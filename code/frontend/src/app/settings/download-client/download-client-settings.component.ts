@@ -56,11 +56,7 @@ export class DownloadClientSettingsComponent implements OnDestroy, CanComponentD
   editingClient: ClientConfig | null = null;
 
   // Download client type options
-  clientTypeOptions = [
-    { label: "qBittorrent", value: DownloadClientType.QBittorrent },
-    { label: "Deluge", value: DownloadClientType.Deluge },
-    { label: "Transmission", value: DownloadClientType.Transmission },
-  ];
+  clientTypeOptions: { label: string, value: DownloadClientType }[] = [];
 
   // Clean up subscriptions
   private destroy$ = new Subject<void>();
@@ -96,6 +92,10 @@ export class DownloadClientSettingsComponent implements OnDestroy, CanComponentD
       urlBase: [''],
       enabled: [true]
     });
+
+    for (const key of Object.keys(DownloadClientType).filter(k => isNaN(Number(k)))) {
+      this.clientTypeOptions.push({ label: key, value: DownloadClientType[key as keyof typeof DownloadClientType] });
+    }
 
     // Load Download Client config data
     this.downloadClientStore.loadConfig();
@@ -329,14 +329,13 @@ export class DownloadClientSettingsComponent implements OnDestroy, CanComponentD
    */
   private mapClientTypeForBackend(frontendType: DownloadClientType): { typeName: string, type: string } {
     switch (frontendType) {
-      case DownloadClientType.QBittorrent:
-        return { typeName: 'qBittorrent', type: 'Torrent' };
+      case DownloadClientType.qBittorrent:
       case DownloadClientType.Deluge:
-        return { typeName: 'Deluge', type: 'Torrent' };
       case DownloadClientType.Transmission:
-        return { typeName: 'Transmission', type: 'Torrent' };
+      case DownloadClientType.uTorrent:
+        return { typeName: frontendType.toString(), type: 'Torrent' };
       default:
-        return { typeName: 'QBittorrent', type: 'Torrent' };
+        throw new Error(`Invalid client type: ${frontendType}`);
     }
   }
   
@@ -344,16 +343,13 @@ export class DownloadClientSettingsComponent implements OnDestroy, CanComponentD
    * Map backend TypeName to frontend client type
    */
   private mapClientTypeFromBackend(backendTypeName: string): DownloadClientType {
-    switch (backendTypeName) {
-      case 'QBittorrent':
-        return DownloadClientType.QBittorrent;
-      case 'Deluge':
-        return DownloadClientType.Deluge;
-      case 'Transmission':
-        return DownloadClientType.Transmission;
-      default:
-        return DownloadClientType.QBittorrent;
+    for (const key of Object.keys(DownloadClientType).filter(k => isNaN(Number(k)))) {
+      if (key.toString().toLowerCase() === backendTypeName.toLowerCase()) {
+        return DownloadClientType[key as keyof typeof DownloadClientType];
+      }
     }
+
+    throw new Error(`Invalid client type: ${backendTypeName}`);
   }
 
   /**

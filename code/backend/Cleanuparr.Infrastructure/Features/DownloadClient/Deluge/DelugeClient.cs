@@ -4,7 +4,6 @@ using Cleanuparr.Domain.Entities.Deluge.Response;
 using Cleanuparr.Domain.Exceptions;
 using Cleanuparr.Infrastructure.Features.DownloadClient.Deluge.Extensions;
 using Cleanuparr.Persistence.Models.Configuration;
-using Data.Models.Deluge.Exceptions;
 using Newtonsoft.Json;
 
 namespace Cleanuparr.Infrastructure.Features.DownloadClient.Deluge;
