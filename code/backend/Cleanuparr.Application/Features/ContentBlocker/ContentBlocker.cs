@@ -178,6 +178,10 @@ public sealed class ContentBlocker : GenericHandler
                             _logger.LogWarning("Download not found in any torrent client | {title}", record.Title);
                         }
                     }
+                    else
+                    {
+                        _logger.LogDebug("No torrent clients enabled");
+                    }
                 }
 
                 if (!result.ShouldRemove)
