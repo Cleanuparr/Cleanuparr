@@ -11,6 +11,7 @@ import {
   createDefaultCategory
 } from "../../shared/models/download-cleaner-config.model";
 import { ScheduleUnit, ScheduleOptions } from "../../shared/models/queue-cleaner-config.model";
+import { MobileAutocompleteComponent } from "../../shared/components/mobile-autocomplete/mobile-autocomplete.component";
 
 // PrimeNG Components
 import { CardModule } from "primeng/card";
@@ -54,7 +55,8 @@ import { DocumentationService } from "../../core/services/documentation.service"
     TableModule,
     LoadingErrorStateComponent,
     ConfirmDialogModule,
-    NgIf
+    NgIf,
+    MobileAutocompleteComponent,
   ],
   providers: [ConfirmationService],
   templateUrl: "./download-cleaner-settings.component.html",

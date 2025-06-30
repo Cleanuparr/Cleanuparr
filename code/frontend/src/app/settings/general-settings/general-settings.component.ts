@@ -19,10 +19,12 @@ import { NotificationService } from '../../core/services/notification.service';
 import { DocumentationService } from '../../core/services/documentation.service';
 import { SelectModule } from "primeng/select";
 import { ChipsModule } from "primeng/chips";
+import { ChipModule } from "primeng/chip";
 import { AutoCompleteModule } from "primeng/autocomplete";
 import { LoadingErrorStateComponent } from "../../shared/components/loading-error-state/loading-error-state.component";
 import { ConfirmDialogModule } from "primeng/confirmdialog";
 import { ConfirmationService } from "primeng/api";
+import { MobileAutocompleteComponent } from "../../shared/components/mobile-autocomplete/mobile-autocomplete.component";
 
 @Component({
   selector: "app-general-settings",
@@ -36,11 +38,13 @@ import { ConfirmationService } from "primeng/api";
     ButtonModule,
     InputNumberModule,
     ChipsModule,
+    ChipModule,
     ToastModule,
     SelectModule,
     AutoCompleteModule,
     LoadingErrorStateComponent,
     ConfirmDialogModule,
+    MobileAutocompleteComponent,
   ],
   providers: [GeneralConfigStore, ConfirmationService],
   templateUrl: "./general-settings.component.html",

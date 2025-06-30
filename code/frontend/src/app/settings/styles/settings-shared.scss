@@ -1,3 +1,9 @@
+@media (max-width: 768px) {
+  .desktop-only {
+    display: none !important;
+  }
+}
+
 // Documentation info icon styles
 .field-info-icon {
   margin-right: 0.5rem;

@@ -191,6 +191,13 @@
           Ignored Downloads
         </label>
         <div class="field-input">
+          <!-- Mobile-friendly autocomplete -->
+          <app-mobile-autocomplete
+            formControlName="ignoredDownloads"
+            placeholder="Add download pattern"
+          ></app-mobile-autocomplete>
+          
+          <!-- Desktop autocomplete -->
           <p-autocomplete
             formControlName="ignoredDownloads"
             inputId="ignoredDownloads"
@@ -198,6 +205,7 @@
             fluid
             [typeahead]="false"
             placeholder="Add download pattern and press enter"
+            class="desktop-only"
           ></p-autocomplete>
           <small class="form-helper-text">Downloads matching these patterns will be ignored (e.g. hash, tag, category, label, tracker)</small>
         </div>

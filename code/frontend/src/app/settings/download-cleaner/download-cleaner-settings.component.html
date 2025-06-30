@@ -317,6 +317,13 @@
               </label>
               <div>
                 <div class="field-input">
+                  <!-- Mobile-friendly autocomplete -->
+                  <app-mobile-autocomplete
+                    formControlName="unlinkedCategories"
+                    placeholder="Add category"
+                  ></app-mobile-autocomplete>
+                  
+                  <!-- Desktop autocomplete -->
                   <p-autocomplete
                     formControlName="unlinkedCategories"
                     multiple
@@ -325,6 +332,7 @@
                     [suggestions]="unlinkedCategoriesSuggestions"
                     (completeMethod)="onUnlinkedCategoriesComplete($event)"
                     placeholder="Add category and press Enter"
+                    class="desktop-only"
                   >
                   </p-autocomplete>
                 </div>

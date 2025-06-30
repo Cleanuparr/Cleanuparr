@@ -1,0 +1,41 @@
+/* Mobile-friendly autocomplete styles */
+.mobile-autocomplete-container {
+  .input-with-button {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 12px;
+
+    .mobile-input {
+      flex: 1;
+      min-height: 40px;
+    }
+
+    .add-button {
+      flex-shrink: 0;
+      min-width: 40px;
+      height: 40px;
+    }
+  }
+
+  .chips-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+}
+
+/* Responsive design - show mobile component on mobile devices */
+@media (max-width: 768px) {
+  :host {
+    display: block;
+  }
+}
+
+/* Hide mobile component on larger screens */
+@media (min-width: 769px) {
+  :host {
+    display: none;
+  }
+} 

@@ -184,12 +184,20 @@
                 Ignored Patterns
               </label>
               <div class="field-input">
+                <!-- Mobile-friendly autocomplete -->
+                <app-mobile-autocomplete
+                  formControlName="ignoredPatterns"
+                  placeholder="Add pattern"
+                ></app-mobile-autocomplete>
+                
+                <!-- Desktop autocomplete -->
                 <p-autocomplete
                   formControlName="ignoredPatterns"
                   multiple
                   fluid
                   [typeahead]="false"
                   placeholder="Add pattern and press Enter"
+                  class="desktop-only"
                 >
                 </p-autocomplete>
                 <small class="form-helper-text"

@@ -14,6 +14,7 @@ import {
 } from "../../shared/models/queue-cleaner-config.model";
 import { SettingsCardComponent } from "../components/settings-card/settings-card.component";
 import { ByteSizeInputComponent } from "../../shared/components/byte-size-input/byte-size-input.component";
+import { MobileAutocompleteComponent } from "../../shared/components/mobile-autocomplete/mobile-autocomplete.component";
 
 // PrimeNG Components
 import { CardModule } from "primeng/card";
@@ -54,6 +55,7 @@ import { ErrorHandlerUtil } from "../../core/utils/error-handler.util";
     AutoCompleteModule,
     DropdownModule,
     LoadingErrorStateComponent,
+    MobileAutocompleteComponent,
   ],
   providers: [QueueCleanerConfigStore],
   templateUrl: "./queue-cleaner-settings.component.html",
