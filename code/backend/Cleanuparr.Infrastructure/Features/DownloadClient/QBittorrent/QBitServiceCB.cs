@@ -20,7 +20,7 @@ public partial class QBitService
 
         if (download is null)
         {
-            _logger.LogDebug("failed to find torrent {hash} in the download client", hash);
+            _logger.LogDebug("failed to find torrent {hash} in the {name} download client", hash, _downloadClientConfig.Name);
             return result;
         }
 
@@ -39,7 +39,7 @@ public partial class QBitService
 
         if (torrentProperties is null)
         {
-            _logger.LogDebug("failed to find torrent properties {hash} in the download client", hash);
+            _logger.LogDebug("failed to find torrent properties {name}", download.Name);
             return result;
         }
 
