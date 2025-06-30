@@ -94,11 +94,11 @@ public partial class TransmissionService
 
         if (totalUnwantedFiles == totalFiles)
         {
-            _logger.LogDebug("All files are unwanted for {name}", download.Name);
+            _logger.LogDebug("All files are blocked for {name}", download.Name);
             result.ShouldRemove = true;
         }
         
-        _logger.LogDebug("marking {count} unwanted files as skipped for {name}", totalUnwantedFiles, download.Name);
+        _logger.LogDebug("Marking {count} unwanted files as skipped for {name}", totalUnwantedFiles, download.Name);
 
         await _dryRunInterceptor.InterceptAsync(SetUnwantedFiles, download.Id, unwantedFiles.ToArray());
 
