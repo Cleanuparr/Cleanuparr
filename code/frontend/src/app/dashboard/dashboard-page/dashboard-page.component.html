@@ -46,7 +46,7 @@
                     <p-tag [severity]="getLogSeverity(log.level)" [value]="log.level"></p-tag>
                     <span class="text-xs text-color-secondary" *ngIf="log.category">{{log.category}}</span>
                   </div>
-                  <span class="text-xs text-color-secondary">{{log.timestamp | date:'HH:mm:ss'}}</span>
+                  <span class="text-xs text-color-secondary">{{ log.timestamp | date: 'yyyy-MM-dd HH:mm:ss' }}</span>
                 </div>
                 <div class="timeline-message" 
                      [pTooltip]="log.message" 
@@ -112,7 +112,7 @@
                     <p-tag [severity]="getEventSeverity(event.severity)" [value]="event.severity"></p-tag>
                     <span class="text-xs text-color-secondary">{{formatEventType(event.eventType)}}</span>
                   </div>
-                  <span class="text-xs text-color-secondary">{{event.timestamp | date:'HH:mm:ss'}}</span>
+                  <span class="text-xs text-color-secondary">{{event.timestamp | date: 'yyyy-MM-dd HH:mm:ss'}}</span>
                 </div>
                 <div class="timeline-message" 
                      [pTooltip]="event.message" 
