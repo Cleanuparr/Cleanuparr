@@ -88,19 +88,6 @@ jobs:
         run: |
           dotnet publish code/backend/${{ env.executableName }}/${{ env.executableName }}.csproj -c Release --runtime win-x64 --self-contained -o dist /p:PublishSingleFile=true /p:Version=${{ env.appVersion }} /p:DebugType=None /p:DebugSymbols=false
 
-      - name: Create sample configuration
-        shell: pwsh
-        run: |
-          # Create config directory
-          New-Item -ItemType Directory -Force -Path "config"
-          
-          $config = @{
-            "HTTP_PORTS" = 11011
-            "BASE_PATH" = "/"
-          }
-          
-          $config | ConvertTo-Json | Out-File -FilePath "config/cleanuparr.json" -Encoding UTF8
-
       - name: Setup Inno Setup
         shell: pwsh
         run: |
@@ -158,14 +145,4 @@ jobs:
           path: installer/${{ env.installerName }}
           retention-days: 30
 
-      - name: Release
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v2
-        with:
-          name: ${{ env.releaseVersion }}
-          tag_name: ${{ env.releaseVersion }}
-          repository: ${{ env.githubRepository }}
-          token: ${{ env.REPO_READONLY_PAT }}
-          make_latest: true
-          files: |
-            installer/${{ env.installerName }} 
+      # Removed individual release step - handled by main release workflow 
