@@ -62,6 +62,7 @@ public partial class QBitService
 
         if (files is null)
         {
+            _logger.LogDebug("torrent {hash} has no files", hash);
             return result;
         }
 
@@ -78,6 +79,7 @@ public partial class QBitService
         {
             if (!file.Index.HasValue)
             {
+                _logger.LogTrace("Skipping file with no index | {file}", file.Name);
                 continue;
             }
 
@@ -85,12 +87,14 @@ public partial class QBitService
 
             if (file.Priority is TorrentContentPriority.Skip)
             {
+                _logger.LogTrace("File is already skipped | {file}", file.Name);
                 totalUnwantedFiles++;
                 continue;
             }
 
             if (_filenameEvaluator.IsValid(file.Name, blocklistType, patterns, regexes))
             {
+                _logger.LogTrace("File is valid | {file}", file.Name);
                 continue;
             }
             
@@ -101,13 +105,17 @@ public partial class QBitService
 
         if (unwantedFiles.Count is 0)
         {
+            _logger.LogDebug("No unwanted files found for {name}", download.Name);
             return result;
         }
         
         if (totalUnwantedFiles == totalFiles)
         {
+            _logger.LogDebug("All files are blocked for {name}", download.Name);
             result.ShouldRemove = true;
         }
+        
+        _logger.LogDebug("Marking {count} unwanted files as skipped for {name}", totalUnwantedFiles, download.Name);
 
         foreach (int fileIndex in unwantedFiles)
         {
