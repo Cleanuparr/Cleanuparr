@@ -62,6 +62,7 @@ public partial class TransmissionService
         {
             if (download.FileStats?[i].Wanted == null)
             {
+                _logger.LogTrace("Skipping file with no stats | {file}", download.Files[i].Name);
                 continue;
             }
 
@@ -69,12 +70,14 @@ public partial class TransmissionService
             
             if (!download.FileStats[i].Wanted.Value)
             {
+                _logger.LogTrace("File is already skipped | {file}", download.Files[i].Name);
                 totalUnwantedFiles++;
                 continue;
             }
 
             if (_filenameEvaluator.IsValid(download.Files[i].Name, blocklistType, patterns, regexes))
             {
+                _logger.LogTrace("File is valid | {file}", download.Files[i].Name);
                 continue;
             }
             
@@ -85,11 +88,13 @@ public partial class TransmissionService
 
         if (unwantedFiles.Count is 0)
         {
+            _logger.LogDebug("No unwanted files found for {name}", download.Name);
             return result;
         }
 
         if (totalUnwantedFiles == totalFiles)
         {
+            _logger.LogDebug("All files are unwanted for {name}", download.Name);
             result.ShouldRemove = true;
         }
         
