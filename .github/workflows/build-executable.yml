@@ -134,22 +134,4 @@ jobs:
             ./artifacts/*.zip
           retention-days: 30
 
-      - name: Release
-        if: startsWith(github.ref, 'refs/tags/')
-        id: release
-        uses: softprops/action-gh-release@v2
-        with:
-          name: ${{ env.releaseVersion }}
-          tag_name: ${{ env.releaseVersion }}
-          repository: ${{ env.githubRepository }}
-          token: ${{ env.REPO_READONLY_PAT }}
-          make_latest: true
-          fail_on_unmatched_files: true
-          target_commitish: main
-          generate_release_notes: true
-          files: |
-            ./artifacts/${{ env.githubRepositoryName }}-${{ env.appVersion }}-win-amd64.zip
-            ./artifacts/${{ env.githubRepositoryName }}-${{ env.appVersion }}-linux-amd64.zip
-            ./artifacts/${{ env.githubRepositoryName }}-${{ env.appVersion }}-linux-arm64.zip
-            ./artifacts/${{ env.githubRepositoryName }}-${{ env.appVersion }}-osx-amd64.zip
-            ./artifacts/${{ env.githubRepositoryName }}-${{ env.appVersion }}-osx-arm64.zip
+      # Removed individual release step - handled by main release workflow
