@@ -64,7 +64,10 @@ export class ConfigurationService {
    * Update queue cleaner configuration
    */
   updateQueueCleanerConfig(config: QueueCleanerConfig): Observable<QueueCleanerConfig> {
-    config.cronExpression = this.convertJobScheduleToCron(config.jobSchedule!);
+    // Generate cron expression if using basic scheduling
+    if (!config.useAdvancedScheduling && config.jobSchedule) {
+      config.cronExpression = this.convertJobScheduleToCron(config.jobSchedule);
+    }
     return this.http.put<QueueCleanerConfig>(this.ApplicationPathService.buildApiUrl('/configuration/queue_cleaner'), config).pipe(
       catchError((error) => {
         console.error("Error updating queue cleaner config:", error);
@@ -113,32 +116,32 @@ export class ConfigurationService {
    */
   private tryExtractJobScheduleFromCron(cronExpression: string): JobSchedule | undefined {
     // Patterns we support:
-    // Seconds: */n * * ? * * *
-    // Minutes: 0 */n * ? * * *
-    // Hours: 0 0 */n ? * * *
+    // Seconds: */n * * ? * * * or 0/n * * ? * * * (Quartz.NET format)
+    // Minutes: 0 */n * ? * * * or 0 0/n * ? * * * (Quartz.NET format)
+    // Hours: 0 0 */n ? * * * or 0 0 0/n ? * * * (Quartz.NET format)
     try {
       const parts = cronExpression.split(" ");
 
       if (parts.length !== 7) return undefined;
 
-      // Every n seconds
-      if (parts[0].startsWith("*/") && parts[1] === "*") {
+      // Every n seconds - handle both */n and 0/n formats
+      if ((parts[0].startsWith("*/") || parts[0].startsWith("0/")) && parts[1] === "*") {
         const seconds = parseInt(parts[0].substring(2));
         if (!isNaN(seconds) && seconds > 0 && seconds < 60) {
           return { every: seconds, type: ScheduleUnit.Seconds };
         }
       }
 
-      // Every n minutes
-      if (parts[0] === "0" && parts[1].startsWith("*/")) {
+      // Every n minutes - handle both */n and 0/n formats
+      if (parts[0] === "0" && (parts[1].startsWith("*/") || parts[1].startsWith("0/"))) {
         const minutes = parseInt(parts[1].substring(2));
         if (!isNaN(minutes) && minutes > 0 && minutes < 60) {
           return { every: minutes, type: ScheduleUnit.Minutes };
         }
       }
 
-      // Every n hours
-      if (parts[0] === "0" && parts[1] === "0" && parts[2].startsWith("*/")) {
+      // Every n hours - handle both */n and 0/n formats
+      if (parts[0] === "0" && parts[1] === "0" && (parts[2].startsWith("*/") || parts[2].startsWith("0/"))) {
         const hours = parseInt(parts[2].substring(2));
         if (!isNaN(hours) && hours > 0 && hours < 24) {
           return { every: hours, type: ScheduleUnit.Hours };
@@ -156,31 +159,31 @@ export class ConfigurationService {
    */
   private convertJobScheduleToCron(schedule: JobSchedule): string {
     if (!schedule || schedule.every <= 0) {
-      return "0 0/5 * * * ?"; // Default: every 5 minutes
+      return "0 0/5 * * * ?"; // Default: every 5 minutes (Quartz.NET format)
     }
 
     switch (schedule.type) {
       case ScheduleUnit.Seconds:
         if (schedule.every < 60) {
-          return `*/${schedule.every} * * ? * * *`;
+          return `0/${schedule.every} * * ? * * *`; // Quartz.NET format
         }
         break;
 
       case ScheduleUnit.Minutes:
         if (schedule.every < 60) {
-          return `0 */${schedule.every} * ? * * *`;
+          return `0 0/${schedule.every} * ? * * *`; // Quartz.NET format
         }
         break;
 
       case ScheduleUnit.Hours:
         if (schedule.every < 24) {
-          return `0 0 */${schedule.every} ? * * *`;
+          return `0 0 0/${schedule.every} ? * * *`; // Quartz.NET format
         }
         break;
     }
 
     // Fallback to default
-    return "0 0/5 * * * ?";
+    return "0 0/5 * * * ?"; // Default: every 5 minutes (Quartz.NET format)
   }
 
   /**
@@ -189,32 +192,32 @@ export class ConfigurationService {
    */
   private tryExtractContentBlockerJobScheduleFromCron(cronExpression: string): ContentBlockerJobSchedule | undefined {
     // Patterns we support:
-    // Seconds: */n * * ? * * *
-    // Minutes: 0 */n * ? * * *
-    // Hours: 0 0 */n ? * * *
+    // Seconds: */n * * ? * * * or 0/n * * ? * * * (Quartz.NET format)
+    // Minutes: 0 */n * ? * * * or 0 0/n * ? * * * (Quartz.NET format)
+    // Hours: 0 0 */n ? * * * or 0 0 0/n ? * * * (Quartz.NET format)
     try {
       const parts = cronExpression.split(" ");
 
       if (parts.length !== 7) return undefined;
 
-      // Every n seconds
-      if (parts[0].startsWith("*/") && parts[1] === "*") {
+      // Every n seconds - handle both */n and 0/n formats
+      if ((parts[0].startsWith("*/") || parts[0].startsWith("0/")) && parts[1] === "*") {
         const seconds = parseInt(parts[0].substring(2));
         if (!isNaN(seconds) && seconds > 0 && seconds < 60) {
           return { every: seconds, type: ContentBlockerScheduleUnit.Seconds };
         }
       }
 
-      // Every n minutes
-      if (parts[0] === "0" && parts[1].startsWith("*/")) {
+      // Every n minutes - handle both */n and 0/n formats
+      if (parts[0] === "0" && (parts[1].startsWith("*/") || parts[1].startsWith("0/"))) {
         const minutes = parseInt(parts[1].substring(2));
         if (!isNaN(minutes) && minutes > 0 && minutes < 60) {
           return { every: minutes, type: ContentBlockerScheduleUnit.Minutes };
         }
       }
 
-      // Every n hours
-      if (parts[0] === "0" && parts[1] === "0" && parts[2].startsWith("*/")) {
+      // Every n hours - handle both */n and 0/n formats
+      if (parts[0] === "0" && parts[1] === "0" && (parts[2].startsWith("*/") || parts[2].startsWith("0/"))) {
         const hours = parseInt(parts[2].substring(2));
         if (!isNaN(hours) && hours > 0 && hours < 24) {
           return { every: hours, type: ContentBlockerScheduleUnit.Hours };
@@ -232,31 +235,31 @@ export class ConfigurationService {
    */
   private convertContentBlockerJobScheduleToCron(schedule: ContentBlockerJobSchedule): string {
     if (!schedule || schedule.every <= 0) {
-      return "0 0/5 * * * ?"; // Default: every 5 minutes
+      return "0/5 * * * * ?"; // Default: every 5 seconds (Quartz.NET format)
     }
 
     switch (schedule.type) {
       case ContentBlockerScheduleUnit.Seconds:
         if (schedule.every < 60) {
-          return `*/${schedule.every} * * ? * * *`;
+          return `0/${schedule.every} * * ? * * *`; // Quartz.NET format
         }
         break;
 
       case ContentBlockerScheduleUnit.Minutes:
         if (schedule.every < 60) {
-          return `0 */${schedule.every} * ? * * *`;
+          return `0 0/${schedule.every} * ? * * *`; // Quartz.NET format
         }
         break;
 
       case ContentBlockerScheduleUnit.Hours:
         if (schedule.every < 24) {
-          return `0 0 */${schedule.every} ? * * *`;
+          return `0 0 0/${schedule.every} ? * * *`; // Quartz.NET format
         }
         break;
     }
 
     // Fallback to default
-    return "0 0/5 * * * ?";
+    return "0/5 * * * * ?"; // Default: every 5 seconds (Quartz.NET format)
   }
 
   /**

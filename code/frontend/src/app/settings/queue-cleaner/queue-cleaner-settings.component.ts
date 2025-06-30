@@ -262,21 +262,27 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
       advancedControl.valueChanges.pipe(takeUntil(this.destroy$))
         .subscribe((useAdvanced: boolean) => {
           const enabled = this.queueCleanerForm.get('enabled')?.value || false;
-          if (enabled) {
-            const cronExpressionControl = this.queueCleanerForm.get('cronExpression');
-            const jobScheduleGroup = this.queueCleanerForm.get('jobSchedule') as FormGroup;
-            const everyControl = jobScheduleGroup?.get('every');
-            const typeControl = jobScheduleGroup?.get('type');
-            
-            if (useAdvanced) {
-              if (cronExpressionControl) cronExpressionControl.enable();
-              if (everyControl) everyControl.disable();
-              if (typeControl) typeControl.disable();
-            } else {
-              if (cronExpressionControl) cronExpressionControl.disable();
-              if (everyControl) everyControl.enable();
-              if (typeControl) typeControl.enable();
-            }
+          const cronExpressionControl = this.queueCleanerForm.get('cronExpression');
+          const jobScheduleGroup = this.queueCleanerForm.get('jobSchedule') as FormGroup;
+          const everyControl = jobScheduleGroup?.get('every');
+          const typeControl = jobScheduleGroup?.get('type');
+          
+          // Update scheduling controls based on mode, regardless of enabled state
+          if (useAdvanced) {
+            if (cronExpressionControl) cronExpressionControl.enable();
+            if (everyControl) everyControl.disable();
+            if (typeControl) typeControl.disable();
+          } else {
+            if (cronExpressionControl) cronExpressionControl.disable();
+            if (everyControl) everyControl.enable();
+            if (typeControl) typeControl.enable();
+          }
+          
+          // Then respect the main enabled state - if disabled, disable all scheduling controls
+          if (!enabled) {
+            cronExpressionControl?.disable();
+            everyControl?.disable();
+            typeControl?.disable();
           }
         });
     }
@@ -521,14 +527,17 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
       // Make a copy of the form values
       const formValue = this.queueCleanerForm.getRawValue();
       
+      // Determine the correct cron expression to use
+      const cronExpression: string = formValue.useAdvancedScheduling ? 
+        formValue.cronExpression : 
+        // If in basic mode, generate cron expression from the schedule
+        this.queueCleanerStore.generateCronExpression(formValue.jobSchedule);
+      
       // Create the config object to be saved
       const queueCleanerConfig: QueueCleanerConfig = {
         enabled: formValue.enabled,
         useAdvancedScheduling: formValue.useAdvancedScheduling,
-        cronExpression: formValue.useAdvancedScheduling ? 
-          formValue.cronExpression : 
-          // If in basic mode, generate cron expression from the schedule
-          this.queueCleanerStore.generateCronExpression(formValue.jobSchedule),
+        cronExpression: cronExpression,
         jobSchedule: formValue.jobSchedule,
         failedImport: {
           maxStrikes: formValue.failedImport?.maxStrikes || 0,
