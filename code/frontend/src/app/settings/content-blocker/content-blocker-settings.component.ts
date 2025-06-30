@@ -127,7 +127,7 @@ export class ContentBlockerSettingsComponent implements OnDestroy, CanComponentD
       cronExpression: [{ value: '', disabled: true }, [Validators.required]],
       jobSchedule: this.formBuilder.group({
         every: [{ value: 5, disabled: true }, [Validators.required, Validators.min(1)]],
-        type: [{ value: ScheduleUnit.Minutes, disabled: true }],
+        type: [{ value: ScheduleUnit.Seconds, disabled: true }],
       }),
 
       ignorePrivate: [{ value: false, disabled: true }],
@@ -167,7 +167,7 @@ export class ContentBlockerSettingsComponent implements OnDestroy, CanComponentD
           cronExpression: config.cronExpression,
           jobSchedule: config.jobSchedule || {
             every: 5,
-            type: ScheduleUnit.Minutes
+            type: ScheduleUnit.Seconds
           },
           ignorePrivate: config.ignorePrivate,
           deletePrivate: config.deletePrivate,
@@ -569,6 +569,11 @@ export class ContentBlockerSettingsComponent implements OnDestroy, CanComponentD
         blocklistPath: "",
         blocklistType: BlocklistType.Blacklist,
       },
+      readarr: {
+        enabled: false,
+        blocklistPath: "",
+        blocklistType: BlocklistType.Blacklist,
+      },
     });
 
     // Manually update control states after reset
@@ -576,6 +581,7 @@ export class ContentBlockerSettingsComponent implements OnDestroy, CanComponentD
     this.updateBlocklistDependentControls('sonarr', false);
     this.updateBlocklistDependentControls('radarr', false);
     this.updateBlocklistDependentControls('lidarr', false);
+    this.updateBlocklistDependentControls('readarr', false);
     
     // Mark form as dirty so the save button is enabled after reset
     this.contentBlockerForm.markAsDirty();
@@ -614,7 +620,7 @@ export class ContentBlockerSettingsComponent implements OnDestroy, CanComponentD
     } else if (scheduleType === ScheduleUnit.Hours) {
       return this.scheduleValueOptions[ScheduleUnit.Hours];
     }
-    return this.scheduleValueOptions[ScheduleUnit.Minutes]; // Default to minutes
+    return this.scheduleValueOptions[ScheduleUnit.Seconds]; // Default to seconds
   }
 
   /**

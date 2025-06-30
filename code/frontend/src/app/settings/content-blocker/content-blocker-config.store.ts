@@ -122,22 +122,22 @@ export class ContentBlockerConfigStore extends signalStore(
      */
     generateCronExpression(schedule: JobSchedule): string {
       if (!schedule) {
-        return "0/5 * * * * ?"; // Default: every 5 seconds
+        return "0/5 * * * * ?"; // Default: every 5 seconds (Quartz.NET format)
       }
       
       // Cron format: Seconds Minutes Hours Day-of-month Month Day-of-week Year
       switch (schedule.type) {
         case ScheduleUnit.Seconds:
-          return `0/${schedule.every} * * ? * * *`; // Every n seconds
+          return `0/${schedule.every} * * ? * * *`; // Every n seconds (Quartz.NET format)
         
         case ScheduleUnit.Minutes:
-          return `0 0/${schedule.every} * ? * * *`; // Every n minutes
+          return `0 0/${schedule.every} * ? * * *`; // Every n minutes (Quartz.NET format)
         
         case ScheduleUnit.Hours:
-          return `0 0 0/${schedule.every} ? * * *`; // Every n hours
+          return `0 0 0/${schedule.every} ? * * *`; // Every n hours (Quartz.NET format)
         
         default:
-          return "0/5 * * * * ?"; // Default: every 5 seconds
+          return "0/5 * * * * ?"; // Default: every 5 seconds (Quartz.NET format)
       }
     }
   })),

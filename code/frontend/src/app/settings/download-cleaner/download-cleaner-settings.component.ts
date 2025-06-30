@@ -362,21 +362,27 @@ export class DownloadCleanerSettingsComponent implements OnDestroy, CanComponent
         .pipe(takeUntil(this.destroy$))
         .subscribe(useAdvanced => {
           const enabled = this.downloadCleanerForm.get('enabled')?.value || false;
-          if (enabled) {
-            const cronExpressionControl = this.downloadCleanerForm.get('cronExpression');
-            const jobScheduleGroup = this.downloadCleanerForm.get('jobSchedule') as FormGroup;
-            const everyControl = jobScheduleGroup?.get('every');
-            const typeControl = jobScheduleGroup?.get('type');
-            
-            if (useAdvanced) {
-              if (cronExpressionControl) cronExpressionControl.enable();
-              if (everyControl) everyControl.disable();
-              if (typeControl) typeControl.disable();
-            } else {
-              if (cronExpressionControl) cronExpressionControl.disable();
-              if (everyControl) everyControl.enable();
-              if (typeControl) typeControl.enable();
-            }
+          const cronExpressionControl = this.downloadCleanerForm.get('cronExpression');
+          const jobScheduleGroup = this.downloadCleanerForm.get('jobSchedule') as FormGroup;
+          const everyControl = jobScheduleGroup?.get('every');
+          const typeControl = jobScheduleGroup?.get('type');
+          
+          // Update scheduling controls based on mode, regardless of enabled state
+          if (useAdvanced) {
+            if (cronExpressionControl) cronExpressionControl.enable();
+            if (everyControl) everyControl.disable();
+            if (typeControl) typeControl.disable();
+          } else {
+            if (cronExpressionControl) cronExpressionControl.disable();
+            if (everyControl) everyControl.enable();
+            if (typeControl) typeControl.enable();
+          }
+          
+          // Then respect the main enabled state - if disabled, disable all scheduling controls
+          if (!enabled) {
+            cronExpressionControl?.disable();
+            everyControl?.disable();
+            typeControl?.disable();
           }
         });
     }
@@ -463,19 +469,14 @@ export class DownloadCleanerSettingsComponent implements OnDestroy, CanComponent
    * Update form control disabled states based on the configuration
    */
   private updateFormControlDisabledStates(config: DownloadCleanerConfig): void {
-    // Update main controls based on enabled state
+    // Update main form controls based on the 'enabled' state
     this.updateMainControlsState(config.enabled);
     
-    // Update schedule controls based on advanced scheduling
-    const cronControl = this.downloadCleanerForm.get('cronExpression');
-    const jobScheduleControl = this.downloadCleanerForm.get('jobSchedule');
-
-    if (config.useAdvancedScheduling) {
-      jobScheduleControl?.disable({ emitEvent: false });
-      cronControl?.enable({ emitEvent: false });
-    } else {
-      cronControl?.disable({ emitEvent: false });
-      jobScheduleControl?.enable({ emitEvent: false });
+    // Update other dependent controls only if the main feature is enabled
+    if (config.enabled) {
+      // Update unlinked controls based on current unlinkedEnabled value
+      const unlinkedEnabled = config.unlinkedEnabled || false;
+      this.updateUnlinkedControlsState(unlinkedEnabled);
     }
   }
   
@@ -552,14 +553,17 @@ export class DownloadCleanerSettingsComponent implements OnDestroy, CanComponent
       // Get form values including disabled controls
       const formValues = this.downloadCleanerForm.getRawValue();
 
+      // Determine the correct cron expression to use
+      const cronExpression: string = formValues.useAdvancedScheduling ?
+        formValues.cronExpression :
+        // If in basic mode, generate cron expression from the schedule
+        this.downloadCleanerStore.generateCronExpression(formValues.jobSchedule);
+
       // Create config object from form values
       const config: DownloadCleanerConfig = {
         enabled: formValues.enabled,
         useAdvancedScheduling: formValues.useAdvancedScheduling,
-        cronExpression: formValues.useAdvancedScheduling ? 
-          formValues.cronExpression : 
-          // If in basic mode, generate cron expression from the schedule
-          this.downloadCleanerStore.generateCronExpression(formValues.jobSchedule),
+        cronExpression: cronExpression,
         jobSchedule: formValues.jobSchedule,
         categories: formValues.categories,
         deletePrivate: formValues.deletePrivate,
