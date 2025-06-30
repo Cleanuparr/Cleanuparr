@@ -25,7 +25,7 @@ public partial class DelugeService
         
         if (download?.Hash is null)
         {
-            _logger.LogDebug("failed to find torrent {hash} in the download client", hash);
+            _logger.LogDebug("failed to find torrent {hash} in the {name} download client", hash, _downloadClientConfig.Name);
             return result;
         }
         
@@ -44,7 +44,7 @@ public partial class DelugeService
         }
         catch (Exception exception)
         {
-            _logger.LogDebug(exception, "failed to find torrent {hash} in the download client", hash);
+            _logger.LogDebug(exception, "failed to find files in the download client | {name}", download.Name);
         }
         
 
