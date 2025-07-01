@@ -363,14 +363,4 @@ jobs:
           path: '${{ env.pkgName }}'
           retention-days: 30
 
-      - name: Release
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v2
-        with:
-          name: ${{ env.releaseVersion }}
-          tag_name: ${{ env.releaseVersion }}
-          repository: ${{ env.githubRepository }}
-          token: ${{ env.REPO_READONLY_PAT }}
-          make_latest: true
-          files: |
-            ${{ env.pkgName }} 
+      # Removed individual release step - handled by main release workflow 
