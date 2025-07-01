@@ -45,6 +45,7 @@ FROM mcr.microsoft.com/dotnet/aspnet:9.0-bookworm-slim
 
 # Install required packages for user management and timezone support
 RUN apt-get update && apt-get install -y \
+    curl \
     tzdata \
     gosu \
     && rm -rf /var/lib/apt/lists/*
