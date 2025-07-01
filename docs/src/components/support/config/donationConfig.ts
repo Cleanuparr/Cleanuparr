@@ -84,14 +84,14 @@ export const alternativeSupport: AlternativeSupport[] = [
     title: 'Star on GitHub',
     description: 'Give us a star on GitHub to help increase visibility and show your support.',
     icon: '⭐',
-    link: 'https://github.com/Cleanupparr/Cleanupparr',
+    link: 'https://github.com/Cleanuparr/Cleanuparr',
     linkText: 'Star the Repository'
   },
   {
     title: 'Report Bugs',
     description: 'Help improve Cleanuparr by reporting bugs and issues you encounter.',
     icon: '🐛',
-    link: 'https://github.com/Cleanupparr/Cleanupparr/issues',
+    link: 'https://github.com/Cleanuparr/Cleanuparr/issues',
     linkText: 'Report an Issue'
   },
   {
