@@ -311,7 +311,7 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
    */
   hasError(controlName: string, errorName: string): boolean {
     const control = this.notificationForm.get(controlName);
-    return control ? control.touched && control.hasError(errorName) : false;
+    return control ? control.dirty && control.hasError(errorName) : false;
   }
 
   /**
@@ -319,7 +319,7 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
    */
   hasNestedError(groupName: string, controlName: string, errorName: string): boolean {
     const control = this.notificationForm.get(`${groupName}.${controlName}`);
-    return control ? control.touched && control.hasError(errorName) : false;
+    return control ? control.dirty && control.hasError(errorName) : false;
   }
 
   /**

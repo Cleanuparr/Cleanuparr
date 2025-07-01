@@ -101,7 +101,7 @@
           <div class="field-input">
             <input type="text" pInputText formControlName="cronExpression" placeholder="0 0/5 * ? * * *" />
           </div>
-          <small *ngIf="queueCleanerForm.get('cronExpression')?.hasError('required') && queueCleanerForm.get('cronExpression')?.touched" class="p-error">Cron expression is required</small>
+          <small *ngIf="hasError('cronExpression', 'required')" class="p-error">Cron expression is required</small>
           <small class="form-helper-text">Enter a valid Quartz cron expression (e.g., "0 0/5 * ? * * *" runs every 5 minutes)</small>
         </div>
       </div>
@@ -128,15 +128,18 @@
                    title="Click for documentation"></i>
                 Max Strikes
               </label>
-              <div class="field-input">
-                <p-inputNumber
-                  formControlName="maxStrikes"
-                  [showButtons]="true"
-                  [min]="0"
-                  [max]="10"
-                  buttonLayout="horizontal"
-                >
-                </p-inputNumber>
+              <div>
+                <div class="field-input">
+                  <p-inputNumber
+                    formControlName="maxStrikes"
+                    [showButtons]="true"
+                    [min]="0"
+                    buttonLayout="horizontal"
+                  >
+                  </p-inputNumber>
+                </div>
+                <small *ngIf="hasNestedError('failedImport', 'maxStrikes', 'required')" class="p-error">This field is required</small>
+                <small *ngIf="hasNestedError('failedImport', 'maxStrikes', 'max')" class="p-error">Value cannot exceed 5000</small>
                 <small class="form-helper-text"
                   >Number of strikes before action is taken (0 to disable, min 3 to enable)</small
                 >
@@ -232,7 +235,7 @@
                   </p-inputNumber>
                 </div>
                 <small *ngIf="hasNestedError('stalled', 'maxStrikes', 'required')" class="p-error">This field is required</small>
-                <small *ngIf="hasNestedError('stalled', 'maxStrikes', 'max')" class="p-error">Value cannot exceed 100</small>
+                <small *ngIf="hasNestedError('stalled', 'maxStrikes', 'max')" class="p-error">Value cannot exceed 5000</small>
                 <small class="form-helper-text"
                   >Number of strikes before action is taken (0 to disable, min 3 to enable)</small
                 >
@@ -311,7 +314,7 @@
                   </p-inputNumber>
                 </div>
                 <small *ngIf="hasNestedError('stalled', 'downloadingMetadataMaxStrikes', 'required')" class="p-error">This field is required</small>
-                <small *ngIf="hasNestedError('stalled', 'downloadingMetadataMaxStrikes', 'max')" class="p-error">Value cannot exceed 100</small>
+                <small *ngIf="hasNestedError('stalled', 'downloadingMetadataMaxStrikes', 'max')" class="p-error">Value cannot exceed 5000</small>
                 <small class="form-helper-text"
                   >Number of strikes before action is taken (0 to disable, min 3 to enable)</small
                 >
@@ -351,7 +354,7 @@
                   </p-inputNumber>
                 </div>
                 <small *ngIf="hasNestedError('slow', 'maxStrikes', 'required')" class="p-error">This field is required</small>
-                <small *ngIf="hasNestedError('slow', 'maxStrikes', 'max')" class="p-error">Value cannot exceed 100</small>
+                <small *ngIf="hasNestedError('slow', 'maxStrikes', 'max')" class="p-error">Value cannot exceed 5000</small>
                 <small class="form-helper-text"
                   >Number of strikes before action is taken (0 to disable, min 3 to enable)</small
                 >
@@ -422,16 +425,18 @@
                    title="Click for documentation"></i>
                 Maximum Time (hours)
               </label>
-              <div class="field-input">
-                <p-inputNumber
-                  formControlName="maxTime"
-                  [showButtons]="true"
-                  [min]="0"
-                  buttonLayout="horizontal"
-                >
-                </p-inputNumber>
+              <div>
+                <div class="field-input">
+                  <p-inputNumber
+                    formControlName="maxTime"
+                    [showButtons]="true"
+                    [min]="0"
+                    buttonLayout="horizontal"
+                  >
+                  </p-inputNumber>
+                </div>
                 <small *ngIf="hasNestedError('slow', 'maxTime', 'required')" class="p-error">This field is required</small>
-                <small *ngIf="hasNestedError('slow', 'maxTime', 'max')" class="p-error">Value cannot exceed 168</small>
+                <small *ngIf="hasNestedError('slow', 'maxTime', 'max')" class="p-error">Value cannot exceed 1000</small>
                 <small class="form-helper-text">Maximum time allowed for slow downloads (0 means disabled)</small>
               </div>
             </div>

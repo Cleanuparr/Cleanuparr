@@ -101,7 +101,7 @@
           <div class="field-input">
             <input type="text" pInputText formControlName="cronExpression" placeholder="0 0/5 * ? * * *" />
           </div>
-          <small *ngIf="downloadCleanerForm.get('cronExpression')?.hasError('required') && downloadCleanerForm.get('cronExpression')?.touched" class="p-error">Cron expression is required</small>
+          <small *ngIf="hasError('cronExpression', 'required')" class="p-error">Cron expression is required</small>
           <small class="form-helper-text">Enter a valid Quartz cron expression (e.g., "0 0/5 * ? * * *" runs every 5 minutes)</small>
         </div>
       </div>
