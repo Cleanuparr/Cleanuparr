@@ -156,7 +156,7 @@ export class DownloadClientSettingsComponent implements OnDestroy, CanComponentD
    */
   hasError(form: FormGroup, controlName: string, errorName: string): boolean {
     const control = form.get(controlName);
-    return control !== null && control.hasError(errorName) && control.touched;
+    return control !== null && control.hasError(errorName) && control.dirty;
   }
 
   /**

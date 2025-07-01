@@ -355,7 +355,7 @@ export class GeneralSettingsComponent implements OnDestroy, CanComponentDeactiva
    */
   hasError(controlName: string, errorName: string): boolean {
     const control = this.generalForm.get(controlName);
-    return control ? control.touched && control.hasError(errorName) : false;
+    return control ? control.dirty && control.hasError(errorName) : false;
   }
 
   /**

@@ -660,14 +660,14 @@ export class DownloadCleanerSettingsComponent implements OnDestroy, CanComponent
    */
   hasError(controlName: string, errorName: string): boolean {
     const control = this.downloadCleanerForm.get(controlName);
-    return control ? control.touched && control.hasError(errorName) : false;
+    return control ? control.dirty && control.hasError(errorName) : false;
   }
   
   /**
    * Check if the form has the unlinked categories validation error
    */
   hasUnlinkedCategoriesError(): boolean {
-    return this.downloadCleanerForm.touched && this.downloadCleanerForm.hasError('unlinkedCategoriesRequired');
+    return this.downloadCleanerForm.dirty && this.downloadCleanerForm.hasError('unlinkedCategoriesRequired');
   }
   
   /**
@@ -695,7 +695,7 @@ export class DownloadCleanerSettingsComponent implements OnDestroy, CanComponent
     }
 
     const control = parentControl.get(controlName);
-    return control ? control.touched && control.hasError(errorName) : false;
+    return control ? control.dirty && control.hasError(errorName) : false;
   }
 
   /**
@@ -706,7 +706,7 @@ export class DownloadCleanerSettingsComponent implements OnDestroy, CanComponent
     if (!categoryGroup) return false;
     
     const control = categoryGroup.get(controlName);
-    return control ? control.touched && control.hasError(errorName) : false;
+    return control ? control.dirty && control.hasError(errorName) : false;
   }
 
   /**
@@ -715,7 +715,7 @@ export class DownloadCleanerSettingsComponent implements OnDestroy, CanComponent
   hasCategoryControlError(categoryIndex: number, controlName: string, errorName: string): boolean {
     const categoryGroup = this.categoriesFormArray.at(categoryIndex);
     const control = categoryGroup.get(controlName);
-    return control ? control.touched && control.hasError(errorName) : false;
+    return control ? control.dirty && control.hasError(errorName) : false;
   }
   
   /**
@@ -723,7 +723,7 @@ export class DownloadCleanerSettingsComponent implements OnDestroy, CanComponent
    */
   hasCategoryGroupError(categoryIndex: number, errorName: string): boolean {
     const categoryGroup = this.categoriesFormArray.at(categoryIndex);
-    return categoryGroup ? categoryGroup.touched && categoryGroup.hasError(errorName) : false;
+    return categoryGroup ? categoryGroup.dirty && categoryGroup.hasError(errorName) : false;
   }
 
   /**

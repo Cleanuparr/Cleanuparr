@@ -142,7 +142,7 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
 
       // Failed Import settings - nested group
       failedImport: this.formBuilder.group({
-        maxStrikes: [0, [Validators.required, Validators.min(0), Validators.max(100)]],
+        maxStrikes: [0, [Validators.required, Validators.min(0), Validators.max(5000)]],
         ignorePrivate: [{ value: false, disabled: true }],
         deletePrivate: [{ value: false, disabled: true }],
         ignoredPatterns: [{ value: [], disabled: true }],
@@ -150,21 +150,21 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
 
       // Stalled settings - nested group
       stalled: this.formBuilder.group({
-        maxStrikes: [0, [Validators.required, Validators.min(0), Validators.max(100)]],
+        maxStrikes: [0, [Validators.required, Validators.min(0), Validators.max(5000)]],
         resetStrikesOnProgress: [{ value: false, disabled: true }],
         ignorePrivate: [{ value: false, disabled: true }],
         deletePrivate: [{ value: false, disabled: true }],
-        downloadingMetadataMaxStrikes: [0, [Validators.required, Validators.min(0), Validators.max(100)]],
+        downloadingMetadataMaxStrikes: [0, [Validators.required, Validators.min(0), Validators.max(5000)]],
       }),
 
       // Slow Download settings - nested group
       slow: this.formBuilder.group({
-        maxStrikes: [0, [Validators.required, Validators.min(0), Validators.max(100)]],
+        maxStrikes: [0, [Validators.required, Validators.min(0), Validators.max(5000)]],
         resetStrikesOnProgress: [{ value: false, disabled: true }],
         ignorePrivate: [{ value: false, disabled: true }],
         deletePrivate: [{ value: false, disabled: true }],
         minSpeed: [{ value: "", disabled: true }],
-        maxTime: [{ value: 0, disabled: true }, [Validators.required, Validators.min(0), Validators.max(168)]],
+        maxTime: [{ value: 0, disabled: true }, [Validators.required, Validators.min(0), Validators.max(1000)]],
         ignoreAboveSize: [{ value: "", disabled: true }],
       }),
 
@@ -675,7 +675,7 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
    */
   hasError(controlName: string, errorName: string): boolean {
     const control = this.queueCleanerForm.get(controlName);
-    return control ? control.touched && control.hasError(errorName) : false;
+    return control ? control.dirty && control.hasError(errorName) : false;
   }
   
   /**
@@ -703,7 +703,7 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
     }
 
     const control = parentControl.get(controlName);
-    return control ? control.touched && control.hasError(errorName) : false;
+    return control ? control.dirty && control.hasError(errorName) : false;
   }
   
 

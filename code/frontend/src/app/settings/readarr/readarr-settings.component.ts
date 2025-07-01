@@ -82,7 +82,7 @@ export class ReadarrSettingsComponent implements OnDestroy, CanComponentDeactiva
   constructor() {
     // Initialize forms
     this.globalForm = this.formBuilder.group({
-      failedImportMaxStrikes: [-1],
+      failedImportMaxStrikes: [-1, [Validators.required, Validators.min(-1), Validators.max(5000)]],
     });
 
     this.instanceForm = this.formBuilder.group({
@@ -211,11 +211,18 @@ export class ReadarrSettingsComponent implements OnDestroy, CanComponentDeactiva
   }
 
   /**
-   * Check if a form control has an error
+   * Check if a form control has an error after it's been touched
    */
-  hasError(form: FormGroup, controlName: string, errorName: string): boolean {
-    const control = form.get(controlName);
-    return control !== null && control.hasError(errorName) && control.touched;
+  hasError(formOrControlName: FormGroup | string, controlNameOrErrorName: string, errorName?: string): boolean {
+    if (formOrControlName instanceof FormGroup) {
+      // For instance form
+      const control = formOrControlName.get(controlNameOrErrorName);
+      return control !== null && control.hasError(errorName!) && control.dirty;
+    } else {
+      // For global form
+      const control = this.globalForm.get(formOrControlName);
+      return control ? control.dirty && control.hasError(controlNameOrErrorName) : false;
+    }
   }
 
   /**
@@ -411,5 +418,18 @@ export class ReadarrSettingsComponent implements OnDestroy, CanComponentDeactiva
    */
   get modalTitle(): string {
     return this.modalMode === 'add' ? 'Add Readarr Instance' : 'Edit Readarr Instance';
+  }
+
+  /**
+   * Get nested form control errors
+   */
+  hasNestedError(parentName: string, controlName: string, errorName: string): boolean {
+    const parentControl = this.globalForm.get(parentName);
+    if (!parentControl || !(parentControl instanceof FormGroup)) {
+      return false;
+    }
+
+    const control = parentControl.get(controlName);
+    return control ? control.dirty && control.hasError(errorName) : false;
   }
 } 

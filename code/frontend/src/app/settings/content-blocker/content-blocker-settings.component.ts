@@ -605,7 +605,7 @@ export class ContentBlockerSettingsComponent implements OnDestroy, CanComponentD
    */
   hasError(controlName: string, errorName: string): boolean {
     const control = this.contentBlockerForm.get(controlName);
-    return control ? control.touched && control.hasError(errorName) : false;
+    return control ? control.dirty && control.hasError(errorName) : false;
   }
   
   /**
@@ -633,7 +633,7 @@ export class ContentBlockerSettingsComponent implements OnDestroy, CanComponentD
     }
 
     const control = parentControl.get(controlName);
-    return control ? control.touched && control.hasError(errorName) : false;
+    return control ? control.dirty && control.hasError(errorName) : false;
   }
   
 
