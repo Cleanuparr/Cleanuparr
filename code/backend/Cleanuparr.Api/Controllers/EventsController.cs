@@ -87,10 +87,6 @@ public class EventsController : ControllerBase
             .Take(pageSize)
             .ToListAsync();
 
-        events = events
-            .OrderBy(e => e.Timestamp)
-            .ToList();
-
         // Return paginated result
         var result = new PaginatedResult<AppEvent>
         {
