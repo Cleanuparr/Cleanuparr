@@ -167,6 +167,7 @@ public class NotificationPublisher : INotificationPublisher
             InstanceType.Radarr => record.Movie?.Images?.FirstOrDefault(x => x.CoverType == "poster")?.RemoteUrl,
             InstanceType.Lidarr => record.Album?.Images?.FirstOrDefault(x => x.CoverType == "cover")?.Url,
             InstanceType.Readarr => record.Book?.Images?.FirstOrDefault(x => x.CoverType == "cover")?.Url,
+            InstanceType.Whisparr => record.Series?.Images?.FirstOrDefault(x => x.CoverType == "poster")?.RemoteUrl,
             _ => throw new ArgumentOutOfRangeException(nameof(instanceType))
         };
 

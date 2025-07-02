@@ -53,6 +53,12 @@
       </div>
       <span>Readarr</span>
     </a>
+    <a [routerLink]="['/whisparr']" class="nav-item" [class.active]="router.url.includes('/whisparr')" (click)="onNavItemClick()">
+      <div class="nav-icon-wrapper">
+        <i class="pi pi-lock"></i>
+      </div>
+      <span>Whisparr</span>
+    </a>
     <a [routerLink]="['/download-clients']" class="nav-item" [class.active]="router.url.includes('/download-clients')" (click)="onNavItemClick()">
       <div class="nav-icon-wrapper">
         <i class="pi pi-download"></i>
