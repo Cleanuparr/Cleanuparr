@@ -1,5 +1,5 @@
-﻿using Infrastructure.Verticals.Notifications;
-using Infrastructure.Verticals.Notifications.Models;
+﻿using Cleanuparr.Infrastructure.Features.Notifications.Models;
+using Infrastructure.Verticals.Notifications;
 using MassTransit;
 using Microsoft.Extensions.Logging;
 

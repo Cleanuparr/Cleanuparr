@@ -3,7 +3,6 @@ using Cleanuparr.Application.Features.Arr.Dtos;
 using Cleanuparr.Application.Features.DownloadClient.Dtos;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Domain.Exceptions;
-using Cleanuparr.Infrastructure.Helpers;
 using Cleanuparr.Infrastructure.Http.DynamicHttpClientSystem;
 using Cleanuparr.Infrastructure.Logging;
 using Cleanuparr.Infrastructure.Models;

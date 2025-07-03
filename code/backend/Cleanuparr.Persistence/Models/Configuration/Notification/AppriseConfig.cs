@@ -1,10 +1,15 @@
-﻿namespace Cleanuparr.Persistence.Models.Configuration.Notification;
+﻿using System.ComponentModel.DataAnnotations.Schema;
+
+namespace Cleanuparr.Persistence.Models.Configuration.Notification;
 
 public sealed record AppriseConfig : NotificationConfig
 {
-    public Uri? Url { get; init; }
+    public string? FullUrl { get; set; }
     
-    public string? Key { get; init; }
+    [NotMapped]
+    public Uri? Url => string.IsNullOrEmpty(FullUrl) ? null : new Uri(FullUrl, UriKind.Absolute);
+    
+    public string? Key { get; set; }
     
     public override bool IsValid()
     {

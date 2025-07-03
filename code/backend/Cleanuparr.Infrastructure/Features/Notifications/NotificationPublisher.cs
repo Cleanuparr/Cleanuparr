@@ -6,7 +6,6 @@ using Cleanuparr.Infrastructure.Features.Notifications.Models;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Data.Models.Arr.Queue;
 using Infrastructure.Interceptors;
-using Infrastructure.Verticals.Notifications.Models;
 using Mapster;
 using MassTransit;
 using Microsoft.Extensions.Logging;

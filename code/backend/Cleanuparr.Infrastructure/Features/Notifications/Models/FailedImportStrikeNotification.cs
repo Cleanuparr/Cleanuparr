@@ -1,6 +1,4 @@
-﻿using Cleanuparr.Infrastructure.Features.Notifications.Models;
-
-namespace Infrastructure.Verticals.Notifications.Models;
+﻿namespace Cleanuparr.Infrastructure.Features.Notifications.Models;
 
 public sealed record FailedImportStrikeNotification : ArrNotification
 {
