@@ -77,6 +77,7 @@ public partial class DelugeService
 
             if (file.Priority is 0)
             {
+                _logger.LogTrace("File is already skipped | {file}", file.Path);
                 totalUnwantedFiles++;
             }
 
@@ -88,6 +89,7 @@ public partial class DelugeService
                 _logger.LogInformation("unwanted file found | {file}", file.Path);
             }
             
+            _logger.LogTrace("File is valid | {file}", file.Path);
             priorities.Add(file.Index, priority);
         });
 
@@ -105,8 +107,11 @@ public partial class DelugeService
 
         if (totalUnwantedFiles == totalFiles)
         {
+            _logger.LogDebug("All files are blocked for {name}", download.Name);
             result.ShouldRemove = true;
         }
+        
+        _logger.LogDebug("Marking {count} unwanted files as skipped for {name}", totalUnwantedFiles, download.Name);
 
         await _dryRunInterceptor.InterceptAsync(ChangeFilesPriority, hash, sortedPriorities);
 
