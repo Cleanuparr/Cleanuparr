@@ -1,11 +1,11 @@
 using System.Text.Json.Serialization;
 using Cleanuparr.Infrastructure.Features.DownloadRemover.Consumers;
 using Cleanuparr.Infrastructure.Features.Notifications.Consumers;
+using Cleanuparr.Infrastructure.Features.Notifications.Models;
 using Cleanuparr.Infrastructure.Health;
 using Cleanuparr.Infrastructure.Http;
 using Cleanuparr.Infrastructure.Http.DynamicHttpClientSystem;
 using Data.Models.Arr;
-using Infrastructure.Verticals.Notifications.Models;
 using MassTransit;
 using Microsoft.Extensions.Caching.Memory;
 

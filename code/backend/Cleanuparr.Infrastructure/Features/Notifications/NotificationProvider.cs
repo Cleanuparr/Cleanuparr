@@ -1,5 +1,5 @@
+using Cleanuparr.Infrastructure.Features.Notifications.Models;
 using Cleanuparr.Persistence.Models.Configuration.Notification;
-using Infrastructure.Verticals.Notifications.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cleanuparr.Infrastructure.Features.Notifications;
@@ -10,7 +10,7 @@ public abstract class NotificationProvider<T> : INotificationProvider<T>
     protected readonly DbSet<T> _notificationConfig;
     protected T? _config;
     
-    public T Config => _config ??= _notificationConfig.First();
+    public T Config => _config ??= _notificationConfig.AsNoTracking().First();
     
     NotificationConfig INotificationProvider.Config => Config;
 

@@ -3,13 +3,11 @@ using Cleanuparr.Infrastructure.Features.Notifications.Models;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.Notification;
 using Infrastructure.Verticals.Notifications;
-using Infrastructure.Verticals.Notifications.Models;
 
 namespace Cleanuparr.Infrastructure.Features.Notifications.Apprise;
 
 public sealed class AppriseProvider : NotificationProvider<AppriseConfig>
 {
-    private readonly DataContext _dataContext;
     private readonly IAppriseProxy _proxy;
     
     public override string Name => "Apprise";
@@ -17,7 +15,6 @@ public sealed class AppriseProvider : NotificationProvider<AppriseConfig>
     public AppriseProvider(DataContext dataContext, IAppriseProxy proxy)
         : base(dataContext.AppriseConfigs)
     {
-        _dataContext = dataContext;
         _proxy = proxy;
     }
 

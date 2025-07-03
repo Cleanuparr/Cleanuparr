@@ -1,5 +1,5 @@
 using Cleanuparr.Infrastructure.Features.Notifications;
-using Infrastructure.Verticals.Notifications.Models;
+using Cleanuparr.Infrastructure.Features.Notifications.Models;
 using Microsoft.Extensions.Logging;
 
 namespace Infrastructure.Verticals.Notifications;

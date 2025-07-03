@@ -84,7 +84,7 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
       }),
       // Apprise configuration
       apprise: this.formBuilder.group({
-        url: [''],
+        fullUrl: [''],
         key: [''],
         onFailedImportStrike: [false],
         onStalledStrike: [false],
@@ -112,7 +112,7 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
             onCategoryChanged: false,
           },
           apprise: config.apprise || {
-            url: '',
+            fullUrl: '',
             key: '',
             onFailedImportStrike: false,
             onStalledStrike: false,
@@ -268,7 +268,7 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
         onCategoryChanged: false,
       },
       apprise: {
-        url: '',
+        fullUrl: '',
         key: '',
         onFailedImportStrike: false,
         onStalledStrike: false,

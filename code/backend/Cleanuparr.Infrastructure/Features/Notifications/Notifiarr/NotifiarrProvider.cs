@@ -2,7 +2,6 @@ using Cleanuparr.Infrastructure.Features.Notifications.Models;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.Notification;
 using Infrastructure.Verticals.Notifications;
-using Infrastructure.Verticals.Notifications.Models;
 using Mapster;
 
 namespace Cleanuparr.Infrastructure.Features.Notifications.Notifiarr;

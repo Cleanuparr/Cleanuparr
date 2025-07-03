@@ -1,5 +1,4 @@
 ﻿using Cleanuparr.Domain.Enums;
-using Infrastructure.Verticals.Notifications.Models;
 
 namespace Cleanuparr.Infrastructure.Features.Notifications.Models;
 

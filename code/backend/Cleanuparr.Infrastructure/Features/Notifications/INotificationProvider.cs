@@ -1,5 +1,5 @@
+using Cleanuparr.Infrastructure.Features.Notifications.Models;
 using Cleanuparr.Persistence.Models.Configuration.Notification;
-using Infrastructure.Verticals.Notifications.Models;
 
 namespace Cleanuparr.Infrastructure.Features.Notifications;
 

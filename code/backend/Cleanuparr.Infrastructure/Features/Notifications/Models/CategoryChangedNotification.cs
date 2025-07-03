@@ -1,4 +1,4 @@
-﻿namespace Infrastructure.Verticals.Notifications.Models;
+﻿namespace Cleanuparr.Infrastructure.Features.Notifications.Models;
 
 public sealed record CategoryChangedNotification : Notification
 {
