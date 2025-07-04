@@ -153,7 +153,7 @@ public static class ApiDI
                 start_url = basePath,
                 display = "standalone",
                 background_color = "#ffffff",
-                theme_color = "#1976d2",
+                theme_color = "#ffffff",
                 icons = new[]
                 {
                     new {
