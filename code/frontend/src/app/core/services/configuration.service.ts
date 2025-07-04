@@ -7,6 +7,7 @@ import { SonarrConfig } from "../../shared/models/sonarr-config.model";
 import { RadarrConfig } from "../../shared/models/radarr-config.model";
 import { LidarrConfig } from "../../shared/models/lidarr-config.model";
 import { ReadarrConfig } from "../../shared/models/readarr-config.model";
+import { WhisparrConfig } from "../../shared/models/whisparr-config.model";
 import { ClientConfig, DownloadClientConfig, CreateDownloadClientDto } from "../../shared/models/download-client-config.model";
 import { ArrInstance, CreateArrInstanceDto } from "../../shared/models/arr-config.model";
 import { GeneralConfig } from "../../shared/models/general-config.model";
@@ -355,6 +356,29 @@ export class ConfigurationService {
   }
 
   /**
+   * Get Whisparr configuration
+   */
+  getWhisparrConfig(): Observable<WhisparrConfig> {
+    return this.http.get<WhisparrConfig>(this.ApplicationPathService.buildApiUrl('/configuration/whisparr')).pipe(
+      catchError((error) => {
+        console.error("Error fetching Whisparr config:", error);
+        return throwError(() => new Error("Failed to load Whisparr configuration"));
+      })
+    );
+  }
+  /**
+   * Update Whisparr configuration
+   */
+  updateWhisparrConfig(config: {failedImportMaxStrikes: number}): Observable<any> {
+    return this.http.put<any>(this.ApplicationPathService.buildApiUrl('/configuration/whisparr'), config).pipe(
+      catchError((error) => {
+        console.error("Error updating Whisparr config:", error);
+        return throwError(() => new Error(error.error?.error || "Failed to update Whisparr configuration"));
+      })
+    );
+  }
+
+  /**
    * Get Download Client configuration
    */
   getDownloadClientConfig(): Observable<DownloadClientConfig> {
@@ -562,6 +586,44 @@ export class ConfigurationService {
       catchError((error) => {
         console.error(`Error deleting Readarr instance with ID ${id}:`, error);
         return throwError(() => new Error(error.error?.error || `Failed to delete Readarr instance with ID ${id}`));
+      })
+    );
+  }
+
+  // ===== WHISPARR INSTANCE MANAGEMENT =====
+
+  /**
+   * Create a new Whisparr instance
+   */
+  createWhisparrInstance(instance: CreateArrInstanceDto): Observable<ArrInstance> {
+    return this.http.post<ArrInstance>(this.ApplicationPathService.buildApiUrl('/configuration/whisparr/instances'), instance).pipe(
+      catchError((error) => {
+        console.error("Error creating Whisparr instance:", error);
+        return throwError(() => new Error(error.error?.error || "Failed to create Whisparr instance"));
+      })
+    );
+  }
+
+  /**
+   * Update a Whisparr instance by ID
+   */
+  updateWhisparrInstance(id: string, instance: CreateArrInstanceDto): Observable<ArrInstance> {
+    return this.http.put<ArrInstance>(this.ApplicationPathService.buildApiUrl(`/configuration/whisparr/instances/${id}`), instance).pipe(
+      catchError((error) => {
+        console.error(`Error updating Whisparr instance with ID ${id}:`, error);
+        return throwError(() => new Error(error.error?.error || `Failed to update Whisparr instance with ID ${id}`));
+      })
+    );
+  }
+
+  /**
+   * Delete a Whisparr instance by ID
+   */
+  deleteWhisparrInstance(id: string): Observable<void> {
+    return this.http.delete<void>(this.ApplicationPathService.buildApiUrl(`/configuration/whisparr/instances/${id}`)).pipe(
+      catchError((error) => {
+        console.error(`Error deleting Whisparr instance with ID ${id}:`, error);
+        return throwError(() => new Error(error.error?.error || `Failed to delete Whisparr instance with ID ${id}`));
       })
     );
   }

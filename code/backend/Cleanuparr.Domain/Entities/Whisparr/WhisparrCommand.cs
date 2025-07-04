@@ -1,8 +1,8 @@
-﻿using Cleanuparr.Domain.Enums;
+using Cleanuparr.Domain.Enums;
 
-namespace Cleanuparr.Domain.Entities.Sonarr;
+namespace Cleanuparr.Domain.Entities.Whisparr;
 
-public sealed record SonarrCommand
+public sealed record WhisparrCommand
 {
     public string Name { get; set; }
 
@@ -13,4 +13,4 @@ public sealed record SonarrCommand
     public List<long>? EpisodeIds { get; set; }
     
     public SeriesSearchType SearchType { get; set; }
-}
+} 

@@ -414,6 +414,76 @@
             </div>
           </p-accordion-content>
         </p-accordion-panel>
+
+        <!-- Whisparr Settings -->
+        <p-accordion-panel [disabled]="!contentBlockerForm.get('enabled')?.value" [value]="4">
+          <p-accordion-header>
+            <ng-template #toggleicon let-active="active">
+              @if (active) {
+                <i class="pi pi-chevron-up"></i>
+              } @else {
+                <i class="pi pi-chevron-down"></i>
+              }
+            </ng-template>
+            Whisparr Settings
+          </p-accordion-header>
+          <p-accordion-content>
+            <div formGroupName="whisparr">
+              <div class="field-row">
+                <label class="field-label">
+                  <i class="pi pi-info-circle field-info-icon" 
+                     (click)="openFieldDocs('whisparr.enabled')" 
+                     title="Click for documentation"></i>
+                  Enable Whisparr Blocklist
+                </label>
+                <div class="field-input">
+                  <p-checkbox formControlName="enabled" [binary]="true"></p-checkbox>
+                  <small class="form-helper-text">When enabled, the Whisparr blocklist will be used for content filtering</small>
+                </div>
+              </div>
+
+              <div class="field-row">
+                <label class="field-label">
+                  <i class="pi pi-info-circle field-info-icon" 
+                     (click)="openFieldDocs('whisparr.blocklistPath')" 
+                     title="Click for documentation"></i>
+                  Blocklist Path
+                </label>
+                <p-fluid>
+                  <div class="field-input">
+                    <input pInputText formControlName="blocklistPath" placeholder="Path to blocklist file or URL" />
+                  </div>
+                  <small *ngIf="hasNestedError('whisparr', 'blocklistPath', 'required')" class="p-error">Path is required when Whisparr blocklist is enabled</small>
+                  <small class="form-helper-text">Path to the blocklist file or URL</small>
+                </p-fluid>
+              </div>
+
+              <div class="field-row">
+                <label class="field-label">
+                  <i class="pi pi-info-circle field-info-icon" 
+                     (click)="openFieldDocs('whisparr.blocklistType')" 
+                     title="Click for documentation"></i>
+                  Blocklist Type
+                </label>
+                <div class="field-input">
+                  <p-select
+                    formControlName="blocklistType"
+                    [options]="[
+                      { label: 'Blacklist', value: 'Blacklist' },
+                      { label: 'Whitelist', value: 'Whitelist' }
+                    ]"
+                    optionLabel="label"
+                    optionValue="value"
+                    appendTo="body"
+                  ></p-select>
+                  <small class="form-helper-text"
+                    >Type of blocklist: Blacklist (block matches) or Whitelist (only allow matches)</small
+                  >
+                </div>
+              </div>
+            </div>
+          </p-accordion-content>
+        </p-accordion-panel>
       </p-accordion>
 
       <!-- Action buttons -->

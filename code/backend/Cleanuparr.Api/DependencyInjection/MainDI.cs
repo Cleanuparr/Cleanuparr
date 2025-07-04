@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using Cleanuparr.Domain.Entities.Arr;
 using Cleanuparr.Infrastructure.Features.DownloadRemover.Consumers;
 using Cleanuparr.Infrastructure.Features.Notifications.Consumers;
 using Cleanuparr.Infrastructure.Features.Notifications.Models;
@@ -26,7 +27,7 @@ public static class MainDI
             .AddMassTransit(config =>
             {
                 config.AddConsumer<DownloadRemoverConsumer<SearchItem>>();
-                config.AddConsumer<DownloadRemoverConsumer<SonarrSearchItem>>();
+                config.AddConsumer<DownloadRemoverConsumer<SeriesSearchItem>>();
                 
                 config.AddConsumer<NotificationConsumer<FailedImportStrikeNotification>>();
                 config.AddConsumer<NotificationConsumer<StalledStrikeNotification>>();
@@ -48,7 +49,7 @@ public static class MainDI
                     cfg.ReceiveEndpoint("download-remover-queue", e =>
                     {
                         e.ConfigureConsumer<DownloadRemoverConsumer<SearchItem>>(context);
-                        e.ConfigureConsumer<DownloadRemoverConsumer<SonarrSearchItem>>(context);
+                        e.ConfigureConsumer<DownloadRemoverConsumer<SeriesSearchItem>>(context);
                         e.ConcurrentMessageLimit = 1;
                         e.PrefetchCount = 1;
                     });

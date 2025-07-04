@@ -1,6 +1,6 @@
 ﻿namespace Cleanuparr.Domain.Enums;
 
-public enum SonarrSearchType
+public enum SeriesSearchType
 {
     Episode,
     Season,

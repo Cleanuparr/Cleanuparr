@@ -1,7 +1,8 @@
-﻿using System.Text;
+using System.Text;
 using Cleanuparr.Domain.Entities.Arr;
 using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Entities.Sonarr;
+using Cleanuparr.Domain.Entities.Whisparr;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 using Cleanuparr.Infrastructure.Features.ItemStriker;
@@ -10,14 +11,13 @@ using Data.Models.Arr;
 using Infrastructure.Interceptors;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
-using Series = Cleanuparr.Domain.Entities.Sonarr.Series;
 
 namespace Cleanuparr.Infrastructure.Features.Arr;
 
-public class SonarrClient : ArrClient, ISonarrClient
+public class WhisparrClient : ArrClient, IWhisparrClient
 {
-    public SonarrClient(
-        ILogger<SonarrClient> logger,
+    public WhisparrClient(
+        ILogger<WhisparrClient> logger,
         IHttpClientFactory httpClientFactory,
         IStriker striker,
         IDryRunInterceptor dryRunInterceptor
@@ -58,7 +58,7 @@ public class SonarrClient : ArrClient, ISonarrClient
         UriBuilder uriBuilder = new(arrInstance.Url);
         uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/v3/command";
         
-        foreach (SonarrCommand command in GetSearchCommands(items.Cast<SeriesSearchItem>().ToHashSet()))
+        foreach (WhisparrCommand command in GetSearchCommands(items.Cast<SeriesSearchItem>().ToHashSet()))
         {
             using HttpRequestMessage request = new(HttpMethod.Post, uriBuilder.Uri);
             request.Content = new StringContent(
@@ -99,7 +99,7 @@ public class SonarrClient : ArrClient, ISonarrClient
     private static string GetSearchLog(
         SeriesSearchType searchType,
         Uri instanceUrl,
-        SonarrCommand command,
+        WhisparrCommand command,
         bool success,
         string? logContext
     )
@@ -117,7 +117,7 @@ public class SonarrClient : ArrClient, ISonarrClient
         };
     }
 
-    private async Task<string?> ComputeCommandLogContextAsync(ArrInstance arrInstance, SonarrCommand command, SeriesSearchType searchType)
+    private async Task<string?> ComputeCommandLogContextAsync(ArrInstance arrInstance, WhisparrCommand command, SeriesSearchType searchType)
     {
         try
         {
@@ -203,44 +203,42 @@ public class SonarrClient : ArrClient, ISonarrClient
     {
         UriBuilder uriBuilder = new(arrInstance.Url);
         uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/v3/episode";
-        uriBuilder.Query = string.Join('&', episodeIds.Select(x => $"episodeIds={x}"));
-        
+        uriBuilder.Query = $"episodeIds={string.Join(',', episodeIds)}";
+
         using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
         SetApiKey(request, arrInstance.ApiKey);
 
-        using HttpResponseMessage response = await _httpClient.SendAsync(request);
-        response.EnsureSuccessStatusCode();
-                
-        string responseBody = await response.Content.ReadAsStringAsync();
-        return JsonConvert.DeserializeObject<List<Episode>>(responseBody);
+        HttpResponseMessage response = await SendRequestAsync(request);
+        string responseContent = await response.Content.ReadAsStringAsync();
+
+        return JsonConvert.DeserializeObject<List<Episode>>(responseContent);
     }
 
     private async Task<Series?> GetSeriesAsync(ArrInstance arrInstance, long seriesId)
     {
         UriBuilder uriBuilder = new(arrInstance.Url);
         uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/v3/series/{seriesId}";
-        
+
         using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
         SetApiKey(request, arrInstance.ApiKey);
 
-        using HttpResponseMessage response = await _httpClient.SendAsync(request);
-        response.EnsureSuccessStatusCode();
-                
-        string responseBody = await response.Content.ReadAsStringAsync();
-        return JsonConvert.DeserializeObject<Series>(responseBody);
+        HttpResponseMessage response = await SendRequestAsync(request);
+        string responseContent = await response.Content.ReadAsStringAsync();
+
+        return JsonConvert.DeserializeObject<Series>(responseContent);
     }
 
-    private List<SonarrCommand> GetSearchCommands(HashSet<SeriesSearchItem> items)
+    private List<WhisparrCommand> GetSearchCommands(HashSet<SeriesSearchItem> items)
     {
         const string episodeSearch = "EpisodeSearch";
         const string seasonSearch = "SeasonSearch";
         const string seriesSearch = "SeriesSearch";
         
-        List<SonarrCommand> commands = new();
+        List<WhisparrCommand> commands = new();
 
         foreach (SeriesSearchItem item in items)
         {
-            SonarrCommand command = item.SearchType is SeriesSearchType.Episode
+            WhisparrCommand command = item.SearchType is SeriesSearchType.Episode
                 ? commands.FirstOrDefault() ?? new() { Name = episodeSearch, EpisodeIds = new() }
                 : new();
             
@@ -278,7 +276,7 @@ public class SonarrClient : ArrClient, ISonarrClient
             command.SearchType = item.SearchType;
             commands.Add(command);
         }
-        
+
         return commands;
     }
-}
+} 

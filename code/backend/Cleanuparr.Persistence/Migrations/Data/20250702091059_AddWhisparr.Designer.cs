@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Cleanuparr.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Cleanuparr.Persistence.Migrations.Data
 {
     [DbContext(typeof(DataContext))]
-    partial class DataContextModelSnapshot : ModelSnapshot
+    [Migration("20250702091059_AddWhisparr")]
+    partial class AddWhisparr
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.6");
@@ -404,10 +407,6 @@ namespace Cleanuparr.Persistence.Migrations.Data
                         .HasColumnType("TEXT")
                         .HasColumnName("id");
 
-                    b.Property<string>("FullUrl")
-                        .HasColumnType("TEXT")
-                        .HasColumnName("full_url");
-
                     b.Property<string>("Key")
                         .HasColumnType("TEXT")
                         .HasColumnName("key");
@@ -436,9 +435,9 @@ namespace Cleanuparr.Persistence.Migrations.Data
                         .HasColumnType("INTEGER")
                         .HasColumnName("on_stalled_strike");
 
-                    b.Property<string>("Tags")
+                    b.Property<string>("Url")
                         .HasColumnType("TEXT")
-                        .HasColumnName("tags");
+                        .HasColumnName("url");
 
                     b.HasKey("Id")
                         .HasName("pk_apprise_configs");

@@ -1,16 +1,17 @@
 ﻿using Cleanuparr.Domain.Enums;
+using Data.Models.Arr;
 
-namespace Data.Models.Arr;
+namespace Cleanuparr.Domain.Entities.Arr;
 
-public sealed class SonarrSearchItem : SearchItem
+public sealed class SeriesSearchItem : SearchItem
 {
     public long SeriesId { get; set; }
     
-    public SonarrSearchType SearchType { get; set; }
+    public SeriesSearchType SearchType { get; set; }
     
     public override bool Equals(object? obj)
     {
-        if (obj is not SonarrSearchItem other)
+        if (obj is not SeriesSearchItem other)
         {
             return false;
         }

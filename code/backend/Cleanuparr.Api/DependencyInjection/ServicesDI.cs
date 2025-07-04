@@ -38,6 +38,7 @@ public static class ServicesDI
             .AddTransient<RadarrClient>()
             .AddTransient<LidarrClient>()
             .AddTransient<ReadarrClient>()
+            .AddTransient<WhisparrClient>()
             .AddTransient<ArrClientFactory>()
             .AddTransient<QueueCleaner>()
             .AddTransient<ContentBlocker>()

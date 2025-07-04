@@ -2,7 +2,7 @@ namespace Cleanuparr.Domain.Entities.Arr.Queue;
 
 public sealed record QueueRecord
 {
-    // Sonarr
+    // Sonarr and Whisparr
     public long SeriesId { get; init; }
     public long EpisodeId { get; init; }
     public long SeasonNumber { get; init; }

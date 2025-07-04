@@ -1,3 +1,4 @@
+using Cleanuparr.Domain.Entities.Arr;
 using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Events;
@@ -71,6 +72,9 @@ public abstract class GenericHandler : IHandler
             ContextProvider.Set(nameof(InstanceType.Readarr), await _dataContext.ArrConfigs.AsNoTracking()
                 .Include(x => x.Instances)
                 .FirstAsync(x => x.Type == InstanceType.Readarr));
+            ContextProvider.Set(nameof(InstanceType.Whisparr), await _dataContext.ArrConfigs.AsNoTracking()
+                .Include(x => x.Instances)
+                .FirstAsync(x => x.Type == InstanceType.Whisparr));
             ContextProvider.Set(nameof(QueueCleanerConfig), await _dataContext.QueueCleanerConfigs.AsNoTracking().FirstAsync());
             ContextProvider.Set(nameof(ContentBlockerConfig), await _dataContext.ContentBlockerConfigs.AsNoTracking().FirstAsync());
             ContextProvider.Set(nameof(DownloadCleanerConfig), await _dataContext.DownloadCleanerConfigs.Include(x => x.Categories).AsNoTracking().FirstAsync());
@@ -136,14 +140,14 @@ public abstract class GenericHandler : IHandler
             return;
         }
         
-        if (instanceType is InstanceType.Sonarr)
+        if (instanceType is InstanceType.Sonarr or InstanceType.Whisparr)
         {
-            QueueItemRemoveRequest<SonarrSearchItem> removeRequest = new()
+            QueueItemRemoveRequest<SeriesSearchItem> removeRequest = new()
             {
                 InstanceType = instanceType,
                 Instance = instance,
                 Record = record,
-                SearchItem = (SonarrSearchItem)GetRecordSearchItem(instanceType, record, isPack),
+                SearchItem = (SeriesSearchItem)GetRecordSearchItem(instanceType, record, isPack),
                 RemoveFromClient = removeFromClient,
                 DeleteReason = deleteReason
             };
@@ -173,17 +177,17 @@ public abstract class GenericHandler : IHandler
     {
         return type switch
         {
-            InstanceType.Sonarr when !isPack => new SonarrSearchItem
+            InstanceType.Sonarr when !isPack => new SeriesSearchItem
             {
                 Id = record.EpisodeId,
                 SeriesId = record.SeriesId,
-                SearchType = SonarrSearchType.Episode
+                SearchType = SeriesSearchType.Episode
             },
-            InstanceType.Sonarr when isPack => new SonarrSearchItem
+            InstanceType.Sonarr when isPack => new SeriesSearchItem
             {
                 Id = record.SeasonNumber,
                 SeriesId = record.SeriesId,
-                SearchType = SonarrSearchType.Season
+                SearchType = SeriesSearchType.Season
             },
             InstanceType.Radarr => new SearchItem
             {
@@ -196,6 +200,18 @@ public abstract class GenericHandler : IHandler
             InstanceType.Readarr => new SearchItem
             {
                 Id = record.BookId
+            },
+            InstanceType.Whisparr when !isPack => new SeriesSearchItem
+            {
+                Id = record.EpisodeId,
+                SeriesId = record.SeriesId,
+                SearchType = SeriesSearchType.Episode
+            },
+            InstanceType.Whisparr when isPack => new SeriesSearchItem
+            {
+                Id = record.SeasonNumber,
+                SeriesId = record.SeriesId,
+                SearchType = SeriesSearchType.Season
             },
             _ => throw new NotImplementedException($"instance type {type} is not yet supported")
         };

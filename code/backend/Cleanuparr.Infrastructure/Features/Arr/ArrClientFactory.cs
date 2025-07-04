@@ -9,18 +9,21 @@ public sealed class ArrClientFactory
     private readonly IRadarrClient _radarrClient;
     private readonly ILidarrClient _lidarrClient;
     private readonly IReadarrClient _readarrClient;
+    private readonly IWhisparrClient _whisparrClient;
 
     public ArrClientFactory(
         SonarrClient sonarrClient,
         RadarrClient radarrClient,
         LidarrClient lidarrClient,
-        ReadarrClient readarrClient
+        ReadarrClient readarrClient,
+        WhisparrClient whisparrClient
     )
     {
         _sonarrClient = sonarrClient;
         _radarrClient = radarrClient;
         _lidarrClient = lidarrClient;
         _readarrClient = readarrClient;
+        _whisparrClient = whisparrClient;
     }
     
     public IArrClient GetClient(InstanceType type) =>
@@ -30,6 +33,7 @@ public sealed class ArrClientFactory
             InstanceType.Radarr => _radarrClient,
             InstanceType.Lidarr => _lidarrClient,
             InstanceType.Readarr => _readarrClient,
+            InstanceType.Whisparr => _whisparrClient,
             _ => throw new NotImplementedException($"instance type {type} is not yet supported")
         };
 }

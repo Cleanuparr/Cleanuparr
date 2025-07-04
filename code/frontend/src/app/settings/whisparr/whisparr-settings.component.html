@@ -1,0 +1,233 @@
+<div class="settings-container">
+  <div class="flex align-items-center justify-content-between mb-4">
+    <h1>Whisparr</h1>
+  </div>
+
+  <!-- Loading/Error State Component -->
+  <div class="mb-4">
+    <app-loading-error-state
+      *ngIf="whisparrLoading() || whisparrError()"
+      [loading]="whisparrLoading()"
+      [error]="whisparrError()"
+      loadingMessage="Loading settings..."
+      errorMessage="Could not connect to server"
+    ></app-loading-error-state>
+  </div>
+
+  <!-- Content - only shown when not loading and no error -->
+  <div *ngIf="!whisparrLoading() && !whisparrError()">
+    
+    <!-- Global Configuration Card -->
+    <p-card styleClass="settings-card mb-4">
+      <ng-template pTemplate="header">
+        <div class="flex align-items-center justify-content-between p-3 border-bottom-1 surface-border">
+          <div class="header-title-container">
+            <h2 class="card-title m-0">Whisparr Settings</h2>
+            <span class="card-subtitle">Configure general Whisparr integration settings</span>
+          </div>
+        </div>
+      </ng-template>
+
+      <form [formGroup]="globalForm" class="p-fluid">
+        <div class="field-row">
+          <label class="field-label">Failed Import Max Strikes</label>
+          <div>
+            <div class="field-input">
+              <p-inputNumber
+                formControlName="failedImportMaxStrikes"
+                [min]="-1" 
+                [showButtons]="true"
+                buttonLayout="horizontal"
+                incrementButtonIcon="pi pi-plus"
+                decrementButtonIcon="pi pi-minus"
+              ></p-inputNumber>
+            </div>
+            <small *ngIf="hasError('failedImportMaxStrikes', 'required')" class="p-error">This field is required</small>
+            <small *ngIf="hasError('failedImportMaxStrikes', 'min')" class="p-error">Value cannot be less than -1</small>
+            <small *ngIf="hasError('failedImportMaxStrikes', 'max')" class="p-error">Value cannot exceed 5000</small>
+            <small class="form-helper-text">Maximum number of strikes before removing a failed import (-1 to use global setting; 0 to disable)</small>
+          </div>
+        </div>
+
+        <!-- Save Button -->
+        <div class="card-footer mt-3">
+          <button
+            pButton
+            type="button"
+            label="Save"
+            icon="pi pi-save"
+            class="p-button-primary"
+            [disabled]="!globalForm.dirty || !hasGlobalChanges || globalForm.invalid || whisparrSaving()"
+            [loading]="whisparrSaving()"
+            (click)="saveGlobalConfig()"
+          ></button>
+        </div>
+      </form>
+    </p-card>
+
+    <!-- Instance Management Card -->
+    <p-card styleClass="settings-card mb-4">
+      <ng-template pTemplate="header">
+        <div class="flex align-items-center justify-content-between p-3 border-bottom-1 surface-border">
+          <div class="header-title-container">
+            <h2 class="card-title m-0">Instances</h2>
+            <span class="card-subtitle">Manage Whisparr server instances</span>
+          </div>
+        </div>
+      </ng-template>
+
+      <!-- Empty state when no instances -->
+      <div *ngIf="instances.length === 0" class="empty-instances-message p-3 text-center">
+        <i class="pi pi-inbox empty-icon"></i>
+        <p>No Whisparr instances configured</p>
+        <small>Add an instance to start using Whisparr integration</small>
+      </div>
+
+      <!-- Instances List -->
+      <div *ngIf="instances.length > 0" class="instances-list">
+        <div *ngFor="let instance of instances" class="instance-item">
+          <div class="instance-header">
+            <div class="instance-title">
+              <i class="pi pi-server instance-icon"></i>
+              <span class="instance-name">{{ instance.name }}</span>
+            </div>
+            <div class="instance-actions">
+              <button 
+                pButton 
+                type="button" 
+                icon="pi pi-pencil" 
+                class="p-button-text p-button-sm"
+                [disabled]="whisparrSaving()"
+                (click)="openEditInstanceModal(instance)"
+                pTooltip="Edit instance"
+              ></button>
+              <button 
+                pButton 
+                type="button" 
+                icon="pi pi-trash" 
+                class="p-button-text p-button-sm p-button-danger"
+                [disabled]="whisparrSaving()"
+                (click)="deleteInstance(instance)"
+                pTooltip="Delete instance"
+              ></button>
+            </div>
+          </div>
+          
+          <div class="instance-content">
+            <div class="instance-field">
+              <label>{{ instance.url }}</label>
+            </div>
+            <div class="instance-field">
+              <label>Status: 
+                <span [class]="instance.enabled ? 'text-green-500' : 'text-red-500'">
+                  {{ instance.enabled ? 'Enabled' : 'Disabled' }}
+                </span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action buttons -->
+      <div class="card-footer mt-3">
+        <button 
+          pButton 
+          type="button" 
+          icon="pi pi-plus" 
+          label="Add Instance"
+          class="p-button-outlined"
+          [disabled]="whisparrSaving()"
+          (click)="openAddInstanceModal()"
+        ></button>
+      </div>
+    </p-card>
+  </div>
+</div>
+
+<!-- Instance Modal -->
+<p-dialog 
+  [(visible)]="showInstanceModal" 
+  [modal]="true" 
+  [closable]="true"
+  [draggable]="false"
+  [resizable]="false"
+  styleClass="instance-modal"
+  [header]="modalTitle"
+  (onHide)="closeInstanceModal()"
+>
+  <form [formGroup]="instanceForm" class="p-fluid instance-form">
+    <div class="field flex flex-row">
+      <label class="field-label">Enabled</label>
+      <div class="field-input">
+        <p-checkbox formControlName="enabled" [binary]="true"></p-checkbox>
+        <small class="form-helper-text">Enable this Whisparr instance</small>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="instance-name">Name *</label>
+      <input 
+        id="instance-name"
+        type="text" 
+        pInputText 
+        formControlName="name" 
+        placeholder="My Whisparr Instance"
+        class="w-full"
+      />
+      <small *ngIf="hasError(instanceForm, 'name', 'required')" class="p-error">Name is required</small>
+    </div>
+
+    <div class="field">
+      <label for="instance-url">URL *</label>
+      <input 
+        id="instance-url"
+        type="text" 
+        pInputText 
+        formControlName="url" 
+        placeholder="http://localhost:6969"
+        class="w-full"
+      />
+      <small *ngIf="hasError(instanceForm, 'url', 'required')" class="p-error">URL is required</small>
+      <small *ngIf="hasError(instanceForm, 'url', 'invalidUri')" class="p-error">URL must be a valid URL</small>
+      <small *ngIf="hasError(instanceForm, 'url', 'invalidProtocol')" class="p-error">URL must use http or https protocol</small>
+    </div>
+
+    <div class="field">
+      <label for="instance-apikey">API Key *</label>
+      <input 
+        id="instance-apikey"
+        type="password" 
+        pInputText 
+        formControlName="apiKey" 
+        placeholder="Your Whisparr API key"
+        class="w-full"
+      />
+      <small *ngIf="hasError(instanceForm, 'apiKey', 'required')" class="p-error">API key is required</small>
+    </div>
+  </form>
+
+  <ng-template pTemplate="footer">
+    <div class="modal-footer">
+      <button 
+        pButton 
+        type="button" 
+        label="Cancel" 
+        class="p-button-text"
+        (click)="closeInstanceModal()"
+      ></button>
+      <button 
+        pButton 
+        type="button" 
+        label="Save" 
+        icon="pi pi-save"
+        class="p-button-primary ml-2"
+        [disabled]="instanceForm.invalid || whisparrSaving()"
+        [loading]="whisparrSaving()"
+        (click)="saveInstance()"
+      ></button>
+    </div>
+  </ng-template>
+</p-dialog>
+
+<!-- Confirmation Dialog -->
+<p-confirmDialog></p-confirmDialog> 

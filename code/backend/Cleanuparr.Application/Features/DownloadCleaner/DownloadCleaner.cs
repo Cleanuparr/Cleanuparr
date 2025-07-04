@@ -131,7 +131,8 @@ public sealed class DownloadCleaner : GenericHandler
         await ProcessArrConfigAsync(ContextProvider.Get<ArrConfig>(nameof(InstanceType.Radarr)), InstanceType.Radarr, true);
         await ProcessArrConfigAsync(ContextProvider.Get<ArrConfig>(nameof(InstanceType.Lidarr)), InstanceType.Lidarr, true);
         await ProcessArrConfigAsync(ContextProvider.Get<ArrConfig>(nameof(InstanceType.Readarr)), InstanceType.Readarr, true);
-
+        await ProcessArrConfigAsync(ContextProvider.Get<ArrConfig>(nameof(InstanceType.Whisparr)), InstanceType.Whisparr, true);
+        
         if (isUnlinkedEnabled && downloadServiceWithDownloads.Count > 0)
         {
             _logger.LogInformation("Found {count} potential downloads to change category", downloadServiceWithDownloads.Sum(x => x.Item2.Count));

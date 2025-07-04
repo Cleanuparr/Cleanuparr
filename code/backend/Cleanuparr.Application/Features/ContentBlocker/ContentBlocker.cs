@@ -64,6 +64,7 @@ public sealed class ContentBlocker : GenericHandler
         var radarrConfig = ContextProvider.Get<ArrConfig>(nameof(InstanceType.Radarr));
         var lidarrConfig = ContextProvider.Get<ArrConfig>(nameof(InstanceType.Lidarr));
         var readarrConfig = ContextProvider.Get<ArrConfig>(nameof(InstanceType.Readarr));
+        var whisparrConfig = ContextProvider.Get<ArrConfig>(nameof(InstanceType.Whisparr));
 
         if (config.Sonarr.Enabled)
         {
@@ -83,6 +84,11 @@ public sealed class ContentBlocker : GenericHandler
         if (config.Readarr.Enabled)
         {
             await ProcessArrConfigAsync(readarrConfig, InstanceType.Readarr);
+        }
+        
+        if (config.Whisparr.Enabled)
+        {
+            await ProcessArrConfigAsync(whisparrConfig, InstanceType.Whisparr);
         }
     }
 
