@@ -139,6 +139,38 @@ public static class ApiDI
         // Map SignalR hubs
         app.MapHub<HealthStatusHub>("/api/hubs/health");
         app.MapHub<AppHub>("/api/hubs/app");
+        
+        app.MapGet("/manifest.webmanifest", (HttpContext context) =>
+        {
+            var basePath = context.Request.PathBase.HasValue
+                ? context.Request.PathBase.Value
+                : "/";
+
+            var manifest = new
+            {
+                name = "Cleanuparr",
+                short_name = "Cleanuparr",
+                start_url = basePath,
+                display = "standalone",
+                background_color = "#ffffff",
+                theme_color = "#ffffff",
+                icons = new[]
+                {
+                    new {
+                        src = "assets/icons/icon-192x192.png",
+                        sizes = "192x192",
+                        type = "image/png"
+                    },
+                    new {
+                        src = "assets/icons/icon-512x512.png",
+                        sizes = "512x512",
+                        type = "image/png"
+                    }
+                }
+            };
+
+            return Results.Json(manifest, contentType: "application/manifest+json");
+        });
 
         return app;
     }
