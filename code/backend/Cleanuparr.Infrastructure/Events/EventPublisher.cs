@@ -1,4 +1,7 @@
+using System.Dynamic;
 using System.Text.Json;
+using System.Text.Json.Serialization;
+using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.Notifications;
@@ -47,7 +50,10 @@ public class EventPublisher
             EventType = eventType,
             Message = message,
             Severity = severity,
-            Data = data != null ? JsonSerializer.Serialize(data) : null,
+            Data = data != null ? JsonSerializer.Serialize(data, new JsonSerializerOptions
+            {
+                Converters = { new JsonStringEnumConverter() }
+            }) : null,
             TrackingId = trackingId
         };
 
@@ -75,12 +81,37 @@ public class EventPublisher
             StrikeType.SlowTime => EventType.SlowTimeStrike,
         };
 
+        dynamic data;
+
+        if (strikeType is StrikeType.FailedImport)
+        {
+            QueueRecord record = ContextProvider.Get<QueueRecord>(nameof(QueueRecord));
+            data = new
+            {
+                hash,
+                itemName,
+                strikeCount,
+                strikeType,
+                failedImportReasons = record.StatusMessages ?? [],
+            };
+        }
+        else
+        {
+            data = new
+            {
+                hash,
+                itemName,
+                strikeCount,
+                strikeType,
+            };
+        }
+
         // Publish the event
         await PublishAsync(
             eventType,
             $"Item '{itemName}' has been struck {strikeCount} times for reason '{strikeType}'",
             EventSeverity.Important,
-            data: new { hash, itemName, strikeCount, strikeType });
+            data: data);
 
         // Send notification (uses ContextProvider internally)
         await _notificationPublisher.NotifyStrike(strikeType, strikeCount);

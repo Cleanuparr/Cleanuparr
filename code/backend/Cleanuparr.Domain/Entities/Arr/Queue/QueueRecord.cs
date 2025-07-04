@@ -1,5 +1,3 @@
-using Data.Models.Arr.Queue;
-
 namespace Cleanuparr.Domain.Entities.Arr.Queue;
 
 public sealed record QueueRecord

@@ -1,6 +1,4 @@
-﻿using Data.Models.Arr.Queue;
-
-namespace Cleanuparr.Domain.Entities.Arr.Queue;
+﻿namespace Cleanuparr.Domain.Entities.Arr.Queue;
 
 public record QueueListResponse
 {
