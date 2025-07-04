@@ -65,7 +65,7 @@ public abstract class ArrClient : IArrClient
         return queueResponse;
     }
 
-    public virtual async Task<bool> ShouldRemoveFromQueue(InstanceType instanceType, QueueRecord record, bool isPrivateDownload, ushort arrMaxStrikes)
+    public virtual async Task<bool> ShouldRemoveFromQueue(InstanceType instanceType, QueueRecord record, bool isPrivateDownload, short arrMaxStrikes)
     {
         var queueCleanerConfig = ContextProvider.Get<QueueCleanerConfig>();
         

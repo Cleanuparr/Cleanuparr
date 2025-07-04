@@ -1,4 +1,4 @@
-﻿using Cleanuparr.Domain.Entities.Arr.Queue;
+using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Data.Models.Arr;
@@ -9,7 +9,7 @@ public interface IArrClient
 {
     Task<QueueListResponse> GetQueueItemsAsync(ArrInstance arrInstance, int page);
 
-    Task<bool> ShouldRemoveFromQueue(InstanceType instanceType, QueueRecord record, bool isPrivateDownload, ushort arrMaxStrikes);
+    Task<bool> ShouldRemoveFromQueue(InstanceType instanceType, QueueRecord record, bool isPrivateDownload, short arrMaxStrikes);
 
     Task DeleteQueueItemAsync(ArrInstance arrInstance, QueueRecord record, bool removeFromClient, DeleteReason deleteReason);
     

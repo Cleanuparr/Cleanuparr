@@ -146,7 +146,7 @@ public sealed class QueueCleaner : GenericHandler
                 var config = ContextProvider.Get<QueueCleanerConfig>();
                 
                 // failed import check
-                bool shouldRemoveFromArr = await arrClient.ShouldRemoveFromQueue(instanceType, record, downloadCheckResult.IsPrivate, config.FailedImport.MaxStrikes);
+                bool shouldRemoveFromArr = await arrClient.ShouldRemoveFromQueue(instanceType, record, downloadCheckResult.IsPrivate, instance.ArrConfig.FailedImportMaxStrikes);
                 DeleteReason deleteReason = downloadCheckResult.ShouldRemove ? downloadCheckResult.DeleteReason : DeleteReason.FailedImport;
                 
                 if (!shouldRemoveFromArr && !downloadCheckResult.ShouldRemove)
