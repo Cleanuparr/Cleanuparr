@@ -18,25 +18,50 @@ public sealed class AppriseProxy : IAppriseProxy
 
     public async Task SendNotification(ApprisePayload payload, AppriseConfig config)
     {
-        string content = JsonConvert.SerializeObject(payload, new JsonSerializerSettings
+        try
         {
-            ContractResolver = new CamelCasePropertyNamesContractResolver()
-        });
-        
-        UriBuilder uriBuilder = new(config.Url.ToString());
-        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/notify/{config.Key}";
-        
-        using HttpRequestMessage request = new(HttpMethod.Post, uriBuilder.Uri);
-        request.Method = HttpMethod.Post;
-        request.Content = new StringContent(content, Encoding.UTF8, "application/json");
+            string content = JsonConvert.SerializeObject(payload, new JsonSerializerSettings
+            {
+                ContractResolver = new CamelCasePropertyNamesContractResolver(),
+                NullValueHandling = NullValueHandling.Ignore
+            });
 
-        if (!string.IsNullOrEmpty(config.Url.UserInfo))
-        {
-            var byteArray = Encoding.ASCII.GetBytes(config.Url.UserInfo);
-            request.Headers.Authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(byteArray));
+            UriBuilder uriBuilder = new(config.Url.ToString());
+            uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/notify/{config.Key}";
+
+            using HttpRequestMessage request = new(HttpMethod.Post, uriBuilder.Uri);
+            request.Method = HttpMethod.Post;
+            request.Content = new StringContent(content, Encoding.UTF8, "application/json");
+
+            if (!string.IsNullOrEmpty(config.Url.UserInfo))
+            {
+                var byteArray = Encoding.ASCII.GetBytes(config.Url.UserInfo);
+                request.Headers.Authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(byteArray));
+            }
+
+            using HttpResponseMessage response = await _httpClient.SendAsync(request);
+            response.EnsureSuccessStatusCode();
         }
-        
-        using HttpResponseMessage response = await _httpClient.SendAsync(request);
-        response.EnsureSuccessStatusCode();
+        catch (HttpRequestException exception)
+        {
+            if (exception.StatusCode is null)
+            {
+                throw new AppriseException("Unable to send notification", exception);
+            }
+
+            switch ((int)exception.StatusCode)
+            {
+                case 401:
+                    throw new AppriseException("Unable to send notification | API key is invalid");
+                case 424:
+                    throw new AppriseException("Your tags are not configured correctly", exception);
+                case 502:
+                case 503:
+                case 504:
+                    throw new AppriseException("Unable to send notification | service unavailable", exception);
+                default:
+                    throw new AppriseException("Unable to send notification", exception);
+            }
+        }
     }
 }

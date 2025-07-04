@@ -86,6 +86,7 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
       apprise: this.formBuilder.group({
         fullUrl: [''],
         key: [''],
+        tags: [''],
         onFailedImportStrike: [false],
         onStalledStrike: [false],
         onSlowStrike: [false],
@@ -114,6 +115,7 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
           apprise: config.apprise || {
             fullUrl: '',
             key: '',
+            tags: '',
             onFailedImportStrike: false,
             onStalledStrike: false,
             onSlowStrike: false,
@@ -270,6 +272,7 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
       apprise: {
         fullUrl: '',
         key: '',
+        tags: '',
         onFailedImportStrike: false,
         onStalledStrike: false,
         onSlowStrike: false,

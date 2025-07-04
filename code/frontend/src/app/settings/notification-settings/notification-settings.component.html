@@ -53,10 +53,7 @@
                    title="Click for documentation">
                 </i>
                 Channel ID
-                <i class="pi pi-info-circle field-info-icon" 
-                   (click)="openFieldDocs('notifiarr.channelId')"
-                   title="Click for documentation">
-                </i>
+
               </label>
               <div class="field-input">
                 <input type="text" pInputText formControlName="channelId" inputId="notifiarrChannelId" placeholder="Enter channel ID" />
@@ -137,6 +134,21 @@
               <div class="field-input">
                 <input type="text" pInputText formControlName="key" inputId="appriseKey" placeholder="Enter key" />
                 <small class="form-helper-text">The key of your Apprise config</small>
+              </div>
+            </div>
+
+            <!-- Tags -->
+            <div class="field-row">
+              <label class="field-label">
+                <i class="pi pi-info-circle field-info-icon" 
+                   (click)="openFieldDocs('apprise.tags')"
+                   title="Click for documentation">
+                </i>
+                Tags
+              </label>
+              <div class="field-input">
+                <input type="text" pInputText formControlName="tags" inputId="appriseTags" placeholder="Enter tags (comma or space separated)" />
+                <small class="form-helper-text">Optionally notify only those tagged accordingly. Use a comma (,) to OR your tags and a space ( ) to AND them.</small>
               </div>
             </div>
   
