@@ -48,7 +48,7 @@ public sealed class AppriseProvider : NotificationProvider<AppriseConfig>
         await _proxy.SendNotification(BuildPayload(notification, NotificationType.Warning), Config);
     }
     
-    private static ApprisePayload BuildPayload(ArrNotification notification, NotificationType notificationType)
+    private ApprisePayload BuildPayload(ArrNotification notification, NotificationType notificationType)
     {
         StringBuilder body = new();
         body.AppendLine(notification.Description);
@@ -67,12 +67,13 @@ public sealed class AppriseProvider : NotificationProvider<AppriseConfig>
             Title = notification.Title,
             Body = body.ToString(),
             Type = notificationType.ToString().ToLowerInvariant(),
+            Tags = Config.Tags,
         };
         
         return payload;
     }
     
-    private static ApprisePayload BuildPayload(Notification notification, NotificationType notificationType)
+    private ApprisePayload BuildPayload(Notification notification, NotificationType notificationType)
     {
         StringBuilder body = new();
         body.AppendLine(notification.Description);
@@ -88,6 +89,7 @@ public sealed class AppriseProvider : NotificationProvider<AppriseConfig>
             Title = notification.Title,
             Body = body.ToString(),
             Type = notificationType.ToString().ToLowerInvariant(),
+            Tags = Config.Tags,
         };
         
         return payload;

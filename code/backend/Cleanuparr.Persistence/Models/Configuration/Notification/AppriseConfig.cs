@@ -11,6 +11,8 @@ public sealed record AppriseConfig : NotificationConfig
     
     public string? Key { get; set; }
     
+    public string? Tags { get; set; }
+    
     public override bool IsValid()
     {
         if (Url is null)
