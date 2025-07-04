@@ -4,7 +4,6 @@ using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.Notifications.Models;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
-using Data.Models.Arr.Queue;
 using Infrastructure.Interceptors;
 using Mapster;
 using MassTransit;

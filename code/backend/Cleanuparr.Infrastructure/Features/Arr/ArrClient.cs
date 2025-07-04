@@ -7,7 +7,6 @@ using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
 using Cleanuparr.Shared.Helpers;
 using Data.Models.Arr;
-using Data.Models.Arr.Queue;
 using Infrastructure.Interceptors;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -105,6 +104,12 @@ public abstract class ArrClient : IArrClient
             }
             
             ushort maxStrikes = arrMaxStrikes > 0 ? (ushort)arrMaxStrikes : queueCleanerConfig.FailedImport.MaxStrikes;
+            
+            _logger.LogInformation(
+                "Item {title} has failed import status with the following reason(s):\n{messages}",
+                record.Title,
+                string.Join("\n",  record.StatusMessages?.Select(JsonConvert.SerializeObject) ?? [])
+            );
             
             return await _striker.StrikeAndCheckLimit(
                 record.DownloadId,
@@ -207,7 +212,7 @@ public abstract class ArrClient : IArrClient
         return response;
     }
     
-    private bool HasIgnoredPatterns(QueueRecord record)
+    private static bool HasIgnoredPatterns(QueueRecord record)
     {
         var queueCleanerConfig = ContextProvider.Get<QueueCleanerConfig>();
         
