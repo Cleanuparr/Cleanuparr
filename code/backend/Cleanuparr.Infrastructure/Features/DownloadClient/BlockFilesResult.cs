@@ -1,4 +1,6 @@
-﻿namespace Cleanuparr.Infrastructure.Features.DownloadClient;
+﻿using Cleanuparr.Domain.Enums;
+
+namespace Cleanuparr.Infrastructure.Features.DownloadClient;
 
 public sealed record BlockFilesResult
 {
@@ -13,4 +15,6 @@ public sealed record BlockFilesResult
     public bool IsPrivate { get; set; }
     
     public bool Found { get; set; }
+    
+    public DeleteReason DeleteReason { get; set; } = DeleteReason.None;
 }

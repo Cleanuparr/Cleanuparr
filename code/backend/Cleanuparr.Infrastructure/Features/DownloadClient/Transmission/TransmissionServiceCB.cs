@@ -67,6 +67,14 @@ public partial class TransmissionService
 
             totalFiles++;
             
+            if (IsDefinitelyMalware(download.Files[i].Name))
+            {
+                _logger.LogInformation("malware file found | {file} | {title}", download.Files[i].Name, download.Name);
+                result.ShouldRemove = true;
+                result.DeleteReason = DeleteReason.MalwareFileFound;
+                return result;
+            }
+            
             if (!download.FileStats[i].Wanted.Value)
             {
                 totalUnwantedFiles++;
@@ -91,6 +99,7 @@ public partial class TransmissionService
         if (totalUnwantedFiles == totalFiles)
         {
             result.ShouldRemove = true;
+            result.DeleteReason = DeleteReason.AllFilesBlocked;
         }
         
         _logger.LogDebug("marking {count} unwanted files as skipped for {name}", totalUnwantedFiles, download.Name);

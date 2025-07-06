@@ -74,6 +74,13 @@ public partial class DelugeService
         {
             totalFiles++;
             int priority = file.Priority;
+            
+            if (IsDefinitelyMalware(name))
+            {
+                _logger.LogInformation("malware file found | {file} | {title}", file.Path, download.Name);
+                result.ShouldRemove = true;
+                result.DeleteReason = DeleteReason.MalwareFileFound;
+            }
 
             if (file.Priority is 0)
             {
@@ -91,6 +98,11 @@ public partial class DelugeService
             priorities.Add(file.Index, priority);
         });
 
+        if (result.ShouldRemove)
+        {
+            return result;
+        }
+
         if (!hasPriorityUpdates)
         {
             return result;
@@ -106,6 +118,7 @@ public partial class DelugeService
         if (totalUnwantedFiles == totalFiles)
         {
             result.ShouldRemove = true;
+            result.DeleteReason = DeleteReason.AllFilesBlocked;
         }
 
         await _dryRunInterceptor.InterceptAsync(ChangeFilesPriority, hash, sortedPriorities);

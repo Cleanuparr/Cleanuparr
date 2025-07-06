@@ -89,6 +89,14 @@ public partial class QBitService
                 continue;
             }
 
+            if (IsDefinitelyMalware(file.Name))
+            {
+                _logger.LogInformation("malware file found | {file} | {title}", file.Name, download.Name);
+                result.ShouldRemove = true;
+                result.DeleteReason = DeleteReason.MalwareFileFound;
+                return result;
+            }
+
             if (_filenameEvaluator.IsValid(file.Name, blocklistType, patterns, regexes))
             {
                 continue;
@@ -107,6 +115,7 @@ public partial class QBitService
         if (totalUnwantedFiles == totalFiles)
         {
             result.ShouldRemove = true;
+            result.DeleteReason = DeleteReason.AllFilesBlocked;
         }
 
         foreach (int fileIndex in unwantedFiles)

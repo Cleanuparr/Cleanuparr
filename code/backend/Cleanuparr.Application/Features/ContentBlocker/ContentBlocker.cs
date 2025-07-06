@@ -52,7 +52,7 @@ public sealed class ContentBlocker : GenericHandler
         
         var config = ContextProvider.Get<ContentBlockerConfig>();
         
-        if (!config.Sonarr.Enabled && !config.Radarr.Enabled && !config.Lidarr.Enabled)
+        if (!config.Sonarr.Enabled && !config.Radarr.Enabled && !config.Lidarr.Enabled && !config.Readarr.Enabled && !config.Whisparr.Enabled)
         {
             _logger.LogWarning("No blocklists are enabled");
             return;
@@ -206,7 +206,7 @@ public sealed class ContentBlocker : GenericHandler
                     record,
                     group.Count() > 1,
                     removeFromClient,
-                    DeleteReason.AllFilesBlocked
+                    result.DeleteReason
                 );
             }
         });
