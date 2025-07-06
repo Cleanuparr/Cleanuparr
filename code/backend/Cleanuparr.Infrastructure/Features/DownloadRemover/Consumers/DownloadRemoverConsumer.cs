@@ -30,7 +30,7 @@ public class DownloadRemoverConsumer<T> : IConsumer<QueueItemRemoveRequest<T>>
         catch (Exception exception)
         {
             _logger.LogError(exception,
-                "failed to remove queue item| {title} | {url}",
+                "failed to remove queue item | {title} | {url}",
                 context.Message.Record.Title,
                 context.Message.Instance.Url
             );
