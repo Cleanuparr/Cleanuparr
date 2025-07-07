@@ -11,4 +11,5 @@ public enum DeleteReason
     AllFilesSkipped,
     AllFilesSkippedByQBit,
     AllFilesBlocked,
+    MalwareFileFound,
 }

@@ -106,6 +106,17 @@ public sealed class BlocklistProvider
                 changedCount++;
             }
             
+            // Check and update Whisparr blocklist if needed
+            string whisparrHash = GenerateSettingsHash(contentBlockerConfig.Whisparr);
+            if (shouldReload || !_configHashes.TryGetValue(InstanceType.Whisparr, out string? oldWhisparrHash) || whisparrHash != oldWhisparrHash)
+            {
+                _logger.LogDebug("Loading Whisparr blocklist");
+                
+                await LoadPatternsAndRegexesAsync(contentBlockerConfig.Whisparr, InstanceType.Whisparr);
+                _configHashes[InstanceType.Whisparr] = whisparrHash;
+                changedCount++;
+            }
+            
             if (changedCount > 0)
             {
                 _logger.LogInformation("Successfully loaded {count} blocklists", changedCount);

@@ -84,6 +84,14 @@ public partial class QBitService
             }
 
             totalFiles++;
+            
+            if (IsDefinitelyMalware(file.Name))
+            {
+                _logger.LogInformation("malware file found | {file} | {title}", file.Name, download.Name);
+                result.ShouldRemove = true;
+                result.DeleteReason = DeleteReason.MalwareFileFound;
+                return result;
+            }
 
             if (file.Priority is TorrentContentPriority.Skip)
             {
@@ -113,6 +121,7 @@ public partial class QBitService
         {
             _logger.LogDebug("All files are blocked for {name}", download.Name);
             result.ShouldRemove = true;
+            result.DeleteReason = DeleteReason.AllFilesBlocked;
         }
         
         _logger.LogDebug("Marking {count} unwanted files as skipped for {name}", totalUnwantedFiles, download.Name);

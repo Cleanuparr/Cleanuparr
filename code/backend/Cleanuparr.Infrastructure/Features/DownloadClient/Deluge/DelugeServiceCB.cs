@@ -75,6 +75,18 @@ public partial class DelugeService
             totalFiles++;
             int priority = file.Priority;
 
+            if (result.ShouldRemove)
+            {
+                return;
+            }
+            
+            if (IsDefinitelyMalware(name))
+            {
+                _logger.LogInformation("malware file found | {file} | {title}", file.Path, download.Name);
+                result.ShouldRemove = true;
+                result.DeleteReason = DeleteReason.MalwareFileFound;
+            }
+
             if (file.Priority is 0)
             {
                 _logger.LogTrace("File is already skipped | {file}", file.Path);
@@ -93,6 +105,11 @@ public partial class DelugeService
             priorities.Add(file.Index, priority);
         });
 
+        if (result.ShouldRemove)
+        {
+            return result;
+        }
+
         if (!hasPriorityUpdates)
         {
             return result;
@@ -109,6 +126,7 @@ public partial class DelugeService
         {
             _logger.LogDebug("All files are blocked for {name}", download.Name);
             result.ShouldRemove = true;
+            result.DeleteReason = DeleteReason.AllFilesBlocked;
         }
         
         _logger.LogDebug("Marking {count} unwanted files as skipped for {name}", totalUnwantedFiles, download.Name);

@@ -100,6 +100,16 @@ public abstract class DownloadService : IDownloadService
     
     /// <inheritdoc/>
     public abstract Task<BlockFilesResult> BlockUnwantedFilesAsync(string hash, IReadOnlyList<string> ignoredDownloads);
+
+    protected bool IsDefinitelyMalware(string filename)
+    {
+        if (filename.Contains("thepirateheaven.org", StringComparison.InvariantCultureIgnoreCase))
+        {
+            return true;
+        }
+
+        return false;
+    }
     
     protected void ResetStalledStrikesOnProgress(string hash, long downloaded)
     {
