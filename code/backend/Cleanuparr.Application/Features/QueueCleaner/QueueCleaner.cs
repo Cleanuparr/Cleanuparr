@@ -107,7 +107,7 @@ public sealed class QueueCleaner : GenericHandler
 
                 DownloadCheckResult downloadCheckResult = new();
 
-                if (record.Protocol is "torrent")
+                if (record.Protocol.Contains("torrent", StringComparison.InvariantCultureIgnoreCase))
                 {
                     var torrentClients = downloadServices
                         .Where(x => x.ClientConfig.Type is DownloadClientType.Torrent)
