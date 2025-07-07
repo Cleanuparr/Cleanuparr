@@ -1,6 +1,4 @@
-﻿using System.Collections.Concurrent;
-using System.Text.RegularExpressions;
-using Cleanuparr.Domain.Entities;
+﻿using Cleanuparr.Domain.Entities;
 using Cleanuparr.Domain.Entities.Deluge.Response;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Extensions;
@@ -61,6 +59,7 @@ public partial class DelugeService
         if (shouldRemove)
         {
             // remove if all files are unwanted
+            _logger.LogTrace("all files are unwanted | removing download | {name}", download.Name);
             result.ShouldRemove = true;
             result.DeleteReason = DeleteReason.AllFilesSkipped;
             return result;
@@ -95,11 +94,13 @@ public partial class DelugeService
         
         if (download.State is null || !download.State.Equals("Downloading", StringComparison.InvariantCultureIgnoreCase))
         {
+            _logger.LogTrace("skip slow check | item is in {state} state | {name}", download.State, download.Name);
             return (false, DeleteReason.None);
         }
         
         if (download.DownloadSpeed <= 0)
         {
+            _logger.LogTrace("skip slow check | download speed is 0 | {name}", download.Name);
             return (false, DeleteReason.None);
         }
         
@@ -137,6 +138,7 @@ public partial class DelugeService
         
         if (queueCleanerConfig.Stalled.MaxStrikes is 0)
         {
+            _logger.LogTrace("skip stalled check | max strikes is 0 | {name}", status.Name);
             return (false, DeleteReason.None);
         }
         
@@ -149,11 +151,13 @@ public partial class DelugeService
         
         if (status.State is null || !status.State.Equals("Downloading", StringComparison.InvariantCultureIgnoreCase))
         {
+            _logger.LogTrace("skip stalled check | download is in {state} state | {name}", status.State, status.Name);
             return (false, DeleteReason.None);
         }
 
         if (status.Eta > 0)
         {
+            _logger.LogTrace("skip stalled check | download is not stalled | {name}", status.Name);
             return (false, DeleteReason.None);
         }
         
