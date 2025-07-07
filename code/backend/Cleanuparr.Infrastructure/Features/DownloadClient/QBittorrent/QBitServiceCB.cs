@@ -82,19 +82,19 @@ public partial class QBitService
             }
 
             totalFiles++;
-
-            if (file.Priority is TorrentContentPriority.Skip)
-            {
-                totalUnwantedFiles++;
-                continue;
-            }
-
+            
             if (IsDefinitelyMalware(file.Name))
             {
                 _logger.LogInformation("malware file found | {file} | {title}", file.Name, download.Name);
                 result.ShouldRemove = true;
                 result.DeleteReason = DeleteReason.MalwareFileFound;
                 return result;
+            }
+
+            if (file.Priority is TorrentContentPriority.Skip)
+            {
+                totalUnwantedFiles++;
+                continue;
             }
 
             if (_filenameEvaluator.IsValid(file.Name, blocklistType, patterns, regexes))

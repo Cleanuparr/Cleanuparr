@@ -74,6 +74,11 @@ public partial class DelugeService
         {
             totalFiles++;
             int priority = file.Priority;
+
+            if (result.ShouldRemove)
+            {
+                return;
+            }
             
             if (IsDefinitelyMalware(name))
             {
