@@ -27,6 +27,7 @@ public sealed class Striker : IStriker
     {
         if (maxStrikes is 0)
         {
+            _logger.LogTrace("skip striking for {reason} | max strikes is 0 | {name}", strikeType, itemName);
             return false;
         }
         

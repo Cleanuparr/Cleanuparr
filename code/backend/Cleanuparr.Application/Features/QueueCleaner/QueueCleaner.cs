@@ -141,6 +141,10 @@ public sealed class QueueCleaner : GenericHandler
                             _logger.LogWarning("Download not found in any torrent client | {title}", record.Title);
                         }
                     }
+                    else
+                    {
+                        _logger.LogDebug("No torrent clients enabled");
+                    }
                 }
                 
                 var config = ContextProvider.Get<QueueCleanerConfig>();

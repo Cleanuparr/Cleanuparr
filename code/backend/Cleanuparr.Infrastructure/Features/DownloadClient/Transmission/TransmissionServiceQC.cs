@@ -1,6 +1,4 @@
-﻿using System.Collections.Concurrent;
-using System.Text.RegularExpressions;
-using Cleanuparr.Domain.Entities;
+﻿using Cleanuparr.Domain.Entities;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Extensions;
 using Cleanuparr.Infrastructure.Features.Context;
@@ -56,6 +54,7 @@ public partial class TransmissionService
         if (shouldRemove)
         {
             // remove if all files are unwanted
+            _logger.LogDebug("all files are unwanted | removing download | {name}", download.Name);
             result.ShouldRemove = true;
             result.DeleteReason = DeleteReason.AllFilesSkipped;
             return result;
@@ -100,11 +99,13 @@ public partial class TransmissionService
         if (download.Status is not 4)
         {
             // not in downloading state
+            _logger.LogTrace("skip slow check | download is in {state} state | {name}", download.Status, download.Name);
             return (false, DeleteReason.None);
         }
         
         if (download.RateDownload <= 0)
         {
+            _logger.LogTrace("skip slow check | download speed is 0 | {name}", download.Name);
             return (false, DeleteReason.None);
         }
         
@@ -142,17 +143,20 @@ public partial class TransmissionService
         
         if (queueCleanerConfig.Stalled.MaxStrikes is 0)
         {
+            _logger.LogTrace("skip stalled check | max strikes is 0 | {name}", download.Name);
             return (false, DeleteReason.None);
         }
         
         if (download.Status is not 4)
         {
             // not in downloading state
+            _logger.LogTrace("skip stalled check | download is in {state} state | {name}", download.Status, download.Name);
             return (false, DeleteReason.None);
         }
         
         if (download.RateDownload > 0 || download.Eta > 0)
         {
+            _logger.LogTrace("skip stalled check | download is not stalled | {name}", download.Name);
             return (false, DeleteReason.None);
         }
         
