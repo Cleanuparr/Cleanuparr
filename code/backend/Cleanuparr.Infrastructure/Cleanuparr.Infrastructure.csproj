@@ -7,10 +7,6 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <Folder Include="Features\" />
-    </ItemGroup>
-
-    <ItemGroup>
       <PackageReference Include="FLM.QBittorrent" Version="1.0.1" />
       <PackageReference Include="FLM.Transmission" Version="1.0.3" />
       <PackageReference Include="Mapster" Version="7.4.0" />

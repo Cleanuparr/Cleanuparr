@@ -5,6 +5,8 @@ using Cleanuparr.Infrastructure.Events;
 using Cleanuparr.Infrastructure.Features.Arr;
 using Cleanuparr.Infrastructure.Features.ContentBlocker;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
+using Cleanuparr.Infrastructure.Features.DownloadHunter;
+using Cleanuparr.Infrastructure.Features.DownloadHunter.Interfaces;
 using Cleanuparr.Infrastructure.Features.DownloadRemover;
 using Cleanuparr.Infrastructure.Features.DownloadRemover.Interfaces;
 using Cleanuparr.Infrastructure.Features.Files;
@@ -44,6 +46,7 @@ public static class ServicesDI
             .AddTransient<ContentBlocker>()
             .AddTransient<DownloadCleaner>()
             .AddTransient<IQueueItemRemover, QueueItemRemover>()
+            .AddTransient<IDownloadHunter, DownloadHunter>()
             .AddTransient<IFilenameEvaluator, FilenameEvaluator>()
             .AddTransient<IHardLinkFileService, HardLinkFileService>()
             .AddTransient<UnixHardLinkFileService>()
