@@ -28,14 +28,31 @@ public partial class UTorrentService : DownloadService, IUTorrentService
         IDynamicHttpClientProvider httpClientProvider,
         EventPublisher eventPublisher,
         BlocklistProvider blocklistProvider,
-        DownloadClientConfig downloadClientConfig
+        DownloadClientConfig downloadClientConfig,
+        ILoggerFactory loggerFactory
     ) : base(
         logger, cache,
         filenameEvaluator, striker, dryRunInterceptor, hardLinkFileService,
         httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig
     )
     {
-        _client = new UTorrentClient(downloadClientConfig, _httpClient);
+        // Create the new layered client with dependency injection
+        var httpService = new UTorrentHttpService(_httpClient, downloadClientConfig, loggerFactory.CreateLogger<UTorrentHttpService>());
+        var authenticator = new UTorrentAuthenticator(
+            cache,
+            httpService,
+            downloadClientConfig,
+            loggerFactory.CreateLogger<UTorrentAuthenticator>()
+        );
+        var responseParser = new UTorrentResponseParser(loggerFactory.CreateLogger<UTorrentResponseParser>());
+        
+        _client = new UTorrentClient(
+            downloadClientConfig,
+            authenticator,
+            httpService,
+            responseParser,
+            loggerFactory.CreateLogger<UTorrentClient>()
+        );
     }
 
     public override void Dispose()

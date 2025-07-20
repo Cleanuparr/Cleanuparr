@@ -3,6 +3,7 @@ using Cleanuparr.Domain.Entities.UTorrent.Response;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.DownloadClient.UTorrent;
 using Cleanuparr.Persistence.Models.Configuration;
+using Microsoft.Extensions.Logging;
 using Moq;
 using Moq.Protected;
 using Newtonsoft.Json;
@@ -15,10 +16,18 @@ public class UTorrentClientTests
     private readonly UTorrentClient _client;
     private readonly Mock<HttpMessageHandler> _mockHttpHandler;
     private readonly DownloadClientConfig _config;
+    private readonly Mock<IUTorrentAuthenticator> _mockAuthenticator;
+    private readonly Mock<IUTorrentHttpService> _mockHttpService;
+    private readonly Mock<IUTorrentResponseParser> _mockResponseParser;
+    private readonly Mock<ILogger<UTorrentClient>> _mockLogger;
 
     public UTorrentClientTests()
     {
         _mockHttpHandler = new Mock<HttpMessageHandler>();
+        _mockAuthenticator = new Mock<IUTorrentAuthenticator>();
+        _mockHttpService = new Mock<IUTorrentHttpService>();
+        _mockResponseParser = new Mock<IUTorrentResponseParser>();
+        _mockLogger = new Mock<ILogger<UTorrentClient>>();
         
         _config = new DownloadClientConfig
         {
@@ -30,8 +39,13 @@ public class UTorrentClientTests
             Password = "password"
         };
 
-        var httpClient = new HttpClient(_mockHttpHandler.Object);
-        _client = new UTorrentClient(_config, httpClient);
+        _client = new UTorrentClient(
+            _config,
+            _mockAuthenticator.Object,
+            _mockHttpService.Object,
+            _mockResponseParser.Object,
+            _mockLogger.Object
+        );
     }
 
     [Fact]

@@ -128,11 +128,12 @@ public sealed class DownloadServiceFactory
         var httpClientProvider = _serviceProvider.GetRequiredService<IDynamicHttpClientProvider>();
         var eventPublisher = _serviceProvider.GetRequiredService<EventPublisher>();
         var blocklistProvider = _serviceProvider.GetRequiredService<BlocklistProvider>();
+        var loggerFactory = _serviceProvider.GetRequiredService<ILoggerFactory>();
         
         // Create the UTorrentService instance
         UTorrentService service = new(
             logger, cache, filenameEvaluator, striker, dryRunInterceptor,
-            hardLinkFileService, httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig
+            hardLinkFileService, httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, loggerFactory
         );
         
         return service;
