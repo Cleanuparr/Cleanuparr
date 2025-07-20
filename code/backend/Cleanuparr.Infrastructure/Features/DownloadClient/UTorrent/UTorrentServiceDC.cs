@@ -203,11 +203,14 @@ public partial class UTorrentService
                 continue;
             }
             
+            //TODO change label on download object
             await _dryRunInterceptor.InterceptAsync(ChangeLabel, download.Hash, downloadCleanerConfig.UnlinkedTargetCategory);
+            
+            await _eventPublisher.PublishCategoryChanged(download.Label, downloadCleanerConfig.UnlinkedTargetCategory);
             
             _logger.LogInformation("category changed for {name}", download.Name);
             
-            await _eventPublisher.PublishCategoryChanged(download.Label, downloadCleanerConfig.UnlinkedTargetCategory);
+            download.Label = downloadCleanerConfig.UnlinkedTargetCategory;
         }
     }
 
@@ -216,7 +219,7 @@ public partial class UTorrentService
     {
         hash = hash.ToLowerInvariant();
         
-        await _client.RemoveTorrentsAsync([hash], true);
+        await _client.RemoveTorrentsAsync([hash]);
     }
 
     protected async Task CreateLabel(string name)

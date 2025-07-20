@@ -206,92 +206,16 @@ public sealed class UTorrentClient
     }
 
     /// <summary>
-    /// Starts a torrent
-    /// </summary>
-    /// <param name="hash">Torrent hash</param>
-    public async Task StartTorrentAsync(string hash)
-    {
-        try
-        {
-            var request = UTorrentRequestFactory.CreateStartTorrentRequest(hash);
-            await SendAuthenticatedRequestAsync(request);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to start torrent {Hash} in µTorrent client '{ClientName}'", hash, _config.Name);
-            throw new UTorrentException($"Failed to start torrent {hash}: {ex.Message}", ex);
-        }
-    }
-
-    /// <summary>
-    /// Stops a torrent
-    /// </summary>
-    /// <param name="hash">Torrent hash</param>
-    public async Task StopTorrentAsync(string hash)
-    {
-        try
-        {
-            var request = UTorrentRequestFactory.CreateStopTorrentRequest(hash);
-            await SendAuthenticatedRequestAsync(request);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to stop torrent {Hash} in µTorrent client '{ClientName}'", hash, _config.Name);
-            throw new UTorrentException($"Failed to stop torrent {hash}: {ex.Message}", ex);
-        }
-    }
-
-    /// <summary>
-    /// Pauses a torrent
-    /// </summary>
-    /// <param name="hash">Torrent hash</param>
-    public async Task PauseTorrentAsync(string hash)
-    {
-        try
-        {
-            var request = UTorrentRequestFactory.CreatePauseTorrentRequest(hash);
-            await SendAuthenticatedRequestAsync(request);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to pause torrent {Hash} in µTorrent client '{ClientName}'", hash, _config.Name);
-            throw new UTorrentException($"Failed to pause torrent {hash}: {ex.Message}", ex);
-        }
-    }
-
-    /// <summary>
-    /// Forces a torrent to start
-    /// </summary>
-    /// <param name="hash">Torrent hash</param>
-    public async Task ForceStartTorrentAsync(string hash)
-    {
-        try
-        {
-            var request = UTorrentRequestFactory.CreateForceStartTorrentRequest(hash);
-            await SendAuthenticatedRequestAsync(request);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to force start torrent {Hash} in µTorrent client '{ClientName}'", hash, _config.Name);
-            throw new UTorrentException($"Failed to force start torrent {hash}: {ex.Message}", ex);
-        }
-    }
-
-    /// <summary>
     /// Removes torrents from µTorrent
     /// </summary>
     /// <param name="hashes">List of torrent hashes to remove</param>
-    /// <param name="deleteData">Whether to delete the data files as well</param>
-    public async Task RemoveTorrentsAsync(List<string> hashes, bool deleteData = false)
+    public async Task RemoveTorrentsAsync(List<string> hashes)
     {
         try
         {
             foreach (var hash in hashes)
             {
-                var request = deleteData 
-                    ? UTorrentRequestFactory.CreateRemoveTorrentWithDataRequest(hash)
-                    : UTorrentRequestFactory.CreateRemoveTorrentRequest(hash);
-                
+                var request = UTorrentRequestFactory.CreateRemoveTorrentWithDataRequest(hash);
                 await SendAuthenticatedRequestAsync(request);
             }
         }
