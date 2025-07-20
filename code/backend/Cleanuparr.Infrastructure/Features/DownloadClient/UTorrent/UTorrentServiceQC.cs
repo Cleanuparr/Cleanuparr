@@ -145,7 +145,6 @@ public partial class UTorrentService
         
         if (queueCleanerConfig.Stalled.IgnorePrivate && isPrivate)
         {
-            // Note: µTorrent doesn't expose private flag, so this check may not work as expected
             _logger.LogDebug("skip stalled check | download is private | {name}", download.Name);
             return (false, DeleteReason.None);
         }

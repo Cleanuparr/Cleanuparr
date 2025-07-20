@@ -333,7 +333,7 @@ export class DownloadClientSettingsComponent implements OnDestroy, CanComponentD
       case DownloadClientType.Deluge:
       case DownloadClientType.Transmission:
       case DownloadClientType.uTorrent:
-        return { typeName: frontendType.toString(), type: 'Torrent' };
+        return { typeName: DownloadClientType[frontendType], type: 'Torrent' };
       default:
         throw new Error(`Invalid client type: ${frontendType}`);
     }

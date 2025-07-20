@@ -100,7 +100,6 @@ public partial class UTorrentService
         
         _logger.LogDebug("changing priorities | torrent {hash}", hash);
 
-        // TODO
         // Convert to array for µTorrent API
         int[] sortedPriorities = new int[priorities.Count];
         for (int i = 0; i < priorities.Count; i++)

@@ -39,7 +39,7 @@ public partial class QBitService
 
         if (torrentProperties is null)
         {
-            _logger.LogDebug("failed to find torrent properties {name}", download.Name);
+            _logger.LogError("Failed to find torrent properties {name}", download.Name);
             return result;
         }
 

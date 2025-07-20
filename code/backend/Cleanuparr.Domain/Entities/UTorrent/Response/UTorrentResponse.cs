@@ -39,8 +39,8 @@ public sealed record UTorrentResponse<T>
             {
                 foreach (var jToken in jArray)
                 {
-                    var ceva = (JArray)jToken;
-                    var fileArray = ceva.ToObject<object[]>() ?? [];
+                    var fileTokenArray = (JArray)jToken;
+                    var fileArray = fileTokenArray.ToObject<object[]>() ?? [];
                     files.Add(new UTorrentFile
                     {
                         Name = fileArray[0].ToString() ?? string.Empty,

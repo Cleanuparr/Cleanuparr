@@ -33,4 +33,14 @@ public interface IUTorrentAuthenticator
     /// Invalidates the cached authentication session
     /// </summary>
     Task InvalidateSessionAsync();
+
+    /// <summary>
+    /// Gets whether the client is currently authenticated
+    /// </summary>
+    bool IsAuthenticated { get; }
+
+    /// <summary>
+    /// Gets the GUID cookie for the current session
+    /// </summary>
+    string GuidCookie { get; }
 }

@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using Cleanuparr.Domain.Exceptions;
 using Cleanuparr.Infrastructure.Helpers;
 using Cleanuparr.Persistence.Models.Configuration;
+using Cleanuparr.Shared.Helpers;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 
@@ -20,7 +21,6 @@ public class UTorrentAuthenticator : IUTorrentAuthenticator
     
     // Use a static concurrent dictionary to ensure same client instances share the same semaphore
     // This prevents multiple instances of the same client from authenticating simultaneously
-    private static readonly ConcurrentDictionary<string, SemaphoreSlim> _authSemaphores = new();
     private readonly SemaphoreSlim _authSemaphore;
     private readonly string _clientKey;
     
@@ -44,7 +44,14 @@ public class UTorrentAuthenticator : IUTorrentAuthenticator
         _clientKey = GetClientKey();
         
         // Get or create semaphore for this specific client configuration
-        _authSemaphore = _authSemaphores.GetOrAdd(_clientKey, _ => new SemaphoreSlim(1, 1));
+        if (_cache.TryGetValue<SemaphoreSlim>(_clientKey, out var authSemaphore) && authSemaphore is not null)
+        {
+            _authSemaphore = authSemaphore;
+            return;
+        }
+        
+        _authSemaphore = new SemaphoreSlim(1, 1);
+        _cache.Set(_clientKey, _authSemaphore, Constants.DefaultCacheEntryOptions);
     }
 
     /// <inheritdoc/>
