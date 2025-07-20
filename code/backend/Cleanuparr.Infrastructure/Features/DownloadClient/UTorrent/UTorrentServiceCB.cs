@@ -54,9 +54,8 @@ public partial class UTorrentService
             _logger.LogDebug("skip files check | no files found | {name}", download.Name);
             return result;
         }
-        
-        Dictionary<int, int> priorities = new();
-        bool hasPriorityUpdates = false;
+
+        List<int> fileIndexes = new(files.Count);
         long totalUnwantedFiles = 0;
         
         InstanceType instanceType = (InstanceType)ContextProvider.Get<object>(nameof(InstanceType));
@@ -75,37 +74,27 @@ public partial class UTorrentService
             }
             
             var file = files[i];
-            int priority = file.Priority;
 
             if (file.Priority == 0) // Already skipped
             {
                 totalUnwantedFiles++;
+                continue;
             }
 
             if (file.Priority != 0 && !_filenameEvaluator.IsValid(file.Name, blocklistType, patterns, regexes))
             {
                 totalUnwantedFiles++;
-                priority = 0; // Set to skip
-                hasPriorityUpdates = true;
+                fileIndexes.Add(i);
                 _logger.LogInformation("unwanted file found | {file}", file.Name);
             }
-            
-            priorities.Add(i, priority);
         }
 
-        if (!hasPriorityUpdates)
+        if (fileIndexes.Count is 0)
         {
             return result;
         }
         
         _logger.LogDebug("changing priorities | torrent {hash}", hash);
-
-        // Convert to array for µTorrent API
-        int[] sortedPriorities = new int[priorities.Count];
-        for (int i = 0; i < priorities.Count; i++)
-        {
-            sortedPriorities[i] = priorities[i];
-        }
 
         if (totalUnwantedFiles == files.Count)
         {
@@ -114,13 +103,13 @@ public partial class UTorrentService
             result.DeleteReason = DeleteReason.AllFilesBlocked;
         }
 
-        await _dryRunInterceptor.InterceptAsync(ChangeFilesPriority, hash, sortedPriorities);
+        await _dryRunInterceptor.InterceptAsync(ChangeFilesPriority, hash, fileIndexes);
 
         return result;
     }
     
-    protected virtual async Task ChangeFilesPriority(string hash, int[] priorities)
+    protected virtual async Task ChangeFilesPriority(string hash, List<int> fileIndexes)
     {
-        await _client.SetFilePrioritiesAsync(hash, priorities);
+        await _client.SetFilesPriorityAsync(hash, fileIndexes, 0);
     }
 } 

@@ -63,17 +63,18 @@ public static class UTorrentRequestFactory
     /// Creates a request to set file priorities for a torrent
     /// </summary>
     /// <param name="hash">Torrent hash</param>
-    /// <param name="priorities">Array of priorities (0=skip, 1=low, 2=normal, 3=high)</param>
+    /// <param name="fileIndexes"></param>
+    /// <param name="filePriority"></param>
     /// <returns>Request for set file priorities API call</returns>
-    public static UTorrentRequest CreateSetFilePrioritiesRequest(string hash, int[] priorities)
+    public static UTorrentRequest CreateSetFilePrioritiesRequest(string hash, List<int> fileIndexes, int filePriority)
     {
         var request = UTorrentRequest.Create("action=setprio", string.Empty)
-            .WithParameter("hash", hash);
+            .WithParameter("hash", hash)
+            .WithParameter("p", filePriority.ToString());
 
-        // Add each priority as a separate parameter
-        for (int i = 0; i < priorities.Length; i++)
+        foreach (int fileIndex in fileIndexes)
         {
-            request.WithParameter($"f{i}", priorities[i].ToString());
+            request.WithParameter("f", fileIndex.ToString());
         }
 
         return request;

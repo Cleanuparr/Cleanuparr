@@ -190,18 +190,19 @@ public sealed class UTorrentClient
     /// Sets file priorities for a torrent
     /// </summary>
     /// <param name="hash">Torrent hash</param>
-    /// <param name="priorities">Array of priorities (0=skip, 1=low, 2=normal, 3=high)</param>
-    public async Task SetFilePrioritiesAsync(string hash, int[] priorities)
+    /// <param name="fileIndexes">Index of the file to set priority for</param>
+    /// <param name="priority">File priority (0=skip, 1=low, 2=normal, 3=high)</param>
+    public async Task SetFilesPriorityAsync(string hash, List<int> fileIndexes, int priority)
     {
         try
         {
-            var request = UTorrentRequestFactory.CreateSetFilePrioritiesRequest(hash, priorities);
+            var request = UTorrentRequestFactory.CreateSetFilePrioritiesRequest(hash, fileIndexes, priority);
             await SendAuthenticatedRequestAsync(request);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to set file priorities for torrent {Hash} in µTorrent client '{ClientName}'", hash, _config.Name);
-            throw new UTorrentException($"Failed to set file priorities for torrent {hash}: {ex.Message}", ex);
+            _logger.LogError(ex, "Failed to set file priority for torrent {Hash} in µTorrent client '{ClientName}'", hash, _config.Name);
+            throw new UTorrentException($"Failed to set file priority for torrent {hash}: {ex.Message}", ex);
         }
     }
 

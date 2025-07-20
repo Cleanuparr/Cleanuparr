@@ -18,7 +18,7 @@ public sealed class UTorrentRequest
     /// <summary>
     /// Additional parameters for the request
     /// </summary>
-    public Dictionary<string, string> Parameters { get; set; } = new();
+    public List<(string Name, string Value)> Parameters { get; set; } = new();
 
     /// <summary>
     /// Constructs the query string for the API call
@@ -34,7 +34,7 @@ public sealed class UTorrentRequest
 
         foreach (var param in Parameters)
         {
-            queryParams.Add($"{Uri.EscapeDataString(param.Key)}={Uri.EscapeDataString(param.Value)}");
+            queryParams.Add($"{Uri.EscapeDataString(param.Name)}={Uri.EscapeDataString(param.Value)}");
         }
 
         return string.Join("&", queryParams);
@@ -63,7 +63,7 @@ public sealed class UTorrentRequest
     /// <returns>This instance for method chaining</returns>
     public UTorrentRequest WithParameter(string key, string value)
     {
-        Parameters[key] = value;
+        Parameters.Add((key, value));
         return this;
     }
 } 
