@@ -13,16 +13,16 @@ namespace Cleanuparr.Infrastructure.Http;
 public class DynamicHttpClientProvider : IDynamicHttpClientProvider
 {
     private readonly ILogger<DynamicHttpClientProvider> _logger;
-    private readonly IServiceProvider _serviceProvider;
+    private readonly IServiceScopeFactory _scopeFactory;
     private readonly IDynamicHttpClientFactory _dynamicHttpClientFactory;
 
     public DynamicHttpClientProvider(
         ILogger<DynamicHttpClientProvider> logger,
-        IServiceProvider serviceProvider,
+        IServiceScopeFactory scopeFactory,
         IDynamicHttpClientFactory dynamicHttpClientFactory)
     {
         _logger = logger;
-        _serviceProvider = serviceProvider;
+        _scopeFactory = scopeFactory;
         _dynamicHttpClientFactory = dynamicHttpClientFactory;
     }
 
@@ -49,7 +49,8 @@ public class DynamicHttpClientProvider : IDynamicHttpClientProvider
     /// <returns>A configured HttpClient instance</returns>
     private HttpClient CreateGenericClient(DownloadClientConfig downloadClientConfig)
     {
-        var dataContext = _serviceProvider.GetRequiredService<DataContext>();
+        using var scope = _scopeFactory.CreateScope();
+        using var dataContext = scope.ServiceProvider.GetRequiredService<DataContext>();
         var httpConfig = dataContext.GeneralConfigs.First();
         var clientName = GetClientName(downloadClientConfig);
         

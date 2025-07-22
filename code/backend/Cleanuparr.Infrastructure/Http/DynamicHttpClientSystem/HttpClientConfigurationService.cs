@@ -1,6 +1,7 @@
 using Cleanuparr.Persistence;
 using Cleanuparr.Shared.Helpers;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using DelugeService = Cleanuparr.Infrastructure.Features.DownloadClient.Deluge.DelugeService;
@@ -13,24 +14,27 @@ namespace Cleanuparr.Infrastructure.Http.DynamicHttpClientSystem;
 public class HttpClientConfigurationService : IHostedService
 {
     private readonly IDynamicHttpClientFactory _clientFactory;
-    private readonly DataContext _dataContext;
     private readonly ILogger<HttpClientConfigurationService> _logger;
+    private readonly IServiceScopeFactory _scopeFactory;
 
     public HttpClientConfigurationService(
         IDynamicHttpClientFactory clientFactory, 
-        DataContext dataContext,
-        ILogger<HttpClientConfigurationService> logger)
+        ILogger<HttpClientConfigurationService> logger,
+        IServiceScopeFactory scopeFactory)
     {
         _clientFactory = clientFactory;
-        _dataContext = dataContext;
         _logger = logger;
+        _scopeFactory = scopeFactory;
     }
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         try
         {
-            var config = await _dataContext.GeneralConfigs
+            await using var scope = _scopeFactory.CreateAsyncScope();
+            await using var dataContext = scope.ServiceProvider.GetRequiredService<DataContext>();
+            
+            var config = await dataContext.GeneralConfigs
                 .AsNoTracking()
                 .FirstAsync(cancellationToken);
             
