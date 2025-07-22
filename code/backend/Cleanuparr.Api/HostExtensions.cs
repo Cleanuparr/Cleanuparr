@@ -21,13 +21,16 @@ public static class HostExtensions
         logger.LogInformation("timezone: {tz}", TimeZoneInfo.Local.DisplayName);
         
         // Apply db migrations
-        var eventsContext = app.Services.GetRequiredService<EventsContext>();
+        var scopeFactory = app.Services.GetRequiredService<IServiceScopeFactory>();
+        await using var scope = scopeFactory.CreateAsyncScope();
+        
+        await using var eventsContext = scope.ServiceProvider.GetRequiredService<EventsContext>();
         if ((await eventsContext.Database.GetPendingMigrationsAsync()).Any())
         {
             await eventsContext.Database.MigrateAsync();
         }
 
-        var configContext = app.Services.GetRequiredService<DataContext>();
+        await using var configContext = scope.ServiceProvider.GetRequiredService<DataContext>();
         if ((await configContext.Database.GetPendingMigrationsAsync()).Any())
         {
             await configContext.Database.MigrateAsync();

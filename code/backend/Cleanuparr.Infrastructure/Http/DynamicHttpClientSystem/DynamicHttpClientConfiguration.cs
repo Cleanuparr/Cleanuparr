@@ -13,16 +13,17 @@ namespace Cleanuparr.Infrastructure.Http.DynamicHttpClientSystem;
 /// </summary>
 public class DynamicHttpClientConfiguration : IConfigureNamedOptions<HttpClientFactoryOptions>
 {
-    private readonly IServiceProvider _serviceProvider;
+    private readonly IServiceScopeFactory _scopeFactory;
 
-    public DynamicHttpClientConfiguration(IServiceProvider serviceProvider)
+    public DynamicHttpClientConfiguration(IServiceScopeFactory scopeFactory)
     {
-        _serviceProvider = serviceProvider;
+        _scopeFactory = scopeFactory;
     }
 
     public void Configure(string name, HttpClientFactoryOptions options)
     {
-        var configStore = _serviceProvider.GetRequiredService<IHttpClientConfigStore>();
+        using var scope = _scopeFactory.CreateScope();
+        var configStore = scope.ServiceProvider.GetRequiredService<IHttpClientConfigStore>();
         
         if (!configStore.TryGetConfiguration(name, out HttpClientConfig? config))
             return;
@@ -48,7 +49,8 @@ public class DynamicHttpClientConfiguration : IConfigureNamedOptions<HttpClientF
 
     private void ConfigureHandler(HttpMessageHandlerBuilder builder, HttpClientConfig config)
     {
-        var certValidationService = _serviceProvider.GetRequiredService<CertificateValidationService>();
+        using var scope = _scopeFactory.CreateScope();
+        var certValidationService = scope.ServiceProvider.GetRequiredService<CertificateValidationService>();
         
         switch (config.Type)
         {

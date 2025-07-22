@@ -1,4 +1,3 @@
-using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
 using Cleanuparr.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -13,9 +12,8 @@ namespace Cleanuparr.Infrastructure.Health;
 public class HealthCheckService : IHealthCheckService
 {
     private readonly ILogger<HealthCheckService> _logger;
-    private readonly IServiceProvider _serviceProvider;
-    private readonly DownloadServiceFactory _downloadServiceFactory;
     private readonly Dictionary<Guid, HealthStatus> _healthStatuses = new();
+    private readonly IServiceScopeFactory _scopeFactory;
     private readonly object _lockObject = new();
 
     /// <summary>
@@ -25,12 +23,11 @@ public class HealthCheckService : IHealthCheckService
 
     public HealthCheckService(
         ILogger<HealthCheckService> logger,
-        IServiceProvider serviceProvider,
-        DownloadServiceFactory downloadServiceFactory)
+        IServiceScopeFactory scopeFactory
+    )
     {
         _logger = logger;
-        _serviceProvider = serviceProvider;
-        _downloadServiceFactory = downloadServiceFactory;
+        _scopeFactory = scopeFactory;
     }
 
     /// <inheritdoc />
@@ -40,7 +37,8 @@ public class HealthCheckService : IHealthCheckService
 
         try
         {
-            var dataContext = _serviceProvider.GetRequiredService<DataContext>();
+            await using var scope = _scopeFactory.CreateAsyncScope();
+            await using var dataContext = scope.ServiceProvider.GetRequiredService<DataContext>();
             
             // Get the client configuration
             var downloadClientConfig = await dataContext.DownloadClients
@@ -63,7 +61,8 @@ public class HealthCheckService : IHealthCheckService
             }
 
             // Get the client instance
-            var client = _downloadServiceFactory.GetDownloadService(downloadClientConfig);
+            var downloadServiceFactory = scope.ServiceProvider.GetRequiredService<DownloadServiceFactory>();
+            var client = downloadServiceFactory.GetDownloadService(downloadClientConfig);
             
             // Execute the health check
             var healthResult = await client.HealthCheckAsync();
@@ -107,7 +106,8 @@ public class HealthCheckService : IHealthCheckService
         
         try
         {
-            var dataContext = _serviceProvider.GetRequiredService<DataContext>();
+            await using var scope = _scopeFactory.CreateAsyncScope();
+            await using var dataContext = scope.ServiceProvider.GetRequiredService<DataContext>();
             
             // Get all enabled client configurations
             var enabledClients = await dataContext.DownloadClients
