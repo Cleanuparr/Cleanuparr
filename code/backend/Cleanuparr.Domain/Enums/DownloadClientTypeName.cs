@@ -2,7 +2,8 @@
 
 public enum DownloadClientTypeName
 {
-    QBittorrent,
+    qBittorrent,
     Deluge,
     Transmission,
+    uTorrent,
 }

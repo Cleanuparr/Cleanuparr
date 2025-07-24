@@ -15,4 +15,10 @@ public static class CacheKeys
     public static string IgnoredDownloads(string name) => $"{name}_ignored";
     
     public static string DownloadMarkedForRemoval(string hash, Uri url) => $"remove_{hash.ToLowerInvariant()}_{url}";
+    
+    public static class UTorrent
+    {
+        public static string GetAuthTokenKey(string clientId) => $"utorrent:auth:token:{clientId}";
+        public static string GetGuidCookieKey(string clientId) => $"utorrent:auth:cookie:{clientId}";
+    }
 }

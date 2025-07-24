@@ -147,21 +147,21 @@
     <div class="field">
       <label for="client-type">
         <i class="pi pi-info-circle field-info-icon" 
-           (click)="openFieldDocs('type')" 
+           (click)="openFieldDocs('typeName')" 
            pTooltip="Click for documentation"></i>
         Client Type *
       </label>
       <p-select
         id="client-type"
-        formControlName="type"
-        [options]="clientTypeOptions"
+        formControlName="typeName"
+        [options]="typeNameOptions"
         optionLabel="label"
         optionValue="value"
         placeholder="Select client type"
         appendTo="body"
         class="w-full"
       ></p-select>
-      <small *ngIf="hasError(clientForm, 'type', 'required')" class="p-error">Client type is required</small>
+      <small *ngIf="hasError(clientForm, 'typeName', 'required')" class="p-error">Client type is required</small>
     </div>
 
     <ng-container>

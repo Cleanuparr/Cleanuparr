@@ -45,6 +45,20 @@ services:
       - TZ=Etc/UTC
 ```
 
+## Unraid
+
+Use the Unraid template available in the Community Applications plugin. If the template is not yet available, you can manually add using the above Docker Compose configuration or use this guide to create a custom template:
+
+1. Download the template from here: https://github.com/Cleanuparr/unraid/blob/main/templates/Cleanuparr.xml
+2. Rename the downloaded file to 'my-cleanuparr.xml'
+3. Drop it in the `/boot/config/plugins/dockerMan/templates-user/` folder of your Unraid machine
+4. Go to the Docker tab of the Unraid webui
+5. Click on Add Container
+6. From the `Template` dropdown menu, select `cleanuparr`
+7. Set the repository to `ghcr.io/cleanuparr/cleanuparr:latest`
+8. Most other settings can be left at default, with the exception of the downloads folder which should be mapped to where your *arr stack / torrent client downloads its files to
+
+
 ## 🖥️ Other Installation Methods
 
 - **Windows**: Download the installer from [GitHub Releases](https://github.com/Cleanuparr/Cleanuparr/releases)

@@ -39,7 +39,7 @@ public partial class QBitService
 
         if (torrentProperties is null)
         {
-            _logger.LogDebug("failed to find torrent properties {name}", download.Name);
+            _logger.LogError("Failed to find torrent properties {name}", download.Name);
             return result;
         }
 
@@ -60,9 +60,9 @@ public partial class QBitService
         
         IReadOnlyList<TorrentContent>? files = await _client.GetTorrentContentsAsync(hash);
 
-        if (files is null)
+        if (files?.Count is null or 0)
         {
-            _logger.LogDebug("torrent {hash} has no files", hash);
+            _logger.LogDebug("skip files check | no files found | {name}", download.Name);
             return result;
         }
 

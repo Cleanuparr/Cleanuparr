@@ -793,7 +793,7 @@ export class DownloadCleanerSettingsComponent implements OnDestroy, CanComponent
   private showEnableConfirmationDialog(): void {
     this.confirmationService.confirm({
       header: 'Enable Download Cleaner',
-      message: 'To avoid affecting items that are awaiting to be imported, please ensure that your Sonarr, Radarr, and Lidarr instances have been properly configured prior to enabling the Download Cleaner.<br/><br/>Are you sure you want to proceed?',
+      message: 'To avoid affecting items that are awaiting to be imported, please ensure that your Sonarr, Radarr, and Lidarr instances have been configured prior to enabling the Download Cleaner.<br/><br/>Are you sure you want to proceed?',
       icon: 'pi pi-exclamation-triangle',
       acceptIcon: 'pi pi-check',
       rejectIcon: 'pi pi-times',

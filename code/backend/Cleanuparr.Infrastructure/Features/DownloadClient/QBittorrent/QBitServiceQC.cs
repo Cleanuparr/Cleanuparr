@@ -38,7 +38,7 @@ public partial class QBitService
 
         if (torrentProperties is null)
         {
-            _logger.LogDebug("failed to find torrent properties {hash}", download.Name);
+            _logger.LogError("Failed to find torrent properties for {name}", download.Name);
             return result;
         }
 
@@ -89,32 +89,32 @@ public partial class QBitService
         
         if (queueCleanerConfig.Slow.MaxStrikes is 0)
         {
-            _logger.LogDebug("skip slow check | max strikes is 0 | {name}", download.Name);
+            _logger.LogTrace("skip slow check | max strikes is 0 | {name}", download.Name);
             return (false, DeleteReason.None);
         }
 
         if (download.State is not (TorrentState.Downloading or TorrentState.ForcedDownload))
         {
-            _logger.LogDebug("skip slow check | download is in {state} state | {name}", download.State, download.Name);
+            _logger.LogTrace("skip slow check | download is in {state} state | {name}", download.State, download.Name);
             return (false, DeleteReason.None);
         }
 
         if (download.DownloadSpeed <= 0)
         {
-            _logger.LogDebug("skip slow check | download speed is 0 | {name}", download.Name);
+            _logger.LogTrace("skip slow check | download speed is 0 | {name}", download.Name);
             return (false, DeleteReason.None);
         }
 
         if (queueCleanerConfig.Slow.IgnorePrivate && isPrivate)
         {
             // ignore private trackers
-            _logger.LogDebug("skip slow check | download is private | {name}", download.Name);
+            _logger.LogTrace("skip slow check | download is private | {name}", download.Name);
             return (false, DeleteReason.None);
         }
 
         if (download.Size > (queueCleanerConfig.Slow.IgnoreAboveSizeByteSize?.Bytes ?? long.MaxValue))
         {
-            _logger.LogDebug("skip slow check | download is too large | {name}", download.Name);
+            _logger.LogTrace("skip slow check | download is too large | {name}", download.Name);
             return (false, DeleteReason.None);
         }
 
@@ -139,7 +139,7 @@ public partial class QBitService
         
         if (queueCleanerConfig.Stalled.MaxStrikes is 0 && queueCleanerConfig.Stalled.DownloadingMetadataMaxStrikes is 0)
         {
-            _logger.LogDebug("skip stalled check | max strikes is 0 | {name}", torrent.Name);
+            _logger.LogTrace("skip stalled check | max strikes is 0 | {name}", torrent.Name);
             return (false, DeleteReason.None);
         }
 
@@ -147,7 +147,7 @@ public partial class QBitService
             and not TorrentState.ForcedFetchingMetadata)
         {
             // ignore other states
-            _logger.LogDebug("skip stalled check | download is in {state} state | {name}", torrent.State, torrent.Name);
+            _logger.LogTrace("skip stalled check | download is in {state} state | {name}", torrent.State, torrent.Name);
             return (false, DeleteReason.None);
         }
 
@@ -156,7 +156,7 @@ public partial class QBitService
             if (queueCleanerConfig.Stalled.IgnorePrivate && isPrivate)
             {
                 // ignore private trackers
-                _logger.LogDebug("skip stalled check | download is private | {name}", torrent.Name);
+                _logger.LogTrace("skip stalled check | download is private | {name}", torrent.Name);
             }
             else
             {
@@ -175,7 +175,7 @@ public partial class QBitService
                     StrikeType.DownloadingMetadata), DeleteReason.DownloadingMetadata);
         }
 
-        _logger.LogDebug("skip stalled check | download is not stalled | {name}", torrent.Name);
+        _logger.LogTrace("skip stalled check | download is not stalled | {name}", torrent.Name);
         return (false, DeleteReason.None);
     }
 }
