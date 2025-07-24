@@ -42,7 +42,7 @@ This is a detailed explanation of how the recurring cleanup jobs work.
   icon="🧹"
 >
 
-- Run every 5 minutes (or configured cron, or right after `Content Blocker`).
+- Run every 5 minutes (or configured cron).
 - Process all items in the *arr queue.
 - Check each queue item if it is **stalled (download speed is 0)**, **stuck in metadata downloading**, **failed to be imported** or **slow**.
   - If it is, the item receives a **strike** and will continue to accumulate strikes every time it meets any of these conditions.
