@@ -1,9 +1,11 @@
-/**
- * Download client type enum matching backend DownloadClientType
- */
 export enum DownloadClientType {
-  qBittorrent = 0,
-  Deluge = 1,
-  Transmission = 2,
-  uTorrent = 3,
+  Torrent = "Torrent",
+  Usenet = "Usenet",
+}
+
+export enum DownloadClientTypeName {
+  qBittorrent = "qBittorrent",
+  Deluge = "Deluge",
+  Transmission = "Transmission",
+  uTorrent = "uTorrent",
 }
