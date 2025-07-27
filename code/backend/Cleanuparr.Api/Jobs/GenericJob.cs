@@ -9,12 +9,12 @@ public sealed class GenericJob<T> : IJob
     where T : IHandler
 {
     private readonly ILogger<GenericJob<T>> _logger;
-    private readonly T _handler;
-
-    public GenericJob(ILogger<GenericJob<T>> logger, T handler)
+    private readonly IServiceScopeFactory _scopeFactory;
+    
+    public GenericJob(ILogger<GenericJob<T>> logger, IServiceScopeFactory scopeFactory)
     {
         _logger = logger;
-        _handler = handler;
+        _scopeFactory = scopeFactory;
     }
     
     public async Task Execute(IJobExecutionContext context)
@@ -23,7 +23,9 @@ public sealed class GenericJob<T> : IJob
         
         try
         {
-            await _handler.ExecuteAsync();
+            await using var scope = _scopeFactory.CreateAsyncScope();
+            var handler = scope.ServiceProvider.GetRequiredService<T>();
+            await handler.ExecuteAsync();
         }
         catch (Exception ex)
         {

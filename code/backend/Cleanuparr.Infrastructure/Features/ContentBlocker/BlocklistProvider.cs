@@ -19,7 +19,7 @@ namespace Cleanuparr.Infrastructure.Features.ContentBlocker;
 public sealed class BlocklistProvider
 {
     private readonly ILogger<BlocklistProvider> _logger;
-    private readonly IServiceProvider _serviceProvider;
+    private readonly IServiceScopeFactory _scopeFactory;
     private readonly HttpClient _httpClient;
     private readonly IMemoryCache _cache;
     private readonly Dictionary<InstanceType, string> _configHashes = new();
@@ -28,13 +28,13 @@ public sealed class BlocklistProvider
 
     public BlocklistProvider(
         ILogger<BlocklistProvider> logger,
-        IServiceProvider serviceProvider,
+        IServiceScopeFactory scopeFactory,
         IMemoryCache cache,
         IHttpClientFactory httpClientFactory
     )
     {
         _logger = logger;
-        _serviceProvider = serviceProvider;
+        _scopeFactory = scopeFactory;
         _cache = cache;
         _httpClient = httpClientFactory.CreateClient(Constants.HttpClientWithRetryName);
     }
@@ -43,7 +43,8 @@ public sealed class BlocklistProvider
     {
         try
         {
-            var dataContext = _serviceProvider.GetRequiredService<DataContext>();
+            await using var scope = _scopeFactory.CreateAsyncScope();
+            await using var dataContext = scope.ServiceProvider.GetRequiredService<DataContext>();
             int changedCount = 0;
             var contentBlockerConfig = await dataContext.ContentBlockerConfigs
                 .AsNoTracking()

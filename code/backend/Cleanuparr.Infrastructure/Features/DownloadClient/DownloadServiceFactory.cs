@@ -21,12 +21,13 @@ namespace Cleanuparr.Infrastructure.Features.DownloadClient;
 /// </summary>
 public sealed class DownloadServiceFactory
 {
-    private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<DownloadServiceFactory> _logger;
+    private readonly IServiceProvider _serviceProvider;
     
     public DownloadServiceFactory(
-        IServiceProvider serviceProvider, 
-        ILogger<DownloadServiceFactory> logger)
+        ILogger<DownloadServiceFactory> logger,
+        IServiceProvider serviceProvider
+    )
     {
         _serviceProvider = serviceProvider;
         _logger = logger;

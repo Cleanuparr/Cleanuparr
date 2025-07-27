@@ -22,18 +22,18 @@ namespace Cleanuparr.Api.Jobs;
 public class BackgroundJobManager : IHostedService
 {
     private readonly ISchedulerFactory _schedulerFactory;
-    private readonly DataContext _dataContext;
+    private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<BackgroundJobManager> _logger;
     private IScheduler? _scheduler;
 
     public BackgroundJobManager(
         ISchedulerFactory schedulerFactory,
-        DataContext dataContext,
+        IServiceScopeFactory scopeFactory,
         ILogger<BackgroundJobManager> logger
     )
     {
         _schedulerFactory = schedulerFactory;
-        _dataContext = dataContext;
+        _scopeFactory = scopeFactory;
         _logger = logger;
     }
 
@@ -86,14 +86,18 @@ public class BackgroundJobManager : IHostedService
             throw new InvalidOperationException("Scheduler not initialized");
         }
         
+        // Use scoped DataContext to prevent memory leaks
+        await using var scope = _scopeFactory.CreateAsyncScope();
+        await using var dataContext = scope.ServiceProvider.GetRequiredService<DataContext>();
+        
         // Get configurations from db
-        QueueCleanerConfig queueCleanerConfig = await _dataContext.QueueCleanerConfigs
+        QueueCleanerConfig queueCleanerConfig = await dataContext.QueueCleanerConfigs
             .AsNoTracking()
             .FirstAsync(cancellationToken);
-        ContentBlockerConfig contentBlockerConfig = await _dataContext.ContentBlockerConfigs
+        ContentBlockerConfig contentBlockerConfig = await dataContext.ContentBlockerConfigs
             .AsNoTracking()
             .FirstAsync(cancellationToken);
-        DownloadCleanerConfig downloadCleanerConfig = await _dataContext.DownloadCleanerConfigs
+        DownloadCleanerConfig downloadCleanerConfig = await dataContext.DownloadCleanerConfigs
             .AsNoTracking()
             .FirstAsync(cancellationToken);
         

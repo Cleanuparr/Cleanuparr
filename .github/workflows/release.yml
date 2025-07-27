@@ -106,7 +106,7 @@ jobs:
       - name: Create release
         uses: softprops/action-gh-release@v2
         with:
-          name: Cleanuparr ${{ needs.validate.outputs.release_version }}
+          name: ${{ needs.validate.outputs.release_version }}
           tag_name: ${{ needs.validate.outputs.release_version }}
           token: ${{ env.REPO_READONLY_PAT }}
           make_latest: true

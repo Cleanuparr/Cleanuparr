@@ -94,7 +94,7 @@ export class DownloadClientSettingsComponent implements OnDestroy, CanComponentD
     });
 
     // Initialize type name options
-    for (const key of Object.keys(DownloadClientTypeName).filter(k => isNaN(Number(k)))) {
+    for (const key of Object.keys(DownloadClientTypeName)) {
       this.typeNameOptions.push({ 
         label: key, 
         value: DownloadClientTypeName[key as keyof typeof DownloadClientTypeName] 
@@ -338,19 +338,6 @@ export class DownloadClientSettingsComponent implements OnDestroy, CanComponentD
   }
   
   /**
-   * Map backend TypeName to frontend typeName
-   */
-  private mapClientTypeFromBackend(backendTypeName: string): DownloadClientTypeName {
-    for (const key of Object.keys(DownloadClientTypeName).filter(k => isNaN(Number(k)))) {
-      if (DownloadClientTypeName[key as keyof typeof DownloadClientTypeName] === backendTypeName) {
-        return DownloadClientTypeName[key as keyof typeof DownloadClientTypeName];
-      }
-    }
-
-    throw new Error(`Invalid client type: ${backendTypeName}`);
-  }
-
-  /**
    * Handle client type changes to update validation
    */
   onClientTypeChange(): void {
@@ -374,7 +361,7 @@ export class DownloadClientSettingsComponent implements OnDestroy, CanComponentD
     
     // Set default URL base for Transmission
     if (clientTypeName === DownloadClientTypeName.Transmission) {
-      urlBaseControl.setValue('transmission/rpc');
+      urlBaseControl.setValue('transmission');
     }
     
     // Update validation state
