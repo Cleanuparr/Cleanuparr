@@ -22,7 +22,7 @@ public partial class UTorrentService
         
         if (download?.Hash is null)
         {
-            _logger.LogDebug("failed to find torrent {hash} in the download client", hash);
+            _logger.LogDebug("Failed to find torrent {hash} in the download client", hash);
             return result;
         }
         

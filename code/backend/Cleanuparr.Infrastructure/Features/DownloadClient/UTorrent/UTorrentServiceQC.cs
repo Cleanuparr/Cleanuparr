@@ -20,7 +20,7 @@ public partial class UTorrentService
         
         if (download?.Hash is null)
         {
-            _logger.LogDebug("failed to find torrent {hash} in the download client", hash);
+            _logger.LogDebug("Failed to find torrent {hash} in the download client", hash);
             return result;
         }
         
@@ -42,7 +42,7 @@ public partial class UTorrentService
         }
         catch (Exception exception)
         {
-            _logger.LogDebug(exception, "failed to get files for torrent {hash} in the download client", hash);
+            _logger.LogDebug(exception, "Failed to get files for torrent {hash} in the download client", hash);
         }
 
         bool shouldRemove = files?.Count > 0;
