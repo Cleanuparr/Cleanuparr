@@ -94,7 +94,7 @@ export class DownloadClientSettingsComponent implements OnDestroy, CanComponentD
     });
 
     // Initialize type name options
-    for (const key of Object.keys(DownloadClientTypeName).filter(k => isNaN(Number(k)))) {
+    for (const key of Object.keys(DownloadClientTypeName)) {
       this.typeNameOptions.push({ 
         label: key, 
         value: DownloadClientTypeName[key as keyof typeof DownloadClientTypeName] 
