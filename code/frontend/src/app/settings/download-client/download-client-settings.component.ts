@@ -360,7 +360,7 @@ export class DownloadClientSettingsComponent implements OnDestroy, CanComponentD
     
     // Set default URL base for Transmission
     if (clientTypeName === DownloadClientTypeName.Transmission) {
-      urlBaseControl.setValue('transmission/rpc');
+      urlBaseControl.setValue('transmission');
     }
     
     // Update validation state
