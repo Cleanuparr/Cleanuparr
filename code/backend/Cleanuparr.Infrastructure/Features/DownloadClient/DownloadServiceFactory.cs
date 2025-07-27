@@ -46,7 +46,7 @@ public sealed class DownloadServiceFactory
         
         return downloadClientConfig.TypeName switch
         {
-            DownloadClientTypeName.QBittorrent => CreateQBitService(downloadClientConfig),
+            DownloadClientTypeName.qBittorrent => CreateQBitService(downloadClientConfig),
             DownloadClientTypeName.Deluge => CreateDelugeService(downloadClientConfig),
             DownloadClientTypeName.Transmission => CreateTransmissionService(downloadClientConfig),
             _ => throw new NotSupportedException($"Download client type {downloadClientConfig.TypeName} is not supported")

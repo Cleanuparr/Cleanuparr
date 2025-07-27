@@ -1,4 +1,4 @@
-import { DownloadClientType } from './enums';
+import { DownloadClientType, DownloadClientTypeName } from './enums';
 
 /**
  * Represents a download client configuration object
@@ -37,7 +37,7 @@ export interface ClientConfig {
   /**
    * Type name of download client (backend enum)
    */
-  typeName?: string;
+  typeName: DownloadClientTypeName;
   
   /**
    * Host address for the download client
@@ -73,16 +73,16 @@ export interface CreateDownloadClientDto {
    * Friendly name for this client
    */
   name: string;
+
+  /**
+   * Type of download client (backend enum)
+   */
+  type: DownloadClientType;
   
   /**
    * Type name of download client (backend enum)
    */
-  typeName: string;
-  
-  /**
-   * Type of download client (backend enum)
-   */
-  type: string;
+  typeName: DownloadClientTypeName;
   
   /**
    * Host address for the download client

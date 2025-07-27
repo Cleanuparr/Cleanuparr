@@ -84,7 +84,7 @@ export class DocumentationService {
     'download-client': {
       'enabled': 'enable-download-client',
       'name': 'client-name',
-      'type': 'client-type',
+      'typeName': 'client-type',
       'host': 'client-host',
       'urlBase': 'url-base-path',
       'username': 'username',
