@@ -25,21 +25,24 @@ Cleanuparr was created primarily to address malicious files, such as `*.lnk` or 
 ## 🎯 Supported Applications
 
 ### *Arr Applications
-- **Sonarr** (TV Shows)
-- **Radarr** (Movies)  
-- **Lidarr** (Music)
+- **Sonarr**
+- **Radarr**
+- **Lidarr**
+- **Readarr**
+- **Whisparr**
 
 ### Download Clients
 - **qBittorrent**
 - **Transmission**
 - **Deluge**
+- **µTorrent**
 
 ### Platforms
-- **Docker** (Linux, Windows, macOS)
-- **Windows** (Native installer)
-- **macOS** (Intel & Apple Silicon)
-- **Linux** (Portable executable)
-- **Unraid** (Community Apps)
+- **Docker**
+- **Windows**
+- **macOS**
+- **Linux**
+- **Unraid**
 
 ## 🚀 Quick Start
 
@@ -55,7 +58,7 @@ docker run -d --name cleanuparr \
   ghcr.io/cleanuparr/cleanuparr:latest
 ```
 
-For Docker Compose, health checks, and other installation methods, see our [Complete Installation Guide](https://cleanuparr.github.io/Cleanuparr/docs/installation/detailed).
+For Docker Compose, health checks, and other installation methods, see the [Complete Installation Guide](https://cleanuparr.github.io/Cleanuparr/docs/installation/detailed).
 
 ### 🌐 Access the Web Interface
 

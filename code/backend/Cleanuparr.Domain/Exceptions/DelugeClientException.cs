@@ -1,4 +1,4 @@
-﻿namespace Data.Models.Deluge.Exceptions;
+﻿namespace Cleanuparr.Domain.Exceptions;
 
 public class DelugeClientException : Exception
 {

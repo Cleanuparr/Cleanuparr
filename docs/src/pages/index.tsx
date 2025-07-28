@@ -208,10 +208,11 @@ function IntegrationsSection() {
     { name: "Radarr", icon: "🎬", color: "#ffc107" },
     { name: "Lidarr", icon: "🎵", color: "#28a745" },
     { name: "Readarr", icon: "📚", color: "#6f42c1" },
-    //{ name: "Whisparr", icon: "🔞", color: "#dc3545" },
+    { name: "Whisparr", icon: "🔞", color: "#dc3545" },
     { name: "qBittorrent", icon: "⬇️", color: "#17a2b8" },
     { name: "Deluge", icon: "🌊", color: "#fd7e14" },
-    { name: "Transmission", icon: "📡", color: "#e83e8c" }
+    { name: "Transmission", icon: "📡", color: "#e83e8c" },
+    { name: "µTorrent", icon: "🌀", color: "#343a40" },
   ];
 
   return (

@@ -12,6 +12,7 @@ using Microsoft.Extensions.Logging;
 using DelugeService = Cleanuparr.Infrastructure.Features.DownloadClient.Deluge.DelugeService;
 using QBitService = Cleanuparr.Infrastructure.Features.DownloadClient.QBittorrent.QBitService;
 using TransmissionService = Cleanuparr.Infrastructure.Features.DownloadClient.Transmission.TransmissionService;
+using UTorrentService = Cleanuparr.Infrastructure.Features.DownloadClient.UTorrent.UTorrentService;
 
 namespace Cleanuparr.Infrastructure.Features.DownloadClient;
 
@@ -49,6 +50,7 @@ public sealed class DownloadServiceFactory
             DownloadClientTypeName.qBittorrent => CreateQBitService(downloadClientConfig),
             DownloadClientTypeName.Deluge => CreateDelugeService(downloadClientConfig),
             DownloadClientTypeName.Transmission => CreateTransmissionService(downloadClientConfig),
+            DownloadClientTypeName.uTorrent => CreateUTorrentService(downloadClientConfig),
             _ => throw new NotSupportedException($"Download client type {downloadClientConfig.TypeName} is not supported")
         };
     }
@@ -111,6 +113,28 @@ public sealed class DownloadServiceFactory
         TransmissionService service = new(
             logger, cache, filenameEvaluator, striker, dryRunInterceptor,
             hardLinkFileService, httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig
+        );
+        
+        return service;
+    }
+
+    private UTorrentService CreateUTorrentService(DownloadClientConfig downloadClientConfig)
+    {
+        var logger = _serviceProvider.GetRequiredService<ILogger<UTorrentService>>();
+        var cache = _serviceProvider.GetRequiredService<IMemoryCache>();
+        var filenameEvaluator = _serviceProvider.GetRequiredService<IFilenameEvaluator>();
+        var striker = _serviceProvider.GetRequiredService<IStriker>();
+        var dryRunInterceptor = _serviceProvider.GetRequiredService<IDryRunInterceptor>();
+        var hardLinkFileService = _serviceProvider.GetRequiredService<IHardLinkFileService>();
+        var httpClientProvider = _serviceProvider.GetRequiredService<IDynamicHttpClientProvider>();
+        var eventPublisher = _serviceProvider.GetRequiredService<EventPublisher>();
+        var blocklistProvider = _serviceProvider.GetRequiredService<BlocklistProvider>();
+        var loggerFactory = _serviceProvider.GetRequiredService<ILoggerFactory>();
+        
+        // Create the UTorrentService instance
+        UTorrentService service = new(
+            logger, cache, filenameEvaluator, striker, dryRunInterceptor,
+            hardLinkFileService, httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, loggerFactory
         );
         
         return service;

@@ -330,6 +330,7 @@ export class DownloadClientSettingsComponent implements OnDestroy, CanComponentD
       case DownloadClientTypeName.qBittorrent:
       case DownloadClientTypeName.Deluge:
       case DownloadClientTypeName.Transmission:
+      case DownloadClientTypeName.uTorrent:
         return DownloadClientType.Torrent;
       default:
         throw new Error(`Unknown client type name: ${typeName}`);
