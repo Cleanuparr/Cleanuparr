@@ -6,7 +6,7 @@ import { SelectButtonModule } from 'primeng/selectbutton';
 
 export type ByteSizeInputType = 'speed' | 'size';
 
-type ByteSizeUnit = 'KB' | 'MB' | 'GB' | 'TB';
+type ByteSizeUnit = 'KB' | 'MB' | 'GB';
 
 @Component({
   selector: 'app-byte-size-input',
@@ -28,13 +28,13 @@ export class ByteSizeInputComponent implements ControlValueAccessor {
   @Input() disabled: boolean = false;
   @Input() placeholder: string = 'Enter size';
   @Input() helpText: string = '';
-  @Input() type: ByteSizeInputType = 'size'; // New input to control units
+  @Input() type: ByteSizeInputType = 'size';
 
   // Value in the selected unit
   value = signal<number | null>(null);
 
   // The selected unit
-  unit = signal<ByteSizeUnit>(this.getDefaultUnit());
+  unit = signal<ByteSizeUnit>('MB');
 
   // Available units, computed based on type
   get unitOptions() {
@@ -69,10 +69,7 @@ export class ByteSizeInputComponent implements ControlValueAccessor {
   private onTouched: () => void = () => {};
 
   ngOnInit(): void {
-    // Set default unit based on type if not already set
-    if (!this.unit()) {
-      this.unit.set(this.getDefaultUnit());
-    }
+    this.unit.set(this.getDefaultUnit());
   }
 
   /**
