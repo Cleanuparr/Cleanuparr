@@ -57,6 +57,7 @@ public partial class TransmissionService
         BlocklistType blocklistType = _blocklistProvider.GetBlocklistType(instanceType);
         ConcurrentBag<string> patterns = _blocklistProvider.GetPatterns(instanceType);
         ConcurrentBag<Regex> regexes = _blocklistProvider.GetRegexes(instanceType);
+        ConcurrentBag<string> malwarePatterns = _blocklistProvider.GetMalwarePatterns();
         
         for (int i = 0; i < download.Files.Length; i++)
         {
@@ -68,7 +69,7 @@ public partial class TransmissionService
 
             totalFiles++;
             
-            if (IsDefinitelyMalware(download.Files[i].Name))
+            if (contentBlockerConfig.DeleteKnownMalware && _filenameEvaluator.IsKnownMalware(download.Files[i].Name, malwarePatterns))
             {
                 _logger.LogInformation("malware file found | {file} | {title}", download.Files[i].Name, download.Name);
                 result.ShouldRemove = true;

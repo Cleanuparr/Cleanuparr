@@ -71,6 +71,7 @@ export class DocumentationService {
       'jobSchedule.type': 'run-schedule',
       'ignorePrivate': 'ignore-private',
       'deletePrivate': 'delete-private',
+      'deleteKnownMalware': 'delete-known-malware',
       'sonarr.enabled': 'enable-sonarr-blocklist',
       'sonarr.blocklistPath': 'sonarr-blocklist-path',
       'sonarr.blocklistType': 'sonarr-blocklist-type',

@@ -66,27 +66,27 @@ public sealed class ContentBlocker : GenericHandler
         var readarrConfig = ContextProvider.Get<ArrConfig>(nameof(InstanceType.Readarr));
         var whisparrConfig = ContextProvider.Get<ArrConfig>(nameof(InstanceType.Whisparr));
 
-        if (config.Sonarr.Enabled)
+        if (config.Sonarr.Enabled || config.DeleteKnownMalware)
         {
             await ProcessArrConfigAsync(sonarrConfig, InstanceType.Sonarr);
         }
         
-        if (config.Radarr.Enabled)
+        if (config.Radarr.Enabled || config.DeleteKnownMalware)
         {
             await ProcessArrConfigAsync(radarrConfig, InstanceType.Radarr);
         }
         
-        if (config.Lidarr.Enabled)
+        if (config.Lidarr.Enabled || config.DeleteKnownMalware)
         {
             await ProcessArrConfigAsync(lidarrConfig, InstanceType.Lidarr);
         }
         
-        if (config.Readarr.Enabled)
+        if (config.Readarr.Enabled || config.DeleteKnownMalware)
         {
             await ProcessArrConfigAsync(readarrConfig, InstanceType.Readarr);
         }
         
-        if (config.Whisparr.Enabled)
+        if (config.Whisparr.Enabled || config.DeleteKnownMalware)
         {
             await ProcessArrConfigAsync(whisparrConfig, InstanceType.Whisparr);
         }

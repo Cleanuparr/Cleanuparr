@@ -37,6 +37,7 @@ export interface ContentBlockerConfig {
   
   ignorePrivate: boolean;
   deletePrivate: boolean;
+  deleteKnownMalware: boolean;
   
   sonarr: BlocklistSettings;
   radarr: BlocklistSettings;

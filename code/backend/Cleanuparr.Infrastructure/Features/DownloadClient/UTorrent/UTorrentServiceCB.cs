@@ -62,10 +62,11 @@ public partial class UTorrentService
         BlocklistType blocklistType = _blocklistProvider.GetBlocklistType(instanceType);
         ConcurrentBag<string> patterns = _blocklistProvider.GetPatterns(instanceType);
         ConcurrentBag<Regex> regexes = _blocklistProvider.GetRegexes(instanceType);
+        ConcurrentBag<string> malwarePatterns = _blocklistProvider.GetMalwarePatterns();
 
         for (int i = 0; i < files.Count; i++)
         {
-            if (IsDefinitelyMalware(files[i].Name))
+            if (contentBlockerConfig.DeleteKnownMalware && _filenameEvaluator.IsKnownMalware(files[i].Name, malwarePatterns))
             {
                 _logger.LogInformation("malware file found | {file} | {title}", files[i].Name, download.Name);
                 result.ShouldRemove = true;

@@ -20,6 +20,16 @@ public class FilenameEvaluator : IFilenameEvaluator
         return IsValidAgainstPatterns(filename, type, patterns) && IsValidAgainstRegexes(filename, type, regexes);
     }
 
+    public bool IsKnownMalware(string filename, ConcurrentBag<string> malwarePatterns)
+    {
+        if (malwarePatterns.Count is 0)
+        {
+            return false;
+        }
+        
+        return malwarePatterns.Any(pattern => filename.Contains(pattern, StringComparison.InvariantCultureIgnoreCase));
+    }
+
     private static bool IsValidAgainstPatterns(string filename, BlocklistType type, ConcurrentBag<string> patterns)
     {
         if (patterns.Count is 0)

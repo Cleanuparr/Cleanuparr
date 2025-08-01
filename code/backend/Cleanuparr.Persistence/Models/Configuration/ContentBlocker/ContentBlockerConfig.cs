@@ -19,6 +19,8 @@ public sealed record ContentBlockerConfig : IJobConfig
     public bool IgnorePrivate { get; set; }
     
     public bool DeletePrivate { get; set; }
+    
+    public bool DeleteKnownMalware { get; set; }
 
     public BlocklistSettings Sonarr { get; set; } = new();
     
