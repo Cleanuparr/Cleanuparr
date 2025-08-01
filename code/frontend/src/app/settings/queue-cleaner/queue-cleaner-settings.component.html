@@ -155,7 +155,7 @@
               </label>
               <div class="field-input">
                 <p-checkbox formControlName="ignorePrivate" [binary]="true"></p-checkbox>
-                <small class="form-helper-text">When enabled, private torrents will be skipped</small>
+                <small class="form-helper-text">When enabled, private torrents will not be checked for being failed imports</small>
               </div>
             </div>
 
@@ -168,7 +168,7 @@
               </label>
               <div class="field-input">
                 <p-checkbox formControlName="deletePrivate" [binary]="true"></p-checkbox>
-                <small class="form-helper-text">When enabled, private torrents will be deleted</small>
+                <small class="form-helper-text">Enable this if you want to keep private torrents in the download client even if they are removed from the arrs</small>
               </div>
             </div>
 
@@ -264,7 +264,7 @@
               </label>
               <div class="field-input">
                 <p-checkbox formControlName="ignorePrivate" [binary]="true"></p-checkbox>
-                <small class="form-helper-text">When enabled, private torrents will be skipped</small>
+                <small class="form-helper-text">When enabled, private torrents will not be checked for being stalled</small>
               </div>
             </div>
 
@@ -277,7 +277,7 @@
               </label>
               <div class="field-input">
                 <p-checkbox formControlName="deletePrivate" [binary]="true"></p-checkbox>
-                <small class="form-helper-text">When enabled, private torrents will be deleted</small>
+                <small class="form-helper-text">Enable this if you want to keep private torrents in the download client even if they are removed from the arrs</small>
               </div>
             </div>
           </p-accordion-content>
@@ -383,7 +383,7 @@
               </label>
               <div class="field-input">
                 <p-checkbox formControlName="ignorePrivate" [binary]="true"></p-checkbox>
-                <small class="form-helper-text">When enabled, private torrents will be skipped</small>
+                <small class="form-helper-text">When enabled, private torrents will not be checked for being slow</small>
               </div>
             </div>
 
@@ -396,7 +396,7 @@
               </label>
               <div class="field-input">
                 <p-checkbox formControlName="deletePrivate" [binary]="true"></p-checkbox>
-                <small class="form-helper-text">When enabled, private torrents will be deleted</small>
+                <small class="form-helper-text">Enable this if you want to keep private torrents in the download client even if they are removed from the arrs</small>
               </div>
             </div>
 
@@ -413,6 +413,7 @@
                   [min]="0"
                   placeholder="Enter minimum speed"
                   helpText="Minimum speed threshold for slow downloads (e.g., 100KB/s)"
+                  type="speed"
                 >
                 </app-byte-size-input>
               </div>
@@ -454,6 +455,7 @@
                   [min]="0"
                   placeholder="Enter size threshold"
                   helpText="Downloads will be ignored if size exceeds, e.g., 25 GB"
+                  type="size"
                 >
                 </app-byte-size-input>
               </div>

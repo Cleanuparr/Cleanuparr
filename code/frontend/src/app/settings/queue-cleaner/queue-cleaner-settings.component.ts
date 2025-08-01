@@ -176,25 +176,40 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
     effect(() => {
       const config = this.queueCleanerConfig();
       if (config) {
-        // Save original cron expression
-        const cronExpression = config.cronExpression;
+        // Handle the case where ignorePrivate is true but deletePrivate is also true
+        // This shouldn't happen, but if it does, correct it
+        const correctedConfig = { ...config };
         
-        // Reset form with the config values
+        // For Queue Cleaner (apply to all sections)
+        if (correctedConfig.failedImport?.ignorePrivate && correctedConfig.failedImport?.deletePrivate) {
+          correctedConfig.failedImport.deletePrivate = false;
+        }
+        if (correctedConfig.stalled?.ignorePrivate && correctedConfig.stalled?.deletePrivate) {
+          correctedConfig.stalled.deletePrivate = false;
+        }
+        if (correctedConfig.slow?.ignorePrivate && correctedConfig.slow?.deletePrivate) {
+          correctedConfig.slow.deletePrivate = false;
+        }
+        
+        // Save original cron expression
+        const cronExpression = correctedConfig.cronExpression;
+        
+        // Reset form with the corrected config values
         this.queueCleanerForm.patchValue({
-          enabled: config.enabled,
-          useAdvancedScheduling: config.useAdvancedScheduling || false,
-          cronExpression: config.cronExpression,
-          jobSchedule: config.jobSchedule || {
+          enabled: correctedConfig.enabled,
+          useAdvancedScheduling: correctedConfig.useAdvancedScheduling || false,
+          cronExpression: correctedConfig.cronExpression,
+          jobSchedule: correctedConfig.jobSchedule || {
             every: 5,
             type: ScheduleUnit.Minutes
           },
-          failedImport: config.failedImport,
-          stalled: config.stalled,
-          slow: config.slow,
+          failedImport: correctedConfig.failedImport,
+          stalled: correctedConfig.stalled,
+          slow: correctedConfig.slow,
         });
 
         // Then update all other dependent form control states
-        this.updateFormControlDisabledStates(config);
+        this.updateFormControlDisabledStates(correctedConfig);
         
         // Store original values for dirty checking
         this.storeOriginalValues();
@@ -255,6 +270,30 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
           this.updateMainControlsState(enabled);
         });
     }
+
+    // Add listeners for ignorePrivate changes in each section
+    ['failedImport', 'stalled', 'slow'].forEach(section => {
+      const ignorePrivateControl = this.queueCleanerForm.get(`${section}.ignorePrivate`);
+      
+      if (ignorePrivateControl) {
+        ignorePrivateControl.valueChanges.pipe(takeUntil(this.destroy$))
+          .subscribe((ignorePrivate: boolean) => {
+            const deletePrivateControl = this.queueCleanerForm.get(`${section}.deletePrivate`);
+            
+            if (ignorePrivate && deletePrivateControl) {
+              // If ignoring private, uncheck and disable delete private
+              deletePrivateControl.setValue(false);
+              deletePrivateControl.disable({ onlySelf: true });
+            } else if (!ignorePrivate && deletePrivateControl) {
+              // If not ignoring private, enable delete private (if parent section is enabled)
+              const sectionEnabled = this.isSectionEnabled(section);
+              if (sectionEnabled) {
+                deletePrivateControl.enable({ onlySelf: true });
+              }
+            }
+          });
+      }
+    });
       
     // Listen for changes to the 'useAdvancedScheduling' control
     const advancedControl = this.queueCleanerForm.get('useAdvancedScheduling');
@@ -348,6 +387,17 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
     // Create a deep copy of the form values to ensure proper comparison
     this.originalFormValues = JSON.parse(JSON.stringify(this.queueCleanerForm.getRawValue()));
     this.hasActualChanges = false;
+  }
+
+  // Helper method to check if a section is enabled
+  private isSectionEnabled(section: string): boolean {
+    const mainEnabled = this.queueCleanerForm.get('enabled')?.value || false;
+    if (!mainEnabled) return false;
+    
+    const maxStrikesControl = this.queueCleanerForm.get(`${section}.maxStrikes`);
+    const maxStrikes = maxStrikesControl?.value || 0;
+    
+    return maxStrikes >= 3;
   }
   
   // Check if the current form values are different from the original values
@@ -463,8 +513,17 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
 
     if (enable) {
       this.queueCleanerForm.get("failedImport")?.get("ignorePrivate")?.enable(options);
-      this.queueCleanerForm.get("failedImport")?.get("deletePrivate")?.enable(options);
       this.queueCleanerForm.get("failedImport")?.get("ignoredPatterns")?.enable(options);
+      
+      // Only enable deletePrivate if ignorePrivate is false
+      const ignorePrivate = this.queueCleanerForm.get("failedImport.ignorePrivate")?.value || false;
+      const deletePrivateControl = this.queueCleanerForm.get("failedImport.deletePrivate");
+      
+      if (!ignorePrivate && deletePrivateControl) {
+        deletePrivateControl.enable(options);
+      } else if (deletePrivateControl) {
+        deletePrivateControl.disable(options);
+      }
     } else {
       this.queueCleanerForm.get("failedImport")?.get("ignorePrivate")?.disable(options);
       this.queueCleanerForm.get("failedImport")?.get("deletePrivate")?.disable(options);
@@ -482,7 +541,16 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
     if (enable) {
       this.queueCleanerForm.get("stalled")?.get("resetStrikesOnProgress")?.enable(options);
       this.queueCleanerForm.get("stalled")?.get("ignorePrivate")?.enable(options);
-      this.queueCleanerForm.get("stalled")?.get("deletePrivate")?.enable(options);
+      
+      // Only enable deletePrivate if ignorePrivate is false
+      const ignorePrivate = this.queueCleanerForm.get("stalled.ignorePrivate")?.value || false;
+      const deletePrivateControl = this.queueCleanerForm.get("stalled.deletePrivate");
+      
+      if (!ignorePrivate && deletePrivateControl) {
+        deletePrivateControl.enable(options);
+      } else if (deletePrivateControl) {
+        deletePrivateControl.disable(options);
+      }
     } else {
       this.queueCleanerForm.get("stalled")?.get("resetStrikesOnProgress")?.disable(options);
       this.queueCleanerForm.get("stalled")?.get("ignorePrivate")?.disable(options);
@@ -500,10 +568,19 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
     if (enable) {
       this.queueCleanerForm.get("slow")?.get("resetStrikesOnProgress")?.enable(options);
       this.queueCleanerForm.get("slow")?.get("ignorePrivate")?.enable(options);
-      this.queueCleanerForm.get("slow")?.get("deletePrivate")?.enable(options);
       this.queueCleanerForm.get("slow")?.get("minSpeed")?.enable(options);
       this.queueCleanerForm.get("slow")?.get("maxTime")?.enable(options);
       this.queueCleanerForm.get("slow")?.get("ignoreAboveSize")?.enable(options);
+      
+      // Only enable deletePrivate if ignorePrivate is false
+      const ignorePrivate = this.queueCleanerForm.get("slow.ignorePrivate")?.value || false;
+      const deletePrivateControl = this.queueCleanerForm.get("slow.deletePrivate");
+      
+      if (!ignorePrivate && deletePrivateControl) {
+        deletePrivateControl.enable(options);
+      } else if (deletePrivateControl) {
+        deletePrivateControl.disable(options);
+      }
     } else {
       this.queueCleanerForm.get("slow")?.get("resetStrikesOnProgress")?.disable(options);
       this.queueCleanerForm.get("slow")?.get("ignorePrivate")?.disable(options);

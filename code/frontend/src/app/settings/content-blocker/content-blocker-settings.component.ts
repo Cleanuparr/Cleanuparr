@@ -166,27 +166,36 @@ export class ContentBlockerSettingsComponent implements OnDestroy, CanComponentD
     effect(() => {
       const config = this.contentBlockerConfig();
       if (config) {
-        // Reset form with the config values
+        // Handle the case where ignorePrivate is true but deletePrivate is also true
+        // This shouldn't happen, but if it does, correct it
+        const correctedConfig = { ...config };
+        
+        // For Content Blocker
+        if (correctedConfig.ignorePrivate && correctedConfig.deletePrivate) {
+          correctedConfig.deletePrivate = false;
+        }
+        
+        // Reset form with the corrected config values
         this.contentBlockerForm.patchValue({
-          enabled: config.enabled,
-          useAdvancedScheduling: config.useAdvancedScheduling || false,
-          cronExpression: config.cronExpression,
-          jobSchedule: config.jobSchedule || {
+          enabled: correctedConfig.enabled,
+          useAdvancedScheduling: correctedConfig.useAdvancedScheduling || false,
+          cronExpression: correctedConfig.cronExpression,
+          jobSchedule: correctedConfig.jobSchedule || {
             every: 5,
             type: ScheduleUnit.Seconds
           },
-          ignorePrivate: config.ignorePrivate,
-          deletePrivate: config.deletePrivate,
-          deleteKnownMalware: config.deleteKnownMalware,
-          sonarr: config.sonarr,
-          radarr: config.radarr,
-          lidarr: config.lidarr,
-          readarr: config.readarr,
-          whisparr: config.whisparr,
+          ignorePrivate: correctedConfig.ignorePrivate,
+          deletePrivate: correctedConfig.deletePrivate,
+          deleteKnownMalware: correctedConfig.deleteKnownMalware,
+          sonarr: correctedConfig.sonarr,
+          radarr: correctedConfig.radarr,
+          lidarr: correctedConfig.lidarr,
+          readarr: correctedConfig.readarr,
+          whisparr: correctedConfig.whisparr,
         });
 
         // Update all form control states
-        this.updateFormControlDisabledStates(config);
+        this.updateFormControlDisabledStates(correctedConfig);
         
         // Store original values for dirty checking
         this.storeOriginalValues();
@@ -245,6 +254,27 @@ export class ContentBlockerSettingsComponent implements OnDestroy, CanComponentD
       enabledControl.valueChanges.pipe(takeUntil(this.destroy$))
         .subscribe((enabled: boolean) => {
           this.updateMainControlsState(enabled);
+        });
+    }
+
+    // Add listener for ignorePrivate changes
+    const ignorePrivateControl = this.contentBlockerForm.get('ignorePrivate');
+    if (ignorePrivateControl) {
+      ignorePrivateControl.valueChanges.pipe(takeUntil(this.destroy$))
+        .subscribe((ignorePrivate: boolean) => {
+          const deletePrivateControl = this.contentBlockerForm.get('deletePrivate');
+          
+          if (ignorePrivate && deletePrivateControl) {
+            // If ignoring private, uncheck and disable delete private
+            deletePrivateControl.setValue(false);
+            deletePrivateControl.disable({ onlySelf: true });
+          } else if (!ignorePrivate && deletePrivateControl) {
+            // If not ignoring private, enable delete private (if main feature is enabled)
+            const mainEnabled = this.contentBlockerForm.get('enabled')?.value || false;
+            if (mainEnabled) {
+              deletePrivateControl.enable({ onlySelf: true });
+            }
+          }
         });
     }
       
@@ -417,8 +447,17 @@ export class ContentBlockerSettingsComponent implements OnDestroy, CanComponentD
       
       // Enable content blocker specific controls
       this.contentBlockerForm.get("ignorePrivate")?.enable({ onlySelf: true });
-      this.contentBlockerForm.get("deletePrivate")?.enable({ onlySelf: true });
       this.contentBlockerForm.get("deleteKnownMalware")?.enable({ onlySelf: true });
+      
+      // Only enable deletePrivate if ignorePrivate is false
+      const ignorePrivate = this.contentBlockerForm.get("ignorePrivate")?.value || false;
+      const deletePrivateControl = this.contentBlockerForm.get("deletePrivate");
+      
+      if (!ignorePrivate && deletePrivateControl) {
+        deletePrivateControl.enable({ onlySelf: true });
+      } else if (deletePrivateControl) {
+        deletePrivateControl.disable({ onlySelf: true });
+      }
 
       // Enable blocklist settings for each Arr
       this.contentBlockerForm.get("sonarr.enabled")?.enable({ onlySelf: true });
