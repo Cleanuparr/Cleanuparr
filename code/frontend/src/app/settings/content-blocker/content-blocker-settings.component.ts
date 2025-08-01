@@ -132,6 +132,7 @@ export class ContentBlockerSettingsComponent implements OnDestroy, CanComponentD
 
       ignorePrivate: [{ value: false, disabled: true }],
       deletePrivate: [{ value: false, disabled: true }],
+      deleteKnownMalware: [{ value: false, disabled: true }],
 
       // Blocklist settings for each Arr
       sonarr: this.formBuilder.group({
@@ -176,6 +177,7 @@ export class ContentBlockerSettingsComponent implements OnDestroy, CanComponentD
           },
           ignorePrivate: config.ignorePrivate,
           deletePrivate: config.deletePrivate,
+          deleteKnownMalware: config.deleteKnownMalware,
           sonarr: config.sonarr,
           radarr: config.radarr,
           lidarr: config.lidarr,
@@ -416,6 +418,7 @@ export class ContentBlockerSettingsComponent implements OnDestroy, CanComponentD
       // Enable content blocker specific controls
       this.contentBlockerForm.get("ignorePrivate")?.enable({ onlySelf: true });
       this.contentBlockerForm.get("deletePrivate")?.enable({ onlySelf: true });
+      this.contentBlockerForm.get("deleteKnownMalware")?.enable({ onlySelf: true });
 
       // Enable blocklist settings for each Arr
       this.contentBlockerForm.get("sonarr.enabled")?.enable({ onlySelf: true });
@@ -449,6 +452,7 @@ export class ContentBlockerSettingsComponent implements OnDestroy, CanComponentD
       // Disable content blocker specific controls
       this.contentBlockerForm.get("ignorePrivate")?.disable({ onlySelf: true });
       this.contentBlockerForm.get("deletePrivate")?.disable({ onlySelf: true });
+      this.contentBlockerForm.get("deleteKnownMalware")?.disable({ onlySelf: true });
 
       // Disable all blocklist settings for each Arr
       this.contentBlockerForm.get("sonarr.enabled")?.disable({ onlySelf: true });
@@ -494,6 +498,7 @@ export class ContentBlockerSettingsComponent implements OnDestroy, CanComponentD
         jobSchedule: formValue.jobSchedule,
         ignorePrivate: formValue.ignorePrivate || false,
         deletePrivate: formValue.deletePrivate || false,
+        deleteKnownMalware: formValue.deleteKnownMalware || false,
         sonarr: formValue.sonarr || {
           enabled: false,
           blocklistPath: "",
@@ -572,6 +577,7 @@ export class ContentBlockerSettingsComponent implements OnDestroy, CanComponentD
       },
       ignorePrivate: false,
       deletePrivate: false,
+      deleteKnownMalware: false,
       sonarr: {
         enabled: false,
         blocklistPath: "",

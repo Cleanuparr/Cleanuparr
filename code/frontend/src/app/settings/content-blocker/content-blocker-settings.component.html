@@ -133,6 +133,19 @@
         </div>
       </div>
 
+      <div class="field-row">
+        <label class="field-label">
+          <i class="pi pi-info-circle field-info-icon" 
+             (click)="openFieldDocs('deleteKnownMalware')" 
+             title="Click for documentation"></i>
+          Delete Known Malware
+        </label>
+        <div class="field-input">
+          <p-checkbox formControlName="deleteKnownMalware" [binary]="true"></p-checkbox>
+          <small class="form-helper-text">When enabled, files matching known malware patterns will be deleted</small>
+        </div>
+      </div>
+
       <!-- Arr Service Settings in Accordion -->
       <p-accordion [multiple]="false" [value]="activeAccordionIndices" styleClass="mt-3">
         <!-- Sonarr Settings -->

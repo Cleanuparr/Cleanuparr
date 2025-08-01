@@ -23,8 +23,11 @@ public sealed class BlocklistProvider
     private readonly HttpClient _httpClient;
     private readonly IMemoryCache _cache;
     private readonly Dictionary<InstanceType, string> _configHashes = new();
-    private static DateTime _lastLoadTime = DateTime.MinValue;
-    private const int LoadIntervalHours = 4;
+    private readonly Dictionary<string, DateTime> _lastLoadTimes = new();
+    private const int DefaultLoadIntervalHours = 4;
+    private const int FastLoadIntervalMinutes = 5;
+    private const string MalwareListUrl = "https://cleanuparr.pages.dev/static/known_malware_file_name_patterns";
+    private const string MalwareListKey = "MALWARE_PATTERNS";
 
     public BlocklistProvider(
         ILogger<BlocklistProvider> logger,
@@ -49,13 +52,6 @@ public sealed class BlocklistProvider
             var contentBlockerConfig = await dataContext.ContentBlockerConfigs
                 .AsNoTracking()
                 .FirstAsync();
-            bool shouldReload = false;
-
-            if (_lastLoadTime.AddHours(LoadIntervalHours) < DateTime.UtcNow)
-            {
-                shouldReload = true;
-                _lastLoadTime = DateTime.UtcNow;
-            }
             
             if (!contentBlockerConfig.Enabled)
             {
@@ -65,58 +61,76 @@ public sealed class BlocklistProvider
             
             // Check and update Sonarr blocklist if needed
             string sonarrHash = GenerateSettingsHash(contentBlockerConfig.Sonarr);
-            if (shouldReload || !_configHashes.TryGetValue(InstanceType.Sonarr, out string? oldSonarrHash) || sonarrHash != oldSonarrHash)
+            var sonarrInterval = GetLoadInterval(contentBlockerConfig.Sonarr.BlocklistPath);
+            var sonarrIdentifier = $"Sonarr_{contentBlockerConfig.Sonarr.BlocklistPath}";
+            if (ShouldReloadBlocklist(sonarrIdentifier, sonarrInterval) || !_configHashes.TryGetValue(InstanceType.Sonarr, out string? oldSonarrHash) || sonarrHash != oldSonarrHash)
             {
                 _logger.LogDebug("Loading Sonarr blocklist");
                 
                 await LoadPatternsAndRegexesAsync(contentBlockerConfig.Sonarr, InstanceType.Sonarr);
                 _configHashes[InstanceType.Sonarr] = sonarrHash;
+                _lastLoadTimes[sonarrIdentifier] = DateTime.UtcNow;
                 changedCount++;
             }
             
             // Check and update Radarr blocklist if needed
             string radarrHash = GenerateSettingsHash(contentBlockerConfig.Radarr);
-            if (shouldReload || !_configHashes.TryGetValue(InstanceType.Radarr, out string? oldRadarrHash) || radarrHash != oldRadarrHash)
+            var radarrInterval = GetLoadInterval(contentBlockerConfig.Radarr.BlocklistPath);
+            var radarrIdentifier = $"Radarr_{contentBlockerConfig.Radarr.BlocklistPath}";
+            if (ShouldReloadBlocklist(radarrIdentifier, radarrInterval) || !_configHashes.TryGetValue(InstanceType.Radarr, out string? oldRadarrHash) || radarrHash != oldRadarrHash)
             {
                 _logger.LogDebug("Loading Radarr blocklist");
                 
                 await LoadPatternsAndRegexesAsync(contentBlockerConfig.Radarr, InstanceType.Radarr);
                 _configHashes[InstanceType.Radarr] = radarrHash;
+                _lastLoadTimes[radarrIdentifier] = DateTime.UtcNow;
                 changedCount++;
             }
             
             // Check and update Lidarr blocklist if needed
             string lidarrHash = GenerateSettingsHash(contentBlockerConfig.Lidarr);
-            if (shouldReload || !_configHashes.TryGetValue(InstanceType.Lidarr, out string? oldLidarrHash) || lidarrHash != oldLidarrHash)
+            var lidarrInterval = GetLoadInterval(contentBlockerConfig.Lidarr.BlocklistPath);
+            var lidarrIdentifier = $"Lidarr_{contentBlockerConfig.Lidarr.BlocklistPath}";
+            if (ShouldReloadBlocklist(lidarrIdentifier, lidarrInterval) || !_configHashes.TryGetValue(InstanceType.Lidarr, out string? oldLidarrHash) || lidarrHash != oldLidarrHash)
             {
                 _logger.LogDebug("Loading Lidarr blocklist");
                 
                 await LoadPatternsAndRegexesAsync(contentBlockerConfig.Lidarr, InstanceType.Lidarr);
                 _configHashes[InstanceType.Lidarr] = lidarrHash;
+                _lastLoadTimes[lidarrIdentifier] = DateTime.UtcNow;
                 changedCount++;
             }
             
-            // Check and update Lidarr blocklist if needed
+            // Check and update Readarr blocklist if needed
             string readarrHash = GenerateSettingsHash(contentBlockerConfig.Readarr);
-            if (shouldReload || !_configHashes.TryGetValue(InstanceType.Readarr, out string? oldReadarrHash) || readarrHash != oldReadarrHash)
+            var readarrInterval = GetLoadInterval(contentBlockerConfig.Readarr.BlocklistPath);
+            var readarrIdentifier = $"Readarr_{contentBlockerConfig.Readarr.BlocklistPath}";
+            if (ShouldReloadBlocklist(readarrIdentifier, readarrInterval) || !_configHashes.TryGetValue(InstanceType.Readarr, out string? oldReadarrHash) || readarrHash != oldReadarrHash)
             {
                 _logger.LogDebug("Loading Readarr blocklist");
                 
                 await LoadPatternsAndRegexesAsync(contentBlockerConfig.Readarr, InstanceType.Readarr);
                 _configHashes[InstanceType.Readarr] = readarrHash;
+                _lastLoadTimes[readarrIdentifier] = DateTime.UtcNow;
                 changedCount++;
             }
             
             // Check and update Whisparr blocklist if needed
             string whisparrHash = GenerateSettingsHash(contentBlockerConfig.Whisparr);
-            if (shouldReload || !_configHashes.TryGetValue(InstanceType.Whisparr, out string? oldWhisparrHash) || whisparrHash != oldWhisparrHash)
+            var whisparrInterval = GetLoadInterval(contentBlockerConfig.Whisparr.BlocklistPath);
+            var whisparrIdentifier = $"Whisparr_{contentBlockerConfig.Whisparr.BlocklistPath}";
+            if (ShouldReloadBlocklist(whisparrIdentifier, whisparrInterval) || !_configHashes.TryGetValue(InstanceType.Whisparr, out string? oldWhisparrHash) || whisparrHash != oldWhisparrHash)
             {
                 _logger.LogDebug("Loading Whisparr blocklist");
                 
                 await LoadPatternsAndRegexesAsync(contentBlockerConfig.Whisparr, InstanceType.Whisparr);
                 _configHashes[InstanceType.Whisparr] = whisparrHash;
+                _lastLoadTimes[whisparrIdentifier] = DateTime.UtcNow;
                 changedCount++;
             }
+            
+            // Always check and update malware patterns
+            await LoadMalwarePatternsAsync();
             
             if (changedCount > 0)
             {
@@ -153,6 +167,74 @@ public sealed class BlocklistProvider
         _cache.TryGetValue(CacheKeys.BlocklistRegexes(instanceType), out ConcurrentBag<Regex>? regexes);
         
         return regexes ?? [];
+    }
+    
+    public ConcurrentBag<string> GetMalwarePatterns()
+    {
+        _cache.TryGetValue(CacheKeys.KnownMalwarePatterns(), out ConcurrentBag<string>? patterns);
+        
+        return patterns ?? [];
+    }
+    
+    private TimeSpan GetLoadInterval(string? path)
+    {
+        if (!string.IsNullOrEmpty(path) && Uri.TryCreate(path, UriKind.Absolute, out var uri))
+        {
+            if (uri.Host.Equals("cleanuparr.pages.dev", StringComparison.OrdinalIgnoreCase))
+            {
+                return TimeSpan.FromMinutes(FastLoadIntervalMinutes);
+            }
+        }
+        
+        return TimeSpan.FromHours(DefaultLoadIntervalHours);
+    }
+    
+    private bool ShouldReloadBlocklist(string identifier, TimeSpan interval)
+    {
+        if (!_lastLoadTimes.TryGetValue(identifier, out DateTime lastLoad))
+        {
+            return true;
+        }
+        
+        return DateTime.UtcNow - lastLoad >= interval;
+    }
+    
+    private async Task LoadMalwarePatternsAsync()
+    {
+        var malwareInterval = TimeSpan.FromMinutes(FastLoadIntervalMinutes);
+        
+        if (!ShouldReloadBlocklist(MalwareListKey, malwareInterval))
+        {
+            return;
+        }
+        
+        try
+        {
+            _logger.LogDebug("Loading malware patterns");
+            
+            string[] filePatterns = await ReadContentAsync(MalwareListUrl);
+            
+            long startTime = Stopwatch.GetTimestamp();
+            ParallelOptions options = new() { MaxDegreeOfParallelism = 5 };
+            ConcurrentBag<string> patterns = [];
+            
+            Parallel.ForEach(filePatterns, options, pattern =>
+            {
+                patterns.Add(pattern);
+            });
+
+            TimeSpan elapsed = Stopwatch.GetElapsedTime(startTime);
+
+            _cache.Set(CacheKeys.KnownMalwarePatterns(), patterns);
+            _lastLoadTimes[MalwareListKey] = DateTime.UtcNow;
+            
+            _logger.LogDebug("loaded {count} known malware patterns", patterns.Count);
+            _logger.LogDebug("malware patterns loaded in {elapsed} ms", elapsed.TotalMilliseconds);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to load malware patterns from {url}", MalwareListUrl);
+        }
     }
 
     private async Task LoadPatternsAndRegexesAsync(BlocklistSettings blocklistSettings, InstanceType instanceType)

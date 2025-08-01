@@ -7,4 +7,6 @@ namespace Cleanuparr.Infrastructure.Features.ContentBlocker;
 public interface IFilenameEvaluator
 {
     bool IsValid(string filename, BlocklistType type, ConcurrentBag<string> patterns, ConcurrentBag<Regex> regexes);
+
+    bool IsKnownMalware(string filename, ConcurrentBag<string> malwarePatterns);
 }
