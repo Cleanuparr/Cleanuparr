@@ -1,3 +1,11 @@
+// Main container stability
+:host {
+  display: block;
+  height: 100%;
+  overflow: hidden; // Prevent scrolling
+  position: relative;
+}
+
 // Logo container
 .logo-container {
   display: flex;
@@ -50,28 +58,57 @@
   display: flex;
   flex-direction: column;
   flex: 1;
-  gap: 1rem;
-  transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+  gap: 0; // Remove gap to prevent layout shifts
+  transition: opacity 0.2s ease;
+  
+  // Prevent horizontal scrolling
+  overflow-x: hidden;
+  overflow-y: auto;
+  
+  // Fixed minimum height to prevent jumping
+  min-height: 400px;
 
   // Loading skeleton
   .nav-skeleton {
     padding: 0;
     
     .skeleton-item {
-      height: 60px;
+      height: 60px; // Match actual nav-item height
+      padding: 10px 20px; // Match nav-item padding
+      margin-bottom: 8px; // Match nav-item spacing
+      display: flex;
+      align-items: center;
+      border-radius: 6px;
       background: linear-gradient(90deg, var(--surface-200) 25%, var(--surface-300) 50%, var(--surface-200) 75%);
       background-size: 200% 100%;
       animation: skeleton-loading 1.5s infinite;
-      margin-bottom: 10px;
-      border-radius: 6px;
       
       &:last-child {
         margin-bottom: 0;
       }
       
       &.sponsor-skeleton {
-        height: 50px;
         margin-bottom: 15px;
+      }
+      
+      // Add fake icon and text areas to match real content
+      &::before {
+        content: '';
+        width: 40px;
+        height: 40px;
+        border-radius: 8px;
+        background: var(--surface-300);
+        margin-right: 15px;
+        flex-shrink: 0;
+      }
+      
+      &::after {
+        content: '';
+        height: 20px;
+        background: var(--surface-300);
+        border-radius: 4px;
+        flex: 1;
+        max-width: 120px;
       }
     }
   }
@@ -130,22 +167,6 @@
     }
   }
   
-  // Nav groups (keeping for potential future use)
-  .nav-group {
-    margin-bottom: 15px;
-    
-    .nav-group-title {
-      font-size: 12px;
-      font-weight: 700;
-      color: var(--text-color-secondary);
-      text-transform: uppercase;
-      letter-spacing: 2px;
-      padding: 0 20px 8px;
-      margin: 5px 0;
-      border-bottom: 1px solid var(--surface-border);
-    }
-  }
-  
   // Navigation items
   .nav-item {
     display: flex;
@@ -157,6 +178,11 @@
     position: relative;
     overflow: hidden;
     transition: all 0.2s cubic-bezier(0.4, 0.0, 0.2, 1);
+    margin-bottom: 8px; // Consistent spacing instead of gap
+    
+    &:last-child {
+      margin-bottom: 0;
+    }
     
     .nav-icon-wrapper {
       width: 40px;
@@ -169,6 +195,7 @@
       background: var(--surface-card);
       border: 1px solid var(--surface-border);
       transition: all 0.2s cubic-bezier(0.4, 0.0, 0.2, 1);
+      flex-shrink: 0; // Prevent icon from shrinking
       
       i {
         font-size: 20px;
@@ -180,6 +207,9 @@
     span {
       white-space: nowrap;
       font-size: 14px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      flex: 1; // Take available space
     }
 
     .nav-badge {
@@ -190,6 +220,7 @@
       padding: 2px 8px;
       font-size: 12px;
       font-weight: 600;
+      flex-shrink: 0;
     }
     
     &::before {
@@ -246,6 +277,7 @@
       margin-left: auto;
       opacity: 0.6;
       transition: transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+      flex-shrink: 0;
       
       i {
         font-size: 16px;

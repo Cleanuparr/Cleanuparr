@@ -40,46 +40,32 @@ interface RouteMapping {
   templateUrl: './sidebar-content.component.html',
   styleUrl: './sidebar-content.component.scss',
   animations: [
-    // Main navigation container animation
-    trigger('slideInOut', [
+    // Navigation level transition animations
+    trigger('slideInFromRight', [
       transition(':enter', [
-        style({ opacity: 0, transform: 'translateX(-20px)' }),
-        animate('300ms ease-out', style({ opacity: 1, transform: 'translateX(0)' }))
+        style({ transform: 'translateX(100%)', opacity: 0 }),
+        animate('300ms cubic-bezier(0.4, 0.0, 0.2, 1)', style({ transform: 'translateX(0)', opacity: 1 }))
       ]),
       transition(':leave', [
-        animate('200ms ease-in', style({ opacity: 0, transform: 'translateX(20px)' }))
+        animate('200ms cubic-bezier(0.4, 0.0, 0.2, 1)', style({ transform: 'translateX(-50%)', opacity: 0 }))
       ])
     ]),
-    
-    // Individual navigation items animation
+    // Staggered item animations for smooth appearance
     trigger('staggerItems', [
       transition(':enter', [
-        query('.nav-item', [
-          style({ opacity: 0, transform: 'translateY(-10px)' }),
-          stagger(50, animate('200ms ease-out', style({ opacity: 1, transform: 'translateY(0)' })))
+        query(':enter', [
+          style({ transform: 'translateX(30px)', opacity: 0 }),
+          stagger('50ms', [
+            animate('300ms cubic-bezier(0.4, 0.0, 0.2, 1)', style({ transform: 'translateX(0)', opacity: 1 }))
+          ])
         ], { optional: true })
       ])
     ]),
-    
-    // Breadcrumb animation
-    trigger('breadcrumbSlide', [
+    // Simple fade in animation for skeleton
+    trigger('fadeIn', [
       transition(':enter', [
-        style({ opacity: 0, height: 0, marginBottom: 0 }),
-        animate('250ms ease-out', style({ opacity: 1, height: '*', marginBottom: '10px' }))
-      ]),
-      transition(':leave', [
-        animate('200ms ease-in', style({ opacity: 0, height: 0, marginBottom: 0 }))
-      ])
-    ]),
-    
-    // Go back button animation
-    trigger('slideDown', [
-      transition(':enter', [
-        style({ opacity: 0, transform: 'translateY(-20px)' }),
-        animate('250ms ease-out', style({ opacity: 1, transform: 'translateY(0)' }))
-      ]),
-      transition(':leave', [
-        animate('200ms ease-in', style({ opacity: 0, transform: 'translateY(-20px)' }))
+        style({ opacity: 0 }),
+        animate('200ms ease-out', style({ opacity: 1 }))
       ])
     ])
   ]
@@ -100,7 +86,7 @@ export class SidebarContentComponent implements OnInit, OnChanges, OnDestroy {
 
   // Pre-rendering optimization properties
   isNavigationReady = false;
-  isInitializing = true;
+  private hasInitialized = false;
 
   // Route synchronization properties
   private routerSubscription?: Subscription;
@@ -124,7 +110,13 @@ export class SidebarContentComponent implements OnInit, OnChanges, OnDestroy {
   ];
 
   ngOnInit(): void {
-    this.initializeNavigationWithRoute();
+    // Start with loading state
+    this.isNavigationReady = false;
+    
+    // Initialize navigation after showing skeleton
+    setTimeout(() => {
+      this.initializeNavigation();
+    }, 300);
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -138,57 +130,41 @@ export class SidebarContentComponent implements OnInit, OnChanges, OnDestroy {
   }
 
   /**
-   * Initialize navigation with correct route state from the start
+   * Initialize navigation and determine correct level based on route
    */
-  private async initializeNavigationWithRoute(): Promise<void> {
-    // Initialize navigation data first
-    this.initializeNavigation();
+  private initializeNavigation(): void {
+    if (this.hasInitialized) return;
     
-    // Determine correct state before rendering
-    await this.determineInitialNavigationState();
+    // 1. Initialize navigation data
+    this.setupNavigationData();
     
-    // Mark as ready to render
+    // 2. Update activity items if available
+    if (this.menuItems && this.menuItems.length > 0) {
+      this.updateActivityItems();
+    }
+    
+    // 3. Determine correct navigation level based on current route
+    this.syncSidebarWithCurrentRoute();
+    
+    // 4. Mark as ready and subscribe to route changes
     this.isNavigationReady = true;
-    this.isInitializing = false;
-    
-    // Subscribe to route changes for future navigation
+    this.hasInitialized = true;
     this.subscribeToRouteChanges();
   }
 
   /**
-   * Determine initial navigation state based on current route
+   * Setup basic navigation data structure
    */
-  private async determineInitialNavigationState(): Promise<void> {
-    // Give Angular time to process route
-    await new Promise(resolve => setTimeout(resolve, 0));
-    
-    const currentRoute = this.router.url;
-    const mapping = this.findRouteMapping(currentRoute);
-    
-    if (mapping) {
-      this.navigateToRouteMapping(mapping);
-    }
+  private setupNavigationData(): void {
+    this.navigationData = this.getNavigationData();
+    this.currentNavigation = [...this.navigationData];
   }
 
   /**
-   * TrackBy function for better performance
+   * Get the navigation data structure
    */
-  trackByItemId(index: number, item: NavigationItem): string {
-    return item.id;
-  }
-
-  /**
-   * TrackBy function for breadcrumb items
-   */
-  trackByBreadcrumb(index: number, item: NavigationItem): string {
-    return `${item.id}-${index}`;
-  }
-
-  /**
-   * Initialize the navigation data structure
-   */
-  private initializeNavigation(): void {
-    this.navigationData = [
+  private getNavigationData(): NavigationItem[] {
+    return [
       {
         id: 'dashboard',
         label: 'Dashboard',
@@ -259,11 +235,64 @@ export class SidebarContentComponent implements OnInit, OnChanges, OnDestroy {
         ]
       }
     ];
+  }
 
-    // Set initial navigation to root level
+  /**
+   * Navigate to route mapping synchronously without delays
+   */
+  private navigateToRouteMappingSync(mapping: RouteMapping): void {
+    // No delays, no async operations - just set the state
+    this.navigationBreadcrumb = [];
     this.currentNavigation = [...this.navigationData];
-    this.updateActivityItems();
+    
+    for (let i = 0; i < mapping.navigationPath.length - 1; i++) {
+      const itemId = mapping.navigationPath[i];
+      const item = this.currentNavigation.find(nav => nav.id === itemId);
+      
+      if (item && item.children) {
+        this.navigationBreadcrumb.push(item);
+        this.currentNavigation = [...item.children];
+      }
+    }
+    
     this.updateNavigationState();
+  }
+
+  /**
+   * Get skeleton items based on predicted navigation state
+   */
+  getSkeletonItems(): Array<{isSponsor: boolean}> {
+    const currentRoute = this.router.url;
+    const mapping = this.findRouteMapping(currentRoute);
+    
+    if (mapping && mapping.navigationPath.length > 1) {
+      // We'll show sub-navigation, predict item count
+      return [
+        { isSponsor: true },
+        { isSponsor: false }, // Go back
+        ...Array(6).fill({ isSponsor: false }) // Estimated items
+      ];
+    }
+    
+    // Default main navigation count
+    return [
+      { isSponsor: true },
+      ...Array(5).fill({ isSponsor: false })
+    ];
+  }
+
+  /**
+   * TrackBy function for better performance
+   */
+  trackByItemId(index: number, item: NavigationItem): string {
+    return item.id;
+  }
+
+  /**
+   * TrackBy function for breadcrumb items
+   */
+  trackByBreadcrumb(index: number, item: NavigationItem): string {
+    return `${item.id}-${index}`;
   }
 
   /**
@@ -343,25 +372,11 @@ export class SidebarContentComponent implements OnInit, OnChanges, OnDestroy {
   }
 
   /**
-   * Navigate sidebar to match route mapping
+   * Navigate sidebar to match route mapping (used by route sync)
    */
   private navigateToRouteMapping(mapping: RouteMapping): void {
-    // Reset to root level
-    this.navigationBreadcrumb = [];
-    this.currentNavigation = [...this.navigationData];
-    
-    // Navigate through the path to reach the target (skip the last item as it's the final destination)
-    for (let i = 0; i < mapping.navigationPath.length - 1; i++) {
-      const itemId = mapping.navigationPath[i];
-      const item = this.currentNavigation.find(nav => nav.id === itemId);
-      
-      if (item && item.children) {
-        this.navigationBreadcrumb.push(item);
-        this.currentNavigation = [...item.children];
-      }
-    }
-    
-    this.updateNavigationState();
+    // Use the synchronous version
+    this.navigateToRouteMappingSync(mapping);
   }
 
   /**
@@ -376,44 +391,33 @@ export class SidebarContentComponent implements OnInit, OnChanges, OnDestroy {
   }
 
   /**
-   * Navigate to a sub-level with smooth animation
+   * Navigate to a sub-level without delays
    */
   navigateToLevel(item: NavigationItem): void {
     if (item.children && item.children.length > 0) {
-      // Add small delay for smooth animation
-      this.isNavigationReady = false;
-      
-      setTimeout(() => {
-        this.navigationBreadcrumb.push(item);
-        this.currentNavigation = item.children ? [...item.children] : [];
-        this.updateNavigationState();
-        this.isNavigationReady = true;
-      }, 150);
+      this.navigationBreadcrumb.push(item);
+      this.currentNavigation = item.children ? [...item.children] : [];
+      this.updateNavigationState();
     }
   }
 
   /**
-   * Go back to the previous level with smooth animation
+   * Go back to the previous level without delays
    */
   goBack(): void {
     if (this.navigationBreadcrumb.length > 0) {
-      this.isNavigationReady = false;
+      this.navigationBreadcrumb.pop();
       
-      setTimeout(() => {
-        this.navigationBreadcrumb.pop();
-        
-        if (this.navigationBreadcrumb.length === 0) {
-          // Back to root level
-          this.currentNavigation = [...this.navigationData];
-        } else {
-          // Back to parent level
-          const parent = this.navigationBreadcrumb[this.navigationBreadcrumb.length - 1];
-          this.currentNavigation = parent.children ? [...parent.children] : [];
-        }
-        
-        this.updateNavigationState();
-        this.isNavigationReady = true;
-      }, 150);
+      if (this.navigationBreadcrumb.length === 0) {
+        // Back to root level
+        this.currentNavigation = [...this.navigationData];
+      } else {
+        // Back to parent level
+        const parent = this.navigationBreadcrumb[this.navigationBreadcrumb.length - 1];
+        this.currentNavigation = parent.children ? [...parent.children] : [];
+      }
+      
+      this.updateNavigationState();
     }
   }
 
