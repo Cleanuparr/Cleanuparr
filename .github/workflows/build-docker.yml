@@ -29,6 +29,8 @@ jobs:
           githubHeadRef=${{ env.githubHeadRef }}
           latestDockerTag=""
           versionDockerTag=""
+          majorVersionDockerTag=""
+          minorVersionDockerTag=""
           version="0.0.1"
 
           if [[ "$githubRef" =~ ^"refs/tags/" ]]; then
@@ -36,6 +38,12 @@ jobs:
             latestDockerTag="latest"
             versionDockerTag=${branch#v}
             version=${branch#v}
+            
+            # Extract major and minor versions for additional tags
+            if [[ "$versionDockerTag" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
+              majorVersionDockerTag="${BASH_REMATCH[1]}"
+              minorVersionDockerTag="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}"
+            fi
           else
             # Determine if this run is for the main branch or another branch
             if [[ -z "$githubHeadRef" ]]; then
@@ -57,6 +65,12 @@ jobs:
           fi
           if [ -n "$versionDockerTag" ]; then
             githubTags="$githubTags,ghcr.io/cleanuparr/cleanuparr:$versionDockerTag"
+          fi
+          if [ -n "$minorVersionDockerTag" ]; then
+            githubTags="$githubTags,ghcr.io/cleanuparr/cleanuparr:$minorVersionDockerTag"
+          fi
+          if [ -n "$majorVersionDockerTag" ]; then
+            githubTags="$githubTags,ghcr.io/cleanuparr/cleanuparr:$majorVersionDockerTag"
           fi
 
           # set env vars
