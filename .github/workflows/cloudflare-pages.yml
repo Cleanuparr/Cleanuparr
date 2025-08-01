@@ -1,0 +1,36 @@
+name: Deploy to Cloudflare Pages
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'Cloudflare/**'
+      - 'blacklist'
+      - 'blacklist_permissive'
+      - 'whitelist'
+      - 'whitelist_with_subtitles'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    name: Deploy to Cloudflare Pages
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Copy root static files to Cloudflare static directory
+        run: |
+          cp blacklist Cloudflare/static/
+          cp blacklist_permissive Cloudflare/static/
+          cp whitelist Cloudflare/static/
+          cp whitelist_with_subtitles Cloudflare/static/
+      
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_PAGES_TOKEN }}
+          workingDirectory: "Cloudflare"
+          command: pages deploy . --project-name=cleanuparr

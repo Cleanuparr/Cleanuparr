@@ -1,0 +1,3 @@
+# Cache static files for 5 minutes
+/static/*
+  Cache-Control: public, max-age=300, s-maxage=300
