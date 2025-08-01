@@ -23,10 +23,13 @@
 <!-- Show actual navigation when ready -->
 <nav class="nav-menu" 
      *ngIf="isNavigationReady" 
-     [@slideInFromRight]
      [@staggerItems]>
   <!-- Project Sponsors Link (always visible) -->
-  <a href="https://cleanuparr.github.io/Cleanuparr/support" class="nav-item sponsor-link" target="_blank" rel="noopener noreferrer">
+  <a href="https://cleanuparr.github.io/Cleanuparr/support" 
+     class="nav-item sponsor-link" 
+     target="_blank" 
+     rel="noopener noreferrer"
+     [@slideInFromRight]>
     <div class="nav-icon-wrapper heart-icon">
       <i class="pi pi-heart"></i>
     </div>
@@ -34,7 +37,10 @@
   </a>
   
   <!-- Go Back button (shown when not at root level) -->
-  <div class="nav-item go-back-button" *ngIf="canGoBack" (click)="goBack()">
+  <div class="nav-item go-back-button" 
+       *ngIf="canGoBack" 
+       (click)="goBack()"
+       [@slideInFromRight]>
     <div class="nav-icon-wrapper">
       <i class="pi pi-arrow-left"></i>
     </div>
@@ -42,7 +48,9 @@
   </div>
 
   <!-- Breadcrumb (optional, for better UX) -->
-  <div class="breadcrumb" *ngIf="navigationBreadcrumb.length > 0">
+  <div class="breadcrumb" 
+       *ngIf="navigationBreadcrumb.length > 0"
+       [@slideInFromRight]>
     <span *ngFor="let crumb of navigationBreadcrumb; let last = last; trackBy: trackByBreadcrumb">
       {{ crumb.label }}
       <i class="pi pi-chevron-right" *ngIf="!last"></i>
@@ -50,12 +58,13 @@
   </div>
 
   <!-- Current level navigation items -->
-  <ng-container *ngFor="let item of currentNavigation; trackBy: trackByItemId">
+  <ng-container *ngFor="let item of currentNavigation; trackBy: trackByItemIdWithState">
     <!-- Items with children (drill-down) -->
     <div 
       class="nav-item nav-parent" 
       *ngIf="item.children && item.children.length > 0"
-      (click)="navigateToLevel(item)">
+      (click)="navigateToLevel(item)"
+      [@slideInFromRight]>
       <div class="nav-icon-wrapper">
         <i [class]="item.icon"></i>
       </div>
@@ -71,7 +80,8 @@
       class="nav-item" 
       *ngIf="!item.children && item.route"
       [class.active]="router.url.includes(item.route)" 
-      (click)="onNavItemClick()">
+      (click)="onNavItemClick()"
+      [@slideInFromRight]>
       <div class="nav-icon-wrapper">
         <i [class]="item.icon"></i>
       </div>
@@ -85,7 +95,8 @@
       class="nav-item" 
       *ngIf="!item.children && item.isExternal"
       target="_blank" 
-      rel="noopener noreferrer">
+      rel="noopener noreferrer"
+      [@slideInFromRight]>
       <div class="nav-icon-wrapper">
         <i [class]="item.icon"></i>
       </div>

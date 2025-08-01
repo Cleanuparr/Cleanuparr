@@ -88,6 +88,9 @@ export class SidebarContentComponent implements OnInit, OnChanges, OnDestroy {
   isNavigationReady = false;
   private hasInitialized = false;
 
+  // Animation trigger property - changes to force re-render and trigger animations
+  navigationStateKey = 0;
+
   // Route synchronization properties
   private routerSubscription?: Subscription;
   private routeMappings: RouteMapping[] = [
@@ -289,6 +292,13 @@ export class SidebarContentComponent implements OnInit, OnChanges, OnDestroy {
   }
 
   /**
+   * TrackBy function that includes navigation state for animation triggers
+   */
+  trackByItemIdWithState(index: number, item: NavigationItem): string {
+    return `${item.id}-${this.navigationStateKey}`;
+  }
+
+  /**
    * TrackBy function for breadcrumb items
    */
   trackByBreadcrumb(index: number, item: NavigationItem): string {
@@ -391,18 +401,19 @@ export class SidebarContentComponent implements OnInit, OnChanges, OnDestroy {
   }
 
   /**
-   * Navigate to a sub-level without delays
+   * Navigate to a sub-level with animation trigger
    */
   navigateToLevel(item: NavigationItem): void {
     if (item.children && item.children.length > 0) {
       this.navigationBreadcrumb.push(item);
       this.currentNavigation = item.children ? [...item.children] : [];
+      this.navigationStateKey++; // Force animation trigger
       this.updateNavigationState();
     }
   }
 
   /**
-   * Go back to the previous level without delays
+   * Go back to the previous level with animation trigger
    */
   goBack(): void {
     if (this.navigationBreadcrumb.length > 0) {
@@ -417,6 +428,7 @@ export class SidebarContentComponent implements OnInit, OnChanges, OnDestroy {
         this.currentNavigation = parent.children ? [...parent.children] : [];
       }
       
+      this.navigationStateKey++; // Force animation trigger
       this.updateNavigationState();
     }
   }
