@@ -83,6 +83,25 @@ Setting this to true means private torrents will be permanently deleted, potenti
 
 </ConfigSection>
 
+<ConfigSection
+  id="delete-known-malware"
+  title="Delete Known Malware"
+  icon="🦠"
+>
+
+When enabled, downloads that match known malware patterns will be automatically deleted from the download client.
+
+**Malware Detection Source:**
+- List is automatically fetched from: `https://cleanuparr.pages.dev/static/known_malware_file_name_patterns`
+- Updates automatically every **5 minutes**
+- Contains filename patterns known to be associated with malware
+
+<EnhancedWarning>
+This feature permanently deletes downloads that match malware patterns. While the patterns are carefully curated, false positives are possible. Monitor logs carefully when first enabling this feature.
+</EnhancedWarning>
+
+</ConfigSection>
+
 </div>
 
 <div className={styles.section}>
@@ -118,7 +137,12 @@ Path to the blocklist file or URL. This can be a local file path or a remote URL
 - `/config/sonarr-blocklist.txt`
 - `https://example.com/blocklist.txt`
 
-The blocklists support the following types of patters:
+**Automatic Reload Intervals:**
+- **Cleanuparr Official Lists** (`cleanuparr.pages.dev`): Every **5 minutes**
+- **Other Remote URLs**: Every **4 hours**
+- **Local Files**: Every **5 minutes**
+
+The blocklists support the following types of patterns:
 ```
 *example            // file name ends with "example"
 example*            // file name starts with "example"
@@ -126,6 +150,14 @@ example*            // file name starts with "example"
 example             // file name is exactly the word "example"
 regex:<ANY_REGEX>   // regex that needs to be marked at the start of the line with "regex:"
 ```
+
+:::tip
+Available blocklists that can be used with Sonarr and Radarr:
+- `http://cleanuparr.pages.dev/static/blacklist`
+- `http://cleanuparr.pages.dev/static/blacklist_permissive`
+- `http://cleanuparr.pages.dev/static/whitelist`
+- `http://cleanuparr.pages.dev/static/whitelist_with_subtitles`
+:::
 
 </ConfigSection>
 
@@ -138,10 +170,6 @@ regex:<ANY_REGEX>   // regex that needs to be marked at the start of the line wi
 Controls how the blocklist is interpreted:
 - **Blacklist**: Files matching any pattern in the list will be blocked.
 - **Whitelist**: Only files matching patterns in the list will be allowed.
-
-:::tip
-[This blacklist](https://raw.githubusercontent.com/Cleanuparr/Cleanuparr/refs/heads/main/blacklist), [this permissive blacklist](https://raw.githubusercontent.com/Cleanuparr/Cleanuparr/refs/heads/main/blacklist_permissive), [this whitelist](https://raw.githubusercontent.com/Cleanuparr/Cleanuparr/refs/heads/main/whitelist) and [this whitelist with subtitles](https://raw.githubusercontent.com/Cleanuparr/Cleanuparr/refs/heads/main/whitelist_with_subtitles) can be used for Sonarr and Radarr.
-:::
 
 </ConfigSection>
 
