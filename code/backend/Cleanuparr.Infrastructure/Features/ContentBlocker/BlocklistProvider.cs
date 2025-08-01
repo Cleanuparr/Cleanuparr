@@ -189,7 +189,7 @@ public sealed class BlocklistProvider
         }
         
         // If fast load interval for local files
-        return TimeSpan.FromHours(FastLoadIntervalMinutes);
+        return TimeSpan.FromMinutes(FastLoadIntervalMinutes);
     }
     
     private bool ShouldReloadBlocklist(string identifier, TimeSpan interval)
