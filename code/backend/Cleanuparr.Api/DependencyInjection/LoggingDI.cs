@@ -27,7 +27,7 @@ public static class LoggingDI
         const string fileOutputTemplate = $"{{@t:yyyy-MM-dd HH:mm:ss.fff zzz}} [{{@l:u3}}]{jobNameTemplate}{categoryTemplate} {{@m:lj}}\n{{@x}}";
 
         // Determine job name padding
-        List<string> jobNames = [nameof(JobType.QueueCleaner), nameof(JobType.ContentBlocker), nameof(JobType.DownloadCleaner)];
+        List<string> jobNames = [nameof(JobType.QueueCleaner), nameof(JobType.MalwareBlocker), nameof(JobType.DownloadCleaner)];
         int jobPadding = jobNames.Max(x => x.Length) + 2;
 
         // Determine instance name padding

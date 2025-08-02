@@ -52,7 +52,7 @@ public static class CronValidationHelper
                 throw new ValidationException($"{cronExpression} should have a fire time of maximum {Constants.TriggerMaxLimit.TotalHours} hours");
             }
             
-            if (jobType is not JobType.ContentBlocker && triggerValue < Constants.TriggerMinLimit)
+            if (jobType is not JobType.MalwareBlocker && triggerValue < Constants.TriggerMinLimit)
             {
                 throw new ValidationException($"{cronExpression} should have a fire time of minimum {Constants.TriggerMinLimit.TotalSeconds} seconds");
             }
