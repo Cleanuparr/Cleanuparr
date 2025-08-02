@@ -132,12 +132,12 @@ public class BackgroundJobManager : IHostedService
         CancellationToken cancellationToken = default)
     {
         // Always register the job definition
-        await AddJobWithoutTrigger<ContentBlocker>(cancellationToken);
+        await AddJobWithoutTrigger<MalwareBlocker>(cancellationToken);
         
         // Only add triggers if the job is enabled
         if (config.Enabled)
         {
-            await AddTriggersForJob<ContentBlocker>(config, config.CronExpression, cancellationToken);
+            await AddTriggersForJob<MalwareBlocker>(config, config.CronExpression, cancellationToken);
         }
     }
     
@@ -190,7 +190,7 @@ public class BackgroundJobManager : IHostedService
                 throw new ValidationException($"{cronExpression} should have a fire time of maximum {Constants.TriggerMaxLimit.TotalHours} hours");
             }
             
-            if (typeof(T) != typeof(ContentBlocker) && triggerValue < Constants.TriggerMinLimit)
+            if (typeof(T) != typeof(MalwareBlocker) && triggerValue < Constants.TriggerMinLimit)
             {
                 throw new ValidationException($"{cronExpression} should have a fire time of minimum {Constants.TriggerMinLimit.TotalSeconds} seconds");
             }

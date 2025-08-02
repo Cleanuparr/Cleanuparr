@@ -40,7 +40,7 @@ public static class ServicesDI
             .AddScoped<WhisparrClient>()
             .AddScoped<ArrClientFactory>()
             .AddScoped<QueueCleaner>()
-            .AddScoped<ContentBlocker>()
+            .AddScoped<MalwareBlocker>()
             .AddScoped<DownloadCleaner>()
             .AddScoped<IQueueItemRemover, QueueItemRemover>()
             .AddScoped<IDownloadHunter, DownloadHunter>()
