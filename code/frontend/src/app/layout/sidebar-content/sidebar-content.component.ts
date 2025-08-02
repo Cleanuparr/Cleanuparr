@@ -119,7 +119,7 @@ export class SidebarContentComponent implements OnInit, OnChanges, OnDestroy {
     // Initialize navigation after showing skeleton
     setTimeout(() => {
       this.initializeNavigation();
-    }, 300);
+    }, 100);
   }
 
   ngOnChanges(changes: SimpleChanges): void {
