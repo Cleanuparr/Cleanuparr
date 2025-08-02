@@ -41,7 +41,7 @@
               </label>
               <div class="field-input">
                 <input type="text" pInputText formControlName="apiKey" inputId="notifiarrApiKey" placeholder="Enter Notifiarr API key" />
-                <small class="form-helper-text">Your Notifiarr API key for authentication</small>
+                <small class="form-helper-text">Passthrough integration must be enabled and a Passthrough key needs to be created in your profile</small>
               </div>
             </div>
 
@@ -56,8 +56,14 @@
 
               </label>
               <div class="field-input">
-                <input type="text" pInputText formControlName="channelId" inputId="notifiarrChannelId" placeholder="Enter channel ID" />
-                <small class="form-helper-text">The channel ID where notifications will be sent</small>
+                <p-inputNumber
+                  placeholder="Enter channel ID"
+                  formControlName="channelId"
+                  [min]="0"
+                  [useGrouping]="false"
+                >
+                </p-inputNumber>
+                <small class="form-helper-text">The Discord channel ID where notifications will be sent</small>
               </div>
             </div>
   
