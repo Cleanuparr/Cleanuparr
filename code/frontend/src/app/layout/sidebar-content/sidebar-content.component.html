@@ -59,10 +59,20 @@
        [@navigationContainer]="navigationStateKey">
     <!-- Current level navigation items -->
     <ng-container *ngFor="let item of currentNavigation; trackBy: trackByItemId">
-      <!-- Items with children (drill-down) -->
+      <!-- Section headers for top-level sections -->
+      <div 
+        class="nav-section-header" 
+        *ngIf="item.isHeader">
+        <div class="nav-icon-wrapper">
+          <i [class]="item.icon"></i>
+        </div>
+        <span>{{ item.label }}</span>
+      </div>
+
+      <!-- Items with children (drill-down) - exclude top-level items -->
       <div 
         class="nav-item nav-parent" 
-        *ngIf="item.children && item.children.length > 0"
+        *ngIf="item.children && item.children.length > 0 && !item.topLevel"
         (click)="navigateToLevel(item)">
         <div class="nav-icon-wrapper">
           <i [class]="item.icon"></i>
@@ -77,7 +87,7 @@
       <a 
         [routerLink]="item.route" 
         class="nav-item" 
-        *ngIf="!item.children && item.route"
+        *ngIf="!item.children && item.route && !item.isHeader"
         [class.active]="router.url.includes(item.route)" 
         (click)="onNavItemClick()">
         <div class="nav-icon-wrapper">
@@ -91,7 +101,7 @@
       <a 
         [href]="item.href" 
         class="nav-item" 
-        *ngIf="!item.children && item.isExternal"
+        *ngIf="!item.children && item.isExternal && !item.isHeader"
         target="_blank" 
         rel="noopener noreferrer">
         <div class="nav-icon-wrapper">

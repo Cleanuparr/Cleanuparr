@@ -22,6 +22,8 @@ interface NavigationItem {
   isExternal?: boolean;     // For external links
   href?: string;           // For external URLs
   badge?: string;          // For notification badges
+  topLevel?: boolean;      // If true, shows children directly on top level instead of drill-down
+  isHeader?: boolean;      // If true, renders as a section header (non-clickable)
 }
 
 interface RouteMapping {
@@ -158,7 +160,34 @@ export class SidebarContentComponent implements OnInit, OnChanges, OnDestroy {
    */
   private setupNavigationData(): void {
     this.navigationData = this.getNavigationData();
-    this.currentNavigation = [...this.navigationData];
+    this.currentNavigation = this.buildTopLevelNavigation();
+  }
+
+  /**
+   * Build top-level navigation including expanded sections marked with topLevel: true
+   */
+  private buildTopLevelNavigation(): NavigationItem[] {
+    const topLevelItems: NavigationItem[] = [];
+    
+    for (const item of this.navigationData) {
+      if (item.topLevel && item.children) {
+        // Add section header
+        topLevelItems.push({
+          id: `${item.id}-header`,
+          label: item.label,
+          icon: item.icon,
+          isHeader: true
+        });
+        
+        // Add all children directly to top level
+        topLevelItems.push(...item.children);
+      } else {
+        // Add item normally (drill-down behavior)
+        topLevelItems.push(item);
+      }
+    }
+    
+    return topLevelItems;
   }
 
   /**
@@ -224,6 +253,7 @@ export class SidebarContentComponent implements OnInit, OnChanges, OnDestroy {
       {
         id: 'suggested-apps',
         label: 'Suggested Apps',
+        topLevel: true,
         icon: 'pi pi-star',
         children: [
           { 
@@ -244,13 +274,15 @@ export class SidebarContentComponent implements OnInit, OnChanges, OnDestroy {
   private navigateToRouteMappingSync(mapping: RouteMapping): void {
     // No delays, no async operations - just set the state
     this.navigationBreadcrumb = [];
-    this.currentNavigation = [...this.navigationData];
+    this.currentNavigation = this.buildTopLevelNavigation();
     
     for (let i = 0; i < mapping.navigationPath.length - 1; i++) {
       const itemId = mapping.navigationPath[i];
-      const item = this.currentNavigation.find(nav => nav.id === itemId);
+      // Find in original navigation data, not the flattened version
+      const item = this.navigationData.find(nav => nav.id === itemId);
       
-      if (item && item.children) {
+      if (item && item.children && !item.topLevel) {
+        // Only drill down if it's not a top-level section
         this.navigationBreadcrumb.push(item);
         this.currentNavigation = [...item.children];
       }
@@ -324,7 +356,7 @@ export class SidebarContentComponent implements OnInit, OnChanges, OnDestroy {
       
       // Update current navigation if we're showing the root level
       if (this.navigationBreadcrumb.length === 0) {
-        this.currentNavigation = [...this.navigationData];
+        this.currentNavigation = this.buildTopLevelNavigation();
       }
 
       // Re-sync with current route to handle activity routes
@@ -418,8 +450,8 @@ export class SidebarContentComponent implements OnInit, OnChanges, OnDestroy {
       this.navigationBreadcrumb.pop();
       
       if (this.navigationBreadcrumb.length === 0) {
-        // Back to root level
-        this.currentNavigation = [...this.navigationData];
+        // Back to root level - use top-level navigation
+        this.currentNavigation = this.buildTopLevelNavigation();
       } else {
         // Back to parent level
         const parent = this.navigationBreadcrumb[this.navigationBreadcrumb.length - 1];
