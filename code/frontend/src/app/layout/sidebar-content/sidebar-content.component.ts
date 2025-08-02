@@ -40,17 +40,6 @@ interface RouteMapping {
   templateUrl: './sidebar-content.component.html',
   styleUrl: './sidebar-content.component.scss',
   animations: [
-    // Navigation level transition animations
-    trigger('slideInFromRight', [
-      transition(':enter', [
-        style({ transform: 'translateX(100%)', opacity: 0 }),
-        animate('300ms cubic-bezier(0.4, 0.0, 0.2, 1)', style({ transform: 'translateX(0)', opacity: 1 }))
-      ]),
-      transition(':leave', [
-        animate('200ms cubic-bezier(0.4, 0.0, 0.2, 1)', style({ transform: 'translateX(-50%)', opacity: 0 }))
-      ])
-    ]),
-    // Staggered item animations for smooth appearance
     trigger('staggerItems', [
       transition(':enter', [
         query(':enter', [
@@ -61,7 +50,16 @@ interface RouteMapping {
         ], { optional: true })
       ])
     ]),
-    // Simple fade in animation for skeleton
+    // Container-level navigation animation (replaces individual item animations)
+    trigger('navigationContainer', [
+      transition('* => *', [
+        style({ transform: 'translateX(100%)', opacity: 0 }),
+        animate('300ms cubic-bezier(0.4, 0.0, 0.2, 1)', 
+          style({ transform: 'translateX(0)', opacity: 1 })
+        )
+      ])
+    ]),
+    // Simple fade in animation for initial load
     trigger('fadeIn', [
       transition(':enter', [
         style({ opacity: 0 }),
@@ -98,18 +96,18 @@ export class SidebarContentComponent implements OnInit, OnChanges, OnDestroy {
     { route: '/dashboard', navigationPath: ['dashboard'] },
     
     // Media Management routes
-    { route: '/sonarr', navigationPath: ['media-management', 'sonarr'] },
-    { route: '/radarr', navigationPath: ['media-management', 'radarr'] },
-    { route: '/lidarr', navigationPath: ['media-management', 'lidarr'] },
-    { route: '/readarr', navigationPath: ['media-management', 'readarr'] },
-    { route: '/whisparr', navigationPath: ['media-management', 'whisparr'] },
-    { route: '/download-clients', navigationPath: ['media-management', 'download-clients'] },
+    { route: '/sonarr', navigationPath: ['media-apps', 'sonarr'] },
+    { route: '/radarr', navigationPath: ['media-apps', 'radarr'] },
+    { route: '/lidarr', navigationPath: ['media-apps', 'lidarr'] },
+    { route: '/readarr', navigationPath: ['media-apps', 'readarr'] },
+    { route: '/whisparr', navigationPath: ['media-apps', 'whisparr'] },
+    { route: '/download-clients', navigationPath: ['media-apps', 'download-clients'] },
     
     // System routes
-    { route: '/settings', navigationPath: ['system', 'cleanup'] },
-    { route: '/notifications', navigationPath: ['system', 'notifications'] },
+    { route: '/settings', navigationPath: ['settings', 'cleanup'] },
+    { route: '/notifications', navigationPath: ['settings', 'notifications'] },
     
-    // Activity routes will be handled dynamically
+    // Other routes will be handled dynamically
   ];
 
   ngOnInit(): void {
@@ -175,8 +173,8 @@ export class SidebarContentComponent implements OnInit, OnChanges, OnDestroy {
         route: '/dashboard'
       },
       {
-        id: 'media-management',
-        label: 'Media Management',
+        id: 'media-apps',
+        label: 'Media Apps',
         icon: 'pi pi-play-circle',
         children: [
           { id: 'sonarr', label: 'Sonarr', icon: 'pi pi-play-circle', route: '/sonarr' },
@@ -188,8 +186,8 @@ export class SidebarContentComponent implements OnInit, OnChanges, OnDestroy {
         ]
       },
       {
-        id: 'system',
-        label: 'System',
+        id: 'settings',
+        label: 'Settings',
         icon: 'pi pi-cog',
         children: [
           { id: 'cleanup', label: 'Cleanup', icon: 'pi pi-trash', route: '/settings' },
@@ -221,19 +219,19 @@ export class SidebarContentComponent implements OnInit, OnChanges, OnDestroy {
             isExternal: true, 
             href: 'https://discord.gg/SCtMCgtsc4' 
           },
-          {
-            id: 'recommended-apps',
-            label: 'Recommended Apps',
-            icon: 'pi pi-star',
-            children: [
-              { 
-                id: 'huntarr', 
-                label: 'Huntarr', 
-                icon: 'pi pi-github', 
-                isExternal: true, 
-                href: 'https://github.com/plexguide/Huntarr.io' 
-              }
-            ]
+        ]
+      },
+      {
+        id: 'suggested-apps',
+        label: 'Suggested Apps',
+        icon: 'pi pi-star',
+        children: [
+          { 
+            id: 'huntarr', 
+            label: 'Huntarr', 
+            icon: 'pi pi-github', 
+            isExternal: true, 
+            href: 'https://github.com/plexguide/Huntarr.io' 
           }
         ]
       }

@@ -28,8 +28,7 @@
   <a href="https://cleanuparr.github.io/Cleanuparr/support" 
      class="nav-item sponsor-link" 
      target="_blank" 
-     rel="noopener noreferrer"
-     [@slideInFromRight]>
+     rel="noopener noreferrer">
     <div class="nav-icon-wrapper heart-icon">
       <i class="pi pi-heart"></i>
     </div>
@@ -39,8 +38,7 @@
   <!-- Go Back button (shown when not at root level) -->
   <div class="nav-item go-back-button" 
        *ngIf="canGoBack" 
-       (click)="goBack()"
-       [@slideInFromRight]>
+       (click)="goBack()">
     <div class="nav-icon-wrapper">
       <i class="pi pi-arrow-left"></i>
     </div>
@@ -49,58 +47,58 @@
 
   <!-- Breadcrumb (optional, for better UX) -->
   <div class="breadcrumb" 
-       *ngIf="navigationBreadcrumb.length > 0"
-       [@slideInFromRight]>
+       *ngIf="navigationBreadcrumb.length > 0">
     <span *ngFor="let crumb of navigationBreadcrumb; let last = last; trackBy: trackByBreadcrumb">
       {{ crumb.label }}
       <i class="pi pi-chevron-right" *ngIf="!last"></i>
     </span>
   </div>
 
-  <!-- Current level navigation items -->
-  <ng-container *ngFor="let item of currentNavigation; trackBy: trackByItemIdWithState">
-    <!-- Items with children (drill-down) -->
-    <div 
-      class="nav-item nav-parent" 
-      *ngIf="item.children && item.children.length > 0"
-      (click)="navigateToLevel(item)"
-      [@slideInFromRight]>
-      <div class="nav-icon-wrapper">
-        <i [class]="item.icon"></i>
+  <!-- Navigation items container with container-level animation -->
+  <div class="navigation-items-container"
+       [@navigationContainer]="navigationStateKey">
+    <!-- Current level navigation items -->
+    <ng-container *ngFor="let item of currentNavigation; trackBy: trackByItemId">
+      <!-- Items with children (drill-down) -->
+      <div 
+        class="nav-item nav-parent" 
+        *ngIf="item.children && item.children.length > 0"
+        (click)="navigateToLevel(item)">
+        <div class="nav-icon-wrapper">
+          <i [class]="item.icon"></i>
+        </div>
+        <span>{{ item.label }}</span>
+        <div class="nav-chevron">
+          <i class="pi pi-chevron-right"></i>
+        </div>
       </div>
-      <span>{{ item.label }}</span>
-      <div class="nav-chevron">
-        <i class="pi pi-chevron-right"></i>
-      </div>
-    </div>
 
-    <!-- Direct navigation items -->
-    <a 
-      [routerLink]="item.route" 
-      class="nav-item" 
-      *ngIf="!item.children && item.route"
-      [class.active]="router.url.includes(item.route)" 
-      (click)="onNavItemClick()"
-      [@slideInFromRight]>
-      <div class="nav-icon-wrapper">
-        <i [class]="item.icon"></i>
-      </div>
-      <span>{{ item.label }}</span>
-      <span class="nav-badge" *ngIf="item.badge">{{ item.badge }}</span>
-    </a>
+      <!-- Direct navigation items -->
+      <a 
+        [routerLink]="item.route" 
+        class="nav-item" 
+        *ngIf="!item.children && item.route"
+        [class.active]="router.url.includes(item.route)" 
+        (click)="onNavItemClick()">
+        <div class="nav-icon-wrapper">
+          <i [class]="item.icon"></i>
+        </div>
+        <span>{{ item.label }}</span>
+        <span class="nav-badge" *ngIf="item.badge">{{ item.badge }}</span>
+      </a>
 
-    <!-- External links -->
-    <a 
-      [href]="item.href" 
-      class="nav-item" 
-      *ngIf="!item.children && item.isExternal"
-      target="_blank" 
-      rel="noopener noreferrer"
-      [@slideInFromRight]>
-      <div class="nav-icon-wrapper">
-        <i [class]="item.icon"></i>
-      </div>
-      <span>{{ item.label }}</span>
-    </a>
-  </ng-container>
+      <!-- External links -->
+      <a 
+        [href]="item.href" 
+        class="nav-item" 
+        *ngIf="!item.children && item.isExternal"
+        target="_blank" 
+        rel="noopener noreferrer">
+        <div class="nav-icon-wrapper">
+          <i [class]="item.icon"></i>
+        </div>
+        <span>{{ item.label }}</span>
+      </a>
+    </ng-container>
+  </div>
 </nav>

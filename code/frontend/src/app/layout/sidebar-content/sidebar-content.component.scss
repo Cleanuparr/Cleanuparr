@@ -68,6 +68,15 @@
   // Fixed minimum height to prevent jumping
   min-height: 400px;
 
+  // Navigation items container for smooth animations
+  .navigation-items-container {
+    display: flex;
+    flex-direction: column;
+    gap: 8px; // Consistent spacing between navigation items
+    position: relative; // Ensure proper stacking context for animations
+    width: 100%; // Take full width of parent
+  }
+
   // Loading skeleton
   .nav-skeleton {
     padding: 0;
