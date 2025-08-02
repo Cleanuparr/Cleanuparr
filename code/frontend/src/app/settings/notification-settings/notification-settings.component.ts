@@ -225,7 +225,7 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
     const config: NotificationsConfig = {
       notifiarr: {
         ...formValues.notifiarr,
-        channelId: formValues.notifiarr.channelId?.toString(),
+        channelId: formValues.notifiarr.channelId ? formValues.notifiarr.channelId.toString() : null,
       },
       apprise: formValues.apprise,
     };

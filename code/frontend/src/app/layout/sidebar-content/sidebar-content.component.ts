@@ -376,7 +376,7 @@ export class SidebarContentComponent implements OnInit, OnChanges, OnDestroy {
   private updateActivityRouteMappings(): void {
     // Remove old activity mappings
     this.routeMappings = this.routeMappings.filter(mapping => 
-      !mapping.navigationPath[0]?.startsWith('activity')
+      !mapping.navigationPath[0] || !mapping.navigationPath[0].startsWith('activity')
     );
     
     // Add new activity mappings
