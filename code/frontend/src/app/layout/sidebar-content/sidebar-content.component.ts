@@ -105,8 +105,11 @@ export class SidebarContentComponent implements OnInit, OnChanges, OnDestroy {
     { route: '/whisparr', navigationPath: ['media-apps', 'whisparr'] },
     { route: '/download-clients', navigationPath: ['media-apps', 'download-clients'] },
     
-    // System routes
-    { route: '/settings', navigationPath: ['settings', 'cleanup'] },
+    // Settings routes
+    { route: '/general-settings', navigationPath: ['settings', 'general'] },
+    { route: '/queue-cleaner', navigationPath: ['settings', 'queue-cleaner'] },
+    { route: '/content-blocker', navigationPath: ['settings', 'content-blocker'] },
+    { route: '/download-cleaner', navigationPath: ['settings', 'download-cleaner'] },
     { route: '/notifications', navigationPath: ['settings', 'notifications'] },
     
     // Other routes will be handled dynamically
@@ -219,7 +222,10 @@ export class SidebarContentComponent implements OnInit, OnChanges, OnDestroy {
         label: 'Settings',
         icon: 'pi pi-cog',
         children: [
-          { id: 'cleanup', label: 'Cleanup', icon: 'pi pi-trash', route: '/settings' },
+          { id: 'general', label: 'General', icon: 'pi pi-cog', route: '/general-settings' },
+          { id: 'queue-cleaner', label: 'Queue Cleaner', icon: 'pi pi-list', route: '/queue-cleaner' },
+          { id: 'content-blocker', label: 'Malware Blocker', icon: 'pi pi-shield', route: '/content-blocker' },
+          { id: 'download-cleaner', label: 'Download Cleaner', icon: 'pi pi-trash', route: '/download-cleaner' },
           { id: 'notifications', label: 'Notifications', icon: 'pi pi-bell', route: '/notifications' }
         ]
       },

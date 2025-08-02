@@ -1,13 +1,16 @@
-<!-- Toast notifications handled by central toast container -->
+<div class="settings-container">
+  <div class="flex align-items-center justify-content-between mb-4">
+    <h1>Malware Blocker</h1>
+  </div>
 
-<p-card styleClass="settings-card h-full">
-  <ng-template pTemplate="header">
-    <div class="flex align-items-center justify-content-between p-3 border-bottom-1 surface-border">
-      <div class="header-title-container">
-        <h2 class="card-title m-0">Content Blocker Configuration</h2>
-        <span class="card-subtitle">Configure automatic content filtering and blocking</span>
+  <p-card styleClass="settings-card h-full">
+    <ng-template pTemplate="header">
+      <div class="flex align-items-center justify-content-between p-3 border-bottom-1 surface-border">
+        <div class="header-title-container">
+          <h2 class="card-title m-0">Malware Blocker Configuration</h2>
+          <span class="card-subtitle">Configure automatic content filtering and blocking</span>
+        </div>
       </div>
-    </div>
   </ng-template>
 
   <div class="card-content">
@@ -28,11 +31,11 @@
           <i class="pi pi-info-circle field-info-icon" 
              (click)="openFieldDocs('enabled')" 
              title="Click for documentation"></i>
-          Enable Content Blocker
+          Enable Malware Blocker
         </label>
         <div class="field-input">
           <p-checkbox formControlName="enabled" [binary]="true" inputId="cbEnabled"></p-checkbox>
-          <small class="form-helper-text">When enabled, the content blocker will run according to the schedule</small>
+          <small class="form-helper-text">When enabled, the Malware blocker will run according to the schedule</small>
         </div>
       </div>
 
@@ -142,7 +145,7 @@
         </label>
         <div class="field-input">
           <p-checkbox formControlName="deleteKnownMalware" [binary]="true"></p-checkbox>
-          <small class="form-helper-text">When enabled, files matching known malware patterns will be deleted</small>
+          <small class="form-helper-text">When enabled, downloads matching known malware patterns will be deleted</small>
         </div>
       </div>
 
@@ -523,3 +526,4 @@
     </form>
   </div>
 </p-card> 
+</div> 

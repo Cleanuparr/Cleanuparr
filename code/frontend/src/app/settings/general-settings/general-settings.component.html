@@ -1,13 +1,16 @@
-<!-- Toast notifications handled by central toast container -->
+<div class="settings-container">
+  <div class="flex align-items-center justify-content-between mb-4">
+    <h1>General Settings</h1>
+  </div>
 
-<p-card styleClass="settings-card h-full">
-  <ng-template pTemplate="header">
-    <div class="flex align-items-center justify-content-between p-3 border-bottom-1 surface-border">
-      <div class="header-title-container">
-        <h2 class="card-title m-0">General Configuration</h2>
-        <span class="card-subtitle">Configure general application settings</span>
+  <p-card styleClass="settings-card h-full">
+    <ng-template pTemplate="header">
+      <div class="flex align-items-center justify-content-between p-3 border-bottom-1 surface-border">
+        <div class="header-title-container">
+          <h2 class="card-title m-0">General Configuration</h2>
+          <span class="card-subtitle">Configure general application settings</span>
+        </div>
       </div>
-    </div>
   </ng-template>
 
   <div class="card-content">
@@ -241,3 +244,4 @@
   [style]="{ width: '500px', maxWidth: '90vw' }"
   [baseZIndex]="10000">
 </p-confirmDialog>
+</div>

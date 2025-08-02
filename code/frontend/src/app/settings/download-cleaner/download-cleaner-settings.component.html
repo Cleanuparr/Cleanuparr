@@ -1,13 +1,16 @@
-<!-- Toast notifications handled by central toast container -->
+<div class="settings-container">
+  <div class="flex align-items-center justify-content-between mb-4">
+    <h1>Download Cleaner</h1>
+  </div>
 
-<p-card styleClass="settings-card h-full">
-  <ng-template pTemplate="header">
-    <div class="flex align-items-center justify-content-between p-3 border-bottom-1 surface-border">
-      <div class="header-title-container">
-        <h2 class="card-title m-0">Download Cleaner Configuration</h2>
-        <span class="card-subtitle">Configure automatic download cleanup</span>
+  <p-card styleClass="settings-card h-full">
+    <ng-template pTemplate="header">
+      <div class="flex align-items-center justify-content-between p-3 border-bottom-1 surface-border">
+        <div class="header-title-container">
+          <h2 class="card-title m-0">Download Cleaner Configuration</h2>
+          <span class="card-subtitle">Configure automatic download cleanup</span>
+        </div>
       </div>
-    </div>
   </ng-template>
 
   <div class="card-content">
@@ -371,8 +374,9 @@
 </p-card>
 
 <!-- Confirmation Dialog -->
-<p-confirmDialog 
-  [style]="{ width: '450px' }"
-  [baseZIndex]="10000"
-  rejectButtonStyleClass="p-button-text">
-</p-confirmDialog>
+  <p-confirmDialog 
+    [style]="{ width: '450px' }"
+    [baseZIndex]="10000"
+    rejectButtonStyleClass="p-button-text">
+  </p-confirmDialog>
+</div>
