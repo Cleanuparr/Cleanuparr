@@ -1,13 +1,16 @@
-<!-- Toast notifications handled by central toast container -->
+<div class="settings-container">
+  <div class="flex align-items-center justify-content-between mb-4">
+    <h1>Queue Cleaner</h1>
+  </div>
 
-<p-card styleClass="settings-card h-full">
-  <ng-template pTemplate="header">
-    <div class="flex align-items-center justify-content-between p-3 border-bottom-1 surface-border">
-      <div class="header-title-container">
-        <h2 class="card-title m-0">Queue Cleaner Configuration</h2>
-        <span class="card-subtitle">Configure automatic arr queue cleanup</span>
+  <p-card styleClass="settings-card h-full">
+    <ng-template pTemplate="header">
+      <div class="flex align-items-center justify-content-between p-3 border-bottom-1 surface-border">
+        <div class="header-title-container">
+          <h2 class="card-title m-0">Queue Cleaner Configuration</h2>
+          <span class="card-subtitle">Configure automatic arr queue cleanup</span>
+        </div>
       </div>
-    </div>
   </ng-template>
 
   <div class="card-content">
@@ -25,7 +28,7 @@
       <!-- Main Settings -->
       <div class="field-row">
         <label class="field-label">
-          <i class="pi pi-info-circle field-info-icon" 
+          <i class="pi pi-question-circle field-info-icon" 
              (click)="openFieldDocs('enabled')" 
              title="Click for documentation"></i>
           Enable Queue Cleaner
@@ -39,7 +42,7 @@
       <!-- Scheduling Mode Toggle -->
       <div class="field-row">
         <label class="field-label">
-          <i class="pi pi-info-circle field-info-icon" 
+          <i class="pi pi-question-circle field-info-icon" 
              (click)="openFieldDocs('useAdvancedScheduling')" 
              title="Click for documentation"></i>
           Scheduling Mode
@@ -92,7 +95,7 @@
       <!-- Advanced Schedule Controls - shown when useAdvancedScheduling is true -->
       <div class="field-row" *ngIf="queueCleanerForm.get('useAdvancedScheduling')?.value">
         <label class="field-label">
-          <i class="pi pi-info-circle field-info-icon" 
+          <i class="pi pi-question-circle field-info-icon" 
              (click)="openFieldDocs('cronExpression')" 
              title="Click for documentation"></i>
           Cron Expression
@@ -123,7 +126,7 @@
           <p-accordion-content>
             <div class="field-row" formGroupName="failedImport">
               <label class="field-label">
-                <i class="pi pi-info-circle field-info-icon" 
+                <i class="pi pi-question-circle field-info-icon" 
                    (click)="openFieldDocs('failedImport.maxStrikes')" 
                    title="Click for documentation"></i>
                 Max Strikes
@@ -148,7 +151,7 @@
 
             <div class="field-row" formGroupName="failedImport">
               <label class="field-label">
-                <i class="pi pi-info-circle field-info-icon" 
+                <i class="pi pi-question-circle field-info-icon" 
                    (click)="openFieldDocs('failedImport.ignorePrivate')" 
                    title="Click for documentation"></i>
                 Ignore Private
@@ -161,7 +164,7 @@
 
             <div class="field-row" formGroupName="failedImport">
               <label class="field-label">
-                <i class="pi pi-info-circle field-info-icon" 
+                <i class="pi pi-question-circle field-info-icon" 
                    (click)="openFieldDocs('failedImport.deletePrivate')" 
                    title="Click for documentation"></i>
                 Delete Private
@@ -174,7 +177,7 @@
 
             <div class="field-row" formGroupName="failedImport">
               <label class="field-label">
-                <i class="pi pi-info-circle field-info-icon" 
+                <i class="pi pi-question-circle field-info-icon" 
                    (click)="openFieldDocs('failedImport.ignoredPatterns')" 
                    title="Click for documentation"></i>
                 Ignored Patterns
@@ -219,7 +222,7 @@
           <p-accordion-content>
             <div class="field-row" formGroupName="stalled">
               <label class="field-label">
-                <i class="pi pi-info-circle field-info-icon" 
+                <i class="pi pi-question-circle field-info-icon" 
                    (click)="openFieldDocs('stalled.maxStrikes')" 
                    title="Click for documentation"></i>
                 Max Strikes
@@ -244,7 +247,7 @@
 
             <div class="field-row" formGroupName="stalled">
               <label class="field-label">
-                <i class="pi pi-info-circle field-info-icon" 
+                <i class="pi pi-question-circle field-info-icon" 
                    (click)="openFieldDocs('stalled.resetStrikesOnProgress')" 
                    title="Click for documentation"></i>
                 Reset Strikes On Progress
@@ -257,7 +260,7 @@
 
             <div class="field-row" formGroupName="stalled">
               <label class="field-label">
-                <i class="pi pi-info-circle field-info-icon" 
+                <i class="pi pi-question-circle field-info-icon" 
                    (click)="openFieldDocs('stalled.ignorePrivate')" 
                    title="Click for documentation"></i>
                 Ignore Private
@@ -270,7 +273,7 @@
 
             <div class="field-row" formGroupName="stalled">
               <label class="field-label">
-                <i class="pi pi-info-circle field-info-icon" 
+                <i class="pi pi-question-circle field-info-icon" 
                    (click)="openFieldDocs('stalled.deletePrivate')" 
                    title="Click for documentation"></i>
                 Delete Private
@@ -298,7 +301,7 @@
           <p-accordion-content>
             <div class="field-row" formGroupName="stalled">
               <label class="field-label">
-                <i class="pi pi-info-circle field-info-icon" 
+                <i class="pi pi-question-circle field-info-icon" 
                    (click)="openFieldDocs('stalled.downloadingMetadataMaxStrikes')" 
                    title="Click for documentation"></i>
                 Max Strikes for Downloading Metadata
@@ -338,7 +341,7 @@
           <p-accordion-content>
             <div class="field-row" formGroupName="slow">
               <label class="field-label">
-                <i class="pi pi-info-circle field-info-icon" 
+                <i class="pi pi-question-circle field-info-icon" 
                    (click)="openFieldDocs('slow.maxStrikes')" 
                    title="Click for documentation"></i>
                 Max Strikes
@@ -363,7 +366,7 @@
 
             <div class="field-row" formGroupName="slow">
               <label class="field-label">
-                <i class="pi pi-info-circle field-info-icon" 
+                <i class="pi pi-question-circle field-info-icon" 
                    (click)="openFieldDocs('slow.resetStrikesOnProgress')" 
                    title="Click for documentation"></i>
                 Reset Strikes On Progress
@@ -376,7 +379,7 @@
 
             <div class="field-row" formGroupName="slow">
               <label class="field-label">
-                <i class="pi pi-info-circle field-info-icon" 
+                <i class="pi pi-question-circle field-info-icon" 
                    (click)="openFieldDocs('slow.ignorePrivate')" 
                    title="Click for documentation"></i>
                 Ignore Private
@@ -389,7 +392,7 @@
 
             <div class="field-row" formGroupName="slow">
               <label class="field-label">
-                <i class="pi pi-info-circle field-info-icon" 
+                <i class="pi pi-question-circle field-info-icon" 
                    (click)="openFieldDocs('slow.deletePrivate')" 
                    title="Click for documentation"></i>
                 Delete Private
@@ -402,7 +405,7 @@
 
             <div class="field-row" formGroupName="slow">
               <label class="field-label">
-                <i class="pi pi-info-circle field-info-icon" 
+                <i class="pi pi-question-circle field-info-icon" 
                    (click)="openFieldDocs('slow.minSpeed')" 
                    title="Click for documentation"></i>
                 Minimum Speed
@@ -421,7 +424,7 @@
 
             <div class="field-row" formGroupName="slow">
               <label class="field-label">
-                <i class="pi pi-info-circle field-info-icon" 
+                <i class="pi pi-question-circle field-info-icon" 
                    (click)="openFieldDocs('slow.maxTime')" 
                    title="Click for documentation"></i>
                 Maximum Time (hours)
@@ -444,7 +447,7 @@
 
             <div class="field-row" formGroupName="slow">
               <label class="field-label">
-                <i class="pi pi-info-circle field-info-icon" 
+                <i class="pi pi-question-circle field-info-icon" 
                    (click)="openFieldDocs('slow.ignoreAboveSize')" 
                    title="Click for documentation"></i>
                 Ignore Above Size
@@ -490,3 +493,4 @@
     </form>
   </div>
 </p-card>
+</div>

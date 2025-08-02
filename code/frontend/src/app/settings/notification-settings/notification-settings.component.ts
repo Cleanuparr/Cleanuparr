@@ -9,6 +9,7 @@ import { NotificationsConfig } from "../../shared/models/notifications-config.mo
 // PrimeNG Components
 import { CardModule } from "primeng/card";
 import { InputTextModule } from "primeng/inputtext";
+import { InputNumberModule } from "primeng/inputnumber";
 import { CheckboxModule } from "primeng/checkbox";
 import { ButtonModule } from "primeng/button";
 import { ToastModule } from "primeng/toast";
@@ -24,6 +25,7 @@ import { LoadingErrorStateComponent } from "../../shared/components/loading-erro
     ReactiveFormsModule,
     CardModule,
     InputTextModule,
+    InputNumberModule,
     CheckboxModule,
     ButtonModule,
     ToastModule,
@@ -221,7 +223,10 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
     const formValues = this.notificationForm.value;
 
     const config: NotificationsConfig = {
-      notifiarr: formValues.notifiarr,
+      notifiarr: {
+        ...formValues.notifiarr,
+        channelId: formValues.notifiarr.channelId ? formValues.notifiarr.channelId.toString() : null,
+      },
       apprise: formValues.apprise,
     };
 

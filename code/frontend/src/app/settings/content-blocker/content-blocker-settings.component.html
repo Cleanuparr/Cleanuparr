@@ -1,13 +1,16 @@
-<!-- Toast notifications handled by central toast container -->
+<div class="settings-container">
+  <div class="flex align-items-center justify-content-between mb-4">
+    <h1>Malware Blocker</h1>
+  </div>
 
-<p-card styleClass="settings-card h-full">
-  <ng-template pTemplate="header">
-    <div class="flex align-items-center justify-content-between p-3 border-bottom-1 surface-border">
-      <div class="header-title-container">
-        <h2 class="card-title m-0">Content Blocker Configuration</h2>
-        <span class="card-subtitle">Configure automatic content filtering and blocking</span>
+  <p-card styleClass="settings-card h-full">
+    <ng-template pTemplate="header">
+      <div class="flex align-items-center justify-content-between p-3 border-bottom-1 surface-border">
+        <div class="header-title-container">
+          <h2 class="card-title m-0">Malware Blocker Configuration</h2>
+          <span class="card-subtitle">Configure automatic content filtering and blocking</span>
+        </div>
       </div>
-    </div>
   </ng-template>
 
   <div class="card-content">
@@ -25,21 +28,21 @@
       <!-- Main Settings -->
       <div class="field-row">
         <label class="field-label">
-          <i class="pi pi-info-circle field-info-icon" 
+          <i class="pi pi-question-circle field-info-icon" 
              (click)="openFieldDocs('enabled')" 
              title="Click for documentation"></i>
-          Enable Content Blocker
+          Enable Malware Blocker
         </label>
         <div class="field-input">
           <p-checkbox formControlName="enabled" [binary]="true" inputId="cbEnabled"></p-checkbox>
-          <small class="form-helper-text">When enabled, the content blocker will run according to the schedule</small>
+          <small class="form-helper-text">When enabled, the Malware blocker will run according to the schedule</small>
         </div>
       </div>
 
       <!-- Scheduling Mode Toggle -->
       <div class="field-row">
         <label class="field-label">
-          <i class="pi pi-info-circle field-info-icon" 
+          <i class="pi pi-question-circle field-info-icon" 
              (click)="openFieldDocs('useAdvancedScheduling')" 
              title="Click for documentation"></i>
           Scheduling Mode
@@ -92,7 +95,7 @@
       <!-- Advanced Schedule Controls - shown when useAdvancedScheduling is true -->
       <div class="field-row" *ngIf="contentBlockerForm.get('useAdvancedScheduling')?.value">
         <label class="field-label">
-          <i class="pi pi-info-circle field-info-icon" 
+          <i class="pi pi-question-circle field-info-icon" 
              (click)="openFieldDocs('cronExpression')" 
              title="Click for documentation"></i>
           Cron Expression
@@ -109,7 +112,7 @@
       <!-- Content Blocker Specific Settings -->
       <div class="field-row">
         <label class="field-label">
-          <i class="pi pi-info-circle field-info-icon" 
+          <i class="pi pi-question-circle field-info-icon" 
              (click)="openFieldDocs('ignorePrivate')" 
              title="Click for documentation"></i>
           Ignore Private
@@ -122,7 +125,7 @@
 
       <div class="field-row">
         <label class="field-label">
-          <i class="pi pi-info-circle field-info-icon" 
+          <i class="pi pi-question-circle field-info-icon" 
              (click)="openFieldDocs('deletePrivate')" 
              title="Click for documentation"></i>
           Delete Private
@@ -135,14 +138,14 @@
 
       <div class="field-row">
         <label class="field-label">
-          <i class="pi pi-info-circle field-info-icon" 
+          <i class="pi pi-question-circle field-info-icon" 
              (click)="openFieldDocs('deleteKnownMalware')" 
              title="Click for documentation"></i>
           Delete Known Malware
         </label>
         <div class="field-input">
           <p-checkbox formControlName="deleteKnownMalware" [binary]="true"></p-checkbox>
-          <small class="form-helper-text">When enabled, files matching known malware patterns will be deleted</small>
+          <small class="form-helper-text">When enabled, downloads matching known malware patterns will be deleted</small>
         </div>
       </div>
 
@@ -164,7 +167,7 @@
             <div formGroupName="sonarr">
               <div class="field-row">
                 <label class="field-label">
-                  <i class="pi pi-info-circle field-info-icon" 
+                  <i class="pi pi-question-circle field-info-icon" 
                      (click)="openFieldDocs('sonarr.enabled')" 
                      title="Click for documentation"></i>
                   Enable Sonarr Blocklist
@@ -177,7 +180,7 @@
 
               <div class="field-row">
                 <label class="field-label">
-                  <i class="pi pi-info-circle field-info-icon" 
+                  <i class="pi pi-question-circle field-info-icon" 
                      (click)="openFieldDocs('sonarr.blocklistPath')" 
                      title="Click for documentation"></i>
                   Blocklist Path
@@ -193,7 +196,7 @@
 
               <div class="field-row">
                 <label class="field-label">
-                  <i class="pi pi-info-circle field-info-icon" 
+                  <i class="pi pi-question-circle field-info-icon" 
                      (click)="openFieldDocs('sonarr.blocklistType')" 
                      title="Click for documentation"></i>
                   Blocklist Type
@@ -234,7 +237,7 @@
             <div formGroupName="radarr">
               <div class="field-row">
                 <label class="field-label">
-                  <i class="pi pi-info-circle field-info-icon" 
+                  <i class="pi pi-question-circle field-info-icon" 
                      (click)="openFieldDocs('radarr.enabled')" 
                      title="Click for documentation"></i>
                   Enable Radarr Blocklist
@@ -247,7 +250,7 @@
 
               <div class="field-row">
                 <label class="field-label">
-                  <i class="pi pi-info-circle field-info-icon" 
+                  <i class="pi pi-question-circle field-info-icon" 
                      (click)="openFieldDocs('radarr.blocklistPath')" 
                      title="Click for documentation"></i>
                   Blocklist Path
@@ -263,7 +266,7 @@
 
               <div class="field-row">
                 <label class="field-label">
-                  <i class="pi pi-info-circle field-info-icon" 
+                  <i class="pi pi-question-circle field-info-icon" 
                      (click)="openFieldDocs('radarr.blocklistType')" 
                      title="Click for documentation"></i>
                   Blocklist Type
@@ -304,7 +307,7 @@
             <div formGroupName="lidarr">
               <div class="field-row">
                 <label class="field-label">
-                  <i class="pi pi-info-circle field-info-icon" 
+                  <i class="pi pi-question-circle field-info-icon" 
                      (click)="openFieldDocs('lidarr.enabled')" 
                      title="Click for documentation"></i>
                   Enable Lidarr Blocklist
@@ -317,7 +320,7 @@
 
               <div class="field-row">
                 <label class="field-label">
-                  <i class="pi pi-info-circle field-info-icon" 
+                  <i class="pi pi-question-circle field-info-icon" 
                      (click)="openFieldDocs('lidarr.blocklistPath')" 
                      title="Click for documentation"></i>
                   Blocklist Path
@@ -333,7 +336,7 @@
 
               <div class="field-row">
                 <label class="field-label">
-                  <i class="pi pi-info-circle field-info-icon" 
+                  <i class="pi pi-question-circle field-info-icon" 
                      (click)="openFieldDocs('lidarr.blocklistType')" 
                      title="Click for documentation"></i>
                   Blocklist Type
@@ -374,7 +377,7 @@
             <div formGroupName="readarr">
               <div class="field-row">
                 <label class="field-label">
-                  <i class="pi pi-info-circle field-info-icon" 
+                  <i class="pi pi-question-circle field-info-icon" 
                      (click)="openFieldDocs('readarr.enabled')" 
                      title="Click for documentation"></i>
                   Enable Readarr Blocklist
@@ -387,7 +390,7 @@
 
               <div class="field-row">
                 <label class="field-label">
-                  <i class="pi pi-info-circle field-info-icon" 
+                  <i class="pi pi-question-circle field-info-icon" 
                      (click)="openFieldDocs('readarr.blocklistPath')" 
                      title="Click for documentation"></i>
                   Blocklist Path
@@ -403,7 +406,7 @@
 
               <div class="field-row">
                 <label class="field-label">
-                  <i class="pi pi-info-circle field-info-icon" 
+                  <i class="pi pi-question-circle field-info-icon" 
                      (click)="openFieldDocs('readarr.blocklistType')" 
                      title="Click for documentation"></i>
                   Blocklist Type
@@ -444,7 +447,7 @@
             <div formGroupName="whisparr">
               <div class="field-row">
                 <label class="field-label">
-                  <i class="pi pi-info-circle field-info-icon" 
+                  <i class="pi pi-question-circle field-info-icon" 
                      (click)="openFieldDocs('whisparr.enabled')" 
                      title="Click for documentation"></i>
                   Enable Whisparr Blocklist
@@ -457,7 +460,7 @@
 
               <div class="field-row">
                 <label class="field-label">
-                  <i class="pi pi-info-circle field-info-icon" 
+                  <i class="pi pi-question-circle field-info-icon" 
                      (click)="openFieldDocs('whisparr.blocklistPath')" 
                      title="Click for documentation"></i>
                   Blocklist Path
@@ -473,7 +476,7 @@
 
               <div class="field-row">
                 <label class="field-label">
-                  <i class="pi pi-info-circle field-info-icon" 
+                  <i class="pi pi-question-circle field-info-icon" 
                      (click)="openFieldDocs('whisparr.blocklistType')" 
                      title="Click for documentation"></i>
                   Blocklist Type
@@ -523,3 +526,4 @@
     </form>
   </div>
 </p-card> 
+</div> 

@@ -1,13 +1,16 @@
-<!-- Toast notifications handled by central toast container -->
+<div class="settings-container">
+  <div class="flex align-items-center justify-content-between mb-4">
+    <h1>General Settings</h1>
+  </div>
 
-<p-card styleClass="settings-card h-full">
-  <ng-template pTemplate="header">
-    <div class="flex align-items-center justify-content-between p-3 border-bottom-1 surface-border">
-      <div class="header-title-container">
-        <h2 class="card-title m-0">General Configuration</h2>
-        <span class="card-subtitle">Configure general application settings</span>
+  <p-card styleClass="settings-card h-full">
+    <ng-template pTemplate="header">
+      <div class="flex align-items-center justify-content-between p-3 border-bottom-1 surface-border">
+        <div class="header-title-container">
+          <h2 class="card-title m-0">General Configuration</h2>
+          <span class="card-subtitle">Configure general application settings</span>
+        </div>
       </div>
-    </div>
   </ng-template>
 
   <div class="card-content">
@@ -25,7 +28,7 @@
         <!-- Display Support Banner -->
         <div class="field-row">
           <label class="field-label">
-            <i class="pi pi-info-circle field-info-icon" 
+            <i class="pi pi-question-circle field-info-icon" 
                (click)="openFieldDocs('displaySupportBanner')"
                title="Click for documentation">
             </i>
@@ -40,7 +43,7 @@
         <!-- Dry Run -->
       <div class="field-row">
         <label class="field-label">
-          <i class="pi pi-info-circle field-info-icon" 
+          <i class="pi pi-question-circle field-info-icon" 
              (click)="openFieldDocs('dryRun')"
              title="Click for documentation">
           </i>
@@ -55,7 +58,7 @@
       <!-- HTTP Settings -->
       <div class="field-row">
         <label class="field-label">
-          <i class="pi pi-info-circle field-info-icon" 
+          <i class="pi pi-question-circle field-info-icon" 
              (click)="openFieldDocs('httpMaxRetries')"
              title="Click for documentation">
           </i>
@@ -79,7 +82,7 @@
 
       <div class="field-row">
         <label class="field-label">
-          <i class="pi pi-info-circle field-info-icon" 
+          <i class="pi pi-question-circle field-info-icon" 
              (click)="openFieldDocs('httpTimeout')"
              title="Click for documentation">
           </i>
@@ -103,7 +106,7 @@
 
       <div class="field-row">
         <label class="field-label">
-          <i class="pi pi-info-circle field-info-icon" 
+          <i class="pi pi-question-circle field-info-icon" 
              (click)="openFieldDocs('httpCertificateValidation')"
              title="Click for documentation">
           </i>
@@ -124,7 +127,7 @@
       <!-- Search Settings -->
       <div class="field-row">
         <label class="field-label">
-          <i class="pi pi-info-circle field-info-icon" 
+          <i class="pi pi-question-circle field-info-icon" 
              (click)="openFieldDocs('searchEnabled')"
              title="Click for documentation">
           </i>
@@ -138,7 +141,7 @@
 
       <div class="field-row">
         <label class="field-label">
-          <i class="pi pi-info-circle field-info-icon" 
+          <i class="pi pi-question-circle field-info-icon" 
              (click)="openFieldDocs('searchDelay')"
              title="Click for documentation">
           </i>
@@ -163,7 +166,7 @@
       <!-- Log Level -->
       <div class="field-row">
         <label class="field-label">
-          <i class="pi pi-info-circle field-info-icon" 
+          <i class="pi pi-question-circle field-info-icon" 
              (click)="openFieldDocs('logLevel')"
              title="Click for documentation">
           </i>
@@ -184,7 +187,7 @@
       <!-- Ignored Downloads -->
       <div class="field-row">
         <label class="field-label">
-          <i class="pi pi-info-circle field-info-icon" 
+          <i class="pi pi-question-circle field-info-icon" 
              (click)="openFieldDocs('ignoredDownloads')"
              title="Click for documentation">
           </i>
@@ -241,3 +244,4 @@
   [style]="{ width: '500px', maxWidth: '90vw' }"
   [baseZIndex]="10000">
 </p-confirmDialog>
+</div>

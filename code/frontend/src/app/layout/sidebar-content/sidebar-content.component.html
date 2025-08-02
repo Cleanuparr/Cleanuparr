@@ -10,115 +10,105 @@
 </div>
 
 <!-- Sidebar Navigation -->
-<nav class="nav-menu">
-  <!-- Project Sponsors Link -->
-  <a href="https://cleanuparr.github.io/Cleanuparr/support" class="nav-item sponsor-link" target="_blank" rel="noopener noreferrer">
+<!-- Show loading skeleton while determining navigation state -->
+<nav class="nav-menu" *ngIf="!isNavigationReady">
+  <div class="nav-skeleton">
+    <div class="skeleton-item" 
+         *ngFor="let item of getSkeletonItems()"
+         [class.sponsor-skeleton]="item.isSponsor">
+    </div>
+  </div>
+</nav>
+
+<!-- Show actual navigation when ready -->
+<nav class="nav-menu" 
+     *ngIf="isNavigationReady" 
+     [@staggerItems]>
+  <!-- Project Sponsors Link (always visible) -->
+  <a href="https://cleanuparr.github.io/Cleanuparr/support" 
+     class="nav-item sponsor-link" 
+     target="_blank" 
+     rel="noopener noreferrer">
     <div class="nav-icon-wrapper heart-icon">
       <i class="pi pi-heart"></i>
     </div>
     <span>Become A Sponsor</span>
   </a>
   
-  <a [routerLink]="['/dashboard']" class="nav-item" [class.active]="router.url.includes('/dashboard')" (click)="onNavItemClick()">
+  <!-- Go Back button (shown when not at root level) -->
+  <div class="nav-item go-back-button" 
+       *ngIf="canGoBack" 
+       (click)="goBack()">
     <div class="nav-icon-wrapper">
-      <i class="pi pi-home"></i>
+      <i class="pi pi-arrow-left"></i>
     </div>
-    <span>Dashboard</span>
-  </a>
-
-  <!-- Settings Group -->
-  <div class="nav-group">
-    <div class="nav-group-title">Settings</div>
-    <a [routerLink]="['/sonarr']" class="nav-item" [class.active]="router.url.includes('/sonarr')" (click)="onNavItemClick()">
-      <div class="nav-icon-wrapper">
-        <i class="pi pi-play-circle"></i>
-      </div>
-      <span>Sonarr</span>
-    </a>
-    <a [routerLink]="['/radarr']" class="nav-item" [class.active]="router.url.includes('/radarr')" (click)="onNavItemClick()">
-      <div class="nav-icon-wrapper">
-        <i class="pi pi-play-circle"></i>
-      </div>
-      <span>Radarr</span>
-    </a>
-    <a [routerLink]="['/lidarr']" class="nav-item" [class.active]="router.url.includes('/lidarr')" (click)="onNavItemClick()">
-      <div class="nav-icon-wrapper">
-        <i class="pi pi-bolt"></i>
-      </div>
-      <span>Lidarr</span>
-    </a>
-    <a [routerLink]="['/readarr']" class="nav-item" [class.active]="router.url.includes('/readarr')" (click)="onNavItemClick()">
-      <div class="nav-icon-wrapper">
-        <i class="pi pi-book"></i>
-      </div>
-      <span>Readarr</span>
-    </a>
-    <a [routerLink]="['/whisparr']" class="nav-item" [class.active]="router.url.includes('/whisparr')" (click)="onNavItemClick()">
-      <div class="nav-icon-wrapper">
-        <i class="pi pi-lock"></i>
-      </div>
-      <span>Whisparr</span>
-    </a>
-    <a [routerLink]="['/download-clients']" class="nav-item" [class.active]="router.url.includes('/download-clients')" (click)="onNavItemClick()">
-      <div class="nav-icon-wrapper">
-        <i class="pi pi-download"></i>
-      </div>
-      <span>Download Clients</span>
-    </a>
-    <a [routerLink]="['/settings']" class="nav-item" [class.active]="router.url.includes('/settings')" (click)="onNavItemClick()">
-      <div class="nav-icon-wrapper">
-        <i class="pi pi-trash"></i>
-      </div>
-      <span>Cleanup</span>
-    </a>
-    <a [routerLink]="['/notifications']" class="nav-item" [class.active]="router.url.includes('/notifications')" (click)="onNavItemClick()">
-      <div class="nav-icon-wrapper">
-        <i class="pi pi-bell"></i>
-      </div>
-      <span>Notifications</span>
-    </a>
+    <span>Go Back</span>
   </div>
-  
-  <!-- Activity Group -->
-  <div class="nav-group">
-    <div class="nav-group-title">Activity</div>
-    <ng-container *ngFor="let item of menuItems">
-      <ng-container *ngIf="!['Dashboard', 'Settings'].includes(item.label)">
-        <a [routerLink]="item.route" class="nav-item" [class.active]="router.url.includes(item.route)" (click)="onNavItemClick()">
-          <div class="nav-icon-wrapper">
-            <i [class]="item.icon"></i>
-          </div>
-          <span>{{ item.label }}</span>
-        </a>
-      </ng-container>
+
+  <!-- Breadcrumb (optional, for better UX) -->
+  <div class="breadcrumb" 
+       *ngIf="navigationBreadcrumb.length > 0">
+    <span *ngFor="let crumb of navigationBreadcrumb; let last = last; trackBy: trackByBreadcrumb">
+      {{ crumb.label }}
+      <i class="pi pi-chevron-right" *ngIf="!last"></i>
+    </span>
+  </div>
+
+  <!-- Navigation items container with container-level animation -->
+  <div class="navigation-items-container"
+       [@navigationContainer]="navigationStateKey">
+    <!-- Current level navigation items -->
+    <ng-container *ngFor="let item of currentNavigation; trackBy: trackByItemId">
+      <!-- Section headers for top-level sections -->
+      <div 
+        class="nav-section-header" 
+        *ngIf="item.isHeader">
+        <div class="nav-icon-wrapper">
+          <i [class]="item.icon"></i>
+        </div>
+        <span>{{ item.label }}</span>
+      </div>
+
+      <!-- Items with children (drill-down) - exclude top-level items -->
+      <div 
+        class="nav-item nav-parent" 
+        *ngIf="item.children && item.children.length > 0 && !item.topLevel"
+        (click)="navigateToLevel(item)">
+        <div class="nav-icon-wrapper">
+          <i [class]="item.icon"></i>
+        </div>
+        <span>{{ item.label }}</span>
+        <div class="nav-chevron">
+          <i class="pi pi-chevron-right"></i>
+        </div>
+      </div>
+
+      <!-- Direct navigation items -->
+      <a 
+        [routerLink]="item.route" 
+        class="nav-item" 
+        *ngIf="!item.children && item.route && !item.isHeader"
+        [class.active]="router.url.includes(item.route)" 
+        (click)="onNavItemClick()">
+        <div class="nav-icon-wrapper">
+          <i [class]="item.icon"></i>
+        </div>
+        <span>{{ item.label }}</span>
+        <span class="nav-badge" *ngIf="item.badge">{{ item.badge }}</span>
+      </a>
+
+      <!-- External links -->
+      <a 
+        [href]="item.href" 
+        class="nav-item" 
+        *ngIf="!item.children && item.isExternal && !item.isHeader"
+        target="_blank" 
+        rel="noopener noreferrer">
+        <div class="nav-icon-wrapper">
+          <i [class]="item.icon"></i>
+        </div>
+        <span>{{ item.label }}</span>
+      </a>
     </ng-container>
-  </div>
-  
-  <!-- Resources Group -->
-  <div class="nav-group">
-    <div class="nav-group-title">Resources</div>
-    <a href="https://github.com/Cleanuparr/Cleanuparr/issues" class="nav-item" target="_blank" rel="noopener noreferrer">
-      <div class="nav-icon-wrapper">
-        <i class="pi pi-github"></i>
-      </div>
-      <span>Issues and requests</span>
-    </a>
-
-    <a href="https://discord.gg/SCtMCgtsc4" class="nav-item" target="_blank" rel="noopener noreferrer">
-      <div class="nav-icon-wrapper">
-        <i class="pi pi-discord"></i>
-      </div>
-      <span>Discord</span>
-    </a>
-  </div>
-
-  <div class="nav-group">
-    <div class="nav-group-title">Recommended apps</div>
-    <a href="https://github.com/plexguide/Huntarr.io" class="nav-item" target="_blank" rel="noopener noreferrer">
-      <div class="nav-icon-wrapper">
-        <i class="pi pi-github"></i>
-      </div>
-      <span>Huntarr</span>
-    </a>
   </div>
 </nav>
