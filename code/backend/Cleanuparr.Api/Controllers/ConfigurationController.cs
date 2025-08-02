@@ -495,7 +495,7 @@ public class ConfigurationController : ControllerBase
             // Validate cron expression if present
             if (!string.IsNullOrEmpty(newConfig.CronExpression))
             {
-                CronValidationHelper.ValidateCronExpression(newConfig.CronExpression, JobType.ContentBlocker);
+                CronValidationHelper.ValidateCronExpression(newConfig.CronExpression, JobType.MalwareBlocker);
             }
 
             // Get existing config
@@ -513,7 +513,7 @@ public class ConfigurationController : ControllerBase
             await _dataContext.SaveChangesAsync();
 
             // Update the scheduler based on configuration changes
-            await UpdateJobSchedule(oldConfig, JobType.ContentBlocker);
+            await UpdateJobSchedule(oldConfig, JobType.MalwareBlocker);
 
             return Ok(new { Message = "ContentBlocker configuration updated successfully" });
         }
