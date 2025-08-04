@@ -27,6 +27,8 @@ public static class MainDI
             .AddNotifications(configuration)
             .AddMassTransit(config =>
             {
+                config.DisableUsageTelemetry();
+                
                 config.AddConsumer<DownloadRemoverConsumer<SearchItem>>();
                 config.AddConsumer<DownloadRemoverConsumer<SeriesSearchItem>>();
                 config.AddConsumer<DownloadHunterConsumer<SearchItem>>();
