@@ -53,16 +53,15 @@
                    title="Click for documentation">
                 </i>
                 Channel ID
-
               </label>
               <div class="field-input">
-                <p-inputNumber
-                  placeholder="Enter channel ID"
-                  formControlName="channelId"
-                  [min]="0"
-                  [useGrouping]="false"
-                >
-                </p-inputNumber>
+                <input 
+                  type="text" 
+                  pInputText 
+                  formControlName="channelId" 
+                  placeholder="Enter Discord channel ID"
+                  numericInput
+                />
                 <small class="form-helper-text">The Discord channel ID where notifications will be sent</small>
               </div>
             </div>
