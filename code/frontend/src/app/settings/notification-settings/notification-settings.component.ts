@@ -5,6 +5,7 @@ import { Subject, takeUntil } from "rxjs";
 import { NotificationConfigStore } from "./notification-config.store";
 import { CanComponentDeactivate } from "../../core/guards";
 import { NotificationsConfig } from "../../shared/models/notifications-config.model";
+import { NumericInputDirective } from "../../shared/directives";
 
 // PrimeNG Components
 import { CardModule } from "primeng/card";
@@ -30,6 +31,7 @@ import { LoadingErrorStateComponent } from "../../shared/components/loading-erro
     ButtonModule,
     ToastModule,
     LoadingErrorStateComponent,
+    NumericInputDirective,
   ],
   providers: [NotificationConfigStore],
   templateUrl: "./notification-settings.component.html",
