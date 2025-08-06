@@ -108,7 +108,7 @@ export class SidebarContentComponent implements OnInit, OnChanges, OnDestroy {
     // Settings routes
     { route: '/general-settings', navigationPath: ['settings', 'general'] },
     { route: '/queue-cleaner', navigationPath: ['settings', 'queue-cleaner'] },
-    { route: '/content-blocker', navigationPath: ['settings', 'content-blocker'] },
+    { route: '/malware-blocker', navigationPath: ['settings', 'malware-blocker'] },
     { route: '/download-cleaner', navigationPath: ['settings', 'download-cleaner'] },
     { route: '/notifications', navigationPath: ['settings', 'notifications'] },
     
@@ -224,7 +224,7 @@ export class SidebarContentComponent implements OnInit, OnChanges, OnDestroy {
         children: [
           { id: 'general', label: 'General', icon: 'pi pi-cog', route: '/general-settings' },
           { id: 'queue-cleaner', label: 'Queue Cleaner', icon: 'pi pi-list', route: '/queue-cleaner' },
-          { id: 'content-blocker', label: 'Malware Blocker', icon: 'pi pi-shield', route: '/content-blocker' },
+          { id: 'malware-blocker', label: 'Malware Blocker', icon: 'pi pi-shield', route: '/malware-blocker' },
           { id: 'download-cleaner', label: 'Download Cleaner', icon: 'pi pi-trash', route: '/download-cleaner' },
           { id: 'notifications', label: 'Notifications', icon: 'pi pi-bell', route: '/notifications' }
         ]

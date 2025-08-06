@@ -18,8 +18,8 @@ export const routes: Routes = [
     canDeactivate: [pendingChangesGuard] 
   },
   { 
-    path: 'content-blocker', 
-    loadComponent: () => import('./settings/content-blocker/content-blocker-settings.component').then(m => m.ContentBlockerSettingsComponent),
+    path: 'malware-blocker', 
+    loadComponent: () => import('./settings/malware-blocker/malware-blocker-settings.component').then(m => m.MalwareBlockerSettingsComponent),
     canDeactivate: [pendingChangesGuard] 
   },
   { 

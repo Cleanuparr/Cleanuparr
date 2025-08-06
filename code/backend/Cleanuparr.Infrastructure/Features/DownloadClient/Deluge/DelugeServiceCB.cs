@@ -4,7 +4,7 @@ using Cleanuparr.Domain.Entities.Deluge.Response;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Extensions;
 using Cleanuparr.Infrastructure.Features.Context;
-using Cleanuparr.Persistence.Models.Configuration.ContentBlocker;
+using Cleanuparr.Persistence.Models.Configuration.MalwareBlocker;
 using Microsoft.Extensions.Logging;
 
 namespace Cleanuparr.Infrastructure.Features.DownloadClient.Deluge;
@@ -35,9 +35,9 @@ public partial class DelugeService
 
         result.IsPrivate = download.Private;
         
-        var contentBlockerConfig = ContextProvider.Get<ContentBlockerConfig>();
+        var malwareBlockerConfig = ContextProvider.Get<ContentBlockerConfig>();
         
-        if (contentBlockerConfig.IgnorePrivate && download.Private)
+        if (malwareBlockerConfig.IgnorePrivate && download.Private)
         {
             // ignore private trackers
             _logger.LogDebug("skip files check | download is private | {name}", download.Name);
@@ -81,7 +81,7 @@ public partial class DelugeService
                 return;
             }
             
-            if (contentBlockerConfig.DeleteKnownMalware && _filenameEvaluator.IsKnownMalware(name, malwarePatterns))
+            if (malwareBlockerConfig.DeleteKnownMalware && _filenameEvaluator.IsKnownMalware(name, malwarePatterns))
             {
                 _logger.LogInformation("malware file found | {file} | {title}", file.Path, download.Name);
                 result.ShouldRemove = true;

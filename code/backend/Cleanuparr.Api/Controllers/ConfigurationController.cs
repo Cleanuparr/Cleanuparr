@@ -11,9 +11,9 @@ using Cleanuparr.Infrastructure.Utilities;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
-using Cleanuparr.Persistence.Models.Configuration.ContentBlocker;
 using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
 using Cleanuparr.Persistence.Models.Configuration.General;
+using Cleanuparr.Persistence.Models.Configuration.MalwareBlocker;
 using Cleanuparr.Persistence.Models.Configuration.Notification;
 using Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
 using Mapster;
@@ -65,8 +65,8 @@ public class ConfigurationController : ControllerBase
         }
     }
     
-    [HttpGet("content_blocker")]
-    public async Task<IActionResult> GetContentBlockerConfig()
+    [HttpGet("malware_blocker")]
+    public async Task<IActionResult> GetMalwareBlockerConfig()
     {
         await DataContext.Lock.WaitAsync();
         try
@@ -483,8 +483,8 @@ public class ConfigurationController : ControllerBase
         }
     }
     
-    [HttpPut("content_blocker")]
-    public async Task<IActionResult> UpdateContentBlockerConfig([FromBody] ContentBlockerConfig newConfig)
+    [HttpPut("malware_blocker")]
+    public async Task<IActionResult> UpdateMalwareBlockerConfig([FromBody] ContentBlockerConfig newConfig)
     {
         await DataContext.Lock.WaitAsync();
         try
@@ -515,11 +515,11 @@ public class ConfigurationController : ControllerBase
             // Update the scheduler based on configuration changes
             await UpdateJobSchedule(oldConfig, JobType.MalwareBlocker);
 
-            return Ok(new { Message = "ContentBlocker configuration updated successfully" });
+            return Ok(new { Message = "MalwareBlocker configuration updated successfully" });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to save ContentBlocker configuration");
+            _logger.LogError(ex, "Failed to save MalwareBlocker configuration");
             throw;
         }
         finally

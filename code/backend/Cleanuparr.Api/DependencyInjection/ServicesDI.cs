@@ -1,9 +1,8 @@
-using Cleanuparr.Application.Features.ContentBlocker;
 using Cleanuparr.Application.Features.DownloadCleaner;
+using Cleanuparr.Application.Features.MalwareBlocker;
 using Cleanuparr.Application.Features.QueueCleaner;
 using Cleanuparr.Infrastructure.Events;
 using Cleanuparr.Infrastructure.Features.Arr;
-using Cleanuparr.Infrastructure.Features.ContentBlocker;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
 using Cleanuparr.Infrastructure.Features.DownloadHunter;
 using Cleanuparr.Infrastructure.Features.DownloadHunter.Interfaces;
@@ -11,6 +10,7 @@ using Cleanuparr.Infrastructure.Features.DownloadRemover;
 using Cleanuparr.Infrastructure.Features.DownloadRemover.Interfaces;
 using Cleanuparr.Infrastructure.Features.Files;
 using Cleanuparr.Infrastructure.Features.ItemStriker;
+using Cleanuparr.Infrastructure.Features.MalwareBlocker;
 using Cleanuparr.Infrastructure.Features.Security;
 using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Infrastructure.Services;

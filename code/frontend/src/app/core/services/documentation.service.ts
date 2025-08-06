@@ -63,8 +63,8 @@ export class DocumentationService {
       'unlinkedIgnoredRootDir': 'ignored-root-directory',
       'unlinkedCategories': 'unlinked-categories'
     },
-    'content-blocker': {
-      'enabled': 'enable-content-blocker',
+    'malware-blocker': {
+      'enabled': 'enable-malware-blocker',
       'useAdvancedScheduling': 'scheduling-mode',
       'cronExpression': 'cron-expression',
       'jobSchedule.every': 'run-schedule',

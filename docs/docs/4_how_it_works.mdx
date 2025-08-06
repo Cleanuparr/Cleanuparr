@@ -16,8 +16,8 @@ This is a detailed explanation of how the recurring cleanup jobs work.
 <div className={styles.section}>
 
 <ConfigSection
-  id="content-blocker"
-  title="1. Content Blocker"
+  id="malware-blocker"
+  title="1. Malware Blocker"
   description="Automatically filters and removes unwanted content based on configurable blocklists"
   icon="🚫"
 >
@@ -47,7 +47,7 @@ This is a detailed explanation of how the recurring cleanup jobs work.
 - Check each queue item if it is **stalled (download speed is 0)**, **stuck in metadata downloading**, **failed to be imported** or **slow**.
   - If it is, the item receives a **strike** and will continue to accumulate strikes every time it meets any of these conditions.
 - Check each queue item if it meets one of the following condition in the download client:
-  - **Marked as completed, but 0 bytes have been downloaded** (due to files being blocked by qBittorrent or the **content blocker**).
+  - **Marked as completed, but 0 bytes have been downloaded** (due to files being blocked by qBittorrent or the **Malware Blocker**).
   - All associated files are marked as **unwanted/skipped/do not download**.
 - If the item **DOES NOT** match the above criteria, it will be skipped.
 - If the item **DOES** match the criteria or has received the **maximum number of strikes**:

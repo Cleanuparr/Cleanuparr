@@ -3,7 +3,7 @@ using System.Text.RegularExpressions;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Extensions;
 using Cleanuparr.Infrastructure.Features.Context;
-using Cleanuparr.Persistence.Models.Configuration.ContentBlocker;
+using Cleanuparr.Persistence.Models.Configuration.MalwareBlocker;
 using Microsoft.Extensions.Logging;
 using Transmission.API.RPC.Entity;
 
@@ -40,9 +40,9 @@ public partial class TransmissionService
         bool isPrivate = download.IsPrivate ?? false;
         result.IsPrivate = isPrivate;
         
-        var contentBlockerConfig = ContextProvider.Get<ContentBlockerConfig>();
+        var malwareBlockerConfig = ContextProvider.Get<ContentBlockerConfig>();
         
-        if (contentBlockerConfig.IgnorePrivate && isPrivate)
+        if (malwareBlockerConfig.IgnorePrivate && isPrivate)
         {
             // ignore private trackers
             _logger.LogDebug("skip files check | download is private | {name}", download.Name);
@@ -69,7 +69,7 @@ public partial class TransmissionService
 
             totalFiles++;
             
-            if (contentBlockerConfig.DeleteKnownMalware && _filenameEvaluator.IsKnownMalware(download.Files[i].Name, malwarePatterns))
+            if (malwareBlockerConfig.DeleteKnownMalware && _filenameEvaluator.IsKnownMalware(download.Files[i].Name, malwarePatterns))
             {
                 _logger.LogInformation("malware file found | {file} | {title}", download.Files[i].Name, download.Name);
                 result.ShouldRemove = true;

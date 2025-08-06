@@ -1,9 +1,9 @@
 using Cleanuparr.Domain.Entities.Deluge.Response;
 using Cleanuparr.Domain.Exceptions;
 using Cleanuparr.Infrastructure.Events;
-using Cleanuparr.Infrastructure.Features.ContentBlocker;
 using Cleanuparr.Infrastructure.Features.Files;
 using Cleanuparr.Infrastructure.Features.ItemStriker;
+using Cleanuparr.Infrastructure.Features.MalwareBlocker;
 using Cleanuparr.Infrastructure.Http;
 using Cleanuparr.Persistence.Models.Configuration;
 using Infrastructure.Interceptors;

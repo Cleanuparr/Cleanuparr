@@ -1,12 +1,12 @@
-using Cleanuparr.Application.Features.ContentBlocker;
 using Cleanuparr.Application.Features.DownloadCleaner;
+using Cleanuparr.Application.Features.MalwareBlocker;
 using Cleanuparr.Application.Features.QueueCleaner;
 using Cleanuparr.Domain.Exceptions;
 using Cleanuparr.Infrastructure.Features.Jobs;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration;
-using Cleanuparr.Persistence.Models.Configuration.ContentBlocker;
 using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
+using Cleanuparr.Persistence.Models.Configuration.MalwareBlocker;
 using Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
 using Cleanuparr.Shared.Helpers;
 using Microsoft.EntityFrameworkCore;
@@ -94,7 +94,7 @@ public class BackgroundJobManager : IHostedService
         QueueCleanerConfig queueCleanerConfig = await dataContext.QueueCleanerConfigs
             .AsNoTracking()
             .FirstAsync(cancellationToken);
-        ContentBlockerConfig contentBlockerConfig = await dataContext.ContentBlockerConfigs
+        ContentBlockerConfig malwareBlockerConfig = await dataContext.ContentBlockerConfigs
             .AsNoTracking()
             .FirstAsync(cancellationToken);
         DownloadCleanerConfig downloadCleanerConfig = await dataContext.DownloadCleanerConfigs
@@ -103,7 +103,7 @@ public class BackgroundJobManager : IHostedService
         
         // Always register jobs, regardless of enabled status
         await RegisterQueueCleanerJob(queueCleanerConfig, cancellationToken);
-        await RegisterContentBlockerJob(contentBlockerConfig, cancellationToken);
+        await RegisterMalwareBlockerJob(malwareBlockerConfig, cancellationToken);
         await RegisterDownloadCleanerJob(downloadCleanerConfig, cancellationToken);
     }
     
@@ -127,7 +127,7 @@ public class BackgroundJobManager : IHostedService
     /// <summary>
     /// Registers the QueueCleaner job and optionally adds triggers based on configuration.
     /// </summary>
-    public async Task RegisterContentBlockerJob(
+    public async Task RegisterMalwareBlockerJob(
         ContentBlockerConfig config, 
         CancellationToken cancellationToken = default)
     {
