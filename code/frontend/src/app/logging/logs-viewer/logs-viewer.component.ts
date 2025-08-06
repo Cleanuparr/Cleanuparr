@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, signal, computed, inject, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, signal, computed, inject, ViewChild } from '@angular/core';
 import { DatePipe, NgFor, NgIf } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subject, takeUntil, debounceTime, distinctUntilChanged } from 'rxjs';
@@ -14,7 +14,6 @@ import { CardModule } from 'primeng/card';
 import { ToolbarModule } from 'primeng/toolbar';
 import { TooltipModule } from 'primeng/tooltip';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
-import { InputSwitchModule } from 'primeng/inputswitch';
 
 // Services & Models
 import { AppHubService } from '../../core/services/app-hub.service';
@@ -39,8 +38,7 @@ import { MenuItem } from 'primeng/api';
     ToolbarModule,
     TooltipModule,
     ProgressSpinnerModule,
-    MenuModule,
-    InputSwitchModule
+    MenuModule
   ],
   providers: [AppHubService],
   templateUrl: './logs-viewer.component.html',
@@ -52,13 +50,11 @@ export class LogsViewerComponent implements OnInit, OnDestroy {
   private clipboard = inject(Clipboard);
   private search$ = new Subject<string>();
 
-  @ViewChild('logsConsole') logsConsole!: ElementRef;
   @ViewChild('exportMenu') exportMenu: any;
   
   // Signals for reactive state
   logs = signal<LogEntry[]>([]);
   isConnected = signal<boolean>(false);
-  autoScroll = signal<boolean>(true);
   expandedLogs: { [key: number]: boolean } = {};
   
   // Filter state
@@ -92,7 +88,8 @@ export class LogsViewerComponent implements OnInit, OnDestroy {
         (log.exception && log.exception.toLowerCase().includes(search)));
     }
     
-    return filtered;
+    // Sort by timestamp descending (newest first)
+    return filtered.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   });
   
   levels = computed(() => {
@@ -117,9 +114,6 @@ export class LogsViewerComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe((logs: LogEntry[]) => {
         this.logs.set(logs);
-        if (this.autoScroll()) {
-          this.scrollToBottom();
-        }
       });
     
     // Subscribe to connection status
@@ -141,12 +135,6 @@ export class LogsViewerComponent implements OnInit, OnDestroy {
       });
   }
 
-  ngAfterViewChecked(): void {
-    if (this.autoScroll() && this.logsConsole) {
-      this.scrollToBottom();
-    }
-  }
-  
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
@@ -344,25 +332,5 @@ export class LogsViewerComponent implements OnInit, OnDestroy {
     setTimeout(() => {
       URL.revokeObjectURL(url);
     }, 100);
-  }
-  
-  /**
-   * Scroll to the bottom of the logs container
-   */
-  private scrollToBottom(): void {
-    if (this.logsConsole && this.logsConsole.nativeElement) {
-      const element = this.logsConsole.nativeElement;
-      element.scrollTop = element.scrollHeight;
-    }
-  }
-
-  /**
-   * Sets the auto-scroll state
-   */
-  setAutoScroll(value: boolean): void {
-    this.autoScroll.set(value);
-    if (value) {
-      this.scrollToBottom();
-    }
   }
 }

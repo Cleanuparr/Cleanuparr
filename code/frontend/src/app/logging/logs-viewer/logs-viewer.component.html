@@ -11,14 +11,6 @@
       ></p-tag>
     </div>
     <div class="log-controls flex align-items-center gap-2">
-      <div class="auto-scroll-toggle">
-        <p-inputSwitch
-          [ngModel]="autoScroll()"
-          (ngModelChange)="setAutoScroll($event)"
-          id="autoScrollToggle"
-        ></p-inputSwitch>
-        <label for="autoScrollToggle" class="ml-2 text-sm">Auto-scroll</label>
-      </div>
       <button
         pButton
         icon="pi pi-download"
@@ -112,7 +104,7 @@
 
     <div class="card-content">
       <!-- Console-style Logs View -->
-      <div class="viewer-console" #logsConsole>
+      <div class="viewer-console">
         <!-- Logs List -->
         <div class="items-list" *ngIf="filteredLogs().length > 0; else emptyLogs">
           <div *ngFor="let log of filteredLogs(); let i = index" class="item-entry" [id]="'log-' + i">
