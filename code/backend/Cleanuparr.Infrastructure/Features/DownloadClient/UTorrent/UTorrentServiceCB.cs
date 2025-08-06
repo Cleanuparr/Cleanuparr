@@ -5,7 +5,7 @@ using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Extensions;
 using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.DownloadClient.UTorrent.Extensions;
-using Cleanuparr.Persistence.Models.Configuration.ContentBlocker;
+using Cleanuparr.Persistence.Models.Configuration.MalwareBlocker;
 using Microsoft.Extensions.Logging;
 
 namespace Cleanuparr.Infrastructure.Features.DownloadClient.UTorrent;
@@ -38,9 +38,9 @@ public partial class UTorrentService
             return result;
         }
 
-        var contentBlockerConfig = ContextProvider.Get<ContentBlockerConfig>();
+        var malwareBlockerConfig = ContextProvider.Get<ContentBlockerConfig>();
         
-        if (contentBlockerConfig.IgnorePrivate && result.IsPrivate)
+        if (malwareBlockerConfig.IgnorePrivate && result.IsPrivate)
         {
             // ignore private trackers
             _logger.LogDebug("skip files check | download is private | {name}", download.Name);
@@ -66,7 +66,7 @@ public partial class UTorrentService
 
         for (int i = 0; i < files.Count; i++)
         {
-            if (contentBlockerConfig.DeleteKnownMalware && _filenameEvaluator.IsKnownMalware(files[i].Name, malwarePatterns))
+            if (malwareBlockerConfig.DeleteKnownMalware && _filenameEvaluator.IsKnownMalware(files[i].Name, malwarePatterns))
             {
                 _logger.LogInformation("malware file found | {file} | {title}", files[i].Name, download.Name);
                 result.ShouldRemove = true;

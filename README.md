@@ -15,7 +15,8 @@ Cleanuparr was created primarily to address malicious files, such as `*.lnk` or 
 > - Remove and block downloads that are **failing to be imported** by the arrs.
 > - Remove and block downloads that are **stalled** or in **metadata downloading** state.
 > - Remove and block downloads that have a **low download speed** or **high estimated completion time**.
-> - Remove and block downloads blocked by qBittorrent or by Cleanuparr's **Content Blocker**.
+> - Remove and block downloads blocked by qBittorrent or by Cleanuparr's **Malware Blocker**.
+> - Remove and block known malware based on patterns found by the community.
 > - Automatically trigger a search for downloads removed from the arrs.
 > - Clean up downloads that have been **seeding** for a certain amount of time.
 > - Remove downloads that are **orphaned**/have no **hardlinks**/are not referenced by the arrs anymore (with [cross-seed](https://www.cross-seed.org/) support).

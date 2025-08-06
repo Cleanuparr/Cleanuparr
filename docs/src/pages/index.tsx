@@ -112,8 +112,8 @@ function FeaturesSection() {
   const features: FeatureCardProps[] = [
     {
       icon: "🚫",
-      title: "Content Blocking",
-      description: "Automatically block and remove malicious files using customizable blocklists and whitelists.",
+      title: "Malware Blocking",
+      description: "Automatically block and remove malicious files using customizable blocklists.",
       color: "#dc3545"
     },
     {
@@ -143,7 +143,7 @@ function FeaturesSection() {
     {
       icon: "🔔",
       title: "Smart Notifications",
-      description: "Get alerted about strikes, removals, and cleanup operations via Discord or Apprise.",
+      description: "Get alerted about strikes, removals, and cleanup operations via Notifiarr or Apprise.",
       color: "#fd7e14"
     }
   ];

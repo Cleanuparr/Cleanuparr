@@ -3,7 +3,7 @@ using System.Text.RegularExpressions;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Extensions;
 using Cleanuparr.Infrastructure.Features.Context;
-using Cleanuparr.Persistence.Models.Configuration.ContentBlocker;
+using Cleanuparr.Persistence.Models.Configuration.MalwareBlocker;
 using Microsoft.Extensions.Logging;
 using QBittorrent.Client;
 
@@ -49,9 +49,9 @@ public partial class QBitService
 
         result.IsPrivate = isPrivate;
 
-        var contentBlockerConfig = ContextProvider.Get<ContentBlockerConfig>();
+        var malwareBlockerConfig = ContextProvider.Get<ContentBlockerConfig>();
 
-        if (contentBlockerConfig.IgnorePrivate && isPrivate)
+        if (malwareBlockerConfig.IgnorePrivate && isPrivate)
         {
             // ignore private trackers
             _logger.LogDebug("skip files check | download is private | {name}", download.Name);
@@ -86,7 +86,7 @@ public partial class QBitService
 
             totalFiles++;
             
-            if (contentBlockerConfig.DeleteKnownMalware && _filenameEvaluator.IsKnownMalware(file.Name, malwarePatterns))
+            if (malwareBlockerConfig.DeleteKnownMalware && _filenameEvaluator.IsKnownMalware(file.Name, malwarePatterns))
             {
                 _logger.LogInformation("malware file found | {file} | {title}", file.Name, download.Name);
                 result.ShouldRemove = true;
