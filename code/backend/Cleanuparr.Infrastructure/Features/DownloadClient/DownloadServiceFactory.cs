@@ -4,6 +4,7 @@ using Cleanuparr.Infrastructure.Features.Files;
 using Cleanuparr.Infrastructure.Features.ItemStriker;
 using Cleanuparr.Infrastructure.Features.MalwareBlocker;
 using Cleanuparr.Infrastructure.Http;
+using Cleanuparr.Infrastructure.Services.Interfaces;
 using Cleanuparr.Persistence.Models.Configuration;
 using Infrastructure.Interceptors;
 using Microsoft.Extensions.Caching.Memory;
@@ -67,10 +68,12 @@ public sealed class DownloadServiceFactory
         var eventPublisher = _serviceProvider.GetRequiredService<EventPublisher>();
         var blocklistProvider = _serviceProvider.GetRequiredService<BlocklistProvider>();
         
+        var ruleEvaluator = _serviceProvider.GetRequiredService<IRuleEvaluator>();
+        
         // Create the QBitService instance
         QBitService service = new(
             logger, cache, filenameEvaluator, striker, dryRunInterceptor,
-            hardLinkFileService, httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig
+            hardLinkFileService, httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, ruleEvaluator
         );
         
         return service;
@@ -88,10 +91,12 @@ public sealed class DownloadServiceFactory
         var eventPublisher = _serviceProvider.GetRequiredService<EventPublisher>();
         var blocklistProvider = _serviceProvider.GetRequiredService<BlocklistProvider>();
         
+        var ruleEvaluator = _serviceProvider.GetRequiredService<IRuleEvaluator>();
+        
         // Create the DelugeService instance
         DelugeService service = new(
             logger, cache, filenameEvaluator, striker, dryRunInterceptor,
-            hardLinkFileService, httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig
+            hardLinkFileService, httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, ruleEvaluator
         );
         
         return service;
@@ -109,10 +114,12 @@ public sealed class DownloadServiceFactory
         var eventPublisher = _serviceProvider.GetRequiredService<EventPublisher>();
         var blocklistProvider = _serviceProvider.GetRequiredService<BlocklistProvider>();
         
+        var ruleEvaluator = _serviceProvider.GetRequiredService<IRuleEvaluator>();
+        
         // Create the TransmissionService instance
         TransmissionService service = new(
             logger, cache, filenameEvaluator, striker, dryRunInterceptor,
-            hardLinkFileService, httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig
+            hardLinkFileService, httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, ruleEvaluator
         );
         
         return service;
@@ -131,10 +138,12 @@ public sealed class DownloadServiceFactory
         var blocklistProvider = _serviceProvider.GetRequiredService<BlocklistProvider>();
         var loggerFactory = _serviceProvider.GetRequiredService<ILoggerFactory>();
         
+        var ruleEvaluator = _serviceProvider.GetRequiredService<IRuleEvaluator>();
+        
         // Create the UTorrentService instance
         UTorrentService service = new(
             logger, cache, filenameEvaluator, striker, dryRunInterceptor,
-            hardLinkFileService, httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, loggerFactory
+            hardLinkFileService, httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, loggerFactory, ruleEvaluator
         );
         
         return service;

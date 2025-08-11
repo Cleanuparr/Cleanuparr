@@ -80,6 +80,9 @@ public static class ApiDI
         // Add the global exception handling middleware first
         app.UseMiddleware<ExceptionMiddleware>();
         
+        // Add queue rule validation middleware
+        app.UseMiddleware<QueueRuleValidationMiddleware>();
+        
         app.UseCors("Any");
         app.UseRouting();
 

@@ -8,6 +8,7 @@ using Cleanuparr.Infrastructure.Features.ItemStriker;
 using Cleanuparr.Infrastructure.Features.MalwareBlocker;
 using Cleanuparr.Infrastructure.Helpers;
 using Cleanuparr.Infrastructure.Http;
+using Cleanuparr.Infrastructure.Services.Interfaces;
 using Cleanuparr.Persistence.Models.Configuration;
 using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
 using Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
@@ -38,6 +39,7 @@ public abstract class DownloadService : IDownloadService
     protected readonly BlocklistProvider _blocklistProvider;
     protected readonly HttpClient _httpClient;
     protected readonly DownloadClientConfig _downloadClientConfig;
+    protected readonly IRuleEvaluator _ruleEvaluator;
     
     protected DownloadService(
         ILogger<DownloadService> logger,
@@ -49,7 +51,8 @@ public abstract class DownloadService : IDownloadService
         IDynamicHttpClientProvider httpClientProvider,
         EventPublisher eventPublisher,
         BlocklistProvider blocklistProvider,
-        DownloadClientConfig downloadClientConfig
+        DownloadClientConfig downloadClientConfig,
+        IRuleEvaluator ruleEvaluator
     )
     {
         _logger = logger;
@@ -64,6 +67,7 @@ public abstract class DownloadService : IDownloadService
             .SetSlidingExpiration(StaticConfiguration.TriggerValue + Constants.CacheLimitBuffer);
         _downloadClientConfig = downloadClientConfig;
         _httpClient = httpClientProvider.CreateClient(downloadClientConfig);
+        _ruleEvaluator = ruleEvaluator;
     }
     
     public DownloadClientConfig ClientConfig => _downloadClientConfig;
@@ -101,113 +105,7 @@ public abstract class DownloadService : IDownloadService
     /// <inheritdoc/>
     public abstract Task<BlockFilesResult> BlockUnwantedFilesAsync(string hash, IReadOnlyList<string> ignoredDownloads);
     
-    protected void ResetStalledStrikesOnProgress(string hash, long downloaded)
-    {
-        var queueCleanerConfig = ContextProvider.Get<QueueCleanerConfig>(nameof(QueueCleanerConfig));
 
-        if (!queueCleanerConfig.Stalled.ResetStrikesOnProgress)
-        {
-            return;
-        }
-
-        if (_cache.TryGetValue(CacheKeys.StrikeItem(hash, StrikeType.Stalled), out StalledCacheItem? cachedItem) &&
-            cachedItem is not null && downloaded > cachedItem.Downloaded)
-        {
-            // cache item found
-            _cache.Remove(CacheKeys.Strike(StrikeType.Stalled, hash));
-            _logger.LogDebug("resetting stalled strikes for {hash} due to progress", hash);
-        }
-        
-        _cache.Set(CacheKeys.StrikeItem(hash, StrikeType.Stalled), new StalledCacheItem { Downloaded = downloaded }, _cacheOptions);
-    }
-    
-    protected void ResetSlowSpeedStrikesOnProgress(string downloadName, string hash)
-    {
-        var queueCleanerConfig = ContextProvider.Get<QueueCleanerConfig>(nameof(QueueCleanerConfig));
-        
-        if (queueCleanerConfig.Slow.ResetStrikesOnProgress)
-        {
-            return;
-        }
-
-        string key = CacheKeys.Strike(StrikeType.SlowSpeed, hash);
-
-        if (!_cache.TryGetValue(key, out object? value) || value is null)
-        {
-            return;
-        }
-        
-        _cache.Remove(key);
-        _logger.LogDebug("resetting slow speed strikes due to progress | {name}", downloadName);
-    }
-    
-    protected void ResetSlowTimeStrikesOnProgress(string downloadName, string hash)
-    {
-        var queueCleanerConfig = ContextProvider.Get<QueueCleanerConfig>(nameof(QueueCleanerConfig));
-        
-        if (queueCleanerConfig.Slow.ResetStrikesOnProgress)
-        {
-            return;
-        }
-
-        string key = CacheKeys.Strike(StrikeType.SlowTime, hash);
-
-        if (!_cache.TryGetValue(key, out object? value) || value is null)
-        {
-            return;
-        }
-        
-        _cache.Remove(key);
-        _logger.LogDebug("resetting slow time strikes due to progress | {name}", downloadName);
-    }
-
-    protected async Task<(bool ShouldRemove, DeleteReason Reason)> CheckIfSlow(
-        string downloadHash,
-        string downloadName,
-        ByteSize minSpeed,
-        ByteSize currentSpeed,
-        SmartTimeSpan maxTime,
-        SmartTimeSpan currentTime
-    )
-    {
-        var queueCleanerConfig = ContextProvider.Get<QueueCleanerConfig>(nameof(QueueCleanerConfig));
-        
-        if (minSpeed.Bytes > 0 && currentSpeed < minSpeed)
-        {
-            _logger.LogTrace("slow speed | {speed}/s | {name}", currentSpeed.ToString(), downloadName);
-            
-            bool shouldRemove = await _striker
-                .StrikeAndCheckLimit(downloadHash, downloadName, queueCleanerConfig.Slow.MaxStrikes, StrikeType.SlowSpeed);
-
-            if (shouldRemove)
-            {
-                return (true, DeleteReason.SlowSpeed);
-            }
-        }
-        else
-        {
-            ResetSlowSpeedStrikesOnProgress(downloadName, downloadHash);
-        }
-        
-        if (maxTime.Time > TimeSpan.Zero && currentTime > maxTime)
-        {
-            _logger.LogTrace("slow estimated time | {time} | {name}", currentTime.ToString(), downloadName);
-            
-            bool shouldRemove = await _striker
-                .StrikeAndCheckLimit(downloadHash, downloadName, queueCleanerConfig.Slow.MaxStrikes, StrikeType.SlowTime);
-
-            if (shouldRemove)
-            {
-                return (true, DeleteReason.SlowTime);
-            }
-        }
-        else
-        {
-            ResetSlowTimeStrikesOnProgress(downloadName, downloadHash);
-        }
-        
-        return (false, DeleteReason.None);
-    }
     
     protected SeedingCheckResult ShouldCleanDownload(double ratio, TimeSpan seedingTime, CleanCategory category)
     {

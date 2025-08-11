@@ -169,3 +169,6 @@ app.MapHealthChecks("/health/ready", new HealthCheckOptions
 app.ConfigureApi();
 
 await app.RunAsync();
+
+// Make Program class accessible for testing
+public partial class Program { }

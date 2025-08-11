@@ -1,6 +1,7 @@
 using Cleanuparr.Api.Models;
 using Cleanuparr.Application.Features.Arr.Dtos;
 using Cleanuparr.Application.Features.DownloadClient.Dtos;
+using Cleanuparr.Domain.Entities;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Domain.Exceptions;
 using Cleanuparr.Infrastructure.Http.DynamicHttpClientSystem;
@@ -20,6 +21,7 @@ using Mapster;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
+using System.Text.Json;
 
 namespace Cleanuparr.Api.Controllers;
 
@@ -57,7 +59,18 @@ public class ConfigurationController : ControllerBase
             var config = await _dataContext.QueueCleanerConfigs
                 .AsNoTracking()
                 .FirstAsync();
-            return Ok(config);
+            
+            // Return only the main configuration, rules are managed separately
+            var response = new
+            {
+                config.Id,
+                config.Enabled,
+                config.CronExpression,
+                config.UseAdvancedScheduling,
+                config.FailedImport
+            };
+            
+            return Ok(response);
         }
         finally
         {
@@ -378,6 +391,16 @@ public class ConfigurationController : ControllerBase
         public AppriseConfig? Apprise { get; set; }
     }
 
+    public class UpdateQueueCleanerConfigDto
+    {
+        public bool Enabled { get; set; }
+        public string CronExpression { get; set; } = "0 0/5 * * * ?";
+        public bool UseAdvancedScheduling { get; set; } = false;
+        public FailedImportConfig FailedImport { get; set; } = new();
+        // Rules are now managed through separate endpoints
+        // Removed: StallRules, SlowRules, Stalled, Slow properties
+    }
+
     [HttpPut("notifications")]
     public async Task<IActionResult> UpdateNotificationsConfig([FromBody] UpdateNotificationConfigDto newConfig)
     {
@@ -439,30 +462,29 @@ public class ConfigurationController : ControllerBase
     }
 
     [HttpPut("queue_cleaner")]
-    public async Task<IActionResult> UpdateQueueCleanerConfig([FromBody] QueueCleanerConfig newConfig)
+    public async Task<IActionResult> UpdateQueueCleanerConfig([FromBody] UpdateQueueCleanerConfigDto newConfigDto)
     {
         await DataContext.Lock.WaitAsync();
         try
         {
-            // Validate the configuration
-            newConfig.Validate();
-
             // Validate cron expression if present
-            if (!string.IsNullOrEmpty(newConfig.CronExpression))
+            if (!string.IsNullOrEmpty(newConfigDto.CronExpression))
             {
-                CronValidationHelper.ValidateCronExpression(newConfig.CronExpression);
+                CronValidationHelper.ValidateCronExpression(newConfigDto.CronExpression);
             }
 
-            // Get existing config
+            // Validate the failed import configuration
+            newConfigDto.FailedImport.Validate();
+
+            // Get existing config (no need to include rules as they're managed separately)
             var oldConfig = await _dataContext.QueueCleanerConfigs
                 .FirstAsync();
 
-            // Apply updates from DTO, excluding the ID property to avoid EF key modification error
-            var adapterConfig = new TypeAdapterConfig();
-            adapterConfig.NewConfig<QueueCleanerConfig, QueueCleanerConfig>()
-                .Ignore(dest => dest.Id);
-            
-            newConfig.Adapt(oldConfig, adapterConfig);
+            // Update only the main properties (rules are managed through separate endpoints)
+            oldConfig.Enabled = newConfigDto.Enabled;
+            oldConfig.CronExpression = newConfigDto.CronExpression;
+            oldConfig.UseAdvancedScheduling = newConfigDto.UseAdvancedScheduling;
+            oldConfig.FailedImport = newConfigDto.FailedImport;
 
             // Persist the configuration
             await _dataContext.SaveChangesAsync();
@@ -471,6 +493,10 @@ public class ConfigurationController : ControllerBase
             await UpdateJobSchedule(oldConfig, JobType.QueueCleaner);
 
             return Ok(new { Message = "QueueCleaner configuration updated successfully" });
+        }
+        catch (ValidationException ex)
+        {
+            return BadRequest(ex.Message);
         }
         catch (Exception ex)
         {

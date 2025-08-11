@@ -15,6 +15,7 @@ using Cleanuparr.Infrastructure.Features.Security;
 using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Infrastructure.Services;
 using Cleanuparr.Infrastructure.Services.Interfaces;
+using Cleanuparr.Infrastructure.Utilities;
 using Cleanuparr.Persistence;
 using Infrastructure.Interceptors;
 using Infrastructure.Verticals.Files;
@@ -51,6 +52,10 @@ public static class ServicesDI
             .AddScoped<ArrQueueIterator>()
             .AddScoped<DownloadServiceFactory>()
             .AddScoped<IStriker, Striker>()
+            .AddScoped<IRuleManager, RuleManager>()
+            .AddScoped<IRuleEvaluator, RuleEvaluator>()
+            .AddScoped<IRuleIntervalValidator, RuleIntervalValidator>()
             .AddSingleton<IJobManagementService, JobManagementService>()
+            .AddSingleton<ITrackerPatternMatcher, TrackerPatternMatcher>()
             .AddSingleton<BlocklistProvider>();
 }

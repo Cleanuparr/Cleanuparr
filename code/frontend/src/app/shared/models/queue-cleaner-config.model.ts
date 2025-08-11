@@ -1,3 +1,6 @@
+// Import the rule types
+import { StallRule, SlowRule } from './queue-rule.model';
+
 export enum ScheduleUnit {
   Seconds = 'Seconds',
   Minutes = 'Minutes',
@@ -54,6 +57,10 @@ export interface QueueCleanerConfig {
   failedImport: FailedImportConfig;
   stalled: StalledConfig;
   slow: SlowConfig;
+  
+  // Queue Rules
+  stallRules?: StallRule[];
+  slowRules?: SlowRule[];
   
   // Legacy flat properties for backward compatibility
   // These will be mapped to/from the nested structure

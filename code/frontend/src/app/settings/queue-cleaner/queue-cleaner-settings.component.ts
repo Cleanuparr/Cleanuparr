@@ -1,6 +1,6 @@
 import { Component, EventEmitter, OnDestroy, Output, effect, inject } from "@angular/core";
 import { CommonModule } from "@angular/common";
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from "@angular/forms";
+import { FormBuilder, FormGroup, FormArray, ReactiveFormsModule, Validators } from "@angular/forms";
 import { Subject, takeUntil } from "rxjs";
 import { QueueCleanerConfigStore } from "./queue-cleaner-config.store";
 import { CanComponentDeactivate } from "../../core/guards";
@@ -26,14 +26,33 @@ import { AccordionModule } from "primeng/accordion";
 import { SelectButtonModule } from "primeng/selectbutton";
 import { ChipsModule } from "primeng/chips";
 import { ToastModule } from "primeng/toast";
+import { MessageService, ConfirmationService } from "primeng/api";
 // Using centralized NotificationService instead of MessageService
 import { NotificationService } from "../../core/services/notification.service";
 import { DocumentationService } from "../../core/services/documentation.service";
 import { SelectModule } from "primeng/select";
 import { AutoCompleteModule } from "primeng/autocomplete";
 import { DropdownModule } from "primeng/dropdown";
+import { TooltipModule } from "primeng/tooltip";
+import { DialogModule } from "primeng/dialog";
+import { ConfirmDialogModule } from "primeng/confirmdialog";
 import { LoadingErrorStateComponent } from "../../shared/components/loading-error-state/loading-error-state.component";
 import { ErrorHandlerUtil } from "../../core/utils/error-handler.util";
+import { StallRule, SlowRule, TorrentPrivacyType } from "../../shared/models/queue-rule.model";
+
+// Frontend Coverage Analysis Types
+interface CoverageGap {
+  start: number;
+  end: number;
+  privacyType: TorrentPrivacyType;
+  privacyTypeLabel: string;
+}
+
+interface RuleCoverage {
+  hasGaps: boolean;
+  gaps: CoverageGap[];
+  totalGapPercentage: number;
+}
 
 @Component({
   selector: "app-queue-cleaner-settings",
@@ -54,10 +73,13 @@ import { ErrorHandlerUtil } from "../../core/utils/error-handler.util";
     SelectModule,
     AutoCompleteModule,
     DropdownModule,
+    TooltipModule,
+    DialogModule,
+    ConfirmDialogModule,
     LoadingErrorStateComponent,
     MobileAutocompleteComponent,
   ],
-  providers: [QueueCleanerConfigStore],
+  providers: [QueueCleanerConfigStore, MessageService, ConfirmationService],
   templateUrl: "./queue-cleaner-settings.component.html",
   styleUrls: ["./queue-cleaner-settings.component.scss"],
 })
@@ -94,10 +116,18 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
     { label: 'Advanced', value: true }
   ];
 
+  // Privacy type options for rules
+  privacyTypeOptions = [
+    { label: 'Public Torrents Only', value: TorrentPrivacyType.Public },
+    { label: 'Private Torrents Only', value: TorrentPrivacyType.Private },
+    { label: 'Both Public and Private', value: TorrentPrivacyType.Both }
+  ];
+
   // Inject the necessary services
   private formBuilder = inject(FormBuilder);
   // Using the notification service for all toast messages
   private notificationService = inject(NotificationService);
+  private confirmationService = inject(ConfirmationService);
   private documentationService = inject(DocumentationService);
   private queueCleanerStore = inject(QueueCleanerConfigStore);
 
@@ -108,17 +138,473 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
   readonly queueCleanerLoadError = this.queueCleanerStore.loadError;  // Only for "Not connected" state
   readonly queueCleanerSaveError = this.queueCleanerStore.saveError;  // Only for toast notifications
 
+  // Queue Rules signals from the store
+  readonly stallRules = this.queueCleanerStore.stallRules;
+  readonly slowRules = this.queueCleanerStore.slowRules;
+  readonly rulesLoading = this.queueCleanerStore.rulesLoading;
+  readonly rulesSaving = this.queueCleanerStore.rulesSaving;
+  readonly rulesError = this.queueCleanerStore.rulesError;
+
   // Track active accordion tabs
   activeAccordionIndices: number[] = [];
 
+  // Modal visibility state
+  stallRuleModalVisible = false;
+  slowRuleModalVisible = false;
+
+  // Rule forms
+  stallRuleForm: FormGroup;
+  slowRuleForm: FormGroup;
+
+  // Track saving states locally for UI feedback
+  stallRuleSaving = false;
+  slowRuleSaving = false;
+  
+  // Track if we've initiated a save operation to watch for completion
+  private stallRuleSaveInitiated = false;
+  private slowRuleSaveInitiated = false;
+
+  // Edit mode tracking
+  editingStallRule: StallRule | null = null;
+  editingSlowRule: SlowRule | null = null;
+
+  // Rule preview properties for summary display (now using signals directly)
+  stallRulesPreview: StallRule[] = [];
+  slowRulesPreview: SlowRule[] = [];
+
   // Subject for unsubscribing from observables when component is destroyed
   private destroy$ = new Subject<void>();
+
+  // Computed properties for rule counts and summaries (using signals)
+  get stallRulesCount(): number {
+    return this.stallRules().length;
+  }
+
+  get enabledStallRulesCount(): number {
+    return this.stallRules().filter(rule => rule.enabled).length;
+  }
+
+  get slowRulesCount(): number {
+    return this.slowRules().length;
+  }
+
+  get enabledSlowRulesCount(): number {
+    return this.slowRules().filter(rule => rule.enabled).length;
+  }
+
+  // Coverage analysis computed properties  
+  get stallRulesCoverage(): RuleCoverage {
+    return this.analyzeRuleCoverage(this.stallRules());
+  }
+
+  get slowRulesCoverage(): RuleCoverage {
+    return this.analyzeRuleCoverage(this.slowRules());
+  }
+
+  /**
+   * Analyze rule coverage for gaps in completion percentage intervals
+   */
+  private analyzeRuleCoverage(rules: (StallRule | SlowRule)[]): RuleCoverage {
+    const enabledRules = rules.filter(rule => rule.enabled);
+    
+    if (enabledRules.length === 0) {
+      return {
+        hasGaps: true,
+        gaps: [
+          {
+            start: 1,
+            end: 100,
+            privacyType: TorrentPrivacyType.Public,
+            privacyTypeLabel: 'Public'
+          },
+          {
+            start: 1,
+            end: 100,
+            privacyType: TorrentPrivacyType.Private,
+            privacyTypeLabel: 'Private'
+          }
+        ],
+        totalGapPercentage: 100
+      };
+    }
+
+    // Expand privacy types (Both -> Public + Private) and create intervals
+    const intervals: Array<{ start: number; end: number; privacyType: TorrentPrivacyType; privacyTypeLabel: string }> = [];
+    
+    for (const rule of enabledRules) {
+      const start = 1;
+      const end = rule.maxCompletionPercentage;
+      
+      if (rule.privacyType === TorrentPrivacyType.Both) {
+        intervals.push({
+          start,
+          end,
+          privacyType: TorrentPrivacyType.Public,
+          privacyTypeLabel: 'Public'
+        });
+        intervals.push({
+          start,
+          end,
+          privacyType: TorrentPrivacyType.Private,
+          privacyTypeLabel: 'Private'
+        });
+      } else {
+        intervals.push({
+          start,
+          end,
+          privacyType: rule.privacyType,
+          privacyTypeLabel: rule.privacyType === TorrentPrivacyType.Public ? 'Public' : 'Private'
+        });
+      }
+    }
+
+    // Find the maximum coverage for each privacy type
+    const gaps: CoverageGap[] = [];
+    
+    for (const privacyType of [TorrentPrivacyType.Public, TorrentPrivacyType.Private]) {
+      const privacyTypeLabel = privacyType === TorrentPrivacyType.Public ? 'Public' : 'Private';
+      const typeIntervals = intervals
+        .filter(r => r.privacyType === privacyType)
+        .sort((a, b) => b.end - a.end); // Sort by end descending to get max coverage
+
+      if (typeIntervals.length === 0) {
+        // No rules for this privacy type - entire range is a gap
+        gaps.push({
+          start: 1,
+          end: 100,
+          privacyType,
+          privacyTypeLabel
+        });
+        continue;
+      }
+
+      // Get the maximum coverage for this privacy type
+      const maxCoverage = typeIntervals[0].end;
+      
+      // If max coverage is less than 100%, there's a gap
+      if (maxCoverage < 100) {
+        gaps.push({
+          start: maxCoverage + 1,
+          end: 100,
+          privacyType,
+          privacyTypeLabel
+        });
+      }
+    }
+
+    // Calculate total gap percentage
+    let totalGapPercentage = 0;
+    for (const gap of gaps) {
+      totalGapPercentage += gap.end - gap.start + 1;
+    }
+    // Divide by 2 since we have two privacy types (avoid double counting)
+    if (gaps.length > 0) {
+      totalGapPercentage = totalGapPercentage / 2;
+    }
+
+    return {
+      hasGaps: gaps.length > 0,
+      gaps,
+      totalGapPercentage
+    };
+  }
 
   /**
    * Check if component can be deactivated (navigation guard)
    */
   canDeactivate(): boolean {
     return !this.queueCleanerForm.dirty;
+  }
+
+  /**
+   * Open stall rules modal for adding a new rule
+   */
+  openStallRulesModal(): void {
+    this.editingStallRule = null;
+    this.stallRuleModalVisible = true;
+  }
+
+  /**
+   * Open stall rules modal for editing an existing rule
+   */
+  editStallRule(rule: StallRule): void {
+    this.editingStallRule = rule;
+    this.stallRuleForm.patchValue({
+      name: rule.name,
+      enabled: rule.enabled,
+      maxStrikes: rule.maxStrikes,
+      privacyType: rule.privacyType,
+      maxCompletionPercentage: rule.maxCompletionPercentage,
+      resetStrikesOnProgress: rule.resetStrikesOnProgress
+    });
+    this.stallRuleModalVisible = true;
+  }
+
+  /**
+   * Delete a stall rule
+   */
+  deleteStallRule(rule: StallRule): void {
+    this.confirmationService.confirm({
+      message: `Are you sure you want to delete the stall rule "${rule.name}"?`,
+      header: 'Confirm Deletion',
+      icon: 'pi pi-exclamation-triangle',
+      acceptButtonStyleClass: 'p-button-danger',
+      accept: () => {
+        if (rule.id) {
+          this.queueCleanerStore.deleteStallRule(rule.id);
+          this.monitorStallRuleDeletion();
+        }
+      }
+    });
+  }
+
+  /**
+   * Open slow rules modal for adding a new rule
+   */
+  openSlowRulesModal(): void {
+    this.editingSlowRule = null;
+    this.slowRuleModalVisible = true;
+  }
+
+  /**
+   * Open slow rules modal for editing an existing rule
+   */
+  editSlowRule(rule: SlowRule): void {
+    this.editingSlowRule = rule;
+    this.slowRuleForm.patchValue({
+      name: rule.name,
+      enabled: rule.enabled,
+      maxStrikes: rule.maxStrikes,
+      privacyType: rule.privacyType,
+      maxCompletionPercentage: rule.maxCompletionPercentage,
+      resetStrikesOnProgress: rule.resetStrikesOnProgress,
+      minSpeed: rule.minSpeed,
+      maxTimeHours: rule.maxTimeHours,
+      ignoreAboveSize: rule.ignoreAboveSize
+    });
+    this.slowRuleModalVisible = true;
+  }
+
+  /**
+   * Delete a slow rule
+   */
+  deleteSlowRule(rule: SlowRule): void {
+    this.confirmationService.confirm({
+      message: `Are you sure you want to delete the slow rule "${rule.name}"?`,
+      header: 'Confirm Deletion',
+      icon: 'pi pi-exclamation-triangle',
+      acceptButtonStyleClass: 'p-button-danger',
+      accept: () => {
+        if (rule.id) {
+          this.queueCleanerStore.deleteSlowRule(rule.id);
+          this.monitorSlowRuleDeletion();
+        }
+      }
+    });
+  }
+
+  /**
+   * Close stall rule modal
+   */
+  closeStallRuleModal(): void {
+    this.stallRuleModalVisible = false;
+    this.editingStallRule = null;
+    this.stallRuleForm.reset({
+      enabled: true,
+      maxStrikes: 3,
+      privacyType: TorrentPrivacyType.Public,
+      resetStrikesOnProgress: true,
+    });
+  }
+
+  /**
+   * Close slow rule modal
+   */
+  closeSlowRuleModal(): void {
+    this.slowRuleModalVisible = false;
+    this.editingSlowRule = null;
+    this.slowRuleForm.reset({
+      enabled: true,
+      maxStrikes: 3,
+      privacyType: TorrentPrivacyType.Public,
+      resetStrikesOnProgress: true,
+      maxTimeHours: 0
+    });
+  }
+
+  /**
+   * Save stall rule (create or update)
+   */
+  saveStallRule(): void {
+    if (this.stallRuleForm.invalid) {
+      this.markFormGroupTouched(this.stallRuleForm);
+      return;
+    }
+    
+    this.stallRuleSaving = true;
+    this.stallRuleSaveInitiated = true;
+    const ruleData = this.stallRuleForm.value;
+    
+    if (this.editingStallRule?.id) {
+      // Update existing rule
+      this.queueCleanerStore.updateStallRule({ 
+        id: this.editingStallRule.id, 
+        rule: { ...ruleData, id: this.editingStallRule.id } 
+      });
+    } else {
+      // Create new rule
+      this.queueCleanerStore.createStallRule(ruleData);
+    }
+
+    this.monitorStallRuleSaving();
+  }
+
+  /**
+   * Save slow rule (create or update)
+   */
+  saveSlowRule(): void {
+    if (this.slowRuleForm.invalid) {
+      this.markFormGroupTouched(this.slowRuleForm);
+      return;
+    }
+    
+    this.slowRuleSaving = true;
+    this.slowRuleSaveInitiated = true;
+    const ruleData = this.slowRuleForm.value;
+    
+    if (this.editingSlowRule?.id) {
+      // Update existing rule
+      this.queueCleanerStore.updateSlowRule({ 
+        id: this.editingSlowRule.id, 
+        rule: { ...ruleData, id: this.editingSlowRule.id } 
+      });
+    } else {
+      // Create new rule
+      this.queueCleanerStore.createSlowRule(ruleData);
+    }
+
+    this.monitorSlowRuleSaving();
+  }
+
+  /**
+   * Monitor stall rule saving completion
+   */
+  private monitorStallRuleSaving(): void {
+    const checkSavingStatus = () => {
+      const saving = this.rulesSaving();
+      const error = this.rulesError();
+      
+      if (!saving) {
+        this.stallRuleSaving = false;
+        this.stallRuleSaveInitiated = false;
+        
+        if (error) {
+          this.notificationService.showError(`Operation failed: ${error}`);
+        } else {
+          const action = this.editingStallRule ? 'updated' : 'created';
+          this.notificationService.showSuccess(`Stall rule ${action} successfully`);
+          this.closeStallRuleModal();
+        }
+      } else {
+        setTimeout(checkSavingStatus, 100);
+      }
+    };
+    
+    setTimeout(checkSavingStatus, 100);
+  }
+
+  /**
+   * Monitor slow rule saving completion
+   */
+  private monitorSlowRuleSaving(): void {
+    const checkSavingStatus = () => {
+      const saving = this.rulesSaving();
+      const error = this.rulesError();
+      
+      if (!saving) {
+        this.slowRuleSaving = false;
+        this.slowRuleSaveInitiated = false;
+        
+        if (error) {
+          this.notificationService.showError(`Operation failed: ${error}`);
+        } else {
+          const action = this.editingSlowRule ? 'updated' : 'created';
+          this.notificationService.showSuccess(`Slow rule ${action} successfully`);
+          this.closeSlowRuleModal();
+        }
+      } else {
+        setTimeout(checkSavingStatus, 100);
+      }
+    };
+    
+    setTimeout(checkSavingStatus, 100);
+  }
+
+  /**
+   * Monitor stall rule deletion completion
+   */
+  private monitorStallRuleDeletion(): void {
+    const checkDeletionStatus = () => {
+      const saving = this.rulesSaving();
+      const error = this.rulesError();
+      
+      if (!saving) {
+        if (error) {
+          this.notificationService.showError(`Deletion failed: ${error}`);
+        } else {
+          this.notificationService.showSuccess('Stall rule deleted successfully');
+        }
+      } else {
+        setTimeout(checkDeletionStatus, 100);
+      }
+    };
+    
+    setTimeout(checkDeletionStatus, 100);
+  }
+
+  /**
+   * Monitor slow rule deletion completion
+   */
+  private monitorSlowRuleDeletion(): void {
+    const checkDeletionStatus = () => {
+      const saving = this.rulesSaving();
+      const error = this.rulesError();
+      
+      if (!saving) {
+        if (error) {
+          this.notificationService.showError(`Deletion failed: ${error}`);
+        } else {
+          this.notificationService.showSuccess('Slow rule deleted successfully');
+        }
+      } else {
+        setTimeout(checkDeletionStatus, 100);
+      }
+    };
+    
+    setTimeout(checkDeletionStatus, 100);
+  }
+
+  /**
+   * Track function for stall rules
+   */
+  trackStallRule(index: number, rule: StallRule): any {
+    return rule.id || index;
+  }
+
+  /**
+   * Track function for slow rules
+   */
+  trackSlowRule(index: number, rule: SlowRule): any {
+    return rule.id || index;
+  }
+
+  /**
+   * Load rule previews for summary display
+   * Since we're now using signals from the store, we don't need to load separately
+   */
+  private loadRulePreviews(): void {
+    // Rules are automatically loaded by the store and available through signals
+    // The template will use computed properties to show the preview
   }
 
   /**
@@ -167,8 +653,28 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
         maxTime: [{ value: 0, disabled: true }, [Validators.required, Validators.min(0), Validators.max(1000)]],
         ignoreAboveSize: [{ value: "", disabled: true }],
       }),
+    });
 
+    // Initialize rule forms with all required fields like the existing modals
+    this.stallRuleForm = this.formBuilder.group({
+      name: ['', [Validators.required, Validators.maxLength(100)]],
+      enabled: [true],
+      maxStrikes: [3, [Validators.required, Validators.min(3), Validators.max(5000)]],
+      privacyType: [TorrentPrivacyType.Public, [Validators.required]],
+      maxCompletionPercentage: [null, [Validators.required, Validators.min(1), Validators.max(100)]],
+      resetStrikesOnProgress: [true],
+    });
 
+    this.slowRuleForm = this.formBuilder.group({
+      name: ['', [Validators.required, Validators.maxLength(100)]],
+      enabled: [true],
+      maxStrikes: [3, [Validators.required, Validators.min(3), Validators.max(5000)]],
+      minSpeed: ['', [Validators.required]],
+      maxTimeHours: [0, [Validators.required, Validators.min(0)]],
+      privacyType: [TorrentPrivacyType.Public, [Validators.required]],
+      maxCompletionPercentage: [null, [Validators.required, Validators.min(1), Validators.max(100)]],
+      ignoreAboveSize: [null, [Validators.min(0)]],
+      resetStrikesOnProgress: [true]
     });
 
     // Create an effect to update the form when the configuration changes
@@ -243,6 +749,42 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
           // For non-user-fixable save errors, also emit to parent
           this.error.emit(saveErrorMessage);
         }
+      }
+    });
+
+    // Effect to handle stall rule save completion
+    effect(() => {
+      const saving = this.queueCleanerStore.rulesSaving();
+      const error = this.queueCleanerStore.rulesError();
+      
+      if (this.stallRuleSaveInitiated && !saving) {
+        if (error) {
+          this.notificationService.showError('Failed to create stall rule: ' + error);
+        } else {
+          this.notificationService.showSuccess('Stall rule created successfully');
+          this.closeStallRuleModal();
+        }
+        this.stallRuleSaving = false;
+        this.stallRuleSaveInitiated = false;
+        this.queueCleanerStore.resetRulesError();
+      }
+    });
+
+    // Effect to handle slow rule save completion  
+    effect(() => {
+      const saving = this.queueCleanerStore.rulesSaving();
+      const error = this.queueCleanerStore.rulesError();
+      
+      if (this.slowRuleSaveInitiated && !saving) {
+        if (error) {
+          this.notificationService.showError('Failed to create slow rule: ' + error);
+        } else {
+          this.notificationService.showSuccess('Slow rule created successfully');
+          this.closeSlowRuleModal();
+        }
+        this.slowRuleSaving = false;
+        this.slowRuleSaveInitiated = false;
+        this.queueCleanerStore.resetRulesError();
       }
     });
     
@@ -638,6 +1180,8 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
           maxTime: formValue.slow?.maxTime || 0,
           ignoreAboveSize: formValue.slow?.ignoreAboveSize || "",
         },
+        stallRules: formValue.stallRules || [],
+        slowRules: formValue.slowRules || [],
       };
       
       // Save the configuration
@@ -730,58 +1274,54 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
     this.updateStalledDependentControls(0);
     this.updateSlowDependentControls(0);
     
-    // Mark form as dirty so the save button is enabled after reset
+    // Mark form as dirty so the form can be saved
     this.queueCleanerForm.markAsDirty();
   }
 
   /**
-   * Mark all controls in a form group as touched
+   * Get schedule value options based on the selected schedule type
+   */
+  getScheduleValueOptions() {
+    const scheduleType = this.queueCleanerForm.get('jobSchedule.type')?.value;
+    return this.scheduleValueOptions[scheduleType as keyof typeof this.scheduleValueOptions] || [];
+  }
+
+  /**
+   * Check if a nested form field has a specific error (for queueCleanerForm)
+   */
+  hasNestedError(groupName: string, fieldName: string, errorType: string): boolean {
+    const field = this.queueCleanerForm.get(`${groupName}.${fieldName}`);
+    return !!(field && field.hasError(errorType) && (field.dirty || field.touched));
+  }
+
+  /**
+   * Check if a top-level form field has a specific error (for queueCleanerForm)
+   */
+  hasMainFormError(fieldName: string, errorType: string): boolean {
+    const field = this.queueCleanerForm.get(fieldName);
+    return !!(field && field.hasError(errorType) && (field.dirty || field.touched));
+  }
+
+  /**
+   * Check if a modal form field has a specific error (for stallRuleForm and slowRuleForm)
+   */
+  hasModalError(form: FormGroup, fieldName: string, errorType: string): boolean {
+    const field = form.get(fieldName);
+    return !!(field && field.hasError(errorType) && (field.dirty || field.touched));
+  }
+
+  /**
+   * Mark all form controls as touched to trigger validation
    */
   private markFormGroupTouched(formGroup: FormGroup): void {
-    Object.values(formGroup.controls).forEach((control) => {
-      control.markAsTouched();
+    Object.keys(formGroup.controls).forEach(key => {
+      const control = formGroup.get(key);
+      control?.markAsTouched();
 
-      if ((control as any).controls) {
-        this.markFormGroupTouched(control as FormGroup);
+      if (control instanceof FormGroup) {
+        this.markFormGroupTouched(control);
       }
     });
   }
-
-  /**
-   * Check if a form control has an error after it's been touched
-   */
-  hasError(controlName: string, errorName: string): boolean {
-    const control = this.queueCleanerForm.get(controlName);
-    return control ? control.dirty && control.hasError(errorName) : false;
-  }
-  
-  /**
-   * Get schedule value options based on the current schedule unit type
-   */
-  getScheduleValueOptions(): {label: string, value: number}[] {
-    const scheduleType = this.queueCleanerForm.get('jobSchedule.type')?.value as ScheduleUnit;
-    if (scheduleType === ScheduleUnit.Seconds) {
-      return this.scheduleValueOptions[ScheduleUnit.Seconds];
-    } else if (scheduleType === ScheduleUnit.Minutes) {
-      return this.scheduleValueOptions[ScheduleUnit.Minutes];
-    } else if (scheduleType === ScheduleUnit.Hours) {
-      return this.scheduleValueOptions[ScheduleUnit.Hours];
-    }
-    return this.scheduleValueOptions[ScheduleUnit.Minutes]; // Default to minutes
-  }
-
-  /**
-   * Get nested form control errors
-   */
-  hasNestedError(parentName: string, controlName: string, errorName: string): boolean {
-    const parentControl = this.queueCleanerForm.get(parentName);
-    if (!parentControl || !(parentControl instanceof FormGroup)) {
-      return false;
-    }
-
-    const control = parentControl.get(controlName);
-    return control ? control.dirty && control.hasError(errorName) : false;
-  }
-  
 
 }

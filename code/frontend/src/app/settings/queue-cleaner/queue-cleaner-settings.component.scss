@@ -3,3 +3,164 @@
 @use '../styles/settings-shared.scss';
 @use '../styles/arr-shared.scss';
 @use '../settings-page/settings-page.component.scss';
+
+:host ::ng-deep {
+  // Rules styling
+  .rules-container {
+    .empty-rules-message {
+      background-color: var(--surface-100);
+      border: 1px dashed var(--surface-300);
+      border-radius: var(--border-radius);
+      color: var(--text-color-secondary);
+    }
+
+    .rule-list {
+      .rule-item {
+        background-color: var(--surface-0);
+        border: 1px solid var(--surface-300);
+        border-radius: var(--border-radius);
+        padding: 1rem;
+        margin-bottom: 1rem;
+
+        .rule-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 0.5rem;
+
+          .rule-title {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex: 1;
+
+            .rule-icon {
+              color: var(--primary-color);
+            }
+
+            .rule-name-input {
+              flex: 1;
+              max-width: 300px;
+            }
+          }
+
+          .rule-actions {
+            display: flex;
+            gap: 0.25rem;
+          }
+        }
+
+        .rule-content {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+          gap: 1rem;
+          margin-top: 1rem;
+
+          .rule-field {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+
+            label {
+              font-weight: 500;
+              color: var(--text-color);
+            }
+
+            .form-helper-text {
+              font-size: 0.875rem;
+              color: var(--text-color-secondary);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Rules management sections
+  .rules-management-section {
+    .section-header {
+      text-align: center;
+      
+      h3 {
+        margin: 0 0 0.25rem 0;
+        color: var(--text-color);
+      }
+      
+      small {
+        color: var(--text-color-secondary);
+        font-style: italic;
+      }
+    }
+
+    .rules-summary {
+      .empty-rules-message {
+        background-color: var(--surface-100);
+        border: 1px dashed var(--surface-300);
+        border-radius: var(--border-radius);
+        color: var(--text-color-secondary);
+        
+        .empty-icon {
+          font-size: 2rem;
+          color: var(--surface-400);
+          margin-bottom: 0.5rem;
+        }
+      }
+
+      .rules-list-summary {
+        .rules-count {
+          display: flex;
+          align-items: center;
+          font-weight: 500;
+          color: var(--text-color);
+          padding: 0.5rem;
+          background-color: var(--surface-50);
+          border: 1px solid var(--surface-200);
+          border-radius: var(--border-radius);
+        }
+
+        .rules-preview {
+          .rule-preview-item {
+            padding: 0.5rem;
+            border-left: 3px solid var(--primary-color);
+            background-color: var(--surface-0);
+            margin-bottom: 0.5rem;
+            border-radius: 0 var(--border-radius) var(--border-radius) 0;
+
+            .rule-preview-content {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+
+              .rule-name {
+                font-weight: 500;
+                color: var(--text-color);
+              }
+
+              .rule-status {
+                font-size: 0.875rem;
+                padding: 0.25rem 0.5rem;
+                border-radius: var(--border-radius);
+
+                &.rule-enabled {
+                  background-color: var(--green-100);
+                  color: var(--green-800);
+                }
+
+                &.rule-disabled {
+                  background-color: var(--surface-200);
+                  color: var(--text-color-secondary);
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    .rules-actions {
+      display: flex;
+      justify-content: center;
+      margin-top: 1rem;
+    }
+  }
+}

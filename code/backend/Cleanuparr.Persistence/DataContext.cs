@@ -1,3 +1,4 @@
+using Cleanuparr.Domain.Entities;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Persistence.Converters;
 using Cleanuparr.Persistence.Models.Configuration;
@@ -25,6 +26,10 @@ public class DataContext : DbContext
     public DbSet<DownloadClientConfig> DownloadClients { get; set; }
     
     public DbSet<QueueCleanerConfig> QueueCleanerConfigs { get; set; }
+    
+    public DbSet<StallRule> StallRules { get; set; }
+    
+    public DbSet<SlowRule> SlowRules { get; set; }
     
     public DbSet<ContentBlockerConfig> ContentBlockerConfigs { get; set; }
     
@@ -59,8 +64,8 @@ public class DataContext : DbContext
         modelBuilder.Entity<QueueCleanerConfig>(entity =>
         {
             entity.ComplexProperty(e => e.FailedImport);
-            entity.ComplexProperty(e => e.Stalled);
-            entity.ComplexProperty(e => e.Slow);
+            // entity.ComplexProperty(e => e.Stalled);
+            // entity.ComplexProperty(e => e.Slow);
         });
         
         modelBuilder.Entity<ContentBlockerConfig>(entity =>

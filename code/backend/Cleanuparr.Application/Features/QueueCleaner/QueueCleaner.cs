@@ -7,6 +7,7 @@ using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
 using Cleanuparr.Infrastructure.Features.Jobs;
 using Cleanuparr.Infrastructure.Helpers;
+using Cleanuparr.Infrastructure.Services.Interfaces;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
@@ -21,6 +22,8 @@ namespace Cleanuparr.Application.Features.QueueCleaner;
 
 public sealed class QueueCleaner : GenericHandler
 {
+    private readonly IRuleEvaluator _ruleEvaluator;
+    
     public QueueCleaner(
         ILogger<QueueCleaner> logger,
         DataContext dataContext,
@@ -29,12 +32,14 @@ public sealed class QueueCleaner : GenericHandler
         ArrClientFactory arrClientFactory,
         ArrQueueIterator arrArrQueueIterator,
         DownloadServiceFactory downloadServiceFactory,
-        EventPublisher eventPublisher
+        EventPublisher eventPublisher,
+        IRuleEvaluator ruleEvaluator
     ) : base(
         logger, dataContext, cache, messageBus,
         arrClientFactory, arrArrQueueIterator, downloadServiceFactory, eventPublisher
     )
     {
+        _ruleEvaluator = ruleEvaluator;
     }
     
     protected override async Task ExecuteInternalAsync()
@@ -120,7 +125,7 @@ public sealed class QueueCleaner : GenericHandler
                         {
                             try
                             {
-                                // stalled download check
+                                // Get torrent info from download service for rule evaluation
                                 downloadCheckResult = await downloadService
                                     .ShouldRemoveFromArrQueueAsync(record.DownloadId, ignoredDownloads);
                                 
@@ -147,8 +152,6 @@ public sealed class QueueCleaner : GenericHandler
                     }
                 }
                 
-                var config = ContextProvider.Get<QueueCleanerConfig>();
-                
                 // failed import check
                 bool shouldRemoveFromArr = await arrClient.ShouldRemoveFromQueue(instanceType, record, downloadCheckResult.IsPrivate, instance.ArrConfig.FailedImportMaxStrikes);
                 DeleteReason deleteReason = downloadCheckResult.ShouldRemove ? downloadCheckResult.DeleteReason : DeleteReason.FailedImport;
@@ -159,28 +162,9 @@ public sealed class QueueCleaner : GenericHandler
                     continue;
                 }
 
+                // With rule-based evaluation, the decision to remove from client is handled by the rules themselves
+                // The rules determine both whether to remove and whether to delete from client based on their configuration
                 bool removeFromClient = true;
-                
-                if (downloadCheckResult.IsPrivate)
-                {
-                    bool isStalledWithoutPruneFlag = 
-                        downloadCheckResult.DeleteReason is DeleteReason.Stalled &&
-                        !config.Stalled.DeletePrivate;
-    
-                    bool isSlowWithoutPruneFlag = 
-                        downloadCheckResult.DeleteReason is DeleteReason.SlowSpeed or DeleteReason.SlowTime &&
-                        !config.Slow.DeletePrivate;
-    
-                    bool shouldKeepDueToDeleteRules = downloadCheckResult.ShouldRemove && 
-                        (isStalledWithoutPruneFlag || isSlowWithoutPruneFlag);
-                        
-                    bool shouldKeepDueToImportRules = shouldRemoveFromArr && !config.FailedImport.DeletePrivate;
-
-                    if (shouldKeepDueToDeleteRules || shouldKeepDueToImportRules)
-                    {
-                        removeFromClient = false;
-                    }
-                }
                 
                 await PublishQueueItemRemoveRequest(
                     downloadRemovalKey,

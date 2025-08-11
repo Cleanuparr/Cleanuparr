@@ -3,6 +3,7 @@ using Cleanuparr.Infrastructure.Features.Files;
 using Cleanuparr.Infrastructure.Features.ItemStriker;
 using Cleanuparr.Infrastructure.Features.MalwareBlocker;
 using Cleanuparr.Infrastructure.Http;
+using Cleanuparr.Infrastructure.Services.Interfaces;
 using Cleanuparr.Persistence.Models.Configuration;
 using Infrastructure.Interceptors;
 using Microsoft.Extensions.Caching.Memory;
@@ -25,10 +26,11 @@ public partial class QBitService : DownloadService, IQBitService
         IDynamicHttpClientProvider httpClientProvider,
         EventPublisher eventPublisher,
         BlocklistProvider blocklistProvider,
-        DownloadClientConfig downloadClientConfig
+        DownloadClientConfig downloadClientConfig,
+        IRuleEvaluator ruleEvaluator
     ) : base(
         logger, cache, filenameEvaluator, striker, dryRunInterceptor, hardLinkFileService,
-        httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig
+        httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, ruleEvaluator
     )
     {
         _client = new QBittorrentClient(_httpClient, downloadClientConfig.Url);
