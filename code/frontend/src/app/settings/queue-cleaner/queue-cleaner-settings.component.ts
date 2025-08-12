@@ -338,6 +338,17 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
       resetStrikesOnProgress: rule.resetStrikesOnProgress,
       deletePrivateTorrentsFromClient: rule.deletePrivateTorrentsFromClient
     });
+    
+    // Set the proper enabled/disabled state for deletePrivateTorrentsFromClient
+    const deletePrivateControl = this.stallRuleForm.get('deletePrivateTorrentsFromClient');
+    if (deletePrivateControl) {
+      if (rule.privacyType === TorrentPrivacyType.Private || rule.privacyType === TorrentPrivacyType.Both) {
+        deletePrivateControl.enable();
+      } else {
+        deletePrivateControl.disable();
+      }
+    }
+    
     this.stallRuleModalVisible = true;
   }
 
@@ -384,6 +395,17 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
       ignoreAboveSize: rule.ignoreAboveSize,
       deletePrivateTorrentsFromClient: rule.deletePrivateTorrentsFromClient
     });
+    
+    // Set the proper enabled/disabled state for deletePrivateTorrentsFromClient
+    const deletePrivateControl = this.slowRuleForm.get('deletePrivateTorrentsFromClient');
+    if (deletePrivateControl) {
+      if (rule.privacyType === TorrentPrivacyType.Private || rule.privacyType === TorrentPrivacyType.Both) {
+        deletePrivateControl.enable();
+      } else {
+        deletePrivateControl.disable();
+      }
+    }
+    
     this.slowRuleModalVisible = true;
   }
 
@@ -418,6 +440,12 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
       resetStrikesOnProgress: true,
       deletePrivateTorrentsFromClient: false,
     });
+    
+    // Ensure deletePrivateTorrentsFromClient is disabled for Public privacy type
+    const deletePrivateControl = this.stallRuleForm.get('deletePrivateTorrentsFromClient');
+    if (deletePrivateControl) {
+      deletePrivateControl.disable();
+    }
   }
 
   /**
@@ -434,6 +462,12 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
       maxTimeHours: 0,
       deletePrivateTorrentsFromClient: false,
     });
+    
+    // Ensure deletePrivateTorrentsFromClient is disabled for Public privacy type
+    const deletePrivateControl = this.slowRuleForm.get('deletePrivateTorrentsFromClient');
+    if (deletePrivateControl) {
+      deletePrivateControl.disable();
+    }
   }
 
   /**
@@ -667,7 +701,7 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
       privacyType: [TorrentPrivacyType.Public, [Validators.required]],
       maxCompletionPercentage: [null, [Validators.required, Validators.min(1), Validators.max(100)]],
       resetStrikesOnProgress: [true],
-      deletePrivateTorrentsFromClient: [false],
+      deletePrivateTorrentsFromClient: [{ value: false, disabled: true }],
     });
 
     this.slowRuleForm = this.formBuilder.group({
@@ -680,8 +714,11 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
       maxCompletionPercentage: [null, [Validators.required, Validators.min(1), Validators.max(100)]],
       ignoreAboveSize: [null, [Validators.min(0)]],
       resetStrikesOnProgress: [true],
-      deletePrivateTorrentsFromClient: [false],
+      deletePrivateTorrentsFromClient: [{ value: false, disabled: true }],
     });
+
+    // Initialize the control states properly
+    this.initializeRuleFormControlStates();
 
     // Create an effect to update the form when the configuration changes
     // Effect to handle configuration changes
@@ -804,6 +841,33 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+  }
+
+  /**
+   * Initialize rule form control states based on initial values
+   */
+  private initializeRuleFormControlStates(): void {
+    // Initialize stall rule form
+    const stallPrivacyType = this.stallRuleForm.get('privacyType')?.value;
+    const stallDeletePrivateControl = this.stallRuleForm.get('deletePrivateTorrentsFromClient');
+    if (stallDeletePrivateControl) {
+      if (stallPrivacyType === TorrentPrivacyType.Private || stallPrivacyType === TorrentPrivacyType.Both) {
+        stallDeletePrivateControl.enable();
+      } else {
+        stallDeletePrivateControl.disable();
+      }
+    }
+
+    // Initialize slow rule form
+    const slowPrivacyType = this.slowRuleForm.get('privacyType')?.value;
+    const slowDeletePrivateControl = this.slowRuleForm.get('deletePrivateTorrentsFromClient');
+    if (slowDeletePrivateControl) {
+      if (slowPrivacyType === TorrentPrivacyType.Private || slowPrivacyType === TorrentPrivacyType.Both) {
+        slowDeletePrivateControl.enable();
+      } else {
+        slowDeletePrivateControl.disable();
+      }
+    }
   }
 
   /**
@@ -931,16 +995,32 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
     this.stallRuleForm.get('privacyType')?.valueChanges.pipe(takeUntil(this.destroy$))
       .subscribe((privacyType: TorrentPrivacyType) => {
         const deletePrivateControl = this.stallRuleForm.get('deletePrivateTorrentsFromClient');
-        if (privacyType === TorrentPrivacyType.Public) {
-          deletePrivateControl?.setValue(false);
+        if (deletePrivateControl) {
+          // Always reset to false on any privacy type change
+          deletePrivateControl.setValue(false);
+          
+          // Enable/disable based on privacy type
+          if (privacyType === TorrentPrivacyType.Private || privacyType === TorrentPrivacyType.Both) {
+            deletePrivateControl.enable();
+          } else {
+            deletePrivateControl.disable();
+          }
         }
       });
 
     this.slowRuleForm.get('privacyType')?.valueChanges.pipe(takeUntil(this.destroy$))
       .subscribe((privacyType: TorrentPrivacyType) => {
         const deletePrivateControl = this.slowRuleForm.get('deletePrivateTorrentsFromClient');
-        if (privacyType === TorrentPrivacyType.Public) {
-          deletePrivateControl?.setValue(false);
+        if (deletePrivateControl) {
+          // Always reset to false on any privacy type change
+          deletePrivateControl.setValue(false);
+          
+          // Enable/disable based on privacy type
+          if (privacyType === TorrentPrivacyType.Private || privacyType === TorrentPrivacyType.Both) {
+            deletePrivateControl.enable();
+          } else {
+            deletePrivateControl.disable();
+          }
         }
       });
   }
@@ -1334,9 +1414,9 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
   }
 
   /**
-   * Check if the deletePrivateTorrentsFromClient field should be shown based on privacy type
+   * Check if the deletePrivateTorrentsFromClient field should be enabled based on privacy type
    */
-  shouldShowDeletePrivateTorrents(form: FormGroup): boolean {
+  isDeletePrivateTorrentsEnabled(form: FormGroup): boolean {
     const privacyType = form.get('privacyType')?.value;
     return privacyType === TorrentPrivacyType.Private || privacyType === TorrentPrivacyType.Both;
   }
