@@ -167,7 +167,7 @@
                 <i class="pi pi-question-circle field-info-icon" 
                    (click)="openFieldDocs('failedImport.deletePrivate')" 
                    title="Click for documentation"></i>
-                Delete Private
+                Delete Private from client
               </label>
               <div class="field-input">
                 <p-checkbox formControlName="deletePrivate" [binary]="true"></p-checkbox>
@@ -276,7 +276,7 @@
                 <i class="pi pi-question-circle field-info-icon" 
                    (click)="openFieldDocs('stalled.deletePrivate')" 
                    title="Click for documentation"></i>
-                Delete Private
+                Delete Private from client
               </label>
               <div class="field-input">
                 <p-checkbox formControlName="deletePrivate" [binary]="true"></p-checkbox>
@@ -395,7 +395,7 @@
                 <i class="pi pi-question-circle field-info-icon" 
                    (click)="openFieldDocs('slow.deletePrivate')" 
                    title="Click for documentation"></i>
-                Delete Private
+                Delete Private from client
               </label>
               <div class="field-input">
                 <p-checkbox formControlName="deletePrivate" [binary]="true"></p-checkbox>
@@ -551,6 +551,13 @@
                       </span>
                     </label>
                   </div>
+                  <div class="instance-field" *ngIf="rule.privacyType === 'Private' || rule.privacyType === 'Both'">
+                    <label>Delete Private from Client: 
+                      <span [class]="rule.deletePrivateTorrentsFromClient ? 'text-green-500' : 'text-red-500'">
+                        {{ rule.deletePrivateTorrentsFromClient ? 'Yes' : 'No' }}
+                      </span>
+                    </label>
+                  </div>
                   <div class="instance-field">
                     <label>Status: 
                       <span [class]="rule.enabled ? 'text-green-500' : 'text-red-500'">
@@ -670,6 +677,13 @@
                   </div>
                   <div class="instance-field" *ngIf="rule.ignoreAboveSize">
                     <label>Ignore Above Size: {{ rule.ignoreAboveSize }}</label>
+                  </div>
+                  <div class="instance-field" *ngIf="rule.privacyType === 'Private' || rule.privacyType === 'Both'">
+                    <label>Delete Private from Client: 
+                      <span [class]="rule.deletePrivateTorrentsFromClient ? 'text-green-500' : 'text-red-500'">
+                        {{ rule.deletePrivateTorrentsFromClient ? 'Yes' : 'No' }}
+                      </span>
+                    </label>
                   </div>
                   <div class="instance-field">
                     <label>Status: 
@@ -810,6 +824,14 @@
       <div class="field-input">
         <p-checkbox formControlName="resetStrikesOnProgress" [binary]="true"></p-checkbox>
         <small class="form-helper-text">Reset strike count when torrent shows progress</small>
+      </div>
+    </div>
+
+    <div class="field flex flex-row" *ngIf="shouldShowDeletePrivateTorrents(stallRuleForm)">
+      <label class="field-label">Delete Private from Client</label>
+      <div class="field-input">
+        <p-checkbox formControlName="deletePrivateTorrentsFromClient" [binary]="true"></p-checkbox>
+        <small class="form-helper-text">Disable this if you want to keep private torrents in the download client even if they are removed from the arrs</small>
       </div>
     </div>
   </form>
@@ -962,6 +984,14 @@
       <div class="field-input">
         <p-checkbox formControlName="resetStrikesOnProgress" [binary]="true"></p-checkbox>
         <small class="form-helper-text">Reset strike count when torrent shows progress</small>
+      </div>
+    </div>
+
+    <div class="field flex flex-row" *ngIf="shouldShowDeletePrivateTorrents(slowRuleForm)">
+      <label class="field-label">Delete Private from Client</label>
+      <div class="field-input">
+        <p-checkbox formControlName="deletePrivateTorrentsFromClient" [binary]="true"></p-checkbox>
+        <small class="form-helper-text">Disable this if you want to keep private torrents in the download client even if they are removed from the arrs</small>
       </div>
     </div>
   </form>

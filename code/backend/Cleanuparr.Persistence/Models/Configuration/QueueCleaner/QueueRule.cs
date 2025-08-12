@@ -25,6 +25,8 @@ public abstract record QueueRule : IConfig, IQueueRule
     
     public double MaxCompletionPercentage { get; init; }
     
+    public bool DeletePrivateTorrentsFromClient { get; init; } = false;
+    
     public abstract bool MatchesTorrent(ITorrentInfo torrent);
     
     public virtual void Validate()

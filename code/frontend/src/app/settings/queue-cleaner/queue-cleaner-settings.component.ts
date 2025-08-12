@@ -335,7 +335,8 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
       maxStrikes: rule.maxStrikes,
       privacyType: rule.privacyType,
       maxCompletionPercentage: rule.maxCompletionPercentage,
-      resetStrikesOnProgress: rule.resetStrikesOnProgress
+      resetStrikesOnProgress: rule.resetStrikesOnProgress,
+      deletePrivateTorrentsFromClient: rule.deletePrivateTorrentsFromClient
     });
     this.stallRuleModalVisible = true;
   }
@@ -380,7 +381,8 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
       resetStrikesOnProgress: rule.resetStrikesOnProgress,
       minSpeed: rule.minSpeed,
       maxTimeHours: rule.maxTimeHours,
-      ignoreAboveSize: rule.ignoreAboveSize
+      ignoreAboveSize: rule.ignoreAboveSize,
+      deletePrivateTorrentsFromClient: rule.deletePrivateTorrentsFromClient
     });
     this.slowRuleModalVisible = true;
   }
@@ -414,6 +416,7 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
       maxStrikes: 3,
       privacyType: TorrentPrivacyType.Public,
       resetStrikesOnProgress: true,
+      deletePrivateTorrentsFromClient: false,
     });
   }
 
@@ -428,7 +431,8 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
       maxStrikes: 3,
       privacyType: TorrentPrivacyType.Public,
       resetStrikesOnProgress: true,
-      maxTimeHours: 0
+      maxTimeHours: 0,
+      deletePrivateTorrentsFromClient: false,
     });
   }
 
@@ -663,6 +667,7 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
       privacyType: [TorrentPrivacyType.Public, [Validators.required]],
       maxCompletionPercentage: [null, [Validators.required, Validators.min(1), Validators.max(100)]],
       resetStrikesOnProgress: [true],
+      deletePrivateTorrentsFromClient: [false],
     });
 
     this.slowRuleForm = this.formBuilder.group({
@@ -674,7 +679,8 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
       privacyType: [TorrentPrivacyType.Public, [Validators.required]],
       maxCompletionPercentage: [null, [Validators.required, Validators.min(1), Validators.max(100)]],
       ignoreAboveSize: [null, [Validators.min(0)]],
-      resetStrikesOnProgress: [true]
+      resetStrikesOnProgress: [true],
+      deletePrivateTorrentsFromClient: [false],
     });
 
     // Create an effect to update the form when the configuration changes
@@ -919,6 +925,23 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
     this.queueCleanerForm.valueChanges.pipe(takeUntil(this.destroy$))
       .subscribe(() => {
         this.hasActualChanges = this.formValuesChanged();
+      });
+
+    // Set up privacy type change listeners for rule forms
+    this.stallRuleForm.get('privacyType')?.valueChanges.pipe(takeUntil(this.destroy$))
+      .subscribe((privacyType: TorrentPrivacyType) => {
+        const deletePrivateControl = this.stallRuleForm.get('deletePrivateTorrentsFromClient');
+        if (privacyType === TorrentPrivacyType.Public) {
+          deletePrivateControl?.setValue(false);
+        }
+      });
+
+    this.slowRuleForm.get('privacyType')?.valueChanges.pipe(takeUntil(this.destroy$))
+      .subscribe((privacyType: TorrentPrivacyType) => {
+        const deletePrivateControl = this.slowRuleForm.get('deletePrivateTorrentsFromClient');
+        if (privacyType === TorrentPrivacyType.Public) {
+          deletePrivateControl?.setValue(false);
+        }
       });
   }
 
@@ -1308,6 +1331,14 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
   hasModalError(form: FormGroup, fieldName: string, errorType: string): boolean {
     const field = form.get(fieldName);
     return !!(field && field.hasError(errorType) && (field.dirty || field.touched));
+  }
+
+  /**
+   * Check if the deletePrivateTorrentsFromClient field should be shown based on privacy type
+   */
+  shouldShowDeletePrivateTorrents(form: FormGroup): boolean {
+    const privacyType = form.get('privacyType')?.value;
+    return privacyType === TorrentPrivacyType.Private || privacyType === TorrentPrivacyType.Both;
   }
 
   /**

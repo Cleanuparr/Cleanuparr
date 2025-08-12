@@ -16,6 +16,7 @@ export interface QueueRule {
   maxStrikes: number;
   privacyType: TorrentPrivacyType;
   maxCompletionPercentage: number;
+  deletePrivateTorrentsFromClient: boolean;
 }
 
 export interface StallRule extends QueueRule {
@@ -38,6 +39,7 @@ export interface CreateStallRuleDto {
   privacyType: TorrentPrivacyType;
   maxCompletionPercentage: number;
   resetStrikesOnProgress: boolean;
+  deletePrivateTorrentsFromClient: boolean;
 }
 
 export interface UpdateStallRuleDto extends CreateStallRuleDto {
@@ -55,6 +57,7 @@ export interface CreateSlowRuleDto {
   minSpeed: string;
   maxTimeHours: number;
   ignoreAboveSize?: string;
+  deletePrivateTorrentsFromClient: boolean;
 }
 
 export interface UpdateSlowRuleDto extends CreateSlowRuleDto {

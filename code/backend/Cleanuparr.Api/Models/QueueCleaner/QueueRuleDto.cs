@@ -19,4 +19,6 @@ public abstract record QueueRuleDto
     
     [Range(1, 100, ErrorMessage = "Completion percentage must be between 1 and 100")]
     public double MaxCompletionPercentage { get; set; }
+    
+    public bool DeletePrivateTorrentsFromClient { get; set; } = false;
 }

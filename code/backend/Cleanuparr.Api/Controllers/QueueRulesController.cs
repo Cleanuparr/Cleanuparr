@@ -86,6 +86,7 @@ public class QueueRulesController : ControllerBase
                 PrivacyType = ruleDto.PrivacyType,
                 MaxCompletionPercentage = ruleDto.MaxCompletionPercentage,
                 ResetStrikesOnProgress = ruleDto.ResetStrikesOnProgress,
+                DeletePrivateTorrentsFromClient = ruleDto.DeletePrivateTorrentsFromClient,
             };
 
             // Get existing rules for interval validation (excluding the current rule)
@@ -163,6 +164,7 @@ public class QueueRulesController : ControllerBase
                 PrivacyType = ruleDto.PrivacyType,
                 MaxCompletionPercentage = ruleDto.MaxCompletionPercentage,
                 ResetStrikesOnProgress = ruleDto.ResetStrikesOnProgress,
+                DeletePrivateTorrentsFromClient = ruleDto.DeletePrivateTorrentsFromClient,
             };
 
             // Get existing rules for interval validation (excluding the current rule)
@@ -300,7 +302,8 @@ public class QueueRulesController : ControllerBase
                 ResetStrikesOnProgress = ruleDto.ResetStrikesOnProgress,
                 MinSpeed = ruleDto.MinSpeed?.Trim() ?? string.Empty,
                 MaxTimeHours = ruleDto.MaxTimeHours,
-                IgnoreAboveSize = ruleDto.IgnoreAboveSize
+                IgnoreAboveSize = ruleDto.IgnoreAboveSize,
+                DeletePrivateTorrentsFromClient = ruleDto.DeletePrivateTorrentsFromClient,
             };
 
             // Get existing rules for interval validation (excluding the current rule)
@@ -380,7 +383,8 @@ public class QueueRulesController : ControllerBase
                 ResetStrikesOnProgress = ruleDto.ResetStrikesOnProgress,
                 MinSpeed = ruleDto.MinSpeed?.Trim() ?? string.Empty,
                 MaxTimeHours = ruleDto.MaxTimeHours,
-                IgnoreAboveSize = ruleDto.IgnoreAboveSize
+                IgnoreAboveSize = ruleDto.IgnoreAboveSize,
+                DeletePrivateTorrentsFromClient = ruleDto.DeletePrivateTorrentsFromClient,
             };
 
             // Get existing rules for interval validation (excluding the current rule)
