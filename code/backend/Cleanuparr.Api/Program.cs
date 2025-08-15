@@ -169,3 +169,5 @@ app.MapHealthChecks("/health/ready", new HealthCheckOptions
 app.ConfigureApi();
 
 await app.RunAsync();
+
+await Log.CloseAndFlushAsync();
