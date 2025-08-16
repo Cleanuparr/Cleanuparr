@@ -43,7 +43,6 @@
         <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
         <!-- API-related packages -->
         <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.2" />
-        <PackageReference Include="Serilog.Sinks.File.Archive" Version="1.0.6" />
         <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
     </ItemGroup>
 

@@ -29,21 +29,18 @@ public class ConfigurationController : ControllerBase
 {
     private readonly ILogger<ConfigurationController> _logger;
     private readonly DataContext _dataContext;
-    private readonly LoggingConfigManager _loggingConfigManager;
     private readonly IJobManagementService _jobManagementService;
     private readonly MemoryCache _cache;
 
     public ConfigurationController(
         ILogger<ConfigurationController> logger,
         DataContext dataContext,
-        LoggingConfigManager loggingConfigManager,
         IJobManagementService jobManagementService,
         MemoryCache cache
     )
     {
         _logger = logger;
         _dataContext = dataContext;
-        _loggingConfigManager = loggingConfigManager;
         _jobManagementService = jobManagementService;
         _cache = cache;
     }
@@ -701,7 +698,12 @@ public class ConfigurationController : ControllerBase
             _logger.LogInformation("Updated all HTTP client configurations with new general settings");
 
             // Set the logging level based on the new configuration
-            _loggingConfigManager.SetLogLevel(newConfig.LogLevel);
+            if (newConfig.Log.Level != oldConfig.Log.Level)
+            {
+                _logger.LogCritical("Setting global log level to {level}", newConfig.Log.Level);
+
+                LoggingConfigManager.SetLogLevel(newConfig.Log.Level);
+            }
 
             return Ok(new { Message = "General configuration updated successfully" });
         }

@@ -15,11 +15,11 @@ public class AppHub : Hub
     private readonly ILogger<AppHub> _logger;
     private readonly SignalRLogSink _logSink;
 
-    public AppHub(EventsContext context, ILogger<AppHub> logger, SignalRLogSink logSink)
+    public AppHub(EventsContext context, ILogger<AppHub> logger)
     {
         _context = context;
         _logger = logger;
-        _logSink = logSink;
+        _logSink = SignalRLogSink.Instance;
     }
 
     /// <summary>

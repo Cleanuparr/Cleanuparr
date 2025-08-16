@@ -2,13 +2,17 @@ using System.Runtime.InteropServices;
 using System.Text.Json.Serialization;
 using Cleanuparr.Api;
 using Cleanuparr.Api.DependencyInjection;
+using Cleanuparr.Infrastructure.Hubs;
 using Cleanuparr.Infrastructure.Logging;
 using Cleanuparr.Shared.Helpers;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
-using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.SignalR;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
+
+await builder.InitAsync();
+builder.Logging.AddLogging();
 
 // Fix paths for single-file deployment on macOS
 if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
@@ -68,14 +72,6 @@ builder.Services.AddCors(options =>
     });
 });
 
-// Register services needed for logging first
-builder.Services
-    .AddScoped<LoggingConfigManager>()
-    .AddSingleton<SignalRLogSink>();
-
-// Add logging with proper service provider
-builder.Logging.AddLogging();
-
 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
 {
     builder.Host.UseWindowsService(options =>
@@ -130,28 +126,11 @@ if (basePath is not null)
 logger.LogInformation("Server configuration: PORT={port}, BASE_PATH={basePath}", port, basePath ?? "/");
 
 // Initialize the host
-await app.Init();
+await app.InitAsync();
 
-// Get LoggingConfigManager (will be created if not already registered)
-var scopeFactory = app.Services.GetRequiredService<IServiceScopeFactory>();
-using (var scope = scopeFactory.CreateScope())
-{
-    var configManager = scope.ServiceProvider.GetRequiredService<LoggingConfigManager>();
-    
-    // Get the dynamic level switch for controlling log levels
-    var levelSwitch = configManager.GetLevelSwitch();
-            
-    // Get the SignalRLogSink instance
-    var signalRSink = app.Services.GetRequiredService<SignalRLogSink>();
-
-    var logConfig = LoggingDI.GetDefaultLoggerConfiguration();
-    logConfig.MinimumLevel.ControlledBy(levelSwitch);
-        
-    // Add to Serilog pipeline
-    logConfig.WriteTo.Sink(signalRSink);
-
-    Log.Logger = logConfig.CreateLogger();
-}
+// Configure the app hub for SignalR
+var appHub = app.Services.GetRequiredService<IHubContext<AppHub>>();
+SignalRLogSink.Instance.SetAppHubContext(appHub);
 
 // Configure health check endpoints before the API configuration
 app.MapHealthChecks("/health", new HealthCheckOptions
