@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { patchState, signalStore, withHooks, withMethods, withState } from '@ngrx/signals';
 import { rxMethod } from '@ngrx/signals/rxjs-interop';
 import { GeneralConfig } from '../../shared/models/general-config.model';
+import { LoggingConfig } from '../../shared/models/logging-config.model';
 import { ConfigurationService } from '../../core/services/configuration.service';
 import { EMPTY, Observable, catchError, switchMap, tap } from 'rxjs';
 
@@ -54,16 +55,15 @@ export class GeneralConfigStore extends signalStore(
         switchMap(config => configService.updateGeneralConfig(config).pipe(
           tap({
             next: () => {
-              // Successfully saved - just update saving state
-              // Don't update config to avoid triggering form effects
               patchState(store, { 
-                saving: false 
+                saving: false,
+                error: null  // Clear any previous save errors
               });
             },
             error: (error) => {
-              patchState(store, { 
-                saving: false, 
-                error: error.message || 'Failed to save configuration' 
+              patchState(store, {
+                saving: false,
+                error: error.message || 'Failed to save configuration'
               });
             }
           }),

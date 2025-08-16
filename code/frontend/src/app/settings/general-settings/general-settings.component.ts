@@ -5,6 +5,7 @@ import { Subject, takeUntil } from "rxjs";
 import { GeneralConfigStore } from "./general-config.store";
 import { CanComponentDeactivate } from "../../core/guards";
 import { GeneralConfig } from "../../shared/models/general-config.model";
+import { LoggingConfig } from "../../shared/models/logging-config.model";
 import { LogEventLevel } from "../../shared/models/log-event-level.enum";
 import { CertificateValidationType } from "../../shared/models/certificate-validation-type.enum";
 
@@ -56,6 +57,11 @@ export class GeneralSettingsComponent implements OnDestroy, CanComponentDeactiva
 
   // General Configuration Form
   generalForm: FormGroup;
+  
+  // Getter for easy access to the log form group
+  get logForm(): FormGroup {
+    return this.generalForm.get('log') as FormGroup;
+  }
   
   // Original form values for tracking changes
   private originalFormValues: any;
@@ -127,8 +133,19 @@ export class GeneralSettingsComponent implements OnDestroy, CanComponentDeactiva
       httpCertificateValidation: [CertificateValidationType.Enabled],
       searchEnabled: [true],
       searchDelay: [30, [Validators.required, Validators.min(1), Validators.max(300)]],
-      logLevel: [LogEventLevel.Information],
       ignoredDownloads: [[]],
+      // Nested logging configuration form group
+      log: this.formBuilder.group({
+        level: [LogEventLevel.Information],
+        rollingSizeMB: [10, [Validators.required, Validators.min(0), Validators.max(100)]],
+        retainedFileCount: [5, [Validators.required, Validators.min(0), Validators.max(50)]],
+        timeLimitHours: [24, [Validators.required, Validators.min(0), Validators.max(1440)]], // max 60 days
+        archiveEnabled: [true],
+        archiveRetainedCount: [{ value: 60, disabled: false }, [Validators.required, Validators.min(0), Validators.max(100)]],
+        archiveTimeLimitHours: [{ value: 720, disabled: false }, [Validators.required, Validators.min(0), Validators.max(1440)]], // max 60 days
+      }),
+      // Temporary backward compatibility - will be removed
+      logLevel: [LogEventLevel.Information],
     });
 
     // Effect to handle configuration changes
@@ -144,12 +161,27 @@ export class GeneralSettingsComponent implements OnDestroy, CanComponentDeactiva
           httpCertificateValidation: config.httpCertificateValidation,
           searchEnabled: config.searchEnabled,
           searchDelay: config.searchDelay,
-          logLevel: config.logLevel,
           ignoredDownloads: config.ignoredDownloads || [],
+          // New nested logging configuration
+          log: config.log || {
+            level: config.logLevel || LogEventLevel.Information, // Fall back to old property
+            rollingSizeMB: 10,
+            retainedFileCount: 5,
+            timeLimitHours: 24,
+            archiveEnabled: true,
+            archiveRetainedCount: 60,
+            archiveTimeLimitHours: 720,
+          },
+          // Temporary backward compatibility
+          logLevel: config.logLevel || config.log?.level || LogEventLevel.Information,
         });
 
         // Store original values for dirty checking
         this.storeOriginalValues();
+
+        // Update archive controls state based on loaded configuration
+        const archiveEnabled = config.log?.archiveEnabled ?? true;
+        this.updateArchiveControlsState(archiveEnabled);
 
         // Track the support banner state for confirmation dialog logic
         this.previousSupportBannerState = config.displaySupportBanner;
@@ -200,6 +232,16 @@ export class GeneralSettingsComponent implements OnDestroy, CanComponentDeactiva
       .subscribe(() => {
         this.hasActualChanges = this.formValuesChanged();
       });
+    
+    // Listen for changes to the 'archiveEnabled' control
+    const archiveEnabledControl = this.generalForm.get('log.archiveEnabled');
+    if (archiveEnabledControl) {
+      archiveEnabledControl.valueChanges
+        .pipe(takeUntil(this.destroy$))
+        .subscribe((enabled: boolean) => {
+          this.updateArchiveControlsState(enabled);
+        });
+    }
   }
 
   /**
@@ -218,6 +260,23 @@ export class GeneralSettingsComponent implements OnDestroy, CanComponentDeactiva
     
     const currentValues = this.generalForm.getRawValue();
     return !this.isEqual(currentValues, this.originalFormValues);
+  }
+
+  /**
+   * Update the state of archive-related controls based on the 'archiveEnabled' control value
+   */
+  private updateArchiveControlsState(archiveEnabled: boolean): void {
+    const options = { onlySelf: true };
+    const archiveRetainedCountControl = this.generalForm.get('log.archiveRetainedCount');
+    const archiveTimeLimitHoursControl = this.generalForm.get('log.archiveTimeLimitHours');
+
+    if (archiveEnabled) {
+      archiveRetainedCountControl?.enable(options);
+      archiveTimeLimitHoursControl?.enable(options);
+    } else {
+      archiveRetainedCountControl?.disable(options);
+      archiveTimeLimitHoursControl?.disable(options);
+    }
   }
 
   /**
@@ -280,8 +339,11 @@ export class GeneralSettingsComponent implements OnDestroy, CanComponentDeactiva
         httpCertificateValidation: formValues.httpCertificateValidation,
         searchEnabled: formValues.searchEnabled,
         searchDelay: formValues.searchDelay,
-        logLevel: formValues.logLevel,
         ignoredDownloads: formValues.ignoredDownloads || [],
+        // New nested logging configuration
+        log: formValues.log as LoggingConfig,
+        // Temporary backward compatibility - keep logLevel for now
+        logLevel: formValues.log?.level || formValues.logLevel,
       };
 
       // Save the configuration
@@ -329,9 +391,23 @@ export class GeneralSettingsComponent implements OnDestroy, CanComponentDeactiva
       httpCertificateValidation: CertificateValidationType.Enabled,
       searchEnabled: true,
       searchDelay: 30,
-      logLevel: LogEventLevel.Information,
       ignoredDownloads: [],
+      // Reset nested logging configuration to defaults
+      log: {
+        level: LogEventLevel.Information,
+        rollingSizeMB: 10,
+        retainedFileCount: 5,
+        timeLimitHours: 24,
+        archiveEnabled: true,
+        archiveRetainedCount: 60,
+        archiveTimeLimitHours: 720,
+      },
+      // Temporary backward compatibility
+      logLevel: LogEventLevel.Information,
     });
+    
+    // Update archive controls state after reset
+    this.updateArchiveControlsState(true); // archiveEnabled defaults to true
     
     // Mark form as dirty so the save button is enabled after reset
     this.generalForm.markAsDirty();
@@ -355,6 +431,19 @@ export class GeneralSettingsComponent implements OnDestroy, CanComponentDeactiva
    */
   hasError(controlName: string, errorName: string): boolean {
     const control = this.generalForm.get(controlName);
+    return control ? control.dirty && control.hasError(errorName) : false;
+  }
+
+  /**
+   * Get nested form control errors
+   */
+  hasNestedError(parentName: string, controlName: string, errorName: string): boolean {
+    const parentControl = this.generalForm.get(parentName);
+    if (!parentControl || !(parentControl instanceof FormGroup)) {
+      return false;
+    }
+
+    const control = parentControl.get(controlName);
     return control ? control.dirty && control.hasError(errorName) : false;
   }
 
