@@ -126,4 +126,28 @@ public static class LoggingConfigManager
         // Change the level in the switch
         LevelSwitch.MinimumLevel = level;
     }
+
+    /// <summary>
+    /// Reconfigures the entire logging system with new settings
+    /// </summary>
+    /// <param name="config">The new general configuration</param>
+    public static void ReconfigureLogging(GeneralConfig config)
+    {
+        try
+        {
+            // Create new logger configuration
+            var newLoggerConfig = CreateLoggerConfiguration();
+            
+            // Apply the new configuration to the global logger
+            Log.Logger = newLoggerConfig.CreateLogger();
+            
+            // Update the level switch with the new level
+            LevelSwitch.MinimumLevel = config.Log.Level;
+        }
+        catch (Exception ex)
+        {
+            // Log the error but don't throw to avoid breaking the application
+            Log.Error(ex, "Failed to reconfigure logger");
+        }
+    }
 }
