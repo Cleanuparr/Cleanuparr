@@ -49,5 +49,10 @@ public sealed record LoggingConfig : IConfig
         {
             throw new ValidationException("Log archive time limit cannot exceed 60 days");
         }
+        
+        if (RetainedFileCount is 0 && TimeLimitHours is 0 && ArchiveEnabled)
+        {
+            throw new ValidationException("Archiving is enabled, but no retention policy is set. Please set either a retained file count or time limit");
+        }
     }
 }

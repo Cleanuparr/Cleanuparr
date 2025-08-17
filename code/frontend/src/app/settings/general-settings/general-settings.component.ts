@@ -209,17 +209,8 @@ export class GeneralSettingsComponent implements OnDestroy, CanComponentDeactiva
     effect(() => {
       const saveErrorMessage = this.generalSaveError();
       if (saveErrorMessage) {
-        // Check if this looks like a validation error from the backend
-        // These are typically user-fixable errors that should be shown as toasts
-        const isUserFixableError = ErrorHandlerUtil.isUserFixableError(saveErrorMessage);
-        
-        if (isUserFixableError) {
-          // Show validation errors as toast notifications so user can fix them
+          // Always show save errors as a toast so the user sees the backend message.
           this.notificationService.showError(saveErrorMessage);
-        } else {
-          // For non-user-fixable save errors, also emit to parent
-          this.error.emit(saveErrorMessage);
-        }
       }
     });
 
