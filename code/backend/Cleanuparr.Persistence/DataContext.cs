@@ -10,6 +10,7 @@ using Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
 using Cleanuparr.Shared.Helpers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using Serilog.Events;
 
 namespace Cleanuparr.Persistence;
 
@@ -39,23 +40,36 @@ public class DataContext : DbContext
     public DbSet<AppriseConfig> AppriseConfigs { get; set; }
     
     public DbSet<NotifiarrConfig> NotifiarrConfigs { get; set; }
+
+    public DataContext()
+    {
+    }
+
+    public DataContext(DbContextOptions<DataContext> options) : base(options)
+    {
+    }
+    
+    public static DataContext CreateStaticInstance()
+    {
+        var optionsBuilder = new DbContextOptionsBuilder<DataContext>();
+        SetDbContextOptions(optionsBuilder);
+        return new DataContext(optionsBuilder.Options);
+    }
     
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
-        if (optionsBuilder.IsConfigured)
-        {
-            return;
-        }
-        
-        var dbPath = Path.Combine(ConfigurationPathProvider.GetConfigPath(), "cleanuparr.db");
-        optionsBuilder
-            .UseSqlite($"Data Source={dbPath}")
-            .UseLowerCaseNamingConvention()
-            .UseSnakeCaseNamingConvention();
+        SetDbContextOptions(optionsBuilder);
     }
     
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<GeneralConfig>(entity =>
+            entity.ComplexProperty(e => e.Log, cp =>
+            {
+                cp.Property(l => l.Level).HasConversion<LowercaseEnumConverter<LogEventLevel>>();
+            })
+        );
+        
         modelBuilder.Entity<QueueCleanerConfig>(entity =>
         {
             entity.ComplexProperty(e => e.FailedImport);
@@ -114,5 +128,19 @@ public class DataContext : DbContext
                     .HasConversion((ValueConverter)converter!);
             }
         }
+    }
+
+    private static void SetDbContextOptions(DbContextOptionsBuilder optionsBuilder)
+    {
+        if (optionsBuilder.IsConfigured)
+        {
+            return;
+        }
+        
+        var dbPath = Path.Combine(ConfigurationPathProvider.GetConfigPath(), "cleanuparr.db");
+        optionsBuilder
+            .UseSqlite($"Data Source={dbPath}")
+            .UseLowerCaseNamingConvention()
+            .UseSnakeCaseNamingConvention();
     }
 } 

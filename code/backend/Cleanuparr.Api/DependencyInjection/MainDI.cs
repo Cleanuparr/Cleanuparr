@@ -17,7 +17,6 @@ public static class MainDI
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration) =>
         services
-            .AddLogging(builder => builder.ClearProviders().AddConsole())
             .AddHttpClients(configuration)
             .AddSingleton<MemoryCache>()
             .AddSingleton<IMemoryCache>(serviceProvider => serviceProvider.GetRequiredService<MemoryCache>())

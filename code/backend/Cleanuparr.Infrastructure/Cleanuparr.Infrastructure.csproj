@@ -18,6 +18,7 @@
       <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.6" />
       <PackageReference Include="Mono.Unix" Version="7.1.0-final.1.21458.1" />
       <PackageReference Include="Quartz" Version="3.14.0" />
+      <PackageReference Include="Serilog.Expressions" Version="5.0.0" />
     </ItemGroup>
 
     <ItemGroup>
