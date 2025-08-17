@@ -10,14 +10,16 @@ export interface GeneralConfigState {
   config: GeneralConfig | null;
   loading: boolean;
   saving: boolean;
-  error: string | null;
+  loadError: string | null;  // Only for load failures that should show "Not connected"
+  saveError: string | null;  // Only for save failures that should show toast
 }
 
 const initialState: GeneralConfigState = {
   config: null,
   loading: false,
   saving: false,
-  error: null
+  loadError: null,
+  saveError: null
 };
 
 @Injectable()
@@ -30,18 +32,26 @@ export class GeneralConfigStore extends signalStore(
      */
     loadConfig: rxMethod<void>(
       pipe => pipe.pipe(
-        tap(() => patchState(store, { loading: true, error: null })),
+        tap(() => patchState(store, { loading: true, loadError: null, saveError: null })),
         switchMap(() => configService.getGeneralConfig().pipe(
           tap({
-            next: (config) => patchState(store, { config, loading: false }),
+            next: (config) => patchState(store, { config, loading: false, loadError: null }),
             error: (error) => {
+              const errorMessage = error.message || 'Failed to load configuration';
               patchState(store, { 
                 loading: false, 
-                error: error.message || 'Failed to load configuration' 
+                loadError: errorMessage  // Only load errors should trigger "Not connected" state
               });
             }
           }),
-          catchError(() => EMPTY)
+          catchError((error) => {
+            const errorMessage = error.message || 'Failed to load configuration';
+            patchState(store, { 
+              loading: false,
+              loadError: errorMessage  // Only load errors should trigger "Not connected" state
+            });
+            return EMPTY;
+          })
         ))
       )
     ),
@@ -51,23 +61,31 @@ export class GeneralConfigStore extends signalStore(
      */
     saveConfig: rxMethod<GeneralConfig>(
       (config$: Observable<GeneralConfig>) => config$.pipe(
-        tap(() => patchState(store, { saving: true, error: null })),
+        tap(() => patchState(store, { saving: true, saveError: null })),
         switchMap(config => configService.updateGeneralConfig(config).pipe(
           tap({
             next: () => {
               patchState(store, { 
                 saving: false,
-                error: null  // Clear any previous save errors
+                saveError: null  // Clear any previous save errors
               });
             },
             error: (error) => {
+              const errorMessage = error.message || 'Failed to save configuration';
               patchState(store, {
                 saving: false,
-                error: error.message || 'Failed to save configuration'
+                saveError: errorMessage  // Save errors should NOT trigger "Not connected" state
               });
             }
           }),
-          catchError(() => EMPTY)
+          catchError((error) => {
+            const errorMessage = error.message || 'Failed to save configuration';
+            patchState(store, { 
+              saving: false,
+              saveError: errorMessage  // Save errors should NOT trigger "Not connected" state
+            });
+            return EMPTY;
+          })
         ))
       )
     ),
@@ -88,7 +106,14 @@ export class GeneralConfigStore extends signalStore(
      * Reset any errors
      */
     resetError() {
-      patchState(store, { error: null });
+      patchState(store, { loadError: null, saveError: null });
+    },
+    
+    /**
+     * Reset only save errors
+     */
+    resetSaveError() {
+      patchState(store, { saveError: null });
     }
   })),
   withHooks({

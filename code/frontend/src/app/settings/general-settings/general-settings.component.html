@@ -5,15 +5,15 @@
 
   <!-- Loading/Error Component -->
   <app-loading-error-state
-    *ngIf="generalLoading() || generalError()"
+    *ngIf="generalLoading() || generalLoadError()"
     [loading]="generalLoading()"
-    [error]="generalError()"
+    [error]="generalLoadError()"
     loadingMessage="Loading settings..."
     errorMessage="Could not connect to server"
   ></app-loading-error-state>
 
   <!-- Settings Form -->
-  <form *ngIf="!generalLoading() && !generalError()" [formGroup]="generalForm" class="p-fluid">
+  <form *ngIf="!generalLoading() && !generalLoadError()" [formGroup]="generalForm" class="p-fluid">
     
     <!-- General Configuration Card -->
     <p-card styleClass="settings-card mb-4">
