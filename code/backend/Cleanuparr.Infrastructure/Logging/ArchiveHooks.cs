@@ -35,20 +35,24 @@ public class ArchiveHooks : FileLifecycleHooks
     {
         FileInfo originalFileInfo = new FileInfo(path);
         string newFilePath = $"{path}.gz";
-        
-        using FileStream originalFileStream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
-        using FileStream newFileStream = new FileStream(newFilePath, FileMode.OpenOrCreate, FileAccess.Write, FileShare.None);
-        using GZipStream archiveStream = new GZipStream(newFileStream, _compressionLevel);
+
+        using (FileStream originalFileStream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
         {
-            originalFileStream.CopyTo(archiveStream);
+            using (FileStream newFileStream = new FileStream(newFilePath, FileMode.OpenOrCreate, FileAccess.Write, FileShare.None))
+            {
+                using (GZipStream archiveStream = new GZipStream(newFileStream, _compressionLevel))
+                {
+                    originalFileStream.CopyTo(archiveStream);
+                }
+            }
         }
         
-        File.SetCreationTime(newFilePath, originalFileInfo.CreationTime);
-        File.SetCreationTimeUtc(newFilePath, originalFileInfo.CreationTimeUtc);
+        File.SetLastWriteTime(newFilePath, originalFileInfo.LastWriteTime);
+        File.SetLastWriteTimeUtc(newFilePath, originalFileInfo.LastWriteTimeUtc);
         
         RemoveExcessFiles(Path.GetDirectoryName(path)!);
     }
-
+    
     private void RemoveExcessFiles(string folder)
     {
         string searchPattern = _compressionLevel != CompressionLevel.NoCompression ? "*.gz" : "*.*";
@@ -65,7 +69,7 @@ public class ArchiveHooks : FileLifecycleHooks
         if (_retainedFileTimeLimit is not null)
         {
             filesToDeleteQuery = filesToDeleteQuery
-                .Where(file => file.CreationTimeUtc < DateTime.UtcNow - _retainedFileTimeLimit);
+                .Where(file => file.LastWriteTimeUtc < DateTime.UtcNow - _retainedFileTimeLimit);
         }
         
         List<FileInfo> filesToDelete = filesToDeleteQuery.ToList();
