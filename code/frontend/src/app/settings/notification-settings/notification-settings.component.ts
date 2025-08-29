@@ -23,7 +23,7 @@ import { DialogModule } from "primeng/dialog";
 import { ConfirmDialogModule } from "primeng/confirmdialog";
 import { TagModule } from "primeng/tag";
 import { TooltipModule } from "primeng/tooltip";
-import { ConfirmationService } from "primeng/api";
+import { ConfirmationService, MessageService } from "primeng/api";
 import { NotificationService } from "../../core/services/notification.service";
 
 @Component({
@@ -43,7 +43,7 @@ import { NotificationService } from "../../core/services/notification.service";
     TagModule,
     TooltipModule
   ],
-  providers: [NotificationProviderConfigStore, ConfirmationService],
+  providers: [NotificationProviderConfigStore, ConfirmationService, MessageService],
   templateUrl: "./notification-settings.component.html",
   styleUrls: ["./notification-settings.component.scss"],
 })

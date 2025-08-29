@@ -158,32 +158,38 @@
       <div class="grid">
         <div class="col-6">
           <div class="field-checkbox">
-            <p-checkbox formControlName="onGrab" [binary]="true" inputId="on-grab"></p-checkbox>
-            <label for="on-grab" class="ml-2">On Grab</label>
+            <p-checkbox formControlName="onFailedImportStrike" [binary]="true" inputId="on-failed-import-strike"></p-checkbox>
+            <label for="on-failed-import-strike" class="ml-2">On Failed Import Strike</label>
           </div>
         </div>
         <div class="col-6">
           <div class="field-checkbox">
-            <p-checkbox formControlName="onDownloadFailure" [binary]="true" inputId="on-download-failure"></p-checkbox>
-            <label for="on-download-failure" class="ml-2">On Download Failure</label>
+            <p-checkbox formControlName="onStalledStrike" [binary]="true" inputId="on-stalled-strike"></p-checkbox>
+            <label for="on-stalled-strike" class="ml-2">On Stalled Strike</label>
           </div>
         </div>
         <div class="col-6">
           <div class="field-checkbox">
-            <p-checkbox formControlName="onImportFailure" [binary]="true" inputId="on-import-failure"></p-checkbox>
-            <label for="on-import-failure" class="ml-2">On Import Failure</label>
+            <p-checkbox formControlName="onSlowStrike" [binary]="true" inputId="on-slow-strike"></p-checkbox>
+            <label for="on-slow-strike" class="ml-2">On Slow Strike</label>
           </div>
         </div>
         <div class="col-6">
           <div class="field-checkbox">
-            <p-checkbox formControlName="onHealthIssue" [binary]="true" inputId="on-health-issue"></p-checkbox>
-            <label for="on-health-issue" class="ml-2">On Health Issue</label>
+            <p-checkbox formControlName="onQueueItemDeleted" [binary]="true" inputId="on-queue-item-deleted"></p-checkbox>
+            <label for="on-queue-item-deleted" class="ml-2">On Queue Item Deleted</label>
           </div>
         </div>
         <div class="col-6">
           <div class="field-checkbox">
-            <p-checkbox formControlName="onApplicationUpdate" [binary]="true" inputId="on-application-update"></p-checkbox>
-            <label for="on-application-update" class="ml-2">On Application Update</label>
+            <p-checkbox formControlName="onDownloadCleaned" [binary]="true" inputId="on-download-cleaned"></p-checkbox>
+            <label for="on-download-cleaned" class="ml-2">On Download Cleaned</label>
+          </div>
+        </div>
+        <div class="col-6">
+          <div class="field-checkbox">
+            <p-checkbox formControlName="onCategoryChanged" [binary]="true" inputId="on-category-changed"></p-checkbox>
+            <label for="on-category-changed" class="ml-2">On Category Changed</label>
           </div>
         </div>
       </div>
