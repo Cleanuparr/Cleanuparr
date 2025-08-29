@@ -11,9 +11,12 @@ import {
 } from "../../shared/models/notification-provider.model";
 import { NotificationProviderType } from "../../shared/models/enums";
 import { DocumentationService } from "../../core/services/documentation.service";
+import { NotifiarrFormData, AppriseFormData } from "./models/provider-modal.model";
 
 // New modal components
 import { ProviderTypeSelectionComponent } from "./modals/provider-type-selection/provider-type-selection.component";
+import { NotifiarrProviderComponent } from "./modals/notifiarr-provider/notifiarr-provider.component";
+import { AppriseProviderComponent } from "./modals/apprise-provider/apprise-provider.component";
 
 // PrimeNG Components
 import { CardModule } from "primeng/card";
@@ -45,7 +48,9 @@ import { NotificationService } from "../../core/services/notification.service";
     ConfirmDialogModule,
     TagModule,
     TooltipModule,
-    ProviderTypeSelectionComponent
+    ProviderTypeSelectionComponent,
+    NotifiarrProviderComponent,
+    AppriseProviderComponent
   ],
   providers: [NotificationProviderConfigStore, ConfirmationService, MessageService],
   templateUrl: "./notification-settings.component.html",
@@ -61,6 +66,8 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
   // Modal state
   showProviderModal = false; // Keep old modal for now during transition
   showTypeSelectionModal = false; // New: Provider type selection modal
+  showNotifiarrModal = false; // New: Notifiarr provider modal
+  showAppriseModal = false; // New: Apprise provider modal
   modalMode: 'add' | 'edit' = 'add';
   editingProvider: NotificationProviderDto | null = null;
 
@@ -78,6 +85,7 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
   private formBuilder = inject(FormBuilder);
   private notificationService = inject(NotificationService);
   private confirmationService = inject(ConfirmationService);
+  private messageService = inject(MessageService);
   private notificationProviderStore = inject(NotificationProviderConfigStore);
   private documentationService = inject(DocumentationService);
 
@@ -259,17 +267,31 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
   }
 
   /**
-   * Open provider-specific modal based on type (placeholder for Phase 2)
+   * Open provider-specific modal based on type
    */
   private openProviderSpecificModal(type: NotificationProviderType): void {
-    // For now, use the existing modal with pre-selected type
-    // This will be replaced with provider-specific modals in Phase 2
-    this.providerForm.reset();
-    this.providerForm.patchValue({ 
-      enabled: true,
-      type: type
-    });
-    this.showProviderModal = true;
+    // Reset editing state for new provider
+    this.editingProvider = null;
+    this.modalMode = 'add';
+    
+    // Open the appropriate provider-specific modal
+    switch (type) {
+      case NotificationProviderType.Notifiarr:
+        this.showNotifiarrModal = true;
+        break;
+      case NotificationProviderType.Apprise:
+        this.showAppriseModal = true;
+        break;
+      default:
+        // For unsupported types, fall back to the old modal
+        this.providerForm.reset();
+        this.providerForm.patchValue({ 
+          enabled: true,
+          type: type
+        });
+        this.showProviderModal = true;
+        break;
+    }
   }
 
   /**
@@ -516,5 +538,179 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
    */
   openFieldDocs(fieldName: string): void {
     this.documentationService.openFieldDocumentation('notifications', fieldName);
+  }
+
+  // Provider-specific modal event handlers
+
+  /**
+   * Handle Notifiarr provider save
+   */
+  onNotifiarrSave(data: NotifiarrFormData): void {
+    if (this.modalMode === 'edit' && this.editingProvider) {
+      this.updateNotifiarrProvider(data);
+    } else {
+      this.createNotifiarrProvider(data);
+    }
+  }
+
+  /**
+   * Handle Notifiarr provider test
+   */
+  onNotifiarrTest(data: NotifiarrFormData): void {
+    // TODO: Implement test functionality
+    this.messageService.add({
+      severity: 'info',
+      summary: 'Test',
+      detail: 'Notifiarr test functionality coming soon'
+    });
+  }
+
+  /**
+   * Handle Apprise provider save
+   */
+  onAppriseSave(data: AppriseFormData): void {
+    if (this.modalMode === 'edit' && this.editingProvider) {
+      this.updateAppriseProvider(data);
+    } else {
+      this.createAppriseProvider(data);
+    }
+  }
+
+  /**
+   * Handle Apprise provider test
+   */
+  onAppriseTest(data: AppriseFormData): void {
+    // TODO: Implement test functionality
+    this.messageService.add({
+      severity: 'info',
+      summary: 'Test',
+      detail: 'Apprise test functionality coming soon'
+    });
+  }
+
+  /**
+   * Handle provider modal cancel
+   */
+  onProviderCancel(): void {
+    this.closeAllModals();
+  }
+
+  /**
+   * Close all provider modals
+   */
+  private closeAllModals(): void {
+    this.showTypeSelectionModal = false;
+    this.showNotifiarrModal = false;
+    this.showAppriseModal = false;
+    this.showProviderModal = false;
+    this.editingProvider = null;
+  }
+
+  /**
+   * Create new Notifiarr provider
+   */
+  private createNotifiarrProvider(data: NotifiarrFormData): void {
+    const createDto: CreateNotificationProviderDto = {
+      name: data.name,
+      type: NotificationProviderType.Notifiarr,
+      isEnabled: data.enabled,
+      onFailedImportStrike: data.onFailedImportStrike,
+      onStalledStrike: data.onStalledStrike,
+      onSlowStrike: data.onSlowStrike,
+      onQueueItemDeleted: data.onQueueItemDeleted,
+      onDownloadCleaned: data.onDownloadCleaned,
+      onCategoryChanged: data.onCategoryChanged,
+      configuration: {
+        apiKey: data.apiKey,
+        channelId: data.channelId
+      }
+    };
+
+    this.notificationProviderStore.createProvider(createDto);
+    this.closeAllModals();
+  }
+
+  /**
+   * Update existing Notifiarr provider
+   */
+  private updateNotifiarrProvider(data: NotifiarrFormData): void {
+    if (!this.editingProvider) return;
+
+    const updateDto: UpdateNotificationProviderDto = {
+      name: data.name,
+      type: this.editingProvider.type,
+      isEnabled: data.enabled,
+      onFailedImportStrike: data.onFailedImportStrike,
+      onStalledStrike: data.onStalledStrike,
+      onSlowStrike: data.onSlowStrike,
+      onQueueItemDeleted: data.onQueueItemDeleted,
+      onDownloadCleaned: data.onDownloadCleaned,
+      onCategoryChanged: data.onCategoryChanged,
+      configuration: {
+        apiKey: data.apiKey,
+        channelId: data.channelId
+      }
+    };
+
+    this.notificationProviderStore.updateProvider({ 
+      id: this.editingProvider.id, 
+      provider: updateDto
+    });
+    this.closeAllModals();
+  }
+
+  /**
+   * Create new Apprise provider
+   */
+  private createAppriseProvider(data: AppriseFormData): void {
+    const createDto: CreateNotificationProviderDto = {
+      name: data.name,
+      type: NotificationProviderType.Apprise,
+      isEnabled: data.enabled,
+      onFailedImportStrike: data.onFailedImportStrike,
+      onStalledStrike: data.onStalledStrike,
+      onSlowStrike: data.onSlowStrike,
+      onQueueItemDeleted: data.onQueueItemDeleted,
+      onDownloadCleaned: data.onDownloadCleaned,
+      onCategoryChanged: data.onCategoryChanged,
+      configuration: {
+        url: data.fullUrl,
+        key: data.key,
+        tags: data.tags
+      }
+    };
+
+    this.notificationProviderStore.createProvider(createDto);
+    this.closeAllModals();
+  }
+
+  /**
+   * Update existing Apprise provider
+   */
+  private updateAppriseProvider(data: AppriseFormData): void {
+    if (!this.editingProvider) return;
+
+    const updateDto: UpdateNotificationProviderDto = {
+      name: data.name,
+      type: this.editingProvider.type,
+      isEnabled: data.enabled,
+      onFailedImportStrike: data.onFailedImportStrike,
+      onStalledStrike: data.onStalledStrike,
+      onSlowStrike: data.onSlowStrike,
+      onQueueItemDeleted: data.onQueueItemDeleted,
+      onDownloadCleaned: data.onDownloadCleaned,
+      onCategoryChanged: data.onCategoryChanged,
+      configuration: {
+        url: data.fullUrl,
+        key: data.key,
+        tags: data.tags
+      }
+    };
+
+    this.notificationProviderStore.updateProvider({ 
+      id: this.editingProvider.id, 
+      provider: updateDto
+    });
+    this.closeAllModals();
   }
 } 

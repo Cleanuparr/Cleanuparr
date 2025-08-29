@@ -1,4 +1,8 @@
-<div class="settings-layout">
+<div class="settings-container">
+  <div class="flex align-items-center justify-content-between mb-4">
+    <h1>Notifications Configuration</h1>
+  </div>
+
   <div class="settings-content">
     <p-card header="Notification Providers" styleClass="settings-card">
       <div class="providers-list">
@@ -384,6 +388,28 @@
   (providerSelected)="onProviderTypeSelected($event)"
   (cancel)="onTypeSelectionCancel()"
 ></app-provider-type-selection>
+
+<!-- Notifiarr Provider Modal -->
+<app-notifiarr-provider
+  [visible]="showNotifiarrModal"
+  [editingProvider]="editingProvider"
+  [saving]="saving()"
+  [testing]="testing()"
+  (save)="onNotifiarrSave($event)"
+  (cancel)="onProviderCancel()"
+  (test)="onNotifiarrTest($event)"
+></app-notifiarr-provider>
+
+<!-- Apprise Provider Modal -->
+<app-apprise-provider
+  [visible]="showAppriseModal"
+  [editingProvider]="editingProvider"
+  [saving]="saving()"
+  [testing]="testing()"
+  (save)="onAppriseSave($event)"
+  (cancel)="onProviderCancel()"
+  (test)="onAppriseTest($event)"
+></app-apprise-provider>
 
 <!-- Confirmation Dialog -->
 <p-confirmDialog></p-confirmDialog>
