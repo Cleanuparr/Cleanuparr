@@ -3,9 +3,28 @@
     <h1>Notifications Configuration</h1>
   </div>
 
-  <div class="settings-content">
-    <p-card header="Notification Providers" styleClass="settings-card">
-      <div class="providers-list">
+  <p-card styleClass="settings-card h-full">
+    <ng-template pTemplate="header">
+      <div class="flex align-items-center justify-content-between p-3 border-bottom-1 surface-border">
+        <div class="header-title-container">
+          <h2 class="card-title m-0">Notification Providers</h2>
+          <span class="card-subtitle">Configure notification providers to receive alerts</span>
+        </div>
+      </div>
+    </ng-template>
+
+    <div class="card-content">
+      <!-- Loading/Error Component -->
+      <app-loading-error-state
+        *ngIf="notificationProviderLoading() || notificationProviderError()"
+        [loading]="notificationProviderLoading()"
+        [error]="notificationProviderError()"
+        loadingMessage="Loading notification providers..."
+        errorMessage="Could not connect to server"
+      ></app-loading-error-state>
+
+      <!-- Providers List -->
+      <div *ngIf="!notificationProviderLoading() && !notificationProviderError()" class="providers-list">
         <div 
           *ngFor="let provider of providers()" 
           class="provider-item p-3 border-round surface-border border-1 mb-3"
@@ -82,13 +101,13 @@
           type="button" 
           icon="pi pi-plus" 
           label="Add Provider"
-          class="p-button-outlined"
+          class="p-button-primary"
           [disabled]="saving()"
           (click)="openAddProviderModal()"
         ></button>
       </div>
-    </p-card>
-  </div>
+    </div>
+  </p-card>
 </div>
 
 <!-- Provider Modal -->

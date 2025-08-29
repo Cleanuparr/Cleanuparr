@@ -12,6 +12,7 @@ import {
 import { NotificationProviderType } from "../../shared/models/enums";
 import { DocumentationService } from "../../core/services/documentation.service";
 import { NotifiarrFormData, AppriseFormData } from "./models/provider-modal.model";
+import { LoadingErrorStateComponent } from "../../shared/components/loading-error-state/loading-error-state.component";
 
 // New modal components
 import { ProviderTypeSelectionComponent } from "./modals/provider-type-selection/provider-type-selection.component";
@@ -48,6 +49,7 @@ import { NotificationService } from "../../core/services/notification.service";
     ConfirmDialogModule,
     TagModule,
     TooltipModule,
+    LoadingErrorStateComponent,
     ProviderTypeSelectionComponent,
     NotifiarrProviderComponent,
     AppriseProviderComponent
