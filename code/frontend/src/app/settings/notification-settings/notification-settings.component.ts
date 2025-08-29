@@ -1,22 +1,30 @@
-import { Component, EventEmitter, OnDestroy, Output, effect, inject } from "@angular/core";
+import { Component, EventEmitter, OnDestroy, Output, effect, inject, computed } from "@angular/core";
 import { CommonModule } from "@angular/common";
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from "@angular/forms";
 import { Subject, takeUntil } from "rxjs";
-import { NotificationConfigStore } from "./notification-config.store";
+import { NotificationProviderConfigStore } from "../notification-provider/notification-provider-config.store";
 import { CanComponentDeactivate } from "../../core/guards";
-import { NotificationsConfig } from "../../shared/models/notifications-config.model";
-import { NumericInputDirective } from "../../shared/directives";
+import { 
+  NotificationProviderDto, 
+  CreateNotificationProviderDto, 
+  UpdateNotificationProviderDto 
+} from "../../shared/models/notification-provider.model";
+import { NotificationProviderType } from "../../shared/models/enums";
+import { DocumentationService } from "../../core/services/documentation.service";
 
 // PrimeNG Components
 import { CardModule } from "primeng/card";
 import { InputTextModule } from "primeng/inputtext";
-import { InputNumberModule } from "primeng/inputnumber";
 import { CheckboxModule } from "primeng/checkbox";
 import { ButtonModule } from "primeng/button";
+import { SelectModule } from 'primeng/select';
 import { ToastModule } from "primeng/toast";
-import { NotificationService } from '../../core/services/notification.service';
-import { DocumentationService } from '../../core/services/documentation.service';
-import { LoadingErrorStateComponent } from "../../shared/components/loading-error-state/loading-error-state.component";
+import { DialogModule } from "primeng/dialog";
+import { ConfirmDialogModule } from "primeng/confirmdialog";
+import { TagModule } from "primeng/tag";
+import { TooltipModule } from "primeng/tooltip";
+import { ConfirmationService } from "primeng/api";
+import { NotificationService } from "../../core/services/notification.service";
 
 @Component({
   selector: "app-notification-settings",
@@ -26,14 +34,16 @@ import { LoadingErrorStateComponent } from "../../shared/components/loading-erro
     ReactiveFormsModule,
     CardModule,
     InputTextModule,
-    InputNumberModule,
     CheckboxModule,
     ButtonModule,
+    SelectModule,
     ToastModule,
-    LoadingErrorStateComponent,
-    NumericInputDirective,
+    DialogModule,
+    ConfirmDialogModule,
+    TagModule,
+    TooltipModule
   ],
-  providers: [NotificationConfigStore],
+  providers: [NotificationProviderConfigStore, ConfirmationService],
   templateUrl: "./notification-settings.component.html",
   styleUrls: ["./notification-settings.component.scss"],
 })
@@ -41,114 +51,99 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
   @Output() saved = new EventEmitter<void>();
   @Output() error = new EventEmitter<string>();
 
-  // Notification Configuration Form
-  notificationForm: FormGroup;
-  
-  // Original form values for tracking changes
-  private originalFormValues: any;
-  
-  // Track whether the form has actual changes compared to original values
-  hasActualChanges = false;
+  // Forms
+  providerForm: FormGroup;
 
-  // Inject the necessary services
+  // Modal state
+  showProviderModal = false;
+  modalMode: 'add' | 'edit' = 'add';
+  editingProvider: NotificationProviderDto | null = null;
+
+  // Notification provider type options
+  typeOptions: { label: string, value: NotificationProviderType }[] = [];
+
+  get isEditing(): boolean {
+    return this.modalMode === 'edit';
+  }
+
+  // Clean up subscriptions
+  private destroy$ = new Subject<void>();
+
+  // Services
   private formBuilder = inject(FormBuilder);
   private notificationService = inject(NotificationService);
+  private confirmationService = inject(ConfirmationService);
+  private notificationProviderStore = inject(NotificationProviderConfigStore);
   private documentationService = inject(DocumentationService);
-  private notificationConfigStore = inject(NotificationConfigStore);
 
-  // Signals from the store
-  readonly notificationConfig = this.notificationConfigStore.config;
-  readonly notificationLoading = this.notificationConfigStore.loading;
-  readonly notificationSaving = this.notificationConfigStore.saving;
-  readonly notificationError = this.notificationConfigStore.error;
+  // Signals from store
+  notificationProviderConfig = this.notificationProviderStore.config;
+  notificationProviderLoading = this.notificationProviderStore.loading;
+  notificationProviderError = this.notificationProviderStore.error;
+  notificationProviderSaving = this.notificationProviderStore.saving;
+  notificationProviderTesting = this.notificationProviderStore.testing;
+  testResult = this.notificationProviderStore.testResult;
 
-  // Subject for unsubscribing from observables when component is destroyed
-  private destroy$ = new Subject<void>();
+  // Computed signals
+  providers = computed(() => this.notificationProviderConfig()?.providers || []);
+  saving = computed(() => this.notificationProviderSaving());
+  testing = computed(() => this.notificationProviderTesting());
 
   /**
    * Check if component can be deactivated (navigation guard)
    */
   canDeactivate(): boolean {
-    return !this.notificationForm.dirty;
+    return true; // No unsaved changes in modal-based approach
   }
 
   constructor() {
-    // Initialize the notification settings form
-    this.notificationForm = this.formBuilder.group({
-      // Notifiarr configuration
-      notifiarr: this.formBuilder.group({
-        apiKey: [''],
-        channelId: [''],
-        onFailedImportStrike: [false],
-        onStalledStrike: [false],
-        onSlowStrike: [false],
-        onQueueItemDeleted: [false],
-        onDownloadCleaned: [false],
-        onCategoryChanged: [false],
-      }),
-      // Apprise configuration
-      apprise: this.formBuilder.group({
-        fullUrl: [''],
-        key: [''],
-        tags: [''],
-        onFailedImportStrike: [false],
-        onStalledStrike: [false],
-        onSlowStrike: [false],
-        onQueueItemDeleted: [false],
-        onDownloadCleaned: [false],
-        onCategoryChanged: [false],
-      }),
+    // Initialize provider form for modal
+    this.providerForm = this.formBuilder.group({
+      name: ['', Validators.required],
+      type: [null, Validators.required],
+      enabled: [true],
+      // Configuration fields that will be dynamically shown based on type
+      apiKey: [''],
+      channelId: [''],
+      fullUrl: [''],
+      key: [''],
+      tags: [''],
+      // Event trigger flags
+      onFailedImportStrike: [false],
+      onStalledStrike: [false],
+      onSlowStrike: [false],
+      onQueueItemDeleted: [false],
+      onDownloadCleaned: [false],
+      onCategoryChanged: [false]
     });
 
-    // Setup effect to react to config changes
-    effect(() => {
-      const config = this.notificationConfig();
-      if (config) {
-        // Map the server response to form values
-        const formValue = {
-          notifiarr: config.notifiarr || {
-            apiKey: '',
-            channelId: '',
-            onFailedImportStrike: false,
-            onStalledStrike: false,
-            onSlowStrike: false,
-            onQueueItemDeleted: false,
-            onDownloadCleaned: false,
-            onCategoryChanged: false,
-          },
-          apprise: config.apprise || {
-            fullUrl: '',
-            key: '',
-            tags: '',
-            onFailedImportStrike: false,
-            onStalledStrike: false,
-            onSlowStrike: false,
-            onQueueItemDeleted: false,
-            onDownloadCleaned: false,
-            onCategoryChanged: false,
-          },
-        };
+    // Initialize type options
+    for (const key of Object.keys(NotificationProviderType)) {
+      this.typeOptions.push({ 
+        label: this.getProviderTypeLabel(NotificationProviderType[key as keyof typeof NotificationProviderType]), 
+        value: NotificationProviderType[key as keyof typeof NotificationProviderType] 
+      });
+    }
 
-        this.notificationForm.patchValue(formValue);
-        this.storeOriginalValues();
-        this.notificationForm.markAsPristine();
-        this.hasActualChanges = false;
-      }
-    });
+    // Load notification provider config data
+    this.notificationProviderStore.loadConfig();
 
-    // Track form changes for dirty state
-    this.notificationForm.valueChanges
+    // Setup provider type change handler
+    this.providerForm.get('type')?.valueChanges
       .pipe(takeUntil(this.destroy$))
       .subscribe(() => {
-        this.hasActualChanges = this.formValuesChanged();
+        this.onProviderTypeChange();
       });
 
-    // Setup effect to react to error changes
+    // Setup effect to react to test results
     effect(() => {
-      const errorMessage = this.notificationError();
-      if (errorMessage) {
-        // Only emit the error for parent components
-        this.error.emit(errorMessage);
+      const result = this.testResult();
+      if (result) {
+        if (result.success) {
+          this.notificationService.showSuccess(result.message || 'Test notification sent successfully');
+        } else {
+          this.notificationService.showError(result.message || 'Test notification failed');
+        }
       }
     });
   }
@@ -159,148 +154,6 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
-  }
-
-  /**
-   * Check if the current form values are different from the original values
-   */
-  private formValuesChanged(): boolean {
-    return !this.isEqual(this.notificationForm.value, this.originalFormValues);
-  }
-
-  /**
-   * Deep compare two objects for equality
-   */
-  private isEqual(obj1: any, obj2: any): boolean {
-    if (obj1 === obj2) return true;
-    if (obj1 === null || obj2 === null) return false;
-    if (obj1 === undefined || obj2 === undefined) return false;
-    
-    if (typeof obj1 !== 'object' && typeof obj2 !== 'object') {
-      return obj1 === obj2;
-    }
-    
-    if (Array.isArray(obj1) && Array.isArray(obj2)) {
-      if (obj1.length !== obj2.length) return false;
-      for (let i = 0; i < obj1.length; i++) {
-        if (!this.isEqual(obj1[i], obj2[i])) return false;
-      }
-      return true;
-    }
-    
-    const keys1 = Object.keys(obj1);
-    const keys2 = Object.keys(obj2);
-    
-    if (keys1.length !== keys2.length) return false;
-    
-    for (const key of keys1) {
-      if (!this.isEqual(obj1[key], obj2[key])) return false;
-    }
-    
-    return true;
-  }
-
-  /**
-   * Store original form values for dirty checking
-   */
-  private storeOriginalValues(): void {
-    this.originalFormValues = JSON.parse(JSON.stringify(this.notificationForm.value));
-  }
-
-  /**
-   * Save the notification configuration
-   */
-  saveNotificationConfig(): void {
-    if (this.notificationForm.invalid) {
-      this.markFormGroupTouched(this.notificationForm);
-      this.notificationService.showValidationError();
-      return;
-    }
-
-    if (!this.hasActualChanges) {
-      this.notificationService.showSuccess('No changes detected');
-      return;
-    }
-
-    const formValues = this.notificationForm.value;
-
-    const config: NotificationsConfig = {
-      notifiarr: {
-        ...formValues.notifiarr,
-        channelId: formValues.notifiarr.channelId ? formValues.notifiarr.channelId.toString() : null,
-      },
-      apprise: formValues.apprise,
-    };
-
-    // Save the configuration
-    this.notificationConfigStore.saveConfig(config);
-    
-    // Setup a one-time check to mark form as pristine after successful save
-    const checkSaveCompletion = () => {
-      const loading = this.notificationSaving();
-      const error = this.notificationError();
-      
-      if (!loading && !error) {
-        // Mark form as pristine after successful save
-        this.notificationForm.markAsPristine();
-        this.hasActualChanges = false;
-        
-        // Emit saved event
-        this.saved.emit();
-        // Show success message
-        this.notificationService.showSuccess('Notification configuration saved successfully!');
-      } else if (!loading && error) {
-        // If there's an error, we can stop checking
-      } else {
-        // If still loading, check again in a moment
-        setTimeout(checkSaveCompletion, 100);
-      }
-    };
-    
-    // Start checking for save completion
-    checkSaveCompletion();
-  }
-
-  /**
-   * Reset the notification configuration form to default values
-   */
-  resetNotificationConfig(): void {
-    this.notificationForm.reset({
-      notifiarr: {
-        apiKey: '',
-        channelId: '',
-        onFailedImportStrike: false,
-        onStalledStrike: false,
-        onSlowStrike: false,
-        onQueueItemDeleted: false,
-        onDownloadCleaned: false,
-        onCategoryChanged: false,
-      },
-      apprise: {
-        fullUrl: '',
-        key: '',
-        tags: '',
-        onFailedImportStrike: false,
-        onStalledStrike: false,
-        onSlowStrike: false,
-        onQueueItemDeleted: false,
-        onDownloadCleaned: false,
-        onCategoryChanged: false,
-      },
-    });
-    
-    // Check if this reset actually changes anything compared to the original state
-    const hasChangesAfterReset = this.formValuesChanged();
-    
-    if (hasChangesAfterReset) {
-      // Only mark as dirty if the reset actually changes something
-      this.notificationForm.markAsDirty();
-      this.hasActualChanges = true;
-    } else {
-      // If reset brings us back to original state, mark as pristine
-      this.notificationForm.markAsPristine();
-      this.hasActualChanges = false;
-    }
   }
 
   /**
@@ -317,23 +170,316 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
   }
 
   /**
-   * Check if a form control has an error after it's been touched
+   * Check if a form control has an error
    */
-  hasError(controlName: string, errorName: string): boolean {
-    const control = this.notificationForm.get(controlName);
-    return control ? control.dirty && control.hasError(errorName) : false;
+  hasError(form: FormGroup, controlName: string, errorName: string): boolean {
+    const control = form.get(controlName);
+    return control !== null && control.hasError(errorName) && control.dirty;
   }
 
   /**
-   * Check if a nested form control has an error after it's been touched
+   * Open modal to add new provider
    */
-  hasNestedError(groupName: string, controlName: string, errorName: string): boolean {
-    const control = this.notificationForm.get(`${groupName}.${controlName}`);
-    return control ? control.dirty && control.hasError(errorName) : false;
+  openAddProviderModal(): void {
+    this.modalMode = 'add';
+    this.editingProvider = null;
+    this.providerForm.reset();
+    this.providerForm.patchValue({ enabled: true }); // Default enabled to true
+    this.showProviderModal = true;
+    this.showProviderModal = true;
   }
 
   /**
-   * Opens documentation for a specific field
+   * Open modal to edit existing provider
+   */
+  openEditProviderModal(provider: NotificationProviderDto): void {
+    this.modalMode = 'edit';
+    this.editingProvider = provider;
+    this.showProviderModal = true;
+    
+    // Extract configuration based on type
+    let notifiarrConfig: any = null;
+    let appriseConfig: any = null;
+    
+    if (provider.type === NotificationProviderType.Notifiarr) {
+      notifiarrConfig = provider.configuration;
+    } else if (provider.type === NotificationProviderType.Apprise) {
+      appriseConfig = provider.configuration;
+    }
+    
+    this.providerForm.patchValue({
+      name: provider.name,
+      type: provider.type,
+      enabled: provider.isEnabled,
+      // Notifiarr fields
+      apiKey: notifiarrConfig?.apiKey || '',
+      channelId: notifiarrConfig?.channelId || '',
+      // Apprise fields
+      fullUrl: appriseConfig?.fullUrl || '',
+      key: appriseConfig?.key || '',
+      tags: appriseConfig?.tags || '',
+      // Event flags
+      onFailedImportStrike: provider.events.onFailedImportStrike,
+      onStalledStrike: provider.events.onStalledStrike,
+      onSlowStrike: provider.events.onSlowStrike,
+      onQueueItemDeleted: provider.events.onQueueItemDeleted,
+      onDownloadCleaned: provider.events.onDownloadCleaned,
+      onCategoryChanged: provider.events.onCategoryChanged
+    });
+    this.showProviderModal = true;
+  }
+
+  /**
+   * Close provider modal
+   */
+  closeProviderModal(): void {
+    this.showProviderModal = false;
+    this.editingProvider = null;
+    this.providerForm.reset();
+    this.notificationProviderStore.clearTestResult();
+  }
+
+  /**
+   * Save provider (add or edit)
+   */
+  saveProvider(): void {
+    this.markFormGroupTouched(this.providerForm);
+
+    if (this.providerForm.invalid) {
+      this.notificationService.showError('Please fix the validation errors before saving');
+      return;
+    }
+
+    const formValue = this.providerForm.value;
+
+    if (this.modalMode === 'add') {
+      const providerData: CreateNotificationProviderDto = {
+        name: formValue.name,
+        type: formValue.type,
+        isEnabled: formValue.enabled,
+        configuration: formValue.type === NotificationProviderType.Notifiarr ? {
+          apiKey: formValue.apiKey,
+          channelId: formValue.channelId
+        } : formValue.type === NotificationProviderType.Apprise ? {
+          fullUrl: formValue.fullUrl,
+          key: formValue.key,
+          tags: formValue.tags
+        } : {},
+        onFailedImportStrike: formValue.onFailedImportStrike,
+        onStalledStrike: formValue.onStalledStrike,
+        onSlowStrike: formValue.onSlowStrike,
+        onQueueItemDeleted: formValue.onQueueItemDeleted,
+        onDownloadCleaned: formValue.onDownloadCleaned,
+        onCategoryChanged: formValue.onCategoryChanged
+      };
+      
+      this.notificationProviderStore.createProvider(providerData);
+    } else if (this.editingProvider) {
+      const providerData: UpdateNotificationProviderDto = {
+        name: formValue.name,
+        type: formValue.type,
+        isEnabled: formValue.enabled,
+        configuration: formValue.type === NotificationProviderType.Notifiarr ? {
+          apiKey: formValue.apiKey,
+          channelId: formValue.channelId
+        } : formValue.type === NotificationProviderType.Apprise ? {
+          fullUrl: formValue.fullUrl,
+          key: formValue.key,
+          tags: formValue.tags
+        } : {},
+        onFailedImportStrike: formValue.onFailedImportStrike,
+        onStalledStrike: formValue.onStalledStrike,
+        onSlowStrike: formValue.onSlowStrike,
+        onQueueItemDeleted: formValue.onQueueItemDeleted,
+        onDownloadCleaned: formValue.onDownloadCleaned,
+        onCategoryChanged: formValue.onCategoryChanged
+      };
+      
+      this.notificationProviderStore.updateProvider({ 
+        id: this.editingProvider.id!, 
+        provider: providerData
+      });
+    }
+
+    this.monitorProviderSaving();
+  }
+
+  /**
+   * Monitor provider saving completion
+   */
+  private monitorProviderSaving(): void {
+    const checkSavingStatus = () => {
+      const saving = this.notificationProviderSaving();
+      const error = this.notificationProviderError();
+      
+      if (!saving) {
+        if (error) {
+          this.notificationService.showError(`Operation failed: ${error}`);
+        } else {
+          const action = this.modalMode === 'add' ? 'created' : 'updated';
+          this.notificationService.showSuccess(`Provider ${action} successfully`);
+          this.closeProviderModal();
+        }
+      } else {
+        setTimeout(checkSavingStatus, 100);
+      }
+    };
+    
+    setTimeout(checkSavingStatus, 100);
+  }
+
+  /**
+   * Delete provider with confirmation
+   */
+  deleteProvider(provider: NotificationProviderDto): void {
+    this.confirmationService.confirm({
+      message: `Are you sure you want to delete the provider "${provider.name}"?`,
+      header: 'Confirm Deletion',
+      icon: 'pi pi-exclamation-triangle',
+      acceptButtonStyleClass: 'p-button-danger',
+      accept: () => {
+        this.notificationProviderStore.deleteProvider(provider.id!);
+        
+        // Monitor deletion
+        const checkDeletionStatus = () => {
+          const saving = this.notificationProviderSaving();
+          const error = this.notificationProviderError();
+          
+          if (!saving) {
+            if (error) {
+              this.notificationService.showError(`Deletion failed: ${error}`);
+            } else {
+              this.notificationService.showSuccess('Provider deleted successfully');
+            }
+          } else {
+            setTimeout(checkDeletionStatus, 100);
+          }
+        };
+        
+        setTimeout(checkDeletionStatus, 100);
+      }
+    });
+  }
+
+  /**
+   * Test notification provider
+   */
+  testProvider(provider: NotificationProviderDto): void {
+    this.notificationProviderStore.testProvider({ id: provider.id! });
+  }
+
+  /**
+   * Test notification provider from modal
+   */
+  testProviderFromModal(): void {
+    if (this.editingProvider) {
+      this.testProvider(this.editingProvider);
+    }
+  }
+
+  /**
+   * Get modal title based on mode
+   */
+  get modalTitle(): string {
+    return this.modalMode === 'add' ? 'Add Notification Provider' : 'Edit Notification Provider';
+  }
+
+  /**
+   * Test current provider (for modal test button)
+   */
+  testCurrentProvider(): void {
+    if (this.editingProvider) {
+      this.testProvider(this.editingProvider);
+    }
+  }
+
+  /**
+   * Handle provider type changes to update form validation and visibility
+   */
+  onTypeChange(event: any): void {
+    const type = event.value;
+    
+    // Clear the form except for basic fields when type changes
+    const currentValues = this.providerForm.value;
+    this.providerForm.reset();
+    this.providerForm.patchValue({
+      enabled: currentValues.enabled,
+      name: currentValues.name,
+      type: type
+    });
+  }
+
+  /**
+   * Handle provider type changes to update form validation and visibility
+   */
+  onProviderTypeChange(): void {
+    const providerType = this.providerForm.get('type')?.value;
+    
+    // Reset provider-specific fields
+    this.providerForm.patchValue({
+      apiKey: '',
+      channelId: '',
+      fullUrl: '',
+      key: '',
+      tags: ''
+    });
+
+    // Set required validators based on type
+    const apiKeyControl = this.providerForm.get('apiKey');
+    const fullUrlControl = this.providerForm.get('fullUrl');
+    
+    if (apiKeyControl && fullUrlControl) {
+      apiKeyControl.clearValidators();
+      fullUrlControl.clearValidators();
+      
+      if (providerType === NotificationProviderType.Notifiarr) {
+        apiKeyControl.setValidators([Validators.required]);
+      } else if (providerType === NotificationProviderType.Apprise) {
+        fullUrlControl.setValidators([Validators.required]);
+      }
+      
+      apiKeyControl.updateValueAndValidity();
+      fullUrlControl.updateValueAndValidity();
+    }
+  }
+
+  /**
+   * Check if Notifiarr fields should be shown
+   */
+  isNotifiarrType(): boolean {
+    return this.providerForm.get('type')?.value === NotificationProviderType.Notifiarr;
+  }
+
+  /**
+   * Check if Apprise fields should be shown
+   */
+  isAppriseType(): boolean {
+    return this.providerForm.get('type')?.value === NotificationProviderType.Apprise;
+  }
+
+  /**
+   * Get provider type label for display
+   */
+  getProviderTypeLabel(type: NotificationProviderType): string {
+    switch (type) {
+      case NotificationProviderType.Notifiarr:
+        return 'Notifiarr';
+      case NotificationProviderType.Apprise:
+        return 'Apprise';
+      default:
+        return 'Unknown';
+    }
+  }
+
+  /**
+   * Get provider type label for an existing provider
+   */
+  getProviderTypeLabelForProvider(provider: NotificationProviderDto): string {
+    return this.getProviderTypeLabel(provider.type);
+  }
+
+  /**
+   * Open field-specific documentation
    */
   openFieldDocs(fieldName: string): void {
     this.documentationService.openFieldDocumentation('notifications', fieldName);

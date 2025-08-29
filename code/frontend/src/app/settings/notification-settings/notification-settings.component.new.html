@@ -16,17 +16,16 @@
                   class="mr-2"
                 ></p-tag>
                 <p-tag 
-                  [value]="provider.isEnabled ? 'Enabled' : 'Disabled'" 
-                  [severity]="provider.isEnabled ? 'success' : 'secondary'"
+                  [value]="provider.enabled ? 'Enabled' : 'Disabled'" 
+                  [severity]="provider.enabled ? 'success' : 'secondary'"
                 ></p-tag>
               </div>
               <div class="provider-events text-sm text-color-secondary">
-                <span *ngIf="provider.events.onFailedImportStrike" class="mr-2">❌ Failed Import</span>
-                <span *ngIf="provider.events.onStalledStrike" class="mr-2">⏸️ Stalled</span>
-                <span *ngIf="provider.events.onSlowStrike" class="mr-2">🐌 Slow</span>
-                <span *ngIf="provider.events.onQueueItemDeleted" class="mr-2">🗑️ Queue Deleted</span>
-                <span *ngIf="provider.events.onDownloadCleaned" class="mr-2">🧹 Download Cleaned</span>
-                <span *ngIf="provider.events.onCategoryChanged" class="mr-2">� Category Changed</span>
+                <span *ngIf="provider.onDownloadFailure" class="mr-2">📥 Download Failure</span>
+                <span *ngIf="provider.onImportFailure" class="mr-2">📂 Import Failure</span>
+                <span *ngIf="provider.onGrab" class="mr-2">🎯 Grab</span>
+                <span *ngIf="provider.onHealthIssue" class="mr-2">🏥 Health Issue</span>
+                <span *ngIf="provider.onApplicationUpdate" class="mr-2">🔄 Application Update</span>
               </div>
             </div>
             <div class="provider-actions">
@@ -37,7 +36,7 @@
                 class="p-button-rounded p-button-text p-button-sm mr-1"
                 pTooltip="Test notification"
                 [loading]="testing()"
-                (click)="testProvider(provider)"
+                (click)="testProvider(provider.id)"
               ></button>
               <button 
                 pButton 
@@ -55,7 +54,7 @@
                 class="p-button-rounded p-button-text p-button-danger p-button-sm"
                 pTooltip="Delete provider"
                 [disabled]="saving()"
-                (click)="deleteProvider(provider)"
+                (click)="deleteProvider(provider.id)"
               ></button>
             </div>
           </div>
