@@ -9,12 +9,20 @@ public static class NotificationsDI
 {
     public static IServiceCollection AddNotifications(this IServiceCollection services, IConfiguration configuration) =>
         services
-            // Notification configs are now managed through ConfigManager
+            // Legacy notification providers (will be deprecated)
             .AddTransient<INotifiarrProxy, NotifiarrProxy>()
             .AddTransient<INotificationProvider, NotifiarrProvider>()
             .AddTransient<IAppriseProxy, AppriseProxy>()
             .AddTransient<INotificationProvider, AppriseProvider>()
             .AddTransient<INotificationPublisher, NotificationPublisher>()
             .AddTransient<INotificationFactory, NotificationFactory>()
-            .AddTransient<NotificationService>();
+            .AddTransient<NotificationService>()
+            
+            // New notification system
+            .AddScoped<INotificationConfigurationService, NotificationConfigurationService>()
+            .AddScoped<INotificationProviderFactory, NotificationProviderFactory>()
+            .AddScoped<NotificationProviderFactory>()
+            .AddScoped<NotificationPublisherV2>()
+            .AddScoped<NotificationServiceV2>()
+            .AddScoped<NotificationTestService>();
 }

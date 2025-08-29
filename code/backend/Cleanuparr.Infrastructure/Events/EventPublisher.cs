@@ -24,6 +24,7 @@ public class EventPublisher
     private readonly IHubContext<AppHub> _appHubContext;
     private readonly ILogger<EventPublisher> _logger;
     private readonly INotificationPublisher _notificationPublisher;
+    private readonly NotificationPublisherV2 _notificationPublisherV2;
     private readonly IDryRunInterceptor _dryRunInterceptor;
 
     public EventPublisher(
@@ -31,12 +32,14 @@ public class EventPublisher
         IHubContext<AppHub> appHubContext,
         ILogger<EventPublisher> logger,
         INotificationPublisher notificationPublisher,
+        NotificationPublisherV2 notificationPublisherV2,
         IDryRunInterceptor dryRunInterceptor)
     {
         _context = context;
         _appHubContext = appHubContext;
         _logger = logger;
         _notificationPublisher = notificationPublisher;
+        _notificationPublisherV2 = notificationPublisherV2;
         _dryRunInterceptor = dryRunInterceptor;
     }
 
@@ -115,6 +118,9 @@ public class EventPublisher
 
         // Send notification (uses ContextProvider internally)
         await _notificationPublisher.NotifyStrike(strikeType, strikeCount);
+        
+        // Also send via new notification system
+        await _notificationPublisherV2.NotifyStrike(strikeType, strikeCount);
     }
 
     /// <summary>
@@ -135,6 +141,9 @@ public class EventPublisher
 
         // Send notification (uses ContextProvider internally)
         await _notificationPublisher.NotifyQueueItemDeleted(removeFromClient, deleteReason);
+        
+        // Also send via new notification system
+        await _notificationPublisherV2.NotifyQueueItemDeleted(removeFromClient, deleteReason);
     }
 
     /// <summary>
@@ -155,6 +164,9 @@ public class EventPublisher
 
         // Send notification (uses ContextProvider internally)
         await _notificationPublisher.NotifyDownloadCleaned(ratio, seedingTime, categoryName, reason);
+        
+        // Also send via new notification system
+        await _notificationPublisherV2.NotifyDownloadCleaned(ratio, seedingTime, categoryName, reason);
     }
 
     /// <summary>
@@ -175,6 +187,9 @@ public class EventPublisher
 
         // Send notification (uses ContextProvider internally)
         await _notificationPublisher.NotifyCategoryChanged(oldCategory, newCategory, isTag);
+        
+        // Also send via new notification system
+        await _notificationPublisherV2.NotifyCategoryChanged(oldCategory, newCategory, isTag);
     }
 
     private async Task SaveEventToDatabase(AppEvent eventEntity)
