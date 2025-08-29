@@ -378,6 +378,13 @@
   </ng-template>
 </p-dialog>
 
+<!-- Provider Type Selection Modal -->
+<app-provider-type-selection
+  [visible]="showTypeSelectionModal"
+  (providerSelected)="onProviderTypeSelected($event)"
+  (cancel)="onTypeSelectionCancel()"
+></app-provider-type-selection>
+
 <!-- Confirmation Dialog -->
 <p-confirmDialog></p-confirmDialog>
 

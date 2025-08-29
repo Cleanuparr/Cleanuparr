@@ -12,6 +12,9 @@ import {
 import { NotificationProviderType } from "../../shared/models/enums";
 import { DocumentationService } from "../../core/services/documentation.service";
 
+// New modal components
+import { ProviderTypeSelectionComponent } from "./modals/provider-type-selection/provider-type-selection.component";
+
 // PrimeNG Components
 import { CardModule } from "primeng/card";
 import { InputTextModule } from "primeng/inputtext";
@@ -41,7 +44,8 @@ import { NotificationService } from "../../core/services/notification.service";
     DialogModule,
     ConfirmDialogModule,
     TagModule,
-    TooltipModule
+    TooltipModule,
+    ProviderTypeSelectionComponent
   ],
   providers: [NotificationProviderConfigStore, ConfirmationService, MessageService],
   templateUrl: "./notification-settings.component.html",
@@ -55,7 +59,8 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
   providerForm: FormGroup;
 
   // Modal state
-  showProviderModal = false;
+  showProviderModal = false; // Keep old modal for now during transition
+  showTypeSelectionModal = false; // New: Provider type selection modal
   modalMode: 'add' | 'edit' = 'add';
   editingProvider: NotificationProviderDto | null = null;
 
@@ -178,15 +183,12 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
   }
 
   /**
-   * Open modal to add new provider
+   * Open modal to add new provider - starts with type selection
    */
   openAddProviderModal(): void {
     this.modalMode = 'add';
     this.editingProvider = null;
-    this.providerForm.reset();
-    this.providerForm.patchValue({ enabled: true }); // Default enabled to true
-    this.showProviderModal = true;
-    this.showProviderModal = true;
+    this.showTypeSelectionModal = true; // New: Show type selection first
   }
 
   /**
@@ -237,6 +239,37 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
     this.editingProvider = null;
     this.providerForm.reset();
     this.notificationProviderStore.clearTestResult();
+  }
+
+  /**
+   * Handle provider type selection from type selection modal
+   */
+  onProviderTypeSelected(type: NotificationProviderType): void {
+    this.showTypeSelectionModal = false;
+    // TODO: Open provider-specific modal based on type
+    // For now, fall back to the old modal (will be replaced in Phase 2)
+    this.openProviderSpecificModal(type);
+  }
+
+  /**
+   * Handle type selection modal cancel
+   */
+  onTypeSelectionCancel(): void {
+    this.showTypeSelectionModal = false;
+  }
+
+  /**
+   * Open provider-specific modal based on type (placeholder for Phase 2)
+   */
+  private openProviderSpecificModal(type: NotificationProviderType): void {
+    // For now, use the existing modal with pre-selected type
+    // This will be replaced with provider-specific modals in Phase 2
+    this.providerForm.reset();
+    this.providerForm.patchValue({ 
+      enabled: true,
+      type: type
+    });
+    this.showProviderModal = true;
   }
 
   /**
