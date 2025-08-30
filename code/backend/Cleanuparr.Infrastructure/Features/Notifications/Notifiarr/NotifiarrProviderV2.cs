@@ -22,7 +22,7 @@ public sealed class NotifiarrProviderV2 : NotificationProviderBaseV2<NotifiarrCo
     public override async Task SendNotificationAsync(NotificationContext context)
     {
         var payload = BuildPayload(context);
-        await _proxy.SendNotification(payload, MapToOldConfig(Config));
+        await _proxy.SendNotification(payload, Config);
     }
 
     private NotifiarrPayload BuildPayload(NotificationContext context)
@@ -80,15 +80,5 @@ public sealed class NotifiarrProviderV2 : NotificationProviderBaseV2<NotifiarrCo
         }
 
         return fields;
-    }
-
-    private static Cleanuparr.Persistence.Models.Configuration.Notification.NotifiarrConfig MapToOldConfig(NotifiarrConfiguration config)
-    {
-        return new Cleanuparr.Persistence.Models.Configuration.Notification.NotifiarrConfig
-        {
-            Id = config.Id,
-            ApiKey = config.ApiKey,
-            ChannelId = config.ChannelId
-        };
     }
 }

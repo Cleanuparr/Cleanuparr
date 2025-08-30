@@ -1,7 +1,6 @@
 using Cleanuparr.Infrastructure.Features.Notifications;
 using Cleanuparr.Infrastructure.Features.Notifications.Apprise;
 using Cleanuparr.Infrastructure.Features.Notifications.Notifiarr;
-using Infrastructure.Verticals.Notifications;
 
 namespace Cleanuparr.Api.DependencyInjection;
 
@@ -11,12 +10,8 @@ public static class NotificationsDI
         services
             // Legacy notification providers (will be deprecated)
             .AddTransient<INotifiarrProxy, NotifiarrProxy>()
-            .AddTransient<INotificationProvider, NotifiarrProvider>()
             .AddTransient<IAppriseProxy, AppriseProxy>()
-            .AddTransient<INotificationProvider, AppriseProvider>()
             .AddTransient<INotificationPublisher, NotificationPublisher>()
-            .AddTransient<INotificationFactory, NotificationFactory>()
-            .AddTransient<NotificationService>()
             
             // New notification system
             .AddScoped<INotificationConfigurationService, NotificationConfigurationService>()

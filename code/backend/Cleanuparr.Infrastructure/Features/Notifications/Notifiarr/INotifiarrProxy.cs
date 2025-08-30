@@ -4,5 +4,5 @@ namespace Cleanuparr.Infrastructure.Features.Notifications.Notifiarr;
 
 public interface INotifiarrProxy
 {
-    Task SendNotification(NotifiarrPayload payload, NotifiarrConfig config);
+    Task SendNotification(NotifiarrPayload payload, NotifiarrConfiguration config);
 }

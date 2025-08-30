@@ -353,35 +353,6 @@ public class ConfigurationController : ControllerBase
         }
     }
 
-    [HttpGet("notifications")]
-    public async Task<IActionResult> GetNotificationsConfig()
-    {
-        await DataContext.Lock.WaitAsync();
-        try
-        {
-            var notifiarrConfig = await _dataContext.NotifiarrConfigs
-                .AsNoTracking()
-                .FirstOrDefaultAsync();
-            
-            var appriseConfig = await _dataContext.AppriseConfigs
-                .AsNoTracking()
-                .FirstOrDefaultAsync();
-            
-            // Return in the expected format with wrapper object
-            var config = new 
-            { 
-                notifiarr = notifiarrConfig,
-                apprise = appriseConfig
-            };
-            return Ok(config);
-        }
-        finally
-        {
-            DataContext.Lock.Release();
-        }
-    }
-
-    // New Notification Providers API following download client pattern
     [HttpGet("notification_providers")]
     public async Task<IActionResult> GetNotificationProviders()
     {

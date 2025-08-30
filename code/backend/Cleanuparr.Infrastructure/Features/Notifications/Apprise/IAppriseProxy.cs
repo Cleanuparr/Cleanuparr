@@ -4,5 +4,5 @@ namespace Cleanuparr.Infrastructure.Features.Notifications.Apprise;
 
 public interface IAppriseProxy
 {
-    Task SendNotification(ApprisePayload payload, AppriseConfig config);
+    Task SendNotification(ApprisePayload payload, AppriseConfiguration config);
 }
