@@ -359,7 +359,7 @@ public class ConfigurationController : ControllerBase
         await DataContext.Lock.WaitAsync();
         try
         {
-            var providers = await _dataContext.NotificationProviders
+            var providers = await _dataContext.NotificationConfigs
                 .Include(p => p.NotifiarrConfiguration)
                 .Include(p => p.AppriseConfiguration)
                 .AsNoTracking()
@@ -411,7 +411,7 @@ public class ConfigurationController : ControllerBase
             }
 
             // Create provider-specific configuration with validation
-            var notifiarrConfig = new NotifiarrConfiguration
+            var notifiarrConfig = new NotifiarrConfig
             {
                 ApiKey = newProvider.ApiKey,
                 ChannelId = newProvider.ChannelId
@@ -421,7 +421,7 @@ public class ConfigurationController : ControllerBase
             notifiarrConfig.Validate();
 
             // Create the provider entity
-            var provider = new NotificationProvider
+            var provider = new NotificationConfig
             {
                 Name = newProvider.Name,
                 Type = NotificationProviderType.Notifiarr,
@@ -436,7 +436,7 @@ public class ConfigurationController : ControllerBase
             };
 
             // Add the new provider to the database
-            _dataContext.NotificationProviders.Add(provider);
+            _dataContext.NotificationConfigs.Add(provider);
             await _dataContext.SaveChangesAsync();
 
             // Clear cache to ensure fresh data on next request
@@ -487,7 +487,7 @@ public class ConfigurationController : ControllerBase
             }
 
             // Create provider-specific configuration with validation
-            var appriseConfig = new AppriseConfiguration
+            var appriseConfig = new AppriseConfig
             {
                 Url = newProvider.Url,
                 Key = newProvider.Key,
@@ -498,7 +498,7 @@ public class ConfigurationController : ControllerBase
             appriseConfig.Validate();
 
             // Create the provider entity
-            var provider = new NotificationProvider
+            var provider = new NotificationConfig
             {
                 Name = newProvider.Name,
                 Type = NotificationProviderType.Apprise,
@@ -513,7 +513,7 @@ public class ConfigurationController : ControllerBase
             };
 
             // Add the new provider to the database
-            _dataContext.NotificationProviders.Add(provider);
+            _dataContext.NotificationConfigs.Add(provider);
             await _dataContext.SaveChangesAsync();
 
             // Clear cache to ensure fresh data on next request
@@ -563,7 +563,7 @@ public class ConfigurationController : ControllerBase
         try
         {
             // Find the existing notification provider
-            var existingProvider = await _dataContext.NotificationProviders
+            var existingProvider = await _dataContext.NotificationConfigs
                 .Include(p => p.NotifiarrConfiguration)
                 .FirstOrDefaultAsync(p => p.Id == id && p.Type == NotificationProviderType.Notifiarr);
                 
@@ -579,7 +579,7 @@ public class ConfigurationController : ControllerBase
             }
 
             // Create provider-specific configuration with validation
-            var notifiarrConfig = new NotifiarrConfiguration
+            var notifiarrConfig = new NotifiarrConfig
             {
                 ApiKey = updatedProvider.ApiKey,
                 ChannelId = updatedProvider.ChannelId
@@ -610,8 +610,8 @@ public class ConfigurationController : ControllerBase
             };
 
             // Remove old and add new (EF handles this as an update)
-            _dataContext.NotificationProviders.Remove(existingProvider);
-            _dataContext.NotificationProviders.Add(newProvider);
+            _dataContext.NotificationConfigs.Remove(existingProvider);
+            _dataContext.NotificationConfigs.Add(newProvider);
             
             // Persist the configuration
             await _dataContext.SaveChangesAsync();
@@ -662,7 +662,7 @@ public class ConfigurationController : ControllerBase
         try
         {
             // Find the existing notification provider
-            var existingProvider = await _dataContext.NotificationProviders
+            var existingProvider = await _dataContext.NotificationConfigs
                 .Include(p => p.AppriseConfiguration)
                 .FirstOrDefaultAsync(p => p.Id == id && p.Type == NotificationProviderType.Apprise);
                 
@@ -678,7 +678,7 @@ public class ConfigurationController : ControllerBase
             }
 
             // Create provider-specific configuration with validation
-            var appriseConfig = new AppriseConfiguration
+            var appriseConfig = new AppriseConfig
             {
                 Url = updatedProvider.Url,
                 Key = updatedProvider.Key,
@@ -710,8 +710,8 @@ public class ConfigurationController : ControllerBase
             };
 
             // Remove old and add new (EF handles this as an update)
-            _dataContext.NotificationProviders.Remove(existingProvider);
-            _dataContext.NotificationProviders.Add(newProvider);
+            _dataContext.NotificationConfigs.Remove(existingProvider);
+            _dataContext.NotificationConfigs.Add(newProvider);
             
             // Persist the configuration
             await _dataContext.SaveChangesAsync();
@@ -762,7 +762,7 @@ public class ConfigurationController : ControllerBase
         try
         {
             // Find the existing notification provider
-            var existingProvider = await _dataContext.NotificationProviders
+            var existingProvider = await _dataContext.NotificationConfigs
                 .Include(p => p.NotifiarrConfiguration)
                 .Include(p => p.AppriseConfiguration)
                 .FirstOrDefaultAsync(p => p.Id == id);
@@ -773,7 +773,7 @@ public class ConfigurationController : ControllerBase
             }
             
             // Remove the provider from the database
-            _dataContext.NotificationProviders.Remove(existingProvider);
+            _dataContext.NotificationConfigs.Remove(existingProvider);
             await _dataContext.SaveChangesAsync();
 
             // Clear cache to ensure fresh data on next request
@@ -802,7 +802,7 @@ public class ConfigurationController : ControllerBase
         try
         {
             // Create configuration for testing with validation
-            var notifiarrConfig = new NotifiarrConfiguration
+            var notifiarrConfig = new NotifiarrConfig
             {
                 ApiKey = testRequest.ApiKey,
                 ChannelId = testRequest.ChannelId
@@ -862,7 +862,7 @@ public class ConfigurationController : ControllerBase
         try
         {
             // Create configuration for testing with validation
-            var appriseConfig = new AppriseConfiguration
+            var appriseConfig = new AppriseConfig
             {
                 Url = testRequest.Url,
                 Key = testRequest.Key,

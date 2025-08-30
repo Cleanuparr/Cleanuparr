@@ -8,9 +8,9 @@ namespace Cleanuparr.Infrastructure.Features.Notifications.Consumers;
 public sealed class NotificationConsumer<T> : IConsumer<T> where T : Notification
 {
     private readonly ILogger<NotificationConsumer<T>> _logger;
-    private readonly NotificationServiceV2 _notificationService;
+    private readonly NotificationService _notificationService;
 
-    public NotificationConsumer(ILogger<NotificationConsumer<T>> logger, NotificationServiceV2 notificationService)
+    public NotificationConsumer(ILogger<NotificationConsumer<T>> logger, NotificationService notificationService)
     {
         _logger = logger;
         _notificationService = notificationService;

@@ -3,7 +3,7 @@ using Cleanuparr.Infrastructure.Features.Notifications.Models;
 
 namespace Cleanuparr.Infrastructure.Features.Notifications;
 
-public abstract class NotificationProviderBaseV2<TConfig> : INotificationProviderV2
+public abstract class NotificationProviderBase<TConfig> : INotificationProvider
     where TConfig : class
 {
     protected TConfig Config { get; }
@@ -12,7 +12,7 @@ public abstract class NotificationProviderBaseV2<TConfig> : INotificationProvide
     
     public NotificationProviderType Type { get; }
 
-    protected NotificationProviderBaseV2(string name, NotificationProviderType type, TConfig config)
+    protected NotificationProviderBase(string name, NotificationProviderType type, TConfig config)
     {
         Name = name;
         Type = type;

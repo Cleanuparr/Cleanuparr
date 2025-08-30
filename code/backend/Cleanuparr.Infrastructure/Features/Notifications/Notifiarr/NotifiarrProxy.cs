@@ -20,7 +20,7 @@ public sealed class NotifiarrProxy : INotifiarrProxy
         _httpClient = httpClientFactory.CreateClient(Constants.HttpClientWithRetryName);
     }
 
-    public async Task SendNotification(NotifiarrPayload payload, NotifiarrConfiguration config)
+    public async Task SendNotification(NotifiarrPayload payload, NotifiarrConfig config)
     {
         try
         {

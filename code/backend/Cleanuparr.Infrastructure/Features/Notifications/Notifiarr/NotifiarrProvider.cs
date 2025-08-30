@@ -5,14 +5,14 @@ using Cleanuparr.Persistence.Models.Configuration.Notification;
 
 namespace Cleanuparr.Infrastructure.Features.Notifications.Notifiarr;
 
-public sealed class NotifiarrProviderV2 : NotificationProviderBaseV2<NotifiarrConfiguration>
+public sealed class NotifiarrProvider : NotificationProviderBase<NotifiarrConfig>
 {
     private readonly INotifiarrProxy _proxy;
 
-    public NotifiarrProviderV2(
+    public NotifiarrProvider(
         string name,
         NotificationProviderType type,
-        NotifiarrConfiguration config,
+        NotifiarrConfig config,
         INotifiarrProxy proxy)
         : base(name, type, config)
     {

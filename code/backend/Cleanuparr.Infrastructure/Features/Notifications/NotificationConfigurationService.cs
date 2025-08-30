@@ -67,7 +67,7 @@ public sealed class NotificationConfigurationService : INotificationConfiguratio
     {
         try
         {
-            var providers = await _dataContext.Set<NotificationProvider>()
+            var providers = await _dataContext.Set<NotificationConfig>()
                 .Include(p => p.NotifiarrConfiguration)
                 .Include(p => p.AppriseConfiguration)
                 .AsNoTracking()
@@ -93,31 +93,31 @@ public sealed class NotificationConfigurationService : INotificationConfiguratio
         }
     }
 
-    private static NotificationProviderDto MapToDto(NotificationProvider provider)
+    private static NotificationProviderDto MapToDto(NotificationConfig config)
     {
         var events = new NotificationEventFlags
         {
-            OnFailedImportStrike = provider.OnFailedImportStrike,
-            OnStalledStrike = provider.OnStalledStrike,
-            OnSlowStrike = provider.OnSlowStrike,
-            OnQueueItemDeleted = provider.OnQueueItemDeleted,
-            OnDownloadCleaned = provider.OnDownloadCleaned,
-            OnCategoryChanged = provider.OnCategoryChanged
+            OnFailedImportStrike = config.OnFailedImportStrike,
+            OnStalledStrike = config.OnStalledStrike,
+            OnSlowStrike = config.OnSlowStrike,
+            OnQueueItemDeleted = config.OnQueueItemDeleted,
+            OnDownloadCleaned = config.OnDownloadCleaned,
+            OnCategoryChanged = config.OnCategoryChanged
         };
 
-        var configuration = provider.Type switch
+        var configuration = config.Type switch
         {
-            NotificationProviderType.Notifiarr => provider.NotifiarrConfiguration,
-            NotificationProviderType.Apprise => provider.AppriseConfiguration,
+            NotificationProviderType.Notifiarr => config.NotifiarrConfiguration,
+            NotificationProviderType.Apprise => config.AppriseConfiguration,
             _ => new object()
         };
 
         return new NotificationProviderDto
         {
-            Id = provider.Id,
-            Name = provider.Name,
-            Type = provider.Type,
-            IsEnabled = provider.IsEnabled && provider.IsConfigured && provider.HasAnyEventEnabled,
+            Id = config.Id,
+            Name = config.Name,
+            Type = config.Type,
+            IsEnabled = config.IsEnabled && config.IsConfigured && config.HasAnyEventEnabled,
             Events = events,
             Configuration = configuration ?? new object()
         };

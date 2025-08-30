@@ -11,13 +11,12 @@ public static class NotificationsDI
             // Legacy notification providers (will be deprecated)
             .AddTransient<INotifiarrProxy, NotifiarrProxy>()
             .AddTransient<IAppriseProxy, AppriseProxy>()
-            .AddTransient<INotificationPublisher, NotificationPublisher>()
             
             // New notification system
             .AddScoped<INotificationConfigurationService, NotificationConfigurationService>()
             .AddScoped<INotificationProviderFactory, NotificationProviderFactory>()
             .AddScoped<NotificationProviderFactory>()
-            .AddScoped<NotificationPublisherV2>()
-            .AddScoped<NotificationServiceV2>()
+            .AddScoped<INotificationPublisher, NotificationPublisher>()
+            .AddScoped<NotificationService>()
             .AddScoped<NotificationTestService>();
 }

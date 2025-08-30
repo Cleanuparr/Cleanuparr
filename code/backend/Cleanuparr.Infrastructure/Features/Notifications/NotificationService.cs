@@ -4,14 +4,14 @@ using Microsoft.Extensions.Logging;
 
 namespace Cleanuparr.Infrastructure.Features.Notifications;
 
-public sealed class NotificationServiceV2
+public sealed class NotificationService
 {
-    private readonly ILogger<NotificationServiceV2> _logger;
+    private readonly ILogger<NotificationService> _logger;
     private readonly INotificationConfigurationService _configurationService;
     private readonly INotificationProviderFactory _providerFactory;
 
-    public NotificationServiceV2(
-        ILogger<NotificationServiceV2> logger,
+    public NotificationService(
+        ILogger<NotificationService> logger,
         INotificationConfigurationService configurationService,
         INotificationProviderFactory providerFactory)
     {

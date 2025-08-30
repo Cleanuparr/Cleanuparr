@@ -6,14 +6,14 @@ using System.Text;
 
 namespace Cleanuparr.Infrastructure.Features.Notifications.Apprise;
 
-public sealed class AppriseProviderV2 : NotificationProviderBaseV2<AppriseConfiguration>
+public sealed class AppriseProvider : NotificationProviderBase<AppriseConfig>
 {
     private readonly IAppriseProxy _proxy;
 
-    public AppriseProviderV2(
+    public AppriseProvider(
         string name,
         NotificationProviderType type,
-        AppriseConfiguration config,
+        AppriseConfig config,
         IAppriseProxy proxy)
         : base(name, type, config)
     {

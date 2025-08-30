@@ -4,5 +4,5 @@ namespace Cleanuparr.Infrastructure.Features.Notifications;
 
 public interface INotificationProviderFactory
 {
-    INotificationProviderV2 CreateProvider(NotificationProviderDto config);
+    INotificationProvider CreateProvider(NotificationProviderDto config);
 }

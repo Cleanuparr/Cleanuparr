@@ -5,14 +5,16 @@ using ValidationException = Cleanuparr.Domain.Exceptions.ValidationException;
 
 namespace Cleanuparr.Persistence.Models.Configuration.Notification;
 
-public sealed record AppriseConfiguration : IConfig
+public sealed record AppriseConfig : IConfig
 {
     [Key]
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     public Guid Id { get; init; } = Guid.NewGuid();
     
     [Required]
-    public Guid ProviderId { get; init; }
+    public Guid NotificationConfigId { get; init; }
+    
+    public NotificationConfig NotificationConfig { get; init; } = null!;
     
     [Required]
     [MaxLength(500)]
@@ -25,12 +27,8 @@ public sealed record AppriseConfiguration : IConfig
     [MaxLength(255)]
     public string? Tags { get; init; }
     
-    // Navigation property
-    [ForeignKey(nameof(ProviderId))]
-    public NotificationProvider Provider { get; init; } = null!;
-    
     [NotMapped]
-    public Uri? ParsedUrl
+    public Uri? Uri
     {
         get
         {
@@ -47,7 +45,7 @@ public sealed record AppriseConfiguration : IConfig
     
     public bool IsValid()
     {
-        return ParsedUrl != null && 
+        return Uri != null && 
                !string.IsNullOrWhiteSpace(Key);
     }
     
@@ -58,7 +56,7 @@ public sealed record AppriseConfiguration : IConfig
             throw new ValidationException("Apprise server URL is required");
         }
         
-        if (ParsedUrl == null)
+        if (Uri == null)
         {
             throw new ValidationException("Apprise server URL must be a valid HTTP or HTTPS URL");
         }

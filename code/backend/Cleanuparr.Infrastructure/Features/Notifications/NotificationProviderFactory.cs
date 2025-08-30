@@ -16,7 +16,7 @@ public sealed class NotificationProviderFactory : INotificationProviderFactory
         _serviceProvider = serviceProvider;
     }
 
-    public INotificationProviderV2 CreateProvider(NotificationProviderDto config)
+    public INotificationProvider CreateProvider(NotificationProviderDto config)
     {
         return config.Type switch
         {
@@ -26,19 +26,19 @@ public sealed class NotificationProviderFactory : INotificationProviderFactory
         };
     }
 
-    private INotificationProviderV2 CreateNotifiarrProvider(NotificationProviderDto config)
+    private INotificationProvider CreateNotifiarrProvider(NotificationProviderDto config)
     {
-        var notifiarrConfig = (NotifiarrConfiguration)config.Configuration;
+        var notifiarrConfig = (NotifiarrConfig)config.Configuration;
         var proxy = _serviceProvider.GetRequiredService<INotifiarrProxy>();
         
-        return new NotifiarrProviderV2(config.Name, config.Type, notifiarrConfig, proxy);
+        return new NotifiarrProvider(config.Name, config.Type, notifiarrConfig, proxy);
     }
 
-    private INotificationProviderV2 CreateAppriseProvider(NotificationProviderDto config)
+    private INotificationProvider CreateAppriseProvider(NotificationProviderDto config)
     {
-        var appriseConfig = (AppriseConfiguration)config.Configuration;
+        var appriseConfig = (AppriseConfig)config.Configuration;
         var proxy = _serviceProvider.GetRequiredService<IAppriseProxy>();
         
-        return new AppriseProviderV2(config.Name, config.Type, appriseConfig, proxy);
+        return new AppriseProvider(config.Name, config.Type, appriseConfig, proxy);
     }
 }

@@ -36,12 +36,11 @@ public class DataContext : DbContext
     
     public DbSet<ArrInstance> ArrInstances { get; set; }
     
-    // New notification system entities
-    public DbSet<NotificationProvider> NotificationProviders { get; set; }
+    public DbSet<NotificationConfig> NotificationConfigs { get; set; }
     
-    public DbSet<NotifiarrConfiguration> NotifiarrConfigurations { get; set; }
+    public DbSet<NotifiarrConfig> NotifiarrConfigs { get; set; }
     
-    public DbSet<AppriseConfiguration> AppriseConfigurations { get; set; }
+    public DbSet<AppriseConfig> AppriseConfigs { get; set; }
     
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -96,16 +95,16 @@ public class DataContext : DbContext
         });
         
         // Configure new notification system relationships
-        modelBuilder.Entity<NotificationProvider>(entity =>
+        modelBuilder.Entity<NotificationConfig>(entity =>
         {
             entity.HasOne(p => p.NotifiarrConfiguration)
-                  .WithOne(c => c.Provider)
-                  .HasForeignKey<NotifiarrConfiguration>(c => c.ProviderId)
+                  .WithOne(c => c.NotificationConfig)
+                  .HasForeignKey<NotifiarrConfig>(c => c.NotificationConfigId)
                   .OnDelete(DeleteBehavior.Cascade);
                   
             entity.HasOne(p => p.AppriseConfiguration)
-                  .WithOne(c => c.Provider)
-                  .HasForeignKey<AppriseConfiguration>(c => c.ProviderId)
+                  .WithOne(c => c.NotificationConfig)
+                  .HasForeignKey<AppriseConfig>(c => c.NotificationConfigId)
                   .OnDelete(DeleteBehavior.Cascade);
                   
             entity.HasIndex(p => p.Name).IsUnique();

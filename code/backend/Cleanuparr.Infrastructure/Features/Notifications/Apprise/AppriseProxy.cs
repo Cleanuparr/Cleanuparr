@@ -16,7 +16,7 @@ public sealed class AppriseProxy : IAppriseProxy
         _httpClient = httpClientFactory.CreateClient(Constants.HttpClientWithRetryName);
     }
 
-    public async Task SendNotification(ApprisePayload payload, AppriseConfiguration config)
+    public async Task SendNotification(ApprisePayload payload, AppriseConfig config)
     {
         try
         {
@@ -26,7 +26,7 @@ public sealed class AppriseProxy : IAppriseProxy
                 NullValueHandling = NullValueHandling.Ignore
             });
 
-            var parsedUrl = config.ParsedUrl!;
+            var parsedUrl = config.Uri!;
             UriBuilder uriBuilder = new(parsedUrl);
             uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/notify/{config.Key}";
 

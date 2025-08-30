@@ -4,7 +4,7 @@ using Cleanuparr.Domain.Enums;
 
 namespace Cleanuparr.Persistence.Models.Configuration.Notification;
 
-public sealed record NotificationProvider
+public sealed record NotificationConfig
 {
     [Key]
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
@@ -35,10 +35,9 @@ public sealed record NotificationProvider
     
     public DateTime UpdatedAt { get; init; } = DateTime.UtcNow;
     
-    // Navigation properties
-    public NotifiarrConfiguration? NotifiarrConfiguration { get; init; }
+    public NotifiarrConfig? NotifiarrConfiguration { get; init; }
     
-    public AppriseConfiguration? AppriseConfiguration { get; init; }
+    public AppriseConfig? AppriseConfiguration { get; init; }
     
     [NotMapped]
     public bool IsConfigured => Type switch

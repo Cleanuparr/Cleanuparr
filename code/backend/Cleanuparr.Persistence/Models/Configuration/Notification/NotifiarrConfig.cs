@@ -5,14 +5,17 @@ using ValidationException = Cleanuparr.Domain.Exceptions.ValidationException;
 
 namespace Cleanuparr.Persistence.Models.Configuration.Notification;
 
-public sealed record NotifiarrConfiguration : IConfig
+public sealed record NotifiarrConfig : IConfig
 {
     [Key]
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     public Guid Id { get; init; } = Guid.NewGuid();
     
     [Required]
-    public Guid ProviderId { get; init; }
+    public Guid NotificationConfigId { get; init; }
+    
+    [ForeignKey(nameof(NotificationConfigId))]
+    public NotificationConfig NotificationConfig { get; init; } = null!;
     
     [Required]
     [MaxLength(255)]
@@ -21,10 +24,6 @@ public sealed record NotifiarrConfiguration : IConfig
     [Required]
     [MaxLength(50)]
     public string ChannelId { get; init; } = string.Empty;
-    
-    // Navigation property
-    [ForeignKey(nameof(ProviderId))]
-    public NotificationProvider Provider { get; init; } = null!;
     
     public bool IsValid()
     {

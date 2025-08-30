@@ -3,7 +3,7 @@ using Cleanuparr.Infrastructure.Features.Notifications.Models;
 
 namespace Cleanuparr.Infrastructure.Features.Notifications;
 
-public interface INotificationProviderV2
+public interface INotificationProvider
 {
     string Name { get; }
     
