@@ -1,9 +1,11 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Cleanuparr.Persistence.Models.Configuration;
+using ValidationException = Cleanuparr.Domain.Exceptions.ValidationException;
 
 namespace Cleanuparr.Persistence.Models.Configuration.Notification;
 
-public sealed record AppriseConfiguration
+public sealed record AppriseConfiguration : IConfig
 {
     [Key]
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
@@ -47,5 +49,28 @@ public sealed record AppriseConfiguration
     {
         return ParsedUrl != null && 
                !string.IsNullOrWhiteSpace(Key);
+    }
+    
+    public void Validate()
+    {
+        if (string.IsNullOrWhiteSpace(Url))
+        {
+            throw new ValidationException("Apprise server URL is required");
+        }
+        
+        if (ParsedUrl == null)
+        {
+            throw new ValidationException("Apprise server URL must be a valid HTTP or HTTPS URL");
+        }
+        
+        if (string.IsNullOrWhiteSpace(Key))
+        {
+            throw new ValidationException("Apprise configuration key is required");
+        }
+        
+        if (Key.Length < 2)
+        {
+            throw new ValidationException("Apprise configuration key must be at least 2 characters long");
+        }
     }
 }

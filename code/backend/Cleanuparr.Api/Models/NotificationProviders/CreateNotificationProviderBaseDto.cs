@@ -1,12 +1,8 @@
-using Cleanuparr.Domain.Enums;
+namespace Cleanuparr.Api.Models.NotificationProviders;
 
-namespace Cleanuparr.Api.Models;
-
-public sealed record UpdateNotificationProviderDto
+public abstract record CreateNotificationProviderBaseDto
 {
     public string Name { get; init; } = string.Empty;
-    
-    public NotificationProviderType Type { get; init; }
     
     public bool IsEnabled { get; init; } = true;
     
@@ -21,6 +17,4 @@ public sealed record UpdateNotificationProviderDto
     public bool OnDownloadCleaned { get; init; }
     
     public bool OnCategoryChanged { get; init; }
-    
-    public object? Configuration { get; init; }
 }
