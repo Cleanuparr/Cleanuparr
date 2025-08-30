@@ -30,7 +30,7 @@ export interface NotifiarrFormData extends BaseProviderFormData {
 }
 
 export interface AppriseFormData extends BaseProviderFormData {
-  fullUrl: string;
+  url: string;
   key: string;
   tags: string;
 }

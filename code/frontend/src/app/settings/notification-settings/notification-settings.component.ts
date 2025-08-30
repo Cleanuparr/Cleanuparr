@@ -137,8 +137,6 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
    * Open modal to edit existing provider
    */
   openEditProviderModal(provider: NotificationProviderDto): void {
-    console.log('Opening edit modal for provider:', provider);
-    
     // Close all modals first to ensure clean state
     this.closeAllModals();
     
@@ -260,7 +258,7 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
       case NotificationProviderType.Apprise:
         const appriseConfig = provider.configuration as any;
         testRequest = {
-          url: appriseConfig.url || appriseConfig.fullUrl,
+          url: appriseConfig.url,
           key: appriseConfig.key,
           tags: appriseConfig.tags || ''
         };
@@ -364,7 +362,7 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
    */
   onAppriseTest(data: AppriseFormData): void {
     const testRequest = {
-      url: data.fullUrl,
+      url: data.url,
       key: data.key,
       tags: data.tags
     };
@@ -458,7 +456,7 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
       onQueueItemDeleted: data.onQueueItemDeleted,
       onDownloadCleaned: data.onDownloadCleaned,
       onCategoryChanged: data.onCategoryChanged,
-      url: data.fullUrl,
+      url: data.url,
       key: data.key,
       tags: data.tags
     };
@@ -485,7 +483,7 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
       onQueueItemDeleted: data.onQueueItemDeleted,
       onDownloadCleaned: data.onDownloadCleaned,
       onCategoryChanged: data.onCategoryChanged,
-      url: data.fullUrl,
+      url: data.url,
       key: data.key,
       tags: data.tags
     };

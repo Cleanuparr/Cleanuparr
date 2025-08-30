@@ -66,7 +66,6 @@ export class NotificationProviderBaseComponent implements OnInit, OnChanges {
 
   protected populateForm() {
     if (this.editingProvider) {
-      console.log('Populating base form with provider:', this.editingProvider);
       this.baseForm.patchValue({
         name: this.editingProvider.name,
         enabled: this.editingProvider.isEnabled,
@@ -77,7 +76,6 @@ export class NotificationProviderBaseComponent implements OnInit, OnChanges {
         onDownloadCleaned: this.editingProvider.events?.onDownloadCleaned || false,
         onCategoryChanged: this.editingProvider.events?.onCategoryChanged || false
       });
-      console.log('Base form populated with values:', this.baseForm.value);
     }
   }
 

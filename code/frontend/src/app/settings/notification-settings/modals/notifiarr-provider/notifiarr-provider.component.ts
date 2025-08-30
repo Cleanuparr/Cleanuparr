@@ -20,7 +20,7 @@ import { NotificationProviderBaseComponent } from '../base/notification-provider
   templateUrl: './notifiarr-provider.component.html',
   styleUrls: ['./notifiarr-provider.component.scss']
 })
-export class NotifiarrProviderComponent implements OnInit, OnDestroy, OnChanges {
+export class NotifiarrProviderComponent implements OnInit, OnChanges {
   @Input() visible = false;
   @Input() editingProvider: NotificationProviderDto | null = null;
   @Input() saving = false;
@@ -50,20 +50,12 @@ export class NotifiarrProviderComponent implements OnInit, OnDestroy, OnChanges 
     }
   }
 
-  ngOnDestroy(): void {
-    // Component cleanup if needed
-  }
-
   private populateProviderFields(): void {
     if (this.editingProvider) {
-      console.log('Populating Notifiarr fields with provider:', this.editingProvider);
       const config = this.editingProvider.configuration as any;
-      console.log('Provider configuration:', config);
       
       this.apiKeyControl.setValue(config?.apiKey || '');
       this.channelIdControl.setValue(config?.channelId || '');
-      
-      console.log('Notifiarr fields populated - API Key:', this.apiKeyControl.value, 'Channel ID:', this.channelIdControl.value);
     }
   }
 

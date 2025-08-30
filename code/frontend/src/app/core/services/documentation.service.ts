@@ -94,7 +94,7 @@ export class DocumentationService {
     'notifications': {
       'notifiarr.apiKey': 'notifiarr-api-key',
       'notifiarr.channelId': 'notifiarr-channel-id',
-      'apprise.fullUrl': 'apprise-url',
+      'apprise.url': 'apprise-url',
       'apprise.key': 'apprise-key',
       'eventTriggers': 'event-triggers'
     }

@@ -21,11 +21,11 @@
         id="full-url"
         type="url" 
         pInputText 
-        [formControl]="fullUrlControl" 
+        [formControl]="urlControl" 
         placeholder="http://localhost:8000"
         class="w-full" />
-      <small *ngIf="hasFieldError(fullUrlControl, 'required')" class="p-error">Apprise server URL is required</small>
-      <small *ngIf="hasFieldError(fullUrlControl, 'pattern')" class="p-error">Please enter a valid URL (e.g., http://localhost:8000)</small>
+      <small *ngIf="hasFieldError(urlControl, 'required')" class="p-error">Apprise server URL is required</small>
+      <small *ngIf="hasFieldError(urlControl, 'pattern')" class="p-error">Please enter a valid URL (e.g., http://localhost:8000)</small>
       <small class="form-helper-text">The URL of your Apprise server where notifications will be sent.</small>
     </div>
 

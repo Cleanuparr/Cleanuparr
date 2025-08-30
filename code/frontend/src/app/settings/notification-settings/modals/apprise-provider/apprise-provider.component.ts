@@ -20,7 +20,7 @@ import { NotificationProviderBaseComponent } from '../base/notification-provider
   templateUrl: './apprise-provider.component.html',
   styleUrls: ['./apprise-provider.component.scss']
 })
-export class AppriseProviderComponent implements OnInit, OnDestroy, OnChanges {
+export class AppriseProviderComponent implements OnInit, OnChanges {
   @Input() visible = false;
   @Input() editingProvider: NotificationProviderDto | null = null;
   @Input() saving = false;
@@ -34,7 +34,7 @@ export class AppriseProviderComponent implements OnInit, OnDestroy, OnChanges {
   private readonly urlPattern = /^https?:\/\/(?:[-\w.])+(?::[0-9]+)?(?:\/.*)?$/;
 
   // Provider-specific form controls
-  fullUrlControl = new FormControl('', [Validators.required, Validators.pattern(this.urlPattern)]);
+  urlControl = new FormControl('', [Validators.required, Validators.pattern(this.urlPattern)]);
   keyControl = new FormControl('', [Validators.required, Validators.minLength(2)]);
   tagsControl = new FormControl(''); // Optional field
 
@@ -54,27 +54,18 @@ export class AppriseProviderComponent implements OnInit, OnDestroy, OnChanges {
     }
   }
 
-  ngOnDestroy(): void {
-    // Component cleanup if needed
-  }
-
   private populateProviderFields(): void {
     if (this.editingProvider) {
-      console.log('Populating Apprise fields with provider:', this.editingProvider);
       const config = this.editingProvider.configuration as any;
-      console.log('Provider configuration:', config);
       
-      // Handle both 'url' and 'fullUrl' for backwards compatibility
-      this.fullUrlControl.setValue(config?.url || config?.fullUrl || '');
+      this.urlControl.setValue(config?.url || '');
       this.keyControl.setValue(config?.key || '');
       this.tagsControl.setValue(config?.tags || '');
-      
-      console.log('Apprise fields populated - URL:', this.fullUrlControl.value, 'Key:', this.keyControl.value, 'Tags:', this.tagsControl.value);
     }
   }
 
   private resetProviderFields(): void {
-    this.fullUrlControl.setValue('');
+    this.urlControl.setValue('');
     this.keyControl.setValue('');
     this.tagsControl.setValue('');
   }
@@ -84,17 +75,17 @@ export class AppriseProviderComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   onSave(baseData: BaseProviderFormData): void {
-    if (this.fullUrlControl.valid && this.keyControl.valid) {
+    if (this.urlControl.valid && this.keyControl.valid) {
       const appriseData: AppriseFormData = {
         ...baseData,
-        fullUrl: this.fullUrlControl.value || '',
+        url: this.urlControl.value || '',
         key: this.keyControl.value || '',
         tags: this.tagsControl.value || ''
       };
       this.save.emit(appriseData);
     } else {
       // Mark provider-specific fields as touched to show validation errors
-      this.fullUrlControl.markAsTouched();
+      this.urlControl.markAsTouched();
       this.keyControl.markAsTouched();
     }
   }
@@ -104,17 +95,17 @@ export class AppriseProviderComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   onTest(baseData: BaseProviderFormData): void {
-    if (this.fullUrlControl.valid && this.keyControl.valid) {
+    if (this.urlControl.valid && this.keyControl.valid) {
       const appriseData: AppriseFormData = {
         ...baseData,
-        fullUrl: this.fullUrlControl.value || '',
+        url: this.urlControl.value || '',
         key: this.keyControl.value || '',
         tags: this.tagsControl.value || ''
       };
       this.test.emit(appriseData);
     } else {
       // Mark provider-specific fields as touched to show validation errors
-      this.fullUrlControl.markAsTouched();
+      this.urlControl.markAsTouched();
       this.keyControl.markAsTouched();
     }
   }

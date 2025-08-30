@@ -55,7 +55,7 @@ export interface NotifiarrConfiguration {
 }
 
 export interface AppriseConfiguration {
-  fullUrl: string;
+  url: string;
   key: string;
   tags: string;
 }
