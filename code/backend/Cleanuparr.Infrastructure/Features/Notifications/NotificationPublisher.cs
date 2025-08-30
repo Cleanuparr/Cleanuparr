@@ -54,8 +54,10 @@ public class NotificationPublisher : INotificationPublisher
                     await NotifyInternal(notification.Adapt<FailedImportStrikeNotification>());
                     break;
                 case StrikeType.SlowSpeed:
+                    await NotifyInternal(notification.Adapt<SlowSpeedStrikeNotification>());
+                    break;
                 case StrikeType.SlowTime:
-                    await NotifyInternal(notification.Adapt<SlowStrikeNotification>());
+                    await NotifyInternal(notification.Adapt<SlowTimeStrikeNotification>());
                     break;
             }
         }

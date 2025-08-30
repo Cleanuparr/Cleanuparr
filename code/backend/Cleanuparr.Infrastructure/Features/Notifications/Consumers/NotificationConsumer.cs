@@ -32,11 +32,15 @@ public sealed class NotificationConsumer<T> : IConsumer<T> where T : Notificatio
                         NotificationEventType.StalledStrike, 
                         ConvertToNotificationContext(stalledMessage, NotificationEventType.StalledStrike));
                     break;
-                case SlowStrikeNotification slowMessage:
-                    // Map SlowStrike to SlowSpeedStrike for now - could be enhanced to differentiate
+                case SlowSpeedStrikeNotification slowMessage:
                     await _notificationService.SendNotificationAsync(
                         NotificationEventType.SlowSpeedStrike, 
                         ConvertToNotificationContext(slowMessage, NotificationEventType.SlowSpeedStrike));
+                    break;
+                case SlowTimeStrikeNotification slowTimeMessage:
+                    await _notificationService.SendNotificationAsync(
+                        NotificationEventType.SlowTimeStrike, 
+                        ConvertToNotificationContext(slowTimeMessage, NotificationEventType.SlowTimeStrike));
                     break;
                 case QueueItemDeletedNotification queueItemDeleteMessage:
                     await _notificationService.SendNotificationAsync(
