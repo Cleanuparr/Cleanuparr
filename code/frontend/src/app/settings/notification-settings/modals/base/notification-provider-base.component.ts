@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, OnInit, inject } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, OnChanges, SimpleChanges, inject } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { DialogModule } from 'primeng/dialog';
@@ -24,7 +24,7 @@ import { NotificationProviderDto } from '../../../../shared/models/notification-
   templateUrl: './notification-provider-base.component.html',
   styleUrls: ['./notification-provider-base.component.scss']
 })
-export class NotificationProviderBaseComponent implements OnInit {
+export class NotificationProviderBaseComponent implements OnInit, OnChanges {
   @Input() visible = false;
   @Input() modalTitle = 'Configure Notification Provider';
   @Input() saving = false;
@@ -49,24 +49,49 @@ export class NotificationProviderBaseComponent implements OnInit {
   });
 
   ngOnInit() {
-    if (this.editingProvider) {
-      this.populateForm();
+    // Initialize form but don't populate yet - wait for ngOnChanges
+  }
+
+  ngOnChanges(changes: SimpleChanges) {
+    // Populate form when editingProvider input changes
+    if (changes['editingProvider']) {
+      if (this.editingProvider) {
+        this.populateForm();
+      } else {
+        // Reset form when editingProvider is cleared
+        this.resetForm();
+      }
     }
   }
 
   protected populateForm() {
     if (this.editingProvider) {
+      console.log('Populating base form with provider:', this.editingProvider);
       this.baseForm.patchValue({
         name: this.editingProvider.name,
         enabled: this.editingProvider.isEnabled,
-        onFailedImportStrike: this.editingProvider.events.onFailedImportStrike,
-        onStalledStrike: this.editingProvider.events.onStalledStrike,
-        onSlowStrike: this.editingProvider.events.onSlowStrike,
-        onQueueItemDeleted: this.editingProvider.events.onQueueItemDeleted,
-        onDownloadCleaned: this.editingProvider.events.onDownloadCleaned,
-        onCategoryChanged: this.editingProvider.events.onCategoryChanged
+        onFailedImportStrike: this.editingProvider.events?.onFailedImportStrike || false,
+        onStalledStrike: this.editingProvider.events?.onStalledStrike || false,
+        onSlowStrike: this.editingProvider.events?.onSlowStrike || false,
+        onQueueItemDeleted: this.editingProvider.events?.onQueueItemDeleted || false,
+        onDownloadCleaned: this.editingProvider.events?.onDownloadCleaned || false,
+        onCategoryChanged: this.editingProvider.events?.onCategoryChanged || false
       });
+      console.log('Base form populated with values:', this.baseForm.value);
     }
+  }
+
+  protected resetForm() {
+    this.baseForm.reset({
+      name: '',
+      enabled: true,
+      onFailedImportStrike: false,
+      onStalledStrike: false,
+      onSlowStrike: false,
+      onQueueItemDeleted: false,
+      onDownloadCleaned: false,
+      onCategoryChanged: false
+    });
   }
 
   protected hasError(fieldName: string, errorType: string): boolean {

@@ -41,7 +41,7 @@ public sealed class NotificationTestService
             var provider = _providerFactory.CreateProvider(config);
             await provider.SendNotificationAsync(testContext);
 
-            _logger.LogInformation("Test notification sent successfully via {providerName}", config.Name);
+            _logger.LogTrace("Test notification sent successfully via {providerName}", config.Name);
             return true;
         }
         catch (Exception ex)

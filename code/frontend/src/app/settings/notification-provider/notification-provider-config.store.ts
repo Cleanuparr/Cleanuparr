@@ -3,12 +3,11 @@ import { patchState, signalStore, withHooks, withMethods, withState } from '@ngr
 import { rxMethod } from '@ngrx/signals/rxjs-interop';
 import { 
   NotificationProvidersConfig, 
-  NotificationProviderDto, 
-  CreateNotificationProviderDto, 
-  UpdateNotificationProviderDto,
+  NotificationProviderDto,
   TestNotificationResult
 } from '../../shared/models/notification-provider.model';
 import { NotificationProviderService } from '../../core/services/notification-provider.service';
+import { NotificationProviderType } from '../../shared/models/enums';
 import { EMPTY, Observable, catchError, switchMap, tap, forkJoin, of } from 'rxjs';
 
 export interface NotificationProviderConfigState {
@@ -58,12 +57,12 @@ export class NotificationProviderConfigStore extends signalStore(
     ),
     
     /**
-     * Create a new notification provider
+     * Create a new notification provider (provider-specific)
      */
-    createProvider: rxMethod<CreateNotificationProviderDto>(
-      (provider$: Observable<CreateNotificationProviderDto>) => provider$.pipe(
+    createProvider: rxMethod<{ provider: any, type: NotificationProviderType }>(
+      (params$: Observable<{ provider: any, type: NotificationProviderType }>) => params$.pipe(
         tap(() => patchState(store, { saving: true, error: null })),
-        switchMap(provider => notificationService.createProvider(provider).pipe(
+        switchMap(({ provider, type }) => notificationService.createProvider(provider, type).pipe(
           tap({
             next: (newProvider) => {
               const currentConfig = store.config();
@@ -90,12 +89,12 @@ export class NotificationProviderConfigStore extends signalStore(
     ),
     
     /**
-     * Update a specific notification provider by ID
+     * Update a specific notification provider by ID (provider-specific)
      */
-    updateProvider: rxMethod<{ id: string, provider: UpdateNotificationProviderDto }>(
-      (params$: Observable<{ id: string, provider: UpdateNotificationProviderDto }>) => params$.pipe(
+    updateProvider: rxMethod<{ id: string, provider: any, type: NotificationProviderType }>(
+      (params$: Observable<{ id: string, provider: any, type: NotificationProviderType }>) => params$.pipe(
         tap(() => patchState(store, { saving: true, error: null })),
-        switchMap(({ id, provider }) => notificationService.updateProvider(id, provider).pipe(
+        switchMap(({ id, provider, type }) => notificationService.updateProvider(id, provider, type).pipe(
           tap({
             next: (updatedProvider) => {
               const currentConfig = store.config();
@@ -156,12 +155,12 @@ export class NotificationProviderConfigStore extends signalStore(
     ),
     
     /**
-     * Test a notification provider
+     * Test a notification provider (provider-specific - without ID)
      */
-    testProvider: rxMethod<{ id: string }>(
-      (params$: Observable<{ id: string }>) => params$.pipe(
+    testProvider: rxMethod<{ testRequest: any, type: NotificationProviderType }>(
+      (params$: Observable<{ testRequest: any, type: NotificationProviderType }>) => params$.pipe(
         tap(() => patchState(store, { testing: true, error: null, testResult: null })),
-        switchMap(({ id }) => notificationService.testProvider(id).pipe(
+        switchMap(({ testRequest, type }) => notificationService.testProvider(testRequest, type).pipe(
           tap({
             next: (result) => {
               patchState(store, { 
@@ -186,10 +185,10 @@ export class NotificationProviderConfigStore extends signalStore(
     ),
     
     /**
-     * Batch create multiple providers
+     * Batch create multiple providers (kept for compatibility)
      */
-    createProviders: rxMethod<CreateNotificationProviderDto[]>(
-      (providers$: Observable<CreateNotificationProviderDto[]>) => providers$.pipe(
+    createProviders: rxMethod<Array<{ provider: any, type: NotificationProviderType }>>(
+      (providers$: Observable<Array<{ provider: any, type: NotificationProviderType }>>) => providers$.pipe(
         tap(() => patchState(store, { saving: true, error: null, pendingOperations: 0 })),
         switchMap(providers => {
           if (providers.length === 0) {
@@ -200,8 +199,8 @@ export class NotificationProviderConfigStore extends signalStore(
           patchState(store, { pendingOperations: providers.length });
           
           // Create all providers in parallel
-          const createOperations = providers.map(provider => 
-            notificationService.createProvider(provider).pipe(
+          const createOperations = providers.map(({ provider, type }) => 
+            notificationService.createProvider(provider, type).pipe(
               catchError(error => {
                 console.error('Failed to create provider:', error);
                 return of(null); // Return null for failed operations
@@ -242,10 +241,10 @@ export class NotificationProviderConfigStore extends signalStore(
     ),
     
     /**
-     * Batch update multiple providers
+     * Batch update multiple providers (kept for compatibility)
      */
-    updateProviders: rxMethod<Array<{ id: string, provider: UpdateNotificationProviderDto }>>(
-      (updates$: Observable<Array<{ id: string, provider: UpdateNotificationProviderDto }>>) => updates$.pipe(
+    updateProviders: rxMethod<Array<{ id: string, provider: any, type: NotificationProviderType }>>(
+      (updates$: Observable<Array<{ id: string, provider: any, type: NotificationProviderType }>>) => updates$.pipe(
         tap(() => patchState(store, { saving: true, error: null, pendingOperations: 0 })),
         switchMap(updates => {
           if (updates.length === 0) {
@@ -256,8 +255,8 @@ export class NotificationProviderConfigStore extends signalStore(
           patchState(store, { pendingOperations: updates.length });
           
           // Update all providers in parallel
-          const updateOperations = updates.map(({ id, provider }) => 
-            notificationService.updateProvider(id, provider).pipe(
+          const updateOperations = updates.map(({ id, provider, type }) => 
+            notificationService.updateProvider(id, provider, type).pipe(
               catchError(error => {
                 console.error('Failed to update provider:', error);
                 return of(null); // Return null for failed operations

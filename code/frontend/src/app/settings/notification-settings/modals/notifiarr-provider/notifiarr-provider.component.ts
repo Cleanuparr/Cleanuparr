@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, OnInit, OnDestroy, inject } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, OnDestroy, OnChanges, SimpleChanges, inject } from '@angular/core';
 import { FormControl, Validators, ReactiveFormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { InputTextModule } from 'primeng/inputtext';
@@ -20,7 +20,7 @@ import { NotificationProviderBaseComponent } from '../base/notification-provider
   templateUrl: './notifiarr-provider.component.html',
   styleUrls: ['./notifiarr-provider.component.scss']
 })
-export class NotifiarrProviderComponent implements OnInit, OnDestroy {
+export class NotifiarrProviderComponent implements OnInit, OnDestroy, OnChanges {
   @Input() visible = false;
   @Input() editingProvider: NotificationProviderDto | null = null;
   @Input() saving = false;
@@ -35,8 +35,18 @@ export class NotifiarrProviderComponent implements OnInit, OnDestroy {
   channelIdControl = new FormControl('', [Validators.required, Validators.pattern(/^\d+$/)]);
 
   ngOnInit(): void {
-    if (this.editingProvider) {
-      this.populateProviderFields();
+    // Initialize component but don't populate yet - wait for ngOnChanges
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    // Populate provider-specific fields when editingProvider input changes
+    if (changes['editingProvider']) {
+      if (this.editingProvider) {
+        this.populateProviderFields();
+      } else {
+        // Reset fields when editingProvider is cleared
+        this.resetProviderFields();
+      }
     }
   }
 
@@ -46,10 +56,20 @@ export class NotifiarrProviderComponent implements OnInit, OnDestroy {
 
   private populateProviderFields(): void {
     if (this.editingProvider) {
+      console.log('Populating Notifiarr fields with provider:', this.editingProvider);
       const config = this.editingProvider.configuration as any;
+      console.log('Provider configuration:', config);
+      
       this.apiKeyControl.setValue(config?.apiKey || '');
       this.channelIdControl.setValue(config?.channelId || '');
+      
+      console.log('Notifiarr fields populated - API Key:', this.apiKeyControl.value, 'Channel ID:', this.channelIdControl.value);
     }
+  }
+
+  private resetProviderFields(): void {
+    this.apiKeyControl.setValue('');
+    this.channelIdControl.setValue('');
   }
 
   protected hasFieldError(control: FormControl, errorType: string): boolean {

@@ -4,9 +4,7 @@ import { Subject, takeUntil } from "rxjs";
 import { NotificationProviderConfigStore } from "../notification-provider/notification-provider-config.store";
 import { CanComponentDeactivate } from "../../core/guards";
 import { 
-  NotificationProviderDto, 
-  CreateNotificationProviderDto, 
-  UpdateNotificationProviderDto 
+  NotificationProviderDto
 } from "../../shared/models/notification-provider.model";
 import { NotificationProviderType } from "../../shared/models/enums";
 import { DocumentationService } from "../../core/services/documentation.service";
@@ -103,8 +101,7 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
   }
 
   constructor() {
-    // Load notification provider config data
-    this.notificationProviderStore.loadConfig();
+    // Store will auto-load data via onInit hook
 
     // Setup effect to react to test results
     effect(() => {
@@ -140,6 +137,11 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
    * Open modal to edit existing provider
    */
   openEditProviderModal(provider: NotificationProviderDto): void {
+    console.log('Opening edit modal for provider:', provider);
+    
+    // Close all modals first to ensure clean state
+    this.closeAllModals();
+    
     this.modalMode = 'edit';
     this.editingProvider = provider;
     
@@ -244,7 +246,34 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
    * Test notification provider
    */
   testProvider(provider: NotificationProviderDto): void {
-    this.notificationProviderStore.testProvider({ id: provider.id! });
+    // Build test request based on provider type
+    let testRequest: any;
+    
+    switch (provider.type) {
+      case NotificationProviderType.Notifiarr:
+        const notifiarrConfig = provider.configuration as any;
+        testRequest = {
+          apiKey: notifiarrConfig.apiKey,
+          channelId: notifiarrConfig.channelId
+        };
+        break;
+      case NotificationProviderType.Apprise:
+        const appriseConfig = provider.configuration as any;
+        testRequest = {
+          url: appriseConfig.url || appriseConfig.fullUrl,
+          key: appriseConfig.key,
+          tags: appriseConfig.tags || ''
+        };
+        break;
+      default:
+        this.notificationService.showError('Testing not supported for this provider type');
+        return;
+    }
+    
+    this.notificationProviderStore.testProvider({
+      testRequest,
+      type: provider.type
+    });
   }
 
   /**
@@ -308,11 +337,14 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
    * Handle Notifiarr provider test
    */
   onNotifiarrTest(data: NotifiarrFormData): void {
-    // TODO: Implement test functionality
-    this.messageService.add({
-      severity: 'info',
-      summary: 'Test',
-      detail: 'Notifiarr test functionality coming soon'
+    const testRequest = {
+      apiKey: data.apiKey,
+      channelId: data.channelId
+    };
+    
+    this.notificationProviderStore.testProvider({
+      testRequest,
+      type: NotificationProviderType.Notifiarr
     });
   }
 
@@ -331,11 +363,15 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
    * Handle Apprise provider test
    */
   onAppriseTest(data: AppriseFormData): void {
-    // TODO: Implement test functionality
-    this.messageService.add({
-      severity: 'info',
-      summary: 'Test',
-      detail: 'Apprise test functionality coming soon'
+    const testRequest = {
+      url: data.fullUrl,
+      key: data.key,
+      tags: data.tags
+    };
+    
+    this.notificationProviderStore.testProvider({
+      testRequest,
+      type: NotificationProviderType.Apprise
     });
   }
 
@@ -355,15 +391,15 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
     this.showAppriseModal = false;
     this.showProviderModal = false;
     this.editingProvider = null;
+    this.notificationProviderStore.clearTestResult();
   }
 
   /**
    * Create new Notifiarr provider
    */
   private createNotifiarrProvider(data: NotifiarrFormData): void {
-    const createDto: CreateNotificationProviderDto = {
+    const createDto = {
       name: data.name,
-      type: NotificationProviderType.Notifiarr,
       isEnabled: data.enabled,
       onFailedImportStrike: data.onFailedImportStrike,
       onStalledStrike: data.onStalledStrike,
@@ -371,13 +407,14 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
       onQueueItemDeleted: data.onQueueItemDeleted,
       onDownloadCleaned: data.onDownloadCleaned,
       onCategoryChanged: data.onCategoryChanged,
-      configuration: {
-        apiKey: data.apiKey,
-        channelId: data.channelId
-      }
+      apiKey: data.apiKey,
+      channelId: data.channelId
     };
 
-    this.notificationProviderStore.createProvider(createDto);
+    this.notificationProviderStore.createProvider({
+      provider: createDto,
+      type: NotificationProviderType.Notifiarr
+    });
     this.monitorProviderOperation('created');
   }
 
@@ -387,9 +424,8 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
   private updateNotifiarrProvider(data: NotifiarrFormData): void {
     if (!this.editingProvider) return;
 
-    const updateDto: UpdateNotificationProviderDto = {
+    const updateDto = {
       name: data.name,
-      type: this.editingProvider.type,
       isEnabled: data.enabled,
       onFailedImportStrike: data.onFailedImportStrike,
       onStalledStrike: data.onStalledStrike,
@@ -397,15 +433,14 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
       onQueueItemDeleted: data.onQueueItemDeleted,
       onDownloadCleaned: data.onDownloadCleaned,
       onCategoryChanged: data.onCategoryChanged,
-      configuration: {
-        apiKey: data.apiKey,
-        channelId: data.channelId
-      }
+      apiKey: data.apiKey,
+      channelId: data.channelId
     };
 
     this.notificationProviderStore.updateProvider({ 
       id: this.editingProvider.id, 
-      provider: updateDto
+      provider: updateDto,
+      type: NotificationProviderType.Notifiarr
     });
     this.monitorProviderOperation('updated');
   }
@@ -414,9 +449,8 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
    * Create new Apprise provider
    */
   private createAppriseProvider(data: AppriseFormData): void {
-    const createDto: CreateNotificationProviderDto = {
+    const createDto = {
       name: data.name,
-      type: NotificationProviderType.Apprise,
       isEnabled: data.enabled,
       onFailedImportStrike: data.onFailedImportStrike,
       onStalledStrike: data.onStalledStrike,
@@ -424,14 +458,15 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
       onQueueItemDeleted: data.onQueueItemDeleted,
       onDownloadCleaned: data.onDownloadCleaned,
       onCategoryChanged: data.onCategoryChanged,
-      configuration: {
-        url: data.fullUrl,
-        key: data.key,
-        tags: data.tags
-      }
+      url: data.fullUrl,
+      key: data.key,
+      tags: data.tags
     };
 
-    this.notificationProviderStore.createProvider(createDto);
+    this.notificationProviderStore.createProvider({
+      provider: createDto,
+      type: NotificationProviderType.Apprise
+    });
     this.monitorProviderOperation('created');
   }
 
@@ -441,9 +476,8 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
   private updateAppriseProvider(data: AppriseFormData): void {
     if (!this.editingProvider) return;
 
-    const updateDto: UpdateNotificationProviderDto = {
+    const updateDto = {
       name: data.name,
-      type: this.editingProvider.type,
       isEnabled: data.enabled,
       onFailedImportStrike: data.onFailedImportStrike,
       onStalledStrike: data.onStalledStrike,
@@ -451,16 +485,15 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
       onQueueItemDeleted: data.onQueueItemDeleted,
       onDownloadCleaned: data.onDownloadCleaned,
       onCategoryChanged: data.onCategoryChanged,
-      configuration: {
-        url: data.fullUrl,
-        key: data.key,
-        tags: data.tags
-      }
+      url: data.fullUrl,
+      key: data.key,
+      tags: data.tags
     };
 
     this.notificationProviderStore.updateProvider({ 
       id: this.editingProvider.id, 
-      provider: updateDto
+      provider: updateDto,
+      type: NotificationProviderType.Apprise
     });
     this.monitorProviderOperation('updated');
   }

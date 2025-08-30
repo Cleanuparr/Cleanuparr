@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, OnInit, OnDestroy, inject } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, OnDestroy, OnChanges, SimpleChanges, inject } from '@angular/core';
 import { FormControl, Validators, ReactiveFormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { InputTextModule } from 'primeng/inputtext';
@@ -20,7 +20,7 @@ import { NotificationProviderBaseComponent } from '../base/notification-provider
   templateUrl: './apprise-provider.component.html',
   styleUrls: ['./apprise-provider.component.scss']
 })
-export class AppriseProviderComponent implements OnInit, OnDestroy {
+export class AppriseProviderComponent implements OnInit, OnDestroy, OnChanges {
   @Input() visible = false;
   @Input() editingProvider: NotificationProviderDto | null = null;
   @Input() saving = false;
@@ -39,8 +39,18 @@ export class AppriseProviderComponent implements OnInit, OnDestroy {
   tagsControl = new FormControl(''); // Optional field
 
   ngOnInit(): void {
-    if (this.editingProvider) {
-      this.populateProviderFields();
+    // Initialize component but don't populate yet - wait for ngOnChanges
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    // Populate provider-specific fields when editingProvider input changes
+    if (changes['editingProvider']) {
+      if (this.editingProvider) {
+        this.populateProviderFields();
+      } else {
+        // Reset fields when editingProvider is cleared
+        this.resetProviderFields();
+      }
     }
   }
 
@@ -50,11 +60,23 @@ export class AppriseProviderComponent implements OnInit, OnDestroy {
 
   private populateProviderFields(): void {
     if (this.editingProvider) {
+      console.log('Populating Apprise fields with provider:', this.editingProvider);
       const config = this.editingProvider.configuration as any;
+      console.log('Provider configuration:', config);
+      
+      // Handle both 'url' and 'fullUrl' for backwards compatibility
       this.fullUrlControl.setValue(config?.url || config?.fullUrl || '');
       this.keyControl.setValue(config?.key || '');
       this.tagsControl.setValue(config?.tags || '');
+      
+      console.log('Apprise fields populated - URL:', this.fullUrlControl.value, 'Key:', this.keyControl.value, 'Tags:', this.tagsControl.value);
     }
+  }
+
+  private resetProviderFields(): void {
+    this.fullUrlControl.setValue('');
+    this.keyControl.setValue('');
+    this.tagsControl.setValue('');
   }
 
   protected hasFieldError(control: FormControl, errorType: string): boolean {
