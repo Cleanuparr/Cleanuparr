@@ -9,13 +9,16 @@ import {
 import { NotificationProviderService } from '../../core/services/notification-provider.service';
 import { NotificationProviderType } from '../../shared/models/enums';
 import { EMPTY, Observable, catchError, switchMap, tap, forkJoin, of } from 'rxjs';
+import { ErrorHandlerUtil } from '../../core/utils/error-handler.util';
 
 export interface NotificationProviderConfigState {
   config: NotificationProvidersConfig | null;
   loading: boolean;
   saving: boolean;
   testing: boolean;
-  error: string | null;
+  loadError: string | null;  // Only for load failures that should show "Not connected"
+  saveError: string | null;  // Only for save failures that should show toast
+  testError: string | null;  // Only for test failures that should show toast
   testResult: TestNotificationResult | null;
   pendingOperations: number;
 }
@@ -25,7 +28,9 @@ const initialState: NotificationProviderConfigState = {
   loading: false,
   saving: false,
   testing: false,
-  error: null,
+  loadError: null,
+  saveError: null,
+  testError: null,
   testResult: null,
   pendingOperations: 0
 };
@@ -40,18 +45,26 @@ export class NotificationProviderConfigStore extends signalStore(
      */
     loadConfig: rxMethod<void>(
       pipe => pipe.pipe(
-        tap(() => patchState(store, { loading: true, error: null })),
+        tap(() => patchState(store, { loading: true, loadError: null, saveError: null, testError: null })),
         switchMap(() => notificationService.getProviders().pipe(
           tap({
-            next: (config) => patchState(store, { config, loading: false }),
+            next: (config) => patchState(store, { config, loading: false, loadError: null }),
             error: (error) => {
+              const errorMessage = ErrorHandlerUtil.extractErrorMessage(error);
               patchState(store, { 
                 loading: false, 
-                error: error.message || 'Failed to load Notification Provider configuration' 
+                loadError: errorMessage  // Only load errors should trigger "Not connected" state
               });
             }
           }),
-          catchError(() => EMPTY)
+          catchError((error) => {
+            const errorMessage = ErrorHandlerUtil.extractErrorMessage(error);
+            patchState(store, { 
+              loading: false, 
+              loadError: errorMessage  // Only load errors should trigger "Not connected" state
+            });
+            return EMPTY;
+          })
         ))
       )
     ),
@@ -61,7 +74,7 @@ export class NotificationProviderConfigStore extends signalStore(
      */
     createProvider: rxMethod<{ provider: any, type: NotificationProviderType }>(
       (params$: Observable<{ provider: any, type: NotificationProviderType }>) => params$.pipe(
-        tap(() => patchState(store, { saving: true, error: null })),
+        tap(() => patchState(store, { saving: true, saveError: null })),
         switchMap(({ provider, type }) => notificationService.createProvider(provider, type).pipe(
           tap({
             next: (newProvider) => {
@@ -72,18 +85,27 @@ export class NotificationProviderConfigStore extends signalStore(
                 
                 patchState(store, { 
                   config: { providers: updatedProviders },
-                  saving: false 
+                  saving: false,
+                  saveError: null
                 });
               }
             },
             error: (error) => {
+              const errorMessage = ErrorHandlerUtil.extractErrorMessage(error);
               patchState(store, { 
                 saving: false, 
-                error: error.message || 'Failed to create Notification Provider' 
+                saveError: errorMessage  // Save errors should NOT trigger "Not connected" state
               });
             }
           }),
-          catchError(() => EMPTY)
+          catchError((error) => {
+            const errorMessage = ErrorHandlerUtil.extractErrorMessage(error);
+            patchState(store, { 
+              saving: false, 
+              saveError: errorMessage  // Save errors should NOT trigger "Not connected" state
+            });
+            return EMPTY;
+          })
         ))
       )
     ),
@@ -93,7 +115,7 @@ export class NotificationProviderConfigStore extends signalStore(
      */
     updateProvider: rxMethod<{ id: string, provider: any, type: NotificationProviderType }>(
       (params$: Observable<{ id: string, provider: any, type: NotificationProviderType }>) => params$.pipe(
-        tap(() => patchState(store, { saving: true, error: null })),
+        tap(() => patchState(store, { saving: true, saveError: null })),
         switchMap(({ id, provider, type }) => notificationService.updateProvider(id, provider, type).pipe(
           tap({
             next: (updatedProvider) => {
@@ -106,18 +128,27 @@ export class NotificationProviderConfigStore extends signalStore(
                 
                 patchState(store, { 
                   config: { providers: updatedProviders },
-                  saving: false 
+                  saving: false,
+                  saveError: null
                 });
               }
             },
             error: (error) => {
+              const errorMessage = ErrorHandlerUtil.extractErrorMessage(error);
               patchState(store, { 
                 saving: false, 
-                error: error.message || `Failed to update Notification Provider with ID ${id}` 
+                saveError: errorMessage  // Save errors should NOT trigger "Not connected" state
               });
             }
           }),
-          catchError(() => EMPTY)
+          catchError((error) => {
+            const errorMessage = ErrorHandlerUtil.extractErrorMessage(error);
+            patchState(store, { 
+              saving: false, 
+              saveError: errorMessage  // Save errors should NOT trigger "Not connected" state
+            });
+            return EMPTY;
+          })
         ))
       )
     ),
@@ -127,7 +158,7 @@ export class NotificationProviderConfigStore extends signalStore(
      */
     deleteProvider: rxMethod<string>(
       (id$: Observable<string>) => id$.pipe(
-        tap(() => patchState(store, { saving: true, error: null })),
+        tap(() => patchState(store, { saving: true, saveError: null })),
         switchMap(id => notificationService.deleteProvider(id).pipe(
           tap({
             next: () => {
@@ -138,18 +169,27 @@ export class NotificationProviderConfigStore extends signalStore(
                 
                 patchState(store, { 
                   config: { providers: updatedProviders },
-                  saving: false 
+                  saving: false,
+                  saveError: null
                 });
               }
             },
             error: (error) => {
+              const errorMessage = ErrorHandlerUtil.extractErrorMessage(error);
               patchState(store, { 
                 saving: false, 
-                error: error.message || `Failed to delete Notification Provider with ID ${id}` 
+                saveError: errorMessage  // Save errors should NOT trigger "Not connected" state
               });
             }
           }),
-          catchError(() => EMPTY)
+          catchError((error) => {
+            const errorMessage = ErrorHandlerUtil.extractErrorMessage(error);
+            patchState(store, { 
+              saving: false, 
+              saveError: errorMessage  // Save errors should NOT trigger "Not connected" state
+            });
+            return EMPTY;
+          })
         ))
       )
     ),
@@ -159,27 +199,40 @@ export class NotificationProviderConfigStore extends signalStore(
      */
     testProvider: rxMethod<{ testRequest: any, type: NotificationProviderType }>(
       (params$: Observable<{ testRequest: any, type: NotificationProviderType }>) => params$.pipe(
-        tap(() => patchState(store, { testing: true, error: null, testResult: null })),
+        tap(() => patchState(store, { testing: true, testError: null, testResult: null })),
         switchMap(({ testRequest, type }) => notificationService.testProvider(testRequest, type).pipe(
           tap({
             next: (result) => {
               patchState(store, { 
                 testing: false,
-                testResult: result
+                testResult: result,
+                testError: null
               });
             },
             error: (error) => {
+              const errorMessage = ErrorHandlerUtil.extractErrorMessage(error);
               patchState(store, { 
                 testing: false, 
-                error: error.message || 'Failed to test Notification Provider',
+                testError: errorMessage,  // Test errors should NOT trigger "Not connected" state
                 testResult: {
                   success: false,
-                  message: error.message || 'Test failed'
+                  message: errorMessage
                 }
               });
             }
           }),
-          catchError(() => EMPTY)
+          catchError((error) => {
+            const errorMessage = ErrorHandlerUtil.extractErrorMessage(error);
+            patchState(store, { 
+              testing: false, 
+              testError: errorMessage,  // Test errors should NOT trigger "Not connected" state
+              testResult: {
+                success: false,
+                message: errorMessage
+              }
+            });
+            return EMPTY;
+          })
         ))
       )
     ),
@@ -189,7 +242,7 @@ export class NotificationProviderConfigStore extends signalStore(
      */
     createProviders: rxMethod<Array<{ provider: any, type: NotificationProviderType }>>(
       (providers$: Observable<Array<{ provider: any, type: NotificationProviderType }>>) => providers$.pipe(
-        tap(() => patchState(store, { saving: true, error: null, pendingOperations: 0 })),
+        tap(() => patchState(store, { saving: true, saveError: null, pendingOperations: 0 })),
         switchMap(providers => {
           if (providers.length === 0) {
             patchState(store, { saving: false });
@@ -223,15 +276,16 @@ export class NotificationProviderConfigStore extends signalStore(
                     config: { providers: updatedProviders },
                     saving: false,
                     pendingOperations: 0,
-                    error: failedCount > 0 ? `${failedCount} provider(s) failed to create` : null
+                    saveError: failedCount > 0 ? `${failedCount} provider(s) failed to create` : null
                   });
                 }
               },
               error: (error) => {
+                const errorMessage = ErrorHandlerUtil.extractErrorMessage(error);
                 patchState(store, { 
                   saving: false,
                   pendingOperations: 0,
-                  error: error.message || 'Failed to create providers' 
+                  saveError: errorMessage
                 });
               }
             })
@@ -245,7 +299,7 @@ export class NotificationProviderConfigStore extends signalStore(
      */
     updateProviders: rxMethod<Array<{ id: string, provider: any, type: NotificationProviderType }>>(
       (updates$: Observable<Array<{ id: string, provider: any, type: NotificationProviderType }>>) => updates$.pipe(
-        tap(() => patchState(store, { saving: true, error: null, pendingOperations: 0 })),
+        tap(() => patchState(store, { saving: true, saveError: null, pendingOperations: 0 })),
         switchMap(updates => {
           if (updates.length === 0) {
             patchState(store, { saving: false });
@@ -288,15 +342,16 @@ export class NotificationProviderConfigStore extends signalStore(
                     config: { providers: updatedProviders },
                     saving: false,
                     pendingOperations: 0,
-                    error: failedCount > 0 ? `${failedCount} provider(s) failed to update` : null
+                    saveError: failedCount > 0 ? `${failedCount} provider(s) failed to update` : null
                   });
                 }
               },
               error: (error) => {
+                const errorMessage = ErrorHandlerUtil.extractErrorMessage(error);
                 patchState(store, { 
                   saving: false,
                   pendingOperations: 0,
-                  error: error.message || 'Failed to update providers' 
+                  saveError: errorMessage
                 });
               }
             })
@@ -321,7 +376,21 @@ export class NotificationProviderConfigStore extends signalStore(
      * Reset any errors and test results
      */
     resetError() {
-      patchState(store, { error: null, testResult: null });
+      patchState(store, { loadError: null, saveError: null, testError: null, testResult: null });
+    },
+    
+    /**
+     * Reset only save errors (for when user fixes validation issues)
+     */
+    resetSaveError() {
+      patchState(store, { saveError: null });
+    },
+    
+    /**
+     * Reset only test errors
+     */
+    resetTestError() {
+      patchState(store, { testError: null });
     },
     
     /**

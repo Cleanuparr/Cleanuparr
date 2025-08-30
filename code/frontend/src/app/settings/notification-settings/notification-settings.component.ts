@@ -10,6 +10,7 @@ import { NotificationProviderType } from "../../shared/models/enums";
 import { DocumentationService } from "../../core/services/documentation.service";
 import { NotifiarrFormData, AppriseFormData } from "./models/provider-modal.model";
 import { LoadingErrorStateComponent } from "../../shared/components/loading-error-state/loading-error-state.component";
+import { ErrorHandlerUtil } from "../../core/utils/error-handler.util";
 
 // New modal components
 import { ProviderTypeSelectionComponent } from "./modals/provider-type-selection/provider-type-selection.component";
@@ -83,7 +84,9 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
   // Signals from store
   notificationProviderConfig = this.notificationProviderStore.config;
   notificationProviderLoading = this.notificationProviderStore.loading;
-  notificationProviderError = this.notificationProviderStore.error;
+  notificationProviderLoadError = this.notificationProviderStore.loadError;  // Only for "Not connected" state
+  notificationProviderSaveError = this.notificationProviderStore.saveError;  // Only for toast notifications
+  notificationProviderTestError = this.notificationProviderStore.testError;  // Only for toast notifications
   notificationProviderSaving = this.notificationProviderStore.saving;
   notificationProviderTesting = this.notificationProviderStore.testing;
   testResult = this.notificationProviderStore.testResult;
@@ -103,6 +106,47 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
   constructor() {
     // Store will auto-load data via onInit hook
 
+    // Effect to handle load errors - emit to LoadingErrorStateComponent for "Not connected" display
+    effect(() => {
+      const loadErrorMessage = this.notificationProviderLoadError();
+      if (loadErrorMessage) {
+        // Emit to parent component which will show LoadingErrorStateComponent
+        this.error.emit(loadErrorMessage);
+      }
+    });
+    
+    // Effect to handle save errors - show as toast notifications for user to fix
+    effect(() => {
+      const saveErrorMessage = this.notificationProviderSaveError();
+      if (saveErrorMessage) {
+        // Use ErrorHandlerUtil to determine if this is a user-fixable error
+        const isUserFixableError = ErrorHandlerUtil.isUserFixableError(saveErrorMessage);
+        
+        if (isUserFixableError) {
+          // Show as toast for user to fix (validation errors, etc.)
+          this.notificationService.showError(saveErrorMessage);
+        } else {
+          // Show as LoadingErrorStateComponent (connection issues, etc.)
+          this.error.emit(saveErrorMessage);
+        }
+        
+        // Clear the error after handling
+        this.notificationProviderStore.resetSaveError();
+      }
+    });
+    
+    // Effect to handle test errors - show as toast notifications for user to fix
+    effect(() => {
+      const testErrorMessage = this.notificationProviderTestError();
+      if (testErrorMessage) {
+        // Test errors should always be shown as toast notifications
+        this.notificationService.showError(testErrorMessage);
+        
+        // Clear the error after handling
+        this.notificationProviderStore.resetTestError();
+      }
+    });
+
     // Setup effect to react to test results
     effect(() => {
       const result = this.testResult();
@@ -110,7 +154,8 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
         if (result.success) {
           this.notificationService.showSuccess(result.message || 'Test notification sent successfully');
         } else {
-          this.notificationService.showError(result.message || 'Test notification failed');
+          // Error handling is already done in the test error effect above
+          // This just handles the success case
         }
       }
     });
@@ -219,18 +264,19 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
       accept: () => {
         this.notificationProviderStore.deleteProvider(provider.id!);
         
-        // Monitor deletion
+        // Success/error handling is done via effects in constructor
+        // Monitor for success to show notification
         const checkDeletionStatus = () => {
           const saving = this.notificationProviderSaving();
-          const error = this.notificationProviderError();
+          const saveError = this.notificationProviderSaveError();
           
-          if (!saving) {
-            if (error) {
-              this.notificationService.showError(`Deletion failed: ${error}`);
-            } else {
-              this.notificationService.showSuccess('Provider deleted successfully');
-            }
+          if (!saving && !saveError) {
+            // Operation completed successfully
+            this.notificationService.showSuccess('Provider deleted successfully');
+          } else if (!saving && saveError) {
+            // Error handling is done in effects, this is just for cleanup
           } else {
+            // Still saving, check again
             setTimeout(checkDeletionStatus, 100);
           }
         };
@@ -502,16 +548,17 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
   private monitorProviderOperation(operation: string): void {
     const checkStatus = () => {
       const saving = this.notificationProviderSaving();
-      const error = this.notificationProviderError();
+      const saveError = this.notificationProviderSaveError();
       
-      if (!saving) {
-        if (error) {
-          this.notificationService.showError(`Operation failed: ${error}`);
-        } else {
-          this.notificationService.showSuccess(`Provider ${operation} successfully`);
-          this.closeAllModals();
-        }
+      if (!saving && !saveError) {
+        // Operation completed successfully
+        this.notificationService.showSuccess(`Provider ${operation} successfully`);
+        this.closeAllModals();
+      } else if (!saving && saveError) {
+        // Error handling is done in effects, this is just for cleanup
+        // Don't close modals on error so user can fix and retry
       } else {
+        // Still saving, check again
         setTimeout(checkStatus, 100);
       }
     };
