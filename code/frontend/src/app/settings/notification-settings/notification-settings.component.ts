@@ -1,6 +1,5 @@
 import { Component, EventEmitter, OnDestroy, Output, effect, inject, computed } from "@angular/core";
 import { CommonModule } from "@angular/common";
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from "@angular/forms";
 import { Subject, takeUntil } from "rxjs";
 import { NotificationProviderConfigStore } from "../notification-provider/notification-provider-config.store";
 import { CanComponentDeactivate } from "../../core/guards";
@@ -38,7 +37,6 @@ import { NotificationService } from "../../core/services/notification.service";
   standalone: true,
   imports: [
     CommonModule,
-    ReactiveFormsModule,
     CardModule,
     InputTextModule,
     CheckboxModule,
@@ -62,19 +60,13 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
   @Output() saved = new EventEmitter<void>();
   @Output() error = new EventEmitter<string>();
 
-  // Forms
-  providerForm: FormGroup;
-
   // Modal state
-  showProviderModal = false; // Keep old modal for now during transition
+  showProviderModal = false; // Legacy modal for unsupported types
   showTypeSelectionModal = false; // New: Provider type selection modal
   showNotifiarrModal = false; // New: Notifiarr provider modal
   showAppriseModal = false; // New: Apprise provider modal
   modalMode: 'add' | 'edit' = 'add';
   editingProvider: NotificationProviderDto | null = null;
-
-  // Notification provider type options
-  typeOptions: { label: string, value: NotificationProviderType }[] = [];
 
   get isEditing(): boolean {
     return this.modalMode === 'edit';
@@ -84,7 +76,6 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
   private destroy$ = new Subject<void>();
 
   // Services
-  private formBuilder = inject(FormBuilder);
   private notificationService = inject(NotificationService);
   private confirmationService = inject(ConfirmationService);
   private messageService = inject(MessageService);
@@ -112,43 +103,8 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
   }
 
   constructor() {
-    // Initialize provider form for modal
-    this.providerForm = this.formBuilder.group({
-      name: ['', Validators.required],
-      type: [null, Validators.required],
-      enabled: [true],
-      // Configuration fields that will be dynamically shown based on type
-      apiKey: [''],
-      channelId: [''],
-      fullUrl: [''],
-      key: [''],
-      tags: [''],
-      // Event trigger flags
-      onFailedImportStrike: [false],
-      onStalledStrike: [false],
-      onSlowStrike: [false],
-      onQueueItemDeleted: [false],
-      onDownloadCleaned: [false],
-      onCategoryChanged: [false]
-    });
-
-    // Initialize type options
-    for (const key of Object.keys(NotificationProviderType)) {
-      this.typeOptions.push({ 
-        label: this.getProviderTypeLabel(NotificationProviderType[key as keyof typeof NotificationProviderType]), 
-        value: NotificationProviderType[key as keyof typeof NotificationProviderType] 
-      });
-    }
-
     // Load notification provider config data
     this.notificationProviderStore.loadConfig();
-
-    // Setup provider type change handler
-    this.providerForm.get('type')?.valueChanges
-      .pipe(takeUntil(this.destroy$))
-      .subscribe(() => {
-        this.onProviderTypeChange();
-      });
 
     // Setup effect to react to test results
     effect(() => {
@@ -172,27 +128,6 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
   }
 
   /**
-   * Mark all controls in a form group as touched
-   */
-  private markFormGroupTouched(formGroup: FormGroup): void {
-    Object.values(formGroup.controls).forEach((control) => {
-      control.markAsTouched();
-
-      if ((control as any).controls) {
-        this.markFormGroupTouched(control as FormGroup);
-      }
-    });
-  }
-
-  /**
-   * Check if a form control has an error
-   */
-  hasError(form: FormGroup, controlName: string, errorName: string): boolean {
-    const control = form.get(controlName);
-    return control !== null && control.hasError(errorName) && control.dirty;
-  }
-
-  /**
    * Open modal to add new provider - starts with type selection
    */
   openAddProviderModal(): void {
@@ -207,38 +142,20 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
   openEditProviderModal(provider: NotificationProviderDto): void {
     this.modalMode = 'edit';
     this.editingProvider = provider;
-    this.showProviderModal = true;
     
-    // Extract configuration based on type
-    let notifiarrConfig: any = null;
-    let appriseConfig: any = null;
-    
-    if (provider.type === NotificationProviderType.Notifiarr) {
-      notifiarrConfig = provider.configuration;
-    } else if (provider.type === NotificationProviderType.Apprise) {
-      appriseConfig = provider.configuration;
+    // Open the appropriate provider-specific modal based on type
+    switch (provider.type) {
+      case NotificationProviderType.Notifiarr:
+        this.showNotifiarrModal = true;
+        break;
+      case NotificationProviderType.Apprise:
+        this.showAppriseModal = true;
+        break;
+      default:
+        // For unsupported types, show the legacy modal with info message
+        this.showProviderModal = true;
+        break;
     }
-    
-    this.providerForm.patchValue({
-      name: provider.name,
-      type: provider.type,
-      enabled: provider.isEnabled,
-      // Notifiarr fields
-      apiKey: notifiarrConfig?.apiKey || '',
-      channelId: notifiarrConfig?.channelId || '',
-      // Apprise fields
-      fullUrl: appriseConfig?.fullUrl || '',
-      key: appriseConfig?.key || '',
-      tags: appriseConfig?.tags || '',
-      // Event flags
-      onFailedImportStrike: provider.events.onFailedImportStrike,
-      onStalledStrike: provider.events.onStalledStrike,
-      onSlowStrike: provider.events.onSlowStrike,
-      onQueueItemDeleted: provider.events.onQueueItemDeleted,
-      onDownloadCleaned: provider.events.onDownloadCleaned,
-      onCategoryChanged: provider.events.onCategoryChanged
-    });
-    this.showProviderModal = true;
   }
 
   /**
@@ -247,7 +164,6 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
   closeProviderModal(): void {
     this.showProviderModal = false;
     this.editingProvider = null;
-    this.providerForm.reset();
     this.notificationProviderStore.clearTestResult();
   }
 
@@ -285,104 +201,10 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
         this.showAppriseModal = true;
         break;
       default:
-        // For unsupported types, fall back to the old modal
-        this.providerForm.reset();
-        this.providerForm.patchValue({ 
-          enabled: true,
-          type: type
-        });
+        // For unsupported types, show the legacy modal with info message
         this.showProviderModal = true;
         break;
     }
-  }
-
-  /**
-   * Save provider (add or edit)
-   */
-  saveProvider(): void {
-    this.markFormGroupTouched(this.providerForm);
-
-    if (this.providerForm.invalid) {
-      this.notificationService.showError('Please fix the validation errors before saving');
-      return;
-    }
-
-    const formValue = this.providerForm.value;
-
-    if (this.modalMode === 'add') {
-      const providerData: CreateNotificationProviderDto = {
-        name: formValue.name,
-        type: formValue.type,
-        isEnabled: formValue.enabled,
-        configuration: formValue.type === NotificationProviderType.Notifiarr ? {
-          apiKey: formValue.apiKey,
-          channelId: formValue.channelId
-        } : formValue.type === NotificationProviderType.Apprise ? {
-          fullUrl: formValue.fullUrl,
-          key: formValue.key,
-          tags: formValue.tags
-        } : {},
-        onFailedImportStrike: formValue.onFailedImportStrike,
-        onStalledStrike: formValue.onStalledStrike,
-        onSlowStrike: formValue.onSlowStrike,
-        onQueueItemDeleted: formValue.onQueueItemDeleted,
-        onDownloadCleaned: formValue.onDownloadCleaned,
-        onCategoryChanged: formValue.onCategoryChanged
-      };
-      
-      this.notificationProviderStore.createProvider(providerData);
-    } else if (this.editingProvider) {
-      const providerData: UpdateNotificationProviderDto = {
-        name: formValue.name,
-        type: formValue.type,
-        isEnabled: formValue.enabled,
-        configuration: formValue.type === NotificationProviderType.Notifiarr ? {
-          apiKey: formValue.apiKey,
-          channelId: formValue.channelId
-        } : formValue.type === NotificationProviderType.Apprise ? {
-          fullUrl: formValue.fullUrl,
-          key: formValue.key,
-          tags: formValue.tags
-        } : {},
-        onFailedImportStrike: formValue.onFailedImportStrike,
-        onStalledStrike: formValue.onStalledStrike,
-        onSlowStrike: formValue.onSlowStrike,
-        onQueueItemDeleted: formValue.onQueueItemDeleted,
-        onDownloadCleaned: formValue.onDownloadCleaned,
-        onCategoryChanged: formValue.onCategoryChanged
-      };
-      
-      this.notificationProviderStore.updateProvider({ 
-        id: this.editingProvider.id!, 
-        provider: providerData
-      });
-    }
-
-    this.monitorProviderSaving();
-  }
-
-  /**
-   * Monitor provider saving completion
-   */
-  private monitorProviderSaving(): void {
-    const checkSavingStatus = () => {
-      const saving = this.notificationProviderSaving();
-      const error = this.notificationProviderError();
-      
-      if (!saving) {
-        if (error) {
-          this.notificationService.showError(`Operation failed: ${error}`);
-        } else {
-          const action = this.modalMode === 'add' ? 'created' : 'updated';
-          this.notificationService.showSuccess(`Provider ${action} successfully`);
-          this.closeProviderModal();
-        }
-      } else {
-        setTimeout(checkSavingStatus, 100);
-      }
-    };
-    
-    setTimeout(checkSavingStatus, 100);
   }
 
   /**
@@ -439,79 +261,6 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
    */
   get modalTitle(): string {
     return this.modalMode === 'add' ? 'Add Notification Provider' : 'Edit Notification Provider';
-  }
-
-  /**
-   * Test current provider (for modal test button)
-   */
-  testCurrentProvider(): void {
-    if (this.editingProvider) {
-      this.testProvider(this.editingProvider);
-    }
-  }
-
-  /**
-   * Handle provider type changes to update form validation and visibility
-   */
-  onTypeChange(event: any): void {
-    const type = event.value;
-    
-    // Clear the form except for basic fields when type changes
-    const currentValues = this.providerForm.value;
-    this.providerForm.reset();
-    this.providerForm.patchValue({
-      enabled: currentValues.enabled,
-      name: currentValues.name,
-      type: type
-    });
-  }
-
-  /**
-   * Handle provider type changes to update form validation and visibility
-   */
-  onProviderTypeChange(): void {
-    const providerType = this.providerForm.get('type')?.value;
-    
-    // Reset provider-specific fields
-    this.providerForm.patchValue({
-      apiKey: '',
-      channelId: '',
-      fullUrl: '',
-      key: '',
-      tags: ''
-    });
-
-    // Set required validators based on type
-    const apiKeyControl = this.providerForm.get('apiKey');
-    const fullUrlControl = this.providerForm.get('fullUrl');
-    
-    if (apiKeyControl && fullUrlControl) {
-      apiKeyControl.clearValidators();
-      fullUrlControl.clearValidators();
-      
-      if (providerType === NotificationProviderType.Notifiarr) {
-        apiKeyControl.setValidators([Validators.required]);
-      } else if (providerType === NotificationProviderType.Apprise) {
-        fullUrlControl.setValidators([Validators.required]);
-      }
-      
-      apiKeyControl.updateValueAndValidity();
-      fullUrlControl.updateValueAndValidity();
-    }
-  }
-
-  /**
-   * Check if Notifiarr fields should be shown
-   */
-  isNotifiarrType(): boolean {
-    return this.providerForm.get('type')?.value === NotificationProviderType.Notifiarr;
-  }
-
-  /**
-   * Check if Apprise fields should be shown
-   */
-  isAppriseType(): boolean {
-    return this.providerForm.get('type')?.value === NotificationProviderType.Apprise;
   }
 
   /**
@@ -629,7 +378,7 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
     };
 
     this.notificationProviderStore.createProvider(createDto);
-    this.closeAllModals();
+    this.monitorProviderOperation('created');
   }
 
   /**
@@ -658,7 +407,7 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
       id: this.editingProvider.id, 
       provider: updateDto
     });
-    this.closeAllModals();
+    this.monitorProviderOperation('updated');
   }
 
   /**
@@ -683,7 +432,7 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
     };
 
     this.notificationProviderStore.createProvider(createDto);
-    this.closeAllModals();
+    this.monitorProviderOperation('created');
   }
 
   /**
@@ -713,6 +462,29 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
       id: this.editingProvider.id, 
       provider: updateDto
     });
-    this.closeAllModals();
+    this.monitorProviderOperation('updated');
+  }
+
+  /**
+   * Monitor provider operation completion and close modals
+   */
+  private monitorProviderOperation(operation: string): void {
+    const checkStatus = () => {
+      const saving = this.notificationProviderSaving();
+      const error = this.notificationProviderError();
+      
+      if (!saving) {
+        if (error) {
+          this.notificationService.showError(`Operation failed: ${error}`);
+        } else {
+          this.notificationService.showSuccess(`Provider ${operation} successfully`);
+          this.closeAllModals();
+        }
+      } else {
+        setTimeout(checkStatus, 100);
+      }
+    };
+    
+    setTimeout(checkStatus, 100);
   }
 } 

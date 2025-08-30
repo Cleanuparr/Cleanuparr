@@ -1,13 +1,11 @@
 import { Component, Input, Output, EventEmitter, OnInit, OnDestroy, inject } from '@angular/core';
-import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
+import { FormControl, Validators, ReactiveFormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
-import { DialogModule } from 'primeng/dialog';
-import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
-import { CheckboxModule } from 'primeng/checkbox';
 import { TooltipModule } from 'primeng/tooltip';
-import { NotifiarrFormData, ProviderModalConfig } from '../../models/provider-modal.model';
+import { NotifiarrFormData, BaseProviderFormData } from '../../models/provider-modal.model';
 import { NotificationProviderDto } from '../../../../shared/models/notification-provider.model';
+import { NotificationProviderBaseComponent } from '../base/notification-provider-base.component';
 
 @Component({
   selector: 'app-notifiarr-provider',
@@ -15,11 +13,9 @@ import { NotificationProviderDto } from '../../../../shared/models/notification-
   imports: [
     CommonModule,
     ReactiveFormsModule,
-    DialogModule,
-    ButtonModule,
     InputTextModule,
-    CheckboxModule,
-    TooltipModule
+    TooltipModule,
+    NotificationProviderBaseComponent
   ],
   templateUrl: './notifiarr-provider.component.html',
   styleUrls: ['./notifiarr-provider.component.scss']
@@ -34,29 +30,13 @@ export class NotifiarrProviderComponent implements OnInit, OnDestroy {
   @Output() cancel = new EventEmitter<void>();
   @Output() test = new EventEmitter<NotifiarrFormData>();
 
-  protected readonly formBuilder = inject(FormBuilder);
-
-  providerForm: FormGroup = this.formBuilder.group({
-    // Base fields
-    name: ['', [Validators.required, Validators.minLength(2)]],
-    enabled: [true],
-    
-    // Event fields
-    onFailedImportStrike: [false],
-    onStalledStrike: [false],
-    onSlowStrike: [false],
-    onQueueItemDeleted: [false],
-    onDownloadCleaned: [false],
-    onCategoryChanged: [false],
-    
-    // Notifiarr-specific fields
-    apiKey: ['', [Validators.required, Validators.minLength(10)]],
-    channelId: ['', [Validators.required, Validators.pattern(/^\d+$/)]]
-  });
+  // Provider-specific form controls
+  apiKeyControl = new FormControl('', [Validators.required, Validators.minLength(10)]);
+  channelIdControl = new FormControl('', [Validators.required, Validators.pattern(/^\d+$/)]);
 
   ngOnInit(): void {
     if (this.editingProvider) {
-      this.populateForm();
+      this.populateProviderFields();
     }
   }
 
@@ -64,50 +44,30 @@ export class NotifiarrProviderComponent implements OnInit, OnDestroy {
     // Component cleanup if needed
   }
 
-  private populateForm(): void {
+  private populateProviderFields(): void {
     if (this.editingProvider) {
       const config = this.editingProvider.configuration as any;
-      this.providerForm.patchValue({
-        name: this.editingProvider.name,
-        enabled: this.editingProvider.isEnabled,
-        onFailedImportStrike: this.editingProvider.events.onFailedImportStrike,
-        onStalledStrike: this.editingProvider.events.onStalledStrike,
-        onSlowStrike: this.editingProvider.events.onSlowStrike,
-        onQueueItemDeleted: this.editingProvider.events.onQueueItemDeleted,
-        onDownloadCleaned: this.editingProvider.events.onDownloadCleaned,
-        onCategoryChanged: this.editingProvider.events.onCategoryChanged,
-        apiKey: config?.apiKey || '',
-        channelId: config?.channelId || ''
-      });
+      this.apiKeyControl.setValue(config?.apiKey || '');
+      this.channelIdControl.setValue(config?.channelId || '');
     }
   }
 
-  protected hasError(fieldName: string, errorType: string): boolean {
-    const field = this.providerForm.get(fieldName);
-    return !!(field && field.errors?.[errorType] && (field.dirty || field.touched));
+  protected hasFieldError(control: FormControl, errorType: string): boolean {
+    return !!(control && control.errors?.[errorType] && (control.dirty || control.touched));
   }
 
-  onSave(): void {
-    if (this.providerForm.valid) {
-      const formValue = this.providerForm.value;
+  onSave(baseData: BaseProviderFormData): void {
+    if (this.apiKeyControl.valid && this.channelIdControl.valid) {
       const notifiarrData: NotifiarrFormData = {
-        name: formValue.name,
-        enabled: formValue.enabled,
-        onFailedImportStrike: formValue.onFailedImportStrike,
-        onStalledStrike: formValue.onStalledStrike,
-        onSlowStrike: formValue.onSlowStrike,
-        onQueueItemDeleted: formValue.onQueueItemDeleted,
-        onDownloadCleaned: formValue.onDownloadCleaned,
-        onCategoryChanged: formValue.onCategoryChanged,
-        apiKey: formValue.apiKey,
-        channelId: formValue.channelId
+        ...baseData,
+        apiKey: this.apiKeyControl.value || '',
+        channelId: this.channelIdControl.value || ''
       };
       this.save.emit(notifiarrData);
     } else {
-      // Mark all fields as touched to show validation errors
-      Object.keys(this.providerForm.controls).forEach(key => {
-        this.providerForm.get(key)?.markAsTouched();
-      });
+      // Mark provider-specific fields as touched to show validation errors
+      this.apiKeyControl.markAsTouched();
+      this.channelIdControl.markAsTouched();
     }
   }
 
@@ -115,27 +75,18 @@ export class NotifiarrProviderComponent implements OnInit, OnDestroy {
     this.cancel.emit();
   }
 
-  onTest(): void {
-    if (this.providerForm.valid) {
-      const formValue = this.providerForm.value;
+  onTest(baseData: BaseProviderFormData): void {
+    if (this.apiKeyControl.valid && this.channelIdControl.valid) {
       const notifiarrData: NotifiarrFormData = {
-        name: formValue.name,
-        enabled: formValue.enabled,
-        onFailedImportStrike: formValue.onFailedImportStrike,
-        onStalledStrike: formValue.onStalledStrike,
-        onSlowStrike: formValue.onSlowStrike,
-        onQueueItemDeleted: formValue.onQueueItemDeleted,
-        onDownloadCleaned: formValue.onDownloadCleaned,
-        onCategoryChanged: formValue.onCategoryChanged,
-        apiKey: formValue.apiKey,
-        channelId: formValue.channelId
+        ...baseData,
+        apiKey: this.apiKeyControl.value || '',
+        channelId: this.channelIdControl.value || ''
       };
       this.test.emit(notifiarrData);
     } else {
-      // Mark all fields as touched to show validation errors
-      Object.keys(this.providerForm.controls).forEach(key => {
-        this.providerForm.get(key)?.markAsTouched();
-      });
+      // Mark provider-specific fields as touched to show validation errors
+      this.apiKeyControl.markAsTouched();
+      this.channelIdControl.markAsTouched();
     }
   }
 }
