@@ -381,72 +381,6 @@ public class ConfigurationController : ControllerBase
         }
     }
 
-    public class UpdateNotificationConfigDto
-    {
-        public NotifiarrConfig? Notifiarr { get; set; }
-        public AppriseConfig? Apprise { get; set; }
-    }
-
-    [HttpPut("notifications")]
-    public async Task<IActionResult> UpdateNotificationsConfig([FromBody] UpdateNotificationConfigDto newConfig)
-    {
-        await DataContext.Lock.WaitAsync();
-        try
-        {
-            // Update Notifiarr config if provided
-            if (newConfig.Notifiarr != null)
-            {
-                var existingNotifiarr = await _dataContext.NotifiarrConfigs.FirstOrDefaultAsync();
-                if (existingNotifiarr != null)
-                {
-                    // Apply updates from DTO, excluding the ID property to avoid EF key modification error
-                    var config = new TypeAdapterConfig();
-                    config.NewConfig<NotifiarrConfig, NotifiarrConfig>()
-                        .Ignore(dest => dest.Id);
-                    
-                    newConfig.Notifiarr.Adapt(existingNotifiarr, config);
-                }
-                else
-                {
-                    _dataContext.NotifiarrConfigs.Add(newConfig.Notifiarr);
-                }
-            }
-
-            // Update Apprise config if provided
-            if (newConfig.Apprise != null)
-            {
-                var existingApprise = await _dataContext.AppriseConfigs.FirstOrDefaultAsync();
-                if (existingApprise != null)
-                {
-                    // Apply updates from DTO, excluding the ID property to avoid EF key modification error
-                    var config = new TypeAdapterConfig();
-                    config.NewConfig<AppriseConfig, AppriseConfig>()
-                        .Ignore(dest => dest.Id);
-                    
-                    newConfig.Apprise.Adapt(existingApprise, config);
-                }
-                else
-                {
-                    _dataContext.AppriseConfigs.Add(newConfig.Apprise);
-                }
-            }
-
-            // Persist the configuration
-            await _dataContext.SaveChangesAsync();
-
-            return Ok(new { Message = "Notifications configuration updated successfully" });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to save Notifications configuration");
-            throw;
-        }
-        finally
-        {
-            DataContext.Lock.Release();
-        }
-    }
-
     // New Notification Providers API following download client pattern
     [HttpGet("notification_providers")]
     public async Task<IActionResult> GetNotificationProviders()
@@ -493,7 +427,6 @@ public class ConfigurationController : ControllerBase
         }
     }
     
-    // Provider-specific CREATE endpoints
     [HttpPost("notification_providers/notifiarr")]
     public async Task<IActionResult> CreateNotifiarrProvider([FromBody] CreateNotifiarrProviderDto newProvider)
     {
@@ -538,11 +471,26 @@ public class ConfigurationController : ControllerBase
             // Clear cache to ensure fresh data on next request
             _notificationConfigurationService.InvalidateCache();
 
-            return CreatedAtAction(nameof(GetNotificationProviders), new { id = provider.Id }, provider);
-        }
-        catch (ValidationException ex)
-        {
-            return BadRequest(ex.Message);
+            // Return the provider in DTO format to match frontend expectations
+            var providerDto = new NotificationProviderDto
+            {
+                Id = provider.Id,
+                Name = provider.Name,
+                Type = provider.Type,
+                IsEnabled = provider.IsEnabled,
+                Events = new NotificationEventFlags
+                {
+                    OnFailedImportStrike = provider.OnFailedImportStrike,
+                    OnStalledStrike = provider.OnStalledStrike,
+                    OnSlowStrike = provider.OnSlowStrike,
+                    OnQueueItemDeleted = provider.OnQueueItemDeleted,
+                    OnDownloadCleaned = provider.OnDownloadCleaned,
+                    OnCategoryChanged = provider.OnCategoryChanged
+                },
+                Configuration = provider.NotifiarrConfiguration ?? new object()
+            };
+
+            return CreatedAtAction(nameof(GetNotificationProviders), new { id = provider.Id }, providerDto);
         }
         catch (Exception ex)
         {
@@ -600,7 +548,26 @@ public class ConfigurationController : ControllerBase
             // Clear cache to ensure fresh data on next request
             _notificationConfigurationService.InvalidateCache();
 
-            return CreatedAtAction(nameof(GetNotificationProviders), new { id = provider.Id }, provider);
+            // Return the provider in DTO format to match frontend expectations
+            var providerDto = new NotificationProviderDto
+            {
+                Id = provider.Id,
+                Name = provider.Name,
+                Type = provider.Type,
+                IsEnabled = provider.IsEnabled,
+                Events = new NotificationEventFlags
+                {
+                    OnFailedImportStrike = provider.OnFailedImportStrike,
+                    OnStalledStrike = provider.OnStalledStrike,
+                    OnSlowStrike = provider.OnSlowStrike,
+                    OnQueueItemDeleted = provider.OnQueueItemDeleted,
+                    OnDownloadCleaned = provider.OnDownloadCleaned,
+                    OnCategoryChanged = provider.OnCategoryChanged
+                },
+                Configuration = provider.AppriseConfiguration ?? new object()
+            };
+
+            return CreatedAtAction(nameof(GetNotificationProviders), new { id = provider.Id }, providerDto);
         }
         catch (ValidationException ex)
         {
@@ -681,7 +648,26 @@ public class ConfigurationController : ControllerBase
             // Clear cache to ensure fresh data on next request
             _notificationConfigurationService.InvalidateCache();
 
-            return Ok(newProvider);
+            // Return the provider in DTO format to match frontend expectations
+            var providerDto = new NotificationProviderDto
+            {
+                Id = newProvider.Id,
+                Name = newProvider.Name,
+                Type = newProvider.Type,
+                IsEnabled = newProvider.IsEnabled,
+                Events = new NotificationEventFlags
+                {
+                    OnFailedImportStrike = newProvider.OnFailedImportStrike,
+                    OnStalledStrike = newProvider.OnStalledStrike,
+                    OnSlowStrike = newProvider.OnSlowStrike,
+                    OnQueueItemDeleted = newProvider.OnQueueItemDeleted,
+                    OnDownloadCleaned = newProvider.OnDownloadCleaned,
+                    OnCategoryChanged = newProvider.OnCategoryChanged
+                },
+                Configuration = newProvider.NotifiarrConfiguration ?? new object()
+            };
+
+            return Ok(providerDto);
         }
         catch (ValidationException ex)
         {
@@ -762,7 +748,26 @@ public class ConfigurationController : ControllerBase
             // Clear cache to ensure fresh data on next request
             _notificationConfigurationService.InvalidateCache();
 
-            return Ok(newProvider);
+            // Return the provider in DTO format to match frontend expectations
+            var providerDto = new NotificationProviderDto
+            {
+                Id = newProvider.Id,
+                Name = newProvider.Name,
+                Type = newProvider.Type,
+                IsEnabled = newProvider.IsEnabled,
+                Events = new NotificationEventFlags
+                {
+                    OnFailedImportStrike = newProvider.OnFailedImportStrike,
+                    OnStalledStrike = newProvider.OnStalledStrike,
+                    OnSlowStrike = newProvider.OnSlowStrike,
+                    OnQueueItemDeleted = newProvider.OnQueueItemDeleted,
+                    OnDownloadCleaned = newProvider.OnDownloadCleaned,
+                    OnCategoryChanged = newProvider.OnCategoryChanged
+                },
+                Configuration = newProvider.AppriseConfiguration ?? new object()
+            };
+
+            return Ok(providerDto);
         }
         catch (ValidationException ex)
         {
@@ -869,13 +874,6 @@ public class ConfigurationController : ControllerBase
                 });
             }
         }
-        catch (ValidationException ex)
-        {
-            return BadRequest(new { 
-                Message = ex.Message, 
-                Success = false
-            });
-        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to test Notifiarr provider");
@@ -936,13 +934,6 @@ public class ConfigurationController : ControllerBase
                     Success = false
                 });
             }
-        }
-        catch (ValidationException ex)
-        {
-            return BadRequest(new { 
-                Message = ex.Message, 
-                Success = false
-            });
         }
         catch (Exception ex)
         {
