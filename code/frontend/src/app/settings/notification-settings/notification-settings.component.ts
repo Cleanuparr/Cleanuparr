@@ -217,8 +217,6 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
    */
   onProviderTypeSelected(type: NotificationProviderType): void {
     this.showTypeSelectionModal = false;
-    // TODO: Open provider-specific modal based on type
-    // For now, fall back to the old modal (will be replaced in Phase 2)
     this.openProviderSpecificModal(type);
   }
 

@@ -25,14 +25,17 @@
   transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
   position: relative;
   overflow: hidden;
+  /* Hint to the browser that we'll be animating transform - improves compositing performance */
+  will-change: transform;
 
   /* subtle soft elevation */
   box-shadow: 0 2px 8px rgba(16,24,40,0.04);
 
   &:hover {
-  transform: translateY(-6px);
-  box-shadow: 0 12px 40px rgba(16,24,40,0.14), 0 0 30px rgba(0,172,255,0.18);
-  border-color: rgba(0,172,255,0.18);
+    transform: translateY(-6px);
+    /* Reduce shadow complexity to lower paint cost while keeping visual depth */
+    box-shadow: 0 10px 28px rgba(16,24,40,0.10), 0 0 18px rgba(0,172,255,0.14);
+    border-color: rgba(0,172,255,0.16);
   }
 
   /* enabled accent stripe */
@@ -54,7 +57,8 @@
 
   /* neon glow when enabled */
   &.enabled {
-    box-shadow: 0 12px 40px rgba(6,20,46,0.18), 0 0 36px rgba(0,172,255,0.22);
+    /* Slightly lighter neon glow to reduce continuous paint cost when multiple items are enabled */
+    box-shadow: 0 10px 30px rgba(6,20,46,0.12), 0 0 24px rgba(0,172,255,0.16);
     transform: translateY(-2px);
   }
 
