@@ -49,7 +49,7 @@ import { NotificationService } from "../../core/services/notification.service";
     LoadingErrorStateComponent,
     ProviderTypeSelectionComponent,
     NotifiarrProviderComponent,
-    AppriseProviderComponent
+    AppriseProviderComponent,
   ],
   providers: [NotificationProviderConfigStore, ConfirmationService, MessageService],
   templateUrl: "./notification-settings.component.html",
@@ -84,15 +84,30 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
   // Signals from store
   notificationProviderConfig = this.notificationProviderStore.config;
   notificationProviderLoading = this.notificationProviderStore.loading;
-  notificationProviderLoadError = this.notificationProviderStore.loadError;  // Only for "Not connected" state
-  notificationProviderSaveError = this.notificationProviderStore.saveError;  // Only for toast notifications
-  notificationProviderTestError = this.notificationProviderStore.testError;  // Only for toast notifications
+  notificationProviderLoadError = this.notificationProviderStore.loadError; // Only for "Not connected" state
+  notificationProviderSaveError = this.notificationProviderStore.saveError; // Only for toast notifications
+  notificationProviderTestError = this.notificationProviderStore.testError; // Only for toast notifications
   notificationProviderSaving = this.notificationProviderStore.saving;
   notificationProviderTesting = this.notificationProviderStore.testing;
   testResult = this.notificationProviderStore.testResult;
 
   // Computed signals
-  providers = computed(() => this.notificationProviderConfig()?.providers || []);
+  providers = computed(() => {
+    const cfg = this.notificationProviderConfig();
+    const arr = cfg?.providers ? [...cfg.providers] : [];
+    return arr.sort((a, b) => {
+      // Order by type first (stable, ascending)
+      if (a.type !== b.type) {
+        return String(a.type ?? "").localeCompare(String(b.type ?? ""));
+      }
+
+      // Then by name (case-insensitive)
+      const an = (a.name || "").toLowerCase();
+      const bn = (b.name || "").toLowerCase();
+      
+      return an.localeCompare(bn);
+    });
+  });
   saving = computed(() => this.notificationProviderSaving());
   testing = computed(() => this.notificationProviderTesting());
 
@@ -114,14 +129,14 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
         this.error.emit(loadErrorMessage);
       }
     });
-    
+
     // Effect to handle save errors - show as toast notifications for user to fix
     effect(() => {
       const saveErrorMessage = this.notificationProviderSaveError();
       if (saveErrorMessage) {
         // Use ErrorHandlerUtil to determine if this is a user-fixable error
         const isUserFixableError = ErrorHandlerUtil.isUserFixableError(saveErrorMessage);
-        
+
         if (isUserFixableError) {
           // Show as toast for user to fix (validation errors, etc.)
           this.notificationService.showError(saveErrorMessage);
@@ -129,19 +144,19 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
           // Show as LoadingErrorStateComponent (connection issues, etc.)
           this.error.emit(saveErrorMessage);
         }
-        
+
         // Clear the error after handling
         this.notificationProviderStore.resetSaveError();
       }
     });
-    
+
     // Effect to handle test errors - show as toast notifications for user to fix
     effect(() => {
       const testErrorMessage = this.notificationProviderTestError();
       if (testErrorMessage) {
         // Test errors should always be shown as toast notifications
         this.notificationService.showError(testErrorMessage);
-        
+
         // Clear the error after handling
         this.notificationProviderStore.resetTestError();
       }
@@ -152,7 +167,7 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
       const result = this.testResult();
       if (result) {
         if (result.success) {
-          this.notificationService.showSuccess(result.message || 'Test notification sent successfully');
+          this.notificationService.showSuccess(result.message || "Test notification sent successfully");
         } else {
           // Error handling is already done in the test error effect above
           // This just handles the success case
@@ -173,7 +188,7 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
    * Open modal to add new provider - starts with type selection
    */
   openAddProviderModal(): void {
-    this.modalMode = 'add';
+    this.modalMode = "add";
     this.editingProvider = null;
     this.showTypeSelectionModal = true; // New: Show type selection first
   }
@@ -184,10 +199,10 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
   openEditProviderModal(provider: NotificationProviderDto): void {
     // Close all modals first to ensure clean state
     this.closeAllModals();
-    
-    this.modalMode = 'edit';
+
+    this.modalMode = "edit";
     this.editingProvider = provider;
-    
+
     // Open the appropriate provider-specific modal based on type
     switch (provider.type) {
       case NotificationProviderType.Notifiarr:
@@ -233,8 +248,8 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
   private openProviderSpecificModal(type: NotificationProviderType): void {
     // Reset editing state for new provider
     this.editingProvider = null;
-    this.modalMode = 'add';
-    
+    this.modalMode = "add";
+
     // Open the appropriate provider-specific modal
     switch (type) {
       case NotificationProviderType.Notifiarr:
@@ -256,21 +271,21 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
   deleteProvider(provider: NotificationProviderDto): void {
     this.confirmationService.confirm({
       message: `Are you sure you want to delete the provider "${provider.name}"?`,
-      header: 'Confirm Deletion',
-      icon: 'pi pi-exclamation-triangle',
-      acceptButtonStyleClass: 'p-button-danger',
+      header: "Confirm Deletion",
+      icon: "pi pi-exclamation-triangle",
+      acceptButtonStyleClass: "p-button-danger",
       accept: () => {
         this.notificationProviderStore.deleteProvider(provider.id!);
-        
+
         // Success/error handling is done via effects in constructor
         // Monitor for success to show notification
         const checkDeletionStatus = () => {
           const saving = this.notificationProviderSaving();
           const saveError = this.notificationProviderSaveError();
-          
+
           if (!saving && !saveError) {
             // Operation completed successfully
-            this.notificationService.showSuccess('Provider deleted successfully');
+            this.notificationService.showSuccess("Provider deleted successfully");
           } else if (!saving && saveError) {
             // Error handling is done in effects, this is just for cleanup
           } else {
@@ -278,9 +293,9 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
             setTimeout(checkDeletionStatus, 100);
           }
         };
-        
+
         setTimeout(checkDeletionStatus, 100);
-      }
+      },
     });
   }
 
@@ -290,13 +305,13 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
   testProvider(provider: NotificationProviderDto): void {
     // Build test request based on provider type
     let testRequest: any;
-    
+
     switch (provider.type) {
       case NotificationProviderType.Notifiarr:
         const notifiarrConfig = provider.configuration as any;
         testRequest = {
           apiKey: notifiarrConfig.apiKey,
-          channelId: notifiarrConfig.channelId
+          channelId: notifiarrConfig.channelId,
         };
         break;
       case NotificationProviderType.Apprise:
@@ -304,17 +319,17 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
         testRequest = {
           url: appriseConfig.url,
           key: appriseConfig.key,
-          tags: appriseConfig.tags || ''
+          tags: appriseConfig.tags || "",
         };
         break;
       default:
-        this.notificationService.showError('Testing not supported for this provider type');
+        this.notificationService.showError("Testing not supported for this provider type");
         return;
     }
-    
+
     this.notificationProviderStore.testProvider({
       testRequest,
-      type: provider.type
+      type: provider.type,
     });
   }
 
@@ -331,7 +346,7 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
    * Get modal title based on mode
    */
   get modalTitle(): string {
-    return this.modalMode === 'add' ? 'Add Notification Provider' : 'Edit Notification Provider';
+    return this.modalMode === "add" ? "Add Notification Provider" : "Edit Notification Provider";
   }
 
   /**
@@ -340,11 +355,11 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
   getProviderTypeLabel(type: NotificationProviderType): string {
     switch (type) {
       case NotificationProviderType.Notifiarr:
-        return 'Notifiarr';
+        return "Notifiarr";
       case NotificationProviderType.Apprise:
-        return 'Apprise';
+        return "Apprise";
       default:
-        return 'Unknown';
+        return "Unknown";
     }
   }
 
@@ -359,7 +374,7 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
    * Open field-specific documentation
    */
   openFieldDocs(fieldName: string): void {
-    this.documentationService.openFieldDocumentation('notifications', fieldName);
+    this.documentationService.openFieldDocumentation("notifications", fieldName);
   }
 
   // Provider-specific modal event handlers
@@ -368,7 +383,7 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
    * Handle Notifiarr provider save
    */
   onNotifiarrSave(data: NotifiarrFormData): void {
-    if (this.modalMode === 'edit' && this.editingProvider) {
+    if (this.modalMode === "edit" && this.editingProvider) {
       this.updateNotifiarrProvider(data);
     } else {
       this.createNotifiarrProvider(data);
@@ -381,12 +396,12 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
   onNotifiarrTest(data: NotifiarrFormData): void {
     const testRequest = {
       apiKey: data.apiKey,
-      channelId: data.channelId
+      channelId: data.channelId,
     };
-    
+
     this.notificationProviderStore.testProvider({
       testRequest,
-      type: NotificationProviderType.Notifiarr
+      type: NotificationProviderType.Notifiarr,
     });
   }
 
@@ -394,7 +409,7 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
    * Handle Apprise provider save
    */
   onAppriseSave(data: AppriseFormData): void {
-    if (this.modalMode === 'edit' && this.editingProvider) {
+    if (this.modalMode === "edit" && this.editingProvider) {
       this.updateAppriseProvider(data);
     } else {
       this.createAppriseProvider(data);
@@ -408,12 +423,12 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
     const testRequest = {
       url: data.url,
       key: data.key,
-      tags: data.tags
+      tags: data.tags,
     };
-    
+
     this.notificationProviderStore.testProvider({
       testRequest,
-      type: NotificationProviderType.Apprise
+      type: NotificationProviderType.Apprise,
     });
   }
 
@@ -450,14 +465,14 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
       onDownloadCleaned: data.onDownloadCleaned,
       onCategoryChanged: data.onCategoryChanged,
       apiKey: data.apiKey,
-      channelId: data.channelId
+      channelId: data.channelId,
     };
 
     this.notificationProviderStore.createProvider({
       provider: createDto,
-      type: NotificationProviderType.Notifiarr
+      type: NotificationProviderType.Notifiarr,
     });
-    this.monitorProviderOperation('created');
+    this.monitorProviderOperation("created");
   }
 
   /**
@@ -476,15 +491,15 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
       onDownloadCleaned: data.onDownloadCleaned,
       onCategoryChanged: data.onCategoryChanged,
       apiKey: data.apiKey,
-      channelId: data.channelId
+      channelId: data.channelId,
     };
 
-    this.notificationProviderStore.updateProvider({ 
-      id: this.editingProvider.id, 
+    this.notificationProviderStore.updateProvider({
+      id: this.editingProvider.id,
       provider: updateDto,
-      type: NotificationProviderType.Notifiarr
+      type: NotificationProviderType.Notifiarr,
     });
-    this.monitorProviderOperation('updated');
+    this.monitorProviderOperation("updated");
   }
 
   /**
@@ -502,14 +517,14 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
       onCategoryChanged: data.onCategoryChanged,
       url: data.url,
       key: data.key,
-      tags: data.tags
+      tags: data.tags,
     };
 
     this.notificationProviderStore.createProvider({
       provider: createDto,
-      type: NotificationProviderType.Apprise
+      type: NotificationProviderType.Apprise,
     });
-    this.monitorProviderOperation('created');
+    this.monitorProviderOperation("created");
   }
 
   /**
@@ -529,15 +544,15 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
       onCategoryChanged: data.onCategoryChanged,
       url: data.url,
       key: data.key,
-      tags: data.tags
+      tags: data.tags,
     };
 
-    this.notificationProviderStore.updateProvider({ 
-      id: this.editingProvider.id, 
+    this.notificationProviderStore.updateProvider({
+      id: this.editingProvider.id,
       provider: updateDto,
-      type: NotificationProviderType.Apprise
+      type: NotificationProviderType.Apprise,
     });
-    this.monitorProviderOperation('updated');
+    this.monitorProviderOperation("updated");
   }
 
   /**
@@ -547,7 +562,7 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
     const checkStatus = () => {
       const saving = this.notificationProviderSaving();
       const saveError = this.notificationProviderSaveError();
-      
+
       if (!saving && !saveError) {
         // Operation completed successfully
         this.notificationService.showSuccess(`Provider ${operation} successfully`);
@@ -560,7 +575,7 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
         setTimeout(checkStatus, 100);
       }
     };
-    
+
     setTimeout(checkStatus, 100);
   }
 } 
