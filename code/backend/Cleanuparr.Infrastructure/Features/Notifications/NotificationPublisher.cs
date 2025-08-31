@@ -52,7 +52,7 @@ public class NotificationPublisher : INotificationPublisher
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "failed to notify queue item deleted");
+            _logger.LogError(ex, "Failed to notify queue item deleted");
         }
     }
 
@@ -65,7 +65,7 @@ public class NotificationPublisher : INotificationPublisher
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "failed to notify download cleaned");
+            _logger.LogError(ex, "Failed to notify download cleaned");
         }
     }
 
@@ -78,7 +78,7 @@ public class NotificationPublisher : INotificationPublisher
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "failed to notify category changed");
+            _logger.LogError(ex, "Failed to notify category changed");
         }
     }
 
@@ -128,14 +128,14 @@ public class NotificationPublisher : INotificationPublisher
             Title = $"Strike received with reason: {strikeType}",
             Description = record.Title,
             Severity = EventSeverity.Warning,
-            Data = new Dictionary<string, object>
+            Image = imageUrl,
+            Data = new Dictionary<string, string>
             {
-                ["strikeType"] = strikeType.ToString(),
-                ["strikeCount"] = strikeCount,
-                ["hash"] = record.DownloadId.ToLowerInvariant(),
-                ["instanceType"] = instanceType,
-                ["instanceUrl"] = instanceUrl,
-                ["image"] = imageUrl?.ToString() ?? string.Empty
+                ["Strike type"] = strikeType.ToString(),
+                ["Strike count"] = strikeCount.ToString(),
+                ["Hash"] = record.DownloadId.ToLowerInvariant(),
+                ["Instance type"] = instanceType.ToString(),
+                ["Url"] = instanceUrl.ToString(),
             }
         };
     }
@@ -153,19 +153,19 @@ public class NotificationPublisher : INotificationPublisher
             Title = $"Deleting item from queue with reason: {reason}",
             Description = record.Title,
             Severity = EventSeverity.Important,
-            Data = new Dictionary<string, object>
+            Image = imageUrl,
+            Data = new Dictionary<string, string>
             {
-                ["reason"] = reason.ToString(),
-                ["removeFromClient"] = removeFromClient,
-                ["hash"] = record.DownloadId.ToLowerInvariant(),
-                ["instanceType"] = instanceType,
-                ["instanceUrl"] = instanceUrl,
-                ["image"] = imageUrl?.ToString() ?? string.Empty
+                ["Reason"] = reason.ToString(),
+                ["Removed from client?"] = removeFromClient.ToString(),
+                ["Hash"] = record.DownloadId.ToLowerInvariant(),
+                ["Instance type"] = instanceType.ToString(),
+                ["Url"] = instanceUrl.ToString(),
             }
         };
     }
 
-    private NotificationContext BuildDownloadCleanedContext(double ratio, TimeSpan seedingTime, string categoryName, CleanReason reason)
+    private static NotificationContext BuildDownloadCleanedContext(double ratio, TimeSpan seedingTime, string categoryName, CleanReason reason)
     {
         var downloadName = ContextProvider.Get<string>("downloadName");
         var hash = ContextProvider.Get<string>("hash");
@@ -176,36 +176,43 @@ public class NotificationPublisher : INotificationPublisher
             Title = $"Cleaned item from download client with reason: {reason}",
             Description = downloadName,
             Severity = EventSeverity.Important,
-            Data = new Dictionary<string, object>
+            Data = new Dictionary<string, string>
             {
-                ["reason"] = reason.ToString(),
-                ["hash"] = hash.ToLowerInvariant(),
-                ["categoryName"] = categoryName.ToLowerInvariant(),
-                ["ratio"] = ratio,
-                ["seedingHours"] = Math.Round(seedingTime.TotalHours, 0)
+                ["Hash"] = hash.ToLowerInvariant(),
+                ["Category"] = categoryName.ToLowerInvariant(),
+                ["Ratio"] = ratio.ToString(CultureInfo.InvariantCulture),
+                ["Seeding hours"] = Math.Round(seedingTime.TotalHours, 0).ToString(CultureInfo.InvariantCulture)
             }
         };
     }
 
     private NotificationContext BuildCategoryChangedContext(string oldCategory, string newCategory, bool isTag)
     {
-        var downloadName = ContextProvider.Get<string>("downloadName");
-        var hash = ContextProvider.Get<string>("hash");
+        string downloadName = ContextProvider.Get<string>("downloadName");
 
-        return new NotificationContext
+        NotificationContext context = new()
         {
             EventType = NotificationEventType.CategoryChanged,
             Title = isTag ? "Tag added" : "Category changed",
             Description = downloadName,
             Severity = EventSeverity.Information,
-            Data = new Dictionary<string, object>
+            Data = new Dictionary<string, string>
             {
-                ["oldCategory"] = oldCategory,
-                ["newCategory"] = newCategory,
-                ["isTag"] = isTag,
-                ["hash"] = hash.ToLowerInvariant()
+                ["hash"] = ContextProvider.Get<string>("hash").ToLowerInvariant()
             }
         };
+        
+        if (isTag)
+        {
+            context.Data.Add("Tag", newCategory);
+        }
+        else
+        {
+            context.Data.Add("Old category", oldCategory);
+            context.Data.Add("New category", newCategory);
+        }
+
+        return context;
     }
 
     private static NotificationEventType MapStrikeTypeToEventType(StrikeType strikeType)
@@ -235,7 +242,7 @@ public class NotificationPublisher : INotificationPublisher
 
         if (image is null)
         {
-            _logger.LogWarning("no poster found for {title}", record.Title);
+            _logger.LogWarning("No poster found for {title}", record.Title);
         }
 
         return image;

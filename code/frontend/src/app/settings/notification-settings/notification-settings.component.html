@@ -28,21 +28,23 @@
         <div 
           *ngFor="let provider of providers()" 
           class="provider-item p-3 border-round surface-border border-1 mb-3"
+          [ngClass]="{ 'enabled': provider.isEnabled }"
         >
           <div class="flex justify-content-between align-items-center">
             <div class="provider-info flex-1">
-              <div class="flex align-items-center mb-2">
-                <h4 class="m-0 mr-2">{{ provider.name }}</h4>
-                <p-tag 
-                  [value]="provider.type | titlecase" 
-                  [severity]="'info'"
-                  class="mr-2"
-                ></p-tag>
-                <p-tag 
-                  [value]="provider.isEnabled ? 'Enabled' : 'Disabled'" 
-                  [severity]="provider.isEnabled ? 'success' : 'secondary'"
-                ></p-tag>
-              </div>
+                <div>
+                  <div class="flex align-items-center mb-2">
+                    <h4 class="m-0 mr-2">{{ provider.name }}</h4>
+                    <p-tag 
+                      [value]="provider.type | titlecase" 
+                      [severity]="'info'"
+                      class="mr-2"
+                    ></p-tag>
+                    <p-tag 
+                      [value]="provider.isEnabled ? 'Enabled' : 'Disabled'" 
+                      [severity]="provider.isEnabled ? 'success' : 'secondary'"
+                    ></p-tag>
+                  </div>
               <div class="provider-events text-sm text-color-secondary">
                 <span *ngIf="provider.events.onFailedImportStrike" class="mr-2">❌ Failed Import</span>
                 <span *ngIf="provider.events.onStalledStrike" class="mr-2">⏸️ Stalled</span>
@@ -50,7 +52,8 @@
                 <span *ngIf="provider.events.onQueueItemDeleted" class="mr-2">🗑️ Queue Deleted</span>
                 <span *ngIf="provider.events.onDownloadCleaned" class="mr-2">🧹 Download Cleaned</span>
                 <span *ngIf="provider.events.onCategoryChanged" class="mr-2">🔄 Category Changed</span>
-              </div>
+                  </div>
+                </div>
             </div>
             <div class="provider-actions">
               <button 

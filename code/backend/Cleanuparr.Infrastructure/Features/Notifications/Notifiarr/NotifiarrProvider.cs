@@ -54,7 +54,8 @@ public sealed class NotifiarrProvider : NotificationProviderBase<NotifiarrConfig
                 },
                 Images = new()
                 {
-                    Thumbnail = new Uri(logo)
+                    Thumbnail = new Uri(logo),
+                    Image = context.Image
                 }
             }
         };
@@ -64,19 +65,9 @@ public sealed class NotifiarrProvider : NotificationProviderBase<NotifiarrConfig
     {
         var fields = new List<Field>();
 
-        if (context.Data.TryGetValue("instanceType", out var instanceType) && instanceType != null)
+        foreach ((string key, string value) in context.Data)
         {
-            fields.Add(new Field { Title = "Instance type", Text = instanceType.ToString() ?? string.Empty });
-        }
-
-        if (context.Data.TryGetValue("instanceUrl", out var instanceUrl) && instanceUrl != null)
-        {
-            fields.Add(new Field { Title = "Url", Text = instanceUrl.ToString() ?? string.Empty });
-        }
-
-        if (context.Data.TryGetValue("hash", out var hash) && hash != null)
-        {
-            fields.Add(new Field { Title = "Download hash", Text = hash.ToString() ?? string.Empty });
+            fields.Add(new() { Title = key, Text = value });
         }
 
         return fields;

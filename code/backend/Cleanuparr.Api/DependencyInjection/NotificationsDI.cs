@@ -6,17 +6,13 @@ namespace Cleanuparr.Api.DependencyInjection;
 
 public static class NotificationsDI
 {
-    public static IServiceCollection AddNotifications(this IServiceCollection services, IConfiguration configuration) =>
+    public static IServiceCollection AddNotifications(this IServiceCollection services) =>
         services
-            // Legacy notification providers (will be deprecated)
-            .AddTransient<INotifiarrProxy, NotifiarrProxy>()
-            .AddTransient<IAppriseProxy, AppriseProxy>()
-            
-            // New notification system
+            .AddScoped<INotifiarrProxy, NotifiarrProxy>()
+            .AddScoped<IAppriseProxy, AppriseProxy>()
             .AddScoped<INotificationConfigurationService, NotificationConfigurationService>()
             .AddScoped<INotificationProviderFactory, NotificationProviderFactory>()
             .AddScoped<NotificationProviderFactory>()
             .AddScoped<INotificationPublisher, NotificationPublisher>()
-            .AddScoped<NotificationService>()
-            .AddScoped<NotificationTestService>();
+            .AddScoped<NotificationService>();
 }

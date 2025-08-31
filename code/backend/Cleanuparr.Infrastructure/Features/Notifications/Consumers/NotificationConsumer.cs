@@ -66,7 +66,7 @@ public sealed class NotificationConsumer<T> : IConsumer<T> where T : Notificatio
         }
         catch (Exception exception)
         {
-            _logger.LogError(exception, "error while processing notifications");
+            _logger.LogError(exception, "Error while processing notifications");
         }
     }
 
@@ -79,25 +79,21 @@ public sealed class NotificationConsumer<T> : IConsumer<T> where T : Notificatio
             _ => EventSeverity.Information
         };
 
-        var data = new Dictionary<string, object>();
+        var data = new Dictionary<string, string>();
+        Uri? image = null;
 
-        // Add common fields
         if (notification is ArrNotification arrNotification)
         {
-            data["instanceType"] = arrNotification.InstanceType;
-            data["instanceUrl"] = arrNotification.InstanceUrl;
-            data["hash"] = arrNotification.Hash;
-            if (arrNotification.Image != null)
-                data["image"] = arrNotification.Image.ToString();
+            data.Add("Instance type", arrNotification.InstanceType.ToString());
+            data.Add("Url", arrNotification.InstanceUrl.ToString());
+            data.Add("Hash", arrNotification.Hash);
+
+            image = arrNotification.Image;
         }
 
-        // Add fields from notification.Fields if they exist
-        if (notification.Fields != null)
+        foreach (var field in notification.Fields ?? [])
         {
-            foreach (var field in notification.Fields)
-            {
-                data[field.Title.ToLowerInvariant().Replace(" ", "")] = field.Text;
-            }
+            data[field.Key] = field.Value;
         }
 
         return new NotificationContext
@@ -106,7 +102,8 @@ public sealed class NotificationConsumer<T> : IConsumer<T> where T : Notificatio
             Title = notification.Title,
             Description = notification.Description,
             Severity = severity,
-            Data = data
+            Data = data,
+            Image = image
         };
     }
 }

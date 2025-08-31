@@ -14,28 +14,28 @@ public sealed class AppriseProvider : NotificationProviderBase<AppriseConfig>
         string name,
         NotificationProviderType type,
         AppriseConfig config,
-        IAppriseProxy proxy)
-        : base(name, type, config)
+        IAppriseProxy proxy
+    ) : base(name, type, config)
     {
         _proxy = proxy;
     }
 
     public override async Task SendNotificationAsync(NotificationContext context)
     {
-        var payload = BuildPayload(context);
+        ApprisePayload payload = BuildPayload(context);
         await _proxy.SendNotification(payload, Config);
     }
 
     private ApprisePayload BuildPayload(NotificationContext context)
     {
-        var notificationType = context.Severity switch
+        NotificationType notificationType = context.Severity switch
         {
             EventSeverity.Warning => NotificationType.Warning,
             EventSeverity.Important => NotificationType.Failure,
             _ => NotificationType.Info
         };
 
-        var body = BuildBody(context);
+        string body = BuildBody(context);
 
         return new ApprisePayload
         {
@@ -46,25 +46,15 @@ public sealed class AppriseProvider : NotificationProviderBase<AppriseConfig>
         };
     }
 
-    private string BuildBody(NotificationContext context)
+    private static string BuildBody(NotificationContext context)
     {
         var body = new StringBuilder();
         body.AppendLine(context.Description);
         body.AppendLine();
-
-        if (context.Data.TryGetValue("instanceType", out var instanceType))
+        
+        foreach ((string key, string value) in context.Data)
         {
-            body.AppendLine($"Instance type: {instanceType}");
-        }
-
-        if (context.Data.TryGetValue("instanceUrl", out var instanceUrl))
-        {
-            body.AppendLine($"Url: {instanceUrl}");
-        }
-
-        if (context.Data.TryGetValue("hash", out var hash))
-        {
-            body.AppendLine($"Download hash: {hash}");
+            body.AppendLine($"{key}: {value}");
         }
 
         return body.ToString();

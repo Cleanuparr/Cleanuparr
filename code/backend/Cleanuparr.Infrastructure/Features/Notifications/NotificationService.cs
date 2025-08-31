@@ -47,7 +47,7 @@ public sealed class NotificationService
             });
 
             await Task.WhenAll(tasks);
-            _logger.LogInformation("Notification sent to {count} providers for event {eventType}", providers.Count, eventType);
+            _logger.LogTrace("Notification sent to {count} providers for event {eventType}", providers.Count, eventType);
         }
         catch (Exception ex)
         {
@@ -57,20 +57,17 @@ public sealed class NotificationService
 
     public async Task SendTestNotificationAsync(NotificationProviderDto providerConfig)
     {
-        var testContext = new NotificationContext
+        NotificationContext testContext = new()
         {
             EventType = NotificationEventType.Test,
             Title = "Test Notification from Cleanuparr",
             Description = "This is a test notification to verify your configuration is working correctly.",
             Severity = EventSeverity.Information,
-            Data = new Dictionary<string, object>
+            Data = new Dictionary<string, string>
             {
-                ["testTime"] = DateTime.UtcNow,
-                ["providerName"] = providerConfig.Name,
-                ["providerType"] = providerConfig.Type.ToString(),
-                ["hash"] = "test-hash-12345",
-                ["instanceType"] = InstanceType.Sonarr,
-                ["instanceUrl"] = "http://test-instance.local"
+                ["Test time"] = DateTime.UtcNow.ToString("o"),
+                ["Provider name"] = providerConfig.Name,
+                ["Provider type"] = providerConfig.Type.ToString(),
             }
         };
 

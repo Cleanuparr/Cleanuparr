@@ -36,7 +36,7 @@ public class ConfigurationController : ControllerBase
     private readonly IJobManagementService _jobManagementService;
     private readonly MemoryCache _cache;
     private readonly INotificationConfigurationService _notificationConfigurationService;
-    private readonly NotificationTestService _notificationTestService;
+    private readonly NotificationService _notificationService;
 
     public ConfigurationController(
         ILogger<ConfigurationController> logger,
@@ -45,7 +45,7 @@ public class ConfigurationController : ControllerBase
         IJobManagementService jobManagementService,
         MemoryCache cache,
         INotificationConfigurationService notificationConfigurationService,
-        NotificationTestService notificationTestService
+        NotificationService notificationService
     )
     {
         _logger = logger;
@@ -54,7 +54,7 @@ public class ConfigurationController : ControllerBase
         _jobManagementService = jobManagementService;
         _cache = cache;
         _notificationConfigurationService = notificationConfigurationService;
-        _notificationTestService = notificationTestService;
+        _notificationService = notificationService;
     }
 
     [HttpGet("queue_cleaner")]
@@ -831,28 +831,14 @@ public class ConfigurationController : ControllerBase
             };
 
             // Test the notification provider
-            var testSuccess = await _notificationTestService.TestProviderAsync(providerDto);
+            await _notificationService.SendTestNotificationAsync(providerDto);
             
-            if (testSuccess)
-            {
-                return Ok(new { Message = "Test notification sent successfully", Success = true });
-            }
-            else
-            {
-                return BadRequest(new { 
-                    Message = "Test notification failed", 
-                    Success = false
-                });
-            }
+            return Ok(new { Message = "Test notification sent successfully", Success = true });
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to test Notifiarr provider");
-            return BadRequest(new { 
-                Message = $"Test notification failed: {ex.Message}", 
-                Success = false,
-                Error = ex.Message
-            });
+            throw;
         }
     }
 
@@ -892,28 +878,14 @@ public class ConfigurationController : ControllerBase
             };
 
             // Test the notification provider
-            var testSuccess = await _notificationTestService.TestProviderAsync(providerDto);
+            await _notificationService.SendTestNotificationAsync(providerDto);
             
-            if (testSuccess)
-            {
-                return Ok(new { Message = "Test notification sent successfully", Success = true });
-            }
-            else
-            {
-                return BadRequest(new { 
-                    Message = "Test notification failed", 
-                    Success = false
-                });
-            }
+            return Ok(new { Message = "Test notification sent successfully", Success = true });
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to test Apprise provider");
-            return BadRequest(new { 
-                Message = $"Test notification failed: {ex.Message}", 
-                Success = false,
-                Error = ex.Message
-            });
+            throw;
         }
     }
 

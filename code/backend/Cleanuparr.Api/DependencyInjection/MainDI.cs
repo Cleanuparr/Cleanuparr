@@ -24,7 +24,7 @@ public static class MainDI
             .AddServices()
             .AddHealthServices()
             .AddQuartzServices(configuration)
-            .AddNotifications(configuration)
+            .AddNotifications()
             .AddMassTransit(config =>
             {
                 config.DisableUsageTelemetry();

@@ -6,11 +6,13 @@ public sealed record NotificationContext
 {
     public NotificationEventType EventType { get; init; }
     
-    public string Title { get; init; } = string.Empty;
+    public required string Title { get; init; }
     
-    public string Description { get; init; } = string.Empty;
+    public required string Description { get; init; }
     
-    public Dictionary<string, object> Data { get; init; } = new();
+    public Dictionary<string, string> Data { get; init; } = new();
     
     public EventSeverity Severity { get; init; } = EventSeverity.Information;
+    
+    public Uri? Image { get; set; }
 }
