@@ -92,13 +92,15 @@ export class DocumentationService {
       'password': 'password'
     },
     'notifications': {
+      'enabled': 'enabled',
+      'name': 'provider-name',
       'notifiarr.apiKey': 'notifiarr-api-key',
       'notifiarr.channelId': 'notifiarr-channel-id',
       'apprise.url': 'apprise-url',
       'apprise.key': 'apprise-key',
+      'apprise.tags': 'apprise-tags',
       'eventTriggers': 'event-triggers'
     }
-    // Additional sections will be added here as we implement them
   };
 
   constructor(private applicationPathService: ApplicationPathService) {}

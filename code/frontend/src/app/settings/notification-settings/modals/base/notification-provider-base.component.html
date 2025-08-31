@@ -1,19 +1,22 @@
-<p-dialog 
-  [(visible)]="visible" 
-  [modal]="true" 
+<p-dialog
+  [(visible)]="visible"
+  [modal]="true"
   [closable]="true"
   [draggable]="false"
   [resizable]="false"
   styleClass="instance-modal"
   [header]="modalTitle"
-  (onHide)="onCancel()">
-  
+  (onHide)="onCancel()"
+>
   <form [formGroup]="baseForm" class="p-fluid instance-form">
     <!-- Enabled Toggle -->
     <div class="field flex flex-row">
       <label class="field-label">
-        <i class="pi pi-question-circle field-info-icon" 
-           pTooltip="Enable or disable this notification provider"></i>
+        <i
+          class="pi pi-question-circle field-info-icon"
+          title="Click for documentation"
+          (click)="openFieldDocs('enabled')"
+        ></i>
         Enabled
       </label>
       <div class="field-input">
@@ -25,20 +28,23 @@
     <!-- Provider Name -->
     <div class="field">
       <label for="provider-name">
-        <i class="pi pi-question-circle field-info-icon" 
-           pTooltip="A unique name to identify this provider"></i>
+        <i
+          class="pi pi-question-circle field-info-icon"
+          title="Click for documentation"
+          (click)="openFieldDocs('name')"
+        ></i>
         Provider Name *
       </label>
-      <input 
+      <input
         id="provider-name"
-        type="text" 
-        pInputText 
-        formControlName="name" 
+        type="text"
+        pInputText
+        formControlName="name"
         placeholder="My Notification Provider"
-        class="w-full" />
-      <small *ngIf="hasError('name', 'required')" class="p-error">
-        Provider name is required
-      </small>
+        class="w-full"
+      />
+      <small class="form-helper-text">A unique name to identify this provider</small>
+      <small *ngIf="hasError('name', 'required')" class="p-error"> Provider name is required </small>
     </div>
 
     <!-- Provider-Specific Configuration (Content Projection) -->
@@ -47,14 +53,21 @@
     <!-- Event Triggers Section -->
     <div class="field">
       <label>
-        <i class="pi pi-question-circle field-info-icon" 
-           pTooltip="Select which events trigger notifications"></i>
+        <i
+          class="pi pi-question-circle field-info-icon"
+          title="Click for documentation"
+          (click)="openFieldDocs('eventTriggers')"
+        ></i>
         Notification Events
       </label>
       <div class="grid">
         <div class="col-6">
           <div class="field-checkbox">
-            <p-checkbox formControlName="onFailedImportStrike" [binary]="true" inputId="on-failed-import-strike"></p-checkbox>
+            <p-checkbox
+              formControlName="onFailedImportStrike"
+              [binary]="true"
+              inputId="on-failed-import-strike"
+            ></p-checkbox>
             <label for="on-failed-import-strike" class="ml-2">On Failed Import Strike</label>
           </div>
         </div>
@@ -72,7 +85,11 @@
         </div>
         <div class="col-6">
           <div class="field-checkbox">
-            <p-checkbox formControlName="onQueueItemDeleted" [binary]="true" inputId="on-queue-item-deleted"></p-checkbox>
+            <p-checkbox
+              formControlName="onQueueItemDeleted"
+              [binary]="true"
+              inputId="on-queue-item-deleted"
+            ></p-checkbox>
             <label for="on-queue-item-deleted" class="ml-2">On Queue Item Deleted</label>
           </div>
         </div>
@@ -95,33 +112,27 @@
   <!-- Modal Footer -->
   <ng-template pTemplate="footer">
     <div>
-      <button 
-        pButton 
-        type="button" 
-        label="Cancel" 
-        class="p-button-text"
-        (click)="onCancel()">
-      </button>
-      <button 
-        pButton 
-        type="button" 
-        label="Test" 
+      <button pButton type="button" label="Cancel" class="p-button-text" (click)="onCancel()"></button>
+      <button
+        pButton
+        type="button"
+        label="Test"
         icon="pi pi-play"
         class="p-button-outlined ml-2"
         [disabled]="baseForm.invalid || testing"
         [loading]="testing"
-        (click)="onTest()">
-      </button>
-      <button 
-        pButton 
-        type="button" 
-        label="Save" 
+        (click)="onTest()"
+      ></button>
+      <button
+        pButton
+        type="button"
+        label="Save"
         icon="pi pi-save"
         class="p-button-primary ml-2"
         [disabled]="baseForm.invalid || saving"
         [loading]="saving"
-        (click)="onSave()">
-      </button>
+        (click)="onSave()"
+      ></button>
     </div>
   </ng-template>
 </p-dialog>

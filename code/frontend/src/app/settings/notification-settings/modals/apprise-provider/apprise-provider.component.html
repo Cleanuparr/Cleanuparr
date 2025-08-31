@@ -6,43 +6,46 @@
   [editingProvider]="editingProvider"
   (save)="onSave($event)"
   (cancel)="onCancel()"
-  (test)="onTest($event)">
-
+  (test)="onTest($event)"
+>
   <!-- Provider-specific configuration goes here -->
   <div slot="provider-config">
     <!-- Apprise Server URL -->
     <div class="field">
       <label for="full-url">
-        <i class="pi pi-question-circle field-info-icon" 
-           pTooltip="The URL of your Apprise server where notifications will be sent"></i>
+        <i
+          class="pi pi-question-circle field-info-icon"
+          title="Click for documentation"
+          (click)="openFieldDocs('apprise.url')"
+        ></i>
         Apprise Server URL *
       </label>
-      <input 
+      <input
         id="full-url"
-        type="url" 
-        pInputText 
-        [formControl]="urlControl" 
+        type="url"
+        pInputText
+        [formControl]="urlControl"
         placeholder="http://localhost:8000"
-        class="w-full" />
+        class="w-full"
+      />
       <small *ngIf="hasFieldError(urlControl, 'required')" class="p-error">Apprise server URL is required</small>
-      <small *ngIf="hasFieldError(urlControl, 'pattern')" class="p-error">Please enter a valid URL (e.g., http://localhost:8000)</small>
+      <small *ngIf="hasFieldError(urlControl, 'pattern')" class="p-error"
+        >Please enter a valid URL (e.g., http://localhost:8000)</small
+      >
       <small class="form-helper-text">The URL of your Apprise server where notifications will be sent.</small>
     </div>
 
     <!-- Configuration Key -->
     <div class="field">
       <label for="key">
-        <i class="pi pi-question-circle field-info-icon" 
-           pTooltip="The key that identifies your Apprise configuration on the server"></i>
+        <i
+          class="pi pi-question-circle field-info-icon"
+          title="Click for documentation"
+          (click)="openFieldDocs('apprise.key')"
+        ></i>
         Configuration Key *
       </label>
-      <input 
-        id="key"
-        type="text" 
-        pInputText 
-        [formControl]="keyControl" 
-        placeholder="my-config-key"
-        class="w-full" />
+      <input id="key" type="text" pInputText [formControl]="keyControl" placeholder="my-config-key" class="w-full" />
       <small *ngIf="hasFieldError(keyControl, 'required')" class="p-error">Configuration key is required</small>
       <small *ngIf="hasFieldError(keyControl, 'minlength')" class="p-error">Key must be at least 2 characters</small>
       <small class="form-helper-text">The key that identifies your Apprise configuration on the server.</small>
@@ -51,18 +54,24 @@
     <!-- Tags -->
     <div class="field">
       <label for="tags">
-        <i class="pi pi-question-circle field-info-icon" 
-           pTooltip="Optional tags to filter notifications"></i>
+        <i
+          class="pi pi-question-circle field-info-icon"
+          title="Click for documentation"
+          (click)="openFieldDocs('apprise.tags')"
+        ></i>
         Tags (Optional)
       </label>
-      <input 
+      <input
         id="tags"
-        type="text" 
-        pInputText 
-        [formControl]="tagsControl" 
+        type="text"
+        pInputText
+        [formControl]="tagsControl"
         placeholder="tag1,tag2 or tag3 tag4"
-        class="w-full" />
-      <small class="form-helper-text">Optional tags to filter notifications. Use comma (,) to OR tags and space ( ) to AND them.</small>
+        class="w-full"
+      />
+      <small class="form-helper-text"
+        >Optional tags to filter notifications. Use comma (,) to OR tags and space ( ) to AND them.</small
+      >
     </div>
   </div>
 </app-notification-provider-base>

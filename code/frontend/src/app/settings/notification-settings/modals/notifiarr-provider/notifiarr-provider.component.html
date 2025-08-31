@@ -14,7 +14,8 @@
     <div class="field">
       <label for="api-key">
         <i class="pi pi-question-circle field-info-icon" 
-           pTooltip="Your Notifiarr API key from your dashboard"></i>
+           title="Click for documentation"
+           (click)="openFieldDocs('notifiarr.apiKey')"></i>
         API Key *
       </label>
       <input 
@@ -33,7 +34,8 @@
     <div class="field">
       <label for="channel-id">
         <i class="pi pi-question-circle field-info-icon" 
-           pTooltip="The Discord channel ID where notifications will be sent"></i>
+           title="Click for documentation"
+           (click)="openFieldDocs('notifiarr.channelId')"></i>
         Discord Channel ID *
       </label>
       <input 

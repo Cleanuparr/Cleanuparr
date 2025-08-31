@@ -1,11 +1,11 @@
 import { Component, Input, Output, EventEmitter, OnInit, OnChanges, SimpleChanges, inject } from '@angular/core';
+import { DocumentationService } from '../../../../core/services/documentation.service';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
 import { CheckboxModule } from 'primeng/checkbox';
 import { ButtonModule } from 'primeng/button';
-import { TooltipModule } from 'primeng/tooltip';
 import { BaseProviderFormData } from '../../models/provider-modal.model';
 import { NotificationProviderDto } from '../../../../shared/models/notification-provider.model';
 
@@ -19,7 +19,6 @@ import { NotificationProviderDto } from '../../../../shared/models/notification-
     InputTextModule,
     CheckboxModule,
     ButtonModule,
-    TooltipModule
   ],
   templateUrl: './notification-provider-base.component.html',
   styleUrls: ['./notification-provider-base.component.scss']
@@ -36,6 +35,7 @@ export class NotificationProviderBaseComponent implements OnInit, OnChanges {
   @Output() test = new EventEmitter<BaseProviderFormData>();
 
   protected readonly formBuilder = inject(FormBuilder);
+  private readonly documentationService = inject(DocumentationService);
 
   baseForm: FormGroup = this.formBuilder.group({
     name: ['', Validators.required],
@@ -111,5 +111,13 @@ export class NotificationProviderBaseComponent implements OnInit, OnChanges {
     if (this.baseForm.valid) {
       this.test.emit(this.baseForm.value as BaseProviderFormData);
     }
+  }
+
+  /**
+   * Open notifications documentation for a specific field (or the section when no field provided)
+   */
+  openFieldDocs(fieldName?: string): void {
+    // pass empty string when undefined so the service falls back to section doc
+    this.documentationService.openFieldDocumentation('notifications', fieldName ?? '');
   }
 }

@@ -2,8 +2,8 @@ import { Component, Input, Output, EventEmitter, OnInit, OnDestroy, OnChanges, S
 import { FormControl, Validators, ReactiveFormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { InputTextModule } from 'primeng/inputtext';
-import { TooltipModule } from 'primeng/tooltip';
 import { NotifiarrFormData, BaseProviderFormData } from '../../models/provider-modal.model';
+import { DocumentationService } from '../../../../core/services/documentation.service';
 import { NotificationProviderDto } from '../../../../shared/models/notification-provider.model';
 import { NotificationProviderBaseComponent } from '../base/notification-provider-base.component';
 
@@ -14,7 +14,6 @@ import { NotificationProviderBaseComponent } from '../base/notification-provider
     CommonModule,
     ReactiveFormsModule,
     InputTextModule,
-    TooltipModule,
     NotificationProviderBaseComponent
   ],
   templateUrl: './notifiarr-provider.component.html',
@@ -33,6 +32,12 @@ export class NotifiarrProviderComponent implements OnInit, OnChanges {
   // Provider-specific form controls
   apiKeyControl = new FormControl('', [Validators.required, Validators.minLength(10)]);
   channelIdControl = new FormControl('', [Validators.required, Validators.pattern(/^\d+$/)]);
+  private documentationService = inject(DocumentationService);
+
+  /** Exposed for template to open documentation for notifiarr fields */
+  openFieldDocs(fieldName: string): void {
+    this.documentationService.openFieldDocumentation('notifications', fieldName);
+  }
 
   ngOnInit(): void {
     // Initialize component but don't populate yet - wait for ngOnChanges
