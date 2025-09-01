@@ -640,6 +640,7 @@
 *.spm
 *.spr
 *.spt
+*.sql
 *.sqf
 *.sqx
 *.sqz
