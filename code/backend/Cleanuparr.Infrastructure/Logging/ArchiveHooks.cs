@@ -96,14 +96,12 @@ public class ArchiveHooks : FileLifecycleHooks
                 return -1;
             }
 
-            if (y == null || x.Name.Length > y.Name.Length)
+            if (y == null || x.LastWriteTimeUtc > y.LastWriteTimeUtc)
             {
                 return 1;
             }
             
-            return y.Name.Length > x.Name.Length
-                ? -1
-                : string.Compare(x.Name, y.Name, StringComparison.OrdinalIgnoreCase);
+            return x.LastWriteTimeUtc < y.LastWriteTimeUtc ? -1 : 0;
         }
     }
 }
