@@ -24,20 +24,17 @@ public class HealthCheckBackgroundService : BackgroundService
         _logger = logger;
         _healthCheckService = healthCheckService;
         
-        // Check health every 1 minute by default
-        _checkInterval = TimeSpan.FromMinutes(1);
+        _checkInterval = TimeSpan.FromMinutes(5);
     }
 
     /// <inheritdoc />
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation("Health check background service started");
-
         try
         {
             while (!stoppingToken.IsCancellationRequested)
             {
-                _logger.LogDebug("Performing periodic health check for all clients");
+                _logger.LogDebug("Performing periodic health check for all download clients");
                 
                 try
                 {
@@ -47,17 +44,27 @@ public class HealthCheckBackgroundService : BackgroundService
                     // Log summary
                     var healthyCount = results.Count(r => r.Value.IsHealthy);
                     var unhealthyCount = results.Count - healthyCount;
-                    
-                    _logger.LogInformation(
-                        "Health check completed. {healthyCount} healthy, {unhealthyCount} unhealthy clients",
-                        healthyCount,
-                        unhealthyCount);
+
+                    if (unhealthyCount is 0)
+                    {
+                        _logger.LogDebug(
+                            "Health check completed. {healthyCount} healthy, {unhealthyCount} unhealthy download clients",
+                            healthyCount,
+                            unhealthyCount);
+                    }
+                    else
+                    {
+                        _logger.LogWarning(
+                            "Health check completed. {healthyCount} healthy, {unhealthyCount} unhealthy download clients",
+                            healthyCount,
+                            unhealthyCount);
+                    }
                     
                     // Log detailed information for unhealthy clients
                     foreach (var result in results.Where(r => !r.Value.IsHealthy))
                     {
                         _logger.LogWarning(
-                            "Client {clientId} ({clientName}) is unhealthy: {errorMessage}",
+                            "Download client {clientId} ({clientName}) is unhealthy: {errorMessage}",
                             result.Key,
                             result.Value.ClientName,
                             result.Value.ErrorMessage);
