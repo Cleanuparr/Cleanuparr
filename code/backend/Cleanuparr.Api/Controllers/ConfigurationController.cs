@@ -32,7 +32,6 @@ public class ConfigurationController : ControllerBase
 {
     private readonly ILogger<ConfigurationController> _logger;
     private readonly DataContext _dataContext;
-    private readonly LoggingConfigManager _loggingConfigManager;
     private readonly IJobManagementService _jobManagementService;
     private readonly MemoryCache _cache;
     private readonly INotificationConfigurationService _notificationConfigurationService;
@@ -41,7 +40,6 @@ public class ConfigurationController : ControllerBase
     public ConfigurationController(
         ILogger<ConfigurationController> logger,
         DataContext dataContext,
-        LoggingConfigManager loggingConfigManager,
         IJobManagementService jobManagementService,
         MemoryCache cache,
         INotificationConfigurationService notificationConfigurationService,
@@ -50,7 +48,6 @@ public class ConfigurationController : ControllerBase
     {
         _logger = logger;
         _dataContext = dataContext;
-        _loggingConfigManager = loggingConfigManager;
         _jobManagementService = jobManagementService;
         _cache = cache;
         _notificationConfigurationService = notificationConfigurationService;
@@ -1151,8 +1148,19 @@ public class ConfigurationController : ControllerBase
             
             _logger.LogInformation("Updated all HTTP client configurations with new general settings");
 
-            // Set the logging level based on the new configuration
-            _loggingConfigManager.SetLogLevel(newConfig.LogLevel);
+            // Handle logging configuration changes
+            var loggingChanged = HasLoggingConfigurationChanged(oldConfig.Log, newConfig.Log);
+            
+            if (loggingChanged.LevelOnly)
+            {
+                _logger.LogCritical("Setting global log level to {level}", newConfig.Log.Level);
+                LoggingConfigManager.SetLogLevel(newConfig.Log.Level);
+            }
+            else if (loggingChanged.FullReconfiguration)
+            {
+                _logger.LogCritical("Reconfiguring logger due to configuration changes");
+                LoggingConfigManager.ReconfigureLogging(newConfig);
+            }
 
             return Ok(new { Message = "General configuration updated successfully" });
         }
@@ -1904,5 +1912,41 @@ public class ConfigurationController : ControllerBase
         {
             DataContext.Lock.Release();
         }
+    }
+
+    /// <summary>
+    /// Determines what type of logging reconfiguration is needed based on configuration changes
+    /// </summary>
+    /// <param name="oldConfig">The previous logging configuration</param>
+    /// <param name="newConfig">The new logging configuration</param>
+    /// <returns>A tuple indicating the type of reconfiguration needed</returns>
+    private static (bool LevelOnly, bool FullReconfiguration) HasLoggingConfigurationChanged(LoggingConfig oldConfig, LoggingConfig newConfig)
+    {
+        // Check if only the log level changed
+        bool levelChanged = oldConfig.Level != newConfig.Level;
+        
+        // Check if other logging properties changed that require full reconfiguration
+        bool otherPropertiesChanged = 
+            oldConfig.RollingSizeMB != newConfig.RollingSizeMB ||
+            oldConfig.RetainedFileCount != newConfig.RetainedFileCount ||
+            oldConfig.TimeLimitHours != newConfig.TimeLimitHours ||
+            oldConfig.ArchiveEnabled != newConfig.ArchiveEnabled ||
+            oldConfig.ArchiveRetainedCount != newConfig.ArchiveRetainedCount ||
+            oldConfig.ArchiveTimeLimitHours != newConfig.ArchiveTimeLimitHours;
+
+        if (otherPropertiesChanged)
+        {
+            // Full reconfiguration needed (includes level change if any)
+            return (false, true);
+        }
+        
+        if (levelChanged)
+        {
+            // Only level changed, simple level update is sufficient
+            return (true, false);
+        }
+        
+        // No logging configuration changes
+        return (false, false);
     }
 }

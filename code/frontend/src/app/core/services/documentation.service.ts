@@ -43,7 +43,13 @@ export class DocumentationService {
       'httpCertificateValidation': 'http-certificate-validation',
       'searchEnabled': 'search-enabled',
       'searchDelay': 'search-delay',
-      'logLevel': 'log-level',
+      'log.level': 'log-level',
+      'log.rollingSizeMB': 'log-rolling-size-mb',
+      'log.retainedFileCount': 'log-retained-file-count',
+      'log.timeLimitHours': 'log-time-limit-hours',
+      'log.archiveEnabled': 'log-archive-enabled',
+      'log.archiveRetainedCount': 'log-archive-retained-count',
+      'log.archiveTimeLimitHours': 'log-archive-time-limit-hours',
       'ignoredDownloads': 'ignored-downloads'
     },
     'download-cleaner': {
