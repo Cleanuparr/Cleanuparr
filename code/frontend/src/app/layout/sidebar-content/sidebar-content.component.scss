@@ -1,8 +1,9 @@
 // Main container stability
 :host {
-  display: block;
+  display: flex;
+  flex-direction: column;
   height: 100%;
-  overflow: hidden; // Prevent scrolling
+  overflow: hidden; // Prevent scrolling on the host
   position: relative;
 }
 
@@ -12,6 +13,7 @@
   align-items: center;
   padding: 20px;
   margin-top: 20px;
+  flex: 0 0 auto; // Prevent logo container from growing/shrinking
   
   .logo {
     display: flex;
@@ -55,18 +57,21 @@
 
 // Navigation menu
 .nav-menu {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
+  display: block;
   gap: 0; // Remove gap to prevent layout shifts
   transition: opacity 0.2s ease;
-  
-  // Prevent horizontal scrolling
+
+  // Keep horizontal overflow hidden to avoid horizontal scrollbar
   overflow-x: hidden;
+
+  // The nav area becomes the scrollable region. Use a calc so the
+  // header/logo area remains visible and the nav does not shrink
+  // other elements when it scrolls. Default header height can be
+  // overridden via the --sidebar-header-height CSS variable.
+  height: calc(100% - var(--sidebar-header-height, 120px));
+  box-sizing: border-box;
   overflow-y: auto;
-  
-  // Fixed minimum height to prevent jumping
-  min-height: 400px;
+  -webkit-overflow-scrolling: touch;
 
   // Navigation items container for smooth animations
   .navigation-items-container {
@@ -75,6 +80,14 @@
     gap: 8px; // Consistent spacing between navigation items
     position: relative; // Ensure proper stacking context for animations
     width: 100%; // Take full width of parent
+
+    // Prevent horizontal scrollbar when items translate on hover
+    overflow-x: hidden;
+    padding-right: 8px; // leave space for the scrollbar
+
+    // Keep layout stable: do not force this element to flex-grow
+    // so icons and badges won't shrink when the nav scrolls.
+    min-height: 0;
   }
 
   // Loading skeleton
