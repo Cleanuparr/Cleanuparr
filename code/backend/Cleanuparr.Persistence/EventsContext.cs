@@ -12,19 +12,34 @@ namespace Cleanuparr.Persistence;
 public class EventsContext : DbContext
 {
     public DbSet<AppEvent> Events { get; set; }
+    
+    public EventsContext()
+    {
+    }
+    
+    public EventsContext(DbContextOptions<EventsContext> options) : base(options)
+    {
+    }
+    
+    public static EventsContext CreateStaticInstance()
+    {
+        var optionsBuilder = new DbContextOptionsBuilder<EventsContext>();
+        SetDbContextOptions(optionsBuilder);
+        return new EventsContext(optionsBuilder.Options);
+    }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
-        if (optionsBuilder.IsConfigured)
-        {
-            return;
-        }
+        SetDbContextOptions(optionsBuilder);
+    }
+    
+    public static string GetLikePattern(string input)
+    {
+        input = input.Replace("[", "[[]")
+            .Replace("%", "[%]")
+            .Replace("_", "[_]");
         
-        var dbPath = Path.Combine(ConfigurationPathProvider.GetConfigPath(), "events.db");
-        optionsBuilder
-            .UseSqlite($"Data Source={dbPath}")
-            .UseLowerCaseNamingConvention()
-            .UseSnakeCaseNamingConvention();
+        return $"%{input}%";
     }
     
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -59,12 +74,17 @@ public class EventsContext : DbContext
         }
     }
     
-    public static string GetLikePattern(string input)
+    private static void SetDbContextOptions(DbContextOptionsBuilder optionsBuilder)
     {
-        input = input.Replace("[", "[[]")
-            .Replace("%", "[%]")
-            .Replace("_", "[_]");
+        if (optionsBuilder.IsConfigured)
+        {
+            return;
+        }
         
-        return $"%{input}%";
+        var dbPath = Path.Combine(ConfigurationPathProvider.GetConfigPath(), "events.db");
+        optionsBuilder
+            .UseSqlite($"Data Source={dbPath}")
+            .UseLowerCaseNamingConvention()
+            .UseSnakeCaseNamingConvention();
     }
 } 

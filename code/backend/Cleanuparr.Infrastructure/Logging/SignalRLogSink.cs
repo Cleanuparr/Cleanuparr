@@ -2,7 +2,7 @@ using System.Collections.Concurrent;
 using System.Globalization;
 using Cleanuparr.Infrastructure.Hubs;
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.Extensions.Logging;
+using Serilog;
 using Serilog.Core;
 using Serilog.Events;
 using Serilog.Formatting.Display;
@@ -14,18 +14,22 @@ namespace Cleanuparr.Infrastructure.Logging;
 /// </summary>
 public class SignalRLogSink : ILogEventSink
 {
-    private readonly ILogger<SignalRLogSink> _logger;
     private readonly ConcurrentQueue<object> _logBuffer;
     private readonly int _bufferSize;
-    private readonly IHubContext<AppHub> _appHubContext;
     private readonly MessageTemplateTextFormatter _formatter = new("{Message:l}", CultureInfo.InvariantCulture);
+    private IHubContext<AppHub>? _appHubContext;
     
-    public SignalRLogSink(ILogger<SignalRLogSink> logger, IHubContext<AppHub> appHubContext)
+    public static SignalRLogSink Instance { get; } = new();
+    
+    private SignalRLogSink()
     {
-        _appHubContext = appHubContext;
-        _logger = logger;
         _bufferSize = 100;
         _logBuffer = new ConcurrentQueue<object>();
+    }
+    
+    public void SetAppHubContext(IHubContext<AppHub> appHubContext)
+    {
+        _appHubContext = appHubContext ?? throw new ArgumentNullException(nameof(appHubContext), "AppHub context cannot be null");
     }
     
     /// <summary>
@@ -52,11 +56,14 @@ public class SignalRLogSink : ILogEventSink
             AddToBuffer(logData);
             
             // Send to connected clients via the unified hub
-            _ = _appHubContext.Clients.All.SendAsync("LogReceived", logData);
+            if (_appHubContext is not null)
+            {
+                _ = _appHubContext.Clients.All.SendAsync("LogReceived", logData);
+            }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to send log event via SignalR");
+            Log.Logger.Error(ex, "Failed to send log event via SignalR");
         }
     }
     

@@ -143,6 +143,70 @@ Controls the detail level of application logs. Lower levels include all higher l
 
 </ConfigSection>
 
+<ConfigSection
+  id="log-rolling-size-mb"
+  title="Log Rolling Size (MB)"
+  icon="📐"
+>
+
+Maximum size (in megabytes) for a single log file before the logger rolls over to a new file. Larger values reduce the number of files created but increase individual file sizes.
+
+</ConfigSection>
+
+<ConfigSection
+  id="log-retained-file-count"
+  title="Retained Log Files"
+  icon="🗂️"
+>
+
+The number of non-archived log files to keep on disk. Older files beyond this count will be removed or archived, according to the settings.
+
+</ConfigSection>
+
+<ConfigSection
+  id="log-time-limit-hours"
+  title="Log Time Limit (Hours)"
+  icon="⏳"
+>
+
+Maximum age (in hours) for non-archived log files to keep on disk. Older files beyond this age will be removed or archived, according to the settings.
+
+</ConfigSection>
+
+<ConfigSection
+  id="log-archive-enabled"
+  title="Archive Logs"
+  icon="🗄️"
+>
+
+When enabled, log files that exceed retention limits will be archived instead of being immediately deleted. Archiving helps preserve historical logs while reducing the disk size used by them.
+
+<EnhancedNote>
+Some setups will find that a lot of logs are generated, so archiving is recommended to prevent excessive disk usage.
+</EnhancedNote>
+
+</ConfigSection>
+
+<ConfigSection
+  id="log-archive-retained-count"
+  title="Archived Log Retention (Count)"
+  icon="🧾"
+>
+
+The number of archived log files to keep. Older files beyond this count will be removed.
+
+</ConfigSection>
+
+<ConfigSection
+  id="log-archive-time-limit-hours"
+  title="Archived Log Retention (Hours)"
+  icon="🕒"
+>
+
+Maximum age (in hours) for archived logs before they are deleted. Older files beyond this age will be removed.
+
+</ConfigSection>
+
 </div>
 
 <div className={styles.section}>

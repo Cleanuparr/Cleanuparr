@@ -3,28 +3,30 @@
     <h1>General Settings</h1>
   </div>
 
-  <p-card styleClass="settings-card h-full">
-    <ng-template pTemplate="header">
-      <div class="flex align-items-center justify-content-between p-3 border-bottom-1 surface-border">
-        <div class="header-title-container">
-          <h2 class="card-title m-0">General Configuration</h2>
-          <span class="card-subtitle">Configure general application settings</span>
+  <!-- Loading/Error Component -->
+  <app-loading-error-state
+    *ngIf="generalLoading() || generalLoadError()"
+    [loading]="generalLoading()"
+    [error]="generalLoadError()"
+    loadingMessage="Loading settings..."
+    errorMessage="Could not connect to server"
+  ></app-loading-error-state>
+
+  <!-- Settings Form -->
+  <form *ngIf="!generalLoading() && !generalLoadError()" [formGroup]="generalForm" class="p-fluid">
+    
+    <!-- General Configuration Card -->
+    <p-card styleClass="settings-card mb-4">
+      <ng-template pTemplate="header">
+        <div class="flex align-items-center justify-content-between p-3 border-bottom-1 surface-border">
+          <div class="header-title-container">
+            <h2 class="card-title m-0">General Configuration</h2>
+            <span class="card-subtitle">Configure general application settings</span>
+          </div>
         </div>
-      </div>
-  </ng-template>
+      </ng-template>
 
-  <div class="card-content">
-    <!-- Loading/Error Component -->
-    <app-loading-error-state
-      *ngIf="generalLoading() || generalError()"
-      [loading]="generalLoading()"
-      [error]="generalError()"
-      loadingMessage="Loading settings..."
-      errorMessage="Could not connect to server"
-    ></app-loading-error-state>
-
-          <!-- Settings Form -->
-      <form *ngIf="!generalLoading() && !generalError()" [formGroup]="generalForm" class="p-fluid">
+      <div class="card-content">
         <!-- Display Support Banner -->
         <div class="field-row">
           <label class="field-label">
@@ -41,207 +43,362 @@
         </div>
 
         <!-- Dry Run -->
-      <div class="field-row">
-        <label class="field-label">
-          <i class="pi pi-question-circle field-info-icon" 
-             (click)="openFieldDocs('dryRun')"
-             title="Click for documentation">
-          </i>
-          Dry Run
-        </label>
-        <div class="field-input">
-          <p-checkbox formControlName="dryRun" [binary]="true" inputId="dryRun"></p-checkbox>
-          <small class="form-helper-text">When enabled, no changes will be made to the system</small>
-        </div>
-      </div>
-
-      <!-- HTTP Settings -->
-      <div class="field-row">
-        <label class="field-label">
-          <i class="pi pi-question-circle field-info-icon" 
-             (click)="openFieldDocs('httpMaxRetries')"
-             title="Click for documentation">
-          </i>
-          Maximum HTTP Retries
-        </label>
-        <div>
+        <div class="field-row">
+          <label class="field-label">
+            <i class="pi pi-question-circle field-info-icon" 
+               (click)="openFieldDocs('dryRun')"
+               title="Click for documentation">
+            </i>
+            Dry Run
+          </label>
           <div class="field-input">
-            <p-inputNumber
-              formControlName="httpMaxRetries"
-              inputId="httpMaxRetries"
-              [showButtons]="true"
-              [min]="0"
-              buttonLayout="horizontal"
-            ></p-inputNumber>
+            <p-checkbox formControlName="dryRun" [binary]="true" inputId="dryRun"></p-checkbox>
+            <small class="form-helper-text">When enabled, no changes will be made to the system</small>
           </div>
-          <small *ngIf="hasError('httpMaxRetries', 'required')" class="p-error">This field is required</small>
-          <small *ngIf="hasError('httpMaxRetries', 'max')" class="p-error">Maximum value is 5</small>
-          <small class="form-helper-text">Number of retry attempts for failed HTTPS requests</small>
         </div>
-      </div>
 
-      <div class="field-row">
-        <label class="field-label">
-          <i class="pi pi-question-circle field-info-icon" 
-             (click)="openFieldDocs('httpTimeout')"
-             title="Click for documentation">
-          </i>
-          HTTP Timeout (seconds)
-        </label>
-        <div>
+        <!-- HTTP Settings -->
+        <div class="field-row">
+          <label class="field-label">
+            <i class="pi pi-question-circle field-info-icon" 
+               (click)="openFieldDocs('httpMaxRetries')"
+               title="Click for documentation">
+            </i>
+            Maximum HTTP Retries
+          </label>
+          <div>
+            <div class="field-input">
+              <p-inputNumber
+                formControlName="httpMaxRetries"
+                inputId="httpMaxRetries"
+                [showButtons]="true"
+                [min]="0"
+                buttonLayout="horizontal"
+              ></p-inputNumber>
+            </div>
+            <small *ngIf="hasError('httpMaxRetries', 'required')" class="p-error">This field is required</small>
+            <small *ngIf="hasError('httpMaxRetries', 'max')" class="p-error">Maximum value is 5</small>
+            <small class="form-helper-text">Number of retry attempts for failed HTTPS requests</small>
+          </div>
+        </div>
+
+        <div class="field-row">
+          <label class="field-label">
+            <i class="pi pi-question-circle field-info-icon" 
+               (click)="openFieldDocs('httpTimeout')"
+               title="Click for documentation">
+            </i>
+            HTTP Timeout (seconds)
+          </label>
+          <div>
+            <div class="field-input">
+              <p-inputNumber
+                formControlName="httpTimeout"
+                inputId="httpTimeout"
+                [showButtons]="true"
+                [min]="1"
+                buttonLayout="horizontal"
+              ></p-inputNumber>
+            </div>
+            <small *ngIf="hasError('httpTimeout', 'required')" class="p-error">This field is required</small>
+            <small *ngIf="hasError('httpTimeout', 'max')" class="p-error">Maximum value is 100</small>
+            <small class="form-helper-text">Timeout duration for HTTP requests in seconds</small>
+          </div>
+        </div>
+
+        <div class="field-row">
+          <label class="field-label">
+            <i class="pi pi-question-circle field-info-icon" 
+               (click)="openFieldDocs('httpCertificateValidation')"
+               title="Click for documentation">
+            </i>
+            Certificate Validation
+          </label>
           <div class="field-input">
-            <p-inputNumber
-              formControlName="httpTimeout"
-              inputId="httpTimeout"
-              [showButtons]="true"
-              [min]="1"
-              buttonLayout="horizontal"
-            ></p-inputNumber>
+            <p-select
+              formControlName="httpCertificateValidation"
+              inputId="httpCertificateValidation"
+              [options]="certificateValidationOptions"
+              optionLabel="label"
+              optionValue="value"
+            ></p-select>
+            <small class="form-helper-text">Enable or disable certificate validation for HTTPS requests</small>
           </div>
-          <small *ngIf="hasError('httpTimeout', 'required')" class="p-error">This field is required</small>
-          <small *ngIf="hasError('httpTimeout', 'max')" class="p-error">Maximum value is 100</small>
-          <small class="form-helper-text">Timeout duration for HTTP requests in seconds</small>
         </div>
-      </div>
 
-      <div class="field-row">
-        <label class="field-label">
-          <i class="pi pi-question-circle field-info-icon" 
-             (click)="openFieldDocs('httpCertificateValidation')"
-             title="Click for documentation">
-          </i>
-          Certificate Validation
-        </label>
-        <div class="field-input">
-          <p-select
-            formControlName="httpCertificateValidation"
-            inputId="httpCertificateValidation"
-            [options]="certificateValidationOptions"
-            optionLabel="label"
-            optionValue="value"
-          ></p-select>
-          <small class="form-helper-text">Enable or disable certificate validation for HTTPS requests</small>
-        </div>
-      </div>
-
-      <!-- Search Settings -->
-      <div class="field-row">
-        <label class="field-label">
-          <i class="pi pi-question-circle field-info-icon" 
-             (click)="openFieldDocs('searchEnabled')"
-             title="Click for documentation">
-          </i>
-          Enable Search
-        </label>
-        <div class="field-input">
-          <p-checkbox formControlName="searchEnabled" [binary]="true" inputId="searchEnabled"></p-checkbox>
-          <small class="form-helper-text">When enabled, the application will trigger a search after removing a download</small>
-        </div>
-      </div>
-
-      <div class="field-row">
-        <label class="field-label">
-          <i class="pi pi-question-circle field-info-icon" 
-             (click)="openFieldDocs('searchDelay')"
-             title="Click for documentation">
-          </i>
-          Search Delay (seconds)
-        </label>
-        <div>
+        <!-- Search Settings -->
+        <div class="field-row">
+          <label class="field-label">
+            <i class="pi pi-question-circle field-info-icon" 
+               (click)="openFieldDocs('searchEnabled')"
+               title="Click for documentation">
+            </i>
+            Enable Search
+          </label>
           <div class="field-input">
-            <p-inputNumber
-              formControlName="searchDelay"
-              inputId="searchDelay"
-              [showButtons]="true"
-              [min]="1"
-              buttonLayout="horizontal"
-            ></p-inputNumber>
+            <p-checkbox formControlName="searchEnabled" [binary]="true" inputId="searchEnabled"></p-checkbox>
+            <small class="form-helper-text">When enabled, the application will trigger a search after removing a download</small>
           </div>
-          <small *ngIf="hasError('searchDelay', 'required')" class="p-error">This field is required</small>
-          <small *ngIf="hasError('searchDelay', 'max')" class="p-error">Maximum value is 300</small>
-          <small class="form-helper-text">Delay between search operations in seconds</small>
+        </div>
+
+        <div class="field-row">
+          <label class="field-label">
+            <i class="pi pi-question-circle field-info-icon" 
+               (click)="openFieldDocs('searchDelay')"
+               title="Click for documentation">
+            </i>
+            Search Delay (seconds)
+          </label>
+          <div>
+            <div class="field-input">
+              <p-inputNumber
+                formControlName="searchDelay"
+                inputId="searchDelay"
+                [showButtons]="true"
+                [min]="1"
+                buttonLayout="horizontal"
+              ></p-inputNumber>
+            </div>
+            <small *ngIf="hasError('searchDelay', 'required')" class="p-error">This field is required</small>
+            <small *ngIf="hasError('searchDelay', 'max')" class="p-error">Maximum value is 300</small>
+            <small class="form-helper-text">Delay between search operations in seconds</small>
+          </div>
+        </div>
+
+        <!-- Ignored Downloads -->
+        <div class="field-row">
+          <label class="field-label">
+            <i class="pi pi-question-circle field-info-icon" 
+               (click)="openFieldDocs('ignoredDownloads')"
+               title="Click for documentation">
+            </i>
+            Ignored Downloads
+          </label>
+          <div class="field-input">
+            <!-- Mobile-friendly autocomplete -->
+            <app-mobile-autocomplete
+              formControlName="ignoredDownloads"
+              placeholder="Add download pattern"
+            ></app-mobile-autocomplete>
+            
+            <!-- Desktop autocomplete -->
+            <p-autocomplete
+              formControlName="ignoredDownloads"
+              inputId="ignoredDownloads"
+              multiple
+              fluid
+              [typeahead]="false"
+              placeholder="Add download pattern and press enter"
+              class="desktop-only"
+            ></p-autocomplete>
+            <small class="form-helper-text">Downloads matching these patterns will be ignored (e.g. hash, tag, category, label, tracker)</small>
+          </div>
         </div>
       </div>
+    </p-card>
 
-      <!-- Log Level -->
-      <div class="field-row">
-        <label class="field-label">
-          <i class="pi pi-question-circle field-info-icon" 
-             (click)="openFieldDocs('logLevel')"
-             title="Click for documentation">
-          </i>
-          Log Level
-        </label>
-        <div class="field-input">
-          <p-select 
-            formControlName="logLevel" 
-            inputId="logLevel" 
-            [options]="logLevelOptions"
-            optionLabel="label"
-            optionValue="value"
-          ></p-select>
-          <small class="form-helper-text">Select the minimum log level to display</small>
+    <!-- Logging Configuration Card -->
+    <p-card styleClass="settings-card mb-4">
+      <ng-template pTemplate="header">
+        <div class="flex align-items-center justify-content-between p-3 border-bottom-1 surface-border">
+          <div class="header-title-container">
+            <h2 class="card-title m-0">Logging Configuration</h2>
+            <span class="card-subtitle">Configure application logging and retention settings</span>
+          </div>
+        </div>
+      </ng-template>
+
+      <div class="card-content" formGroupName="log">
+        <!-- Log Level -->
+        <div class="field-row">
+          <label class="field-label">
+            <i class="pi pi-question-circle field-info-icon" 
+               (click)="openFieldDocs('log.level')"
+               title="Click for documentation">
+            </i>
+            Log Level
+          </label>
+          <div class="field-input">
+            <p-select 
+              formControlName="level" 
+              inputId="logLevel" 
+              [options]="logLevelOptions"
+              optionLabel="label"
+              optionValue="value"
+            ></p-select>
+            <small class="form-helper-text">Select the minimum log level to display</small>
+          </div>
+        </div>
+
+        <!-- Rolling Size -->
+        <div class="field-row">
+          <label class="field-label">
+            <i class="pi pi-question-circle field-info-icon" 
+               (click)="openFieldDocs('log.rollingSizeMB')"
+               title="Click for documentation">
+            </i>
+            Rolling Size (MB)
+          </label>
+          <div>
+            <div class="field-input">
+              <p-inputNumber
+                formControlName="rollingSizeMB"
+                inputId="rollingSizeMB"
+                [showButtons]="true"
+                [min]="0"
+                buttonLayout="horizontal"
+              ></p-inputNumber>
+            </div>
+            <small *ngIf="hasNestedError('log', 'rollingSizeMB', 'required')" class="p-error">This field is required</small>
+            <small *ngIf="hasNestedError('log', 'rollingSizeMB', 'max')" class="p-error">Maximum value is 100 MB</small>
+            <small class="form-helper-text">Maximum size of each log file in megabytes (0 = disabled)</small>
+          </div>
+        </div>
+
+        <!-- Retained File Count -->
+        <div class="field-row">
+          <label class="field-label">
+            <i class="pi pi-question-circle field-info-icon" 
+               (click)="openFieldDocs('log.retainedFileCount')"
+               title="Click for documentation">
+            </i>
+            Retained File Count
+          </label>
+          <div>
+            <div class="field-input">
+              <p-inputNumber
+                formControlName="retainedFileCount"
+                inputId="retainedFileCount"
+                [showButtons]="true"
+                [min]="0"
+                buttonLayout="horizontal"
+              ></p-inputNumber>
+            </div>
+            <small *ngIf="hasNestedError('log', 'retainedFileCount', 'required')" class="p-error">This field is required</small>
+            <small *ngIf="hasNestedError('log', 'retainedFileCount', 'max')" class="p-error">Maximum value is 50</small>
+            <small class="form-helper-text">Number of old log files to retain (0 = unlimited)</small>
+            <small class="form-helper-text">Files exceeding this limit will be deleted or archived</small>
+          </div>
+        </div>
+
+        <!-- Time Limit Hours -->
+        <div class="field-row">
+          <label class="field-label">
+            <i class="pi pi-question-circle field-info-icon" 
+               (click)="openFieldDocs('log.timeLimitHours')"
+               title="Click for documentation">
+            </i>
+            Time Limit (hours)
+          </label>
+          <div>
+            <div class="field-input">
+              <p-inputNumber
+                formControlName="timeLimitHours"
+                inputId="timeLimitHours"
+                [showButtons]="true"
+                [min]="0"
+                buttonLayout="horizontal"
+              ></p-inputNumber>
+            </div>
+            <small *ngIf="hasNestedError('log', 'timeLimitHours', 'required')" class="p-error">This field is required</small>
+            <small *ngIf="hasNestedError('log', 'timeLimitHours', 'max')" class="p-error">Maximum value is 1440 hours (60 days)</small>
+            <small class="form-helper-text">Maximum age of old log files in hours (0 = unlimited)</small>
+            <small class="form-helper-text">Files exceeding this limit will be deleted or archived</small>
+          </div>
+        </div>
+
+        <!-- Archive Enabled -->
+        <div class="field-row">
+          <label class="field-label">
+            <i class="pi pi-question-circle field-info-icon" 
+               (click)="openFieldDocs('log.archiveEnabled')"
+               title="Click for documentation">
+            </i>
+            Enable Archive
+          </label>
+          <div class="field-input">
+            <p-checkbox formControlName="archiveEnabled" [binary]="true" inputId="archiveEnabled"></p-checkbox>
+            <small class="form-helper-text">Enable archiving of old log files</small>
+          </div>
+        </div>
+
+        <!-- Archive Retained Count (disabled when archiving disabled) -->
+        <div class="field-row">
+          <label class="field-label">
+            <i class="pi pi-question-circle field-info-icon" 
+               (click)="openFieldDocs('log.archiveRetainedCount')"
+               title="Click for documentation">
+            </i>
+            Archive Retained Count
+          </label>
+          <div>
+            <div class="field-input">
+              <p-inputNumber
+                formControlName="archiveRetainedCount"
+                inputId="archiveRetainedCount"
+                [showButtons]="true"
+                [min]="0"
+                buttonLayout="horizontal"
+              ></p-inputNumber>
+            </div>
+            <small *ngIf="hasNestedError('log', 'archiveRetainedCount', 'required')" class="p-error">This field is required</small>
+            <small *ngIf="hasNestedError('log', 'archiveRetainedCount', 'max')" class="p-error">Maximum value is 100</small>
+            <small class="form-helper-text">Number of archive files to retain (0 = unlimited)</small>
+          </div>
+        </div>
+
+        <!-- Archive Time Limit Hours (disabled when archiving disabled) -->
+        <div class="field-row">
+          <label class="field-label">
+            <i class="pi pi-question-circle field-info-icon" 
+               (click)="openFieldDocs('log.archiveTimeLimitHours')"
+               title="Click for documentation">
+            </i>
+            Archive Time Limit (hours)
+          </label>
+          <div>
+            <div class="field-input">
+              <p-inputNumber
+                formControlName="archiveTimeLimitHours"
+                inputId="archiveTimeLimitHours"
+                [showButtons]="true"
+                [min]="0"
+                buttonLayout="horizontal"
+              ></p-inputNumber>
+            </div>
+            <small *ngIf="hasNestedError('log', 'archiveTimeLimitHours', 'required')" class="p-error">This field is required</small>
+            <small *ngIf="hasNestedError('log', 'archiveTimeLimitHours', 'max')" class="p-error">Maximum value is 1440 hours (60 days)</small>
+            <small class="form-helper-text">Maximum age of archive files in hours (0 = unlimited)</small>
+          </div>
         </div>
       </div>
+    </p-card>
 
-      <!-- Ignored Downloads -->
-      <div class="field-row">
-        <label class="field-label">
-          <i class="pi pi-question-circle field-info-icon" 
-             (click)="openFieldDocs('ignoredDownloads')"
-             title="Click for documentation">
-          </i>
-          Ignored Downloads
-        </label>
-        <div class="field-input">
-          <!-- Mobile-friendly autocomplete -->
-          <app-mobile-autocomplete
-            formControlName="ignoredDownloads"
-            placeholder="Add download pattern"
-          ></app-mobile-autocomplete>
-          
-          <!-- Desktop autocomplete -->
-          <p-autocomplete
-            formControlName="ignoredDownloads"
-            inputId="ignoredDownloads"
-            multiple
-            fluid
-            [typeahead]="false"
-            placeholder="Add download pattern and press enter"
-            class="desktop-only"
-          ></p-autocomplete>
-          <small class="form-helper-text">Downloads matching these patterns will be ignored (e.g. hash, tag, category, label, tracker)</small>
-        </div>
-      </div>
-
-      <!-- Action buttons -->
-      <div class="card-footer mt-3">
-        <button
-          pButton
-          type="button"
-          label="Save"
-          icon="pi pi-save"
-          class="p-button-primary"
-          [disabled]="(!generalForm.dirty || !hasActualChanges) || generalForm.invalid || generalSaving()"
-          [loading]="generalSaving()"
-          (click)="saveGeneralConfig()"
-        ></button>
-        <button
-          pButton
-          type="button"
-          label="Reset"
-          icon="pi pi-refresh"
-          class="p-button-secondary p-button-outlined ml-2"
-          (click)="resetGeneralConfig()"
-        ></button>
-      </div>
-    </form>
-  </div>
-</p-card>
-
-<!-- Confirmation Dialog -->
-<p-confirmDialog 
-  [style]="{ width: '500px', maxWidth: '90vw' }"
-  [baseZIndex]="10000">
-</p-confirmDialog>
+    <!-- Action buttons moved outside cards -->
+    <div class="card-footer mt-3">
+      <button
+        pButton
+        type="button"
+        label="Save"
+        icon="pi pi-save"
+        class="p-button-primary"
+        [disabled]="(!generalForm.dirty || !hasActualChanges) || generalForm.invalid || generalSaving()"
+        [loading]="generalSaving()"
+        (click)="saveGeneralConfig()"
+      ></button>
+      <button
+        pButton
+        type="button"
+        label="Reset"
+        icon="pi pi-refresh"
+        class="p-button-secondary p-button-outlined ml-2"
+        (click)="resetGeneralConfig()"
+      ></button>
+    </div>
+  </form>
+  <!-- Confirmation Dialog -->
+  <p-confirmDialog 
+    [style]="{ width: '500px', maxWidth: '90vw' }"
+    [baseZIndex]="10000">
+  </p-confirmDialog>
 </div>
