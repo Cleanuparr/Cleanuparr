@@ -10,7 +10,6 @@ import { NotificationProviderType } from "../../shared/models/enums";
 import { DocumentationService } from "../../core/services/documentation.service";
 import { NotifiarrFormData, AppriseFormData } from "./models/provider-modal.model";
 import { LoadingErrorStateComponent } from "../../shared/components/loading-error-state/loading-error-state.component";
-import { ErrorHandlerUtil } from "../../core/utils/error-handler.util";
 
 // New modal components
 import { ProviderTypeSelectionComponent } from "./modals/provider-type-selection/provider-type-selection.component";
@@ -130,20 +129,11 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
       }
     });
 
-    // Effect to handle save errors - show as toast notifications for user to fix
+    // Effect to handle save errors
     effect(() => {
       const saveErrorMessage = this.notificationProviderSaveError();
       if (saveErrorMessage) {
-        // Use ErrorHandlerUtil to determine if this is a user-fixable error
-        const isUserFixableError = ErrorHandlerUtil.isUserFixableError(saveErrorMessage);
-
-        if (isUserFixableError) {
-          // Show as toast for user to fix (validation errors, etc.)
-          this.notificationService.showError(saveErrorMessage);
-        } else {
-          // Show as LoadingErrorStateComponent (connection issues, etc.)
-          this.error.emit(saveErrorMessage);
-        }
+        this.notificationService.showError(saveErrorMessage);
 
         // Clear the error after handling
         this.notificationProviderStore.resetSaveError();
