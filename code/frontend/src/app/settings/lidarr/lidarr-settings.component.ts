@@ -1,6 +1,6 @@
 import { Component, EventEmitter, OnDestroy, Output, effect, inject } from "@angular/core";
 import { CommonModule } from "@angular/common";
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, AbstractControl, ValidationErrors } from "@angular/forms";
+import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from "@angular/forms";
 import { Subject, takeUntil } from "rxjs";
 import { LidarrConfigStore } from "./lidarr-config.store";
 import { CanComponentDeactivate } from "../../core/guards";
@@ -19,6 +19,7 @@ import { ConfirmDialogModule } from "primeng/confirmdialog";
 import { ConfirmationService } from "primeng/api";
 import { NotificationService } from "../../core/services/notification.service";
 import { LoadingErrorStateComponent } from "../../shared/components/loading-error-state/loading-error-state.component";
+import { UrlValidators } from "../../core/validators/url.validator";
 
 @Component({
   selector: "app-lidarr-settings",
@@ -88,7 +89,7 @@ export class LidarrSettingsComponent implements OnDestroy, CanComponentDeactivat
     this.instanceForm = this.formBuilder.group({
       enabled: [true],
       name: ['', Validators.required],
-      url: ['', [Validators.required, this.uriValidator.bind(this)]],
+      url: ['', [Validators.required, UrlValidators.httpUrl]],
       apiKey: ['', Validators.required],
     });
 
@@ -178,24 +179,7 @@ export class LidarrSettingsComponent implements OnDestroy, CanComponentDeactivat
   /**
    * Custom validator to check if the input is a valid URI
    */
-  private uriValidator(control: AbstractControl): ValidationErrors | null {
-    if (!control.value) {
-      return null; // Let required validator handle empty values
-    }
-    
-    try {
-      const url = new URL(control.value);
-      
-      // Check that we have a valid protocol (http or https)
-      if (url.protocol !== 'http:' && url.protocol !== 'https:') {
-        return { invalidProtocol: true };
-      }
-      
-      return null; // Valid URI
-    } catch (e) {
-      return { invalidUri: true }; // Invalid URI
-    }
-  }
+  // URL validation handled by shared UrlValidators.httpUrl
 
   /**
    * Mark all controls in a form group as touched

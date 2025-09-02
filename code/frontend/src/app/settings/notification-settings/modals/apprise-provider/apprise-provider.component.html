@@ -28,10 +28,9 @@
         placeholder="http://localhost:8000"
         class="w-full"
       />
-      <small *ngIf="hasFieldError(urlControl, 'required')" class="p-error">Apprise server URL is required</small>
-      <small *ngIf="hasFieldError(urlControl, 'url')" class="p-error"
-        >Please enter a valid URL (e.g., http://localhost:8000)</small
-      >
+      <small *ngIf="hasFieldError(urlControl, 'required')" class="p-error">URL is required</small>
+      <small *ngIf="hasFieldError(urlControl, 'invalidUri')" class="p-error">Must be a valid URL</small>
+      <small *ngIf="hasFieldError(urlControl, 'invalidProtocol')" class="p-error">Must use http or https protocol</small>
       <small class="form-helper-text">The URL of your Apprise server where notifications will be sent.</small>
     </div>
 
