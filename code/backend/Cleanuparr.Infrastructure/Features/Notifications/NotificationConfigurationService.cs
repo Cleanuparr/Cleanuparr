@@ -12,7 +12,7 @@ public sealed class NotificationConfigurationService : INotificationConfiguratio
     private readonly DataContext _dataContext;
     private readonly ILogger<NotificationConfigurationService> _logger;
     private List<NotificationProviderDto>? _cachedProviders;
-    private readonly object _cacheLock = new();
+    private readonly SemaphoreSlim _cacheSemaphore = new(1, 1);
 
     public NotificationConfigurationService(
         DataContext dataContext,
@@ -24,19 +24,29 @@ public sealed class NotificationConfigurationService : INotificationConfiguratio
 
     public async Task<List<NotificationProviderDto>> GetActiveProvidersAsync()
     {
-        lock (_cacheLock)
+        await _cacheSemaphore.WaitAsync();
+        try
         {
             if (_cachedProviders != null)
             {
                 return _cachedProviders.Where(p => p.IsEnabled).ToList();
             }
         }
+        finally
+        {
+            _cacheSemaphore.Release();
+        }
 
         await LoadProvidersAsync();
-        
-        lock (_cacheLock)
+
+        await _cacheSemaphore.WaitAsync();
+        try
         {
             return _cachedProviders?.Where(p => p.IsEnabled).ToList() ?? new List<NotificationProviderDto>();
+        }
+        finally
+        {
+            _cacheSemaphore.Release();
         }
     }
 
@@ -53,13 +63,18 @@ public sealed class NotificationConfigurationService : INotificationConfiguratio
         return allProviders.FirstOrDefault(p => p.Id == id);
     }
 
-    public void InvalidateCache()
+    public async Task InvalidateCacheAsync()
     {
-        lock (_cacheLock)
+        await _cacheSemaphore.WaitAsync();
+        try
         {
             _cachedProviders = null;
         }
-        
+        finally
+        {
+            _cacheSemaphore.Release();
+        }
+
         _logger.LogDebug("Notification provider cache invalidated");
     }
 
@@ -75,9 +90,14 @@ public sealed class NotificationConfigurationService : INotificationConfiguratio
 
             var dtos = providers.Select(MapToDto).ToList();
 
-            lock (_cacheLock)
+            await _cacheSemaphore.WaitAsync();
+            try
             {
                 _cachedProviders = dtos;
+            }
+            finally
+            {
+                _cacheSemaphore.Release();
             }
 
             _logger.LogDebug("Loaded {count} notification providers", dtos.Count);
@@ -85,10 +105,14 @@ public sealed class NotificationConfigurationService : INotificationConfiguratio
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to load notification providers");
-            
-            lock (_cacheLock)
+            await _cacheSemaphore.WaitAsync();
+            try
             {
                 _cachedProviders = new List<NotificationProviderDto>();
+            }
+            finally
+            {
+                _cacheSemaphore.Release();
             }
         }
     }

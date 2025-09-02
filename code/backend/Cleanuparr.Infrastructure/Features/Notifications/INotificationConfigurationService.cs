@@ -11,5 +11,5 @@ public interface INotificationConfigurationService
     
     Task<NotificationProviderDto?> GetProviderByIdAsync(Guid id);
     
-    void InvalidateCache();
+    Task InvalidateCacheAsync();
 }

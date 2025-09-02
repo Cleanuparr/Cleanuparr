@@ -437,7 +437,7 @@ public class ConfigurationController : ControllerBase
             await _dataContext.SaveChangesAsync();
 
             // Clear cache to ensure fresh data on next request
-            _notificationConfigurationService.InvalidateCache();
+            await _notificationConfigurationService.InvalidateCacheAsync();
 
             // Return the provider in DTO format to match frontend expectations
             var providerDto = new NotificationProviderDto
@@ -514,7 +514,7 @@ public class ConfigurationController : ControllerBase
             await _dataContext.SaveChangesAsync();
 
             // Clear cache to ensure fresh data on next request
-            _notificationConfigurationService.InvalidateCache();
+            await _notificationConfigurationService.InvalidateCacheAsync();
 
             // Return the provider in DTO format to match frontend expectations
             var providerDto = new NotificationProviderDto
@@ -614,7 +614,7 @@ public class ConfigurationController : ControllerBase
             await _dataContext.SaveChangesAsync();
 
             // Clear cache to ensure fresh data on next request
-            _notificationConfigurationService.InvalidateCache();
+            await _notificationConfigurationService.InvalidateCacheAsync();
 
             // Return the provider in DTO format to match frontend expectations
             var providerDto = new NotificationProviderDto
@@ -714,7 +714,7 @@ public class ConfigurationController : ControllerBase
             await _dataContext.SaveChangesAsync();
 
             // Clear cache to ensure fresh data on next request
-            _notificationConfigurationService.InvalidateCache();
+            await _notificationConfigurationService.InvalidateCacheAsync();
 
             // Return the provider in DTO format to match frontend expectations
             var providerDto = new NotificationProviderDto
@@ -774,7 +774,7 @@ public class ConfigurationController : ControllerBase
             await _dataContext.SaveChangesAsync();
 
             // Clear cache to ensure fresh data on next request
-            _notificationConfigurationService.InvalidateCache();
+            await _notificationConfigurationService.InvalidateCacheAsync();
             
             _logger.LogInformation("Removed notification provider {ProviderName} with ID {ProviderId}", 
                 existingProvider.Name, existingProvider.Id);
