@@ -254,7 +254,7 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
       icon: "pi pi-exclamation-triangle",
       acceptButtonStyleClass: "p-button-danger",
       accept: () => {
-        this.notificationProviderStore.deleteProvider(provider.id!);
+        this.notificationProviderStore.deleteProvider(provider.id);
 
         // Reuse monitor for success/error handling
         this.monitorProviderOperation('deleted');

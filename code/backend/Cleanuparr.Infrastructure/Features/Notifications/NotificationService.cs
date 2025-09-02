@@ -66,7 +66,6 @@ public sealed class NotificationService
             Data = new Dictionary<string, string>
             {
                 ["Test time"] = DateTime.UtcNow.ToString("o"),
-                ["Provider name"] = providerConfig.Name,
                 ["Provider type"] = providerConfig.Type.ToString(),
             }
         };
