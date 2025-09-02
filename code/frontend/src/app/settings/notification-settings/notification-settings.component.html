@@ -26,7 +26,7 @@
       <!-- Providers List -->
       <div *ngIf="!notificationProviderLoading() && !notificationProviderLoadError()" class="providers-list">
         <div 
-          *ngFor="let provider of providers()" 
+          *ngFor="let provider of notificationProviderStore.notificationProviders()" 
           class="provider-item p-3 border-round surface-border border-1 mb-3"
           [ngClass]="{ 'enabled': provider.isEnabled }"
         >
@@ -62,6 +62,7 @@
                 icon="pi pi-play" 
                 class="p-button-rounded p-button-text p-button-sm mr-1"
                 pTooltip="Test notification"
+                tooltipPosition="left"
                 [loading]="testing()"
                 (click)="testProvider(provider)"
               ></button>
@@ -71,6 +72,7 @@
                 icon="pi pi-pencil" 
                 class="p-button-rounded p-button-text p-button-sm mr-1"
                 pTooltip="Edit provider"
+                tooltipPosition="left"
                 [disabled]="saving()"
                 (click)="openEditProviderModal(provider)"
               ></button>
@@ -80,6 +82,7 @@
                 icon="pi pi-trash" 
                 class="p-button-rounded p-button-text p-button-danger p-button-sm"
                 pTooltip="Delete provider"
+                tooltipPosition="left"
                 [disabled]="saving()"
                 (click)="deleteProvider(provider)"
               ></button>
@@ -88,7 +91,7 @@
         </div>
 
         <div 
-          *ngIf="providers().length === 0" 
+          *ngIf="notificationProviderStore.notificationProviders().length === 0" 
           class="no-providers text-center py-5 text-color-secondary"
         >
           <i class="pi pi-bell text-4xl mb-3"></i>

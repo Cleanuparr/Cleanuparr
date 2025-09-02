@@ -77,11 +77,11 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
   private notificationService = inject(NotificationService);
   private confirmationService = inject(ConfirmationService);
   private messageService = inject(MessageService);
-  private notificationProviderStore = inject(NotificationProviderConfigStore);
+  public readonly notificationProviderStore = inject(NotificationProviderConfigStore);
   private documentationService = inject(DocumentationService);
 
   // Signals from store
-  notificationProviderConfig = this.notificationProviderStore.config;
+  notificationProviderConfig = this.notificationProviderStore.config();
   notificationProviderLoading = this.notificationProviderStore.loading;
   notificationProviderLoadError = this.notificationProviderStore.loadError; // Only for "Not connected" state
   notificationProviderSaveError = this.notificationProviderStore.saveError; // Only for toast notifications
@@ -90,23 +90,6 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
   notificationProviderTesting = this.notificationProviderStore.testing;
   testResult = this.notificationProviderStore.testResult;
 
-  // Computed signals
-  providers = computed(() => {
-    const cfg = this.notificationProviderConfig();
-    const arr = cfg?.providers ? [...cfg.providers] : [];
-    return arr.sort((a, b) => {
-      // Order by type first (stable, ascending)
-      if (a.type !== b.type) {
-        return String(a.type ?? "").localeCompare(String(b.type ?? ""));
-      }
-
-      // Then by name (case-insensitive)
-      const an = (a.name || "").toLowerCase();
-      const bn = (b.name || "").toLowerCase();
-      
-      return an.localeCompare(bn);
-    });
-  });
   saving = computed(() => this.notificationProviderSaving());
   testing = computed(() => this.notificationProviderTesting());
 

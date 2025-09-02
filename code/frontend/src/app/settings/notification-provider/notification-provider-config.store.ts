@@ -1,5 +1,5 @@
-import { Injectable, inject } from '@angular/core';
-import { patchState, signalStore, withHooks, withMethods, withState } from '@ngrx/signals';
+import { Injectable, computed, inject } from '@angular/core';
+import { patchState, signalStore, withComputed, withHooks, withMethods, withState } from '@ngrx/signals';
 import { rxMethod } from '@ngrx/signals/rxjs-interop';
 import { 
   NotificationProvidersConfig, 
@@ -399,6 +399,9 @@ export class NotificationProviderConfigStore extends signalStore(
     clearTestResult() {
       patchState(store, { testResult: null });
     }
+  })),
+  withComputed((store) => ({
+    notificationProviders: computed(() => store.config()?.providers || [])
   })),
   withHooks({
     onInit({ loadConfig }) {

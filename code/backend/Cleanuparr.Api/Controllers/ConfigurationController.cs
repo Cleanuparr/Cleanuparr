@@ -362,28 +362,32 @@ public class ConfigurationController : ControllerBase
                 .AsNoTracking()
                 .ToListAsync();
             
-            var providerDtos = providers.Select(p => new NotificationProviderDto
-            {
-                Id = p.Id,
-                Name = p.Name,
-                Type = p.Type,
-                IsEnabled = p.IsEnabled,
-                Events = new NotificationEventFlags
+            var providerDtos = providers
+                .Select(p => new NotificationProviderDto
                 {
-                    OnFailedImportStrike = p.OnFailedImportStrike,
-                    OnStalledStrike = p.OnStalledStrike,
-                    OnSlowStrike = p.OnSlowStrike,
-                    OnQueueItemDeleted = p.OnQueueItemDeleted,
-                    OnDownloadCleaned = p.OnDownloadCleaned,
-                    OnCategoryChanged = p.OnCategoryChanged
-                },
-                Configuration = p.Type switch
-                {
-                    NotificationProviderType.Notifiarr => p.NotifiarrConfiguration ?? new object(),
-                    NotificationProviderType.Apprise => p.AppriseConfiguration ?? new object(),
-                    _ => new object()
-                }
-            }).ToList();
+                    Id = p.Id,
+                    Name = p.Name,
+                    Type = p.Type,
+                    IsEnabled = p.IsEnabled,
+                    Events = new NotificationEventFlags
+                    {
+                        OnFailedImportStrike = p.OnFailedImportStrike,
+                        OnStalledStrike = p.OnStalledStrike,
+                        OnSlowStrike = p.OnSlowStrike,
+                        OnQueueItemDeleted = p.OnQueueItemDeleted,
+                        OnDownloadCleaned = p.OnDownloadCleaned,
+                        OnCategoryChanged = p.OnCategoryChanged
+                    },
+                    Configuration = p.Type switch
+                    {
+                        NotificationProviderType.Notifiarr => p.NotifiarrConfiguration ?? new object(),
+                        NotificationProviderType.Apprise => p.AppriseConfiguration ?? new object(),
+                        _ => new object()
+                    }
+                })
+                .OrderBy(x => x.Type.ToString())
+                .ThenBy(x => x.Name)
+                .ToList();
             
             // Return in the expected format with providers wrapper
             var config = new { providers = providerDtos };
@@ -405,6 +409,13 @@ public class ConfigurationController : ControllerBase
             if (string.IsNullOrWhiteSpace(newProvider.Name))
             {
                 return BadRequest("Provider name is required");
+            }
+            
+            var duplicateConfig = await _dataContext.NotificationConfigs.CountAsync(x => x.Name == newProvider.Name);
+
+            if (duplicateConfig > 0)
+            {
+                return BadRequest("A provider with this name already exists");
             }
 
             // Create provider-specific configuration with validation
@@ -481,6 +492,13 @@ public class ConfigurationController : ControllerBase
             if (string.IsNullOrWhiteSpace(newProvider.Name))
             {
                 return BadRequest("Provider name is required");
+            }
+            
+            var duplicateConfig = await _dataContext.NotificationConfigs.CountAsync(x => x.Name == newProvider.Name);
+
+            if (duplicateConfig > 0)
+            {
+                return BadRequest("A provider with this name already exists");
             }
 
             // Create provider-specific configuration with validation
@@ -575,6 +593,13 @@ public class ConfigurationController : ControllerBase
                 return BadRequest("Provider name is required");
             }
 
+            var duplicateConfig = await _dataContext.NotificationConfigs.CountAsync(x => x.Name == updatedProvider.Name);
+
+            if (duplicateConfig > 0)
+            {
+                return BadRequest("A provider with this name already exists");
+            }
+            
             // Create provider-specific configuration with validation
             var notifiarrConfig = new NotifiarrConfig
             {
@@ -672,6 +697,13 @@ public class ConfigurationController : ControllerBase
             if (string.IsNullOrWhiteSpace(updatedProvider.Name))
             {
                 return BadRequest("Provider name is required");
+            }
+            
+            var duplicateConfig = await _dataContext.NotificationConfigs.CountAsync(x => x.Name == updatedProvider.Name);
+
+            if (duplicateConfig > 0)
+            {
+                return BadRequest("A provider with this name already exists");
             }
 
             // Create provider-specific configuration with validation
