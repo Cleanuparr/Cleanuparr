@@ -33,7 +33,7 @@ namespace Cleanuparr.Persistence.Migrations.Data
                     table.PrimaryKey("pk_notification_configs", x => x.id);
                 });
             
-            Guid newGuid = Guid.NewGuid();
+            string newGuid = Guid.NewGuid().ToString().ToUpperInvariant();
             migrationBuilder.Sql(
                 $"""
                 INSERT INTO notification_configs (id, name, type, is_enabled, on_failed_import_strike, on_stalled_strike, on_slow_strike, on_queue_item_deleted, on_download_cleaned, on_category_changed, created_at, updated_at)
@@ -56,7 +56,7 @@ namespace Cleanuparr.Persistence.Migrations.Data
                     channel_id IS NOT NULL AND channel_id != '' AND api_key IS NOT NULL AND api_key != ''
                 """);
 
-            newGuid = Guid.NewGuid();
+            newGuid = Guid.NewGuid().ToString().ToUpperInvariant();
             migrationBuilder.Sql(
                 $"""
                 INSERT INTO notification_configs (id, name, type, is_enabled, on_failed_import_strike, on_stalled_strike, on_slow_strike, on_queue_item_deleted, on_download_cleaned, on_category_changed, created_at, updated_at)

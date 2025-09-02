@@ -40,6 +40,8 @@ public class DataContext : DbContext
     public DbSet<NotificationConfig> NotificationConfigs { get; set; }
     
     public DbSet<NotifiarrConfig> NotifiarrConfigs { get; set; }
+    
+    public DbSet<AppriseConfig> AppriseConfigs { get; set; }
 
     public DataContext()
     {
@@ -55,8 +57,6 @@ public class DataContext : DbContext
         SetDbContextOptions(optionsBuilder);
         return new DataContext(optionsBuilder.Options);
     }
-    
-    public DbSet<AppriseConfig> AppriseConfigs { get; set; }
     
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -111,6 +111,8 @@ public class DataContext : DbContext
         // Configure new notification system relationships
         modelBuilder.Entity<NotificationConfig>(entity =>
         {
+            entity.Property(e => e.Type).HasConversion(new LowercaseEnumConverter<NotificationProviderType>());
+
             entity.HasOne(p => p.NotifiarrConfiguration)
                   .WithOne(c => c.NotificationConfig)
                   .HasForeignKey<NotifiarrConfig>(c => c.NotificationConfigId)
