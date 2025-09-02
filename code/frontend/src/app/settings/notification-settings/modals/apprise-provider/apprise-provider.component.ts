@@ -1,5 +1,5 @@
 import { Component, Input, Output, EventEmitter, OnInit, OnDestroy, OnChanges, SimpleChanges, inject } from '@angular/core';
-import { FormControl, Validators, ReactiveFormsModule } from '@angular/forms';
+import { FormControl, Validators, ReactiveFormsModule, AbstractControl, ValidationErrors } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { InputTextModule } from 'primeng/inputtext';
 import { AppriseFormData, BaseProviderFormData } from '../../models/provider-modal.model';
@@ -29,11 +29,8 @@ export class AppriseProviderComponent implements OnInit, OnChanges {
   @Output() cancel = new EventEmitter<void>();
   @Output() test = new EventEmitter<AppriseFormData>();
 
-  // URL pattern for validation
-  private readonly urlPattern = /^https?:\/\/(?:[-\w.])+(?::[0-9]+)?(?:\/.*)?$/;
-
   // Provider-specific form controls
-  urlControl = new FormControl('', [Validators.required, Validators.pattern(this.urlPattern)]);
+  urlControl = new FormControl('', [Validators.required, AppriseProviderComponent.url]);
   keyControl = new FormControl('', [Validators.required, Validators.minLength(2)]);
   tagsControl = new FormControl(''); // Optional field
   private documentationService = inject(DocumentationService);
@@ -114,6 +111,26 @@ export class AppriseProviderComponent implements OnInit, OnChanges {
       // Mark provider-specific fields as touched to show validation errors
       this.urlControl.markAsTouched();
       this.keyControl.markAsTouched();
+    }
+  }
+
+  public static url(control: AbstractControl): ValidationErrors | null {
+    const value = control.value;
+    
+    // Return null if empty (let required validator handle empty case)
+    if (!value || value === '') {
+      return null;
+    }
+    
+    try {
+      // Accept only http or https protocols
+      const url = new URL(value);
+      if (url.protocol === 'http:' || url.protocol === 'https:') {
+        return null; // Valid URL
+      }
+      return { url: true }; // Invalid protocol
+    } catch {
+      return { url: true }; // Invalid URL format
     }
   }
 }
