@@ -128,19 +128,8 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
         this.error.emit(loadErrorMessage);
       }
     });
-
-    // Effect to handle save errors
-    effect(() => {
-      const saveErrorMessage = this.notificationProviderSaveError();
-      if (saveErrorMessage) {
-        this.notificationService.showError(saveErrorMessage);
-
-        // Clear the error after handling
-        this.notificationProviderStore.resetSaveError();
-      }
-    });
-
-    // Effect to handle test errors - show as toast notifications for user to fix
+    
+    // Effect: show test errors as toast
     effect(() => {
       const testErrorMessage = this.notificationProviderTestError();
       if (testErrorMessage) {
@@ -267,24 +256,8 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
       accept: () => {
         this.notificationProviderStore.deleteProvider(provider.id!);
 
-        // Success/error handling is done via effects in constructor
-        // Monitor for success to show notification
-        const checkDeletionStatus = () => {
-          const saving = this.notificationProviderSaving();
-          const saveError = this.notificationProviderSaveError();
-
-          if (!saving && !saveError) {
-            // Operation completed successfully
-            this.notificationService.showSuccess("Provider deleted successfully");
-          } else if (!saving && saveError) {
-            // Error handling is done in effects, this is just for cleanup
-          } else {
-            // Still saving, check again
-            setTimeout(checkDeletionStatus, 100);
-          }
-        };
-
-        setTimeout(checkDeletionStatus, 100);
+        // Reuse monitor for success/error handling
+        this.monitorProviderOperation('deleted');
       },
     });
   }
@@ -367,7 +340,7 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
     this.documentationService.openFieldDocumentation("notifications", fieldName);
   }
 
-  // Provider-specific modal event handlers
+  // Provider modal handlers
 
   /**
    * Handle Notifiarr provider save
@@ -553,13 +526,16 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
       const saving = this.notificationProviderSaving();
       const saveError = this.notificationProviderSaveError();
 
-      if (!saving && !saveError) {
-        // Operation completed successfully
-        this.notificationService.showSuccess(`Provider ${operation} successfully`);
-        this.closeAllModals();
-      } else if (!saving && saveError) {
-        // Error handling is done in effects, this is just for cleanup
-        // Don't close modals on error so user can fix and retry
+      if (!saving) {
+        if (saveError) {
+          // Show error once and clear it
+          this.notificationService.showError(saveError);
+          this.notificationProviderStore.resetSaveError();
+        } else {
+          // Operation completed successfully
+          this.notificationService.showSuccess(`Provider ${operation} successfully`);
+          this.closeAllModals();
+        }
       } else {
         // Still saving, check again
         setTimeout(checkStatus, 100);
