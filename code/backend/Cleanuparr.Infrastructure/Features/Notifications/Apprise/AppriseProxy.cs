@@ -26,16 +26,17 @@ public sealed class AppriseProxy : IAppriseProxy
                 NullValueHandling = NullValueHandling.Ignore
             });
 
-            UriBuilder uriBuilder = new(config.Url.ToString());
+            var parsedUrl = config.Uri!;
+            UriBuilder uriBuilder = new(parsedUrl);
             uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/notify/{config.Key}";
 
             using HttpRequestMessage request = new(HttpMethod.Post, uriBuilder.Uri);
             request.Method = HttpMethod.Post;
             request.Content = new StringContent(content, Encoding.UTF8, "application/json");
 
-            if (!string.IsNullOrEmpty(config.Url.UserInfo))
+            if (!string.IsNullOrEmpty(parsedUrl.UserInfo))
             {
-                var byteArray = Encoding.ASCII.GetBytes(config.Url.UserInfo);
+                var byteArray = Encoding.ASCII.GetBytes(parsedUrl.UserInfo);
                 request.Headers.Authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(byteArray));
             }
 

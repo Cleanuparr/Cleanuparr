@@ -747,31 +747,6 @@ export class DownloadCleanerSettingsComponent implements OnDestroy, CanComponent
   }
 
   /**
-   * Simple test method to check unlinkedCategories functionality
-   * Call from browser console: ng.getComponent(document.querySelector('app-download-cleaner-settings')).testUnlinkedCategories()
-   */
-  testUnlinkedCategories(): void {
-    console.log('=== TESTING UNLINKED CATEGORIES ===');
-    
-    const control = this.downloadCleanerForm.get('unlinkedCategories');
-    console.log('Current value:', control?.value);
-    console.log('Control disabled:', control?.disabled);
-    console.log('Control status:', control?.status);
-    
-    // Test setting values
-    console.log('Setting test values: ["movies", "tv-shows"]');
-    control?.setValue(['movies', 'tv-shows']);
-    
-    console.log('Value after setting:', control?.value);
-    
-    // Test what getRawValue returns
-    const rawValues = this.downloadCleanerForm.getRawValue();
-    console.log('getRawValue().unlinkedCategories:', rawValues.unlinkedCategories);
-    
-    console.log('=== END TEST ===');
-  }
-
-  /**
    * Minimal complete method for autocomplete - just returns empty array to allow manual input
    */
   onUnlinkedCategoriesComplete(event: any): void {

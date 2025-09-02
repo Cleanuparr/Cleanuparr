@@ -17,6 +17,26 @@ Configure notification services to receive alerts about Cleanuparr operations.
 
 <div className={styles.section}>
 
+<ConfigSection
+  id="enabled"
+  title="Enabled"
+  icon="✅"
+>
+
+Enable or disable this notification provider. If enabled, notifications will be sent according to the configured event triggers.
+
+</ConfigSection>
+
+<ConfigSection
+  id="provider-name"
+  title="Provider Name"
+  icon="🆔"
+>
+
+A unique name to identify this provider. This name will be displayed in the user interface and logs.
+
+</ConfigSection>
+
 <h2 className={styles.sectionTitle}>
   <span className={styles.sectionIcon}>🚀</span>
   Notifiarr
@@ -97,7 +117,7 @@ Optionally notify only those tagged accordingly. Use a comma (,) to OR your tags
 
 <div className={styles.section}>
 
-<h2 className={styles.sectionTitle}>
+<h2 id="event-triggers" className={styles.sectionTitle}>
   <span className={styles.sectionIcon}>⚡</span>
   Event Triggers
 </h2>

@@ -37,9 +37,11 @@ public class DataContext : DbContext
     
     public DbSet<ArrInstance> ArrInstances { get; set; }
     
-    public DbSet<AppriseConfig> AppriseConfigs { get; set; }
+    public DbSet<NotificationConfig> NotificationConfigs { get; set; }
     
     public DbSet<NotifiarrConfig> NotifiarrConfigs { get; set; }
+    
+    public DbSet<AppriseConfig> AppriseConfigs { get; set; }
 
     public DataContext()
     {
@@ -104,6 +106,24 @@ public class DataContext : DbContext
                   .WithOne(i => i.ArrConfig)
                   .HasForeignKey(i => i.ArrConfigId)
                   .OnDelete(DeleteBehavior.Cascade);
+        });
+        
+        // Configure new notification system relationships
+        modelBuilder.Entity<NotificationConfig>(entity =>
+        {
+            entity.Property(e => e.Type).HasConversion(new LowercaseEnumConverter<NotificationProviderType>());
+
+            entity.HasOne(p => p.NotifiarrConfiguration)
+                  .WithOne(c => c.NotificationConfig)
+                  .HasForeignKey<NotifiarrConfig>(c => c.NotificationConfigId)
+                  .OnDelete(DeleteBehavior.Cascade);
+                  
+            entity.HasOne(p => p.AppriseConfiguration)
+                  .WithOne(c => c.NotificationConfig)
+                  .HasForeignKey<AppriseConfig>(c => c.NotificationConfigId)
+                  .OnDelete(DeleteBehavior.Cascade);
+                  
+            entity.HasIndex(p => p.Name).IsUnique();
         });
         
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())

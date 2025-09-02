@@ -68,7 +68,6 @@ export abstract class BaseSignalRService<T> implements OnDestroy {
 
     return this.hubConnection.start()
       .then(() => {
-        console.log(`SignalR connection started to ${this.config.hubUrl}`);
         this.connectionStatusSubject.next(true);
         this.reconnectAttempts = 0;
         this.onConnectionEstablished();
@@ -86,7 +85,6 @@ export abstract class BaseSignalRService<T> implements OnDestroy {
             30000
           );
           
-          console.log(`Attempting to reconnect (${this.reconnectAttempts}) in ${delay}ms...`);
           setTimeout(() => this.startConnection(), delay);
         }
         
@@ -107,11 +105,9 @@ export abstract class BaseSignalRService<T> implements OnDestroy {
 
     return this.hubConnection.stop()
       .then(() => {
-        console.log(`SignalR connection to ${this.config.hubUrl} stopped`);
         this.connectionStatusSubject.next(false);
       })
       .catch(err => {
-        console.error(`Error stopping connection to ${this.config.hubUrl}:`, err);
         throw err;
       });
   }
@@ -127,19 +123,16 @@ export abstract class BaseSignalRService<T> implements OnDestroy {
 
     // Handle reconnection events
     this.hubConnection.onreconnected(() => {
-      console.log(`SignalR connection reconnected to ${this.config.hubUrl}`);
       this.connectionStatusSubject.next(true);
       this.reconnectAttempts = 0;
       this.onConnectionEstablished();
     });
 
     this.hubConnection.onreconnecting(() => {
-      console.log(`SignalR connection reconnecting to ${this.config.hubUrl}...`);
       this.connectionStatusSubject.next(false);
     });
 
     this.hubConnection.onclose(() => {
-      console.log(`SignalR connection to ${this.config.hubUrl} closed`);
       this.connectionStatusSubject.next(false);
       
       // Try to reconnect if the connection was closed unexpectedly
@@ -178,7 +171,6 @@ export abstract class BaseSignalRService<T> implements OnDestroy {
   protected checkConnectionHealth(): void {
     if (!this.hubConnection || 
         this.hubConnection.state === signalR.HubConnectionState.Disconnected) {
-      console.log('Health check detected disconnected state, attempting to reconnect...');
       this.startConnection();
     }
   }

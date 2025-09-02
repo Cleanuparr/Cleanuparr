@@ -1,8 +1,11 @@
 using Cleanuparr.Api.Models;
+using Cleanuparr.Api.Models.NotificationProviders;
 using Cleanuparr.Application.Features.Arr.Dtos;
 using Cleanuparr.Application.Features.DownloadClient.Dtos;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Domain.Exceptions;
+using Cleanuparr.Infrastructure.Features.Notifications;
+using Cleanuparr.Infrastructure.Features.Notifications.Models;
 using Cleanuparr.Infrastructure.Http.DynamicHttpClientSystem;
 using Cleanuparr.Infrastructure.Logging;
 using Cleanuparr.Infrastructure.Models;
@@ -31,18 +34,24 @@ public class ConfigurationController : ControllerBase
     private readonly DataContext _dataContext;
     private readonly IJobManagementService _jobManagementService;
     private readonly MemoryCache _cache;
+    private readonly INotificationConfigurationService _notificationConfigurationService;
+    private readonly NotificationService _notificationService;
 
     public ConfigurationController(
         ILogger<ConfigurationController> logger,
         DataContext dataContext,
         IJobManagementService jobManagementService,
-        MemoryCache cache
+        MemoryCache cache,
+        INotificationConfigurationService notificationConfigurationService,
+        NotificationService notificationService
     )
     {
         _logger = logger;
         _dataContext = dataContext;
         _jobManagementService = jobManagementService;
         _cache = cache;
+        _notificationConfigurationService = notificationConfigurationService;
+        _notificationService = notificationService;
     }
 
     [HttpGet("queue_cleaner")]
@@ -341,26 +350,47 @@ public class ConfigurationController : ControllerBase
         }
     }
 
-    [HttpGet("notifications")]
-    public async Task<IActionResult> GetNotificationsConfig()
+    [HttpGet("notification_providers")]
+    public async Task<IActionResult> GetNotificationProviders()
     {
         await DataContext.Lock.WaitAsync();
         try
         {
-            var notifiarrConfig = await _dataContext.NotifiarrConfigs
+            var providers = await _dataContext.NotificationConfigs
+                .Include(p => p.NotifiarrConfiguration)
+                .Include(p => p.AppriseConfiguration)
                 .AsNoTracking()
-                .FirstOrDefaultAsync();
+                .ToListAsync();
             
-            var appriseConfig = await _dataContext.AppriseConfigs
-                .AsNoTracking()
-                .FirstOrDefaultAsync();
+            var providerDtos = providers
+                .Select(p => new NotificationProviderDto
+                {
+                    Id = p.Id,
+                    Name = p.Name,
+                    Type = p.Type,
+                    IsEnabled = p.IsEnabled,
+                    Events = new NotificationEventFlags
+                    {
+                        OnFailedImportStrike = p.OnFailedImportStrike,
+                        OnStalledStrike = p.OnStalledStrike,
+                        OnSlowStrike = p.OnSlowStrike,
+                        OnQueueItemDeleted = p.OnQueueItemDeleted,
+                        OnDownloadCleaned = p.OnDownloadCleaned,
+                        OnCategoryChanged = p.OnCategoryChanged
+                    },
+                    Configuration = p.Type switch
+                    {
+                        NotificationProviderType.Notifiarr => p.NotifiarrConfiguration ?? new object(),
+                        NotificationProviderType.Apprise => p.AppriseConfiguration ?? new object(),
+                        _ => new object()
+                    }
+                })
+                .OrderBy(x => x.Type.ToString())
+                .ThenBy(x => x.Name)
+                .ToList();
             
-            // Return in the expected format with wrapper object
-            var config = new 
-            { 
-                notifiarr = notifiarrConfig,
-                apprise = appriseConfig
-            };
+            // Return in the expected format with providers wrapper
+            var config = new { providers = providerDtos };
             return Ok(config);
         }
         finally
@@ -368,70 +398,523 @@ public class ConfigurationController : ControllerBase
             DataContext.Lock.Release();
         }
     }
-
-    public class UpdateNotificationConfigDto
-    {
-        public NotifiarrConfig? Notifiarr { get; set; }
-        public AppriseConfig? Apprise { get; set; }
-    }
-
-    [HttpPut("notifications")]
-    public async Task<IActionResult> UpdateNotificationsConfig([FromBody] UpdateNotificationConfigDto newConfig)
+    
+    [HttpPost("notification_providers/notifiarr")]
+    public async Task<IActionResult> CreateNotifiarrProvider([FromBody] CreateNotifiarrProviderDto newProvider)
     {
         await DataContext.Lock.WaitAsync();
         try
         {
-            // Update Notifiarr config if provided
-            if (newConfig.Notifiarr != null)
+            // Validate required fields
+            if (string.IsNullOrWhiteSpace(newProvider.Name))
             {
-                var existingNotifiarr = await _dataContext.NotifiarrConfigs.FirstOrDefaultAsync();
-                if (existingNotifiarr != null)
-                {
-                    // Apply updates from DTO, excluding the ID property to avoid EF key modification error
-                    var config = new TypeAdapterConfig();
-                    config.NewConfig<NotifiarrConfig, NotifiarrConfig>()
-                        .Ignore(dest => dest.Id);
-                    
-                    newConfig.Notifiarr.Adapt(existingNotifiarr, config);
-                }
-                else
-                {
-                    _dataContext.NotifiarrConfigs.Add(newConfig.Notifiarr);
-                }
+                return BadRequest("Provider name is required");
+            }
+            
+            var duplicateConfig = await _dataContext.NotificationConfigs.CountAsync(x => x.Name == newProvider.Name);
+
+            if (duplicateConfig > 0)
+            {
+                return BadRequest("A provider with this name already exists");
             }
 
-            // Update Apprise config if provided
-            if (newConfig.Apprise != null)
+            // Create provider-specific configuration with validation
+            var notifiarrConfig = new NotifiarrConfig
             {
-                var existingApprise = await _dataContext.AppriseConfigs.FirstOrDefaultAsync();
-                if (existingApprise != null)
-                {
-                    // Apply updates from DTO, excluding the ID property to avoid EF key modification error
-                    var config = new TypeAdapterConfig();
-                    config.NewConfig<AppriseConfig, AppriseConfig>()
-                        .Ignore(dest => dest.Id);
-                    
-                    newConfig.Apprise.Adapt(existingApprise, config);
-                }
-                else
-                {
-                    _dataContext.AppriseConfigs.Add(newConfig.Apprise);
-                }
-            }
+                ApiKey = newProvider.ApiKey,
+                ChannelId = newProvider.ChannelId
+            };
+            
+            // Validate the configuration
+            notifiarrConfig.Validate();
 
-            // Persist the configuration
+            // Create the provider entity
+            var provider = new NotificationConfig
+            {
+                Name = newProvider.Name,
+                Type = NotificationProviderType.Notifiarr,
+                IsEnabled = newProvider.IsEnabled,
+                OnFailedImportStrike = newProvider.OnFailedImportStrike,
+                OnStalledStrike = newProvider.OnStalledStrike,
+                OnSlowStrike = newProvider.OnSlowStrike,
+                OnQueueItemDeleted = newProvider.OnQueueItemDeleted,
+                OnDownloadCleaned = newProvider.OnDownloadCleaned,
+                OnCategoryChanged = newProvider.OnCategoryChanged,
+                NotifiarrConfiguration = notifiarrConfig
+            };
+
+            // Add the new provider to the database
+            _dataContext.NotificationConfigs.Add(provider);
             await _dataContext.SaveChangesAsync();
 
-            return Ok(new { Message = "Notifications configuration updated successfully" });
+            // Clear cache to ensure fresh data on next request
+            await _notificationConfigurationService.InvalidateCacheAsync();
+
+            // Return the provider in DTO format to match frontend expectations
+            var providerDto = new NotificationProviderDto
+            {
+                Id = provider.Id,
+                Name = provider.Name,
+                Type = provider.Type,
+                IsEnabled = provider.IsEnabled,
+                Events = new NotificationEventFlags
+                {
+                    OnFailedImportStrike = provider.OnFailedImportStrike,
+                    OnStalledStrike = provider.OnStalledStrike,
+                    OnSlowStrike = provider.OnSlowStrike,
+                    OnQueueItemDeleted = provider.OnQueueItemDeleted,
+                    OnDownloadCleaned = provider.OnDownloadCleaned,
+                    OnCategoryChanged = provider.OnCategoryChanged
+                },
+                Configuration = provider.NotifiarrConfiguration ?? new object()
+            };
+
+            return CreatedAtAction(nameof(GetNotificationProviders), new { id = provider.Id }, providerDto);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to save Notifications configuration");
+            _logger.LogError(ex, "Failed to create Notifiarr provider");
             throw;
         }
         finally
         {
             DataContext.Lock.Release();
+        }
+    }
+
+    [HttpPost("notification_providers/apprise")]
+    public async Task<IActionResult> CreateAppriseProvider([FromBody] CreateAppriseProviderDto newProvider)
+    {
+        await DataContext.Lock.WaitAsync();
+        try
+        {
+            // Validate required fields
+            if (string.IsNullOrWhiteSpace(newProvider.Name))
+            {
+                return BadRequest("Provider name is required");
+            }
+            
+            var duplicateConfig = await _dataContext.NotificationConfigs.CountAsync(x => x.Name == newProvider.Name);
+
+            if (duplicateConfig > 0)
+            {
+                return BadRequest("A provider with this name already exists");
+            }
+
+            // Create provider-specific configuration with validation
+            var appriseConfig = new AppriseConfig
+            {
+                Url = newProvider.Url,
+                Key = newProvider.Key,
+                Tags = newProvider.Tags
+            };
+            
+            // Validate the configuration
+            appriseConfig.Validate();
+
+            // Create the provider entity
+            var provider = new NotificationConfig
+            {
+                Name = newProvider.Name,
+                Type = NotificationProviderType.Apprise,
+                IsEnabled = newProvider.IsEnabled,
+                OnFailedImportStrike = newProvider.OnFailedImportStrike,
+                OnStalledStrike = newProvider.OnStalledStrike,
+                OnSlowStrike = newProvider.OnSlowStrike,
+                OnQueueItemDeleted = newProvider.OnQueueItemDeleted,
+                OnDownloadCleaned = newProvider.OnDownloadCleaned,
+                OnCategoryChanged = newProvider.OnCategoryChanged,
+                AppriseConfiguration = appriseConfig
+            };
+
+            // Add the new provider to the database
+            _dataContext.NotificationConfigs.Add(provider);
+            await _dataContext.SaveChangesAsync();
+
+            // Clear cache to ensure fresh data on next request
+            await _notificationConfigurationService.InvalidateCacheAsync();
+
+            // Return the provider in DTO format to match frontend expectations
+            var providerDto = new NotificationProviderDto
+            {
+                Id = provider.Id,
+                Name = provider.Name,
+                Type = provider.Type,
+                IsEnabled = provider.IsEnabled,
+                Events = new NotificationEventFlags
+                {
+                    OnFailedImportStrike = provider.OnFailedImportStrike,
+                    OnStalledStrike = provider.OnStalledStrike,
+                    OnSlowStrike = provider.OnSlowStrike,
+                    OnQueueItemDeleted = provider.OnQueueItemDeleted,
+                    OnDownloadCleaned = provider.OnDownloadCleaned,
+                    OnCategoryChanged = provider.OnCategoryChanged
+                },
+                Configuration = provider.AppriseConfiguration ?? new object()
+            };
+
+            return CreatedAtAction(nameof(GetNotificationProviders), new { id = provider.Id }, providerDto);
+        }
+        catch (ValidationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to create Apprise provider");
+            throw;
+        }
+        finally
+        {
+            DataContext.Lock.Release();
+        }
+    }
+    
+    // Provider-specific UPDATE endpoints
+    [HttpPut("notification_providers/notifiarr/{id}")]
+    public async Task<IActionResult> UpdateNotifiarrProvider(Guid id, [FromBody] UpdateNotifiarrProviderDto updatedProvider)
+    {
+        await DataContext.Lock.WaitAsync();
+        try
+        {
+            // Find the existing notification provider
+            var existingProvider = await _dataContext.NotificationConfigs
+                .Include(p => p.NotifiarrConfiguration)
+                .FirstOrDefaultAsync(p => p.Id == id && p.Type == NotificationProviderType.Notifiarr);
+                
+            if (existingProvider == null)
+            {
+                return NotFound($"Notifiarr provider with ID {id} not found");
+            }
+
+            // Validate required fields
+            if (string.IsNullOrWhiteSpace(updatedProvider.Name))
+            {
+                return BadRequest("Provider name is required");
+            }
+
+            var duplicateConfig = await _dataContext.NotificationConfigs.CountAsync(x => x.Name == updatedProvider.Name);
+
+            if (duplicateConfig > 0)
+            {
+                return BadRequest("A provider with this name already exists");
+            }
+            
+            // Create provider-specific configuration with validation
+            var notifiarrConfig = new NotifiarrConfig
+            {
+                ApiKey = updatedProvider.ApiKey,
+                ChannelId = updatedProvider.ChannelId
+            };
+            
+            // Preserve the existing ID if updating
+            if (existingProvider.NotifiarrConfiguration != null)
+            {
+                notifiarrConfig = notifiarrConfig with { Id = existingProvider.NotifiarrConfiguration.Id };
+            }
+            
+            // Validate the configuration
+            notifiarrConfig.Validate();
+
+            // Create a new provider entity with updated values (records are immutable)
+            var newProvider = existingProvider with
+            {
+                Name = updatedProvider.Name,
+                IsEnabled = updatedProvider.IsEnabled,
+                OnFailedImportStrike = updatedProvider.OnFailedImportStrike,
+                OnStalledStrike = updatedProvider.OnStalledStrike,
+                OnSlowStrike = updatedProvider.OnSlowStrike,
+                OnQueueItemDeleted = updatedProvider.OnQueueItemDeleted,
+                OnDownloadCleaned = updatedProvider.OnDownloadCleaned,
+                OnCategoryChanged = updatedProvider.OnCategoryChanged,
+                NotifiarrConfiguration = notifiarrConfig,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            // Remove old and add new (EF handles this as an update)
+            _dataContext.NotificationConfigs.Remove(existingProvider);
+            _dataContext.NotificationConfigs.Add(newProvider);
+            
+            // Persist the configuration
+            await _dataContext.SaveChangesAsync();
+
+            // Clear cache to ensure fresh data on next request
+            await _notificationConfigurationService.InvalidateCacheAsync();
+
+            // Return the provider in DTO format to match frontend expectations
+            var providerDto = new NotificationProviderDto
+            {
+                Id = newProvider.Id,
+                Name = newProvider.Name,
+                Type = newProvider.Type,
+                IsEnabled = newProvider.IsEnabled,
+                Events = new NotificationEventFlags
+                {
+                    OnFailedImportStrike = newProvider.OnFailedImportStrike,
+                    OnStalledStrike = newProvider.OnStalledStrike,
+                    OnSlowStrike = newProvider.OnSlowStrike,
+                    OnQueueItemDeleted = newProvider.OnQueueItemDeleted,
+                    OnDownloadCleaned = newProvider.OnDownloadCleaned,
+                    OnCategoryChanged = newProvider.OnCategoryChanged
+                },
+                Configuration = newProvider.NotifiarrConfiguration ?? new object()
+            };
+
+            return Ok(providerDto);
+        }
+        catch (ValidationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to update Notifiarr provider with ID {Id}", id);
+            throw;
+        }
+        finally
+        {
+            DataContext.Lock.Release();
+        }
+    }
+    
+    [HttpPut("notification_providers/apprise/{id}")]
+    public async Task<IActionResult> UpdateAppriseProvider(Guid id, [FromBody] UpdateAppriseProviderDto updatedProvider)
+    {
+        await DataContext.Lock.WaitAsync();
+        try
+        {
+            // Find the existing notification provider
+            var existingProvider = await _dataContext.NotificationConfigs
+                .Include(p => p.AppriseConfiguration)
+                .FirstOrDefaultAsync(p => p.Id == id && p.Type == NotificationProviderType.Apprise);
+                
+            if (existingProvider == null)
+            {
+                return NotFound($"Apprise provider with ID {id} not found");
+            }
+
+            // Validate required fields
+            if (string.IsNullOrWhiteSpace(updatedProvider.Name))
+            {
+                return BadRequest("Provider name is required");
+            }
+            
+            var duplicateConfig = await _dataContext.NotificationConfigs.CountAsync(x => x.Name == updatedProvider.Name);
+
+            if (duplicateConfig > 0)
+            {
+                return BadRequest("A provider with this name already exists");
+            }
+
+            // Create provider-specific configuration with validation
+            var appriseConfig = new AppriseConfig
+            {
+                Url = updatedProvider.Url,
+                Key = updatedProvider.Key,
+                Tags = updatedProvider.Tags
+            };
+            
+            // Preserve the existing ID if updating
+            if (existingProvider.AppriseConfiguration != null)
+            {
+                appriseConfig = appriseConfig with { Id = existingProvider.AppriseConfiguration.Id };
+            }
+            
+            // Validate the configuration
+            appriseConfig.Validate();
+
+            // Create a new provider entity with updated values (records are immutable)
+            var newProvider = existingProvider with
+            {
+                Name = updatedProvider.Name,
+                IsEnabled = updatedProvider.IsEnabled,
+                OnFailedImportStrike = updatedProvider.OnFailedImportStrike,
+                OnStalledStrike = updatedProvider.OnStalledStrike,
+                OnSlowStrike = updatedProvider.OnSlowStrike,
+                OnQueueItemDeleted = updatedProvider.OnQueueItemDeleted,
+                OnDownloadCleaned = updatedProvider.OnDownloadCleaned,
+                OnCategoryChanged = updatedProvider.OnCategoryChanged,
+                AppriseConfiguration = appriseConfig,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            // Remove old and add new (EF handles this as an update)
+            _dataContext.NotificationConfigs.Remove(existingProvider);
+            _dataContext.NotificationConfigs.Add(newProvider);
+            
+            // Persist the configuration
+            await _dataContext.SaveChangesAsync();
+
+            // Clear cache to ensure fresh data on next request
+            await _notificationConfigurationService.InvalidateCacheAsync();
+
+            // Return the provider in DTO format to match frontend expectations
+            var providerDto = new NotificationProviderDto
+            {
+                Id = newProvider.Id,
+                Name = newProvider.Name,
+                Type = newProvider.Type,
+                IsEnabled = newProvider.IsEnabled,
+                Events = new NotificationEventFlags
+                {
+                    OnFailedImportStrike = newProvider.OnFailedImportStrike,
+                    OnStalledStrike = newProvider.OnStalledStrike,
+                    OnSlowStrike = newProvider.OnSlowStrike,
+                    OnQueueItemDeleted = newProvider.OnQueueItemDeleted,
+                    OnDownloadCleaned = newProvider.OnDownloadCleaned,
+                    OnCategoryChanged = newProvider.OnCategoryChanged
+                },
+                Configuration = newProvider.AppriseConfiguration ?? new object()
+            };
+
+            return Ok(providerDto);
+        }
+        catch (ValidationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to update Apprise provider with ID {Id}", id);
+            throw;
+        }
+        finally
+        {
+            DataContext.Lock.Release();
+        }
+    }
+    
+    [HttpDelete("notification_providers/{id}")]
+    public async Task<IActionResult> DeleteNotificationProvider(Guid id)
+    {
+        await DataContext.Lock.WaitAsync();
+        try
+        {
+            // Find the existing notification provider
+            var existingProvider = await _dataContext.NotificationConfigs
+                .Include(p => p.NotifiarrConfiguration)
+                .Include(p => p.AppriseConfiguration)
+                .FirstOrDefaultAsync(p => p.Id == id);
+                
+            if (existingProvider == null)
+            {
+                return NotFound($"Notification provider with ID {id} not found");
+            }
+            
+            // Remove the provider from the database
+            _dataContext.NotificationConfigs.Remove(existingProvider);
+            await _dataContext.SaveChangesAsync();
+
+            // Clear cache to ensure fresh data on next request
+            await _notificationConfigurationService.InvalidateCacheAsync();
+            
+            _logger.LogInformation("Removed notification provider {ProviderName} with ID {ProviderId}", 
+                existingProvider.Name, existingProvider.Id);
+            
+            return NoContent();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to delete notification provider with ID {Id}", id);
+            throw;
+        }
+        finally
+        {
+            DataContext.Lock.Release();
+        }
+    }
+
+    // Provider-specific TEST endpoints (no ID required)
+    [HttpPost("notification_providers/notifiarr/test")]
+    public async Task<IActionResult> TestNotifiarrProvider([FromBody] TestNotifiarrProviderDto testRequest)
+    {
+        try
+        {
+            // Create configuration for testing with validation
+            var notifiarrConfig = new NotifiarrConfig
+            {
+                ApiKey = testRequest.ApiKey,
+                ChannelId = testRequest.ChannelId
+            };
+            
+            // Validate the configuration
+            notifiarrConfig.Validate();
+
+            // Create a temporary provider DTO for the test service
+            var providerDto = new NotificationProviderDto
+            {
+                Id = Guid.NewGuid(), // Temporary ID for testing
+                Name = "Test Provider",
+                Type = NotificationProviderType.Notifiarr,
+                IsEnabled = true,
+                Events = new NotificationEventFlags
+                {
+                    OnFailedImportStrike = true, // Enable for test
+                    OnStalledStrike = false,
+                    OnSlowStrike = false,
+                    OnQueueItemDeleted = false,
+                    OnDownloadCleaned = false,
+                    OnCategoryChanged = false
+                },
+                Configuration = notifiarrConfig
+            };
+
+            // Test the notification provider
+            await _notificationService.SendTestNotificationAsync(providerDto);
+            
+            return Ok(new { Message = "Test notification sent successfully", Success = true });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to test Notifiarr provider");
+            throw;
+        }
+    }
+
+    [HttpPost("notification_providers/apprise/test")]
+    public async Task<IActionResult> TestAppriseProvider([FromBody] TestAppriseProviderDto testRequest)
+    {
+        try
+        {
+            // Create configuration for testing with validation
+            var appriseConfig = new AppriseConfig
+            {
+                Url = testRequest.Url,
+                Key = testRequest.Key,
+                Tags = testRequest.Tags
+            };
+            
+            // Validate the configuration
+            appriseConfig.Validate();
+
+            // Create a temporary provider DTO for the test service
+            var providerDto = new NotificationProviderDto
+            {
+                Id = Guid.NewGuid(), // Temporary ID for testing
+                Name = "Test Provider",
+                Type = NotificationProviderType.Apprise,
+                IsEnabled = true,
+                Events = new NotificationEventFlags
+                {
+                    OnFailedImportStrike = true, // Enable for test
+                    OnStalledStrike = false,
+                    OnSlowStrike = false,
+                    OnQueueItemDeleted = false,
+                    OnDownloadCleaned = false,
+                    OnCategoryChanged = false
+                },
+                Configuration = appriseConfig
+            };
+
+            // Test the notification provider
+            await _notificationService.SendTestNotificationAsync(providerDto);
+            
+            return Ok(new { Message = "Test notification sent successfully", Success = true });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to test Apprise provider");
+            throw;
         }
     }
 

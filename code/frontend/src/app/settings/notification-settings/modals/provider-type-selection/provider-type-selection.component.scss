@@ -1,0 +1,153 @@
+.provider-selection-modal {
+  .p-dialog {
+    width: 90vw;
+    max-width: 600px;
+  }
+}
+
+.provider-selection-content {
+  padding: 1rem;
+}
+
+.selection-description {
+  text-align: center;
+  color: var(--text-color-secondary);
+  margin-bottom: 2rem;
+  font-size: 1rem;
+}
+
+.provider-selection-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+  padding: 1rem 0;
+}
+
+.provider-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2rem 1.5rem;
+  border: 2px solid var(--surface-border);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: var(--surface-card);
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+
+  &:hover {
+    border-color: var(--primary-color);
+    background: var(--surface-hover);
+    transform: translateY(-4px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    
+    .provider-icon {
+      transform: scale(1.1);
+      color: var(--primary-color);
+    }
+  }
+
+  &:active {
+    transform: translateY(-2px);
+  }
+
+  // Add subtle background pattern
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(45deg, transparent 30%, rgba(var(--primary-color-rgb), 0.02) 50%, transparent 70%);
+    pointer-events: none;
+  }
+}
+
+.provider-icon {
+  font-size: 3rem;
+  color: var(--text-color-secondary);
+  margin-bottom: 1rem;
+  transition: all 0.3s ease;
+  
+  i {
+    display: block;
+  }
+}
+
+.provider-name {
+  font-weight: 700;
+  font-size: 1.25rem;
+  color: var(--text-color);
+  margin-bottom: 0.5rem;
+  letter-spacing: 0.025em;
+}
+
+.provider-description {
+  font-size: 0.875rem;
+  color: var(--text-color-secondary);
+  line-height: 1.4;
+  text-align: center;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding-top: 1rem;
+  border-top: 1px solid var(--surface-border);
+  margin-top: 1rem;
+}
+
+// Responsive design
+@media (max-width: 768px) {
+  .provider-selection-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .provider-card {
+    padding: 1.5rem 1rem;
+  }
+  
+  .provider-icon {
+    font-size: 2.5rem;
+  }
+}
+
+// Accessibility improvements
+.provider-card {
+  &:focus {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+  }
+  
+  &:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+  }
+}
+
+// Animation for card entrance
+.provider-card {
+  animation: fadeInUp 0.4s ease-out;
+  animation-fill-mode: both;
+  
+  &:nth-child(1) { animation-delay: 0.1s; }
+  &:nth-child(2) { animation-delay: 0.2s; }
+  &:nth-child(3) { animation-delay: 0.3s; }
+  &:nth-child(4) { animation-delay: 0.4s; }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

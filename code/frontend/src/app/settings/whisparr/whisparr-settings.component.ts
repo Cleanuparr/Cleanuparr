@@ -19,6 +19,7 @@ import { ConfirmDialogModule } from "primeng/confirmdialog";
 import { ConfirmationService } from "primeng/api";
 import { NotificationService } from "../../core/services/notification.service";
 import { LoadingErrorStateComponent } from "../../shared/components/loading-error-state/loading-error-state.component";
+import { UrlValidators } from "../../core/validators/url.validator";
 
 @Component({
   selector: "app-whisparr-settings",
@@ -88,7 +89,7 @@ export class WhisparrSettingsComponent implements OnDestroy, CanComponentDeactiv
     this.instanceForm = this.formBuilder.group({
       enabled: [true],
       name: ['', Validators.required],
-      url: ['', [Validators.required, this.uriValidator.bind(this)]],
+      url: ['', [Validators.required, UrlValidators.httpUrl]],
       apiKey: ['', Validators.required],
     });
 
@@ -173,28 +174,6 @@ export class WhisparrSettingsComponent implements OnDestroy, CanComponentDeactiv
     }
 
     return true;
-  }
-
-  /**
-   * Custom validator to check if the input is a valid URI
-   */
-  private uriValidator(control: AbstractControl): ValidationErrors | null {
-    if (!control.value) {
-      return null; // Let required validator handle empty values
-    }
-    
-    try {
-      const url = new URL(control.value);
-      
-      // Check that we have a valid protocol (http or https)
-      if (url.protocol !== 'http:' && url.protocol !== 'https:') {
-        return { invalidProtocol: true };
-      }
-      
-      return null; // Valid URI
-    } catch (e) {
-      return { invalidUri: true }; // Invalid URI
-    }
   }
 
   /**

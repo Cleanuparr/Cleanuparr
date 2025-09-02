@@ -437,44 +437,33 @@ namespace Cleanuparr.Persistence.Migrations.Data
                         .HasColumnType("TEXT")
                         .HasColumnName("id");
 
-                    b.Property<string>("FullUrl")
-                        .HasColumnType("TEXT")
-                        .HasColumnName("full_url");
-
                     b.Property<string>("Key")
+                        .IsRequired()
+                        .HasMaxLength(255)
                         .HasColumnType("TEXT")
                         .HasColumnName("key");
 
-                    b.Property<bool>("OnCategoryChanged")
-                        .HasColumnType("INTEGER")
-                        .HasColumnName("on_category_changed");
-
-                    b.Property<bool>("OnDownloadCleaned")
-                        .HasColumnType("INTEGER")
-                        .HasColumnName("on_download_cleaned");
-
-                    b.Property<bool>("OnFailedImportStrike")
-                        .HasColumnType("INTEGER")
-                        .HasColumnName("on_failed_import_strike");
-
-                    b.Property<bool>("OnQueueItemDeleted")
-                        .HasColumnType("INTEGER")
-                        .HasColumnName("on_queue_item_deleted");
-
-                    b.Property<bool>("OnSlowStrike")
-                        .HasColumnType("INTEGER")
-                        .HasColumnName("on_slow_strike");
-
-                    b.Property<bool>("OnStalledStrike")
-                        .HasColumnType("INTEGER")
-                        .HasColumnName("on_stalled_strike");
+                    b.Property<Guid>("NotificationConfigId")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("notification_config_id");
 
                     b.Property<string>("Tags")
+                        .HasMaxLength(255)
                         .HasColumnType("TEXT")
                         .HasColumnName("tags");
 
+                    b.Property<string>("Url")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("url");
+
                     b.HasKey("Id")
                         .HasName("pk_apprise_configs");
+
+                    b.HasIndex("NotificationConfigId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_apprise_configs_notification_config_id");
 
                     b.ToTable("apprise_configs", (string)null);
                 });
@@ -487,12 +476,51 @@ namespace Cleanuparr.Persistence.Migrations.Data
                         .HasColumnName("id");
 
                     b.Property<string>("ApiKey")
+                        .IsRequired()
+                        .HasMaxLength(255)
                         .HasColumnType("TEXT")
                         .HasColumnName("api_key");
 
                     b.Property<string>("ChannelId")
+                        .IsRequired()
+                        .HasMaxLength(50)
                         .HasColumnType("TEXT")
                         .HasColumnName("channel_id");
+
+                    b.Property<Guid>("NotificationConfigId")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("notification_config_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_notifiarr_configs");
+
+                    b.HasIndex("NotificationConfigId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_notifiarr_configs_notification_config_id");
+
+                    b.ToTable("notifiarr_configs", (string)null);
+                });
+
+            modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.Notification.NotificationConfig", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("created_at");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("is_enabled");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("name");
 
                     b.Property<bool>("OnCategoryChanged")
                         .HasColumnType("INTEGER")
@@ -518,10 +546,23 @@ namespace Cleanuparr.Persistence.Migrations.Data
                         .HasColumnType("INTEGER")
                         .HasColumnName("on_stalled_strike");
 
-                    b.HasKey("Id")
-                        .HasName("pk_notifiarr_configs");
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("type");
 
-                    b.ToTable("notifiarr_configs", (string)null);
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_notification_configs");
+
+                    b.HasIndex("Name")
+                        .IsUnique()
+                        .HasDatabaseName("ix_notification_configs_name");
+
+                    b.ToTable("notification_configs", (string)null);
                 });
 
             modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.QueueCleaner.QueueCleanerConfig", b =>
@@ -656,6 +697,30 @@ namespace Cleanuparr.Persistence.Migrations.Data
                     b.Navigation("DownloadCleanerConfig");
                 });
 
+            modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.Notification.AppriseConfig", b =>
+                {
+                    b.HasOne("Cleanuparr.Persistence.Models.Configuration.Notification.NotificationConfig", "NotificationConfig")
+                        .WithOne("AppriseConfiguration")
+                        .HasForeignKey("Cleanuparr.Persistence.Models.Configuration.Notification.AppriseConfig", "NotificationConfigId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_apprise_configs_notification_configs_notification_config_id");
+
+                    b.Navigation("NotificationConfig");
+                });
+
+            modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.Notification.NotifiarrConfig", b =>
+                {
+                    b.HasOne("Cleanuparr.Persistence.Models.Configuration.Notification.NotificationConfig", "NotificationConfig")
+                        .WithOne("NotifiarrConfiguration")
+                        .HasForeignKey("Cleanuparr.Persistence.Models.Configuration.Notification.NotifiarrConfig", "NotificationConfigId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_notifiarr_configs_notification_configs_notification_config_id");
+
+                    b.Navigation("NotificationConfig");
+                });
+
             modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.Arr.ArrConfig", b =>
                 {
                     b.Navigation("Instances");
@@ -664,6 +729,13 @@ namespace Cleanuparr.Persistence.Migrations.Data
             modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.DownloadCleaner.DownloadCleanerConfig", b =>
                 {
                     b.Navigation("Categories");
+                });
+
+            modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.Notification.NotificationConfig", b =>
+                {
+                    b.Navigation("AppriseConfiguration");
+
+                    b.Navigation("NotifiarrConfiguration");
                 });
 #pragma warning restore 612, 618
         }
