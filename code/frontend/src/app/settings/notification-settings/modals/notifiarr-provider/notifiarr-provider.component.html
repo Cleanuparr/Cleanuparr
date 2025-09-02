@@ -40,13 +40,13 @@
       </label>
       <input 
         id="channel-id"
-        type="text" 
-        pInputText 
+        type="text"
+        pInputText
+        numericInput
         [formControl]="channelIdControl" 
         placeholder="Enter Discord channel ID"
         class="w-full" />
       <small *ngIf="hasFieldError(channelIdControl, 'required')" class="p-error">Channel ID is required</small>
-      <small *ngIf="hasFieldError(channelIdControl, 'pattern')" class="p-error">Channel ID must be a valid Discord channel ID (numbers only)</small>
       <small class="form-helper-text">The Discord channel ID where notifications will be sent.</small>
     </div>
   </div>

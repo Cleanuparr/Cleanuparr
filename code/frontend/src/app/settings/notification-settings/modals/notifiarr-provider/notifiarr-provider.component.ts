@@ -6,6 +6,7 @@ import { NotifiarrFormData, BaseProviderFormData } from '../../models/provider-m
 import { DocumentationService } from '../../../../core/services/documentation.service';
 import { NotificationProviderDto } from '../../../../shared/models/notification-provider.model';
 import { NotificationProviderBaseComponent } from '../base/notification-provider-base.component';
+import { NumericInputDirective } from '../../../../shared/directives';
 
 @Component({
   selector: 'app-notifiarr-provider',
@@ -14,7 +15,8 @@ import { NotificationProviderBaseComponent } from '../base/notification-provider
     CommonModule,
     ReactiveFormsModule,
     InputTextModule,
-    NotificationProviderBaseComponent
+    NotificationProviderBaseComponent,
+    NumericInputDirective
   ],
   templateUrl: './notifiarr-provider.component.html',
   styleUrls: ['./notifiarr-provider.component.scss']
@@ -31,7 +33,7 @@ export class NotifiarrProviderComponent implements OnInit, OnChanges {
 
   // Provider-specific form controls
   apiKeyControl = new FormControl('', [Validators.required, Validators.minLength(10)]);
-  channelIdControl = new FormControl('', [Validators.required, Validators.pattern(/^\d+$/)]);
+  channelIdControl = new FormControl('', [Validators.required]);
   private documentationService = inject(DocumentationService);
 
   /** Exposed for template to open documentation for notifiarr fields */
