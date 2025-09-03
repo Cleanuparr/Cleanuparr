@@ -593,7 +593,10 @@ public class ConfigurationController : ControllerBase
                 return BadRequest("Provider name is required");
             }
 
-            var duplicateConfig = await _dataContext.NotificationConfigs.CountAsync(x => x.Name == updatedProvider.Name);
+            var duplicateConfig = await _dataContext.NotificationConfigs
+                .Where(x => x.Id != id)
+                .Where(x => x.Name == updatedProvider.Name)
+                .CountAsync();
 
             if (duplicateConfig > 0)
             {
@@ -699,7 +702,10 @@ public class ConfigurationController : ControllerBase
                 return BadRequest("Provider name is required");
             }
             
-            var duplicateConfig = await _dataContext.NotificationConfigs.CountAsync(x => x.Name == updatedProvider.Name);
+            var duplicateConfig = await _dataContext.NotificationConfigs
+                .Where(x => x.Id != id)
+                .Where(x => x.Name == updatedProvider.Name)
+                .CountAsync();
 
             if (duplicateConfig > 0)
             {
