@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -52,7 +52,6 @@ namespace Cleanuparr.Persistence.Migrations.Data
                     datetime('now') AS updated_at
                 FROM notifiarr_configs
                 WHERE
-                    (on_failed_import_strike = 1 OR on_stalled_strike = 1 OR on_slow_strike = 1 OR on_queue_item_deleted = 1 OR on_download_cleaned = 1 OR on_category_changed = 1) AND
                     channel_id IS NOT NULL AND channel_id != '' AND api_key IS NOT NULL AND api_key != ''
                 """);
 
@@ -75,7 +74,6 @@ namespace Cleanuparr.Persistence.Migrations.Data
                     datetime('now') AS updated_at
                 FROM apprise_configs
                 WHERE
-                    (on_failed_import_strike = 1 OR on_stalled_strike = 1 OR on_slow_strike = 1 OR on_queue_item_deleted = 1 OR on_download_cleaned = 1 OR on_category_changed = 1) AND
                     key IS NOT NULL AND key != '' AND full_url IS NOT NULL AND full_url != ''
                 """);
             
