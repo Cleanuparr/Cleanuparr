@@ -32,6 +32,7 @@ public static class LoggingConfigManager
     {
         using var context = DataContext.CreateStaticInstance();
         var config = context.GeneralConfigs.AsNoTracking().First();
+        SetLogLevel(config.Log.Level);
         
         const string categoryTemplate = "{#if Category is not null} {Concat('[',Category,']'),CAT_PAD}{#end}";
         const string jobNameTemplate = "{#if JobName is not null} {Concat('[',JobName,']'),JOB_PAD}{#end}";
