@@ -1173,6 +1173,9 @@ public class ConfigurationController : ControllerBase
                 }
             }
             
+            // Handle logging configuration changes
+            var loggingChanged = HasLoggingConfigurationChanged(oldConfig.Log, newConfig.Log);
+            
             newConfig.Adapt(oldConfig, config);
 
             // Persist the configuration
@@ -1185,9 +1188,6 @@ public class ConfigurationController : ControllerBase
             dynamicHttpClientFactory.UpdateAllClientsFromGeneralConfig(oldConfig);
             
             _logger.LogInformation("Updated all HTTP client configurations with new general settings");
-
-            // Handle logging configuration changes
-            var loggingChanged = HasLoggingConfigurationChanged(oldConfig.Log, newConfig.Log);
             
             if (loggingChanged.LevelOnly)
             {
