@@ -185,7 +185,7 @@
               <div class="field-input">
                 <p-selectButton
                   formControlName="patternMode"
-                  [options]="[{ label: 'Exclude', value: 'Exclude' }, { label: 'Include', value: 'Include' }]"
+                  [options]="[{ label: PatternMode.Include, value: PatternMode.Include }, { label: PatternMode.Exclude, value: PatternMode.Exclude }]"
                   optionLabel="label"
                   optionValue="value"
                   [allowEmpty]="false"
@@ -200,7 +200,7 @@
                 <i class="pi pi-question-circle field-info-icon" 
                    (click)="openFieldDocs('failedImport.patterns')" 
                    title="Click for documentation"></i>
-                {{ queueCleanerForm.get('failedImport.patternMode')?.value === 'Include' ? 'Included Patterns' : 'Excluded Patterns' }}
+                {{ queueCleanerForm.get('failedImport.patternMode')?.value === PatternMode.Include ? 'Included Patterns' : 'Excluded Patterns' }}
               </label>
               <div class="field-input">
                 <!-- Mobile-friendly autocomplete -->
@@ -220,7 +220,7 @@
                 >
                 </p-autocomplete>
                 <small class="form-helper-text">
-                  {{ queueCleanerForm.get('failedImport.patternMode')?.value === 'Include' ?
+                  {{ queueCleanerForm.get('failedImport.patternMode')?.value === PatternMode.Include ?
                     'Only failed imports containing these patterns will be removed and everything else will be skipped' :
                     'Failed imports containing these patterns will be skipped and everything else will be removed'
                   }}

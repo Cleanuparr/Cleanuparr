@@ -20,7 +20,17 @@ namespace Cleanuparr.Persistence.Migrations.Data
                 table: "queue_cleaner_configs",
                 type: "TEXT",
                 nullable: false,
-                defaultValue: "exclude");
+                defaultValue: "");
+            
+            migrationBuilder.Sql(
+                """
+                UPDATE queue_cleaner_configs
+                SET failed_import_pattern_mode = CASE
+                    WHEN failed_import_max_strikes = 0 AND failed_import_patterns = '[]'
+                        THEN 'include'
+                    ELSE 'exclude'
+                END;
+                """);
         }
 
         /// <inheritdoc />

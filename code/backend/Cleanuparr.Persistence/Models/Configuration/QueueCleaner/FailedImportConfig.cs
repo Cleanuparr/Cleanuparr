@@ -16,7 +16,7 @@ public sealed record FailedImportConfig
 
     public IReadOnlyList<string> Patterns { get; init; } = [];
 
-    public PatternMode PatternMode { get; init; } = PatternMode.Exclude;
+    public PatternMode PatternMode { get; init; } = PatternMode.Include;
     
     public void Validate()
     {
