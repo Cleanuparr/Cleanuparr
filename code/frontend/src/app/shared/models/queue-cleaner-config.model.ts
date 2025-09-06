@@ -23,7 +23,8 @@ export interface FailedImportConfig {
   maxStrikes: number;
   ignorePrivate: boolean;
   deletePrivate: boolean;
-  ignoredPatterns: string[];
+  patterns: string[];
+  patternMode?: 'Exclude' | 'Include';
 }
 
 export interface StalledConfig {
@@ -60,7 +61,7 @@ export interface QueueCleanerConfig {
   failedImportMaxStrikes?: number;
   failedImportIgnorePrivate?: boolean;
   failedImportDeletePrivate?: boolean;
-  failedImportIgnorePatterns?: string[];
+  failedImportPatterns?: string[];
   stalledMaxStrikes?: number;
   stalledResetStrikesOnProgress?: boolean;
   stalledIgnorePrivate?: boolean;

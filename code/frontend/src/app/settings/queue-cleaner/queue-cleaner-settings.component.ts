@@ -145,7 +145,8 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
         maxStrikes: [0, [Validators.required, Validators.min(0), Validators.max(5000)]],
         ignorePrivate: [{ value: false, disabled: true }],
         deletePrivate: [{ value: false, disabled: true }],
-        ignoredPatterns: [{ value: [], disabled: true }],
+  patterns: [{ value: [], disabled: true }],
+  patternMode: [{ value: 'Exclude', disabled: true }],
       }),
 
       // Stalled settings - nested group
@@ -504,7 +505,8 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
 
     if (enable) {
       this.queueCleanerForm.get("failedImport")?.get("ignorePrivate")?.enable(options);
-      this.queueCleanerForm.get("failedImport")?.get("ignoredPatterns")?.enable(options);
+  this.queueCleanerForm.get("failedImport")?.get("patterns")?.enable(options);
+  this.queueCleanerForm.get("failedImport")?.get("patternMode")?.enable(options);
       
       // Only enable deletePrivate if ignorePrivate is false
       const ignorePrivate = this.queueCleanerForm.get("failedImport.ignorePrivate")?.value || false;
@@ -516,9 +518,10 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
         deletePrivateControl.disable(options);
       }
     } else {
-      this.queueCleanerForm.get("failedImport")?.get("ignorePrivate")?.disable(options);
-      this.queueCleanerForm.get("failedImport")?.get("deletePrivate")?.disable(options);
-      this.queueCleanerForm.get("failedImport")?.get("ignoredPatterns")?.disable(options);
+  this.queueCleanerForm.get("failedImport")?.get("ignorePrivate")?.disable(options);
+  this.queueCleanerForm.get("failedImport")?.get("deletePrivate")?.disable(options);
+  this.queueCleanerForm.get("failedImport")?.get("patterns")?.disable(options);
+  this.queueCleanerForm.get("failedImport")?.get("patternMode")?.disable(options);
     }
   }
 
@@ -611,7 +614,8 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
           maxStrikes: formValue.failedImport?.maxStrikes || 0,
           ignorePrivate: formValue.failedImport?.ignorePrivate || false,
           deletePrivate: formValue.failedImport?.deletePrivate || false,
-          ignoredPatterns: formValue.failedImport?.ignoredPatterns || [],
+          patterns: formValue.failedImport?.patterns || [],
+          patternMode: formValue.failedImport?.patternMode || 'Exclude',
         },
         stalled: {
           maxStrikes: formValue.stalled?.maxStrikes || 0,
@@ -689,7 +693,8 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
         maxStrikes: 0,
         ignorePrivate: false,
         deletePrivate: false,
-        ignoredPatterns: [],
+  patterns: [],
+  patternMode: 'Exclude',
       },
 
       // Stalled settings (nested)

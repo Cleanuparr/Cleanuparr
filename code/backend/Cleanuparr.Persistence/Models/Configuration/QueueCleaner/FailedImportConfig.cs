@@ -1,4 +1,6 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
+﻿using System;
+using System.ComponentModel.DataAnnotations.Schema;
+using Cleanuparr.Domain.Enums;
 using Cleanuparr.Domain.Exceptions;
 
 namespace Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
@@ -12,7 +14,9 @@ public sealed record FailedImportConfig
     
     public bool DeletePrivate { get; init; }
 
-    public IReadOnlyList<string> IgnoredPatterns { get; init; } = [];
+    public IReadOnlyList<string> Patterns { get; init; } = [];
+
+    public PatternMode PatternMode { get; init; } = PatternMode.Exclude;
     
     public void Validate()
     {

@@ -91,9 +91,8 @@ public abstract class ArrClient : IArrClient
         
         if (hasWarn() && (isImportBlocked() || isImportPending() || isImportFailed()) || isFailedLidarr())
         {
-            if (HasIgnoredPatterns(record))
+            if (!ShouldStrikeFailedImport(queueCleanerConfig, record))
             {
-                _logger.LogDebug("skip failed import check | contains ignored pattern | {name}", record.Title);
                 return false;
             }
 
@@ -212,19 +211,14 @@ public abstract class ArrClient : IArrClient
         return response;
     }
     
-    private static bool HasIgnoredPatterns(QueueRecord record)
+    /// <summary>
+    /// Determines whether the failed import record should be skipped
+    /// </summary>
+    private bool ShouldStrikeFailedImport(QueueCleanerConfig queueCleanerConfig, QueueRecord record)
     {
-        var queueCleanerConfig = ContextProvider.Get<QueueCleanerConfig>();
-        
-        if (queueCleanerConfig.FailedImport.IgnoredPatterns.Count is 0)
-        {
-            // no patterns are configured
-            return false;
-        }
-            
         if (record.StatusMessages?.Count is null or 0)
         {
-            // no status message found
+            _logger.LogWarning("skip failed import check | no status message found | {name}", record.Title);
             return false;
         }
         
@@ -235,10 +229,29 @@ public abstract class ArrClient : IArrClient
             .ToList()
             .ForEach(x => messages.Add(x));
         
-        return messages.Any(
-            m => queueCleanerConfig.FailedImport.IgnoredPatterns.Any(
-                p => !string.IsNullOrWhiteSpace(p.Trim()) && m.Contains(p, StringComparison.InvariantCultureIgnoreCase)
+        var patterns = queueCleanerConfig.FailedImport.Patterns;
+        var patternMode = queueCleanerConfig.FailedImport.PatternMode;
+        
+        var matched = messages.Any(
+            m => patterns.Any(
+                p => !string.IsNullOrWhiteSpace(p?.Trim()) && m.Contains(p, StringComparison.InvariantCultureIgnoreCase)
             )
         );
+
+        if (patternMode is PatternMode.Exclude && matched)
+        {
+            // contains an excluded/ignored pattern -> skip
+            _logger.LogTrace("skip failed import check | excluded pattern matched | {name}", record.Title);
+            return false;
+        }
+
+        if (patternMode is PatternMode.Include && (!matched || patterns.Count is 0))
+        {
+            // does not match any included patterns -> skip
+            _logger.LogTrace("skip failed import check | no included pattern matched | {name}", record.Title);
+            return false;
+        }
+        
+        return true;
     }
 }

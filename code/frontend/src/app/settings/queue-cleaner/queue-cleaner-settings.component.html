@@ -178,20 +178,40 @@
             <div class="field-row" formGroupName="failedImport">
               <label class="field-label">
                 <i class="pi pi-question-circle field-info-icon" 
-                   (click)="openFieldDocs('failedImport.ignoredPatterns')" 
+                   (click)="openFieldDocs('failedImport.pattern-mode')" 
                    title="Click for documentation"></i>
-                Ignored Patterns
+                Pattern Mode
+              </label>
+              <div class="field-input">
+                <p-selectButton
+                  formControlName="patternMode"
+                  [options]="[{ label: 'Exclude', value: 'Exclude' }, { label: 'Include', value: 'Include' }]"
+                  optionLabel="label"
+                  optionValue="value"
+                  [allowEmpty]="false"
+                  [multiple]="false"
+                ></p-selectButton>
+                <small class="form-helper-text">Choose how the patterns are applied to failed imports</small>
+              </div>
+            </div>
+
+            <div class="field-row" formGroupName="failedImport">
+              <label class="field-label">
+                <i class="pi pi-question-circle field-info-icon" 
+                   (click)="openFieldDocs('failedImport.patterns')" 
+                   title="Click for documentation"></i>
+                {{ queueCleanerForm.get('failedImport.patternMode')?.value === 'Include' ? 'Included Patterns' : 'Excluded Patterns' }}
               </label>
               <div class="field-input">
                 <!-- Mobile-friendly autocomplete -->
                 <app-mobile-autocomplete
-                  formControlName="ignoredPatterns"
+                  formControlName="patterns"
                   placeholder="Add pattern"
                 ></app-mobile-autocomplete>
                 
                 <!-- Desktop autocomplete -->
                 <p-autocomplete
-                  formControlName="ignoredPatterns"
+                  formControlName="patterns"
                   multiple
                   fluid
                   [typeahead]="false"
@@ -199,9 +219,12 @@
                   class="desktop-only"
                 >
                 </p-autocomplete>
-                <small class="form-helper-text"
-                  >Failed imports containing these patterns will be skipped (e.g. <code>sample</code>)</small
-                >
+                <small class="form-helper-text">
+                  {{ queueCleanerForm.get('failedImport.patternMode')?.value === 'Include' ?
+                    'Only failed imports containing these patterns will be removed and everything else will be skipped' :
+                    'Failed imports containing these patterns will be skipped and everything else will be removed'
+                  }}
+                </small>
               </div>
             </div>
           </p-accordion-content>
