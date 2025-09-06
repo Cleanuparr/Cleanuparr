@@ -74,7 +74,10 @@ public class DataContext : DbContext
         
         modelBuilder.Entity<QueueCleanerConfig>(entity =>
         {
-            entity.ComplexProperty(e => e.FailedImport);
+            entity.ComplexProperty(e => e.FailedImport, cp =>
+            {
+                cp.Property(x => x.PatternMode).HasConversion<LowercaseEnumConverter<PatternMode>>();
+            });
             entity.ComplexProperty(e => e.Stalled);
             entity.ComplexProperty(e => e.Slow);
         });
