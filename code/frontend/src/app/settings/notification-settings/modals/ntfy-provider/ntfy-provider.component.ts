@@ -44,7 +44,7 @@ export class NtfyProviderComponent implements OnInit, OnChanges {
   passwordControl = new FormControl('');
   accessTokenControl = new FormControl('');
   priorityControl = new FormControl(NtfyPriority.Default, [Validators.required]);
-  tagsControl = new FormControl(''); // Optional field
+  tagsControl = new FormControl('');
 
   private documentationService = inject(DocumentationService);
 

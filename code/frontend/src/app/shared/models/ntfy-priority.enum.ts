@@ -1,7 +1,7 @@
 export enum NtfyPriority {
-  Min = 1,
-  Low = 2,
-  Default = 3,
-  High = 4,
-  Max = 5
+  Min = 'Min',
+  Low = 'Low',
+  Default = 'Default',
+  High = 'High',
+  Max = 'Max'
 }
