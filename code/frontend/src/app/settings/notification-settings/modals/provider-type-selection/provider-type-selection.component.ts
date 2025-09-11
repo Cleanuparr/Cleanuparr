@@ -82,6 +82,12 @@ export class ProviderTypeSelectionComponent {
       name: 'Apprise',
       iconClass: 'pi pi-send',
       description: 'Universal notification library supporting many services'
+    },
+    {
+      type: NotificationProviderType.Ntfy,
+      name: 'ntfy',
+      iconClass: 'pi pi-bell',
+      description: 'Simple HTTP pub-sub notifications'
     }
     // Add more providers as they are implemented
   ];

@@ -1,4 +1,6 @@
 import { NotificationProviderType } from '../../../shared/models/enums';
+import { NtfyAuthenticationType } from '../../../shared/models/ntfy-authentication-type.enum';
+import { NtfyPriority } from '../../../shared/models/ntfy-priority.enum';
 
 export interface ProviderTypeInfo {
   type: NotificationProviderType;
@@ -32,6 +34,17 @@ export interface NotifiarrFormData extends BaseProviderFormData {
 export interface AppriseFormData extends BaseProviderFormData {
   url: string;
   key: string;
+  tags: string;
+}
+
+export interface NtfyFormData extends BaseProviderFormData {
+  serverUrl: string;
+  topics: string;
+  authenticationType: NtfyAuthenticationType;
+  username: string;
+  password: string;
+  accessToken: string;
+  priority: NtfyPriority;
   tags: string;
 }
 
