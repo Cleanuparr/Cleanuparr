@@ -5,8 +5,8 @@ namespace Cleanuparr.Api.Models.NotificationProviders;
 public sealed record UpdateNtfyProviderDto : CreateNotificationProviderBaseDto
 {
     public string ServerUrl { get; init; } = string.Empty;
-    
-    public string Topics { get; init; } = string.Empty;
+
+    public List<string> Topics { get; init; } = [];
     
     public NtfyAuthenticationType AuthenticationType { get; init; } = NtfyAuthenticationType.None;
     
@@ -17,6 +17,6 @@ public sealed record UpdateNtfyProviderDto : CreateNotificationProviderBaseDto
     public string AccessToken { get; init; } = string.Empty;
     
     public NtfyPriority Priority { get; init; } = NtfyPriority.Default;
-    
-    public string Tags { get; init; } = string.Empty;
+
+    public List<string> Tags { get; init; } = [];
 }

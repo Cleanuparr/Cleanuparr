@@ -40,13 +40,13 @@ export interface AppriseFormData extends BaseProviderFormData {
 
 export interface NtfyFormData extends BaseProviderFormData {
   serverUrl: string;
-  topics: string;
+  topics: string[];
   authenticationType: NtfyAuthenticationType;
   username: string;
   password: string;
   accessToken: string;
   priority: NtfyPriority;
-  tags: string;
+  tags: string[];
 }
 
 // Events for modal communication

@@ -22,8 +22,7 @@ public sealed record NtfyConfig : IConfig
     public string ServerUrl { get; init; } = string.Empty;
     
     [Required]
-    [MaxLength(1000)]
-    public string Topics { get; init; } = string.Empty;
+    public List<string> Topics { get; init; } = new();
     
     [Required]
     public NtfyAuthenticationType AuthenticationType { get; init; } = NtfyAuthenticationType.None;
@@ -40,8 +39,7 @@ public sealed record NtfyConfig : IConfig
     [Required]
     public NtfyPriority Priority { get; init; } = NtfyPriority.Default;
     
-    [MaxLength(255)]
-    public string? Tags { get; init; }
+    public List<string> Tags { get; init; } = new();
     
     [NotMapped]
     public Uri? Uri
@@ -62,7 +60,7 @@ public sealed record NtfyConfig : IConfig
     public bool IsValid()
     {
         return Uri != null && 
-               !string.IsNullOrWhiteSpace(Topics) &&
+               Topics.Any(t => !string.IsNullOrWhiteSpace(t)) &&
                IsAuthenticationValid();
     }
     
@@ -78,7 +76,7 @@ public sealed record NtfyConfig : IConfig
             throw new ValidationException("ntfy server URL must be a valid HTTP or HTTPS URL");
         }
         
-        if (string.IsNullOrWhiteSpace(Topics))
+        if (!Topics.Any(t => !string.IsNullOrWhiteSpace(t)))
         {
             throw new ValidationException("At least one ntfy topic is required");
         }

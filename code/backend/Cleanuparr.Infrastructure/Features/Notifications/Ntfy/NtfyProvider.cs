@@ -36,7 +36,6 @@ public sealed class NtfyProvider : NotificationProviderBase<NtfyConfig>
     {
         int priority = MapSeverityToPriority(context.Severity);
         string message = BuildMessage(context);
-        string[]? tags = GetTags(context);
 
         return new NtfyPayload
         {
@@ -44,7 +43,7 @@ public sealed class NtfyProvider : NotificationProviderBase<NtfyConfig>
             Title = context.Title,
             Message = message,
             Priority = priority,
-            Tags = tags
+            Tags = Config.Tags.ToArray()
         };
     }
 
@@ -79,32 +78,8 @@ public sealed class NtfyProvider : NotificationProviderBase<NtfyConfig>
     private string[] GetTopics()
     {
         return Config.Topics
-            .Split(',', StringSplitOptions.RemoveEmptyEntries)
-            .Select(t => t.Trim())
             .Where(t => !string.IsNullOrWhiteSpace(t))
+            .Select(t => t.Trim())
             .ToArray();
-    }
-
-    private string[]? GetTags(NotificationContext context)
-    {
-        var tags = new List<string>();
-        
-        // Add default tags from config if any
-        if (!string.IsNullOrWhiteSpace(Config.Tags))
-        {
-            var configTags = Config.Tags
-                .Split(',', StringSplitOptions.RemoveEmptyEntries)
-                .Select(t => t.Trim())
-                .Where(t => !string.IsNullOrWhiteSpace(t));
-            tags.AddRange(configTags);
-        }
-        
-        // Add severity-based tag
-        tags.Add(context.Severity.ToString().ToLowerInvariant());
-        
-        // Add event type tag
-        tags.Add(context.EventType.ToString().ToLowerInvariant());
-
-        return tags.Any() ? tags.ToArray() : null;
     }
 }

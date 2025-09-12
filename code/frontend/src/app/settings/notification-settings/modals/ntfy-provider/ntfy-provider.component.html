@@ -190,15 +190,24 @@
         ></i>
         Tags (Optional)
       </label>
-      <input
-        id="tags"
-        type="text"
-        pInputText
+      <!-- Mobile-friendly autocomplete (chips UI) -->
+      <app-mobile-autocomplete
         [formControl]="tagsControl"
-        placeholder="tag1,tag2,tag3"
-        class="w-full"
-      />
-      <small class="form-helper-text">Optional comma-separated tags to add to notifications (e.g., warning,alert).</small>
+        placeholder="Enter tag names"
+      ></app-mobile-autocomplete>
+
+      <!-- Desktop autocomplete (allows multiple entries) -->
+      <p-autocomplete
+        id="tags"
+        [formControl]="tagsControl"
+        multiple
+        fluid
+        [typeahead]="false"
+        placeholder="Add a tag and press Enter"
+        class="desktop-only w-full"
+      ></p-autocomplete>
+
+      <small class="form-helper-text">Optional tags to add to notifications (e.g., warning, alert). Press Enter or comma to add each tag.</small>
     </div>
   </div>
 </app-notification-provider-base>

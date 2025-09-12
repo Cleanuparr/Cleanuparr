@@ -40,13 +40,13 @@ export class NtfyProviderComponent implements OnInit, OnChanges {
 
   // Provider-specific form controls
   serverUrlControl = new FormControl('', [Validators.required, UrlValidators.httpUrl]);
-  topicsControl = new FormControl([], [Validators.required, Validators.minLength(1)]);
+  topicsControl = new FormControl<string[]>([], [Validators.required, Validators.minLength(1)]);
   authenticationTypeControl = new FormControl(NtfyAuthenticationType.None, [Validators.required]);
   usernameControl = new FormControl('');
   passwordControl = new FormControl('');
   accessTokenControl = new FormControl('');
   priorityControl = new FormControl(NtfyPriority.Default, [Validators.required]);
-  tagsControl = new FormControl('');
+  tagsControl = new FormControl<string[]>([]);
 
   private documentationService = inject(DocumentationService);
 
@@ -102,18 +102,13 @@ export class NtfyProviderComponent implements OnInit, OnChanges {
       const config = this.editingProvider.configuration as any;
       
       this.serverUrlControl.setValue(config?.serverUrl || 'https://ntfy.sh');
-      
-      // Parse topics from comma-separated string to array
-      const topicsString = config?.topics || '';
-      const topicsArray = topicsString ? topicsString.split(',').map((t: string) => t.trim()).filter((t: string) => t) : [];
-      this.topicsControl.setValue(topicsArray);
-      
+      this.topicsControl.setValue(config?.topics || []);
       this.authenticationTypeControl.setValue(config?.authenticationType || NtfyAuthenticationType.None);
       this.usernameControl.setValue(config?.username || '');
       this.passwordControl.setValue(config?.password || '');
       this.accessTokenControl.setValue(config?.accessToken || '');
       this.priorityControl.setValue(config?.priority || NtfyPriority.Default);
-      this.tagsControl.setValue(config?.tags || '');
+      this.tagsControl.setValue(config?.tags || []);
     }
   }
 
@@ -125,7 +120,7 @@ export class NtfyProviderComponent implements OnInit, OnChanges {
     this.passwordControl.setValue('');
     this.accessTokenControl.setValue('');
     this.priorityControl.setValue(NtfyPriority.Default);
-    this.tagsControl.setValue('');
+    this.tagsControl.setValue([]);
   }
 
   private updateAuthFieldValidation(authType: NtfyAuthenticationType | null): void {
@@ -163,20 +158,16 @@ export class NtfyProviderComponent implements OnInit, OnChanges {
   }
 
   private buildNtfyData(baseData: BaseProviderFormData): NtfyFormData {
-    // Convert topics array to comma-separated string
-    const topicsArray = this.topicsControl.value || [];
-    const topicsString = Array.isArray(topicsArray) ? topicsArray.join(',') : '';
-
     return {
       ...baseData,
       serverUrl: this.serverUrlControl.value || '',
-      topics: topicsString,
+      topics: this.topicsControl.value || [],
       authenticationType: this.authenticationTypeControl.value || NtfyAuthenticationType.None,
       username: this.usernameControl.value || '',
       password: this.passwordControl.value || '',
       accessToken: this.accessTokenControl.value || '',
       priority: this.priorityControl.value || NtfyPriority.Default,
-      tags: this.tagsControl.value || ''
+      tags: this.tagsControl.value || []
     };
   }
 
