@@ -18,10 +18,12 @@
         class="provider-card" 
         *ngFor="let provider of availableProviders" 
         (click)="selectProvider(provider.type)"
+        (mouseenter)="onProviderEnter(provider.type)"
+        (mouseleave)="onProviderLeave()"
         [attr.data-provider]="provider.type">
         
         <div class="provider-icon">
-          <img [src]="provider.iconUrl" [alt]="provider.name + ' icon'" class="provider-icon-image">
+          <img [src]="hoveredProvider === provider.type && provider.iconUrlHover ? provider.iconUrlHover : provider.iconUrl" [alt]="provider.name + ' icon'" class="provider-icon-image">
         </div>
         <div class="provider-name">
           {{ provider.name }}

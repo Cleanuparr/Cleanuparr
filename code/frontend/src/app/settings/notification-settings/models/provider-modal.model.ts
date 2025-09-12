@@ -6,6 +6,7 @@ export interface ProviderTypeInfo {
   type: NotificationProviderType;
   name: string;
   iconUrl: string;
+  iconUrlHover?: string;
   description?: string;
 }
 

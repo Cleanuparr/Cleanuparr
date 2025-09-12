@@ -1,12 +1,15 @@
 .provider-selection-modal {
   .p-dialog {
     width: 90vw;
-    max-width: 600px;
+    max-width: 900px; // Increased to accommodate multiple columns
+    min-width: 320px; // Ensure minimum usable width
   }
 }
 
 .provider-selection-content {
   padding: 1rem;
+  max-height: 70vh; // Limit height to prevent excessive tall modals
+  overflow-y: auto; // Enable scrolling if needed
 }
 
 .selection-description {
@@ -18,9 +21,22 @@
 
 .provider-selection-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 1.5rem;
   padding: 1rem 0;
+  
+  // Default: 3 columns for desktop (large screens)
+  grid-template-columns: repeat(3, 1fr);
+  
+  // Medium screens (tablets): 2 columns
+  @media (max-width: 992px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  // Small screens (mobile): 1 column
+  @media (max-width: 576px) {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
 }
 
 .provider-card {
@@ -97,28 +113,34 @@
   text-align: center;
 }
 
-.modal-footer {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding-top: 1rem;
-  border-top: 1px solid var(--surface-border);
-  margin-top: 1rem;
-}
-
-// Responsive design
-@media (max-width: 768px) {
-  .provider-selection-grid {
-    grid-template-columns: 1fr;
-    gap: 1rem;
-  }
-  
+// Responsive design for card content
+@media (max-width: 576px) {
   .provider-card {
     padding: 1.5rem 1rem;
   }
   
   .provider-icon {
-    font-size: 2.5rem;
+    margin-bottom: 0.75rem;
+    
+    .provider-icon-image {
+      width: 40px;
+      height: 40px;
+    }
+  }
+  
+  .provider-name {
+    font-size: 1.125rem;
+  }
+  
+  .provider-description {
+    font-size: 0.8rem;
+  }
+}
+
+// Ensure proper spacing on medium screens
+@media (max-width: 992px) and (min-width: 577px) {
+  .provider-card {
+    padding: 1.75rem 1.25rem;
   }
 }
 
@@ -140,10 +162,17 @@
   animation: fadeInUp 0.4s ease-out;
   animation-fill-mode: both;
   
+  // Staggered animation delays for up to 12 providers (4 rows x 3 columns)
   &:nth-child(1) { animation-delay: 0.1s; }
-  &:nth-child(2) { animation-delay: 0.2s; }
-  &:nth-child(3) { animation-delay: 0.3s; }
-  &:nth-child(4) { animation-delay: 0.4s; }
+  &:nth-child(2) { animation-delay: 0.15s; }
+  &:nth-child(3) { animation-delay: 0.2s; }
+  &:nth-child(4) { animation-delay: 0.25s; }
+  &:nth-child(5) { animation-delay: 0.3s; }
+  &:nth-child(6) { animation-delay: 0.35s; }
+  &:nth-child(7) { animation-delay: 0.4s; }
+  &:nth-child(8) { animation-delay: 0.45s; }
+  &:nth-child(9) { animation-delay: 0.5s; }
+  &:nth-child(n+10) { animation-delay: 0.55s; } // All remaining items
 }
 
 @keyframes fadeInUp {
@@ -154,5 +183,42 @@
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+// Add subtle scroll indicators when content overflows
+.provider-selection-content {
+  position: relative;
+  
+  // Gradient fade at bottom when scrolling is needed
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 20px;
+    background: linear-gradient(to top, var(--surface-card), transparent);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: var(--surface-border);
+    border-radius: 3px;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: var(--text-color-secondary);
+    border-radius: 3px;
+    
+    &:hover {
+      background: var(--primary-color);
+    }
   }
 }
