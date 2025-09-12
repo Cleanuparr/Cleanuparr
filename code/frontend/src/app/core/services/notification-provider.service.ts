@@ -87,13 +87,13 @@ export interface CreateNtfyProviderDto {
   onDownloadCleaned: boolean;
   onCategoryChanged: boolean;
   serverUrl: string;
-  topics: string;
+  topics: string[];
   authenticationType: NtfyAuthenticationType;
   username: string;
   password: string;
   accessToken: string;
   priority: NtfyPriority;
-  tags: string;
+  tags: string[];
 }
 
 export interface UpdateNtfyProviderDto {
@@ -106,24 +106,24 @@ export interface UpdateNtfyProviderDto {
   onDownloadCleaned: boolean;
   onCategoryChanged: boolean;
   serverUrl: string;
-  topics: string;
+  topics: string[];
   authenticationType: NtfyAuthenticationType;
   username: string;
   password: string;
   accessToken: string;
   priority: NtfyPriority;
-  tags: string;
+  tags: string[];
 }
 
 export interface TestNtfyProviderDto {
   serverUrl: string;
-  topics: string;
+  topics: string[];
   authenticationType: NtfyAuthenticationType;
   username: string;
   password: string;
   accessToken: string;
   priority: NtfyPriority;
-  tags: string;
+  tags: string[];
 }
 
 @Injectable({
