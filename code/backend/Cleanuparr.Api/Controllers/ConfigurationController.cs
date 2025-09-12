@@ -116,9 +116,12 @@ public class ConfigurationController : ControllerBase
                 .AsNoTracking()
                 .ToListAsync();
             
-            // Return in the expected format with clients wrapper
-            var config = new { clients = clients };
-            return Ok(config);
+            clients = clients
+                .OrderBy(c => c.TypeName)
+                .ThenBy(c => c.Name)
+                .ToList();
+            
+            return Ok(new { clients });
         }
         finally
         {
