@@ -29,57 +29,65 @@
       </ng-template>
 
       <!-- Empty state when no clients -->
-      <div *ngIf="clients.length === 0" class="empty-instances-message p-3 text-center">
-        <i class="pi pi-inbox empty-icon"></i>
-        <p>No download clients defined. Add a client to start.</p>
+      <div *ngIf="clients.length === 0" class="no-items text-center py-5 text-color-secondary">
+        <i class="pi pi-download text-4xl mb-3"></i>
+        <p class="m-0">No download clients configured</p>
+        <small>Add a client to start downloading</small>
       </div>
 
       <!-- Clients List -->
-      <div *ngIf="clients.length > 0" class="instances-list">
-        <div *ngFor="let client of clients" class="instance-item">
-          <div class="instance-header">
-            <div class="instance-title">
-              <i class="pi pi-download instance-icon"></i>
-              <span class="instance-name">{{ client.name }}</span>
+      <div *ngIf="clients.length > 0" class="items-list">
+        <div 
+          *ngFor="let client of clients" 
+          class="item-item p-3 border-round surface-border border-1 mb-3"
+          [ngClass]="{ 'enabled': client.enabled }"
+        >
+          <div class="flex justify-content-between align-items-center">
+            <div class="item-info flex-1">
+              <div>
+                <div class="flex align-items-center mb-2">
+                  <h4 class="m-0 mr-2">{{ client.name }}</h4>
+                  <p-tag 
+                    [value]="getClientTypeLabel(client)" 
+                    [severity]="'info'"
+                    class="mr-2"
+                  ></p-tag>
+                  <p-tag 
+                    [value]="client.enabled ? 'Enabled' : 'Disabled'" 
+                    [severity]="client.enabled ? 'success' : 'secondary'"
+                  ></p-tag>
+                </div>
+                <div class="item-details client-details text-sm text-color-secondary">
+                  <div *ngIf="client.host">
+                    <label>Host: {{ client.host }}</label>
+                  </div>
+                  <div *ngIf="client.urlBase">
+                    <label>URL Base: {{ client.urlBase }}</label>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div class="instance-actions">
+            <div class="item-actions">
               <button 
                 pButton 
                 type="button" 
                 icon="pi pi-pencil" 
-                class="p-button-text p-button-sm"
+                class="p-button-rounded p-button-text p-button-sm mr-1"
+                pTooltip="Edit client"
+                tooltipPosition="left"
                 [disabled]="downloadClientSaving()"
                 (click)="openEditClientModal(client)"
-                pTooltip="Edit client"
               ></button>
               <button 
                 pButton 
                 type="button" 
                 icon="pi pi-trash" 
-                class="p-button-text p-button-sm p-button-danger"
+                class="p-button-rounded p-button-text p-button-danger p-button-sm"
+                pTooltip="Delete client"
+                tooltipPosition="left"
                 [disabled]="downloadClientSaving()"
                 (click)="deleteClient(client)"
-                pTooltip="Delete client"
               ></button>
-            </div>
-          </div>
-          
-          <div class="instance-content">
-            <div class="instance-field">
-              <label>Type: {{ getClientTypeLabel(client) }}</label>
-            </div>
-            <div class="instance-field" *ngIf="client.host">
-              <label>Host: {{ client.host }}</label>
-            </div>
-            <div class="instance-field" *ngIf="client.urlBase">
-              <label>URL Base: {{ client.urlBase }}</label>
-            </div>
-            <div class="instance-field">
-              <label>Status: 
-                <span [class]="client.enabled ? 'text-green-500' : 'text-red-500'">
-                  {{ client.enabled ? 'Enabled' : 'Disabled' }}
-                </span>
-              </label>
             </div>
           </div>
         </div>

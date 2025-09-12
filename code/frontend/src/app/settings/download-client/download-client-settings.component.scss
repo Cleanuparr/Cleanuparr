@@ -1,3 +1,17 @@
 @use '../styles/settings-shared.scss';
 @use '../styles/arr-shared.scss';
+@use '../styles/item-list-styles.scss';
 @use '../settings-page/settings-page.component.scss';
+
+/* Override item details styling for download clients to match original format */
+.item-details {
+  div {
+    margin: 0;
+    
+    label {
+      font-weight: 500;
+      color: var(--text-color-secondary);
+      font-size: 0.875rem;
+    }
+  }
+}

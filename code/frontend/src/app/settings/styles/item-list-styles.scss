@@ -1,0 +1,111 @@
+/* Shared styles for item lists (providers, clients, etc.) */
+
+/* List container styling */
+.items-list {
+  display: block; /* one item per line */
+  gap: 1rem;
+}
+
+.item-item {
+  background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+  border: 1px solid rgba(255,255,255,0.04);
+  border-radius: 12px;
+  padding: 1rem;
+  position: relative;
+  overflow: hidden;
+
+  /* subtle soft elevation */
+  box-shadow: 0 2px 8px rgba(16,24,40,0.04);
+
+  /* enabled accent stripe - always show for enabled items */
+  &::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: linear-gradient(180deg, var(--primary-color), #4ab0ff);
+    opacity: 0; /* shown only when enabled */
+    transition: opacity 180ms ease;
+  }
+
+  &.enabled::before {
+    opacity: 1;
+  }
+
+  /* neon glow when enabled - always show for enabled items */
+  &.enabled {
+    box-shadow: 0 10px 30px rgba(6,20,46,0.12), 0 0 24px rgba(0,172,255,0.16);
+  }
+
+  .item-info {
+    padding-right: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .item-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .item-details {
+    margin-top: 0.35rem;
+    color: var(--text-color-secondary);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+
+    span {
+      background: rgba(0,0,0,0.03);
+      padding: 0.15rem 0.5rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+    
+    div {
+      font-size: 0.85rem;
+      width: 100%;
+    }
+  }
+  
+  /* Override for client details to be vertical */
+  .item-details.client-details {
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  /* small tag style override to match new look */
+  p-tag {
+    border-radius: 999px;
+    padding: 0.25rem 0.6rem;
+    font-weight: 600;
+    font-size: 0.8rem;
+    text-transform: none;
+  }
+}
+
+.no-items {
+  background: transparent;
+  border: 1px dashed rgba(255,255,255,0.03);
+  border-radius: 8px;
+  padding: 2rem;
+}
+
+/* make action spinner visible on the action button without shifting layout */
+.p-button .pi {
+  vertical-align: middle;
+}
+
+/* Small responsive tweaks */
+@media (max-width: 479px) {
+  .item-actions {
+    gap: 0.25rem;
+  }
+}

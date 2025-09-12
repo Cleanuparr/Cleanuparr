@@ -24,14 +24,14 @@
       ></app-loading-error-state>
 
       <!-- Providers List -->
-      <div *ngIf="!notificationProviderLoading() && !notificationProviderLoadError()" class="providers-list">
+      <div *ngIf="!notificationProviderLoading() && !notificationProviderLoadError()" class="items-list">
         <div 
           *ngFor="let provider of notificationProviderStore.notificationProviders()" 
-          class="provider-item p-3 border-round surface-border border-1 mb-3"
+          class="item-item p-3 border-round surface-border border-1 mb-3"
           [ngClass]="{ 'enabled': provider.isEnabled }"
         >
           <div class="flex justify-content-between align-items-center">
-            <div class="provider-info flex-1">
+            <div class="item-info flex-1">
                 <div>
                   <div class="flex align-items-center mb-2">
                     <h4 class="m-0 mr-2">{{ provider.name }}</h4>
@@ -45,7 +45,7 @@
                       [severity]="provider.isEnabled ? 'success' : 'secondary'"
                     ></p-tag>
                   </div>
-              <div class="provider-events text-sm text-color-secondary">
+              <div class="item-details text-sm text-color-secondary">
                 <span *ngIf="provider.events.onFailedImportStrike" class="mr-2">❌ Failed Import</span>
                 <span *ngIf="provider.events.onStalledStrike" class="mr-2">⏸️ Stalled</span>
                 <span *ngIf="provider.events.onSlowStrike" class="mr-2">🐌 Slow</span>
@@ -55,7 +55,7 @@
                   </div>
                 </div>
             </div>
-            <div class="provider-actions">
+            <div class="item-actions">
               <button 
                 pButton 
                 type="button" 
@@ -92,7 +92,7 @@
 
         <div 
           *ngIf="notificationProviderStore.notificationProviders().length === 0" 
-          class="no-providers text-center py-5 text-color-secondary"
+          class="no-items text-center py-5 text-color-secondary"
         >
           <i class="pi pi-bell text-4xl mb-3"></i>
           <p class="m-0">No notification providers configured</p>

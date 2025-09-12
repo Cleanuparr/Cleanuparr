@@ -17,6 +17,8 @@ interface NavigationItem {
   id: string;
   label: string;
   icon: string;
+  iconUrl?: string;
+  iconUrlHover?: string;
   route?: string;           // For direct navigation items
   children?: NavigationItem[]; // For parent items with sub-menus
   isExternal?: boolean;     // For external links
@@ -91,6 +93,9 @@ export class SidebarContentComponent implements OnInit, OnChanges, OnDestroy {
   // Animation trigger property - changes to force re-render and trigger animations
   navigationStateKey = 0;
 
+  // Track hovered navigation item id to swap images
+  hoveredNavId: string | null = null;
+
   // Route synchronization properties
   private routerSubscription?: Subscription;
   private routeMappings: RouteMapping[] = [
@@ -164,6 +169,29 @@ export class SidebarContentComponent implements OnInit, OnChanges, OnDestroy {
   private setupNavigationData(): void {
     this.navigationData = this.getNavigationData();
     this.currentNavigation = this.buildTopLevelNavigation();
+    // Preload hover icons to avoid flicker on first hover
+    this.preloadIcons();
+  }
+
+  /**
+   * Preload hover icon images to reduce flicker when user first hovers over an item
+   */
+  private preloadIcons(): void {
+    const urls = new Set<string>();
+    const collect = (items: NavigationItem[] | undefined) => {
+      if (!items) return;
+      items.forEach(i => {
+        if (i.iconUrlHover) urls.add(i.iconUrlHover);
+        if (i.children) collect(i.children);
+      });
+    };
+
+    collect(this.navigationData);
+
+    urls.forEach(url => {
+      const img = new Image();
+      img.src = url;
+    });
   }
 
   /**
@@ -209,11 +237,46 @@ export class SidebarContentComponent implements OnInit, OnChanges, OnDestroy {
         label: 'Media Apps',
         icon: 'pi pi-play-circle',
         children: [
-          { id: 'sonarr', label: 'Sonarr', icon: 'pi pi-play-circle', route: '/sonarr' },
-          { id: 'radarr', label: 'Radarr', icon: 'pi pi-play-circle', route: '/radarr' },
-          { id: 'lidarr', label: 'Lidarr', icon: 'pi pi-bolt', route: '/lidarr' },
-          { id: 'readarr', label: 'Readarr', icon: 'pi pi-book', route: '/readarr' },
-          { id: 'whisparr', label: 'Whisparr', icon: 'pi pi-lock', route: '/whisparr' },
+          {
+            id: 'sonarr',
+            label: 'Sonarr',
+            icon: 'pi pi-play-circle',
+            route: '/sonarr',
+            iconUrl: '/icons/ext/sonarr-light.svg',
+            iconUrlHover: '/icons/ext/sonarr.svg'
+          },
+          {
+            id: 'radarr',
+            label: 'Radarr',
+            icon: 'pi pi-play-circle',
+            route: '/radarr',
+            iconUrl: '/icons/ext/radarr-light.svg',
+            iconUrlHover: '/icons/ext/radarr.svg'
+          },
+          {
+            id: 'lidarr',
+            label: 'Lidarr',
+            icon: 'pi pi-bolt',
+            route: '/lidarr',
+            iconUrl: '/icons/ext/lidarr-light.svg',
+            iconUrlHover: '/icons/ext/lidarr.svg'
+          },
+          {
+            id: 'readarr',
+            label: 'Readarr',
+            icon: 'pi pi-book',
+            route: '/readarr',
+            iconUrl: '/icons/ext/readarr-light.svg',
+            iconUrlHover: '/icons/ext/readarr.svg'
+          },
+          {
+            id: 'whisparr',
+            label: 'Whisparr',
+            icon: 'pi pi-lock',
+            route: '/whisparr',
+            iconUrl: '/icons/ext/whisparr-light.svg',
+            iconUrlHover: '/icons/ext/whisparr.svg'
+          },
           { id: 'download-clients', label: 'Download Clients', icon: 'pi pi-download', route: '/download-clients' }
         ]
       },

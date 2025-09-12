@@ -77,52 +77,62 @@
       </ng-template>
 
       <!-- Empty state when no instances -->
-      <div *ngIf="instances.length === 0" class="empty-instances-message p-3 text-center">
-        <i class="pi pi-inbox empty-icon"></i>
-        <p>No Lidarr instances configured</p>
+      <div *ngIf="instances.length === 0" class="no-items text-center py-5 text-color-secondary">
+        <i class="pi pi-server text-4xl mb-3"></i>
+        <p class="m-0">No Lidarr instances configured</p>
         <small>Add an instance to start using Lidarr integration</small>
       </div>
 
       <!-- Instances List -->
-      <div *ngIf="instances.length > 0" class="instances-list">
-        <div *ngFor="let instance of instances" class="instance-item">
-          <div class="instance-header">
-            <div class="instance-title">
-              <i class="pi pi-server instance-icon"></i>
-              <span class="instance-name">{{ instance.name }}</span>
+      <div *ngIf="instances.length > 0" class="items-list">
+        <div 
+          *ngFor="let instance of instances" 
+          class="item-item p-3 border-round surface-border border-1 mb-3"
+          [ngClass]="{ 'enabled': instance.enabled }"
+        >
+          <div class="flex justify-content-between align-items-center">
+            <div class="item-info flex-1">
+              <div>
+                <div class="flex align-items-center mb-2">
+                  <h4 class="m-0 mr-2">{{ instance.name }}</h4>
+                  <p-tag 
+                    value="Lidarr" 
+                    [severity]="'info'"
+                    class="mr-2"
+                  ></p-tag>
+                  <p-tag 
+                    [value]="instance.enabled ? 'Enabled' : 'Disabled'" 
+                    [severity]="instance.enabled ? 'success' : 'secondary'"
+                  ></p-tag>
+                </div>
+                <div class="item-details client-details text-sm text-color-secondary">
+                  <div>
+                    <label>URL: {{ instance.url }}</label>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div class="instance-actions">
+            <div class="item-actions">
               <button 
                 pButton 
                 type="button" 
                 icon="pi pi-pencil" 
-                class="p-button-text p-button-sm"
+                class="p-button-rounded p-button-text p-button-sm mr-1"
+                pTooltip="Edit instance"
+                tooltipPosition="left"
                 [disabled]="lidarrSaving()"
                 (click)="openEditInstanceModal(instance)"
-                pTooltip="Edit instance"
               ></button>
               <button 
                 pButton 
                 type="button" 
                 icon="pi pi-trash" 
-                class="p-button-text p-button-sm p-button-danger"
+                class="p-button-rounded p-button-text p-button-danger p-button-sm"
+                pTooltip="Delete instance"
+                tooltipPosition="left"
                 [disabled]="lidarrSaving()"
                 (click)="deleteInstance(instance)"
-                pTooltip="Delete instance"
               ></button>
-            </div>
-          </div>
-          
-          <div class="instance-content">
-            <div class="instance-field">
-              <label>{{ instance.url }}</label>
-            </div>
-            <div class="instance-field">
-              <label>Status: 
-                <span [class]="instance.enabled ? 'text-green-500' : 'text-red-500'">
-                  {{ instance.enabled ? 'Enabled' : 'Disabled' }}
-                </span>
-              </label>
             </div>
           </div>
         </div>

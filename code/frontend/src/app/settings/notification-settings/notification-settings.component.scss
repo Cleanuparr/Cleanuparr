@@ -1,5 +1,6 @@
 @use '../styles/settings-shared.scss';
 @use '../styles/arr-shared.scss';
+@use '../styles/item-list-styles.scss';
 @use '../settings-page/settings-page.component.scss';
 
 .section-title {
@@ -11,113 +12,27 @@
   padding-bottom: 0.5rem;
 } 
 
-/* Providers list modern styling */
+/* Map provider classes to shared item classes */
 .providers-list {
-  display: block; /* one provider per line */
-  gap: 1rem;
+  @extend .items-list;
 }
 
 .provider-item {
-  background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
-  border: 1px solid rgba(255,255,255,0.04);
-  border-radius: 12px;
-  padding: 1rem;
-  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
-  position: relative;
-  overflow: hidden;
-  /* Hint to the browser that we'll be animating transform - improves compositing performance */
-  will-change: transform;
+  @extend .item-item;
+}
 
-  /* subtle soft elevation */
-  box-shadow: 0 2px 8px rgba(16,24,40,0.04);
+.provider-info {
+  @extend .item-info;
+}
 
-  &:hover {
-    transform: translateY(-6px);
-    /* Reduce shadow complexity to lower paint cost while keeping visual depth */
-    box-shadow: 0 10px 28px rgba(16,24,40,0.10), 0 0 18px rgba(0,172,255,0.14);
-    border-color: rgba(0,172,255,0.16);
-  }
+.provider-actions {
+  @extend .item-actions;
+}
 
-  /* enabled accent stripe */
-  &::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 4px;
-    background: linear-gradient(180deg, var(--primary-color), #4ab0ff);
-    opacity: 0; /* shown only when enabled */
-    transition: opacity 180ms ease;
-  }
-
-  &.enabled::before {
-    opacity: 1;
-  }
-
-  /* neon glow when enabled */
-  &.enabled {
-    /* Slightly lighter neon glow to reduce continuous paint cost when multiple items are enabled */
-    box-shadow: 0 10px 30px rgba(6,20,46,0.12), 0 0 24px rgba(0,172,255,0.16);
-    transform: translateY(-2px);
-  }
-
-  .provider-info {
-    padding-right: 0.75rem;
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-  }
-
-  .provider-actions {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
-
-  .provider-events {
-    margin-top: 0.35rem;
-    color: var(--text-color-secondary);
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-
-    span {
-      background: rgba(0,0,0,0.03);
-      padding: 0.15rem 0.5rem;
-      border-radius: 6px;
-      font-size: 0.85rem;
-      display: inline-flex;
-      align-items: center;
-      gap: 0.35rem;
-    }
-  }
-
-  /* small tag style override to match new look */
-  p-tag {
-    border-radius: 999px;
-    padding: 0.25rem 0.6rem;
-    font-weight: 600;
-    font-size: 0.8rem;
-    text-transform: none;
-  }
+.provider-events {
+  @extend .item-details;
 }
 
 .no-providers {
-  background: transparent;
-  border: 1px dashed rgba(255,255,255,0.03);
-  border-radius: 8px;
-  padding: 2rem;
-}
-
-/* make testing spinner visible on the action button without shifting layout */
-.p-button .pi {
-  vertical-align: middle;
-}
-
-/* Small responsive tweaks */
-@media (max-width: 479px) {
-  .provider-actions {
-    gap: 0.25rem;
-  }
+  @extend .no-items;
 }
