@@ -73,7 +73,7 @@ export class NtfyProviderComponent implements OnInit, OnChanges {
    * Exposed for template to open documentation for ntfy fields
    */
   openFieldDocs(fieldName: string): void {
-    this.documentationService.openFieldDocumentation('notifications', fieldName);
+    this.documentationService.openFieldDocumentation('notifications/ntfy', fieldName);
   }
 
   ngOnInit(): void {
