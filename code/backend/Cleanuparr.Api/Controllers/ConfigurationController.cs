@@ -273,6 +273,11 @@ public class ConfigurationController : ControllerBase
                 .Include(x => x.Instances)
                 .AsNoTracking()
                 .FirstAsync(x => x.Type == InstanceType.Sonarr);
+            
+            config.Instances = config.Instances
+                .OrderBy(i => i.Name)
+                .ToList();
+            
             return Ok(config.Adapt<ArrConfigDto>());
         }
         finally
@@ -291,6 +296,11 @@ public class ConfigurationController : ControllerBase
                 .Include(x => x.Instances)
                 .AsNoTracking()
                 .FirstAsync(x => x.Type == InstanceType.Radarr);
+            
+            config.Instances = config.Instances
+                .OrderBy(i => i.Name)
+                .ToList();
+            
             return Ok(config.Adapt<ArrConfigDto>());
         }
         finally
@@ -309,6 +319,11 @@ public class ConfigurationController : ControllerBase
                 .Include(x => x.Instances)
                 .AsNoTracking()
                 .FirstAsync(x => x.Type == InstanceType.Lidarr);
+            
+            config.Instances = config.Instances
+                .OrderBy(i => i.Name)
+                .ToList();
+            
             return Ok(config.Adapt<ArrConfigDto>());
         }
         finally
@@ -327,6 +342,11 @@ public class ConfigurationController : ControllerBase
                 .Include(x => x.Instances)
                 .AsNoTracking()
                 .FirstAsync(x => x.Type == InstanceType.Readarr);
+            
+            config.Instances = config.Instances
+                .OrderBy(i => i.Name)
+                .ToList();
+            
             return Ok(config.Adapt<ArrConfigDto>());
         }
         finally
@@ -345,6 +365,11 @@ public class ConfigurationController : ControllerBase
                 .Include(x => x.Instances)
                 .AsNoTracking()
                 .FirstAsync(x => x.Type == InstanceType.Whisparr);
+            
+            config.Instances = config.Instances
+                .OrderBy(i => i.Name)
+                .ToList();
+            
             return Ok(config.Adapt<ArrConfigDto>());
         }
         finally
