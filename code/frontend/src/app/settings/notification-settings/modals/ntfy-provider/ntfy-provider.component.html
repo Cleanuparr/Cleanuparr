@@ -44,14 +44,23 @@
         ></i>
         Topics *
       </label>
-      <p-chips
-        id="topics"
+      <!-- Mobile-friendly autocomplete (chips UI) -->
+      <app-mobile-autocomplete
         [formControl]="topicsControl"
         placeholder="Enter topic names"
-        class="w-full"
-        separator=","
-        [allowDuplicate]="false"
-      ></p-chips>
+      ></app-mobile-autocomplete>
+
+      <!-- Desktop autocomplete (allows multiple entries) -->
+      <p-autocomplete
+        id="topics"
+        [formControl]="topicsControl"
+        multiple
+        fluid
+        [typeahead]="false"
+        placeholder="Add a topic and press Enter"
+        class="desktop-only w-full"
+      ></p-autocomplete>
+
       <small *ngIf="hasFieldError(topicsControl, 'required')" class="p-error">At least one topic is required</small>
       <small *ngIf="hasFieldError(topicsControl, 'minlength')" class="p-error">At least one topic is required</small>
       <small class="form-helper-text">Enter the ntfy topics you want to publish to. Press Enter or comma to add each topic.</small>
@@ -67,15 +76,15 @@
         ></i>
         Authentication Type *
       </label>
-      <p-dropdown
+      <p-select
         id="auth-type"
         [formControl]="authenticationTypeControl"
         [options]="authenticationOptions"
         optionLabel="label"
         optionValue="value"
-        placeholder="Select authentication method"
         class="w-full"
-      ></p-dropdown>
+        [showClear]="false"
+      ></p-select>
       <small *ngIf="hasFieldError(authenticationTypeControl, 'required')" class="p-error">Authentication type is required</small>
       <small class="form-helper-text">Choose how to authenticate with the ntfy server.</small>
     </div>
@@ -158,15 +167,15 @@
         ></i>
         Priority *
       </label>
-      <p-dropdown
+      <p-select
         id="priority"
         [formControl]="priorityControl"
         [options]="priorityOptions"
         optionLabel="label"
         optionValue="value"
-        placeholder="Select priority"
         class="w-full"
-      ></p-dropdown>
+        [showClear]="false"
+      ></p-select>
       <small *ngIf="hasFieldError(priorityControl, 'required')" class="p-error">Priority is required</small>
       <small class="form-helper-text">The priority level for notifications (1=min, 5=max).</small>
     </div>

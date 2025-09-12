@@ -5,7 +5,7 @@ import { NtfyPriority } from '../../../shared/models/ntfy-priority.enum';
 export interface ProviderTypeInfo {
   type: NotificationProviderType;
   name: string;
-  iconClass: string;
+  iconUrl: string;
   description?: string;
 }
 

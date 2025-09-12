@@ -2,8 +2,9 @@ import { Component, Input, Output, EventEmitter, OnInit, OnDestroy, OnChanges, S
 import { FormControl, Validators, ReactiveFormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { InputTextModule } from 'primeng/inputtext';
-import { ChipsModule } from 'primeng/chips';
-import { DropdownModule } from 'primeng/dropdown';
+import { AutoCompleteModule } from 'primeng/autocomplete';
+import { SelectModule } from 'primeng/select';
+import { MobileAutocompleteComponent } from '../../../../shared/components/mobile-autocomplete/mobile-autocomplete.component';
 import { NtfyFormData, BaseProviderFormData } from '../../models/provider-modal.model';
 import { DocumentationService } from '../../../../core/services/documentation.service';
 import { NotificationProviderDto } from '../../../../shared/models/notification-provider.model';
@@ -19,8 +20,9 @@ import { NtfyPriority } from '../../../../shared/models/ntfy-priority.enum';
     CommonModule,
     ReactiveFormsModule,
     InputTextModule,
-    ChipsModule,
-    DropdownModule,
+    AutoCompleteModule,
+    SelectModule,
+    MobileAutocompleteComponent,
     NotificationProviderBaseComponent
   ],
   templateUrl: './ntfy-provider.component.html',
@@ -37,7 +39,7 @@ export class NtfyProviderComponent implements OnInit, OnChanges {
   @Output() test = new EventEmitter<NtfyFormData>();
 
   // Provider-specific form controls
-  serverUrlControl = new FormControl('https://ntfy.sh', [Validators.required, UrlValidators.httpUrl]);
+  serverUrlControl = new FormControl('', [Validators.required, UrlValidators.httpUrl]);
   topicsControl = new FormControl([], [Validators.required, Validators.minLength(1)]);
   authenticationTypeControl = new FormControl(NtfyAuthenticationType.None, [Validators.required]);
   usernameControl = new FormControl('');
