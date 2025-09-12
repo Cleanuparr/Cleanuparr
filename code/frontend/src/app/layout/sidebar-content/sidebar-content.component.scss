@@ -243,8 +243,8 @@
     }
     
     .nav-icon-wrapper {
-      width: 40px;
-      height: 40px;
+      width: 48px;
+      height: 48px;
       display: flex;
       justify-content: center;
       align-items: center;
@@ -256,9 +256,38 @@
       flex-shrink: 0; // Prevent icon from shrinking
       
       i {
-        font-size: 20px;
+        font-size: 22px;
         color: var(--text-color-secondary);
         transition: all 0.2s cubic-bezier(0.4, 0.0, 0.2, 1);
+      }
+
+      /* Stacked image icon (grayscale base + colored top) */
+      .icon-stack {
+        position: relative;
+        width: 24px;
+        height: 24px;
+      }
+
+      .icon-stack img {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 24px;
+        height: 24px;
+        display: block;
+        object-fit: contain;
+        transition: opacity 180ms ease-in-out, transform 180ms ease-in-out;
+        opacity: 1;
+      }
+
+      .icon-stack .icon-top {
+        opacity: 0;
+        transform: scale(1);
+      }
+
+      .icon-stack .icon-top.visible {
+        opacity: 1;
+        transform: scale(1.03);
       }
     }
     
