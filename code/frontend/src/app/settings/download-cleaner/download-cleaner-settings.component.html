@@ -118,12 +118,23 @@
           Ignored Downloads
         </label>
         <div class="field-input">
-          <p-chips
+          <!-- Mobile-friendly autocomplete -->
+          <app-mobile-autocomplete
             formControlName="ignoredDownloads"
-            placeholder="Enter download names to ignore..."
-            [allowDuplicate]="false"
-          ></p-chips>
-          <small class="form-helper-text">Downloads matching these names will be ignored by the download cleaner</small>
+            placeholder="Add download pattern"
+          ></app-mobile-autocomplete>
+          
+          <!-- Desktop autocomplete -->
+          <p-autocomplete
+            formControlName="ignoredDownloads"
+            inputId="dc-ignoredDownloads"
+            multiple
+            fluid
+            [typeahead]="false"
+            placeholder="Add download pattern and press enter"
+            class="desktop-only"
+          ></p-autocomplete>
+          <small class="form-helper-text">Downloads matching these patterns will be ignored by the download cleaner</small>
         </div>
       </div>
 

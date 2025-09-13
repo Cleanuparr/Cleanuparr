@@ -21,7 +21,6 @@ import { ButtonModule } from "primeng/button";
 import { InputNumberModule } from "primeng/inputnumber";
 import { AccordionModule } from "primeng/accordion";
 import { SelectButtonModule } from "primeng/selectbutton";
-import { ChipsModule } from "primeng/chips";
 import { ToastModule } from "primeng/toast";
 import { NotificationService } from "../../core/services/notification.service";
 import { SelectModule } from "primeng/select";
@@ -47,7 +46,6 @@ import { DocumentationService } from "../../core/services/documentation.service"
     InputNumberModule,
     AccordionModule,
     SelectButtonModule,
-    ChipsModule,
     ToastModule,
     SelectModule,
     AutoCompleteModule,
