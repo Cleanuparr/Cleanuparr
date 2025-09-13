@@ -1,4 +1,5 @@
 using Cleanuparr.Application.Features.DownloadCleaner;
+using Cleanuparr.Application.Features.DownloadClient;
 using Cleanuparr.Application.Features.MalwareBlocker;
 using Cleanuparr.Application.Features.QueueCleaner;
 using Cleanuparr.Domain.Exceptions;
@@ -8,6 +9,7 @@ using Cleanuparr.Persistence.Models.Configuration;
 using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
 using Cleanuparr.Persistence.Models.Configuration.MalwareBlocker;
 using Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
+using Cleanuparr.Persistence.Models.Configuration.General;
 using Cleanuparr.Shared.Helpers;
 using Microsoft.EntityFrameworkCore;
 using Quartz;
@@ -100,11 +102,15 @@ public class BackgroundJobManager : IHostedService
         DownloadCleanerConfig downloadCleanerConfig = await dataContext.DownloadCleanerConfigs
             .AsNoTracking()
             .FirstAsync(cancellationToken);
+        GeneralConfig generalConfig = await dataContext.GeneralConfigs
+            .AsNoTracking()
+            .FirstAsync(cancellationToken);
         
         // Always register jobs, regardless of enabled status
         await RegisterQueueCleanerJob(queueCleanerConfig, cancellationToken);
         await RegisterMalwareBlockerJob(malwareBlockerConfig, cancellationToken);
         await RegisterDownloadCleanerJob(downloadCleanerConfig, cancellationToken);
+        await RegisterBlacklistSyncJob(generalConfig, cancellationToken);
     }
     
     /// <summary>
@@ -120,7 +126,7 @@ public class BackgroundJobManager : IHostedService
         // Only add triggers if the job is enabled
         if (config.Enabled)
         {
-            await AddTriggersForJob<QueueCleaner>(config, config.CronExpression, cancellationToken);
+            await AddTriggersForJob<QueueCleaner>(config.CronExpression, cancellationToken);
         }
     }
     
@@ -137,7 +143,7 @@ public class BackgroundJobManager : IHostedService
         // Only add triggers if the job is enabled
         if (config.Enabled)
         {
-            await AddTriggersForJob<MalwareBlocker>(config, config.CronExpression, cancellationToken);
+            await AddTriggersForJob<MalwareBlocker>(config.CronExpression, cancellationToken);
         }
     }
     
@@ -152,7 +158,21 @@ public class BackgroundJobManager : IHostedService
         // Only add triggers if the job is enabled
         if (config.Enabled)
         {
-            await AddTriggersForJob<DownloadCleaner>(config, config.CronExpression, cancellationToken);
+            await AddTriggersForJob<DownloadCleaner>(config.CronExpression, cancellationToken);
+        }
+    }
+
+    /// <summary>
+    /// Registers the BlacklistSync job and optionally adds triggers based on general configuration.
+    /// </summary>
+    public async Task RegisterBlacklistSyncJob(GeneralConfig config, CancellationToken cancellationToken = default)
+    {
+        // Always register the job definition
+        await AddJobWithoutTrigger<BlacklistSynchronizer>(cancellationToken);
+
+        if (config.EnableBlacklistSync)
+        {
+            await AddTriggersForJob<BlacklistSynchronizer>(StaticConfiguration.BlacklistSyncCron, cancellationToken);
         }
     }
     
@@ -160,10 +180,9 @@ public class BackgroundJobManager : IHostedService
     /// Helper method to add triggers for an existing job.
     /// </summary>
     private async Task AddTriggersForJob<T>(
-        IJobConfig config,
         string cronExpression,
         CancellationToken cancellationToken = default) 
-        where T : GenericHandler
+        where T : IHandler
     {
         if (_scheduler == null)
         {
@@ -228,7 +247,7 @@ public class BackgroundJobManager : IHostedService
     /// Helper method to add a job without a trigger (for chained jobs).
     /// </summary>
     private async Task AddJobWithoutTrigger<T>(CancellationToken cancellationToken = default) 
-        where T : GenericHandler
+        where T : IHandler
     {
         if (_scheduler == null)
         {
@@ -254,6 +273,6 @@ public class BackgroundJobManager : IHostedService
         // Add job to scheduler
         await _scheduler.AddJob(jobDetail, true, cancellationToken);
         
-        _logger.LogInformation("Registered job {name} without trigger", typeName);
+        _logger.LogDebug("Registered job {name} without trigger", typeName);
     }
 }

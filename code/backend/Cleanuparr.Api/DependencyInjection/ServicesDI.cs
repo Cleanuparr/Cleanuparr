@@ -1,4 +1,5 @@
 using Cleanuparr.Application.Features.DownloadCleaner;
+using Cleanuparr.Application.Features.DownloadClient;
 using Cleanuparr.Application.Features.MalwareBlocker;
 using Cleanuparr.Application.Features.QueueCleaner;
 using Cleanuparr.Infrastructure.Events;
@@ -32,7 +33,6 @@ public static class ServicesDI
             .AddScoped<DataContext>()
             .AddScoped<EventPublisher>()
             .AddHostedService<EventCleanupService>()
-            .AddHostedService<BlacklistSyncService>()
             .AddScoped<IDryRunInterceptor, DryRunInterceptor>()
             .AddScoped<CertificateValidationService>()
             .AddScoped<SonarrClient>()
@@ -42,6 +42,7 @@ public static class ServicesDI
             .AddScoped<WhisparrClient>()
             .AddScoped<ArrClientFactory>()
             .AddScoped<QueueCleaner>()
+            .AddScoped<BlacklistSynchronizer>()
             .AddScoped<MalwareBlocker>()
             .AddScoped<DownloadCleaner>()
             .AddScoped<IQueueItemRemover, QueueItemRemover>()

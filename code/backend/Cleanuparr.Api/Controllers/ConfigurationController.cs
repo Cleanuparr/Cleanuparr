@@ -1176,6 +1176,10 @@ public class ConfigurationController : ControllerBase
             // Handle logging configuration changes
             var loggingChanged = HasLoggingConfigurationChanged(oldConfig.Log, newConfig.Log);
             
+            // Detect changes affecting BlacklistSync job
+            bool enabledChanged = oldConfig.EnableBlacklistSync != newConfig.EnableBlacklistSync;
+            bool becameEnabled = !oldConfig.EnableBlacklistSync && newConfig.EnableBlacklistSync;
+            
             newConfig.Adapt(oldConfig, config);
 
             // Persist the configuration
@@ -1198,6 +1202,22 @@ public class ConfigurationController : ControllerBase
             {
                 _logger.LogCritical("Reconfiguring logger due to configuration changes");
                 LoggingConfigManager.ReconfigureLogging(newConfig);
+            }
+
+            // Start/stop BlacklistSync job if toggled
+            if (enabledChanged)
+            {
+                if (becameEnabled)
+                {
+                    _logger.LogInformation("BlacklistSync enabled; starting job with fixed schedule and triggering once");
+                    await _jobManagementService.StartJob(JobType.BlacklistSynchronizer, null, Cleanuparr.Shared.Helpers.StaticConfiguration.BlacklistSyncCron);
+                    await _jobManagementService.TriggerJobOnce(JobType.BlacklistSynchronizer);
+                }
+                else
+                {
+                    _logger.LogInformation("BlacklistSync disabled; stopping job");
+                    await _jobManagementService.StopJob(JobType.BlacklistSynchronizer);
+                }
             }
 
             return Ok(new { Message = "General configuration updated successfully" });

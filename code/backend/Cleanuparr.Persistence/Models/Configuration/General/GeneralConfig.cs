@@ -50,6 +50,22 @@ public sealed record GeneralConfig : IConfig
             throw new ValidationException("HTTP_TIMEOUT must be greater than 0");
         }
 
+        if (EnableBlacklistSync)
+        {
+            if (string.IsNullOrEmpty(BlacklistPath?.Trim()))
+            {
+                throw new ValidationException("Blacklist sync is enabled but BlacklistPath is not configured");
+            }
+
+            bool isValidPath = Uri.TryCreate(BlacklistPath, UriKind.Absolute, out var uri) &&
+                (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps) || File.Exists(BlacklistPath);
+
+            if (!isValidPath)
+            {
+                throw new ValidationException("BlacklistPath must be a valid URL or an existing local file path");
+            }
+        }
+
         Log.Validate();
     }
 }
