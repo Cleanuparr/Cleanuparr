@@ -1,0 +1,121 @@
+---
+sidebar_position: 3
+---
+
+import { 
+  ConfigSection, 
+  styles 
+} from '@site/src/components/documentation';
+
+# ntfy
+
+ntfy is a simple HTTP-based pub-sub notification service. You can use the public service at ntfy.sh or run your own server.
+
+<div className={styles.documentationPage}>
+
+<div className={styles.section}>
+
+<h2 className={styles.sectionTitle}>
+  <span className={styles.sectionIcon}>🔔</span>
+  Configuration
+</h2>
+
+<p className={styles.sectionDescription}>
+  Configure ntfy to send push notifications to your devices.
+</p>
+
+<ConfigSection
+  id="ntfy-server-url"
+  title="Server URL"
+  icon="🌐"
+>
+
+The URL of your ntfy server. Use `https://ntfy.sh` for the public service or your self-hosted instance URL.
+
+</ConfigSection>
+
+<ConfigSection
+  id="ntfy-topics"
+  title="Topics"
+  icon="📢"
+>
+
+The ntfy topics you want to publish to. You can specify multiple topics to send notifications to different channels or devices.
+
+</ConfigSection>
+
+<ConfigSection
+  id="ntfy-authentication-type"
+  title="Authentication Type"
+  icon="🔐"
+>
+
+Choose how to authenticate with the ntfy server:
+- **None**: No authentication required (public topics)
+- **Basic Auth**: Username and password authentication
+- **Access Token**: Bearer token authentication
+
+</ConfigSection>
+
+<ConfigSection
+  id="ntfy-username"
+  title="Username"
+  icon="👤"
+>
+
+Your username for basic authentication. Required when using Basic Auth authentication type.
+
+</ConfigSection>
+
+<ConfigSection
+  id="ntfy-password"
+  title="Password"
+  icon="🔑"
+>
+
+Your password for basic authentication. Required when using Basic Auth authentication type.
+
+</ConfigSection>
+
+<ConfigSection
+  id="ntfy-access-token"
+  title="Access Token"
+  icon="🎫"
+>
+
+Your access token for bearer token authentication. Required when using Access Token authentication type.
+
+</ConfigSection>
+
+<ConfigSection
+  id="ntfy-priority"
+  title="Priority"
+  icon="🔥"
+>
+
+The priority level for notifications:
+- **Min**: No vibration or sound. The notification will be under the fold in "Other notifications".
+- **Low**: No vibration or sound. Notification will not visibly show up until notification drawer is pulled down.
+- **Default**: Short default vibration and sound. Default notification behavior.
+- **High**: Long vibration burst, default notification sound with a pop-over notification.
+- **Max**: Really long vibration bursts, default notification sound with a pop-over notification.
+
+Reference: https://docs.ntfy.sh/publish/#message-priority
+
+</ConfigSection>
+
+<ConfigSection
+  id="ntfy-tags"
+  title="Tags"
+  icon="🏷️"
+>
+
+Tags to add to notifications.
+
+Reference: https://docs.ntfy.sh/publish/#tags-emojis
+
+</ConfigSection>
+
+</div>
+
+</div>

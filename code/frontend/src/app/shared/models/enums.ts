@@ -13,4 +13,5 @@ export enum DownloadClientTypeName {
 export enum NotificationProviderType {
   Notifiarr = "Notifiarr",
   Apprise = "Apprise",
+  Ntfy = "Ntfy",
 }

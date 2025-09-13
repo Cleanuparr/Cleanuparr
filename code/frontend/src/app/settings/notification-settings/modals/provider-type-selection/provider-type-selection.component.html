@@ -1,0 +1,49 @@
+<p-dialog 
+  [(visible)]="visible" 
+  [modal]="true" 
+  [closable]="true"
+  [draggable]="false"
+  [resizable]="false"
+  styleClass="instance-modal provider-selection-modal"
+  header="Add Notification Provider"
+  (onHide)="onCancel()">
+  
+  <div class="provider-selection-content">
+    <p class="selection-description">
+      Choose a notification provider type to configure:
+    </p>
+    
+    <div class="provider-selection-grid">
+      <div 
+        class="provider-card" 
+        *ngFor="let provider of availableProviders" 
+        (click)="selectProvider(provider.type)"
+        (mouseenter)="onProviderEnter(provider.type)"
+        (mouseleave)="onProviderLeave()"
+        [attr.data-provider]="provider.type">
+        
+        <div class="provider-icon">
+          <img [src]="hoveredProvider === provider.type && provider.iconUrlHover ? provider.iconUrlHover : provider.iconUrl" [alt]="provider.name + ' icon'" class="provider-icon-image">
+        </div>
+        <div class="provider-name">
+          {{ provider.name }}
+        </div>
+        <div class="provider-description" *ngIf="provider.description">
+          {{ provider.description }}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <ng-template pTemplate="footer">
+    <div class="modal-footer">
+      <button 
+        pButton 
+        type="button" 
+        label="Cancel" 
+        class="p-button-text"
+        (click)="onCancel()">
+      </button>
+    </div>
+  </ng-template>
+</p-dialog>

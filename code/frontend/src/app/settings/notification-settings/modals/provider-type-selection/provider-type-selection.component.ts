@@ -13,81 +13,49 @@ import { ProviderTypeInfo } from '../../models/provider-modal.model';
     DialogModule,
     ButtonModule
   ],
-  template: `
-    <p-dialog 
-      [(visible)]="visible" 
-      [modal]="true" 
-      [closable]="true"
-      [draggable]="false"
-      [resizable]="false"
-      styleClass="instance-modal provider-selection-modal"
-      header="Add Notification Provider"
-      (onHide)="onCancel()">
-      
-      <div class="provider-selection-content">
-        <p class="selection-description">
-          Choose a notification provider type to configure:
-        </p>
-        
-        <div class="provider-selection-grid">
-          <div 
-            class="provider-card" 
-            *ngFor="let provider of availableProviders" 
-            (click)="selectProvider(provider.type)"
-            [attr.data-provider]="provider.type">
-            
-            <div class="provider-icon">
-              <i [class]="provider.iconClass"></i>
-            </div>
-            <div class="provider-name">
-              {{ provider.name }}
-            </div>
-            <div class="provider-description" *ngIf="provider.description">
-              {{ provider.description }}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <ng-template pTemplate="footer">
-        <div class="modal-footer">
-          <button 
-            pButton 
-            type="button" 
-            label="Cancel" 
-            class="p-button-text"
-            (click)="onCancel()">
-          </button>
-        </div>
-      </ng-template>
-    </p-dialog>
-  `,
+  templateUrl: './provider-type-selection.component.html',
   styleUrls: ['./provider-type-selection.component.scss']
 })
 export class ProviderTypeSelectionComponent {
   @Input() visible = false;
   @Output() providerSelected = new EventEmitter<NotificationProviderType>();
   @Output() cancel = new EventEmitter<void>();
+  hoveredProvider: NotificationProviderType | null = null;
 
-  // Available providers - only show implemented ones
   availableProviders: ProviderTypeInfo[] = [
-    {
-      type: NotificationProviderType.Notifiarr,
-      name: 'Notifiarr',
-      iconClass: 'pi pi-bell',
-      description: 'Discord integration via Notifiarr service'
-    },
     {
       type: NotificationProviderType.Apprise,
       name: 'Apprise',
-      iconClass: 'pi pi-send',
-      description: 'Universal notification library supporting many services'
+      iconUrl: '/icons/ext/apprise-light.svg',
+      iconUrlHover: '/icons/ext/apprise.svg',
+      description: 'https://github.com/caronc/apprise'
+    },
+    {
+      type: NotificationProviderType.Notifiarr,
+      name: 'Notifiarr',
+      iconUrl: '/icons/ext/notifiarr-light.svg',
+      iconUrlHover: '/icons/ext/notifiarr.svg',
+      description: 'https://notifiarr.com'
+    },
+    {
+      type: NotificationProviderType.Ntfy,
+      name: 'ntfy',
+      iconUrl: '/icons/ext/ntfy-light.svg',
+      iconUrlHover: '/icons/ext/ntfy.svg',
+      description: 'https://ntfy.sh/'
     }
-    // Add more providers as they are implemented
   ];
 
   selectProvider(type: NotificationProviderType) {
     this.providerSelected.emit(type);
+  }
+
+  onProviderEnter(type: NotificationProviderType) {
+    this.hoveredProvider = type;
+  }
+
+  onProviderLeave() {
+    this.hoveredProvider = null;
   }
 
   onCancel() {

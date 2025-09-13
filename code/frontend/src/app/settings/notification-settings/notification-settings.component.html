@@ -173,6 +173,17 @@
   (test)="onAppriseTest($event)"
 ></app-apprise-provider>
 
+<!-- Ntfy Provider Modal -->
+<app-ntfy-provider
+  [visible]="showNtfyModal"
+  [editingProvider]="editingProvider"
+  [saving]="saving()"
+  [testing]="testing()"
+  (save)="onNtfySave($event)"
+  (cancel)="onProviderCancel()"
+  (test)="onNtfyTest($event)"
+></app-ntfy-provider>
+
 <!-- Confirmation Dialog -->
 <p-confirmDialog></p-confirmDialog>
 

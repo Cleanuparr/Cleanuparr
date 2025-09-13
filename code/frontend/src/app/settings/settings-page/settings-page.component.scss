@@ -59,7 +59,7 @@
         font-size: 0.85rem;
       }
       
-      input, .p-dropdown, .p-inputnumber {
+    input, .p-select, .p-autocomplete, .p-inputnumber {
         width: 100%;
       }
     }
@@ -81,7 +81,7 @@
     }
     
     /* Input styling */
-    .p-inputtext, .p-dropdown, .p-inputnumber {
+    .p-inputtext, .p-select, .p-autocomplete, .p-inputnumber {
       &:hover {
         border-color: var(--primary-color);
       }
@@ -92,8 +92,8 @@
       }
     }
     
-    .p-dropdown {
-      .p-dropdown-label {
+    .p-select, .p-autocomplete {
+      .p-select-label, .p-autocomplete-input {
         padding: 0.5rem 0.75rem;
       }
     }
