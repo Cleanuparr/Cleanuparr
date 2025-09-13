@@ -13,7 +13,7 @@
   ></app-loading-error-state>
 
   <!-- Settings Form -->
-  <form *ngIf="!generalLoading() && !generalLoadError()" [formGroup]="generalForm" class="p-fluid">
+  <form *ngIf="!generalLoading() && !generalLoadError() && generalForm" [formGroup]="generalForm" class="p-fluid">
     
     <!-- General Configuration Card -->
     <p-card styleClass="settings-card mb-4">
@@ -192,6 +192,60 @@
               class="desktop-only"
             ></p-autocomplete>
             <small class="form-helper-text">Downloads matching these patterns will be ignored (e.g. hash, tag, category, label, tracker)</small>
+          </div>
+        </div>
+
+      </div>
+    </p-card>
+
+    <!-- Blacklist Sync Configuration Card -->
+    <p-card styleClass="settings-card mb-4">
+      <ng-template pTemplate="header">
+        <div class="flex align-items-center justify-content-between p-3 border-bottom-1 surface-border">
+          <div class="header-title-container">
+            <h2 class="card-title m-0">Blacklist Sync Configuration</h2>
+            <span class="card-subtitle">Configure automatic blacklist synchronization to qBittorrent clients</span>
+          </div>
+        </div>
+      </ng-template>
+
+      <div class="card-content">
+        <!-- Enable Blacklist Sync -->
+        <div class="field-row">
+          <label class="field-label">
+            <i class="pi pi-question-circle field-info-icon" 
+               (click)="openFieldDocs('enableBlacklistSync')"
+               title="Click for documentation">
+            </i>
+            Enable Blacklist Sync
+          </label>
+          <div class="field-input">
+            <p-checkbox formControlName="enableBlacklistSync" [binary]="true" inputId="enableBlacklistSync"></p-checkbox>
+            <small class="form-helper-text">When enabled, automatically sync blacklist content to qBittorrent excluded file names every hour</small>
+          </div>
+        </div>
+
+        <!-- Blacklist Path -->
+        <div class="field-row">
+          <label class="field-label">
+            <i class="pi pi-question-circle field-info-icon" 
+               (click)="openFieldDocs('blacklistPath')"
+               title="Click for documentation">
+            </i>
+            Blacklist Path
+          </label>
+          <div>
+            <div class="field-input">
+              <input
+                id="blacklistPath"
+                type="text"
+                pInputText
+                formControlName="blacklistPath"
+                placeholder="/path/to/blacklist.txt or https://example.com/blacklist.txt"
+              />
+            </div>
+            <small *ngIf="hasError('blacklistPath', 'required')" class="p-error">This field is required</small>
+            <small class="form-helper-text">Path to blacklist file (local file path or HTTP/HTTPS URL) containing patterns to exclude from qBittorrent downloads</small>
           </div>
         </div>
       </div>

@@ -2,4 +2,5 @@
 
 public interface IQBitService : IDownloadService, IDisposable
 {
+    Task UpdateBlacklistAsync(string blacklistPath);
 }

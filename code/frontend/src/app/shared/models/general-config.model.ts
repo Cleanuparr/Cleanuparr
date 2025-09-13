@@ -15,4 +15,7 @@ export interface GeneralConfig {
   // Temporary backward compatibility - will be removed in task 7
   logLevel?: LogEventLevel;
   ignoredDownloads: string[];
+  // Blacklist sync configuration
+  enableBlacklistSync: boolean;
+  blacklistPath?: string;
 }

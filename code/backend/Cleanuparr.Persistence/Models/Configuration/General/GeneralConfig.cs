@@ -31,6 +31,16 @@ public sealed record GeneralConfig : IConfig
 
     public List<string> IgnoredDownloads { get; set; } = [];
 
+    /// <summary>
+    /// Enable synchronization of blacklist patterns to qBittorrent's excluded file names
+    /// </summary>
+    public bool EnableBlacklistSync { get; set; }
+
+    /// <summary>
+    /// Path to blacklist file for qBittorrent excluded file names sync
+    /// </summary>
+    public string? BlacklistPath { get; set; }
+
     public LoggingConfig Log { get; set; } = new();
 
     public void Validate()

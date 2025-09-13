@@ -12,6 +12,7 @@ using Cleanuparr.Infrastructure.Features.Files;
 using Cleanuparr.Infrastructure.Features.ItemStriker;
 using Cleanuparr.Infrastructure.Features.MalwareBlocker;
 using Cleanuparr.Infrastructure.Features.Security;
+using Cleanuparr.Infrastructure.Helpers;
 using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Infrastructure.Services;
 using Cleanuparr.Infrastructure.Services.Interfaces;
@@ -31,6 +32,7 @@ public static class ServicesDI
             .AddScoped<DataContext>()
             .AddScoped<EventPublisher>()
             .AddHostedService<EventCleanupService>()
+            .AddHostedService<BlacklistSyncService>()
             .AddScoped<IDryRunInterceptor, DryRunInterceptor>()
             .AddScoped<CertificateValidationService>()
             .AddScoped<SonarrClient>()
@@ -51,6 +53,7 @@ public static class ServicesDI
             .AddScoped<ArrQueueIterator>()
             .AddScoped<DownloadServiceFactory>()
             .AddScoped<IStriker, Striker>()
+            .AddScoped<FileReader>()
             .AddSingleton<IJobManagementService, JobManagementService>()
             .AddSingleton<BlocklistProvider>();
 }
