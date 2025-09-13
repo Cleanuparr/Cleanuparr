@@ -50,6 +50,8 @@ export interface QueueCleanerConfig {
   useAdvancedScheduling: boolean;
   jobSchedule?: JobSchedule; // UI-only field, not sent to API
   
+  ignoredDownloads: string[];
+  
   // Nested configurations
   failedImport: FailedImportConfig;
   stalled: StalledConfig;

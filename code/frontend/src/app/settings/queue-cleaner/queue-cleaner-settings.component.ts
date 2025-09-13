@@ -139,6 +139,7 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
         every: [{ value: 5, disabled: true }, [Validators.required, Validators.min(1)]],
         type: [{ value: ScheduleUnit.Minutes, disabled: true }],
       }),
+      ignoredDownloads: [{ value: [], disabled: true }],
 
       // Failed Import settings - nested group
       failedImport: this.formBuilder.group({
@@ -203,6 +204,7 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
             every: 5,
             type: ScheduleUnit.Minutes
           },
+          ignoredDownloads: correctedConfig.ignoredDownloads || [],
           failedImport: correctedConfig.failedImport,
           stalled: correctedConfig.stalled,
           slow: correctedConfig.slow,
@@ -471,6 +473,10 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
       const useAdvancedSchedulingControl = this.queueCleanerForm.get('useAdvancedScheduling');
       useAdvancedSchedulingControl?.enable();
       
+      // Enable ignored downloads control
+      const ignoredDownloadsControl = this.queueCleanerForm.get('ignoredDownloads');
+      ignoredDownloadsControl?.enable();
+      
       // Update individual config sections only if they are enabled
       const failedImportMaxStrikes = this.queueCleanerForm.get("failedImport.maxStrikes")?.value;
       const stalledMaxStrikes = this.queueCleanerForm.get("stalled.maxStrikes")?.value;
@@ -488,6 +494,10 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
       // Disable the useAdvancedScheduling control
       const useAdvancedSchedulingControl = this.queueCleanerForm.get('useAdvancedScheduling');
       useAdvancedSchedulingControl?.disable();
+      
+      // Disable ignored downloads control
+      const ignoredDownloadsControl = this.queueCleanerForm.get('ignoredDownloads');
+      ignoredDownloadsControl?.disable();
       
       // Save current active accordion state before clearing it
       // This will be empty when we collapse all accordions
@@ -607,6 +617,7 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
         useAdvancedScheduling: formValue.useAdvancedScheduling,
         cronExpression: cronExpression,
         jobSchedule: formValue.jobSchedule,
+        ignoredDownloads: formValue.ignoredDownloads || [],
         failedImport: {
           maxStrikes: formValue.failedImport?.maxStrikes || 0,
           ignorePrivate: formValue.failedImport?.ignorePrivate || false,

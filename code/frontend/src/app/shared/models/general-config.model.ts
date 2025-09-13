@@ -14,5 +14,4 @@ export interface GeneralConfig {
   log?: LoggingConfig;
   // Temporary backward compatibility - will be removed in task 7
   logLevel?: LogEventLevel;
-  ignoredDownloads: string[];
 }
