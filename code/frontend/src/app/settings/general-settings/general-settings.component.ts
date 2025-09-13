@@ -135,7 +135,6 @@ export class GeneralSettingsComponent implements OnDestroy, CanComponentDeactiva
       httpCertificateValidation: [CertificateValidationType.Enabled],
       searchEnabled: [true],
       searchDelay: [30, [Validators.required, Validators.min(1), Validators.max(300)]],
-      ignoredDownloads: [[]],
       // Nested logging configuration form group
       log: this.formBuilder.group({
         level: [LogEventLevel.Information],
@@ -163,7 +162,6 @@ export class GeneralSettingsComponent implements OnDestroy, CanComponentDeactiva
           httpCertificateValidation: config.httpCertificateValidation,
           searchEnabled: config.searchEnabled,
           searchDelay: config.searchDelay,
-          ignoredDownloads: config.ignoredDownloads || [],
           // New nested logging configuration
           log: config.log || {
             level: config.logLevel || LogEventLevel.Information, // Fall back to old property
@@ -438,7 +436,6 @@ export class GeneralSettingsComponent implements OnDestroy, CanComponentDeactiva
       httpCertificateValidation: formValues.httpCertificateValidation,
       searchEnabled: formValues.searchEnabled,
       searchDelay: formValues.searchDelay,
-      ignoredDownloads: formValues.ignoredDownloads || [],
       // New nested logging configuration
       log: formValues.log as LoggingConfig,
       // Temporary backward compatibility - keep logLevel for now
@@ -487,7 +484,6 @@ export class GeneralSettingsComponent implements OnDestroy, CanComponentDeactiva
       httpCertificateValidation: CertificateValidationType.Enabled,
       searchEnabled: true,
       searchDelay: 30,
-      ignoredDownloads: [],
       // Reset nested logging configuration to defaults
       log: {
         level: LogEventLevel.Information,

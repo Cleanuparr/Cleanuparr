@@ -29,8 +29,6 @@ public sealed record GeneralConfig : IConfig
 
     public string EncryptionKey { get; set; } = Guid.NewGuid().ToString();
 
-    public List<string> IgnoredDownloads { get; set; } = [];
-
     public LoggingConfig Log { get; set; } = new();
 
     public void Validate()
