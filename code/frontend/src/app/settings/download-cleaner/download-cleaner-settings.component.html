@@ -3,28 +3,29 @@
     <h1>Download Cleaner</h1>
   </div>
 
-  <p-card styleClass="settings-card h-full">
-    <ng-template pTemplate="header">
-      <div class="flex align-items-center justify-content-between p-3 border-bottom-1 surface-border">
-        <div class="header-title-container">
-          <h2 class="card-title m-0">Download Cleaner Configuration</h2>
-          <span class="card-subtitle">Configure automatic download cleanup</span>
+  <!-- Loading/Error State Component -->
+  <app-loading-error-state
+    *ngIf="downloadCleanerLoading() || downloadCleanerLoadError()"
+    [loading]="downloadCleanerLoading()"
+    [error]="downloadCleanerLoadError()"
+    loadingMessage="Loading settings..."
+    errorMessage="Could not connect to server"
+  ></app-loading-error-state>
+
+  <!-- Settings Form -->
+  <form *ngIf="!downloadCleanerLoading() && !downloadCleanerLoadError()" [formGroup]="downloadCleanerForm" class="p-fluid">
+    
+    <p-card styleClass="settings-card h-full">
+      <ng-template pTemplate="header">
+        <div class="flex align-items-center justify-content-between p-3 border-bottom-1 surface-border">
+          <div class="header-title-container">
+            <h2 class="card-title m-0">Download Cleaner Configuration</h2>
+            <span class="card-subtitle">Configure automatic download cleanup</span>
+          </div>
         </div>
-      </div>
-  </ng-template>
+    </ng-template>
 
-  <div class="card-content">
-    <!-- Loading/Error State Component -->
-    <app-loading-error-state
-      *ngIf="downloadCleanerLoading() || downloadCleanerLoadError()"
-      [loading]="downloadCleanerLoading()"
-      [error]="downloadCleanerLoadError()"
-      loadingMessage="Loading settings..."
-      errorMessage="Could not connect to server"
-    ></app-loading-error-state>
-
-    <!-- Form Content - only shown when not loading and no error -->
-    <form *ngIf="!downloadCleanerLoading() && !downloadCleanerLoadError()" [formGroup]="downloadCleanerForm" class="p-fluid">
+    <div class="card-content">
       <!-- Main Settings -->
       <div class="field-row">
         <label class="field-label">
@@ -106,6 +107,35 @@
           </div>
           <small *ngIf="hasError('cronExpression', 'required')" class="p-error">Cron expression is required</small>
           <small class="form-helper-text">Enter a valid Quartz cron expression (e.g., "0 0/5 * ? * * *" runs every 5 minutes)</small>
+        </div>
+      </div>
+
+      <!-- Ignored Downloads Field -->
+      <div class="field-row">
+        <label class="field-label">
+          <i class="pi pi-question-circle field-info-icon" 
+             (click)="openFieldDocs('ignoredDownloads')" 
+             title="Click for documentation"></i>
+          Ignored Downloads
+        </label>
+        <div class="field-input">
+          <!-- Mobile-friendly autocomplete -->
+          <app-mobile-autocomplete
+            formControlName="ignoredDownloads"
+            placeholder="Add download pattern"
+          ></app-mobile-autocomplete>
+          
+          <!-- Desktop autocomplete -->
+          <p-autocomplete
+            formControlName="ignoredDownloads"
+            inputId="dc-ignoredDownloads"
+            multiple
+            fluid
+            [typeahead]="false"
+            placeholder="Add download pattern and press enter"
+            class="desktop-only"
+          ></p-autocomplete>
+          <small class="form-helper-text">Downloads matching these patterns will be ignored by the download cleaner</small>
         </div>
       </div>
 
@@ -367,11 +397,11 @@
           (click)="resetDownloadCleanerConfig()"
         ></button>
       </div>
-    </form>
-  </div>
-</p-card>
+    </div>
+  </p-card>
+  </form>
 
-<!-- Confirmation Dialog -->
+  <!-- Confirmation Dialog -->
   <p-confirmDialog 
     [style]="{ width: '450px' }"
     [baseZIndex]="10000"

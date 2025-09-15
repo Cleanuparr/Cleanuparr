@@ -2,9 +2,9 @@ name: Deploy Docusaurus to GitHub Pages
 
 on:
   push:
-    branches: [main]
-    paths:
-      - 'docs/**'
+    tags:
+      - "v*.*.*"
+  workflow_dispatch: {}
 
 permissions:
   contents: read

@@ -3,28 +3,29 @@
     <h1>Queue Cleaner</h1>
   </div>
 
-  <p-card styleClass="settings-card h-full">
-    <ng-template pTemplate="header">
-      <div class="flex align-items-center justify-content-between p-3 border-bottom-1 surface-border">
-        <div class="header-title-container">
-          <h2 class="card-title m-0">Queue Cleaner Configuration</h2>
-          <span class="card-subtitle">Configure automatic arr queue cleanup</span>
+  <!-- Loading/Error State Component -->
+  <app-loading-error-state
+    *ngIf="queueCleanerLoading() || queueCleanerLoadError()"
+    [loading]="queueCleanerLoading()"
+    [error]="queueCleanerLoadError()"
+    loadingMessage="Loading settings..."
+    errorMessage="Could not connect to server"
+  ></app-loading-error-state>
+
+  <!-- Settings Form -->
+  <form *ngIf="!queueCleanerLoading() && !queueCleanerLoadError()" [formGroup]="queueCleanerForm" class="p-fluid">
+    
+    <p-card styleClass="settings-card h-full">
+      <ng-template pTemplate="header">
+        <div class="flex align-items-center justify-content-between p-3 border-bottom-1 surface-border">
+          <div class="header-title-container">
+            <h2 class="card-title m-0">Queue Cleaner Configuration</h2>
+            <span class="card-subtitle">Configure automatic arr queue cleanup</span>
+          </div>
         </div>
-      </div>
-  </ng-template>
+    </ng-template>
 
-  <div class="card-content">
-    <!-- Loading/Error State Component -->
-    <app-loading-error-state
-      *ngIf="queueCleanerLoading() || queueCleanerLoadError()"
-      [loading]="queueCleanerLoading()"
-      [error]="queueCleanerLoadError()"
-      loadingMessage="Loading settings..."
-      errorMessage="Could not connect to server"
-    ></app-loading-error-state>
-
-    <!-- Form Content - only shown when not loading and no error -->
-    <form *ngIf="!queueCleanerLoading() && !queueCleanerLoadError()" [formGroup]="queueCleanerForm" class="p-fluid">
+    <div class="card-content">
       <!-- Main Settings -->
       <div class="field-row">
         <label class="field-label">
@@ -106,6 +107,36 @@
           </div>
           <small *ngIf="hasError('cronExpression', 'required')" class="p-error">Cron expression is required</small>
           <small class="form-helper-text">Enter a valid Quartz cron expression (e.g., "0 0/5 * ? * * *" runs every 5 minutes)</small>
+        </div>
+      </div>
+
+      <!-- Ignored Downloads -->
+      <div class="field-row">
+        <label class="field-label">
+          <i class="pi pi-question-circle field-info-icon" 
+             (click)="openFieldDocs('ignoredDownloads')"
+             title="Click for documentation">
+          </i>
+          Ignored Downloads
+        </label>
+        <div class="field-input">
+          <!-- Mobile-friendly autocomplete -->
+          <app-mobile-autocomplete
+            formControlName="ignoredDownloads"
+            placeholder="Add download pattern"
+          ></app-mobile-autocomplete>
+          
+          <!-- Desktop autocomplete -->
+          <p-autocomplete
+            formControlName="ignoredDownloads"
+            inputId="qc-ignoredDownloads"
+            multiple
+            fluid
+            [typeahead]="false"
+            placeholder="Add download pattern and press enter"
+            class="desktop-only"
+          ></p-autocomplete>
+          <small class="form-helper-text">Downloads matching these patterns will be ignored (e.g. hash, tag, category, label, tracker)</small>
         </div>
       </div>
 
@@ -490,7 +521,7 @@
           (click)="resetQueueCleanerConfig()"
         ></button>
       </div>
-    </form>
-  </div>
-</p-card>
+    </div>
+  </p-card>
+  </form>
 </div>

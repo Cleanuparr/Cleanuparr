@@ -3,9 +3,9 @@ using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Entities.Lidarr;
 using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 using Cleanuparr.Infrastructure.Features.ItemStriker;
+using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Data.Models.Arr;
-using Infrastructure.Interceptors;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
