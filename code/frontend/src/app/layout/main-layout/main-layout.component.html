@@ -12,7 +12,6 @@
       
       <!-- Shared Sidebar Content -->
       <app-sidebar-content 
-        [menuItems]="menuItems" 
         [isMobile]="false">
       </app-sidebar-content>
     </div>
@@ -79,7 +78,6 @@
         
         <!-- Shared Sidebar Content for Mobile -->
         <app-sidebar-content 
-          [menuItems]="menuItems" 
           [isMobile]="true"
           (navItemClicked)="mobileSidebarVisible.set(false)">
         </app-sidebar-content>

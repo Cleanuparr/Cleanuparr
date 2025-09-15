@@ -134,9 +134,12 @@ public class ConfigurationController : ControllerBase
                 .AsNoTracking()
                 .ToListAsync();
             
-            // Return in the expected format with clients wrapper
-            var config = new { clients = clients };
-            return Ok(config);
+            clients = clients
+                .OrderBy(c => c.TypeName)
+                .ThenBy(c => c.Name)
+                .ToList();
+            
+            return Ok(new { clients });
         }
         finally
         {
@@ -288,6 +291,11 @@ public class ConfigurationController : ControllerBase
                 .Include(x => x.Instances)
                 .AsNoTracking()
                 .FirstAsync(x => x.Type == InstanceType.Sonarr);
+            
+            config.Instances = config.Instances
+                .OrderBy(i => i.Name)
+                .ToList();
+            
             return Ok(config.Adapt<ArrConfigDto>());
         }
         finally
@@ -306,6 +314,11 @@ public class ConfigurationController : ControllerBase
                 .Include(x => x.Instances)
                 .AsNoTracking()
                 .FirstAsync(x => x.Type == InstanceType.Radarr);
+            
+            config.Instances = config.Instances
+                .OrderBy(i => i.Name)
+                .ToList();
+            
             return Ok(config.Adapt<ArrConfigDto>());
         }
         finally
@@ -324,6 +337,11 @@ public class ConfigurationController : ControllerBase
                 .Include(x => x.Instances)
                 .AsNoTracking()
                 .FirstAsync(x => x.Type == InstanceType.Lidarr);
+            
+            config.Instances = config.Instances
+                .OrderBy(i => i.Name)
+                .ToList();
+            
             return Ok(config.Adapt<ArrConfigDto>());
         }
         finally
@@ -342,6 +360,11 @@ public class ConfigurationController : ControllerBase
                 .Include(x => x.Instances)
                 .AsNoTracking()
                 .FirstAsync(x => x.Type == InstanceType.Readarr);
+            
+            config.Instances = config.Instances
+                .OrderBy(i => i.Name)
+                .ToList();
+            
             return Ok(config.Adapt<ArrConfigDto>());
         }
         finally
@@ -360,6 +383,11 @@ public class ConfigurationController : ControllerBase
                 .Include(x => x.Instances)
                 .AsNoTracking()
                 .FirstAsync(x => x.Type == InstanceType.Whisparr);
+            
+            config.Instances = config.Instances
+                .OrderBy(i => i.Name)
+                .ToList();
+            
             return Ok(config.Adapt<ArrConfigDto>());
         }
         finally
