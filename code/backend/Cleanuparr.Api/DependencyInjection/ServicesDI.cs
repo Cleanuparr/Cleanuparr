@@ -18,7 +18,6 @@ using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Infrastructure.Services;
 using Cleanuparr.Infrastructure.Services.Interfaces;
 using Cleanuparr.Persistence;
-using Infrastructure.Interceptors;
 using Infrastructure.Verticals.Files;
 
 namespace Cleanuparr.Api.DependencyInjection;

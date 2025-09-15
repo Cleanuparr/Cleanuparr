@@ -11,6 +11,7 @@ using Microsoft.Extensions.Logging;
 using Cleanuparr.Infrastructure.Helpers;
 using System.Security.Cryptography;
 using System.Text;
+using Cleanuparr.Infrastructure.Interceptors;
 
 namespace Cleanuparr.Application.Features.DownloadClient;
 
@@ -20,18 +21,21 @@ public sealed class BlacklistSynchronizer : IHandler
     private readonly DataContext _dataContext;
     private readonly DownloadServiceFactory _downloadServiceFactory;
     private readonly FileReader _fileReader;
+    private readonly IDryRunInterceptor _dryRunInterceptor;
     
     public BlacklistSynchronizer(
         ILogger<BlacklistSynchronizer> logger,
         DataContext dataContext,
         DownloadServiceFactory downloadServiceFactory,
-        FileReader fileReader
+        FileReader fileReader,
+        IDryRunInterceptor dryRunInterceptor
     )
     {
         _logger = logger;
         _dataContext = dataContext;
         _downloadServiceFactory = downloadServiceFactory;
         _fileReader = fileReader;
+        _dryRunInterceptor = dryRunInterceptor;
     }
 
     public async Task ExecuteAsync()
@@ -56,35 +60,46 @@ public sealed class BlacklistSynchronizer : IHandler
         string excludedFileNames = string.Join('\n', patterns.Where(p => !string.IsNullOrWhiteSpace(p)));
 
         string currentHash = ComputeHash(excludedFileNames);
+        
+        await _dryRunInterceptor.InterceptAsync(SyncBlacklist, currentHash, excludedFileNames);
+        await _dryRunInterceptor.InterceptAsync(RemoveOldSyncDataAsync, currentHash);
 
+        _logger.LogDebug("Blacklist synchronization completed");
+    }
+
+    private async Task SyncBlacklist(string currentHash, string excludedFileNames)
+    {
         List<DownloadClientConfig> qBittorrentClients = await _dataContext.DownloadClients
             .AsNoTracking()
             .Where(c => c.Enabled && c.TypeName == DownloadClientTypeName.qBittorrent)
             .ToListAsync();
-
+        
         if (qBittorrentClients.Count is 0)
         {
             _logger.LogDebug("No enabled qBittorrent clients found for blacklist sync");
             return;
         }
 
-        _logger.LogDebug("Starting blacklist synchronization for {Count} qBittorrent clients | hash={hash}", qBittorrentClients.Count, currentHash);
+        _logger.LogDebug("Starting blacklist synchronization for {Count} qBittorrent clients", qBittorrentClients.Count);
 
         // Pull existing sync history for this hash
-        var history = await _dataContext.BlacklistSyncHistory
+        var alreadySynced = await _dataContext.BlacklistSyncHistory
             .AsNoTracking()
             .Where(s => s.Hash == currentHash)
+            .Select(x => x.DownloadClientId)
             .ToListAsync();
 
-        var alreadySynced = history
-            .Select(s => s.DownloadClientId)
-            .ToHashSet();
-
         // Only update clients not present in history for current hash
-        foreach (var clientConfig in qBittorrentClients.Where(c => !alreadySynced.Contains(c.Id)))
+        foreach (var clientConfig in qBittorrentClients)
         {
             try
             {
+                if (alreadySynced.Contains(clientConfig.Id))
+                {
+                    _logger.LogDebug("Client {ClientName} already synced for current blacklist, skipping", clientConfig.Name);
+                    continue;
+                }
+                
                 var downloadService = _downloadServiceFactory.GetDownloadService(clientConfig);
                 if (downloadService is not QBitService qBitService)
                 {
@@ -121,10 +136,6 @@ public sealed class BlacklistSynchronizer : IHandler
                 _logger.LogError(ex, "Failed to create download service for client {ClientName}", clientConfig.Name);
             }
         }
-
-        await RemoveOldDataAsync(currentHash);
-
-        _logger.LogDebug("Blacklist synchronization completed");
     }
 
     private static string ComputeHash(string excludedFileNames)
@@ -135,7 +146,7 @@ public sealed class BlacklistSynchronizer : IHandler
         return Convert.ToHexString(hash).ToLowerInvariant();
     }
 
-    private async Task RemoveOldDataAsync(string currentHash)
+    private async Task RemoveOldSyncDataAsync(string currentHash)
     {
         try
         {
