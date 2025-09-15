@@ -19,7 +19,7 @@ using Cleanuparr.Persistence.Models.Configuration.General;
 using Cleanuparr.Persistence.Models.Configuration.MalwareBlocker;
 using Cleanuparr.Persistence.Models.Configuration.Notification;
 using Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
-using Cleanuparr.Shared.Helpers;
+using Cleanuparr.Persistence.Models.Configuration.BlacklistSync;
 using Mapster;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -53,6 +53,23 @@ public class ConfigurationController : ControllerBase
         _cache = cache;
         _notificationConfigurationService = notificationConfigurationService;
         _notificationService = notificationService;
+    }
+
+    [HttpGet("blacklist_sync")]
+    public async Task<IActionResult> GetBlacklistSyncConfig()
+    {
+        await DataContext.Lock.WaitAsync();
+        try
+        {
+            var config = await _dataContext.BlacklistSyncConfigs
+                .AsNoTracking()
+                .FirstAsync();
+            return Ok(config);
+        }
+        finally
+        {
+            DataContext.Lock.Release();
+        }
     }
 
     [HttpGet("queue_cleaner")]
@@ -1177,11 +1194,6 @@ public class ConfigurationController : ControllerBase
             // Handle logging configuration changes
             var loggingChanged = HasLoggingConfigurationChanged(oldConfig.Log, newConfig.Log);
             
-            // Detect changes affecting BlacklistSync job
-            bool enabledChanged = oldConfig.EnableBlacklistSync != newConfig.EnableBlacklistSync;
-            bool becameEnabled = !oldConfig.EnableBlacklistSync && newConfig.EnableBlacklistSync;
-            bool blacklistChanged = !(oldConfig.BlacklistPath?.Equals(newConfig.BlacklistPath, StringComparison.InvariantCultureIgnoreCase) ?? true);
-            
             newConfig.Adapt(oldConfig, config);
 
             // Persist the configuration
@@ -1206,31 +1218,69 @@ public class ConfigurationController : ControllerBase
                 LoggingConfigManager.ReconfigureLogging(newConfig);
             }
 
-            // Start/stop BlacklistSync job if toggled
-            if (enabledChanged)
-            {
-                if (becameEnabled)
-                {
-                    _logger.LogInformation("BlacklistSync enabled; starting job with fixed schedule and triggering once");
-                    await _jobManagementService.StartJob(JobType.BlacklistSynchronizer, null, StaticConfiguration.BlacklistSyncCron);
-                    await _jobManagementService.TriggerJobOnce(JobType.BlacklistSynchronizer);
-                }
-                else
-                {
-                    _logger.LogInformation("BlacklistSync disabled; stopping job");
-                    await _jobManagementService.StopJob(JobType.BlacklistSynchronizer);
-                }
-            }
-            else if (blacklistChanged)
-            {
-                await _jobManagementService.TriggerJobOnce(JobType.BlacklistSynchronizer);
-            }
-
             return Ok(new { Message = "General configuration updated successfully" });
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to save General configuration");
+            throw;
+        }
+        finally
+        {
+            DataContext.Lock.Release();
+        }
+    }
+
+    [HttpPut("blacklist_sync")]
+    public async Task<IActionResult> UpdateBlacklistSyncConfig([FromBody] BlacklistSyncConfig newConfig)
+    {
+        await DataContext.Lock.WaitAsync();
+        try
+        {
+            newConfig.Validate();
+
+            var oldConfig = await _dataContext.BlacklistSyncConfigs
+                .FirstAsync();
+
+            bool enabledChanged = oldConfig.Enabled != newConfig.Enabled;
+            bool becameEnabled = !oldConfig.Enabled && newConfig.Enabled;
+            bool pathChanged = !(oldConfig.BlacklistPath?.Equals(newConfig.BlacklistPath, StringComparison.InvariantCultureIgnoreCase) ?? true);
+
+            var adapterConfig = new TypeAdapterConfig();
+            adapterConfig.NewConfig<BlacklistSyncConfig, BlacklistSyncConfig>()
+                .Ignore(dest => dest.Id)
+                // Cron expression changes are not supported yet for this type of job
+                .Ignore(dest => dest.CronExpression);
+
+            newConfig.Adapt(oldConfig, adapterConfig);
+
+            await _dataContext.SaveChangesAsync();
+
+            if (enabledChanged)
+            {
+                if (becameEnabled)
+                {
+                    _logger.LogInformation("BlacklistSynchronizer enabled, starting job");
+                    await _jobManagementService.StartJob(JobType.BlacklistSynchronizer, null, newConfig.CronExpression);
+                    await _jobManagementService.TriggerJobOnce(JobType.BlacklistSynchronizer);
+                }
+                else
+                {
+                    _logger.LogInformation("BlacklistSynchronizer disabled, stopping the job");
+                    await _jobManagementService.StopJob(JobType.BlacklistSynchronizer);
+                }
+            }
+            else if (pathChanged && oldConfig.Enabled)
+            {
+                _logger.LogDebug("BlacklistSynchronizer path changed");
+                await _jobManagementService.TriggerJobOnce(JobType.BlacklistSynchronizer);
+            }
+
+            return Ok(new { Message = "BlacklistSynchronizer configuration updated successfully" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to save BlacklistSync configuration");
             throw;
         }
         finally

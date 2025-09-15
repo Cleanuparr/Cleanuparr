@@ -27,6 +27,11 @@ export const routes: Routes = [
     loadComponent: () => import('./settings/download-cleaner/download-cleaner-settings.component').then(m => m.DownloadCleanerSettingsComponent),
     canDeactivate: [pendingChangesGuard] 
   },
+  { 
+    path: 'blacklist-sync', 
+    loadComponent: () => import('./settings/blacklist-sync/blacklist-sync-settings.component').then(m => m.BlacklistSyncSettingsComponent),
+    canDeactivate: [pendingChangesGuard] 
+  },
   
   { path: 'sonarr', loadComponent: () => import('./settings/sonarr/sonarr-settings.component').then(m => m.SonarrSettingsComponent) },
   { path: 'radarr', loadComponent: () => import('./settings/radarr/radarr-settings.component').then(m => m.RadarrSettingsComponent) },

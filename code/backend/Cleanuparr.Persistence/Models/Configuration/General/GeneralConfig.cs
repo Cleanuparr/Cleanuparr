@@ -1,8 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Cleanuparr.Domain.Enums;
-using Serilog;
-using Serilog.Events;
 using ValidationException = Cleanuparr.Domain.Exceptions.ValidationException;
 
 namespace Cleanuparr.Persistence.Models.Configuration.General;
@@ -31,16 +29,6 @@ public sealed record GeneralConfig : IConfig
 
     public List<string> IgnoredDownloads { get; set; } = [];
 
-    /// <summary>
-    /// Enable synchronization of blacklist patterns to qBittorrent's excluded file names
-    /// </summary>
-    public bool EnableBlacklistSync { get; set; }
-
-    /// <summary>
-    /// Path to blacklist file for qBittorrent excluded file names sync
-    /// </summary>
-    public string? BlacklistPath { get; set; }
-
     public LoggingConfig Log { get; set; } = new();
 
     public void Validate()
@@ -48,22 +36,6 @@ public sealed record GeneralConfig : IConfig
         if (HttpTimeout is 0)
         {
             throw new ValidationException("HTTP_TIMEOUT must be greater than 0");
-        }
-
-        if (EnableBlacklistSync)
-        {
-            if (string.IsNullOrEmpty(BlacklistPath?.Trim()))
-            {
-                throw new ValidationException("Blacklist sync is enabled but BlacklistPath is not configured");
-            }
-
-            bool isValidPath = Uri.TryCreate(BlacklistPath, UriKind.Absolute, out var uri) &&
-                (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps) || File.Exists(BlacklistPath);
-
-            if (!isValidPath)
-            {
-                throw new ValidationException("BlacklistPath must be a valid URL or an existing local file path");
-            }
         }
 
         Log.Validate();

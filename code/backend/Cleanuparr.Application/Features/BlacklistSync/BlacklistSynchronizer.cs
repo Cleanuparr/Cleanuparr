@@ -1,19 +1,19 @@
+using System.Security.Cryptography;
+using System.Text;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
 using Cleanuparr.Infrastructure.Features.DownloadClient.QBittorrent;
 using Cleanuparr.Infrastructure.Features.Jobs;
+using Cleanuparr.Infrastructure.Helpers;
+using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration;
-using Cleanuparr.Persistence.Models.Configuration.General;
+using Cleanuparr.Persistence.Models.Configuration.BlacklistSync;
 using Cleanuparr.Persistence.Models.State;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using Cleanuparr.Infrastructure.Helpers;
-using System.Security.Cryptography;
-using System.Text;
-using Cleanuparr.Infrastructure.Interceptors;
 
-namespace Cleanuparr.Application.Features.DownloadClient;
+namespace Cleanuparr.Application.Features.BlacklistSync;
 
 public sealed class BlacklistSynchronizer : IHandler
 {
@@ -40,28 +40,28 @@ public sealed class BlacklistSynchronizer : IHandler
 
     public async Task ExecuteAsync()
     {
-        GeneralConfig generalConfig = await _dataContext.GeneralConfigs
+        BlacklistSyncConfig config = await _dataContext.BlacklistSyncConfigs
             .AsNoTracking()
             .FirstAsync();
         
-        if (!generalConfig.EnableBlacklistSync)
+        if (!config.Enabled)
         {
             _logger.LogDebug("Blacklist sync is disabled");
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(generalConfig.BlacklistPath))
+        if (string.IsNullOrWhiteSpace(config.BlacklistPath))
         {
             _logger.LogWarning("Blacklist sync path is not configured");
             return;
         }
         
-        string[] patterns = await _fileReader.ReadContentAsync(generalConfig.BlacklistPath);
+        string[] patterns = await _fileReader.ReadContentAsync(config.BlacklistPath);
         string excludedFileNames = string.Join('\n', patterns.Where(p => !string.IsNullOrWhiteSpace(p)));
 
         string currentHash = ComputeHash(excludedFileNames);
         
-        await _dryRunInterceptor.InterceptAsync(SyncBlacklist, currentHash, excludedFileNames);
+    await _dryRunInterceptor.InterceptAsync(SyncBlacklist, currentHash, excludedFileNames);
         await _dryRunInterceptor.InterceptAsync(RemoveOldSyncDataAsync, currentHash);
 
         _logger.LogDebug("Blacklist synchronization completed");

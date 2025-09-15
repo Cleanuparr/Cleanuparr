@@ -1,3 +1,4 @@
+using Cleanuparr.Application.Features.BlacklistSync;
 using Cleanuparr.Application.Features.DownloadCleaner;
 using Cleanuparr.Application.Features.DownloadClient;
 using Cleanuparr.Application.Features.MalwareBlocker;

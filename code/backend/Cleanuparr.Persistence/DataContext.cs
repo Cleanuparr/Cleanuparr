@@ -7,6 +7,7 @@ using Cleanuparr.Persistence.Models.Configuration.General;
 using Cleanuparr.Persistence.Models.Configuration.MalwareBlocker;
 using Cleanuparr.Persistence.Models.Configuration.Notification;
 using Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
+using Cleanuparr.Persistence.Models.Configuration.BlacklistSync;
 using Cleanuparr.Persistence.Models.State;
 using Cleanuparr.Shared.Helpers;
 using Microsoft.EntityFrameworkCore;
@@ -45,6 +46,8 @@ public class DataContext : DbContext
     public DbSet<AppriseConfig> AppriseConfigs { get; set; }
 
     public DbSet<BlacklistSyncHistory> BlacklistSyncHistory { get; set; }
+
+    public DbSet<BlacklistSyncConfig> BlacklistSyncConfigs { get; set; }
 
     public DataContext()
     {
