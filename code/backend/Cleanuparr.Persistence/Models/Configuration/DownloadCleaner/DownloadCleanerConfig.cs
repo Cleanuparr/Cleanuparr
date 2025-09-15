@@ -36,6 +36,8 @@ public sealed record DownloadCleanerConfig : IJobConfig
     
     public List<string> UnlinkedCategories { get; set; } = [];
 
+    public List<string> IgnoredDownloads { get; set; } = [];
+
     public void Validate()
     {
         if (!Enabled)

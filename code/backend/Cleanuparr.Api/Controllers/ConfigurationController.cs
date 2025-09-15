@@ -1100,6 +1100,7 @@ public class ConfigurationController : ControllerBase
             oldConfig.UnlinkedUseTag = newConfigDto.UnlinkedUseTag;
             oldConfig.UnlinkedIgnoredRootDir = newConfigDto.UnlinkedIgnoredRootDir;
             oldConfig.UnlinkedCategories = newConfigDto.UnlinkedCategories;
+            oldConfig.IgnoredDownloads = newConfigDto.IgnoredDownloads;
 
             // Handle Categories collection separately to avoid EF tracking issues
             // Clear existing categories
