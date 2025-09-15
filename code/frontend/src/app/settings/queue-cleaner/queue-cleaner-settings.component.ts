@@ -12,6 +12,7 @@ import {
   SlowConfig,
   ScheduleOptions
 } from "../../shared/models/queue-cleaner-config.model";
+import { PatternMode } from "../../shared/models/queue-cleaner-config.model";
 import { SettingsCardComponent } from "../components/settings-card/settings-card.component";
 import { ByteSizeInputComponent } from "../../shared/components/byte-size-input/byte-size-input.component";
 import { MobileAutocompleteComponent } from "../../shared/components/mobile-autocomplete/mobile-autocomplete.component";
@@ -93,6 +94,8 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
     { label: 'Basic', value: false },
     { label: 'Advanced', value: true }
   ];
+  // Expose PatternMode enum for template comparisons
+  PatternMode = PatternMode;
 
   // Inject the necessary services
   private formBuilder = inject(FormBuilder);
@@ -145,7 +148,8 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
         maxStrikes: [0, [Validators.required, Validators.min(0), Validators.max(5000)]],
         ignorePrivate: [{ value: false, disabled: true }],
         deletePrivate: [{ value: false, disabled: true }],
-        ignoredPatterns: [{ value: [], disabled: true }],
+        patterns: [{ value: [], disabled: true }],
+        patternMode: [{ value: PatternMode.Include, disabled: true }],
       }),
 
       // Stalled settings - nested group
@@ -504,7 +508,8 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
 
     if (enable) {
       this.queueCleanerForm.get("failedImport")?.get("ignorePrivate")?.enable(options);
-      this.queueCleanerForm.get("failedImport")?.get("ignoredPatterns")?.enable(options);
+      this.queueCleanerForm.get("failedImport")?.get("patterns")?.enable(options);
+      this.queueCleanerForm.get("failedImport")?.get("patternMode")?.enable(options);
       
       // Only enable deletePrivate if ignorePrivate is false
       const ignorePrivate = this.queueCleanerForm.get("failedImport.ignorePrivate")?.value || false;
@@ -518,7 +523,8 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
     } else {
       this.queueCleanerForm.get("failedImport")?.get("ignorePrivate")?.disable(options);
       this.queueCleanerForm.get("failedImport")?.get("deletePrivate")?.disable(options);
-      this.queueCleanerForm.get("failedImport")?.get("ignoredPatterns")?.disable(options);
+      this.queueCleanerForm.get("failedImport")?.get("patterns")?.disable(options);
+      this.queueCleanerForm.get("failedImport")?.get("patternMode")?.disable(options);
     }
   }
 
@@ -611,7 +617,8 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
           maxStrikes: formValue.failedImport?.maxStrikes || 0,
           ignorePrivate: formValue.failedImport?.ignorePrivate || false,
           deletePrivate: formValue.failedImport?.deletePrivate || false,
-          ignoredPatterns: formValue.failedImport?.ignoredPatterns || [],
+          patterns: formValue.failedImport?.patterns || [],
+          patternMode: formValue.failedImport?.patternMode || PatternMode.Include,
         },
         stalled: {
           maxStrikes: formValue.stalled?.maxStrikes || 0,
@@ -689,7 +696,8 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
         maxStrikes: 0,
         ignorePrivate: false,
         deletePrivate: false,
-        ignoredPatterns: [],
+        patterns: [],
+        patternMode: PatternMode.Include,
       },
 
       // Stalled settings (nested)
