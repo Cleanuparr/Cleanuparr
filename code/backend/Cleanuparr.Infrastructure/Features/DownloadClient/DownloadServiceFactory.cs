@@ -67,12 +67,11 @@ public sealed class DownloadServiceFactory
         var httpClientProvider = _serviceProvider.GetRequiredService<IDynamicHttpClientProvider>();
         var eventPublisher = _serviceProvider.GetRequiredService<EventPublisher>();
         var blocklistProvider = _serviceProvider.GetRequiredService<BlocklistProvider>();
-        var fileReader = _serviceProvider.GetRequiredService<FileReader>();
         
         // Create the QBitService instance
         QBitService service = new(
             logger, cache, filenameEvaluator, striker, dryRunInterceptor,
-            hardLinkFileService, httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, fileReader
+            hardLinkFileService, httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig
         );
         
         return service;

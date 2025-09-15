@@ -16,7 +16,6 @@ namespace Cleanuparr.Infrastructure.Features.DownloadClient.QBittorrent;
 public partial class QBitService : DownloadService, IQBitService
 {
     protected readonly QBittorrentClient _client;
-    private readonly FileReader _fileReader;
 
     public QBitService(
         ILogger<QBitService> logger,
@@ -28,15 +27,13 @@ public partial class QBitService : DownloadService, IQBitService
         IDynamicHttpClientProvider httpClientProvider,
         EventPublisher eventPublisher,
         BlocklistProvider blocklistProvider,
-        DownloadClientConfig downloadClientConfig,
-        FileReader fileReader
+        DownloadClientConfig downloadClientConfig
     ) : base(
         logger, cache, filenameEvaluator, striker, dryRunInterceptor, hardLinkFileService,
         httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig
     )
     {
         _client = new QBittorrentClient(_httpClient, downloadClientConfig.Url);
-        _fileReader = fileReader;
     }
     
     public override async Task LoginAsync()
@@ -107,16 +104,9 @@ public partial class QBitService : DownloadService, IQBitService
     /// <summary>
     /// Syncs blacklist patterns from configured file to qBittorrent excluded file names
     /// </summary>
-    /// <param name="blacklistPath">Path to blacklist file</param>
-    public async Task UpdateBlacklistAsync(string blacklistPath)
+    /// <param name="excludedFileNames">List of excluded file names for qBittorrent</param>
+    public async Task UpdateBlacklistAsync(string excludedFileNames)
     {
-        // Read patterns from file using extracted helper
-        string[] patterns = await _fileReader.ReadContentAsync(blacklistPath);
-        
-        // Join patterns with newlines (qBittorrent format)
-        string excludedFileNames = string.Join('\n', patterns.Where(p => !string.IsNullOrWhiteSpace(p)));
-        
-        // Update qBittorrent preferences
         Preferences preferences = new()
         {
             AdditionalData = new Dictionary<string, JToken>

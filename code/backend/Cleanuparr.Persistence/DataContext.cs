@@ -7,6 +7,7 @@ using Cleanuparr.Persistence.Models.Configuration.General;
 using Cleanuparr.Persistence.Models.Configuration.MalwareBlocker;
 using Cleanuparr.Persistence.Models.Configuration.Notification;
 using Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
+using Cleanuparr.Persistence.Models.State;
 using Cleanuparr.Shared.Helpers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
@@ -42,6 +43,8 @@ public class DataContext : DbContext
     public DbSet<NotifiarrConfig> NotifiarrConfigs { get; set; }
     
     public DbSet<AppriseConfig> AppriseConfigs { get; set; }
+
+    public DbSet<BlacklistSyncHistory> BlacklistSyncHistory { get; set; }
 
     public DataContext()
     {
@@ -124,6 +127,19 @@ public class DataContext : DbContext
                   .OnDelete(DeleteBehavior.Cascade);
                   
             entity.HasIndex(p => p.Name).IsUnique();
+        });
+
+        // Configure BlacklistSyncState relationships and indexes
+        modelBuilder.Entity<BlacklistSyncHistory>(entity =>
+        {
+            // FK to DownloadClientConfig by DownloadClientId with cascade on delete
+            entity.HasOne(s => s.DownloadClient)
+                  .WithMany()
+                  .HasForeignKey(s => s.DownloadClientId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(s => new { s.Hash, DownloadClientId = s.DownloadClientId }).IsUnique();
+            entity.HasIndex(s => s.Hash);
         });
         
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())
