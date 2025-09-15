@@ -19,6 +19,7 @@ using Cleanuparr.Persistence.Models.Configuration.General;
 using Cleanuparr.Persistence.Models.Configuration.MalwareBlocker;
 using Cleanuparr.Persistence.Models.Configuration.Notification;
 using Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
+using Cleanuparr.Shared.Helpers;
 using Mapster;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -1179,6 +1180,7 @@ public class ConfigurationController : ControllerBase
             // Detect changes affecting BlacklistSync job
             bool enabledChanged = oldConfig.EnableBlacklistSync != newConfig.EnableBlacklistSync;
             bool becameEnabled = !oldConfig.EnableBlacklistSync && newConfig.EnableBlacklistSync;
+            bool blacklistChanged = !(oldConfig.BlacklistPath?.Equals(newConfig.BlacklistPath, StringComparison.InvariantCultureIgnoreCase) ?? true);
             
             newConfig.Adapt(oldConfig, config);
 
@@ -1210,7 +1212,7 @@ public class ConfigurationController : ControllerBase
                 if (becameEnabled)
                 {
                     _logger.LogInformation("BlacklistSync enabled; starting job with fixed schedule and triggering once");
-                    await _jobManagementService.StartJob(JobType.BlacklistSynchronizer, null, Cleanuparr.Shared.Helpers.StaticConfiguration.BlacklistSyncCron);
+                    await _jobManagementService.StartJob(JobType.BlacklistSynchronizer, null, StaticConfiguration.BlacklistSyncCron);
                     await _jobManagementService.TriggerJobOnce(JobType.BlacklistSynchronizer);
                 }
                 else
@@ -1218,6 +1220,10 @@ public class ConfigurationController : ControllerBase
                     _logger.LogInformation("BlacklistSync disabled; stopping job");
                     await _jobManagementService.StopJob(JobType.BlacklistSynchronizer);
                 }
+            }
+            else if (blacklistChanged)
+            {
+                await _jobManagementService.TriggerJobOnce(JobType.BlacklistSynchronizer);
             }
 
             return Ok(new { Message = "General configuration updated successfully" });
