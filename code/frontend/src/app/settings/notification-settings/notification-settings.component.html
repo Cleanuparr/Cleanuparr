@@ -3,28 +3,30 @@
     <h1>Notifications Configuration</h1>
   </div>
 
-  <p-card styleClass="settings-card h-full">
-    <ng-template pTemplate="header">
-      <div class="flex align-items-center justify-content-between p-3 border-bottom-1 surface-border">
-        <div class="header-title-container">
-          <h2 class="card-title m-0">Notification Providers</h2>
-          <span class="card-subtitle">Configure notification providers to receive alerts</span>
+  <!-- Loading/Error Component -->
+  <app-loading-error-state
+    *ngIf="notificationProviderLoading() || notificationProviderLoadError()"
+    [loading]="notificationProviderLoading()"
+    [error]="notificationProviderLoadError()"
+    loadingMessage="Loading notification providers..."
+    errorMessage="Could not connect to server"
+  ></app-loading-error-state>
+
+  <!-- Providers Configuration -->
+  <div *ngIf="!notificationProviderLoading() && !notificationProviderLoadError()">
+    <p-card styleClass="settings-card h-full">
+      <ng-template pTemplate="header">
+        <div class="flex align-items-center justify-content-between p-3 border-bottom-1 surface-border">
+          <div class="header-title-container">
+            <h2 class="card-title m-0">Notification Providers</h2>
+            <span class="card-subtitle">Configure notification providers to receive alerts</span>
+          </div>
         </div>
-      </div>
-    </ng-template>
+      </ng-template>
 
-    <div class="card-content">
-      <!-- Loading/Error Component -->
-      <app-loading-error-state
-        *ngIf="notificationProviderLoading() || notificationProviderLoadError()"
-        [loading]="notificationProviderLoading()"
-        [error]="notificationProviderLoadError()"
-        loadingMessage="Loading notification providers..."
-        errorMessage="Could not connect to server"
-      ></app-loading-error-state>
-
-      <!-- Providers List -->
-      <div *ngIf="!notificationProviderLoading() && !notificationProviderLoadError()" class="items-list">
+      <div class="card-content">
+        <!-- Providers List -->
+        <div class="items-list">
         <div 
           *ngFor="let provider of notificationProviderStore.notificationProviders()" 
           class="item-item p-3 border-round surface-border border-1 mb-3"
@@ -98,22 +100,23 @@
           <p class="m-0">No notification providers configured</p>
           <small>Add a provider to start receiving notifications</small>
         </div>
-      </div>
 
-      <!-- Action buttons -->
-      <div class="card-footer mt-3">
-        <button 
-          pButton 
-          type="button" 
-          icon="pi pi-plus" 
-          label="Add Provider"
-          class="p-button-primary"
-          [disabled]="saving()"
-          (click)="openAddProviderModal()"
-        ></button>
+        <!-- Action buttons -->
+        <div class="card-footer mt-3">
+          <button 
+            pButton 
+            type="button" 
+            icon="pi pi-plus" 
+            label="Add Provider"
+            class="p-button-primary"
+            [disabled]="saving()"
+            (click)="openAddProviderModal()"
+          ></button>
+        </div>
+        </div>
       </div>
-    </div>
-  </p-card>
+    </p-card>
+  </div>
 </div>
 
 <!-- Legacy Provider Modal (for unsupported provider types) -->
