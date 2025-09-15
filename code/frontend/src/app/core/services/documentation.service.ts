@@ -16,6 +16,7 @@ export class DocumentationService {
   private readonly fieldMappings: FieldDocumentationMapping = {
     'queue-cleaner': {
       'enabled': 'enable-queue-cleaner',
+      'ignoredDownloads': 'ignored-downloads',
       'useAdvancedScheduling': 'scheduling-mode',
       'cronExpression': 'cron-expression',
       'failedImport.maxStrikes': 'failed-import-max-strikes',
@@ -54,6 +55,7 @@ export class DocumentationService {
     },
     'download-cleaner': {
       'enabled': 'enable-download-cleaner',
+      'ignoredDownloads': 'ignored-downloads',
       'useAdvancedScheduling': 'scheduling-mode',
       'cronExpression': 'cron-expression',
       'jobSchedule.every': 'run-schedule',
@@ -71,6 +73,7 @@ export class DocumentationService {
     },
     'malware-blocker': {
       'enabled': 'enable-malware-blocker',
+      'ignoredDownloads': 'ignored-downloads',
       'useAdvancedScheduling': 'scheduling-mode',
       'cronExpression': 'cron-expression',
       'jobSchedule.every': 'run-schedule',
