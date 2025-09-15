@@ -23,6 +23,8 @@ public sealed record QueueCleanerConfig : IJobConfig
     public StalledConfig Stalled { get; set; } = new();
     
     public SlowConfig Slow { get; set; } = new();
+
+    public List<string> IgnoredDownloads { get; set; } = [];
     
     public void Validate()
     {

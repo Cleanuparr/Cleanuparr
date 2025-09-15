@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Cleanuparr.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Cleanuparr.Persistence.Migrations.Data
 {
     [DbContext(typeof(DataContext))]
-    partial class DataContextModelSnapshot : ModelSnapshot
+    [Migration("20250915181529_AddPerJobIgnoredDownloads")]
+    partial class AddPerJobIgnoredDownloads
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.6");
@@ -77,32 +80,6 @@ namespace Cleanuparr.Persistence.Migrations.Data
                         .HasDatabaseName("ix_arr_instances_arr_config_id");
 
                     b.ToTable("arr_instances", (string)null);
-                });
-
-            modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.BlacklistSync.BlacklistSyncConfig", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT")
-                        .HasColumnName("id");
-
-                    b.Property<string>("BlacklistPath")
-                        .HasColumnType("TEXT")
-                        .HasColumnName("blacklist_path");
-
-                    b.Property<string>("CronExpression")
-                        .IsRequired()
-                        .HasColumnType("TEXT")
-                        .HasColumnName("cron_expression");
-
-                    b.Property<bool>("Enabled")
-                        .HasColumnType("INTEGER")
-                        .HasColumnName("enabled");
-
-                    b.HasKey("Id")
-                        .HasName("pk_blacklist_sync_configs");
-
-                    b.ToTable("blacklist_sync_configs", (string)null);
                 });
 
             modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.DownloadCleaner.CleanCategory", b =>
@@ -714,38 +691,6 @@ namespace Cleanuparr.Persistence.Migrations.Data
                     b.ToTable("queue_cleaner_configs", (string)null);
                 });
 
-            modelBuilder.Entity("Cleanuparr.Persistence.Models.State.BlacklistSyncHistory", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT")
-                        .HasColumnName("id");
-
-                    b.Property<Guid>("DownloadClientId")
-                        .HasColumnType("TEXT")
-                        .HasColumnName("download_client_id");
-
-                    b.Property<string>("Hash")
-                        .IsRequired()
-                        .HasColumnType("TEXT")
-                        .HasColumnName("hash");
-
-                    b.HasKey("Id")
-                        .HasName("pk_blacklist_sync_history");
-
-                    b.HasIndex("DownloadClientId")
-                        .HasDatabaseName("ix_blacklist_sync_history_download_client_id");
-
-                    b.HasIndex("Hash")
-                        .HasDatabaseName("ix_blacklist_sync_history_hash");
-
-                    b.HasIndex("Hash", "DownloadClientId")
-                        .IsUnique()
-                        .HasDatabaseName("ix_blacklist_sync_history_hash_download_client_id");
-
-                    b.ToTable("blacklist_sync_history", (string)null);
-                });
-
             modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.Arr.ArrInstance", b =>
                 {
                     b.HasOne("Cleanuparr.Persistence.Models.Configuration.Arr.ArrConfig", "ArrConfig")
@@ -792,18 +737,6 @@ namespace Cleanuparr.Persistence.Migrations.Data
                         .HasConstraintName("fk_notifiarr_configs_notification_configs_notification_config_id");
 
                     b.Navigation("NotificationConfig");
-                });
-
-            modelBuilder.Entity("Cleanuparr.Persistence.Models.State.BlacklistSyncHistory", b =>
-                {
-                    b.HasOne("Cleanuparr.Persistence.Models.Configuration.DownloadClientConfig", "DownloadClient")
-                        .WithMany()
-                        .HasForeignKey("DownloadClientId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_blacklist_sync_history_download_clients_download_client_id");
-
-                    b.Navigation("DownloadClient");
                 });
 
             modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.Arr.ArrConfig", b =>
