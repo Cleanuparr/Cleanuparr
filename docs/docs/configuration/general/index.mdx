@@ -3,11 +3,11 @@ sidebar_position: 1
 ---
 
 import { Note, Warning } from '@site/src/components/Admonition';
-import { 
-  ConfigSection, 
-  EnhancedNote, 
+import {
+  ConfigSection,
+  EnhancedNote,
   EnhancedWarning,
-  styles 
+  styles
 } from '@site/src/components/documentation';
 
 # General
@@ -124,6 +124,82 @@ A lower value or `0` will result in faster searches, but may cause issues such a
 
 </ConfigSection>
 
+<div className={styles.section}>
+
+<h2 className={styles.sectionTitle}>
+  <span className={styles.sectionIcon}>📦</span>
+  Download Management
+</h2>
+
+<ConfigSection
+  id="ignored-downloads"
+  title="Ignored Downloads"
+  icon="🚯"
+>
+
+Downloads matching these patterns will be ignored during all cleaning operations. Patterns can match any of these:
+- torrent hash
+- qBittorrent tag or category
+- Deluge label
+- Transmission category (last directory from the save location)
+- µTorrent label
+- torrent tracker domain
+
+**Examples:**
+```
+fa800a7d7c443a2c3561d1f8f393c089036dade1
+tv-sonarr
+qbit-tag
+mytracker.com
+```
+
+</ConfigSection>
+
+</div>
+
+<div className={styles.section}>
+
+<h2 className={styles.sectionTitle}>
+  <span className={styles.sectionIcon}>⛔</span>
+  Blacklist Sync
+  </h2>
+
+<ConfigSection
+  id="enable-blacklist-sync"
+  title="Enable Blacklist Sync"
+  icon="✅"
+>
+
+When enabled, Cleanuparr will automatically synchronize blacklist entries to all enabled qBittorrent clients every hour. The sync happens when the blacklist path or content changes.
+
+<EnhancedNote>
+This feature updates the qBittorrent "Excluded file names" setting, but does not enable it.
+</EnhancedNote>
+
+</ConfigSection>
+
+<ConfigSection
+  id="blacklist-path"
+  title="Blacklist Path"
+  icon="🗂️"
+>
+
+Path to the blacklist content. This can be a local file path or an HTTP/HTTPS URL. The application computes a content hash and only pushes updates when the content changes.
+
+**Examples:**
+```
+/data/blacklists/qbit-exclusions.txt
+https://example.com/blacklist.txt
+```
+
+<EnhancedWarning>
+If Blacklist Sync is enabled, this field is required. For remote URLs, ensure the server is reachable from Cleanuparr and the certificate is valid (or adjust HTTP certificate validation settings).
+</EnhancedWarning>
+
+</ConfigSection>
+
+</div>
+
 </div>
 
 <div className={styles.section}>
@@ -204,39 +280,6 @@ The number of archived log files to keep. Older files beyond this count will be 
 >
 
 Maximum age (in hours) for archived logs before they are deleted. Older files beyond this age will be removed.
-
-</ConfigSection>
-
-</div>
-
-<div className={styles.section}>
-
-<h2 className={styles.sectionTitle}>
-  <span className={styles.sectionIcon}>📦</span>
-  Download Management
-</h2>
-
-<ConfigSection
-  id="ignored-downloads"
-  title="Ignored Downloads"
-  icon="🚯"
->
-
-Downloads matching these patterns will be ignored during all cleaning operations. Patterns can match any of these:
-- torrent hash
-- qBittorrent tag or category
-- Deluge label
-- Transmission category (last directory from the save location)
-- µTorrent label
-- torrent tracker domain
-
-**Examples:**
-```
-fa800a7d7c443a2c3561d1f8f393c089036dade1
-tv-sonarr
-qbit-tag
-mytracker.com
-```
 
 </ConfigSection>
 
