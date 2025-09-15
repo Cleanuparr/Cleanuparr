@@ -125,7 +125,7 @@ public abstract class DownloadService : IDownloadService
     {
         var queueCleanerConfig = ContextProvider.Get<QueueCleanerConfig>(nameof(QueueCleanerConfig));
         
-        if (queueCleanerConfig.Slow.ResetStrikesOnProgress)
+        if (!queueCleanerConfig.Slow.ResetStrikesOnProgress)
         {
             return;
         }
@@ -145,7 +145,7 @@ public abstract class DownloadService : IDownloadService
     {
         var queueCleanerConfig = ContextProvider.Get<QueueCleanerConfig>(nameof(QueueCleanerConfig));
         
-        if (queueCleanerConfig.Slow.ResetStrikesOnProgress)
+        if (!queueCleanerConfig.Slow.ResetStrikesOnProgress)
         {
             return;
         }
