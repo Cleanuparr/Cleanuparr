@@ -43,6 +43,8 @@ export class DocumentationService {
       'httpCertificateValidation': 'http-certificate-validation',
       'searchEnabled': 'search-enabled',
       'searchDelay': 'search-delay',
+      'enableBlacklistSync': 'enable-blacklist-sync',
+      'blacklistPath': 'blacklist-path',
       'log.level': 'log-level',
       'log.rollingSizeMB': 'log-rolling-size-mb',
       'log.retainedFileCount': 'log-retained-file-count',
@@ -159,4 +161,4 @@ export class DocumentationService {
   hasFieldDocumentation(section: string, fieldName: string): boolean {
     return !!this.getFieldAnchor(section, fieldName);
   }
-} 
+}

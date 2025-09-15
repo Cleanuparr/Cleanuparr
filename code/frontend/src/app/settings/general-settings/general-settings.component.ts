@@ -1,4 +1,4 @@
-import { Component, EventEmitter, OnDestroy, Output, effect, inject } from "@angular/core";
+import { Component, EventEmitter, OnInit, OnDestroy, Output, effect, inject } from "@angular/core";
 import { CommonModule } from "@angular/common";
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from "@angular/forms";
 import { Subject, takeUntil } from "rxjs";
@@ -136,7 +136,6 @@ export class GeneralSettingsComponent implements OnDestroy, CanComponentDeactiva
       searchEnabled: [true],
       searchDelay: [30, [Validators.required, Validators.min(1), Validators.max(300)]],
       ignoredDownloads: [[]],
-      // Nested logging configuration form group
       log: this.formBuilder.group({
         level: [LogEventLevel.Information],
         rollingSizeMB: [10, [Validators.required, Validators.min(0), Validators.max(100)]],
@@ -146,8 +145,6 @@ export class GeneralSettingsComponent implements OnDestroy, CanComponentDeactiva
         archiveRetainedCount: [{ value: 60, disabled: false }, [Validators.required, Validators.min(0), Validators.max(100)]],
         archiveTimeLimitHours: [{ value: 720, disabled: false }, [Validators.required, Validators.min(0), Validators.max(1440)]], // max 60 days
       }),
-      // Temporary backward compatibility - will be removed
-      logLevel: [LogEventLevel.Information],
     });
 
     // Effect to handle configuration changes
@@ -164,9 +161,8 @@ export class GeneralSettingsComponent implements OnDestroy, CanComponentDeactiva
           searchEnabled: config.searchEnabled,
           searchDelay: config.searchDelay,
           ignoredDownloads: config.ignoredDownloads || [],
-          // New nested logging configuration
           log: config.log || {
-            level: config.logLevel || LogEventLevel.Information, // Fall back to old property
+            level: LogEventLevel.Information,
             rollingSizeMB: 10,
             retainedFileCount: 5,
             timeLimitHours: 24,
@@ -174,8 +170,6 @@ export class GeneralSettingsComponent implements OnDestroy, CanComponentDeactiva
             archiveRetainedCount: 60,
             archiveTimeLimitHours: 720,
           },
-          // Temporary backward compatibility
-          logLevel: config.logLevel || config.log?.level || LogEventLevel.Information,
         });
 
         // Store original values for dirty checking
@@ -439,10 +433,7 @@ export class GeneralSettingsComponent implements OnDestroy, CanComponentDeactiva
       searchEnabled: formValues.searchEnabled,
       searchDelay: formValues.searchDelay,
       ignoredDownloads: formValues.ignoredDownloads || [],
-      // New nested logging configuration
       log: formValues.log as LoggingConfig,
-      // Temporary backward compatibility - keep logLevel for now
-      logLevel: formValues.log?.level || formValues.logLevel,
     };
 
       // Save the configuration
@@ -488,7 +479,6 @@ export class GeneralSettingsComponent implements OnDestroy, CanComponentDeactiva
       searchEnabled: true,
       searchDelay: 30,
       ignoredDownloads: [],
-      // Reset nested logging configuration to defaults
       log: {
         level: LogEventLevel.Information,
         rollingSizeMB: 10,
@@ -498,8 +488,6 @@ export class GeneralSettingsComponent implements OnDestroy, CanComponentDeactiva
         archiveRetainedCount: 60,
         archiveTimeLimitHours: 720,
       },
-      // Temporary backward compatibility
-      logLevel: LogEventLevel.Information,
     });
     
     // Update archive controls state after reset
@@ -528,7 +516,7 @@ export class GeneralSettingsComponent implements OnDestroy, CanComponentDeactiva
   hasError(controlName: string, errorName: string): boolean {
     const control = this.generalForm.get(controlName);
     // Check for errors on both enabled and disabled controls that have been touched
-    return control ? (control.dirty || control.touched) && control.hasError(errorName) : false;
+    return control ? control.hasError(errorName) : false;
   }
 
   /**
@@ -542,7 +530,7 @@ export class GeneralSettingsComponent implements OnDestroy, CanComponentDeactiva
 
     const control = parentControl.get(controlName);
     // Check for errors on both enabled and disabled controls that have been touched
-    return control ? (control.dirty || control.touched) && control.hasError(errorName) : false;
+    return control ? control.hasError(errorName) : false;
   }
 
   /**

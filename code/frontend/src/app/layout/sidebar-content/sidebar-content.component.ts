@@ -110,6 +110,7 @@ export class SidebarContentComponent implements OnInit, OnChanges, OnDestroy {
     { route: '/queue-cleaner', navigationPath: ['settings', 'queue-cleaner'] },
     { route: '/malware-blocker', navigationPath: ['settings', 'malware-blocker'] },
     { route: '/download-cleaner', navigationPath: ['settings', 'download-cleaner'] },
+    { route: '/blacklist-synchronizer', navigationPath: ['settings', 'blacklist-synchronizer'] },
     { route: '/notifications', navigationPath: ['settings', 'notifications'] },
     
     // Other routes will be handled dynamically
@@ -226,6 +227,7 @@ export class SidebarContentComponent implements OnInit, OnChanges, OnDestroy {
           { id: 'queue-cleaner', label: 'Queue Cleaner', icon: 'pi pi-list', route: '/queue-cleaner' },
           { id: 'malware-blocker', label: 'Malware Blocker', icon: 'pi pi-shield', route: '/malware-blocker' },
           { id: 'download-cleaner', label: 'Download Cleaner', icon: 'pi pi-trash', route: '/download-cleaner' },
+          { id: 'blacklist-synchronizer', label: 'Blacklist Synchronizer', icon: 'pi pi-sync', route: '/blacklist-synchronizer' },
           { id: 'notifications', label: 'Notifications', icon: 'pi pi-bell', route: '/notifications' }
         ]
       },

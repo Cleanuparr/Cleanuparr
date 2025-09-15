@@ -8,11 +8,11 @@ using Cleanuparr.Infrastructure.Features.ItemStriker;
 using Cleanuparr.Infrastructure.Features.MalwareBlocker;
 using Cleanuparr.Infrastructure.Helpers;
 using Cleanuparr.Infrastructure.Http;
+using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Persistence.Models.Configuration;
 using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
 using Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
 using Cleanuparr.Shared.Helpers;
-using Infrastructure.Interceptors;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 

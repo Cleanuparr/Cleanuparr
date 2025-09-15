@@ -1,0 +1,92 @@
+<div class="settings-container">
+  <div class="flex align-items-center justify-content-between mb-4">
+    <h1>Blacklist Sync</h1>
+  </div>
+
+  <!-- Loading/Error Component -->
+  <app-loading-error-state
+    *ngIf="blacklistSyncLoading() || blacklistSyncLoadError()"
+    [loading]="blacklistSyncLoading()"
+    [error]="blacklistSyncLoadError()"
+    loadingMessage="Loading settings..."
+    errorMessage="Could not connect to server"
+  ></app-loading-error-state>
+
+  <!-- Settings Form -->
+  <form *ngIf="!blacklistSyncLoading() && !blacklistSyncLoadError() && blacklistSyncForm" [formGroup]="blacklistSyncForm" class="p-fluid">
+    
+    <!-- Blacklist Sync Configuration Card -->
+    <p-card styleClass="settings-card mb-4">
+      <ng-template pTemplate="header">
+        <div class="flex align-items-center justify-content-between p-3 border-bottom-1 surface-border">
+          <div class="header-title-container">
+            <h2 class="card-title m-0">Blacklist Sync Configuration</h2>
+            <span class="card-subtitle">Configure automatic blacklist synchronization</span>
+          </div>
+        </div>
+      </ng-template>
+
+      <div class="card-content">
+        <!-- Enable Blacklist Sync -->
+        <div class="field-row">
+          <label class="field-label">
+            <i class="pi pi-question-circle field-info-icon" 
+               (click)="openFieldDocs('enabled')" 
+               title="Click for documentation">
+            </i>
+            Enable Blacklist Sync
+          </label>
+          <div class="field-input">
+            <p-checkbox formControlName="enabled" [binary]="true" inputId="blacklistSyncEnabled"></p-checkbox>
+            <small class="form-helper-text">When enabled, blacklist patterns will be synchronized to download clients hourly</small>
+          </div>
+        </div>
+
+        <!-- Blacklist Path -->
+        <div class="field-row">
+          <label class="field-label">
+            <i class="pi pi-question-circle field-info-icon" 
+               (click)="openFieldDocs('blacklistPath')" 
+               title="Click for documentation">
+            </i>
+            Blacklist Path
+          </label>
+          <div>
+            <div class="field-input">
+              <input 
+                type="text" 
+                pInputText 
+                formControlName="blacklistPath" 
+                placeholder="File path or http(s) URL" 
+                id="blacklistPath" />
+            </div>
+            <small *ngIf="hasError('blacklistPath', 'required')" class="p-error">This field is required when blacklist sync is enabled</small>
+            <small class="form-helper-text">Path to blacklist file or HTTP(S) URL containing blacklist patterns</small>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="card-footer mt-3">
+        <button
+            pButton
+            type="button"
+            label="Save"
+            icon="pi pi-save"
+            class="p-button-primary"
+            [disabled]="(!blacklistSyncForm.dirty || !hasActualChanges) || blacklistSyncForm.invalid || blacklistSyncSaving()"
+            [loading]="blacklistSyncSaving()"
+            (click)="saveBlacklistSyncConfig()"
+        ></button>
+        <button
+            pButton
+            type="button"
+            label="Reset"
+            icon="pi pi-refresh"
+            class="p-button-secondary p-button-outlined ml-2"
+            (click)="resetBlacklistSyncConfig()"
+        ></button>
+        </div>
+    </p-card>
+  </form>
+</div>
