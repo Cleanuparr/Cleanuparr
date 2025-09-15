@@ -227,7 +227,7 @@ export class SidebarContentComponent implements OnInit, OnChanges, OnDestroy {
           { id: 'queue-cleaner', label: 'Queue Cleaner', icon: 'pi pi-list', route: '/queue-cleaner' },
           { id: 'malware-blocker', label: 'Malware Blocker', icon: 'pi pi-shield', route: '/malware-blocker' },
           { id: 'download-cleaner', label: 'Download Cleaner', icon: 'pi pi-trash', route: '/download-cleaner' },
-          { id: 'blacklist-sync', label: 'Blacklist Synchronizer', icon: 'pi pi-ban', route: '/blacklist-synchronizer' },
+          { id: 'blacklist-synchronizer', label: 'Blacklist Synchronizer', icon: 'pi pi-sync', route: '/blacklist-synchronizer' },
           { id: 'notifications', label: 'Notifications', icon: 'pi pi-bell', route: '/notifications' }
         ]
       },

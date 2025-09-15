@@ -28,7 +28,7 @@ export const routes: Routes = [
     canDeactivate: [pendingChangesGuard] 
   },
   { 
-    path: 'blacklist-sync', 
+    path: 'blacklist-synchronizer', 
     loadComponent: () => import('./settings/blacklist-sync/blacklist-sync-settings.component').then(m => m.BlacklistSyncSettingsComponent),
     canDeactivate: [pendingChangesGuard] 
   },

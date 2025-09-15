@@ -66,28 +66,27 @@
         </div>
 
       </div>
-    </p-card>
 
-    <!-- Action buttons moved outside cards -->
-    <div class="card-footer mt-3">
-      <button
-        pButton
-        type="button"
-        label="Save"
-        icon="pi pi-save"
-        class="p-button-primary"
-        [disabled]="(!blacklistSyncForm.dirty || !hasActualChanges) || blacklistSyncForm.invalid || blacklistSyncSaving()"
-        [loading]="blacklistSyncSaving()"
-        (click)="saveBlacklistSyncConfig()"
-      ></button>
-      <button
-        pButton
-        type="button"
-        label="Reset"
-        icon="pi pi-refresh"
-        class="p-button-secondary p-button-outlined ml-2"
-        (click)="resetBlacklistSyncConfig()"
-      ></button>
-    </div>
+      <div class="card-footer mt-3">
+        <button
+            pButton
+            type="button"
+            label="Save"
+            icon="pi pi-save"
+            class="p-button-primary"
+            [disabled]="(!blacklistSyncForm.dirty || !hasActualChanges) || blacklistSyncForm.invalid || blacklistSyncSaving()"
+            [loading]="blacklistSyncSaving()"
+            (click)="saveBlacklistSyncConfig()"
+        ></button>
+        <button
+            pButton
+            type="button"
+            label="Reset"
+            icon="pi pi-refresh"
+            class="p-button-secondary p-button-outlined ml-2"
+            (click)="resetBlacklistSyncConfig()"
+        ></button>
+        </div>
+    </p-card>
   </form>
 </div>

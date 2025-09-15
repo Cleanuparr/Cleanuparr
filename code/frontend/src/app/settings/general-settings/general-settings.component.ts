@@ -136,10 +136,6 @@ export class GeneralSettingsComponent implements OnDestroy, CanComponentDeactiva
       searchEnabled: [true],
       searchDelay: [30, [Validators.required, Validators.min(1), Validators.max(300)]],
       ignoredDownloads: [[]],
-      // Blacklist sync configuration
-      enableBlacklistSync: [false],
-      blacklistPath: ['', [Validators.required]],
-      // Nested logging configuration form group
       log: this.formBuilder.group({
         level: [LogEventLevel.Information],
         rollingSizeMB: [10, [Validators.required, Validators.min(0), Validators.max(100)]],
@@ -149,8 +145,6 @@ export class GeneralSettingsComponent implements OnDestroy, CanComponentDeactiva
         archiveRetainedCount: [{ value: 60, disabled: false }, [Validators.required, Validators.min(0), Validators.max(100)]],
         archiveTimeLimitHours: [{ value: 720, disabled: false }, [Validators.required, Validators.min(0), Validators.max(1440)]], // max 60 days
       }),
-      // Temporary backward compatibility - will be removed
-      logLevel: [LogEventLevel.Information],
     });
 
     // Effect to handle configuration changes
@@ -167,12 +161,8 @@ export class GeneralSettingsComponent implements OnDestroy, CanComponentDeactiva
           searchEnabled: config.searchEnabled,
           searchDelay: config.searchDelay,
           ignoredDownloads: config.ignoredDownloads || [],
-          // Blacklist sync configuration
-          enableBlacklistSync: config.enableBlacklistSync || false,
-          blacklistPath: config.blacklistPath || '',
-          // New nested logging configuration
           log: config.log || {
-            level: config.logLevel || LogEventLevel.Information, // Fall back to old property
+            level: LogEventLevel.Information,
             rollingSizeMB: 10,
             retainedFileCount: 5,
             timeLimitHours: 24,
@@ -180,8 +170,6 @@ export class GeneralSettingsComponent implements OnDestroy, CanComponentDeactiva
             archiveRetainedCount: 60,
             archiveTimeLimitHours: 720,
           },
-          // Temporary backward compatibility
-          logLevel: config.logLevel || config.log?.level || LogEventLevel.Information,
         });
 
         // Store original values for dirty checking
@@ -190,10 +178,6 @@ export class GeneralSettingsComponent implements OnDestroy, CanComponentDeactiva
         // Update archive controls state based on loaded configuration
         const archiveEnabled = config.log?.archiveEnabled ?? true;
         this.updateArchiveControlsState(archiveEnabled);
-
-        // Update blacklist sync controls state based on loaded configuration
-        const blacklistSyncEnabled = config.enableBlacklistSync ?? false;
-        this.updateBlacklistSyncControlsState(blacklistSyncEnabled);
 
         // Track the support banner state for confirmation dialog logic
         this.previousSupportBannerState = config.displaySupportBanner;
@@ -263,16 +247,6 @@ export class GeneralSettingsComponent implements OnDestroy, CanComponentDeactiva
           this.updateArchiveControlsState(enabled);
         });
     }
-
-    // Listen for changes to the 'enableBlacklistSync' control
-    const enableBlacklistSyncControl = this.generalForm.get('enableBlacklistSync');
-    if (enableBlacklistSyncControl) {
-      enableBlacklistSyncControl.valueChanges
-        .pipe(takeUntil(this.destroy$))
-        .subscribe((enabled: boolean) => {
-          this.updateBlacklistSyncControlsState(enabled);
-        });
-    }
   }
 
   /**
@@ -307,19 +281,6 @@ export class GeneralSettingsComponent implements OnDestroy, CanComponentDeactiva
       // Disable controls but ensure they can still show validation errors
       archiveRetainedCountControl?.disable({ emitEvent: false });
       archiveTimeLimitHoursControl?.disable({ emitEvent: false });
-    }
-  }
-
-  /**
-   * Update blacklist sync controls state based on enableBlacklistSync value
-   */
-  private updateBlacklistSyncControlsState(enabled: boolean): void {
-    const blacklistPathControl = this.generalForm.get('blacklistPath');
-
-    if (enabled) {
-      blacklistPathControl?.enable({ emitEvent: false });
-    } else {
-      blacklistPathControl?.disable({ emitEvent: false });
     }
   }
 
@@ -472,13 +433,7 @@ export class GeneralSettingsComponent implements OnDestroy, CanComponentDeactiva
       searchEnabled: formValues.searchEnabled,
       searchDelay: formValues.searchDelay,
       ignoredDownloads: formValues.ignoredDownloads || [],
-      // New nested logging configuration
       log: formValues.log as LoggingConfig,
-      // Temporary backward compatibility - keep logLevel for now
-      logLevel: formValues.log?.level || formValues.logLevel,
-      // Blacklist sync configuration
-      enableBlacklistSync: formValues.enableBlacklistSync,
-      blacklistPath: formValues.blacklistPath,
     };
 
       // Save the configuration
@@ -524,10 +479,6 @@ export class GeneralSettingsComponent implements OnDestroy, CanComponentDeactiva
       searchEnabled: true,
       searchDelay: 30,
       ignoredDownloads: [],
-      // Reset blacklist sync configuration to defaults
-      enableBlacklistSync: false,
-      blacklistPath: '',
-      // Reset nested logging configuration to defaults
       log: {
         level: LogEventLevel.Information,
         rollingSizeMB: 10,
@@ -537,15 +488,10 @@ export class GeneralSettingsComponent implements OnDestroy, CanComponentDeactiva
         archiveRetainedCount: 60,
         archiveTimeLimitHours: 720,
       },
-      // Temporary backward compatibility
-      logLevel: LogEventLevel.Information,
     });
     
     // Update archive controls state after reset
     this.updateArchiveControlsState(true); // archiveEnabled defaults to true
-    
-    // Update blacklist sync controls state after reset
-    this.updateBlacklistSyncControlsState(false); // enableBlacklistSync defaults to false
     
     // Mark form as dirty so the save button is enabled after reset
     this.generalForm.markAsDirty();
