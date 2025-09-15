@@ -85,6 +85,7 @@ public sealed class NotificationConfigurationService : INotificationConfiguratio
             var providers = await _dataContext.Set<NotificationConfig>()
                 .Include(p => p.NotifiarrConfiguration)
                 .Include(p => p.AppriseConfiguration)
+                .Include(p => p.NtfyConfiguration)
                 .AsNoTracking()
                 .ToListAsync();
 
@@ -133,6 +134,7 @@ public sealed class NotificationConfigurationService : INotificationConfiguratio
         {
             NotificationProviderType.Notifiarr => config.NotifiarrConfiguration,
             NotificationProviderType.Apprise => config.AppriseConfiguration,
+            NotificationProviderType.Ntfy => config.NtfyConfiguration,
             _ => new object()
         };
 

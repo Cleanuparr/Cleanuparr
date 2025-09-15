@@ -8,6 +8,8 @@ import {
   TestNotificationResult
 } from '../../shared/models/notification-provider.model';
 import { NotificationProviderType } from '../../shared/models/enums';
+import { NtfyAuthenticationType } from '../../shared/models/ntfy-authentication-type.enum';
+import { NtfyPriority } from '../../shared/models/ntfy-priority.enum';
 
 // Provider-specific interfaces
 export interface CreateNotifiarrProviderDto {
@@ -75,6 +77,55 @@ export interface TestAppriseProviderDto {
   tags: string;
 }
 
+export interface CreateNtfyProviderDto {
+  name: string;
+  isEnabled: boolean;
+  onFailedImportStrike: boolean;
+  onStalledStrike: boolean;
+  onSlowStrike: boolean;
+  onQueueItemDeleted: boolean;
+  onDownloadCleaned: boolean;
+  onCategoryChanged: boolean;
+  serverUrl: string;
+  topics: string[];
+  authenticationType: NtfyAuthenticationType;
+  username: string;
+  password: string;
+  accessToken: string;
+  priority: NtfyPriority;
+  tags: string[];
+}
+
+export interface UpdateNtfyProviderDto {
+  name: string;
+  isEnabled: boolean;
+  onFailedImportStrike: boolean;
+  onStalledStrike: boolean;
+  onSlowStrike: boolean;
+  onQueueItemDeleted: boolean;
+  onDownloadCleaned: boolean;
+  onCategoryChanged: boolean;
+  serverUrl: string;
+  topics: string[];
+  authenticationType: NtfyAuthenticationType;
+  username: string;
+  password: string;
+  accessToken: string;
+  priority: NtfyPriority;
+  tags: string[];
+}
+
+export interface TestNtfyProviderDto {
+  serverUrl: string;
+  topics: string[];
+  authenticationType: NtfyAuthenticationType;
+  username: string;
+  password: string;
+  accessToken: string;
+  priority: NtfyPriority;
+  tags: string[];
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -105,6 +156,13 @@ export class NotificationProviderService {
   }
 
   /**
+   * Create a new Ntfy provider
+   */
+  createNtfyProvider(provider: CreateNtfyProviderDto): Observable<NotificationProviderDto> {
+    return this.http.post<NotificationProviderDto>(`${this.baseUrl}/notification_providers/ntfy`, provider);
+  }
+
+  /**
    * Update an existing Notifiarr provider
    */
   updateNotifiarrProvider(id: string, provider: UpdateNotifiarrProviderDto): Observable<NotificationProviderDto> {
@@ -116,6 +174,13 @@ export class NotificationProviderService {
    */
   updateAppriseProvider(id: string, provider: UpdateAppriseProviderDto): Observable<NotificationProviderDto> {
     return this.http.put<NotificationProviderDto>(`${this.baseUrl}/notification_providers/apprise/${id}`, provider);
+  }
+
+  /**
+   * Update an existing Ntfy provider
+   */
+  updateNtfyProvider(id: string, provider: UpdateNtfyProviderDto): Observable<NotificationProviderDto> {
+    return this.http.put<NotificationProviderDto>(`${this.baseUrl}/notification_providers/ntfy/${id}`, provider);
   }
 
   /**
@@ -140,6 +205,13 @@ export class NotificationProviderService {
   }
 
   /**
+   * Test an Ntfy provider (without ID - for testing configuration before saving)
+   */
+  testNtfyProvider(testRequest: TestNtfyProviderDto): Observable<TestNotificationResult> {
+    return this.http.post<TestNotificationResult>(`${this.baseUrl}/notification_providers/ntfy/test`, testRequest);
+  }
+
+  /**
    * Generic create method that delegates to provider-specific methods
    */
   createProvider(provider: any, type: NotificationProviderType): Observable<NotificationProviderDto> {
@@ -148,6 +220,8 @@ export class NotificationProviderService {
         return this.createNotifiarrProvider(provider as CreateNotifiarrProviderDto);
       case NotificationProviderType.Apprise:
         return this.createAppriseProvider(provider as CreateAppriseProviderDto);
+      case NotificationProviderType.Ntfy:
+        return this.createNtfyProvider(provider as CreateNtfyProviderDto);
       default:
         throw new Error(`Unsupported provider type: ${type}`);
     }
@@ -162,6 +236,8 @@ export class NotificationProviderService {
         return this.updateNotifiarrProvider(id, provider as UpdateNotifiarrProviderDto);
       case NotificationProviderType.Apprise:
         return this.updateAppriseProvider(id, provider as UpdateAppriseProviderDto);
+      case NotificationProviderType.Ntfy:
+        return this.updateNtfyProvider(id, provider as UpdateNtfyProviderDto);
       default:
         throw new Error(`Unsupported provider type: ${type}`);
     }
@@ -176,6 +252,8 @@ export class NotificationProviderService {
         return this.testNotifiarrProvider(testRequest as TestNotifiarrProviderDto);
       case NotificationProviderType.Apprise:
         return this.testAppriseProvider(testRequest as TestAppriseProviderDto);
+      case NotificationProviderType.Ntfy:
+        return this.testNtfyProvider(testRequest as TestNtfyProviderDto);
       default:
         throw new Error(`Unsupported provider type: ${type}`);
     }

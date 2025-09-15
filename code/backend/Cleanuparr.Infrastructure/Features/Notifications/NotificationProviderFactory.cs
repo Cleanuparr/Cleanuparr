@@ -2,6 +2,7 @@ using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Notifications.Apprise;
 using Cleanuparr.Infrastructure.Features.Notifications.Models;
 using Cleanuparr.Infrastructure.Features.Notifications.Notifiarr;
+using Cleanuparr.Infrastructure.Features.Notifications.Ntfy;
 using Cleanuparr.Persistence.Models.Configuration.Notification;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -22,6 +23,7 @@ public sealed class NotificationProviderFactory : INotificationProviderFactory
         {
             NotificationProviderType.Notifiarr => CreateNotifiarrProvider(config),
             NotificationProviderType.Apprise => CreateAppriseProvider(config),
+            NotificationProviderType.Ntfy => CreateNtfyProvider(config),
             _ => throw new NotSupportedException($"Provider type {config.Type} is not supported")
         };
     }
@@ -40,5 +42,13 @@ public sealed class NotificationProviderFactory : INotificationProviderFactory
         var proxy = _serviceProvider.GetRequiredService<IAppriseProxy>();
         
         return new AppriseProvider(config.Name, config.Type, appriseConfig, proxy);
+    }
+
+    private INotificationProvider CreateNtfyProvider(NotificationProviderDto config)
+    {
+        var ntfyConfig = (NtfyConfig)config.Configuration;
+        var proxy = _serviceProvider.GetRequiredService<INtfyProxy>();
+        
+        return new NtfyProvider(config.Name, config.Type, ntfyConfig, proxy);
     }
 }

@@ -39,11 +39,14 @@ public sealed record NotificationConfig
     
     public AppriseConfig? AppriseConfiguration { get; init; }
     
+    public NtfyConfig? NtfyConfiguration { get; init; }
+    
     [NotMapped]
     public bool IsConfigured => Type switch
     {
         NotificationProviderType.Notifiarr => NotifiarrConfiguration?.IsValid() == true,
         NotificationProviderType.Apprise => AppriseConfiguration?.IsValid() == true,
+        NotificationProviderType.Ntfy => NtfyConfiguration?.IsValid() == true,
         _ => false
     };
     

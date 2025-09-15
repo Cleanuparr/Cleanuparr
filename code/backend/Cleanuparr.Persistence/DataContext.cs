@@ -44,6 +44,8 @@ public class DataContext : DbContext
     public DbSet<NotifiarrConfig> NotifiarrConfigs { get; set; }
     
     public DbSet<AppriseConfig> AppriseConfigs { get; set; }
+    
+    public DbSet<NtfyConfig> NtfyConfigs { get; set; }
 
     public DbSet<BlacklistSyncHistory> BlacklistSyncHistory { get; set; }
 
@@ -127,6 +129,11 @@ public class DataContext : DbContext
             entity.HasOne(p => p.AppriseConfiguration)
                   .WithOne(c => c.NotificationConfig)
                   .HasForeignKey<AppriseConfig>(c => c.NotificationConfigId)
+                  .OnDelete(DeleteBehavior.Cascade);
+                  
+            entity.HasOne(p => p.NtfyConfiguration)
+                  .WithOne(c => c.NotificationConfig)
+                  .HasForeignKey<NtfyConfig>(c => c.NotificationConfigId)
                   .OnDelete(DeleteBehavior.Cascade);
                   
             entity.HasIndex(p => p.Name).IsUnique();

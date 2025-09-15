@@ -253,7 +253,7 @@ a {
     }
   }
   
-  .p-dropdown {
+  .p-select, .p-autocomplete {
     width: 100%;
   }
 }
@@ -430,10 +430,10 @@ a {
   }
   
   /* Accent color for various components */
-  .p-dropdown-panel .p-dropdown-items .p-dropdown-item.p-highlight,
+  .p-select-panel .p-select-items .p-select-item.p-highlight,
   .p-multiselect-panel .p-multiselect-items .p-multiselect-item.p-highlight,
   .p-listbox .p-listbox-list .p-listbox-item.p-highlight,
-  .p-dropdown-panel .p-dropdown-items .p-dropdown-item:focus,
+  .p-select-panel .p-select-items .p-select-item:focus,
   .p-multiselect-panel .p-multiselect-items .p-multiselect-item:focus,
   .p-listbox .p-listbox-list .p-listbox-item:focus {
     background-color: rgba(126, 87, 194, 0.16);
@@ -448,7 +448,9 @@ a {
   
   /* Focus and selection ring */
   .p-component:focus,
-  .p-inputtext:focus {
+  .p-inputtext:focus,
+  .p-select:focus,
+  .p-autocomplete:focus {
     box-shadow: 0 0 0 1px var(--primary-light);
     border-color: var(--primary-color);
   }

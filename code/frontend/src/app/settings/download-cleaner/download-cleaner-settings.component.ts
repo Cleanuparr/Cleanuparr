@@ -91,9 +91,6 @@ export class DownloadCleanerSettingsComponent implements OnDestroy, CanComponent
   // Flag to track if form has been initially loaded to avoid showing dialog on page load
   private formInitialized = false;
   
-  // Minimal autocomplete support - empty suggestions to allow manual input
-  unlinkedCategoriesSuggestions: string[] = [];
-  
   // Get the categories form array for easier access in the template
   get categoriesFormArray(): FormArray {
     return this.downloadCleanerForm.get('categories') as FormArray;
@@ -749,15 +746,6 @@ export class DownloadCleanerSettingsComponent implements OnDestroy, CanComponent
       ignoredRootDirControl?.disable(options);
       categoriesControl?.disable(options);
     }
-  }
-
-  /**
-   * Minimal complete method for autocomplete - just returns empty array to allow manual input
-   */
-  onUnlinkedCategoriesComplete(event: any): void {
-    // Return empty array - this allows users to type any value manually
-    // PrimeNG requires this method even when we don't want suggestions
-    this.unlinkedCategoriesSuggestions = [];
   }
 
   /**

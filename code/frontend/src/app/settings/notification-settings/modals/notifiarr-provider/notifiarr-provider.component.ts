@@ -38,7 +38,7 @@ export class NotifiarrProviderComponent implements OnInit, OnChanges {
 
   /** Exposed for template to open documentation for notifiarr fields */
   openFieldDocs(fieldName: string): void {
-    this.documentationService.openFieldDocumentation('notifications', fieldName);
+    this.documentationService.openFieldDocumentation('notifications/notifiarr', fieldName);
   }
 
   ngOnInit(): void {

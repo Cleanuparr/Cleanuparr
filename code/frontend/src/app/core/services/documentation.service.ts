@@ -105,11 +105,28 @@ export class DocumentationService {
     'notifications': {
       'enabled': 'enabled',
       'name': 'provider-name',
+      'eventTriggers': 'event-triggers'
+    },
+    'notifications/notifiarr': {
       'notifiarr.apiKey': 'notifiarr-api-key',
-      'notifiarr.channelId': 'notifiarr-channel-id',
+      'notifiarr.channelId': 'notifiarr-channel-id'
+    },
+    'notifications/apprise': {
       'apprise.url': 'apprise-url',
       'apprise.key': 'apprise-key',
-      'apprise.tags': 'apprise-tags',
+      'apprise.tags': 'apprise-tags'
+    },
+    'notifications/ntfy': {
+      'ntfy.serverUrl': 'ntfy-server-url',
+      'ntfy.topics': 'ntfy-topics',
+      'ntfy.authenticationType': 'ntfy-authentication-type',
+      'ntfy.username': 'ntfy-username',
+      'ntfy.password': 'ntfy-password',
+      'ntfy.accessToken': 'ntfy-access-token',
+      'ntfy.priority': 'ntfy-priority',
+      'ntfy.tags': 'ntfy-tags'
+    },
+    'notifications/events': {
       'eventTriggers': 'event-triggers'
     }
   };

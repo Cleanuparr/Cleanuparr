@@ -405,6 +405,7 @@ public class ConfigurationController : ControllerBase
             var providers = await _dataContext.NotificationConfigs
                 .Include(p => p.NotifiarrConfiguration)
                 .Include(p => p.AppriseConfiguration)
+                .Include(p => p.NtfyConfiguration)
                 .AsNoTracking()
                 .ToListAsync();
             
@@ -428,6 +429,7 @@ public class ConfigurationController : ControllerBase
                     {
                         NotificationProviderType.Notifiarr => p.NotifiarrConfiguration ?? new object(),
                         NotificationProviderType.Apprise => p.AppriseConfiguration ?? new object(),
+                        NotificationProviderType.Ntfy => p.NtfyConfiguration ?? new object(),
                         _ => new object()
                     }
                 })
@@ -846,6 +848,7 @@ public class ConfigurationController : ControllerBase
             var existingProvider = await _dataContext.NotificationConfigs
                 .Include(p => p.NotifiarrConfiguration)
                 .Include(p => p.AppriseConfiguration)
+                .Include(p => p.NtfyConfiguration)
                 .FirstOrDefaultAsync(p => p.Id == id);
                 
             if (existingProvider == null)
@@ -966,6 +969,266 @@ public class ConfigurationController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to test Apprise provider");
+            throw;
+        }
+    }
+
+    [HttpPost("notification_providers/ntfy")]
+    public async Task<IActionResult> CreateNtfyProvider([FromBody] CreateNtfyProviderDto newProvider)
+    {
+        await DataContext.Lock.WaitAsync();
+        try
+        {
+            // Validate required fields
+            if (string.IsNullOrWhiteSpace(newProvider.Name))
+            {
+                return BadRequest("Provider name is required");
+            }
+            
+            var duplicateConfig = await _dataContext.NotificationConfigs.CountAsync(x => x.Name == newProvider.Name);
+
+            if (duplicateConfig > 0)
+            {
+                return BadRequest("A provider with this name already exists");
+            }
+
+            // Create provider-specific configuration with validation
+            var ntfyConfig = new NtfyConfig
+            {
+                ServerUrl = newProvider.ServerUrl,
+                Topics = newProvider.Topics,
+                AuthenticationType = newProvider.AuthenticationType,
+                Username = newProvider.Username,
+                Password = newProvider.Password,
+                AccessToken = newProvider.AccessToken,
+                Priority = newProvider.Priority,
+                Tags = newProvider.Tags
+            };
+            
+            // Validate the configuration
+            ntfyConfig.Validate();
+
+            // Create the provider entity
+            var provider = new NotificationConfig
+            {
+                Name = newProvider.Name,
+                Type = NotificationProviderType.Ntfy,
+                IsEnabled = newProvider.IsEnabled,
+                OnFailedImportStrike = newProvider.OnFailedImportStrike,
+                OnStalledStrike = newProvider.OnStalledStrike,
+                OnSlowStrike = newProvider.OnSlowStrike,
+                OnQueueItemDeleted = newProvider.OnQueueItemDeleted,
+                OnDownloadCleaned = newProvider.OnDownloadCleaned,
+                OnCategoryChanged = newProvider.OnCategoryChanged,
+                NtfyConfiguration = ntfyConfig
+            };
+
+            // Add the new provider to the database
+            _dataContext.NotificationConfigs.Add(provider);
+            await _dataContext.SaveChangesAsync();
+
+            // Clear cache to ensure fresh data on next request
+            await _notificationConfigurationService.InvalidateCacheAsync();
+
+            // Return the provider in DTO format to match frontend expectations
+            var providerDto = new NotificationProviderDto
+            {
+                Id = provider.Id,
+                Name = provider.Name,
+                Type = provider.Type,
+                IsEnabled = provider.IsEnabled,
+                Events = new NotificationEventFlags
+                {
+                    OnFailedImportStrike = provider.OnFailedImportStrike,
+                    OnStalledStrike = provider.OnStalledStrike,
+                    OnSlowStrike = provider.OnSlowStrike,
+                    OnQueueItemDeleted = provider.OnQueueItemDeleted,
+                    OnDownloadCleaned = provider.OnDownloadCleaned,
+                    OnCategoryChanged = provider.OnCategoryChanged
+                },
+                Configuration = provider.NtfyConfiguration ?? new object()
+            };
+
+            return CreatedAtAction(nameof(GetNotificationProviders), new { id = provider.Id }, providerDto);
+        }
+        catch (ValidationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to create Ntfy provider");
+            throw;
+        }
+        finally
+        {
+            DataContext.Lock.Release();
+        }
+    }
+
+    [HttpPut("notification_providers/ntfy/{id}")]
+    public async Task<IActionResult> UpdateNtfyProvider(Guid id, [FromBody] UpdateNtfyProviderDto updatedProvider)
+    {
+        await DataContext.Lock.WaitAsync();
+        try
+        {
+            // Find the existing notification provider
+            var existingProvider = await _dataContext.NotificationConfigs
+                .Include(p => p.NtfyConfiguration)
+                .FirstOrDefaultAsync(p => p.Id == id && p.Type == NotificationProviderType.Ntfy);
+                
+            if (existingProvider == null)
+            {
+                return NotFound($"Ntfy provider with ID {id} not found");
+            }
+
+            // Validate required fields
+            if (string.IsNullOrWhiteSpace(updatedProvider.Name))
+            {
+                return BadRequest("Provider name is required");
+            }
+            
+            var duplicateConfig = await _dataContext.NotificationConfigs
+                .Where(x => x.Id != id)
+                .Where(x => x.Name == updatedProvider.Name)
+                .CountAsync();
+
+            if (duplicateConfig > 0)
+            {
+                return BadRequest("A provider with this name already exists");
+            }
+
+            // Create provider-specific configuration with validation
+            var ntfyConfig = new NtfyConfig
+            {
+                ServerUrl = updatedProvider.ServerUrl,
+                Topics = updatedProvider.Topics,
+                AuthenticationType = updatedProvider.AuthenticationType,
+                Username = updatedProvider.Username,
+                Password = updatedProvider.Password,
+                AccessToken = updatedProvider.AccessToken,
+                Priority = updatedProvider.Priority,
+                Tags = updatedProvider.Tags
+            };
+            
+            // Preserve the existing ID if updating
+            if (existingProvider.NtfyConfiguration != null)
+            {
+                ntfyConfig = ntfyConfig with { Id = existingProvider.NtfyConfiguration.Id };
+            }
+            
+            // Validate the configuration
+            ntfyConfig.Validate();
+
+            // Create a new provider entity with updated values (records are immutable)
+            var newProvider = existingProvider with
+            {
+                Name = updatedProvider.Name,
+                IsEnabled = updatedProvider.IsEnabled,
+                OnFailedImportStrike = updatedProvider.OnFailedImportStrike,
+                OnStalledStrike = updatedProvider.OnStalledStrike,
+                OnSlowStrike = updatedProvider.OnSlowStrike,
+                OnQueueItemDeleted = updatedProvider.OnQueueItemDeleted,
+                OnDownloadCleaned = updatedProvider.OnDownloadCleaned,
+                OnCategoryChanged = updatedProvider.OnCategoryChanged,
+                NtfyConfiguration = ntfyConfig,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            // Remove old and add new (EF handles this as an update)
+            _dataContext.NotificationConfigs.Remove(existingProvider);
+            _dataContext.NotificationConfigs.Add(newProvider);
+            
+            // Persist the configuration
+            await _dataContext.SaveChangesAsync();
+
+            // Clear cache to ensure fresh data on next request
+            await _notificationConfigurationService.InvalidateCacheAsync();
+
+            // Return the provider in DTO format to match frontend expectations
+            var providerDto = new NotificationProviderDto
+            {
+                Id = newProvider.Id,
+                Name = newProvider.Name,
+                Type = newProvider.Type,
+                IsEnabled = newProvider.IsEnabled,
+                Events = new NotificationEventFlags
+                {
+                    OnFailedImportStrike = newProvider.OnFailedImportStrike,
+                    OnStalledStrike = newProvider.OnStalledStrike,
+                    OnSlowStrike = newProvider.OnSlowStrike,
+                    OnQueueItemDeleted = newProvider.OnQueueItemDeleted,
+                    OnDownloadCleaned = newProvider.OnDownloadCleaned,
+                    OnCategoryChanged = newProvider.OnCategoryChanged
+                },
+                Configuration = newProvider.NtfyConfiguration ?? new object()
+            };
+
+            return Ok(providerDto);
+        }
+        catch (ValidationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to update Ntfy provider with ID {Id}", id);
+            throw;
+        }
+        finally
+        {
+            DataContext.Lock.Release();
+        }
+    }
+
+    [HttpPost("notification_providers/ntfy/test")]
+    public async Task<IActionResult> TestNtfyProvider([FromBody] TestNtfyProviderDto testRequest)
+    {
+        try
+        {
+            // Create configuration for testing with validation
+            var ntfyConfig = new NtfyConfig
+            {
+                ServerUrl = testRequest.ServerUrl,
+                Topics = testRequest.Topics,
+                AuthenticationType = testRequest.AuthenticationType,
+                Username = testRequest.Username,
+                Password = testRequest.Password,
+                AccessToken = testRequest.AccessToken,
+                Priority = testRequest.Priority,
+                Tags = testRequest.Tags
+            };
+            
+            // Validate the configuration
+            ntfyConfig.Validate();
+
+            // Create a temporary provider DTO for the test service
+            var providerDto = new NotificationProviderDto
+            {
+                Id = Guid.NewGuid(), // Temporary ID for testing
+                Name = "Test Provider",
+                Type = NotificationProviderType.Ntfy,
+                IsEnabled = true,
+                Events = new NotificationEventFlags
+                {
+                    OnFailedImportStrike = true, // Enable for test
+                    OnStalledStrike = false,
+                    OnSlowStrike = false,
+                    OnQueueItemDeleted = false,
+                    OnDownloadCleaned = false,
+                    OnCategoryChanged = false
+                },
+                Configuration = ntfyConfig
+            };
+
+            // Test the notification provider
+            await _notificationService.SendTestNotificationAsync(providerDto);
+            
+            return Ok(new { Message = "Test notification sent successfully", Success = true });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to test Ntfy provider");
             throw;
         }
     }

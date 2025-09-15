@@ -40,7 +40,7 @@ export class AppriseProviderComponent implements OnInit, OnChanges {
    * Exposed for template to open documentation for apprise fields
    */
   openFieldDocs(fieldName: string): void {
-    this.documentationService.openFieldDocumentation('notifications', fieldName);
+    this.documentationService.openFieldDocumentation('notifications/apprise', fieldName);
   }
 
   ngOnInit(): void {
