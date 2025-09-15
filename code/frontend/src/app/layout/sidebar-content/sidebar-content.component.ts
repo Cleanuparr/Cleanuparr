@@ -1,17 +1,10 @@
-import { Component, Input, inject, Output, EventEmitter, OnInit, OnChanges, SimpleChanges, OnDestroy } from '@angular/core';
+import { Component, Input, inject, Output, EventEmitter, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink, NavigationEnd } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { filter } from 'rxjs/operators';
 import { Subscription } from 'rxjs';
 import { trigger, state, style, transition, animate, query, stagger } from '@angular/animations';
-
-interface MenuItem {
-  label: string;
-  icon: string;
-  route: string;
-  badge?: string;
-}
 
 interface NavigationItem {
   id: string;
@@ -72,8 +65,7 @@ interface RouteMapping {
     ])
   ]
 })
-export class SidebarContentComponent implements OnInit, OnChanges, OnDestroy {
-  @Input() menuItems: MenuItem[] = [];
+export class SidebarContentComponent implements OnInit, OnDestroy {
   @Input() isMobile = false;
   @Output() navItemClicked = new EventEmitter<void>();
   
@@ -117,7 +109,9 @@ export class SidebarContentComponent implements OnInit, OnChanges, OnDestroy {
     { route: '/download-cleaner', navigationPath: ['settings', 'download-cleaner'] },
     { route: '/notifications', navigationPath: ['settings', 'notifications'] },
     
-    // Other routes will be handled dynamically
+    // Activity routes
+    { route: '/logs', navigationPath: ['activity', 'logs'] },
+    { route: '/events', navigationPath: ['activity', 'events'] }
   ];
 
   ngOnInit(): void {
@@ -130,12 +124,6 @@ export class SidebarContentComponent implements OnInit, OnChanges, OnDestroy {
     }, 100);
   }
 
-  ngOnChanges(changes: SimpleChanges): void {
-    if (changes['menuItems']) {
-      this.updateActivityItems();
-    }
-  }
-
   ngOnDestroy(): void {
     this.routerSubscription?.unsubscribe();
   }
@@ -146,18 +134,10 @@ export class SidebarContentComponent implements OnInit, OnChanges, OnDestroy {
   private initializeNavigation(): void {
     if (this.hasInitialized) return;
     
-    // 1. Initialize navigation data
     this.setupNavigationData();
     
-    // 2. Update activity items if available
-    if (this.menuItems && this.menuItems.length > 0) {
-      this.updateActivityItems();
-    }
-    
-    // 3. Determine correct navigation level based on current route
     this.syncSidebarWithCurrentRoute();
     
-    // 4. Mark as ready and subscribe to route changes
     this.isNavigationReady = true;
     this.hasInitialized = true;
     this.subscribeToRouteChanges();
@@ -296,7 +276,10 @@ export class SidebarContentComponent implements OnInit, OnChanges, OnDestroy {
         id: 'activity',
         label: 'Activity',
         icon: 'pi pi-chart-line',
-        children: [] // Will be populated dynamically from menuItems
+        children: [
+          { id: 'logs', label: 'Logs', icon: 'pi pi-list', route: '/logs' },
+          { id: 'events', label: 'Events', icon: 'pi pi-calendar', route: '/events' }
+        ]
       },
       {
         id: 'help-support',
@@ -404,57 +387,7 @@ export class SidebarContentComponent implements OnInit, OnChanges, OnDestroy {
     return `${item.id}-${index}`;
   }
 
-  /**
-   * Update activity items from menuItems input
-   */
-  private updateActivityItems(): void {
-    const activityItem = this.navigationData.find(item => item.id === 'activity');
-    if (activityItem && this.menuItems) {
-      activityItem.children = this.menuItems
-        .filter(item => !['Dashboard', 'Settings'].includes(item.label))
-        .map(item => ({
-          id: item.label.toLowerCase().replace(/\s+/g, '-'),
-          label: item.label,
-          icon: item.icon,
-          route: item.route,
-          badge: item.badge
-        }));
-      
-      // Update route mappings for activity items
-      this.updateActivityRouteMappings();
-      
-      // Update current navigation if we're showing the root level
-      if (this.navigationBreadcrumb.length === 0) {
-        this.currentNavigation = this.buildTopLevelNavigation();
-      }
 
-      // Re-sync with current route to handle activity routes
-      this.syncSidebarWithCurrentRoute();
-    }
-  }
-
-  /**
-   * Update route mappings for activity items
-   */
-  private updateActivityRouteMappings(): void {
-    // Remove old activity mappings
-    this.routeMappings = this.routeMappings.filter(mapping => 
-      !mapping.navigationPath[0] || !mapping.navigationPath[0].startsWith('activity')
-    );
-    
-    // Add new activity mappings
-    const activityItem = this.navigationData.find(item => item.id === 'activity');
-    if (activityItem?.children) {
-      activityItem.children.forEach(child => {
-        if (child.route) {
-          this.routeMappings.push({
-            route: child.route,
-            navigationPath: ['activity', child.id]
-          });
-        }
-      });
-    }
-  }
 
   /**
    * Sync sidebar state with current route

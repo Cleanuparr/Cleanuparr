@@ -18,13 +18,6 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { SidebarContentComponent } from '../sidebar-content/sidebar-content.component';
 import { ToastContainerComponent } from '../../shared/components/toast-container/toast-container.component';
 
-interface MenuItem {
-  label: string;
-  icon: string;
-  route: string;
-  badge?: string;
-}
-
 @Component({
   selector: 'app-main-layout',
   standalone: true,
@@ -47,14 +40,6 @@ interface MenuItem {
   styleUrl: './main-layout.component.scss'
 })
 export class MainLayoutComponent {
-  // Menu items
-  menuItems: MenuItem[] = [
-    { label: 'Dashboard', icon: 'pi pi-home', route: '/dashboard' },
-    { label: 'Logs', icon: 'pi pi-list', route: '/logs' },
-    { label: 'Settings', icon: 'pi pi-cog', route: '/settings' },
-    { label: 'Events', icon: 'pi pi-calendar', route: '/events' },
-  ];
-  
   // Mobile menu state
   mobileSidebarVisible = signal<boolean>(false);
   
