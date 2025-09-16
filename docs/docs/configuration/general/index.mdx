@@ -157,49 +157,6 @@ mytracker.com
 
 </div>
 
-<div className={styles.section}>
-
-<h2 className={styles.sectionTitle}>
-  <span className={styles.sectionIcon}>⛔</span>
-  Blacklist Sync
-  </h2>
-
-<ConfigSection
-  id="enable-blacklist-sync"
-  title="Enable Blacklist Sync"
-  icon="✅"
->
-
-When enabled, Cleanuparr will automatically synchronize blacklist entries to all enabled qBittorrent clients every hour. The sync happens when the blacklist path or content changes.
-
-<EnhancedNote>
-This feature updates the qBittorrent "Excluded file names" setting, but does not enable it.
-</EnhancedNote>
-
-</ConfigSection>
-
-<ConfigSection
-  id="blacklist-path"
-  title="Blacklist Path"
-  icon="🗂️"
->
-
-Path to the blacklist content. This can be a local file path or an HTTP/HTTPS URL. The application computes a content hash and only pushes updates when the content changes.
-
-**Examples:**
-```
-/data/blacklists/qbit-exclusions.txt
-https://example.com/blacklist.txt
-```
-
-<EnhancedWarning>
-If Blacklist Sync is enabled, this field is required. For remote URLs, ensure the server is reachable from Cleanuparr and the certificate is valid (or adjust HTTP certificate validation settings).
-</EnhancedWarning>
-
-</ConfigSection>
-
-</div>
-
 </div>
 
 <div className={styles.section}>

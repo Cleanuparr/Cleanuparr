@@ -21,7 +21,7 @@
         <div class="flex align-items-center justify-content-between p-3 border-bottom-1 surface-border">
           <div class="header-title-container">
             <h2 class="card-title m-0">Blacklist Sync Configuration</h2>
-            <span class="card-subtitle">Configure automatic blacklist synchronization</span>
+            <span class="card-subtitle">Configure automatic blacklist synchronization for qBittorrent clients</span>
           </div>
         </div>
       </ng-template>
@@ -38,7 +38,7 @@
           </label>
           <div class="field-input">
             <p-checkbox formControlName="enabled" [binary]="true" inputId="blacklistSyncEnabled"></p-checkbox>
-            <small class="form-helper-text">When enabled, blacklist patterns will be synchronized to download clients hourly</small>
+            <small class="form-helper-text">When enabled, blacklist patterns will be synchronized to enabled qBittorrent clients hourly</small>
           </div>
         </div>
 
