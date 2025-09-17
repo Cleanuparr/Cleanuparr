@@ -60,6 +60,8 @@ public sealed class QueueItemRemover : IQueueItemRemover
                 SearchItem = request.SearchItem,
                 Record = request.Record
             });
+
+            await Task.Delay(5 * 1000);
         }
         catch (HttpRequestException exception)
         {
