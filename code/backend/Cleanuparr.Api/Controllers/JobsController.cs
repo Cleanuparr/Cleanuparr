@@ -136,6 +136,26 @@ public class JobsController : ControllerBase
         }
     }
 
+    [HttpPost("{jobType}/trigger")]
+    public async Task<IActionResult> TriggerJob(JobType jobType)
+    {
+        try
+        {
+            var result = await _jobManagementService.TriggerJobOnce(jobType);
+            
+            if (!result)
+            {
+                return BadRequest($"Failed to trigger job '{jobType}' - job may not exist or be configured");
+            }
+            return Ok(new { Message = $"Job '{jobType}' triggered successfully for one-time execution" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error triggering job {jobType}", jobType);
+            return StatusCode(500, $"An error occurred while triggering job '{jobType}'");
+        }
+    }
+
     [HttpPut("{jobType}/schedule")]
     public async Task<IActionResult> UpdateJobSchedule(JobType jobType, [FromBody] ScheduleRequest scheduleRequest)
     {

@@ -19,6 +19,7 @@ import { GeneralConfig } from '../../shared/models/general-config.model';
 
 // Components
 import { SupportSectionComponent } from '../../shared/components/support-section/support-section.component';
+import { JobsManagementComponent } from '../../shared/components/jobs-management/jobs-management.component';
 
 @Component({
   selector: 'app-dashboard-page',
@@ -33,7 +34,8 @@ import { SupportSectionComponent } from '../../shared/components/support-section
     TagModule,
     TooltipModule,
     ProgressSpinnerModule,
-    SupportSectionComponent
+    SupportSectionComponent,
+    JobsManagementComponent
   ],
   templateUrl: './dashboard-page.component.html',
   styleUrl: './dashboard-page.component.scss'

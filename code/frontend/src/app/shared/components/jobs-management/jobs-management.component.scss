@@ -1,0 +1,98 @@
+.jobs-management-card {
+  .header-title-container {
+    .card-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: var(--text-color);
+    }
+    
+    .card-subtitle {
+      font-size: 0.875rem;
+      color: var(--text-color-secondary);
+      display: block;
+      margin-top: 0.25rem;
+    }
+  }
+}
+
+.jobs-content {
+  .empty-state {
+    padding: 2rem 1rem;
+  }
+  
+  :host ::ng-deep {
+    .p-datatable {
+      .p-datatable-thead > tr > th {
+        background: var(--surface-50);
+        border-color: var(--surface-200);
+        color: var(--text-color);
+        font-weight: 600;
+        padding: 0.75rem;
+      }
+      
+      .p-datatable-tbody > tr > td {
+        padding: 0.75rem;
+        border-color: var(--surface-200);
+      }
+      
+      .p-datatable-tbody > tr:hover {
+        background: var(--surface-50);
+      }
+    }
+    
+    .p-tag {
+      font-size: 0.75rem;
+      padding: 0.25rem 0.5rem;
+    }
+    
+    .p-button-sm {
+      padding: 0.375rem;
+      font-size: 0.75rem;
+      
+      .pi {
+        font-size: 0.875rem;
+      }
+    }
+    
+    .p-messages {
+      margin-bottom: 1rem;
+      
+      .p-message {
+        margin: 0;
+      }
+    }
+  }
+}
+
+// Responsive design
+@media (max-width: 768px) {
+  .jobs-content {
+    :host ::ng-deep {
+      .p-datatable {
+        .p-datatable-thead > tr > th,
+        .p-datatable-tbody > tr > td {
+          padding: 0.5rem;
+          font-size: 0.875rem;
+        }
+      }
+      
+      .p-button-sm {
+        padding: 0.25rem;
+        
+        .pi {
+          font-size: 0.75rem;
+        }
+      }
+    }
+  }
+  
+  .header-title-container {
+    .card-title {
+      font-size: 1.125rem !important;
+    }
+    
+    .card-subtitle {
+      font-size: 0.8rem !important;
+    }
+  }
+}

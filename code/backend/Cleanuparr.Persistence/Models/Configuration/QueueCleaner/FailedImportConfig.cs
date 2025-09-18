@@ -16,9 +16,9 @@ public sealed record FailedImportConfig
     
     public void Validate()
     {
-        if (MaxStrikes is > 0 and < 3)
+        if (MaxStrikes is > 0 and < 2)
         {
-            throw new ValidationException("the minimum value for failed imports max strikes must be 3");
+            throw new ValidationException("the minimum value for failed imports max strikes must be 2");
         }
     }
 }
