@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
-import { BasePathService } from './base-path.service';
+import { ApplicationPathService } from './base-path.service';
 import { JobInfo, JobType } from '../models/job.models';
 
 @Injectable({
@@ -10,10 +10,10 @@ import { JobInfo, JobType } from '../models/job.models';
 })
 export class JobsService {
   private http = inject(HttpClient);
-  private basePathService = inject(BasePathService);
+  private pathService = inject(ApplicationPathService);
   
   private get baseUrl(): string {
-    return `${this.basePathService.basePath}/api/jobs`;
+    return this.pathService.buildApiUrl('/jobs');
   }
 
   /**

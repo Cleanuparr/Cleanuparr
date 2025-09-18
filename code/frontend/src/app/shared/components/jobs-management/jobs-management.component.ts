@@ -16,7 +16,14 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { JobsService } from '../../../core/services/jobs.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { JobInfo, JobType, JobAction } from '../../../core/models/job.models';
-import { ConfirmationService, Message } from 'primeng/api';
+import { ConfirmationService } from 'primeng/api';
+
+// Simple message interface for local use
+interface Message {
+  severity: 'success' | 'info' | 'warn' | 'error';
+  summary: string;
+  detail: string;
+}
 
 @Component({
   selector: 'app-jobs-management',
@@ -228,7 +235,7 @@ export class JobsManagementComponent implements OnInit, OnDestroy {
       case JobType.BlacklistSynchronizer:
         return 'Blacklist Synchronizer';
       default:
-        return jobType.toString();
+        return String(jobType);
     }
   }
 
