@@ -55,8 +55,8 @@ public static class MainDI
                     {
                         e.ConfigureConsumer<DownloadRemoverConsumer<SearchItem>>(context);
                         e.ConfigureConsumer<DownloadRemoverConsumer<SeriesSearchItem>>(context);
-                        e.ConcurrentMessageLimit = 2;
-                        e.PrefetchCount = 2;
+                        e.ConcurrentMessageLimit = 1;
+                        e.PrefetchCount = 1;
                     });
                     
                     cfg.ReceiveEndpoint("download-hunter-queue", e =>
