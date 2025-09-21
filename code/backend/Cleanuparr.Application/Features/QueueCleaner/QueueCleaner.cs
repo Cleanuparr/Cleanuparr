@@ -5,6 +5,7 @@ using Cleanuparr.Infrastructure.Features.Arr;
 using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
+using Cleanuparr.Infrastructure.Features.DownloadClient.Deluge;
 using Cleanuparr.Infrastructure.Features.Jobs;
 using Cleanuparr.Infrastructure.Helpers;
 using Cleanuparr.Persistence;
@@ -107,33 +108,35 @@ public sealed class QueueCleaner : GenericHandler
                 ContextProvider.Set(nameof(QueueRecord), record);
 
                 DownloadCheckResult downloadCheckResult = new();
+                IDownloadService? downloadService = null;
 
                 if (record.Protocol.Contains("torrent", StringComparison.InvariantCultureIgnoreCase))
                 {
-                    var torrentClients = downloadServices
+                    var torrentServices = downloadServices
                         .Where(x => x.ClientConfig.Type is DownloadClientType.Torrent)
                         .ToList();
                     
-                    if (torrentClients.Count > 0)
+                    if (torrentServices.Count > 0)
                     {
                         // Check each download client for the download item
-                        foreach (var downloadService in torrentClients)
+                        foreach (var torrentService in torrentServices)
                         {
                             try
                             {
                                 // stalled download check
-                                downloadCheckResult = await downloadService
+                                downloadCheckResult = await torrentService
                                     .ShouldRemoveFromArrQueueAsync(record.DownloadId, ignoredDownloads);
                                 
                                 if (downloadCheckResult.Found)
                                 {
+                                    downloadService = torrentService;
                                     break;
                                 }
                             }
                             catch (Exception ex)
                             {
                                 _logger.LogError(ex, "Error checking download {dName} with download client {cName}", 
-                                    record.Title, downloadService.ClientConfig.Name);
+                                    record.Title, torrentService.ClientConfig.Name);
                             }
                         }
                     
@@ -181,6 +184,11 @@ public sealed class QueueCleaner : GenericHandler
                     {
                         removeFromClient = false;
                     }
+                }
+                
+                if (downloadService is DelugeService delugeService)
+                {
+                    await delugeService.PauseAsync(record.DownloadId);
                 }
                 
                 await PublishQueueItemRemoveRequest(
