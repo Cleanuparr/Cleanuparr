@@ -3,8 +3,8 @@ import { CommonModule } from '@angular/common';
 import { Router, RouterLink, NavigationEnd } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { DrawerModule } from 'primeng/drawer';
-import { filter } from 'rxjs/operators';
-import { Subscription } from 'rxjs';
+import { filter, debounceTime } from 'rxjs/operators';
+import { Subscription, fromEvent } from 'rxjs';
 import { trigger, state, style, transition, animate, query, stagger } from '@angular/animations';
 
 interface NavigationItem {
@@ -100,6 +100,7 @@ export class SidebarContentComponent implements OnInit, OnDestroy {
 
   // Route synchronization properties
   private routerSubscription?: Subscription;
+  private resizeSubscription?: Subscription;
   private routeMappings: RouteMapping[] = [
     // Dashboard
     { route: '/dashboard', navigationPath: ['dashboard'] },
@@ -133,10 +134,31 @@ export class SidebarContentComponent implements OnInit, OnDestroy {
     setTimeout(() => {
       this.initializeNavigation();
     }, 100);
+
+    // Listen for window resize events to auto-hide mobile drawer
+    this.setupWindowResizeListener();
   }
 
   ngOnDestroy(): void {
     this.routerSubscription?.unsubscribe();
+    this.resizeSubscription?.unsubscribe();
+  }
+
+  /**
+   * Setup window resize listener to auto-hide mobile drawer on larger screens
+   */
+  private setupWindowResizeListener(): void {
+    // Define the mobile breakpoint (should match CSS media query)
+    const MOBILE_BREAKPOINT = 991;
+
+    this.resizeSubscription = fromEvent(window, 'resize')
+      .pipe(
+        debounceTime(150), // Debounce resize events for better performance
+        filter(() => window.innerWidth > MOBILE_BREAKPOINT && this.mobileSidebarVisible())
+      )
+      .subscribe(() => {
+        this.mobileSidebarVisible.set(false);
+      });
   }
 
   /**
