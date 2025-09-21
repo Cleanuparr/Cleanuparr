@@ -55,6 +55,15 @@ public partial class DelugeService : DownloadService, IDelugeService
             throw;
         }
     }
+
+    public async Task PauseAsync(string hash)
+    {
+        hash = hash.ToLowerInvariant();
+        
+        _logger.LogDebug("Pausing torrent {hash} in Deluge client {name}", hash, _downloadClientConfig.Name);
+            
+        await _client.PauseAsync(hash);
+    }
     
     public override async Task<HealthCheckResult> HealthCheckAsync()
     {
