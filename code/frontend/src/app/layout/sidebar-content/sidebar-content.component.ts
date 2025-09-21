@@ -1,7 +1,8 @@
-import { Component, Input, inject, Output, EventEmitter, OnInit, OnDestroy } from '@angular/core';
+import { Component, Input, inject, Output, EventEmitter, OnInit, OnDestroy, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink, NavigationEnd } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
+import { DrawerModule } from 'primeng/drawer';
 import { filter } from 'rxjs/operators';
 import { Subscription } from 'rxjs';
 import { trigger, state, style, transition, animate, query, stagger } from '@angular/animations';
@@ -32,10 +33,14 @@ interface RouteMapping {
   imports: [
     CommonModule,
     RouterLink,
-    ButtonModule
+    ButtonModule,
+    DrawerModule
   ],
   templateUrl: './sidebar-content.component.html',
   styleUrl: './sidebar-content.component.scss',
+  host: {
+    '[class.mobile-variant]': 'isMobile'
+  },
   animations: [
     trigger('staggerItems', [
       transition(':enter', [
@@ -67,7 +72,12 @@ interface RouteMapping {
 })
 export class SidebarContentComponent implements OnInit, OnDestroy {
   @Input() isMobile = false;
+  @Input() enableMobileDrawer = false;
   @Output() navItemClicked = new EventEmitter<void>();
+  @Output() mobileDrawerVisibilityChange = new EventEmitter<boolean>();
+  
+  // Mobile drawer state
+  mobileSidebarVisible = signal<boolean>(false);
   
   // Inject router for active route styling
   public router = inject(Router);
@@ -481,5 +491,38 @@ export class SidebarContentComponent implements OnInit, OnDestroy {
     if (this.isMobile) {
       this.navItemClicked.emit();
     }
+    // Close mobile drawer when nav item is clicked
+    if (this.mobileSidebarVisible()) {
+      this.mobileSidebarVisible.set(false);
+    }
+  }
+
+  /**
+   * Show mobile drawer
+   */
+  showMobileDrawer(): void {
+    this.mobileSidebarVisible.set(true);
+  }
+
+  /**
+   * Hide mobile drawer  
+   */
+  hideMobileDrawer(): void {
+    this.mobileSidebarVisible.set(false);
+  }
+
+  /**
+   * Toggle mobile drawer visibility
+   */
+  toggleMobileDrawer(): void {
+    this.mobileSidebarVisible.update(visible => !visible);
+  }
+
+  /**
+   * Handle mobile drawer visibility change
+   */
+  onMobileDrawerVisibilityChange(visible: boolean): void {
+    this.mobileSidebarVisible.set(visible);
+    this.mobileDrawerVisibilityChange.emit(visible);
   }
 }
