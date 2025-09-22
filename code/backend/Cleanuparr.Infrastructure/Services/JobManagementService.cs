@@ -194,58 +194,6 @@ public class JobManagementService : IJobManagementService
 
 
 
-    public async Task<bool> StopJob(JobType jobType)
-    {
-        string jobName = jobType.ToString();
-        try
-        {
-            var scheduler = await _schedulerFactory.GetScheduler();
-            var jobKey = new JobKey(jobName);
-            
-            if (!await scheduler.CheckExists(jobKey))
-            {
-                _logger.LogError("Job {name} does not exist", jobName);
-                return false;
-            }
-
-            // Clean up all triggers for this job (reuse our centralized method)
-            await CleanupAllTriggersForJob(scheduler, jobKey);
-
-            _logger.LogInformation("Job {name} stopped successfully", jobName);
-            return true;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error stopping job {jobName}", jobName);
-            return false;
-        }
-    }
-
-    public async Task<bool> PauseJob(JobType jobType)
-    {
-        string jobName = jobType.ToString();
-        try
-        {
-            var scheduler = await _schedulerFactory.GetScheduler();
-            var jobKey = new JobKey(jobName);
-            
-            if (!await scheduler.CheckExists(jobKey))
-            {
-                _logger.LogError("Job {name} does not exist", jobName);
-                return false;
-            }
-
-            await scheduler.PauseJob(jobKey);
-            _logger.LogInformation("Job {name} paused successfully", jobName);
-            return true;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error pausing job {jobName}", jobName);
-            return false;
-        }
-    }
-
     public async Task<bool> ResumeJob(JobType jobType)
     {
         string jobName = jobType.ToString();
@@ -289,7 +237,7 @@ public class JobManagementService : IJobManagementService
                     var jobInfo = new JobInfo
                     {
                         Name = jobKey.Name,
-                        JobType = jobDetail.JobType.Name,
+                        JobType = jobKey.Name, // Use the job key name instead of generic type
                         Status = "Not Scheduled"
                     };
                     
@@ -300,12 +248,12 @@ public class JobManagementService : IJobManagementService
                         
                         jobInfo.Status = triggerState switch
                         {
-                            TriggerState.Normal => "Running",
+                            TriggerState.Normal => "Scheduled", // Normal means trigger is scheduled and ready to fire
                             TriggerState.Paused => "Paused",
                             TriggerState.Complete => "Complete",
                             TriggerState.Error => "Error",
-                            TriggerState.Blocked => "Blocked",
-                            TriggerState.None => "None",
+                            TriggerState.Blocked => "Running", // Blocked typically means job is currently executing
+                            TriggerState.None => "Not Scheduled",
                             _ => "Unknown"
                         };
                         
@@ -351,7 +299,7 @@ public class JobManagementService : IJobManagementService
             var jobInfo = new JobInfo
             {
                 Name = jobName,
-                JobType = jobDetail.JobType.Name,
+                JobType = jobName, // Use the job key name instead of generic type
                 Status = "Not Scheduled"
             };
             
@@ -362,12 +310,12 @@ public class JobManagementService : IJobManagementService
                 
                 jobInfo.Status = state switch
                 {
-                    TriggerState.Normal => "Running",
+                    TriggerState.Normal => "Scheduled", // Normal means trigger is scheduled and ready to fire
                     TriggerState.Paused => "Paused",
                     TriggerState.Complete => "Complete",
                     TriggerState.Error => "Error",
-                    TriggerState.Blocked => "Blocked",
-                    TriggerState.None => "None",
+                    TriggerState.Blocked => "Running", // Blocked typically means job is currently executing
+                    TriggerState.None => "Not Scheduled",
                     _ => "Unknown"
                 };
                 

@@ -76,46 +76,6 @@ public class JobsController : ControllerBase
         }
     }
 
-    [HttpPost("{jobType}/stop")]
-    public async Task<IActionResult> StopJob(JobType jobType)
-    {
-        try
-        {
-            var result = await _jobManagementService.StopJob(jobType);
-            
-            if (!result)
-            {
-                return BadRequest($"Failed to stop job '{jobType}'");
-            }
-            return Ok(new { Message = $"Job '{jobType}' stopped successfully" });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error stopping job {jobType}", jobType);
-            return StatusCode(500, $"An error occurred while stopping job '{jobType}'");
-        }
-    }
-
-    [HttpPost("{jobType}/pause")]
-    public async Task<IActionResult> PauseJob(JobType jobType)
-    {
-        try
-        {
-            var result = await _jobManagementService.PauseJob(jobType);
-            
-            if (!result)
-            {
-                return BadRequest($"Failed to pause job '{jobType}'");
-            }
-            return Ok(new { Message = $"Job '{jobType}' paused successfully" });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error pausing job {jobType}", jobType);
-            return StatusCode(500, $"An error occurred while pausing job '{jobType}'");
-        }
-    }
-
     [HttpPost("{jobType}/resume")]
     public async Task<IActionResult> ResumeJob(JobType jobType)
     {

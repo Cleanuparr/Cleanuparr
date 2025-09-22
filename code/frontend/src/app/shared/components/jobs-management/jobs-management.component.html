@@ -21,14 +21,6 @@
   </ng-template>
 
   <div class="jobs-content">
-    <!-- Messages -->
-    <p-messages 
-      *ngIf="messages().length > 0" 
-      [value]="messages()"
-      [closable]="true"
-      class="mb-3">
-    </p-messages>
-
     <!-- Loading State -->
     <div *ngIf="loading() && jobs().length === 0" class="text-center py-4">
       <p-progressSpinner styleClass="w-3rem h-3rem"></p-progressSpinner>
@@ -61,7 +53,7 @@
           <td>
             <div class="flex align-items-center">
               <i class="pi pi-calendar-clock mr-2 text-primary"></i>
-              <span class="font-semibold">{{ getJobDisplayName(job.jobType) }}</span>
+              <span class="font-semibold">{{ getJobDisplayName(job.name) }}</span>
             </div>
           </td>
           
@@ -108,7 +100,7 @@
                 tooltipPosition="top"
                 [disabled]="action.disabled ? action.disabled(job) : false"
                 [class]="'p-button-sm p-button-outlined p-button-' + (action.severity || 'secondary')"
-                (click)="action.action(job.jobType)"
+                (click)="action.action(getJobTypeEnum(job.jobType))"
               ></button>
             </div>
           </td>

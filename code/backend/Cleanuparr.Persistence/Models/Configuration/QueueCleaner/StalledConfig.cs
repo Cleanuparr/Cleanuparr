@@ -18,14 +18,14 @@ public sealed record StalledConfig
     
     public void Validate()
     {
-        if (MaxStrikes is > 0 and < 2)
+        if (MaxStrikes is > 0 and < 3)
         {
-            throw new ValidationException("the minimum value for stalled max strikes must be 2");
+            throw new ValidationException("the minimum value for stalled max strikes must be 3");
         }
         
-        if (DownloadingMetadataMaxStrikes is > 0 and < 2)
+        if (DownloadingMetadataMaxStrikes is > 0 and < 3)
         {
-            throw new ValidationException("the minimum value for downloading metadata max strikes must be 2");
+            throw new ValidationException("the minimum value for downloading metadata max strikes must be 3");
         }
     }
 }

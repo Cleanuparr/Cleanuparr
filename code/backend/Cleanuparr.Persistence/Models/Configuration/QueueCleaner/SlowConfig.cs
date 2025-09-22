@@ -30,9 +30,9 @@ public sealed record SlowConfig
     
     public void Validate()
     {
-        if (MaxStrikes is > 0 and < 2)
+        if (MaxStrikes is > 0 and < 3)
         {
-            throw new ValidationException("the minimum value for slow max strikes must be 2");
+            throw new ValidationException("the minimum value for slow max strikes must be 3");
         }
 
         if (MaxStrikes > 0)

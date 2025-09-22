@@ -42,22 +42,6 @@ export class JobsService {
   }
 
   /**
-   * Stop a job
-   */
-  stopJob(jobType: JobType): Observable<any> {
-    return this.http.post(`${this.baseUrl}/${jobType}/stop`, {})
-      .pipe(catchError(this.handleError));
-  }
-
-  /**
-   * Pause a job
-   */
-  pauseJob(jobType: JobType): Observable<any> {
-    return this.http.post(`${this.baseUrl}/${jobType}/pause`, {})
-      .pipe(catchError(this.handleError));
-  }
-
-  /**
    * Resume a job
    */
   resumeJob(jobType: JobType): Observable<any> {
