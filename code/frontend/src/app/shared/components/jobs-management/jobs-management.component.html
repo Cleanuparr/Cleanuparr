@@ -6,6 +6,13 @@
         <span class="card-subtitle">Manage and monitor background jobs</span>
       </div>
       <div class="flex align-items-center gap-2">
+        <!-- Connection Status -->
+        <p-tag 
+          *ngIf="!connected()" 
+          value="Disconnected" 
+          severity="danger" 
+          class="mr-2">
+        </p-tag>
         <button
           pButton
           icon="pi pi-refresh"

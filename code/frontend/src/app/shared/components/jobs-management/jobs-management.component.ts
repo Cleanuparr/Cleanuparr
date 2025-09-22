@@ -48,6 +48,7 @@ export class JobsManagementComponent implements OnInit, OnDestroy {
   // Signals for reactive state
   jobs = signal<JobInfo[]>([]);
   loading = signal<boolean>(false);
+  connected = signal<boolean>(false);
 
   // Job actions configuration
   jobActions: JobAction[] = [
@@ -70,6 +71,19 @@ export class JobsManagementComponent implements OnInit, OnDestroy {
   }
 
   private initializeJobsData(): void {
+    // Subscribe to connection status
+    this.appHubService.getJobsConnectionStatus()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (connected) => {
+          this.connected.set(connected);
+          if (connected) {
+            // When we reconnect, load jobs once from API
+            this.loadJobsFromApi();
+          }
+        }
+      });
+
     // Subscribe to real-time job updates via SignalR
     this.appHubService.getJobs()
       .pipe(takeUntil(this.destroy$))
@@ -80,8 +94,7 @@ export class JobsManagementComponent implements OnInit, OnDestroy {
         },
         error: (error) => {
           console.error('Error receiving job updates:', error);
-          // Fallback to API call if SignalR fails
-          this.loadJobsFromApi();
+          // Don't show error notifications - just let connection status handle it
         }
       });
 
@@ -102,7 +115,7 @@ export class JobsManagementComponent implements OnInit, OnDestroy {
         },
         error: (error) => {
           console.error('Failed to load jobs:', error);
-          this.notificationService.showError('Failed to load jobs');
+          // Don't show error notifications - connection status will handle this
         }
       });
   }

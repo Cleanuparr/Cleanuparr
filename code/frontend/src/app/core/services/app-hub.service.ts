@@ -225,6 +225,14 @@ export class AppHubService {
   }
   
   /**
+   * Get jobs connection status as an observable
+   * For consistency with logs and events connection status
+   */
+  public getJobsConnectionStatus(): Observable<boolean> {
+    return this.connectionStatusSubject.asObservable();
+  }
+  
+  /**
    * Request job status from the server
    */
   public requestJobStatus(): void {

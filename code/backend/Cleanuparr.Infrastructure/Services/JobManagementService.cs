@@ -195,6 +195,35 @@ public class JobManagementService : IJobManagementService
         }
     }
 
+    /// <summary>
+    /// Internal method to stop a job - used by other services but not exposed via API
+    /// </summary>
+    internal async Task<bool> StopJob(JobType jobType)
+    {
+        string jobName = jobType.ToString();
+        try
+        {
+            var scheduler = await _schedulerFactory.GetScheduler();
+            var jobKey = new JobKey(jobName);
+            
+            if (!await scheduler.CheckExists(jobKey))
+            {
+                _logger.LogError("Job {name} does not exist", jobName);
+                return false;
+            }
+
+            // Clean up all triggers for this job (reuse our centralized method)
+            await CleanupAllTriggersForJob(scheduler, jobKey);
+
+            _logger.LogInformation("Job {name} stopped successfully", jobName);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error stopping job {jobName}", jobName);
+            return false;
+        }
+    }
 
     public async Task<IReadOnlyList<JobInfo>> GetAllJobs(IScheduler? scheduler = null)
     {
