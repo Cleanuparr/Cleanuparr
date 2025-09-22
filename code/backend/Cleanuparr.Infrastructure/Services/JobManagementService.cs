@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using Cleanuparr.Infrastructure.Models;
 using Cleanuparr.Infrastructure.Services.Interfaces;
 using Cleanuparr.Infrastructure.Utilities;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using Quartz;
 using Quartz.Impl.Matchers;
@@ -13,12 +14,14 @@ public class JobManagementService : IJobManagementService
 {
     private readonly ILogger<JobManagementService> _logger;
     private readonly ISchedulerFactory _schedulerFactory;
+    private readonly IHubContext<Hubs.AppHub> _hubContext;
     private readonly ConcurrentDictionary<string, JobKey> _jobKeys = new();
 
-    public JobManagementService(ILogger<JobManagementService> logger, ISchedulerFactory schedulerFactory)
+    public JobManagementService(ILogger<JobManagementService> logger, ISchedulerFactory schedulerFactory, IHubContext<Hubs.AppHub> hubContext)
     {
         _logger = logger;
         _schedulerFactory = schedulerFactory;
+        _hubContext = hubContext;
     }
 
     public async Task<bool> StartJob(JobType jobType, JobSchedule? schedule = null, string? directCronExpression = null)
@@ -193,32 +196,6 @@ public class JobManagementService : IJobManagementService
     }
 
 
-
-    public async Task<bool> ResumeJob(JobType jobType)
-    {
-        string jobName = jobType.ToString();
-        try
-        {
-            var scheduler = await _schedulerFactory.GetScheduler();
-            var jobKey = new JobKey(jobName);
-            
-            if (!await scheduler.CheckExists(jobKey))
-            {
-                _logger.LogError("Job {name} does not exist", jobName);
-                return false;
-            }
-
-            await scheduler.ResumeJob(jobKey);
-            _logger.LogInformation("Job {name} resumed successfully", jobName);
-            return true;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error resuming job {name}", jobName);
-            return false;
-        }
-    }
-
     public async Task<IReadOnlyList<JobInfo>> GetAllJobs(IScheduler? scheduler = null)
     {
         try
@@ -353,6 +330,10 @@ public class JobManagementService : IJobManagementService
 
             await TriggerJobImmediately(scheduler, jobKey, "manual");
             _logger.LogInformation("Job {name} triggered for one-time execution", jobName);
+            
+            // Broadcast job status update to all clients
+            _ = Task.Run(async () => await BroadcastJobStatusUpdate());
+            
             return true;
         }
         catch (Exception ex)
@@ -401,6 +382,23 @@ public class JobManagementService : IJobManagementService
         {
             _logger.LogError(ex, "Error updating job {name} schedule", jobName);
             return false;
+        }
+    }
+
+    /// <summary>
+    /// Broadcasts job status updates to all connected clients
+    /// </summary>
+    private async Task BroadcastJobStatusUpdate()
+    {
+        try
+        {
+            var jobs = await GetAllJobs();
+            await _hubContext.Clients.All.SendAsync("JobStatusUpdate", jobs);
+            _logger.LogDebug("Broadcasted job status update to all clients");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to broadcast job status update");
         }
     }
 }

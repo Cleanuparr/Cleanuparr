@@ -42,14 +42,6 @@ export class JobsService {
   }
 
   /**
-   * Resume a job
-   */
-  resumeJob(jobType: JobType): Observable<any> {
-    return this.http.post(`${this.baseUrl}/${jobType}/resume`, {})
-      .pipe(catchError(this.handleError));
-  }
-
-  /**
    * Trigger a job for one-time execution
    */
   triggerJob(jobType: JobType): Observable<any> {

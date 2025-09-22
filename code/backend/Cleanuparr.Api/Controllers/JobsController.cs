@@ -76,26 +76,6 @@ public class JobsController : ControllerBase
         }
     }
 
-    [HttpPost("{jobType}/resume")]
-    public async Task<IActionResult> ResumeJob(JobType jobType)
-    {
-        try
-        {
-            var result = await _jobManagementService.ResumeJob(jobType);
-            
-            if (!result)
-            {
-                return BadRequest($"Failed to resume job '{jobType}'");
-            }
-            return Ok(new { Message = $"Job '{jobType}' resumed successfully" });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error resuming job {jobType}", jobType);
-            return StatusCode(500, $"An error occurred while resuming job '{jobType}'");
-        }
-    }
-
     [HttpPost("{jobType}/trigger")]
     public async Task<IActionResult> TriggerJob(JobType jobType)
     {

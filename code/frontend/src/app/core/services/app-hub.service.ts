@@ -3,6 +3,7 @@ import { BehaviorSubject, Observable } from 'rxjs';
 import * as signalR from '@microsoft/signalr';
 import { LogEntry } from '../models/signalr.models';
 import { AppEvent } from '../models/event.models';
+import { JobInfo } from '../models/job.models';
 import { ApplicationPathService } from './base-path.service';
 
 /**
@@ -16,6 +17,7 @@ export class AppHubService {
   private connectionStatusSubject = new BehaviorSubject<boolean>(false);
   private logsSubject = new BehaviorSubject<LogEntry[]>([]);
   private eventsSubject = new BehaviorSubject<AppEvent[]>([]);
+  private jobsSubject = new BehaviorSubject<JobInfo[]>([]);
   private readonly ApplicationPathService = inject(ApplicationPathService);
   
   private logBuffer: LogEntry[] = [];
@@ -110,6 +112,13 @@ export class AppHubService {
         this.trimBuffer(this.eventBuffer, this.bufferSize);
       }
     });
+
+    // Handle job status updates
+    this.hubConnection.on('JobStatusUpdate', (jobs: JobInfo[]) => {
+      if (jobs) {
+        this.jobsSubject.next(jobs);
+      }
+    });
   }
   
   /**
@@ -118,6 +127,7 @@ export class AppHubService {
   private requestInitialData(): void {
     this.requestRecentLogs();
     this.requestRecentEvents();
+    this.requestJobStatus();
   }
   
   /**
@@ -205,6 +215,23 @@ export class AppHubService {
    */
   public getEvents(): Observable<AppEvent[]> {
     return this.eventsSubject.asObservable();
+  }
+
+  /**
+   * Get jobs as an observable
+   */
+  public getJobs(): Observable<JobInfo[]> {
+    return this.jobsSubject.asObservable();
+  }
+  
+  /**
+   * Request job status from the server
+   */
+  public requestJobStatus(): void {
+    if (this.isConnected()) {
+      this.hubConnection.invoke('GetJobStatus')
+        .catch(err => console.error('Error requesting job status:', err));
+    }
   }
   
   /**

@@ -14,6 +14,7 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
 // Services & Models
 import { JobsService } from '../../../core/services/jobs.service';
 import { NotificationService } from '../../../core/services/notification.service';
+import { AppHubService } from '../../../core/services/app-hub.service';
 import { JobInfo, JobType, JobAction } from '../../../core/models/job.models';
 import { ConfirmationService } from 'primeng/api';
 
@@ -37,6 +38,7 @@ import { ConfirmationService } from 'primeng/api';
 export class JobsManagementComponent implements OnInit, OnDestroy {
   private jobsService = inject(JobsService);
   private notificationService = inject(NotificationService);
+  private appHubService = inject(AppHubService);
   private confirmationService = inject(ConfirmationService);
   private destroy$ = new Subject<void>();
 
@@ -55,20 +57,11 @@ export class JobsManagementComponent implements OnInit, OnDestroy {
       severity: 'success',
       action: (jobType: JobType) => this.triggerJob(jobType),
       disabled: (job: JobInfo) => job.status === 'Error'
-    },
-    {
-      label: 'Resume',
-      icon: 'pi pi-play-circle',
-      severity: 'info',
-      action: (jobType: JobType) => this.resumeJob(jobType),
-      disabled: (job: JobInfo) => job.status !== 'Paused'
     }
   ];
 
   ngOnInit() {
-    this.loadJobs();
-    // Set up auto-reload every 30 seconds
-    setInterval(() => this.loadJobs(), 30000);
+    this.initializeJobsData();
   }
 
   ngOnDestroy(): void {
@@ -76,7 +69,27 @@ export class JobsManagementComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  loadJobs(): void {
+  private initializeJobsData(): void {
+    // Subscribe to real-time job updates via SignalR
+    this.appHubService.getJobs()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (jobs) => {
+          this.jobs.set(jobs);
+          this.loading.set(false);
+        },
+        error: (error) => {
+          console.error('Error receiving job updates:', error);
+          // Fallback to API call if SignalR fails
+          this.loadJobsFromApi();
+        }
+      });
+
+    // Initial load - try to get current job status
+    this.loadJobsFromApi();
+  }
+
+  private loadJobsFromApi(): void {
     this.loading.set(true);
     this.jobsService.getAllJobs()
       .pipe(
@@ -112,7 +125,7 @@ export class JobsManagementComponent implements OnInit, OnDestroy {
           .subscribe({
             next: (response) => {
               this.notificationService.showSuccess(`${jobName} triggered successfully`);
-              setTimeout(() => this.loadJobs(), 2000); // Reload after 2 seconds
+              // Job status will be updated automatically via SignalR
             },
             error: (error) => {
               console.error('Failed to trigger job:', error);
@@ -121,27 +134,6 @@ export class JobsManagementComponent implements OnInit, OnDestroy {
           });
       }
     });
-  }
-
-  resumeJob(jobType: JobType): void {
-    const jobName = this.getJobDisplayName(jobType);
-    
-    this.loading.set(true);
-    this.jobsService.resumeJob(jobType)
-      .pipe(
-        takeUntil(this.destroy$),
-        finalize(() => this.loading.set(false))
-      )
-      .subscribe({
-        next: (response) => {
-          this.notificationService.showSuccess(`${jobName} resumed successfully`);
-          this.loadJobs();
-        },
-        error: (error) => {
-          console.error('Failed to resume job:', error);
-          this.notificationService.showError(`Failed to resume ${jobName}`);
-        }
-      });
   }
 
   getJobDisplayName(jobName: string): string {
@@ -188,6 +180,6 @@ export class JobsManagementComponent implements OnInit, OnDestroy {
   }
 
   onRefresh(): void {
-    this.loadJobs();
+    this.loadJobsFromApi();
   }
 }
