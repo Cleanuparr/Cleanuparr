@@ -195,10 +195,8 @@ public class JobManagementService : IJobManagementService
         }
     }
 
-    /// <summary>
-    /// Internal method to stop a job - used by other services but not exposed via API
-    /// </summary>
-    internal async Task<bool> StopJob(JobType jobType)
+    
+    public async Task<bool> StopJob(JobType jobType)
     {
         string jobName = jobType.ToString();
         try
