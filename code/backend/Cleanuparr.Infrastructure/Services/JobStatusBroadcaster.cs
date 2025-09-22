@@ -1,3 +1,4 @@
+using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -14,6 +15,13 @@ public class JobStatusBroadcaster : BackgroundService
     private readonly IJobManagementService _jobManagementService;
     private readonly IHubContext<Hubs.AppHub> _hubContext;
     private readonly TimeSpan _broadcastInterval = TimeSpan.FromSeconds(5);
+    private readonly FixedWindowRateLimiter _limiter = new(new FixedWindowRateLimiterOptions
+    {
+        PermitLimit = 1,
+        Window = TimeSpan.FromMinutes(5),
+        QueueLimit = 0,
+        QueueProcessingOrder = QueueProcessingOrder.OldestFirst
+    });
 
     /// <summary>
     /// Initializes a new instance of the <see cref="JobStatusBroadcaster"/> class
@@ -24,7 +32,8 @@ public class JobStatusBroadcaster : BackgroundService
     public JobStatusBroadcaster(
         ILogger<JobStatusBroadcaster> logger,
         IJobManagementService jobManagementService,
-        IHubContext<Hubs.AppHub> hubContext)
+        IHubContext<Hubs.AppHub> hubContext
+    )
     {
         _logger = logger;
         _jobManagementService = jobManagementService;
@@ -38,18 +47,15 @@ public class JobStatusBroadcaster : BackgroundService
     /// <returns>A task representing the asynchronous operation</returns>
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation("Job Status Broadcaster started");
+        _logger.LogTrace("Job Status Broadcaster started");
 
         while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
-                // Only broadcast if there are connected clients
-                // This is an optimization - SignalR will handle this internally too
-                await BroadcastJobStatus();
-
-                // Wait for the next interval
-                await Task.Delay(_broadcastInterval, stoppingToken);
+                throw new Exception();
+                var jobs = await _jobManagementService.GetAllJobs();
+                await _hubContext.Clients.All.SendAsync("JobStatusUpdate", jobs, stoppingToken);
             }
             catch (OperationCanceledException)
             {
@@ -58,38 +64,15 @@ public class JobStatusBroadcaster : BackgroundService
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error occurred while broadcasting job status");
-                
-                // Wait a bit before retrying to avoid flooding logs on persistent errors
-                try
+                if (_limiter.AttemptAcquire().IsAcquired)
                 {
-                    await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken);
-                }
-                catch (OperationCanceledException)
-                {
-                    break;
+                    _logger.LogError(ex, "Error occurred while broadcasting job status");
                 }
             }
-        }
-
-        _logger.LogInformation("Job Status Broadcaster stopped");
-    }
-
-    /// <summary>
-    /// Broadcasts current job status to all connected clients
-    /// </summary>
-    private async Task BroadcastJobStatus()
-    {
-        try
-        {
-            var jobs = await _jobManagementService.GetAllJobs();
-            await _hubContext.Clients.All.SendAsync("JobStatusUpdate", jobs);
             
-            _logger.LogDebug("Broadcasted job status update to all clients - {JobCount} jobs", jobs.Count);
+            await Task.Delay(_broadcastInterval, stoppingToken);
         }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Failed to broadcast job status update");
-        }
+
+        _logger.LogTrace("Job Status Broadcaster stopped");
     }
 }
