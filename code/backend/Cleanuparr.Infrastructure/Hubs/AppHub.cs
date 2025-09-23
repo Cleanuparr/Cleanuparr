@@ -1,4 +1,5 @@
 using Cleanuparr.Infrastructure.Logging;
+using Cleanuparr.Infrastructure.Services.Interfaces;
 using Cleanuparr.Persistence;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
@@ -11,14 +12,16 @@ namespace Cleanuparr.Infrastructure.Hubs;
 /// </summary>
 public class AppHub : Hub
 {
-    private readonly EventsContext _context;
     private readonly ILogger<AppHub> _logger;
+    private readonly EventsContext _context;
+    private readonly IJobManagementService _jobManagementService;
     private readonly SignalRLogSink _logSink;
 
-    public AppHub(EventsContext context, ILogger<AppHub> logger)
+    public AppHub(ILogger<AppHub> logger, EventsContext context, IJobManagementService jobManagementService)
     {
         _context = context;
         _logger = logger;
+        _jobManagementService = jobManagementService;
         _logSink = SignalRLogSink.Instance;
     }
 
@@ -35,7 +38,7 @@ public class AppHub : Hub
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to send recent logs to client {connectionId}", Context.ConnectionId);
+            _logger.LogError(ex, "Failed to send recent logs to client");
         }
     }
 
@@ -56,7 +59,23 @@ public class AppHub : Hub
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to send recent events to client {connectionId}", Context.ConnectionId);
+            _logger.LogError(ex, "Failed to send recent events to client");
+        }
+    }
+
+    /// <summary>
+    /// Client requests current job statuses
+    /// </summary>
+    public async Task GetJobStatus()
+    {
+        try
+        {
+            var jobs = await _jobManagementService.GetAllJobs();
+            await Clients.All.SendAsync("JobStatusUpdate", jobs);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to send job status to client");
         }
     }
 

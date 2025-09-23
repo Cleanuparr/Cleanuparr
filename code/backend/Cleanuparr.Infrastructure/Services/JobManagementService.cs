@@ -252,11 +252,11 @@ public class JobManagementService : IJobManagementService
                         
                         jobInfo.Status = triggerState switch
                         {
-                            TriggerState.Normal => "Scheduled", // Normal means trigger is scheduled and ready to fire
+                            TriggerState.Normal => "Scheduled",
                             TriggerState.Paused => "Paused",
                             TriggerState.Complete => "Complete",
                             TriggerState.Error => "Error",
-                            TriggerState.Blocked => "Running", // Blocked typically means job is currently executing
+                            TriggerState.Blocked => "Running",
                             TriggerState.None => "Not Scheduled",
                             _ => "Unknown"
                         };
@@ -358,9 +358,6 @@ public class JobManagementService : IJobManagementService
             await TriggerJobImmediately(scheduler, jobKey, "manual");
             _logger.LogInformation("Job {name} triggered for one-time execution", jobName);
             
-            // Broadcast job status update to all clients
-            _ = Task.Run(async () => await BroadcastJobStatusUpdate());
-            
             return true;
         }
         catch (Exception ex)
@@ -409,23 +406,6 @@ public class JobManagementService : IJobManagementService
         {
             _logger.LogError(ex, "Error updating job {name} schedule", jobName);
             return false;
-        }
-    }
-
-    /// <summary>
-    /// Broadcasts job status updates to all connected clients
-    /// </summary>
-    private async Task BroadcastJobStatusUpdate()
-    {
-        try
-        {
-            var jobs = await GetAllJobs();
-            await _hubContext.Clients.All.SendAsync("JobStatusUpdate", jobs);
-            _logger.LogDebug("Broadcasted job status update to all clients");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Failed to broadcast job status update");
         }
     }
 }

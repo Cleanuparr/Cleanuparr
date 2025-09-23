@@ -14,7 +14,7 @@ public class JobStatusBroadcaster : BackgroundService
 {
     private readonly ILogger<JobStatusBroadcaster> _logger;
     private readonly IJobManagementService _jobManagementService;
-    private readonly IHubContext<Hubs.AppHub> _hubContext;
+    private readonly IHubContext<AppHub> _hubContext;
     private readonly TimeSpan _broadcastInterval = TimeSpan.FromSeconds(5);
     private readonly FixedWindowRateLimiter _limiter = new(new FixedWindowRateLimiterOptions
     {
