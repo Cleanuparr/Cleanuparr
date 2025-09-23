@@ -20,11 +20,14 @@
     padding: 2rem 1rem;
   }
   
-  :host ::ng-deep {
+  ::ng-deep {
     .p-datatable {
+      .p-datatable-thead {
+        background: transparent;
+      }
+
       .p-datatable-thead > tr > th {
-        background: var(--surface-50);
-        border-color: var(--surface-200);
+        background: transparent;
         color: var(--text-color);
         font-weight: 600;
         padding: 0.75rem;
@@ -32,11 +35,11 @@
       
       .p-datatable-tbody > tr > td {
         padding: 0.75rem;
-        border-color: var(--surface-200);
+        background: transparent;
       }
-      
-      .p-datatable-tbody > tr:hover {
-        background: var(--surface-50);
+
+      .p-datatable-tbody > tr {
+        background: transparent;
       }
     }
     
