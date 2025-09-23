@@ -114,9 +114,22 @@ export class AppHubService {
     });
 
     // Handle job status updates
-    this.hubConnection.on('JobStatusUpdate', (jobs: JobInfo[]) => {
+    this.hubConnection.on('JobsStatusUpdate', (jobs: JobInfo[]) => {
       if (jobs) {
         this.jobsSubject.next(jobs);
+      }
+    });
+
+    this.hubConnection.on('JobStatusUpdate', (job: JobInfo) => {
+      if (job) {
+        const currentJobs = this.jobsSubject.value;
+        const jobIndex = currentJobs.findIndex(j => j.name === job.name);
+        if (jobIndex !== -1) {
+          currentJobs[jobIndex] = job;
+          this.jobsSubject.next([...currentJobs]);
+        } else {
+          this.jobsSubject.next([...currentJobs, job]);
+        }
       }
     });
   }

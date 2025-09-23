@@ -71,7 +71,7 @@ public class AppHub : Hub
         try
         {
             var jobs = await _jobManagementService.GetAllJobs();
-            await Clients.All.SendAsync("JobStatusUpdate", jobs);
+            await Clients.All.SendAsync("JobsStatusUpdate", jobs);
         }
         catch (Exception ex)
         {

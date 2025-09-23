@@ -56,6 +56,5 @@ public static class ServicesDI
             .AddScoped<IStriker, Striker>()
             .AddScoped<FileReader>()
             .AddSingleton<IJobManagementService, JobManagementService>()
-            .AddSingleton<BlocklistProvider>()
-            .AddHostedService<JobStatusBroadcaster>();
+            .AddSingleton<BlocklistProvider>();
 }
