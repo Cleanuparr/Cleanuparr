@@ -49,7 +49,6 @@
           <th>Status</th>
           <th>Schedule</th>
           <th>Next Run</th>
-          <th>Previous Run</th>
           <th class="text-center">Actions</th>
         </tr>
       </ng-template>
@@ -86,13 +85,6 @@
           <td>
             <span class="text-sm">
               {{ formatDateTime(job.nextRunTime) }}
-            </span>
-          </td>
-          
-          <!-- Previous Run -->
-          <td>
-            <span class="text-sm">
-              {{ formatDateTime(job.previousRunTime) }}
             </span>
           </td>
           
