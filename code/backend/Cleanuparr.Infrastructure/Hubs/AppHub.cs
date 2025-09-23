@@ -61,23 +61,6 @@ public class AppHub : Hub
     }
 
     /// <summary>
-    /// Client requests current job status
-    /// </summary>
-    public async Task GetJobStatus()
-    {
-        try
-        {
-            // This will be called when clients want current job status
-            // The actual job data will be sent via IJobManagementService
-            _logger.LogDebug("Client {connectionId} requested job status", Context.ConnectionId);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to handle job status request from client {connectionId}", Context.ConnectionId);
-        }
-    }
-
-    /// <summary>
     /// Client connection established
     /// </summary>
     public override async Task OnConnectedAsync()

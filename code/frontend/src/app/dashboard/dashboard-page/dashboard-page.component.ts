@@ -55,13 +55,13 @@ export class DashboardPageComponent implements OnInit, OnDestroy {
   displayLogs = computed(() => {
     return this.recentLogs()
       .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()) // Sort chronologically (oldest first)
-      .slice(-5); // Take the last 5 (most recent);
+      .slice(-5); // Take the last 10 (most recent);
   });
   
   displayEvents = computed(() => {
     return this.recentEvents()
       .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()) // Sort chronologically (oldest first)
-      .slice(-5); // Take the last 5 (most recent)
+      .slice(-5); // Take the last 10 (most recent)
   });
 
   // Computed value for showing support section

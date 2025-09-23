@@ -1,4 +1,5 @@
 using System.Threading.RateLimiting;
+using Cleanuparr.Infrastructure.Hubs;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -32,7 +33,7 @@ public class JobStatusBroadcaster : BackgroundService
     public JobStatusBroadcaster(
         ILogger<JobStatusBroadcaster> logger,
         IJobManagementService jobManagementService,
-        IHubContext<Hubs.AppHub> hubContext
+        IHubContext<AppHub> hubContext
     )
     {
         _logger = logger;
@@ -53,7 +54,6 @@ public class JobStatusBroadcaster : BackgroundService
         {
             try
             {
-                throw new Exception();
                 var jobs = await _jobManagementService.GetAllJobs();
                 await _hubContext.Clients.All.SendAsync("JobStatusUpdate", jobs, stoppingToken);
             }
