@@ -217,8 +217,8 @@
       flex: 1;
       overflow-y: auto;
       position: relative;
-      min-height: 200px;
-      max-height: 450px;
+      min-height: 400px;
+      max-height: 400px;
       display: block;
     }
   }
@@ -355,6 +355,12 @@
         word-break: break-word;
       }
     }
+  }
+}
+
+.events-card {
+  .timeline-item {
+    padding-bottom: 2rem;
   }
 }
 

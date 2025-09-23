@@ -15,55 +15,59 @@
   }
 }
 
+::ng-deep {
+  .p-datatable {
+    .p-datatable-thead {
+      background: transparent !important;
+    }
+
+    .p-datatable-tbody {
+      background: transparent !important;
+    }
+
+    .p-datatable-thead > tr > th {
+      background: transparent;
+      color: var(--text-color);
+      font-weight: 600;
+      padding: 0.75rem;
+    }
+    
+    .p-datatable-tbody > tr > td {
+      padding: 0.75rem;
+      background: transparent;
+    }
+
+    .p-datatable-tbody > tr {
+      background: transparent;
+    }
+  }
+  
+  .p-tag {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+  }
+  
+  .p-button-sm {
+    padding: 0.375rem;
+    font-size: 0.75rem;
+    
+    .pi {
+      font-size: 0.875rem;
+    }
+  }
+  
+  .p-messages {
+    margin-bottom: 1rem;
+    
+    .p-message {
+      margin: 0;
+    }
+  }
+}
+
 .jobs-content {
   .empty-state {
     padding: 2rem 1rem;
-  }
-  
-  ::ng-deep {
-    .p-datatable {
-      .p-datatable-thead {
-        background: transparent;
-      }
-
-      .p-datatable-thead > tr > th {
-        background: transparent;
-        color: var(--text-color);
-        font-weight: 600;
-        padding: 0.75rem;
-      }
-      
-      .p-datatable-tbody > tr > td {
-        padding: 0.75rem;
-        background: transparent;
-      }
-
-      .p-datatable-tbody > tr {
-        background: transparent;
-      }
-    }
-    
-    .p-tag {
-      font-size: 0.75rem;
-      padding: 0.25rem 0.5rem;
-    }
-    
-    .p-button-sm {
-      padding: 0.375rem;
-      font-size: 0.75rem;
-      
-      .pi {
-        font-size: 0.875rem;
-      }
-    }
-    
-    .p-messages {
-      margin-bottom: 1rem;
-      
-      .p-message {
-        margin: 0;
-      }
-    }
   }
 }
 
