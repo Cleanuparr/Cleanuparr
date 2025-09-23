@@ -77,10 +77,6 @@ export class JobsManagementComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (connected) => {
           this.connected.set(connected);
-          if (connected) {
-            // When we reconnect, load jobs once from API
-            this.loadJobsFromApi();
-          }
         }
       });
 
@@ -94,28 +90,6 @@ export class JobsManagementComponent implements OnInit, OnDestroy {
         },
         error: (error) => {
           console.error('Error receiving job updates:', error);
-          // Don't show error notifications - just let connection status handle it
-        }
-      });
-
-    // Initial load - try to get current job status
-    this.loadJobsFromApi();
-  }
-
-  private loadJobsFromApi(): void {
-    this.loading.set(true);
-    this.jobsService.getAllJobs()
-      .pipe(
-        takeUntil(this.destroy$),
-        finalize(() => this.loading.set(false))
-      )
-      .subscribe({
-        next: (jobs) => {
-          this.jobs.set(jobs);
-        },
-        error: (error) => {
-          console.error('Failed to load jobs:', error);
-          // Don't show error notifications - connection status will handle this
         }
       });
   }
@@ -190,9 +164,5 @@ export class JobsManagementComponent implements OnInit, OnDestroy {
   formatDateTime(date?: Date): string {
     if (!date) return 'Never';
     return new Date(date).toLocaleString();
-  }
-
-  onRefresh(): void {
-    this.loadJobsFromApi();
   }
 }
