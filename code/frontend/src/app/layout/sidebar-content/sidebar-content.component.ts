@@ -1,9 +1,10 @@
-import { Component, Input, inject, Output, EventEmitter, OnInit, OnDestroy } from '@angular/core';
+import { Component, Input, inject, Output, EventEmitter, OnInit, OnDestroy, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink, NavigationEnd } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
-import { filter } from 'rxjs/operators';
-import { Subscription } from 'rxjs';
+import { DrawerModule } from 'primeng/drawer';
+import { filter, debounceTime } from 'rxjs/operators';
+import { Subscription, fromEvent } from 'rxjs';
 import { trigger, state, style, transition, animate, query, stagger } from '@angular/animations';
 
 interface NavigationItem {
@@ -32,10 +33,14 @@ interface RouteMapping {
   imports: [
     CommonModule,
     RouterLink,
-    ButtonModule
+    ButtonModule,
+    DrawerModule
   ],
   templateUrl: './sidebar-content.component.html',
   styleUrl: './sidebar-content.component.scss',
+  host: {
+    '[class.mobile-variant]': 'isMobile'
+  },
   animations: [
     trigger('staggerItems', [
       transition(':enter', [
@@ -67,7 +72,12 @@ interface RouteMapping {
 })
 export class SidebarContentComponent implements OnInit, OnDestroy {
   @Input() isMobile = false;
+  @Input() enableMobileDrawer = false;
   @Output() navItemClicked = new EventEmitter<void>();
+  @Output() mobileDrawerVisibilityChange = new EventEmitter<boolean>();
+  
+  // Mobile drawer state
+  mobileSidebarVisible = signal<boolean>(false);
   
   // Inject router for active route styling
   public router = inject(Router);
@@ -90,6 +100,7 @@ export class SidebarContentComponent implements OnInit, OnDestroy {
 
   // Route synchronization properties
   private routerSubscription?: Subscription;
+  private resizeSubscription?: Subscription;
   private routeMappings: RouteMapping[] = [
     // Dashboard
     { route: '/dashboard', navigationPath: ['dashboard'] },
@@ -123,10 +134,31 @@ export class SidebarContentComponent implements OnInit, OnDestroy {
     setTimeout(() => {
       this.initializeNavigation();
     }, 100);
+
+    // Listen for window resize events to auto-hide mobile drawer
+    this.setupWindowResizeListener();
   }
 
   ngOnDestroy(): void {
     this.routerSubscription?.unsubscribe();
+    this.resizeSubscription?.unsubscribe();
+  }
+
+  /**
+   * Setup window resize listener to auto-hide mobile drawer on larger screens
+   */
+  private setupWindowResizeListener(): void {
+    // Define the mobile breakpoint (should match CSS media query)
+    const MOBILE_BREAKPOINT = 991;
+
+    this.resizeSubscription = fromEvent(window, 'resize')
+      .pipe(
+        debounceTime(150), // Debounce resize events for better performance
+        filter(() => window.innerWidth > MOBILE_BREAKPOINT && this.mobileSidebarVisible())
+      )
+      .subscribe(() => {
+        this.mobileSidebarVisible.set(false);
+      });
   }
 
   /**
@@ -481,5 +513,38 @@ export class SidebarContentComponent implements OnInit, OnDestroy {
     if (this.isMobile) {
       this.navItemClicked.emit();
     }
+    // Close mobile drawer when nav item is clicked
+    if (this.mobileSidebarVisible()) {
+      this.mobileSidebarVisible.set(false);
+    }
+  }
+
+  /**
+   * Show mobile drawer
+   */
+  showMobileDrawer(): void {
+    this.mobileSidebarVisible.set(true);
+  }
+
+  /**
+   * Hide mobile drawer  
+   */
+  hideMobileDrawer(): void {
+    this.mobileSidebarVisible.set(false);
+  }
+
+  /**
+   * Toggle mobile drawer visibility
+   */
+  toggleMobileDrawer(): void {
+    this.mobileSidebarVisible.update(visible => !visible);
+  }
+
+  /**
+   * Handle mobile drawer visibility change
+   */
+  onMobileDrawerVisibilityChange(visible: boolean): void {
+    this.mobileSidebarVisible.set(visible);
+    this.mobileDrawerVisibilityChange.emit(visible);
   }
 }

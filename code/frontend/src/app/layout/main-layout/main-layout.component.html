@@ -6,13 +6,11 @@
   <p-confirmDialog></p-confirmDialog>
   <!-- Main layout with sidebar and content -->
   <div class="layout-main">
-    <!-- Desktop Sidebar -->
     <div class="sidebar">
-      <div class="sidebar-top-line"></div>
-      
-      <!-- Shared Sidebar Content -->
       <app-sidebar-content 
-        [isMobile]="false">
+        #sidebarContent
+        [isMobile]="false"
+        [enableMobileDrawer]="true">
       </app-sidebar-content>
     </div>
     
@@ -24,7 +22,7 @@
         <div class="topbar-section left">
           <button pButton class="p-button-text sidebar-toggle-mobile" 
                   icon="pi pi-bars" 
-                  (click)="mobileSidebarVisible.set(true)"></button>
+                  (click)="sidebarContent.toggleMobileDrawer()"></button>
         </div>
         <!-- <div class="topbar-section center">
           <div class="version-bar">
@@ -63,25 +61,4 @@
       </div>
     </div>
   </div>
-  
-  <!-- Mobile Sidebar using PrimeNG sidebar component -->
-  <p-drawer 
-    styleClass="mobile-sidebar" 
-    [visible]="mobileSidebarVisible()" 
-    (visibleChange)="mobileSidebarVisible.set($event)" 
-    [dismissible]="true" 
-    [showCloseIcon]="false"
-    position="left">
-    <ng-template #headless>
-      <div class="mobile-sidebar-content">
-        <div class="sidebar-top-line"></div>
-        
-        <!-- Shared Sidebar Content for Mobile -->
-        <app-sidebar-content 
-          [isMobile]="true"
-          (navItemClicked)="mobileSidebarVisible.set(false)">
-        </app-sidebar-content>
-      </div>
-    </ng-template>
-  </p-drawer>
 </div>
