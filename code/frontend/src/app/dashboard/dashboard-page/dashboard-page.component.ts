@@ -19,6 +19,7 @@ import { GeneralConfig } from '../../shared/models/general-config.model';
 
 // Components
 import { SupportSectionComponent } from '../../shared/components/support-section/support-section.component';
+import { JobsManagementComponent } from '../../shared/components/jobs-management/jobs-management.component';
 
 @Component({
   selector: 'app-dashboard-page',
@@ -33,7 +34,8 @@ import { SupportSectionComponent } from '../../shared/components/support-section
     TagModule,
     TooltipModule,
     ProgressSpinnerModule,
-    SupportSectionComponent
+    SupportSectionComponent,
+    JobsManagementComponent
   ],
   templateUrl: './dashboard-page.component.html',
   styleUrl: './dashboard-page.component.scss'
@@ -53,13 +55,13 @@ export class DashboardPageComponent implements OnInit, OnDestroy {
   displayLogs = computed(() => {
     return this.recentLogs()
       .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()) // Sort chronologically (oldest first)
-      .slice(-5); // Take the last 5 (most recent);
+      .slice(-5); // Take the last 10 (most recent);
   });
   
   displayEvents = computed(() => {
     return this.recentEvents()
       .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()) // Sort chronologically (oldest first)
-      .slice(-5); // Take the last 5 (most recent)
+      .slice(-5); // Take the last 10 (most recent)
   });
 
   // Computed value for showing support section

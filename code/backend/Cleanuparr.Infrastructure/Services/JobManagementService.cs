@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using Cleanuparr.Infrastructure.Models;
 using Cleanuparr.Infrastructure.Services.Interfaces;
 using Cleanuparr.Infrastructure.Utilities;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using Quartz;
 using Quartz.Impl.Matchers;
@@ -13,12 +14,14 @@ public class JobManagementService : IJobManagementService
 {
     private readonly ILogger<JobManagementService> _logger;
     private readonly ISchedulerFactory _schedulerFactory;
+    private readonly IHubContext<Hubs.AppHub> _hubContext;
     private readonly ConcurrentDictionary<string, JobKey> _jobKeys = new();
 
-    public JobManagementService(ILogger<JobManagementService> logger, ISchedulerFactory schedulerFactory)
+    public JobManagementService(ILogger<JobManagementService> logger, ISchedulerFactory schedulerFactory, IHubContext<Hubs.AppHub> hubContext)
     {
         _logger = logger;
         _schedulerFactory = schedulerFactory;
+        _hubContext = hubContext;
     }
 
     public async Task<bool> StartJob(JobType jobType, JobSchedule? schedule = null, string? directCronExpression = null)
@@ -192,8 +195,7 @@ public class JobManagementService : IJobManagementService
         }
     }
 
-
-
+    
     public async Task<bool> StopJob(JobType jobType)
     {
         string jobName = jobType.ToString();
@@ -221,56 +223,6 @@ public class JobManagementService : IJobManagementService
         }
     }
 
-    public async Task<bool> PauseJob(JobType jobType)
-    {
-        string jobName = jobType.ToString();
-        try
-        {
-            var scheduler = await _schedulerFactory.GetScheduler();
-            var jobKey = new JobKey(jobName);
-            
-            if (!await scheduler.CheckExists(jobKey))
-            {
-                _logger.LogError("Job {name} does not exist", jobName);
-                return false;
-            }
-
-            await scheduler.PauseJob(jobKey);
-            _logger.LogInformation("Job {name} paused successfully", jobName);
-            return true;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error pausing job {jobName}", jobName);
-            return false;
-        }
-    }
-
-    public async Task<bool> ResumeJob(JobType jobType)
-    {
-        string jobName = jobType.ToString();
-        try
-        {
-            var scheduler = await _schedulerFactory.GetScheduler();
-            var jobKey = new JobKey(jobName);
-            
-            if (!await scheduler.CheckExists(jobKey))
-            {
-                _logger.LogError("Job {name} does not exist", jobName);
-                return false;
-            }
-
-            await scheduler.ResumeJob(jobKey);
-            _logger.LogInformation("Job {name} resumed successfully", jobName);
-            return true;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error resuming job {name}", jobName);
-            return false;
-        }
-    }
-
     public async Task<IReadOnlyList<JobInfo>> GetAllJobs(IScheduler? scheduler = null)
     {
         try
@@ -289,7 +241,7 @@ public class JobManagementService : IJobManagementService
                     var jobInfo = new JobInfo
                     {
                         Name = jobKey.Name,
-                        JobType = jobDetail.JobType.Name,
+                        JobType = jobKey.Name, // Use the job key name instead of generic type
                         Status = "Not Scheduled"
                     };
                     
@@ -300,12 +252,12 @@ public class JobManagementService : IJobManagementService
                         
                         jobInfo.Status = triggerState switch
                         {
-                            TriggerState.Normal => "Running",
+                            TriggerState.Normal => "Scheduled",
                             TriggerState.Paused => "Paused",
                             TriggerState.Complete => "Complete",
                             TriggerState.Error => "Error",
-                            TriggerState.Blocked => "Blocked",
-                            TriggerState.None => "None",
+                            TriggerState.Blocked => "Running",
+                            TriggerState.None => "Not Scheduled",
                             _ => "Unknown"
                         };
                         
@@ -351,7 +303,7 @@ public class JobManagementService : IJobManagementService
             var jobInfo = new JobInfo
             {
                 Name = jobName,
-                JobType = jobDetail.JobType.Name,
+                JobType = jobName, // Use the job key name instead of generic type
                 Status = "Not Scheduled"
             };
             
@@ -362,12 +314,12 @@ public class JobManagementService : IJobManagementService
                 
                 jobInfo.Status = state switch
                 {
-                    TriggerState.Normal => "Running",
+                    TriggerState.Normal => "Scheduled", // Normal means trigger is scheduled and ready to fire
                     TriggerState.Paused => "Paused",
                     TriggerState.Complete => "Complete",
                     TriggerState.Error => "Error",
-                    TriggerState.Blocked => "Blocked",
-                    TriggerState.None => "None",
+                    TriggerState.Blocked => "Running", // Blocked typically means job is currently executing
+                    TriggerState.None => "Not Scheduled",
                     _ => "Unknown"
                 };
                 
@@ -405,6 +357,7 @@ public class JobManagementService : IJobManagementService
 
             await TriggerJobImmediately(scheduler, jobKey, "manual");
             _logger.LogInformation("Job {name} triggered for one-time execution", jobName);
+            
             return true;
         }
         catch (Exception ex)

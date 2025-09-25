@@ -231,16 +231,7 @@ public class BackgroundJobManager : IHostedService
         // Schedule the main trigger
         await _scheduler.ScheduleJob(trigger, cancellationToken);
         
-        // Trigger immediate execution for startup using a one-time trigger
-        var startupTrigger = TriggerBuilder.Create()
-            .WithIdentity($"{typeName}-startup-{DateTimeOffset.UtcNow.Ticks}")
-            .ForJob(jobKey)
-            .StartNow()
-            .Build();
-        
-        await _scheduler.ScheduleJob(startupTrigger, cancellationToken);
-        
-        _logger.LogInformation("Added trigger for job {name} with cron expression {CronExpression} and immediate startup execution", 
+        _logger.LogInformation("Added trigger for job {name} with cron expression {CronExpression}", 
             typeName, cronExpression);
     }
     

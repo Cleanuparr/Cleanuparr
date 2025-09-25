@@ -76,63 +76,23 @@ public class JobsController : ControllerBase
         }
     }
 
-    [HttpPost("{jobType}/stop")]
-    public async Task<IActionResult> StopJob(JobType jobType)
+    [HttpPost("{jobType}/trigger")]
+    public async Task<IActionResult> TriggerJob(JobType jobType)
     {
         try
         {
-            var result = await _jobManagementService.StopJob(jobType);
+            var result = await _jobManagementService.TriggerJobOnce(jobType);
             
             if (!result)
             {
-                return BadRequest($"Failed to stop job '{jobType}'");
+                return BadRequest($"Failed to trigger job '{jobType}' - job may not exist or be configured");
             }
-            return Ok(new { Message = $"Job '{jobType}' stopped successfully" });
+            return Ok(new { Message = $"Job '{jobType}' triggered successfully for one-time execution" });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error stopping job {jobType}", jobType);
-            return StatusCode(500, $"An error occurred while stopping job '{jobType}'");
-        }
-    }
-
-    [HttpPost("{jobType}/pause")]
-    public async Task<IActionResult> PauseJob(JobType jobType)
-    {
-        try
-        {
-            var result = await _jobManagementService.PauseJob(jobType);
-            
-            if (!result)
-            {
-                return BadRequest($"Failed to pause job '{jobType}'");
-            }
-            return Ok(new { Message = $"Job '{jobType}' paused successfully" });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error pausing job {jobType}", jobType);
-            return StatusCode(500, $"An error occurred while pausing job '{jobType}'");
-        }
-    }
-
-    [HttpPost("{jobType}/resume")]
-    public async Task<IActionResult> ResumeJob(JobType jobType)
-    {
-        try
-        {
-            var result = await _jobManagementService.ResumeJob(jobType);
-            
-            if (!result)
-            {
-                return BadRequest($"Failed to resume job '{jobType}'");
-            }
-            return Ok(new { Message = $"Job '{jobType}' resumed successfully" });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error resuming job {jobType}", jobType);
-            return StatusCode(500, $"An error occurred while resuming job '{jobType}'");
+            _logger.LogError(ex, "Error triggering job {jobType}", jobType);
+            return StatusCode(500, $"An error occurred while triggering job '{jobType}'");
         }
     }
 

@@ -1,0 +1,111 @@
+<p-card styleClass="jobs-management-card">
+  <ng-template pTemplate="header">
+    <div class="flex align-items-center justify-content-between p-3 border-bottom-1 surface-border">
+      <div class="header-title-container">
+        <h2 class="card-title m-0">Jobs Overview</h2>
+        <p-tag
+          [severity]="connected() ? 'success' : 'danger'"
+          [value]="connected() ? 'Connected' : 'Disconnected'"
+          [pTooltip]="connected() ? 'Connected to app hub' : 'Attempting to reconnect...'"
+          tooltipPosition="right"
+          styleClass="status-tag"
+        ></p-tag>
+      </div>
+    </div>
+  </ng-template>
+
+  <div class="jobs-content">
+    <!-- Loading State -->
+    <div *ngIf="loading() && jobs().length === 0" class="text-center py-4">
+      <p-progressSpinner styleClass="w-3rem h-3rem"></p-progressSpinner>
+      <p class="text-color-secondary mt-2">Loading jobs...</p>
+    </div>
+
+    <!-- Jobs Table -->
+    <p-table 
+      *ngIf="!loading() || jobs().length > 0"
+      [value]="jobs()" 
+      [loading]="loading()"
+      styleClass="p-datatable-sm"
+      [scrollable]="true"
+      responsiveLayout="scroll">
+      
+      <ng-template pTemplate="header">
+        <tr>
+          <th>Job Name</th>
+          <th>Status</th>
+          <th>Schedule</th>
+          <th>Next Run</th>
+          <th class="text-center">Actions</th>
+        </tr>
+      </ng-template>
+      
+      <ng-template pTemplate="body" let-job>
+        <tr>
+          <!-- Job Name -->
+          <td>
+            <div class="flex align-items-center">
+              <i class="pi pi-calendar-clock mr-2 text-primary"></i>
+              <span class="font-semibold">{{ getJobDisplayName(job.name) }}</span>
+            </div>
+          </td>
+          
+          <!-- Status -->
+          <td>
+            <p-tag 
+              [value]="job.status" 
+              [severity]="getStatusSeverity(job.status)">
+            </p-tag>
+          </td>
+          
+          <!-- Schedule -->
+          <td>
+            <span 
+              class="text-sm text-color-secondary" 
+              [pTooltip]="job.schedule || 'No schedule configured'"
+              tooltipPosition="top">
+              {{ job.schedule || 'Not scheduled' }}
+            </span>
+          </td>
+          
+          <!-- Next Run -->
+          <td>
+            <span class="text-sm">
+              {{ formatDateTime(job.nextRunTime) }}
+            </span>
+          </td>
+          
+          <!-- Actions -->
+          <td class="text-center">
+            <div class="flex align-items-center justify-content-center gap-1">
+              <button
+                *ngFor="let action of jobActions"
+                pButton
+                [icon]="action.icon"
+                [pTooltip]="action.label"
+                tooltipPosition="top"
+                [disabled]="action.disabled ? action.disabled(job) : false"
+                [class]="'p-button-sm p-button-outlined p-button-' + (action.severity || 'secondary')"
+                (click)="action.action(getJobTypeEnum(job.jobType))"
+              ></button>
+            </div>
+          </td>
+        </tr>
+      </ng-template>
+      
+      <ng-template pTemplate="emptymessage">
+        <tr>
+          <td colspan="6" class="text-center py-4">
+            <div class="empty-state">
+              <i class="pi pi-calendar-clock text-4xl text-color-secondary mb-3"></i>
+              <p class="text-color-secondary mb-0">No jobs configured</p>
+            </div>
+          </td>
+        </tr>
+      </ng-template>
+    </p-table>
+  </div>
+</p-card>
+
+<!-- Confirmation Dialog -->
+<p-confirmDialog></p-confirmDialog>

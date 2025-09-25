@@ -19,6 +19,7 @@
       <PackageReference Include="Mono.Unix" Version="7.1.0-final.1.21458.1" />
       <PackageReference Include="Quartz" Version="3.14.0" />
       <PackageReference Include="Serilog.Expressions" Version="5.0.0" />
+      <PackageReference Include="System.Threading.RateLimiting" Version="9.0.9" />
     </ItemGroup>
 
     <ItemGroup>
