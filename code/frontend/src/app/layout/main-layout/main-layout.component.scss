@@ -45,9 +45,9 @@
   // Top bar styling
   .top-bar {
     height: 60px;
-    display: flex;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
     align-items: center;
-    justify-content: space-between;
     padding: 0 20px;
     background-color: var(--surface-card);
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
@@ -68,7 +68,7 @@
       align-items: center;
       
       &.left {
-        flex: 1;
+        justify-self: start;
         
         .sidebar-toggle-mobile {
           margin-right: 15px;
@@ -93,15 +93,15 @@
       }
       
       &.center {
-        flex: 1;
         justify-content: center;
+        justify-self: center;
         
         .version-bar {
           display: flex;
           align-items: center;
           background-color: var(--surface-section);
           border-radius: 15px;
-          padding: 5px 15px;
+          padding: 2px 5px;
           border: 1px solid var(--surface-border);
           
           .version-item {
@@ -141,8 +141,14 @@
       }
       
       &.right {
-        flex: 1;
         justify-content: flex-end;
+        justify-self: end;
+
+        .topbar-spacer {
+          width: 36px;
+          height: 36px;
+          flex-shrink: 0;
+        }
       }
     }
   }
@@ -158,7 +164,6 @@
       .p-card,
       .p-panel,
       .p-fieldset {
-        background-color: var(--surface-card);
         border: 1px solid var(--surface-border);
         border-radius: var(--border-radius);
         transition: transform 0.2s, box-shadow 0.2s;
@@ -225,7 +230,8 @@
     .top-bar {
       height: 35px;
       background: linear-gradient(135deg, rgba(30, 18, 48, 0.95) 0%, rgba(22, 13, 35, 0.95) 50%, rgba(26, 16, 42, 0.95) 100%);
-      display: flex;
+      display: grid;
+      grid-template-columns: auto 1fr auto;
       align-items: center;
       padding: 0 20px;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
@@ -266,8 +272,8 @@
         align-items: center;
 
         &.left {
-          flex: 1;
           justify-content: flex-start;
+          justify-self: start;
 
           .sidebar-toggle-mobile {
             display: none;
@@ -289,7 +295,6 @@
         }
 
         &.center {
-          flex: 1;
           justify-content: center;
           align-items: center;
           display: flex;
@@ -297,11 +302,18 @@
           left: unset;
           transform: unset;
           width: auto;
+          justify-self: center;
         }
 
         &.right {
-          flex: 1;
           justify-content: flex-end;
+          justify-self: end;
+
+          .topbar-spacer {
+            width: 36px;
+            height: 36px;
+            flex-shrink: 0;
+          }
         }
       }
 
@@ -431,7 +443,7 @@
       // Responsive styling for topbar
       @media (max-width: 768px) {
         height: 50px;
-        display: flex;
+        grid-template-columns: auto 1fr;
         align-items: center;
         padding: 0 10px;
 
@@ -439,54 +451,24 @@
           width: 100%;
         }
 
-        .topbar-section.left,
-        .topbar-section.center {
-          display: inline-flex;
+        .topbar-section {
           align-items: center;
-        }
 
-        .topbar-section.left {
-          margin-right: 10px;
-        }
+          &.left {
+            margin-right: 10px;
+          }
 
-        .topbar-section.center {
-          flex-grow: 1;
-          justify-content: flex-start;
-        }
+          &.center {
+            justify-content: center;
+          }
 
-        .topbar-section.right {
-          display: none; // Hide user info on mobile to save space
+          &.right {
+            display: none;
+          }
         }
 
         .version-bar {
-          display: flex !important;
-          gap: 8px !important;
-          flex-wrap: nowrap;
-        }
-
-        .version-item {
-          display: none !important;
-        }
-
-        .version-item:nth-child(1),
-        .version-item:nth-child(3) {
-          display: flex !important;
-          font-size: 13px !important;
-          background: rgba(30, 18, 48, 0.6);
-          border-radius: 4px;
-          padding: 2px 5px;
-          margin: 0;
-          border: 1px solid rgba(142, 68, 173, 0.2);
-        }
-
-        .version-divider {
-          display: none !important;
-        }
-
-        .version-divider:nth-child(2) {
-          display: block !important;
-          height: 12px;
-          margin: 0 5px;
+          margin: 0 auto;
         }
       }
     }
@@ -546,8 +528,6 @@
   }
 }
 
-// Mobile sidebar styling moved to sidebar-content component
-
 /* Media queries for responsiveness */
 @media screen and (max-width: 768px) {
   .layout-main {
@@ -563,12 +543,23 @@
     
     .top-bar {
       .topbar-section {
-        &.center {
-          display: none; // Hide version bar on mobile to save space
+        &.left {
+          flex: 0;
         }
+
+        &.center {
+          flex: 1;
+          justify-content: center;
+        }
+
+        &.right {
+          display: none;
+        }
+      }
+
+      .version-bar {
+        margin: 0 auto;
       }
     }
   }
-  
-  // Drawer/Sidebar mobile styling is centralized in sidebar-content component
 }

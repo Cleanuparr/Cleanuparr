@@ -1,4 +1,7 @@
 ﻿using System.Reflection;
+using Cleanuparr.Infrastructure.Health;
+using Cleanuparr.Infrastructure.Logging;
+using Cleanuparr.Infrastructure.Services;
 using Cleanuparr.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -6,21 +9,43 @@ namespace Cleanuparr.Api;
 
 public static class HostExtensions
 {
-    public static async Task<IHost> InitAsync(this WebApplication app)
+    public static Task<IHost> InitAsync(this WebApplication app)
     {
         ILogger<Program> logger = app.Services.GetRequiredService<ILogger<Program>>();
+        AppStatusSnapshot statusSnapshot = app.Services.GetRequiredService<AppStatusSnapshot>();
 
         Version? version = Assembly.GetExecutingAssembly().GetName().Version;
+        string? formattedVersion = FormatVersion(version);
+
+        if (statusSnapshot.UpdateCurrentVersion(formattedVersion, out _))
+        {
+            logger.LogDebug("App status current version set to {Version}", formattedVersion);
+        }
 
         logger.LogInformation(
             version is null
                 ? "Cleanuparr version not detected"
-                : $"Cleanuparr v{version.Major}.{version.Minor}.{version.Build}"
+                : $"Cleanuparr {formattedVersion}"
         );
         
         logger.LogInformation("timezone: {tz}", TimeZoneInfo.Local.DisplayName);
         
-        return app;
+        return Task.FromResult<IHost>(app);
+    }
+
+    private static string? FormatVersion(Version? version)
+    {
+        if (version is null)
+        {
+            return null;
+        }
+
+        if (version.Build >= 0)
+        {
+            return $"v{version.Major}.{version.Minor}.{version.Build}";
+        }
+
+        return $"v{version.Major}.{version.Minor}";
     }
 
     public static async Task<WebApplicationBuilder> InitAsync(this WebApplicationBuilder builder)

@@ -3,6 +3,7 @@ import { BehaviorSubject, Observable } from 'rxjs';
 import * as signalR from '@microsoft/signalr';
 import { LogEntry } from '../models/signalr.models';
 import { AppEvent } from '../models/event.models';
+import { AppStatus } from '../models/app-status.model';
 import { ApplicationPathService } from './base-path.service';
 
 /**
@@ -16,6 +17,7 @@ export class AppHubService {
   private connectionStatusSubject = new BehaviorSubject<boolean>(false);
   private logsSubject = new BehaviorSubject<LogEntry[]>([]);
   private eventsSubject = new BehaviorSubject<AppEvent[]>([]);
+  private appStatusSubject = new BehaviorSubject<AppStatus | null>(null);
   private readonly ApplicationPathService = inject(ApplicationPathService);
   
   private logBuffer: LogEntry[] = [];
@@ -69,10 +71,12 @@ export class AppHubService {
 
     this.hubConnection.onreconnecting(() => {
       this.connectionStatusSubject.next(false);
+      this.appStatusSubject.next(null);
     });
 
     this.hubConnection.onclose(() => {
       this.connectionStatusSubject.next(false);
+      this.appStatusSubject.next(null);
     });
 
     // Handle individual log messages
@@ -109,6 +113,20 @@ export class AppHubService {
         this.eventBuffer = [...events];
         this.trimBuffer(this.eventBuffer, this.bufferSize);
       }
+    });
+
+    this.hubConnection.on('AppStatusUpdated', (status: AppStatus | null) => {
+      if (!status) {
+        this.appStatusSubject.next(null);
+        return;
+      }
+
+      const normalized: AppStatus = {
+        currentVersion: status.currentVersion ?? null,
+        latestVersion: status.latestVersion ?? null
+      };
+
+      this.appStatusSubject.next(normalized);
     });
   }
   
@@ -228,6 +246,10 @@ export class AppHubService {
    */
   public getEventsConnectionStatus(): Observable<boolean> {
     return this.connectionStatusSubject.asObservable();
+  }
+
+  public getAppStatus(): Observable<AppStatus | null> {
+    return this.appStatusSubject.asObservable();
   }
   
   /**

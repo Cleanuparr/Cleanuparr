@@ -1,7 +1,6 @@
-import { Component, HostListener, inject, signal } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { Router, RouterOutlet } from '@angular/router';
 import { CommonModule } from '@angular/common';
-import { Title } from '@angular/platform-browser';
 
 // PrimeNG Imports
 import { ButtonModule } from 'primeng/button';
@@ -17,6 +16,7 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
 // Custom Components
 import { SidebarContentComponent } from '../sidebar-content/sidebar-content.component';
 import { ToastContainerComponent } from '../../shared/components/toast-container/toast-container.component';
+import { AppHubService } from '../../core/services/app-hub.service';
 
 @Component({
   selector: 'app-main-layout',
@@ -38,11 +38,15 @@ import { ToastContainerComponent } from '../../shared/components/toast-container
   templateUrl: './main-layout.component.html',
   styleUrl: './main-layout.component.scss'
 })
-export class MainLayoutComponent {
+export class MainLayoutComponent implements OnInit {
   // Inject router
   public router = inject(Router);
+  private readonly appHubService = inject(AppHubService);
+  public readonly appStatus$ = this.appHubService.getAppStatus();
   
-  constructor() {}
+  ngOnInit(): void {
+    this.appHubService.startConnection().catch((error: Error) => console.error('Failed to connect to app hub:', error));
+  }
   
   /**
    * Toggle mobile sidebar visibility via sidebar component
