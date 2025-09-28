@@ -83,18 +83,7 @@ public class ConfigurationController : ControllerBase
             var config = await _dataContext.QueueCleanerConfigs
                 .AsNoTracking()
                 .FirstAsync();
-            
-            // Return only the main configuration, rules are managed separately
-            var response = new
-            {
-                config.Id,
-                config.Enabled,
-                config.CronExpression,
-                config.UseAdvancedScheduling,
-                config.FailedImport
-            };
-            
-            return Ok(response);
+            return Ok(config);
         }
         finally
         {
@@ -549,6 +538,8 @@ public class ConfigurationController : ControllerBase
         public string CronExpression { get; set; } = "0 0/5 * * * ?";
         public bool UseAdvancedScheduling { get; set; } = false;
         public FailedImportConfig FailedImport { get; set; } = new();
+        
+        public ushort DownloadingMetadataMaxStrikes { get; set; }
     }
 
     [HttpPost("notification_providers/apprise")]
@@ -1278,6 +1269,7 @@ public class ConfigurationController : ControllerBase
             oldConfig.CronExpression = newConfigDto.CronExpression;
             oldConfig.UseAdvancedScheduling = newConfigDto.UseAdvancedScheduling;
             oldConfig.FailedImport = newConfigDto.FailedImport;
+            oldConfig.DownloadingMetadataMaxStrikes = newConfigDto.DownloadingMetadataMaxStrikes;
 
             // Persist the configuration
             await _dataContext.SaveChangesAsync();

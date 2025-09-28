@@ -27,7 +27,7 @@ public sealed record QueueCleanerConfig : IJobConfig
     
     public List<string> IgnoredDownloads { get; set; } = [];
     
-    public ushort DownloadingMetadataMaxStrikes { get; init; }
+    public ushort DownloadingMetadataMaxStrikes { get; set; }
     
     public List<StallRule> StallRules { get; set; } = [];
     
