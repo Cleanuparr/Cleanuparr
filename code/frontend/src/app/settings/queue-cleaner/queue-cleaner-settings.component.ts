@@ -7,7 +7,6 @@ import { CanComponentDeactivate } from "../../core/guards";
 import {
   QueueCleanerConfig,
   ScheduleUnit,
-  FailedImportConfig,
   ScheduleOptions
 } from "../../shared/models/queue-cleaner-config.model";
 import { ByteSizeInputComponent } from "../../shared/components/byte-size-input/byte-size-input.component";
@@ -34,7 +33,6 @@ import { TooltipModule } from "primeng/tooltip";
 import { DialogModule } from "primeng/dialog";
 import { ConfirmDialogModule } from "primeng/confirmdialog";
 import { LoadingErrorStateComponent } from "../../shared/components/loading-error-state/loading-error-state.component";
-import { ErrorHandlerUtil } from "../../core/utils/error-handler.util";
 import { StallRule, SlowRule, TorrentPrivacyType } from "../../shared/models/queue-rule.model";
 
 // Frontend Coverage Analysis Types
@@ -491,7 +489,6 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
       this.queueCleanerStore.createStallRule(ruleData);
     }
 
-    this.monitorStallRuleSaving();
   }
 
   /**
@@ -518,61 +515,6 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
       this.queueCleanerStore.createSlowRule(ruleData);
     }
 
-    this.monitorSlowRuleSaving();
-  }
-
-  /**
-   * Monitor stall rule saving completion
-   */
-  private monitorStallRuleSaving(): void {
-    const checkSavingStatus = () => {
-      const saving = this.rulesSaving();
-      const error = this.rulesError();
-      
-      if (!saving) {
-        this.stallRuleSaving = false;
-        this.stallRuleSaveInitiated = false;
-        
-        if (error) {
-          this.notificationService.showError(`Operation failed: ${error}`);
-        } else {
-          const action = this.editingStallRule ? 'updated' : 'created';
-          this.notificationService.showSuccess(`Stall rule ${action} successfully`);
-          this.closeStallRuleModal();
-        }
-      } else {
-        setTimeout(checkSavingStatus, 100);
-      }
-    };
-    
-    setTimeout(checkSavingStatus, 100);
-  }
-
-  /**
-   * Monitor slow rule saving completion
-   */
-  private monitorSlowRuleSaving(): void {
-    const checkSavingStatus = () => {
-      const saving = this.rulesSaving();
-      const error = this.rulesError();
-      
-      if (!saving) {
-        this.slowRuleSaving = false;
-        this.slowRuleSaveInitiated = false;
-        
-        if (error) {
-          this.notificationService.showError(`Operation failed: ${error}`);
-        } else {
-          const action = this.editingSlowRule ? 'updated' : 'created';
-          this.notificationService.showSuccess(`Slow rule ${action} successfully`);
-          this.closeSlowRuleModal();
-        }
-      } else {
-        setTimeout(checkSavingStatus, 100);
-      }
-    };
-    
-    setTimeout(checkSavingStatus, 100);
   }
 
   /**
@@ -763,10 +705,12 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
       const error = this.queueCleanerStore.rulesError();
       
       if (this.stallRuleSaveInitiated && !saving) {
+        const actionVerb = this.editingStallRule ? 'update' : 'create';
+
         if (error) {
-          this.notificationService.showError('Failed to create stall rule: ' + error);
+          this.notificationService.showError(`Failed to ${actionVerb} stall rule: ${error}`);
         } else {
-          this.notificationService.showSuccess('Stall rule created successfully');
+          this.notificationService.showSuccess(`Stall rule ${actionVerb}d successfully`);
           this.closeStallRuleModal();
         }
         this.stallRuleSaving = false;
@@ -781,10 +725,12 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
       const error = this.queueCleanerStore.rulesError();
       
       if (this.slowRuleSaveInitiated && !saving) {
+        const actionVerb = this.editingSlowRule ? 'update' : 'create';
+
         if (error) {
-          this.notificationService.showError('Failed to create slow rule: ' + error);
+          this.notificationService.showError(`Failed to ${actionVerb} slow rule: ${error}`);
         } else {
-          this.notificationService.showSuccess('Slow rule created successfully');
+          this.notificationService.showSuccess(`Slow rule ${actionVerb}d successfully`);
           this.closeSlowRuleModal();
         }
         this.slowRuleSaving = false;
