@@ -1,6 +1,5 @@
 using System.Reflection;
 using Cleanuparr.Persistence;
-using Infrastructure.Interceptors;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 

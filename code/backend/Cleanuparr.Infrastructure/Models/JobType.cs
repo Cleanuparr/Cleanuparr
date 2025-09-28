@@ -7,5 +7,6 @@ public enum JobType
 {
     QueueCleaner,
     MalwareBlocker,
-    DownloadCleaner
+    DownloadCleaner,
+    BlacklistSynchronizer,
 }

@@ -18,9 +18,11 @@ import { SelectModule } from 'primeng/select';
 import { ToastModule } from "primeng/toast";
 import { DialogModule } from "primeng/dialog";
 import { ConfirmDialogModule } from "primeng/confirmdialog";
+import { TagModule } from "primeng/tag";
 import { ConfirmationService } from "primeng/api";
 import { NotificationService } from "../../core/services/notification.service";
 import { LoadingErrorStateComponent } from "../../shared/components/loading-error-state/loading-error-state.component";
+import { UrlValidators } from "../../core/validators/url.validator";
 
 @Component({
   selector: "app-download-client-settings",
@@ -37,6 +39,7 @@ import { LoadingErrorStateComponent } from "../../shared/components/loading-erro
     ToastModule,
     DialogModule,
     ConfirmDialogModule,
+    TagModule,
     LoadingErrorStateComponent
   ],
   providers: [DownloadClientConfigStore, ConfirmationService],
@@ -86,7 +89,7 @@ export class DownloadClientSettingsComponent implements OnDestroy, CanComponentD
     this.clientForm = this.formBuilder.group({
       name: ['', Validators.required],
       typeName: [null, Validators.required],
-      host: ['', [Validators.required, this.uriValidator.bind(this)]],
+      host: ['', [Validators.required, UrlValidators.httpUrl]],
       username: [''],
       password: [''],
       urlBase: [''],
@@ -118,28 +121,6 @@ export class DownloadClientSettingsComponent implements OnDestroy, CanComponentD
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
-  }
-
-  /**
-   * Custom validator to check if the input is a valid URI
-   */
-  private uriValidator(control: AbstractControl): ValidationErrors | null {
-    if (!control.value) {
-      return null; // Let required validator handle empty values
-    }
-    
-    try {
-      const url = new URL(control.value);
-      
-      // Check that we have a valid protocol (http or https)
-      if (url.protocol !== 'http:' && url.protocol !== 'https:') {
-        return { invalidProtocol: true };
-      }
-      
-      return null; // Valid URI
-    } catch (e) {
-      return { invalidUri: true }; // Invalid URI
-    }
   }
 
   /**
@@ -349,8 +330,8 @@ export class DownloadClientSettingsComponent implements OnDestroy, CanComponentD
     if (!hostControl || !usernameControl || !urlBaseControl) return;
     
     hostControl.setValidators([
-      Validators.required, 
-      this.uriValidator.bind(this)
+      Validators.required,
+      UrlValidators.httpUrl
     ]);
     
     // Clear username value and remove validation for Deluge

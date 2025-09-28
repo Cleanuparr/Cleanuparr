@@ -1,97 +1,62 @@
-﻿using System.Text;
+using Cleanuparr.Domain.Enums;
+using Cleanuparr.Infrastructure.Features.Notifications.Apprise;
 using Cleanuparr.Infrastructure.Features.Notifications.Models;
-using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.Notification;
-using Infrastructure.Verticals.Notifications;
+using System.Text;
 
 namespace Cleanuparr.Infrastructure.Features.Notifications.Apprise;
 
-public sealed class AppriseProvider : NotificationProvider<AppriseConfig>
+public sealed class AppriseProvider : NotificationProviderBase<AppriseConfig>
 {
     private readonly IAppriseProxy _proxy;
-    
-    public override string Name => "Apprise";
-    
-    public AppriseProvider(DataContext dataContext, IAppriseProxy proxy)
-        : base(dataContext.AppriseConfigs)
+
+    public AppriseProvider(
+        string name,
+        NotificationProviderType type,
+        AppriseConfig config,
+        IAppriseProxy proxy
+    ) : base(name, type, config)
     {
         _proxy = proxy;
     }
 
-    public override async Task OnFailedImportStrike(FailedImportStrikeNotification notification)
+    public override async Task SendNotificationAsync(NotificationContext context)
     {
-        await _proxy.SendNotification(BuildPayload(notification, NotificationType.Warning), Config);
-    }
-    
-    public override async Task OnStalledStrike(StalledStrikeNotification notification)
-    {
-        await _proxy.SendNotification(BuildPayload(notification, NotificationType.Warning), Config);
-    }
-    
-    public override async Task OnSlowStrike(SlowStrikeNotification notification)
-    {
-        await _proxy.SendNotification(BuildPayload(notification, NotificationType.Warning), Config);
-    }
-    
-    public override async Task OnQueueItemDeleted(QueueItemDeletedNotification notification)
-    {
-        await _proxy.SendNotification(BuildPayload(notification, NotificationType.Warning), Config);
+        ApprisePayload payload = BuildPayload(context);
+        await _proxy.SendNotification(payload, Config);
     }
 
-    public override async Task OnDownloadCleaned(DownloadCleanedNotification notification)
+    private ApprisePayload BuildPayload(NotificationContext context)
     {
-        await _proxy.SendNotification(BuildPayload(notification, NotificationType.Warning), Config);
-    }
-    
-    public override async Task OnCategoryChanged(CategoryChangedNotification notification)
-    {
-        await _proxy.SendNotification(BuildPayload(notification, NotificationType.Warning), Config);
-    }
-    
-    private ApprisePayload BuildPayload(ArrNotification notification, NotificationType notificationType)
-    {
-        StringBuilder body = new();
-        body.AppendLine(notification.Description);
-        body.AppendLine();
-        body.AppendLine($"Instance type: {notification.InstanceType.ToString()}");
-        body.AppendLine($"Url: {notification.InstanceUrl}");
-        body.AppendLine($"Download hash: {notification.Hash}");
+        NotificationType notificationType = context.Severity switch
+        {
+            EventSeverity.Warning => NotificationType.Warning,
+            EventSeverity.Important => NotificationType.Failure,
+            _ => NotificationType.Info
+        };
 
-        foreach (NotificationField field in notification.Fields ?? [])
+        string body = BuildBody(context);
+
+        return new ApprisePayload
         {
-            body.AppendLine($"{field.Title}: {field.Text}");
-        }
-        
-        ApprisePayload payload = new()
-        {
-            Title = notification.Title,
-            Body = body.ToString(),
+            Title = context.Title,
+            Body = body,
             Type = notificationType.ToString().ToLowerInvariant(),
             Tags = Config.Tags,
         };
-        
-        return payload;
     }
-    
-    private ApprisePayload BuildPayload(Notification notification, NotificationType notificationType)
-    {
-        StringBuilder body = new();
-        body.AppendLine(notification.Description);
-        body.AppendLine();
 
-        foreach (NotificationField field in notification.Fields ?? [])
+    private static string BuildBody(NotificationContext context)
+    {
+        var body = new StringBuilder();
+        body.AppendLine(context.Description);
+        body.AppendLine();
+        
+        foreach ((string key, string value) in context.Data)
         {
-            body.AppendLine($"{field.Title}: {field.Text}");
+            body.AppendLine($"{key}: {value}");
         }
-        
-        ApprisePayload payload = new()
-        {
-            Title = notification.Title,
-            Body = body.ToString(),
-            Type = notificationType.ToString().ToLowerInvariant(),
-            Tags = Config.Tags,
-        };
-        
-        return payload;
+
+        return body.ToString();
     }
 }

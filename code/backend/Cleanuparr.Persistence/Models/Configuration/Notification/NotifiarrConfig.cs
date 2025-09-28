@@ -1,23 +1,56 @@
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+using Cleanuparr.Persistence.Models.Configuration;
+using ValidationException = Cleanuparr.Domain.Exceptions.ValidationException;
+
 namespace Cleanuparr.Persistence.Models.Configuration.Notification;
 
-public sealed record NotifiarrConfig : NotificationConfig
+public sealed record NotifiarrConfig : IConfig
 {
-    public string? ApiKey { get; init; }
+    [Key]
+    [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+    public Guid Id { get; init; } = Guid.NewGuid();
     
-    public string? ChannelId { get; init; }
-
-    public override bool IsValid()
+    [Required]
+    public Guid NotificationConfigId { get; init; }
+    
+    [ForeignKey(nameof(NotificationConfigId))]
+    public NotificationConfig NotificationConfig { get; init; } = null!;
+    
+    [Required]
+    [MaxLength(255)]
+    public string ApiKey { get; init; } = string.Empty;
+    
+    [Required]
+    [MaxLength(50)]
+    public string ChannelId { get; init; } = string.Empty;
+    
+    public bool IsValid()
     {
-        if (string.IsNullOrEmpty(ApiKey?.Trim()))
+        return !string.IsNullOrWhiteSpace(ApiKey) && 
+               !string.IsNullOrWhiteSpace(ChannelId);
+    }
+    
+    public void Validate()
+    {
+        if (string.IsNullOrWhiteSpace(ApiKey))
         {
-            return false;
+            throw new ValidationException("Notifiarr API key is required");
         }
-
-        if (string.IsNullOrEmpty(ChannelId?.Trim()))
+        
+        if (ApiKey.Length < 10)
         {
-            return false;
+            throw new ValidationException("Notifiarr API key must be at least 10 characters long");
         }
-
-        return true;
+        
+        if (string.IsNullOrWhiteSpace(ChannelId))
+        {
+            throw new ValidationException("Discord channel ID is required");
+        }
+        
+        if (!ulong.TryParse(ChannelId, out _))
+        {
+            throw new ValidationException("Discord channel ID must be a valid numeric ID");
+        }
     }
 }

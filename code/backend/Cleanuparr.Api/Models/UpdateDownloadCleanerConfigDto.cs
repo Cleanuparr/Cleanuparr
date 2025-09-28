@@ -29,6 +29,8 @@ public class UpdateDownloadCleanerConfigDto
     public string UnlinkedIgnoredRootDir { get; set; } = string.Empty;
     
     public List<string> UnlinkedCategories { get; set; } = [];
+
+    public List<string> IgnoredDownloads { get; set; } = [];
 }
 
 public class CleanCategoryDto

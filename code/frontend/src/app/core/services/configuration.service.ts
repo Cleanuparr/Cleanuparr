@@ -21,6 +21,7 @@ import {
 } from "../../shared/models/queue-rule.model";
 import { ApplicationPathService } from "./base-path.service";
 import { ErrorHandlerUtil } from "../utils/error-handler.util";
+import { BlacklistSyncConfig } from "../../shared/models/blacklist-sync-config.model";
 
 @Injectable({
   providedIn: "root",
@@ -37,6 +38,31 @@ export class ConfigurationService {
       catchError((error) => {
         console.error("Error fetching general config:", error);
         return throwError(() => new Error("Failed to load general configuration"));
+      })
+    );
+  }
+
+  /**
+   * Get Blacklist Sync configuration
+   */
+  getBlacklistSyncConfig(): Observable<BlacklistSyncConfig> {
+    return this.http.get<BlacklistSyncConfig>(this.ApplicationPathService.buildApiUrl('/configuration/blacklist_sync')).pipe(
+      catchError((error) => {
+        console.error("Error fetching Blacklist Sync config:", error);
+        return throwError(() => new Error("Failed to load Blacklist Sync configuration"));
+      })
+    );
+  }
+
+  /**
+   * Update Blacklist Sync configuration
+   */
+  updateBlacklistSyncConfig(config: BlacklistSyncConfig): Observable<any> {
+    return this.http.put<any>(this.ApplicationPathService.buildApiUrl('/configuration/blacklist_sync'), config).pipe(
+      catchError((error) => {
+        console.error("Error updating Blacklist Sync config:", error);
+        const errorMessage = ErrorHandlerUtil.extractErrorMessage(error);
+        return throwError(() => new Error(errorMessage));
       })
     );
   }

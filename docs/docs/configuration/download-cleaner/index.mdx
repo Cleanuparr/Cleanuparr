@@ -64,6 +64,34 @@ Enter a valid Quartz.NET cron expression to control when the Download Cleaner ru
 
 <div className={styles.section}>
 
+<ConfigSection
+  id="ignored-downloads"
+  title="Ignored Downloads"
+  icon="🚫"
+>
+
+Downloads matching these patterns will be ignored by Download Cleaner. Patterns can match any of these:
+- torrent hash
+- qBittorrent tag or category
+- Deluge label
+- Transmission category (last directory from the save location)
+- µTorrent label
+- torrent tracker domain
+
+**Examples:**
+```
+fa800a7d7c443a2c3561d1f8f393c089036dade1
+tv-sonarr
+qbit-tag
+mytracker.com
+```
+
+</ConfigSection>
+
+</div>
+
+<div className={styles.section}>
+
 <h2 className={styles.sectionTitle}>
   <span className={styles.sectionIcon}>🌱</span>
   Seeding Settings

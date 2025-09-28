@@ -43,6 +43,50 @@
   --accent-purple-800: #4527A0;
   --accent-purple-900: #311B92;
   
+  /* Sidebar Layout Variables */
+  --sidebar-width: 270px;                    /* Single source for both desktop/mobile */
+  --sidebar-width-collapsed: 70px;
+  --sidebar-height: 100vh;
+  --sidebar-z-index: 1000;
+  
+  /* Sidebar Visual Variables */
+  --sidebar-background: linear-gradient(135deg, #2c1a47 0%, #1a0e29 50%, #1e1230 75%, rgba(30, 18, 48, 0.95) 100%);
+  --sidebar-border: 1px solid rgba(142, 68, 173, 0.15);
+  --sidebar-shadow: 2px 0 15px rgba(0, 0, 0, 0.3);
+  --sidebar-backdrop-filter: blur(5px);
+  
+  /* Sidebar Top Line */
+  --sidebar-top-line-height: 1px;
+  --sidebar-top-line-background: linear-gradient(90deg, rgba(142, 68, 173, 0.6), rgba(103, 58, 183, 0.6));
+  --sidebar-top-line-shadow: 0 0 8px rgba(142, 68, 173, 0.4);
+  
+  /* Logo Variables */
+  --sidebar-logo-size: 50px;
+  --sidebar-logo-background: rgba(142, 68, 173, 0.1);
+  --sidebar-logo-border: 1px solid rgba(142, 68, 173, 0.3);
+  --sidebar-logo-icon-size: 30px;
+  
+  /* Navigation Variables */
+  --sidebar-nav-padding: 1rem 0;
+  --sidebar-nav-item-padding: 10px 20px;
+  --sidebar-nav-icon-wrapper-size: 48px;
+  --sidebar-nav-icon-size: 22px;
+  --sidebar-nav-border-radius: 0 6px 6px 0;
+  --sidebar-nav-hover-transform: translateX(4px);
+  
+  /* Text & Color Variables */
+  --sidebar-text-white: #ffffff;
+  --sidebar-text-gradient: linear-gradient(to right, #fff, #bbb);
+  --sidebar-text-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+  --sidebar-logo-glow: 0 0 10px 6px rgba(89, 16, 185, 0.5);
+  --sidebar-heart-color: rgb(147, 0, 255);
+  --sidebar-heart-shadow: 0 0 6px rgba(239, 68, 68, 0.7), 0 0 12px rgba(239, 68, 68, 0.5);
+  
+  /* Animation Variables */
+  --sidebar-transition-duration: 0.3s;
+  --sidebar-transition-easing: cubic-bezier(0.4, 0.0, 0.2, 1);
+  --sidebar-animation-easing: ease-in-out;
+  
   /* Standard color palette for logs and events */
   --yellow-50: #fffde7;
   --yellow-100: #fff9c4;
@@ -253,134 +297,12 @@ a {
     }
   }
   
-  .p-dropdown {
+  .p-select, .p-autocomplete {
     width: 100%;
   }
 }
 
-/* PrimeNG Sidebar Override */
-.p-sidebar.mobile-sidebar {
-  background-color: #1a1e27 !important;
-  border: none !important;
-  
-  .p-sidebar-header {
-    display: none !important;
-  }
-  
-  .p-sidebar-content {
-    padding: 0 !important;
-    background-color: #1a1e27 !important;
-    color: #ffffff !important;
-    
-    .sidebar-header {
-      padding: 1.5rem 1rem;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      
-      .sidebar-logo {
-        display: flex;
-        align-items: center;
-        
-        .sidebar-icon {
-          font-size: 1.5rem;
-          color: #ffcc00;
-        }
-        
-        .app-name {
-          font-size: 1.25rem;
-          font-weight: 700;
-          margin-left: 0.5rem;
-          color: #ffffff;
-        }
-      }
-    }
-    
-    .sidebar-nav {
-      padding: 1rem 0;
-      overflow-y: auto;
-      flex: 1;
-      
-      .sidebar-section-title {
-        padding: 0 1rem;
-        margin: 0 0 0.5rem 0;
-        font-size: 0.75rem;
-        font-weight: 600;
-        color: rgba(255, 255, 255, 0.5);
-        letter-spacing: 0.5px;
-      }
-      
-      ul {
-        list-style: none;
-        padding: 0;
-        margin: 0;
-        
-        li {
-          a {
-            display: flex;
-            align-items: center;
-            padding: 0.75rem 1rem;
-            color: rgba(255, 255, 255, 0.8);
-            text-decoration: none;
-            transition: background-color 0.2s;
-            
-            &:hover {
-              background-color: rgba(255, 255, 255, 0.05);
-            }
-            
-            i {
-              font-size: 1.25rem;
-              width: 1.5rem;
-              margin-right: 0.75rem;
-              text-align: center;
-            }
-            
-            span {
-              font-size: 0.95rem;
-            }
-          }
-          
-          &.active a {
-            background-color: rgba(255, 255, 255, 0.1);
-            color: #ffffff;
-            font-weight: 600;
-            border-left: 3px solid #4299e1;
-            padding-left: calc(1rem - 3px);
-            
-            i {
-              color: #4299e1;
-            }
-          }
-        }
-      }
-    }
-    
-    .sponsor-section {
-      padding: 0.5rem 1rem 1rem;
-      margin-top: auto;
-      
-      .sponsor-link {
-        display: flex;
-        align-items: center;
-        padding: 0.75rem 1rem;
-        background-color: rgba(255, 255, 255, 0.05);
-        border-radius: 4px;
-        color: #ffffff;
-        text-decoration: none;
-        transition: background-color 0.2s;
-        
-        &:hover {
-          background-color: rgba(255, 255, 255, 0.1);
-        }
-        
-        i {
-          color: #ff5a5f;
-          margin-right: 0.75rem;
-        }
-      }
-    }
-  }
-}
+/* PrimeNG Sidebar Override - moved to sidebar-content component */
 
 /* Dark purple theme overrides */
 .dark-mode {
@@ -430,10 +352,10 @@ a {
   }
   
   /* Accent color for various components */
-  .p-dropdown-panel .p-dropdown-items .p-dropdown-item.p-highlight,
+  .p-select-panel .p-select-items .p-select-item.p-highlight,
   .p-multiselect-panel .p-multiselect-items .p-multiselect-item.p-highlight,
   .p-listbox .p-listbox-list .p-listbox-item.p-highlight,
-  .p-dropdown-panel .p-dropdown-items .p-dropdown-item:focus,
+  .p-select-panel .p-select-items .p-select-item:focus,
   .p-multiselect-panel .p-multiselect-items .p-multiselect-item:focus,
   .p-listbox .p-listbox-list .p-listbox-item:focus {
     background-color: rgba(126, 87, 194, 0.16);
@@ -448,7 +370,9 @@ a {
   
   /* Focus and selection ring */
   .p-component:focus,
-  .p-inputtext:focus {
+  .p-inputtext:focus,
+  .p-select:focus,
+  .p-autocomplete:focus {
     box-shadow: 0 0 0 1px var(--primary-light);
     border-color: var(--primary-color);
   }

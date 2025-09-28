@@ -75,40 +75,4 @@ export class ErrorHandlerUtil {
     return null;
   }
   
-  /**
-   * Determine if an error message represents a user-fixable validation error
-   * These should be shown as toast notifications so the user can correct them
-   */
-  static isUserFixableError(errorMessage: string): boolean {
-    // Common validation error patterns that users can fix
-    const validationPatterns = [
-      /does not exist/i,
-      /cannot be empty/i,
-      /invalid/i,
-      /required/i,
-      /must be/i,
-      /should not/i,
-      /duplicate/i,
-      /already exists/i,
-      /format/i,
-      /expression/i,
-    ];
-    
-    // Network errors should not be shown as toast (shown in LoadingErrorStateComponent instead)
-    const networkErrorPatterns = [
-      /unable to connect/i,
-      /network/i,
-      /connection/i,
-      /timeout/i,
-      /server error/i,
-    ];
-    
-    // Check if it's a network error first
-    if (networkErrorPatterns.some(pattern => pattern.test(errorMessage))) {
-      return false;
-    }
-    
-    // Check if it matches validation patterns
-    return validationPatterns.some(pattern => pattern.test(errorMessage));
-  }
 } 

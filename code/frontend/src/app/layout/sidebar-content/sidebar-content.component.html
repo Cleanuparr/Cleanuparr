@@ -1,10 +1,7 @@
 <!-- Logo Container -->
 <div class="logo-container">
   <div class="logo logo-large logo-glow">
-    <img src="icons/128.png" width="40" height="40" alt="Logo">
-  </div>
-  <div class="logo logo-small logo-glow">
-    <img src="icons/128.png" width="40" height="40" alt="Logo">
+    <img src="/icons/128.png" width="40" height="40" alt="Logo">
   </div>
   <h2>Cleanuparr</h2>
 </div>
@@ -26,7 +23,7 @@
      [@staggerItems]>
   <!-- Project Sponsors Link (always visible) -->
   <a href="https://cleanuparr.github.io/Cleanuparr/support" 
-     class="nav-item sponsor-link" 
+     class="nav-item support-link" 
      target="_blank" 
      rel="noopener noreferrer">
     <div class="nav-icon-wrapper heart-icon">
@@ -73,9 +70,19 @@
       <div 
         class="nav-item nav-parent" 
         *ngIf="item.children && item.children.length > 0 && !item.topLevel"
-        (click)="navigateToLevel(item)">
+        (click)="navigateToLevel(item)"
+        (mouseenter)="hoveredNavId = item.id"
+        (mouseleave)="hoveredNavId = null">
         <div class="nav-icon-wrapper">
-          <i [class]="item.icon"></i>
+          <ng-container *ngIf="item.iconUrl; else iconClass">
+            <div class="icon-stack">
+              <img class="icon-base" [src]="item.iconUrl" alt="{{item.label}} icon">
+              <img class="icon-top" [src]="item.iconUrlHover || item.iconUrl" [class.visible]="hoveredNavId === item.id" alt="{{item.label}} icon (hover)">
+            </div>
+          </ng-container>
+          <ng-template #iconClass>
+            <i [class]="item.icon"></i>
+          </ng-template>
         </div>
         <span>{{ item.label }}</span>
         <div class="nav-chevron">
@@ -89,9 +96,19 @@
         class="nav-item" 
         *ngIf="!item.children && item.route && !item.isHeader"
         [class.active]="router.url.includes(item.route)" 
-        (click)="onNavItemClick()">
+        (click)="onNavItemClick()"
+        (mouseenter)="hoveredNavId = item.id"
+        (mouseleave)="hoveredNavId = null">
         <div class="nav-icon-wrapper">
-          <i [class]="item.icon"></i>
+          <ng-container *ngIf="item.iconUrl; else iconClassLink">
+            <div class="icon-stack">
+              <img class="icon-base" [src]="item.iconUrl" alt="{{item.label}} icon">
+              <img class="icon-top" [src]="item.iconUrlHover || item.iconUrl" [class.visible]="hoveredNavId === item.id" alt="{{item.label}} icon (hover)">
+            </div>
+          </ng-container>
+          <ng-template #iconClassLink>
+            <i [class]="item.icon"></i>
+          </ng-template>
         </div>
         <span>{{ item.label }}</span>
         <span class="nav-badge" *ngIf="item.badge">{{ item.badge }}</span>
@@ -103,12 +120,40 @@
         class="nav-item" 
         *ngIf="!item.children && item.isExternal && !item.isHeader"
         target="_blank" 
-        rel="noopener noreferrer">
+        rel="noopener noreferrer"
+        (mouseenter)="hoveredNavId = item.id"
+        (mouseleave)="hoveredNavId = null">
         <div class="nav-icon-wrapper">
-          <i [class]="item.icon"></i>
+          <ng-container *ngIf="item.iconUrl; else iconClassExternal">
+            <div class="icon-stack">
+              <img class="icon-base" [src]="item.iconUrl" alt="{{item.label}} icon">
+              <img class="icon-top" [src]="item.iconUrlHover || item.iconUrl" [class.visible]="hoveredNavId === item.id" alt="{{item.label}} icon (hover)">
+            </div>
+          </ng-container>
+          <ng-template #iconClassExternal>
+            <i [class]="item.icon"></i>
+          </ng-template>
         </div>
         <span>{{ item.label }}</span>
       </a>
     </ng-container>
   </div>
 </nav>
+
+<!-- Mobile Drawer (only rendered when enableMobileDrawer is true) -->
+<p-drawer 
+  *ngIf="enableMobileDrawer"
+  styleClass="mobile-sidebar" 
+  [visible]="mobileSidebarVisible()" 
+  (visibleChange)="onMobileDrawerVisibilityChange($event)" 
+  [dismissible]="true" 
+  [showCloseIcon]="false"
+  position="left">
+  <ng-template #headless>
+    <app-sidebar-content 
+      [isMobile]="true"
+      [enableMobileDrawer]="false"
+      (navItemClicked)="onNavItemClick()">
+    </app-sidebar-content>
+  </ng-template>
+</p-drawer>

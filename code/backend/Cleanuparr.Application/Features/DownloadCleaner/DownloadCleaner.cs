@@ -59,7 +59,8 @@ public sealed class DownloadCleaner : GenericHandler
             return;
         }
         
-        IReadOnlyList<string> ignoredDownloads = ContextProvider.Get<GeneralConfig>(nameof(GeneralConfig)).IgnoredDownloads;
+        List<string> ignoredDownloads = ContextProvider.Get<GeneralConfig>(nameof(GeneralConfig)).IgnoredDownloads;
+        ignoredDownloads.AddRange(ContextProvider.Get<DownloadCleanerConfig>().IgnoredDownloads);
         
         var downloadServiceToDownloadsMap = new Dictionary<IDownloadService, List<object>>();
         

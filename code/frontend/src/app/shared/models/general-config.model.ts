@@ -1,5 +1,5 @@
-import { LogEventLevel } from './log-event-level.enum';
 import { CertificateValidationType } from './certificate-validation-type.enum';
+import { LoggingConfig } from './logging-config.model';
 
 export interface GeneralConfig {
   displaySupportBanner: boolean;
@@ -9,6 +9,6 @@ export interface GeneralConfig {
   httpCertificateValidation: CertificateValidationType;
   searchEnabled: boolean;
   searchDelay: number;
-  logLevel: LogEventLevel;
+  log?: LoggingConfig;
   ignoredDownloads: string[];
 }

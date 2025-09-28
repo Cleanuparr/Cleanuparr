@@ -6,10 +6,9 @@ using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.Notifications;
 using Cleanuparr.Infrastructure.Hubs;
+using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Events;
-using Infrastructure.Interceptors;
-using Infrastructure.Verticals.Notifications;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 
@@ -79,6 +78,7 @@ public class EventPublisher
             StrikeType.FailedImport => EventType.FailedImportStrike,
             StrikeType.SlowSpeed => EventType.SlowSpeedStrike,
             StrikeType.SlowTime => EventType.SlowTimeStrike,
+            _ => throw new ArgumentOutOfRangeException(nameof(strikeType), strikeType, null)
         };
 
         dynamic data;

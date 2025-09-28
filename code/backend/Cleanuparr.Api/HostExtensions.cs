@@ -6,7 +6,7 @@ namespace Cleanuparr.Api;
 
 public static class HostExtensions
 {
-    public static async Task<IHost> Init(this WebApplication app)
+    public static async Task<IHost> InitAsync(this WebApplication app)
     {
         ILogger<Program> logger = app.Services.GetRequiredService<ILogger<Program>>();
 
@@ -20,22 +20,25 @@ public static class HostExtensions
         
         logger.LogInformation("timezone: {tz}", TimeZoneInfo.Local.DisplayName);
         
-        // Apply db migrations
-        var scopeFactory = app.Services.GetRequiredService<IServiceScopeFactory>();
-        await using var scope = scopeFactory.CreateAsyncScope();
-        
-        await using var eventsContext = scope.ServiceProvider.GetRequiredService<EventsContext>();
+        return app;
+    }
+
+    public static async Task<WebApplicationBuilder> InitAsync(this WebApplicationBuilder builder)
+    {
+        // Apply events db migrations
+        await using var eventsContext = EventsContext.CreateStaticInstance();
         if ((await eventsContext.Database.GetPendingMigrationsAsync()).Any())
         {
             await eventsContext.Database.MigrateAsync();
         }
 
-        await using var configContext = scope.ServiceProvider.GetRequiredService<DataContext>();
+        // Apply data db migrations
+        await using var configContext = DataContext.CreateStaticInstance();
         if ((await configContext.Database.GetPendingMigrationsAsync()).Any())
         {
             await configContext.Database.MigrateAsync();
         }
         
-        return app;
+        return builder;
     }
 }

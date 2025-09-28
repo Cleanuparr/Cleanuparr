@@ -9,3 +9,9 @@ export enum DownloadClientTypeName {
   Transmission = "Transmission",
   uTorrent = "uTorrent",
 }
+
+export enum NotificationProviderType {
+  Notifiarr = "Notifiarr",
+  Apprise = "Apprise",
+  Ntfy = "Ntfy",
+}

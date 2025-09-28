@@ -1,0 +1,53 @@
+<app-notification-provider-base
+  [visible]="visible"
+  modalTitle="Configure Notifiarr Provider"
+  [saving]="saving"
+  [testing]="testing"
+  [editingProvider]="editingProvider"
+  (save)="onSave($event)"
+  (cancel)="onCancel()"
+  (test)="onTest($event)">
+
+  <!-- Provider-specific configuration goes here -->
+  <div slot="provider-config">
+    <!-- API Key Field -->
+    <div class="field">
+      <label for="api-key">
+        <i class="pi pi-question-circle field-info-icon" 
+           title="Click for documentation"
+           (click)="openFieldDocs('notifiarr.apiKey')"></i>
+        API Key *
+      </label>
+      <input 
+        id="api-key"
+        type="password" 
+        pInputText 
+        [formControl]="apiKeyControl" 
+        placeholder="Enter your Notifiarr API key"
+        class="w-full" />
+      <small *ngIf="hasFieldError(apiKeyControl, 'required')" class="p-error">API Key is required</small>
+      <small *ngIf="hasFieldError(apiKeyControl, 'minlength')" class="p-error">API Key must be at least 10 characters</small>
+      <small class="form-helper-text">Your Notifiarr API key from your dashboard. Requires Passthrough integration.</small>
+    </div>
+
+    <!-- Channel ID Field -->
+    <div class="field">
+      <label for="channel-id">
+        <i class="pi pi-question-circle field-info-icon" 
+           title="Click for documentation"
+           (click)="openFieldDocs('notifiarr.channelId')"></i>
+        Discord Channel ID *
+      </label>
+      <input 
+        id="channel-id"
+        type="text"
+        pInputText
+        numericInput
+        [formControl]="channelIdControl" 
+        placeholder="Enter Discord channel ID"
+        class="w-full" />
+      <small *ngIf="hasFieldError(channelIdControl, 'required')" class="p-error">Channel ID is required</small>
+      <small class="form-helper-text">The Discord channel ID where notifications will be sent.</small>
+    </div>
+  </div>
+</app-notification-provider-base>

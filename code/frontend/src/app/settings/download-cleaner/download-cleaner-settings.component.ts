@@ -21,7 +21,6 @@ import { ButtonModule } from "primeng/button";
 import { InputNumberModule } from "primeng/inputnumber";
 import { AccordionModule } from "primeng/accordion";
 import { SelectButtonModule } from "primeng/selectbutton";
-import { ChipsModule } from "primeng/chips";
 import { ToastModule } from "primeng/toast";
 import { NotificationService } from "../../core/services/notification.service";
 import { SelectModule } from "primeng/select";
@@ -47,7 +46,6 @@ import { DocumentationService } from "../../core/services/documentation.service"
     InputNumberModule,
     AccordionModule,
     SelectButtonModule,
-    ChipsModule,
     ToastModule,
     SelectModule,
     AutoCompleteModule,
@@ -92,9 +90,6 @@ export class DownloadCleanerSettingsComponent implements OnDestroy, CanComponent
   
   // Flag to track if form has been initially loaded to avoid showing dialog on page load
   private formInitialized = false;
-  
-  // Minimal autocomplete support - empty suggestions to allow manual input
-  unlinkedCategoriesSuggestions: string[] = [];
   
   // Get the categories form array for easier access in the template
   get categoriesFormArray(): FormArray {
@@ -148,6 +143,7 @@ export class DownloadCleanerSettingsComponent implements OnDestroy, CanComponent
         type: [{ value: ScheduleUnit.Minutes, disabled: true }, [Validators.required]]
       }),
       categories: this.formBuilder.array([]),
+      ignoredDownloads: [{ value: [], disabled: true }],
       deletePrivate: [{ value: false, disabled: true }],
       unlinkedEnabled: [{ value: false, disabled: true }],
       unlinkedTargetCategory: [{ value: 'cleanuparr-unlinked', disabled: true }, [Validators.required]],
@@ -179,15 +175,8 @@ export class DownloadCleanerSettingsComponent implements OnDestroy, CanComponent
       if (saveErrorMessage) {
         // Check if this looks like a validation error from the backend
         // These are typically user-fixable errors that should be shown as toasts
-        const isUserFixableError = ErrorHandlerUtil.isUserFixableError(saveErrorMessage);
-        
-        if (isUserFixableError) {
-          // Show validation errors as toast notifications so user can fix them
-          this.notificationService.showError(saveErrorMessage);
-        } else {
-          // For non-user-fixable save errors, also emit to parent
-          this.error.emit(saveErrorMessage);
-        }
+            // Always show save errors as a toast so the user sees the backend message.
+            this.notificationService.showError(saveErrorMessage);
       }
     });
     
@@ -297,6 +286,7 @@ export class DownloadCleanerSettingsComponent implements OnDestroy, CanComponent
       useAdvancedScheduling: useAdvanced,
       cronExpression: config.cronExpression,
       deletePrivate: config.deletePrivate,
+      ignoredDownloads: config.ignoredDownloads || [],
       unlinkedEnabled: config.unlinkedEnabled,
       unlinkedTargetCategory: config.unlinkedTargetCategory,
       unlinkedUseTag: config.unlinkedUseTag,
@@ -507,11 +497,13 @@ export class DownloadCleanerSettingsComponent implements OnDestroy, CanComponent
       const deletePrivateControl = this.downloadCleanerForm.get('deletePrivate');
       const unlinkedEnabledControl = this.downloadCleanerForm.get('unlinkedEnabled');
       const useAdvancedSchedulingControl = this.downloadCleanerForm.get('useAdvancedScheduling');
+      const ignoredDownloadsControl = this.downloadCleanerForm.get('ignoredDownloads');
       
       categoriesControl?.enable();
       deletePrivateControl?.enable();
       unlinkedEnabledControl?.enable();
       useAdvancedSchedulingControl?.enable();
+      ignoredDownloadsControl?.enable();
       
       // Update unlinked controls based on unlinkedEnabled value
       const unlinkedEnabled = unlinkedEnabledControl?.value;
@@ -527,11 +519,13 @@ export class DownloadCleanerSettingsComponent implements OnDestroy, CanComponent
       const deletePrivateControl = this.downloadCleanerForm.get('deletePrivate');
       const unlinkedEnabledControl = this.downloadCleanerForm.get('unlinkedEnabled');
       const useAdvancedSchedulingControl = this.downloadCleanerForm.get('useAdvancedScheduling');
+      const ignoredDownloadsControl = this.downloadCleanerForm.get('ignoredDownloads');
       
       categoriesControl?.disable();
       deletePrivateControl?.disable();
       unlinkedEnabledControl?.disable();
       useAdvancedSchedulingControl?.disable();
+      ignoredDownloadsControl?.disable();
       
       // Always disable unlinked controls when main feature is disabled
       this.updateUnlinkedControlsState(false);
@@ -567,6 +561,7 @@ export class DownloadCleanerSettingsComponent implements OnDestroy, CanComponent
         jobSchedule: formValues.jobSchedule,
         categories: formValues.categories,
         deletePrivate: formValues.deletePrivate,
+        ignoredDownloads: formValues.ignoredDownloads || [],
         unlinkedEnabled: formValues.unlinkedEnabled,
         unlinkedTargetCategory: formValues.unlinkedTargetCategory,
         unlinkedUseTag: formValues.unlinkedUseTag,
@@ -751,40 +746,6 @@ export class DownloadCleanerSettingsComponent implements OnDestroy, CanComponent
       ignoredRootDirControl?.disable(options);
       categoriesControl?.disable(options);
     }
-  }
-
-  /**
-   * Simple test method to check unlinkedCategories functionality
-   * Call from browser console: ng.getComponent(document.querySelector('app-download-cleaner-settings')).testUnlinkedCategories()
-   */
-  testUnlinkedCategories(): void {
-    console.log('=== TESTING UNLINKED CATEGORIES ===');
-    
-    const control = this.downloadCleanerForm.get('unlinkedCategories');
-    console.log('Current value:', control?.value);
-    console.log('Control disabled:', control?.disabled);
-    console.log('Control status:', control?.status);
-    
-    // Test setting values
-    console.log('Setting test values: ["movies", "tv-shows"]');
-    control?.setValue(['movies', 'tv-shows']);
-    
-    console.log('Value after setting:', control?.value);
-    
-    // Test what getRawValue returns
-    const rawValues = this.downloadCleanerForm.getRawValue();
-    console.log('getRawValue().unlinkedCategories:', rawValues.unlinkedCategories);
-    
-    console.log('=== END TEST ===');
-  }
-
-  /**
-   * Minimal complete method for autocomplete - just returns empty array to allow manual input
-   */
-  onUnlinkedCategoriesComplete(event: any): void {
-    // Return empty array - this allows users to type any value manually
-    // PrimeNG requires this method even when we don't want suggestions
-    this.unlinkedCategoriesSuggestions = [];
   }
 
   /**

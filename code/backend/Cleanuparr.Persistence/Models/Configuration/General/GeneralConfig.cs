@@ -1,7 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Cleanuparr.Domain.Enums;
-using Serilog.Events;
 using ValidationException = Cleanuparr.Domain.Exceptions.ValidationException;
 
 namespace Cleanuparr.Persistence.Models.Configuration.General;
@@ -25,12 +24,12 @@ public sealed record GeneralConfig : IConfig
     public bool SearchEnabled { get; set; } = true;
     
     public ushort SearchDelay { get; set; } = 30;
-    
-    public LogEventLevel LogLevel { get; set; } = LogEventLevel.Information;
 
     public string EncryptionKey { get; set; } = Guid.NewGuid().ToString();
 
     public List<string> IgnoredDownloads { get; set; } = [];
+
+    public LoggingConfig Log { get; set; } = new();
 
     public void Validate()
     {
@@ -38,5 +37,7 @@ public sealed record GeneralConfig : IConfig
         {
             throw new ValidationException("HTTP_TIMEOUT must be greater than 0");
         }
+
+        Log.Validate();
     }
 }

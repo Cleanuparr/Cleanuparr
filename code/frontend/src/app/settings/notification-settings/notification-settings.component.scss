@@ -1,5 +1,6 @@
 @use '../styles/settings-shared.scss';
 @use '../styles/arr-shared.scss';
+@use '../styles/item-list-styles.scss';
 @use '../settings-page/settings-page.component.scss';
 
 .section-title {
@@ -10,3 +11,28 @@
   border-bottom: 1px solid var(--surface-border);
   padding-bottom: 0.5rem;
 } 
+
+/* Map provider classes to shared item classes */
+.providers-list {
+  @extend .items-list;
+}
+
+.provider-item {
+  @extend .item-item;
+}
+
+.provider-info {
+  @extend .item-info;
+}
+
+.provider-actions {
+  @extend .item-actions;
+}
+
+.provider-events {
+  @extend .item-details;
+}
+
+.no-providers {
+  @extend .no-items;
+}

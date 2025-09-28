@@ -1,22 +1,18 @@
-import { Component, Input, inject, Output, EventEmitter, OnInit, OnChanges, SimpleChanges, OnDestroy } from '@angular/core';
+import { Component, Input, inject, Output, EventEmitter, OnInit, OnDestroy, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink, NavigationEnd } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
-import { filter } from 'rxjs/operators';
-import { Subscription } from 'rxjs';
+import { DrawerModule } from 'primeng/drawer';
+import { filter, debounceTime } from 'rxjs/operators';
+import { Subscription, fromEvent } from 'rxjs';
 import { trigger, state, style, transition, animate, query, stagger } from '@angular/animations';
-
-interface MenuItem {
-  label: string;
-  icon: string;
-  route: string;
-  badge?: string;
-}
 
 interface NavigationItem {
   id: string;
   label: string;
   icon: string;
+  iconUrl?: string;
+  iconUrlHover?: string;
   route?: string;           // For direct navigation items
   children?: NavigationItem[]; // For parent items with sub-menus
   isExternal?: boolean;     // For external links
@@ -37,10 +33,14 @@ interface RouteMapping {
   imports: [
     CommonModule,
     RouterLink,
-    ButtonModule
+    ButtonModule,
+    DrawerModule
   ],
   templateUrl: './sidebar-content.component.html',
   styleUrl: './sidebar-content.component.scss',
+  host: {
+    '[class.mobile-variant]': 'isMobile'
+  },
   animations: [
     trigger('staggerItems', [
       transition(':enter', [
@@ -70,10 +70,14 @@ interface RouteMapping {
     ])
   ]
 })
-export class SidebarContentComponent implements OnInit, OnChanges, OnDestroy {
-  @Input() menuItems: MenuItem[] = [];
+export class SidebarContentComponent implements OnInit, OnDestroy {
   @Input() isMobile = false;
+  @Input() enableMobileDrawer = false;
   @Output() navItemClicked = new EventEmitter<void>();
+  @Output() mobileDrawerVisibilityChange = new EventEmitter<boolean>();
+  
+  // Mobile drawer state
+  mobileSidebarVisible = signal<boolean>(false);
   
   // Inject router for active route styling
   public router = inject(Router);
@@ -91,8 +95,12 @@ export class SidebarContentComponent implements OnInit, OnChanges, OnDestroy {
   // Animation trigger property - changes to force re-render and trigger animations
   navigationStateKey = 0;
 
+  // Track hovered navigation item id to swap images
+  hoveredNavId: string | null = null;
+
   // Route synchronization properties
   private routerSubscription?: Subscription;
+  private resizeSubscription?: Subscription;
   private routeMappings: RouteMapping[] = [
     // Dashboard
     { route: '/dashboard', navigationPath: ['dashboard'] },
@@ -110,9 +118,12 @@ export class SidebarContentComponent implements OnInit, OnChanges, OnDestroy {
     { route: '/queue-cleaner', navigationPath: ['settings', 'queue-cleaner'] },
     { route: '/malware-blocker', navigationPath: ['settings', 'malware-blocker'] },
     { route: '/download-cleaner', navigationPath: ['settings', 'download-cleaner'] },
+    { route: '/blacklist-synchronizer', navigationPath: ['settings', 'blacklist-synchronizer'] },
     { route: '/notifications', navigationPath: ['settings', 'notifications'] },
     
-    // Other routes will be handled dynamically
+    // Activity routes
+    { route: '/logs', navigationPath: ['activity', 'logs'] },
+    { route: '/events', navigationPath: ['activity', 'events'] }
   ];
 
   ngOnInit(): void {
@@ -123,16 +134,31 @@ export class SidebarContentComponent implements OnInit, OnChanges, OnDestroy {
     setTimeout(() => {
       this.initializeNavigation();
     }, 100);
-  }
 
-  ngOnChanges(changes: SimpleChanges): void {
-    if (changes['menuItems']) {
-      this.updateActivityItems();
-    }
+    // Listen for window resize events to auto-hide mobile drawer
+    this.setupWindowResizeListener();
   }
 
   ngOnDestroy(): void {
     this.routerSubscription?.unsubscribe();
+    this.resizeSubscription?.unsubscribe();
+  }
+
+  /**
+   * Setup window resize listener to auto-hide mobile drawer on larger screens
+   */
+  private setupWindowResizeListener(): void {
+    // Define the mobile breakpoint (should match CSS media query)
+    const MOBILE_BREAKPOINT = 991;
+
+    this.resizeSubscription = fromEvent(window, 'resize')
+      .pipe(
+        debounceTime(150), // Debounce resize events for better performance
+        filter(() => window.innerWidth > MOBILE_BREAKPOINT && this.mobileSidebarVisible())
+      )
+      .subscribe(() => {
+        this.mobileSidebarVisible.set(false);
+      });
   }
 
   /**
@@ -141,18 +167,10 @@ export class SidebarContentComponent implements OnInit, OnChanges, OnDestroy {
   private initializeNavigation(): void {
     if (this.hasInitialized) return;
     
-    // 1. Initialize navigation data
     this.setupNavigationData();
     
-    // 2. Update activity items if available
-    if (this.menuItems && this.menuItems.length > 0) {
-      this.updateActivityItems();
-    }
-    
-    // 3. Determine correct navigation level based on current route
     this.syncSidebarWithCurrentRoute();
     
-    // 4. Mark as ready and subscribe to route changes
     this.isNavigationReady = true;
     this.hasInitialized = true;
     this.subscribeToRouteChanges();
@@ -164,6 +182,29 @@ export class SidebarContentComponent implements OnInit, OnChanges, OnDestroy {
   private setupNavigationData(): void {
     this.navigationData = this.getNavigationData();
     this.currentNavigation = this.buildTopLevelNavigation();
+    // Preload hover icons to avoid flicker on first hover
+    this.preloadIcons();
+  }
+
+  /**
+   * Preload hover icon images to reduce flicker when user first hovers over an item
+   */
+  private preloadIcons(): void {
+    const urls = new Set<string>();
+    const collect = (items: NavigationItem[] | undefined) => {
+      if (!items) return;
+      items.forEach(i => {
+        if (i.iconUrlHover) urls.add(i.iconUrlHover);
+        if (i.children) collect(i.children);
+      });
+    };
+
+    collect(this.navigationData);
+
+    urls.forEach(url => {
+      const img = new Image();
+      img.src = url;
+    });
   }
 
   /**
@@ -209,11 +250,46 @@ export class SidebarContentComponent implements OnInit, OnChanges, OnDestroy {
         label: 'Media Apps',
         icon: 'pi pi-play-circle',
         children: [
-          { id: 'sonarr', label: 'Sonarr', icon: 'pi pi-play-circle', route: '/sonarr' },
-          { id: 'radarr', label: 'Radarr', icon: 'pi pi-play-circle', route: '/radarr' },
-          { id: 'lidarr', label: 'Lidarr', icon: 'pi pi-bolt', route: '/lidarr' },
-          { id: 'readarr', label: 'Readarr', icon: 'pi pi-book', route: '/readarr' },
-          { id: 'whisparr', label: 'Whisparr', icon: 'pi pi-lock', route: '/whisparr' },
+          {
+            id: 'sonarr',
+            label: 'Sonarr',
+            icon: 'pi pi-play-circle',
+            route: '/sonarr',
+            iconUrl: '/icons/ext/sonarr-light.svg',
+            iconUrlHover: '/icons/ext/sonarr.svg'
+          },
+          {
+            id: 'radarr',
+            label: 'Radarr',
+            icon: 'pi pi-play-circle',
+            route: '/radarr',
+            iconUrl: '/icons/ext/radarr-light.svg',
+            iconUrlHover: '/icons/ext/radarr.svg'
+          },
+          {
+            id: 'lidarr',
+            label: 'Lidarr',
+            icon: 'pi pi-bolt',
+            route: '/lidarr',
+            iconUrl: '/icons/ext/lidarr-light.svg',
+            iconUrlHover: '/icons/ext/lidarr.svg'
+          },
+          {
+            id: 'readarr',
+            label: 'Readarr',
+            icon: 'pi pi-book',
+            route: '/readarr',
+            iconUrl: '/icons/ext/readarr-light.svg',
+            iconUrlHover: '/icons/ext/readarr.svg'
+          },
+          {
+            id: 'whisparr',
+            label: 'Whisparr',
+            icon: 'pi pi-lock',
+            route: '/whisparr',
+            iconUrl: '/icons/ext/whisparr-light.svg',
+            iconUrlHover: '/icons/ext/whisparr.svg'
+          },
           { id: 'download-clients', label: 'Download Clients', icon: 'pi pi-download', route: '/download-clients' }
         ]
       },
@@ -226,6 +302,7 @@ export class SidebarContentComponent implements OnInit, OnChanges, OnDestroy {
           { id: 'queue-cleaner', label: 'Queue Cleaner', icon: 'pi pi-list', route: '/queue-cleaner' },
           { id: 'malware-blocker', label: 'Malware Blocker', icon: 'pi pi-shield', route: '/malware-blocker' },
           { id: 'download-cleaner', label: 'Download Cleaner', icon: 'pi pi-trash', route: '/download-cleaner' },
+          { id: 'blacklist-synchronizer', label: 'Blacklist Synchronizer', icon: 'pi pi-sync', route: '/blacklist-synchronizer' },
           { id: 'notifications', label: 'Notifications', icon: 'pi pi-bell', route: '/notifications' }
         ]
       },
@@ -233,7 +310,10 @@ export class SidebarContentComponent implements OnInit, OnChanges, OnDestroy {
         id: 'activity',
         label: 'Activity',
         icon: 'pi pi-chart-line',
-        children: [] // Will be populated dynamically from menuItems
+        children: [
+          { id: 'logs', label: 'Logs', icon: 'pi pi-list', route: '/logs' },
+          { id: 'events', label: 'Events', icon: 'pi pi-calendar', route: '/events' }
+        ]
       },
       {
         id: 'help-support',
@@ -341,57 +421,7 @@ export class SidebarContentComponent implements OnInit, OnChanges, OnDestroy {
     return `${item.id}-${index}`;
   }
 
-  /**
-   * Update activity items from menuItems input
-   */
-  private updateActivityItems(): void {
-    const activityItem = this.navigationData.find(item => item.id === 'activity');
-    if (activityItem && this.menuItems) {
-      activityItem.children = this.menuItems
-        .filter(item => !['Dashboard', 'Settings'].includes(item.label))
-        .map(item => ({
-          id: item.label.toLowerCase().replace(/\s+/g, '-'),
-          label: item.label,
-          icon: item.icon,
-          route: item.route,
-          badge: item.badge
-        }));
-      
-      // Update route mappings for activity items
-      this.updateActivityRouteMappings();
-      
-      // Update current navigation if we're showing the root level
-      if (this.navigationBreadcrumb.length === 0) {
-        this.currentNavigation = this.buildTopLevelNavigation();
-      }
 
-      // Re-sync with current route to handle activity routes
-      this.syncSidebarWithCurrentRoute();
-    }
-  }
-
-  /**
-   * Update route mappings for activity items
-   */
-  private updateActivityRouteMappings(): void {
-    // Remove old activity mappings
-    this.routeMappings = this.routeMappings.filter(mapping => 
-      !mapping.navigationPath[0] || !mapping.navigationPath[0].startsWith('activity')
-    );
-    
-    // Add new activity mappings
-    const activityItem = this.navigationData.find(item => item.id === 'activity');
-    if (activityItem?.children) {
-      activityItem.children.forEach(child => {
-        if (child.route) {
-          this.routeMappings.push({
-            route: child.route,
-            navigationPath: ['activity', child.id]
-          });
-        }
-      });
-    }
-  }
 
   /**
    * Sync sidebar state with current route
@@ -483,5 +513,38 @@ export class SidebarContentComponent implements OnInit, OnChanges, OnDestroy {
     if (this.isMobile) {
       this.navItemClicked.emit();
     }
+    // Close mobile drawer when nav item is clicked
+    if (this.mobileSidebarVisible()) {
+      this.mobileSidebarVisible.set(false);
+    }
+  }
+
+  /**
+   * Show mobile drawer
+   */
+  showMobileDrawer(): void {
+    this.mobileSidebarVisible.set(true);
+  }
+
+  /**
+   * Hide mobile drawer  
+   */
+  hideMobileDrawer(): void {
+    this.mobileSidebarVisible.set(false);
+  }
+
+  /**
+   * Toggle mobile drawer visibility
+   */
+  toggleMobileDrawer(): void {
+    this.mobileSidebarVisible.update(visible => !visible);
+  }
+
+  /**
+   * Handle mobile drawer visibility change
+   */
+  onMobileDrawerVisibilityChange(visible: boolean): void {
+    this.mobileSidebarVisible.set(visible);
+    this.mobileDrawerVisibilityChange.emit(visible);
   }
 }

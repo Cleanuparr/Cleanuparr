@@ -16,6 +16,7 @@ export class DocumentationService {
   private readonly fieldMappings: FieldDocumentationMapping = {
     'queue-cleaner': {
       'enabled': 'enable-queue-cleaner',
+      'ignoredDownloads': 'ignored-downloads',
       'useAdvancedScheduling': 'scheduling-mode',
       'cronExpression': 'cron-expression',
       'failedImport.maxStrikes': 'failed-import-max-strikes',
@@ -43,11 +44,20 @@ export class DocumentationService {
       'httpCertificateValidation': 'http-certificate-validation',
       'searchEnabled': 'search-enabled',
       'searchDelay': 'search-delay',
-      'logLevel': 'log-level',
+      'enableBlacklistSync': 'enable-blacklist-sync',
+      'blacklistPath': 'blacklist-path',
+      'log.level': 'log-level',
+      'log.rollingSizeMB': 'log-rolling-size-mb',
+      'log.retainedFileCount': 'log-retained-file-count',
+      'log.timeLimitHours': 'log-time-limit-hours',
+      'log.archiveEnabled': 'log-archive-enabled',
+      'log.archiveRetainedCount': 'log-archive-retained-count',
+      'log.archiveTimeLimitHours': 'log-archive-time-limit-hours',
       'ignoredDownloads': 'ignored-downloads'
     },
     'download-cleaner': {
       'enabled': 'enable-download-cleaner',
+      'ignoredDownloads': 'ignored-downloads',
       'useAdvancedScheduling': 'scheduling-mode',
       'cronExpression': 'cron-expression',
       'jobSchedule.every': 'run-schedule',
@@ -65,6 +75,7 @@ export class DocumentationService {
     },
     'malware-blocker': {
       'enabled': 'enable-malware-blocker',
+      'ignoredDownloads': 'ignored-downloads',
       'useAdvancedScheduling': 'scheduling-mode',
       'cronExpression': 'cron-expression',
       'jobSchedule.every': 'run-schedule',
@@ -92,13 +103,32 @@ export class DocumentationService {
       'password': 'password'
     },
     'notifications': {
+      'enabled': 'enabled',
+      'name': 'provider-name',
+      'eventTriggers': 'event-triggers'
+    },
+    'notifications/notifiarr': {
       'notifiarr.apiKey': 'notifiarr-api-key',
-      'notifiarr.channelId': 'notifiarr-channel-id',
-      'apprise.fullUrl': 'apprise-url',
+      'notifiarr.channelId': 'notifiarr-channel-id'
+    },
+    'notifications/apprise': {
+      'apprise.url': 'apprise-url',
       'apprise.key': 'apprise-key',
+      'apprise.tags': 'apprise-tags'
+    },
+    'notifications/ntfy': {
+      'ntfy.serverUrl': 'ntfy-server-url',
+      'ntfy.topics': 'ntfy-topics',
+      'ntfy.authenticationType': 'ntfy-authentication-type',
+      'ntfy.username': 'ntfy-username',
+      'ntfy.password': 'ntfy-password',
+      'ntfy.accessToken': 'ntfy-access-token',
+      'ntfy.priority': 'ntfy-priority',
+      'ntfy.tags': 'ntfy-tags'
+    },
+    'notifications/events': {
       'eventTriggers': 'event-triggers'
     }
-    // Additional sections will be added here as we implement them
   };
 
   constructor(private applicationPathService: ApplicationPathService) {}
@@ -151,4 +181,4 @@ export class DocumentationService {
   hasFieldDocumentation(section: string, fieldName: string): boolean {
     return !!this.getFieldAnchor(section, fieldName);
   }
-} 
+}

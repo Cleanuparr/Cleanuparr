@@ -663,6 +663,7 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
         every: [{ value: 5, disabled: true }, [Validators.required, Validators.min(1)]],
         type: [{ value: ScheduleUnit.Minutes, disabled: true }],
       }),
+      ignoredDownloads: [{ value: [], disabled: true }],
 
       // Failed Import settings - nested group
       failedImport: this.formBuilder.group({
@@ -752,6 +753,7 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
             every: 5,
             type: ScheduleUnit.Minutes
           },
+          ignoredDownloads: correctedConfig.ignoredDownloads || [],
           failedImport: correctedConfig.failedImport,
           stalled: correctedConfig.stalled,
           slow: correctedConfig.slow,
@@ -781,17 +783,8 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
     effect(() => {
       const saveErrorMessage = this.queueCleanerSaveError();
       if (saveErrorMessage) {
-        // Check if this looks like a validation error from the backend
-        // These are typically user-fixable errors that should be shown as toasts
-        const isUserFixableError = ErrorHandlerUtil.isUserFixableError(saveErrorMessage);
-        
-        if (isUserFixableError) {
-          // Show validation errors as toast notifications so user can fix them
-          this.notificationService.showError(saveErrorMessage);
-        } else {
-          // For non-user-fixable save errors, also emit to parent
-          this.error.emit(saveErrorMessage);
-        }
+            // Always show save errors as a toast so the user sees the backend message.
+            this.notificationService.showError(saveErrorMessage);
       }
     });
 
@@ -1125,6 +1118,10 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
       const useAdvancedSchedulingControl = this.queueCleanerForm.get('useAdvancedScheduling');
       useAdvancedSchedulingControl?.enable();
       
+      // Enable ignored downloads control
+      const ignoredDownloadsControl = this.queueCleanerForm.get('ignoredDownloads');
+      ignoredDownloadsControl?.enable();
+      
       // Update individual config sections only if they are enabled
       const failedImportMaxStrikes = this.queueCleanerForm.get("failedImport.maxStrikes")?.value;
       const stalledMaxStrikes = this.queueCleanerForm.get("stalled.maxStrikes")?.value;
@@ -1142,6 +1139,10 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
       // Disable the useAdvancedScheduling control
       const useAdvancedSchedulingControl = this.queueCleanerForm.get('useAdvancedScheduling');
       useAdvancedSchedulingControl?.disable();
+      
+      // Disable ignored downloads control
+      const ignoredDownloadsControl = this.queueCleanerForm.get('ignoredDownloads');
+      ignoredDownloadsControl?.disable();
       
       // Save current active accordion state before clearing it
       // This will be empty when we collapse all accordions
@@ -1261,6 +1262,7 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
         useAdvancedScheduling: formValue.useAdvancedScheduling,
         cronExpression: cronExpression,
         jobSchedule: formValue.jobSchedule,
+        ignoredDownloads: formValue.ignoredDownloads || [],
         failedImport: {
           maxStrikes: formValue.failedImport?.maxStrikes || 0,
           ignorePrivate: formValue.failedImport?.ignorePrivate || false,

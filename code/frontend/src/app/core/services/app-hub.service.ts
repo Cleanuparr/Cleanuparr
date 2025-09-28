@@ -48,12 +48,10 @@ export class AppHubService {
 
     return this.hubConnection.start()
       .then(() => {
-        console.log('AppHub connection started');
         this.connectionStatusSubject.next(true);
         this.requestInitialData();
       })
       .catch(err => {
-        console.error('Error connecting to AppHub:', err);
         this.connectionStatusSubject.next(false);
         throw err;
       });
@@ -65,18 +63,15 @@ export class AppHubService {
   private registerSignalREvents(): void {
     // Handle connection events
     this.hubConnection.onreconnected(() => {
-      console.log('AppHub reconnected');
       this.connectionStatusSubject.next(true);
       this.requestInitialData();
     });
 
     this.hubConnection.onreconnecting(() => {
-      console.log('AppHub reconnecting...');
       this.connectionStatusSubject.next(false);
     });
 
     this.hubConnection.onclose(() => {
-      console.log('AppHub connection closed');
       this.connectionStatusSubject.next(false);
     });
 
@@ -163,7 +158,6 @@ export class AppHubService {
     
     return this.hubConnection.stop()
       .then(() => {
-        console.log('AppHub connection stopped');
         this.connectionStatusSubject.next(false);
       })
       .catch(err => {

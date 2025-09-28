@@ -1,10 +1,11 @@
-import { Component, EventEmitter, OnDestroy, Output, effect, inject } from "@angular/core";
+import { Component, EventEmitter, OnInit, OnDestroy, Output, effect, inject } from "@angular/core";
 import { CommonModule } from "@angular/common";
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from "@angular/forms";
 import { Subject, takeUntil } from "rxjs";
 import { GeneralConfigStore } from "./general-config.store";
 import { CanComponentDeactivate } from "../../core/guards";
 import { GeneralConfig } from "../../shared/models/general-config.model";
+import { LoggingConfig } from "../../shared/models/logging-config.model";
 import { LogEventLevel } from "../../shared/models/log-event-level.enum";
 import { CertificateValidationType } from "../../shared/models/certificate-validation-type.enum";
 
@@ -25,6 +26,7 @@ import { LoadingErrorStateComponent } from "../../shared/components/loading-erro
 import { ConfirmDialogModule } from "primeng/confirmdialog";
 import { ConfirmationService } from "primeng/api";
 import { MobileAutocompleteComponent } from "../../shared/components/mobile-autocomplete/mobile-autocomplete.component";
+import { ErrorHandlerUtil } from "../../core/utils/error-handler.util";
 
 @Component({
   selector: "app-general-settings",
@@ -56,6 +58,11 @@ export class GeneralSettingsComponent implements OnDestroy, CanComponentDeactiva
 
   // General Configuration Form
   generalForm: FormGroup;
+  
+  // Getter for easy access to the log form group
+  get logForm(): FormGroup {
+    return this.generalForm.get('log') as FormGroup;
+  }
   
   // Original form values for tracking changes
   private originalFormValues: any;
@@ -91,7 +98,8 @@ export class GeneralSettingsComponent implements OnDestroy, CanComponentDeactiva
   readonly generalConfig = this.generalConfigStore.config;
   readonly generalLoading = this.generalConfigStore.loading;
   readonly generalSaving = this.generalConfigStore.saving;
-  readonly generalError = this.generalConfigStore.error;
+  readonly generalLoadError = this.generalConfigStore.loadError;  // Only for "Not connected" state
+  readonly generalSaveError = this.generalConfigStore.saveError;  // Only for toast notifications
 
   // Subject for unsubscribing from observables when component is destroyed
   private destroy$ = new Subject<void>();
@@ -127,8 +135,16 @@ export class GeneralSettingsComponent implements OnDestroy, CanComponentDeactiva
       httpCertificateValidation: [CertificateValidationType.Enabled],
       searchEnabled: [true],
       searchDelay: [30, [Validators.required, Validators.min(1), Validators.max(300)]],
-      logLevel: [LogEventLevel.Information],
       ignoredDownloads: [[]],
+      log: this.formBuilder.group({
+        level: [LogEventLevel.Information],
+        rollingSizeMB: [10, [Validators.required, Validators.min(0), Validators.max(100)]],
+        retainedFileCount: [5, [Validators.required, Validators.min(0), Validators.max(50)]],
+        timeLimitHours: [24, [Validators.required, Validators.min(0), Validators.max(1440)]], // max 60 days
+        archiveEnabled: [true],
+        archiveRetainedCount: [{ value: 60, disabled: false }, [Validators.required, Validators.min(0), Validators.max(100)]],
+        archiveTimeLimitHours: [{ value: 720, disabled: false }, [Validators.required, Validators.min(0), Validators.max(1440)]], // max 60 days
+      }),
     });
 
     // Effect to handle configuration changes
@@ -144,12 +160,24 @@ export class GeneralSettingsComponent implements OnDestroy, CanComponentDeactiva
           httpCertificateValidation: config.httpCertificateValidation,
           searchEnabled: config.searchEnabled,
           searchDelay: config.searchDelay,
-          logLevel: config.logLevel,
           ignoredDownloads: config.ignoredDownloads || [],
+          log: config.log || {
+            level: LogEventLevel.Information,
+            rollingSizeMB: 10,
+            retainedFileCount: 5,
+            timeLimitHours: 24,
+            archiveEnabled: true,
+            archiveRetainedCount: 60,
+            archiveTimeLimitHours: 720,
+          },
         });
 
         // Store original values for dirty checking
         this.storeOriginalValues();
+
+        // Update archive controls state based on loaded configuration
+        const archiveEnabled = config.log?.archiveEnabled ?? true;
+        this.updateArchiveControlsState(archiveEnabled);
 
         // Track the support banner state for confirmation dialog logic
         this.previousSupportBannerState = config.displaySupportBanner;
@@ -162,12 +190,21 @@ export class GeneralSettingsComponent implements OnDestroy, CanComponentDeactiva
       }
     });
 
-    // Effect to handle errors
+    // Effect to handle load errors - emit to LoadingErrorStateComponent for "Not connected" display
     effect(() => {
-      const errorMessage = this.generalError();
-      if (errorMessage) {
-        // Only emit the error for parent components
-        this.error.emit(errorMessage);
+      const loadErrorMessage = this.generalLoadError();
+      if (loadErrorMessage) {
+        // Load errors should be shown as "Not connected to server" in LoadingErrorStateComponent
+        this.error.emit(loadErrorMessage);
+      }
+    });
+    
+    // Effect to handle save errors - show as toast notifications for user to fix
+    effect(() => {
+      const saveErrorMessage = this.generalSaveError();
+      if (saveErrorMessage) {
+          // Always show save errors as a toast so the user sees the backend message.
+          this.notificationService.showError(saveErrorMessage);
       }
     });
 
@@ -200,6 +237,16 @@ export class GeneralSettingsComponent implements OnDestroy, CanComponentDeactiva
       .subscribe(() => {
         this.hasActualChanges = this.formValuesChanged();
       });
+    
+    // Listen for changes to the 'archiveEnabled' control
+    const archiveEnabledControl = this.generalForm.get('log.archiveEnabled');
+    if (archiveEnabledControl) {
+      archiveEnabledControl.valueChanges
+        .pipe(takeUntil(this.destroy$))
+        .subscribe((enabled: boolean) => {
+          this.updateArchiveControlsState(enabled);
+        });
+    }
   }
 
   /**
@@ -218,6 +265,101 @@ export class GeneralSettingsComponent implements OnDestroy, CanComponentDeactiva
     
     const currentValues = this.generalForm.getRawValue();
     return !this.isEqual(currentValues, this.originalFormValues);
+  }
+
+  /**
+   * Update the state of archive-related controls based on the 'archiveEnabled' control value
+   */
+  private updateArchiveControlsState(archiveEnabled: boolean): void {
+    const archiveRetainedCountControl = this.generalForm.get('log.archiveRetainedCount');
+    const archiveTimeLimitHoursControl = this.generalForm.get('log.archiveTimeLimitHours');
+
+    if (archiveEnabled) {
+      archiveRetainedCountControl?.enable({ emitEvent: false });
+      archiveTimeLimitHoursControl?.enable({ emitEvent: false });
+    } else {
+      // Disable controls but ensure they can still show validation errors
+      archiveRetainedCountControl?.disable({ emitEvent: false });
+      archiveTimeLimitHoursControl?.disable({ emitEvent: false });
+    }
+  }
+
+  /**
+   * Validate all form controls, including disabled ones
+   */
+  private validateAllFormControls(formGroup: FormGroup): void {
+    Object.keys(formGroup.controls).forEach(key => {
+      const control = formGroup.get(key);
+      if (control instanceof FormGroup) {
+        this.validateAllFormControls(control);
+      } else {
+        // Force validation even on disabled controls
+        control?.updateValueAndValidity({ onlySelf: true });
+        control?.markAsTouched();
+      }
+    });
+  }
+
+  /**
+   * Validate archive controls specifically, even when disabled
+   * Returns true if archive controls have validation errors
+   */
+  private validateArchiveControls(): boolean {
+    const archiveEnabledControl = this.generalForm.get('log.archiveEnabled');
+    const archiveRetainedCountControl = this.generalForm.get('log.archiveRetainedCount');
+    const archiveTimeLimitHoursControl = this.generalForm.get('log.archiveTimeLimitHours');
+    
+    if (!archiveEnabledControl || !archiveRetainedCountControl || !archiveTimeLimitHoursControl) {
+      return false;
+    }
+    
+    const isArchiveEnabled = archiveEnabledControl.value;
+    
+    // If archive is disabled, we need to manually validate the disabled controls
+    if (!isArchiveEnabled) {
+      const retainedCountValue = archiveRetainedCountControl.value;
+      const timeLimitValue = archiveTimeLimitHoursControl.value;
+      
+      // Check archive retained count validation (required, min: 0, max: 100)
+      const retainedCountErrors: any = {};
+      if (retainedCountValue === null || retainedCountValue === undefined || retainedCountValue === '') {
+        retainedCountErrors.required = true;
+      } else if (retainedCountValue < 0) {
+        retainedCountErrors.min = { min: 0, actual: retainedCountValue };
+      } else if (retainedCountValue > 100) {
+        retainedCountErrors.max = { max: 100, actual: retainedCountValue };
+      }
+      
+      // Check archive time limit validation (required, min: 0, max: 1440)
+      const timeLimitErrors: any = {};
+      if (timeLimitValue === null || timeLimitValue === undefined || timeLimitValue === '') {
+        timeLimitErrors.required = true;
+      } else if (timeLimitValue < 0) {
+        timeLimitErrors.min = { min: 0, actual: timeLimitValue };
+      } else if (timeLimitValue > 1440) {
+        timeLimitErrors.max = { max: 1440, actual: timeLimitValue };
+      }
+      
+      // Manually set errors and mark as touched to show validation messages
+      if (Object.keys(retainedCountErrors).length > 0) {
+        archiveRetainedCountControl.setErrors(retainedCountErrors);
+        archiveRetainedCountControl.markAsTouched();
+      } else {
+        archiveRetainedCountControl.setErrors(null);
+      }
+      
+      if (Object.keys(timeLimitErrors).length > 0) {
+        archiveTimeLimitHoursControl.setErrors(timeLimitErrors);
+        archiveTimeLimitHoursControl.markAsTouched();
+      } else {
+        archiveTimeLimitHoursControl.setErrors(null);
+      }
+      
+      // Return true if there are validation errors
+      return Object.keys(retainedCountErrors).length > 0 || Object.keys(timeLimitErrors).length > 0;
+    }
+    
+    return false;
   }
 
   /**
@@ -266,23 +408,33 @@ export class GeneralSettingsComponent implements OnDestroy, CanComponentDeactiva
    * Save the general configuration
    */
   saveGeneralConfig(): void {
-    // Mark all form controls as touched to trigger validation
+    // Force validation on all controls, including disabled ones
+    this.validateAllFormControls(this.generalForm);
+    
+    // Specifically validate archive controls even when disabled
+    const archiveValidationErrors = this.validateArchiveControls();
+    
+    // Mark all form controls as touched to trigger validation messages
     this.markFormGroupTouched(this.generalForm);
 
-    if (this.generalForm.valid) {
-      const formValues = this.generalForm.getRawValue();
+    if (this.generalForm.invalid || archiveValidationErrors) {
+      this.notificationService.showValidationError();
+      return;
+    }
 
-      const config: GeneralConfig = {
-        displaySupportBanner: formValues.displaySupportBanner,
-        dryRun: formValues.dryRun,
-        httpMaxRetries: formValues.httpMaxRetries,
-        httpTimeout: formValues.httpTimeout,
-        httpCertificateValidation: formValues.httpCertificateValidation,
-        searchEnabled: formValues.searchEnabled,
-        searchDelay: formValues.searchDelay,
-        logLevel: formValues.logLevel,
-        ignoredDownloads: formValues.ignoredDownloads || [],
-      };
+    const formValues = this.generalForm.getRawValue();
+
+    const config: GeneralConfig = {
+      displaySupportBanner: formValues.displaySupportBanner,
+      dryRun: formValues.dryRun,
+      httpMaxRetries: formValues.httpMaxRetries,
+      httpTimeout: formValues.httpTimeout,
+      httpCertificateValidation: formValues.httpCertificateValidation,
+      searchEnabled: formValues.searchEnabled,
+      searchDelay: formValues.searchDelay,
+      ignoredDownloads: formValues.ignoredDownloads || [],
+      log: formValues.log as LoggingConfig,
+    };
 
       // Save the configuration
       this.generalConfigStore.saveConfig(config);
@@ -290,9 +442,9 @@ export class GeneralSettingsComponent implements OnDestroy, CanComponentDeactiva
       // Setup a one-time check to mark form as pristine after successful save
       const checkSaveCompletion = () => {
         const saving = this.generalSaving();
-        const error = this.generalError();
+        const saveError = this.generalSaveError();
         
-        if (!saving && !error) {
+        if (!saving && !saveError) {
           // Mark form as pristine after successful save
           this.generalForm.markAsPristine();
           // Update original values reference
@@ -301,9 +453,9 @@ export class GeneralSettingsComponent implements OnDestroy, CanComponentDeactiva
           this.saved.emit();
           // Display success message
           this.notificationService.showSuccess('General configuration saved successfully.');
-        } else if (!saving && error) {
-          // If there's an error, we can stop checking
-          // No need to show error toast here, it's handled by the LoadingErrorStateComponent
+        } else if (!saving && saveError) {
+          // If there's a save error, we can stop checking
+          // Toast notification is already handled by the effect above
         } else {
           // If still saving, check again in a moment
           setTimeout(checkSaveCompletion, 100);
@@ -312,9 +464,6 @@ export class GeneralSettingsComponent implements OnDestroy, CanComponentDeactiva
       
       // Start checking for save completion
       checkSaveCompletion();
-    } else {
-      this.notificationService.showValidationError();
-    }
   }
 
   /**
@@ -329,9 +478,20 @@ export class GeneralSettingsComponent implements OnDestroy, CanComponentDeactiva
       httpCertificateValidation: CertificateValidationType.Enabled,
       searchEnabled: true,
       searchDelay: 30,
-      logLevel: LogEventLevel.Information,
       ignoredDownloads: [],
+      log: {
+        level: LogEventLevel.Information,
+        rollingSizeMB: 10,
+        retainedFileCount: 5,
+        timeLimitHours: 24,
+        archiveEnabled: true,
+        archiveRetainedCount: 60,
+        archiveTimeLimitHours: 720,
+      },
     });
+    
+    // Update archive controls state after reset
+    this.updateArchiveControlsState(true); // archiveEnabled defaults to true
     
     // Mark form as dirty so the save button is enabled after reset
     this.generalForm.markAsDirty();
@@ -355,7 +515,22 @@ export class GeneralSettingsComponent implements OnDestroy, CanComponentDeactiva
    */
   hasError(controlName: string, errorName: string): boolean {
     const control = this.generalForm.get(controlName);
-    return control ? control.dirty && control.hasError(errorName) : false;
+    // Check for errors on both enabled and disabled controls that have been touched
+    return control ? control.hasError(errorName) : false;
+  }
+
+  /**
+   * Get nested form control errors
+   */
+  hasNestedError(parentName: string, controlName: string, errorName: string): boolean {
+    const parentControl = this.generalForm.get(parentName);
+    if (!parentControl || !(parentControl instanceof FormGroup)) {
+      return false;
+    }
+
+    const control = parentControl.get(controlName);
+    // Check for errors on both enabled and disabled controls that have been touched
+    return control ? control.hasError(errorName) : false;
   }
 
   /**

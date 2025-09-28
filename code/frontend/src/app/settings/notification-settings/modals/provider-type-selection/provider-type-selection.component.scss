@@ -1,0 +1,224 @@
+.provider-selection-modal {
+  .p-dialog {
+    width: 90vw;
+    max-width: 900px; // Increased to accommodate multiple columns
+    min-width: 320px; // Ensure minimum usable width
+  }
+}
+
+.provider-selection-content {
+  padding: 1rem;
+  max-height: 70vh; // Limit height to prevent excessive tall modals
+  overflow-y: auto; // Enable scrolling if needed
+}
+
+.selection-description {
+  text-align: center;
+  color: var(--text-color-secondary);
+  margin-bottom: 2rem;
+  font-size: 1rem;
+}
+
+.provider-selection-grid {
+  display: grid;
+  gap: 1.5rem;
+  padding: 1rem 0;
+  
+  // Default: 3 columns for desktop (large screens)
+  grid-template-columns: repeat(3, 1fr);
+  
+  // Medium screens (tablets): 2 columns
+  @media (max-width: 992px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  // Small screens (mobile): 1 column
+  @media (max-width: 576px) {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+}
+
+.provider-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2rem 1.5rem;
+  border: 2px solid var(--surface-border);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: var(--surface-card);
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+
+  &:hover {
+    border-color: var(--primary-color);
+    background: var(--surface-hover);
+    transform: translateY(-4px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    
+    .provider-icon {
+      transform: scale(1.1);
+      
+      .provider-icon-image {
+        filter: opacity(1);
+      }
+    }
+  }
+
+  &:active {
+    transform: translateY(-2px);
+  }
+
+  // Add subtle background pattern
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(45deg, transparent 30%, rgba(var(--primary-color-rgb), 0.02) 50%, transparent 70%);
+    pointer-events: none;
+  }
+}
+
+.provider-icon {
+  margin-bottom: 1rem;
+  transition: all 0.3s ease;
+  
+  .provider-icon-image {
+    width: 48px;
+    height: 48px;
+    display: block;
+    filter: opacity(0.7);
+    transition: all 0.3s ease;
+  }
+}
+
+.provider-name {
+  font-weight: 700;
+  font-size: 1.25rem;
+  color: var(--text-color);
+  margin-bottom: 0.5rem;
+  letter-spacing: 0.025em;
+}
+
+.provider-description {
+  font-size: 0.875rem;
+  color: var(--text-color-secondary);
+  line-height: 1.4;
+  text-align: center;
+}
+
+// Responsive design for card content
+@media (max-width: 576px) {
+  .provider-card {
+    padding: 1.5rem 1rem;
+  }
+  
+  .provider-icon {
+    margin-bottom: 0.75rem;
+    
+    .provider-icon-image {
+      width: 40px;
+      height: 40px;
+    }
+  }
+  
+  .provider-name {
+    font-size: 1.125rem;
+  }
+  
+  .provider-description {
+    font-size: 0.8rem;
+  }
+}
+
+// Ensure proper spacing on medium screens
+@media (max-width: 992px) and (min-width: 577px) {
+  .provider-card {
+    padding: 1.75rem 1.25rem;
+  }
+}
+
+// Accessibility improvements
+.provider-card {
+  &:focus {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+  }
+  
+  &:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+  }
+}
+
+// Animation for card entrance
+.provider-card {
+  animation: fadeInUp 0.4s ease-out;
+  animation-fill-mode: both;
+  
+  // Staggered animation delays for up to 12 providers (4 rows x 3 columns)
+  &:nth-child(1) { animation-delay: 0.1s; }
+  &:nth-child(2) { animation-delay: 0.15s; }
+  &:nth-child(3) { animation-delay: 0.2s; }
+  &:nth-child(4) { animation-delay: 0.25s; }
+  &:nth-child(5) { animation-delay: 0.3s; }
+  &:nth-child(6) { animation-delay: 0.35s; }
+  &:nth-child(7) { animation-delay: 0.4s; }
+  &:nth-child(8) { animation-delay: 0.45s; }
+  &:nth-child(9) { animation-delay: 0.5s; }
+  &:nth-child(n+10) { animation-delay: 0.55s; } // All remaining items
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// Add subtle scroll indicators when content overflows
+.provider-selection-content {
+  position: relative;
+  
+  // Gradient fade at bottom when scrolling is needed
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 20px;
+    background: linear-gradient(to top, var(--surface-card), transparent);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: var(--surface-border);
+    border-radius: 3px;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: var(--text-color-secondary);
+    border-radius: 3px;
+    
+    &:hover {
+      background: var(--primary-color);
+    }
+  }
+}

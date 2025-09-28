@@ -25,6 +25,8 @@ public sealed record QueueCleanerConfig : IJobConfig
     //
     // public SlowConfig Slow { get; set; } = new();
     
+    public List<string> IgnoredDownloads { get; set; } = [];
+    
     public ushort DownloadingMetadataMaxStrikes { get; init; }
     
     public List<StallRule> StallRules { get; set; } = [];

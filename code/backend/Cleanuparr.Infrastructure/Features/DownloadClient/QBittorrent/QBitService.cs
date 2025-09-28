@@ -2,12 +2,14 @@ using Cleanuparr.Infrastructure.Events;
 using Cleanuparr.Infrastructure.Features.Files;
 using Cleanuparr.Infrastructure.Features.ItemStriker;
 using Cleanuparr.Infrastructure.Features.MalwareBlocker;
+using Cleanuparr.Infrastructure.Helpers;
 using Cleanuparr.Infrastructure.Http;
+using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Infrastructure.Services.Interfaces;
 using Cleanuparr.Persistence.Models.Configuration;
-using Infrastructure.Interceptors;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json.Linq;
 using QBittorrent.Client;
 
 namespace Cleanuparr.Infrastructure.Features.DownloadClient.QBittorrent;
@@ -47,11 +49,11 @@ public partial class QBitService : DownloadService, IQBitService
         try
         {
             await _client.LoginAsync(_downloadClientConfig.Username, _downloadClientConfig.Password);
-            _logger.LogDebug("Successfully logged in to QBittorrent client {clientId}", _downloadClientConfig.Id);
+            _logger.LogDebug("Successfully logged in to qBittorrent client {clientId}", _downloadClientConfig.Id);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to login to QBittorrent client {clientId}", _downloadClientConfig.Id);
+            _logger.LogError(ex, "Failed to login to qBittorrent client {clientId}", _downloadClientConfig.Id);
             throw;
         }
     }
@@ -67,15 +69,15 @@ public partial class QBitService : DownloadService, IQBitService
 
             if (hasCredentials)
             {
-                // If credentials are provided, we must be able to login for the service to be healthy
+                // If credentials are provided, we must be able to log in for the service to be healthy
                 await _client.LoginAsync(_downloadClientConfig.Username, _downloadClientConfig.Password);
-                _logger.LogDebug("Health check: Successfully logged in to QBittorrent client {clientId}", _downloadClientConfig.Id);
+                _logger.LogDebug("Health check: Successfully logged in to qBittorrent client {clientId}", _downloadClientConfig.Id);
             }
             else
             {
                 // If no credentials, test connectivity using version endpoint
                 await _client.GetApiVersionAsync();
-                _logger.LogDebug("Health check: Successfully connected to QBittorrent client {clientId}", _downloadClientConfig.Id);
+                _logger.LogDebug("Health check: Successfully connected to qBittorrent client {clientId}", _downloadClientConfig.Id);
             }
 
             stopwatch.Stop();
@@ -90,7 +92,7 @@ public partial class QBitService : DownloadService, IQBitService
         {
             stopwatch.Stop();
             
-            _logger.LogWarning(ex, "Health check failed for QBittorrent client {clientId}", _downloadClientConfig.Id);
+            _logger.LogWarning(ex, "Health check failed for qBittorrent client {clientId}", _downloadClientConfig.Id);
             
             return new HealthCheckResult
             {
@@ -99,6 +101,23 @@ public partial class QBitService : DownloadService, IQBitService
                 ResponseTime = stopwatch.Elapsed
             };
         }
+    }
+
+    /// <summary>
+    /// Syncs blacklist patterns from configured file to qBittorrent excluded file names
+    /// </summary>
+    /// <param name="excludedFileNames">List of excluded file names for qBittorrent</param>
+    public async Task UpdateBlacklistAsync(string excludedFileNames)
+    {
+        Preferences preferences = new()
+        {
+            AdditionalData = new Dictionary<string, JToken>
+            {
+                { "excluded_file_names", excludedFileNames }
+            }
+        };
+
+        await _client.SetPreferencesAsync(preferences);
     }
     
     private async Task<IReadOnlyList<TorrentTracker>> GetTrackersAsync(string hash)

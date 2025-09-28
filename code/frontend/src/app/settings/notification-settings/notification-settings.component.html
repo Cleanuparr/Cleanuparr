@@ -1,226 +1,194 @@
 <div class="settings-container">
   <div class="flex align-items-center justify-content-between mb-4">
-    <h1>Notifications</h1>
+    <h1>Notifications Configuration</h1>
   </div>
 
-  <p-card styleClass="settings-card h-full">
-    <ng-template pTemplate="header">
-      <div class="flex align-items-center justify-content-between p-3 border-bottom-1 surface-border">
-        <div class="header-title-container">
-          <h2 class="card-title m-0">Notification Configuration</h2>
-          <span class="card-subtitle">Configure notification settings for Notifiarr and Apprise</span>
-        </div>
-      </div>
-    </ng-template>
-  
-    <div class="card-content">
-      <!-- Loading/Error Component -->
-      <app-loading-error-state
-        *ngIf="notificationLoading() || notificationError()"
-        [loading]="notificationLoading()"
-        [error]="notificationError()"
-        loadingMessage="Loading notification settings..."
-        errorMessage="Could not connect to server"
-      ></app-loading-error-state>
-  
-      <!-- Settings Form -->
-      <form *ngIf="!notificationLoading() && !notificationError()" [formGroup]="notificationForm" class="p-fluid">
-        
-        <!-- Notifiarr Configuration Section -->
-        <div class="mb-4">
-          <h3 class="section-title">Notifiarr Configuration</h3>
-          <div formGroupName="notifiarr">
-                        <!-- API Key -->
-            <div class="field-row">
-              <label class="field-label">
-                <i class="pi pi-question-circle field-info-icon" 
-                   (click)="openFieldDocs('notifiarr.apiKey')"
-                   title="Click for documentation">
-                </i>
-                API Key
-              </label>
-              <div class="field-input">
-                <input type="text" pInputText formControlName="apiKey" inputId="notifiarrApiKey" placeholder="Enter Notifiarr API key" />
-                <small class="form-helper-text">Passthrough integration must be enabled and a Passthrough key needs to be created in your profile</small>
-              </div>
-            </div>
+  <!-- Loading/Error Component -->
+  <app-loading-error-state
+    *ngIf="notificationProviderLoading() || notificationProviderLoadError()"
+    [loading]="notificationProviderLoading()"
+    [error]="notificationProviderLoadError()"
+    loadingMessage="Loading notification providers..."
+    errorMessage="Could not connect to server"
+  ></app-loading-error-state>
 
-            <!-- Channel ID -->
-            <div class="field-row">
-              <label class="field-label">
-                <i class="pi pi-question-circle field-info-icon" 
-                   (click)="openFieldDocs('notifiarr.channelId')"
-                   title="Click for documentation">
-                </i>
-                Channel ID
-              </label>
-              <div class="field-input">
-                <input 
-                  type="text" 
-                  pInputText 
-                  formControlName="channelId" 
-                  placeholder="Enter Discord channel ID"
-                  numericInput
-                />
-                <small class="form-helper-text">The Discord channel ID where notifications will be sent</small>
-              </div>
-            </div>
-  
-            <!-- Event Triggers -->
-            <div class="field-row">
-              <label class="field-label">
-                <i class="pi pi-question-circle field-info-icon" 
-                   (click)="openFieldDocs('eventTriggers')"
-                   title="Click for documentation">
-                </i>
-                Event Triggers
-              </label>
-              <div class="field-input">
-                <div class="flex flex-column gap-2">
-                  <div class="flex align-items-center">
-                    <p-checkbox formControlName="onFailedImportStrike" [binary]="true" inputId="notifiarrFailedImport"></p-checkbox>
-                    <label for="notifiarrFailedImport" class="ml-2">Failed Import Strike</label>
+  <!-- Providers Configuration -->
+  <div *ngIf="!notificationProviderLoading() && !notificationProviderLoadError()">
+    <p-card styleClass="settings-card h-full">
+      <ng-template pTemplate="header">
+        <div class="flex align-items-center justify-content-between p-3 border-bottom-1 surface-border">
+          <div class="header-title-container">
+            <h2 class="card-title m-0">Notification Providers</h2>
+            <span class="card-subtitle">Configure notification providers to receive alerts</span>
+          </div>
+        </div>
+      </ng-template>
+
+      <div class="card-content">
+        <!-- Providers List -->
+        <div class="items-list">
+        <div 
+          *ngFor="let provider of notificationProviderStore.notificationProviders()" 
+          class="item-item p-3 border-round surface-border border-1 mb-3"
+          [ngClass]="{ 'enabled': provider.isEnabled }"
+        >
+          <div class="flex justify-content-between align-items-center">
+            <div class="item-info flex-1">
+                <div>
+                  <div class="flex align-items-center mb-2">
+                    <h4 class="m-0 mr-2">{{ provider.name }}</h4>
+                    <p-tag 
+                      [value]="provider.type | titlecase" 
+                      [severity]="'info'"
+                      class="mr-2"
+                    ></p-tag>
+                    <p-tag 
+                      [value]="provider.isEnabled ? 'Enabled' : 'Disabled'" 
+                      [severity]="provider.isEnabled ? 'success' : 'secondary'"
+                    ></p-tag>
                   </div>
-                  <div class="flex align-items-center">
-                    <p-checkbox formControlName="onStalledStrike" [binary]="true" inputId="notifiarrStalled"></p-checkbox>
-                    <label for="notifiarrStalled" class="ml-2">Stalled Strike</label>
-                  </div>
-                  <div class="flex align-items-center">
-                    <p-checkbox formControlName="onSlowStrike" [binary]="true" inputId="notifiarrSlow"></p-checkbox>
-                    <label for="notifiarrSlow" class="ml-2">Slow Strike</label>
-                  </div>
-                  <div class="flex align-items-center">
-                    <p-checkbox formControlName="onQueueItemDeleted" [binary]="true" inputId="notifiarrDeleted"></p-checkbox>
-                    <label for="notifiarrDeleted" class="ml-2">Queue Item Deleted</label>
-                  </div>
-                  <div class="flex align-items-center">
-                    <p-checkbox formControlName="onDownloadCleaned" [binary]="true" inputId="notifiarrCleaned"></p-checkbox>
-                    <label for="notifiarrCleaned" class="ml-2">Download Cleaned</label>
-                  </div>
-                  <div class="flex align-items-center">
-                    <p-checkbox formControlName="onCategoryChanged" [binary]="true" inputId="notifiarrCategory"></p-checkbox>
-                    <label for="notifiarrCategory" class="ml-2">Category Changed</label>
+              <div class="item-details text-sm text-color-secondary">
+                <span *ngIf="provider.events.onFailedImportStrike" class="mr-2">❌ Failed Import</span>
+                <span *ngIf="provider.events.onStalledStrike" class="mr-2">⏸️ Stalled</span>
+                <span *ngIf="provider.events.onSlowStrike" class="mr-2">🐌 Slow</span>
+                <span *ngIf="provider.events.onQueueItemDeleted" class="mr-2">🗑️ Queue Deleted</span>
+                <span *ngIf="provider.events.onDownloadCleaned" class="mr-2">🧹 Download Cleaned</span>
+                <span *ngIf="provider.events.onCategoryChanged" class="mr-2">🏷️ Category Changed</span>
                   </div>
                 </div>
-                <small class="form-helper-text">Select which events should trigger Notifiarr notifications</small>
-              </div>
+            </div>
+            <div class="item-actions">
+              <button 
+                pButton 
+                type="button" 
+                icon="pi pi-play" 
+                class="p-button-rounded p-button-text p-button-sm mr-1"
+                pTooltip="Test notification"
+                tooltipPosition="left"
+                [loading]="testing()"
+                (click)="testProvider(provider)"
+              ></button>
+              <button 
+                pButton 
+                type="button" 
+                icon="pi pi-pencil" 
+                class="p-button-rounded p-button-text p-button-sm mr-1"
+                pTooltip="Edit provider"
+                tooltipPosition="left"
+                [disabled]="saving()"
+                (click)="openEditProviderModal(provider)"
+              ></button>
+              <button 
+                pButton 
+                type="button" 
+                icon="pi pi-trash" 
+                class="p-button-rounded p-button-text p-button-danger p-button-sm"
+                pTooltip="Delete provider"
+                tooltipPosition="left"
+                [disabled]="saving()"
+                (click)="deleteProvider(provider)"
+              ></button>
             </div>
           </div>
         </div>
-  
-        <!-- Apprise Configuration Section -->
-        <div class="mb-4">
-          <h3 class="section-title">Apprise Configuration</h3>
-          <div formGroupName="apprise">
-                        <!-- URL -->
-            <div class="field-row">
-              <label class="field-label">
-                <i class="pi pi-question-circle field-info-icon" 
-                   (click)="openFieldDocs('apprise.fullUrl')"
-                   title="Click for documentation">
-                </i>
-                URL
-              </label>
-              <div class="field-input">
-                <input type="text" pInputText formControlName="fullUrl" inputId="appriseUrl" placeholder="Enter Apprise URL" />
-                <small class="form-helper-text">The Apprise server URL</small>
-              </div>
-            </div>
 
-            <!-- Key -->
-            <div class="field-row">
-              <label class="field-label">
-                <i class="pi pi-question-circle field-info-icon" 
-                   (click)="openFieldDocs('apprise.key')"
-                   title="Click for documentation">
-                </i>
-                Key
-              </label>
-              <div class="field-input">
-                <input type="text" pInputText formControlName="key" inputId="appriseKey" placeholder="Enter key" />
-                <small class="form-helper-text">The key of your Apprise config</small>
-              </div>
-            </div>
-
-            <!-- Tags -->
-            <div class="field-row">
-              <label class="field-label">
-                <i class="pi pi-question-circle field-info-icon" 
-                   (click)="openFieldDocs('apprise.tags')"
-                   title="Click for documentation">
-                </i>
-                Tags
-              </label>
-              <div class="field-input">
-                <input type="text" pInputText formControlName="tags" inputId="appriseTags" placeholder="Enter tags (comma or space separated)" />
-                <small class="form-helper-text">Optionally notify only those tagged accordingly. Use a comma (,) to OR your tags and a space ( ) to AND them.</small>
-              </div>
-            </div>
-  
-            <!-- Event Triggers -->
-            <div class="field-row">
-              <label class="field-label">
-                <i class="pi pi-question-circle field-info-icon" 
-                   (click)="openFieldDocs('eventTriggers')"
-                   title="Click for documentation">
-                </i>
-                Event Triggers
-              </label>
-              <div class="field-input">
-                <div class="flex flex-column gap-2">
-                  <div class="flex align-items-center">
-                    <p-checkbox formControlName="onFailedImportStrike" [binary]="true" inputId="appriseFailedImport"></p-checkbox>
-                    <label for="appriseFailedImport" class="ml-2">Failed Import Strike</label>
-                  </div>
-                  <div class="flex align-items-center">
-                    <p-checkbox formControlName="onStalledStrike" [binary]="true" inputId="appriseStalled"></p-checkbox>
-                    <label for="appriseStalled" class="ml-2">Stalled Strike</label>
-                  </div>
-                  <div class="flex align-items-center">
-                    <p-checkbox formControlName="onSlowStrike" [binary]="true" inputId="appriseSlow"></p-checkbox>
-                    <label for="appriseSlow" class="ml-2">Slow Strike</label>
-                  </div>
-                  <div class="flex align-items-center">
-                    <p-checkbox formControlName="onQueueItemDeleted" [binary]="true" inputId="appriseDeleted"></p-checkbox>
-                    <label for="appriseDeleted" class="ml-2">Queue Item Deleted</label>
-                  </div>
-                  <div class="flex align-items-center">
-                    <p-checkbox formControlName="onDownloadCleaned" [binary]="true" inputId="appriseCleaned"></p-checkbox>
-                    <label for="appriseCleaned" class="ml-2">Download Cleaned</label>
-                  </div>
-                  <div class="flex align-items-center">
-                    <p-checkbox formControlName="onCategoryChanged" [binary]="true" inputId="appriseCategory"></p-checkbox>
-                    <label for="appriseCategory" class="ml-2">Category Changed</label>
-                  </div>
-                </div>
-                <small class="form-helper-text">Select which events should trigger Apprise notifications</small>
-              </div>
-            </div>
-          </div>
+        <div 
+          *ngIf="notificationProviderStore.notificationProviders().length === 0" 
+          class="no-items text-center py-5 text-color-secondary"
+        >
+          <i class="pi pi-bell text-4xl mb-3"></i>
+          <p class="m-0">No notification providers configured</p>
+          <small>Add a provider to start receiving notifications</small>
         </div>
-  
+
         <!-- Action buttons -->
         <div class="card-footer mt-3">
-          <button
-            pButton
-            type="button"
-            label="Save"
-            icon="pi pi-save"
+          <button 
+            pButton 
+            type="button" 
+            icon="pi pi-plus" 
+            label="Add Provider"
             class="p-button-primary"
-            [disabled]="(!notificationForm.dirty || !hasActualChanges) || notificationForm.invalid || notificationSaving()"
-            [loading]="notificationSaving()"
-            (click)="saveNotificationConfig()"
-          ></button>
-          <button
-            pButton
-            type="button"
-            label="Reset"
-            icon="pi pi-refresh"
-            class="p-button-secondary p-button-outlined ml-2"
-            (click)="resetNotificationConfig()"
+            [disabled]="saving()"
+            (click)="openAddProviderModal()"
           ></button>
         </div>
-      </form>
-    </div>
-  </p-card> 
+        </div>
+      </div>
+    </p-card>
+  </div>
 </div>
+
+<!-- Legacy Provider Modal (for unsupported provider types) -->
+<p-dialog 
+  [(visible)]="showProviderModal" 
+  [modal]="true" 
+  [closable]="true"
+  [draggable]="false"
+  [resizable]="false"
+  styleClass="instance-modal"
+  [header]="modalTitle"
+  (onHide)="closeProviderModal()"
+>
+  <div class="text-center py-4">
+    <i class="pi pi-info-circle text-4xl mb-3 text-color-secondary"></i>
+    <h3>Provider Type Not Yet Supported</h3>
+    <p class="text-color-secondary">
+      This provider type is not yet supported by the new modal system.
+      <br>Please select Notifiarr or Apprise for now.
+    </p>
+    <button 
+      pButton 
+      type="button" 
+      label="Close" 
+      class="p-button-text mt-3"
+      (click)="closeProviderModal()"
+    ></button>
+  </div>
+</p-dialog>
+
+<!-- Provider Type Selection Modal -->
+<app-provider-type-selection
+  [visible]="showTypeSelectionModal"
+  (providerSelected)="onProviderTypeSelected($event)"
+  (cancel)="onTypeSelectionCancel()"
+></app-provider-type-selection>
+
+<!-- Notifiarr Provider Modal -->
+<app-notifiarr-provider
+  [visible]="showNotifiarrModal"
+  [editingProvider]="editingProvider"
+  [saving]="saving()"
+  [testing]="testing()"
+  (save)="onNotifiarrSave($event)"
+  (cancel)="onProviderCancel()"
+  (test)="onNotifiarrTest($event)"
+></app-notifiarr-provider>
+
+<!-- Apprise Provider Modal -->
+<app-apprise-provider
+  [visible]="showAppriseModal"
+  [editingProvider]="editingProvider"
+  [saving]="saving()"
+  [testing]="testing()"
+  (save)="onAppriseSave($event)"
+  (cancel)="onProviderCancel()"
+  (test)="onAppriseTest($event)"
+></app-apprise-provider>
+
+<!-- Ntfy Provider Modal -->
+<app-ntfy-provider
+  [visible]="showNtfyModal"
+  [editingProvider]="editingProvider"
+  [saving]="saving()"
+  [testing]="testing()"
+  (save)="onNtfySave($event)"
+  (cancel)="onProviderCancel()"
+  (test)="onNtfyTest($event)"
+></app-ntfy-provider>
+
+<!-- Confirmation Dialog -->
+<p-confirmDialog></p-confirmDialog>
+
+<!-- Toast for notifications -->
+<p-toast></p-toast>
