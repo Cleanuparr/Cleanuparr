@@ -9,7 +9,7 @@ namespace Cleanuparr.Api;
 
 public static class HostExtensions
 {
-    public static Task<IHost> InitAsync(this WebApplication app)
+    public static IHost Init(this WebApplication app)
     {
         ILogger<Program> logger = app.Services.GetRequiredService<ILogger<Program>>();
         AppStatusSnapshot statusSnapshot = app.Services.GetRequiredService<AppStatusSnapshot>();
@@ -30,7 +30,7 @@ public static class HostExtensions
         
         logger.LogInformation("timezone: {tz}", TimeZoneInfo.Local.DisplayName);
         
-        return Task.FromResult<IHost>(app);
+        return app;
     }
 
     private static string? FormatVersion(Version? version)
