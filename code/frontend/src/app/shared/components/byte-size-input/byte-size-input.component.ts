@@ -1,4 +1,4 @@
-import { Component, Input, forwardRef, signal } from '@angular/core';
+import { Component, Input, forwardRef, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ControlValueAccessor, FormsModule, NG_VALUE_ACCESSOR, ReactiveFormsModule } from '@angular/forms';
 import { InputNumberModule } from 'primeng/inputnumber';
@@ -22,12 +22,12 @@ type ByteSizeUnit = 'KB' | 'MB' | 'GB';
   templateUrl: './byte-size-input.component.html',
   styleUrl: './byte-size-input.component.scss'
 })
-export class ByteSizeInputComponent implements ControlValueAccessor {
-  @Input() label: string = 'Size';
-  @Input() min: number = 0;
-  @Input() disabled: boolean = false;
-  @Input() placeholder: string = 'Enter size';
-  @Input() helpText: string = '';
+export class ByteSizeInputComponent implements ControlValueAccessor, OnInit {
+  @Input() label = 'Size';
+  @Input() min = 0;
+  @Input() disabled = false;
+  @Input() placeholder = 'Enter size';
+  @Input() helpText = '';
   @Input() type: ByteSizeInputType = 'size';
 
   // Value in the selected unit
@@ -65,8 +65,8 @@ export class ByteSizeInputComponent implements ControlValueAccessor {
   }
 
   // ControlValueAccessor interface methods
-  private onChange: (value: string) => void = () => {};
-  private onTouched: () => void = () => {};
+  private onChange: (value: string) => void = () => undefined;
+  private onTouched: () => void = () => undefined;
 
   ngOnInit(): void {
     this.unit.set(this.getDefaultUnit());
@@ -111,11 +111,11 @@ export class ByteSizeInputComponent implements ControlValueAccessor {
     }
   }
 
-  registerOnChange(fn: any): void {
+  registerOnChange(fn: (value: string) => void): void {
     this.onChange = fn;
   }
 
-  registerOnTouched(fn: any): void {
+  registerOnTouched(fn: () => void): void {
     this.onTouched = fn;
   }
 
@@ -133,7 +133,13 @@ export class ByteSizeInputComponent implements ControlValueAccessor {
       return;
     }
     // Format as "100MB", "1.5GB", etc.
-    const formattedValue = `${this.value()}${this.unit()}`;
+    let unitValue = this.unit() as ByteSizeUnit | null;
+    if (!unitValue) {
+      unitValue = this.getDefaultUnit();
+      this.unit.set(unitValue);
+    }
+
+    const formattedValue = `${this.value()}${unitValue}`;
     this.onChange(formattedValue);
   }
 
@@ -141,6 +147,11 @@ export class ByteSizeInputComponent implements ControlValueAccessor {
    * Update the unit and notify the form control
    */
   updateUnit(): void {
+    let unitValue = this.unit() as ByteSizeUnit | null;
+    if (!unitValue) {
+      unitValue = this.getDefaultUnit();
+      this.unit.set(unitValue);
+    }
     this.updateValue();
   }
 }
