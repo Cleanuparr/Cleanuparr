@@ -22,6 +22,7 @@ import { AccordionModule } from "primeng/accordion";
 import { SelectButtonModule } from "primeng/selectbutton";
 import { ChipsModule } from "primeng/chips";
 import { ToastModule } from "primeng/toast";
+import { TagModule } from "primeng/tag";
 import { MessageService, ConfirmationService } from "primeng/api";
 // Using centralized NotificationService instead of MessageService
 import { NotificationService } from "../../core/services/notification.service";
@@ -64,6 +65,7 @@ interface RuleCoverage {
     SelectButtonModule,
     ChipsModule,
     ToastModule,
+  TagModule,
     ByteSizeInputComponent,
     SelectModule,
     AutoCompleteModule,
