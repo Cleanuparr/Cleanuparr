@@ -87,6 +87,7 @@ public class QueueRulesController : ControllerBase
                 MaxCompletionPercentage = ruleDto.MaxCompletionPercentage,
                 ResetStrikesOnProgress = ruleDto.ResetStrikesOnProgress,
                 DeletePrivateTorrentsFromClient = ruleDto.DeletePrivateTorrentsFromClient,
+                MinimumProgress = ruleDto.MinimumProgress?.Trim(),
             };
 
             // Get existing rules for interval validation (excluding the current rule)
@@ -165,6 +166,7 @@ public class QueueRulesController : ControllerBase
                 MaxCompletionPercentage = ruleDto.MaxCompletionPercentage,
                 ResetStrikesOnProgress = ruleDto.ResetStrikesOnProgress,
                 DeletePrivateTorrentsFromClient = ruleDto.DeletePrivateTorrentsFromClient,
+                MinimumProgress = ruleDto.MinimumProgress?.Trim(),
             };
 
             // Get existing rules for interval validation (excluding the current rule)

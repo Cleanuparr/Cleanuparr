@@ -334,6 +334,7 @@
                         <span>Max Completion: {{ rule.maxCompletionPercentage }}%</span>
                         <span>Max Strikes: {{ rule.maxStrikes }}</span>
                         <span>Reset on Progress: {{ rule.resetStrikesOnProgress ? 'Yes' : 'No' }}</span>
+                        <span *ngIf="rule.minimumProgress">Minimum Progress: {{ rule.minimumProgress }}</span>
                         <span *ngIf="rule.privacyType === 'Private' || rule.privacyType === 'Both'">
                           Delete Private: {{ rule.deletePrivateTorrentsFromClient ? 'Yes' : 'No' }}
                         </span>
@@ -419,12 +420,6 @@
                   </div>
                 </div>
               </div>
-            </div>
-
-            <!-- Empty state when no rules -->
-            <div *ngIf="slowRulesCount === 0" class="empty-instances-message p-3 text-center">
-              <i class="pi pi-clock empty-icon"></i>
-              <p>No slow download rules defined. Add a rule to customize slow download detection.</p>
             </div>
 
             <!-- Rules List -->
@@ -622,6 +617,18 @@
         <p-checkbox formControlName="resetStrikesOnProgress" [binary]="true"></p-checkbox>
         <small class="form-helper-text">Reset strike count when torrent shows progress</small>
       </div>
+    </div>
+
+    <div class="field">
+      <label for="stall-rule-min-progress">Minimum Progress to Reset</label>
+      <app-byte-size-input
+        id="stall-rule-min-progress"
+        formControlName="minimumProgress"
+        placeholder="Enter minimum progress"
+        helpText="Only reset strikes after the torrent downloads at least this amount. Leave blank to reset on any progress."
+        type="smallSize"
+      >
+      </app-byte-size-input>
     </div>
 
     <div class="field flex flex-row">

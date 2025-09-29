@@ -21,6 +21,7 @@ export interface QueueRule {
 
 export interface StallRule extends QueueRule {
   resetStrikesOnProgress: boolean;
+  minimumProgress?: string | null;
 }
 
 export interface SlowRule extends QueueRule {
@@ -40,6 +41,7 @@ export interface CreateStallRuleDto {
   maxCompletionPercentage: number;
   resetStrikesOnProgress: boolean;
   deletePrivateTorrentsFromClient: boolean;
+  minimumProgress?: string | null;
 }
 
 export interface UpdateStallRuleDto extends CreateStallRuleDto {

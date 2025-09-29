@@ -4,7 +4,7 @@ import { ControlValueAccessor, FormsModule, NG_VALUE_ACCESSOR, ReactiveFormsModu
 import { InputNumberModule } from 'primeng/inputnumber';
 import { SelectButtonModule } from 'primeng/selectbutton';
 
-export type ByteSizeInputType = 'speed' | 'size';
+export type ByteSizeInputType = 'speed' | 'size' | 'smallSize';
 
 type ByteSizeUnit = 'KB' | 'MB' | 'GB';
 
@@ -43,6 +43,11 @@ export class ByteSizeInputComponent implements ControlValueAccessor, OnInit {
         return [
           { label: 'KB/s', value: 'KB' },
           { label: 'MB/s', value: 'MB' }
+        ];
+      case 'smallSize':
+        return [
+          { label: 'KB', value: 'KB' },
+          { label: 'MB', value: 'MB' },
         ];
       case 'size':
       default:

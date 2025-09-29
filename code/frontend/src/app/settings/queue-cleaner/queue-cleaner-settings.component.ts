@@ -333,6 +333,7 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
       privacyType: rule.privacyType,
       maxCompletionPercentage: rule.maxCompletionPercentage,
       resetStrikesOnProgress: rule.resetStrikesOnProgress,
+      minimumProgress: rule.minimumProgress ?? null,
       deletePrivateTorrentsFromClient: rule.deletePrivateTorrentsFromClient
     });
     
@@ -435,6 +436,7 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
       maxStrikes: 3,
       privacyType: TorrentPrivacyType.Public,
       resetStrikesOnProgress: true,
+      minimumProgress: null,
       deletePrivateTorrentsFromClient: false,
     });
     
@@ -443,6 +445,9 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
     if (deletePrivateControl) {
       deletePrivateControl.disable();
     }
+
+    const minimumProgressControl = this.stallRuleForm.get('minimumProgress');
+    minimumProgressControl?.enable({ emitEvent: false });
   }
 
   /**
@@ -478,7 +483,7 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
     
     this.stallRuleSaving = true;
     this.stallRuleSaveInitiated = true;
-    const ruleData = this.stallRuleForm.value;
+  const ruleData = this.stallRuleForm.getRawValue();
     
     if (this.editingStallRule?.id) {
       // Update existing rule
@@ -625,6 +630,7 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
       privacyType: [TorrentPrivacyType.Public, [Validators.required]],
       maxCompletionPercentage: [null, [Validators.required, Validators.min(1), Validators.max(100)]],
       resetStrikesOnProgress: [true],
+      minimumProgress: [null],
       deletePrivateTorrentsFromClient: [{ value: false, disabled: true }],
     });
 
@@ -760,11 +766,21 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
     // Initialize stall rule form
     const stallPrivacyType = this.stallRuleForm.get('privacyType')?.value;
     const stallDeletePrivateControl = this.stallRuleForm.get('deletePrivateTorrentsFromClient');
+    const stallMinimumProgressControl = this.stallRuleForm.get('minimumProgress');
     if (stallDeletePrivateControl) {
       if (stallPrivacyType === TorrentPrivacyType.Private || stallPrivacyType === TorrentPrivacyType.Both) {
         stallDeletePrivateControl.enable();
       } else {
         stallDeletePrivateControl.disable();
+      }
+    }
+
+    if (stallMinimumProgressControl) {
+      const resetOnProgress = this.stallRuleForm.get('resetStrikesOnProgress')?.value ?? true;
+      if (resetOnProgress) {
+        stallMinimumProgressControl.enable({ emitEvent: false });
+      } else {
+        stallMinimumProgressControl.disable({ emitEvent: false });
       }
     }
 
@@ -895,6 +911,20 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
           } else {
             deletePrivateControl.disable();
           }
+        }
+      });
+
+    this.stallRuleForm.get('resetStrikesOnProgress')?.valueChanges.pipe(takeUntil(this.destroy$))
+      .subscribe((resetOnProgress: boolean) => {
+        const minimumProgressControl = this.stallRuleForm.get('minimumProgress');
+        if (!minimumProgressControl) {
+          return;
+        }
+
+        if (resetOnProgress) {
+          minimumProgressControl.enable({ onlySelf: true, emitEvent: false });
+        } else {
+          minimumProgressControl.disable({ onlySelf: true, emitEvent: false });
         }
       });
 

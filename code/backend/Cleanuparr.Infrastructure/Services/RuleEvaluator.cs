@@ -59,7 +59,12 @@ public class RuleEvaluator : IRuleEvaluator
 
             try
             {
-                await ResetStrikesIfProgressAsync(torrent, rule.ResetStrikesOnProgress, StrikeType.Stalled, rule.Name);
+                await ResetStrikesIfProgressAsync(
+                    torrent,
+                    rule.ResetStrikesOnProgress,
+                    rule.MinimumProgressByteSize?.Bytes,
+                    StrikeType.Stalled,
+                    rule.Name);
                 
                 // Apply strike and check if torrent should be removed
                 bool shouldRemove = await _striker.StrikeAndCheckLimit(
@@ -121,7 +126,12 @@ public class RuleEvaluator : IRuleEvaluator
 
             try
             {
-                await ResetStrikesIfProgressAsync(torrent, rule.ResetStrikesOnProgress, StrikeType.SlowSpeed, rule.Name);
+                await ResetStrikesIfProgressAsync(
+                    torrent,
+                    rule.ResetStrikesOnProgress,
+                    null,
+                    StrikeType.SlowSpeed,
+                    rule.Name);
                 
                 // For slow rules, we need additional torrent information to evaluate speed/time criteria
                 // This would typically come from the download client, but for now we'll apply the strike
@@ -161,7 +171,12 @@ public class RuleEvaluator : IRuleEvaluator
         return result;
     }
 
-    private async Task ResetStrikesIfProgressAsync(ITorrentInfo torrent, bool resetEnabled, StrikeType strikeType, string ruleName)
+    private async Task ResetStrikesIfProgressAsync(
+        ITorrentInfo torrent,
+        bool resetEnabled,
+        long? minimumProgressBytes,
+        StrikeType strikeType,
+        string ruleName)
     {
         if (!resetEnabled)
         {
@@ -170,6 +185,20 @@ public class RuleEvaluator : IRuleEvaluator
 
         if (!HasDownloadProgress(torrent, strikeType, out long previous, out long current))
         {
+            return;
+        }
+
+        long progressBytes = current - previous;
+
+        if (minimumProgressBytes.HasValue && minimumProgressBytes.Value > 0 && progressBytes < minimumProgressBytes.Value)
+        {
+            _logger.LogDebug(
+                "Progress detected for torrent '{TorrentName}' while applying {StrikeType} rule '{RuleName}', but {ProgressBytes} bytes is below threshold of {ThresholdBytes} bytes. Strikes remain unchanged.",
+                torrent.Name,
+                strikeType,
+                ruleName,
+                progressBytes,
+                minimumProgressBytes.Value);
             return;
         }
 

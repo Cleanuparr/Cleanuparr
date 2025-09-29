@@ -3,4 +3,6 @@
 public sealed record StallRuleDto : QueueRuleDto
 {
     public bool ResetStrikesOnProgress { get; set; } = true;
+    
+    public string? MinimumProgress { get; set; }
 }
