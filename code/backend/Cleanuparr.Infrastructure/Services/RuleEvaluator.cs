@@ -131,7 +131,13 @@ public class RuleEvaluator : IRuleEvaluator
         // Apply first-match logic - evaluate rules in priority order and apply the first matching rule
         foreach (var rule in matchingRules)
         {
-            _logger.LogTrace("Applying slow rule '{ruleName}' to torrent '{name}'", rule.Name, torrent.Name);
+            var strikeContext = DetermineSlowRuleStrikeContext(rule);
+
+            _logger.LogTrace(
+                "Applying slow rule '{ruleName}' ({strikeType}) to torrent '{name}'",
+                rule.Name,
+                strikeContext.StrikeType,
+                torrent.Name);
 
             try
             {
@@ -139,7 +145,7 @@ public class RuleEvaluator : IRuleEvaluator
                     torrent,
                     rule.ResetStrikesOnProgress,
                     null,
-                    StrikeType.SlowSpeed,
+                    strikeContext.StrikeType,
                     rule.Name);
                 
                 // For slow rules, we need additional torrent information to evaluate speed/time criteria
@@ -150,23 +156,28 @@ public class RuleEvaluator : IRuleEvaluator
                     torrent.Hash, 
                     torrent.Name, 
                     (ushort)rule.MaxStrikes, 
-                    StrikeType.SlowSpeed); // Default to SlowSpeed, could be enhanced to determine type
+                    strikeContext.StrikeType);
 
                 if (shouldRemove)
                 {
                     result.ShouldRemove = true;
-                    result.DeleteReason = DeleteReason.SlowSpeed; // Could be SlowTime based on rule criteria
+                    result.DeleteReason = strikeContext.DeleteReason;
                     
                     _logger.LogInformation(
-                        "Torrent '{name}' marked for removal by slow rule '{ruleName}' after reaching {strikes} strikes", 
-                        torrent.Name, rule.Name, rule.MaxStrikes
+                        "Torrent '{name}' marked for removal by slow rule '{ruleName}' ({strikeType}) after reaching {strikes} strikes", 
+                        torrent.Name,
+                        rule.Name,
+                        strikeContext.StrikeType,
+                        rule.MaxStrikes
                     );
                 }
                 else
                 {
                     _logger.LogDebug(
-                        "Strike applied to torrent '{name}' by slow rule '{ruleName}', but removal threshold not reached", 
-                        torrent.Name, rule.Name
+                        "Strike applied to torrent '{name}' by slow rule '{ruleName}' ({strikeType}), but removal threshold not reached", 
+                        torrent.Name,
+                        rule.Name,
+                        strikeContext.StrikeType
                     );
                 }
 
@@ -184,6 +195,31 @@ public class RuleEvaluator : IRuleEvaluator
         }
 
         return result;
+    }
+
+    private static (StrikeType StrikeType, DeleteReason DeleteReason) DetermineSlowRuleStrikeContext(SlowRule rule)
+    {
+        bool hasMinSpeed = !string.IsNullOrWhiteSpace(rule.MinSpeed);
+        bool hasMaxTime = rule.MaxTimeHours > 0 || rule.MaxTime > 0;
+
+        if (hasMinSpeed && !hasMaxTime)
+        {
+            return (StrikeType.SlowSpeed, DeleteReason.SlowSpeed);
+        }
+
+        if (!hasMinSpeed && hasMaxTime)
+        {
+            return (StrikeType.SlowTime, DeleteReason.SlowTime);
+        }
+
+        if (hasMinSpeed && hasMaxTime)
+        {
+            // When both are configured treat the slowdown as speed-related to maintain backward compatibility
+            return (StrikeType.SlowSpeed, DeleteReason.SlowSpeed);
+        }
+
+        // Fallback to SlowSpeed for legacy or misconfigured rules
+        return (StrikeType.SlowSpeed, DeleteReason.SlowSpeed);
     }
 
     private async Task ResetStrikesIfProgressAsync(

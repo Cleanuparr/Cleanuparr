@@ -213,7 +213,7 @@ public class RuleEvaluatorTests
 
         Assert.True(result.Found);
         Assert.False(result.ShouldRemove);
-        strikerMock.Verify(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.SlowSpeed), Times.Never);
+        strikerMock.Verify(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.SlowTime), Times.Never);
     }
 
     [Fact]
@@ -233,7 +233,7 @@ public class RuleEvaluatorTests
             .ReturnsAsync(new List<SlowRule> { slowRule });
 
         strikerMock
-            .Setup(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.SlowSpeed))
+            .Setup(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.SlowTime))
             .ReturnsAsync(false);
 
         var torrentMock = CreateTorrentMock();
@@ -242,7 +242,7 @@ public class RuleEvaluatorTests
 
         Assert.True(result.Found);
         Assert.False(result.ShouldRemove);
-        strikerMock.Verify(x => x.StrikeAndCheckLimit("hash", "Example Torrent", (ushort)slowRule.MaxStrikes, StrikeType.SlowSpeed), Times.Once);
+        strikerMock.Verify(x => x.StrikeAndCheckLimit("hash", "Example Torrent", (ushort)slowRule.MaxStrikes, StrikeType.SlowTime), Times.Once);
     }
 
     [Fact]
@@ -262,7 +262,7 @@ public class RuleEvaluatorTests
             .ReturnsAsync(new List<SlowRule> { slowRule });
 
         strikerMock
-            .Setup(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.SlowSpeed))
+            .Setup(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.SlowTime))
             .ReturnsAsync(true);
 
         var torrentMock = CreateTorrentMock();
@@ -270,8 +270,8 @@ public class RuleEvaluatorTests
         var result = await evaluator.EvaluateSlowRulesAsync(torrentMock.Object);
 
         Assert.True(result.ShouldRemove);
-        Assert.Equal(DeleteReason.SlowSpeed, result.DeleteReason);
-        strikerMock.Verify(x => x.StrikeAndCheckLimit("hash", "Example Torrent", (ushort)slowRule.MaxStrikes, StrikeType.SlowSpeed), Times.Once);
+        Assert.Equal(DeleteReason.SlowTime, result.DeleteReason);
+        strikerMock.Verify(x => x.StrikeAndCheckLimit("hash", "Example Torrent", (ushort)slowRule.MaxStrikes, StrikeType.SlowTime), Times.Once);
     }
 
     [Fact]
@@ -291,22 +291,22 @@ public class RuleEvaluatorTests
             .ReturnsAsync(new List<SlowRule> { slowRule });
 
         strikerMock
-            .Setup(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.SlowSpeed))
+            .Setup(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.SlowTime))
             .ReturnsAsync(false);
 
         long downloadedBytes = 0;
         var torrentMock = CreateTorrentMock(downloadedBytesFactory: () => downloadedBytes);
 
         await evaluator.EvaluateSlowRulesAsync(torrentMock.Object);
-        strikerMock.Verify(x => x.ResetStrikeAsync(It.IsAny<string>(), It.IsAny<string>(), StrikeType.SlowSpeed), Times.Never);
+        strikerMock.Verify(x => x.ResetStrikeAsync(It.IsAny<string>(), It.IsAny<string>(), StrikeType.SlowTime), Times.Never);
 
         downloadedBytes = ByteSize.Parse("5 MB").Bytes;
         await evaluator.EvaluateSlowRulesAsync(torrentMock.Object);
-        strikerMock.Verify(x => x.ResetStrikeAsync("hash", "Example Torrent", StrikeType.SlowSpeed), Times.Once);
+        strikerMock.Verify(x => x.ResetStrikeAsync("hash", "Example Torrent", StrikeType.SlowTime), Times.Once);
 
         downloadedBytes = ByteSize.Parse("1 MB").Bytes;
         await evaluator.EvaluateSlowRulesAsync(torrentMock.Object);
-        strikerMock.Verify(x => x.ResetStrikeAsync("hash", "Example Torrent", StrikeType.SlowSpeed), Times.Once);
+        strikerMock.Verify(x => x.ResetStrikeAsync("hash", "Example Torrent", StrikeType.SlowTime), Times.Once);
     }
 
     [Fact]
@@ -327,7 +327,7 @@ public class RuleEvaluatorTests
             .ReturnsAsync(new List<SlowRule> { failingRule, succeedingRule });
 
         strikerMock
-            .SetupSequence(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.SlowSpeed))
+            .SetupSequence(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.SlowTime))
             .ThrowsAsync(new InvalidOperationException("slow fail"))
             .ReturnsAsync(false);
 
@@ -337,7 +337,158 @@ public class RuleEvaluatorTests
 
         Assert.True(result.Found);
         Assert.False(result.ShouldRemove);
-        strikerMock.Verify(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.SlowSpeed), Times.Exactly(2));
+        strikerMock.Verify(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.SlowTime), Times.Exactly(2));
+
+    }
+
+    [Fact]
+    public async Task EvaluateSlowRulesAsync_WithSpeedBasedRule_ShouldUseSlowSpeedStrikeType()
+    {
+        var ruleManagerMock = new Mock<IRuleManager>();
+        var strikerMock = new Mock<IStriker>();
+        using var memoryCache = new MemoryCache(new MemoryCacheOptions());
+        var loggerMock = new Mock<ILogger<RuleEvaluator>>();
+
+        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, memoryCache, loggerMock.Object);
+
+        var slowRule = CreateSlowRule(
+            name: "Speed Rule",
+            resetOnProgress: false,
+            maxStrikes: 3,
+            minSpeed: "1 MB/s",
+            maxTimeHours: 0);
+
+        ruleManagerMock
+            .Setup(x => x.GetMatchingRulesAsync<SlowRule>(It.IsAny<ITorrentInfo>()))
+            .ReturnsAsync(new List<SlowRule> { slowRule });
+
+        strikerMock
+            .Setup(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.SlowSpeed))
+            .ReturnsAsync(true);
+
+        var torrentMock = CreateTorrentMock();
+
+        var result = await evaluator.EvaluateSlowRulesAsync(torrentMock.Object);
+
+        Assert.True(result.ShouldRemove);
+        Assert.Equal(DeleteReason.SlowSpeed, result.DeleteReason);
+        strikerMock.Verify(
+            x => x.StrikeAndCheckLimit("hash", "Example Torrent", (ushort)slowRule.MaxStrikes, StrikeType.SlowSpeed),
+            Times.Once);
+        strikerMock.Verify(
+            x => x.ResetStrikeAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<StrikeType>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task EvaluateSlowRulesAsync_WithBothSpeedAndTimeConfigured_ShouldTreatAsSlowSpeed()
+    {
+        var ruleManagerMock = new Mock<IRuleManager>();
+        var strikerMock = new Mock<IStriker>();
+        using var memoryCache = new MemoryCache(new MemoryCacheOptions());
+        var loggerMock = new Mock<ILogger<RuleEvaluator>>();
+
+        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, memoryCache, loggerMock.Object);
+
+        var slowRule = CreateSlowRule(
+            name: "Both Rule",
+            resetOnProgress: false,
+            maxStrikes: 2,
+            minSpeed: "500 KB/s",
+            maxTimeHours: 2);
+
+        ruleManagerMock
+            .Setup(x => x.GetMatchingRulesAsync<SlowRule>(It.IsAny<ITorrentInfo>()))
+            .ReturnsAsync(new List<SlowRule> { slowRule });
+
+        strikerMock
+            .Setup(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.SlowSpeed))
+            .ReturnsAsync(true);
+
+        var torrentMock = CreateTorrentMock();
+
+        var result = await evaluator.EvaluateSlowRulesAsync(torrentMock.Object);
+
+        Assert.True(result.ShouldRemove);
+        Assert.Equal(DeleteReason.SlowSpeed, result.DeleteReason);
+        strikerMock.Verify(x => x.StrikeAndCheckLimit("hash", "Example Torrent", (ushort)slowRule.MaxStrikes, StrikeType.SlowSpeed), Times.Once);
+    }
+
+    [Fact]
+    public async Task EvaluateSlowRulesAsync_WithNeitherSpeedNorTimeConfigured_ShouldFallbackToSlowSpeed()
+    {
+        var ruleManagerMock = new Mock<IRuleManager>();
+        var strikerMock = new Mock<IStriker>();
+        using var memoryCache = new MemoryCache(new MemoryCacheOptions());
+        var loggerMock = new Mock<ILogger<RuleEvaluator>>();
+
+        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, memoryCache, loggerMock.Object);
+
+        // Neither minSpeed nor maxTime set (maxTimeHours = 0, minSpeed = null) => fallback
+        var slowRule = CreateSlowRule(
+            name: "Fallback Rule",
+            resetOnProgress: false,
+            maxStrikes: 1,
+            minSpeed: null,
+            maxTimeHours: 0);
+
+        ruleManagerMock
+            .Setup(x => x.GetMatchingRulesAsync<SlowRule>(It.IsAny<ITorrentInfo>()))
+            .ReturnsAsync(new List<SlowRule> { slowRule });
+
+        strikerMock
+            .Setup(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.SlowSpeed))
+            .ReturnsAsync(false);
+
+        var torrentMock = CreateTorrentMock();
+
+        var result = await evaluator.EvaluateSlowRulesAsync(torrentMock.Object);
+
+        Assert.True(result.Found);
+        Assert.False(result.ShouldRemove);
+        strikerMock.Verify(x => x.StrikeAndCheckLimit("hash", "Example Torrent", (ushort)slowRule.MaxStrikes, StrikeType.SlowSpeed), Times.Once);
+    }
+
+    [Fact]
+    public async Task EvaluateSlowRulesAsync_SpeedBasedRule_WithResetOnProgress_ShouldResetSlowSpeedStrikes()
+    {
+        var ruleManagerMock = new Mock<IRuleManager>();
+        var strikerMock = new Mock<IStriker>();
+        using var memoryCache = new MemoryCache(new MemoryCacheOptions());
+        var loggerMock = new Mock<ILogger<RuleEvaluator>>();
+
+        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, memoryCache, loggerMock.Object);
+
+        var slowRule = CreateSlowRule(
+            name: "Speed Reset",
+            resetOnProgress: true,
+            maxStrikes: 3,
+            minSpeed: "1 MB/s",
+            maxTimeHours: 0);
+
+        ruleManagerMock
+            .Setup(x => x.GetMatchingRulesAsync<SlowRule>(It.IsAny<ITorrentInfo>()))
+            .ReturnsAsync(new List<SlowRule> { slowRule });
+
+        strikerMock
+            .Setup(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.SlowSpeed))
+            .ReturnsAsync(false);
+
+        strikerMock
+            .Setup(x => x.ResetStrikeAsync(It.IsAny<string>(), It.IsAny<string>(), StrikeType.SlowSpeed))
+            .Returns(Task.CompletedTask);
+
+        long downloadedBytes = 0;
+        var torrentMock = CreateTorrentMock(downloadedBytesFactory: () => downloadedBytes);
+
+        // First call seeds cache
+        await evaluator.EvaluateSlowRulesAsync(torrentMock.Object);
+        strikerMock.Verify(x => x.ResetStrikeAsync(It.IsAny<string>(), It.IsAny<string>(), StrikeType.SlowSpeed), Times.Never);
+
+        // Progress should trigger reset for SlowSpeed context
+        downloadedBytes = ByteSize.Parse("2 MB").Bytes;
+        await evaluator.EvaluateSlowRulesAsync(torrentMock.Object);
+        strikerMock.Verify(x => x.ResetStrikeAsync("hash", "Example Torrent", StrikeType.SlowSpeed), Times.Once);
     }
 
     private static Mock<ITorrentInfo> CreateTorrentMock(
@@ -377,7 +528,12 @@ public class RuleEvaluatorTests
         };
     }
 
-    private static SlowRule CreateSlowRule(string name, bool resetOnProgress, int maxStrikes)
+    private static SlowRule CreateSlowRule(
+        string name,
+        bool resetOnProgress,
+        int maxStrikes,
+        string? minSpeed = null,
+        double maxTimeHours = 1)
     {
         return new SlowRule
         {
@@ -390,8 +546,8 @@ public class RuleEvaluatorTests
             MinCompletionPercentage = 0,
             MaxCompletionPercentage = 100,
             ResetStrikesOnProgress = resetOnProgress,
-            MaxTimeHours = 1,
-            MinSpeed = string.Empty,
+            MaxTimeHours = maxTimeHours,
+            MinSpeed = minSpeed ?? string.Empty,
             MaxTime = 0,
             IgnoreAboveSize = string.Empty,
             DeletePrivateTorrentsFromClient = false,
