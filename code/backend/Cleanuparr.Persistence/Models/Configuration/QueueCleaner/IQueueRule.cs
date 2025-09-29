@@ -15,7 +15,9 @@ public interface IQueueRule
     
     TorrentPrivacyType PrivacyType { get; }
     
-    double MaxCompletionPercentage { get; }
+    ushort MinCompletionPercentage { get; }
+    
+    ushort MaxCompletionPercentage { get; }
     
     bool MatchesTorrent(ITorrentInfo torrent);
     

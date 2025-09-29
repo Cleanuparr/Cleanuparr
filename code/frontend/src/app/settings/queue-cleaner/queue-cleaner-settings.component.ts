@@ -1,6 +1,6 @@
 import { Component, EventEmitter, OnDestroy, Output, effect, inject } from "@angular/core";
 import { CommonModule } from "@angular/common";
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from "@angular/forms";
+import { AbstractControl, FormBuilder, FormGroup, ReactiveFormsModule, ValidationErrors, ValidatorFn, Validators } from "@angular/forms";
 import { Subject, takeUntil } from "rxjs";
 import { QueueCleanerConfigStore } from "./queue-cleaner-config.store";
 import { CanComponentDeactivate } from "../../core/guards";
@@ -65,7 +65,7 @@ interface RuleCoverage {
     SelectButtonModule,
     ChipsModule,
     ToastModule,
-  TagModule,
+    TagModule,
     ByteSizeInputComponent,
     SelectModule,
     AutoCompleteModule,
@@ -117,8 +117,10 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
   privacyTypeOptions = [
     { label: 'Public Torrents Only', value: TorrentPrivacyType.Public },
     { label: 'Private Torrents Only', value: TorrentPrivacyType.Private },
-    { label: 'Both Public and Private', value: TorrentPrivacyType.Both }
+    { label: 'Public and Private Torrents', value: TorrentPrivacyType.Both }
   ];
+
+  torrentPrivacyType = TorrentPrivacyType; // Expose enum to template
 
   // Inject the necessary services
   private formBuilder = inject(FormBuilder);
@@ -203,101 +205,82 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
    */
   private analyzeRuleCoverage(rules: (StallRule | SlowRule)[]): RuleCoverage {
     const enabledRules = rules.filter(rule => rule.enabled);
-    
+    const privacyTypes = [
+      { type: TorrentPrivacyType.Public, label: 'Public' },
+      { type: TorrentPrivacyType.Private, label: 'Private' }
+    ];
+    const EPSILON = 0.0001;
+
     if (enabledRules.length === 0) {
+      const gaps = privacyTypes.map(({ type, label }) => ({
+        start: 0,
+        end: 100,
+        privacyType: type,
+        privacyTypeLabel: label
+      }));
+
       return {
         hasGaps: true,
-        gaps: [
-          {
-            start: 1,
-            end: 100,
-            privacyType: TorrentPrivacyType.Public,
-            privacyTypeLabel: 'Public'
-          },
-          {
-            start: 1,
-            end: 100,
-            privacyType: TorrentPrivacyType.Private,
-            privacyTypeLabel: 'Private'
-          }
-        ],
+        gaps,
         totalGapPercentage: 100
       };
     }
 
-    // Expand privacy types (Both -> Public + Private) and create intervals
-    const intervals: Array<{ start: number; end: number; privacyType: TorrentPrivacyType; privacyTypeLabel: string }> = [];
-    
-    for (const rule of enabledRules) {
-      const start = 1;
-      const end = rule.maxCompletionPercentage;
-      
-      if (rule.privacyType === TorrentPrivacyType.Both) {
-        intervals.push({
-          start,
-          end,
-          privacyType: TorrentPrivacyType.Public,
-          privacyTypeLabel: 'Public'
-        });
-        intervals.push({
-          start,
-          end,
-          privacyType: TorrentPrivacyType.Private,
-          privacyTypeLabel: 'Private'
-        });
-      } else {
-        intervals.push({
-          start,
-          end,
-          privacyType: rule.privacyType,
-          privacyTypeLabel: rule.privacyType === TorrentPrivacyType.Public ? 'Public' : 'Private'
-        });
-      }
-    }
-
-    // Find the maximum coverage for each privacy type
     const gaps: CoverageGap[] = [];
-    
-    for (const privacyType of [TorrentPrivacyType.Public, TorrentPrivacyType.Private]) {
-      const privacyTypeLabel = privacyType === TorrentPrivacyType.Public ? 'Public' : 'Private';
-      const typeIntervals = intervals
-        .filter(r => r.privacyType === privacyType)
-        .sort((a, b) => b.end - a.end); // Sort by end descending to get max coverage
 
-      if (typeIntervals.length === 0) {
-        // No rules for this privacy type - entire range is a gap
+    for (const { type, label } of privacyTypes) {
+      const intervals = enabledRules
+        .filter(rule => rule.privacyType === type || rule.privacyType === TorrentPrivacyType.Both)
+        .map(rule => ({
+          start: Math.max(0, Math.min(100, rule.minCompletionPercentage)),
+          end: Math.max(0, Math.min(100, rule.maxCompletionPercentage))
+        }))
+        .filter(interval => interval.end >= interval.start)
+        .sort((a, b) => a.start === b.start ? a.end - b.end : a.start - b.start);
+
+      if (intervals.length === 0) {
         gaps.push({
-          start: 1,
+          start: 0,
           end: 100,
-          privacyType,
-          privacyTypeLabel
+          privacyType: type,
+          privacyTypeLabel: label
         });
         continue;
       }
 
-      // Get the maximum coverage for this privacy type
-      const maxCoverage = typeIntervals[0].end;
-      
-      // If max coverage is less than 100%, there's a gap
-      if (maxCoverage < 100) {
+      let coverageCursor = 0;
+
+      for (const interval of intervals) {
+        if (interval.start > coverageCursor + EPSILON) {
+          gaps.push({
+            privacyType: type,
+            privacyTypeLabel: label,
+            start: coverageCursor,
+            end: interval.start
+          });
+        }
+
+        if (interval.end > coverageCursor) {
+          coverageCursor = interval.end;
+        }
+
+        if (coverageCursor >= 100 - EPSILON) {
+          coverageCursor = 100;
+          break;
+        }
+      }
+
+      if (coverageCursor < 100 - EPSILON) {
         gaps.push({
-          start: maxCoverage + 1,
-          end: 100,
-          privacyType,
-          privacyTypeLabel
+          privacyType: type,
+          privacyTypeLabel: label,
+          start: coverageCursor,
+          end: 100
         });
       }
     }
 
-    // Calculate total gap percentage
-    let totalGapPercentage = 0;
-    for (const gap of gaps) {
-      totalGapPercentage += gap.end - gap.start + 1;
-    }
-    // Divide by 2 since we have two privacy types (avoid double counting)
-    if (gaps.length > 0) {
-      totalGapPercentage = totalGapPercentage / 2;
-    }
+    const totalGapPercentage = gaps.reduce((sum, gap) => sum + Math.max(0, gap.end - gap.start), 0) / privacyTypes.length;
 
     return {
       hasGaps: gaps.length > 0,
@@ -318,6 +301,7 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
    */
   openStallRulesModal(): void {
     this.editingStallRule = null;
+    this.resetStallRuleFormDefaults();
     this.stallRuleModalVisible = true;
   }
 
@@ -331,6 +315,7 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
       enabled: rule.enabled,
       maxStrikes: rule.maxStrikes,
       privacyType: rule.privacyType,
+      minCompletionPercentage: rule.minCompletionPercentage,
       maxCompletionPercentage: rule.maxCompletionPercentage,
       resetStrikesOnProgress: rule.resetStrikesOnProgress,
       minimumProgress: rule.minimumProgress ?? null,
@@ -373,6 +358,7 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
    */
   openSlowRulesModal(): void {
     this.editingSlowRule = null;
+    this.resetSlowRuleFormDefaults();
     this.slowRuleModalVisible = true;
   }
 
@@ -386,6 +372,7 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
       enabled: rule.enabled,
       maxStrikes: rule.maxStrikes,
       privacyType: rule.privacyType,
+      minCompletionPercentage: rule.minCompletionPercentage,
       maxCompletionPercentage: rule.maxCompletionPercentage,
       resetStrikesOnProgress: rule.resetStrikesOnProgress,
       minSpeed: rule.minSpeed,
@@ -431,23 +418,7 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
   closeStallRuleModal(): void {
     this.stallRuleModalVisible = false;
     this.editingStallRule = null;
-    this.stallRuleForm.reset({
-      enabled: true,
-      maxStrikes: 3,
-      privacyType: TorrentPrivacyType.Public,
-      resetStrikesOnProgress: true,
-      minimumProgress: null,
-      deletePrivateTorrentsFromClient: false,
-    });
-    
-    // Ensure deletePrivateTorrentsFromClient is disabled for Public privacy type
-    const deletePrivateControl = this.stallRuleForm.get('deletePrivateTorrentsFromClient');
-    if (deletePrivateControl) {
-      deletePrivateControl.disable();
-    }
-
-    const minimumProgressControl = this.stallRuleForm.get('minimumProgress');
-    minimumProgressControl?.enable({ emitEvent: false });
+    this.resetStallRuleFormDefaults();
   }
 
   /**
@@ -456,20 +427,7 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
   closeSlowRuleModal(): void {
     this.slowRuleModalVisible = false;
     this.editingSlowRule = null;
-    this.slowRuleForm.reset({
-      enabled: true,
-      maxStrikes: 3,
-      privacyType: TorrentPrivacyType.Public,
-      resetStrikesOnProgress: true,
-      maxTimeHours: 0,
-      deletePrivateTorrentsFromClient: false,
-    });
-    
-    // Ensure deletePrivateTorrentsFromClient is disabled for Public privacy type
-    const deletePrivateControl = this.slowRuleForm.get('deletePrivateTorrentsFromClient');
-    if (deletePrivateControl) {
-      deletePrivateControl.disable();
-    }
+    this.resetSlowRuleFormDefaults();
   }
 
   /**
@@ -509,7 +467,7 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
     
     this.slowRuleSaving = true;
     this.slowRuleSaveInitiated = true;
-    const ruleData = this.slowRuleForm.value;
+  const ruleData = this.slowRuleForm.getRawValue();
     
     if (this.editingSlowRule?.id) {
       // Update existing rule
@@ -628,11 +586,12 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
       enabled: [true],
       maxStrikes: [3, [Validators.required, Validators.min(3), Validators.max(5000)]],
       privacyType: [TorrentPrivacyType.Public, [Validators.required]],
-      maxCompletionPercentage: [null, [Validators.required, Validators.min(1), Validators.max(100)]],
+      minCompletionPercentage: [null, [Validators.required, Validators.min(0), Validators.max(100)]],
+      maxCompletionPercentage: [null, [Validators.required, Validators.min(0), Validators.max(100)]],
       resetStrikesOnProgress: [true],
       minimumProgress: [null],
       deletePrivateTorrentsFromClient: [{ value: false, disabled: true }],
-    });
+    }, { validators: this.minLessThanOrEqualMaxValidator('minCompletionPercentage', 'maxCompletionPercentage') });
 
     this.slowRuleForm = this.formBuilder.group({
       name: ['', [Validators.required, Validators.maxLength(100)]],
@@ -641,11 +600,12 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
       minSpeed: ['', [Validators.required]],
       maxTimeHours: [0, [Validators.required, Validators.min(0)]],
       privacyType: [TorrentPrivacyType.Public, [Validators.required]],
-      maxCompletionPercentage: [null, [Validators.required, Validators.min(1), Validators.max(100)]],
+      minCompletionPercentage: [null, [Validators.required, Validators.min(0), Validators.max(100)]],
+      maxCompletionPercentage: [null, [Validators.required, Validators.min(0), Validators.max(100)]],
       ignoreAboveSize: [null, [Validators.min(0)]],
       resetStrikesOnProgress: [true],
       deletePrivateTorrentsFromClient: [{ value: false, disabled: true }],
-    });
+    }, { validators: this.minLessThanOrEqualMaxValidator('minCompletionPercentage', 'maxCompletionPercentage') });
 
     // Initialize the control states properly
     this.initializeRuleFormControlStates();
@@ -749,6 +709,9 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
     
     // Set up listeners for form value changes
     this.setupFormValueChangeListeners();
+
+    this.resetStallRuleFormDefaults();
+    this.resetSlowRuleFormDefaults();
   }
 
   /**
@@ -1260,4 +1223,94 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
     });
   }
 
+  private minLessThanOrEqualMaxValidator(minControlName: string, maxControlName: string): ValidatorFn {
+    return (group: AbstractControl): ValidationErrors | null => {
+      const minControl = group.get(minControlName);
+      const maxControl = group.get(maxControlName);
+
+      if (!minControl || !maxControl) {
+        return null;
+      }
+
+      const minValue = minControl.value;
+      const maxValue = maxControl.value;
+
+      if (minValue === null || maxValue === null || minValue === '' || maxValue === '') {
+        this.clearMinMaxError(maxControl);
+        return null;
+      }
+
+      if (typeof minValue === 'number' && typeof maxValue === 'number' && maxValue < minValue) {
+        const existingErrors = maxControl.errors ?? {};
+        if (!existingErrors['minGreaterThanMax']) {
+          maxControl.setErrors({ ...existingErrors, minGreaterThanMax: true });
+        }
+        return { minGreaterThanMax: true };
+      }
+
+      this.clearMinMaxError(maxControl);
+      return null;
+    };
+  }
+
+  private clearMinMaxError(control: AbstractControl): void {
+    if (!control.errors || !control.errors['minGreaterThanMax']) {
+      return;
+    }
+
+    const { minGreaterThanMax, ...remaining } = control.errors;
+    control.setErrors(Object.keys(remaining).length ? remaining : null);
+  }
+
+  /**
+   * Reset the default values for the stall rule form
+   */
+  private resetStallRuleFormDefaults(): void {
+    this.stallRuleForm.reset({
+      name: '',
+      enabled: true,
+      maxStrikes: 3,
+      privacyType: TorrentPrivacyType.Public,
+      minCompletionPercentage: 0,
+      maxCompletionPercentage: 100,
+      resetStrikesOnProgress: true,
+      minimumProgress: null,
+      deletePrivateTorrentsFromClient: false,
+    }, { emitEvent: false });
+
+    this.stallRuleForm.get('deletePrivateTorrentsFromClient')?.disable({ emitEvent: false });
+    this.stallRuleForm.get('minimumProgress')?.enable({ emitEvent: false });
+  }
+
+  /**
+   * Reset the default values for the slow rule form
+   */
+  private resetSlowRuleFormDefaults(): void {
+    this.slowRuleForm.reset({
+      name: '',
+      enabled: true,
+      maxStrikes: 3,
+      minSpeed: '',
+      maxTimeHours: 0,
+      privacyType: TorrentPrivacyType.Public,
+      minCompletionPercentage: 0,
+      maxCompletionPercentage: 100,
+      ignoreAboveSize: null,
+      resetStrikesOnProgress: true,
+      deletePrivateTorrentsFromClient: false,
+    }, { emitEvent: false });
+
+    this.slowRuleForm.get('deletePrivateTorrentsFromClient')?.disable({ emitEvent: false });
+  }
+
+  public getPrivacyLabel(type: TorrentPrivacyType): string {
+    switch (type) {
+      case TorrentPrivacyType.Public:
+        return 'Public';
+      case TorrentPrivacyType.Private:
+        return 'Private';
+      case TorrentPrivacyType.Both:
+        return 'Public and Private';
+    }
+  }
 }

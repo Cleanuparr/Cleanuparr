@@ -38,6 +38,7 @@ public class RuleManager : IRuleManager
         var rules = await _context.StallRules
             .Where(r => r.Enabled)
             .OrderByDescending(r => r.MaxCompletionPercentage)
+            .ThenByDescending(r => r.MinCompletionPercentage)
             .ThenBy(r => r.Id) // Use Id as tiebreaker for consistent ordering
             .ToListAsync();
             
@@ -63,6 +64,7 @@ public class RuleManager : IRuleManager
         var rules = await _context.SlowRules
             .Where(r => r.Enabled)
             .OrderByDescending(r => r.MaxCompletionPercentage)
+            .ThenByDescending(r => r.MinCompletionPercentage)
             .ThenBy(r => r.Id) // Use Id as tiebreaker for consistent ordering
             .ToListAsync();
             

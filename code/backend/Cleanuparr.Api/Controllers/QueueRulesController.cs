@@ -33,7 +33,7 @@ public class QueueRulesController : ControllerBase
         try
         {
             var rules = await _dataContext.StallRules
-                .OrderBy(r => r.MaxCompletionPercentage)
+                .OrderBy(r => r.MinCompletionPercentage)
                 .ThenBy(r => r.Name)
                 .AsNoTracking()
                 .ToListAsync();
@@ -84,6 +84,7 @@ public class QueueRulesController : ControllerBase
                 Enabled = ruleDto.Enabled,
                 MaxStrikes = ruleDto.MaxStrikes,
                 PrivacyType = ruleDto.PrivacyType,
+                MinCompletionPercentage = ruleDto.MinCompletionPercentage,
                 MaxCompletionPercentage = ruleDto.MaxCompletionPercentage,
                 ResetStrikesOnProgress = ruleDto.ResetStrikesOnProgress,
                 DeletePrivateTorrentsFromClient = ruleDto.DeletePrivateTorrentsFromClient,
@@ -162,8 +163,9 @@ public class QueueRulesController : ControllerBase
                 Name = ruleDto.Name.Trim(),
                 Enabled = ruleDto.Enabled,
                 MaxStrikes = ruleDto.MaxStrikes,
-                PrivacyType = ruleDto.PrivacyType,
-                MaxCompletionPercentage = ruleDto.MaxCompletionPercentage,
+        PrivacyType = ruleDto.PrivacyType,
+        MinCompletionPercentage = ruleDto.MinCompletionPercentage,
+        MaxCompletionPercentage = ruleDto.MaxCompletionPercentage,
                 ResetStrikesOnProgress = ruleDto.ResetStrikesOnProgress,
                 DeletePrivateTorrentsFromClient = ruleDto.DeletePrivateTorrentsFromClient,
                 MinimumProgress = ruleDto.MinimumProgress?.Trim(),
@@ -249,7 +251,7 @@ public class QueueRulesController : ControllerBase
         try
         {
             var rules = await _dataContext.SlowRules
-                .OrderBy(r => r.MaxCompletionPercentage)
+                .OrderBy(r => r.MinCompletionPercentage)
                 .ThenBy(r => r.Name)
                 .AsNoTracking()
                 .ToListAsync();
@@ -300,6 +302,7 @@ public class QueueRulesController : ControllerBase
                 Enabled = ruleDto.Enabled,
                 MaxStrikes = ruleDto.MaxStrikes,
                 PrivacyType = ruleDto.PrivacyType,
+                MinCompletionPercentage = ruleDto.MinCompletionPercentage,
                 MaxCompletionPercentage = ruleDto.MaxCompletionPercentage,
                 ResetStrikesOnProgress = ruleDto.ResetStrikesOnProgress,
                 MinSpeed = ruleDto.MinSpeed?.Trim() ?? string.Empty,
@@ -381,6 +384,7 @@ public class QueueRulesController : ControllerBase
                 Enabled = ruleDto.Enabled,
                 MaxStrikes = ruleDto.MaxStrikes,
                 PrivacyType = ruleDto.PrivacyType,
+                MinCompletionPercentage = ruleDto.MinCompletionPercentage,
                 MaxCompletionPercentage = ruleDto.MaxCompletionPercentage,
                 ResetStrikesOnProgress = ruleDto.ResetStrikesOnProgress,
                 MinSpeed = ruleDto.MinSpeed?.Trim() ?? string.Empty,

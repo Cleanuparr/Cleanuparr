@@ -102,6 +102,7 @@ public class RuleIntervalValidator : IRuleIntervalValidator
                 intervals.Add(new RuleInterval 
                 { 
                     PrivacyType = TorrentPrivacyType.Public, 
+                    Start = rule.MinCompletionPercentage,
                     End = rule.MaxCompletionPercentage, 
                     RuleName = rule.Name,
                     RuleId = rule.Id
@@ -109,6 +110,7 @@ public class RuleIntervalValidator : IRuleIntervalValidator
                 intervals.Add(new RuleInterval 
                 { 
                     PrivacyType = TorrentPrivacyType.Private, 
+                    Start = rule.MinCompletionPercentage,
                     End = rule.MaxCompletionPercentage, 
                     RuleName = rule.Name,
                     RuleId = rule.Id
@@ -119,6 +121,7 @@ public class RuleIntervalValidator : IRuleIntervalValidator
                 intervals.Add(new RuleInterval 
                 { 
                     PrivacyType = rule.PrivacyType, 
+                    Start = rule.MinCompletionPercentage,
                     End = rule.MaxCompletionPercentage, 
                     RuleName = rule.Name,
                     RuleId = rule.Id
@@ -132,35 +135,40 @@ public class RuleIntervalValidator : IRuleIntervalValidator
     private OverlapResult? FindOverlappingIntervals(List<RuleInterval> intervals)
     {
         if (intervals.Count < 2) return null;
-        
-        // Sort intervals by end percentage
-        var sortedIntervals = intervals.OrderBy(i => i.End).ToList();
-        
+
+        var sortedIntervals = intervals
+            .OrderBy(i => i.Start)
+            .ThenBy(i => i.End)
+            .ToList();
+
+        var active = sortedIntervals[0];
+
         for (int i = 1; i < sortedIntervals.Count; i++)
         {
             var current = sortedIntervals[i];
-            var previous = sortedIntervals[i - 1];
-            
-            // Check if current interval starts before previous interval ends
-            // Since all intervals start at 0, we check if previous.End >= current.Start (which is 0)
-            // But since Start is always 0, we need to check if the intervals actually overlap
-            // Two intervals [0, A] and [0, B] overlap if both A > 0 and B > 0 and they're different rules
-            
-            if (previous.End >= current.Start && previous.RuleId != current.RuleId)
+
+            if (current.Start <= active.End && active.RuleId != current.RuleId)
             {
-                // Calculate overlap range
-                var overlapStart = Math.Max(previous.Start, current.Start);
-                var overlapEnd = Math.Min(previous.End, current.End);
-                
-                return new OverlapResult
+                var overlapStart = Math.Max(active.Start, current.Start);
+                var overlapEnd = Math.Min(active.End, current.End);
+
+                if (overlapEnd >= overlapStart)
                 {
-                    ConflictingRuleName = previous.RuleName,
-                    OverlapStart = overlapStart,
-                    OverlapEnd = overlapEnd
-                };
+                    return new OverlapResult
+                    {
+                        ConflictingRuleName = active.RuleName,
+                        OverlapStart = overlapStart,
+                        OverlapEnd = overlapEnd
+                    };
+                }
+            }
+
+            if (current.End > active.End)
+            {
+                active = current;
             }
         }
-        
+
         return null;
     }
 
@@ -175,7 +183,6 @@ public class RuleIntervalValidator : IRuleIntervalValidator
         
         if (!relevantRules.Any())
         {
-            // No rules for this privacy type - entire range is a gap
             gaps.Add(new IntervalGap
             {
                 PrivacyType = privacyType,
@@ -184,40 +191,53 @@ public class RuleIntervalValidator : IRuleIntervalValidator
             });
             return gaps;
         }
-        
-        // Sort rules by max completion percentage
-        var sortedRules = relevantRules.OrderBy(r => r.MaxCompletionPercentage).ToList();
-        
-        double currentCovered = 0;
-        
-        foreach (var rule in sortedRules)
-        {
-            if (rule.MaxCompletionPercentage > currentCovered)
+
+        var intervals = relevantRules
+            .Select(r => new
             {
-                if (currentCovered < rule.MaxCompletionPercentage - 0.01) // Avoid tiny gaps due to floating point precision
+                Start = Math.Max(0, Math.Min(100, (int)r.MinCompletionPercentage)),
+                End = Math.Max(0, Math.Min(100, (int)r.MaxCompletionPercentage))
+            })
+            .Where(i => i.End >= i.Start)
+            .OrderBy(i => i.Start)
+            .ThenBy(i => i.End)
+            .ToList();
+
+        double currentCoverageEnd = 0;
+
+        foreach (var interval in intervals)
+        {
+            if (interval.Start > currentCoverageEnd + 0.0001)
+            {
+                gaps.Add(new IntervalGap
                 {
-                    gaps.Add(new IntervalGap
-                    {
-                        PrivacyType = privacyType,
-                        Start = currentCovered,
-                        End = rule.MaxCompletionPercentage
-                    });
-                }
-                currentCovered = rule.MaxCompletionPercentage;
+                    PrivacyType = privacyType,
+                    Start = currentCoverageEnd,
+                    End = interval.Start
+                });
+            }
+
+            if (interval.End > currentCoverageEnd)
+            {
+                currentCoverageEnd = interval.End;
+            }
+
+            if (currentCoverageEnd >= 100)
+            {
+                break;
             }
         }
-        
-        // Check if there's a gap from the last rule to 100%
-        if (currentCovered < 99.99) // Account for floating point precision
+
+        if (currentCoverageEnd < 100 - 0.0001)
         {
             gaps.Add(new IntervalGap
             {
                 PrivacyType = privacyType,
-                Start = currentCovered,
+                Start = currentCoverageEnd,
                 End = 100
             });
         }
-        
+
         return gaps;
     }
 

@@ -17,8 +17,11 @@ public abstract record QueueRuleDto
     
     public TorrentPrivacyType PrivacyType { get; set; } = TorrentPrivacyType.Public;
     
-    [Range(1, 100, ErrorMessage = "Completion percentage must be between 1 and 100")]
-    public double MaxCompletionPercentage { get; set; }
+    [Range(0, 100, ErrorMessage = "Minimum completion percentage must be between 0 and 100")]
+    public ushort MinCompletionPercentage { get; set; }
+    
+    [Range(0, 100, ErrorMessage = "Maximum completion percentage must be between 0 and 100")]
+    public ushort MaxCompletionPercentage { get; set; }
     
     public bool DeletePrivateTorrentsFromClient { get; set; } = false;
 }

@@ -173,6 +173,9 @@
                   </p-inputNumber>
                 </div>
                 <small *ngIf="hasNestedError('failedImport', 'maxStrikes', 'required')" class="p-error">This field is required</small>
+                    [step]="1"
+                    [minFractionDigits]="0"
+                    [maxFractionDigits]="0"
                 <small *ngIf="hasNestedError('failedImport', 'maxStrikes', 'max')" class="p-error">Value cannot exceed 5000</small>
                 <small class="form-helper-text"
                   >Number of strikes before action is taken (0 to disable, min 3 to enable)</small
@@ -269,6 +272,9 @@
                   </p-inputNumber>
                 </div>
                 <small *ngIf="hasMainFormError('downloadingMetadataMaxStrikes', 'required')" class="p-error">This field is required</small>
+                    [step]="1"
+                    [minFractionDigits]="0"
+                    [maxFractionDigits]="0"
                 <small *ngIf="hasMainFormError('downloadingMetadataMaxStrikes', 'max')" class="p-error">Value cannot exceed 5000</small>
                 <small class="form-helper-text"
                   >Number of strikes before action is taken (0 to disable, min 3 to enable)</small
@@ -324,18 +330,18 @@
                       <div class="flex align-items-center flex-wrap gap-2 mb-2">
                         <h4 class="m-0">{{ rule.name }}</h4>
                         <p-tag value="Stall Rule" severity="info"></p-tag>
-                        <p-tag [value]="rule.privacyType | titlecase" severity="info"></p-tag>
+                        <p-tag [value]="getPrivacyLabel(rule.privacyType) | titlecase" severity="info"></p-tag>
                         <p-tag
                           [value]="rule.enabled ? 'Enabled' : 'Disabled'"
                           [severity]="rule.enabled ? 'success' : 'secondary'"
                         ></p-tag>
                       </div>
                       <div class="item-details">
-                        <span>Max Completion: {{ rule.maxCompletionPercentage }}%</span>
+                        <span>Completion Range: {{ rule.minCompletionPercentage }}% - {{ rule.maxCompletionPercentage }}%</span>
                         <span>Max Strikes: {{ rule.maxStrikes }}</span>
                         <span>Reset on Progress: {{ rule.resetStrikesOnProgress ? 'Yes' : 'No' }}</span>
                         <span *ngIf="rule.minimumProgress">Minimum Progress: {{ rule.minimumProgress }}</span>
-                        <span *ngIf="rule.privacyType === 'Private' || rule.privacyType === 'Both'">
+                        <span *ngIf="rule.privacyType === torrentPrivacyType.Private || rule.privacyType === torrentPrivacyType.Both">
                           Delete Private: {{ rule.deletePrivateTorrentsFromClient ? 'Yes' : 'No' }}
                         </span>
                       </div>
@@ -436,7 +442,7 @@
                       <div class="flex align-items-center flex-wrap gap-2 mb-2">
                         <h4 class="m-0">{{ rule.name }}</h4>
                         <p-tag value="Slow Rule" severity="info"></p-tag>
-                        <p-tag [value]="rule.privacyType | titlecase" severity="info"></p-tag>
+                        <p-tag [value]="getPrivacyLabel(rule.privacyType) | titlecase" severity="info"></p-tag>
                         <p-tag
                           [value]="rule.enabled ? 'Enabled' : 'Disabled'"
                           [severity]="rule.enabled ? 'success' : 'secondary'"
@@ -444,12 +450,12 @@
                       </div>
                       <div class="item-details">
                         <span>Max Strikes: {{ rule.maxStrikes }}</span>
-                        <span>Max Completion: {{ rule.maxCompletionPercentage }}%</span>
+                        <span>Completion Range: {{ rule.minCompletionPercentage }}% - {{ rule.maxCompletionPercentage }}%</span>
                         <span *ngIf="rule.minSpeed">Min Speed: {{ rule.minSpeed }}</span>
                         <span *ngIf="rule.maxTimeHours && rule.maxTimeHours > 0">Max Time: {{ rule.maxTimeHours }}h</span>
                         <span>Reset on Progress: {{ rule.resetStrikesOnProgress ? 'Yes' : 'No' }}</span>
                         <span *ngIf="rule.ignoreAboveSize">Ignore Above Size: {{ rule.ignoreAboveSize }}</span>
-                        <span *ngIf="rule.privacyType === 'Private' || rule.privacyType === 'Both'">
+                        <span *ngIf="rule.privacyType === torrentPrivacyType.Private || rule.privacyType === torrentPrivacyType.Both">
                           Delete Private: {{ rule.deletePrivateTorrentsFromClient ? 'Yes' : 'No' }}
                         </span>
                       </div>
@@ -597,18 +603,40 @@
     </div>
 
     <div class="field">
-      <label for="stall-rule-max-completion">Max Completion Percentage</label>
-      <p-inputNumber 
-        id="stall-rule-max-completion"
-        formControlName="maxCompletionPercentage"
+      <label for="stall-rule-min-completion">Min Completion Percentage</label>
+      <p-inputNumber
+        id="stall-rule-min-completion"
+        formControlName="minCompletionPercentage"
+        [step]="1"
+        [minFractionDigits]="0"
+        [maxFractionDigits]="0"
         suffix="%"
         placeholder="Percentage"
         class="w-full"
       ></p-inputNumber>
-      <small *ngIf="hasModalError(stallRuleForm, 'maxCompletionPercentage', 'min')" class="p-error">Percentage must be at least 1</small>
-      <small *ngIf="hasModalError(stallRuleForm, 'maxCompletionPercentage', 'max')" class="p-error">Percentage cannot exceed 100</small>
+      <small *ngIf="hasModalError(stallRuleForm, 'minCompletionPercentage', 'required')" class="p-error">Percentage is required</small>
+      <small *ngIf="hasModalError(stallRuleForm, 'minCompletionPercentage', 'min')" class="p-error">Percentage cannot be negative</small>
+      <small *ngIf="hasModalError(stallRuleForm, 'minCompletionPercentage', 'max')" class="p-error">Percentage cannot exceed 100</small>
+      <small class="form-helper-text">Apply the rule starting at this completion percentage (inclusive)</small>
+    </div>
+
+    <div class="field">
+      <label for="stall-rule-max-completion">Max Completion Percentage</label>
+      <p-inputNumber 
+        id="stall-rule-max-completion"
+        formControlName="maxCompletionPercentage"
+        [step]="1"
+        [minFractionDigits]="0"
+        [maxFractionDigits]="0"
+        suffix="%"
+        placeholder="Percentage"
+        class="w-full"
+      ></p-inputNumber>
       <small *ngIf="hasModalError(stallRuleForm, 'maxCompletionPercentage', 'required')" class="p-error">Percentage is required</small>
-      <small class="form-helper-text">Apply the rule to torrents having the completion percentage less than or equal to this number</small>
+      <small *ngIf="hasModalError(stallRuleForm, 'maxCompletionPercentage', 'min')" class="p-error">Percentage cannot be negative</small>
+      <small *ngIf="hasModalError(stallRuleForm, 'maxCompletionPercentage', 'max')" class="p-error">Percentage cannot exceed 100</small>
+      <small *ngIf="hasModalError(stallRuleForm, 'maxCompletionPercentage', 'minGreaterThanMax')" class="p-error">Max percentage must be greater than or equal to Min percentage</small>
+      <small class="form-helper-text">Apply the rule up to this completion percentage (inclusive)</small>
     </div>
 
     <div class="field flex flex-row">
@@ -755,6 +783,23 @@
     </div>
 
     <div class="field">
+      <label for="slow-rule-min-completion">Min Completion %</label>
+      <p-inputNumber
+        formControlName="minCompletionPercentage"
+        id="slow-rule-min-completion"
+        placeholder="Minimum completion percentage"
+        [showButtons]="true"
+        [step]="1"
+        suffix="%"
+        class="w-full"
+      ></p-inputNumber>
+      <small *ngIf="hasModalError(slowRuleForm, 'minCompletionPercentage', 'required')" class="p-error">Percentage is required</small>
+      <small *ngIf="hasModalError(slowRuleForm, 'minCompletionPercentage', 'min')" class="p-error">Percentage cannot be negative</small>
+      <small *ngIf="hasModalError(slowRuleForm, 'minCompletionPercentage', 'max')" class="p-error">Percentage cannot exceed 100</small>
+      <small class="form-helper-text">Apply the rule starting at this completion percentage (inclusive)</small>
+    </div>
+
+    <div class="field">
       <label for="slow-rule-max-completion">Max Completion %</label>
       <p-inputNumber
         formControlName="maxCompletionPercentage"
@@ -765,10 +810,11 @@
         suffix="%"
         class="w-full"
       ></p-inputNumber>
-      <small *ngIf="hasModalError(slowRuleForm, 'maxCompletionPercentage', 'min')" class="p-error">Percentage must be at least 1</small>
-      <small *ngIf="hasModalError(slowRuleForm, 'maxCompletionPercentage', 'max')" class="p-error">Percentage cannot exceed 100</small>
       <small *ngIf="hasModalError(slowRuleForm, 'maxCompletionPercentage', 'required')" class="p-error">Percentage is required</small>
-      <small class="form-helper-text">Apply the rule to torrents having the completion percentage less than or equal to this number</small>
+      <small *ngIf="hasModalError(slowRuleForm, 'maxCompletionPercentage', 'min')" class="p-error">Percentage cannot be negative</small>
+      <small *ngIf="hasModalError(slowRuleForm, 'maxCompletionPercentage', 'max')" class="p-error">Percentage cannot exceed 100</small>
+      <small *ngIf="hasModalError(slowRuleForm, 'maxCompletionPercentage', 'minGreaterThanMax')" class="p-error">Max percentage must be greater than or equal to Min percentage</small>
+      <small class="form-helper-text">Apply the rule up to this completion percentage (inclusive)</small>
     </div>
 
     <div class="field">
