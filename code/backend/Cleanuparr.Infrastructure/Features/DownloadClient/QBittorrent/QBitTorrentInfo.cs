@@ -25,6 +25,7 @@ public sealed class QBitTorrentInfo : ITorrentInfo
     public long Size => _torrentInfo.Size;
     
     public double CompletionPercentage => _torrentInfo.Progress * 100.0;
+    public long DownloadedBytes => _torrentInfo.Downloaded ?? 0;
     
     public IReadOnlyList<string> Trackers => _trackers
         .Where(t => !string.IsNullOrEmpty(t.Url))

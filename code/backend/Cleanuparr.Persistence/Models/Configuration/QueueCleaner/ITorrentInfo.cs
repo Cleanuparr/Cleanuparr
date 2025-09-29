@@ -8,4 +8,5 @@ public interface ITorrentInfo
     long Size { get; }
     double CompletionPercentage { get; }
     IReadOnlyList<string> Trackers { get; }
+    long DownloadedBytes { get; }
 }

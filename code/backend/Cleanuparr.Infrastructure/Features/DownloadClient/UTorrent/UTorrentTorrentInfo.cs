@@ -23,6 +23,7 @@ public sealed class UTorrentTorrentInfo : ITorrentInfo
     public long Size => _torrentItem.Size;
     
     public double CompletionPercentage => _torrentItem.Progress / 10.0; // Progress is in permille (1000 = 100%)
+    public long DownloadedBytes => _torrentItem.Downloaded;
     
     public IReadOnlyList<string> Trackers => _torrentProperties.TrackerList
         .Select(ExtractHostFromUrl)

@@ -23,6 +23,7 @@ public sealed class TransmissionTorrentInfo : ITorrentInfo
     public double CompletionPercentage => _torrentInfo.TotalSize > 0 
         ? ((_torrentInfo.DownloadedEver ?? 0) / (double)_torrentInfo.TotalSize) * 100.0 
         : 0.0;
+    public long DownloadedBytes => _torrentInfo.DownloadedEver ?? 0;
     
     public IReadOnlyList<string> Trackers => _torrentInfo.Trackers?
         .Where(t => !string.IsNullOrEmpty(t.Announce))

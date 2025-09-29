@@ -1,9 +1,13 @@
 using Cleanuparr.Domain.Entities;
+using Cleanuparr.Domain.Entities.Cache;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
 using Cleanuparr.Infrastructure.Features.ItemStriker;
+using Cleanuparr.Infrastructure.Helpers;
 using Cleanuparr.Infrastructure.Services.Interfaces;
 using Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
+using Cleanuparr.Shared.Helpers;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 
 namespace Cleanuparr.Infrastructure.Services;
@@ -12,13 +16,22 @@ public class RuleEvaluator : IRuleEvaluator
 {
     private readonly IRuleManager _ruleManager;
     private readonly IStriker _striker;
+    private readonly IMemoryCache _cache;
+    private readonly MemoryCacheEntryOptions _cacheOptions;
     private readonly ILogger<RuleEvaluator> _logger;
 
-    public RuleEvaluator(IRuleManager ruleManager, IStriker striker, ILogger<RuleEvaluator> logger)
+    public RuleEvaluator(
+        IRuleManager ruleManager,
+        IStriker striker,
+        IMemoryCache cache,
+        ILogger<RuleEvaluator> logger)
     {
         _ruleManager = ruleManager;
         _striker = striker;
+        _cache = cache;
         _logger = logger;
+        _cacheOptions = new MemoryCacheEntryOptions()
+            .SetSlidingExpiration(StaticConfiguration.TriggerValue + Constants.CacheLimitBuffer);
     }
 
     public async Task<DownloadCheckResult> EvaluateStallRulesAsync(ITorrentInfo torrent)
@@ -46,6 +59,8 @@ public class RuleEvaluator : IRuleEvaluator
 
             try
             {
+                await ResetStrikesIfProgressAsync(torrent, rule.ResetStrikesOnProgress, StrikeType.Stalled, rule.Name);
+                
                 // Apply strike and check if torrent should be removed
                 bool shouldRemove = await _striker.StrikeAndCheckLimit(
                     torrent.Hash, 
@@ -106,6 +121,8 @@ public class RuleEvaluator : IRuleEvaluator
 
             try
             {
+                await ResetStrikesIfProgressAsync(torrent, rule.ResetStrikesOnProgress, StrikeType.SlowSpeed, rule.Name);
+                
                 // For slow rules, we need additional torrent information to evaluate speed/time criteria
                 // This would typically come from the download client, but for now we'll apply the strike
                 // The actual speed/time evaluation would be done by the calling download service
@@ -142,5 +159,56 @@ public class RuleEvaluator : IRuleEvaluator
         }
 
         return result;
+    }
+
+    private async Task ResetStrikesIfProgressAsync(ITorrentInfo torrent, bool resetEnabled, StrikeType strikeType, string ruleName)
+    {
+        if (!resetEnabled)
+        {
+            return;
+        }
+
+        if (!HasDownloadProgress(torrent, strikeType, out long previous, out long current))
+        {
+            return;
+        }
+
+        _logger.LogDebug(
+            "Progress detected for torrent '{TorrentName}' while applying {StrikeType} rule '{RuleName}'. Previous bytes: {Previous}, Current bytes: {Current}. Resetting strikes.",
+            torrent.Name,
+            strikeType,
+            ruleName,
+            previous,
+            current);
+
+        await _striker.ResetStrikeAsync(torrent.Hash, torrent.Name, strikeType);
+    }
+
+    // TODO check and fix
+    private bool HasDownloadProgress(ITorrentInfo torrent, StrikeType strikeType, out long previousDownloaded, out long currentDownloaded)
+    {
+        previousDownloaded = 0;
+        currentDownloaded = Math.Max(0, torrent.DownloadedBytes);
+
+        string cacheKey = CacheKeys.StrikeItem(torrent.Hash, strikeType);
+
+        if (!_cache.TryGetValue(cacheKey, out StalledCacheItem? cachedItem) || cachedItem is null)
+        {
+            cachedItem = new StalledCacheItem { Downloaded = currentDownloaded };
+            _cache.Set(cacheKey, cachedItem, _cacheOptions);
+            return false;
+        }
+
+        previousDownloaded = cachedItem.Downloaded;
+
+        bool progressed = currentDownloaded > cachedItem.Downloaded;
+
+        if (progressed || currentDownloaded != cachedItem.Downloaded)
+        {
+            cachedItem.Downloaded = currentDownloaded;
+            _cache.Set(cacheKey, cachedItem, _cacheOptions);
+        }
+
+        return progressed;
     }
 }

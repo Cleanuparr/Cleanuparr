@@ -23,6 +23,7 @@ public sealed class DelugeTorrentInfo : ITorrentInfo
     public double CompletionPercentage => _downloadStatus.Size > 0 
         ? (_downloadStatus.TotalDone / (double)_downloadStatus.Size) * 100.0 
         : 0.0;
+    public long DownloadedBytes => _downloadStatus.TotalDone;
     
     public IReadOnlyList<string> Trackers => _downloadStatus.Trackers?
         .Where(t => !string.IsNullOrEmpty(t.Url))
