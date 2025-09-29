@@ -36,7 +36,7 @@ public class RuleEvaluator : IRuleEvaluator
 
     public async Task<DownloadCheckResult> EvaluateStallRulesAsync(ITorrentInfo torrent)
     {
-        _logger.LogDebug("Evaluating stall rules for torrent '{TorrentName}' ({Hash})", torrent.Name, torrent.Hash);
+        _logger.LogDebug("Evaluating stall rules for torrent '{name}' ({hash})", torrent.Name, torrent.Hash);
 
         var result = new DownloadCheckResult
         {
@@ -49,13 +49,13 @@ public class RuleEvaluator : IRuleEvaluator
 
         if (matchingRules.Count == 0)
         {
-            _logger.LogDebug("No stall rules match torrent '{TorrentName}'. No action will be taken.", torrent.Name);
+            _logger.LogTrace("No stall rules match torrent '{name}'. No action will be taken.", torrent.Name);
             return result;
         }
 
         foreach (var rule in matchingRules)
         {
-            _logger.LogDebug("Applying stall rule '{RuleName}' to torrent '{TorrentName}'", rule.Name, torrent.Name);
+            _logger.LogTrace("Applying stall rule '{ruleName}' to torrent '{name}'", rule.Name, torrent.Name);
 
             try
             {
@@ -64,27 +64,33 @@ public class RuleEvaluator : IRuleEvaluator
                     rule.ResetStrikesOnProgress,
                     rule.MinimumProgressByteSize?.Bytes,
                     StrikeType.Stalled,
-                    rule.Name);
+                    rule.Name
+                );
                 
                 // Apply strike and check if torrent should be removed
                 bool shouldRemove = await _striker.StrikeAndCheckLimit(
                     torrent.Hash, 
                     torrent.Name, 
                     (ushort)rule.MaxStrikes, 
-                    StrikeType.Stalled);
+                    StrikeType.Stalled
+                );
 
                 if (shouldRemove)
                 {
                     result.ShouldRemove = true;
                     result.DeleteReason = DeleteReason.Stalled;
                     
-                    _logger.LogInformation("Torrent '{TorrentName}' marked for removal by stall rule '{RuleName}' after reaching {MaxStrikes} strikes", 
-                        torrent.Name, rule.Name, rule.MaxStrikes);
+                    _logger.LogInformation(
+                        "Torrent '{name}' marked for removal by stall rule '{ruleName}' after reaching {strikes} strikes", 
+                        torrent.Name, rule.Name, rule.MaxStrikes
+                    );
                 }
                 else
                 {
-                    _logger.LogDebug("Strike applied to torrent '{TorrentName}' by stall rule '{RuleName}', but removal threshold not reached", 
-                        torrent.Name, rule.Name);
+                    _logger.LogDebug(
+                        "Strike applied to torrent '{name}' by stall rule '{ruleName}', but removal threshold not reached", 
+                        torrent.Name, rule.Name
+                    );
                 }
 
                 // First-match logic: stop after applying the first matching rule
@@ -92,8 +98,11 @@ public class RuleEvaluator : IRuleEvaluator
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error applying stall rule '{RuleName}' to torrent '{TorrentName}'. Skipping rule.", 
-                    rule.Name, torrent.Name);
+                _logger.LogError(
+                    ex,
+                    "Error applying stall rule '{ruleName}' to torrent '{name}'. Skipping rule.", 
+                    rule.Name, torrent.Name
+                );
             }
         }
 
@@ -115,14 +124,14 @@ public class RuleEvaluator : IRuleEvaluator
 
         if (matchingRules.Count == 0)
         {
-            _logger.LogDebug("No slow rules match torrent '{TorrentName}'. No action will be taken.", torrent.Name);
+            _logger.LogTrace("No slow rules match torrent '{name}'. No action will be taken.", torrent.Name);
             return result;
         }
 
         // Apply first-match logic - evaluate rules in priority order and apply the first matching rule
         foreach (var rule in matchingRules)
         {
-            _logger.LogDebug("Applying slow rule '{RuleName}' to torrent '{TorrentName}'", rule.Name, torrent.Name);
+            _logger.LogTrace("Applying slow rule '{ruleName}' to torrent '{name}'", rule.Name, torrent.Name);
 
             try
             {
@@ -148,13 +157,17 @@ public class RuleEvaluator : IRuleEvaluator
                     result.ShouldRemove = true;
                     result.DeleteReason = DeleteReason.SlowSpeed; // Could be SlowTime based on rule criteria
                     
-                    _logger.LogInformation("Torrent '{TorrentName}' marked for removal by slow rule '{RuleName}' after reaching {MaxStrikes} strikes", 
-                        torrent.Name, rule.Name, rule.MaxStrikes);
+                    _logger.LogInformation(
+                        "Torrent '{name}' marked for removal by slow rule '{ruleName}' after reaching {strikes} strikes", 
+                        torrent.Name, rule.Name, rule.MaxStrikes
+                    );
                 }
                 else
                 {
-                    _logger.LogDebug("Strike applied to torrent '{TorrentName}' by slow rule '{RuleName}', but removal threshold not reached", 
-                        torrent.Name, rule.Name);
+                    _logger.LogDebug(
+                        "Strike applied to torrent '{name}' by slow rule '{ruleName}', but removal threshold not reached", 
+                        torrent.Name, rule.Name
+                    );
                 }
 
                 // First-match logic: stop after applying the first matching rule
@@ -162,9 +175,11 @@ public class RuleEvaluator : IRuleEvaluator
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error applying slow rule '{RuleName}' to torrent '{TorrentName}'. Skipping rule.", 
-                    rule.Name, torrent.Name);
-                continue;
+                _logger.LogError(
+                    ex,
+                    "Error applying slow rule '{ruleName}' to torrent '{name}'. Skipping rule.", 
+                    rule.Name, torrent.Name
+                );
             }
         }
 

@@ -168,14 +168,14 @@
                     formControlName="maxStrikes"
                     [showButtons]="true"
                     [min]="0"
+                    [step]="1"
+                    [minFractionDigits]="0"
+                    [maxFractionDigits]="0"
                     buttonLayout="horizontal"
                   >
                   </p-inputNumber>
                 </div>
                 <small *ngIf="hasNestedError('failedImport', 'maxStrikes', 'required')" class="p-error">This field is required</small>
-                    [step]="1"
-                    [minFractionDigits]="0"
-                    [maxFractionDigits]="0"
                 <small *ngIf="hasNestedError('failedImport', 'maxStrikes', 'max')" class="p-error">Value cannot exceed 5000</small>
                 <small class="form-helper-text"
                   >Number of strikes before action is taken (0 to disable, min 3 to enable)</small
@@ -267,14 +267,14 @@
                     formControlName="downloadingMetadataMaxStrikes"
                     [showButtons]="true"
                     [min]="0"
+                    [step]="1"
+                    [minFractionDigits]="0"
+                    [maxFractionDigits]="0"
                     buttonLayout="horizontal"
                   >
                   </p-inputNumber>
                 </div>
                 <small *ngIf="hasMainFormError('downloadingMetadataMaxStrikes', 'required')" class="p-error">This field is required</small>
-                    [step]="1"
-                    [minFractionDigits]="0"
-                    [maxFractionDigits]="0"
                 <small *ngIf="hasMainFormError('downloadingMetadataMaxStrikes', 'max')" class="p-error">Value cannot exceed 5000</small>
                 <small class="form-helper-text"
                   >Number of strikes before action is taken (0 to disable, min 3 to enable)</small
@@ -617,7 +617,9 @@
       <small *ngIf="hasModalError(stallRuleForm, 'minCompletionPercentage', 'required')" class="p-error">Percentage is required</small>
       <small *ngIf="hasModalError(stallRuleForm, 'minCompletionPercentage', 'min')" class="p-error">Percentage cannot be negative</small>
       <small *ngIf="hasModalError(stallRuleForm, 'minCompletionPercentage', 'max')" class="p-error">Percentage cannot exceed 100</small>
-      <small class="form-helper-text">Apply the rule starting at this completion percentage (inclusive)</small>
+      <small class="form-helper-text">Apply the rule once completion percentage exceeds this value</small>
+      <small class="form-helper-text">Example: A value of 20 includes items above 20% (20 is not included)</small>
+      <small class="form-helper-text">A value of 0 includes items at 0% and above</small>
     </div>
 
     <div class="field">
@@ -636,7 +638,8 @@
       <small *ngIf="hasModalError(stallRuleForm, 'maxCompletionPercentage', 'min')" class="p-error">Percentage cannot be negative</small>
       <small *ngIf="hasModalError(stallRuleForm, 'maxCompletionPercentage', 'max')" class="p-error">Percentage cannot exceed 100</small>
       <small *ngIf="hasModalError(stallRuleForm, 'maxCompletionPercentage', 'minGreaterThanMax')" class="p-error">Max percentage must be greater than or equal to Min percentage</small>
-      <small class="form-helper-text">Apply the rule up to this completion percentage (inclusive)</small>
+      <small class="form-helper-text">Apply the rule to items with a completion percentage less than or equal to this value</small>
+      <small class="form-helper-text">Example: A value of 80 includes items at 80% and below</small>
     </div>
 
     <div class="field flex flex-row">
@@ -796,7 +799,7 @@
       <small *ngIf="hasModalError(slowRuleForm, 'minCompletionPercentage', 'required')" class="p-error">Percentage is required</small>
       <small *ngIf="hasModalError(slowRuleForm, 'minCompletionPercentage', 'min')" class="p-error">Percentage cannot be negative</small>
       <small *ngIf="hasModalError(slowRuleForm, 'minCompletionPercentage', 'max')" class="p-error">Percentage cannot exceed 100</small>
-      <small class="form-helper-text">Apply the rule starting at this completion percentage (inclusive)</small>
+  <small class="form-helper-text">Apply the rule once completion percentage exceeds this value (0 still includes exactly 0%)</small>
     </div>
 
     <div class="field">
@@ -814,7 +817,7 @@
       <small *ngIf="hasModalError(slowRuleForm, 'maxCompletionPercentage', 'min')" class="p-error">Percentage cannot be negative</small>
       <small *ngIf="hasModalError(slowRuleForm, 'maxCompletionPercentage', 'max')" class="p-error">Percentage cannot exceed 100</small>
       <small *ngIf="hasModalError(slowRuleForm, 'maxCompletionPercentage', 'minGreaterThanMax')" class="p-error">Max percentage must be greater than or equal to Min percentage</small>
-      <small class="form-helper-text">Apply the rule up to this completion percentage (inclusive)</small>
+  <small class="form-helper-text">Apply the rule up to and including this completion percentage</small>
     </div>
 
     <div class="field">

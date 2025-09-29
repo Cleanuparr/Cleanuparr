@@ -147,12 +147,12 @@ public class RuleIntervalValidator : IRuleIntervalValidator
         {
             var current = sortedIntervals[i];
 
-            if (current.Start <= active.End && active.RuleId != current.RuleId)
+            if (current.Start < active.End && active.RuleId != current.RuleId)
             {
                 var overlapStart = Math.Max(active.Start, current.Start);
                 var overlapEnd = Math.Min(active.End, current.End);
 
-                if (overlapEnd >= overlapStart)
+                if (overlapEnd > overlapStart)
                 {
                     return new OverlapResult
                     {

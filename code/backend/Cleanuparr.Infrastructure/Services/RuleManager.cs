@@ -104,24 +104,27 @@ public class RuleManager : IRuleManager
                 if (rule.MatchesTorrent(torrent))
                 {
                     matchingRules.Add(rule);
-                    _logger.LogDebug("Rule '{RuleName}' matches torrent '{TorrentName}'", 
-                        rule.Name, torrent.Name);
+                    _logger.LogDebug("Rule '{ruleName}' matches torrent '{name}'", rule.Name, torrent.Name);
                 }
                 else
                 {
-                    _logger.LogTrace("Rule '{RuleName}' does not match torrent '{TorrentName}'", 
-                        rule.Name, torrent.Name);
+                    _logger.LogTrace("Rule '{ruleName}' does not match torrent '{name}'", rule.Name, torrent.Name);
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Error evaluating rule '{RuleName}' against torrent '{TorrentName}'. Skipping rule.", 
-                    rule.Name, torrent.Name);
+                _logger.LogWarning(
+                    ex,
+                    "Error evaluating rule '{ruleName}' against torrent '{name}'. Skipping rule.", 
+                    rule.Name, torrent.Name
+                );
             }
         }
         
-        _logger.LogDebug("Found {MatchingCount} matching rules out of {TotalCount} active rules for torrent '{TorrentName}'", 
-            matchingRules.Count, allRules.Count, torrent.Name);
+        _logger.LogTrace(
+            "Found {matching} matching rules out of {total} active rules for torrent '{name}'", 
+            matchingRules.Count, allRules.Count, torrent.Name
+        );
         
         return matchingRules.AsReadOnly();
     }

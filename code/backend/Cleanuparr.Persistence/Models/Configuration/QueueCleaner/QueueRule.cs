@@ -72,6 +72,17 @@ public abstract record QueueRule : IConfig, IQueueRule
     
     protected bool MatchesCompletionPercentage(double completionPercentage)
     {
-        return completionPercentage >= MinCompletionPercentage && completionPercentage <= MaxCompletionPercentage;
+        if (MaxCompletionPercentage < MinCompletionPercentage)
+        {
+            return false;
+        }
+
+        bool meetsLowerBound = MinCompletionPercentage == 0
+            ? completionPercentage >= 0
+            : completionPercentage > MinCompletionPercentage;
+
+        bool meetsUpperBound = completionPercentage <= MaxCompletionPercentage;
+
+        return meetsLowerBound && meetsUpperBound;
     }
 }

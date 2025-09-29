@@ -81,6 +81,36 @@ public class RuleIntervalValidatorTests
     }
 
     [Fact]
+    public void ValidateStallRuleIntervals_AllowsTouchingRanges()
+    {
+        var firstRule = new StallRule
+        {
+            Id = Guid.NewGuid(),
+            Name = "First",
+            Enabled = true,
+            MaxStrikes = 3,
+            PrivacyType = TorrentPrivacyType.Public,
+            MinCompletionPercentage = 0,
+            MaxCompletionPercentage = 40
+        };
+
+        var newRule = new StallRule
+        {
+            Id = Guid.NewGuid(),
+            Name = "Second",
+            Enabled = true,
+            MaxStrikes = 3,
+            PrivacyType = TorrentPrivacyType.Public,
+            MinCompletionPercentage = 40,
+            MaxCompletionPercentage = 80
+        };
+
+        var result = _validator.ValidateStallRuleIntervals(newRule, new List<StallRule> { firstRule });
+
+        result.IsValid.ShouldBeTrue();
+    }
+
+    [Fact]
     public void FindGapsInCoverage_ReturnsFullGapWhenNoRules()
     {
         var gaps = _validator.FindGapsInCoverage(new List<StallRule>());
@@ -132,5 +162,41 @@ public class RuleIntervalValidatorTests
         var privateGap = gaps.First(g => g.PrivacyType == TorrentPrivacyType.Private);
         privateGap.Start.ShouldBe(0);
         privateGap.End.ShouldBe(100);
+    }
+
+    [Fact]
+    public void ValidateSlowRuleIntervals_AllowsTouchingRanges()
+    {
+        var firstRule = new SlowRule
+        {
+            Id = Guid.NewGuid(),
+            Name = "First Slow",
+            Enabled = true,
+            MaxStrikes = 3,
+            PrivacyType = TorrentPrivacyType.Public,
+            MinCompletionPercentage = 0,
+            MaxCompletionPercentage = 40,
+            ResetStrikesOnProgress = false,
+            MaxTimeHours = 1,
+            MinSpeed = "1 MB"
+        };
+
+        var newRule = new SlowRule
+        {
+            Id = Guid.NewGuid(),
+            Name = "Second Slow",
+            Enabled = true,
+            MaxStrikes = 3,
+            PrivacyType = TorrentPrivacyType.Public,
+            MinCompletionPercentage = 40,
+            MaxCompletionPercentage = 80,
+            ResetStrikesOnProgress = false,
+            MaxTimeHours = 1,
+            MinSpeed = "1 MB"
+        };
+
+        var result = _validator.ValidateSlowRuleIntervals(newRule, new List<SlowRule> { firstRule });
+
+        result.IsValid.ShouldBeTrue();
     }
 }
