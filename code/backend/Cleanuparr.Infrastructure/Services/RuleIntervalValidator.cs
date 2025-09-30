@@ -90,7 +90,7 @@ public class RuleIntervalValidator : IRuleIntervalValidator
         return ValidationResult.Success();
     }
 
-    private List<RuleInterval> ExpandPrivacyTypes(List<QueueRule> rules)
+    private static List<RuleInterval> ExpandPrivacyTypes(List<QueueRule> rules)
     {
         var intervals = new List<RuleInterval>();
         
@@ -132,7 +132,7 @@ public class RuleIntervalValidator : IRuleIntervalValidator
         return intervals;
     }
 
-    private OverlapResult? FindOverlappingIntervals(List<RuleInterval> intervals)
+    private static OverlapResult? FindOverlappingIntervals(List<RuleInterval> intervals)
     {
         if (intervals.Count < 2) return null;
 
@@ -172,7 +172,7 @@ public class RuleIntervalValidator : IRuleIntervalValidator
         return null;
     }
 
-    private List<IntervalGap> FindGapsForPrivacyType<T>(List<T> rules, TorrentPrivacyType privacyType) where T : QueueRule
+    private static List<IntervalGap> FindGapsForPrivacyType<T>(List<T> rules, TorrentPrivacyType privacyType) where T : QueueRule
     {
         var gaps = new List<IntervalGap>();
         
