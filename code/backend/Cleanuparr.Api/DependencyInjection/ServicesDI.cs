@@ -61,5 +61,7 @@ public static class ServicesDI
             .AddScoped<IRuleIntervalValidator, RuleIntervalValidator>()
             .AddSingleton<IJobManagementService, JobManagementService>()
             .AddSingleton<ITrackerPatternMatcher, TrackerPatternMatcher>()
-            .AddSingleton<BlocklistProvider>();
+            .AddSingleton<BlocklistProvider>()
+            .AddSingleton<AppStatusSnapshot>()
+            .AddHostedService<AppStatusRefreshService>();
 }

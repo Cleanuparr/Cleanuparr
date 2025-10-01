@@ -255,40 +255,40 @@ export class SidebarContentComponent implements OnInit, OnDestroy {
             label: 'Sonarr',
             icon: 'pi pi-play-circle',
             route: '/sonarr',
-            iconUrl: '/icons/ext/sonarr-light.svg',
-            iconUrlHover: '/icons/ext/sonarr.svg'
+            iconUrl: 'icons/ext/sonarr-light.svg',
+            iconUrlHover: 'icons/ext/sonarr.svg'
           },
           {
             id: 'radarr',
             label: 'Radarr',
             icon: 'pi pi-play-circle',
             route: '/radarr',
-            iconUrl: '/icons/ext/radarr-light.svg',
-            iconUrlHover: '/icons/ext/radarr.svg'
+            iconUrl: 'icons/ext/radarr-light.svg',
+            iconUrlHover: 'icons/ext/radarr.svg'
           },
           {
             id: 'lidarr',
             label: 'Lidarr',
             icon: 'pi pi-bolt',
             route: '/lidarr',
-            iconUrl: '/icons/ext/lidarr-light.svg',
-            iconUrlHover: '/icons/ext/lidarr.svg'
+            iconUrl: 'icons/ext/lidarr-light.svg',
+            iconUrlHover: 'icons/ext/lidarr.svg'
           },
           {
             id: 'readarr',
             label: 'Readarr',
             icon: 'pi pi-book',
             route: '/readarr',
-            iconUrl: '/icons/ext/readarr-light.svg',
-            iconUrlHover: '/icons/ext/readarr.svg'
+            iconUrl: 'icons/ext/readarr-light.svg',
+            iconUrlHover: 'icons/ext/readarr.svg'
           },
           {
             id: 'whisparr',
             label: 'Whisparr',
             icon: 'pi pi-lock',
             route: '/whisparr',
-            iconUrl: '/icons/ext/whisparr-light.svg',
-            iconUrlHover: '/icons/ext/whisparr.svg'
+            iconUrl: 'icons/ext/whisparr-light.svg',
+            iconUrlHover: 'icons/ext/whisparr.svg'
           },
           { id: 'download-clients', label: 'Download Clients', icon: 'pi pi-download', route: '/download-clients' }
         ]
