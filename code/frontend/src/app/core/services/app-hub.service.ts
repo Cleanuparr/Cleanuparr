@@ -4,6 +4,7 @@ import * as signalR from '@microsoft/signalr';
 import { LogEntry } from '../models/signalr.models';
 import { AppEvent } from '../models/event.models';
 import { AppStatus } from '../models/app-status.model';
+import { JobInfo } from '../models/job.models';
 import { ApplicationPathService } from './base-path.service';
 
 /**
@@ -18,6 +19,7 @@ export class AppHubService {
   private logsSubject = new BehaviorSubject<LogEntry[]>([]);
   private eventsSubject = new BehaviorSubject<AppEvent[]>([]);
   private appStatusSubject = new BehaviorSubject<AppStatus | null>(null);
+  private jobsSubject = new BehaviorSubject<JobInfo[]>([]);
   private readonly ApplicationPathService = inject(ApplicationPathService);
   
   private logBuffer: LogEntry[] = [];
@@ -128,6 +130,26 @@ export class AppHubService {
 
       this.appStatusSubject.next(normalized);
     });
+
+    // Handle job status updates
+    this.hubConnection.on('JobsStatusUpdate', (jobs: JobInfo[]) => {
+      if (jobs) {
+        this.jobsSubject.next(jobs);
+      }
+    });
+
+    this.hubConnection.on('JobStatusUpdate', (job: JobInfo) => {
+      if (job) {
+        const currentJobs = this.jobsSubject.value;
+        const jobIndex = currentJobs.findIndex(j => j.name === job.name);
+        if (jobIndex !== -1) {
+          currentJobs[jobIndex] = job;
+          this.jobsSubject.next([...currentJobs]);
+        } else {
+          this.jobsSubject.next([...currentJobs, job]);
+        }
+      }
+    });
   }
   
   /**
@@ -136,6 +158,7 @@ export class AppHubService {
   private requestInitialData(): void {
     this.requestRecentLogs();
     this.requestRecentEvents();
+    this.requestJobStatus();
   }
   
   /**
@@ -223,6 +246,31 @@ export class AppHubService {
    */
   public getEvents(): Observable<AppEvent[]> {
     return this.eventsSubject.asObservable();
+  }
+
+  /**
+   * Get jobs as an observable
+   */
+  public getJobs(): Observable<JobInfo[]> {
+    return this.jobsSubject.asObservable();
+  }
+  
+  /**
+   * Get jobs connection status as an observable
+   * For consistency with logs and events connection status
+   */
+  public getJobsConnectionStatus(): Observable<boolean> {
+    return this.connectionStatusSubject.asObservable();
+  }
+  
+  /**
+   * Request job status from the server
+   */
+  public requestJobStatus(): void {
+    if (this.isConnected()) {
+      this.hubConnection.invoke('GetJobStatus')
+        .catch(err => console.error('Error requesting job status:', err));
+    }
   }
   
   /**
