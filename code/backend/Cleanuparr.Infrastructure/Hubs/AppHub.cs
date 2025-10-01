@@ -1,4 +1,6 @@
 using Cleanuparr.Infrastructure.Logging;
+using Cleanuparr.Infrastructure.Models;
+using Cleanuparr.Infrastructure.Services;
 using Cleanuparr.Infrastructure.Services.Interfaces;
 using Cleanuparr.Persistence;
 using Microsoft.AspNetCore.SignalR;
@@ -16,11 +18,13 @@ public class AppHub : Hub
     private readonly EventsContext _context;
     private readonly IJobManagementService _jobManagementService;
     private readonly SignalRLogSink _logSink;
+    private readonly AppStatusSnapshot _statusSnapshot;
 
-    public AppHub(ILogger<AppHub> logger, EventsContext context, IJobManagementService jobManagementService)
+    public AppHub(EventsContext context, ILogger<AppHub> logger, AppStatusSnapshot statusSnapshot, IJobManagementService jobManagementService)
     {
         _context = context;
         _logger = logger;
+        _statusSnapshot = statusSnapshot;
         _jobManagementService = jobManagementService;
         _logSink = SignalRLogSink.Instance;
     }
@@ -85,6 +89,13 @@ public class AppHub : Hub
     public override async Task OnConnectedAsync()
     {
         _logger.LogTrace("Client connected to AppHub: {ConnectionId}", Context.ConnectionId);
+
+        var status = _statusSnapshot.Current;
+        if (status.CurrentVersion is not null || status.LatestVersion is not null)
+        {
+            await Clients.Caller.SendAsync("AppStatusUpdated", status);
+        }
+
         await base.OnConnectedAsync();
     }
 

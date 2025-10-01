@@ -26,22 +26,22 @@ export class ProviderTypeSelectionComponent {
     {
       type: NotificationProviderType.Apprise,
       name: 'Apprise',
-      iconUrl: '/icons/ext/apprise-light.svg',
-      iconUrlHover: '/icons/ext/apprise.svg',
+      iconUrl: 'icons/ext/apprise-light.svg',
+      iconUrlHover: 'icons/ext/apprise.svg',
       description: 'https://github.com/caronc/apprise'
     },
     {
       type: NotificationProviderType.Notifiarr,
       name: 'Notifiarr',
-      iconUrl: '/icons/ext/notifiarr-light.svg',
-      iconUrlHover: '/icons/ext/notifiarr.svg',
+      iconUrl: 'icons/ext/notifiarr-light.svg',
+      iconUrlHover: 'icons/ext/notifiarr.svg',
       description: 'https://notifiarr.com'
     },
     {
       type: NotificationProviderType.Ntfy,
       name: 'ntfy',
-      iconUrl: '/icons/ext/ntfy-light.svg',
-      iconUrlHover: '/icons/ext/ntfy.svg',
+      iconUrl: 'icons/ext/ntfy-light.svg',
+      iconUrlHover: 'icons/ext/ntfy.svg',
       description: 'https://ntfy.sh/'
     }
   ];

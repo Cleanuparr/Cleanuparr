@@ -45,6 +45,7 @@ public static class MainDI
                 {
                     cfg.ConfigureJsonSerializerOptions(options =>
                     {
+                        options.PropertyNameCaseInsensitive = true;
                         options.Converters.Add(new JsonStringEnumConverter());
                         options.ReferenceHandler = ReferenceHandler.IgnoreCycles;
 

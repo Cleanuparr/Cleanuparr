@@ -56,7 +56,7 @@ import { DocumentationService } from "../../core/services/documentation.service"
     NgIf,
     MobileAutocompleteComponent,
   ],
-  providers: [ConfirmationService],
+  providers: [ConfirmationService, DownloadCleanerConfigStore],
   templateUrl: "./download-cleaner-settings.component.html",
   styleUrls: ["./download-cleaner-settings.component.scss"],
 })

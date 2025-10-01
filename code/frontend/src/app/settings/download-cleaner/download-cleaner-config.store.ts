@@ -24,7 +24,6 @@ const initialState: DownloadCleanerConfigState = {
 };
 
 export const DownloadCleanerConfigStore = signalStore(
-  { providedIn: 'root' },
   withState(initialState),
   withMethods((store, http = inject(HttpClient), applicationPathService = inject(ApplicationPathService)) => ({
     
