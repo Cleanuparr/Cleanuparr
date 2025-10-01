@@ -7,5 +7,6 @@ public interface IRuleManager
 {
     Task<IReadOnlyList<StallRule>> GetActiveStallRulesAsync();
     Task<IReadOnlyList<SlowRule>> GetActiveSlowRulesAsync();
-    Task<IReadOnlyList<TRule>> GetMatchingRulesAsync<TRule>(ITorrentInfo torrent) where TRule : QueueRule;
+    Task<StallRule?> GetMatchingStallRuleAsync(ITorrentInfo torrent);
+    Task<SlowRule?> GetMatchingSlowRuleAsync(ITorrentInfo torrent);
 }

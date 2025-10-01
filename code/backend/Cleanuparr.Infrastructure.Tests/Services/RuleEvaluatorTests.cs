@@ -43,8 +43,8 @@ public class RuleEvaluatorTests
         };
 
         ruleManagerMock
-            .Setup(x => x.GetMatchingRulesAsync<StallRule>(It.IsAny<ITorrentInfo>()))
-            .ReturnsAsync(new List<StallRule> { stallRule });
+            .Setup(x => x.GetMatchingStallRuleAsync(It.IsAny<ITorrentInfo>()))
+            .ReturnsAsync(stallRule);
 
         strikerMock
             .Setup(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.Stalled))
@@ -91,8 +91,8 @@ public class RuleEvaluatorTests
         var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, memoryCache, loggerMock.Object);
 
         ruleManagerMock
-            .Setup(x => x.GetMatchingRulesAsync<StallRule>(It.IsAny<ITorrentInfo>()))
-            .ReturnsAsync(new List<StallRule>());
+            .Setup(x => x.GetMatchingStallRuleAsync(It.IsAny<ITorrentInfo>()))
+            .ReturnsAsync((StallRule?)null);
 
         var torrentMock = CreateTorrentMock();
 
@@ -116,8 +116,8 @@ public class RuleEvaluatorTests
         var stallRule = CreateStallRule("Stall Apply", resetOnProgress: false, maxStrikes: 5);
 
         ruleManagerMock
-            .Setup(x => x.GetMatchingRulesAsync<StallRule>(It.IsAny<ITorrentInfo>()))
-            .ReturnsAsync(new List<StallRule> { stallRule });
+            .Setup(x => x.GetMatchingStallRuleAsync(It.IsAny<ITorrentInfo>()))
+            .ReturnsAsync(stallRule);
 
         strikerMock
             .Setup(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.Stalled))
@@ -146,8 +146,8 @@ public class RuleEvaluatorTests
         var stallRule = CreateStallRule("Stall Remove", resetOnProgress: false, maxStrikes: 6);
 
         ruleManagerMock
-            .Setup(x => x.GetMatchingRulesAsync<StallRule>(It.IsAny<ITorrentInfo>()))
-            .ReturnsAsync(new List<StallRule> { stallRule });
+            .Setup(x => x.GetMatchingStallRuleAsync(It.IsAny<ITorrentInfo>()))
+            .ReturnsAsync(stallRule);
 
         strikerMock
             .Setup(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.Stalled))
@@ -163,7 +163,7 @@ public class RuleEvaluatorTests
     }
 
     [Fact]
-    public async Task EvaluateStallRulesAsync_WhenStrikeThrows_ShouldContinueWithNextRule()
+    public async Task EvaluateStallRulesAsync_WhenStrikeThrows_ShouldHandleExceptionGracefully()
     {
         var ruleManagerMock = new Mock<IRuleManager>();
         var strikerMock = new Mock<IStriker>();
@@ -173,24 +173,22 @@ public class RuleEvaluatorTests
         var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, memoryCache, loggerMock.Object);
 
         var failingRule = CreateStallRule("Failing", resetOnProgress: false, maxStrikes: 4);
-        var succeedingRule = CreateStallRule("Fallback", resetOnProgress: false, maxStrikes: 4);
 
         ruleManagerMock
-            .Setup(x => x.GetMatchingRulesAsync<StallRule>(It.IsAny<ITorrentInfo>()))
-            .ReturnsAsync(new List<StallRule> { failingRule, succeedingRule });
+            .Setup(x => x.GetMatchingStallRuleAsync(It.IsAny<ITorrentInfo>()))
+            .ReturnsAsync(failingRule);
 
         strikerMock
-            .SetupSequence(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.Stalled))
-            .ThrowsAsync(new InvalidOperationException("boom"))
-            .ReturnsAsync(true);
+            .Setup(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.Stalled))
+            .ThrowsAsync(new InvalidOperationException("boom"));
 
         var torrentMock = CreateTorrentMock();
 
         var result = await evaluator.EvaluateStallRulesAsync(torrentMock.Object);
 
-        Assert.True(result.ShouldRemove);
-        Assert.Equal(DeleteReason.Stalled, result.DeleteReason);
-        strikerMock.Verify(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.Stalled), Times.Exactly(2));
+        Assert.True(result.Found);
+        Assert.False(result.ShouldRemove);
+        strikerMock.Verify(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.Stalled), Times.Once);
     }
 
     [Fact]
@@ -204,8 +202,8 @@ public class RuleEvaluatorTests
         var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, memoryCache, loggerMock.Object);
 
         ruleManagerMock
-            .Setup(x => x.GetMatchingRulesAsync<SlowRule>(It.IsAny<ITorrentInfo>()))
-            .ReturnsAsync(new List<SlowRule>());
+            .Setup(x => x.GetMatchingSlowRuleAsync(It.IsAny<ITorrentInfo>()))
+            .ReturnsAsync((SlowRule?)null);
 
         var torrentMock = CreateTorrentMock();
 
@@ -229,8 +227,8 @@ public class RuleEvaluatorTests
         var slowRule = CreateSlowRule("Slow Apply", resetOnProgress: false, maxStrikes: 3);
 
         ruleManagerMock
-            .Setup(x => x.GetMatchingRulesAsync<SlowRule>(It.IsAny<ITorrentInfo>()))
-            .ReturnsAsync(new List<SlowRule> { slowRule });
+            .Setup(x => x.GetMatchingSlowRuleAsync(It.IsAny<ITorrentInfo>()))
+            .ReturnsAsync(slowRule);
 
         strikerMock
             .Setup(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.SlowTime))
@@ -258,8 +256,8 @@ public class RuleEvaluatorTests
         var slowRule = CreateSlowRule("Slow Remove", resetOnProgress: false, maxStrikes: 8);
 
         ruleManagerMock
-            .Setup(x => x.GetMatchingRulesAsync<SlowRule>(It.IsAny<ITorrentInfo>()))
-            .ReturnsAsync(new List<SlowRule> { slowRule });
+            .Setup(x => x.GetMatchingSlowRuleAsync(It.IsAny<ITorrentInfo>()))
+            .ReturnsAsync(slowRule);
 
         strikerMock
             .Setup(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.SlowTime))
@@ -287,8 +285,8 @@ public class RuleEvaluatorTests
         var slowRule = CreateSlowRule("Slow Progress", resetOnProgress: true, maxStrikes: 4);
 
         ruleManagerMock
-            .Setup(x => x.GetMatchingRulesAsync<SlowRule>(It.IsAny<ITorrentInfo>()))
-            .ReturnsAsync(new List<SlowRule> { slowRule });
+            .Setup(x => x.GetMatchingSlowRuleAsync(It.IsAny<ITorrentInfo>()))
+            .ReturnsAsync(slowRule);
 
         strikerMock
             .Setup(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.SlowTime))
@@ -310,7 +308,7 @@ public class RuleEvaluatorTests
     }
 
     [Fact]
-    public async Task EvaluateSlowRulesAsync_WhenStrikeThrows_ShouldContinueWithNextRule()
+    public async Task EvaluateSlowRulesAsync_WhenStrikeThrows_ShouldHandleExceptionGracefully()
     {
         var ruleManagerMock = new Mock<IRuleManager>();
         var strikerMock = new Mock<IStriker>();
@@ -320,16 +318,14 @@ public class RuleEvaluatorTests
         var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, memoryCache, loggerMock.Object);
 
         var failingRule = CreateSlowRule("Failing Slow", resetOnProgress: false, maxStrikes: 4);
-        var succeedingRule = CreateSlowRule("Fallback Slow", resetOnProgress: false, maxStrikes: 5);
 
         ruleManagerMock
-            .Setup(x => x.GetMatchingRulesAsync<SlowRule>(It.IsAny<ITorrentInfo>()))
-            .ReturnsAsync(new List<SlowRule> { failingRule, succeedingRule });
+            .Setup(x => x.GetMatchingSlowRuleAsync(It.IsAny<ITorrentInfo>()))
+            .ReturnsAsync(failingRule);
 
         strikerMock
-            .SetupSequence(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.SlowTime))
-            .ThrowsAsync(new InvalidOperationException("slow fail"))
-            .ReturnsAsync(false);
+            .Setup(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.SlowTime))
+            .ThrowsAsync(new InvalidOperationException("slow fail"));
 
         var torrentMock = CreateTorrentMock();
 
@@ -337,7 +333,7 @@ public class RuleEvaluatorTests
 
         Assert.True(result.Found);
         Assert.False(result.ShouldRemove);
-        strikerMock.Verify(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.SlowTime), Times.Exactly(2));
+        strikerMock.Verify(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.SlowTime), Times.Once);
 
     }
 
@@ -359,8 +355,8 @@ public class RuleEvaluatorTests
             maxTimeHours: 0);
 
         ruleManagerMock
-            .Setup(x => x.GetMatchingRulesAsync<SlowRule>(It.IsAny<ITorrentInfo>()))
-            .ReturnsAsync(new List<SlowRule> { slowRule });
+            .Setup(x => x.GetMatchingSlowRuleAsync(It.IsAny<ITorrentInfo>()))
+            .ReturnsAsync(slowRule);
 
         strikerMock
             .Setup(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.SlowSpeed))
@@ -398,8 +394,8 @@ public class RuleEvaluatorTests
             maxTimeHours: 2);
 
         ruleManagerMock
-            .Setup(x => x.GetMatchingRulesAsync<SlowRule>(It.IsAny<ITorrentInfo>()))
-            .ReturnsAsync(new List<SlowRule> { slowRule });
+            .Setup(x => x.GetMatchingSlowRuleAsync(It.IsAny<ITorrentInfo>()))
+            .ReturnsAsync(slowRule);
 
         strikerMock
             .Setup(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.SlowSpeed))
@@ -433,8 +429,8 @@ public class RuleEvaluatorTests
             maxTimeHours: 0);
 
         ruleManagerMock
-            .Setup(x => x.GetMatchingRulesAsync<SlowRule>(It.IsAny<ITorrentInfo>()))
-            .ReturnsAsync(new List<SlowRule> { slowRule });
+            .Setup(x => x.GetMatchingSlowRuleAsync(It.IsAny<ITorrentInfo>()))
+            .ReturnsAsync(slowRule);
 
         strikerMock
             .Setup(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.SlowSpeed))
@@ -467,8 +463,8 @@ public class RuleEvaluatorTests
             maxTimeHours: 0);
 
         ruleManagerMock
-            .Setup(x => x.GetMatchingRulesAsync<SlowRule>(It.IsAny<ITorrentInfo>()))
-            .ReturnsAsync(new List<SlowRule> { slowRule });
+            .Setup(x => x.GetMatchingSlowRuleAsync(It.IsAny<ITorrentInfo>()))
+            .ReturnsAsync(slowRule);
 
         strikerMock
             .Setup(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.SlowSpeed))

@@ -1,4 +1,5 @@
 using Cleanuparr.Domain.Entities;
+using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Services.Interfaces;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
@@ -39,7 +40,6 @@ public class RuleManager : IRuleManager
             .Where(r => r.Enabled)
             .OrderByDescending(r => r.MaxCompletionPercentage)
             .ThenByDescending(r => r.MinCompletionPercentage)
-            .ThenBy(r => r.Id) // Use Id as tiebreaker for consistent ordering
             .ToListAsync();
             
         var readOnlyRules = rules.AsReadOnly();
@@ -65,7 +65,6 @@ public class RuleManager : IRuleManager
             .Where(r => r.Enabled)
             .OrderByDescending(r => r.MaxCompletionPercentage)
             .ThenByDescending(r => r.MinCompletionPercentage)
-            .ThenBy(r => r.Id) // Use Id as tiebreaker for consistent ordering
             .ToListAsync();
             
         var readOnlyRules = rules.AsReadOnly();
@@ -77,55 +76,83 @@ public class RuleManager : IRuleManager
         return readOnlyRules;
     }
     
-    public async Task<IReadOnlyList<TRule>> GetMatchingRulesAsync<TRule>(ITorrentInfo torrent) 
-        where TRule : QueueRule
+    public Task<StallRule?> GetMatchingStallRuleAsync(ITorrentInfo torrent)
     {
-        IReadOnlyList<TRule> allRules;
-        
-        if (typeof(TRule) == typeof(StallRule))
+        var stallRules = ContextProvider.Get<List<StallRule>>(nameof(StallRule)) ?? new List<StallRule>();
+        var match = GetMatchingRule(torrent, stallRules);
+        return Task.FromResult(match);
+    }
+
+    public Task<SlowRule?> GetMatchingSlowRuleAsync(ITorrentInfo torrent)
+    {
+        var slowRules = ContextProvider.Get<List<SlowRule>>(nameof(SlowRule)) ?? new List<SlowRule>();
+        var match = GetMatchingRule(torrent, slowRules);
+        return Task.FromResult(match);
+    }
+
+    private TRule? GetMatchingRule<TRule>(ITorrentInfo torrent, IReadOnlyList<TRule> rules) where TRule : QueueRule
+    {
+        if (rules.Count == 0)
         {
-            allRules = (await GetActiveStallRulesAsync()).Cast<TRule>().ToList().AsReadOnly();
+            _logger.LogTrace(
+                "No active {RuleType} rules available to evaluate torrent '{name}'",
+                typeof(TRule).Name,
+                torrent.Name);
+            return null;
         }
-        else if (typeof(TRule) == typeof(SlowRule))
-        {
-            allRules = (await GetActiveSlowRulesAsync()).Cast<TRule>().ToList().AsReadOnly();
-        }
-        else
-        {
-            throw new ArgumentException($"Unsupported rule type: {typeof(TRule).Name}");
-        }
-        
-        var matchingRules = new List<TRule>();
-        
-        foreach (var rule in allRules)
+
+        TRule? matchedRule = null;
+
+        foreach (var rule in rules)
         {
             try
             {
                 if (rule.MatchesTorrent(torrent))
                 {
-                    matchingRules.Add(rule);
-                    _logger.LogDebug("Rule '{ruleName}' matches torrent '{name}'", rule.Name, torrent.Name);
+                    if (matchedRule is null)
+                    {
+                        matchedRule = rule;
+                        _logger.LogDebug(
+                            "Rule '{ruleName}' matches torrent '{name}'",
+                            rule.Name,
+                            torrent.Name);
+                    }
+                    else
+                    {
+                        _logger.LogWarning(
+                            "Multiple {RuleType} rules matched torrent '{TorrentName}'. Using rule '{SelectedRule}' and ignoring '{IgnoredRule}'.",
+                            typeof(TRule).Name,
+                            torrent.Name,
+                            matchedRule.Name,
+                            rule.Name);
+                    }
                 }
                 else
                 {
-                    _logger.LogTrace("Rule '{ruleName}' does not match torrent '{name}'", rule.Name, torrent.Name);
+                    _logger.LogTrace(
+                        "Rule '{ruleName}' does not match torrent '{name}'",
+                        rule.Name,
+                        torrent.Name);
                 }
             }
             catch (Exception ex)
             {
                 _logger.LogWarning(
                     ex,
-                    "Error evaluating rule '{ruleName}' against torrent '{name}'. Skipping rule.", 
-                    rule.Name, torrent.Name
-                );
+                    "Error evaluating rule '{ruleName}' against torrent '{name}'. Skipping rule.",
+                    rule.Name,
+                    torrent.Name);
             }
         }
-        
-        _logger.LogTrace(
-            "Found {matching} matching rules out of {total} active rules for torrent '{name}'", 
-            matchingRules.Count, allRules.Count, torrent.Name
-        );
-        
-        return matchingRules.AsReadOnly();
+
+        if (matchedRule is null)
+        {
+            _logger.LogTrace(
+                "No matching {RuleType} rules found for torrent '{name}'",
+                typeof(TRule).Name,
+                torrent.Name);
+        }
+
+        return matchedRule;
     }
 }

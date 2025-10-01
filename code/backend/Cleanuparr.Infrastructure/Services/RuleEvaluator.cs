@@ -45,65 +45,61 @@ public class RuleEvaluator : IRuleEvaluator
         };
 
         // Get matching stall rules in priority order
-        var matchingRules = await _ruleManager.GetMatchingRulesAsync<StallRule>(torrent);
+        var matchingRule = await _ruleManager.GetMatchingStallRuleAsync(torrent);
 
-        if (matchingRules.Count == 0)
+        if (matchingRule is null)
         {
+            // TODO too many logs if no rules are configured
             _logger.LogTrace("No stall rules match torrent '{name}'. No action will be taken.", torrent.Name);
             return result;
         }
 
-        foreach (var rule in matchingRules)
+        _logger.LogTrace("Applying stall rule '{ruleName}' to torrent '{name}'", matchingRule.Name, torrent.Name);
+
+        try
         {
-            _logger.LogTrace("Applying stall rule '{ruleName}' to torrent '{name}'", rule.Name, torrent.Name);
+            await ResetStrikesIfProgressAsync(
+                torrent,
+                matchingRule.ResetStrikesOnProgress,
+                matchingRule.MinimumProgressByteSize?.Bytes,
+                StrikeType.Stalled,
+                matchingRule.Name
+            );
+            
+            // Apply strike and check if torrent should be removed
+            bool shouldRemove = await _striker.StrikeAndCheckLimit(
+                torrent.Hash, 
+                torrent.Name, 
+                (ushort)matchingRule.MaxStrikes, 
+                StrikeType.Stalled
+            );
 
-            try
+            if (shouldRemove)
             {
-                await ResetStrikesIfProgressAsync(
-                    torrent,
-                    rule.ResetStrikesOnProgress,
-                    rule.MinimumProgressByteSize?.Bytes,
-                    StrikeType.Stalled,
-                    rule.Name
-                );
+                result.ShouldRemove = true;
+                result.DeleteReason = DeleteReason.Stalled;
                 
-                // Apply strike and check if torrent should be removed
-                bool shouldRemove = await _striker.StrikeAndCheckLimit(
-                    torrent.Hash, 
-                    torrent.Name, 
-                    (ushort)rule.MaxStrikes, 
-                    StrikeType.Stalled
+                _logger.LogInformation(
+                    "Torrent '{name}' marked for removal by stall rule '{ruleName}' after reaching {strikes} strikes", 
+                    torrent.Name, matchingRule.Name, matchingRule.MaxStrikes
                 );
-
-                if (shouldRemove)
-                {
-                    result.ShouldRemove = true;
-                    result.DeleteReason = DeleteReason.Stalled;
-                    
-                    _logger.LogInformation(
-                        "Torrent '{name}' marked for removal by stall rule '{ruleName}' after reaching {strikes} strikes", 
-                        torrent.Name, rule.Name, rule.MaxStrikes
-                    );
-                }
-                else
-                {
-                    _logger.LogDebug(
-                        "Strike applied to torrent '{name}' by stall rule '{ruleName}', but removal threshold not reached", 
-                        torrent.Name, rule.Name
-                    );
-                }
-
-                // First-match logic: stop after applying the first matching rule
-                break;
             }
-            catch (Exception ex)
+            else
             {
-                _logger.LogError(
-                    ex,
-                    "Error applying stall rule '{ruleName}' to torrent '{name}'. Skipping rule.", 
-                    rule.Name, torrent.Name
+                _logger.LogDebug(
+                    "Strike applied to torrent '{name}' by stall rule '{ruleName}', but removal threshold not reached", 
+                    torrent.Name, matchingRule.Name
                 );
             }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "Error applying stall rule '{ruleName}' to torrent '{name}'.",
+                matchingRule.Name,
+                torrent.Name
+            );
         }
 
         return result;
@@ -120,78 +116,72 @@ public class RuleEvaluator : IRuleEvaluator
         };
 
         // Get matching slow rules in priority order
-        var matchingRules = await _ruleManager.GetMatchingRulesAsync<SlowRule>(torrent);
+        var matchingRule = await _ruleManager.GetMatchingSlowRuleAsync(torrent);
 
-        if (matchingRules.Count == 0)
+        if (matchingRule is null)
         {
             _logger.LogTrace("No slow rules match torrent '{name}'. No action will be taken.", torrent.Name);
             return result;
         }
 
-        // Apply first-match logic - evaluate rules in priority order and apply the first matching rule
-        foreach (var rule in matchingRules)
+        var strikeContext = DetermineSlowRuleStrikeContext(matchingRule);
+
+        _logger.LogTrace(
+            "Applying slow rule '{ruleName}' ({strikeType}) to torrent '{name}'",
+            matchingRule.Name,
+            strikeContext.StrikeType,
+            torrent.Name);
+
+        try
         {
-            var strikeContext = DetermineSlowRuleStrikeContext(rule);
-
-            _logger.LogTrace(
-                "Applying slow rule '{ruleName}' ({strikeType}) to torrent '{name}'",
-                rule.Name,
+            await ResetStrikesIfProgressAsync(
+                torrent,
+                matchingRule.ResetStrikesOnProgress,
+                null,
                 strikeContext.StrikeType,
-                torrent.Name);
+                matchingRule.Name);
+            
+            // For slow rules, we need additional torrent information to evaluate speed/time criteria
+            // This would typically come from the download client, but for now we'll apply the strike
+            // The actual speed/time evaluation would be done by the calling download service
+            
+            bool shouldRemove = await _striker.StrikeAndCheckLimit(
+                torrent.Hash, 
+                torrent.Name, 
+                (ushort)matchingRule.MaxStrikes, 
+                strikeContext.StrikeType);
 
-            try
+            if (shouldRemove)
             {
-                await ResetStrikesIfProgressAsync(
-                    torrent,
-                    rule.ResetStrikesOnProgress,
-                    null,
+                result.ShouldRemove = true;
+                result.DeleteReason = strikeContext.DeleteReason;
+                
+                _logger.LogInformation(
+                    "Torrent '{name}' marked for removal by slow rule '{ruleName}' ({strikeType}) after reaching {strikes} strikes", 
+                    torrent.Name,
+                    matchingRule.Name,
                     strikeContext.StrikeType,
-                    rule.Name);
-                
-                // For slow rules, we need additional torrent information to evaluate speed/time criteria
-                // This would typically come from the download client, but for now we'll apply the strike
-                // The actual speed/time evaluation would be done by the calling download service
-                
-                bool shouldRemove = await _striker.StrikeAndCheckLimit(
-                    torrent.Hash, 
-                    torrent.Name, 
-                    (ushort)rule.MaxStrikes, 
-                    strikeContext.StrikeType);
-
-                if (shouldRemove)
-                {
-                    result.ShouldRemove = true;
-                    result.DeleteReason = strikeContext.DeleteReason;
-                    
-                    _logger.LogInformation(
-                        "Torrent '{name}' marked for removal by slow rule '{ruleName}' ({strikeType}) after reaching {strikes} strikes", 
-                        torrent.Name,
-                        rule.Name,
-                        strikeContext.StrikeType,
-                        rule.MaxStrikes
-                    );
-                }
-                else
-                {
-                    _logger.LogDebug(
-                        "Strike applied to torrent '{name}' by slow rule '{ruleName}' ({strikeType}), but removal threshold not reached", 
-                        torrent.Name,
-                        rule.Name,
-                        strikeContext.StrikeType
-                    );
-                }
-
-                // First-match logic: stop after applying the first matching rule
-                break;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(
-                    ex,
-                    "Error applying slow rule '{ruleName}' to torrent '{name}'. Skipping rule.", 
-                    rule.Name, torrent.Name
+                    matchingRule.MaxStrikes
                 );
             }
+            else
+            {
+                _logger.LogDebug(
+                    "Strike applied to torrent '{name}' by slow rule '{ruleName}' ({strikeType}), but removal threshold not reached", 
+                    torrent.Name,
+                    matchingRule.Name,
+                    strikeContext.StrikeType
+                );
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "Error applying slow rule '{ruleName}' to torrent '{name}'.",
+                matchingRule.Name,
+                torrent.Name
+            );
         }
 
         return result;

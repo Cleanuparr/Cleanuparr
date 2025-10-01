@@ -330,11 +330,11 @@
                       <div class="flex align-items-center flex-wrap gap-2 mb-2">
                         <h4 class="m-0">{{ rule.name }}</h4>
                         <p-tag value="Stall Rule" severity="info"></p-tag>
-                        <p-tag [value]="getPrivacyLabel(rule.privacyType) | titlecase" severity="info"></p-tag>
                         <p-tag
                           [value]="rule.enabled ? 'Enabled' : 'Disabled'"
                           [severity]="rule.enabled ? 'success' : 'secondary'"
                         ></p-tag>
+                        <p-tag [value]="getPrivacyLabel(rule.privacyType) | titlecase" severity="info"></p-tag>
                       </div>
                       <div class="item-details">
                         <span>Completion Range: {{ rule.minCompletionPercentage }}% - {{ rule.maxCompletionPercentage }}%</span>
@@ -442,11 +442,11 @@
                       <div class="flex align-items-center flex-wrap gap-2 mb-2">
                         <h4 class="m-0">{{ rule.name }}</h4>
                         <p-tag value="Slow Rule" severity="info"></p-tag>
-                        <p-tag [value]="getPrivacyLabel(rule.privacyType) | titlecase" severity="info"></p-tag>
                         <p-tag
                           [value]="rule.enabled ? 'Enabled' : 'Disabled'"
                           [severity]="rule.enabled ? 'success' : 'secondary'"
                         ></p-tag>
+                        <p-tag [value]="getPrivacyLabel(rule.privacyType) | titlecase" severity="info"></p-tag>
                       </div>
                       <div class="item-details">
                         <span>Max Strikes: {{ rule.maxStrikes }}</span>

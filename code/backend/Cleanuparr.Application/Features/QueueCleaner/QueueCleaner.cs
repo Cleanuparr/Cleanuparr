@@ -14,6 +14,7 @@ using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Cleanuparr.Persistence.Models.Configuration.General;
 using Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
 using MassTransit;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using LogContext = Serilog.Context.LogContext;
@@ -44,6 +45,33 @@ public sealed class QueueCleaner : GenericHandler
     
     protected override async Task ExecuteInternalAsync()
     {
+        await DataContext.Lock.WaitAsync();
+
+        try
+        {
+            List<SlowRule> slowRules = await _dataContext.SlowRules
+                .Where(r => r.Enabled)
+                .OrderByDescending(r => r.MaxCompletionPercentage)
+                .ThenByDescending(r => r.MinCompletionPercentage)
+                .AsNoTracking()
+                .ToListAsync();
+            
+            // TODO if rules count is 0, log warning
+            ContextProvider.Set(nameof(SlowRule), slowRules);
+            
+            List<StallRule> stallRules = await _dataContext.StallRules
+                .Where(r => r.Enabled)
+                .OrderByDescending(r => r.MaxCompletionPercentage)
+                .ThenByDescending(r => r.MinCompletionPercentage)
+                .AsNoTracking()
+                .ToListAsync();
+            ContextProvider.Set(nameof(StallRule), stallRules);
+        }
+        finally
+        {
+            DataContext.Lock.Release();
+        }
+        
         var sonarrConfig = ContextProvider.Get<ArrConfig>(nameof(InstanceType.Sonarr));
         var radarrConfig = ContextProvider.Get<ArrConfig>(nameof(InstanceType.Radarr));
         var lidarrConfig = ContextProvider.Get<ArrConfig>(nameof(InstanceType.Lidarr));
