@@ -1,10 +1,8 @@
+using System;
+
 namespace Cleanuparr.Api.Models.NotificationProviders;
 
-public sealed record TestAppriseProviderDto
-{
-    public string Url { get; init; } = string.Empty;
-    
-    public string Key { get; init; } = string.Empty;
-    
-    public string Tags { get; init; } = string.Empty;
-}
+using TestAppriseProviderRequest = Cleanuparr.Api.Features.Notifications.Contracts.Requests.TestAppriseProviderRequest;
+
+[Obsolete("Use Cleanuparr.Api.Features.Notifications.Contracts.Requests.TestAppriseProviderRequest instead.")]
+public sealed record TestAppriseProviderDto : TestAppriseProviderRequest;

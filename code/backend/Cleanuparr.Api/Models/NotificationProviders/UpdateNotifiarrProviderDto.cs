@@ -1,8 +1,8 @@
+using System;
+
 namespace Cleanuparr.Api.Models.NotificationProviders;
 
-public sealed record UpdateNotifiarrProviderDto : CreateNotificationProviderBaseDto
-{
-    public string ApiKey { get; init; } = string.Empty;
-    
-    public string ChannelId { get; init; } = string.Empty;
-}
+using UpdateNotifiarrProviderRequest = Cleanuparr.Api.Features.Notifications.Contracts.Requests.UpdateNotifiarrProviderRequest;
+
+[Obsolete("Use Cleanuparr.Api.Features.Notifications.Contracts.Requests.UpdateNotifiarrProviderRequest instead.")]
+public sealed record UpdateNotifiarrProviderDto : UpdateNotifiarrProviderRequest;

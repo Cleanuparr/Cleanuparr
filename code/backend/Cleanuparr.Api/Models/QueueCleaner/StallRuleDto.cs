@@ -1,8 +1,1 @@
-﻿namespace Cleanuparr.Api.Models.QueueCleaner;
-
-public sealed record StallRuleDto : QueueRuleDto
-{
-    public bool ResetStrikesOnProgress { get; set; } = true;
-    
-    public string? MinimumProgress { get; set; }
-}
+﻿// Moved to Cleanuparr.Api.Features.QueueCleaner.Contracts.Requests
