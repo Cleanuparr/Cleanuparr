@@ -186,6 +186,11 @@ public sealed class QueueCleaner : GenericHandler
                     }
                 }
                 
+                if (downloadService is DelugeService delugeService)
+                {
+                    await delugeService.PauseAsync(record.DownloadId);
+                }
+
                 await PublishQueueItemRemoveRequest(
                     downloadRemovalKey,
                     instanceType,
