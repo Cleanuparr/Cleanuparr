@@ -34,24 +34,18 @@ public class RuleEvaluator : IRuleEvaluator
             .SetSlidingExpiration(StaticConfiguration.TriggerValue + Constants.CacheLimitBuffer);
     }
 
-    public async Task<DownloadCheckResult> EvaluateStallRulesAsync(ITorrentInfo torrent)
+    public async Task<bool> EvaluateStallRulesAsync(ITorrentInfo torrent)
     {
         _logger.LogDebug("Evaluating stall rules for torrent '{name}' ({hash})", torrent.Name, torrent.Hash);
 
-        var result = new DownloadCheckResult
-        {
-            Found = true,
-            IsPrivate = torrent.IsPrivate
-        };
-
         // Get matching stall rules in priority order
-        var matchingRule = await _ruleManager.GetMatchingStallRuleAsync(torrent);
+        var matchingRule = _ruleManager.GetMatchingStallRuleAsync(torrent);
 
         if (matchingRule is null)
         {
             // TODO too many logs if no rules are configured
             _logger.LogTrace("No stall rules match torrent '{name}'. No action will be taken.", torrent.Name);
-            return result;
+            return false;
         }
 
         _logger.LogTrace("Applying stall rule '{ruleName}' to torrent '{name}'", matchingRule.Name, torrent.Name);
@@ -76,20 +70,12 @@ public class RuleEvaluator : IRuleEvaluator
 
             if (shouldRemove)
             {
-                result.ShouldRemove = true;
-                result.DeleteReason = DeleteReason.Stalled;
-                
                 _logger.LogInformation(
                     "Torrent '{name}' marked for removal by stall rule '{ruleName}' after reaching {strikes} strikes", 
                     torrent.Name, matchingRule.Name, matchingRule.MaxStrikes
                 );
-            }
-            else
-            {
-                _logger.LogDebug(
-                    "Strike applied to torrent '{name}' by stall rule '{ruleName}', but removal threshold not reached", 
-                    torrent.Name, matchingRule.Name
-                );
+
+                return true;
             }
         }
         catch (Exception ex)
@@ -102,26 +88,20 @@ public class RuleEvaluator : IRuleEvaluator
             );
         }
 
-        return result;
+        return false;
     }
 
-    public async Task<DownloadCheckResult> EvaluateSlowRulesAsync(ITorrentInfo torrent)
+    public async Task<bool> EvaluateSlowRulesAsync(ITorrentInfo torrent)
     {
-        _logger.LogDebug("Evaluating slow rules for torrent '{TorrentName}' ({Hash})", torrent.Name, torrent.Hash);
-
-        var result = new DownloadCheckResult
-        {
-            Found = true,
-            IsPrivate = torrent.IsPrivate
-        };
+        _logger.LogDebug("Evaluating slow rules for torrent '{name}' ({hash})", torrent.Name, torrent.Hash);
 
         // Get matching slow rules in priority order
-        var matchingRule = await _ruleManager.GetMatchingSlowRuleAsync(torrent);
+        var matchingRule = _ruleManager.GetMatchingSlowRuleAsync(torrent);
 
         if (matchingRule is null)
         {
             _logger.LogTrace("No slow rules match torrent '{name}'. No action will be taken.", torrent.Name);
-            return result;
+            return false;
         }
 
         var strikeContext = DetermineSlowRuleStrikeContext(matchingRule);
@@ -141,6 +121,7 @@ public class RuleEvaluator : IRuleEvaluator
                 strikeContext.StrikeType,
                 matchingRule.Name);
             
+            // TODO
             // For slow rules, we need additional torrent information to evaluate speed/time criteria
             // This would typically come from the download client, but for now we'll apply the strike
             // The actual speed/time evaluation would be done by the calling download service
@@ -153,9 +134,6 @@ public class RuleEvaluator : IRuleEvaluator
 
             if (shouldRemove)
             {
-                result.ShouldRemove = true;
-                result.DeleteReason = strikeContext.DeleteReason;
-                
                 _logger.LogInformation(
                     "Torrent '{name}' marked for removal by slow rule '{ruleName}' ({strikeType}) after reaching {strikes} strikes", 
                     torrent.Name,
@@ -163,15 +141,8 @@ public class RuleEvaluator : IRuleEvaluator
                     strikeContext.StrikeType,
                     matchingRule.MaxStrikes
                 );
-            }
-            else
-            {
-                _logger.LogDebug(
-                    "Strike applied to torrent '{name}' by slow rule '{ruleName}' ({strikeType}), but removal threshold not reached", 
-                    torrent.Name,
-                    matchingRule.Name,
-                    strikeContext.StrikeType
-                );
+                
+                return true;
             }
         }
         catch (Exception ex)
@@ -184,7 +155,7 @@ public class RuleEvaluator : IRuleEvaluator
             );
         }
 
-        return result;
+        return false;
     }
 
     private static (StrikeType StrikeType, DeleteReason DeleteReason) DetermineSlowRuleStrikeContext(SlowRule rule)

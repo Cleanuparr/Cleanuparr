@@ -76,18 +76,16 @@ public class RuleManager : IRuleManager
         return readOnlyRules;
     }
     
-    public Task<StallRule?> GetMatchingStallRuleAsync(ITorrentInfo torrent)
+    public StallRule? GetMatchingStallRuleAsync(ITorrentInfo torrent)
     {
-        var stallRules = ContextProvider.Get<List<StallRule>>(nameof(StallRule)) ?? new List<StallRule>();
-        var match = GetMatchingRule(torrent, stallRules);
-        return Task.FromResult(match);
+        var stallRules = ContextProvider.Get<List<StallRule>>(nameof(StallRule));
+        return GetMatchingRule(torrent, stallRules);
     }
 
-    public Task<SlowRule?> GetMatchingSlowRuleAsync(ITorrentInfo torrent)
+    public SlowRule? GetMatchingSlowRuleAsync(ITorrentInfo torrent)
     {
-        var slowRules = ContextProvider.Get<List<SlowRule>>(nameof(SlowRule)) ?? new List<SlowRule>();
-        var match = GetMatchingRule(torrent, slowRules);
-        return Task.FromResult(match);
+        var slowRules = ContextProvider.Get<List<SlowRule>>(nameof(SlowRule));
+        return GetMatchingRule(torrent, slowRules);
     }
 
     private TRule? GetMatchingRule<TRule>(ITorrentInfo torrent, IReadOnlyList<TRule> rules) where TRule : QueueRule
