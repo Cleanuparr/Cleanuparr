@@ -28,11 +28,12 @@ public partial class DelugeService : DownloadService, IDelugeService
         EventPublisher eventPublisher,
         BlocklistProvider blocklistProvider,
         DownloadClientConfig downloadClientConfig,
-        IRuleEvaluator ruleEvaluator
+        IRuleEvaluator ruleEvaluator,
+        IRuleManager ruleManager
     ) : base(
         logger, cache,
         filenameEvaluator, striker, dryRunInterceptor, hardLinkFileService,
-        httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, ruleEvaluator
+        httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, ruleEvaluator, ruleManager
     )
     {
         _client = new DelugeClient(downloadClientConfig, _httpClient);

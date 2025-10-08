@@ -47,11 +47,12 @@ public partial class TransmissionService : DownloadService, ITransmissionService
         EventPublisher eventPublisher,
         BlocklistProvider blocklistProvider,
         DownloadClientConfig downloadClientConfig,
-        IRuleEvaluator ruleEvaluator
+        IRuleEvaluator ruleEvaluator,
+        IRuleManager ruleManager
     ) : base(
         logger, cache,
         filenameEvaluator, striker, dryRunInterceptor, hardLinkFileService,
-        httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, ruleEvaluator
+        httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, ruleEvaluator, ruleManager
     )
     {
         UriBuilder uriBuilder = new(_downloadClientConfig.Url);

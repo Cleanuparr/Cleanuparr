@@ -2,7 +2,6 @@
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Extensions;
 using Cleanuparr.Infrastructure.Features.Context;
-using Cleanuparr.Infrastructure.Services.Interfaces;
 using Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
 using Microsoft.Extensions.Logging;
 using QBittorrent.Client;
@@ -74,62 +73,131 @@ public partial class QBitService
     
     private async Task<(bool ShouldRemove, DeleteReason Reason)> EvaluateDownloadRemoval(TorrentInfo torrent, IReadOnlyList<TorrentTracker> trackers, DownloadCheckResult result)
     {
-        // Create ITorrentInfo wrapper for rule evaluation
-        var torrentInfo = new QBitTorrentInfo(torrent, trackers, result.IsPrivate);
-        
-        // TODO check for metadata stuck separately
-        var shouldRemove = await _ruleEvaluator.EvaluateStallRulesAsync(torrentInfo);
-        if (shouldRemove)
+        (bool ShouldRemove, DeleteReason Reason) slowResult = await CheckIfSlow(torrent, trackers, result.IsPrivate);
+
+        if (slowResult.ShouldRemove)
         {
-            return (true, DeleteReason.Stalled);
-        }
-        
-        shouldRemove = await _ruleEvaluator.EvaluateSlowRulesAsync(torrentInfo);
-        if (shouldRemove)
-        {
-            return (true, DeleteReason.Slow);
+            return slowResult;
         }
 
-        return (false, DeleteReason.None);
+        return await CheckIfStuck(torrent, trackers, result.IsPrivate);
     }
 
-    private async Task<(bool ShouldRemove, DeleteReason Reason)> CheckIfStuck(TorrentInfo torrent, bool isPrivate)
+    private async Task<(bool ShouldRemove, DeleteReason Reason)> CheckIfSlow(TorrentInfo download, IReadOnlyList<TorrentTracker> trackers, bool isPrivate)
     {
-        var queueCleanerConfig = ContextProvider.Get<QueueCleanerConfig>(nameof(QueueCleanerConfig));
-        
-        if (torrent.State is not TorrentState.StalledDownload and not TorrentState.FetchingMetadata
-            and not TorrentState.ForcedFetchingMetadata)
+        // First check if the torrent is in a state where slow rules apply
+        if (download.State is not (TorrentState.Downloading or TorrentState.ForcedDownload))
         {
-            // ignore other states
+            _logger.LogTrace("skip slow check | download is in {state} state | {name}", download.State, download.Name);
+            return (false, DeleteReason.None);
+        }
+
+        if (download.DownloadSpeed <= 0)
+        {
+            _logger.LogTrace("skip slow check | download speed is 0 | {name}", download.Name);
+            return (false, DeleteReason.None);
+        }
+
+        // Create ITorrentInfo wrapper for rule matching
+        var torrentInfo = new QBitTorrentInfo(download, trackers, isPrivate);
+
+        // Get matching slow rule
+        var matchingRule = _ruleManager.GetMatchingSlowRuleAsync(torrentInfo);
+
+        if (matchingRule is null)
+        {
+            _logger.LogTrace("No slow rules match torrent '{name}'. No action will be taken.", download.Name);
+            return (false, DeleteReason.None);
+        }
+
+        _logger.LogTrace("Applying slow rule '{ruleName}' to torrent '{name}'", matchingRule.Name, download.Name);
+
+        // Determine the strike type based on rule configuration
+        bool hasMinSpeed = !string.IsNullOrWhiteSpace(matchingRule.MinSpeed);
+        bool hasMaxTime = matchingRule.MaxTimeHours > 0 || matchingRule.MaxTime > 0;
+        
+        // TODO why do we determine this here?
+        // TODO maybe separate max time from max speed?
+        StrikeType strikeType = (hasMinSpeed && !hasMaxTime) ? StrikeType.SlowSpeed :
+                                (!hasMinSpeed && hasMaxTime) ? StrikeType.SlowTime :
+                                StrikeType.SlowSpeed; // default to speed when both configured
+
+        DeleteReason deleteReason = strikeType == StrikeType.SlowSpeed ? DeleteReason.SlowSpeed : DeleteReason.SlowTime;
+
+        // Check if torrent is actually slow based on thresholds
+        bool isSlow = false;
+
+        if (hasMinSpeed)
+        {
+            ByteSize minSpeed = matchingRule.MinSpeedByteSize;
+            ByteSize currentSpeed = new ByteSize(download.DownloadSpeed);
+            if (currentSpeed.Bytes < minSpeed.Bytes)
+            {
+                isSlow = true;
+            }
+        }
+
+        if (hasMaxTime && !isSlow)
+        {
+            SmartTimeSpan maxTime = SmartTimeSpan.FromHours(matchingRule.MaxTimeHours > 0 ? matchingRule.MaxTimeHours : matchingRule.MaxTime / 3600.0);
+            SmartTimeSpan currentTime = new SmartTimeSpan(download.EstimatedTime ?? TimeSpan.Zero);
+            if (currentTime.Time.TotalSeconds > maxTime.Time.TotalSeconds && maxTime.Time.TotalSeconds > 0)
+            {
+                isSlow = true;
+            }
+        }
+
+        if (!isSlow)
+        {
+            _logger.LogTrace("Torrent '{name}' doesn't violate slow thresholds", download.Name);
+            return (false, DeleteReason.None);
+        }
+
+        // Apply strike
+        bool shouldRemove = await _striker.StrikeAndCheckLimit(download.Hash, download.Name, (ushort)matchingRule.MaxStrikes, strikeType);
+        return (shouldRemove, deleteReason);
+    }
+
+    private async Task<(bool ShouldRemove, DeleteReason Reason)> CheckIfStuck(TorrentInfo torrent, IReadOnlyList<TorrentTracker> trackers, bool isPrivate)
+    {
+        // Check for metadata downloading state separately
+        if (torrent.State is TorrentState.FetchingMetadata or TorrentState.ForcedFetchingMetadata)
+        {
+            var queueCleanerConfig = ContextProvider.Get<QueueCleanerConfig>(nameof(QueueCleanerConfig));
+
+            if (queueCleanerConfig.DownloadingMetadataMaxStrikes > 0)
+            {
+                return (
+                    await _striker.StrikeAndCheckLimit(torrent.Hash, torrent.Name, queueCleanerConfig.DownloadingMetadataMaxStrikes,
+                        StrikeType.DownloadingMetadata), DeleteReason.DownloadingMetadata);
+            }
+
+            return (false, DeleteReason.None);
+        }
+
+        // First check if the torrent is in a stalled state
+        if (torrent.State is not TorrentState.StalledDownload)
+        {
             _logger.LogTrace("skip stalled check | download is in {state} state | {name}", torrent.State, torrent.Name);
             return (false, DeleteReason.None);
         }
 
-        if (torrent.State is TorrentState.StalledDownload)
-        {
-            if (queueCleanerConfig.Stalled.IgnorePrivate && isPrivate)
-            {
-                // ignore private trackers
-                _logger.LogTrace("skip stalled check | download is private | {name}", torrent.Name);
-            }
-            else
-            {
-                ResetStalledStrikesOnProgress(torrent.Hash, torrent.Downloaded ?? 0);
+        // Create ITorrentInfo wrapper for rule matching
+        var torrentInfo = new QBitTorrentInfo(torrent, trackers, isPrivate);
 
-                return (
-                    await _striker.StrikeAndCheckLimit(torrent.Hash, torrent.Name, queueCleanerConfig.Stalled.MaxStrikes,
-                        StrikeType.Stalled), DeleteReason.Stalled);
-            }
+        // Get matching stall rule
+        var matchingRule = _ruleManager.GetMatchingStallRuleAsync(torrentInfo);
+
+        if (matchingRule is null)
+        {
+            _logger.LogTrace("No stall rules match torrent '{name}'. No action will be taken.", torrent.Name);
+            return (false, DeleteReason.None);
         }
 
-        if (queueCleanerConfig.Stalled.DownloadingMetadataMaxStrikes > 0 && torrent.State is not TorrentState.StalledDownload)
-        {
-            return (
-                await _striker.StrikeAndCheckLimit(torrent.Hash, torrent.Name, queueCleanerConfig.Stalled.DownloadingMetadataMaxStrikes,
-                    StrikeType.DownloadingMetadata), DeleteReason.DownloadingMetadata);
-        }
+        _logger.LogTrace("Applying stall rule '{ruleName}' to torrent '{name}'", matchingRule.Name, torrent.Name);
 
-        _logger.LogTrace("skip stalled check | download is not stalled | {name}", torrent.Name);
-        return (false, DeleteReason.None);
+        // Apply strike
+        bool shouldRemove = await _striker.StrikeAndCheckLimit(torrent.Hash, torrent.Name, (ushort)matchingRule.MaxStrikes, StrikeType.Stalled);
+        return (shouldRemove, DeleteReason.Stalled);
     }
 }

@@ -3,7 +3,7 @@ using Shouldly;
 using Transmission.API.RPC.Entity;
 using Xunit;
 
-namespace Cleanuparr.Infrastructure.Tests.Features.DownloadClient.Transmission;
+namespace Cleanuparr.Infrastructure.Tests.Features.DownloadClient;
 
 public class TransmissionTorrentInfoTests
 {

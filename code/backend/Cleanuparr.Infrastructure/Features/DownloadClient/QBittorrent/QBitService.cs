@@ -29,10 +29,11 @@ public partial class QBitService : DownloadService, IQBitService
         EventPublisher eventPublisher,
         BlocklistProvider blocklistProvider,
         DownloadClientConfig downloadClientConfig,
-        IRuleEvaluator ruleEvaluator
+        IRuleEvaluator ruleEvaluator,
+        IRuleManager ruleManager
     ) : base(
         logger, cache, filenameEvaluator, striker, dryRunInterceptor, hardLinkFileService,
-        httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, ruleEvaluator
+        httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, ruleEvaluator, ruleManager
     )
     {
         _client = new QBittorrentClient(_httpClient, downloadClientConfig.Url);

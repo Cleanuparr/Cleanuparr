@@ -31,11 +31,12 @@ public partial class UTorrentService : DownloadService, IUTorrentService
         BlocklistProvider blocklistProvider,
         DownloadClientConfig downloadClientConfig,
         ILoggerFactory loggerFactory,
-        IRuleEvaluator ruleEvaluator
+        IRuleEvaluator ruleEvaluator,
+        IRuleManager ruleManager
     ) : base(
         logger, cache,
         filenameEvaluator, striker, dryRunInterceptor, hardLinkFileService,
-        httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, ruleEvaluator
+        httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, ruleEvaluator, ruleManager
     )
     {
         // Create the new layered client with dependency injection

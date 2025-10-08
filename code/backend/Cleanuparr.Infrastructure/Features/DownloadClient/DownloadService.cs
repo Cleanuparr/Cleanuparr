@@ -40,7 +40,8 @@ public abstract class DownloadService : IDownloadService
     protected readonly HttpClient _httpClient;
     protected readonly DownloadClientConfig _downloadClientConfig;
     protected readonly IRuleEvaluator _ruleEvaluator;
-    
+    protected readonly IRuleManager _ruleManager;
+
     protected DownloadService(
         ILogger<DownloadService> logger,
         IMemoryCache cache,
@@ -52,7 +53,8 @@ public abstract class DownloadService : IDownloadService
         EventPublisher eventPublisher,
         BlocklistProvider blocklistProvider,
         DownloadClientConfig downloadClientConfig,
-        IRuleEvaluator ruleEvaluator
+        IRuleEvaluator ruleEvaluator,
+        IRuleManager ruleManager
     )
     {
         _logger = logger;
@@ -68,6 +70,7 @@ public abstract class DownloadService : IDownloadService
         _downloadClientConfig = downloadClientConfig;
         _httpClient = httpClientProvider.CreateClient(downloadClientConfig);
         _ruleEvaluator = ruleEvaluator;
+        _ruleManager = ruleManager;
     }
     
     public DownloadClientConfig ClientConfig => _downloadClientConfig;
