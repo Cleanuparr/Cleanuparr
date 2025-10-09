@@ -236,4 +236,9 @@ public sealed class DelugeClient
     {
         await SendRequest<DelugeResponse<object>>("label.set_torrent", hash, newLabel);
     }
+    
+    public async Task PauseAsync(string hash)
+    {
+        await SendRequest<DelugeResponse<object>>("core.pause_torrent", hash);
+    }
 }
