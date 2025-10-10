@@ -72,10 +72,6 @@ public sealed class Striker : IStriker
         {
             _logger.LogTrace("Progress detected | resetting {reason} strikes from {strikeCount} to 0 | {name}", strikeType, strikeCount, itemName);
         }
-        else
-        {
-            _logger.LogTrace("Progress detected | no existing {reason} strikes to reset | {name}", strikeType, itemName);
-        }
 
         _cache.Remove(key);
 

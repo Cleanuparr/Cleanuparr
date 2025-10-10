@@ -1,3 +1,4 @@
+using Cleanuparr.Domain.Entities;
 using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Events;
@@ -62,8 +63,8 @@ public sealed class DownloadCleaner : GenericHandler
         List<string> ignoredDownloads = ContextProvider.Get<GeneralConfig>(nameof(GeneralConfig)).IgnoredDownloads;
         ignoredDownloads.AddRange(ContextProvider.Get<DownloadCleanerConfig>().IgnoredDownloads);
         
-        var downloadServiceToDownloadsMap = new Dictionary<IDownloadService, List<object>>();
-        
+        var downloadServiceToDownloadsMap = new Dictionary<IDownloadService, List<ITorrentItem>>();
+
         foreach (var downloadService in downloadServices)
         {
             try
@@ -86,11 +87,11 @@ public sealed class DownloadCleaner : GenericHandler
             _logger.LogDebug("no seeding downloads found");
             return;
         }
-        
+
         var totalDownloads = downloadServiceToDownloadsMap.Values.Sum(x => x.Count);
         _logger.LogTrace("found {count} seeding downloads across {clientCount} clients", totalDownloads, downloadServiceToDownloadsMap.Count);
-        
-        List<Tuple<IDownloadService, List<object>>> downloadServiceWithDownloads = [];
+
+        List<Tuple<IDownloadService, List<ITorrentItem>>> downloadServiceWithDownloads = [];
 
         if (isUnlinkedEnabled)
         {

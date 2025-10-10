@@ -5,7 +5,7 @@ using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.DownloadClient;
 
-public class UTorrentTorrentInfoTests
+public class UTorrentItemWrapperTests
 {
     [Fact]
     public void Constructor_WithNullTorrentItem_ThrowsArgumentNullException()
@@ -14,7 +14,7 @@ public class UTorrentTorrentInfoTests
         var torrentProperties = new UTorrentProperties();
 
         // Act & Assert
-        Should.Throw<ArgumentNullException>(() => new UTorrentTorrentInfo(null!, torrentProperties));
+        Should.Throw<ArgumentNullException>(() => new UTorrentItemWrapper(null!, torrentProperties));
     }
 
     [Fact]
@@ -24,7 +24,7 @@ public class UTorrentTorrentInfoTests
         var torrentItem = new UTorrentItem();
 
         // Act & Assert
-        Should.Throw<ArgumentNullException>(() => new UTorrentTorrentInfo(torrentItem, null!));
+        Should.Throw<ArgumentNullException>(() => new UTorrentItemWrapper(torrentItem, null!));
     }
 
     [Fact]
@@ -34,7 +34,7 @@ public class UTorrentTorrentInfoTests
         var expectedHash = "test-hash-123";
         var torrentItem = new UTorrentItem { Hash = expectedHash };
         var torrentProperties = new UTorrentProperties();
-        var wrapper = new UTorrentTorrentInfo(torrentItem, torrentProperties);
+        var wrapper = new UTorrentItemWrapper(torrentItem, torrentProperties);
 
         // Act
         var result = wrapper.Hash;
@@ -50,7 +50,7 @@ public class UTorrentTorrentInfoTests
         var expectedName = "Test Torrent";
         var torrentItem = new UTorrentItem { Name = expectedName };
         var torrentProperties = new UTorrentProperties();
-        var wrapper = new UTorrentTorrentInfo(torrentItem, torrentProperties);
+        var wrapper = new UTorrentItemWrapper(torrentItem, torrentProperties);
 
         // Act
         var result = wrapper.Name;
@@ -65,7 +65,7 @@ public class UTorrentTorrentInfoTests
         // Arrange
         var torrentItem = new UTorrentItem();
         var torrentProperties = new UTorrentProperties { Pex = -1 }; // -1 means private torrent
-        var wrapper = new UTorrentTorrentInfo(torrentItem, torrentProperties);
+        var wrapper = new UTorrentItemWrapper(torrentItem, torrentProperties);
 
         // Act
         var result = wrapper.IsPrivate;
@@ -81,7 +81,7 @@ public class UTorrentTorrentInfoTests
         var expectedSize = 1024L * 1024 * 1024; // 1GB
         var torrentItem = new UTorrentItem { Size = expectedSize };
         var torrentProperties = new UTorrentProperties();
-        var wrapper = new UTorrentTorrentInfo(torrentItem, torrentProperties);
+        var wrapper = new UTorrentItemWrapper(torrentItem, torrentProperties);
 
         // Act
         var result = wrapper.Size;
@@ -100,7 +100,7 @@ public class UTorrentTorrentInfoTests
         // Arrange
         var torrentItem = new UTorrentItem { Progress = progress };
         var torrentProperties = new UTorrentProperties();
-        var wrapper = new UTorrentTorrentInfo(torrentItem, torrentProperties);
+        var wrapper = new UTorrentItemWrapper(torrentItem, torrentProperties);
 
         // Act
         var result = wrapper.CompletionPercentage;
@@ -118,7 +118,7 @@ public class UTorrentTorrentInfoTests
         {
             Trackers = "http://tracker1.example.com:8080/announce\r\nhttps://tracker2.example.com/announce\r\nudp://tracker3.example.com:1337/announce"
         };
-        var wrapper = new UTorrentTorrentInfo(torrentItem, torrentProperties);
+        var wrapper = new UTorrentItemWrapper(torrentItem, torrentProperties);
 
         // Act
         var result = wrapper.Trackers;
@@ -139,7 +139,7 @@ public class UTorrentTorrentInfoTests
         {
             Trackers = "http://tracker1.example.com:8080/announce\r\nhttps://tracker1.example.com/announce\r\nudp://tracker1.example.com:1337/announce"
         };
-        var wrapper = new UTorrentTorrentInfo(torrentItem, torrentProperties);
+        var wrapper = new UTorrentItemWrapper(torrentItem, torrentProperties);
 
         // Act
         var result = wrapper.Trackers;
@@ -158,7 +158,7 @@ public class UTorrentTorrentInfoTests
         {
             Trackers = "http://valid.example.com/announce\r\ninvalid-url\r\n\r\n "
         };
-        var wrapper = new UTorrentTorrentInfo(torrentItem, torrentProperties);
+        var wrapper = new UTorrentItemWrapper(torrentItem, torrentProperties);
 
         // Act
         var result = wrapper.Trackers;
@@ -177,7 +177,7 @@ public class UTorrentTorrentInfoTests
         {
             Trackers = ""
         };
-        var wrapper = new UTorrentTorrentInfo(torrentItem, torrentProperties);
+        var wrapper = new UTorrentItemWrapper(torrentItem, torrentProperties);
 
         // Act
         var result = wrapper.Trackers;
@@ -192,7 +192,7 @@ public class UTorrentTorrentInfoTests
         // Arrange
         var torrentItem = new UTorrentItem();
         var torrentProperties = new UTorrentProperties(); // Trackers defaults to empty string
-        var wrapper = new UTorrentTorrentInfo(torrentItem, torrentProperties);
+        var wrapper = new UTorrentItemWrapper(torrentItem, torrentProperties);
 
         // Act
         var result = wrapper.Trackers;

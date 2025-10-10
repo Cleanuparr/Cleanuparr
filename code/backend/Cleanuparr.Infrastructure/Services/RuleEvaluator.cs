@@ -34,48 +34,46 @@ public class RuleEvaluator : IRuleEvaluator
             .SetSlidingExpiration(StaticConfiguration.TriggerValue + Constants.CacheLimitBuffer);
     }
 
-    public async Task<bool> EvaluateStallRulesAsync(ITorrentInfo torrent)
+    public async Task<(bool ShouldRemove, DeleteReason Reason)> EvaluateStallRulesAsync(ITorrentItem torrent)
     {
         _logger.LogDebug("Evaluating stall rules for torrent '{name}' ({hash})", torrent.Name, torrent.Hash);
 
         // Get matching stall rules in priority order
-        var matchingRule = _ruleManager.GetMatchingStallRuleAsync(torrent);
+        var rule = _ruleManager.GetMatchingStallRuleAsync(torrent);
 
-        if (matchingRule is null)
+        if (rule is null)
         {
             // TODO too many logs if no rules are configured
             _logger.LogTrace("No stall rules match torrent '{name}'. No action will be taken.", torrent.Name);
-            return false;
+            return (false, DeleteReason.None);
         }
 
-        _logger.LogTrace("Applying stall rule '{ruleName}' to torrent '{name}'", matchingRule.Name, torrent.Name);
+        _logger.LogTrace("Applying stall rule {rule} to torrent | {name}", rule.Name, torrent.Name);
 
         try
         {
-            await ResetStrikesIfProgressAsync(
+            await ResetStalledStrikesAsync(
                 torrent,
-                matchingRule.ResetStrikesOnProgress,
-                matchingRule.MinimumProgressByteSize?.Bytes,
-                StrikeType.Stalled,
-                matchingRule.Name
+                rule.ResetStrikesOnProgress,
+                rule.MinimumProgressByteSize?.Bytes
             );
-            
+
             // Apply strike and check if torrent should be removed
             bool shouldRemove = await _striker.StrikeAndCheckLimit(
-                torrent.Hash, 
-                torrent.Name, 
-                (ushort)matchingRule.MaxStrikes, 
+                torrent.Hash,
+                torrent.Name,
+                (ushort)rule.MaxStrikes,
                 StrikeType.Stalled
             );
 
             if (shouldRemove)
             {
                 _logger.LogInformation(
-                    "Torrent '{name}' marked for removal by stall rule '{ruleName}' after reaching {strikes} strikes", 
-                    torrent.Name, matchingRule.Name, matchingRule.MaxStrikes
+                    "Torrent '{name}' marked for removal by stall rule '{ruleName}' after reaching {strikes} strikes",
+                    torrent.Name, rule.Name, rule.MaxStrikes
                 );
 
-                return true;
+                return (true, DeleteReason.Stalled);
             }
         }
         catch (Exception ex)
@@ -83,150 +81,149 @@ public class RuleEvaluator : IRuleEvaluator
             _logger.LogError(
                 ex,
                 "Error applying stall rule '{ruleName}' to torrent '{name}'.",
-                matchingRule.Name,
+                rule.Name,
                 torrent.Name
             );
         }
 
-        return false;
+        return (false, DeleteReason.None);
     }
 
-    public async Task<bool> EvaluateSlowRulesAsync(ITorrentInfo torrent)
+    public async Task<(bool ShouldRemove, DeleteReason Reason)> EvaluateSlowRulesAsync(ITorrentItem torrent)
     {
-        _logger.LogDebug("Evaluating slow rules for torrent '{name}' ({hash})", torrent.Name, torrent.Hash);
+        _logger.LogTrace("Evaluating slow rules | {name}", torrent.Name);
 
         // Get matching slow rules in priority order
-        var matchingRule = _ruleManager.GetMatchingSlowRuleAsync(torrent);
+        SlowRule? rule = _ruleManager.GetMatchingSlowRuleAsync(torrent);
 
-        if (matchingRule is null)
+        if (rule is null)
         {
-            _logger.LogTrace("No slow rules match torrent '{name}'. No action will be taken.", torrent.Name);
-            return false;
+            _logger.LogDebug("skip | no slow rules matched | {name}", torrent.Name);
+            return (false, DeleteReason.None);
         }
 
-        var strikeContext = DetermineSlowRuleStrikeContext(matchingRule);
+        _logger.LogTrace("Applying slow rule {rule} | {name}", rule.Name, torrent.Name);
 
-        _logger.LogTrace(
-            "Applying slow rule '{ruleName}' ({strikeType}) to torrent '{name}'",
-            matchingRule.Name,
-            strikeContext.StrikeType,
-            torrent.Name);
-
-        try
+        // Check if slow speed
+        if (!string.IsNullOrWhiteSpace(rule.MinSpeed))
         {
-            await ResetStrikesIfProgressAsync(
-                torrent,
-                matchingRule.ResetStrikesOnProgress,
-                null,
-                strikeContext.StrikeType,
-                matchingRule.Name);
-            
-            // TODO
-            // For slow rules, we need additional torrent information to evaluate speed/time criteria
-            // This would typically come from the download client, but for now we'll apply the strike
-            // The actual speed/time evaluation would be done by the calling download service
-            
-            bool shouldRemove = await _striker.StrikeAndCheckLimit(
-                torrent.Hash, 
-                torrent.Name, 
-                (ushort)matchingRule.MaxStrikes, 
-                strikeContext.StrikeType);
-
-            if (shouldRemove)
+            ByteSize minSpeed = rule.MinSpeedByteSize;
+            ByteSize currentSpeed = new ByteSize(torrent.DownloadSpeed);
+            if (currentSpeed.Bytes < minSpeed.Bytes)
             {
-                _logger.LogInformation(
-                    "Torrent '{name}' marked for removal by slow rule '{ruleName}' ({strikeType}) after reaching {strikes} strikes", 
+                bool shouldRemove = await _striker.StrikeAndCheckLimit(
+                    torrent.Hash,
                     torrent.Name,
-                    matchingRule.Name,
-                    strikeContext.StrikeType,
-                    matchingRule.MaxStrikes
+                    (ushort)rule.MaxStrikes,
+                    StrikeType.SlowSpeed
                 );
-                
-                return true;
+
+                if (shouldRemove)
+                {
+                    return (true, DeleteReason.SlowSpeed);
+                }
+            }
+            else
+            {
+                await ResetSlowStrikesAsync(torrent, rule.ResetStrikesOnProgress, StrikeType.SlowSpeed);
             }
         }
-        catch (Exception ex)
+
+        // Check if slow time
+        if (rule.MaxTimeHours > 0)
         {
-            _logger.LogError(
-                ex,
-                "Error applying slow rule '{ruleName}' to torrent '{name}'.",
-                matchingRule.Name,
-                torrent.Name
-            );
+            SmartTimeSpan maxTime = SmartTimeSpan.FromHours(rule.MaxTimeHours);
+            SmartTimeSpan currentTime = SmartTimeSpan.FromSeconds(torrent.Eta);
+            if (currentTime.Time.TotalSeconds > maxTime.Time.TotalSeconds && maxTime.Time.TotalSeconds > 0)
+            {
+                bool shouldRemove = await _striker.StrikeAndCheckLimit(
+                    torrent.Hash,
+                    torrent.Name,
+                    (ushort)rule.MaxStrikes,
+                    StrikeType.SlowTime
+                );
+
+                if (shouldRemove)
+                {
+                    return (true, DeleteReason.SlowTime);
+                }
+            }
+            else
+            {
+                await ResetSlowStrikesAsync(torrent, rule.ResetStrikesOnProgress, StrikeType.SlowTime);
+            }
         }
 
-        return false;
+        return (false, DeleteReason.None);
     }
 
-    private static (StrikeType StrikeType, DeleteReason DeleteReason) DetermineSlowRuleStrikeContext(SlowRule rule)
-    {
-        bool hasMinSpeed = !string.IsNullOrWhiteSpace(rule.MinSpeed);
-        bool hasMaxTime = rule.MaxTimeHours > 0 || rule.MaxTime > 0;
-
-        if (hasMinSpeed && !hasMaxTime)
-        {
-            return (StrikeType.SlowSpeed, DeleteReason.SlowSpeed);
-        }
-
-        if (!hasMinSpeed && hasMaxTime)
-        {
-            return (StrikeType.SlowTime, DeleteReason.SlowTime);
-        }
-
-        if (hasMinSpeed && hasMaxTime)
-        {
-            // When both are configured treat the slowdown as speed-related to maintain backward compatibility
-            return (StrikeType.SlowSpeed, DeleteReason.SlowSpeed);
-        }
-
-        // Fallback to SlowSpeed for legacy or misconfigured rules
-        return (StrikeType.SlowSpeed, DeleteReason.SlowSpeed);
-    }
-
-    private async Task ResetStrikesIfProgressAsync(
-        ITorrentInfo torrent,
+    private async Task ResetStalledStrikesAsync(
+        ITorrentItem torrent,
         bool resetEnabled,
-        long? minimumProgressBytes,
-        StrikeType strikeType,
-        string ruleName)
+        long? minimumProgressBytes
+    )
     {
         if (!resetEnabled)
         {
             return;
         }
 
-        if (!HasDownloadProgress(torrent, strikeType, out long previous, out long current))
+        if (!HasStalledDownloadProgress(torrent, StrikeType.Stalled, out long previous, out long current))
         {
+            _logger.LogTrace("No progress detected | strikes are not reset | {name}", torrent.Name);
             return;
         }
 
         long progressBytes = current - previous;
 
-        if (minimumProgressBytes.HasValue && minimumProgressBytes.Value > 0 && progressBytes < minimumProgressBytes.Value)
+        if (minimumProgressBytes is > 0)
         {
-            _logger.LogDebug(
-                "Progress detected for torrent '{TorrentName}' while applying {StrikeType} rule '{RuleName}', but {ProgressBytes} bytes is below threshold of {ThresholdBytes} bytes. Strikes remain unchanged.",
-                torrent.Name,
-                strikeType,
-                ruleName,
+            if (progressBytes < minimumProgressBytes)
+            {
+                _logger.LogTrace(
+                    "Progress detected | strikes are not reset | progress: {progress}b | minimum: {minimum}b | {name}",
+                    progressBytes,
+                    minimumProgressBytes,
+                    torrent.Name
+                );
+                
+                return;
+            }
+            
+            _logger.LogTrace(
+                "Progress detected | strikes are reset | progress: {progress}b | minimum: {minimum}b | {name}",
                 progressBytes,
-                minimumProgressBytes.Value);
-            return;
+                minimumProgressBytes,
+                torrent.Name
+            );
+        }
+        else
+        {
+            _logger.LogTrace(
+                "Progress detected | strikes are reset | progress: {progress}b | {name}",
+                progressBytes,
+                torrent.Name
+            );
         }
 
-        _logger.LogDebug(
-            "Progress detected for torrent '{TorrentName}' while applying {StrikeType} rule '{RuleName}'. Previous bytes: {Previous}, Current bytes: {Current}. Resetting strikes.",
-            torrent.Name,
-            strikeType,
-            ruleName,
-            previous,
-            current);
+        await _striker.ResetStrikeAsync(torrent.Hash, torrent.Name, StrikeType.Stalled);
+    }
 
+    private async Task ResetSlowStrikesAsync(
+        ITorrentItem torrent,
+        bool resetEnabled,
+        StrikeType strikeType
+    )
+    {
+        if (!resetEnabled)
+        {
+            return;
+        }
+        
         await _striker.ResetStrikeAsync(torrent.Hash, torrent.Name, strikeType);
     }
 
-    // TODO check and fix
-    private bool HasDownloadProgress(ITorrentInfo torrent, StrikeType strikeType, out long previousDownloaded, out long currentDownloaded)
+    private bool HasStalledDownloadProgress(ITorrentItem torrent, StrikeType strikeType, out long previousDownloaded, out long currentDownloaded)
     {
         previousDownloaded = 0;
         currentDownloaded = Math.Max(0, torrent.DownloadedBytes);

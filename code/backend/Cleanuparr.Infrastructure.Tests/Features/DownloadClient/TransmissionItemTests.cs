@@ -5,13 +5,13 @@ using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.DownloadClient;
 
-public class TransmissionTorrentInfoTests
+public class TransmissionItemTests
 {
     [Fact]
     public void Constructor_WithNullTorrentInfo_ThrowsArgumentNullException()
     {
         // Act & Assert
-        Should.Throw<ArgumentNullException>(() => new TransmissionTorrentInfo(null!));
+        Should.Throw<ArgumentNullException>(() => new TransmissionItem(null!));
     }
 
     [Fact]
@@ -20,7 +20,7 @@ public class TransmissionTorrentInfoTests
         // Arrange
         var expectedHash = "test-hash-123";
         var torrentInfo = new TorrentInfo { HashString = expectedHash };
-        var wrapper = new TransmissionTorrentInfo(torrentInfo);
+        var wrapper = new TransmissionItem(torrentInfo);
 
         // Act
         var result = wrapper.Hash;
@@ -34,7 +34,7 @@ public class TransmissionTorrentInfoTests
     {
         // Arrange
         var torrentInfo = new TorrentInfo { HashString = null };
-        var wrapper = new TransmissionTorrentInfo(torrentInfo);
+        var wrapper = new TransmissionItem(torrentInfo);
 
         // Act
         var result = wrapper.Hash;
@@ -49,7 +49,7 @@ public class TransmissionTorrentInfoTests
         // Arrange
         var expectedName = "Test Torrent";
         var torrentInfo = new TorrentInfo { Name = expectedName };
-        var wrapper = new TransmissionTorrentInfo(torrentInfo);
+        var wrapper = new TransmissionItem(torrentInfo);
 
         // Act
         var result = wrapper.Name;
@@ -63,7 +63,7 @@ public class TransmissionTorrentInfoTests
     {
         // Arrange
         var torrentInfo = new TorrentInfo { Name = null };
-        var wrapper = new TransmissionTorrentInfo(torrentInfo);
+        var wrapper = new TransmissionItem(torrentInfo);
 
         // Act
         var result = wrapper.Name;
@@ -80,7 +80,7 @@ public class TransmissionTorrentInfoTests
     {
         // Arrange
         var torrentInfo = new TorrentInfo { IsPrivate = isPrivate };
-        var wrapper = new TransmissionTorrentInfo(torrentInfo);
+        var wrapper = new TransmissionItem(torrentInfo);
 
         // Act
         var result = wrapper.IsPrivate;
@@ -97,7 +97,7 @@ public class TransmissionTorrentInfoTests
     {
         // Arrange
         var torrentInfo = new TorrentInfo { TotalSize = totalSize };
-        var wrapper = new TransmissionTorrentInfo(torrentInfo);
+        var wrapper = new TransmissionItem(torrentInfo);
 
         // Act
         var result = wrapper.Size;
@@ -122,7 +122,7 @@ public class TransmissionTorrentInfoTests
             DownloadedEver = downloadedEver,
             TotalSize = totalSize
         };
-        var wrapper = new TransmissionTorrentInfo(torrentInfo);
+        var wrapper = new TransmissionItem(torrentInfo);
 
         // Act
         var result = wrapper.CompletionPercentage;
@@ -144,7 +144,7 @@ public class TransmissionTorrentInfoTests
                 new() { Announce = "udp://tracker3.example.com:1337/announce" }
             }
         };
-        var wrapper = new TransmissionTorrentInfo(torrentInfo);
+        var wrapper = new TransmissionItem(torrentInfo);
 
         // Act
         var result = wrapper.Trackers;
@@ -169,7 +169,7 @@ public class TransmissionTorrentInfoTests
                 new() { Announce = "udp://tracker1.example.com:1337/announce" }
             }
         };
-        var wrapper = new TransmissionTorrentInfo(torrentInfo);
+        var wrapper = new TransmissionItem(torrentInfo);
 
         // Act
         var result = wrapper.Trackers;
@@ -193,7 +193,7 @@ public class TransmissionTorrentInfoTests
                 new() { Announce = null }
             }
         };
-        var wrapper = new TransmissionTorrentInfo(torrentInfo);
+        var wrapper = new TransmissionItem(torrentInfo);
 
         // Act
         var result = wrapper.Trackers;
@@ -211,7 +211,7 @@ public class TransmissionTorrentInfoTests
         {
             Trackers = new TransmissionTorrentTrackers[0]
         };
-        var wrapper = new TransmissionTorrentInfo(torrentInfo);
+        var wrapper = new TransmissionItem(torrentInfo);
 
         // Act
         var result = wrapper.Trackers;
@@ -228,7 +228,7 @@ public class TransmissionTorrentInfoTests
         {
             Trackers = null
         };
-        var wrapper = new TransmissionTorrentInfo(torrentInfo);
+        var wrapper = new TransmissionItem(torrentInfo);
 
         // Act
         var result = wrapper.Trackers;

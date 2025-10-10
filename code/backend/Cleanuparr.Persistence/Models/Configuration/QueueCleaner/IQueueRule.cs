@@ -19,7 +19,7 @@ public interface IQueueRule
     
     ushort MaxCompletionPercentage { get; }
     
-    bool MatchesTorrent(ITorrentInfo torrent);
+    bool MatchesTorrent(ITorrentItem torrent);
     
     void Validate();
 }

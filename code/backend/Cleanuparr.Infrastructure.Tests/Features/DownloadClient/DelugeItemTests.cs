@@ -5,13 +5,13 @@ using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.DownloadClient;
 
-public class DelugeTorrentInfoTests
+public class DelugeItemTests
 {
     [Fact]
     public void Constructor_WithNullDownloadStatus_ThrowsArgumentNullException()
     {
         // Act & Assert
-        Should.Throw<ArgumentNullException>(() => new DelugeTorrentInfo(null!));
+        Should.Throw<ArgumentNullException>(() => new DelugeItem(null!));
     }
 
     [Fact]
@@ -25,7 +25,7 @@ public class DelugeTorrentInfoTests
             Trackers = new List<Tracker>(),
             DownloadLocation = "/test/path"
         };
-        var wrapper = new DelugeTorrentInfo(downloadStatus);
+        var wrapper = new DelugeItem(downloadStatus);
 
         // Act
         var result = wrapper.Hash;
@@ -44,7 +44,7 @@ public class DelugeTorrentInfoTests
             Trackers = new List<Tracker>(),
             DownloadLocation = "/test/path"
         };
-        var wrapper = new DelugeTorrentInfo(downloadStatus);
+        var wrapper = new DelugeItem(downloadStatus);
 
         // Act
         var result = wrapper.Hash;
@@ -64,7 +64,7 @@ public class DelugeTorrentInfoTests
             Trackers = new List<Tracker>(),
             DownloadLocation = "/test/path"
         };
-        var wrapper = new DelugeTorrentInfo(downloadStatus);
+        var wrapper = new DelugeItem(downloadStatus);
 
         // Act
         var result = wrapper.Name;
@@ -83,7 +83,7 @@ public class DelugeTorrentInfoTests
             Trackers = new List<Tracker>(),
             DownloadLocation = "/test/path"
         };
-        var wrapper = new DelugeTorrentInfo(downloadStatus);
+        var wrapper = new DelugeItem(downloadStatus);
 
         // Act
         var result = wrapper.Name;
@@ -102,7 +102,7 @@ public class DelugeTorrentInfoTests
             Trackers = new List<Tracker>(),
             DownloadLocation = "/test/path"
         };
-        var wrapper = new DelugeTorrentInfo(downloadStatus);
+        var wrapper = new DelugeItem(downloadStatus);
 
         // Act
         var result = wrapper.IsPrivate;
@@ -122,7 +122,7 @@ public class DelugeTorrentInfoTests
             Trackers = new List<Tracker>(),
             DownloadLocation = "/test/path"
         };
-        var wrapper = new DelugeTorrentInfo(downloadStatus);
+        var wrapper = new DelugeItem(downloadStatus);
 
         // Act
         var result = wrapper.Size;
@@ -147,7 +147,7 @@ public class DelugeTorrentInfoTests
             Trackers = new List<Tracker>(),
             DownloadLocation = "/test/path"
         };
-        var wrapper = new DelugeTorrentInfo(downloadStatus);
+        var wrapper = new DelugeItem(downloadStatus);
 
         // Act
         var result = wrapper.CompletionPercentage;
@@ -170,7 +170,7 @@ public class DelugeTorrentInfoTests
             },
             DownloadLocation = "/test/path"
         };
-        var wrapper = new DelugeTorrentInfo(downloadStatus);
+        var wrapper = new DelugeItem(downloadStatus);
 
         // Act
         var result = wrapper.Trackers;
@@ -196,7 +196,7 @@ public class DelugeTorrentInfoTests
             },
             DownloadLocation = "/test/path"
         };
-        var wrapper = new DelugeTorrentInfo(downloadStatus);
+        var wrapper = new DelugeItem(downloadStatus);
 
         // Act
         var result = wrapper.Trackers;
@@ -221,7 +221,7 @@ public class DelugeTorrentInfoTests
             },
             DownloadLocation = "/test/path"
         };
-        var wrapper = new DelugeTorrentInfo(downloadStatus);
+        var wrapper = new DelugeItem(downloadStatus);
 
         // Act
         var result = wrapper.Trackers;
@@ -240,7 +240,7 @@ public class DelugeTorrentInfoTests
             Trackers = new List<Tracker>(),
             DownloadLocation = "/test/path"
         };
-        var wrapper = new DelugeTorrentInfo(downloadStatus);
+        var wrapper = new DelugeItem(downloadStatus);
 
         // Act
         var result = wrapper.Trackers;
@@ -258,7 +258,7 @@ public class DelugeTorrentInfoTests
             Trackers = null!,
             DownloadLocation = "/test/path"
         };
-        var wrapper = new DelugeTorrentInfo(downloadStatus);
+        var wrapper = new DelugeItem(downloadStatus);
 
         // Act
         var result = wrapper.Trackers;

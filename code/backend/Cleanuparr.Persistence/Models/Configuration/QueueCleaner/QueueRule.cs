@@ -29,7 +29,7 @@ public abstract record QueueRule : IConfig, IQueueRule
     
     public bool DeletePrivateTorrentsFromClient { get; init; } = false;
     
-    public abstract bool MatchesTorrent(ITorrentInfo torrent);
+    public abstract bool MatchesTorrent(ITorrentItem torrent);
     
     public virtual void Validate()
     {

@@ -23,8 +23,6 @@ namespace Cleanuparr.Application.Features.QueueCleaner;
 
 public sealed class QueueCleaner : GenericHandler
 {
-    private readonly IRuleEvaluator _ruleEvaluator;
-    
     public QueueCleaner(
         ILogger<QueueCleaner> logger,
         DataContext dataContext,
@@ -33,44 +31,17 @@ public sealed class QueueCleaner : GenericHandler
         ArrClientFactory arrClientFactory,
         ArrQueueIterator arrArrQueueIterator,
         DownloadServiceFactory downloadServiceFactory,
-        EventPublisher eventPublisher,
-        IRuleEvaluator ruleEvaluator
+        EventPublisher eventPublisher
     ) : base(
         logger, dataContext, cache, messageBus,
         arrClientFactory, arrArrQueueIterator, downloadServiceFactory, eventPublisher
     )
     {
-        _ruleEvaluator = ruleEvaluator;
     }
     
     protected override async Task ExecuteInternalAsync()
     {
-        await DataContext.Lock.WaitAsync();
-
-        try
-        {
-            List<SlowRule> slowRules = await _dataContext.SlowRules
-                .Where(r => r.Enabled)
-                .OrderByDescending(r => r.MaxCompletionPercentage)
-                .ThenByDescending(r => r.MinCompletionPercentage)
-                .AsNoTracking()
-                .ToListAsync();
-            
-            // TODO if rules count is 0, log warning
-            ContextProvider.Set(nameof(SlowRule), slowRules);
-            
-            List<StallRule> stallRules = await _dataContext.StallRules
-                .Where(r => r.Enabled)
-                .OrderByDescending(r => r.MaxCompletionPercentage)
-                .ThenByDescending(r => r.MinCompletionPercentage)
-                .AsNoTracking()
-                .ToListAsync();
-            ContextProvider.Set(nameof(StallRule), stallRules);
-        }
-        finally
-        {
-            DataContext.Lock.Release();
-        }
+        await LoadQueueRulesContext();
         
         var sonarrConfig = ContextProvider.Get<ArrConfig>(nameof(InstanceType.Sonarr));
         var radarrConfig = ContextProvider.Get<ArrConfig>(nameof(InstanceType.Radarr));
@@ -206,5 +177,45 @@ public sealed class QueueCleaner : GenericHandler
                 );
             }
         });
+    }
+
+    private async Task LoadQueueRulesContext()
+    {
+        await DataContext.Lock.WaitAsync();
+
+        try
+        {
+            List<StallRule> stallRules = await _dataContext.StallRules
+                .Where(r => r.Enabled)
+                .OrderByDescending(r => r.MaxCompletionPercentage)
+                .ThenByDescending(r => r.MinCompletionPercentage)
+                .AsNoTracking()
+                .ToListAsync();
+            
+            if (stallRules.Count is 0)
+            {
+                _logger.LogDebug("No active stall rules found");
+            }
+            
+            ContextProvider.Set(nameof(StallRule), stallRules);
+            
+            List<SlowRule> slowRules = await _dataContext.SlowRules
+                .Where(r => r.Enabled)
+                .OrderByDescending(r => r.MaxCompletionPercentage)
+                .ThenByDescending(r => r.MinCompletionPercentage)
+                .AsNoTracking()
+                .ToListAsync();
+            
+            if (slowRules.Count is 0)
+            {
+                _logger.LogDebug("No active slow rules found");
+            }
+            
+            ContextProvider.Set(nameof(SlowRule), slowRules);
+        }
+        finally
+        {
+            DataContext.Lock.Release();
+        }
     }
 }

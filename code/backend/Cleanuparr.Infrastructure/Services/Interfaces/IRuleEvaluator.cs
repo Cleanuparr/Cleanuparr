@@ -6,6 +6,6 @@ namespace Cleanuparr.Infrastructure.Services.Interfaces;
 
 public interface IRuleEvaluator
 {
-    Task<bool> EvaluateStallRulesAsync(ITorrentInfo torrent);
-    Task<bool> EvaluateSlowRulesAsync(ITorrentInfo torrent);
+    Task<(bool ShouldRemove, DeleteReason Reason)> EvaluateStallRulesAsync(ITorrentItem torrent);
+    Task<(bool ShouldRemove, DeleteReason Reason)> EvaluateSlowRulesAsync(ITorrentItem torrent);
 }

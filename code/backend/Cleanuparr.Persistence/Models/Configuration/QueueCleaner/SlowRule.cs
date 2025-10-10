@@ -14,14 +14,12 @@ public sealed record SlowRule : QueueRule
     [JsonIgnore]
     public ByteSize MinSpeedByteSize => string.IsNullOrEmpty(MinSpeed) ? new ByteSize(0) : ByteSize.Parse(MinSpeed);
     
-    public double MaxTime { get; init; }
-    
     public string? IgnoreAboveSize { get; init; } = string.Empty;
     
     [JsonIgnore]
     public ByteSize? IgnoreAboveSizeByteSize => string.IsNullOrEmpty(IgnoreAboveSize) ? null : ByteSize.Parse(IgnoreAboveSize);
 
-    public override bool MatchesTorrent(ITorrentInfo torrent)
+    public override bool MatchesTorrent(ITorrentItem torrent)
     {
         // Check privacy type
         if (!MatchesPrivacyType(torrent.IsPrivate))
@@ -41,20 +39,6 @@ public sealed record SlowRule : QueueRule
             return false;
         }
         
-        // TODO
-        // Check minimum speed
-        if (!string.IsNullOrEmpty(MinSpeed) && torrent.Size > 0)
-        {
-            var minSpeedBytes = MinSpeedByteSize.Bytes;
-            var timeInHours = MaxTimeHours > 0 ? MaxTimeHours : MaxTime / 3600.0; // Convert seconds to hours
-            var requiredBytes = minSpeedBytes * timeInHours;
-
-            if (torrent.Size < requiredBytes)
-            {
-                return false;
-            }
-        }
-            
         return true;
     }
     
@@ -95,7 +79,7 @@ public sealed record SlowRule : QueueRule
     
     private bool MatchesFileSize(long size)
     {
-        if (IgnoreAboveSizeByteSize.HasValue && size >= IgnoreAboveSizeByteSize.Value.Bytes)
+        if (size >= IgnoreAboveSizeByteSize?.Bytes)
         {
             return false;
         }

@@ -70,9 +70,9 @@ public class QueueRuleMatchTests
         Assert.True(rule.MatchesTorrent(torrentAboveBoundary.Object));
     }
 
-    private static Mock<ITorrentInfo> CreateTorrent(bool isPrivate, double completionPercentage)
+    private static Mock<ITorrentItem> CreateTorrent(bool isPrivate, double completionPercentage)
     {
-        var torrent = new Mock<ITorrentInfo>();
+        var torrent = new Mock<ITorrentItem>();
         torrent.SetupGet(t => t.IsPrivate).Returns(isPrivate);
         torrent.SetupGet(t => t.CompletionPercentage).Returns(completionPercentage);
         torrent.SetupGet(t => t.Size).Returns(0L);

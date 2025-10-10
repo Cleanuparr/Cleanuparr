@@ -1,5 +1,4 @@
 ﻿using System.Runtime.InteropServices;
-using Infrastructure.Verticals.Files;
 using Microsoft.Extensions.Logging;
 
 namespace Cleanuparr.Infrastructure.Features.Files;
