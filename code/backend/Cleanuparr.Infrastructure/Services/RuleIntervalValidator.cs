@@ -17,7 +17,7 @@ public class RuleIntervalValidator : IRuleIntervalValidator
 
     public ValidationResult ValidateStallRuleIntervals(StallRule newRule, List<StallRule> existingRules)
     {
-        _logger.LogDebug("Validating stall rule intervals for rule '{RuleName}'", newRule.Name);
+        _logger.LogDebug("Validating stall rule intervals for rule {rule}", newRule.Name);
         
         var allRules = existingRules.Cast<QueueRule>().ToList();
         allRules.Add(newRule);
@@ -27,7 +27,7 @@ public class RuleIntervalValidator : IRuleIntervalValidator
 
     public ValidationResult ValidateSlowRuleIntervals(SlowRule newRule, List<SlowRule> existingRules)
     {
-        _logger.LogDebug("Validating slow rule intervals for rule '{RuleName}'", newRule.Name);
+        _logger.LogDebug("Validating slow rule intervals for rule {rule}", newRule.Name);
         
         var allRules = existingRules.Cast<QueueRule>().ToList();
         allRules.Add(newRule);
@@ -37,7 +37,7 @@ public class RuleIntervalValidator : IRuleIntervalValidator
 
     public List<IntervalGap> FindGapsInCoverage<T>(List<T> rules) where T : QueueRule
     {
-        _logger.LogDebug("Finding gaps in coverage for {RuleCount} rules", rules.Count);
+        _logger.LogDebug("Finding gaps in coverage for {rule} rules", rules.Count);
         
         var gaps = new List<IntervalGap>();
         var enabledRules = rules.Where(r => r.Enabled).ToList();
@@ -51,40 +51,62 @@ public class RuleIntervalValidator : IRuleIntervalValidator
         return gaps;
     }
 
+    /// <summary>
+    /// Validates that the provided rules do not create overlapping intervals.
+    /// </summary>
+    /// <param name="allRules">The collection of all rules, including the newly created one.</param>
+    /// <param name="newRuleName">The name of the new rule.</param>
+    /// <returns></returns>
     private ValidationResult ValidateRuleIntervals(List<QueueRule> allRules, string newRuleName)
     {
         // Only consider enabled rules for validation
-        var enabledRules = allRules.Where(r => r.Enabled).ToList();
+        List<QueueRule> enabledRules = allRules
+            .Where(r => r.Enabled)
+            .ToList();
         
         // Expand privacy types (Both -> Public + Private)
-        var intervals = ExpandPrivacyTypes(enabledRules);
+        List<RuleInterval> intervals = ExpandPrivacyTypes(enabledRules);
         
         // Group by privacy type and check for overlaps
-        var publicIntervals = intervals.Where(i => i.PrivacyType == TorrentPrivacyType.Public).ToList();
-        var privateIntervals = intervals.Where(i => i.PrivacyType == TorrentPrivacyType.Private).ToList();
+        List<RuleInterval> publicIntervals = intervals
+            .Where(i => i.PrivacyType == TorrentPrivacyType.Public)
+            .ToList();
+        List<RuleInterval> privateIntervals = intervals
+            .Where(i => i.PrivacyType == TorrentPrivacyType.Private)
+            .ToList();
         
-        var publicOverlap = FindOverlappingIntervals(publicIntervals);
-        var privateOverlap = FindOverlappingIntervals(privateIntervals);
+        OverlapResult? publicOverlap = FindOverlappingIntervals(publicIntervals);
+        OverlapResult? privateOverlap = FindOverlappingIntervals(privateIntervals);
         
-        var errors = new List<string>();
+        HashSet<string> overlappingRules = [];
         
-        if (publicOverlap != null)
+        if (publicOverlap is not null)
         {
-            var message = $"Rule '{newRuleName}' creates overlapping intervals for Public torrents with rule '{publicOverlap.ConflictingRuleName}' (both cover {publicOverlap.OverlapStart}%-{publicOverlap.OverlapEnd}%)";
-            errors.Add(message);
-            _logger.LogWarning("Overlap detected for Public torrents: {Message}", message);
+            overlappingRules.Add(publicOverlap.ConflictingRuleName);
+
+            _logger.LogWarning("Rule {newRuleName} overlaps for Public torrents with rule {ruleName} (both cover {start}%-{end}%)",
+                newRuleName,
+                publicOverlap.ConflictingRuleName,
+                publicOverlap.OverlapStart,
+                publicOverlap.OverlapEnd
+            );
         }
         
-        if (privateOverlap != null)
+        if (privateOverlap is not null)
         {
-            var message = $"Rule '{newRuleName}' creates overlapping intervals for Private torrents with rule '{privateOverlap.ConflictingRuleName}' (both cover {privateOverlap.OverlapStart}%-{privateOverlap.OverlapEnd}%)";
-            errors.Add(message);
-            _logger.LogWarning("Overlap detected for Private torrents: {Message}", message);
+            overlappingRules.Add(privateOverlap.ConflictingRuleName);
+
+            _logger.LogWarning("Rule {newRuleName} overlaps for Private torrents with rule {ruleName} (both cover {start}%-{end}%)",
+                newRuleName,
+                privateOverlap.ConflictingRuleName,
+                privateOverlap.OverlapStart,
+                privateOverlap.OverlapEnd
+            );
         }
         
-        if (errors.Any())
+        if (overlappingRules.Count > 0)
         {
-            return ValidationResult.Failure("Rule creates overlapping intervals", errors);
+            return ValidationResult.Failure("Rule creates overlapping intervals with existing rules: " + string.Join(", ", overlappingRules));
         }
         
         return ValidationResult.Success();
@@ -134,7 +156,10 @@ public class RuleIntervalValidator : IRuleIntervalValidator
 
     private static OverlapResult? FindOverlappingIntervals(List<RuleInterval> intervals)
     {
-        if (intervals.Count < 2) return null;
+        if (intervals.Count < 2)
+        {
+            return null;
+        }
 
         var sortedIntervals = intervals
             .OrderBy(i => i.Start)

@@ -1,8 +1,4 @@
 using Cleanuparr.Application.Features.BlacklistSync;
-using Cleanuparr.Application.Features.DownloadCleaner;
-using Cleanuparr.Application.Features.DownloadClient;
-using Cleanuparr.Application.Features.MalwareBlocker;
-using Cleanuparr.Application.Features.QueueCleaner;
 using Cleanuparr.Infrastructure.Events;
 using Cleanuparr.Infrastructure.Features.Arr;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
@@ -12,13 +8,13 @@ using Cleanuparr.Infrastructure.Features.DownloadRemover;
 using Cleanuparr.Infrastructure.Features.DownloadRemover.Interfaces;
 using Cleanuparr.Infrastructure.Features.Files;
 using Cleanuparr.Infrastructure.Features.ItemStriker;
+using Cleanuparr.Infrastructure.Features.Jobs;
 using Cleanuparr.Infrastructure.Features.MalwareBlocker;
 using Cleanuparr.Infrastructure.Features.Security;
 using Cleanuparr.Infrastructure.Helpers;
 using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Infrastructure.Services;
 using Cleanuparr.Infrastructure.Services.Interfaces;
-using Cleanuparr.Infrastructure.Utilities;
 using Cleanuparr.Persistence;
 
 namespace Cleanuparr.Api.DependencyInjection;

@@ -1,16 +1,10 @@
 using Cleanuparr.Application.Features.BlacklistSync;
-using Cleanuparr.Application.Features.DownloadCleaner;
-using Cleanuparr.Application.Features.DownloadClient;
-using Cleanuparr.Application.Features.MalwareBlocker;
-using Cleanuparr.Application.Features.QueueCleaner;
 using Cleanuparr.Domain.Exceptions;
 using Cleanuparr.Infrastructure.Features.Jobs;
 using Cleanuparr.Persistence;
-using Cleanuparr.Persistence.Models.Configuration;
 using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
 using Cleanuparr.Persistence.Models.Configuration.MalwareBlocker;
 using Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
-using Cleanuparr.Persistence.Models.Configuration.General;
 using Cleanuparr.Persistence.Models.Configuration.BlacklistSync;
 using Cleanuparr.Shared.Helpers;
 using Microsoft.EntityFrameworkCore;

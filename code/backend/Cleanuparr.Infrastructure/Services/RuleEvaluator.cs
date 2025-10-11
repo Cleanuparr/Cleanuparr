@@ -36,55 +36,38 @@ public class RuleEvaluator : IRuleEvaluator
 
     public async Task<(bool ShouldRemove, DeleteReason Reason)> EvaluateStallRulesAsync(ITorrentItem torrent)
     {
-        _logger.LogDebug("Evaluating stall rules for torrent '{name}' ({hash})", torrent.Name, torrent.Hash);
+        _logger.LogTrace("Evaluating stall rules | {name}", torrent.Name);
 
         // Get matching stall rules in priority order
         var rule = _ruleManager.GetMatchingStallRuleAsync(torrent);
 
         if (rule is null)
         {
-            // TODO too many logs if no rules are configured
-            _logger.LogTrace("No stall rules match torrent '{name}'. No action will be taken.", torrent.Name);
+            _logger.LogTrace("skip | no stall rules matched | {name}", torrent.Name);
             return (false, DeleteReason.None);
         }
+        
+        _logger.LogTrace("Applying stall rule {rule} | {name}", rule.Name, torrent.Name);
 
-        _logger.LogTrace("Applying stall rule {rule} to torrent | {name}", rule.Name, torrent.Name);
+        await ResetStalledStrikesAsync(
+            torrent,
+            rule.ResetStrikesOnProgress,
+            rule.MinimumProgressByteSize?.Bytes
+        );
 
-        try
+        // Apply strike and check if torrent should be removed
+        bool shouldRemove = await _striker.StrikeAndCheckLimit(
+            torrent.Hash,
+            torrent.Name,
+            (ushort)rule.MaxStrikes,
+            StrikeType.Stalled
+        );
+
+        if (shouldRemove)
         {
-            await ResetStalledStrikesAsync(
-                torrent,
-                rule.ResetStrikesOnProgress,
-                rule.MinimumProgressByteSize?.Bytes
-            );
-
-            // Apply strike and check if torrent should be removed
-            bool shouldRemove = await _striker.StrikeAndCheckLimit(
-                torrent.Hash,
-                torrent.Name,
-                (ushort)rule.MaxStrikes,
-                StrikeType.Stalled
-            );
-
-            if (shouldRemove)
-            {
-                _logger.LogInformation(
-                    "Torrent '{name}' marked for removal by stall rule '{ruleName}' after reaching {strikes} strikes",
-                    torrent.Name, rule.Name, rule.MaxStrikes
-                );
-
-                return (true, DeleteReason.Stalled);
-            }
+            return (true, DeleteReason.Stalled);
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(
-                ex,
-                "Error applying stall rule '{ruleName}' to torrent '{name}'.",
-                rule.Name,
-                torrent.Name
-            );
-        }
+
 
         return (false, DeleteReason.None);
     }
