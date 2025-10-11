@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace Cleanuparr.Application.Features.Arr.Dtos;
+namespace Cleanuparr.Infrastructure.Features.Arr.Dtos;
 
 /// <summary>
 /// DTO for updating Sonarr configuration basic settings (instances managed separately)

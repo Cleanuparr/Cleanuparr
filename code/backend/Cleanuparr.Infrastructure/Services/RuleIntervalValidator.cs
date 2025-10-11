@@ -59,8 +59,14 @@ public class RuleIntervalValidator : IRuleIntervalValidator
     /// <returns></returns>
     private ValidationResult ValidateRuleIntervals(List<QueueRule> allRules, string newRuleName)
     {
+        // Remove duplicate rules with the same ID (keep the last one, which is typically the updated version)
+        var deduplicatedRules = allRules
+            .GroupBy(r => r.Id)
+            .Select(g => g.Last())
+            .ToList();
+
         // Only consider enabled rules for validation
-        List<QueueRule> enabledRules = allRules
+        List<QueueRule> enabledRules = deduplicatedRules
             .Where(r => r.Enabled)
             .ToList();
         
@@ -75,40 +81,41 @@ public class RuleIntervalValidator : IRuleIntervalValidator
             .Where(i => i.PrivacyType == TorrentPrivacyType.Private)
             .ToList();
         
-        OverlapResult? publicOverlap = FindOverlappingIntervals(publicIntervals);
-        OverlapResult? privateOverlap = FindOverlappingIntervals(privateIntervals);
-        
+        List<OverlapResult> publicOverlaps = FindAllOverlappingIntervals(publicIntervals, newRuleName);
+        List<OverlapResult> privateOverlaps = FindAllOverlappingIntervals(privateIntervals, newRuleName);
+
         HashSet<string> overlappingRules = [];
-        
-        if (publicOverlap is not null)
+
+        foreach (var overlap in publicOverlaps)
         {
-            overlappingRules.Add(publicOverlap.ConflictingRuleName);
+            overlappingRules.Add(overlap.ConflictingRuleName);
 
             _logger.LogWarning("Rule {newRuleName} overlaps for Public torrents with rule {ruleName} (both cover {start}%-{end}%)",
                 newRuleName,
-                publicOverlap.ConflictingRuleName,
-                publicOverlap.OverlapStart,
-                publicOverlap.OverlapEnd
+                overlap.ConflictingRuleName,
+                overlap.OverlapStart,
+                overlap.OverlapEnd
             );
         }
-        
-        if (privateOverlap is not null)
+
+        foreach (var overlap in privateOverlaps)
         {
-            overlappingRules.Add(privateOverlap.ConflictingRuleName);
+            overlappingRules.Add(overlap.ConflictingRuleName);
 
             _logger.LogWarning("Rule {newRuleName} overlaps for Private torrents with rule {ruleName} (both cover {start}%-{end}%)",
                 newRuleName,
-                privateOverlap.ConflictingRuleName,
-                privateOverlap.OverlapStart,
-                privateOverlap.OverlapEnd
+                overlap.ConflictingRuleName,
+                overlap.OverlapStart,
+                overlap.OverlapEnd
             );
         }
         
         if (overlappingRules.Count > 0)
         {
-            return ValidationResult.Failure("Rule creates overlapping intervals with existing rules: " + string.Join(", ", overlappingRules));
+            var details = overlappingRules.ToList();
+            return ValidationResult.Failure("Rule creates overlapping intervals with existing rules: " + string.Join(", ", overlappingRules), details);
         }
-        
+
         return ValidationResult.Success();
     }
 
@@ -154,11 +161,19 @@ public class RuleIntervalValidator : IRuleIntervalValidator
         return intervals;
     }
 
-    private static OverlapResult? FindOverlappingIntervals(List<RuleInterval> intervals)
+    /// <summary>
+    /// Finds all overlapping intervals for the new rule being validated.
+    /// </summary>
+    /// <param name="intervals">List of intervals to check for overlaps</param>
+    /// <param name="newRuleName">Name of the rule being validated</param>
+    /// <returns>List of all overlaps found</returns>
+    private static List<OverlapResult> FindAllOverlappingIntervals(List<RuleInterval> intervals, string newRuleName)
     {
+        var overlaps = new List<OverlapResult>();
+
         if (intervals.Count < 2)
         {
-            return null;
+            return overlaps;
         }
 
         var sortedIntervals = intervals
@@ -166,35 +181,41 @@ public class RuleIntervalValidator : IRuleIntervalValidator
             .ThenBy(i => i.End)
             .ToList();
 
-        var active = sortedIntervals[0];
+        // Find the new rule interval(s)
+        var newRuleIntervals = sortedIntervals.Where(i => i.RuleName == newRuleName).ToList();
+        var existingIntervals = sortedIntervals.Where(i => i.RuleName != newRuleName).ToList();
 
-        for (int i = 1; i < sortedIntervals.Count; i++)
+        // Check each new rule interval against all existing intervals
+        foreach (var newInterval in newRuleIntervals)
         {
-            var current = sortedIntervals[i];
-
-            if (current.Start < active.End && active.RuleId != current.RuleId)
+            foreach (var existingInterval in existingIntervals)
             {
-                var overlapStart = Math.Max(active.Start, current.Start);
-                var overlapEnd = Math.Min(active.End, current.End);
-
-                if (overlapEnd > overlapStart)
+                // Skip if same rule ID (handles the case where a rule is being updated)
+                if (newInterval.RuleId == existingInterval.RuleId)
                 {
-                    return new OverlapResult
-                    {
-                        ConflictingRuleName = active.RuleName,
-                        OverlapStart = overlapStart,
-                        OverlapEnd = overlapEnd
-                    };
+                    continue;
                 }
-            }
 
-            if (current.End > active.End)
-            {
-                active = current;
+                // Check for overlap
+                if (newInterval.Start < existingInterval.End && existingInterval.Start < newInterval.End)
+                {
+                    var overlapStart = Math.Max(newInterval.Start, existingInterval.Start);
+                    var overlapEnd = Math.Min(newInterval.End, existingInterval.End);
+
+                    if (overlapEnd > overlapStart)
+                    {
+                        overlaps.Add(new OverlapResult
+                        {
+                            ConflictingRuleName = existingInterval.RuleName,
+                            OverlapStart = overlapStart,
+                            OverlapEnd = overlapEnd
+                        });
+                    }
+                }
             }
         }
 
-        return null;
+        return overlaps;
     }
 
     private static List<IntervalGap> FindGapsForPrivacyType<T>(List<T> rules, TorrentPrivacyType privacyType) where T : QueueRule

@@ -13,7 +13,7 @@ using Cleanuparr.Persistence.Models.State;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
-namespace Cleanuparr.Application.Features.BlacklistSync;
+namespace Cleanuparr.Infrastructure.Features.BlacklistSync;
 
 public sealed class BlacklistSynchronizer : IHandler
 {

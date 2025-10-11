@@ -1,6 +1,6 @@
 ﻿using Cleanuparr.Domain.Enums;
 
-namespace Cleanuparr.Application.Features.Arr.Dtos;
+namespace Cleanuparr.Infrastructure.Features.Arr.Dtos;
 
 public class ArrConfigDto
 {

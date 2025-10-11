@@ -1,4 +1,4 @@
-namespace Cleanuparr.Application.Features.Arr.Dtos;
+namespace Cleanuparr.Infrastructure.Features.Arr.Dtos;
 
 /// <summary>
 /// DTO for updating Readarr configuration basic settings (instances managed separately)

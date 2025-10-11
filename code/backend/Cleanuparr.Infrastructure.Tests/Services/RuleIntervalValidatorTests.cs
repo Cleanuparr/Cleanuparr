@@ -638,4 +638,127 @@ public class RuleIntervalValidatorTests
         privateGap.Start.ShouldBe(0);
         privateGap.End.ShouldBe(100);
     }
+
+    [Fact]
+    public void ValidateStallRuleIntervals_DoesNotReportSelfOverlapWhenEnablingDisabledRule()
+    {
+        var ruleId = Guid.NewGuid();
+
+        // Simulate existing disabled rule
+        var disabledRule = new StallRule
+        {
+            Id = ruleId,
+            Name = "Rule1",
+            Enabled = false,
+            MaxStrikes = 3,
+            PrivacyType = TorrentPrivacyType.Both,
+            MinCompletionPercentage = 0,
+            MaxCompletionPercentage = 100
+        };
+
+        // Simulate another existing enabled rule
+        var enabledRule = new StallRule
+        {
+            Id = Guid.NewGuid(),
+            Name = "Rule2",
+            Enabled = true,
+            MaxStrikes = 3,
+            PrivacyType = TorrentPrivacyType.Both,
+            MinCompletionPercentage = 0,
+            MaxCompletionPercentage = 100
+        };
+
+        // Now we enable the first rule (same ID, but now enabled)
+        var nowEnabledRule = new StallRule
+        {
+            Id = ruleId,
+            Name = "Rule1",
+            Enabled = true,
+            MaxStrikes = 3,
+            PrivacyType = TorrentPrivacyType.Both,
+            MinCompletionPercentage = 0,
+            MaxCompletionPercentage = 100
+        };
+
+        // Validation should detect overlap with Rule2, not with itself
+        var result = _validator.ValidateStallRuleIntervals(nowEnabledRule, new List<StallRule> { disabledRule, enabledRule });
+
+        result.IsValid.ShouldBeFalse();
+        // The error should mention Rule2, not Rule1
+        result.ErrorMessage.ShouldContain("Rule2");
+        result.ErrorMessage.ShouldNotContain("Rule1");
+    }
+
+    [Fact]
+    public void ValidateStallRuleIntervals_BothPrivacyTypeDoesNotSelfOverlap()
+    {
+        var ruleId = Guid.NewGuid();
+
+        // Create a single rule with Both privacy type
+        var newRule = new StallRule
+        {
+            Id = ruleId,
+            Name = "BothRule",
+            Enabled = true,
+            MaxStrikes = 3,
+            PrivacyType = TorrentPrivacyType.Both,
+            MinCompletionPercentage = 0,
+            MaxCompletionPercentage = 100
+        };
+
+        // Validate with no existing rules - should pass
+        var result = _validator.ValidateStallRuleIntervals(newRule, new List<StallRule>());
+
+        result.IsValid.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void ValidateStallRuleIntervals_DetectsMultipleOverlaps()
+    {
+        // Rule1 covers 0-80%
+        var rule1 = new StallRule
+        {
+            Id = Guid.NewGuid(),
+            Name = "Rule1",
+            Enabled = true,
+            MaxStrikes = 3,
+            PrivacyType = TorrentPrivacyType.Public,
+            MinCompletionPercentage = 0,
+            MaxCompletionPercentage = 80
+        };
+
+        // Rule2 covers 80-100%
+        var rule2 = new StallRule
+        {
+            Id = Guid.NewGuid(),
+            Name = "Rule2",
+            Enabled = true,
+            MaxStrikes = 3,
+            PrivacyType = TorrentPrivacyType.Public,
+            MinCompletionPercentage = 80,
+            MaxCompletionPercentage = 100
+        };
+
+        // Rule3 overlaps both Rule1 and Rule2 (0-90%)
+        var rule3 = new StallRule
+        {
+            Id = Guid.NewGuid(),
+            Name = "Rule3",
+            Enabled = true,
+            MaxStrikes = 3,
+            PrivacyType = TorrentPrivacyType.Public,
+            MinCompletionPercentage = 0,
+            MaxCompletionPercentage = 90
+        };
+
+        var result = _validator.ValidateStallRuleIntervals(rule3, new List<StallRule> { rule1, rule2 });
+
+        result.IsValid.ShouldBeFalse();
+        // Should detect overlaps with both Rule1 and Rule2
+        result.Details.Count.ShouldBe(2);
+        result.Details.ShouldContain("Rule1");
+        result.Details.ShouldContain("Rule2");
+        result.ErrorMessage.ShouldContain("Rule1");
+        result.ErrorMessage.ShouldContain("Rule2");
+    }
 }

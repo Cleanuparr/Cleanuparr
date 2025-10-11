@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace Cleanuparr.Application.Features.Arr.Dtos;
+namespace Cleanuparr.Infrastructure.Features.Arr.Dtos;
 
 /// <summary>
 /// DTO for creating new Arr instances without requiring an ID

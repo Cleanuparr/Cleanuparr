@@ -3,8 +3,8 @@ using System.Linq;
 using System.Threading.Tasks;
 
 using Cleanuparr.Api.Features.Arr.Contracts.Requests;
-using Cleanuparr.Application.Features.Arr.Dtos;
 using Cleanuparr.Domain.Enums;
+using Cleanuparr.Infrastructure.Features.Arr.Dtos;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Mapster;

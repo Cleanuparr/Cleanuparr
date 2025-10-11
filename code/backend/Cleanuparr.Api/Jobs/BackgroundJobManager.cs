@@ -1,5 +1,5 @@
-using Cleanuparr.Application.Features.BlacklistSync;
 using Cleanuparr.Domain.Exceptions;
+using Cleanuparr.Infrastructure.Features.BlacklistSync;
 using Cleanuparr.Infrastructure.Features.Jobs;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;

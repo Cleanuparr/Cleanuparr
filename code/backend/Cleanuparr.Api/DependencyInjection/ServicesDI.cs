@@ -1,6 +1,6 @@
-using Cleanuparr.Application.Features.BlacklistSync;
 using Cleanuparr.Infrastructure.Events;
 using Cleanuparr.Infrastructure.Features.Arr;
+using Cleanuparr.Infrastructure.Features.BlacklistSync;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
 using Cleanuparr.Infrastructure.Features.DownloadHunter;
 using Cleanuparr.Infrastructure.Features.DownloadHunter.Interfaces;
