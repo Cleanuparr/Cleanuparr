@@ -63,7 +63,7 @@ public sealed class GeneralConfigController : ControllerBase
 
             await _dataContext.SaveChangesAsync();
 
-            ClearStrikeCachesIfNeeded(wasDryRun, config.DryRun);
+            ClearStrikesCacheIfNeeded(wasDryRun, config.DryRun);
 
             return Ok(new { Message = "General configuration updated successfully" });
         }
@@ -78,16 +78,19 @@ public sealed class GeneralConfigController : ControllerBase
         }
     }
 
-    private void ClearStrikeCachesIfNeeded(bool wasDryRun, bool isDryRun)
+    private void ClearStrikesCacheIfNeeded(bool wasDryRun, bool isDryRun)
     {
         if (!wasDryRun || isDryRun)
         {
             return;
         }
 
+        List<object> keys;
+
+        // Remove strikes
         foreach (string strikeType in Enum.GetNames(typeof(StrikeType)))
         {
-            var keys = _cache.Keys
+            keys = _cache.Keys
                 .Where(key => key.ToString()?.StartsWith(strikeType, StringComparison.InvariantCultureIgnoreCase) is true)
                 .ToList();
 
@@ -97,6 +100,16 @@ public sealed class GeneralConfigController : ControllerBase
             }
 
             _logger.LogTrace("Removed all cache entries for strike type: {StrikeType}", strikeType);
+        }
+
+        // Remove strike cache items
+        keys = _cache.Keys
+            .Where(key => key.ToString()?.StartsWith("item_", StringComparison.InvariantCultureIgnoreCase) is true)
+            .ToList();
+        
+        foreach (object key in keys)
+        {
+            _cache.Remove(key);
         }
     }
 }
