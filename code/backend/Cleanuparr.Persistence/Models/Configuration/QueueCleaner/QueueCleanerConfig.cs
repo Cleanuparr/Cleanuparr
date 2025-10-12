@@ -21,10 +21,6 @@ public sealed record QueueCleanerConfig : IJobConfig
     
     public FailedImportConfig FailedImport { get; set; } = new();
     
-    // public StalledConfig Stalled { get; set; } = new();
-    //
-    // public SlowConfig Slow { get; set; } = new();
-    
     public List<string> IgnoredDownloads { get; set; } = [];
     
     public ushort DownloadingMetadataMaxStrikes { get; set; }
@@ -36,8 +32,6 @@ public sealed record QueueCleanerConfig : IJobConfig
     public void Validate()
     {
         FailedImport.Validate();
-        // Stalled.Validate();
-        // Slow.Validate();
         
         if (DownloadingMetadataMaxStrikes is > 0 and < 3)
         {
