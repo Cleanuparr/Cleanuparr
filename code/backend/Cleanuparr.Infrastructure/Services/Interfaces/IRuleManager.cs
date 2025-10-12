@@ -5,6 +5,6 @@ namespace Cleanuparr.Infrastructure.Services.Interfaces;
 
 public interface IRuleManager
 {
-    StallRule? GetMatchingStallRuleAsync(ITorrentItem torrent);
-    SlowRule? GetMatchingSlowRuleAsync(ITorrentItem torrent);
+    StallRule? GetMatchingStallRule(ITorrentItem torrent);
+    SlowRule? GetMatchingSlowRule(ITorrentItem torrent);
 }

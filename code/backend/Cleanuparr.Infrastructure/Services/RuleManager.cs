@@ -15,13 +15,13 @@ public class RuleManager : IRuleManager
         _logger = logger;
     }
     
-    public StallRule? GetMatchingStallRuleAsync(ITorrentItem torrent)
+    public StallRule? GetMatchingStallRule(ITorrentItem torrent)
     {
         var stallRules = ContextProvider.Get<List<StallRule>>(nameof(StallRule));
         return GetMatchingQueueRule(torrent, stallRules);
     }
 
-    public SlowRule? GetMatchingSlowRuleAsync(ITorrentItem torrent)
+    public SlowRule? GetMatchingSlowRule(ITorrentItem torrent)
     {
         var slowRules = ContextProvider.Get<List<SlowRule>>(nameof(SlowRule));
         return GetMatchingQueueRule(torrent, slowRules);
@@ -34,16 +34,16 @@ public class RuleManager : IRuleManager
             return null;
         }
 
-        List<TRule> matchedRule = rules
-            .Where(x => x.MatchesTorrent(torrent))
+        List<TRule> matchedRules = rules
+            .Where(x => x.Enabled && x.MatchesTorrent(torrent))
             .ToList();
 
-        if (matchedRule.Count > 1)
+        if (matchedRules.Count > 1)
         {
             _logger.LogWarning("skip | multiple {type} rules matched | {name}", typeof(TRule).Name, torrent.Name);
             return null;
         }
-        
-        return matchedRule.FirstOrDefault();
+
+        return matchedRules.FirstOrDefault();
     }
 }

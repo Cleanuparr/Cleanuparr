@@ -167,10 +167,6 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
   editingStallRule: StallRule | null = null;
   editingSlowRule: SlowRule | null = null;
 
-  // Rule preview properties for summary display (now using signals directly)
-  stallRulesPreview: StallRule[] = [];
-  slowRulesPreview: SlowRule[] = [];
-
   // Subject for unsubscribing from observables when component is destroyed
   private destroy$ = new Subject<void>();
 
@@ -209,7 +205,6 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
       { type: TorrentPrivacyType.Public, label: 'Public' },
       { type: TorrentPrivacyType.Private, label: 'Private' }
     ];
-    const EPSILON = 0.0001;
 
     if (enabledRules.length === 0) {
       const gaps = privacyTypes.map(({ type, label }) => ({
@@ -251,7 +246,7 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
       let coverageCursor = 0;
 
       for (const interval of intervals) {
-        if (interval.start > coverageCursor + EPSILON) {
+        if (interval.start > coverageCursor) {
           gaps.push({
             privacyType: type,
             privacyTypeLabel: label,
@@ -264,13 +259,13 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
           coverageCursor = interval.end;
         }
 
-        if (coverageCursor >= 100 - EPSILON) {
+        if (coverageCursor >= 100) {
           coverageCursor = 100;
           break;
         }
       }
 
-      if (coverageCursor < 100 - EPSILON) {
+      if (coverageCursor < 100) {
         gaps.push({
           privacyType: type,
           privacyTypeLabel: label,
@@ -483,47 +478,40 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
   }
 
   /**
-   * Monitor stall rule deletion completion
+   * Monitor rule deletion completion
    */
-  private monitorStallRuleDeletion(): void {
+  private monitorRuleDeletion(ruleType: 'stall' | 'slow'): void {
     const checkDeletionStatus = () => {
       const saving = this.rulesSaving();
       const error = this.rulesError();
-      
+
       if (!saving) {
         if (error) {
           this.notificationService.showError(`Deletion failed: ${error}`);
         } else {
-          this.notificationService.showSuccess('Stall rule deleted successfully');
+          const label = ruleType === 'stall' ? 'Stall' : 'Slow';
+          this.notificationService.showSuccess(`${label} rule deleted successfully`);
         }
       } else {
         setTimeout(checkDeletionStatus, 100);
       }
     };
-    
+
     setTimeout(checkDeletionStatus, 100);
+  }
+
+  /**
+   * Monitor stall rule deletion completion
+   */
+  private monitorStallRuleDeletion(): void {
+    this.monitorRuleDeletion('stall');
   }
 
   /**
    * Monitor slow rule deletion completion
    */
   private monitorSlowRuleDeletion(): void {
-    const checkDeletionStatus = () => {
-      const saving = this.rulesSaving();
-      const error = this.rulesError();
-      
-      if (!saving) {
-        if (error) {
-          this.notificationService.showError(`Deletion failed: ${error}`);
-        } else {
-          this.notificationService.showSuccess('Slow rule deleted successfully');
-        }
-      } else {
-        setTimeout(checkDeletionStatus, 100);
-      }
-    };
-    
-    setTimeout(checkDeletionStatus, 100);
+    this.monitorRuleDeletion('slow');
   }
 
   /**
@@ -538,15 +526,6 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
    */
   trackSlowRule(index: number, rule: SlowRule): any {
     return rule.id || index;
-  }
-
-  /**
-   * Load rule previews for summary display
-   * Since we're now using signals from the store, we don't need to load separately
-   */
-  private loadRulePreviews(): void {
-    // Rules are automatically loaded by the store and available through signals
-    // The template will use computed properties to show the preview
   }
 
   /**
@@ -861,21 +840,8 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
       });
 
     // Set up privacy type change listeners for rule forms
-    this.stallRuleForm.get('privacyType')?.valueChanges.pipe(takeUntil(this.destroy$))
-      .subscribe((privacyType: TorrentPrivacyType) => {
-        const deletePrivateControl = this.stallRuleForm.get('deletePrivateTorrentsFromClient');
-        if (deletePrivateControl) {
-          // Always reset to false on any privacy type change
-          deletePrivateControl.setValue(false);
-          
-          // Enable/disable based on privacy type
-          if (privacyType === TorrentPrivacyType.Private || privacyType === TorrentPrivacyType.Both) {
-            deletePrivateControl.enable();
-          } else {
-            deletePrivateControl.disable();
-          }
-        }
-      });
+    this.setupPrivacyTypeChangeListener(this.stallRuleForm);
+    this.setupPrivacyTypeChangeListener(this.slowRuleForm);
 
     this.stallRuleForm.get('resetStrikesOnProgress')?.valueChanges.pipe(takeUntil(this.destroy$))
       .subscribe((resetOnProgress: boolean) => {
@@ -890,14 +856,19 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
           minimumProgressControl.disable({ onlySelf: true, emitEvent: false });
         }
       });
+  }
 
-    this.slowRuleForm.get('privacyType')?.valueChanges.pipe(takeUntil(this.destroy$))
+  /**
+   * Set up privacy type change listener for a rule form
+   */
+  private setupPrivacyTypeChangeListener(form: FormGroup): void {
+    form.get('privacyType')?.valueChanges.pipe(takeUntil(this.destroy$))
       .subscribe((privacyType: TorrentPrivacyType) => {
-        const deletePrivateControl = this.slowRuleForm.get('deletePrivateTorrentsFromClient');
+        const deletePrivateControl = form.get('deletePrivateTorrentsFromClient');
         if (deletePrivateControl) {
           // Always reset to false on any privacy type change
           deletePrivateControl.setValue(false);
-          
+
           // Enable/disable based on privacy type
           if (privacyType === TorrentPrivacyType.Private || privacyType === TorrentPrivacyType.Both) {
             deletePrivateControl.enable();

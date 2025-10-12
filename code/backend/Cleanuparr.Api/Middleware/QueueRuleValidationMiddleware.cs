@@ -1,4 +1,3 @@
-using Cleanuparr.Api.Models;
 using Cleanuparr.Domain.Exceptions;
 using System.Text.Json;
 

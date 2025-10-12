@@ -121,44 +121,30 @@ public class RuleIntervalValidator : IRuleIntervalValidator
 
     private static List<RuleInterval> ExpandPrivacyTypes(List<QueueRule> rules)
     {
-        var intervals = new List<RuleInterval>();
-        
-        foreach (var rule in rules)
+        return rules
+            .SelectMany(rule => GetPrivacyTypes(rule.PrivacyType)
+                .Select(privacyType => new RuleInterval
+                {
+                    PrivacyType = privacyType,
+                    Start = rule.MinCompletionPercentage,
+                    End = rule.MaxCompletionPercentage,
+                    RuleName = rule.Name,
+                    RuleId = rule.Id
+                }))
+            .ToList();
+    }
+
+    private static IEnumerable<TorrentPrivacyType> GetPrivacyTypes(TorrentPrivacyType type)
+    {
+        if (type == TorrentPrivacyType.Both)
         {
-            if (rule.PrivacyType == TorrentPrivacyType.Both)
-            {
-                // Both privacy type creates intervals for both Public and Private
-                intervals.Add(new RuleInterval 
-                { 
-                    PrivacyType = TorrentPrivacyType.Public, 
-                    Start = rule.MinCompletionPercentage,
-                    End = rule.MaxCompletionPercentage, 
-                    RuleName = rule.Name,
-                    RuleId = rule.Id
-                });
-                intervals.Add(new RuleInterval 
-                { 
-                    PrivacyType = TorrentPrivacyType.Private, 
-                    Start = rule.MinCompletionPercentage,
-                    End = rule.MaxCompletionPercentage, 
-                    RuleName = rule.Name,
-                    RuleId = rule.Id
-                });
-            }
-            else
-            {
-                intervals.Add(new RuleInterval 
-                { 
-                    PrivacyType = rule.PrivacyType, 
-                    Start = rule.MinCompletionPercentage,
-                    End = rule.MaxCompletionPercentage, 
-                    RuleName = rule.Name,
-                    RuleId = rule.Id
-                });
-            }
+            yield return TorrentPrivacyType.Public;
+            yield return TorrentPrivacyType.Private;
         }
-        
-        return intervals;
+        else
+        {
+            yield return type;
+        }
     }
 
     /// <summary>
@@ -253,7 +239,7 @@ public class RuleIntervalValidator : IRuleIntervalValidator
 
         foreach (var interval in intervals)
         {
-            if (interval.Start > currentCoverageEnd + 0.0001)
+            if (interval.Start > currentCoverageEnd)
             {
                 gaps.Add(new IntervalGap
                 {
@@ -274,7 +260,7 @@ public class RuleIntervalValidator : IRuleIntervalValidator
             }
         }
 
-        if (currentCoverageEnd < 100 - 0.0001)
+        if (currentCoverageEnd < 100)
         {
             gaps.Add(new IntervalGap
             {

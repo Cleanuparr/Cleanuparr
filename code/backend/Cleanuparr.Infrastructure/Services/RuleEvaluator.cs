@@ -39,7 +39,7 @@ public class RuleEvaluator : IRuleEvaluator
         _logger.LogTrace("Evaluating stall rules | {name}", torrent.Name);
 
         // Get matching stall rules in priority order
-        var rule = _ruleManager.GetMatchingStallRuleAsync(torrent);
+        var rule = _ruleManager.GetMatchingStallRule(torrent);
 
         if (rule is null)
         {
@@ -77,7 +77,7 @@ public class RuleEvaluator : IRuleEvaluator
         _logger.LogTrace("Evaluating slow rules | {name}", torrent.Name);
 
         // Get matching slow rules in priority order
-        SlowRule? rule = _ruleManager.GetMatchingSlowRuleAsync(torrent);
+        SlowRule? rule = _ruleManager.GetMatchingSlowRule(torrent);
 
         if (rule is null)
         {
