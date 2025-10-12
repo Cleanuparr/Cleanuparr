@@ -1,10 +1,10 @@
 using System.Text.Json.Serialization;
-using Cleanuparr.Api.Middleware;
 using Cleanuparr.Infrastructure.Health;
 using Cleanuparr.Infrastructure.Hubs;
 using Microsoft.AspNetCore.Http.Json;
 using Microsoft.OpenApi.Models;
 using System.Text;
+using Cleanuparr.Api.Middleware;
 using Microsoft.Extensions.Options;
 
 namespace Cleanuparr.Api.DependencyInjection;
@@ -79,10 +79,7 @@ public static class ApiDI
         
         // Add the global exception handling middleware first
         app.UseMiddleware<ExceptionMiddleware>();
-        
-        // Add queue rule validation middleware
-        app.UseMiddleware<QueueRuleValidationMiddleware>();
-        
+
         app.UseCors("Any");
         app.UseRouting();
 
