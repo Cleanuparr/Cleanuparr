@@ -1,4 +1,5 @@
-﻿using Cleanuparr.Domain.Enums;
+﻿using Cleanuparr.Domain.Entities;
+using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Extensions;
 using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
@@ -10,31 +11,42 @@ namespace Cleanuparr.Infrastructure.Features.DownloadClient.QBittorrent;
 public partial class QBitService
 {
     /// <inheritdoc/>
-    public override async Task<List<object>?> GetSeedingDownloads()
+    public override async Task<List<ITorrentItem>?> GetSeedingDownloads()
     {
         var torrentList = await _client.GetTorrentListAsync(new TorrentListQuery { Filter = TorrentListFilter.Completed });
-        return torrentList?.Where(x => !string.IsNullOrEmpty(x.Hash))
-            .Cast<object>()
-            .ToList();
+        if (torrentList is null)
+        {
+            return null;
+        }
+
+        var result = new List<ITorrentItem>();
+        foreach (var torrent in torrentList.Where(x => !string.IsNullOrEmpty(x.Hash)))
+        {
+            var trackers = await GetTrackersAsync(torrent.Hash!);
+            var properties = await _client.GetTorrentPropertiesAsync(torrent.Hash!);
+            bool isPrivate = properties?.AdditionalData.TryGetValue("is_private", out var dictValue) == true &&
+                           bool.TryParse(dictValue?.ToString(), out bool boolValue) && boolValue;
+
+            result.Add(new QBitItem(torrent, trackers, isPrivate));
+        }
+
+        return result;
     }
 
     /// <inheritdoc/>
-    public override List<object>? FilterDownloadsToBeCleanedAsync(List<object>? downloads, List<CleanCategory> categories) =>
+    public override List<ITorrentItem>? FilterDownloadsToBeCleanedAsync(List<ITorrentItem>? downloads, List<CleanCategory> categories) =>
         downloads
-            ?.Cast<TorrentInfo>()
-            .Where(x => !string.IsNullOrEmpty(x.Hash))
+            ?.Where(x => !string.IsNullOrEmpty(x.Hash))
             .Where(x => categories.Any(cat => cat.Name.Equals(x.Category, StringComparison.InvariantCultureIgnoreCase)))
-            .Cast<object>()
             .ToList();
 
     /// <inheritdoc/>
-    public override List<object>? FilterDownloadsToChangeCategoryAsync(List<object>? downloads, List<string> categories)
+    public override List<ITorrentItem>? FilterDownloadsToChangeCategoryAsync(List<ITorrentItem>? downloads, List<string> categories)
     {
         var downloadCleanerConfig = ContextProvider.Get<DownloadCleanerConfig>(nameof(DownloadCleanerConfig));
-        
+
         return downloads
-            ?.Cast<TorrentInfo>()
-            .Where(x => !string.IsNullOrEmpty(x.Hash))
+            ?.Where(x => !string.IsNullOrEmpty(x.Hash))
             .Where(x => categories.Any(cat => cat.Equals(x.Category, StringComparison.InvariantCultureIgnoreCase)))
             .Where(x =>
             {
@@ -46,12 +58,11 @@ public partial class QBitService
 
                 return true;
             })
-            .Cast<object>()
             .ToList();
     }
 
     /// <inheritdoc/>
-    public override async Task CleanDownloadsAsync(List<object>? downloads, List<CleanCategory> categoriesToClean,
+    public override async Task CleanDownloadsAsync(List<ITorrentItem>? downloads, List<CleanCategory> categoriesToClean,
         HashSet<string> excludedHashes, IReadOnlyList<string> ignoredDownloads)
     {
         if (downloads?.Count is null or 0)
@@ -59,7 +70,7 @@ public partial class QBitService
             return;
         }
 
-        foreach (TorrentInfo download in downloads)
+        foreach (ITorrentItem download in downloads)
         {
             if (string.IsNullOrEmpty(download.Hash))
             {
@@ -72,50 +83,32 @@ public partial class QBitService
                 continue;
             }
 
-            IReadOnlyList<TorrentTracker> trackers = await GetTrackersAsync(download.Hash);
-
-            if (ignoredDownloads.Count > 0 &&
-                (download.ShouldIgnore(ignoredDownloads) || trackers.Any(x => x.ShouldIgnore(ignoredDownloads))))
+            if (download.IsIgnored(ignoredDownloads))
             {
                 _logger.LogInformation("skip | download is ignored | {name}", download.Name);
                 continue;
             }
 
             CleanCategory? category = categoriesToClean
-                .FirstOrDefault(x => download.Category.Equals(x.Name, StringComparison.InvariantCultureIgnoreCase));
+                .FirstOrDefault(x => (download.Category ?? string.Empty).Equals(x.Name, StringComparison.InvariantCultureIgnoreCase));
 
             if (category is null)
             {
                 continue;
             }
-            
+
             var downloadCleanerConfig = ContextProvider.Get<DownloadCleanerConfig>(nameof(DownloadCleanerConfig));
 
-            if (!downloadCleanerConfig.DeletePrivate)
+            if (!downloadCleanerConfig.DeletePrivate && download.IsPrivate)
             {
-                TorrentProperties? torrentProperties = await _client.GetTorrentPropertiesAsync(download.Hash);
-
-                if (torrentProperties is null)
-                {
-                    _logger.LogError("Failed to find torrent properties | {name}", download.Name);
-                    return;
-                }
-
-                bool isPrivate = torrentProperties.AdditionalData.TryGetValue("is_private", out var dictValue) &&
-                                 bool.TryParse(dictValue?.ToString(), out bool boolValue)
-                                 && boolValue;
-
-                if (isPrivate)
-                {
-                    _logger.LogDebug("skip | download is private | {name}", download.Name);
-                    continue;
-                }
+                _logger.LogDebug("skip | download is private | {name}", download.Name);
+                continue;
             }
 
             ContextProvider.Set("downloadName", download.Name);
             ContextProvider.Set("hash", download.Hash);
 
-            SeedingCheckResult result = ShouldCleanDownload(download.Ratio, download.SeedingTime ?? TimeSpan.Zero, category);
+            SeedingCheckResult result = ShouldCleanDownload(download.Ratio, TimeSpan.FromSeconds(download.SeedingTimeSeconds), category);
 
             if (!result.ShouldClean)
             {
@@ -132,7 +125,7 @@ public partial class QBitService
                 download.Name
             );
 
-            await _eventPublisher.PublishDownloadCleaned(download.Ratio, download.SeedingTime ?? TimeSpan.Zero, category.Name, result.Reason);
+            await _eventPublisher.PublishDownloadCleaned(download.Ratio, TimeSpan.FromSeconds(download.SeedingTimeSeconds), category.Name, result.Reason);
         }
     }
 
@@ -150,13 +143,13 @@ public partial class QBitService
         await _dryRunInterceptor.InterceptAsync(CreateCategory, name);
     }
 
-    public override async Task ChangeCategoryForNoHardLinksAsync(List<object>? downloads, HashSet<string> excludedHashes, IReadOnlyList<string> ignoredDownloads)
+    public override async Task ChangeCategoryForNoHardLinksAsync(List<ITorrentItem>? downloads, HashSet<string> excludedHashes, IReadOnlyList<string> ignoredDownloads)
     {
         if (downloads?.Count is null or 0)
         {
             return;
         }
-        
+
         var downloadCleanerConfig = ContextProvider.Get<DownloadCleanerConfig>(nameof(DownloadCleanerConfig));
 
         if (!string.IsNullOrEmpty(downloadCleanerConfig.UnlinkedIgnoredRootDir))
@@ -164,7 +157,7 @@ public partial class QBitService
             _hardLinkFileService.PopulateFileCounts(downloadCleanerConfig.UnlinkedIgnoredRootDir);
         }
 
-        foreach (TorrentInfo download in downloads)
+        foreach (ITorrentItem download in downloads)
         {
             if (string.IsNullOrEmpty(download.Hash))
             {
@@ -177,12 +170,19 @@ public partial class QBitService
                 continue;
             }
 
-            IReadOnlyList<TorrentTracker> trackers = await GetTrackersAsync(download.Hash);
-
-            if (ignoredDownloads.Count > 0 &&
-                (download.ShouldIgnore(ignoredDownloads) || trackers.Any(x => x.ShouldIgnore(ignoredDownloads))))
+            if (download.IsIgnored(ignoredDownloads))
             {
                 _logger.LogInformation("skip | download is ignored | {name}", download.Name);
+                continue;
+            }
+
+            // Get the underlying TorrentInfo to access SavePath and files
+            TorrentInfo? torrentInfo = await _client.GetTorrentListAsync(new TorrentListQuery { Hashes = new[] { download.Hash } })
+                .ContinueWith(t => t.Result?.FirstOrDefault());
+
+            if (torrentInfo is null)
+            {
+                _logger.LogDebug("failed to find torrent info for {name}", download.Name);
                 continue;
             }
 
@@ -207,7 +207,7 @@ public partial class QBitService
                     break;
                 }
 
-                string filePath = string.Join(Path.DirectorySeparatorChar, Path.Combine(download.SavePath, file.Name).Split(['\\', '/']));
+                string filePath = string.Join(Path.DirectorySeparatorChar, Path.Combine(torrentInfo.SavePath, file.Name).Split(['\\', '/']));
 
                 if (file.Priority is TorrentContentPriority.Skip)
                 {
@@ -238,7 +238,7 @@ public partial class QBitService
             }
 
             await _dryRunInterceptor.InterceptAsync(ChangeCategory, download.Hash, downloadCleanerConfig.UnlinkedTargetCategory);
-            
+
             await _eventPublisher.PublishCategoryChanged(download.Category, downloadCleanerConfig.UnlinkedTargetCategory, downloadCleanerConfig.UnlinkedUseTag);
 
             if (downloadCleanerConfig.UnlinkedUseTag)
@@ -248,7 +248,6 @@ public partial class QBitService
             else
             {
                 _logger.LogInformation("category changed for {name}", download.Name);
-                download.Category = downloadCleanerConfig.UnlinkedTargetCategory;
             }
         }
     }

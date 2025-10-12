@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
+using Cleanuparr.Domain.Entities;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Persistence.Models.Configuration;
 using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
@@ -30,7 +31,7 @@ public interface IDownloadService : IDisposable
     /// Fetches all seeding downloads.
     /// </summary>
     /// <returns>A list of downloads that are seeding.</returns>
-    Task<List<object>?> GetSeedingDownloads();
+    Task<List<ITorrentItem>?> GetSeedingDownloads();
 
     /// <summary>
     /// Filters downloads that should be cleaned.
@@ -38,7 +39,7 @@ public interface IDownloadService : IDisposable
     /// <param name="downloads">The downloads to filter.</param>
     /// <param name="categories">The categories by which to filter the downloads.</param>
     /// <returns>A list of downloads for the provided categories.</returns>
-    List<object>? FilterDownloadsToBeCleanedAsync(List<object>? downloads, List<CleanCategory> categories);
+    List<ITorrentItem>? FilterDownloadsToBeCleanedAsync(List<ITorrentItem>? downloads, List<CleanCategory> categories);
 
     /// <summary>
     /// Filters downloads that should have their category changed.
@@ -46,7 +47,7 @@ public interface IDownloadService : IDisposable
     /// <param name="downloads">The downloads to filter.</param>
     /// <param name="categories">The categories by which to filter the downloads.</param>
     /// <returns>A list of downloads for the provided categories.</returns>
-    List<object>? FilterDownloadsToChangeCategoryAsync(List<object>? downloads, List<string> categories);
+    List<ITorrentItem>? FilterDownloadsToChangeCategoryAsync(List<ITorrentItem>? downloads, List<string> categories);
 
     /// <summary>
     /// Cleans the downloads.
@@ -55,7 +56,7 @@ public interface IDownloadService : IDisposable
     /// <param name="categoriesToClean">The categories that should be cleaned.</param>
     /// <param name="excludedHashes">The hashes that should not be cleaned.</param>
     /// <param name="ignoredDownloads">The downloads to ignore from processing.</param>
-    Task CleanDownloadsAsync(List<object>? downloads, List<CleanCategory> categoriesToClean, HashSet<string> excludedHashes, IReadOnlyList<string> ignoredDownloads);
+    Task CleanDownloadsAsync(List<ITorrentItem>? downloads, List<CleanCategory> categoriesToClean, HashSet<string> excludedHashes, IReadOnlyList<string> ignoredDownloads);
 
     /// <summary>
     /// Changes the category for downloads that have no hardlinks.
@@ -63,7 +64,7 @@ public interface IDownloadService : IDisposable
     /// <param name="downloads">The downloads to change.</param>
     /// <param name="excludedHashes">The hashes that should not be cleaned.</param>
     /// <param name="ignoredDownloads">The downloads to ignore from processing.</param>
-    Task ChangeCategoryForNoHardLinksAsync(List<object>? downloads, HashSet<string> excludedHashes, IReadOnlyList<string> ignoredDownloads);
+    Task ChangeCategoryForNoHardLinksAsync(List<ITorrentItem>? downloads, HashSet<string> excludedHashes, IReadOnlyList<string> ignoredDownloads);
     
     /// <summary>
     /// Deletes a download item.

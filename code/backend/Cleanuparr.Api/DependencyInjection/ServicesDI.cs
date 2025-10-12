@@ -1,10 +1,6 @@
-using Cleanuparr.Application.Features.BlacklistSync;
-using Cleanuparr.Application.Features.DownloadCleaner;
-using Cleanuparr.Application.Features.DownloadClient;
-using Cleanuparr.Application.Features.MalwareBlocker;
-using Cleanuparr.Application.Features.QueueCleaner;
 using Cleanuparr.Infrastructure.Events;
 using Cleanuparr.Infrastructure.Features.Arr;
+using Cleanuparr.Infrastructure.Features.BlacklistSync;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
 using Cleanuparr.Infrastructure.Features.DownloadHunter;
 using Cleanuparr.Infrastructure.Features.DownloadHunter.Interfaces;
@@ -12,6 +8,7 @@ using Cleanuparr.Infrastructure.Features.DownloadRemover;
 using Cleanuparr.Infrastructure.Features.DownloadRemover.Interfaces;
 using Cleanuparr.Infrastructure.Features.Files;
 using Cleanuparr.Infrastructure.Features.ItemStriker;
+using Cleanuparr.Infrastructure.Features.Jobs;
 using Cleanuparr.Infrastructure.Features.MalwareBlocker;
 using Cleanuparr.Infrastructure.Features.Security;
 using Cleanuparr.Infrastructure.Helpers;
@@ -19,7 +16,6 @@ using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Infrastructure.Services;
 using Cleanuparr.Infrastructure.Services.Interfaces;
 using Cleanuparr.Persistence;
-using Infrastructure.Verticals.Files;
 
 namespace Cleanuparr.Api.DependencyInjection;
 
@@ -55,6 +51,9 @@ public static class ServicesDI
             .AddScoped<DownloadServiceFactory>()
             .AddScoped<IStriker, Striker>()
             .AddScoped<FileReader>()
+            .AddScoped<IRuleManager, RuleManager>()
+            .AddScoped<IRuleEvaluator, RuleEvaluator>()
+            .AddScoped<IRuleIntervalValidator, RuleIntervalValidator>()
             .AddSingleton<IJobManagementService, JobManagementService>()
             .AddSingleton<BlocklistProvider>()
             .AddSingleton<AppStatusSnapshot>()

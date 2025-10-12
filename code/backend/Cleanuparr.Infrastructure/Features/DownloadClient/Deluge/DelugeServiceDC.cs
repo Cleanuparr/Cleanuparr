@@ -1,4 +1,5 @@
-﻿using Cleanuparr.Domain.Entities.Deluge.Response;
+﻿using Cleanuparr.Domain.Entities;
+using Cleanuparr.Domain.Entities.Deluge.Response;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Extensions;
 using Cleanuparr.Infrastructure.Features.Context;
@@ -9,78 +10,80 @@ namespace Cleanuparr.Infrastructure.Features.DownloadClient.Deluge;
 
 public partial class DelugeService
 {
-    public override async Task<List<object>?> GetSeedingDownloads()
+    public override async Task<List<ITorrentItem>?> GetSeedingDownloads()
     {
-        return (await _client.GetStatusForAllTorrents())
-            ?.Where(x => !string.IsNullOrEmpty(x.Hash))
+        var downloads = await _client.GetStatusForAllTorrents();
+        if (downloads is null)
+        {
+            return null;
+        }
+
+        return downloads
+            .Where(x => !string.IsNullOrEmpty(x.Hash))
             .Where(x => x.State?.Equals("seeding", StringComparison.InvariantCultureIgnoreCase) is true)
-            .Cast<object>()
+            .Select(x => (ITorrentItem)new DelugeItem(x))
             .ToList();
     }
 
-    public override List<object>? FilterDownloadsToBeCleanedAsync(List<object>? downloads, List<CleanCategory> categories) =>
+    public override List<ITorrentItem>? FilterDownloadsToBeCleanedAsync(List<ITorrentItem>? downloads, List<CleanCategory> categories) =>
         downloads
-            ?.Cast<DownloadStatus>()
-            .Where(x => categories.Any(cat => cat.Name.Equals(x.Label, StringComparison.InvariantCultureIgnoreCase)))
-            .Cast<object>()
+            ?.Where(x => categories.Any(cat => cat.Name.Equals(x.Category, StringComparison.InvariantCultureIgnoreCase)))
             .ToList();
 
-    public override List<object>? FilterDownloadsToChangeCategoryAsync(List<object>? downloads, List<string> categories) =>
+    public override List<ITorrentItem>? FilterDownloadsToChangeCategoryAsync(List<ITorrentItem>? downloads, List<string> categories) =>
         downloads
-            ?.Cast<DownloadStatus>()
-            .Where(x => !string.IsNullOrEmpty(x.Hash))
-            .Where(x => categories.Any(cat => cat.Equals(x.Label, StringComparison.InvariantCultureIgnoreCase)))
-            .Cast<object>()
+            ?.Where(x => !string.IsNullOrEmpty(x.Hash))
+            .Where(x => categories.Any(cat => cat.Equals(x.Category, StringComparison.InvariantCultureIgnoreCase)))
             .ToList();
 
     /// <inheritdoc/>
-    public override async Task CleanDownloadsAsync(List<object>? downloads, List<CleanCategory> categoriesToClean, HashSet<string> excludedHashes,
+    public override async Task CleanDownloadsAsync(List<ITorrentItem>? downloads, List<CleanCategory> categoriesToClean, HashSet<string> excludedHashes,
         IReadOnlyList<string> ignoredDownloads)
     {
         if (downloads?.Count is null or 0)
         {
             return;
         }
-        
-        foreach (DownloadStatus download in downloads)
+
+        foreach (ITorrentItem download in downloads)
         {
             if (string.IsNullOrEmpty(download.Hash))
             {
                 continue;
             }
-            
+
             if (excludedHashes.Any(x => x.Equals(download.Hash, StringComparison.InvariantCultureIgnoreCase)))
             {
                 _logger.LogDebug("skip | download is used by an arr | {name}", download.Name);
                 continue;
             }
 
-            if (ignoredDownloads.Count > 0 && download.ShouldIgnore(ignoredDownloads))
+            if (download.IsIgnored(ignoredDownloads))
             {
                 _logger.LogInformation("skip | download is ignored | {name}", download.Name);
                 continue;
             }
-            
+
             CleanCategory? category = categoriesToClean
-                .FirstOrDefault(x => x.Name.Equals(download.Label, StringComparison.InvariantCultureIgnoreCase));
+                .FirstOrDefault(x => x.Name.Equals(download.Category, StringComparison.InvariantCultureIgnoreCase));
 
             if (category is null)
             {
                 continue;
             }
-            
+
             var downloadCleanerConfig = ContextProvider.Get<DownloadCleanerConfig>(nameof(DownloadCleanerConfig));
 
-            if (!downloadCleanerConfig.DeletePrivate && download.Private)
+            if (!downloadCleanerConfig.DeletePrivate && download.IsPrivate)
             {
                 _logger.LogDebug("skip | download is private | {name}", download.Name);
                 continue;
             }
-            
+
             ContextProvider.Set("downloadName", download.Name);
             ContextProvider.Set("hash", download.Hash);
-            
-            TimeSpan seedingTime = TimeSpan.FromSeconds(download.SeedingTime);
+
+            TimeSpan seedingTime = TimeSpan.FromSeconds(download.SeedingTimeSeconds);
             SeedingCheckResult result = ShouldCleanDownload(download.Ratio, seedingTime, category);
 
             if (!result.ShouldClean)
@@ -97,7 +100,7 @@ public partial class DelugeService
                     : "MAX_SEED_TIME",
                 download.Name
             );
-            
+
             await _eventPublisher.PublishDownloadCleaned(download.Ratio, seedingTime, category.Name, result.Reason);
         }
     }
@@ -116,42 +119,50 @@ public partial class DelugeService
         await _dryRunInterceptor.InterceptAsync(CreateLabel, name);
     }
 
-    public override async Task ChangeCategoryForNoHardLinksAsync(List<object>? downloads, HashSet<string> excludedHashes, IReadOnlyList<string> ignoredDownloads)
+    public override async Task ChangeCategoryForNoHardLinksAsync(List<ITorrentItem>? downloads, HashSet<string> excludedHashes, IReadOnlyList<string> ignoredDownloads)
     {
         if (downloads?.Count is null or 0)
         {
             return;
         }
-        
+
         var downloadCleanerConfig = ContextProvider.Get<DownloadCleanerConfig>(nameof(DownloadCleanerConfig));
 
         if (!string.IsNullOrEmpty(downloadCleanerConfig.UnlinkedIgnoredRootDir))
         {
             _hardLinkFileService.PopulateFileCounts(downloadCleanerConfig.UnlinkedIgnoredRootDir);
         }
-        
-        foreach (DownloadStatus download in downloads.Cast<DownloadStatus>())
+
+        foreach (ITorrentItem download in downloads)
         {
-            if (string.IsNullOrEmpty(download.Hash) || string.IsNullOrEmpty(download.Name) || string.IsNullOrEmpty(download.Label))
+            if (string.IsNullOrEmpty(download.Hash) || string.IsNullOrEmpty(download.Name) || string.IsNullOrEmpty(download.Category))
             {
                 continue;
             }
-            
+
             if (excludedHashes.Any(x => x.Equals(download.Hash, StringComparison.InvariantCultureIgnoreCase)))
             {
                 _logger.LogDebug("skip | download is used by an arr | {name}", download.Name);
                 continue;
             }
 
-            if (ignoredDownloads.Count > 0 && download.ShouldIgnore(ignoredDownloads))
+            if (download.IsIgnored(ignoredDownloads))
             {
                 _logger.LogInformation("skip | download is ignored | {name}", download.Name);
                 continue;
             }
-        
+
             ContextProvider.Set("downloadName", download.Name);
             ContextProvider.Set("hash", download.Hash);
-            
+
+            // Get the underlying DownloadStatus to access DownloadLocation
+            DownloadStatus? downloadStatus = await _client.GetTorrentStatus(download.Hash);
+            if (downloadStatus is null)
+            {
+                _logger.LogDebug("failed to find torrent status for {name}", download.Name);
+                continue;
+            }
+
             DelugeContents? contents = null;
             try
             {
@@ -162,48 +173,46 @@ public partial class DelugeService
                 _logger.LogDebug(exception, "failed to find torrent files for {name}", download.Name);
                 continue;
             }
-            
+
             bool hasHardlinks = false;
-            
+
             ProcessFiles(contents?.Contents, (_, file) =>
             {
-                string filePath = string.Join(Path.DirectorySeparatorChar, Path.Combine(download.DownloadLocation, file.Path).Split(['\\', '/']));
+                string filePath = string.Join(Path.DirectorySeparatorChar, Path.Combine(downloadStatus.DownloadLocation, file.Path).Split(['\\', '/']));
 
                 if (file.Priority <= 0)
                 {
                     _logger.LogDebug("skip | file is not downloaded | {file}", filePath);
                     return;
                 }
-                
+
                 long hardlinkCount = _hardLinkFileService
                     .GetHardLinkCount(filePath, !string.IsNullOrEmpty(downloadCleanerConfig.UnlinkedIgnoredRootDir));
-        
+
                 if (hardlinkCount < 0)
                 {
                     _logger.LogDebug("skip | could not get file properties | {file}", filePath);
                     hasHardlinks = true;
                     return;
                 }
-        
+
                 if (hardlinkCount > 0)
                 {
                     hasHardlinks = true;
                 }
             });
-            
+
             if (hasHardlinks)
             {
                 _logger.LogDebug("skip | download has hardlinks | {name}", download.Name);
                 continue;
             }
-            
+
             await _dryRunInterceptor.InterceptAsync(ChangeLabel, download.Hash, downloadCleanerConfig.UnlinkedTargetCategory);
-            
+
             _logger.LogInformation("category changed for {name}", download.Name);
-            
-            await _eventPublisher.PublishCategoryChanged(download.Label, downloadCleanerConfig.UnlinkedTargetCategory);
-            
-            download.Label = downloadCleanerConfig.UnlinkedTargetCategory;
+
+            await _eventPublisher.PublishCategoryChanged(download.Category, downloadCleanerConfig.UnlinkedTargetCategory);
         }
     }
 

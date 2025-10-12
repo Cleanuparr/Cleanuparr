@@ -1,4 +1,5 @@
-﻿using Cleanuparr.Domain.Enums;
+﻿using Cleanuparr.Domain.Entities;
+using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Extensions;
 using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
@@ -9,102 +10,98 @@ namespace Cleanuparr.Infrastructure.Features.DownloadClient.Transmission;
 
 public partial class TransmissionService
 {
-    public override async Task<List<object>?> GetSeedingDownloads() =>
-        (await _client.TorrentGetAsync(Fields))
-        ?.Torrents
-        ?.Where(x => !string.IsNullOrEmpty(x.HashString))
-        .Where(x => x.Status is 5 or 6)
-        .Cast<object>()
-        .ToList();
+    public override async Task<List<ITorrentItem>?> GetSeedingDownloads()
+    {
+        var result = await _client.TorrentGetAsync(Fields);
+        return result?.Torrents
+            ?.Where(x => !string.IsNullOrEmpty(x.HashString))
+            .Where(x => x.Status is 5 or 6)
+            .Select(x => (ITorrentItem)new TransmissionItem(x))
+            .ToList();
+    }
 
     /// <inheritdoc/>
-    public override List<object>? FilterDownloadsToBeCleanedAsync(List<object>? downloads, List<CleanCategory> categories)
+    public override List<ITorrentItem>? FilterDownloadsToBeCleanedAsync(List<ITorrentItem>? downloads, List<CleanCategory> categories)
     {
         return downloads
-            ?
-            .Cast<TorrentInfo>()
-            .Where(x => categories
-                .Any(cat => cat.Name.Equals(x.GetCategory(), StringComparison.InvariantCultureIgnoreCase))
+            ?.Where(x => categories
+                .Any(cat => cat.Name.Equals(x.Category, StringComparison.InvariantCultureIgnoreCase))
             )
-            .Cast<object>()
             .ToList();
     }
 
-    public override List<object>? FilterDownloadsToChangeCategoryAsync(List<object>? downloads, List<string> categories)
+    public override List<ITorrentItem>? FilterDownloadsToChangeCategoryAsync(List<ITorrentItem>? downloads, List<string> categories)
     {
         return downloads
-            ?.Cast<TorrentInfo>()
-            .Where(x => !string.IsNullOrEmpty(x.HashString))
-            .Where(x => categories.Any(cat => cat.Equals(x.GetCategory(), StringComparison.InvariantCultureIgnoreCase)))
-            .Cast<object>()
+            ?.Where(x => !string.IsNullOrEmpty(x.Hash))
+            .Where(x => categories.Any(cat => cat.Equals(x.Category, StringComparison.InvariantCultureIgnoreCase)))
             .ToList();
     }
 
     /// <inheritdoc/>
-    public override async Task CleanDownloadsAsync(List<object>? downloads, List<CleanCategory> categoriesToClean,
+    public override async Task CleanDownloadsAsync(List<ITorrentItem>? downloads, List<CleanCategory> categoriesToClean,
         HashSet<string> excludedHashes, IReadOnlyList<string> ignoredDownloads)
     {
         if (downloads?.Count is null or 0)
         {
             return;
         }
-        
-        foreach (TorrentInfo download in downloads)
+
+        foreach (ITorrentItem download in downloads)
         {
-            if (string.IsNullOrEmpty(download.HashString))
+            if (string.IsNullOrEmpty(download.Hash))
             {
                 continue;
             }
-            
-            if (excludedHashes.Any(x => x.Equals(download.HashString, StringComparison.InvariantCultureIgnoreCase)))
+
+            if (excludedHashes.Any(x => x.Equals(download.Hash, StringComparison.InvariantCultureIgnoreCase)))
             {
                 _logger.LogDebug("skip | download is used by an arr | {name}", download.Name);
                 continue;
             }
 
-            if (ignoredDownloads.Count > 0 && download.ShouldIgnore(ignoredDownloads))
+            if (download.IsIgnored(ignoredDownloads))
             {
                 _logger.LogDebug("skip | download is ignored | {name}", download.Name);
                 continue;
             }
-            
-            CleanCategory? category = categoriesToClean
-                .FirstOrDefault(x =>
-                {
-                    if (download.DownloadDir is null)
-                    {
-                        return false;
-                    }
 
-                    return Path.GetFileName(Path.TrimEndingDirectorySeparator(download.DownloadDir))
-                        .Equals(x.Name, StringComparison.InvariantCultureIgnoreCase);
-                });
-            
+            CleanCategory? category = categoriesToClean
+                .FirstOrDefault(x => x.Name.Equals(download.Category, StringComparison.InvariantCultureIgnoreCase));
+
             if (category is null)
             {
                 continue;
             }
-            
+
             var downloadCleanerConfig = ContextProvider.Get<DownloadCleanerConfig>(nameof(DownloadCleanerConfig));
 
-            if (!downloadCleanerConfig.DeletePrivate && download.IsPrivate is true)
+            if (!downloadCleanerConfig.DeletePrivate && download.IsPrivate)
             {
                 _logger.LogDebug("skip | download is private | {name}", download.Name);
                 continue;
             }
-            
-            ContextProvider.Set("downloadName", download.Name);
-            ContextProvider.Set("hash", download.HashString);
 
-            TimeSpan seedingTime = TimeSpan.FromSeconds(download.SecondsSeeding ?? 0);
-            SeedingCheckResult result = ShouldCleanDownload(download.uploadRatio ?? 0, seedingTime, category);
-            
+            ContextProvider.Set("downloadName", download.Name);
+            ContextProvider.Set("hash", download.Hash);
+
+            TimeSpan seedingTime = TimeSpan.FromSeconds(download.SeedingTimeSeconds);
+            SeedingCheckResult result = ShouldCleanDownload(download.Ratio, seedingTime, category);
+
             if (!result.ShouldClean)
             {
                 continue;
             }
 
-            await _dryRunInterceptor.InterceptAsync(RemoveDownloadAsync, download.Id);
+            // Get the underlying TorrentInfo to access Id for deletion
+            TorrentInfo? torrentInfo = await GetTorrentAsync(download.Hash);
+            if (torrentInfo is null)
+            {
+                _logger.LogDebug("failed to find torrent info for {name}", download.Name);
+                continue;
+            }
+
+            await _dryRunInterceptor.InterceptAsync(RemoveDownloadAsync, torrentInfo.Id);
 
             _logger.LogInformation(
                 "download cleaned | {reason} reached | {name}",
@@ -114,7 +111,7 @@ public partial class TransmissionService
                 download.Name
             );
 
-            await _eventPublisher.PublishDownloadCleaned(download.uploadRatio ?? 0, seedingTime, category.Name, result.Reason);
+            await _eventPublisher.PublishDownloadCleaned(download.Ratio, seedingTime, category.Name, result.Reason);
         }
     }
     
@@ -123,64 +120,72 @@ public partial class TransmissionService
         await Task.CompletedTask;
     }
 
-    public override async Task ChangeCategoryForNoHardLinksAsync(List<object>? downloads, HashSet<string> excludedHashes, IReadOnlyList<string> ignoredDownloads)
+    public override async Task ChangeCategoryForNoHardLinksAsync(List<ITorrentItem>? downloads, HashSet<string> excludedHashes, IReadOnlyList<string> ignoredDownloads)
     {
         if (downloads?.Count is null or 0)
         {
             return;
         }
-        
+
         var downloadCleanerConfig = ContextProvider.Get<DownloadCleanerConfig>(nameof(DownloadCleanerConfig));
-        
+
         if (!string.IsNullOrEmpty(downloadCleanerConfig.UnlinkedIgnoredRootDir))
         {
             _hardLinkFileService.PopulateFileCounts(downloadCleanerConfig.UnlinkedIgnoredRootDir);
         }
-        
-        foreach (TorrentInfo download in downloads.Cast<TorrentInfo>())
+
+        foreach (ITorrentItem download in downloads)
         {
-            if (string.IsNullOrEmpty(download.HashString) || string.IsNullOrEmpty(download.Name) || download.DownloadDir == null)
+            if (string.IsNullOrEmpty(download.Hash) || string.IsNullOrEmpty(download.Name))
             {
                 continue;
             }
-            
-            if (excludedHashes.Any(x => x.Equals(download.HashString, StringComparison.InvariantCultureIgnoreCase)))
+
+            if (excludedHashes.Any(x => x.Equals(download.Hash, StringComparison.InvariantCultureIgnoreCase)))
             {
                 _logger.LogDebug("skip | download is used by an arr | {name}", download.Name);
                 continue;
             }
-            
-            if (ignoredDownloads.Count > 0 && download.ShouldIgnore(ignoredDownloads))
+
+            if (download.IsIgnored(ignoredDownloads))
             {
                 _logger.LogDebug("skip | download is ignored | {name}", download.Name);
                 continue;
             }
-        
+
             ContextProvider.Set("downloadName", download.Name);
-            ContextProvider.Set("hash", download.HashString);
-            
+            ContextProvider.Set("hash", download.Hash);
+
+            // Get the underlying TorrentInfo to access files and DownloadDir
+            TorrentInfo? torrentInfo = await GetTorrentAsync(download.Hash);
+            if (torrentInfo is null || torrentInfo.DownloadDir is null)
+            {
+                _logger.LogDebug("failed to find torrent info for {name}", download.Name);
+                continue;
+            }
+
             bool hasHardlinks = false;
-            
-            if (download.Files is null || download.FileStats is null)
+
+            if (torrentInfo.Files is null || torrentInfo.FileStats is null)
             {
                 _logger.LogDebug("skip | download has no files | {name}", download.Name);
                 continue;
             }
 
-            for (int i = 0; i < download.Files.Length; i++)
+            for (int i = 0; i < torrentInfo.Files.Length; i++)
             {
-                TransmissionTorrentFiles file = download.Files[i];
-                TransmissionTorrentFileStats stats = download.FileStats[i];
-                
+                TransmissionTorrentFiles file = torrentInfo.Files[i];
+                TransmissionTorrentFileStats stats = torrentInfo.FileStats[i];
+
                 if (stats.Wanted is null or false || string.IsNullOrEmpty(file.Name))
                 {
                     continue;
                 }
 
-                string filePath = string.Join(Path.DirectorySeparatorChar, Path.Combine(download.DownloadDir, file.Name).Split(['\\', '/']));
-                
+                string filePath = string.Join(Path.DirectorySeparatorChar, Path.Combine(torrentInfo.DownloadDir, file.Name).Split(['\\', '/']));
+
                 long hardlinkCount = _hardLinkFileService.GetHardLinkCount(filePath, !string.IsNullOrEmpty(downloadCleanerConfig.UnlinkedIgnoredRootDir));
-                
+
                 if (hardlinkCount < 0)
                 {
                     _logger.LogDebug("skip | could not get file properties | {file}", filePath);
@@ -200,17 +205,15 @@ public partial class TransmissionService
                 _logger.LogDebug("skip | download has hardlinks | {name}", download.Name);
                 continue;
             }
-            
-            string currentCategory = download.GetCategory();
-            string newLocation = string.Join(Path.DirectorySeparatorChar, Path.Combine(download.DownloadDir, downloadCleanerConfig.UnlinkedTargetCategory).Split(['\\', '/']));
-            
-            await _dryRunInterceptor.InterceptAsync(ChangeDownloadLocation, download.Id, newLocation);
-            
-            _logger.LogInformation("category changed for {name}", download.Name);
-            
-            await _eventPublisher.PublishCategoryChanged(currentCategory, downloadCleanerConfig.UnlinkedTargetCategory);
 
-            download.DownloadDir = newLocation;
+            string currentCategory = download.Category ?? string.Empty;
+            string newLocation = string.Join(Path.DirectorySeparatorChar, Path.Combine(torrentInfo.DownloadDir, downloadCleanerConfig.UnlinkedTargetCategory).Split(['\\', '/']));
+
+            await _dryRunInterceptor.InterceptAsync(ChangeDownloadLocation, torrentInfo.Id, newLocation);
+
+            _logger.LogInformation("category changed for {name}", download.Name);
+
+            await _eventPublisher.PublishCategoryChanged(currentCategory, downloadCleanerConfig.UnlinkedTargetCategory);
         }
     }
 

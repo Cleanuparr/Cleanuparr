@@ -2,4 +2,22 @@
 
 @use '../styles/settings-shared.scss';
 @use '../styles/arr-shared.scss';
+@use '../styles/item-list-styles.scss';
 @use '../settings-page/settings-page.component.scss';
+
+:host ::ng-deep {
+  .item-icon {
+    font-size: 1.5rem;
+    color: var(--primary-color);
+  }
+
+  .coverage-info {
+    background-color: rgba(255, 152, 0, 0.08);
+    border-left: 4px solid var(--orange-500);
+  }
+
+  .coverage-gaps .gap-item {
+    display: block;
+    margin-bottom: 0.25rem;
+  }
+}

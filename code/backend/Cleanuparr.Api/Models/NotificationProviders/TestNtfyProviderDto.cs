@@ -1,22 +1,8 @@
-using Cleanuparr.Domain.Enums;
+using System;
 
 namespace Cleanuparr.Api.Models.NotificationProviders;
 
-public sealed record TestNtfyProviderDto
-{
-    public string ServerUrl { get; init; } = string.Empty;
+using TestNtfyProviderRequest = Cleanuparr.Api.Features.Notifications.Contracts.Requests.TestNtfyProviderRequest;
 
-    public List<string> Topics { get; init; } = [];
-    
-    public NtfyAuthenticationType AuthenticationType { get; init; } = NtfyAuthenticationType.None;
-    
-    public string Username { get; init; } = string.Empty;
-    
-    public string Password { get; init; } = string.Empty;
-    
-    public string AccessToken { get; init; } = string.Empty;
-    
-    public NtfyPriority Priority { get; init; } = NtfyPriority.Default;
-
-    public List<string> Tags { get; init; } = [];
-}
+[Obsolete("Use Cleanuparr.Api.Features.Notifications.Contracts.Requests.TestNtfyProviderRequest instead.")]
+public sealed record TestNtfyProviderDto : TestNtfyProviderRequest;

@@ -1,3 +1,6 @@
+// Import the rule types
+import { StallRule, SlowRule } from './queue-rule.model';
+
 export enum ScheduleUnit {
   Seconds = 'Seconds',
   Minutes = 'Minutes',
@@ -25,24 +28,6 @@ export interface FailedImportConfig {
   ignoredPatterns: string[];
 }
 
-export interface StalledConfig {
-  maxStrikes: number;
-  resetStrikesOnProgress: boolean;
-  ignorePrivate: boolean;
-  deletePrivate: boolean;
-  downloadingMetadataMaxStrikes: number;
-}
-
-export interface SlowConfig {
-  maxStrikes: number;
-  resetStrikesOnProgress: boolean;
-  ignorePrivate: boolean;
-  deletePrivate: boolean;
-  minSpeed: string;
-  maxTime: number;
-  ignoreAboveSize: string;
-}
-
 export interface QueueCleanerConfig {
   enabled: boolean;
   cronExpression: string;
@@ -50,6 +35,9 @@ export interface QueueCleanerConfig {
   jobSchedule?: JobSchedule; // UI-only field, not sent to API
   ignoredDownloads: string[];
   failedImport: FailedImportConfig;
-  stalled: StalledConfig;
-  slow: SlowConfig;
+  downloadingMetadataMaxStrikes: number;
+  
+  // Queue Rules
+  stallRules?: StallRule[];
+  slowRules?: SlowRule[];
 }
