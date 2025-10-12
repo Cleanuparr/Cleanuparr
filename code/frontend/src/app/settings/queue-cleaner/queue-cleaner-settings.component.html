@@ -320,7 +320,7 @@
             <div *ngIf="stallRulesCount > 0" class="items-list">
               <div
                 *ngFor="let rule of stallRules(); trackBy: trackStallRule"
-                class="item-item"
+                class="item-item p-3 border-round surface-border border-1 mb-3"
                 [ngClass]="{ 'enabled': rule.enabled }"
               >
                 <div class="flex justify-content-between align-items-start flex-wrap gap-3">
@@ -432,7 +432,7 @@
             <div *ngIf="slowRulesCount > 0" class="items-list">
               <div
                 *ngFor="let rule of slowRules(); trackBy: trackSlowRule"
-                class="item-item"
+                class="item-item p-3 border-round surface-border border-1 mb-3"
                 [ngClass]="{ 'enabled': rule.enabled }"
               >
                 <div class="flex justify-content-between align-items-start flex-wrap gap-3">
