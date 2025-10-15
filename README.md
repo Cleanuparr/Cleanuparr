@@ -37,6 +37,7 @@ Cleanuparr was created primarily to address malicious files, such as `*.lnk` or 
 - **Transmission**
 - **Deluge**
 - **µTorrent**
+- **RDT-Client**
 
 ### Platforms
 - **Docker**

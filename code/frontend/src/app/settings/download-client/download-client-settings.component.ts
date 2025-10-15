@@ -98,9 +98,9 @@ export class DownloadClientSettingsComponent implements OnDestroy, CanComponentD
 
     // Initialize type name options
     for (const key of Object.keys(DownloadClientTypeName)) {
-      this.typeNameOptions.push({ 
-        label: key, 
-        value: DownloadClientTypeName[key as keyof typeof DownloadClientTypeName] 
+      this.typeNameOptions.push({
+        label: key,
+        value: DownloadClientTypeName[key as keyof typeof DownloadClientTypeName]
       });
     }
 
@@ -168,7 +168,7 @@ export class DownloadClientSettingsComponent implements OnDestroy, CanComponentD
   openEditClientModal(client: ClientConfig): void {
     this.modalMode = 'edit';
     this.editingClient = client;
-    
+
     this.clientForm.patchValue({
       name: client.name,
       typeName: client.typeName,
@@ -214,7 +214,7 @@ export class DownloadClientSettingsComponent implements OnDestroy, CanComponentD
         urlBase: formValue.urlBase,
         enabled: formValue.enabled
       };
-      
+
       this.downloadClientStore.createClient(clientData);
     } else if (this.editingClient) {
       // For updates, create a proper ClientConfig object
@@ -229,9 +229,9 @@ export class DownloadClientSettingsComponent implements OnDestroy, CanComponentD
         urlBase: formValue.urlBase,
         enabled: formValue.enabled
       };
-      
-      this.downloadClientStore.updateClient({ 
-        id: this.editingClient.id!, 
+
+      this.downloadClientStore.updateClient({
+        id: this.editingClient.id!,
         client: clientConfig
       });
     }
@@ -246,7 +246,7 @@ export class DownloadClientSettingsComponent implements OnDestroy, CanComponentD
     const checkSavingStatus = () => {
       const saving = this.downloadClientSaving();
       const error = this.downloadClientError();
-      
+
       if (!saving) {
         if (error) {
           this.notificationService.showError(`Operation failed: ${error}`);
@@ -259,7 +259,7 @@ export class DownloadClientSettingsComponent implements OnDestroy, CanComponentD
         setTimeout(checkSavingStatus, 100);
       }
     };
-    
+
     setTimeout(checkSavingStatus, 100);
   }
 
@@ -274,12 +274,12 @@ export class DownloadClientSettingsComponent implements OnDestroy, CanComponentD
       acceptButtonStyleClass: 'p-button-danger',
       accept: () => {
         this.downloadClientStore.deleteClient(client.id!);
-        
+
         // Monitor deletion
         const checkDeletionStatus = () => {
           const saving = this.downloadClientSaving();
           const error = this.downloadClientError();
-          
+
           if (!saving) {
             if (error) {
               this.notificationService.showError(`Deletion failed: ${error}`);
@@ -290,7 +290,7 @@ export class DownloadClientSettingsComponent implements OnDestroy, CanComponentD
             setTimeout(checkDeletionStatus, 100);
           }
         };
-        
+
         setTimeout(checkDeletionStatus, 100);
       }
     });
@@ -312,12 +312,13 @@ export class DownloadClientSettingsComponent implements OnDestroy, CanComponentD
       case DownloadClientTypeName.Deluge:
       case DownloadClientTypeName.Transmission:
       case DownloadClientTypeName.uTorrent:
+      case DownloadClientTypeName.RdtClient:
         return DownloadClientType.Torrent;
       default:
         throw new Error(`Unknown client type name: ${typeName}`);
     }
   }
-  
+
   /**
    * Handle client type changes to update validation
    */
@@ -326,25 +327,25 @@ export class DownloadClientSettingsComponent implements OnDestroy, CanComponentD
     const hostControl = this.clientForm.get('host');
     const usernameControl = this.clientForm.get('username');
     const urlBaseControl = this.clientForm.get('urlBase');
-    
+
     if (!hostControl || !usernameControl || !urlBaseControl) return;
-    
+
     hostControl.setValidators([
       Validators.required,
       UrlValidators.httpUrl
     ]);
-    
+
     // Clear username value and remove validation for Deluge
     if (clientTypeName === DownloadClientTypeName.Deluge) {
       usernameControl.setValue('');
       usernameControl.clearValidators();
     }
-    
+
     // Set default URL base for Transmission
     if (clientTypeName === DownloadClientTypeName.Transmission) {
       urlBaseControl.setValue('transmission');
     }
-    
+
     // Update validation state
     hostControl.updateValueAndValidity();
     usernameControl.updateValueAndValidity();

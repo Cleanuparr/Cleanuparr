@@ -6,4 +6,5 @@ public enum DownloadClientTypeName
     Deluge,
     Transmission,
     uTorrent,
+    RdtClient,
 }

@@ -8,6 +8,7 @@ export enum DownloadClientTypeName {
   Deluge = "Deluge",
   Transmission = "Transmission",
   uTorrent = "uTorrent",
+  RdtClient = "RdtClient",
 }
 
 export enum NotificationProviderType {

@@ -12,6 +12,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using DelugeService = Cleanuparr.Infrastructure.Features.DownloadClient.Deluge.DelugeService;
 using QBitService = Cleanuparr.Infrastructure.Features.DownloadClient.QBittorrent.QBitService;
+using RdtService = Cleanuparr.Infrastructure.Features.DownloadClient.RdtClient.RdtService;
 using TransmissionService = Cleanuparr.Infrastructure.Features.DownloadClient.Transmission.TransmissionService;
 using UTorrentService = Cleanuparr.Infrastructure.Features.DownloadClient.UTorrent.UTorrentService;
 
@@ -52,6 +53,7 @@ public sealed class DownloadServiceFactory
             DownloadClientTypeName.Deluge => CreateDelugeService(downloadClientConfig),
             DownloadClientTypeName.Transmission => CreateTransmissionService(downloadClientConfig),
             DownloadClientTypeName.uTorrent => CreateUTorrentService(downloadClientConfig),
+            DownloadClientTypeName.RdtClient => CreateRdtService(downloadClientConfig),
             _ => throw new NotSupportedException($"Download client type {downloadClientConfig.TypeName} is not supported")
         };
     }
@@ -136,6 +138,27 @@ public sealed class DownloadServiceFactory
         UTorrentService service = new(
             logger, cache, filenameEvaluator, striker, dryRunInterceptor,
             hardLinkFileService, httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, loggerFactory
+        );
+        
+        return service;
+    }
+
+    private RdtService CreateRdtService(DownloadClientConfig downloadClientConfig)
+    {
+        var logger = _serviceProvider.GetRequiredService<ILogger<RdtService>>();
+        var cache = _serviceProvider.GetRequiredService<IMemoryCache>();
+        var filenameEvaluator = _serviceProvider.GetRequiredService<IFilenameEvaluator>();
+        var striker = _serviceProvider.GetRequiredService<IStriker>();
+        var dryRunInterceptor = _serviceProvider.GetRequiredService<IDryRunInterceptor>();
+        var hardLinkFileService = _serviceProvider.GetRequiredService<IHardLinkFileService>();
+        var httpClientProvider = _serviceProvider.GetRequiredService<IDynamicHttpClientProvider>();
+        var eventPublisher = _serviceProvider.GetRequiredService<EventPublisher>();
+        var blocklistProvider = _serviceProvider.GetRequiredService<BlocklistProvider>();
+        
+        // Create the RdtService instance
+        RdtService service = new(
+            logger, cache, filenameEvaluator, striker, dryRunInterceptor,
+            hardLinkFileService, httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig
         );
         
         return service;
