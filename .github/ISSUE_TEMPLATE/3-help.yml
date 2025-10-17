@@ -8,6 +8,13 @@ body:
       value: |
         If you are experiencing unexpected behavior, please consider submitting a bug report instead.
   - type: checkboxes
+    id: duplicate-check
+    attributes:
+      label: "Duplicate check"
+      options:
+        - label: I have searched for existing issues and confirmed this is not a duplicate.
+          required: true
+  - type: checkboxes
     id: init
     attributes:
       label: "Before submitting a help request, I have:"
