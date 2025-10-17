@@ -78,6 +78,17 @@ http://localhost:11011
 - **💬 [Discord Community](https://discord.gg/SCtMCgtsc4)** - Get help and discuss with other users
 - **🔗 [GitHub Releases](https://github.com/Cleanuparr/Cleanuparr/releases)** - Download binaries and view changelog
 
+## 🤝 Contributing
+
+We welcome contributions from the community! Whether it's bug fixes, new features, documentation improvements, or testing, your help is appreciated.
+
+**Before contributing:** Please read our [Contributing Guide](CONTRIBUTING.md) and announce your intent to work on an issue before starting.
+
+- **[Contributing Guide](CONTRIBUTING.md)** - Learn how to set up your development environment and submit contributions
+- **[Report Issues](https://github.com/Cleanuparr/Cleanuparr/issues/new/choose)** - Found a bug? Let us know!
+- **[Feature Requests](https://github.com/Cleanuparr/Cleanuparr/issues/new/choose)** - Share your ideas for new features
+- **[Help Test Features](https://discord.gg/SCtMCgtsc4)** - Join Discord to test pre-release features and provide feedback
+
 # <img style="vertical-align: middle;" width="24px" src="./Logo/256.png" alt="Cleanuparr"> <span style="vertical-align: middle;">Cleanuparr</span> <img src="https://raw.githubusercontent.com/FortAwesome/Font-Awesome/6.x/svgs/solid/x.svg" height="24px" width="30px" style="vertical-align: middle;"> <span style="vertical-align: middle;">Huntarr</span> <img style="vertical-align: middle;" width="24px" src="https://github.com/plexguide/Huntarr.io/blob/main/frontend/static/logo/512.png?raw=true" alt Huntarr></img>
 
 Think of **Cleanuparr** as the janitor of your server; it keeps your download queue spotless, removes clutter, and blocks malicious files. Now imagine combining that with **Huntarr**, the compulsive librarian who finds missing and upgradable media to complete your collection
