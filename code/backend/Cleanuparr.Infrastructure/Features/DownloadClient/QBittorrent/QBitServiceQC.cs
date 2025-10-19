@@ -59,23 +59,25 @@ public partial class QBitService
             {
                 _logger.LogDebug("all files are unwanted by qBit | removing download | {name}", torrentItem.Name);
                 result.DeleteReason = DeleteReason.AllFilesSkippedByQBit;
+                result.DeleteFromClient = true;
                 return result;
             }
 
             // remove if all files are unwanted
             _logger.LogDebug("all files are unwanted | removing download | {name}", torrentItem.Name);
             result.DeleteReason = DeleteReason.AllFilesSkipped;
+            result.DeleteFromClient = true;
             return result;
         }
 
-        (result.ShouldRemove, result.DeleteReason) = await EvaluateDownloadRemoval(torrentItem);
+        (result.ShouldRemove, result.DeleteReason, result.DeleteFromClient) = await EvaluateDownloadRemoval(torrentItem);
 
         return result;
     }
-    
-    private async Task<(bool ShouldRemove, DeleteReason Reason)> EvaluateDownloadRemoval(ITorrentItem torrentItem)
+
+    private async Task<(bool ShouldRemove, DeleteReason Reason, bool DeleteFromClient)> EvaluateDownloadRemoval(ITorrentItem torrentItem)
     {
-        (bool ShouldRemove, DeleteReason Reason) slowResult = await CheckIfSlow(torrentItem);
+        (bool ShouldRemove, DeleteReason Reason, bool DeleteFromClient) slowResult = await CheckIfSlow(torrentItem);
 
         if (slowResult.ShouldRemove)
         {
@@ -85,24 +87,24 @@ public partial class QBitService
         return await CheckIfStuck(torrentItem);
     }
 
-    private async Task<(bool ShouldRemove, DeleteReason Reason)> CheckIfSlow(ITorrentItem torrentItem)
+    private async Task<(bool ShouldRemove, DeleteReason Reason, bool DeleteFromClient)> CheckIfSlow(ITorrentItem torrentItem)
     {
         if (!torrentItem.IsDownloading())
         {
             _logger.LogTrace("skip slow check | download is not in downloading state | {name}", torrentItem.Name);
-            return (false, DeleteReason.None);
+            return (false, DeleteReason.None, false);
         }
 
         if (torrentItem.DownloadSpeed <= 0)
         {
             _logger.LogTrace("skip slow check | download speed is 0 | {name}", torrentItem.Name);
-            return (false, DeleteReason.None);
+            return (false, DeleteReason.None, false);
         }
 
         return await _ruleEvaluator.EvaluateSlowRulesAsync(torrentItem);
     }
 
-    private async Task<(bool ShouldRemove, DeleteReason Reason)> CheckIfStuck(ITorrentItem torrentItem)
+    private async Task<(bool ShouldRemove, DeleteReason Reason, bool DeleteFromClient)> CheckIfStuck(ITorrentItem torrentItem)
     {
         if (torrentItem.IsMetadataDownloading())
         {
@@ -110,18 +112,23 @@ public partial class QBitService
 
             if (queueCleanerConfig.DownloadingMetadataMaxStrikes > 0)
             {
-                return (
-                    await _striker.StrikeAndCheckLimit(torrentItem.Hash, torrentItem.Name, queueCleanerConfig.DownloadingMetadataMaxStrikes,
-                        StrikeType.DownloadingMetadata), DeleteReason.DownloadingMetadata);
+                bool shouldRemove = await _striker.StrikeAndCheckLimit(
+                    torrentItem.Hash,
+                    torrentItem.Name,
+                    queueCleanerConfig.DownloadingMetadataMaxStrikes,
+                    StrikeType.DownloadingMetadata
+                );
+                
+                return (shouldRemove, DeleteReason.DownloadingMetadata, shouldRemove);
             }
 
-            return (false, DeleteReason.None);
+            return (false, DeleteReason.None, false);
         }
 
         if (!torrentItem.IsStalled())
         {
             _logger.LogTrace("skip stalled check | download is not in stalled state | {name}", torrentItem.Name);
-            return (false, DeleteReason.None);
+            return (false, DeleteReason.None, false);
         }
 
         return await _ruleEvaluator.EvaluateStallRulesAsync(torrentItem);

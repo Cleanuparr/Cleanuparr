@@ -665,7 +665,7 @@ public class RuleEvaluatorTests
         return torrentMock;
     }
 
-    private static StallRule CreateStallRule(string name, bool resetOnProgress, int maxStrikes, string? minimumProgress = null)
+    private static StallRule CreateStallRule(string name, bool resetOnProgress, int maxStrikes, string? minimumProgress = null, bool deletePrivateTorrentsFromClient = false)
     {
         return new StallRule
         {
@@ -679,7 +679,7 @@ public class RuleEvaluatorTests
             MaxCompletionPercentage = 100,
             ResetStrikesOnProgress = resetOnProgress,
             MinimumProgress = minimumProgress,
-            DeletePrivateTorrentsFromClient = false,
+            DeletePrivateTorrentsFromClient = deletePrivateTorrentsFromClient,
         };
     }
 
@@ -688,7 +688,8 @@ public class RuleEvaluatorTests
         bool resetOnProgress,
         int maxStrikes,
         string? minSpeed = null,
-        double maxTimeHours = 1)
+        double maxTimeHours = 1,
+        bool deletePrivateTorrentsFromClient = false)
     {
         return new SlowRule
         {
@@ -704,7 +705,263 @@ public class RuleEvaluatorTests
             MaxTimeHours = maxTimeHours,
             MinSpeed = minSpeed ?? string.Empty,
             IgnoreAboveSize = string.Empty,
-            DeletePrivateTorrentsFromClient = false,
+            DeletePrivateTorrentsFromClient = deletePrivateTorrentsFromClient,
         };
+    }
+
+    [Fact]
+    public async Task EvaluateStallRulesAsync_WhenNoRuleMatches_ShouldReturnDeleteFromClientFalse()
+    {
+        var ruleManagerMock = new Mock<IRuleManager>();
+        var strikerMock = new Mock<IStriker>();
+        using var memoryCache = new MemoryCache(new MemoryCacheOptions());
+        var loggerMock = new Mock<ILogger<RuleEvaluator>>();
+
+        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, memoryCache, loggerMock.Object);
+
+        ruleManagerMock
+            .Setup(x => x.GetMatchingStallRule(It.IsAny<ITorrentItem>()))
+            .Returns((StallRule?)null);
+
+        var torrentMock = CreateTorrentMock();
+
+        var result = await evaluator.EvaluateStallRulesAsync(torrentMock.Object);
+
+        Assert.False(result.ShouldRemove);
+        Assert.Equal(DeleteReason.None, result.Reason);
+        Assert.False(result.DeleteFromClient);
+    }
+
+    [Fact]
+    public async Task EvaluateStallRulesAsync_WhenRuleMatchesButNoRemoval_ShouldReturnDeleteFromClientFalse()
+    {
+        var ruleManagerMock = new Mock<IRuleManager>();
+        var strikerMock = new Mock<IStriker>();
+        using var memoryCache = new MemoryCache(new MemoryCacheOptions());
+        var loggerMock = new Mock<ILogger<RuleEvaluator>>();
+
+        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, memoryCache, loggerMock.Object);
+
+        var stallRule = CreateStallRule("Test Rule", resetOnProgress: false, maxStrikes: 3, deletePrivateTorrentsFromClient: true);
+
+        ruleManagerMock
+            .Setup(x => x.GetMatchingStallRule(It.IsAny<ITorrentItem>()))
+            .Returns(stallRule);
+
+        strikerMock
+            .Setup(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.Stalled))
+            .ReturnsAsync(false);
+
+        var torrentMock = CreateTorrentMock();
+
+        var result = await evaluator.EvaluateStallRulesAsync(torrentMock.Object);
+
+        Assert.False(result.ShouldRemove);
+        Assert.Equal(DeleteReason.None, result.Reason);
+        Assert.False(result.DeleteFromClient);
+    }
+
+    [Fact]
+    public async Task EvaluateStallRulesAsync_WhenRuleMatchesAndRemovesWithDeleteFromClientTrue_ShouldReturnTrue()
+    {
+        var ruleManagerMock = new Mock<IRuleManager>();
+        var strikerMock = new Mock<IStriker>();
+        using var memoryCache = new MemoryCache(new MemoryCacheOptions());
+        var loggerMock = new Mock<ILogger<RuleEvaluator>>();
+
+        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, memoryCache, loggerMock.Object);
+
+        var stallRule = CreateStallRule("Delete True Rule", resetOnProgress: false, maxStrikes: 3, deletePrivateTorrentsFromClient: true);
+
+        ruleManagerMock
+            .Setup(x => x.GetMatchingStallRule(It.IsAny<ITorrentItem>()))
+            .Returns(stallRule);
+
+        strikerMock
+            .Setup(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.Stalled))
+            .ReturnsAsync(true);
+
+        var torrentMock = CreateTorrentMock();
+
+        var result = await evaluator.EvaluateStallRulesAsync(torrentMock.Object);
+
+        Assert.True(result.ShouldRemove);
+        Assert.Equal(DeleteReason.Stalled, result.Reason);
+        Assert.True(result.DeleteFromClient);
+    }
+
+    [Fact]
+    public async Task EvaluateStallRulesAsync_WhenRuleMatchesAndRemovesWithDeleteFromClientFalse_ShouldReturnFalse()
+    {
+        var ruleManagerMock = new Mock<IRuleManager>();
+        var strikerMock = new Mock<IStriker>();
+        using var memoryCache = new MemoryCache(new MemoryCacheOptions());
+        var loggerMock = new Mock<ILogger<RuleEvaluator>>();
+
+        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, memoryCache, loggerMock.Object);
+
+        var stallRule = CreateStallRule("Delete False Rule", resetOnProgress: false, maxStrikes: 3, deletePrivateTorrentsFromClient: false);
+
+        ruleManagerMock
+            .Setup(x => x.GetMatchingStallRule(It.IsAny<ITorrentItem>()))
+            .Returns(stallRule);
+
+        strikerMock
+            .Setup(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.Stalled))
+            .ReturnsAsync(true);
+
+        var torrentMock = CreateTorrentMock();
+
+        var result = await evaluator.EvaluateStallRulesAsync(torrentMock.Object);
+
+        Assert.True(result.ShouldRemove);
+        Assert.Equal(DeleteReason.Stalled, result.Reason);
+        Assert.False(result.DeleteFromClient);
+    }
+
+    [Fact]
+    public async Task EvaluateSlowRulesAsync_WhenNoRuleMatches_ShouldReturnDeleteFromClientFalse()
+    {
+        var ruleManagerMock = new Mock<IRuleManager>();
+        var strikerMock = new Mock<IStriker>();
+        using var memoryCache = new MemoryCache(new MemoryCacheOptions());
+        var loggerMock = new Mock<ILogger<RuleEvaluator>>();
+
+        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, memoryCache, loggerMock.Object);
+
+        ruleManagerMock
+            .Setup(x => x.GetMatchingSlowRule(It.IsAny<ITorrentItem>()))
+            .Returns((SlowRule?)null);
+
+        var torrentMock = CreateTorrentMock();
+
+        var result = await evaluator.EvaluateSlowRulesAsync(torrentMock.Object);
+
+        Assert.False(result.ShouldRemove);
+        Assert.Equal(DeleteReason.None, result.Reason);
+        Assert.False(result.DeleteFromClient);
+    }
+
+    [Fact]
+    public async Task EvaluateSlowRulesAsync_WhenRuleMatchesAndRemovesWithDeleteFromClientTrue_ShouldReturnTrue()
+    {
+        var ruleManagerMock = new Mock<IRuleManager>();
+        var strikerMock = new Mock<IStriker>();
+        using var memoryCache = new MemoryCache(new MemoryCacheOptions());
+        var loggerMock = new Mock<ILogger<RuleEvaluator>>();
+
+        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, memoryCache, loggerMock.Object);
+
+        var slowRule = CreateSlowRule("Slow Delete True", resetOnProgress: false, maxStrikes: 3, maxTimeHours: 1, deletePrivateTorrentsFromClient: true);
+
+        ruleManagerMock
+            .Setup(x => x.GetMatchingSlowRule(It.IsAny<ITorrentItem>()))
+            .Returns(slowRule);
+
+        strikerMock
+            .Setup(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.SlowTime))
+            .ReturnsAsync(true);
+
+        var torrentMock = CreateTorrentMock();
+
+        var result = await evaluator.EvaluateSlowRulesAsync(torrentMock.Object);
+
+        Assert.True(result.ShouldRemove);
+        Assert.Equal(DeleteReason.SlowTime, result.Reason);
+        Assert.True(result.DeleteFromClient);
+    }
+
+    [Fact]
+    public async Task EvaluateSlowRulesAsync_WhenRuleMatchesAndRemovesWithDeleteFromClientFalse_ShouldReturnFalse()
+    {
+        var ruleManagerMock = new Mock<IRuleManager>();
+        var strikerMock = new Mock<IStriker>();
+        using var memoryCache = new MemoryCache(new MemoryCacheOptions());
+        var loggerMock = new Mock<ILogger<RuleEvaluator>>();
+
+        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, memoryCache, loggerMock.Object);
+
+        var slowRule = CreateSlowRule("Slow Delete False", resetOnProgress: false, maxStrikes: 3, maxTimeHours: 1, deletePrivateTorrentsFromClient: false);
+
+        ruleManagerMock
+            .Setup(x => x.GetMatchingSlowRule(It.IsAny<ITorrentItem>()))
+            .Returns(slowRule);
+
+        strikerMock
+            .Setup(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.SlowTime))
+            .ReturnsAsync(true);
+
+        var torrentMock = CreateTorrentMock();
+
+        var result = await evaluator.EvaluateSlowRulesAsync(torrentMock.Object);
+
+        Assert.True(result.ShouldRemove);
+        Assert.Equal(DeleteReason.SlowTime, result.Reason);
+        Assert.False(result.DeleteFromClient);
+    }
+
+    [Fact]
+    public async Task EvaluateSlowRulesAsync_SpeedBasedRuleWithDeleteFromClientTrue_ShouldReturnTrue()
+    {
+        var ruleManagerMock = new Mock<IRuleManager>();
+        var strikerMock = new Mock<IStriker>();
+        using var memoryCache = new MemoryCache(new MemoryCacheOptions());
+        var loggerMock = new Mock<ILogger<RuleEvaluator>>();
+
+        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, memoryCache, loggerMock.Object);
+
+        var slowRule = CreateSlowRule(
+            "Speed Delete True",
+            resetOnProgress: false,
+            maxStrikes: 3,
+            minSpeed: "5 MB",
+            maxTimeHours: 0,
+            deletePrivateTorrentsFromClient: true);
+
+        ruleManagerMock
+            .Setup(x => x.GetMatchingSlowRule(It.IsAny<ITorrentItem>()))
+            .Returns(slowRule);
+
+        strikerMock
+            .Setup(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.SlowSpeed))
+            .ReturnsAsync(true);
+
+        var torrentMock = CreateTorrentMock();
+        torrentMock.SetupGet(t => t.DownloadSpeed).Returns(ByteSize.Parse("1 MB").Bytes);
+
+        var result = await evaluator.EvaluateSlowRulesAsync(torrentMock.Object);
+
+        Assert.True(result.ShouldRemove);
+        Assert.Equal(DeleteReason.SlowSpeed, result.Reason);
+        Assert.True(result.DeleteFromClient);
+    }
+
+    [Fact]
+    public async Task EvaluateSlowRulesAsync_WhenRuleMatchesButNoRemoval_ShouldReturnDeleteFromClientFalse()
+    {
+        var ruleManagerMock = new Mock<IRuleManager>();
+        var strikerMock = new Mock<IStriker>();
+        using var memoryCache = new MemoryCache(new MemoryCacheOptions());
+        var loggerMock = new Mock<ILogger<RuleEvaluator>>();
+
+        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, memoryCache, loggerMock.Object);
+
+        var slowRule = CreateSlowRule("Test Slow Rule", resetOnProgress: false, maxStrikes: 3, maxTimeHours: 1, deletePrivateTorrentsFromClient: true);
+
+        ruleManagerMock
+            .Setup(x => x.GetMatchingSlowRule(It.IsAny<ITorrentItem>()))
+            .Returns(slowRule);
+
+        strikerMock
+            .Setup(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.SlowTime))
+            .ReturnsAsync(false);
+
+        var torrentMock = CreateTorrentMock();
+
+        var result = await evaluator.EvaluateSlowRulesAsync(torrentMock.Object);
+
+        Assert.False(result.ShouldRemove);
+        Assert.Equal(DeleteReason.None, result.Reason);
+        Assert.False(result.DeleteFromClient);
     }
 }

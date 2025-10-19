@@ -34,7 +34,7 @@ public class RuleEvaluator : IRuleEvaluator
             .SetSlidingExpiration(StaticConfiguration.TriggerValue + Constants.CacheLimitBuffer);
     }
 
-    public async Task<(bool ShouldRemove, DeleteReason Reason)> EvaluateStallRulesAsync(ITorrentItem torrent)
+    public async Task<(bool ShouldRemove, DeleteReason Reason, bool DeleteFromClient)> EvaluateStallRulesAsync(ITorrentItem torrent)
     {
         _logger.LogTrace("Evaluating stall rules | {name}", torrent.Name);
 
@@ -44,9 +44,9 @@ public class RuleEvaluator : IRuleEvaluator
         if (rule is null)
         {
             _logger.LogTrace("skip | no stall rules matched | {name}", torrent.Name);
-            return (false, DeleteReason.None);
+            return (false, DeleteReason.None, false);
         }
-        
+
         _logger.LogTrace("Applying stall rule {rule} | {name}", rule.Name, torrent.Name);
 
         await ResetStalledStrikesAsync(
@@ -65,14 +65,13 @@ public class RuleEvaluator : IRuleEvaluator
 
         if (shouldRemove)
         {
-            return (true, DeleteReason.Stalled);
+            return (true, DeleteReason.Stalled, rule.DeletePrivateTorrentsFromClient);
         }
 
-
-        return (false, DeleteReason.None);
+        return (false, DeleteReason.None, false);
     }
 
-    public async Task<(bool ShouldRemove, DeleteReason Reason)> EvaluateSlowRulesAsync(ITorrentItem torrent)
+    public async Task<(bool ShouldRemove, DeleteReason Reason, bool DeleteFromClient)> EvaluateSlowRulesAsync(ITorrentItem torrent)
     {
         _logger.LogTrace("Evaluating slow rules | {name}", torrent.Name);
 
@@ -82,7 +81,7 @@ public class RuleEvaluator : IRuleEvaluator
         if (rule is null)
         {
             _logger.LogDebug("skip | no slow rules matched | {name}", torrent.Name);
-            return (false, DeleteReason.None);
+            return (false, DeleteReason.None, false);
         }
 
         _logger.LogTrace("Applying slow rule {rule} | {name}", rule.Name, torrent.Name);
@@ -103,7 +102,7 @@ public class RuleEvaluator : IRuleEvaluator
 
                 if (shouldRemove)
                 {
-                    return (true, DeleteReason.SlowSpeed);
+                    return (true, DeleteReason.SlowSpeed, rule.DeletePrivateTorrentsFromClient);
                 }
             }
             else
@@ -128,7 +127,7 @@ public class RuleEvaluator : IRuleEvaluator
 
                 if (shouldRemove)
                 {
-                    return (true, DeleteReason.SlowTime);
+                    return (true, DeleteReason.SlowTime, rule.DeletePrivateTorrentsFromClient);
                 }
             }
             else
@@ -137,7 +136,7 @@ public class RuleEvaluator : IRuleEvaluator
             }
         }
 
-        return (false, DeleteReason.None);
+        return (false, DeleteReason.None, false);
     }
 
     private async Task ResetStalledStrikesAsync(

@@ -82,7 +82,8 @@ public sealed class QueueCleaner : GenericHandler
     protected override async Task ProcessInstanceAsync(ArrInstance instance, InstanceType instanceType)
     {
         List<string> ignoredDownloads = ContextProvider.Get<GeneralConfig>(nameof(GeneralConfig)).IgnoredDownloads;
-        ignoredDownloads.AddRange(ContextProvider.Get<QueueCleanerConfig>().IgnoredDownloads);
+        QueueCleanerConfig queueCleanerConfig = ContextProvider.Get<QueueCleanerConfig>();
+        ignoredDownloads.AddRange(queueCleanerConfig.IgnoredDownloads);
         
         using var _ = LogContext.PushProperty(LogProperties.Category, instanceType.ToString());
         
@@ -174,30 +175,46 @@ public sealed class QueueCleaner : GenericHandler
                         _logger.LogDebug("No torrent clients enabled");
                     }
                 }
-                
-                // failed import check
-                bool shouldRemoveFromArr = await arrClient.ShouldRemoveFromQueue(instanceType, record, downloadCheckResult.IsPrivate, instance.ArrConfig.FailedImportMaxStrikes);
-                DeleteReason deleteReason = downloadCheckResult.ShouldRemove ? downloadCheckResult.DeleteReason : DeleteReason.FailedImport;
-                
-                if (!shouldRemoveFromArr && !downloadCheckResult.ShouldRemove)
+
+                if (downloadCheckResult.ShouldRemove)
                 {
-                    _logger.LogInformation("skip | {title}", record.Title);
+                    bool removeFromClient = !downloadCheckResult.IsPrivate || downloadCheckResult.DeleteFromClient;
+                    
+                    await PublishQueueItemRemoveRequest(
+                        downloadRemovalKey,
+                        instanceType,
+                        instance,
+                        record,
+                        group.Count() > 1,
+                        removeFromClient,
+                        downloadCheckResult.DeleteReason
+                    );
+                    
                     continue;
                 }
-
-                // With rule-based evaluation, the decision to remove from client is handled by the rules themselves
-                // The rules determine both whether to remove and whether to delete from client based on their configuration
-                bool removeFromClient = true;
                 
-                await PublishQueueItemRemoveRequest(
-                    downloadRemovalKey,
-                    instanceType,
-                    instance,
-                    record,
-                    group.Count() > 1,
-                    removeFromClient,
-                    deleteReason
-                );
+                // failed import check
+                bool shouldRemoveFromArr = await arrClient
+                    .ShouldRemoveFromQueue(instanceType, record, downloadCheckResult.IsPrivate, instance.ArrConfig.FailedImportMaxStrikes);
+
+                if (shouldRemoveFromArr)
+                {
+                    bool removeFromClient = !downloadCheckResult.IsPrivate || queueCleanerConfig.FailedImport.DeletePrivate;
+                    
+                    await PublishQueueItemRemoveRequest(
+                        downloadRemovalKey,
+                        instanceType,
+                        instance,
+                        record,
+                        group.Count() > 1,
+                        removeFromClient,
+                        DeleteReason.FailedImport
+                    );
+
+                    continue;
+                }
+                
+                _logger.LogDebug("skip | {title}", record.Title);
             }
         });
     }
