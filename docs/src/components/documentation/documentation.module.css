@@ -89,13 +89,13 @@
 
 /* Section Container */
 .section {
-  margin: 0;
+  margin: var(--doc-spacing-md) 0;
   border-radius: var(--doc-radius-md);
   scroll-margin-top: 100px;
-  transition: background 0.3s ease, box-shadow 0.3s ease;
-  /* Reserve space for potential border to prevent layout shift */
-  border: 2px solid transparent;
+  transition: background 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+  border: 2px solid var(--doc-primary-light);
   padding: var(--doc-spacing-md);
+  background: var(--doc-bg-secondary);
 }
 
 .section.highlighted {
@@ -118,8 +118,8 @@
     box-shadow: 0 0 0 4px rgba(255, 193, 7, 0.1);
   }
   100% {
-    background: transparent;
-    border-color: transparent;
+    background: var(--doc-bg-secondary);
+    border-color: var(--doc-primary-light);
     box-shadow: none;
   }
 }
@@ -131,8 +131,8 @@
     box-shadow: 0 0 0 4px rgba(255, 193, 7, 0.15);
   }
   100% {
-    background: transparent;
-    border-color: transparent;
+    background: var(--doc-bg-secondary);
+    border-color: var(--doc-primary-light);
     box-shadow: none;
   }
 }
