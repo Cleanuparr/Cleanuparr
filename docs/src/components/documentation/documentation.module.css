@@ -164,12 +164,12 @@
 /* Configuration Cards */
 .configSection {
   background: var(--doc-bg-secondary);
-  border: 1px solid var(--doc-border-color);
+  border: 2px solid var(--doc-border-color);
   border-radius: var(--doc-radius-sm);
   padding: 0.75rem 1rem;
   margin: 0.5rem 0;
   box-shadow: var(--doc-shadow-sm);
-  transition: all 0.3s ease;
+  transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease;
   scroll-margin-top: 100px;
 }
 
@@ -180,35 +180,41 @@
 }
 
 .configSection.highlighted {
-  background: #fff3cd;
+  background: rgba(255, 193, 7, 0.08);
   border-color: #ffc107;
+  box-shadow: 0 0 0 4px rgba(255, 193, 7, 0.1);
   animation: highlightFade 2s ease-in-out forwards;
 }
 
 [data-theme='dark'] .configSection.highlighted {
-  background: rgba(255, 193, 7, 0.2);
+  background: rgba(255, 193, 7, 0.12);
   border-color: #ffc107;
+  box-shadow: 0 0 0 4px rgba(255, 193, 7, 0.15);
 }
 
 @keyframes highlightFade {
   0% {
-    background: #fff3cd;
+    background: rgba(255, 193, 7, 0.08);
     border-color: #ffc107;
+    box-shadow: 0 0 0 4px rgba(255, 193, 7, 0.1);
   }
   100% {
     background: var(--doc-bg-secondary);
     border-color: var(--doc-border-color);
+    box-shadow: var(--doc-shadow-sm);
   }
 }
 
 [data-theme='dark'] @keyframes highlightFade {
   0% {
-    background: rgba(255, 193, 7, 0.2);
+    background: rgba(255, 193, 7, 0.12);
     border-color: #ffc107;
+    box-shadow: 0 0 0 4px rgba(255, 193, 7, 0.15);
   }
   100% {
     background: var(--doc-bg-secondary);
     border-color: var(--doc-border-color);
+    box-shadow: var(--doc-shadow-sm);
   }
 }
 
