@@ -62,7 +62,7 @@ export class ApplicationPathService {
     let url = `${baseUrl}/docs/configuration/${section}`;
 
     if (fieldAnchor) {
-      url += `?p=${fieldAnchor}`;
+      url += `?${fieldAnchor}`;
     }
 
     return url;

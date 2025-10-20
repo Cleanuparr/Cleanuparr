@@ -4,7 +4,7 @@ import styles from './documentation.module.css';
 
 /**
  * Component that handles navigation to specific fields and sections via query parameters
- * Usage: Add ?p=element-id to the URL to scroll to and highlight that element
+ * Usage: Add ?element-id to the URL to scroll to and highlight that element
  */
 export default function ElementNavigator() {
   const location = useLocation();
@@ -12,7 +12,10 @@ export default function ElementNavigator() {
   useEffect(() => {
     // Parse query parameters
     const params = new URLSearchParams(location.search);
-    const elementId = params.get('p');
+
+    // Use the first query parameter key as the element ID
+    const firstParam = params.keys().next();
+    const elementId = firstParam.done ? null : firstParam.value;
 
     if (!elementId) {
       return;
