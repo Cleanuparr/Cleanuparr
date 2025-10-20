@@ -4,8 +4,8 @@ sidebar_position: 3
 
 import {
   ConfigSection,
-  EnhancedImportant,
-  EnhancedWarning,
+  Important,
+  Warning,
   FieldNavigator,
   styles
 } from '@site/src/components/documentation';
@@ -113,9 +113,9 @@ Number of strikes before a failed import download is removed from the queue. Set
 
 When enabled, private torrents will be skipped during failed import cleaning. This is useful if you want to preserve private tracker content even when imports fail.
 
-<EnhancedImportant>
+<Important>
 This setting needs a download client to be configured.
-</EnhancedImportant>
+</Important>
 
 </ConfigSection>
 
@@ -127,13 +127,13 @@ This setting needs a download client to be configured.
 
 When enabled, private torrents that reach the maximum strikes will be deleted from the download client. Use with caution as this will permanently remove the download.
 
-<EnhancedWarning>
+<Warning>
 Setting this to true means private torrents will be permanently deleted, potentially affecting your private tracker account by receiving H&R if the seeding requirements are not met.
-</EnhancedWarning>
+</Warning>
 
-<EnhancedImportant>
+<Important>
 This setting needs a download client to be configured.
-</EnhancedImportant>
+</Important>
 
 </ConfigSection>
 
@@ -182,9 +182,9 @@ These patterns can be any substring of the failed import messages. These messsag
   Stalled downloads are those that have stopped downloading and show no progress. You can create multiple rules to handle different scenarios based on completion percentage and torrent privacy.
 </p>
 
-<EnhancedImportant>
+<Important>
 These settings need a download client to be configured.
-</EnhancedImportant>
+</Important>
 
 <ConfigSection
   id="stall-rule-name"
@@ -271,9 +271,9 @@ Only reset strikes after the torrent downloads at least this amount of data. Lea
 
 When enabled, private torrents that reach the maximum strikes will be deleted from the download client. When disabled, they'll only be removed from the *arr queue but remain in your download client.
 
-<EnhancedWarning>
-Enabling this means private torrents will be permanently deleted from your download client, potentially affecting your private tracker account if seeding requirements aren't met.
-</EnhancedWarning>
+<Warning>
+Setting this to true means private torrents will be permanently deleted, potentially affecting your private tracker account by receiving H&R if the seeding requirements are not met.
+</Warning>
 
 </ConfigSection>
 
@@ -300,9 +300,9 @@ Number of strikes before a download stuck in "Downloading Metadata" state is rem
   Slow downloads are those downloading below a specified speed threshold. You can create multiple rules to handle different scenarios based on speed, time limits, file size, completion percentage, and torrent privacy.
 </p>
 
-<EnhancedImportant>
+<Important>
 These settings need a download client to be configured.
-</EnhancedImportant>
+</Important>
 
 <ConfigSection
   id="slow-rule-name"
@@ -409,9 +409,9 @@ When enabled, the strike count resets to zero if the download speed improves abo
 
 When enabled, private torrents that reach the maximum strikes will be deleted from the download client. When disabled, they'll only be removed from the *arr queue but remain in your download client.
 
-<EnhancedWarning>
-Enabling this means private torrents will be permanently deleted from your download client, potentially affecting your private tracker account if seeding requirements aren't met.
-</EnhancedWarning>
+<Warning>
+Setting this to true means private torrents will be permanently deleted, potentially affecting your private tracker account by receiving H&R if the seeding requirements are not met.
+</Warning>
 
 </ConfigSection>
 

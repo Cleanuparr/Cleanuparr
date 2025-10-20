@@ -4,8 +4,8 @@ sidebar_position: 1
 
 import {
   ConfigSection,
-  EnhancedNote,
-  EnhancedWarning,
+  Note,
+  Warning,
   FieldNavigator,
   styles
 } from '@site/src/components/documentation';
@@ -106,9 +106,9 @@ SSL certificate validation for HTTPS connections.
 
 Automatically search for replacements after removing downloads from *arr apps.
 
-<EnhancedNote>
+<Note>
 If using [Huntarr](https://github.com/plexguide/Huntarr.io), disable this to let Huntarr handle searching.
-</EnhancedNote>
+</Note>
 
 </ConfigSection>
 
@@ -120,9 +120,9 @@ If using [Huntarr](https://github.com/plexguide/Huntarr.io), disable this to let
 
 Seconds to wait before triggering replacement searches. Prevents overwhelming indexers with rapid requests.
 
-<EnhancedWarning>
+<Warning>
 A lower value will result in faster searches, but may cause issues such as being rate limited or banned by the indexer.
-</EnhancedWarning>
+</Warning>
 
 </ConfigSection>
 
@@ -216,9 +216,9 @@ Maximum age for non-archived logs. Older files are removed or archived based on 
 
 Archive old log files instead of deleting them. Preserves history while reducing disk usage through compression.
 
-<EnhancedNote>
+<Note>
 Recommended if Cleanuparr generates many logs on your setup.
-</EnhancedNote>
+</Note>
 
 </ConfigSection>
 

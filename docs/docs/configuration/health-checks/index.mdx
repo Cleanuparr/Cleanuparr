@@ -4,8 +4,8 @@ sidebar_position: 8
 
 import {
   ConfigSection,
-  EnhancedImportant,
-  EnhancedWarning,
+  Important,
+  Warning,
   FieldNavigator,
   styles
 } from '@site/src/components/documentation';
@@ -120,9 +120,9 @@ curl http://localhost:11011/health/detailed
 - Validates working directory access
 - Used for readiness probes
 
-<EnhancedImportant>
+<Important>
 File write tests are not performed during health checks to avoid creating temporary files on every check.
-</EnhancedImportant>
+</Important>
 
 </ConfigSection>
 

@@ -4,9 +4,9 @@ sidebar_position: 4
 
 import {
   ConfigSection,
-  EnhancedNote,
-  EnhancedImportant,
-  EnhancedWarning,
+  Note,
+  Important,
+  Warning,
   FieldNavigator,
   styles
 } from '@site/src/components/documentation';
@@ -19,9 +19,9 @@ The Download Cleaner automatically removes downloads from your download client a
 
 <div className={styles.documentationPage}>
 
-<EnhancedImportant>
+<Important>
 These settings need a download client to be configured.
-</EnhancedImportant>
+</Important>
 
 <div className={styles.section}>
 
@@ -111,9 +111,9 @@ mytracker.com
 
 When enabled, private torrents will be deleted from the download client when they meet the cleanup criteria. Use with caution as this permanently removes the download.
 
-<EnhancedWarning>
+<Warning>
 Setting this to true means private torrents will be permanently deleted, potentially affecting your private tracker account by receiving H&R if the seeding requirements are not met.
-</EnhancedWarning>
+</Warning>
 
 </ConfigSection>
 
@@ -130,13 +130,13 @@ Setting this to true means private torrents will be permanently deleted, potenti
   Categories define the cleanup rules for different types of downloads. Each category specifies when downloads should be removed based on ratio and time limits.
 </p>
 
-<EnhancedNote>
+<Note>
 A download is cleaned when both `Max Ratio` and `Min Seed Time` are reached, OR when `Max Seed Time` is reached regardless of ratio.
-</EnhancedNote>
+</Note>
 
-<EnhancedImportant>
+<Important>
 Both Max Ratio and Max Seed Time cannot be disabled (-1) at the same time. At least one cleanup condition must be configured.
-</EnhancedImportant>
+</Important>
 
 <ConfigSection
   id="category-name"
@@ -204,9 +204,9 @@ Maximum time in hours to seed before removing a download regardless of ratio. Se
 
 Enable management of downloads that have no hardlinks remaining. This helps identify downloads that are no longer needed by your *arr applications.
 
-<EnhancedImportant>
+<Important>
 If you are using Docker, make sure to mount the downloads directory the same way it is mounted for the download client. If your download client's download directory is `/downloads`, it should be the same for Cleanuparr.
-</EnhancedImportant>
+</Important>
 
 </ConfigSection>
 
