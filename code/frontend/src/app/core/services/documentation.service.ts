@@ -54,15 +54,13 @@ export class DocumentationService {
       'httpCertificateValidation': 'http-certificate-validation',
       'searchEnabled': 'search-enabled',
       'searchDelay': 'search-delay',
-      'enableBlacklistSync': 'enable-blacklist-sync',
-      'blacklistPath': 'blacklist-path',
       'log.level': 'log-level',
-      'log.rollingSizeMB': 'log-rolling-size-mb',
-      'log.retainedFileCount': 'log-retained-file-count',
-      'log.timeLimitHours': 'log-time-limit-hours',
-      'log.archiveEnabled': 'log-archive-enabled',
-      'log.archiveRetainedCount': 'log-archive-retained-count',
-      'log.archiveTimeLimitHours': 'log-archive-time-limit-hours',
+      'log.rollingSizeMB': 'rolling-size-mb',
+      'log.retainedFileCount': 'retained-file-count',
+      'log.timeLimitHours': 'time-limit',
+      'log.archiveEnabled': 'archive-enabled',
+      'log.archiveRetainedCount': 'archive-retained-count',
+      'log.archiveTimeLimitHours': 'archive-time-limit',
       'ignoredDownloads': 'ignored-downloads'
     },
     'download-cleaner': {
@@ -70,8 +68,6 @@ export class DocumentationService {
       'ignoredDownloads': 'ignored-downloads',
       'useAdvancedScheduling': 'scheduling-mode',
       'cronExpression': 'cron-expression',
-      'jobSchedule.every': 'run-schedule',
-      'jobSchedule.type': 'run-schedule',
       'deletePrivate': 'delete-private-torrents',
       'name': 'category-name',
       'maxRatio': 'max-ratio',
@@ -88,20 +84,18 @@ export class DocumentationService {
       'ignoredDownloads': 'ignored-downloads',
       'useAdvancedScheduling': 'scheduling-mode',
       'cronExpression': 'cron-expression',
-      'jobSchedule.every': 'run-schedule',
-      'jobSchedule.type': 'run-schedule',
       'ignorePrivate': 'ignore-private',
       'deletePrivate': 'delete-private',
       'deleteKnownMalware': 'delete-known-malware',
-      'sonarr.enabled': 'enable-sonarr-blocklist',
-      'sonarr.blocklistPath': 'sonarr-blocklist-path',
-      'sonarr.blocklistType': 'sonarr-blocklist-type',
-      'radarr.enabled': 'enable-radarr-blocklist',
-      'radarr.blocklistPath': 'radarr-blocklist-path',
-      'radarr.blocklistType': 'radarr-blocklist-type',
-      'lidarr.enabled': 'enable-lidarr-blocklist',
-      'lidarr.blocklistPath': 'lidarr-blocklist-path',
-      'lidarr.blocklistType': 'lidarr-blocklist-type'
+      'sonarr.enabled': 'enable-blocklist',
+      'sonarr.blocklistPath': 'blocklist-path',
+      'sonarr.blocklistType': 'blocklist-type',
+      'radarr.enabled': 'enable-blocklist',
+      'radarr.blocklistPath': 'blocklist-path',
+      'radarr.blocklistType': 'blocklist-type',
+      'lidarr.enabled': 'enable-blocklist',
+      'lidarr.blocklistPath': 'blocklist-path',
+      'lidarr.blocklistType': 'blocklist-type'
     },
     'download-client': {
       'enabled': 'enable-download-client',
@@ -112,10 +106,14 @@ export class DocumentationService {
       'username': 'username',
       'password': 'password'
     },
+    'blacklist-sync': {
+      'enabled': 'enable-blacklist-sync',
+      'blacklistPath': 'blacklist-path'
+    },
     'notifications': {
       'enabled': 'enabled',
       'name': 'provider-name',
-      'eventTriggers': 'event-triggers'
+      'eventTriggers': 'event-configuration'
     },
     'notifications/notifiarr': {
       'notifiarr.apiKey': 'api-key',
@@ -136,9 +134,6 @@ export class DocumentationService {
       'ntfy.priority': 'priority',
       'ntfy.tags': 'tags'
     },
-    'notifications/events': {
-      'eventTriggers': 'event-triggers'
-    }
   };
 
   constructor(private applicationPathService: ApplicationPathService) {}
