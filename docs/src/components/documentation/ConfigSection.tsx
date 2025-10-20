@@ -1,5 +1,6 @@
 import React from 'react';
 import styles from './documentation.module.css';
+import { generateIdFromTitle } from './utils';
 
 interface ConfigSectionProps {
   id?: string;
@@ -9,19 +10,6 @@ interface ConfigSectionProps {
   badge?: 'required' | 'optional' | 'advanced';
   children: React.ReactNode;
   className?: string;
-}
-
-/**
- * Generates a URL-friendly ID from a title string
- * Example: "Client Host" -> "client-host"
- */
-function generateIdFromTitle(title: string): string {
-  return title
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, '') // Remove special characters
-    .replace(/\s+/g, '-')          // Replace spaces with hyphens
-    .replace(/-+/g, '-')           // Replace multiple hyphens with single
-    .trim();
 }
 
 export default function ConfigSection({
