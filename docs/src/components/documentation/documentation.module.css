@@ -120,9 +120,9 @@
 .configSection {
   background: var(--doc-bg-secondary);
   border: 1px solid var(--doc-border-color);
-  border-radius: var(--doc-radius-md);
-  padding: var(--doc-spacing-sm);
-  margin: var(--doc-spacing-sm) 0;
+  border-radius: var(--doc-radius-sm);
+  padding: 0.75rem 1rem;
+  margin: 0.5rem 0;
   box-shadow: var(--doc-shadow-sm);
   transition: all 0.3s ease;
   scroll-margin-top: 100px;
@@ -131,29 +131,62 @@
 .configSection:hover {
   border-color: var(--doc-border-hover);
   box-shadow: var(--doc-shadow-md);
-  transform: translateY(-2px);
+  transform: translateY(-1px);
+}
+
+.configSection.highlighted {
+  background: #fff3cd;
+  border-color: #ffc107;
+  animation: highlightFade 2s ease-in-out forwards;
+}
+
+[data-theme='dark'] .configSection.highlighted {
+  background: rgba(255, 193, 7, 0.2);
+  border-color: #ffc107;
+}
+
+@keyframes highlightFade {
+  0% {
+    background: #fff3cd;
+    border-color: #ffc107;
+  }
+  100% {
+    background: var(--doc-bg-secondary);
+    border-color: var(--doc-border-color);
+  }
+}
+
+[data-theme='dark'] @keyframes highlightFade {
+  0% {
+    background: rgba(255, 193, 7, 0.2);
+    border-color: #ffc107;
+  }
+  100% {
+    background: var(--doc-bg-secondary);
+    border-color: var(--doc-border-color);
+  }
 }
 
 .configHeader {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  margin-bottom: var(--doc-spacing-md);
-  gap: var(--doc-spacing-md);
+  margin-bottom: 0.5rem;
+  gap: 0.75rem;
 }
 
 .configTitle {
-  font-size: 1.5rem;
+  font-size: 1.25rem;
   font-weight: 600;
   color: var(--doc-text-primary);
   margin: 0;
   display: flex;
   align-items: center;
-  gap: var(--doc-spacing-sm);
+  gap: 0.5rem;
 }
 
 .configIcon {
-  font-size: 1.25rem;
+  font-size: 1.1rem;
   color: var(--doc-primary);
   opacity: 0.8;
 }
@@ -161,9 +194,9 @@
 .configBadge {
   background: var(--doc-primary);
   color: white;
-  padding: 0.25rem 0.75rem;
+  padding: 0.2rem 0.6rem;
   border-radius: 50px;
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -185,8 +218,9 @@
 
 .configDescription {
   color: var(--doc-text-secondary);
-  line-height: 1.6;
-  margin: 0 0 var(--doc-spacing-md) 0;
+  line-height: 1.5;
+  margin: 0 0 0.5rem 0;
+  font-size: 0.95rem;
 }
 
 /* Enhanced Code Blocks */
