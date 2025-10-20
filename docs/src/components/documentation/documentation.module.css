@@ -89,7 +89,7 @@
 
 /* Section Container */
 .section {
-  margin: var(--doc-spacing-md) 0;
+  margin: 0;
   border-radius: var(--doc-radius-md);
   scroll-margin-top: 100px;
   transition: background 0.3s ease, box-shadow 0.3s ease;
@@ -171,6 +171,10 @@
   box-shadow: var(--doc-shadow-sm);
   transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease;
   scroll-margin-top: 100px;
+}
+
+.configSection p {
+  margin-bottom: 0;
 }
 
 .configSection:hover {
