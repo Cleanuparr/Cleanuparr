@@ -90,6 +90,51 @@
 /* Section Container */
 .section {
   margin: var(--doc-spacing-md) 0;
+  border-radius: var(--doc-radius-md);
+  scroll-margin-top: 100px;
+  transition: background 0.3s ease, box-shadow 0.3s ease;
+  /* Reserve space for potential border to prevent layout shift */
+  border: 2px solid transparent;
+  padding: var(--doc-spacing-md);
+}
+
+.section.highlighted {
+  background: rgba(255, 193, 7, 0.08);
+  border-color: #ffc107;
+  box-shadow: 0 0 0 4px rgba(255, 193, 7, 0.1);
+  animation: sectionHighlightFade 2s ease-in-out forwards;
+}
+
+[data-theme='dark'] .section.highlighted {
+  background: rgba(255, 193, 7, 0.12);
+  border-color: #ffc107;
+  box-shadow: 0 0 0 4px rgba(255, 193, 7, 0.15);
+}
+
+@keyframes sectionHighlightFade {
+  0% {
+    background: rgba(255, 193, 7, 0.08);
+    border-color: #ffc107;
+    box-shadow: 0 0 0 4px rgba(255, 193, 7, 0.1);
+  }
+  100% {
+    background: transparent;
+    border-color: transparent;
+    box-shadow: none;
+  }
+}
+
+[data-theme='dark'] @keyframes sectionHighlightFade {
+  0% {
+    background: rgba(255, 193, 7, 0.12);
+    border-color: #ffc107;
+    box-shadow: 0 0 0 4px rgba(255, 193, 7, 0.15);
+  }
+  100% {
+    background: transparent;
+    border-color: transparent;
+    box-shadow: none;
+  }
 }
 
 .sectionTitle {
