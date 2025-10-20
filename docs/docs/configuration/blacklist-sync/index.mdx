@@ -6,7 +6,8 @@ import {
   ConfigSection,
   Note,
   Warning,
-  FieldNavigator,
+  ElementNavigator,
+  SectionTitle,
   styles
 } from '@site/src/components/documentation';
 
@@ -14,19 +15,15 @@ import {
 
 The Blacklist Synchronizer automatically synchronizes blacklist entries to all enabled qBittorrent clients every hour. This helps maintain consistent content filtering across your download clients.
 
-<FieldNavigator />
+<ElementNavigator />
 
 <div className={styles.documentationPage}>
 
 <div className={styles.section}>
 
-<h2 id="blacklist-sync" className={styles.sectionTitle}>
-  <span className={styles.sectionIcon}>⛔</span>
-  Blacklist Sync
-  </h2>
+<SectionTitle icon="⛔">Blacklist Sync</SectionTitle>
 
-<ConfigSection 
-  id="enable-blacklist-sync"
+<ConfigSection
   title="Enable Blacklist Sync"
   icon="✅"
 >
@@ -40,7 +37,6 @@ This feature updates the qBittorrent "Excluded file names" setting, but does not
 </ConfigSection>
 
 <ConfigSection
-  id="blacklist-path"
   title="Blacklist Path"
   icon="🗂️"
 >

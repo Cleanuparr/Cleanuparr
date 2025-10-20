@@ -11,18 +11,34 @@ interface ConfigSectionProps {
   className?: string;
 }
 
-export default function ConfigSection({ 
-  id, 
-  title, 
-  description, 
-  icon, 
-  badge, 
-  children, 
-  className 
+/**
+ * Generates a URL-friendly ID from a title string
+ * Example: "Client Host" -> "client-host"
+ */
+function generateIdFromTitle(title: string): string {
+  return title
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '') // Remove special characters
+    .replace(/\s+/g, '-')          // Replace spaces with hyphens
+    .replace(/-+/g, '-')           // Replace multiple hyphens with single
+    .trim();
+}
+
+export default function ConfigSection({
+  id,
+  title,
+  description,
+  icon,
+  badge,
+  children,
+  className
 }: ConfigSectionProps) {
+  // Generate ID from title if not provided
+  const elementId = id || generateIdFromTitle(title);
+
   return (
-    <section 
-      id={id} 
+    <section
+      id={elementId}
       className={`${styles.configSection} ${className || ''}`}
     >
       <div className={styles.configHeader}>

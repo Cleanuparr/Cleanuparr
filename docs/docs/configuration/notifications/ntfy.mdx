@@ -4,7 +4,8 @@ sidebar_position: 3
 
 import {
   ConfigSection,
-  FieldNavigator,
+  ElementNavigator,
+  SectionTitle,
   styles
 } from '@site/src/components/documentation';
 
@@ -12,23 +13,19 @@ import {
 
 ntfy is a simple HTTP-based pub-sub notification service. You can use the public service at ntfy.sh or run your own server.
 
-<FieldNavigator />
+<ElementNavigator />
 
 <div className={styles.documentationPage}>
 
 <div className={styles.section}>
 
-<h2 id="configuration" className={styles.sectionTitle}>
-  <span className={styles.sectionIcon}>🔔</span>
-  Configuration
-</h2>
+<SectionTitle icon="🔔">Configuration</SectionTitle>
 
 <p className={styles.sectionDescription}>
   Configure ntfy to send push notifications to your devices.
 </p>
 
 <ConfigSection
-  id="ntfy-server-url"
   title="Server URL"
   icon="🌐"
 >
@@ -38,7 +35,6 @@ The URL of your ntfy server. Use `https://ntfy.sh` for the public service or you
 </ConfigSection>
 
 <ConfigSection
-  id="ntfy-topics"
   title="Topics"
   icon="📢"
 >
@@ -48,7 +44,6 @@ The ntfy topics you want to publish to. You can specify multiple topics to send 
 </ConfigSection>
 
 <ConfigSection
-  id="ntfy-authentication-type"
   title="Authentication Type"
   icon="🔐"
 >
@@ -61,7 +56,6 @@ Choose how to authenticate with the ntfy server:
 </ConfigSection>
 
 <ConfigSection
-  id="ntfy-username"
   title="Username"
   icon="👤"
 >
@@ -71,7 +65,6 @@ Your username for basic authentication. Required when using Basic Auth authentic
 </ConfigSection>
 
 <ConfigSection
-  id="ntfy-password"
   title="Password"
   icon="🔑"
 >
@@ -81,7 +74,6 @@ Your password for basic authentication. Required when using Basic Auth authentic
 </ConfigSection>
 
 <ConfigSection
-  id="ntfy-access-token"
   title="Access Token"
   icon="🎫"
 >
@@ -91,7 +83,6 @@ Your access token for bearer token authentication. Required when using Access To
 </ConfigSection>
 
 <ConfigSection
-  id="ntfy-priority"
   title="Priority"
   icon="🔥"
 >
@@ -108,7 +99,6 @@ Reference: https://docs.ntfy.sh/publish/#message-priority
 </ConfigSection>
 
 <ConfigSection
-  id="ntfy-tags"
   title="Tags"
   icon="🏷️"
 >

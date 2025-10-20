@@ -4,7 +4,8 @@ sidebar_position: 6
 
 import {
   ConfigSection,
-  FieldNavigator,
+  SectionTitle,
+  ElementNavigator,
   styles
 } from '@site/src/components/documentation';
 
@@ -12,14 +13,13 @@ import {
 
 Configure download client connections for torrents. Cleanuparr supports qBittorrent, Deluge, Transmission and µTorrent download clients.
 
-<FieldNavigator />
+<ElementNavigator />
 
 <div className={styles.documentationPage}>
 
 <div className={styles.section}>
 
 <ConfigSection
-  id="enable-download-client"
   title="Enable Download Client"
   icon="🔄"
 >
@@ -37,7 +37,6 @@ Controls whether this download client instance is active and will be used by Cle
 </ConfigSection>
 
 <ConfigSection
-  id="client-name"
   title="Client Name"
   icon="🏷️"
 >
@@ -47,7 +46,6 @@ A descriptive name to identify this download client instance in the Cleanuparr i
 </ConfigSection>
 
 <ConfigSection
-  id="client-type"
   title="Client Type"
   icon="📱"
 >
@@ -60,13 +58,11 @@ Specifies which download client software this configuration connects to.
 
 <div className={styles.section}>
 
-<h2 id="connection-settings" className={styles.sectionTitle}>
-  <span className={styles.sectionIcon}>🌐</span>
+<SectionTitle icon="🌐">
   Connection Settings
-</h2>
+</SectionTitle>
 
 <ConfigSection
-  id="client-host"
   title="Client Host"
   icon="🖥️"
 >
@@ -84,7 +80,6 @@ The complete URL to access your download client's web interface.
 </ConfigSection>
 
 <ConfigSection
-  id="url-base-path"
   title="URL Base Path"
   icon="📂"
 >
@@ -107,13 +102,11 @@ URL path prefix if your download client runs behind a reverse proxy with a subpa
 
 <div className={styles.section}>
 
-<h2 id="authentication" className={styles.sectionTitle}>
-  <span className={styles.sectionIcon}>🔐</span>
+<SectionTitle icon="🔐">
   Authentication
-</h2>
+</SectionTitle>
 
 <ConfigSection
-  id="username"
   title="Username"
   icon="👤"
 >
@@ -123,7 +116,6 @@ Username for download client authentication if required.
 </ConfigSection>
 
 <ConfigSection
-  id="password"
   title="Password"
   icon="🔑"
 >

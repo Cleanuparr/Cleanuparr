@@ -5,7 +5,8 @@ sidebar_position: 2
 import {
   ConfigSection,
   Important,
-  FieldNavigator,
+  ElementNavigator,
+  SectionTitle,
   styles
 } from '@site/src/components/documentation';
 
@@ -13,23 +14,19 @@ import {
 
 Notifiarr is a notification service that can send alerts to Discord.
 
-<FieldNavigator />
+<ElementNavigator />
 
 <div className={styles.documentationPage}>
 
 <div className={styles.section}>
 
-<h2 id="configuration" className={styles.sectionTitle}>
-  <span className={styles.sectionIcon}>🚀</span>
-  Configuration
-</h2>
+<SectionTitle icon="🚀">Configuration</SectionTitle>
 
 <p className={styles.sectionDescription}>
   Configure Notifiarr to send notifications to your Discord server.
 </p>
 
 <ConfigSection
-  id="notifiarr-api-key"
   title="Notifiarr API Key"
   icon="🔑"
 >
@@ -43,7 +40,6 @@ Requires Notifiarr's [Passthrough](https://notifiarr.wiki/pages/integrations/pas
 </ConfigSection>
 
 <ConfigSection
-  id="notifiarr-channel-id"
   title="Notifiarr Channel ID"
   icon="💬"
 >

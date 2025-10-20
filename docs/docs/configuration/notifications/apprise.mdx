@@ -4,7 +4,8 @@ sidebar_position: 1
 
 import {
   ConfigSection,
-  FieldNavigator,
+  ElementNavigator,
+  SectionTitle,
   styles
 } from '@site/src/components/documentation';
 
@@ -12,23 +13,19 @@ import {
 
 Apprise is a universal notification library that supports over 80 different notification services.
 
-<FieldNavigator />
+<ElementNavigator />
 
 <div className={styles.documentationPage}>
 
 <div className={styles.section}>
 
-<h2 id="configuration" className={styles.sectionTitle}>
-  <span className={styles.sectionIcon}>📡</span>
-  Configuration
-</h2>
+<SectionTitle icon="📡">Configuration</SectionTitle>
 
 <p className={styles.sectionDescription}>
   Configure Apprise to send notifications through any of its supported services.
 </p>
 
 <ConfigSection
-  id="apprise-url"
   title="Apprise URL"
   icon="🌐"
 >
@@ -38,7 +35,6 @@ The Apprise server URL where notification requests will be sent.
 </ConfigSection>
 
 <ConfigSection
-  id="apprise-key"
   title="Apprise Key"
   icon="🔐"
 >
@@ -48,7 +44,6 @@ The key that identifies your Apprise configuration. This corresponds to a config
 </ConfigSection>
 
 <ConfigSection
-  id="apprise-tags"
   title="Apprise Tags"
   icon="🏷️"
 >

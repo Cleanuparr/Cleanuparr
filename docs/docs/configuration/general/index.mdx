@@ -6,7 +6,8 @@ import {
   ConfigSection,
   Note,
   Warning,
-  FieldNavigator,
+  ElementNavigator,
+  SectionTitle,
   styles
 } from '@site/src/components/documentation';
 
@@ -14,19 +15,15 @@ import {
 
 General configuration settings that apply to the entire Cleanuparr application.
 
-<FieldNavigator />
+<ElementNavigator />
 
 <div className={styles.documentationPage}>
 
 <div className={styles.section}>
 
-<h2 id="system-settings" className={styles.sectionTitle}>
-  <span className={styles.sectionIcon}>⚙️</span>
-  System Settings
-</h2>
+<SectionTitle icon="⚙️">System Settings</SectionTitle>
 
 <ConfigSection
-  id="display-support-banner"
   title="Display Support Banner"
   icon="🎗️"
 >
@@ -36,7 +33,6 @@ Shows the support section on the dashboard with links to GitHub and sponsors.
 </ConfigSection>
 
 <ConfigSection
-  id="dry-run"
   title="Dry Run"
   icon="🧪"
 >
@@ -49,13 +45,9 @@ Logs all operations without making changes. Test your configuration safely befor
 
 <div className={styles.section}>
 
-<h2 id="http-configuration" className={styles.sectionTitle}>
-  <span className={styles.sectionIcon}>🌐</span>
-  HTTP Configuration
-</h2>
+<SectionTitle icon="🌐">HTTP Configuration</SectionTitle>
 
 <ConfigSection
-  id="http-max-retries"
   title="HTTP Max Retries"
   icon="🔄"
 >
@@ -65,7 +57,6 @@ Number of retry attempts for failed HTTP requests to *arrs, download clients, an
 </ConfigSection>
 
 <ConfigSection
-  id="http-timeout"
   title="HTTP Timeout"
   icon="⏱️"
 >
@@ -75,7 +66,6 @@ Seconds to wait before timing out HTTP requests to *arrs, download clients, and 
 </ConfigSection>
 
 <ConfigSection
-  id="http-certificate-validation"
   title="HTTP Certificate Validation"
   icon="🔒"
 >
@@ -93,13 +83,9 @@ SSL certificate validation for HTTPS connections.
 
 <div className={styles.section}>
 
-<h2 id="search-settings" className={styles.sectionTitle}>
-  <span className={styles.sectionIcon}>🔍</span>
-  Search Settings
-</h2>
+<SectionTitle icon="🔍">Search Settings</SectionTitle>
 
 <ConfigSection
-  id="search-enabled"
   title="Search Enabled"
   icon="✅"
 >
@@ -113,7 +99,6 @@ If using [Huntarr](https://github.com/plexguide/Huntarr.io), disable this to let
 </ConfigSection>
 
 <ConfigSection
-  id="search-delay"
   title="Search Delay"
   icon="⏳"
 >
@@ -128,13 +113,9 @@ A lower value will result in faster searches, but may cause issues such as being
 
 <div className={styles.section}>
 
-<h2 id="download-management" className={styles.sectionTitle}>
-  <span className={styles.sectionIcon}>📦</span>
-  Download Management
-</h2>
+<SectionTitle icon="📦">Download Management</SectionTitle>
 
 <ConfigSection
-  id="ignored-downloads"
   title="Ignored Downloads"
   icon="🚯"
 >
@@ -163,13 +144,9 @@ mytracker.com
 
 <div className={styles.section}>
 
-<h2 id="logging-settings" className={styles.sectionTitle}>
-  <span className={styles.sectionIcon}>📝</span>
-  Logging Settings
-</h2>
+<SectionTitle icon="📝">Logging Settings</SectionTitle>
 
 <ConfigSection
-  id="log-level"
   title="Log Level"
   icon="📊"
 >
@@ -179,7 +156,6 @@ Controls log detail level. Lower levels include all higher-level messages.
 </ConfigSection>
 
 <ConfigSection
-  id="log-rolling-size-mb"
   title="Log Rolling Size (MB)"
   icon="📐"
 >
@@ -189,7 +165,6 @@ Maximum log file size before creating a new file. Larger values mean fewer files
 </ConfigSection>
 
 <ConfigSection
-  id="log-retained-file-count"
   title="Retained Log Files"
   icon="🗂️"
 >
@@ -199,7 +174,6 @@ Number of non-archived log files to keep. Older files are removed or archived ba
 </ConfigSection>
 
 <ConfigSection
-  id="log-time-limit-hours"
   title="Log Time Limit (Hours)"
   icon="⏳"
 >
@@ -209,7 +183,6 @@ Maximum age for non-archived logs. Older files are removed or archived based on 
 </ConfigSection>
 
 <ConfigSection
-  id="log-archive-enabled"
   title="Archive Logs"
   icon="🗄️"
 >
@@ -223,7 +196,6 @@ Recommended if Cleanuparr generates many logs on your setup.
 </ConfigSection>
 
 <ConfigSection
-  id="log-archive-retained-count"
   title="Archived Log Retention (Count)"
   icon="🧾"
 >
@@ -233,7 +205,6 @@ Number of archived log files to keep. Older archives are deleted.
 </ConfigSection>
 
 <ConfigSection
-  id="log-archive-time-limit-hours"
   title="Archived Log Retention (Hours)"
   icon="🕒"
 >
