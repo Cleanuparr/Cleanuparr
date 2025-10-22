@@ -26,10 +26,9 @@ public partial class UTorrentService
             return result;
         }
         
-        result.Found = true;
-        
         var properties = await _client.GetTorrentPropertiesAsync(hash);
         result.IsPrivate = properties.IsPrivate;
+        result.Found = true;
         
         if (ignoredDownloads.Count > 0 && 
             (download.ShouldIgnore(ignoredDownloads) || properties.TrackerList.Any(x => x.ShouldIgnore(ignoredDownloads))))

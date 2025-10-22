@@ -23,8 +23,6 @@ public partial class TransmissionService
             return result;
         }
         
-        result.Found = true;
-
         if (download.Files is null)
         {
             _logger.LogDebug("torrent {hash} has no files", hash);
@@ -39,6 +37,7 @@ public partial class TransmissionService
 
         bool isPrivate = download.IsPrivate ?? false;
         result.IsPrivate = isPrivate;
+        result.Found = true;
         
         var malwareBlockerConfig = ContextProvider.Get<ContentBlockerConfig>();
         

@@ -25,10 +25,9 @@ public partial class TransmissionService
             return result;
         }
 
-        result.Found = true;
-
         bool isPrivate = download.IsPrivate ?? false;
         result.IsPrivate = isPrivate;
+        result.Found = true;
 
         // Create ITorrentItem wrapper for consistent interface usage
         var torrentItem = new TransmissionItem(download);

@@ -7,6 +7,7 @@ using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
 using Cleanuparr.Infrastructure.Helpers;
 using Cleanuparr.Persistence;
+using Cleanuparr.Persistence.Models.Configuration;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Cleanuparr.Persistence.Models.Configuration.General;
 using Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
@@ -94,6 +95,10 @@ public sealed class QueueCleaner : GenericHandler
         ContextProvider.Set(nameof(InstanceType), instanceType);
 
         IReadOnlyList<IDownloadService> downloadServices = await GetInitializedDownloadServicesAsync();
+        bool hasEnabledTorrentClients = ContextProvider
+            .Get<List<DownloadClientConfig>>(nameof(DownloadClientConfig))
+            .Where(x => x.Type == DownloadClientType.Torrent)
+            .Any(x => x.Enabled);
 
         await _arrArrQueueIterator.Iterate(arrClient, instance, async items =>
         {
@@ -135,8 +140,9 @@ public sealed class QueueCleaner : GenericHandler
                 ContextProvider.Set(nameof(QueueRecord), record);
 
                 DownloadCheckResult downloadCheckResult = new();
+                bool isTorrent = record.Protocol.Contains("torrent", StringComparison.InvariantCultureIgnoreCase);
 
-                if (record.Protocol.Contains("torrent", StringComparison.InvariantCultureIgnoreCase))
+                if (isTorrent)
                 {
                     var torrentClients = downloadServices
                         .Where(x => x.ClientConfig.Type is DownloadClientType.Torrent)
@@ -170,16 +176,12 @@ public sealed class QueueCleaner : GenericHandler
                             _logger.LogWarning("Download not found in any torrent client | {title}", record.Title);
                         }
                     }
-                    else
-                    {
-                        _logger.LogDebug("No torrent clients enabled");
-                    }
                 }
 
                 if (downloadCheckResult.ShouldRemove)
                 {
                     bool removeFromClient = !downloadCheckResult.IsPrivate || downloadCheckResult.DeleteFromClient;
-                    
+
                     await PublishQueueItemRemoveRequest(
                         downloadRemovalKey,
                         instanceType,
@@ -189,11 +191,18 @@ public sealed class QueueCleaner : GenericHandler
                         removeFromClient,
                         downloadCheckResult.DeleteReason
                     );
-                    
+
                     continue;
                 }
-                
-                // failed import check
+
+                // Skip failed import check if torrent is not found in client and skipIfNotFoundInClient is enabled
+                if (isTorrent && hasEnabledTorrentClients && !downloadCheckResult.Found && queueCleanerConfig.FailedImport.SkipIfNotFoundInClient)
+                {
+                    _logger.LogInformation("skip | torrent not found in any torrent client | {title}", record.Title);
+                    continue;
+                }
+
+                // Failed import check
                 bool shouldRemoveFromArr = await arrClient
                     .ShouldRemoveFromQueue(instanceType, record, downloadCheckResult.IsPrivate, instance.ArrConfig.FailedImportMaxStrikes);
 

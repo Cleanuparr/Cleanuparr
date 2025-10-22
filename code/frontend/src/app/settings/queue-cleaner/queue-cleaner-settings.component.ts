@@ -557,6 +557,7 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
         maxStrikes: [0, [Validators.required, Validators.min(0), Validators.max(5000)]],
         ignorePrivate: [{ value: false, disabled: true }],
         deletePrivate: [{ value: false, disabled: true }],
+        skipIfNotFoundInClient: [{ value: true, disabled: true }],
         patterns: [{ value: [], disabled: true }],
         patternMode: [{ value: PatternMode.Include, disabled: true }],
       }),
@@ -1020,13 +1021,14 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
 
     if (enable) {
       this.queueCleanerForm.get("failedImport")?.get("ignorePrivate")?.enable(options);
+      this.queueCleanerForm.get("failedImport")?.get("skipIfNotFoundInClient")?.enable(options);
       this.queueCleanerForm.get("failedImport")?.get("patterns")?.enable(options);
       this.queueCleanerForm.get("failedImport")?.get("patternMode")?.enable(options);
-      
+
       // Only enable deletePrivate if ignorePrivate is false
       const ignorePrivate = this.queueCleanerForm.get("failedImport.ignorePrivate")?.value || false;
       const deletePrivateControl = this.queueCleanerForm.get("failedImport.deletePrivate");
-      
+
       if (!ignorePrivate && deletePrivateControl) {
         deletePrivateControl.enable(options);
       } else if (deletePrivateControl) {
@@ -1035,6 +1037,7 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
     } else {
       this.queueCleanerForm.get("failedImport")?.get("ignorePrivate")?.disable(options);
       this.queueCleanerForm.get("failedImport")?.get("deletePrivate")?.disable(options);
+      this.queueCleanerForm.get("failedImport")?.get("skipIfNotFoundInClient")?.disable(options);
       this.queueCleanerForm.get("failedImport")?.get("patterns")?.disable(options);
       this.queueCleanerForm.get("failedImport")?.get("patternMode")?.disable(options);
     }
@@ -1068,6 +1071,7 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
           maxStrikes: formValue.failedImport?.maxStrikes || 0,
           ignorePrivate: formValue.failedImport?.ignorePrivate || false,
           deletePrivate: formValue.failedImport?.deletePrivate || false,
+          skipIfNotFoundInClient: formValue.failedImport?.skipIfNotFoundInClient ?? true,
           patterns: formValue.failedImport?.patterns || [],
           patternMode: formValue.failedImport?.patternMode || PatternMode.Include,
         },
@@ -1134,6 +1138,7 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
         maxStrikes: 0,
         ignorePrivate: false,
         deletePrivate: false,
+        skipIfNotFoundInClient: true,
         patterns: [],
         patternMode: PatternMode.Include,
       },

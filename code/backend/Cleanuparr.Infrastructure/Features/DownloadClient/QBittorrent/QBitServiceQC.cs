@@ -23,8 +23,6 @@ public partial class QBitService
             return result;
         }
 
-        result.Found = true;
-
         IReadOnlyList<TorrentTracker> trackers = await GetTrackersAsync(hash);
 
         TorrentProperties? torrentProperties = await _client.GetTorrentPropertiesAsync(hash);
@@ -38,6 +36,8 @@ public partial class QBitService
         result.IsPrivate = torrentProperties.AdditionalData.TryGetValue("is_private", out var dictValue) &&
                            bool.TryParse(dictValue?.ToString(), out bool boolValue)
                            && boolValue;
+        
+        result.Found = true;
 
         // Create ITorrentItem wrapper for consistent interface usage
         var torrentItem = new QBitItem(download, trackers, result.IsPrivate);

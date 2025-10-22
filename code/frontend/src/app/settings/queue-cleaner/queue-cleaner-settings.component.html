@@ -198,14 +198,27 @@
 
             <div class="field-row" formGroupName="failedImport">
               <label class="field-label">
-                <i class="pi pi-question-circle field-info-icon" 
-                   (click)="openFieldDocs('failedImport.deletePrivate')" 
+                <i class="pi pi-question-circle field-info-icon"
+                   (click)="openFieldDocs('failedImport.deletePrivate')"
                    title="Click for documentation"></i>
                 Delete Private from client
               </label>
               <div class="field-input">
                 <p-checkbox formControlName="deletePrivate" [binary]="true"></p-checkbox>
                 <small class="form-helper-text">Disable this if you want to keep private torrents in the download client even if they are removed from the arrs</small>
+              </div>
+            </div>
+
+            <div class="field-row" formGroupName="failedImport">
+              <label class="field-label">
+                <i class="pi pi-question-circle field-info-icon"
+                   (click)="openFieldDocs('failedImport.skipIfNotFoundInClient')"
+                   title="Click for documentation"></i>
+                Skip If Not Found In Client
+              </label>
+              <div class="field-input">
+                <p-checkbox formControlName="skipIfNotFoundInClient" [binary]="true"></p-checkbox>
+                <small class="form-helper-text">Skip failed import check for torrents not found in any enabled torrent client</small>
               </div>
             </div>
 

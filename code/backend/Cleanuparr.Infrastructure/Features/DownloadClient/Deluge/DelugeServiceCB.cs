@@ -25,6 +25,7 @@ public partial class DelugeService
             return result;
         }
         
+        result.IsPrivate = download.Private;
         result.Found = true;
         
         if (ignoredDownloads.Count > 0 && download.ShouldIgnore(ignoredDownloads))
@@ -32,8 +33,6 @@ public partial class DelugeService
             _logger.LogInformation("skip | download is ignored | {name}", download.Name);
             return result;
         }
-
-        result.IsPrivate = download.Private;
         
         var malwareBlockerConfig = ContextProvider.Get<ContentBlockerConfig>();
         

@@ -28,8 +28,8 @@ public partial class DelugeService
             return result;
         }
         
-        result.Found = true;
         result.IsPrivate = download.Private;
+        result.Found = true;
 
         // Create ITorrentItem wrapper for consistent interface usage
         var torrentItem = new DelugeItem(download);
