@@ -7,6 +7,11 @@ export enum ScheduleUnit {
   Hours = 'Hours'
 }
 
+export enum PatternMode {
+  Exclude = 'Exclude',
+  Include = 'Include'
+}
+
 /**
  * Valid values for each schedule unit
  */
@@ -25,7 +30,8 @@ export interface FailedImportConfig {
   maxStrikes: number;
   ignorePrivate: boolean;
   deletePrivate: boolean;
-  ignoredPatterns: string[];
+  patterns: string[];
+  patternMode?: PatternMode;
 }
 
 export interface QueueCleanerConfig {

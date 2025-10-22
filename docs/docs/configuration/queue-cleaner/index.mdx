@@ -9,6 +9,7 @@ import {
   EnhancedWarning,
   styles 
 } from '@site/src/components/documentation';
+import failedImportPatterns from '../../../static/img/failed-import-patterns.png';
 
 # Queue Cleaner
 
@@ -135,8 +136,20 @@ This setting needs a download client to be configured.
 </ConfigSection>
 
 <ConfigSection
-  id="failed-import-ignored-patterns"
-  title="Failed Import Ignored Patterns"
+  id="failed-import-pattern-mode"
+  title="Failed Import Pattern Mode"
+  icon="🎭"
+>
+
+Choose how to handle failed imports based on their patterns:
+- **Exclude**: Remove all failed imports except those containing specified patterns.
+- **Include**: Remove only failed imports containing specified patterns.
+
+</ConfigSection>
+
+<ConfigSection
+  id="failed-import-patterns"
+  title="Failed Import Patterns"
   icon="📝"
 >
 
@@ -145,7 +158,12 @@ This setting needs a download client to be configured.
 - `manual import required`
 - `recently aired`
 
-Failed imports containing these patterns in their name will be skipped during cleaning. Useful for avoiding removal of legitimate downloads that may have temporary import issues.
+When pattern mode is set to `Exclude`, failed imports containing these patterns will be skipped. Everything else will be removed.
+When pattern mode is set to `Include`, only failed imports containing these patterns will be removed. Everything else will be skipped.
+
+These patterns can be any substring of the failed import messages. These messsages can be viewed in the queue of your *arr application.
+
+<img src={failedImportPatterns} alt="Failed Import Messages Example" style={{ borderRadius: '8px' }} />
 
 </ConfigSection>
 

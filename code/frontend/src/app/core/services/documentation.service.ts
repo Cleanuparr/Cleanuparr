@@ -22,7 +22,8 @@ export class DocumentationService {
       'failedImport.maxStrikes': 'failed-import-max-strikes',
       'failedImport.ignorePrivate': 'failed-import-ignore-private',
       'failedImport.deletePrivate': 'failed-import-delete-private',
-      'failedImport.ignoredPatterns': 'failed-import-ignored-patterns',
+      'failedImport.pattern-mode': 'failed-import-pattern-mode',
+      'failedImport.patterns': 'failed-import-patterns',
       'downloadingMetadataMaxStrikes': 'downloading-metadata-max-strikes',
       // Stall rule fields
       'stallRule.name': 'stall-rule-name',
