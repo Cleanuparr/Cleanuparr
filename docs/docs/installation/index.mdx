@@ -2,7 +2,7 @@
 sidebar_position: 1
 ---
 
-import { Note, styles } from '@site/src/components/documentation';
+import { Note, SectionTitle, styles } from '@site/src/components/documentation';
 
 # Quick Start
 
@@ -10,7 +10,9 @@ import { Note, styles } from '@site/src/components/documentation';
 
 The fastest way to get started with Cleanuparr:
 
-## Docker (Recommended)
+<div className={styles.section}>
+
+<SectionTitle>Docker (Recommended)</SectionTitle>
 
 **Option 1: Docker Run**
 ```bash
@@ -47,21 +49,11 @@ services:
       - TZ=Etc/UTC
 ```
 
-## Unraid
+</div>
 
-Use the Unraid template available in the Community Applications plugin. If the template is not yet available, you can manually add using the above Docker Compose configuration or use this guide to create a custom template:
+<div className={styles.section}>
 
-1. Download the template from here: https://github.com/Cleanuparr/unraid/blob/main/templates/Cleanuparr.xml
-2. Rename the downloaded file to 'my-cleanuparr.xml'
-3. Drop it in the `/boot/config/plugins/dockerMan/templates-user/` folder of your Unraid machine
-4. Go to the Docker tab of the Unraid webui
-5. Click on Add Container
-6. From the `Template` dropdown menu, select `cleanuparr`
-7. Set the repository to `ghcr.io/cleanuparr/cleanuparr:latest`
-8. Most other settings can be left at default, with the exception of the downloads folder which should be mapped to where your *arr stack / torrent client downloads its files to
-
-
-## Other Installation Methods
+<SectionTitle>Other Installation Methods</SectionTitle>
 
 - **Windows**: Download the installer from [GitHub Releases](https://github.com/Cleanuparr/Cleanuparr/releases)
 - **macOS**: Download the `.pkg` installer for your Mac type (Intel/Apple Silicon)
@@ -71,10 +63,16 @@ Use the Unraid template available in the Community Applications plugin. If the t
 For detailed installation instructions, security notes, troubleshooting, and all platform-specific options, see the [Complete Installation Guide](/docs/installation/detailed).
 </Note>
 
-## After Installation
+</div>
+
+<div className={styles.section}>
+
+<SectionTitle>After Installation</SectionTitle>
 
 1. Open your browser and go to `http://localhost:11011`
 2. Configure your download clients and *arr applications
 3. Refer to the [Configuration](/docs/category/configuration) section for detailed setup instructions
+
+</div>
 
 </div> 

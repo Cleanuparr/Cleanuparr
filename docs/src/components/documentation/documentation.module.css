@@ -460,10 +460,12 @@
   counter-increment: step-counter;
   display: flex;
   gap: var(--doc-spacing-md);
-  margin: var(--doc-spacing-lg) 0;
+  margin: var(--doc-spacing-md) 0;
   padding: var(--doc-spacing-lg);
-  background: var(--doc-bg-secondary);
-  border-radius: var(--doc-radius-md);
+  background: var(--doc-bg-primary);
+  border-radius: var(--doc-radius-sm);
+  border-left: 4px solid var(--doc-primary);
+  border: 1px solid var(--doc-border-color);
   border-left: 4px solid var(--doc-primary);
   position: relative;
 }
