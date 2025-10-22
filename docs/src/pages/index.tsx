@@ -2,7 +2,6 @@ import type { ReactNode } from "react";
 import clsx from "clsx";
 import Link from "@docusaurus/Link";
 import useDocusaurusContext from "@docusaurus/useDocusaurusContext";
-import useBaseUrl from "@docusaurus/useBaseUrl";
 import Layout from "@theme/Layout";
 import Heading from "@theme/Heading";
 import SupportBanner from "../components/support/SupportBanner";
@@ -72,16 +71,22 @@ function HomepageHeader() {
             </p>
             <div className={styles.heroButtons}>
               <Link
-                className="button button--primary button--lg"
+                className="button button--secondary button--outline button--md"
                 to="/docs/installation"
               >
                 🚀 Get Started
               </Link>
               <Link
-                className="button button--secondary button--outline button--lg"
+                className="button button--secondary button--outline button--md"
                 to="/docs/features"
               >
-                ✨ View Features
+                View Features
+              </Link>
+              <Link
+                className="button button--secondary button--outline button--md"
+                to="/docs/supported-apps"
+              >
+                Supported Apps
               </Link>
             </div>
           </div>
@@ -199,82 +204,6 @@ function QuickStartSection() {
   );
 }
 
-function IntegrationsSection() {
-  const mediaApps = [
-    { name: "Sonarr", iconLight: "/img/icons/sonarr-light.svg", iconDark: "/img/icons/sonarr-dark.svg", color: "#3578e5" },
-    { name: "Radarr", iconLight: "/img/icons/radarr-light.svg", iconDark: "/img/icons/radarr-dark.svg", color: "#ffc107" },
-    { name: "Lidarr", iconLight: "/img/icons/lidarr-light.svg", iconDark: "/img/icons/lidarr-dark.svg", color: "#28a745" },
-    { name: "Readarr", iconLight: "/img/icons/readarr-light.svg", iconDark: "/img/icons/readarr-dark.svg", color: "#ff0000ff" },
-    { name: "Whisparr", iconLight: "/img/icons/whisparr-light.svg", iconDark: "/img/icons/whisparr-dark.svg", color: "#e83e8c" },
-  ];
-
-  const downloadClients = [
-    { name: "qBittorrent", iconLight: "/img/icons/qbittorrent-light.svg", iconDark: "/img/icons/qbittorrent-dark.svg", color: "#2b75d9" },
-    { name: "Deluge", iconLight: "/img/icons/deluge-light.svg", iconDark: "/img/icons/deluge-dark.svg", color: "#094491" },
-    { name: "Transmission", iconLight: "/img/icons/transmission-light.svg", iconDark: "/img/icons/transmission-dark.svg", color: "#e90f0fff" },
-    { name: "µTorrent", iconLight: "/img/icons/utorrent-light.svg", iconDark: "/img/icons/utorrent-dark.svg", color: "#0ce216ff" },
-  ];
-
-  return (
-    <section className={styles.integrationsSection}>
-      <div className="container">
-        <div className={styles.sectionHeader}>
-          <h2>Seamless Integrations</h2>
-          <p>Works with all your favorite *arr applications and download clients.</p>
-        </div>
-
-        <div className={styles.integrationCategory}>
-          <h3 className={styles.categoryTitle}>Media Management</h3>
-          <div className={styles.integrationsGrid}>
-            {mediaApps.map((app, idx) => (
-              <IntegrationCard key={idx} app={app} />
-            ))}
-          </div>
-        </div>
-
-        <div className={styles.integrationCategory}>
-          <h3 className={styles.categoryTitle}>Download Clients</h3>
-          <div className={styles.integrationsGrid}>
-            {downloadClients.map((app, idx) => (
-              <IntegrationCard key={idx} app={app} />
-            ))}
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-interface IntegrationCardProps {
-  app: {
-    name: string;
-    iconLight: string;
-    iconDark: string;
-    color: string;
-  };
-}
-
-function IntegrationCard({ app }: IntegrationCardProps) {
-  const iconLightUrl = useBaseUrl(app.iconLight);
-  const iconDarkUrl = useBaseUrl(app.iconDark);
-
-  return (
-    <div className={styles.integrationItem} style={{ '--app-color': app.color } as any}>
-      <img
-        src={iconLightUrl}
-        alt={`${app.name} logo`}
-        className={`${styles.integrationIcon} ${styles.integrationIconLight}`}
-      />
-      <img
-        src={iconDarkUrl}
-        alt={`${app.name} logo`}
-        className={`${styles.integrationIcon} ${styles.integrationIconDark}`}
-      />
-      <span className={styles.integrationName}>{app.name}</span>
-    </div>
-  );
-}
-
 export default function Home(): ReactNode {
   const { siteConfig } = useDocusaurusContext();
   return (
@@ -286,10 +215,7 @@ export default function Home(): ReactNode {
       <main>
         <FeaturesSection />
         <QuickStartSection />
-        <IntegrationsSection />
-        <div className="container" style={{ padding: '2rem 0' }}>
-          <SupportBanner />
-        </div>
+        <SupportBanner />
       </main>
     </Layout>
   );
