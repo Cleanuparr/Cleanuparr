@@ -42,7 +42,7 @@ public sealed class Striker : IStriker
             ++strikeCount;
         }
         
-        _logger.LogInformation("item on strike number {strike} | reason {reason} | {name}", strikeCount, strikeType.ToString(), itemName);
+        _logger.LogInformation("Item on strike number {strike} | reason {reason} | {name}", strikeCount, strikeType.ToString(), itemName);
 
         await _eventPublisher.PublishStrike(strikeType, strikeCount, hash, itemName);
         
@@ -55,12 +55,26 @@ public sealed class Striker : IStriker
 
         if (strikeCount > maxStrikes)
         {
-            _logger.LogWarning("blocked item keeps coming back | {name}", itemName);
-            _logger.LogWarning("be sure to enable \"Reject Blocklisted Torrent Hashes While Grabbing\" on your indexers to reject blocked items");
+            _logger.LogWarning("Blocked item keeps coming back | {name}", itemName);
+            _logger.LogWarning("Be sure to enable \"Reject Blocklisted Torrent Hashes While Grabbing\" on your indexers to reject blocked items");
         }
 
-        _logger.LogInformation("removing item with max strikes | reason {reason} | {name}", strikeType.ToString(), itemName);
+        _logger.LogInformation("Removing item with max strikes | reason {reason} | {name}", strikeType.ToString(), itemName);
 
         return true;
+    }
+
+    public Task ResetStrikeAsync(string hash, string itemName, StrikeType strikeType)
+    {
+        string key = CacheKeys.Strike(strikeType, hash);
+
+        if (_cache.TryGetValue(key, out int strikeCount) && strikeCount > 0)
+        {
+            _logger.LogTrace("Progress detected | resetting {reason} strikes from {strikeCount} to 0 | {name}", strikeType, strikeCount, itemName);
+        }
+
+        _cache.Remove(key);
+
+        return Task.CompletedTask;
     }
 }

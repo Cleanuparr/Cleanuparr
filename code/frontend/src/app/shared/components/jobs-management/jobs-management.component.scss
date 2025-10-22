@@ -1,0 +1,25 @@
+@use '../../../dashboard/dashboard-page/dashboard-page.component.scss';
+
+::ng-deep {
+  .p-datatable {
+    .p-datatable-thead {
+      background: transparent !important;
+    }
+
+    .p-datatable-tbody {
+      background: transparent !important;
+    }
+
+    .p-datatable-thead > tr > th {
+      background: transparent;
+    }
+    
+    .p-datatable-tbody > tr > td {
+      background: transparent;
+    }
+
+    .p-datatable-tbody > tr {
+      background: transparent;
+    }
+  }
+}

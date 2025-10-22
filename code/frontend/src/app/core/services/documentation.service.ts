@@ -16,6 +16,7 @@ export class DocumentationService {
   private readonly fieldMappings: FieldDocumentationMapping = {
     'queue-cleaner': {
       'enabled': 'enable-queue-cleaner',
+      'ignoredDownloads': 'ignored-downloads',
       'useAdvancedScheduling': 'scheduling-mode',
       'cronExpression': 'cron-expression',
       'failedImport.maxStrikes': 'failed-import-max-strikes',
@@ -23,18 +24,27 @@ export class DocumentationService {
       'failedImport.deletePrivate': 'failed-import-delete-private',
       'failedImport.pattern-mode': 'failed-import-pattern-mode',
       'failedImport.patterns': 'failed-import-patterns',
-      'stalled.maxStrikes': 'stalled-max-strikes',
-      'stalled.resetStrikesOnProgress': 'stalled-reset-strikes-on-progress',
-      'stalled.ignorePrivate': 'stalled-ignore-private',
-      'stalled.deletePrivate': 'stalled-delete-private',
-      'stalled.downloadingMetadataMaxStrikes': 'downloading-metadata-max-strikes',
-      'slow.maxStrikes': 'slow-max-strikes',
-      'slow.resetStrikesOnProgress': 'slow-reset-strikes-on-progress',
-      'slow.ignorePrivate': 'slow-ignore-private',
-      'slow.deletePrivate': 'slow-delete-private',
-      'slow.minSpeed': 'slow-min-speed',
-      'slow.maxTime': 'slow-max-time',
-      'slow.ignoreAboveSize': 'slow-ignore-above-size'
+      'downloadingMetadataMaxStrikes': 'downloading-metadata-max-strikes',
+      // Stall rule fields
+      'stallRule.name': 'stall-rule-name',
+      'stallRule.enabled': 'stall-rule-enabled',
+      'stallRule.maxStrikes': 'stall-rule-max-strikes',
+      'stallRule.privacyType': 'stall-rule-privacy-type',
+      'stallRule.completionRange': 'stall-rule-completion-range',
+      'stallRule.resetStrikesOnProgress': 'stall-rule-reset-strikes',
+      'stallRule.minimumProgress': 'stall-rule-minimum-progress',
+      'stallRule.deletePrivateTorrentsFromClient': 'stall-rule-delete-private',
+      // Slow rule fields
+      'slowRule.name': 'slow-rule-name',
+      'slowRule.enabled': 'slow-rule-enabled',
+      'slowRule.maxStrikes': 'slow-rule-max-strikes',
+      'slowRule.minSpeed': 'slow-rule-min-speed',
+      'slowRule.maxTimeHours': 'slow-rule-max-time',
+      'slowRule.privacyType': 'slow-rule-privacy-type',
+      'slowRule.completionRange': 'slow-rule-completion-range',
+      'slowRule.ignoreAboveSize': 'slow-rule-ignore-above-size',
+      'slowRule.resetStrikesOnProgress': 'slow-rule-reset-strikes',
+      'slowRule.deletePrivateTorrentsFromClient': 'slow-rule-delete-private'
     },
     'general': {
       'displaySupportBanner': 'display-support-banner',
@@ -44,6 +54,8 @@ export class DocumentationService {
       'httpCertificateValidation': 'http-certificate-validation',
       'searchEnabled': 'search-enabled',
       'searchDelay': 'search-delay',
+      'enableBlacklistSync': 'enable-blacklist-sync',
+      'blacklistPath': 'blacklist-path',
       'log.level': 'log-level',
       'log.rollingSizeMB': 'log-rolling-size-mb',
       'log.retainedFileCount': 'log-retained-file-count',
@@ -55,6 +67,7 @@ export class DocumentationService {
     },
     'download-cleaner': {
       'enabled': 'enable-download-cleaner',
+      'ignoredDownloads': 'ignored-downloads',
       'useAdvancedScheduling': 'scheduling-mode',
       'cronExpression': 'cron-expression',
       'jobSchedule.every': 'run-schedule',
@@ -72,6 +85,7 @@ export class DocumentationService {
     },
     'malware-blocker': {
       'enabled': 'enable-malware-blocker',
+      'ignoredDownloads': 'ignored-downloads',
       'useAdvancedScheduling': 'scheduling-mode',
       'cronExpression': 'cron-expression',
       'jobSchedule.every': 'run-schedule',
@@ -101,11 +115,28 @@ export class DocumentationService {
     'notifications': {
       'enabled': 'enabled',
       'name': 'provider-name',
+      'eventTriggers': 'event-triggers'
+    },
+    'notifications/notifiarr': {
       'notifiarr.apiKey': 'notifiarr-api-key',
-      'notifiarr.channelId': 'notifiarr-channel-id',
+      'notifiarr.channelId': 'notifiarr-channel-id'
+    },
+    'notifications/apprise': {
       'apprise.url': 'apprise-url',
       'apprise.key': 'apprise-key',
-      'apprise.tags': 'apprise-tags',
+      'apprise.tags': 'apprise-tags'
+    },
+    'notifications/ntfy': {
+      'ntfy.serverUrl': 'ntfy-server-url',
+      'ntfy.topics': 'ntfy-topics',
+      'ntfy.authenticationType': 'ntfy-authentication-type',
+      'ntfy.username': 'ntfy-username',
+      'ntfy.password': 'ntfy-password',
+      'ntfy.accessToken': 'ntfy-access-token',
+      'ntfy.priority': 'ntfy-priority',
+      'ntfy.tags': 'ntfy-tags'
+    },
+    'notifications/events': {
       'eventTriggers': 'event-triggers'
     }
   };
@@ -160,4 +191,4 @@ export class DocumentationService {
   hasFieldDocumentation(section: string, fieldName: string): boolean {
     return !!this.getFieldAnchor(section, fieldName);
   }
-} 
+}

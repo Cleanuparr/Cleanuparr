@@ -1,7 +1,6 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { Router, RouterOutlet } from '@angular/router';
 import { CommonModule } from '@angular/common';
-import { Title } from '@angular/platform-browser';
 
 // PrimeNG Imports
 import { ButtonModule } from 'primeng/button';
@@ -9,7 +8,7 @@ import { ToolbarModule } from 'primeng/toolbar';
 import { FormsModule } from '@angular/forms';
 import { MenuModule } from 'primeng/menu';
 import { SidebarModule } from 'primeng/sidebar';
-import { DrawerModule } from 'primeng/drawer';
+
 import { DividerModule } from 'primeng/divider';
 import { RippleModule } from 'primeng/ripple';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
@@ -17,13 +16,7 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
 // Custom Components
 import { SidebarContentComponent } from '../sidebar-content/sidebar-content.component';
 import { ToastContainerComponent } from '../../shared/components/toast-container/toast-container.component';
-
-interface MenuItem {
-  label: string;
-  icon: string;
-  route: string;
-  badge?: string;
-}
+import { AppHubService } from '../../core/services/app-hub.service';
 
 @Component({
   selector: 'app-main-layout',
@@ -36,7 +29,6 @@ interface MenuItem {
     FormsModule,
     MenuModule,
     SidebarModule,
-    DrawerModule,
     DividerModule,
     RippleModule,
     ConfirmDialogModule,
@@ -46,34 +38,20 @@ interface MenuItem {
   templateUrl: './main-layout.component.html',
   styleUrl: './main-layout.component.scss'
 })
-export class MainLayoutComponent {
-  // Menu items
-  menuItems: MenuItem[] = [
-    { label: 'Dashboard', icon: 'pi pi-home', route: '/dashboard' },
-    { label: 'Logs', icon: 'pi pi-list', route: '/logs' },
-    { label: 'Settings', icon: 'pi pi-cog', route: '/settings' },
-    { label: 'Events', icon: 'pi pi-calendar', route: '/events' },
-  ];
-  
-  // Mobile menu state
-  mobileSidebarVisible = signal<boolean>(false);
-  
+export class MainLayoutComponent implements OnInit {
   // Inject router
   public router = inject(Router);
+  private readonly appHubService = inject(AppHubService);
+  public readonly appStatus$ = this.appHubService.getAppStatus();
   
-  constructor() {}
-  
-  /**
-   * Handles mobile navigation click events by closing the sidebar
-   */
-  onMobileNavClick(): void {
-    this.mobileSidebarVisible.set(false);
+  ngOnInit(): void {
+    this.appHubService.startConnection().catch((error: Error) => console.error('Failed to connect to app hub:', error));
   }
   
   /**
-   * Toggle mobile sidebar visibility
+   * Toggle mobile sidebar visibility via sidebar component
    */
   toggleMobileSidebar(): void {
-    this.mobileSidebarVisible.update(value => !value);
+    // This will be called via template reference
   }
 }

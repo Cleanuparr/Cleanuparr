@@ -13,7 +13,7 @@
   ></app-loading-error-state>
 
   <!-- Settings Form -->
-  <form *ngIf="!generalLoading() && !generalLoadError()" [formGroup]="generalForm" class="p-fluid">
+  <form *ngIf="!generalLoading() && !generalLoadError() && generalForm" [formGroup]="generalForm" class="p-fluid">
     
     <!-- General Configuration Card -->
     <p-card styleClass="settings-card mb-4">
@@ -194,6 +194,7 @@
             <small class="form-helper-text">Downloads matching these patterns will be ignored (e.g. hash, tag, category, label, tracker)</small>
           </div>
         </div>
+
       </div>
     </p-card>
 

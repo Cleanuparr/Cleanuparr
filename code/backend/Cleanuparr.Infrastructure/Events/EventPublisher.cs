@@ -6,9 +6,9 @@ using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.Notifications;
 using Cleanuparr.Infrastructure.Hubs;
+using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Events;
-using Infrastructure.Interceptors;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 

@@ -11,8 +11,17 @@ import { WhisparrConfig } from "../../shared/models/whisparr-config.model";
 import { ClientConfig, DownloadClientConfig, CreateDownloadClientDto } from "../../shared/models/download-client-config.model";
 import { ArrInstance, CreateArrInstanceDto } from "../../shared/models/arr-config.model";
 import { GeneralConfig } from "../../shared/models/general-config.model";
+import { 
+  StallRule, 
+  SlowRule, 
+  CreateStallRuleDto,
+  UpdateStallRuleDto,
+  CreateSlowRuleDto,
+  UpdateSlowRuleDto
+} from "../../shared/models/queue-rule.model";
 import { ApplicationPathService } from "./base-path.service";
 import { ErrorHandlerUtil } from "../utils/error-handler.util";
+import { BlacklistSyncConfig } from "../../shared/models/blacklist-sync-config.model";
 
 @Injectable({
   providedIn: "root",
@@ -29,6 +38,31 @@ export class ConfigurationService {
       catchError((error) => {
         console.error("Error fetching general config:", error);
         return throwError(() => new Error("Failed to load general configuration"));
+      })
+    );
+  }
+
+  /**
+   * Get Blacklist Sync configuration
+   */
+  getBlacklistSyncConfig(): Observable<BlacklistSyncConfig> {
+    return this.http.get<BlacklistSyncConfig>(this.ApplicationPathService.buildApiUrl('/configuration/blacklist_sync')).pipe(
+      catchError((error) => {
+        console.error("Error fetching Blacklist Sync config:", error);
+        return throwError(() => new Error("Failed to load Blacklist Sync configuration"));
+      })
+    );
+  }
+
+  /**
+   * Update Blacklist Sync configuration
+   */
+  updateBlacklistSyncConfig(config: BlacklistSyncConfig): Observable<any> {
+    return this.http.put<any>(this.ApplicationPathService.buildApiUrl('/configuration/blacklist_sync'), config).pipe(
+      catchError((error) => {
+        console.error("Error updating Blacklist Sync config:", error);
+        const errorMessage = ErrorHandlerUtil.extractErrorMessage(error);
+        return throwError(() => new Error(errorMessage));
       })
     );
   }
@@ -624,6 +658,110 @@ export class ConfigurationService {
       catchError((error) => {
         console.error(`Error deleting Whisparr instance with ID ${id}:`, error);
         return throwError(() => new Error(error.error?.error || `Failed to delete Whisparr instance with ID ${id}`));
+      })
+    );
+  }
+
+  // ===== QUEUE RULES MANAGEMENT =====
+
+  /**
+   * Get all stall rules
+   */
+  getStallRules(): Observable<StallRule[]> {
+    return this.http.get<StallRule[]>(this.ApplicationPathService.buildApiUrl('/queue-rules/stall')).pipe(
+      catchError((error) => {
+        console.error('Error fetching stall rules:', error);
+        return throwError(() => new Error("Failed to load stall rules"));
+      })
+    );
+  }
+
+  /**
+   * Create a new stall rule
+   */
+  createStallRule(rule: CreateStallRuleDto): Observable<StallRule> {
+    return this.http.post<StallRule>(this.ApplicationPathService.buildApiUrl('/queue-rules/stall'), rule).pipe(
+      catchError((error) => {
+        console.error('Error creating stall rule:', error);
+        const errorMessage = ErrorHandlerUtil.extractErrorMessage(error);
+        return throwError(() => new Error(errorMessage));
+      })
+    );
+  }
+
+  /**
+   * Update an existing stall rule
+   */
+  updateStallRule(id: string, rule: UpdateStallRuleDto): Observable<StallRule> {
+    return this.http.put<StallRule>(this.ApplicationPathService.buildApiUrl(`/queue-rules/stall/${id}`), rule).pipe(
+      catchError((error) => {
+        console.error(`Error updating stall rule ${id}:`, error);
+        const errorMessage = ErrorHandlerUtil.extractErrorMessage(error);
+        return throwError(() => new Error(errorMessage));
+      })
+    );
+  }
+
+  /**
+   * Delete a stall rule
+   */
+  deleteStallRule(id: string): Observable<void> {
+    return this.http.delete<void>(this.ApplicationPathService.buildApiUrl(`/queue-rules/stall/${id}`)).pipe(
+      catchError((error) => {
+        console.error(`Error deleting stall rule ${id}:`, error);
+        const errorMessage = ErrorHandlerUtil.extractErrorMessage(error);
+        return throwError(() => new Error(errorMessage));
+      })
+    );
+  }
+
+  /**
+   * Get all slow rules
+   */
+  getSlowRules(): Observable<SlowRule[]> {
+    return this.http.get<SlowRule[]>(this.ApplicationPathService.buildApiUrl('/queue-rules/slow')).pipe(
+      catchError((error) => {
+        console.error('Error fetching slow rules:', error);
+        return throwError(() => new Error("Failed to load slow rules"));
+      })
+    );
+  }
+
+  /**
+   * Create a new slow rule
+   */
+  createSlowRule(rule: CreateSlowRuleDto): Observable<SlowRule> {
+    return this.http.post<SlowRule>(this.ApplicationPathService.buildApiUrl('/queue-rules/slow'), rule).pipe(
+      catchError((error) => {
+        console.error('Error creating slow rule:', error);
+        const errorMessage = ErrorHandlerUtil.extractErrorMessage(error);
+        return throwError(() => new Error(errorMessage));
+      })
+    );
+  }
+
+  /**
+   * Update an existing slow rule
+   */
+  updateSlowRule(id: string, rule: UpdateSlowRuleDto): Observable<SlowRule> {
+    return this.http.put<SlowRule>(this.ApplicationPathService.buildApiUrl(`/queue-rules/slow/${id}`), rule).pipe(
+      catchError((error) => {
+        console.error(`Error updating slow rule ${id}:`, error);
+        const errorMessage = ErrorHandlerUtil.extractErrorMessage(error);
+        return throwError(() => new Error(errorMessage));
+      })
+    );
+  }
+
+  /**
+   * Delete a slow rule
+   */
+  deleteSlowRule(id: string): Observable<void> {
+    return this.http.delete<void>(this.ApplicationPathService.buildApiUrl(`/queue-rules/slow/${id}`)).pipe(
+      catchError((error) => {
+        console.error(`Error deleting slow rule ${id}:`, error);
+        const errorMessage = ErrorHandlerUtil.extractErrorMessage(error);
+        return throwError(() => new Error(errorMessage));
       })
     );
   }

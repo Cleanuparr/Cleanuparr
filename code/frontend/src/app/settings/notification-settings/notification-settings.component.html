@@ -3,35 +3,37 @@
     <h1>Notifications Configuration</h1>
   </div>
 
-  <p-card styleClass="settings-card h-full">
-    <ng-template pTemplate="header">
-      <div class="flex align-items-center justify-content-between p-3 border-bottom-1 surface-border">
-        <div class="header-title-container">
-          <h2 class="card-title m-0">Notification Providers</h2>
-          <span class="card-subtitle">Configure notification providers to receive alerts</span>
+  <!-- Loading/Error Component -->
+  <app-loading-error-state
+    *ngIf="notificationProviderLoading() || notificationProviderLoadError()"
+    [loading]="notificationProviderLoading()"
+    [error]="notificationProviderLoadError()"
+    loadingMessage="Loading notification providers..."
+    errorMessage="Could not connect to server"
+  ></app-loading-error-state>
+
+  <!-- Providers Configuration -->
+  <div *ngIf="!notificationProviderLoading() && !notificationProviderLoadError()">
+    <p-card styleClass="settings-card h-full">
+      <ng-template pTemplate="header">
+        <div class="flex align-items-center justify-content-between p-3 border-bottom-1 surface-border">
+          <div class="header-title-container">
+            <h2 class="card-title m-0">Notification Providers</h2>
+            <span class="card-subtitle">Configure notification providers to receive alerts</span>
+          </div>
         </div>
-      </div>
-    </ng-template>
+      </ng-template>
 
-    <div class="card-content">
-      <!-- Loading/Error Component -->
-      <app-loading-error-state
-        *ngIf="notificationProviderLoading() || notificationProviderLoadError()"
-        [loading]="notificationProviderLoading()"
-        [error]="notificationProviderLoadError()"
-        loadingMessage="Loading notification providers..."
-        errorMessage="Could not connect to server"
-      ></app-loading-error-state>
-
-      <!-- Providers List -->
-      <div *ngIf="!notificationProviderLoading() && !notificationProviderLoadError()" class="providers-list">
+      <div class="card-content">
+        <!-- Providers List -->
+        <div class="items-list">
         <div 
           *ngFor="let provider of notificationProviderStore.notificationProviders()" 
-          class="provider-item p-3 border-round surface-border border-1 mb-3"
+          class="item-item p-3 border-round surface-border border-1 mb-3"
           [ngClass]="{ 'enabled': provider.isEnabled }"
         >
           <div class="flex justify-content-between align-items-center">
-            <div class="provider-info flex-1">
+            <div class="item-info flex-1">
                 <div>
                   <div class="flex align-items-center mb-2">
                     <h4 class="m-0 mr-2">{{ provider.name }}</h4>
@@ -45,7 +47,7 @@
                       [severity]="provider.isEnabled ? 'success' : 'secondary'"
                     ></p-tag>
                   </div>
-              <div class="provider-events text-sm text-color-secondary">
+              <div class="item-details text-sm text-color-secondary">
                 <span *ngIf="provider.events.onFailedImportStrike" class="mr-2">❌ Failed Import</span>
                 <span *ngIf="provider.events.onStalledStrike" class="mr-2">⏸️ Stalled</span>
                 <span *ngIf="provider.events.onSlowStrike" class="mr-2">🐌 Slow</span>
@@ -55,7 +57,7 @@
                   </div>
                 </div>
             </div>
-            <div class="provider-actions">
+            <div class="item-actions">
               <button 
                 pButton 
                 type="button" 
@@ -92,28 +94,29 @@
 
         <div 
           *ngIf="notificationProviderStore.notificationProviders().length === 0" 
-          class="no-providers text-center py-5 text-color-secondary"
+          class="no-items text-center py-5 text-color-secondary"
         >
           <i class="pi pi-bell text-4xl mb-3"></i>
           <p class="m-0">No notification providers configured</p>
           <small>Add a provider to start receiving notifications</small>
         </div>
-      </div>
 
-      <!-- Action buttons -->
-      <div class="card-footer mt-3">
-        <button 
-          pButton 
-          type="button" 
-          icon="pi pi-plus" 
-          label="Add Provider"
-          class="p-button-primary"
-          [disabled]="saving()"
-          (click)="openAddProviderModal()"
-        ></button>
+        <!-- Action buttons -->
+        <div class="card-footer mt-3">
+          <button 
+            pButton 
+            type="button" 
+            icon="pi pi-plus" 
+            label="Add Provider"
+            class="p-button-primary"
+            [disabled]="saving()"
+            (click)="openAddProviderModal()"
+          ></button>
+        </div>
+        </div>
       </div>
-    </div>
-  </p-card>
+    </p-card>
+  </div>
 </div>
 
 <!-- Legacy Provider Modal (for unsupported provider types) -->
@@ -172,6 +175,17 @@
   (cancel)="onProviderCancel()"
   (test)="onAppriseTest($event)"
 ></app-apprise-provider>
+
+<!-- Ntfy Provider Modal -->
+<app-ntfy-provider
+  [visible]="showNtfyModal"
+  [editingProvider]="editingProvider"
+  [saving]="saving()"
+  [testing]="testing()"
+  (save)="onNtfySave($event)"
+  (cancel)="onProviderCancel()"
+  (test)="onNtfyTest($event)"
+></app-ntfy-provider>
 
 <!-- Confirmation Dialog -->
 <p-confirmDialog></p-confirmDialog>

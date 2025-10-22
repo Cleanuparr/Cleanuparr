@@ -6,14 +6,11 @@
   <p-confirmDialog></p-confirmDialog>
   <!-- Main layout with sidebar and content -->
   <div class="layout-main">
-    <!-- Desktop Sidebar -->
     <div class="sidebar">
-      <div class="sidebar-top-line"></div>
-      
-      <!-- Shared Sidebar Content -->
       <app-sidebar-content 
-        [menuItems]="menuItems" 
-        [isMobile]="false">
+        #sidebarContent
+        [isMobile]="false"
+        [enableMobileDrawer]="true">
       </app-sidebar-content>
     </div>
     
@@ -25,37 +22,38 @@
         <div class="topbar-section left">
           <button pButton class="p-button-text sidebar-toggle-mobile" 
                   icon="pi pi-bars" 
-                  (click)="mobileSidebarVisible.set(true)"></button>
+                  (click)="sidebarContent.toggleMobileDrawer()"></button>
         </div>
-        <!-- <div class="topbar-section center">
-          <div class="version-bar">
-            <div class="version-item">
-              <i class="pi pi-code-branch version-icon"></i>
-              <span>Version <a href="https://github.com/username/cleanuparr/releases" target="_blank"><span id="version-value">1.0.0</span></a></span>
+        <div class="topbar-section center">
+          <ng-container *ngIf="appStatus$ | async as status">
+            <div class="version-bar" *ngIf="status.currentVersion || status.latestVersion">
+              <ng-container *ngIf="status.currentVersion as current">
+                <div class="version-item">
+                  <i class="pi pi-code version-icon" aria-hidden="true"></i>
+                  <span class="version-text">
+                    <span class="version-label">Version: </span>
+                    <a [href]="'https://github.com/Cleanuparr/Cleanuparr/releases/' + current" target="_blank" rel="noopener noreferrer">{{ current }}</a>
+                  </span>
+                </div>
+              </ng-container>
+
+              <div class="version-divider" *ngIf="status.currentVersion && status.latestVersion"></div>
+
+              <ng-container *ngIf="status.latestVersion as latest">
+                <div class="version-item">
+                  <i class="pi pi-github version-icon" aria-hidden="true"></i>
+                  <span class="version-text">
+                    <span class="version-label">Latest: </span>
+                    <a [href]="'https://github.com/Cleanuparr/Cleanuparr/releases/' + latest" target="_blank" rel="noopener noreferrer">{{ latest }}</a>
+                  </span>
+                </div>
+              </ng-container>
             </div>
-            <div class="version-divider"></div>
-            <div class="version-item">
-              <i class="pi pi-cloud-download version-icon"></i>
-              <span>Latest: <a href="https://github.com/username/cleanuparr/releases" target="_blank"><span id="latest-version-value">1.0.0</span></a></span>
-            </div>
-            <div class="version-divider"></div>
-            <div class="version-item">
-              <i class="pi pi-star-fill version-icon star-icon"></i>
-              <span><a href="https://github.com/username/cleanuparr" target="_blank"><span id="github-stars-value">123</span></a></span>
-            </div>
-            <div class="version-divider"></div>
-            <div class="version-item">
-              <i class="pi pi-code version-icon"></i>
-              <span class="developer-credit">Developer: <a href="https://github.com/username" target="_blank">Username</a></span>
-            </div>
-          </div>
+          </ng-container>
         </div>
         <div class="topbar-section right">
-          <div class="user-info" id="userInfoContainer">
-            <span id="username">User</span>
-            <a href="#" id="logoutLink" class="logout-btn"><i class="pi pi-sign-out"></i></a>
-          </div>
-        </div> -->
+          <div class="topbar-spacer" aria-hidden="true"></div>
+        </div>
       </div>
       
       <!-- Main Content -->
@@ -64,26 +62,4 @@
       </div>
     </div>
   </div>
-  
-  <!-- Mobile Sidebar using PrimeNG sidebar component -->
-  <p-drawer 
-    styleClass="mobile-sidebar" 
-    [visible]="mobileSidebarVisible()" 
-    (visibleChange)="mobileSidebarVisible.set($event)" 
-    [dismissible]="true" 
-    [showCloseIcon]="false"
-    position="left">
-    <ng-template #headless>
-      <div class="mobile-sidebar-content">
-        <div class="sidebar-top-line"></div>
-        
-        <!-- Shared Sidebar Content for Mobile -->
-        <app-sidebar-content 
-          [menuItems]="menuItems" 
-          [isMobile]="true"
-          (navItemClicked)="mobileSidebarVisible.set(false)">
-        </app-sidebar-content>
-      </div>
-    </ng-template>
-  </p-drawer>
 </div>

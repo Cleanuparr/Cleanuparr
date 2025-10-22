@@ -3,8 +3,9 @@ using Cleanuparr.Infrastructure.Features.Files;
 using Cleanuparr.Infrastructure.Features.ItemStriker;
 using Cleanuparr.Infrastructure.Features.MalwareBlocker;
 using Cleanuparr.Infrastructure.Http;
+using Cleanuparr.Infrastructure.Interceptors;
+using Cleanuparr.Infrastructure.Services.Interfaces;
 using Cleanuparr.Persistence.Models.Configuration;
-using Infrastructure.Interceptors;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Transmission.API.RPC;
@@ -45,11 +46,13 @@ public partial class TransmissionService : DownloadService, ITransmissionService
         IDynamicHttpClientProvider httpClientProvider,
         EventPublisher eventPublisher,
         BlocklistProvider blocklistProvider,
-        DownloadClientConfig downloadClientConfig
+        DownloadClientConfig downloadClientConfig,
+        IRuleEvaluator ruleEvaluator,
+        IRuleManager ruleManager
     ) : base(
         logger, cache,
         filenameEvaluator, striker, dryRunInterceptor, hardLinkFileService,
-        httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig
+        httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, ruleEvaluator, ruleManager
     )
     {
         UriBuilder uriBuilder = new(_downloadClientConfig.Url);

@@ -3,11 +3,11 @@ sidebar_position: 1
 ---
 
 import { Note, Warning } from '@site/src/components/Admonition';
-import { 
-  ConfigSection, 
-  EnhancedNote, 
+import {
+  ConfigSection,
+  EnhancedNote,
   EnhancedWarning,
-  styles 
+  styles
 } from '@site/src/components/documentation';
 
 # General
@@ -124,6 +124,39 @@ A lower value or `0` will result in faster searches, but may cause issues such a
 
 </ConfigSection>
 
+<div className={styles.section}>
+
+<h2 className={styles.sectionTitle}>
+  <span className={styles.sectionIcon}>📦</span>
+  Download Management
+</h2>
+
+<ConfigSection
+  id="ignored-downloads"
+  title="Ignored Downloads"
+  icon="🚯"
+>
+
+Downloads matching these patterns will be ignored during all cleaning operations. Patterns can match any of these:
+- torrent hash
+- qBittorrent tag or category
+- Deluge label
+- Transmission category (last directory from the save location)
+- µTorrent label
+- torrent tracker domain
+
+**Examples:**
+```
+fa800a7d7c443a2c3561d1f8f393c089036dade1
+tv-sonarr
+qbit-tag
+mytracker.com
+```
+
+</ConfigSection>
+
+</div>
+
 </div>
 
 <div className={styles.section}>
@@ -204,39 +237,6 @@ The number of archived log files to keep. Older files beyond this count will be 
 >
 
 Maximum age (in hours) for archived logs before they are deleted. Older files beyond this age will be removed.
-
-</ConfigSection>
-
-</div>
-
-<div className={styles.section}>
-
-<h2 className={styles.sectionTitle}>
-  <span className={styles.sectionIcon}>📦</span>
-  Download Management
-</h2>
-
-<ConfigSection
-  id="ignored-downloads"
-  title="Ignored Downloads"
-  icon="🚯"
->
-
-Downloads matching these patterns will be ignored during all cleaning operations. Patterns can match any of these:
-- torrent hash
-- qBittorrent tag or category
-- Deluge label
-- Transmission category (last directory from the save location)
-- µTorrent label
-- torrent tracker domain
-
-**Examples:**
-```
-fa800a7d7c443a2c3561d1f8f393c089036dade1
-tv-sonarr
-qbit-tag
-mytracker.com
-```
 
 </ConfigSection>
 

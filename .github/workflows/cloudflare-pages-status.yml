@@ -1,0 +1,30 @@
+name: Deploy to Cloudflare Pages
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    name: Deploy to Cloudflare Pages
+    
+    steps:
+      - name: Create status files
+        run: |
+          mkdir -p status
+          echo "{ \"version\": \"${GITHUB_REF_NAME}\" }" > status/status.json
+
+          # Cache static files for 10 minutes
+          cat > status/_headers << 'EOF'
+          /*
+            Cache-Control: public, max-age=600, s-maxage=600
+          EOF
+      
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_PAGES_TOKEN }}
+          workingDirectory: "status"
+          command: pages deploy . --project-name=cleanuparr-status

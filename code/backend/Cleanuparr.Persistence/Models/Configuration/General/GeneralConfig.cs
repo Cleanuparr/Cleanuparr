@@ -1,8 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Cleanuparr.Domain.Enums;
-using Serilog;
-using Serilog.Events;
 using ValidationException = Cleanuparr.Domain.Exceptions.ValidationException;
 
 namespace Cleanuparr.Persistence.Models.Configuration.General;

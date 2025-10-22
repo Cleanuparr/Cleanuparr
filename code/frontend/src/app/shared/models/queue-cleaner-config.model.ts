@@ -1,3 +1,6 @@
+// Import the rule types
+import { StallRule, SlowRule } from './queue-rule.model';
+
 export enum ScheduleUnit {
   Seconds = 'Seconds',
   Minutes = 'Minutes',
@@ -23,7 +26,6 @@ export interface JobSchedule {
   type: ScheduleUnit;
 }
 
-// Nested configuration interfaces
 export interface FailedImportConfig {
   maxStrikes: number;
   ignorePrivate: boolean;
@@ -32,51 +34,16 @@ export interface FailedImportConfig {
   patternMode?: PatternMode;
 }
 
-export interface StalledConfig {
-  maxStrikes: number;
-  resetStrikesOnProgress: boolean;
-  ignorePrivate: boolean;
-  deletePrivate: boolean;
-  downloadingMetadataMaxStrikes: number;
-}
-
-export interface SlowConfig {
-  maxStrikes: number;
-  resetStrikesOnProgress: boolean;
-  ignorePrivate: boolean;
-  deletePrivate: boolean;
-  minSpeed: string;
-  maxTime: number;
-  ignoreAboveSize: string;
-}
-
 export interface QueueCleanerConfig {
   enabled: boolean;
   cronExpression: string;
   useAdvancedScheduling: boolean;
   jobSchedule?: JobSchedule; // UI-only field, not sent to API
-  
-  // Nested configurations
+  ignoredDownloads: string[];
   failedImport: FailedImportConfig;
-  stalled: StalledConfig;
-  slow: SlowConfig;
+  downloadingMetadataMaxStrikes: number;
   
-  // Legacy flat properties for backward compatibility
-  // These will be mapped to/from the nested structure
-  failedImportMaxStrikes?: number;
-  failedImportIgnorePrivate?: boolean;
-  failedImportDeletePrivate?: boolean;
-  failedImportPatterns?: string[];
-  stalledMaxStrikes?: number;
-  stalledResetStrikesOnProgress?: boolean;
-  stalledIgnorePrivate?: boolean;
-  stalledDeletePrivate?: boolean;
-  downloadingMetadataMaxStrikes?: number;
-  slowMaxStrikes?: number;
-  slowResetStrikesOnProgress?: boolean;
-  slowIgnorePrivate?: boolean;
-  slowDeletePrivate?: boolean;
-  slowMinSpeed?: string;
-  slowMaxTime?: number;
-  slowIgnoreAboveSize?: string;
+  // Queue Rules
+  stallRules?: StallRule[];
+  slowRules?: SlowRule[];
 }

@@ -1,4 +1,4 @@
-﻿namespace Infrastructure.Interceptors;
+﻿namespace Cleanuparr.Infrastructure.Interceptors;
 
 public interface IDryRunInterceptor
 {

@@ -50,6 +50,7 @@ builder.Services.AddResponseCompression(options =>
 // Configure JSON options to serialize enums as strings
 builder.Services.ConfigureHttpJsonOptions(options =>
 {
+    options.SerializerOptions.PropertyNameCaseInsensitive = true;
     options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
 });
 
@@ -126,7 +127,7 @@ if (basePath is not null)
 logger.LogInformation("Server configuration: PORT={port}, BASE_PATH={basePath}", port, basePath ?? "/");
 
 // Initialize the host
-await app.InitAsync();
+app.Init();
 
 // Configure the app hub for SignalR
 var appHub = app.Services.GetRequiredService<IHubContext<AppHub>>();
@@ -150,3 +151,6 @@ app.ConfigureApi();
 await app.RunAsync();
 
 await Log.CloseAndFlushAsync();
+
+// Make Program class accessible for testing
+public partial class Program { }

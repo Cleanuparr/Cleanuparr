@@ -1,3 +1,4 @@
+using Cleanuparr.Domain.Entities;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Persistence.Converters;
 using Cleanuparr.Persistence.Models.Configuration;
@@ -7,6 +8,8 @@ using Cleanuparr.Persistence.Models.Configuration.General;
 using Cleanuparr.Persistence.Models.Configuration.MalwareBlocker;
 using Cleanuparr.Persistence.Models.Configuration.Notification;
 using Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
+using Cleanuparr.Persistence.Models.Configuration.BlacklistSync;
+using Cleanuparr.Persistence.Models.State;
 using Cleanuparr.Shared.Helpers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
@@ -27,6 +30,10 @@ public class DataContext : DbContext
     
     public DbSet<QueueCleanerConfig> QueueCleanerConfigs { get; set; }
     
+    public DbSet<StallRule> StallRules { get; set; }
+    
+    public DbSet<SlowRule> SlowRules { get; set; }
+    
     public DbSet<ContentBlockerConfig> ContentBlockerConfigs { get; set; }
     
     public DbSet<DownloadCleanerConfig> DownloadCleanerConfigs { get; set; }
@@ -42,6 +49,12 @@ public class DataContext : DbContext
     public DbSet<NotifiarrConfig> NotifiarrConfigs { get; set; }
     
     public DbSet<AppriseConfig> AppriseConfigs { get; set; }
+    
+    public DbSet<NtfyConfig> NtfyConfigs { get; set; }
+
+    public DbSet<BlacklistSyncHistory> BlacklistSyncHistory { get; set; }
+
+    public DbSet<BlacklistSyncConfig> BlacklistSyncConfigs { get; set; }
 
     public DataContext()
     {
@@ -78,8 +91,6 @@ public class DataContext : DbContext
             {
                 cp.Property(x => x.PatternMode).HasConversion<LowercaseEnumConverter<PatternMode>>();
             });
-            entity.ComplexProperty(e => e.Stalled);
-            entity.ComplexProperty(e => e.Slow);
         });
         
         modelBuilder.Entity<ContentBlockerConfig>(entity =>
@@ -126,7 +137,25 @@ public class DataContext : DbContext
                   .HasForeignKey<AppriseConfig>(c => c.NotificationConfigId)
                   .OnDelete(DeleteBehavior.Cascade);
                   
+            entity.HasOne(p => p.NtfyConfiguration)
+                  .WithOne(c => c.NotificationConfig)
+                  .HasForeignKey<NtfyConfig>(c => c.NotificationConfigId)
+                  .OnDelete(DeleteBehavior.Cascade);
+                  
             entity.HasIndex(p => p.Name).IsUnique();
+        });
+
+        // Configure BlacklistSyncState relationships and indexes
+        modelBuilder.Entity<BlacklistSyncHistory>(entity =>
+        {
+            // FK to DownloadClientConfig by DownloadClientId with cascade on delete
+            entity.HasOne(s => s.DownloadClient)
+                  .WithMany()
+                  .HasForeignKey(s => s.DownloadClientId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(s => new { s.Hash, DownloadClientId = s.DownloadClientId }).IsUnique();
+            entity.HasIndex(s => s.Hash);
         });
         
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())

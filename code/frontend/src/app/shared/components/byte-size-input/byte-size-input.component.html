@@ -16,6 +16,7 @@
       [ngModel]="unit()"
       (ngModelChange)="unit.set($event); updateUnit()"
       [disabled]="disabled"
+      [allowEmpty]="false"
       optionLabel="label" 
       optionValue="value">
     </p-selectButton>

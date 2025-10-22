@@ -1,11 +1,11 @@
 using System.Text.Json.Serialization;
-using Cleanuparr.Api.Middleware;
 using Cleanuparr.Infrastructure.Health;
 using Cleanuparr.Infrastructure.Hubs;
-using Cleanuparr.Infrastructure.Logging;
 using Microsoft.AspNetCore.Http.Json;
 using Microsoft.OpenApi.Models;
 using System.Text;
+using Cleanuparr.Api.Middleware;
+using Microsoft.Extensions.Options;
 
 namespace Cleanuparr.Api.DependencyInjection;
 
@@ -15,15 +15,21 @@ public static class ApiDI
     {
         services.Configure<JsonOptions>(options =>
         {
+            options.SerializerOptions.PropertyNameCaseInsensitive = true;
             options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
             options.SerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
         });
+        
+        // Make JsonSerializerOptions available for injection
+        services.AddSingleton(sp =>
+            sp.GetRequiredService<IOptions<JsonOptions>>().Value.SerializerOptions);
         
         // Add API-specific services
         services
             .AddControllers()
             .AddJsonOptions(options =>
             {
+                options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
                 options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
                 options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
             });
@@ -34,6 +40,7 @@ public static class ApiDI
             .AddSignalR()
             .AddJsonProtocol(options =>
             {
+                options.PayloadSerializerOptions.PropertyNameCaseInsensitive = true;
                 options.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter());
             });
         
@@ -67,19 +74,12 @@ public static class ApiDI
         // Serve static files with caching
         app.UseStaticFiles(new StaticFileOptions
         {
-            OnPrepareResponse = ctx =>
-            {
-                // Cache static assets for 30 days
-                // if (ctx.File.Name.EndsWith(".js") || ctx.File.Name.EndsWith(".css"))
-                // {
-                //     ctx.Context.Response.Headers.CacheControl = "public,max-age=2592000";
-                // }
-            }
+            OnPrepareResponse = _ => {}
         });
         
         // Add the global exception handling middleware first
         app.UseMiddleware<ExceptionMiddleware>();
-        
+
         app.UseCors("Any");
         app.UseRouting();
 
@@ -157,12 +157,12 @@ public static class ApiDI
                 icons = new[]
                 {
                     new {
-                        src = "assets/icons/icon-192x192.png",
+                        src = "icons/icon-192x192.png",
                         sizes = "192x192",
                         type = "image/png"
                     },
                     new {
-                        src = "assets/icons/icon-512x512.png",
+                        src = "icons/icon-512x512.png",
                         sizes = "512x512",
                         type = "image/png"
                     }

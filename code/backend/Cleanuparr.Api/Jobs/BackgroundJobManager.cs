@@ -1,13 +1,11 @@
-using Cleanuparr.Application.Features.DownloadCleaner;
-using Cleanuparr.Application.Features.MalwareBlocker;
-using Cleanuparr.Application.Features.QueueCleaner;
 using Cleanuparr.Domain.Exceptions;
+using Cleanuparr.Infrastructure.Features.BlacklistSync;
 using Cleanuparr.Infrastructure.Features.Jobs;
 using Cleanuparr.Persistence;
-using Cleanuparr.Persistence.Models.Configuration;
 using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
 using Cleanuparr.Persistence.Models.Configuration.MalwareBlocker;
 using Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
+using Cleanuparr.Persistence.Models.Configuration.BlacklistSync;
 using Cleanuparr.Shared.Helpers;
 using Microsoft.EntityFrameworkCore;
 using Quartz;
@@ -45,12 +43,12 @@ public class BackgroundJobManager : IHostedService
     {
         try
         {
-            _logger.LogInformation("Starting BackgroundJobManager");
+            _logger.LogDebug("Starting BackgroundJobManager");
             _scheduler = await _schedulerFactory.GetScheduler(cancellationToken);
         
             await InitializeJobsFromConfiguration(cancellationToken);
         
-            _logger.LogInformation("BackgroundJobManager started");
+            _logger.LogDebug("BackgroundJobManager started");
         }
         catch (Exception ex)
         {
@@ -64,15 +62,15 @@ public class BackgroundJobManager : IHostedService
     /// </summary>
     public async Task StopAsync(CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Stopping BackgroundJobManager");
+        _logger.LogDebug("Stopping BackgroundJobManager");
         
         if (_scheduler != null)
         {
-            // Don't shutdown the scheduler as it's managed by QuartzHostedService
+            // Don't shut down the scheduler as it's managed by QuartzHostedService
             await _scheduler.Standby(cancellationToken);
         }
         
-        _logger.LogInformation("BackgroundJobManager stopped");
+        _logger.LogDebug("BackgroundJobManager stopped");
     }
     
     /// <summary>
@@ -86,7 +84,6 @@ public class BackgroundJobManager : IHostedService
             throw new InvalidOperationException("Scheduler not initialized");
         }
         
-        // Use scoped DataContext to prevent memory leaks
         await using var scope = _scopeFactory.CreateAsyncScope();
         await using var dataContext = scope.ServiceProvider.GetRequiredService<DataContext>();
         
@@ -100,11 +97,15 @@ public class BackgroundJobManager : IHostedService
         DownloadCleanerConfig downloadCleanerConfig = await dataContext.DownloadCleanerConfigs
             .AsNoTracking()
             .FirstAsync(cancellationToken);
+        BlacklistSyncConfig blacklistSyncConfig = await dataContext.BlacklistSyncConfigs
+            .AsNoTracking()
+            .FirstAsync(cancellationToken);
         
         // Always register jobs, regardless of enabled status
         await RegisterQueueCleanerJob(queueCleanerConfig, cancellationToken);
         await RegisterMalwareBlockerJob(malwareBlockerConfig, cancellationToken);
         await RegisterDownloadCleanerJob(downloadCleanerConfig, cancellationToken);
+        await RegisterBlacklistSyncJob(blacklistSyncConfig, cancellationToken);
     }
     
     /// <summary>
@@ -120,7 +121,7 @@ public class BackgroundJobManager : IHostedService
         // Only add triggers if the job is enabled
         if (config.Enabled)
         {
-            await AddTriggersForJob<QueueCleaner>(config, config.CronExpression, cancellationToken);
+            await AddTriggersForJob<QueueCleaner>(config.CronExpression, cancellationToken);
         }
     }
     
@@ -137,7 +138,7 @@ public class BackgroundJobManager : IHostedService
         // Only add triggers if the job is enabled
         if (config.Enabled)
         {
-            await AddTriggersForJob<MalwareBlocker>(config, config.CronExpression, cancellationToken);
+            await AddTriggersForJob<MalwareBlocker>(config.CronExpression, cancellationToken);
         }
     }
     
@@ -152,7 +153,21 @@ public class BackgroundJobManager : IHostedService
         // Only add triggers if the job is enabled
         if (config.Enabled)
         {
-            await AddTriggersForJob<DownloadCleaner>(config, config.CronExpression, cancellationToken);
+            await AddTriggersForJob<DownloadCleaner>(config.CronExpression, cancellationToken);
+        }
+    }
+
+    /// <summary>
+    /// Registers the BlacklistSync job and optionally adds triggers based on general configuration.
+    /// </summary>
+    public async Task RegisterBlacklistSyncJob(BlacklistSyncConfig config, CancellationToken cancellationToken = default)
+    {
+        // Always register the job definition
+        await AddJobWithoutTrigger<BlacklistSynchronizer>(cancellationToken);
+
+        if (config.Enabled)
+        {
+            await AddTriggersForJob<BlacklistSynchronizer>(config.CronExpression, cancellationToken);
         }
     }
     
@@ -160,10 +175,9 @@ public class BackgroundJobManager : IHostedService
     /// Helper method to add triggers for an existing job.
     /// </summary>
     private async Task AddTriggersForJob<T>(
-        IJobConfig config,
         string cronExpression,
         CancellationToken cancellationToken = default) 
-        where T : GenericHandler
+        where T : IHandler
     {
         if (_scheduler == null)
         {
@@ -211,16 +225,7 @@ public class BackgroundJobManager : IHostedService
         // Schedule the main trigger
         await _scheduler.ScheduleJob(trigger, cancellationToken);
         
-        // Trigger immediate execution for startup using a one-time trigger
-        var startupTrigger = TriggerBuilder.Create()
-            .WithIdentity($"{typeName}-startup-{DateTimeOffset.UtcNow.Ticks}")
-            .ForJob(jobKey)
-            .StartNow()
-            .Build();
-        
-        await _scheduler.ScheduleJob(startupTrigger, cancellationToken);
-        
-        _logger.LogInformation("Added trigger for job {name} with cron expression {CronExpression} and immediate startup execution", 
+        _logger.LogInformation("Added trigger for job {name} with cron expression {CronExpression}", 
             typeName, cronExpression);
     }
     
@@ -228,7 +233,7 @@ public class BackgroundJobManager : IHostedService
     /// Helper method to add a job without a trigger (for chained jobs).
     /// </summary>
     private async Task AddJobWithoutTrigger<T>(CancellationToken cancellationToken = default) 
-        where T : GenericHandler
+        where T : IHandler
     {
         if (_scheduler == null)
         {
@@ -254,6 +259,6 @@ public class BackgroundJobManager : IHostedService
         // Add job to scheduler
         await _scheduler.AddJob(jobDetail, true, cancellationToken);
         
-        _logger.LogInformation("Registered job {name} without trigger", typeName);
+        _logger.LogDebug("Registered job {name} without trigger", typeName);
     }
 }

@@ -7,6 +7,25 @@ body:
     attributes:
       value: |
         Thanks for taking the time to improve Cleanuparr!
+  - type: checkboxes
+    id: duplicate-check
+    attributes:
+      label: "Duplicate check"
+      options:
+        - label: I have searched for existing issues and confirmed this is not a duplicate.
+          required: true
+  - type: checkboxes
+    id: init
+    attributes:
+      label: Implementation & testing support
+      description: The requester should help answer questions, provide support for the implementation and test changes.
+      options:
+        - label: I understand I must be available to assist with implementation questions and to test the feature before being released.
+          required: true
+        - label: I understand that joining the Discord server may be necessary for better coordination and faster communication.
+          required: true
+        - label: I understand that failure to assist in the development process of my request will result in the request being closed.
+          required: true
   - type: textarea
     id: description
     attributes:

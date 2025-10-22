@@ -12,6 +12,7 @@
       <PackageReference Include="Mapster" Version="7.4.0" />
       <PackageReference Include="MassTransit.Abstractions" Version="8.4.1" />
       <PackageReference Include="Microsoft.AspNetCore.SignalR" Version="1.2.0" />
+      <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="9.0.6" />
       <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.Abstractions" Version="9.0.0" />
       <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.6" />
       <PackageReference Include="Microsoft.Extensions.Http.Polly" Version="9.0.6" />
@@ -19,6 +20,7 @@
       <PackageReference Include="Mono.Unix" Version="7.1.0-final.1.21458.1" />
       <PackageReference Include="Quartz" Version="3.14.0" />
       <PackageReference Include="Serilog.Expressions" Version="5.0.0" />
+      <PackageReference Include="System.Threading.RateLimiting" Version="9.0.9" />
     </ItemGroup>
 
     <ItemGroup>

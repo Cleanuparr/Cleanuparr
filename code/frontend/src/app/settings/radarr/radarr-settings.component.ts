@@ -16,6 +16,7 @@ import { InputNumberModule } from "primeng/inputnumber";
 import { ToastModule } from "primeng/toast";
 import { DialogModule } from "primeng/dialog";
 import { ConfirmDialogModule } from "primeng/confirmdialog";
+import { TagModule } from "primeng/tag";
 import { ConfirmationService } from "primeng/api";
 import { NotificationService } from "../../core/services/notification.service";
 import { LoadingErrorStateComponent } from "../../shared/components/loading-error-state/loading-error-state.component";
@@ -35,6 +36,7 @@ import { UrlValidators } from "../../core/validators/url.validator";
     ToastModule,
     DialogModule,
     ConfirmDialogModule,
+    TagModule,
     LoadingErrorStateComponent,
   ],
   providers: [RadarrConfigStore, ConfirmationService],
