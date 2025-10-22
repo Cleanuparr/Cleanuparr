@@ -549,12 +549,17 @@
 >
   <form [formGroup]="stallRuleForm" class="p-fluid instance-form">
     <div class="field">
-      <label for="stall-rule-name">Name</label>
-      <input 
+      <label for="stall-rule-name">
+        <i class="pi pi-question-circle field-info-icon"
+           (click)="openFieldDocs('stallRule.name')"
+           title="Click for documentation"></i>
+        Name
+      </label>
+      <input
         id="stall-rule-name"
-        type="text" 
-        pInputText 
-        formControlName="name" 
+        type="text"
+        pInputText
+        formControlName="name"
         placeholder="My Stall Rule"
         class="w-full"
       />
@@ -563,7 +568,12 @@
     </div>
 
     <div class="field flex flex-row">
-      <label class="field-label">Enabled</label>
+      <label class="field-label">
+        <i class="pi pi-question-circle field-info-icon"
+           (click)="openFieldDocs('stallRule.enabled')"
+           title="Click for documentation"></i>
+        Enabled
+      </label>
       <div class="field-input">
         <p-checkbox formControlName="enabled" [binary]="true"></p-checkbox>
         <small class="form-helper-text">Enable this rule</small>
@@ -571,7 +581,12 @@
     </div>
 
     <div class="field">
-      <label for="stall-rule-strikes">Max Strikes</label>
+      <label for="stall-rule-strikes">
+        <i class="pi pi-question-circle field-info-icon"
+           (click)="openFieldDocs('stallRule.maxStrikes')"
+           title="Click for documentation"></i>
+        Max Strikes
+      </label>
       <p-inputNumber
         id="stall-rule-strikes"
         formControlName="maxStrikes"
@@ -586,7 +601,12 @@
     </div>
 
     <div class="field">
-      <label for="stall-rule-privacy-type">Privacy Type</label>
+      <label for="stall-rule-privacy-type">
+        <i class="pi pi-question-circle field-info-icon"
+           (click)="openFieldDocs('stallRule.privacyType')"
+           title="Click for documentation"></i>
+        Privacy Type
+      </label>
       <p-select
         id="stall-rule-privacy-type"
         formControlName="privacyType"
@@ -601,7 +621,12 @@
     </div>
 
     <div class="field">
-      <label for="stall-rule-min-completion">Min Completion Percentage</label>
+      <label for="stall-rule-min-completion">
+        <i class="pi pi-question-circle field-info-icon"
+           (click)="openFieldDocs('stallRule.completionRange')"
+           title="Click for documentation"></i>
+        Min Completion Percentage
+      </label>
       <p-inputNumber
         id="stall-rule-min-completion"
         formControlName="minCompletionPercentage"
@@ -621,8 +646,13 @@
     </div>
 
     <div class="field">
-      <label for="stall-rule-max-completion">Max Completion Percentage</label>
-      <p-inputNumber 
+      <label for="stall-rule-max-completion">
+        <i class="pi pi-question-circle field-info-icon"
+           (click)="openFieldDocs('stallRule.completionRange')"
+           title="Click for documentation"></i>
+        Max Completion Percentage
+      </label>
+      <p-inputNumber
         id="stall-rule-max-completion"
         formControlName="maxCompletionPercentage"
         [step]="1"
@@ -641,7 +671,12 @@
     </div>
 
     <div class="field flex flex-row">
-      <label class="field-label">Reset Strikes on Progress</label>
+      <label class="field-label">
+        <i class="pi pi-question-circle field-info-icon"
+           (click)="openFieldDocs('stallRule.resetStrikesOnProgress')"
+           title="Click for documentation"></i>
+        Reset Strikes on Progress
+      </label>
       <div class="field-input">
         <p-checkbox formControlName="resetStrikesOnProgress" [binary]="true"></p-checkbox>
         <small class="form-helper-text">Reset strike count when torrent shows progress</small>
@@ -649,7 +684,12 @@
     </div>
 
     <div class="field">
-      <label for="stall-rule-min-progress">Minimum Progress to Reset</label>
+      <label for="stall-rule-min-progress">
+        <i class="pi pi-question-circle field-info-icon"
+           (click)="openFieldDocs('stallRule.minimumProgress')"
+           title="Click for documentation"></i>
+        Minimum Progress to Reset
+      </label>
       <app-byte-size-input
         id="stall-rule-min-progress"
         formControlName="minimumProgress"
@@ -661,7 +701,12 @@
     </div>
 
     <div class="field flex flex-row">
-      <label class="field-label">Delete Private from Client</label>
+      <label class="field-label">
+        <i class="pi pi-question-circle field-info-icon"
+           (click)="openFieldDocs('stallRule.deletePrivateTorrentsFromClient')"
+           title="Click for documentation"></i>
+        Delete Private from Client
+      </label>
       <div class="field-input">
         <p-checkbox formControlName="deletePrivateTorrentsFromClient" [binary]="true"></p-checkbox>
         <small class="form-helper-text">Disable this if you want to keep private torrents in the download client even if they are removed from the arrs</small>
@@ -705,12 +750,17 @@
 >
   <form [formGroup]="slowRuleForm" class="p-fluid instance-form">
     <div class="field">
-      <label for="slow-rule-name">Name</label>
-      <input 
+      <label for="slow-rule-name">
+        <i class="pi pi-question-circle field-info-icon"
+           (click)="openFieldDocs('slowRule.name')"
+           title="Click for documentation"></i>
+        Name
+      </label>
+      <input
         id="slow-rule-name"
-        type="text" 
-        pInputText 
-        formControlName="name" 
+        type="text"
+        pInputText
+        formControlName="name"
         placeholder="My Slow Rule"
         class="w-full"
       />
@@ -719,7 +769,12 @@
     </div>
 
     <div class="field flex flex-row">
-      <label class="field-label">Enabled</label>
+      <label class="field-label">
+        <i class="pi pi-question-circle field-info-icon"
+           (click)="openFieldDocs('slowRule.enabled')"
+           title="Click for documentation"></i>
+        Enabled
+      </label>
       <div class="field-input">
         <p-checkbox formControlName="enabled" [binary]="true"></p-checkbox>
         <small class="form-helper-text">Enable this rule</small>
@@ -727,7 +782,12 @@
     </div>
 
     <div class="field">
-      <label for="slow-rule-strikes">Max Strikes</label>
+      <label for="slow-rule-strikes">
+        <i class="pi pi-question-circle field-info-icon"
+           (click)="openFieldDocs('slowRule.maxStrikes')"
+           title="Click for documentation"></i>
+        Max Strikes
+      </label>
       <p-inputNumber
         id="slow-rule-strikes"
         formControlName="maxStrikes"
@@ -742,7 +802,12 @@
     </div>
 
     <div class="field">
-      <label for="slow-rule-speed">Min Speed</label>
+      <label for="slow-rule-speed">
+        <i class="pi pi-question-circle field-info-icon"
+           (click)="openFieldDocs('slowRule.minSpeed')"
+           title="Click for documentation"></i>
+        Min Speed
+      </label>
       <app-byte-size-input
         formControlName="minSpeed"
         placeholder="Enter minimum speed"
@@ -754,7 +819,12 @@
     </div>
 
     <div class="field">
-      <label for="slow-rule-max-time">Maximum Time (Hours)</label>
+      <label for="slow-rule-max-time">
+        <i class="pi pi-question-circle field-info-icon"
+           (click)="openFieldDocs('slowRule.maxTimeHours')"
+           title="Click for documentation"></i>
+        Maximum Time (Hours)
+      </label>
       <p-inputNumber
         formControlName="maxTimeHours"
         id="slow-rule-max-time"
@@ -769,7 +839,12 @@
     </div>
 
     <div class="field">
-      <label for="slow-rule-privacy-type">Privacy Type</label>
+      <label for="slow-rule-privacy-type">
+        <i class="pi pi-question-circle field-info-icon"
+           (click)="openFieldDocs('slowRule.privacyType')"
+           title="Click for documentation"></i>
+        Privacy Type
+      </label>
       <p-select
         id="slow-rule-privacy-type"
         formControlName="privacyType"
@@ -784,7 +859,12 @@
     </div>
 
     <div class="field">
-      <label for="slow-rule-min-completion">Min Completion %</label>
+      <label for="slow-rule-min-completion">
+        <i class="pi pi-question-circle field-info-icon"
+           (click)="openFieldDocs('slowRule.completionRange')"
+           title="Click for documentation"></i>
+        Min Completion %
+      </label>
       <p-inputNumber
         formControlName="minCompletionPercentage"
         id="slow-rule-min-completion"
@@ -797,11 +877,16 @@
       <small *ngIf="hasModalError(slowRuleForm, 'minCompletionPercentage', 'required')" class="p-error">Percentage is required</small>
       <small *ngIf="hasModalError(slowRuleForm, 'minCompletionPercentage', 'min')" class="p-error">Percentage cannot be negative</small>
       <small *ngIf="hasModalError(slowRuleForm, 'minCompletionPercentage', 'max')" class="p-error">Percentage cannot exceed 100</small>
-  <small class="form-helper-text">Apply the rule once completion percentage exceeds this value (0 still includes exactly 0%)</small>
+      <small class="form-helper-text">Apply the rule once completion percentage exceeds this value (0 still includes exactly 0%)</small>
     </div>
 
     <div class="field">
-      <label for="slow-rule-max-completion">Max Completion %</label>
+      <label for="slow-rule-max-completion">
+        <i class="pi pi-question-circle field-info-icon"
+           (click)="openFieldDocs('slowRule.completionRange')"
+           title="Click for documentation"></i>
+        Max Completion %
+      </label>
       <p-inputNumber
         formControlName="maxCompletionPercentage"
         id="slow-rule-max-completion"
@@ -815,11 +900,16 @@
       <small *ngIf="hasModalError(slowRuleForm, 'maxCompletionPercentage', 'min')" class="p-error">Percentage cannot be negative</small>
       <small *ngIf="hasModalError(slowRuleForm, 'maxCompletionPercentage', 'max')" class="p-error">Percentage cannot exceed 100</small>
       <small *ngIf="hasModalError(slowRuleForm, 'maxCompletionPercentage', 'minGreaterThanMax')" class="p-error">Max percentage must be greater than or equal to Min percentage</small>
-  <small class="form-helper-text">Apply the rule up to and including this completion percentage</small>
+      <small class="form-helper-text">Apply the rule up to and including this completion percentage</small>
     </div>
 
     <div class="field">
-      <label for="slow-rule-ignore-above-size">Ignore Above Size</label>
+      <label for="slow-rule-ignore-above-size">
+        <i class="pi pi-question-circle field-info-icon"
+           (click)="openFieldDocs('slowRule.ignoreAboveSize')"
+           title="Click for documentation"></i>
+        Ignore Above Size
+      </label>
       <app-byte-size-input
         formControlName="ignoreAboveSize"
         [min]="0"
@@ -831,7 +921,12 @@
     </div>
 
     <div class="field flex flex-row">
-      <label class="field-label">Reset Strikes on Progress</label>
+      <label class="field-label">
+        <i class="pi pi-question-circle field-info-icon"
+           (click)="openFieldDocs('slowRule.resetStrikesOnProgress')"
+           title="Click for documentation"></i>
+        Reset Strikes on Progress
+      </label>
       <div class="field-input">
         <p-checkbox formControlName="resetStrikesOnProgress" [binary]="true"></p-checkbox>
         <small class="form-helper-text">Reset strike count when torrent shows progress</small>
@@ -839,7 +934,12 @@
     </div>
 
     <div class="field flex flex-row">
-      <label class="field-label">Delete Private from Client</label>
+      <label class="field-label">
+        <i class="pi pi-question-circle field-info-icon"
+           (click)="openFieldDocs('slowRule.deletePrivateTorrentsFromClient')"
+           title="Click for documentation"></i>
+        Delete Private from Client
+      </label>
       <div class="field-input">
         <p-checkbox formControlName="deletePrivateTorrentsFromClient" [binary]="true"></p-checkbox>
         <small class="form-helper-text">Disable this if you want to keep private torrents in the download client even if they are removed from the arrs</small>
