@@ -601,7 +601,7 @@
 
 .appGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  grid-template-columns: repeat(4, 1fr);
   gap: 1.5rem;
   margin-bottom: 2rem;
 }
@@ -618,6 +618,7 @@
   flex-direction: column;
   align-items: center;
   position: relative;
+  min-height: 100%;
 }
 
 .appCard:hover {
@@ -662,7 +663,6 @@
   font-size: 0.813rem;
   line-height: 1.4;
   margin: 0.5rem 0;
-  flex-grow: 1;
 }
 
 .appLink {
@@ -671,7 +671,8 @@
   font-weight: 500;
   font-size: 0.813rem;
   transition: all 0.2s ease;
-  margin-top: 0.5rem;
+  margin-top: auto;
+  padding-top: 0.5rem;
 }
 
 .appLink:hover {
@@ -750,45 +751,55 @@
 }
 
 /* Responsive Design */
+@media (max-width: 996px) {
+  .appGrid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
 @media (max-width: 768px) {
   .pageHeader {
     padding: var(--doc-spacing-lg) var(--doc-spacing-md);
     margin-left: calc(-1 * var(--ifm-spacing-horizontal));
     margin-right: calc(-1 * var(--ifm-spacing-horizontal));
   }
-  
+
   .headerTitle {
     font-size: 2rem;
   }
-  
+
   .headerSubtitle {
     font-size: 1.1rem;
   }
-  
+
   .methodGrid {
     grid-template-columns: 1fr;
     gap: var(--doc-spacing-md);
   }
-  
+
+  .appGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
   .configHeader {
     flex-direction: column;
     align-items: flex-start;
     gap: var(--doc-spacing-sm);
   }
-  
+
   .step {
     flex-direction: column;
     text-align: center;
   }
-  
+
   .stepNumber {
     align-self: center;
   }
-  
+
   .quickNav {
     position: static;
   }
-  
+
   .quickNavList {
     grid-template-columns: 1fr;
   }
@@ -801,13 +812,17 @@
     text-align: center;
     gap: var(--doc-spacing-sm);
   }
-  
+
   .configSection {
     padding: var(--doc-spacing-md);
   }
-  
+
   .methodCard {
     padding: var(--doc-spacing-md);
+  }
+
+  .appGrid {
+    grid-template-columns: 1fr;
   }
 }
 
