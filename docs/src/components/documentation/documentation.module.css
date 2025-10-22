@@ -586,78 +586,82 @@
   transform: translateX(4px);
 }
 
-/* App Cards */
+/* App Cards - Styled like main page integrations */
 .appCardSection {
-  margin: var(--doc-spacing-xl) 0;
+  margin: 3rem 0;
 }
 
 .appCardTitle {
   font-size: 1.5rem;
   font-weight: 600;
-  color: var(--doc-text-primary);
-  margin: 0 0 var(--doc-spacing-md) 0;
-  border-bottom: 3px solid var(--doc-primary);
-  padding-bottom: var(--doc-spacing-sm);
+  color: var(--ifm-heading-color);
+  margin: 0 0 1.5rem 0;
+  text-align: center;
 }
 
 .appGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: var(--doc-spacing-md);
-  margin: var(--doc-spacing-md) 0;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
 }
 
 .appCard {
-  background: var(--doc-bg-secondary);
-  border: 2px solid var(--doc-border-color);
-  border-radius: var(--doc-radius-sm);
-  padding: var(--doc-spacing-md);
+  background: var(--ifm-card-background-color);
+  border: 1px solid var(--ifm-color-emphasis-200);
+  border-radius: 12px;
+  padding: 1.5rem;
+  text-align: center;
   transition: all 0.3s ease;
+  cursor: pointer;
   display: flex;
   flex-direction: column;
   align-items: center;
-  text-align: center;
   position: relative;
 }
 
 .appCard:hover {
-  border-color: var(--doc-primary);
-  box-shadow: var(--doc-shadow-md);
-  transform: translateY(-2px);
-}
-
-.appIconWrapper {
-  width: 50px;
-  height: 50px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: var(--doc-spacing-sm);
-  padding: 0.4rem;
+  transform: translateY(-4px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+  border-color: var(--app-color);
 }
 
 .appIcon {
-  width: 100%;
-  height: 100%;
+  width: 50px;
+  height: 50px;
+  display: block;
+  margin: 0 auto 0.75rem;
   object-fit: contain;
 }
 
-[data-theme='dark'] .appIcon {
-  filter: brightness(1.1);
+.appIconLight {
+  display: none;
+}
+
+.appIconDark {
+  display: block;
+}
+
+[data-theme='dark'] .appIconLight {
+  display: block;
+}
+
+[data-theme='dark'] .appIconDark {
+  display: none;
 }
 
 .appName {
-  font-size: 1rem;
   font-weight: 600;
-  color: var(--doc-text-primary);
-  margin: 0 0 0.4rem 0;
+  color: var(--ifm-heading-color);
+  font-size: 0.875rem;
+  margin-bottom: 0.5rem;
 }
 
 .appDescription {
-  color: var(--doc-text-secondary);
-  font-size: 0.85rem;
+  color: var(--ifm-color-emphasis-700);
+  font-size: 0.813rem;
   line-height: 1.4;
-  margin: 0 0 var(--doc-spacing-sm) 0;
+  margin: 0.5rem 0;
   flex-grow: 1;
 }
 
@@ -665,8 +669,9 @@
   color: var(--ifm-link-color);
   text-decoration: none;
   font-weight: 500;
-  font-size: 0.85rem;
+  font-size: 0.813rem;
   transition: all 0.2s ease;
+  margin-top: 0.5rem;
 }
 
 .appLink:hover {

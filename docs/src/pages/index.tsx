@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import clsx from "clsx";
 import Link from "@docusaurus/Link";
 import useDocusaurusContext from "@docusaurus/useDocusaurusContext";
+import useBaseUrl from "@docusaurus/useBaseUrl";
 import Layout from "@theme/Layout";
 import Heading from "@theme/Heading";
 import SupportBanner from "../components/support/SupportBanner";
@@ -26,7 +27,6 @@ function FeatureCard({ icon, title, description, color }: FeatureCardProps) {
 }
 
 interface QuickStartCardProps {
-  icon: string;
   title: string;
   description: string;
   command: string;
@@ -34,11 +34,10 @@ interface QuickStartCardProps {
   buttonLink: string;
 }
 
-function QuickStartCard({ icon, title, description, command, buttonText, buttonLink }: QuickStartCardProps) {
+function QuickStartCard({ title, description, command, buttonText, buttonLink }: QuickStartCardProps) {
   return (
     <div className={styles.quickStartCard}>
       <div className={styles.quickStartHeader}>
-        <span className={styles.quickStartIcon}>{icon}</span>
         <h3 className={styles.quickStartTitle}>{title}</h3>
       </div>
       <p className={styles.quickStartDescription}>{description}</p>
@@ -143,7 +142,7 @@ function FeaturesSection() {
     {
       icon: "🔔",
       title: "Smart Notifications",
-      description: "Get alerted about strikes, removals, and cleanup operations via Notifiarr or Apprise.",
+      description: "Get alerted about strikes, removals and cleanup operations.",
       color: "#fd7e14"
     }
   ];
@@ -168,7 +167,6 @@ function FeaturesSection() {
 function QuickStartSection() {
   const quickStartOptions: QuickStartCardProps[] = [
     {
-      icon: "🐳",
       title: "Docker (Recommended)",
       description: "Get up and running in seconds with Docker Compose",
       command: "docker run -d --name cleanuparr -p 11011:11011 cleanuparr/cleanuparr:latest",
@@ -176,7 +174,6 @@ function QuickStartSection() {
       buttonLink: "/docs/installation"
     },
     {
-      icon: "💻",
       title: "Standalone Application",
       description: "Download pre-built binaries for Windows, macOS, and Linux",
       command: "# Download from GitHub Releases\n# Extract and run the executable",
@@ -203,16 +200,19 @@ function QuickStartSection() {
 }
 
 function IntegrationsSection() {
-  const supportedApps = [
-    { name: "Sonarr", icon: "📺", color: "#3578e5" },
-    { name: "Radarr", icon: "🎬", color: "#ffc107" },
-    { name: "Lidarr", icon: "🎵", color: "#28a745" },
-    { name: "Readarr", icon: "📚", color: "#6f42c1" },
-    { name: "Whisparr", icon: "🔞", color: "#dc3545" },
-    { name: "qBittorrent", icon: "⬇️", color: "#17a2b8" },
-    { name: "Deluge", icon: "🌊", color: "#fd7e14" },
-    { name: "Transmission", icon: "📡", color: "#e83e8c" },
-    { name: "µTorrent", icon: "🌀", color: "#343a40" },
+  const mediaApps = [
+    { name: "Sonarr", iconLight: "/img/icons/sonarr-light.svg", iconDark: "/img/icons/sonarr-dark.svg", color: "#3578e5" },
+    { name: "Radarr", iconLight: "/img/icons/radarr-light.svg", iconDark: "/img/icons/radarr-dark.svg", color: "#ffc107" },
+    { name: "Lidarr", iconLight: "/img/icons/lidarr-light.svg", iconDark: "/img/icons/lidarr-dark.svg", color: "#28a745" },
+    { name: "Readarr", iconLight: "/img/icons/readarr-light.svg", iconDark: "/img/icons/readarr-dark.svg", color: "#ff0000ff" },
+    { name: "Whisparr", iconLight: "/img/icons/whisparr-light.svg", iconDark: "/img/icons/whisparr-dark.svg", color: "#e83e8c" },
+  ];
+
+  const downloadClients = [
+    { name: "qBittorrent", iconLight: "/img/icons/qbittorrent-light.svg", iconDark: "/img/icons/qbittorrent-dark.svg", color: "#2b75d9" },
+    { name: "Deluge", iconLight: "/img/icons/deluge-light.svg", iconDark: "/img/icons/deluge-dark.svg", color: "#094491" },
+    { name: "Transmission", iconLight: "/img/icons/transmission-light.svg", iconDark: "/img/icons/transmission-dark.svg", color: "#e90f0fff" },
+    { name: "µTorrent", iconLight: "/img/icons/utorrent-light.svg", iconDark: "/img/icons/utorrent-dark.svg", color: "#0ce216ff" },
   ];
 
   return (
@@ -222,16 +222,56 @@ function IntegrationsSection() {
           <h2>Seamless Integrations</h2>
           <p>Works with all your favorite *arr applications and download clients.</p>
         </div>
-        <div className={styles.integrationsGrid}>
-          {supportedApps.map((app, idx) => (
-            <div key={idx} className={styles.integrationItem} style={{ '--app-color': app.color } as any}>
-              <span className={styles.integrationIcon}>{app.icon}</span>
-              <span className={styles.integrationName}>{app.name}</span>
-            </div>
-          ))}
+
+        <div className={styles.integrationCategory}>
+          <h3 className={styles.categoryTitle}>Media Management</h3>
+          <div className={styles.integrationsGrid}>
+            {mediaApps.map((app, idx) => (
+              <IntegrationCard key={idx} app={app} />
+            ))}
+          </div>
+        </div>
+
+        <div className={styles.integrationCategory}>
+          <h3 className={styles.categoryTitle}>Download Clients</h3>
+          <div className={styles.integrationsGrid}>
+            {downloadClients.map((app, idx) => (
+              <IntegrationCard key={idx} app={app} />
+            ))}
+          </div>
         </div>
       </div>
     </section>
+  );
+}
+
+interface IntegrationCardProps {
+  app: {
+    name: string;
+    iconLight: string;
+    iconDark: string;
+    color: string;
+  };
+}
+
+function IntegrationCard({ app }: IntegrationCardProps) {
+  const iconLightUrl = useBaseUrl(app.iconLight);
+  const iconDarkUrl = useBaseUrl(app.iconDark);
+
+  return (
+    <div className={styles.integrationItem} style={{ '--app-color': app.color } as any}>
+      <img
+        src={iconLightUrl}
+        alt={`${app.name} logo`}
+        className={`${styles.integrationIcon} ${styles.integrationIconLight}`}
+      />
+      <img
+        src={iconDarkUrl}
+        alt={`${app.name} logo`}
+        className={`${styles.integrationIcon} ${styles.integrationIconDark}`}
+      />
+      <span className={styles.integrationName}>{app.name}</span>
+    </div>
   );
 }
 
