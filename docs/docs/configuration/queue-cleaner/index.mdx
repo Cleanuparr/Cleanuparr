@@ -8,6 +8,7 @@ import {
   Warning,
   ElementNavigator,
   SectionTitle,
+  PrefixedSection,
   styles
 } from '@site/src/components/documentation';
 import failedImportPatterns from '../../../static/img/failed-import-patterns.png';
@@ -156,6 +157,7 @@ These patterns can be any substring of the failed import messages. These messsag
 
 </div>
 
+<PrefixedSection prefix="stalled">
 <div className={styles.section}>
 
 <SectionTitle icon="⏸️">Stalled Download Rules</SectionTitle>
@@ -261,7 +263,9 @@ Number of strikes before a download stuck in "Downloading Metadata" state is rem
 </ConfigSection>
 
 </div>
+</PrefixedSection>
 
+<PrefixedSection prefix="slow">
 <div className={styles.section}>
 
 <SectionTitle icon="🐌">Slow Download Rules</SectionTitle>
@@ -376,5 +380,6 @@ Setting this to true means private torrents will be permanently deleted, potenti
 </ConfigSection>
 
 </div>
+</PrefixedSection>
 
 </div>

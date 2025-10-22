@@ -1,6 +1,7 @@
 import React from 'react';
 import styles from './documentation.module.css';
 import { generateIdFromTitle } from './utils';
+import { useIdPrefix } from './IdPrefixContext';
 
 interface ConfigSectionProps {
   id?: string;
@@ -21,8 +22,11 @@ export default function ConfigSection({
   children,
   className
 }: ConfigSectionProps) {
-  // Generate ID from title if not provided
-  const elementId = id || generateIdFromTitle(title);
+  // Get prefix from context (if within a section that provides it)
+  const prefix = useIdPrefix();
+
+  // Generate ID from title if not provided, with optional prefix
+  const elementId = id || generateIdFromTitle(title, prefix);
 
   return (
     <section
