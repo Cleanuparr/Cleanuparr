@@ -175,8 +175,8 @@ function QuickStartSection() {
       title: "Docker (Recommended)",
       description: "Get up and running in seconds with Docker Compose",
       command: "docker run -d --name cleanuparr -p 11011:11011 cleanuparr/cleanuparr:latest",
-      buttonText: "Docker Setup Guide",
-      buttonLink: "/docs/installation"
+      buttonText: "Quick Start Guide",
+      buttonLink: "/docs/installation/quick_start"
     },
     {
       title: "Standalone Application",
