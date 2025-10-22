@@ -3,7 +3,7 @@ sidebar_position: 1
 ---
 
 import useBaseUrl from '@docusaurus/useBaseUrl';
-import { Note, SectionTitle, ElementNavigator, ClickableImage, styles } from '@site/src/components/documentation';
+import { Note, Important, SectionTitle, ElementNavigator, ClickableImage, styles } from '@site/src/components/documentation';
 
 # Prerequisites
 
@@ -28,7 +28,7 @@ If you are using Prowlarr as your indexer manager:
 5. Edit app
 6. Enable `Sync Reject Blocklisted Torrent Hashes While Grabbing`
 
-Repeat step #6 for each Prowlarr app you have configured.
+Repeat steps #5 and #6 for each Prowlarr app you have configured.
 
   </div>
   <div className={styles.sideBySideImage}>
@@ -49,6 +49,10 @@ Repeat step #6 for each Prowlarr app you have configured.
 <div className={styles.sideBySide}>
   <div className={styles.sideBySideContent}>
 
+<Important>
+If you are using Prowlarr, this step is not necessary.
+</Important>
+
 If you are using Sonarr/Radarr/Lidarr/Readarr/Whisparr as your indexer manager:
 1. Go to Sonarr/Radarr/Lidarr/Readarr/Whisparr
 2. Navigate to `Settings`
@@ -57,7 +61,7 @@ If you are using Sonarr/Radarr/Lidarr/Readarr/Whisparr as your indexer manager:
 5. Edit indexer
 6. Enable `Reject Blocklisted Torrent Hashes While Grabbing`
 
-Repeat step #6 for each indexer you have configured.
+Repeat steps #5 and #6 for each indexer you have configured.
 
   </div>
   <div className={styles.sideBySideImage}>
