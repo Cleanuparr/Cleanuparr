@@ -37,11 +37,6 @@ export default function SectionTitle({
 
   return (
     <h2 id={elementId} className={`${styles.sectionTitle} ${className || ''}`}>
-      {icon && (
-        <span className={styles.sectionIcon} role="img" aria-label={text}>
-          {icon}
-        </span>
-      )}
       {children}
     </h2>
   );

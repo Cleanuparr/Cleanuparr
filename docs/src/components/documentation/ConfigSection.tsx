@@ -35,11 +35,6 @@ export default function ConfigSection({
     >
       <div className={styles.configHeader}>
         <h3 className={styles.configTitle}>
-          {icon && (
-            <span className={styles.configIcon} role="img" aria-label={title}>
-              {icon}
-            </span>
-          )}
           {title}
         </h3>
         {badge && (
