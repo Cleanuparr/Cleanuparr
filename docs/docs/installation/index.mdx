@@ -2,13 +2,15 @@
 sidebar_position: 1
 ---
 
-import { Note as Note } from '@site/src/components/documentation';
+import { Note, styles } from '@site/src/components/documentation';
 
 # Quick Start
 
+<div className={styles.documentationPage}>
+
 The fastest way to get started with Cleanuparr:
 
-## 🐳 Docker (Recommended)
+## Docker (Recommended)
 
 **Option 1: Docker Run**
 ```bash
@@ -59,7 +61,7 @@ Use the Unraid template available in the Community Applications plugin. If the t
 8. Most other settings can be left at default, with the exception of the downloads folder which should be mapped to where your *arr stack / torrent client downloads its files to
 
 
-## 🖥️ Other Installation Methods
+## Other Installation Methods
 
 - **Windows**: Download the installer from [GitHub Releases](https://github.com/Cleanuparr/Cleanuparr/releases)
 - **macOS**: Download the `.pkg` installer for your Mac type (Intel/Apple Silicon)
@@ -69,8 +71,10 @@ Use the Unraid template available in the Community Applications plugin. If the t
 For detailed installation instructions, security notes, troubleshooting, and all platform-specific options, see the [Complete Installation Guide](/docs/installation/detailed).
 </Note>
 
-## 🚀 After Installation
+## After Installation
 
 1. Open your browser and go to `http://localhost:11011`
 2. Configure your download clients and *arr applications
-3. Refer to the [Configuration](/docs/category/configuration) section for detailed setup instructions 
+3. Refer to the [Configuration](/docs/category/configuration) section for detailed setup instructions
+
+</div> 

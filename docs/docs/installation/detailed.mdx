@@ -2,9 +2,12 @@
 sidebar_position: 2
 ---
 
-import { Note as Note, Important as Important } from '@site/src/components/documentation';
+import { Note, Important, styles } from '@site/src/components/documentation';
 
 # Installation Guide
+
+
+<div className={styles.documentationPage}>
 
 This guide will walk you through the installation process for Cleanuparr. Cleanuparr can be installed in several ways depending on your preference and system configuration.
 
@@ -281,3 +284,5 @@ $ yay -Sy cleanuparr
 
 #### Health Checks
 Cleanuparr provides comprehensive health check endpoints for monitoring and container orchestration. For detailed information about available endpoints and configuration, see the [Health Checks documentation](../configuration/health-checks/).
+
+</div>
