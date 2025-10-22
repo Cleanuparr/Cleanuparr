@@ -586,6 +586,94 @@
   transform: translateX(4px);
 }
 
+/* App Cards */
+.appCardSection {
+  margin: var(--doc-spacing-xl) 0;
+}
+
+.appCardTitle {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--doc-text-primary);
+  margin: 0 0 var(--doc-spacing-md) 0;
+  border-bottom: 3px solid var(--doc-primary);
+  padding-bottom: var(--doc-spacing-sm);
+}
+
+.appGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: var(--doc-spacing-md);
+  margin: var(--doc-spacing-md) 0;
+}
+
+.appCard {
+  background: var(--doc-bg-secondary);
+  border: 2px solid var(--doc-border-color);
+  border-radius: var(--doc-radius-sm);
+  padding: var(--doc-spacing-md);
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  position: relative;
+}
+
+.appCard:hover {
+  border-color: var(--doc-primary);
+  box-shadow: var(--doc-shadow-md);
+  transform: translateY(-2px);
+}
+
+.appIconWrapper {
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: var(--doc-spacing-sm);
+  padding: 0.4rem;
+}
+
+.appIcon {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+[data-theme='dark'] .appIcon {
+  filter: brightness(1.1);
+}
+
+.appName {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--doc-text-primary);
+  margin: 0 0 0.4rem 0;
+}
+
+.appDescription {
+  color: var(--doc-text-secondary);
+  font-size: 0.85rem;
+  line-height: 1.4;
+  margin: 0 0 var(--doc-spacing-sm) 0;
+  flex-grow: 1;
+}
+
+.appLink {
+  color: var(--ifm-link-color);
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 0.85rem;
+  transition: all 0.2s ease;
+}
+
+.appLink:hover {
+  color: var(--ifm-link-hover-color);
+  text-decoration: underline;
+}
+
 /* Enhanced Admonitions */
 .enhancedAdmonition {
   margin: 0.75rem 0;

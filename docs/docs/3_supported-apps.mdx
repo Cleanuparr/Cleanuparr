@@ -2,27 +2,88 @@
 sidebar_position: 3
 ---
 
-import { 
-  styles 
+import {
+  AppCard,
+  styles
 } from '@site/src/components/documentation';
+import useBaseUrl from '@docusaurus/useBaseUrl';
 
 # Supported Apps
 
-Cleanuparr integrates with popular *arr applications and download clients for comprehensive media management.
+Cleanuparr integrates with popular *arr applications and download clients for media management automation.
 
 <div className={styles.documentationPage}>
 
-<div className={styles.section}>
+<AppCard
+  title="Media Management Apps"
+  apps={[
+    {
+      name: 'Sonarr',
+      iconLight: useBaseUrl('/img/icons/sonarr-light.svg'),
+      iconDark: useBaseUrl('/img/icons/sonarr-dark.svg'),
+      description: 'Smart PVR for newsgroup and torrent users for TV series management',
+      url: 'https://sonarr.tv'
+    },
+    {
+      name: 'Radarr',
+      iconLight: useBaseUrl('/img/icons/radarr-light.svg'),
+      iconDark: useBaseUrl('/img/icons/radarr-dark.svg'),
+      description: 'Movie collection manager for Usenet and BitTorrent users',
+      url: 'https://radarr.video'
+    },
+    {
+      name: 'Lidarr',
+      iconLight: useBaseUrl('/img/icons/lidarr-light.svg'),
+      iconDark: useBaseUrl('/img/icons/lidarr-dark.svg'),
+      description: 'Music collection manager for Usenet and BitTorrent users',
+      url: 'https://lidarr.audio'
+    },
+    {
+      name: 'Readarr',
+      iconLight: useBaseUrl('/img/icons/readarr-light.svg'),
+      iconDark: useBaseUrl('/img/icons/readarr-dark.svg'),
+      description: 'Book and audiobook collection manager for Usenet and BitTorrent',
+      url: 'https://readarr.com'
+    },
+    {
+      name: 'Whisparr v2',
+      iconLight: useBaseUrl('/img/icons/whisparr-light.svg'),
+      iconDark: useBaseUrl('/img/icons/whisparr-dark.svg'),
+      description: 'Adult content management for Usenet and BitTorrent users',
+      url: 'https://whisparr.com'
+    }
+  ]}
+/>
 
-<div className={styles.configTable}>
-
-| **Category** | **Application** | **Integration** |
-|--------------|-----------------|-----------------|
-| **Media Management** | Sonarr, Radarr, Lidarr, Readarr, Whisparr | Full API integration for queue monitoring and search triggers |
-| **Download Clients** | qBittorrent, Deluge, Transmission, µTorrent | Complete download management and monitoring |
-
-</div>
-
-</div>
+<AppCard
+  title="Download Clients"
+  apps={[
+    {
+      name: 'qBittorrent',
+      iconLight: useBaseUrl('/img/icons/qbittorrent-light.svg'),
+      iconDark: useBaseUrl('/img/icons/qbittorrent-dark.svg'),
+      description: '(recommended)',
+      url: 'https://www.qbittorrent.org'
+    },
+    {
+      name: 'Deluge',
+      iconLight: useBaseUrl('/img/icons/deluge-light.svg'),
+      iconDark: useBaseUrl('/img/icons/deluge-dark.svg'),
+      url: 'https://deluge-torrent.org'
+    },
+    {
+      name: 'Transmission',
+      iconLight: useBaseUrl('/img/icons/transmission-light.svg'),
+      iconDark: useBaseUrl('/img/icons/transmission-dark.svg'),
+      url: 'https://transmissionbt.com'
+    },
+    {
+      name: 'µTorrent',
+      iconLight: useBaseUrl('/img/icons/utorrent-light.svg'),
+      iconDark: useBaseUrl('/img/icons/utorrent-dark.svg'),
+      url: 'https://www.utorrent.com'
+    }
+  ]}
+/>
 
 </div>

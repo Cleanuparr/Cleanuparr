@@ -8,6 +8,7 @@ export { default as StepGuide, Step } from './StepGuide';
 export { default as QuickNav } from './QuickNav';
 export { default as EnhancedAdmonition, Note, Important, Warning, EnhancedNote, EnhancedImportant, EnhancedWarning } from './EnhancedAdmonition';
 export { default as ElementNavigator } from './ElementNavigator';
+export { default as AppCard } from './AppCard';
 
 // CSS classes for direct use
 export { default as styles } from './documentation.module.css'; 
