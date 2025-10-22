@@ -3,11 +3,11 @@ sidebar_position: 1
 ---
 
 import useBaseUrl from '@docusaurus/useBaseUrl';
-import { Note, SectionTitle, ElementNavigator, styles } from '@site/src/components/documentation';
+import { Note, SectionTitle, ElementNavigator, ClickableImage, styles } from '@site/src/components/documentation';
 
 # Prerequisites
 
-If you want to successfully block releases and never have them pop back up in your queue, you need to do the following:
+If you want to **successfully block** releases and never have them pop back up in your queue, you need to do the following:
 
 <ElementNavigator />
 
@@ -16,6 +16,9 @@ If you want to successfully block releases and never have them pop back up in yo
 <div className={styles.section}>
 
 <SectionTitle>Configure Prowlarr</SectionTitle>
+
+<div className={styles.sideBySide}>
+  <div className={styles.sideBySideContent}>
 
 If you are using Prowlarr as your indexer manager:
 1. Go to Prowlarr
@@ -27,17 +30,24 @@ If you are using Prowlarr as your indexer manager:
 
 Repeat step #6 for each Prowlarr app you have configured.
 
-<img
-  src={useBaseUrl('/img/prowlarr_settings.png')}
-  alt="Prowlarr settings showing Sync Reject Blocklisted Torrent Hashes option"
-  style={{ maxWidth: '50%', borderRadius: '8px', margin: '1rem 0', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}
-/>
+  </div>
+  <div className={styles.sideBySideImage}>
+    <ClickableImage
+      src={useBaseUrl('/img/prowlarr_settings.png')}
+      alt="Prowlarr settings showing Sync Reject Blocklisted Torrent Hashes option"
+      style={{ borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', maxWidth: '100%' }}
+    />
+  </div>
+</div>
 
 </div>
 
 <div className={styles.section}>
 
 <SectionTitle>Configure *arr</SectionTitle>
+
+<div className={styles.sideBySide}>
+  <div className={styles.sideBySideContent}>
 
 If you are using Sonarr/Radarr/Lidarr/Readarr/Whisparr as your indexer manager:
 1. Go to Sonarr/Radarr/Lidarr/Readarr/Whisparr
@@ -49,11 +59,15 @@ If you are using Sonarr/Radarr/Lidarr/Readarr/Whisparr as your indexer manager:
 
 Repeat step #6 for each indexer you have configured.
 
-<img
-  src={useBaseUrl('/img/sonarr_settings.png')}
-  alt="Sonarr settings showing Reject Blocklisted Torrent Hashes option"
-  style={{ maxWidth: '50%', borderRadius: '8px', margin: '1rem 0', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}
-/>
+  </div>
+  <div className={styles.sideBySideImage}>
+    <ClickableImage
+      src={useBaseUrl('/img/sonarr_settings.png')}
+      alt="Sonarr settings showing Reject Blocklisted Torrent Hashes option"
+      style={{ borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', maxWidth: '100%' }}
+    />
+  </div>
+</div>
 
 </div>
 

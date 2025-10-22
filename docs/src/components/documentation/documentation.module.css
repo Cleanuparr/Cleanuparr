@@ -911,6 +911,32 @@
   animation: fadeInUp 0.6s ease-out;
 }
 
+/* Side-by-side layout for text and image */
+.sideBySide {
+  display: grid;
+  grid-template-columns: 3fr 1fr;
+  gap: 2rem;
+  align-items: start;
+  margin: var(--doc-spacing-lg) 0;
+}
+
+.sideBySideContent {
+  display: flex;
+  flex-direction: column;
+}
+
+.sideBySideImage {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+@media (max-width: 996px) {
+  .sideBySide {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Screenshot Gallery */
 .screenshotGallery {
   display: grid;

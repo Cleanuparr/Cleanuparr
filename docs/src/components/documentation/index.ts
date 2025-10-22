@@ -10,6 +10,7 @@ export { default as EnhancedAdmonition, Note, Important, Warning, EnhancedNote, 
 export { default as ElementNavigator } from './ElementNavigator';
 export { default as AppCard } from './AppCard';
 export { ScreenshotGallery } from './ScreenshotGallery';
+export { ClickableImage } from './ClickableImage';
 
 // CSS classes for direct use
 export { default as styles } from './documentation.module.css'; 
