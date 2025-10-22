@@ -23,6 +23,10 @@ Cleanuparr was created primarily to address malicious files, such as `*.lnk` or 
 > - Notify on strike or download removal.
 > - Ignore certain torrent hashes, categories, tags or trackers from being processed by Cleanuparr.
 
+## Screenshots
+
+https://cleanuparr.github.io/Cleanuparr/docs/screenshots
+
 ## 🎯 Supported Applications
 
 ### *Arr Applications

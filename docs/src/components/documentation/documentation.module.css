@@ -137,16 +137,24 @@
   }
 }
 
+.sectionTitleWrapper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin: 0 0 var(--doc-spacing-lg) 0;
+  border-bottom: 3px solid var(--doc-primary);
+  padding-bottom: var(--doc-spacing-sm);
+}
+
 .sectionTitle {
   font-size: 1.875rem;
   font-weight: 600;
   color: var(--doc-text-primary);
-  margin: 0 0 var(--doc-spacing-lg) 0;
+  margin: 0;
   display: flex;
   align-items: center;
   gap: var(--doc-spacing-sm);
-  border-bottom: 3px solid var(--doc-primary);
-  padding-bottom: var(--doc-spacing-sm);
 }
 
 .sectionIcon {
@@ -230,6 +238,13 @@
   gap: 0.75rem;
 }
 
+.configHeaderActions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
 .configTitle {
   font-size: 1.25rem;
   font-weight: 600;
@@ -241,6 +256,38 @@
 }
 
 .configIcon {
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.copyAnchorButton {
+  background: transparent;
+  border: 1px solid var(--doc-border-color);
+  border-radius: var(--doc-radius-sm);
+  padding: 0.25rem 0.5rem;
+  font-size: 0.9rem;
+  color: var(--doc-text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2rem;
+  height: 1.75rem;
+}
+
+.copyAnchorButton:hover {
+  background: var(--doc-bg-secondary);
+  border-color: var(--doc-primary);
+  color: var(--doc-primary);
+  transform: translateY(-1px);
+}
+
+.copyAnchorButton:active {
+  transform: translateY(0);
+}
+
+.oldConfigIcon {
   font-size: 1.1rem;
   color: var(--doc-primary);
   opacity: 0.8;
@@ -864,17 +911,95 @@
   animation: fadeInUp 0.6s ease-out;
 }
 
+/* Screenshot Gallery */
+.screenshotGallery {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2.5rem;
+  margin: var(--doc-spacing-lg) 0;
+}
+
+.screenshotItem {
+  background: var(--doc-bg-secondary);
+  border: 1px solid var(--doc-border-color);
+  border-radius: var(--doc-radius-md);
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.screenshotItem:hover {
+  border-color: var(--doc-primary);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  transform: translateY(-2px);
+}
+
+.screenshotImageWrapper {
+  width: 100%;
+  background: var(--ifm-background-color);
+  padding: 1rem;
+  border-bottom: 1px solid var(--doc-border-color);
+}
+
+.screenshotImage {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: var(--doc-radius-sm);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.screenshotContent {
+  padding: 1.25rem;
+}
+
+.screenshotTitle {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--doc-text-primary);
+}
+
+.screenshotDescription {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: var(--doc-text-secondary);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .screenshotGallery {
+    gap: 1.5rem;
+  }
+
+  .screenshotImageWrapper {
+    padding: 0.75rem;
+  }
+
+  .screenshotContent {
+    padding: 1rem;
+  }
+
+  .screenshotTitle {
+    font-size: 1.1rem;
+  }
+}
+
 /* Print styles */
 @media print {
   .pageHeader,
   .quickNav {
     display: none;
   }
-  
+
   .configSection,
   .methodCard {
     page-break-inside: avoid;
     box-shadow: none;
     border: 1px solid #ccc;
+  }
+
+  .screenshotItem {
+    page-break-inside: avoid;
   }
 } 

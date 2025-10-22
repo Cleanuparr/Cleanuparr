@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import styles from './documentation.module.css';
 import { generateIdFromTitle } from './utils';
 
@@ -31,13 +31,36 @@ export default function SectionTitle({
   children,
   className
 }: SectionTitleProps) {
+  const [copied, setCopied] = useState(false);
+
   // Generate ID from children text if not provided
   const text = extractTextFromChildren(children);
   const elementId = id || generateIdFromTitle(text);
 
+  const copyAnchorLink = () => {
+    const url = new URL(window.location.href);
+    // Remove any existing query params
+    url.search = '?' + elementId;
+
+    navigator.clipboard.writeText(url.toString()).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
   return (
-    <h2 id={elementId} className={`${styles.sectionTitle} ${className || ''}`}>
-      {children}
-    </h2>
+    <div className={styles.sectionTitleWrapper}>
+      <h2 id={elementId} className={`${styles.sectionTitle} ${className || ''}`}>
+        {children}
+      </h2>
+      <button
+        className={styles.copyAnchorButton}
+        onClick={copyAnchorLink}
+        title="Copy link to this section"
+        aria-label="Copy link to this section"
+      >
+        {copied ? '✓' : '🔗'}
+      </button>
+    </div>
   );
 }

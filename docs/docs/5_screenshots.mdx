@@ -1,0 +1,47 @@
+---
+sidebar_position: 5
+---
+
+import useBaseUrl from '@docusaurus/useBaseUrl';
+import { ScreenshotGallery, styles } from '@site/src/components/documentation';
+
+# Screenshots
+
+Get a visual overview of Cleanuparr's interface and features.
+
+<div className={styles.documentationPage}>
+
+<div className={styles.section}>
+
+<ScreenshotGallery
+  screenshots={[
+    {
+      src: useBaseUrl('/img/screenshots/dashboard.png'),
+      alt: 'Cleanuparr Dashboard',
+      title: 'Dashboard Overview',
+      description: 'The main dashboard provides a quick overview of all your configured jobs, their status, and recent activity.'
+    },
+    {
+      src: useBaseUrl('/img/screenshots/download_clients.png'),
+      alt: 'Download Clients Configuration',
+      title: 'Download Clients',
+      description: 'Configure and manage connections to your download clients.'
+    },
+    {
+      src: useBaseUrl('/img/screenshots/events.png'),
+      alt: 'Events and Activity Log',
+      title: 'Events & Activity',
+      description: 'Track all actions taken by Cleanuparr including strikes issued, downloads removed, and searches triggered. Filter by event type, job, or time period to understand what happened and when.'
+    },
+    {
+      src: useBaseUrl('/img/screenshots/logs.png'),
+      alt: 'Application Logs',
+      title: 'Logs Viewer',
+      description: 'Access live application logs directly from the web interface (only the latest 100 entries are kept). Filter by log level, search for specific messages, and troubleshoot issues without accessing the server console.'
+    }
+  ]}
+/>
+
+</div>
+
+</div>
