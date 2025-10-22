@@ -2,8 +2,6 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cleanuparr.Domain", "Cleanuparr.Domain\Cleanuparr.Domain.csproj", "{88DFBF8D-733A-45B4-B254-908D818E5D44}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cleanuparr.Application", "Cleanuparr.Application\Cleanuparr.Application.csproj", "{5CE59F74-2C3B-4E87-9B23-37FC8AA62539}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cleanuparr.Infrastructure", "Cleanuparr.Infrastructure\Cleanuparr.Infrastructure.csproj", "{FD470DF2-6150-4908-9C08-CB975D54B3D6}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cleanuparr.Persistence", "Cleanuparr.Persistence\Cleanuparr.Persistence.csproj", "{CBF2F5E6-6AF7-4859-8DC9-478EE7E5B667}"
@@ -24,10 +22,6 @@ Global
 		{88DFBF8D-733A-45B4-B254-908D818E5D44}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{88DFBF8D-733A-45B4-B254-908D818E5D44}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{88DFBF8D-733A-45B4-B254-908D818E5D44}.Release|Any CPU.Build.0 = Release|Any CPU
-		{5CE59F74-2C3B-4E87-9B23-37FC8AA62539}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{5CE59F74-2C3B-4E87-9B23-37FC8AA62539}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{5CE59F74-2C3B-4E87-9B23-37FC8AA62539}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{5CE59F74-2C3B-4E87-9B23-37FC8AA62539}.Release|Any CPU.Build.0 = Release|Any CPU
 		{FD470DF2-6150-4908-9C08-CB975D54B3D6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{FD470DF2-6150-4908-9C08-CB975D54B3D6}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{FD470DF2-6150-4908-9C08-CB975D54B3D6}.Release|Any CPU.ActiveCfg = Release|Any CPU

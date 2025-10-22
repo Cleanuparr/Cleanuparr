@@ -155,11 +155,11 @@ Failed imports containing these patterns in their name will be skipped during cl
 
 <h2 className={styles.sectionTitle}>
   <span className={styles.sectionIcon}>⏸️</span>
-  Stalled Download Settings
+  Stalled Download Rules
 </h2>
 
 <p className={styles.sectionDescription}>
-  Stalled downloads are those that have stopped downloading and show no progress.
+  Stalled downloads are those that have stopped downloading and show no progress. You can create multiple rules to handle different scenarios based on completion percentage and torrent privacy.
 </p>
 
 <EnhancedImportant>
@@ -167,45 +167,92 @@ These settings need a download client to be configured.
 </EnhancedImportant>
 
 <ConfigSection
-  id="stalled-max-strikes"
-  title="Stalled Max Strikes"
+  id="stall-rule-name"
+  title="Rule Name"
+  icon="📝"
+>
+
+A descriptive name for this stall rule. This helps you identify the purpose of each rule when managing multiple rules.
+
+</ConfigSection>
+
+<ConfigSection
+  id="stall-rule-enabled"
+  title="Enabled"
+  icon="✅"
+>
+
+Toggle to enable or disable this rule. Disabled rules won't be applied during queue cleaning.
+
+</ConfigSection>
+
+<ConfigSection
+  id="stall-rule-max-strikes"
+  title="Max Strikes"
   icon="⚡"
 >
 
-Number of strikes before a stalled download is removed from the queue. Set to 0 to disable stalled download cleaning, minimum 3 to enable.
+Number of consecutive times a download must be stalled before action is taken. Minimum value is 3.
 
 </ConfigSection>
 
 <ConfigSection
-  id="stalled-reset-strikes-on-progress"
-  title="Stalled Reset Strikes On Progress"
-  icon="🔄"
->
-
-When enabled, strikes will be reset to zero if the download shows progress again. This prevents removal of downloads that temporarily stall but resume downloading.
-
-</ConfigSection>
-
-<ConfigSection
-  id="stalled-ignore-private"
-  title="Stalled Ignore Private"
+  id="stall-rule-privacy-type"
+  title="Privacy Type"
   icon="🔒"
 >
 
-When enabled, private torrents will be skipped during stalled download cleaning.
+Determines which torrents this rule applies to:
+- **Public Torrents Only**: Rule only applies to public torrents
+- **Private Torrents Only**: Rule only applies to private torrents
+- **Public and Private Torrents**: Rule applies to all torrents
 
 </ConfigSection>
 
 <ConfigSection
-  id="stalled-delete-private"
-  title="Stalled Delete Private"
+  id="stall-rule-completion-range"
+  title="Completion Percentage Range"
+  icon="📊"
+>
+
+Define the completion percentage range where this rule applies:
+- **Min Completion Percentage**: Rule applies once completion exceeds this value. A value of 0 includes torrents at exactly 0% and above.
+- **Max Completion Percentage**: Rule applies up to and including this completion percentage.
+
+This allows you to create different rules for different stages of a download. For example, you might be more aggressive with stalled downloads that are only 10% complete versus those that are 90% complete.
+
+</ConfigSection>
+
+<ConfigSection
+  id="stall-rule-reset-strikes"
+  title="Reset Strikes on Progress"
+  icon="🔄"
+>
+
+When enabled, the strike count resets to zero if the download shows progress again. This prevents removal of downloads that temporarily stall but resume downloading.
+
+</ConfigSection>
+
+<ConfigSection
+  id="stall-rule-minimum-progress"
+  title="Minimum Progress to Reset"
+  icon="📏"
+>
+
+Only reset strikes after the torrent downloads at least this amount of data. Leave blank to reset on any progress. This prevents strikes from being reset by minimal progress that doesn't actually indicate the download is healthy.
+
+</ConfigSection>
+
+<ConfigSection
+  id="stall-rule-delete-private"
+  title="Delete Private from Client"
   icon="🗑️"
 >
 
-When enabled, private torrents that reach the maximum strikes will be deleted from the download client.
+When enabled, private torrents that reach the maximum strikes will be deleted from the download client. When disabled, they'll only be removed from the *arr queue but remain in your download client.
 
 <EnhancedWarning>
-Setting this to true means private torrents will be permanently deleted, potentially affecting your private tracker account by receiving H&R if the seeding requirements are not met.
+Enabling this means private torrents will be permanently deleted from your download client, potentially affecting your private tracker account if seeding requirements aren't met.
 </EnhancedWarning>
 
 </ConfigSection>
@@ -216,7 +263,7 @@ Setting this to true means private torrents will be permanently deleted, potenti
   icon="📊"
 >
 
-Number of strikes before a download stuck in "Downloading Metadata" state is removed (qBittorrent only).
+Number of strikes before a download stuck in "Downloading Metadata" state is removed (qBittorrent only). This is separate from the rule system and applies globally.
 
 </ConfigSection>
 
@@ -226,11 +273,11 @@ Number of strikes before a download stuck in "Downloading Metadata" state is rem
 
 <h2 className={styles.sectionTitle}>
   <span className={styles.sectionIcon}>🐌</span>
-  Slow Download Settings
+  Slow Download Rules
 </h2>
 
 <p className={styles.sectionDescription}>
-  Slow downloads are those downloading below a specified speed threshold.
+  Slow downloads are those downloading below a specified speed threshold. You can create multiple rules to handle different scenarios based on speed, time limits, file size, completion percentage, and torrent privacy.
 </p>
 
 <EnhancedImportant>
@@ -238,76 +285,113 @@ These settings need a download client to be configured.
 </EnhancedImportant>
 
 <ConfigSection
-  id="slow-max-strikes"
-  title="Slow Max Strikes"
+  id="slow-rule-name"
+  title="Rule Name"
+  icon="📝"
+>
+
+A descriptive name for this slow rule. This helps you identify the purpose of each rule when managing multiple rules.
+
+</ConfigSection>
+
+<ConfigSection
+  id="slow-rule-enabled"
+  title="Enabled"
+  icon="✅"
+>
+
+Toggle to enable or disable this rule. Disabled rules won't be applied during queue cleaning.
+
+</ConfigSection>
+
+<ConfigSection
+  id="slow-rule-max-strikes"
+  title="Max Strikes"
   icon="⚡"
 >
 
-Number of strikes before a slow download is removed from the queue. Set to 0 to disable slow download cleaning, minimum 3 to enable.
+Number of consecutive times a download must be slow before action is taken. Minimum value is 3.
 
 </ConfigSection>
 
 <ConfigSection
-  id="slow-reset-strikes-on-progress"
-  title="Slow Reset Strikes On Progress"
-  icon="🔄"
+  id="slow-rule-min-speed"
+  title="Min Speed"
+  icon="🚀"
 >
 
-When enabled, strikes will be reset if the download speed improves above the minimum threshold.
+Minimum download speed threshold (e.g., 100KB/s). Downloads consistently below this speed will accumulate strikes. Either minimum speed or maximum time must be specified.
 
 </ConfigSection>
 
 <ConfigSection
-  id="slow-ignore-private"
-  title="Slow Ignore Private"
-  icon="🔒"
->
-
-When enabled, private torrents will be skipped during slow download cleaning.
-
-</ConfigSection>
-
-<ConfigSection
-  id="slow-delete-private"
-  title="Slow Delete Private"
-  icon="🗑️"
->
-
-When enabled, private torrents that reach the maximum strikes will be deleted from the download client.
-
-<EnhancedWarning>
-Setting this to true means private torrents will be permanently deleted, potentially affecting your private tracker account by receiving H&R if the seeding requirements are not met.
-</EnhancedWarning>
-
-</ConfigSection>
-
-<ConfigSection
-  id="slow-min-speed"
-  title="Slow Min Speed"
-  icon="📊"
->
-
-Minimum download speed threshold. Downloads consistently below this speed will accumulate strikes.
-
-</ConfigSection>
-
-<ConfigSection
-  id="slow-max-time"
-  title="Slow Max Time"
+  id="slow-rule-max-time"
+  title="Maximum Time (Hours)"
   icon="⏰"
 >
 
-Maximum time (in hours) that a download can take. Set to 0 to disable time-based removal. This works alongside the speed threshold.
+Maximum time allowed for downloads in hours. Set to 0 to disable time-based checking. When enabled, downloads that exceed this time limit will accumulate strikes regardless of speed. Either minimum speed or maximum time must be specified.
 
 </ConfigSection>
 
 <ConfigSection
-  id="slow-ignore-above-size"
-  title="Slow Ignore Above Size"
+  id="slow-rule-privacy-type"
+  title="Privacy Type"
+  icon="🔒"
+>
+
+Determines which torrents this rule applies to:
+- **Public Torrents Only**: Rule only applies to public torrents
+- **Private Torrents Only**: Rule only applies to private torrents
+- **Public and Private Torrents**: Rule applies to all torrents
+
+</ConfigSection>
+
+<ConfigSection
+  id="slow-rule-completion-range"
+  title="Completion Percentage Range"
+  icon="📊"
+>
+
+Define the completion percentage range where this rule applies:
+- **Min Completion %**: Rule applies once completion exceeds this value. A value of 0 includes torrents at exactly 0% and above.
+- **Max Completion %**: Rule applies up to and including this completion percentage.
+
+This allows you to create different rules for different stages of a download. For example, you might tolerate slower speeds early in a download but expect faster speeds once it's mostly complete.
+
+</ConfigSection>
+
+<ConfigSection
+  id="slow-rule-ignore-above-size"
+  title="Ignore Above Size"
   icon="📦"
 >
 
-Downloads larger than this size will be ignored by slow download cleaning. Large files often download slower and may need more time to complete.
+Downloads larger than this size will be ignored by this rule (e.g., 25 GB). Large files often download slower and may need more time to complete, so you might want to exclude them from aggressive slow download rules.
+
+</ConfigSection>
+
+<ConfigSection
+  id="slow-rule-reset-strikes"
+  title="Reset Strikes on Progress"
+  icon="🔄"
+>
+
+When enabled, the strike count resets to zero if the download speed improves above the minimum threshold. This prevents removal of downloads that temporarily slow down but recover.
+
+</ConfigSection>
+
+<ConfigSection
+  id="slow-rule-delete-private"
+  title="Delete Private from Client"
+  icon="🗑️"
+>
+
+When enabled, private torrents that reach the maximum strikes will be deleted from the download client. When disabled, they'll only be removed from the *arr queue but remain in your download client.
+
+<EnhancedWarning>
+Enabling this means private torrents will be permanently deleted from your download client, potentially affecting your private tracker account if seeding requirements aren't met.
+</EnhancedWarning>
 
 </ConfigSection>
 

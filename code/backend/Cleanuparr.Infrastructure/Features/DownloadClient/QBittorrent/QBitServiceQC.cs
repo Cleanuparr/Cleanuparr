@@ -27,13 +27,6 @@ public partial class QBitService
 
         IReadOnlyList<TorrentTracker> trackers = await GetTrackersAsync(hash);
 
-        if (ignoredDownloads.Count > 0 &&
-            (download.ShouldIgnore(ignoredDownloads) || trackers.Any(x => x.ShouldIgnore(ignoredDownloads))))
-        {
-            _logger.LogInformation("skip | download is ignored | {name}", download.Name);
-            return result;
-        }
-
         TorrentProperties? torrentProperties = await _client.GetTorrentPropertiesAsync(hash);
 
         if (torrentProperties is null)
@@ -46,6 +39,15 @@ public partial class QBitService
                            bool.TryParse(dictValue?.ToString(), out bool boolValue)
                            && boolValue;
 
+        // Create ITorrentItem wrapper for consistent interface usage
+        var torrentItem = new QBitItem(download, trackers, result.IsPrivate);
+
+        if (torrentItem.IsIgnored(ignoredDownloads))
+        {
+            _logger.LogInformation("skip | download is ignored | {name}", torrentItem.Name);
+            return result;
+        }
+
         IReadOnlyList<TorrentContent>? files = await _client.GetTorrentContentsAsync(hash);
 
         if (files?.Count is > 0 && files.All(x => x.Priority is TorrentContentPriority.Skip))
@@ -55,127 +57,80 @@ public partial class QBitService
             // if all files were blocked by qBittorrent
             if (download is { CompletionOn: not null, Downloaded: null or 0 })
             {
-                _logger.LogDebug("all files are unwanted by qBit | removing download | {name}", download.Name);
+                _logger.LogDebug("all files are unwanted by qBit | removing download | {name}", torrentItem.Name);
                 result.DeleteReason = DeleteReason.AllFilesSkippedByQBit;
+                result.DeleteFromClient = true;
                 return result;
             }
 
             // remove if all files are unwanted
-            _logger.LogDebug("all files are unwanted | removing download | {name}", download.Name);
+            _logger.LogDebug("all files are unwanted | removing download | {name}", torrentItem.Name);
             result.DeleteReason = DeleteReason.AllFilesSkipped;
+            result.DeleteFromClient = true;
             return result;
         }
 
-        (result.ShouldRemove, result.DeleteReason) = await EvaluateDownloadRemoval(download, result.IsPrivate);
+        (result.ShouldRemove, result.DeleteReason, result.DeleteFromClient) = await EvaluateDownloadRemoval(torrentItem);
 
         return result;
     }
-    
-    private async Task<(bool, DeleteReason)> EvaluateDownloadRemoval(TorrentInfo torrent, bool isPrivate)
-    {
-        (bool ShouldRemove, DeleteReason Reason) result = await CheckIfSlow(torrent, isPrivate);
 
-        if (result.ShouldRemove)
+    private async Task<(bool ShouldRemove, DeleteReason Reason, bool DeleteFromClient)> EvaluateDownloadRemoval(ITorrentItem torrentItem)
+    {
+        (bool ShouldRemove, DeleteReason Reason, bool DeleteFromClient) slowResult = await CheckIfSlow(torrentItem);
+
+        if (slowResult.ShouldRemove)
         {
-            return result;
+            return slowResult;
         }
 
-        return await CheckIfStuck(torrent, isPrivate);
+        return await CheckIfStuck(torrentItem);
     }
 
-    private async Task<(bool ShouldRemove, DeleteReason Reason)> CheckIfSlow(TorrentInfo download, bool isPrivate)
+    private async Task<(bool ShouldRemove, DeleteReason Reason, bool DeleteFromClient)> CheckIfSlow(ITorrentItem torrentItem)
     {
-        var queueCleanerConfig = ContextProvider.Get<QueueCleanerConfig>(nameof(QueueCleanerConfig));
-        
-        if (queueCleanerConfig.Slow.MaxStrikes is 0)
+        if (!torrentItem.IsDownloading())
         {
-            _logger.LogTrace("skip slow check | max strikes is 0 | {name}", download.Name);
-            return (false, DeleteReason.None);
+            _logger.LogTrace("skip slow check | download is not in downloading state | {name}", torrentItem.Name);
+            return (false, DeleteReason.None, false);
         }
 
-        if (download.State is not (TorrentState.Downloading or TorrentState.ForcedDownload))
+        if (torrentItem.DownloadSpeed <= 0)
         {
-            _logger.LogTrace("skip slow check | download is in {state} state | {name}", download.State, download.Name);
-            return (false, DeleteReason.None);
+            _logger.LogTrace("skip slow check | download speed is 0 | {name}", torrentItem.Name);
+            return (false, DeleteReason.None, false);
         }
 
-        if (download.DownloadSpeed <= 0)
-        {
-            _logger.LogTrace("skip slow check | download speed is 0 | {name}", download.Name);
-            return (false, DeleteReason.None);
-        }
-
-        if (queueCleanerConfig.Slow.IgnorePrivate && isPrivate)
-        {
-            // ignore private trackers
-            _logger.LogTrace("skip slow check | download is private | {name}", download.Name);
-            return (false, DeleteReason.None);
-        }
-
-        if (download.Size > (queueCleanerConfig.Slow.IgnoreAboveSizeByteSize?.Bytes ?? long.MaxValue))
-        {
-            _logger.LogTrace("skip slow check | download is too large | {name}", download.Name);
-            return (false, DeleteReason.None);
-        }
-
-        ByteSize minSpeed = queueCleanerConfig.Slow.MinSpeedByteSize;
-        ByteSize currentSpeed = new ByteSize(download.DownloadSpeed);
-        SmartTimeSpan maxTime = SmartTimeSpan.FromHours(queueCleanerConfig.Slow.MaxTime);
-        SmartTimeSpan currentTime = new SmartTimeSpan(download.EstimatedTime ?? TimeSpan.Zero);
-
-        return await CheckIfSlow(
-            download.Hash,
-            download.Name,
-            minSpeed,
-            currentSpeed,
-            maxTime,
-            currentTime
-        );
+        return await _ruleEvaluator.EvaluateSlowRulesAsync(torrentItem);
     }
 
-    private async Task<(bool ShouldRemove, DeleteReason Reason)> CheckIfStuck(TorrentInfo torrent, bool isPrivate)
+    private async Task<(bool ShouldRemove, DeleteReason Reason, bool DeleteFromClient)> CheckIfStuck(ITorrentItem torrentItem)
     {
-        var queueCleanerConfig = ContextProvider.Get<QueueCleanerConfig>(nameof(QueueCleanerConfig));
-        
-        if (queueCleanerConfig.Stalled.MaxStrikes is 0 && queueCleanerConfig.Stalled.DownloadingMetadataMaxStrikes is 0)
+        if (torrentItem.IsMetadataDownloading())
         {
-            _logger.LogTrace("skip stalled check | max strikes is 0 | {name}", torrent.Name);
-            return (false, DeleteReason.None);
-        }
+            var queueCleanerConfig = ContextProvider.Get<QueueCleanerConfig>(nameof(QueueCleanerConfig));
 
-        if (torrent.State is not TorrentState.StalledDownload and not TorrentState.FetchingMetadata
-            and not TorrentState.ForcedFetchingMetadata)
-        {
-            // ignore other states
-            _logger.LogTrace("skip stalled check | download is in {state} state | {name}", torrent.State, torrent.Name);
-            return (false, DeleteReason.None);
-        }
-
-        if (queueCleanerConfig.Stalled.MaxStrikes > 0 && torrent.State is TorrentState.StalledDownload)
-        {
-            if (queueCleanerConfig.Stalled.IgnorePrivate && isPrivate)
+            if (queueCleanerConfig.DownloadingMetadataMaxStrikes > 0)
             {
-                // ignore private trackers
-                _logger.LogTrace("skip stalled check | download is private | {name}", torrent.Name);
+                bool shouldRemove = await _striker.StrikeAndCheckLimit(
+                    torrentItem.Hash,
+                    torrentItem.Name,
+                    queueCleanerConfig.DownloadingMetadataMaxStrikes,
+                    StrikeType.DownloadingMetadata
+                );
+                
+                return (shouldRemove, DeleteReason.DownloadingMetadata, shouldRemove);
             }
-            else
-            {
-                ResetStalledStrikesOnProgress(torrent.Hash, torrent.Downloaded ?? 0);
 
-                return (
-                    await _striker.StrikeAndCheckLimit(torrent.Hash, torrent.Name, queueCleanerConfig.Stalled.MaxStrikes,
-                        StrikeType.Stalled), DeleteReason.Stalled);
-            }
+            return (false, DeleteReason.None, false);
         }
 
-        if (queueCleanerConfig.Stalled.DownloadingMetadataMaxStrikes > 0 && torrent.State is not TorrentState.StalledDownload)
+        if (!torrentItem.IsStalled())
         {
-            return (
-                await _striker.StrikeAndCheckLimit(torrent.Hash, torrent.Name, queueCleanerConfig.Stalled.DownloadingMetadataMaxStrikes,
-                    StrikeType.DownloadingMetadata), DeleteReason.DownloadingMetadata);
+            _logger.LogTrace("skip stalled check | download is not in stalled state | {name}", torrentItem.Name);
+            return (false, DeleteReason.None, false);
         }
 
-        _logger.LogTrace("skip stalled check | download is not stalled | {name}", torrent.Name);
-        return (false, DeleteReason.None);
+        return await _ruleEvaluator.EvaluateStallRulesAsync(torrentItem);
     }
 }

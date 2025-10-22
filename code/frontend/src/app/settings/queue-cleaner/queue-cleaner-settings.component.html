@@ -105,7 +105,7 @@
           <div class="field-input">
             <input type="text" pInputText formControlName="cronExpression" placeholder="0 0/5 * ? * * *" />
           </div>
-          <small *ngIf="hasError('cronExpression', 'required')" class="p-error">Cron expression is required</small>
+          <small *ngIf="hasMainFormError('cronExpression', 'required')" class="p-error">Cron expression is required</small>
           <small class="form-helper-text">Enter a valid Quartz cron expression (e.g., "0 0/5 * ? * * *" runs every 5 minutes)</small>
         </div>
       </div>
@@ -168,6 +168,9 @@
                     formControlName="maxStrikes"
                     [showButtons]="true"
                     [min]="0"
+                    [step]="1"
+                    [minFractionDigits]="0"
+                    [maxFractionDigits]="0"
                     buttonLayout="horizontal"
                   >
                   </p-inputNumber>
@@ -198,7 +201,7 @@
                 <i class="pi pi-question-circle field-info-icon" 
                    (click)="openFieldDocs('failedImport.deletePrivate')" 
                    title="Click for documentation"></i>
-                Delete Private
+                Delete Private from client
               </label>
               <div class="field-input">
                 <p-checkbox formControlName="deletePrivate" [binary]="true"></p-checkbox>
@@ -238,85 +241,6 @@
           </p-accordion-content>
         </p-accordion-panel>
 
-        <!-- Stalled Settings -->
-        <p-accordion-panel [disabled]="!queueCleanerForm.get('enabled')?.value" [value]="1">
-          <p-accordion-header>
-            <ng-template #toggleicon let-active="active">
-              @if (active) {
-                <i class="pi pi-chevron-up"></i>
-              } @else {
-                <i class="pi pi-chevron-down"></i>
-              }
-            </ng-template>
-            Stalled Download Settings
-          </p-accordion-header>
-          <p-accordion-content>
-            <div class="field-row" formGroupName="stalled">
-              <label class="field-label">
-                <i class="pi pi-question-circle field-info-icon" 
-                   (click)="openFieldDocs('stalled.maxStrikes')" 
-                   title="Click for documentation"></i>
-                Max Strikes
-              </label>
-              <div>
-                <div class="field-input">
-                  <p-inputNumber
-                    formControlName="maxStrikes"
-                    [showButtons]="true"
-                    [min]="0"
-                    buttonLayout="horizontal"
-                  >
-                  </p-inputNumber>
-                </div>
-                <small *ngIf="hasNestedError('stalled', 'maxStrikes', 'required')" class="p-error">This field is required</small>
-                <small *ngIf="hasNestedError('stalled', 'maxStrikes', 'max')" class="p-error">Value cannot exceed 5000</small>
-                <small class="form-helper-text"
-                  >Number of strikes before action is taken (0 to disable, min 3 to enable)</small
-                >
-              </div>
-            </div>
-
-            <div class="field-row" formGroupName="stalled">
-              <label class="field-label">
-                <i class="pi pi-question-circle field-info-icon" 
-                   (click)="openFieldDocs('stalled.resetStrikesOnProgress')" 
-                   title="Click for documentation"></i>
-                Reset Strikes On Progress
-              </label>
-              <div class="field-input">
-                <p-checkbox formControlName="resetStrikesOnProgress" [binary]="true"></p-checkbox>
-                <small class="form-helper-text">When enabled, strikes will be reset if download progress is made</small>
-              </div>
-            </div>
-
-            <div class="field-row" formGroupName="stalled">
-              <label class="field-label">
-                <i class="pi pi-question-circle field-info-icon" 
-                   (click)="openFieldDocs('stalled.ignorePrivate')" 
-                   title="Click for documentation"></i>
-                Ignore Private
-              </label>
-              <div class="field-input">
-                <p-checkbox formControlName="ignorePrivate" [binary]="true"></p-checkbox>
-                <small class="form-helper-text">When enabled, private torrents will not be checked for being stalled</small>
-              </div>
-            </div>
-
-            <div class="field-row" formGroupName="stalled">
-              <label class="field-label">
-                <i class="pi pi-question-circle field-info-icon" 
-                   (click)="openFieldDocs('stalled.deletePrivate')" 
-                   title="Click for documentation"></i>
-                Delete Private
-              </label>
-              <div class="field-input">
-                <p-checkbox formControlName="deletePrivate" [binary]="true"></p-checkbox>
-                <small class="form-helper-text">Disable this if you want to keep private torrents in the download client even if they are removed from the arrs</small>
-              </div>
-            </div>
-          </p-accordion-content>
-        </p-accordion-panel>
-
         <!-- Downloading Metadata Settings -->
         <p-accordion-panel [disabled]="!queueCleanerForm.get('enabled')?.value" [value]="2">
           <p-accordion-header>
@@ -330,10 +254,10 @@
             Downloading Metadata Settings (qBittorrent only)
           </p-accordion-header>
           <p-accordion-content>
-            <div class="field-row" formGroupName="stalled">
+            <div class="field-row">
               <label class="field-label">
                 <i class="pi pi-question-circle field-info-icon" 
-                   (click)="openFieldDocs('stalled.downloadingMetadataMaxStrikes')" 
+                   (click)="openFieldDocs('downloadingMetadataMaxStrikes')" 
                    title="Click for documentation"></i>
                 Max Strikes for Downloading Metadata
               </label>
@@ -343,12 +267,15 @@
                     formControlName="downloadingMetadataMaxStrikes"
                     [showButtons]="true"
                     [min]="0"
+                    [step]="1"
+                    [minFractionDigits]="0"
+                    [maxFractionDigits]="0"
                     buttonLayout="horizontal"
                   >
                   </p-inputNumber>
                 </div>
-                <small *ngIf="hasNestedError('stalled', 'downloadingMetadataMaxStrikes', 'required')" class="p-error">This field is required</small>
-                <small *ngIf="hasNestedError('stalled', 'downloadingMetadataMaxStrikes', 'max')" class="p-error">Value cannot exceed 5000</small>
+                <small *ngIf="hasMainFormError('downloadingMetadataMaxStrikes', 'required')" class="p-error">This field is required</small>
+                <small *ngIf="hasMainFormError('downloadingMetadataMaxStrikes', 'max')" class="p-error">Value cannot exceed 5000</small>
                 <small class="form-helper-text"
                   >Number of strikes before action is taken (0 to disable, min 3 to enable)</small
                 >
@@ -357,8 +284,8 @@
           </p-accordion-content>
         </p-accordion-panel>
 
-        <!-- Slow Download Settings -->
-        <p-accordion-panel [disabled]="!queueCleanerForm.get('enabled')?.value" [value]="3">
+        <!-- Stall Rules Management -->
+        <p-accordion-panel [disabled]="!queueCleanerForm.get('enabled')?.value" [value]="4">
           <p-accordion-header>
             <ng-template #toggleicon let-active="active">
               @if (active) {
@@ -367,136 +294,219 @@
                 <i class="pi pi-chevron-down"></i>
               }
             </ng-template>
-            Slow Download Settings
+            Stalled Download Rules
           </p-accordion-header>
           <p-accordion-content>
-            <div class="field-row" formGroupName="slow">
-              <label class="field-label">
-                <i class="pi pi-question-circle field-info-icon" 
-                   (click)="openFieldDocs('slow.maxStrikes')" 
-                   title="Click for documentation"></i>
-                Max Strikes
-              </label>
-              <div>
-                <div class="field-input">
-                  <p-inputNumber
-                    formControlName="maxStrikes"
-                    [showButtons]="true"
-                    [min]="0"
-                    buttonLayout="horizontal"
-                  >
-                  </p-inputNumber>
+            <!-- Coverage Analysis Warning -->
+            <div *ngIf="stallRulesCoverage.hasGaps" class="coverage-info mb-3 p-3 border-1 surface-border border-round">
+              <div class="flex align-items-start gap-2">
+                <i class="pi pi-exclamation-triangle text-orange-500 mt-1"></i>
+                <div>
+                  <h4 class="m-0 mb-2 text-orange-700">Coverage Gaps Detected</h4>
+                  <p class="m-0 mb-2 text-sm text-600">
+                    Your stall rules don't cover all completion percentage ranges for all privacy types.
+                    Torrents in uncovered ranges won't be processed by stall rules.
+                  </p>
+                  <div class="coverage-gaps">
+                    <div *ngFor="let gap of stallRulesCoverage.gaps" class="gap-item text-sm">
+                      <strong>{{ gap.privacyTypeLabel }} torrents:</strong> {{ gap.start }}% - {{ gap.end }}% completion not covered
+                    </div>
+                  </div>
                 </div>
-                <small *ngIf="hasNestedError('slow', 'maxStrikes', 'required')" class="p-error">This field is required</small>
-                <small *ngIf="hasNestedError('slow', 'maxStrikes', 'max')" class="p-error">Value cannot exceed 5000</small>
-                <small class="form-helper-text"
-                  >Number of strikes before action is taken (0 to disable, min 3 to enable)</small
-                >
               </div>
             </div>
 
-            <div class="field-row" formGroupName="slow">
-              <label class="field-label">
-                <i class="pi pi-question-circle field-info-icon" 
-                   (click)="openFieldDocs('slow.resetStrikesOnProgress')" 
-                   title="Click for documentation"></i>
-                Reset Strikes On Progress
-              </label>
-              <div class="field-input">
-                <p-checkbox formControlName="resetStrikesOnProgress" [binary]="true"></p-checkbox>
-                <small class="form-helper-text">When enabled, strikes will be reset if download progress is made</small>
-              </div>
-            </div>
-
-            <div class="field-row" formGroupName="slow">
-              <label class="field-label">
-                <i class="pi pi-question-circle field-info-icon" 
-                   (click)="openFieldDocs('slow.ignorePrivate')" 
-                   title="Click for documentation"></i>
-                Ignore Private
-              </label>
-              <div class="field-input">
-                <p-checkbox formControlName="ignorePrivate" [binary]="true"></p-checkbox>
-                <small class="form-helper-text">When enabled, private torrents will not be checked for being slow</small>
-              </div>
-            </div>
-
-            <div class="field-row" formGroupName="slow">
-              <label class="field-label">
-                <i class="pi pi-question-circle field-info-icon" 
-                   (click)="openFieldDocs('slow.deletePrivate')" 
-                   title="Click for documentation"></i>
-                Delete Private
-              </label>
-              <div class="field-input">
-                <p-checkbox formControlName="deletePrivate" [binary]="true"></p-checkbox>
-                <small class="form-helper-text">Disable this if you want to keep private torrents in the download client even if they are removed from the arrs</small>
-              </div>
-            </div>
-
-            <div class="field-row" formGroupName="slow">
-              <label class="field-label">
-                <i class="pi pi-question-circle field-info-icon" 
-                   (click)="openFieldDocs('slow.minSpeed')" 
-                   title="Click for documentation"></i>
-                Minimum Speed
-              </label>
-              <div class="field-input">
-                <app-byte-size-input
-                  formControlName="minSpeed"
-                  [min]="0"
-                  placeholder="Enter minimum speed"
-                  helpText="Minimum speed threshold for slow downloads (e.g., 100KB/s)"
-                  type="speed"
-                >
-                </app-byte-size-input>
-              </div>
-            </div>
-
-            <div class="field-row" formGroupName="slow">
-              <label class="field-label">
-                <i class="pi pi-question-circle field-info-icon" 
-                   (click)="openFieldDocs('slow.maxTime')" 
-                   title="Click for documentation"></i>
-                Maximum Time (hours)
-              </label>
-              <div>
-                <div class="field-input">
-                  <p-inputNumber
-                    formControlName="maxTime"
-                    [showButtons]="true"
-                    [min]="0"
-                    buttonLayout="horizontal"
-                  >
-                  </p-inputNumber>
+            <!-- Rules List -->
+            <div *ngIf="stallRulesCount > 0" class="items-list">
+              <div
+                *ngFor="let rule of stallRules(); trackBy: trackStallRule"
+                class="item-item p-3 border-round surface-border border-1 mb-3"
+                [ngClass]="{ 'enabled': rule.enabled }"
+              >
+                <div class="flex justify-content-between align-items-start flex-wrap gap-3">
+                  <div class="item-info flex-1">
+                    <div>
+                      <div class="flex align-items-center flex-wrap gap-2 mb-2">
+                        <h4 class="m-0">{{ rule.name }}</h4>
+                        <p-tag value="Stall Rule" severity="info"></p-tag>
+                        <p-tag
+                          [value]="rule.enabled ? 'Enabled' : 'Disabled'"
+                          [severity]="rule.enabled ? 'success' : 'secondary'"
+                        ></p-tag>
+                        <p-tag [value]="getPrivacyLabel(rule.privacyType) | titlecase" severity="info"></p-tag>
+                      </div>
+                      <div class="item-details">
+                        <span>Completion Range: {{ rule.minCompletionPercentage }}% - {{ rule.maxCompletionPercentage }}%</span>
+                        <span>Max Strikes: {{ rule.maxStrikes }}</span>
+                        <span>Reset on Progress: {{ rule.resetStrikesOnProgress ? 'Yes' : 'No' }}</span>
+                        <span *ngIf="rule.minimumProgress">Minimum Progress: {{ rule.minimumProgress }}</span>
+                        <span *ngIf="rule.privacyType === torrentPrivacyType.Private || rule.privacyType === torrentPrivacyType.Both">
+                          Delete Private: {{ rule.deletePrivateTorrentsFromClient ? 'Yes' : 'No' }}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="item-actions">
+                    <button
+                      pButton
+                      type="button"
+                      icon="pi pi-pencil"
+                      class="p-button-rounded p-button-text p-button-sm"
+                      [disabled]="queueCleanerSaving()"
+                      (click)="editStallRule(rule)"
+                      pTooltip="Edit rule"
+                    ></button>
+                    <button
+                      pButton
+                      type="button"
+                      icon="pi pi-trash"
+                      class="p-button-rounded p-button-text p-button-danger p-button-sm"
+                      [disabled]="queueCleanerSaving()"
+                      (click)="deleteStallRule(rule)"
+                      pTooltip="Delete rule"
+                    ></button>
+                  </div>
                 </div>
-                <small *ngIf="hasNestedError('slow', 'maxTime', 'required')" class="p-error">This field is required</small>
-                <small *ngIf="hasNestedError('slow', 'maxTime', 'max')" class="p-error">Value cannot exceed 1000</small>
-                <small class="form-helper-text">Maximum time allowed for slow downloads (0 means disabled)</small>
               </div>
             </div>
 
-            <div class="field-row" formGroupName="slow">
-              <label class="field-label">
-                <i class="pi pi-question-circle field-info-icon" 
-                   (click)="openFieldDocs('slow.ignoreAboveSize')" 
-                   title="Click for documentation"></i>
-                Ignore Above Size
-              </label>
-              <div class="field-input">
-                <app-byte-size-input
-                  formControlName="ignoreAboveSize"
-                  [min]="0"
-                  placeholder="Enter size threshold"
-                  helpText="Downloads will be ignored if size exceeds, e.g., 25 GB"
-                  type="size"
-                >
-                </app-byte-size-input>
-              </div>
+            <!-- Empty state when no rules -->
+            <div
+              *ngIf="stallRulesCount === 0"
+              class="no-items text-center py-5 text-color-secondary"
+            >
+              <i class="pi pi-pause text-4xl mb-3"></i>
+              <p class="m-0">No stalled download rules defined.</p>
+              <small>Add a rule to customize stall detection.</small>
+            </div>
+
+            <!-- Action buttons -->
+            <div class="card-footer mt-3">
+              <button
+                pButton
+                type="button"
+                icon="pi pi-plus"
+                label="Add Rule"
+                class="p-button-outlined"
+                [disabled]="queueCleanerForm.get('enabled')?.value === false"
+                (click)="openStallRulesModal()"
+              ></button>
             </div>
           </p-accordion-content>
         </p-accordion-panel>
 
+        <!-- Slow Rules Management -->
+        <p-accordion-panel [disabled]="!queueCleanerForm.get('enabled')?.value" [value]="5">
+          <p-accordion-header>
+            <ng-template #toggleicon let-active="active">
+              @if (active) {
+                <i class="pi pi-chevron-up"></i>
+              } @else {
+                <i class="pi pi-chevron-down"></i>
+              }
+            </ng-template>
+            Slow Download Rules
+          </p-accordion-header>
+          <p-accordion-content>
+            <!-- Coverage Analysis Warning -->
+            <div *ngIf="slowRulesCoverage.hasGaps" class="coverage-info mb-3 p-3 border-1 surface-border border-round">
+              <div class="flex align-items-start gap-2">
+                <i class="pi pi-exclamation-triangle text-orange-500 mt-1"></i>
+                <div>
+                  <h4 class="m-0 mb-2 text-orange-700">Coverage Gaps Detected</h4>
+                  <p class="m-0 mb-2 text-sm text-600">
+                    Your slow rules don't cover all completion percentage ranges for all privacy types.
+                    Torrents in uncovered ranges won't be processed by slow rules.
+                  </p>
+                  <div class="coverage-gaps">
+                    <div *ngFor="let gap of slowRulesCoverage.gaps" class="gap-item text-sm">
+                      <strong>{{ gap.privacyTypeLabel }} torrents:</strong> {{ gap.start }}% - {{ gap.end }}% completion not covered
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Rules List -->
+            <div *ngIf="slowRulesCount > 0" class="items-list">
+              <div
+                *ngFor="let rule of slowRules(); trackBy: trackSlowRule"
+                class="item-item p-3 border-round surface-border border-1 mb-3"
+                [ngClass]="{ 'enabled': rule.enabled }"
+              >
+                <div class="flex justify-content-between align-items-start flex-wrap gap-3">
+                  <div class="item-info flex-1">
+                    <div>
+                      <div class="flex align-items-center flex-wrap gap-2 mb-2">
+                        <h4 class="m-0">{{ rule.name }}</h4>
+                        <p-tag value="Slow Rule" severity="info"></p-tag>
+                        <p-tag
+                          [value]="rule.enabled ? 'Enabled' : 'Disabled'"
+                          [severity]="rule.enabled ? 'success' : 'secondary'"
+                        ></p-tag>
+                        <p-tag [value]="getPrivacyLabel(rule.privacyType) | titlecase" severity="info"></p-tag>
+                      </div>
+                      <div class="item-details">
+                        <span>Max Strikes: {{ rule.maxStrikes }}</span>
+                        <span>Completion Range: {{ rule.minCompletionPercentage }}% - {{ rule.maxCompletionPercentage }}%</span>
+                        <span *ngIf="rule.minSpeed">Min Speed: {{ rule.minSpeed }}</span>
+                        <span *ngIf="rule.maxTimeHours && rule.maxTimeHours > 0">Max Time: {{ rule.maxTimeHours }}h</span>
+                        <span>Reset on Progress: {{ rule.resetStrikesOnProgress ? 'Yes' : 'No' }}</span>
+                        <span *ngIf="rule.ignoreAboveSize">Ignore Above Size: {{ rule.ignoreAboveSize }}</span>
+                        <span *ngIf="rule.privacyType === torrentPrivacyType.Private || rule.privacyType === torrentPrivacyType.Both">
+                          Delete Private: {{ rule.deletePrivateTorrentsFromClient ? 'Yes' : 'No' }}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="item-actions">
+                    <button
+                      pButton
+                      type="button"
+                      icon="pi pi-pencil"
+                      class="p-button-rounded p-button-text p-button-sm"
+                      [disabled]="queueCleanerSaving()"
+                      (click)="editSlowRule(rule)"
+                      pTooltip="Edit rule"
+                    ></button>
+                    <button
+                      pButton
+                      type="button"
+                      icon="pi pi-trash"
+                      class="p-button-rounded p-button-text p-button-danger p-button-sm"
+                      [disabled]="queueCleanerSaving()"
+                      (click)="deleteSlowRule(rule)"
+                      pTooltip="Delete rule"
+                    ></button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Empty state when no rules -->
+            <div
+              *ngIf="slowRulesCount === 0"
+              class="no-items text-center py-5 text-color-secondary"
+            >
+              <i class="pi pi-clock text-4xl mb-3"></i>
+              <p class="m-0">No slow download rules defined.</p>
+              <small>Add a rule to customize slow download detection.</small>
+            </div>
+
+            <!-- Action buttons -->
+            <div class="card-footer mt-3">
+              <button
+                pButton
+                type="button"
+                icon="pi pi-plus"
+                label="Add Rule"
+                class="p-button-outlined"
+                [disabled]="queueCleanerForm.get('enabled')?.value === false"
+                (click)="openSlowRulesModal()"
+              ></button>
+            </div>
+          </p-accordion-content>
+        </p-accordion-panel>
 
       </p-accordion>
 
@@ -525,3 +535,440 @@
   </p-card>
   </form>
 </div>
+
+<!-- Stall Rules Modal -->
+<p-dialog 
+  [(visible)]="stallRuleModalVisible" 
+  [modal]="true" 
+  [closable]="true"
+  [draggable]="false"
+  [resizable]="false"
+  styleClass="instance-modal"
+  header="{{ editingStallRule ? 'Edit Stall Rule' : 'Add Stall Rule' }}"
+  (onHide)="closeStallRuleModal()"
+>
+  <form [formGroup]="stallRuleForm" class="p-fluid instance-form">
+    <div class="field">
+      <label for="stall-rule-name">
+        <i class="pi pi-question-circle field-info-icon"
+           (click)="openFieldDocs('stallRule.name')"
+           title="Click for documentation"></i>
+        Name
+      </label>
+      <input
+        id="stall-rule-name"
+        type="text"
+        pInputText
+        formControlName="name"
+        placeholder="My Stall Rule"
+        class="w-full"
+      />
+      <small *ngIf="hasModalError(stallRuleForm, 'name', 'required')" class="p-error">Name is required</small>
+      <small *ngIf="hasModalError(stallRuleForm, 'name', 'maxlength')" class="p-error">Name cannot exceed 100 characters</small>
+    </div>
+
+    <div class="field flex flex-row">
+      <label class="field-label">
+        <i class="pi pi-question-circle field-info-icon"
+           (click)="openFieldDocs('stallRule.enabled')"
+           title="Click for documentation"></i>
+        Enabled
+      </label>
+      <div class="field-input">
+        <p-checkbox formControlName="enabled" [binary]="true"></p-checkbox>
+        <small class="form-helper-text">Enable this rule</small>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="stall-rule-strikes">
+        <i class="pi pi-question-circle field-info-icon"
+           (click)="openFieldDocs('stallRule.maxStrikes')"
+           title="Click for documentation"></i>
+        Max Strikes
+      </label>
+      <p-inputNumber
+        id="stall-rule-strikes"
+        formControlName="maxStrikes"
+        [showButtons]="true"
+        buttonLayout="horizontal"
+        class="w-full"
+      ></p-inputNumber>
+      <small *ngIf="hasModalError(stallRuleForm, 'maxStrikes', 'required')" class="p-error">Max strikes is required</small>
+      <small *ngIf="hasModalError(stallRuleForm, 'maxStrikes', 'min')" class="p-error">Min value is 3</small>
+      <small *ngIf="hasModalError(stallRuleForm, 'maxStrikes', 'max')" class="p-error">Max value is 5000</small>
+      <small class="form-helper-text">Number of strikes before action is taken</small>
+    </div>
+
+    <div class="field">
+      <label for="stall-rule-privacy-type">
+        <i class="pi pi-question-circle field-info-icon"
+           (click)="openFieldDocs('stallRule.privacyType')"
+           title="Click for documentation"></i>
+        Privacy Type
+      </label>
+      <p-select
+        id="stall-rule-privacy-type"
+        formControlName="privacyType"
+        [options]="privacyTypeOptions"
+        optionLabel="label"
+        optionValue="value"
+        placeholder="Select privacy type"
+        class="w-full"
+      ></p-select>
+      <small *ngIf="hasModalError(stallRuleForm, 'privacyType', 'required')" class="p-error">Privacy type is required</small>
+      <small class="form-helper-text">Which torrent types this rule applies to</small>
+    </div>
+
+    <div class="field">
+      <label for="stall-rule-min-completion">
+        <i class="pi pi-question-circle field-info-icon"
+           (click)="openFieldDocs('stallRule.completionRange')"
+           title="Click for documentation"></i>
+        Min Completion Percentage
+      </label>
+      <p-inputNumber
+        id="stall-rule-min-completion"
+        formControlName="minCompletionPercentage"
+        [step]="1"
+        [minFractionDigits]="0"
+        [maxFractionDigits]="0"
+        suffix="%"
+        placeholder="Percentage"
+        class="w-full"
+      ></p-inputNumber>
+      <small *ngIf="hasModalError(stallRuleForm, 'minCompletionPercentage', 'required')" class="p-error">Percentage is required</small>
+      <small *ngIf="hasModalError(stallRuleForm, 'minCompletionPercentage', 'min')" class="p-error">Percentage cannot be negative</small>
+      <small *ngIf="hasModalError(stallRuleForm, 'minCompletionPercentage', 'max')" class="p-error">Percentage cannot exceed 100</small>
+      <small class="form-helper-text">Apply the rule once completion percentage exceeds this value</small>
+      <small class="form-helper-text">Example: A value of 20 includes items above 20% (20 is not included)</small>
+      <small class="form-helper-text">A value of 0 includes items at 0% and above</small>
+    </div>
+
+    <div class="field">
+      <label for="stall-rule-max-completion">
+        <i class="pi pi-question-circle field-info-icon"
+           (click)="openFieldDocs('stallRule.completionRange')"
+           title="Click for documentation"></i>
+        Max Completion Percentage
+      </label>
+      <p-inputNumber
+        id="stall-rule-max-completion"
+        formControlName="maxCompletionPercentage"
+        [step]="1"
+        [minFractionDigits]="0"
+        [maxFractionDigits]="0"
+        suffix="%"
+        placeholder="Percentage"
+        class="w-full"
+      ></p-inputNumber>
+      <small *ngIf="hasModalError(stallRuleForm, 'maxCompletionPercentage', 'required')" class="p-error">Percentage is required</small>
+      <small *ngIf="hasModalError(stallRuleForm, 'maxCompletionPercentage', 'min')" class="p-error">Percentage cannot be negative</small>
+      <small *ngIf="hasModalError(stallRuleForm, 'maxCompletionPercentage', 'max')" class="p-error">Percentage cannot exceed 100</small>
+      <small *ngIf="hasModalError(stallRuleForm, 'maxCompletionPercentage', 'minGreaterThanMax')" class="p-error">Max percentage must be greater than or equal to Min percentage</small>
+      <small class="form-helper-text">Apply the rule to items with a completion percentage less than or equal to this value</small>
+      <small class="form-helper-text">Example: A value of 80 includes items at 80% and below</small>
+    </div>
+
+    <div class="field flex flex-row">
+      <label class="field-label">
+        <i class="pi pi-question-circle field-info-icon"
+           (click)="openFieldDocs('stallRule.resetStrikesOnProgress')"
+           title="Click for documentation"></i>
+        Reset Strikes on Progress
+      </label>
+      <div class="field-input">
+        <p-checkbox formControlName="resetStrikesOnProgress" [binary]="true"></p-checkbox>
+        <small class="form-helper-text">Reset strike count when torrent shows progress</small>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="stall-rule-min-progress">
+        <i class="pi pi-question-circle field-info-icon"
+           (click)="openFieldDocs('stallRule.minimumProgress')"
+           title="Click for documentation"></i>
+        Minimum Progress to Reset
+      </label>
+      <app-byte-size-input
+        id="stall-rule-min-progress"
+        formControlName="minimumProgress"
+        placeholder="Enter minimum progress"
+        helpText="Only reset strikes after the torrent downloads at least this amount. Leave blank to reset on any progress."
+        type="smallSize"
+      >
+      </app-byte-size-input>
+    </div>
+
+    <div class="field flex flex-row">
+      <label class="field-label">
+        <i class="pi pi-question-circle field-info-icon"
+           (click)="openFieldDocs('stallRule.deletePrivateTorrentsFromClient')"
+           title="Click for documentation"></i>
+        Delete Private from Client
+      </label>
+      <div class="field-input">
+        <p-checkbox formControlName="deletePrivateTorrentsFromClient" [binary]="true"></p-checkbox>
+        <small class="form-helper-text">Disable this if you want to keep private torrents in the download client even if they are removed from the arrs</small>
+      </div>
+    </div>
+  </form>
+
+  <ng-template pTemplate="footer">
+    <div class="modal-footer">
+      <button 
+        pButton 
+        type="button" 
+        label="Cancel" 
+        class="p-button-text"
+        (click)="closeStallRuleModal()"
+      ></button>
+      <button 
+        pButton 
+        type="button" 
+        label="{{ editingStallRule ? 'Update' : 'Save' }}" 
+        icon="pi pi-save"
+        class="p-button-primary ml-2"
+        [disabled]="stallRuleForm.invalid || stallRuleSaving"
+        [loading]="stallRuleSaving"
+        (click)="saveStallRule()"
+      ></button>
+    </div>
+  </ng-template>
+</p-dialog>
+
+<!-- Slow Rules Modal -->
+<p-dialog 
+  [(visible)]="slowRuleModalVisible" 
+  [modal]="true" 
+  [closable]="true"
+  [draggable]="false"
+  [resizable]="false"
+  styleClass="instance-modal"
+  header="{{ editingSlowRule ? 'Edit Slow Rule' : 'Add Slow Rule' }}"
+  (onHide)="closeSlowRuleModal()"
+>
+  <form [formGroup]="slowRuleForm" class="p-fluid instance-form">
+    <div class="field">
+      <label for="slow-rule-name">
+        <i class="pi pi-question-circle field-info-icon"
+           (click)="openFieldDocs('slowRule.name')"
+           title="Click for documentation"></i>
+        Name
+      </label>
+      <input
+        id="slow-rule-name"
+        type="text"
+        pInputText
+        formControlName="name"
+        placeholder="My Slow Rule"
+        class="w-full"
+      />
+      <small *ngIf="hasModalError(slowRuleForm, 'name', 'required')" class="p-error">Name is required</small>
+      <small *ngIf="hasModalError(slowRuleForm, 'name', 'maxlength')" class="p-error">Name cannot exceed 100 characters</small>
+    </div>
+
+    <div class="field flex flex-row">
+      <label class="field-label">
+        <i class="pi pi-question-circle field-info-icon"
+           (click)="openFieldDocs('slowRule.enabled')"
+           title="Click for documentation"></i>
+        Enabled
+      </label>
+      <div class="field-input">
+        <p-checkbox formControlName="enabled" [binary]="true"></p-checkbox>
+        <small class="form-helper-text">Enable this rule</small>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="slow-rule-strikes">
+        <i class="pi pi-question-circle field-info-icon"
+           (click)="openFieldDocs('slowRule.maxStrikes')"
+           title="Click for documentation"></i>
+        Max Strikes
+      </label>
+      <p-inputNumber
+        id="slow-rule-strikes"
+        formControlName="maxStrikes"
+        [showButtons]="true"
+        buttonLayout="horizontal"
+        class="w-full"
+      ></p-inputNumber>
+      <small *ngIf="hasModalError(slowRuleForm, 'maxStrikes', 'required')" class="p-error">Max strikes is required</small>
+      <small *ngIf="hasModalError(slowRuleForm, 'maxStrikes', 'min')" class="p-error">Min value is 3</small>
+      <small *ngIf="hasModalError(slowRuleForm, 'maxStrikes', 'max')" class="p-error">Max value is 5000</small>
+      <small class="form-helper-text">Number of strikes before action is taken</small>
+    </div>
+
+    <div class="field">
+      <label for="slow-rule-speed">
+        <i class="pi pi-question-circle field-info-icon"
+           (click)="openFieldDocs('slowRule.minSpeed')"
+           title="Click for documentation"></i>
+        Min Speed
+      </label>
+      <app-byte-size-input
+        formControlName="minSpeed"
+        placeholder="Enter minimum speed"
+        helpText="Minimum speed threshold for slow downloads (e.g., 100KB/s)"
+        type="speed"
+      >
+      </app-byte-size-input>
+      <small *ngIf="hasModalError(slowRuleForm, 'minSpeed', 'required')" class="p-error">Minimum speed is required</small>
+    </div>
+
+    <div class="field">
+      <label for="slow-rule-max-time">
+        <i class="pi pi-question-circle field-info-icon"
+           (click)="openFieldDocs('slowRule.maxTimeHours')"
+           title="Click for documentation"></i>
+        Maximum Time (Hours)
+      </label>
+      <p-inputNumber
+        formControlName="maxTimeHours"
+        id="slow-rule-max-time"
+        placeholder="Maximum download time in hours"
+        [showButtons]="true"
+        [step]="1"
+        class="w-full"
+      ></p-inputNumber>
+      <small *ngIf="hasModalError(slowRuleForm, 'maxTimeHours', 'required')" class="p-error">Maximum time is required</small>
+      <small *ngIf="hasModalError(slowRuleForm, 'maxTimeHours', 'min')" class="p-error">Min value is 0</small>
+      <small class="form-helper-text">Maximum time allowed for slow downloads (0 means disabled)</small>
+    </div>
+
+    <div class="field">
+      <label for="slow-rule-privacy-type">
+        <i class="pi pi-question-circle field-info-icon"
+           (click)="openFieldDocs('slowRule.privacyType')"
+           title="Click for documentation"></i>
+        Privacy Type
+      </label>
+      <p-select
+        id="slow-rule-privacy-type"
+        formControlName="privacyType"
+        [options]="privacyTypeOptions"
+        optionLabel="label"
+        optionValue="value"
+        placeholder="Select privacy type"
+        class="w-full"
+      ></p-select>
+      <small *ngIf="hasModalError(slowRuleForm, 'privacyType', 'required')" class="p-error">Privacy type is required</small>
+      <small class="form-helper-text">Which torrent types this rule applies to</small>
+    </div>
+
+    <div class="field">
+      <label for="slow-rule-min-completion">
+        <i class="pi pi-question-circle field-info-icon"
+           (click)="openFieldDocs('slowRule.completionRange')"
+           title="Click for documentation"></i>
+        Min Completion %
+      </label>
+      <p-inputNumber
+        formControlName="minCompletionPercentage"
+        id="slow-rule-min-completion"
+        placeholder="Minimum completion percentage"
+        [showButtons]="true"
+        [step]="1"
+        suffix="%"
+        class="w-full"
+      ></p-inputNumber>
+      <small *ngIf="hasModalError(slowRuleForm, 'minCompletionPercentage', 'required')" class="p-error">Percentage is required</small>
+      <small *ngIf="hasModalError(slowRuleForm, 'minCompletionPercentage', 'min')" class="p-error">Percentage cannot be negative</small>
+      <small *ngIf="hasModalError(slowRuleForm, 'minCompletionPercentage', 'max')" class="p-error">Percentage cannot exceed 100</small>
+      <small class="form-helper-text">Apply the rule once completion percentage exceeds this value (0 still includes exactly 0%)</small>
+    </div>
+
+    <div class="field">
+      <label for="slow-rule-max-completion">
+        <i class="pi pi-question-circle field-info-icon"
+           (click)="openFieldDocs('slowRule.completionRange')"
+           title="Click for documentation"></i>
+        Max Completion %
+      </label>
+      <p-inputNumber
+        formControlName="maxCompletionPercentage"
+        id="slow-rule-max-completion"
+        placeholder="Maximum completion percentage"
+        [showButtons]="true"
+        [step]="1"
+        suffix="%"
+        class="w-full"
+      ></p-inputNumber>
+      <small *ngIf="hasModalError(slowRuleForm, 'maxCompletionPercentage', 'required')" class="p-error">Percentage is required</small>
+      <small *ngIf="hasModalError(slowRuleForm, 'maxCompletionPercentage', 'min')" class="p-error">Percentage cannot be negative</small>
+      <small *ngIf="hasModalError(slowRuleForm, 'maxCompletionPercentage', 'max')" class="p-error">Percentage cannot exceed 100</small>
+      <small *ngIf="hasModalError(slowRuleForm, 'maxCompletionPercentage', 'minGreaterThanMax')" class="p-error">Max percentage must be greater than or equal to Min percentage</small>
+      <small class="form-helper-text">Apply the rule up to and including this completion percentage</small>
+    </div>
+
+    <div class="field">
+      <label for="slow-rule-ignore-above-size">
+        <i class="pi pi-question-circle field-info-icon"
+           (click)="openFieldDocs('slowRule.ignoreAboveSize')"
+           title="Click for documentation"></i>
+        Ignore Above Size
+      </label>
+      <app-byte-size-input
+        formControlName="ignoreAboveSize"
+        [min]="0"
+        placeholder="Enter size threshold"
+        helpText="Downloads will be ignored if size exceeds, e.g., 25 GB"
+        type="size"
+      >
+      </app-byte-size-input>
+    </div>
+
+    <div class="field flex flex-row">
+      <label class="field-label">
+        <i class="pi pi-question-circle field-info-icon"
+           (click)="openFieldDocs('slowRule.resetStrikesOnProgress')"
+           title="Click for documentation"></i>
+        Reset Strikes on Progress
+      </label>
+      <div class="field-input">
+        <p-checkbox formControlName="resetStrikesOnProgress" [binary]="true"></p-checkbox>
+        <small class="form-helper-text">Reset strike count when torrent shows progress</small>
+      </div>
+    </div>
+
+    <div class="field flex flex-row">
+      <label class="field-label">
+        <i class="pi pi-question-circle field-info-icon"
+           (click)="openFieldDocs('slowRule.deletePrivateTorrentsFromClient')"
+           title="Click for documentation"></i>
+        Delete Private from Client
+      </label>
+      <div class="field-input">
+        <p-checkbox formControlName="deletePrivateTorrentsFromClient" [binary]="true"></p-checkbox>
+        <small class="form-helper-text">Disable this if you want to keep private torrents in the download client even if they are removed from the arrs</small>
+      </div>
+    </div>
+  </form>
+
+  <ng-template pTemplate="footer">
+    <div class="modal-footer">
+      <button 
+        pButton 
+        type="button" 
+        label="Cancel" 
+        class="p-button-text"
+        (click)="closeSlowRuleModal()"
+      ></button>
+      <button 
+        pButton 
+        type="button" 
+        label="{{ editingSlowRule ? 'Update' : 'Save' }}" 
+        icon="pi pi-save"
+        class="p-button-primary ml-2"
+        [disabled]="slowRuleForm.invalid || slowRuleSaving"
+        [loading]="slowRuleSaving"
+        (click)="saveSlowRule()"
+      ></button>
+    </div>
+  </ng-template>
+</p-dialog>
+
+<!-- Confirmation Dialog -->
+<p-confirmDialog></p-confirmDialog>

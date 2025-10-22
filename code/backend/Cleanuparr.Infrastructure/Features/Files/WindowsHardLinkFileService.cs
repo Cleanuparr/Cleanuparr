@@ -1,10 +1,9 @@
 ﻿using System.Collections.Concurrent;
 using System.Runtime.InteropServices;
-using Cleanuparr.Infrastructure.Features.Files;
 using Microsoft.Extensions.Logging;
 using Microsoft.Win32.SafeHandles;
 
-namespace Infrastructure.Verticals.Files;
+namespace Cleanuparr.Infrastructure.Features.Files;
 
 public class WindowsHardLinkFileService : IHardLinkFileService, IDisposable
 {
