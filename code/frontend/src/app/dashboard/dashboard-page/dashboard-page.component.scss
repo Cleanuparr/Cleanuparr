@@ -1,6 +1,3 @@
-// Import manual events card styles
-@import './manual-events-card.component.scss';
-
 // Glowing event card wrapper styles
 .glow-event-card-wrapper {
   position: relative;
@@ -33,25 +30,25 @@
 
   &.severity-warning {
     box-shadow:
-      0 0 20px rgba(249, 115, 22, 0.7),
-      0 0 40px rgba(249, 115, 22, 0.5),
-      0 0 60px rgba(249, 115, 22, 0.3);
+      0 0 20px rgba(234, 179, 8, 0.7),
+      0 0 40px rgba(234, 179, 8, 0.5),
+      0 0 60px rgba(234, 179, 8, 0.3);
     animation: glowBorderWarning 2s ease-in-out infinite, shake 3s ease-in-out infinite;
 
     ::ng-deep .dashboard-card.p-card {
-      border-color: var(--orange-500) !important;
+      border-color: var(--yellow-500) !important;
     }
   }
 
   &.severity-important {
     box-shadow:
-      0 0 20px rgba(234, 179, 8, 0.7),
-      0 0 40px rgba(234, 179, 8, 0.5),
-      0 0 60px rgba(234, 179, 8, 0.3);
+      0 0 20px rgba(249, 115, 22, 0.7),
+      0 0 40px rgba(249, 115, 22, 0.5),
+      0 0 60px rgba(249, 115, 22, 0.3);
     animation: glowBorderImportant 2s ease-in-out infinite, shake 3s ease-in-out infinite;
 
     ::ng-deep .dashboard-card.p-card {
-      border-color: var(--yellow-500) !important;
+      border-color: var(--orange-500) !important;
     }
   }
 
@@ -133,7 +130,7 @@
   }
 }
 
-@keyframes glowBorderWarning {
+@keyframes glowBorderImportant {
   0%, 100% {
     box-shadow:
       0 0 20px rgba(249, 115, 22, 0.7),
@@ -148,7 +145,7 @@
   }
 }
 
-@keyframes glowBorderImportant {
+@keyframes glowBorderWarning {
   0%, 100% {
     box-shadow:
       0 0 20px rgba(234, 179, 8, 0.7),
@@ -213,19 +210,6 @@
   }
   10% {
     transform: translateX(0) rotate(0deg);
-  }
-}
-
-// Force override PrimeNG card padding for manual events
-::ng-deep .manual-event-card-wrapper {
-  .manual-event-card-inner,
-  .manual-event-card-inner.p-card,
-  .manual-event-card-inner .p-card {
-    .p-card-body,
-    .p-card-content {
-      padding: 0 !important;
-      margin: 0 !important;
-    }
   }
 }
 
