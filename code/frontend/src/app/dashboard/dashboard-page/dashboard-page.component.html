@@ -41,12 +41,24 @@
 
           <!-- Event Data (Collapsible) -->
           <div class="event-data mb-3" *ngIf="currentManualEvent()!.data">
-            <p-accordion>
-              <p-accordionTab header="Event Details">
-                <div class="event-data-content">
-                  <pre class="text-sm">{{ parseEventData(currentManualEvent()!.data) | json }}</pre>
-                </div>
-              </p-accordionTab>
+            <p-accordion [multiple]="false">
+              <p-accordion-panel [value]="0">
+                <p-accordion-header>
+                  <ng-template #toggleicon let-active="active">
+                    @if (active) {
+                      <i class="pi pi-chevron-up"></i>
+                    } @else {
+                      <i class="pi pi-chevron-down"></i>
+                    }
+                  </ng-template>
+                  Event Details
+                </p-accordion-header>
+                <p-accordion-content>
+                  <div class="event-data-content">
+                    <pre class="text-sm">{{ parseEventData(currentManualEvent()!.data) | json }}</pre>
+                  </div>
+                </p-accordion-content>
+              </p-accordion-panel>
             </p-accordion>
           </div>
 
