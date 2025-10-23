@@ -16,7 +16,7 @@ public class ManualEvent
     [Key]
     public Guid Id { get; set; } = Guid.CreateVersion7();
     
-    public DateTime Timestamp { get; } = DateTime.UtcNow;
+    public DateTime Timestamp { get; set; } = DateTime.UtcNow;
 
     [Required]
     [MaxLength(1000)]

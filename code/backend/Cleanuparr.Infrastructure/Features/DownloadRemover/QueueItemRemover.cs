@@ -59,10 +59,11 @@ public sealed class QueueItemRemover : IQueueItemRemover
             await _eventPublisher.PublishQueueItemDeleted(request.RemoveFromClient, request.DeleteReason);
 
             // If recurring, do not search for replacement
-            if (Striker.RecurringHashes.Keys.Contains(request.Record.DownloadId, StringComparer.InvariantCultureIgnoreCase))
+            string hash = request.Record.DownloadId.ToLowerInvariant();
+            if (Striker.RecurringHashes.ContainsKey(hash))
             {
                 await _eventPublisher.PublishSearchNotTriggered(request.Record.DownloadId, request.Record.Title);
-                Striker.RecurringHashes.Remove(request.Record.DownloadId.ToLowerInvariant(), out _);
+                Striker.RecurringHashes.Remove(hash, out _);
                 return;
             }
 

@@ -46,7 +46,7 @@ namespace Cleanuparr.Persistence.Migrations.Events
                 name: "ix_manual_events_timestamp",
                 table: "manual_events",
                 column: "timestamp",
-                descending: new bool[0]);
+                descending: [true]);
         }
 
         /// <inheritdoc />

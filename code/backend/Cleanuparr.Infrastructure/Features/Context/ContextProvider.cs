@@ -33,10 +33,4 @@ public static class ContextProvider
         string key = typeof(T).Name ?? throw new Exception("Type name is null");
         return Get<T>(key);
     }
-    
-    public static T? GetOrDefault<T>() where T : class
-    {
-        string key = typeof(T).Name ?? throw new Exception("Type name is null");
-        return Get(key) as T;
-    }
 }
