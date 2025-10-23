@@ -92,6 +92,91 @@
     </div>
   </div>
 
+  <!-- Alternative Manual Events Card (Glowing Border) -->
+  <div class="mb-4" *ngIf="currentManualEvent()">
+    <div class="glow-event-card-wrapper" [ngClass]="getManualEventSeverityClass(currentManualEvent()!.severity)">
+      <p-card styleClass="dashboard-card">
+        <ng-template pTemplate="header">
+          <div class="flex align-items-center justify-content-between p-3 border-bottom-1 surface-border">
+            <div class="header-title-container">
+              <div class="flex align-items-center gap-2">
+                <i class="pi pi-exclamation-triangle text-2xl"></i>
+                <h2 class="card-title m-0">Action Required</h2>
+              </div>
+              <span class="card-subtitle">Manual intervention needed</span>
+            </div>
+            <div class="flex align-items-center gap-2">
+              <p-tag
+                [severity]="getEventSeverity(currentManualEvent()!.severity)"
+                [value]="currentManualEvent()!.severity"
+              ></p-tag>
+            </div>
+          </div>
+        </ng-template>
+
+        <div class="card-content">
+          <!-- Event Message -->
+          <div class="event-message mb-3">
+            <h3 class="text-xl font-semibold mb-2" [innerHTML]="processManualEventMessage(currentManualEvent()!.message)"></h3>
+            <p class="text-sm text-color-secondary">
+              {{ currentManualEvent()!.timestamp | date: 'yyyy-MM-dd HH:mm:ss' }}
+            </p>
+          </div>
+
+          <!-- Event Data (Collapsible) -->
+          <div class="event-data mb-3" *ngIf="currentManualEvent()!.data">
+            <p-accordion>
+              <p-accordionTab header="Event Details">
+                <div class="event-data-content">
+                  <pre class="text-sm">{{ parseEventData(currentManualEvent()!.data) | json }}</pre>
+                </div>
+              </p-accordionTab>
+            </p-accordion>
+          </div>
+
+          <!-- Navigation and Action Controls -->
+          <div class="glow-card-footer">
+            <div class="flex align-items-center justify-content-between gap-3">
+              <!-- Navigation -->
+              <div class="flex align-items-center gap-2">
+                <button
+                  pButton
+                  icon="pi pi-chevron-left"
+                  class="p-button-outlined p-button-sm"
+                  (click)="previousManualEvent()"
+                  [disabled]="!canNavigatePrevious()"
+                  pTooltip="Previous event"
+                  tooltipPosition="top"
+                ></button>
+                <span class="text-sm font-medium">
+                  {{ currentManualEventIndex() + 1 }} of {{ unresolvedManualEvents().length }}
+                </span>
+                <button
+                  pButton
+                  icon="pi pi-chevron-right"
+                  class="p-button-outlined p-button-sm"
+                  (click)="nextManualEvent()"
+                  [disabled]="!canNavigateNext()"
+                  pTooltip="Next event"
+                  tooltipPosition="top"
+                ></button>
+              </div>
+
+              <!-- Dismiss Button -->
+              <button
+                pButton
+                label="Dismiss"
+                icon="pi pi-check"
+                class="p-button-success"
+                (click)="dismissManualEvent(currentManualEvent()!.id)"
+              ></button>
+            </div>
+          </div>
+        </div>
+      </p-card>
+    </div>
+  </div>
+
   <!-- Real-time Cards -->
   <div class="grid">
     <!-- Recent Logs Card -->

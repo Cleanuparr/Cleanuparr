@@ -1,6 +1,221 @@
 // Import manual events card styles
 @import './manual-events-card.component.scss';
 
+// Glowing event card wrapper styles
+.glow-event-card-wrapper {
+  position: relative;
+  border-radius: 10px;
+  animation: shake 3s ease-in-out infinite;
+
+  ::ng-deep .dashboard-card.p-card {
+    border: 3px solid !important;
+    border-radius: 10px !important;
+    box-shadow: none !important;
+  }
+
+  // Override hover effect from dashboard-card
+  ::ng-deep .dashboard-card.p-card:hover {
+    transform: none !important;
+    box-shadow: none !important;
+  }
+
+  &.severity-error {
+    box-shadow:
+      0 0 20px rgba(239, 68, 68, 0.7),
+      0 0 40px rgba(239, 68, 68, 0.5),
+      0 0 60px rgba(239, 68, 68, 0.3);
+    animation: glowBorderError 2s ease-in-out infinite, shake 3s ease-in-out infinite;
+
+    ::ng-deep .dashboard-card.p-card {
+      border-color: var(--red-500) !important;
+    }
+  }
+
+  &.severity-warning {
+    box-shadow:
+      0 0 20px rgba(249, 115, 22, 0.7),
+      0 0 40px rgba(249, 115, 22, 0.5),
+      0 0 60px rgba(249, 115, 22, 0.3);
+    animation: glowBorderWarning 2s ease-in-out infinite, shake 3s ease-in-out infinite;
+
+    ::ng-deep .dashboard-card.p-card {
+      border-color: var(--orange-500) !important;
+    }
+  }
+
+  &.severity-important {
+    box-shadow:
+      0 0 20px rgba(234, 179, 8, 0.7),
+      0 0 40px rgba(234, 179, 8, 0.5),
+      0 0 60px rgba(234, 179, 8, 0.3);
+    animation: glowBorderImportant 2s ease-in-out infinite, shake 3s ease-in-out infinite;
+
+    ::ng-deep .dashboard-card.p-card {
+      border-color: var(--yellow-500) !important;
+    }
+  }
+
+  &.severity-info {
+    box-shadow:
+      0 0 20px rgba(59, 130, 246, 0.7),
+      0 0 40px rgba(59, 130, 246, 0.5),
+      0 0 60px rgba(59, 130, 246, 0.3);
+    animation: glowBorderInfo 2s ease-in-out infinite, shake 3s ease-in-out infinite;
+
+    ::ng-deep .dashboard-card.p-card {
+      border-color: var(--blue-500) !important;
+    }
+  }
+
+  &.severity-default {
+    box-shadow:
+      0 0 20px rgba(100, 100, 100, 0.5),
+      0 0 40px rgba(100, 100, 100, 0.3),
+      0 0 60px rgba(100, 100, 100, 0.2);
+    animation: glowBorderDefault 2s ease-in-out infinite, shake 3s ease-in-out infinite;
+
+    ::ng-deep .dashboard-card.p-card {
+      border-color: var(--surface-border) !important;
+    }
+  }
+
+  .event-data-content {
+    max-height: 300px;
+    overflow-y: auto;
+    background: var(--surface-50);
+    border-radius: 6px;
+    padding: 1rem;
+
+    pre {
+      margin: 0;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      font-family: 'Courier New', monospace;
+    }
+  }
+
+  .glow-card-footer {
+    border-top: 1px solid var(--surface-border);
+    padding-top: 1rem;
+    margin-top: 1rem;
+
+    @media (max-width: 768px) {
+      .flex.align-items-center.justify-content-between {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 1rem;
+
+        .flex.align-items-center.gap-2 {
+          justify-content: center;
+        }
+
+        button {
+          width: 100%;
+        }
+      }
+    }
+  }
+}
+
+// Glowing border animations
+@keyframes glowBorderError {
+  0%, 100% {
+    box-shadow:
+      0 0 20px rgba(239, 68, 68, 0.7),
+      0 0 40px rgba(239, 68, 68, 0.5),
+      0 0 60px rgba(239, 68, 68, 0.3);
+  }
+  50% {
+    box-shadow:
+      0 0 35px rgba(239, 68, 68, 0.9),
+      0 0 60px rgba(239, 68, 68, 0.7),
+      0 0 90px rgba(239, 68, 68, 0.5);
+  }
+}
+
+@keyframes glowBorderWarning {
+  0%, 100% {
+    box-shadow:
+      0 0 20px rgba(249, 115, 22, 0.7),
+      0 0 40px rgba(249, 115, 22, 0.5),
+      0 0 60px rgba(249, 115, 22, 0.3);
+  }
+  50% {
+    box-shadow:
+      0 0 35px rgba(249, 115, 22, 0.9),
+      0 0 60px rgba(249, 115, 22, 0.7),
+      0 0 90px rgba(249, 115, 22, 0.5);
+  }
+}
+
+@keyframes glowBorderImportant {
+  0%, 100% {
+    box-shadow:
+      0 0 20px rgba(234, 179, 8, 0.7),
+      0 0 40px rgba(234, 179, 8, 0.5),
+      0 0 60px rgba(234, 179, 8, 0.3);
+  }
+  50% {
+    box-shadow:
+      0 0 35px rgba(234, 179, 8, 0.9),
+      0 0 60px rgba(234, 179, 8, 0.7),
+      0 0 90px rgba(234, 179, 8, 0.5);
+  }
+}
+
+@keyframes glowBorderInfo {
+  0%, 100% {
+    box-shadow:
+      0 0 20px rgba(59, 130, 246, 0.7),
+      0 0 40px rgba(59, 130, 246, 0.5),
+      0 0 60px rgba(59, 130, 246, 0.3);
+  }
+  50% {
+    box-shadow:
+      0 0 35px rgba(59, 130, 246, 0.9),
+      0 0 60px rgba(59, 130, 246, 0.7),
+      0 0 90px rgba(59, 130, 246, 0.5);
+  }
+}
+
+@keyframes glowBorderDefault {
+  0%, 100% {
+    box-shadow:
+      0 0 20px rgba(100, 100, 100, 0.5),
+      0 0 40px rgba(100, 100, 100, 0.3),
+      0 0 60px rgba(100, 100, 100, 0.2);
+  }
+  50% {
+    box-shadow:
+      0 0 35px rgba(100, 100, 100, 0.7),
+      0 0 60px rgba(100, 100, 100, 0.5),
+      0 0 90px rgba(100, 100, 100, 0.3);
+  }
+}
+
+// Shake animation
+@keyframes shake {
+  0%,
+  100% {
+    transform: translateX(0) rotate(0deg);
+  }
+  2% {
+    transform: translateX(-3px) rotate(-0.5deg);
+  }
+  4% {
+    transform: translateX(3px) rotate(0.5deg);
+  }
+  6% {
+    transform: translateX(-3px) rotate(-0.5deg);
+  }
+  8% {
+    transform: translateX(3px) rotate(0.5deg);
+  }
+  10% {
+    transform: translateX(0) rotate(0deg);
+  }
+}
+
 // Force override PrimeNG card padding for manual events
 ::ng-deep .manual-event-card-wrapper {
   .manual-event-card-inner,
