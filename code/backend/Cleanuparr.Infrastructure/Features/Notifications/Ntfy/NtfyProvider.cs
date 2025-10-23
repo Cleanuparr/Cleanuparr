@@ -34,7 +34,6 @@ public sealed class NtfyProvider : NotificationProviderBase<NtfyConfig>
 
     private NtfyPayload BuildPayload(string topic, NotificationContext context)
     {
-        int priority = MapSeverityToPriority(context.Severity);
         string message = BuildMessage(context);
 
         return new NtfyPayload
@@ -42,7 +41,7 @@ public sealed class NtfyProvider : NotificationProviderBase<NtfyConfig>
             Topic = topic.Trim(),
             Title = context.Title,
             Message = message,
-            Priority = priority,
+            Priority = (int)Config.Priority,
             Tags = Config.Tags.ToArray()
         };
     }
@@ -62,17 +61,6 @@ public sealed class NtfyProvider : NotificationProviderBase<NtfyConfig>
         }
 
         return message.ToString().Trim();
-    }
-
-    private int MapSeverityToPriority(EventSeverity severity)
-    {
-        return severity switch
-        {
-            EventSeverity.Information => (int)Config.Priority,
-            EventSeverity.Warning => Math.Max((int)Config.Priority, (int)NtfyPriority.High),
-            EventSeverity.Important => (int)NtfyPriority.Max,
-            _ => (int)Config.Priority
-        };
     }
 
     private string[] GetTopics()
