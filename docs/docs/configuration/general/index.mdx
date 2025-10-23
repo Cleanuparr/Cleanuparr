@@ -2,11 +2,12 @@
 sidebar_position: 1
 ---
 
-import { Note, Warning } from '@site/src/components/Admonition';
 import {
   ConfigSection,
-  EnhancedNote,
-  EnhancedWarning,
+  Note,
+  Warning,
+  ElementNavigator,
+  SectionTitle,
   styles
 } from '@site/src/components/documentation';
 
@@ -14,32 +15,29 @@ import {
 
 General configuration settings that apply to the entire Cleanuparr application.
 
+<ElementNavigator />
+
 <div className={styles.documentationPage}>
 
 <div className={styles.section}>
 
-<h2 className={styles.sectionTitle}>
-  <span className={styles.sectionIcon}>⚙️</span>
-  System Settings
-</h2>
+<SectionTitle icon="⚙️">System Settings</SectionTitle>
 
 <ConfigSection
-  id="display-support-banner"
   title="Display Support Banner"
   icon="🎗️"
 >
 
-Show the support section on the dashboard with links to GitHub and sponsors.
+Shows the support section on the dashboard with links to GitHub and sponsors.
 
 </ConfigSection>
 
 <ConfigSection
-  id="dry-run"
   title="Dry Run"
   icon="🧪"
 >
 
-When enabled, logs irreversible operations (like deletions and notifications) without making actual changes. This is useful for testing configurations without affecting your actual downloads.
+Logs all operations without making changes. Test your configuration safely before enabling live deletions and notifications.
 
 </ConfigSection>
 
@@ -47,43 +45,37 @@ When enabled, logs irreversible operations (like deletions and notifications) wi
 
 <div className={styles.section}>
 
-<h2 className={styles.sectionTitle}>
-  <span className={styles.sectionIcon}>🌐</span>
-  HTTP Configuration
-</h2>
+<SectionTitle icon="🌐">HTTP Configuration</SectionTitle>
 
 <ConfigSection
-  id="http-max-retries"
   title="HTTP Max Retries"
   icon="🔄"
 >
 
-The number of times to retry a failed HTTP call. Applies when communicating with *arrs, download clients and other services through HTTP calls.
+Number of retry attempts for failed HTTP requests to *arrs, download clients, and other services.
 
 </ConfigSection>
 
 <ConfigSection
-  id="http-timeout"
   title="HTTP Timeout"
   icon="⏱️"
 >
 
-The number of seconds to wait before failing an HTTP call. Applies to calls to *arrs, download clients, and other services.
+Seconds to wait before timing out HTTP requests to *arrs, download clients, and other services.
 
 </ConfigSection>
 
 <ConfigSection
-  id="http-certificate-validation"
   title="HTTP Certificate Validation"
   icon="🔒"
 >
 
-Controls whether to validate SSL certificates for HTTPS connections. Set to "Disabled" to ignore SSL certificate errors, but this reduces security.
+SSL certificate validation for HTTPS connections.
 
 **Options:**
 - **Enabled:** Validate all SSL certificates
-- **Disabled for Local Addresses:** Skip validation for local/private IP addresses
-- **Disabled:** Skip all SSL certificate validation
+- **Disabled for Local Addresses:** Skip validation for local/private IP addresses only
+- **Disabled:** Skip all validation (not recommended)
 
 </ConfigSection>
 
@@ -91,59 +83,52 @@ Controls whether to validate SSL certificates for HTTPS connections. Set to "Dis
 
 <div className={styles.section}>
 
-<h2 className={styles.sectionTitle}>
-  <span className={styles.sectionIcon}>🔍</span>
-  Search Settings
-</h2>
+<SectionTitle icon="🔍">Search Settings</SectionTitle>
 
 <ConfigSection
-  id="search-enabled"
   title="Search Enabled"
   icon="✅"
 >
 
-Enables searching for replacements after a download has been removed from an *arr application.
+Automatically search for replacements after removing downloads from *arr apps.
 
-<EnhancedNote>
-If you are using [Huntarr](https://github.com/plexguide/Huntarr.io), you may want to set disable this setting to let Huntarr handle the searching.
-</EnhancedNote>
+<Note>
+If using [Huntarr](https://github.com/plexguide/Huntarr.io), disable this to let Huntarr handle searching.
+</Note>
 
 </ConfigSection>
 
 <ConfigSection
-  id="search-delay"
   title="Search Delay"
   icon="⏳"
 >
 
-If searching for replacements is enabled, this setting will delay the searches by the specified number of seconds. This is useful to avoid overwhelming the indexer with too many requests at once.
+Seconds to wait before triggering replacement searches. Prevents overwhelming indexers with rapid requests.
 
-<EnhancedWarning>
+<Warning>
 A lower value will result in faster searches, but may cause issues such as being rate limited or banned by the indexer.
-</EnhancedWarning>
+</Warning>
 
 </ConfigSection>
 
+</div>
+
 <div className={styles.section}>
 
-<h2 className={styles.sectionTitle}>
-  <span className={styles.sectionIcon}>📦</span>
-  Download Management
-</h2>
+<SectionTitle icon="📦">Download Management</SectionTitle>
 
 <ConfigSection
-  id="ignored-downloads"
   title="Ignored Downloads"
   icon="🚯"
 >
 
-Downloads matching these patterns will be ignored during all cleaning operations. Patterns can match any of these:
-- torrent hash
+Downloads matching these patterns are skipped during all cleaning operations. Match by:
+- Torrent hash
 - qBittorrent tag or category
 - Deluge label
 - Transmission category (last directory from the save location)
 - µTorrent label
-- torrent tracker domain
+- Tracker domain
 
 **Examples:**
 ```
@@ -157,86 +142,74 @@ mytracker.com
 
 </div>
 
-</div>
-
 <div className={styles.section}>
 
-<h2 className={styles.sectionTitle}>
-  <span className={styles.sectionIcon}>📝</span>
-  Logging Settings
-</h2>
+<SectionTitle icon="📝">Logging Settings</SectionTitle>
 
 <ConfigSection
-  id="log-level"
   title="Log Level"
   icon="📊"
 >
 
-Controls the detail level of application logs. Lower levels include all higher level messages.
+Controls log detail level. Lower levels include all higher-level messages.
 
 </ConfigSection>
 
 <ConfigSection
-  id="log-rolling-size-mb"
-  title="Log Rolling Size (MB)"
+  title="Rolling Size (MB)"
   icon="📐"
 >
 
-Maximum size (in megabytes) for a single log file before the logger rolls over to a new file. Larger values reduce the number of files created but increase individual file sizes.
+Maximum log file size before creating a new file. Larger values mean fewer files but bigger individual file sizes.
 
 </ConfigSection>
 
 <ConfigSection
-  id="log-retained-file-count"
-  title="Retained Log Files"
+  title="Retained File Count"
   icon="🗂️"
 >
 
-The number of non-archived log files to keep on disk. Older files beyond this count will be removed or archived, according to the settings.
+Number of non-archived log files to keep. Older files are removed or archived based on your settings.
 
 </ConfigSection>
 
 <ConfigSection
-  id="log-time-limit-hours"
-  title="Log Time Limit (Hours)"
+  title="Time Limit"
   icon="⏳"
 >
 
-Maximum age (in hours) for non-archived log files to keep on disk. Older files beyond this age will be removed or archived, according to the settings.
+Maximum age for non-archived logs. Older files are removed or archived based on your settings.
 
 </ConfigSection>
 
 <ConfigSection
-  id="log-archive-enabled"
-  title="Archive Logs"
+  title="Archive Enabled"
   icon="🗄️"
 >
 
-When enabled, log files that exceed retention limits will be archived instead of being immediately deleted. Archiving helps preserve historical logs while reducing the disk size used by them.
+Archive old log files instead of deleting them. Preserves history while reducing disk usage through compression.
 
-<EnhancedNote>
-Some setups will find that a lot of logs are generated, so archiving is recommended to prevent excessive disk usage.
-</EnhancedNote>
+<Note>
+Recommended if Cleanuparr generates many logs on your setup.
+</Note>
 
 </ConfigSection>
 
 <ConfigSection
-  id="log-archive-retained-count"
-  title="Archived Log Retention (Count)"
+  title="Archive Retained Count"
   icon="🧾"
 >
 
-The number of archived log files to keep. Older files beyond this count will be removed.
+Number of archived log files to keep. Older archives are deleted.
 
 </ConfigSection>
 
 <ConfigSection
-  id="log-archive-time-limit-hours"
-  title="Archived Log Retention (Hours)"
+  title="Archive Time Limit"
   icon="🕒"
 >
 
-Maximum age (in hours) for archived logs before they are deleted. Older files beyond this age will be removed.
+Maximum age for archived logs before deletion.
 
 </ConfigSection>
 

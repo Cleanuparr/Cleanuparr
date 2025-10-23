@@ -2,29 +2,31 @@
 sidebar_position: 4
 ---
 
-import { Note, Important, Warning } from '@site/src/components/Admonition';
-import { 
-  ConfigSection, 
-  EnhancedNote, 
-  EnhancedImportant, 
-  EnhancedWarning,
-  styles 
+import {
+  ConfigSection,
+  Note,
+  Important,
+  Warning,
+  ElementNavigator,
+  SectionTitle,
+  styles
 } from '@site/src/components/documentation';
 
 # Download Cleaner
 
 The Download Cleaner automatically removes downloads from your download client after they have finished seeding according to configurable rules. This helps manage disk space and maintain optimal seeding ratios.
 
+<ElementNavigator />
+
 <div className={styles.documentationPage}>
 
-<EnhancedImportant>
+<Important>
 These settings need a download client to be configured.
-</EnhancedImportant>
+</Important>
 
 <div className={styles.section}>
 
 <ConfigSection
-  id="enable-download-cleaner"
   title="Enable Download Cleaner"
   icon="🔄"
 >
@@ -34,7 +36,6 @@ When enabled, the Download Cleaner will run according to the configured schedule
 </ConfigSection>
 
 <ConfigSection
-  id="scheduling-mode"
   title="Scheduling Mode"
   icon="📅"
 >
@@ -46,7 +47,6 @@ Choose how to configure the Download Cleaner schedule:
 </ConfigSection>
 
 <ConfigSection
-  id="cron-expression"
   title="Cron Expression"
   icon="⏲️"
 >
@@ -60,12 +60,7 @@ Enter a valid Quartz.NET cron expression to control when the Download Cleaner ru
 
 </ConfigSection>
 
-</div>
-
-<div className={styles.section}>
-
 <ConfigSection
-  id="ignored-downloads"
   title="Ignored Downloads"
   icon="🚫"
 >
@@ -92,26 +87,22 @@ mytracker.com
 
 <div className={styles.section}>
 
-<h2 className={styles.sectionTitle}>
-  <span className={styles.sectionIcon}>🌱</span>
-  Seeding Settings
-</h2>
+<SectionTitle icon="🌱">Seeding Settings</SectionTitle>
 
 <p className={styles.sectionDescription}>
   Settings that control how downloads are cleaned after they finish downloading.
 </p>
 
 <ConfigSection
-  id="delete-private-torrents"
   title="Delete Private Torrents"
   icon="🗑️"
 >
 
 When enabled, private torrents will be deleted from the download client when they meet the cleanup criteria. Use with caution as this permanently removes the download.
 
-<EnhancedWarning>
+<Warning>
 Setting this to true means private torrents will be permanently deleted, potentially affecting your private tracker account by receiving H&R if the seeding requirements are not met.
-</EnhancedWarning>
+</Warning>
 
 </ConfigSection>
 
@@ -119,25 +110,21 @@ Setting this to true means private torrents will be permanently deleted, potenti
 
 <div className={styles.section}>
 
-<h2 className={styles.sectionTitle}>
-  <span className={styles.sectionIcon}>📏</span>
-  Seeding Rules
-</h2>
+<SectionTitle icon="📏">Seeding Rules</SectionTitle>
 
 <p className={styles.sectionDescription}>
   Categories define the cleanup rules for different types of downloads. Each category specifies when downloads should be removed based on ratio and time limits.
 </p>
 
-<EnhancedNote>
+<Note>
 A download is cleaned when both `Max Ratio` and `Min Seed Time` are reached, OR when `Max Seed Time` is reached regardless of ratio.
-</EnhancedNote>
+</Note>
 
-<EnhancedImportant>
+<Important>
 Both Max Ratio and Max Seed Time cannot be disabled (-1) at the same time. At least one cleanup condition must be configured.
-</EnhancedImportant>
+</Important>
 
 <ConfigSection
-  id="category-name"
   title="Category Name"
   icon="🏷️"
 >
@@ -152,7 +139,6 @@ The name of the download client category to apply these rules to. Must match the
 </ConfigSection>
 
 <ConfigSection
-  id="max-ratio"
   title="Max Ratio"
   icon="📊"
 >
@@ -162,8 +148,7 @@ Maximum ratio to seed before considering the download for removal. Set to `-1` t
 </ConfigSection>
 
 <ConfigSection
-  id="min-seed-time"
-  title="Min Seed Time (hours)"
+  title="Min Seed Time"
   icon="⏰"
 >
 
@@ -172,8 +157,7 @@ Minimum time in hours to seed before removing a download that has reached the ma
 </ConfigSection>
 
 <ConfigSection
-  id="max-seed-time"
-  title="Max Seed Time (hours)"
+  title="Max Seed Time"
   icon="⏳"
 >
 
@@ -185,31 +169,26 @@ Maximum time in hours to seed before removing a download regardless of ratio. Se
 
 <div className={styles.section}>
 
-<h2 className={styles.sectionTitle}>
-  <span className={styles.sectionIcon}>🔗</span>
-  Unlinked Download Settings
-</h2>
+<SectionTitle icon="🔗">Unlinked Download Settings</SectionTitle>
 
 <p className={styles.sectionDescription}>
   Settings for managing downloads that no longer have hardlinks to media files (indicating they may no longer be needed by the *arr applications).
 </p>
 
 <ConfigSection
-  id="enable-unlinked-download-handling"
   title="Enable Unlinked Download Handling"
   icon="🔍"
 >
 
 Enable management of downloads that have no hardlinks remaining. This helps identify downloads that are no longer needed by your *arr applications.
 
-<EnhancedImportant>
+<Important>
 If you are using Docker, make sure to mount the downloads directory the same way it is mounted for the download client. If your download client's download directory is `/downloads`, it should be the same for Cleanuparr.
-</EnhancedImportant>
+</Important>
 
 </ConfigSection>
 
 <ConfigSection
-  id="target-category"
   title="Target Category"
   icon="🎯"
 >
@@ -219,7 +198,6 @@ Category to move unlinked downloads to.
 </ConfigSection>
 
 <ConfigSection
-  id="use-tag"
   title="Use Tag"
   icon="🏷️"
 >
@@ -229,7 +207,6 @@ When enabled, uses a tag instead of category for marking unlinked downloads (qBi
 </ConfigSection>
 
 <ConfigSection
-  id="ignored-root-directory"
   title="Ignored Root Directory"
   icon="📁"
 >
@@ -250,7 +227,6 @@ For the example above, the ignored root directory should be set to `/data/downlo
 </ConfigSection>
 
 <ConfigSection
-  id="unlinked-categories"
   title="Unlinked Categories"
   icon="📋"
 >

@@ -1,12 +1,16 @@
 ---
-sidebar_position: 2
+sidebar_position: 3
 ---
 
-import { Note, Important } from '@site/src/components/Admonition';
+import { Note, Important, SectionTitle, styles, ElementNavigator } from '@site/src/components/documentation';
 
 # Installation Guide
 
+<div className={styles.documentationPage}>
+
 This guide will walk you through the installation process for Cleanuparr. Cleanuparr can be installed in several ways depending on your preference and system configuration.
+
+<ElementNavigator />
 
 <Note>
 For most users, we recommend the Docker installation method as it provides the most consistent experience across all platforms.
@@ -17,6 +21,7 @@ For most users, we recommend the Docker installation method as it provides the m
 - [Docker Installation (Recommended)](#docker-installation-recommended)
   - [Docker Run Method](#docker-run)
   - [Docker Compose Method](#docker-compose)
+- [Unraid](#unraid)
 - [Windows Installation](#windows-installation)
   - [Windows Installer](#windows-installer)
   - [Windows Portable](#windows-portable)
@@ -24,17 +29,16 @@ For most users, we recommend the Docker installation method as it provides the m
   - [macOS Installer](#macos-installer)
   - [macOS Portable](#macos-portable)
 - [Linux Installation](#linux-installation)
+- [Port and Base Path (Non-Docker)](#port-and-base-path-non-docker)
 - [Post Installation](#post-installation)
-
+ 
 ---
 
-## Docker Installation (Recommended)
+<div className={styles.section}>
+
+<SectionTitle>Docker Installation (Recommended)</SectionTitle>
 
 Docker is the preferred installation method as it ensures all dependencies are correctly installed and provides consistent behavior across all platforms.
-
-### Prerequisites
-- Docker (version 20.10 or newer)
-- Docker Compose (optional, for compose method)
 
 ### Docker Run
 
@@ -90,7 +94,7 @@ services:
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `PORT` | 11011 | Port for the web interface |
-| `BASE_PATH` | *(empty)* | Base path for reverse proxy setups |
+| `BASE_PATH` | *(empty)* | Base path for reverse proxy setups ([examples](#example-configurations)) |
 | `PUID` | 1000 | User ID for file permissions |
 | `PGID` | 1000 | Group ID for file permissions |
 | `UMASK` | 022 | File creation mask |
@@ -100,15 +104,34 @@ services:
 
 | Container Path | Description |
 |----------------|-------------|
-| `/config` | Configuration files and database |
+| `/config` | Configuration files, log files and database |
 
 <Note>
 Replace `/path/to/config` with your desired configuration directory path on the host system.
 </Note>
 
----
+</div>
 
-## Windows Installation
+<div className={styles.section}>
+
+<SectionTitle>Unraid</SectionTitle>
+
+Use the Unraid template available in the Community Applications plugin. If the template is not yet available, you can manually add using the above Docker Compose configuration or use this guide to create a custom template:
+
+1. Download the template from here: https://github.com/Cleanuparr/unraid/blob/main/templates/Cleanuparr.xml
+2. Rename the downloaded file to 'my-cleanuparr.xml'
+3. Drop it in the `/boot/config/plugins/dockerMan/templates-user/` folder of your Unraid machine
+4. Go to the Docker tab of the Unraid webui
+5. Click on Add Container
+6. From the `Template` dropdown menu, select `cleanuparr`
+7. Set the repository to `ghcr.io/cleanuparr/cleanuparr:latest`
+8. Most other settings can be left at default, with the exception of the downloads folder which should be mapped to where your *arr stack / torrent client downloads its files to
+
+</div>
+
+<div className={styles.section}>
+
+<SectionTitle>Windows Installation</SectionTitle>
 
 ### Windows Installer
 
@@ -127,6 +150,10 @@ The easiest way to install Cleanuparr on Windows is using the provided installer
 - **Installation Directory**: `C:\Program Files\Cleanuparr\`
 - **Configuration**: `C:\ProgramFiles\Cleanuparr\config\`
 
+<Note>
+To change the port or base path, see [Port and Base Path (Non-Docker)](#port-and-base-path-non-docker).
+</Note>
+
 ### Windows Portable
 
 For users who prefer a portable installation:
@@ -137,12 +164,14 @@ For users who prefer a portable installation:
 4. Access the web interface at `http://localhost:11011`
 
 <Note>
-The portable version requires manual startup and doesn't install as a Windows service.
+The portable version requires manual startup and doesn't install as a Windows service. To change the port or base path, see [Port and Base Path (Non-Docker)](#port-and-base-path-non-docker).
 </Note>
 
----
+</div>
 
-## macOS Installation
+<div className={styles.section}>
+
+<SectionTitle>macOS Installation</SectionTitle>
 
 ### macOS Installer
 
@@ -168,12 +197,16 @@ Cleanuparr provides native macOS installers for both Intel and Apple Silicon Mac
 macOS will show security warnings for unsigned applications. This is normal - click "Open Anyway" in System Settings to proceed.
 </Important>
 
+<Note>
+To change the port or base path, see [Port and Base Path (Non-Docker)](#port-and-base-path-non-docker).
+</Note>
+
 ### macOS Portable
 
 For users who prefer a portable installation:
 
 1. Download the appropriate zip file from [GitHub Releases](https://github.com/Cleanuparr/Cleanuparr/releases):
-   - `Cleanuparr-{version}-osx-amd64.zip` for Intel Macs  
+   - `Cleanuparr-{version}-osx-amd64.zip` for Intel Macs
    - `Cleanuparr-{version}-osx-arm64.zip` for Apple Silicon Macs
 2. Extract the zip file to your desired directory
 3. Open Terminal and navigate to the extracted directory
@@ -181,9 +214,15 @@ For users who prefer a portable installation:
 5. Run: `./Cleanuparr`
 6. Access the web interface at `http://localhost:11011`
 
----
+<Note>
+To change the port or base path, see [Port and Base Path (Non-Docker)](#port-and-base-path-non-docker).
+</Note>
 
-## Linux Installation
+</div>
+
+<div className={styles.section}>
+
+<SectionTitle>Linux Installation</SectionTitle>
 
 Linux users can use the portable executables, as we don't provide distribution-specific packages.
 
@@ -206,6 +245,10 @@ Linux users can use the portable executables, as we don't provide distribution-s
    ./Cleanuparr
    ```
 5. Access the web interface at `http://localhost:11011`
+
+<Note>
+To change the port or base path, see [Port and Base Path (Non-Docker)](#port-and-base-path-non-docker).
+</Note>
 
 ### Running as a Service (Systemd)
 
@@ -255,6 +298,10 @@ To run Cleanuparr as a systemd service:
    sudo systemctl start cleanuparr
    ```
 
+<Note>
+For systemd services, you can also configure PORT and BASE_PATH directly in the service file using the `Environment` directive, or use the [Port and Base Path (Non-Docker)](#port-and-base-path-non-docker) configuration file method.
+</Note>
+
 ### Arch Linux
 [![cleanuparr on AUR](https://img.shields.io/aur/version/cleanuparr?label=cleanuparr)](https://aur.archlinux.org/packages/cleanuparr/)
 [![cleanuparr-bin on AUR](https://img.shields.io/aur/version/cleanuparr-bin?label=cleanuparr-bin)](https://aur.archlinux.org/packages/cleanuparr-bin/)
@@ -270,14 +317,80 @@ Example:
 $ yay -Sy cleanuparr
 ```
 
----
+<Note>
+To change the port or base path for AUR installations, see [Port and Base Path (Non-Docker)](#port-and-base-path-non-docker).
+</Note>
 
-## Post Installation
+</div>
+
+<div className={styles.section}>
+
+<SectionTitle>Port and Base Path (Non-Docker)</SectionTitle>
+
+For all non-Docker installations (Windows, macOS, Linux portable), you can configure the PORT and BASE_PATH by creating a configuration file.
+
+### Initial Setup
+
+1. **Start Cleanuparr** for the first time to initialize the application and create the `config` directory
+2. Navigate to the `config` directory:
+   - **Windows Installer**: `C:\ProgramFiles\Cleanuparr\config\`
+   - **Windows Portable**: `[installation-directory]\config\`
+   - **macOS Installer**: `/Applications/Cleanuparr.app/Contents/MacOS/config/`
+   - **macOS Portable**: `[installation-directory]/config/`
+   - **Linux**: `[installation-directory]/config/`
+
+3. **Create** a file named `cleanuparr.json` in the `config` directory with the following contents (modify as needed):
+
+```json
+{
+  "PORT": 11011,
+  "BASE_PATH": ""
+}
+```
+
+4. **Restart Cleanuparr** for the changes to take effect
+
+### Example Configurations
+
+**Running on port 8080:**
+```json
+{
+  "PORT": 8080,
+}
+```
+Access via: `http://localhost:8080`
+
+**Running with reverse proxy at `/cleanuparr`:**
+```json
+{
+  "BASE_PATH": "/cleanuparr"
+}
+```
+Access via: `http://yourdomain.com/cleanuparr`
+
+**Custom port with base path:**
+```json
+{
+  "PORT": 8080,
+  "BASE_PATH": "/apps/cleanup"
+}
+```
+Access via: `http://yourdomain.com:8080/apps/cleanup`
+
+</div>
+
+<div className={styles.section}>
+
+<SectionTitle>Post Installation</SectionTitle>
 
 #### Default Configuration
-- **Web Interface**: `http://localhost:11011`
-- **Base Path**: *(empty)* (for reverse proxy setups, change `BASE_PATH` environment variable)
-- **Configuration Location**: Varies by platform and installation method
+- **Web Interface**: `http://localhost:[PORT][BASE_PATH]` (default: `http://localhost:11011`)
+- Configure your download clients and *arr applications
+- Refer to the [Configuration](/docs/category/configuration) section for detailed setup instructions
 
 #### Health Checks
-Cleanuparr provides comprehensive health check endpoints for monitoring and container orchestration. For detailed information about available endpoints and configuration, see the [Health Checks documentation](../configuration/health-checks/).
+Cleanuparr provides health check endpoints for monitoring and container orchestration. For detailed information about available endpoints and configuration, see the [Health Checks documentation](../configuration/health-checks/).
+
+</div>
+
+</div>

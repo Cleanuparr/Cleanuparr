@@ -23,6 +23,10 @@ Cleanuparr was created primarily to address malicious files, such as `*.lnk` or 
 > - Notify on strike or download removal.
 > - Ignore certain torrent hashes, categories, tags or trackers from being processed by Cleanuparr.
 
+## Screenshots
+
+https://cleanuparr.github.io/Cleanuparr/docs/screenshots
+
 ## 🎯 Supported Applications
 
 ### *Arr Applications
@@ -59,7 +63,7 @@ docker run -d --name cleanuparr \
   ghcr.io/cleanuparr/cleanuparr:latest
 ```
 
-For Docker Compose, health checks, and other installation methods, see the [Complete Installation Guide](https://cleanuparr.github.io/Cleanuparr/docs/installation/detailed).
+For Docker Compose, health checks, and other installation methods, see the [Complete Installation Guide](https://cleanuparr.github.io/Cleanuparr/docs/installation/detailed), but not before reading the [Prerequisites](https://cleanuparr.github.io/Cleanuparr/docs/installation/).
 
 ### 🌐 Access the Web Interface
 

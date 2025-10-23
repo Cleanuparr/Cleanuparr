@@ -2,26 +2,26 @@
 sidebar_position: 7
 ---
 
-import { 
-  ConfigSection, 
-  styles 
+import {
+  ConfigSection,
+  ElementNavigator,
+  SectionTitle,
+  styles
 } from '@site/src/components/documentation';
 
 # Notifications
 
 Configure notification services to receive alerts about Cleanuparr operations.
 
+<ElementNavigator />
+
 <div className={styles.documentationPage}>
 
 <div className={styles.section}>
 
-<h2 className={styles.sectionTitle}>
-  <span className={styles.sectionIcon}>⚙️</span>
-  General Settings
-</h2>
+<SectionTitle icon="⚙️">General Settings</SectionTitle>
 
 <ConfigSection
-  id="enabled"
   title="Enabled"
   icon="✅"
 >
@@ -31,7 +31,6 @@ Enable or disable this notification provider. If enabled, notifications will be 
 </ConfigSection>
 
 <ConfigSection
-  id="provider-name"
   title="Provider Name"
   icon="🆔"
 >
@@ -44,13 +43,9 @@ A unique name to identify this provider. This name will be displayed in the user
 
 <div className={styles.section}>
 
-<h2 className={styles.sectionTitle}>
-  <span className={styles.sectionIcon}>⚡</span>
-  Event Configuration
-</h2>
+<SectionTitle icon="⚡">Event Configuration</SectionTitle>
 
 <ConfigSection
-  id="event-failed-import-strike"
   title="Failed Import Strike"
   icon="❌"
 >
@@ -60,7 +55,6 @@ A unique name to identify this provider. This name will be displayed in the user
 </ConfigSection>
 
 <ConfigSection
-  id="event-stalled-strike"
   title="Stalled Strike"
   icon="⏸️"
 >
@@ -70,7 +64,6 @@ A unique name to identify this provider. This name will be displayed in the user
 </ConfigSection>
 
 <ConfigSection
-  id="event-slow-strike"
   title="Slow Strike"
   icon="🐌"
 >
@@ -80,7 +73,6 @@ A unique name to identify this provider. This name will be displayed in the user
 </ConfigSection>
 
 <ConfigSection
-  id="event-queue-item-deleted"
   title="Queue Item Deleted"
   icon="🗑️"
 >
@@ -90,7 +82,6 @@ A unique name to identify this provider. This name will be displayed in the user
 </ConfigSection>
 
 <ConfigSection
-  id="event-download-cleaned"
   title="Download Cleaned"
   icon="🧽"
 >
@@ -100,7 +91,6 @@ A unique name to identify this provider. This name will be displayed in the user
 </ConfigSection>
 
 <ConfigSection
-  id="event-category-changed"
   title="Category Changed"
   icon="🏷️"
 >

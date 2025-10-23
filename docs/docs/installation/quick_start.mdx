@@ -1,0 +1,68 @@
+---
+sidebar_position: 2
+---
+
+import { Note, SectionTitle, styles } from '@site/src/components/documentation';
+
+# Quick Start
+
+<div className={styles.documentationPage}>
+
+The fastest way to get started with Cleanuparr:
+
+<div className={styles.section}>
+
+<SectionTitle>Docker (Recommended)</SectionTitle>
+
+**Option 1: Docker Run**
+```bash
+docker run -d --name cleanuparr \
+  --restart unless-stopped \
+  -p 11011:11011 \
+  -v /path/to/config:/config \
+  -e PORT=11011 \
+  -e BASE_PATH= \
+  -e PUID=1000 \
+  -e PGID=1000 \
+  -e UMASK=022 \
+  -e TZ=Etc/UTC \
+  ghcr.io/cleanuparr/cleanuparr:latest
+```
+
+**Option 2: Docker Compose**
+```yaml
+services:
+  cleanuparr:
+    image: ghcr.io/cleanuparr/cleanuparr:latest
+    container_name: cleanuparr
+    restart: unless-stopped
+    ports:
+      - "11011:11011"
+    volumes:
+      - /path/to/config:/config
+    environment:
+      - PORT=11011
+      - BASE_PATH=
+      - PUID=1000
+      - PGID=1000
+      - UMASK=022
+      - TZ=Etc/UTC
+```
+
+</div>
+
+<div className={styles.section}>
+
+<SectionTitle>Post Installation</SectionTitle>
+
+- **Web Interface**: `http://localhost:[PORT][BASE_PATH]` (default: `http://localhost:11011`)
+- Configure your download clients and *arr applications
+- Refer to the [Configuration](/docs/category/configuration) section for detailed setup instructions
+
+</div>
+
+<Note>
+For other installation methods, see the detailed [Installation Guide](/docs/installation/detailed).
+</Note>
+
+</div> 

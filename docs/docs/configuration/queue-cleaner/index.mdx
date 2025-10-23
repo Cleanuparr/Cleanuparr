@@ -2,25 +2,29 @@
 sidebar_position: 3
 ---
 
-import { Important, Warning } from '@site/src/components/Admonition';
-import { 
-  ConfigSection, 
-  EnhancedImportant, 
-  EnhancedWarning,
-  styles 
+import useBaseUrl from '@docusaurus/useBaseUrl';
+import {
+  ConfigSection,
+  Important,
+  Warning,
+  ElementNavigator,
+  SectionTitle,
+  PrefixedSection,
+  ClickableImage,
+  styles
 } from '@site/src/components/documentation';
-import failedImportPatterns from '../../../static/img/failed-import-patterns.png';
 
 # Queue Cleaner
 
 The Queue Cleaner monitors your *arr's queues and automatically removes downloads based on configurable criteria. This helps keep your queue clean and prevents problematic downloads from being stuck.
+
+<ElementNavigator />
 
 <div className={styles.documentationPage}>
 
 <div className={styles.section}>
 
 <ConfigSection
-  id="enable-queue-cleaner"
   title="Enable Queue Cleaner"
   icon="🔄"
 >
@@ -30,7 +34,6 @@ When enabled, the Queue Cleaner will run according to the configured schedule to
 </ConfigSection>
 
 <ConfigSection
-  id="scheduling-mode"
   title="Scheduling Mode"
   icon="📅"
 >
@@ -42,7 +45,6 @@ Choose how to configure the Queue Cleaner schedule:
 </ConfigSection>
 
 <ConfigSection
-  id="cron-expression"
   title="Cron Expression"
   icon="⏲️"
 >
@@ -56,12 +58,7 @@ Enter a valid Quartz cron expression to control when the Queue Cleaner runs.
 
 </ConfigSection>
 
-</div>
-
-<div className={styles.section}>
-
 <ConfigSection
-  id="ignored-downloads"
   title="Ignored Downloads"
   icon="🚫"
 >
@@ -86,16 +83,13 @@ mytracker.com
 
 </div>
 
+<PrefixedSection prefix="failed-import">
 <div className={styles.section}>
 
-<h2 className={styles.sectionTitle}>
-  <span className={styles.sectionIcon}>❌</span>
-  Failed Import Settings
-</h2>
+<SectionTitle icon="❌">Failed Import Settings</SectionTitle>
 
 <ConfigSection
-  id="failed-import-max-strikes"
-  title="Failed Import Max Strikes"
+  title="Max Strikes"
   icon="⚡"
 >
 
@@ -104,40 +98,37 @@ Number of strikes before a failed import download is removed from the queue. Set
 </ConfigSection>
 
 <ConfigSection
-  id="failed-import-ignore-private"
-  title="Failed Import Ignore Private"
+  title="Ignore Private"
   icon="🔒"
 >
 
 When enabled, private torrents will be skipped during failed import cleaning. This is useful if you want to preserve private tracker content even when imports fail.
 
-<EnhancedImportant>
+<Important>
 This setting needs a download client to be configured.
-</EnhancedImportant>
+</Important>
 
 </ConfigSection>
 
 <ConfigSection
-  id="failed-import-delete-private"
-  title="Failed Import Delete Private"
+  title="Delete Private"
   icon="🗑️"
 >
 
 When enabled, private torrents that reach the maximum strikes will be deleted from the download client. Use with caution as this will permanently remove the download.
 
-<EnhancedWarning>
+<Warning>
 Setting this to true means private torrents will be permanently deleted, potentially affecting your private tracker account by receiving H&R if the seeding requirements are not met.
-</EnhancedWarning>
+</Warning>
 
-<EnhancedImportant>
+<Important>
 This setting needs a download client to be configured.
-</EnhancedImportant>
+</Important>
 
 </ConfigSection>
 
 <ConfigSection
-  id="failed-import-pattern-mode"
-  title="Failed Import Pattern Mode"
+  title="Pattern Mode"
   icon="🎭"
 >
 
@@ -148,8 +139,7 @@ Choose how to handle failed imports based on their patterns:
 </ConfigSection>
 
 <ConfigSection
-  id="failed-import-patterns"
-  title="Failed Import Patterns"
+  title="Patterns"
   icon="📝"
 >
 
@@ -163,29 +153,31 @@ When pattern mode is set to `Include`, only failed imports containing these patt
 
 These patterns can be any substring of the failed import messages. These messsages can be viewed in the queue of your *arr application.
 
-<img src={failedImportPatterns} alt="Failed Import Messages Example" style={{ borderRadius: '8px' }} />
+<ClickableImage
+  src={useBaseUrl('/img/failed_import_patterns.png')}
+  alt="Failed Import Messages Example"
+  style={{ borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', maxWidth: '100%' }}
+/>
 
 </ConfigSection>
 
 </div>
+</PrefixedSection>
 
+<PrefixedSection prefix="stalled">
 <div className={styles.section}>
 
-<h2 className={styles.sectionTitle}>
-  <span className={styles.sectionIcon}>⏸️</span>
-  Stalled Download Rules
-</h2>
+<SectionTitle icon="⏸️">Stalled Download Rules</SectionTitle>
 
 <p className={styles.sectionDescription}>
   Stalled downloads are those that have stopped downloading and show no progress. You can create multiple rules to handle different scenarios based on completion percentage and torrent privacy.
 </p>
 
-<EnhancedImportant>
+<Important>
 These settings need a download client to be configured.
-</EnhancedImportant>
+</Important>
 
 <ConfigSection
-  id="stall-rule-name"
   title="Rule Name"
   icon="📝"
 >
@@ -195,7 +187,6 @@ A descriptive name for this stall rule. This helps you identify the purpose of e
 </ConfigSection>
 
 <ConfigSection
-  id="stall-rule-enabled"
   title="Enabled"
   icon="✅"
 >
@@ -205,7 +196,6 @@ Toggle to enable or disable this rule. Disabled rules won't be applied during qu
 </ConfigSection>
 
 <ConfigSection
-  id="stall-rule-max-strikes"
   title="Max Strikes"
   icon="⚡"
 >
@@ -215,7 +205,6 @@ Number of consecutive times a download must be stalled before action is taken. M
 </ConfigSection>
 
 <ConfigSection
-  id="stall-rule-privacy-type"
   title="Privacy Type"
   icon="🔒"
 >
@@ -228,7 +217,6 @@ Determines which torrents this rule applies to:
 </ConfigSection>
 
 <ConfigSection
-  id="stall-rule-completion-range"
   title="Completion Percentage Range"
   icon="📊"
 >
@@ -242,7 +230,6 @@ This allows you to create different rules for different stages of a download. Fo
 </ConfigSection>
 
 <ConfigSection
-  id="stall-rule-reset-strikes"
   title="Reset Strikes on Progress"
   icon="🔄"
 >
@@ -252,7 +239,6 @@ When enabled, the strike count resets to zero if the download shows progress aga
 </ConfigSection>
 
 <ConfigSection
-  id="stall-rule-minimum-progress"
   title="Minimum Progress to Reset"
   icon="📏"
 >
@@ -262,21 +248,19 @@ Only reset strikes after the torrent downloads at least this amount of data. Lea
 </ConfigSection>
 
 <ConfigSection
-  id="stall-rule-delete-private"
   title="Delete Private from Client"
   icon="🗑️"
 >
 
 When enabled, private torrents that reach the maximum strikes will be deleted from the download client. When disabled, they'll only be removed from the *arr queue but remain in your download client.
 
-<EnhancedWarning>
-Enabling this means private torrents will be permanently deleted from your download client, potentially affecting your private tracker account if seeding requirements aren't met.
-</EnhancedWarning>
+<Warning>
+Setting this to true means private torrents will be permanently deleted, potentially affecting your private tracker account by receiving H&R if the seeding requirements are not met.
+</Warning>
 
 </ConfigSection>
 
 <ConfigSection
-  id="downloading-metadata-max-strikes"
   title="Downloading Metadata Max Strikes"
   icon="📊"
 >
@@ -286,24 +270,22 @@ Number of strikes before a download stuck in "Downloading Metadata" state is rem
 </ConfigSection>
 
 </div>
+</PrefixedSection>
 
+<PrefixedSection prefix="slow">
 <div className={styles.section}>
 
-<h2 className={styles.sectionTitle}>
-  <span className={styles.sectionIcon}>🐌</span>
-  Slow Download Rules
-</h2>
+<SectionTitle icon="🐌">Slow Download Rules</SectionTitle>
 
 <p className={styles.sectionDescription}>
   Slow downloads are those downloading below a specified speed threshold. You can create multiple rules to handle different scenarios based on speed, time limits, file size, completion percentage, and torrent privacy.
 </p>
 
-<EnhancedImportant>
+<Important>
 These settings need a download client to be configured.
-</EnhancedImportant>
+</Important>
 
 <ConfigSection
-  id="slow-rule-name"
   title="Rule Name"
   icon="📝"
 >
@@ -313,7 +295,6 @@ A descriptive name for this slow rule. This helps you identify the purpose of ea
 </ConfigSection>
 
 <ConfigSection
-  id="slow-rule-enabled"
   title="Enabled"
   icon="✅"
 >
@@ -323,7 +304,6 @@ Toggle to enable or disable this rule. Disabled rules won't be applied during qu
 </ConfigSection>
 
 <ConfigSection
-  id="slow-rule-max-strikes"
   title="Max Strikes"
   icon="⚡"
 >
@@ -333,7 +313,6 @@ Number of consecutive times a download must be slow before action is taken. Mini
 </ConfigSection>
 
 <ConfigSection
-  id="slow-rule-min-speed"
   title="Min Speed"
   icon="🚀"
 >
@@ -343,7 +322,6 @@ Minimum download speed threshold (e.g., 100KB/s). Downloads consistently below t
 </ConfigSection>
 
 <ConfigSection
-  id="slow-rule-max-time"
   title="Maximum Time (Hours)"
   icon="⏰"
 >
@@ -353,7 +331,6 @@ Maximum time allowed for downloads in hours. Set to 0 to disable time-based chec
 </ConfigSection>
 
 <ConfigSection
-  id="slow-rule-privacy-type"
   title="Privacy Type"
   icon="🔒"
 >
@@ -366,7 +343,6 @@ Determines which torrents this rule applies to:
 </ConfigSection>
 
 <ConfigSection
-  id="slow-rule-completion-range"
   title="Completion Percentage Range"
   icon="📊"
 >
@@ -380,7 +356,6 @@ This allows you to create different rules for different stages of a download. Fo
 </ConfigSection>
 
 <ConfigSection
-  id="slow-rule-ignore-above-size"
   title="Ignore Above Size"
   icon="📦"
 >
@@ -390,7 +365,6 @@ Downloads larger than this size will be ignored by this rule (e.g., 25 GB). Larg
 </ConfigSection>
 
 <ConfigSection
-  id="slow-rule-reset-strikes"
   title="Reset Strikes on Progress"
   icon="🔄"
 >
@@ -400,19 +374,19 @@ When enabled, the strike count resets to zero if the download speed improves abo
 </ConfigSection>
 
 <ConfigSection
-  id="slow-rule-delete-private"
   title="Delete Private from Client"
   icon="🗑️"
 >
 
 When enabled, private torrents that reach the maximum strikes will be deleted from the download client. When disabled, they'll only be removed from the *arr queue but remain in your download client.
 
-<EnhancedWarning>
-Enabling this means private torrents will be permanently deleted from your download client, potentially affecting your private tracker account if seeding requirements aren't met.
-</EnhancedWarning>
+<Warning>
+Setting this to true means private torrents will be permanently deleted, potentially affecting your private tracker account by receiving H&R if the seeding requirements are not met.
+</Warning>
 
 </ConfigSection>
 
 </div>
+</PrefixedSection>
 
 </div>

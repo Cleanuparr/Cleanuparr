@@ -2,75 +2,77 @@
 sidebar_position: 1
 ---
 
-import { Note } from '@site/src/components/Admonition';
+import useBaseUrl from '@docusaurus/useBaseUrl';
+import { Note, Important, SectionTitle, ElementNavigator, ClickableImage, styles } from '@site/src/components/documentation';
 
-# Quick Start
+# Prerequisites
 
-The fastest way to get started with Cleanuparr:
+If you want to **successfully block** releases and never have them pop back up in your queue, you need to do the following:
 
-## 🐳 Docker (Recommended)
+<ElementNavigator />
 
-**Option 1: Docker Run**
-```bash
-docker run -d --name cleanuparr \
-  --restart unless-stopped \
-  -p 11011:11011 \
-  -v /path/to/config:/config \
-  -e PORT=11011 \
-  -e BASE_PATH= \
-  -e PUID=1000 \
-  -e PGID=1000 \
-  -e UMASK=022 \
-  -e TZ=Etc/UTC \
-  ghcr.io/cleanuparr/cleanuparr:latest
-```
+<div className={styles.documentationPage}>
 
-**Option 2: Docker Compose**
-```yaml
-services:
-  cleanuparr:
-    image: ghcr.io/cleanuparr/cleanuparr:latest
-    container_name: cleanuparr
-    restart: unless-stopped
-    ports:
-      - "11011:11011"
-    volumes:
-      - /path/to/config:/config
-    environment:
-      - PORT=11011
-      - BASE_PATH=
-      - PUID=1000
-      - PGID=1000
-      - UMASK=022
-      - TZ=Etc/UTC
-```
+<div className={styles.section}>
 
-## Unraid
+<SectionTitle>Configure Prowlarr</SectionTitle>
 
-Use the Unraid template available in the Community Applications plugin. If the template is not yet available, you can manually add using the above Docker Compose configuration or use this guide to create a custom template:
+<div className={styles.sideBySide}>
+  <div className={styles.sideBySideContent}>
 
-1. Download the template from here: https://github.com/Cleanuparr/unraid/blob/main/templates/Cleanuparr.xml
-2. Rename the downloaded file to 'my-cleanuparr.xml'
-3. Drop it in the `/boot/config/plugins/dockerMan/templates-user/` folder of your Unraid machine
-4. Go to the Docker tab of the Unraid webui
-5. Click on Add Container
-6. From the `Template` dropdown menu, select `cleanuparr`
-7. Set the repository to `ghcr.io/cleanuparr/cleanuparr:latest`
-8. Most other settings can be left at default, with the exception of the downloads folder which should be mapped to where your *arr stack / torrent client downloads its files to
+If you are using Prowlarr as your indexer manager:
+1. Go to Prowlarr
+2. Navigate to `Settings`
+3. Navigate to `Apps`
+4. Enabled advanced settings by clicking on `Show Advanced`
+5. Edit app
+6. Enable `Sync Reject Blocklisted Torrent Hashes While Grabbing`
 
+Repeat steps #5 and #6 for each Prowlarr app you have configured.
 
-## 🖥️ Other Installation Methods
+  </div>
+  <div className={styles.sideBySideImage}>
+    <ClickableImage
+      src={useBaseUrl('/img/prowlarr_settings.png')}
+      alt="Prowlarr settings showing Sync Reject Blocklisted Torrent Hashes option"
+      style={{ borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', maxWidth: '100%' }}
+    />
+  </div>
+</div>
 
-- **Windows**: Download the installer from [GitHub Releases](https://github.com/Cleanuparr/Cleanuparr/releases)
-- **macOS**: Download the `.pkg` installer for your Mac type (Intel/Apple Silicon)
-- **Linux**: Download and extract the portable executable
+</div>
 
-<Note>
-For detailed installation instructions, security notes, troubleshooting, and all platform-specific options, see the [Complete Installation Guide](/docs/installation/detailed).
-</Note>
+<div className={styles.section}>
 
-## 🚀 After Installation
+<SectionTitle>Configure *arr</SectionTitle>
 
-1. Open your browser and go to `http://localhost:11011`
-2. Configure your download clients and *arr applications
-3. Refer to the [Configuration](/docs/category/configuration) section for detailed setup instructions 
+<div className={styles.sideBySide}>
+  <div className={styles.sideBySideContent}>
+
+<Important>
+If you are using Prowlarr, this step is not necessary.
+</Important>
+
+If you are using Sonarr/Radarr/Lidarr/Readarr/Whisparr as your indexer manager:
+1. Go to Sonarr/Radarr/Lidarr/Readarr/Whisparr
+2. Navigate to `Settings`
+3. Navigate to `Indexers`
+4. Enabled advanced settings by clicking on `Show Advanced`
+5. Edit indexer
+6. Enable `Reject Blocklisted Torrent Hashes While Grabbing`
+
+Repeat steps #5 and #6 for each indexer you have configured.
+
+  </div>
+  <div className={styles.sideBySideImage}>
+    <ClickableImage
+      src={useBaseUrl('/img/sonarr_settings.png')}
+      alt="Sonarr settings showing Reject Blocklisted Torrent Hashes option"
+      style={{ borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', maxWidth: '100%' }}
+    />
+  </div>
+</div>
+
+</div>
+
+</div>

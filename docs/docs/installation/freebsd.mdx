@@ -1,24 +1,23 @@
 ---
-sidebar_position: 3
+sidebar_position: 4
 ---
 
-import { Note } from '@site/src/components/Admonition';
-import { 
-  StepGuide, 
-  Step, 
-  EnhancedNote,
-  styles 
+import {
+  StepGuide,
+  Step,
+  Note,
+  styles
 } from '@site/src/components/documentation';
 
 # FreeBSD
 
 Build Cleanuparr from source on FreeBSD systems with full dependency management and native compilation.
 
-<EnhancedNote>
-The preferred method of installation method is using Docker.
-</EnhancedNote>
-
 <div className={styles.documentationPage}>
+
+<Note>
+The preferred method of installation is using Docker.
+</Note>
 
 <div className={styles.section}>
 
@@ -152,6 +151,8 @@ chmod +x Cleanuparr
 ```
 
 The application will start and be available at `http://localhost:11011` by default.
+
+To change the port or base path, see the [Port and Base Path (Non-Docker)](./detailed#port-and-base-path-non-docker) configuration section.
   </Step>
 </StepGuide>
 

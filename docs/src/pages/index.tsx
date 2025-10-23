@@ -26,7 +26,6 @@ function FeatureCard({ icon, title, description, color }: FeatureCardProps) {
 }
 
 interface QuickStartCardProps {
-  icon: string;
   title: string;
   description: string;
   command: string;
@@ -34,11 +33,10 @@ interface QuickStartCardProps {
   buttonLink: string;
 }
 
-function QuickStartCard({ icon, title, description, command, buttonText, buttonLink }: QuickStartCardProps) {
+function QuickStartCard({ title, description, command, buttonText, buttonLink }: QuickStartCardProps) {
   return (
     <div className={styles.quickStartCard}>
       <div className={styles.quickStartHeader}>
-        <span className={styles.quickStartIcon}>{icon}</span>
         <h3 className={styles.quickStartTitle}>{title}</h3>
       </div>
       <p className={styles.quickStartDescription}>{description}</p>
@@ -73,16 +71,22 @@ function HomepageHeader() {
             </p>
             <div className={styles.heroButtons}>
               <Link
-                className="button button--primary button--lg"
+                className="button button--secondary button--outline button--md"
                 to="/docs/installation"
               >
                 🚀 Get Started
               </Link>
               <Link
-                className="button button--secondary button--outline button--lg"
+                className="button button--secondary button--outline button--md"
                 to="/docs/features"
               >
-                ✨ View Features
+                View Features
+              </Link>
+              <Link
+                className="button button--secondary button--outline button--md"
+                to="/docs/supported-apps"
+              >
+                Supported Apps
               </Link>
             </div>
           </div>
@@ -143,7 +147,7 @@ function FeaturesSection() {
     {
       icon: "🔔",
       title: "Smart Notifications",
-      description: "Get alerted about strikes, removals, and cleanup operations via Notifiarr or Apprise.",
+      description: "Get alerted about strikes, removals and cleanup operations.",
       color: "#fd7e14"
     }
   ];
@@ -168,15 +172,13 @@ function FeaturesSection() {
 function QuickStartSection() {
   const quickStartOptions: QuickStartCardProps[] = [
     {
-      icon: "🐳",
       title: "Docker (Recommended)",
       description: "Get up and running in seconds with Docker Compose",
       command: "docker run -d --name cleanuparr -p 11011:11011 cleanuparr/cleanuparr:latest",
-      buttonText: "Docker Setup Guide",
-      buttonLink: "/docs/installation"
+      buttonText: "Quick Start Guide",
+      buttonLink: "/docs/installation/quick_start"
     },
     {
-      icon: "💻",
       title: "Standalone Application",
       description: "Download pre-built binaries for Windows, macOS, and Linux",
       command: "# Download from GitHub Releases\n# Extract and run the executable",
@@ -202,39 +204,6 @@ function QuickStartSection() {
   );
 }
 
-function IntegrationsSection() {
-  const supportedApps = [
-    { name: "Sonarr", icon: "📺", color: "#3578e5" },
-    { name: "Radarr", icon: "🎬", color: "#ffc107" },
-    { name: "Lidarr", icon: "🎵", color: "#28a745" },
-    { name: "Readarr", icon: "📚", color: "#6f42c1" },
-    { name: "Whisparr", icon: "🔞", color: "#dc3545" },
-    { name: "qBittorrent", icon: "⬇️", color: "#17a2b8" },
-    { name: "Deluge", icon: "🌊", color: "#fd7e14" },
-    { name: "Transmission", icon: "📡", color: "#e83e8c" },
-    { name: "µTorrent", icon: "🌀", color: "#343a40" },
-  ];
-
-  return (
-    <section className={styles.integrationsSection}>
-      <div className="container">
-        <div className={styles.sectionHeader}>
-          <h2>Seamless Integrations</h2>
-          <p>Works with all your favorite *arr applications and download clients.</p>
-        </div>
-        <div className={styles.integrationsGrid}>
-          {supportedApps.map((app, idx) => (
-            <div key={idx} className={styles.integrationItem} style={{ '--app-color': app.color } as any}>
-              <span className={styles.integrationIcon}>{app.icon}</span>
-              <span className={styles.integrationName}>{app.name}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
 export default function Home(): ReactNode {
   const { siteConfig } = useDocusaurusContext();
   return (
@@ -246,10 +215,7 @@ export default function Home(): ReactNode {
       <main>
         <FeaturesSection />
         <QuickStartSection />
-        <IntegrationsSection />
-        <div className="container" style={{ padding: '2rem 0' }}>
-          <SupportBanner />
-        </div>
+        <SupportBanner />
       </main>
     </Layout>
   );

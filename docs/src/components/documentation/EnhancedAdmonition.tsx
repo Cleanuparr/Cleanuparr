@@ -48,14 +48,19 @@ export default function EnhancedAdmonition({
 }
 
 // Convenience components
-export function EnhancedNote({ title, children, className }: Omit<EnhancedAdmonitionProps, 'type'>) {
+export function Note({ title, children, className }: Omit<EnhancedAdmonitionProps, 'type'>) {
   return <EnhancedAdmonition type="note" title={title} className={className}>{children}</EnhancedAdmonition>;
 }
 
-export function EnhancedImportant({ title, children, className }: Omit<EnhancedAdmonitionProps, 'type'>) {
+export function Important({ title, children, className }: Omit<EnhancedAdmonitionProps, 'type'>) {
   return <EnhancedAdmonition type="important" title={title} className={className}>{children}</EnhancedAdmonition>;
 }
 
-export function EnhancedWarning({ title, children, className }: Omit<EnhancedAdmonitionProps, 'type'>) {
+export function Warning({ title, children, className }: Omit<EnhancedAdmonitionProps, 'type'>) {
   return <EnhancedAdmonition type="warning" title={title} className={className}>{children}</EnhancedAdmonition>;
-} 
+}
+
+// Legacy exports for backwards compatibility (can be removed later)
+export { Note as EnhancedNote };
+export { Important as EnhancedImportant };
+export { Warning as EnhancedWarning }; 

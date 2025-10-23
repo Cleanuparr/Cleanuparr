@@ -24,27 +24,25 @@ export class DocumentationService {
       'failedImport.deletePrivate': 'failed-import-delete-private',
       'failedImport.pattern-mode': 'failed-import-pattern-mode',
       'failedImport.patterns': 'failed-import-patterns',
-      'downloadingMetadataMaxStrikes': 'downloading-metadata-max-strikes',
-      // Stall rule fields
-      'stallRule.name': 'stall-rule-name',
-      'stallRule.enabled': 'stall-rule-enabled',
-      'stallRule.maxStrikes': 'stall-rule-max-strikes',
-      'stallRule.privacyType': 'stall-rule-privacy-type',
-      'stallRule.completionRange': 'stall-rule-completion-range',
-      'stallRule.resetStrikesOnProgress': 'stall-rule-reset-strikes',
-      'stallRule.minimumProgress': 'stall-rule-minimum-progress',
-      'stallRule.deletePrivateTorrentsFromClient': 'stall-rule-delete-private',
-      // Slow rule fields
+      'downloadingMetadataMaxStrikes': 'stalled-downloading-metadata-max-strikes',
+      'stallRule.name': 'stalled-rule-name',
+      'stallRule.enabled': 'stalled-enabled',
+      'stallRule.maxStrikes': 'stalled-max-strikes',
+      'stallRule.privacyType': 'stalled-privacy-type',
+      'stallRule.completionRange': 'stalled-completion-percentage-range',
+      'stallRule.resetStrikesOnProgress': 'stalled-reset-strikes-on-progress',
+      'stallRule.minimumProgress': 'stalled-minimum-progress-to-reset',
+      'stallRule.deletePrivateTorrentsFromClient': 'stalled-delete-private-from-client',
       'slowRule.name': 'slow-rule-name',
-      'slowRule.enabled': 'slow-rule-enabled',
-      'slowRule.maxStrikes': 'slow-rule-max-strikes',
-      'slowRule.minSpeed': 'slow-rule-min-speed',
-      'slowRule.maxTimeHours': 'slow-rule-max-time',
-      'slowRule.privacyType': 'slow-rule-privacy-type',
-      'slowRule.completionRange': 'slow-rule-completion-range',
-      'slowRule.ignoreAboveSize': 'slow-rule-ignore-above-size',
-      'slowRule.resetStrikesOnProgress': 'slow-rule-reset-strikes',
-      'slowRule.deletePrivateTorrentsFromClient': 'slow-rule-delete-private'
+      'slowRule.enabled': 'slow-enabled',
+      'slowRule.maxStrikes': 'slow-max-strikes',
+      'slowRule.minSpeed': 'slow-min-speed',
+      'slowRule.maxTimeHours': 'slow-maximum-time-hours',
+      'slowRule.privacyType': 'slow-privacy-type',
+      'slowRule.completionRange': 'slow-completion-percentage-range',
+      'slowRule.ignoreAboveSize': 'slow-ignore-above-size',
+      'slowRule.resetStrikesOnProgress': 'slow-reset-strikes-on-progress',
+      'slowRule.deletePrivateTorrentsFromClient': 'slow-delete-private-from-client'
     },
     'general': {
       'displaySupportBanner': 'display-support-banner',
@@ -54,15 +52,13 @@ export class DocumentationService {
       'httpCertificateValidation': 'http-certificate-validation',
       'searchEnabled': 'search-enabled',
       'searchDelay': 'search-delay',
-      'enableBlacklistSync': 'enable-blacklist-sync',
-      'blacklistPath': 'blacklist-path',
       'log.level': 'log-level',
-      'log.rollingSizeMB': 'log-rolling-size-mb',
-      'log.retainedFileCount': 'log-retained-file-count',
-      'log.timeLimitHours': 'log-time-limit-hours',
-      'log.archiveEnabled': 'log-archive-enabled',
-      'log.archiveRetainedCount': 'log-archive-retained-count',
-      'log.archiveTimeLimitHours': 'log-archive-time-limit-hours',
+      'log.rollingSizeMB': 'rolling-size-mb',
+      'log.retainedFileCount': 'retained-file-count',
+      'log.timeLimitHours': 'time-limit',
+      'log.archiveEnabled': 'archive-enabled',
+      'log.archiveRetainedCount': 'archive-retained-count',
+      'log.archiveTimeLimitHours': 'archive-time-limit',
       'ignoredDownloads': 'ignored-downloads'
     },
     'download-cleaner': {
@@ -70,8 +66,6 @@ export class DocumentationService {
       'ignoredDownloads': 'ignored-downloads',
       'useAdvancedScheduling': 'scheduling-mode',
       'cronExpression': 'cron-expression',
-      'jobSchedule.every': 'run-schedule',
-      'jobSchedule.type': 'run-schedule',
       'deletePrivate': 'delete-private-torrents',
       'name': 'category-name',
       'maxRatio': 'max-ratio',
@@ -88,20 +82,18 @@ export class DocumentationService {
       'ignoredDownloads': 'ignored-downloads',
       'useAdvancedScheduling': 'scheduling-mode',
       'cronExpression': 'cron-expression',
-      'jobSchedule.every': 'run-schedule',
-      'jobSchedule.type': 'run-schedule',
       'ignorePrivate': 'ignore-private',
       'deletePrivate': 'delete-private',
       'deleteKnownMalware': 'delete-known-malware',
-      'sonarr.enabled': 'enable-sonarr-blocklist',
-      'sonarr.blocklistPath': 'sonarr-blocklist-path',
-      'sonarr.blocklistType': 'sonarr-blocklist-type',
-      'radarr.enabled': 'enable-radarr-blocklist',
-      'radarr.blocklistPath': 'radarr-blocklist-path',
-      'radarr.blocklistType': 'radarr-blocklist-type',
-      'lidarr.enabled': 'enable-lidarr-blocklist',
-      'lidarr.blocklistPath': 'lidarr-blocklist-path',
-      'lidarr.blocklistType': 'lidarr-blocklist-type'
+      'sonarr.enabled': 'enable-blocklist',
+      'sonarr.blocklistPath': 'blocklist-path',
+      'sonarr.blocklistType': 'blocklist-type',
+      'radarr.enabled': 'enable-blocklist',
+      'radarr.blocklistPath': 'blocklist-path',
+      'radarr.blocklistType': 'blocklist-type',
+      'lidarr.enabled': 'enable-blocklist',
+      'lidarr.blocklistPath': 'blocklist-path',
+      'lidarr.blocklistType': 'blocklist-type'
     },
     'download-client': {
       'enabled': 'enable-download-client',
@@ -112,33 +104,34 @@ export class DocumentationService {
       'username': 'username',
       'password': 'password'
     },
+    'blacklist-sync': {
+      'enabled': 'enable-blacklist-sync',
+      'blacklistPath': 'blacklist-path'
+    },
     'notifications': {
       'enabled': 'enabled',
       'name': 'provider-name',
-      'eventTriggers': 'event-triggers'
+      'eventTriggers': 'event-configuration'
     },
     'notifications/notifiarr': {
-      'notifiarr.apiKey': 'notifiarr-api-key',
-      'notifiarr.channelId': 'notifiarr-channel-id'
+      'notifiarr.apiKey': 'api-key',
+      'notifiarr.channelId': 'channel-id'
     },
     'notifications/apprise': {
-      'apprise.url': 'apprise-url',
-      'apprise.key': 'apprise-key',
-      'apprise.tags': 'apprise-tags'
+      'apprise.url': 'url',
+      'apprise.key': 'key',
+      'apprise.tags': 'tags'
     },
     'notifications/ntfy': {
-      'ntfy.serverUrl': 'ntfy-server-url',
-      'ntfy.topics': 'ntfy-topics',
-      'ntfy.authenticationType': 'ntfy-authentication-type',
-      'ntfy.username': 'ntfy-username',
-      'ntfy.password': 'ntfy-password',
-      'ntfy.accessToken': 'ntfy-access-token',
-      'ntfy.priority': 'ntfy-priority',
-      'ntfy.tags': 'ntfy-tags'
+      'ntfy.serverUrl': 'server-url',
+      'ntfy.topics': 'topics',
+      'ntfy.authenticationType': 'authentication-type',
+      'ntfy.username': 'username',
+      'ntfy.password': 'password',
+      'ntfy.accessToken': 'access-token',
+      'ntfy.priority': 'priority',
+      'ntfy.tags': 'tags'
     },
-    'notifications/events': {
-      'eventTriggers': 'event-triggers'
-    }
   };
 
   constructor(private applicationPathService: ApplicationPathService) {}

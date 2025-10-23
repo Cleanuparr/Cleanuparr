@@ -2,11 +2,12 @@
 sidebar_position: 5
 ---
 
-import { Note, Warning } from '@site/src/components/Admonition';
 import {
   ConfigSection,
-  EnhancedNote,
-  EnhancedWarning,
+  Note,
+  Warning,
+  ElementNavigator,
+  SectionTitle,
   styles
 } from '@site/src/components/documentation';
 
@@ -14,31 +15,28 @@ import {
 
 The Blacklist Synchronizer automatically synchronizes blacklist entries to all enabled qBittorrent clients every hour. This helps maintain consistent content filtering across your download clients.
 
+<ElementNavigator />
+
 <div className={styles.documentationPage}>
 
 <div className={styles.section}>
 
-<h2 className={styles.sectionTitle}>
-  <span className={styles.sectionIcon}>⛔</span>
-  Blacklist Sync
-  </h2>
+<SectionTitle icon="⛔">Blacklist Sync</SectionTitle>
 
-<ConfigSection 
-  id="enable-blacklist-sync"
+<ConfigSection
   title="Enable Blacklist Sync"
   icon="✅"
 >
 
 When enabled, Cleanuparr will automatically synchronize blacklist entries to all enabled qBittorrent clients every hour. The sync happens when the blacklist path or content changes.
 
-<EnhancedNote>
+<Note>
 This feature updates the qBittorrent "Excluded file names" setting, but does not enable it.
-</EnhancedNote>
+</Note>
 
 </ConfigSection>
 
 <ConfigSection
-  id="blacklist-path"
   title="Blacklist Path"
   icon="🗂️"
 >
@@ -51,9 +49,9 @@ Path to the blacklist content. This can be a local file path or an HTTP/HTTPS UR
 https://example.com/blacklist.txt
 ```
 
-<EnhancedWarning>
+<Warning>
 If Blacklist Sync is enabled, this field is required. For remote URLs, ensure the server is reachable from Cleanuparr and the certificate is valid (or adjust HTTP certificate validation settings).
-</EnhancedWarning>
+</Warning>
 
 </ConfigSection>
 

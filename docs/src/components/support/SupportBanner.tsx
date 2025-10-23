@@ -9,14 +9,11 @@ interface SupportBannerProps {
 
 export default function SupportBanner({ compact = false, showDismiss = false, onDismiss }: SupportBannerProps) {
   const bannerStyle: React.CSSProperties = {
-    background: 'linear-gradient(135deg, #3b82f6, #10b981)',
+    background: 'linear-gradient(90deg, #3b82f6, #10b981)',
     color: 'white',
-    padding: compact ? '1rem 2rem' : '1.5rem 2rem',
-    borderRadius: '12px',
+    padding: compact ? '2rem' : '3rem 2rem',
     textAlign: 'center',
-    margin: '2rem 0',
     position: 'relative',
-    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
   };
 
   const titleStyle: React.CSSProperties = {

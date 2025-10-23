@@ -1,0 +1,177 @@
+---
+sidebar_position: 7
+---
+
+import Link from '@docusaurus/Link';
+import { ConfigSection, Note, Important, ElementNavigator, styles } from '@site/src/components/documentation';
+import Image from '@theme/IdealImage';
+
+# Frequently Asked Questions
+
+Common questions and answers about Cleanuparr.
+
+<ElementNavigator />
+
+<div className={styles.documentationPage}>
+
+<div className={styles.section}>
+
+<ConfigSection
+  id="why-cleanuparr-name"
+  title="Why is it called Cleanuparr and not X or Y?"
+  icon="❓"
+  badge="General"
+>
+
+The name `Cleanuparr` reflects its purpose: to clean up your *arr applications. The `arr` suffix is a nod to the [Servarr](https://wiki.servarr.com/) ecosystem that it supports.
+Other names were already taken or I just didn't like them.
+
+</ConfigSection>
+
+<ConfigSection
+  id="private-trackers"
+  title="Can I use Cleanuparr with private torrents/trackers?"
+  icon="❓"
+  badge="General"
+>
+
+Yes, Cleanuparr works with private torrents and trackers just like public ones. Depending on the availability, some private trackers can also have slow or stalled torrents.
+
+Configurations such as never removing private torrents are available, but a direct connection to your download client is required for that, otherwise it can't know which ones are private.
+
+However, you should still be cautious with aggressive strike rules and make sure your configuration is appropriate for your use case.
+
+<Important>
+Always test your configuration in dry run mode first, especially when setting up strike rules or malware blocking patterns.
+</Important>
+
+</ConfigSection>
+
+<ConfigSection
+  id="usenet-support"
+  title="Is Usenet supported? Will it be supported in the future?"
+  icon="❓"
+  badge="General"
+>
+
+Failed imports are handled regardless of the download client, so Usenet users can benefit from using it.
+
+But on a broader spectrum, Cleanuparr <b><i>will not</i></b> be adding native Usenet support, mainly because:
+- I am not using Usenet myself, so I can't properly test or maintain it.
+- People asking for Usenet support offered no help with development or testing, as seen [here](https://github.com/Cleanuparr/Cleanuparr/issues/137) and [here](https://github.com/Cleanuparr/Cleanuparr/issues/226).
+
+</ConfigSection>
+
+<ConfigSection
+  id="debrid-support"
+  title="Will debrid services be officially supported?"
+  icon="❓"
+  badge="General"
+>
+
+Probably not.
+
+</ConfigSection>
+
+<ConfigSection
+  id="linux-docker-flavors"
+  title="Will X flavor of Linux or the Y flavor of Docker be supported?"
+  icon="❓"
+  badge="General"
+>
+
+No. Executables and Docker containers for every major platform are already provided, which should work on any modern Linux distribution or Docker environment.
+
+</ConfigSection>
+
+<ConfigSection
+  id="linux-docker-flavors"
+  title="Does it have an Unraid template?"
+  icon="❓"
+  badge="General"
+>
+
+Read the [Installation Guide](/docs/installation/detailed?unraid)!
+
+</ConfigSection>
+
+<ConfigSection
+  id="linux-docker-flavors"
+  title="What does Cleanuparr do differently compared to X or Y similar tool?"
+  icon="❓"
+  badge="General"
+>
+
+You be the judge.
+
+There's a list of [features](/docs/features) that you can compare against other tools, [configuration docs](/docs/category/configuration) to explore the available customizations, or just install it and try it out.
+
+</ConfigSection>
+
+</div>
+
+<div className={styles.section}>
+
+<ConfigSection
+  id="not-blocking"
+  title="The same release keeps comming back even after Cleanuparr blocked it. Why?"
+  icon="❓"
+  badge="Features"
+>
+
+Read the [Prerequisites](/docs/installation)!
+
+</ConfigSection>
+
+<ConfigSection
+  id="strike-system"
+  title="What is the strike system and how does it work?"
+  icon="❓"
+  badge="Features"
+>
+
+The strike system prevents false positives by requiring multiple violations before taking action:
+
+1. **Detection**: Cleanuparr detects a problem (stalled, slow, failed import)
+2. **Strike Issued**: The download receives a strike (logged and tracked)
+3. **Accumulation**: Each time the job runs and the problem persists, another strike is added
+4. **Action**: When strikes reach the configured maximum (default: 3), the download is removed and blocked
+
+**Why it matters**: A temporarily slow download due to network issues won't be removed immediately. Only consistently problematic downloads are removed.
+
+**Configuration**: You can adjust the maximum strikes per rule type in the <Link to="/docs/configuration/queue-cleaner">Queue Cleaner settings</Link>.
+
+</ConfigSection>
+
+<ConfigSection
+  id="dry-run-mode"
+  title="What is dry run mode and should I use it?"
+  icon="❓"
+  badge="Features"
+>
+
+Dry run mode simulates what Cleanuparr would do **without actually doing it**:
+
+- Downloads are NOT removed
+- Strikes are NOT issued
+- Searches are NOT triggered
+- Actions are logged as `[DRY RUN]`
+
+**When to use it**:
+- Testing new configuration
+- Validating strike rules
+- Checking what would be affected by changes
+- Learning how Cleanuparr works
+- Before going live with aggressive rules
+
+**How to enable**: Go to Settings → General → Enable Dry Run
+
+<Note>
+Always test configuration changes in dry run mode first, especially for critical production systems.
+</Note>
+
+</ConfigSection>
+
+</div>
+
+</div>

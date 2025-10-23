@@ -2,29 +2,28 @@
 sidebar_position: 8
 ---
 
-import { Important, Warning } from '@site/src/components/Admonition';
-import { 
-  ConfigSection, 
-  EnhancedImportant, 
-  EnhancedWarning,
-  styles 
+import {
+  ConfigSection,
+  Important,
+  Warning,
+  ElementNavigator,
+  SectionTitle,
+  styles
 } from '@site/src/components/documentation';
 
 # Health Checks
 
-Cleanuparr provides comprehensive health check endpoints that are compatible with Docker health checks and Kubernetes probes. This allows for better monitoring, automated failover, and container orchestration.
+Cleanuparr provides health check endpoints that are compatible with Docker health checks and Kubernetes probes. This allows for better monitoring, automated failover, and container orchestration.
+
+<ElementNavigator />
 
 <div className={styles.documentationPage}>
 
 <div className={styles.section}>
 
-<h2 className={styles.sectionTitle}>
-  <span className={styles.sectionIcon}>🏥</span>
-  Health Check Endpoints
-</h2>
+<SectionTitle icon="🏥">Health Check Endpoints</SectionTitle>
 
 <ConfigSection
-  id="health-liveness"
   title="/health - Liveness Probe"
   icon="💓"
 >
@@ -41,7 +40,6 @@ curl http://localhost:11011/health
 </ConfigSection>
 
 <ConfigSection
-  id="health-readiness"
   title="/health/ready - Readiness Probe"
   icon="✅"
 >
@@ -58,12 +56,11 @@ curl http://localhost:11011/health/ready
 </ConfigSection>
 
 <ConfigSection
-  id="health-detailed"
   title="/health/detailed - Detailed Status"
   icon="📊"
 >
 
-**Purpose**: Comprehensive health status for monitoring and debugging  
+**Purpose**: Health status for monitoring and debugging  
 **Use Case**: Monitoring systems and troubleshooting  
 **Response**: Detailed JSON with status of all components  
 **Checks**: All health checks with timing and detailed status
@@ -78,13 +75,9 @@ curl http://localhost:11011/health/detailed
 
 <div className={styles.section}>
 
-<h2 className={styles.sectionTitle}>
-  <span className={styles.sectionIcon}>🔍</span>
-  Health Check Components
-</h2>
+<SectionTitle icon="🔍">Health Check Components</SectionTitle>
 
 <ConfigSection
-  id="application-health"
   title="Application Health"
   icon="🚀"
 >
@@ -96,7 +89,6 @@ curl http://localhost:11011/health/detailed
 </ConfigSection>
 
 <ConfigSection
-  id="database-health"
   title="Database Health"
   icon="🗄️"
 >
@@ -109,7 +101,6 @@ curl http://localhost:11011/health/detailed
 </ConfigSection>
 
 <ConfigSection
-  id="filesystem-health"
   title="File System Health"
   icon="📁"
 >
@@ -118,14 +109,13 @@ curl http://localhost:11011/health/detailed
 - Validates working directory access
 - Used for readiness probes
 
-<EnhancedImportant>
+<Important>
 File write tests are not performed during health checks to avoid creating temporary files on every check.
-</EnhancedImportant>
+</Important>
 
 </ConfigSection>
 
 <ConfigSection
-  id="download-client-health"
   title="Download Client Health"
   icon="⬇️"
 >
@@ -141,13 +131,9 @@ File write tests are not performed during health checks to avoid creating tempor
 
 <div className={styles.section}>
 
-<h2 className={styles.sectionTitle}>
-  <span className={styles.sectionIcon}>🐳</span>
-  Environment Variables
-</h2>
+<SectionTitle icon="🐳">Environment Variables</SectionTitle>
 
 <ConfigSection
-  id="health-environment-variables"
   title="Environment Variables"
   icon="🌍"
 >
@@ -168,13 +154,9 @@ If you set `BASE_PATH=/cleanuparr`, health checks will be available at:
 
 <div className={styles.section}>
 
-<h2 className={styles.sectionTitle}>
-  <span className={styles.sectionIcon}>🔧</span>
-  Troubleshooting
-</h2>
+<SectionTitle icon="🔧">Troubleshooting</SectionTitle>
 
 <ConfigSection
-  id="health-common-issues"
   title="Common Issues"
   icon="⚠️"
 >

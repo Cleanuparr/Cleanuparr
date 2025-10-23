@@ -60,11 +60,11 @@ export class ApplicationPathService {
   buildDocumentationUrl(section: string, fieldAnchor?: string): string {
     const baseUrl = this.getDocumentationBaseUrl();
     let url = `${baseUrl}/docs/configuration/${section}`;
-    
+
     if (fieldAnchor) {
-      url += `#${fieldAnchor}`;
+      url += `?${fieldAnchor}`;
     }
-    
+
     return url;
   }
 } 
