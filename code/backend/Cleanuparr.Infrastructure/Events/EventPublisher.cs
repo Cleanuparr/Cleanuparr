@@ -44,7 +44,7 @@ public class EventPublisher
     /// </summary>
     public async Task PublishAsync(EventType eventType, string message, EventSeverity severity, object? data = null, Guid? trackingId = null)
     {
-        var eventEntity = new AppEvent
+        AppEvent eventEntity = new()
         {
             EventType = eventType,
             Message = message,
@@ -63,6 +63,27 @@ public class EventPublisher
         await NotifyClientsAsync(eventEntity);
 
         _logger.LogTrace("Published event: {eventType}", eventType);
+    }
+    
+    public async Task PublishManualAsync(string message, EventSeverity severity, object? data = null)
+    {
+        ManualEvent eventEntity = new()
+        {
+            Message = message,
+            Severity = severity,
+            Data = data != null ? JsonSerializer.Serialize(data, new JsonSerializerOptions
+            {
+                Converters = { new JsonStringEnumConverter() }
+            }) : null,
+        };
+        
+        // Save to database with dry run interception
+        await _dryRunInterceptor.InterceptAsync(SaveManualEventToDatabase, eventEntity);
+        
+        // Always send to SignalR clients (not affected by dry run)
+        await NotifyClientsAsync(eventEntity);
+        
+        _logger.LogTrace("Published manual event: {message}", message);
     }
 
     /// <summary>
@@ -163,8 +184,8 @@ public class EventPublisher
     public async Task PublishCategoryChanged(string oldCategory, string newCategory, bool isTag = false)
     {
         // Get context data for the event
-        string downloadName = ContextProvider.Get<string>("downloadName") ?? "Unknown";
-        string hash = ContextProvider.Get<string>("hash") ?? "Unknown";
+        string downloadName = ContextProvider.Get<string>("downloadName");
+        string hash = ContextProvider.Get<string>("hash");
 
         // Publish the event
         await PublishAsync(
@@ -177,9 +198,40 @@ public class EventPublisher
         await _notificationPublisher.NotifyCategoryChanged(oldCategory, newCategory, isTag);
     }
 
+    /// <summary>
+    /// Publishes an event alerting that an item keeps coming back
+    /// </summary>
+    public async Task PublishRecurringItem(string hash, string itemName, int strikeCount)
+    {
+        // Publish the event
+        await PublishManualAsync(
+            "Download keeps coming back after deletion\nTo prevent further issues, please consult the prerequisites: https://cleanuparr.github.io/Cleanuparr/docs/installation/",
+            EventSeverity.Important,
+            data: new { itemName, hash, strikeCount }
+        );
+    }
+
+    /// <summary>
+    /// Publishes an event alerting that search was not triggered for an item
+    /// </summary>
+    public async Task PublishSearchNotTriggered(string hash, string itemName)
+    {
+        await PublishManualAsync(
+            "Replacement search was not triggered after removal because the item keeps coming back",
+            EventSeverity.Warning,
+            data: new { itemName, hash }
+        );
+    }
+
     private async Task SaveEventToDatabase(AppEvent eventEntity)
     {
         _context.Events.Add(eventEntity);
+        await _context.SaveChangesAsync();
+    }
+    
+    private async Task SaveManualEventToDatabase(ManualEvent eventEntity)
+    {
+        _context.ManualEvents.Add(eventEntity);
         await _context.SaveChangesAsync();
     }
 
@@ -189,6 +241,19 @@ public class EventPublisher
         {
             // Send to all connected clients via the unified AppHub
             await _appHubContext.Clients.All.SendAsync("EventReceived", appEventEntity);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to send event {eventId} to SignalR clients", appEventEntity.Id);
+        }
+    }
+    
+    private async Task NotifyClientsAsync(ManualEvent appEventEntity)
+    {
+        try
+        {
+            // Send to all connected clients via the unified AppHub
+            await _appHubContext.Clients.All.SendAsync("ManualEventReceived", appEventEntity);
         }
         catch (Exception ex)
         {

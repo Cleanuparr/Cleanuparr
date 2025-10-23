@@ -1,6 +1,7 @@
 using Cleanuparr.Domain.Entities;
 using Cleanuparr.Domain.Entities.Cache;
 using Cleanuparr.Domain.Enums;
+using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
 using Cleanuparr.Infrastructure.Features.ItemStriker;
 using Cleanuparr.Infrastructure.Helpers;
@@ -48,6 +49,7 @@ public class RuleEvaluator : IRuleEvaluator
         }
 
         _logger.LogTrace("Applying stall rule {rule} | {name}", rule.Name, torrent.Name);
+        ContextProvider.Set<QueueRule>(rule);
 
         await ResetStalledStrikesAsync(
             torrent,
@@ -85,6 +87,7 @@ public class RuleEvaluator : IRuleEvaluator
         }
 
         _logger.LogTrace("Applying slow rule {rule} | {name}", rule.Name, torrent.Name);
+        ContextProvider.Set<QueueRule>(rule);
 
         // Check if slow speed
         if (!string.IsNullOrWhiteSpace(rule.MinSpeed))

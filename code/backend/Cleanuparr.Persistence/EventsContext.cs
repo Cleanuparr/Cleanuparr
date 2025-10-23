@@ -13,6 +13,8 @@ public class EventsContext : DbContext
 {
     public DbSet<AppEvent> Events { get; set; }
     
+    public DbSet<ManualEvent> ManualEvents { get; set; }
+    
     public EventsContext()
     {
     }

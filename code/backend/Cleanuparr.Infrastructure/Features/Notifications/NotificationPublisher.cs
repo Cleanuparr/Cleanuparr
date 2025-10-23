@@ -5,6 +5,7 @@ using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.Notifications.Models;
 using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
+using Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
 using Microsoft.Extensions.Logging;
 
 namespace Cleanuparr.Infrastructure.Features.Notifications;
@@ -122,7 +123,7 @@ public class NotificationPublisher : INotificationPublisher
         var instanceUrl = ContextProvider.Get<Uri>(nameof(ArrInstance) + nameof(ArrInstance.Url));
         var imageUrl = GetImageFromContext(record, instanceType);
 
-        return new NotificationContext
+        NotificationContext context = new()
         {
             EventType = eventType,
             Title = $"Strike received with reason: {strikeType}",
@@ -138,6 +139,14 @@ public class NotificationPublisher : INotificationPublisher
                 ["Url"] = instanceUrl.ToString(),
             }
         };
+
+        if (strikeType is StrikeType.Stalled or StrikeType.SlowSpeed or StrikeType.SlowTime)
+        {
+            var rule = ContextProvider.Get<QueueRule>();
+            context.Data.Add("Rule name", rule.Name);
+        }
+
+        return context;
     }
 
     private NotificationContext BuildQueueItemDeletedContext(bool removeFromClient, DeleteReason reason)

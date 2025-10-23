@@ -65,6 +65,10 @@ public class EventCleanupService : BackgroundService
             await context.Events
                 .Where(e => e.Timestamp < cutoffDate)
                 .ExecuteDeleteAsync();
+            await context.ManualEvents
+                .Where(e => e.Timestamp < cutoffDate)
+                .Where(e => e.IsResolved)
+                .ExecuteDeleteAsync();
         }
         catch (Exception ex)
         {
