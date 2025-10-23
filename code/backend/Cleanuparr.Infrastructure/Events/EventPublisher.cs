@@ -1,4 +1,3 @@
-using System.Dynamic;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Cleanuparr.Domain.Entities.Arr.Queue;
@@ -8,6 +7,7 @@ using Cleanuparr.Infrastructure.Features.Notifications;
 using Cleanuparr.Infrastructure.Hubs;
 using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Persistence;
+using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Cleanuparr.Persistence.Models.Events;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
@@ -203,11 +203,14 @@ public class EventPublisher
     /// </summary>
     public async Task PublishRecurringItem(string hash, string itemName, int strikeCount)
     {
+        var instanceType = (InstanceType)ContextProvider.Get<object>(nameof(InstanceType));
+        var instanceUrl = ContextProvider.Get<Uri>(nameof(ArrInstance) + nameof(ArrInstance.Url));
+        
         // Publish the event
         await PublishManualAsync(
             "Download keeps coming back after deletion\nTo prevent further issues, please consult the prerequisites: https://cleanuparr.github.io/Cleanuparr/docs/installation/",
             EventSeverity.Important,
-            data: new { itemName, hash, strikeCount }
+            data: new { itemName, hash, strikeCount, instanceType, instanceUrl }
         );
     }
 
@@ -216,10 +219,13 @@ public class EventPublisher
     /// </summary>
     public async Task PublishSearchNotTriggered(string hash, string itemName)
     {
+        var instanceType = (InstanceType)ContextProvider.Get<object>(nameof(InstanceType));
+        var instanceUrl = ContextProvider.Get<Uri>(nameof(ArrInstance) + nameof(ArrInstance.Url));
+        
         await PublishManualAsync(
-            "Replacement search was not triggered after removal because the item keeps coming back",
+            "Replacement search was not triggered after removal because the item keeps coming back\nPlease trigger a manual search if needed",
             EventSeverity.Warning,
-            data: new { itemName, hash }
+            data: new { itemName, hash, instanceType, instanceUrl }
         );
     }
 
