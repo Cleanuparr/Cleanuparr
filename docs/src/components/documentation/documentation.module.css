@@ -940,8 +940,8 @@
 /* Screenshot Gallery */
 .screenshotGallery {
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 2.5rem;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
   margin: var(--doc-spacing-lg) 0;
 }
 
@@ -995,6 +995,7 @@
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .screenshotGallery {
+    grid-template-columns: 1fr;
     gap: 1.5rem;
   }
 
