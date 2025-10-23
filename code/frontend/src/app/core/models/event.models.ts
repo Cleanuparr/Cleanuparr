@@ -8,6 +8,15 @@ export interface AppEvent {
   trackingId?: string;
 }
 
+export interface ManualEvent {
+  id: string;
+  timestamp: Date;
+  message: string;
+  data?: string;
+  severity: string;
+  isResolved: boolean;
+}
+
 export interface EventStats {
   totalEvents: number;
   eventsBySeverity: { severity: string; count: number }[];

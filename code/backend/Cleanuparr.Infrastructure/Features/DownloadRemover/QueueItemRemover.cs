@@ -7,28 +7,33 @@ using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.DownloadHunter.Models;
 using Cleanuparr.Infrastructure.Features.DownloadRemover.Interfaces;
 using Cleanuparr.Infrastructure.Features.DownloadRemover.Models;
+using Cleanuparr.Infrastructure.Features.ItemStriker;
 using Cleanuparr.Infrastructure.Helpers;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Data.Models.Arr;
 using MassTransit;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Logging;
 
 namespace Cleanuparr.Infrastructure.Features.DownloadRemover;
 
 public sealed class QueueItemRemover : IQueueItemRemover
 {
+    private readonly ILogger<QueueItemRemover> _logger;
     private readonly IBus _messageBus;
     private readonly IMemoryCache _cache;
     private readonly ArrClientFactory _arrClientFactory;
     private readonly EventPublisher _eventPublisher;
 
     public QueueItemRemover(
+        ILogger<QueueItemRemover> logger,
         IBus messageBus,
         IMemoryCache cache,
         ArrClientFactory arrClientFactory,
         EventPublisher eventPublisher
     )
     {
+        _logger = logger;
         _messageBus = messageBus;
         _cache = cache;
         _arrClientFactory = arrClientFactory;
@@ -52,6 +57,15 @@ public sealed class QueueItemRemover : IQueueItemRemover
 
             // Use the new centralized EventPublisher method
             await _eventPublisher.PublishQueueItemDeleted(request.RemoveFromClient, request.DeleteReason);
+
+            // If recurring, do not search for replacement
+            string hash = request.Record.DownloadId.ToLowerInvariant();
+            if (Striker.RecurringHashes.ContainsKey(hash))
+            {
+                await _eventPublisher.PublishSearchNotTriggered(request.Record.DownloadId, request.Record.Title);
+                Striker.RecurringHashes.Remove(hash, out _);
+                return;
+            }
 
             await _messageBus.Publish(new DownloadHuntRequest<T>
             {

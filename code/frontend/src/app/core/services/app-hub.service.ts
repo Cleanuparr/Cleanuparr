@@ -2,7 +2,7 @@ import { inject, Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import * as signalR from '@microsoft/signalr';
 import { LogEntry } from '../models/signalr.models';
-import { AppEvent } from '../models/event.models';
+import { AppEvent, ManualEvent } from '../models/event.models';
 import { AppStatus } from '../models/app-status.model';
 import { JobInfo } from '../models/job.models';
 import { ApplicationPathService } from './base-path.service';
@@ -18,12 +18,14 @@ export class AppHubService {
   private connectionStatusSubject = new BehaviorSubject<boolean>(false);
   private logsSubject = new BehaviorSubject<LogEntry[]>([]);
   private eventsSubject = new BehaviorSubject<AppEvent[]>([]);
+  private manualEventsSubject = new BehaviorSubject<ManualEvent[]>([]);
   private appStatusSubject = new BehaviorSubject<AppStatus | null>(null);
   private jobsSubject = new BehaviorSubject<JobInfo[]>([]);
   private readonly ApplicationPathService = inject(ApplicationPathService);
-  
+
   private logBuffer: LogEntry[] = [];
   private eventBuffer: AppEvent[] = [];
+  private manualEventBuffer: ManualEvent[] = [];
   private readonly bufferSize = 1000;
 
   constructor() { }
@@ -117,6 +119,24 @@ export class AppHubService {
       }
     });
 
+    // Handle individual manual event messages
+    this.hubConnection.on('ManualEventReceived', (event: ManualEvent) => {
+      this.addManualEventToBuffer(event);
+      const currentEvents = this.manualEventsSubject.value;
+      this.manualEventsSubject.next([...currentEvents, event]);
+    });
+
+    // Handle bulk manual event messages (initial load)
+    this.hubConnection.on('ManualEventsReceived', (events: ManualEvent[]) => {
+      if (events && events.length > 0) {
+        // Set all manual events at once
+        this.manualEventsSubject.next(events);
+        // Update buffer
+        this.manualEventBuffer = [...events];
+        this.trimBuffer(this.manualEventBuffer, this.bufferSize);
+      }
+    });
+
     this.hubConnection.on('AppStatusUpdated', (status: AppStatus | null) => {
       if (!status) {
         this.appStatusSubject.next(null);
@@ -158,6 +178,7 @@ export class AppHubService {
   private requestInitialData(): void {
     this.requestRecentLogs();
     this.requestRecentEvents();
+    this.requestRecentManualEvents();
     this.requestJobStatus();
   }
   
@@ -180,12 +201,22 @@ export class AppHubService {
         .catch(err => console.error('Error requesting recent events:', err));
     }
   }
-  
+
+  /**
+   * Request recent manual events from the server
+   */
+  public requestRecentManualEvents(count: number = 100): void {
+    if (this.isConnected()) {
+      this.hubConnection.invoke('GetRecentManualEvents', count)
+        .catch(err => console.error('Error requesting recent manual events:', err));
+    }
+  }
+
   /**
    * Check if the connection is established
    */
   private isConnected(): boolean {
-    return this.hubConnection && 
+    return this.hubConnection &&
            this.hubConnection.state === signalR.HubConnectionState.Connected;
   }
   
@@ -222,7 +253,15 @@ export class AppHubService {
     this.eventBuffer.push(event);
     this.trimBuffer(this.eventBuffer, this.bufferSize);
   }
-  
+
+  /**
+   * Add a manual event to the buffer
+   */
+  private addManualEventToBuffer(event: ManualEvent): void {
+    this.manualEventBuffer.push(event);
+    this.trimBuffer(this.manualEventBuffer, this.bufferSize);
+  }
+
   /**
    * Trim a buffer to the specified size
    */
@@ -246,6 +285,13 @@ export class AppHubService {
    */
   public getEvents(): Observable<AppEvent[]> {
     return this.eventsSubject.asObservable();
+  }
+
+  /**
+   * Get manual events as an observable
+   */
+  public getManualEvents(): Observable<ManualEvent[]> {
+    return this.manualEventsSubject.asObservable();
   }
 
   /**
@@ -307,12 +353,29 @@ export class AppHubService {
     this.eventsSubject.next([]);
     this.eventBuffer = [];
   }
-  
+
+  /**
+   * Clear manual events
+   */
+  public clearManualEvents(): void {
+    this.manualEventsSubject.next([]);
+    this.manualEventBuffer = [];
+  }
+
   /**
    * Clear logs
    */
   public clearLogs(): void {
     this.logsSubject.next([]);
     this.logBuffer = [];
+  }
+
+  /**
+   * Remove a specific manual event from the subject
+   */
+  public removeManualEvent(eventId: string): void {
+    const currentEvents = this.manualEventsSubject.value;
+    const filteredEvents = currentEvents.filter(e => e.id !== eventId);
+    this.manualEventsSubject.next(filteredEvents);
   }
 }

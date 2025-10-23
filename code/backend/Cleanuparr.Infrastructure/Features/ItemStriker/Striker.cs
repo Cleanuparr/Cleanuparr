@@ -1,4 +1,5 @@
-﻿using Cleanuparr.Domain.Enums;
+﻿using System.Collections.Concurrent;
+using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Events;
 using Cleanuparr.Infrastructure.Helpers;
 using Cleanuparr.Shared.Helpers;
@@ -14,6 +15,8 @@ public sealed class Striker : IStriker
     private readonly MemoryCacheEntryOptions _cacheOptions;
     private readonly EventPublisher _eventPublisher;
 
+    public static readonly ConcurrentDictionary<string, string?> RecurringHashes = [];
+
     public Striker(ILogger<Striker> logger, IMemoryCache cache, EventPublisher eventPublisher)
     {
         _logger = logger;
@@ -23,6 +26,7 @@ public sealed class Striker : IStriker
             .SetSlidingExpiration(StaticConfiguration.TriggerValue + Constants.CacheLimitBuffer);
     }
     
+    /// <inheritdoc/>
     public async Task<bool> StrikeAndCheckLimit(string hash, string itemName, ushort maxStrikes, StrikeType strikeType)
     {
         if (maxStrikes is 0)
@@ -56,7 +60,9 @@ public sealed class Striker : IStriker
         if (strikeCount > maxStrikes)
         {
             _logger.LogWarning("Blocked item keeps coming back | {name}", itemName);
-            _logger.LogWarning("Be sure to enable \"Reject Blocklisted Torrent Hashes While Grabbing\" on your indexers to reject blocked items");
+            
+            RecurringHashes.TryAdd(hash.ToLowerInvariant(), null);
+            await _eventPublisher.PublishRecurringItem(hash, itemName, strikeCount);
         }
 
         _logger.LogInformation("Removing item with max strikes | reason {reason} | {name}", strikeType.ToString(), itemName);
