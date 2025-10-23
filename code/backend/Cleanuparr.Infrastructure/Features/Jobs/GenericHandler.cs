@@ -237,7 +237,7 @@ public abstract class GenericHandler : IHandler
             }
         }
         
-        if (downloadServices.Count == 0)
+        if (downloadServices.Count is 0)
         {
             _logger.LogDebug("No valid download clients found");
         }
@@ -246,11 +246,6 @@ public abstract class GenericHandler : IHandler
             _logger.LogDebug("Initialized {count} download clients", downloadServices.Count);
         }
         
-        foreach (var downloadService in downloadServices)
-        {
-            await downloadService.LoginAsync();
-        }
-
         return downloadServices;
     }
 }

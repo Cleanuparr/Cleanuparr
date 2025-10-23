@@ -23,8 +23,6 @@ public partial class QBitService
             _logger.LogDebug("failed to find torrent {hash} in the {name} download client", hash, _downloadClientConfig.Name);
             return result;
         }
-
-        result.Found = true;
         
         IReadOnlyList<TorrentTracker> trackers = await GetTrackersAsync(hash);
         
@@ -48,6 +46,7 @@ public partial class QBitService
                          && boolValue;
 
         result.IsPrivate = isPrivate;
+        result.Found = true;
 
         var malwareBlockerConfig = ContextProvider.Get<ContentBlockerConfig>();
 

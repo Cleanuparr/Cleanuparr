@@ -9,10 +9,12 @@ namespace Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
 public sealed record FailedImportConfig
 {
     public ushort MaxStrikes { get; init; }
-    
+
     public bool IgnorePrivate { get; init; }
-    
+
     public bool DeletePrivate { get; init; }
+
+    public bool SkipIfNotFoundInClient { get; init; } = true;
 
     public IReadOnlyList<string> Patterns { get; init; } = [];
 

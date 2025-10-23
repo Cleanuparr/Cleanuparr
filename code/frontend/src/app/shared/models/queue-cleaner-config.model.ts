@@ -30,6 +30,7 @@ export interface FailedImportConfig {
   maxStrikes: number;
   ignorePrivate: boolean;
   deletePrivate: boolean;
+  skipIfNotFoundInClient: boolean;
   patterns: string[];
   patternMode?: PatternMode;
 }

@@ -25,10 +25,9 @@ public partial class UTorrentService
             return result;
         }
 
-        result.Found = true;
-
         var properties = await _client.GetTorrentPropertiesAsync(hash);
         result.IsPrivate = properties.IsPrivate;
+        result.Found = true;
 
         // Create ITorrentItem wrapper for consistent interface usage
         var torrentItem = new UTorrentItemWrapper(download, properties);
