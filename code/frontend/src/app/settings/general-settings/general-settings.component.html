@@ -160,6 +160,7 @@
               ></p-inputNumber>
             </div>
             <small *ngIf="hasError('searchDelay', 'required')" class="p-error">This field is required</small>
+            <small *ngIf="hasError('searchDelay', 'min')" class="p-error">Minimum value is 60</small>
             <small *ngIf="hasError('searchDelay', 'max')" class="p-error">Maximum value is 300</small>
             <small class="form-helper-text">Delay between search operations in seconds</small>
           </div>

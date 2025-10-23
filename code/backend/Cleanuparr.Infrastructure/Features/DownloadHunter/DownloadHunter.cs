@@ -2,6 +2,7 @@
 using Cleanuparr.Infrastructure.Features.DownloadHunter.Interfaces;
 using Cleanuparr.Infrastructure.Features.DownloadHunter.Models;
 using Cleanuparr.Persistence;
+using Cleanuparr.Shared.Helpers;
 using Data.Models.Arr;
 using Microsoft.EntityFrameworkCore;
 
@@ -36,7 +37,13 @@ public sealed class DownloadHunter : IDownloadHunter
         var arrClient = _arrClientFactory.GetClient(request.InstanceType);
         await arrClient.SearchItemsAsync(request.Instance, [request.SearchItem]);
         
-        // prevent tracker spamming
+        // Prevent manual db edits
+        if (generalConfig.SearchDelay < Constants.MinSearchDelaySeconds)
+        {
+            generalConfig.SearchDelay = Constants.DefaultSearchDelaySeconds;
+        }
+        
+        // Prevent tracker spamming
         await Task.Delay(TimeSpan.FromSeconds(generalConfig.SearchDelay));
     }
 }
