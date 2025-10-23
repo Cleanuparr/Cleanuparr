@@ -1,12 +1,8 @@
-using System;
-using System.Collections.Generic;
-
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Http.DynamicHttpClientSystem;
 using Cleanuparr.Infrastructure.Logging;
 using Cleanuparr.Persistence.Models.Configuration.General;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
+using Cleanuparr.Shared.Helpers;
 using Serilog.Events;
 using ValidationException = Cleanuparr.Domain.Exceptions.ValidationException;
 
@@ -26,7 +22,7 @@ public sealed record UpdateGeneralConfigRequest
 
     public bool SearchEnabled { get; init; } = true;
 
-    public ushort SearchDelay { get; init; } = 30;
+    public ushort SearchDelay { get; init; } = Constants.DefaultSearchDelaySeconds;
 
     public string EncryptionKey { get; init; } = Guid.NewGuid().ToString();
 

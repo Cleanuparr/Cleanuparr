@@ -36,7 +36,13 @@ public sealed class DownloadHunter : IDownloadHunter
         var arrClient = _arrClientFactory.GetClient(request.InstanceType);
         await arrClient.SearchItemsAsync(request.Instance, [request.SearchItem]);
         
-        // prevent tracker spamming
+        // Prevent manual db edits
+        if (generalConfig.SearchDelay < 60)
+        {
+            generalConfig.SearchDelay = 60;
+        }
+        
+        // Prevent tracker spamming
         await Task.Delay(TimeSpan.FromSeconds(generalConfig.SearchDelay));
     }
 }

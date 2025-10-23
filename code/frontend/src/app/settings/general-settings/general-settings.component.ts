@@ -134,7 +134,7 @@ export class GeneralSettingsComponent implements OnDestroy, CanComponentDeactiva
       httpTimeout: [100, [Validators.required, Validators.min(1), Validators.max(100)]],
       httpCertificateValidation: [CertificateValidationType.Enabled],
       searchEnabled: [true],
-      searchDelay: [30, [Validators.required, Validators.min(1), Validators.max(300)]],
+      searchDelay: [120, [Validators.required, Validators.min(60), Validators.max(300)]],
       ignoredDownloads: [[]],
       log: this.formBuilder.group({
         level: [LogEventLevel.Information],
@@ -477,7 +477,7 @@ export class GeneralSettingsComponent implements OnDestroy, CanComponentDeactiva
       httpTimeout: 100,
       httpCertificateValidation: CertificateValidationType.Enabled,
       searchEnabled: true,
-      searchDelay: 30,
+      searchDelay: 120,
       ignoredDownloads: [],
       log: {
         level: LogEventLevel.Information,

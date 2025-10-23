@@ -14,4 +14,7 @@ public static class Constants
     {
         SlidingExpiration = TimeSpan.FromMinutes(10)
     };
+    
+    public const int DefaultSearchDelaySeconds = 120;
+    public const int MinSearchDelaySeconds = 60;
 }
