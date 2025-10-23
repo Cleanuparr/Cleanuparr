@@ -1,0 +1,343 @@
+// Manual Events Card Wrapper with Animated Border
+
+.manual-event-card-wrapper {
+  position: relative;
+  border-radius: 10px;
+  padding: 4px;
+  animation: shake 3s ease-in-out infinite;
+
+  // Animated border gradient background - BRIGHT AND VISIBLE
+  background: linear-gradient(
+    90deg,
+    #ff0000,
+    #ff7f00,
+    #ffff00,
+    #00ff00,
+    #0000ff,
+    #8b00ff,
+    #ff0000
+  );
+  background-size: 400% 400%;
+  animation: gradientShift 8s linear infinite, shake 3s ease-in-out infinite;
+
+  // Pulsing glow effect - SUPER VISIBLE
+  box-shadow:
+    0 0 20px rgba(255, 0, 0, 0.6),
+    0 0 40px rgba(255, 127, 0, 0.5),
+    0 0 60px rgba(255, 255, 0, 0.4);
+  animation: gradientShift 8s linear infinite, shake 3s ease-in-out infinite, glowPulse 3s ease-in-out infinite;
+
+  // Inner card styling
+  ::ng-deep .manual-event-card-inner {
+    margin: 0;
+    border-radius: 6px;
+    background: var(--surface-card);
+  }
+}
+
+// Separate ::ng-deep block for better specificity - NUCLEAR OPTION
+::ng-deep {
+  .manual-event-card-wrapper .manual-event-card-inner.p-card {
+    margin: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  .manual-event-card-wrapper .manual-event-card-inner .p-card {
+    margin: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  .manual-event-card-wrapper .manual-event-card-inner .p-card-body {
+    padding: 0 !important;
+  }
+
+  .manual-event-card-wrapper .manual-event-card-inner .p-card-content {
+    padding: 0 !important;
+  }
+
+  // Try with p-element prefix too (PrimeNG sometimes uses this)
+  .manual-event-card-wrapper .p-element.manual-event-card-inner .p-card-body,
+  .manual-event-card-wrapper .manual-event-card-inner.p-element .p-card-body {
+    padding: 0 !important;
+  }
+
+  .manual-event-card-wrapper .p-element.manual-event-card-inner .p-card-content,
+  .manual-event-card-wrapper .manual-event-card-inner.p-element .p-card-content {
+    padding: 0 !important;
+  }
+}
+
+// Severity-specific borders with different animation speeds - INTENSE
+.manual-event-card-wrapper {
+  &.severity-error {
+    background: linear-gradient(
+      90deg,
+      #ff0000,
+      #ff3333,
+      #ff0000,
+      #cc0000,
+      #ff0000
+    );
+    background-size: 400% 400%;
+    box-shadow:
+      0 0 25px rgba(255, 0, 0, 0.8),
+      0 0 50px rgba(255, 0, 0, 0.6),
+      0 0 75px rgba(255, 0, 0, 0.4);
+    animation: gradientShift 6s linear infinite, shake 3s ease-in-out infinite, glowPulse 3s ease-in-out infinite;
+  }
+
+  &.severity-warning {
+    background: linear-gradient(
+      90deg,
+      #ff9900,
+      #ffcc00,
+      #ff9900,
+      #ff6600,
+      #ff9900
+    );
+    background-size: 400% 400%;
+    box-shadow:
+      0 0 25px rgba(255, 153, 0, 0.7),
+      0 0 50px rgba(255, 204, 0, 0.6),
+      0 0 75px rgba(255, 153, 0, 0.4);
+    animation: gradientShift 7s linear infinite, shake 3s ease-in-out infinite, glowPulse 3s ease-in-out infinite;
+  }
+
+  &.severity-important {
+    background: linear-gradient(
+      90deg,
+      #ff6600,
+      #ff9933,
+      #ff6600,
+      #ff3300,
+      #ff6600
+    );
+    background-size: 400% 400%;
+    box-shadow:
+      0 0 25px rgba(255, 102, 0, 0.7),
+      0 0 50px rgba(255, 153, 51, 0.6),
+      0 0 75px rgba(255, 102, 0, 0.4);
+    animation: gradientShift 6s linear infinite, shake 3s ease-in-out infinite, glowPulse 3s ease-in-out infinite;
+  }
+
+  &.severity-info {
+    background: linear-gradient(
+      90deg,
+      #0099ff,
+      #33aaff,
+      #0099ff,
+      #0066cc,
+      #0099ff
+    );
+    background-size: 400% 400%;
+    box-shadow:
+      0 0 25px rgba(0, 153, 255, 0.6),
+      0 0 50px rgba(51, 170, 255, 0.5),
+      0 0 75px rgba(0, 153, 255, 0.4);
+    animation: gradientShift 8s linear infinite, shake 3s ease-in-out infinite, glowPulse 3s ease-in-out infinite;
+  }
+}
+
+// Gradient animation keyframes
+@keyframes gradientShift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+// Glow pulse animation - DRAMATIC
+@keyframes glowPulse {
+  0%,
+  100% {
+    filter: brightness(1) drop-shadow(0 0 10px currentColor);
+  }
+  50% {
+    filter: brightness(1.3) drop-shadow(0 0 30px currentColor);
+  }
+}
+
+// Subtle shake animation to grab attention
+@keyframes shake {
+  0%,
+  100% {
+    transform: translateX(0) rotate(0deg);
+  }
+  2% {
+    transform: translateX(-3px) rotate(-0.5deg);
+  }
+  4% {
+    transform: translateX(3px) rotate(0.5deg);
+  }
+  6% {
+    transform: translateX(-3px) rotate(-0.5deg);
+  }
+  8% {
+    transform: translateX(3px) rotate(0.5deg);
+  }
+  10% {
+    transform: translateX(0) rotate(0deg);
+  }
+}
+
+// Manual event content styling
+.manual-event-content {
+  padding: 1rem;
+
+  .event-message {
+    h3 {
+      line-height: 1.6;
+      word-wrap: break-word;
+
+      // Style for clickable links in messages
+      ::ng-deep .manual-event-link {
+        color: var(--primary-color);
+        text-decoration: underline;
+        font-weight: 600;
+        transition: color 0.2s ease;
+
+        &:hover {
+          color: var(--primary-400);
+          text-decoration: underline;
+        }
+
+        &:active {
+          color: var(--primary-600);
+        }
+      }
+    }
+  }
+
+  .event-data-content {
+    max-height: 300px;
+    overflow-y: auto;
+    background: var(--surface-50);
+    border-radius: 6px;
+    padding: 1rem;
+
+    pre {
+      margin: 0;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      font-family: 'Courier New', monospace;
+    }
+  }
+}
+
+// Header styling
+.header-title-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+
+  .card-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+  }
+
+  .card-subtitle {
+    font-size: 0.875rem;
+    color: var(--text-color-secondary);
+  }
+}
+
+// Severity tag styling
+.severity-tag-large {
+  font-size: 0.875rem;
+  padding: 0.5rem 1rem;
+  font-weight: 600;
+}
+
+// Navigation controls
+.navigation-controls {
+  .p-button-sm {
+    padding: 0.5rem;
+  }
+}
+
+// Responsive adjustments
+@media (max-width: 768px) {
+  .manual-event-content {
+    padding: 0.75rem;
+
+    .flex.align-items-center.justify-content-between {
+      flex-direction: column;
+      gap: 1rem;
+      align-items: stretch;
+
+      .flex.align-items-center.gap-2 {
+        justify-content: center;
+      }
+
+      button {
+        width: 100%;
+      }
+    }
+  }
+
+  .header-title-container {
+    .card-title {
+      font-size: 1.25rem;
+    }
+  }
+}
+
+// Accordion custom styling for event data
+::ng-deep .manual-event-card {
+  .p-accordion {
+    .p-accordion-header {
+      border-radius: 6px;
+
+      .p-accordion-header-link {
+        border-radius: 6px;
+        padding: 0.75rem 1rem;
+        background: var(--surface-100);
+        border: 1px solid var(--surface-border);
+        transition: all 0.2s ease;
+
+        &:hover {
+          background: var(--surface-200);
+        }
+      }
+    }
+
+    .p-accordion-content {
+      border: 1px solid var(--surface-border);
+      border-top: none;
+      border-radius: 0 0 6px 6px;
+      padding: 0;
+    }
+  }
+}
+
+// Additional severity-based styling for content
+.severity-error {
+  .event-message h3 {
+    color: var(--red-600);
+  }
+}
+
+.severity-warning {
+  .event-message h3 {
+    color: var(--yellow-600);
+  }
+}
+
+.severity-important {
+  .event-message h3 {
+    color: var(--orange-600);
+  }
+}
+
+.severity-info {
+  .event-message h3 {
+    color: var(--blue-600);
+  }
+}

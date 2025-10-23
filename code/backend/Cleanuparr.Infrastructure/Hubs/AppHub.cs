@@ -68,6 +68,28 @@ public class AppHub : Hub
     }
 
     /// <summary>
+    /// Client requests recent manual events
+    /// </summary>
+    public async Task GetRecentManualEvents(int count = 100)
+    {
+        try
+        {
+            var manualEvents = await _context.ManualEvents
+                .Where(e => !e.IsResolved)
+                .OrderBy(e => e.Timestamp) // Oldest first
+                .Take(Math.Min(count, 100)) // Cap at 100
+                .ToListAsync();
+
+            await Clients.Caller.SendAsync("ManualEventsReceived", manualEvents);
+            _logger.LogDebug("Sent {count} recent manual events to client {connectionId}", manualEvents.Count, Context.ConnectionId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to send recent manual events to client");
+        }
+    }
+
+    /// <summary>
     /// Client requests current job statuses
     /// </summary>
     public async Task GetJobStatus()

@@ -1,3 +1,19 @@
+// Import manual events card styles
+@import './manual-events-card.component.scss';
+
+// Force override PrimeNG card padding for manual events
+::ng-deep .manual-event-card-wrapper {
+  .manual-event-card-inner,
+  .manual-event-card-inner.p-card,
+  .manual-event-card-inner .p-card {
+    .p-card-body,
+    .p-card-content {
+      padding: 0 !important;
+      margin: 0 !important;
+    }
+  }
+}
+
 .dashboard-container {
   max-width: 1200px;
   margin: 0 auto;
