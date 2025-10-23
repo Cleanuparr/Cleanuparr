@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Cleanuparr.Persistence.Migrations.Data
 {
     [DbContext(typeof(DataContext))]
-    [Migration("20250906183018_AddFailedImportTypeHandling")]
+    [Migration("20251023184757_AddFailedImportTypeHandling")]
     partial class AddFailedImportTypeHandling
     {
         /// <inheritdoc />
@@ -82,6 +82,32 @@ namespace Cleanuparr.Persistence.Migrations.Data
                     b.ToTable("arr_instances", (string)null);
                 });
 
+            modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.BlacklistSync.BlacklistSyncConfig", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("id");
+
+                    b.Property<string>("BlacklistPath")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("blacklist_path");
+
+                    b.Property<string>("CronExpression")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("cron_expression");
+
+                    b.Property<bool>("Enabled")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("enabled");
+
+                    b.HasKey("Id")
+                        .HasName("pk_blacklist_sync_configs");
+
+                    b.ToTable("blacklist_sync_configs", (string)null);
+                });
+
             modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.DownloadCleaner.CleanCategory", b =>
                 {
                     b.Property<Guid>("Id")
@@ -138,6 +164,11 @@ namespace Cleanuparr.Persistence.Migrations.Data
                     b.Property<bool>("Enabled")
                         .HasColumnType("INTEGER")
                         .HasColumnName("enabled");
+
+                    b.PrimitiveCollection<string>("IgnoredDownloads")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("ignored_downloads");
 
                     b.PrimitiveCollection<string>("UnlinkedCategories")
                         .IsRequired()
@@ -333,6 +364,11 @@ namespace Cleanuparr.Persistence.Migrations.Data
                     b.Property<bool>("IgnorePrivate")
                         .HasColumnType("INTEGER")
                         .HasColumnName("ignore_private");
+
+                    b.PrimitiveCollection<string>("IgnoredDownloads")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("ignored_downloads");
 
                     b.Property<bool>("UseAdvancedScheduling")
                         .HasColumnType("INTEGER")
@@ -568,6 +604,68 @@ namespace Cleanuparr.Persistence.Migrations.Data
                     b.ToTable("notification_configs", (string)null);
                 });
 
+            modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.Notification.NtfyConfig", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("id");
+
+                    b.Property<string>("AccessToken")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("access_token");
+
+                    b.Property<string>("AuthenticationType")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("authentication_type");
+
+                    b.Property<Guid>("NotificationConfigId")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("notification_config_id");
+
+                    b.Property<string>("Password")
+                        .HasMaxLength(255)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("password");
+
+                    b.Property<string>("Priority")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("priority");
+
+                    b.Property<string>("ServerUrl")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("server_url");
+
+                    b.PrimitiveCollection<string>("Tags")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("tags");
+
+                    b.PrimitiveCollection<string>("Topics")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("topics");
+
+                    b.Property<string>("Username")
+                        .HasMaxLength(255)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("username");
+
+                    b.HasKey("Id")
+                        .HasName("pk_ntfy_configs");
+
+                    b.HasIndex("NotificationConfigId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_ntfy_configs_notification_config_id");
+
+                    b.ToTable("ntfy_configs", (string)null);
+                });
+
             modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.QueueCleaner.QueueCleanerConfig", b =>
                 {
                     b.Property<Guid>("Id")
@@ -580,9 +678,18 @@ namespace Cleanuparr.Persistence.Migrations.Data
                         .HasColumnType("TEXT")
                         .HasColumnName("cron_expression");
 
+                    b.Property<ushort>("DownloadingMetadataMaxStrikes")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("downloading_metadata_max_strikes");
+
                     b.Property<bool>("Enabled")
                         .HasColumnType("INTEGER")
                         .HasColumnName("enabled");
+
+                    b.PrimitiveCollection<string>("IgnoredDownloads")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("ignored_downloads");
 
                     b.Property<bool>("UseAdvancedScheduling")
                         .HasColumnType("INTEGER")
@@ -613,72 +720,173 @@ namespace Cleanuparr.Persistence.Migrations.Data
                                 .IsRequired()
                                 .HasColumnType("TEXT")
                                 .HasColumnName("failed_import_patterns");
-                        });
 
-                    b.ComplexProperty<Dictionary<string, object>>("Slow", "Cleanuparr.Persistence.Models.Configuration.QueueCleaner.QueueCleanerConfig.Slow#SlowConfig", b1 =>
-                        {
-                            b1.IsRequired();
-
-                            b1.Property<bool>("DeletePrivate")
+                            b1.Property<bool>("SkipIfNotFoundInClient")
                                 .HasColumnType("INTEGER")
-                                .HasColumnName("slow_delete_private");
-
-                            b1.Property<string>("IgnoreAboveSize")
-                                .IsRequired()
-                                .HasColumnType("TEXT")
-                                .HasColumnName("slow_ignore_above_size");
-
-                            b1.Property<bool>("IgnorePrivate")
-                                .HasColumnType("INTEGER")
-                                .HasColumnName("slow_ignore_private");
-
-                            b1.Property<ushort>("MaxStrikes")
-                                .HasColumnType("INTEGER")
-                                .HasColumnName("slow_max_strikes");
-
-                            b1.Property<double>("MaxTime")
-                                .HasColumnType("REAL")
-                                .HasColumnName("slow_max_time");
-
-                            b1.Property<string>("MinSpeed")
-                                .IsRequired()
-                                .HasColumnType("TEXT")
-                                .HasColumnName("slow_min_speed");
-
-                            b1.Property<bool>("ResetStrikesOnProgress")
-                                .HasColumnType("INTEGER")
-                                .HasColumnName("slow_reset_strikes_on_progress");
-                        });
-
-                    b.ComplexProperty<Dictionary<string, object>>("Stalled", "Cleanuparr.Persistence.Models.Configuration.QueueCleaner.QueueCleanerConfig.Stalled#StalledConfig", b1 =>
-                        {
-                            b1.IsRequired();
-
-                            b1.Property<bool>("DeletePrivate")
-                                .HasColumnType("INTEGER")
-                                .HasColumnName("stalled_delete_private");
-
-                            b1.Property<ushort>("DownloadingMetadataMaxStrikes")
-                                .HasColumnType("INTEGER")
-                                .HasColumnName("stalled_downloading_metadata_max_strikes");
-
-                            b1.Property<bool>("IgnorePrivate")
-                                .HasColumnType("INTEGER")
-                                .HasColumnName("stalled_ignore_private");
-
-                            b1.Property<ushort>("MaxStrikes")
-                                .HasColumnType("INTEGER")
-                                .HasColumnName("stalled_max_strikes");
-
-                            b1.Property<bool>("ResetStrikesOnProgress")
-                                .HasColumnType("INTEGER")
-                                .HasColumnName("stalled_reset_strikes_on_progress");
+                                .HasColumnName("failed_import_skip_if_not_found_in_client");
                         });
 
                     b.HasKey("Id")
                         .HasName("pk_queue_cleaner_configs");
 
                     b.ToTable("queue_cleaner_configs", (string)null);
+                });
+
+            modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.QueueCleaner.SlowRule", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("id");
+
+                    b.Property<bool>("DeletePrivateTorrentsFromClient")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("delete_private_torrents_from_client");
+
+                    b.Property<bool>("Enabled")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("enabled");
+
+                    b.Property<string>("IgnoreAboveSize")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("ignore_above_size");
+
+                    b.Property<ushort>("MaxCompletionPercentage")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("max_completion_percentage");
+
+                    b.Property<int>("MaxStrikes")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("max_strikes");
+
+                    b.Property<double>("MaxTimeHours")
+                        .HasColumnType("REAL")
+                        .HasColumnName("max_time_hours");
+
+                    b.Property<ushort>("MinCompletionPercentage")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("min_completion_percentage");
+
+                    b.Property<string>("MinSpeed")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("min_speed");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("name");
+
+                    b.Property<string>("PrivacyType")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("privacy_type");
+
+                    b.Property<Guid>("QueueCleanerConfigId")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("queue_cleaner_config_id");
+
+                    b.Property<bool>("ResetStrikesOnProgress")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("reset_strikes_on_progress");
+
+                    b.HasKey("Id")
+                        .HasName("pk_slow_rules");
+
+                    b.HasIndex("QueueCleanerConfigId")
+                        .HasDatabaseName("ix_slow_rules_queue_cleaner_config_id");
+
+                    b.ToTable("slow_rules", (string)null);
+                });
+
+            modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.QueueCleaner.StallRule", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("id");
+
+                    b.Property<bool>("DeletePrivateTorrentsFromClient")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("delete_private_torrents_from_client");
+
+                    b.Property<bool>("Enabled")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("enabled");
+
+                    b.Property<ushort>("MaxCompletionPercentage")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("max_completion_percentage");
+
+                    b.Property<int>("MaxStrikes")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("max_strikes");
+
+                    b.Property<ushort>("MinCompletionPercentage")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("min_completion_percentage");
+
+                    b.Property<string>("MinimumProgress")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("minimum_progress");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("name");
+
+                    b.Property<string>("PrivacyType")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("privacy_type");
+
+                    b.Property<Guid>("QueueCleanerConfigId")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("queue_cleaner_config_id");
+
+                    b.Property<bool>("ResetStrikesOnProgress")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("reset_strikes_on_progress");
+
+                    b.HasKey("Id")
+                        .HasName("pk_stall_rules");
+
+                    b.HasIndex("QueueCleanerConfigId")
+                        .HasDatabaseName("ix_stall_rules_queue_cleaner_config_id");
+
+                    b.ToTable("stall_rules", (string)null);
+                });
+
+            modelBuilder.Entity("Cleanuparr.Persistence.Models.State.BlacklistSyncHistory", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("DownloadClientId")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("download_client_id");
+
+                    b.Property<string>("Hash")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("hash");
+
+                    b.HasKey("Id")
+                        .HasName("pk_blacklist_sync_history");
+
+                    b.HasIndex("DownloadClientId")
+                        .HasDatabaseName("ix_blacklist_sync_history_download_client_id");
+
+                    b.HasIndex("Hash")
+                        .HasDatabaseName("ix_blacklist_sync_history_hash");
+
+                    b.HasIndex("Hash", "DownloadClientId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_blacklist_sync_history_hash_download_client_id");
+
+                    b.ToTable("blacklist_sync_history", (string)null);
                 });
 
             modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.Arr.ArrInstance", b =>
@@ -729,6 +937,54 @@ namespace Cleanuparr.Persistence.Migrations.Data
                     b.Navigation("NotificationConfig");
                 });
 
+            modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.Notification.NtfyConfig", b =>
+                {
+                    b.HasOne("Cleanuparr.Persistence.Models.Configuration.Notification.NotificationConfig", "NotificationConfig")
+                        .WithOne("NtfyConfiguration")
+                        .HasForeignKey("Cleanuparr.Persistence.Models.Configuration.Notification.NtfyConfig", "NotificationConfigId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_ntfy_configs_notification_configs_notification_config_id");
+
+                    b.Navigation("NotificationConfig");
+                });
+
+            modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.QueueCleaner.SlowRule", b =>
+                {
+                    b.HasOne("Cleanuparr.Persistence.Models.Configuration.QueueCleaner.QueueCleanerConfig", "QueueCleanerConfig")
+                        .WithMany("SlowRules")
+                        .HasForeignKey("QueueCleanerConfigId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_slow_rules_queue_cleaner_configs_queue_cleaner_config_id");
+
+                    b.Navigation("QueueCleanerConfig");
+                });
+
+            modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.QueueCleaner.StallRule", b =>
+                {
+                    b.HasOne("Cleanuparr.Persistence.Models.Configuration.QueueCleaner.QueueCleanerConfig", "QueueCleanerConfig")
+                        .WithMany("StallRules")
+                        .HasForeignKey("QueueCleanerConfigId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_stall_rules_queue_cleaner_configs_queue_cleaner_config_id");
+
+                    b.Navigation("QueueCleanerConfig");
+                });
+
+            modelBuilder.Entity("Cleanuparr.Persistence.Models.State.BlacklistSyncHistory", b =>
+                {
+                    b.HasOne("Cleanuparr.Persistence.Models.Configuration.DownloadClientConfig", "DownloadClient")
+                        .WithMany()
+                        .HasForeignKey("DownloadClientId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_blacklist_sync_history_download_clients_download_client_id");
+
+                    b.Navigation("DownloadClient");
+                });
+
             modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.Arr.ArrConfig", b =>
                 {
                     b.Navigation("Instances");
@@ -744,6 +1000,15 @@ namespace Cleanuparr.Persistence.Migrations.Data
                     b.Navigation("AppriseConfiguration");
 
                     b.Navigation("NotifiarrConfiguration");
+
+                    b.Navigation("NtfyConfiguration");
+                });
+
+            modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.QueueCleaner.QueueCleanerConfig", b =>
+                {
+                    b.Navigation("SlowRules");
+
+                    b.Navigation("StallRules");
                 });
 #pragma warning restore 612, 618
         }
