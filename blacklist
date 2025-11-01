@@ -1,3 +1,4 @@
+sample*
 *(sample).*
 *sample.avchd
 *sample.avi
@@ -352,6 +353,7 @@
 *.lzo
 *.lzr
 *.lzx
+*.m2ts
 *.m3u
 *.m4a
 *.mac
@@ -845,6 +847,8 @@
 *.zw
 *.zwi
 *.zz
+Extra*
+Featurettes*
 Trailer.*
 VOSTFR
 api
