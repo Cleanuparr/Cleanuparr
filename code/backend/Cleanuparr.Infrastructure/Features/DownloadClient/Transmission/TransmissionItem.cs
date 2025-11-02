@@ -61,7 +61,7 @@ public sealed class TransmissionItem : ITorrentItem
     // State checking methods
     // Transmission status: 0=stopped, 1=check pending, 2=checking, 3=download pending, 4=downloading, 5=seed pending, 6=seeding
     public bool IsDownloading() => _torrentInfo.Status == 4;
-    public bool IsStalled() => _torrentInfo.Status == 4 && (_torrentInfo.RateDownload ?? 0) == 0 && (_torrentInfo.Eta ?? 0) == 0;
+    public bool IsStalled() => _torrentInfo is { Status: 4, RateDownload: <= 0, Eta: <= 0 };
     public bool IsSeeding() => _torrentInfo.Status == 6;
     public bool IsCompleted() => CompletionPercentage >= 100.0;
     public bool IsPaused() => _torrentInfo.Status == 0;
