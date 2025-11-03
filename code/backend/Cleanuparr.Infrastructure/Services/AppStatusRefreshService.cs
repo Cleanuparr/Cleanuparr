@@ -22,7 +22,6 @@ public sealed class AppStatusRefreshService : BackgroundService
     private static readonly Uri StatusUri = new("https://cleanuparr-status.pages.dev/status.json");
     private static readonly TimeSpan PollInterval = TimeSpan.FromMinutes(10);
     private static readonly TimeSpan StartupDelay = TimeSpan.FromSeconds(5);
-    private static readonly TimeSpan RequestTimeout = TimeSpan.FromSeconds(3);
     
     public AppStatusRefreshService(
         ILogger<AppStatusRefreshService> logger,
@@ -70,7 +69,6 @@ public sealed class AppStatusRefreshService : BackgroundService
         try
         {
             using var client = _httpClientFactory.CreateClient(Constants.HttpClientWithRetryName);
-            client.Timeout = RequestTimeout;
 
             using var response = await client.GetAsync(StatusUri, cancellationToken);
             response.EnsureSuccessStatusCode();
