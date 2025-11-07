@@ -4,7 +4,7 @@ namespace Cleanuparr.Domain.Entities;
 /// Universal abstraction for a torrent item across all download clients.
 /// Provides a unified interface for accessing torrent properties and state.
 /// </summary>
-public interface ITorrentItem
+public interface ITorrentItemWrapper
 {
     // Basic identification
     string Hash { get; }
@@ -43,8 +43,6 @@ public interface ITorrentItem
     bool IsPaused();
     bool IsQueued();
     bool IsChecking();
-    bool IsAllocating();
-    bool IsMetadataDownloading();
 
     // Filtering methods
     /// <summary>

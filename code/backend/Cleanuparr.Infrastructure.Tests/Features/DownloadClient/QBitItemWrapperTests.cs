@@ -5,7 +5,7 @@ using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.DownloadClient;
 
-public class QBitItemTests
+public class QBitItemWrapperTests
 {
     [Fact]
     public void Constructor_WithNullTorrentInfo_ThrowsArgumentNullException()
@@ -14,7 +14,7 @@ public class QBitItemTests
         var trackers = new List<TorrentTracker>();
 
         // Act & Assert
-        Should.Throw<ArgumentNullException>(() => new QBitItem(null!, trackers, false));
+        Should.Throw<ArgumentNullException>(() => new QBitItemWrapper(null!, trackers, false));
     }
 
     [Fact]
@@ -24,7 +24,7 @@ public class QBitItemTests
         var torrentInfo = new TorrentInfo();
 
         // Act & Assert
-        Should.Throw<ArgumentNullException>(() => new QBitItem(torrentInfo, null!, false));
+        Should.Throw<ArgumentNullException>(() => new QBitItemWrapper(torrentInfo, null!, false));
     }
 
     [Fact]
@@ -34,7 +34,7 @@ public class QBitItemTests
         var expectedHash = "test-hash-123";
         var torrentInfo = new TorrentInfo { Hash = expectedHash };
         var trackers = new List<TorrentTracker>();
-        var wrapper = new QBitItem(torrentInfo, trackers, false);
+        var wrapper = new QBitItemWrapper(torrentInfo, trackers, false);
 
         // Act
         var result = wrapper.Hash;
@@ -49,7 +49,7 @@ public class QBitItemTests
         // Arrange
         var torrentInfo = new TorrentInfo { Hash = null };
         var trackers = new List<TorrentTracker>();
-        var wrapper = new QBitItem(torrentInfo, trackers, false);
+        var wrapper = new QBitItemWrapper(torrentInfo, trackers, false);
 
         // Act
         var result = wrapper.Hash;
@@ -65,7 +65,7 @@ public class QBitItemTests
         var expectedName = "Test Torrent";
         var torrentInfo = new TorrentInfo { Name = expectedName };
         var trackers = new List<TorrentTracker>();
-        var wrapper = new QBitItem(torrentInfo, trackers, false);
+        var wrapper = new QBitItemWrapper(torrentInfo, trackers, false);
 
         // Act
         var result = wrapper.Name;
@@ -80,7 +80,7 @@ public class QBitItemTests
         // Arrange
         var torrentInfo = new TorrentInfo { Name = null };
         var trackers = new List<TorrentTracker>();
-        var wrapper = new QBitItem(torrentInfo, trackers, false);
+        var wrapper = new QBitItemWrapper(torrentInfo, trackers, false);
 
         // Act
         var result = wrapper.Name;
@@ -95,7 +95,7 @@ public class QBitItemTests
         // Arrange
         var torrentInfo = new TorrentInfo();
         var trackers = new List<TorrentTracker>();
-        var wrapper = new QBitItem(torrentInfo, trackers, true);
+        var wrapper = new QBitItemWrapper(torrentInfo, trackers, true);
 
         // Act
         var result = wrapper.IsPrivate;
@@ -111,7 +111,7 @@ public class QBitItemTests
         var expectedSize = 1024L * 1024 * 1024; // 1GB
         var torrentInfo = new TorrentInfo { Size = expectedSize };
         var trackers = new List<TorrentTracker>();
-        var wrapper = new QBitItem(torrentInfo, trackers, false);
+        var wrapper = new QBitItemWrapper(torrentInfo, trackers, false);
 
         // Act
         var result = wrapper.Size;
@@ -126,7 +126,7 @@ public class QBitItemTests
         // Arrange
         var torrentInfo = new TorrentInfo { Size = 0 };
         var trackers = new List<TorrentTracker>();
-        var wrapper = new QBitItem(torrentInfo, trackers, false);
+        var wrapper = new QBitItemWrapper(torrentInfo, trackers, false);
 
         // Act
         var result = wrapper.Size;
@@ -145,7 +145,7 @@ public class QBitItemTests
         // Arrange
         var torrentInfo = new TorrentInfo { Progress = progress };
         var trackers = new List<TorrentTracker>();
-        var wrapper = new QBitItem(torrentInfo, trackers, false);
+        var wrapper = new QBitItemWrapper(torrentInfo, trackers, false);
 
         // Act
         var result = wrapper.CompletionPercentage;
@@ -165,7 +165,7 @@ public class QBitItemTests
             new() { Url = "https://tracker2.example.com/announce" },
             new() { Url = "udp://tracker3.example.com:1337/announce" }
         };
-        var wrapper = new QBitItem(torrentInfo, trackers, false);
+        var wrapper = new QBitItemWrapper(torrentInfo, trackers, false);
 
         // Act
         var result = wrapper.Trackers;
@@ -188,7 +188,7 @@ public class QBitItemTests
             new() { Url = "https://tracker1.example.com/announce" },
             new() { Url = "udp://tracker1.example.com:1337/announce" }
         };
-        var wrapper = new QBitItem(torrentInfo, trackers, false);
+        var wrapper = new QBitItemWrapper(torrentInfo, trackers, false);
 
         // Act
         var result = wrapper.Trackers;
@@ -210,7 +210,7 @@ public class QBitItemTests
             new() { Url = "" },
             new() { Url = null }
         };
-        var wrapper = new QBitItem(torrentInfo, trackers, false);
+        var wrapper = new QBitItemWrapper(torrentInfo, trackers, false);
 
         // Act
         var result = wrapper.Trackers;
@@ -226,7 +226,7 @@ public class QBitItemTests
         // Arrange
         var torrentInfo = new TorrentInfo();
         var trackers = new List<TorrentTracker>();
-        var wrapper = new QBitItem(torrentInfo, trackers, false);
+        var wrapper = new QBitItemWrapper(torrentInfo, trackers, false);
 
         // Act
         var result = wrapper.Trackers;
@@ -247,7 +247,7 @@ public class QBitItemTests
         // Arrange
         var torrentInfo = new TorrentInfo { State = state };
         var trackers = new List<TorrentTracker>();
-        var wrapper = new QBitItem(torrentInfo, trackers, false);
+        var wrapper = new QBitItemWrapper(torrentInfo, trackers, false);
 
         // Act
         var result = wrapper.IsDownloading();
@@ -266,7 +266,7 @@ public class QBitItemTests
         // Arrange
         var torrentInfo = new TorrentInfo { State = state };
         var trackers = new List<TorrentTracker>();
-        var wrapper = new QBitItem(torrentInfo, trackers, false);
+        var wrapper = new QBitItemWrapper(torrentInfo, trackers, false);
 
         // Act
         var result = wrapper.IsStalled();
@@ -286,7 +286,7 @@ public class QBitItemTests
         // Arrange
         var torrentInfo = new TorrentInfo { State = state };
         var trackers = new List<TorrentTracker>();
-        var wrapper = new QBitItem(torrentInfo, trackers, false);
+        var wrapper = new QBitItemWrapper(torrentInfo, trackers, false);
 
         // Act
         var result = wrapper.IsSeeding();
@@ -305,7 +305,7 @@ public class QBitItemTests
         // Arrange
         var torrentInfo = new TorrentInfo { Progress = progress };
         var trackers = new List<TorrentTracker>();
-        var wrapper = new QBitItem(torrentInfo, trackers, false);
+        var wrapper = new QBitItemWrapper(torrentInfo, trackers, false);
 
         // Act
         var result = wrapper.IsCompleted();
@@ -324,7 +324,7 @@ public class QBitItemTests
         // Arrange
         var torrentInfo = new TorrentInfo { State = state };
         var trackers = new List<TorrentTracker>();
-        var wrapper = new QBitItem(torrentInfo, trackers, false);
+        var wrapper = new QBitItemWrapper(torrentInfo, trackers, false);
 
         // Act
         var result = wrapper.IsPaused();
@@ -343,7 +343,7 @@ public class QBitItemTests
         // Arrange
         var torrentInfo = new TorrentInfo { State = state };
         var trackers = new List<TorrentTracker>();
-        var wrapper = new QBitItem(torrentInfo, trackers, false);
+        var wrapper = new QBitItemWrapper(torrentInfo, trackers, false);
 
         // Act
         var result = wrapper.IsQueued();
@@ -363,7 +363,7 @@ public class QBitItemTests
         // Arrange
         var torrentInfo = new TorrentInfo { State = state };
         var trackers = new List<TorrentTracker>();
-        var wrapper = new QBitItem(torrentInfo, trackers, false);
+        var wrapper = new QBitItemWrapper(torrentInfo, trackers, false);
 
         // Act
         var result = wrapper.IsChecking();
@@ -381,7 +381,7 @@ public class QBitItemTests
         // Arrange
         var torrentInfo = new TorrentInfo { State = state };
         var trackers = new List<TorrentTracker>();
-        var wrapper = new QBitItem(torrentInfo, trackers, false);
+        var wrapper = new QBitItemWrapper(torrentInfo, trackers, false);
 
         // Act
         var result = wrapper.IsAllocating();
@@ -400,7 +400,7 @@ public class QBitItemTests
         // Arrange
         var torrentInfo = new TorrentInfo { State = state };
         var trackers = new List<TorrentTracker>();
-        var wrapper = new QBitItem(torrentInfo, trackers, false);
+        var wrapper = new QBitItemWrapper(torrentInfo, trackers, false);
 
         // Act
         var result = wrapper.IsMetadataDownloading();
@@ -415,7 +415,7 @@ public class QBitItemTests
         // Arrange
         var torrentInfo = new TorrentInfo { Name = "Test Torrent", Hash = "abc123" };
         var trackers = new List<TorrentTracker>();
-        var wrapper = new QBitItem(torrentInfo, trackers, false);
+        var wrapper = new QBitItemWrapper(torrentInfo, trackers, false);
 
         // Act
         var result = wrapper.IsIgnored(Array.Empty<string>());
@@ -430,7 +430,7 @@ public class QBitItemTests
         // Arrange
         var torrentInfo = new TorrentInfo { Name = "Test Torrent", Hash = "abc123" };
         var trackers = new List<TorrentTracker>();
-        var wrapper = new QBitItem(torrentInfo, trackers, false);
+        var wrapper = new QBitItemWrapper(torrentInfo, trackers, false);
         var ignoredDownloads = new[] { "test" };
 
         // Act
@@ -446,7 +446,7 @@ public class QBitItemTests
         // Arrange
         var torrentInfo = new TorrentInfo { Name = "Test Torrent", Hash = "abc123" };
         var trackers = new List<TorrentTracker>();
-        var wrapper = new QBitItem(torrentInfo, trackers, false);
+        var wrapper = new QBitItemWrapper(torrentInfo, trackers, false);
         var ignoredDownloads = new[] { "abc123" };
 
         // Act
@@ -465,7 +465,7 @@ public class QBitItemTests
         {
             new() { Url = "http://tracker.example.com/announce" }
         };
-        var wrapper = new QBitItem(torrentInfo, trackers, false);
+        var wrapper = new QBitItemWrapper(torrentInfo, trackers, false);
         var ignoredDownloads = new[] { "tracker.example.com" };
 
         // Act
@@ -484,7 +484,7 @@ public class QBitItemTests
         {
             new() { Url = "http://tracker.example.com/announce" }
         };
-        var wrapper = new QBitItem(torrentInfo, trackers, false);
+        var wrapper = new QBitItemWrapper(torrentInfo, trackers, false);
         var ignoredDownloads = new[] { "notmatching" };
 
         // Act

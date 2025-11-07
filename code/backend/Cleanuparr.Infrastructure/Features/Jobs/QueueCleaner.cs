@@ -124,7 +124,7 @@ public sealed class QueueCleaner : GenericHandler
                 
                 if (ignoredDownloads.Contains(record.DownloadId, StringComparer.InvariantCultureIgnoreCase))
                 {
-                    _logger.LogInformation("skip | {title} | ignored", record.Title);
+                    _logger.LogInformation("skip | download is ignored | {name}", record.Title);
                     continue;
                 }
                 

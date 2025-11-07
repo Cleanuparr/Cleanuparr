@@ -1,18 +1,15 @@
 using Cleanuparr.Domain.Entities;
-using Cleanuparr.Domain.Entities.Cache;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Events;
 using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.Files;
 using Cleanuparr.Infrastructure.Features.ItemStriker;
 using Cleanuparr.Infrastructure.Features.MalwareBlocker;
-using Cleanuparr.Infrastructure.Helpers;
 using Cleanuparr.Infrastructure.Http;
 using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Infrastructure.Services.Interfaces;
 using Cleanuparr.Persistence.Models.Configuration;
 using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
-using Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
 using Cleanuparr.Shared.Helpers;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
@@ -81,26 +78,25 @@ public abstract class DownloadService : IDownloadService
 
     public abstract Task<HealthCheckResult> HealthCheckAsync();
 
-    public abstract Task<DownloadCheckResult> ShouldRemoveFromArrQueueAsync(string hash,
-        IReadOnlyList<string> ignoredDownloads);
+    public abstract Task<DownloadCheckResult> ShouldRemoveFromArrQueueAsync(string hash, IReadOnlyList<string> ignoredDownloads);
 
     /// <inheritdoc/>
     public abstract Task DeleteDownload(string hash);
 
     /// <inheritdoc/>
-    public abstract Task<List<ITorrentItem>?> GetSeedingDownloads();
+    public abstract Task<List<ITorrentItemWrapper>> GetSeedingDownloads();
 
     /// <inheritdoc/>
-    public abstract List<ITorrentItem>? FilterDownloadsToBeCleanedAsync(List<ITorrentItem>? downloads, List<CleanCategory> categories);
+    public abstract List<ITorrentItemWrapper>? FilterDownloadsToBeCleanedAsync(List<ITorrentItemWrapper>? downloads, List<CleanCategory> categories);
 
     /// <inheritdoc/>
-    public abstract List<ITorrentItem>? FilterDownloadsToChangeCategoryAsync(List<ITorrentItem>? downloads, List<string> categories);
+    public abstract List<ITorrentItemWrapper>? FilterDownloadsToChangeCategoryAsync(List<ITorrentItemWrapper>? downloads, List<string> categories);
 
     /// <inheritdoc/>
-    public abstract Task CleanDownloadsAsync(List<ITorrentItem>? downloads, List<CleanCategory> categoriesToClean, HashSet<string> excludedHashes, IReadOnlyList<string> ignoredDownloads);
+    public abstract Task CleanDownloadsAsync(List<ITorrentItemWrapper>? downloads, List<CleanCategory> categoriesToClean);
 
     /// <inheritdoc/>
-    public abstract Task ChangeCategoryForNoHardLinksAsync(List<ITorrentItem>? downloads, HashSet<string> excludedHashes, IReadOnlyList<string> ignoredDownloads);
+    public abstract Task ChangeCategoryForNoHardLinksAsync(List<ITorrentItemWrapper>? downloads);
     
     /// <inheritdoc/>
     public abstract Task CreateCategoryAsync(string name);
@@ -175,7 +171,7 @@ public abstract class DownloadService : IDownloadService
             return false;
         }
         
-        // max ration is 0 or reached
+        // max ratio is 0 or reached
         return true;
     }
     
