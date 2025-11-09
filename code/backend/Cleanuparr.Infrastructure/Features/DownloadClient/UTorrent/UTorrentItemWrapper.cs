@@ -25,12 +25,6 @@ public sealed class UTorrentItemWrapper : ITorrentItemWrapper
 
     // Privacy and tracking
     public bool IsPrivate => Properties.IsPrivate;
-    public IReadOnlyList<string> Trackers => Properties.TrackerList
-        .Select(ExtractHostFromUrl)
-        .Where(host => !string.IsNullOrEmpty(host))
-        .Distinct()
-        .ToList()
-        .AsReadOnly();
 
     // Size and progress
     public long Size => Info.Size;
@@ -100,25 +94,5 @@ public sealed class UTorrentItemWrapper : ITorrentItemWrapper
         }
 
         return false;
-    }
-
-    /// <summary>
-    /// Extracts the host from a tracker URL
-    /// </summary>
-    private static string ExtractHostFromUrl(string url)
-    {
-        try
-        {
-            if (Uri.TryCreate(url, UriKind.Absolute, out var uri))
-            {
-                return uri.Host;
-            }
-        }
-        catch
-        {
-            // Ignore parsing errors
-        }
-
-        return string.Empty;
     }
 }

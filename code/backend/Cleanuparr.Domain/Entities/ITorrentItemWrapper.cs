@@ -12,7 +12,6 @@ public interface ITorrentItemWrapper
 
     // Privacy and tracking
     bool IsPrivate { get; }
-    IReadOnlyList<string> Trackers { get; }
 
     // Size and progress
     long Size { get; }

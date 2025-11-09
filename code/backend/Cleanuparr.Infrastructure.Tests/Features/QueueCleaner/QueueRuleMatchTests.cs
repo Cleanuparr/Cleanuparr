@@ -405,7 +405,6 @@ public class QueueRuleMatchTests
         torrent.SetupGet(t => t.IsPrivate).Returns(isPrivate);
         torrent.SetupGet(t => t.CompletionPercentage).Returns(completionPercentage);
         torrent.SetupGet(t => t.Size).Returns(ByteSize.Parse(size).Bytes);
-        torrent.SetupGet(t => t.Trackers).Returns(Array.Empty<string>());
         return torrent;
     }
 }

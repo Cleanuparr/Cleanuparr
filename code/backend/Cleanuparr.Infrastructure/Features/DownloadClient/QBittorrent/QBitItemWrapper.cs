@@ -28,14 +28,6 @@ public sealed class QBitItemWrapper : ITorrentItemWrapper
     // Privacy and tracking
     public bool IsPrivate { get; }
 
-    public IReadOnlyList<string> Trackers => _trackers
-        .Where(t => !string.IsNullOrEmpty(t.Url))
-        .Select(t => ExtractHostFromUrl(t.Url!))
-        .Where(host => !string.IsNullOrEmpty(host))
-        .Distinct()
-        .ToList()
-        .AsReadOnly();
-
     // Size and progress
     public long Size => Info.Size;
     public double CompletionPercentage => Info.Progress * 100.0;
@@ -88,11 +80,11 @@ public sealed class QBitItemWrapper : ITorrentItemWrapper
                 return true;
             }
 
-            if (Info.Tags.Contains(pattern, StringComparer.InvariantCultureIgnoreCase))
+            if (Info.Tags?.Contains(pattern, StringComparer.InvariantCultureIgnoreCase) is true)
             {
                 return true;
             }
-            
+
             if (_trackers.Any(tracker => tracker.ShouldIgnore(ignoredDownloads)))
             {
                 return true;
@@ -100,25 +92,5 @@ public sealed class QBitItemWrapper : ITorrentItemWrapper
         }
 
         return false;
-    }
-
-    /// <summary>
-    /// Extracts the host from a tracker URL
-    /// </summary>
-    private static string ExtractHostFromUrl(string url)
-    {
-        try
-        {
-            if (Uri.TryCreate(url, UriKind.Absolute, out var uri))
-            {
-                return uri.Host;
-            }
-        }
-        catch
-        {
-            // Ignore parsing errors
-        }
-
-        return string.Empty;
     }
 }

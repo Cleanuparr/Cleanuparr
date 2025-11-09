@@ -22,13 +22,6 @@ public sealed class TransmissionItemWrapper : ITorrentItemWrapper
 
     // Privacy and tracking
     public bool IsPrivate => Info.IsPrivate ?? false;
-    public IReadOnlyList<string> Trackers => Info.Trackers?
-        .Where(t => !string.IsNullOrEmpty(t.Announce))
-        .Select(t => ExtractHostFromUrl(t.Announce!))
-        .Where(host => !string.IsNullOrEmpty(host))
-        .Distinct()
-        .ToList()
-        .AsReadOnly() ?? (IReadOnlyList<string>)Array.Empty<string>();
 
     // Size and progress
     public long Size => Info.TotalSize ?? 0;
@@ -99,25 +92,5 @@ public sealed class TransmissionItemWrapper : ITorrentItemWrapper
         }
 
         return false;
-    }
-
-    /// <summary>
-    /// Extracts the host from a tracker URL
-    /// </summary>
-    private static string ExtractHostFromUrl(string url)
-    {
-        try
-        {
-            if (Uri.TryCreate(url, UriKind.Absolute, out var uri))
-            {
-                return uri.Host;
-            }
-        }
-        catch
-        {
-            // Ignore parsing errors
-        }
-
-        return string.Empty;
     }
 }

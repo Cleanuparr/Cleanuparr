@@ -22,13 +22,6 @@ public sealed class DelugeItemWrapper : ITorrentItemWrapper
 
     // Privacy and tracking
     public bool IsPrivate => Info.Private;
-    public IReadOnlyList<string> Trackers => Info.Trackers?
-        .Where(t => !string.IsNullOrEmpty(t.Url))
-        .Select(t => ExtractHostFromUrl(t.Url!))
-        .Where(host => !string.IsNullOrEmpty(host))
-        .Distinct()
-        .ToList()
-        .AsReadOnly() ?? (IReadOnlyList<string>)Array.Empty<string>();
 
     // Size and progress
     public long Size => Info.Size;
@@ -90,25 +83,5 @@ public sealed class DelugeItemWrapper : ITorrentItemWrapper
         }
 
         return false;
-    }
-
-    /// <summary>
-    /// Extracts the host from a tracker URL
-    /// </summary>
-    private static string ExtractHostFromUrl(string url)
-    {
-        try
-        {
-            if (Uri.TryCreate(url, UriKind.Absolute, out var uri))
-            {
-                return uri.Host;
-            }
-        }
-        catch
-        {
-            // Ignore parsing errors
-        }
-
-        return string.Empty;
     }
 }

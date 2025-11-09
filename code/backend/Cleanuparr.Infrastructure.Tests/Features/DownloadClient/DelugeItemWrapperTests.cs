@@ -140,8 +140,8 @@ public class DelugeItemWrapperTests
     public void CompletionPercentage_ReturnsCorrectValue(long totalDone, long size, double expectedPercentage)
     {
         // Arrange
-        var downloadStatus = new DownloadStatus 
-        { 
+        var downloadStatus = new DownloadStatus
+        {
             TotalDone = totalDone,
             Size = size,
             Trackers = new List<Tracker>(),
@@ -157,113 +157,114 @@ public class DelugeItemWrapperTests
     }
 
     [Fact]
-    public void Trackers_WithValidUrls_ReturnsHostNames()
+    public void IsIgnored_WithEmptyList_ReturnsFalse()
     {
         // Arrange
         var downloadStatus = new DownloadStatus
         {
-            Trackers = new List<Tracker>
-            {
-                new() { Url = "http://tracker1.example.com:8080/announce" },
-                new() { Url = "https://tracker2.example.com/announce" },
-                new() { Url = "udp://tracker3.example.com:1337/announce" }
-            },
-            DownloadLocation = "/test/path"
-        };
-        var wrapper = new DelugeItemWrapper(downloadStatus);
-
-        // Act
-        var result = wrapper.Trackers;
-
-        // Assert
-        result.Count.ShouldBe(3);
-        result.ShouldContain("tracker1.example.com");
-        result.ShouldContain("tracker2.example.com");
-        result.ShouldContain("tracker3.example.com");
-    }
-
-    [Fact]
-    public void Trackers_WithDuplicateHosts_ReturnsDistinctHosts()
-    {
-        // Arrange
-        var downloadStatus = new DownloadStatus
-        {
-            Trackers = new List<Tracker>
-            {
-                new() { Url = "http://tracker1.example.com:8080/announce" },
-                new() { Url = "https://tracker1.example.com/announce" },
-                new() { Url = "udp://tracker1.example.com:1337/announce" }
-            },
-            DownloadLocation = "/test/path"
-        };
-        var wrapper = new DelugeItemWrapper(downloadStatus);
-
-        // Act
-        var result = wrapper.Trackers;
-
-        // Assert
-        result.Count.ShouldBe(1);
-        result.ShouldContain("tracker1.example.com");
-    }
-
-    [Fact]
-    public void Trackers_WithInvalidUrls_SkipsInvalidEntries()
-    {
-        // Arrange
-        var downloadStatus = new DownloadStatus
-        {
-            Trackers = new List<Tracker>
-            {
-                new() { Url = "http://valid.example.com/announce" },
-                new() { Url = "invalid-url" },
-                new() { Url = "" },
-                new() { Url = null! }
-            },
-            DownloadLocation = "/test/path"
-        };
-        var wrapper = new DelugeItemWrapper(downloadStatus);
-
-        // Act
-        var result = wrapper.Trackers;
-
-        // Assert
-        result.Count.ShouldBe(1);
-        result.ShouldContain("valid.example.com");
-    }
-
-    [Fact]
-    public void Trackers_WithEmptyList_ReturnsEmptyList()
-    {
-        // Arrange
-        var downloadStatus = new DownloadStatus
-        {
+            Hash = "abc123",
+            Name = "Test Torrent",
             Trackers = new List<Tracker>(),
             DownloadLocation = "/test/path"
         };
         var wrapper = new DelugeItemWrapper(downloadStatus);
 
         // Act
-        var result = wrapper.Trackers;
+        var result = wrapper.IsIgnored(Array.Empty<string>());
 
         // Assert
-        result.ShouldBeEmpty();
+        result.ShouldBeFalse();
     }
 
     [Fact]
-    public void Trackers_WithNullTrackers_ReturnsEmptyList()
+    public void IsIgnored_MatchingHash_ReturnsTrue()
     {
         // Arrange
         var downloadStatus = new DownloadStatus
         {
-            Trackers = null!,
+            Hash = "abc123",
+            Name = "Test Torrent",
+            Trackers = new List<Tracker>(),
             DownloadLocation = "/test/path"
         };
         var wrapper = new DelugeItemWrapper(downloadStatus);
+        var ignoredDownloads = new[] { "abc123" };
 
         // Act
-        var result = wrapper.Trackers;
+        var result = wrapper.IsIgnored(ignoredDownloads);
 
         // Assert
-        result.ShouldBeEmpty();
+        result.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void IsIgnored_MatchingCategory_ReturnsTrue()
+    {
+        // Arrange
+        var downloadStatus = new DownloadStatus
+        {
+            Hash = "abc123",
+            Name = "Test Torrent",
+            Label = "test-category",
+            Trackers = new List<Tracker>(),
+            DownloadLocation = "/test/path"
+        };
+        var wrapper = new DelugeItemWrapper(downloadStatus);
+        var ignoredDownloads = new[] { "test-category" };
+
+        // Act
+        var result = wrapper.IsIgnored(ignoredDownloads);
+
+        // Assert
+        result.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void IsIgnored_MatchingTracker_ReturnsTrue()
+    {
+        // Arrange
+        var downloadStatus = new DownloadStatus
+        {
+            Hash = "abc123",
+            Name = "Test Torrent",
+            Trackers = new List<Tracker>
+            {
+                new() { Url = "http://tracker.example.com/announce" }
+            },
+            DownloadLocation = "/test/path"
+        };
+        var wrapper = new DelugeItemWrapper(downloadStatus);
+        var ignoredDownloads = new[] { "tracker.example.com" };
+
+        // Act
+        var result = wrapper.IsIgnored(ignoredDownloads);
+
+        // Assert
+        result.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void IsIgnored_NotMatching_ReturnsFalse()
+    {
+        // Arrange
+        var downloadStatus = new DownloadStatus
+        {
+            Hash = "abc123",
+            Name = "Test Torrent",
+            Label = "some-category",
+            Trackers = new List<Tracker>
+            {
+                new() { Url = "http://tracker.example.com/announce" }
+            },
+            DownloadLocation = "/test/path"
+        };
+        var wrapper = new DelugeItemWrapper(downloadStatus);
+        var ignoredDownloads = new[] { "notmatching" };
+
+        // Act
+        var result = wrapper.IsIgnored(ignoredDownloads);
+
+        // Assert
+        result.ShouldBeFalse();
     }
 }

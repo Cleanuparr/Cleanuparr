@@ -110,94 +110,87 @@ public class UTorrentItemWrapperTests
     }
 
     [Fact]
-    public void Trackers_WithValidUrls_ReturnsHostNames()
+    public void IsIgnored_WithEmptyList_ReturnsFalse()
     {
         // Arrange
-        var torrentItem = new UTorrentItem();
-        var torrentProperties = new UTorrentProperties
-        {
-            Trackers = "http://tracker1.example.com:8080/announce\r\nhttps://tracker2.example.com/announce\r\nudp://tracker3.example.com:1337/announce"
-        };
+        var torrentItem = new UTorrentItem { Hash = "abc123", Name = "Test Torrent" };
+        var torrentProperties = new UTorrentProperties();
         var wrapper = new UTorrentItemWrapper(torrentItem, torrentProperties);
 
         // Act
-        var result = wrapper.Trackers;
+        var result = wrapper.IsIgnored(Array.Empty<string>());
 
         // Assert
-        result.Count.ShouldBe(3);
-        result.ShouldContain("tracker1.example.com");
-        result.ShouldContain("tracker2.example.com");
-        result.ShouldContain("tracker3.example.com");
+        result.ShouldBeFalse();
     }
 
     [Fact]
-    public void Trackers_WithDuplicateHosts_ReturnsDistinctHosts()
+    public void IsIgnored_MatchingHash_ReturnsTrue()
     {
         // Arrange
-        var torrentItem = new UTorrentItem();
-        var torrentProperties = new UTorrentProperties
-        {
-            Trackers = "http://tracker1.example.com:8080/announce\r\nhttps://tracker1.example.com/announce\r\nudp://tracker1.example.com:1337/announce"
-        };
+        var torrentItem = new UTorrentItem { Hash = "abc123", Name = "Test Torrent" };
+        var torrentProperties = new UTorrentProperties();
         var wrapper = new UTorrentItemWrapper(torrentItem, torrentProperties);
+        var ignoredDownloads = new[] { "abc123" };
 
         // Act
-        var result = wrapper.Trackers;
+        var result = wrapper.IsIgnored(ignoredDownloads);
 
         // Assert
-        result.Count.ShouldBe(1);
-        result.ShouldContain("tracker1.example.com");
+        result.ShouldBeTrue();
     }
 
     [Fact]
-    public void Trackers_WithInvalidUrls_SkipsInvalidEntries()
+    public void IsIgnored_MatchingCategory_ReturnsTrue()
     {
         // Arrange
-        var torrentItem = new UTorrentItem();
-        var torrentProperties = new UTorrentProperties
-        {
-            Trackers = "http://valid.example.com/announce\r\ninvalid-url\r\n\r\n "
-        };
+        var torrentItem = new UTorrentItem { Hash = "abc123", Name = "Test Torrent", Label = "test-category" };
+        var torrentProperties = new UTorrentProperties();
         var wrapper = new UTorrentItemWrapper(torrentItem, torrentProperties);
+        var ignoredDownloads = new[] { "test-category" };
 
         // Act
-        var result = wrapper.Trackers;
+        var result = wrapper.IsIgnored(ignoredDownloads);
 
         // Assert
-        result.Count.ShouldBe(1);
-        result.ShouldContain("valid.example.com");
+        result.ShouldBeTrue();
     }
 
     [Fact]
-    public void Trackers_WithEmptyList_ReturnsEmptyList()
+    public void IsIgnored_MatchingTracker_ReturnsTrue()
     {
         // Arrange
-        var torrentItem = new UTorrentItem();
+        var torrentItem = new UTorrentItem { Hash = "abc123", Name = "Test Torrent" };
         var torrentProperties = new UTorrentProperties
         {
-            Trackers = ""
+            Trackers = "http://tracker.example.com/announce"
         };
         var wrapper = new UTorrentItemWrapper(torrentItem, torrentProperties);
+        var ignoredDownloads = new[] { "tracker.example.com" };
 
         // Act
-        var result = wrapper.Trackers;
+        var result = wrapper.IsIgnored(ignoredDownloads);
 
         // Assert
-        result.ShouldBeEmpty();
+        result.ShouldBeTrue();
     }
 
     [Fact]
-    public void Trackers_WithNullTrackerList_ReturnsEmptyList()
+    public void IsIgnored_NotMatching_ReturnsFalse()
     {
         // Arrange
-        var torrentItem = new UTorrentItem();
-        var torrentProperties = new UTorrentProperties(); // Trackers defaults to empty string
+        var torrentItem = new UTorrentItem { Hash = "abc123", Name = "Test Torrent", Label = "some-category" };
+        var torrentProperties = new UTorrentProperties
+        {
+            Trackers = "http://tracker.example.com/announce"
+        };
         var wrapper = new UTorrentItemWrapper(torrentItem, torrentProperties);
+        var ignoredDownloads = new[] { "notmatching" };
 
         // Act
-        var result = wrapper.Trackers;
+        var result = wrapper.IsIgnored(ignoredDownloads);
 
         // Assert
-        result.ShouldBeEmpty();
+        result.ShouldBeFalse();
     }
 }

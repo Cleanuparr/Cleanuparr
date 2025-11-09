@@ -390,7 +390,6 @@ public class RuleManagerTests
         torrentMock.SetupGet(t => t.IsPrivate).Returns(isPrivate);
         torrentMock.SetupGet(t => t.CompletionPercentage).Returns(completionPercentage);
         torrentMock.SetupGet(t => t.Size).Returns(ByteSize.Parse(size).Bytes);
-        torrentMock.SetupGet(t => t.Trackers).Returns(Array.Empty<string>());
         torrentMock.SetupGet(t => t.DownloadedBytes).Returns(0);
         torrentMock.SetupGet(t => t.DownloadSpeed).Returns(0);
         torrentMock.SetupGet(t => t.Eta).Returns(3600);

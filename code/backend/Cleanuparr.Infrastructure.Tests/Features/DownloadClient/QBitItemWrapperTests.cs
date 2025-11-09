@@ -154,87 +154,6 @@ public class QBitItemWrapperTests
         result.ShouldBe(expectedPercentage);
     }
 
-    [Fact]
-    public void Trackers_WithValidUrls_ReturnsHostNames()
-    {
-        // Arrange
-        var torrentInfo = new TorrentInfo();
-        var trackers = new List<TorrentTracker>
-        {
-            new() { Url = "http://tracker1.example.com:8080/announce" },
-            new() { Url = "https://tracker2.example.com/announce" },
-            new() { Url = "udp://tracker3.example.com:1337/announce" }
-        };
-        var wrapper = new QBitItemWrapper(torrentInfo, trackers, false);
-
-        // Act
-        var result = wrapper.Trackers;
-
-        // Assert
-        result.Count.ShouldBe(3);
-        result.ShouldContain("tracker1.example.com");
-        result.ShouldContain("tracker2.example.com");
-        result.ShouldContain("tracker3.example.com");
-    }
-
-    [Fact]
-    public void Trackers_WithDuplicateHosts_ReturnsDistinctHosts()
-    {
-        // Arrange
-        var torrentInfo = new TorrentInfo();
-        var trackers = new List<TorrentTracker>
-        {
-            new() { Url = "http://tracker1.example.com:8080/announce" },
-            new() { Url = "https://tracker1.example.com/announce" },
-            new() { Url = "udp://tracker1.example.com:1337/announce" }
-        };
-        var wrapper = new QBitItemWrapper(torrentInfo, trackers, false);
-
-        // Act
-        var result = wrapper.Trackers;
-
-        // Assert
-        result.Count.ShouldBe(1);
-        result.ShouldContain("tracker1.example.com");
-    }
-
-    [Fact]
-    public void Trackers_WithInvalidUrls_SkipsInvalidEntries()
-    {
-        // Arrange
-        var torrentInfo = new TorrentInfo();
-        var trackers = new List<TorrentTracker>
-        {
-            new() { Url = "http://valid.example.com/announce" },
-            new() { Url = "invalid-url" },
-            new() { Url = "" },
-            new() { Url = null }
-        };
-        var wrapper = new QBitItemWrapper(torrentInfo, trackers, false);
-
-        // Act
-        var result = wrapper.Trackers;
-
-        // Assert
-        result.Count.ShouldBe(1);
-        result.ShouldContain("valid.example.com");
-    }
-
-    [Fact]
-    public void Trackers_WithEmptyList_ReturnsEmptyList()
-    {
-        // Arrange
-        var torrentInfo = new TorrentInfo();
-        var trackers = new List<TorrentTracker>();
-        var wrapper = new QBitItemWrapper(torrentInfo, trackers, false);
-
-        // Act
-        var result = wrapper.Trackers;
-
-        // Assert
-        result.ShouldBeEmpty();
-    }
-
     // State checking method tests
     [Theory]
     [InlineData(TorrentState.Downloading, true)]
@@ -425,22 +344,6 @@ public class QBitItemWrapperTests
     }
 
     [Fact]
-    public void IsIgnored_MatchingName_ReturnsTrue()
-    {
-        // Arrange
-        var torrentInfo = new TorrentInfo { Name = "Test Torrent", Hash = "abc123" };
-        var trackers = new List<TorrentTracker>();
-        var wrapper = new QBitItemWrapper(torrentInfo, trackers, false);
-        var ignoredDownloads = new[] { "test" };
-
-        // Act
-        var result = wrapper.IsIgnored(ignoredDownloads);
-
-        // Assert
-        result.ShouldBeTrue();
-    }
-
-    [Fact]
     public void IsIgnored_MatchingHash_ReturnsTrue()
     {
         // Arrange
@@ -457,10 +360,56 @@ public class QBitItemWrapperTests
     }
 
     [Fact]
+    public void IsIgnored_MatchingTag_ReturnsTrue()
+    {
+        // Arrange
+        var torrentInfo = new TorrentInfo
+        {
+            Name = "Test Torrent",
+            Hash = "abc123",
+            Tags = new List<string> { "test-tag" }.AsReadOnly()
+        };
+        var trackers = new List<TorrentTracker>();
+        var wrapper = new QBitItemWrapper(torrentInfo, trackers, false);
+        var ignoredDownloads = new[] { "test-tag" };
+
+        // Act
+        var result = wrapper.IsIgnored(ignoredDownloads);
+
+        // Assert
+        result.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void IsIgnored_MatchingCategory_ReturnsTrue()
+    {
+        // Arrange
+        var torrentInfo = new TorrentInfo
+        {
+            Name = "Test Torrent",
+            Hash = "abc123",
+            Category = "test-category"
+        };
+        var trackers = new List<TorrentTracker>();
+        var wrapper = new QBitItemWrapper(torrentInfo, trackers, false);
+        var ignoredDownloads = new[] { "test-category" };
+
+        // Act
+        var result = wrapper.IsIgnored(ignoredDownloads);
+
+        // Assert
+        result.ShouldBeTrue();
+    }
+
+    [Fact]
     public void IsIgnored_MatchingTracker_ReturnsTrue()
     {
         // Arrange
-        var torrentInfo = new TorrentInfo { Name = "Test Torrent", Hash = "abc123" };
+        var torrentInfo = new TorrentInfo
+        {
+            Name = "Test Torrent",
+            Hash = "abc123"
+        };
         var trackers = new List<TorrentTracker>
         {
             new() { Url = "http://tracker.example.com/announce" }
@@ -479,7 +428,13 @@ public class QBitItemWrapperTests
     public void IsIgnored_NotMatching_ReturnsFalse()
     {
         // Arrange
-        var torrentInfo = new TorrentInfo { Name = "Test Torrent", Hash = "abc123" };
+        var torrentInfo = new TorrentInfo
+        {
+            Name = "Test Torrent",
+            Hash = "abc123",
+            Category = "some-category",
+            Tags = new List<string> { "some-tag" }.AsReadOnly()
+        };
         var trackers = new List<TorrentTracker>
         {
             new() { Url = "http://tracker.example.com/announce" }
