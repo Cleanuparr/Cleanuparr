@@ -1,4 +1,5 @@
 using Cleanuparr.Domain.Entities;
+using Cleanuparr.Infrastructure.Features.DownloadClient.UTorrent.Extensions;
 using QBittorrent.Client;
 
 namespace Cleanuparr.Infrastructure.Features.DownloadClient.QBittorrent;
@@ -73,10 +74,30 @@ public sealed class QBitItem : ITorrentItem
             return false;
         }
 
-        return ignoredDownloads.Any(pattern =>
-            Name.Contains(pattern, StringComparison.InvariantCultureIgnoreCase) ||
-            Hash.Equals(pattern, StringComparison.InvariantCultureIgnoreCase) ||
-            Trackers.Any(tracker => tracker.EndsWith(pattern, StringComparison.InvariantCultureIgnoreCase)));
+        foreach (string pattern in ignoredDownloads)
+        {
+            if (Hash.Equals(pattern, StringComparison.InvariantCultureIgnoreCase))
+            {
+                return true;
+            }
+            
+            if (Category?.Equals(pattern, StringComparison.InvariantCultureIgnoreCase) is true)
+            {
+                return true;
+            }
+
+            if (_torrentInfo.Tags.Contains(pattern, StringComparer.InvariantCultureIgnoreCase))
+            {
+                return true;
+            }
+            
+            if (Trackers.Any(tracker => tracker.ShouldIgnore(ignoredDownloads)))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>

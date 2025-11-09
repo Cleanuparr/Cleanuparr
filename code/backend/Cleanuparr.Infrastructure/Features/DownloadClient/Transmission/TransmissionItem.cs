@@ -1,4 +1,6 @@
 using Cleanuparr.Domain.Entities;
+using Cleanuparr.Infrastructure.Extensions;
+using Cleanuparr.Infrastructure.Services;
 using Transmission.API.RPC.Entity;
 
 namespace Cleanuparr.Infrastructure.Features.DownloadClient.Transmission;
@@ -55,7 +57,7 @@ public sealed class TransmissionItem : ITorrentItem
     public long SeedingTimeSeconds => _torrentInfo.SecondsSeeding ?? 0;
 
     // Categories and tags
-    public string? Category => _torrentInfo.Labels?.FirstOrDefault();
+    public string? Category => _torrentInfo.GetCategory();
     public IReadOnlyList<string> Tags => _torrentInfo.Labels?.ToList().AsReadOnly() ?? (IReadOnlyList<string>)Array.Empty<string>();
 
     // State checking methods
@@ -78,10 +80,28 @@ public sealed class TransmissionItem : ITorrentItem
             return false;
         }
 
-        return ignoredDownloads.Any(pattern =>
-            Name.Contains(pattern, StringComparison.InvariantCultureIgnoreCase) ||
-            Hash.Equals(pattern, StringComparison.InvariantCultureIgnoreCase) ||
-            Trackers.Any(tracker => tracker.EndsWith(pattern, StringComparison.InvariantCultureIgnoreCase)));
+        foreach (string pattern in ignoredDownloads)
+        {
+            if (Hash?.Equals(pattern, StringComparison.InvariantCultureIgnoreCase) is true)
+            {
+                return true;
+            }
+
+            if (Category?.Equals(pattern, StringComparison.InvariantCultureIgnoreCase) is true)
+            {
+                return true;
+            }
+
+            bool? hasIgnoredTracker = _torrentInfo.Trackers?
+                .Any(x => UriService.GetDomain(x.Announce)?.EndsWith(pattern, StringComparison.InvariantCultureIgnoreCase) ?? false);
+            
+            if (hasIgnoredTracker is true)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>
