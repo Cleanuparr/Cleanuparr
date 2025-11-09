@@ -1,5 +1,6 @@
 using Cleanuparr.Domain.Entities;
 using Cleanuparr.Domain.Entities.UTorrent.Response;
+using Cleanuparr.Infrastructure.Features.DownloadClient.UTorrent.Extensions;
 
 namespace Cleanuparr.Infrastructure.Features.DownloadClient.UTorrent;
 
@@ -82,11 +83,26 @@ public sealed class UTorrentItemWrapper : ITorrentItem
         {
             return false;
         }
+        
+        foreach (string value in ignoredDownloads)
+        {
+            if (Hash.Equals(value, StringComparison.InvariantCultureIgnoreCase))
+            {
+                return true;
+            }
+            
+            if (Category?.Equals(value, StringComparison.InvariantCultureIgnoreCase) is true)
+            {
+                return true;
+            }
 
-        return ignoredDownloads.Any(pattern =>
-            Name.Contains(pattern, StringComparison.InvariantCultureIgnoreCase) ||
-            Hash.Equals(pattern, StringComparison.InvariantCultureIgnoreCase) ||
-            Trackers.Any(tracker => tracker.EndsWith(pattern, StringComparison.InvariantCultureIgnoreCase)));
+            if (_torrentProperties.TrackerList.Any(x => x.ShouldIgnore(ignoredDownloads)))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>
