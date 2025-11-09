@@ -1,4 +1,5 @@
 using Cleanuparr.Domain.Entities;
+using Cleanuparr.Infrastructure.Extensions;
 using Cleanuparr.Infrastructure.Features.DownloadClient.UTorrent.Extensions;
 using QBittorrent.Client;
 
@@ -92,7 +93,7 @@ public sealed class QBitItemWrapper : ITorrentItemWrapper
                 return true;
             }
             
-            if (Trackers.Any(tracker => tracker.ShouldIgnore(ignoredDownloads)))
+            if (_trackers.Any(tracker => tracker.ShouldIgnore(ignoredDownloads)))
             {
                 return true;
             }
