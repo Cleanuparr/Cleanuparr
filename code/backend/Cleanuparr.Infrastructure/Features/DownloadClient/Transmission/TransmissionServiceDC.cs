@@ -39,59 +39,10 @@ public partial class TransmissionService
     }
 
     /// <inheritdoc/>
-    public override async Task CleanDownloadsAsync(List<ITorrentItemWrapper>? downloads, List<CleanCategory> categoriesToClean)
+    protected override async Task DeleteDownloadInternal(ITorrentItemWrapper torrent)
     {
-        if (downloads?.Count is null or 0)
-        {
-            return;
-        }
-
-        foreach (TransmissionItemWrapper torrent in downloads.Cast<TransmissionItemWrapper>())
-        {
-            if (string.IsNullOrEmpty(torrent.Hash))
-            {
-                continue;
-            }
-            
-            CleanCategory? category = categoriesToClean
-                .FirstOrDefault(x => x.Name.Equals(torrent.Category, StringComparison.InvariantCultureIgnoreCase));
-
-            if (category is null)
-            {
-                continue;
-            }
-
-            var downloadCleanerConfig = ContextProvider.Get<DownloadCleanerConfig>(nameof(DownloadCleanerConfig));
-
-            if (!downloadCleanerConfig.DeletePrivate && torrent.IsPrivate)
-            {
-                _logger.LogDebug("skip | torrent is private | {name}", torrent.Name);
-                continue;
-            }
-
-            ContextProvider.Set("downloadName", torrent.Name);
-            ContextProvider.Set("hash", torrent.Hash);
-
-            TimeSpan seedingTime = TimeSpan.FromSeconds(torrent.SeedingTimeSeconds);
-            SeedingCheckResult result = ShouldCleanDownload(torrent.Ratio, seedingTime, category);
-
-            if (!result.ShouldClean)
-            {
-                continue;
-            }
-
-            await _dryRunInterceptor.InterceptAsync(RemoveDownloadAsync, torrent.Info.Id);
-
-            _logger.LogInformation(
-                "download cleaned | {reason} reached | {name}",
-                result.Reason is CleanReason.MaxRatioReached
-                    ? "max ratio & min seeding time"
-                    : "max seeding time",
-                torrent.Name
-            );
-
-            await _eventPublisher.PublishDownloadCleaned(torrent.Ratio, seedingTime, category.Name, result.Reason);
-        }
+        var transmissionTorrent = (TransmissionItemWrapper)torrent;
+        await RemoveDownloadAsync(transmissionTorrent.Info.Id);
     }
     
     public override async Task CreateCategoryAsync(string name)

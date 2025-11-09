@@ -93,16 +93,76 @@ public abstract class DownloadService : IDownloadService
     public abstract List<ITorrentItemWrapper>? FilterDownloadsToChangeCategoryAsync(List<ITorrentItemWrapper>? downloads, List<string> categories);
 
     /// <inheritdoc/>
-    public abstract Task CleanDownloadsAsync(List<ITorrentItemWrapper>? downloads, List<CleanCategory> categoriesToClean);
+    public virtual async Task CleanDownloadsAsync(List<ITorrentItemWrapper>? downloads, List<CleanCategory> categoriesToClean)
+    {
+        if (downloads?.Count is null or 0)
+        {
+            return;
+        }
+
+        foreach (ITorrentItemWrapper torrent in downloads)
+        {
+            if (string.IsNullOrEmpty(torrent.Hash))
+            {
+                continue;
+            }
+
+            CleanCategory? category = categoriesToClean
+                .FirstOrDefault(x => (torrent.Category ?? string.Empty).Equals(x.Name, StringComparison.InvariantCultureIgnoreCase));
+
+            if (category is null)
+            {
+                continue;
+            }
+
+            var downloadCleanerConfig = ContextProvider.Get<DownloadCleanerConfig>(nameof(DownloadCleanerConfig));
+
+            if (!downloadCleanerConfig.DeletePrivate && torrent.IsPrivate)
+            {
+                _logger.LogDebug("skip | download is private | {name}", torrent.Name);
+                continue;
+            }
+
+            ContextProvider.Set("downloadName", torrent.Name);
+            ContextProvider.Set("hash", torrent.Hash);
+
+            TimeSpan seedingTime = TimeSpan.FromSeconds(torrent.SeedingTimeSeconds);
+            SeedingCheckResult result = ShouldCleanDownload(torrent.Ratio, seedingTime, category);
+
+            if (!result.ShouldClean)
+            {
+                continue;
+            }
+
+            await _dryRunInterceptor.InterceptAsync(DeleteDownloadInternal, torrent);
+
+            _logger.LogInformation(
+                "download cleaned | {reason} reached | {name}",
+                result.Reason is CleanReason.MaxRatioReached
+                    ? "MAX_RATIO & MIN_SEED_TIME"
+                    : "MAX_SEED_TIME",
+                torrent.Name
+            );
+
+            await _eventPublisher.PublishDownloadCleaned(torrent.Ratio, seedingTime, category.Name, result.Reason);
+        }
+    }
 
     /// <inheritdoc/>
     public abstract Task ChangeCategoryForNoHardLinksAsync(List<ITorrentItemWrapper>? downloads);
-    
+
     /// <inheritdoc/>
     public abstract Task CreateCategoryAsync(string name);
-    
+
     /// <inheritdoc/>
     public abstract Task<BlockFilesResult> BlockUnwantedFilesAsync(string hash, IReadOnlyList<string> ignoredDownloads);
+
+    /// <summary>
+    /// Deletes the specified download from the download client.
+    /// Each client implementation handles the deletion according to its API requirements.
+    /// </summary>
+    /// <param name="torrent">The torrent to delete</param>
+    protected abstract Task DeleteDownloadInternal(ITorrentItemWrapper torrent);
     
     protected SeedingCheckResult ShouldCleanDownload(double ratio, TimeSpan seedingTime, CleanCategory category)
     {
