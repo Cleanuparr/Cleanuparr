@@ -1,5 +1,6 @@
 using Cleanuparr.Domain.Entities;
 using Cleanuparr.Domain.Entities.Deluge.Response;
+using Cleanuparr.Infrastructure.Services;
 
 namespace Cleanuparr.Infrastructure.Features.DownloadClient.Deluge;
 
@@ -69,11 +70,26 @@ public sealed class DelugeItemWrapper : ITorrentItemWrapper
         {
             return false;
         }
+        
+        foreach (string pattern in ignoredDownloads)
+        {
+            if (Hash?.Equals(pattern, StringComparison.InvariantCultureIgnoreCase) is true)
+            {
+                return true;
+            }
 
-        return ignoredDownloads.Any(pattern =>
-            Name.Contains(pattern, StringComparison.InvariantCultureIgnoreCase) ||
-            Hash.Equals(pattern, StringComparison.InvariantCultureIgnoreCase) ||
-            Trackers.Any(tracker => tracker.EndsWith(pattern, StringComparison.InvariantCultureIgnoreCase)));
+            if (Category?.Equals(pattern, StringComparison.InvariantCultureIgnoreCase) is true)
+            {
+                return true;
+            }
+            
+            if (Info.Trackers.Any(x => UriService.GetDomain(x.Url)?.EndsWith(pattern, StringComparison.InvariantCultureIgnoreCase) is true))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>

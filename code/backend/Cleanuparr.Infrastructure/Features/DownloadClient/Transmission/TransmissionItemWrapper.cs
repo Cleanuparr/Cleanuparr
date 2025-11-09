@@ -1,4 +1,5 @@
 using Cleanuparr.Domain.Entities;
+using Cleanuparr.Infrastructure.Services;
 using Transmission.API.RPC.Entity;
 
 namespace Cleanuparr.Infrastructure.Features.DownloadClient.Transmission;
@@ -76,10 +77,28 @@ public sealed class TransmissionItemWrapper : ITorrentItemWrapper
             return false;
         }
 
-        return ignoredDownloads.Any(pattern =>
-            Name.Contains(pattern, StringComparison.InvariantCultureIgnoreCase) ||
-            Hash.Equals(pattern, StringComparison.InvariantCultureIgnoreCase) ||
-            Trackers.Any(tracker => tracker.EndsWith(pattern, StringComparison.InvariantCultureIgnoreCase)));
+        foreach (string pattern in ignoredDownloads)
+        {
+            if (Hash?.Equals(pattern, StringComparison.InvariantCultureIgnoreCase) is true)
+            {
+                return true;
+            }
+
+            if (Category?.Equals(pattern, StringComparison.InvariantCultureIgnoreCase) is true)
+            {
+                return true;
+            }
+
+            bool? hasIgnoredTracker = Info.Trackers?
+                .Any(x => UriService.GetDomain(x.Announce)?.EndsWith(pattern, StringComparison.InvariantCultureIgnoreCase) ?? false);
+            
+            if (hasIgnoredTracker is true)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>
