@@ -50,7 +50,6 @@ public sealed class TransmissionItemWrapper : ITorrentItemWrapper
 
     // Categories and tags
     public string? Category => Info.Labels?.FirstOrDefault();
-    public IReadOnlyList<string> Tags => Info.Labels?.ToList().AsReadOnly() ?? (IReadOnlyList<string>)Array.Empty<string>();
 
     // State checking methods
     // Transmission status: 0=stopped, 1=check pending, 2=checking, 3=download pending, 4=downloading, 5=seed pending, 6=seeding

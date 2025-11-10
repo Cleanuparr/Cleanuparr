@@ -30,9 +30,7 @@ public interface ITorrentItemWrapper
     DateTime? DateCompleted { get; }
     long SeedingTimeSeconds { get; }
 
-    // Categories and tags
     string? Category { get; }
-    IReadOnlyList<string> Tags { get; }
 
     // State checking methods
     bool IsDownloading();

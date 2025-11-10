@@ -44,7 +44,6 @@ public sealed class DelugeItemWrapper : ITorrentItemWrapper
 
     // Categories and tags
     public string? Category => Info.Label;
-    public IReadOnlyList<string> Tags => Array.Empty<string>(); // Deluge doesn't have tags
 
     // State checking methods
     public bool IsDownloading() => Info.State?.Equals("Downloading", StringComparison.InvariantCultureIgnoreCase) == true;

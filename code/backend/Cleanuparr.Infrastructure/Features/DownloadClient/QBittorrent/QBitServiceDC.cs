@@ -49,9 +49,9 @@ public partial class QBitService
             .Where(x => categories.Any(cat => cat.Equals(x.Category, StringComparison.InvariantCultureIgnoreCase)))
             .Where(x =>
             {
-                if (downloadCleanerConfig.UnlinkedUseTag)
+                if (downloadCleanerConfig.UnlinkedUseTag && x is QBitItemWrapper qBitItemWrapper)
                 {
-                    return !x.Tags.Any(tag =>
+                    return !qBitItemWrapper.Tags.Any(tag =>
                         tag.Equals(downloadCleanerConfig.UnlinkedTargetCategory, StringComparison.InvariantCultureIgnoreCase));
                 }
 

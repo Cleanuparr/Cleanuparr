@@ -47,7 +47,6 @@ public sealed class UTorrentItemWrapper : ITorrentItemWrapper
 
     // Categories and tags
     public string? Category => Info.Label;
-    public IReadOnlyList<string> Tags => Array.Empty<string>(); // uTorrent doesn't have tags
 
     // State checking methods using status bitfield
     public bool IsDownloading() =>
