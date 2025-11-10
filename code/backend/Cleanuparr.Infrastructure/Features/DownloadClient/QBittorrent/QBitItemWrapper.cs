@@ -21,42 +21,38 @@ public sealed class QBitItemWrapper : ITorrentItemWrapper
         IsPrivate = isPrivate;
     }
 
-    // Basic identification
     public string Hash => Info.Hash ?? string.Empty;
+    
     public string Name => Info.Name ?? string.Empty;
 
-    // Privacy and tracking
     public bool IsPrivate { get; }
 
-    // Size and progress
     public long Size => Info.Size;
+    
     public double CompletionPercentage => Info.Progress * 100.0;
+    
     public long DownloadedBytes => Info.Downloaded ?? 0;
 
-    // Speed and transfer rates
     public long DownloadSpeed => Info.DownloadSpeed;
+    
     public double Ratio => Info.Ratio;
 
-    // Time tracking
     public long Eta => Info.EstimatedTime?.TotalSeconds is { } eta ? (long)eta : 0;
-    public long SeedingTimeSeconds => Info.SeedingTime?.TotalSeconds is double seedTime ? (long)seedTime : 0;
+    
+    public long SeedingTimeSeconds => Info.SeedingTime?.TotalSeconds is { } seedTime ? (long)seedTime : 0;
 
-    // Categories and tags
     public string? Category => Info.Category;
+    
     public IReadOnlyList<string> Tags => Info.Tags?.ToList().AsReadOnly() ?? (IReadOnlyList<string>)Array.Empty<string>();
 
-    // State checking methods
     public bool IsDownloading() => Info.State is TorrentState.Downloading or TorrentState.ForcedDownload;
+    
     public bool IsStalled() => Info.State is TorrentState.StalledDownload;
+    
     public bool IsSeeding() => Info.State is TorrentState.Uploading or TorrentState.ForcedUpload or TorrentState.StalledUpload;
-    public bool IsCompleted() => CompletionPercentage >= 100.0;
-    public bool IsPaused() => Info.State is TorrentState.PausedDownload or TorrentState.PausedUpload;
-    public bool IsQueued() => Info.State is TorrentState.QueuedDownload or TorrentState.QueuedUpload;
-    public bool IsChecking() => Info.State is TorrentState.CheckingDownload or TorrentState.CheckingUpload or TorrentState.CheckingResumeData;
-    public bool IsAllocating() => Info.State is TorrentState.Allocating;
+    
     public bool IsMetadataDownloading() => Info.State is TorrentState.FetchingMetadata or TorrentState.ForcedFetchingMetadata;
 
-    // Filtering methods
     public bool IsIgnored(IReadOnlyList<string> ignoredDownloads)
     {
         if (ignoredDownloads.Count == 0)

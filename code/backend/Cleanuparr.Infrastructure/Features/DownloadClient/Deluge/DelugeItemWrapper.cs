@@ -16,42 +16,34 @@ public sealed class DelugeItemWrapper : ITorrentItemWrapper
         Info = downloadStatus ?? throw new ArgumentNullException(nameof(downloadStatus));
     }
 
-    // Basic identification
     public string Hash => Info.Hash ?? string.Empty;
+    
     public string Name => Info.Name ?? string.Empty;
 
-    // Privacy and tracking
     public bool IsPrivate => Info.Private;
 
-    // Size and progress
     public long Size => Info.Size;
+    
     public double CompletionPercentage => Info.Size > 0
         ? (Info.TotalDone / (double)Info.Size) * 100.0
         : 0.0;
+    
     public long DownloadedBytes => Info.TotalDone;
 
-    // Speed and transfer rates
     public long DownloadSpeed => Info.DownloadSpeed;
+    
     public double Ratio => Info.Ratio;
 
-    // Time tracking
     public long Eta => (long)Info.Eta;
+    
     public long SeedingTimeSeconds => Info.SeedingTime;
 
-    // Categories and tags
     public string? Category => Info.Label;
 
-    // State checking methods
     public bool IsDownloading() => Info.State?.Equals("Downloading", StringComparison.InvariantCultureIgnoreCase) == true;
-    public bool IsStalled() => Info.State?.Equals("Downloading", StringComparison.InvariantCultureIgnoreCase) == true && Info.DownloadSpeed == 0 && Info.Eta == 0;
-    public bool IsSeeding() => Info.State?.Equals("Seeding", StringComparison.InvariantCultureIgnoreCase) == true;
-    public bool IsCompleted() => CompletionPercentage >= 100.0;
-    public bool IsPaused() => Info.State?.Equals("Paused", StringComparison.InvariantCultureIgnoreCase) == true;
-    public bool IsQueued() => Info.State?.Equals("Queued", StringComparison.InvariantCultureIgnoreCase) == true;
-    public bool IsChecking() => Info.State?.Equals("Checking", StringComparison.InvariantCultureIgnoreCase) == true;
-    public bool IsAllocating() => Info.State?.Equals("Allocating", StringComparison.InvariantCultureIgnoreCase) == true;
+    
+    public bool IsStalled() => Info.State?.Equals("Downloading", StringComparison.InvariantCultureIgnoreCase) == true && Info is { DownloadSpeed: <= 0, Eta: <= 0 };
 
-    // Filtering methods
     public bool IsIgnored(IReadOnlyList<string> ignoredDownloads)
     {
         if (ignoredDownloads.Count == 0)

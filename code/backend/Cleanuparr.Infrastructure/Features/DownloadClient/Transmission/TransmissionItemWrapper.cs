@@ -16,44 +16,36 @@ public sealed class TransmissionItemWrapper : ITorrentItemWrapper
         Info = torrentInfo ?? throw new ArgumentNullException(nameof(torrentInfo));
     }
 
-    // Basic identification
     public string Hash => Info.HashString ?? string.Empty;
+    
     public string Name => Info.Name ?? string.Empty;
 
-    // Privacy and tracking
     public bool IsPrivate => Info.IsPrivate ?? false;
 
-    // Size and progress
     public long Size => Info.TotalSize ?? 0;
+    
     public double CompletionPercentage => Info.TotalSize > 0
         ? ((Info.DownloadedEver ?? 0) / (double)Info.TotalSize) * 100.0
         : 0.0;
+    
     public long DownloadedBytes => Info.DownloadedEver ?? 0;
 
-    // Speed and transfer rates
     public long DownloadSpeed => Info.RateDownload ?? 0;
+    
     public double Ratio => (Info.UploadedEver ?? 0) > 0 && (Info.DownloadedEver ?? 0) > 0
         ? (Info.UploadedEver ?? 0) / (double)(Info.DownloadedEver ?? 1)
         : 0.0;
 
-    // Time tracking
     public long Eta => Info.Eta ?? 0;
+    
     public long SeedingTimeSeconds => Info.SecondsSeeding ?? 0;
 
-    // Categories and tags
     public string? Category => Info.Labels?.FirstOrDefault();
 
-    // State checking methods
     // Transmission status: 0=stopped, 1=check pending, 2=checking, 3=download pending, 4=downloading, 5=seed pending, 6=seeding
     public bool IsDownloading() => Info.Status == 4;
     public bool IsStalled() => Info is { Status: 4, RateDownload: <= 0, Eta: <= 0 };
-    public bool IsSeeding() => Info.Status == 6;
-    public bool IsCompleted() => CompletionPercentage >= 100.0;
-    public bool IsPaused() => Info.Status == 0;
-    public bool IsQueued() => Info.Status is 1 or 3 or 5;
-    public bool IsChecking() => Info.Status == 2;
 
-    // Filtering methods
     public bool IsIgnored(IReadOnlyList<string> ignoredDownloads)
     {
         if (ignoredDownloads.Count == 0)
