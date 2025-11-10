@@ -17,7 +17,6 @@ public interface ITorrentItemWrapper
     long Size { get; }
     double CompletionPercentage { get; }
     long DownloadedBytes { get; }
-    long TotalUploaded { get; }
 
     // Speed and transfer rates
     long DownloadSpeed { get; }

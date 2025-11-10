@@ -184,38 +184,7 @@ public class QBitItemWrapperTests
         // Assert
         result.ShouldBe(0);
     }
-
-    [Fact]
-    public void TotalUploaded_ReturnsCorrectValue()
-    {
-        // Arrange
-        var expectedUploaded = 1024L * 1024 * 750; // 750MB
-        var torrentInfo = new TorrentInfo { Uploaded = expectedUploaded };
-        var trackers = new List<TorrentTracker>();
-        var wrapper = new QBitItemWrapper(torrentInfo, trackers, false);
-
-        // Act
-        var result = wrapper.TotalUploaded;
-
-        // Assert
-        result.ShouldBe(expectedUploaded);
-    }
-
-    [Fact]
-    public void TotalUploaded_WithNullValue_ReturnsZero()
-    {
-        // Arrange
-        var torrentInfo = new TorrentInfo { Uploaded = null };
-        var trackers = new List<TorrentTracker>();
-        var wrapper = new QBitItemWrapper(torrentInfo, trackers, false);
-
-        // Act
-        var result = wrapper.TotalUploaded;
-
-        // Assert
-        result.ShouldBe(0);
-    }
-
+    
     [Fact]
     public void DownloadSpeed_ReturnsCorrectValue()
     {

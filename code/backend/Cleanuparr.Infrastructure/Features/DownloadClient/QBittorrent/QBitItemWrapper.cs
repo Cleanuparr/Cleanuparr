@@ -32,7 +32,6 @@ public sealed class QBitItemWrapper : ITorrentItemWrapper
     public long Size => Info.Size;
     public double CompletionPercentage => Info.Progress * 100.0;
     public long DownloadedBytes => Info.Downloaded ?? 0;
-    public long TotalUploaded => Info.Uploaded ?? 0;
 
     // Speed and transfer rates
     public long DownloadSpeed => Info.DownloadSpeed;

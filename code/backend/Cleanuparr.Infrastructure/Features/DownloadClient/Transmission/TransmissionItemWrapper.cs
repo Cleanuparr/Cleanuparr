@@ -29,7 +29,6 @@ public sealed class TransmissionItemWrapper : ITorrentItemWrapper
         ? ((Info.DownloadedEver ?? 0) / (double)Info.TotalSize) * 100.0
         : 0.0;
     public long DownloadedBytes => Info.DownloadedEver ?? 0;
-    public long TotalUploaded => Info.UploadedEver ?? 0;
 
     // Speed and transfer rates
     public long DownloadSpeed => Info.RateDownload ?? 0;

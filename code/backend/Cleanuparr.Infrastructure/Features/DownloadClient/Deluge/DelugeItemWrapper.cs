@@ -29,7 +29,6 @@ public sealed class DelugeItemWrapper : ITorrentItemWrapper
         ? (Info.TotalDone / (double)Info.Size) * 100.0
         : 0.0;
     public long DownloadedBytes => Info.TotalDone;
-    public long TotalUploaded => (long)(Info.Ratio * Info.TotalDone);
 
     // Speed and transfer rates
     public long DownloadSpeed => Info.DownloadSpeed;

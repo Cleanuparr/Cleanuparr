@@ -30,7 +30,6 @@ public sealed class UTorrentItemWrapper : ITorrentItemWrapper
     public long Size => Info.Size;
     public double CompletionPercentage => Info.Progress / 10.0; // Progress is in permille (1000 = 100%)
     public long DownloadedBytes => Info.Downloaded;
-    public long TotalUploaded => Info.Uploaded;
 
     // Speed and transfer rates
     public long DownloadSpeed => Info.DownloadSpeed;
