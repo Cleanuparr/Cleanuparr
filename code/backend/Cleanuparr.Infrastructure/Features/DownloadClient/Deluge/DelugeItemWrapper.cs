@@ -36,7 +36,6 @@ public sealed class DelugeItemWrapper : ITorrentItemWrapper
 
     // Time tracking
     public long Eta => (long)Info.Eta;
-    public DateTime? DateAdded => null; // Deluge DownloadStatus doesn't expose date added
     public DateTime? DateCompleted => null; // Deluge DownloadStatus doesn't expose date completed
     public long SeedingTimeSeconds => Info.SeedingTime;
 

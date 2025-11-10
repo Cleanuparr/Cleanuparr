@@ -38,8 +38,7 @@ public sealed class QBitItemWrapper : ITorrentItemWrapper
     public double Ratio => Info.Ratio;
 
     // Time tracking
-    public long Eta => Info.EstimatedTime?.TotalSeconds is double eta ? (long)eta : 0;
-    public DateTime? DateAdded => Info.AddedOn;
+    public long Eta => Info.EstimatedTime?.TotalSeconds is { } eta ? (long)eta : 0;
     public DateTime? DateCompleted => Info.CompletionOn;
     public long SeedingTimeSeconds => Info.SeedingTime?.TotalSeconds is double seedTime ? (long)seedTime : 0;
 

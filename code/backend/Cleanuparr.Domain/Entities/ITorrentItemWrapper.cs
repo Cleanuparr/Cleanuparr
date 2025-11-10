@@ -24,7 +24,6 @@ public interface ITorrentItemWrapper
 
     // Time tracking
     long Eta { get; }
-    DateTime? DateAdded { get; }
     DateTime? DateCompleted { get; }
     long SeedingTimeSeconds { get; }
 

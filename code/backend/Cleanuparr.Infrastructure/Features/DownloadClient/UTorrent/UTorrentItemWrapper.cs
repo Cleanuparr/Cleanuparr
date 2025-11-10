@@ -37,9 +37,6 @@ public sealed class UTorrentItemWrapper : ITorrentItemWrapper
 
     // Time tracking
     public long Eta => Info.ETA;
-    public DateTime? DateAdded => Info.DateAdded > 0
-        ? DateTimeOffset.FromUnixTimeSeconds(Info.DateAdded).DateTime
-        : null;
     public DateTime? DateCompleted => Info.DateCompletedDateTime;
     public long SeedingTimeSeconds => (long?)Info.SeedingTime?.TotalSeconds ?? 0;
 
