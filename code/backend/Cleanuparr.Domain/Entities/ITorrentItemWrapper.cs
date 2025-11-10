@@ -21,7 +21,6 @@ public interface ITorrentItemWrapper
 
     // Speed and transfer rates
     long DownloadSpeed { get; }
-    long UploadSpeed { get; }
     double Ratio { get; }
 
     // Time tracking

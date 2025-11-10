@@ -34,7 +34,6 @@ public sealed class UTorrentItemWrapper : ITorrentItemWrapper
 
     // Speed and transfer rates
     public long DownloadSpeed => Info.DownloadSpeed;
-    public long UploadSpeed => Info.UploadSpeed;
     public double Ratio => Info.Ratio;
 
     // Time tracking

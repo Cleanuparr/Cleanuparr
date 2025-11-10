@@ -33,7 +33,6 @@ public sealed class TransmissionItemWrapper : ITorrentItemWrapper
 
     // Speed and transfer rates
     public long DownloadSpeed => Info.RateDownload ?? 0;
-    public long UploadSpeed => Info.RateUpload ?? 0;
     public double Ratio => (Info.UploadedEver ?? 0) > 0 && (Info.DownloadedEver ?? 0) > 0
         ? (Info.UploadedEver ?? 0) / (double)(Info.DownloadedEver ?? 1)
         : 0.0;

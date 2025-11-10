@@ -232,22 +232,6 @@ public class QBitItemWrapperTests
         result.ShouldBe(expectedSpeed);
     }
 
-    [Fact]
-    public void UploadSpeed_ReturnsCorrectValue()
-    {
-        // Arrange
-        var expectedSpeed = 1024 * 256; // 256 KB/s
-        var torrentInfo = new TorrentInfo { UploadSpeed = expectedSpeed };
-        var trackers = new List<TorrentTracker>();
-        var wrapper = new QBitItemWrapper(torrentInfo, trackers, false);
-
-        // Act
-        var result = wrapper.UploadSpeed;
-
-        // Assert
-        result.ShouldBe(expectedSpeed);
-    }
-
     [Theory]
     [InlineData(0.0)]
     [InlineData(0.5)]

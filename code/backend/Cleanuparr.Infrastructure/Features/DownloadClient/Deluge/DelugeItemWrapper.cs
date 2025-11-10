@@ -33,7 +33,6 @@ public sealed class DelugeItemWrapper : ITorrentItemWrapper
 
     // Speed and transfer rates
     public long DownloadSpeed => Info.DownloadSpeed;
-    public long UploadSpeed => 0; // Deluge DownloadStatus doesn't expose upload speed
     public double Ratio => Info.Ratio;
 
     // Time tracking
