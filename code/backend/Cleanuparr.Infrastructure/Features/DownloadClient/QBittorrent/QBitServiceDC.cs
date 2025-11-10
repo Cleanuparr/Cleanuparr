@@ -96,7 +96,7 @@ public partial class QBitService
 
         foreach (QBitItemWrapper torrent in downloads.Cast<QBitItemWrapper>())
         {
-            if (string.IsNullOrEmpty(torrent.Hash))
+            if (string.IsNullOrEmpty(torrent.Name) || string.IsNullOrEmpty(torrent.Hash) || string.IsNullOrEmpty(torrent.Category))
             {
                 continue;
             }
@@ -169,6 +169,7 @@ public partial class QBitService
             else
             {
                 _logger.LogInformation("category changed for {name}", torrent.Name);
+                torrent.Category = downloadCleanerConfig.UnlinkedTargetCategory;
             }
         }
     }

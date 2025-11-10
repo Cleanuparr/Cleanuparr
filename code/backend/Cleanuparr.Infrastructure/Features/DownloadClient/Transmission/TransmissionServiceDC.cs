@@ -123,13 +123,15 @@ public partial class TransmissionService
             }
 
             string currentCategory = torrent.Category ?? string.Empty;
-            string newLocation = string.Join(Path.DirectorySeparatorChar, Path.Combine(torrent.Info.DownloadDir, downloadCleanerConfig.UnlinkedTargetCategory).Split(['\\', '/']));
+            string newLocation = torrent.Info.GetNewLocationByAppend(downloadCleanerConfig.UnlinkedTargetCategory);
 
             await _dryRunInterceptor.InterceptAsync(ChangeDownloadLocation, torrent.Info.Id, newLocation);
 
             _logger.LogInformation("category changed for {name}", torrent.Name);
 
             await _eventPublisher.PublishCategoryChanged(currentCategory, downloadCleanerConfig.UnlinkedTargetCategory);
+            
+            torrent.Category = downloadCleanerConfig.UnlinkedTargetCategory;
         }
     }
 

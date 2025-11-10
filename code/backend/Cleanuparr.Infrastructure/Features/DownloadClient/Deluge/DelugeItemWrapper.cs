@@ -38,7 +38,11 @@ public sealed class DelugeItemWrapper : ITorrentItemWrapper
     
     public long SeedingTimeSeconds => Info.SeedingTime;
 
-    public string? Category => Info.Label;
+    public string? Category
+    {
+        get => Info.Label;
+        set => Info.Label = value;
+    }
 
     public bool IsDownloading() => Info.State?.Equals("Downloading", StringComparison.InvariantCultureIgnoreCase) == true;
     

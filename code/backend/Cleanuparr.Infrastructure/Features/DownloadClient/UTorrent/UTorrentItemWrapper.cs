@@ -39,7 +39,11 @@ public sealed class UTorrentItemWrapper : ITorrentItemWrapper
     
     public long SeedingTimeSeconds => (long?)Info.SeedingTime?.TotalSeconds ?? 0;
 
-    public string? Category => Info.Label;
+    public string? Category
+    {
+        get => Info.Label;
+        set => Info.Label = value ?? throw new ArgumentNullException(nameof(value));
+    }
 
     public bool IsDownloading() =>
         (Info.Status & UTorrentStatus.Started) != 0 &&

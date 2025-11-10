@@ -26,7 +26,7 @@ public interface ITorrentItemWrapper
     
     long SeedingTimeSeconds { get; }
 
-    string? Category { get; }
+    string? Category { get; set; }
 
     bool IsDownloading();
     

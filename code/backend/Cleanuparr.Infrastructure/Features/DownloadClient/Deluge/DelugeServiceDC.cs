@@ -136,6 +136,8 @@ public partial class DelugeService
             _logger.LogInformation("category changed for {name}", torrent.Name);
 
             await _eventPublisher.PublishCategoryChanged(torrent.Category, downloadCleanerConfig.UnlinkedTargetCategory);
+            
+            torrent.Category = downloadCleanerConfig.UnlinkedTargetCategory;
         }
     }
 

@@ -1,4 +1,5 @@
 using Cleanuparr.Domain.Entities;
+using Cleanuparr.Infrastructure.Extensions;
 using Cleanuparr.Infrastructure.Services;
 using Transmission.API.RPC.Entity;
 
@@ -40,7 +41,11 @@ public sealed class TransmissionItemWrapper : ITorrentItemWrapper
     
     public long SeedingTimeSeconds => Info.SecondsSeeding ?? 0;
 
-    public string? Category => Info.Labels?.FirstOrDefault();
+    public string? Category
+    {
+        get => Info.GetCategory();
+        set => Info.AppendCategory(value);
+    }
 
     // Transmission status: 0=stopped, 1=check pending, 2=checking, 3=download pending, 4=downloading, 5=seed pending, 6=seeding
     public bool IsDownloading() => Info.Status == 4;

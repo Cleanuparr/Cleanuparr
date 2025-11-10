@@ -118,6 +118,8 @@ public partial class UTorrentService
             await _eventPublisher.PublishCategoryChanged(torrent.Category, downloadCleanerConfig.UnlinkedTargetCategory);
 
             _logger.LogInformation("category changed for {name}", torrent.Name);
+            
+            torrent.Category = downloadCleanerConfig.UnlinkedTargetCategory;
         }
     }
 

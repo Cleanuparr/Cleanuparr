@@ -41,8 +41,12 @@ public sealed class QBitItemWrapper : ITorrentItemWrapper
     
     public long SeedingTimeSeconds => Info.SeedingTime?.TotalSeconds is { } seedTime ? (long)seedTime : 0;
 
-    public string? Category => Info.Category;
-    
+    public string? Category
+    {
+        get => Info.Category;
+        set => Info.Category = value;
+    }
+
     public IReadOnlyList<string> Tags => Info.Tags?.ToList().AsReadOnly() ?? (IReadOnlyList<string>)Array.Empty<string>();
 
     public bool IsDownloading() => Info.State is TorrentState.Downloading or TorrentState.ForcedDownload;
