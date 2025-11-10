@@ -154,6 +154,320 @@ public class QBitItemWrapperTests
         result.ShouldBe(expectedPercentage);
     }
 
+    [Fact]
+    public void DownloadedBytes_ReturnsCorrectValue()
+    {
+        // Arrange
+        var expectedDownloaded = 1024L * 1024 * 500; // 500MB
+        var torrentInfo = new TorrentInfo { Downloaded = expectedDownloaded };
+        var trackers = new List<TorrentTracker>();
+        var wrapper = new QBitItemWrapper(torrentInfo, trackers, false);
+
+        // Act
+        var result = wrapper.DownloadedBytes;
+
+        // Assert
+        result.ShouldBe(expectedDownloaded);
+    }
+
+    [Fact]
+    public void DownloadedBytes_WithNullValue_ReturnsZero()
+    {
+        // Arrange
+        var torrentInfo = new TorrentInfo { Downloaded = null };
+        var trackers = new List<TorrentTracker>();
+        var wrapper = new QBitItemWrapper(torrentInfo, trackers, false);
+
+        // Act
+        var result = wrapper.DownloadedBytes;
+
+        // Assert
+        result.ShouldBe(0);
+    }
+
+    [Fact]
+    public void TotalUploaded_ReturnsCorrectValue()
+    {
+        // Arrange
+        var expectedUploaded = 1024L * 1024 * 750; // 750MB
+        var torrentInfo = new TorrentInfo { Uploaded = expectedUploaded };
+        var trackers = new List<TorrentTracker>();
+        var wrapper = new QBitItemWrapper(torrentInfo, trackers, false);
+
+        // Act
+        var result = wrapper.TotalUploaded;
+
+        // Assert
+        result.ShouldBe(expectedUploaded);
+    }
+
+    [Fact]
+    public void TotalUploaded_WithNullValue_ReturnsZero()
+    {
+        // Arrange
+        var torrentInfo = new TorrentInfo { Uploaded = null };
+        var trackers = new List<TorrentTracker>();
+        var wrapper = new QBitItemWrapper(torrentInfo, trackers, false);
+
+        // Act
+        var result = wrapper.TotalUploaded;
+
+        // Assert
+        result.ShouldBe(0);
+    }
+
+    [Fact]
+    public void DownloadSpeed_ReturnsCorrectValue()
+    {
+        // Arrange
+        var expectedSpeed = 1024 * 512; // 512 KB/s
+        var torrentInfo = new TorrentInfo { DownloadSpeed = expectedSpeed };
+        var trackers = new List<TorrentTracker>();
+        var wrapper = new QBitItemWrapper(torrentInfo, trackers, false);
+
+        // Act
+        var result = wrapper.DownloadSpeed;
+
+        // Assert
+        result.ShouldBe(expectedSpeed);
+    }
+
+    [Fact]
+    public void UploadSpeed_ReturnsCorrectValue()
+    {
+        // Arrange
+        var expectedSpeed = 1024 * 256; // 256 KB/s
+        var torrentInfo = new TorrentInfo { UploadSpeed = expectedSpeed };
+        var trackers = new List<TorrentTracker>();
+        var wrapper = new QBitItemWrapper(torrentInfo, trackers, false);
+
+        // Act
+        var result = wrapper.UploadSpeed;
+
+        // Assert
+        result.ShouldBe(expectedSpeed);
+    }
+
+    [Theory]
+    [InlineData(0.0)]
+    [InlineData(0.5)]
+    [InlineData(1.0)]
+    [InlineData(2.5)]
+    public void Ratio_ReturnsCorrectValue(double expectedRatio)
+    {
+        // Arrange
+        var torrentInfo = new TorrentInfo { Ratio = expectedRatio };
+        var trackers = new List<TorrentTracker>();
+        var wrapper = new QBitItemWrapper(torrentInfo, trackers, false);
+
+        // Act
+        var result = wrapper.Ratio;
+
+        // Assert
+        result.ShouldBe(expectedRatio);
+    }
+
+    [Fact]
+    public void Eta_ReturnsCorrectValue()
+    {
+        // Arrange
+        var expectedEta = TimeSpan.FromMinutes(30);
+        var torrentInfo = new TorrentInfo { EstimatedTime = expectedEta };
+        var trackers = new List<TorrentTracker>();
+        var wrapper = new QBitItemWrapper(torrentInfo, trackers, false);
+
+        // Act
+        var result = wrapper.Eta;
+
+        // Assert
+        result.ShouldBe((long)expectedEta.TotalSeconds);
+    }
+
+    [Fact]
+    public void Eta_WithNullValue_ReturnsZero()
+    {
+        // Arrange
+        var torrentInfo = new TorrentInfo { EstimatedTime = null };
+        var trackers = new List<TorrentTracker>();
+        var wrapper = new QBitItemWrapper(torrentInfo, trackers, false);
+
+        // Act
+        var result = wrapper.Eta;
+
+        // Assert
+        result.ShouldBe(0);
+    }
+
+    [Fact]
+    public void DateAdded_ReturnsCorrectValue()
+    {
+        // Arrange
+        var expectedDate = new DateTime(2025, 1, 15, 10, 30, 0, DateTimeKind.Utc);
+        var torrentInfo = new TorrentInfo { AddedOn = expectedDate };
+        var trackers = new List<TorrentTracker>();
+        var wrapper = new QBitItemWrapper(torrentInfo, trackers, false);
+
+        // Act
+        var result = wrapper.DateAdded;
+
+        // Assert
+        result.ShouldBe(expectedDate);
+    }
+
+    [Fact]
+    public void DateAdded_WithNullValue_ReturnsNull()
+    {
+        // Arrange
+        var torrentInfo = new TorrentInfo { AddedOn = null };
+        var trackers = new List<TorrentTracker>();
+        var wrapper = new QBitItemWrapper(torrentInfo, trackers, false);
+
+        // Act
+        var result = wrapper.DateAdded;
+
+        // Assert
+        result.ShouldBeNull();
+    }
+
+    [Fact]
+    public void DateCompleted_ReturnsCorrectValue()
+    {
+        // Arrange
+        var expectedDate = new DateTime(2025, 1, 15, 12, 45, 0, DateTimeKind.Utc);
+        var torrentInfo = new TorrentInfo { CompletionOn = expectedDate };
+        var trackers = new List<TorrentTracker>();
+        var wrapper = new QBitItemWrapper(torrentInfo, trackers, false);
+
+        // Act
+        var result = wrapper.DateCompleted;
+
+        // Assert
+        result.ShouldBe(expectedDate);
+    }
+
+    [Fact]
+    public void DateCompleted_WithNullValue_ReturnsNull()
+    {
+        // Arrange
+        var torrentInfo = new TorrentInfo { CompletionOn = null };
+        var trackers = new List<TorrentTracker>();
+        var wrapper = new QBitItemWrapper(torrentInfo, trackers, false);
+
+        // Act
+        var result = wrapper.DateCompleted;
+
+        // Assert
+        result.ShouldBeNull();
+    }
+
+    [Fact]
+    public void SeedingTimeSeconds_ReturnsCorrectValue()
+    {
+        // Arrange
+        var expectedTime = TimeSpan.FromHours(5);
+        var torrentInfo = new TorrentInfo { SeedingTime = expectedTime };
+        var trackers = new List<TorrentTracker>();
+        var wrapper = new QBitItemWrapper(torrentInfo, trackers, false);
+
+        // Act
+        var result = wrapper.SeedingTimeSeconds;
+
+        // Assert
+        result.ShouldBe((long)expectedTime.TotalSeconds);
+    }
+
+    [Fact]
+    public void SeedingTimeSeconds_WithNullValue_ReturnsZero()
+    {
+        // Arrange
+        var torrentInfo = new TorrentInfo { SeedingTime = null };
+        var trackers = new List<TorrentTracker>();
+        var wrapper = new QBitItemWrapper(torrentInfo, trackers, false);
+
+        // Act
+        var result = wrapper.SeedingTimeSeconds;
+
+        // Assert
+        result.ShouldBe(0);
+    }
+
+    [Fact]
+    public void Tags_ReturnsCorrectValue()
+    {
+        // Arrange
+        var expectedTags = new List<string> { "tag1", "tag2", "tag3" };
+        var torrentInfo = new TorrentInfo { Tags = expectedTags.AsReadOnly() };
+        var trackers = new List<TorrentTracker>();
+        var wrapper = new QBitItemWrapper(torrentInfo, trackers, false);
+
+        // Act
+        var result = wrapper.Tags;
+
+        // Assert
+        result.ShouldBe(expectedTags);
+    }
+
+    [Fact]
+    public void Tags_WithNullValue_ReturnsEmptyList()
+    {
+        // Arrange
+        var torrentInfo = new TorrentInfo { Tags = null };
+        var trackers = new List<TorrentTracker>();
+        var wrapper = new QBitItemWrapper(torrentInfo, trackers, false);
+
+        // Act
+        var result = wrapper.Tags;
+
+        // Assert
+        result.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void Tags_WithEmptyList_ReturnsEmptyList()
+    {
+        // Arrange
+        var torrentInfo = new TorrentInfo { Tags = new List<string>().AsReadOnly() };
+        var trackers = new List<TorrentTracker>();
+        var wrapper = new QBitItemWrapper(torrentInfo, trackers, false);
+
+        // Act
+        var result = wrapper.Tags;
+
+        // Assert
+        result.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void Category_ReturnsCorrectValue()
+    {
+        // Arrange
+        var expectedCategory = "movies";
+        var torrentInfo = new TorrentInfo { Category = expectedCategory };
+        var trackers = new List<TorrentTracker>();
+        var wrapper = new QBitItemWrapper(torrentInfo, trackers, false);
+
+        // Act
+        var result = wrapper.Category;
+
+        // Assert
+        result.ShouldBe(expectedCategory);
+    }
+
+    [Fact]
+    public void Category_WithNullValue_ReturnsNull()
+    {
+        // Arrange
+        var torrentInfo = new TorrentInfo { Category = null };
+        var trackers = new List<TorrentTracker>();
+        var wrapper = new QBitItemWrapper(torrentInfo, trackers, false);
+
+        // Act
+        var result = wrapper.Category;
+
+        // Assert
+        result.ShouldBeNull();
+    }
+
     // State checking method tests
     [Theory]
     [InlineData(TorrentState.Downloading, true)]
