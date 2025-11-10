@@ -15,7 +15,7 @@ namespace Cleanuparr.Infrastructure.Features.DownloadClient.Deluge;
 
 public partial class DelugeService : DownloadService, IDelugeService
 {
-    private readonly DelugeClient _client;
+    private readonly IDelugeClientWrapper _client;
 
     public DelugeService(
         ILogger<DelugeService> logger,
@@ -36,7 +36,32 @@ public partial class DelugeService : DownloadService, IDelugeService
         httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, ruleEvaluator, ruleManager
     )
     {
-        _client = new DelugeClient(downloadClientConfig, _httpClient);
+        var delugeClient = new DelugeClient(downloadClientConfig, _httpClient);
+        _client = new DelugeClientWrapper(delugeClient);
+    }
+
+    // Internal constructor for testing
+    internal DelugeService(
+        ILogger<DelugeService> logger,
+        IMemoryCache cache,
+        IFilenameEvaluator filenameEvaluator,
+        IStriker striker,
+        IDryRunInterceptor dryRunInterceptor,
+        IHardLinkFileService hardLinkFileService,
+        IDynamicHttpClientProvider httpClientProvider,
+        EventPublisher eventPublisher,
+        BlocklistProvider blocklistProvider,
+        DownloadClientConfig downloadClientConfig,
+        IRuleEvaluator ruleEvaluator,
+        IRuleManager ruleManager,
+        IDelugeClientWrapper clientWrapper
+    ) : base(
+        logger, cache,
+        filenameEvaluator, striker, dryRunInterceptor, hardLinkFileService,
+        httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, ruleEvaluator, ruleManager
+    )
+    {
+        _client = clientWrapper;
     }
     
     public override async Task LoginAsync()
