@@ -38,9 +38,6 @@ public sealed class TransmissionItemWrapper : ITorrentItemWrapper
 
     // Time tracking
     public long Eta => Info.Eta ?? 0;
-    public DateTime? DateCompleted => Info.DoneDate.HasValue && Info.DoneDate.Value > 0
-        ? DateTimeOffset.FromUnixTimeSeconds(Info.DoneDate.Value).DateTime
-        : null;
     public long SeedingTimeSeconds => Info.SecondsSeeding ?? 0;
 
     // Categories and tags

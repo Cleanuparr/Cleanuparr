@@ -37,7 +37,6 @@ public sealed class UTorrentItemWrapper : ITorrentItemWrapper
 
     // Time tracking
     public long Eta => Info.ETA;
-    public DateTime? DateCompleted => Info.DateCompletedDateTime;
     public long SeedingTimeSeconds => (long?)Info.SeedingTime?.TotalSeconds ?? 0;
 
     // Categories and tags

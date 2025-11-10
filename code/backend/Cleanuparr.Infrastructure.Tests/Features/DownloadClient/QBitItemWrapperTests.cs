@@ -252,37 +252,6 @@ public class QBitItemWrapperTests
     }
 
     [Fact]
-    public void DateCompleted_ReturnsCorrectValue()
-    {
-        // Arrange
-        var expectedDate = new DateTime(2025, 1, 15, 12, 45, 0, DateTimeKind.Utc);
-        var torrentInfo = new TorrentInfo { CompletionOn = expectedDate };
-        var trackers = new List<TorrentTracker>();
-        var wrapper = new QBitItemWrapper(torrentInfo, trackers, false);
-
-        // Act
-        var result = wrapper.DateCompleted;
-
-        // Assert
-        result.ShouldBe(expectedDate);
-    }
-
-    [Fact]
-    public void DateCompleted_WithNullValue_ReturnsNull()
-    {
-        // Arrange
-        var torrentInfo = new TorrentInfo { CompletionOn = null };
-        var trackers = new List<TorrentTracker>();
-        var wrapper = new QBitItemWrapper(torrentInfo, trackers, false);
-
-        // Act
-        var result = wrapper.DateCompleted;
-
-        // Assert
-        result.ShouldBeNull();
-    }
-
-    [Fact]
     public void SeedingTimeSeconds_ReturnsCorrectValue()
     {
         // Arrange

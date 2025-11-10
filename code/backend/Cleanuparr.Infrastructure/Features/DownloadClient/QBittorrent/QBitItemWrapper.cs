@@ -39,7 +39,6 @@ public sealed class QBitItemWrapper : ITorrentItemWrapper
 
     // Time tracking
     public long Eta => Info.EstimatedTime?.TotalSeconds is { } eta ? (long)eta : 0;
-    public DateTime? DateCompleted => Info.CompletionOn;
     public long SeedingTimeSeconds => Info.SeedingTime?.TotalSeconds is double seedTime ? (long)seedTime : 0;
 
     // Categories and tags
