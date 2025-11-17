@@ -61,8 +61,9 @@ import { ChipModule } from 'primeng/chip';
         <p-chip
           *ngFor="let item of value; let i = index"
           [label]="item"
-          [removable]="true"
+          [removable]="!disabled"
           (onRemove)="removeItem(i)"
+          [ngClass]="{'chip-disabled': disabled}"
           class="mb-2 mr-2"
         ></p-chip>
       </div>

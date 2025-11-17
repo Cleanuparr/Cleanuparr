@@ -43,6 +43,17 @@
     flex-wrap: wrap;
     gap: 8px;
     margin-bottom: 8px;
+
+    ::ng-deep .chip-disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      pointer-events: none;
+
+      .p-chip {
+        background: var(--surface-200) !important;
+        color: var(--text-color-secondary) !important;
+      }
+    }
   }
 
   .p-error {
