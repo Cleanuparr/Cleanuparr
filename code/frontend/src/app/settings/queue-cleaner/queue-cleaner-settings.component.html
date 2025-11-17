@@ -140,7 +140,12 @@
                 <i class="pi pi-chevron-down"></i>
               }
             </ng-template>
-            Failed Import Settings
+            <span class="accordion-header-title">
+              Failed Import Settings
+              @if (sectionHasErrors(0)) {
+                <i class="pi pi-exclamation-circle accordion-error-icon" title="This section has validation errors"></i>
+              }
+            </span>
           </p-accordion-header>
           <p-accordion-content>
             <div class="field-row" formGroupName="failedImport">
@@ -264,7 +269,12 @@
                 <i class="pi pi-chevron-down"></i>
               }
             </ng-template>
-            Downloading Metadata Settings (qBittorrent only)
+            <span class="accordion-header-title">
+              Downloading Metadata Settings (qBittorrent only)
+              @if (sectionHasErrors(2)) {
+                <i class="pi pi-exclamation-circle accordion-error-icon" title="This section has validation errors"></i>
+              }
+            </span>
           </p-accordion-header>
           <p-accordion-content>
             <div class="field-row">
@@ -307,7 +317,12 @@
                 <i class="pi pi-chevron-down"></i>
               }
             </ng-template>
-            Stalled Download Rules
+            <span class="accordion-header-title">
+              Stalled Download Rules
+              @if (sectionHasErrors(4)) {
+                <i class="pi pi-exclamation-triangle accordion-error-icon" title="Coverage gaps detected"></i>
+              }
+            </span>
           </p-accordion-header>
           <p-accordion-content>
             <!-- Coverage Analysis Warning -->
@@ -418,7 +433,12 @@
                 <i class="pi pi-chevron-down"></i>
               }
             </ng-template>
-            Slow Download Rules
+            <span class="accordion-header-title">
+              Slow Download Rules
+              @if (sectionHasErrors(5)) {
+                <i class="pi pi-exclamation-triangle accordion-error-icon" title="Coverage gaps detected"></i>
+              }
+            </span>
           </p-accordion-header>
           <p-accordion-content>
             <!-- Coverage Analysis Warning -->

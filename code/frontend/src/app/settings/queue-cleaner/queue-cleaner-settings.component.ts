@@ -13,6 +13,7 @@ import { PatternMode } from "../../shared/models/queue-cleaner-config.model";
 import { SettingsCardComponent } from "../components/settings-card/settings-card.component";
 import { ByteSizeInputComponent } from "../../shared/components/byte-size-input/byte-size-input.component";
 import { MobileAutocompleteComponent } from "../../shared/components/mobile-autocomplete/mobile-autocomplete.component";
+import { hasIndividuallyDirtyFormErrors } from "../../core/utils/form-validation.util";
 
 // PrimeNG Components
 import { CardModule } from "primeng/card";
@@ -1406,6 +1407,26 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
         return 'Private';
       case TorrentPrivacyType.Both:
         return 'Public and Private';
+    }
+  }
+
+  /**
+   * Check if an accordion section has validation errors
+   * @param sectionIndex The accordion panel index
+   * @returns True if the section has validation errors
+   */
+  sectionHasErrors(sectionIndex: number): boolean {
+    switch (sectionIndex) {
+      case 0: // Failed Import Settings
+        return hasIndividuallyDirtyFormErrors(this.queueCleanerForm.get('failedImport'));
+      case 2: // Downloading Metadata Settings
+        return hasIndividuallyDirtyFormErrors(this.queueCleanerForm.get('downloadingMetadataMaxStrikes'));
+      case 4: // Stall Rules - has errors if coverage gaps exist
+        return this.stallRulesCoverage.hasGaps;
+      case 5: // Slow Rules - has errors if coverage gaps exist
+        return this.slowRulesCoverage.hasGaps;
+      default:
+        return false;
     }
   }
 

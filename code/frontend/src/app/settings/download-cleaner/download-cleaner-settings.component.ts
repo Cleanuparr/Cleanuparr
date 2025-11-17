@@ -12,6 +12,7 @@ import {
 } from "../../shared/models/download-cleaner-config.model";
 import { ScheduleUnit, ScheduleOptions } from "../../shared/models/queue-cleaner-config.model";
 import { MobileAutocompleteComponent } from "../../shared/components/mobile-autocomplete/mobile-autocomplete.component";
+import { hasIndividuallyDirtyFormErrors } from "../../core/utils/form-validation.util";
 
 // PrimeNG Components
 import { CardModule } from "primeng/card";
@@ -794,6 +795,34 @@ export class DownloadCleanerSettingsComponent implements OnDestroy, CanComponent
       useTagControl?.disable(options);
       ignoredRootDirControl?.disable(options);
       categoriesControl?.disable(options);
+    }
+  }
+
+  /**
+   * Check if an accordion section has validation errors
+   * @param sectionIndex The accordion panel index
+   * @returns True if the section has validation errors
+   */
+  sectionHasErrors(sectionIndex: number): boolean {
+    switch (sectionIndex) {
+      case 0: // Seeding Settings
+        const categoriesArray = this.downloadCleanerForm.get('categories') as FormArray;
+        // Check if categories array has errors or if any category has errors
+        if (hasIndividuallyDirtyFormErrors(categoriesArray)) {
+          return true;
+        }
+        // Also check if there are no categories (which is an error when enabled)
+        if (categoriesArray.length === 0 && this.downloadCleanerForm.get('enabled')?.value) {
+          return true;
+        }
+        return false;
+      case 1: // Unlinked Download Settings
+        return hasIndividuallyDirtyFormErrors(this.downloadCleanerForm.get('unlinkedEnabled')) ||
+               hasIndividuallyDirtyFormErrors(this.downloadCleanerForm.get('unlinkedTargetCategory')) ||
+               hasIndividuallyDirtyFormErrors(this.downloadCleanerForm.get('unlinkedCategories')) ||
+               this.hasUnlinkedCategoriesError();
+      default:
+        return false;
     }
   }
 

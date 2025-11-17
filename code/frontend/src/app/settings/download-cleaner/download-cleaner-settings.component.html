@@ -142,7 +142,12 @@
                 <i class="pi pi-chevron-down"></i>
               }
             </ng-template>
-            Seeding Settings
+            <span class="accordion-header-title">
+              Seeding Settings
+              @if (sectionHasErrors(0)) {
+                <i class="pi pi-exclamation-circle accordion-error-icon" title="This section has validation errors"></i>
+              }
+            </span>
           </p-accordion-header>
           <p-accordion-content>
             <!-- Delete Private Option -->
@@ -268,7 +273,12 @@
                 <i class="pi pi-chevron-down"></i>
               }
             </ng-template>
-            Unlinked Download Settings
+            <span class="accordion-header-title">
+              Unlinked Download Settings
+              @if (sectionHasErrors(1)) {
+                <i class="pi pi-exclamation-circle accordion-error-icon" title="This section has validation errors"></i>
+              }
+            </span>
           </p-accordion-header>
           <p-accordion-content>
             <div class="field-row">
