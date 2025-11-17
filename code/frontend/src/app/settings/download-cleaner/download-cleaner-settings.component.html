@@ -116,28 +116,16 @@
       <!-- Ignored Downloads Field -->
       <div class="field-row">
         <label class="field-label">
-          <i class="pi pi-question-circle field-info-icon" 
-             (click)="openFieldDocs('ignoredDownloads')" 
+          <i class="pi pi-question-circle field-info-icon"
+             (click)="openFieldDocs('ignoredDownloads')"
              title="Click for documentation"></i>
           Ignored Downloads
         </label>
         <div class="field-input">
-          <!-- Mobile-friendly autocomplete -->
           <app-mobile-autocomplete
             formControlName="ignoredDownloads"
             placeholder="Add download pattern"
           ></app-mobile-autocomplete>
-          
-          <!-- Desktop autocomplete -->
-          <p-autocomplete
-            formControlName="ignoredDownloads"
-            inputId="dc-ignoredDownloads"
-            multiple
-            fluid
-            [typeahead]="false"
-            placeholder="Add download pattern and press enter"
-            class="desktop-only"
-          ></p-autocomplete>
           <small class="form-helper-text">Downloads matching these patterns will be ignored by the download cleaner</small>
         </div>
       </div>
@@ -347,29 +335,17 @@
             <!-- Unlinked Categories -->
             <div class="field-row">
               <label class="field-label">
-                <i class="pi pi-question-circle field-info-icon" 
-                   (click)="openFieldDocs('unlinkedCategories')" 
+                <i class="pi pi-question-circle field-info-icon"
+                   (click)="openFieldDocs('unlinkedCategories')"
                    title="Click for documentation"></i>
                 Unlinked Categories
               </label>
               <div>
                 <div class="field-input">
-                  <!-- Mobile-friendly autocomplete -->
                   <app-mobile-autocomplete
                     formControlName="unlinkedCategories"
                     placeholder="Add category"
                   ></app-mobile-autocomplete>
-                  
-                  <!-- Desktop autocomplete -->
-                  <p-autocomplete
-                    formControlName="unlinkedCategories"
-                    multiple
-                    fluid
-                    [typeahead]="false"
-                    placeholder="Add category and press Enter"
-                    class="desktop-only"
-                  >
-                  </p-autocomplete>
                 </div>
                 <small *ngIf="hasUnlinkedCategoriesError()" class="p-error">At least one category is required when unlinked download handling is enabled</small>
                 <small class="form-helper-text">Categories to check for unlinked downloads</small>

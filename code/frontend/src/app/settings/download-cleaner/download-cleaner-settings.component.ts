@@ -24,7 +24,6 @@ import { SelectButtonModule } from "primeng/selectbutton";
 import { ToastModule } from "primeng/toast";
 import { NotificationService } from "../../core/services/notification.service";
 import { SelectModule } from "primeng/select";
-import { AutoCompleteModule } from "primeng/autocomplete";
 import { DropdownModule } from "primeng/dropdown";
 import { TableModule } from "primeng/table";
 import { LoadingErrorStateComponent } from "../../shared/components/loading-error-state/loading-error-state.component";
@@ -48,7 +47,6 @@ import { DocumentationService } from "../../core/services/documentation.service"
     SelectButtonModule,
     ToastModule,
     SelectModule,
-    AutoCompleteModule,
     DropdownModule,
     TableModule,
     LoadingErrorStateComponent,

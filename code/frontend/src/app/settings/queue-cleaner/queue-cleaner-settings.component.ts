@@ -30,7 +30,6 @@ import { MessageService, ConfirmationService } from "primeng/api";
 import { NotificationService } from "../../core/services/notification.service";
 import { DocumentationService } from "../../core/services/documentation.service";
 import { SelectModule } from "primeng/select";
-import { AutoCompleteModule } from "primeng/autocomplete";
 import { DropdownModule } from "primeng/dropdown";
 import { TooltipModule } from "primeng/tooltip";
 import { DialogModule } from "primeng/dialog";
@@ -70,7 +69,6 @@ interface RuleCoverage {
     TagModule,
     ByteSizeInputComponent,
     SelectModule,
-    AutoCompleteModule,
     DropdownModule,
     TooltipModule,
     DialogModule,
