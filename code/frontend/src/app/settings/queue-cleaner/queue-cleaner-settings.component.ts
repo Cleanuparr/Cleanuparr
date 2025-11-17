@@ -153,6 +153,12 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
   stallRuleModalVisible = false;
   slowRuleModalVisible = false;
 
+  // Track the previous pattern mode state to detect when user is trying to change to Exclude
+  private previousPatternMode = PatternMode.Include;
+
+  // Flag to track if form has been initially loaded to avoid showing dialog on page load
+  private formInitialized = false;
+
   // Rule forms
   stallRuleForm: FormGroup;
   slowRuleForm: FormGroup;
@@ -623,9 +629,15 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
 
         // Then update all other dependent form control states
         this.updateFormControlDisabledStates(correctedConfig);
-        
+
         // Store original values for dirty checking
         this.storeOriginalValues();
+
+        // Track the pattern mode for confirmation dialog logic
+        this.previousPatternMode = correctedConfig.failedImport?.patternMode || PatternMode.Include;
+
+        // Mark form as initialized to enable confirmation dialogs for user actions
+        this.formInitialized = true;
 
         // Mark form as pristine since we've just loaded the data
         this.queueCleanerForm.markAsPristine();
@@ -817,6 +829,22 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
       .subscribe((strikes) => {
         this.updateFailedImportDependentControls(strikes);
       });
+    }
+
+    // Listen for changes to the 'failedImport.patternMode' control
+    const patternModeControl = this.queueCleanerForm.get('failedImport.patternMode');
+    if (patternModeControl) {
+      patternModeControl.valueChanges
+        .pipe(takeUntil(this.destroy$))
+        .subscribe((patternMode: PatternMode) => {
+          // Only show confirmation dialog if form is initialized and user is trying to change to Exclude
+          if (this.formInitialized && patternMode === PatternMode.Exclude && this.previousPatternMode !== PatternMode.Exclude) {
+            this.showPatternModeExcludeConfirmationDialog();
+          } else {
+            // Update tracked state normally
+            this.previousPatternMode = patternMode;
+          }
+        });
     }
 
     // Listen for changes to the schedule type to ensure dropdown isn't empty
@@ -1295,5 +1323,32 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
       case TorrentPrivacyType.Both:
         return 'Public and Private';
     }
+  }
+
+  /**
+   * Show confirmation dialog when changing pattern mode to Exclude
+   */
+  private showPatternModeExcludeConfirmationDialog(): void {
+    this.confirmationService.confirm({
+      header: 'Switch to Exclude Pattern Mode',
+      message: 'The Exclude Pattern Mode is aggressive as will remove everything that is not matched by the Excluded Patterns.<br/><br/>Are you sure you want to proceed?',
+      icon: 'pi pi-exclamation-triangle',
+      acceptIcon: 'pi pi-check',
+      rejectIcon: 'pi pi-times',
+      acceptLabel: 'Yes, Switch to Exclude',
+      rejectLabel: 'Cancel',
+      acceptButtonStyleClass: 'p-button-warning',
+      accept: () => {
+        // User confirmed, update tracked state
+        this.previousPatternMode = PatternMode.Exclude;
+      },
+      reject: () => {
+        // User cancelled, revert the select button without triggering value change
+        const patternModeControl = this.queueCleanerForm.get('failedImport.patternMode');
+        if (patternModeControl) {
+          patternModeControl.setValue(this.previousPatternMode, { emitEvent: false });
+        }
+      }
+    });
   }
 }
