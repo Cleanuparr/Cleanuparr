@@ -29,13 +29,16 @@
       <!-- Main Settings -->
       <div class="field-row">
         <label class="field-label">
-          <i class="pi pi-question-circle field-info-icon" 
-             (click)="openFieldDocs('enabled')" 
+          <i class="pi pi-question-circle field-info-icon"
+             (click)="openFieldDocs('enabled')"
              title="Click for documentation"></i>
           Enable Download Cleaner
         </label>
-        <div class="field-input">
-          <p-checkbox formControlName="enabled" [binary]="true" inputId="dcEnabled"></p-checkbox>
+        <div>
+          <div class="field-input">
+            <p-checkbox formControlName="enabled" [binary]="true" inputId="dcEnabled"></p-checkbox>
+          </div>
+          <small *ngIf="hasNoFeaturesConfiguredError()" class="p-error block">At least one feature must be configured</small>
           <small class="form-helper-text">When enabled, the download cleaner will run according to the schedule</small>
         </div>
       </div>

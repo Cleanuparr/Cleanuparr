@@ -150,7 +150,7 @@ export class DownloadCleanerSettingsComponent implements OnDestroy, CanComponent
       unlinkedUseTag: [{ value: false, disabled: true }],
       unlinkedIgnoredRootDir: [{ value: '', disabled: true }],
       unlinkedCategories: [{ value: [], disabled: true }]
-    }, { validators: this.validateUnlinkedCategories });
+    }, { validators: [this.validateUnlinkedCategories, this.validateAtLeastOneFeature] });
 
     // Load the current configuration
     effect(() => {
@@ -230,6 +230,39 @@ export class DownloadCleanerSettingsComponent implements OnDestroy, CanComponent
 
     if (unlinkedEnabled && (!unlinkedCategories || unlinkedCategories.length === 0)) {
       return { unlinkedCategoriesRequired: true };
+    }
+
+    return null;
+  }
+
+  /**
+   * Custom validator to ensure at least one feature is configured when Download Cleaner is enabled
+   */
+  private validateAtLeastOneFeature(group: FormGroup): ValidationErrors | null {
+    const enabled = group.get('enabled')?.value;
+
+    // If not enabled, validation passes
+    if (!enabled) {
+      return null;
+    }
+
+    // Check if seeding categories are configured
+    const categories = group.get('categories')?.value;
+    const hasSeedingCategories = categories && categories.length > 0;
+
+    // Check if unlinked feature is properly configured
+    const unlinkedEnabled = group.get('unlinkedEnabled')?.value;
+    const unlinkedCategories = group.get('unlinkedCategories')?.value;
+    const unlinkedTargetCategory = group.get('unlinkedTargetCategory')?.value;
+    const hasUnlinkedFeature = unlinkedEnabled &&
+                                unlinkedCategories &&
+                                unlinkedCategories.length > 0 &&
+                                unlinkedTargetCategory &&
+                                unlinkedTargetCategory.trim() !== '';
+
+    // At least one feature must be configured
+    if (!hasSeedingCategories && !hasUnlinkedFeature) {
+      return { noFeaturesConfigured: true };
     }
 
     return null;
@@ -663,6 +696,13 @@ export class DownloadCleanerSettingsComponent implements OnDestroy, CanComponent
    */
   hasUnlinkedCategoriesError(): boolean {
     return this.downloadCleanerForm.dirty && this.downloadCleanerForm.hasError('unlinkedCategoriesRequired');
+  }
+
+  /**
+   * Check if the form has the no features configured validation error
+   */
+  hasNoFeaturesConfiguredError(): boolean {
+    return this.downloadCleanerForm.dirty && this.downloadCleanerForm.hasError('noFeaturesConfigured');
   }
   
   /**

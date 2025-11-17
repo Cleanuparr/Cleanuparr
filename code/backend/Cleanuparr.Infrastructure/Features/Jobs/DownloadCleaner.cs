@@ -52,10 +52,10 @@ public sealed class DownloadCleaner : GenericHandler
         
         bool isUnlinkedEnabled = config.UnlinkedEnabled && !string.IsNullOrEmpty(config.UnlinkedTargetCategory) && config.UnlinkedCategories.Count > 0;
         bool isCleaningEnabled = config.Categories.Count > 0;
-        
+
         if (!isUnlinkedEnabled && !isCleaningEnabled)
         {
-            _logger.LogWarning("{name} is not configured properly", nameof(DownloadCleaner));
+            _logger.LogWarning("No features are enabled for {name}", nameof(DownloadCleaner));
             return;
         }
         

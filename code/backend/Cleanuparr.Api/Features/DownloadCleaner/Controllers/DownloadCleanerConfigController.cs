@@ -62,65 +62,13 @@ public sealed class DownloadCleanerConfigController : ControllerBase
                 throw new ValidationException("Request body cannot be null");
             }
 
+            // Validate cron expression format
             if (!string.IsNullOrEmpty(newConfigDto.CronExpression))
             {
                 CronValidationHelper.ValidateCronExpression(newConfigDto.CronExpression);
             }
 
-            if (newConfigDto.Enabled && newConfigDto.Categories.Any())
-            {
-                if (newConfigDto.Categories.GroupBy(x => x.Name).Any(x => x.Count() > 1))
-                {
-                    throw new ValidationException("Duplicate category names found");
-                }
-
-                foreach (var categoryDto in newConfigDto.Categories)
-                {
-                    if (string.IsNullOrWhiteSpace(categoryDto.Name))
-                    {
-                        throw new ValidationException("Category name cannot be empty");
-                    }
-
-                    if (categoryDto is { MaxRatio: < 0, MaxSeedTime: < 0 })
-                    {
-                        throw new ValidationException("Either max ratio or max seed time must be enabled");
-                    }
-
-                    if (categoryDto.MinSeedTime < 0)
-                    {
-                        throw new ValidationException("Min seed time cannot be negative");
-                    }
-                }
-            }
-
-            if (newConfigDto.UnlinkedEnabled)
-            {
-                if (string.IsNullOrWhiteSpace(newConfigDto.UnlinkedTargetCategory))
-                {
-                    throw new ValidationException("Unlinked target category cannot be empty");
-                }
-
-                if (newConfigDto.UnlinkedCategories?.Count is null or 0)
-                {
-                    throw new ValidationException("Unlinked categories cannot be empty");
-                }
-
-                if (newConfigDto.UnlinkedCategories.Contains(newConfigDto.UnlinkedTargetCategory))
-                {
-                    throw new ValidationException("The unlinked target category should not be present in unlinked categories");
-                }
-
-                if (newConfigDto.UnlinkedCategories.Any(string.IsNullOrWhiteSpace))
-                {
-                    throw new ValidationException("Empty unlinked category filter found");
-                }
-
-                if (!string.IsNullOrEmpty(newConfigDto.UnlinkedIgnoredRootDir) && !Directory.Exists(newConfigDto.UnlinkedIgnoredRootDir))
-                {
-                    throw new ValidationException($"{newConfigDto.UnlinkedIgnoredRootDir} root directory does not exist");
-                }
-            }
-
+            // Get existing configuration
             var oldConfig = await _dataContext.DownloadCleanerConfigs
                 .Include(x => x.Categories)
                 .FirstAsync();
@@ -135,6 +83,7 @@ public sealed class DownloadCleanerConfigController : ControllerBase
             oldConfig.UnlinkedIgnoredRootDir = newConfigDto.UnlinkedIgnoredRootDir;
             oldConfig.UnlinkedCategories = newConfigDto.UnlinkedCategories;
             oldConfig.IgnoredDownloads = newConfigDto.IgnoredDownloads;
+            oldConfig.Categories.Clear();
 
             _dataContext.CleanCategories.RemoveRange(oldConfig.Categories);
             _dataContext.DownloadCleanerConfigs.Update(oldConfig);
@@ -150,6 +99,8 @@ public sealed class DownloadCleanerConfigController : ControllerBase
                     DownloadCleanerConfigId = oldConfig.Id
                 });
             }
+
+            oldConfig.Validate();
 
             await _dataContext.SaveChangesAsync();
 

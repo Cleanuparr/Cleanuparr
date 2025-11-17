@@ -40,7 +40,7 @@ public sealed record CleanCategory : IConfig
 
         if (MaxRatio < 0 && MaxSeedTime < 0)
         {
-            throw new ValidationException("Both max ratio and max seed time are disabled");
+            throw new ValidationException("Either max ratio or max seed time must be set to a non-negative value");
         }
 
         if (MinSeedTime < 0)
