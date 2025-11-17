@@ -168,7 +168,7 @@ public class TransmissionItemWrapperTests
         {
             HashString = "abc123",
             Name = "Test Torrent",
-            Labels = new[] { "test-category" }
+            DownloadDir = "/downloads/test-category"
         };
         var wrapper = new TransmissionItemWrapper(torrentInfo);
         var ignoredDownloads = new[] { "test-category" };
