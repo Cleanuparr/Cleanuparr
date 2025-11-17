@@ -564,7 +564,7 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
         skipIfNotFoundInClient: [{ value: true, disabled: true }],
         patterns: [{ value: [], disabled: true }],
         patternMode: [{ value: PatternMode.Include, disabled: true }],
-      }),
+      }, { validators: this.includePatternsRequiredValidator() }),
 
       downloadingMetadataMaxStrikes: [{ value: 0, disabled: true }, [Validators.required, Validators.min(0), Validators.max(5000)]],
     });
@@ -641,6 +641,18 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
 
         // Mark form as pristine since we've just loaded the data
         this.queueCleanerForm.markAsPristine();
+
+        // Immediately show validation errors for patterns if Include mode is selected with no patterns
+        const failedImportGroup = this.queueCleanerForm.get('failedImport');
+        const patternsControl = this.queueCleanerForm.get('failedImport.patterns');
+        if (failedImportGroup && patternsControl) {
+          // Trigger validation
+          failedImportGroup.updateValueAndValidity();
+          // If there's a validation error, mark the field as touched to display it immediately
+          if (patternsControl.errors && patternsControl.errors['patternsRequired']) {
+            patternsControl.markAsTouched();
+          }
+        }
       }
     });
     
@@ -843,6 +855,26 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
           } else {
             // Update tracked state normally
             this.previousPatternMode = patternMode;
+          }
+
+          // Trigger validation on the failedImport form group to update patterns validation
+          const failedImportGroup = this.queueCleanerForm.get('failedImport');
+          if (failedImportGroup) {
+            failedImportGroup.updateValueAndValidity();
+          }
+        });
+    }
+
+    // Listen for changes to the 'failedImport.patterns' control to trigger validation
+    const patternsControl = this.queueCleanerForm.get('failedImport.patterns');
+    if (patternsControl) {
+      patternsControl.valueChanges
+        .pipe(takeUntil(this.destroy$))
+        .subscribe(() => {
+          // Trigger validation on the failedImport form group
+          const failedImportGroup = this.queueCleanerForm.get('failedImport');
+          if (failedImportGroup) {
+            failedImportGroup.updateValueAndValidity();
           }
         });
     }
@@ -1067,6 +1099,12 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
       this.queueCleanerForm.get("failedImport")?.get("patterns")?.disable(options);
       this.queueCleanerForm.get("failedImport")?.get("patternMode")?.disable(options);
     }
+
+    // Trigger validation on the failedImport form group after enabling/disabling controls
+    const failedImportGroup = this.queueCleanerForm.get('failedImport');
+    if (failedImportGroup) {
+      failedImportGroup.updateValueAndValidity();
+    }
   }
 
   /**
@@ -1270,6 +1308,52 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
     }
 
     const { minGreaterThanMax, ...remaining } = control.errors;
+    control.setErrors(Object.keys(remaining).length ? remaining : null);
+  }
+
+  /**
+   * Validator to ensure patterns array is not empty when patternMode is Include
+   */
+  private includePatternsRequiredValidator(): ValidatorFn {
+    return (group: AbstractControl): ValidationErrors | null => {
+      const patternModeControl = group.get('patternMode');
+      const patternsControl = group.get('patterns');
+
+      if (!patternModeControl || !patternsControl) {
+        return null;
+      }
+
+      const patternMode = patternModeControl.value;
+      const patterns = patternsControl.value;
+
+      // Only validate if pattern mode is Include
+      if (patternMode === PatternMode.Include) {
+        // Check if patterns array is empty or null
+        if (!patterns || !Array.isArray(patterns) || patterns.length === 0) {
+          // Set error on the patterns control
+          const existingErrors = patternsControl.errors ?? {};
+          if (!existingErrors['patternsRequired']) {
+            patternsControl.setErrors({ ...existingErrors, patternsRequired: true });
+          }
+          return { patternsRequired: true };
+        }
+      }
+
+      // Clear the error if validation passes
+      this.clearPatternsRequiredError(patternsControl);
+      return null;
+    };
+  }
+
+  /**
+   * Clear the patternsRequired error from the control
+   */
+  private clearPatternsRequiredError(control: AbstractControl): void {
+    if (!control.errors || !control.errors['patternsRequired']) {
+      return;
+    }
+
+    const { patternsRequired, ...remaining } = control.errors;
     control.setErrors(Object.keys(remaining).length ? remaining : null);
   }
 

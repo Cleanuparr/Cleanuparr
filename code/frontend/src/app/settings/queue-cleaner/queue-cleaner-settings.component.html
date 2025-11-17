@@ -242,6 +242,7 @@
                   formControlName="patterns"
                   placeholder="Add pattern"
                 ></app-mobile-autocomplete>
+                <small *ngIf="hasNestedError('failedImport', 'patterns', 'patternsRequired')" class="p-error">At least one pattern is required when using Include mode</small>
                 <small class="form-helper-text">
                   {{ queueCleanerForm.get('failedImport.patternMode')?.value === PatternMode.Include ?
                     'Only failed imports containing these patterns will be removed and everything else will be skipped' :

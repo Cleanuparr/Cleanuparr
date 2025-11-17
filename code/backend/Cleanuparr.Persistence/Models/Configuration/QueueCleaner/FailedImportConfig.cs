@@ -24,7 +24,12 @@ public sealed record FailedImportConfig
     {
         if (MaxStrikes is > 0 and < 3)
         {
-            throw new ValidationException("the minimum value for failed imports max strikes must be 3");
+            throw new ValidationException("The minimum value for failed imports max strikes must be 3");
+        }
+
+        if (PatternMode is PatternMode.Include && Patterns.Count is 0)
+        {
+            throw new ValidationException("At least one pattern must be specified when using the Include pattern mode");
         }
     }
 }
