@@ -124,21 +124,3 @@
   padding-top: 1rem;
   border-top: 1px solid var(--surface-border);
 }
-
-/* Confirmation Dialog Customization */
-::ng-deep .p-confirmdialog {
-  .p-dialog-content {
-    flex-direction: column;
-    gap: 1rem;
-  }
-
-  .p-confirm-dialog-icon {
-    margin: 0;
-    font-size: 3rem;
-    align-self: center;
-  }
-
-  .p-confirm-dialog-message {
-    margin-left: 0;
-  }
-}
