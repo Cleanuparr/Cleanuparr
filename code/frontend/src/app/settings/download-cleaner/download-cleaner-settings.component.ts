@@ -87,7 +87,10 @@ export class DownloadCleanerSettingsComponent implements OnDestroy, CanComponent
   
   // Track the previous enabled state to detect when user is trying to enable
   private previousEnabledState = false;
-  
+
+  // Track the previous unlinked enabled state to detect when user is trying to enable
+  private previousUnlinkedEnabledState = false;
+
   // Flag to track if form has been initially loaded to avoid showing dialog on page load
   private formInitialized = false;
   
@@ -338,10 +341,11 @@ export class DownloadCleanerSettingsComponent implements OnDestroy, CanComponent
     
     // Store original values for change detection
     this.storeOriginalValues();
-    
+
     // Track the enabled state for confirmation dialog logic
     this.previousEnabledState = config.enabled;
-    
+    this.previousUnlinkedEnabledState = config.unlinkedEnabled;
+
     // Mark form as initialized to enable confirmation dialogs for user actions
     this.formInitialized = true;
     
@@ -416,7 +420,14 @@ export class DownloadCleanerSettingsComponent implements OnDestroy, CanComponent
       unlinkedEnabledControl.valueChanges
         .pipe(takeUntil(this.destroy$))
         .subscribe(enabled => {
-          this.updateUnlinkedControlsState(enabled);
+          // Only show confirmation dialog if form is initialized and user is trying to enable
+          if (this.formInitialized && enabled && !this.previousUnlinkedEnabledState) {
+            this.showUnlinkedEnableConfirmationDialog();
+          } else {
+            // Update control states normally
+            this.updateUnlinkedControlsState(enabled);
+            this.previousUnlinkedEnabledState = enabled;
+          }
         });
     }
 
@@ -816,8 +827,33 @@ export class DownloadCleanerSettingsComponent implements OnDestroy, CanComponent
       }
     });
   }
-  
 
-
-  // Add any other necessary methods here
+  /**
+   * Show confirmation dialog when enabling unlinked download handling
+   */
+  private showUnlinkedEnableConfirmationDialog(): void {
+    this.confirmationService.confirm({
+      header: 'Enable Unlinked Download Handling',
+      message: 'This feature requires your downloads directory to be accessible (and mounted if using Docker).<br/><br/>Are you sure you want to proceed?',
+      icon: 'pi pi-exclamation-triangle',
+      acceptIcon: 'pi pi-check',
+      rejectIcon: 'pi pi-times',
+      acceptLabel: 'Yes, Enable',
+      rejectLabel: 'Cancel',
+      acceptButtonStyleClass: 'p-button-warning',
+      accept: () => {
+        // User confirmed, update control states and track state
+        this.updateUnlinkedControlsState(true);
+        this.previousUnlinkedEnabledState = true;
+      },
+      reject: () => {
+        // User cancelled, revert the checkbox without triggering value change
+        const unlinkedEnabledControl = this.downloadCleanerForm.get('unlinkedEnabled');
+        if (unlinkedEnabledControl) {
+          unlinkedEnabledControl.setValue(false, { emitEvent: false });
+          this.previousUnlinkedEnabledState = false;
+        }
+      }
+    });
+  }
 }
