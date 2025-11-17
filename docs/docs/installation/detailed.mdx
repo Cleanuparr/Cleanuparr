@@ -73,6 +73,8 @@ services:
       - "11011:11011"
     volumes:
       - /path/to/config:/config
+      # Mount your downloads directory if needed
+      - /path/to/downloads:/downloads
     environment:
       - PORT=11011
       - BASE_PATH=
@@ -105,6 +107,7 @@ services:
 | Container Path | Description |
 |----------------|-------------|
 | `/config` | Configuration files, log files and database |
+| `/downloads` | (Optional) Mount your downloads directory if using [Unlinked download settings](/docs/configuration/download-cleaner/?unlinked-download-settings) |
 
 <Note>
 Replace `/path/to/config` with your desired configuration directory path on the host system.
