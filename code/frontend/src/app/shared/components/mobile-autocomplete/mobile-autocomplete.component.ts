@@ -27,48 +27,7 @@ import { ChipModule } from 'primeng/chip';
       multi: true
     }
   ],
-  template: `
-    <div class="mobile-autocomplete-container">
-      <div class="input-with-button" [class.has-uncommitted-input]="hasUncommittedInput && !disabled">
-        <input
-          type="text"
-          pInputText
-          #inputField
-          [placeholder]="placeholder"
-          [ngModel]="currentInputValue"
-          (ngModelChange)="onInputChange($event)"
-          (keyup.enter)="addItem(inputField.value); inputField.value = ''; onInputChange('')"
-          (blur)="onInputBlur()"
-          [class.ng-invalid]="hasUncommittedInput && !disabled && (touched || currentInputValue.length > 0)"
-          [class.ng-dirty]="hasUncommittedInput && !disabled"
-          class="mobile-input"
-          [disabled]="disabled"
-        />
-        <button
-          pButton
-          type="button"
-          icon="pi pi-plus"
-          class="p-button-sm add-button"
-          (click)="addItem(inputField.value); inputField.value = ''; onInputChange('')"
-          [title]="'Add ' + placeholder"
-          [disabled]="disabled || !inputField.value.trim()"
-        ></button>
-      </div>
-      <small *ngIf="hasUncommittedInput && !disabled && (touched || currentInputValue.length > 0)" class="p-error">
-        Press Enter or click + to add this item
-      </small>
-      <div class="chips-container" *ngIf="value && value.length > 0">
-        <p-chip
-          *ngFor="let item of value; let i = index"
-          [label]="item"
-          [removable]="!disabled"
-          (onRemove)="removeItem(i)"
-          [ngClass]="{'chip-disabled': disabled}"
-          class="mb-2 mr-2"
-        ></p-chip>
-      </div>
-    </div>
-  `,
+  templateUrl: './mobile-autocomplete.component.html',
   styleUrls: ['./mobile-autocomplete.component.scss']
 })
 export class MobileAutocompleteComponent implements ControlValueAccessor, Validator {
@@ -147,6 +106,12 @@ export class MobileAutocompleteComponent implements ControlValueAccessor, Valida
       this.hasUncommittedInput = false;
       this.onValidatorChange();
     }
+  }
+
+  addItemAndClearInput(inputField: HTMLInputElement): void {
+    this.addItem(inputField.value);
+    inputField.value = '';
+    this.onInputChange('');
   }
 
   removeItem(index: number): void {
