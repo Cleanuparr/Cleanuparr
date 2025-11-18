@@ -1103,8 +1103,15 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
 
     // Trigger validation on the failedImport form group after enabling/disabling controls
     const failedImportGroup = this.queueCleanerForm.get('failedImport');
+    const patternsControl = this.queueCleanerForm.get('failedImport.patterns');
     if (failedImportGroup) {
       failedImportGroup.updateValueAndValidity();
+
+      // If we just enabled the patterns control and it has a validation error, mark it as touched
+      // so the error appears immediately
+      if (enable && patternsControl?.errors?.['patternsRequired']) {
+        patternsControl.markAsTouched();
+      }
     }
   }
 
@@ -1291,11 +1298,13 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
       }
 
       if (typeof minValue === 'number' && typeof maxValue === 'number' && maxValue < minValue) {
+        // Set error on the max control only (for UI display)
         const existingErrors = maxControl.errors ?? {};
         if (!existingErrors['minGreaterThanMax']) {
           maxControl.setErrors({ ...existingErrors, minGreaterThanMax: true });
         }
-        return { minGreaterThanMax: true };
+        // Don't return an error - we've already set it on the control directly
+        return null;
       }
 
       this.clearMinMaxError(maxControl);
@@ -1337,12 +1346,13 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
       if (patternMode === PatternMode.Include) {
         // Check if patterns array is empty or null
         if (!patterns || !Array.isArray(patterns) || patterns.length === 0) {
-          // Set error on the patterns control
+          // Set error on the patterns control only
           const existingErrors = patternsControl.errors ?? {};
           if (!existingErrors['patternsRequired']) {
             patternsControl.setErrors({ ...existingErrors, patternsRequired: true });
           }
-          return { patternsRequired: true };
+          // Don't return an error - we've already set it on the control directly
+          return null;
         }
       }
 
