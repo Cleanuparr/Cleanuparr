@@ -650,7 +650,7 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
           // Trigger validation
           failedImportGroup.updateValueAndValidity();
           // If there's a validation error, mark the field as touched to display it immediately
-          if (patternsControl.errors && patternsControl.errors['patternsRequired']) {
+          if (patternsControl.errors?.['patternsRequired']) {
             patternsControl.markAsTouched();
           }
         }
