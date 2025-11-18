@@ -22,6 +22,7 @@ export class DocumentationService {
       'failedImport.maxStrikes': 'failed-import-max-strikes',
       'failedImport.ignorePrivate': 'failed-import-ignore-private',
       'failedImport.deletePrivate': 'failed-import-delete-private',
+      'failedImport.skipIfNotFoundInClient': 'failed-import-skip-if-not-found-in-client',
       'failedImport.pattern-mode': 'failed-import-pattern-mode',
       'failedImport.patterns': 'failed-import-patterns',
       'downloadingMetadataMaxStrikes': 'stalled-downloading-metadata-max-strikes',
