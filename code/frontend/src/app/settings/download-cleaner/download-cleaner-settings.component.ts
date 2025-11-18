@@ -192,9 +192,16 @@ export class DownloadCleanerSettingsComponent implements OnDestroy, CanComponent
   addCategory(category: CleanCategory = createDefaultCategory()): void {
     // Create a form group for the category with validation and add it to the form array
     const categoryGroup = this.createCategoryFormGroup(category);
-    
+
     this.categoriesFormArray.push(categoryGroup);
     this.downloadCleanerForm.markAsDirty();
+
+    // Mark all controls in the new category as dirty to trigger validation immediately
+    Object.keys(categoryGroup.controls).forEach(key => {
+      categoryGroup.get(key)?.markAsDirty();
+    });
+    // Also mark the group itself as dirty to trigger group-level validators
+    categoryGroup.markAsDirty();
   }
   
   /**
@@ -203,9 +210,9 @@ export class DownloadCleanerSettingsComponent implements OnDestroy, CanComponent
   private createCategoryFormGroup(category: CleanCategory): FormGroup {
     return this.formBuilder.group({
       name: [category.name, Validators.required],
-      maxRatio: [category.maxRatio],
-      minSeedTime: [category.minSeedTime, [Validators.min(0)]],
-      maxSeedTime: [category.maxSeedTime],
+      maxRatio: [category.maxRatio, [Validators.min(-1), Validators.required]],
+      minSeedTime: [category.minSeedTime, [Validators.min(0), Validators.required]],
+      maxSeedTime: [category.maxSeedTime, [Validators.min(-1), Validators.required]],
     }, { validators: this.validateCategory });
   }
   
@@ -819,9 +826,12 @@ export class DownloadCleanerSettingsComponent implements OnDestroy, CanComponent
         if (hasIndividuallyDirtyFormErrors(categoriesArray)) {
           return true;
         }
-        // Also check if there are no categories (which is an error when enabled)
-        if (categoriesArray.length === 0 && this.downloadCleanerForm.get('enabled')?.value) {
-          return true;
+        // Also check for group-level errors on category form groups (like bothDisabled)
+        for (let i = 0; i < categoriesArray.length; i++) {
+          const categoryGroup = categoriesArray.at(i) as FormGroup;
+          if (categoryGroup.dirty && categoryGroup.errors && Object.keys(categoryGroup.errors).length > 0) {
+            return true;
+          }
         }
         return false;
       case 1: // Unlinked Download Settings

@@ -178,11 +178,10 @@
                 <div *ngFor="let category of categoriesFormArray.controls; let i = index" class="category-item" [formGroup]="getCategoryAsFormGroup(i)">
                   <div class="category-header">
                     <div class="category-title">
-                      <i class="pi pi-tag category-icon"></i>
-                      <input type="text" pInputText formControlName="name" placeholder="Category name" class="category-name-input" />
                       <i class="pi pi-question-circle field-info-icon" 
                          (click)="openFieldDocs('name')" 
                          title="Click for documentation"></i>
+                      <input type="text" pInputText formControlName="name" placeholder="Category name" class="category-name-input" />
                     </div>
                     <button pButton type="button" icon="pi pi-trash" class="p-button-danger p-button-sm" 
                       (click)="removeCategory(i)" [disabled]="downloadCleanerForm.disabled"></button>
@@ -203,6 +202,7 @@
                           decrementButtonClass="p-button-danger" incrementButtonClass="p-button-success" incrementButtonIcon="pi pi-plus"
                           decrementButtonIcon="pi pi-minus">
                         </p-inputNumber>
+                        <small *ngIf="hasCategoryError(i, 'maxRatio', 'required')" class="form-error-text">This input is required</small>
                         <small *ngIf="hasCategoryError(i, 'maxRatio', 'min')" class="form-error-text">Min value is -1</small>
                         <small class="form-helper-text">Maximum ratio to seed before removing (<code>-1</code> means disabled)</small>
                       </div>
@@ -220,6 +220,7 @@
                           decrementButtonClass="p-button-danger" incrementButtonClass="p-button-success" incrementButtonIcon="pi pi-plus"
                           decrementButtonIcon="pi pi-minus">
                         </p-inputNumber>
+                        <small *ngIf="hasCategoryError(i, 'minSeedTime', 'required')" class="form-error-text">This input is required</small>
                         <small *ngIf="hasCategoryError(i, 'minSeedTime', 'min')" class="form-error-text">Min value is 0</small>
                         <small class="form-helper-text">Minimum time to seed before removing a download that has reached the max ratio (<code>0</code> means disabled)</small>
                       </div>
@@ -237,6 +238,7 @@
                           decrementButtonClass="p-button-danger" incrementButtonClass="p-button-success" incrementButtonIcon="pi pi-plus"
                           decrementButtonIcon="pi pi-minus">
                         </p-inputNumber>
+                        <small *ngIf="hasCategoryError(i, 'maxSeedTime', 'required')" class="form-error-text">This input is required</small>
                         <small *ngIf="hasCategoryError(i, 'maxSeedTime', 'min')" class="form-error-text">Min value is -1</small>
                         <small class="form-helper-text">Maximum time to seed before removing (<code>-1</code> means disabled)</small>
                       </div>
