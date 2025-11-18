@@ -227,8 +227,16 @@ export class DownloadCleanerSettingsComponent implements OnDestroy, CanComponent
    * Custom validator for unlinked categories - requires categories when unlinked handling is enabled
    */
   private validateUnlinkedCategories(group: FormGroup): ValidationErrors | null {
-    const unlinkedEnabled = group.get('unlinkedEnabled')?.value;
-    const unlinkedCategories = group.get('unlinkedCategories')?.value;
+    const unlinkedEnabledControl = group.get('unlinkedEnabled');
+    const unlinkedCategoriesControl = group.get('unlinkedCategories');
+
+    // Don't validate if controls don't exist or if unlinkedCategories is disabled
+    if (!unlinkedEnabledControl || !unlinkedCategoriesControl || unlinkedCategoriesControl.disabled) {
+      return null;
+    }
+
+    const unlinkedEnabled = unlinkedEnabledControl.value;
+    const unlinkedCategories = unlinkedCategoriesControl.value;
 
     if (unlinkedEnabled && (!unlinkedCategories || unlinkedCategories.length === 0)) {
       return { unlinkedCategoriesRequired: true };
