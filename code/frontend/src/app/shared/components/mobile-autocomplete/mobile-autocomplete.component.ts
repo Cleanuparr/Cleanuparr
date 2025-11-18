@@ -29,7 +29,7 @@ import { ChipModule } from 'primeng/chip';
   ],
   template: `
     <div class="mobile-autocomplete-container">
-      <div class="input-with-button" [class.has-uncommitted-input]="hasUncommittedInput">
+      <div class="input-with-button" [class.has-uncommitted-input]="hasUncommittedInput && !disabled">
         <input
           type="text"
           pInputText
@@ -39,8 +39,8 @@ import { ChipModule } from 'primeng/chip';
           (ngModelChange)="onInputChange($event)"
           (keyup.enter)="addItem(inputField.value); inputField.value = ''; onInputChange('')"
           (blur)="onInputBlur()"
-          [class.ng-invalid]="hasUncommittedInput && (touched || currentInputValue.length > 0)"
-          [class.ng-dirty]="hasUncommittedInput"
+          [class.ng-invalid]="hasUncommittedInput && !disabled && (touched || currentInputValue.length > 0)"
+          [class.ng-dirty]="hasUncommittedInput && !disabled"
           class="mobile-input"
           [disabled]="disabled"
         />
@@ -54,7 +54,7 @@ import { ChipModule } from 'primeng/chip';
           [disabled]="disabled || !inputField.value.trim()"
         ></button>
       </div>
-      <small *ngIf="hasUncommittedInput && (touched || currentInputValue.length > 0)" class="p-error">
+      <small *ngIf="hasUncommittedInput && !disabled && (touched || currentInputValue.length > 0)" class="p-error">
         Press Enter or click + to add this item
       </small>
       <div class="chips-container" *ngIf="value && value.length > 0">
@@ -112,10 +112,18 @@ export class MobileAutocompleteComponent implements ControlValueAccessor, Valida
 
   setDisabledState(isDisabled: boolean): void {
     this.disabled = isDisabled;
+
+    // Clear uncommitted input when becoming disabled
+    if (isDisabled && this.hasUncommittedInput) {
+      this.currentInputValue = '';
+      this.hasUncommittedInput = false;
+      this.onValidatorChange();
+    }
   }
 
   validate(control: AbstractControl): ValidationErrors | null {
-    if (this.hasUncommittedInput) {
+    // Don't report validation errors when disabled
+    if (this.hasUncommittedInput && !this.disabled) {
       return { uncommittedInput: { value: this.currentInputValue } };
     }
     return null;
