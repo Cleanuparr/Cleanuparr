@@ -24,7 +24,7 @@
       [disabled]="disabled || !inputField.value.trim()"
     ></button>
   </div>
-  <small *ngIf="hasUncommittedInput && !disabled && (touched || currentInputValue.length > 0)" class="p-error">
+  <small *ngIf="hasUncommittedInput && !disabled && (touched || currentInputValue.length > 0)" class="form-error-text">
     Press Enter or click + to add this item
   </small>
   <div class="chips-container" *ngIf="value && value.length > 0">

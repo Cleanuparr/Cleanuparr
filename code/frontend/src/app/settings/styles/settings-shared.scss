@@ -29,6 +29,7 @@
 .field-label {
   display: flex;
   align-items: center;
+  font-weight: 500;
   
   .field-info-icon {
     flex-shrink: 0;
@@ -101,35 +102,6 @@
   }
 }
 
-/* Form layout and structure */
-// .field-row {
-//   display: flex;
-//   margin-bottom: 1.25rem;
-//   align-items: flex-start;
-  
-//   &:last-child {
-//     margin-bottom: 0;
-//   }
-// }
-
-.field-label {
-  flex: 0 0 230px;
-  // padding-top: 0.5rem;
-  font-weight: 500;
-}
-
-.field-input {
-  flex: 1;
-  max-width: 600px;
-}
-
-.form-helper-text {
-  display: block;
-  margin-top: 0.25rem;
-  color: var(--text-color-secondary);
-  font-size: 0.85rem;
-}
-
 /* Schedule input specific styles */
 .schedule-input {
   display: flex;
@@ -158,26 +130,4 @@
   gap: 0.5rem;
   padding-top: 1rem;
   border-top: 1px solid var(--surface-border);
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-  // .field-row {
-  //   flex-direction: column;
-  // }
-  
-  .field-label {
-    flex: 0 0 auto;
-    margin-bottom: 0.5rem;
-    padding-top: 0;
-  }
-  
-  .field-input {
-    width: 100%;
-    max-width: 100%;
-  }
-}
-
-.p-error {
-  color: red;
 }

@@ -31,20 +31,18 @@
       <form [formGroup]="globalForm" class="p-fluid">
         <div class="field-row">
           <label class="field-label">Failed Import Max Strikes</label>
-          <div>
-            <div class="field-input">
-              <p-inputNumber
-                formControlName="failedImportMaxStrikes"
-                [min]="-1" 
-                [showButtons]="true"
-                buttonLayout="horizontal"
-                incrementButtonIcon="pi pi-plus"
-                decrementButtonIcon="pi pi-minus"
-              ></p-inputNumber>
-            </div>
-            <small *ngIf="hasError('failedImportMaxStrikes', 'required')" class="p-error">This field is required</small>
-            <small *ngIf="hasError('failedImportMaxStrikes', 'min')" class="p-error">Value cannot be less than -1</small>
-            <small *ngIf="hasError('failedImportMaxStrikes', 'max')" class="p-error">Value cannot exceed 5000</small>
+          <div class="field-input">
+            <p-inputNumber
+              formControlName="failedImportMaxStrikes"
+              [min]="-1" 
+              [showButtons]="true"
+              buttonLayout="horizontal"
+              incrementButtonIcon="pi pi-plus"
+              decrementButtonIcon="pi pi-minus"
+            ></p-inputNumber>
+            <small *ngIf="hasError('failedImportMaxStrikes', 'required')" class="form-error-text">This field is required</small>
+            <small *ngIf="hasError('failedImportMaxStrikes', 'min')" class="form-error-text">Value cannot be less than -1</small>
+            <small *ngIf="hasError('failedImportMaxStrikes', 'max')" class="form-error-text">Value cannot exceed 5000</small>
             <small class="form-helper-text">Maximum number of strikes before removing a failed import (-1 to use global setting; 0 to disable)</small>
           </div>
         </div>
@@ -184,7 +182,7 @@
         placeholder="My Whisparr Instance"
         class="w-full"
       />
-      <small *ngIf="hasError(instanceForm, 'name', 'required')" class="p-error">Name is required</small>
+      <small *ngIf="hasError(instanceForm, 'name', 'required')" class="form-error-text">Name is required</small>
     </div>
 
     <div class="field">
@@ -197,9 +195,9 @@
         placeholder="http://localhost:6969"
         class="w-full"
       />
-      <small *ngIf="hasError(instanceForm, 'url', 'required')" class="p-error">URL is required</small>
-      <small *ngIf="hasError(instanceForm, 'url', 'invalidUri')" class="p-error">URL must be a valid URL</small>
-      <small *ngIf="hasError(instanceForm, 'url', 'invalidProtocol')" class="p-error">URL must use http or https protocol</small>
+      <small *ngIf="hasError(instanceForm, 'url', 'required')" class="form-error-text">URL is required</small>
+      <small *ngIf="hasError(instanceForm, 'url', 'invalidUri')" class="form-error-text">URL must be a valid URL</small>
+      <small *ngIf="hasError(instanceForm, 'url', 'invalidProtocol')" class="form-error-text">URL must use http or https protocol</small>
     </div>
 
     <div class="field">
@@ -212,7 +210,7 @@
         placeholder="Your Whisparr API key"
         class="w-full"
       />
-      <small *ngIf="hasError(instanceForm, 'apiKey', 'required')" class="p-error">API key is required</small>
+      <small *ngIf="hasError(instanceForm, 'apiKey', 'required')" class="form-error-text">API key is required</small>
     </div>
   </form>
 

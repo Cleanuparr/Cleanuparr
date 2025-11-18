@@ -88,15 +88,6 @@
         padding-top: 0.5rem;
       }
     }
-    
-    .field-input {
-      flex: 1;
-      max-width: 100%;
-      
-      @media (min-width: 768px) {
-        max-width: 400px;
-      }
-    }
   }
   
   .empty-instances-message {

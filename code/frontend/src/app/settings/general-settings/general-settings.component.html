@@ -66,18 +66,16 @@
             </i>
             Maximum HTTP Retries
           </label>
-          <div>
-            <div class="field-input">
-              <p-inputNumber
-                formControlName="httpMaxRetries"
-                inputId="httpMaxRetries"
-                [showButtons]="true"
-                [min]="0"
-                buttonLayout="horizontal"
-              ></p-inputNumber>
-            </div>
-            <small *ngIf="hasError('httpMaxRetries', 'required')" class="p-error">This field is required</small>
-            <small *ngIf="hasError('httpMaxRetries', 'max')" class="p-error">Maximum value is 5</small>
+          <div class="field-input">
+            <p-inputNumber
+              formControlName="httpMaxRetries"
+              inputId="httpMaxRetries"
+              [showButtons]="true"
+              [min]="0"
+              buttonLayout="horizontal"
+            ></p-inputNumber>
+            <small *ngIf="hasError('httpMaxRetries', 'required')" class="form-error-text">This field is required</small>
+            <small *ngIf="hasError('httpMaxRetries', 'max')" class="form-error-text">Maximum value is 5</small>
             <small class="form-helper-text">Number of retry attempts for failed HTTPS requests</small>
           </div>
         </div>
@@ -90,18 +88,16 @@
             </i>
             HTTP Timeout (seconds)
           </label>
-          <div>
-            <div class="field-input">
-              <p-inputNumber
-                formControlName="httpTimeout"
-                inputId="httpTimeout"
-                [showButtons]="true"
-                [min]="1"
-                buttonLayout="horizontal"
-              ></p-inputNumber>
-            </div>
-            <small *ngIf="hasError('httpTimeout', 'required')" class="p-error">This field is required</small>
-            <small *ngIf="hasError('httpTimeout', 'max')" class="p-error">Maximum value is 100</small>
+          <div class="field-input">
+            <p-inputNumber
+              formControlName="httpTimeout"
+              inputId="httpTimeout"
+              [showButtons]="true"
+              [min]="1"
+              buttonLayout="horizontal"
+            ></p-inputNumber>
+            <small *ngIf="hasError('httpTimeout', 'required')" class="form-error-text">This field is required</small>
+            <small *ngIf="hasError('httpTimeout', 'max')" class="form-error-text">Maximum value is 100</small>
             <small class="form-helper-text">Timeout duration for HTTP requests in seconds</small>
           </div>
         </div>
@@ -149,19 +145,17 @@
             </i>
             Search Delay (seconds)
           </label>
-          <div>
-            <div class="field-input">
-              <p-inputNumber
-                formControlName="searchDelay"
-                inputId="searchDelay"
-                [showButtons]="true"
-                [min]="1"
-                buttonLayout="horizontal"
-              ></p-inputNumber>
-            </div>
-            <small *ngIf="hasError('searchDelay', 'required')" class="p-error">This field is required</small>
-            <small *ngIf="hasError('searchDelay', 'min')" class="p-error">Minimum value is 60</small>
-            <small *ngIf="hasError('searchDelay', 'max')" class="p-error">Maximum value is 300</small>
+          <div class="field-input">
+            <p-inputNumber
+              formControlName="searchDelay"
+              inputId="searchDelay"
+              [showButtons]="true"
+              [min]="1"
+              buttonLayout="horizontal"
+            ></p-inputNumber>
+            <small *ngIf="hasError('searchDelay', 'required')" class="form-error-text">This field is required</small>
+            <small *ngIf="hasError('searchDelay', 'min')" class="form-error-text">Minimum value is 60</small>
+            <small *ngIf="hasError('searchDelay', 'max')" class="form-error-text">Maximum value is 300</small>
             <small class="form-helper-text">Delay between search operations in seconds</small>
           </div>
         </div>
@@ -229,18 +223,16 @@
             </i>
             Rolling Size (MB)
           </label>
-          <div>
-            <div class="field-input">
-              <p-inputNumber
-                formControlName="rollingSizeMB"
-                inputId="rollingSizeMB"
-                [showButtons]="true"
-                [min]="0"
-                buttonLayout="horizontal"
-              ></p-inputNumber>
-            </div>
-            <small *ngIf="hasNestedError('log', 'rollingSizeMB', 'required')" class="p-error">This field is required</small>
-            <small *ngIf="hasNestedError('log', 'rollingSizeMB', 'max')" class="p-error">Maximum value is 100 MB</small>
+          <div class="field-input">
+            <p-inputNumber
+              formControlName="rollingSizeMB"
+              inputId="rollingSizeMB"
+              [showButtons]="true"
+              [min]="0"
+              buttonLayout="horizontal"
+            ></p-inputNumber>
+            <small *ngIf="hasNestedError('log', 'rollingSizeMB', 'required')" class="form-error-text">This field is required</small>
+            <small *ngIf="hasNestedError('log', 'rollingSizeMB', 'max')" class="form-error-text">Maximum value is 100 MB</small>
             <small class="form-helper-text">Maximum size of each log file in megabytes (0 = disabled)</small>
           </div>
         </div>
@@ -254,18 +246,16 @@
             </i>
             Retained File Count
           </label>
-          <div>
-            <div class="field-input">
-              <p-inputNumber
-                formControlName="retainedFileCount"
-                inputId="retainedFileCount"
-                [showButtons]="true"
-                [min]="0"
-                buttonLayout="horizontal"
-              ></p-inputNumber>
-            </div>
-            <small *ngIf="hasNestedError('log', 'retainedFileCount', 'required')" class="p-error">This field is required</small>
-            <small *ngIf="hasNestedError('log', 'retainedFileCount', 'max')" class="p-error">Maximum value is 50</small>
+          <div class="field-input">
+            <p-inputNumber
+              formControlName="retainedFileCount"
+              inputId="retainedFileCount"
+              [showButtons]="true"
+              [min]="0"
+              buttonLayout="horizontal"
+            ></p-inputNumber>
+            <small *ngIf="hasNestedError('log', 'retainedFileCount', 'required')" class="form-error-text">This field is required</small>
+            <small *ngIf="hasNestedError('log', 'retainedFileCount', 'max')" class="form-error-text">Maximum value is 50</small>
             <small class="form-helper-text">Number of old log files to retain (0 = unlimited)</small>
             <small class="form-helper-text">Files exceeding this limit will be deleted or archived</small>
           </div>
@@ -280,18 +270,16 @@
             </i>
             Time Limit (hours)
           </label>
-          <div>
-            <div class="field-input">
-              <p-inputNumber
-                formControlName="timeLimitHours"
-                inputId="timeLimitHours"
-                [showButtons]="true"
-                [min]="0"
-                buttonLayout="horizontal"
-              ></p-inputNumber>
-            </div>
-            <small *ngIf="hasNestedError('log', 'timeLimitHours', 'required')" class="p-error">This field is required</small>
-            <small *ngIf="hasNestedError('log', 'timeLimitHours', 'max')" class="p-error">Maximum value is 1440 hours (60 days)</small>
+          <div class="field-input">
+            <p-inputNumber
+              formControlName="timeLimitHours"
+              inputId="timeLimitHours"
+              [showButtons]="true"
+              [min]="0"
+              buttonLayout="horizontal"
+            ></p-inputNumber>
+            <small *ngIf="hasNestedError('log', 'timeLimitHours', 'required')" class="form-error-text">This field is required</small>
+            <small *ngIf="hasNestedError('log', 'timeLimitHours', 'max')" class="form-error-text">Maximum value is 1440 hours (60 days)</small>
             <small class="form-helper-text">Maximum age of old log files in hours (0 = unlimited)</small>
             <small class="form-helper-text">Files exceeding this limit will be deleted or archived</small>
           </div>
@@ -321,18 +309,16 @@
             </i>
             Archive Retained Count
           </label>
-          <div>
-            <div class="field-input">
-              <p-inputNumber
-                formControlName="archiveRetainedCount"
-                inputId="archiveRetainedCount"
-                [showButtons]="true"
-                [min]="0"
-                buttonLayout="horizontal"
-              ></p-inputNumber>
-            </div>
-            <small *ngIf="hasNestedError('log', 'archiveRetainedCount', 'required')" class="p-error">This field is required</small>
-            <small *ngIf="hasNestedError('log', 'archiveRetainedCount', 'max')" class="p-error">Maximum value is 100</small>
+          <div class="field-input">
+            <p-inputNumber
+              formControlName="archiveRetainedCount"
+              inputId="archiveRetainedCount"
+              [showButtons]="true"
+              [min]="0"
+              buttonLayout="horizontal"
+            ></p-inputNumber>
+            <small *ngIf="hasNestedError('log', 'archiveRetainedCount', 'required')" class="form-error-text">This field is required</small>
+            <small *ngIf="hasNestedError('log', 'archiveRetainedCount', 'max')" class="form-error-text">Maximum value is 100</small>
             <small class="form-helper-text">Number of archive files to retain (0 = unlimited)</small>
           </div>
         </div>
@@ -346,18 +332,16 @@
             </i>
             Archive Time Limit (hours)
           </label>
-          <div>
-            <div class="field-input">
-              <p-inputNumber
-                formControlName="archiveTimeLimitHours"
-                inputId="archiveTimeLimitHours"
-                [showButtons]="true"
-                [min]="0"
-                buttonLayout="horizontal"
-              ></p-inputNumber>
-            </div>
-            <small *ngIf="hasNestedError('log', 'archiveTimeLimitHours', 'required')" class="p-error">This field is required</small>
-            <small *ngIf="hasNestedError('log', 'archiveTimeLimitHours', 'max')" class="p-error">Maximum value is 1440 hours (60 days)</small>
+          <div class="field-input">
+            <p-inputNumber
+              formControlName="archiveTimeLimitHours"
+              inputId="archiveTimeLimitHours"
+              [showButtons]="true"
+              [min]="0"
+              buttonLayout="horizontal"
+            ></p-inputNumber>
+            <small *ngIf="hasNestedError('log', 'archiveTimeLimitHours', 'required')" class="form-error-text">This field is required</small>
+            <small *ngIf="hasNestedError('log', 'archiveTimeLimitHours', 'max')" class="form-error-text">Maximum value is 1440 hours (60 days)</small>
             <small class="form-helper-text">Maximum age of archive files in hours (0 = unlimited)</small>
           </div>
         </div>

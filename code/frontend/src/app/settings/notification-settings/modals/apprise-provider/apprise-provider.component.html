@@ -28,9 +28,9 @@
         placeholder="http://localhost:8000"
         class="w-full"
       />
-      <small *ngIf="hasFieldError(urlControl, 'required')" class="p-error">URL is required</small>
-      <small *ngIf="hasFieldError(urlControl, 'invalidUri')" class="p-error">Must be a valid URL</small>
-      <small *ngIf="hasFieldError(urlControl, 'invalidProtocol')" class="p-error">Must use http or https protocol</small>
+      <small *ngIf="hasFieldError(urlControl, 'required')" class="form-error-text">URL is required</small>
+      <small *ngIf="hasFieldError(urlControl, 'invalidUri')" class="form-error-text">Must be a valid URL</small>
+      <small *ngIf="hasFieldError(urlControl, 'invalidProtocol')" class="form-error-text">Must use http or https protocol</small>
       <small class="form-helper-text">The URL of your Apprise server where notifications will be sent.</small>
     </div>
 
@@ -45,8 +45,8 @@
         Configuration Key *
       </label>
       <input id="key" type="text" pInputText [formControl]="keyControl" placeholder="my-config-key" class="w-full" />
-      <small *ngIf="hasFieldError(keyControl, 'required')" class="p-error">Configuration key is required</small>
-      <small *ngIf="hasFieldError(keyControl, 'minlength')" class="p-error">Key must be at least 2 characters</small>
+      <small *ngIf="hasFieldError(keyControl, 'required')" class="form-error-text">Configuration key is required</small>
+      <small *ngIf="hasFieldError(keyControl, 'minlength')" class="form-error-text">Key must be at least 2 characters</small>
       <small class="form-helper-text">The key that identifies your Apprise configuration on the server.</small>
     </div>
 

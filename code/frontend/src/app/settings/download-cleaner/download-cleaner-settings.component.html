@@ -34,11 +34,9 @@
              title="Click for documentation"></i>
           Enable Download Cleaner
         </label>
-        <div>
-          <div class="field-input">
-            <p-checkbox formControlName="enabled" [binary]="true" inputId="dcEnabled"></p-checkbox>
-          </div>
-          <small *ngIf="hasNoFeaturesConfiguredError()" class="p-error block">At least one feature must be configured</small>
+        <div class="field-input">
+          <p-checkbox formControlName="enabled" [binary]="true" inputId="dcEnabled"></p-checkbox>
+          <small *ngIf="hasNoFeaturesConfiguredError()" class="form-error-text">At least one feature must be configured</small>
           <small class="form-helper-text">When enabled, the download cleaner will run according to the schedule</small>
         </div>
       </div>
@@ -70,8 +68,8 @@
         <label class="field-label">
           Run Schedule
         </label>
-        <div>
-          <div class="field-input schedule-input flex flex-wrap">
+        <div class="field-input">
+          <div class="schedule-input flex flex-wrap">
             <span class="schedule-label">Every</span>
             <p-select 
               formControlName="every"
@@ -91,7 +89,7 @@
             >
             </p-selectButton>
           </div>
-          <small *ngIf="hasNestedError('jobSchedule', 'every', 'required')" class="p-error">This field is required</small>
+          <small *ngIf="hasNestedError('jobSchedule', 'every', 'required')" class="form-error-text">This field is required</small>
           <small class="form-helper-text">How often the download cleaner should run</small>
         </div>
       </div>
@@ -104,11 +102,9 @@
              title="Click for documentation"></i>
           Cron Expression
         </label>
-        <div>
-          <div class="field-input">
-            <input type="text" pInputText formControlName="cronExpression" placeholder="0 0/5 * ? * * *" />
-          </div>
-          <small *ngIf="hasError('cronExpression', 'required')" class="p-error">Cron expression is required</small>
+        <div class="field-input">
+          <input type="text" pInputText formControlName="cronExpression" placeholder="0 0/5 * ? * * *" />
+          <small *ngIf="hasError('cronExpression', 'required')" class="form-error-text">Cron expression is required</small>
           <small class="form-helper-text">Enter a valid Quartz cron expression (e.g., "0 0/5 * ? * * *" runs every 5 minutes)</small>
         </div>
       </div>
@@ -191,7 +187,7 @@
                     <button pButton type="button" icon="pi pi-trash" class="p-button-danger p-button-sm" 
                       (click)="removeCategory(i)" [disabled]="downloadCleanerForm.disabled"></button>
                   </div>
-                  <small *ngIf="hasCategoryError(i, 'name', 'required')" class="p-error block">Name is required</small>
+                  <small *ngIf="hasCategoryError(i, 'name', 'required')" class="form-error-text">Name is required</small>
                   
                   <div class="category-content">
                     <div class="category-field">
@@ -207,7 +203,7 @@
                           decrementButtonClass="p-button-danger" incrementButtonClass="p-button-success" incrementButtonIcon="pi pi-plus"
                           decrementButtonIcon="pi pi-minus">
                         </p-inputNumber>
-                        <small *ngIf="hasCategoryError(i, 'maxRatio', 'min')" class="p-error block">Min value is -1</small>
+                        <small *ngIf="hasCategoryError(i, 'maxRatio', 'min')" class="form-error-text">Min value is -1</small>
                         <small class="form-helper-text">Maximum ratio to seed before removing (<code>-1</code> means disabled)</small>
                       </div>
                     </div>
@@ -224,7 +220,7 @@
                           decrementButtonClass="p-button-danger" incrementButtonClass="p-button-success" incrementButtonIcon="pi pi-plus"
                           decrementButtonIcon="pi pi-minus">
                         </p-inputNumber>
-                        <small *ngIf="hasCategoryError(i, 'minSeedTime', 'min')" class="p-error block">Min value is 0</small>
+                        <small *ngIf="hasCategoryError(i, 'minSeedTime', 'min')" class="form-error-text">Min value is 0</small>
                         <small class="form-helper-text">Minimum time to seed before removing a download that has reached the max ratio (<code>0</code> means disabled)</small>
                       </div>
                     </div>
@@ -236,20 +232,18 @@
                            title="Click for documentation"></i>
                         Max Seed Time (hours)
                       </label>
-                      <div>
-                        <div class="field-input">
-                          <p-inputNumber formControlName="maxSeedTime" [min]="-1" [showButtons]="true" buttonLayout="horizontal"
-                            decrementButtonClass="p-button-danger" incrementButtonClass="p-button-success" incrementButtonIcon="pi pi-plus"
-                            decrementButtonIcon="pi pi-minus">
-                          </p-inputNumber>
-                        </div>
+                      <div class="field-input">
+                        <p-inputNumber formControlName="maxSeedTime" [min]="-1" [showButtons]="true" buttonLayout="horizontal"
+                          decrementButtonClass="p-button-danger" incrementButtonClass="p-button-success" incrementButtonIcon="pi pi-plus"
+                          decrementButtonIcon="pi pi-minus">
+                        </p-inputNumber>
+                        <small *ngIf="hasCategoryError(i, 'maxSeedTime', 'min')" class="form-error-text">Min value is -1</small>
                         <small class="form-helper-text">Maximum time to seed before removing (<code>-1</code> means disabled)</small>
-                        <small *ngIf="hasCategoryError(i, 'maxSeedTime', 'min')" class="p-error block">Min value is -1</small>
                       </div>
                     </div>
                   </div>
                   <!-- Error for both maxRatio and maxSeedTime disabled -->
-                  <small *ngIf="hasCategoryGroupError(i, 'bothDisabled')" class="p-error block">
+                  <small *ngIf="hasCategoryGroupError(i, 'bothDisabled')" class="form-error-text">
                     Both max ratio and max seed time cannot be disabled at the same time
                   </small>
                 </div>
@@ -302,11 +296,9 @@
                    title="Click for documentation"></i>
                 Target Category
               </label>
-              <div>
-                <div class="field-input">
-                  <input type="text" pInputText formControlName="unlinkedTargetCategory" placeholder="Target category name" />
-                </div>
-                <small *ngIf="hasError('unlinkedTargetCategory', 'required')" class="p-error">Target category is required</small>
+              <div class="field-input">
+                <input type="text" pInputText formControlName="unlinkedTargetCategory" placeholder="Target category name" />
+                <small *ngIf="hasError('unlinkedTargetCategory', 'required')" class="form-error-text">Target category is required</small>
                 <small class="form-helper-text">Category to move unlinked downloads to</small>
                 <small class="form-helper-text">You have to create a seeding rule for this category if you want to remove the downloads</small>
               </div>
@@ -334,10 +326,8 @@
                    title="Click for documentation"></i>
                 Ignored Root Directory
               </label>
-              <div>
-                <div class="field-input">
-                  <input type="text" pInputText formControlName="unlinkedIgnoredRootDir" placeholder="/path/to/directory" />
-                </div>
+              <div class="field-input">
+                <input type="text" pInputText formControlName="unlinkedIgnoredRootDir" placeholder="/path/to/directory" />
                 <small class="form-helper-text">Root directory to ignore when checking for unlinked downloads (used for cross-seed)</small>
               </div>
             </div>
@@ -350,16 +340,14 @@
                    title="Click for documentation"></i>
                 Unlinked Categories
               </label>
-              <div>
                 <div class="field-input">
                   <app-mobile-autocomplete
                     formControlName="unlinkedCategories"
                     placeholder="Add category"
                   ></app-mobile-autocomplete>
+                  <small *ngIf="hasUnlinkedCategoriesError()" class="form-error-text">At least one category is required when unlinked download handling is enabled</small>
+                  <small class="form-helper-text">Categories to check for unlinked downloads</small>
                 </div>
-                <small *ngIf="hasUnlinkedCategoriesError()" class="p-error">At least one category is required when unlinked download handling is enabled</small>
-                <small class="form-helper-text">Categories to check for unlinked downloads</small>
-              </div>
             </div>
           </p-accordion-content>
         </p-accordion-panel>
