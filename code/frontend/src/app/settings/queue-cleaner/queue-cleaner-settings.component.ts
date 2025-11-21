@@ -1452,7 +1452,7 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
   private showPatternModeExcludeConfirmationDialog(): void {
     this.confirmationService.confirm({
       header: 'Switch to Exclude Pattern Mode',
-      message: 'The Exclude Pattern Mode is <b>very aggressive</b> and will <b>remove everything</b> that is not matched by the Excluded Patterns.<br/><br/>Are you sure you want to proceed?',
+      message: 'The Exclude Pattern Mode is <b>very aggressive</b> and will <b>remove all failed imports</b> that are not matched by the Excluded Patterns.<br/><br/>Are you sure you want to proceed?',
       icon: 'pi pi-exclamation-triangle',
       acceptIcon: 'pi pi-check',
       rejectIcon: 'pi pi-times',
