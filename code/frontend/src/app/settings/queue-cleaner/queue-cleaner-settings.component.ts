@@ -157,6 +157,9 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
   // Track the previous pattern mode state to detect when user is trying to change to Exclude
   private previousPatternMode = PatternMode.Include;
 
+  // Track the previous failed import max strikes value to detect when user is trying to enable it
+  private previousFailedImportMaxStrikes = 0;
+
   // Flag to track if form has been initially loaded to avoid showing dialog on page load
   private formInitialized = false;
 
@@ -637,6 +640,9 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
         // Track the pattern mode for confirmation dialog logic
         this.previousPatternMode = correctedConfig.failedImport?.patternMode || PatternMode.Include;
 
+        // Track the failed import max strikes for confirmation dialog logic
+        this.previousFailedImportMaxStrikes = correctedConfig.failedImport?.maxStrikes || 0;
+
         // Mark form as initialized to enable confirmation dialogs for user actions
         this.formInitialized = true;
 
@@ -840,7 +846,14 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
     if (failedImportMaxStrikesControl) {
       failedImportMaxStrikesControl.valueChanges.pipe(takeUntil(this.destroy$))
       .subscribe((strikes) => {
-        this.updateFailedImportDependentControls(strikes);
+        // Only show confirmation dialog if form is initialized and user is trying to enable (>= 3)
+        if (this.formInitialized && strikes >= 3 && this.previousFailedImportMaxStrikes < 3) {
+          this.showFailedImportMaxStrikesConfirmationDialog(strikes);
+        } else {
+          // Update tracked state normally
+          this.previousFailedImportMaxStrikes = strikes;
+          this.updateFailedImportDependentControls(strikes);
+        }
       });
     }
 
@@ -1468,6 +1481,34 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
         const patternModeControl = this.queueCleanerForm.get('failedImport.patternMode');
         if (patternModeControl) {
           patternModeControl.setValue(this.previousPatternMode, { emitEvent: false });
+        }
+      }
+    });
+  }
+
+  /**
+   * Show confirmation dialog when enabling failed import max strikes (>= 3)
+   */
+  private showFailedImportMaxStrikesConfirmationDialog(newStrikesValue: number): void {
+    this.confirmationService.confirm({
+      header: 'Enable Failed Import Processing',
+      message: 'If you are using <b>private torrent trackers</b>, please ensure that your download clients have been configured and enabled, otherwise you may <b>risk having private torrents deleted before seeding</b> the minimum required amount.<br/><br/>Are you sure you want to enable Failed Import processing?',
+      icon: 'pi pi-exclamation-triangle',
+      acceptIcon: 'pi pi-check',
+      rejectIcon: 'pi pi-times',
+      acceptLabel: 'Yes, Enable',
+      rejectLabel: 'Cancel',
+      acceptButtonStyleClass: 'p-button-warning',
+      accept: () => {
+        // User confirmed, update tracked state and apply changes
+        this.previousFailedImportMaxStrikes = newStrikesValue;
+        this.updateFailedImportDependentControls(newStrikesValue);
+      },
+      reject: () => {
+        // User cancelled, revert the value without triggering value change
+        const maxStrikesControl = this.queueCleanerForm.get('failedImport.maxStrikes');
+        if (maxStrikesControl) {
+          maxStrikesControl.setValue(this.previousFailedImportMaxStrikes, { emitEvent: false });
         }
       }
     });
