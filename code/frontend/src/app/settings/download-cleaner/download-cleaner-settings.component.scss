@@ -2,6 +2,7 @@
 
 @use '../styles/settings-shared.scss';
 @use '../styles/arr-shared.scss';
+@use '../styles/accordion-error-indicator.scss';
 @use '../settings-page/settings-page.component.scss';
 
 .section-header {
@@ -87,15 +88,6 @@
       flex: 0 0 200px;
       margin-bottom: 0;
       padding-top: 0.5rem;
-    }
-  }
-  
-  .field-input {
-    flex: 1;
-    max-width: 100%;
-    
-    @media (min-width: 768px) {
-      max-width: 400px;
     }
   }
 }

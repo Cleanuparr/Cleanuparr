@@ -51,16 +51,14 @@
             </i>
             Blacklist Path
           </label>
-          <div>
-            <div class="field-input">
-              <input 
-                type="text" 
-                pInputText 
-                formControlName="blacklistPath" 
-                placeholder="File path or http(s) URL" 
-                id="blacklistPath" />
-            </div>
-            <small *ngIf="hasError('blacklistPath', 'required')" class="p-error">This field is required when blacklist sync is enabled</small>
+          <div class="field-input">
+            <input 
+              type="text" 
+              pInputText 
+              formControlName="blacklistPath" 
+              placeholder="Local file path or URL" 
+              id="blacklistPath" />
+            <small *ngIf="hasError('blacklistPath', 'required')" class="form-error-text">This field is required when blacklist sync is enabled</small>
             <small class="form-helper-text">Path to blacklist file or HTTP(S) URL containing blacklist patterns</small>
           </div>
         </div>

@@ -29,13 +29,14 @@
       <!-- Main Settings -->
       <div class="field-row">
         <label class="field-label">
-          <i class="pi pi-question-circle field-info-icon" 
-             (click)="openFieldDocs('enabled')" 
+          <i class="pi pi-question-circle field-info-icon"
+             (click)="openFieldDocs('enabled')"
              title="Click for documentation"></i>
           Enable Download Cleaner
         </label>
         <div class="field-input">
           <p-checkbox formControlName="enabled" [binary]="true" inputId="dcEnabled"></p-checkbox>
+          <small *ngIf="hasNoFeaturesConfiguredError()" class="form-error-text">At least one feature must be configured</small>
           <small class="form-helper-text">When enabled, the download cleaner will run according to the schedule</small>
         </div>
       </div>
@@ -67,8 +68,8 @@
         <label class="field-label">
           Run Schedule
         </label>
-        <div>
-          <div class="field-input schedule-input flex flex-wrap">
+        <div class="field-input">
+          <div class="schedule-input flex flex-wrap">
             <span class="schedule-label">Every</span>
             <p-select 
               formControlName="every"
@@ -88,7 +89,7 @@
             >
             </p-selectButton>
           </div>
-          <small *ngIf="hasNestedError('jobSchedule', 'every', 'required')" class="p-error">This field is required</small>
+          <small *ngIf="hasNestedError('jobSchedule', 'every', 'required')" class="form-error-text">This field is required</small>
           <small class="form-helper-text">How often the download cleaner should run</small>
         </div>
       </div>
@@ -101,11 +102,9 @@
              title="Click for documentation"></i>
           Cron Expression
         </label>
-        <div>
-          <div class="field-input">
-            <input type="text" pInputText formControlName="cronExpression" placeholder="0 0/5 * ? * * *" />
-          </div>
-          <small *ngIf="hasError('cronExpression', 'required')" class="p-error">Cron expression is required</small>
+        <div class="field-input">
+          <input type="text" pInputText formControlName="cronExpression" placeholder="0 0/5 * ? * * *" />
+          <small *ngIf="hasError('cronExpression', 'required')" class="form-error-text">Cron expression is required</small>
           <small class="form-helper-text">Enter a valid Quartz cron expression (e.g., "0 0/5 * ? * * *" runs every 5 minutes)</small>
         </div>
       </div>
@@ -113,28 +112,16 @@
       <!-- Ignored Downloads Field -->
       <div class="field-row">
         <label class="field-label">
-          <i class="pi pi-question-circle field-info-icon" 
-             (click)="openFieldDocs('ignoredDownloads')" 
+          <i class="pi pi-question-circle field-info-icon"
+             (click)="openFieldDocs('ignoredDownloads')"
              title="Click for documentation"></i>
           Ignored Downloads
         </label>
         <div class="field-input">
-          <!-- Mobile-friendly autocomplete -->
           <app-mobile-autocomplete
             formControlName="ignoredDownloads"
             placeholder="Add download pattern"
           ></app-mobile-autocomplete>
-          
-          <!-- Desktop autocomplete -->
-          <p-autocomplete
-            formControlName="ignoredDownloads"
-            inputId="dc-ignoredDownloads"
-            multiple
-            fluid
-            [typeahead]="false"
-            placeholder="Add download pattern and press enter"
-            class="desktop-only"
-          ></p-autocomplete>
           <small class="form-helper-text">Downloads matching these patterns will be ignored by the download cleaner</small>
         </div>
       </div>
@@ -151,7 +138,12 @@
                 <i class="pi pi-chevron-down"></i>
               }
             </ng-template>
-            Seeding Settings
+            <span class="accordion-header-title">
+              Seeding Settings
+              @if (sectionHasErrors(0)) {
+                <i class="pi pi-exclamation-circle accordion-error-icon" title="This section has validation errors"></i>
+              }
+            </span>
           </p-accordion-header>
           <p-accordion-content>
             <!-- Delete Private Option -->
@@ -186,16 +178,15 @@
                 <div *ngFor="let category of categoriesFormArray.controls; let i = index" class="category-item" [formGroup]="getCategoryAsFormGroup(i)">
                   <div class="category-header">
                     <div class="category-title">
-                      <i class="pi pi-tag category-icon"></i>
-                      <input type="text" pInputText formControlName="name" placeholder="Category name" class="category-name-input" />
                       <i class="pi pi-question-circle field-info-icon" 
                          (click)="openFieldDocs('name')" 
                          title="Click for documentation"></i>
+                      <input type="text" pInputText formControlName="name" placeholder="Category name" class="category-name-input" />
                     </div>
                     <button pButton type="button" icon="pi pi-trash" class="p-button-danger p-button-sm" 
                       (click)="removeCategory(i)" [disabled]="downloadCleanerForm.disabled"></button>
                   </div>
-                  <small *ngIf="hasCategoryError(i, 'name', 'required')" class="p-error block">Name is required</small>
+                  <small *ngIf="hasCategoryError(i, 'name', 'required')" class="form-error-text">Name is required</small>
                   
                   <div class="category-content">
                     <div class="category-field">
@@ -211,7 +202,8 @@
                           decrementButtonClass="p-button-danger" incrementButtonClass="p-button-success" incrementButtonIcon="pi pi-plus"
                           decrementButtonIcon="pi pi-minus">
                         </p-inputNumber>
-                        <small *ngIf="hasCategoryError(i, 'maxRatio', 'min')" class="p-error block">Min value is -1</small>
+                        <small *ngIf="hasCategoryError(i, 'maxRatio', 'required')" class="form-error-text">This input is required</small>
+                        <small *ngIf="hasCategoryError(i, 'maxRatio', 'min')" class="form-error-text">Min value is -1</small>
                         <small class="form-helper-text">Maximum ratio to seed before removing (<code>-1</code> means disabled)</small>
                       </div>
                     </div>
@@ -228,7 +220,8 @@
                           decrementButtonClass="p-button-danger" incrementButtonClass="p-button-success" incrementButtonIcon="pi pi-plus"
                           decrementButtonIcon="pi pi-minus">
                         </p-inputNumber>
-                        <small *ngIf="hasCategoryError(i, 'minSeedTime', 'min')" class="p-error block">Min value is 0</small>
+                        <small *ngIf="hasCategoryError(i, 'minSeedTime', 'required')" class="form-error-text">This input is required</small>
+                        <small *ngIf="hasCategoryError(i, 'minSeedTime', 'min')" class="form-error-text">Min value is 0</small>
                         <small class="form-helper-text">Minimum time to seed before removing a download that has reached the max ratio (<code>0</code> means disabled)</small>
                       </div>
                     </div>
@@ -240,20 +233,19 @@
                            title="Click for documentation"></i>
                         Max Seed Time (hours)
                       </label>
-                      <div>
-                        <div class="field-input">
-                          <p-inputNumber formControlName="maxSeedTime" [min]="-1" [showButtons]="true" buttonLayout="horizontal"
-                            decrementButtonClass="p-button-danger" incrementButtonClass="p-button-success" incrementButtonIcon="pi pi-plus"
-                            decrementButtonIcon="pi pi-minus">
-                          </p-inputNumber>
-                        </div>
+                      <div class="field-input">
+                        <p-inputNumber formControlName="maxSeedTime" [min]="-1" [showButtons]="true" buttonLayout="horizontal"
+                          decrementButtonClass="p-button-danger" incrementButtonClass="p-button-success" incrementButtonIcon="pi pi-plus"
+                          decrementButtonIcon="pi pi-minus">
+                        </p-inputNumber>
+                        <small *ngIf="hasCategoryError(i, 'maxSeedTime', 'required')" class="form-error-text">This input is required</small>
+                        <small *ngIf="hasCategoryError(i, 'maxSeedTime', 'min')" class="form-error-text">Min value is -1</small>
                         <small class="form-helper-text">Maximum time to seed before removing (<code>-1</code> means disabled)</small>
-                        <small *ngIf="hasCategoryError(i, 'maxSeedTime', 'min')" class="p-error block">Min value is -1</small>
                       </div>
                     </div>
                   </div>
                   <!-- Error for both maxRatio and maxSeedTime disabled -->
-                  <small *ngIf="hasCategoryGroupError(i, 'bothDisabled')" class="p-error block">
+                  <small *ngIf="hasCategoryGroupError(i, 'bothDisabled')" class="form-error-text">
                     Both max ratio and max seed time cannot be disabled at the same time
                   </small>
                 </div>
@@ -277,7 +269,12 @@
                 <i class="pi pi-chevron-down"></i>
               }
             </ng-template>
-            Unlinked Download Settings
+            <span class="accordion-header-title">
+              Unlinked Download Settings
+              @if (sectionHasErrors(1)) {
+                <i class="pi pi-exclamation-circle accordion-error-icon" title="This section has validation errors"></i>
+              }
+            </span>
           </p-accordion-header>
           <p-accordion-content>
             <div class="field-row">
@@ -301,11 +298,9 @@
                    title="Click for documentation"></i>
                 Target Category
               </label>
-              <div>
-                <div class="field-input">
-                  <input type="text" pInputText formControlName="unlinkedTargetCategory" placeholder="Target category name" />
-                </div>
-                <small *ngIf="hasError('unlinkedTargetCategory', 'required')" class="p-error">Target category is required</small>
+              <div class="field-input">
+                <input type="text" pInputText formControlName="unlinkedTargetCategory" placeholder="Target category name" />
+                <small *ngIf="hasError('unlinkedTargetCategory', 'required')" class="form-error-text">Target category is required</small>
                 <small class="form-helper-text">Category to move unlinked downloads to</small>
                 <small class="form-helper-text">You have to create a seeding rule for this category if you want to remove the downloads</small>
               </div>
@@ -333,10 +328,8 @@
                    title="Click for documentation"></i>
                 Ignored Root Directory
               </label>
-              <div>
-                <div class="field-input">
-                  <input type="text" pInputText formControlName="unlinkedIgnoredRootDir" placeholder="/path/to/directory" />
-                </div>
+              <div class="field-input">
+                <input type="text" pInputText formControlName="unlinkedIgnoredRootDir" placeholder="/path/to/directory" />
                 <small class="form-helper-text">Root directory to ignore when checking for unlinked downloads (used for cross-seed)</small>
               </div>
             </div>
@@ -344,33 +337,19 @@
             <!-- Unlinked Categories -->
             <div class="field-row">
               <label class="field-label">
-                <i class="pi pi-question-circle field-info-icon" 
-                   (click)="openFieldDocs('unlinkedCategories')" 
+                <i class="pi pi-question-circle field-info-icon"
+                   (click)="openFieldDocs('unlinkedCategories')"
                    title="Click for documentation"></i>
                 Unlinked Categories
               </label>
-              <div>
                 <div class="field-input">
-                  <!-- Mobile-friendly autocomplete -->
                   <app-mobile-autocomplete
                     formControlName="unlinkedCategories"
                     placeholder="Add category"
                   ></app-mobile-autocomplete>
-                  
-                  <!-- Desktop autocomplete -->
-                  <p-autocomplete
-                    formControlName="unlinkedCategories"
-                    multiple
-                    fluid
-                    [typeahead]="false"
-                    placeholder="Add category and press Enter"
-                    class="desktop-only"
-                  >
-                  </p-autocomplete>
+                  <small *ngIf="hasUnlinkedCategoriesError()" class="form-error-text">At least one category is required when unlinked download handling is enabled</small>
+                  <small class="form-helper-text">Categories to check for unlinked downloads</small>
                 </div>
-                <small *ngIf="hasUnlinkedCategoriesError()" class="p-error">At least one category is required when unlinked download handling is enabled</small>
-                <small class="form-helper-text">Categories to check for unlinked downloads</small>
-              </div>
             </div>
           </p-accordion-content>
         </p-accordion-panel>
@@ -402,9 +381,7 @@
   </form>
 
   <!-- Confirmation Dialog -->
-  <p-confirmDialog 
-    [style]="{ width: '450px' }"
-    [baseZIndex]="10000"
+  <p-confirmDialog
     rejectButtonStyleClass="p-button-text">
   </p-confirmDialog>
 </div>

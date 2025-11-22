@@ -52,10 +52,10 @@ public sealed class DownloadCleaner : GenericHandler
         
         bool isUnlinkedEnabled = config.UnlinkedEnabled && !string.IsNullOrEmpty(config.UnlinkedTargetCategory) && config.UnlinkedCategories.Count > 0;
         bool isCleaningEnabled = config.Categories.Count > 0;
-        
+
         if (!isUnlinkedEnabled && !isCleaningEnabled)
         {
-            _logger.LogWarning("{name} is not configured properly", nameof(DownloadCleaner));
+            _logger.LogWarning("No features are enabled for {name}", nameof(DownloadCleaner));
             return;
         }
         
@@ -133,9 +133,9 @@ public sealed class DownloadCleaner : GenericHandler
         await ProcessArrConfigAsync(ContextProvider.Get<ArrConfig>(nameof(InstanceType.Readarr)), InstanceType.Readarr, true);
         await ProcessArrConfigAsync(ContextProvider.Get<ArrConfig>(nameof(InstanceType.Whisparr)), InstanceType.Whisparr, true);
         
-        if (isUnlinkedEnabled && downloadServiceWithDownloads.Count > 0)
+        if (isUnlinkedEnabled && downloadServiceWithDownloads.Sum(x => x.Item2.Count) > 0)
         {
-            _logger.LogInformation("Found {count} potential downloads to change category", downloadServiceWithDownloads.Sum(x => x.Item2.Count));
+            _logger.LogInformation("Evaluating {count} downloads for hardlinks", downloadServiceWithDownloads.Sum(x => x.Item2.Count));
             
             // Process each client with its own filtered downloads
             foreach (var (downloadService, downloadsToChangeCategory) in downloadServiceWithDownloads)
@@ -150,7 +150,7 @@ public sealed class DownloadCleaner : GenericHandler
                 }
             }
             
-            _logger.LogInformation("Finished changing category");
+            _logger.LogInformation("Finished hardlinks evaluation");
         }
         
         if (config.Categories.Count is 0)
@@ -175,7 +175,7 @@ public sealed class DownloadCleaner : GenericHandler
             }
         }
         
-        _logger.LogInformation("found {count} potential downloads to clean", downloadServiceWithDownloads.Sum(x => x.Item2.Count));
+        _logger.LogInformation("Evaluating {count} downloads for cleanup", downloadServiceWithDownloads.Sum(x => x.Item2.Count));
         
         // Process cleaning for each client
         foreach (var (downloadService, downloadsToClean) in downloadServiceWithDownloads)
@@ -190,7 +190,7 @@ public sealed class DownloadCleaner : GenericHandler
             }
         }
         
-        _logger.LogInformation("finished cleaning downloads");
+        _logger.LogInformation("Finished cleanup evaluation");
 
         foreach (var downloadService in downloadServices)
         {

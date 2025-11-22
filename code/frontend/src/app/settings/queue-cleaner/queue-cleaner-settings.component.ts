@@ -13,6 +13,7 @@ import { PatternMode } from "../../shared/models/queue-cleaner-config.model";
 import { SettingsCardComponent } from "../components/settings-card/settings-card.component";
 import { ByteSizeInputComponent } from "../../shared/components/byte-size-input/byte-size-input.component";
 import { MobileAutocompleteComponent } from "../../shared/components/mobile-autocomplete/mobile-autocomplete.component";
+import { hasIndividuallyDirtyFormErrors } from "../../core/utils/form-validation.util";
 
 // PrimeNG Components
 import { CardModule } from "primeng/card";
@@ -30,7 +31,6 @@ import { MessageService, ConfirmationService } from "primeng/api";
 import { NotificationService } from "../../core/services/notification.service";
 import { DocumentationService } from "../../core/services/documentation.service";
 import { SelectModule } from "primeng/select";
-import { AutoCompleteModule } from "primeng/autocomplete";
 import { DropdownModule } from "primeng/dropdown";
 import { TooltipModule } from "primeng/tooltip";
 import { DialogModule } from "primeng/dialog";
@@ -70,7 +70,6 @@ interface RuleCoverage {
     TagModule,
     ByteSizeInputComponent,
     SelectModule,
-    AutoCompleteModule,
     DropdownModule,
     TooltipModule,
     DialogModule,
@@ -154,6 +153,15 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
   // Modal visibility state
   stallRuleModalVisible = false;
   slowRuleModalVisible = false;
+
+  // Track the previous pattern mode state to detect when user is trying to change to Exclude
+  private previousPatternMode = PatternMode.Include;
+
+  // Track the previous failed import max strikes value to detect when user is trying to enable it
+  private previousFailedImportMaxStrikes = 0;
+
+  // Flag to track if form has been initially loaded to avoid showing dialog on page load
+  private formInitialized = false;
 
   // Rule forms
   stallRuleForm: FormGroup;
@@ -560,7 +568,7 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
         skipIfNotFoundInClient: [{ value: true, disabled: true }],
         patterns: [{ value: [], disabled: true }],
         patternMode: [{ value: PatternMode.Include, disabled: true }],
-      }),
+      }, { validators: this.includePatternsRequiredValidator() }),
 
       downloadingMetadataMaxStrikes: [{ value: 0, disabled: true }, [Validators.required, Validators.min(0), Validators.max(5000)]],
     });
@@ -625,12 +633,33 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
 
         // Then update all other dependent form control states
         this.updateFormControlDisabledStates(correctedConfig);
-        
+
         // Store original values for dirty checking
         this.storeOriginalValues();
 
+        // Track the pattern mode for confirmation dialog logic
+        this.previousPatternMode = correctedConfig.failedImport?.patternMode || PatternMode.Include;
+
+        // Track the failed import max strikes for confirmation dialog logic
+        this.previousFailedImportMaxStrikes = correctedConfig.failedImport?.maxStrikes || 0;
+
+        // Mark form as initialized to enable confirmation dialogs for user actions
+        this.formInitialized = true;
+
         // Mark form as pristine since we've just loaded the data
         this.queueCleanerForm.markAsPristine();
+
+        // Immediately show validation errors for patterns if Include mode is selected with no patterns
+        const failedImportGroup = this.queueCleanerForm.get('failedImport');
+        const patternsControl = this.queueCleanerForm.get('failedImport.patterns');
+        if (failedImportGroup && patternsControl) {
+          // Trigger validation
+          failedImportGroup.updateValueAndValidity();
+          // If there's a validation error, mark the field as touched to display it immediately
+          if (patternsControl.errors?.['patternsRequired']) {
+            patternsControl.markAsTouched();
+          }
+        }
       }
     });
     
@@ -817,8 +846,51 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
     if (failedImportMaxStrikesControl) {
       failedImportMaxStrikesControl.valueChanges.pipe(takeUntil(this.destroy$))
       .subscribe((strikes) => {
-        this.updateFailedImportDependentControls(strikes);
+        // Only show confirmation dialog if form is initialized and user is trying to enable (>= 3)
+        if (this.formInitialized && strikes >= 3 && this.previousFailedImportMaxStrikes < 3) {
+          this.showFailedImportMaxStrikesConfirmationDialog(strikes);
+        } else {
+          // Update tracked state normally
+          this.previousFailedImportMaxStrikes = strikes;
+          this.updateFailedImportDependentControls(strikes);
+        }
       });
+    }
+
+    // Listen for changes to the 'failedImport.patternMode' control
+    const patternModeControl = this.queueCleanerForm.get('failedImport.patternMode');
+    if (patternModeControl) {
+      patternModeControl.valueChanges
+        .pipe(takeUntil(this.destroy$))
+        .subscribe((patternMode: PatternMode) => {
+          // Only show confirmation dialog if form is initialized and user is trying to change to Exclude
+          if (this.formInitialized && patternMode === PatternMode.Exclude && this.previousPatternMode !== PatternMode.Exclude) {
+            this.showPatternModeExcludeConfirmationDialog();
+          } else {
+            // Update tracked state normally
+            this.previousPatternMode = patternMode;
+          }
+
+          // Trigger validation on the failedImport form group to update patterns validation
+          const failedImportGroup = this.queueCleanerForm.get('failedImport');
+          if (failedImportGroup) {
+            failedImportGroup.updateValueAndValidity();
+          }
+        });
+    }
+
+    // Listen for changes to the 'failedImport.patterns' control to trigger validation
+    const patternsControl = this.queueCleanerForm.get('failedImport.patterns');
+    if (patternsControl) {
+      patternsControl.valueChanges
+        .pipe(takeUntil(this.destroy$))
+        .subscribe(() => {
+          // Trigger validation on the failedImport form group
+          const failedImportGroup = this.queueCleanerForm.get('failedImport');
+          if (failedImportGroup) {
+            failedImportGroup.updateValueAndValidity();
+          }
+        });
     }
 
     // Listen for changes to the schedule type to ensure dropdown isn't empty
@@ -1041,6 +1113,19 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
       this.queueCleanerForm.get("failedImport")?.get("patterns")?.disable(options);
       this.queueCleanerForm.get("failedImport")?.get("patternMode")?.disable(options);
     }
+
+    // Trigger validation on the failedImport form group after enabling/disabling controls
+    const failedImportGroup = this.queueCleanerForm.get('failedImport');
+    const patternsControl = this.queueCleanerForm.get('failedImport.patterns');
+    if (failedImportGroup) {
+      failedImportGroup.updateValueAndValidity();
+
+      // If we just enabled the patterns control and it has a validation error, mark it as touched
+      // so the error appears immediately
+      if (enable && patternsControl?.errors?.['patternsRequired']) {
+        patternsControl.markAsTouched();
+      }
+    }
   }
 
   /**
@@ -1226,11 +1311,13 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
       }
 
       if (typeof minValue === 'number' && typeof maxValue === 'number' && maxValue < minValue) {
+        // Set error on the max control only (for UI display)
         const existingErrors = maxControl.errors ?? {};
         if (!existingErrors['minGreaterThanMax']) {
           maxControl.setErrors({ ...existingErrors, minGreaterThanMax: true });
         }
-        return { minGreaterThanMax: true };
+        // Don't return an error - we've already set it on the control directly
+        return null;
       }
 
       this.clearMinMaxError(maxControl);
@@ -1244,6 +1331,59 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
     }
 
     const { minGreaterThanMax, ...remaining } = control.errors;
+    control.setErrors(Object.keys(remaining).length ? remaining : null);
+  }
+
+  /**
+   * Validator to ensure patterns array is not empty when patternMode is Include
+   */
+  private includePatternsRequiredValidator(): ValidatorFn {
+    return (group: AbstractControl): ValidationErrors | null => {
+      const patternModeControl = group.get('patternMode');
+      const patternsControl = group.get('patterns');
+
+      if (!patternModeControl || !patternsControl) {
+        return null;
+      }
+
+      // Don't validate disabled controls - clear any existing errors
+      if (patternsControl.disabled) {
+        this.clearPatternsRequiredError(patternsControl);
+        return null;
+      }
+
+      const patternMode = patternModeControl.value;
+      const patterns = patternsControl.value;
+
+      // Only validate if pattern mode is Include
+      if (patternMode === PatternMode.Include) {
+        // Check if patterns array is empty or null
+        if (!patterns || !Array.isArray(patterns) || patterns.length === 0) {
+          // Set error on the patterns control only
+          const existingErrors = patternsControl.errors ?? {};
+          if (!existingErrors['patternsRequired']) {
+            patternsControl.setErrors({ ...existingErrors, patternsRequired: true });
+          }
+          // Don't return an error - we've already set it on the control directly
+          return null;
+        }
+      }
+
+      // Clear the error if validation passes
+      this.clearPatternsRequiredError(patternsControl);
+      return null;
+    };
+  }
+
+  /**
+   * Clear the patternsRequired error from the control
+   */
+  private clearPatternsRequiredError(control: AbstractControl): void {
+    if (!control.errors || !control.errors['patternsRequired']) {
+      return;
+    }
+
+    const { patternsRequired, ...remaining } = control.errors;
     control.setErrors(Object.keys(remaining).length ? remaining : null);
   }
 
@@ -1297,5 +1437,80 @@ export class QueueCleanerSettingsComponent implements OnDestroy, CanComponentDea
       case TorrentPrivacyType.Both:
         return 'Public and Private';
     }
+  }
+
+  /**
+   * Check if an accordion section has validation errors
+   * @param sectionIndex The accordion panel index
+   * @returns True if the section has validation errors
+   */
+  sectionHasErrors(sectionIndex: number): boolean {
+    switch (sectionIndex) {
+      case 0: // Failed Import Settings
+        return hasIndividuallyDirtyFormErrors(this.queueCleanerForm.get('failedImport'));
+      case 2: // Downloading Metadata Settings
+        return hasIndividuallyDirtyFormErrors(this.queueCleanerForm.get('downloadingMetadataMaxStrikes'));
+      case 4: // Stall Rules - has errors if coverage gaps exist
+        return this.stallRulesCoverage.hasGaps;
+      case 5: // Slow Rules - has errors if coverage gaps exist
+        return this.slowRulesCoverage.hasGaps;
+      default:
+        return false;
+    }
+  }
+
+  /**
+   * Show confirmation dialog when changing pattern mode to Exclude
+   */
+  private showPatternModeExcludeConfirmationDialog(): void {
+    this.confirmationService.confirm({
+      header: 'Switch to Exclude Pattern Mode',
+      message: 'The Exclude Pattern Mode is <b>very aggressive</b> and will <b>remove all failed imports</b> that are not matched by the Excluded Patterns.<br/><br/>Are you sure you want to proceed?',
+      icon: 'pi pi-exclamation-triangle',
+      acceptIcon: 'pi pi-check',
+      rejectIcon: 'pi pi-times',
+      acceptLabel: 'Yes, Switch to Exclude',
+      rejectLabel: 'Cancel',
+      acceptButtonStyleClass: 'p-button-warning',
+      accept: () => {
+        // User confirmed, update tracked state
+        this.previousPatternMode = PatternMode.Exclude;
+      },
+      reject: () => {
+        // User cancelled, revert the select button without triggering value change
+        const patternModeControl = this.queueCleanerForm.get('failedImport.patternMode');
+        if (patternModeControl) {
+          patternModeControl.setValue(this.previousPatternMode, { emitEvent: false });
+        }
+      }
+    });
+  }
+
+  /**
+   * Show confirmation dialog when enabling failed import max strikes (>= 3)
+   */
+  private showFailedImportMaxStrikesConfirmationDialog(newStrikesValue: number): void {
+    this.confirmationService.confirm({
+      header: 'Enable Failed Import Processing',
+      message: 'If you are using <b>private torrent trackers</b>, please ensure that your download clients have been configured and enabled, otherwise you may <b>risk having private torrents deleted before seeding</b> the minimum required amount.<br/><br/>Are you sure you want to enable Failed Import processing?',
+      icon: 'pi pi-exclamation-triangle',
+      acceptIcon: 'pi pi-check',
+      rejectIcon: 'pi pi-times',
+      acceptLabel: 'Yes, Enable',
+      rejectLabel: 'Cancel',
+      acceptButtonStyleClass: 'p-button-warning',
+      accept: () => {
+        // User confirmed, update tracked state and apply changes
+        this.previousFailedImportMaxStrikes = newStrikesValue;
+        this.updateFailedImportDependentControls(newStrikesValue);
+      },
+      reject: () => {
+        // User cancelled, revert the value without triggering value change
+        const maxStrikesControl = this.queueCleanerForm.get('failedImport.maxStrikes');
+        if (maxStrikesControl) {
+          maxStrikesControl.setValue(this.previousFailedImportMaxStrikes, { emitEvent: false });
+        }
+      }
+    });
   }
 }

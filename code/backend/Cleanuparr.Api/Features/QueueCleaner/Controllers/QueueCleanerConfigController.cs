@@ -59,8 +59,6 @@ public sealed class QueueCleanerConfigController : ControllerBase
                 CronValidationHelper.ValidateCronExpression(newConfigDto.CronExpression);
             }
 
-            newConfigDto.FailedImport.Validate();
-
             var oldConfig = await _dataContext.QueueCleanerConfigs
                 .FirstAsync();
 
@@ -70,6 +68,8 @@ public sealed class QueueCleanerConfigController : ControllerBase
             oldConfig.FailedImport = newConfigDto.FailedImport;
             oldConfig.DownloadingMetadataMaxStrikes = newConfigDto.DownloadingMetadataMaxStrikes;
             oldConfig.IgnoredDownloads = newConfigDto.IgnoredDownloads;
+            
+            oldConfig.Validate();
 
             await _dataContext.SaveChangesAsync();
 

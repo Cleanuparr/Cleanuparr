@@ -1,0 +1,30 @@
+// Shared styles for accordion error indicators
+// Used across multiple settings pages to show validation errors on closed accordion panels
+
+:host ::ng-deep {
+  // Accordion header title with error indicator
+  .accordion-header-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex: 1;
+  }
+
+  // Error icon styling
+  .accordion-error-icon {
+    color: var(--red-500);
+    font-size: 1rem;
+    margin-left: 0.5rem;
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  // Subtle pulse animation for error icon
+  @keyframes pulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.6;
+    }
+  }
+}

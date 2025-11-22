@@ -1,0 +1,40 @@
+<div class="mobile-autocomplete-container">
+  <div class="input-with-button" [class.has-uncommitted-input]="hasUncommittedInput && !disabled">
+    <input
+      type="text"
+      pInputText
+      #inputField
+      [placeholder]="placeholder"
+      [ngModel]="currentInputValue"
+      (ngModelChange)="onInputChange($event)"
+      (keyup.enter)="addItemAndClearInput(inputField)"
+      (blur)="onInputBlur()"
+      [class.ng-invalid]="hasUncommittedInput && !disabled && (touched || currentInputValue.length > 0)"
+      [class.ng-dirty]="hasUncommittedInput && !disabled"
+      class="mobile-input"
+      [disabled]="disabled"
+    />
+    <button
+      pButton
+      type="button"
+      icon="pi pi-plus"
+      class="p-button-sm add-button"
+      (click)="addItemAndClearInput(inputField)"
+      [title]="'Add ' + placeholder"
+      [disabled]="disabled || !inputField.value.trim()"
+    ></button>
+  </div>
+  <small *ngIf="hasUncommittedInput && !disabled && (touched || currentInputValue.length > 0)" class="form-error-text">
+    Press Enter or click + to add this item
+  </small>
+  <div class="chips-container" *ngIf="value && value.length > 0">
+    <p-chip
+      *ngFor="let item of value; let i = index"
+      [label]="item"
+      [removable]="!disabled"
+      (onRemove)="removeItem(i)"
+      [ngClass]="{'chip-disabled': disabled}"
+      class="mb-2 mr-2"
+    ></p-chip>
+  </div>
+</div>

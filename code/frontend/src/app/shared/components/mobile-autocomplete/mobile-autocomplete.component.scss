@@ -1,4 +1,7 @@
-/* Mobile-friendly autocomplete styles */
+:host {
+  display: block;
+}
+
 .mobile-autocomplete-container {
   .input-with-button {
     display: flex;
@@ -6,9 +9,26 @@
     align-items: center;
     margin-bottom: 12px;
 
+    &.has-uncommitted-input {
+      .mobile-input {
+        border-color: var(--red-500, #ef4444);
+
+        &:focus {
+          border-color: var(--red-600, #dc2626);
+          box-shadow: 0 0 0 0.2rem rgba(239, 68, 68, 0.25);
+        }
+      }
+    }
+
     .mobile-input {
       flex: 1;
       min-height: 40px;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+
+      &.ng-invalid.ng-dirty,
+      &.ng-invalid.ng-touched {
+        border-color: var(--red-500, #ef4444);
+      }
     }
 
     .add-button {
@@ -23,19 +43,16 @@
     flex-wrap: wrap;
     gap: 8px;
     margin-bottom: 8px;
+
+    ::ng-deep .chip-disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      pointer-events: none;
+
+      .p-chip {
+        background: var(--surface-200) !important;
+        color: var(--text-color-secondary) !important;
+      }
+    }
   }
 }
-
-/* Responsive design - show mobile component on mobile devices */
-@media (max-width: 768px) {
-  :host {
-    display: block;
-  }
-}
-
-/* Hide mobile component on larger screens */
-@media (min-width: 769px) {
-  :host {
-    display: none;
-  }
-} 

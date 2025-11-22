@@ -1,6 +1,6 @@
-import { Component, Input, Output, EventEmitter, forwardRef } from '@angular/core';
+import { Component, Input, forwardRef, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ControlValueAccessor, NG_VALUE_ACCESSOR, FormsModule } from '@angular/forms';
+import { ControlValueAccessor, NG_VALUE_ACCESSOR, NG_VALIDATORS, FormsModule, AbstractControl, ValidationErrors, Validator } from '@angular/forms';
 import { InputTextModule } from 'primeng/inputtext';
 import { ButtonModule } from 'primeng/button';
 import { ChipModule } from 'primeng/chip';
@@ -20,51 +20,42 @@ import { ChipModule } from 'primeng/chip';
       provide: NG_VALUE_ACCESSOR,
       useExisting: forwardRef(() => MobileAutocompleteComponent),
       multi: true
+    },
+    {
+      provide: NG_VALIDATORS,
+      useExisting: forwardRef(() => MobileAutocompleteComponent),
+      multi: true
     }
   ],
-  template: `
-    <div class="mobile-autocomplete-container">
-      <div class="input-with-button">
-        <input 
-          type="text" 
-          pInputText 
-          #inputField
-          [placeholder]="placeholder"
-          (keyup.enter)="addItem(inputField.value); inputField.value = ''"
-          class="mobile-input"
-        />
-        <button 
-          pButton 
-          type="button" 
-          icon="pi pi-plus" 
-          class="p-button-sm add-button"
-          (click)="addItem(inputField.value); inputField.value = ''"
-          [title]="'Add ' + placeholder"
-        ></button>
-      </div>
-      <div class="chips-container" *ngIf="value && value.length > 0">
-        <p-chip 
-          *ngFor="let item of value; let i = index" 
-          [label]="item" 
-          [removable]="true"
-          (onRemove)="removeItem(i)"
-          class="mb-2 mr-2"
-        ></p-chip>
-      </div>
-    </div>
-  `,
+  templateUrl: './mobile-autocomplete.component.html',
   styleUrls: ['./mobile-autocomplete.component.scss']
 })
-export class MobileAutocompleteComponent implements ControlValueAccessor {
+export class MobileAutocompleteComponent implements ControlValueAccessor, Validator {
   @Input() placeholder: string = 'Add item and press Enter';
   @Input() multiple: boolean = true;
-  
+  @ViewChild('inputField', { static: false }) inputField?: ElementRef<HTMLInputElement>;
+
   value: string[] = [];
   disabled: boolean = false;
+  currentInputValue: string = '';
+  hasUncommittedInput: boolean = false;
+  touched: boolean = false;
 
-  // ControlValueAccessor implementation
   private onChange = (value: string[]) => {};
   private onTouched = () => {};
+  private onValidatorChange = () => {};
+
+  onInputChange(value: string): void {
+    this.currentInputValue = value;
+    this.hasUncommittedInput = value.trim().length > 0;
+    this.onValidatorChange();
+  }
+
+  onInputBlur(): void {
+    this.touched = true;
+    this.onTouched();
+    this.onValidatorChange();
+  }
 
   writeValue(value: string[]): void {
     this.value = value || [];
@@ -80,20 +71,47 @@ export class MobileAutocompleteComponent implements ControlValueAccessor {
 
   setDisabledState(isDisabled: boolean): void {
     this.disabled = isDisabled;
+
+    // Clear uncommitted input when becoming disabled
+    if (isDisabled && this.hasUncommittedInput) {
+      this.currentInputValue = '';
+      this.hasUncommittedInput = false;
+      this.onValidatorChange();
+    }
+  }
+
+  validate(control: AbstractControl): ValidationErrors | null {
+    // Don't report validation errors when disabled
+    if (this.hasUncommittedInput && !this.disabled) {
+      return { uncommittedInput: { value: this.currentInputValue } };
+    }
+    return null;
+  }
+
+  registerOnValidatorChange(fn: () => void): void {
+    this.onValidatorChange = fn;
   }
 
   addItem(item: string): void {
     if (item && item.trim() && !this.disabled) {
       const trimmedItem = item.trim();
-      
-      // Check if item already exists
+
       if (!this.value.includes(trimmedItem)) {
         const newValue = [...this.value, trimmedItem];
         this.value = newValue;
         this.onChange(this.value);
-        this.onTouched();
       }
+
+      this.currentInputValue = '';
+      this.hasUncommittedInput = false;
+      this.onValidatorChange();
     }
+  }
+
+  addItemAndClearInput(inputField: HTMLInputElement): void {
+    this.addItem(inputField.value);
+    inputField.value = '';
+    this.onInputChange('');
   }
 
   removeItem(index: number): void {
@@ -104,4 +122,4 @@ export class MobileAutocompleteComponent implements ControlValueAccessor {
       this.onTouched();
     }
   }
-} 
+}
