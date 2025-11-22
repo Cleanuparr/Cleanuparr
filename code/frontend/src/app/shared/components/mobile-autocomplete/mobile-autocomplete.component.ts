@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, forwardRef, ViewChild, ElementRef } from '@angular/core';
+import { Component, Input, forwardRef, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR, NG_VALIDATORS, FormsModule, AbstractControl, ValidationErrors, Validator } from '@angular/forms';
 import { InputTextModule } from 'primeng/inputtext';
