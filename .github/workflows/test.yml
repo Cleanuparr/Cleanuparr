@@ -1,6 +1,12 @@
 name: Tests
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'code/backend/**'
+      - '.github/workflows/test.yml'
   pull_request:
     paths:
       - 'code/backend/**'
