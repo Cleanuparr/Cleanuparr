@@ -87,7 +87,7 @@ public sealed class QBitItem : ITorrentItem
                 return true;
             }
 
-            if (_torrentInfo.Tags.Contains(pattern, StringComparer.InvariantCultureIgnoreCase))
+            if (_torrentInfo.Tags?.Contains(pattern, StringComparer.InvariantCultureIgnoreCase) is true)
             {
                 return true;
             }

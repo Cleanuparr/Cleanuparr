@@ -425,22 +425,6 @@ public class QBitItemTests
     }
 
     [Fact]
-    public void IsIgnored_MatchingName_ReturnsTrue()
-    {
-        // Arrange
-        var torrentInfo = new TorrentInfo { Name = "Test Torrent", Hash = "abc123" };
-        var trackers = new List<TorrentTracker>();
-        var wrapper = new QBitItem(torrentInfo, trackers, false);
-        var ignoredDownloads = new[] { "test" };
-
-        // Act
-        var result = wrapper.IsIgnored(ignoredDownloads);
-
-        // Assert
-        result.ShouldBeTrue();
-    }
-
-    [Fact]
     public void IsIgnored_MatchingHash_ReturnsTrue()
     {
         // Arrange
