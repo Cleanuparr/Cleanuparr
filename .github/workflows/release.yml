@@ -52,27 +52,76 @@ jobs:
           echo "📱 App Version: $app_version"
           echo "🔖 Is Tag: $is_tag"
 
+  # Run tests
+  test:
+    needs: validate
+    uses: ./.github/workflows/test.yml
+    secrets: inherit
+
+  # Build frontend once for all build jobs
+  build-frontend:
+    needs: [validate, test]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get vault secrets
+        uses: hashicorp/vault-action@v2
+        with:
+          url: ${{ secrets.VAULT_HOST }}
+          method: approle
+          roleId: ${{ secrets.VAULT_ROLE_ID }}
+          secretId: ${{ secrets.VAULT_SECRET_ID }}
+          secrets:
+            secrets/data/github repo_readonly_pat | REPO_READONLY_PAT
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        timeout-minutes: 1
+        with:
+          repository: ${{ github.repository }}
+          ref: ${{ github.ref_name }}
+          token: ${{ env.REPO_READONLY_PAT }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: code/frontend/package-lock.json
+
+      - name: Build frontend
+        run: |
+          cd code/frontend
+          npm ci
+          npm run build
+
+      - name: Upload frontend artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist-release
+          path: code/frontend/dist/ui/browser
+          retention-days: 1
+
   # Build portable executables
   build-executables:
-    needs: validate
+    needs: [validate, test, build-frontend]
     uses: ./.github/workflows/build-executable.yml
     secrets: inherit
 
   # Build Windows installer
   build-windows-installer:
-    needs: validate
+    needs: [validate, test, build-frontend]
     uses: ./.github/workflows/build-windows-installer.yml
     secrets: inherit
 
   # Build macOS Intel installer
   build-macos-intel:
-    needs: validate
+    needs: [validate, test, build-frontend]
     uses: ./.github/workflows/build-macos-intel-installer.yml
     secrets: inherit
 
   # Build macOS ARM installer
   build-macos-arm:
-    needs: validate
+    needs: [validate, test, build-frontend]
     uses: ./.github/workflows/build-macos-arm-installer.yml
     secrets: inherit
 
@@ -119,10 +168,10 @@ jobs:
 
   # Summary job
   summary:
-    needs: [validate, build-executables, build-windows-installer, build-macos-intel, build-macos-arm]
+    needs: [validate, test, build-executables, build-windows-installer, build-macos-intel, build-macos-arm]
     runs-on: ubuntu-latest
     if: always()
-    
+
     steps:
       - name: Build Summary
         run: |
@@ -134,31 +183,38 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Build Results" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          
+
+          # Check test results
+          if [[ "${{ needs.test.result }}" == "success" ]]; then
+            echo "✅ **Tests**: Success" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Tests**: ${{ needs.test.result }}" >> $GITHUB_STEP_SUMMARY
+          fi
+
           # Check job results
           if [[ "${{ needs.build-executables.result }}" == "success" ]]; then
             echo "✅ **Portable Executables**: Success" >> $GITHUB_STEP_SUMMARY
           else
             echo "❌ **Portable Executables**: ${{ needs.build-executables.result }}" >> $GITHUB_STEP_SUMMARY
           fi
-          
+
           if [[ "${{ needs.build-windows-installer.result }}" == "success" ]]; then
             echo "✅ **Windows Installer**: Success" >> $GITHUB_STEP_SUMMARY
           else
             echo "❌ **Windows Installer**: ${{ needs.build-windows-installer.result }}" >> $GITHUB_STEP_SUMMARY
           fi
-          
+
           if [[ "${{ needs.build-macos-intel.result }}" == "success" ]]; then
             echo "✅ **macOS Intel Installer**: Success" >> $GITHUB_STEP_SUMMARY
           else
             echo "❌ **macOS Intel Installer**: ${{ needs.build-macos-intel.result }}" >> $GITHUB_STEP_SUMMARY
           fi
-          
+
           if [[ "${{ needs.build-macos-arm.result }}" == "success" ]]; then
             echo "✅ **macOS ARM Installer**: Success" >> $GITHUB_STEP_SUMMARY
           else
             echo "❌ **macOS ARM Installer**: ${{ needs.build-macos-arm.result }}" >> $GITHUB_STEP_SUMMARY
           fi
-          
+
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "🎉 **Build completed!**" >> $GITHUB_STEP_SUMMARY 

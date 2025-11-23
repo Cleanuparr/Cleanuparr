@@ -8,33 +8,103 @@ on:
   workflow_call:
 
 jobs:
-  build:
+  # Build frontend once and share with all platform builds
+  build-frontend:
     runs-on: ubuntu-latest
     steps:
-
       - name: Gate
-        if: ${{ !startsWith(github.ref, 'refs/tags/') && github.event_name != 'workflow_dispatch' }}
+        if: ${{ !startsWith(github.ref, 'refs/tags/') && github.event_name != 'workflow_dispatch' && github.event_name != 'workflow_call' }}
         run: |
-          echo "This workflow only runs on tag events or manual dispatch. Pipeline finished."
+          echo "This workflow only runs on tag events, manual dispatch, or workflow calls. Pipeline finished."
           exit 0
 
+      - name: Try to download shared frontend from parent workflow
+        id: download-shared-frontend
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: frontend-dist-release
+          path: code/frontend/dist/ui/browser
+
+      - name: Get vault secrets
+        if: steps.download-shared-frontend.outcome != 'success'
+        uses: hashicorp/vault-action@v2
+        with:
+          url: ${{ secrets.VAULT_HOST }}
+          method: approle
+          roleId: ${{ secrets.VAULT_ROLE_ID }}
+          secretId: ${{ secrets.VAULT_SECRET_ID }}
+          secrets:
+            secrets/data/github repo_readonly_pat | REPO_READONLY_PAT
+
+      - name: Checkout target repository
+        if: steps.download-shared-frontend.outcome != 'success'
+        uses: actions/checkout@v4
+        timeout-minutes: 1
+        with:
+          repository: ${{ github.repository }}
+          ref: ${{ github.ref_name }}
+          token: ${{ env.REPO_READONLY_PAT }}
+
+      - name: Setup Node.js
+        if: steps.download-shared-frontend.outcome != 'success'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: code/frontend/package-lock.json
+
+      - name: Build frontend
+        if: steps.download-shared-frontend.outcome != 'success'
+        run: |
+          cd code/frontend
+          npm ci
+          npm run build
+
+      - name: Upload frontend artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: code/frontend/dist/ui/browser
+          retention-days: 1
+
+  # Build for each platform in parallel using matrix strategy
+  build-platform:
+    needs: build-frontend
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - runtime: win-x64
+            platform: win-amd64
+          - runtime: linux-x64
+            platform: linux-amd64
+          - runtime: linux-arm64
+            platform: linux-arm64
+          - runtime: osx-x64
+            platform: osx-amd64
+          - runtime: osx-arm64
+            platform: osx-arm64
+
+    steps:
       - name: Set variables
         run: |
-          repoFullName=${{ github.repository }}
           ref=${{ github.ref }}
-          
-          # Handle both tag events and manual dispatch
+
           if [[ "$ref" =~ ^refs/tags/ ]]; then
             releaseVersion=${ref##refs/tags/}
             appVersion=${releaseVersion#v}
           else
-            # For manual dispatch, use a default version
             releaseVersion="dev-$(date +%Y%m%d-%H%M%S)"
             appVersion="0.0.1-dev"
           fi
 
+          repoFullName=${{ github.repository }}
+          repositoryName=${repoFullName#*/}
+
           echo "githubRepository=${{ github.repository }}" >> $GITHUB_ENV
-          echo "githubRepositoryName=${repoFullName#*/}" >> $GITHUB_ENV
+          echo "githubRepositoryName=$repositoryName" >> $GITHUB_ENV
           echo "releaseVersion=$releaseVersion" >> $GITHUB_ENV
           echo "appVersion=$appVersion" >> $GITHUB_ENV
           echo "executableName=Cleanuparr.Api" >> $GITHUB_ENV
@@ -58,27 +128,28 @@ jobs:
           ref: ${{ github.ref_name }}
           token: ${{ env.REPO_READONLY_PAT }}
 
-      - name: Setup Node.js for frontend build
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          cache: 'npm'
-          cache-dependency-path: code/frontend/package-lock.json
-
-      - name: Build frontend
-        run: |
-          cd code/frontend
-          npm ci
-          npm run build
-
       - name: Setup dotnet
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 9.0.x
-      
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json', '**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Download frontend artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: code/frontend/dist/ui/browser
+
       - name: Install dependencies and restore
         run: |
-          dotnet nuget add source --username ${{ github.repository_owner }} --password ${{ secrets.PACKAGES_PAT }} --store-password-in-clear-text --name Cleanuparr https://nuget.pkg.github.com/Cleanuparr/index.json
+          dotnet nuget add source --username ${{ github.repository_owner }} --password ${{ env.PACKAGES_PAT }} --store-password-in-clear-text --name Cleanuparr https://nuget.pkg.github.com/Cleanuparr/index.json
           dotnet restore code/backend/${{ env.executableName }}/${{ env.executableName }}.csproj
 
       - name: Copy frontend to backend wwwroot
@@ -86,52 +157,49 @@ jobs:
           mkdir -p code/backend/${{ env.executableName }}/wwwroot
           cp -r code/frontend/dist/ui/browser/* code/backend/${{ env.executableName }}/wwwroot/
 
-      - name: Build win-x64
-        run: dotnet publish code/backend/${{ env.executableName }}/${{ env.executableName }}.csproj -c Release --runtime win-x64 --self-contained -o artifacts/${{ env.githubRepositoryName }}-${{ env.appVersion }}-win-amd64 /p:PublishSingleFile=true /p:Version=${{ env.appVersion }} /p:DebugSymbols=false
+      - name: Build ${{ matrix.platform }}
+        run: |
+          dotnet publish code/backend/${{ env.executableName }}/${{ env.executableName }}.csproj \
+            -c Release \
+            --runtime ${{ matrix.runtime }} \
+            --self-contained \
+            -o artifacts/${{ env.githubRepositoryName }}-${{ env.appVersion }}-${{ matrix.platform }} \
+            /p:PublishSingleFile=true \
+            /p:Version=${{ env.appVersion }} \
+            /p:DebugSymbols=false
 
-      - name: Build linux-x64
-        run: dotnet publish code/backend/${{ env.executableName }}/${{ env.executableName }}.csproj -c Release --runtime linux-x64 --self-contained -o artifacts/${{ env.githubRepositoryName }}-${{ env.appVersion }}-linux-amd64 /p:PublishSingleFile=true /p:Version=${{ env.appVersion }} /p:DebugSymbols=false
-
-      - name: Build linux-arm64
-        run: dotnet publish code/backend/${{ env.executableName }}/${{ env.executableName }}.csproj -c Release --runtime linux-arm64 --self-contained -o artifacts/${{ env.githubRepositoryName }}-${{ env.appVersion }}-linux-arm64 /p:PublishSingleFile=true /p:Version=${{ env.appVersion }} /p:DebugSymbols=false
-        
-      - name: Build osx-x64
-        run: dotnet publish code/backend/${{ env.executableName }}/${{ env.executableName }}.csproj -c Release --runtime osx-x64 --self-contained -o artifacts/${{ env.githubRepositoryName }}-${{ env.appVersion }}-osx-amd64 /p:PublishSingleFile=true /p:Version=${{ env.appVersion }} /p:DebugSymbols=false
-
-      - name: Build osx-arm64
-        run: dotnet publish code/backend/${{ env.executableName }}/${{ env.executableName }}.csproj -c Release --runtime osx-arm64 --self-contained -o artifacts/${{ env.githubRepositoryName }}-${{ env.appVersion }}-osx-arm64 /p:PublishSingleFile=true /p:Version=${{ env.appVersion }} /p:DebugSymbols=false
-
-      - name: Zip win-x64
+      - name: Zip artifact
         run: |
           cd ./artifacts
-          zip -r ./${{ env.githubRepositoryName }}-${{ env.appVersion }}-win-amd64.zip ./${{ env.githubRepositoryName }}-${{ env.appVersion }}-win-amd64/
+          zip -r ./${{ env.githubRepositoryName }}-${{ env.appVersion }}-${{ matrix.platform }}.zip ./${{ env.githubRepositoryName }}-${{ env.appVersion }}-${{ matrix.platform }}/
 
-      - name: Zip linux-x64
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: executable-${{ matrix.platform }}
+          path: ./artifacts/*.zip
+          retention-days: 30
+
+  # Consolidate all executable artifacts
+  consolidate:
+    needs: build-platform
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all platform artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: executable-*
+          path: ./artifacts
+          merge-multiple: true
+
+      - name: List downloaded artifacts
         run: |
-          cd ./artifacts
-          zip -r ./${{ env.githubRepositoryName }}-${{ env.appVersion }}-linux-amd64.zip ./${{ env.githubRepositoryName }}-${{ env.appVersion }}-linux-amd64/
+          echo "Consolidated executable artifacts:"
+          find ./artifacts -type f -name "*.zip" | sort
 
-      - name: Zip linux-arm64
-        run: |
-          cd ./artifacts
-          zip -r ./${{ env.githubRepositoryName }}-${{ env.appVersion }}-linux-arm64.zip ./${{ env.githubRepositoryName }}-${{ env.appVersion }}-linux-arm64/
-
-      - name: Zip osx-x64
-        run: |
-          cd ./artifacts
-          zip -r ./${{ env.githubRepositoryName }}-${{ env.appVersion }}-osx-amd64.zip ./${{ env.githubRepositoryName }}-${{ env.appVersion }}-osx-amd64/
-
-      - name: Zip osx-arm64
-        run: |
-          cd ./artifacts
-          zip -r ./${{ env.githubRepositoryName }}-${{ env.appVersion }}-osx-arm64.zip ./${{ env.githubRepositoryName }}-${{ env.appVersion }}-osx-arm64/
-
-      - name: Upload artifacts
+      - name: Upload consolidated artifacts
         uses: actions/upload-artifact@v4
         with:
           name: cleanuparr-executables
-          path: |
-            ./artifacts/*.zip
+          path: ./artifacts/*.zip
           retention-days: 30
-
-      # Removed individual release step - handled by main release workflow

@@ -55,7 +55,16 @@ jobs:
           ref: ${{ github.ref_name }}
           token: ${{ env.REPO_READONLY_PAT }}
 
+      - name: Try to download shared frontend
+        id: download-frontend
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: frontend-dist-release
+          path: code/frontend/dist/ui/browser
+
       - name: Setup Node.js for frontend build
+        if: steps.download-frontend.outcome != 'success'
         uses: actions/setup-node@v4
         with:
           node-version: '18'
@@ -63,6 +72,7 @@ jobs:
           cache-dependency-path: code/frontend/package-lock.json
 
       - name: Build frontend
+        if: steps.download-frontend.outcome != 'success'
         run: |
           cd code/frontend
           npm ci
