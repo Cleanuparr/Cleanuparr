@@ -11,8 +11,6 @@ jobs:
   # Build frontend once and share with all platform builds
   build-frontend:
     runs-on: ubuntu-latest
-    outputs:
-      cache-key: ${{ steps.cache-frontend.outputs.cache-primary-key }}
     steps:
       - name: Gate
         if: ${{ !startsWith(github.ref, 'refs/tags/') && github.event_name != 'workflow_dispatch' && github.event_name != 'workflow_call' }}

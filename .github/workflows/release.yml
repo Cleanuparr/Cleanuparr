@@ -62,8 +62,6 @@ jobs:
   build-frontend:
     needs: [validate, test]
     runs-on: ubuntu-latest
-    outputs:
-      cache-key: ${{ steps.cache-frontend.outputs.cache-key }}
     steps:
       - name: Get vault secrets
         uses: hashicorp/vault-action@v2
