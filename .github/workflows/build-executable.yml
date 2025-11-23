@@ -18,16 +18,7 @@ jobs:
           echo "This workflow only runs on tag events, manual dispatch, or workflow calls. Pipeline finished."
           exit 0
 
-      - name: Try to download shared frontend from parent workflow
-        id: download-shared-frontend
-        uses: actions/download-artifact@v4
-        continue-on-error: true
-        with:
-          name: frontend-dist-release
-          path: code/frontend/dist/ui/browser
-
       - name: Get vault secrets
-        if: steps.download-shared-frontend.outcome != 'success'
         uses: hashicorp/vault-action@v2
         with:
           url: ${{ secrets.VAULT_HOST }}
@@ -38,7 +29,6 @@ jobs:
             secrets/data/github repo_readonly_pat | REPO_READONLY_PAT
 
       - name: Checkout target repository
-        if: steps.download-shared-frontend.outcome != 'success'
         uses: actions/checkout@v4
         timeout-minutes: 1
         with:
@@ -47,7 +37,6 @@ jobs:
           token: ${{ env.REPO_READONLY_PAT }}
 
       - name: Setup Node.js
-        if: steps.download-shared-frontend.outcome != 'success'
         uses: actions/setup-node@v4
         with:
           node-version: '18'
@@ -55,18 +44,17 @@ jobs:
           cache-dependency-path: code/frontend/package-lock.json
 
       - name: Build frontend
-        if: steps.download-shared-frontend.outcome != 'success'
         run: |
           cd code/frontend
           npm ci
           npm run build
 
-      - name: Upload frontend artifact
-        uses: actions/upload-artifact@v4
+      - name: Cache frontend build
+        id: cache-frontend
+        uses: actions/cache/save@v4
         with:
-          name: frontend-dist
           path: code/frontend/dist/ui/browser
-          retention-days: 1
+          key: frontend-dist-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
 
   # Build for each platform in parallel using matrix strategy
   build-platform:
@@ -141,11 +129,12 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-nuget-
 
-      - name: Download frontend artifact
-        uses: actions/download-artifact@v4
+      - name: Restore frontend from cache
+        uses: actions/cache/restore@v4
         with:
-          name: frontend-dist
           path: code/frontend/dist/ui/browser
+          key: frontend-dist-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          fail-on-cache-miss: true
 
       - name: Install dependencies and restore
         run: |
