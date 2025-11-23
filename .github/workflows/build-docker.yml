@@ -1,13 +1,9 @@
 name: Build Docker Images
 
 on:
-  push:
-    tags:
-      - "v*.*.*"
   pull_request:
     paths:
       - 'code/**'
-  workflow_dispatch:
   workflow_call:
 
 jobs:

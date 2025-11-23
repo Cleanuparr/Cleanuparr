@@ -1,10 +1,6 @@
 name: Build Windows Installer
 
 on:
-  push:
-    tags:
-      - "v*.*.*"
-  workflow_dispatch:
   workflow_call:
 
 jobs:
@@ -58,25 +54,10 @@ jobs:
       - name: Try to restore frontend from cache
         id: restore-frontend
         uses: actions/cache/restore@v4
-        continue-on-error: true
         with:
           path: code/frontend/dist/ui/browser
-          key: frontend-dist-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
-
-      - name: Setup Node.js for frontend build
-        if: steps.restore-frontend.outputs.cache-hit != 'true'
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          cache: 'npm'
-          cache-dependency-path: code/frontend/package-lock.json
-
-      - name: Build frontend
-        if: steps.restore-frontend.outputs.cache-hit != 'true'
-        run: |
-          cd code/frontend
-          npm ci
-          npm run build
+          key: frontend-dist-${{ github.sha }}-${{ github.run_id }}
+          fail-on-cache-miss: true
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
