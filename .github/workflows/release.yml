@@ -76,16 +76,10 @@ jobs:
     uses: ./.github/workflows/build-windows-installer.yml
     secrets: inherit
 
-  # Build macOS Intel installer
-  build-macos-intel:
+  # Build macOS installers (Intel and ARM)
+  build-macos:
     needs: [validate, test, build-frontend]
-    uses: ./.github/workflows/build-macos-intel-installer.yml
-    secrets: inherit
-
-  # Build macOS ARM installer
-  build-macos-arm:
-    needs: [validate, test, build-frontend]
-    uses: ./.github/workflows/build-macos-arm-installer.yml
+    uses: ./.github/workflows/build-macos-installer.yml
     secrets: inherit
 
   # Build and push Docker image(s)
@@ -96,7 +90,7 @@ jobs:
 
   # Create GitHub release
   create-release:
-    needs: [validate, build-executables, build-windows-installer, build-macos-intel, build-macos-arm]
+    needs: [validate, build-executables, build-windows-installer, build-macos]
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
     
@@ -137,18 +131,35 @@ jobs:
 
   # Summary job
   summary:
-    needs: [validate, test, build-executables, build-windows-installer, build-macos-intel, build-macos-arm, build-docker]
+    needs: [validate, test, build-executables, build-windows-installer, build-macos, build-docker]
     runs-on: ubuntu-latest
     if: always()
 
     steps:
+      - name: Record workflow start time
+        id: workflow-start
+        run: |
+          # Get workflow start time from GitHub API
+          workflow_start=$(gh api repos/${{ github.repository }}/actions/runs/${{ github.run_id }} --jq '.run_started_at')
+          start_epoch=$(date -d "$workflow_start" +%s 2>/dev/null || date -j -f "%Y-%m-%dT%H:%M:%SZ" "$workflow_start" +%s)
+          echo "start=$start_epoch" >> $GITHUB_OUTPUT
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Build Summary
         run: |
+          # Calculate total workflow duration
+          start_time=${{ steps.workflow-start.outputs.start }}
+          end_time=$(date +%s)
+          duration=$((end_time - start_time))
+          minutes=$((duration / 60))
+          seconds=$((duration % 60))
           echo "## 🏗️ Cleanuparr Build Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Version**: ${{ needs.validate.outputs.release_version }}" >> $GITHUB_STEP_SUMMARY
           echo "**App Version**: ${{ needs.validate.outputs.app_version }}" >> $GITHUB_STEP_SUMMARY
           echo "**Is Tag**: ${{ needs.validate.outputs.is_tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Total Duration**: ${minutes}m ${seconds}s" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Build Results" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -173,16 +184,10 @@ jobs:
             echo "❌ **Windows Installer**: ${{ needs.build-windows-installer.result }}" >> $GITHUB_STEP_SUMMARY
           fi
 
-          if [[ "${{ needs.build-macos-intel.result }}" == "success" ]]; then
-            echo "✅ **macOS Intel Installer**: Success" >> $GITHUB_STEP_SUMMARY
+          if [[ "${{ needs.build-macos.result }}" == "success" ]]; then
+            echo "✅ **macOS Installers (Intel & ARM)**: Success" >> $GITHUB_STEP_SUMMARY
           else
-            echo "❌ **macOS Intel Installer**: ${{ needs.build-macos-intel.result }}" >> $GITHUB_STEP_SUMMARY
-          fi
-
-          if [[ "${{ needs.build-macos-arm.result }}" == "success" ]]; then
-            echo "✅ **macOS ARM Installer**: Success" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "❌ **macOS ARM Installer**: ${{ needs.build-macos-arm.result }}" >> $GITHUB_STEP_SUMMARY
+            echo "❌ **macOS Installers (Intel & ARM)**: ${{ needs.build-macos.result }}" >> $GITHUB_STEP_SUMMARY
           fi
 
           if [[ "${{ needs.build-docker.result }}" == "success" ]]; then

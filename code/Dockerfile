@@ -1,10 +1,12 @@
 # Build Angular frontend
-FROM --platform=$BUILDPLATFORM node:18-alpine AS frontend-build
+FROM --platform=$BUILDPLATFORM node:24-alpine AS frontend-build
 WORKDIR /app
 
 # Copy package files first for better layer caching
 COPY frontend/package*.json ./
-RUN npm ci && npm install -g @angular/cli
+# Use cache mount for npm to speed up builds
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci && npm install -g @angular/cli
 
 # Copy source code
 COPY frontend/ .
@@ -28,11 +30,13 @@ EXPOSE 11011
 # Copy source code
 COPY backend/ ./backend/
 
-# Restore dependencies
-RUN dotnet nuget add source --username ${PACKAGES_USERNAME} --password ${PACKAGES_PAT} --store-password-in-clear-text --name Cleanuparr https://nuget.pkg.github.com/Cleanuparr/index.json
+# Restore dependencies with cache mount
+RUN --mount=type=cache,target=/root/.nuget/packages \
+    dotnet nuget add source --username ${PACKAGES_USERNAME} --password ${PACKAGES_PAT} --store-password-in-clear-text --name Cleanuparr https://nuget.pkg.github.com/Cleanuparr/index.json
 
-# Build and publish
-RUN dotnet publish ./backend/Cleanuparr.Api/Cleanuparr.Api.csproj \
+# Build and publish with cache mount for NuGet packages
+RUN --mount=type=cache,target=/root/.nuget/packages \
+    dotnet publish ./backend/Cleanuparr.Api/Cleanuparr.Api.csproj \
     -a $TARGETARCH \
     -c Release \
     -o /app/publish \

@@ -1,4 +1,4 @@
-name: Build macOS Intel Installer
+name: Build macOS Installers
 
 permissions:
   contents: write
@@ -7,16 +7,30 @@ on:
   workflow_call:
 
 jobs:
-  build-macos-intel-installer:
-    name: Build macOS Intel Installer
-    runs-on: macos-13  # Intel runner
-    
+  build-macos-installer:
+    name: Build macOS ${{ matrix.arch }} Installer
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: Intel
+            runner: macos-13
+            runtime: osx-x64
+            min_os_version: "10.15"
+            artifact_suffix: intel
+          - arch: ARM
+            runner: macos-14
+            runtime: osx-arm64
+            min_os_version: "11.0"
+            artifact_suffix: arm64
+
     steps:
       - name: Set variables
         run: |
           repoFullName=${{ github.repository }}
           ref=${{ github.ref }}
-          
+
           # Handle both tag events and manual dispatch
           if [[ "$ref" =~ ^refs/tags/ ]]; then
             releaseVersion=${ref##refs/tags/}
@@ -26,9 +40,9 @@ jobs:
             releaseVersion="dev-$(date +%Y%m%d-%H%M%S)"
             appVersion="0.0.1-dev"
           fi
-          
+
           repositoryName=${repoFullName#*/}
-          
+
           echo "githubRepository=${{ github.repository }}" >> $GITHUB_ENV
           echo "githubRepositoryName=$repositoryName" >> $GITHUB_ENV
           echo "releaseVersion=$releaseVersion" >> $GITHUB_ENV
@@ -72,16 +86,16 @@ jobs:
           dotnet nuget add source --username ${{ github.repository_owner }} --password ${{ env.PACKAGES_PAT }} --store-password-in-clear-text --name Cleanuparr https://nuget.pkg.github.com/Cleanuparr/index.json
           dotnet restore code/backend/${{ env.executableName }}/${{ env.executableName }}.csproj
 
-      - name: Build macOS Intel executable
+      - name: Build macOS ${{ matrix.arch }} executable
         run: |
           # Clean any existing output directory
           rm -rf dist
           mkdir -p dist/temp
-          
+
           # Build to a temporary location
           dotnet publish code/backend/${{ env.executableName }}/${{ env.executableName }}.csproj \
             -c Release \
-            --runtime osx-x64 \
+            --runtime ${{ matrix.runtime }} \
             --self-contained true \
             -o dist/temp \
             /p:PublishSingleFile=true \
@@ -94,17 +108,17 @@ jobs:
             /p:_CodeSignDuringBuild=false \
             /p:PublishTrimmed=false \
             /p:TrimMode=link
-          
+
           # Create proper app bundle structure
           mkdir -p dist/Cleanuparr.app/Contents/MacOS
-          
+
           # Copy the built executable (note: AssemblyName is "Cleanuparr" not "Cleanuparr.Api")
           cp dist/temp/Cleanuparr dist/Cleanuparr.app/Contents/MacOS/Cleanuparr
-          
+
           # Copy frontend directly to where it belongs in the app bundle
           mkdir -p dist/Cleanuparr.app/Contents/MacOS/wwwroot
           cp -r code/frontend/dist/ui/browser/* dist/Cleanuparr.app/Contents/MacOS/wwwroot/
-          
+
           # Copy any additional runtime files if they exist
           if [ -d "dist/temp" ]; then
             find dist/temp -name "*.dylib" -exec cp {} dist/Cleanuparr.app/Contents/MacOS/ \; 2>/dev/null || true
@@ -115,16 +129,16 @@ jobs:
         run: |
           # Make sure the executable is actually executable
           chmod +x dist/Cleanuparr.app/Contents/MacOS/Cleanuparr
-          
+
           # Remove any .pdb files that might have been created
           find dist/Cleanuparr.app/Contents/MacOS -name "*.pdb" -delete 2>/dev/null || true
-          
+
           echo "Checking architecture of built binary:"
           file dist/Cleanuparr.app/Contents/MacOS/Cleanuparr
           if command -v lipo >/dev/null 2>&1; then
             lipo -info dist/Cleanuparr.app/Contents/MacOS/Cleanuparr
           fi
-          
+
           echo "Files in MacOS directory:"
           ls -la dist/Cleanuparr.app/Contents/MacOS/
 
@@ -132,12 +146,12 @@ jobs:
         run: |
           # Create proper app bundle structure
           mkdir -p dist/Cleanuparr.app/Contents/{MacOS,Resources,Frameworks}
-          
+
           # Convert ICO to ICNS for macOS app bundle
           if command -v iconutil >/dev/null 2>&1; then
             # Create iconset directory structure
             mkdir -p Cleanuparr.iconset
-            
+
             # Use existing PNG files from Logo directory for different sizes
             cp Logo/16.png Cleanuparr.iconset/icon_16x16.png
             cp Logo/32.png Cleanuparr.iconset/icon_16x16@2x.png
@@ -149,14 +163,14 @@ jobs:
             cp Logo/512.png Cleanuparr.iconset/icon_256x256@2x.png
             cp Logo/512.png Cleanuparr.iconset/icon_512x512.png
             cp Logo/1024.png Cleanuparr.iconset/icon_512x512@2x.png
-            
+
             # Create ICNS file
             iconutil -c icns Cleanuparr.iconset -o dist/Cleanuparr.app/Contents/Resources/Cleanuparr.icns
-            
+
             # Clean up iconset directory
             rm -rf Cleanuparr.iconset
           fi
-          
+
           # Create Launch Daemon plist
           cat > dist/Cleanuparr.app/Contents/Resources/com.cleanuparr.daemon.plist << EOF
           <?xml version="1.0" encoding="UTF-8"?>
@@ -187,7 +201,7 @@ jobs:
           </dict>
           </plist>
           EOF
-          
+
           # Create Info.plist with proper configuration
           cat > dist/Cleanuparr.app/Contents/Info.plist << EOF
           <?xml version="1.0" encoding="UTF-8"?>
@@ -219,7 +233,7 @@ jobs:
               <key>NSRequiresAquaSystemAppearance</key>
               <false/>
               <key>LSMinimumSystemVersion</key>
-              <string>10.15</string>
+              <string>${{ matrix.min_os_version }}</string>
               <key>LSApplicationCategoryType</key>
               <string>public.app-category.productivity</string>
               <key>NSSupportsAutomaticTermination</key>
@@ -236,7 +250,7 @@ jobs:
           </dict>
           </plist>
           EOF
-          
+
           # Clean up temp directory
           rm -rf dist/temp
 
@@ -246,96 +260,96 @@ jobs:
           mkdir -p scripts
           cat > scripts/preinstall << 'EOF'
           #!/bin/bash
-          
+
           # Stop and unload existing launch daemon if it exists
           if launchctl list | grep -q "com.cleanuparr.daemon"; then
             launchctl stop com.cleanuparr.daemon 2>/dev/null || true
             launchctl unload /Library/LaunchDaemons/com.cleanuparr.daemon.plist 2>/dev/null || true
           fi
-          
+
           # Stop any running instances of Cleanuparr
           pkill -f "Cleanuparr" || true
           sleep 2
-          
+
           # Remove old installation if it exists
           if [[ -d "/Applications/Cleanuparr.app" ]]; then
             rm -rf "/Applications/Cleanuparr.app"
           fi
-          
+
           # Remove old launch daemon plist if it exists
           if [[ -f "/Library/LaunchDaemons/com.cleanuparr.daemon.plist" ]]; then
             rm -f "/Library/LaunchDaemons/com.cleanuparr.daemon.plist"
           fi
-          
+
           exit 0
           EOF
-          
+
           chmod +x scripts/preinstall
-          
+
           # Create postinstall script
           cat > scripts/postinstall << 'EOF'
           #!/bin/bash
-          
+
           # Set proper permissions for the app bundle
           chmod -R 755 /Applications/Cleanuparr.app
           chmod +x /Applications/Cleanuparr.app/Contents/MacOS/Cleanuparr
-          
+
           # Install the launch daemon
           cp /Applications/Cleanuparr.app/Contents/Resources/com.cleanuparr.daemon.plist /Library/LaunchDaemons/
           chown root:wheel /Library/LaunchDaemons/com.cleanuparr.daemon.plist
           chmod 644 /Library/LaunchDaemons/com.cleanuparr.daemon.plist
-          
+
           # Load and start the service
           launchctl load /Library/LaunchDaemons/com.cleanuparr.daemon.plist
           launchctl start com.cleanuparr.daemon
-          
+
           # Wait a moment for service to start
           sleep 3
-          
+
           # Display as system notification
           osascript -e 'display notification "Cleanuparr service started! Visit http://localhost:11011 in your browser." with title "Installation Complete"' 2>/dev/null || true
-          
+
           exit 0
           EOF
-          
+
           chmod +x scripts/postinstall
-          
+
           # Create uninstall script (optional, for user reference)
           cat > scripts/uninstall_cleanuparr.sh << 'EOF'
           #!/bin/bash
           # Cleanuparr Uninstall Script
           # Run this script with sudo to completely remove Cleanuparr
-          
+
           echo "Stopping Cleanuparr service..."
           launchctl stop com.cleanuparr.daemon 2>/dev/null || true
           launchctl unload /Library/LaunchDaemons/com.cleanuparr.daemon.plist 2>/dev/null || true
-          
+
           echo "Removing service files..."
           rm -f /Library/LaunchDaemons/com.cleanuparr.daemon.plist
-          
+
           echo "Removing application..."
           rm -rf /Applications/Cleanuparr.app
-          
+
           echo "Removing logs..."
           rm -f /var/log/cleanuparr.log
           rm -f /var/log/cleanuparr.error.log
-          
+
           echo "Cleanuparr has been completely removed."
           echo "Note: Configuration files in /Applications/Cleanuparr.app/Contents/MacOS/config/ have been removed with the app."
           EOF
-          
+
           chmod +x scripts/uninstall_cleanuparr.sh
-          
+
           # Copy uninstall script to app bundle for user access
           cp scripts/uninstall_cleanuparr.sh dist/Cleanuparr.app/Contents/Resources/
-          
+
           # Determine package name
           if [[ "${{ github.ref }}" =~ ^refs/tags/ ]]; then
-            pkg_name="Cleanuparr-${{ env.appVersion }}-macos-intel.pkg"
+            pkg_name="Cleanuparr-${{ env.appVersion }}-macos-${{ matrix.artifact_suffix }}.pkg"
           else
-            pkg_name="Cleanuparr-${{ env.appVersion }}-macos-intel-dev.pkg"
+            pkg_name="Cleanuparr-${{ env.appVersion }}-macos-${{ matrix.artifact_suffix }}-dev.pkg"
           fi
-          
+
           # Create PKG installer with better metadata
           pkgbuild --root dist/ \
                   --scripts scripts/ \
@@ -344,14 +358,12 @@ jobs:
                   --install-location /Applications \
                   --ownership preserve \
                   ${pkg_name}
-          
+
           echo "pkgName=${pkg_name}" >> $GITHUB_ENV
 
       - name: Upload installer as artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Cleanuparr-macos-intel-installer
+          name: Cleanuparr-macos-${{ matrix.artifact_suffix }}-installer
           path: '${{ env.pkgName }}'
           retention-days: 30
-
-      # Removed individual release step - handled by main release workflow 

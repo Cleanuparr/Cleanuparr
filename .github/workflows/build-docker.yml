@@ -6,6 +6,11 @@ on:
       - 'code/**'
   workflow_call:
 
+# Cancel in-progress runs for the same PR
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build_app:
     runs-on: ubuntu-latest
@@ -111,6 +116,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push docker image
+        id: docker-build
         timeout-minutes: 15
         uses: docker/build-push-action@v6
         with:
@@ -132,3 +138,38 @@ jobs:
           push: true
           tags: |
             ${{ env.githubTags }}
+          # Enable BuildKit cache for faster builds
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Comment on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const tags = '${{ env.githubTags }}'.split(',').filter(t => t.trim());
+            const runUrl = `${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}`;
+
+            const tagList = tags.map(tag => `- \`${tag.trim()}\``).join('\n');
+
+            const body = `## 🐳 Docker Build Complete
+
+            **Status**: ✅ Successfully built and pushed
+            **Platforms**: linux/amd64, linux/arm64
+            **Run**: [View Details](${runUrl})
+
+            **Tags**:
+            ${tagList}
+
+            You can pull the image using:
+            \`\`\`bash
+            docker pull ${tags[0].trim()}
+            \`\`\`
+            `;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });
