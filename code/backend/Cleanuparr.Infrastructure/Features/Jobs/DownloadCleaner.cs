@@ -180,7 +180,7 @@ public sealed class DownloadCleaner : GenericHandler
             {
                 _logger.LogError(
                     ex, 
-                    "Failed to filter downloads for category change for download client {clientName}",
+                    "Failed to filter downloads for hardlinks evaluation for download client {clientName}",
                     downloadService.ClientConfig.Name
                 );
             }
@@ -188,7 +188,7 @@ public sealed class DownloadCleaner : GenericHandler
 
         if (downloadServiceWithDownloads.Count is 0)
         {
-            _logger.LogInformation("No downloads found to change category");
+            _logger.LogInformation("No downloads found to evaluate for hardlinks");
             return;
         }
 
@@ -206,7 +206,12 @@ public sealed class DownloadCleaner : GenericHandler
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to create category for download client {clientName}", downloadService.ClientConfig.Name);
+                _logger.LogError(
+                    ex,
+                    "Failed to create category {category} for download client {clientName}",
+                    config.UnlinkedTargetCategory,
+                    downloadService.ClientConfig.Name
+                );
             }
             
             try
