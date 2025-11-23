@@ -28,9 +28,9 @@
         placeholder="https://ntfy.sh"
         class="w-full"
       />
-      <small *ngIf="hasFieldError(serverUrlControl, 'required')" class="p-error">Server URL is required</small>
-      <small *ngIf="hasFieldError(serverUrlControl, 'invalidUri')" class="p-error">Must be a valid URL</small>
-      <small *ngIf="hasFieldError(serverUrlControl, 'invalidProtocol')" class="p-error">Must use http or https protocol</small>
+      <small *ngIf="hasFieldError(serverUrlControl, 'required')" class="form-error-text">Server URL is required</small>
+      <small *ngIf="hasFieldError(serverUrlControl, 'invalidUri')" class="form-error-text">Must be a valid URL</small>
+      <small *ngIf="hasFieldError(serverUrlControl, 'invalidProtocol')" class="form-error-text">Must use http or https protocol</small>
       <small class="form-helper-text">The URL of your ntfy server. Use https://ntfy.sh for the public service or your self-hosted instance.</small>
     </div>
 
@@ -61,8 +61,8 @@
         class="desktop-only w-full"
       ></p-autocomplete>
 
-      <small *ngIf="hasFieldError(topicsControl, 'required')" class="p-error">At least one topic is required</small>
-      <small *ngIf="hasFieldError(topicsControl, 'minlength')" class="p-error">At least one topic is required</small>
+      <small *ngIf="hasFieldError(topicsControl, 'required')" class="form-error-text">At least one topic is required</small>
+      <small *ngIf="hasFieldError(topicsControl, 'minlength')" class="form-error-text">At least one topic is required</small>
       <small class="form-helper-text">Enter the ntfy topics you want to publish to. Press Enter or comma to add each topic.</small>
     </div>
 
@@ -85,7 +85,7 @@
         class="w-full"
         [showClear]="false"
       ></p-select>
-      <small *ngIf="hasFieldError(authenticationTypeControl, 'required')" class="p-error">Authentication type is required</small>
+      <small *ngIf="hasFieldError(authenticationTypeControl, 'required')" class="form-error-text">Authentication type is required</small>
       <small class="form-helper-text">Choose how to authenticate with the ntfy server.</small>
     </div>
 
@@ -108,7 +108,7 @@
         class="w-full"
         autocomplete="username"
       />
-      <small *ngIf="hasFieldError(usernameControl, 'required')" class="p-error">Username is required for Basic Auth</small>
+      <small *ngIf="hasFieldError(usernameControl, 'required')" class="form-error-text">Username is required for Basic Auth</small>
       <small class="form-helper-text">Your username for basic authentication.</small>
     </div>
 
@@ -131,7 +131,7 @@
         class="w-full"
         autocomplete="current-password"
       />
-      <small *ngIf="hasFieldError(passwordControl, 'required')" class="p-error">Password is required for Basic Auth</small>
+      <small *ngIf="hasFieldError(passwordControl, 'required')" class="form-error-text">Password is required for Basic Auth</small>
       <small class="form-helper-text">Your password for basic authentication.</small>
     </div>
 
@@ -153,7 +153,7 @@
         placeholder="Enter access token"
         class="w-full"
       />
-      <small *ngIf="hasFieldError(accessTokenControl, 'required')" class="p-error">Access token is required</small>
+      <small *ngIf="hasFieldError(accessTokenControl, 'required')" class="form-error-text">Access token is required</small>
       <small class="form-helper-text">Your access token for bearer token authentication.</small>
     </div>
 
@@ -176,7 +176,7 @@
         class="w-full"
         [showClear]="false"
       ></p-select>
-      <small *ngIf="hasFieldError(priorityControl, 'required')" class="p-error">Priority is required</small>
+      <small *ngIf="hasFieldError(priorityControl, 'required')" class="form-error-text">Priority is required</small>
       <small class="form-helper-text">The priority level for notifications (1=min, 5=max).</small>
     </div>
 

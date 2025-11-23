@@ -67,8 +67,8 @@
         <label class="field-label">
           Run Schedule
         </label>
-        <div>
-          <div class="field-input schedule-input flex flex-wrap">
+        <div class="field-input">
+          <div class="schedule-input flex flex-wrap">
             <span class="schedule-label">Every</span>
             <p-select 
               formControlName="every"
@@ -88,7 +88,7 @@
             >
             </p-selectButton>
           </div>
-          <small *ngIf="hasNestedError('jobSchedule', 'every', 'required')" class="p-error">This field is required</small>
+          <small *ngIf="hasNestedError('jobSchedule', 'every', 'required')" class="form-error-text">This field is required</small>
           <small class="form-helper-text">How often the queue cleaner should run</small>
         </div>
       </div>
@@ -101,11 +101,9 @@
              title="Click for documentation"></i>
           Cron Expression
         </label>
-        <div>
-          <div class="field-input">
-            <input type="text" pInputText formControlName="cronExpression" placeholder="0 0/5 * ? * * *" />
-          </div>
-          <small *ngIf="hasMainFormError('cronExpression', 'required')" class="p-error">Cron expression is required</small>
+        <div class="field-input">
+          <input type="text" pInputText formControlName="cronExpression" placeholder="0 0/5 * ? * * *" />
+          <small *ngIf="hasMainFormError('cronExpression', 'required')" class="form-error-text">Cron expression is required</small>
           <small class="form-helper-text">Enter a valid Quartz cron expression (e.g., "0 0/5 * ? * * *" runs every 5 minutes)</small>
         </div>
       </div>
@@ -113,29 +111,17 @@
       <!-- Ignored Downloads -->
       <div class="field-row">
         <label class="field-label">
-          <i class="pi pi-question-circle field-info-icon" 
+          <i class="pi pi-question-circle field-info-icon"
              (click)="openFieldDocs('ignoredDownloads')"
              title="Click for documentation">
           </i>
           Ignored Downloads
         </label>
         <div class="field-input">
-          <!-- Mobile-friendly autocomplete -->
           <app-mobile-autocomplete
             formControlName="ignoredDownloads"
             placeholder="Add download pattern"
           ></app-mobile-autocomplete>
-          
-          <!-- Desktop autocomplete -->
-          <p-autocomplete
-            formControlName="ignoredDownloads"
-            inputId="qc-ignoredDownloads"
-            multiple
-            fluid
-            [typeahead]="false"
-            placeholder="Add download pattern and press enter"
-            class="desktop-only"
-          ></p-autocomplete>
           <small class="form-helper-text">Downloads matching these patterns will be ignored (e.g. hash, tag, category, label, tracker)</small>
         </div>
       </div>
@@ -152,7 +138,12 @@
                 <i class="pi pi-chevron-down"></i>
               }
             </ng-template>
-            Failed Import Settings
+            <span class="accordion-header-title">
+              Failed Import Settings
+              @if (sectionHasErrors(0)) {
+                <i class="pi pi-exclamation-circle accordion-error-icon" title="This section has validation errors"></i>
+              }
+            </span>
           </p-accordion-header>
           <p-accordion-content>
             <div class="field-row" formGroupName="failedImport">
@@ -162,24 +153,20 @@
                    title="Click for documentation"></i>
                 Max Strikes
               </label>
-              <div>
-                <div class="field-input">
-                  <p-inputNumber
-                    formControlName="maxStrikes"
-                    [showButtons]="true"
-                    [min]="0"
-                    [step]="1"
-                    [minFractionDigits]="0"
-                    [maxFractionDigits]="0"
-                    buttonLayout="horizontal"
-                  >
-                  </p-inputNumber>
-                </div>
-                <small *ngIf="hasNestedError('failedImport', 'maxStrikes', 'required')" class="p-error">This field is required</small>
-                <small *ngIf="hasNestedError('failedImport', 'maxStrikes', 'max')" class="p-error">Value cannot exceed 5000</small>
-                <small class="form-helper-text"
-                  >Number of strikes before action is taken (0 to disable, min 3 to enable)</small
+              <div class="field-input">
+                <p-inputNumber
+                  formControlName="maxStrikes"
+                  [showButtons]="true"
+                  [min]="0"
+                  [step]="1"
+                  [minFractionDigits]="0"
+                  [maxFractionDigits]="0"
+                  buttonLayout="horizontal"
                 >
+                </p-inputNumber>
+                <small *ngIf="hasNestedError('failedImport', 'maxStrikes', 'required')" class="form-error-text">This field is required</small>
+                <small *ngIf="hasNestedError('failedImport', 'maxStrikes', 'max')" class="form-error-text">Value cannot exceed 5000</small>
+                <small class="form-helper-text">Number of strikes before action is taken (0 to disable, min 3 to enable)</small>
               </div>
             </div>
 
@@ -244,28 +231,17 @@
 
             <div class="field-row" formGroupName="failedImport">
               <label class="field-label">
-                <i class="pi pi-question-circle field-info-icon" 
-                   (click)="openFieldDocs('failedImport.patterns')" 
+                <i class="pi pi-question-circle field-info-icon"
+                   (click)="openFieldDocs('failedImport.patterns')"
                    title="Click for documentation"></i>
                 {{ queueCleanerForm.get('failedImport.patternMode')?.value === PatternMode.Include ? 'Included Patterns' : 'Excluded Patterns' }}
               </label>
               <div class="field-input">
-                <!-- Mobile-friendly autocomplete -->
                 <app-mobile-autocomplete
                   formControlName="patterns"
                   placeholder="Add pattern"
                 ></app-mobile-autocomplete>
-                
-                <!-- Desktop autocomplete -->
-                <p-autocomplete
-                  formControlName="patterns"
-                  multiple
-                  fluid
-                  [typeahead]="false"
-                  placeholder="Add pattern and press Enter"
-                  class="desktop-only"
-                >
-                </p-autocomplete>
+                <small *ngIf="hasNestedError('failedImport', 'patterns', 'patternsRequired')" class="form-error-text">At least one pattern is required when using Include mode</small>
                 <small class="form-helper-text">
                   {{ queueCleanerForm.get('failedImport.patternMode')?.value === PatternMode.Include ?
                     'Only failed imports containing these patterns will be removed and everything else will be skipped' :
@@ -287,7 +263,12 @@
                 <i class="pi pi-chevron-down"></i>
               }
             </ng-template>
-            Downloading Metadata Settings (qBittorrent only)
+            <span class="accordion-header-title">
+              Downloading Metadata Settings (qBittorrent only)
+              @if (sectionHasErrors(2)) {
+                <i class="pi pi-exclamation-circle accordion-error-icon" title="This section has validation errors"></i>
+              }
+            </span>
           </p-accordion-header>
           <p-accordion-content>
             <div class="field-row">
@@ -297,24 +278,20 @@
                    title="Click for documentation"></i>
                 Max Strikes for Downloading Metadata
               </label>
-              <div>
-                <div class="field-input">
-                  <p-inputNumber
-                    formControlName="downloadingMetadataMaxStrikes"
-                    [showButtons]="true"
-                    [min]="0"
-                    [step]="1"
-                    [minFractionDigits]="0"
-                    [maxFractionDigits]="0"
-                    buttonLayout="horizontal"
-                  >
-                  </p-inputNumber>
-                </div>
-                <small *ngIf="hasMainFormError('downloadingMetadataMaxStrikes', 'required')" class="p-error">This field is required</small>
-                <small *ngIf="hasMainFormError('downloadingMetadataMaxStrikes', 'max')" class="p-error">Value cannot exceed 5000</small>
-                <small class="form-helper-text"
-                  >Number of strikes before action is taken (0 to disable, min 3 to enable)</small
+              <div class="field-input">
+                <p-inputNumber
+                  formControlName="downloadingMetadataMaxStrikes"
+                  [showButtons]="true"
+                  [min]="0"
+                  [step]="1"
+                  [minFractionDigits]="0"
+                  [maxFractionDigits]="0"
+                  buttonLayout="horizontal"
                 >
+                </p-inputNumber>
+                <small *ngIf="hasMainFormError('downloadingMetadataMaxStrikes', 'required')" class="form-error-text">This field is required</small>
+                <small *ngIf="hasMainFormError('downloadingMetadataMaxStrikes', 'max')" class="form-error-text">Value cannot exceed 5000</small>
+                <small class="form-helper-text">Number of strikes before action is taken (0 to disable, min 3 to enable)</small>
               </div>
             </div>
           </p-accordion-content>
@@ -330,7 +307,12 @@
                 <i class="pi pi-chevron-down"></i>
               }
             </ng-template>
-            Stalled Download Rules
+            <span class="accordion-header-title">
+              Stalled Download Rules
+              @if (sectionHasErrors(4)) {
+                <i class="pi pi-exclamation-triangle accordion-error-icon" title="Coverage gaps detected"></i>
+              }
+            </span>
           </p-accordion-header>
           <p-accordion-content>
             <!-- Coverage Analysis Warning -->
@@ -441,7 +423,12 @@
                 <i class="pi pi-chevron-down"></i>
               }
             </ng-template>
-            Slow Download Rules
+            <span class="accordion-header-title">
+              Slow Download Rules
+              @if (sectionHasErrors(5)) {
+                <i class="pi pi-exclamation-triangle accordion-error-icon" title="Coverage gaps detected"></i>
+              }
+            </span>
           </p-accordion-header>
           <p-accordion-content>
             <!-- Coverage Analysis Warning -->
@@ -599,8 +586,8 @@
         placeholder="My Stall Rule"
         class="w-full"
       />
-      <small *ngIf="hasModalError(stallRuleForm, 'name', 'required')" class="p-error">Name is required</small>
-      <small *ngIf="hasModalError(stallRuleForm, 'name', 'maxlength')" class="p-error">Name cannot exceed 100 characters</small>
+      <small *ngIf="hasModalError(stallRuleForm, 'name', 'required')" class="form-error-text">Name is required</small>
+      <small *ngIf="hasModalError(stallRuleForm, 'name', 'maxlength')" class="form-error-text">Name cannot exceed 100 characters</small>
     </div>
 
     <div class="field flex flex-row">
@@ -630,9 +617,9 @@
         buttonLayout="horizontal"
         class="w-full"
       ></p-inputNumber>
-      <small *ngIf="hasModalError(stallRuleForm, 'maxStrikes', 'required')" class="p-error">Max strikes is required</small>
-      <small *ngIf="hasModalError(stallRuleForm, 'maxStrikes', 'min')" class="p-error">Min value is 3</small>
-      <small *ngIf="hasModalError(stallRuleForm, 'maxStrikes', 'max')" class="p-error">Max value is 5000</small>
+      <small *ngIf="hasModalError(stallRuleForm, 'maxStrikes', 'required')" class="form-error-text">Max strikes is required</small>
+      <small *ngIf="hasModalError(stallRuleForm, 'maxStrikes', 'min')" class="form-error-text">Min value is 3</small>
+      <small *ngIf="hasModalError(stallRuleForm, 'maxStrikes', 'max')" class="form-error-text">Max value is 5000</small>
       <small class="form-helper-text">Number of strikes before action is taken</small>
     </div>
 
@@ -652,7 +639,7 @@
         placeholder="Select privacy type"
         class="w-full"
       ></p-select>
-      <small *ngIf="hasModalError(stallRuleForm, 'privacyType', 'required')" class="p-error">Privacy type is required</small>
+      <small *ngIf="hasModalError(stallRuleForm, 'privacyType', 'required')" class="form-error-text">Privacy type is required</small>
       <small class="form-helper-text">Which torrent types this rule applies to</small>
     </div>
 
@@ -673,9 +660,9 @@
         placeholder="Percentage"
         class="w-full"
       ></p-inputNumber>
-      <small *ngIf="hasModalError(stallRuleForm, 'minCompletionPercentage', 'required')" class="p-error">Percentage is required</small>
-      <small *ngIf="hasModalError(stallRuleForm, 'minCompletionPercentage', 'min')" class="p-error">Percentage cannot be negative</small>
-      <small *ngIf="hasModalError(stallRuleForm, 'minCompletionPercentage', 'max')" class="p-error">Percentage cannot exceed 100</small>
+      <small *ngIf="hasModalError(stallRuleForm, 'minCompletionPercentage', 'required')" class="form-error-text">Percentage is required</small>
+      <small *ngIf="hasModalError(stallRuleForm, 'minCompletionPercentage', 'min')" class="form-error-text">Percentage cannot be negative</small>
+      <small *ngIf="hasModalError(stallRuleForm, 'minCompletionPercentage', 'max')" class="form-error-text">Percentage cannot exceed 100</small>
       <small class="form-helper-text">Apply the rule once completion percentage exceeds this value</small>
       <small class="form-helper-text">Example: A value of 20 includes items above 20% (20 is not included)</small>
       <small class="form-helper-text">A value of 0 includes items at 0% and above</small>
@@ -698,10 +685,10 @@
         placeholder="Percentage"
         class="w-full"
       ></p-inputNumber>
-      <small *ngIf="hasModalError(stallRuleForm, 'maxCompletionPercentage', 'required')" class="p-error">Percentage is required</small>
-      <small *ngIf="hasModalError(stallRuleForm, 'maxCompletionPercentage', 'min')" class="p-error">Percentage cannot be negative</small>
-      <small *ngIf="hasModalError(stallRuleForm, 'maxCompletionPercentage', 'max')" class="p-error">Percentage cannot exceed 100</small>
-      <small *ngIf="hasModalError(stallRuleForm, 'maxCompletionPercentage', 'minGreaterThanMax')" class="p-error">Max percentage must be greater than or equal to Min percentage</small>
+      <small *ngIf="hasModalError(stallRuleForm, 'maxCompletionPercentage', 'required')" class="form-error-text">Percentage is required</small>
+      <small *ngIf="hasModalError(stallRuleForm, 'maxCompletionPercentage', 'min')" class="form-error-text">Percentage cannot be negative</small>
+      <small *ngIf="hasModalError(stallRuleForm, 'maxCompletionPercentage', 'max')" class="form-error-text">Percentage cannot exceed 100</small>
+      <small *ngIf="hasModalError(stallRuleForm, 'maxCompletionPercentage', 'minGreaterThanMax')" class="form-error-text">Max percentage must be greater than or equal to Min percentage</small>
       <small class="form-helper-text">Apply the rule to items with a completion percentage less than or equal to this value</small>
       <small class="form-helper-text">Example: A value of 80 includes items at 80% and below</small>
     </div>
@@ -800,8 +787,8 @@
         placeholder="My Slow Rule"
         class="w-full"
       />
-      <small *ngIf="hasModalError(slowRuleForm, 'name', 'required')" class="p-error">Name is required</small>
-      <small *ngIf="hasModalError(slowRuleForm, 'name', 'maxlength')" class="p-error">Name cannot exceed 100 characters</small>
+      <small *ngIf="hasModalError(slowRuleForm, 'name', 'required')" class="form-error-text">Name is required</small>
+      <small *ngIf="hasModalError(slowRuleForm, 'name', 'maxlength')" class="form-error-text">Name cannot exceed 100 characters</small>
     </div>
 
     <div class="field flex flex-row">
@@ -831,9 +818,9 @@
         buttonLayout="horizontal"
         class="w-full"
       ></p-inputNumber>
-      <small *ngIf="hasModalError(slowRuleForm, 'maxStrikes', 'required')" class="p-error">Max strikes is required</small>
-      <small *ngIf="hasModalError(slowRuleForm, 'maxStrikes', 'min')" class="p-error">Min value is 3</small>
-      <small *ngIf="hasModalError(slowRuleForm, 'maxStrikes', 'max')" class="p-error">Max value is 5000</small>
+      <small *ngIf="hasModalError(slowRuleForm, 'maxStrikes', 'required')" class="form-error-text">Max strikes is required</small>
+      <small *ngIf="hasModalError(slowRuleForm, 'maxStrikes', 'min')" class="form-error-text">Min value is 3</small>
+      <small *ngIf="hasModalError(slowRuleForm, 'maxStrikes', 'max')" class="form-error-text">Max value is 5000</small>
       <small class="form-helper-text">Number of strikes before action is taken</small>
     </div>
 
@@ -851,7 +838,7 @@
         type="speed"
       >
       </app-byte-size-input>
-      <small *ngIf="hasModalError(slowRuleForm, 'minSpeed', 'required')" class="p-error">Minimum speed is required</small>
+      <small *ngIf="hasModalError(slowRuleForm, 'minSpeed', 'required')" class="form-error-text">Minimum speed is required</small>
     </div>
 
     <div class="field">
@@ -869,8 +856,8 @@
         [step]="1"
         class="w-full"
       ></p-inputNumber>
-      <small *ngIf="hasModalError(slowRuleForm, 'maxTimeHours', 'required')" class="p-error">Maximum time is required</small>
-      <small *ngIf="hasModalError(slowRuleForm, 'maxTimeHours', 'min')" class="p-error">Min value is 0</small>
+      <small *ngIf="hasModalError(slowRuleForm, 'maxTimeHours', 'required')" class="form-error-text">Maximum time is required</small>
+      <small *ngIf="hasModalError(slowRuleForm, 'maxTimeHours', 'min')" class="form-error-text">Min value is 0</small>
       <small class="form-helper-text">Maximum time allowed for slow downloads (0 means disabled)</small>
     </div>
 
@@ -890,7 +877,7 @@
         placeholder="Select privacy type"
         class="w-full"
       ></p-select>
-      <small *ngIf="hasModalError(slowRuleForm, 'privacyType', 'required')" class="p-error">Privacy type is required</small>
+      <small *ngIf="hasModalError(slowRuleForm, 'privacyType', 'required')" class="form-error-text">Privacy type is required</small>
       <small class="form-helper-text">Which torrent types this rule applies to</small>
     </div>
 
@@ -910,9 +897,9 @@
         suffix="%"
         class="w-full"
       ></p-inputNumber>
-      <small *ngIf="hasModalError(slowRuleForm, 'minCompletionPercentage', 'required')" class="p-error">Percentage is required</small>
-      <small *ngIf="hasModalError(slowRuleForm, 'minCompletionPercentage', 'min')" class="p-error">Percentage cannot be negative</small>
-      <small *ngIf="hasModalError(slowRuleForm, 'minCompletionPercentage', 'max')" class="p-error">Percentage cannot exceed 100</small>
+      <small *ngIf="hasModalError(slowRuleForm, 'minCompletionPercentage', 'required')" class="form-error-text">Percentage is required</small>
+      <small *ngIf="hasModalError(slowRuleForm, 'minCompletionPercentage', 'min')" class="form-error-text">Percentage cannot be negative</small>
+      <small *ngIf="hasModalError(slowRuleForm, 'minCompletionPercentage', 'max')" class="form-error-text">Percentage cannot exceed 100</small>
       <small class="form-helper-text">Apply the rule once completion percentage exceeds this value (0 still includes exactly 0%)</small>
     </div>
 
@@ -932,10 +919,10 @@
         suffix="%"
         class="w-full"
       ></p-inputNumber>
-      <small *ngIf="hasModalError(slowRuleForm, 'maxCompletionPercentage', 'required')" class="p-error">Percentage is required</small>
-      <small *ngIf="hasModalError(slowRuleForm, 'maxCompletionPercentage', 'min')" class="p-error">Percentage cannot be negative</small>
-      <small *ngIf="hasModalError(slowRuleForm, 'maxCompletionPercentage', 'max')" class="p-error">Percentage cannot exceed 100</small>
-      <small *ngIf="hasModalError(slowRuleForm, 'maxCompletionPercentage', 'minGreaterThanMax')" class="p-error">Max percentage must be greater than or equal to Min percentage</small>
+      <small *ngIf="hasModalError(slowRuleForm, 'maxCompletionPercentage', 'required')" class="form-error-text">Percentage is required</small>
+      <small *ngIf="hasModalError(slowRuleForm, 'maxCompletionPercentage', 'min')" class="form-error-text">Percentage cannot be negative</small>
+      <small *ngIf="hasModalError(slowRuleForm, 'maxCompletionPercentage', 'max')" class="form-error-text">Percentage cannot exceed 100</small>
+      <small *ngIf="hasModalError(slowRuleForm, 'maxCompletionPercentage', 'minGreaterThanMax')" class="form-error-text">Max percentage must be greater than or equal to Min percentage</small>
       <small class="form-helper-text">Apply the rule up to and including this completion percentage</small>
     </div>
 
@@ -1007,4 +994,6 @@
 </p-dialog>
 
 <!-- Confirmation Dialog -->
-<p-confirmDialog></p-confirmDialog>
+<p-confirmDialog
+  rejectButtonStyleClass="p-button-text">
+</p-confirmDialog>

@@ -149,7 +149,7 @@
         placeholder="My Download Client"
         class="w-full"
       />
-      <small *ngIf="hasError(clientForm, 'name', 'required')" class="p-error">Name is required</small>
+      <small *ngIf="hasError(clientForm, 'name', 'required')" class="form-error-text">Name is required</small>
     </div>
 
     <div class="field">
@@ -169,7 +169,7 @@
         appendTo="body"
         class="w-full"
       ></p-select>
-      <small *ngIf="hasError(clientForm, 'typeName', 'required')" class="p-error">Client type is required</small>
+      <small *ngIf="hasError(clientForm, 'typeName', 'required')" class="form-error-text">Client type is required</small>
     </div>
 
     <ng-container>
@@ -188,9 +188,9 @@
           placeholder="http://localhost:8080"
           class="w-full"
         />
-        <small *ngIf="hasError(clientForm, 'host', 'required')" class="p-error">Host is required</small>
-        <small *ngIf="hasError(clientForm, 'host', 'invalidUri')" class="p-error">Host must be a valid URL</small>
-        <small *ngIf="hasError(clientForm, 'host', 'invalidProtocol')" class="p-error">Host must use http or https protocol</small>
+        <small *ngIf="hasError(clientForm, 'host', 'required')" class="form-error-text">Host is required</small>
+        <small *ngIf="hasError(clientForm, 'host', 'invalidUri')" class="form-error-text">Host must be a valid URL</small>
+        <small *ngIf="hasError(clientForm, 'host', 'invalidProtocol')" class="form-error-text">Host must use http or https protocol</small>
       </div>
       
       <div class="field">

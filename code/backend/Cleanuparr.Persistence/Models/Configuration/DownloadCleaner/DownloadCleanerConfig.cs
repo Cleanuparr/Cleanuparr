@@ -44,10 +44,19 @@ public sealed record DownloadCleanerConfig : IJobConfig
         {
             return;
         }
-        
+
+        // Validate that at least one feature is configured
+        bool hasSeedingCategories = Categories.Count > 0;
+        bool hasUnlinkedFeature = UnlinkedEnabled && UnlinkedCategories.Count > 0 && !string.IsNullOrWhiteSpace(UnlinkedTargetCategory);
+
+        if (!hasSeedingCategories && !hasUnlinkedFeature)
+        {
+            throw new ValidationException("No features are enabled");
+        }
+
         if (Categories.GroupBy(x => x.Name).Any(x => x.Count() > 1))
         {
-            throw new ValidationException("duplicated clean categories found");
+            throw new ValidationException("Duplicated clean categories found");
         }
         
         Categories.ForEach(x => x.Validate());
@@ -63,19 +72,19 @@ public sealed record DownloadCleanerConfig : IJobConfig
             throw new ValidationException("unlinked target category is required");
         }
 
-        if (UnlinkedCategories?.Count is null or 0)
+        if (UnlinkedCategories.Count is 0)
         {
-            throw new ValidationException("no unlinked categories configured");
+            throw new ValidationException("No unlinked categories configured");
         }
 
         if (UnlinkedCategories.Contains(UnlinkedTargetCategory))
         {
-            throw new ValidationException($"The unlinked target category should not be present in unlinked categories");
+            throw new ValidationException("The unlinked target category should not be present in unlinked categories");
         }
 
         if (UnlinkedCategories.Any(string.IsNullOrEmpty))
         {
-            throw new ValidationException("empty unlinked category filter found");
+            throw new ValidationException("Empty unlinked category filter found");
         }
 
         if (!string.IsNullOrEmpty(UnlinkedIgnoredRootDir) && !Directory.Exists(UnlinkedIgnoredRootDir))

@@ -52,10 +52,10 @@ public sealed class DownloadCleaner : GenericHandler
         
         bool isUnlinkedEnabled = config.UnlinkedEnabled && !string.IsNullOrEmpty(config.UnlinkedTargetCategory) && config.UnlinkedCategories.Count > 0;
         bool isCleaningEnabled = config.Categories.Count > 0;
-        
+
         if (!isUnlinkedEnabled && !isCleaningEnabled)
         {
-            _logger.LogWarning("{name} is not configured properly - no feature is enabled", nameof(DownloadCleaner));
+            _logger.LogWarning("No features are enabled for {name}", nameof(DownloadCleaner));
             return;
         }
         
@@ -193,7 +193,7 @@ public sealed class DownloadCleaner : GenericHandler
         }
 
         _logger.LogInformation(
-            "Found {count} potential downloads to change category",
+            "Evaluating {count} downloads for hardlinks",
             downloadServiceWithDownloads.Sum(x => x.Value.Count)
         );
         
@@ -219,7 +219,7 @@ public sealed class DownloadCleaner : GenericHandler
             }
         }
 
-        _logger.LogInformation("Finished changing category");
+        _logger.LogInformation("Finished hardlinks evaluation");
     }
     
     private async Task CleanDownloadsAsync(Dictionary<IDownloadService, List<ITorrentItemWrapper>> downloadServiceToDownloadsMap, DownloadCleanerConfig config)
@@ -254,7 +254,7 @@ public sealed class DownloadCleaner : GenericHandler
         }
         
         _logger.LogInformation(
-            "Found {count} potential downloads to clean",
+            "Evaluating {count} downloads for cleanup",
             downloadServiceWithDownloads.Sum(x => x.Value.Count)
         );
         
@@ -271,6 +271,6 @@ public sealed class DownloadCleaner : GenericHandler
             }
         }
         
-        _logger.LogInformation("Finished cleaning downloads");
+        _logger.LogInformation("Finished cleanup evaluation");
     }
 }

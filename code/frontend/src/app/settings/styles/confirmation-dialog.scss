@@ -1,0 +1,21 @@
+/* Confirmation Dialog Customization */
+/* Shared styles for PrimeNG confirmation dialogs across settings components */
+
+::ng-deep .p-confirmdialog {
+  width: 450px;
+
+  .p-dialog-content {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .p-confirm-dialog-icon {
+    margin: 0;
+    font-size: 3rem;
+    align-self: center;
+  }
+
+  .p-confirm-dialog-message {
+    margin-left: 0;
+  }
+}
