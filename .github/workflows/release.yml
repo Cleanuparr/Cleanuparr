@@ -58,10 +58,12 @@ jobs:
     uses: ./.github/workflows/test.yml
     secrets: inherit
 
-  # Build frontend once for all build jobs
+  # Build frontend once for all build jobs and cache it
   build-frontend:
     needs: [validate, test]
     runs-on: ubuntu-latest
+    outputs:
+      cache-key: ${{ steps.cache-frontend.outputs.cache-key }}
     steps:
       - name: Get vault secrets
         uses: hashicorp/vault-action@v2
@@ -94,12 +96,12 @@ jobs:
           npm ci
           npm run build
 
-      - name: Upload frontend artifact
-        uses: actions/upload-artifact@v4
+      - name: Cache frontend build
+        id: cache-frontend
+        uses: actions/cache/save@v4
         with:
-          name: frontend-dist-release
           path: code/frontend/dist/ui/browser
-          retention-days: 1
+          key: frontend-dist-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
 
   # Build portable executables
   build-executables:
