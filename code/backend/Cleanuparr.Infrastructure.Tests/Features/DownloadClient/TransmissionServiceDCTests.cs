@@ -626,6 +626,10 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
             };
             ContextProvider.Set(nameof(DownloadCleanerConfig), config);
 
+            var baseDownloadDir = Path.Combine("downloads", "movies");
+            var expectedNewLocation = string.Join(Path.DirectorySeparatorChar,
+                Path.Combine(baseDownloadDir, "unlinked").Split(['\\', '/']));
+
             var downloads = new List<Domain.Entities.ITorrentItemWrapper>
             {
                 new TransmissionItemWrapper(new TorrentInfo
@@ -633,7 +637,7 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
                     Id = 123,
                     HashString = "hash1",
                     Name = "Test",
-                    DownloadDir = "/downloads/movies",
+                    DownloadDir = baseDownloadDir,
                     Files = new[] { new TransmissionTorrentFiles { Name = "file1.mkv" } },
                     FileStats = new[] { new TransmissionTorrentFileStats { Wanted = true } }
                 })
@@ -648,7 +652,7 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
 
             // Assert
             _fixture.ClientWrapper.Verify(
-                x => x.TorrentSetLocationAsync(It.Is<long[]>(ids => ids.Contains(123)), "/downloads/movies/unlinked", true),
+                x => x.TorrentSetLocationAsync(It.Is<long[]>(ids => ids.Contains(123)), expectedNewLocation, true),
                 Times.Once);
         }
 
@@ -826,6 +830,10 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
             };
             ContextProvider.Set(nameof(DownloadCleanerConfig), config);
 
+            var baseDownloadDir = Path.Combine("downloads", "movies");
+            var expectedNewLocation = string.Join(Path.DirectorySeparatorChar,
+                Path.Combine(baseDownloadDir, "unlinked").Split(['\\', '/']));
+
             var downloads = new List<Domain.Entities.ITorrentItemWrapper>
             {
                 new TransmissionItemWrapper(new TorrentInfo
@@ -833,7 +841,7 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
                     Id = 123,
                     HashString = "hash1",
                     Name = "Test",
-                    DownloadDir = "/downloads/movies",
+                    DownloadDir = baseDownloadDir,
                     Files = new[] { new TransmissionTorrentFiles { Name = "file1.mkv" } },
                     FileStats = new[] { new TransmissionTorrentFileStats { Wanted = true } }
                 })
@@ -848,7 +856,7 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
 
             // Assert - EventPublisher is not mocked, so we just verify the method completed
             _fixture.ClientWrapper.Verify(
-                x => x.TorrentSetLocationAsync(It.Is<long[]>(ids => ids.Contains(123)), "/downloads/movies/unlinked", true),
+                x => x.TorrentSetLocationAsync(It.Is<long[]>(ids => ids.Contains(123)), expectedNewLocation, true),
                 Times.Once);
         }
 
@@ -865,6 +873,10 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
             };
             ContextProvider.Set(nameof(DownloadCleanerConfig), config);
 
+            var baseDownloadDir = Path.Combine("downloads", "movies", "subfolder");
+            var expectedNewLocation = string.Join(Path.DirectorySeparatorChar,
+                Path.Combine(baseDownloadDir, "unlinked").Split(['\\', '/']));
+
             var downloads = new List<Domain.Entities.ITorrentItemWrapper>
             {
                 new TransmissionItemWrapper(new TorrentInfo
@@ -872,7 +884,7 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
                     Id = 123,
                     HashString = "hash1",
                     Name = "Test",
-                    DownloadDir = "/downloads/movies/subfolder",
+                    DownloadDir = baseDownloadDir,
                     Files = new[] { new TransmissionTorrentFiles { Name = "file1.mkv" } },
                     FileStats = new[] { new TransmissionTorrentFileStats { Wanted = true } }
                 })
@@ -887,7 +899,7 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
 
             // Assert
             _fixture.ClientWrapper.Verify(
-                x => x.TorrentSetLocationAsync(It.Is<long[]>(ids => ids.Contains(123)), "/downloads/movies/subfolder/unlinked", true),
+                x => x.TorrentSetLocationAsync(It.Is<long[]>(ids => ids.Contains(123)), expectedNewLocation, true),
                 Times.Once);
         }
     }
