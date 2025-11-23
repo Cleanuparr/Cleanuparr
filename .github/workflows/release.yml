@@ -125,6 +125,12 @@ jobs:
     uses: ./.github/workflows/build-macos-arm-installer.yml
     secrets: inherit
 
+  # Build and push Docker image(s)
+  build-docker:
+    needs: [validate, test]
+    uses: ./.github/workflows/build-docker.yml
+    secrets: inherit
+
   # Create GitHub release
   create-release:
     needs: [validate, build-executables, build-windows-installer, build-macos-intel, build-macos-arm]
@@ -168,7 +174,7 @@ jobs:
 
   # Summary job
   summary:
-    needs: [validate, test, build-executables, build-windows-installer, build-macos-intel, build-macos-arm]
+    needs: [validate, test, build-executables, build-windows-installer, build-macos-intel, build-macos-arm, build-docker]
     runs-on: ubuntu-latest
     if: always()
 
@@ -214,6 +220,12 @@ jobs:
             echo "✅ **macOS ARM Installer**: Success" >> $GITHUB_STEP_SUMMARY
           else
             echo "❌ **macOS ARM Installer**: ${{ needs.build-macos-arm.result }}" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if [[ "${{ needs.build-docker.result }}" == "success" ]]; then
+            echo "✅ **Docker Image Build**: Success" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Docker Image Build**: ${{ needs.build-docker.result }}" >> $GITHUB_STEP_SUMMARY
           fi
 
           echo "" >> $GITHUB_STEP_SUMMARY
