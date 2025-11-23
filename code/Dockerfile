@@ -30,16 +30,17 @@ EXPOSE 11011
 # Copy source code
 COPY backend/ ./backend/
 
-# Restore dependencies with cache mount
-RUN --mount=type=cache,target=/root/.nuget/packages \
-    dotnet nuget add source --username ${PACKAGES_USERNAME} --password ${PACKAGES_PAT} --store-password-in-clear-text --name Cleanuparr https://nuget.pkg.github.com/Cleanuparr/index.json
+# Add NuGet source
+RUN dotnet nuget add source --username ${PACKAGES_USERNAME} --password ${PACKAGES_PAT} --store-password-in-clear-text --name Cleanuparr https://nuget.pkg.github.com/Cleanuparr/index.json
 
-# Build and publish with cache mount for NuGet packages
-RUN --mount=type=cache,target=/root/.nuget/packages \
+# Restore and publish with cache mount
+RUN --mount=type=cache,target=/root/.nuget/packages,sharing=locked \
+    dotnet restore ./backend/Cleanuparr.Api/Cleanuparr.Api.csproj -a $TARGETARCH && \
     dotnet publish ./backend/Cleanuparr.Api/Cleanuparr.Api.csproj \
     -a $TARGETARCH \
     -c Release \
     -o /app/publish \
+    --no-restore \
     /p:Version=${VERSION} \
     /p:PublishSingleFile=true \
     /p:DebugSymbols=false
