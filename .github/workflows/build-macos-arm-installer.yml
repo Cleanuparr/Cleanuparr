@@ -64,7 +64,7 @@ jobs:
         continue-on-error: true
         with:
           path: code/frontend/dist/ui/browser
-          key: frontend-dist-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          key: frontend-dist-${{ github.sha }}-${{ github.run_id }}
 
       - name: Setup Node.js for frontend build
         if: steps.restore-frontend.outputs.cache-hit != 'true'

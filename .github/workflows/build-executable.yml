@@ -54,7 +54,7 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: code/frontend/dist/ui/browser
-          key: frontend-dist-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          key: frontend-dist-${{ github.sha }}-${{ github.run_id }}
 
   # Build for each platform in parallel using matrix strategy
   build-platform:
@@ -133,7 +133,7 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: code/frontend/dist/ui/browser
-          key: frontend-dist-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          key: frontend-dist-${{ github.sha }}-${{ github.run_id }}
           fail-on-cache-miss: true
 
       - name: Install dependencies and restore
