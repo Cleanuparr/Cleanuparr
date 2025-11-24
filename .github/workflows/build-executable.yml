@@ -5,15 +5,9 @@ on:
 
 jobs:
   # Build frontend once and share with all platform builds
-  build-frontend:
+  restore-frontend:
     runs-on: ubuntu-latest
     steps:
-      - name: Gate
-        if: ${{ !startsWith(github.ref, 'refs/tags/') && github.event_name != 'workflow_dispatch' && github.event_name != 'workflow_call' }}
-        run: |
-          echo "This workflow only runs on tag events, manual dispatch, or workflow calls. Pipeline finished."
-          exit 0
-
       - name: Try to restore frontend from cache
         id: restore-frontend
         uses: actions/cache/restore@v4
@@ -24,7 +18,7 @@ jobs:
 
   # Build for each platform in parallel using matrix strategy
   build-platform:
-    needs: build-frontend
+    needs: restore-frontend
     runs-on: ubuntu-latest
     strategy:
       fail-fast: true
