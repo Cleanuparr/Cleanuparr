@@ -68,7 +68,7 @@ jobs:
           token: ${{ env.REPO_READONLY_PAT }}
           fetch-depth: 0
 
-      - name: Try to restore frontend from cache
+      - name: Restore frontend from cache
         id: restore-frontend
         uses: actions/cache/restore@v4
         with:

@@ -8,7 +8,7 @@ jobs:
   restore-frontend:
     runs-on: ubuntu-latest
     steps:
-      - name: Try to restore frontend from cache
+      - name: Restore frontend from cache
         id: restore-frontend
         uses: actions/cache/restore@v4
         with:

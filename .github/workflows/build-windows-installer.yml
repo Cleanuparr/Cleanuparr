@@ -31,7 +31,6 @@ jobs:
           echo "releaseVersion=$releaseVersion" >> $env:GITHUB_ENV
           echo "appVersion=$appVersion" >> $env:GITHUB_ENV
           echo "executableName=Cleanuparr.Api" >> $env:GITHUB_ENV
-          echo "APP_VERSION=$appVersion" >> $env:GITHUB_ENV
 
       - name: Get vault secrets
         uses: hashicorp/vault-action@v2
@@ -51,7 +50,7 @@ jobs:
           ref: ${{ github.ref_name }}
           token: ${{ env.REPO_READONLY_PAT }}
 
-      - name: Try to restore frontend from cache
+      - name: Restore frontend from cache
         id: restore-frontend
         uses: actions/cache/restore@v4
         with:
