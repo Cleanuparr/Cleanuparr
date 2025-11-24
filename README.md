@@ -2,7 +2,11 @@ _Love this project? Give it a ⭐️ and let others know!_
 
 # <img width="24px" src="./Logo/256.png" alt="Cleanuparr"></img> Cleanuparr
 
+![Version](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fcleanuparr-status.pages.dev%2Fstatus.json&query=%24.version&logo=git&label=version&color=blue)
+![Total Downloads](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fghcr-badge.elias.eu.org%2Fapi%2FCleanuparr%2FCleanuparr%2Fcleanuparr&query=%24.downloadCount&style=flat&logo=docker&label=Total%20Downloads&color=blue)
 [![Tests](https://github.com/Cleanuparr/Cleanuparr/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/Cleanuparr/Cleanuparr/actions/workflows/test.yml)
+
+
 [![Discord](https://img.shields.io/discord/1306721212587573389?color=7289DA&label=Discord&style=for-the-badge&logo=discord)](https://discord.gg/SCtMCgtsc4)
 
 Cleanuparr is a tool for automating the cleanup of unwanted or blocked files in Sonarr, Radarr, and supported download clients like qBittorrent. It removes incomplete or blocked downloads, updates queues, and enforces blacklists or whitelists to manage file selection. After removing blocked content, Cleanuparr can also trigger a search to replace the deleted shows/movies.
