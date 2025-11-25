@@ -1,0 +1,66 @@
+name: Get Version Info
+
+on:
+  workflow_call:
+    inputs:
+      manual_version:
+        description: 'Manual version override (e.g., 1.0.0)'
+        required: false
+        type: string
+        default: ''
+    outputs:
+      app_version:
+        description: 'Application version (without v prefix)'
+        value: ${{ jobs.version.outputs.app_version }}
+      release_version:
+        description: 'Release version (with v prefix)'
+        value: ${{ jobs.version.outputs.release_version }}
+      is_tag:
+        description: 'Whether this is a tag event'
+        value: ${{ jobs.version.outputs.is_tag }}
+      repository_name:
+        description: 'Repository name without owner'
+        value: ${{ jobs.version.outputs.repository_name }}
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      app_version: ${{ steps.version.outputs.app_version }}
+      release_version: ${{ steps.version.outputs.release_version }}
+      is_tag: ${{ steps.version.outputs.is_tag }}
+      repository_name: ${{ steps.version.outputs.repository_name }}
+
+    steps:
+      - name: Calculate version info
+        id: version
+        run: |
+          repoFullName="${{ github.repository }}"
+          repositoryName="${repoFullName#*/}"
+
+          if [[ "${{ github.ref }}" =~ ^refs/tags/ ]]; then
+            # Tag event
+            release_version="${GITHUB_REF##refs/tags/}"
+            app_version="${release_version#v}"
+            is_tag="true"
+          elif [[ -n "${{ inputs.manual_version }}" ]]; then
+            # Manual workflow with version
+            app_version="${{ inputs.manual_version }}"
+            release_version="v${app_version}"
+            is_tag="false"
+          else
+            # Development build
+            app_version="0.0.1-dev-$(date +%Y%m%d-%H%M%S)"
+            release_version="v${app_version}"
+            is_tag="false"
+          fi
+
+          echo "app_version=${app_version}" >> $GITHUB_OUTPUT
+          echo "release_version=${release_version}" >> $GITHUB_OUTPUT
+          echo "is_tag=${is_tag}" >> $GITHUB_OUTPUT
+          echo "repository_name=${repositoryName}" >> $GITHUB_OUTPUT
+
+          echo "📦 Repository: ${repositoryName}"
+          echo "🏷️ Release Version: ${release_version}"
+          echo "📱 App Version: ${app_version}"
+          echo "🔖 Is Tag: ${is_tag}"

@@ -1,0 +1,99 @@
+name: Tests
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'code/backend/**'
+      - '.github/workflows/test.yml'
+  pull_request:
+    paths:
+      - 'code/backend/**'
+      - '.github/workflows/test.yml'
+  workflow_call:
+
+# Cancel in-progress runs for the same PR
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        timeout-minutes: 1
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json', '**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Get vault secrets
+        uses: hashicorp/vault-action@v2
+        with:
+          url: ${{ secrets.VAULT_HOST }}
+          method: approle
+          roleId: ${{ secrets.VAULT_ROLE_ID }}
+          secretId: ${{ secrets.VAULT_SECRET_ID }}
+          secrets:
+            secrets/data/github packages_pat | PACKAGES_PAT
+
+      - name: Restore dependencies
+        run: |
+          dotnet nuget add source --username ${{ github.repository_owner }} --password ${{ env.PACKAGES_PAT }} --store-password-in-clear-text --name Cleanuparr https://nuget.pkg.github.com/Cleanuparr/index.json
+          dotnet restore code/backend/cleanuparr.sln
+
+      - name: Build solution
+        run: dotnet build code/backend/cleanuparr.sln --configuration Release --no-restore
+
+      - name: Run tests
+        id: run-tests
+        run: dotnet test code/backend/cleanuparr.sln --configuration Release --no-build --verbosity normal --logger trx --collect:"XPlat Code Coverage" --results-directory ./coverage
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: ./coverage/*.trx
+          retention-days: 30
+
+      - name: Upload coverage reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: ./coverage/**/coverage.cobertura.xml
+          retention-days: 30
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: ./coverage/**/coverage.cobertura.xml
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: false
+          flags: backend
+          name: backend-coverage
+
+      - name: Test Summary
+        run: |
+          echo "## Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.run-tests.outcome }}" == "success" ]; then
+            echo "✅ All tests passed!" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Tests failed or were cancelled. Status: ${{ steps.run-tests.outcome }}" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Test artifacts have been uploaded for detailed analysis." >> $GITHUB_STEP_SUMMARY

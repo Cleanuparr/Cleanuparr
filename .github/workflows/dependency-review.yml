@@ -1,0 +1,45 @@
+name: Dependency Review
+
+on:
+  pull_request:
+    branches:
+      - main
+
+# Cancel in-progress runs for the same PR
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  dependency-review:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v4
+        with:
+          # Fail on critical and high severity vulnerabilities
+          fail-on-severity: high
+          # Warn on moderate vulnerabilities
+          warn-on-severity: moderate
+          # Allow licenses
+          # allow-licenses: MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC, 0BSD
+          # Comment summarizes the vulnerabilities found
+          comment-summary-in-pr: on-failure
+          # Show dependency changes in PR
+          show-openssf-scorecard: true
+          vulnerability-check: true
+
+      - name: Upload dependency review results
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-review-results
+          path: dependency-review-*.json
+          if-no-files-found: ignore
+          retention-days: 30
