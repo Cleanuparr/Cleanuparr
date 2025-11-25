@@ -1,14 +1,15 @@
 name: Build Docker Images
 
 on:
-  push:
-    tags:
-      - "v*.*.*"
   pull_request:
     paths:
       - 'code/**'
-  workflow_dispatch:
   workflow_call:
+
+# Cancel in-progress runs for the same PR
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build_app:
@@ -115,6 +116,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push docker image
+        id: docker-build
         timeout-minutes: 15
         uses: docker/build-push-action@v6
         with:
@@ -136,3 +138,6 @@ jobs:
           push: true
           tags: |
             ${{ env.githubTags }}
+          # Enable BuildKit cache for faster builds
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

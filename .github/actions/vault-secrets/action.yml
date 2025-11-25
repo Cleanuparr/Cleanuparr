@@ -1,0 +1,30 @@
+name: 'Get Vault Secrets'
+description: 'Retrieves secrets from HashiCorp Vault using AppRole authentication'
+inputs:
+  vault_host:
+    description: 'Vault server URL'
+    required: true
+  vault_role_id:
+    description: 'Vault AppRole Role ID'
+    required: true
+  vault_secret_id:
+    description: 'Vault AppRole Secret ID'
+    required: true
+  secrets:
+    description: 'Secrets to retrieve (multiline string, one per line in format: path | output_name)'
+    required: true
+    default: |
+      secrets/data/github repo_readonly_pat | REPO_READONLY_PAT
+      secrets/data/github packages_pat | PACKAGES_PAT
+
+runs:
+  using: "composite"
+  steps:
+    - name: Get vault secrets
+      uses: hashicorp/vault-action@v2
+      with:
+        url: ${{ inputs.vault_host }}
+        method: approle
+        roleId: ${{ inputs.vault_role_id }}
+        secretId: ${{ inputs.vault_secret_id }}
+        secrets: ${{ inputs.secrets }}

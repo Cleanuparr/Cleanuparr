@@ -1,0 +1,46 @@
+name: Build Frontend
+
+on:
+  workflow_call:
+
+jobs:
+  build-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get vault secrets
+        uses: hashicorp/vault-action@v2
+        with:
+          url: ${{ secrets.VAULT_HOST }}
+          method: approle
+          roleId: ${{ secrets.VAULT_ROLE_ID }}
+          secretId: ${{ secrets.VAULT_SECRET_ID }}
+          secrets:
+            secrets/data/github repo_readonly_pat | REPO_READONLY_PAT
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        timeout-minutes: 1
+        with:
+          repository: ${{ github.repository }}
+          ref: ${{ github.ref_name }}
+          token: ${{ env.REPO_READONLY_PAT }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: code/frontend/package-lock.json
+
+      - name: Build frontend
+        run: |
+          cd code/frontend
+          npm ci
+          npm run build
+
+      - name: Cache frontend build
+        id: cache-frontend
+        uses: actions/cache/save@v4
+        with:
+          path: code/frontend/dist/ui/browser
+          key: frontend-dist-${{ github.sha }}-${{ github.run_id }}

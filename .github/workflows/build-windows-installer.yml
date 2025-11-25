@@ -1,10 +1,6 @@
 name: Build Windows Installer
 
 on:
-  push:
-    tags:
-      - "v*.*.*"
-  workflow_dispatch:
   workflow_call:
 
 jobs:
@@ -35,7 +31,6 @@ jobs:
           echo "releaseVersion=$releaseVersion" >> $env:GITHUB_ENV
           echo "appVersion=$appVersion" >> $env:GITHUB_ENV
           echo "executableName=Cleanuparr.Api" >> $env:GITHUB_ENV
-          echo "APP_VERSION=$appVersion" >> $env:GITHUB_ENV
 
       - name: Get vault secrets
         uses: hashicorp/vault-action@v2
@@ -55,18 +50,13 @@ jobs:
           ref: ${{ github.ref_name }}
           token: ${{ env.REPO_READONLY_PAT }}
 
-      - name: Setup Node.js for frontend build
-        uses: actions/setup-node@v4
+      - name: Restore frontend from cache
+        id: restore-frontend
+        uses: actions/cache/restore@v4
         with:
-          node-version: '18'
-          cache: 'npm'
-          cache-dependency-path: code/frontend/package-lock.json
-
-      - name: Build frontend
-        run: |
-          cd code/frontend
-          npm ci
-          npm run build
+          path: code/frontend/dist/ui/browser
+          key: frontend-dist-${{ github.sha }}-${{ github.run_id }}
+          fail-on-cache-miss: true
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
