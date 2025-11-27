@@ -10,7 +10,6 @@ using Cleanuparr.Infrastructure.Features.Files;
 using Cleanuparr.Infrastructure.Features.ItemStriker;
 using Cleanuparr.Infrastructure.Features.Jobs;
 using Cleanuparr.Infrastructure.Features.MalwareBlocker;
-using Cleanuparr.Infrastructure.Features.Security;
 using Cleanuparr.Infrastructure.Helpers;
 using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Infrastructure.Services;
@@ -23,8 +22,6 @@ public static class ServicesDI
 {
     public static IServiceCollection AddServices(this IServiceCollection services) =>
         services
-            .AddScoped<IEncryptionService, AesEncryptionService>()
-            .AddScoped<SensitiveDataJsonConverter>()
             .AddScoped<EventsContext>()
             .AddScoped<DataContext>()
             .AddScoped<EventPublisher>()
