@@ -10,6 +10,11 @@ on:
         description: 'Version to release (e.g., 1.0.0)'
         required: false
         default: ''
+      skip_docker:
+        description: 'Skip Docker build and push'
+        type: boolean
+        required: false
+        default: false
 
 jobs:
   # Validate release
@@ -19,7 +24,7 @@ jobs:
       app_version: ${{ steps.version.outputs.app_version }}
       release_version: ${{ steps.version.outputs.release_version }}
       is_tag: ${{ steps.version.outputs.is_tag }}
-      
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -47,7 +52,7 @@ jobs:
           echo "app_version=$app_version" >> $GITHUB_OUTPUT
           echo "release_version=$release_version" >> $GITHUB_OUTPUT
           echo "is_tag=$is_tag" >> $GITHUB_OUTPUT
-          
+
           echo "🏷️ Release Version: $release_version"
           echo "📱 App Version: $app_version"
           echo "🔖 Is Tag: $is_tag"
@@ -84,6 +89,7 @@ jobs:
 
   # Build and push Docker image(s)
   build-docker:
+    if: ${{ github.event.inputs.skip_docker != 'true' }}
     needs: [validate, test]
     uses: ./.github/workflows/build-docker.yml
     secrets: inherit
