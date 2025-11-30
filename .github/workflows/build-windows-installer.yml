@@ -30,6 +30,7 @@ jobs:
           echo "githubRepositoryName=$repositoryName" >> $env:GITHUB_ENV
           echo "releaseVersion=$releaseVersion" >> $env:GITHUB_ENV
           echo "appVersion=$appVersion" >> $env:GITHUB_ENV
+          echo "APP_VERSION=$appVersion" >> $env:GITHUB_ENV
           echo "executableName=Cleanuparr.Api" >> $env:GITHUB_ENV
 
       - name: Get vault secrets
