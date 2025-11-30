@@ -41,9 +41,6 @@
         <PackageReference Include="Serilog.Settings.Configuration" Version="10.0.0" />
         <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
         <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
-        <!-- API-related packages -->
-        <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.11" />
-        <PackageReference Include="Swashbuckle.AspNetCore" Version="10.0.1" />
     </ItemGroup>
 
 </Project>

@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.Http.Json;
 using System.Text;
 using Cleanuparr.Api.Middleware;
 using Microsoft.Extensions.Options;
-using Microsoft.OpenApi;
 
 namespace Cleanuparr.Api.DependencyInjection;
 
@@ -46,20 +45,6 @@ public static class ApiDI
         
         // Add health status broadcaster
         services.AddHostedService<HealthStatusBroadcaster>();
-        
-        services.AddSwaggerGen(options =>
-        {
-            options.SwaggerDoc("v1", new OpenApiInfo
-            {
-                Title = "Cleanuparr API",
-                Version = "v1",
-                Description = "API for managing media downloads and cleanups",
-                Contact = new OpenApiContact
-                {
-                    Name = "Cleanuparr Team"
-                }
-            });
-        });
 
         return services;
     }
@@ -82,17 +67,6 @@ public static class ApiDI
 
         app.UseCors("Any");
         app.UseRouting();
-
-        if (app.Environment.IsDevelopment())
-        {
-            app.UseSwagger();
-            app.UseSwaggerUI(options =>
-            {
-                options.SwaggerEndpoint("v1/swagger.json", "Cleanuparr API v1");
-                options.RoutePrefix = "swagger";
-                options.DocumentTitle = "Cleanuparr API Documentation";
-            });
-        }
 
         app.UseAuthorization();
         app.MapControllers();
