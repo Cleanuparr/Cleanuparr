@@ -38,9 +38,9 @@ jobs:
           npm ci
           npm run build
 
-      - name: Cache frontend build
-        id: cache-frontend
-        uses: actions/cache/save@v4
+      - name: Upload frontend artifact
+        uses: actions/upload-artifact@v4
         with:
+          name: frontend-dist
           path: code/frontend/dist/ui/browser
-          key: frontend-dist-${{ github.sha }}-${{ github.run_id }}
+          retention-days: 1

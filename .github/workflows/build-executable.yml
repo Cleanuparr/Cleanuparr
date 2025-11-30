@@ -2,23 +2,16 @@ name: Build Executables
 
 on:
   workflow_call:
+    inputs:
+      app_version:
+        description: 'Application version'
+        type: string
+        required: false
+        default: ''
 
 jobs:
-  # Build frontend once and share with all platform builds
-  restore-frontend:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Restore frontend from cache
-        id: restore-frontend
-        uses: actions/cache/restore@v4
-        with:
-          path: code/frontend/dist/ui/browser
-          key: frontend-dist-${{ github.sha }}-${{ github.run_id }}
-          fail-on-cache-miss: true
-
   # Build for each platform in parallel using matrix strategy
   build-platform:
-    needs: restore-frontend
     runs-on: ubuntu-latest
     strategy:
       fail-fast: true
@@ -40,7 +33,11 @@ jobs:
         run: |
           ref=${{ github.ref }}
 
-          if [[ "$ref" =~ ^refs/tags/ ]]; then
+          # Use input version if provided, otherwise determine from ref
+          if [[ -n "${{ inputs.app_version }}" ]]; then
+            appVersion="${{ inputs.app_version }}"
+            releaseVersion="v$appVersion"
+          elif [[ "$ref" =~ ^refs/tags/ ]]; then
             releaseVersion=${ref##refs/tags/}
             appVersion=${releaseVersion#v}
           else
@@ -89,12 +86,11 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-nuget-
 
-      - name: Restore frontend from cache
-        uses: actions/cache/restore@v4
+      - name: Download frontend artifact
+        uses: actions/download-artifact@v4
         with:
+          name: frontend-dist
           path: code/frontend/dist/ui/browser
-          key: frontend-dist-${{ github.sha }}-${{ github.run_id }}
-          fail-on-cache-miss: true
 
       - name: Install dependencies and restore
         run: |

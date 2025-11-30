@@ -2,6 +2,12 @@ name: Build Windows Installer
 
 on:
   workflow_call:
+    inputs:
+      app_version:
+        description: 'Application version'
+        type: string
+        required: false
+        default: ''
 
 jobs:
   build-windows-installer:
@@ -13,9 +19,13 @@ jobs:
         run: |
           $repoFullName = "${{ github.repository }}"
           $ref = "${{ github.ref }}"
-          
-          # Handle both tag events and manual dispatch
-          if ($ref -match "^refs/tags/") {
+          $inputVersion = "${{ inputs.app_version }}"
+
+          # Use input version if provided, otherwise determine from ref
+          if ($inputVersion -ne "") {
+            $appVersion = $inputVersion
+            $releaseVersion = "v$appVersion"
+          } elseif ($ref -match "^refs/tags/") {
             $releaseVersion = $ref -replace "refs/tags/", ""
             $appVersion = $releaseVersion -replace "^v", ""
           } else {
@@ -23,13 +33,14 @@ jobs:
             $releaseVersion = "dev-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
             $appVersion = "0.0.1-dev"
           }
-          
+
           $repositoryName = $repoFullName.Split("/")[1]
-          
+
           echo "githubRepository=${{ github.repository }}" >> $env:GITHUB_ENV
           echo "githubRepositoryName=$repositoryName" >> $env:GITHUB_ENV
           echo "releaseVersion=$releaseVersion" >> $env:GITHUB_ENV
           echo "appVersion=$appVersion" >> $env:GITHUB_ENV
+          echo "APP_VERSION=$appVersion" >> $env:GITHUB_ENV
           echo "executableName=Cleanuparr.Api" >> $env:GITHUB_ENV
 
       - name: Get vault secrets
@@ -50,13 +61,11 @@ jobs:
           ref: ${{ github.ref_name }}
           token: ${{ env.REPO_READONLY_PAT }}
 
-      - name: Restore frontend from cache
-        id: restore-frontend
-        uses: actions/cache/restore@v4
+      - name: Download frontend artifact
+        uses: actions/download-artifact@v4
         with:
+          name: frontend-dist
           path: code/frontend/dist/ui/browser
-          key: frontend-dist-${{ github.sha }}-${{ github.run_id }}
-          fail-on-cache-miss: true
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
