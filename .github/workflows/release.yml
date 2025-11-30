@@ -105,6 +105,8 @@ jobs:
       needs.build-frontend.result == 'success' &&
       (needs.validate.outputs.is_tag == 'true' || github.event.inputs.buildBinaries == 'true')
     uses: ./.github/workflows/build-executable.yml
+    with:
+      app_version: ${{ needs.validate.outputs.app_version }}
     secrets: inherit
 
   # Build Windows installer
@@ -117,6 +119,8 @@ jobs:
       needs.build-frontend.result == 'success' &&
       (needs.validate.outputs.is_tag == 'true' || github.event.inputs.buildBinaries == 'true')
     uses: ./.github/workflows/build-windows-installer.yml
+    with:
+      app_version: ${{ needs.validate.outputs.app_version }}
     secrets: inherit
 
   # Build macOS installers (Intel and ARM)
@@ -129,6 +133,8 @@ jobs:
       needs.build-frontend.result == 'success' &&
       (needs.validate.outputs.is_tag == 'true' || github.event.inputs.buildBinaries == 'true')
     uses: ./.github/workflows/build-macos-installer.yml
+    with:
+      app_version: ${{ needs.validate.outputs.app_version }}
     secrets: inherit
 
   # Build and push Docker image(s)

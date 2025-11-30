@@ -5,6 +5,12 @@ permissions:
 
 on:
   workflow_call:
+    inputs:
+      app_version:
+        description: 'Application version'
+        type: string
+        required: false
+        default: ''
 
 jobs:
   build-macos-installer:
@@ -31,8 +37,11 @@ jobs:
           repoFullName=${{ github.repository }}
           ref=${{ github.ref }}
 
-          # Handle both tag events and manual dispatch
-          if [[ "$ref" =~ ^refs/tags/ ]]; then
+          # Use input version if provided, otherwise determine from ref
+          if [[ -n "${{ inputs.app_version }}" ]]; then
+            appVersion="${{ inputs.app_version }}"
+            releaseVersion="v$appVersion"
+          elif [[ "$ref" =~ ^refs/tags/ ]]; then
             releaseVersion=${ref##refs/tags/}
             appVersion=${releaseVersion#v}
           else
