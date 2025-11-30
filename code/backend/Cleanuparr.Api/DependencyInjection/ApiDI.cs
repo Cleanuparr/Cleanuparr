@@ -2,10 +2,10 @@ using System.Text.Json.Serialization;
 using Cleanuparr.Infrastructure.Health;
 using Cleanuparr.Infrastructure.Hubs;
 using Microsoft.AspNetCore.Http.Json;
-using Microsoft.OpenApi.Models;
 using System.Text;
 using Cleanuparr.Api.Middleware;
 using Microsoft.Extensions.Options;
+using Microsoft.OpenApi;
 
 namespace Cleanuparr.Api.DependencyInjection;
 
