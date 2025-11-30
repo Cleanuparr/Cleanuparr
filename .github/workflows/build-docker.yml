@@ -5,6 +5,12 @@ on:
     paths:
       - 'code/**'
   workflow_call:
+    inputs:
+      push_docker:
+        description: 'Push Docker image to registry'
+        type: boolean
+        required: false
+        default: true
 
 # Cancel in-progress runs for the same PR
 concurrency:
@@ -135,7 +141,7 @@ jobs:
           platforms: |
             linux/amd64
             linux/arm64
-          push: true
+          push: ${{ inputs.push_docker }}
           tags: |
             ${{ env.githubTags }}
           # Enable BuildKit cache for faster builds

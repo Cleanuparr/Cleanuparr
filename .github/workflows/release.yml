@@ -10,8 +10,28 @@ on:
         description: 'Version to release (e.g., 1.0.0)'
         required: false
         default: ''
-      skip_docker:
-        description: 'Skip Docker build and push'
+      runTests:
+        description: 'Run test suite'
+        type: boolean
+        required: false
+        default: true
+      buildDocker:
+        description: 'Build Docker image'
+        type: boolean
+        required: false
+        default: true
+      pushDocker:
+        description: 'Push Docker image to registry'
+        type: boolean
+        required: false
+        default: false
+      buildBinaries:
+        description: 'Build executables and installers'
+        type: boolean
+        required: false
+        default: true
+      createRelease:
+        description: 'Create GitHub release'
         type: boolean
         required: false
         default: false
@@ -60,45 +80,84 @@ jobs:
   # Run tests
   test:
     needs: validate
+    if: ${{ needs.validate.outputs.is_tag == 'true' || github.event.inputs.runTests == 'true' }}
     uses: ./.github/workflows/test.yml
     secrets: inherit
 
   # Build frontend once for all build jobs and cache it
   build-frontend:
     needs: [validate, test]
+    if: |
+      always() &&
+      needs.validate.result == 'success' &&
+      (needs.test.result == 'success' || needs.test.result == 'skipped') &&
+      (needs.validate.outputs.is_tag == 'true' || github.event.inputs.buildBinaries == 'true')
     uses: ./.github/workflows/build-frontend.yml
     secrets: inherit
 
   # Build portable executables
   build-executables:
     needs: [validate, test, build-frontend]
+    if: |
+      always() &&
+      needs.validate.result == 'success' &&
+      (needs.test.result == 'success' || needs.test.result == 'skipped') &&
+      needs.build-frontend.result == 'success' &&
+      (needs.validate.outputs.is_tag == 'true' || github.event.inputs.buildBinaries == 'true')
     uses: ./.github/workflows/build-executable.yml
     secrets: inherit
 
   # Build Windows installer
   build-windows-installer:
     needs: [validate, test, build-frontend]
+    if: |
+      always() &&
+      needs.validate.result == 'success' &&
+      (needs.test.result == 'success' || needs.test.result == 'skipped') &&
+      needs.build-frontend.result == 'success' &&
+      (needs.validate.outputs.is_tag == 'true' || github.event.inputs.buildBinaries == 'true')
     uses: ./.github/workflows/build-windows-installer.yml
     secrets: inherit
 
   # Build macOS installers (Intel and ARM)
   build-macos:
     needs: [validate, test, build-frontend]
+    if: |
+      always() &&
+      needs.validate.result == 'success' &&
+      (needs.test.result == 'success' || needs.test.result == 'skipped') &&
+      needs.build-frontend.result == 'success' &&
+      (needs.validate.outputs.is_tag == 'true' || github.event.inputs.buildBinaries == 'true')
     uses: ./.github/workflows/build-macos-installer.yml
     secrets: inherit
 
   # Build and push Docker image(s)
   build-docker:
-    if: ${{ github.event.inputs.skip_docker != 'true' }}
     needs: [validate, test]
+    if: |
+      always() &&
+      needs.validate.result == 'success' &&
+      (needs.test.result == 'success' || needs.test.result == 'skipped') &&
+      (needs.validate.outputs.is_tag == 'true' || github.event.inputs.buildDocker == 'true')
     uses: ./.github/workflows/build-docker.yml
+    with:
+      push_docker: ${{ needs.validate.outputs.is_tag == 'true' || github.event.inputs.pushDocker == 'true' }}
     secrets: inherit
 
   # Create GitHub release
   create-release:
     needs: [validate, build-executables, build-windows-installer, build-macos]
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+    if: |
+      always() &&
+      needs.validate.result == 'success' &&
+      needs.build-executables.result == 'success' &&
+      needs.build-windows-installer.result == 'success' &&
+      needs.build-macos.result == 'success' &&
+      (
+        needs.validate.outputs.is_tag == 'true' ||
+        (github.event.inputs.createRelease == 'true' && github.event.inputs.buildBinaries == 'true')
+      )
     
     steps:
       - name: Get vault secrets
@@ -137,7 +196,7 @@ jobs:
 
   # Summary job
   summary:
-    needs: [validate, test, build-executables, build-windows-installer, build-macos, build-docker]
+    needs: [validate, test, build-frontend, build-executables, build-windows-installer, build-macos, build-docker]
     runs-on: ubuntu-latest
     if: always()
 
@@ -170,37 +229,23 @@ jobs:
           echo "### Build Results" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
-          # Check test results
-          if [[ "${{ needs.test.result }}" == "success" ]]; then
-            echo "✅ **Tests**: Success" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "❌ **Tests**: ${{ needs.test.result }}" >> $GITHUB_STEP_SUMMARY
-          fi
+          # Helper function to print job result
+          print_result() {
+            local name="$1"
+            local result="$2"
+            case "$result" in
+              success) echo "✅ **$name**: Success" >> $GITHUB_STEP_SUMMARY ;;
+              skipped) echo "⏭️ **$name**: Skipped" >> $GITHUB_STEP_SUMMARY ;;
+              *) echo "❌ **$name**: $result" >> $GITHUB_STEP_SUMMARY ;;
+            esac
+          }
 
-          # Check job results
-          if [[ "${{ needs.build-executables.result }}" == "success" ]]; then
-            echo "✅ **Portable Executables**: Success" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "❌ **Portable Executables**: ${{ needs.build-executables.result }}" >> $GITHUB_STEP_SUMMARY
-          fi
-
-          if [[ "${{ needs.build-windows-installer.result }}" == "success" ]]; then
-            echo "✅ **Windows Installer**: Success" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "❌ **Windows Installer**: ${{ needs.build-windows-installer.result }}" >> $GITHUB_STEP_SUMMARY
-          fi
-
-          if [[ "${{ needs.build-macos.result }}" == "success" ]]; then
-            echo "✅ **macOS Installers (Intel & ARM)**: Success" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "❌ **macOS Installers (Intel & ARM)**: ${{ needs.build-macos.result }}" >> $GITHUB_STEP_SUMMARY
-          fi
-
-          if [[ "${{ needs.build-docker.result }}" == "success" ]]; then
-            echo "✅ **Docker Image Build**: Success" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "❌ **Docker Image Build**: ${{ needs.build-docker.result }}" >> $GITHUB_STEP_SUMMARY
-          fi
+          print_result "Tests" "${{ needs.test.result }}"
+          print_result "Frontend Build" "${{ needs.build-frontend.result }}"
+          print_result "Portable Executables" "${{ needs.build-executables.result }}"
+          print_result "Windows Installer" "${{ needs.build-windows-installer.result }}"
+          print_result "macOS Installers (Intel & ARM)" "${{ needs.build-macos.result }}"
+          print_result "Docker Image Build" "${{ needs.build-docker.result }}"
 
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "🎉 **Build completed!**" >> $GITHUB_STEP_SUMMARY 
