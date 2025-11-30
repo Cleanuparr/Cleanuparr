@@ -4,21 +4,8 @@ on:
   workflow_call:
 
 jobs:
-  # Build frontend once and share with all platform builds
-  restore-frontend:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Restore frontend from cache
-        id: restore-frontend
-        uses: actions/cache/restore@v4
-        with:
-          path: code/frontend/dist/ui/browser
-          key: frontend-dist-${{ github.sha }}-${{ github.run_id }}
-          fail-on-cache-miss: true
-
   # Build for each platform in parallel using matrix strategy
   build-platform:
-    needs: restore-frontend
     runs-on: ubuntu-latest
     strategy:
       fail-fast: true
@@ -89,12 +76,11 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-nuget-
 
-      - name: Restore frontend from cache
-        uses: actions/cache/restore@v4
+      - name: Download frontend artifact
+        uses: actions/download-artifact@v4
         with:
+          name: frontend-dist
           path: code/frontend/dist/ui/browser
-          key: frontend-dist-${{ github.sha }}-${{ github.run_id }}
-          fail-on-cache-miss: true
 
       - name: Install dependencies and restore
         run: |

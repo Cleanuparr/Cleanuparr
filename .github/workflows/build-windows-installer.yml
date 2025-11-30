@@ -50,13 +50,11 @@ jobs:
           ref: ${{ github.ref_name }}
           token: ${{ env.REPO_READONLY_PAT }}
 
-      - name: Restore frontend from cache
-        id: restore-frontend
-        uses: actions/cache/restore@v4
+      - name: Download frontend artifact
+        uses: actions/download-artifact@v4
         with:
+          name: frontend-dist
           path: code/frontend/dist/ui/browser
-          key: frontend-dist-${{ github.sha }}-${{ github.run_id }}
-          fail-on-cache-miss: true
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
