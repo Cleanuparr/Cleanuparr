@@ -379,18 +379,17 @@ public class RuleManagerTests
         Assert.Equal(slowRule.Id, result.Id);
     }
 
-    private static Mock<ITorrentItem> CreateTorrentMock(
+    private static Mock<ITorrentItemWrapper> CreateTorrentMock(
         bool isPrivate = false,
         double completionPercentage = 50,
         string size = "100 MB")
     {
-        var torrentMock = new Mock<ITorrentItem>();
+        var torrentMock = new Mock<ITorrentItemWrapper>();
         torrentMock.SetupGet(t => t.Hash).Returns("test-hash");
         torrentMock.SetupGet(t => t.Name).Returns("Test Torrent");
         torrentMock.SetupGet(t => t.IsPrivate).Returns(isPrivate);
         torrentMock.SetupGet(t => t.CompletionPercentage).Returns(completionPercentage);
         torrentMock.SetupGet(t => t.Size).Returns(ByteSize.Parse(size).Bytes);
-        torrentMock.SetupGet(t => t.Trackers).Returns(Array.Empty<string>());
         torrentMock.SetupGet(t => t.DownloadedBytes).Returns(0);
         torrentMock.SetupGet(t => t.DownloadSpeed).Returns(0);
         torrentMock.SetupGet(t => t.Eta).Returns(3600);

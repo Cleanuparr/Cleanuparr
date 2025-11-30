@@ -5,13 +5,13 @@ using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.DownloadClient;
 
-public class TransmissionItemTests
+public class TransmissionItemWrapperTests
 {
     [Fact]
     public void Constructor_WithNullTorrentInfo_ThrowsArgumentNullException()
     {
         // Act & Assert
-        Should.Throw<ArgumentNullException>(() => new TransmissionItem(null!));
+        Should.Throw<ArgumentNullException>(() => new TransmissionItemWrapper(null!));
     }
 
     [Fact]
@@ -20,7 +20,7 @@ public class TransmissionItemTests
         // Arrange
         var expectedHash = "test-hash-123";
         var torrentInfo = new TorrentInfo { HashString = expectedHash };
-        var wrapper = new TransmissionItem(torrentInfo);
+        var wrapper = new TransmissionItemWrapper(torrentInfo);
 
         // Act
         var result = wrapper.Hash;
@@ -34,7 +34,7 @@ public class TransmissionItemTests
     {
         // Arrange
         var torrentInfo = new TorrentInfo { HashString = null };
-        var wrapper = new TransmissionItem(torrentInfo);
+        var wrapper = new TransmissionItemWrapper(torrentInfo);
 
         // Act
         var result = wrapper.Hash;
@@ -49,7 +49,7 @@ public class TransmissionItemTests
         // Arrange
         var expectedName = "Test Torrent";
         var torrentInfo = new TorrentInfo { Name = expectedName };
-        var wrapper = new TransmissionItem(torrentInfo);
+        var wrapper = new TransmissionItemWrapper(torrentInfo);
 
         // Act
         var result = wrapper.Name;
@@ -63,7 +63,7 @@ public class TransmissionItemTests
     {
         // Arrange
         var torrentInfo = new TorrentInfo { Name = null };
-        var wrapper = new TransmissionItem(torrentInfo);
+        var wrapper = new TransmissionItemWrapper(torrentInfo);
 
         // Act
         var result = wrapper.Name;
@@ -80,7 +80,7 @@ public class TransmissionItemTests
     {
         // Arrange
         var torrentInfo = new TorrentInfo { IsPrivate = isPrivate };
-        var wrapper = new TransmissionItem(torrentInfo);
+        var wrapper = new TransmissionItemWrapper(torrentInfo);
 
         // Act
         var result = wrapper.IsPrivate;
@@ -97,7 +97,7 @@ public class TransmissionItemTests
     {
         // Arrange
         var torrentInfo = new TorrentInfo { TotalSize = totalSize };
-        var wrapper = new TransmissionItem(torrentInfo);
+        var wrapper = new TransmissionItemWrapper(torrentInfo);
 
         // Act
         var result = wrapper.Size;
@@ -117,12 +117,12 @@ public class TransmissionItemTests
     public void CompletionPercentage_ReturnsCorrectValue(long? downloadedEver, long? totalSize, double expectedPercentage)
     {
         // Arrange
-        var torrentInfo = new TorrentInfo 
-        { 
+        var torrentInfo = new TorrentInfo
+        {
             DownloadedEver = downloadedEver,
             TotalSize = totalSize
         };
-        var wrapper = new TransmissionItem(torrentInfo);
+        var wrapper = new TransmissionItemWrapper(torrentInfo);
 
         // Act
         var result = wrapper.CompletionPercentage;
@@ -132,108 +132,98 @@ public class TransmissionItemTests
     }
 
     [Fact]
-    public void Trackers_WithValidUrls_ReturnsHostNames()
+    public void IsIgnored_WithEmptyList_ReturnsFalse()
+    {
+        // Arrange
+        var torrentInfo = new TorrentInfo { HashString = "abc123", Name = "Test Torrent" };
+        var wrapper = new TransmissionItemWrapper(torrentInfo);
+
+        // Act
+        var result = wrapper.IsIgnored(Array.Empty<string>());
+
+        // Assert
+        result.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void IsIgnored_MatchingHash_ReturnsTrue()
+    {
+        // Arrange
+        var torrentInfo = new TorrentInfo { HashString = "abc123", Name = "Test Torrent" };
+        var wrapper = new TransmissionItemWrapper(torrentInfo);
+        var ignoredDownloads = new[] { "abc123" };
+
+        // Act
+        var result = wrapper.IsIgnored(ignoredDownloads);
+
+        // Assert
+        result.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void IsIgnored_MatchingCategory_ReturnsTrue()
     {
         // Arrange
         var torrentInfo = new TorrentInfo
         {
+            HashString = "abc123",
+            Name = "Test Torrent",
+            DownloadDir = "/downloads/test-category"
+        };
+        var wrapper = new TransmissionItemWrapper(torrentInfo);
+        var ignoredDownloads = new[] { "test-category" };
+
+        // Act
+        var result = wrapper.IsIgnored(ignoredDownloads);
+
+        // Assert
+        result.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void IsIgnored_MatchingTracker_ReturnsTrue()
+    {
+        // Arrange
+        var torrentInfo = new TorrentInfo
+        {
+            HashString = "abc123",
+            Name = "Test Torrent",
             Trackers = new TransmissionTorrentTrackers[]
             {
-                new() { Announce = "http://tracker1.example.com:8080/announce" },
-                new() { Announce = "https://tracker2.example.com/announce" },
-                new() { Announce = "udp://tracker3.example.com:1337/announce" }
+                new() { Announce = "http://tracker.example.com/announce" }
             }
         };
-        var wrapper = new TransmissionItem(torrentInfo);
+        var wrapper = new TransmissionItemWrapper(torrentInfo);
+        var ignoredDownloads = new[] { "tracker.example.com" };
 
         // Act
-        var result = wrapper.Trackers;
+        var result = wrapper.IsIgnored(ignoredDownloads);
 
         // Assert
-        result.Count.ShouldBe(3);
-        result.ShouldContain("tracker1.example.com");
-        result.ShouldContain("tracker2.example.com");
-        result.ShouldContain("tracker3.example.com");
+        result.ShouldBeTrue();
     }
 
     [Fact]
-    public void Trackers_WithDuplicateHosts_ReturnsDistinctHosts()
+    public void IsIgnored_NotMatching_ReturnsFalse()
     {
         // Arrange
         var torrentInfo = new TorrentInfo
         {
+            HashString = "abc123",
+            Name = "Test Torrent",
+            Labels = new[] { "some-category" },
             Trackers = new TransmissionTorrentTrackers[]
             {
-                new() { Announce = "http://tracker1.example.com:8080/announce" },
-                new() { Announce = "https://tracker1.example.com/announce" },
-                new() { Announce = "udp://tracker1.example.com:1337/announce" }
+                new() { Announce = "http://tracker.example.com/announce" }
             }
         };
-        var wrapper = new TransmissionItem(torrentInfo);
+        var wrapper = new TransmissionItemWrapper(torrentInfo);
+        var ignoredDownloads = new[] { "notmatching" };
 
         // Act
-        var result = wrapper.Trackers;
+        var result = wrapper.IsIgnored(ignoredDownloads);
 
         // Assert
-        result.Count.ShouldBe(1);
-        result.ShouldContain("tracker1.example.com");
-    }
-
-    [Fact]
-    public void Trackers_WithInvalidUrls_SkipsInvalidEntries()
-    {
-        // Arrange
-        var torrentInfo = new TorrentInfo
-        {
-            Trackers = new TransmissionTorrentTrackers[]
-            {
-                new() { Announce = "http://valid.example.com/announce" },
-                new() { Announce = "invalid-url" },
-                new() { Announce = "" },
-                new() { Announce = null }
-            }
-        };
-        var wrapper = new TransmissionItem(torrentInfo);
-
-        // Act
-        var result = wrapper.Trackers;
-
-        // Assert
-        result.Count.ShouldBe(1);
-        result.ShouldContain("valid.example.com");
-    }
-
-    [Fact]
-    public void Trackers_WithEmptyList_ReturnsEmptyList()
-    {
-        // Arrange
-        var torrentInfo = new TorrentInfo
-        {
-            Trackers = new TransmissionTorrentTrackers[0]
-        };
-        var wrapper = new TransmissionItem(torrentInfo);
-
-        // Act
-        var result = wrapper.Trackers;
-
-        // Assert
-        result.ShouldBeEmpty();
-    }
-
-    [Fact]
-    public void Trackers_WithNullTrackers_ReturnsEmptyList()
-    {
-        // Arrange
-        var torrentInfo = new TorrentInfo
-        {
-            Trackers = null
-        };
-        var wrapper = new TransmissionItem(torrentInfo);
-
-        // Act
-        var result = wrapper.Trackers;
-
-        // Assert
-        result.ShouldBeEmpty();
+        result.ShouldBeFalse();
     }
 }

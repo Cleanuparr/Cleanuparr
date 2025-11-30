@@ -16,7 +16,7 @@ namespace Cleanuparr.Infrastructure.Features.DownloadClient.QBittorrent;
 
 public partial class QBitService : DownloadService, IQBitService
 {
-    protected readonly QBittorrentClient _client;
+    protected readonly IQBittorrentClientWrapper _client;
 
     public QBitService(
         ILogger<QBitService> logger,
@@ -36,7 +36,31 @@ public partial class QBitService : DownloadService, IQBitService
         httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, ruleEvaluator, ruleManager
     )
     {
-        _client = new QBittorrentClient(_httpClient, downloadClientConfig.Url);
+        var qBittorrentClient = new QBittorrentClient(_httpClient, downloadClientConfig.Url);
+        _client = new QBittorrentClientWrapper(qBittorrentClient);
+    }
+
+    // Internal constructor for testing
+    internal QBitService(
+        ILogger<QBitService> logger,
+        IMemoryCache cache,
+        IFilenameEvaluator filenameEvaluator,
+        IStriker striker,
+        IDryRunInterceptor dryRunInterceptor,
+        IHardLinkFileService hardLinkFileService,
+        IDynamicHttpClientProvider httpClientProvider,
+        EventPublisher eventPublisher,
+        BlocklistProvider blocklistProvider,
+        DownloadClientConfig downloadClientConfig,
+        IRuleEvaluator ruleEvaluator,
+        IRuleManager ruleManager,
+        IQBittorrentClientWrapper clientWrapper
+    ) : base(
+        logger, cache, filenameEvaluator, striker, dryRunInterceptor, hardLinkFileService,
+        httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, ruleEvaluator, ruleManager
+    )
+    {
+        _client = clientWrapper;
     }
     
     public override async Task LoginAsync()

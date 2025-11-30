@@ -19,7 +19,7 @@ public sealed record SlowRule : QueueRule
     [JsonIgnore]
     public ByteSize? IgnoreAboveSizeByteSize => string.IsNullOrEmpty(IgnoreAboveSize) ? null : ByteSize.Parse(IgnoreAboveSize);
 
-    public override bool MatchesTorrent(ITorrentItem torrent)
+    public override bool MatchesTorrent(ITorrentItemWrapper torrent)
     {
         // Check privacy type
         if (!MatchesPrivacyType(torrent.IsPrivate))
