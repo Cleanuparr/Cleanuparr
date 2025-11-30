@@ -2,6 +2,12 @@ name: Build Windows Installer
 
 on:
   workflow_call:
+    inputs:
+      app_version:
+        description: 'Application version'
+        type: string
+        required: false
+        default: ''
 
 jobs:
   build-windows-installer:
@@ -13,9 +19,13 @@ jobs:
         run: |
           $repoFullName = "${{ github.repository }}"
           $ref = "${{ github.ref }}"
-          
-          # Handle both tag events and manual dispatch
-          if ($ref -match "^refs/tags/") {
+          $inputVersion = "${{ inputs.app_version }}"
+
+          # Use input version if provided, otherwise determine from ref
+          if ($inputVersion -ne "") {
+            $appVersion = $inputVersion
+            $releaseVersion = "v$appVersion"
+          } elseif ($ref -match "^refs/tags/") {
             $releaseVersion = $ref -replace "refs/tags/", ""
             $appVersion = $releaseVersion -replace "^v", ""
           } else {
@@ -23,9 +33,9 @@ jobs:
             $releaseVersion = "dev-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
             $appVersion = "0.0.1-dev"
           }
-          
+
           $repositoryName = $repoFullName.Split("/")[1]
-          
+
           echo "githubRepository=${{ github.repository }}" >> $env:GITHUB_ENV
           echo "githubRepositoryName=$repositoryName" >> $env:GITHUB_ENV
           echo "releaseVersion=$releaseVersion" >> $env:GITHUB_ENV

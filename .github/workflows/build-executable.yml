@@ -2,6 +2,12 @@ name: Build Executables
 
 on:
   workflow_call:
+    inputs:
+      app_version:
+        description: 'Application version'
+        type: string
+        required: false
+        default: ''
 
 jobs:
   # Build for each platform in parallel using matrix strategy
@@ -27,7 +33,11 @@ jobs:
         run: |
           ref=${{ github.ref }}
 
-          if [[ "$ref" =~ ^refs/tags/ ]]; then
+          # Use input version if provided, otherwise determine from ref
+          if [[ -n "${{ inputs.app_version }}" ]]; then
+            appVersion="${{ inputs.app_version }}"
+            releaseVersion="v$appVersion"
+          elif [[ "$ref" =~ ^refs/tags/ ]]; then
             releaseVersion=${ref##refs/tags/}
             appVersion=${releaseVersion#v}
           else
