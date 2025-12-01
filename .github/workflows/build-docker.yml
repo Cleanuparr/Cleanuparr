@@ -11,6 +11,11 @@ on:
         type: boolean
         required: false
         default: true
+      app_version:
+        description: 'Application version'
+        type: string
+        required: false
+        default: ''
 
 # Cancel in-progress runs for the same PR
 concurrency:
@@ -34,18 +39,32 @@ jobs:
         timeout-minutes: 1
         run: |
           githubHeadRef=${{ env.githubHeadRef }}
+          inputVersion="${{ inputs.app_version }}"
           latestDockerTag=""
           versionDockerTag=""
           majorVersionDockerTag=""
           minorVersionDockerTag=""
           version="0.0.1"
 
-          if [[ "$githubRef" =~ ^"refs/tags/" ]]; then
+          if [[ -n "$inputVersion" ]]; then
+            # Version provided via input (manual release)
+            branch="main"
+            latestDockerTag="latest"
+            versionDockerTag="$inputVersion"
+            version="$inputVersion"
+
+            # Extract major and minor versions for additional tags
+            if [[ "$versionDockerTag" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
+              majorVersionDockerTag="${BASH_REMATCH[1]}"
+              minorVersionDockerTag="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}"
+            fi
+          elif [[ "$githubRef" =~ ^"refs/tags/" ]]; then
+            # Tag push
             branch=${githubRef##*/}
             latestDockerTag="latest"
             versionDockerTag=${branch#v}
             version=${branch#v}
-            
+
             # Extract major and minor versions for additional tags
             if [[ "$versionDockerTag" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
               majorVersionDockerTag="${BASH_REMATCH[1]}"
@@ -136,8 +155,6 @@ jobs:
             VERSION=${{ env.version }}
             PACKAGES_USERNAME=${{ secrets.PACKAGES_USERNAME }}
             PACKAGES_PAT=${{ env.PACKAGES_PAT }}
-          outputs: |
-            type=image
           platforms: |
             linux/amd64
             linux/arm64
