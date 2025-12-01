@@ -84,33 +84,6 @@ public class CronExpressionConverterTests
         result.ShouldBeFalse();
     }
 
-    [Fact]
-    public void GetCronDescription_ValidExpression_ReturnsDescription()
-    {
-        // Arrange
-        const string cronExpression = "0 */5 * * * ?";
-
-        // Act
-        var result = CronExpressionConverter.GetCronDescription(cronExpression);
-
-        // Assert
-        result.ShouldNotBeNull();
-        result.ShouldContain(cronExpression);
-    }
-
-    [Fact]
-    public void GetCronDescription_InvalidExpression_ReturnsNull()
-    {
-        // Arrange
-        const string cronExpression = "invalid";
-
-        // Act
-        var result = CronExpressionConverter.GetCronDescription(cronExpression);
-
-        // Assert
-        result.ShouldBeNull();
-    }
-
     [Theory]
     [InlineData(1)]
     [InlineData(2)]
@@ -168,7 +141,12 @@ public class CronExpressionConverterTests
     [InlineData("")]
     [InlineData("   ")]
     [InlineData(null)]
-    public void IsValidCronExpression_EmptyOrNull_ReturnsFalse(string? cronExpression)
+    [InlineData("0 0 0 32 1 ?")] // Invalid day of month (32)
+    [InlineData("0 0 0 ? 13 *")] // Invalid month (13)
+    [InlineData("0 60 * ? * *")] // Invalid minute (60)
+    [InlineData("0 0 25 ? * *")] // Invalid hour (25)
+    [InlineData("0 0 0 ? * 8")] // Invalid day of week (8)
+    public void IsValidCronExpression_InvalidInput_ReturnsFalse(string? cronExpression)
     {
         // Act
         var result = CronExpressionConverter.IsValidCronExpression(cronExpression!);

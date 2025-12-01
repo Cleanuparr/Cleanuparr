@@ -51,15 +51,10 @@ public static class CronExpressionConverter
     public static bool IsValidCronExpression(string cronExpression)
     {
         if (string.IsNullOrWhiteSpace(cronExpression))
+        {
             return false;
+        }
             
-        try
-        {
-            return CronExpression.IsValidExpression(cronExpression);
-        }
-        catch
-        {
-            return false;
-        }
+        return CronExpression.IsValidExpression(cronExpression);
     }
 }
