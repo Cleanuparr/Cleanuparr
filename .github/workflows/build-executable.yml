@@ -124,27 +124,3 @@ jobs:
           name: executable-${{ matrix.platform }}
           path: ./artifacts/*.zip
           retention-days: 30
-
-  # Consolidate all executable artifacts
-  consolidate:
-    needs: build-platform
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download all platform artifacts
-        uses: actions/download-artifact@v4
-        with:
-          pattern: executable-*
-          path: ./artifacts
-          merge-multiple: true
-
-      - name: List downloaded artifacts
-        run: |
-          echo "Consolidated executable artifacts:"
-          find ./artifacts -type f -name "*.zip" | sort
-
-      - name: Upload consolidated artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: cleanuparr-executables
-          path: ./artifacts/*.zip
-          retention-days: 30

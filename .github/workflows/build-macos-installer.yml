@@ -350,8 +350,8 @@ jobs:
           # Copy uninstall script to app bundle for user access
           cp scripts/uninstall_cleanuparr.sh dist/Cleanuparr.app/Contents/Resources/
 
-          # Determine package name
-          if [[ "${{ github.ref }}" =~ ^refs/tags/ ]]; then
+          # Determine package name - if app_version input was provided, it's a release build
+          if [[ -n "${{ inputs.app_version }}" ]] || [[ "${{ github.ref }}" =~ ^refs/tags/ ]]; then
             pkg_name="Cleanuparr-${{ env.appVersion }}-macos-${{ matrix.artifact_suffix }}.pkg"
           else
             pkg_name="Cleanuparr-${{ env.appVersion }}-macos-${{ matrix.artifact_suffix }}-dev.pkg"
