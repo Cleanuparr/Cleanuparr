@@ -8,8 +8,7 @@ on:
     inputs:
       version:
         description: 'Version to release (e.g., 1.0.0)'
-        required: false
-        default: ''
+        required: true
       runTests:
         description: 'Run test suite'
         type: boolean
@@ -57,25 +56,38 @@ jobs:
             release_version=${GITHUB_REF##refs/tags/}
             app_version=${release_version#v}
             is_tag=true
-          elif [[ -n "${{ github.event.inputs.version }}" ]]; then
+          else
             # Manual workflow with version
             app_version="${{ github.event.inputs.version }}"
-            release_version="v$app_version"
-            is_tag=false
-          else
-            # Manual workflow without version
-            app_version="0.0.1-dev-$(date +%Y%m%d-%H%M%S)"
+
+            # Validate version format (x.x.x)
+            if ! [[ "$app_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "Error: Version must be in format x.x.x (e.g., 1.0.0)"
+              echo "Provided version: $app_version"
+              exit 1
+            fi
+
             release_version="v$app_version"
             is_tag=false
           fi
-          
+
           echo "app_version=$app_version" >> $GITHUB_OUTPUT
           echo "release_version=$release_version" >> $GITHUB_OUTPUT
           echo "is_tag=$is_tag" >> $GITHUB_OUTPUT
 
-          echo "🏷️ Release Version: $release_version"
-          echo "📱 App Version: $app_version"
-          echo "🔖 Is Tag: $is_tag"
+          echo "Release Version: $release_version"
+          echo "App Version: $app_version"
+          echo "Is Tag: $is_tag"
+
+      - name: Check if release already exists
+        run: |
+          if gh release view "${{ steps.version.outputs.release_version }}" &>/dev/null; then
+            echo "❌ Release ${{ steps.version.outputs.release_version }} already exists. Stopping workflow."
+            exit 1
+          fi
+          echo "✅ Release ${{ steps.version.outputs.release_version }} does not exist. Proceeding."
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   # Run tests
   test:
@@ -148,6 +160,7 @@ jobs:
     uses: ./.github/workflows/build-docker.yml
     with:
       push_docker: ${{ needs.validate.outputs.is_tag == 'true' || github.event.inputs.pushDocker == 'true' }}
+      app_version: ${{ needs.validate.outputs.app_version }}
     secrets: inherit
 
   # Create GitHub release
@@ -176,15 +189,32 @@ jobs:
           secrets:
             secrets/data/github repo_readonly_pat | REPO_READONLY_PAT
 
-      - name: Download all artifacts
+      - name: Download executable artifacts
         uses: actions/download-artifact@v4
         with:
+          pattern: executable-*
           path: ./artifacts
+          merge-multiple: true
+
+      - name: Download Windows installer
+        uses: actions/download-artifact@v4
+        with:
+          name: Cleanuparr-windows-installer
+          path: ./artifacts
+
+      - name: Download macOS installers
+        uses: actions/download-artifact@v4
+        with:
+          pattern: Cleanuparr-macos-*-installer
+          path: ./artifacts
+          merge-multiple: true
 
       - name: List downloaded artifacts
         run: |
-          echo "📦 Downloaded artifacts:"
-          find ./artifacts -type f -name "*.zip" -o -name "*.pkg" -o -name "*.exe" | sort
+          echo "Downloaded artifacts:"
+          find ./artifacts -type f \( -name "*.zip" -o -name "*.pkg" -o -name "*.exe" \) | sort
+          echo ""
+          echo "Total files: $(find ./artifacts -type f \( -name "*.zip" -o -name "*.pkg" -o -name "*.exe" \) | wc -l)"
 
       - name: Create release
         uses: softprops/action-gh-release@v2
@@ -196,9 +226,9 @@ jobs:
           target_commitish: main
           generate_release_notes: true
           files: |
-            ./artifacts/**/*.zip
-            ./artifacts/**/*.pkg
-            ./artifacts/**/*.exe
+            ./artifacts/*.zip
+            ./artifacts/*.pkg
+            ./artifacts/*.exe
 
   # Summary job
   summary:
