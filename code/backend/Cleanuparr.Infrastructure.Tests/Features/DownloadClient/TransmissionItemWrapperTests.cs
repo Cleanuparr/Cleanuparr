@@ -131,6 +131,84 @@ public class TransmissionItemWrapperTests
         result.ShouldBe(expectedPercentage);
     }
 
+    [Theory]
+    [InlineData(1024L * 1024 * 100, 1024L * 1024 * 100)] // 100MB
+    [InlineData(0L, 0L)]
+    [InlineData(null, 0L)]
+    public void DownloadedBytes_ReturnsCorrectValue(long? downloadedEver, long expected)
+    {
+        // Arrange
+        var torrentInfo = new TorrentInfo { DownloadedEver = downloadedEver };
+        var wrapper = new TransmissionItemWrapper(torrentInfo);
+
+        // Act
+        var result = wrapper.DownloadedBytes;
+
+        // Assert
+        result.ShouldBe(expected);
+    }
+
+    [Theory]
+    [InlineData(1024L, 512L, 2.0)] // Uploaded more than downloaded
+    [InlineData(512L, 1024L, 0.5)] // Uploaded less than downloaded
+    [InlineData(1024L, 1024L, 1.0)] // Equal
+    [InlineData(0L, 1024L, 0.0)] // No upload
+    [InlineData(1024L, 0L, 0.0)] // No download
+    [InlineData(null, 1024L, 0.0)] // Null upload
+    [InlineData(1024L, null, 0.0)] // Null download
+    [InlineData(null, null, 0.0)] // Both null
+    public void Ratio_ReturnsCorrectValue(long? uploadedEver, long? downloadedEver, double expected)
+    {
+        // Arrange
+        var torrentInfo = new TorrentInfo
+        {
+            UploadedEver = uploadedEver,
+            DownloadedEver = downloadedEver
+        };
+        var wrapper = new TransmissionItemWrapper(torrentInfo);
+
+        // Act
+        var result = wrapper.Ratio;
+
+        // Assert
+        result.ShouldBe(expected);
+    }
+
+    [Theory]
+    [InlineData(3600L, 3600L)] // 1 hour
+    [InlineData(0L, 0L)]
+    [InlineData(-1L, -1L)] // Unknown/infinite
+    [InlineData(null, 0L)]
+    public void Eta_ReturnsCorrectValue(long? eta, long expected)
+    {
+        // Arrange
+        var torrentInfo = new TorrentInfo { Eta = eta };
+        var wrapper = new TransmissionItemWrapper(torrentInfo);
+
+        // Act
+        var result = wrapper.Eta;
+
+        // Assert
+        result.ShouldBe(expected);
+    }
+
+    [Theory]
+    [InlineData(86400L, 86400L)] // 1 day
+    [InlineData(0L, 0L)]
+    [InlineData(null, 0L)]
+    public void SeedingTimeSeconds_ReturnsCorrectValue(long? secondsSeeding, long expected)
+    {
+        // Arrange
+        var torrentInfo = new TorrentInfo { SecondsSeeding = secondsSeeding };
+        var wrapper = new TransmissionItemWrapper(torrentInfo);
+
+        // Act
+        var result = wrapper.SeedingTimeSeconds;
+
+        // Assert
+        result.ShouldBe(expected);
+    }
+
     [Fact]
     public void IsIgnored_WithEmptyList_ReturnsFalse()
     {

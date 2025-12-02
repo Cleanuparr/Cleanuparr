@@ -52,8 +52,6 @@ public sealed class UTorrentItemWrapper : ITorrentItemWrapper
 
     public bool IsStalled() => IsDownloading() && Info is { DownloadSpeed: 0, ETA: 0 };
 
-    public bool IsSeeding() => IsDownloading() && Info.DateCompleted > 0;
-
     // Filtering methods
     public bool IsIgnored(IReadOnlyList<string> ignoredDownloads)
     {

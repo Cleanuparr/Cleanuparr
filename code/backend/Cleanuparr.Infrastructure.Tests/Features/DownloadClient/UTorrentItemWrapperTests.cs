@@ -109,6 +109,91 @@ public class UTorrentItemWrapperTests
         result.ShouldBe(expectedPercentage);
     }
 
+    [Theory]
+    [InlineData(1024L * 1024 * 100, 1024L * 1024 * 100)] // 100MB
+    [InlineData(0L, 0L)]
+    public void DownloadedBytes_ReturnsCorrectValue(long downloaded, long expected)
+    {
+        // Arrange
+        var torrentItem = new UTorrentItem { Downloaded = downloaded };
+        var torrentProperties = new UTorrentProperties();
+        var wrapper = new UTorrentItemWrapper(torrentItem, torrentProperties);
+
+        // Act
+        var result = wrapper.DownloadedBytes;
+
+        // Assert
+        result.ShouldBe(expected);
+    }
+
+    [Theory]
+    [InlineData(2000, 2.0)] // 2000 permille = 2.0 ratio
+    [InlineData(500, 0.5)]  // 500 permille = 0.5 ratio
+    [InlineData(1000, 1.0)] // 1000 permille = 1.0 ratio
+    [InlineData(0, 0.0)]    // No ratio
+    public void Ratio_ReturnsCorrectValue(int ratioRaw, double expected)
+    {
+        // Arrange
+        var torrentItem = new UTorrentItem { RatioRaw = ratioRaw };
+        var torrentProperties = new UTorrentProperties();
+        var wrapper = new UTorrentItemWrapper(torrentItem, torrentProperties);
+
+        // Act
+        var result = wrapper.Ratio;
+
+        // Assert
+        result.ShouldBe(expected);
+    }
+
+    [Theory]
+    [InlineData(3600, 3600L)] // 1 hour
+    [InlineData(0, 0L)]
+    [InlineData(-1, -1L)] // Unknown/infinite
+    public void Eta_ReturnsCorrectValue(int eta, long expected)
+    {
+        // Arrange
+        var torrentItem = new UTorrentItem { ETA = eta };
+        var torrentProperties = new UTorrentProperties();
+        var wrapper = new UTorrentItemWrapper(torrentItem, torrentProperties);
+
+        // Act
+        var result = wrapper.Eta;
+
+        // Assert
+        result.ShouldBe(expected);
+    }
+
+    [Fact]
+    public void SeedingTimeSeconds_WithCompletedDate_ReturnsPositiveValue()
+    {
+        // Arrange - Set DateCompleted to 1 hour ago
+        var oneHourAgo = DateTimeOffset.UtcNow.AddHours(-1).ToUnixTimeSeconds();
+        var torrentItem = new UTorrentItem { DateCompleted = oneHourAgo };
+        var torrentProperties = new UTorrentProperties();
+        var wrapper = new UTorrentItemWrapper(torrentItem, torrentProperties);
+
+        // Act
+        var result = wrapper.SeedingTimeSeconds;
+
+        // Assert - Should be approximately 3600 seconds (1 hour), allow some tolerance
+        result.ShouldBeInRange(3599L, 3601L);
+    }
+
+    [Fact]
+    public void SeedingTimeSeconds_WithNoCompletedDate_ReturnsZero()
+    {
+        // Arrange - DateCompleted = 0 means not completed
+        var torrentItem = new UTorrentItem { DateCompleted = 0 };
+        var torrentProperties = new UTorrentProperties();
+        var wrapper = new UTorrentItemWrapper(torrentItem, torrentProperties);
+
+        // Act
+        var result = wrapper.SeedingTimeSeconds;
+
+        // Assert
+        result.ShouldBe(0L);
+    }
+
     [Fact]
     public void IsIgnored_WithEmptyList_ReturnsFalse()
     {
