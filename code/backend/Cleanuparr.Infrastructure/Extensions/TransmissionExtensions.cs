@@ -58,12 +58,12 @@ public static class TransmissionExtensions
     {
         if (string.IsNullOrEmpty(category))
         {
-            throw new ArgumentException(nameof(category));
+            throw new ArgumentException("Category cannot be null or empty", nameof(category));
         }
         
         if (string.IsNullOrEmpty(torrent.DownloadDir))
         {
-            throw new ArgumentException(nameof(torrent.DownloadDir));
+            throw new ArgumentException("DownloadDir cannot be null or empty", nameof(torrent.DownloadDir));
         }
 
         return string.Join(Path.DirectorySeparatorChar, Path.Combine(torrent.DownloadDir, category).Split(['\\', '/']));
