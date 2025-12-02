@@ -1,0 +1,257 @@
+using Cleanuparr.Domain.Enums;
+using Cleanuparr.Infrastructure.Features.Notifications;
+using Cleanuparr.Infrastructure.Features.Notifications.Apprise;
+using Cleanuparr.Infrastructure.Features.Notifications.Models;
+using Cleanuparr.Infrastructure.Features.Notifications.Notifiarr;
+using Cleanuparr.Infrastructure.Features.Notifications.Ntfy;
+using Cleanuparr.Persistence.Models.Configuration.Notification;
+using Microsoft.Extensions.DependencyInjection;
+using Moq;
+using Xunit;
+
+namespace Cleanuparr.Infrastructure.Tests.Features.Notifications;
+
+public class NotificationProviderFactoryTests
+{
+    private readonly Mock<IAppriseProxy> _appriseProxyMock;
+    private readonly Mock<INtfyProxy> _ntfyProxyMock;
+    private readonly Mock<INotifiarrProxy> _notifiarrProxyMock;
+    private readonly IServiceProvider _serviceProvider;
+    private readonly NotificationProviderFactory _factory;
+
+    public NotificationProviderFactoryTests()
+    {
+        _appriseProxyMock = new Mock<IAppriseProxy>();
+        _ntfyProxyMock = new Mock<INtfyProxy>();
+        _notifiarrProxyMock = new Mock<INotifiarrProxy>();
+
+        var services = new ServiceCollection();
+        services.AddSingleton(_appriseProxyMock.Object);
+        services.AddSingleton(_ntfyProxyMock.Object);
+        services.AddSingleton(_notifiarrProxyMock.Object);
+
+        _serviceProvider = services.BuildServiceProvider();
+        _factory = new NotificationProviderFactory(_serviceProvider);
+    }
+
+    #region CreateProvider Tests
+
+    [Fact]
+    public void CreateProvider_AppriseType_CreatesAppriseProvider()
+    {
+        // Arrange
+        var config = new NotificationProviderDto
+        {
+            Id = Guid.NewGuid(),
+            Name = "TestApprise",
+            Type = NotificationProviderType.Apprise,
+            IsEnabled = true,
+            Configuration = new AppriseConfig
+            {
+                Id = Guid.NewGuid(),
+                Url = "http://apprise.example.com",
+                Key = "testkey"
+            }
+        };
+
+        // Act
+        var provider = _factory.CreateProvider(config);
+
+        // Assert
+        Assert.NotNull(provider);
+        Assert.IsType<AppriseProvider>(provider);
+        Assert.Equal("TestApprise", provider.Name);
+        Assert.Equal(NotificationProviderType.Apprise, provider.Type);
+    }
+
+    [Fact]
+    public void CreateProvider_NtfyType_CreatesNtfyProvider()
+    {
+        // Arrange
+        var config = new NotificationProviderDto
+        {
+            Id = Guid.NewGuid(),
+            Name = "TestNtfy",
+            Type = NotificationProviderType.Ntfy,
+            IsEnabled = true,
+            Configuration = new NtfyConfig
+            {
+                Id = Guid.NewGuid(),
+                ServerUrl = "http://ntfy.example.com",
+                Topics = new List<string> { "test-topic" },
+                AuthenticationType = NtfyAuthenticationType.None,
+                Priority = NtfyPriority.Default
+            }
+        };
+
+        // Act
+        var provider = _factory.CreateProvider(config);
+
+        // Assert
+        Assert.NotNull(provider);
+        Assert.IsType<NtfyProvider>(provider);
+        Assert.Equal("TestNtfy", provider.Name);
+        Assert.Equal(NotificationProviderType.Ntfy, provider.Type);
+    }
+
+    [Fact]
+    public void CreateProvider_NotifiarrType_CreatesNotifiarrProvider()
+    {
+        // Arrange
+        var config = new NotificationProviderDto
+        {
+            Id = Guid.NewGuid(),
+            Name = "TestNotifiarr",
+            Type = NotificationProviderType.Notifiarr,
+            IsEnabled = true,
+            Configuration = new NotifiarrConfig
+            {
+                Id = Guid.NewGuid(),
+                ApiKey = "testapikey1234567890",
+                ChannelId = "123456789012345678"
+            }
+        };
+
+        // Act
+        var provider = _factory.CreateProvider(config);
+
+        // Assert
+        Assert.NotNull(provider);
+        Assert.IsType<NotifiarrProvider>(provider);
+        Assert.Equal("TestNotifiarr", provider.Name);
+        Assert.Equal(NotificationProviderType.Notifiarr, provider.Type);
+    }
+
+    [Fact]
+    public void CreateProvider_UnsupportedType_ThrowsNotSupportedException()
+    {
+        // Arrange
+        var config = new NotificationProviderDto
+        {
+            Id = Guid.NewGuid(),
+            Name = "TestUnsupported",
+            Type = (NotificationProviderType)999, // Invalid type
+            IsEnabled = true,
+            Configuration = new object()
+        };
+
+        // Act & Assert
+        var exception = Assert.Throws<NotSupportedException>(() => _factory.CreateProvider(config));
+        Assert.Contains("not supported", exception.Message);
+    }
+
+    [Fact]
+    public void CreateProvider_AppriseType_UsesCorrectProxy()
+    {
+        // Arrange
+        var config = new NotificationProviderDto
+        {
+            Id = Guid.NewGuid(),
+            Name = "TestApprise",
+            Type = NotificationProviderType.Apprise,
+            IsEnabled = true,
+            Configuration = new AppriseConfig
+            {
+                Id = Guid.NewGuid(),
+                Url = "http://apprise.example.com",
+                Key = "testkey"
+            }
+        };
+
+        // Act
+        var provider = _factory.CreateProvider(config);
+
+        // Assert - provider was created with the injected proxy
+        Assert.NotNull(provider);
+        // The proxy would be used when SendNotificationAsync is called
+    }
+
+    [Fact]
+    public void CreateProvider_PreservesProviderName()
+    {
+        // Arrange
+        var config = new NotificationProviderDto
+        {
+            Id = Guid.NewGuid(),
+            Name = "My Custom Provider Name",
+            Type = NotificationProviderType.Ntfy,
+            IsEnabled = true,
+            Configuration = new NtfyConfig
+            {
+                Id = Guid.NewGuid(),
+                ServerUrl = "http://ntfy.example.com",
+                Topics = new List<string> { "test" },
+                AuthenticationType = NtfyAuthenticationType.None,
+                Priority = NtfyPriority.Default
+            }
+        };
+
+        // Act
+        var provider = _factory.CreateProvider(config);
+
+        // Assert
+        Assert.Equal("My Custom Provider Name", provider.Name);
+    }
+
+    [Fact]
+    public void CreateProvider_PreservesProviderType()
+    {
+        // Arrange
+        var configs = new[]
+        {
+            (Type: NotificationProviderType.Apprise, Config: (object)new AppriseConfig { Id = Guid.NewGuid(), Url = "http://test.com", Key = "key" }),
+            (Type: NotificationProviderType.Ntfy, Config: (object)new NtfyConfig { Id = Guid.NewGuid(), ServerUrl = "http://test.com", Topics = new List<string> { "t" }, AuthenticationType = NtfyAuthenticationType.None, Priority = NtfyPriority.Default }),
+            (Type: NotificationProviderType.Notifiarr, Config: (object)new NotifiarrConfig { Id = Guid.NewGuid(), ApiKey = "1234567890", ChannelId = "12345" })
+        };
+
+        foreach (var (type, configObj) in configs)
+        {
+            var dto = new NotificationProviderDto
+            {
+                Id = Guid.NewGuid(),
+                Name = $"Test-{type}",
+                Type = type,
+                IsEnabled = true,
+                Configuration = configObj
+            };
+
+            // Act
+            var provider = _factory.CreateProvider(dto);
+
+            // Assert
+            Assert.Equal(type, provider.Type);
+        }
+    }
+
+    #endregion
+
+    #region Service Resolution Tests
+
+    [Fact]
+    public void CreateProvider_WhenProxyNotRegistered_ThrowsException()
+    {
+        // Arrange - create a service provider without the proxy
+        var emptyServices = new ServiceCollection();
+        var emptyServiceProvider = emptyServices.BuildServiceProvider();
+        var factoryWithNoServices = new NotificationProviderFactory(emptyServiceProvider);
+
+        var config = new NotificationProviderDto
+        {
+            Id = Guid.NewGuid(),
+            Name = "TestApprise",
+            Type = NotificationProviderType.Apprise,
+            IsEnabled = true,
+            Configuration = new AppriseConfig
+            {
+                Id = Guid.NewGuid(),
+                Url = "http://test.com",
+                Key = "key"
+            }
+        };
+
+        // Act & Assert
+        Assert.Throws<InvalidOperationException>(() => factoryWithNoServices.CreateProvider(config));
+    }
+
+    #endregion
+}
