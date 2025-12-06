@@ -19,14 +19,14 @@ public sealed class BlacklistSynchronizer : IHandler
 {
     private readonly ILogger<BlacklistSynchronizer> _logger;
     private readonly DataContext _dataContext;
-    private readonly DownloadServiceFactory _downloadServiceFactory;
+    private readonly IDownloadServiceFactory _downloadServiceFactory;
     private readonly FileReader _fileReader;
     private readonly IDryRunInterceptor _dryRunInterceptor;
     
     public BlacklistSynchronizer(
         ILogger<BlacklistSynchronizer> logger,
         DataContext dataContext,
-        DownloadServiceFactory downloadServiceFactory,
+        IDownloadServiceFactory downloadServiceFactory,
         FileReader fileReader,
         IDryRunInterceptor dryRunInterceptor
     )

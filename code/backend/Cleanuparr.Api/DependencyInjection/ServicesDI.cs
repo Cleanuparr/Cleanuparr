@@ -1,5 +1,7 @@
 using Cleanuparr.Infrastructure.Events;
+using Cleanuparr.Infrastructure.Events.Interfaces;
 using Cleanuparr.Infrastructure.Features.Arr;
+using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 using Cleanuparr.Infrastructure.Features.BlacklistSync;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
 using Cleanuparr.Infrastructure.Features.DownloadHunter;
@@ -10,7 +12,6 @@ using Cleanuparr.Infrastructure.Features.Files;
 using Cleanuparr.Infrastructure.Features.ItemStriker;
 using Cleanuparr.Infrastructure.Features.Jobs;
 using Cleanuparr.Infrastructure.Features.MalwareBlocker;
-using Cleanuparr.Infrastructure.Features.Security;
 using Cleanuparr.Infrastructure.Helpers;
 using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Infrastructure.Services;
@@ -23,20 +24,18 @@ public static class ServicesDI
 {
     public static IServiceCollection AddServices(this IServiceCollection services) =>
         services
-            .AddScoped<IEncryptionService, AesEncryptionService>()
-            .AddScoped<SensitiveDataJsonConverter>()
             .AddScoped<EventsContext>()
             .AddScoped<DataContext>()
-            .AddScoped<EventPublisher>()
+            .AddScoped<IEventPublisher, EventPublisher>()
             .AddHostedService<EventCleanupService>()
             .AddScoped<IDryRunInterceptor, DryRunInterceptor>()
             .AddScoped<CertificateValidationService>()
-            .AddScoped<SonarrClient>()
-            .AddScoped<RadarrClient>()
-            .AddScoped<LidarrClient>()
-            .AddScoped<ReadarrClient>()
-            .AddScoped<WhisparrClient>()
-            .AddScoped<ArrClientFactory>()
+            .AddScoped<ISonarrClient, SonarrClient>()
+            .AddScoped<IRadarrClient, RadarrClient>()
+            .AddScoped<ILidarrClient, LidarrClient>()
+            .AddScoped<IReadarrClient, ReadarrClient>()
+            .AddScoped<IWhisparrClient, WhisparrClient>()
+            .AddScoped<IArrClientFactory, ArrClientFactory>()
             .AddScoped<QueueCleaner>()
             .AddScoped<BlacklistSynchronizer>()
             .AddScoped<MalwareBlocker>()
@@ -47,15 +46,16 @@ public static class ServicesDI
             .AddScoped<IHardLinkFileService, HardLinkFileService>()
             .AddScoped<UnixHardLinkFileService>()
             .AddScoped<WindowsHardLinkFileService>()
-            .AddScoped<ArrQueueIterator>()
-            .AddScoped<DownloadServiceFactory>()
+            .AddScoped<IArrQueueIterator, ArrQueueIterator>()
+            .AddScoped<IDownloadServiceFactory, DownloadServiceFactory>()
             .AddScoped<IStriker, Striker>()
             .AddScoped<FileReader>()
             .AddScoped<IRuleManager, RuleManager>()
             .AddScoped<IRuleEvaluator, RuleEvaluator>()
             .AddScoped<IRuleIntervalValidator, RuleIntervalValidator>()
             .AddSingleton<IJobManagementService, JobManagementService>()
-            .AddSingleton<BlocklistProvider>()
+            .AddSingleton<IBlocklistProvider, BlocklistProvider>()
+            .AddSingleton(TimeProvider.System)
             .AddSingleton<AppStatusSnapshot>()
             .AddHostedService<AppStatusRefreshService>();
 }

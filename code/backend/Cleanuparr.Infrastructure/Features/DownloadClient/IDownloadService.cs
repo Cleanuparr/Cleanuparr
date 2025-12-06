@@ -24,14 +24,13 @@ public interface IDownloadService : IDisposable
     /// </summary>
     /// <param name="hash">The download hash.</param>
     /// <param name="ignoredDownloads">Downloads to ignore from processing.</param>
-    public Task<DownloadCheckResult> ShouldRemoveFromArrQueueAsync(string hash,
-        IReadOnlyList<string> ignoredDownloads);
+    public Task<DownloadCheckResult> ShouldRemoveFromArrQueueAsync(string hash, IReadOnlyList<string> ignoredDownloads);
 
     /// <summary>
     /// Fetches all seeding downloads.
     /// </summary>
     /// <returns>A list of downloads that are seeding.</returns>
-    Task<List<ITorrentItem>?> GetSeedingDownloads();
+    Task<List<ITorrentItemWrapper>> GetSeedingDownloads();
 
     /// <summary>
     /// Filters downloads that should be cleaned.
@@ -39,7 +38,7 @@ public interface IDownloadService : IDisposable
     /// <param name="downloads">The downloads to filter.</param>
     /// <param name="categories">The categories by which to filter the downloads.</param>
     /// <returns>A list of downloads for the provided categories.</returns>
-    List<ITorrentItem>? FilterDownloadsToBeCleanedAsync(List<ITorrentItem>? downloads, List<CleanCategory> categories);
+    List<ITorrentItemWrapper>? FilterDownloadsToBeCleanedAsync(List<ITorrentItemWrapper>? downloads, List<CleanCategory> categories);
 
     /// <summary>
     /// Filters downloads that should have their category changed.
@@ -47,24 +46,20 @@ public interface IDownloadService : IDisposable
     /// <param name="downloads">The downloads to filter.</param>
     /// <param name="categories">The categories by which to filter the downloads.</param>
     /// <returns>A list of downloads for the provided categories.</returns>
-    List<ITorrentItem>? FilterDownloadsToChangeCategoryAsync(List<ITorrentItem>? downloads, List<string> categories);
+    List<ITorrentItemWrapper>? FilterDownloadsToChangeCategoryAsync(List<ITorrentItemWrapper>? downloads, List<string> categories);
 
     /// <summary>
     /// Cleans the downloads.
     /// </summary>
     /// <param name="downloads">The downloads to clean.</param>
     /// <param name="categoriesToClean">The categories that should be cleaned.</param>
-    /// <param name="excludedHashes">The hashes that should not be cleaned.</param>
-    /// <param name="ignoredDownloads">The downloads to ignore from processing.</param>
-    Task CleanDownloadsAsync(List<ITorrentItem>? downloads, List<CleanCategory> categoriesToClean, HashSet<string> excludedHashes, IReadOnlyList<string> ignoredDownloads);
+    Task CleanDownloadsAsync(List<ITorrentItemWrapper>? downloads, List<CleanCategory> categoriesToClean);
 
     /// <summary>
     /// Changes the category for downloads that have no hardlinks.
     /// </summary>
     /// <param name="downloads">The downloads to change.</param>
-    /// <param name="excludedHashes">The hashes that should not be cleaned.</param>
-    /// <param name="ignoredDownloads">The downloads to ignore from processing.</param>
-    Task ChangeCategoryForNoHardLinksAsync(List<ITorrentItem>? downloads, HashSet<string> excludedHashes, IReadOnlyList<string> ignoredDownloads);
+    Task ChangeCategoryForNoHardLinksAsync(List<ITorrentItemWrapper>? downloads);
     
     /// <summary>
     /// Deletes a download item.

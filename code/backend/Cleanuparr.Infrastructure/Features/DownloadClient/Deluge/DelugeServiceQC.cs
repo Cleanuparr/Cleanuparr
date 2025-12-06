@@ -12,8 +12,7 @@ namespace Cleanuparr.Infrastructure.Features.DownloadClient.Deluge;
 public partial class DelugeService
 {
     /// <inheritdoc/>
-    public override async Task<DownloadCheckResult> ShouldRemoveFromArrQueueAsync(string hash,
-        IReadOnlyList<string> ignoredDownloads)
+    public override async Task<DownloadCheckResult> ShouldRemoveFromArrQueueAsync(string hash, IReadOnlyList<string> ignoredDownloads)
     {
         hash = hash.ToLowerInvariant();
         
@@ -24,7 +23,7 @@ public partial class DelugeService
         
         if (download?.Hash is null)
         {
-            _logger.LogDebug("failed to find torrent {hash} in the {name} download client", hash, _downloadClientConfig.Name);
+            _logger.LogDebug("Failed to find torrent {hash} in the {name} download client", hash, _downloadClientConfig.Name);
             return result;
         }
         
@@ -32,11 +31,11 @@ public partial class DelugeService
         result.Found = true;
 
         // Create ITorrentItem wrapper for consistent interface usage
-        var torrentItem = new DelugeItem(download);
+        DelugeItemWrapper torrent = new(download);
 
-        if (torrentItem.IsIgnored(ignoredDownloads))
+        if (torrent.IsIgnored(ignoredDownloads))
         {
-            _logger.LogInformation("skip | download is ignored | {name}", torrentItem.Name);
+            _logger.LogInformation("skip | download is ignored | {name}", torrent.Name);
             return result;
         }
 
@@ -46,7 +45,7 @@ public partial class DelugeService
         }
         catch (Exception exception)
         {
-            _logger.LogDebug(exception, "failed to find files in the download client | {name}", torrentItem.Name);
+            _logger.LogDebug(exception, "failed to find files in the download client | {name}", torrent.Name);
         }
         
 
@@ -63,7 +62,7 @@ public partial class DelugeService
         if (shouldRemove)
         {
             // remove if all files are unwanted
-            _logger.LogTrace("all files are unwanted | removing download | {name}", torrentItem.Name);
+            _logger.LogTrace("all files are unwanted | removing download | {name}", torrent.Name);
             result.ShouldRemove = true;
             result.DeleteReason = DeleteReason.AllFilesSkipped;
             result.DeleteFromClient = true;
@@ -71,48 +70,48 @@ public partial class DelugeService
         }
         
         // remove if download is stuck
-        (result.ShouldRemove, result.DeleteReason, result.DeleteFromClient) = await EvaluateDownloadRemoval(torrentItem);
+        (result.ShouldRemove, result.DeleteReason, result.DeleteFromClient) = await EvaluateDownloadRemoval(torrent);
 
         return result;
     }
 
-    private async Task<(bool, DeleteReason, bool)> EvaluateDownloadRemoval(ITorrentItem torrentItem)
+    private async Task<(bool, DeleteReason, bool)> EvaluateDownloadRemoval(ITorrentItemWrapper wrapper)
     {
-        (bool ShouldRemove, DeleteReason Reason, bool DeleteFromClient) result = await CheckIfSlow(torrentItem);
+        (bool ShouldRemove, DeleteReason Reason, bool DeleteFromClient) result = await CheckIfSlow(wrapper);
 
         if (result.ShouldRemove)
         {
             return result;
         }
 
-        return await CheckIfStuck(torrentItem);
+        return await CheckIfStuck(wrapper);
     }
 
-    private async Task<(bool ShouldRemove, DeleteReason Reason, bool DeleteFromClient)> CheckIfSlow(ITorrentItem torrentItem)
+    private async Task<(bool ShouldRemove, DeleteReason Reason, bool DeleteFromClient)> CheckIfSlow(ITorrentItemWrapper wrapper)
     {
-        if (!torrentItem.IsDownloading())
+        if (!wrapper.IsDownloading())
         {
-            _logger.LogTrace("skip slow check | download is not in downloading state | {name}", torrentItem.Name);
+            _logger.LogTrace("skip slow check | download is not in downloading state | {name}", wrapper.Name);
             return (false, DeleteReason.None, false);
         }
 
-        if (torrentItem.DownloadSpeed <= 0)
+        if (wrapper.DownloadSpeed <= 0)
         {
-            _logger.LogTrace("skip slow check | download speed is 0 | {name}", torrentItem.Name);
+            _logger.LogTrace("skip slow check | download speed is 0 | {name}", wrapper.Name);
             return (false, DeleteReason.None, false);
         }
 
-        return await _ruleEvaluator.EvaluateSlowRulesAsync(torrentItem);
+        return await _ruleEvaluator.EvaluateSlowRulesAsync(wrapper);
     }
 
-    private async Task<(bool ShouldRemove, DeleteReason Reason, bool DeleteFromClient)> CheckIfStuck(ITorrentItem torrentItem)
+    private async Task<(bool ShouldRemove, DeleteReason Reason, bool DeleteFromClient)> CheckIfStuck(ITorrentItemWrapper wrapper)
     {
-        if (!torrentItem.IsStalled())
+        if (!wrapper.IsStalled())
         {
-            _logger.LogTrace("skip stalled check | download is not in stalled state | {name}", torrentItem.Name);
+            _logger.LogTrace("skip stalled check | download is not in stalled state | {name}", wrapper.Name);
             return (false, DeleteReason.None, false);
         }
 
-        return await _ruleEvaluator.EvaluateStallRulesAsync(torrentItem);
+        return await _ruleEvaluator.EvaluateStallRulesAsync(wrapper);
     }
 }

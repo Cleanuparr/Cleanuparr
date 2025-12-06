@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Arr;
+using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
 using Cleanuparr.Persistence;
 using Microsoft.AspNetCore.Mvc;
@@ -14,18 +15,15 @@ public class StatusController : ControllerBase
 {
     private readonly ILogger<StatusController> _logger;
     private readonly DataContext _dataContext;
-    private readonly DownloadServiceFactory _downloadServiceFactory;
-    private readonly ArrClientFactory _arrClientFactory;
+    private readonly IArrClientFactory _arrClientFactory;
 
     public StatusController(
         ILogger<StatusController> logger,
         DataContext dataContext,
-        DownloadServiceFactory downloadServiceFactory,
-        ArrClientFactory arrClientFactory)
+        IArrClientFactory arrClientFactory)
     {
         _logger = logger;
         _dataContext = dataContext;
-        _downloadServiceFactory = downloadServiceFactory;
         _arrClientFactory = arrClientFactory;
     }
 

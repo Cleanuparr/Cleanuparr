@@ -1,18 +1,16 @@
 using Cleanuparr.Domain.Entities;
-using Cleanuparr.Domain.Entities.Cache;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Events;
+using Cleanuparr.Infrastructure.Events.Interfaces;
 using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.Files;
 using Cleanuparr.Infrastructure.Features.ItemStriker;
 using Cleanuparr.Infrastructure.Features.MalwareBlocker;
-using Cleanuparr.Infrastructure.Helpers;
 using Cleanuparr.Infrastructure.Http;
 using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Infrastructure.Services.Interfaces;
 using Cleanuparr.Persistence.Models.Configuration;
 using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
-using Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
 using Cleanuparr.Shared.Helpers;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
@@ -35,7 +33,7 @@ public abstract class DownloadService : IDownloadService
     protected readonly MemoryCacheEntryOptions _cacheOptions;
     protected readonly IDryRunInterceptor _dryRunInterceptor;
     protected readonly IHardLinkFileService _hardLinkFileService;
-    protected readonly EventPublisher _eventPublisher;
+    protected readonly IEventPublisher _eventPublisher;
     protected readonly BlocklistProvider _blocklistProvider;
     protected readonly HttpClient _httpClient;
     protected readonly DownloadClientConfig _downloadClientConfig;
@@ -50,7 +48,7 @@ public abstract class DownloadService : IDownloadService
         IDryRunInterceptor dryRunInterceptor,
         IHardLinkFileService hardLinkFileService,
         IDynamicHttpClientProvider httpClientProvider,
-        EventPublisher eventPublisher,
+        IEventPublisher eventPublisher,
         BlocklistProvider blocklistProvider,
         DownloadClientConfig downloadClientConfig,
         IRuleEvaluator ruleEvaluator,
@@ -81,32 +79,91 @@ public abstract class DownloadService : IDownloadService
 
     public abstract Task<HealthCheckResult> HealthCheckAsync();
 
-    public abstract Task<DownloadCheckResult> ShouldRemoveFromArrQueueAsync(string hash,
-        IReadOnlyList<string> ignoredDownloads);
+    public abstract Task<DownloadCheckResult> ShouldRemoveFromArrQueueAsync(string hash, IReadOnlyList<string> ignoredDownloads);
 
     /// <inheritdoc/>
     public abstract Task DeleteDownload(string hash);
 
     /// <inheritdoc/>
-    public abstract Task<List<ITorrentItem>?> GetSeedingDownloads();
+    public abstract Task<List<ITorrentItemWrapper>> GetSeedingDownloads();
 
     /// <inheritdoc/>
-    public abstract List<ITorrentItem>? FilterDownloadsToBeCleanedAsync(List<ITorrentItem>? downloads, List<CleanCategory> categories);
+    public abstract List<ITorrentItemWrapper>? FilterDownloadsToBeCleanedAsync(List<ITorrentItemWrapper>? downloads, List<CleanCategory> categories);
 
     /// <inheritdoc/>
-    public abstract List<ITorrentItem>? FilterDownloadsToChangeCategoryAsync(List<ITorrentItem>? downloads, List<string> categories);
+    public abstract List<ITorrentItemWrapper>? FilterDownloadsToChangeCategoryAsync(List<ITorrentItemWrapper>? downloads, List<string> categories);
 
     /// <inheritdoc/>
-    public abstract Task CleanDownloadsAsync(List<ITorrentItem>? downloads, List<CleanCategory> categoriesToClean, HashSet<string> excludedHashes, IReadOnlyList<string> ignoredDownloads);
+    public virtual async Task CleanDownloadsAsync(List<ITorrentItemWrapper>? downloads, List<CleanCategory> categoriesToClean)
+    {
+        if (downloads?.Count is null or 0)
+        {
+            return;
+        }
+
+        foreach (ITorrentItemWrapper torrent in downloads)
+        {
+            if (string.IsNullOrEmpty(torrent.Hash))
+            {
+                continue;
+            }
+
+            CleanCategory? category = categoriesToClean
+                .FirstOrDefault(x => (torrent.Category ?? string.Empty).Equals(x.Name, StringComparison.InvariantCultureIgnoreCase));
+
+            if (category is null)
+            {
+                continue;
+            }
+
+            var downloadCleanerConfig = ContextProvider.Get<DownloadCleanerConfig>(nameof(DownloadCleanerConfig));
+
+            if (!downloadCleanerConfig.DeletePrivate && torrent.IsPrivate)
+            {
+                _logger.LogDebug("skip | download is private | {name}", torrent.Name);
+                continue;
+            }
+
+            ContextProvider.Set("downloadName", torrent.Name);
+            ContextProvider.Set("hash", torrent.Hash);
+
+            TimeSpan seedingTime = TimeSpan.FromSeconds(torrent.SeedingTimeSeconds);
+            SeedingCheckResult result = ShouldCleanDownload(torrent.Ratio, seedingTime, category);
+
+            if (!result.ShouldClean)
+            {
+                continue;
+            }
+
+            await _dryRunInterceptor.InterceptAsync(DeleteDownloadInternal, torrent);
+
+            _logger.LogInformation(
+                "download cleaned | {reason} reached | {name}",
+                result.Reason is CleanReason.MaxRatioReached
+                    ? "MAX_RATIO & MIN_SEED_TIME"
+                    : "MAX_SEED_TIME",
+                torrent.Name
+            );
+
+            await _eventPublisher.PublishDownloadCleaned(torrent.Ratio, seedingTime, category.Name, result.Reason);
+        }
+    }
 
     /// <inheritdoc/>
-    public abstract Task ChangeCategoryForNoHardLinksAsync(List<ITorrentItem>? downloads, HashSet<string> excludedHashes, IReadOnlyList<string> ignoredDownloads);
-    
+    public abstract Task ChangeCategoryForNoHardLinksAsync(List<ITorrentItemWrapper>? downloads);
+
     /// <inheritdoc/>
     public abstract Task CreateCategoryAsync(string name);
-    
+
     /// <inheritdoc/>
     public abstract Task<BlockFilesResult> BlockUnwantedFilesAsync(string hash, IReadOnlyList<string> ignoredDownloads);
+
+    /// <summary>
+    /// Deletes the specified download from the download client.
+    /// Each client implementation handles the deletion according to its API requirements.
+    /// </summary>
+    /// <param name="torrent">The torrent to delete</param>
+    protected abstract Task DeleteDownloadInternal(ITorrentItemWrapper torrent);
     
     protected SeedingCheckResult ShouldCleanDownload(double ratio, TimeSpan seedingTime, CleanCategory category)
     {
@@ -175,7 +232,7 @@ public abstract class DownloadService : IDownloadService
             return false;
         }
         
-        // max ration is 0 or reached
+        // max ratio is 0 or reached
         return true;
     }
     

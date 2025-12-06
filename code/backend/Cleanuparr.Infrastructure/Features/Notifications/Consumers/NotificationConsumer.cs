@@ -9,11 +9,13 @@ public sealed class NotificationConsumer<T> : IConsumer<T> where T : Notificatio
 {
     private readonly ILogger<NotificationConsumer<T>> _logger;
     private readonly NotificationService _notificationService;
+    private readonly TimeProvider _timeProvider;
 
-    public NotificationConsumer(ILogger<NotificationConsumer<T>> logger, NotificationService notificationService)
+    public NotificationConsumer(ILogger<NotificationConsumer<T>> logger, NotificationService notificationService, TimeProvider timeProvider)
     {
         _logger = logger;
         _notificationService = notificationService;
+        _timeProvider = timeProvider;
     }
 
     public async Task Consume(ConsumeContext<T> context)
@@ -62,7 +64,7 @@ public sealed class NotificationConsumer<T> : IConsumer<T> where T : Notificatio
             }
                 
             // prevent spamming
-            await Task.Delay(1000);
+            await Task.Delay(TimeSpan.FromSeconds(1), _timeProvider);
         }
         catch (Exception exception)
         {

@@ -399,13 +399,12 @@ public class QueueRuleMatchTests
         Assert.False(rule.MatchesTorrent(publicTorrent.Object));
     }
 
-    private static Mock<ITorrentItem> CreateTorrent(bool isPrivate, double completionPercentage, string size = "10 GB")
+    private static Mock<ITorrentItemWrapper> CreateTorrent(bool isPrivate, double completionPercentage, string size = "10 GB")
     {
-        var torrent = new Mock<ITorrentItem>();
+        var torrent = new Mock<ITorrentItemWrapper>();
         torrent.SetupGet(t => t.IsPrivate).Returns(isPrivate);
         torrent.SetupGet(t => t.CompletionPercentage).Returns(completionPercentage);
         torrent.SetupGet(t => t.Size).Returns(ByteSize.Parse(size).Bytes);
-        torrent.SetupGet(t => t.Trackers).Returns(Array.Empty<string>());
         return torrent;
     }
 }

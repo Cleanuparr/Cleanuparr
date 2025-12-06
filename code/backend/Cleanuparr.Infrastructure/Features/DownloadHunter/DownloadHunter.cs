@@ -1,4 +1,5 @@
 ﻿using Cleanuparr.Infrastructure.Features.Arr;
+using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 using Cleanuparr.Infrastructure.Features.DownloadHunter.Interfaces;
 using Cleanuparr.Infrastructure.Features.DownloadHunter.Models;
 using Cleanuparr.Persistence;
@@ -11,15 +12,18 @@ namespace Cleanuparr.Infrastructure.Features.DownloadHunter;
 public sealed class DownloadHunter : IDownloadHunter
 {
     private readonly DataContext _dataContext;
-    private readonly ArrClientFactory _arrClientFactory;
-    
+    private readonly IArrClientFactory _arrClientFactory;
+    private readonly TimeProvider _timeProvider;
+
     public DownloadHunter(
         DataContext dataContext,
-        ArrClientFactory arrClientFactory
+        IArrClientFactory arrClientFactory,
+        TimeProvider timeProvider
     )
     {
         _dataContext = dataContext;
         _arrClientFactory = arrClientFactory;
+        _timeProvider = timeProvider;
     }
     
     public async Task HuntDownloadsAsync<T>(DownloadHuntRequest<T> request)
@@ -44,6 +48,6 @@ public sealed class DownloadHunter : IDownloadHunter
         }
         
         // Prevent tracker spamming
-        await Task.Delay(TimeSpan.FromSeconds(generalConfig.SearchDelay));
+        await Task.Delay(TimeSpan.FromSeconds(generalConfig.SearchDelay), _timeProvider);
     }
 }

@@ -15,19 +15,19 @@ public class RuleManager : IRuleManager
         _logger = logger;
     }
     
-    public StallRule? GetMatchingStallRule(ITorrentItem torrent)
+    public StallRule? GetMatchingStallRule(ITorrentItemWrapper torrent)
     {
         var stallRules = ContextProvider.Get<List<StallRule>>(nameof(StallRule));
         return GetMatchingQueueRule(torrent, stallRules);
     }
 
-    public SlowRule? GetMatchingSlowRule(ITorrentItem torrent)
+    public SlowRule? GetMatchingSlowRule(ITorrentItemWrapper torrent)
     {
         var slowRules = ContextProvider.Get<List<SlowRule>>(nameof(SlowRule));
         return GetMatchingQueueRule(torrent, slowRules);
     }
 
-    private TRule? GetMatchingQueueRule<TRule>(ITorrentItem torrent, IReadOnlyList<TRule> rules) where TRule : QueueRule
+    private TRule? GetMatchingQueueRule<TRule>(ITorrentItemWrapper torrent, IReadOnlyList<TRule> rules) where TRule : QueueRule
     {
         if (rules.Count is 0)
         {

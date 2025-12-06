@@ -3,7 +3,7 @@ using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 
 namespace Cleanuparr.Infrastructure.Features.Arr;
 
-public sealed class ArrClientFactory
+public sealed class ArrClientFactory : IArrClientFactory
 {
     private readonly ISonarrClient _sonarrClient;
     private readonly IRadarrClient _radarrClient;
@@ -12,11 +12,11 @@ public sealed class ArrClientFactory
     private readonly IWhisparrClient _whisparrClient;
 
     public ArrClientFactory(
-        SonarrClient sonarrClient,
-        RadarrClient radarrClient,
-        LidarrClient lidarrClient,
-        ReadarrClient readarrClient,
-        WhisparrClient whisparrClient
+        ISonarrClient sonarrClient,
+        IRadarrClient radarrClient,
+        ILidarrClient lidarrClient,
+        IReadarrClient readarrClient,
+        IWhisparrClient whisparrClient
     )
     {
         _sonarrClient = sonarrClient;

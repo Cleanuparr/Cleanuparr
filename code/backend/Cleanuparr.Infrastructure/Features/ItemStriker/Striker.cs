@@ -1,6 +1,7 @@
 ﻿using System.Collections.Concurrent;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Events;
+using Cleanuparr.Infrastructure.Events.Interfaces;
 using Cleanuparr.Infrastructure.Helpers;
 using Cleanuparr.Shared.Helpers;
 using Microsoft.Extensions.Caching.Memory;
@@ -13,11 +14,11 @@ public sealed class Striker : IStriker
     private readonly ILogger<Striker> _logger;
     private readonly IMemoryCache _cache;
     private readonly MemoryCacheEntryOptions _cacheOptions;
-    private readonly EventPublisher _eventPublisher;
+    private readonly IEventPublisher _eventPublisher;
 
     public static readonly ConcurrentDictionary<string, string?> RecurringHashes = [];
 
-    public Striker(ILogger<Striker> logger, IMemoryCache cache, EventPublisher eventPublisher)
+    public Striker(ILogger<Striker> logger, IMemoryCache cache, IEventPublisher eventPublisher)
     {
         _logger = logger;
         _cache = cache;

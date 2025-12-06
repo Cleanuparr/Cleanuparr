@@ -1,8 +1,7 @@
 using Cleanuparr.Domain.Entities;
 using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Enums;
-using Cleanuparr.Infrastructure.Events;
-using Cleanuparr.Infrastructure.Features.Arr;
+using Cleanuparr.Infrastructure.Events.Interfaces;
 using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
@@ -20,22 +19,25 @@ namespace Cleanuparr.Infrastructure.Features.Jobs;
 
 public sealed class DownloadCleaner : GenericHandler
 {
-    private readonly HashSet<string> _excludedHashes = [];
-    
+    private readonly HashSet<string> _downloadsProcessedByArrs = [];
+    private readonly TimeProvider _timeProvider;
+
     public DownloadCleaner(
         ILogger<DownloadCleaner> logger,
         DataContext dataContext,
         IMemoryCache cache,
         IBus messageBus,
-        ArrClientFactory arrClientFactory,
-        ArrQueueIterator arrArrQueueIterator,
-        DownloadServiceFactory downloadServiceFactory,
-        EventPublisher eventPublisher
+        IArrClientFactory arrClientFactory,
+        IArrQueueIterator arrArrQueueIterator,
+        IDownloadServiceFactory downloadServiceFactory,
+        IEventPublisher eventPublisher,
+        TimeProvider timeProvider
     ) : base(
         logger, dataContext, cache, messageBus,
         arrClientFactory, arrArrQueueIterator, downloadServiceFactory, eventPublisher
     )
     {
+        _timeProvider = timeProvider;
     }
     
     protected override async Task ExecuteInternalAsync()
@@ -62,15 +64,16 @@ public sealed class DownloadCleaner : GenericHandler
         List<string> ignoredDownloads = ContextProvider.Get<GeneralConfig>(nameof(GeneralConfig)).IgnoredDownloads;
         ignoredDownloads.AddRange(ContextProvider.Get<DownloadCleanerConfig>().IgnoredDownloads);
         
-        var downloadServiceToDownloadsMap = new Dictionary<IDownloadService, List<ITorrentItem>>();
+        var downloadServiceToDownloadsMap = new Dictionary<IDownloadService, List<ITorrentItemWrapper>>();
 
         foreach (var downloadService in downloadServices)
         {
             try
             {
                 await downloadService.LoginAsync();
-                var clientDownloads = await downloadService.GetSeedingDownloads();
-                if (clientDownloads?.Count > 0)
+                List<ITorrentItemWrapper> clientDownloads = await downloadService.GetSeedingDownloads();
+
+                if (clientDownloads.Count > 0)
                 {
                     downloadServiceToDownloadsMap[downloadService] = clientDownloads;
                 }
@@ -81,116 +84,52 @@ public sealed class DownloadCleaner : GenericHandler
             }
         }
 
-        if (downloadServiceToDownloadsMap.Count == 0)
+        if (downloadServiceToDownloadsMap.Count is 0)
         {
-            _logger.LogDebug("no seeding downloads found");
+            _logger.LogInformation("No seeding downloads found");
             return;
         }
 
-        var totalDownloads = downloadServiceToDownloadsMap.Values.Sum(x => x.Count);
-        _logger.LogTrace("found {count} seeding downloads across {clientCount} clients", totalDownloads, downloadServiceToDownloadsMap.Count);
-
-        List<Tuple<IDownloadService, List<ITorrentItem>>> downloadServiceWithDownloads = [];
-
-        if (isUnlinkedEnabled)
-        {
-            // Create category for all clients
-            foreach (var downloadService in downloadServices)
-            {
-                try
-                {
-                    await downloadService.CreateCategoryAsync(config.UnlinkedTargetCategory);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Failed to create category for download client {clientName}", downloadService.ClientConfig.Name);
-                }
-            }
-            
-            foreach (var (downloadService, clientDownloads) in downloadServiceToDownloadsMap)
-            {
-                try
-                {
-                    var downloadsToChangeCategory = downloadService.FilterDownloadsToChangeCategoryAsync(clientDownloads, config.UnlinkedCategories);
-                    if (downloadsToChangeCategory?.Count > 0)
-                    {
-                        downloadServiceWithDownloads.Add(Tuple.Create(downloadService, downloadsToChangeCategory));
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Failed to filter downloads for category change for download client {clientName}", downloadService.ClientConfig.Name);
-                }
-            }
-        }
+        int totalDownloads = downloadServiceToDownloadsMap.Values.Sum(x => x.Count);
+        _logger.LogTrace("Found {count} seeding downloads across {clientCount} clients", totalDownloads, downloadServiceToDownloadsMap.Count);
 
         // wait for the downloads to appear in the arr queue
-        await Task.Delay(10 * 1000);
+        await Task.Delay(TimeSpan.FromSeconds(10), _timeProvider);
 
         await ProcessArrConfigAsync(ContextProvider.Get<ArrConfig>(nameof(InstanceType.Sonarr)), InstanceType.Sonarr, true);
         await ProcessArrConfigAsync(ContextProvider.Get<ArrConfig>(nameof(InstanceType.Radarr)), InstanceType.Radarr, true);
         await ProcessArrConfigAsync(ContextProvider.Get<ArrConfig>(nameof(InstanceType.Lidarr)), InstanceType.Lidarr, true);
         await ProcessArrConfigAsync(ContextProvider.Get<ArrConfig>(nameof(InstanceType.Readarr)), InstanceType.Readarr, true);
         await ProcessArrConfigAsync(ContextProvider.Get<ArrConfig>(nameof(InstanceType.Whisparr)), InstanceType.Whisparr, true);
-        
-        if (isUnlinkedEnabled && downloadServiceWithDownloads.Sum(x => x.Item2.Count) > 0)
+
+        foreach (var pair in downloadServiceToDownloadsMap)
         {
-            _logger.LogInformation("Evaluating {count} downloads for hardlinks", downloadServiceWithDownloads.Sum(x => x.Item2.Count));
+            List<ITorrentItemWrapper> filteredDownloads = [];
             
-            // Process each client with its own filtered downloads
-            foreach (var (downloadService, downloadsToChangeCategory) in downloadServiceWithDownloads)
+            foreach (ITorrentItemWrapper download in pair.Value)
             {
-                try
+                if (download.IsIgnored(ignoredDownloads))
                 {
-                    await downloadService.ChangeCategoryForNoHardLinksAsync(downloadsToChangeCategory, _excludedHashes, ignoredDownloads);
+                    _logger.LogDebug("skip | download is ignored | {name}", download.Name);
+                    continue;
                 }
-                catch (Exception ex)
+                
+                if (_downloadsProcessedByArrs.Any(x => x.Equals(download.Hash, StringComparison.InvariantCultureIgnoreCase)))
                 {
-                    _logger.LogError(ex, "Failed to change category for download client {clientName}", downloadService.ClientConfig.Name);
+                    _logger.LogDebug("skip | download is used by an arr | {name}", download.Name);
+                    continue;
                 }
+        
+                filteredDownloads.Add(download);
             }
-            
-            _logger.LogInformation("Finished hardlinks evaluation");
+        
+            downloadServiceToDownloadsMap[pair.Key] = filteredDownloads;
         }
+
+        await ChangeUnlinkedCategoriesAsync(isUnlinkedEnabled, downloadServiceToDownloadsMap, config);
+        await CleanDownloadsAsync(downloadServiceToDownloadsMap, config);
         
-        if (config.Categories.Count is 0)
-        {
-            return;
-        }
         
-        downloadServiceWithDownloads = [];
-        foreach (var (downloadService, clientDownloads) in downloadServiceToDownloadsMap)
-        {
-            try
-            {
-                var downloadsToClean = downloadService.FilterDownloadsToBeCleanedAsync(clientDownloads, config.Categories);
-                if (downloadsToClean?.Count > 0)
-                {
-                    downloadServiceWithDownloads.Add(Tuple.Create(downloadService, downloadsToClean));
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to filter downloads for cleaning for download client {clientName}", downloadService.ClientConfig.Name);
-            }
-        }
-        
-        _logger.LogInformation("Evaluating {count} downloads for cleanup", downloadServiceWithDownloads.Sum(x => x.Item2.Count));
-        
-        // Process cleaning for each client
-        foreach (var (downloadService, downloadsToClean) in downloadServiceWithDownloads)
-        {
-            try
-            {
-                await downloadService.CleanDownloadsAsync(downloadsToClean, config.Categories, _excludedHashes, ignoredDownloads);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to clean downloads for download client {clientName}", downloadService.ClientConfig.Name);
-            }
-        }
-        
-        _logger.LogInformation("Finished cleanup evaluation");
 
         foreach (var downloadService in downloadServices)
         {
@@ -213,8 +152,132 @@ public sealed class DownloadCleaner : GenericHandler
 
             foreach (QueueRecord record in groups.Select(group => group.First()))
             {
-                _excludedHashes.Add(record.DownloadId.ToLowerInvariant());
+                _downloadsProcessedByArrs.Add(record.DownloadId.ToLowerInvariant());
             }
         });
+    }
+
+    private async Task ChangeUnlinkedCategoriesAsync(bool isUnlinkedEnabled, Dictionary<IDownloadService, List<ITorrentItemWrapper>> downloadServiceToDownloadsMap, DownloadCleanerConfig config)
+    {
+        if (!isUnlinkedEnabled)
+        {
+            return;
+        }
+        
+        Dictionary<IDownloadService, List<ITorrentItemWrapper>> downloadServiceWithDownloads = [];
+        
+        foreach (var (downloadService, clientDownloads) in downloadServiceToDownloadsMap)
+        {
+            try
+            {
+                var downloadsToChangeCategory = downloadService
+                    .FilterDownloadsToChangeCategoryAsync(clientDownloads, config.UnlinkedCategories);
+                
+                if (downloadsToChangeCategory?.Count > 0)
+                {
+                    downloadServiceWithDownloads.Add(downloadService, downloadsToChangeCategory);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(
+                    ex, 
+                    "Failed to filter downloads for hardlinks evaluation for download client {clientName}",
+                    downloadService.ClientConfig.Name
+                );
+            }
+        }
+
+        if (downloadServiceWithDownloads.Count is 0)
+        {
+            _logger.LogInformation("No downloads found to evaluate for hardlinks");
+            return;
+        }
+
+        _logger.LogInformation(
+            "Evaluating {count} downloads for hardlinks",
+            downloadServiceWithDownloads.Sum(x => x.Value.Count)
+        );
+        
+        // Process each client with its own filtered downloads
+        foreach (var (downloadService, downloadsToChangeCategory) in downloadServiceWithDownloads)
+        {
+            try
+            {
+                await downloadService.CreateCategoryAsync(config.UnlinkedTargetCategory);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(
+                    ex,
+                    "Failed to create category {category} for download client {clientName}",
+                    config.UnlinkedTargetCategory,
+                    downloadService.ClientConfig.Name
+                );
+            }
+            
+            try
+            {
+                await downloadService.ChangeCategoryForNoHardLinksAsync(downloadsToChangeCategory);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to change category for download client {clientName}", downloadService.ClientConfig.Name);
+            }
+        }
+
+        _logger.LogInformation("Finished hardlinks evaluation");
+    }
+    
+    private async Task CleanDownloadsAsync(Dictionary<IDownloadService, List<ITorrentItemWrapper>> downloadServiceToDownloadsMap, DownloadCleanerConfig config)
+    {
+        if (config.Categories.Count is 0)
+        {
+            return;
+        }
+        
+        Dictionary<IDownloadService, List<ITorrentItemWrapper>> downloadServiceWithDownloads = [];
+
+        foreach (var (downloadService, clientDownloads) in downloadServiceToDownloadsMap)
+        {
+            try
+            {
+                var downloadsToClean = downloadService
+                    .FilterDownloadsToBeCleanedAsync(clientDownloads, config.Categories);
+                
+                if (downloadsToClean?.Count > 0)
+                {
+                    downloadServiceWithDownloads.Add(downloadService, downloadsToClean);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(
+                    ex,
+                    "Failed to filter downloads for cleaning for download client {clientName}",
+                    downloadService.ClientConfig.Name
+                );
+            }
+        }
+        
+        _logger.LogInformation(
+            "Evaluating {count} downloads for cleanup",
+            downloadServiceWithDownloads.Sum(x => x.Value.Count)
+        );
+        
+        // Process cleaning for each client
+        foreach (var (downloadService, downloadsToClean) in downloadServiceWithDownloads)
+        {
+            try
+            {
+                await downloadService.CleanDownloadsAsync(downloadsToClean, config.Categories);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to clean downloads for download client {clientName}", downloadService.ClientConfig.Name);
+            }
+        }
+        
+        _logger.LogInformation("Finished cleanup evaluation");
     }
 }

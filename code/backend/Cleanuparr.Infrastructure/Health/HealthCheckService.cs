@@ -61,7 +61,7 @@ public class HealthCheckService : IHealthCheckService
             }
 
             // Get the client instance
-            var downloadServiceFactory = scope.ServiceProvider.GetRequiredService<DownloadServiceFactory>();
+            var downloadServiceFactory = scope.ServiceProvider.GetRequiredService<IDownloadServiceFactory>();
             var client = downloadServiceFactory.GetDownloadService(downloadClientConfig);
             
             // Execute the health check

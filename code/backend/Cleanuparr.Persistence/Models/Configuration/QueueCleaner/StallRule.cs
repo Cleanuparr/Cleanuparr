@@ -14,7 +14,7 @@ public sealed record StallRule : QueueRule
         ? null
         : ByteSize.Parse(MinimumProgress);
     
-    public override bool MatchesTorrent(ITorrentItem torrent)
+    public override bool MatchesTorrent(ITorrentItemWrapper torrent)
     {
         // Check privacy type
         if (!MatchesPrivacyType(torrent.IsPrivate))

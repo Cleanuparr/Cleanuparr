@@ -1,4 +1,5 @@
 using Cleanuparr.Infrastructure.Events;
+using Cleanuparr.Infrastructure.Events.Interfaces;
 using Cleanuparr.Infrastructure.Features.Files;
 using Cleanuparr.Infrastructure.Features.ItemStriker;
 using Cleanuparr.Infrastructure.Features.MalwareBlocker;
@@ -15,7 +16,7 @@ namespace Cleanuparr.Infrastructure.Features.DownloadClient.Transmission;
 
 public partial class TransmissionService : DownloadService, ITransmissionService
 {
-    private readonly Client _client;
+    private readonly ITransmissionClientWrapper _client;
 
     private static readonly string[] Fields =
     [
@@ -44,7 +45,7 @@ public partial class TransmissionService : DownloadService, ITransmissionService
         IDryRunInterceptor dryRunInterceptor,
         IHardLinkFileService hardLinkFileService,
         IDynamicHttpClientProvider httpClientProvider,
-        EventPublisher eventPublisher,
+        IEventPublisher eventPublisher,
         BlocklistProvider blocklistProvider,
         DownloadClientConfig downloadClientConfig,
         IRuleEvaluator ruleEvaluator,
@@ -57,12 +58,37 @@ public partial class TransmissionService : DownloadService, ITransmissionService
     {
         UriBuilder uriBuilder = new(_downloadClientConfig.Url);
         uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/rpc";
-        _client = new Client(
+        var client = new Client(
             _httpClient,
             uriBuilder.Uri.ToString(),
             login: _downloadClientConfig.Username,
             password: _downloadClientConfig.Password
         );
+        _client = new TransmissionClientWrapper(client);
+    }
+
+    // Internal constructor for testing
+    internal TransmissionService(
+        ILogger<TransmissionService> logger,
+        IMemoryCache cache,
+        IFilenameEvaluator filenameEvaluator,
+        IStriker striker,
+        IDryRunInterceptor dryRunInterceptor,
+        IHardLinkFileService hardLinkFileService,
+        IDynamicHttpClientProvider httpClientProvider,
+        IEventPublisher eventPublisher,
+        BlocklistProvider blocklistProvider,
+        DownloadClientConfig downloadClientConfig,
+        IRuleEvaluator ruleEvaluator,
+        IRuleManager ruleManager,
+        ITransmissionClientWrapper clientWrapper
+    ) : base(
+        logger, cache,
+        filenameEvaluator, striker, dryRunInterceptor, hardLinkFileService,
+        httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, ruleEvaluator, ruleManager
+    )
+    {
+        _client = clientWrapper;
     }
 
     public override async Task LoginAsync()

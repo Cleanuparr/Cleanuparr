@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Enums;
+using Cleanuparr.Infrastructure.Events.Interfaces;
 using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.Notifications;
 using Cleanuparr.Infrastructure.Hubs;
@@ -17,7 +18,7 @@ namespace Cleanuparr.Infrastructure.Events;
 /// <summary>
 /// Service for publishing events to database and SignalR hub
 /// </summary>
-public class EventPublisher
+public class EventPublisher : IEventPublisher
 {
     private readonly EventsContext _context;
     private readonly IHubContext<AppHub> _appHubContext;
