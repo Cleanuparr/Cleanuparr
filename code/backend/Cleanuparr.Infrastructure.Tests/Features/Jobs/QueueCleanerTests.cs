@@ -18,7 +18,8 @@ using QueueCleanerJob = Cleanuparr.Infrastructure.Features.Jobs.QueueCleaner;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.Jobs;
 
-public class QueueCleanerTests : IClassFixture<JobHandlerFixture>, IDisposable
+[Collection(JobHandlerCollection.Name)]
+public class QueueCleanerTests : IDisposable
 {
     private readonly JobHandlerFixture _fixture;
     private readonly Mock<ILogger<QueueCleanerJob>> _logger;

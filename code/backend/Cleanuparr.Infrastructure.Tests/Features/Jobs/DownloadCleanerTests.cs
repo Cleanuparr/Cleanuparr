@@ -17,7 +17,8 @@ using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.Jobs;
 
-public class DownloadCleanerTests : IClassFixture<JobHandlerFixture>, IDisposable
+[Collection(JobHandlerCollection.Name)]
+public class DownloadCleanerTests : IDisposable
 {
     private readonly JobHandlerFixture _fixture;
     private readonly Mock<ILogger<DownloadCleaner>> _logger;
