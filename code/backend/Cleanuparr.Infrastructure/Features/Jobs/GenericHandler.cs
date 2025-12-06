@@ -3,6 +3,7 @@ using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Events;
 using Cleanuparr.Infrastructure.Features.Arr;
+using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
 using Cleanuparr.Infrastructure.Features.DownloadRemover.Models;
@@ -27,9 +28,9 @@ public abstract class GenericHandler : IHandler
     protected readonly DataContext _dataContext;
     protected readonly IMemoryCache _cache;
     protected readonly IBus _messageBus;
-    protected readonly ArrClientFactory _arrClientFactory;
+    protected readonly IArrClientFactory _arrClientFactory;
     protected readonly ArrQueueIterator _arrArrQueueIterator;
-    protected readonly DownloadServiceFactory _downloadServiceFactory;
+    protected readonly IDownloadServiceFactory _downloadServiceFactory;
     private readonly EventPublisher _eventPublisher;
 
     protected GenericHandler(
@@ -37,9 +38,9 @@ public abstract class GenericHandler : IHandler
         DataContext dataContext,
         IMemoryCache cache,
         IBus messageBus,
-        ArrClientFactory arrClientFactory,
+        IArrClientFactory arrClientFactory,
         ArrQueueIterator arrArrQueueIterator,
-        DownloadServiceFactory downloadServiceFactory,
+        IDownloadServiceFactory downloadServiceFactory,
         EventPublisher eventPublisher
     )
     {

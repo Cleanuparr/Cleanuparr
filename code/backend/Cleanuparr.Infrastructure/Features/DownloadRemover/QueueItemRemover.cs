@@ -3,6 +3,7 @@ using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Events;
 using Cleanuparr.Infrastructure.Features.Arr;
+using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.DownloadHunter.Models;
 using Cleanuparr.Infrastructure.Features.DownloadRemover.Interfaces;
@@ -22,14 +23,14 @@ public sealed class QueueItemRemover : IQueueItemRemover
     private readonly ILogger<QueueItemRemover> _logger;
     private readonly IBus _messageBus;
     private readonly IMemoryCache _cache;
-    private readonly ArrClientFactory _arrClientFactory;
+    private readonly IArrClientFactory _arrClientFactory;
     private readonly EventPublisher _eventPublisher;
 
     public QueueItemRemover(
         ILogger<QueueItemRemover> logger,
         IBus messageBus,
         IMemoryCache cache,
-        ArrClientFactory arrClientFactory,
+        IArrClientFactory arrClientFactory,
         EventPublisher eventPublisher
     )
     {

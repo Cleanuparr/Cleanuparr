@@ -1,5 +1,6 @@
 using Cleanuparr.Infrastructure.Events;
 using Cleanuparr.Infrastructure.Features.Arr;
+using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 using Cleanuparr.Infrastructure.Features.BlacklistSync;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
 using Cleanuparr.Infrastructure.Features.DownloadHunter;
@@ -28,12 +29,12 @@ public static class ServicesDI
             .AddHostedService<EventCleanupService>()
             .AddScoped<IDryRunInterceptor, DryRunInterceptor>()
             .AddScoped<CertificateValidationService>()
-            .AddScoped<SonarrClient>()
-            .AddScoped<RadarrClient>()
-            .AddScoped<LidarrClient>()
-            .AddScoped<ReadarrClient>()
-            .AddScoped<WhisparrClient>()
-            .AddScoped<ArrClientFactory>()
+            .AddScoped<ISonarrClient, SonarrClient>()
+            .AddScoped<IRadarrClient, RadarrClient>()
+            .AddScoped<ILidarrClient, LidarrClient>()
+            .AddScoped<IReadarrClient, ReadarrClient>()
+            .AddScoped<IWhisparrClient, WhisparrClient>()
+            .AddScoped<IArrClientFactory, ArrClientFactory>()
             .AddScoped<QueueCleaner>()
             .AddScoped<BlacklistSynchronizer>()
             .AddScoped<MalwareBlocker>()
@@ -45,7 +46,7 @@ public static class ServicesDI
             .AddScoped<UnixHardLinkFileService>()
             .AddScoped<WindowsHardLinkFileService>()
             .AddScoped<ArrQueueIterator>()
-            .AddScoped<DownloadServiceFactory>()
+            .AddScoped<IDownloadServiceFactory, DownloadServiceFactory>()
             .AddScoped<IStriker, Striker>()
             .AddScoped<FileReader>()
             .AddScoped<IRuleManager, RuleManager>()
@@ -53,6 +54,7 @@ public static class ServicesDI
             .AddScoped<IRuleIntervalValidator, RuleIntervalValidator>()
             .AddSingleton<IJobManagementService, JobManagementService>()
             .AddSingleton<BlocklistProvider>()
+            .AddSingleton(TimeProvider.System)
             .AddSingleton<AppStatusSnapshot>()
             .AddHostedService<AppStatusRefreshService>();
 }

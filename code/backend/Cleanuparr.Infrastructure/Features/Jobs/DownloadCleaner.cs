@@ -27,9 +27,9 @@ public sealed class DownloadCleaner : GenericHandler
         DataContext dataContext,
         IMemoryCache cache,
         IBus messageBus,
-        ArrClientFactory arrClientFactory,
+        IArrClientFactory arrClientFactory,
         ArrQueueIterator arrArrQueueIterator,
-        DownloadServiceFactory downloadServiceFactory,
+        IDownloadServiceFactory downloadServiceFactory,
         EventPublisher eventPublisher
     ) : base(
         logger, dataContext, cache, messageBus,

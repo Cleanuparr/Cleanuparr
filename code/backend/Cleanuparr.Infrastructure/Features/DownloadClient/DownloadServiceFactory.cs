@@ -21,7 +21,7 @@ namespace Cleanuparr.Infrastructure.Features.DownloadClient;
 /// <summary>
 /// Factory responsible for creating download client service instances
 /// </summary>
-public sealed class DownloadServiceFactory
+public sealed class DownloadServiceFactory : IDownloadServiceFactory
 {
     private readonly ILogger<DownloadServiceFactory> _logger;
     private readonly IServiceProvider _serviceProvider;
