@@ -4,6 +4,7 @@ using Cleanuparr.Infrastructure.Features.Notifications.Consumers;
 using Cleanuparr.Infrastructure.Features.Notifications.Models;
 using MassTransit;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using Xunit;
 
@@ -15,12 +16,14 @@ public class NotificationConsumerTests
     private readonly Mock<INotificationConfigurationService> _configurationServiceMock;
     private readonly Mock<INotificationProviderFactory> _providerFactoryMock;
     private readonly NotificationService _notificationService;
+    private readonly FakeTimeProvider _timeProvider;
 
     public NotificationConsumerTests()
     {
         _serviceLoggerMock = new Mock<ILogger<NotificationService>>();
         _configurationServiceMock = new Mock<INotificationConfigurationService>();
         _providerFactoryMock = new Mock<INotificationProviderFactory>();
+        _timeProvider = new FakeTimeProvider();
 
         _notificationService = new NotificationService(
             _serviceLoggerMock.Object,
@@ -62,7 +65,7 @@ public class NotificationConsumerTests
         providerMock.Setup(p => p.SendNotificationAsync(It.IsAny<NotificationContext>())).Returns(Task.CompletedTask);
 
         // Act
-        await consumer.Consume(contextMock.Object);
+        await ConsumeWithTimeAdvance(consumer, contextMock);
 
         // Assert
         Assert.Equal(NotificationEventType.FailedImportStrike, capturedEventType);
@@ -104,7 +107,7 @@ public class NotificationConsumerTests
         providerMock.Setup(p => p.SendNotificationAsync(It.IsAny<NotificationContext>())).Returns(Task.CompletedTask);
 
         // Act
-        await consumer.Consume(contextMock.Object);
+        await ConsumeWithTimeAdvance(consumer, contextMock);
 
         // Assert
         Assert.Equal(NotificationEventType.StalledStrike, capturedEventType);
@@ -146,7 +149,7 @@ public class NotificationConsumerTests
         providerMock.Setup(p => p.SendNotificationAsync(It.IsAny<NotificationContext>())).Returns(Task.CompletedTask);
 
         // Act
-        await consumer.Consume(contextMock.Object);
+        await ConsumeWithTimeAdvance(consumer, contextMock);
 
         // Assert
         Assert.Equal(NotificationEventType.SlowSpeedStrike, capturedEventType);
@@ -188,7 +191,7 @@ public class NotificationConsumerTests
         providerMock.Setup(p => p.SendNotificationAsync(It.IsAny<NotificationContext>())).Returns(Task.CompletedTask);
 
         // Act
-        await consumer.Consume(contextMock.Object);
+        await ConsumeWithTimeAdvance(consumer, contextMock);
 
         // Assert
         Assert.Equal(NotificationEventType.SlowTimeStrike, capturedEventType);
@@ -230,7 +233,7 @@ public class NotificationConsumerTests
         providerMock.Setup(p => p.SendNotificationAsync(It.IsAny<NotificationContext>())).Returns(Task.CompletedTask);
 
         // Act
-        await consumer.Consume(contextMock.Object);
+        await ConsumeWithTimeAdvance(consumer, contextMock);
 
         // Assert
         Assert.Equal(NotificationEventType.QueueItemDeleted, capturedEventType);
@@ -269,7 +272,7 @@ public class NotificationConsumerTests
         providerMock.Setup(p => p.SendNotificationAsync(It.IsAny<NotificationContext>())).Returns(Task.CompletedTask);
 
         // Act
-        await consumer.Consume(contextMock.Object);
+        await ConsumeWithTimeAdvance(consumer, contextMock);
 
         // Assert
         Assert.Equal(NotificationEventType.DownloadCleaned, capturedEventType);
@@ -308,7 +311,7 @@ public class NotificationConsumerTests
         providerMock.Setup(p => p.SendNotificationAsync(It.IsAny<NotificationContext>())).Returns(Task.CompletedTask);
 
         // Act
-        await consumer.Consume(contextMock.Object);
+        await ConsumeWithTimeAdvance(consumer, contextMock);
 
         // Assert
         Assert.Equal(NotificationEventType.CategoryChanged, capturedEventType);
@@ -355,7 +358,7 @@ public class NotificationConsumerTests
             .Returns(Task.CompletedTask);
 
         // Act
-        await consumer.Consume(contextMock.Object);
+        await ConsumeWithTimeAdvance(consumer, contextMock);
 
         // Assert
         Assert.NotNull(capturedContext);
@@ -397,7 +400,7 @@ public class NotificationConsumerTests
             .Returns(Task.CompletedTask);
 
         // Act
-        await consumer.Consume(contextMock.Object);
+        await ConsumeWithTimeAdvance(consumer, contextMock);
 
         // Assert
         Assert.NotNull(capturedContext);
@@ -446,7 +449,7 @@ public class NotificationConsumerTests
             .Returns(Task.CompletedTask);
 
         // Act
-        await consumer.Consume(contextMock.Object);
+        await ConsumeWithTimeAdvance(consumer, contextMock);
 
         // Assert
         Assert.NotNull(capturedContext);
@@ -485,7 +488,7 @@ public class NotificationConsumerTests
             .Returns(Task.CompletedTask);
 
         // Act
-        await consumer.Consume(contextMock.Object);
+        await ConsumeWithTimeAdvance(consumer, contextMock);
 
         // Assert
         Assert.NotNull(capturedContext);
@@ -519,7 +522,7 @@ public class NotificationConsumerTests
             .ReturnsAsync(new List<NotificationProviderDto>());
 
         // Act
-        await consumer.Consume(contextMock.Object);
+        await ConsumeWithTimeAdvance(consumer, contextMock);
 
         // Assert
         _providerFactoryMock.Verify(f => f.CreateProvider(It.IsAny<NotificationProviderDto>()), Times.Never);
@@ -532,7 +535,7 @@ public class NotificationConsumerTests
     private NotificationConsumer<T> CreateConsumer<T>() where T : Notification
     {
         var loggerMock = new Mock<ILogger<NotificationConsumer<T>>>();
-        return new NotificationConsumer<T>(loggerMock.Object, _notificationService);
+        return new NotificationConsumer<T>(loggerMock.Object, _notificationService, _timeProvider);
     }
 
     private static Mock<ConsumeContext<T>> CreateConsumeContextMock<T>(T message) where T : class
@@ -540,6 +543,16 @@ public class NotificationConsumerTests
         var mock = new Mock<ConsumeContext<T>>();
         mock.Setup(c => c.Message).Returns(message);
         return mock;
+    }
+
+    /// <summary>
+    /// Executes the consumer and advances time past the 1-second spam prevention delay
+    /// </summary>
+    private async Task ConsumeWithTimeAdvance<T>(NotificationConsumer<T> consumer, Mock<ConsumeContext<T>> contextMock) where T : Notification
+    {
+        var task = consumer.Consume(contextMock.Object);
+        _timeProvider.Advance(TimeSpan.FromSeconds(1));
+        await task;
     }
 
     #endregion
