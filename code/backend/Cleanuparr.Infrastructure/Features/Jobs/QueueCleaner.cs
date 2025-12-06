@@ -1,8 +1,6 @@
 using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Enums;
-using Cleanuparr.Infrastructure.Events;
 using Cleanuparr.Infrastructure.Events.Interfaces;
-using Cleanuparr.Infrastructure.Features.Arr;
 using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.DownloadClient;

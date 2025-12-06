@@ -1,9 +1,7 @@
 using Cleanuparr.Domain.Entities;
 using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Enums;
-using Cleanuparr.Infrastructure.Events;
 using Cleanuparr.Infrastructure.Events.Interfaces;
-using Cleanuparr.Infrastructure.Features.Arr;
 using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
@@ -22,7 +20,8 @@ namespace Cleanuparr.Infrastructure.Features.Jobs;
 public sealed class DownloadCleaner : GenericHandler
 {
     private readonly HashSet<string> _downloadsProcessedByArrs = [];
-    
+    private readonly TimeProvider _timeProvider;
+
     public DownloadCleaner(
         ILogger<DownloadCleaner> logger,
         DataContext dataContext,
@@ -31,12 +30,14 @@ public sealed class DownloadCleaner : GenericHandler
         IArrClientFactory arrClientFactory,
         IArrQueueIterator arrArrQueueIterator,
         IDownloadServiceFactory downloadServiceFactory,
-        IEventPublisher eventPublisher
+        IEventPublisher eventPublisher,
+        TimeProvider timeProvider
     ) : base(
         logger, dataContext, cache, messageBus,
         arrClientFactory, arrArrQueueIterator, downloadServiceFactory, eventPublisher
     )
     {
+        _timeProvider = timeProvider;
     }
     
     protected override async Task ExecuteInternalAsync()
@@ -93,7 +94,7 @@ public sealed class DownloadCleaner : GenericHandler
         _logger.LogTrace("Found {count} seeding downloads across {clientCount} clients", totalDownloads, downloadServiceToDownloadsMap.Count);
 
         // wait for the downloads to appear in the arr queue
-        await Task.Delay(10 * 1000);
+        await Task.Delay(TimeSpan.FromSeconds(10), _timeProvider);
 
         await ProcessArrConfigAsync(ContextProvider.Get<ArrConfig>(nameof(InstanceType.Sonarr)), InstanceType.Sonarr, true);
         await ProcessArrConfigAsync(ContextProvider.Get<ArrConfig>(nameof(InstanceType.Radarr)), InstanceType.Radarr, true);

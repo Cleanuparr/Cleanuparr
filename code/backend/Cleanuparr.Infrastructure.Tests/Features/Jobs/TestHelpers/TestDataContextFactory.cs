@@ -147,6 +147,78 @@ public static class TestDataContextFactory
     }
 
     /// <summary>
+    /// Adds an enabled Lidarr instance to the context
+    /// </summary>
+    public static ArrInstance AddLidarrInstance(DataContext context, string url = "http://lidarr:8686", bool enabled = true)
+    {
+        var arrConfig = context.ArrConfigs.First(x => x.Type == InstanceType.Lidarr);
+        var instance = new ArrInstance
+        {
+            Id = Guid.NewGuid(),
+            Name = "Test Lidarr",
+            Url = new Uri(url),
+            ApiKey = "test-api-key",
+            Enabled = enabled,
+            ArrConfigId = arrConfig.Id,
+            ArrConfig = arrConfig
+        };
+
+        arrConfig.Instances.Add(instance);
+        context.ArrInstances.Add(instance);
+        context.SaveChanges();
+
+        return instance;
+    }
+
+    /// <summary>
+    /// Adds an enabled Readarr instance to the context
+    /// </summary>
+    public static ArrInstance AddReadarrInstance(DataContext context, string url = "http://readarr:8787", bool enabled = true)
+    {
+        var arrConfig = context.ArrConfigs.First(x => x.Type == InstanceType.Readarr);
+        var instance = new ArrInstance
+        {
+            Id = Guid.NewGuid(),
+            Name = "Test Readarr",
+            Url = new Uri(url),
+            ApiKey = "test-api-key",
+            Enabled = enabled,
+            ArrConfigId = arrConfig.Id,
+            ArrConfig = arrConfig
+        };
+
+        arrConfig.Instances.Add(instance);
+        context.ArrInstances.Add(instance);
+        context.SaveChanges();
+
+        return instance;
+    }
+
+    /// <summary>
+    /// Adds an enabled Whisparr instance to the context
+    /// </summary>
+    public static ArrInstance AddWhisparrInstance(DataContext context, string url = "http://whisparr:6969", bool enabled = true)
+    {
+        var arrConfig = context.ArrConfigs.First(x => x.Type == InstanceType.Whisparr);
+        var instance = new ArrInstance
+        {
+            Id = Guid.NewGuid(),
+            Name = "Test Whisparr",
+            Url = new Uri(url),
+            ApiKey = "test-api-key",
+            Enabled = enabled,
+            ArrConfigId = arrConfig.Id,
+            ArrConfig = arrConfig
+        };
+
+        arrConfig.Instances.Add(instance);
+        context.ArrInstances.Add(instance);
+        context.SaveChanges();
+
+        return instance;
+    }
+
+    /// <summary>
     /// Adds an enabled download client to the context
     /// </summary>
     public static DownloadClientConfig AddDownloadClient(
