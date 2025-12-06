@@ -1,5 +1,6 @@
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Events;
+using Cleanuparr.Infrastructure.Events.Interfaces;
 using Cleanuparr.Infrastructure.Features.Files;
 using Cleanuparr.Infrastructure.Features.ItemStriker;
 using Cleanuparr.Infrastructure.Features.MalwareBlocker;
@@ -66,7 +67,7 @@ public sealed class DownloadServiceFactory : IDownloadServiceFactory
         var dryRunInterceptor = _serviceProvider.GetRequiredService<IDryRunInterceptor>();
         var hardLinkFileService = _serviceProvider.GetRequiredService<IHardLinkFileService>();
         var httpClientProvider = _serviceProvider.GetRequiredService<IDynamicHttpClientProvider>();
-        var eventPublisher = _serviceProvider.GetRequiredService<EventPublisher>();
+        var eventPublisher = _serviceProvider.GetRequiredService<IEventPublisher>();
         var blocklistProvider = _serviceProvider.GetRequiredService<BlocklistProvider>();
 
         var ruleEvaluator = _serviceProvider.GetRequiredService<IRuleEvaluator>();
@@ -90,7 +91,7 @@ public sealed class DownloadServiceFactory : IDownloadServiceFactory
         var dryRunInterceptor = _serviceProvider.GetRequiredService<IDryRunInterceptor>();
         var hardLinkFileService = _serviceProvider.GetRequiredService<IHardLinkFileService>();
         var httpClientProvider = _serviceProvider.GetRequiredService<IDynamicHttpClientProvider>();
-        var eventPublisher = _serviceProvider.GetRequiredService<EventPublisher>();
+        var eventPublisher = _serviceProvider.GetRequiredService<IEventPublisher>();
         var blocklistProvider = _serviceProvider.GetRequiredService<BlocklistProvider>();
 
         var ruleEvaluator = _serviceProvider.GetRequiredService<IRuleEvaluator>();
@@ -114,7 +115,7 @@ public sealed class DownloadServiceFactory : IDownloadServiceFactory
         var dryRunInterceptor = _serviceProvider.GetRequiredService<IDryRunInterceptor>();
         var hardLinkFileService = _serviceProvider.GetRequiredService<IHardLinkFileService>();
         var httpClientProvider = _serviceProvider.GetRequiredService<IDynamicHttpClientProvider>();
-        var eventPublisher = _serviceProvider.GetRequiredService<EventPublisher>();
+        var eventPublisher = _serviceProvider.GetRequiredService<IEventPublisher>();
         var blocklistProvider = _serviceProvider.GetRequiredService<BlocklistProvider>();
 
         var ruleEvaluator = _serviceProvider.GetRequiredService<IRuleEvaluator>();
@@ -138,7 +139,7 @@ public sealed class DownloadServiceFactory : IDownloadServiceFactory
         var dryRunInterceptor = _serviceProvider.GetRequiredService<IDryRunInterceptor>();
         var hardLinkFileService = _serviceProvider.GetRequiredService<IHardLinkFileService>();
         var httpClientProvider = _serviceProvider.GetRequiredService<IDynamicHttpClientProvider>();
-        var eventPublisher = _serviceProvider.GetRequiredService<EventPublisher>();
+        var eventPublisher = _serviceProvider.GetRequiredService<IEventPublisher>();
         var blocklistProvider = _serviceProvider.GetRequiredService<BlocklistProvider>();
         var loggerFactory = _serviceProvider.GetRequiredService<ILoggerFactory>();
 

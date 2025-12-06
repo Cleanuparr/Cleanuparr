@@ -1,6 +1,7 @@
 using Cleanuparr.Domain.Entities;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Events;
+using Cleanuparr.Infrastructure.Events.Interfaces;
 using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.Files;
 using Cleanuparr.Infrastructure.Features.ItemStriker;
@@ -32,7 +33,7 @@ public abstract class DownloadService : IDownloadService
     protected readonly MemoryCacheEntryOptions _cacheOptions;
     protected readonly IDryRunInterceptor _dryRunInterceptor;
     protected readonly IHardLinkFileService _hardLinkFileService;
-    protected readonly EventPublisher _eventPublisher;
+    protected readonly IEventPublisher _eventPublisher;
     protected readonly BlocklistProvider _blocklistProvider;
     protected readonly HttpClient _httpClient;
     protected readonly DownloadClientConfig _downloadClientConfig;
@@ -47,7 +48,7 @@ public abstract class DownloadService : IDownloadService
         IDryRunInterceptor dryRunInterceptor,
         IHardLinkFileService hardLinkFileService,
         IDynamicHttpClientProvider httpClientProvider,
-        EventPublisher eventPublisher,
+        IEventPublisher eventPublisher,
         BlocklistProvider blocklistProvider,
         DownloadClientConfig downloadClientConfig,
         IRuleEvaluator ruleEvaluator,

@@ -1,4 +1,5 @@
 using Cleanuparr.Infrastructure.Events;
+using Cleanuparr.Infrastructure.Events.Interfaces;
 using Cleanuparr.Infrastructure.Features.Arr;
 using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 using Cleanuparr.Infrastructure.Features.BlacklistSync;
@@ -25,7 +26,7 @@ public static class ServicesDI
         services
             .AddScoped<EventsContext>()
             .AddScoped<DataContext>()
-            .AddScoped<EventPublisher>()
+            .AddScoped<IEventPublisher, EventPublisher>()
             .AddHostedService<EventCleanupService>()
             .AddScoped<IDryRunInterceptor, DryRunInterceptor>()
             .AddScoped<CertificateValidationService>()
@@ -45,7 +46,7 @@ public static class ServicesDI
             .AddScoped<IHardLinkFileService, HardLinkFileService>()
             .AddScoped<UnixHardLinkFileService>()
             .AddScoped<WindowsHardLinkFileService>()
-            .AddScoped<ArrQueueIterator>()
+            .AddScoped<IArrQueueIterator, ArrQueueIterator>()
             .AddScoped<IDownloadServiceFactory, DownloadServiceFactory>()
             .AddScoped<IStriker, Striker>()
             .AddScoped<FileReader>()
@@ -53,7 +54,7 @@ public static class ServicesDI
             .AddScoped<IRuleEvaluator, RuleEvaluator>()
             .AddScoped<IRuleIntervalValidator, RuleIntervalValidator>()
             .AddSingleton<IJobManagementService, JobManagementService>()
-            .AddSingleton<BlocklistProvider>()
+            .AddSingleton<IBlocklistProvider, BlocklistProvider>()
             .AddSingleton(TimeProvider.System)
             .AddSingleton<AppStatusSnapshot>()
             .AddHostedService<AppStatusRefreshService>();

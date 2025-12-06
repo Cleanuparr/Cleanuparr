@@ -1,4 +1,4 @@
-using Cleanuparr.Infrastructure.Events;
+using Cleanuparr.Infrastructure.Events.Interfaces;
 using Cleanuparr.Infrastructure.Features.DownloadClient.Deluge;
 using Cleanuparr.Infrastructure.Features.Files;
 using Cleanuparr.Infrastructure.Features.ItemStriker;
@@ -23,7 +23,7 @@ public class DelugeServiceFixture : IDisposable
     public Mock<IDryRunInterceptor> DryRunInterceptor { get; }
     public Mock<IHardLinkFileService> HardLinkFileService { get; }
     public Mock<IDynamicHttpClientProvider> HttpClientProvider { get; }
-    public EventPublisher EventPublisher { get; }
+    public Mock<IEventPublisher> EventPublisher { get; }
     public BlocklistProvider BlocklistProvider { get; }
     public Mock<IRuleEvaluator> RuleEvaluator { get; }
     public Mock<IRuleManager> RuleManager { get; }
@@ -38,7 +38,7 @@ public class DelugeServiceFixture : IDisposable
         DryRunInterceptor = new Mock<IDryRunInterceptor>();
         HardLinkFileService = new Mock<IHardLinkFileService>();
         HttpClientProvider = new Mock<IDynamicHttpClientProvider>();
-        EventPublisher = TestEventPublisherFactory.Create();
+        EventPublisher = new Mock<IEventPublisher>();
         BlocklistProvider = TestBlocklistProviderFactory.Create();
         RuleEvaluator = new Mock<IRuleEvaluator>();
         RuleManager = new Mock<IRuleManager>();
@@ -80,7 +80,7 @@ public class DelugeServiceFixture : IDisposable
             DryRunInterceptor.Object,
             HardLinkFileService.Object,
             HttpClientProvider.Object,
-            EventPublisher,
+            EventPublisher.Object,
             BlocklistProvider,
             config,
             RuleEvaluator.Object,
@@ -97,6 +97,7 @@ public class DelugeServiceFixture : IDisposable
         DryRunInterceptor.Reset();
         HardLinkFileService.Reset();
         HttpClientProvider.Reset();
+        EventPublisher.Reset();
         RuleEvaluator.Reset();
         RuleManager.Reset();
         ClientWrapper.Reset();

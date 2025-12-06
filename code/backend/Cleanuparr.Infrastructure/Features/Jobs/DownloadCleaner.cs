@@ -2,6 +2,7 @@ using Cleanuparr.Domain.Entities;
 using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Events;
+using Cleanuparr.Infrastructure.Events.Interfaces;
 using Cleanuparr.Infrastructure.Features.Arr;
 using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 using Cleanuparr.Infrastructure.Features.Context;
@@ -28,9 +29,9 @@ public sealed class DownloadCleaner : GenericHandler
         IMemoryCache cache,
         IBus messageBus,
         IArrClientFactory arrClientFactory,
-        ArrQueueIterator arrArrQueueIterator,
+        IArrQueueIterator arrArrQueueIterator,
         IDownloadServiceFactory downloadServiceFactory,
-        EventPublisher eventPublisher
+        IEventPublisher eventPublisher
     ) : base(
         logger, dataContext, cache, messageBus,
         arrClientFactory, arrArrQueueIterator, downloadServiceFactory, eventPublisher

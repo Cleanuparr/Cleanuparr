@@ -1,5 +1,6 @@
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Events;
+using Cleanuparr.Infrastructure.Events.Interfaces;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
 using Cleanuparr.Infrastructure.Features.DownloadClient.Deluge;
 using Cleanuparr.Infrastructure.Features.DownloadClient.QBittorrent;
@@ -75,7 +76,7 @@ public class DownloadServiceFactoryTests : IDisposable
         clientsMock.Setup(c => c.All).Returns(Mock.Of<IClientProxy>());
         hubContextMock.Setup(h => h.Clients).Returns(clientsMock.Object);
 
-        services.AddSingleton(new EventPublisher(
+        services.AddSingleton<IEventPublisher>(new EventPublisher(
             eventsContext,
             hubContextMock.Object,
             Mock.Of<ILogger<EventPublisher>>(),
