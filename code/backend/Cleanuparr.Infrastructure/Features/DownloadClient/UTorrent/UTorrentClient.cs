@@ -228,18 +228,6 @@ public sealed class UTorrentClient
     }
 
     /// <summary>
-    /// Creates a new label in µTorrent
-    /// </summary>
-    /// <param name="label">Label name to create</param>
-    public static async Task CreateLabel(string label)
-    {
-        // µTorrent doesn't have an explicit "create label" API
-        // Labels are created automatically when you assign them to a torrent
-        // So this is a no-op for µTorrent
-        await Task.CompletedTask;
-    }
-
-    /// <summary>
     /// Sends an authenticated request to the µTorrent API
     /// Handles automatic authentication and retry logic
     /// </summary>

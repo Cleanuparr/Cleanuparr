@@ -35,7 +35,7 @@ public class RuleEvaluator : IRuleEvaluator
             .SetSlidingExpiration(StaticConfiguration.TriggerValue + Constants.CacheLimitBuffer);
     }
 
-    public async Task<(bool ShouldRemove, DeleteReason Reason, bool DeleteFromClient)> EvaluateStallRulesAsync(ITorrentItem torrent)
+    public async Task<(bool ShouldRemove, DeleteReason Reason, bool DeleteFromClient)> EvaluateStallRulesAsync(ITorrentItemWrapper torrent)
     {
         _logger.LogTrace("Evaluating stall rules | {name}", torrent.Name);
 
@@ -73,7 +73,7 @@ public class RuleEvaluator : IRuleEvaluator
         return (false, DeleteReason.None, false);
     }
 
-    public async Task<(bool ShouldRemove, DeleteReason Reason, bool DeleteFromClient)> EvaluateSlowRulesAsync(ITorrentItem torrent)
+    public async Task<(bool ShouldRemove, DeleteReason Reason, bool DeleteFromClient)> EvaluateSlowRulesAsync(ITorrentItemWrapper torrent)
     {
         _logger.LogTrace("Evaluating slow rules | {name}", torrent.Name);
 
@@ -143,7 +143,7 @@ public class RuleEvaluator : IRuleEvaluator
     }
 
     private async Task ResetStalledStrikesAsync(
-        ITorrentItem torrent,
+        ITorrentItemWrapper torrent,
         bool resetEnabled,
         long? minimumProgressBytes
     )
@@ -195,7 +195,7 @@ public class RuleEvaluator : IRuleEvaluator
     }
 
     private async Task ResetSlowStrikesAsync(
-        ITorrentItem torrent,
+        ITorrentItemWrapper torrent,
         bool resetEnabled,
         StrikeType strikeType
     )
@@ -208,7 +208,7 @@ public class RuleEvaluator : IRuleEvaluator
         await _striker.ResetStrikeAsync(torrent.Hash, torrent.Name, strikeType);
     }
 
-    private bool HasStalledDownloadProgress(ITorrentItem torrent, StrikeType strikeType, out long previousDownloaded, out long currentDownloaded)
+    private bool HasStalledDownloadProgress(ITorrentItemWrapper torrent, StrikeType strikeType, out long previousDownloaded, out long currentDownloaded)
     {
         previousDownloaded = 0;
         currentDownloaded = Math.Max(0, torrent.DownloadedBytes);

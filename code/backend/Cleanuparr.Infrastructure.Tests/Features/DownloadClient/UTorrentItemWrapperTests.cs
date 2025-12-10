@@ -109,95 +109,173 @@ public class UTorrentItemWrapperTests
         result.ShouldBe(expectedPercentage);
     }
 
-    [Fact]
-    public void Trackers_WithValidUrls_ReturnsHostNames()
+    [Theory]
+    [InlineData(1024L * 1024 * 100, 1024L * 1024 * 100)] // 100MB
+    [InlineData(0L, 0L)]
+    public void DownloadedBytes_ReturnsCorrectValue(long downloaded, long expected)
     {
         // Arrange
-        var torrentItem = new UTorrentItem();
-        var torrentProperties = new UTorrentProperties
-        {
-            Trackers = "http://tracker1.example.com:8080/announce\r\nhttps://tracker2.example.com/announce\r\nudp://tracker3.example.com:1337/announce"
-        };
+        var torrentItem = new UTorrentItem { Downloaded = downloaded };
+        var torrentProperties = new UTorrentProperties();
         var wrapper = new UTorrentItemWrapper(torrentItem, torrentProperties);
 
         // Act
-        var result = wrapper.Trackers;
+        var result = wrapper.DownloadedBytes;
 
         // Assert
-        result.Count.ShouldBe(3);
-        result.ShouldContain("tracker1.example.com");
-        result.ShouldContain("tracker2.example.com");
-        result.ShouldContain("tracker3.example.com");
+        result.ShouldBe(expected);
+    }
+
+    [Theory]
+    [InlineData(2000, 2.0)] // 2000 permille = 2.0 ratio
+    [InlineData(500, 0.5)]  // 500 permille = 0.5 ratio
+    [InlineData(1000, 1.0)] // 1000 permille = 1.0 ratio
+    [InlineData(0, 0.0)]    // No ratio
+    public void Ratio_ReturnsCorrectValue(int ratioRaw, double expected)
+    {
+        // Arrange
+        var torrentItem = new UTorrentItem { RatioRaw = ratioRaw };
+        var torrentProperties = new UTorrentProperties();
+        var wrapper = new UTorrentItemWrapper(torrentItem, torrentProperties);
+
+        // Act
+        var result = wrapper.Ratio;
+
+        // Assert
+        result.ShouldBe(expected);
+    }
+
+    [Theory]
+    [InlineData(3600, 3600L)] // 1 hour
+    [InlineData(0, 0L)]
+    [InlineData(-1, -1L)] // Unknown/infinite
+    public void Eta_ReturnsCorrectValue(int eta, long expected)
+    {
+        // Arrange
+        var torrentItem = new UTorrentItem { ETA = eta };
+        var torrentProperties = new UTorrentProperties();
+        var wrapper = new UTorrentItemWrapper(torrentItem, torrentProperties);
+
+        // Act
+        var result = wrapper.Eta;
+
+        // Assert
+        result.ShouldBe(expected);
     }
 
     [Fact]
-    public void Trackers_WithDuplicateHosts_ReturnsDistinctHosts()
+    public void SeedingTimeSeconds_WithCompletedDate_ReturnsPositiveValue()
     {
-        // Arrange
-        var torrentItem = new UTorrentItem();
-        var torrentProperties = new UTorrentProperties
-        {
-            Trackers = "http://tracker1.example.com:8080/announce\r\nhttps://tracker1.example.com/announce\r\nudp://tracker1.example.com:1337/announce"
-        };
+        // Arrange - Set DateCompleted to 1 hour ago
+        var oneHourAgo = DateTimeOffset.UtcNow.AddHours(-1).ToUnixTimeSeconds();
+        var torrentItem = new UTorrentItem { DateCompleted = oneHourAgo };
+        var torrentProperties = new UTorrentProperties();
         var wrapper = new UTorrentItemWrapper(torrentItem, torrentProperties);
 
         // Act
-        var result = wrapper.Trackers;
+        var result = wrapper.SeedingTimeSeconds;
 
-        // Assert
-        result.Count.ShouldBe(1);
-        result.ShouldContain("tracker1.example.com");
+        // Assert - Should be approximately 3600 seconds (1 hour), allow some tolerance
+        result.ShouldBeInRange(3599L, 3601L);
     }
 
     [Fact]
-    public void Trackers_WithInvalidUrls_SkipsInvalidEntries()
+    public void SeedingTimeSeconds_WithNoCompletedDate_ReturnsZero()
     {
-        // Arrange
-        var torrentItem = new UTorrentItem();
-        var torrentProperties = new UTorrentProperties
-        {
-            Trackers = "http://valid.example.com/announce\r\ninvalid-url\r\n\r\n "
-        };
+        // Arrange - DateCompleted = 0 means not completed
+        var torrentItem = new UTorrentItem { DateCompleted = 0 };
+        var torrentProperties = new UTorrentProperties();
         var wrapper = new UTorrentItemWrapper(torrentItem, torrentProperties);
 
         // Act
-        var result = wrapper.Trackers;
+        var result = wrapper.SeedingTimeSeconds;
 
         // Assert
-        result.Count.ShouldBe(1);
-        result.ShouldContain("valid.example.com");
+        result.ShouldBe(0L);
     }
 
     [Fact]
-    public void Trackers_WithEmptyList_ReturnsEmptyList()
+    public void IsIgnored_WithEmptyList_ReturnsFalse()
     {
         // Arrange
-        var torrentItem = new UTorrentItem();
-        var torrentProperties = new UTorrentProperties
-        {
-            Trackers = ""
-        };
+        var torrentItem = new UTorrentItem { Hash = "abc123", Name = "Test Torrent" };
+        var torrentProperties = new UTorrentProperties();
         var wrapper = new UTorrentItemWrapper(torrentItem, torrentProperties);
 
         // Act
-        var result = wrapper.Trackers;
+        var result = wrapper.IsIgnored(Array.Empty<string>());
 
         // Assert
-        result.ShouldBeEmpty();
+        result.ShouldBeFalse();
     }
 
     [Fact]
-    public void Trackers_WithNullTrackerList_ReturnsEmptyList()
+    public void IsIgnored_MatchingHash_ReturnsTrue()
     {
         // Arrange
-        var torrentItem = new UTorrentItem();
-        var torrentProperties = new UTorrentProperties(); // Trackers defaults to empty string
+        var torrentItem = new UTorrentItem { Hash = "abc123", Name = "Test Torrent" };
+        var torrentProperties = new UTorrentProperties();
         var wrapper = new UTorrentItemWrapper(torrentItem, torrentProperties);
+        var ignoredDownloads = new[] { "abc123" };
 
         // Act
-        var result = wrapper.Trackers;
+        var result = wrapper.IsIgnored(ignoredDownloads);
 
         // Assert
-        result.ShouldBeEmpty();
+        result.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void IsIgnored_MatchingCategory_ReturnsTrue()
+    {
+        // Arrange
+        var torrentItem = new UTorrentItem { Hash = "abc123", Name = "Test Torrent", Label = "test-category" };
+        var torrentProperties = new UTorrentProperties();
+        var wrapper = new UTorrentItemWrapper(torrentItem, torrentProperties);
+        var ignoredDownloads = new[] { "test-category" };
+
+        // Act
+        var result = wrapper.IsIgnored(ignoredDownloads);
+
+        // Assert
+        result.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void IsIgnored_MatchingTracker_ReturnsTrue()
+    {
+        // Arrange
+        var torrentItem = new UTorrentItem { Hash = "abc123", Name = "Test Torrent" };
+        var torrentProperties = new UTorrentProperties
+        {
+            Trackers = "http://tracker.example.com/announce"
+        };
+        var wrapper = new UTorrentItemWrapper(torrentItem, torrentProperties);
+        var ignoredDownloads = new[] { "tracker.example.com" };
+
+        // Act
+        var result = wrapper.IsIgnored(ignoredDownloads);
+
+        // Assert
+        result.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void IsIgnored_NotMatching_ReturnsFalse()
+    {
+        // Arrange
+        var torrentItem = new UTorrentItem { Hash = "abc123", Name = "Test Torrent", Label = "some-category" };
+        var torrentProperties = new UTorrentProperties
+        {
+            Trackers = "http://tracker.example.com/announce"
+        };
+        var wrapper = new UTorrentItemWrapper(torrentItem, torrentProperties);
+        var ignoredDownloads = new[] { "notmatching" };
+
+        // Act
+        var result = wrapper.IsIgnored(ignoredDownloads);
+
+        // Assert
+        result.ShouldBeFalse();
     }
 }

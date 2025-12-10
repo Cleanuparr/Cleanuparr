@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Cleanuparr.Infrastructure.Features.Arr;
 
-public sealed class ArrQueueIterator
+public sealed class ArrQueueIterator : IArrQueueIterator
 {
     private readonly ILogger<ArrQueueIterator> _logger;
     

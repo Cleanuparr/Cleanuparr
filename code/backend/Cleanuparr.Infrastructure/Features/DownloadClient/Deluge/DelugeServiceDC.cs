@@ -10,99 +10,36 @@ namespace Cleanuparr.Infrastructure.Features.DownloadClient.Deluge;
 
 public partial class DelugeService
 {
-    public override async Task<List<ITorrentItem>?> GetSeedingDownloads()
+    public override async Task<List<ITorrentItemWrapper>> GetSeedingDownloads()
     {
         var downloads = await _client.GetStatusForAllTorrents();
         if (downloads is null)
         {
-            return null;
+            return [];
         }
 
         return downloads
             .Where(x => !string.IsNullOrEmpty(x.Hash))
             .Where(x => x.State?.Equals("seeding", StringComparison.InvariantCultureIgnoreCase) is true)
-            .Select(x => (ITorrentItem)new DelugeItem(x))
+            .Select(ITorrentItemWrapper (x) => new DelugeItemWrapper(x))
             .ToList();
     }
 
-    public override List<ITorrentItem>? FilterDownloadsToBeCleanedAsync(List<ITorrentItem>? downloads, List<CleanCategory> categories) =>
+    public override List<ITorrentItemWrapper>? FilterDownloadsToBeCleanedAsync(List<ITorrentItemWrapper>? downloads, List<CleanCategory> categories) =>
         downloads
             ?.Where(x => categories.Any(cat => cat.Name.Equals(x.Category, StringComparison.InvariantCultureIgnoreCase)))
             .ToList();
 
-    public override List<ITorrentItem>? FilterDownloadsToChangeCategoryAsync(List<ITorrentItem>? downloads, List<string> categories) =>
+    public override List<ITorrentItemWrapper>? FilterDownloadsToChangeCategoryAsync(List<ITorrentItemWrapper>? downloads, List<string> categories) =>
         downloads
             ?.Where(x => !string.IsNullOrEmpty(x.Hash))
             .Where(x => categories.Any(cat => cat.Equals(x.Category, StringComparison.InvariantCultureIgnoreCase)))
             .ToList();
 
     /// <inheritdoc/>
-    public override async Task CleanDownloadsAsync(List<ITorrentItem>? downloads, List<CleanCategory> categoriesToClean, HashSet<string> excludedHashes,
-        IReadOnlyList<string> ignoredDownloads)
+    protected override async Task DeleteDownloadInternal(ITorrentItemWrapper torrent)
     {
-        if (downloads?.Count is null or 0)
-        {
-            return;
-        }
-
-        foreach (ITorrentItem download in downloads)
-        {
-            if (string.IsNullOrEmpty(download.Hash))
-            {
-                continue;
-            }
-
-            if (excludedHashes.Any(x => x.Equals(download.Hash, StringComparison.InvariantCultureIgnoreCase)))
-            {
-                _logger.LogDebug("skip | download is used by an arr | {name}", download.Name);
-                continue;
-            }
-
-            if (download.IsIgnored(ignoredDownloads))
-            {
-                _logger.LogInformation("skip | download is ignored | {name}", download.Name);
-                continue;
-            }
-
-            CleanCategory? category = categoriesToClean
-                .FirstOrDefault(x => x.Name.Equals(download.Category, StringComparison.InvariantCultureIgnoreCase));
-
-            if (category is null)
-            {
-                continue;
-            }
-
-            var downloadCleanerConfig = ContextProvider.Get<DownloadCleanerConfig>(nameof(DownloadCleanerConfig));
-
-            if (!downloadCleanerConfig.DeletePrivate && download.IsPrivate)
-            {
-                _logger.LogDebug("skip | download is private | {name}", download.Name);
-                continue;
-            }
-
-            ContextProvider.Set("downloadName", download.Name);
-            ContextProvider.Set("hash", download.Hash);
-
-            TimeSpan seedingTime = TimeSpan.FromSeconds(download.SeedingTimeSeconds);
-            SeedingCheckResult result = ShouldCleanDownload(download.Ratio, seedingTime, category);
-
-            if (!result.ShouldClean)
-            {
-                continue;
-            }
-
-            await _dryRunInterceptor.InterceptAsync(DeleteDownload, download.Hash);
-
-            _logger.LogInformation(
-                "download cleaned | {reason} reached | {name}",
-                result.Reason is CleanReason.MaxRatioReached
-                    ? "MAX_RATIO & MIN_SEED_TIME"
-                    : "MAX_SEED_TIME",
-                download.Name
-            );
-
-            await _eventPublisher.PublishDownloadCleaned(download.Ratio, seedingTime, category.Name, result.Reason);
-        }
+        await DeleteDownload(torrent.Hash);
     }
 
     public override async Task CreateCategoryAsync(string name)
@@ -119,7 +56,7 @@ public partial class DelugeService
         await _dryRunInterceptor.InterceptAsync(CreateLabel, name);
     }
 
-    public override async Task ChangeCategoryForNoHardLinksAsync(List<ITorrentItem>? downloads, HashSet<string> excludedHashes, IReadOnlyList<string> ignoredDownloads)
+    public override async Task ChangeCategoryForNoHardLinksAsync(List<ITorrentItemWrapper>? downloads)
     {
         if (downloads?.Count is null or 0)
         {
@@ -133,52 +70,33 @@ public partial class DelugeService
             _hardLinkFileService.PopulateFileCounts(downloadCleanerConfig.UnlinkedIgnoredRootDir);
         }
 
-        foreach (ITorrentItem download in downloads)
+        foreach (DelugeItemWrapper torrent in downloads.Cast<DelugeItemWrapper>())
         {
-            if (string.IsNullOrEmpty(download.Hash) || string.IsNullOrEmpty(download.Name) || string.IsNullOrEmpty(download.Category))
+            if (string.IsNullOrEmpty(torrent.Hash) || string.IsNullOrEmpty(torrent.Name) || string.IsNullOrEmpty(torrent.Category))
             {
                 continue;
             }
+            
+            ContextProvider.Set("downloadName", torrent.Name);
+            ContextProvider.Set("hash", torrent.Hash);
 
-            if (excludedHashes.Any(x => x.Equals(download.Hash, StringComparison.InvariantCultureIgnoreCase)))
-            {
-                _logger.LogDebug("skip | download is used by an arr | {name}", download.Name);
-                continue;
-            }
-
-            if (download.IsIgnored(ignoredDownloads))
-            {
-                _logger.LogInformation("skip | download is ignored | {name}", download.Name);
-                continue;
-            }
-
-            ContextProvider.Set("downloadName", download.Name);
-            ContextProvider.Set("hash", download.Hash);
-
-            // Get the underlying DownloadStatus to access DownloadLocation
-            DownloadStatus? downloadStatus = await _client.GetTorrentStatus(download.Hash);
-            if (downloadStatus is null)
-            {
-                _logger.LogDebug("failed to find torrent status for {name}", download.Name);
-                continue;
-            }
-
-            DelugeContents? contents = null;
+            DelugeContents? contents;
             try
             {
-                contents = await _client.GetTorrentFiles(download.Hash);
+                contents = await _client.GetTorrentFiles(torrent.Hash);
             }
             catch (Exception exception)
             {
-                _logger.LogDebug(exception, "failed to find torrent files for {name}", download.Name);
+                _logger.LogDebug(exception, "failed to find torrent files for {name}", torrent.Name);
                 continue;
             }
 
             bool hasHardlinks = false;
+            bool hasErrors = false;
 
             ProcessFiles(contents?.Contents, (_, file) =>
             {
-                string filePath = string.Join(Path.DirectorySeparatorChar, Path.Combine(downloadStatus.DownloadLocation, file.Path).Split(['\\', '/']));
+                string filePath = string.Join(Path.DirectorySeparatorChar, Path.Combine(torrent.Info.DownloadLocation, file.Path).Split(['\\', '/']));
 
                 if (file.Priority <= 0)
                 {
@@ -191,8 +109,8 @@ public partial class DelugeService
 
                 if (hardlinkCount < 0)
                 {
-                    _logger.LogDebug("skip | could not get file properties | {file}", filePath);
-                    hasHardlinks = true;
+                    _logger.LogError("skip | file does not exist or insufficient permissions | {file}", filePath);
+                    hasErrors = true;
                     return;
                 }
 
@@ -202,17 +120,24 @@ public partial class DelugeService
                 }
             });
 
-            if (hasHardlinks)
+            if (hasErrors)
             {
-                _logger.LogDebug("skip | download has hardlinks | {name}", download.Name);
                 continue;
             }
 
-            await _dryRunInterceptor.InterceptAsync(ChangeLabel, download.Hash, downloadCleanerConfig.UnlinkedTargetCategory);
+            if (hasHardlinks)
+            {
+                _logger.LogDebug("skip | download has hardlinks | {name}", torrent.Name);
+                continue;
+            }
 
-            _logger.LogInformation("category changed for {name}", download.Name);
+            await _dryRunInterceptor.InterceptAsync(ChangeLabel, torrent.Hash, downloadCleanerConfig.UnlinkedTargetCategory);
 
-            await _eventPublisher.PublishCategoryChanged(download.Category, downloadCleanerConfig.UnlinkedTargetCategory);
+            _logger.LogInformation("category changed for {name}", torrent.Name);
+
+            await _eventPublisher.PublishCategoryChanged(torrent.Category, downloadCleanerConfig.UnlinkedTargetCategory);
+            
+            torrent.Category = downloadCleanerConfig.UnlinkedTargetCategory;
         }
     }
 

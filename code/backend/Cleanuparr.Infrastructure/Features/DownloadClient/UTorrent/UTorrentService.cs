@@ -1,4 +1,5 @@
 using Cleanuparr.Infrastructure.Events;
+using Cleanuparr.Infrastructure.Events.Interfaces;
 using Cleanuparr.Infrastructure.Features.Files;
 using Cleanuparr.Infrastructure.Features.ItemStriker;
 using Cleanuparr.Infrastructure.Features.MalwareBlocker;
@@ -17,7 +18,7 @@ namespace Cleanuparr.Infrastructure.Features.DownloadClient.UTorrent;
 /// </summary>
 public partial class UTorrentService : DownloadService, IUTorrentService
 {
-    private readonly UTorrentClient _client;
+    private readonly IUTorrentClientWrapper _client;
 
     public UTorrentService(
         ILogger<UTorrentService> logger,
@@ -27,7 +28,7 @@ public partial class UTorrentService : DownloadService, IUTorrentService
         IDryRunInterceptor dryRunInterceptor,
         IHardLinkFileService hardLinkFileService,
         IDynamicHttpClientProvider httpClientProvider,
-        EventPublisher eventPublisher,
+        IEventPublisher eventPublisher,
         BlocklistProvider blocklistProvider,
         DownloadClientConfig downloadClientConfig,
         ILoggerFactory loggerFactory,
@@ -48,14 +49,39 @@ public partial class UTorrentService : DownloadService, IUTorrentService
             loggerFactory.CreateLogger<UTorrentAuthenticator>()
         );
         var responseParser = new UTorrentResponseParser(loggerFactory.CreateLogger<UTorrentResponseParser>());
-        
-        _client = new UTorrentClient(
+
+        var client = new UTorrentClient(
             downloadClientConfig,
             authenticator,
             httpService,
             responseParser,
             loggerFactory.CreateLogger<UTorrentClient>()
         );
+        _client = new UTorrentClientWrapper(client);
+    }
+
+    // Internal constructor for testing
+    internal UTorrentService(
+        ILogger<UTorrentService> logger,
+        IMemoryCache cache,
+        IFilenameEvaluator filenameEvaluator,
+        IStriker striker,
+        IDryRunInterceptor dryRunInterceptor,
+        IHardLinkFileService hardLinkFileService,
+        IDynamicHttpClientProvider httpClientProvider,
+        IEventPublisher eventPublisher,
+        BlocklistProvider blocklistProvider,
+        DownloadClientConfig downloadClientConfig,
+        IRuleEvaluator ruleEvaluator,
+        IRuleManager ruleManager,
+        IUTorrentClientWrapper clientWrapper
+    ) : base(
+        logger, cache,
+        filenameEvaluator, striker, dryRunInterceptor, hardLinkFileService,
+        httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, ruleEvaluator, ruleManager
+    )
+    {
+        _client = clientWrapper;
     }
 
     public override void Dispose()

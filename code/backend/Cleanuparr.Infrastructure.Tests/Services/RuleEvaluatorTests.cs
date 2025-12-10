@@ -43,7 +43,7 @@ public class RuleEvaluatorTests
         };
 
         ruleManagerMock
-            .Setup(x => x.GetMatchingStallRule(It.IsAny<ITorrentItem>()))
+            .Setup(x => x.GetMatchingStallRule(It.IsAny<ITorrentItemWrapper>()))
             .Returns(stallRule);
 
         strikerMock
@@ -56,13 +56,12 @@ public class RuleEvaluatorTests
 
         long downloadedBytes = 0;
 
-        var torrentMock = new Mock<ITorrentItem>();
+        var torrentMock = new Mock<ITorrentItemWrapper>();
         torrentMock.SetupGet(t => t.Hash).Returns("hash");
         torrentMock.SetupGet(t => t.Name).Returns("Example Torrent");
         torrentMock.SetupGet(t => t.IsPrivate).Returns(false);
         torrentMock.SetupGet(t => t.Size).Returns(ByteSize.Parse("100 MB").Bytes);
         torrentMock.SetupGet(t => t.CompletionPercentage).Returns(50);
-        torrentMock.SetupGet(t => t.Trackers).Returns(Array.Empty<string>());
         torrentMock.SetupGet(t => t.DownloadedBytes).Returns(() => downloadedBytes);
 
         // Seed cache with initial observation (no reset expected)
@@ -91,7 +90,7 @@ public class RuleEvaluatorTests
         var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, memoryCache, loggerMock.Object);
 
         ruleManagerMock
-            .Setup(x => x.GetMatchingStallRule(It.IsAny<ITorrentItem>()))
+            .Setup(x => x.GetMatchingStallRule(It.IsAny<ITorrentItemWrapper>()))
             .Returns((StallRule?)null);
 
         var torrentMock = CreateTorrentMock();
@@ -115,7 +114,7 @@ public class RuleEvaluatorTests
         var stallRule = CreateStallRule("Stall Apply", resetOnProgress: false, maxStrikes: 5);
 
         ruleManagerMock
-            .Setup(x => x.GetMatchingStallRule(It.IsAny<ITorrentItem>()))
+            .Setup(x => x.GetMatchingStallRule(It.IsAny<ITorrentItemWrapper>()))
             .Returns(stallRule);
 
         strikerMock
@@ -144,7 +143,7 @@ public class RuleEvaluatorTests
         var stallRule = CreateStallRule("Stall Remove", resetOnProgress: false, maxStrikes: 6);
 
         ruleManagerMock
-            .Setup(x => x.GetMatchingStallRule(It.IsAny<ITorrentItem>()))
+            .Setup(x => x.GetMatchingStallRule(It.IsAny<ITorrentItemWrapper>()))
             .Returns(stallRule);
 
         strikerMock
@@ -172,7 +171,7 @@ public class RuleEvaluatorTests
         var failingRule = CreateStallRule("Failing", resetOnProgress: false, maxStrikes: 4);
 
         ruleManagerMock
-            .Setup(x => x.GetMatchingStallRule(It.IsAny<ITorrentItem>()))
+            .Setup(x => x.GetMatchingStallRule(It.IsAny<ITorrentItemWrapper>()))
             .Returns(failingRule);
 
         strikerMock
@@ -197,7 +196,7 @@ public class RuleEvaluatorTests
         var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, memoryCache, loggerMock.Object);
 
         ruleManagerMock
-            .Setup(x => x.GetMatchingSlowRule(It.IsAny<ITorrentItem>()))
+            .Setup(x => x.GetMatchingSlowRule(It.IsAny<ITorrentItemWrapper>()))
             .Returns((SlowRule?)null);
 
         var torrentMock = CreateTorrentMock();
@@ -221,7 +220,7 @@ public class RuleEvaluatorTests
         var slowRule = CreateSlowRule("Slow Apply", resetOnProgress: false, maxStrikes: 3);
 
         ruleManagerMock
-            .Setup(x => x.GetMatchingSlowRule(It.IsAny<ITorrentItem>()))
+            .Setup(x => x.GetMatchingSlowRule(It.IsAny<ITorrentItemWrapper>()))
             .Returns(slowRule);
 
         strikerMock
@@ -249,7 +248,7 @@ public class RuleEvaluatorTests
         var slowRule = CreateSlowRule("Slow Remove", resetOnProgress: false, maxStrikes: 8);
 
         ruleManagerMock
-            .Setup(x => x.GetMatchingSlowRule(It.IsAny<ITorrentItem>()))
+            .Setup(x => x.GetMatchingSlowRule(It.IsAny<ITorrentItemWrapper>()))
             .Returns(slowRule);
 
         strikerMock
@@ -277,7 +276,7 @@ public class RuleEvaluatorTests
         var slowRule = CreateSlowRule("Slow Progress", resetOnProgress: true, maxStrikes: 4);
 
         ruleManagerMock
-            .Setup(x => x.GetMatchingSlowRule(It.IsAny<ITorrentItem>()))
+            .Setup(x => x.GetMatchingSlowRule(It.IsAny<ITorrentItemWrapper>()))
             .Returns(slowRule);
 
         strikerMock
@@ -304,7 +303,7 @@ public class RuleEvaluatorTests
         var failingRule = CreateSlowRule("Failing Slow", resetOnProgress: false, maxStrikes: 4);
 
         ruleManagerMock
-            .Setup(x => x.GetMatchingSlowRule(It.IsAny<ITorrentItem>()))
+            .Setup(x => x.GetMatchingSlowRule(It.IsAny<ITorrentItemWrapper>()))
             .Returns(failingRule);
 
         strikerMock
@@ -336,7 +335,7 @@ public class RuleEvaluatorTests
             maxTimeHours: 0);
 
         ruleManagerMock
-            .Setup(x => x.GetMatchingSlowRule(It.IsAny<ITorrentItem>()))
+            .Setup(x => x.GetMatchingSlowRule(It.IsAny<ITorrentItemWrapper>()))
             .Returns(slowRule);
 
         strikerMock
@@ -374,7 +373,7 @@ public class RuleEvaluatorTests
             maxTimeHours: 2);
 
         ruleManagerMock
-            .Setup(x => x.GetMatchingSlowRule(It.IsAny<ITorrentItem>()))
+            .Setup(x => x.GetMatchingSlowRule(It.IsAny<ITorrentItemWrapper>()))
             .Returns(slowRule);
 
         strikerMock
@@ -408,7 +407,7 @@ public class RuleEvaluatorTests
             maxTimeHours: 0);
 
         ruleManagerMock
-            .Setup(x => x.GetMatchingSlowRule(It.IsAny<ITorrentItem>()))
+            .Setup(x => x.GetMatchingSlowRule(It.IsAny<ITorrentItemWrapper>()))
             .Returns(slowRule);
 
         var torrentMock = CreateTorrentMock();
@@ -437,7 +436,7 @@ public class RuleEvaluatorTests
             maxTimeHours: 0);
 
         ruleManagerMock
-            .Setup(x => x.GetMatchingSlowRule(It.IsAny<ITorrentItem>()))
+            .Setup(x => x.GetMatchingSlowRule(It.IsAny<ITorrentItemWrapper>()))
             .Returns(slowRule);
 
         strikerMock
@@ -469,7 +468,7 @@ public class RuleEvaluatorTests
             maxTimeHours: 0);
 
         ruleManagerMock
-            .Setup(x => x.GetMatchingSlowRule(It.IsAny<ITorrentItem>()))
+            .Setup(x => x.GetMatchingSlowRule(It.IsAny<ITorrentItemWrapper>()))
             .Returns(slowRule);
 
         var torrentMock = CreateTorrentMock();
@@ -497,7 +496,7 @@ public class RuleEvaluatorTests
             maxTimeHours: 2);
 
         ruleManagerMock
-            .Setup(x => x.GetMatchingSlowRule(It.IsAny<ITorrentItem>()))
+            .Setup(x => x.GetMatchingSlowRule(It.IsAny<ITorrentItemWrapper>()))
             .Returns(slowRule);
 
         var torrentMock = CreateTorrentMock();
@@ -525,7 +524,7 @@ public class RuleEvaluatorTests
             maxTimeHours: 0);
 
         ruleManagerMock
-            .Setup(x => x.GetMatchingSlowRule(It.IsAny<ITorrentItem>()))
+            .Setup(x => x.GetMatchingSlowRule(It.IsAny<ITorrentItemWrapper>()))
             .Returns(slowRule);
 
         strikerMock
@@ -559,7 +558,7 @@ public class RuleEvaluatorTests
             maxTimeHours: 1);
 
         ruleManagerMock
-            .Setup(x => x.GetMatchingSlowRule(It.IsAny<ITorrentItem>()))
+            .Setup(x => x.GetMatchingSlowRule(It.IsAny<ITorrentItemWrapper>()))
             .Returns(slowRule);
 
         strikerMock
@@ -588,7 +587,7 @@ public class RuleEvaluatorTests
         var stallRule = CreateStallRule("No Reset", resetOnProgress: false, maxStrikes: 3);
 
         ruleManagerMock
-            .Setup(x => x.GetMatchingStallRule(It.IsAny<ITorrentItem>()))
+            .Setup(x => x.GetMatchingStallRule(It.IsAny<ITorrentItemWrapper>()))
             .Returns(stallRule);
 
         strikerMock
@@ -620,7 +619,7 @@ public class RuleEvaluatorTests
         var stallRule = CreateStallRule("Reset No Minimum", resetOnProgress: true, maxStrikes: 3, minimumProgress: null);
 
         ruleManagerMock
-            .Setup(x => x.GetMatchingStallRule(It.IsAny<ITorrentItem>()))
+            .Setup(x => x.GetMatchingStallRule(It.IsAny<ITorrentItemWrapper>()))
             .Returns(stallRule);
 
         strikerMock
@@ -644,7 +643,7 @@ public class RuleEvaluatorTests
         strikerMock.Verify(x => x.ResetStrikeAsync("hash", "Example Torrent", StrikeType.Stalled), Times.Once);
     }
 
-    private static Mock<ITorrentItem> CreateTorrentMock(
+    private static Mock<ITorrentItemWrapper> CreateTorrentMock(
         Func<long>? downloadedBytesFactory = null,
         bool isPrivate = false,
         string hash = "hash",
@@ -652,13 +651,12 @@ public class RuleEvaluatorTests
         double completionPercentage = 50,
         string size = "100 MB")
     {
-        var torrentMock = new Mock<ITorrentItem>();
+        var torrentMock = new Mock<ITorrentItemWrapper>();
         torrentMock.SetupGet(t => t.Hash).Returns(hash);
         torrentMock.SetupGet(t => t.Name).Returns(name);
         torrentMock.SetupGet(t => t.IsPrivate).Returns(isPrivate);
         torrentMock.SetupGet(t => t.CompletionPercentage).Returns(completionPercentage);
         torrentMock.SetupGet(t => t.Size).Returns(ByteSize.Parse(size).Bytes);
-        torrentMock.SetupGet(t => t.Trackers).Returns(Array.Empty<string>());
         torrentMock.SetupGet(t => t.DownloadedBytes).Returns(() => downloadedBytesFactory?.Invoke() ?? 0);
         torrentMock.SetupGet(t => t.DownloadSpeed).Returns(0);
         torrentMock.SetupGet(t => t.Eta).Returns(7200);
@@ -720,7 +718,7 @@ public class RuleEvaluatorTests
         var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, memoryCache, loggerMock.Object);
 
         ruleManagerMock
-            .Setup(x => x.GetMatchingStallRule(It.IsAny<ITorrentItem>()))
+            .Setup(x => x.GetMatchingStallRule(It.IsAny<ITorrentItemWrapper>()))
             .Returns((StallRule?)null);
 
         var torrentMock = CreateTorrentMock();
@@ -745,7 +743,7 @@ public class RuleEvaluatorTests
         var stallRule = CreateStallRule("Test Rule", resetOnProgress: false, maxStrikes: 3, deletePrivateTorrentsFromClient: true);
 
         ruleManagerMock
-            .Setup(x => x.GetMatchingStallRule(It.IsAny<ITorrentItem>()))
+            .Setup(x => x.GetMatchingStallRule(It.IsAny<ITorrentItemWrapper>()))
             .Returns(stallRule);
 
         strikerMock
@@ -774,7 +772,7 @@ public class RuleEvaluatorTests
         var stallRule = CreateStallRule("Delete True Rule", resetOnProgress: false, maxStrikes: 3, deletePrivateTorrentsFromClient: true);
 
         ruleManagerMock
-            .Setup(x => x.GetMatchingStallRule(It.IsAny<ITorrentItem>()))
+            .Setup(x => x.GetMatchingStallRule(It.IsAny<ITorrentItemWrapper>()))
             .Returns(stallRule);
 
         strikerMock
@@ -803,7 +801,7 @@ public class RuleEvaluatorTests
         var stallRule = CreateStallRule("Delete False Rule", resetOnProgress: false, maxStrikes: 3, deletePrivateTorrentsFromClient: false);
 
         ruleManagerMock
-            .Setup(x => x.GetMatchingStallRule(It.IsAny<ITorrentItem>()))
+            .Setup(x => x.GetMatchingStallRule(It.IsAny<ITorrentItemWrapper>()))
             .Returns(stallRule);
 
         strikerMock
@@ -830,7 +828,7 @@ public class RuleEvaluatorTests
         var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, memoryCache, loggerMock.Object);
 
         ruleManagerMock
-            .Setup(x => x.GetMatchingSlowRule(It.IsAny<ITorrentItem>()))
+            .Setup(x => x.GetMatchingSlowRule(It.IsAny<ITorrentItemWrapper>()))
             .Returns((SlowRule?)null);
 
         var torrentMock = CreateTorrentMock();
@@ -855,7 +853,7 @@ public class RuleEvaluatorTests
         var slowRule = CreateSlowRule("Slow Delete True", resetOnProgress: false, maxStrikes: 3, maxTimeHours: 1, deletePrivateTorrentsFromClient: true);
 
         ruleManagerMock
-            .Setup(x => x.GetMatchingSlowRule(It.IsAny<ITorrentItem>()))
+            .Setup(x => x.GetMatchingSlowRule(It.IsAny<ITorrentItemWrapper>()))
             .Returns(slowRule);
 
         strikerMock
@@ -884,7 +882,7 @@ public class RuleEvaluatorTests
         var slowRule = CreateSlowRule("Slow Delete False", resetOnProgress: false, maxStrikes: 3, maxTimeHours: 1, deletePrivateTorrentsFromClient: false);
 
         ruleManagerMock
-            .Setup(x => x.GetMatchingSlowRule(It.IsAny<ITorrentItem>()))
+            .Setup(x => x.GetMatchingSlowRule(It.IsAny<ITorrentItemWrapper>()))
             .Returns(slowRule);
 
         strikerMock
@@ -919,7 +917,7 @@ public class RuleEvaluatorTests
             deletePrivateTorrentsFromClient: true);
 
         ruleManagerMock
-            .Setup(x => x.GetMatchingSlowRule(It.IsAny<ITorrentItem>()))
+            .Setup(x => x.GetMatchingSlowRule(It.IsAny<ITorrentItemWrapper>()))
             .Returns(slowRule);
 
         strikerMock
@@ -949,7 +947,7 @@ public class RuleEvaluatorTests
         var slowRule = CreateSlowRule("Test Slow Rule", resetOnProgress: false, maxStrikes: 3, maxTimeHours: 1, deletePrivateTorrentsFromClient: true);
 
         ruleManagerMock
-            .Setup(x => x.GetMatchingSlowRule(It.IsAny<ITorrentItem>()))
+            .Setup(x => x.GetMatchingSlowRule(It.IsAny<ITorrentItemWrapper>()))
             .Returns(slowRule);
 
         strikerMock

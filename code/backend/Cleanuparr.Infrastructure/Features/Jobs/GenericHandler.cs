@@ -1,8 +1,8 @@
 using Cleanuparr.Domain.Entities.Arr;
 using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Enums;
-using Cleanuparr.Infrastructure.Events;
-using Cleanuparr.Infrastructure.Features.Arr;
+using Cleanuparr.Infrastructure.Events.Interfaces;
+using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
 using Cleanuparr.Infrastructure.Features.DownloadRemover.Models;
@@ -27,20 +27,20 @@ public abstract class GenericHandler : IHandler
     protected readonly DataContext _dataContext;
     protected readonly IMemoryCache _cache;
     protected readonly IBus _messageBus;
-    protected readonly ArrClientFactory _arrClientFactory;
-    protected readonly ArrQueueIterator _arrArrQueueIterator;
-    protected readonly DownloadServiceFactory _downloadServiceFactory;
-    private readonly EventPublisher _eventPublisher;
+    protected readonly IArrClientFactory _arrClientFactory;
+    protected readonly IArrQueueIterator _arrArrQueueIterator;
+    protected readonly IDownloadServiceFactory _downloadServiceFactory;
+    private readonly IEventPublisher _eventPublisher;
 
     protected GenericHandler(
         ILogger<GenericHandler> logger,
         DataContext dataContext,
         IMemoryCache cache,
         IBus messageBus,
-        ArrClientFactory arrClientFactory,
-        ArrQueueIterator arrArrQueueIterator,
-        DownloadServiceFactory downloadServiceFactory,
-        EventPublisher eventPublisher
+        IArrClientFactory arrClientFactory,
+        IArrQueueIterator arrArrQueueIterator,
+        IDownloadServiceFactory downloadServiceFactory,
+        IEventPublisher eventPublisher
     )
     {
         _logger = logger;

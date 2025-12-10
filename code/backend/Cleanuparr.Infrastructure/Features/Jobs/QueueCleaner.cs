@@ -1,7 +1,6 @@
 using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Enums;
-using Cleanuparr.Infrastructure.Events;
-using Cleanuparr.Infrastructure.Features.Arr;
+using Cleanuparr.Infrastructure.Events.Interfaces;
 using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
@@ -26,10 +25,10 @@ public sealed class QueueCleaner : GenericHandler
         DataContext dataContext,
         IMemoryCache cache,
         IBus messageBus,
-        ArrClientFactory arrClientFactory,
-        ArrQueueIterator arrArrQueueIterator,
-        DownloadServiceFactory downloadServiceFactory,
-        EventPublisher eventPublisher
+        IArrClientFactory arrClientFactory,
+        IArrQueueIterator arrArrQueueIterator,
+        IDownloadServiceFactory downloadServiceFactory,
+        IEventPublisher eventPublisher
     ) : base(
         logger, dataContext, cache, messageBus,
         arrClientFactory, arrArrQueueIterator, downloadServiceFactory, eventPublisher
@@ -124,7 +123,7 @@ public sealed class QueueCleaner : GenericHandler
                 
                 if (ignoredDownloads.Contains(record.DownloadId, StringComparer.InvariantCultureIgnoreCase))
                 {
-                    _logger.LogInformation("skip | {title} | ignored", record.Title);
+                    _logger.LogInformation("skip | download is ignored | {name}", record.Title);
                     continue;
                 }
                 
