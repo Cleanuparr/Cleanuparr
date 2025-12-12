@@ -4,6 +4,7 @@ using Cleanuparr.Infrastructure.Features.Notifications.Apprise;
 using Cleanuparr.Infrastructure.Features.Notifications.Models;
 using Cleanuparr.Infrastructure.Features.Notifications.Notifiarr;
 using Cleanuparr.Infrastructure.Features.Notifications.Ntfy;
+using Cleanuparr.Infrastructure.Features.Notifications.Pushover;
 using Cleanuparr.Persistence.Models.Configuration.Notification;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
@@ -16,6 +17,7 @@ public class NotificationProviderFactoryTests
     private readonly Mock<IAppriseProxy> _appriseProxyMock;
     private readonly Mock<INtfyProxy> _ntfyProxyMock;
     private readonly Mock<INotifiarrProxy> _notifiarrProxyMock;
+    private readonly Mock<IPushoverProxy> _pushoverProxyMock;
     private readonly IServiceProvider _serviceProvider;
     private readonly NotificationProviderFactory _factory;
 
@@ -24,11 +26,13 @@ public class NotificationProviderFactoryTests
         _appriseProxyMock = new Mock<IAppriseProxy>();
         _ntfyProxyMock = new Mock<INtfyProxy>();
         _notifiarrProxyMock = new Mock<INotifiarrProxy>();
+        _pushoverProxyMock = new Mock<IPushoverProxy>();
 
         var services = new ServiceCollection();
         services.AddSingleton(_appriseProxyMock.Object);
         services.AddSingleton(_ntfyProxyMock.Object);
         services.AddSingleton(_notifiarrProxyMock.Object);
+        services.AddSingleton(_pushoverProxyMock.Object);
 
         _serviceProvider = services.BuildServiceProvider();
         _factory = new NotificationProviderFactory(_serviceProvider);
@@ -123,6 +127,38 @@ public class NotificationProviderFactoryTests
     }
 
     [Fact]
+    public void CreateProvider_PushoverType_CreatesPushoverProvider()
+    {
+        // Arrange
+        var config = new NotificationProviderDto
+        {
+            Id = Guid.NewGuid(),
+            Name = "TestPushover",
+            Type = NotificationProviderType.Pushover,
+            IsEnabled = true,
+            Configuration = new PushoverConfig
+            {
+                Id = Guid.NewGuid(),
+                ApiToken = "test-api-token",
+                UserKey = "test-user-key",
+                Devices = new List<string>(),
+                Priority = PushoverPriority.Normal,
+                Sound = "",
+                Tags = new List<string>()
+            }
+        };
+
+        // Act
+        var provider = _factory.CreateProvider(config);
+
+        // Assert
+        Assert.NotNull(provider);
+        Assert.IsType<PushoverProvider>(provider);
+        Assert.Equal("TestPushover", provider.Name);
+        Assert.Equal(NotificationProviderType.Pushover, provider.Type);
+    }
+
+    [Fact]
     public void CreateProvider_UnsupportedType_ThrowsNotSupportedException()
     {
         // Arrange
@@ -201,7 +237,8 @@ public class NotificationProviderFactoryTests
         {
             (Type: NotificationProviderType.Apprise, Config: (object)new AppriseConfig { Id = Guid.NewGuid(), Url = "http://test.com", Key = "key" }),
             (Type: NotificationProviderType.Ntfy, Config: (object)new NtfyConfig { Id = Guid.NewGuid(), ServerUrl = "http://test.com", Topics = new List<string> { "t" }, AuthenticationType = NtfyAuthenticationType.None, Priority = NtfyPriority.Default }),
-            (Type: NotificationProviderType.Notifiarr, Config: (object)new NotifiarrConfig { Id = Guid.NewGuid(), ApiKey = "1234567890", ChannelId = "12345" })
+            (Type: NotificationProviderType.Notifiarr, Config: (object)new NotifiarrConfig { Id = Guid.NewGuid(), ApiKey = "1234567890", ChannelId = "12345" }),
+            (Type: NotificationProviderType.Pushover, Config: (object)new PushoverConfig { Id = Guid.NewGuid(), ApiToken = "token", UserKey = "user", Devices = new List<string>(), Priority = PushoverPriority.Normal, Sound = "", Tags = new List<string>() })
         };
 
         foreach (var (type, configObj) in configs)

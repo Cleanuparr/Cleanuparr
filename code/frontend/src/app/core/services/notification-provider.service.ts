@@ -2,14 +2,15 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { ApplicationPathService } from './base-path.service';
-import { 
-  NotificationProvidersConfig, 
-  NotificationProviderDto, 
+import {
+  NotificationProvidersConfig,
+  NotificationProviderDto,
   TestNotificationResult
 } from '../../shared/models/notification-provider.model';
 import { NotificationProviderType } from '../../shared/models/enums';
 import { NtfyAuthenticationType } from '../../shared/models/ntfy-authentication-type.enum';
 import { NtfyPriority } from '../../shared/models/ntfy-priority.enum';
+import { PushoverPriority } from '../../shared/models/pushover-priority.enum';
 
 // Provider-specific interfaces
 export interface CreateNotifiarrProviderRequest {
@@ -126,6 +127,55 @@ export interface TestNtfyProviderRequest {
   tags: string[];
 }
 
+export interface CreatePushoverProviderRequest {
+  name: string;
+  isEnabled: boolean;
+  onFailedImportStrike: boolean;
+  onStalledStrike: boolean;
+  onSlowStrike: boolean;
+  onQueueItemDeleted: boolean;
+  onDownloadCleaned: boolean;
+  onCategoryChanged: boolean;
+  apiToken: string;
+  userKey: string;
+  devices: string[];
+  priority: PushoverPriority;
+  sound: string | null;
+  retry: number | null;
+  expire: number | null;
+  tags: string[];
+}
+
+export interface UpdatePushoverProviderRequest {
+  name: string;
+  isEnabled: boolean;
+  onFailedImportStrike: boolean;
+  onStalledStrike: boolean;
+  onSlowStrike: boolean;
+  onQueueItemDeleted: boolean;
+  onDownloadCleaned: boolean;
+  onCategoryChanged: boolean;
+  apiToken: string;
+  userKey: string;
+  devices: string[];
+  priority: PushoverPriority;
+  sound: string | null;
+  retry: number | null;
+  expire: number | null;
+  tags: string[];
+}
+
+export interface TestPushoverProviderRequest {
+  apiToken: string;
+  userKey: string;
+  devices: string[];
+  priority: PushoverPriority;
+  sound: string | null;
+  retry: number | null;
+  expire: number | null;
+  tags: string[];
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -163,6 +213,13 @@ export class NotificationProviderService {
   }
 
   /**
+   * Create a new Pushover provider
+   */
+  createPushoverProvider(provider: CreatePushoverProviderRequest): Observable<NotificationProviderDto> {
+    return this.http.post<NotificationProviderDto>(`${this.baseUrl}/pushover`, provider);
+  }
+
+  /**
    * Update an existing Notifiarr provider
    */
   updateNotifiarrProvider(id: string, provider: UpdateNotifiarrProviderRequest): Observable<NotificationProviderDto> {
@@ -181,6 +238,13 @@ export class NotificationProviderService {
    */
   updateNtfyProvider(id: string, provider: UpdateNtfyProviderRequest): Observable<NotificationProviderDto> {
     return this.http.put<NotificationProviderDto>(`${this.baseUrl}/ntfy/${id}`, provider);
+  }
+
+  /**
+   * Update an existing Pushover provider
+   */
+  updatePushoverProvider(id: string, provider: UpdatePushoverProviderRequest): Observable<NotificationProviderDto> {
+    return this.http.put<NotificationProviderDto>(`${this.baseUrl}/pushover/${id}`, provider);
   }
 
   /**
@@ -212,16 +276,25 @@ export class NotificationProviderService {
   }
 
   /**
+   * Test a Pushover provider (without ID - for testing configuration before saving)
+   */
+  testPushoverProvider(testRequest: TestPushoverProviderRequest): Observable<TestNotificationResult> {
+    return this.http.post<TestNotificationResult>(`${this.baseUrl}/pushover/test`, testRequest);
+  }
+
+  /**
    * Generic create method that delegates to provider-specific methods
    */
   createProvider(provider: any, type: NotificationProviderType): Observable<NotificationProviderDto> {
     switch (type) {
       case NotificationProviderType.Notifiarr:
-  return this.createNotifiarrProvider(provider as CreateNotifiarrProviderRequest);
+        return this.createNotifiarrProvider(provider as CreateNotifiarrProviderRequest);
       case NotificationProviderType.Apprise:
-  return this.createAppriseProvider(provider as CreateAppriseProviderRequest);
+        return this.createAppriseProvider(provider as CreateAppriseProviderRequest);
       case NotificationProviderType.Ntfy:
-  return this.createNtfyProvider(provider as CreateNtfyProviderRequest);
+        return this.createNtfyProvider(provider as CreateNtfyProviderRequest);
+      case NotificationProviderType.Pushover:
+        return this.createPushoverProvider(provider as CreatePushoverProviderRequest);
       default:
         throw new Error(`Unsupported provider type: ${type}`);
     }
@@ -233,11 +306,13 @@ export class NotificationProviderService {
   updateProvider(id: string, provider: any, type: NotificationProviderType): Observable<NotificationProviderDto> {
     switch (type) {
       case NotificationProviderType.Notifiarr:
-  return this.updateNotifiarrProvider(id, provider as UpdateNotifiarrProviderRequest);
+        return this.updateNotifiarrProvider(id, provider as UpdateNotifiarrProviderRequest);
       case NotificationProviderType.Apprise:
-  return this.updateAppriseProvider(id, provider as UpdateAppriseProviderRequest);
+        return this.updateAppriseProvider(id, provider as UpdateAppriseProviderRequest);
       case NotificationProviderType.Ntfy:
-  return this.updateNtfyProvider(id, provider as UpdateNtfyProviderRequest);
+        return this.updateNtfyProvider(id, provider as UpdateNtfyProviderRequest);
+      case NotificationProviderType.Pushover:
+        return this.updatePushoverProvider(id, provider as UpdatePushoverProviderRequest);
       default:
         throw new Error(`Unsupported provider type: ${type}`);
     }
@@ -249,11 +324,13 @@ export class NotificationProviderService {
   testProvider(testRequest: any, type: NotificationProviderType): Observable<TestNotificationResult> {
     switch (type) {
       case NotificationProviderType.Notifiarr:
-  return this.testNotifiarrProvider(testRequest as TestNotifiarrProviderRequest);
+        return this.testNotifiarrProvider(testRequest as TestNotifiarrProviderRequest);
       case NotificationProviderType.Apprise:
-  return this.testAppriseProvider(testRequest as TestAppriseProviderRequest);
+        return this.testAppriseProvider(testRequest as TestAppriseProviderRequest);
       case NotificationProviderType.Ntfy:
-  return this.testNtfyProvider(testRequest as TestNtfyProviderRequest);
+        return this.testNtfyProvider(testRequest as TestNtfyProviderRequest);
+      case NotificationProviderType.Pushover:
+        return this.testPushoverProvider(testRequest as TestPushoverProviderRequest);
       default:
         throw new Error(`Unsupported provider type: ${type}`);
     }

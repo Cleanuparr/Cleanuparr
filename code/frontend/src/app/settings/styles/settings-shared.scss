@@ -131,3 +131,22 @@
   padding-top: 1rem;
   border-top: 1px solid var(--surface-border);
 }
+
+.field-input {
+  width: 70%;
+}
+
+.form-helper-text {
+  display: block;
+  color: var(--text-color-secondary);
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.form-error-text {
+  display: block;
+  color: var(--text-color-secondary);
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  color: red;
+}

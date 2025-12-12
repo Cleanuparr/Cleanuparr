@@ -44,6 +44,7 @@ public sealed class NotificationProvidersController : ControllerBase
                 .Include(p => p.NotifiarrConfiguration)
                 .Include(p => p.AppriseConfiguration)
                 .Include(p => p.NtfyConfiguration)
+                .Include(p => p.PushoverConfiguration)
                 .AsNoTracking()
                 .ToListAsync();
 
@@ -68,6 +69,7 @@ public sealed class NotificationProvidersController : ControllerBase
                         NotificationProviderType.Notifiarr => p.NotifiarrConfiguration ?? new object(),
                         NotificationProviderType.Apprise => p.AppriseConfiguration ?? new object(),
                         NotificationProviderType.Ntfy => p.NtfyConfiguration ?? new object(),
+                        NotificationProviderType.Pushover => p.PushoverConfiguration ?? new object(),
                         _ => new object()
                     }
                 })
@@ -524,6 +526,7 @@ public sealed class NotificationProvidersController : ControllerBase
                 .Include(p => p.NotifiarrConfiguration)
                 .Include(p => p.AppriseConfiguration)
                 .Include(p => p.NtfyConfiguration)
+                .Include(p => p.PushoverConfiguration)
                 .FirstOrDefaultAsync(p => p.Id == id);
 
             if (existingProvider == null)
@@ -701,8 +704,207 @@ public sealed class NotificationProvidersController : ControllerBase
                 NotificationProviderType.Notifiarr => provider.NotifiarrConfiguration ?? new object(),
                 NotificationProviderType.Apprise => provider.AppriseConfiguration ?? new object(),
                 NotificationProviderType.Ntfy => provider.NtfyConfiguration ?? new object(),
+                NotificationProviderType.Pushover => provider.PushoverConfiguration ?? new object(),
                 _ => new object()
             }
         };
+    }
+
+    [HttpPost("pushover")]
+    public async Task<IActionResult> CreatePushoverProvider([FromBody] CreatePushoverProviderRequest newProvider)
+    {
+        await DataContext.Lock.WaitAsync();
+        try
+        {
+            if (string.IsNullOrWhiteSpace(newProvider.Name))
+            {
+                return BadRequest("Provider name is required");
+            }
+
+            var duplicateConfig = await _dataContext.NotificationConfigs.CountAsync(x => x.Name == newProvider.Name);
+            if (duplicateConfig > 0)
+            {
+                return BadRequest("A provider with this name already exists");
+            }
+
+            var pushoverConfig = new PushoverConfig
+            {
+                ApiToken = newProvider.ApiToken,
+                UserKey = newProvider.UserKey,
+                Devices = newProvider.Devices,
+                Priority = newProvider.Priority,
+                Sound = newProvider.Sound,
+                Retry = newProvider.Retry,
+                Expire = newProvider.Expire,
+                Tags = newProvider.Tags
+            };
+            pushoverConfig.Validate();
+
+            var provider = new NotificationConfig
+            {
+                Name = newProvider.Name,
+                Type = NotificationProviderType.Pushover,
+                IsEnabled = newProvider.IsEnabled,
+                OnFailedImportStrike = newProvider.OnFailedImportStrike,
+                OnStalledStrike = newProvider.OnStalledStrike,
+                OnSlowStrike = newProvider.OnSlowStrike,
+                OnQueueItemDeleted = newProvider.OnQueueItemDeleted,
+                OnDownloadCleaned = newProvider.OnDownloadCleaned,
+                OnCategoryChanged = newProvider.OnCategoryChanged,
+                PushoverConfiguration = pushoverConfig
+            };
+
+            _dataContext.NotificationConfigs.Add(provider);
+            await _dataContext.SaveChangesAsync();
+
+            await _notificationConfigurationService.InvalidateCacheAsync();
+
+            var providerDto = MapProvider(provider);
+            return CreatedAtAction(nameof(GetNotificationProviders), new { id = provider.Id }, providerDto);
+        }
+        catch (ValidationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to create Pushover provider");
+            throw;
+        }
+        finally
+        {
+            DataContext.Lock.Release();
+        }
+    }
+
+    [HttpPut("pushover/{id:guid}")]
+    public async Task<IActionResult> UpdatePushoverProvider(Guid id, [FromBody] UpdatePushoverProviderRequest updatedProvider)
+    {
+        await DataContext.Lock.WaitAsync();
+        try
+        {
+            var existingProvider = await _dataContext.NotificationConfigs
+                .Include(p => p.PushoverConfiguration)
+                .FirstOrDefaultAsync(p => p.Id == id && p.Type == NotificationProviderType.Pushover);
+
+            if (existingProvider == null)
+            {
+                return NotFound($"Pushover provider with ID {id} not found");
+            }
+
+            if (string.IsNullOrWhiteSpace(updatedProvider.Name))
+            {
+                return BadRequest("Provider name is required");
+            }
+
+            var duplicateConfig = await _dataContext.NotificationConfigs
+                .Where(x => x.Id != id)
+                .Where(x => x.Name == updatedProvider.Name)
+                .CountAsync();
+            if (duplicateConfig > 0)
+            {
+                return BadRequest("A provider with this name already exists");
+            }
+
+            var pushoverConfig = new PushoverConfig
+            {
+                ApiToken = updatedProvider.ApiToken,
+                UserKey = updatedProvider.UserKey,
+                Devices = updatedProvider.Devices,
+                Priority = updatedProvider.Priority,
+                Sound = updatedProvider.Sound,
+                Retry = updatedProvider.Retry,
+                Expire = updatedProvider.Expire,
+                Tags = updatedProvider.Tags
+            };
+
+            if (existingProvider.PushoverConfiguration != null)
+            {
+                pushoverConfig = pushoverConfig with { Id = existingProvider.PushoverConfiguration.Id };
+            }
+            pushoverConfig.Validate();
+
+            var newProvider = existingProvider with
+            {
+                Name = updatedProvider.Name,
+                IsEnabled = updatedProvider.IsEnabled,
+                OnFailedImportStrike = updatedProvider.OnFailedImportStrike,
+                OnStalledStrike = updatedProvider.OnStalledStrike,
+                OnSlowStrike = updatedProvider.OnSlowStrike,
+                OnQueueItemDeleted = updatedProvider.OnQueueItemDeleted,
+                OnDownloadCleaned = updatedProvider.OnDownloadCleaned,
+                OnCategoryChanged = updatedProvider.OnCategoryChanged,
+                PushoverConfiguration = pushoverConfig,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            _dataContext.NotificationConfigs.Remove(existingProvider);
+            _dataContext.NotificationConfigs.Add(newProvider);
+
+            await _dataContext.SaveChangesAsync();
+            await _notificationConfigurationService.InvalidateCacheAsync();
+
+            var providerDto = MapProvider(newProvider);
+            return Ok(providerDto);
+        }
+        catch (ValidationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to update Pushover provider with ID {Id}", id);
+            throw;
+        }
+        finally
+        {
+            DataContext.Lock.Release();
+        }
+    }
+
+    [HttpPost("pushover/test")]
+    public async Task<IActionResult> TestPushoverProvider([FromBody] TestPushoverProviderRequest testRequest)
+    {
+        try
+        {
+            var pushoverConfig = new PushoverConfig
+            {
+                ApiToken = testRequest.ApiToken,
+                UserKey = testRequest.UserKey,
+                Devices = testRequest.Devices,
+                Priority = testRequest.Priority,
+                Sound = testRequest.Sound,
+                Retry = testRequest.Retry,
+                Expire = testRequest.Expire,
+                Tags = testRequest.Tags
+            };
+            pushoverConfig.Validate();
+
+            var providerDto = new NotificationProviderDto
+            {
+                Id = Guid.NewGuid(),
+                Name = "Test Provider",
+                Type = NotificationProviderType.Pushover,
+                IsEnabled = true,
+                Events = new NotificationEventFlags
+                {
+                    OnFailedImportStrike = true,
+                    OnStalledStrike = false,
+                    OnSlowStrike = false,
+                    OnQueueItemDeleted = false,
+                    OnDownloadCleaned = false,
+                    OnCategoryChanged = false
+                },
+                Configuration = pushoverConfig
+            };
+
+            await _notificationService.SendTestNotificationAsync(providerDto);
+            return Ok(new { Message = "Test notification sent successfully", Success = true });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to test Pushover provider");
+            throw;
+        }
     }
 }

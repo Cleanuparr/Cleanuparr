@@ -187,6 +187,17 @@
   (test)="onNtfyTest($event)"
 ></app-ntfy-provider>
 
+<!-- Pushover Provider Modal -->
+<app-pushover-provider
+  [visible]="showPushoverModal"
+  [editingProvider]="editingProvider"
+  [saving]="saving()"
+  [testing]="testing()"
+  (save)="onPushoverSave($event)"
+  (cancel)="onProviderCancel()"
+  (test)="onPushoverTest($event)"
+></app-pushover-provider>
+
 <!-- Confirmation Dialog -->
 <p-confirmDialog></p-confirmDialog>
 

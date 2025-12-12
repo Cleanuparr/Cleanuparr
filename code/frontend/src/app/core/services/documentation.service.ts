@@ -133,6 +133,16 @@ export class DocumentationService {
       'ntfy.priority': 'priority',
       'ntfy.tags': 'tags'
     },
+    'notifications/pushover': {
+      'pushover.apiToken': 'pushover.apiToken',
+      'pushover.userKey': 'pushover.userKey',
+      'pushover.devices': 'pushover.devices',
+      'pushover.priority': 'pushover.priority',
+      'pushover.retry': 'pushover.retry',
+      'pushover.expire': 'pushover.expire',
+      'pushover.sound': 'pushover.sound',
+      'pushover.tags': 'pushover.tags'
+    },
   };
 
   constructor(private applicationPathService: ApplicationPathService) {}

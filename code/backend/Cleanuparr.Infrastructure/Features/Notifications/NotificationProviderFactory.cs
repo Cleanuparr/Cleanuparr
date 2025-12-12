@@ -3,6 +3,7 @@ using Cleanuparr.Infrastructure.Features.Notifications.Apprise;
 using Cleanuparr.Infrastructure.Features.Notifications.Models;
 using Cleanuparr.Infrastructure.Features.Notifications.Notifiarr;
 using Cleanuparr.Infrastructure.Features.Notifications.Ntfy;
+using Cleanuparr.Infrastructure.Features.Notifications.Pushover;
 using Cleanuparr.Persistence.Models.Configuration.Notification;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -24,6 +25,7 @@ public sealed class NotificationProviderFactory : INotificationProviderFactory
             NotificationProviderType.Notifiarr => CreateNotifiarrProvider(config),
             NotificationProviderType.Apprise => CreateAppriseProvider(config),
             NotificationProviderType.Ntfy => CreateNtfyProvider(config),
+            NotificationProviderType.Pushover => CreatePushoverProvider(config),
             _ => throw new NotSupportedException($"Provider type {config.Type} is not supported")
         };
     }
@@ -48,7 +50,15 @@ public sealed class NotificationProviderFactory : INotificationProviderFactory
     {
         var ntfyConfig = (NtfyConfig)config.Configuration;
         var proxy = _serviceProvider.GetRequiredService<INtfyProxy>();
-        
+
         return new NtfyProvider(config.Name, config.Type, ntfyConfig, proxy);
+    }
+
+    private INotificationProvider CreatePushoverProvider(NotificationProviderDto config)
+    {
+        var pushoverConfig = (PushoverConfig)config.Configuration;
+        var proxy = _serviceProvider.GetRequiredService<IPushoverProxy>();
+
+        return new PushoverProvider(config.Name, config.Type, pushoverConfig, proxy);
     }
 }

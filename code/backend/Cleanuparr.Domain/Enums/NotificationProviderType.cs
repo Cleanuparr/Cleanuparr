@@ -4,5 +4,6 @@ public enum NotificationProviderType
 {
     Notifiarr,
     Apprise,
-    Ntfy
+    Ntfy,
+    Pushover
 }
