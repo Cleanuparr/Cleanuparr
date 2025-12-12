@@ -64,23 +64,10 @@
         ></i>
         Devices (Optional)
       </label>
-      <!-- Mobile-friendly autocomplete (chips UI) -->
       <app-mobile-autocomplete
         [formControl]="devicesControl"
-        placeholder="Enter device names"
+        placeholder="Add device name and press Enter"
       ></app-mobile-autocomplete>
-
-      <!-- Desktop autocomplete (allows multiple entries) -->
-      <p-autocomplete
-        id="devices"
-        [formControl]="devicesControl"
-        multiple
-        fluid
-        [typeahead]="false"
-        placeholder="Add a device and press Enter"
-        class="desktop-only w-full"
-      ></p-autocomplete>
-
       <small class="form-helper-text">Leave empty to send to all devices, or enter specific device names.</small>
     </div>
 
@@ -205,23 +192,10 @@
         ></i>
         Tags (Optional)
       </label>
-      <!-- Mobile-friendly autocomplete (chips UI) -->
       <app-mobile-autocomplete
         [formControl]="tagsControl"
-        placeholder="Enter tag names"
+        placeholder="Add tag and press Enter"
       ></app-mobile-autocomplete>
-
-      <!-- Desktop autocomplete (allows multiple entries) -->
-      <p-autocomplete
-        id="tags"
-        [formControl]="tagsControl"
-        multiple
-        fluid
-        [typeahead]="false"
-        placeholder="Add a tag and press Enter"
-        class="desktop-only w-full"
-      ></p-autocomplete>
-
       <small class="form-helper-text">Tags for receipt tracking and batch cancellation of emergency notifications.</small>
     </div>
   </div>

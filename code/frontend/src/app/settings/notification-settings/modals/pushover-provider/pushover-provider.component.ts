@@ -3,7 +3,6 @@ import { FormControl, Validators, ReactiveFormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { InputTextModule } from 'primeng/inputtext';
 import { InputNumberModule } from 'primeng/inputnumber';
-import { AutoCompleteModule } from 'primeng/autocomplete';
 import { SelectModule } from 'primeng/select';
 import { MobileAutocompleteComponent } from '../../../../shared/components/mobile-autocomplete/mobile-autocomplete.component';
 import { PushoverFormData, BaseProviderFormData } from '../../models/provider-modal.model';
@@ -21,7 +20,6 @@ import { PushoverSounds } from '../../../../shared/models/pushover-sounds';
     ReactiveFormsModule,
     InputTextModule,
     InputNumberModule,
-    AutoCompleteModule,
     SelectModule,
     MobileAutocompleteComponent,
     NotificationProviderBaseComponent
