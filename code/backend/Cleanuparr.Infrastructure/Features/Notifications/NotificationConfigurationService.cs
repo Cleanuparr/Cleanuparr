@@ -86,6 +86,7 @@ public sealed class NotificationConfigurationService : INotificationConfiguratio
                 .Include(p => p.NotifiarrConfiguration)
                 .Include(p => p.AppriseConfiguration)
                 .Include(p => p.NtfyConfiguration)
+                .Include(p => p.PushoverConfiguration)
                 .AsNoTracking()
                 .ToListAsync();
 
@@ -132,10 +133,11 @@ public sealed class NotificationConfigurationService : INotificationConfiguratio
 
         var configuration = config.Type switch
         {
-            NotificationProviderType.Notifiarr => config.NotifiarrConfiguration,
+            NotificationProviderType.Notifiarr => config.NotifiarrConfiguration as object,
             NotificationProviderType.Apprise => config.AppriseConfiguration,
             NotificationProviderType.Ntfy => config.NtfyConfiguration,
-            _ => new object()
+            NotificationProviderType.Pushover => config.PushoverConfiguration,
+            _ => throw new ArgumentOutOfRangeException(nameof(config), $"Config type for provider type {config.Type.ToString()} is not registered")
         };
 
         return new NotificationProviderDto
