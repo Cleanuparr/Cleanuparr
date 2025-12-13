@@ -61,7 +61,7 @@ jobs:
 
       - name: Run tests
         id: run-tests
-        run: dotnet test code/backend/cleanuparr.sln --configuration Release --no-build --verbosity normal --logger trx --collect:"XPlat Code Coverage" --results-directory ./coverage
+        run: dotnet test code/backend/cleanuparr.sln --configuration Release --no-build --verbosity normal --logger trx --collect:"XPlat Code Coverage" --settings code/backend/coverage.runsettings --results-directory ./coverage
 
       - name: Upload test results
         uses: actions/upload-artifact@v4
