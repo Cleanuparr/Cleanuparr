@@ -92,7 +92,7 @@ public sealed class DownloadServiceFactory : IDownloadServiceFactory
         var hardLinkFileService = _serviceProvider.GetRequiredService<IHardLinkFileService>();
         var httpClientProvider = _serviceProvider.GetRequiredService<IDynamicHttpClientProvider>();
         var eventPublisher = _serviceProvider.GetRequiredService<IEventPublisher>();
-        var blocklistProvider = _serviceProvider.GetRequiredService<BlocklistProvider>();
+        var blocklistProvider = _serviceProvider.GetRequiredService<IBlocklistProvider>();
 
         var ruleEvaluator = _serviceProvider.GetRequiredService<IRuleEvaluator>();
         var ruleManager = _serviceProvider.GetRequiredService<IRuleManager>();
@@ -116,7 +116,7 @@ public sealed class DownloadServiceFactory : IDownloadServiceFactory
         var hardLinkFileService = _serviceProvider.GetRequiredService<IHardLinkFileService>();
         var httpClientProvider = _serviceProvider.GetRequiredService<IDynamicHttpClientProvider>();
         var eventPublisher = _serviceProvider.GetRequiredService<IEventPublisher>();
-        var blocklistProvider = _serviceProvider.GetRequiredService<BlocklistProvider>();
+        var blocklistProvider = _serviceProvider.GetRequiredService<IBlocklistProvider>();
 
         var ruleEvaluator = _serviceProvider.GetRequiredService<IRuleEvaluator>();
         var ruleManager = _serviceProvider.GetRequiredService<IRuleManager>();
@@ -140,7 +140,7 @@ public sealed class DownloadServiceFactory : IDownloadServiceFactory
         var hardLinkFileService = _serviceProvider.GetRequiredService<IHardLinkFileService>();
         var httpClientProvider = _serviceProvider.GetRequiredService<IDynamicHttpClientProvider>();
         var eventPublisher = _serviceProvider.GetRequiredService<IEventPublisher>();
-        var blocklistProvider = _serviceProvider.GetRequiredService<BlocklistProvider>();
+        var blocklistProvider = _serviceProvider.GetRequiredService<IBlocklistProvider>();
         var loggerFactory = _serviceProvider.GetRequiredService<ILoggerFactory>();
 
         var ruleEvaluator = _serviceProvider.GetRequiredService<IRuleEvaluator>();

@@ -86,7 +86,7 @@ public class DownloadServiceFactoryTests : IDisposable
         // BlocklistProvider requires specific constructor arguments
         var scopeFactoryMock = new Mock<IServiceScopeFactory>();
 
-        services.AddSingleton(new BlocklistProvider(
+        services.AddSingleton<IBlocklistProvider>(new BlocklistProvider(
             Mock.Of<ILogger<BlocklistProvider>>(),
             scopeFactoryMock.Object,
             _memoryCache));

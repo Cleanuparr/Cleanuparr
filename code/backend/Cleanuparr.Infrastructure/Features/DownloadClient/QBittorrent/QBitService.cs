@@ -51,7 +51,7 @@ public partial class QBitService : DownloadService, IQBitService
         IHardLinkFileService hardLinkFileService,
         IDynamicHttpClientProvider httpClientProvider,
         IEventPublisher eventPublisher,
-        BlocklistProvider blocklistProvider,
+        IBlocklistProvider blocklistProvider,
         DownloadClientConfig downloadClientConfig,
         IRuleEvaluator ruleEvaluator,
         IRuleManager ruleManager,
