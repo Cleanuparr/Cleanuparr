@@ -1,0 +1,139 @@
+---
+sidebar_position: 4
+---
+
+import {
+  ConfigSection,
+  ElementNavigator,
+  SectionTitle,
+  styles
+} from '@site/src/components/documentation';
+
+# Pushover
+
+Pushover is a service for sending real-time notifications to your Android, iPhone, iPad, and Desktop devices.
+
+<ElementNavigator />
+
+<div className={styles.documentationPage}>
+
+<div className={styles.section}>
+
+<SectionTitle icon="🔔">Configuration</SectionTitle>
+
+<p className={styles.sectionDescription}>
+  Configure Pushover to send push notifications to your devices.
+</p>
+
+<ConfigSection
+  title="API Token"
+  icon="🔑"
+  id="pushover.apiToken"
+>
+
+Your Pushover application API token. Create one at [pushover.net/apps/build](https://pushover.net/apps/build).
+
+Each application you create on Pushover gets a unique API token that identifies it when sending notifications.
+
+</ConfigSection>
+
+<ConfigSection
+  title="User Key"
+  icon="👤"
+  id="pushover.userKey"
+>
+
+Your Pushover user or group key. Find this on your [Pushover dashboard](https://pushover.net/).
+
+- **User Key**: Sends notifications to all your registered devices
+- **Group Key**: Sends notifications to a group of users (useful for team notifications)
+
+</ConfigSection>
+
+<ConfigSection
+  title="Devices"
+  icon="📱"
+  id="pushover.devices"
+>
+
+Optionally specify device names to send notifications to specific devices only. Leave empty to send to all devices registered with your Pushover account.
+
+Device names can be found in your Pushover app settings on each device.
+
+</ConfigSection>
+
+<ConfigSection
+  title="Priority"
+  icon="🔥"
+  id="pushover.priority"
+>
+
+The priority level for notifications:
+
+- **Lowest (-2)**: No notification/alert will be generated
+- **Low (-1)**: Quiet notification, no sound or vibration but shown in notification list
+- **Normal (0)**: Default priority with standard sound and vibration
+- **High (1)**: Bypasses user's quiet hours settings
+- **Emergency (2)**: Requires acknowledgment, will repeat notification until acknowledged
+
+Reference: [Pushover Message Priority](https://pushover.net/api#priority)
+
+</ConfigSection>
+
+<ConfigSection
+  title="Retry"
+  icon="🔄"
+  id="pushover.retry"
+>
+
+**Only applicable for Emergency priority notifications.**
+
+How often (in seconds) the notification will be retried until acknowledged. The minimum value is 30 seconds.
+
+For example, setting this to 60 means the notification will be resent every 60 seconds until the user acknowledges it.
+
+</ConfigSection>
+
+<ConfigSection
+  title="Expire"
+  icon="⏰"
+  id="pushover.expire"
+>
+
+**Only applicable for Emergency priority notifications.**
+
+How long (in seconds) the notification will continue to be retried. The maximum value is 10800 seconds (3 hours).
+
+After this time, if the notification hasn't been acknowledged, Pushover will stop retrying.
+
+</ConfigSection>
+
+<ConfigSection
+  title="Sound"
+  icon="🔊"
+  id="pushover.sound"
+>
+
+The notification sound to play. Choose from built-in sounds or select "Custom" to use a custom sound you've uploaded to Pushover.
+
+Built-in sounds include: pushover, bike, bugle, cashregister, classical, cosmic, falling, gamelan, incoming, intermission, magic, mechanical, pianobar, siren, spacealarm, tugboat, alien, climb, persistent, echo, updown, vibrate, none.
+
+Reference: [Pushover Sounds](https://pushover.net/api#sounds)
+
+</ConfigSection>
+
+<ConfigSection
+  title="Tags"
+  icon="🏷️"
+  id="pushover.tags"
+>
+
+Tags for receipt tracking and batch cancellation of emergency notifications.
+
+Tags are useful when you want to cancel pending emergency notifications programmatically.
+
+</ConfigSection>
+
+</div>
+
+</div>

@@ -46,7 +46,7 @@ public partial class TransmissionService : DownloadService, ITransmissionService
         IHardLinkFileService hardLinkFileService,
         IDynamicHttpClientProvider httpClientProvider,
         IEventPublisher eventPublisher,
-        BlocklistProvider blocklistProvider,
+        IBlocklistProvider blocklistProvider,
         DownloadClientConfig downloadClientConfig,
         IRuleEvaluator ruleEvaluator,
         IRuleManager ruleManager
@@ -77,7 +77,7 @@ public partial class TransmissionService : DownloadService, ITransmissionService
         IHardLinkFileService hardLinkFileService,
         IDynamicHttpClientProvider httpClientProvider,
         IEventPublisher eventPublisher,
-        BlocklistProvider blocklistProvider,
+        IBlocklistProvider blocklistProvider,
         DownloadClientConfig downloadClientConfig,
         IRuleEvaluator ruleEvaluator,
         IRuleManager ruleManager,

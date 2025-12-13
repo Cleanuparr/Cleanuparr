@@ -34,7 +34,7 @@ public abstract class DownloadService : IDownloadService
     protected readonly IDryRunInterceptor _dryRunInterceptor;
     protected readonly IHardLinkFileService _hardLinkFileService;
     protected readonly IEventPublisher _eventPublisher;
-    protected readonly BlocklistProvider _blocklistProvider;
+    protected readonly IBlocklistProvider _blocklistProvider;
     protected readonly HttpClient _httpClient;
     protected readonly DownloadClientConfig _downloadClientConfig;
     protected readonly IRuleEvaluator _ruleEvaluator;
@@ -49,7 +49,7 @@ public abstract class DownloadService : IDownloadService
         IHardLinkFileService hardLinkFileService,
         IDynamicHttpClientProvider httpClientProvider,
         IEventPublisher eventPublisher,
-        BlocklistProvider blocklistProvider,
+        IBlocklistProvider blocklistProvider,
         DownloadClientConfig downloadClientConfig,
         IRuleEvaluator ruleEvaluator,
         IRuleManager ruleManager

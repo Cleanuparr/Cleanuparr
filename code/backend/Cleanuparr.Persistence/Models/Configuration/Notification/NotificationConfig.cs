@@ -40,14 +40,17 @@ public sealed record NotificationConfig
     public AppriseConfig? AppriseConfiguration { get; init; }
     
     public NtfyConfig? NtfyConfiguration { get; init; }
-    
+
+    public PushoverConfig? PushoverConfiguration { get; init; }
+
     [NotMapped]
     public bool IsConfigured => Type switch
     {
         NotificationProviderType.Notifiarr => NotifiarrConfiguration?.IsValid() == true,
         NotificationProviderType.Apprise => AppriseConfiguration?.IsValid() == true,
         NotificationProviderType.Ntfy => NtfyConfiguration?.IsValid() == true,
-        _ => false
+        NotificationProviderType.Pushover => PushoverConfiguration?.IsValid() == true,
+        _ => throw new ArgumentOutOfRangeException(nameof(Type), $"Invalid notification provider type {Type}")
     };
     
     [NotMapped]

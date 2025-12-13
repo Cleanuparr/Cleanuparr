@@ -8,7 +8,7 @@ import {
 } from "../../shared/models/notification-provider.model";
 import { NotificationProviderType } from "../../shared/models/enums";
 import { DocumentationService } from "../../core/services/documentation.service";
-import { NotifiarrFormData, AppriseFormData, NtfyFormData } from "./models/provider-modal.model";
+import { NotifiarrFormData, AppriseFormData, NtfyFormData, PushoverFormData } from "./models/provider-modal.model";
 import { LoadingErrorStateComponent } from "../../shared/components/loading-error-state/loading-error-state.component";
 
 // New modal components
@@ -16,6 +16,7 @@ import { ProviderTypeSelectionComponent } from "./modals/provider-type-selection
 import { NotifiarrProviderComponent } from "./modals/notifiarr-provider/notifiarr-provider.component";
 import { AppriseProviderComponent } from "./modals/apprise-provider/apprise-provider.component";
 import { NtfyProviderComponent } from "./modals/ntfy-provider/ntfy-provider.component";
+import { PushoverProviderComponent } from "./modals/pushover-provider/pushover-provider.component";
 
 // PrimeNG Components
 import { CardModule } from "primeng/card";
@@ -51,6 +52,7 @@ import { NotificationService } from "../../core/services/notification.service";
     NotifiarrProviderComponent,
     AppriseProviderComponent,
     NtfyProviderComponent,
+    PushoverProviderComponent,
   ],
   providers: [NotificationProviderConfigStore, ConfirmationService, MessageService],
   templateUrl: "./notification-settings.component.html",
@@ -66,6 +68,7 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
   showNotifiarrModal = false; // New: Notifiarr provider modal
   showAppriseModal = false; // New: Apprise provider modal
   showNtfyModal = false; // New: Ntfy provider modal
+  showPushoverModal = false; // New: Pushover provider modal
   modalMode: 'add' | 'edit' = 'add';
   editingProvider: NotificationProviderDto | null = null;
 
@@ -179,6 +182,9 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
       case NotificationProviderType.Ntfy:
         this.showNtfyModal = true;
         break;
+      case NotificationProviderType.Pushover:
+        this.showPushoverModal = true;
+        break;
       default:
         // For unsupported types, show the legacy modal with info message
         this.showProviderModal = true;
@@ -228,6 +234,9 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
         break;
       case NotificationProviderType.Ntfy:
         this.showNtfyModal = true;
+        break;
+      case NotificationProviderType.Pushover:
+        this.showPushoverModal = true;
         break;
       default:
         // For unsupported types, show the legacy modal with info message
@@ -290,6 +299,19 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
           tags: ntfyConfig.tags || "",
         };
         break;
+      case NotificationProviderType.Pushover:
+        const pushoverConfig = provider.configuration as any;
+        testRequest = {
+          apiToken: pushoverConfig.apiToken,
+          userKey: pushoverConfig.userKey,
+          devices: pushoverConfig.devices || [],
+          priority: pushoverConfig.priority,
+          sound: pushoverConfig.sound || "",
+          retry: pushoverConfig.retry,
+          expire: pushoverConfig.expire,
+          tags: pushoverConfig.tags || [],
+        };
+        break;
       default:
         this.notificationService.showError("Testing not supported for this provider type");
         return;
@@ -328,6 +350,8 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
         return "Apprise";
       case NotificationProviderType.Ntfy:
         return "ntfy";
+      case NotificationProviderType.Pushover:
+        return "Pushover";
       default:
         return "Unknown";
     }
@@ -435,6 +459,38 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
   }
 
   /**
+   * Handle Pushover provider save
+   */
+  onPushoverSave(data: PushoverFormData): void {
+    if (this.modalMode === "edit" && this.editingProvider) {
+      this.updatePushoverProvider(data);
+    } else {
+      this.createPushoverProvider(data);
+    }
+  }
+
+  /**
+   * Handle Pushover provider test
+   */
+  onPushoverTest(data: PushoverFormData): void {
+    const testRequest = {
+      apiToken: data.apiToken,
+      userKey: data.userKey,
+      devices: data.devices,
+      priority: data.priority,
+      sound: data.sound,
+      retry: data.retry,
+      expire: data.expire,
+      tags: data.tags,
+    };
+
+    this.notificationProviderStore.testProvider({
+      testRequest,
+      type: NotificationProviderType.Pushover,
+    });
+  }
+
+  /**
    * Handle provider modal cancel
    */
   onProviderCancel(): void {
@@ -449,6 +505,7 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
     this.showNotifiarrModal = false;
     this.showAppriseModal = false;
     this.showNtfyModal = false;
+    this.showPushoverModal = false;
     this.showProviderModal = false;
     this.editingProvider = null;
     this.notificationProviderStore.clearTestResult();
@@ -617,6 +674,69 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
       id: this.editingProvider.id,
       provider: updateDto,
       type: NotificationProviderType.Ntfy,
+    });
+    this.monitorProviderOperation("updated");
+  }
+
+  /**
+   * Create new Pushover provider
+   */
+  private createPushoverProvider(data: PushoverFormData): void {
+    const createDto = {
+      name: data.name,
+      isEnabled: data.enabled,
+      onFailedImportStrike: data.onFailedImportStrike,
+      onStalledStrike: data.onStalledStrike,
+      onSlowStrike: data.onSlowStrike,
+      onQueueItemDeleted: data.onQueueItemDeleted,
+      onDownloadCleaned: data.onDownloadCleaned,
+      onCategoryChanged: data.onCategoryChanged,
+      apiToken: data.apiToken,
+      userKey: data.userKey,
+      devices: data.devices,
+      priority: data.priority,
+      sound: data.sound,
+      retry: data.retry,
+      expire: data.expire,
+      tags: data.tags,
+    };
+
+    this.notificationProviderStore.createProvider({
+      provider: createDto,
+      type: NotificationProviderType.Pushover,
+    });
+    this.monitorProviderOperation("created");
+  }
+
+  /**
+   * Update existing Pushover provider
+   */
+  private updatePushoverProvider(data: PushoverFormData): void {
+    if (!this.editingProvider) return;
+
+    const updateDto = {
+      name: data.name,
+      isEnabled: data.enabled,
+      onFailedImportStrike: data.onFailedImportStrike,
+      onStalledStrike: data.onStalledStrike,
+      onSlowStrike: data.onSlowStrike,
+      onQueueItemDeleted: data.onQueueItemDeleted,
+      onDownloadCleaned: data.onDownloadCleaned,
+      onCategoryChanged: data.onCategoryChanged,
+      apiToken: data.apiToken,
+      userKey: data.userKey,
+      devices: data.devices,
+      priority: data.priority,
+      sound: data.sound,
+      retry: data.retry,
+      expire: data.expire,
+      tags: data.tags,
+    };
+
+    this.notificationProviderStore.updateProvider({
+      id: this.editingProvider.id,
+      provider: updateDto,
+      type: NotificationProviderType.Pushover,
     });
     this.monitorProviderOperation("updated");
   }

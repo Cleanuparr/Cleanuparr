@@ -14,4 +14,5 @@ export enum NotificationProviderType {
   Notifiarr = "Notifiarr",
   Apprise = "Apprise",
   Ntfy = "Ntfy",
+  Pushover = "Pushover",
 }

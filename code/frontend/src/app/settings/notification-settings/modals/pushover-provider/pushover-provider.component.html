@@ -1,0 +1,203 @@
+<app-notification-provider-base
+  [visible]="visible"
+  modalTitle="Configure Pushover Provider"
+  [saving]="saving"
+  [testing]="testing"
+  [editingProvider]="editingProvider"
+  (save)="onSave($event)"
+  (cancel)="onCancel()"
+  (test)="onTest($event)"
+>
+  <!-- Provider-specific configuration goes here -->
+  <div slot="provider-config">
+    <!-- API Token -->
+    <div class="field">
+      <label for="api-token">
+        <i
+          class="pi pi-question-circle field-info-icon"
+          title="Click for documentation"
+          (click)="openFieldDocs('pushover.apiToken')"
+        ></i>
+        API Token *
+      </label>
+      <input
+        id="api-token"
+        type="password"
+        pInputText
+        [formControl]="apiTokenControl"
+        placeholder="Enter your Pushover API token"
+        class="w-full"
+      />
+      <small *ngIf="hasFieldError(apiTokenControl, 'required')" class="form-error-text">API token is required</small>
+      <small class="form-helper-text">Your application API token from Pushover. Create one at pushover.net/apps/build.</small>
+    </div>
+
+    <!-- User Key -->
+    <div class="field">
+      <label for="user-key">
+        <i
+          class="pi pi-question-circle field-info-icon"
+          title="Click for documentation"
+          (click)="openFieldDocs('pushover.userKey')"
+        ></i>
+        User Key *
+      </label>
+      <input
+        id="user-key"
+        type="password"
+        pInputText
+        [formControl]="userKeyControl"
+        placeholder="Enter your Pushover user key"
+        class="w-full"
+      />
+      <small *ngIf="hasFieldError(userKeyControl, 'required')" class="form-error-text">User key is required</small>
+      <small class="form-helper-text">Your user/group key from your Pushover dashboard.</small>
+    </div>
+
+    <!-- Devices (Optional) -->
+    <div class="field">
+      <label for="devices">
+        <i
+          class="pi pi-question-circle field-info-icon"
+          title="Click for documentation"
+          (click)="openFieldDocs('pushover.devices')"
+        ></i>
+        Devices (Optional)
+      </label>
+      <app-mobile-autocomplete
+        [formControl]="devicesControl"
+        placeholder="Add device name and press Enter"
+      ></app-mobile-autocomplete>
+      <small class="form-helper-text">Leave empty to send to all devices, or enter specific device names.</small>
+    </div>
+
+    <!-- Priority -->
+    <div class="field">
+      <label for="priority">
+        <i
+          class="pi pi-question-circle field-info-icon"
+          title="Click for documentation"
+          (click)="openFieldDocs('pushover.priority')"
+        ></i>
+        Priority *
+      </label>
+      <p-select
+        id="priority"
+        [formControl]="priorityControl"
+        [options]="priorityOptions"
+        optionLabel="label"
+        optionValue="value"
+        class="w-full"
+        [showClear]="false"
+      ></p-select>
+      <small *ngIf="hasFieldError(priorityControl, 'required')" class="form-error-text">Priority is required</small>
+      <small class="form-helper-text">The priority level for notifications. Emergency priority will repeat until acknowledged.</small>
+    </div>
+
+    <!-- Retry (conditional - Emergency priority only) -->
+    <div class="field" *ngIf="currentPriority === PushoverPriority.Emergency">
+      <label for="retry">
+        <i
+          class="pi pi-question-circle field-info-icon"
+          title="Click for documentation"
+          (click)="openFieldDocs('pushover.retry')"
+        ></i>
+        Retry (seconds) *
+      </label>
+      <p-inputNumber
+        id="retry"
+        [formControl]="retryControl"
+        [min]="30"
+        [showButtons]="true"
+        [step]="30"
+        placeholder="30"
+        class="w-full"
+        inputStyleClass="w-full"
+      ></p-inputNumber>
+      <small *ngIf="hasFieldError(retryControl, 'required')" class="form-error-text">Retry is required for emergency priority</small>
+      <small *ngIf="hasFieldError(retryControl, 'min')" class="form-error-text">Minimum retry is 30 seconds</small>
+      <small class="form-helper-text">How often (in seconds) the notification will be resent until acknowledged. Minimum 30 seconds.</small>
+    </div>
+
+    <!-- Expire (conditional - Emergency priority only) -->
+    <div class="field" *ngIf="currentPriority === PushoverPriority.Emergency">
+      <label for="expire">
+        <i
+          class="pi pi-question-circle field-info-icon"
+          title="Click for documentation"
+          (click)="openFieldDocs('pushover.expire')"
+        ></i>
+        Expire (seconds) *
+      </label>
+      <p-inputNumber
+        id="expire"
+        [formControl]="expireControl"
+        [min]="1"
+        [max]="10800"
+        [showButtons]="true"
+        [step]="60"
+        placeholder="3600"
+        class="w-full"
+        inputStyleClass="w-full"
+      ></p-inputNumber>
+      <small *ngIf="hasFieldError(expireControl, 'required')" class="form-error-text">Expire is required for emergency priority</small>
+      <small *ngIf="hasFieldError(expireControl, 'min')" class="form-error-text">Expire must be at least 1 second</small>
+      <small *ngIf="hasFieldError(expireControl, 'max')" class="form-error-text">Expire cannot exceed 10800 seconds (3 hours)</small>
+      <small class="form-helper-text">How long (in seconds) the notification will continue to be retried. Maximum 10800 seconds (3 hours).</small>
+    </div>
+
+    <!-- Sound -->
+    <div class="field">
+      <label for="sound">
+        <i
+          class="pi pi-question-circle field-info-icon"
+          title="Click for documentation"
+          (click)="openFieldDocs('pushover.sound')"
+        ></i>
+        Sound (Optional)
+      </label>
+      <p-select
+        id="sound"
+        [formControl]="soundControl"
+        [options]="soundOptions"
+        optionLabel="label"
+        optionValue="value"
+        class="w-full"
+        [showClear]="false"
+      ></p-select>
+      <small class="form-helper-text">Choose a notification sound, or select Custom to enter your own.</small>
+    </div>
+
+    <!-- Custom Sound (conditional) -->
+    <div class="field" *ngIf="isCustomSound">
+      <label for="custom-sound">Custom Sound Name *</label>
+      <input
+        id="custom-sound"
+        type="text"
+        pInputText
+        [formControl]="customSoundControl"
+        placeholder="Enter custom sound name"
+        class="w-full"
+      />
+      <small *ngIf="hasFieldError(customSoundControl, 'required')" class="form-error-text">Custom sound name is required</small>
+      <small class="form-helper-text">Enter the name of a custom sound you've uploaded to Pushover.</small>
+    </div>
+
+    <!-- Tags (Optional) -->
+    <div class="field">
+      <label for="tags">
+        <i
+          class="pi pi-question-circle field-info-icon"
+          title="Click for documentation"
+          (click)="openFieldDocs('pushover.tags')"
+        ></i>
+        Tags (Optional)
+      </label>
+      <app-mobile-autocomplete
+        [formControl]="tagsControl"
+        placeholder="Add tag and press Enter"
+      ></app-mobile-autocomplete>
+      <small class="form-helper-text">Tags for receipt tracking and batch cancellation of emergency notifications.</small>
+    </div>
+  </div>
+</app-notification-provider-base>

@@ -663,6 +663,67 @@ namespace Cleanuparr.Persistence.Migrations.Data
                     b.ToTable("ntfy_configs", (string)null);
                 });
 
+            modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.Notification.PushoverConfig", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("id");
+
+                    b.Property<string>("ApiToken")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("api_token");
+
+                    b.Property<string>("Devices")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("devices");
+
+                    b.Property<int?>("Expire")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("expire");
+
+                    b.Property<Guid>("NotificationConfigId")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("notification_config_id");
+
+                    b.Property<string>("Priority")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("priority");
+
+                    b.Property<int?>("Retry")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("retry");
+
+                    b.Property<string>("Sound")
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("sound");
+
+                    b.Property<string>("Tags")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("tags");
+
+                    b.Property<string>("UserKey")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("user_key");
+
+                    b.HasKey("Id")
+                        .HasName("pk_pushover_configs");
+
+                    b.HasIndex("NotificationConfigId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_pushover_configs_notification_config_id");
+
+                    b.ToTable("pushover_configs", (string)null);
+                });
+
             modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.QueueCleaner.QueueCleanerConfig", b =>
                 {
                     b.Property<Guid>("Id")
@@ -946,6 +1007,18 @@ namespace Cleanuparr.Persistence.Migrations.Data
                     b.Navigation("NotificationConfig");
                 });
 
+            modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.Notification.PushoverConfig", b =>
+                {
+                    b.HasOne("Cleanuparr.Persistence.Models.Configuration.Notification.NotificationConfig", "NotificationConfig")
+                        .WithOne("PushoverConfiguration")
+                        .HasForeignKey("Cleanuparr.Persistence.Models.Configuration.Notification.PushoverConfig", "NotificationConfigId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_pushover_configs_notification_configs_notification_config_id");
+
+                    b.Navigation("NotificationConfig");
+                });
+
             modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.QueueCleaner.SlowRule", b =>
                 {
                     b.HasOne("Cleanuparr.Persistence.Models.Configuration.QueueCleaner.QueueCleanerConfig", "QueueCleanerConfig")
@@ -999,6 +1072,8 @@ namespace Cleanuparr.Persistence.Migrations.Data
                     b.Navigation("NotifiarrConfiguration");
 
                     b.Navigation("NtfyConfiguration");
+
+                    b.Navigation("PushoverConfiguration");
                 });
 
             modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.QueueCleaner.QueueCleanerConfig", b =>

@@ -43,6 +43,13 @@ export class ProviderTypeSelectionComponent {
       iconUrl: 'icons/ext/ntfy-light.svg',
       iconUrlHover: 'icons/ext/ntfy.svg',
       description: 'https://ntfy.sh/'
+    },
+    {
+      type: NotificationProviderType.Pushover,
+      name: 'Pushover',
+      iconUrl: 'icons/ext/pushover-light.svg',
+      iconUrlHover: 'icons/ext/pushover.svg',
+      description: 'https://pushover.net/'
     }
   ];
 

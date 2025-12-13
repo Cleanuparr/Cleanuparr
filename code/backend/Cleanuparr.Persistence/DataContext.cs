@@ -52,6 +52,8 @@ public class DataContext : DbContext
     
     public DbSet<NtfyConfig> NtfyConfigs { get; set; }
 
+    public DbSet<PushoverConfig> PushoverConfigs { get; set; }
+
     public DbSet<BlacklistSyncHistory> BlacklistSyncHistory { get; set; }
 
     public DbSet<BlacklistSyncConfig> BlacklistSyncConfigs { get; set; }
@@ -141,8 +143,27 @@ public class DataContext : DbContext
                   .WithOne(c => c.NotificationConfig)
                   .HasForeignKey<NtfyConfig>(c => c.NotificationConfigId)
                   .OnDelete(DeleteBehavior.Cascade);
-                  
+
+            entity.HasOne(p => p.PushoverConfiguration)
+                  .WithOne(c => c.NotificationConfig)
+                  .HasForeignKey<PushoverConfig>(c => c.NotificationConfigId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
             entity.HasIndex(p => p.Name).IsUnique();
+        });
+
+        // Configure PushoverConfig List<string> conversions
+        modelBuilder.Entity<PushoverConfig>(entity =>
+        {
+            entity.Property(p => p.Devices)
+                  .HasConversion(
+                      v => string.Join(',', v),
+                      v => v.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList());
+
+            entity.Property(p => p.Tags)
+                  .HasConversion(
+                      v => string.Join(',', v),
+                      v => v.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList());
         });
 
         // Configure BlacklistSyncState relationships and indexes
