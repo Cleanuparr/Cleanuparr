@@ -162,7 +162,7 @@ public sealed class NotificationConfigurationService : INotificationConfiguratio
             NotificationEventType.DownloadCleaned => events.OnDownloadCleaned,
             NotificationEventType.CategoryChanged => events.OnCategoryChanged,
             NotificationEventType.Test => true,
-            _ => false
+            _ => throw new ArgumentOutOfRangeException(nameof(eventType), $"Provider type {eventType} is not yet registered")
         };
     }
 }

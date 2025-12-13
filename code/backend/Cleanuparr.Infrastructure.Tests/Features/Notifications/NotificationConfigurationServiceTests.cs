@@ -308,7 +308,118 @@ public class NotificationConfigurationServiceTests : IDisposable
 
     #endregion
 
+    #region Error Handling Tests
+
+    [Fact]
+    public async Task GetProvidersForEventAsync_UnknownEventType_ThrowsArgumentOutOfRangeException()
+    {
+        // Arrange
+        var config = CreateNotifiarrConfig("Test", isEnabled: true);
+        _context.Set<NotificationConfig>().Add(config);
+        await _context.SaveChangesAsync();
+        await _service.InvalidateCacheAsync();
+
+        var unknownEventType = (NotificationEventType)999;
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(
+            () => _service.GetProvidersForEventAsync(unknownEventType));
+    }
+
+    [Fact]
+    public async Task GetActiveProvidersAsync_DatabaseError_ReturnsEmptyListAndLogsError()
+    {
+        // Arrange - dispose context to simulate database error
+        var options = new DbContextOptionsBuilder<DataContext>()
+            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .Options;
+        var disposedContext = new DataContext(options);
+        var loggerMock = new Mock<ILogger<NotificationConfigurationService>>();
+        var service = new NotificationConfigurationService(disposedContext, loggerMock.Object);
+
+        await disposedContext.DisposeAsync();
+
+        // Act
+        var result = await service.GetActiveProvidersAsync();
+
+        // Assert
+        Assert.Empty(result);
+        loggerMock.Verify(
+            x => x.Log(
+                LogLevel.Error,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Failed to load notification providers")),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+    }
+
+    #endregion
+
+    #region Provider Type Mapping Tests
+
+    [Theory]
+    [InlineData(NotificationProviderType.Notifiarr)]
+    [InlineData(NotificationProviderType.Apprise)]
+    [InlineData(NotificationProviderType.Ntfy)]
+    [InlineData(NotificationProviderType.Pushover)]
+    public async Task GetActiveProvidersAsync_MapsProviderTypeCorrectly(NotificationProviderType providerType)
+    {
+        // Arrange
+        var config = CreateConfigForType(providerType, "Test Provider", isEnabled: true);
+        _context.Set<NotificationConfig>().Add(config);
+        await _context.SaveChangesAsync();
+        await _service.InvalidateCacheAsync();
+
+        // Act
+        var result = await _service.GetActiveProvidersAsync();
+
+        // Assert
+        Assert.Single(result);
+        Assert.Equal(providerType, result[0].Type);
+        Assert.Equal("Test Provider", result[0].Name);
+        Assert.NotNull(result[0].Configuration);
+    }
+
+    [Theory]
+    [InlineData(NotificationProviderType.Notifiarr)]
+    [InlineData(NotificationProviderType.Apprise)]
+    [InlineData(NotificationProviderType.Ntfy)]
+    [InlineData(NotificationProviderType.Pushover)]
+    public async Task GetProvidersForEventAsync_ReturnsProviderForAllTypes(NotificationProviderType providerType)
+    {
+        // Arrange
+        var config = CreateConfigForType(providerType, "Test", isEnabled: true);
+        _context.Set<NotificationConfig>().Add(config);
+        await _context.SaveChangesAsync();
+        await _service.InvalidateCacheAsync();
+
+        // Act
+        var result = await _service.GetProvidersForEventAsync(NotificationEventType.StalledStrike);
+
+        // Assert
+        Assert.Single(result);
+        Assert.Equal(providerType, result[0].Type);
+    }
+
+    #endregion
+
     #region Helper Methods
+
+    private static NotificationConfig CreateConfigForType(
+        NotificationProviderType providerType,
+        string name,
+        bool isEnabled)
+    {
+        return providerType switch
+        {
+            NotificationProviderType.Notifiarr => CreateNotifiarrConfig(name, isEnabled),
+            NotificationProviderType.Apprise => CreateAppriseConfig(name, isEnabled),
+            NotificationProviderType.Ntfy => CreateNtfyConfig(name, isEnabled),
+            NotificationProviderType.Pushover => CreatePushoverConfig(name, isEnabled),
+            _ => throw new ArgumentOutOfRangeException(nameof(providerType))
+        };
+    }
 
     private static NotificationConfig CreateNotifiarrConfig(
         string name,
@@ -337,6 +448,75 @@ public class NotificationConfigurationServiceTests : IDisposable
                 Id = Guid.NewGuid(),
                 ApiKey = "testapikey1234567890",
                 ChannelId = "123456789012345678"
+            }
+        };
+    }
+
+    private static NotificationConfig CreateAppriseConfig(string name, bool isEnabled)
+    {
+        return new NotificationConfig
+        {
+            Id = Guid.NewGuid(),
+            Name = name,
+            Type = NotificationProviderType.Apprise,
+            IsEnabled = isEnabled,
+            OnStalledStrike = true,
+            OnFailedImportStrike = true,
+            OnSlowStrike = true,
+            OnQueueItemDeleted = true,
+            OnDownloadCleaned = true,
+            OnCategoryChanged = true,
+            AppriseConfiguration = new AppriseConfig
+            {
+                Id = Guid.NewGuid(),
+                Url = "http://localhost:8000",
+                Key = "testkey"
+            }
+        };
+    }
+
+    private static NotificationConfig CreateNtfyConfig(string name, bool isEnabled)
+    {
+        return new NotificationConfig
+        {
+            Id = Guid.NewGuid(),
+            Name = name,
+            Type = NotificationProviderType.Ntfy,
+            IsEnabled = isEnabled,
+            OnStalledStrike = true,
+            OnFailedImportStrike = true,
+            OnSlowStrike = true,
+            OnQueueItemDeleted = true,
+            OnDownloadCleaned = true,
+            OnCategoryChanged = true,
+            NtfyConfiguration = new NtfyConfig
+            {
+                Id = Guid.NewGuid(),
+                ServerUrl = "https://ntfy.sh",
+                Topics = ["test-topic"]
+            }
+        };
+    }
+
+    private static NotificationConfig CreatePushoverConfig(string name, bool isEnabled)
+    {
+        return new NotificationConfig
+        {
+            Id = Guid.NewGuid(),
+            Name = name,
+            Type = NotificationProviderType.Pushover,
+            IsEnabled = isEnabled,
+            OnStalledStrike = true,
+            OnFailedImportStrike = true,
+            OnSlowStrike = true,
+            OnQueueItemDeleted = true,
+            OnDownloadCleaned = true,
+            OnCategoryChanged = true,
+            PushoverConfiguration = new PushoverConfig
+            {
+                Id = Guid.NewGuid(),
+                ApiToken = "test_api_token_1234567890abcd",
+                UserKey = "test_user_key_1234567890abcde"
             }
         };
     }

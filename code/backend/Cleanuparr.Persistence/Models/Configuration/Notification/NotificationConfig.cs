@@ -50,7 +50,7 @@ public sealed record NotificationConfig
         NotificationProviderType.Apprise => AppriseConfiguration?.IsValid() == true,
         NotificationProviderType.Ntfy => NtfyConfiguration?.IsValid() == true,
         NotificationProviderType.Pushover => PushoverConfiguration?.IsValid() == true,
-        _ => false
+        _ => throw new ArgumentOutOfRangeException(nameof(Type), $"Invalid notification provider type {Type}")
     };
     
     [NotMapped]
