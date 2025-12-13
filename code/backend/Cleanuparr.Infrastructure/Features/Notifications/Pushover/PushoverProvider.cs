@@ -31,7 +31,9 @@ public sealed class PushoverProvider : NotificationProviderBase<PushoverConfig>
 
         // Truncate message to 1024 chars if needed
         if (message.Length > 1024)
+        {
             message = message[..1021] + "...";
+        }
 
         return new PushoverPayload
         {
@@ -48,9 +50,9 @@ public sealed class PushoverProvider : NotificationProviderBase<PushoverConfig>
         };
     }
 
-    private string BuildMessage(NotificationContext context)
+    private static string BuildMessage(NotificationContext context)
     {
-        var message = new StringBuilder();
+        StringBuilder message = new();
         message.AppendLine(context.Description);
 
         if (context.Data.Any())
@@ -68,14 +70,16 @@ public sealed class PushoverProvider : NotificationProviderBase<PushoverConfig>
     private static string? TruncateTitle(string title)
     {
         if (string.IsNullOrWhiteSpace(title))
+        {
             return null;
+        }
 
         return title.Length > 250 ? title[..247] + "..." : title;
     }
 
     private string? GetDevicesString()
     {
-        var devices = Config.Devices
+        string[] devices = Config.Devices
             .Where(d => !string.IsNullOrWhiteSpace(d))
             .Select(d => d.Trim())
             .ToArray();
@@ -85,7 +89,7 @@ public sealed class PushoverProvider : NotificationProviderBase<PushoverConfig>
 
     private string? GetTagsString()
     {
-        var tags = Config.Tags
+        string[] tags = Config.Tags
             .Where(t => !string.IsNullOrWhiteSpace(t))
             .Select(t => t.Trim())
             .ToArray();

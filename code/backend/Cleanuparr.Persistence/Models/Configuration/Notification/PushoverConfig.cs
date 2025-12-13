@@ -62,18 +62,34 @@ public sealed partial record PushoverConfig : IConfig
     /// Tags for receipt tracking and batch cancellation
     /// </summary>
     public List<string> Tags { get; init; } = [];
+    
+    [GeneratedRegex(@"^[A-Za-z0-9_-]+$")]
+    private static partial Regex DeviceNameRegex();
 
     public bool IsValid()
     {
         if (string.IsNullOrWhiteSpace(ApiToken) || string.IsNullOrWhiteSpace(UserKey))
+        {
             return false;
+        }
 
         if (Priority == PushoverPriority.Emergency)
         {
-            if (!Retry.HasValue || Retry.Value < 30)
+            if (Retry is null or < 30)
+            {
                 return false;
-            if (!Expire.HasValue || Expire.Value < 1 || Expire.Value > 10800)
+            }
+
+            if (Expire is null or < 1 or > 10800)
+            {
                 return false;
+            }
+        }
+
+        // Sound, if provided, must not be whitespace-only
+        if (Sound is not null && Sound.Length > 0 && string.IsNullOrWhiteSpace(Sound))
+        {
+            return false;
         }
 
         return true;
@@ -82,34 +98,51 @@ public sealed partial record PushoverConfig : IConfig
     public void Validate()
     {
         if (string.IsNullOrWhiteSpace(ApiToken))
+        {
             throw new ValidationException("Pushover API token is required");
+        }
 
         if (string.IsNullOrWhiteSpace(UserKey))
+        {
             throw new ValidationException("Pushover user key is required");
+        }
 
         if (Priority == PushoverPriority.Emergency)
         {
             if (!Retry.HasValue || Retry.Value < 30)
+            {
                 throw new ValidationException("Retry interval must be at least 30 seconds for emergency priority");
+            }
 
             if (!Expire.HasValue || Expire.Value < 1)
+            {
                 throw new ValidationException("Expire time is required for emergency priority");
+            }
 
             if (Expire.Value > 10800)
+            {
                 throw new ValidationException("Expire time cannot exceed 10800 seconds (3 hours)");
+            }
         }
 
         // Validate device names if provided
-        foreach (var device in Devices.Where(d => !string.IsNullOrWhiteSpace(d)))
+        foreach (string device in Devices.Where(d => !string.IsNullOrWhiteSpace(d)))
         {
             if (device.Length > 25)
+            {
                 throw new ValidationException($"Device name '{device}' exceeds 25 character limit");
+            }
 
             if (!DeviceNameRegex().IsMatch(device))
+            {
                 throw new ValidationException($"Device name '{device}' contains invalid characters. Only letters, numbers, underscores, and hyphens are allowed.");
+            }
+        }
+
+        // Validate sound - if provided, must not be whitespace-only
+        if (Sound is not null && Sound.Length > 0 && string.IsNullOrWhiteSpace(Sound))
+        {
+            throw new ValidationException("Sound name cannot be empty or whitespace when specified");
         }
     }
-
-    [GeneratedRegex(@"^[A-Za-z0-9_-]+$")]
-    private static partial Regex DeviceNameRegex();
 }

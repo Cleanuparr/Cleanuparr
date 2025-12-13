@@ -179,6 +179,7 @@
         placeholder="Enter custom sound name"
         class="w-full"
       />
+      <small *ngIf="hasFieldError(customSoundControl, 'required')" class="form-error-text">Custom sound name is required</small>
       <small class="form-helper-text">Enter the name of a custom sound you've uploaded to Pushover.</small>
     </div>
 

@@ -85,9 +85,10 @@ export class PushoverProviderComponent implements OnInit, OnChanges {
       this.updateEmergencyFieldValidation(priority);
     });
 
-    // Track custom sound selection
+    // Track custom sound selection and update validation
     this.soundControl.valueChanges.subscribe(value => {
       this.isCustomSound = value === '__custom__';
+      this.updateCustomSoundValidation(this.isCustomSound);
       if (!this.isCustomSound) {
         this.customSoundControl.setValue('');
       }
@@ -127,6 +128,7 @@ export class PushoverProviderComponent implements OnInit, OnChanges {
         this.customSoundControl.setValue(savedSound);
         this.isCustomSound = true;
       }
+      this.updateCustomSoundValidation(this.isCustomSound);
 
       this.retryControl.setValue(config?.retry || null);
       this.expireControl.setValue(config?.expire || null);
@@ -166,6 +168,16 @@ export class PushoverProviderComponent implements OnInit, OnChanges {
     this.expireControl.updateValueAndValidity();
   }
 
+  private updateCustomSoundValidation(isCustom: boolean): void {
+    this.customSoundControl.clearValidators();
+
+    if (isCustom) {
+      this.customSoundControl.setValidators([Validators.required]);
+    }
+
+    this.customSoundControl.updateValueAndValidity();
+  }
+
   protected hasFieldError(control: FormControl, errorType: string): boolean {
     return !!(control && control.errors?.[errorType] && (control.dirty || control.touched));
   }
@@ -175,11 +187,17 @@ export class PushoverProviderComponent implements OnInit, OnChanges {
                       this.userKeyControl.valid &&
                       this.priorityControl.valid;
 
+    let valid = baseValid;
+
     if (this.currentPriority === PushoverPriority.Emergency) {
-      return baseValid && this.retryControl.valid && this.expireControl.valid;
+      valid = valid && this.retryControl.valid && this.expireControl.valid;
     }
 
-    return baseValid;
+    if (this.isCustomSound) {
+      valid = valid && this.customSoundControl.valid;
+    }
+
+    return valid;
   }
 
   private getEffectiveSound(): string {
@@ -214,6 +232,7 @@ export class PushoverProviderComponent implements OnInit, OnChanges {
       this.priorityControl.markAsTouched();
       this.retryControl.markAsTouched();
       this.expireControl.markAsTouched();
+      this.customSoundControl.markAsTouched();
     }
   }
 
@@ -232,6 +251,7 @@ export class PushoverProviderComponent implements OnInit, OnChanges {
       this.priorityControl.markAsTouched();
       this.retryControl.markAsTouched();
       this.expireControl.markAsTouched();
+      this.customSoundControl.markAsTouched();
     }
   }
 
