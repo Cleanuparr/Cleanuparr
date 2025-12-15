@@ -15,6 +15,7 @@ namespace Cleanuparr.Infrastructure.Tests.Features.Notifications;
 public class NotificationProviderFactoryTests
 {
     private readonly Mock<IAppriseProxy> _appriseProxyMock;
+    private readonly Mock<IAppriseCliProxy> _appriseCliProxyMock;
     private readonly Mock<INtfyProxy> _ntfyProxyMock;
     private readonly Mock<INotifiarrProxy> _notifiarrProxyMock;
     private readonly Mock<IPushoverProxy> _pushoverProxyMock;
@@ -24,12 +25,14 @@ public class NotificationProviderFactoryTests
     public NotificationProviderFactoryTests()
     {
         _appriseProxyMock = new Mock<IAppriseProxy>();
+        _appriseCliProxyMock = new Mock<IAppriseCliProxy>();
         _ntfyProxyMock = new Mock<INtfyProxy>();
         _notifiarrProxyMock = new Mock<INotifiarrProxy>();
         _pushoverProxyMock = new Mock<IPushoverProxy>();
 
         var services = new ServiceCollection();
         services.AddSingleton(_appriseProxyMock.Object);
+        services.AddSingleton(_appriseCliProxyMock.Object);
         services.AddSingleton(_ntfyProxyMock.Object);
         services.AddSingleton(_notifiarrProxyMock.Object);
         services.AddSingleton(_pushoverProxyMock.Object);

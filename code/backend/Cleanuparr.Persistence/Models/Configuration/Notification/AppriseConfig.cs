@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Cleanuparr.Domain.Enums;
 using Cleanuparr.Persistence.Models.Configuration;
 using ValidationException = Cleanuparr.Domain.Exceptions.ValidationException;
 
@@ -10,23 +11,35 @@ public sealed record AppriseConfig : IConfig
     [Key]
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     public Guid Id { get; init; } = Guid.NewGuid();
-    
+
     [Required]
     public Guid NotificationConfigId { get; init; }
-    
+
     public NotificationConfig NotificationConfig { get; init; } = null!;
-    
-    [Required]
+
+    /// <summary>
+    /// The mode of operation: Api (external apprise-api container) or Cli (bundled apprise CLI)
+    /// </summary>
+    public AppriseMode Mode { get; init; } = AppriseMode.Api;
+
+    // API mode fields
     [MaxLength(500)]
     public string Url { get; init; } = string.Empty;
-    
-    [Required]
+
     [MaxLength(255)]
     public string Key { get; init; } = string.Empty;
-    
+
     [MaxLength(255)]
     public string? Tags { get; init; }
-    
+
+    // CLI mode fields
+    /// <summary>
+    /// Apprise service URLs for CLI mode (one per line).
+    /// Example: discord://webhook_id/webhook_token
+    /// </summary>
+    [MaxLength(4000)]
+    public string? ServiceUrls { get; init; }
+
     [NotMapped]
     public Uri? Uri
     {
@@ -42,33 +55,68 @@ public sealed record AppriseConfig : IConfig
             }
         }
     }
-    
+
     public bool IsValid()
     {
-        return Uri != null && 
-               !string.IsNullOrWhiteSpace(Key);
+        return Mode switch
+        {
+            AppriseMode.Api => Uri != null && !string.IsNullOrWhiteSpace(Key),
+            AppriseMode.Cli => !string.IsNullOrWhiteSpace(ServiceUrls),
+            _ => false
+        };
     }
-    
+
     public void Validate()
+    {
+        if (Mode == AppriseMode.Api)
+        {
+            ValidateApiMode();
+        }
+        else
+        {
+            ValidateCliMode();
+        }
+    }
+
+    private void ValidateApiMode()
     {
         if (string.IsNullOrWhiteSpace(Url))
         {
-            throw new ValidationException("Apprise server URL is required");
+            throw new ValidationException("Apprise server URL is required for API mode");
         }
-        
+
         if (Uri == null)
         {
             throw new ValidationException("Apprise server URL must be a valid HTTP or HTTPS URL");
         }
-        
+
         if (string.IsNullOrWhiteSpace(Key))
         {
-            throw new ValidationException("Apprise configuration key is required");
+            throw new ValidationException("Apprise configuration key is required for API mode");
         }
-        
+
         if (Key.Length < 2)
         {
             throw new ValidationException("Apprise configuration key must be at least 2 characters long");
+        }
+    }
+
+    private void ValidateCliMode()
+    {
+        if (string.IsNullOrWhiteSpace(ServiceUrls))
+        {
+            throw new ValidationException("At least one service URL is required for CLI mode");
+        }
+
+        var urls = ServiceUrls
+            .Split('\n', StringSplitOptions.RemoveEmptyEntries)
+            .Select(u => u.Trim())
+            .Where(u => !string.IsNullOrEmpty(u))
+            .ToArray();
+
+        if (urls.Length == 0)
+        {
+            throw new ValidationException("At least one valid service URL is required for CLI mode");
         }
     }
 }

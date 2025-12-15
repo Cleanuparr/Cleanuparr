@@ -12,6 +12,8 @@ public static class NotificationsDI
         services
             .AddScoped<INotifiarrProxy, NotifiarrProxy>()
             .AddScoped<IAppriseProxy, AppriseProxy>()
+            .AddScoped<IAppriseCliProxy, AppriseCliProxy>()
+            .AddSingleton<IAppriseCliDetector, AppriseCliDetector>()
             .AddScoped<INtfyProxy, NtfyProxy>()
             .AddScoped<IPushoverProxy, PushoverProxy>()
             .AddScoped<INotificationConfigurationService, NotificationConfigurationService>()

@@ -16,3 +16,8 @@ export enum NotificationProviderType {
   Ntfy = "Ntfy",
   Pushover = "Pushover",
 }
+
+export enum AppriseMode {
+  Api = "Api",
+  Cli = "Cli",
+}

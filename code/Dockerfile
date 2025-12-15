@@ -48,12 +48,21 @@ RUN --mount=type=cache,target=/root/.nuget/packages,sharing=locked \
 # Runtime stage
 FROM mcr.microsoft.com/dotnet/aspnet:9.0-bookworm-slim
 
-# Install required packages for user management and timezone support
+# Install required packages for user management, timezone support, and Python for Apprise CLI
 RUN apt-get update && apt-get install -y \
     curl \
     tzdata \
     gosu \
+    python3 \
+    python3-venv \
     && rm -rf /var/lib/apt/lists/*
+
+# Create virtual environment and install Apprise CLI
+ENV VIRTUAL_ENV=/opt/apprise-venv
+RUN python3 -m venv $VIRTUAL_ENV
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+# Major version pinning: auto-updates within 1.x but protected from breaking changes in 2.x
+RUN pip install --no-cache-dir "apprise>=1.0,<2.0"
 
 ENV PUID=1000 \
     PGID=1000 \

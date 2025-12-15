@@ -1,3 +1,4 @@
+using Cleanuparr.Domain.Enums;
 using Cleanuparr.Persistence.Models.Configuration.Notification;
 using Shouldly;
 using Xunit;
@@ -142,7 +143,7 @@ public sealed class AppriseConfigTests
         };
 
         var exception = Should.Throw<ValidationException>(() => config.Validate());
-        exception.Message.ShouldBe("Apprise server URL is required");
+        exception.Message.ShouldBe("Apprise server URL is required for API mode");
     }
 
     [Fact]
@@ -171,7 +172,7 @@ public sealed class AppriseConfigTests
         };
 
         var exception = Should.Throw<ValidationException>(() => config.Validate());
-        exception.Message.ShouldBe("Apprise configuration key is required");
+        exception.Message.ShouldBe("Apprise configuration key is required for API mode");
     }
 
     [Fact]
@@ -197,6 +198,106 @@ public sealed class AppriseConfigTests
         };
 
         Should.NotThrow(() => config.Validate());
+    }
+
+    #endregion
+
+    #region CLI Mode Tests
+
+    [Fact]
+    public void IsValid_CliMode_WithValidServiceUrls_ReturnsTrue()
+    {
+        var config = new AppriseConfig
+        {
+            Mode = AppriseMode.Cli,
+            ServiceUrls = "discord://webhook_id/webhook_token"
+        };
+
+        config.IsValid().ShouldBeTrue();
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void IsValid_CliMode_WithEmptyServiceUrls_ReturnsFalse(string? serviceUrls)
+    {
+        var config = new AppriseConfig
+        {
+            Mode = AppriseMode.Cli,
+            ServiceUrls = serviceUrls
+        };
+
+        config.IsValid().ShouldBeFalse();
+    }
+
+    [Fact]
+    public void Validate_CliMode_WithValidServiceUrls_DoesNotThrow()
+    {
+        var config = new AppriseConfig
+        {
+            Mode = AppriseMode.Cli,
+            ServiceUrls = "discord://webhook_id/webhook_token\nslack://token_a/token_b/token_c"
+        };
+
+        Should.NotThrow(() => config.Validate());
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void Validate_CliMode_WithEmptyServiceUrls_ThrowsValidationException(string? serviceUrls)
+    {
+        var config = new AppriseConfig
+        {
+            Mode = AppriseMode.Cli,
+            ServiceUrls = serviceUrls
+        };
+
+        var exception = Should.Throw<ValidationException>(() => config.Validate());
+        exception.Message.ShouldBe("At least one service URL is required for CLI mode");
+    }
+
+    [Fact]
+    public void Validate_CliMode_WithValidUrlAndWhitespaceLines_DoesNotThrow()
+    {
+        // url1 is valid content, whitespace lines should be filtered out
+        var config = new AppriseConfig
+        {
+            Mode = AppriseMode.Cli,
+            ServiceUrls = "discord://webhook_id/token\n   \n   "
+        };
+
+        Should.NotThrow(() => config.Validate());
+    }
+
+    [Fact]
+    public void IsValid_CliMode_IgnoresApiModeFields()
+    {
+        var config = new AppriseConfig
+        {
+            Mode = AppriseMode.Cli,
+            Url = string.Empty, // Would be invalid in API mode
+            Key = string.Empty, // Would be invalid in API mode
+            ServiceUrls = "discord://webhook_id/webhook_token"
+        };
+
+        config.IsValid().ShouldBeTrue();
+    }
+
+    [Fact]
+    public void IsValid_ApiMode_IgnoresCliModeFields()
+    {
+        var config = new AppriseConfig
+        {
+            Mode = AppriseMode.Api,
+            Url = "https://apprise.example.com",
+            Key = "my-key",
+            ServiceUrls = null // Would be invalid in CLI mode
+        };
+
+        config.IsValid().ShouldBeTrue();
     }
 
     #endregion
