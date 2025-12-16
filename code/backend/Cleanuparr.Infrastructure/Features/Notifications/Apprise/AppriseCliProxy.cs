@@ -21,31 +21,20 @@ public sealed class AppriseCliProxy : IAppriseCliProxy
             throw new AppriseException("No service URLs configured");
         }
 
-        var command = BuildArguments(payload, serviceUrls);
-        await ExecuteAppriseAsync(command);
-    }
-
-    internal static string BuildArguments(ApprisePayload payload, string[] urls)
-    {
-        var sb = new StringBuilder(" --verbose");
+        var args = new List<string> { "--verbose" };
 
         if (!string.IsNullOrEmpty(payload.Title))
         {
-            sb.Append($" --title=\"{EscapeArgument(payload.Title)}\"");
+            args.AddRange(["--title", payload.Title]);
         }
 
-        sb.Append($" --body=\"{EscapeArgument(payload.Body)}\"");
-        sb.Append($" --notification-type={payload.Type}");
+        args.AddRange(["--body", payload.Body, "--notification-type", payload.Type]);
+        args.AddRange(serviceUrls);
 
-        foreach (var url in urls)
-        {
-            sb.Append($" \"{EscapeArgument(url)}\"");
-        }
-
-        return sb.ToString();
+        await ExecuteAppriseAsync(args);
     }
 
-    private static async Task ExecuteAppriseAsync(string arguments)
+    private static async Task ExecuteAppriseAsync(IEnumerable<string> arguments)
     {
         using var cts = new CancellationTokenSource(DefaultTimeout);
         StringBuilder message = new();
@@ -76,11 +65,5 @@ public sealed class AppriseCliProxy : IAppriseCliProxy
         {
             throw new AppriseException("Apprise CLI failed", exception);
         }
-    }
-
-    internal static string EscapeArgument(string arg)
-    {
-        // Escape double quotes and backslashes for shell
-        return arg.Replace("\\", @"\\").Replace("\"", "\\\"");
     }
 }
