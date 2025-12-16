@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Diagnostics.CodeAnalysis;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Persistence.Models.Configuration;
 using ValidationException = Cleanuparr.Domain.Exceptions.ValidationException;
@@ -13,6 +14,7 @@ public sealed record AppriseConfig : IConfig
     public Guid Id { get; init; } = Guid.NewGuid();
 
     [Required]
+    [ExcludeFromCodeCoverage]
     public Guid NotificationConfigId { get; init; }
 
     public NotificationConfig NotificationConfig { get; init; } = null!;
@@ -68,14 +70,13 @@ public sealed record AppriseConfig : IConfig
 
     public void Validate()
     {
-        if (Mode == AppriseMode.Api)
+        if (Mode is AppriseMode.Api)
         {
             ValidateApiMode();
+            return;
         }
-        else
-        {
-            ValidateCliMode();
-        }
+
+        ValidateCliMode();
     }
 
     private void ValidateApiMode()
@@ -85,7 +86,7 @@ public sealed record AppriseConfig : IConfig
             throw new ValidationException("Apprise server URL is required for API mode");
         }
 
-        if (Uri == null)
+        if (Uri is null)
         {
             throw new ValidationException("Apprise server URL must be a valid HTTP or HTTPS URL");
         }
@@ -106,17 +107,6 @@ public sealed record AppriseConfig : IConfig
         if (string.IsNullOrWhiteSpace(ServiceUrls))
         {
             throw new ValidationException("At least one service URL is required for CLI mode");
-        }
-
-        var urls = ServiceUrls
-            .Split('\n', StringSplitOptions.RemoveEmptyEntries)
-            .Select(u => u.Trim())
-            .Where(u => !string.IsNullOrEmpty(u))
-            .ToArray();
-
-        if (urls.Length == 0)
-        {
-            throw new ValidationException("At least one valid service URL is required for CLI mode");
         }
     }
 }

@@ -187,6 +187,40 @@ public class AppriseProviderTests
         Assert.Contains("Test Description", capturedPayload.Body);
     }
 
+    [Fact]
+    public async Task SendNotificationAsync_CliMode_CallsCliProxy()
+    {
+        // Arrange
+        var cliConfig = new AppriseConfig
+        {
+            Id = Guid.NewGuid(),
+            Mode = AppriseMode.Cli,
+            ServiceUrls = "discord://webhook_id/token"
+        };
+
+        var apiProxyMock = new Mock<IAppriseProxy>();
+        var cliProxyMock = new Mock<IAppriseCliProxy>();
+
+        var provider = new AppriseProvider(
+            "TestAppriseCli",
+            NotificationProviderType.Apprise,
+            cliConfig,
+            apiProxyMock.Object,
+            cliProxyMock.Object);
+
+        var context = CreateTestContext();
+
+        cliProxyMock.Setup(p => p.SendNotification(It.IsAny<ApprisePayload>(), cliConfig))
+            .Returns(Task.CompletedTask);
+
+        // Act
+        await provider.SendNotificationAsync(context);
+
+        // Assert
+        cliProxyMock.Verify(p => p.SendNotification(It.IsAny<ApprisePayload>(), cliConfig), Times.Once);
+        apiProxyMock.Verify(p => p.SendNotification(It.IsAny<ApprisePayload>(), It.IsAny<AppriseConfig>()), Times.Never);
+    }
+
     #endregion
 
     #region Helper Methods

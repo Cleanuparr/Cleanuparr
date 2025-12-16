@@ -26,7 +26,7 @@ public sealed class AppriseProvider : NotificationProviderBase<AppriseConfig>
     {
         ApprisePayload payload = BuildPayload(context);
 
-        if (Config.Mode == AppriseMode.Cli)
+        if (Config.Mode is AppriseMode.Cli)
         {
             await _cliProxy.SendNotification(payload, Config);
         }
