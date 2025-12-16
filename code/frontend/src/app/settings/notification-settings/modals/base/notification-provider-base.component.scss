@@ -1,2 +1,6 @@
-/* Base Notification Provider Modal Styles */
 @use '../../../styles/settings-shared.scss';
+
+::ng-deep .notification-provider-modal.p-dialog {
+  max-width: 600px !important;
+  min-width: 320px !important;
+}

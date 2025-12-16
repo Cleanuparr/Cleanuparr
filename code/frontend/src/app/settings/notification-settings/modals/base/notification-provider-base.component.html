@@ -4,7 +4,7 @@
   [closable]="true"
   [draggable]="false"
   [resizable]="false"
-  styleClass="instance-modal"
+  styleClass="notification-provider-modal"
   [header]="modalTitle"
   (onHide)="onCancel()"
 >
@@ -111,7 +111,7 @@
 
   <!-- Modal Footer -->
   <ng-template pTemplate="footer">
-    <div>
+    <div class="pt-3">
       <button pButton type="button" label="Cancel" class="p-button-text" (click)="onCancel()"></button>
       <button
         pButton
