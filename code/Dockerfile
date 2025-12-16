@@ -23,10 +23,6 @@ ARG PACKAGES_PAT
 WORKDIR /app
 EXPOSE 11011
 
-# Copy solution and project files first for better layer caching
-# COPY backend/*.sln ./backend/
-# COPY backend/*/*.csproj ./backend/*/
-
 # Copy source code
 COPY backend/ ./backend/
 
@@ -61,8 +57,7 @@ RUN apt-get update && apt-get install -y \
 ENV VIRTUAL_ENV=/opt/apprise-venv
 RUN python3 -m venv $VIRTUAL_ENV
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
-# Major version pinning: auto-updates within 1.x but protected from breaking changes in 2.x
-RUN pip install --no-cache-dir "apprise>=1.0,<2.0"
+RUN pip install --no-cache-dir apprise==1.9.6
 
 ENV PUID=1000 \
     PGID=1000 \
