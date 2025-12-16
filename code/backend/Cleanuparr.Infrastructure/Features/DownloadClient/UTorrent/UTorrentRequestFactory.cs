@@ -60,6 +60,17 @@ public static class UTorrentRequestFactory
     }
 
     /// <summary>
+    /// Creates a request to remove a torrent without deleting its data
+    /// </summary>
+    /// <param name="hash">Torrent hash</param>
+    /// <returns>Request for remove torrent API call</returns>
+    public static UTorrentRequest CreateRemoveTorrentRequest(string hash)
+    {
+        return UTorrentRequest.Create("action=removetorrent", string.Empty)
+            .WithParameter("hash", hash);
+    }
+
+    /// <summary>
     /// Creates a request to set file priorities for a torrent
     /// </summary>
     /// <param name="hash">Torrent hash</param>

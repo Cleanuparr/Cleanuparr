@@ -151,7 +151,7 @@ public class DownloadCleanerTests : IDisposable
     {
         // Arrange
         TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
-        TestDataContextFactory.AddCleanCategory(_fixture.DataContext);
+        TestDataContextFactory.AddSeedingRule(_fixture.DataContext);
 
         var mockDownloadService = _fixture.CreateMockDownloadService();
         mockDownloadService
@@ -185,7 +185,7 @@ public class DownloadCleanerTests : IDisposable
     {
         // Arrange
         TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
-        TestDataContextFactory.AddCleanCategory(_fixture.DataContext);
+        TestDataContextFactory.AddSeedingRule(_fixture.DataContext);
 
         // Add ignored download to general config
         var generalConfig = _fixture.DataContext.GeneralConfigs.First();
@@ -229,7 +229,7 @@ public class DownloadCleanerTests : IDisposable
     {
         // Arrange
         TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
-        TestDataContextFactory.AddCleanCategory(_fixture.DataContext);
+        TestDataContextFactory.AddSeedingRule(_fixture.DataContext);
         var sonarrInstance = TestDataContextFactory.AddSonarrInstance(_fixture.DataContext);
 
         var mockTorrent = new Mock<ITorrentItemWrapper>();
@@ -294,7 +294,7 @@ public class DownloadCleanerTests : IDisposable
     {
         // Arrange
         TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
-        TestDataContextFactory.AddCleanCategory(_fixture.DataContext);
+        TestDataContextFactory.AddSeedingRule(_fixture.DataContext);
         TestDataContextFactory.AddSonarrInstance(_fixture.DataContext);
         TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
 
@@ -312,7 +312,7 @@ public class DownloadCleanerTests : IDisposable
         mockDownloadService
             .Setup(x => x.FilterDownloadsToBeCleanedAsync(
                 It.IsAny<List<ITorrentItemWrapper>>(),
-                It.IsAny<List<CleanCategory>>()
+                It.IsAny<List<SeedingRule>>()
             ))
             .Returns([]);
 
@@ -419,7 +419,7 @@ public class DownloadCleanerTests : IDisposable
     {
         // Arrange
         TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
-        TestDataContextFactory.AddCleanCategory(_fixture.DataContext, "completed", 1.0, 60);
+        TestDataContextFactory.AddSeedingRule(_fixture.DataContext, "completed", 1.0, 60);
 
         var mockTorrent = new Mock<ITorrentItemWrapper>();
         mockTorrent.Setup(x => x.Hash).Returns("test-hash");
@@ -434,13 +434,13 @@ public class DownloadCleanerTests : IDisposable
         mockDownloadService
             .Setup(x => x.FilterDownloadsToBeCleanedAsync(
                 It.IsAny<List<ITorrentItemWrapper>>(),
-                It.IsAny<List<CleanCategory>>()
+                It.IsAny<List<SeedingRule>>()
             ))
             .Returns([mockTorrent.Object]);
         mockDownloadService
             .Setup(x => x.CleanDownloadsAsync(
                 It.IsAny<List<ITorrentItemWrapper>>(),
-                It.IsAny<List<CleanCategory>>()
+                It.IsAny<List<SeedingRule>>()
             ))
             .Returns(Task.CompletedTask);
 
@@ -475,7 +475,7 @@ public class DownloadCleanerTests : IDisposable
     {
         // Arrange
         TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
-        TestDataContextFactory.AddCleanCategory(_fixture.DataContext);
+        TestDataContextFactory.AddSeedingRule(_fixture.DataContext);
         var sonarrInstance = TestDataContextFactory.AddSonarrInstance(_fixture.DataContext);
 
         // Need at least one download for arr processing to occur
@@ -492,7 +492,7 @@ public class DownloadCleanerTests : IDisposable
         mockDownloadService
             .Setup(x => x.FilterDownloadsToBeCleanedAsync(
                 It.IsAny<List<ITorrentItemWrapper>>(),
-                It.IsAny<List<CleanCategory>>()
+                It.IsAny<List<SeedingRule>>()
             ))
             .Returns([]);
 
@@ -548,7 +548,7 @@ public class DownloadCleanerTests : IDisposable
         // Arrange
         TestDataContextFactory.AddDownloadClient(_fixture.DataContext, "Failing Client");
         TestDataContextFactory.AddDownloadClient(_fixture.DataContext, "Working Client");
-        TestDataContextFactory.AddCleanCategory(_fixture.DataContext);
+        TestDataContextFactory.AddSeedingRule(_fixture.DataContext);
 
         var failingService = _fixture.CreateMockDownloadService("Failing Client");
         failingService
@@ -754,7 +754,7 @@ public class DownloadCleanerTests : IDisposable
     {
         // Arrange
         TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
-        TestDataContextFactory.AddCleanCategory(_fixture.DataContext);
+        TestDataContextFactory.AddSeedingRule(_fixture.DataContext);
 
         var mockTorrent = new Mock<ITorrentItemWrapper>();
         mockTorrent.Setup(x => x.Hash).Returns("test-hash");
@@ -769,7 +769,7 @@ public class DownloadCleanerTests : IDisposable
         mockDownloadService
             .Setup(x => x.FilterDownloadsToBeCleanedAsync(
                 It.IsAny<List<ITorrentItemWrapper>>(),
-                It.IsAny<List<CleanCategory>>()
+                It.IsAny<List<SeedingRule>>()
             ))
             .Throws(new Exception("Filter failed"));
 
@@ -800,7 +800,7 @@ public class DownloadCleanerTests : IDisposable
     {
         // Arrange
         TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
-        TestDataContextFactory.AddCleanCategory(_fixture.DataContext);
+        TestDataContextFactory.AddSeedingRule(_fixture.DataContext);
 
         var mockTorrent = new Mock<ITorrentItemWrapper>();
         mockTorrent.Setup(x => x.Hash).Returns("test-hash");
@@ -815,13 +815,13 @@ public class DownloadCleanerTests : IDisposable
         mockDownloadService
             .Setup(x => x.FilterDownloadsToBeCleanedAsync(
                 It.IsAny<List<ITorrentItemWrapper>>(),
-                It.IsAny<List<CleanCategory>>()
+                It.IsAny<List<SeedingRule>>()
             ))
             .Returns([mockTorrent.Object]);
         mockDownloadService
             .Setup(x => x.CleanDownloadsAsync(
                 It.IsAny<List<ITorrentItemWrapper>>(),
-                It.IsAny<List<CleanCategory>>()
+                It.IsAny<List<SeedingRule>>()
             ))
             .ThrowsAsync(new Exception("Clean failed"));
 
@@ -852,7 +852,7 @@ public class DownloadCleanerTests : IDisposable
     {
         // Arrange - DownloadCleaner calls ProcessArrConfigAsync with throwOnFailure=true
         TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
-        TestDataContextFactory.AddCleanCategory(_fixture.DataContext);
+        TestDataContextFactory.AddSeedingRule(_fixture.DataContext);
         TestDataContextFactory.AddSonarrInstance(_fixture.DataContext);
 
         var mockTorrent = new Mock<ITorrentItemWrapper>();
@@ -868,7 +868,7 @@ public class DownloadCleanerTests : IDisposable
         mockDownloadService
             .Setup(x => x.FilterDownloadsToBeCleanedAsync(
                 It.IsAny<List<ITorrentItemWrapper>>(),
-                It.IsAny<List<CleanCategory>>()
+                It.IsAny<List<SeedingRule>>()
             ))
             .Returns([]);
 

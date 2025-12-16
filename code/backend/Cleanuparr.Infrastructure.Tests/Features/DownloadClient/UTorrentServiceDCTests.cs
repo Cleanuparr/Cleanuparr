@@ -126,10 +126,10 @@ public class UTorrentServiceDCTests : IClassFixture<UTorrentServiceFixture>
                 new UTorrentItemWrapper(new UTorrentItem { Hash = "hash3", Label = "music" }, new UTorrentProperties { Hash = "hash3", Pex = 1, Trackers = "" })
             };
 
-            var categories = new List<CleanCategory>
+            var categories = new List<SeedingRule>
             {
-                new CleanCategory { Name = "movies", MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1 },
-                new CleanCategory { Name = "tv", MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1 }
+                new SeedingRule { Name = "movies", MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true },
+                new SeedingRule { Name = "tv", MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true }
             };
 
             // Act
@@ -153,9 +153,9 @@ public class UTorrentServiceDCTests : IClassFixture<UTorrentServiceFixture>
                 new UTorrentItemWrapper(new UTorrentItem { Hash = "hash1", Label = "Movies" }, new UTorrentProperties { Hash = "hash1", Pex = 1, Trackers = "" })
             };
 
-            var categories = new List<CleanCategory>
+            var categories = new List<SeedingRule>
             {
-                new CleanCategory { Name = "movies", MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1 }
+                new SeedingRule { Name = "movies", MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true }
             };
 
             // Act
@@ -177,9 +177,9 @@ public class UTorrentServiceDCTests : IClassFixture<UTorrentServiceFixture>
                 new UTorrentItemWrapper(new UTorrentItem { Hash = "hash1", Label = "music" }, new UTorrentProperties { Hash = "hash1", Pex = 1, Trackers = "" })
             };
 
-            var categories = new List<CleanCategory>
+            var categories = new List<SeedingRule>
             {
-                new CleanCategory { Name = "movies", MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1 }
+                new SeedingRule { Name = "movies", MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true }
             };
 
             // Act
@@ -292,15 +292,15 @@ public class UTorrentServiceDCTests : IClassFixture<UTorrentServiceFixture>
             const string hash = "TEST-HASH";
 
             _fixture.ClientWrapper
-                .Setup(x => x.RemoveTorrentsAsync(It.Is<List<string>>(h => h.Contains("test-hash"))))
+                .Setup(x => x.RemoveTorrentsAsync(It.Is<List<string>>(h => h.Contains("test-hash")), true))
                 .Returns(Task.CompletedTask);
 
             // Act
-            await sut.DeleteDownload(hash);
+            await sut.DeleteDownload(hash, true);
 
             // Assert
             _fixture.ClientWrapper.Verify(
-                x => x.RemoveTorrentsAsync(It.Is<List<string>>(h => h.Contains("test-hash"))),
+                x => x.RemoveTorrentsAsync(It.Is<List<string>>(h => h.Contains("test-hash")), true),
                 Times.Once);
         }
 
@@ -312,15 +312,35 @@ public class UTorrentServiceDCTests : IClassFixture<UTorrentServiceFixture>
             const string hash = "UPPERCASE-HASH";
 
             _fixture.ClientWrapper
-                .Setup(x => x.RemoveTorrentsAsync(It.IsAny<List<string>>()))
+                .Setup(x => x.RemoveTorrentsAsync(It.IsAny<List<string>>(), true))
                 .Returns(Task.CompletedTask);
 
             // Act
-            await sut.DeleteDownload(hash);
+            await sut.DeleteDownload(hash, true);
 
             // Assert
             _fixture.ClientWrapper.Verify(
-                x => x.RemoveTorrentsAsync(It.Is<List<string>>(h => h.Contains("uppercase-hash"))),
+                x => x.RemoveTorrentsAsync(It.Is<List<string>>(h => h.Contains("uppercase-hash")), true),
+                Times.Once);
+        }
+
+        [Fact]
+        public async Task CallsClientDeleteWithoutSourceFiles()
+        {
+            // Arrange
+            var sut = _fixture.CreateSut();
+            const string hash = "TEST-HASH";
+
+            _fixture.ClientWrapper
+                .Setup(x => x.RemoveTorrentsAsync(It.Is<List<string>>(h => h.Contains("test-hash")), false))
+                .Returns(Task.CompletedTask);
+
+            // Act
+            await sut.DeleteDownload(hash, false);
+
+            // Assert
+            _fixture.ClientWrapper.Verify(
+                x => x.RemoveTorrentsAsync(It.Is<List<string>>(h => h.Contains("test-hash")), false),
                 Times.Once);
         }
     }

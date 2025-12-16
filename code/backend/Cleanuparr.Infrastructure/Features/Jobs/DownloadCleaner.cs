@@ -128,8 +128,6 @@ public sealed class DownloadCleaner : GenericHandler
 
         await ChangeUnlinkedCategoriesAsync(isUnlinkedEnabled, downloadServiceToDownloadsMap, config);
         await CleanDownloadsAsync(downloadServiceToDownloadsMap, config);
-        
-        
 
         foreach (var downloadService in downloadServices)
         {

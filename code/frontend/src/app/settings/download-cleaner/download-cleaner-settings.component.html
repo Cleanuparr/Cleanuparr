@@ -228,8 +228,8 @@
                     
                     <div class="category-field">
                       <label>
-                        <i class="pi pi-question-circle field-info-icon" 
-                           (click)="openFieldDocs('maxSeedTime')" 
+                        <i class="pi pi-question-circle field-info-icon"
+                           (click)="openFieldDocs('maxSeedTime')"
                            title="Click for documentation"></i>
                         Max Seed Time (hours)
                       </label>
@@ -241,6 +241,19 @@
                         <small *ngIf="hasCategoryError(i, 'maxSeedTime', 'required')" class="form-error-text">This input is required</small>
                         <small *ngIf="hasCategoryError(i, 'maxSeedTime', 'min')" class="form-error-text">Min value is -1</small>
                         <small class="form-helper-text">Maximum time to seed before removing (<code>-1</code> means disabled)</small>
+                      </div>
+                    </div>
+
+                    <div class="category-field">
+                      <label>
+                        <i class="pi pi-question-circle field-info-icon"
+                           (click)="openFieldDocs('deleteSourceFiles')"
+                           title="Click for documentation"></i>
+                        Delete Source Files
+                      </label>
+                      <div class="field-input">
+                        <p-checkbox formControlName="deleteSourceFiles" [binary]="true" [inputId]="'deleteSourceFiles_' + i"></p-checkbox>
+                        <small class="form-helper-text">When enabled, the source files will be deleted when the download is removed</small>
                       </div>
                     </div>
                   </div>

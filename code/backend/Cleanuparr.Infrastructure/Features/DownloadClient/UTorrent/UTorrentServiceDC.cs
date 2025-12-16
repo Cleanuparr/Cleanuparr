@@ -24,9 +24,9 @@ public partial class UTorrentService
         return result;
     }
 
-    public override List<ITorrentItemWrapper>? FilterDownloadsToBeCleanedAsync(List<ITorrentItemWrapper>? downloads, List<CleanCategory> categories) =>
+    public override List<ITorrentItemWrapper>? FilterDownloadsToBeCleanedAsync(List<ITorrentItemWrapper>? downloads, List<SeedingRule> seedingRules) =>
         downloads
-            ?.Where(x => categories.Any(cat => cat.Name.Equals(x.Category, StringComparison.InvariantCultureIgnoreCase)))
+            ?.Where(x => seedingRules.Any(cat => cat.Name.Equals(x.Category, StringComparison.InvariantCultureIgnoreCase)))
             .ToList();
 
     public override List<ITorrentItemWrapper>? FilterDownloadsToChangeCategoryAsync(List<ITorrentItemWrapper>? downloads, List<string> categories) =>
@@ -36,9 +36,9 @@ public partial class UTorrentService
             .ToList();
 
     /// <inheritdoc/>
-    protected override async Task DeleteDownloadInternal(ITorrentItemWrapper torrent)
+    protected override async Task DeleteDownloadInternal(ITorrentItemWrapper torrent, bool deleteSourceFiles)
     {
-        await DeleteDownload(torrent.Hash);
+        await DeleteDownload(torrent.Hash, deleteSourceFiles);
     }
 
     public override async Task CreateCategoryAsync(string name)
@@ -124,11 +124,11 @@ public partial class UTorrentService
     }
 
     /// <inheritdoc/>
-    public override async Task DeleteDownload(string hash)
+    public override async Task DeleteDownload(string hash, bool deleteSourceFiles)
     {
         hash = hash.ToLowerInvariant();
-        
-        await _client.RemoveTorrentsAsync([hash]);
+
+        await _client.RemoveTorrentsAsync([hash], deleteSourceFiles);
     }
     
     protected virtual async Task ChangeLabel(string hash, string newLabel)

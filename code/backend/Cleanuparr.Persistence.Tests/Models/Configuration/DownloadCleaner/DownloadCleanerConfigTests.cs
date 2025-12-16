@@ -79,8 +79,8 @@ public sealed class DownloadCleanerConfigTests
             Enabled = true,
             Categories =
             [
-                new CleanCategory { Name = "movies", MaxRatio = 2.0, MinSeedTime = 0, MaxSeedTime = -1 },
-                new CleanCategory { Name = "tv", MaxRatio = 1.5, MinSeedTime = 24, MaxSeedTime = -1 }
+                new SeedingRule { Name = "movies", MaxRatio = 2.0, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true },
+                new SeedingRule { Name = "tv", MaxRatio = 1.5, MinSeedTime = 24, MaxSeedTime = -1, DeleteSourceFiles = true }
             ],
             UnlinkedEnabled = false
         };
@@ -96,8 +96,8 @@ public sealed class DownloadCleanerConfigTests
             Enabled = true,
             Categories =
             [
-                new CleanCategory { Name = "movies", MaxRatio = 2.0, MinSeedTime = 0, MaxSeedTime = -1 },
-                new CleanCategory { Name = "movies", MaxRatio = 1.5, MinSeedTime = 24, MaxSeedTime = -1 }
+                new SeedingRule { Name = "movies", MaxRatio = 2.0, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true },
+                new SeedingRule { Name = "movies", MaxRatio = 1.5, MinSeedTime = 24, MaxSeedTime = -1, DeleteSourceFiles = true }
             ],
             UnlinkedEnabled = false
         };
@@ -114,7 +114,7 @@ public sealed class DownloadCleanerConfigTests
             Enabled = true,
             Categories =
             [
-                new CleanCategory { Name = "", MaxRatio = 2.0, MinSeedTime = 0, MaxSeedTime = -1 }
+                new SeedingRule { Name = "", MaxRatio = 2.0, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true }
             ],
             UnlinkedEnabled = false
         };
@@ -151,7 +151,7 @@ public sealed class DownloadCleanerConfigTests
             Enabled = true,
             Categories =
             [
-                new CleanCategory { Name = "movies", MaxRatio = 2.0, MinSeedTime = 0, MaxSeedTime = -1 }
+                new SeedingRule { Name = "movies", MaxRatio = 2.0, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true }
             ],
             UnlinkedEnabled = true,
             UnlinkedTargetCategory = "",
@@ -171,7 +171,7 @@ public sealed class DownloadCleanerConfigTests
             Enabled = true,
             Categories =
             [
-                new CleanCategory { Name = "movies", MaxRatio = 2.0, MinSeedTime = 0, MaxSeedTime = -1 }
+                new SeedingRule { Name = "movies", MaxRatio = 2.0, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true }
             ],
             UnlinkedEnabled = true,
             UnlinkedTargetCategory = "cleanuparr-unlinked",
@@ -259,7 +259,7 @@ public sealed class DownloadCleanerConfigTests
             Enabled = true,
             Categories =
             [
-                new CleanCategory { Name = "movies", MaxRatio = 2.0, MinSeedTime = 0, MaxSeedTime = -1 }
+                new SeedingRule { Name = "movies", MaxRatio = 2.0, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true }
             ],
             UnlinkedEnabled = true,
             UnlinkedTargetCategory = "cleanuparr-unlinked",

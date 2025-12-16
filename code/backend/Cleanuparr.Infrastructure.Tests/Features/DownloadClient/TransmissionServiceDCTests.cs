@@ -138,10 +138,10 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
                 new TransmissionItemWrapper(new TorrentInfo { HashString = "hash3", DownloadDir = "/downloads/music" })
             };
 
-            var categories = new List<CleanCategory>
+            var categories = new List<SeedingRule>
             {
-                new CleanCategory { Name = "movies", MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1 },
-                new CleanCategory { Name = "tv", MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1 }
+                new SeedingRule { Name = "movies", MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true },
+                new SeedingRule { Name = "tv", MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true }
             };
 
             // Act
@@ -165,9 +165,9 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
                 new TransmissionItemWrapper(new TorrentInfo { HashString = "hash1", DownloadDir = "/downloads/Movies" })
             };
 
-            var categories = new List<CleanCategory>
+            var categories = new List<SeedingRule>
             {
-                new CleanCategory { Name = "movies", MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1 }
+                new SeedingRule { Name = "movies", MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true }
             };
 
             // Act
@@ -189,9 +189,9 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
                 new TransmissionItemWrapper(new TorrentInfo { HashString = "hash1", DownloadDir = "/downloads/music" })
             };
 
-            var categories = new List<CleanCategory>
+            var categories = new List<SeedingRule>
             {
-                new CleanCategory { Name = "movies", MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1 }
+                new SeedingRule { Name = "movies", MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true }
             };
 
             // Act
@@ -340,7 +340,7 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
                 .Returns(Task.CompletedTask);
 
             // Act
-            await sut.DeleteDownload(hash);
+            await sut.DeleteDownload(hash, true);
 
             // Assert
             _fixture.ClientWrapper.Verify(
@@ -379,7 +379,7 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
                 .ReturnsAsync((TransmissionTorrents?)null);
 
             // Act
-            await sut.DeleteDownload(hash);
+            await sut.DeleteDownload(hash, true);
 
             // Assert - no exception thrown
             _fixture.ClientWrapper.Verify(
@@ -426,7 +426,7 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
                 .ReturnsAsync(torrents);
 
             // Act
-            await sut.DeleteDownload(hash);
+            await sut.DeleteDownload(hash, true);
 
             // Assert
             _fixture.ClientWrapper.Verify(

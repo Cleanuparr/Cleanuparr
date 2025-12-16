@@ -33,10 +33,10 @@ public partial class QBitService
     }
 
     /// <inheritdoc/>
-    public override List<ITorrentItemWrapper>? FilterDownloadsToBeCleanedAsync(List<ITorrentItemWrapper>? downloads, List<CleanCategory> categories) =>
+    public override List<ITorrentItemWrapper>? FilterDownloadsToBeCleanedAsync(List<ITorrentItemWrapper>? downloads, List<SeedingRule> seedingRules) =>
         downloads
             ?.Where(x => !string.IsNullOrEmpty(x.Hash))
-            .Where(x => categories.Any(cat => cat.Name.Equals(x.Category, StringComparison.InvariantCultureIgnoreCase)))
+            .Where(x => seedingRules.Any(cat => cat.Name.Equals(x.Category, StringComparison.InvariantCultureIgnoreCase)))
             .ToList();
 
     /// <inheritdoc/>
@@ -61,9 +61,9 @@ public partial class QBitService
     }
 
     /// <inheritdoc/>
-    protected override async Task DeleteDownloadInternal(ITorrentItemWrapper torrent)
+    protected override async Task DeleteDownloadInternal(ITorrentItemWrapper torrent, bool deleteSourceFiles)
     {
-        await DeleteDownload(torrent.Hash);
+        await DeleteDownload(torrent.Hash, deleteSourceFiles);
     }
 
     public override async Task CreateCategoryAsync(string name)
@@ -175,9 +175,9 @@ public partial class QBitService
     }
 
     /// <inheritdoc/>
-    public override async Task DeleteDownload(string hash)
+    public override async Task DeleteDownload(string hash, bool deleteSourceFiles)
     {
-        await _client.DeleteAsync([hash], deleteDownloadedData: true);
+        await _client.DeleteAsync([hash], deleteDownloadedData: deleteSourceFiles);
     }
 
     protected async Task CreateCategory(string name)

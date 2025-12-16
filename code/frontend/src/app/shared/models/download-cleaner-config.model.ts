@@ -22,6 +22,7 @@ export interface CleanCategory {
   maxRatio: number;
   minSeedTime: number; // hours
   maxSeedTime: number; // hours
+  deleteSourceFiles: boolean;
 }
 
 export interface JobSchedule {
@@ -35,7 +36,8 @@ export function createDefaultCategory(): CleanCategory {
     name: '',
     maxRatio: -1, // -1 means disabled
     minSeedTime: 0,
-    maxSeedTime: -1 // -1 means disabled
+    maxSeedTime: -1, // -1 means disabled
+    deleteSourceFiles: true
   };
 }
 

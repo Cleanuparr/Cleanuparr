@@ -36,9 +36,9 @@ public interface IDownloadService : IDisposable
     /// Filters downloads that should be cleaned.
     /// </summary>
     /// <param name="downloads">The downloads to filter.</param>
-    /// <param name="categories">The categories by which to filter the downloads.</param>
+    /// <param name="seedingRules">The seeding rules by which to filter the downloads.</param>
     /// <returns>A list of downloads for the provided categories.</returns>
-    List<ITorrentItemWrapper>? FilterDownloadsToBeCleanedAsync(List<ITorrentItemWrapper>? downloads, List<CleanCategory> categories);
+    List<ITorrentItemWrapper>? FilterDownloadsToBeCleanedAsync(List<ITorrentItemWrapper>? downloads, List<SeedingRule> seedingRules);
 
     /// <summary>
     /// Filters downloads that should have their category changed.
@@ -52,8 +52,8 @@ public interface IDownloadService : IDisposable
     /// Cleans the downloads.
     /// </summary>
     /// <param name="downloads">The downloads to clean.</param>
-    /// <param name="categoriesToClean">The categories that should be cleaned.</param>
-    Task CleanDownloadsAsync(List<ITorrentItemWrapper>? downloads, List<CleanCategory> categoriesToClean);
+    /// <param name="seedingRules">The seeding rules.</param>
+    Task CleanDownloadsAsync(List<ITorrentItemWrapper>? downloads, List<SeedingRule> seedingRules);
 
     /// <summary>
     /// Changes the category for downloads that have no hardlinks.
@@ -64,7 +64,9 @@ public interface IDownloadService : IDisposable
     /// <summary>
     /// Deletes a download item.
     /// </summary>
-    public Task DeleteDownload(string hash);
+    /// <param name="hash">The torrent hash.</param>
+    /// <param name="deleteSourceFiles">Whether to delete the source files along with the torrent. Defaults to true.</param>
+    public Task DeleteDownload(string hash, bool deleteSourceFiles);
 
     /// <summary>
     /// Creates a category.

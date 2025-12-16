@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Cleanuparr.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Cleanuparr.Persistence.Migrations.Data
 {
     [DbContext(typeof(DataContext))]
-    partial class DataContextModelSnapshot : ModelSnapshot
+    [Migration("20251216204347_AddDeleteSourceFilesToCleanCategory")]
+    partial class AddDeleteSourceFilesToCleanCategory
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.6");
@@ -105,6 +108,47 @@ namespace Cleanuparr.Persistence.Migrations.Data
                     b.ToTable("blacklist_sync_configs", (string)null);
                 });
 
+            modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.DownloadCleaner.CleanCategory", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("id");
+
+                    b.Property<bool>("DeleteSourceFiles")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("delete_source_files");
+
+                    b.Property<Guid>("DownloadCleanerConfigId")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("download_cleaner_config_id");
+
+                    b.Property<double>("MaxRatio")
+                        .HasColumnType("REAL")
+                        .HasColumnName("max_ratio");
+
+                    b.Property<double>("MaxSeedTime")
+                        .HasColumnType("REAL")
+                        .HasColumnName("max_seed_time");
+
+                    b.Property<double>("MinSeedTime")
+                        .HasColumnType("REAL")
+                        .HasColumnName("min_seed_time");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("name");
+
+                    b.HasKey("Id")
+                        .HasName("pk_clean_categories");
+
+                    b.HasIndex("DownloadCleanerConfigId")
+                        .HasDatabaseName("ix_clean_categories_download_cleaner_config_id");
+
+                    b.ToTable("clean_categories", (string)null);
+                });
+
             modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.DownloadCleaner.DownloadCleanerConfig", b =>
                 {
                     b.Property<Guid>("Id")
@@ -161,47 +205,6 @@ namespace Cleanuparr.Persistence.Migrations.Data
                         .HasName("pk_download_cleaner_configs");
 
                     b.ToTable("download_cleaner_configs", (string)null);
-                });
-
-            modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.DownloadCleaner.SeedingRule", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT")
-                        .HasColumnName("id");
-
-                    b.Property<bool>("DeleteSourceFiles")
-                        .HasColumnType("INTEGER")
-                        .HasColumnName("delete_source_files");
-
-                    b.Property<Guid>("DownloadCleanerConfigId")
-                        .HasColumnType("TEXT")
-                        .HasColumnName("download_cleaner_config_id");
-
-                    b.Property<double>("MaxRatio")
-                        .HasColumnType("REAL")
-                        .HasColumnName("max_ratio");
-
-                    b.Property<double>("MaxSeedTime")
-                        .HasColumnType("REAL")
-                        .HasColumnName("max_seed_time");
-
-                    b.Property<double>("MinSeedTime")
-                        .HasColumnType("REAL")
-                        .HasColumnName("min_seed_time");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("TEXT")
-                        .HasColumnName("name");
-
-                    b.HasKey("Id")
-                        .HasName("pk_seeding_rules");
-
-                    b.HasIndex("DownloadCleanerConfigId")
-                        .HasDatabaseName("ix_seeding_rules_download_cleaner_config_id");
-
-                    b.ToTable("seeding_rules", (string)null);
                 });
 
             modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.DownloadClientConfig", b =>
@@ -963,14 +966,14 @@ namespace Cleanuparr.Persistence.Migrations.Data
                     b.Navigation("ArrConfig");
                 });
 
-            modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.DownloadCleaner.SeedingRule", b =>
+            modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.DownloadCleaner.CleanCategory", b =>
                 {
                     b.HasOne("Cleanuparr.Persistence.Models.Configuration.DownloadCleaner.DownloadCleanerConfig", "DownloadCleanerConfig")
                         .WithMany("Categories")
                         .HasForeignKey("DownloadCleanerConfigId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
-                        .HasConstraintName("fk_seeding_rules_download_cleaner_configs_download_cleaner_config_id");
+                        .HasConstraintName("fk_clean_categories_download_cleaner_configs_download_cleaner_config_id");
 
                     b.Navigation("DownloadCleanerConfig");
                 });

@@ -21,10 +21,10 @@ public partial class TransmissionService
     }
 
     /// <inheritdoc/>
-    public override List<ITorrentItemWrapper>? FilterDownloadsToBeCleanedAsync(List<ITorrentItemWrapper>? downloads, List<CleanCategory> categories)
+    public override List<ITorrentItemWrapper>? FilterDownloadsToBeCleanedAsync(List<ITorrentItemWrapper>? downloads, List<SeedingRule> seedingRules)
     {
         return downloads
-            ?.Where(x => categories
+            ?.Where(x => seedingRules
                 .Any(cat => cat.Name.Equals(x.Category, StringComparison.InvariantCultureIgnoreCase))
             )
             .ToList();
@@ -39,10 +39,10 @@ public partial class TransmissionService
     }
 
     /// <inheritdoc/>
-    protected override async Task DeleteDownloadInternal(ITorrentItemWrapper torrent)
+    protected override async Task DeleteDownloadInternal(ITorrentItemWrapper torrent, bool deleteSourceFiles)
     {
         var transmissionTorrent = (TransmissionItemWrapper)torrent;
-        await RemoveDownloadAsync(transmissionTorrent.Info.Id);
+        await RemoveDownloadAsync(transmissionTorrent.Info.Id, deleteSourceFiles);
     }
     
     public override async Task CreateCategoryAsync(string name)
@@ -140,7 +140,7 @@ public partial class TransmissionService
         await _client.TorrentSetLocationAsync([downloadId], newLocation, true);
     }
 
-    public override async Task DeleteDownload(string hash)
+    public override async Task DeleteDownload(string hash, bool deleteSourceFiles)
     {
         TorrentInfo? torrent = await GetTorrentAsync(hash);
 
@@ -149,11 +149,11 @@ public partial class TransmissionService
             return;
         }
 
-        await _client.TorrentRemoveAsync([torrent.Id], true);
+        await _client.TorrentRemoveAsync([torrent.Id], deleteSourceFiles);
     }
-    
-    protected virtual async Task RemoveDownloadAsync(long downloadId)
+
+    protected virtual async Task RemoveDownloadAsync(long downloadId, bool deleteSourceFiles)
     {
-        await _client.TorrentRemoveAsync([downloadId], true);
+        await _client.TorrentRemoveAsync([downloadId], deleteSourceFiles);
     }
 }

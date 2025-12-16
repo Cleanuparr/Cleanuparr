@@ -82,19 +82,19 @@ public abstract class DownloadService : IDownloadService
     public abstract Task<DownloadCheckResult> ShouldRemoveFromArrQueueAsync(string hash, IReadOnlyList<string> ignoredDownloads);
 
     /// <inheritdoc/>
-    public abstract Task DeleteDownload(string hash);
+    public abstract Task DeleteDownload(string hash, bool deleteSourceFiles);
 
     /// <inheritdoc/>
     public abstract Task<List<ITorrentItemWrapper>> GetSeedingDownloads();
 
     /// <inheritdoc/>
-    public abstract List<ITorrentItemWrapper>? FilterDownloadsToBeCleanedAsync(List<ITorrentItemWrapper>? downloads, List<CleanCategory> categories);
+    public abstract List<ITorrentItemWrapper>? FilterDownloadsToBeCleanedAsync(List<ITorrentItemWrapper>? downloads, List<SeedingRule> seedingRules);
 
     /// <inheritdoc/>
     public abstract List<ITorrentItemWrapper>? FilterDownloadsToChangeCategoryAsync(List<ITorrentItemWrapper>? downloads, List<string> categories);
 
     /// <inheritdoc/>
-    public virtual async Task CleanDownloadsAsync(List<ITorrentItemWrapper>? downloads, List<CleanCategory> categoriesToClean)
+    public virtual async Task CleanDownloadsAsync(List<ITorrentItemWrapper>? downloads, List<SeedingRule> seedingRules)
     {
         if (downloads?.Count is null or 0)
         {
@@ -108,7 +108,7 @@ public abstract class DownloadService : IDownloadService
                 continue;
             }
 
-            CleanCategory? category = categoriesToClean
+            SeedingRule? category = seedingRules
                 .FirstOrDefault(x => (torrent.Category ?? string.Empty).Equals(x.Name, StringComparison.InvariantCultureIgnoreCase));
 
             if (category is null)
@@ -135,13 +135,14 @@ public abstract class DownloadService : IDownloadService
                 continue;
             }
 
-            await _dryRunInterceptor.InterceptAsync(DeleteDownloadInternal, torrent);
+            await _dryRunInterceptor.InterceptAsync(() => DeleteDownloadInternal(torrent, category.DeleteSourceFiles));
 
             _logger.LogInformation(
-                "download cleaned | {reason} reached | {name}",
+                "download cleaned | {reason} reached | delete files: {deleteFiles} | {name}",
                 result.Reason is CleanReason.MaxRatioReached
                     ? "MAX_RATIO & MIN_SEED_TIME"
                     : "MAX_SEED_TIME",
+                category.DeleteSourceFiles,
                 torrent.Name
             );
 
@@ -163,9 +164,10 @@ public abstract class DownloadService : IDownloadService
     /// Each client implementation handles the deletion according to its API requirements.
     /// </summary>
     /// <param name="torrent">The torrent to delete</param>
-    protected abstract Task DeleteDownloadInternal(ITorrentItemWrapper torrent);
+    /// <param name="deleteSourceFiles">Whether to delete the source files along with the torrent</param>
+    protected abstract Task DeleteDownloadInternal(ITorrentItemWrapper torrent, bool deleteSourceFiles);
     
-    protected SeedingCheckResult ShouldCleanDownload(double ratio, TimeSpan seedingTime, CleanCategory category)
+    protected SeedingCheckResult ShouldCleanDownload(double ratio, TimeSpan seedingTime, SeedingRule category)
     {
         // check ratio
         if (DownloadReachedRatio(ratio, seedingTime, category))
@@ -210,7 +212,7 @@ public abstract class DownloadService : IDownloadService
         return parts.Length > 0 ? Path.Combine(root, parts[0]) : root;
     }
     
-    private bool DownloadReachedRatio(double ratio, TimeSpan seedingTime, CleanCategory category)
+    private bool DownloadReachedRatio(double ratio, TimeSpan seedingTime, SeedingRule category)
     {
         if (category.MaxRatio < 0)
         {
@@ -236,7 +238,7 @@ public abstract class DownloadService : IDownloadService
         return true;
     }
     
-    private bool DownloadReachedMaxSeedTime(TimeSpan seedingTime, CleanCategory category)
+    private bool DownloadReachedMaxSeedTime(TimeSpan seedingTime, SeedingRule category)
     {
         if (category.MaxSeedTime < 0)
         {
