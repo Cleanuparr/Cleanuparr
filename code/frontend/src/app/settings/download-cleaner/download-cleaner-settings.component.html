@@ -333,17 +333,20 @@
               </div>
             </div>
 
-            <!-- Ignored Root Directory -->
+            <!-- Ignored Root Directories -->
             <div class="field-row">
               <label class="field-label">
-                <i class="pi pi-question-circle field-info-icon" 
-                   (click)="openFieldDocs('unlinkedIgnoredRootDir')" 
+                <i class="pi pi-question-circle field-info-icon"
+                   (click)="openFieldDocs('unlinkedIgnoredRootDirs')"
                    title="Click for documentation"></i>
-                Ignored Root Directory
+                Ignored Root Directories
               </label>
               <div class="field-input">
-                <input type="text" pInputText formControlName="unlinkedIgnoredRootDir" placeholder="/path/to/directory" />
-                <small class="form-helper-text">Root directory to ignore when checking for unlinked downloads (used for cross-seed)</small>
+                <app-mobile-autocomplete
+                  formControlName="unlinkedIgnoredRootDirs"
+                  placeholder="Add directory path"
+                ></app-mobile-autocomplete>
+                <small class="form-helper-text">Root directories to ignore when checking for unlinked downloads (used for cross-seed)</small>
               </div>
             </div>
 

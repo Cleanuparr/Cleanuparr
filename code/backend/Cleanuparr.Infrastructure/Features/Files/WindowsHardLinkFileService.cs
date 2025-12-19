@@ -1,4 +1,4 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
 using Microsoft.Win32.SafeHandles;
@@ -66,6 +66,15 @@ public class WindowsHardLinkFileService : IHardLinkFileService, IDisposable
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to populate file index counts from {dir}", directoryPath);
+        }
+    }
+
+    /// <inheritdoc/>
+    public void PopulateFileCounts(IEnumerable<string> directoryPaths)
+    {
+        foreach (var directoryPath in directoryPaths.Where(d => !string.IsNullOrEmpty(d)))
+        {
+            PopulateFileCounts(directoryPath);
         }
     }
 

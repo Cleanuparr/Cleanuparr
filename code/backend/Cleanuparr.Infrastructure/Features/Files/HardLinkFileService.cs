@@ -23,14 +23,22 @@ public class HardLinkFileService : IHardLinkFileService
     public void PopulateFileCounts(string directoryPath)
     {
         _logger.LogTrace("populating file counts from {dir}", directoryPath);
-        
+
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
             _windowsHardLinkFileService.PopulateFileCounts(directoryPath);
             return;
         }
-        
+
         _unixHardLinkFileService.PopulateFileCounts(directoryPath);
+    }
+
+    public void PopulateFileCounts(IEnumerable<string> directoryPaths)
+    {
+        foreach (var directoryPath in directoryPaths.Where(d => !string.IsNullOrEmpty(d)))
+        {
+            PopulateFileCounts(directoryPath);
+        }
     }
 
     public long GetHardLinkCount(string filePath, bool ignoreRootDir)

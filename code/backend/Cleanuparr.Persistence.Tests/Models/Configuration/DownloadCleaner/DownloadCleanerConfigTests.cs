@@ -224,7 +224,7 @@ public sealed class DownloadCleanerConfigTests
             UnlinkedEnabled = true,
             UnlinkedTargetCategory = "cleanuparr-unlinked",
             UnlinkedCategories = ["movies"],
-            UnlinkedIgnoredRootDir = "/non/existent/directory"
+            UnlinkedIgnoredRootDirs = ["/non/existent/directory"]
         };
 
         var exception = Should.Throw<ValidationException>(() => config.Validate());
@@ -241,7 +241,7 @@ public sealed class DownloadCleanerConfigTests
             UnlinkedEnabled = true,
             UnlinkedTargetCategory = "cleanuparr-unlinked",
             UnlinkedCategories = ["movies"],
-            UnlinkedIgnoredRootDir = ""
+            UnlinkedIgnoredRootDirs = []
         };
 
         Should.NotThrow(() => config.Validate());

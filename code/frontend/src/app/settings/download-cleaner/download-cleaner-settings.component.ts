@@ -150,7 +150,7 @@ export class DownloadCleanerSettingsComponent implements OnDestroy, CanComponent
       unlinkedEnabled: [{ value: false, disabled: true }],
       unlinkedTargetCategory: [{ value: 'cleanuparr-unlinked', disabled: true }, [Validators.required]],
       unlinkedUseTag: [{ value: false, disabled: true }],
-      unlinkedIgnoredRootDir: [{ value: '', disabled: true }],
+      unlinkedIgnoredRootDirs: [{ value: [], disabled: true }],
       unlinkedCategories: [{ value: [], disabled: true }]
     }, { validators: [this.validateUnlinkedCategories, this.validateAtLeastOneFeature] });
 
@@ -341,7 +341,7 @@ export class DownloadCleanerSettingsComponent implements OnDestroy, CanComponent
       unlinkedEnabled: config.unlinkedEnabled,
       unlinkedTargetCategory: config.unlinkedTargetCategory,
       unlinkedUseTag: config.unlinkedUseTag,
-      unlinkedIgnoredRootDir: config.unlinkedIgnoredRootDir,
+      unlinkedIgnoredRootDirs: config.unlinkedIgnoredRootDirs || [],
       unlinkedCategories: config.unlinkedCategories || []
     });
 
@@ -624,7 +624,7 @@ export class DownloadCleanerSettingsComponent implements OnDestroy, CanComponent
         unlinkedEnabled: formValues.unlinkedEnabled,
         unlinkedTargetCategory: formValues.unlinkedTargetCategory,
         unlinkedUseTag: formValues.unlinkedUseTag,
-        unlinkedIgnoredRootDir: formValues.unlinkedIgnoredRootDir,
+        unlinkedIgnoredRootDirs: formValues.unlinkedIgnoredRootDirs || [],
         unlinkedCategories: formValues.unlinkedCategories || []
       };
 
@@ -682,7 +682,7 @@ export class DownloadCleanerSettingsComponent implements OnDestroy, CanComponent
       unlinkedEnabled: false,
       unlinkedTargetCategory: 'cleanuparr-unlinked',
       unlinkedUseTag: false,
-      unlinkedIgnoredRootDir: '',
+      unlinkedIgnoredRootDirs: [],
       unlinkedCategories: []
     });
 
@@ -793,7 +793,7 @@ export class DownloadCleanerSettingsComponent implements OnDestroy, CanComponent
   private updateUnlinkedControlsState(enabled: boolean): void {
     const targetCategoryControl = this.downloadCleanerForm.get('unlinkedTargetCategory');
     const useTagControl = this.downloadCleanerForm.get('unlinkedUseTag');
-    const ignoredRootDirControl = this.downloadCleanerForm.get('unlinkedIgnoredRootDir');
+    const ignoredRootDirsControl = this.downloadCleanerForm.get('unlinkedIgnoredRootDirs');
     const categoriesControl = this.downloadCleanerForm.get('unlinkedCategories');
     
     // Disable emitting events during bulk changes
@@ -803,13 +803,13 @@ export class DownloadCleanerSettingsComponent implements OnDestroy, CanComponent
       // Enable all unlinked controls
       targetCategoryControl?.enable(options);
       useTagControl?.enable(options);
-      ignoredRootDirControl?.enable(options);
+      ignoredRootDirsControl?.enable(options);
       categoriesControl?.enable(options);
     } else {
       // Disable all unlinked controls
       targetCategoryControl?.disable(options);
       useTagControl?.disable(options);
-      ignoredRootDirControl?.disable(options);
+      ignoredRootDirsControl?.disable(options);
       categoriesControl?.disable(options);
     }
   }

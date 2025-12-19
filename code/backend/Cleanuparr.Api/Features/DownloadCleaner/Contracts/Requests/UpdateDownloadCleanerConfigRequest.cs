@@ -24,7 +24,7 @@ public sealed record UpdateDownloadCleanerConfigRequest
 
     public bool UnlinkedUseTag { get; init; }
 
-    public string UnlinkedIgnoredRootDir { get; init; } = string.Empty;
+    public List<string> UnlinkedIgnoredRootDirs { get; init; } = [];
     
     public List<string> UnlinkedCategories { get; init; } = [];
 

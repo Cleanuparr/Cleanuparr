@@ -89,9 +89,9 @@ public partial class QBitService
 
         var downloadCleanerConfig = ContextProvider.Get<DownloadCleanerConfig>(nameof(DownloadCleanerConfig));
 
-        if (!string.IsNullOrEmpty(downloadCleanerConfig.UnlinkedIgnoredRootDir))
+        if (downloadCleanerConfig.UnlinkedIgnoredRootDirs.Count > 0)
         {
-            _hardLinkFileService.PopulateFileCounts(downloadCleanerConfig.UnlinkedIgnoredRootDir);
+            _hardLinkFileService.PopulateFileCounts(downloadCleanerConfig.UnlinkedIgnoredRootDirs);
         }
 
         foreach (QBitItemWrapper torrent in downloads.Cast<QBitItemWrapper>())
@@ -131,7 +131,7 @@ public partial class QBitService
                     continue;
                 }
 
-                long hardlinkCount = _hardLinkFileService.GetHardLinkCount(filePath, !string.IsNullOrEmpty(downloadCleanerConfig.UnlinkedIgnoredRootDir));
+                long hardlinkCount = _hardLinkFileService.GetHardLinkCount(filePath, downloadCleanerConfig.UnlinkedIgnoredRootDirs.Count > 0);
 
                 if (hardlinkCount < 0)
                 {

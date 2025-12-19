@@ -1,4 +1,4 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using Microsoft.Extensions.Logging;
 using Mono.Unix.Native;
 
@@ -61,6 +61,15 @@ public class UnixHardLinkFileService : IHardLinkFileService, IDisposable
         {
             _logger.LogError(ex, "failed to populate inode counts from {dir}", directoryPath);
             throw;
+        }
+    }
+
+    /// <inheritdoc/>
+    public void PopulateFileCounts(IEnumerable<string> directoryPaths)
+    {
+        foreach (var directoryPath in directoryPaths.Where(d => !string.IsNullOrEmpty(d)))
+        {
+            PopulateFileCounts(directoryPath);
         }
     }
 

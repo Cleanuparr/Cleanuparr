@@ -32,7 +32,7 @@ public sealed record DownloadCleanerConfig : IJobConfig
 
     public bool UnlinkedUseTag { get; set; }
 
-    public string UnlinkedIgnoredRootDir { get; set; } = string.Empty;
+    public List<string> UnlinkedIgnoredRootDirs { get; set; } = [];
     
     public List<string> UnlinkedCategories { get; set; } = [];
 
@@ -87,9 +87,12 @@ public sealed record DownloadCleanerConfig : IJobConfig
             throw new ValidationException("Empty unlinked category filter found");
         }
 
-        if (!string.IsNullOrEmpty(UnlinkedIgnoredRootDir) && !Directory.Exists(UnlinkedIgnoredRootDir))
+        foreach (var dir in UnlinkedIgnoredRootDirs.Where(d => !string.IsNullOrEmpty(d)))
         {
-            throw new ValidationException($"{UnlinkedIgnoredRootDir} root directory does not exist");
+            if (!Directory.Exists(dir))
+            {
+                throw new ValidationException($"{dir} root directory does not exist");
+            }
         }
     }
 }
