@@ -16,11 +16,18 @@ public sealed class TransmissionClientWrapper : ITransmissionClientWrapper
         _client = client;
     }
 
-    public Task<SessionInfo> GetSessionInformationAsync()
+    public Task<SessionInfo?> GetSessionInformationAsync()
         => _client.GetSessionInformationAsync();
 
     public Task<TransmissionTorrents?> TorrentGetAsync(string[] fields, string? hash = null)
-        => _client.TorrentGetAsync(fields, hash);
+    {
+        if (hash is null)
+        {
+            return _client.TorrentGetAsync(fields);
+        }
+        
+        return _client.TorrentGetAsync(fields, hash);
+    }
 
     public Task TorrentSetAsync(TorrentSettings settings)
         => _client.TorrentSetAsync(settings);

@@ -8,7 +8,7 @@ namespace Cleanuparr.Infrastructure.Features.DownloadClient.Transmission;
 /// </summary>
 public interface ITransmissionClientWrapper
 {
-    Task<SessionInfo> GetSessionInformationAsync();
+    Task<SessionInfo?> GetSessionInformationAsync();
     Task<TransmissionTorrents?> TorrentGetAsync(string[] fields, string? hash = null);
     Task TorrentSetAsync(TorrentSettings settings);
     Task TorrentSetLocationAsync(long[] ids, string location, bool move);
