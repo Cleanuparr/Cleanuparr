@@ -4,7 +4,7 @@ using ValidationException = Cleanuparr.Domain.Exceptions.ValidationException;
 
 namespace Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
 
-public sealed record CleanCategory : IConfig
+public sealed record SeedingRule : IConfig
 {
     [Key]
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
@@ -30,6 +30,11 @@ public sealed record CleanCategory : IConfig
     /// Number of hours to seed before removing a download.
     /// </summary>
     public required double MaxSeedTime { get; init; } = -1;
+
+    /// <summary>
+    /// Whether to delete the source files when cleaning the download.
+    /// </summary>
+    public required bool DeleteSourceFiles { get; init; }
 
     public void Validate()
     {

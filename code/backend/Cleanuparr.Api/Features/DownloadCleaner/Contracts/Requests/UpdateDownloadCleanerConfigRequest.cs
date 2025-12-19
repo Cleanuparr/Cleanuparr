@@ -1,8 +1,6 @@
-using System.ComponentModel.DataAnnotations;
-
 namespace Cleanuparr.Api.Features.DownloadCleaner.Contracts.Requests;
 
-public record UpdateDownloadCleanerConfigRequest
+public sealed record UpdateDownloadCleanerConfigRequest
 {
     public bool Enabled { get; init; }
 
@@ -13,7 +11,7 @@ public record UpdateDownloadCleanerConfigRequest
     /// </summary>
     public bool UseAdvancedScheduling { get; init; }
 
-    public List<CleanCategoryRequest> Categories { get; init; } = [];
+    public List<SeedingRuleRequest> Categories { get; init; } = [];
 
     public bool DeletePrivate { get; init; }
     
@@ -31,25 +29,4 @@ public record UpdateDownloadCleanerConfigRequest
     public List<string> UnlinkedCategories { get; init; } = [];
 
     public List<string> IgnoredDownloads { get; init; } = [];
-}
-
-public record CleanCategoryRequest
-{
-    [Required]
-    public string Name { get; init; } = string.Empty;
-    
-    /// <summary>
-    /// Max ratio before removing a download.
-    /// </summary>
-    public double MaxRatio { get; init; } = -1;
-
-    /// <summary>
-    /// Min number of hours to seed before removing a download, if the ratio has been met.
-    /// </summary>
-    public double MinSeedTime { get; init; }
-
-    /// <summary>
-    /// Number of hours to seed before removing a download.
-    /// </summary>
-    public double MaxSeedTime { get; init; } = -1;
 }

@@ -210,13 +210,16 @@ public sealed class UTorrentClient
     /// Removes torrents from µTorrent
     /// </summary>
     /// <param name="hashes">List of torrent hashes to remove</param>
-    public async Task RemoveTorrentsAsync(List<string> hashes)
+    /// <param name="deleteData">Whether to delete the downloaded data files</param>
+    public async Task RemoveTorrentsAsync(List<string> hashes, bool deleteData)
     {
         try
         {
             foreach (var hash in hashes)
             {
-                var request = UTorrentRequestFactory.CreateRemoveTorrentWithDataRequest(hash);
+                var request = deleteData
+                    ? UTorrentRequestFactory.CreateRemoveTorrentWithDataRequest(hash)
+                    : UTorrentRequestFactory.CreateRemoveTorrentRequest(hash);
                 await SendAuthenticatedRequestAsync(request);
             }
         }

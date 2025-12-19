@@ -35,8 +35,8 @@ public sealed class DelugeClientWrapper : IDelugeClientWrapper
     public Task<List<DownloadStatus>?> GetStatusForAllTorrents()
         => _client.GetStatusForAllTorrents();
 
-    public Task DeleteTorrents(List<string> hashes)
-        => _client.DeleteTorrents(hashes);
+    public Task DeleteTorrents(List<string> hashes, bool removeData)
+        => _client.DeleteTorrents(hashes, removeData);
 
     public Task ChangeFilesPriority(string hash, List<int> priorities)
         => _client.ChangeFilesPriority(hash, priorities);

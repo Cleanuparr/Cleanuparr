@@ -38,7 +38,7 @@ public class DataContext : DbContext
     
     public DbSet<DownloadCleanerConfig> DownloadCleanerConfigs { get; set; }
     
-    public DbSet<CleanCategory> CleanCategories { get; set; }
+    public DbSet<SeedingRule> SeedingRules { get; set; }
     
     public DbSet<ArrConfig> ArrConfigs { get; set; }
     

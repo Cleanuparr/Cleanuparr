@@ -213,6 +213,7 @@ export class DownloadCleanerSettingsComponent implements OnDestroy, CanComponent
       maxRatio: [category.maxRatio, [Validators.min(-1), Validators.required]],
       minSeedTime: [category.minSeedTime, [Validators.min(0), Validators.required]],
       maxSeedTime: [category.maxSeedTime, [Validators.min(-1), Validators.required]],
+      deleteSourceFiles: [category.deleteSourceFiles],
     }, { validators: this.validateCategory });
   }
   

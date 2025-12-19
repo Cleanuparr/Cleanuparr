@@ -133,10 +133,10 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
                 new DelugeItemWrapper(new DownloadStatus { Hash = "hash3", Label = "music", Trackers = new List<Tracker>(), DownloadLocation = "/downloads" })
             };
 
-            var categories = new List<CleanCategory>
+            var categories = new List<SeedingRule>
             {
-                new CleanCategory { Name = "movies", MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1 },
-                new CleanCategory { Name = "tv", MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1 }
+                new SeedingRule { Name = "movies", MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true },
+                new SeedingRule { Name = "tv", MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true }
             };
 
             // Act
@@ -160,9 +160,9 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
                 new DelugeItemWrapper(new DownloadStatus { Hash = "hash1", Label = "Movies", Trackers = new List<Tracker>(), DownloadLocation = "/downloads" })
             };
 
-            var categories = new List<CleanCategory>
+            var categories = new List<SeedingRule>
             {
-                new CleanCategory { Name = "movies", MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1 }
+                new SeedingRule { Name = "movies", MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true }
             };
 
             // Act
@@ -184,9 +184,9 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
                 new DelugeItemWrapper(new DownloadStatus { Hash = "hash1", Label = "music", Trackers = new List<Tracker>(), DownloadLocation = "/downloads" })
             };
 
-            var categories = new List<CleanCategory>
+            var categories = new List<SeedingRule>
             {
-                new CleanCategory { Name = "movies", MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1 }
+                new SeedingRule { Name = "movies", MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true }
             };
 
             // Act
@@ -342,15 +342,15 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
             const string hash = "TEST-HASH";
 
             _fixture.ClientWrapper
-                .Setup(x => x.DeleteTorrents(It.Is<List<string>>(h => h.Contains("test-hash"))))
+                .Setup(x => x.DeleteTorrents(It.Is<List<string>>(h => h.Contains("test-hash")), true))
                 .Returns(Task.CompletedTask);
 
             // Act
-            await sut.DeleteDownload(hash);
+            await sut.DeleteDownload(hash, true);
 
             // Assert
             _fixture.ClientWrapper.Verify(
-                x => x.DeleteTorrents(It.Is<List<string>>(h => h.Contains("test-hash"))),
+                x => x.DeleteTorrents(It.Is<List<string>>(h => h.Contains("test-hash")), true),
                 Times.Once);
         }
 
@@ -362,15 +362,35 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
             const string hash = "UPPERCASE-HASH";
 
             _fixture.ClientWrapper
-                .Setup(x => x.DeleteTorrents(It.IsAny<List<string>>()))
+                .Setup(x => x.DeleteTorrents(It.IsAny<List<string>>(), true))
                 .Returns(Task.CompletedTask);
 
             // Act
-            await sut.DeleteDownload(hash);
+            await sut.DeleteDownload(hash, true);
 
             // Assert
             _fixture.ClientWrapper.Verify(
-                x => x.DeleteTorrents(It.Is<List<string>>(h => h.Contains("uppercase-hash"))),
+                x => x.DeleteTorrents(It.Is<List<string>>(h => h.Contains("uppercase-hash")), true),
+                Times.Once);
+        }
+
+        [Fact]
+        public async Task CallsClientDeleteWithoutSourceFiles()
+        {
+            // Arrange
+            var sut = _fixture.CreateSut();
+            const string hash = "TEST-HASH";
+
+            _fixture.ClientWrapper
+                .Setup(x => x.DeleteTorrents(It.Is<List<string>>(h => h.Contains("test-hash")), false))
+                .Returns(Task.CompletedTask);
+
+            // Act
+            await sut.DeleteDownload(hash, false);
+
+            // Assert
+            _fixture.ClientWrapper.Verify(
+                x => x.DeleteTorrents(It.Is<List<string>>(h => h.Contains("test-hash")), false),
                 Times.Once);
         }
     }

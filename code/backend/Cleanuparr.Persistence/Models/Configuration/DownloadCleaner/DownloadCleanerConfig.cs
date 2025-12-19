@@ -19,7 +19,7 @@ public sealed record DownloadCleanerConfig : IJobConfig
     /// </summary>
     public bool UseAdvancedScheduling { get; set; }
 
-    public List<CleanCategory> Categories { get; set; } = [];
+    public List<SeedingRule> Categories { get; set; } = [];
 
     public bool DeletePrivate { get; set; }
     

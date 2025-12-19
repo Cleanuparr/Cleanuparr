@@ -85,17 +85,18 @@ public sealed class DownloadCleanerConfigController : ControllerBase
             oldConfig.IgnoredDownloads = newConfigDto.IgnoredDownloads;
             oldConfig.Categories.Clear();
 
-            _dataContext.CleanCategories.RemoveRange(oldConfig.Categories);
+            _dataContext.SeedingRules.RemoveRange(oldConfig.Categories);
             _dataContext.DownloadCleanerConfigs.Update(oldConfig);
 
             foreach (var categoryDto in newConfigDto.Categories)
             {
-                _dataContext.CleanCategories.Add(new CleanCategory
+                _dataContext.SeedingRules.Add(new SeedingRule
                 {
                     Name = categoryDto.Name,
                     MaxRatio = categoryDto.MaxRatio,
                     MinSeedTime = categoryDto.MinSeedTime,
                     MaxSeedTime = categoryDto.MaxSeedTime,
+                    DeleteSourceFiles = categoryDto.DeleteSourceFiles,
                     DownloadCleanerConfigId = oldConfig.Id
                 });
             }

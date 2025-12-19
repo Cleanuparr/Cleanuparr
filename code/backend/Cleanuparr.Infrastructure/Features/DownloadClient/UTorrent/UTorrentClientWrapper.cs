@@ -38,6 +38,6 @@ public sealed class UTorrentClientWrapper : IUTorrentClientWrapper
     public Task SetFilesPriorityAsync(string hash, List<int> fileIndexes, int priority)
         => _client.SetFilesPriorityAsync(hash, fileIndexes, priority);
 
-    public Task RemoveTorrentsAsync(List<string> hashes)
-        => _client.RemoveTorrentsAsync(hashes);
+    public Task RemoveTorrentsAsync(List<string> hashes, bool deleteData)
+        => _client.RemoveTorrentsAsync(hashes, deleteData);
 }

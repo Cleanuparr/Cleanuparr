@@ -308,7 +308,7 @@ public static class TestDataContextFactory
     /// <summary>
     /// Adds a clean category to the download cleaner config
     /// </summary>
-    public static CleanCategory AddCleanCategory(
+    public static SeedingRule AddSeedingRule(
         DataContext context,
         string name = "completed",
         double maxRatio = 1.0,
@@ -316,18 +316,19 @@ public static class TestDataContextFactory
         double maxSeedTime = -1)
     {
         var config = context.DownloadCleanerConfigs.Include(x => x.Categories).First();
-        var category = new CleanCategory
+        var category = new SeedingRule
         {
             Id = Guid.NewGuid(),
             Name = name,
             MaxRatio = maxRatio,
             MinSeedTime = minSeedTime,
             MaxSeedTime = maxSeedTime,
+            DeleteSourceFiles = true,
             DownloadCleanerConfigId = config.Id
         };
 
         config.Categories.Add(category);
-        context.CleanCategories.Add(category);
+        context.SeedingRules.Add(category);
         context.SaveChanges();
 
         return category;
