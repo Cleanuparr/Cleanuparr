@@ -5,7 +5,7 @@ using Microsoft.Win32.SafeHandles;
 
 namespace Cleanuparr.Infrastructure.Features.Files;
 
-public class WindowsHardLinkFileService : IHardLinkFileService, IDisposable
+public class WindowsHardLinkFileService : IWindowsHardLinkFileService, IDisposable
 {
     private readonly ILogger<WindowsHardLinkFileService> _logger;
     private readonly ConcurrentDictionary<ulong, int> _fileIndexCounts = new();
@@ -66,15 +66,6 @@ public class WindowsHardLinkFileService : IHardLinkFileService, IDisposable
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to populate file index counts from {dir}", directoryPath);
-        }
-    }
-
-    /// <inheritdoc/>
-    public void PopulateFileCounts(IEnumerable<string> directoryPaths)
-    {
-        foreach (var directoryPath in directoryPaths.Where(d => !string.IsNullOrEmpty(d)))
-        {
-            PopulateFileCounts(directoryPath);
         }
     }
 

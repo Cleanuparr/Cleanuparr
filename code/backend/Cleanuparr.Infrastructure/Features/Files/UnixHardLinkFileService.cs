@@ -4,7 +4,7 @@ using Mono.Unix.Native;
 
 namespace Cleanuparr.Infrastructure.Features.Files;
 
-public class UnixHardLinkFileService : IHardLinkFileService, IDisposable
+public class UnixHardLinkFileService : IUnixHardLinkFileService, IDisposable
 {
     private readonly ILogger<UnixHardLinkFileService> _logger;
     private readonly ConcurrentDictionary<ulong, int> _inodeCounts = new();
@@ -61,15 +61,6 @@ public class UnixHardLinkFileService : IHardLinkFileService, IDisposable
         {
             _logger.LogError(ex, "failed to populate inode counts from {dir}", directoryPath);
             throw;
-        }
-    }
-
-    /// <inheritdoc/>
-    public void PopulateFileCounts(IEnumerable<string> directoryPaths)
-    {
-        foreach (var directoryPath in directoryPaths.Where(d => !string.IsNullOrEmpty(d)))
-        {
-            PopulateFileCounts(directoryPath);
         }
     }
 

@@ -6,13 +6,13 @@ namespace Cleanuparr.Infrastructure.Features.Files;
 public class HardLinkFileService : IHardLinkFileService
 {
     private readonly ILogger<HardLinkFileService> _logger;
-    private readonly UnixHardLinkFileService _unixHardLinkFileService;
-    private readonly WindowsHardLinkFileService _windowsHardLinkFileService;
+    private readonly IUnixHardLinkFileService _unixHardLinkFileService;
+    private readonly IWindowsHardLinkFileService _windowsHardLinkFileService;
 
     public HardLinkFileService(
         ILogger<HardLinkFileService> logger,
-        UnixHardLinkFileService unixHardLinkFileService,
-        WindowsHardLinkFileService windowsHardLinkFileService
+        IUnixHardLinkFileService unixHardLinkFileService,
+        IWindowsHardLinkFileService windowsHardLinkFileService
     )
     {
         _logger = logger;
