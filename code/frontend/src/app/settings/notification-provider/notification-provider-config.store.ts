@@ -211,25 +211,17 @@ export class NotificationProviderConfigStore extends signalStore(
             },
             error: (error) => {
               const errorMessage = ErrorHandlerUtil.extractErrorMessage(error);
-              patchState(store, { 
-                testing: false, 
-                testError: errorMessage,  // Test errors should NOT trigger "Not connected" state
-                testResult: {
-                  success: false,
-                  message: errorMessage
-                }
+              patchState(store, {
+                testing: false,
+                testError: errorMessage  // Test errors should NOT trigger "Not connected" state
               });
             }
           }),
           catchError((error) => {
             const errorMessage = ErrorHandlerUtil.extractErrorMessage(error);
-            patchState(store, { 
-              testing: false, 
-              testError: errorMessage,  // Test errors should NOT trigger "Not connected" state
-              testResult: {
-                success: false,
-                message: errorMessage
-              }
+            patchState(store, {
+              testing: false,
+              testError: errorMessage  // Test errors should NOT trigger "Not connected" state
             });
             return EMPTY;
           })

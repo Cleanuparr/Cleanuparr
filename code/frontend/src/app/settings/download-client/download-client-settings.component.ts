@@ -4,7 +4,7 @@ import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, AbstractContro
 import { Subject, takeUntil } from "rxjs";
 import { DownloadClientConfigStore } from "./download-client-config.store";
 import { CanComponentDeactivate } from "../../core/guards";
-import { ClientConfig, DownloadClientConfig, CreateDownloadClientDto } from "../../shared/models/download-client-config.model";
+import { ClientConfig, DownloadClientConfig, CreateDownloadClientDto, TestDownloadClientRequest } from "../../shared/models/download-client-config.model";
 import { DownloadClientType, DownloadClientTypeName } from "../../shared/models/enums";
 import { DocumentationService } from "../../core/services/documentation.service";
 
@@ -76,6 +76,10 @@ export class DownloadClientSettingsComponent implements OnDestroy, CanComponentD
   downloadClientLoading = this.downloadClientStore.loading;
   downloadClientError = this.downloadClientStore.error;
   downloadClientSaving = this.downloadClientStore.saving;
+  testing = this.downloadClientStore.testing;
+  testingClientId = this.downloadClientStore.testingClientId;
+  testError = this.downloadClientStore.testError;
+  testResult = this.downloadClientStore.testResult;
 
   /**
    * Check if component can be deactivated (navigation guard)
@@ -113,6 +117,22 @@ export class DownloadClientSettingsComponent implements OnDestroy, CanComponentD
       .subscribe(() => {
         this.onClientTypeChange();
       });
+
+    // Setup effect to handle test results
+    effect(() => {
+      const testResult = this.testResult();
+      const testError = this.testError();
+
+      if (testResult) {
+        this.notificationService.showSuccess(testResult.message || 'Connection test successful');
+        this.downloadClientStore.resetTestState();
+      }
+
+      if (testError) {
+        this.notificationService.showError(testError);
+        this.downloadClientStore.resetTestState();
+      }
+    });
   }
 
   /**
@@ -371,5 +391,44 @@ export class DownloadClientSettingsComponent implements OnDestroy, CanComponentD
    */
   openFieldDocs(fieldName: string): void {
     this.documentationService.openFieldDocumentation('download-client', fieldName);
+  }
+
+  /**
+   * Test client connection from the modal (new or editing)
+   */
+  testClientFromModal(): void {
+    if (this.clientForm.invalid) {
+      this.markFormGroupTouched(this.clientForm);
+      this.notificationService.showError('Please fix the validation errors before testing');
+      return;
+    }
+
+    const formValue = this.clientForm.value;
+    const testRequest: TestDownloadClientRequest = {
+      typeName: formValue.typeName,
+      type: this.mapTypeNameToType(formValue.typeName),
+      host: formValue.host,
+      username: formValue.username,
+      password: formValue.password,
+      urlBase: formValue.urlBase,
+    };
+
+    this.downloadClientStore.testClient({ request: testRequest, clientId: this.editingClient?.id });
+  }
+
+  /**
+   * Test client connection from the list view (existing client)
+   */
+  testClientFromList(client: ClientConfig): void {
+    const testRequest: TestDownloadClientRequest = {
+      typeName: client.typeName,
+      type: client.type,
+      host: client.host,
+      username: client.username,
+      password: client.password,
+      urlBase: client.urlBase,
+    };
+
+    this.downloadClientStore.testClient({ request: testRequest, clientId: client.id });
   }
 }

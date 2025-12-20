@@ -176,17 +176,7 @@ public abstract class ArrClient : IArrClient
     /// <returns>Task that completes when the connection test is done</returns>
     public virtual async Task TestConnectionAsync(ArrInstance arrInstance)
     {
-        UriBuilder uriBuilder = new(arrInstance.Url);
-        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/v3/system/status";
-
-        using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
-        SetApiKey(request, arrInstance.ApiKey);
-        
-        using HttpResponseMessage response = await _httpClient.SendAsync(request);
-        
-        response.EnsureSuccessStatusCode();
-        
-        _logger.LogDebug("Connection test successful for {url}", arrInstance.Url);
+        _ = await GetQueueItemsAsync(arrInstance, 1);
     }
     
     protected abstract string GetQueueUrlPath();

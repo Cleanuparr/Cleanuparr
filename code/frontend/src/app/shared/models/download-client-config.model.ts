@@ -124,3 +124,23 @@ export interface ClientConfigUpdateDto extends ClientConfig {
    */
   password: string;
 }
+
+/**
+ * Request for testing a download client connection
+ */
+export interface TestDownloadClientRequest {
+  typeName: DownloadClientTypeName;
+  type: DownloadClientType;
+  host?: string;
+  username?: string;
+  password?: string;
+  urlBase?: string;
+}
+
+/**
+ * Result of testing a connection (HTTP 200 = success)
+ */
+export interface TestConnectionResult {
+  message: string;
+  responseTime?: number;
+}

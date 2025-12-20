@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { patchState, signalStore, withHooks, withMethods, withState } from '@ngrx/signals';
 import { rxMethod } from '@ngrx/signals/rxjs-interop';
-import { ClientConfig, DownloadClientConfig, CreateDownloadClientDto } from '../../shared/models/download-client-config.model';
+import { ClientConfig, DownloadClientConfig, CreateDownloadClientDto, TestDownloadClientRequest, TestConnectionResult } from '../../shared/models/download-client-config.model';
 import { ConfigurationService } from '../../core/services/configuration.service';
 import { EMPTY, Observable, catchError, switchMap, tap, forkJoin, of } from 'rxjs';
 
@@ -11,6 +11,10 @@ export interface DownloadClientConfigState {
   saving: boolean;
   error: string | null;
   pendingOperations: number;
+  testing: boolean;
+  testingClientId: string | null;
+  testError: string | null;
+  testResult: TestConnectionResult | null;
 }
 
 const initialState: DownloadClientConfigState = {
@@ -18,7 +22,11 @@ const initialState: DownloadClientConfigState = {
   loading: false,
   saving: false,
   error: null,
-  pendingOperations: 0
+  pendingOperations: 0,
+  testing: false,
+  testingClientId: null,
+  testError: null,
+  testResult: null
 };
 
 @Injectable()
@@ -91,7 +99,41 @@ export class DownloadClientConfigStore extends signalStore(
     resetError() {
       patchState(store, { error: null });
     },
-    
+
+    /**
+     * Reset test state
+     */
+    resetTestState() {
+      patchState(store, { testing: false, testingClientId: null, testError: null, testResult: null });
+    },
+
+    /**
+     * Test a download client connection
+     */
+    testClient: rxMethod<{ request: TestDownloadClientRequest; clientId?: string }>(
+      (params$: Observable<{ request: TestDownloadClientRequest; clientId?: string }>) => params$.pipe(
+        tap(({ clientId }) => patchState(store, { testing: true, testingClientId: clientId || null, testError: null, testResult: null })),
+        switchMap(({ request }) => configService.testDownloadClient(request).pipe(
+          tap({
+            next: (result) => {
+              patchState(store, {
+                testing: false,
+                testResult: result,
+                testError: null
+              });
+            },
+            error: (error) => {
+              patchState(store, {
+                testing: false,
+                testError: error.message || 'Connection test failed'
+              });
+            }
+          }),
+          catchError(() => EMPTY)
+        ))
+      )
+    ),
+
     /**
      * Batch create multiple clients
      */

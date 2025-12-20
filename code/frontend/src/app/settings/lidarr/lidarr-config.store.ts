@@ -4,7 +4,8 @@ import { rxMethod } from '@ngrx/signals/rxjs-interop';
 import { LidarrConfig } from '../../shared/models/lidarr-config.model';
 import { ConfigurationService } from '../../core/services/configuration.service';
 import { EMPTY, Observable, catchError, switchMap, tap, forkJoin, of } from 'rxjs';
-import { ArrInstance, CreateArrInstanceDto } from '../../shared/models/arr-config.model';
+import { ArrInstance, CreateArrInstanceDto, TestArrInstanceRequest } from '../../shared/models/arr-config.model';
+import { TestConnectionResult } from '../../shared/models/download-client-config.model';
 
 export interface LidarrConfigState {
   config: LidarrConfig | null;
@@ -12,6 +13,10 @@ export interface LidarrConfigState {
   saving: boolean;
   error: string | null;
   instanceOperations: number;
+  testing: boolean;
+  testingInstanceId: string | null;
+  testError: string | null;
+  testResult: TestConnectionResult | null;
 }
 
 const initialState: LidarrConfigState = {
@@ -19,7 +24,11 @@ const initialState: LidarrConfigState = {
   loading: false,
   saving: false,
   error: null,
-  instanceOperations: 0
+  instanceOperations: 0,
+  testing: false,
+  testingInstanceId: null,
+  testError: null,
+  testResult: null
 };
 
 @Injectable()
@@ -122,6 +131,40 @@ export class LidarrConfigStore extends signalStore(
     resetError() {
       patchState(store, { error: null });
     },
+
+    /**
+     * Reset test state
+     */
+    resetTestState() {
+      patchState(store, { testing: false, testingInstanceId: null, testError: null, testResult: null });
+    },
+
+    /**
+     * Test a Lidarr instance connection
+     */
+    testInstance: rxMethod<{ request: TestArrInstanceRequest; instanceId?: string }>(
+      (params$: Observable<{ request: TestArrInstanceRequest; instanceId?: string }>) => params$.pipe(
+        tap(({ instanceId }) => patchState(store, { testing: true, testingInstanceId: instanceId || null, testError: null, testResult: null })),
+        switchMap(({ request }) => configService.testLidarrInstance(request).pipe(
+          tap({
+            next: (result) => {
+              patchState(store, {
+                testing: false,
+                testResult: result,
+                testError: null
+              });
+            },
+            error: (error) => {
+              patchState(store, {
+                testing: false,
+                testError: error.message || 'Connection test failed'
+              });
+            }
+          }),
+          catchError(() => EMPTY)
+        ))
+      )
+    ),
 
     // ===== INSTANCE MANAGEMENT =====
 

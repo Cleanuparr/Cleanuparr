@@ -111,20 +111,31 @@
               </div>
             </div>
             <div class="item-actions">
-              <button 
-                pButton 
-                type="button" 
-                icon="pi pi-pencil" 
+              <button
+                pButton
+                type="button"
+                icon="pi pi-play"
+                class="p-button-rounded p-button-text p-button-sm mr-1"
+                pTooltip="Test connection"
+                tooltipPosition="left"
+                [disabled]="testing() || lidarrSaving()"
+                [loading]="testingInstanceId() === instance.id"
+                (click)="testInstanceFromList(instance)"
+              ></button>
+              <button
+                pButton
+                type="button"
+                icon="pi pi-pencil"
                 class="p-button-rounded p-button-text p-button-sm mr-1"
                 pTooltip="Edit instance"
                 tooltipPosition="left"
                 [disabled]="lidarrSaving()"
                 (click)="openEditInstanceModal(instance)"
               ></button>
-              <button 
-                pButton 
-                type="button" 
-                icon="pi pi-trash" 
+              <button
+                pButton
+                type="button"
+                icon="pi pi-trash"
                 class="p-button-rounded p-button-text p-button-danger p-button-sm"
                 pTooltip="Delete instance"
                 tooltipPosition="left"
@@ -216,19 +227,29 @@
 
   <ng-template pTemplate="footer">
     <div class="modal-footer">
-      <button 
-        pButton 
-        type="button" 
-        label="Cancel" 
+      <button
+        pButton
+        type="button"
+        label="Cancel"
         class="p-button-text"
         (click)="closeInstanceModal()"
       ></button>
-      <button 
-        pButton 
-        type="button" 
-        label="Save" 
+      <button
+        pButton
+        type="button"
+        label="Test"
+        icon="pi pi-play"
+        class="p-button-outlined ml-2"
+        [disabled]="instanceForm.invalid || testing()"
+        [loading]="testing()"
+        (click)="testInstanceFromModal()"
+      ></button>
+      <button
+        pButton
+        type="button"
+        label="Save"
         icon="pi pi-save"
-        class="p-button-primary"
+        class="p-button-primary ml-2"
         [disabled]="instanceForm.invalid || lidarrSaving()"
         [loading]="lidarrSaving()"
         (click)="saveInstance()"

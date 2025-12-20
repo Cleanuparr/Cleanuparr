@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Cleanuparr.Api.Features.Arr.Contracts.Requests;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Arr.Dtos;
+using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Mapster;
@@ -20,13 +21,16 @@ public sealed class ArrConfigController : ControllerBase
 {
     private readonly ILogger<ArrConfigController> _logger;
     private readonly DataContext _dataContext;
+    private readonly IArrClientFactory _arrClientFactory;
 
     public ArrConfigController(
         ILogger<ArrConfigController> logger,
-        DataContext dataContext)
+        DataContext dataContext,
+        IArrClientFactory arrClientFactory)
     {
         _logger = logger;
         _dataContext = dataContext;
+        _arrClientFactory = arrClientFactory;
     }
 
     [HttpGet("sonarr")]
@@ -123,6 +127,26 @@ public sealed class ArrConfigController : ControllerBase
     [HttpDelete("whisparr/instances/{id}")]
     public Task<IActionResult> DeleteWhisparrInstance(Guid id)
         => DeleteArrInstance(InstanceType.Whisparr, id);
+
+    [HttpPost("sonarr/instances/test")]
+    public Task<IActionResult> TestSonarrInstance([FromBody] TestArrInstanceRequest request)
+        => TestArrInstance(InstanceType.Sonarr, request);
+
+    [HttpPost("radarr/instances/test")]
+    public Task<IActionResult> TestRadarrInstance([FromBody] TestArrInstanceRequest request)
+        => TestArrInstance(InstanceType.Radarr, request);
+
+    [HttpPost("lidarr/instances/test")]
+    public Task<IActionResult> TestLidarrInstance([FromBody] TestArrInstanceRequest request)
+        => TestArrInstance(InstanceType.Lidarr, request);
+
+    [HttpPost("readarr/instances/test")]
+    public Task<IActionResult> TestReadarrInstance([FromBody] TestArrInstanceRequest request)
+        => TestArrInstance(InstanceType.Readarr, request);
+
+    [HttpPost("whisparr/instances/test")]
+    public Task<IActionResult> TestWhisparrInstance([FromBody] TestArrInstanceRequest request)
+        => TestArrInstance(InstanceType.Whisparr, request);
 
     private async Task<IActionResult> GetArrConfig(InstanceType type)
     {
@@ -257,6 +281,23 @@ public sealed class ArrConfigController : ControllerBase
         finally
         {
             DataContext.Lock.Release();
+        }
+    }
+
+    private async Task<IActionResult> TestArrInstance(InstanceType type, TestArrInstanceRequest request)
+    {
+        try
+        {
+            var testInstance = request.ToTestInstance();
+            var client = _arrClientFactory.GetClient(type);
+            await client.TestConnectionAsync(testInstance);
+
+            return Ok(new { Message = $"Connection to {type} instance successful" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to test {Type} instance connection", type);
+            return BadRequest(new { Message = $"Connection failed: {ex.Message}" });
         }
     }
 
