@@ -170,10 +170,8 @@ public sealed class DownloadClientController : ControllerBase
                     ResponseTime = healthResult.ResponseTime.TotalMilliseconds
                 });
             }
-            else
-            {
-                return BadRequest(new { Message = healthResult.ErrorMessage ?? "Connection failed" });
-            }
+
+            return BadRequest(new { Message = healthResult.ErrorMessage ?? "Connection failed" });
         }
         catch (Exception ex)
         {

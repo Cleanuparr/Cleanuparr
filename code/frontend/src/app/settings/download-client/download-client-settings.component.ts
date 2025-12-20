@@ -1,10 +1,10 @@
 import { Component, EventEmitter, OnDestroy, Output, effect, inject } from "@angular/core";
 import { CommonModule } from "@angular/common";
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, AbstractControl, ValidationErrors } from "@angular/forms";
+import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from "@angular/forms";
 import { Subject, takeUntil } from "rxjs";
 import { DownloadClientConfigStore } from "./download-client-config.store";
 import { CanComponentDeactivate } from "../../core/guards";
-import { ClientConfig, DownloadClientConfig, CreateDownloadClientDto, TestDownloadClientRequest } from "../../shared/models/download-client-config.model";
+import { ClientConfig, CreateDownloadClientDto, TestDownloadClientRequest } from "../../shared/models/download-client-config.model";
 import { DownloadClientType, DownloadClientTypeName } from "../../shared/models/enums";
 import { DocumentationService } from "../../core/services/documentation.service";
 
