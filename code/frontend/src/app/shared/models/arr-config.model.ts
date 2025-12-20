@@ -18,3 +18,11 @@ export interface CreateArrInstanceDto {
   url: string;
   apiKey: string;
 }
+
+/**
+ * Request for testing an Arr instance connection
+ */
+export interface TestArrInstanceRequest {
+  url: string;
+  apiKey: string;
+}

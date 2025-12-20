@@ -5,7 +5,7 @@ import { Subject, takeUntil } from "rxjs";
 import { RadarrConfigStore } from "./radarr-config.store";
 import { CanComponentDeactivate } from "../../core/guards";
 import { RadarrConfig } from "../../shared/models/radarr-config.model";
-import { CreateArrInstanceDto, ArrInstance } from "../../shared/models/arr-config.model";
+import { CreateArrInstanceDto, ArrInstance, TestArrInstanceRequest } from "../../shared/models/arr-config.model";
 
 // PrimeNG Components
 import { CardModule } from "primeng/card";
@@ -74,6 +74,10 @@ export class RadarrSettingsComponent implements OnDestroy, CanComponentDeactivat
   radarrLoading = this.radarrStore.loading;
   radarrError = this.radarrStore.error;
   radarrSaving = this.radarrStore.saving;
+  testing = this.radarrStore.testing;
+  testingInstanceId = this.radarrStore.testingInstanceId;
+  testError = this.radarrStore.testError;
+  testResult = this.radarrStore.testResult;
 
   /**
    * Check if component can be deactivated (navigation guard)
@@ -112,6 +116,22 @@ export class RadarrSettingsComponent implements OnDestroy, CanComponentDeactivat
       .subscribe(() => {
         this.hasGlobalChanges = this.globalFormValuesChanged();
       });
+
+    // Setup effect to handle test results
+    effect(() => {
+      const testResult = this.testResult();
+      const testError = this.testError();
+
+      if (testResult) {
+        this.notificationService.showSuccess(testResult.message || 'Connection test successful');
+        this.radarrStore.resetTestState();
+      }
+
+      if (testError) {
+        this.notificationService.showError(testError);
+        this.radarrStore.resetTestState();
+      }
+    });
   }
 
   /**
@@ -417,5 +437,35 @@ export class RadarrSettingsComponent implements OnDestroy, CanComponentDeactivat
    */
   get modalTitle(): string {
     return this.modalMode === 'add' ? 'Add Radarr Instance' : 'Edit Radarr Instance';
+  }
+
+  /**
+   * Test instance connection from the modal (new or editing)
+   */
+  testInstanceFromModal(): void {
+    if (this.instanceForm.invalid) {
+      this.markFormGroupTouched(this.instanceForm);
+      this.notificationService.showError('Please fix the validation errors before testing');
+      return;
+    }
+
+    const testRequest: TestArrInstanceRequest = {
+      url: this.instanceForm.get('url')?.value,
+      apiKey: this.instanceForm.get('apiKey')?.value,
+    };
+
+    this.radarrStore.testInstance({ request: testRequest, instanceId: this.editingInstance?.id });
+  }
+
+  /**
+   * Test instance connection from the list view (existing instance)
+   */
+  testInstanceFromList(instance: ArrInstance): void {
+    const testRequest: TestArrInstanceRequest = {
+      url: instance.url,
+      apiKey: instance.apiKey,
+    };
+
+    this.radarrStore.testInstance({ request: testRequest, instanceId: instance.id });
   }
 }

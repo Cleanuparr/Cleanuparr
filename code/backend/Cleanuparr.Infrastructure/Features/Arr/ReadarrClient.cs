@@ -21,6 +21,11 @@ public class ReadarrClient : ArrClient, IReadarrClient
     ) : base(logger, httpClientFactory, striker, dryRunInterceptor)
     {
     }
+    
+    protected override string GetSystemStatusUrlPath()
+    {
+        return "/api/v1/system/status";
+    }
 
     protected override string GetQueueUrlPath()
     {

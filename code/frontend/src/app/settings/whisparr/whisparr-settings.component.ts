@@ -5,7 +5,7 @@ import { Subject, takeUntil } from "rxjs";
 import { WhisparrConfigStore } from "./whisparr-config.store";
 import { CanComponentDeactivate } from "../../core/guards";
 import { WhisparrConfig } from "../../shared/models/whisparr-config.model";
-import { CreateArrInstanceDto, ArrInstance } from "../../shared/models/arr-config.model";
+import { CreateArrInstanceDto, ArrInstance, TestArrInstanceRequest } from "../../shared/models/arr-config.model";
 
 // PrimeNG Components
 import { CardModule } from "primeng/card";
@@ -74,6 +74,10 @@ export class WhisparrSettingsComponent implements OnDestroy, CanComponentDeactiv
   whisparrLoading = this.whisparrStore.loading;
   whisparrError = this.whisparrStore.error;
   whisparrSaving = this.whisparrStore.saving;
+  testing = this.whisparrStore.testing;
+  testingInstanceId = this.whisparrStore.testingInstanceId;
+  testError = this.whisparrStore.testError;
+  testResult = this.whisparrStore.testResult;
 
   /**
    * Check if component can be deactivated (navigation guard)
@@ -112,6 +116,22 @@ export class WhisparrSettingsComponent implements OnDestroy, CanComponentDeactiv
       .subscribe(() => {
         this.hasGlobalChanges = this.globalFormValuesChanged();
       });
+
+    // Setup effect to handle test results
+    effect(() => {
+      const testResult = this.testResult();
+      const testError = this.testError();
+
+      if (testResult) {
+        this.notificationService.showSuccess(testResult.message || 'Connection test successful');
+        this.whisparrStore.resetTestState();
+      }
+
+      if (testError) {
+        this.notificationService.showError(testError);
+        this.whisparrStore.resetTestState();
+      }
+    });
   }
 
   /**
@@ -412,5 +432,35 @@ export class WhisparrSettingsComponent implements OnDestroy, CanComponentDeactiv
    */
   get modalTitle(): string {
     return this.modalMode === 'add' ? 'Add Whisparr Instance' : 'Edit Whisparr Instance';
+  }
+
+  /**
+   * Test instance connection from the modal (new or editing)
+   */
+  testInstanceFromModal(): void {
+    if (this.instanceForm.invalid) {
+      this.markFormGroupTouched(this.instanceForm);
+      this.notificationService.showError('Please fix the validation errors before testing');
+      return;
+    }
+
+    const testRequest: TestArrInstanceRequest = {
+      url: this.instanceForm.get('url')?.value,
+      apiKey: this.instanceForm.get('apiKey')?.value,
+    };
+
+    this.whisparrStore.testInstance({ request: testRequest, instanceId: this.editingInstance?.id });
+  }
+
+  /**
+   * Test instance connection from the list view (existing instance)
+   */
+  testInstanceFromList(instance: ArrInstance): void {
+    const testRequest: TestArrInstanceRequest = {
+      url: instance.url,
+      apiKey: instance.apiKey,
+    };
+
+    this.whisparrStore.testInstance({ request: testRequest, instanceId: instance.id });
   }
 } 

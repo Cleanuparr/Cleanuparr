@@ -586,12 +586,12 @@ public sealed class NotificationProvidersController : ControllerBase
             };
 
             await _notificationService.SendTestNotificationAsync(providerDto);
-            return Ok(new { Message = "Test notification sent successfully", Success = true });
+            return Ok(new { Message = "Test notification sent successfully" });
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to test Notifiarr provider");
-            throw;
+            return BadRequest(new { Message = $"Test failed: {ex.Message}" });
         }
     }
 
@@ -627,12 +627,12 @@ public sealed class NotificationProvidersController : ControllerBase
             };
 
             await _notificationService.SendTestNotificationAsync(providerDto);
-            return Ok(new { Message = "Test notification sent successfully", Success = true });
+            return Ok(new { Message = "Test notification sent successfully" });
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to test Apprise provider");
-            throw;
+            return BadRequest(new { Message = $"Test failed: {ex.Message}" });
         }
     }
 
@@ -673,12 +673,12 @@ public sealed class NotificationProvidersController : ControllerBase
             };
 
             await _notificationService.SendTestNotificationAsync(providerDto);
-            return Ok(new { Message = "Test notification sent successfully", Success = true });
+            return Ok(new { Message = "Test notification sent successfully" });
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to test Ntfy provider");
-            throw;
+            return BadRequest(new { Message = $"Test failed: {ex.Message}" });
         }
     }
 
@@ -899,12 +899,12 @@ public sealed class NotificationProvidersController : ControllerBase
             };
 
             await _notificationService.SendTestNotificationAsync(providerDto);
-            return Ok(new { Message = "Test notification sent successfully", Success = true });
+            return Ok(new { Message = "Test notification sent successfully" });
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to test Pushover provider");
-            throw;
+            return BadRequest(new { Message = $"Test failed: {ex.Message}" });
         }
     }
 }

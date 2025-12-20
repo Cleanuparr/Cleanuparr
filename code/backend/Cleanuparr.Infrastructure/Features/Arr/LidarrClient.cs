@@ -22,6 +22,11 @@ public class LidarrClient : ArrClient, ILidarrClient
     {
     }
 
+    protected override string GetSystemStatusUrlPath()
+    {
+        return "/api/v1/system/status";
+    }
+
     protected override string GetQueueUrlPath()
     {
         return "/api/v1/queue";

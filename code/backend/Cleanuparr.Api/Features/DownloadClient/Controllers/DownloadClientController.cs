@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 
 using Cleanuparr.Api.Features.DownloadClient.Contracts.Requests;
+using Cleanuparr.Infrastructure.Features.DownloadClient;
 using Cleanuparr.Infrastructure.Http.DynamicHttpClientSystem;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration;
@@ -18,15 +19,18 @@ public sealed class DownloadClientController : ControllerBase
     private readonly ILogger<DownloadClientController> _logger;
     private readonly DataContext _dataContext;
     private readonly IDynamicHttpClientFactory _dynamicHttpClientFactory;
+    private readonly IDownloadServiceFactory _downloadServiceFactory;
 
     public DownloadClientController(
         ILogger<DownloadClientController> logger,
         DataContext dataContext,
-        IDynamicHttpClientFactory dynamicHttpClientFactory)
+        IDynamicHttpClientFactory dynamicHttpClientFactory,
+        IDownloadServiceFactory downloadServiceFactory)
     {
         _logger = logger;
         _dataContext = dataContext;
         _dynamicHttpClientFactory = dynamicHttpClientFactory;
+        _downloadServiceFactory = downloadServiceFactory;
     }
 
     [HttpGet("download_client")]
@@ -144,6 +148,35 @@ public sealed class DownloadClientController : ControllerBase
         finally
         {
             DataContext.Lock.Release();
+        }
+    }
+
+    [HttpPost("download_client/test")]
+    public async Task<IActionResult> TestDownloadClient([FromBody] TestDownloadClientRequest request)
+    {
+        try
+        {
+            request.Validate();
+
+            var testConfig = request.ToTestConfig();
+            using var downloadService = _downloadServiceFactory.GetDownloadService(testConfig);
+            var healthResult = await downloadService.HealthCheckAsync();
+
+            if (healthResult.IsHealthy)
+            {
+                return Ok(new
+                {
+                    Message = $"Connection to {request.TypeName} successful",
+                    ResponseTime = healthResult.ResponseTime.TotalMilliseconds
+                });
+            }
+
+            return BadRequest(new { Message = healthResult.ErrorMessage ?? "Connection failed" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to test {TypeName} client connection", request.TypeName);
+            return BadRequest(new { Message = $"Connection failed: {ex.Message}" });
         }
     }
 }

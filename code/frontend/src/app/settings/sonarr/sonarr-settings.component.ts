@@ -5,7 +5,7 @@ import { Subject, takeUntil } from "rxjs";
 import { SonarrConfigStore } from "./sonarr-config.store";
 import { CanComponentDeactivate } from "../../core/guards";
 import { SonarrConfig } from "../../shared/models/sonarr-config.model";
-import { CreateArrInstanceDto, ArrInstance } from "../../shared/models/arr-config.model";
+import { CreateArrInstanceDto, ArrInstance, TestArrInstanceRequest } from "../../shared/models/arr-config.model";
 
 // PrimeNG Components
 import { CardModule } from "primeng/card";
@@ -74,6 +74,10 @@ export class SonarrSettingsComponent implements OnDestroy, CanComponentDeactivat
   sonarrLoading = this.sonarrStore.loading;
   sonarrError = this.sonarrStore.error;
   sonarrSaving = this.sonarrStore.saving;
+  testing = this.sonarrStore.testing;
+  testingInstanceId = this.sonarrStore.testingInstanceId;
+  testError = this.sonarrStore.testError;
+  testResult = this.sonarrStore.testResult;
 
   /**
    * Check if component can be deactivated (navigation guard)
@@ -112,6 +116,22 @@ export class SonarrSettingsComponent implements OnDestroy, CanComponentDeactivat
       .subscribe(() => {
         this.hasGlobalChanges = this.globalFormValuesChanged();
       });
+
+    // Setup effect to handle test results
+    effect(() => {
+      const testResult = this.testResult();
+      const testError = this.testError();
+
+      if (testResult) {
+        this.notificationService.showSuccess(testResult.message || 'Connection test successful');
+        this.sonarrStore.resetTestState();
+      }
+
+      if (testError) {
+        this.notificationService.showError(testError);
+        this.sonarrStore.resetTestState();
+      }
+    });
   }
 
   /**
@@ -417,5 +437,35 @@ export class SonarrSettingsComponent implements OnDestroy, CanComponentDeactivat
    */
   get modalTitle(): string {
     return this.modalMode === 'add' ? 'Add Sonarr Instance' : 'Edit Sonarr Instance';
+  }
+
+  /**
+   * Test instance connection from the modal (new or editing)
+   */
+  testInstanceFromModal(): void {
+    if (this.instanceForm.invalid) {
+      this.markFormGroupTouched(this.instanceForm);
+      this.notificationService.showError('Please fix the validation errors before testing');
+      return;
+    }
+
+    const testRequest: TestArrInstanceRequest = {
+      url: this.instanceForm.get('url')?.value,
+      apiKey: this.instanceForm.get('apiKey')?.value,
+    };
+
+    this.sonarrStore.testInstance({ request: testRequest, instanceId: this.editingInstance?.id });
+  }
+
+  /**
+   * Test instance connection from the list view (existing instance)
+   */
+  testInstanceFromList(instance: ArrInstance): void {
+    const testRequest: TestArrInstanceRequest = {
+      url: instance.url,
+      apiKey: instance.apiKey,
+    };
+
+    this.sonarrStore.testInstance({ request: testRequest, instanceId: instance.id });
   }
 }

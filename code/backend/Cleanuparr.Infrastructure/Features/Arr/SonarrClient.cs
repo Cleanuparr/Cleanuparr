@@ -25,6 +25,11 @@ public class SonarrClient : ArrClient, ISonarrClient
     {
     }
     
+    protected override string GetSystemStatusUrlPath()
+    {
+        return "/api/v3/system/status";
+    }
+    
     protected override string GetQueueUrlPath()
     {
         return "/api/v3/queue";

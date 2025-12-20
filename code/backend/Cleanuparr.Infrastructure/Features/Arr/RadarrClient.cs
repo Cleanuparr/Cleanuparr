@@ -21,6 +21,11 @@ public class RadarrClient : ArrClient, IRadarrClient
     ) : base(logger, httpClientFactory, striker, dryRunInterceptor)
     {
     }
+    
+    protected override string GetSystemStatusUrlPath()
+    {
+        return "/api/v3/system/status";
+    }
 
     protected override string GetQueueUrlPath()
     {

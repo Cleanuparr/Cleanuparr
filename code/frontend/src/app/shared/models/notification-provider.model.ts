@@ -61,7 +61,5 @@ export interface AppriseConfiguration {
 }
 
 export interface TestNotificationResult {
-  success: boolean;
   message: string;
-  error?: string;
 }

@@ -177,7 +177,7 @@ public class StatusController : ControllerBase
                 try
                 {
                     var sonarrClient = _arrClientFactory.GetClient(InstanceType.Sonarr);
-                    await sonarrClient.TestConnectionAsync(instance);
+                    await sonarrClient.HealthCheckAsync(instance);
                     
                     sonarrStatus.Add(new
                     {
@@ -209,7 +209,7 @@ public class StatusController : ControllerBase
                 try
                 {
                     var radarrClient = _arrClientFactory.GetClient(InstanceType.Radarr);
-                    await radarrClient.TestConnectionAsync(instance);
+                    await radarrClient.HealthCheckAsync(instance);
                     
                     radarrStatus.Add(new
                     {
@@ -241,7 +241,7 @@ public class StatusController : ControllerBase
                 try
                 {
                     var lidarrClient = _arrClientFactory.GetClient(InstanceType.Lidarr);
-                    await lidarrClient.TestConnectionAsync(instance);
+                    await lidarrClient.HealthCheckAsync(instance);
                     
                     lidarrStatus.Add(new
                     {

@@ -8,8 +8,8 @@ import { RadarrConfig } from "../../shared/models/radarr-config.model";
 import { LidarrConfig } from "../../shared/models/lidarr-config.model";
 import { ReadarrConfig } from "../../shared/models/readarr-config.model";
 import { WhisparrConfig } from "../../shared/models/whisparr-config.model";
-import { ClientConfig, DownloadClientConfig, CreateDownloadClientDto } from "../../shared/models/download-client-config.model";
-import { ArrInstance, CreateArrInstanceDto } from "../../shared/models/arr-config.model";
+import { ClientConfig, DownloadClientConfig, CreateDownloadClientDto, TestDownloadClientRequest, TestConnectionResult } from "../../shared/models/download-client-config.model";
+import { ArrInstance, CreateArrInstanceDto, TestArrInstanceRequest } from "../../shared/models/arr-config.model";
 import { GeneralConfig } from "../../shared/models/general-config.model";
 import { 
   StallRule, 
@@ -760,6 +760,86 @@ export class ConfigurationService {
     return this.http.delete<void>(this.ApplicationPathService.buildApiUrl(`/queue-rules/slow/${id}`)).pipe(
       catchError((error) => {
         console.error(`Error deleting slow rule ${id}:`, error);
+        const errorMessage = ErrorHandlerUtil.extractErrorMessage(error);
+        return throwError(() => new Error(errorMessage));
+      })
+    );
+  }
+
+  // ===== CONNECTION TESTING =====
+
+  /**
+   * Test a Sonarr instance connection
+   */
+  testSonarrInstance(request: TestArrInstanceRequest): Observable<TestConnectionResult> {
+    return this.http.post<TestConnectionResult>(this.ApplicationPathService.buildApiUrl('/configuration/sonarr/instances/test'), request).pipe(
+      catchError((error) => {
+        console.error("Error testing Sonarr instance:", error);
+        const errorMessage = ErrorHandlerUtil.extractErrorMessage(error);
+        return throwError(() => new Error(errorMessage));
+      })
+    );
+  }
+
+  /**
+   * Test a Radarr instance connection
+   */
+  testRadarrInstance(request: TestArrInstanceRequest): Observable<TestConnectionResult> {
+    return this.http.post<TestConnectionResult>(this.ApplicationPathService.buildApiUrl('/configuration/radarr/instances/test'), request).pipe(
+      catchError((error) => {
+        console.error("Error testing Radarr instance:", error);
+        const errorMessage = ErrorHandlerUtil.extractErrorMessage(error);
+        return throwError(() => new Error(errorMessage));
+      })
+    );
+  }
+
+  /**
+   * Test a Lidarr instance connection
+   */
+  testLidarrInstance(request: TestArrInstanceRequest): Observable<TestConnectionResult> {
+    return this.http.post<TestConnectionResult>(this.ApplicationPathService.buildApiUrl('/configuration/lidarr/instances/test'), request).pipe(
+      catchError((error) => {
+        console.error("Error testing Lidarr instance:", error);
+        const errorMessage = ErrorHandlerUtil.extractErrorMessage(error);
+        return throwError(() => new Error(errorMessage));
+      })
+    );
+  }
+
+  /**
+   * Test a Readarr instance connection
+   */
+  testReadarrInstance(request: TestArrInstanceRequest): Observable<TestConnectionResult> {
+    return this.http.post<TestConnectionResult>(this.ApplicationPathService.buildApiUrl('/configuration/readarr/instances/test'), request).pipe(
+      catchError((error) => {
+        console.error("Error testing Readarr instance:", error);
+        const errorMessage = ErrorHandlerUtil.extractErrorMessage(error);
+        return throwError(() => new Error(errorMessage));
+      })
+    );
+  }
+
+  /**
+   * Test a Whisparr instance connection
+   */
+  testWhisparrInstance(request: TestArrInstanceRequest): Observable<TestConnectionResult> {
+    return this.http.post<TestConnectionResult>(this.ApplicationPathService.buildApiUrl('/configuration/whisparr/instances/test'), request).pipe(
+      catchError((error) => {
+        console.error("Error testing Whisparr instance:", error);
+        const errorMessage = ErrorHandlerUtil.extractErrorMessage(error);
+        return throwError(() => new Error(errorMessage));
+      })
+    );
+  }
+
+  /**
+   * Test a download client connection
+   */
+  testDownloadClient(request: TestDownloadClientRequest): Observable<TestConnectionResult> {
+    return this.http.post<TestConnectionResult>(this.ApplicationPathService.buildApiUrl('/configuration/download_client/test'), request).pipe(
+      catchError((error) => {
+        console.error("Error testing download client:", error);
         const errorMessage = ErrorHandlerUtil.extractErrorMessage(error);
         return throwError(() => new Error(errorMessage));
       })

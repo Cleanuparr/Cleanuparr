@@ -130,16 +130,11 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
       }
     });
 
-    // Setup effect to react to test results
+    // Setup effect to react to test results (HTTP 200 = success)
     effect(() => {
       const result = this.testResult();
       if (result) {
-        if (result.success) {
-          this.notificationService.showSuccess(result.message || "Test notification sent successfully");
-        } else {
-          // Error handling is already done in the test error effect above
-          // This just handles the success case
-        }
+        this.notificationService.showSuccess(result.message || "Test notification sent successfully");
       }
     });
   }
