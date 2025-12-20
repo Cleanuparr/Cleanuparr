@@ -716,7 +716,7 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
             {
                 Id = Guid.NewGuid(),
                 UnlinkedTargetCategory = "unlinked",
-                UnlinkedIgnoredRootDir = "/ignore"
+                UnlinkedIgnoredRootDirs = ["/ignore"]
             };
             ContextProvider.Set(nameof(DownloadCleanerConfig), config);
 
@@ -744,7 +744,7 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
 
             // Assert
             _fixture.HardLinkFileService.Verify(
-                x => x.PopulateFileCounts("/ignore"),
+                x => x.PopulateFileCounts(It.Is<IEnumerable<string>>(dirs => dirs.Contains("/ignore"))),
                 Times.Once);
         }
 

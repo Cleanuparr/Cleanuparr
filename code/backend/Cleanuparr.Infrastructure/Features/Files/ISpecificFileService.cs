@@ -1,6 +1,6 @@
-﻿namespace Cleanuparr.Infrastructure.Features.Files;
+namespace Cleanuparr.Infrastructure.Features.Files;
 
-public interface IHardLinkFileService
+public interface ISpecificFileService
 {
     /// <summary>
     /// Populates the inode counts for Unix and the file index counts for Windows.
@@ -8,12 +8,6 @@ public interface IHardLinkFileService
     /// </summary>
     /// <param name="directoryPath">The root directory where to search for hardlinks.</param>
     void PopulateFileCounts(string directoryPath);
-
-    /// <summary>
-    /// Populates the inode counts for Unix and the file index counts for Windows from multiple directories.
-    /// </summary>
-    /// <param name="directoryPaths">The root directories where to search for hardlinks.</param>
-    void PopulateFileCounts(IEnumerable<string> directoryPaths);
     
     /// <summary>
     /// Get the hardlink count of a file.

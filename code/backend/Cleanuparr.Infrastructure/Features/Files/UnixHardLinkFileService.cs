@@ -1,10 +1,10 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using Microsoft.Extensions.Logging;
 using Mono.Unix.Native;
 
 namespace Cleanuparr.Infrastructure.Features.Files;
 
-public class UnixHardLinkFileService : IHardLinkFileService, IDisposable
+public class UnixHardLinkFileService : IUnixHardLinkFileService, IDisposable
 {
     private readonly ILogger<UnixHardLinkFileService> _logger;
     private readonly ConcurrentDictionary<ulong, int> _inodeCounts = new();

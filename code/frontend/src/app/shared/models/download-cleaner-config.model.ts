@@ -13,7 +13,7 @@ export interface DownloadCleanerConfig {
   unlinkedEnabled: boolean;
   unlinkedTargetCategory: string;
   unlinkedUseTag: boolean;
-  unlinkedIgnoredRootDir: string;
+  unlinkedIgnoredRootDirs: string[];
   unlinkedCategories: string[];
 }
 
@@ -56,6 +56,6 @@ export const defaultDownloadCleanerConfig: DownloadCleanerConfig = {
   unlinkedEnabled: false,
   unlinkedTargetCategory: 'cleanuparr-unlinked',
   unlinkedUseTag: false,
-  unlinkedIgnoredRootDir: '',
+  unlinkedIgnoredRootDirs: [],
   unlinkedCategories: []
 };

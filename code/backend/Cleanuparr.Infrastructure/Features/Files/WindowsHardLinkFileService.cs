@@ -1,11 +1,11 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
 using Microsoft.Win32.SafeHandles;
 
 namespace Cleanuparr.Infrastructure.Features.Files;
 
-public class WindowsHardLinkFileService : IHardLinkFileService, IDisposable
+public class WindowsHardLinkFileService : IWindowsHardLinkFileService, IDisposable
 {
     private readonly ILogger<WindowsHardLinkFileService> _logger;
     private readonly ConcurrentDictionary<ulong, int> _fileIndexCounts = new();

@@ -59,9 +59,9 @@ public partial class TransmissionService
 
         var downloadCleanerConfig = ContextProvider.Get<DownloadCleanerConfig>(nameof(DownloadCleanerConfig));
 
-        if (!string.IsNullOrEmpty(downloadCleanerConfig.UnlinkedIgnoredRootDir))
+        if (downloadCleanerConfig.UnlinkedIgnoredRootDirs.Count > 0)
         {
-            _hardLinkFileService.PopulateFileCounts(downloadCleanerConfig.UnlinkedIgnoredRootDir);
+            _hardLinkFileService.PopulateFileCounts(downloadCleanerConfig.UnlinkedIgnoredRootDirs);
         }
 
         foreach (TransmissionItemWrapper torrent in downloads.Cast<TransmissionItemWrapper>())
@@ -95,7 +95,7 @@ public partial class TransmissionService
 
                 string filePath = string.Join(Path.DirectorySeparatorChar, Path.Combine(torrent.Info.DownloadDir, file.Name).Split(['\\', '/']));
 
-                long hardlinkCount = _hardLinkFileService.GetHardLinkCount(filePath, !string.IsNullOrEmpty(downloadCleanerConfig.UnlinkedIgnoredRootDir));
+                long hardlinkCount = _hardLinkFileService.GetHardLinkCount(filePath, downloadCleanerConfig.UnlinkedIgnoredRootDirs.Count > 0);
 
                 if (hardlinkCount < 0)
                 {

@@ -80,7 +80,7 @@ public sealed class DownloadCleanerConfigController : ControllerBase
             oldConfig.UnlinkedEnabled = newConfigDto.UnlinkedEnabled;
             oldConfig.UnlinkedTargetCategory = newConfigDto.UnlinkedTargetCategory;
             oldConfig.UnlinkedUseTag = newConfigDto.UnlinkedUseTag;
-            oldConfig.UnlinkedIgnoredRootDir = newConfigDto.UnlinkedIgnoredRootDir;
+            oldConfig.UnlinkedIgnoredRootDirs = newConfigDto.UnlinkedIgnoredRootDirs;
             oldConfig.UnlinkedCategories = newConfigDto.UnlinkedCategories;
             oldConfig.IgnoredDownloads = newConfigDto.IgnoredDownloads;
             oldConfig.Categories.Clear();
