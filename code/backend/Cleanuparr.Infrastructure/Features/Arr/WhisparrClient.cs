@@ -25,6 +25,11 @@ public class WhisparrClient : ArrClient, IWhisparrClient
     {
     }
     
+    protected override string GetSystemStatusUrlPath()
+    {
+        return "/api/v3/system/status";
+    }
+    
     protected override string GetQueueUrlPath()
     {
         return "/api/v3/queue";

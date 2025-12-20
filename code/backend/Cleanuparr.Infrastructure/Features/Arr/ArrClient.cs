@@ -168,16 +168,24 @@ public abstract class ArrClient : IArrClient
 
         return true;
     }
-    
-    /// <summary>
-    /// Tests the connection to an Arr instance
-    /// </summary>
-    /// <param name="arrInstance">The instance to test connection to</param>
-    /// <returns>Task that completes when the connection test is done</returns>
-    public virtual async Task TestConnectionAsync(ArrInstance arrInstance)
+
+    /// <inheritdoc/>
+    public async Task HealthCheckAsync(ArrInstance arrInstance)
     {
-        _ = await GetQueueItemsAsync(arrInstance, 1);
+        UriBuilder uriBuilder = new(arrInstance.Url);
+        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}{GetSystemStatusUrlPath()}";
+
+        using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
+        SetApiKey(request, arrInstance.ApiKey);
+        
+        using HttpResponseMessage response = await _httpClient.SendAsync(request);
+        
+        response.EnsureSuccessStatusCode();
+        
+        _logger.LogDebug("Connection test successful for {url}", arrInstance.Url);
     }
+
+    protected abstract string GetSystemStatusUrlPath();
     
     protected abstract string GetQueueUrlPath();
 

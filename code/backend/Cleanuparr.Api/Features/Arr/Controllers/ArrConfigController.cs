@@ -290,7 +290,7 @@ public sealed class ArrConfigController : ControllerBase
         {
             var testInstance = request.ToTestInstance();
             var client = _arrClientFactory.GetClient(type);
-            await client.TestConnectionAsync(testInstance);
+            await client.HealthCheckAsync(testInstance);
 
             return Ok(new { Message = $"Connection to {type} instance successful" });
         }

@@ -16,11 +16,11 @@ public interface IArrClient
     Task SearchItemsAsync(ArrInstance arrInstance, HashSet<SearchItem>? items);
     
     bool IsRecordValid(QueueRecord record);
-    
+
     /// <summary>
     /// Tests the connection to an Arr instance
     /// </summary>
     /// <param name="arrInstance">The instance to test connection to</param>
     /// <returns>Task that completes when the connection test is done</returns>
-    Task TestConnectionAsync(ArrInstance arrInstance);
+    Task HealthCheckAsync(ArrInstance arrInstance);
 }
