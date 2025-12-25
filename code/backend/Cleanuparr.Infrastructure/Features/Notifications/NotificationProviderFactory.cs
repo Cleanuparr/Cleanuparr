@@ -41,9 +41,10 @@ public sealed class NotificationProviderFactory : INotificationProviderFactory
     private INotificationProvider CreateAppriseProvider(NotificationProviderDto config)
     {
         var appriseConfig = (AppriseConfig)config.Configuration;
-        var proxy = _serviceProvider.GetRequiredService<IAppriseProxy>();
-        
-        return new AppriseProvider(config.Name, config.Type, appriseConfig, proxy);
+        var apiProxy = _serviceProvider.GetRequiredService<IAppriseProxy>();
+        var cliProxy = _serviceProvider.GetRequiredService<IAppriseCliProxy>();
+
+        return new AppriseProvider(config.Name, config.Type, appriseConfig, apiProxy, cliProxy);
     }
 
     private INotificationProvider CreateNtfyProvider(NotificationProviderDto config)

@@ -120,9 +120,11 @@ export class DocumentationService {
       'notifiarr.channelId': 'channel-id'
     },
     'notifications/apprise': {
+      'apprise.mode': 'mode',
       'apprise.url': 'url',
       'apprise.key': 'key',
-      'apprise.tags': 'tags'
+      'apprise.tags': 'tags',
+      'apprise.serviceUrls': 'service-urls'
     },
     'notifications/ntfy': {
       'ntfy.serverUrl': 'server-url',

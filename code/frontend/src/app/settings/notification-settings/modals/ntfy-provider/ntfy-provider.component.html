@@ -44,26 +44,13 @@
         ></i>
         Topics *
       </label>
-      <!-- Mobile-friendly autocomplete (chips UI) -->
       <app-mobile-autocomplete
         [formControl]="topicsControl"
         placeholder="Enter topic names"
       ></app-mobile-autocomplete>
-
-      <!-- Desktop autocomplete (allows multiple entries) -->
-      <p-autocomplete
-        id="topics"
-        [formControl]="topicsControl"
-        multiple
-        fluid
-        [typeahead]="false"
-        placeholder="Add a topic and press Enter"
-        class="desktop-only w-full"
-      ></p-autocomplete>
-
       <small *ngIf="hasFieldError(topicsControl, 'required')" class="form-error-text">At least one topic is required</small>
       <small *ngIf="hasFieldError(topicsControl, 'minlength')" class="form-error-text">At least one topic is required</small>
-      <small class="form-helper-text">Enter the ntfy topics you want to publish to. Press Enter or comma to add each topic.</small>
+      <small class="form-helper-text">Enter the ntfy topics you want to publish to. Press Enter or click + to add each topic.</small>
     </div>
 
     <!-- Authentication Type -->
@@ -190,24 +177,11 @@
         ></i>
         Tags (Optional)
       </label>
-      <!-- Mobile-friendly autocomplete (chips UI) -->
       <app-mobile-autocomplete
         [formControl]="tagsControl"
         placeholder="Enter tag names"
       ></app-mobile-autocomplete>
-
-      <!-- Desktop autocomplete (allows multiple entries) -->
-      <p-autocomplete
-        id="tags"
-        [formControl]="tagsControl"
-        multiple
-        fluid
-        [typeahead]="false"
-        placeholder="Add a tag and press Enter"
-        class="desktop-only w-full"
-      ></p-autocomplete>
-
-      <small class="form-helper-text">Optional tags to add to notifications (e.g., warning, alert). Press Enter or comma to add each tag.</small>
+      <small class="form-helper-text">Optional tags to add to notifications (e.g., warning, alert). Press Enter or click + to add each tag.</small>
     </div>
   </div>
 </app-notification-provider-base>

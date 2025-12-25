@@ -9,16 +9,19 @@ namespace Cleanuparr.Infrastructure.Tests.Features.Notifications;
 
 public class AppriseProviderTests
 {
-    private readonly Mock<IAppriseProxy> _proxyMock;
+    private readonly Mock<IAppriseProxy> _apiProxyMock;
+    private readonly Mock<IAppriseCliProxy> _cliProxyMock;
     private readonly AppriseConfig _config;
     private readonly AppriseProvider _provider;
 
     public AppriseProviderTests()
     {
-        _proxyMock = new Mock<IAppriseProxy>();
+        _apiProxyMock = new Mock<IAppriseProxy>();
+        _cliProxyMock = new Mock<IAppriseCliProxy>();
         _config = new AppriseConfig
         {
             Id = Guid.NewGuid(),
+            Mode = AppriseMode.Api,
             Url = "http://apprise.example.com",
             Key = "testkey",
             Tags = "tag1,tag2"
@@ -28,7 +31,8 @@ public class AppriseProviderTests
             "TestApprise",
             NotificationProviderType.Apprise,
             _config,
-            _proxyMock.Object);
+            _apiProxyMock.Object,
+            _cliProxyMock.Object);
     }
 
     #region Constructor Tests
@@ -58,7 +62,7 @@ public class AppriseProviderTests
         var context = CreateTestContext();
         ApprisePayload? capturedPayload = null;
 
-        _proxyMock.Setup(p => p.SendNotification(It.IsAny<ApprisePayload>(), _config))
+        _apiProxyMock.Setup(p => p.SendNotification(It.IsAny<ApprisePayload>(), _config))
             .Callback<ApprisePayload, AppriseConfig>((payload, config) => capturedPayload = payload)
             .Returns(Task.CompletedTask);
 
@@ -81,7 +85,7 @@ public class AppriseProviderTests
 
         ApprisePayload? capturedPayload = null;
 
-        _proxyMock.Setup(p => p.SendNotification(It.IsAny<ApprisePayload>(), _config))
+        _apiProxyMock.Setup(p => p.SendNotification(It.IsAny<ApprisePayload>(), _config))
             .Callback<ApprisePayload, AppriseConfig>((payload, config) => capturedPayload = payload)
             .Returns(Task.CompletedTask);
 
@@ -112,7 +116,7 @@ public class AppriseProviderTests
 
         ApprisePayload? capturedPayload = null;
 
-        _proxyMock.Setup(p => p.SendNotification(It.IsAny<ApprisePayload>(), _config))
+        _apiProxyMock.Setup(p => p.SendNotification(It.IsAny<ApprisePayload>(), _config))
             .Callback<ApprisePayload, AppriseConfig>((payload, config) => capturedPayload = payload)
             .Returns(Task.CompletedTask);
 
@@ -131,7 +135,7 @@ public class AppriseProviderTests
         var context = CreateTestContext();
         ApprisePayload? capturedPayload = null;
 
-        _proxyMock.Setup(p => p.SendNotification(It.IsAny<ApprisePayload>(), _config))
+        _apiProxyMock.Setup(p => p.SendNotification(It.IsAny<ApprisePayload>(), _config))
             .Callback<ApprisePayload, AppriseConfig>((payload, config) => capturedPayload = payload)
             .Returns(Task.CompletedTask);
 
@@ -149,7 +153,7 @@ public class AppriseProviderTests
         // Arrange
         var context = CreateTestContext();
 
-        _proxyMock.Setup(p => p.SendNotification(It.IsAny<ApprisePayload>(), _config))
+        _apiProxyMock.Setup(p => p.SendNotification(It.IsAny<ApprisePayload>(), _config))
             .ThrowsAsync(new Exception("Proxy error"));
 
         // Act & Assert
@@ -171,7 +175,7 @@ public class AppriseProviderTests
 
         ApprisePayload? capturedPayload = null;
 
-        _proxyMock.Setup(p => p.SendNotification(It.IsAny<ApprisePayload>(), _config))
+        _apiProxyMock.Setup(p => p.SendNotification(It.IsAny<ApprisePayload>(), _config))
             .Callback<ApprisePayload, AppriseConfig>((payload, config) => capturedPayload = payload)
             .Returns(Task.CompletedTask);
 
@@ -181,6 +185,40 @@ public class AppriseProviderTests
         // Assert
         Assert.NotNull(capturedPayload);
         Assert.Contains("Test Description", capturedPayload.Body);
+    }
+
+    [Fact]
+    public async Task SendNotificationAsync_CliMode_CallsCliProxy()
+    {
+        // Arrange
+        var cliConfig = new AppriseConfig
+        {
+            Id = Guid.NewGuid(),
+            Mode = AppriseMode.Cli,
+            ServiceUrls = "discord://webhook_id/token"
+        };
+
+        var apiProxyMock = new Mock<IAppriseProxy>();
+        var cliProxyMock = new Mock<IAppriseCliProxy>();
+
+        var provider = new AppriseProvider(
+            "TestAppriseCli",
+            NotificationProviderType.Apprise,
+            cliConfig,
+            apiProxyMock.Object,
+            cliProxyMock.Object);
+
+        var context = CreateTestContext();
+
+        cliProxyMock.Setup(p => p.SendNotification(It.IsAny<ApprisePayload>(), cliConfig))
+            .Returns(Task.CompletedTask);
+
+        // Act
+        await provider.SendNotificationAsync(context);
+
+        // Assert
+        cliProxyMock.Verify(p => p.SendNotification(It.IsAny<ApprisePayload>(), cliConfig), Times.Once);
+        apiProxyMock.Verify(p => p.SendNotification(It.IsAny<ApprisePayload>(), It.IsAny<AppriseConfig>()), Times.Never);
     }
 
     #endregion

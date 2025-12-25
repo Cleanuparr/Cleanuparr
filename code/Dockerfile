@@ -23,10 +23,6 @@ ARG PACKAGES_PAT
 WORKDIR /app
 EXPOSE 11011
 
-# Copy solution and project files first for better layer caching
-# COPY backend/*.sln ./backend/
-# COPY backend/*/*.csproj ./backend/*/
-
 # Copy source code
 COPY backend/ ./backend/
 
@@ -48,12 +44,20 @@ RUN --mount=type=cache,target=/root/.nuget/packages,sharing=locked \
 # Runtime stage
 FROM mcr.microsoft.com/dotnet/aspnet:9.0-bookworm-slim
 
-# Install required packages for user management and timezone support
+# Install required packages for user management, timezone support, and Python for Apprise CLI
 RUN apt-get update && apt-get install -y \
     curl \
     tzdata \
     gosu \
+    python3 \
+    python3-venv \
     && rm -rf /var/lib/apt/lists/*
+
+# Create virtual environment and install Apprise CLI
+ENV VIRTUAL_ENV=/opt/apprise-venv
+RUN python3 -m venv $VIRTUAL_ENV
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+RUN pip install --no-cache-dir apprise==1.9.6
 
 ENV PUID=1000 \
     PGID=1000 \

@@ -1,4 +1,4 @@
-import { NotificationProviderType } from '../../../shared/models/enums';
+import { AppriseMode, NotificationProviderType } from '../../../shared/models/enums';
 import { NtfyAuthenticationType } from '../../../shared/models/ntfy-authentication-type.enum';
 import { NtfyPriority } from '../../../shared/models/ntfy-priority.enum';
 import { PushoverPriority } from '../../../shared/models/pushover-priority.enum';
@@ -34,9 +34,13 @@ export interface NotifiarrFormData extends BaseProviderFormData {
 }
 
 export interface AppriseFormData extends BaseProviderFormData {
+  mode: AppriseMode;
+  // API mode fields
   url: string;
   key: string;
   tags: string;
+  // CLI mode fields
+  serviceUrls: string;
 }
 
 export interface NtfyFormData extends BaseProviderFormData {

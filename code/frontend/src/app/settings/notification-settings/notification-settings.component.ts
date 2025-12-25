@@ -276,9 +276,11 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
       case NotificationProviderType.Apprise:
         const appriseConfig = provider.configuration as any;
         testRequest = {
-          url: appriseConfig.url,
-          key: appriseConfig.key,
+          mode: appriseConfig.mode,
+          url: appriseConfig.url || "",
+          key: appriseConfig.key || "",
           tags: appriseConfig.tags || "",
+          serviceUrls: appriseConfig.serviceUrls || "",
         };
         break;
       case NotificationProviderType.Ntfy:
@@ -410,9 +412,11 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
    */
   onAppriseTest(data: AppriseFormData): void {
     const testRequest = {
+      mode: data.mode,
       url: data.url,
       key: data.key,
       tags: data.tags,
+      serviceUrls: data.serviceUrls,
     };
 
     this.notificationProviderStore.testProvider({
@@ -570,9 +574,11 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
       onQueueItemDeleted: data.onQueueItemDeleted,
       onDownloadCleaned: data.onDownloadCleaned,
       onCategoryChanged: data.onCategoryChanged,
+      mode: data.mode,
       url: data.url,
       key: data.key,
       tags: data.tags,
+      serviceUrls: data.serviceUrls,
     };
 
     this.notificationProviderStore.createProvider({
@@ -597,9 +603,11 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
       onQueueItemDeleted: data.onQueueItemDeleted,
       onDownloadCleaned: data.onDownloadCleaned,
       onCategoryChanged: data.onCategoryChanged,
+      mode: data.mode,
       url: data.url,
       key: data.key,
       tags: data.tags,
+      serviceUrls: data.serviceUrls,
     };
 
     this.notificationProviderStore.updateProvider({

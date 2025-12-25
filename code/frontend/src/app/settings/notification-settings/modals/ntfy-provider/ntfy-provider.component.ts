@@ -1,8 +1,7 @@
-import { Component, Input, Output, EventEmitter, OnInit, OnDestroy, OnChanges, SimpleChanges, inject } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, OnChanges, SimpleChanges, inject } from '@angular/core';
 import { FormControl, Validators, ReactiveFormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { InputTextModule } from 'primeng/inputtext';
-import { AutoCompleteModule } from 'primeng/autocomplete';
 import { SelectModule } from 'primeng/select';
 import { MobileAutocompleteComponent } from '../../../../shared/components/mobile-autocomplete/mobile-autocomplete.component';
 import { NtfyFormData, BaseProviderFormData } from '../../models/provider-modal.model';
@@ -20,7 +19,6 @@ import { NtfyPriority } from '../../../../shared/models/ntfy-priority.enum';
     CommonModule,
     ReactiveFormsModule,
     InputTextModule,
-    AutoCompleteModule,
     SelectModule,
     MobileAutocompleteComponent,
     NotificationProviderBaseComponent

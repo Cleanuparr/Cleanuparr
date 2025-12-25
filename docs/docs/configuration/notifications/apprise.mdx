@@ -26,8 +26,29 @@ Apprise is a universal notification library that supports over 80 different noti
 </p>
 
 <ConfigSection
+  title="Mode"
+  icon="⚙️"
+>
+
+Choose how to connect to Apprise:
+- **API**: Requires an external [Apprise API](https://github.com/caronc/apprise-api) container running. Notifications are sent via HTTP requests to the Apprise server.
+- **CLI**: Uses the Apprise CLI directly on the host machine. For Docker users, the CLI is pre-installed in the container. Non-Docker users must [install Apprise](https://github.com/caronc/apprise#installation) separately.
+
+</ConfigSection>
+
+</div>
+
+<div className={styles.section}>
+
+<SectionTitle icon="🌐">API Mode</SectionTitle>
+
+<p className={styles.sectionDescription}>
+  Configure settings for API mode. These settings are used when connecting to an external Apprise API server.
+</p>
+
+<ConfigSection
   title="URL"
-  icon="🌐"
+  icon="🔗"
 >
 
 The Apprise server URL where notification requests will be sent.
@@ -49,6 +70,33 @@ The key that identifies your Apprise configuration. This corresponds to a config
 >
 
 Optionally notify only those tagged accordingly. Use a comma (,) to OR your tags and a space ( ) to AND them. More details on this can be seen in the [Apprise documentation](https://github.com/caronc/apprise-api?tab=readme-ov-file#tagging).
+
+</ConfigSection>
+
+</div>
+
+<div className={styles.section}>
+
+<SectionTitle icon="💻">CLI Mode</SectionTitle>
+
+<p className={styles.sectionDescription}>
+  Configure settings for CLI mode. These settings are used when invoking the Apprise CLI directly.
+</p>
+
+<ConfigSection
+  title="Service URLs"
+  icon="📋"
+>
+
+Add Apprise service URLs that define where notifications will be sent. Each URL corresponds to a specific notification service.
+
+Examples:
+- Discord: `discord://webhook_id/token`
+- Slack: `slack://token_a/token_b/token_c`
+- Telegram: `tgram://bot_token/chat_id`
+- Email: `mailto://user:password@gmail.com`
+
+For a complete list of supported services and their URL formats, see the [Apprise Wiki](https://github.com/caronc/apprise/wiki#notification-services).
 
 </ConfigSection>
 

@@ -1,5 +1,4 @@
 using Cleanuparr.Domain.Enums;
-using Cleanuparr.Infrastructure.Features.Notifications.Apprise;
 using Cleanuparr.Infrastructure.Features.Notifications.Models;
 using Cleanuparr.Persistence.Models.Configuration.Notification;
 using System.Text;
@@ -8,22 +7,33 @@ namespace Cleanuparr.Infrastructure.Features.Notifications.Apprise;
 
 public sealed class AppriseProvider : NotificationProviderBase<AppriseConfig>
 {
-    private readonly IAppriseProxy _proxy;
+    private readonly IAppriseProxy _apiProxy;
+    private readonly IAppriseCliProxy _cliProxy;
 
     public AppriseProvider(
         string name,
         NotificationProviderType type,
         AppriseConfig config,
-        IAppriseProxy proxy
+        IAppriseProxy apiProxy,
+        IAppriseCliProxy cliProxy
     ) : base(name, type, config)
     {
-        _proxy = proxy;
+        _apiProxy = apiProxy;
+        _cliProxy = cliProxy;
     }
 
     public override async Task SendNotificationAsync(NotificationContext context)
     {
         ApprisePayload payload = BuildPayload(context);
-        await _proxy.SendNotification(payload, Config);
+
+        if (Config.Mode is AppriseMode.Cli)
+        {
+            await _cliProxy.SendNotification(payload, Config);
+        }
+        else
+        {
+            await _apiProxy.SendNotification(payload, Config);
+        }
     }
 
     private ApprisePayload BuildPayload(NotificationContext context)
@@ -51,7 +61,7 @@ public sealed class AppriseProvider : NotificationProviderBase<AppriseConfig>
         var body = new StringBuilder();
         body.AppendLine(context.Description);
         body.AppendLine();
-        
+
         foreach ((string key, string value) in context.Data)
         {
             body.AppendLine($"{key}: {value}");

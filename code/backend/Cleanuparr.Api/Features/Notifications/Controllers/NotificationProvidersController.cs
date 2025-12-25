@@ -1,15 +1,15 @@
+using System.Net;
 using Cleanuparr.Api.Features.Notifications.Contracts.Requests;
 using Cleanuparr.Api.Features.Notifications.Contracts.Responses;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Domain.Exceptions;
 using Cleanuparr.Infrastructure.Features.Notifications;
+using Cleanuparr.Infrastructure.Features.Notifications.Apprise;
 using Cleanuparr.Infrastructure.Features.Notifications.Models;
-using Cleanuparr.Infrastructure.Services.Interfaces;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.Notification;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 
 namespace Cleanuparr.Api.Features.Notifications.Controllers;
 
@@ -21,17 +21,20 @@ public sealed class NotificationProvidersController : ControllerBase
     private readonly DataContext _dataContext;
     private readonly INotificationConfigurationService _notificationConfigurationService;
     private readonly NotificationService _notificationService;
+    private readonly IAppriseCliDetector _appriseCliDetector;
 
     public NotificationProvidersController(
         ILogger<NotificationProvidersController> logger,
         DataContext dataContext,
         INotificationConfigurationService notificationConfigurationService,
-        NotificationService notificationService)
+        NotificationService notificationService,
+        IAppriseCliDetector appriseCliDetector)
     {
         _logger = logger;
         _dataContext = dataContext;
         _notificationConfigurationService = notificationConfigurationService;
         _notificationService = notificationService;
+        _appriseCliDetector = appriseCliDetector;
     }
 
     [HttpGet]
@@ -84,6 +87,18 @@ public sealed class NotificationProvidersController : ControllerBase
         {
             DataContext.Lock.Release();
         }
+    }
+
+    [HttpGet("apprise/cli-status")]
+    public async Task<IActionResult> GetAppriseCliStatus()
+    {
+        string? version = await _appriseCliDetector.GetAppriseVersionAsync();
+
+        return Ok(new
+        {
+            Available = version is not null,
+            Version = version
+        });
     }
 
     [HttpPost("notifiarr")]
@@ -162,9 +177,11 @@ public sealed class NotificationProvidersController : ControllerBase
 
             var appriseConfig = new AppriseConfig
             {
+                Mode = newProvider.Mode,
                 Url = newProvider.Url,
                 Key = newProvider.Key,
-                Tags = newProvider.Tags
+                Tags = newProvider.Tags,
+                ServiceUrls = newProvider.ServiceUrls
             };
             appriseConfig.Validate();
 
@@ -382,9 +399,11 @@ public sealed class NotificationProvidersController : ControllerBase
 
             var appriseConfig = new AppriseConfig
             {
+                Mode = updatedProvider.Mode,
                 Url = updatedProvider.Url,
                 Key = updatedProvider.Key,
-                Tags = updatedProvider.Tags
+                Tags = updatedProvider.Tags,
+                ServiceUrls = updatedProvider.ServiceUrls
             };
 
             if (existingProvider.AppriseConfiguration != null)
@@ -602,9 +621,11 @@ public sealed class NotificationProvidersController : ControllerBase
         {
             var appriseConfig = new AppriseConfig
             {
+                Mode = testRequest.Mode,
                 Url = testRequest.Url,
                 Key = testRequest.Key,
-                Tags = testRequest.Tags
+                Tags = testRequest.Tags,
+                ServiceUrls = testRequest.ServiceUrls
             };
             appriseConfig.Validate();
 
@@ -628,6 +649,10 @@ public sealed class NotificationProvidersController : ControllerBase
 
             await _notificationService.SendTestNotificationAsync(providerDto);
             return Ok(new { Message = "Test notification sent successfully" });
+        }
+        catch (AppriseException exception)
+        {
+            return StatusCode((int)HttpStatusCode.InternalServerError, exception.Message);
         }
         catch (Exception ex)
         {

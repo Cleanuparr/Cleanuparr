@@ -7,10 +7,15 @@ import {
   NotificationProviderDto,
   TestNotificationResult
 } from '../../shared/models/notification-provider.model';
-import { NotificationProviderType } from '../../shared/models/enums';
+import { AppriseMode, NotificationProviderType } from '../../shared/models/enums';
 import { NtfyAuthenticationType } from '../../shared/models/ntfy-authentication-type.enum';
 import { NtfyPriority } from '../../shared/models/ntfy-priority.enum';
 import { PushoverPriority } from '../../shared/models/pushover-priority.enum';
+
+export interface AppriseCliStatus {
+  available: boolean;
+  version: string | null;
+}
 
 // Provider-specific interfaces
 export interface CreateNotifiarrProviderRequest {
@@ -53,9 +58,13 @@ export interface CreateAppriseProviderRequest {
   onQueueItemDeleted: boolean;
   onDownloadCleaned: boolean;
   onCategoryChanged: boolean;
+  mode: AppriseMode;
+  // API mode fields
   url: string;
   key: string;
   tags: string;
+  // CLI mode fields
+  serviceUrls: string;
 }
 
 export interface UpdateAppriseProviderRequest {
@@ -67,15 +76,23 @@ export interface UpdateAppriseProviderRequest {
   onQueueItemDeleted: boolean;
   onDownloadCleaned: boolean;
   onCategoryChanged: boolean;
+  mode: AppriseMode;
+  // API mode fields
   url: string;
   key: string;
   tags: string;
+  // CLI mode fields
+  serviceUrls: string;
 }
 
 export interface TestAppriseProviderRequest {
+  mode: AppriseMode;
+  // API mode fields
   url: string;
   key: string;
   tags: string;
+  // CLI mode fields
+  serviceUrls: string;
 }
 
 export interface CreateNtfyProviderRequest {
@@ -189,6 +206,13 @@ export class NotificationProviderService {
    */
   getProviders(): Observable<NotificationProvidersConfig> {
     return this.http.get<NotificationProvidersConfig>(this.baseUrl);
+  }
+
+  /**
+   * Get Apprise CLI availability status
+   */
+  getAppriseCliStatus(): Observable<AppriseCliStatus> {
+    return this.http.get<AppriseCliStatus>(`${this.baseUrl}/apprise/cli-status`);
   }
 
   /**

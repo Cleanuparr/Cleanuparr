@@ -1,2 +1,10 @@
 /* Apprise Provider Modal Styles */
 @use '../../../styles/settings-shared.scss';
+
+.cli-detection-loading {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text-color-secondary);
+  font-size: 0.875rem;
+}
