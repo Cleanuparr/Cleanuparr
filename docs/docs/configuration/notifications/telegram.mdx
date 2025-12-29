@@ -32,6 +32,8 @@ Telegram can deliver notifications to users, groups, or supergroups via bots.
 >
 
 Create a bot with [@BotFather](https://t.me/BotFather) and paste the generated token. Tokens look like `123456789:ABC-DEF1234ghIkl-zyx57W2v1u123ew11`.
+<br/>
+Reference: https://core.telegram.org/bots#how-do-i-create-a-bot
 
 </ConfigSection>
 
@@ -45,7 +47,7 @@ The destination chat. Examples:
 - Direct chat with your bot: positive integer (e.g., `123456789`)
 - Group/supergroup: negative integer starting with `-100` (e.g., `-100123456789`)
 
-Add the bot to the chat and send a message so it can receive updates.
+One way to find the chat id: https://stackoverflow.com/a/75954034
 
 </ConfigSection>
 
@@ -56,6 +58,8 @@ Add the bot to the chat and send a message so it can receive updates.
 >
 
 For supergroups with topics enabled, specify the thread/topic ID to target a specific thread. Leave empty to post to the main chat.
+<br/>
+One way to get the topic id: https://stackoverflow.com/a/75178418
 
 </ConfigSection>
 
