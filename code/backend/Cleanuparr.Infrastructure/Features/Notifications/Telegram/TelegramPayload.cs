@@ -10,6 +10,9 @@ public sealed class TelegramPayload
     [JsonProperty("text")]
     public string Text { get; init; } = string.Empty;
 
+    [JsonProperty("photo")]
+    public string? PhotoUrl { get; init; }
+
     [JsonProperty("message_thread_id")]
     public int? MessageThreadId { get; init; }
 

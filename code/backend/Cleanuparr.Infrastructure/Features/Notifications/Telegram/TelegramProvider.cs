@@ -1,3 +1,4 @@
+using System.Net;
 using System.Text;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Notifications.Models;
@@ -32,7 +33,8 @@ public sealed class TelegramProvider : NotificationProviderBase<TelegramConfig>
             ChatId = Config.ChatId.Trim(),
             MessageThreadId = ParseTopicId(Config.TopicId),
             DisableNotification = Config.SendSilently,
-            Text = BuildMessage(context)
+                Text = BuildMessage(context),
+                PhotoUrl = context.Image?.ToString()
         };
     }
 
@@ -42,26 +44,28 @@ public sealed class TelegramProvider : NotificationProviderBase<TelegramConfig>
 
         if (!string.IsNullOrWhiteSpace(context.Title))
         {
-            builder.AppendLine(context.Title.Trim());
+            builder.AppendLine(HtmlEncode(context.Title.Trim()));
             builder.AppendLine();
         }
 
         if (!string.IsNullOrWhiteSpace(context.Description))
         {
-            builder.AppendLine(context.Description.Trim());
+            builder.AppendLine(HtmlEncode(context.Description.Trim()));
         }
 
-        if (context.Data.Any())
-        {
-            builder.AppendLine();
-            foreach ((string key, string value) in context.Data)
+            if (context.Data.Any())
             {
-                builder.AppendLine($"{key}: {value}");
+                builder.AppendLine();
+                foreach ((string key, string value) in context.Data)
+                {
+                    builder.AppendLine($"{HtmlEncode(key)}: {HtmlEncode(value)}");
+                }
             }
-        }
 
         return builder.ToString().Trim();
     }
+
+    private static string HtmlEncode(string value) => WebUtility.HtmlEncode(value);
 
     private static int? ParseTopicId(string? topicId)
     {
