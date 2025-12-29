@@ -34,14 +34,14 @@ https://cleanuparr.github.io/Cleanuparr/docs/screenshots
 
 ## 🎯 Supported Applications
 
-### *Arr Applications
+### *Arr Applications (latest version)
 - **Sonarr**
 - **Radarr**
 - **Lidarr**
 - **Readarr**
-- **Whisparr**
+- **Whisparr v2**
 
-### Download Clients
+### Download Clients (latest version)
 - **qBittorrent**
 - **Transmission**
 - **Deluge**
