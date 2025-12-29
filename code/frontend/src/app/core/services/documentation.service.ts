@@ -146,6 +146,12 @@ export class DocumentationService {
       'pushover.sound': 'pushover.sound',
       'pushover.tags': 'pushover.tags'
     },
+    'notifications/telegram': {
+      'telegram.botToken': 'bot-token',
+      'telegram.chatId': 'chat-id',
+      'telegram.topicId': 'topic-id',
+      'telegram.sendSilently': 'send-silently'
+    },
   };
 
   constructor(private applicationPathService: ApplicationPathService) {}
