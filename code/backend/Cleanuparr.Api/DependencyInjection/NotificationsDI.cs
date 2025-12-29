@@ -3,6 +3,7 @@ using Cleanuparr.Infrastructure.Features.Notifications.Apprise;
 using Cleanuparr.Infrastructure.Features.Notifications.Notifiarr;
 using Cleanuparr.Infrastructure.Features.Notifications.Ntfy;
 using Cleanuparr.Infrastructure.Features.Notifications.Pushover;
+using Cleanuparr.Infrastructure.Features.Notifications.Telegram;
 
 namespace Cleanuparr.Api.DependencyInjection;
 
@@ -16,6 +17,7 @@ public static class NotificationsDI
             .AddSingleton<IAppriseCliDetector, AppriseCliDetector>()
             .AddScoped<INtfyProxy, NtfyProxy>()
             .AddScoped<IPushoverProxy, PushoverProxy>()
+            .AddScoped<ITelegramProxy, TelegramProxy>()
             .AddScoped<INotificationConfigurationService, NotificationConfigurationService>()
             .AddScoped<INotificationProviderFactory, NotificationProviderFactory>()
             .AddScoped<NotificationProviderFactory>()

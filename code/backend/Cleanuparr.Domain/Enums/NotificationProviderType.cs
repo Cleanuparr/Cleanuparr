@@ -5,5 +5,6 @@ public enum NotificationProviderType
     Notifiarr,
     Apprise,
     Ntfy,
-    Pushover
+    Pushover,
+    Telegram,
 }

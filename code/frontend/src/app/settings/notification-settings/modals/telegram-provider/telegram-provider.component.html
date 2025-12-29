@@ -1,0 +1,92 @@
+<app-notification-provider-base
+  [visible]="visible"
+  modalTitle="Configure Telegram Provider"
+  [saving]="saving"
+  [testing]="testing"
+  [editingProvider]="editingProvider"
+  (save)="onSave($event)"
+  (cancel)="onCancel()"
+  (test)="onTest($event)">
+
+  <div slot="provider-config">
+    <div class="field">
+      <label for="bot-token">
+        <i
+          class="pi pi-question-circle field-info-icon"
+          title="Click for documentation"
+          (click)="openFieldDocs('telegram.botToken')"
+        ></i>
+        Bot Token *
+      </label>
+      <input
+        id="bot-token"
+        type="password"
+        pInputText
+        [formControl]="botTokenControl"
+        placeholder="123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"
+        class="w-full"
+      />
+      <small *ngIf="hasFieldError(botTokenControl, 'required')" class="form-error-text">Bot token is required</small>
+      <small *ngIf="hasFieldError(botTokenControl, 'minlength')" class="form-error-text">Bot token looks too short</small>
+      <small class="form-helper-text">Create a bot with BotFather and paste the API token</small>
+    </div>
+
+    <div class="field">
+      <label for="chat-id">
+        <i
+          class="pi pi-question-circle field-info-icon"
+          title="Click for documentation"
+          (click)="openFieldDocs('telegram.chatId')"
+        ></i>
+        Chat ID *
+      </label>
+      <input
+        id="chat-id"
+        type="text"
+        pInputText
+        signedNumericInput
+        [formControl]="chatIdControl"
+        placeholder="e.g. 123456789 or -100123456789"
+        class="w-full"
+      />
+      <small *ngIf="hasFieldError(chatIdControl, 'required')" class="form-error-text">Chat ID is required</small>
+      <small class="form-helper-text">Start a conversation with the bot or add it to your group to get the chat ID</small>
+    </div>
+
+    <div class="field">
+      <label for="topic-id">
+        <i
+          class="pi pi-question-circle field-info-icon"
+          title="Click for documentation"
+          (click)="openFieldDocs('telegram.topicId')"
+        ></i>
+        Topic ID (optional)
+      </label>
+      <input
+        id="topic-id"
+        type="text"
+        pInputText
+        numericInput
+        [formControl]="topicIdControl"
+        placeholder="Enter topic ID for supergroup"
+        class="w-full"
+      />
+      <small class="form-helper-text">Specify a Topic ID to send to a specific thread (supergroups only)</small>
+    </div>
+
+    <div class="field flex flex-row">
+      <label class="field-label">
+        <i
+          class="pi pi-question-circle field-info-icon"
+          title="Click for documentation"
+          (click)="openFieldDocs('telegram.sendSilently')"
+        ></i>
+        Send Silently
+      </label>
+      <div class="field-input">
+        <p-checkbox [binary]="true" [formControl]="sendSilentlyControl"></p-checkbox>
+        <small class="form-helper-text">Deliver without sound for recipients</small>
+      </div>
+    </div>
+  </div>
+</app-notification-provider-base>

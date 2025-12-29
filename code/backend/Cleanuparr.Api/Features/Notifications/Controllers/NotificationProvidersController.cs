@@ -6,6 +6,7 @@ using Cleanuparr.Domain.Exceptions;
 using Cleanuparr.Infrastructure.Features.Notifications;
 using Cleanuparr.Infrastructure.Features.Notifications.Apprise;
 using Cleanuparr.Infrastructure.Features.Notifications.Models;
+using Cleanuparr.Infrastructure.Features.Notifications.Telegram;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.Notification;
 using Microsoft.AspNetCore.Mvc;
@@ -48,6 +49,7 @@ public sealed class NotificationProvidersController : ControllerBase
                 .Include(p => p.AppriseConfiguration)
                 .Include(p => p.NtfyConfiguration)
                 .Include(p => p.PushoverConfiguration)
+                .Include(p => p.TelegramConfiguration)
                 .AsNoTracking()
                 .ToListAsync();
 
@@ -73,6 +75,7 @@ public sealed class NotificationProvidersController : ControllerBase
                         NotificationProviderType.Apprise => p.AppriseConfiguration ?? new object(),
                         NotificationProviderType.Ntfy => p.NtfyConfiguration ?? new object(),
                         NotificationProviderType.Pushover => p.PushoverConfiguration ?? new object(),
+                        NotificationProviderType.Telegram => p.TelegramConfiguration ?? new object(),
                         _ => new object()
                     }
                 })
@@ -281,6 +284,69 @@ public sealed class NotificationProvidersController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to create Ntfy provider");
+            throw;
+        }
+        finally
+        {
+            DataContext.Lock.Release();
+        }
+    }
+
+    [HttpPost("telegram")]
+    public async Task<IActionResult> CreateTelegramProvider([FromBody] CreateTelegramProviderRequest newProvider)
+    {
+        await DataContext.Lock.WaitAsync();
+        try
+        {
+            if (string.IsNullOrWhiteSpace(newProvider.Name))
+            {
+                return BadRequest("Provider name is required");
+            }
+
+            var duplicateConfig = await _dataContext.NotificationConfigs.CountAsync(x => x.Name == newProvider.Name);
+            if (duplicateConfig > 0)
+            {
+                return BadRequest("A provider with this name already exists");
+            }
+
+            var telegramConfig = new TelegramConfig
+            {
+                BotToken = newProvider.BotToken,
+                ChatId = newProvider.ChatId,
+                TopicId = newProvider.TopicId,
+                SendSilently = newProvider.SendSilently
+            };
+            telegramConfig.Validate();
+
+            var provider = new NotificationConfig
+            {
+                Name = newProvider.Name,
+                Type = NotificationProviderType.Telegram,
+                IsEnabled = newProvider.IsEnabled,
+                OnFailedImportStrike = newProvider.OnFailedImportStrike,
+                OnStalledStrike = newProvider.OnStalledStrike,
+                OnSlowStrike = newProvider.OnSlowStrike,
+                OnQueueItemDeleted = newProvider.OnQueueItemDeleted,
+                OnDownloadCleaned = newProvider.OnDownloadCleaned,
+                OnCategoryChanged = newProvider.OnCategoryChanged,
+                TelegramConfiguration = telegramConfig
+            };
+
+            _dataContext.NotificationConfigs.Add(provider);
+            await _dataContext.SaveChangesAsync();
+
+            await _notificationConfigurationService.InvalidateCacheAsync();
+
+            var providerDto = MapProvider(provider);
+            return CreatedAtAction(nameof(GetNotificationProviders), new { id = provider.Id }, providerDto);
+        }
+        catch (ValidationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to create Telegram provider");
             throw;
         }
         finally
@@ -535,6 +601,87 @@ public sealed class NotificationProvidersController : ControllerBase
         }
     }
 
+    [HttpPut("telegram/{id:guid}")]
+    public async Task<IActionResult> UpdateTelegramProvider(Guid id, [FromBody] UpdateTelegramProviderRequest updatedProvider)
+    {
+        await DataContext.Lock.WaitAsync();
+        try
+        {
+            var existingProvider = await _dataContext.NotificationConfigs
+                .Include(p => p.TelegramConfiguration)
+                .FirstOrDefaultAsync(p => p.Id == id && p.Type == NotificationProviderType.Telegram);
+
+            if (existingProvider == null)
+            {
+                return NotFound($"Telegram provider with ID {id} not found");
+            }
+
+            if (string.IsNullOrWhiteSpace(updatedProvider.Name))
+            {
+                return BadRequest("Provider name is required");
+            }
+
+            var duplicateConfig = await _dataContext.NotificationConfigs
+                .Where(x => x.Id != id)
+                .Where(x => x.Name == updatedProvider.Name)
+                .CountAsync();
+            if (duplicateConfig > 0)
+            {
+                return BadRequest("A provider with this name already exists");
+            }
+
+            var telegramConfig = new TelegramConfig
+            {
+                BotToken = updatedProvider.BotToken,
+                ChatId = updatedProvider.ChatId,
+                TopicId = updatedProvider.TopicId,
+                SendSilently = updatedProvider.SendSilently
+            };
+
+            if (existingProvider.TelegramConfiguration != null)
+            {
+                telegramConfig = telegramConfig with { Id = existingProvider.TelegramConfiguration.Id };
+            }
+            telegramConfig.Validate();
+
+            var newProvider = existingProvider with
+            {
+                Name = updatedProvider.Name,
+                IsEnabled = updatedProvider.IsEnabled,
+                OnFailedImportStrike = updatedProvider.OnFailedImportStrike,
+                OnStalledStrike = updatedProvider.OnStalledStrike,
+                OnSlowStrike = updatedProvider.OnSlowStrike,
+                OnQueueItemDeleted = updatedProvider.OnQueueItemDeleted,
+                OnDownloadCleaned = updatedProvider.OnDownloadCleaned,
+                OnCategoryChanged = updatedProvider.OnCategoryChanged,
+                TelegramConfiguration = telegramConfig,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            _dataContext.NotificationConfigs.Remove(existingProvider);
+            _dataContext.NotificationConfigs.Add(newProvider);
+
+            await _dataContext.SaveChangesAsync();
+            await _notificationConfigurationService.InvalidateCacheAsync();
+
+            var providerDto = MapProvider(newProvider);
+            return Ok(providerDto);
+        }
+        catch (ValidationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to update Telegram provider with ID {Id}", id);
+            throw;
+        }
+        finally
+        {
+            DataContext.Lock.Release();
+        }
+    }
+
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> DeleteNotificationProvider(Guid id)
     {
@@ -546,6 +693,7 @@ public sealed class NotificationProvidersController : ControllerBase
                 .Include(p => p.AppriseConfiguration)
                 .Include(p => p.NtfyConfiguration)
                 .Include(p => p.PushoverConfiguration)
+                .Include(p => p.TelegramConfiguration)
                 .FirstOrDefaultAsync(p => p.Id == id);
 
             if (existingProvider == null)
@@ -707,6 +855,53 @@ public sealed class NotificationProvidersController : ControllerBase
         }
     }
 
+    [HttpPost("telegram/test")]
+    public async Task<IActionResult> TestTelegramProvider([FromBody] TestTelegramProviderRequest testRequest)
+    {
+        try
+        {
+            var telegramConfig = new TelegramConfig
+            {
+                BotToken = testRequest.BotToken,
+                ChatId = testRequest.ChatId,
+                TopicId = testRequest.TopicId,
+                SendSilently = testRequest.SendSilently
+            };
+            telegramConfig.Validate();
+
+            var providerDto = new NotificationProviderDto
+            {
+                Id = Guid.NewGuid(),
+                Name = "Test Provider",
+                Type = NotificationProviderType.Telegram,
+                IsEnabled = true,
+                Events = new NotificationEventFlags
+                {
+                    OnFailedImportStrike = true,
+                    OnStalledStrike = false,
+                    OnSlowStrike = false,
+                    OnQueueItemDeleted = false,
+                    OnDownloadCleaned = false,
+                    OnCategoryChanged = false
+                },
+                Configuration = telegramConfig
+            };
+
+            await _notificationService.SendTestNotificationAsync(providerDto);
+            return Ok(new { Message = "Test notification sent successfully" });
+        }
+        catch (TelegramException ex)
+        {
+            _logger.LogWarning(ex, "Failed to test Telegram provider");
+            return BadRequest(new { Message = $"Test failed: {ex.Message}" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to test Telegram provider");
+            return BadRequest(new { Message = $"Test failed: {ex.Message}" });
+        }
+    }
+
     private static NotificationProviderResponse MapProvider(NotificationConfig provider)
     {
         return new NotificationProviderResponse
@@ -730,6 +925,7 @@ public sealed class NotificationProvidersController : ControllerBase
                 NotificationProviderType.Apprise => provider.AppriseConfiguration ?? new object(),
                 NotificationProviderType.Ntfy => provider.NtfyConfiguration ?? new object(),
                 NotificationProviderType.Pushover => provider.PushoverConfiguration ?? new object(),
+                NotificationProviderType.Telegram => provider.TelegramConfiguration ?? new object(),
                 _ => new object()
             }
         };

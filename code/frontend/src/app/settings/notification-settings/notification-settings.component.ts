@@ -8,7 +8,7 @@ import {
 } from "../../shared/models/notification-provider.model";
 import { NotificationProviderType } from "../../shared/models/enums";
 import { DocumentationService } from "../../core/services/documentation.service";
-import { NotifiarrFormData, AppriseFormData, NtfyFormData, PushoverFormData } from "./models/provider-modal.model";
+import { NotifiarrFormData, AppriseFormData, NtfyFormData, PushoverFormData, TelegramFormData } from "./models/provider-modal.model";
 import { LoadingErrorStateComponent } from "../../shared/components/loading-error-state/loading-error-state.component";
 
 // New modal components
@@ -17,6 +17,7 @@ import { NotifiarrProviderComponent } from "./modals/notifiarr-provider/notifiar
 import { AppriseProviderComponent } from "./modals/apprise-provider/apprise-provider.component";
 import { NtfyProviderComponent } from "./modals/ntfy-provider/ntfy-provider.component";
 import { PushoverProviderComponent } from "./modals/pushover-provider/pushover-provider.component";
+import { TelegramProviderComponent } from "./modals/telegram-provider/telegram-provider.component";
 
 // PrimeNG Components
 import { CardModule } from "primeng/card";
@@ -53,6 +54,7 @@ import { NotificationService } from "../../core/services/notification.service";
     AppriseProviderComponent,
     NtfyProviderComponent,
     PushoverProviderComponent,
+    TelegramProviderComponent,
   ],
   providers: [NotificationProviderConfigStore, ConfirmationService, MessageService],
   templateUrl: "./notification-settings.component.html",
@@ -69,6 +71,7 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
   showAppriseModal = false; // New: Apprise provider modal
   showNtfyModal = false; // New: Ntfy provider modal
   showPushoverModal = false; // New: Pushover provider modal
+  showTelegramModal = false; // New: Telegram provider modal
   modalMode: 'add' | 'edit' = 'add';
   editingProvider: NotificationProviderDto | null = null;
 
@@ -180,6 +183,9 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
       case NotificationProviderType.Pushover:
         this.showPushoverModal = true;
         break;
+      case NotificationProviderType.Telegram:
+        this.showTelegramModal = true;
+        break;
       default:
         // For unsupported types, show the legacy modal with info message
         this.showProviderModal = true;
@@ -232,6 +238,9 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
         break;
       case NotificationProviderType.Pushover:
         this.showPushoverModal = true;
+        break;
+      case NotificationProviderType.Telegram:
+        this.showTelegramModal = true;
         break;
       default:
         // For unsupported types, show the legacy modal with info message
@@ -309,6 +318,15 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
           tags: pushoverConfig.tags || [],
         };
         break;
+      case NotificationProviderType.Telegram:
+        const telegramConfig = provider.configuration as any;
+        testRequest = {
+          botToken: telegramConfig.botToken,
+          chatId: telegramConfig.chatId,
+          topicId: telegramConfig.topicId || "",
+          sendSilently: telegramConfig.sendSilently || false,
+        };
+        break;
       default:
         this.notificationService.showError("Testing not supported for this provider type");
         return;
@@ -349,6 +367,8 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
         return "ntfy";
       case NotificationProviderType.Pushover:
         return "Pushover";
+      case NotificationProviderType.Telegram:
+        return "Telegram";
       default:
         return "Unknown";
     }
@@ -490,6 +510,34 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
   }
 
   /**
+   * Handle Telegram provider save
+   */
+  onTelegramSave(data: TelegramFormData): void {
+    if (this.modalMode === "edit" && this.editingProvider) {
+      this.updateTelegramProvider(data);
+    } else {
+      this.createTelegramProvider(data);
+    }
+  }
+
+  /**
+   * Handle Telegram provider test
+   */
+  onTelegramTest(data: TelegramFormData): void {
+    const testRequest = {
+      botToken: data.botToken,
+      chatId: data.chatId,
+      topicId: data.topicId,
+      sendSilently: data.sendSilently,
+    };
+
+    this.notificationProviderStore.testProvider({
+      testRequest,
+      type: NotificationProviderType.Telegram,
+    });
+  }
+
+  /**
    * Handle provider modal cancel
    */
   onProviderCancel(): void {
@@ -505,6 +553,7 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
     this.showAppriseModal = false;
     this.showNtfyModal = false;
     this.showPushoverModal = false;
+    this.showTelegramModal = false;
     this.showProviderModal = false;
     this.editingProvider = null;
     this.notificationProviderStore.clearTestResult();
@@ -740,6 +789,61 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
       id: this.editingProvider.id,
       provider: updateDto,
       type: NotificationProviderType.Pushover,
+    });
+    this.monitorProviderOperation("updated");
+  }
+
+  /**
+   * Create new Telegram provider
+   */
+  private createTelegramProvider(data: TelegramFormData): void {
+    const createDto = {
+      name: data.name,
+      isEnabled: data.enabled,
+      onFailedImportStrike: data.onFailedImportStrike,
+      onStalledStrike: data.onStalledStrike,
+      onSlowStrike: data.onSlowStrike,
+      onQueueItemDeleted: data.onQueueItemDeleted,
+      onDownloadCleaned: data.onDownloadCleaned,
+      onCategoryChanged: data.onCategoryChanged,
+      botToken: data.botToken,
+      chatId: data.chatId,
+      topicId: data.topicId,
+      sendSilently: data.sendSilently,
+    };
+
+    this.notificationProviderStore.createProvider({
+      provider: createDto,
+      type: NotificationProviderType.Telegram,
+    });
+    this.monitorProviderOperation("created");
+  }
+
+  /**
+   * Update existing Telegram provider
+   */
+  private updateTelegramProvider(data: TelegramFormData): void {
+    if (!this.editingProvider) return;
+
+    const updateDto = {
+      name: data.name,
+      isEnabled: data.enabled,
+      onFailedImportStrike: data.onFailedImportStrike,
+      onStalledStrike: data.onStalledStrike,
+      onSlowStrike: data.onSlowStrike,
+      onQueueItemDeleted: data.onQueueItemDeleted,
+      onDownloadCleaned: data.onDownloadCleaned,
+      onCategoryChanged: data.onCategoryChanged,
+      botToken: data.botToken,
+      chatId: data.chatId,
+      topicId: data.topicId,
+      sendSilently: data.sendSilently,
+    };
+
+    this.notificationProviderStore.updateProvider({
+      id: this.editingProvider.id,
+      provider: updateDto,
+      type: NotificationProviderType.Telegram,
     });
     this.monitorProviderOperation("updated");
   }

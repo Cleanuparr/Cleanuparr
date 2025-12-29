@@ -193,6 +193,43 @@ export interface TestPushoverProviderRequest {
   tags: string[];
 }
 
+export interface CreateTelegramProviderRequest {
+  name: string;
+  isEnabled: boolean;
+  onFailedImportStrike: boolean;
+  onStalledStrike: boolean;
+  onSlowStrike: boolean;
+  onQueueItemDeleted: boolean;
+  onDownloadCleaned: boolean;
+  onCategoryChanged: boolean;
+  botToken: string;
+  chatId: string;
+  topicId: string;
+  sendSilently: boolean;
+}
+
+export interface UpdateTelegramProviderRequest {
+  name: string;
+  isEnabled: boolean;
+  onFailedImportStrike: boolean;
+  onStalledStrike: boolean;
+  onSlowStrike: boolean;
+  onQueueItemDeleted: boolean;
+  onDownloadCleaned: boolean;
+  onCategoryChanged: boolean;
+  botToken: string;
+  chatId: string;
+  topicId: string;
+  sendSilently: boolean;
+}
+
+export interface TestTelegramProviderRequest {
+  botToken: string;
+  chatId: string;
+  topicId: string;
+  sendSilently: boolean;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -244,6 +281,13 @@ export class NotificationProviderService {
   }
 
   /**
+   * Create a new Telegram provider
+   */
+  createTelegramProvider(provider: CreateTelegramProviderRequest): Observable<NotificationProviderDto> {
+    return this.http.post<NotificationProviderDto>(`${this.baseUrl}/telegram`, provider);
+  }
+
+  /**
    * Update an existing Notifiarr provider
    */
   updateNotifiarrProvider(id: string, provider: UpdateNotifiarrProviderRequest): Observable<NotificationProviderDto> {
@@ -269,6 +313,13 @@ export class NotificationProviderService {
    */
   updatePushoverProvider(id: string, provider: UpdatePushoverProviderRequest): Observable<NotificationProviderDto> {
     return this.http.put<NotificationProviderDto>(`${this.baseUrl}/pushover/${id}`, provider);
+  }
+
+  /**
+   * Update an existing Telegram provider
+   */
+  updateTelegramProvider(id: string, provider: UpdateTelegramProviderRequest): Observable<NotificationProviderDto> {
+    return this.http.put<NotificationProviderDto>(`${this.baseUrl}/telegram/${id}`, provider);
   }
 
   /**
@@ -307,6 +358,13 @@ export class NotificationProviderService {
   }
 
   /**
+   * Test a Telegram provider (without ID - for testing configuration before saving)
+   */
+  testTelegramProvider(testRequest: TestTelegramProviderRequest): Observable<TestNotificationResult> {
+    return this.http.post<TestNotificationResult>(`${this.baseUrl}/telegram/test`, testRequest);
+  }
+
+  /**
    * Generic create method that delegates to provider-specific methods
    */
   createProvider(provider: any, type: NotificationProviderType): Observable<NotificationProviderDto> {
@@ -319,6 +377,8 @@ export class NotificationProviderService {
         return this.createNtfyProvider(provider as CreateNtfyProviderRequest);
       case NotificationProviderType.Pushover:
         return this.createPushoverProvider(provider as CreatePushoverProviderRequest);
+      case NotificationProviderType.Telegram:
+        return this.createTelegramProvider(provider as CreateTelegramProviderRequest);
       default:
         throw new Error(`Unsupported provider type: ${type}`);
     }
@@ -337,6 +397,8 @@ export class NotificationProviderService {
         return this.updateNtfyProvider(id, provider as UpdateNtfyProviderRequest);
       case NotificationProviderType.Pushover:
         return this.updatePushoverProvider(id, provider as UpdatePushoverProviderRequest);
+      case NotificationProviderType.Telegram:
+        return this.updateTelegramProvider(id, provider as UpdateTelegramProviderRequest);
       default:
         throw new Error(`Unsupported provider type: ${type}`);
     }
@@ -355,6 +417,8 @@ export class NotificationProviderService {
         return this.testNtfyProvider(testRequest as TestNtfyProviderRequest);
       case NotificationProviderType.Pushover:
         return this.testPushoverProvider(testRequest as TestPushoverProviderRequest);
+      case NotificationProviderType.Telegram:
+        return this.testTelegramProvider(testRequest as TestTelegramProviderRequest);
       default:
         throw new Error(`Unsupported provider type: ${type}`);
     }

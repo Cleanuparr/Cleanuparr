@@ -53,6 +53,8 @@ public class DataContext : DbContext
     public DbSet<NtfyConfig> NtfyConfigs { get; set; }
 
     public DbSet<PushoverConfig> PushoverConfigs { get; set; }
+    
+    public DbSet<TelegramConfig> TelegramConfigs { get; set; }
 
     public DbSet<BlacklistSyncHistory> BlacklistSyncHistory { get; set; }
 
@@ -148,6 +150,11 @@ public class DataContext : DbContext
                   .WithOne(c => c.NotificationConfig)
                   .HasForeignKey<PushoverConfig>(c => c.NotificationConfigId)
                   .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(p => p.TelegramConfiguration)
+                .WithOne(c => c.NotificationConfig)
+                .HasForeignKey<TelegramConfig>(c => c.NotificationConfigId)
+                .OnDelete(DeleteBehavior.Cascade);
 
             entity.HasIndex(p => p.Name).IsUnique();
         });

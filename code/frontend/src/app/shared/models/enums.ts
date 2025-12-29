@@ -15,6 +15,7 @@ export enum NotificationProviderType {
   Apprise = "Apprise",
   Ntfy = "Ntfy",
   Pushover = "Pushover",
+  Telegram = "Telegram",
 }
 
 export enum AppriseMode {

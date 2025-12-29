@@ -50,6 +50,13 @@ export class ProviderTypeSelectionComponent {
       iconUrl: 'icons/ext/pushover-light.svg',
       iconUrlHover: 'icons/ext/pushover.svg',
       description: 'https://pushover.net/'
+    },
+    {
+      type: NotificationProviderType.Telegram,
+      name: 'Telegram',
+      iconUrl: 'icons/ext/telegram-light.svg',
+      iconUrlHover: 'icons/ext/telegram.svg',
+      description: 'https://core.telegram.org/bots'
     }
   ];
 
