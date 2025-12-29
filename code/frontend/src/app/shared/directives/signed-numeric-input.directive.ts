@@ -28,11 +28,11 @@ export class SignedNumericInputDirective {
   onKeyDown(event: KeyboardEvent): void {
     // Allow: backspace, delete, tab, escape, enter
     if ([8, 9, 27, 13, 46].includes(event.keyCode) ||
-        // Allow: Ctrl+A, Ctrl+C, Ctrl+V, Ctrl+X
-        (event.keyCode === 65 && event.ctrlKey) ||
-        (event.keyCode === 67 && event.ctrlKey) ||
-        (event.keyCode === 86 && event.ctrlKey) ||
-        (event.keyCode === 88 && event.ctrlKey) ||
+        // Allow: Ctrl/Cmd+A,C,V,X
+        (event.keyCode === 65 && (event.ctrlKey || event.metaKey)) ||
+        (event.keyCode === 67 && (event.ctrlKey || event.metaKey)) ||
+        (event.keyCode === 86 && (event.ctrlKey || event.metaKey)) ||
+        (event.keyCode === 88 && (event.ctrlKey || event.metaKey)) ||
         // Allow: home, end, left, right
         (event.keyCode >= 35 && event.keyCode <= 39)) {
       return;

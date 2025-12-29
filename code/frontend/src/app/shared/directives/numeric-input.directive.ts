@@ -38,11 +38,11 @@ export class NumericInputDirective {
   onKeyDown(event: KeyboardEvent): void {
     // Allow: backspace, delete, tab, escape, enter
     if ([8, 9, 27, 13, 46].indexOf(event.keyCode) !== -1 ||
-        // Allow: Ctrl+A, Ctrl+C, Ctrl+V, Ctrl+X
-        (event.keyCode === 65 && event.ctrlKey === true) ||
-        (event.keyCode === 67 && event.ctrlKey === true) ||
-        (event.keyCode === 86 && event.ctrlKey === true) ||
-        (event.keyCode === 88 && event.ctrlKey === true) ||
+        // Allow: Ctrl/Cmd+A,C,V,X
+        (event.keyCode === 65 && (event.ctrlKey === true || event.metaKey === true)) ||
+        (event.keyCode === 67 && (event.ctrlKey === true || event.metaKey === true)) ||
+        (event.keyCode === 86 && (event.ctrlKey === true || event.metaKey === true)) ||
+        (event.keyCode === 88 && (event.ctrlKey === true || event.metaKey === true)) ||
         // Allow: home, end, left, right
         (event.keyCode >= 35 && event.keyCode <= 39)) {
       return;
