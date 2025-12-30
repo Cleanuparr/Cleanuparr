@@ -361,6 +361,12 @@ export class DashboardPageComponent implements OnInit, OnDestroy {
     }
   }
 
+  // Extract downloadName from event data if available
+  getDownloadName(event: AppEvent): string | null {
+    const parsed = this.parseEventData(event.data);
+    return parsed?.downloadName || null;
+  }
+
   // Process message to convert URLs to clickable links and handle newlines
   processManualEventMessage(message: string): string {
     if (!message) return '';
