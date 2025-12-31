@@ -1,3 +1,4 @@
+using System.Net;
 using System.Runtime.InteropServices;
 using System.Text.Json.Serialization;
 using Cleanuparr.Api;
@@ -33,12 +34,20 @@ builder.Configuration
 int.TryParse(builder.Configuration.GetValue<string>("PORT"), out int port);
 port = port is 0 ? 11011 : port;
 
+string? bindAddress = builder.Configuration.GetValue<string>("BIND_ADDRESS");
+
 if (!builder.Environment.IsDevelopment())
 {
-    // If no port is configured, default to 11011
     builder.WebHost.ConfigureKestrel(options =>
     {
-        options.ListenAnyIP(port);
+        if (string.IsNullOrEmpty(bindAddress) || bindAddress is "0.0.0.0" || bindAddress is "*")
+        {
+            options.ListenAnyIP(port);
+        }
+        else
+        {
+            options.Listen(IPAddress.Parse(bindAddress), port);
+        }
     });
 }
 
@@ -124,7 +133,7 @@ if (basePath is not null)
     }
 }
 
-logger.LogInformation("Server configuration: PORT={port}, BASE_PATH={basePath}", port, basePath ?? "/");
+logger.LogInformation("Server configuration: BIND_ADDRESS={bindAddress}, PORT={port}, BASE_PATH={basePath}", bindAddress ?? "0.0.0.0", port, basePath ?? "/");
 
 // Initialize the host
 app.Init();

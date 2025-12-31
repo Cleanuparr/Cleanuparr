@@ -96,6 +96,7 @@ services:
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `PORT` | 11011 | Port for the web interface |
+| `BIND_ADDRESS` | 0.0.0.0 | IP address to bind to |
 | `BASE_PATH` | *(empty)* | Base path for reverse proxy setups ([examples](#example-configurations)) |
 | `PUID` | 1000 | User ID for file permissions |
 | `PGID` | 1000 | Group ID for file permissions |
@@ -277,6 +278,7 @@ To run Cleanuparr as a systemd service:
    Restart=always
    RestartSec=5
    Environment=PORT=11011
+   Environment=BIND_ADDRESS=0.0.0.0
    Environment=BASE_PATH=
 
    [Install]
@@ -330,7 +332,7 @@ To change the port or base path for AUR installations, see [Port and Base Path (
 
 <SectionTitle>Port and Base Path (Non-Docker)</SectionTitle>
 
-For all non-Docker installations (Windows, macOS, Linux portable), you can configure the PORT and BASE_PATH by creating a configuration file.
+For all non-Docker installations (Windows, macOS, Linux portable), you can configure the PORT, BIND_ADDRESS and BASE_PATH by creating a configuration file.
 
 ### Initial Setup
 
@@ -347,6 +349,7 @@ For all non-Docker installations (Windows, macOS, Linux portable), you can confi
 ```json
 {
   "PORT": 11011,
+  "BIND_ADDRESS": "0.0.0.0",
   "BASE_PATH": ""
 }
 ```
@@ -358,10 +361,18 @@ For all non-Docker installations (Windows, macOS, Linux portable), you can confi
 **Running on port 8080:**
 ```json
 {
-  "PORT": 8080,
+  "PORT": 8080
 }
 ```
 Access via: `http://localhost:8080`
+
+**Binding to localhost only:**
+```json
+{
+  "BIND_ADDRESS": "127.0.0.1"
+}
+```
+Only accessible from the local machine.
 
 **Running with reverse proxy at `/cleanuparr`:**
 ```json
