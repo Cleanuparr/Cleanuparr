@@ -33,8 +33,8 @@ public sealed class TelegramProvider : NotificationProviderBase<TelegramConfig>
             ChatId = Config.ChatId.Trim(),
             MessageThreadId = ParseTopicId(Config.TopicId),
             DisableNotification = Config.SendSilently,
-                Text = BuildMessage(context),
-                PhotoUrl = context.Image?.ToString()
+            Text = BuildMessage(context),
+            PhotoUrl = context.Image?.ToString()
         };
     }
 
