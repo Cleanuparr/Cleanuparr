@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Diagnostics.CodeAnalysis;
 using Cleanuparr.Persistence.Models.Configuration;
 using ValidationException = Cleanuparr.Domain.Exceptions.ValidationException;
 
@@ -12,6 +13,7 @@ public sealed record TelegramConfig : IConfig
     public Guid Id { get; init; } = Guid.NewGuid();
 
     [Required]
+    [ExcludeFromCodeCoverage]
     public Guid NotificationConfigId { get; init; }
 
     public NotificationConfig NotificationConfig { get; init; } = null!;
