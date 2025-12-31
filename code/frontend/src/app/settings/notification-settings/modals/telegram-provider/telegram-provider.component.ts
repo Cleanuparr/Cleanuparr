@@ -4,7 +4,7 @@ import { CommonModule } from '@angular/common';
 import { InputTextModule } from 'primeng/inputtext';
 import { CheckboxModule } from 'primeng/checkbox';
 import { NotificationProviderBaseComponent } from '../base/notification-provider-base.component';
-import { NumericInputDirective, SignedNumericInputDirective } from '../../../../shared/directives';
+import { NumericInputDirective } from '../../../../shared/directives';
 import { TelegramFormData, BaseProviderFormData } from '../../models/provider-modal.model';
 import { NotificationProviderDto } from '../../../../shared/models/notification-provider.model';
 import { DocumentationService } from '../../../../core/services/documentation.service';
@@ -18,7 +18,6 @@ import { DocumentationService } from '../../../../core/services/documentation.se
     InputTextModule,
     CheckboxModule,
     NumericInputDirective,
-    SignedNumericInputDirective,
     NotificationProviderBaseComponent
   ],
   templateUrl: './telegram-provider.component.html',
