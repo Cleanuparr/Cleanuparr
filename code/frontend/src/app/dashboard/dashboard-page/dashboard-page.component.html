@@ -216,11 +216,14 @@
                     </div>
                     <span class="text-xs text-color-secondary">{{event.timestamp | date: 'yyyy-MM-dd HH:mm:ss'}}</span>
                   </div>
-                  <div class="timeline-message" 
-                       [pTooltip]="event.message" 
+                  <div class="timeline-message"
+                       [pTooltip]="event.message"
                        tooltipPosition="top"
                        [showDelay]="500">
                     {{truncateMessage(event.message)}}
+                  </div>
+                  <div class="text-xs text-color-secondary mt-1" *ngIf="getDownloadName(event)">
+                    {{getDownloadName(event)}}
                   </div>
                   <div class="text-xs text-color-secondary mt-1" *ngIf="event.trackingId">
                     Tracking: {{event.trackingId}}
