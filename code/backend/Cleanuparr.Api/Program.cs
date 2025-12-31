@@ -44,9 +44,13 @@ if (!builder.Environment.IsDevelopment())
         {
             options.ListenAnyIP(port);
         }
+        else if (IPAddress.TryParse(bindAddress, out var ipAddress))
+        {
+            options.Listen(ipAddress, port);
+        }
         else
         {
-            options.Listen(IPAddress.Parse(bindAddress), port);
+            throw new ArgumentException($"Invalid BIND_ADDRESS: '{bindAddress}'");
         }
     });
 }
