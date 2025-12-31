@@ -48,7 +48,7 @@ public sealed class TelegramProxy : ITelegramProxy
                 disable_notification = payload.DisableNotification,
                 text,
                 parse_mode = "HTML",
-                disable_web_page_preview = !hasImage ? true : false
+                disable_web_page_preview = !hasImage
             };
 
         try
