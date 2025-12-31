@@ -36,22 +36,25 @@ export class NumericInputDirective {
 
   @HostListener('keydown', ['$event'])
   onKeyDown(event: KeyboardEvent): void {
-    // Allow: backspace, delete, tab, escape, enter
-    if ([8, 9, 27, 13, 46].indexOf(event.keyCode) !== -1 ||
-        // Allow: Ctrl/Cmd+A,C,V,X
-        (event.keyCode === 65 && (event.ctrlKey === true || event.metaKey === true)) ||
-        (event.keyCode === 67 && (event.ctrlKey === true || event.metaKey === true)) ||
-        (event.keyCode === 86 && (event.ctrlKey === true || event.metaKey === true)) ||
-        (event.keyCode === 88 && (event.ctrlKey === true || event.metaKey === true)) ||
-        // Allow: home, end, left, right
-        (event.keyCode >= 35 && event.keyCode <= 39)) {
+    const allowedKeys = ['Backspace', 'Delete', 'Tab', 'Escape', 'Enter', 'Home', 'End', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
+
+    // Allow navigation and control keys
+    if (allowedKeys.includes(event.key)) {
       return;
     }
-    
-    // Ensure that it is a number and stop the keypress
-    if ((event.shiftKey || (event.keyCode < 48 || event.keyCode > 57)) && (event.keyCode < 96 || event.keyCode > 105)) {
-      event.preventDefault();
+
+    // Allow: Ctrl/Cmd+A,C,V,X
+    if ((event.ctrlKey || event.metaKey) && ['a', 'c', 'v', 'x'].includes(event.key.toLowerCase())) {
+      return;
     }
+
+    // Allow digits (0-9)
+    if (/^[0-9]$/.test(event.key)) {
+      return;
+    }
+
+    // Block all other keys
+    event.preventDefault();
   }
 
   @HostListener('paste', ['$event'])

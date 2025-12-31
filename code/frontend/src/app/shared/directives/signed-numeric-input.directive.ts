@@ -26,20 +26,20 @@ export class SignedNumericInputDirective {
 
   @HostListener('keydown', ['$event'])
   onKeyDown(event: KeyboardEvent): void {
-    // Allow: backspace, delete, tab, escape, enter
-    if ([8, 9, 27, 13, 46].includes(event.keyCode) ||
-        // Allow: Ctrl/Cmd+A,C,V,X
-        (event.keyCode === 65 && (event.ctrlKey || event.metaKey)) ||
-        (event.keyCode === 67 && (event.ctrlKey || event.metaKey)) ||
-        (event.keyCode === 86 && (event.ctrlKey || event.metaKey)) ||
-        (event.keyCode === 88 && (event.ctrlKey || event.metaKey)) ||
-        // Allow: home, end, left, right
-        (event.keyCode >= 35 && event.keyCode <= 39)) {
+    const allowedKeys = ['Backspace', 'Delete', 'Tab', 'Escape', 'Enter', 'Home', 'End', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
+
+    // Allow navigation and control keys
+    if (allowedKeys.includes(event.key)) {
+      return;
+    }
+
+    // Allow: Ctrl/Cmd+A,C,V,X
+    if ((event.ctrlKey || event.metaKey) && ['a', 'c', 'v', 'x'].includes(event.key.toLowerCase())) {
       return;
     }
 
     // Allow minus only at the start and only if not already present
-    if ((event.key === '-' || event.keyCode === 189 || event.keyCode === 109)) {
+    if (event.key === '-') {
       const input = event.target as HTMLInputElement;
       const hasMinus = input.value.includes('-');
       const cursorAtStart = (input.selectionStart ?? 0) === 0;
@@ -50,10 +50,13 @@ export class SignedNumericInputDirective {
       return;
     }
 
-    // Block non-numeric keys
-    if ((event.shiftKey || (event.keyCode < 48 || event.keyCode > 57)) && (event.keyCode < 96 || event.keyCode > 105)) {
-      event.preventDefault();
+    // Allow digits (0-9)
+    if (/^[0-9]$/.test(event.key)) {
+      return;
     }
+
+    // Block all other keys
+    event.preventDefault();
   }
 
   @HostListener('paste', ['$event'])
