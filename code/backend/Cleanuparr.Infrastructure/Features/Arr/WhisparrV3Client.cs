@@ -15,7 +15,7 @@ namespace Cleanuparr.Infrastructure.Features.Arr;
 public class WhisparrV3Client : ArrClient, IWhisparrV3Client
 {
     public WhisparrV3Client(
-        ILogger<WhisparrV2Client> logger,
+        ILogger<WhisparrV3Client> logger,
         IHttpClientFactory httpClientFactory,
         IStriker striker,
         IDryRunInterceptor dryRunInterceptor
