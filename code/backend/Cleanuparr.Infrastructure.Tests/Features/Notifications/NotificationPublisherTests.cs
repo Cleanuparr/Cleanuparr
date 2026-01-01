@@ -58,8 +58,9 @@ public class NotificationPublisherTests
         };
 
         ContextProvider.Set(nameof(QueueRecord), record);
-        ContextProvider.Set(nameof(InstanceType), (object)instanceType);
+        ContextProvider.Set(nameof(InstanceType), instanceType);
         ContextProvider.Set(nameof(ArrInstance) + nameof(ArrInstance.Url), new Uri("http://sonarr.local"));
+        ContextProvider.Set("version", 1f);
     }
 
     private void SetupDownloadCleanerContext()

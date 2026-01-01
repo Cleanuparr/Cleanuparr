@@ -110,16 +110,11 @@ public class ArrClientFactoryTests
     }
 
     [Theory]
-    [InlineData(InstanceType.Sonarr, null)]
-    [InlineData(InstanceType.Radarr, null)]
-    [InlineData(InstanceType.Lidarr, null)]
-    [InlineData(InstanceType.Readarr, null)]
-    [InlineData(InstanceType.Whisparr, 2)]
-    [InlineData(InstanceType.Whisparr, 3)]
+    [MemberData(nameof(InstancesData))]
     public void GetClient_AllSupportedTypes_ReturnsNonNullClient(InstanceType instanceType, float? version)
     {
         // Act
-        var result = _factory.GetClient(instanceType, version ?? 0);
+        var result = _factory.GetClient(instanceType, version ?? 0f);
 
         // Assert
         Assert.NotNull(result);
@@ -127,21 +122,26 @@ public class ArrClientFactoryTests
     }
 
     [Theory]
-    [InlineData(InstanceType.Sonarr, null)]
-    [InlineData(InstanceType.Radarr, null)]
-    [InlineData(InstanceType.Lidarr, null)]
-    [InlineData(InstanceType.Readarr, null)]
-    [InlineData(InstanceType.Whisparr, 2)]
-    [InlineData(InstanceType.Whisparr, 3)]
+    [MemberData(nameof(InstancesData))]
     public void GetClient_CalledMultipleTimes_ReturnsSameInstance(InstanceType instanceType, float? version)
     {
         // Act
-        var result1 = _factory.GetClient(instanceType, version ?? 0);
-        var result2 = _factory.GetClient(instanceType, version ?? 0);
+        var result1 = _factory.GetClient(instanceType, version ?? 0f);
+        var result2 = _factory.GetClient(instanceType, version ?? 0f);
 
         // Assert
         Assert.Same(result1, result2);
     }
+    
+    public static IEnumerable<object?[]> InstancesData =>
+    [
+        [InstanceType.Sonarr, null],
+        [InstanceType.Radarr, null],
+        [InstanceType.Lidarr, null],
+        [InstanceType.Readarr, null],
+        [InstanceType.Whisparr, 2f],
+        [InstanceType.Whisparr, 3f]
+    ];
 
     #endregion
 }
