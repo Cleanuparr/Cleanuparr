@@ -17,6 +17,7 @@ import { ToastModule } from "primeng/toast";
 import { DialogModule } from "primeng/dialog";
 import { ConfirmDialogModule } from "primeng/confirmdialog";
 import { TagModule } from "primeng/tag";
+import { SelectModule } from "primeng/select";
 import { ConfirmationService } from "primeng/api";
 import { NotificationService } from "../../core/services/notification.service";
 import { LoadingErrorStateComponent } from "../../shared/components/loading-error-state/loading-error-state.component";
@@ -37,6 +38,7 @@ import { UrlValidators } from "../../core/validators/url.validator";
     DialogModule,
     ConfirmDialogModule,
     TagModule,
+    SelectModule,
     LoadingErrorStateComponent,
   ],
   providers: [WhisparrConfigStore, ConfirmationService],
@@ -50,6 +52,11 @@ export class WhisparrSettingsComponent implements OnDestroy, CanComponentDeactiv
   // Forms
   globalForm: FormGroup;
   instanceForm: FormGroup;
+
+  versionOptions = [
+    { label: 'v2', value: 2 },
+    { label: 'v3', value: 3 }
+  ];
 
   // Modal state
   showInstanceModal = false;
@@ -97,6 +104,7 @@ export class WhisparrSettingsComponent implements OnDestroy, CanComponentDeactiv
       name: ['', Validators.required],
       url: ['', [Validators.required, UrlValidators.httpUrl]],
       apiKey: ['', Validators.required],
+      version: [3, Validators.required],
     });
 
     // Load Whisparr config data
@@ -311,7 +319,8 @@ export class WhisparrSettingsComponent implements OnDestroy, CanComponentDeactiv
       enabled: true,
       name: '',
       url: '',
-      apiKey: ''
+      apiKey: '',
+      version: 3
     });
     this.showInstanceModal = true;
   }
@@ -327,6 +336,7 @@ export class WhisparrSettingsComponent implements OnDestroy, CanComponentDeactiv
       name: instance.name,
       url: instance.url,
       apiKey: instance.apiKey,
+      version: instance.version,
     });
     this.showInstanceModal = true;
   }
@@ -356,6 +366,7 @@ export class WhisparrSettingsComponent implements OnDestroy, CanComponentDeactiv
       name: this.instanceForm.get('name')?.value,
       url: this.instanceForm.get('url')?.value,
       apiKey: this.instanceForm.get('apiKey')?.value,
+      version: this.instanceForm.get('version')?.value,
     };
 
     if (this.modalMode === 'add') {
@@ -447,6 +458,7 @@ export class WhisparrSettingsComponent implements OnDestroy, CanComponentDeactiv
     const testRequest: TestArrInstanceRequest = {
       url: this.instanceForm.get('url')?.value,
       apiKey: this.instanceForm.get('apiKey')?.value,
+      version: this.instanceForm.get('version')?.value,
     };
 
     this.whisparrStore.testInstance({ request: testRequest, instanceId: this.editingInstance?.id });
@@ -459,6 +471,7 @@ export class WhisparrSettingsComponent implements OnDestroy, CanComponentDeactiv
     const testRequest: TestArrInstanceRequest = {
       url: instance.url,
       apiKey: instance.apiKey,
+      version: instance.version,
     };
 
     this.whisparrStore.testInstance({ request: testRequest, instanceId: instance.id });

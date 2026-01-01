@@ -17,6 +17,7 @@ import { ToastModule } from "primeng/toast";
 import { DialogModule } from "primeng/dialog";
 import { ConfirmDialogModule } from "primeng/confirmdialog";
 import { TagModule } from "primeng/tag";
+import { SelectModule } from "primeng/select";
 import { ConfirmationService } from "primeng/api";
 import { NotificationService } from "../../core/services/notification.service";
 import { LoadingErrorStateComponent } from "../../shared/components/loading-error-state/loading-error-state.component";
@@ -37,6 +38,7 @@ import { UrlValidators } from "../../core/validators/url.validator";
     DialogModule,
     ConfirmDialogModule,
     TagModule,
+    SelectModule,
     LoadingErrorStateComponent,
   ],
   providers: [LidarrConfigStore, ConfirmationService],
@@ -50,6 +52,10 @@ export class LidarrSettingsComponent implements OnDestroy, CanComponentDeactivat
   // Forms
   globalForm: FormGroup;
   instanceForm: FormGroup;
+
+  versionOptions = [
+    { label: 'v3', value: 3 }
+  ];
 
   // Modal state
   showInstanceModal = false;
@@ -97,6 +103,7 @@ export class LidarrSettingsComponent implements OnDestroy, CanComponentDeactivat
       name: ['', Validators.required],
       url: ['', [Validators.required, UrlValidators.httpUrl]],
       apiKey: ['', Validators.required],
+      version: [3, Validators.required],
     });
 
     // Load Lidarr config data
@@ -316,7 +323,8 @@ export class LidarrSettingsComponent implements OnDestroy, CanComponentDeactivat
       enabled: true,
       name: '',
       url: '',
-      apiKey: ''
+      apiKey: '',
+      version: 3
     });
     this.showInstanceModal = true;
   }
@@ -332,6 +340,7 @@ export class LidarrSettingsComponent implements OnDestroy, CanComponentDeactivat
       name: instance.name,
       url: instance.url,
       apiKey: instance.apiKey,
+      version: instance.version,
     });
     this.showInstanceModal = true;
   }
@@ -361,6 +370,7 @@ export class LidarrSettingsComponent implements OnDestroy, CanComponentDeactivat
       name: this.instanceForm.get('name')?.value,
       url: this.instanceForm.get('url')?.value,
       apiKey: this.instanceForm.get('apiKey')?.value,
+      version: this.instanceForm.get('version')?.value,
     };
 
     if (this.modalMode === 'add') {
@@ -452,6 +462,7 @@ export class LidarrSettingsComponent implements OnDestroy, CanComponentDeactivat
     const testRequest: TestArrInstanceRequest = {
       url: this.instanceForm.get('url')?.value,
       apiKey: this.instanceForm.get('apiKey')?.value,
+      version: this.instanceForm.get('version')?.value,
     };
 
     this.lidarrStore.testInstance({ request: testRequest, instanceId: this.editingInstance?.id });
@@ -464,6 +475,7 @@ export class LidarrSettingsComponent implements OnDestroy, CanComponentDeactivat
     const testRequest: TestArrInstanceRequest = {
       url: instance.url,
       apiKey: instance.apiKey,
+      version: instance.version,
     };
 
     this.lidarrStore.testInstance({ request: testRequest, instanceId: instance.id });

@@ -7,6 +7,7 @@ export interface ArrInstance {
   name: string;
   url: string;
   apiKey: string;
+  version: number;
 }
 
 /**
@@ -17,6 +18,7 @@ export interface CreateArrInstanceDto {
   name: string;
   url: string;
   apiKey: string;
+  version: number;
 }
 
 /**
@@ -25,4 +27,5 @@ export interface CreateArrInstanceDto {
 export interface TestArrInstanceRequest {
   url: string;
   apiKey: string;
+  version: number;
 }

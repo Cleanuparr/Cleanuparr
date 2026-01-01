@@ -92,9 +92,9 @@ public abstract class GenericHandler : IHandler
 
     protected abstract Task ExecuteInternalAsync();
     
-    protected abstract Task ProcessInstanceAsync(ArrInstance instance, InstanceType instanceType);
+    protected abstract Task ProcessInstanceAsync(ArrInstance instance);
     
-    protected async Task ProcessArrConfigAsync(ArrConfig config, InstanceType instanceType, bool throwOnFailure = false)
+    protected async Task ProcessArrConfigAsync(ArrConfig config, bool throwOnFailure = false)
     {
         var enabledInstances = config.Instances
             .Where(x => x.Enabled)
@@ -102,7 +102,7 @@ public abstract class GenericHandler : IHandler
         
         if (enabledInstances.Count is 0)
         {
-            _logger.LogDebug($"Skip processing {instanceType}. No enabled instances found");
+            _logger.LogDebug($"Skip processing {config.Type}. No enabled instances found");
             return;
         }
 
@@ -110,11 +110,11 @@ public abstract class GenericHandler : IHandler
         {
             try
             {
-                await ProcessInstanceAsync(arrInstance, instanceType);
+                await ProcessInstanceAsync(arrInstance);
             }
             catch (Exception exception)
             {
-                _logger.LogError(exception, "failed to process {type} instance | {url}", instanceType, arrInstance.Url);
+                _logger.LogError(exception, "failed to process {type} instance | {url}", config.Type, arrInstance.Url);
 
                 if (throwOnFailure)
                 {
@@ -140,14 +140,14 @@ public abstract class GenericHandler : IHandler
             return;
         }
         
-        if (instanceType is InstanceType.Sonarr or InstanceType.Whisparr)
+        if (instanceType is InstanceType.Sonarr || (instanceType is InstanceType.Whisparr && instance.Version is 2))
         {
             QueueItemRemoveRequest<SeriesSearchItem> removeRequest = new()
             {
                 InstanceType = instanceType,
                 Instance = instance,
                 Record = record,
-                SearchItem = (SeriesSearchItem)GetRecordSearchItem(instanceType, record, isPack),
+                SearchItem = (SeriesSearchItem)GetRecordSearchItem(instanceType, instance.Version, record, isPack),
                 RemoveFromClient = removeFromClient,
                 DeleteReason = deleteReason
             };
@@ -161,7 +161,7 @@ public abstract class GenericHandler : IHandler
                 InstanceType = instanceType,
                 Instance = instance,
                 Record = record,
-                SearchItem = GetRecordSearchItem(instanceType, record, isPack),
+                SearchItem = GetRecordSearchItem(instanceType, instance.Version, record, isPack),
                 RemoveFromClient = removeFromClient,
                 DeleteReason = deleteReason
             };
@@ -173,7 +173,7 @@ public abstract class GenericHandler : IHandler
         await _eventPublisher.PublishAsync(EventType.DownloadMarkedForDeletion, "Download marked for deletion", EventSeverity.Important);
     }
     
-    protected SearchItem GetRecordSearchItem(InstanceType type, QueueRecord record, bool isPack = false)
+    protected SearchItem GetRecordSearchItem(InstanceType type, float version, QueueRecord record, bool isPack = false)
     {
         return type switch
         {
@@ -201,17 +201,21 @@ public abstract class GenericHandler : IHandler
             {
                 Id = record.BookId
             },
-            InstanceType.Whisparr when !isPack => new SeriesSearchItem
+            InstanceType.Whisparr when version is 2 && !isPack => new SeriesSearchItem
             {
                 Id = record.EpisodeId,
                 SeriesId = record.SeriesId,
                 SearchType = SeriesSearchType.Episode
             },
-            InstanceType.Whisparr when isPack => new SeriesSearchItem
+            InstanceType.Whisparr when version is 2 && isPack => new SeriesSearchItem
             {
                 Id = record.SeasonNumber,
                 SeriesId = record.SeriesId,
                 SearchType = SeriesSearchType.Season
+            },
+            InstanceType.Whisparr when version is 3 => new SearchItem
+            {
+                Id = record.MovieId
             },
             _ => throw new NotImplementedException($"instance type {type} is not yet supported")
         };

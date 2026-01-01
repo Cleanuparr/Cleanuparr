@@ -120,8 +120,9 @@ public class NotificationPublisher : INotificationPublisher
     {
         var record = ContextProvider.Get<QueueRecord>(nameof(QueueRecord));
         var instanceType = (InstanceType)ContextProvider.Get<object>(nameof(InstanceType));
+        var instanceVersion = (float)ContextProvider.Get<object>("version");
         var instanceUrl = ContextProvider.Get<Uri>(nameof(ArrInstance) + nameof(ArrInstance.Url));
-        var imageUrl = GetImageFromContext(record, instanceType);
+        var imageUrl = GetImageFromContext(record, instanceType, instanceVersion);
 
         NotificationContext context = new()
         {
@@ -153,8 +154,9 @@ public class NotificationPublisher : INotificationPublisher
     {
         var record = ContextProvider.Get<QueueRecord>(nameof(QueueRecord));
         var instanceType = (InstanceType)ContextProvider.Get<object>(nameof(InstanceType));
+        var instanceVersion = (float)ContextProvider.Get<object>("version");
         var instanceUrl = ContextProvider.Get<Uri>(nameof(ArrInstance) + nameof(ArrInstance.Url));
-        var imageUrl = GetImageFromContext(record, instanceType);
+        var imageUrl = GetImageFromContext(record, instanceType, instanceVersion);
 
         return new NotificationContext
         {
@@ -237,7 +239,7 @@ public class NotificationPublisher : INotificationPublisher
         };
     }
 
-    private Uri? GetImageFromContext(QueueRecord record, InstanceType instanceType)
+    private Uri? GetImageFromContext(QueueRecord record, InstanceType instanceType, float version)
     {
         Uri? image = instanceType switch
         {
@@ -245,7 +247,8 @@ public class NotificationPublisher : INotificationPublisher
             InstanceType.Radarr => record.Movie?.Images?.FirstOrDefault(x => x.CoverType == "poster")?.RemoteUrl,
             InstanceType.Lidarr => record.Album?.Images?.FirstOrDefault(x => x.CoverType == "cover")?.Url,
             InstanceType.Readarr => record.Book?.Images?.FirstOrDefault(x => x.CoverType == "cover")?.Url,
-            InstanceType.Whisparr => record.Series?.Images?.FirstOrDefault(x => x.CoverType == "poster")?.RemoteUrl,
+            InstanceType.Whisparr when version is 2 => record.Series?.Images?.FirstOrDefault(x => x.CoverType == "poster")?.RemoteUrl,
+            InstanceType.Whisparr when version is 3 => record.Movie?.Images?.FirstOrDefault(x => x.CoverType == "poster")?.RemoteUrl ?? record.Movie?.Images?.FirstOrDefault(x => x.CoverType == "screenshot")?.RemoteUrl,
             _ => throw new ArgumentOutOfRangeException(nameof(instanceType))
         };
 

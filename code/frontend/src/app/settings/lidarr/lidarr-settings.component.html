@@ -213,15 +213,29 @@
 
     <div class="field">
       <label for="instance-apikey">API Key *</label>
-      <input 
+      <input
         id="instance-apikey"
-        type="password" 
-        pInputText 
-        formControlName="apiKey" 
+        type="password"
+        pInputText
+        formControlName="apiKey"
         placeholder="Your Lidarr API key"
         class="w-full"
       />
       <small *ngIf="hasError(instanceForm, 'apiKey', 'required')" class="form-error-text">API key is required</small>
+    </div>
+
+    <div class="field">
+      <label for="instance-version">Version *</label>
+      <p-select
+        id="instance-version"
+        formControlName="version"
+        [options]="versionOptions"
+        optionLabel="label"
+        optionValue="value"
+        placeholder="Select version"
+        styleClass="w-full"
+      ></p-select>
+      <small *ngIf="hasError(instanceForm, 'version', 'required')" class="form-error-text">Version is required</small>
     </div>
   </form>
 

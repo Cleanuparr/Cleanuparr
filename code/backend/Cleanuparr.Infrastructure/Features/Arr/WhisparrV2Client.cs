@@ -14,10 +14,10 @@ using Newtonsoft.Json;
 
 namespace Cleanuparr.Infrastructure.Features.Arr;
 
-public class WhisparrClient : ArrClient, IWhisparrClient
+public class WhisparrV2Client : ArrClient, IWhisparrV2Client
 {
-    public WhisparrClient(
-        ILogger<WhisparrClient> logger,
+    public WhisparrV2Client(
+        ILogger<WhisparrV2Client> logger,
         IHttpClientFactory httpClientFactory,
         IStriker striker,
         IDryRunInterceptor dryRunInterceptor
@@ -63,7 +63,7 @@ public class WhisparrClient : ArrClient, IWhisparrClient
         UriBuilder uriBuilder = new(arrInstance.Url);
         uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/v3/command";
         
-        foreach (WhisparrCommand command in GetSearchCommands(items.Cast<SeriesSearchItem>().ToHashSet()))
+        foreach (WhisparrV2Command command in GetSearchCommands(items.Cast<SeriesSearchItem>().ToHashSet()))
         {
             using HttpRequestMessage request = new(HttpMethod.Post, uriBuilder.Uri);
             request.Content = new StringContent(
@@ -104,7 +104,7 @@ public class WhisparrClient : ArrClient, IWhisparrClient
     private static string GetSearchLog(
         SeriesSearchType searchType,
         Uri instanceUrl,
-        WhisparrCommand command,
+        WhisparrV2Command v2Command,
         bool success,
         string? logContext
     )
@@ -114,15 +114,15 @@ public class WhisparrClient : ArrClient, IWhisparrClient
         return searchType switch
         {
             SeriesSearchType.Episode =>
-                $"episodes search {status} | {instanceUrl} | {logContext ?? $"episode ids: {string.Join(',', command.EpisodeIds)}"}",
+                $"episodes search {status} | {instanceUrl} | {logContext ?? $"episode ids: {string.Join(',', v2Command.EpisodeIds)}"}",
             SeriesSearchType.Season =>
-                $"season search {status} | {instanceUrl} | {logContext ?? $"season: {command.SeasonNumber} series id: {command.SeriesId}"}",
-            SeriesSearchType.Series => $"series search {status} | {instanceUrl} | {logContext ?? $"series id: {command.SeriesId}"}",
+                $"season search {status} | {instanceUrl} | {logContext ?? $"season: {v2Command.SeasonNumber} series id: {v2Command.SeriesId}"}",
+            SeriesSearchType.Series => $"series search {status} | {instanceUrl} | {logContext ?? $"series id: {v2Command.SeriesId}"}",
             _ => throw new ArgumentOutOfRangeException(nameof(searchType), searchType, null)
         };
     }
 
-    private async Task<string?> ComputeCommandLogContextAsync(ArrInstance arrInstance, WhisparrCommand command, SeriesSearchType searchType)
+    private async Task<string?> ComputeCommandLogContextAsync(ArrInstance arrInstance, WhisparrV2Command v2Command, SeriesSearchType searchType)
     {
         try
         {
@@ -130,7 +130,7 @@ public class WhisparrClient : ArrClient, IWhisparrClient
 
             if (searchType is SeriesSearchType.Episode)
             {
-                var episodes = await GetEpisodesAsync(arrInstance, command.EpisodeIds);
+                var episodes = await GetEpisodesAsync(arrInstance, v2Command.EpisodeIds);
 
                 if (episodes?.Count is null or 0)
                 {
@@ -156,7 +156,7 @@ public class WhisparrClient : ArrClient, IWhisparrClient
                     series.Add(show);
                 }
 
-                foreach (var group in command.EpisodeIds.GroupBy(id => episodes.First(x => x.Id == id).SeriesId))
+                foreach (var group in v2Command.EpisodeIds.GroupBy(id => episodes.First(x => x.Id == id).SeriesId))
                 {
                     var show = series.First(x => x.Id == group.Key);
                     var episode = episodes
@@ -172,19 +172,19 @@ public class WhisparrClient : ArrClient, IWhisparrClient
 
             if (searchType is SeriesSearchType.Season)
             {
-                Series? show = await GetSeriesAsync(arrInstance, command.SeriesId.Value);
+                Series? show = await GetSeriesAsync(arrInstance, v2Command.SeriesId.Value);
 
                 if (show is null)
                 {
                     return null;
                 }
 
-                log.Append($"[{show.Title} season {command.SeasonNumber}]");
+                log.Append($"[{show.Title} season {v2Command.SeasonNumber}]");
             }
 
             if (searchType is SeriesSearchType.Series)
             {
-                Series? show = await GetSeriesAsync(arrInstance, command.SeriesId.Value);
+                Series? show = await GetSeriesAsync(arrInstance, v2Command.SeriesId.Value);
 
                 if (show is null)
                 {
@@ -233,39 +233,39 @@ public class WhisparrClient : ArrClient, IWhisparrClient
         return JsonConvert.DeserializeObject<Series>(responseContent);
     }
 
-    private List<WhisparrCommand> GetSearchCommands(HashSet<SeriesSearchItem> items)
+    private List<WhisparrV2Command> GetSearchCommands(HashSet<SeriesSearchItem> items)
     {
         const string episodeSearch = "EpisodeSearch";
         const string seasonSearch = "SeasonSearch";
         const string seriesSearch = "SeriesSearch";
         
-        List<WhisparrCommand> commands = new();
+        List<WhisparrV2Command> commands = new();
 
         foreach (SeriesSearchItem item in items)
         {
-            WhisparrCommand command = item.SearchType is SeriesSearchType.Episode
+            WhisparrV2Command v2Command = item.SearchType is SeriesSearchType.Episode
                 ? commands.FirstOrDefault() ?? new() { Name = episodeSearch, EpisodeIds = new() }
                 : new();
             
             switch (item.SearchType)
             {
-                case SeriesSearchType.Episode when command.EpisodeIds is null:
-                    command.EpisodeIds = [item.Id];
+                case SeriesSearchType.Episode when v2Command.EpisodeIds is null:
+                    v2Command.EpisodeIds = [item.Id];
                     break;
                 
-                case SeriesSearchType.Episode when command.EpisodeIds is not null:
-                    command.EpisodeIds.Add(item.Id);
+                case SeriesSearchType.Episode when v2Command.EpisodeIds is not null:
+                    v2Command.EpisodeIds.Add(item.Id);
                     break;
                 
                 case SeriesSearchType.Season:
-                    command.Name = seasonSearch;
-                    command.SeasonNumber = item.Id;
-                    command.SeriesId = ((SeriesSearchItem)item).SeriesId;
+                    v2Command.Name = seasonSearch;
+                    v2Command.SeasonNumber = item.Id;
+                    v2Command.SeriesId = ((SeriesSearchItem)item).SeriesId;
                     break;
                 
                 case SeriesSearchType.Series:
-                    command.Name = seriesSearch;
-                    command.SeriesId = item.Id;
+                    v2Command.Name = seriesSearch;
+                    v2Command.SeriesId = item.Id;
                     break;
                 
                 default:
@@ -278,8 +278,8 @@ public class WhisparrClient : ArrClient, IWhisparrClient
                 continue;
             }
             
-            command.SearchType = item.SearchType;
-            commands.Add(command);
+            v2Command.SearchType = item.SearchType;
+            commands.Add(v2Command);
         }
 
         return commands;

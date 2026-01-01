@@ -12,6 +12,9 @@ public sealed record TestArrInstanceRequest
 
     [Required]
     public required string ApiKey { get; init; }
+    
+    [Required]
+    public required float Version { get; init; }
 
     public ArrInstance ToTestInstance() => new()
     {
@@ -20,5 +23,6 @@ public sealed record TestArrInstanceRequest
         Url = new Uri(Url),
         ApiKey = ApiKey,
         ArrConfigId = Guid.Empty,
+        Version = Version,
     };
 }

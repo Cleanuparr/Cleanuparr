@@ -1,8 +1,6 @@
 using System.Diagnostics;
 using Cleanuparr.Domain.Enums;
-using Cleanuparr.Infrastructure.Features.Arr;
 using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
-using Cleanuparr.Infrastructure.Features.DownloadClient;
 using Cleanuparr.Persistence;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -176,7 +174,7 @@ public class StatusController : ControllerBase
             {
                 try
                 {
-                    var sonarrClient = _arrClientFactory.GetClient(InstanceType.Sonarr);
+                    var sonarrClient = _arrClientFactory.GetClient(InstanceType.Sonarr, instance.Version);
                     await sonarrClient.HealthCheckAsync(instance);
                     
                     sonarrStatus.Add(new
@@ -208,7 +206,7 @@ public class StatusController : ControllerBase
             {
                 try
                 {
-                    var radarrClient = _arrClientFactory.GetClient(InstanceType.Radarr);
+                    var radarrClient = _arrClientFactory.GetClient(InstanceType.Radarr, instance.Version);
                     await radarrClient.HealthCheckAsync(instance);
                     
                     radarrStatus.Add(new
@@ -240,7 +238,7 @@ public class StatusController : ControllerBase
             {
                 try
                 {
-                    var lidarrClient = _arrClientFactory.GetClient(InstanceType.Lidarr);
+                    var lidarrClient = _arrClientFactory.GetClient(InstanceType.Lidarr, instance.Version);
                     await lidarrClient.HealthCheckAsync(instance);
                     
                     lidarrStatus.Add(new

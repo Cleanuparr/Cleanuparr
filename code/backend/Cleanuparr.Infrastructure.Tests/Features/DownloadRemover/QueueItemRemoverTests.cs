@@ -44,7 +44,7 @@ public class QueueItemRemoverTests : IDisposable
         _arrClientMock = new Mock<IArrClient>();
 
         _arrClientFactoryMock
-            .Setup(f => f.GetClient(It.IsAny<InstanceType>()))
+            .Setup(f => f.GetClient(It.IsAny<InstanceType>(), It.IsAny<float>()))
             .Returns(_arrClientMock.Object);
 
         // Create real EventPublisher with mocked dependencies
@@ -205,7 +205,7 @@ public class QueueItemRemoverTests : IDisposable
         await _queueItemRemover.RemoveQueueItemAsync(request);
 
         // Assert
-        _arrClientFactoryMock.Verify(f => f.GetClient(instanceType), Times.Once);
+        _arrClientFactoryMock.Verify(f => f.GetClient(instanceType, It.IsAny<float>()), Times.Once);
     }
 
     #endregion

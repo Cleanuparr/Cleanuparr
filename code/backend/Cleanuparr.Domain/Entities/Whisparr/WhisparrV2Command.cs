@@ -2,7 +2,7 @@ using Cleanuparr.Domain.Enums;
 
 namespace Cleanuparr.Domain.Entities.Whisparr;
 
-public sealed record WhisparrCommand
+public sealed record WhisparrV2Command
 {
     public string Name { get; set; }
 

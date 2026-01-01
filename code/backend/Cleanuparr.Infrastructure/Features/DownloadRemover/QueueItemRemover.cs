@@ -47,7 +47,7 @@ public sealed class QueueItemRemover : IQueueItemRemover
     {
         try
         {
-            var arrClient = _arrClientFactory.GetClient(request.InstanceType);
+            var arrClient = _arrClientFactory.GetClient(request.InstanceType, request.Instance.Version);
             await arrClient.DeleteQueueItemAsync(request.Instance, request.Record, request.RemoveFromClient, request.DeleteReason);
 
             // Set context for EventPublisher
@@ -56,6 +56,7 @@ public sealed class QueueItemRemover : IQueueItemRemover
             ContextProvider.Set(nameof(QueueRecord), request.Record);
             ContextProvider.Set(nameof(ArrInstance) + nameof(ArrInstance.Url), request.Instance.Url);
             ContextProvider.Set(nameof(InstanceType), request.InstanceType);
+            ContextProvider.Set("version", request.Instance.Version);
 
             // Use the new centralized EventPublisher method
             await _eventPublisher.PublishQueueItemDeleted(request.RemoveFromClient, request.DeleteReason);

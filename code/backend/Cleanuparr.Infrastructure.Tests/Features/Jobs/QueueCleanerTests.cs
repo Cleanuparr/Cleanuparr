@@ -62,7 +62,7 @@ public class QueueCleanerTests : IDisposable
 
         var mockArrClient = new Mock<IArrClient>();
         _fixture.ArrClientFactory
-            .Setup(x => x.GetClient(It.IsAny<InstanceType>()))
+            .Setup(x => x.GetClient(It.IsAny<InstanceType>(), It.IsAny<float>()))
             .Returns(mockArrClient.Object);
 
         _fixture.ArrQueueIterator
@@ -122,7 +122,7 @@ public class QueueCleanerTests : IDisposable
 
         var mockArrClient = new Mock<IArrClient>();
         _fixture.ArrClientFactory
-            .Setup(x => x.GetClient(It.IsAny<InstanceType>()))
+            .Setup(x => x.GetClient(It.IsAny<InstanceType>(), It.IsAny<float>()))
             .Returns(mockArrClient.Object);
 
         _fixture.ArrQueueIterator
@@ -182,7 +182,7 @@ public class QueueCleanerTests : IDisposable
 
         var mockArrClient = new Mock<IArrClient>();
         _fixture.ArrClientFactory
-            .Setup(x => x.GetClient(It.IsAny<InstanceType>()))
+            .Setup(x => x.GetClient(It.IsAny<InstanceType>(), It.IsAny<float>()))
             .Returns(mockArrClient.Object);
 
         _fixture.ArrQueueIterator
@@ -199,8 +199,8 @@ public class QueueCleanerTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert
-        _fixture.ArrClientFactory.Verify(x => x.GetClient(InstanceType.Sonarr), Times.Once);
-        _fixture.ArrClientFactory.Verify(x => x.GetClient(InstanceType.Radarr), Times.Once);
+        _fixture.ArrClientFactory.Verify(x => x.GetClient(InstanceType.Sonarr, It.IsAny<float>()), Times.Once);
+        _fixture.ArrClientFactory.Verify(x => x.GetClient(InstanceType.Radarr, It.IsAny<float>()), Times.Once);
     }
 
     #endregion
@@ -222,7 +222,7 @@ public class QueueCleanerTests : IDisposable
         mockArrClient.Setup(x => x.IsRecordValid(It.IsAny<QueueRecord>())).Returns(true);
 
         _fixture.ArrClientFactory
-            .Setup(x => x.GetClient(InstanceType.Sonarr))
+            .Setup(x => x.GetClient(InstanceType.Sonarr, It.IsAny<float>()))
             .Returns(mockArrClient.Object);
 
         var queueRecord = new QueueRecord
@@ -277,7 +277,7 @@ public class QueueCleanerTests : IDisposable
         mockArrClient.Setup(x => x.IsRecordValid(It.IsAny<QueueRecord>())).Returns(true);
 
         _fixture.ArrClientFactory
-            .Setup(x => x.GetClient(InstanceType.Sonarr))
+            .Setup(x => x.GetClient(InstanceType.Sonarr, It.IsAny<float>()))
             .Returns(mockArrClient.Object);
 
         var queueRecord = new QueueRecord
@@ -334,7 +334,7 @@ public class QueueCleanerTests : IDisposable
         )).ReturnsAsync(false);
 
         _fixture.ArrClientFactory
-            .Setup(x => x.GetClient(InstanceType.Sonarr))
+            .Setup(x => x.GetClient(InstanceType.Sonarr, It.IsAny<float>()))
             .Returns(mockArrClient.Object);
 
         var queueRecord = new QueueRecord
@@ -391,7 +391,7 @@ public class QueueCleanerTests : IDisposable
         mockArrClient.Setup(x => x.IsRecordValid(It.IsAny<QueueRecord>())).Returns(true);
 
         _fixture.ArrClientFactory
-            .Setup(x => x.GetClient(InstanceType.Sonarr))
+            .Setup(x => x.GetClient(InstanceType.Sonarr, It.IsAny<float>()))
             .Returns(mockArrClient.Object);
 
         var queueRecord = new QueueRecord
@@ -466,7 +466,7 @@ public class QueueCleanerTests : IDisposable
         )).ReturnsAsync(false);
 
         _fixture.ArrClientFactory
-            .Setup(x => x.GetClient(InstanceType.Sonarr))
+            .Setup(x => x.GetClient(InstanceType.Sonarr, It.IsAny<float>()))
             .Returns(mockArrClient.Object);
 
         var queueRecord = new QueueRecord
@@ -535,7 +535,7 @@ public class QueueCleanerTests : IDisposable
         )).ReturnsAsync(false);
 
         _fixture.ArrClientFactory
-            .Setup(x => x.GetClient(InstanceType.Sonarr))
+            .Setup(x => x.GetClient(InstanceType.Sonarr, It.IsAny<float>()))
             .Returns(mockArrClient.Object);
 
         var queueRecord = new QueueRecord
@@ -603,7 +603,7 @@ public class QueueCleanerTests : IDisposable
         )).ReturnsAsync(true);
 
         _fixture.ArrClientFactory
-            .Setup(x => x.GetClient(InstanceType.Sonarr))
+            .Setup(x => x.GetClient(InstanceType.Sonarr, It.IsAny<float>()))
             .Returns(mockArrClient.Object);
 
         var queueRecord = new QueueRecord
@@ -677,7 +677,7 @@ public class QueueCleanerTests : IDisposable
         )).ReturnsAsync(false);
 
         _fixture.ArrClientFactory
-            .Setup(x => x.GetClient(InstanceType.Sonarr))
+            .Setup(x => x.GetClient(InstanceType.Sonarr, It.IsAny<float>()))
             .Returns(mockArrClient.Object);
 
         var queueRecord = new QueueRecord
@@ -746,7 +746,7 @@ public class QueueCleanerTests : IDisposable
         mockArrClient.Setup(x => x.IsRecordValid(It.IsAny<QueueRecord>())).Returns(true);
 
         _fixture.ArrClientFactory
-            .Setup(x => x.GetClient(InstanceType.Radarr))
+            .Setup(x => x.GetClient(InstanceType.Radarr, It.IsAny<float>()))
             .Returns(mockArrClient.Object);
 
         var queueRecord = new QueueRecord
@@ -835,7 +835,7 @@ public class QueueCleanerTests : IDisposable
         mockArrClient.Setup(x => x.IsRecordValid(It.IsAny<QueueRecord>())).Returns(true);
 
         _fixture.ArrClientFactory
-            .Setup(x => x.GetClient(InstanceType.Radarr))
+            .Setup(x => x.GetClient(InstanceType.Radarr, It.IsAny<float>()))
             .Returns(mockArrClient.Object);
 
         var queueRecord = new QueueRecord
@@ -907,7 +907,7 @@ public class QueueCleanerTests : IDisposable
         mockArrClient.Setup(x => x.IsRecordValid(It.IsAny<QueueRecord>())).Returns(true);
 
         _fixture.ArrClientFactory
-            .Setup(x => x.GetClient(InstanceType.Lidarr))
+            .Setup(x => x.GetClient(InstanceType.Lidarr, It.IsAny<float>()))
             .Returns(mockArrClient.Object);
 
         var queueRecord = new QueueRecord
@@ -979,7 +979,7 @@ public class QueueCleanerTests : IDisposable
         mockArrClient.Setup(x => x.IsRecordValid(It.IsAny<QueueRecord>())).Returns(true);
 
         _fixture.ArrClientFactory
-            .Setup(x => x.GetClient(InstanceType.Readarr))
+            .Setup(x => x.GetClient(InstanceType.Readarr, It.IsAny<float>()))
             .Returns(mockArrClient.Object);
 
         var queueRecord = new QueueRecord
