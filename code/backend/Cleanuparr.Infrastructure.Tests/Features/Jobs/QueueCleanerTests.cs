@@ -1040,5 +1040,240 @@ public class QueueCleanerTests : IDisposable
         );
     }
 
+    [Fact]
+    public async Task PublishQueueItemRemoveRequest_ForWhisparrV2_PublishesSeriesSearchItemRequest()
+    {
+        // Arrange - test that Whisparr v2 uses SeriesSearchItem
+        var whisparrInstance = TestDataContextFactory.AddWhisparrInstance(_fixture.DataContext, version: 2);
+        TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
+
+        var mockArrClient = new Mock<IArrClient>();
+        mockArrClient.Setup(x => x.IsRecordValid(It.IsAny<QueueRecord>())).Returns(true);
+
+        _fixture.ArrClientFactory
+            .Setup(x => x.GetClient(InstanceType.Whisparr, 2f))
+            .Returns(mockArrClient.Object);
+
+        var queueRecord = new QueueRecord
+        {
+            Id = 1,
+            DownloadId = "whisparr-v2-download-id",
+            Title = "Whisparr V2 Download",
+            Protocol = "torrent",
+            SeriesId = 10,
+            EpisodeId = 100
+        };
+
+        _fixture.ArrQueueIterator
+            .Setup(x => x.Iterate(
+                It.IsAny<IArrClient>(),
+                It.IsAny<ArrInstance>(),
+                It.IsAny<Func<IReadOnlyList<QueueRecord>, Task>>()
+            ))
+            .Returns(async (IArrClient client, ArrInstance instance, Func<IReadOnlyList<QueueRecord>, Task> callback) =>
+            {
+                await callback([queueRecord]);
+            });
+
+        var mockDownloadService = _fixture.CreateMockDownloadService();
+        mockDownloadService
+            .Setup(x => x.ShouldRemoveFromArrQueueAsync(
+                It.IsAny<string>(),
+                It.IsAny<List<string>>()
+            ))
+            .ReturnsAsync(new DownloadCheckResult
+            {
+                Found = true,
+                ShouldRemove = true,
+                IsPrivate = false,
+                DeleteFromClient = true,
+                DeleteReason = DeleteReason.Stalled
+            });
+
+        _fixture.DownloadServiceFactory
+            .Setup(x => x.GetDownloadService(It.IsAny<DownloadClientConfig>()))
+            .Returns(mockDownloadService.Object);
+
+        var sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert - should publish QueueItemRemoveRequest<SeriesSearchItem>
+        _fixture.MessageBus.Verify(
+            x => x.Publish(
+                It.Is<QueueItemRemoveRequest<SeriesSearchItem>>(r =>
+                    r.InstanceType == InstanceType.Whisparr &&
+                    r.SearchItem.Id == 100 && // EpisodeId
+                    r.SearchItem.SeriesId == 10 &&
+                    r.SearchItem.SearchType == SeriesSearchType.Episode &&
+                    r.DeleteReason == DeleteReason.Stalled
+                ),
+                It.IsAny<CancellationToken>()
+            ),
+            Times.Once
+        );
+    }
+
+    [Fact]
+    public async Task PublishQueueItemRemoveRequest_ForWhisparrV3_PublishesSearchItemRequest()
+    {
+        // Arrange - test that Whisparr v3 uses SearchItem
+        var whisparrInstance = TestDataContextFactory.AddWhisparrInstance(_fixture.DataContext, version: 3);
+        TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
+
+        var mockArrClient = new Mock<IArrClient>();
+        mockArrClient.Setup(x => x.IsRecordValid(It.IsAny<QueueRecord>())).Returns(true);
+
+        _fixture.ArrClientFactory
+            .Setup(x => x.GetClient(InstanceType.Whisparr, 3f))
+            .Returns(mockArrClient.Object);
+
+        var queueRecord = new QueueRecord
+        {
+            Id = 1,
+            DownloadId = "whisparr-v3-download-id",
+            Title = "Whisparr V3 Download",
+            Protocol = "torrent",
+            MovieId = 42
+        };
+
+        _fixture.ArrQueueIterator
+            .Setup(x => x.Iterate(
+                It.IsAny<IArrClient>(),
+                It.IsAny<ArrInstance>(),
+                It.IsAny<Func<IReadOnlyList<QueueRecord>, Task>>()
+            ))
+            .Returns(async (IArrClient client, ArrInstance instance, Func<IReadOnlyList<QueueRecord>, Task> callback) =>
+            {
+                await callback([queueRecord]);
+            });
+
+        var mockDownloadService = _fixture.CreateMockDownloadService();
+        mockDownloadService
+            .Setup(x => x.ShouldRemoveFromArrQueueAsync(
+                It.IsAny<string>(),
+                It.IsAny<List<string>>()
+            ))
+            .ReturnsAsync(new DownloadCheckResult
+            {
+                Found = true,
+                ShouldRemove = true,
+                IsPrivate = false,
+                DeleteFromClient = true,
+                DeleteReason = DeleteReason.Stalled
+            });
+
+        _fixture.DownloadServiceFactory
+            .Setup(x => x.GetDownloadService(It.IsAny<DownloadClientConfig>()))
+            .Returns(mockDownloadService.Object);
+
+        var sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert - should publish QueueItemRemoveRequest<SearchItem> with MovieId
+        _fixture.MessageBus.Verify(
+            x => x.Publish(
+                It.Is<QueueItemRemoveRequest<SearchItem>>(r =>
+                    r.InstanceType == InstanceType.Whisparr &&
+                    r.SearchItem.Id == 42 && // MovieId
+                    r.DeleteReason == DeleteReason.Stalled
+                ),
+                It.IsAny<CancellationToken>()
+            ),
+            Times.Once
+        );
+    }
+
+    [Fact]
+    public async Task PublishQueueItemRemoveRequest_ForWhisparrV2Pack_PublishesSeasonSearchItemRequest()
+    {
+        // Arrange - test that Whisparr v2 pack (multiple records with same download ID) uses SeriesSearchItem with Season search type
+        var whisparrInstance = TestDataContextFactory.AddWhisparrInstance(_fixture.DataContext, version: 2);
+        TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
+
+        var mockArrClient = new Mock<IArrClient>();
+        mockArrClient.Setup(x => x.IsRecordValid(It.IsAny<QueueRecord>())).Returns(true);
+
+        _fixture.ArrClientFactory
+            .Setup(x => x.GetClient(InstanceType.Whisparr, 2f))
+            .Returns(mockArrClient.Object);
+
+        // Create multiple records with same download ID to simulate a pack (season pack)
+        var record1 = new QueueRecord
+        {
+            Id = 1,
+            DownloadId = "whisparr-v2-pack-download-id",
+            Title = "Whisparr V2 Season Pack - Episode 1",
+            Protocol = "torrent",
+            SeriesId = 10,
+            EpisodeId = 100,
+            SeasonNumber = 3
+        };
+        var record2 = new QueueRecord
+        {
+            Id = 2,
+            DownloadId = "whisparr-v2-pack-download-id",
+            Title = "Whisparr V2 Season Pack - Episode 2",
+            Protocol = "torrent",
+            SeriesId = 10,
+            EpisodeId = 101,
+            SeasonNumber = 3
+        };
+
+        _fixture.ArrQueueIterator
+            .Setup(x => x.Iterate(
+                It.IsAny<IArrClient>(),
+                It.IsAny<ArrInstance>(),
+                It.IsAny<Func<IReadOnlyList<QueueRecord>, Task>>()
+            ))
+            .Returns(async (IArrClient client, ArrInstance instance, Func<IReadOnlyList<QueueRecord>, Task> callback) =>
+            {
+                await callback([record1, record2]);
+            });
+
+        var mockDownloadService = _fixture.CreateMockDownloadService();
+        mockDownloadService
+            .Setup(x => x.ShouldRemoveFromArrQueueAsync(
+                It.IsAny<string>(),
+                It.IsAny<List<string>>()
+            ))
+            .ReturnsAsync(new DownloadCheckResult
+            {
+                Found = true,
+                ShouldRemove = true,
+                IsPrivate = false,
+                DeleteFromClient = true,
+                DeleteReason = DeleteReason.Stalled
+            });
+
+        _fixture.DownloadServiceFactory
+            .Setup(x => x.GetDownloadService(It.IsAny<DownloadClientConfig>()))
+            .Returns(mockDownloadService.Object);
+
+        var sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert - should publish QueueItemRemoveRequest<SeriesSearchItem> with Season search type
+        // because multiple records with the same download ID indicate a pack
+        _fixture.MessageBus.Verify(
+            x => x.Publish(
+                It.Is<QueueItemRemoveRequest<SeriesSearchItem>>(r =>
+                    r.InstanceType == InstanceType.Whisparr &&
+                    r.SearchItem.Id == 3 && // SeasonNumber
+                    r.SearchItem.SeriesId == 10 &&
+                    r.SearchItem.SearchType == SeriesSearchType.Season &&
+                    r.DeleteReason == DeleteReason.Stalled
+                ),
+                It.IsAny<CancellationToken>()
+            ),
+            Times.Once
+        );
+    }
+
     #endregion
 }
