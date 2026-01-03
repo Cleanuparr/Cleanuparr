@@ -15,7 +15,7 @@ COPY frontend/ .
 RUN npm run build
 
 # Build .NET backend
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:9.0-bookworm-slim AS build
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 ARG TARGETARCH
 ARG VERSION=0.0.1
 ARG PACKAGES_USERNAME
@@ -42,10 +42,10 @@ RUN --mount=type=cache,target=/root/.nuget/packages,sharing=locked \
     /p:DebugSymbols=false
 
 # Runtime stage
-FROM mcr.microsoft.com/dotnet/aspnet:9.0-bookworm-slim
+FROM mcr.microsoft.com/dotnet/aspnet:10.0
 
 # Install required packages for user management, timezone support, and Python for Apprise CLI
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     tzdata \
     gosu \

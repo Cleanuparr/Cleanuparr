@@ -3,7 +3,7 @@
     <PropertyGroup>
         <AssemblyName>Cleanuparr</AssemblyName>
         <Version Condition="'$(Version)' == ''">0.0.1</Version>
-        <TargetFramework>net9.0</TargetFramework>
+        <TargetFramework>net10.0</TargetFramework>
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
         <PublishReadyToRun>true</PublishReadyToRun>
@@ -24,14 +24,14 @@
 
     <ItemGroup>
         <PackageReference Include="MassTransit" Version="8.5.7" />
-        <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.6">
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.1">
           <PrivateAssets>all</PrivateAssets>
           <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
-        <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.0" />
-        <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="10.0.0" />
-        <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.0" />
-        <PackageReference Include="Microsoft.Extensions.Http.Polly" Version="10.0.0" />
+        <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.1" />
+        <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="10.0.1" />
+        <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.1" />
+        <PackageReference Include="Microsoft.Extensions.Http.Polly" Version="10.0.1" />
         <PackageReference Include="Quartz" Version="3.15.1" />
         <PackageReference Include="Quartz.Extensions.DependencyInjection" Version="3.15.1" />
         <PackageReference Include="Quartz.Extensions.Hosting" Version="3.15.1" />

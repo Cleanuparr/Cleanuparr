@@ -19,7 +19,7 @@ This helps us avoid redundant work, git conflicts, and contributions that may no
 
 ### Prerequisites
 
-- [.NET 9.0 SDK](https://dotnet.microsoft.com/download/dotnet/9.0)
+- [.NET 10.0 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
 - [Node.js 18+](https://nodejs.org/)
 - [Git](https://git-scm.com/)
 - (Optional) [Make](https://www.gnu.org/software/make/) for database migrations
