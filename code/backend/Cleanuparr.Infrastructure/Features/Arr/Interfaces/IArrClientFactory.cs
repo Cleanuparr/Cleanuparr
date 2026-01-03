@@ -4,5 +4,5 @@ namespace Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 
 public interface IArrClientFactory
 {
-    IArrClient GetClient(InstanceType type);
+    IArrClient GetClient(InstanceType type, float instanceVersion);
 }

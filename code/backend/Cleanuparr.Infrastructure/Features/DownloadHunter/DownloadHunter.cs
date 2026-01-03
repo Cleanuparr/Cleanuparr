@@ -38,7 +38,7 @@ public sealed class DownloadHunter : IDownloadHunter
             return;
         }
         
-        var arrClient = _arrClientFactory.GetClient(request.InstanceType);
+        var arrClient = _arrClientFactory.GetClient(request.InstanceType, request.Instance.Version);
         await arrClient.SearchItemsAsync(request.Instance, [request.SearchItem]);
         
         // Prevent manual db edits

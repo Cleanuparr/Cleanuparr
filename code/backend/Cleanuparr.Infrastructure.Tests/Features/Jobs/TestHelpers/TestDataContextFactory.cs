@@ -197,16 +197,17 @@ public static class TestDataContextFactory
     /// <summary>
     /// Adds an enabled Whisparr instance to the context
     /// </summary>
-    public static ArrInstance AddWhisparrInstance(DataContext context, string url = "http://whisparr:6969", bool enabled = true)
+    public static ArrInstance AddWhisparrInstance(DataContext context, string url = "http://whisparr:6969", bool enabled = true, float version = 2)
     {
         var arrConfig = context.ArrConfigs.First(x => x.Type == InstanceType.Whisparr);
         var instance = new ArrInstance
         {
             Id = Guid.NewGuid(),
-            Name = "Test Whisparr",
+            Name = $"Test Whisparr v{version}",
             Url = new Uri(url),
             ApiKey = "test-api-key",
             Enabled = enabled,
+            Version = version,
             ArrConfigId = arrConfig.Id,
             ArrConfig = arrConfig
         };

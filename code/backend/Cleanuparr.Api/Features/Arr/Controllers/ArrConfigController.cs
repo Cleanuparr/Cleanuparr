@@ -1,17 +1,11 @@
-using System;
-using System.Linq;
-using System.Threading.Tasks;
-
 using Cleanuparr.Api.Features.Arr.Contracts.Requests;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Arr.Dtos;
 using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 using Cleanuparr.Persistence;
-using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Mapster;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 
 namespace Cleanuparr.Api.Features.Arr.Controllers;
 
@@ -289,7 +283,7 @@ public sealed class ArrConfigController : ControllerBase
         try
         {
             var testInstance = request.ToTestInstance();
-            var client = _arrClientFactory.GetClient(type);
+            var client = _arrClientFactory.GetClient(type, request.Version);
             await client.HealthCheckAsync(testInstance);
 
             return Ok(new { Message = $"Connection to {type} instance successful" });

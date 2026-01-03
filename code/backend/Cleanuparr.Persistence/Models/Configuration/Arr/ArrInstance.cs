@@ -12,6 +12,8 @@ public sealed class ArrInstance
     
     public bool Enabled { get; set; }
     
+    public float Version { get; set; }
+    
     public Guid ArrConfigId { get; set; }
 
     public ArrConfig ArrConfig { get; set; } = null!;

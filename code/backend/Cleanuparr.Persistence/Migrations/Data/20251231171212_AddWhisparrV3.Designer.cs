@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Cleanuparr.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Cleanuparr.Persistence.Migrations.Data
 {
     [DbContext(typeof(DataContext))]
-    partial class DataContextModelSnapshot : ModelSnapshot
+    [Migration("20251231171212_AddWhisparrV3")]
+    partial class AddWhisparrV3
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.6");
@@ -742,48 +745,6 @@ namespace Cleanuparr.Persistence.Migrations.Data
                     b.ToTable("pushover_configs", (string)null);
                 });
 
-            modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.Notification.TelegramConfig", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT")
-                        .HasColumnName("id");
-
-                    b.Property<string>("BotToken")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("TEXT")
-                        .HasColumnName("bot_token");
-
-                    b.Property<string>("ChatId")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("TEXT")
-                        .HasColumnName("chat_id");
-
-                    b.Property<Guid>("NotificationConfigId")
-                        .HasColumnType("TEXT")
-                        .HasColumnName("notification_config_id");
-
-                    b.Property<bool>("SendSilently")
-                        .HasColumnType("INTEGER")
-                        .HasColumnName("send_silently");
-
-                    b.Property<string>("TopicId")
-                        .HasMaxLength(100)
-                        .HasColumnType("TEXT")
-                        .HasColumnName("topic_id");
-
-                    b.HasKey("Id")
-                        .HasName("pk_telegram_configs");
-
-                    b.HasIndex("NotificationConfigId")
-                        .IsUnique()
-                        .HasDatabaseName("ix_telegram_configs_notification_config_id");
-
-                    b.ToTable("telegram_configs", (string)null);
-                });
-
             modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.QueueCleaner.QueueCleanerConfig", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1079,18 +1040,6 @@ namespace Cleanuparr.Persistence.Migrations.Data
                     b.Navigation("NotificationConfig");
                 });
 
-            modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.Notification.TelegramConfig", b =>
-                {
-                    b.HasOne("Cleanuparr.Persistence.Models.Configuration.Notification.NotificationConfig", "NotificationConfig")
-                        .WithOne("TelegramConfiguration")
-                        .HasForeignKey("Cleanuparr.Persistence.Models.Configuration.Notification.TelegramConfig", "NotificationConfigId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_telegram_configs_notification_configs_notification_config_id");
-
-                    b.Navigation("NotificationConfig");
-                });
-
             modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.QueueCleaner.SlowRule", b =>
                 {
                     b.HasOne("Cleanuparr.Persistence.Models.Configuration.QueueCleaner.QueueCleanerConfig", "QueueCleanerConfig")
@@ -1146,8 +1095,6 @@ namespace Cleanuparr.Persistence.Migrations.Data
                     b.Navigation("NtfyConfiguration");
 
                     b.Navigation("PushoverConfiguration");
-
-                    b.Navigation("TelegramConfiguration");
                 });
 
             modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.QueueCleaner.QueueCleanerConfig", b =>

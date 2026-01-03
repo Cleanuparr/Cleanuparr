@@ -18,6 +18,9 @@ public sealed record ArrInstanceRequest
     [Required]
     public required string ApiKey { get; init; }
 
+    [Required]
+    public required float Version { get; init; }
+
     public ArrInstance ToEntity(Guid configId) => new()
     {
         Enabled = Enabled,
@@ -25,6 +28,7 @@ public sealed record ArrInstanceRequest
         Url = new Uri(Url),
         ApiKey = ApiKey,
         ArrConfigId = configId,
+        Version = Version,
     };
 
     public void ApplyTo(ArrInstance instance)
@@ -33,5 +37,6 @@ public sealed record ArrInstanceRequest
         instance.Name = Name;
         instance.Url = new Uri(Url);
         instance.ApiKey = ApiKey;
+        instance.Version = Version;
     }
 }

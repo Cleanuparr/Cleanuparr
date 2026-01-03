@@ -1,5 +1,5 @@
 namespace Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 
-public interface IWhisparrClient : IArrClient
+public interface IWhisparrV2Client : IArrClient
 {
 } 

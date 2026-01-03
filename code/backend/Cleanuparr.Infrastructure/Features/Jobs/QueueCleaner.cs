@@ -71,27 +71,28 @@ public sealed class QueueCleaner : GenericHandler
         var lidarrConfig = ContextProvider.Get<ArrConfig>(nameof(InstanceType.Lidarr));
         var readarrConfig = ContextProvider.Get<ArrConfig>(nameof(InstanceType.Readarr));
         var whisparrConfig = ContextProvider.Get<ArrConfig>(nameof(InstanceType.Whisparr));
-        
-        await ProcessArrConfigAsync(sonarrConfig, InstanceType.Sonarr);
-        await ProcessArrConfigAsync(radarrConfig, InstanceType.Radarr);
-        await ProcessArrConfigAsync(lidarrConfig, InstanceType.Lidarr);
-        await ProcessArrConfigAsync(readarrConfig, InstanceType.Readarr);
-        await ProcessArrConfigAsync(whisparrConfig, InstanceType.Whisparr);
+
+        await ProcessArrConfigAsync(sonarrConfig);
+        await ProcessArrConfigAsync(radarrConfig);
+        await ProcessArrConfigAsync(lidarrConfig);
+        await ProcessArrConfigAsync(readarrConfig);
+        await ProcessArrConfigAsync(whisparrConfig);
     }
 
-    protected override async Task ProcessInstanceAsync(ArrInstance instance, InstanceType instanceType)
+    protected override async Task ProcessInstanceAsync(ArrInstance instance)
     {
         List<string> ignoredDownloads = ContextProvider.Get<GeneralConfig>(nameof(GeneralConfig)).IgnoredDownloads;
         QueueCleanerConfig queueCleanerConfig = ContextProvider.Get<QueueCleanerConfig>();
         ignoredDownloads.AddRange(queueCleanerConfig.IgnoredDownloads);
         
-        using var _ = LogContext.PushProperty(LogProperties.Category, instanceType.ToString());
+        using var _ = LogContext.PushProperty(LogProperties.Category, instance.ArrConfig.Type.ToString());
         
-        IArrClient arrClient = _arrClientFactory.GetClient(instanceType);
+        IArrClient arrClient = _arrClientFactory.GetClient(instance.ArrConfig.Type, instance.Version);
         
         // push to context
         ContextProvider.Set(nameof(ArrInstance) + nameof(ArrInstance.Url), instance.Url);
-        ContextProvider.Set(nameof(InstanceType), instanceType);
+        ContextProvider.Set(nameof(InstanceType), instance.ArrConfig.Type);
+        ContextProvider.Set("version", instance.Version);
 
         IReadOnlyList<IDownloadService> downloadServices = await GetInitializedDownloadServicesAsync();
         bool hasEnabledTorrentClients = ContextProvider
@@ -183,7 +184,7 @@ public sealed class QueueCleaner : GenericHandler
 
                     await PublishQueueItemRemoveRequest(
                         downloadRemovalKey,
-                        instanceType,
+                        instance.ArrConfig.Type,
                         instance,
                         record,
                         group.Count() > 1,
@@ -203,7 +204,7 @@ public sealed class QueueCleaner : GenericHandler
 
                 // Failed import check
                 bool shouldRemoveFromArr = await arrClient
-                    .ShouldRemoveFromQueue(instanceType, record, downloadCheckResult.IsPrivate, instance.ArrConfig.FailedImportMaxStrikes);
+                    .ShouldRemoveFromQueue(instance.ArrConfig.Type, record, downloadCheckResult.IsPrivate, instance.ArrConfig.FailedImportMaxStrikes);
 
                 if (shouldRemoveFromArr)
                 {
@@ -211,7 +212,7 @@ public sealed class QueueCleaner : GenericHandler
                     
                     await PublishQueueItemRemoveRequest(
                         downloadRemovalKey,
-                        instanceType,
+                        instance.ArrConfig.Type,
                         instance,
                         record,
                         group.Count() > 1,

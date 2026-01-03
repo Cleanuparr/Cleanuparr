@@ -42,7 +42,7 @@ public class DownloadHunterTests : IDisposable
         _fakeTimeProvider = new FakeTimeProvider();
 
         _arrClientFactoryMock
-            .Setup(f => f.GetClient(It.IsAny<InstanceType>()))
+            .Setup(f => f.GetClient(It.IsAny<InstanceType>(), It.IsAny<float>()))
             .Returns(_arrClientMock.Object);
 
         _downloadHunter = new Infrastructure.Features.DownloadHunter.DownloadHunter(
@@ -71,7 +71,7 @@ public class DownloadHunterTests : IDisposable
         await _downloadHunter.HuntDownloadsAsync(request);
 
         // Assert
-        _arrClientFactoryMock.Verify(f => f.GetClient(It.IsAny<InstanceType>()), Times.Never);
+        _arrClientFactoryMock.Verify(f => f.GetClient(It.IsAny<InstanceType>(), It.IsAny<float>()), Times.Never);
         _arrClientMock.Verify(c => c.SearchItemsAsync(It.IsAny<ArrInstance>(), It.IsAny<HashSet<SearchItem>>()), Times.Never);
     }
 
@@ -107,7 +107,7 @@ public class DownloadHunterTests : IDisposable
         await task;
 
         // Assert
-        _arrClientFactoryMock.Verify(f => f.GetClient(request.InstanceType), Times.Once);
+        _arrClientFactoryMock.Verify(f => f.GetClient(request.InstanceType, It.IsAny<float>()), Times.Once);
     }
 
     [Fact]
@@ -148,7 +148,7 @@ public class DownloadHunterTests : IDisposable
         await task;
 
         // Assert
-        _arrClientFactoryMock.Verify(f => f.GetClient(instanceType), Times.Once);
+        _arrClientFactoryMock.Verify(f => f.GetClient(instanceType, It.IsAny<float>()), Times.Once);
     }
 
     #endregion
@@ -292,7 +292,8 @@ public class DownloadHunterTests : IDisposable
         {
             Name = "Test Instance",
             Url = new Uri("http://arr.local"),
-            ApiKey = "test-api-key"
+            ApiKey = "test-api-key",
+            Version = 0
         };
     }
 

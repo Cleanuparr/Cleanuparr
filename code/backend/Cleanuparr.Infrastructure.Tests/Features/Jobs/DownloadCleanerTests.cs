@@ -249,7 +249,7 @@ public class DownloadCleanerTests : IDisposable
         // Setup arr client to return queue record with matching download ID
         var mockArrClient = new Mock<IArrClient>();
         _fixture.ArrClientFactory
-            .Setup(x => x.GetClient(It.IsAny<InstanceType>()))
+            .Setup(x => x.GetClient(It.IsAny<InstanceType>(), It.IsAny<float>()))
             .Returns(mockArrClient.Object);
 
         var queueRecord = new QueueRecord
@@ -322,7 +322,7 @@ public class DownloadCleanerTests : IDisposable
 
         var mockArrClient = new Mock<IArrClient>();
         _fixture.ArrClientFactory
-            .Setup(x => x.GetClient(It.IsAny<InstanceType>()))
+            .Setup(x => x.GetClient(It.IsAny<InstanceType>(), It.IsAny<float>()))
             .Returns(mockArrClient.Object);
 
         _fixture.ArrQueueIterator
@@ -340,11 +340,11 @@ public class DownloadCleanerTests : IDisposable
 
         // Assert - both instances should be processed
         _fixture.ArrClientFactory.Verify(
-            x => x.GetClient(InstanceType.Sonarr),
+            x => x.GetClient(InstanceType.Sonarr, It.IsAny<float>()),
             Times.Once
         );
         _fixture.ArrClientFactory.Verify(
-            x => x.GetClient(InstanceType.Radarr),
+            x => x.GetClient(InstanceType.Radarr, It.IsAny<float>()),
             Times.Once
         );
     }
@@ -502,7 +502,7 @@ public class DownloadCleanerTests : IDisposable
 
         var mockArrClient = new Mock<IArrClient>();
         _fixture.ArrClientFactory
-            .Setup(x => x.GetClient(InstanceType.Sonarr))
+            .Setup(x => x.GetClient(InstanceType.Sonarr, It.IsAny<float>()))
             .Returns(mockArrClient.Object);
 
         var queueRecords = new List<QueueRecord>
@@ -878,7 +878,7 @@ public class DownloadCleanerTests : IDisposable
 
         var mockArrClient = new Mock<IArrClient>();
         _fixture.ArrClientFactory
-            .Setup(x => x.GetClient(InstanceType.Sonarr))
+            .Setup(x => x.GetClient(InstanceType.Sonarr, It.IsAny<float>()))
             .Returns(mockArrClient.Object);
 
         // Make the arr queue iterator throw an exception

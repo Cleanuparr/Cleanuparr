@@ -96,11 +96,11 @@ public sealed class DownloadCleaner : GenericHandler
         // wait for the downloads to appear in the arr queue
         await Task.Delay(TimeSpan.FromSeconds(10), _timeProvider);
 
-        await ProcessArrConfigAsync(ContextProvider.Get<ArrConfig>(nameof(InstanceType.Sonarr)), InstanceType.Sonarr, true);
-        await ProcessArrConfigAsync(ContextProvider.Get<ArrConfig>(nameof(InstanceType.Radarr)), InstanceType.Radarr, true);
-        await ProcessArrConfigAsync(ContextProvider.Get<ArrConfig>(nameof(InstanceType.Lidarr)), InstanceType.Lidarr, true);
-        await ProcessArrConfigAsync(ContextProvider.Get<ArrConfig>(nameof(InstanceType.Readarr)), InstanceType.Readarr, true);
-        await ProcessArrConfigAsync(ContextProvider.Get<ArrConfig>(nameof(InstanceType.Whisparr)), InstanceType.Whisparr, true);
+        await ProcessArrConfigAsync(ContextProvider.Get<ArrConfig>(nameof(InstanceType.Sonarr)), true);
+        await ProcessArrConfigAsync(ContextProvider.Get<ArrConfig>(nameof(InstanceType.Radarr)), true);
+        await ProcessArrConfigAsync(ContextProvider.Get<ArrConfig>(nameof(InstanceType.Lidarr)), true);
+        await ProcessArrConfigAsync(ContextProvider.Get<ArrConfig>(nameof(InstanceType.Readarr)), true);
+        await ProcessArrConfigAsync(ContextProvider.Get<ArrConfig>(nameof(InstanceType.Whisparr)), true);
 
         foreach (var pair in downloadServiceToDownloadsMap)
         {
@@ -135,11 +135,11 @@ public sealed class DownloadCleaner : GenericHandler
         }
     }
 
-    protected override async Task ProcessInstanceAsync(ArrInstance instance, InstanceType instanceType)
+    protected override async Task ProcessInstanceAsync(ArrInstance instance)
     {
-        using var _ = LogContext.PushProperty(LogProperties.Category, instanceType.ToString());
+        using var _ = LogContext.PushProperty(LogProperties.Category, instance.ArrConfig.Type.ToString());
         
-        IArrClient arrClient = _arrClientFactory.GetClient(instanceType);
+        IArrClient arrClient = _arrClientFactory.GetClient(instance.ArrConfig.Type, instance.Version);
         
         await _arrArrQueueIterator.Iterate(arrClient, instance, async items =>
         {
