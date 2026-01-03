@@ -5,6 +5,7 @@ using Cleanuparr.Infrastructure.Features.Notifications.Models;
 using Cleanuparr.Infrastructure.Features.Notifications.Notifiarr;
 using Cleanuparr.Infrastructure.Features.Notifications.Ntfy;
 using Cleanuparr.Infrastructure.Features.Notifications.Pushover;
+using Cleanuparr.Infrastructure.Features.Notifications.Telegram;
 using Cleanuparr.Persistence.Models.Configuration.Notification;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
@@ -19,6 +20,7 @@ public class NotificationProviderFactoryTests
     private readonly Mock<INtfyProxy> _ntfyProxyMock;
     private readonly Mock<INotifiarrProxy> _notifiarrProxyMock;
     private readonly Mock<IPushoverProxy> _pushoverProxyMock;
+    private readonly Mock<ITelegramProxy> _telegramProxyMock;
     private readonly IServiceProvider _serviceProvider;
     private readonly NotificationProviderFactory _factory;
 
@@ -29,6 +31,7 @@ public class NotificationProviderFactoryTests
         _ntfyProxyMock = new Mock<INtfyProxy>();
         _notifiarrProxyMock = new Mock<INotifiarrProxy>();
         _pushoverProxyMock = new Mock<IPushoverProxy>();
+        _telegramProxyMock = new Mock<ITelegramProxy>();
 
         var services = new ServiceCollection();
         services.AddSingleton(_appriseProxyMock.Object);
@@ -36,6 +39,7 @@ public class NotificationProviderFactoryTests
         services.AddSingleton(_ntfyProxyMock.Object);
         services.AddSingleton(_notifiarrProxyMock.Object);
         services.AddSingleton(_pushoverProxyMock.Object);
+        services.AddSingleton(_telegramProxyMock.Object);
 
         _serviceProvider = services.BuildServiceProvider();
         _factory = new NotificationProviderFactory(_serviceProvider);
@@ -162,6 +166,35 @@ public class NotificationProviderFactoryTests
     }
 
     [Fact]
+    public void CreateProvider_TelegramType_CreatesTelegramProvider()
+    {
+        // Arrange
+        var config = new NotificationProviderDto
+        {
+            Id = Guid.NewGuid(),
+            Name = "TestTelegram",
+            Type = NotificationProviderType.Telegram,
+            IsEnabled = true,
+            Configuration = new TelegramConfig
+            {
+                Id = Guid.NewGuid(),
+                BotToken = "test-bot-token",
+                ChatId = "123456789",
+                SendSilently = false
+            }
+        };
+
+        // Act
+        var provider = _factory.CreateProvider(config);
+
+        // Assert
+        Assert.NotNull(provider);
+        Assert.IsType<TelegramProvider>(provider);
+        Assert.Equal("TestTelegram", provider.Name);
+        Assert.Equal(NotificationProviderType.Telegram, provider.Type);
+    }
+
+    [Fact]
     public void CreateProvider_UnsupportedType_ThrowsNotSupportedException()
     {
         // Arrange
@@ -241,7 +274,8 @@ public class NotificationProviderFactoryTests
             (Type: NotificationProviderType.Apprise, Config: (object)new AppriseConfig { Id = Guid.NewGuid(), Url = "http://test.com", Key = "key" }),
             (Type: NotificationProviderType.Ntfy, Config: (object)new NtfyConfig { Id = Guid.NewGuid(), ServerUrl = "http://test.com", Topics = new List<string> { "t" }, AuthenticationType = NtfyAuthenticationType.None, Priority = NtfyPriority.Default }),
             (Type: NotificationProviderType.Notifiarr, Config: (object)new NotifiarrConfig { Id = Guid.NewGuid(), ApiKey = "1234567890", ChannelId = "12345" }),
-            (Type: NotificationProviderType.Pushover, Config: (object)new PushoverConfig { Id = Guid.NewGuid(), ApiToken = "token", UserKey = "user", Devices = new List<string>(), Priority = PushoverPriority.Normal, Sound = "", Tags = new List<string>() })
+            (Type: NotificationProviderType.Pushover, Config: (object)new PushoverConfig { Id = Guid.NewGuid(), ApiToken = "token", UserKey = "user", Devices = new List<string>(), Priority = PushoverPriority.Normal, Sound = "", Tags = new List<string>() }),
+            (Type: NotificationProviderType.Telegram, Config: (object)new TelegramConfig { Id = Guid.NewGuid(), BotToken = "token", ChatId = "123456789", SendSilently = false })
         };
 
         foreach (var (type, configObj) in configs)

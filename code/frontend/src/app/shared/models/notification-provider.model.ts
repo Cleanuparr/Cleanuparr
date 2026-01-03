@@ -63,3 +63,10 @@ export interface AppriseConfiguration {
 export interface TestNotificationResult {
   message: string;
 }
+
+export interface TelegramConfiguration {
+  botToken: string;
+  chatId: string;
+  topicId?: string;
+  sendSilently: boolean;
+}

@@ -1,0 +1,78 @@
+---
+sidebar_position: 5
+---
+
+import {
+  ConfigSection,
+  ElementNavigator,
+  SectionTitle,
+  styles
+} from '@site/src/components/documentation';
+
+# Telegram
+
+Telegram can deliver notifications to users, groups, or supergroups via bots.
+
+<ElementNavigator />
+
+<div className={styles.documentationPage}>
+
+<div className={styles.section}>
+
+<SectionTitle icon="🤖">Configuration</SectionTitle>
+
+<p className={styles.sectionDescription}>
+  Configure a Telegram bot to send notifications to a chat (user, group, or supergroup). Chat IDs can be negative for groups/supergroups; topic IDs are for threads in supergroups.
+</p>
+
+<ConfigSection
+  title="Bot Token"
+  icon="🔑"
+  id="bot-token"
+>
+
+Create a bot with [@BotFather](https://t.me/BotFather) and paste the generated token. Tokens look like `123456789:ABC-DEF1234ghIkl-zyx57W2v1u123ew11`.
+<br/>
+Reference: https://core.telegram.org/bots#how-do-i-create-a-bot
+
+</ConfigSection>
+
+<ConfigSection
+  title="Chat ID"
+  icon="💬"
+  id="chat-id"
+>
+
+The destination chat. Examples:
+- Direct chat with your bot: positive integer (e.g., `123456789`)
+- Group/supergroup: negative integer starting with `-100` (e.g., `-100123456789`)
+
+One way to find the chat id: https://stackoverflow.com/a/75954034
+
+</ConfigSection>
+
+<ConfigSection
+  title="Topic ID (optional)"
+  icon="🧵"
+  id="topic-id"
+>
+
+For supergroups with topics enabled, specify the thread/topic ID to target a specific thread. Leave empty to post to the main chat.
+<br/>
+One way to get the topic id: https://stackoverflow.com/a/75178418
+
+</ConfigSection>
+
+<ConfigSection
+  title="Send Silently"
+  icon="🔕"
+  id="send-silently"
+>
+
+When enabled, Telegram delivers the message without sound.
+
+</ConfigSection>
+
+</div>
+
+</div>

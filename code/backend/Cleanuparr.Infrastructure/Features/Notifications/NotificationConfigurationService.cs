@@ -87,6 +87,7 @@ public sealed class NotificationConfigurationService : INotificationConfiguratio
                 .Include(p => p.AppriseConfiguration)
                 .Include(p => p.NtfyConfiguration)
                 .Include(p => p.PushoverConfiguration)
+                .Include(p => p.TelegramConfiguration)
                 .AsNoTracking()
                 .ToListAsync();
 
@@ -137,6 +138,7 @@ public sealed class NotificationConfigurationService : INotificationConfiguratio
             NotificationProviderType.Apprise => config.AppriseConfiguration,
             NotificationProviderType.Ntfy => config.NtfyConfiguration,
             NotificationProviderType.Pushover => config.PushoverConfiguration,
+            NotificationProviderType.Telegram => config.TelegramConfiguration,
             _ => throw new ArgumentOutOfRangeException(nameof(config), $"Config type for provider type {config.Type.ToString()} is not registered")
         };
 

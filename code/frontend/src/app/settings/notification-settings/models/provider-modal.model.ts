@@ -65,6 +65,13 @@ export interface PushoverFormData extends BaseProviderFormData {
   tags: string[];
 }
 
+export interface TelegramFormData extends BaseProviderFormData {
+  botToken: string;
+  chatId: string;
+  topicId: string;
+  sendSilently: boolean;
+}
+
 // Events for modal communication
 export interface ProviderModalEvents {
   save: (data: any) => void;

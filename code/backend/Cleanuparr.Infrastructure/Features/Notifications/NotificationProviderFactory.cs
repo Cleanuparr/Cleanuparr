@@ -1,9 +1,11 @@
+using Cleanuparr.Domain.Entities;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Notifications.Apprise;
 using Cleanuparr.Infrastructure.Features.Notifications.Models;
 using Cleanuparr.Infrastructure.Features.Notifications.Notifiarr;
 using Cleanuparr.Infrastructure.Features.Notifications.Ntfy;
 using Cleanuparr.Infrastructure.Features.Notifications.Pushover;
+using Cleanuparr.Infrastructure.Features.Notifications.Telegram;
 using Cleanuparr.Persistence.Models.Configuration.Notification;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -26,6 +28,7 @@ public sealed class NotificationProviderFactory : INotificationProviderFactory
             NotificationProviderType.Apprise => CreateAppriseProvider(config),
             NotificationProviderType.Ntfy => CreateNtfyProvider(config),
             NotificationProviderType.Pushover => CreatePushoverProvider(config),
+            NotificationProviderType.Telegram => CreateTelegramProvider(config),
             _ => throw new NotSupportedException($"Provider type {config.Type} is not supported")
         };
     }
@@ -61,5 +64,13 @@ public sealed class NotificationProviderFactory : INotificationProviderFactory
         var proxy = _serviceProvider.GetRequiredService<IPushoverProxy>();
 
         return new PushoverProvider(config.Name, config.Type, pushoverConfig, proxy);
+    }
+
+    private INotificationProvider CreateTelegramProvider(NotificationProviderDto config)
+    {
+        var telegramConfig = (TelegramConfig)config.Configuration;
+        var proxy = _serviceProvider.GetRequiredService<ITelegramProxy>();
+
+        return new TelegramProvider(config.Name, config.Type, telegramConfig, proxy);
     }
 }

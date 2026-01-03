@@ -198,6 +198,17 @@
   (test)="onPushoverTest($event)"
 ></app-pushover-provider>
 
+<!-- Telegram Provider Modal -->
+<app-telegram-provider
+  [visible]="showTelegramModal"
+  [editingProvider]="editingProvider"
+  [saving]="saving()"
+  [testing]="testing()"
+  (save)="onTelegramSave($event)"
+  (cancel)="onProviderCancel()"
+  (test)="onTelegramTest($event)"
+></app-telegram-provider>
+
 <!-- Confirmation Dialog -->
 <p-confirmDialog></p-confirmDialog>
 

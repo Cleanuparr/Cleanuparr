@@ -363,6 +363,7 @@ public class NotificationConfigurationServiceTests : IDisposable
     [InlineData(NotificationProviderType.Apprise)]
     [InlineData(NotificationProviderType.Ntfy)]
     [InlineData(NotificationProviderType.Pushover)]
+    [InlineData(NotificationProviderType.Telegram)]
     public async Task GetActiveProvidersAsync_MapsProviderTypeCorrectly(NotificationProviderType providerType)
     {
         // Arrange
@@ -386,6 +387,7 @@ public class NotificationConfigurationServiceTests : IDisposable
     [InlineData(NotificationProviderType.Apprise)]
     [InlineData(NotificationProviderType.Ntfy)]
     [InlineData(NotificationProviderType.Pushover)]
+    [InlineData(NotificationProviderType.Telegram)]
     public async Task GetProvidersForEventAsync_ReturnsProviderForAllTypes(NotificationProviderType providerType)
     {
         // Arrange
@@ -417,6 +419,7 @@ public class NotificationConfigurationServiceTests : IDisposable
             NotificationProviderType.Apprise => CreateAppriseConfig(name, isEnabled),
             NotificationProviderType.Ntfy => CreateNtfyConfig(name, isEnabled),
             NotificationProviderType.Pushover => CreatePushoverConfig(name, isEnabled),
+            NotificationProviderType.Telegram => CreateTelegramConfig(name, isEnabled),
             _ => throw new ArgumentOutOfRangeException(nameof(providerType))
         };
     }
@@ -517,6 +520,31 @@ public class NotificationConfigurationServiceTests : IDisposable
                 Id = Guid.NewGuid(),
                 ApiToken = "test_api_token_1234567890abcd",
                 UserKey = "test_user_key_1234567890abcde"
+            }
+        };
+    }
+    
+    private static NotificationConfig CreateTelegramConfig(string name, bool isEnabled)
+    {
+        return new NotificationConfig
+        {
+            Id = Guid.NewGuid(),
+            Name = name,
+            Type = NotificationProviderType.Telegram,
+            IsEnabled = isEnabled,
+            OnStalledStrike = true,
+            OnFailedImportStrike = true,
+            OnSlowStrike = true,
+            OnQueueItemDeleted = true,
+            OnDownloadCleaned = true,
+            OnCategoryChanged = true,
+            TelegramConfiguration = new TelegramConfig()
+            {
+                Id = Guid.NewGuid(),
+                BotToken = "test_bot_token_1234567890abcd",
+                ChatId =  "1234567890",
+                TopicId = "-1234567890",
+                SendSilently = true
             }
         };
     }

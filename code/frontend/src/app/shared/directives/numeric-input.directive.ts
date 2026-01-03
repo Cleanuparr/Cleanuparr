@@ -1,19 +1,21 @@
-import { Directive, HostListener } from '@angular/core';
+import { booleanAttribute, Directive, HostListener, Input } from '@angular/core';
 import { NgControl } from '@angular/forms';
 
 /**
  * Directive that restricts input to numeric characters only.
  * Useful for fields that need to accept very long numeric values like Discord channel IDs
  * that exceed JavaScript's safe integer limits.
- * 
- * Usage: <input type="text" numericInput formControlName="channelId" />
+ *
+ * Usage:
+ *   <input type="text" numericInput formControlName="channelId" />
+ *   <input type="text" numericInput signed formControlName="chatId" />
  */
 @Directive({
   selector: '[numericInput]',
   standalone: true
 })
 export class NumericInputDirective {
-  private regex = /^\d*$/; // Only allow positive integers (no decimals or negative numbers)
+  @Input({ transform: booleanAttribute }) signed = false;
 
   constructor(private ngControl: NgControl) {}
 
@@ -21,65 +23,84 @@ export class NumericInputDirective {
   onInput(event: Event): void {
     const input = event.target as HTMLInputElement;
     const originalValue = input.value;
+    const sanitized = this.sanitize(originalValue);
 
-    if (!this.regex.test(originalValue)) {
-      // Strip all non-numeric characters
-      const sanitized = originalValue.replace(/[^\d]/g, '');
-      
-      // Update the form control value
-      this.ngControl.control?.setValue(sanitized);
-      
-      // Update the input display value
+    if (sanitized !== originalValue) {
       input.value = sanitized;
+      this.ngControl.control?.setValue(sanitized);
     }
   }
 
   @HostListener('keydown', ['$event'])
   onKeyDown(event: KeyboardEvent): void {
-    // Allow: backspace, delete, tab, escape, enter
-    if ([8, 9, 27, 13, 46].indexOf(event.keyCode) !== -1 ||
-        // Allow: Ctrl+A, Ctrl+C, Ctrl+V, Ctrl+X
-        (event.keyCode === 65 && event.ctrlKey === true) ||
-        (event.keyCode === 67 && event.ctrlKey === true) ||
-        (event.keyCode === 86 && event.ctrlKey === true) ||
-        (event.keyCode === 88 && event.ctrlKey === true) ||
-        // Allow: home, end, left, right
-        (event.keyCode >= 35 && event.keyCode <= 39)) {
+    const allowedKeys = ['Backspace', 'Delete', 'Tab', 'Escape', 'Enter', 'Home', 'End', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
+
+    // Allow navigation and control keys
+    if (allowedKeys.includes(event.key)) {
       return;
     }
-    
-    // Ensure that it is a number and stop the keypress
-    if ((event.shiftKey || (event.keyCode < 48 || event.keyCode > 57)) && (event.keyCode < 96 || event.keyCode > 105)) {
-      event.preventDefault();
+
+    // Allow: Ctrl/Cmd+A,C,V,X
+    if ((event.ctrlKey || event.metaKey) && ['a', 'c', 'v', 'x'].includes(event.key.toLowerCase())) {
+      return;
     }
+
+    // Allow minus only at the start and only if not already present (when signed mode is enabled)
+    if (this.signed && event.key === '-') {
+      const input = event.target as HTMLInputElement;
+      const hasMinus = input.value.includes('-');
+      const cursorAtStart = (input.selectionStart ?? 0) === 0;
+      if (!hasMinus && cursorAtStart) {
+        return;
+      }
+      event.preventDefault();
+      return;
+    }
+
+    // Allow digits (0-9)
+    if (/^[0-9]$/.test(event.key)) {
+      return;
+    }
+
+    // Block all other keys
+    event.preventDefault();
   }
 
   @HostListener('paste', ['$event'])
   onPaste(event: ClipboardEvent): void {
     const paste = event.clipboardData?.getData('text') || '';
-    const sanitized = paste.replace(/[^\d]/g, '');
-    
-    // If the paste content has non-numeric characters, prevent default and handle manually
+    const sanitized = this.sanitize(paste);
+
+    // If the paste content has invalid characters, prevent default and handle manually
     if (sanitized !== paste) {
       event.preventDefault();
-      
+
       const input = event.target as HTMLInputElement;
       const currentValue = input.value;
-      const start = input.selectionStart || 0;
-      const end = input.selectionEnd || 0;
-      
+      const start = input.selectionStart ?? 0;
+      const end = input.selectionEnd ?? 0;
+
       const newValue = currentValue.substring(0, start) + sanitized + currentValue.substring(end);
-      
+
       // Update both the input value and form control
       input.value = newValue;
       this.ngControl.control?.setValue(newValue);
-      
+
       // Set cursor position after pasted content
-      setTimeout(() => {
-        input.setSelectionRange(start + sanitized.length, start + sanitized.length);
-      });
+      const cursor = start + sanitized.length;
+      setTimeout(() => input.setSelectionRange(cursor, cursor));
     }
-    // If paste content is all numeric, allow normal paste behavior
-    // The input event will handle form control synchronization
+  }
+
+  private sanitize(value: string): string {
+    if (!value) return '';
+
+    if (this.signed) {
+      const hasMinus = value.startsWith('-');
+      const digits = value.replace(/\D/g, '');
+      return hasMinus ? `-${digits}` : digits;
+    }
+
+    return value.replace(/\D/g, '');
   }
 }
