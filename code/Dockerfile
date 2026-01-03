@@ -45,7 +45,7 @@ RUN --mount=type=cache,target=/root/.nuget/packages,sharing=locked \
 FROM mcr.microsoft.com/dotnet/aspnet:10.0
 
 # Install required packages for user management, timezone support, and Python for Apprise CLI
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     tzdata \
     gosu \
