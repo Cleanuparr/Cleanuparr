@@ -13,8 +13,10 @@ public sealed record ApprisePayload
     public string Type { get; init; } = NotificationType.Info.ToString().ToLowerInvariant();
 
     public string Format { get; init; } = FormatType.Text.ToString().ToLowerInvariant();
-    
+
     public string? Tags { get; init; }
+
+    public string? ImageUrl { get; init; }
 }
 
 public enum NotificationType

@@ -29,6 +29,12 @@ public sealed class AppriseCliProxy : IAppriseCliProxy
         }
 
         args.AddRange(["--body", payload.Body, "--notification-type", payload.Type]);
+
+        if (!string.IsNullOrEmpty(payload.ImageUrl))
+        {
+            args.AddRange(["--attach", payload.ImageUrl]);
+        }
+
         args.AddRange(serviceUrls);
 
         await ExecuteAppriseAsync(args);
