@@ -8,6 +8,7 @@ public class UnixHardLinkFileService : IUnixHardLinkFileService, IDisposable
 {
     private readonly ILogger<UnixHardLinkFileService> _logger;
     private readonly ConcurrentDictionary<ulong, (int Count, List<string> Files)> _inodeCounts = new();
+    private readonly HashSet<string> _processedPaths = new();
     
     public UnixHardLinkFileService(ILogger<UnixHardLinkFileService> logger)
     {
@@ -76,6 +77,12 @@ public class UnixHardLinkFileService : IUnixHardLinkFileService, IDisposable
     {
         try
         {
+            if (!_processedPaths.Add(path))
+            {
+                _logger.LogDebug("skipping already processed path: {path}", path);
+                return;
+            }
+
             if (Syscall.stat(path, out Stat stat) == 0)
             {
                 _inodeCounts.AddOrUpdate(
@@ -98,5 +105,6 @@ public class UnixHardLinkFileService : IUnixHardLinkFileService, IDisposable
     public void Dispose()
     {
         _inodeCounts.Clear();
+        _processedPaths.Clear();
     }
 }

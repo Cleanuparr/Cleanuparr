@@ -9,6 +9,7 @@ public class WindowsHardLinkFileService : IWindowsHardLinkFileService, IDisposab
 {
     private readonly ILogger<WindowsHardLinkFileService> _logger;
     private readonly ConcurrentDictionary<ulong, (int Count, List<string> Files)> _fileIndexCounts = new();
+    private readonly HashSet<string> _processedPaths = new();
 
     public WindowsHardLinkFileService(ILogger<WindowsHardLinkFileService> logger)
     {
@@ -81,6 +82,12 @@ public class WindowsHardLinkFileService : IWindowsHardLinkFileService, IDisposab
     {
         try
         {
+            if (!_processedPaths.Add(path))
+            {
+                _logger.LogDebug("skipping already processed path: {path}", path);
+                return;
+            }
+
             using SafeFileHandle fileStream = File.OpenHandle(path);
             if (GetFileInformationByHandle(fileStream, out var file))
             {
@@ -124,5 +131,6 @@ public class WindowsHardLinkFileService : IWindowsHardLinkFileService, IDisposab
     public void Dispose()
     {
         _fileIndexCounts.Clear();
+        _processedPaths.Clear();
     }
 }
