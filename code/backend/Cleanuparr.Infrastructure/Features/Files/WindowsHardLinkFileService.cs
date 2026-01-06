@@ -8,7 +8,7 @@ namespace Cleanuparr.Infrastructure.Features.Files;
 public class WindowsHardLinkFileService : IWindowsHardLinkFileService, IDisposable
 {
     private readonly ILogger<WindowsHardLinkFileService> _logger;
-    private readonly ConcurrentDictionary<ulong, int> _fileIndexCounts = new();
+    private readonly ConcurrentDictionary<ulong, (int Count, List<string> Files)> _fileIndexCounts = new();
 
     public WindowsHardLinkFileService(ILogger<WindowsHardLinkFileService> logger)
     {
@@ -38,11 +38,19 @@ public class WindowsHardLinkFileService : IWindowsHardLinkFileService, IDisposab
             ulong fileIndex = ((ulong)file.FileIndexHigh << 32) | file.FileIndexLow;
             
             // get the number of hardlinks in the same root directory
-            int linksInIgnoredDir = _fileIndexCounts.TryGetValue(fileIndex, out int count)
-                ? count
-                : 1; // default to 1 if not found
+            int linksInIgnoredDir;
+            if (_fileIndexCounts.TryGetValue(fileIndex, out var indexData))
+            {
+                linksInIgnoredDir = indexData.Count;
+                _logger.LogDebug("stat file | hardlinks: {links} | ignored: {ignored} | {file}", file.NumberOfLinks, linksInIgnoredDir, filePath);
+                _logger.LogDebug("linked files in ignored directory: {linkedFiles}", string.Join(", ", indexData.Files));
+            }
+            else
+            {
+                linksInIgnoredDir = 1; // default to 1 if not found
+                _logger.LogDebug("stat file | hardlinks: {links} | ignored: {ignored} | {file}", file.NumberOfLinks, linksInIgnoredDir, filePath);
+            }
 
-            _logger.LogDebug("stat file | hardlinks: {links} | ignored: {ignored} | {file}", file.NumberOfLinks, linksInIgnoredDir, filePath);
             return file.NumberOfLinks - linksInIgnoredDir;
         }
         catch (Exception exception)
@@ -77,7 +85,14 @@ public class WindowsHardLinkFileService : IWindowsHardLinkFileService, IDisposab
             if (GetFileInformationByHandle(fileStream, out var file))
             {
                 ulong fileIndex = ((ulong)file.FileIndexHigh << 32) | file.FileIndexLow;
-                _fileIndexCounts.AddOrUpdate(fileIndex, 1, (_, count) => count + 1);
+                _fileIndexCounts.AddOrUpdate(
+                    fileIndex,
+                    _ => (1, new List<string> { path }),
+                    (_, existing) =>
+                    {
+                        existing.Files.Add(path);
+                        return (existing.Count + 1, existing.Files);
+                    });
             }
         }
         catch (Exception ex)
