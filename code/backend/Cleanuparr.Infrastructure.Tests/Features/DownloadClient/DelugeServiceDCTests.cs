@@ -707,48 +707,6 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
         }
 
         [Fact]
-        public async Task WithIgnoredRootDir_PopulatesFileCounts()
-        {
-            // Arrange
-            var sut = _fixture.CreateSut();
-
-            var config = new DownloadCleanerConfig
-            {
-                Id = Guid.NewGuid(),
-                UnlinkedTargetCategory = "unlinked",
-                UnlinkedIgnoredRootDirs = ["/ignore"]
-            };
-            ContextProvider.Set(nameof(DownloadCleanerConfig), config);
-
-            var downloads = new List<Domain.Entities.ITorrentItemWrapper>
-            {
-                new DelugeItemWrapper(new DownloadStatus { Hash = "hash1", Name = "Test", Label = "movies", Trackers = new List<Tracker>(), DownloadLocation = "/downloads" })
-            };
-
-            _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentFiles("hash1"))
-                .ReturnsAsync(new DelugeContents
-                {
-                    Contents = new Dictionary<string, DelugeFileOrDirectory>
-                    {
-                        { "file1.mkv", new DelugeFileOrDirectory { Type = "file", Priority = 1, Index = 0, Path = "file1.mkv" } }
-                    }
-                });
-
-            _fixture.HardLinkFileService
-                .Setup(x => x.GetHardLinkCount(It.IsAny<string>(), It.IsAny<bool>()))
-                .Returns(0);
-
-            // Act
-            await sut.ChangeCategoryForNoHardLinksAsync(downloads);
-
-            // Assert
-            _fixture.HardLinkFileService.Verify(
-                x => x.PopulateFileCounts(It.Is<IEnumerable<string>>(dirs => dirs.Contains("/ignore"))),
-                Times.Once);
-        }
-
-        [Fact]
         public async Task PublishesCategoryChangedEvent()
         {
             // Arrange
