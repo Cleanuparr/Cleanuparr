@@ -5,6 +5,7 @@ using Cleanuparr.Infrastructure.Events.Interfaces;
 using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
+using Cleanuparr.Infrastructure.Features.Files;
 using Cleanuparr.Infrastructure.Helpers;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
@@ -21,6 +22,7 @@ public sealed class DownloadCleaner : GenericHandler
 {
     private readonly HashSet<string> _downloadsProcessedByArrs = [];
     private readonly TimeProvider _timeProvider;
+    private readonly IHardLinkFileService _hardLinkFileService;
 
     public DownloadCleaner(
         ILogger<DownloadCleaner> logger,
@@ -31,13 +33,15 @@ public sealed class DownloadCleaner : GenericHandler
         IArrQueueIterator arrArrQueueIterator,
         IDownloadServiceFactory downloadServiceFactory,
         IEventPublisher eventPublisher,
-        TimeProvider timeProvider
+        TimeProvider timeProvider,
+        IHardLinkFileService hardLinkFileService
     ) : base(
         logger, dataContext, cache, messageBus,
         arrClientFactory, arrArrQueueIterator, downloadServiceFactory, eventPublisher
     )
     {
         _timeProvider = timeProvider;
+        _hardLinkFileService = hardLinkFileService;
     }
     
     protected override async Task ExecuteInternalAsync()
@@ -161,7 +165,12 @@ public sealed class DownloadCleaner : GenericHandler
         {
             return;
         }
-        
+
+        if (config.UnlinkedIgnoredRootDirs.Count > 0)
+        {
+            _hardLinkFileService.PopulateFileCounts(config.UnlinkedIgnoredRootDirs);
+        }
+
         Dictionary<IDownloadService, List<ITorrentItemWrapper>> downloadServiceWithDownloads = [];
         
         foreach (var (downloadService, clientDownloads) in downloadServiceToDownloadsMap)

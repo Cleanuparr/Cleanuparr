@@ -59,11 +59,6 @@ public partial class TransmissionService
 
         var downloadCleanerConfig = ContextProvider.Get<DownloadCleanerConfig>(nameof(DownloadCleanerConfig));
 
-        if (downloadCleanerConfig.UnlinkedIgnoredRootDirs.Count > 0)
-        {
-            _hardLinkFileService.PopulateFileCounts(downloadCleanerConfig.UnlinkedIgnoredRootDirs);
-        }
-
         foreach (TransmissionItemWrapper torrent in downloads.Cast<TransmissionItemWrapper>())
         {
             if (string.IsNullOrEmpty(torrent.Hash) || string.IsNullOrEmpty(torrent.Name) || string.IsNullOrEmpty(torrent.Info.DownloadDir))
