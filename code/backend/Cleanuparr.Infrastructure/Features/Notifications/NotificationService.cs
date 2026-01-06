@@ -67,7 +67,8 @@ public sealed class NotificationService
             {
                 ["Test time"] = DateTime.UtcNow.ToString("o"),
                 ["Provider type"] = providerConfig.Type.ToString(),
-            }
+            },
+            Image = new Uri("https://raw.githubusercontent.com/Cleanuparr/Cleanuparr/refs/heads/main/Logo/256.png")
         };
 
         try
