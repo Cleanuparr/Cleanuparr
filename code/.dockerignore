@@ -39,3 +39,49 @@ backend/**/Tests/
 # Development files
 docker-compose*.yml
 test/ 
+
+# ================================
+# Node and build output
+# ================================
+node_modules
+dist
+out-tsc
+.angular
+.cache
+.tmp
+
+# ================================
+# Testing & Coverage
+# ================================
+coverage
+jest
+cypress
+cypress/screenshots
+cypress/videos
+reports
+playwright-report
+.vite
+.vitepress
+
+# ================================
+# Environment & log files
+# ================================
+*.env*
+!*.env.production
+*.log
+*.tsbuildinfo
+
+# ================================
+# Docker & local orchestration
+# ================================
+Dockerfile
+Dockerfile.*
+.dockerignore
+docker-compose.yml
+docker-compose*.yml
+
+# ================================
+# Miscellaneous
+# ================================
+*.bak
+*.old

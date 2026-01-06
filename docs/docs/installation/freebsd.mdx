@@ -39,16 +39,16 @@ Download and configure the .NET SDK for FreeBSD:
 cd ~
 
 # Set up variables for cleaner commands
-DOTNET_VERSION="v9.0.104-amd64-freebsd-14"
+DOTNET_VERSION="v10.0.101-amd64-freebsd-14"
 DOTNET_BASE_URL="https://github.com/Thefrank/dotnet-freebsd-crossbuild/releases/download"
 
 # Download .NET SDK
-wget -q "${DOTNET_BASE_URL}/${DOTNET_VERSION}/dotnet-sdk-9.0.104-freebsd-x64.tar.gz"
+wget -q "${DOTNET_BASE_URL}/${DOTNET_VERSION}/dotnet-sdk-10.0.101-freebsd-x64.tar.gz"
 
 # Set up .NET environment
 export DOTNET_ROOT=$(pwd)/.dotnet
 mkdir -p "$DOTNET_ROOT"
-tar zxf dotnet-sdk-9.0.104-freebsd-x64.tar.gz -C "$DOTNET_ROOT"
+tar zxf dotnet-sdk-10.0.101-freebsd-x64.tar.gz -C "$DOTNET_ROOT"
 export PATH=$PATH:$DOTNET_ROOT:$DOTNET_ROOT/tools
 ```
   </Step>
@@ -70,7 +70,7 @@ mkdir -p /tmp/nuget
 
 # Set up variables for package URLs
 NUGET_BASE_URL="${DOTNET_BASE_URL}/${DOTNET_VERSION}"
-RUNTIME_VERSION="9.0.3"
+RUNTIME_VERSION="10.0.1"
 
 # Download required packages
 wget -q -P /tmp/nuget/ \
