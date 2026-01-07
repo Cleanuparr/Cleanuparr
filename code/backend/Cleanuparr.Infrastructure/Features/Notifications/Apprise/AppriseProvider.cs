@@ -53,6 +53,7 @@ public sealed class AppriseProvider : NotificationProviderBase<AppriseConfig>
             Body = body,
             Type = notificationType.ToString().ToLowerInvariant(),
             Tags = Config.Tags,
+            ImageUrl = context.Image?.ToString()
         };
     }
 
