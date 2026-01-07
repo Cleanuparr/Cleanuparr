@@ -65,11 +65,6 @@ public partial class DelugeService
 
         var downloadCleanerConfig = ContextProvider.Get<DownloadCleanerConfig>(nameof(DownloadCleanerConfig));
 
-        if (downloadCleanerConfig.UnlinkedIgnoredRootDirs.Count > 0)
-        {
-            _hardLinkFileService.PopulateFileCounts(downloadCleanerConfig.UnlinkedIgnoredRootDirs);
-        }
-
         foreach (DelugeItemWrapper torrent in downloads.Cast<DelugeItemWrapper>())
         {
             if (string.IsNullOrEmpty(torrent.Hash) || string.IsNullOrEmpty(torrent.Name) || string.IsNullOrEmpty(torrent.Category))

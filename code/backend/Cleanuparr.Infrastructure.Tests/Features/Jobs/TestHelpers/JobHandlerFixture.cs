@@ -2,6 +2,7 @@ using Cleanuparr.Infrastructure.Events.Interfaces;
 using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
+using Cleanuparr.Infrastructure.Features.Files;
 using Cleanuparr.Infrastructure.Features.Jobs;
 using Cleanuparr.Infrastructure.Features.MalwareBlocker;
 using Cleanuparr.Persistence;
@@ -26,6 +27,7 @@ public class JobHandlerFixture : IDisposable
     public Mock<IDownloadServiceFactory> DownloadServiceFactory { get; }
     public Mock<IEventPublisher> EventPublisher { get; }
     public Mock<IBlocklistProvider> BlocklistProvider { get; }
+    public Mock<IHardLinkFileService> HardLinkFileService { get; }
     public FakeTimeProvider TimeProvider { get; private set; }
 
     public JobHandlerFixture()
@@ -38,6 +40,7 @@ public class JobHandlerFixture : IDisposable
         DownloadServiceFactory = new Mock<IDownloadServiceFactory>();
         EventPublisher = new Mock<IEventPublisher>();
         BlocklistProvider = new Mock<IBlocklistProvider>();
+        HardLinkFileService = new Mock<IHardLinkFileService>();
         TimeProvider = new FakeTimeProvider();
 
         // Setup default behaviors
@@ -115,6 +118,7 @@ public class JobHandlerFixture : IDisposable
         DownloadServiceFactory.Reset();
         EventPublisher.Reset();
         BlocklistProvider.Reset();
+        HardLinkFileService.Reset();
         Cache.Clear();
         TimeProvider = new FakeTimeProvider();
 

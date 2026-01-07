@@ -890,46 +890,6 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
         }
 
         [Fact]
-        public async Task WithIgnoredRootDir_PopulatesFileCounts()
-        {
-            // Arrange
-            var sut = _fixture.CreateSut();
-
-            var config = new DownloadCleanerConfig
-            {
-                Id = Guid.NewGuid(),
-                UnlinkedUseTag = false,
-                UnlinkedTargetCategory = "unlinked",
-                UnlinkedIgnoredRootDirs = ["/ignore"]
-            };
-            ContextProvider.Set(nameof(DownloadCleanerConfig), config);
-
-            var downloads = new List<Domain.Entities.ITorrentItemWrapper>
-            {
-                new QBitItemWrapper(new TorrentInfo { Hash = "hash1", Name = "Test", Category = "movies", SavePath = "/downloads" }, Array.Empty<TorrentTracker>(), false)
-            };
-
-            _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentContentsAsync("hash1"))
-                .ReturnsAsync(new[]
-                {
-                    new TorrentContent { Index = 0, Name = "file1.mkv", Priority = TorrentContentPriority.Normal }
-                });
-
-            _fixture.HardLinkFileService
-                .Setup(x => x.GetHardLinkCount(It.IsAny<string>(), It.IsAny<bool>()))
-                .Returns(0);
-
-            // Act
-            await sut.ChangeCategoryForNoHardLinksAsync(downloads);
-
-            // Assert
-            _fixture.HardLinkFileService.Verify(
-                x => x.PopulateFileCounts(It.Is<IEnumerable<string>>(dirs => dirs.Contains("/ignore"))),
-                Times.Once);
-        }
-
-        [Fact]
         public async Task FileWithNullIndex_SkipsTorrent()
         {
             // Arrange

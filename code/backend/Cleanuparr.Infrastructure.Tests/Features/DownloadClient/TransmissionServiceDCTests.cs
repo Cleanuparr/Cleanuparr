@@ -778,46 +778,6 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
         }
 
         [Fact]
-        public async Task WithIgnoredRootDir_PopulatesFileCounts()
-        {
-            // Arrange
-            var sut = _fixture.CreateSut();
-
-            var config = new DownloadCleanerConfig
-            {
-                Id = Guid.NewGuid(),
-                UnlinkedTargetCategory = "unlinked",
-                UnlinkedIgnoredRootDirs = ["/ignore"]
-            };
-            ContextProvider.Set(nameof(DownloadCleanerConfig), config);
-
-            var downloads = new List<Domain.Entities.ITorrentItemWrapper>
-            {
-                new TransmissionItemWrapper(new TorrentInfo
-                {
-                    Id = 123,
-                    HashString = "hash1",
-                    Name = "Test",
-                    DownloadDir = "/downloads/movies",
-                    Files = new[] { new TransmissionTorrentFiles { Name = "file1.mkv" } },
-                    FileStats = new[] { new TransmissionTorrentFileStats { Wanted = true } }
-                })
-            };
-
-            _fixture.HardLinkFileService
-                .Setup(x => x.GetHardLinkCount(It.IsAny<string>(), It.IsAny<bool>()))
-                .Returns(0);
-
-            // Act
-            await sut.ChangeCategoryForNoHardLinksAsync(downloads);
-
-            // Assert
-            _fixture.HardLinkFileService.Verify(
-                x => x.PopulateFileCounts(It.Is<IEnumerable<string>>(dirs => dirs.Contains("/ignore"))),
-                Times.Once);
-        }
-
-        [Fact]
         public async Task PublishesCategoryChangedEvent()
         {
             // Arrange

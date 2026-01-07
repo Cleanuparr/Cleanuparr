@@ -89,11 +89,6 @@ public partial class QBitService
 
         var downloadCleanerConfig = ContextProvider.Get<DownloadCleanerConfig>(nameof(DownloadCleanerConfig));
 
-        if (downloadCleanerConfig.UnlinkedIgnoredRootDirs.Count > 0)
-        {
-            _hardLinkFileService.PopulateFileCounts(downloadCleanerConfig.UnlinkedIgnoredRootDirs);
-        }
-
         foreach (QBitItemWrapper torrent in downloads.Cast<QBitItemWrapper>())
         {
             if (string.IsNullOrEmpty(torrent.Name) || string.IsNullOrEmpty(torrent.Hash) || string.IsNullOrEmpty(torrent.Category))
