@@ -21,12 +21,12 @@ jobs:
       matrix:
         include:
           - arch: Intel
-            runner: macos-13
+            runner: macos-15-intel
             runtime: osx-x64
             min_os_version: "10.15"
             artifact_suffix: intel
           - arch: ARM
-            runner: macos-14
+            runner: macos-15
             runtime: osx-arm64
             min_os_version: "11.0"
             artifact_suffix: arm64
