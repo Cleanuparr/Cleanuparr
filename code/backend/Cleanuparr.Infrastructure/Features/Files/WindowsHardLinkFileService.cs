@@ -8,8 +8,8 @@ namespace Cleanuparr.Infrastructure.Features.Files;
 public class WindowsHardLinkFileService : IWindowsHardLinkFileService, IDisposable
 {
     private readonly ILogger<WindowsHardLinkFileService> _logger;
-    private readonly ConcurrentDictionary<ulong, (int Count, List<string> Files)> _fileIndexCounts = new();
-    private readonly HashSet<string> _processedPaths = new();
+    private readonly ConcurrentDictionary<ulong, (int Count, ConcurrentBag<string> Files)> _fileIndexCounts = new();
+    private readonly ConcurrentDictionary<string, byte> _processedPaths = new();
 
     public WindowsHardLinkFileService(ILogger<WindowsHardLinkFileService> logger)
     {
@@ -82,7 +82,7 @@ public class WindowsHardLinkFileService : IWindowsHardLinkFileService, IDisposab
     {
         try
         {
-            if (!_processedPaths.Add(path))
+            if (!_processedPaths.TryAdd(path, 0))
             {
                 _logger.LogDebug("skipping already processed path: {path}", path);
                 return;
@@ -94,7 +94,7 @@ public class WindowsHardLinkFileService : IWindowsHardLinkFileService, IDisposab
                 ulong fileIndex = ((ulong)file.FileIndexHigh << 32) | file.FileIndexLow;
                 _fileIndexCounts.AddOrUpdate(
                     fileIndex,
-                    _ => (1, new List<string> { path }),
+                    _ => (1, new ConcurrentBag<string> { path }),
                     (_, existing) =>
                     {
                         existing.Files.Add(path);
