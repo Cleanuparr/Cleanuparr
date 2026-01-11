@@ -53,6 +53,7 @@ export class WhisparrSettingsComponent implements OnDestroy, CanComponentDeactiv
   globalForm: FormGroup;
   instanceForm: FormGroup;
 
+  // Version options for Whisparr (v2 and v3)
   versionOptions = [
     { label: 'v2', value: 2 },
     { label: 'v3', value: 3 }
