@@ -72,6 +72,12 @@ export interface TelegramFormData extends BaseProviderFormData {
   sendSilently: boolean;
 }
 
+export interface DiscordFormData extends BaseProviderFormData {
+  webhookUrl: string;
+  username: string;
+  avatarUrl: string;
+}
+
 // Events for modal communication
 export interface ProviderModalEvents {
   save: (data: any) => void;

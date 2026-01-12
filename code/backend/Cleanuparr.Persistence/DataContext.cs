@@ -56,6 +56,8 @@ public class DataContext : DbContext
     
     public DbSet<TelegramConfig> TelegramConfigs { get; set; }
 
+    public DbSet<DiscordConfig> DiscordConfigs { get; set; }
+
     public DbSet<BlacklistSyncHistory> BlacklistSyncHistory { get; set; }
 
     public DbSet<BlacklistSyncConfig> BlacklistSyncConfigs { get; set; }
@@ -154,6 +156,11 @@ public class DataContext : DbContext
             entity.HasOne(p => p.TelegramConfiguration)
                 .WithOne(c => c.NotificationConfig)
                 .HasForeignKey<TelegramConfig>(c => c.NotificationConfigId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(p => p.DiscordConfiguration)
+                .WithOne(c => c.NotificationConfig)
+                .HasForeignKey<DiscordConfig>(c => c.NotificationConfigId)
                 .OnDelete(DeleteBehavior.Cascade);
 
             entity.HasIndex(p => p.Name).IsUnique();

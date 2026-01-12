@@ -1,5 +1,6 @@
 using Cleanuparr.Infrastructure.Features.Notifications;
 using Cleanuparr.Infrastructure.Features.Notifications.Apprise;
+using Cleanuparr.Infrastructure.Features.Notifications.Discord;
 using Cleanuparr.Infrastructure.Features.Notifications.Notifiarr;
 using Cleanuparr.Infrastructure.Features.Notifications.Ntfy;
 using Cleanuparr.Infrastructure.Features.Notifications.Pushover;
@@ -18,6 +19,7 @@ public static class NotificationsDI
             .AddScoped<INtfyProxy, NtfyProxy>()
             .AddScoped<IPushoverProxy, PushoverProxy>()
             .AddScoped<ITelegramProxy, TelegramProxy>()
+            .AddScoped<IDiscordProxy, DiscordProxy>()
             .AddScoped<INotificationConfigurationService, NotificationConfigurationService>()
             .AddScoped<INotificationProviderFactory, NotificationProviderFactory>()
             .AddScoped<NotificationProviderFactory>()

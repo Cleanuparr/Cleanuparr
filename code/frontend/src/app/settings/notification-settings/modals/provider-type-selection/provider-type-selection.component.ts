@@ -57,6 +57,13 @@ export class ProviderTypeSelectionComponent {
       iconUrl: 'icons/ext/telegram-light.svg',
       iconUrlHover: 'icons/ext/telegram.svg',
       description: 'https://core.telegram.org/bots'
+    },
+    {
+      type: NotificationProviderType.Discord,
+      name: 'Discord',
+      iconUrl: 'icons/ext/discord-light.svg',
+      iconUrlHover: 'icons/ext/discord.svg',
+      description: 'https://discord.com'
     }
   ];
 

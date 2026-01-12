@@ -364,6 +364,7 @@ public class NotificationConfigurationServiceTests : IDisposable
     [InlineData(NotificationProviderType.Ntfy)]
     [InlineData(NotificationProviderType.Pushover)]
     [InlineData(NotificationProviderType.Telegram)]
+    [InlineData(NotificationProviderType.Discord)]
     public async Task GetActiveProvidersAsync_MapsProviderTypeCorrectly(NotificationProviderType providerType)
     {
         // Arrange
@@ -388,6 +389,7 @@ public class NotificationConfigurationServiceTests : IDisposable
     [InlineData(NotificationProviderType.Ntfy)]
     [InlineData(NotificationProviderType.Pushover)]
     [InlineData(NotificationProviderType.Telegram)]
+    [InlineData(NotificationProviderType.Discord)]
     public async Task GetProvidersForEventAsync_ReturnsProviderForAllTypes(NotificationProviderType providerType)
     {
         // Arrange
@@ -420,6 +422,7 @@ public class NotificationConfigurationServiceTests : IDisposable
             NotificationProviderType.Ntfy => CreateNtfyConfig(name, isEnabled),
             NotificationProviderType.Pushover => CreatePushoverConfig(name, isEnabled),
             NotificationProviderType.Telegram => CreateTelegramConfig(name, isEnabled),
+            NotificationProviderType.Discord => CreateDiscordConfig(name, isEnabled),
             _ => throw new ArgumentOutOfRangeException(nameof(providerType))
         };
     }
@@ -545,6 +548,30 @@ public class NotificationConfigurationServiceTests : IDisposable
                 ChatId =  "1234567890",
                 TopicId = "-1234567890",
                 SendSilently = true
+            }
+        };
+    }
+
+    private static NotificationConfig CreateDiscordConfig(string name, bool isEnabled)
+    {
+        return new NotificationConfig
+        {
+            Id = Guid.NewGuid(),
+            Name = name,
+            Type = NotificationProviderType.Discord,
+            IsEnabled = isEnabled,
+            OnStalledStrike = true,
+            OnFailedImportStrike = true,
+            OnSlowStrike = true,
+            OnQueueItemDeleted = true,
+            OnDownloadCleaned = true,
+            OnCategoryChanged = true,
+            DiscordConfiguration = new DiscordConfig
+            {
+                Id = Guid.NewGuid(),
+                WebhookUrl = "http://localhost:8000",
+                AvatarUrl =  "https://example.com/avatar.png",
+                Username = "test_username",
             }
         };
     }

@@ -3,7 +3,7 @@
 public class NotifiarrPayload
 {
     public NotifiarrNotification Notification { get; set; } = new NotifiarrNotification();
-    public Discord Discord { get; set; }
+    public NotifiarrDiscord Discord { get; set; }
 }
 
 public class NotifiarrNotification
@@ -13,7 +13,7 @@ public class NotifiarrNotification
     public int? Event { get; set; }
 }
 
-public class Discord
+public class NotifiarrDiscord
 {
     public string Color { get; set; } = string.Empty;
     public Ping Ping { get; set; }

@@ -1,5 +1,5 @@
 using System.Net;
-using Cleanuparr.Infrastructure.Features.Notifications.Notifiarr;
+using Cleanuparr.Infrastructure.Features.Notifications.Discord;
 using Cleanuparr.Persistence.Models.Configuration.Notification;
 using Cleanuparr.Shared.Helpers;
 using Microsoft.Extensions.Logging;
@@ -7,17 +7,17 @@ using Moq;
 using Moq.Protected;
 using Xunit;
 
-namespace Cleanuparr.Infrastructure.Tests.Features.Notifications.Notifiarr;
+namespace Cleanuparr.Infrastructure.Tests.Features.Notifications.Discord;
 
-public class NotifiarrProxyTests
+public class DiscordProxyTests
 {
-    private readonly Mock<ILogger<NotifiarrProxy>> _loggerMock;
+    private readonly Mock<ILogger<DiscordProxy>> _loggerMock;
     private readonly Mock<IHttpClientFactory> _httpClientFactoryMock;
     private readonly Mock<HttpMessageHandler> _httpMessageHandlerMock;
 
-    public NotifiarrProxyTests()
+    public DiscordProxyTests()
     {
-        _loggerMock = new Mock<ILogger<NotifiarrProxy>>();
+        _loggerMock = new Mock<ILogger<DiscordProxy>>();
         _httpMessageHandlerMock = new Mock<HttpMessageHandler>();
         _httpClientFactoryMock = new Mock<IHttpClientFactory>();
 
@@ -27,31 +27,34 @@ public class NotifiarrProxyTests
             .Returns(httpClient);
     }
 
-    private NotifiarrProxy CreateProxy()
+    private DiscordProxy CreateProxy()
     {
-        return new NotifiarrProxy(_loggerMock.Object, _httpClientFactoryMock.Object);
+        return new DiscordProxy(_loggerMock.Object, _httpClientFactoryMock.Object);
     }
 
-    private static NotifiarrPayload CreatePayload()
+    private static DiscordPayload CreatePayload()
     {
-        return new NotifiarrPayload
+        return new DiscordPayload
         {
-            Notification = new NotifiarrNotification { Update = false },
-            Discord = new NotifiarrDiscord
+            Embeds = new List<DiscordEmbed>
             {
-                Color = "#FF0000",
-                Text = new Text { Title = "Test", Content = "Test content" },
-                Ids = new Ids { Channel = "123456789" }
+                new()
+                {
+                    Title = "Test Title",
+                    Description = "Test Description",
+                    Color = 0x28a745
+                }
             }
         };
     }
 
-    private static NotifiarrConfig CreateConfig()
+    private static DiscordConfig CreateConfig()
     {
-        return new NotifiarrConfig
+        return new DiscordConfig
         {
-            ApiKey = "test-api-key-12345",
-            ChannelId = "123456789"
+            WebhookUrl = "https://discord.com/api/webhooks/123456789/abcdefghij",
+            Username = "Test Bot",
+            AvatarUrl = "https://example.com/avatar.png"
         };
     }
 
@@ -131,16 +134,17 @@ public class NotifiarrProxyTests
             .Callback<HttpRequestMessage, CancellationToken>((req, _) => capturedUri = req.RequestUri)
             .ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK));
 
-        var config = new NotifiarrConfig { ApiKey = "my-api-key", ChannelId = "123" };
+        var config = new DiscordConfig
+        {
+            WebhookUrl = "https://discord.com/api/webhooks/123/abc"
+        };
 
         // Act
         await proxy.SendNotification(CreatePayload(), config);
 
         // Assert
         Assert.NotNull(capturedUri);
-        Assert.Contains("notifiarr.com", capturedUri.ToString());
-        Assert.Contains("passthrough", capturedUri.ToString());
-        Assert.Contains("my-api-key", capturedUri.ToString());
+        Assert.Equal("https://discord.com/api/webhooks/123/abc", capturedUri.ToString());
     }
 
     [Fact]
@@ -192,50 +196,78 @@ public class NotifiarrProxyTests
 
     #region SendNotification Error Tests
 
-    [Fact]
-    public async Task SendNotification_When401_ThrowsNotifiarrExceptionWithInvalidApiKey()
-    {
-        // Arrange
-        var proxy = CreateProxy();
-        SetupErrorResponse(HttpStatusCode.Unauthorized);
-
-        // Act & Assert
-        var ex = await Assert.ThrowsAsync<NotifiarrException>(() =>
-            proxy.SendNotification(CreatePayload(), CreateConfig()));
-        Assert.Contains("API key is invalid", ex.Message);
-    }
-
     [Theory]
-    [InlineData(HttpStatusCode.BadGateway)]
-    [InlineData(HttpStatusCode.ServiceUnavailable)]
-    [InlineData(HttpStatusCode.GatewayTimeout)]
-    public async Task SendNotification_WhenServiceUnavailable_ThrowsNotifiarrException(HttpStatusCode statusCode)
+    [InlineData(HttpStatusCode.Unauthorized)]
+    [InlineData(HttpStatusCode.Forbidden)]
+    public async Task SendNotification_WhenUnauthorized_ThrowsDiscordExceptionWithInvalidWebhook(HttpStatusCode statusCode)
     {
         // Arrange
         var proxy = CreateProxy();
         SetupErrorResponse(statusCode);
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<NotifiarrException>(() =>
+        var ex = await Assert.ThrowsAsync<DiscordException>(() =>
+            proxy.SendNotification(CreatePayload(), CreateConfig()));
+        Assert.Contains("invalid or unauthorized", ex.Message);
+    }
+
+    [Fact]
+    public async Task SendNotification_When404_ThrowsDiscordExceptionWithNotFound()
+    {
+        // Arrange
+        var proxy = CreateProxy();
+        SetupErrorResponse(HttpStatusCode.NotFound);
+
+        // Act & Assert
+        var ex = await Assert.ThrowsAsync<DiscordException>(() =>
+            proxy.SendNotification(CreatePayload(), CreateConfig()));
+        Assert.Contains("not found", ex.Message);
+    }
+
+    [Fact]
+    public async Task SendNotification_When429_ThrowsDiscordExceptionWithRateLimited()
+    {
+        // Arrange
+        var proxy = CreateProxy();
+        SetupErrorResponse((HttpStatusCode)429);
+
+        // Act & Assert
+        var ex = await Assert.ThrowsAsync<DiscordException>(() =>
+            proxy.SendNotification(CreatePayload(), CreateConfig()));
+        Assert.Contains("rate limited", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData(HttpStatusCode.BadGateway)]
+    [InlineData(HttpStatusCode.ServiceUnavailable)]
+    [InlineData(HttpStatusCode.GatewayTimeout)]
+    public async Task SendNotification_WhenServiceUnavailable_ThrowsDiscordException(HttpStatusCode statusCode)
+    {
+        // Arrange
+        var proxy = CreateProxy();
+        SetupErrorResponse(statusCode);
+
+        // Act & Assert
+        var ex = await Assert.ThrowsAsync<DiscordException>(() =>
             proxy.SendNotification(CreatePayload(), CreateConfig()));
         Assert.Contains("service unavailable", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
-    public async Task SendNotification_WhenOtherError_ThrowsNotifiarrException()
+    public async Task SendNotification_WhenOtherError_ThrowsDiscordException()
     {
         // Arrange
         var proxy = CreateProxy();
         SetupErrorResponse(HttpStatusCode.InternalServerError);
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<NotifiarrException>(() =>
+        var ex = await Assert.ThrowsAsync<DiscordException>(() =>
             proxy.SendNotification(CreatePayload(), CreateConfig()));
         Assert.Contains("unable to send notification", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
-    public async Task SendNotification_WhenNetworkError_ThrowsNotifiarrException()
+    public async Task SendNotification_WhenNetworkError_ThrowsDiscordException()
     {
         // Arrange
         var proxy = CreateProxy();
@@ -248,7 +280,7 @@ public class NotifiarrProxyTests
             .ThrowsAsync(new HttpRequestException("Network error"));
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<NotifiarrException>(() =>
+        var ex = await Assert.ThrowsAsync<DiscordException>(() =>
             proxy.SendNotification(CreatePayload(), CreateConfig()));
         Assert.Contains("unable to send notification", ex.Message, StringComparison.OrdinalIgnoreCase);
     }

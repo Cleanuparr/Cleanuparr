@@ -2,6 +2,7 @@ using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Notifications.Models;
 using Cleanuparr.Infrastructure.Features.Notifications.Notifiarr;
 using Cleanuparr.Persistence.Models.Configuration.Notification;
+using Cleanuparr.Shared.Helpers;
 
 namespace Cleanuparr.Infrastructure.Features.Notifications.Notifiarr;
 
@@ -34,8 +35,6 @@ public sealed class NotifiarrProvider : NotificationProviderBase<NotifiarrConfig
             _ => "28a745"
         };
 
-        const string logo = "https://github.com/Cleanuparr/Cleanuparr/blob/main/Logo/48.png?raw=true";
-
         return new NotifiarrPayload
         {
             Discord = new()
@@ -44,7 +43,7 @@ public sealed class NotifiarrProvider : NotificationProviderBase<NotifiarrConfig
                 Text = new()
                 {
                     Title = context.Title,
-                    Icon = logo,
+                    Icon = Constants.LogoUrl,
                     Description = context.Description,
                     Fields = BuildFields(context)
                 },
@@ -54,7 +53,7 @@ public sealed class NotifiarrProvider : NotificationProviderBase<NotifiarrConfig
                 },
                 Images = new()
                 {
-                    Thumbnail = new Uri(logo),
+                    Thumbnail = new Uri(Constants.LogoUrl),
                     Image = context.Image
                 }
             }

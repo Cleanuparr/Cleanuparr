@@ -135,7 +135,6 @@
     <h3>Provider Type Not Yet Supported</h3>
     <p class="text-color-secondary">
       This provider type is not yet supported by the new modal system.
-      <br>Please select Notifiarr or Apprise for now.
     </p>
     <button 
       pButton 
@@ -208,6 +207,17 @@
   (cancel)="onProviderCancel()"
   (test)="onTelegramTest($event)"
 ></app-telegram-provider>
+
+<!-- Discord Provider Modal -->
+<app-discord-provider
+  [visible]="showDiscordModal"
+  [editingProvider]="editingProvider"
+  [saving]="saving()"
+  [testing]="testing()"
+  (save)="onDiscordSave($event)"
+  (cancel)="onProviderCancel()"
+  (test)="onDiscordTest($event)"
+></app-discord-provider>
 
 <!-- Confirmation Dialog -->
 <p-confirmDialog></p-confirmDialog>

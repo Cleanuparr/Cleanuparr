@@ -8,7 +8,7 @@ import {
 } from "../../shared/models/notification-provider.model";
 import { NotificationProviderType } from "../../shared/models/enums";
 import { DocumentationService } from "../../core/services/documentation.service";
-import { NotifiarrFormData, AppriseFormData, NtfyFormData, PushoverFormData, TelegramFormData } from "./models/provider-modal.model";
+import { NotifiarrFormData, AppriseFormData, NtfyFormData, PushoverFormData, TelegramFormData, DiscordFormData } from "./models/provider-modal.model";
 import { LoadingErrorStateComponent } from "../../shared/components/loading-error-state/loading-error-state.component";
 
 // New modal components
@@ -18,6 +18,7 @@ import { AppriseProviderComponent } from "./modals/apprise-provider/apprise-prov
 import { NtfyProviderComponent } from "./modals/ntfy-provider/ntfy-provider.component";
 import { PushoverProviderComponent } from "./modals/pushover-provider/pushover-provider.component";
 import { TelegramProviderComponent } from "./modals/telegram-provider/telegram-provider.component";
+import { DiscordProviderComponent } from "./modals/discord-provider/discord-provider.component";
 
 // PrimeNG Components
 import { CardModule } from "primeng/card";
@@ -55,6 +56,7 @@ import { NotificationService } from "../../core/services/notification.service";
     NtfyProviderComponent,
     PushoverProviderComponent,
     TelegramProviderComponent,
+    DiscordProviderComponent,
   ],
   providers: [NotificationProviderConfigStore, ConfirmationService, MessageService],
   templateUrl: "./notification-settings.component.html",
@@ -66,12 +68,13 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
 
   // Modal state
   showProviderModal = false; // Legacy modal for unsupported types
-  showTypeSelectionModal = false; // New: Provider type selection modal
-  showNotifiarrModal = false; // New: Notifiarr provider modal
-  showAppriseModal = false; // New: Apprise provider modal
-  showNtfyModal = false; // New: Ntfy provider modal
-  showPushoverModal = false; // New: Pushover provider modal
-  showTelegramModal = false; // New: Telegram provider modal
+  showTypeSelectionModal = false;
+  showNotifiarrModal = false;
+  showAppriseModal = false;
+  showNtfyModal = false;
+  showPushoverModal = false;
+  showTelegramModal = false;
+  showDiscordModal = false;
   modalMode: 'add' | 'edit' = 'add';
   editingProvider: NotificationProviderDto | null = null;
 
@@ -186,6 +189,9 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
       case NotificationProviderType.Telegram:
         this.showTelegramModal = true;
         break;
+      case NotificationProviderType.Discord:
+        this.showDiscordModal = true;
+        break;
       default:
         // For unsupported types, show the legacy modal with info message
         this.showProviderModal = true;
@@ -241,6 +247,9 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
         break;
       case NotificationProviderType.Telegram:
         this.showTelegramModal = true;
+        break;
+      case NotificationProviderType.Discord:
+        this.showDiscordModal = true;
         break;
       default:
         // For unsupported types, show the legacy modal with info message
@@ -327,6 +336,14 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
           sendSilently: telegramConfig.sendSilently || false,
         };
         break;
+      case NotificationProviderType.Discord:
+        const discordConfig = provider.configuration as any;
+        testRequest = {
+          webhookUrl: discordConfig.webhookUrl,
+          username: discordConfig.username || "",
+          avatarUrl: discordConfig.avatarUrl || "",
+        };
+        break;
       default:
         this.notificationService.showError("Testing not supported for this provider type");
         return;
@@ -369,6 +386,8 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
         return "Pushover";
       case NotificationProviderType.Telegram:
         return "Telegram";
+      case NotificationProviderType.Discord:
+        return "Discord";
       default:
         return "Unknown";
     }
@@ -538,6 +557,33 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
   }
 
   /**
+   * Handle Discord provider save
+   */
+  onDiscordSave(data: DiscordFormData): void {
+    if (this.modalMode === "edit" && this.editingProvider) {
+      this.updateDiscordProvider(data);
+    } else {
+      this.createDiscordProvider(data);
+    }
+  }
+
+  /**
+   * Handle Discord provider test
+   */
+  onDiscordTest(data: DiscordFormData): void {
+    const testRequest = {
+      webhookUrl: data.webhookUrl,
+      username: data.username,
+      avatarUrl: data.avatarUrl,
+    };
+
+    this.notificationProviderStore.testProvider({
+      testRequest,
+      type: NotificationProviderType.Discord,
+    });
+  }
+
+  /**
    * Handle provider modal cancel
    */
   onProviderCancel(): void {
@@ -554,6 +600,7 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
     this.showNtfyModal = false;
     this.showPushoverModal = false;
     this.showTelegramModal = false;
+    this.showDiscordModal = false;
     this.showProviderModal = false;
     this.editingProvider = null;
     this.notificationProviderStore.clearTestResult();
@@ -844,6 +891,59 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
       id: this.editingProvider.id,
       provider: updateDto,
       type: NotificationProviderType.Telegram,
+    });
+    this.monitorProviderOperation("updated");
+  }
+
+  /**
+   * Create new Discord provider
+   */
+  private createDiscordProvider(data: DiscordFormData): void {
+    const createDto = {
+      name: data.name,
+      isEnabled: data.enabled,
+      onFailedImportStrike: data.onFailedImportStrike,
+      onStalledStrike: data.onStalledStrike,
+      onSlowStrike: data.onSlowStrike,
+      onQueueItemDeleted: data.onQueueItemDeleted,
+      onDownloadCleaned: data.onDownloadCleaned,
+      onCategoryChanged: data.onCategoryChanged,
+      webhookUrl: data.webhookUrl,
+      username: data.username,
+      avatarUrl: data.avatarUrl,
+    };
+
+    this.notificationProviderStore.createProvider({
+      provider: createDto,
+      type: NotificationProviderType.Discord,
+    });
+    this.monitorProviderOperation("created");
+  }
+
+  /**
+   * Update existing Discord provider
+   */
+  private updateDiscordProvider(data: DiscordFormData): void {
+    if (!this.editingProvider) return;
+
+    const updateDto = {
+      name: data.name,
+      isEnabled: data.enabled,
+      onFailedImportStrike: data.onFailedImportStrike,
+      onStalledStrike: data.onStalledStrike,
+      onSlowStrike: data.onSlowStrike,
+      onQueueItemDeleted: data.onQueueItemDeleted,
+      onDownloadCleaned: data.onDownloadCleaned,
+      onCategoryChanged: data.onCategoryChanged,
+      webhookUrl: data.webhookUrl,
+      username: data.username,
+      avatarUrl: data.avatarUrl,
+    };
+
+    this.notificationProviderStore.updateProvider({
+      id: this.editingProvider.id,
+      provider: updateDto,
+      type: NotificationProviderType.Discord,
     });
     this.monitorProviderOperation("updated");
   }
