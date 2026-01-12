@@ -1,6 +1,7 @@
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Notifications;
 using Cleanuparr.Infrastructure.Features.Notifications.Apprise;
+using Cleanuparr.Infrastructure.Features.Notifications.Discord;
 using Cleanuparr.Infrastructure.Features.Notifications.Models;
 using Cleanuparr.Infrastructure.Features.Notifications.Notifiarr;
 using Cleanuparr.Infrastructure.Features.Notifications.Ntfy;
@@ -21,6 +22,7 @@ public class NotificationProviderFactoryTests
     private readonly Mock<INotifiarrProxy> _notifiarrProxyMock;
     private readonly Mock<IPushoverProxy> _pushoverProxyMock;
     private readonly Mock<ITelegramProxy> _telegramProxyMock;
+    private readonly Mock<IDiscordProxy> _discordProxyMock;
     private readonly IServiceProvider _serviceProvider;
     private readonly NotificationProviderFactory _factory;
 
@@ -32,6 +34,7 @@ public class NotificationProviderFactoryTests
         _notifiarrProxyMock = new Mock<INotifiarrProxy>();
         _pushoverProxyMock = new Mock<IPushoverProxy>();
         _telegramProxyMock = new Mock<ITelegramProxy>();
+        _discordProxyMock = new Mock<IDiscordProxy>();
 
         var services = new ServiceCollection();
         services.AddSingleton(_appriseProxyMock.Object);
@@ -40,6 +43,7 @@ public class NotificationProviderFactoryTests
         services.AddSingleton(_notifiarrProxyMock.Object);
         services.AddSingleton(_pushoverProxyMock.Object);
         services.AddSingleton(_telegramProxyMock.Object);
+        services.AddSingleton(_discordProxyMock.Object);
 
         _serviceProvider = services.BuildServiceProvider();
         _factory = new NotificationProviderFactory(_serviceProvider);
@@ -192,6 +196,35 @@ public class NotificationProviderFactoryTests
         Assert.IsType<TelegramProvider>(provider);
         Assert.Equal("TestTelegram", provider.Name);
         Assert.Equal(NotificationProviderType.Telegram, provider.Type);
+    }
+
+    [Fact]
+    public void CreateProvider_DiscordType_CreatesDiscordProvider()
+    {
+        // Arrange
+        var config = new NotificationProviderDto
+        {
+            Id = Guid.NewGuid(),
+            Name = "TestDiscord",
+            Type = NotificationProviderType.Discord,
+            IsEnabled = true,
+            Configuration = new DiscordConfig
+            {
+                Id = Guid.NewGuid(),
+                WebhookUrl = "test-webhook-url",
+                AvatarUrl = "test-avatar-url",
+                Username = "test-username",
+            }
+        };
+        
+        // Act
+        var provider = _factory.CreateProvider(config);
+
+        // Assert
+        Assert.NotNull(provider);
+        Assert.IsType<DiscordProvider>(provider);
+        Assert.Equal("TestDiscord", provider.Name);
+        Assert.Equal(NotificationProviderType.Discord, provider.Type);
     }
 
     [Fact]
