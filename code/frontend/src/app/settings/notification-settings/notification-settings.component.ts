@@ -8,7 +8,7 @@ import {
 } from "../../shared/models/notification-provider.model";
 import { NotificationProviderType } from "../../shared/models/enums";
 import { DocumentationService } from "../../core/services/documentation.service";
-import { NotifiarrFormData, AppriseFormData, NtfyFormData, PushoverFormData, TelegramFormData, DiscordFormData } from "./models/provider-modal.model";
+import { NotifiarrFormData, AppriseFormData, NtfyFormData, PushoverFormData, TelegramFormData, DiscordFormData, GotifyFormData } from "./models/provider-modal.model";
 import { LoadingErrorStateComponent } from "../../shared/components/loading-error-state/loading-error-state.component";
 
 // New modal components
@@ -19,6 +19,7 @@ import { NtfyProviderComponent } from "./modals/ntfy-provider/ntfy-provider.comp
 import { PushoverProviderComponent } from "./modals/pushover-provider/pushover-provider.component";
 import { TelegramProviderComponent } from "./modals/telegram-provider/telegram-provider.component";
 import { DiscordProviderComponent } from "./modals/discord-provider/discord-provider.component";
+import { GotifyProviderComponent } from "./modals/gotify-provider/gotify-provider.component";
 
 // PrimeNG Components
 import { CardModule } from "primeng/card";
@@ -57,6 +58,7 @@ import { NotificationService } from "../../core/services/notification.service";
     PushoverProviderComponent,
     TelegramProviderComponent,
     DiscordProviderComponent,
+    GotifyProviderComponent,
   ],
   providers: [NotificationProviderConfigStore, ConfirmationService, MessageService],
   templateUrl: "./notification-settings.component.html",
@@ -75,6 +77,7 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
   showPushoverModal = false;
   showTelegramModal = false;
   showDiscordModal = false;
+  showGotifyModal = false;
   modalMode: 'add' | 'edit' = 'add';
   editingProvider: NotificationProviderDto | null = null;
 
@@ -192,6 +195,9 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
       case NotificationProviderType.Discord:
         this.showDiscordModal = true;
         break;
+      case NotificationProviderType.Gotify:
+        this.showGotifyModal = true;
+        break;
       default:
         // For unsupported types, show the legacy modal with info message
         this.showProviderModal = true;
@@ -250,6 +256,9 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
         break;
       case NotificationProviderType.Discord:
         this.showDiscordModal = true;
+        break;
+      case NotificationProviderType.Gotify:
+        this.showGotifyModal = true;
         break;
       default:
         // For unsupported types, show the legacy modal with info message
@@ -344,6 +353,14 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
           avatarUrl: discordConfig.avatarUrl || "",
         };
         break;
+      case NotificationProviderType.Gotify:
+        const gotifyConfig = provider.configuration as any;
+        testRequest = {
+          serverUrl: gotifyConfig.serverUrl,
+          applicationToken: gotifyConfig.applicationToken,
+          priority: gotifyConfig.priority ?? 5,
+        };
+        break;
       default:
         this.notificationService.showError("Testing not supported for this provider type");
         return;
@@ -388,6 +405,8 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
         return "Telegram";
       case NotificationProviderType.Discord:
         return "Discord";
+      case NotificationProviderType.Gotify:
+        return "Gotify";
       default:
         return "Unknown";
     }
@@ -584,6 +603,33 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
   }
 
   /**
+   * Handle Gotify provider save
+   */
+  onGotifySave(data: GotifyFormData): void {
+    if (this.modalMode === "edit" && this.editingProvider) {
+      this.updateGotifyProvider(data);
+    } else {
+      this.createGotifyProvider(data);
+    }
+  }
+
+  /**
+   * Handle Gotify provider test
+   */
+  onGotifyTest(data: GotifyFormData): void {
+    const testRequest = {
+      serverUrl: data.serverUrl,
+      applicationToken: data.applicationToken,
+      priority: data.priority,
+    };
+
+    this.notificationProviderStore.testProvider({
+      testRequest,
+      type: NotificationProviderType.Gotify,
+    });
+  }
+
+  /**
    * Handle provider modal cancel
    */
   onProviderCancel(): void {
@@ -601,6 +647,7 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
     this.showPushoverModal = false;
     this.showTelegramModal = false;
     this.showDiscordModal = false;
+    this.showGotifyModal = false;
     this.showProviderModal = false;
     this.editingProvider = null;
     this.notificationProviderStore.clearTestResult();
@@ -944,6 +991,59 @@ export class NotificationSettingsComponent implements OnDestroy, CanComponentDea
       id: this.editingProvider.id,
       provider: updateDto,
       type: NotificationProviderType.Discord,
+    });
+    this.monitorProviderOperation("updated");
+  }
+
+  /**
+   * Create new Gotify provider
+   */
+  private createGotifyProvider(data: GotifyFormData): void {
+    const createDto = {
+      name: data.name,
+      isEnabled: data.enabled,
+      onFailedImportStrike: data.onFailedImportStrike,
+      onStalledStrike: data.onStalledStrike,
+      onSlowStrike: data.onSlowStrike,
+      onQueueItemDeleted: data.onQueueItemDeleted,
+      onDownloadCleaned: data.onDownloadCleaned,
+      onCategoryChanged: data.onCategoryChanged,
+      serverUrl: data.serverUrl,
+      applicationToken: data.applicationToken,
+      priority: data.priority,
+    };
+
+    this.notificationProviderStore.createProvider({
+      provider: createDto,
+      type: NotificationProviderType.Gotify,
+    });
+    this.monitorProviderOperation("created");
+  }
+
+  /**
+   * Update existing Gotify provider
+   */
+  private updateGotifyProvider(data: GotifyFormData): void {
+    if (!this.editingProvider) return;
+
+    const updateDto = {
+      name: data.name,
+      isEnabled: data.enabled,
+      onFailedImportStrike: data.onFailedImportStrike,
+      onStalledStrike: data.onStalledStrike,
+      onSlowStrike: data.onSlowStrike,
+      onQueueItemDeleted: data.onQueueItemDeleted,
+      onDownloadCleaned: data.onDownloadCleaned,
+      onCategoryChanged: data.onCategoryChanged,
+      serverUrl: data.serverUrl,
+      applicationToken: data.applicationToken,
+      priority: data.priority,
+    };
+
+    this.notificationProviderStore.updateProvider({
+      id: this.editingProvider.id,
+      provider: updateDto,
+      type: NotificationProviderType.Gotify,
     });
     this.monitorProviderOperation("updated");
   }

@@ -78,6 +78,12 @@ export interface DiscordFormData extends BaseProviderFormData {
   avatarUrl: string;
 }
 
+export interface GotifyFormData extends BaseProviderFormData {
+  serverUrl: string;
+  applicationToken: string;
+  priority: number;
+}
+
 // Events for modal communication
 export interface ProviderModalEvents {
   save: (data: any) => void;

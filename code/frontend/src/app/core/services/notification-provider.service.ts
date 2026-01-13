@@ -264,6 +264,40 @@ export interface TestDiscordProviderRequest {
   avatarUrl: string;
 }
 
+export interface CreateGotifyProviderRequest {
+  name: string;
+  isEnabled: boolean;
+  onFailedImportStrike: boolean;
+  onStalledStrike: boolean;
+  onSlowStrike: boolean;
+  onQueueItemDeleted: boolean;
+  onDownloadCleaned: boolean;
+  onCategoryChanged: boolean;
+  serverUrl: string;
+  applicationToken: string;
+  priority: number;
+}
+
+export interface UpdateGotifyProviderRequest {
+  name: string;
+  isEnabled: boolean;
+  onFailedImportStrike: boolean;
+  onStalledStrike: boolean;
+  onSlowStrike: boolean;
+  onQueueItemDeleted: boolean;
+  onDownloadCleaned: boolean;
+  onCategoryChanged: boolean;
+  serverUrl: string;
+  applicationToken: string;
+  priority: number;
+}
+
+export interface TestGotifyProviderRequest {
+  serverUrl: string;
+  applicationToken: string;
+  priority: number;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -329,6 +363,13 @@ export class NotificationProviderService {
   }
 
   /**
+   * Create a new Gotify provider
+   */
+  createGotifyProvider(provider: CreateGotifyProviderRequest): Observable<NotificationProviderDto> {
+    return this.http.post<NotificationProviderDto>(`${this.baseUrl}/gotify`, provider);
+  }
+
+  /**
    * Update an existing Notifiarr provider
    */
   updateNotifiarrProvider(id: string, provider: UpdateNotifiarrProviderRequest): Observable<NotificationProviderDto> {
@@ -368,6 +409,13 @@ export class NotificationProviderService {
    */
   updateDiscordProvider(id: string, provider: UpdateDiscordProviderRequest): Observable<NotificationProviderDto> {
     return this.http.put<NotificationProviderDto>(`${this.baseUrl}/discord/${id}`, provider);
+  }
+
+  /**
+   * Update an existing Gotify provider
+   */
+  updateGotifyProvider(id: string, provider: UpdateGotifyProviderRequest): Observable<NotificationProviderDto> {
+    return this.http.put<NotificationProviderDto>(`${this.baseUrl}/gotify/${id}`, provider);
   }
 
   /**
@@ -420,6 +468,13 @@ export class NotificationProviderService {
   }
 
   /**
+   * Test a Gotify provider (without ID - for testing configuration before saving)
+   */
+  testGotifyProvider(testRequest: TestGotifyProviderRequest): Observable<TestNotificationResult> {
+    return this.http.post<TestNotificationResult>(`${this.baseUrl}/gotify/test`, testRequest);
+  }
+
+  /**
    * Generic create method that delegates to provider-specific methods
    */
   createProvider(provider: any, type: NotificationProviderType): Observable<NotificationProviderDto> {
@@ -436,6 +491,8 @@ export class NotificationProviderService {
         return this.createTelegramProvider(provider as CreateTelegramProviderRequest);
       case NotificationProviderType.Discord:
         return this.createDiscordProvider(provider as CreateDiscordProviderRequest);
+      case NotificationProviderType.Gotify:
+        return this.createGotifyProvider(provider as CreateGotifyProviderRequest);
       default:
         throw new Error(`Unsupported provider type: ${type}`);
     }
@@ -458,6 +515,8 @@ export class NotificationProviderService {
         return this.updateTelegramProvider(id, provider as UpdateTelegramProviderRequest);
       case NotificationProviderType.Discord:
         return this.updateDiscordProvider(id, provider as UpdateDiscordProviderRequest);
+      case NotificationProviderType.Gotify:
+        return this.updateGotifyProvider(id, provider as UpdateGotifyProviderRequest);
       default:
         throw new Error(`Unsupported provider type: ${type}`);
     }
@@ -480,6 +539,8 @@ export class NotificationProviderService {
         return this.testTelegramProvider(testRequest as TestTelegramProviderRequest);
       case NotificationProviderType.Discord:
         return this.testDiscordProvider(testRequest as TestDiscordProviderRequest);
+      case NotificationProviderType.Gotify:
+        return this.testGotifyProvider(testRequest as TestGotifyProviderRequest);
       default:
         throw new Error(`Unsupported provider type: ${type}`);
     }

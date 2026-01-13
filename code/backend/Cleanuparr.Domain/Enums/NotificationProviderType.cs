@@ -8,4 +8,5 @@ public enum NotificationProviderType
     Pushover,
     Telegram,
     Discord,
+    Gotify,
 }
