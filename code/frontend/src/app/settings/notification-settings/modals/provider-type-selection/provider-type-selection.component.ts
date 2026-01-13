@@ -64,8 +64,8 @@ export class ProviderTypeSelectionComponent {
       iconUrl: 'icons/ext/discord-light.svg',
       iconUrlHover: 'icons/ext/discord.svg',
       description: 'https://discord.com'
-    }
-  ];
+    },
+  ].sort((a, b) => a.name.localeCompare(b.name));
 
   selectProvider(type: NotificationProviderType) {
     this.providerSelected.emit(type);
