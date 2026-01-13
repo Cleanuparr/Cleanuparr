@@ -7,4 +7,5 @@ public enum NotificationProviderType
     Ntfy,
     Pushover,
     Telegram,
+    Discord,
 }

@@ -230,6 +230,40 @@ export interface TestTelegramProviderRequest {
   sendSilently: boolean;
 }
 
+export interface CreateDiscordProviderRequest {
+  name: string;
+  isEnabled: boolean;
+  onFailedImportStrike: boolean;
+  onStalledStrike: boolean;
+  onSlowStrike: boolean;
+  onQueueItemDeleted: boolean;
+  onDownloadCleaned: boolean;
+  onCategoryChanged: boolean;
+  webhookUrl: string;
+  username: string;
+  avatarUrl: string;
+}
+
+export interface UpdateDiscordProviderRequest {
+  name: string;
+  isEnabled: boolean;
+  onFailedImportStrike: boolean;
+  onStalledStrike: boolean;
+  onSlowStrike: boolean;
+  onQueueItemDeleted: boolean;
+  onDownloadCleaned: boolean;
+  onCategoryChanged: boolean;
+  webhookUrl: string;
+  username: string;
+  avatarUrl: string;
+}
+
+export interface TestDiscordProviderRequest {
+  webhookUrl: string;
+  username: string;
+  avatarUrl: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -288,6 +322,13 @@ export class NotificationProviderService {
   }
 
   /**
+   * Create a new Discord provider
+   */
+  createDiscordProvider(provider: CreateDiscordProviderRequest): Observable<NotificationProviderDto> {
+    return this.http.post<NotificationProviderDto>(`${this.baseUrl}/discord`, provider);
+  }
+
+  /**
    * Update an existing Notifiarr provider
    */
   updateNotifiarrProvider(id: string, provider: UpdateNotifiarrProviderRequest): Observable<NotificationProviderDto> {
@@ -320,6 +361,13 @@ export class NotificationProviderService {
    */
   updateTelegramProvider(id: string, provider: UpdateTelegramProviderRequest): Observable<NotificationProviderDto> {
     return this.http.put<NotificationProviderDto>(`${this.baseUrl}/telegram/${id}`, provider);
+  }
+
+  /**
+   * Update an existing Discord provider
+   */
+  updateDiscordProvider(id: string, provider: UpdateDiscordProviderRequest): Observable<NotificationProviderDto> {
+    return this.http.put<NotificationProviderDto>(`${this.baseUrl}/discord/${id}`, provider);
   }
 
   /**
@@ -365,6 +413,13 @@ export class NotificationProviderService {
   }
 
   /**
+   * Test a Discord provider (without ID - for testing configuration before saving)
+   */
+  testDiscordProvider(testRequest: TestDiscordProviderRequest): Observable<TestNotificationResult> {
+    return this.http.post<TestNotificationResult>(`${this.baseUrl}/discord/test`, testRequest);
+  }
+
+  /**
    * Generic create method that delegates to provider-specific methods
    */
   createProvider(provider: any, type: NotificationProviderType): Observable<NotificationProviderDto> {
@@ -379,6 +434,8 @@ export class NotificationProviderService {
         return this.createPushoverProvider(provider as CreatePushoverProviderRequest);
       case NotificationProviderType.Telegram:
         return this.createTelegramProvider(provider as CreateTelegramProviderRequest);
+      case NotificationProviderType.Discord:
+        return this.createDiscordProvider(provider as CreateDiscordProviderRequest);
       default:
         throw new Error(`Unsupported provider type: ${type}`);
     }
@@ -399,6 +456,8 @@ export class NotificationProviderService {
         return this.updatePushoverProvider(id, provider as UpdatePushoverProviderRequest);
       case NotificationProviderType.Telegram:
         return this.updateTelegramProvider(id, provider as UpdateTelegramProviderRequest);
+      case NotificationProviderType.Discord:
+        return this.updateDiscordProvider(id, provider as UpdateDiscordProviderRequest);
       default:
         throw new Error(`Unsupported provider type: ${type}`);
     }
@@ -419,6 +478,8 @@ export class NotificationProviderService {
         return this.testPushoverProvider(testRequest as TestPushoverProviderRequest);
       case NotificationProviderType.Telegram:
         return this.testTelegramProvider(testRequest as TestTelegramProviderRequest);
+      case NotificationProviderType.Discord:
+        return this.testDiscordProvider(testRequest as TestDiscordProviderRequest);
       default:
         throw new Error(`Unsupported provider type: ${type}`);
     }

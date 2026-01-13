@@ -152,6 +152,11 @@ export class DocumentationService {
       'telegram.topicId': 'topic-id',
       'telegram.sendSilently': 'send-silently'
     },
+    'notifications/discord': {
+      'discord.webhookUrl': 'webhook-url',
+      'discord.username': 'username',
+      'discord.avatarUrl': 'avatar-url'
+    },
   };
 
   constructor(private applicationPathService: ApplicationPathService) {}

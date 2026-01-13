@@ -5,6 +5,7 @@ using Cleanuparr.Domain.Enums;
 using Cleanuparr.Domain.Exceptions;
 using Cleanuparr.Infrastructure.Features.Notifications;
 using Cleanuparr.Infrastructure.Features.Notifications.Apprise;
+using Cleanuparr.Infrastructure.Features.Notifications.Discord;
 using Cleanuparr.Infrastructure.Features.Notifications.Models;
 using Cleanuparr.Infrastructure.Features.Notifications.Telegram;
 using Cleanuparr.Persistence;
@@ -50,6 +51,7 @@ public sealed class NotificationProvidersController : ControllerBase
                 .Include(p => p.NtfyConfiguration)
                 .Include(p => p.PushoverConfiguration)
                 .Include(p => p.TelegramConfiguration)
+                .Include(p => p.DiscordConfiguration)
                 .AsNoTracking()
                 .ToListAsync();
 
@@ -76,6 +78,7 @@ public sealed class NotificationProvidersController : ControllerBase
                         NotificationProviderType.Ntfy => p.NtfyConfiguration ?? new object(),
                         NotificationProviderType.Pushover => p.PushoverConfiguration ?? new object(),
                         NotificationProviderType.Telegram => p.TelegramConfiguration ?? new object(),
+                        NotificationProviderType.Discord => p.DiscordConfiguration ?? new object(),
                         _ => new object()
                     }
                 })
@@ -694,6 +697,7 @@ public sealed class NotificationProvidersController : ControllerBase
                 .Include(p => p.NtfyConfiguration)
                 .Include(p => p.PushoverConfiguration)
                 .Include(p => p.TelegramConfiguration)
+                .Include(p => p.DiscordConfiguration)
                 .FirstOrDefaultAsync(p => p.Id == id);
 
             if (existingProvider == null)
@@ -926,9 +930,198 @@ public sealed class NotificationProvidersController : ControllerBase
                 NotificationProviderType.Ntfy => provider.NtfyConfiguration ?? new object(),
                 NotificationProviderType.Pushover => provider.PushoverConfiguration ?? new object(),
                 NotificationProviderType.Telegram => provider.TelegramConfiguration ?? new object(),
+                NotificationProviderType.Discord => provider.DiscordConfiguration ?? new object(),
                 _ => new object()
             }
         };
+    }
+
+    [HttpPost("discord")]
+    public async Task<IActionResult> CreateDiscordProvider([FromBody] CreateDiscordProviderRequest newProvider)
+    {
+        await DataContext.Lock.WaitAsync();
+        try
+        {
+            if (string.IsNullOrWhiteSpace(newProvider.Name))
+            {
+                return BadRequest("Provider name is required");
+            }
+
+            var duplicateConfig = await _dataContext.NotificationConfigs.CountAsync(x => x.Name == newProvider.Name);
+            if (duplicateConfig > 0)
+            {
+                return BadRequest("A provider with this name already exists");
+            }
+
+            var discordConfig = new DiscordConfig
+            {
+                WebhookUrl = newProvider.WebhookUrl,
+                Username = newProvider.Username,
+                AvatarUrl = newProvider.AvatarUrl
+            };
+            discordConfig.Validate();
+
+            var provider = new NotificationConfig
+            {
+                Name = newProvider.Name,
+                Type = NotificationProviderType.Discord,
+                IsEnabled = newProvider.IsEnabled,
+                OnFailedImportStrike = newProvider.OnFailedImportStrike,
+                OnStalledStrike = newProvider.OnStalledStrike,
+                OnSlowStrike = newProvider.OnSlowStrike,
+                OnQueueItemDeleted = newProvider.OnQueueItemDeleted,
+                OnDownloadCleaned = newProvider.OnDownloadCleaned,
+                OnCategoryChanged = newProvider.OnCategoryChanged,
+                DiscordConfiguration = discordConfig
+            };
+
+            _dataContext.NotificationConfigs.Add(provider);
+            await _dataContext.SaveChangesAsync();
+
+            await _notificationConfigurationService.InvalidateCacheAsync();
+
+            var providerDto = MapProvider(provider);
+            return CreatedAtAction(nameof(GetNotificationProviders), new { id = provider.Id }, providerDto);
+        }
+        catch (ValidationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to create Discord provider");
+            throw;
+        }
+        finally
+        {
+            DataContext.Lock.Release();
+        }
+    }
+
+    [HttpPut("discord/{id:guid}")]
+    public async Task<IActionResult> UpdateDiscordProvider(Guid id, [FromBody] UpdateDiscordProviderRequest updatedProvider)
+    {
+        await DataContext.Lock.WaitAsync();
+        try
+        {
+            var existingProvider = await _dataContext.NotificationConfigs
+                .Include(p => p.DiscordConfiguration)
+                .FirstOrDefaultAsync(p => p.Id == id && p.Type == NotificationProviderType.Discord);
+
+            if (existingProvider == null)
+            {
+                return NotFound($"Discord provider with ID {id} not found");
+            }
+
+            if (string.IsNullOrWhiteSpace(updatedProvider.Name))
+            {
+                return BadRequest("Provider name is required");
+            }
+
+            var duplicateConfig = await _dataContext.NotificationConfigs
+                .Where(x => x.Id != id)
+                .Where(x => x.Name == updatedProvider.Name)
+                .CountAsync();
+            if (duplicateConfig > 0)
+            {
+                return BadRequest("A provider with this name already exists");
+            }
+
+            var discordConfig = new DiscordConfig
+            {
+                WebhookUrl = updatedProvider.WebhookUrl,
+                Username = updatedProvider.Username,
+                AvatarUrl = updatedProvider.AvatarUrl
+            };
+
+            if (existingProvider.DiscordConfiguration != null)
+            {
+                discordConfig = discordConfig with { Id = existingProvider.DiscordConfiguration.Id };
+            }
+            discordConfig.Validate();
+
+            var newProvider = existingProvider with
+            {
+                Name = updatedProvider.Name,
+                IsEnabled = updatedProvider.IsEnabled,
+                OnFailedImportStrike = updatedProvider.OnFailedImportStrike,
+                OnStalledStrike = updatedProvider.OnStalledStrike,
+                OnSlowStrike = updatedProvider.OnSlowStrike,
+                OnQueueItemDeleted = updatedProvider.OnQueueItemDeleted,
+                OnDownloadCleaned = updatedProvider.OnDownloadCleaned,
+                OnCategoryChanged = updatedProvider.OnCategoryChanged,
+                DiscordConfiguration = discordConfig,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            _dataContext.NotificationConfigs.Remove(existingProvider);
+            _dataContext.NotificationConfigs.Add(newProvider);
+
+            await _dataContext.SaveChangesAsync();
+            await _notificationConfigurationService.InvalidateCacheAsync();
+
+            var providerDto = MapProvider(newProvider);
+            return Ok(providerDto);
+        }
+        catch (ValidationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to update Discord provider with ID {Id}", id);
+            throw;
+        }
+        finally
+        {
+            DataContext.Lock.Release();
+        }
+    }
+
+    [HttpPost("discord/test")]
+    public async Task<IActionResult> TestDiscordProvider([FromBody] TestDiscordProviderRequest testRequest)
+    {
+        try
+        {
+            var discordConfig = new DiscordConfig
+            {
+                WebhookUrl = testRequest.WebhookUrl,
+                Username = testRequest.Username,
+                AvatarUrl = testRequest.AvatarUrl
+            };
+            discordConfig.Validate();
+
+            var providerDto = new NotificationProviderDto
+            {
+                Id = Guid.NewGuid(),
+                Name = "Test Provider",
+                Type = NotificationProviderType.Discord,
+                IsEnabled = true,
+                Events = new NotificationEventFlags
+                {
+                    OnFailedImportStrike = true,
+                    OnStalledStrike = false,
+                    OnSlowStrike = false,
+                    OnQueueItemDeleted = false,
+                    OnDownloadCleaned = false,
+                    OnCategoryChanged = false
+                },
+                Configuration = discordConfig
+            };
+
+            await _notificationService.SendTestNotificationAsync(providerDto);
+            return Ok(new { Message = "Test notification sent successfully" });
+        }
+        catch (DiscordException ex)
+        {
+            _logger.LogWarning(ex, "Failed to test Discord provider");
+            return BadRequest(new { Message = $"Test failed: {ex.Message}" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to test Discord provider");
+            return BadRequest(new { Message = $"Test failed: {ex.Message}" });
+        }
     }
 
     [HttpPost("pushover")]

@@ -1,0 +1,72 @@
+---
+sidebar_position: 6
+---
+
+import {
+  ConfigSection,
+  ElementNavigator,
+  SectionTitle,
+  styles
+} from '@site/src/components/documentation';
+
+# Discord
+
+Discord is a popular communication platform that supports webhooks for automated messaging. Cleanuparr can send notifications directly to any Discord channel via webhooks.
+
+<ElementNavigator />
+
+<div className={styles.documentationPage}>
+
+<div className={styles.section}>
+
+<SectionTitle icon="💬">Configuration</SectionTitle>
+
+<p className={styles.sectionDescription}>
+  Configure a Discord webhook to receive notifications in your Discord server.
+</p>
+
+<ConfigSection
+  title="Webhook URL"
+  icon="🔗"
+  id="webhook-url"
+>
+
+The Discord webhook URL for sending messages. To create a webhook:
+
+1. Open your Discord server and go to **Server Settings** → **Integrations** → **Webhooks**
+2. Click **New Webhook** and select the channel where notifications should appear
+3. Copy the **Webhook URL** and paste it here
+
+Webhook URLs follow the format: `https://discord.com/api/webhooks/{id}/{token}`
+
+Reference: https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks
+
+</ConfigSection>
+
+<ConfigSection
+  title="Username"
+  icon="👤"
+  id="username"
+>
+
+Override the default webhook username displayed in Discord. If left empty, the webhook's default name (configured in Discord) will be used.
+
+Maximum length: 80 characters.
+
+</ConfigSection>
+
+<ConfigSection
+  title="Avatar URL"
+  icon="🖼️"
+  id="avatar-url"
+>
+
+Override the default webhook avatar with a custom image URL. If left empty, the webhook's default avatar (configured in Discord) will be used.
+
+Must be a valid URL pointing to an image file.
+
+</ConfigSection>
+
+</div>
+
+</div>
