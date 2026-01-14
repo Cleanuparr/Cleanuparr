@@ -70,7 +70,7 @@ export class DiscordProviderComponent implements OnInit, OnChanges {
   private resetProviderFields(): void {
     this.webhookUrlControl.setValue('');
     this.usernameControl.setValue('');
-    this.avatarUrlControl.setValue('https://github.com/Cleanuparr/Cleanuparr/blob/main/Logo/48.png?raw=true');
+    this.avatarUrlControl.setValue('https://cdn.jsdelivr.net/gh/Cleanuparr/Cleanuparr@main/Logo/48.png');
   }
 
   protected hasFieldError(control: FormControl, errorType: string): boolean {
