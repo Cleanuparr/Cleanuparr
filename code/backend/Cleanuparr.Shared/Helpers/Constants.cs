@@ -18,5 +18,5 @@ public static class Constants
     public const int DefaultSearchDelaySeconds = 120;
     public const int MinSearchDelaySeconds = 60;
 
-    public const string LogoUrl = "https://github.com/Cleanuparr/Cleanuparr/blob/main/Logo/48.png?raw=true";
+    public const string LogoUrl = "https://cdn.jsdelivr.net/gh/Cleanuparr/Cleanuparr@main/Logo/48.png";
 }
