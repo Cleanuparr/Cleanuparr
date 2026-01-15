@@ -219,6 +219,17 @@
   (test)="onDiscordTest($event)"
 ></app-discord-provider>
 
+<!-- Gotify Provider Modal -->
+<app-gotify-provider
+  [visible]="showGotifyModal"
+  [editingProvider]="editingProvider"
+  [saving]="saving()"
+  [testing]="testing()"
+  (save)="onGotifySave($event)"
+  (cancel)="onProviderCancel()"
+  (test)="onGotifyTest($event)"
+></app-gotify-provider>
+
 <!-- Confirmation Dialog -->
 <p-confirmDialog></p-confirmDialog>
 

@@ -7,6 +7,7 @@ using Cleanuparr.Infrastructure.Features.Notifications.Notifiarr;
 using Cleanuparr.Infrastructure.Features.Notifications.Ntfy;
 using Cleanuparr.Infrastructure.Features.Notifications.Pushover;
 using Cleanuparr.Infrastructure.Features.Notifications.Telegram;
+using Cleanuparr.Infrastructure.Features.Notifications.Gotify;
 using Cleanuparr.Persistence.Models.Configuration.Notification;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -31,6 +32,7 @@ public sealed class NotificationProviderFactory : INotificationProviderFactory
             NotificationProviderType.Pushover => CreatePushoverProvider(config),
             NotificationProviderType.Telegram => CreateTelegramProvider(config),
             NotificationProviderType.Discord => CreateDiscordProvider(config),
+            NotificationProviderType.Gotify => CreateGotifyProvider(config),
             _ => throw new NotSupportedException($"Provider type {config.Type} is not supported")
         };
     }
@@ -82,5 +84,13 @@ public sealed class NotificationProviderFactory : INotificationProviderFactory
         var proxy = _serviceProvider.GetRequiredService<IDiscordProxy>();
 
         return new DiscordProvider(config.Name, config.Type, discordConfig, proxy);
+    }
+
+    private INotificationProvider CreateGotifyProvider(NotificationProviderDto config)
+    {
+        var gotifyConfig = (GotifyConfig)config.Configuration;
+        var proxy = _serviceProvider.GetRequiredService<IGotifyProxy>();
+
+        return new GotifyProvider(config.Name, config.Type, gotifyConfig, proxy);
     }
 }

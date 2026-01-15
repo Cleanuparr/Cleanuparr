@@ -1,0 +1,82 @@
+---
+sidebar_position: 7
+---
+
+import {
+  ConfigSection,
+  ElementNavigator,
+  SectionTitle,
+  styles
+} from '@site/src/components/documentation';
+
+# Gotify
+
+Gotify is a simple, self-hosted push notification server. It provides a REST API for sending messages and has clients available for Android, web browsers, and CLI.
+
+<ElementNavigator />
+
+<div className={styles.documentationPage}>
+
+<div className={styles.section}>
+
+<SectionTitle icon="🔔">Configuration</SectionTitle>
+
+<p className={styles.sectionDescription}>
+  Configure your Gotify server connection to receive push notifications.
+</p>
+
+<ConfigSection
+  title="Server URL"
+  icon="🌐"
+  id="server-url"
+>
+
+The URL of your Gotify server instance. This should be the base URL where your Gotify server is accessible.
+
+Examples:
+- `https://gotify.example.com`
+- `http://192.168.1.100:8080`
+
+</ConfigSection>
+
+<ConfigSection
+  title="Application Token"
+  icon="🔑"
+  id="application-token"
+>
+
+The application token used to authenticate with your Gotify server. To create an application token:
+
+1. Log in to your Gotify web interface
+2. Go to **Apps** and click **Create Application**
+3. Give your application a name (e.g., "Cleanuparr")
+4. Copy the generated token and paste it here
+
+Each application in Gotify has its own token and can be configured with a custom name and icon.
+
+Reference: https://gotify.net/docs/
+
+</ConfigSection>
+
+<ConfigSection
+  title="Priority"
+  icon="🔥"
+  id="priority"
+>
+
+The priority level for notifications (0-10). Higher priority messages may trigger different notification behaviors on Gotify clients:
+
+- **0**: Minimum priority - may not trigger any notification
+- **1-3**: Low priority - quiet notification
+- **4-7**: Normal priority - standard notification behavior
+- **8-10**: High priority - may trigger more intrusive notifications
+
+The exact behavior depends on your Gotify client configuration. Default is 5.
+
+Reference: https://gotify.net/docs/msgextras
+
+</ConfigSection>
+
+</div>
+
+</div>

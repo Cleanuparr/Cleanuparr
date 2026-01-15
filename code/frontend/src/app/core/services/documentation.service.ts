@@ -157,6 +157,11 @@ export class DocumentationService {
       'discord.username': 'username',
       'discord.avatarUrl': 'avatar-url'
     },
+    'notifications/gotify': {
+      'gotify.serverUrl': 'server-url',
+      'gotify.applicationToken': 'application-token',
+      'gotify.priority': 'priority'
+    },
   };
 
   constructor(private applicationPathService: ApplicationPathService) {}

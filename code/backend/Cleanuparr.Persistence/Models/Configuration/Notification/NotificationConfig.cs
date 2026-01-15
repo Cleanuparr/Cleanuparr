@@ -47,6 +47,8 @@ public sealed record NotificationConfig
 
     public DiscordConfig? DiscordConfiguration { get; init; }
 
+    public GotifyConfig? GotifyConfiguration { get; init; }
+
     [NotMapped]
     public bool IsConfigured => Type switch
     {
@@ -56,6 +58,7 @@ public sealed record NotificationConfig
         NotificationProviderType.Pushover => PushoverConfiguration?.IsValid() == true,
         NotificationProviderType.Telegram => TelegramConfiguration?.IsValid() == true,
         NotificationProviderType.Discord => DiscordConfiguration?.IsValid() == true,
+        NotificationProviderType.Gotify => GotifyConfiguration?.IsValid() == true,
         _ => throw new ArgumentOutOfRangeException(nameof(Type), $"Invalid notification provider type {Type}")
     };
     

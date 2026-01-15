@@ -65,6 +65,13 @@ export class ProviderTypeSelectionComponent {
       iconUrlHover: 'icons/ext/discord.svg',
       description: 'https://discord.com'
     },
+    {
+      type: NotificationProviderType.Gotify,
+      name: 'Gotify',
+      iconUrl: 'icons/ext/gotify-light.svg',
+      iconUrlHover: 'icons/ext/gotify.svg',
+      description: 'https://gotify.net'
+    },
   ].sort((a, b) => a.name.localeCompare(b.name));
 
   selectProvider(type: NotificationProviderType) {

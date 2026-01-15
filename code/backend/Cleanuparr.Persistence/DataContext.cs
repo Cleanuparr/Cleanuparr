@@ -58,6 +58,8 @@ public class DataContext : DbContext
 
     public DbSet<DiscordConfig> DiscordConfigs { get; set; }
 
+    public DbSet<GotifyConfig> GotifyConfigs { get; set; }
+
     public DbSet<BlacklistSyncHistory> BlacklistSyncHistory { get; set; }
 
     public DbSet<BlacklistSyncConfig> BlacklistSyncConfigs { get; set; }
@@ -161,6 +163,11 @@ public class DataContext : DbContext
             entity.HasOne(p => p.DiscordConfiguration)
                 .WithOne(c => c.NotificationConfig)
                 .HasForeignKey<DiscordConfig>(c => c.NotificationConfigId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(p => p.GotifyConfiguration)
+                .WithOne(c => c.NotificationConfig)
+                .HasForeignKey<GotifyConfig>(c => c.NotificationConfigId)
                 .OnDelete(DeleteBehavior.Cascade);
 
             entity.HasIndex(p => p.Name).IsUnique();

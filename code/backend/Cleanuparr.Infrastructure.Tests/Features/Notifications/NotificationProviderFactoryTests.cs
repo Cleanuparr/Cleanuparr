@@ -2,6 +2,7 @@ using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Notifications;
 using Cleanuparr.Infrastructure.Features.Notifications.Apprise;
 using Cleanuparr.Infrastructure.Features.Notifications.Discord;
+using Cleanuparr.Infrastructure.Features.Notifications.Gotify;
 using Cleanuparr.Infrastructure.Features.Notifications.Models;
 using Cleanuparr.Infrastructure.Features.Notifications.Notifiarr;
 using Cleanuparr.Infrastructure.Features.Notifications.Ntfy;
@@ -23,6 +24,7 @@ public class NotificationProviderFactoryTests
     private readonly Mock<IPushoverProxy> _pushoverProxyMock;
     private readonly Mock<ITelegramProxy> _telegramProxyMock;
     private readonly Mock<IDiscordProxy> _discordProxyMock;
+    private readonly Mock<IGotifyProxy> _gotifyProxyMock;
     private readonly IServiceProvider _serviceProvider;
     private readonly NotificationProviderFactory _factory;
 
@@ -35,6 +37,7 @@ public class NotificationProviderFactoryTests
         _pushoverProxyMock = new Mock<IPushoverProxy>();
         _telegramProxyMock = new Mock<ITelegramProxy>();
         _discordProxyMock = new Mock<IDiscordProxy>();
+        _gotifyProxyMock = new Mock<IGotifyProxy>();
 
         var services = new ServiceCollection();
         services.AddSingleton(_appriseProxyMock.Object);
@@ -44,6 +47,7 @@ public class NotificationProviderFactoryTests
         services.AddSingleton(_pushoverProxyMock.Object);
         services.AddSingleton(_telegramProxyMock.Object);
         services.AddSingleton(_discordProxyMock.Object);
+        services.AddSingleton(_gotifyProxyMock.Object);
 
         _serviceProvider = services.BuildServiceProvider();
         _factory = new NotificationProviderFactory(_serviceProvider);
@@ -225,6 +229,32 @@ public class NotificationProviderFactoryTests
         Assert.IsType<DiscordProvider>(provider);
         Assert.Equal("TestDiscord", provider.Name);
         Assert.Equal(NotificationProviderType.Discord, provider.Type);
+    }
+
+    [Fact]
+    public void CreateProvider_GotifyType_CreatesGotifyProvider()
+    {
+        // Arrange
+        var config = new NotificationProviderDto
+        {
+            Id = Guid.NewGuid(),
+            Name = "TestGotify",
+            Type = NotificationProviderType.Gotify,
+            IsEnabled = true,
+            Configuration = new GotifyConfig
+            {
+                Id = Guid.NewGuid(),
+                ServerUrl = "test-server-url",
+                ApplicationToken = "test-application-token",
+            }
+        };
+        
+        var provider = _factory.CreateProvider(config);
+        
+        Assert.NotNull(provider);
+        Assert.IsType<GotifyProvider>(provider);
+        Assert.Equal("TestGotify", provider.Name);
+        Assert.Equal(NotificationProviderType.Gotify, provider.Type);
     }
 
     [Fact]

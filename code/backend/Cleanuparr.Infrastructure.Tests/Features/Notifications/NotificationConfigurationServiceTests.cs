@@ -358,13 +358,9 @@ public class NotificationConfigurationServiceTests : IDisposable
 
     #region Provider Type Mapping Tests
 
+
     [Theory]
-    [InlineData(NotificationProviderType.Notifiarr)]
-    [InlineData(NotificationProviderType.Apprise)]
-    [InlineData(NotificationProviderType.Ntfy)]
-    [InlineData(NotificationProviderType.Pushover)]
-    [InlineData(NotificationProviderType.Telegram)]
-    [InlineData(NotificationProviderType.Discord)]
+    [MemberData(nameof(NotificationProviderTypes))]
     public async Task GetActiveProvidersAsync_MapsProviderTypeCorrectly(NotificationProviderType providerType)
     {
         // Arrange
@@ -384,12 +380,7 @@ public class NotificationConfigurationServiceTests : IDisposable
     }
 
     [Theory]
-    [InlineData(NotificationProviderType.Notifiarr)]
-    [InlineData(NotificationProviderType.Apprise)]
-    [InlineData(NotificationProviderType.Ntfy)]
-    [InlineData(NotificationProviderType.Pushover)]
-    [InlineData(NotificationProviderType.Telegram)]
-    [InlineData(NotificationProviderType.Discord)]
+    [MemberData(nameof(NotificationProviderTypes))]
     public async Task GetProvidersForEventAsync_ReturnsProviderForAllTypes(NotificationProviderType providerType)
     {
         // Arrange
@@ -423,6 +414,7 @@ public class NotificationConfigurationServiceTests : IDisposable
             NotificationProviderType.Pushover => CreatePushoverConfig(name, isEnabled),
             NotificationProviderType.Telegram => CreateTelegramConfig(name, isEnabled),
             NotificationProviderType.Discord => CreateDiscordConfig(name, isEnabled),
+            NotificationProviderType.Gotify => CreateGotifyConfig(name, isEnabled),
             _ => throw new ArgumentOutOfRangeException(nameof(providerType))
         };
     }
@@ -576,5 +568,36 @@ public class NotificationConfigurationServiceTests : IDisposable
         };
     }
 
+    private static NotificationConfig CreateGotifyConfig(string name, bool isEnabled)
+    {
+        return new NotificationConfig
+        {
+            Id = Guid.NewGuid(),
+            Name = name,
+            Type = NotificationProviderType.Gotify,
+            IsEnabled = isEnabled,
+            OnStalledStrike = true,
+            OnFailedImportStrike = true,
+            OnSlowStrike = true,
+            OnQueueItemDeleted = true,
+            OnDownloadCleaned = true,
+            OnCategoryChanged = true,
+            GotifyConfiguration = new GotifyConfig
+            {
+                Id = Guid.NewGuid(),
+                ServerUrl = "http://localhost:8000",
+                ApplicationToken =  "test_application_token",
+            }
+        };
+    }
+
     #endregion
+
+    public static IEnumerable<object[]> NotificationProviderTypes =>
+    [
+        ..Enum.GetValues<NotificationProviderType>()
+            .Cast<Object>()
+            .Select(x => new[] { x })
+            .ToList()
+    ];
 }
