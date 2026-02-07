@@ -67,9 +67,6 @@ public abstract class DownloadService : IDownloadService
     public abstract Task<DownloadCheckResult> ShouldRemoveFromArrQueueAsync(string hash, IReadOnlyList<string> ignoredDownloads);
 
     /// <inheritdoc/>
-    public abstract Task DeleteDownload(string hash, bool deleteSourceFiles);
-
-    /// <inheritdoc/>
     public abstract Task<List<ITorrentItemWrapper>> GetSeedingDownloads();
 
     /// <inheritdoc/>
@@ -123,7 +120,7 @@ public abstract class DownloadService : IDownloadService
                 continue;
             }
 
-            await _dryRunInterceptor.InterceptAsync(() => DeleteDownloadInternal(torrent, category.DeleteSourceFiles));
+            await _dryRunInterceptor.InterceptAsync(() => DeleteDownload(torrent, category.DeleteSourceFiles));
 
             _logger.LogInformation(
                 "download cleaned | {reason} reached | delete files: {deleteFiles} | {name}",
@@ -153,7 +150,7 @@ public abstract class DownloadService : IDownloadService
     /// </summary>
     /// <param name="torrent">The torrent to delete</param>
     /// <param name="deleteSourceFiles">Whether to delete the source files along with the torrent</param>
-    protected abstract Task DeleteDownloadInternal(ITorrentItemWrapper torrent, bool deleteSourceFiles);
+    public abstract Task DeleteDownload(ITorrentItemWrapper torrent, bool deleteSourceFiles);
     
     protected SeedingCheckResult ShouldCleanDownload(double ratio, TimeSpan seedingTime, SeedingRule category)
     {
@@ -243,6 +240,42 @@ public abstract class DownloadService : IDownloadService
         }
 
         // max seed time is 0 or reached
+        return true;
+    }
+    
+    protected bool TryDeleteFiles(string path, bool failOnNotFound)
+    {
+        if (string.IsNullOrEmpty(path))
+        {
+            _logger.LogTrace("File path is null or empty");
+            
+            if (failOnNotFound)
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        if (Directory.Exists(path))
+        {
+            Directory.Delete(path, true);
+            return true;
+        }
+
+        if (File.Exists(path))
+        {
+            File.Delete(path);
+            return true;
+        }
+        
+        _logger.LogTrace("File path to delete not found: {path}", path);
+
+        if (failOnNotFound)
+        {
+            return false;
+        }
+
         return true;
     }
 }

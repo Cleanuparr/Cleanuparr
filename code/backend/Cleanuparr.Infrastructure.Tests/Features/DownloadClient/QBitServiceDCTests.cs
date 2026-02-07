@@ -1,3 +1,4 @@
+using Cleanuparr.Domain.Entities;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.DownloadClient.QBittorrent;
@@ -503,13 +504,15 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
             // Arrange
             var sut = _fixture.CreateSut();
             const string hash = "test-hash";
+            var mockTorrent = new Mock<ITorrentItemWrapper>();
+            mockTorrent.Setup(x => x.Hash).Returns(hash);
 
             _fixture.ClientWrapper
                 .Setup(x => x.DeleteAsync(It.Is<IEnumerable<string>>(h => h.Contains(hash)), true))
                 .Returns(Task.CompletedTask);
 
             // Act
-            await sut.DeleteDownload(hash, true);
+            await sut.DeleteDownload(mockTorrent.Object, true);
 
             // Assert
             _fixture.ClientWrapper.Verify(
@@ -523,13 +526,15 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
             // Arrange
             var sut = _fixture.CreateSut();
             const string hash = "test-hash";
+            var mockTorrent = new Mock<ITorrentItemWrapper>();
+            mockTorrent.Setup(x => x.Hash).Returns(hash);
 
             _fixture.ClientWrapper
                 .Setup(x => x.DeleteAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<bool>()))
                 .Returns(Task.CompletedTask);
 
             // Act
-            await sut.DeleteDownload(hash, true);
+            await sut.DeleteDownload(mockTorrent.Object, true);
 
             // Assert
             _fixture.ClientWrapper.Verify(

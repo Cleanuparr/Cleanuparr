@@ -46,6 +46,8 @@ public sealed class TransmissionItemWrapper : ITorrentItemWrapper
         get => Info.GetCategory();
         set => Info.AppendCategory(value);
     }
+    
+    public string SavePath => throw new NotImplementedException();
 
     // Transmission status: 0=stopped, 1=check pending, 2=checking, 3=download pending, 4=downloading, 5=seed pending, 6=seeding
     public bool IsDownloading() => Info.Status == 4;

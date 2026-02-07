@@ -47,6 +47,8 @@ public sealed class QBitItemWrapper : ITorrentItemWrapper
         set => Info.Category = value;
     }
 
+    public string SavePath => throw new NotImplementedException();
+
     public IReadOnlyList<string> Tags => Info.Tags?.ToList().AsReadOnly() ?? (IReadOnlyList<string>)Array.Empty<string>();
 
     public bool IsDownloading() => Info.State is TorrentState.Downloading or TorrentState.ForcedDownload;
