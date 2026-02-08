@@ -33,6 +33,16 @@ import {
   tablerX,
   tablerEye,
   tablerEyeOff,
+  tablerArrowDown,
+  tablerCircleX,
+  tablerInfoCircle,
+  tablerCode,
+  tablerCircle,
+  tablerBolt,
+  tablerTag,
+  tablerChevronUp,
+  tablerCopy,
+  tablerFileExport,
 } from '@ng-icons/tabler-icons';
 
 import { routes } from './app.routes';
@@ -76,6 +86,16 @@ export const appConfig: ApplicationConfig = {
       tablerX,
       tablerEye,
       tablerEyeOff,
+      tablerArrowDown,
+      tablerCircleX,
+      tablerInfoCircle,
+      tablerCode,
+      tablerCircle,
+      tablerBolt,
+      tablerTag,
+      tablerChevronUp,
+      tablerCopy,
+      tablerFileExport,
     }),
   ],
 };

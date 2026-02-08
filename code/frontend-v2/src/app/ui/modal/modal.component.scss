@@ -14,11 +14,28 @@
 
 .modal {
   @include glass('elevated');
+  position: relative;
   width: 100%;
   max-height: 85vh;
   display: flex;
   flex-direction: column;
   animation: scale-in var(--duration-normal) var(--ease-default);
+
+  // Gradient border effect
+  &::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    background: linear-gradient(135deg, rgba(126, 87, 194, 0.3), transparent 50%, rgba(59, 130, 246, 0.2));
+    z-index: -1;
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask-composite: exclude;
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    padding: 1px;
+    pointer-events: none;
+  }
 
   &--sm { max-width: 420px; }
   &--md { max-width: 560px; }

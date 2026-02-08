@@ -61,6 +61,20 @@
   100% { background-position: calc(200px + 100%) 0; }
 }
 
+// Ambient orb float for glassmorphism background
+@keyframes float {
+  0%   { transform: translate(0, 0) scale(1); }
+  33%  { transform: translate(30px, -30px) scale(1.05); }
+  66%  { transform: translate(-20px, 20px) scale(0.95); }
+  100% { transform: translate(10px, -10px) scale(1.02); }
+}
+
+// Toast entrance glow
+@keyframes toast-glow {
+  from { box-shadow: 0 0 20px var(--toast-glow-color, rgba(126, 87, 194, 0.3)); }
+  to   { box-shadow: none; }
+}
+
 // Performance mode: disable decorative animations and transitions
 // Functional indicators ([role="status"] spinners) are exempted
 :root[data-performance-mode='true'],
@@ -78,6 +92,11 @@
   transition-delay: 0ms !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
+}
+
+:root[data-performance-mode='true'] .shell__main::before,
+:root[data-performance-mode='true'] .shell__main::after {
+  display: none !important;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -100,5 +119,10 @@
     transition-delay: 0ms !important;
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
+  }
+
+  .shell__main::before,
+  .shell__main::after {
+    display: none !important;
   }
 }

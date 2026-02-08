@@ -24,12 +24,12 @@
   }
 
   > :nth-child(1) { animation-delay: 0ms; }
-  > :nth-child(2) { animation-delay: 60ms; }
-  > :nth-child(3) { animation-delay: 120ms; }
-  > :nth-child(4) { animation-delay: 180ms; }
-  > :nth-child(5) { animation-delay: 240ms; }
-  > :nth-child(6) { animation-delay: 300ms; }
-  > :nth-child(7) { animation-delay: 360ms; }
+  > :nth-child(2) { animation-delay: 80ms; }
+  > :nth-child(3) { animation-delay: 160ms; }
+  > :nth-child(4) { animation-delay: 240ms; }
+  > :nth-child(5) { animation-delay: 320ms; }
+  > :nth-child(6) { animation-delay: 400ms; }
+  > :nth-child(7) { animation-delay: 480ms; }
 }
 
 // Stacked single-column form layout (preferred for settings pages)

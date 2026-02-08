@@ -3,112 +3,146 @@
   subtitle="System events and notifications"
 />
 
-<!-- Toolbar -->
-<div class="toolbar">
-  <div class="toolbar__filters">
-    <app-select
-      placeholder="All Severities"
-      [options]="severityOptions()"
-      [(value)]="selectedSeverity"
-      (valueChange)="onFilterChange()"
-    />
-    <app-select
-      placeholder="All Types"
-      [options]="typeOptions()"
-      [(value)]="selectedType"
-      (valueChange)="onFilterChange()"
-    />
-    <app-input
-      placeholder="Search events..."
-      type="search"
-      [(value)]="searchQuery"
-      (blurred)="onFilterChange()"
-    />
-  </div>
-  <div class="toolbar__actions">
-    <app-button variant="ghost" size="sm" (clicked)="refresh()">
-      Refresh
-    </app-button>
-  </div>
-</div>
-
-<!-- Events Count -->
-<div class="event-count">
-  {{ totalRecords() }} events
-</div>
-
-<!-- Events List -->
-<app-card [noPadding]="true">
-  <div class="events-list">
-    @for (event of events(); track event.id) {
-      <div
-        class="event-row"
-        [class.event-row--expanded]="expandedId() === event.id"
-        (click)="toggleExpand(event.id)"
-      >
-        <div class="event-row__main">
-          <div class="event-row__marker" [class]="'event-row__marker--' + eventSeverity(event.severity)"></div>
-          <div class="event-row__body">
-            <div class="event-row__top">
-              <app-badge [severity]="eventSeverity(event.severity)" size="sm">
-                {{ formatEventType(event.eventType) }}
-              </app-badge>
-              @if (event.trackingId) {
-                <span class="event-row__tracking">{{ event.trackingId }}</span>
-              }
-              <span class="event-row__time">{{ event.timestamp | date:'short' }}</span>
-            </div>
-            <p class="event-row__message">{{ truncate(event.message) }}</p>
-          </div>
-          <button class="event-row__copy" (click)="copyEvent(event); $event.stopPropagation()" title="Copy">
-            <ng-icon name="tablerFileText" />
-          </button>
-        </div>
-
-        @if (expandedId() === event.id) {
-          <div class="event-row__details">
-            <div class="event-row__detail">
-              <span class="event-row__detail-label">Full Message</span>
-              <span class="event-row__detail-value">{{ event.message }}</span>
-            </div>
-            @if (event.trackingId) {
-              <div class="event-row__detail">
-                <span class="event-row__detail-label">Tracking ID</span>
-                <span class="event-row__detail-value">{{ event.trackingId }}</span>
-              </div>
-            }
-            @if (parseEventData(event.data); as data) {
-              <div class="event-row__detail">
-                <span class="event-row__detail-label">Event Data</span>
-                <div class="event-row__data">
-                  @for (key of objectKeys(data); track key) {
-                    <div class="event-row__data-item">
-                      <span class="event-row__data-key">{{ key }}</span>
-                      <span class="event-row__data-value">{{ data[key] }}</span>
-                    </div>
-                  }
-                </div>
-              </div>
-            }
+<div class="page-content">
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <div class="toolbar__filters">
+      <app-select
+        placeholder="All Severities"
+        [options]="severityOptions()"
+        [(value)]="selectedSeverity"
+        (valueChange)="onFilterChange()"
+      />
+      <app-select
+        placeholder="All Types"
+        [options]="typeOptions()"
+        [(value)]="selectedType"
+        (valueChange)="onFilterChange()"
+      />
+      <app-input
+        placeholder="From date"
+        type="datetime-local"
+        [(value)]="fromDate"
+        (blurred)="onFilterChange()"
+      />
+      <app-input
+        placeholder="To date"
+        type="datetime-local"
+        [(value)]="toDate"
+        (blurred)="onFilterChange()"
+      />
+      <app-input
+        placeholder="Search events..."
+        type="search"
+        [(value)]="searchQuery"
+        (blurred)="onFilterChange()"
+      />
+    </div>
+    <div class="toolbar__actions">
+      <app-button variant="ghost" size="sm" (clicked)="refresh()">
+        Refresh
+      </app-button>
+      <div class="export-wrapper">
+        <app-button variant="ghost" size="sm" (clicked)="showExportMenu.set(!showExportMenu())">
+          <ng-icon name="tablerFileExport" />
+          Export
+        </app-button>
+        @if (showExportMenu()) {
+          <div class="export-menu">
+            <button class="export-menu__item" (click)="exportEvents('json')">JSON</button>
+            <button class="export-menu__item" (click)="exportEvents('csv')">CSV</button>
+            <button class="export-menu__item" (click)="exportEvents('text')">Text</button>
           </div>
         }
       </div>
-    } @empty {
-      <app-empty-state
-        icon="tablerBell"
-        heading="No events"
-        description="No events match your current filters."
-      />
-    }
+    </div>
   </div>
-</app-card>
 
-<!-- Pagination -->
-@if (totalRecords() > pageSize()) {
-  <app-paginator
-    [totalRecords]="totalRecords()"
-    [pageSize]="pageSize()"
-    [currentPage]="currentPage()"
-    (pageChange)="onPageChange($event)"
-  />
-}
+  <!-- Events Count -->
+  <div class="event-count">
+    {{ totalRecords() }} events
+  </div>
+
+  <!-- Events List -->
+  <app-card [noPadding]="true">
+    <div class="events-list">
+      @for (event of events(); track event.id) {
+        <div
+          class="event-row"
+          [class.event-row--expanded]="expandedId() === event.id"
+        >
+          <div
+            class="event-row__main"
+            [class.event-row__main--expandable]="isExpandable(event)"
+            (click)="isExpandable(event) ? toggleExpand(event.id) : null"
+          >
+            <button class="event-row__copy" (click)="copyEvent(event); $event.stopPropagation()" title="Copy event">
+              <ng-icon name="tablerCopy" />
+            </button>
+            <span class="event-row__time">{{ event.timestamp | date:'yyyy-MM-dd HH:mm:ss' }}</span>
+            <app-badge [severity]="eventSeverity(event.severity)" size="sm">
+              {{ event.severity }}
+            </app-badge>
+            <app-badge severity="default" size="sm">
+              {{ formatEventType(event.eventType) }}
+            </app-badge>
+            <span class="event-row__message">{{ truncate(event.message) }}</span>
+            @if (event.trackingId) {
+              <span class="event-row__tracking">{{ event.trackingId }}</span>
+            }
+            @if (isExpandable(event)) {
+              <ng-icon
+                [name]="expandedId() === event.id ? 'tablerChevronUp' : 'tablerChevronDown'"
+                class="event-row__chevron"
+              />
+            }
+          </div>
+
+          @if (expandedId() === event.id) {
+            <div class="event-row__details">
+              <div class="event-row__detail">
+                <span class="event-row__detail-label">Full Message</span>
+                <span class="event-row__detail-value">{{ event.message }}</span>
+              </div>
+              @if (event.trackingId) {
+                <div class="event-row__detail">
+                  <span class="event-row__detail-label">Tracking ID</span>
+                  <span class="event-row__detail-value">{{ event.trackingId }}</span>
+                </div>
+              }
+              @if (parseEventData(event.data); as data) {
+                <div class="event-row__detail">
+                  <span class="event-row__detail-label">Event Data</span>
+                  <div class="event-row__data">
+                    @for (key of objectKeys(data); track key) {
+                      <div class="event-row__data-item">
+                        <span class="event-row__data-key">{{ key }}</span>
+                        <span class="event-row__data-value">{{ data[key] }}</span>
+                      </div>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      } @empty {
+        <app-empty-state
+          icon="tablerBell"
+          heading="No events"
+          description="No events match your current filters."
+        />
+      }
+    </div>
+  </app-card>
+
+  <!-- Pagination -->
+  @if (totalRecords() > pageSize()) {
+    <app-paginator
+      [totalRecords]="totalRecords()"
+      [pageSize]="pageSize()"
+      [currentPage]="currentPage()"
+      (pageChange)="onPageChange($event)"
+    />
+  }
+</div>

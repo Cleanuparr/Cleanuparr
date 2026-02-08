@@ -30,7 +30,7 @@
   }
 
   &--primary {
-    background: var(--color-primary-subtle);
+    background: linear-gradient(135deg, rgba(126, 87, 194, 0.2), rgba(126, 87, 194, 0.1));
     color: var(--color-primary);
     border: 1px solid rgba(126, 87, 194, 0.2);
   }

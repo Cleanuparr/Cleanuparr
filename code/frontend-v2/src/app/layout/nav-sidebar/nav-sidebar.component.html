@@ -6,9 +6,7 @@
 >
   <div class="sidebar__brand">
     <img src="icons/128.png" alt="Cleanuparr" class="sidebar__logo-img" />
-    @if (!collapsed()) {
-      <span class="sidebar__logo-text">Cleanuparr</span>
-    }
+    <span class="sidebar__logo-text">Cleanuparr</span>
   </div>
 
   <div class="sidebar__nav">
@@ -21,9 +19,7 @@
         (click)="onNavItemClick()"
       >
         <ng-icon [name]="item.icon" class="sidebar__item-icon" />
-        @if (!collapsed()) {
-          <span class="sidebar__item-label">{{ item.label }}</span>
-        }
+        <span class="sidebar__item-label">{{ item.label }}</span>
       </a>
     }
 
@@ -49,25 +45,23 @@
           (click)="onNavItemClick()"
         >
           <ng-icon [name]="item.icon" class="sidebar__item-icon" />
-          @if (!collapsed()) {
-            <span class="sidebar__item-label">{{ item.label }}</span>
-          }
+          <span class="sidebar__item-label">{{ item.label }}</span>
         </a>
       }
 
-      <!-- Arr applications sub-group -->
+      <!-- Media Apps sub-group -->
       @if (!collapsed()) {
-        <button class="sidebar__section-toggle sidebar__section-toggle--sub" (click)="toggleArr()">
-          <span class="sidebar__section-label">Arr Applications</span>
+        <button class="sidebar__section-toggle sidebar__section-toggle--sub" (click)="toggleMediaApps()">
+          <span class="sidebar__section-label">Media Apps</span>
           <ng-icon
-            [name]="arrExpanded() ? 'tablerChevronDown' : 'tablerChevronRight'"
+            [name]="mediaAppsExpanded() ? 'tablerChevronDown' : 'tablerChevronRight'"
             class="sidebar__section-chevron"
           />
         </button>
       }
 
-      @if (arrExpanded() || collapsed()) {
-        @for (item of arrItems; track item.route) {
+      @if (mediaAppsExpanded() || collapsed()) {
+        @for (item of mediaAppItems; track item.route) {
           <a
             class="sidebar__item sidebar__item--deep"
             [routerLink]="item.route"
@@ -79,9 +73,7 @@
             } @else if (item.icon) {
               <ng-icon [name]="item.icon" class="sidebar__item-icon" />
             }
-            @if (!collapsed()) {
-              <span class="sidebar__item-label">{{ item.label }}</span>
-            }
+            <span class="sidebar__item-label">{{ item.label }}</span>
           </a>
         }
       }
@@ -94,9 +86,7 @@
           (click)="onNavItemClick()"
         >
           <ng-icon [name]="item.icon" class="sidebar__item-icon" />
-          @if (!collapsed()) {
-            <span class="sidebar__item-label">{{ item.label }}</span>
-          }
+          <span class="sidebar__item-label">{{ item.label }}</span>
         </a>
       }
     }

@@ -15,6 +15,36 @@
     margin-left: var(--sidebar-collapsed-width);
   }
 
+  // Ambient gradient orbs for glassmorphism depth
+  &__main::before,
+  &__main::after {
+    content: '';
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(120px);
+    opacity: 0.15;
+    pointer-events: none;
+    z-index: 0;
+    animation: float 20s ease-in-out infinite alternate;
+  }
+
+  &__main::before {
+    width: 500px;
+    height: 500px;
+    background: radial-gradient(circle, var(--brand-500), var(--brand-800));
+    top: -100px;
+    right: -100px;
+  }
+
+  &__main::after {
+    width: 400px;
+    height: 400px;
+    background: radial-gradient(circle, var(--brand-400), var(--color-info));
+    bottom: -100px;
+    left: -50px;
+    animation-delay: -10s;
+  }
+
   &__content {
     flex: 1;
     padding: var(--space-6);
@@ -22,6 +52,8 @@
     max-width: var(--content-max-width);
     width: 100%;
     margin: 0 auto;
+    position: relative;
+    z-index: 1;
 
     // Route transition: animate routed component on mount
     > :not(router-outlet) {
@@ -44,5 +76,6 @@
 
   &--mobile &__content {
     padding: var(--space-4);
+    overflow-x: hidden;
   }
 }

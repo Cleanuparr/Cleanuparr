@@ -21,10 +21,23 @@
     transition: opacity var(--duration-fast) var(--ease-default);
   }
 
-  // Hover lift effect
+  // Top-edge gradient shine (light reflection on glass)
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(126, 87, 194, 0.5), transparent);
+    pointer-events: none;
+  }
+
+  // Hover lift effect with inner glow
   &:hover {
     transform: translateY(-2px);
-    box-shadow: var(--glass-shadow), 0 8px 24px rgba(126, 87, 194, 0.08);
+    box-shadow: var(--glass-shadow), 0 8px 24px rgba(126, 87, 194, 0.08),
+                inset 0 0 30px rgba(126, 87, 194, 0.03);
 
     &::before {
       opacity: 0.7;

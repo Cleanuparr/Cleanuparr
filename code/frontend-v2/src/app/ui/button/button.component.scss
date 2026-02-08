@@ -55,9 +55,13 @@
     background: var(--color-primary);
     color: var(--color-primary-text);
     border: 1px solid transparent;
+    box-shadow: 0 0 20px rgba(126, 87, 194, 0.3),
+                0 4px 12px rgba(126, 87, 194, 0.2);
 
     &:hover:not(:disabled) {
       background: var(--color-primary-hover);
+      box-shadow: 0 0 30px rgba(126, 87, 194, 0.4),
+                  0 6px 16px rgba(126, 87, 194, 0.3);
     }
 
     &:active:not(:disabled) {

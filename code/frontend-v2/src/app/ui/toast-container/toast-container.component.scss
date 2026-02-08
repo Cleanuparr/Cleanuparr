@@ -20,24 +20,29 @@
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-3) var(--space-4);
-  animation: slide-in-right var(--duration-normal) var(--ease-default);
+  animation: slide-in-right var(--duration-normal) var(--ease-default),
+             toast-glow 0.8s var(--ease-default);
   pointer-events: auto;
   border-left: 3px solid transparent;
 
   &--success {
     border-left-color: var(--color-success);
+    --toast-glow-color: rgba(34, 197, 94, 0.3);
   }
 
   &--error {
     border-left-color: var(--color-error);
+    --toast-glow-color: rgba(239, 68, 68, 0.3);
   }
 
   &--warning {
     border-left-color: var(--color-warning);
+    --toast-glow-color: rgba(245, 158, 11, 0.3);
   }
 
   &--info {
     border-left-color: var(--color-info);
+    --toast-glow-color: rgba(59, 130, 246, 0.3);
   }
 
   &__icon {

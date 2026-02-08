@@ -1,9 +1,13 @@
 // Support section
 .support-section {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(250px, 100%), 1fr));
-  gap: var(--space-4);
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-6);
   margin-bottom: var(--space-6);
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
 
   &__link {
     display: flex;
@@ -101,6 +105,15 @@
 
   &__jobs {
     grid-column: 1 / -1;
+  }
+
+  // Staggered entrance animations (Issue 1)
+  > app-card {
+    animation: slide-up var(--duration-normal) var(--ease-default) both;
+
+    &:nth-child(1) { animation-delay: 0ms; }
+    &:nth-child(2) { animation-delay: 80ms; }
+    &:nth-child(3) { animation-delay: 160ms; }
   }
 }
 
@@ -222,30 +235,75 @@
   display: flex;
   flex-direction: column;
 
+  &__direction {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    font-size: var(--font-size-xs);
+    color: var(--text-tertiary);
+    margin-bottom: var(--space-2);
+    padding-left: 8px;
+  }
+
+  &__direction-icon {
+    font-size: 12px;
+  }
+
   &__item {
     display: flex;
     gap: var(--space-3);
     padding: var(--space-2-5) 0;
     position: relative;
 
-    &:not(:last-child) {
-      border-bottom: 1px solid var(--divider);
+    // Connecting line between items
+    &:not(:last-child)::after {
+      content: '';
+      position: absolute;
+      left: 13px; // center of 28px marker
+      top: 32px;
+      bottom: -4px;
+      width: 2px;
+      background: var(--divider);
     }
   }
 
   &__marker {
-    width: 8px;
-    height: 8px;
+    width: 28px;
+    height: 28px;
     border-radius: var(--radius-full);
-    margin-top: 6px;
     flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    position: relative;
+    z-index: 1;
+    border: 2px solid var(--surface-ground);
 
-    &--error { background: var(--color-error); }
-    &--warning { background: var(--color-warning); }
-    &--info { background: var(--color-info); }
-    &--success { background: var(--color-success); }
-    &--primary { background: var(--color-primary); }
-    &--default { background: var(--text-tertiary); }
+    &--error {
+      background: rgba(239, 68, 68, 0.15);
+      color: var(--color-error);
+    }
+    &--warning {
+      background: rgba(245, 158, 11, 0.15);
+      color: var(--color-warning);
+    }
+    &--info {
+      background: rgba(59, 130, 246, 0.15);
+      color: var(--color-info);
+    }
+    &--success {
+      background: rgba(34, 197, 94, 0.15);
+      color: var(--color-success);
+    }
+    &--primary {
+      background: rgba(126, 87, 194, 0.15);
+      color: var(--color-primary);
+    }
+    &--default {
+      background: rgba(148, 163, 184, 0.15);
+      color: var(--text-tertiary);
+    }
   }
 
   &__content {
@@ -270,6 +328,7 @@
     font-size: var(--font-size-xs);
     color: var(--text-tertiary);
     margin-left: auto;
+    font-family: var(--font-mono);
   }
 
   &__message {
@@ -314,6 +373,17 @@
     align-items: center;
     gap: var(--space-2);
     min-width: 200px;
+
+    @media (max-width: 768px) {
+      min-width: auto;
+    }
+  }
+
+  @media (max-width: 768px) {
+    &__row {
+      flex-wrap: wrap;
+      gap: var(--space-2);
+    }
   }
 
   &__name {

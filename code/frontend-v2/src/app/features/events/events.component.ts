@@ -40,12 +40,15 @@ export class EventsComponent implements OnInit, OnDestroy {
   readonly totalRecords = signal(0);
   readonly loading = signal(false);
   readonly expandedId = signal<string | null>(null);
+  readonly showExportMenu = signal(false);
 
   readonly currentPage = signal(1);
   readonly pageSize = signal(50);
   readonly selectedSeverity = signal<unknown>('');
   readonly selectedType = signal<unknown>('');
   readonly searchQuery = signal('');
+  readonly fromDate = signal('');
+  readonly toDate = signal('');
 
   readonly severityOptions = signal<SelectOption[]>([{ label: 'All Severities', value: '' }]);
   readonly typeOptions = signal<SelectOption[]>([{ label: 'All Types', value: '' }]);
@@ -70,10 +73,14 @@ export class EventsComponent implements OnInit, OnDestroy {
     const severity = this.selectedSeverity() as string;
     const type = this.selectedType() as string;
     const search = this.searchQuery();
+    const from = this.fromDate();
+    const to = this.toDate();
 
     if (severity) filter.severity = severity;
     if (type) filter.eventType = type;
     if (search) filter.search = search;
+    if (from) filter.fromDate = from;
+    if (to) filter.toDate = to;
 
     this.loading.set(true);
     this.eventsApi.getEvents(filter).subscribe({
@@ -118,6 +125,10 @@ export class EventsComponent implements OnInit, OnDestroy {
     this.loadEvents();
   }
 
+  isExpandable(event: AppEvent): boolean {
+    return !!(event.data || event.trackingId);
+  }
+
   toggleExpand(eventId: string): void {
     this.expandedId.update((current) => (current === eventId ? null : eventId));
   }
@@ -132,13 +143,54 @@ export class EventsComponent implements OnInit, OnDestroy {
     this.loadEvents();
   }
 
+  exportEvents(format: 'json' | 'csv' | 'text'): void {
+    this.showExportMenu.set(false);
+    const events = this.events();
+    let content: string;
+    let mimeType: string;
+    let ext: string;
+
+    switch (format) {
+      case 'json':
+        content = JSON.stringify(events, null, 2);
+        mimeType = 'application/json';
+        ext = 'json';
+        break;
+      case 'csv': {
+        const header = 'Timestamp,Severity,EventType,Message,Data,TrackingId';
+        const rows = events.map((e) =>
+          [e.timestamp, e.severity, e.eventType, `"${(e.message ?? '').replace(/"/g, '""')}"`, `"${(e.data ?? '').replace(/"/g, '""')}"`, e.trackingId ?? ''].join(',')
+        );
+        content = [header, ...rows].join('\n');
+        mimeType = 'text/csv';
+        ext = 'csv';
+        break;
+      }
+      case 'text':
+        content = events
+          .map((e) => `[${e.timestamp}] [${e.severity}] ${e.eventType}: ${e.message}`)
+          .join('\n');
+        mimeType = 'text/plain';
+        ext = 'txt';
+        break;
+    }
+
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `cleanuparr-events.${ext}`;
+    a.click();
+    URL.revokeObjectURL(url);
+    this.toast.success(`Events exported as ${format.toUpperCase()}`);
+  }
+
   // Helpers
-  eventSeverity(severity: string): 'error' | 'warning' | 'info' | 'primary' | 'default' {
+  eventSeverity(severity: string): 'error' | 'warning' | 'info' | 'default' {
     const s = severity.toLowerCase();
     if (s === 'error') return 'error';
-    if (s === 'warning') return 'warning';
+    if (s === 'warning' || s === 'important') return 'warning';
     if (s === 'information' || s === 'info') return 'info';
-    if (s === 'important') return 'primary';
     return 'default';
   }
 

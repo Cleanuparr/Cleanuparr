@@ -33,7 +33,7 @@ export class NavSidebarComponent {
   navClicked = output<void>();
 
   settingsExpanded = signal(true);
-  arrExpanded = signal(true);
+  mediaAppsExpanded = signal(true);
 
   readonly currentVersion = computed(() => this.hub.appStatus()?.currentVersion ?? null);
   readonly latestVersion = computed(() => this.hub.appStatus()?.latestVersion ?? null);
@@ -57,16 +57,16 @@ export class NavSidebarComponent {
     { label: 'Blacklist Sync', icon: 'tablerBan', route: '/settings/blacklist-sync' },
   ];
 
-  arrItems: NavItem[] = [
+  mediaAppItems: NavItem[] = [
     { label: 'Sonarr', iconSrc: 'icons/ext/sonarr-light.svg', route: '/settings/arr/sonarr' },
     { label: 'Radarr', iconSrc: 'icons/ext/radarr-light.svg', route: '/settings/arr/radarr' },
     { label: 'Lidarr', iconSrc: 'icons/ext/lidarr-light.svg', route: '/settings/arr/lidarr' },
     { label: 'Readarr', iconSrc: 'icons/ext/readarr-light.svg', route: '/settings/arr/readarr' },
     { label: 'Whisparr', iconSrc: 'icons/ext/whisparr-light.svg', route: '/settings/arr/whisparr' },
+    { label: 'Download Clients', icon: 'tablerDownload', route: '/settings/download-clients' },
   ];
 
   otherSettingsItems: NavItem[] = [
-    { label: 'Download Clients', icon: 'tablerDownload', route: '/settings/download-clients' },
     { label: 'Notifications', icon: 'tablerBellRinging', route: '/settings/notifications' },
   ];
 
@@ -84,7 +84,7 @@ export class NavSidebarComponent {
     this.settingsExpanded.set(!this.settingsExpanded());
   }
 
-  toggleArr(): void {
-    this.arrExpanded.set(!this.arrExpanded());
+  toggleMediaApps(): void {
+    this.mediaAppsExpanded.set(!this.mediaAppsExpanded());
   }
 }

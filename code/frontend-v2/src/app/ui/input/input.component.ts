@@ -16,7 +16,7 @@ export class InputComponent {
 
   label = input<string>();
   placeholder = input('');
-  type = input<'text' | 'password' | 'email' | 'url' | 'search'>('text');
+  type = input<'text' | 'password' | 'email' | 'url' | 'search' | 'datetime-local' | 'date' | 'number'>('text');
   disabled = input(false);
   readonly = input(false);
   error = input<string>();

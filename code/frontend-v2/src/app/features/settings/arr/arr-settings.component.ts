@@ -46,6 +46,7 @@ export class ArrSettingsComponent implements HasPendingChanges {
 
   readonly loading = signal(false);
   readonly saving = signal(false);
+  readonly transitioning = signal(false);
   readonly instances = signal<ArrInstance[]>([]);
 
   // Modal state
@@ -62,7 +63,13 @@ export class ArrSettingsComponent implements HasPendingChanges {
     effect(() => {
       const type = this.arrType();
       if (type) {
-        untracked(() => this.loadConfig());
+        untracked(() => {
+          this.transitioning.set(true);
+          requestAnimationFrame(() => {
+            this.transitioning.set(false);
+            this.loadConfig();
+          });
+        });
       }
     });
 

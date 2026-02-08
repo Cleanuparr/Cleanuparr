@@ -30,5 +30,22 @@
     display: flex;
     align-items: center;
     gap: var(--space-2);
+    flex-wrap: wrap;
+  }
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    align-items: stretch;
+
+    &__filters {
+      app-select {
+        width: 100%;
+        flex-shrink: 1;
+      }
+    }
+
+    &__actions {
+      justify-content: flex-end;
+    }
   }
 }

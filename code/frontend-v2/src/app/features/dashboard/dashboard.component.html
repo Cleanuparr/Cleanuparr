@@ -94,9 +94,15 @@
         <a class="card-header__link" routerLink="/logs">View All</a>
       </div>
       <div class="timeline">
+        <span class="timeline__direction">
+          <ng-icon name="tablerArrowDown" class="timeline__direction-icon" />
+          Newest first
+        </span>
         @for (log of recentLogs(); track $index) {
           <div class="timeline__item">
-            <div class="timeline__marker" [class]="'timeline__marker--' + logSeverity(log.level)"></div>
+            <div class="timeline__marker" [class]="'timeline__marker--' + logSeverity(log.level)">
+              <ng-icon [name]="logIcon(log.level)" />
+            </div>
             <div class="timeline__content">
               <div class="timeline__row">
                 <app-badge [severity]="logBadgeSeverity(log.level)" size="sm">
@@ -105,7 +111,7 @@
                 @if (log.category) {
                   <span class="timeline__category">{{ log.category }}</span>
                 }
-                <span class="timeline__time">{{ log.timestamp | date:'shortTime' }}</span>
+                <span class="timeline__time">{{ log.timestamp | date:'yyyy-MM-dd HH:mm:ss' }}</span>
               </div>
               <p class="timeline__message">{{ truncate(log.message) }}</p>
             </div>
@@ -137,15 +143,24 @@
         <a class="card-header__link" routerLink="/events">View All</a>
       </div>
       <div class="timeline">
+        <span class="timeline__direction">
+          <ng-icon name="tablerArrowDown" class="timeline__direction-icon" />
+          Newest first
+        </span>
         @for (event of recentEvents(); track $index) {
           <div class="timeline__item">
-            <div class="timeline__marker" [class]="'timeline__marker--' + eventSeverity(event.severity)"></div>
+            <div class="timeline__marker" [class]="'timeline__marker--' + eventMarkerClass(event.eventType, event.severity)">
+              <ng-icon [name]="eventIcon(event.eventType)" />
+            </div>
             <div class="timeline__content">
               <div class="timeline__row">
                 <app-badge [severity]="eventSeverity(event.severity)" size="sm">
+                  {{ event.severity }}
+                </app-badge>
+                <app-badge severity="default" size="sm">
                   {{ formatEventType(event.eventType) }}
                 </app-badge>
-                <span class="timeline__time">{{ event.timestamp | date:'shortTime' }}</span>
+                <span class="timeline__time">{{ event.timestamp | date:'yyyy-MM-dd HH:mm:ss' }}</span>
               </div>
               <p class="timeline__message">{{ truncate(event.message) }}</p>
             </div>

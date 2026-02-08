@@ -29,8 +29,8 @@
     @include glass-focus;
 
     &--checked {
-      background: var(--color-primary);
-      border-color: var(--color-primary);
+      background: linear-gradient(135deg, var(--brand-500), var(--brand-400));
+      border-color: var(--brand-500);
 
       .toggle__thumb {
         transform: translateX(20px);

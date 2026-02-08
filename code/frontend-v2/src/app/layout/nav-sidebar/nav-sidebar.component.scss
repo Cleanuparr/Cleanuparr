@@ -38,6 +38,16 @@
     color: #ffffff;
     letter-spacing: -0.02em;
     white-space: nowrap;
+    overflow: hidden;
+    transition: opacity var(--duration-fast) var(--ease-default),
+                width var(--duration-normal) var(--ease-default);
+  }
+
+  &__item-label {
+    white-space: nowrap;
+    overflow: hidden;
+    transition: opacity var(--duration-fast) var(--ease-default),
+                width var(--duration-normal) var(--ease-default);
   }
 
   &__nav {
@@ -46,6 +56,20 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-0-5);
+    position: relative;
+
+    // Bottom gradient fade for depth
+    &::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 60px;
+      background: linear-gradient(to bottom, transparent, rgba(12, 6, 20, 0.9));
+      pointer-events: none;
+      z-index: 1;
+    }
   }
 
   &__item {
@@ -218,7 +242,7 @@
   }
 }
 
-// Collapsed state: center icons
+// Collapsed state: center icons, fade out text
 .sidebar--collapsed {
   .sidebar__item {
     justify-content: center;
@@ -228,6 +252,13 @@
     &--deep {
       padding-left: var(--space-2);
     }
+  }
+
+  .sidebar__item-label,
+  .sidebar__logo-text {
+    opacity: 0;
+    width: 0;
+    pointer-events: none;
   }
 
   .sidebar__nav {
@@ -275,6 +306,13 @@
 
       &--nested { padding-left: var(--space-6); }
       &--deep { padding-left: var(--space-10); }
+    }
+
+    .sidebar__item-label,
+    .sidebar__logo-text {
+      opacity: 1;
+      width: auto;
+      pointer-events: auto;
     }
 
     .sidebar__nav { align-items: stretch; }

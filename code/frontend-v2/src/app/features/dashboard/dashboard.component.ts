@@ -123,12 +123,22 @@ export class DashboardComponent implements OnInit {
   }
 
   // Event helpers
-  eventSeverity(severity: string): 'error' | 'warning' | 'info' | 'primary' | 'default' {
+  eventMarkerClass(eventType: string, severity: string): string {
+    const t = eventType.toLowerCase();
+    if (t.includes('strike')) {
+      const s = severity.toLowerCase();
+      if (s === 'error') return 'error';
+      if (s === 'warning') return 'warning';
+      return 'warning'; // strikes default to yellow/amber
+    }
+    return this.eventSeverity(severity);
+  }
+
+  eventSeverity(severity: string): 'error' | 'warning' | 'info' | 'default' {
     const s = severity.toLowerCase();
     if (s === 'error') return 'error';
-    if (s === 'warning') return 'warning';
+    if (s === 'warning' || s === 'important') return 'warning';
     if (s === 'information' || s === 'info') return 'info';
-    if (s === 'important') return 'primary';
     return 'default';
   }
 
@@ -138,6 +148,25 @@ export class DashboardComponent implements OnInit {
 
   truncate(text: string, max = 80): string {
     return text.length > max ? text.substring(0, max) + '...' : text;
+  }
+
+  // Timeline icon helpers
+  logIcon(level: string): string {
+    const l = level.toLowerCase();
+    if (l === 'error' || l === 'fatal' || l === 'critical') return 'tablerCircleX';
+    if (l === 'warning') return 'tablerAlertTriangle';
+    if (l === 'information' || l === 'info') return 'tablerInfoCircle';
+    if (l === 'debug' || l === 'trace' || l === 'verbose') return 'tablerCode';
+    return 'tablerCircle';
+  }
+
+  eventIcon(eventType: string): string {
+    const t = eventType.toLowerCase();
+    if (t.includes('strike')) return 'tablerBolt';
+    if (t === 'downloadcleaned') return 'tablerDownload';
+    if (t === 'queueitemdeleted') return 'tablerTrash';
+    if (t === 'categorychanged') return 'tablerTag';
+    return 'tablerCircle';
   }
 
   // Job helpers
