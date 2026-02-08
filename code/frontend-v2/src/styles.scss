@@ -7,6 +7,41 @@
 @use 'styles/scrollbar';
 @use 'styles/animations';
 
+// Skeleton loading utility - add class="skeleton" to any element
+.skeleton {
+  background: linear-gradient(90deg, var(--glass-bg) 0px, var(--glass-bg-hover) 40px, var(--glass-bg) 80px);
+  background-size: 200px 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  border-radius: var(--radius-md);
+  color: transparent !important;
+  pointer-events: none;
+  user-select: none;
+
+  * { visibility: hidden; }
+
+  &--text {
+    height: 14px;
+    width: 60%;
+  }
+
+  &--title {
+    height: 20px;
+    width: 40%;
+  }
+
+  &--input {
+    height: 38px;
+    width: 100%;
+    max-width: 400px;
+  }
+
+  &--badge {
+    height: 24px;
+    width: 80px;
+    border-radius: var(--radius-full);
+  }
+}
+
 // Shared field help button (used across all form components)
 .field-help-btn {
   display: inline-flex;

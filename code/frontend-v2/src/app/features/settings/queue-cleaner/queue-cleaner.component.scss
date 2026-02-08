@@ -4,6 +4,9 @@
 :host { @include settings-page; }
 
 .settings-form { @include settings-form; }
+.form-stack { @include form-stack; }
+.form-row { @include form-row; }
+.form-divider { @include form-divider; }
 .form-grid { @include form-grid; }
 .form-section { @include form-section; }
 .form-actions { @include form-actions; }

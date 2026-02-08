@@ -48,6 +48,7 @@ export class GeneralSettingsComponent implements OnInit, HasPendingChanges {
   readonly logLevelOptions = LOG_LEVEL_OPTIONS;
   readonly loading = signal(false);
   readonly saving = signal(false);
+  readonly saved = signal(false);
 
   // Form state
   readonly displaySupportBanner = signal(true);
@@ -198,6 +199,8 @@ export class GeneralSettingsComponent implements OnInit, HasPendingChanges {
       next: () => {
         this.toast.success('General settings saved');
         this.saving.set(false);
+        this.saved.set(true);
+        setTimeout(() => this.saved.set(false), 1500);
         this.savedSnapshot = this.buildSnapshot();
       },
       error: () => {

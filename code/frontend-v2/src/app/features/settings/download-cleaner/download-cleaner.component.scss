@@ -3,8 +3,9 @@
 :host { @include settings-page; }
 
 .settings-form { @include settings-form; }
-.form-grid { @include form-grid; }
-.form-section { @include form-section; }
+.form-stack { @include form-stack; }
+.form-row { @include form-row; }
+.form-divider { @include form-divider; }
 .form-actions { @include form-actions; }
 
 .category-row {
@@ -24,4 +25,10 @@
       flex: 1;
     }
   }
+}
+
+.category-error {
+  font-size: var(--font-size-xs);
+  color: var(--color-error);
+  margin-bottom: var(--space-3);
 }

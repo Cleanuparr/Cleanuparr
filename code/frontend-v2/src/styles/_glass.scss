@@ -69,7 +69,8 @@
   font-family: var(--font-family);
   font-size: var(--font-size-sm);
   transition: border-color var(--duration-fast) var(--ease-default),
-              background var(--duration-fast) var(--ease-default);
+              background var(--duration-fast) var(--ease-default),
+              box-shadow var(--duration-fast) var(--ease-default);
 
   &::placeholder {
     color: var(--input-placeholder);
@@ -83,7 +84,8 @@
   &:focus {
     outline: none;
     border-color: var(--input-border-focus);
-    box-shadow: 0 0 0 3px var(--color-primary-subtle);
+    box-shadow: 0 0 0 3px var(--color-primary-subtle),
+                0 0 12px rgba(126, 87, 194, 0.15);
   }
 
   &:disabled {

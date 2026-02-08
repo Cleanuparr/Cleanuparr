@@ -3,6 +3,33 @@
 .card {
   @include glass('base');
   padding: var(--space-6);
+  position: relative;
+  overflow: hidden;
+  transition: transform var(--duration-fast) var(--ease-default),
+              box-shadow var(--duration-fast) var(--ease-default);
+
+  // Gradient accent border (left edge)
+  &::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: linear-gradient(180deg, var(--color-primary), transparent);
+    opacity: 0.4;
+    transition: opacity var(--duration-fast) var(--ease-default);
+  }
+
+  // Hover lift effect
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--glass-shadow), 0 8px 24px rgba(126, 87, 194, 0.08);
+
+    &::before {
+      opacity: 0.7;
+    }
+  }
 
   &--elevated {
     @include glass('elevated');

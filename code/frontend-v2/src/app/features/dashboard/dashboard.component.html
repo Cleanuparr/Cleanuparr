@@ -87,7 +87,7 @@
       <div class="card-header">
         <div class="card-header__left">
           <h3 class="card-header__title">Recent Logs</h3>
-          <app-badge [severity]="connected() ? 'success' : 'error'" size="sm" [rounded]="true">
+          <app-badge [severity]="connected() ? 'success' : 'error'" size="sm" [rounded]="true" [class.badge--live]="connected()">
             {{ connected() ? 'Connected' : 'Disconnected' }}
           </app-badge>
         </div>
@@ -130,7 +130,7 @@
       <div class="card-header">
         <div class="card-header__left">
           <h3 class="card-header__title">Recent Events</h3>
-          <app-badge [severity]="connected() ? 'success' : 'error'" size="sm" [rounded]="true">
+          <app-badge [severity]="connected() ? 'success' : 'error'" size="sm" [rounded]="true" [class.badge--live]="connected()">
             {{ connected() ? 'Connected' : 'Disconnected' }}
           </app-badge>
         </div>

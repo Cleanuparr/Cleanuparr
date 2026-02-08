@@ -27,19 +27,6 @@
       </a>
     }
 
-    <!-- Sponsor link -->
-    @if (!collapsed()) {
-      <a
-        class="sidebar__sponsor"
-        href="https://cleanuparr.github.io/Cleanuparr/support"
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        <ng-icon name="tablerHeart" class="sidebar__sponsor-icon" />
-        <span>Become a Sponsor</span>
-      </a>
-    }
-
     <div class="sidebar__divider"></div>
 
     <!-- Settings section -->
@@ -132,8 +119,19 @@
     }
   </div>
 
-  @if (!collapsed() && currentVersion()) {
-    <div class="sidebar__footer">
+  <div class="sidebar__footer">
+    <a
+      class="sidebar__sponsor"
+      href="https://cleanuparr.github.io/Cleanuparr/support"
+      target="_blank"
+      rel="noopener noreferrer"
+    >
+      <ng-icon name="tablerHeart" class="sidebar__sponsor-icon" />
+      @if (!collapsed()) {
+        <span>Support this project</span>
+      }
+    </a>
+    @if (!collapsed() && currentVersion()) {
       <a
         class="sidebar__version"
         [href]="'https://github.com/Cleanuparr/Cleanuparr/releases/' + currentVersion()"
@@ -152,6 +150,6 @@
           Update available: {{ latestVersion() }}
         </a>
       }
-    </div>
-  }
+    }
+  </div>
 </nav>

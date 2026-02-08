@@ -5,7 +5,7 @@
 
 <div class="settings-form">
   <app-card header="Configuration">
-    <div class="form-grid">
+    <div class="form-stack">
       <app-toggle label="Enabled" [(checked)]="enabled"
         hint="When enabled, blacklist patterns will be synchronized to enabled qBittorrent clients hourly"
         helpKey="blacklist-sync:enabled" />
@@ -23,8 +23,8 @@
   </app-card>
 
   <div class="form-actions">
-    <app-button variant="primary" [loading]="saving()" [disabled]="saving() || hasErrors()" (clicked)="save()">
-      Save Settings
+    <app-button variant="primary" [loading]="saving()" [disabled]="saving() || saved() || hasErrors()" (clicked)="save()">
+      {{ saved() ? 'Saved!' : 'Save Settings' }}
     </app-button>
   </div>
 </div>

@@ -5,41 +5,46 @@
 
 <div class="settings-form">
   <app-card header="General">
-    <div class="form-grid">
+    <div class="form-stack">
       <app-toggle label="Dry Run Mode" [(checked)]="dryRun"
         hint="When enabled, actions will be logged without being executed (e.g. download removal)"
         helpKey="general:dryRun" />
       <app-toggle label="Display Support Banner" [(checked)]="displaySupportBanner"
         hint="Show the support section on the dashboard with links to GitHub and sponsors"
         helpKey="general:displaySupportBanner" />
+
+      <div class="form-divider"></div>
+
+      <app-chip-input
+        label="Ignored Downloads"
+        placeholder="Add download pattern..."
+        hint="Downloads matching these patterns will be ignored (e.g. hash, tag, category, label, tracker)"
+        [(items)]="ignoredDownloads"
+        helpKey="general:ignoredDownloads"
+      />
     </div>
-    <app-chip-input
-      label="Ignored Downloads"
-      placeholder="Add download pattern..."
-      hint="Downloads matching these patterns will be ignored (e.g. hash, tag, category, label, tracker)"
-      [(items)]="ignoredDownloads"
-      helpKey="general:ignoredDownloads"
-    />
   </app-card>
 
   <app-card header="HTTP Settings">
-    <div class="form-grid">
-      <app-number-input label="Max Retries" [(value)]="httpMaxRetries" [min]="0" [max]="5"
-        hint="Number of retry attempts for failed HTTPS requests"
-        [error]="httpMaxRetriesError()"
-        helpKey="general:httpMaxRetries" />
-      <app-number-input label="Timeout" [(value)]="httpTimeout" [min]="5" [max]="100" suffix="seconds"
-        hint="Timeout duration for HTTP requests in seconds"
-        [error]="httpTimeoutError()"
-        helpKey="general:httpTimeout" />
-      <app-select label="Certificate Validation" [options]="certOptions" [(value)]="httpCertificateValidation"
-        hint="Enable or disable certificate validation for HTTPS requests"
-        helpKey="general:httpCertificateValidation" />
+    <div class="form-stack">
+      <div class="form-row">
+        <app-number-input label="Max Retries" [(value)]="httpMaxRetries" [min]="0" [max]="5"
+          hint="Number of retry attempts for failed HTTPS requests"
+          [error]="httpMaxRetriesError()"
+          helpKey="general:httpMaxRetries" />
+        <app-number-input label="Timeout" [(value)]="httpTimeout" [min]="5" [max]="100" suffix="seconds"
+          hint="Timeout duration for HTTP requests in seconds"
+          [error]="httpTimeoutError()"
+          helpKey="general:httpTimeout" />
+        <app-select label="Certificate Validation" [options]="certOptions" [(value)]="httpCertificateValidation"
+          hint="Enable or disable certificate validation for HTTPS requests"
+          helpKey="general:httpCertificateValidation" />
+      </div>
     </div>
   </app-card>
 
   <app-card header="Search Settings">
-    <div class="form-grid">
+    <div class="form-stack">
       <app-toggle label="Search Enabled" [(checked)]="searchEnabled"
         hint="When enabled, the application will trigger a search after removing a download"
         helpKey="general:searchEnabled" />
@@ -52,41 +57,51 @@
   </app-card>
 
   <app-accordion header="Logging" subtitle="Log file settings" [(expanded)]="logExpanded">
-    <div class="form-grid">
+    <div class="form-stack">
       <app-select label="Log Level" [options]="logLevelOptions" [(value)]="logLevel"
         hint="Select the minimum log level to display"
         helpKey="general:log.level" />
-      <app-number-input label="Rolling Size" [(value)]="logRollingSizeMB" [min]="1" [max]="100" suffix="MB"
-        hint="Maximum size of each log file in megabytes (0 = disabled)"
-        [error]="logRollingSizeError()"
-        helpKey="general:log.rollingSizeMB" />
-      <app-number-input label="Retained Files" [(value)]="logRetainedFileCount" [min]="1" [max]="50"
-        hint="Number of old log files to retain (0 = unlimited)"
-        [error]="logRetainedFileCountError()"
-        helpKey="general:log.retainedFileCount" />
-      <app-number-input label="Time Limit" [(value)]="logTimeLimitHours" [min]="1" [max]="1440" suffix="hours"
-        hint="Maximum age of old log files in hours (0 = unlimited)"
-        [error]="logTimeLimitError()"
-        helpKey="general:log.timeLimitHours" />
+
+      <div class="form-divider"></div>
+
+      <div class="form-row">
+        <app-number-input label="Rolling Size" [(value)]="logRollingSizeMB" [min]="1" [max]="100" suffix="MB"
+          hint="Maximum size of each log file in megabytes (0 = disabled)"
+          [error]="logRollingSizeError()"
+          helpKey="general:log.rollingSizeMB" />
+        <app-number-input label="Retained Files" [(value)]="logRetainedFileCount" [min]="1" [max]="50"
+          hint="Number of old log files to retain (0 = unlimited)"
+          [error]="logRetainedFileCountError()"
+          helpKey="general:log.retainedFileCount" />
+        <app-number-input label="Time Limit" [(value)]="logTimeLimitHours" [min]="1" [max]="1440" suffix="hours"
+          hint="Maximum age of old log files in hours (0 = unlimited)"
+          [error]="logTimeLimitError()"
+          helpKey="general:log.timeLimitHours" />
+      </div>
+
+      <div class="form-divider"></div>
+
       <app-toggle label="Archive Enabled" [(checked)]="logArchiveEnabled"
         hint="Enable archiving of old log files"
         helpKey="general:log.archiveEnabled" />
       @if (logArchiveEnabled()) {
-        <app-number-input label="Archive Retained Count" [(value)]="logArchiveRetainedCount" [min]="1" [max]="100"
-          hint="Number of archive files to retain (0 = unlimited)"
-          [error]="logArchiveRetainedError()"
-          helpKey="general:log.archiveRetainedCount" />
-        <app-number-input label="Archive Time Limit" [(value)]="logArchiveTimeLimitHours" [min]="1" [max]="1440" suffix="hours"
-          hint="Maximum age of archive files in hours (0 = unlimited)"
-          [error]="logArchiveTimeLimitError()"
-          helpKey="general:log.archiveTimeLimitHours" />
+        <div class="form-row">
+          <app-number-input label="Archive Retained Count" [(value)]="logArchiveRetainedCount" [min]="1" [max]="100"
+            hint="Number of archive files to retain (0 = unlimited)"
+            [error]="logArchiveRetainedError()"
+            helpKey="general:log.archiveRetainedCount" />
+          <app-number-input label="Archive Time Limit" [(value)]="logArchiveTimeLimitHours" [min]="1" [max]="1440" suffix="hours"
+            hint="Maximum age of archive files in hours (0 = unlimited)"
+            [error]="logArchiveTimeLimitError()"
+            helpKey="general:log.archiveTimeLimitHours" />
+        </div>
       }
     </div>
   </app-accordion>
 
   <div class="form-actions">
-    <app-button variant="primary" [loading]="saving()" [disabled]="saving() || hasErrors()" (clicked)="save()">
-      Save Settings
+    <app-button variant="primary" [loading]="saving()" [disabled]="saving() || saved() || hasErrors()" (clicked)="save()">
+      {{ saved() ? 'Saved!' : 'Save Settings' }}
     </app-button>
   </div>
 </div>

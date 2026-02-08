@@ -22,6 +22,7 @@ export class BlacklistSyncComponent implements OnInit, HasPendingChanges {
 
   readonly loading = signal(false);
   readonly saving = signal(false);
+  readonly saved = signal(false);
 
   readonly enabled = signal(false);
   readonly blacklistPath = signal('');
@@ -69,6 +70,8 @@ export class BlacklistSyncComponent implements OnInit, HasPendingChanges {
       next: () => {
         this.toast.success('Blacklist sync settings saved');
         this.saving.set(false);
+        this.saved.set(true);
+        setTimeout(() => this.saved.set(false), 1500);
         this.savedSnapshot = this.buildSnapshot();
       },
       error: () => {

@@ -62,6 +62,6 @@
 
   &__content {
     padding: var(--space-3) var(--space-5) var(--space-5);
-    animation: fade-in var(--duration-fast) var(--ease-default);
+    animation: slide-up var(--duration-normal) var(--ease-default);
   }
 }

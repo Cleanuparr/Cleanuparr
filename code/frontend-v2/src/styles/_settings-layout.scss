@@ -15,8 +15,52 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-6);
+
+  // Staggered entrance animation for cards and accordions
+  > app-card,
+  > app-accordion,
+  > .form-actions {
+    animation: slide-up var(--duration-normal) var(--ease-default) both;
+  }
+
+  > :nth-child(1) { animation-delay: 0ms; }
+  > :nth-child(2) { animation-delay: 60ms; }
+  > :nth-child(3) { animation-delay: 120ms; }
+  > :nth-child(4) { animation-delay: 180ms; }
+  > :nth-child(5) { animation-delay: 240ms; }
+  > :nth-child(6) { animation-delay: 300ms; }
+  > :nth-child(7) { animation-delay: 360ms; }
 }
 
+// Stacked single-column form layout (preferred for settings pages)
+@mixin form-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+
+  // Constrain text/number/select inputs to prevent overly wide fields
+  > app-input,
+  > app-number-input,
+  > app-select {
+    max-width: 400px;
+  }
+}
+
+// Inline row for related fields (e.g. scheduling dropdowns, numeric settings)
+@mixin form-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(240px, 100%), 1fr));
+  gap: var(--space-5);
+}
+
+// Visual divider between logical groups within a card
+@mixin form-divider {
+  height: 1px;
+  background: var(--divider);
+  margin: var(--space-1) 0;
+}
+
+// Legacy grid layout - kept for modals and backward compat
 @mixin form-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));

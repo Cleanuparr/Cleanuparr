@@ -5,7 +5,7 @@
 
 <div class="settings-form">
   <app-card header="General">
-    <div class="form-grid">
+    <div class="form-stack">
       <app-toggle label="Enabled" [(checked)]="enabled"
         hint="When enabled, the download cleaner will run according to the schedule"
         helpKey="download-cleaner:enabled" />
@@ -13,6 +13,9 @@
         <app-toggle label="Delete Private Torrents" [(checked)]="deletePrivate"
           hint="When enabled, private torrents will be deleted"
           helpKey="download-cleaner:deletePrivate" />
+
+        <div class="form-divider"></div>
+
         <app-toggle label="Advanced Scheduling" [(checked)]="useAdvancedScheduling"
           hint="Choose between basic scheduling or advanced cron expression"
           helpKey="download-cleaner:useAdvancedScheduling" />
@@ -22,13 +25,18 @@
             [error]="cronError()"
             helpKey="download-cleaner:cronExpression" />
         } @else {
-          <app-select label="Schedule Unit" [options]="scheduleUnitOptions" [(value)]="scheduleUnit"
-            hint="Choose the time unit for the schedule"
-            helpKey="download-cleaner:scheduleUnit" />
-          <app-select label="Every" [options]="scheduleIntervalOptions()" [(value)]="scheduleEvery"
-            hint="How often the job should run"
-            helpKey="download-cleaner:scheduleEvery" />
+          <div class="form-row">
+            <app-select label="Schedule Unit" [options]="scheduleUnitOptions" [(value)]="scheduleUnit"
+              hint="Choose the time unit for the schedule"
+              helpKey="download-cleaner:scheduleUnit" />
+            <app-select label="Every" [options]="scheduleIntervalOptions()" [(value)]="scheduleEvery"
+              hint="How often the job should run"
+              helpKey="download-cleaner:scheduleEvery" />
+          </div>
         }
+
+        <div class="form-divider"></div>
+
         <app-chip-input
           label="Ignored Downloads"
           placeholder="Add download pattern..."
@@ -54,7 +62,7 @@
           @if (categoryDisabledError(cat)) {
             <div class="category-error">{{ categoryDisabledError(cat) }}</div>
           }
-          <div class="form-grid">
+          <div class="form-row">
             <app-number-input label="Max Ratio" [value]="cat.maxRatio"
               (valueChange)="updateCategory(i, 'maxRatio', $event)" [step]="0.1" [min]="-1"
               hint="Maximum ratio to seed before removing (-1 means disabled)"
@@ -67,11 +75,13 @@
               (valueChange)="updateCategory(i, 'maxSeedTime', $event)" suffix="min" [min]="-1"
               hint="Maximum time to seed before removing (-1 means disabled)"
               helpKey="download-cleaner:maxSeedTime" />
-            <app-toggle label="Delete Source Files" [checked]="cat.deleteSourceFiles"
-              (checkedChange)="updateCategory(i, 'deleteSourceFiles', $event)"
-              hint="When enabled, the source files will be deleted when the download is removed"
-              helpKey="download-cleaner:deleteSourceFiles" />
           </div>
+          <app-toggle label="Delete Source Files" [checked]="cat.deleteSourceFiles"
+            (checkedChange)="updateCategory(i, 'deleteSourceFiles', $event)"
+            hint="When enabled, the source files will be deleted when the download is removed"
+            helpKey="download-cleaner:deleteSourceFiles"
+            style="margin-top: var(--space-4)"
+          />
         </div>
       }
       <app-button variant="secondary" size="sm" (clicked)="addCategory()">
@@ -80,7 +90,7 @@
     </app-accordion>
 
     <app-accordion header="Unlinked Downloads" subtitle="Clean up orphaned downloads" [(expanded)]="unlinkedExpanded">
-      <div class="form-grid">
+      <div class="form-stack">
         <app-toggle label="Enabled" [(checked)]="unlinkedEnabled"
           hint="Enable management of downloads that have no hardlinks"
           helpKey="download-cleaner:unlinkedEnabled" />
@@ -92,30 +102,27 @@
           <app-toggle label="Use Tag Instead" [(checked)]="unlinkedUseTag"
             hint="When enabled, uses a tag instead of category (qBittorrent only)"
             helpKey="download-cleaner:unlinkedUseTag" />
-        }
-      </div>
-      @if (unlinkedEnabled()) {
-        <div class="form-section">
+
+          <div class="form-divider"></div>
+
           <app-chip-input label="Ignored Root Directories" placeholder="Add directory path..."
             [(items)]="unlinkedIgnoredRootDirs"
             hint="Root directories to ignore when checking for unlinked downloads (used for cross-seed)"
             helpKey="download-cleaner:unlinkedIgnoredRootDir" />
-        </div>
-        <div class="form-section">
           <app-chip-input label="Unlinked Categories" placeholder="Add category..."
             [(items)]="unlinkedCategories"
             hint="Categories to check for unlinked downloads"
             [error]="unlinkedCategoriesError()"
             helpKey="download-cleaner:unlinkedCategories" />
-        </div>
-      }
+        }
+      </div>
     </app-accordion>
 
   }
 
   <div class="form-actions">
-    <app-button variant="primary" [loading]="saving()" [disabled]="saving() || hasErrors()" (clicked)="save()">
-      Save Settings
+    <app-button variant="primary" [loading]="saving()" [disabled]="saving() || saved() || hasErrors()" (clicked)="save()">
+      {{ saved() ? 'Saved!' : 'Save Settings' }}
     </app-button>
   </div>
 </div>

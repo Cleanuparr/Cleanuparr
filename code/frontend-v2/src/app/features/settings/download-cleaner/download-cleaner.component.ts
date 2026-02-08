@@ -40,6 +40,7 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
   readonly scheduleUnitOptions = SCHEDULE_UNIT_OPTIONS;
   readonly loading = signal(false);
   readonly saving = signal(false);
+  readonly saved = signal(false);
 
   readonly enabled = signal(false);
   readonly useAdvancedScheduling = signal(false);
@@ -186,6 +187,8 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
       next: () => {
         this.toast.success('Download cleaner settings saved');
         this.saving.set(false);
+        this.saved.set(true);
+        setTimeout(() => this.saved.set(false), 1500);
         this.savedSnapshot = this.buildSnapshot();
       },
       error: () => {

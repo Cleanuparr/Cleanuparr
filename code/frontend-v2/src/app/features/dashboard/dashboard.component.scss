@@ -92,8 +92,12 @@
 // Dashboard grid
 .dashboard-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(350px, 100%), 1fr));
+  grid-template-columns: repeat(2, 1fr);
   gap: var(--space-6);
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
 
   &__jobs {
     grid-column: 1 / -1;
@@ -340,4 +344,9 @@
     color: var(--text-tertiary);
     font-size: var(--font-size-sm);
   }
+}
+
+// Live badge pulse animation
+.badge--live {
+  animation: badge-pulse 2s ease-in-out infinite;
 }

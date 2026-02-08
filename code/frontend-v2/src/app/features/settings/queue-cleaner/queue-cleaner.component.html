@@ -5,11 +5,12 @@
 
 <div class="settings-form">
   <app-card header="General">
-    <div class="form-grid">
+    <div class="form-stack">
       <app-toggle label="Enabled" [(checked)]="enabled"
         hint="When enabled, the queue cleaner will run according to the schedule"
         helpKey="queue-cleaner:enabled" />
       @if (enabled()) {
+        <div class="form-divider"></div>
         <app-toggle label="Advanced Scheduling" [(checked)]="useAdvancedScheduling"
           hint="Choose between basic scheduling or advanced cron expression"
           helpKey="queue-cleaner:useAdvancedScheduling" />
@@ -19,13 +20,16 @@
             [error]="cronError()"
             helpKey="queue-cleaner:cronExpression" />
         } @else {
-          <app-select label="Schedule Unit" [options]="scheduleUnitOptions" [(value)]="scheduleUnit"
-            hint="Choose the time unit for the schedule"
-            helpKey="queue-cleaner:scheduleUnit" />
-          <app-select label="Every" [options]="scheduleIntervalOptions()" [(value)]="scheduleEvery"
-            hint="How often the job should run"
-            helpKey="queue-cleaner:scheduleEvery" />
+          <div class="form-row">
+            <app-select label="Schedule Unit" [options]="scheduleUnitOptions" [(value)]="scheduleUnit"
+              hint="Choose the time unit for the schedule"
+              helpKey="queue-cleaner:scheduleUnit" />
+            <app-select label="Every" [options]="scheduleIntervalOptions()" [(value)]="scheduleEvery"
+              hint="How often the job should run"
+              helpKey="queue-cleaner:scheduleEvery" />
+          </div>
         }
+        <div class="form-divider"></div>
         <app-chip-input
           label="Ignored Downloads"
           placeholder="Add download pattern..."
@@ -39,11 +43,14 @@
 
   @if (enabled()) {
     <app-accordion header="Failed Import" subtitle="Settings for handling failed imports" [(expanded)]="failedExpanded">
-      <div class="form-grid">
+      <div class="form-stack">
         <app-number-input label="Max Strikes" [(value)]="failedMaxStrikes" [min]="0" [max]="5000"
           hint="Number of strikes before action is taken (0 to disable, min 3 to enable)"
           [error]="failedMaxStrikesError()"
           helpKey="queue-cleaner:failedImport.maxStrikes" />
+
+        <div class="form-divider"></div>
+
         <app-toggle label="Ignore Private Torrents" [(checked)]="failedIgnorePrivate"
           [disabled]="failedSubFieldsDisabled()"
           hint="When enabled, private torrents will not be checked for being failed imports"
@@ -56,12 +63,13 @@
           [disabled]="failedSubFieldsDisabled()"
           hint="Skip failed import check for torrents not found in any enabled torrent client"
           helpKey="queue-cleaner:failedImport.skipIfNotFoundInClient" />
+
+        <div class="form-divider"></div>
+
         <app-select label="Pattern Mode" [options]="patternModeOptions" [(value)]="failedPatternMode"
           [disabled]="failedSubFieldsDisabled()"
           hint="Choose how the patterns are applied to failed imports"
           helpKey="queue-cleaner:failedImport.pattern-mode" />
-      </div>
-      <div class="form-section">
         <app-chip-input
           [label]="patternLabel()"
           placeholder="Add a pattern..."
@@ -75,7 +83,7 @@
     </app-accordion>
 
     <app-accordion header="Downloading Metadata" subtitle="Settings for stalled metadata downloads (qBittorrent only)" [(expanded)]="metadataExpanded">
-      <div class="form-grid">
+      <div class="form-stack">
         <app-number-input label="Max Strikes" [(value)]="metadataMaxStrikes" [min]="0" [max]="5000"
           hint="Number of strikes before action is taken (0 to disable, min 3 to enable)"
           [error]="metadataMaxStrikesError()"
@@ -210,8 +218,8 @@
   }
 
   <div class="form-actions">
-    <app-button variant="primary" [loading]="saving()" [disabled]="saving() || hasErrors()" (clicked)="save()">
-      Save Settings
+    <app-button variant="primary" [loading]="saving()" [disabled]="saving() || saved() || hasErrors()" (clicked)="save()">
+      {{ saved() ? 'Saved!' : 'Save Settings' }}
     </app-button>
   </div>
 </div>

@@ -50,7 +50,7 @@
     height: 18px;
     background: var(--text-primary);
     border-radius: var(--radius-full);
-    transition: transform var(--duration-fast) var(--ease-default);
+    transition: transform 200ms cubic-bezier(0.34, 1.56, 0.64, 1);
   }
 
   &__label {
