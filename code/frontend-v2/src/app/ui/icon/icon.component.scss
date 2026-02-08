@@ -1,0 +1,20 @@
+.icon {
+  display: inline-flex;
+  color: currentColor;
+
+  &--sm {
+    font-size: 16px;
+  }
+
+  &--md {
+    font-size: 20px;
+  }
+
+  &--lg {
+    font-size: 24px;
+  }
+
+  &--xl {
+    font-size: 32px;
+  }
+}

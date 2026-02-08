@@ -1,6 +1,6 @@
 # Cleanuparr Frontend Rewrite Plan
 
-> **Status**: Draft - All major decisions resolved
+> **Status**: Phases 1-4 complete. Phase 5 (Polish & Parity) in progress.
 > **Last Updated**: 2026-02-08
 
 ## Table of Contents
@@ -1194,58 +1194,83 @@ When `frontend-v2` reaches feature parity:
 
 ## 13. Implementation Phases
 
-### Phase 1: Foundation & Scaffolding
-- [ ] Scaffold Angular 21 project in `code/frontend-v2/`
-- [ ] Install and configure: TailwindCSS v4, Spartan UI, Tabler Icons, Inter font
-- [ ] Set up build tooling (ESLint, Prettier, Vitest)
-- [ ] Create global styles: `_variables.scss`, `_tokens.scss`, `_themes.scss`, `_glass.scss`, `_typography.scss`, `_reset.scss`, `_animations.scss`
-- [ ] Implement `ThemeService` (dark/light toggle + reduce effects)
-- [ ] Build core UI components: button, input, card, spinner, toast, icon, toggle
-- [ ] Build layout: shell, nav-sidebar, toolbar, page-header, auth-layout
-- [ ] Set up routing skeleton with lazy loading
-- [ ] Wire up auth guard (permissive) and auth layout placeholder
+### Phase 1: Foundation & Scaffolding ✅
+- [x] Scaffold Angular 21 project in `code/frontend-v2/`
+- [x] Install and configure: @ng-icons/tabler-icons, Inter font, SCSS design system (Spartan UI and TailwindCSS dropped in favor of custom lightweight components)
+- [x] Set up build tooling (ESLint, Vitest)
+- [x] Create global styles: `_variables.scss`, `_tokens.scss`, `_themes.scss`, `_glass.scss`, `_typography.scss`, `_reset.scss`, `_animations.scss`, `_scrollbar.scss`
+- [x] Implement `ThemeService` (dark/light toggle + reduce effects)
+- [x] Build core UI components: button, input, card, spinner, toast-container, icon, toggle
+- [x] Build layout: shell, nav-sidebar, page-header
+- [x] Set up routing skeleton with lazy loading
+- [x] Wire up auth guard (permissive) and auth layout placeholder
 
-### Phase 1.5: Design Review (CHECKPOINT - must pass before continuing)
-> **Stop here and review with the user.** The app should be runnable with the shell layout, sidebar, toolbar, theme toggle, and core UI components visible. Both dark and light themes should be testable.
-- [ ] Run the app and present the shell layout (sidebar + toolbar + content area) in both themes
-- [ ] Show core UI component showcase (buttons, inputs, cards, toggles in glass style)
-- [ ] Validate glassmorphism look and feel in dark theme
-- [ ] Validate light theme readability and contrast
-- [ ] Validate reduced-effects mode (no blur, no animations)
-- [ ] Get user approval on visual direction before proceeding to feature implementation
-- [ ] Iterate on colors, spacing, glass intensity, typography etc. based on feedback
+### Phase 1.5: Design Review ✅
+- [x] Run the app and present the shell layout (sidebar + toolbar + content area) in both themes
+- [x] Show core UI component showcase (buttons, inputs, cards, toggles in glass style)
+- [x] Validate glassmorphism look and feel in dark theme
+- [x] Validate light theme readability and contrast
+- [x] Validate reduced-effects mode (no blur, no animations)
+- [x] Get user approval on visual direction before proceeding to feature implementation
+- [x] Iterate on feedback: responsive sidebar, mobile overlay, sidebar section labels, arr SVG icons
 
-### Phase 2: Core Infrastructure
-- [ ] Implement domain-split API services (one per backend controller)
-- [ ] Implement HTTP interceptors (error handling, base URL)
-- [ ] Implement SignalR hub service with signal-based state
-- [ ] Build remaining UI components: dropdown, table, modal, confirm-dialog, tabs, accordion, tooltip, menu, etc.
-- [ ] Set up NgRx signal store patterns
+### Phase 2: Core Infrastructure ✅
+- [x] Implement domain-split API services (11 services: general-config, queue-cleaner, malware-blocker, download-cleaner, blacklist-sync, arr, download-client, notification, jobs, events, system)
+- [x] Implement HTTP interceptors (error handling, base URL)
+- [x] Implement SignalR hub service with signal-based state (AppHubService with auto-reconnect)
+- [x] Build remaining UI components: select, number-input, textarea, chip-input, badge, accordion, modal, paginator, tabs, empty-state, loading-state, toast-container
+- [x] Set up signal-based state patterns (component-local signals; NgRx signal stores deferred to Phase 5 if needed)
 
-### Phase 3: Feature Pages
-- [ ] Dashboard (redesigned: stats cards, activity feed, jobs overview, quick actions)
-- [ ] Logs viewer (real-time, virtual scroll, filtering)
-- [ ] Events viewer
-- [ ] General settings
-- [ ] Queue cleaner settings
-- [ ] Malware blocker settings
-- [ ] Download cleaner settings
-- [ ] Blacklist sync settings
+### Phase 3: Feature Pages ✅
+- [x] Dashboard (manual events banner, recent logs/events timelines, jobs management with run-now)
+- [x] Logs viewer (real-time SignalR, level filtering, search, expandable entries, copy)
+- [x] Events viewer (server-side pagination, auto-polling, severity/type/search filters, expandable data)
+- [x] General settings
+- [x] Queue cleaner settings
+- [x] Malware blocker settings
+- [x] Download cleaner settings
+- [x] Blacklist sync settings
 
-### Phase 4: Complex Settings
-- [ ] Unified arr settings (Sonarr/Radarr/Lidarr/Readarr/Whisparr via single component)
-- [ ] Download client settings
-- [ ] Notification settings + provider modals
+### Phase 4: Complex Settings ✅
+- [x] Unified arr settings (Sonarr/Radarr/Lidarr/Readarr/Whisparr via single component with `:type` param)
+- [x] Download client settings (CRUD with modal, type selection, test connection)
+- [x] Notification settings + provider modals (event flag toggles, Discord fully wired)
 
-### Phase 5: Polish & Parity
-- [ ] PWA / Service Worker configuration
-- [ ] Unsaved changes guards
-- [ ] Responsive design testing & mobile edge cases (built-in from Phase 1)
-- [ ] Accessibility audit (both themes, reduced motion)
-- [ ] Performance profiling (especially glass effects on lower-end devices)
-- [ ] Light theme refinement and contrast validation
-- [ ] Feature parity verification against current frontend
-- [ ] Migration to production
+### Phase 5: Polish & Parity (IN PROGRESS)
+- [x] Wire ToastContainer into app shell so toasts display
+- [x] Wire ConfirmDialogComponent into app shell for destructive action confirmations
+- [x] Unsaved changes guards (pendingChangesGuard with HasPendingChanges interface, JSON snapshot dirty tracking)
+- [x] Confirmation dialogs for delete operations (arr instances, download clients, notifications)
+- [x] Version display in sidebar footer (current version + update available link)
+- [x] Support section on dashboard (GitHub, Discord, Donate - conditional on displaySupportBanner)
+- [x] Feature parity verification against current frontend
+- [x] Sidebar logo icon (reused 128.png from old frontend)
+- [x] Mobile sidebar closes on nav link click (navClicked output + smooth transform transition)
+- [x] Fix arr settings route param binding (input alias 'type' for `:type` route param)
+- [x] ApplicationPathService (base-path.service.ts) for dev/prod API routing
+- [x] Dynamic base path in index.html (server-injected `_server_base_path`, proper title/favicon/manifest/iOS meta)
+- [x] SignalR hub URL respects base path (hub.service.ts uses ApplicationPathService.buildHubUrl)
+- [x] PWA manifest (manifest.webmanifest with proper app metadata and icons)
+- [x] Responsive fixes (toast container mobile width, filter toolbar wrapping, min-width reductions)
+- [x] Accessibility audit and fixes:
+  - Toast container: aria-live="polite", aria-atomic
+  - Modal: aria-labelledby linking to title
+  - Confirm dialog: aria-labelledby + aria-describedby
+  - Spinner: uses CSS custom property for reduced motion support
+  - Destructive button: uses --color-primary-text instead of hardcoded #fff
+- [x] Light theme contrast improvements:
+  - text-tertiary: 0.40 → 0.50 opacity (WCAG AA compliant)
+  - text-disabled: 0.25 → 0.35 opacity
+  - input-placeholder: 0.35 → 0.45 opacity
+  - scrollbar-thumb: 0.12 → 0.20 opacity
+- [x] DocumentationService ported (field-to-anchor mappings for all settings sections)
+- [x] Fix spinner animation (component-scoped @keyframes for reliable rendering)
+- [x] Fix SignalR hub lifecycle (moved start/stop to ShellComponent - no more race conditions)
+- [x] Support banner card animations (staggered entrance + hover lift/glow + heart pulse)
+- [x] Sidebar: "Become a Sponsor" link + "Suggested Apps" section (Huntarr)
+- ~~Service Worker~~ Skipped (not needed - Cleanuparr always needs live backend)
+- [ ] Performance profiling (glass effects on lower-end devices)
+- [ ] Migration to production (update Dockerfile to build frontend-v2 instead of frontend)
 
 ---
 

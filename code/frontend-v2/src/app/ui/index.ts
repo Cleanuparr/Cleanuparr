@@ -1,0 +1,24 @@
+// UI Component Library - Barrel Exports
+export { ButtonComponent } from './button/button.component';
+export type { ButtonVariant, ButtonSize } from './button/button.component';
+export { CardComponent } from './card/card.component';
+export { InputComponent } from './input/input.component';
+export { SpinnerComponent } from './spinner/spinner.component';
+export { ToggleComponent } from './toggle/toggle.component';
+export { IconComponent } from './icon/icon.component';
+export { BadgeComponent } from './badge/badge.component';
+export type { BadgeSeverity, BadgeSize } from './badge/badge.component';
+export { SelectComponent } from './select/select.component';
+export type { SelectOption } from './select/select.component';
+export { NumberInputComponent } from './number-input/number-input.component';
+export { TextareaComponent } from './textarea/textarea.component';
+export { ChipInputComponent } from './chip-input/chip-input.component';
+export { AccordionComponent } from './accordion/accordion.component';
+export { ModalComponent } from './modal/modal.component';
+export { PaginatorComponent } from './paginator/paginator.component';
+export { TabsComponent } from './tabs/tabs.component';
+export type { Tab } from './tabs/tabs.component';
+export { EmptyStateComponent } from './empty-state/empty-state.component';
+export { LoadingStateComponent } from './loading-state/loading-state.component';
+export { ToastContainerComponent } from './toast-container/toast-container.component';
+export { ConfirmDialogComponent } from './confirm-dialog/confirm-dialog.component';

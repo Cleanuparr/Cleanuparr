@@ -1,0 +1,124 @@
+// =============================================================================
+// Cleanuparr Design Tokens - Single Source of Truth
+// All visual values are defined here as SCSS variables.
+// These feed into _tokens.scss (CSS custom properties) and _themes.scss.
+// =============================================================================
+
+// Brand colors (Cleanuparr purple palette)
+$brand-50:  #f3e8ff;
+$brand-100: #e9d5ff;
+$brand-200: #d8b4fe;
+$brand-300: #c084fc;
+$brand-400: #a855f7;
+$brand-500: #7E57C2;
+$brand-600: #6D28D9;
+$brand-700: #5B21B6;
+$brand-800: #4C1D95;
+$brand-900: #3B0764;
+$brand-950: #1e0038;
+
+// Semantic colors
+$color-success:     #22c55e;
+$color-success-dim: #166534;
+$color-warning:     #f59e0b;
+$color-warning-dim: #92400e;
+$color-error:       #ef4444;
+$color-error-dim:   #991b1b;
+$color-info:        #3b82f6;
+$color-info-dim:    #1e40af;
+
+// Spacing scale (rem-based for accessibility)
+$space-0:  0;
+$space-px: 1px;
+$space-0-5: 0.125rem;  // 2px
+$space-1:  0.25rem;    // 4px
+$space-1-5: 0.375rem;  // 6px
+$space-2:  0.5rem;     // 8px
+$space-2-5: 0.625rem;  // 10px
+$space-3:  0.75rem;    // 12px
+$space-3-5: 0.875rem;  // 14px
+$space-4:  1rem;       // 16px
+$space-5:  1.25rem;    // 20px
+$space-6:  1.5rem;     // 24px
+$space-7:  1.75rem;    // 28px
+$space-8:  2rem;       // 32px
+$space-9:  2.25rem;    // 36px
+$space-10: 2.5rem;     // 40px
+$space-12: 3rem;       // 48px
+$space-14: 3.5rem;     // 56px
+$space-16: 4rem;       // 64px
+$space-20: 5rem;       // 80px
+
+// Border radius
+$radius-none: 0;
+$radius-sm:   0.25rem;   // 4px
+$radius-md:   0.375rem;  // 6px
+$radius-lg:   0.5rem;    // 8px
+$radius-xl:   0.75rem;   // 12px
+$radius-2xl:  1rem;      // 16px
+$radius-3xl:  1.5rem;    // 24px
+$radius-full: 9999px;
+
+// Glass effect defaults
+$glass-blur:    12px;
+$glass-blur-sm: 8px;
+$glass-blur-lg: 20px;
+
+// Transition durations
+$duration-fast:   150ms;
+$duration-normal: 250ms;
+$duration-slow:   400ms;
+
+// Easing
+$ease-default:  cubic-bezier(0.4, 0, 0.2, 1);
+$ease-in:       cubic-bezier(0.4, 0, 1, 1);
+$ease-out:      cubic-bezier(0, 0, 0.2, 1);
+$ease-in-out:   cubic-bezier(0.4, 0, 0.2, 1);
+
+// Typography
+$font-family:  'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+$font-mono:    'JetBrains Mono', 'Fira Code', 'Cascadia Code', Consolas, monospace;
+
+$font-size-xs:   0.75rem;    // 12px
+$font-size-sm:   0.875rem;   // 14px
+$font-size-base: 1rem;       // 16px
+$font-size-lg:   1.125rem;   // 18px
+$font-size-xl:   1.25rem;    // 20px
+$font-size-2xl:  1.5rem;     // 24px
+$font-size-3xl:  1.875rem;   // 30px
+$font-size-4xl:  2.25rem;    // 36px
+
+$line-height-tight:  1.25;
+$line-height-snug:   1.375;
+$line-height-normal: 1.5;
+$line-height-relaxed: 1.625;
+
+$font-weight-normal:   400;
+$font-weight-medium:   500;
+$font-weight-semibold: 600;
+$font-weight-bold:     700;
+
+// Layout
+$sidebar-width:           260px;
+$sidebar-collapsed-width: 64px;
+$toolbar-height:          56px;
+$content-max-width:       1400px;
+
+// Z-index layers
+$z-dropdown:  100;
+$z-sticky:    200;
+$z-fixed:     300;
+$z-overlay:   400;
+$z-modal:     500;
+$z-popover:   600;
+$z-tooltip:   700;
+$z-toast:     800;
+
+// Breakpoints (single breakpoint for desktop/mobile split)
+$breakpoint-mobile: 768px;
+
+// Shadows (non-glass, for general use)
+$shadow-sm:  0 1px 2px rgba(0, 0, 0, 0.05);
+$shadow-md:  0 4px 6px -1px rgba(0, 0, 0, 0.1);
+$shadow-lg:  0 10px 15px -3px rgba(0, 0, 0, 0.1);
+$shadow-xl:  0 20px 25px -5px rgba(0, 0, 0, 0.1);

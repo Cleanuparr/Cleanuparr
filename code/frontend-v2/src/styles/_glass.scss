@@ -1,0 +1,93 @@
+// =============================================================================
+// Glassmorphism Mixin Library
+// Provides reusable glass effects at different intensity levels.
+// All values reference CSS custom properties for theme compatibility.
+// =============================================================================
+
+// Base glass surface with configurable level
+// 'subtle'   - minimal: background + border only (no blur, good for nested elements)
+// 'base'     - standard: blur + border + shadow (default for cards and panels)
+// 'elevated' - prominent: stronger blur + glow (for modals, overlays, important elements)
+@mixin glass($level: 'base') {
+  @if $level == 'subtle' {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-xl);
+  } @else if $level == 'base' {
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--glass-shadow);
+  } @else if $level == 'elevated' {
+    background: var(--surface-elevated);
+    backdrop-filter: blur(var(--glass-blur-lg));
+    -webkit-backdrop-filter: blur(var(--glass-blur-lg));
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--glass-shadow), 0 0 80px rgba(126, 87, 194, 0.04);
+  }
+}
+
+// Hover effect for interactive glass elements
+@mixin glass-hover {
+  transition: background var(--duration-normal) var(--ease-default),
+              border-color var(--duration-normal) var(--ease-default);
+
+  &:hover {
+    background: var(--glass-bg-hover);
+    border-color: var(--glass-border-hover);
+  }
+
+  &:active {
+    background: var(--glass-bg-active);
+  }
+}
+
+// Focus ring for glass elements (keyboard navigation)
+@mixin glass-focus {
+  &:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+}
+
+// Combined interactive glass element (hover + focus)
+@mixin glass-interactive {
+  @include glass-hover;
+  @include glass-focus;
+  cursor: pointer;
+}
+
+// Glass input field style
+@mixin glass-input {
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: var(--radius-lg);
+  color: var(--input-text);
+  font-family: var(--font-family);
+  font-size: var(--font-size-sm);
+  transition: border-color var(--duration-fast) var(--ease-default),
+              background var(--duration-fast) var(--ease-default);
+
+  &::placeholder {
+    color: var(--input-placeholder);
+  }
+
+  &:hover:not(:focus):not(:disabled) {
+    background: var(--input-bg-hover);
+    border-color: var(--input-border-hover);
+  }
+
+  &:focus {
+    outline: none;
+    border-color: var(--input-border-focus);
+    box-shadow: 0 0 0 3px var(--color-primary-subtle);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}

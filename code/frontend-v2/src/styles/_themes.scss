@@ -1,0 +1,146 @@
+// =============================================================================
+// Theme Definitions
+// All theme-dependent values (surfaces, text, glass, etc.) are defined here.
+// Components use these CSS custom properties - never hardcode theme colors.
+// =============================================================================
+
+// Dark theme (default)
+:root,
+[data-theme='dark'] {
+  // Surfaces
+  --surface-ground:   #0c0614;
+  --surface-section:  #140b22;
+  --surface-card:     rgba(20, 11, 34, 0.75);
+  --surface-overlay:  rgba(12, 6, 20, 0.92);
+  --surface-elevated: rgba(30, 18, 50, 0.65);
+
+  // Glass
+  --glass-bg:           rgba(255, 255, 255, 0.04);
+  --glass-bg-hover:     rgba(255, 255, 255, 0.07);
+  --glass-bg-active:    rgba(255, 255, 255, 0.10);
+  --glass-border:       rgba(255, 255, 255, 0.08);
+  --glass-border-hover: rgba(255, 255, 255, 0.15);
+  --glass-shadow:       0 8px 32px rgba(0, 0, 0, 0.4);
+
+  // Text
+  --text-primary:   rgba(255, 255, 255, 0.92);
+  --text-secondary: rgba(255, 255, 255, 0.60);
+  --text-tertiary:  rgba(255, 255, 255, 0.40);
+  --text-disabled:  rgba(255, 255, 255, 0.25);
+  --text-inverse:   rgba(0, 0, 0, 0.90);
+
+  // Primary (brand purple)
+  --color-primary:        var(--brand-500);
+  --color-primary-hover:  var(--brand-400);
+  --color-primary-active: var(--brand-300);
+  --color-primary-text:   #ffffff;
+  --color-primary-subtle: rgba(126, 87, 194, 0.15);
+
+  // Sidebar (always dark in both themes)
+  --sidebar-bg:          linear-gradient(180deg, #1a0e2e 0%, #0c0614 100%);
+  --sidebar-border:      rgba(255, 255, 255, 0.06);
+  --sidebar-item-text:   rgba(255, 255, 255, 0.65);
+  --sidebar-item-hover:  rgba(126, 87, 194, 0.12);
+  --sidebar-item-active: rgba(126, 87, 194, 0.22);
+  --sidebar-item-active-text: #ffffff;
+  --sidebar-section-label:    rgba(255, 255, 255, 0.45);
+  --sidebar-section-label-hover: rgba(255, 255, 255, 0.65);
+
+  // Toolbar
+  --toolbar-bg:     rgba(12, 6, 20, 0.80);
+  --toolbar-border: rgba(255, 255, 255, 0.06);
+
+  // Input
+  --input-bg:          rgba(255, 255, 255, 0.04);
+  --input-bg-hover:    rgba(255, 255, 255, 0.06);
+  --input-border:      rgba(255, 255, 255, 0.10);
+  --input-border-hover: rgba(255, 255, 255, 0.18);
+  --input-border-focus: var(--brand-500);
+  --input-placeholder: rgba(255, 255, 255, 0.30);
+  --input-text:        var(--text-primary);
+
+  // Scrollbar
+  --scrollbar-track:       transparent;
+  --scrollbar-thumb:       rgba(255, 255, 255, 0.10);
+  --scrollbar-thumb-hover: rgba(255, 255, 255, 0.18);
+
+  // Dropdown
+  --dropdown-bg: rgba(20, 11, 34, 0.97);
+
+  // Divider
+  --divider: rgba(255, 255, 255, 0.08);
+
+  // Focus ring
+  --focus-ring: var(--brand-500);
+  --focus-ring-offset: var(--surface-ground);
+}
+
+// Light theme
+[data-theme='light'] {
+  // Surfaces
+  --surface-ground:   #f5f0fa;
+  --surface-section:  #ede5f7;
+  --surface-card:     rgba(255, 255, 255, 0.70);
+  --surface-overlay:  rgba(245, 240, 250, 0.94);
+  --surface-elevated: rgba(255, 255, 255, 0.80);
+
+  // Glass
+  --glass-bg:           rgba(255, 255, 255, 0.50);
+  --glass-bg-hover:     rgba(255, 255, 255, 0.65);
+  --glass-bg-active:    rgba(255, 255, 255, 0.75);
+  --glass-border:       rgba(126, 87, 194, 0.10);
+  --glass-border-hover: rgba(126, 87, 194, 0.20);
+  --glass-shadow:       0 8px 32px rgba(126, 87, 194, 0.06);
+
+  // Text
+  --text-primary:   rgba(12, 6, 20, 0.90);
+  --text-secondary: rgba(12, 6, 20, 0.60);
+  --text-tertiary:  rgba(12, 6, 20, 0.50);
+  --text-disabled:  rgba(12, 6, 20, 0.35);
+  --text-inverse:   rgba(255, 255, 255, 0.95);
+
+  // Primary
+  --color-primary:        var(--brand-600);
+  --color-primary-hover:  var(--brand-700);
+  --color-primary-active: var(--brand-800);
+  --color-primary-text:   #ffffff;
+  --color-primary-subtle: rgba(126, 87, 194, 0.08);
+
+  // Sidebar (stays dark purple in light theme for brand identity)
+  --sidebar-bg:          linear-gradient(180deg, #2d1a4e 0%, #1a0e2e 100%);
+  --sidebar-border:      rgba(255, 255, 255, 0.08);
+  --sidebar-item-text:   rgba(255, 255, 255, 0.65);
+  --sidebar-item-hover:  rgba(255, 255, 255, 0.10);
+  --sidebar-item-active: rgba(255, 255, 255, 0.18);
+  --sidebar-item-active-text: #ffffff;
+  --sidebar-section-label:    rgba(255, 255, 255, 0.45);
+  --sidebar-section-label-hover: rgba(255, 255, 255, 0.65);
+
+  // Toolbar
+  --toolbar-bg:     rgba(255, 255, 255, 0.65);
+  --toolbar-border: rgba(126, 87, 194, 0.10);
+
+  // Input
+  --input-bg:           rgba(255, 255, 255, 0.60);
+  --input-bg-hover:     rgba(255, 255, 255, 0.75);
+  --input-border:       rgba(126, 87, 194, 0.15);
+  --input-border-hover: rgba(126, 87, 194, 0.25);
+  --input-border-focus: var(--brand-600);
+  --input-placeholder:  rgba(12, 6, 20, 0.45);
+  --input-text:         var(--text-primary);
+
+  // Scrollbar
+  --scrollbar-track:       transparent;
+  --scrollbar-thumb:       rgba(12, 6, 20, 0.20);
+  --scrollbar-thumb-hover: rgba(12, 6, 20, 0.22);
+
+  // Dropdown
+  --dropdown-bg: rgba(255, 255, 255, 0.97);
+
+  // Divider
+  --divider: rgba(126, 87, 194, 0.10);
+
+  // Focus ring
+  --focus-ring: var(--brand-600);
+  --focus-ring-offset: var(--surface-ground);
+}

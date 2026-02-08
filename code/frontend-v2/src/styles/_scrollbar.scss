@@ -1,0 +1,27 @@
+// =============================================================================
+// Custom Scrollbar
+// Thin, themed scrollbar that matches the glass design.
+// =============================================================================
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: var(--radius-full);
+
+  &:hover {
+    background: var(--scrollbar-thumb-hover);
+  }
+}

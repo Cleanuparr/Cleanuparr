@@ -1,0 +1,27 @@
+<label class="toggle" [class.toggle--disabled]="disabled()">
+  <button
+    class="toggle__track"
+    [class.toggle__track--checked]="checked()"
+    role="switch"
+    [attr.aria-checked]="checked()"
+    [attr.aria-label]="label()"
+    [disabled]="disabled()"
+    (click)="toggle()"
+    (keydown)="onKeydown($event)"
+  >
+    <span class="toggle__thumb"></span>
+  </button>
+  @if (label()) {
+    <span class="toggle__label">
+      {{ label() }}
+      @if (helpKey()) {
+        <button class="field-help-btn" (click)="onHelpClick($event)" aria-label="Open documentation" tabindex="-1">
+          <ng-icon name="tablerQuestionMark" size="14" />
+        </button>
+      }
+    </span>
+  }
+</label>
+@if (hint()) {
+  <span class="toggle__hint">{{ hint() }}</span>
+}

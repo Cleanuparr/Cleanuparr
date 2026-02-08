@@ -1,0 +1,122 @@
+@use 'glass' as *;
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  font-family: var(--font-family);
+  font-weight: 500;
+  border-radius: var(--radius-lg);
+  transition: all var(--duration-fast) var(--ease-default);
+  position: relative;
+  white-space: nowrap;
+  user-select: none;
+
+  @include glass-focus;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  // Sizes
+  &--sm {
+    height: 32px;
+    padding: 0 var(--space-3);
+    font-size: var(--font-size-xs);
+  }
+
+  &--md {
+    height: 38px;
+    padding: 0 var(--space-4);
+    font-size: var(--font-size-sm);
+  }
+
+  &--lg {
+    height: 44px;
+    padding: 0 var(--space-6);
+    font-size: var(--font-size-base);
+  }
+
+  &--icon {
+    height: 38px;
+    width: 38px;
+    padding: 0;
+  }
+
+  // Variants
+  &--primary {
+    background: var(--color-primary);
+    color: var(--color-primary-text);
+    border: 1px solid transparent;
+
+    &:hover:not(:disabled) {
+      background: var(--color-primary-hover);
+    }
+
+    &:active:not(:disabled) {
+      background: var(--color-primary-active);
+    }
+  }
+
+  &--secondary {
+    @include glass('subtle');
+    color: var(--text-primary);
+
+    &:hover:not(:disabled) {
+      background: var(--glass-bg-hover);
+      border-color: var(--glass-border-hover);
+    }
+
+    &:active:not(:disabled) {
+      background: var(--glass-bg-active);
+    }
+  }
+
+  &--ghost {
+    background: transparent;
+    color: var(--text-secondary);
+    border: 1px solid transparent;
+
+    &:hover:not(:disabled) {
+      background: var(--glass-bg);
+      color: var(--text-primary);
+    }
+
+    &:active:not(:disabled) {
+      background: var(--glass-bg-hover);
+    }
+  }
+
+  &--destructive {
+    background: var(--color-error);
+    color: var(--color-primary-text);
+    border: 1px solid transparent;
+
+    &:hover:not(:disabled) {
+      background: var(--color-error-dim);
+    }
+  }
+
+  // Loading state
+  &__spinner {
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    border: 2px solid currentColor;
+    border-top-color: transparent;
+    border-radius: var(--radius-full);
+    animation: spin var(--duration-slow) linear infinite;
+  }
+
+  &__content {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+
+    &--hidden {
+      visibility: hidden;
+    }
+  }
+}

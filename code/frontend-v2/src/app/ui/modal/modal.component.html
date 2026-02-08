@@ -1,0 +1,25 @@
+@if (visible()) {
+  <div class="modal-backdrop" (click)="onBackdropClick()">
+    <div
+      class="modal"
+      [class]="'modal modal--' + size()"
+      (click)="$event.stopPropagation()"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modal-title"
+    >
+      @if (title()) {
+        <div class="modal__header">
+          <h2 id="modal-title" class="modal__title">{{ title() }}</h2>
+          <button class="modal__close" (click)="close()" aria-label="Close">&times;</button>
+        </div>
+      }
+      <div class="modal__body">
+        <ng-content />
+      </div>
+      <div class="modal__footer">
+        <ng-content select="[modal-footer]" />
+      </div>
+    </div>
+  </div>
+}

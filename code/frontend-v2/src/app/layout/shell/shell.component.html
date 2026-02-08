@@ -1,0 +1,28 @@
+<div
+  class="shell"
+  [class.shell--collapsed]="sidebarCollapsed() && !isMobile()"
+  [class.shell--mobile]="isMobile()"
+>
+  <!-- Mobile backdrop -->
+  @if (isMobile() && mobileMenuOpen()) {
+    <div class="shell__backdrop" (click)="closeMobileMenu()"></div>
+  }
+
+  <app-nav-sidebar
+    [collapsed]="sidebarCollapsed() && !isMobile()"
+    [mobileOpen]="mobileMenuOpen()"
+    [isMobile]="isMobile()"
+    (navClicked)="closeMobileMenu()"
+  />
+
+  <div class="shell__main">
+    <app-toolbar
+      [sidebarCollapsed]="sidebarCollapsed()"
+      (toggleSidebar)="toggleSidebar()"
+    />
+
+    <main class="shell__content">
+      <router-outlet />
+    </main>
+  </div>
+</div>

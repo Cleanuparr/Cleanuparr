@@ -1,0 +1,86 @@
+// =============================================================================
+// Animations & Transitions
+// Reusable keyframes and animation utilities.
+// All durations use CSS custom properties so performance mode works.
+// =============================================================================
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes fade-out {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-down {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(16px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.5; }
+}
+
+// Performance mode: disable decorative animations and transitions
+// Functional indicators ([role="status"] spinners) are exempted
+:root[data-performance-mode='true'],
+:root[data-performance-mode='true'] *:not([role='status']):not([role='status'] *) {
+  --glass-blur: 0px;
+  --glass-blur-sm: 0px;
+  --glass-blur-lg: 0px;
+  --glass-shadow: none;
+  --duration-fast: 0ms;
+  --duration-normal: 0ms;
+  --duration-slow: 0ms;
+  animation-duration: 0ms !important;
+  animation-delay: 0ms !important;
+  transition-duration: 0ms !important;
+  transition-delay: 0ms !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --glass-blur: 0px;
+    --glass-blur-sm: 0px;
+    --glass-blur-lg: 0px;
+    --glass-shadow: none;
+    --duration-fast: 0ms;
+    --duration-normal: 0ms;
+    --duration-slow: 0ms;
+  }
+
+  *:not([role='status']):not([role='status'] *),
+  *:not([role='status']):not([role='status'] *)::before,
+  *:not([role='status']):not([role='status'] *)::after {
+    animation-duration: 0ms !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0ms !important;
+    transition-delay: 0ms !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+}

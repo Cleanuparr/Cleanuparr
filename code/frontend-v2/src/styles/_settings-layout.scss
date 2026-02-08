@@ -1,0 +1,41 @@
+// =============================================================================
+// Shared Settings Page Layout
+// Used by all settings pages for consistent form structure.
+// Usage: @use 'settings-layout' as *;
+// =============================================================================
+
+// Apply to :host of settings page components to center the full page
+@mixin settings-page {
+  display: block;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+@mixin settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+@mixin form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
+  gap: var(--space-5);
+}
+
+@mixin form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  padding-top: var(--space-2);
+}
+
+@mixin form-section {
+  margin-top: var(--space-5);
+}
+
+@mixin modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}

@@ -1,0 +1,43 @@
+.shell {
+  display: flex;
+  min-height: 100vh;
+  min-height: 100dvh;
+
+  &__main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    margin-left: var(--sidebar-width);
+    transition: margin-left var(--duration-normal) var(--ease-default);
+  }
+
+  &--collapsed &__main {
+    margin-left: var(--sidebar-collapsed-width);
+  }
+
+  &__content {
+    flex: 1;
+    padding: var(--space-6);
+    overflow-y: auto;
+    max-width: var(--content-max-width);
+    width: 100%;
+    margin: 0 auto;
+  }
+
+  &__backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: calc(var(--z-fixed) - 1);
+    animation: fade-in var(--duration-fast) var(--ease-default);
+  }
+
+  // Mobile layout
+  &--mobile &__main {
+    margin-left: 0;
+  }
+
+  &--mobile &__content {
+    padding: var(--space-4);
+  }
+}

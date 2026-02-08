@@ -1,0 +1,124 @@
+@use 'glass' as *;
+
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1-5);
+  position: relative;
+}
+
+.select-label {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.select-wrapper {
+  position: relative;
+}
+
+.select-trigger {
+  @include glass-input;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  height: 38px;
+  padding: 0 var(--space-3);
+  cursor: pointer;
+  text-align: left;
+
+  @include glass-focus;
+
+  &--open {
+    border-color: var(--input-border-focus);
+    box-shadow: 0 0 0 3px var(--color-primary-subtle);
+  }
+
+  &--error {
+    border-color: var(--color-error) !important;
+
+    &:focus {
+      box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
+    }
+  }
+
+  &__text {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: var(--font-size-sm);
+    color: var(--text-primary);
+  }
+
+  &:not(.select-trigger--has-value) .select-trigger__text {
+    color: var(--input-placeholder);
+  }
+
+  &__chevron {
+    font-size: 16px;
+    color: var(--text-tertiary);
+    transition: transform var(--duration-fast) var(--ease-default);
+    flex-shrink: 0;
+  }
+
+  &--open .select-trigger__chevron {
+    transform: rotate(180deg);
+  }
+}
+
+.select-dropdown {
+  @include glass('elevated');
+  background: var(--dropdown-bg);
+  position: absolute;
+  top: calc(100% + var(--space-1));
+  left: 0;
+  right: 0;
+  z-index: var(--z-dropdown);
+  max-height: 240px;
+  overflow-y: auto;
+  padding: var(--space-1);
+  animation: scale-in var(--duration-fast) var(--ease-default);
+}
+
+.select-option {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: none;
+  background: none;
+  font-family: var(--font-family);
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  text-align: left;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-default);
+
+  &:hover:not(:disabled) {
+    background: var(--glass-bg-hover);
+  }
+
+  &--selected {
+    background: var(--color-primary-subtle);
+    color: var(--color-primary);
+    font-weight: 500;
+  }
+
+  &--disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.select-error {
+  font-size: var(--font-size-xs);
+  color: var(--color-error);
+}
+
+.select-hint {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+}

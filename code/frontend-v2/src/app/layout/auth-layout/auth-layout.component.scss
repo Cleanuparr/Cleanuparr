@@ -1,0 +1,29 @@
+@use 'glass' as *;
+
+.auth-layout {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--surface-ground);
+  padding: var(--space-4);
+
+  &__card {
+    @include glass('elevated');
+    width: 100%;
+    max-width: 420px;
+    padding: var(--space-10);
+  }
+
+  &__brand {
+    text-align: center;
+    margin-bottom: var(--space-8);
+
+    h1 {
+      font-size: var(--font-size-3xl);
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+  }
+}

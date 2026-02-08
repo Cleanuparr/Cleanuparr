@@ -1,0 +1,20 @@
+<div
+  class="card"
+  [class.card--elevated]="elevated()"
+  [class.card--interactive]="interactive()"
+  [class.card--no-padding]="noPadding()"
+>
+  @if (header() || subtitle()) {
+    <div class="card__header">
+      @if (header()) {
+        <h3 class="card__title">{{ header() }}</h3>
+      }
+      @if (subtitle()) {
+        <p class="card__subtitle">{{ subtitle() }}</p>
+      }
+    </div>
+  }
+  <div class="card__body">
+    <ng-content />
+  </div>
+</div>

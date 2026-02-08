@@ -1,0 +1,130 @@
+@use 'settings-layout' as *;
+@use 'glass' as *;
+
+:host { @include settings-page; }
+
+.settings-form { @include settings-form; }
+.form-grid { @include form-grid; }
+.form-section { @include form-section; }
+.form-actions { @include form-actions; }
+
+// Coverage warning
+.coverage-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-4);
+  border-radius: var(--radius-md);
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  font-size: var(--font-size-sm);
+
+  &__icon {
+    color: var(--color-warning, #f59e0b);
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  &__content {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__title {
+    display: block;
+    color: var(--color-warning, #f59e0b);
+    margin-bottom: var(--space-1);
+  }
+
+  &__desc {
+    color: var(--text-secondary);
+    margin: 0 0 var(--space-2);
+    line-height: 1.5;
+  }
+
+  &__gaps {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+
+  &__gap {
+    color: var(--text-secondary);
+
+    strong {
+      color: var(--text-primary);
+    }
+  }
+}
+
+// Rule cards
+.rule-card {
+  @include glass('subtle');
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-3);
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--space-2);
+  }
+
+  &__name {
+    font-size: var(--font-size-md);
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+  }
+
+  &__actions {
+    display: flex;
+    gap: var(--space-1);
+  }
+
+  &__action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--glass-border);
+    background: var(--glass-bg);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all var(--duration-fast) var(--ease-default);
+    padding: 0;
+
+    &:hover {
+      color: var(--color-primary);
+      border-color: var(--color-primary);
+    }
+
+    &--danger:hover {
+      color: var(--color-error);
+      border-color: var(--color-error);
+    }
+  }
+
+  &__badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin-bottom: var(--space-3);
+  }
+
+  &__details {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-4);
+    font-size: var(--font-size-sm);
+    color: var(--text-tertiary);
+  }
+}
+
+.rule-actions {
+  margin-top: var(--space-3);
+}

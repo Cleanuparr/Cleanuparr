@@ -1,0 +1,6 @@
+<div class="loading-state">
+  <app-spinner [size]="size()" />
+  @if (message()) {
+    <p class="loading-state__message">{{ message() }}</p>
+  }
+</div>

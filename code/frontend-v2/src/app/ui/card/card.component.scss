@@ -1,0 +1,39 @@
+@use 'glass' as *;
+
+.card {
+  @include glass('base');
+  padding: var(--space-6);
+
+  &--elevated {
+    @include glass('elevated');
+  }
+
+  &--interactive {
+    @include glass-interactive;
+  }
+
+  &--no-padding {
+    padding: 0;
+  }
+
+  &__header {
+    margin-bottom: var(--space-4);
+  }
+
+  &__title {
+    font-size: var(--font-size-lg);
+    font-weight: 600;
+    color: var(--text-primary);
+    line-height: 1.3;
+  }
+
+  &__subtitle {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+    margin-top: var(--space-1);
+  }
+
+  &__body {
+    color: var(--text-secondary);
+  }
+}

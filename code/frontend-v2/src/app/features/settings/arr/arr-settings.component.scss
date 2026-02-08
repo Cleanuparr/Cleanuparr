@@ -1,0 +1,21 @@
+@use 'settings-layout' as *;
+@use 'list-layout' as *;
+
+:host { @include settings-page; }
+
+.settings-form { @include settings-form; }
+.modal-form { @include modal-form; }
+
+.instances-header {
+  @include list-header;
+}
+
+.instance-row {
+  @include item-row;
+
+  &__url {
+    font-size: var(--font-size-xs);
+    color: var(--text-tertiary);
+    font-family: var(--font-mono);
+  }
+}

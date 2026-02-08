@@ -1,0 +1,66 @@
+// =============================================================================
+// CSS Reset
+// Minimal, modern reset for consistent cross-browser rendering.
+// =============================================================================
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  tab-size: 4;
+}
+
+body {
+  min-height: 100vh;
+  min-height: 100dvh;
+  color: var(--text-primary);
+  background-color: var(--surface-ground);
+}
+
+img, picture, video, canvas, svg {
+  display: block;
+  max-width: 100%;
+}
+
+input, button, textarea, select {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+  background: none;
+  border: none;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+ul, ol {
+  list-style: none;
+}
+
+table {
+  border-collapse: collapse;
+  border-spacing: 0;
+}
+
+// Remove default focus outline (we provide our own via glass-focus mixin)
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+// Smooth scrolling unless reduced motion is preferred
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}

@@ -1,0 +1,103 @@
+@use 'variables' as *;
+
+// =============================================================================
+// CSS Custom Properties
+// Maps SCSS variables to CSS custom properties for runtime theme switching.
+// Theme-dependent values are set in _themes.scss, not here.
+// =============================================================================
+
+:root {
+  // Brand palette
+  --brand-50:  #{$brand-50};
+  --brand-100: #{$brand-100};
+  --brand-200: #{$brand-200};
+  --brand-300: #{$brand-300};
+  --brand-400: #{$brand-400};
+  --brand-500: #{$brand-500};
+  --brand-600: #{$brand-600};
+  --brand-700: #{$brand-700};
+  --brand-800: #{$brand-800};
+  --brand-900: #{$brand-900};
+  --brand-950: #{$brand-950};
+
+  // Semantic colors
+  --color-success:     #{$color-success};
+  --color-success-dim: #{$color-success-dim};
+  --color-warning:     #{$color-warning};
+  --color-warning-dim: #{$color-warning-dim};
+  --color-error:       #{$color-error};
+  --color-error-dim:   #{$color-error-dim};
+  --color-info:        #{$color-info};
+  --color-info-dim:    #{$color-info-dim};
+
+  // Spacing
+  --space-0:   #{$space-0};
+  --space-px:  #{$space-px};
+  --space-0-5: #{$space-0-5};
+  --space-1:   #{$space-1};
+  --space-1-5: #{$space-1-5};
+  --space-2:   #{$space-2};
+  --space-2-5: #{$space-2-5};
+  --space-3:   #{$space-3};
+  --space-3-5: #{$space-3-5};
+  --space-4:   #{$space-4};
+  --space-5:   #{$space-5};
+  --space-6:   #{$space-6};
+  --space-7:   #{$space-7};
+  --space-8:   #{$space-8};
+  --space-9:   #{$space-9};
+  --space-10:  #{$space-10};
+  --space-12:  #{$space-12};
+  --space-14:  #{$space-14};
+  --space-16:  #{$space-16};
+  --space-20:  #{$space-20};
+
+  // Radius
+  --radius-none: #{$radius-none};
+  --radius-sm:   #{$radius-sm};
+  --radius-md:   #{$radius-md};
+  --radius-lg:   #{$radius-lg};
+  --radius-xl:   #{$radius-xl};
+  --radius-2xl:  #{$radius-2xl};
+  --radius-3xl:  #{$radius-3xl};
+  --radius-full: #{$radius-full};
+
+  // Typography
+  --font-family: #{$font-family};
+  --font-mono:   #{$font-mono};
+  --font-size-xs:   #{$font-size-xs};
+  --font-size-sm:   #{$font-size-sm};
+  --font-size-base: #{$font-size-base};
+  --font-size-lg:   #{$font-size-lg};
+  --font-size-xl:   #{$font-size-xl};
+  --font-size-2xl:  #{$font-size-2xl};
+  --font-size-3xl:  #{$font-size-3xl};
+  --font-size-4xl:  #{$font-size-4xl};
+
+  // Transitions
+  --duration-fast:   #{$duration-fast};
+  --duration-normal: #{$duration-normal};
+  --duration-slow:   #{$duration-slow};
+  --ease-default: #{$ease-default};
+
+  // Glass
+  --glass-blur:    #{$glass-blur};
+  --glass-blur-sm: #{$glass-blur-sm};
+  --glass-blur-lg: #{$glass-blur-lg};
+
+  // Layout
+  --sidebar-width:           #{$sidebar-width};
+  --sidebar-collapsed-width: #{$sidebar-collapsed-width};
+  --toolbar-height:          #{$toolbar-height};
+  --content-max-width:       #{$content-max-width};
+
+  // Z-index
+  --z-dropdown: #{$z-dropdown};
+  --z-sticky:   #{$z-sticky};
+  --z-fixed:    #{$z-fixed};
+  --z-overlay:  #{$z-overlay};
+  --z-modal:    #{$z-modal};
+  --z-popover:  #{$z-popover};
+  --z-tooltip:  #{$z-tooltip};
+  --z-toast:    #{$z-toast};
+}

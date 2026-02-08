@@ -1,0 +1,95 @@
+@use 'glass' as *;
+
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1-5);
+}
+
+.chip-label {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.chip-wrapper {
+  @include glass-input;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1-5);
+  min-height: 38px;
+  padding: var(--space-1) var(--space-2);
+
+  &:focus-within {
+    border-color: var(--input-border-focus);
+    box-shadow: 0 0 0 3px var(--color-primary-subtle);
+  }
+
+  &--disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  &--error {
+    border-color: var(--color-error);
+  }
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  height: 26px;
+  padding: 0 var(--space-2);
+  background: var(--color-primary-subtle);
+  border: 1px solid rgba(126, 87, 194, 0.2);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  color: var(--text-primary);
+  white-space: nowrap;
+
+  &__remove {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    color: var(--text-tertiary);
+    font-size: 14px;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+    margin-left: var(--space-0-5);
+
+    &:hover {
+      color: var(--color-error);
+    }
+  }
+}
+
+.chip-input {
+  flex: 1;
+  min-width: 120px;
+  height: 26px;
+  background: none;
+  border: none;
+  color: var(--input-text);
+  font-family: var(--font-family);
+  font-size: var(--font-size-sm);
+  outline: none;
+
+  &::placeholder {
+    color: var(--input-placeholder);
+  }
+}
+
+.chip-error {
+  font-size: var(--font-size-xs);
+  color: var(--color-error);
+}
+
+.chip-hint {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+}

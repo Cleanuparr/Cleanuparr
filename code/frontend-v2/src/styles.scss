@@ -1,0 +1,34 @@
+// Cleanuparr v2 - Global Styles Entry Point
+
+@use 'styles/tokens';
+@use 'styles/themes';
+@use 'styles/reset';
+@use 'styles/typography';
+@use 'styles/scrollbar';
+@use 'styles/animations';
+
+// Shared field help button (used across all form components)
+.field-help-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid var(--input-border);
+  background: var(--input-bg);
+  color: var(--text-secondary);
+  cursor: pointer;
+  margin-left: var(--space-1);
+  padding: 0;
+  transition: color var(--duration-fast) var(--ease-default),
+    border-color var(--duration-fast) var(--ease-default),
+    background var(--duration-fast) var(--ease-default);
+  vertical-align: middle;
+
+  &:hover {
+    color: var(--color-primary);
+    border-color: var(--color-primary);
+    background: var(--color-primary-subtle);
+  }
+}

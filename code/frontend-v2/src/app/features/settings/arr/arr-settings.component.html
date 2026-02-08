@@ -1,0 +1,68 @@
+<app-page-header
+  [title]="displayName() + ' Settings'"
+  [subtitle]="'Manage your ' + displayName() + ' instances'"
+/>
+
+<div class="settings-form">
+  <app-card>
+    <div class="instances-header">
+      <h3 class="instances-header__title">Instances</h3>
+      <app-button variant="primary" size="sm" (clicked)="openAddModal()">
+        Add Instance
+      </app-button>
+    </div>
+
+    @for (instance of instances(); track instance.id) {
+      <div class="instance-row">
+        <div class="instance-row__info">
+          <span class="instance-row__name">{{ instance.name }}</span>
+          <app-badge [severity]="instance.enabled ? 'success' : 'default'" size="sm">
+            {{ instance.enabled ? 'Enabled' : 'Disabled' }}
+          </app-badge>
+          <span class="instance-row__url">{{ instance.url }}</span>
+        </div>
+        <div class="instance-row__actions">
+          <app-button variant="ghost" size="sm" (clicked)="openEditModal(instance)">Edit</app-button>
+          <app-button variant="destructive" size="sm" (clicked)="deleteInstance(instance)">Delete</app-button>
+        </div>
+      </div>
+    } @empty {
+      <app-empty-state
+        heading="No instances configured"
+        [description]="'Add a ' + displayName() + ' instance to get started.'"
+      />
+    }
+  </app-card>
+</div>
+
+<!-- Add/Edit Modal -->
+<app-modal
+  [title]="editingInstance() ? 'Edit Instance' : 'Add Instance'"
+  [(visible)]="modalVisible"
+>
+  <div class="modal-form">
+    <app-toggle label="Enabled" [(checked)]="modalEnabled"
+      hint="Enable or disable this instance"
+      helpKey="arr:enabled" />
+    <app-input label="Name" placeholder="My Instance" [(value)]="modalName"
+      hint="A unique name to identify this instance"
+      helpKey="arr:name" />
+    <app-input label="URL" placeholder="http://localhost:8989" type="url" [(value)]="modalUrl"
+      hint="Full URL including protocol and port"
+      helpKey="arr:url" />
+    <app-input label="API Key" placeholder="Enter API key" type="password" [(value)]="modalApiKey"
+      hint="API key from your arr application's Settings > General"
+      helpKey="arr:apiKey" />
+    <app-select label="API Version" [options]="versionOptions()" [(value)]="modalVersion"
+      hint="API version for this application"
+      helpKey="arr:version" />
+  </div>
+  <div modal-footer>
+    <app-button variant="secondary" size="sm" [loading]="testing()" (clicked)="testConnection()">
+      Test
+    </app-button>
+    <app-button variant="primary" size="sm" [loading]="saving()" (clicked)="saveInstance()">
+      Save
+    </app-button>
+  </div>
+</app-modal>

@@ -1,0 +1,35 @@
+@if (label()) {
+  <label class="chip-label">
+    {{ label() }}
+    @if (helpKey()) {
+      <button class="field-help-btn" (click)="onHelpClick($event)" aria-label="Open documentation" tabindex="-1">
+        <ng-icon name="tablerQuestionMark" size="14" />
+      </button>
+    }
+  </label>
+}
+<div class="chip-wrapper" [class.chip-wrapper--disabled]="disabled()" [class.chip-wrapper--error]="error() || uncommittedError()">
+  @for (item of items(); track item; let i = $index) {
+    <span class="chip">
+      {{ item }}
+      @if (!disabled()) {
+        <button class="chip__remove" type="button" (click)="removeItem(i)" aria-label="Remove">&times;</button>
+      }
+    </span>
+  }
+  <input
+    class="chip-input"
+    [placeholder]="items().length === 0 ? placeholder() : ''"
+    [disabled]="disabled()"
+    [(ngModel)]="inputValue"
+    (keydown)="onKeydown($event)"
+    (blur)="onBlur()"
+  />
+</div>
+@if (error()) {
+  <span class="chip-error">{{ error() }}</span>
+} @else if (uncommittedError()) {
+  <span class="chip-error">{{ uncommittedError() }}</span>
+} @else if (hint()) {
+  <span class="chip-hint">{{ hint() }}</span>
+}

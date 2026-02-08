@@ -1,0 +1,250 @@
+<app-page-header
+  title="Notifications"
+  subtitle="Configure notification providers"
+/>
+
+<div class="settings-form">
+  <app-card>
+    <div class="list-header">
+      <h3 class="list-header__title">Providers</h3>
+      <app-button variant="primary" size="sm" (clicked)="openAddModal()">
+        Add Provider
+      </app-button>
+    </div>
+
+    @for (provider of providers(); track provider.id) {
+      <div class="provider-row">
+        <div class="provider-row__top">
+          <div class="item-row__info">
+            <span class="item-row__name">{{ provider.name }}</span>
+            <app-badge [severity]="provider.isEnabled ? 'success' : 'default'" size="sm">
+              {{ provider.isEnabled ? 'Enabled' : 'Disabled' }}
+            </app-badge>
+            <app-badge severity="primary" size="sm">{{ provider.type }}</app-badge>
+          </div>
+          <div class="item-row__actions">
+            <app-button variant="ghost" size="sm" (clicked)="openEditModal(provider)">Edit</app-button>
+            <app-button variant="destructive" size="sm" (clicked)="deleteProvider(provider)">Delete</app-button>
+          </div>
+        </div>
+        <div class="provider-row__events">
+          @if (provider.events.onFailedImportStrike) {
+            <span class="event-tag">Failed Import</span>
+          }
+          @if (provider.events.onStalledStrike) {
+            <span class="event-tag">Stalled</span>
+          }
+          @if (provider.events.onSlowStrike) {
+            <span class="event-tag">Slow</span>
+          }
+          @if (provider.events.onQueueItemDeleted) {
+            <span class="event-tag">Queue Deleted</span>
+          }
+          @if (provider.events.onDownloadCleaned) {
+            <span class="event-tag">Download Cleaned</span>
+          }
+          @if (provider.events.onCategoryChanged) {
+            <span class="event-tag">Category Changed</span>
+          }
+        </div>
+      </div>
+    } @empty {
+      <app-empty-state
+        heading="No notification providers"
+        description="Add a notification provider to get alerts."
+      />
+    }
+  </app-card>
+</div>
+
+<!-- Provider Selection Modal -->
+<app-modal title="Add Notification Provider" [(visible)]="selectionModalVisible">
+  <p class="selection-description">Choose a notification provider type to configure:</p>
+  <div class="provider-grid">
+    @for (provider of availableProviders; track provider.type) {
+      <button class="provider-card" (click)="onProviderTypeSelected(provider.type)">
+        <span class="provider-card__icon-wrapper">
+          <img [src]="provider.iconLightUrl" [alt]="provider.name" class="provider-card__icon provider-card__icon--light" />
+          <img [src]="provider.iconUrl" [alt]="provider.name" class="provider-card__icon provider-card__icon--normal" />
+        </span>
+        <span class="provider-card__name">{{ provider.name }}</span>
+        <span class="provider-card__description">{{ provider.description }}</span>
+      </button>
+    }
+  </div>
+</app-modal>
+
+<!-- Add/Edit Config Modal -->
+<app-modal
+  [title]="editingProvider() ? ('Edit ' + modalType() + ' Provider') : ('Add ' + modalType() + ' Provider')"
+  [(visible)]="modalVisible"
+  size="lg"
+>
+  <div class="modal-form">
+    <app-toggle label="Enabled" [(checked)]="modalEnabled"
+      hint="Enable or disable this provider" />
+    <app-input label="Name" placeholder="My Provider" [(value)]="modalName"
+      hint="A unique name to identify this provider" />
+
+    <!-- Discord Fields -->
+    @if (modalType() === 'Discord') {
+      <app-input label="Webhook URL" placeholder="https://discord.com/api/webhooks/..." type="password" [(value)]="modalWebhookUrl"
+        hint="Your Discord webhook URL. Create one in your Discord server's channel settings under Integrations."
+        helpKey="notifications/discord:webhookUrl" />
+      <app-input label="Username" placeholder="Cleanuparr" [(value)]="modalUsername"
+        hint="Override the default webhook username. Leave empty to use the webhook's default name."
+        helpKey="notifications/discord:username" />
+      <app-input label="Avatar URL" placeholder="https://example.com/avatar.png" type="url" [(value)]="modalAvatarUrl"
+        hint="Override the default webhook avatar. Leave empty to use the webhook's default avatar."
+        helpKey="notifications/discord:avatarUrl" />
+    }
+
+    <!-- Telegram Fields -->
+    @if (modalType() === 'Telegram') {
+      <app-input label="Bot Token" placeholder="123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11" type="password" [(value)]="modalBotToken"
+        hint="Create a bot with BotFather and paste the API token"
+        helpKey="notifications/telegram:botToken" />
+      <app-input label="Chat ID" placeholder="-1001234567890" [(value)]="modalChatId"
+        hint="Start a conversation with the bot or add it to your group to get the chat ID"
+        helpKey="notifications/telegram:chatId" />
+      <app-input label="Topic ID" placeholder="Optional" [(value)]="modalTopicId"
+        hint="Specify a Topic ID to send to a specific thread (supergroups only)"
+        helpKey="notifications/telegram:topicId" />
+      <app-toggle label="Send Silently" [(checked)]="modalSendSilently"
+        hint="Deliver without sound for recipients"
+        helpKey="notifications/telegram:sendSilently" />
+    }
+
+    <!-- Notifiarr Fields -->
+    @if (modalType() === 'Notifiarr') {
+      <app-input label="API Key" placeholder="Enter API key" type="password" [(value)]="modalApiKey"
+        hint="Your Notifiarr API key from your dashboard. Requires Passthrough integration."
+        helpKey="notifications/notifiarr:apiKey" />
+      <app-input label="Channel ID" placeholder="Enter Discord channel ID" [(value)]="modalChannelId"
+        hint="The Discord channel ID where notifications will be sent."
+        helpKey="notifications/notifiarr:channelId" />
+    }
+
+    <!-- Apprise Fields -->
+    @if (modalType() === 'Apprise') {
+      <app-select label="Mode" [options]="appriseOptions" [(value)]="modalAppriseMode"
+        hint="API mode requires an external Apprise container. CLI mode uses the Apprise CLI directly."
+        helpKey="notifications/apprise:mode" />
+      @if (modalAppriseMode() === 'Api') {
+        <app-input label="Server URL" placeholder="http://localhost:8000" [(value)]="modalAppriseUrl"
+          hint="The URL of your Apprise server where notifications will be sent."
+          helpKey="notifications/apprise:url" />
+        <app-input label="Configuration Key" placeholder="Enter key" [(value)]="modalAppriseKey"
+          hint="The key that identifies your Apprise configuration on the server."
+          helpKey="notifications/apprise:key" />
+      }
+      @if (modalAppriseMode() === 'Cli') {
+        <app-chip-input label="Service URLs" placeholder="discord://webhook_id/token" [(items)]="modalAppriseServiceUrls"
+          hint="Add Apprise service URLs. Example: discord://webhook_id/token."
+          helpKey="notifications/apprise:serviceUrls" />
+      }
+      <app-input label="Tags" placeholder="all" [(value)]="modalAppriseTags"
+        hint="Optional tags to filter notifications. Use comma (,) to OR tags and space ( ) to AND them."
+        helpKey="notifications/apprise:tags" />
+    }
+
+    <!-- Ntfy Fields -->
+    @if (modalType() === 'Ntfy') {
+      <app-input label="Server URL" placeholder="https://ntfy.sh" [(value)]="modalNtfyServerUrl"
+        hint="The URL of your ntfy server. Use https://ntfy.sh for the public service or your self-hosted instance."
+        helpKey="notifications/ntfy:serverUrl" />
+      <app-chip-input label="Topics" placeholder="cleanuparr" [(items)]="modalNtfyTopics"
+        hint="Enter the ntfy topics you want to publish to."
+        helpKey="notifications/ntfy:topics" />
+      <app-select label="Authentication" [options]="ntfyAuthOptions" [(value)]="modalNtfyAuthType"
+        hint="Choose how to authenticate with the ntfy server."
+        helpKey="notifications/ntfy:authenticationType" />
+      @if (modalNtfyAuthType() === 'BasicAuth') {
+        <app-input label="Username" placeholder="Enter username" [(value)]="modalNtfyUsername"
+          hint="Your username for basic authentication."
+          helpKey="notifications/ntfy:username" />
+        <app-input label="Password" placeholder="Enter password" type="password" [(value)]="modalNtfyPassword"
+          hint="Your password for basic authentication."
+          helpKey="notifications/ntfy:password" />
+      }
+      @if (modalNtfyAuthType() === 'AccessToken') {
+        <app-input label="Access Token" placeholder="Enter access token" type="password" [(value)]="modalNtfyAccessToken"
+          hint="Your access token for bearer token authentication."
+          helpKey="notifications/ntfy:accessToken" />
+      }
+      <app-select label="Priority" [options]="ntfyPriorityOptions" [(value)]="modalNtfyPriority"
+        hint="The priority level for notifications."
+        helpKey="notifications/ntfy:priority" />
+      <app-chip-input label="Tags" placeholder="warning" [(items)]="modalNtfyTags"
+        hint="Optional tags to add to notifications (e.g., warning, alert)."
+        helpKey="notifications/ntfy:tags" />
+    }
+
+    <!-- Pushover Fields -->
+    @if (modalType() === 'Pushover') {
+      <app-input label="API Token" placeholder="Enter API token" type="password" [(value)]="modalPushoverApiToken"
+        hint="Your application API token from Pushover. Create one at pushover.net/apps/build."
+        helpKey="notifications/pushover:apiToken" />
+      <app-input label="User Key" placeholder="Enter user key" type="password" [(value)]="modalPushoverUserKey"
+        hint="Your user/group key from your Pushover dashboard."
+        helpKey="notifications/pushover:userKey" />
+      <app-chip-input label="Devices" placeholder="myphone" [(items)]="modalPushoverDevices"
+        hint="Leave empty to send to all devices, or enter specific device names."
+        helpKey="notifications/pushover:devices" />
+      <app-select label="Priority" [options]="pushoverPriorityOptions" [(value)]="modalPushoverPriority"
+        hint="The priority level for notifications. Emergency priority will repeat until acknowledged."
+        helpKey="notifications/pushover:priority" />
+      @if (modalPushoverPriority() === 'Emergency') {
+        <app-number-input label="Retry (seconds)" [(value)]="modalPushoverRetry" [min]="30" [step]="30"
+          hint="How often (in seconds) the notification will be resent until acknowledged. Minimum 30 seconds."
+          helpKey="notifications/pushover:retry" />
+        <app-number-input label="Expire (seconds)" [(value)]="modalPushoverExpire" [min]="1" [max]="10800"
+          hint="How long (in seconds) the notification will continue to be retried. Maximum 10800 seconds (3 hours)."
+          helpKey="notifications/pushover:expire" />
+      }
+      <app-select label="Sound" [options]="pushoverSoundOptions" [(value)]="modalPushoverSound"
+        hint="Choose a notification sound, or select Custom to enter your own."
+        helpKey="notifications/pushover:sound" />
+      @if (modalPushoverSound() === '__custom__') {
+        <app-input label="Custom Sound" placeholder="Enter custom sound name" [(value)]="modalPushoverCustomSound"
+          hint="Enter the name of a custom sound you've uploaded to Pushover."
+          helpKey="notifications/pushover:customSound" />
+      }
+      <app-chip-input label="Tags" placeholder="tag1" [(items)]="modalPushoverTags"
+        hint="Tags for receipt tracking and batch cancellation of emergency notifications."
+        helpKey="notifications/pushover:tags" />
+    }
+
+    <div class="event-flags">
+      <h4 class="event-flags__title">Events</h4>
+      <div class="event-flags__grid">
+        <app-toggle label="Failed Import Strike" [(checked)]="onFailedImportStrike"
+          hint="Notify when a failed import strike occurs"
+          helpKey="notifications:onFailedImportStrike" />
+        <app-toggle label="Stalled Strike" [(checked)]="onStalledStrike"
+          hint="Notify when a stalled download strike occurs"
+          helpKey="notifications:onStalledStrike" />
+        <app-toggle label="Slow Strike" [(checked)]="onSlowStrike"
+          hint="Notify when a slow download strike occurs"
+          helpKey="notifications:onSlowStrike" />
+        <app-toggle label="Queue Item Deleted" [(checked)]="onQueueItemDeleted"
+          hint="Notify when a queue item is deleted"
+          helpKey="notifications:onQueueItemDeleted" />
+        <app-toggle label="Download Cleaned" [(checked)]="onDownloadCleaned"
+          hint="Notify when a download is cleaned"
+          helpKey="notifications:onDownloadCleaned" />
+        <app-toggle label="Category Changed" [(checked)]="onCategoryChanged"
+          hint="Notify when a download's category is changed"
+          helpKey="notifications:onCategoryChanged" />
+      </div>
+    </div>
+  </div>
+  <div modal-footer>
+    <app-button variant="secondary" size="sm" [loading]="testing()" (clicked)="testNotification()">
+      Test
+    </app-button>
+    <app-button variant="primary" size="sm" [loading]="saving()" (clicked)="saveProvider()">
+      Save
+    </app-button>
+  </div>
+</app-modal>

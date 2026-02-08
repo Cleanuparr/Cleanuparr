@@ -1,0 +1,97 @@
+@use 'glass' as *;
+
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1-5);
+}
+
+.number-label {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.number-wrapper {
+  display: flex;
+  align-items: center;
+  @include glass-input;
+  height: 38px;
+  padding: 0;
+  overflow: hidden;
+
+  &:focus-within {
+    border-color: var(--input-border-focus);
+    box-shadow: 0 0 0 3px var(--color-primary-subtle);
+  }
+}
+
+.number-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 100%;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: var(--font-size-lg);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: color var(--duration-fast) var(--ease-default),
+              background var(--duration-fast) var(--ease-default);
+
+  &:hover:not(:disabled) {
+    background: var(--glass-bg-hover);
+    color: var(--text-primary);
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+}
+
+.number-field {
+  flex: 1;
+  height: 100%;
+  background: none;
+  border: none;
+  color: var(--input-text);
+  font-family: var(--font-family);
+  font-size: var(--font-size-sm);
+  text-align: center;
+  outline: none;
+  -moz-appearance: textfield;
+
+  &::-webkit-inner-spin-button,
+  &::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  &::placeholder {
+    color: var(--input-placeholder);
+  }
+
+  &--error {
+    border-color: var(--color-error) !important;
+  }
+}
+
+.number-suffix {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+  padding-right: var(--space-2);
+  white-space: nowrap;
+}
+
+.number-error {
+  font-size: var(--font-size-xs);
+  color: var(--color-error);
+}
+
+.number-hint {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+}

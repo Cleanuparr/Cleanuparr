@@ -1,0 +1,30 @@
+<app-page-header
+  title="Blacklist Sync"
+  subtitle="Synchronize custom blacklist patterns"
+/>
+
+<div class="settings-form">
+  <app-card header="Configuration">
+    <div class="form-grid">
+      <app-toggle label="Enabled" [(checked)]="enabled"
+        hint="When enabled, blacklist patterns will be synchronized to enabled qBittorrent clients hourly"
+        helpKey="blacklist-sync:enabled" />
+      @if (enabled()) {
+        <app-input
+          label="Blacklist File Path"
+          placeholder="Local file path or URL"
+          hint="Path to blacklist file or HTTP(S) URL containing blacklist patterns"
+          [error]="blacklistPathError()"
+          [(value)]="blacklistPath"
+          helpKey="blacklist-sync:blacklistPath"
+        />
+      }
+    </div>
+  </app-card>
+
+  <div class="form-actions">
+    <app-button variant="primary" [loading]="saving()" [disabled]="saving() || hasErrors()" (clicked)="save()">
+      Save Settings
+    </app-button>
+  </div>
+</div>

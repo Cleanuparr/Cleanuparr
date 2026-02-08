@@ -1,0 +1,74 @@
+@use 'glass' as *;
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: var(--z-modal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  animation: fade-in var(--duration-fast) var(--ease-default);
+}
+
+.modal {
+  @include glass('elevated');
+  width: 100%;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  animation: scale-in var(--duration-normal) var(--ease-default);
+
+  &--sm { max-width: 420px; }
+  &--md { max-width: 560px; }
+  &--lg { max-width: 780px; }
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-5) var(--space-6);
+    border-bottom: 1px solid var(--divider);
+  }
+
+  &__title {
+    font-size: var(--font-size-lg);
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  &__close {
+    background: none;
+    border: none;
+    color: var(--text-tertiary);
+    font-size: var(--font-size-2xl);
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+    transition: color var(--duration-fast) var(--ease-default);
+
+    &:hover {
+      color: var(--text-primary);
+    }
+  }
+
+  &__body {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--space-6);
+  }
+
+  &__footer {
+    padding: var(--space-4) var(--space-6);
+    border-top: 1px solid var(--divider);
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--space-3);
+
+    &:empty {
+      display: none;
+    }
+  }
+}
