@@ -140,7 +140,7 @@
         target="_blank"
         rel="noopener noreferrer"
       >
-        v{{ currentVersion() }}
+        {{ currentVersion() }}
       </a>
       @if (hasUpdate()) {
         <a
@@ -149,7 +149,7 @@
           target="_blank"
           rel="noopener noreferrer"
         >
-          Update available: v{{ latestVersion() }}
+          Update available: {{ latestVersion() }}
         </a>
       }
     </div>
