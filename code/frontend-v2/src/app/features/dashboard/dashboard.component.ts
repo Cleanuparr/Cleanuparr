@@ -146,6 +146,15 @@ export class DashboardComponent implements OnInit {
     return eventType.replace(/([A-Z])/g, ' $1').trim();
   }
 
+  getDownloadName(event: { data?: string }): string | null {
+    if (!event.data) return null;
+    try {
+      return JSON.parse(event.data)?.downloadName || null;
+    } catch {
+      return null;
+    }
+  }
+
   truncate(text: string, max = 80): string {
     return text.length > max ? text.substring(0, max) + '...' : text;
   }

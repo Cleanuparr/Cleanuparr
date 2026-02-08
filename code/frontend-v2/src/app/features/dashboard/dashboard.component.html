@@ -163,6 +163,9 @@
                 <span class="timeline__time">{{ event.timestamp | date:'yyyy-MM-dd HH:mm:ss' }}</span>
               </div>
               <p class="timeline__message">{{ truncate(event.message) }}</p>
+              @if (getDownloadName(event); as name) {
+                <p class="timeline__download-name">{{ name }}</p>
+              }
             </div>
           </div>
         } @empty {

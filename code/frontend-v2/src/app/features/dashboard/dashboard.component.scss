@@ -340,6 +340,15 @@
     white-space: nowrap;
   }
 
+  &__download-name {
+    font-size: var(--font-size-xs);
+    color: var(--text-tertiary);
+    margin-top: var(--space-1);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   &__empty {
     flex: 1;
     display: flex;
