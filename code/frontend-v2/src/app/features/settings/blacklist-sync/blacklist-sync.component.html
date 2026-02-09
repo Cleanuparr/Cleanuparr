@@ -3,6 +3,17 @@
   subtitle="Synchronize custom blacklist patterns"
 />
 
+@if (loadError()) {
+  <app-empty-state
+    icon="tablerPlugConnectedX"
+    heading="Could not connect to server"
+    description="Failed to load settings. Please check that the server is running and try again."
+  >
+    <app-button variant="primary" size="sm" (clicked)="retry()">
+      Retry
+    </app-button>
+  </app-empty-state>
+} @else {
 <div class="settings-form">
   <app-card header="Configuration">
     <div class="form-stack">
@@ -28,3 +39,4 @@
     </app-button>
   </div>
 </div>
+}

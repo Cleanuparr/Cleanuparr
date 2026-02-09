@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, inject, signal, OnInit } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, signal, computed, OnInit } from '@angular/core';
 import { PageHeaderComponent } from '@layout/page-header/page-header.component';
 import {
   CardComponent, ButtonComponent, InputComponent, ToggleComponent,
@@ -100,6 +100,7 @@ export class NotificationsComponent implements OnInit, HasPendingChanges {
   private readonly confirmService = inject(ConfirmService);
 
   readonly loading = signal(false);
+  readonly loadError = signal(false);
   readonly saving = signal(false);
   readonly providers = signal<NotificationProviderDto[]>([]);
 
@@ -165,6 +166,92 @@ export class NotificationsComponent implements OnInit, HasPendingChanges {
   readonly onDownloadCleaned = signal(true);
   readonly onCategoryChanged = signal(false);
 
+  // Modal validation
+  readonly modalNameError = computed(() => {
+    if (!this.modalName().trim()) return 'Name is required';
+    return undefined;
+  });
+
+  readonly hasModalErrors = computed(() => {
+    if (this.modalNameError()) return true;
+    const type = this.modalType();
+    switch (type) {
+      case NotificationProviderType.Discord:
+        return !this.modalWebhookUrl().trim();
+      case NotificationProviderType.Telegram:
+        return !this.modalBotToken().trim() || !this.modalChatId().trim();
+      case NotificationProviderType.Notifiarr:
+        return !this.modalApiKey().trim();
+      case NotificationProviderType.Apprise:
+        if ((this.modalAppriseMode() as AppriseMode) === AppriseMode.Api) {
+          return !this.modalAppriseUrl().trim() || !this.modalAppriseKey().trim();
+        }
+        return this.modalAppriseServiceUrls().length === 0;
+      case NotificationProviderType.Ntfy:
+        return !this.modalNtfyServerUrl().trim() || this.modalNtfyTopics().length === 0;
+      case NotificationProviderType.Pushover:
+        return !this.modalPushoverApiToken().trim() || !this.modalPushoverUserKey().trim();
+    }
+    return false;
+  });
+
+  // Per-provider field errors
+  readonly discordWebhookError = computed(() => {
+    if (this.modalType() !== NotificationProviderType.Discord) return undefined;
+    if (!this.modalWebhookUrl().trim()) return 'Webhook URL is required';
+    return undefined;
+  });
+  readonly telegramBotTokenError = computed(() => {
+    if (this.modalType() !== NotificationProviderType.Telegram) return undefined;
+    if (!this.modalBotToken().trim()) return 'Bot token is required';
+    return undefined;
+  });
+  readonly telegramChatIdError = computed(() => {
+    if (this.modalType() !== NotificationProviderType.Telegram) return undefined;
+    if (!this.modalChatId().trim()) return 'Chat ID is required';
+    return undefined;
+  });
+  readonly notifiarrApiKeyError = computed(() => {
+    if (this.modalType() !== NotificationProviderType.Notifiarr) return undefined;
+    if (!this.modalApiKey().trim()) return 'API key is required';
+    return undefined;
+  });
+  readonly appriseUrlError = computed(() => {
+    if (this.modalType() !== NotificationProviderType.Apprise) return undefined;
+    if ((this.modalAppriseMode() as AppriseMode) === AppriseMode.Api && !this.modalAppriseUrl().trim()) return 'Server URL is required';
+    return undefined;
+  });
+  readonly appriseKeyError = computed(() => {
+    if (this.modalType() !== NotificationProviderType.Apprise) return undefined;
+    if ((this.modalAppriseMode() as AppriseMode) === AppriseMode.Api && !this.modalAppriseKey().trim()) return 'Config key is required';
+    return undefined;
+  });
+  readonly appriseServiceUrlsError = computed(() => {
+    if (this.modalType() !== NotificationProviderType.Apprise) return undefined;
+    if ((this.modalAppriseMode() as AppriseMode) === AppriseMode.Cli && this.modalAppriseServiceUrls().length === 0) return 'At least one service URL is required';
+    return undefined;
+  });
+  readonly ntfyServerUrlError = computed(() => {
+    if (this.modalType() !== NotificationProviderType.Ntfy) return undefined;
+    if (!this.modalNtfyServerUrl().trim()) return 'Server URL is required';
+    return undefined;
+  });
+  readonly ntfyTopicsError = computed(() => {
+    if (this.modalType() !== NotificationProviderType.Ntfy) return undefined;
+    if (this.modalNtfyTopics().length === 0) return 'At least one topic is required';
+    return undefined;
+  });
+  readonly pushoverApiTokenError = computed(() => {
+    if (this.modalType() !== NotificationProviderType.Pushover) return undefined;
+    if (!this.modalPushoverApiToken().trim()) return 'API token is required';
+    return undefined;
+  });
+  readonly pushoverUserKeyError = computed(() => {
+    if (this.modalType() !== NotificationProviderType.Pushover) return undefined;
+    if (!this.modalPushoverUserKey().trim()) return 'User key is required';
+    return undefined;
+  });
+
   // Options (exposed for template)
   readonly appriseOptions = APPRISE_MODE_OPTIONS;
   readonly ntfyAuthOptions = NTFY_AUTH_OPTIONS;
@@ -196,8 +283,14 @@ export class NotificationsComponent implements OnInit, HasPendingChanges {
       error: () => {
         this.toast.error('Failed to load notification providers');
         this.loading.set(false);
+        this.loadError.set(true);
       },
     });
+  }
+
+  retry(): void {
+    this.loadError.set(false);
+    this.loadProviders();
   }
 
   openAddModal(): void {
@@ -421,6 +514,7 @@ export class NotificationsComponent implements OnInit, HasPendingChanges {
   }
 
   saveProvider(): void {
+    if (this.hasModalErrors()) return;
     const type = this.modalType();
     const editing = this.editingProvider();
     this.saving.set(true);

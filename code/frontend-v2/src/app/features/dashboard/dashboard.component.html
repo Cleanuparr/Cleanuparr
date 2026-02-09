@@ -13,7 +13,13 @@
         {{ event.severity }}
       </app-badge>
     </div>
-    <p class="manual-event__message">{{ event.message }}</p>
+    <p class="manual-event__message" [innerHTML]="processManualEventMessage(event.message)"></p>
+    @if (event.data) {
+      <details class="manual-event__details">
+        <summary class="manual-event__details-toggle">Event Details</summary>
+        <pre class="manual-event__details-content">{{ parseEventData(event.data) | json }}</pre>
+      </details>
+    }
     <div class="manual-event__meta">
       <span class="manual-event__time">{{ event.timestamp | date:'short' }}</span>
       @if (unresolvedManualEvents().length > 1) {

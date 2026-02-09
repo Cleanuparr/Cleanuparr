@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, inject, signal, computed, OnInit, viewChildren } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, signal, computed, OnInit, viewChildren, effect, untracked } from '@angular/core';
 import { PageHeaderComponent } from '@layout/page-header/page-header.component';
 import {
   CardComponent, ButtonComponent, InputComponent, ToggleComponent,
@@ -14,7 +14,7 @@ import { QueueCleanerConfig, ScheduleOptions } from '@shared/models/queue-cleane
 import { StallRule, SlowRule, CreateStallRuleDto, CreateSlowRuleDto } from '@shared/models/queue-rule.model';
 import { ScheduleUnit, PatternMode, TorrentPrivacyType } from '@shared/models/enums';
 import { HasPendingChanges } from '@core/guards/pending-changes.guard';
-import { generateCronExpression } from '@shared/utils/schedule.util';
+import { generateCronExpression, parseCronToJobSchedule } from '@shared/utils/schedule.util';
 import { analyzeCoverage } from './coverage-analysis.util';
 
 const PATTERN_MODE_OPTIONS: SelectOption[] = [
@@ -58,6 +58,7 @@ export class QueueCleanerComponent implements OnInit, HasPendingChanges {
   readonly privacyTypeOptions = PRIVACY_TYPE_OPTIONS;
   readonly scheduleUnitOptions = SCHEDULE_UNIT_OPTIONS;
   readonly loading = signal(false);
+  readonly loadError = signal(false);
   readonly saving = signal(false);
   readonly saved = signal(false);
 
@@ -125,7 +126,26 @@ export class QueueCleanerComponent implements OnInit, HasPendingChanges {
   readonly slowResetOnProgress = signal(false);
   readonly slowDeletePrivate = signal(false);
 
+  constructor() {
+    effect(() => {
+      const unit = this.scheduleUnit();
+      const options = ScheduleOptions[unit as ScheduleUnit] ?? [];
+      const current = this.scheduleEvery();
+      if (options.length > 0 && !options.includes(current as number)) {
+        untracked(() => this.scheduleEvery.set(options[0]));
+      }
+    });
+  }
+
   // Validation
+  readonly scheduleEveryError = computed(() => {
+    if (this.useAdvancedScheduling()) return undefined;
+    const unit = this.scheduleUnit() as ScheduleUnit;
+    const options = ScheduleOptions[unit] ?? [];
+    if (!options.includes(this.scheduleEvery() as number)) return 'Please select a value';
+    return undefined;
+  });
+
   readonly cronError = computed(() => {
     if (this.useAdvancedScheduling() && !this.cronExpression().trim()) return 'Cron expression is required';
     return undefined;
@@ -133,7 +153,9 @@ export class QueueCleanerComponent implements OnInit, HasPendingChanges {
 
   readonly failedMaxStrikesError = computed(() => {
     const v = this.failedMaxStrikes();
-    if (v != null && v > 5000) return 'Value cannot exceed 5000';
+    if (v == null) return 'This field is required';
+    if (v < 0) return 'Value cannot be negative';
+    if (v > 5000) return 'Value cannot exceed 5000';
     return undefined;
   });
 
@@ -146,7 +168,9 @@ export class QueueCleanerComponent implements OnInit, HasPendingChanges {
 
   readonly metadataMaxStrikesError = computed(() => {
     const v = this.metadataMaxStrikes();
-    if (v != null && v > 5000) return 'Value cannot exceed 5000';
+    if (v == null) return 'This field is required';
+    if (v < 0) return 'Value cannot be negative';
+    if (v > 5000) return 'Value cannot exceed 5000';
     return undefined;
   });
 
@@ -209,6 +233,7 @@ export class QueueCleanerComponent implements OnInit, HasPendingChanges {
   });
 
   readonly hasErrors = computed(() => !!(
+    this.scheduleEveryError() ||
     this.cronError() ||
     this.failedMaxStrikesError() ||
     this.failedPatternsError() ||
@@ -232,9 +257,10 @@ export class QueueCleanerComponent implements OnInit, HasPendingChanges {
         this.enabled.set(config.enabled);
         this.useAdvancedScheduling.set(config.useAdvancedScheduling);
         this.cronExpression.set(config.cronExpression);
-        if (config.jobSchedule) {
-          this.scheduleEvery.set(config.jobSchedule.every);
-          this.scheduleUnit.set(config.jobSchedule.type);
+        const parsed = parseCronToJobSchedule(config.cronExpression);
+        if (parsed) {
+          this.scheduleEvery.set(parsed.every);
+          this.scheduleUnit.set(parsed.type);
         }
         this.ignoredDownloads.set(config.ignoredDownloads ?? []);
         this.failedMaxStrikes.set(config.failedImport.maxStrikes);
@@ -250,6 +276,7 @@ export class QueueCleanerComponent implements OnInit, HasPendingChanges {
       error: () => {
         this.toast.error('Failed to load queue cleaner settings');
         this.loading.set(false);
+        this.loadError.set(true);
       },
     });
   }
@@ -280,6 +307,13 @@ export class QueueCleanerComponent implements OnInit, HasPendingChanges {
         this.slowRulesLoading.set(false);
       },
     });
+  }
+
+  retry(): void {
+    this.loadError.set(false);
+    this.loadConfig();
+    this.loadStallRules();
+    this.loadSlowRules();
   }
 
   // Stall rule CRUD
@@ -449,7 +483,6 @@ export class QueueCleanerComponent implements OnInit, HasPendingChanges {
       enabled: this.enabled(),
       useAdvancedScheduling: this.useAdvancedScheduling(),
       cronExpression,
-      jobSchedule,
       ignoredDownloads: this.ignoredDownloads(),
       failedImport: {
         maxStrikes: this.failedMaxStrikes() ?? 3,

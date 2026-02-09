@@ -1,9 +1,9 @@
-import { Component, ChangeDetectionStrategy, inject, signal, computed, OnInit, viewChildren } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, signal, computed, OnInit, viewChildren, effect, untracked } from '@angular/core';
 import { PageHeaderComponent } from '@layout/page-header/page-header.component';
 import {
   CardComponent, ButtonComponent, InputComponent, ToggleComponent,
   NumberInputComponent, SelectComponent, ChipInputComponent, AccordionComponent,
-  type SelectOption,
+  EmptyStateComponent, type SelectOption,
 } from '@ui';
 import { DownloadCleanerApi } from '@core/api/download-cleaner.api';
 import { ToastService } from '@core/services/toast.service';
@@ -11,7 +11,7 @@ import { DownloadCleanerConfig, CleanCategory, createDefaultCategory } from '@sh
 import { ScheduleOptions } from '@shared/models/queue-cleaner-config.model';
 import { ScheduleUnit } from '@shared/models/enums';
 import { HasPendingChanges } from '@core/guards/pending-changes.guard';
-import { generateCronExpression } from '@shared/utils/schedule.util';
+import { generateCronExpression, parseCronToJobSchedule } from '@shared/utils/schedule.util';
 
 const SCHEDULE_UNIT_OPTIONS: SelectOption[] = [
   { label: 'Seconds', value: ScheduleUnit.Seconds },
@@ -25,6 +25,7 @@ const SCHEDULE_UNIT_OPTIONS: SelectOption[] = [
   imports: [
     PageHeaderComponent, CardComponent, ButtonComponent, InputComponent,
     ToggleComponent, NumberInputComponent, SelectComponent, ChipInputComponent, AccordionComponent,
+    EmptyStateComponent,
   ],
   templateUrl: './download-cleaner.component.html',
   styleUrl: './download-cleaner.component.scss',
@@ -39,6 +40,7 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
 
   readonly scheduleUnitOptions = SCHEDULE_UNIT_OPTIONS;
   readonly loading = signal(false);
+  readonly loadError = signal(false);
   readonly saving = signal(false);
   readonly saved = signal(false);
 
@@ -65,6 +67,25 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
   readonly unlinkedIgnoredRootDirs = signal<string[]>([]);
   readonly unlinkedCategories = signal<string[]>([]);
   readonly unlinkedExpanded = signal(false);
+
+  constructor() {
+    effect(() => {
+      const unit = this.scheduleUnit();
+      const options = ScheduleOptions[unit as ScheduleUnit] ?? [];
+      const current = this.scheduleEvery();
+      if (options.length > 0 && !options.includes(current as number)) {
+        untracked(() => this.scheduleEvery.set(options[0]));
+      }
+    });
+  }
+
+  readonly scheduleEveryError = computed(() => {
+    if (this.useAdvancedScheduling()) return undefined;
+    const unit = this.scheduleUnit() as ScheduleUnit;
+    const options = ScheduleOptions[unit] ?? [];
+    if (!options.includes(this.scheduleEvery() as number)) return 'Please select a value';
+    return undefined;
+  });
 
   readonly cronError = computed(() => {
     if (this.useAdvancedScheduling() && !this.cronExpression().trim()) return 'Cron expression is required';
@@ -96,6 +117,7 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
   }
 
   readonly hasErrors = computed(() => {
+    if (this.scheduleEveryError()) return true;
     if (this.cronError()) return true;
     if (this.unlinkedTargetCategoryError()) return true;
     if (this.unlinkedCategoriesError()) return true;
@@ -120,9 +142,10 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
         this.enabled.set(config.enabled);
         this.useAdvancedScheduling.set(config.useAdvancedScheduling);
         this.cronExpression.set(config.cronExpression);
-        if (config.jobSchedule) {
-          this.scheduleEvery.set(config.jobSchedule.every);
-          this.scheduleUnit.set(config.jobSchedule.type);
+        const parsed = parseCronToJobSchedule(config.cronExpression);
+        if (parsed) {
+          this.scheduleEvery.set(parsed.every);
+          this.scheduleUnit.set(parsed.type);
         }
         this.deletePrivate.set(config.deletePrivate);
         this.ignoredDownloads.set(config.ignoredDownloads ?? []);
@@ -138,8 +161,14 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
       error: () => {
         this.toast.error('Failed to load download cleaner settings');
         this.loading.set(false);
+        this.loadError.set(true);
       },
     });
+  }
+
+  retry(): void {
+    this.loadError.set(false);
+    this.loadConfig();
   }
 
   addCategory(): void {
@@ -171,7 +200,6 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
       enabled: this.enabled(),
       useAdvancedScheduling: this.useAdvancedScheduling(),
       cronExpression,
-      jobSchedule,
       deletePrivate: this.deletePrivate(),
       ignoredDownloads: this.ignoredDownloads(),
       categories: this.categories(),

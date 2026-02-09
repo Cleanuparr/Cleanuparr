@@ -3,6 +3,17 @@
   subtitle="Configure automatic queue cleanup rules"
 />
 
+@if (loadError()) {
+  <app-empty-state
+    icon="tablerPlugConnectedX"
+    heading="Could not connect to server"
+    description="Failed to load settings. Please check that the server is running and try again."
+  >
+    <app-button variant="primary" size="sm" (clicked)="retry()">
+      Retry
+    </app-button>
+  </app-empty-state>
+} @else {
 <div class="settings-form">
   <app-card header="General">
     <div class="form-stack">
@@ -26,6 +37,7 @@
               helpKey="queue-cleaner:scheduleUnit" />
             <app-select label="Every" [options]="scheduleIntervalOptions()" [(value)]="scheduleEvery"
               hint="How often the job should run"
+              [error]="scheduleEveryError()"
               helpKey="queue-cleaner:scheduleEvery" />
           </div>
         }
@@ -223,6 +235,7 @@
     </app-button>
   </div>
 </div>
+}
 
 <!-- Stall Rule Modal -->
 <app-modal [title]="editingStallRule() ? 'Edit Stall Rule' : 'Add Stall Rule'" [(visible)]="stallModalVisible" size="lg">

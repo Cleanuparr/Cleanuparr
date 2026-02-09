@@ -45,6 +45,7 @@ export class ArrSettingsComponent implements HasPendingChanges {
   readonly versionOptions = computed(() => ARR_VERSION_OPTIONS[this.arrType()] ?? []);
 
   readonly loading = signal(false);
+  readonly loadError = signal(false);
   readonly saving = signal(false);
   readonly transitioning = signal(false);
   readonly instances = signal<ArrInstance[]>([]);
@@ -58,6 +59,23 @@ export class ArrSettingsComponent implements HasPendingChanges {
   readonly modalVersion = signal<unknown>(3);
   readonly modalEnabled = signal(true);
   readonly testing = signal(false);
+
+  // Modal validation
+  readonly modalNameError = computed(() => {
+    if (!this.modalName().trim()) return 'Name is required';
+    return undefined;
+  });
+  readonly modalUrlError = computed(() => {
+    if (!this.modalUrl().trim()) return 'URL is required';
+    return undefined;
+  });
+  readonly modalApiKeyError = computed(() => {
+    if (!this.modalApiKey().trim()) return 'API key is required';
+    return undefined;
+  });
+  readonly hasModalErrors = computed(() => !!(
+    this.modalNameError() || this.modalUrlError() || this.modalApiKeyError()
+  ));
 
   constructor() {
     effect(() => {
@@ -91,8 +109,14 @@ export class ArrSettingsComponent implements HasPendingChanges {
       error: () => {
         this.toast.error(`Failed to load ${this.displayName()} settings`);
         this.loading.set(false);
+        this.loadError.set(true);
       },
     });
+  }
+
+  retry(): void {
+    this.loadError.set(false);
+    this.loadConfig();
   }
 
   openAddModal(): void {
@@ -136,6 +160,7 @@ export class ArrSettingsComponent implements HasPendingChanges {
   }
 
   saveInstance(): void {
+    if (this.hasModalErrors()) return;
     const dto: CreateArrInstanceDto = {
       name: this.modalName(),
       url: this.modalUrl(),

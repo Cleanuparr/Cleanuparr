@@ -3,6 +3,17 @@
   subtitle="Manage download client connections"
 />
 
+@if (loadError()) {
+  <app-empty-state
+    icon="tablerPlugConnectedX"
+    heading="Could not connect to server"
+    description="Failed to load settings. Please check that the server is running and try again."
+  >
+    <app-button variant="primary" size="sm" (clicked)="retry()">
+      Retry
+    </app-button>
+  </app-empty-state>
+} @else {
 <div class="settings-form">
   <app-card>
     <div class="list-header">
@@ -35,6 +46,7 @@
     }
   </app-card>
 </div>
+}
 
 <!-- Add/Edit Modal -->
 <app-modal
@@ -47,12 +59,14 @@
       helpKey="download-client:enabled" />
     <app-input label="Name" placeholder="My qBittorrent" [(value)]="modalName"
       hint="A unique name to identify this client"
+      [error]="modalNameError()"
       helpKey="download-client:name" />
     <app-select label="Client Type" [options]="typeOptions" [(value)]="modalTypeName"
       hint="The type of download client"
       helpKey="download-client:typeName" />
     <app-input label="Host" placeholder="http://localhost:8080" [(value)]="modalHost"
       hint="Full URL including protocol and port (e.g., http://localhost:8080)"
+      [error]="modalHostError()"
       helpKey="download-client:host" />
     <app-input label="Username" placeholder="admin" [(value)]="modalUsername"
       hint="Username for authentication"
@@ -68,7 +82,7 @@
     <app-button variant="secondary" size="sm" [loading]="testing()" (clicked)="testConnection()">
       Test
     </app-button>
-    <app-button variant="primary" size="sm" [loading]="saving()" (clicked)="saveClient()">
+    <app-button variant="primary" size="sm" [loading]="saving()" [disabled]="hasModalErrors()" (clicked)="saveClient()">
       Save
     </app-button>
   </div>

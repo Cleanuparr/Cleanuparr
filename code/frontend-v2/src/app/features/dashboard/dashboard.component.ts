@@ -1,6 +1,6 @@
 import { Component, ChangeDetectionStrategy, inject, computed, signal, OnInit } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
-import { DatePipe } from '@angular/common';
+import { DatePipe, JsonPipe } from '@angular/common';
 import { NgIcon } from '@ng-icons/core';
 import { PageHeaderComponent } from '@layout/page-header/page-header.component';
 import { CardComponent, ButtonComponent, BadgeComponent, SpinnerComponent } from '@ui';
@@ -19,6 +19,7 @@ import { JobType } from '@shared/models/enums';
   imports: [
     RouterLink,
     DatePipe,
+    JsonPipe,
     NgIcon,
     PageHeaderComponent,
     CardComponent,
@@ -204,6 +205,32 @@ export class DashboardComponent implements OnInit {
     if (s === 'warning') return 'manual-event--warning';
     if (s === 'important') return 'manual-event--important';
     return 'manual-event--info';
+  }
+
+  processManualEventMessage(message: string): string {
+    if (!message) return '';
+    // Escape HTML to prevent XSS
+    let processed = message
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+    // Convert newlines to <br> tags
+    processed = processed.replace(/\\n/g, '<br>').replace(/\n/g, '<br>');
+    // Convert URLs to clickable links
+    const urlRegex = /(https?:\/\/[^\s<]+)/g;
+    processed = processed.replace(urlRegex, '<a href="$1" target="_blank" rel="noopener noreferrer" class="manual-event-link">$1</a>');
+    return processed;
+  }
+
+  parseEventData(data: string | undefined): unknown {
+    if (!data) return null;
+    try {
+      return JSON.parse(data);
+    } catch {
+      return null;
+    }
   }
 
   navigateTo(path: string): void {

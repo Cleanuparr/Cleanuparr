@@ -1,6 +1,6 @@
 import { Component, ChangeDetectionStrategy, inject, signal, computed, OnInit } from '@angular/core';
 import { PageHeaderComponent } from '@layout/page-header/page-header.component';
-import { CardComponent, ButtonComponent, InputComponent, ToggleComponent } from '@ui';
+import { CardComponent, ButtonComponent, InputComponent, ToggleComponent, EmptyStateComponent } from '@ui';
 import { BlacklistSyncApi } from '@core/api/blacklist-sync.api';
 import { ToastService } from '@core/services/toast.service';
 import { BlacklistSyncConfig } from '@shared/models/blacklist-sync-config.model';
@@ -9,7 +9,7 @@ import { HasPendingChanges } from '@core/guards/pending-changes.guard';
 @Component({
   selector: 'app-blacklist-sync',
   standalone: true,
-  imports: [PageHeaderComponent, CardComponent, ButtonComponent, InputComponent, ToggleComponent],
+  imports: [PageHeaderComponent, CardComponent, ButtonComponent, InputComponent, ToggleComponent, EmptyStateComponent],
   templateUrl: './blacklist-sync.component.html',
   styleUrl: './blacklist-sync.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -21,6 +21,7 @@ export class BlacklistSyncComponent implements OnInit, HasPendingChanges {
   private savedSnapshot = '';
 
   readonly loading = signal(false);
+  readonly loadError = signal(false);
   readonly saving = signal(false);
   readonly saved = signal(false);
 
@@ -54,8 +55,14 @@ export class BlacklistSyncComponent implements OnInit, HasPendingChanges {
       error: () => {
         this.toast.error('Failed to load blacklist sync settings');
         this.loading.set(false);
+        this.loadError.set(true);
       },
     });
+  }
+
+  retry(): void {
+    this.loadError.set(false);
+    this.loadConfig();
   }
 
   save(): void {

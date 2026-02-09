@@ -1,8 +1,9 @@
-import { Component, ChangeDetectionStrategy, inject, signal, computed, OnInit } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, signal, computed, OnInit, viewChildren } from '@angular/core';
 import { PageHeaderComponent } from '@layout/page-header/page-header.component';
 import {
   CardComponent, ButtonComponent, ToggleComponent,
   NumberInputComponent, SelectComponent, ChipInputComponent, AccordionComponent,
+  EmptyStateComponent,
   type SelectOption,
 } from '@ui';
 import { GeneralConfigApi } from '@core/api/general-config.api';
@@ -32,7 +33,7 @@ const LOG_LEVEL_OPTIONS: SelectOption[] = [
   imports: [
     PageHeaderComponent, CardComponent, ButtonComponent,
     ToggleComponent, NumberInputComponent, SelectComponent, ChipInputComponent,
-    AccordionComponent,
+    AccordionComponent, EmptyStateComponent,
   ],
   templateUrl: './general-settings.component.html',
   styleUrl: './general-settings.component.scss',
@@ -41,12 +42,14 @@ const LOG_LEVEL_OPTIONS: SelectOption[] = [
 export class GeneralSettingsComponent implements OnInit, HasPendingChanges {
   private readonly api = inject(GeneralConfigApi);
   private readonly toast = inject(ToastService);
+  private readonly chipInputs = viewChildren(ChipInputComponent);
 
   private savedSnapshot = '';
 
   readonly certOptions = CERT_OPTIONS;
   readonly logLevelOptions = LOG_LEVEL_OPTIONS;
   readonly loading = signal(false);
+  readonly loadError = signal(false);
   readonly saving = signal(false);
   readonly saved = signal(false);
 
@@ -73,6 +76,7 @@ export class GeneralSettingsComponent implements OnInit, HasPendingChanges {
   readonly httpMaxRetriesError = computed(() => {
     const v = this.httpMaxRetries();
     if (v == null) return 'This field is required';
+    if (v < 0) return 'Minimum value is 0';
     if (v > 5) return 'Maximum value is 5';
     return undefined;
   });
@@ -80,6 +84,7 @@ export class GeneralSettingsComponent implements OnInit, HasPendingChanges {
   readonly httpTimeoutError = computed(() => {
     const v = this.httpTimeout();
     if (v == null) return 'This field is required';
+    if (v < 1) return 'Minimum value is 1';
     if (v > 100) return 'Maximum value is 100';
     return undefined;
   });
@@ -95,6 +100,7 @@ export class GeneralSettingsComponent implements OnInit, HasPendingChanges {
   readonly logRollingSizeError = computed(() => {
     const v = this.logRollingSizeMB();
     if (v == null) return 'This field is required';
+    if (v < 1) return 'Minimum value is 1';
     if (v > 100) return 'Maximum value is 100 MB';
     return undefined;
   });
@@ -102,6 +108,7 @@ export class GeneralSettingsComponent implements OnInit, HasPendingChanges {
   readonly logRetainedFileCountError = computed(() => {
     const v = this.logRetainedFileCount();
     if (v == null) return 'This field is required';
+    if (v < 0) return 'Minimum value is 0';
     if (v > 50) return 'Maximum value is 50';
     return undefined;
   });
@@ -109,6 +116,7 @@ export class GeneralSettingsComponent implements OnInit, HasPendingChanges {
   readonly logTimeLimitError = computed(() => {
     const v = this.logTimeLimitHours();
     if (v == null) return 'This field is required';
+    if (v < 1) return 'Minimum value is 1';
     if (v > 1440) return 'Maximum value is 1440 hours (60 days)';
     return undefined;
   });
@@ -116,6 +124,7 @@ export class GeneralSettingsComponent implements OnInit, HasPendingChanges {
   readonly logArchiveRetainedError = computed(() => {
     const v = this.logArchiveRetainedCount();
     if (v == null) return 'This field is required';
+    if (v < 0) return 'Minimum value is 0';
     if (v > 100) return 'Maximum value is 100';
     return undefined;
   });
@@ -123,6 +132,7 @@ export class GeneralSettingsComponent implements OnInit, HasPendingChanges {
   readonly logArchiveTimeLimitError = computed(() => {
     const v = this.logArchiveTimeLimitHours();
     if (v == null) return 'This field is required';
+    if (v < 1) return 'Minimum value is 1';
     if (v > 1440) return 'Maximum value is 1440 hours (60 days)';
     return undefined;
   });
@@ -135,7 +145,8 @@ export class GeneralSettingsComponent implements OnInit, HasPendingChanges {
     this.logRetainedFileCountError() ||
     this.logTimeLimitError() ||
     this.logArchiveRetainedError() ||
-    this.logArchiveTimeLimitError()
+    this.logArchiveTimeLimitError() ||
+    this.chipInputs().some(c => c.hasUncommittedInput())
   ));
 
   ngOnInit(): void {
@@ -169,8 +180,14 @@ export class GeneralSettingsComponent implements OnInit, HasPendingChanges {
       error: () => {
         this.toast.error('Failed to load general settings');
         this.loading.set(false);
+        this.loadError.set(true);
       },
     });
+  }
+
+  retry(): void {
+    this.loadError.set(false);
+    this.loadConfig();
   }
 
   save(): void {

@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, inject, signal, OnInit } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, signal, computed, OnInit } from '@angular/core';
 import { PageHeaderComponent } from '@layout/page-header/page-header.component';
 import {
   CardComponent, ButtonComponent, InputComponent, ToggleComponent,
@@ -40,6 +40,7 @@ export class DownloadClientsComponent implements OnInit, HasPendingChanges {
 
   readonly typeOptions = TYPE_OPTIONS;
   readonly loading = signal(false);
+  readonly loadError = signal(false);
   readonly saving = signal(false);
   readonly clients = signal<ClientConfig[]>([]);
 
@@ -55,6 +56,19 @@ export class DownloadClientsComponent implements OnInit, HasPendingChanges {
   readonly modalUrlBase = signal('');
   readonly testing = signal(false);
 
+  // Modal validation
+  readonly modalNameError = computed(() => {
+    if (!this.modalName().trim()) return 'Name is required';
+    return undefined;
+  });
+  readonly modalHostError = computed(() => {
+    if (!this.modalHost().trim()) return 'Host is required';
+    return undefined;
+  });
+  readonly hasModalErrors = computed(() => !!(
+    this.modalNameError() || this.modalHostError()
+  ));
+
   ngOnInit(): void {
     this.loadClients();
   }
@@ -69,8 +83,14 @@ export class DownloadClientsComponent implements OnInit, HasPendingChanges {
       error: () => {
         this.toast.error('Failed to load download clients');
         this.loading.set(false);
+        this.loadError.set(true);
       },
     });
+  }
+
+  retry(): void {
+    this.loadError.set(false);
+    this.loadClients();
   }
 
   openAddModal(): void {
@@ -120,6 +140,7 @@ export class DownloadClientsComponent implements OnInit, HasPendingChanges {
   }
 
   saveClient(): void {
+    if (this.hasModalErrors()) return;
     const editing = this.editingClient();
     this.saving.set(true);
 

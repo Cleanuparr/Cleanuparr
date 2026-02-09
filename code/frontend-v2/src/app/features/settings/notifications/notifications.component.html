@@ -3,6 +3,17 @@
   subtitle="Configure notification providers"
 />
 
+@if (loadError()) {
+  <app-empty-state
+    icon="tablerPlugConnectedX"
+    heading="Could not connect to server"
+    description="Failed to load settings. Please check that the server is running and try again."
+  >
+    <app-button variant="primary" size="sm" (clicked)="retry()">
+      Retry
+    </app-button>
+  </app-empty-state>
+} @else {
 <div class="settings-form">
   <app-card>
     <div class="list-header">
@@ -56,6 +67,7 @@
     }
   </app-card>
 </div>
+}
 
 <!-- Provider Selection Modal -->
 <app-modal title="Add Notification Provider" [(visible)]="selectionModalVisible">
@@ -84,12 +96,14 @@
     <app-toggle label="Enabled" [(checked)]="modalEnabled"
       hint="Enable or disable this provider" />
     <app-input label="Name" placeholder="My Provider" [(value)]="modalName"
-      hint="A unique name to identify this provider" />
+      hint="A unique name to identify this provider"
+      [error]="modalNameError()" />
 
     <!-- Discord Fields -->
     @if (modalType() === 'Discord') {
       <app-input label="Webhook URL" placeholder="https://discord.com/api/webhooks/..." type="password" [(value)]="modalWebhookUrl"
         hint="Your Discord webhook URL. Create one in your Discord server's channel settings under Integrations."
+        [error]="discordWebhookError()"
         helpKey="notifications/discord:webhookUrl" />
       <app-input label="Username" placeholder="Cleanuparr" [(value)]="modalUsername"
         hint="Override the default webhook username. Leave empty to use the webhook's default name."
@@ -103,9 +117,11 @@
     @if (modalType() === 'Telegram') {
       <app-input label="Bot Token" placeholder="123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11" type="password" [(value)]="modalBotToken"
         hint="Create a bot with BotFather and paste the API token"
+        [error]="telegramBotTokenError()"
         helpKey="notifications/telegram:botToken" />
       <app-input label="Chat ID" placeholder="-1001234567890" [(value)]="modalChatId"
         hint="Start a conversation with the bot or add it to your group to get the chat ID"
+        [error]="telegramChatIdError()"
         helpKey="notifications/telegram:chatId" />
       <app-input label="Topic ID" placeholder="Optional" [(value)]="modalTopicId"
         hint="Specify a Topic ID to send to a specific thread (supergroups only)"
@@ -119,6 +135,7 @@
     @if (modalType() === 'Notifiarr') {
       <app-input label="API Key" placeholder="Enter API key" type="password" [(value)]="modalApiKey"
         hint="Your Notifiarr API key from your dashboard. Requires Passthrough integration."
+        [error]="notifiarrApiKeyError()"
         helpKey="notifications/notifiarr:apiKey" />
       <app-input label="Channel ID" placeholder="Enter Discord channel ID" [(value)]="modalChannelId"
         hint="The Discord channel ID where notifications will be sent."
@@ -133,14 +150,17 @@
       @if (modalAppriseMode() === 'Api') {
         <app-input label="Server URL" placeholder="http://localhost:8000" [(value)]="modalAppriseUrl"
           hint="The URL of your Apprise server where notifications will be sent."
+          [error]="appriseUrlError()"
           helpKey="notifications/apprise:url" />
         <app-input label="Configuration Key" placeholder="Enter key" [(value)]="modalAppriseKey"
           hint="The key that identifies your Apprise configuration on the server."
+          [error]="appriseKeyError()"
           helpKey="notifications/apprise:key" />
       }
       @if (modalAppriseMode() === 'Cli') {
         <app-chip-input label="Service URLs" placeholder="discord://webhook_id/token" [(items)]="modalAppriseServiceUrls"
           hint="Add Apprise service URLs. Example: discord://webhook_id/token."
+          [error]="appriseServiceUrlsError()"
           helpKey="notifications/apprise:serviceUrls" />
       }
       <app-input label="Tags" placeholder="all" [(value)]="modalAppriseTags"
@@ -152,9 +172,11 @@
     @if (modalType() === 'Ntfy') {
       <app-input label="Server URL" placeholder="https://ntfy.sh" [(value)]="modalNtfyServerUrl"
         hint="The URL of your ntfy server. Use https://ntfy.sh for the public service or your self-hosted instance."
+        [error]="ntfyServerUrlError()"
         helpKey="notifications/ntfy:serverUrl" />
       <app-chip-input label="Topics" placeholder="cleanuparr" [(items)]="modalNtfyTopics"
         hint="Enter the ntfy topics you want to publish to."
+        [error]="ntfyTopicsError()"
         helpKey="notifications/ntfy:topics" />
       <app-select label="Authentication" [options]="ntfyAuthOptions" [(value)]="modalNtfyAuthType"
         hint="Choose how to authenticate with the ntfy server."
@@ -184,9 +206,11 @@
     @if (modalType() === 'Pushover') {
       <app-input label="API Token" placeholder="Enter API token" type="password" [(value)]="modalPushoverApiToken"
         hint="Your application API token from Pushover. Create one at pushover.net/apps/build."
+        [error]="pushoverApiTokenError()"
         helpKey="notifications/pushover:apiToken" />
       <app-input label="User Key" placeholder="Enter user key" type="password" [(value)]="modalPushoverUserKey"
         hint="Your user/group key from your Pushover dashboard."
+        [error]="pushoverUserKeyError()"
         helpKey="notifications/pushover:userKey" />
       <app-chip-input label="Devices" placeholder="myphone" [(items)]="modalPushoverDevices"
         hint="Leave empty to send to all devices, or enter specific device names."
@@ -243,7 +267,7 @@
     <app-button variant="secondary" size="sm" [loading]="testing()" (clicked)="testNotification()">
       Test
     </app-button>
-    <app-button variant="primary" size="sm" [loading]="saving()" (clicked)="saveProvider()">
+    <app-button variant="primary" size="sm" [loading]="saving()" [disabled]="hasModalErrors()" (clicked)="saveProvider()">
       Save
     </app-button>
   </div>
