@@ -61,16 +61,19 @@
       hint="A unique name to identify this client"
       [error]="modalNameError()"
       helpKey="download-client:name" />
-    <app-select label="Client Type" [options]="typeOptions" [(value)]="modalTypeName"
+    <app-select label="Client Type" [options]="typeOptions" [value]="modalTypeName()"
+      (valueChange)="onClientTypeChange($event)"
       hint="The type of download client"
       helpKey="download-client:typeName" />
     <app-input label="Host" placeholder="http://localhost:8080" [(value)]="modalHost"
       hint="Full URL including protocol and port (e.g., http://localhost:8080)"
       [error]="modalHostError()"
       helpKey="download-client:host" />
-    <app-input label="Username" placeholder="admin" [(value)]="modalUsername"
-      hint="Username for authentication"
-      helpKey="download-client:username" />
+    @if (showUsernameField()) {
+      <app-input label="Username" placeholder="admin" [(value)]="modalUsername"
+        hint="Username for authentication"
+        helpKey="download-client:username" />
+    }
     <app-input label="Password" placeholder="Enter password" type="password" [(value)]="modalPassword"
       hint="Password for authentication"
       helpKey="download-client:password" />

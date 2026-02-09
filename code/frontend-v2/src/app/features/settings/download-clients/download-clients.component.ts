@@ -69,6 +69,20 @@ export class DownloadClientsComponent implements OnInit, HasPendingChanges {
     this.modalNameError() || this.modalHostError()
   ));
 
+  readonly showUsernameField = computed(() => {
+    return this.modalTypeName() !== DownloadClientTypeName.Deluge;
+  });
+
+  onClientTypeChange(value: unknown): void {
+    this.modalTypeName.set(value);
+    if (value === DownloadClientTypeName.Deluge) {
+      this.modalUsername.set('');
+    }
+    if (value === DownloadClientTypeName.Transmission) {
+      this.modalUrlBase.set('transmission');
+    }
+  }
+
   ngOnInit(): void {
     this.loadClients();
   }

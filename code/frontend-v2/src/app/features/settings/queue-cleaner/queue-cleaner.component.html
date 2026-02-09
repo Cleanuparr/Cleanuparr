@@ -68,7 +68,7 @@
           hint="When enabled, private torrents will not be checked for being failed imports"
           helpKey="queue-cleaner:failedImport.ignorePrivate" />
         <app-toggle label="Delete Private from Client" [(checked)]="failedDeletePrivate"
-          [disabled]="failedSubFieldsDisabled()"
+          [disabled]="failedDeletePrivateDisabled()"
           hint="Disable this if you want to keep private torrents in the download client even if they are removed from the arrs"
           helpKey="queue-cleaner:failedImport.deletePrivate" />
         <app-toggle label="Skip if Not Found in Client" [(checked)]="failedSkipNotFound"
@@ -250,7 +250,8 @@
       hint="Number of strikes before action is taken"
       [error]="stallMaxStrikesError()"
       helpKey="queue-cleaner:stallRule.maxStrikes" />
-    <app-select label="Privacy Type" [options]="privacyTypeOptions" [(value)]="stallPrivacyType"
+    <app-select label="Privacy Type" [options]="privacyTypeOptions" [value]="stallPrivacyType()"
+      (valueChange)="onStallPrivacyTypeChange($event)"
       hint="Which torrent types this rule applies to"
       helpKey="queue-cleaner:stallRule.privacyType" />
     <app-number-input label="Min Completion %" [(value)]="stallMinCompletion" [min]="0" [max]="100" suffix="%"
@@ -300,7 +301,8 @@
     <app-number-input label="Maximum Time (Hours)" [(value)]="slowMaxTimeHours" [min]="0"
       hint="Maximum time allowed for slow downloads (0 means disabled)"
       helpKey="queue-cleaner:slowRule.maxTimeHours" />
-    <app-select label="Privacy Type" [options]="privacyTypeOptions" [(value)]="slowPrivacyType"
+    <app-select label="Privacy Type" [options]="privacyTypeOptions" [value]="slowPrivacyType()"
+      (valueChange)="onSlowPrivacyTypeChange($event)"
       hint="Which torrent types this rule applies to"
       helpKey="queue-cleaner:slowRule.privacyType" />
     <app-number-input label="Min Completion %" [(value)]="slowMinCompletion" [min]="0" [max]="100" suffix="%"

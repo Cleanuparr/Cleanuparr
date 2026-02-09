@@ -135,6 +135,13 @@ export class QueueCleanerComponent implements OnInit, HasPendingChanges {
         untracked(() => this.scheduleEvery.set(options[0]));
       }
     });
+
+    effect(() => {
+      const ignorePrivate = this.failedIgnorePrivate();
+      if (ignorePrivate) {
+        untracked(() => this.failedDeletePrivate.set(false));
+      }
+    });
   }
 
   // Validation
@@ -176,6 +183,10 @@ export class QueueCleanerComponent implements OnInit, HasPendingChanges {
 
   readonly failedSubFieldsDisabled = computed(() => {
     return this.failedMaxStrikes() === 0;
+  });
+
+  readonly failedDeletePrivateDisabled = computed(() => {
+    return this.failedSubFieldsDisabled() || this.failedIgnorePrivate();
   });
 
   readonly patternLabel = computed(() => {
@@ -531,5 +542,15 @@ export class QueueCleanerComponent implements OnInit, HasPendingChanges {
 
   hasPendingChanges(): boolean {
     return this.savedSnapshot !== '' && this.savedSnapshot !== this.buildSnapshot();
+  }
+
+  onStallPrivacyTypeChange(value: unknown): void {
+    this.stallPrivacyType.set(value);
+    this.stallDeletePrivate.set(false);
+  }
+
+  onSlowPrivacyTypeChange(value: unknown): void {
+    this.slowPrivacyType.set(value);
+    this.slowDeletePrivate.set(false);
   }
 }
