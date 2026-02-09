@@ -69,8 +69,10 @@
 }
 
 .select-dropdown {
-  @include glass('elevated');
   background: var(--dropdown-bg);
+  border: 1px solid var(--divider);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
   position: absolute;
   top: calc(100% + var(--space-1));
   left: 0;

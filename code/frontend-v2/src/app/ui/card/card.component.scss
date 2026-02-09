@@ -4,7 +4,6 @@
   @include glass('base');
   padding: var(--space-6);
   position: relative;
-  overflow: hidden;
   transition: transform var(--duration-fast) var(--ease-default),
               box-shadow var(--duration-fast) var(--ease-default);
 
