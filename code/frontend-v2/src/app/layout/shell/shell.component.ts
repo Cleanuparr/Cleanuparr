@@ -30,6 +30,8 @@ export class ShellComponent implements OnInit, OnDestroy {
   isMobile = signal(false);
 
   private readonly MOBILE_BREAKPOINT = 768;
+  private readonly TABLET_BREAKPOINT = 1024;
+  private autoCollapsed = signal(false);
 
   ngOnInit(): void {
     this.checkMobile();
@@ -55,6 +57,7 @@ export class ShellComponent implements OnInit, OnDestroy {
       this.mobileMenuOpen.set(!this.mobileMenuOpen());
     } else {
       this.sidebarCollapsed.set(!this.sidebarCollapsed());
+      this.autoCollapsed.set(false);
     }
   }
 
@@ -63,10 +66,26 @@ export class ShellComponent implements OnInit, OnDestroy {
   }
 
   private checkMobile(): void {
-    const mobile = window.innerWidth <= this.MOBILE_BREAKPOINT;
+    const width = window.innerWidth;
+    const mobile = width <= this.MOBILE_BREAKPOINT;
+    const tablet = !mobile && width <= this.TABLET_BREAKPOINT;
+
     this.isMobile.set(mobile);
-    if (!mobile) {
-      this.mobileMenuOpen.set(false);
+
+    if (mobile) {
+      return;
+    }
+
+    this.mobileMenuOpen.set(false);
+
+    if (tablet) {
+      if (!this.sidebarCollapsed()) {
+        this.sidebarCollapsed.set(true);
+        this.autoCollapsed.set(true);
+      }
+    } else if (this.autoCollapsed()) {
+      this.sidebarCollapsed.set(false);
+      this.autoCollapsed.set(false);
     }
   }
 }

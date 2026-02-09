@@ -5,6 +5,7 @@
 
   &__main {
     flex: 1;
+    min-width: 0;
     display: flex;
     flex-direction: column;
     margin-left: var(--sidebar-width);
@@ -67,6 +68,11 @@
     background: rgba(0, 0, 0, 0.5);
     z-index: calc(var(--z-fixed) - 1);
     animation: fade-in var(--duration-fast) var(--ease-default);
+  }
+
+  // Tablet layout
+  &--collapsed &__content {
+    padding: var(--space-5);
   }
 
   // Mobile layout

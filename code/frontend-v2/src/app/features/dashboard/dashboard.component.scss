@@ -5,7 +5,7 @@
   gap: var(--space-6);
   margin-bottom: var(--space-6);
 
-  @media (max-width: 768px) {
+  @media (max-width: 1024px) {
     grid-template-columns: 1fr;
   }
 
@@ -99,7 +99,7 @@
   grid-template-columns: repeat(2, 1fr);
   gap: var(--space-6);
 
-  @media (max-width: 768px) {
+  @media (max-width: 1024px) {
     grid-template-columns: 1fr;
   }
 
@@ -109,6 +109,7 @@
 
   // Staggered entrance animations (Issue 1)
   > app-card {
+    min-width: 0; // Allow grid items to shrink below content size
     animation: slide-up var(--duration-normal) var(--ease-default) both;
 
     &:nth-child(1) { animation-delay: 0ms; }
@@ -383,12 +384,12 @@
     gap: var(--space-2);
     min-width: 200px;
 
-    @media (max-width: 768px) {
+    @media (max-width: 1024px) {
       min-width: auto;
     }
   }
 
-  @media (max-width: 768px) {
+  @media (max-width: 1024px) {
     &__row {
       flex-wrap: wrap;
       gap: var(--space-2);
@@ -428,4 +429,27 @@
 // Live badge pulse animation
 .badge--live {
   animation: badge-pulse 2s ease-in-out infinite;
+}
+
+// Mobile compact dashboard
+@media (max-width: 768px) {
+  .card-inner {
+    min-height: 240px;
+  }
+
+  .card-header {
+    padding: var(--space-3) var(--space-4);
+  }
+
+  .timeline {
+    padding: var(--space-2) var(--space-3);
+  }
+
+  .jobs-table {
+    padding: var(--space-2) var(--space-3);
+
+    &__details {
+      gap: var(--space-2);
+    }
+  }
 }

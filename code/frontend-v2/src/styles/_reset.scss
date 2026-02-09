@@ -21,6 +21,7 @@ body {
   min-height: 100dvh;
   color: var(--text-primary);
   background-color: var(--surface-ground);
+  overflow-x: hidden;
 }
 
 img, picture, video, canvas, svg {

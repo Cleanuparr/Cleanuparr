@@ -218,3 +218,62 @@
     }
   }
 }
+
+// Tablet responsiveness
+@media (max-width: 1024px) {
+  .toolbar__filters {
+    app-input {
+      min-width: 0;
+    }
+  }
+
+  .event-row__main {
+    flex-wrap: wrap;
+  }
+
+  .event-row__message {
+    order: 10;
+    width: 100%;
+    flex-basis: 100%;
+  }
+
+  .event-row__data-key {
+    min-width: auto;
+  }
+}
+
+// Mobile responsiveness
+@media (max-width: 768px) {
+  .toolbar__filters {
+    app-input {
+      min-width: 0;
+      max-width: none;
+      width: 100%;
+    }
+  }
+
+  .event-row__main {
+    flex-wrap: wrap;
+    padding: var(--space-2) var(--space-3);
+  }
+
+  .event-row__message {
+    order: 10;
+    width: 100%;
+    flex-basis: 100%;
+    white-space: normal;
+  }
+
+  .event-row__tracking {
+    display: none;
+  }
+
+  .event-row__data-item {
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+
+  .event-row__data-key {
+    min-width: 0;
+  }
+}

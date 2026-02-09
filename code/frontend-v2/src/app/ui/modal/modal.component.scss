@@ -88,4 +88,20 @@
       display: none;
     }
   }
+
+  @media (max-width: 768px) {
+    max-height: 90vh;
+
+    &__header {
+      padding: var(--space-4);
+    }
+
+    &__body {
+      padding: var(--space-4);
+    }
+
+    &__footer {
+      padding: var(--space-3) var(--space-4);
+    }
+  }
 }
