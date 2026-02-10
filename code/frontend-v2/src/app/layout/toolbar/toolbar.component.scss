@@ -13,6 +13,18 @@
   top: 0;
   z-index: var(--z-sticky);
 
+  // Shine line at bottom edge
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(126, 87, 194, 0.3), transparent);
+    pointer-events: none;
+  }
+
   &__left {
     display: flex;
     align-items: center;
