@@ -93,7 +93,7 @@
     }
 
     &--active {
-      background: var(--sidebar-item-active);
+      background: linear-gradient(90deg, rgba(126, 87, 194, 0.3), rgba(126, 87, 194, 0.08));
       color: var(--sidebar-item-active-text);
       font-weight: 500;
       box-shadow: 0 0 20px rgba(126, 87, 194, 0.15);
