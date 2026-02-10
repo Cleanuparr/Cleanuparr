@@ -196,7 +196,7 @@
       </div>
       <div class="jobs-table">
         @for (job of jobs(); track job.jobType) {
-          <div class="jobs-table__row">
+          <div class="jobs-table__row" [class.jobs-table__row--running]="job.status === 'Running'">
             <div class="jobs-table__info">
               <span class="jobs-table__name">{{ jobDisplayName(job.jobType) }}</span>
               <app-badge [severity]="jobStatusSeverity(job.status)" size="sm">
