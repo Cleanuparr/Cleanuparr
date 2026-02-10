@@ -27,9 +27,25 @@
 
     &:hover {
       background: var(--glass-bg-hover);
-      border-color: var(--glass-border-hover);
       transform: translateY(-2px);
       box-shadow: 0 8px 24px rgba(126, 87, 194, 0.12);
+    }
+
+    // GitHub — monochrome grey/white
+    &:nth-child(1):hover {
+      border-color: rgba(255, 255, 255, 0.25);
+    }
+
+    // Discord — indigo blue
+    &:nth-child(2):hover {
+      border-color: rgba(88, 101, 242, 0.5);
+      box-shadow: 0 8px 24px rgba(88, 101, 242, 0.12);
+    }
+
+    // Donate — warm pink/red
+    &:nth-child(3):hover {
+      border-color: rgba(239, 68, 68, 0.4);
+      box-shadow: 0 8px 24px rgba(239, 68, 68, 0.12);
     }
 
     &:active {
