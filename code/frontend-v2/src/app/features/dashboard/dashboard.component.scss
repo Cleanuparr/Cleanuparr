@@ -282,6 +282,18 @@
   padding: var(--space-4) var(--space-5);
   border-bottom: 1px solid var(--divider);
   border-image: linear-gradient(90deg, transparent, var(--glass-border), transparent) 1;
+  position: relative;
+
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, var(--color-primary-subtle), rgba(59, 130, 246, 0.15), transparent);
+    pointer-events: none;
+  }
 
   &__left {
     display: flex;
