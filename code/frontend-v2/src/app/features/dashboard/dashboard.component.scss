@@ -362,22 +362,27 @@
     &--error {
       background: rgba(239, 68, 68, 0.15);
       color: var(--color-error);
+      box-shadow: 0 0 8px rgba(239, 68, 68, 0.25);
     }
     &--warning {
       background: rgba(245, 158, 11, 0.15);
       color: var(--color-warning);
+      box-shadow: 0 0 8px rgba(245, 158, 11, 0.25);
     }
     &--info {
       background: rgba(59, 130, 246, 0.15);
       color: var(--color-info);
+      box-shadow: 0 0 8px rgba(59, 130, 246, 0.25);
     }
     &--success {
       background: rgba(34, 197, 94, 0.15);
       color: var(--color-success);
+      box-shadow: 0 0 8px rgba(34, 197, 94, 0.25);
     }
     &--primary {
       background: rgba(126, 87, 194, 0.15);
       color: var(--color-primary);
+      box-shadow: 0 0 8px rgba(126, 87, 194, 0.25);
     }
     &--default {
       background: rgba(148, 163, 184, 0.15);
