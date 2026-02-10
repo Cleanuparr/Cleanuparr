@@ -4,6 +4,10 @@
 // All values reference CSS custom properties for theme compatibility.
 // =============================================================================
 
+// Faint SVG noise texture for frosted glass realism
+// Uses an inline SVG fractal noise filter at very low opacity
+$_glass-noise: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+
 // Base glass surface with configurable level
 // 'subtle'   - minimal: background + border only (no blur, good for nested elements)
 // 'base'     - standard: blur + border + shadow (default for cards and panels)
@@ -20,6 +24,11 @@
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-xl);
     box-shadow: var(--glass-shadow);
+
+    // Frost noise overlay for realism
+    background-image: #{$_glass-noise};
+    background-repeat: repeat;
+    background-size: 200px 200px;
   } @else if $level == 'elevated' {
     background: var(--surface-elevated);
     backdrop-filter: blur(var(--glass-blur-lg));
@@ -27,6 +36,11 @@
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-xl);
     box-shadow: var(--glass-shadow), 0 0 80px rgba(126, 87, 194, 0.04);
+
+    // Frost noise overlay for realism
+    background-image: #{$_glass-noise};
+    background-repeat: repeat;
+    background-size: 200px 200px;
   }
 }
 
