@@ -20,7 +20,7 @@
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-3) var(--space-4);
-  animation: slide-in-right var(--duration-normal) var(--ease-default),
+  animation: slide-in-right var(--duration-normal) cubic-bezier(0.34, 1.56, 0.64, 1),
              toast-glow 0.8s var(--ease-default);
   pointer-events: auto;
   border-left: 3px solid transparent;
