@@ -8,6 +8,7 @@
   backdrop-filter: blur(var(--glass-blur-sm));
   -webkit-backdrop-filter: blur(var(--glass-blur-sm));
   border-bottom: 1px solid var(--toolbar-border);
+  border-image: linear-gradient(90deg, transparent, var(--glass-border), transparent) 1;
   position: sticky;
   top: 0;
   z-index: var(--z-sticky);

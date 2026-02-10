@@ -281,6 +281,7 @@
   justify-content: space-between;
   padding: var(--space-4) var(--space-5);
   border-bottom: 1px solid var(--divider);
+  border-image: linear-gradient(90deg, transparent, var(--glass-border), transparent) 1;
 
   &__left {
     display: flex;
@@ -452,6 +453,7 @@
 
     &:not(:last-child) {
       border-bottom: 1px solid var(--divider);
+      border-image: linear-gradient(90deg, transparent, var(--glass-border), transparent) 1;
     }
   }
 

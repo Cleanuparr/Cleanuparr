@@ -24,6 +24,7 @@
     padding: var(--space-5) var(--space-4);
     height: var(--toolbar-height);
     border-bottom: 1px solid var(--sidebar-border);
+    border-image: linear-gradient(90deg, transparent, var(--glass-border), transparent) 1;
   }
 
   &__logo-img {
@@ -214,6 +215,7 @@
   &__footer {
     padding: var(--space-3) var(--space-4);
     border-top: 1px solid var(--sidebar-border);
+    border-image: linear-gradient(90deg, transparent, var(--glass-border), transparent) 1;
     display: flex;
     flex-direction: column;
     gap: var(--space-2);
