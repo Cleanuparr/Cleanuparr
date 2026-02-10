@@ -26,7 +26,9 @@
     opacity: 0.15;
     pointer-events: none;
     z-index: 0;
-    animation: float 20s ease-in-out infinite alternate;
+    animation:
+      float 20s ease-in-out infinite alternate,
+      hue-drift 60s ease-in-out infinite;
   }
 
   &__main::before {
