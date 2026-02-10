@@ -60,7 +60,7 @@
 
   <!-- Events Count -->
   <div class="event-count">
-    {{ totalRecords() }} events
+    <app-animated-counter [value]="totalRecords()" [duration]="400" /> events
   </div>
 
   <!-- Events List -->

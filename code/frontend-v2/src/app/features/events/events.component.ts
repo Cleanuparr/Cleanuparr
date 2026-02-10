@@ -9,6 +9,7 @@ import {
 } from '@ui';
 import { EventsApi } from '@core/api/events.api';
 import { ToastService } from '@core/services/toast.service';
+import { AnimatedCounterComponent } from '@ui/animated-counter/animated-counter.component';
 import { AppEvent, EventFilter } from '@core/models/event.models';
 
 @Component({
@@ -26,6 +27,7 @@ import { AppEvent, EventFilter } from '@core/models/event.models';
     InputComponent,
     PaginatorComponent,
     EmptyStateComponent,
+    AnimatedCounterComponent,
   ],
   templateUrl: './events.component.html',
   styleUrl: './events.component.scss',

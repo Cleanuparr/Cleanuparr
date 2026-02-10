@@ -1,10 +1,11 @@
 import { Component, ChangeDetectionStrategy, input, output, computed } from '@angular/core';
 import { ButtonComponent } from '../button/button.component';
+import { AnimatedCounterComponent } from '../animated-counter/animated-counter.component';
 
 @Component({
   selector: 'app-paginator',
   standalone: true,
-  imports: [ButtonComponent],
+  imports: [ButtonComponent, AnimatedCounterComponent],
   templateUrl: './paginator.component.html',
   styleUrl: './paginator.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
