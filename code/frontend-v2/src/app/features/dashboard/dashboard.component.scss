@@ -339,9 +339,9 @@
       content: '';
       position: absolute;
       left: 13px; // center of 28px marker
-      top: 32px;
-      bottom: -4px;
-      width: 2px;
+      top: 36px; // just below marker bottom (10px pad + 28px marker - 2px z-index overlap)
+      bottom: -12px; // reaches into next marker top (10px pad + 2px z-index overlap)
+      width: 1px;
       background: var(--divider);
     }
   }
