@@ -22,19 +22,20 @@
     content: '';
     position: fixed;
     border-radius: 50%;
-    filter: blur(120px);
-    opacity: 0.15;
+    filter: blur(var(--orb-blur));
+    opacity: var(--orb-opacity);
     pointer-events: none;
     z-index: 0;
     animation:
       float 20s ease-in-out infinite alternate,
       hue-drift 60s ease-in-out infinite;
+    transition: opacity 0.5s ease, filter 0.5s ease;
   }
 
   &__main::before {
     width: 500px;
     height: 500px;
-    background: radial-gradient(circle, var(--brand-500), var(--brand-800));
+    background: var(--orb-primary);
     top: -100px;
     right: -100px;
   }
@@ -42,7 +43,7 @@
   &__main::after {
     width: 400px;
     height: 400px;
-    background: radial-gradient(circle, var(--brand-400), var(--color-info));
+    background: var(--orb-secondary);
     bottom: -100px;
     left: -50px;
     animation-delay: -10s;

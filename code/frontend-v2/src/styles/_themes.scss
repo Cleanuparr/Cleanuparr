@@ -73,6 +73,12 @@
   // Focus ring
   --focus-ring: var(--brand-500);
   --focus-ring-offset: var(--surface-ground);
+
+  // Ambient orbs
+  --orb-opacity: 0.15;
+  --orb-blur: 120px;
+  --orb-primary: radial-gradient(circle, var(--brand-500), var(--brand-800));
+  --orb-secondary: radial-gradient(circle, var(--brand-400), var(--color-info));
 }
 
 // Light theme
@@ -143,4 +149,10 @@
   // Focus ring
   --focus-ring: var(--brand-600);
   --focus-ring-offset: var(--surface-ground);
+
+  // Ambient orbs (stronger for light backgrounds)
+  --orb-opacity: 0.35;
+  --orb-blur: 150px;
+  --orb-primary: radial-gradient(circle, #9333ea, #6d28d9);
+  --orb-secondary: radial-gradient(circle, #7c3aed, #2563eb);
 }

@@ -95,9 +95,9 @@
 
 // Slow hue rotation for ambient orbs — barely noticeable color drift
 @keyframes hue-drift {
-  0%   { filter: blur(120px) hue-rotate(0deg); }
-  50%  { filter: blur(120px) hue-rotate(-35deg); }
-  100% { filter: blur(120px) hue-rotate(0deg); }
+  0%   { filter: blur(var(--orb-blur, 120px)) hue-rotate(0deg); }
+  50%  { filter: blur(var(--orb-blur, 120px)) hue-rotate(-35deg); }
+  100% { filter: blur(var(--orb-blur, 120px)) hue-rotate(0deg); }
 }
 
 // Toast entrance glow
