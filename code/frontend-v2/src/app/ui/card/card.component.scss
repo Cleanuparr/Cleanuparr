@@ -7,34 +7,6 @@
   transition: transform var(--duration-fast) var(--ease-default),
               box-shadow var(--duration-fast) var(--ease-default);
 
-  // Gradient accent border (left edge)
-  &::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 3px;
-    background: linear-gradient(180deg, var(--color-primary), transparent);
-    opacity: 0.4;
-    transition: opacity var(--duration-fast) var(--ease-default);
-  }
-
-  // Top-edge gradient shine (light reflection on glass)
-  &::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 1px;
-    background: linear-gradient(90deg, transparent 20%, rgba(126, 87, 194, 0.5) 50%, transparent 80%);
-    background-size: 200% 100%;
-    background-position: 50% 0;
-    pointer-events: none;
-    transition: background-position var(--duration-normal) var(--ease-default);
-  }
-
   // Hover lift effect with inner glow
   &:hover {
     transform: translateY(-2px);
