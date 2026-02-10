@@ -53,6 +53,7 @@
   font-size: var(--font-size-xs);
   color: var(--text-primary);
   white-space: nowrap;
+  animation: scale-in var(--duration-fast) cubic-bezier(0.34, 1.56, 0.64, 1);
 
   &__remove {
     display: flex;
