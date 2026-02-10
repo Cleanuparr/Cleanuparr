@@ -1,6 +1,11 @@
 @use 'glass' as *;
 
+:host {
+  display: block;
+}
+
 .card {
+  height: 100%;
   @include glass('base');
   padding: var(--space-6);
   position: relative;
