@@ -16,6 +16,8 @@
 
 .toast {
   @include glass('elevated');
+  position: relative;
+  overflow: hidden;
   display: flex;
   align-items: center;
   gap: var(--space-3);
@@ -81,4 +83,25 @@
       color: var(--text-primary);
     }
   }
+
+  &__progress {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 2px;
+    width: 100%;
+    background: var(--toast-progress-color, var(--color-primary));
+    animation: toast-progress-shrink linear forwards;
+    transform-origin: left;
+  }
+
+  &--success .toast__progress { --toast-progress-color: var(--color-success); }
+  &--error .toast__progress { --toast-progress-color: var(--color-error); }
+  &--warning .toast__progress { --toast-progress-color: var(--color-warning); }
+  &--info .toast__progress { --toast-progress-color: var(--color-info); }
+}
+
+@keyframes toast-progress-shrink {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
 }

@@ -4,6 +4,7 @@
       <ng-icon [name]="iconFor(toast.severity)" class="toast__icon" />
       <span class="toast__message">{{ toast.message }}</span>
       <button class="toast__close" (click)="dismiss(toast)" aria-label="Dismiss">&times;</button>
+      <div class="toast__progress" [style.animation-duration.ms]="toast.duration"></div>
     </div>
   }
 </div>
