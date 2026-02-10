@@ -63,5 +63,10 @@
   &__content {
     padding: var(--space-3) var(--space-5) var(--space-5);
     animation: slide-up var(--duration-normal) var(--ease-default);
+
+    // Inner content materialises slightly after the container expands
+    > * {
+      animation: content-fade var(--duration-normal) var(--ease-default) 100ms both;
+    }
   }
 }
