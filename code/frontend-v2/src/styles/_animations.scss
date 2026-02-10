@@ -106,6 +106,12 @@
   to   { box-shadow: none; }
 }
 
+// Gentle floating motion for decorative elements
+@keyframes float-gentle {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-6px); }
+}
+
 // Performance mode: disable decorative animations and transitions
 // Functional indicators ([role="status"] spinners) are exempted
 :root[data-performance-mode='true'],
