@@ -8,17 +8,13 @@
     position: relative;
     z-index: 1;
   }
-  > .event-count {
+  > .log-count {
     animation: slide-up var(--duration-normal) var(--ease-default) both;
     animation-delay: 40ms;
   }
   > app-card {
     animation: slide-up var(--duration-normal) var(--ease-default) both;
     animation-delay: 80ms;
-  }
-  > app-paginator {
-    animation: slide-up var(--duration-normal) var(--ease-default) both;
-    animation-delay: 120ms;
   }
 }
 
@@ -29,28 +25,28 @@
     app-input {
       flex: 1;
       min-width: 150px;
-      max-width: 300px;
+      max-width: 400px;
     }
   }
 }
 
-.event-count {
+.log-count {
   font-size: var(--font-size-sm);
   color: var(--text-tertiary);
   margin-bottom: var(--space-3);
 }
 
-// Events list
-.events-list {
+// Log console
+.log-console {
   max-height: 70vh;
   overflow-y: auto;
-}
-
-.event-row {
-  border-bottom: 1px solid var(--divider);
-  transition: background var(--duration-fast) var(--ease-default);
   font-family: var(--font-mono);
   font-size: var(--font-size-xs);
+}
+
+.log-entry {
+  border-bottom: 1px solid var(--divider);
+  transition: background var(--duration-fast) var(--ease-default);
   position: relative;
   overflow: hidden;
 
@@ -78,7 +74,7 @@
     background: var(--glass-bg);
   }
 
-  &__main {
+  &__row {
     display: flex;
     align-items: center;
     gap: var(--space-2);
@@ -90,17 +86,19 @@
     }
   }
 
-  &__tracking {
-    font-family: var(--font-mono);
-    font-size: var(--font-size-xs);
+  &__time {
     color: var(--text-tertiary);
     flex-shrink: 0;
+    font-size: var(--font-size-xs);
   }
 
-  &__time {
-    font-size: var(--font-size-xs);
-    color: var(--text-tertiary);
+  &__category {
+    color: var(--color-primary);
     flex-shrink: 0;
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   &__message {
@@ -135,7 +133,7 @@
     transition: color var(--duration-fast) var(--ease-default);
   }
 
-  &__main--expandable:hover &__chevron {
+  &__row--expandable:hover &__chevron {
     color: var(--text-secondary);
   }
 
@@ -144,11 +142,12 @@
     padding: var(--space-2) var(--space-4) var(--space-3);
     display: flex;
     flex-direction: column;
-    gap: var(--space-3);
+    gap: var(--space-2);
     animation: fade-in var(--duration-fast) var(--ease-default);
   }
 
-  &__detail {
+  &__detail,
+  &__exception {
     display: flex;
     flex-direction: column;
     gap: var(--space-1);
@@ -162,40 +161,24 @@
     letter-spacing: 0.05em;
   }
 
-  &__detail-value {
-    font-size: var(--font-size-sm);
-    color: var(--text-secondary);
-    word-break: break-word;
-  }
-
-  // 2-column key-value layout
-  &__data {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-1);
+  &__pre {
     background: var(--glass-bg);
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-md);
     padding: var(--space-3);
-  }
-
-  &__data-item {
-    display: flex;
-    gap: var(--space-3);
-  }
-
-  &__data-key {
-    font-size: var(--font-size-xs);
-    color: var(--text-tertiary);
-    font-family: var(--font-mono);
-    min-width: 140px;
-    flex-shrink: 0;
-  }
-
-  &__data-value {
-    font-size: var(--font-size-sm);
-    color: var(--text-secondary);
+    overflow-x: auto;
+    white-space: pre-wrap;
     word-break: break-all;
+    color: var(--color-error);
+    font-size: var(--font-size-xs);
+    max-height: 300px;
+    overflow-y: auto;
+  }
+
+  &__detail {
+    span {
+      color: var(--text-secondary);
+    }
   }
 }
 
@@ -245,18 +228,14 @@
     }
   }
 
-  .event-row__main {
+  .log-entry__row {
     flex-wrap: wrap;
   }
 
-  .event-row__message {
+  .log-entry__message {
     order: 10;
     width: 100%;
     flex-basis: 100%;
-  }
-
-  .event-row__data-key {
-    min-width: auto;
   }
 }
 
@@ -270,28 +249,19 @@
     }
   }
 
-  .event-row__main {
+  .log-entry__row {
     flex-wrap: wrap;
     padding: var(--space-2) var(--space-3);
   }
 
-  .event-row__message {
+  .log-entry__category {
+    max-width: 100px;
+  }
+
+  .log-entry__message {
     order: 10;
     width: 100%;
     flex-basis: 100%;
     white-space: normal;
-  }
-
-  .event-row__tracking {
-    display: none;
-  }
-
-  .event-row__data-item {
-    flex-direction: column;
-    gap: var(--space-1);
-  }
-
-  .event-row__data-key {
-    min-width: 0;
   }
 }
