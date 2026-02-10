@@ -9,7 +9,8 @@
   align-items: center;
   justify-content: center;
   padding: var(--space-4);
-  animation: fade-in var(--duration-fast) var(--ease-default);
+  animation: fade-in var(--duration-fast) var(--ease-default),
+             backdrop-blur-in var(--duration-normal) var(--ease-default) both;
 }
 
 .modal {
@@ -19,7 +20,7 @@
   max-height: 85vh;
   display: flex;
   flex-direction: column;
-  animation: scale-in var(--duration-normal) var(--ease-default);
+  animation: thaw-in var(--duration-normal) var(--ease-default);
 
   // Gradient border effect
   &::before {

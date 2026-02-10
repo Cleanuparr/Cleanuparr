@@ -55,6 +55,18 @@
   50%      { opacity: 0.7; }
 }
 
+// Backdrop blur fade-in for modals — blur materialises
+@keyframes backdrop-blur-in {
+  from { backdrop-filter: blur(0); -webkit-backdrop-filter: blur(0); }
+  to   { backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
+}
+
+// Modal thaw — content defrosts from blurry to clear
+@keyframes thaw-in {
+  from { opacity: 0; transform: scale(0.95); filter: blur(6px); }
+  to   { opacity: 1; transform: scale(1); filter: blur(0); }
+}
+
 // Gentle glow breathe for focused inputs — very slow, very subtle
 @keyframes glow-breathe {
   0%, 100% { box-shadow: 0 0 0 3px var(--color-primary-subtle), 0 0 12px rgba(126, 87, 194, 0.12); }
