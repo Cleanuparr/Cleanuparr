@@ -106,6 +106,13 @@
   to   { box-shadow: none; }
 }
 
+// One-shot focus ring pulse — draws attention to newly focused element
+@keyframes focus-ring-pulse {
+  0%   { outline-offset: 2px; }
+  50%  { outline-offset: 4px; }
+  100% { outline-offset: 2px; }
+}
+
 // Gentle floating motion for decorative elements
 @keyframes float-gentle {
   0%, 100% { transform: translateY(0); }

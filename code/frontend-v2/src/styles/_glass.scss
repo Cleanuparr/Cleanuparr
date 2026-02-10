@@ -64,6 +64,7 @@ $_glass-noise: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http:
   &:focus-visible {
     outline: 2px solid var(--focus-ring);
     outline-offset: 2px;
+    animation: focus-ring-pulse 0.4s var(--ease-default);
   }
 }
 
