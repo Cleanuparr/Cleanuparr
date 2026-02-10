@@ -12,7 +12,7 @@
     line-height: 1.2;
 
     @supports (-webkit-background-clip: text) or (background-clip: text) {
-      background: linear-gradient(135deg, var(--text-primary) 0%, var(--color-primary) 100%);
+      background: linear-gradient(135deg, var(--text-primary) 10%, var(--color-primary) 50%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
