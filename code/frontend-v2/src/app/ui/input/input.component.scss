@@ -65,3 +65,8 @@
   font-size: var(--font-size-xs);
   color: var(--text-tertiary);
 }
+
+:host:focus-within .input-label {
+  color: var(--color-primary);
+  transition: color var(--duration-fast) var(--ease-default);
+}

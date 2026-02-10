@@ -26,6 +26,11 @@
     box-shadow: 0 0 0 3px var(--color-primary-subtle);
   }
 
+  :host:focus-within .textarea-label {
+    color: var(--color-primary);
+    transition: color var(--duration-fast) var(--ease-default);
+  }
+  
   &--disabled {
     opacity: 0.5;
     cursor: not-allowed;
@@ -92,4 +97,9 @@
 .chip-hint {
   font-size: var(--font-size-xs);
   color: var(--text-tertiary);
+}
+
+:host:focus-within .chip-label {
+  color: var(--color-primary);
+  transition: color var(--duration-fast) var(--ease-default);
 }
