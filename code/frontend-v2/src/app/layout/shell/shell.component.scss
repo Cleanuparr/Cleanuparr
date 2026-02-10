@@ -74,6 +74,7 @@
     flex: 1;
     padding: var(--space-6);
     overflow-y: auto;
+    scroll-behavior: smooth;
     max-width: var(--content-max-width);
     width: 100%;
     margin: 0 auto;
