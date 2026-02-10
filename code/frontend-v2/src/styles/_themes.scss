@@ -79,6 +79,7 @@
   --orb-blur: 120px;
   --orb-primary: radial-gradient(circle, var(--brand-500), var(--brand-800));
   --orb-secondary: radial-gradient(circle, var(--brand-400), var(--color-info));
+  --orb-tertiary: radial-gradient(circle, #06b6d4, #3b82f6);
 }
 
 // Light theme
@@ -155,4 +156,5 @@
   --orb-blur: 150px;
   --orb-primary: radial-gradient(circle, #9333ea, #6d28d9);
   --orb-secondary: radial-gradient(circle, #7c3aed, #2563eb);
+  --orb-tertiary: radial-gradient(circle, #0891b2, #6366f1);
 }

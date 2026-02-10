@@ -126,7 +126,8 @@
 }
 
 :root[data-performance-mode='true'] .shell__main::before,
-:root[data-performance-mode='true'] .shell__main::after {
+:root[data-performance-mode='true'] .shell__main::after,
+:root[data-performance-mode='true'] .shell::after {
   display: none !important;
 }
 
@@ -153,7 +154,8 @@
   }
 
   .shell__main::before,
-  .shell__main::after {
+  .shell__main::after,
+  .shell::after {
     display: none !important;
   }
 }

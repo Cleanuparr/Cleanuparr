@@ -49,6 +49,27 @@
     animation-delay: -10s;
   }
 
+  // Third orb: teal/blue accent for color variety
+  &::after {
+    content: '';
+    position: fixed;
+    width: 300px;
+    height: 300px;
+    border-radius: 50%;
+    background: var(--orb-tertiary);
+    filter: blur(var(--orb-blur));
+    opacity: var(--orb-opacity);
+    pointer-events: none;
+    z-index: 0;
+    top: 50%;
+    left: 30%;
+    animation:
+      float 15s ease-in-out infinite alternate,
+      hue-drift 60s ease-in-out infinite;
+    animation-delay: -5s;
+    transition: opacity 0.5s ease, filter 0.5s ease;
+  }
+
   &__content {
     flex: 1;
     padding: var(--space-6);
