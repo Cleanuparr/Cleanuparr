@@ -58,4 +58,25 @@
     color: var(--color-info);
     border: 1px solid rgba(59, 130, 246, 0.2);
   }
+
+  // Severity indicator dot for non-default badges
+  &--primary,
+  &--success,
+  &--warning,
+  &--error,
+  &--info {
+    &::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+      flex-shrink: 0;
+    }
+  }
+
+  // Pulse the dot on rounded (live) badges
+  &--rounded::before {
+    animation: badge-pulse 2s ease-in-out infinite;
+  }
 }
