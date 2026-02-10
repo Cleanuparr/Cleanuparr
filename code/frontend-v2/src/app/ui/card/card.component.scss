@@ -28,8 +28,11 @@
     left: 0;
     right: 0;
     height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(126, 87, 194, 0.5), transparent);
+    background: linear-gradient(90deg, transparent 20%, rgba(126, 87, 194, 0.5) 50%, transparent 80%);
+    background-size: 200% 100%;
+    background-position: 50% 0;
     pointer-events: none;
+    transition: background-position var(--duration-normal) var(--ease-default);
   }
 
   // Hover lift effect with inner glow
@@ -40,6 +43,10 @@
 
     &::before {
       opacity: 0.7;
+    }
+
+    &::after {
+      background-position: 80% 0;
     }
   }
 
