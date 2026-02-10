@@ -9,8 +9,15 @@
 
 // Skeleton loading utility - add class="skeleton" to any element
 .skeleton {
-  background: linear-gradient(90deg, var(--glass-bg) 0px, var(--glass-bg-hover) 40px, var(--glass-bg) 80px);
-  background-size: 200px 100%;
+  background: linear-gradient(
+    90deg,
+    var(--glass-bg) 0px,
+    rgba(126, 87, 194, 0.08) 30px,
+    rgba(59, 130, 246, 0.06) 50px,
+    var(--glass-bg-hover) 70px,
+    var(--glass-bg) 100px
+  );
+  background-size: 250px 100%;
   animation: shimmer 1.5s ease-in-out infinite;
   border-radius: var(--radius-md);
   color: transparent !important;
