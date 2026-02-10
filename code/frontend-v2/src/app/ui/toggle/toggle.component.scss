@@ -20,16 +20,19 @@
     width: 44px;
     height: 24px;
     flex-shrink: 0;
-    background: var(--glass-bg);
+    background: linear-gradient(135deg, var(--brand-500), var(--brand-400)) no-repeat left center;
+    background-size: 0% 100%;
+    background-color: var(--glass-bg);
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-full);
-    transition: all var(--duration-fast) var(--ease-default);
+    transition: background-size 250ms cubic-bezier(0.34, 1.56, 0.64, 1),
+                border-color var(--duration-fast) var(--ease-default);
     padding: 0;
 
     @include glass-focus;
 
     &--checked {
-      background: linear-gradient(135deg, var(--brand-500), var(--brand-400));
+      background-size: 100% 100%;
       border-color: var(--brand-500);
 
       .toggle__thumb {
