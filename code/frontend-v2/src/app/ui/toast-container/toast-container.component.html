@@ -1,6 +1,6 @@
 <div class="toast-container" aria-live="polite" aria-atomic="false">
   @for (toast of toasts(); track toast.id) {
-    <div class="toast" [class]="'toast toast--' + toast.severity">
+    <div class="toast" [class]="'toast toast--' + toast.severity" [class.toast--removing]="isRemoving(toast.id)">
       <ng-icon [name]="iconFor(toast.severity)" class="toast__icon" />
       <span class="toast__message">{{ toast.message }}</span>
       <button class="toast__close" (click)="dismiss(toast)" aria-label="Dismiss">&times;</button>

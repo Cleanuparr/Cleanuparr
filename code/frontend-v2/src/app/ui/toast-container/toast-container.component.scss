@@ -45,6 +45,11 @@
     --toast-glow-color: rgba(59, 130, 246, 0.3);
   }
 
+  &--removing {
+    animation: slide-out-right 300ms var(--ease-default) forwards;
+    pointer-events: none;
+  }
+
   &__icon {
     font-size: 18px;
     flex-shrink: 0;
