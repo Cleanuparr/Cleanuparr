@@ -31,6 +31,12 @@
     width: 32px;
     height: 32px;
     flex-shrink: 0;
+    filter: drop-shadow(0 0 8px rgba(126, 87, 194, 0.4));
+    transition: filter var(--duration-fast) var(--ease-default);
+
+    .sidebar__brand:hover & {
+      filter: drop-shadow(0 0 12px rgba(126, 87, 194, 0.6));
+    }
   }
 
   &__logo-text {
