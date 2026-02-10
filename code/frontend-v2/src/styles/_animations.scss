@@ -55,6 +55,12 @@
   50%      { opacity: 0.7; }
 }
 
+// Gentle glow breathe for focused inputs — very slow, very subtle
+@keyframes glow-breathe {
+  0%, 100% { box-shadow: 0 0 0 3px var(--color-primary-subtle), 0 0 12px rgba(126, 87, 194, 0.12); }
+  50%      { box-shadow: 0 0 0 3px var(--color-primary-subtle), 0 0 16px rgba(126, 87, 194, 0.22); }
+}
+
 // Delayed content materialise — used inside expanding containers
 @keyframes content-fade {
   from { opacity: 0; }

@@ -86,6 +86,7 @@
     border-color: var(--input-border-focus);
     box-shadow: 0 0 0 3px var(--color-primary-subtle),
                 0 0 12px rgba(126, 87, 194, 0.15);
+    animation: glow-breathe 3s ease-in-out infinite;
   }
 
   &:disabled {
