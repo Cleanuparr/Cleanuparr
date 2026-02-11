@@ -18,7 +18,7 @@ export class BlacklistSyncComponent implements OnInit, HasPendingChanges {
   private readonly api = inject(BlacklistSyncApi);
   private readonly toast = inject(ToastService);
 
-  private savedSnapshot = '';
+  private readonly savedSnapshot = signal('');
 
   readonly loading = signal(false);
   readonly loadError = signal(false);
@@ -50,7 +50,7 @@ export class BlacklistSyncComponent implements OnInit, HasPendingChanges {
         this.enabled.set(config.enabled);
         this.blacklistPath.set(config.blacklistPath ?? '');
         this.loading.set(false);
-        this.savedSnapshot = this.buildSnapshot();
+        this.savedSnapshot.set(this.buildSnapshot());
       },
       error: () => {
         this.toast.error('Failed to load blacklist sync settings');
@@ -79,7 +79,7 @@ export class BlacklistSyncComponent implements OnInit, HasPendingChanges {
         this.saving.set(false);
         this.saved.set(true);
         setTimeout(() => this.saved.set(false), 1500);
-        this.savedSnapshot = this.buildSnapshot();
+        this.savedSnapshot.set(this.buildSnapshot());
       },
       error: () => {
         this.toast.error('Failed to save blacklist sync settings');
@@ -95,7 +95,12 @@ export class BlacklistSyncComponent implements OnInit, HasPendingChanges {
     });
   }
 
+  readonly dirty = computed(() => {
+    const saved = this.savedSnapshot();
+    return saved !== '' && saved !== this.buildSnapshot();
+  });
+
   hasPendingChanges(): boolean {
-    return this.savedSnapshot !== '' && this.savedSnapshot !== this.buildSnapshot();
+    return this.dirty();
   }
 }

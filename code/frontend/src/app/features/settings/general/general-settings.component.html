@@ -111,7 +111,7 @@
   </app-accordion>
 
   <div class="form-actions">
-    <app-button variant="primary" [loading]="saving()" [disabled]="saving() || saved() || hasErrors()" (clicked)="save()">
+    <app-button variant="primary" [glowing]="dirty()" [loading]="saving()" [disabled]="saving() || saved() || hasErrors()" (clicked)="save()">
       {{ saved() ? 'Saved!' : 'Save Settings' }}
     </app-button>
   </div>

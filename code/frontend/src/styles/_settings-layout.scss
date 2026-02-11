@@ -18,9 +18,8 @@
 
   // Staggered entrance animation for cards and accordions
   > app-card,
-  > app-accordion,
-  > .form-actions {
-    animation: slide-up var(--duration-normal) var(--ease-default) both;
+  > app-accordion {
+    animation: slide-up var(--duration-normal) var(--ease-default) backwards;
   }
 
   > :nth-child(1) { animation-delay: 0ms; }
@@ -71,7 +70,22 @@
   display: flex;
   justify-content: flex-end;
   gap: var(--space-3);
-  padding-top: var(--space-2);
+  padding: var(--space-4) 0;
+
+  // Sticky at bottom of scroll container (shell__content)
+  position: sticky;
+  bottom: 0;
+  z-index: var(--z-sticky);
+
+  // Transparent — button floats over content without blocking it
+  background: transparent;
+  pointer-events: none;
+
+  // Re-enable pointer events on the button itself
+  > * {
+    pointer-events: auto;
+  }
+
 }
 
 @mixin form-section {

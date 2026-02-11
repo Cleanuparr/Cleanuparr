@@ -44,7 +44,7 @@ export class GeneralSettingsComponent implements OnInit, HasPendingChanges {
   private readonly toast = inject(ToastService);
   private readonly chipInputs = viewChildren(ChipInputComponent);
 
-  private savedSnapshot = '';
+  private readonly savedSnapshot = signal('');
 
   readonly certOptions = CERT_OPTIONS;
   readonly logLevelOptions = LOG_LEVEL_OPTIONS;
@@ -175,7 +175,7 @@ export class GeneralSettingsComponent implements OnInit, HasPendingChanges {
           this.logArchiveTimeLimitHours.set(config.log.archiveTimeLimitHours);
         }
         this.loading.set(false);
-        this.savedSnapshot = this.buildSnapshot();
+        this.savedSnapshot.set(this.buildSnapshot());
       },
       error: () => {
         this.toast.error('Failed to load general settings');
@@ -218,7 +218,7 @@ export class GeneralSettingsComponent implements OnInit, HasPendingChanges {
         this.saving.set(false);
         this.saved.set(true);
         setTimeout(() => this.saved.set(false), 1500);
-        this.savedSnapshot = this.buildSnapshot();
+        this.savedSnapshot.set(this.buildSnapshot());
       },
       error: () => {
         this.toast.error('Failed to save general settings');
@@ -247,7 +247,12 @@ export class GeneralSettingsComponent implements OnInit, HasPendingChanges {
     });
   }
 
+  readonly dirty = computed(() => {
+    const saved = this.savedSnapshot();
+    return saved !== '' && saved !== this.buildSnapshot();
+  });
+
   hasPendingChanges(): boolean {
-    return this.savedSnapshot !== '' && this.savedSnapshot !== this.buildSnapshot();
+    return this.dirty();
   }
 }

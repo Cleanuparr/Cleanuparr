@@ -16,7 +16,7 @@
 
 @keyframes slide-up {
   from { opacity: 0; transform: translateY(8px); filter: blur(4px); }
-  to   { opacity: 1; transform: translateY(0); filter: blur(0); }
+  to   { opacity: 1; transform: none; filter: none; }
 }
 
 @keyframes slide-down {
@@ -48,10 +48,9 @@
   50%      { opacity: 0.5; }
 }
 
-// Page enter: used for route transitions
+// Page enter: used for route transitions (opacity-only to avoid containing blocks that break sticky)
 @keyframes page-enter {
-  from { opacity: 0; transform: translateY(12px); filter: blur(4px); }
-  to   { opacity: 1; transform: translateY(0); filter: blur(0); }
+  from { opacity: 0; }
 }
 
 // Gentle badge pulse for live data indicators

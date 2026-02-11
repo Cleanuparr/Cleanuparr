@@ -52,7 +52,7 @@ export class QueueCleanerComponent implements OnInit, HasPendingChanges {
   private readonly confirm = inject(ConfirmService);
   private readonly chipInputs = viewChildren(ChipInputComponent);
 
-  private savedSnapshot = '';
+  private readonly savedSnapshot = signal('');
 
   readonly patternModeOptions = PATTERN_MODE_OPTIONS;
   readonly privacyTypeOptions = PRIVACY_TYPE_OPTIONS;
@@ -282,7 +282,7 @@ export class QueueCleanerComponent implements OnInit, HasPendingChanges {
         this.failedPatternMode.set(config.failedImport.patternMode ?? PatternMode.Exclude);
         this.metadataMaxStrikes.set(config.downloadingMetadataMaxStrikes);
         this.loading.set(false);
-        this.savedSnapshot = this.buildSnapshot();
+        this.savedSnapshot.set(this.buildSnapshot());
       },
       error: () => {
         this.toast.error('Failed to load queue cleaner settings');
@@ -513,7 +513,7 @@ export class QueueCleanerComponent implements OnInit, HasPendingChanges {
         this.saving.set(false);
         this.saved.set(true);
         setTimeout(() => this.saved.set(false), 1500);
-        this.savedSnapshot = this.buildSnapshot();
+        this.savedSnapshot.set(this.buildSnapshot());
       },
       error: () => {
         this.toast.error('Failed to save queue cleaner settings');
@@ -540,8 +540,13 @@ export class QueueCleanerComponent implements OnInit, HasPendingChanges {
     });
   }
 
+  readonly dirty = computed(() => {
+    const saved = this.savedSnapshot();
+    return saved !== '' && saved !== this.buildSnapshot();
+  });
+
   hasPendingChanges(): boolean {
-    return this.savedSnapshot !== '' && this.savedSnapshot !== this.buildSnapshot();
+    return this.dirty();
   }
 
   onStallPrivacyTypeChange(value: unknown): void {

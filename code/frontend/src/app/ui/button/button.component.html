@@ -2,6 +2,7 @@
   [type]="type()"
   [class]="'btn btn--' + variant() + ' btn--' + size()"
   [class.btn--loading]="loading()"
+  [class.btn--glowing]="glowing()"
   [disabled]="disabled() || loading()"
   (click)="onClick($event)"
 >

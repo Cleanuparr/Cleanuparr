@@ -1,7 +1,7 @@
 .shell {
   display: flex;
-  min-height: 100vh;
-  min-height: 100dvh;
+  height: 100vh;
+  height: 100dvh;
 
   &__main {
     flex: 1;
@@ -83,7 +83,7 @@
 
     // Route transition: animate routed component on mount
     > :not(router-outlet) {
-      animation: page-enter var(--duration-normal) var(--ease-default) both;
+      animation: page-enter var(--duration-normal) var(--ease-default) backwards;
     }
   }
 

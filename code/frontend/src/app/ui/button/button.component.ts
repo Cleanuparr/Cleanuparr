@@ -16,6 +16,7 @@ export class ButtonComponent {
   disabled = input(false);
   loading = input(false);
   type = input<'button' | 'submit' | 'reset'>('button');
+  glowing = input(false);
 
   clicked = output<MouseEvent>();
 

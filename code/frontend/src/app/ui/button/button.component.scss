@@ -1,5 +1,20 @@
 @use 'glass' as *;
 
+@keyframes fire-glow {
+  0%, 100% {
+    box-shadow:
+      0 0 14px rgba(255, 180, 0, 0.5),
+      0 0 28px rgba(255, 120, 0, 0.3),
+      0 0 0 1px rgba(255, 180, 0, 0.2);
+  }
+  50% {
+    box-shadow:
+      0 0 24px rgba(255, 200, 30, 0.7),
+      0 0 48px rgba(255, 140, 0, 0.45),
+      0 0 0 1px rgba(255, 200, 30, 0.35);
+  }
+}
+
 .btn {
   display: inline-flex;
   align-items: center;
@@ -106,6 +121,11 @@
     &:hover:not(:disabled) {
       background: var(--color-error-dim);
     }
+  }
+
+  // Fire glow for dirty state — breathing amber/orange pulse
+  &--glowing:not(:disabled) {
+    animation: fire-glow 2s ease-in-out infinite;
   }
 
   // Loading state

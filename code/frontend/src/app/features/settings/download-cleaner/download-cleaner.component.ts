@@ -36,7 +36,7 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
   private readonly toast = inject(ToastService);
   private readonly chipInputs = viewChildren(ChipInputComponent);
 
-  private savedSnapshot = '';
+  private readonly savedSnapshot = signal('');
 
   readonly scheduleUnitOptions = SCHEDULE_UNIT_OPTIONS;
   readonly loading = signal(false);
@@ -156,7 +156,7 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
         this.unlinkedIgnoredRootDirs.set(config.unlinkedIgnoredRootDirs ?? []);
         this.unlinkedCategories.set(config.unlinkedCategories ?? []);
         this.loading.set(false);
-        this.savedSnapshot = this.buildSnapshot();
+        this.savedSnapshot.set(this.buildSnapshot());
       },
       error: () => {
         this.toast.error('Failed to load download cleaner settings');
@@ -217,7 +217,7 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
         this.saving.set(false);
         this.saved.set(true);
         setTimeout(() => this.saved.set(false), 1500);
-        this.savedSnapshot = this.buildSnapshot();
+        this.savedSnapshot.set(this.buildSnapshot());
       },
       error: () => {
         this.toast.error('Failed to save download cleaner settings');
@@ -244,7 +244,12 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
     });
   }
 
+  readonly dirty = computed(() => {
+    const saved = this.savedSnapshot();
+    return saved !== '' && saved !== this.buildSnapshot();
+  });
+
   hasPendingChanges(): boolean {
-    return this.savedSnapshot !== '' && this.savedSnapshot !== this.buildSnapshot();
+    return this.dirty();
   }
 }
