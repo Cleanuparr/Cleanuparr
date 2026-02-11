@@ -1,5 +1,5 @@
 {
-  "name": "frontend-v2",
+  "name": "ui",
   "version": "0.0.0",
   "scripts": {
     "ng": "ng",
