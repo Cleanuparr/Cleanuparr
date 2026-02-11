@@ -39,9 +39,11 @@ Cleanuparr is a tool for automating the cleanup of unwanted or blocked files in 
   - SignalR (real-time communication)
 
 ### Frontend
-- **Angular 19** with TypeScript 5.7
-- **UI Framework**: PrimeNG 19 (with PrimeFlex and PrimeIcons)
-- **State Management**: @ngrx/signals
+- **Angular 21** with TypeScript 5.9 (standalone components, zoneless, OnPush)
+- **UI**: Custom glassmorphism design system (no external UI frameworks)
+- **Icons**: @ng-icons/core + @ng-icons/tabler-icons
+- **Design System**: 3-layer SCSS (`_variables` → `_tokens` → `_themes`), dark/light themes
+- **State Management**: @ngrx/signals (Angular signals-based)
 - **Real-time Updates**: SignalR (@microsoft/signalr)
 - **PWA**: Service Worker support enabled
 
@@ -120,7 +122,7 @@ Cleanuparr/
 │   │   ├── Cleanuparr.Persistence/   # Database & EF Core
 │   │   ├── Cleanuparr.Shared/        # Shared utilities
 │   │   └── *.Tests/                  # Unit tests
-│   ├── frontend/                     # Angular 19 application
+│   ├── frontend/                     # Angular 21 application
 │   ├── ui/                           # Built frontend assets
 │   ├── Dockerfile                    # Multi-stage Docker build
 │   ├── entrypoint.sh                 # Docker entrypoint
@@ -150,10 +152,12 @@ Cleanuparr/
 ### Frontend (TypeScript/Angular)
 - Follow [Angular Style Guide](https://angular.io/guide/styleguide)
 - Use TypeScript strict mode
-- Prefer signals over traditional observables for state management
+- All components must be **standalone** (no NgModules) with **ChangeDetectionStrategy.OnPush**
+- Use `input()` / `output()` function APIs (not `@Input()` / `@Output()` decorators)
+- Use Angular **signals** for reactive state (`signal()`, `computed()`, `effect()`)
+- Follow the 3-layer SCSS design system (`_variables` → `_tokens` → `_themes`) for styling
 - Component naming: `{feature}.component.ts`
 - Service naming: `{feature}.service.ts`
-- Use PrimeNG components consistently
 - **Look at similar existing components before creating new ones**
 
 ### Testing
@@ -338,7 +342,8 @@ When running via Docker:
 
 - The project uses **Clean Architecture** - respect layer boundaries
 - Database migrations require both contexts - don't forget EventsContext
-- Frontend uses **PrimeNG** - don't introduce other UI frameworks
+- Frontend uses a **custom glassmorphism design system** - don't introduce external UI frameworks (no PrimeNG, Material, etc.)
+- All frontend components are **standalone** with **OnPush** change detection
 - All downloads from *arr apps are processed through a **strike system**
 - The malware blocker is a critical security feature - changes require careful testing
 - Cross-seed integration allows keeping torrents that are actively seeding
