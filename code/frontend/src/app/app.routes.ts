@@ -21,7 +21,7 @@ export const routes: Routes = [
       {
         path: 'logs',
         loadComponent: () =>
-          import('@features/logs/logs.component').then((m) => m.LogsComponent),
+          import('@app/features/logs-component/logs.component').then((m) => m.LogsComponent),
       },
       {
         path: 'events',
