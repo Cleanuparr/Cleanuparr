@@ -1,29 +1,101 @@
-import { ApplicationConfig, provideZoneChangeDetection, isDevMode } from '@angular/core';
-import { provideRouter } from '@angular/router';
-import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
+import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/core';
+import { provideRouter, withComponentInputBinding } from '@angular/router';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
-import { providePrimeNG } from 'primeng/config';
-import { ConfirmationService } from 'primeng/api';
+import { provideIcons } from '@ng-icons/core';
+import {
+  tablerLayoutDashboard,
+  tablerFileText,
+  tablerBell,
+  tablerSettings,
+  tablerPlaylistX,
+  tablerShieldLock,
+  tablerTrash,
+  tablerBan,
+  tablerDownload,
+  tablerBellRinging,
+  tablerChevronDown,
+  tablerChevronRight,
+  tablerMenu2,
+  tablerLayoutSidebarLeftCollapse,
+  tablerSun,
+  tablerMoon,
+  tablerCheck,
+  tablerBrandGithub,
+  tablerBrandDiscord,
+  tablerHeart,
+  tablerStar,
+  tablerExternalLink,
+  tablerQuestionMark,
+  tablerPencil,
+  tablerPlus,
+  tablerAlertTriangle,
+  tablerX,
+  tablerEye,
+  tablerEyeOff,
+  tablerArrowDown,
+  tablerCircleX,
+  tablerInfoCircle,
+  tablerCode,
+  tablerCircle,
+  tablerBolt,
+  tablerTag,
+  tablerChevronUp,
+  tablerCopy,
+  tablerFileExport,
+} from '@ng-icons/tabler-icons';
 
 import { routes } from './app.routes';
-import { provideServiceWorker } from '@angular/service-worker';
-import Noir from './app.preset';
+import { authInterceptor } from '@core/auth/auth.interceptor';
+import { baseUrlInterceptor } from '@core/interceptors/base-url.interceptor';
+import { errorInterceptor } from '@core/interceptors/error.interceptor';
 
 export const appConfig: ApplicationConfig = {
   providers: [
-    provideZoneChangeDetection({ eventCoalescing: true }), 
-    provideRouter(routes), 
-    provideHttpClient(withInterceptorsFromDi()),
-    { provide: ConfirmationService },
+    provideBrowserGlobalErrorListeners(),
+    provideRouter(routes, withComponentInputBinding()),
+    provideHttpClient(withInterceptors([baseUrlInterceptor, authInterceptor, errorInterceptor])),
     provideAnimationsAsync(),
-    providePrimeNG({
-      theme: {
-        preset: Noir
-      }
+    provideIcons({
+      tablerLayoutDashboard,
+      tablerFileText,
+      tablerBell,
+      tablerSettings,
+      tablerPlaylistX,
+      tablerShieldLock,
+      tablerTrash,
+      tablerBan,
+      tablerDownload,
+      tablerBellRinging,
+      tablerChevronDown,
+      tablerChevronRight,
+      tablerMenu2,
+      tablerLayoutSidebarLeftCollapse,
+      tablerSun,
+      tablerMoon,
+      tablerCheck,
+      tablerBrandGithub,
+      tablerBrandDiscord,
+      tablerHeart,
+      tablerStar,
+      tablerExternalLink,
+      tablerQuestionMark,
+      tablerPencil,
+      tablerPlus,
+      tablerAlertTriangle,
+      tablerX,
+      tablerEye,
+      tablerEyeOff,
+      tablerArrowDown,
+      tablerCircleX,
+      tablerInfoCircle,
+      tablerCode,
+      tablerCircle,
+      tablerBolt,
+      tablerTag,
+      tablerChevronUp,
+      tablerCopy,
+      tablerFileExport,
     }),
-    provideServiceWorker('ngsw-worker.js', {
-      enabled: !isDevMode(),
-      registrationStrategy: 'registerWhenStable:30000'
-    })
-  ]
+  ],
 };

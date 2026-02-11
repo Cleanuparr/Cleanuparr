@@ -1,30 +1,22 @@
 import { inject } from '@angular/core';
 import { CanDeactivateFn } from '@angular/router';
-import { ConfirmationService } from 'primeng/api';
+import { ConfirmService } from '@core/services/confirm.service';
 
-export interface CanComponentDeactivate {
-  canDeactivate: () => boolean;
+export interface HasPendingChanges {
+  hasPendingChanges(): boolean;
 }
 
-export const pendingChangesGuard: CanDeactivateFn<CanComponentDeactivate> = async (component) => {
-  // If the component doesn't have unsaved changes, allow navigation
-  if (component.canDeactivate()) {
+export const pendingChangesGuard: CanDeactivateFn<HasPendingChanges> = (component) => {
+  if (!component.hasPendingChanges()) {
     return true;
   }
 
-  // Otherwise show a confirmation dialog
-  const confirmationService = inject(ConfirmationService);
-  
-  return new Promise<boolean>((resolve) => {
-    confirmationService.confirm({
-      header: 'Unsaved Changes',
-      message: 'You have unsaved changes. Are you sure you want to leave this page?',
-      icon: 'pi pi-exclamation-triangle',
-      acceptLabel: 'Leave',
-      rejectLabel: 'Stay',
-      acceptButtonStyleClass: 'p-button-danger',
-      accept: () => resolve(true),
-      reject: () => resolve(false)
-    });
+  const confirmService = inject(ConfirmService);
+  return confirmService.confirm({
+    title: 'Unsaved Changes',
+    message: 'You have unsaved changes. Are you sure you want to leave this page?',
+    confirmLabel: 'Leave',
+    cancelLabel: 'Stay',
+    destructive: true,
   });
 };
