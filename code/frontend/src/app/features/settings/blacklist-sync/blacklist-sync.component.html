@@ -13,7 +13,9 @@
       Retry
     </app-button>
   </app-empty-state>
-} @else {
+} @else if (loader.showSpinner()) {
+  <app-loading-state message="Loading settings..." />
+} @else if (!loader.loading()) {
 <div class="settings-form">
   <app-card header="Configuration">
     <div class="form-stack">

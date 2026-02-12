@@ -2,7 +2,7 @@ import { Component, ChangeDetectionStrategy, inject, signal, computed, OnInit } 
 import { PageHeaderComponent } from '@layout/page-header/page-header.component';
 import {
   CardComponent, ButtonComponent, InputComponent, ToggleComponent,
-  SelectComponent, ModalComponent, EmptyStateComponent, BadgeComponent,
+  SelectComponent, ModalComponent, EmptyStateComponent, BadgeComponent, LoadingStateComponent,
   type SelectOption,
 } from '@ui';
 import { DownloadClientApi } from '@core/api/download-client.api';
@@ -13,6 +13,7 @@ import {
 } from '@shared/models/download-client-config.model';
 import { DownloadClientType, DownloadClientTypeName } from '@shared/models/enums';
 import { HasPendingChanges } from '@core/guards/pending-changes.guard';
+import { DeferredLoader } from '@shared/utils/loading.util';
 
 const TYPE_OPTIONS: SelectOption[] = [
   { label: 'qBittorrent', value: DownloadClientTypeName.qBittorrent },
@@ -27,7 +28,7 @@ const TYPE_OPTIONS: SelectOption[] = [
   imports: [
     PageHeaderComponent, CardComponent, ButtonComponent, InputComponent,
     ToggleComponent, SelectComponent, ModalComponent, EmptyStateComponent,
-    BadgeComponent,
+    BadgeComponent, LoadingStateComponent,
   ],
   templateUrl: './download-clients.component.html',
   styleUrl: './download-clients.component.scss',
@@ -39,7 +40,7 @@ export class DownloadClientsComponent implements OnInit, HasPendingChanges {
   private readonly confirmService = inject(ConfirmService);
 
   readonly typeOptions = TYPE_OPTIONS;
-  readonly loading = signal(false);
+  readonly loader = new DeferredLoader();
   readonly loadError = signal(false);
   readonly saving = signal(false);
   readonly clients = signal<ClientConfig[]>([]);
@@ -88,15 +89,15 @@ export class DownloadClientsComponent implements OnInit, HasPendingChanges {
   }
 
   private loadClients(): void {
-    this.loading.set(true);
+    this.loader.start();
     this.api.getConfig().subscribe({
       next: (config) => {
         this.clients.set(config.clients ?? []);
-        this.loading.set(false);
+        this.loader.stop();
       },
       error: () => {
         this.toast.error('Failed to load download clients');
-        this.loading.set(false);
+        this.loader.stop();
         this.loadError.set(true);
       },
     });

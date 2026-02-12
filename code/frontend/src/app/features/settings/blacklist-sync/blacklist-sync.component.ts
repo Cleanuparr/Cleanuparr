@@ -1,15 +1,16 @@
 import { Component, ChangeDetectionStrategy, inject, signal, computed, OnInit } from '@angular/core';
 import { PageHeaderComponent } from '@layout/page-header/page-header.component';
-import { CardComponent, ButtonComponent, InputComponent, ToggleComponent, EmptyStateComponent } from '@ui';
+import { CardComponent, ButtonComponent, InputComponent, ToggleComponent, EmptyStateComponent, LoadingStateComponent } from '@ui';
 import { BlacklistSyncApi } from '@core/api/blacklist-sync.api';
 import { ToastService } from '@core/services/toast.service';
 import { BlacklistSyncConfig } from '@shared/models/blacklist-sync-config.model';
 import { HasPendingChanges } from '@core/guards/pending-changes.guard';
+import { DeferredLoader } from '@shared/utils/loading.util';
 
 @Component({
   selector: 'app-blacklist-sync',
   standalone: true,
-  imports: [PageHeaderComponent, CardComponent, ButtonComponent, InputComponent, ToggleComponent, EmptyStateComponent],
+  imports: [PageHeaderComponent, CardComponent, ButtonComponent, InputComponent, ToggleComponent, EmptyStateComponent, LoadingStateComponent],
   templateUrl: './blacklist-sync.component.html',
   styleUrl: './blacklist-sync.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -20,7 +21,7 @@ export class BlacklistSyncComponent implements OnInit, HasPendingChanges {
 
   private readonly savedSnapshot = signal('');
 
-  readonly loading = signal(false);
+  readonly loader = new DeferredLoader();
   readonly loadError = signal(false);
   readonly saving = signal(false);
   readonly saved = signal(false);
@@ -43,18 +44,18 @@ export class BlacklistSyncComponent implements OnInit, HasPendingChanges {
   }
 
   private loadConfig(): void {
-    this.loading.set(true);
+    this.loader.start();
     this.api.getConfig().subscribe({
       next: (config) => {
         this.configId = config.id;
         this.enabled.set(config.enabled);
         this.blacklistPath.set(config.blacklistPath ?? '');
-        this.loading.set(false);
+        this.loader.stop();
         this.savedSnapshot.set(this.buildSnapshot());
       },
       error: () => {
         this.toast.error('Failed to load blacklist sync settings');
-        this.loading.set(false);
+        this.loader.stop();
         this.loadError.set(true);
       },
     });

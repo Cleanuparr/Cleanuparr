@@ -2,7 +2,7 @@ import { Component, ChangeDetectionStrategy, inject, signal, input, computed, ef
 import { PageHeaderComponent } from '@layout/page-header/page-header.component';
 import {
   CardComponent, ButtonComponent, InputComponent, ToggleComponent,
-  SelectComponent, ModalComponent, EmptyStateComponent, BadgeComponent,
+  SelectComponent, ModalComponent, EmptyStateComponent, BadgeComponent, LoadingStateComponent,
   type SelectOption,
 } from '@ui';
 import { ArrApi } from '@core/api/arr.api';
@@ -11,6 +11,7 @@ import { ConfirmService } from '@core/services/confirm.service';
 import { ArrConfig, ArrInstance, CreateArrInstanceDto, TestArrInstanceRequest } from '@shared/models/arr-config.model';
 import { ArrType } from '@shared/models/enums';
 import { HasPendingChanges } from '@core/guards/pending-changes.guard';
+import { DeferredLoader } from '@shared/utils/loading.util';
 
 const ARR_VERSION_OPTIONS: Record<string, SelectOption[]> = {
   sonarr:  [{ label: 'v4', value: 4 }],
@@ -26,7 +27,7 @@ const ARR_VERSION_OPTIONS: Record<string, SelectOption[]> = {
   imports: [
     PageHeaderComponent, CardComponent, ButtonComponent, InputComponent,
     ToggleComponent, SelectComponent, ModalComponent, EmptyStateComponent,
-    BadgeComponent,
+    BadgeComponent, LoadingStateComponent,
   ],
   templateUrl: './arr-settings.component.html',
   styleUrl: './arr-settings.component.scss',
@@ -44,10 +45,9 @@ export class ArrSettingsComponent implements HasPendingChanges {
   });
   readonly versionOptions = computed(() => ARR_VERSION_OPTIONS[this.arrType()] ?? []);
 
-  readonly loading = signal(false);
+  readonly loader = new DeferredLoader();
   readonly loadError = signal(false);
   readonly saving = signal(false);
-  readonly transitioning = signal(false);
   readonly instances = signal<ArrInstance[]>([]);
 
   // Modal state
@@ -82,11 +82,9 @@ export class ArrSettingsComponent implements HasPendingChanges {
       const type = this.arrType();
       if (type) {
         untracked(() => {
-          this.transitioning.set(true);
-          requestAnimationFrame(() => {
-            this.transitioning.set(false);
-            this.loadConfig();
-          });
+          this.instances.set([]);
+          this.loadError.set(false);
+          this.loadConfig();
         });
       }
     });
@@ -100,15 +98,15 @@ export class ArrSettingsComponent implements HasPendingChanges {
   }
 
   private loadConfig(): void {
-    this.loading.set(true);
+    this.loader.start();
     this.api.getConfig(this.arrType() as ArrType).subscribe({
       next: (config) => {
         this.instances.set(config.instances ?? []);
-        this.loading.set(false);
+        this.loader.stop();
       },
       error: () => {
         this.toast.error(`Failed to load ${this.displayName()} settings`);
-        this.loading.set(false);
+        this.loader.stop();
         this.loadError.set(true);
       },
     });

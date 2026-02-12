@@ -3,7 +3,7 @@ import { PageHeaderComponent } from '@layout/page-header/page-header.component';
 import {
   CardComponent, ButtonComponent, InputComponent, ToggleComponent,
   NumberInputComponent, SelectComponent, ChipInputComponent, AccordionComponent,
-  EmptyStateComponent, type SelectOption,
+  EmptyStateComponent, LoadingStateComponent, type SelectOption,
 } from '@ui';
 import { DownloadCleanerApi } from '@core/api/download-cleaner.api';
 import { ToastService } from '@core/services/toast.service';
@@ -11,6 +11,7 @@ import { DownloadCleanerConfig, CleanCategory, createDefaultCategory } from '@sh
 import { ScheduleOptions } from '@shared/models/queue-cleaner-config.model';
 import { ScheduleUnit } from '@shared/models/enums';
 import { HasPendingChanges } from '@core/guards/pending-changes.guard';
+import { DeferredLoader } from '@shared/utils/loading.util';
 import { generateCronExpression, parseCronToJobSchedule } from '@shared/utils/schedule.util';
 
 const SCHEDULE_UNIT_OPTIONS: SelectOption[] = [
@@ -25,7 +26,7 @@ const SCHEDULE_UNIT_OPTIONS: SelectOption[] = [
   imports: [
     PageHeaderComponent, CardComponent, ButtonComponent, InputComponent,
     ToggleComponent, NumberInputComponent, SelectComponent, ChipInputComponent, AccordionComponent,
-    EmptyStateComponent,
+    EmptyStateComponent, LoadingStateComponent,
   ],
   templateUrl: './download-cleaner.component.html',
   styleUrl: './download-cleaner.component.scss',
@@ -39,7 +40,7 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
   private readonly savedSnapshot = signal('');
 
   readonly scheduleUnitOptions = SCHEDULE_UNIT_OPTIONS;
-  readonly loading = signal(false);
+  readonly loader = new DeferredLoader();
   readonly loadError = signal(false);
   readonly saving = signal(false);
   readonly saved = signal(false);
@@ -135,7 +136,7 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
   }
 
   private loadConfig(): void {
-    this.loading.set(true);
+    this.loader.start();
     this.api.getConfig().subscribe({
       next: (config) => {
         this.config = config;
@@ -155,12 +156,12 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
         this.unlinkedUseTag.set(config.unlinkedUseTag);
         this.unlinkedIgnoredRootDirs.set(config.unlinkedIgnoredRootDirs ?? []);
         this.unlinkedCategories.set(config.unlinkedCategories ?? []);
-        this.loading.set(false);
+        this.loader.stop();
         this.savedSnapshot.set(this.buildSnapshot());
       },
       error: () => {
         this.toast.error('Failed to load download cleaner settings');
-        this.loading.set(false);
+        this.loader.stop();
         this.loadError.set(true);
       },
     });

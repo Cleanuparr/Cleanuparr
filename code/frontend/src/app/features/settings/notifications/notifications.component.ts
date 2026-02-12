@@ -3,7 +3,7 @@ import { PageHeaderComponent } from '@layout/page-header/page-header.component';
 import {
   CardComponent, ButtonComponent, InputComponent, ToggleComponent,
   SelectComponent, ModalComponent, EmptyStateComponent, BadgeComponent,
-  ChipInputComponent, NumberInputComponent,
+  ChipInputComponent, NumberInputComponent, LoadingStateComponent,
   type SelectOption,
 } from '@ui';
 import { NotificationApi } from '@core/api/notification.api';
@@ -26,6 +26,7 @@ import {
   PushoverPriority,
 } from '@shared/models/enums';
 import { HasPendingChanges } from '@core/guards/pending-changes.guard';
+import { DeferredLoader } from '@shared/utils/loading.util';
 
 const APPRISE_MODE_OPTIONS: SelectOption[] = [
   { label: 'API', value: AppriseMode.Api },
@@ -88,7 +89,7 @@ const PUSHOVER_SOUND_OPTIONS: SelectOption[] = [
   imports: [
     PageHeaderComponent, CardComponent, ButtonComponent, InputComponent,
     ToggleComponent, SelectComponent, ModalComponent, EmptyStateComponent,
-    BadgeComponent, ChipInputComponent, NumberInputComponent,
+    BadgeComponent, ChipInputComponent, NumberInputComponent, LoadingStateComponent,
   ],
   templateUrl: './notifications.component.html',
   styleUrl: './notifications.component.scss',
@@ -99,7 +100,7 @@ export class NotificationsComponent implements OnInit, HasPendingChanges {
   private readonly toast = inject(ToastService);
   private readonly confirmService = inject(ConfirmService);
 
-  readonly loading = signal(false);
+  readonly loader = new DeferredLoader();
   readonly loadError = signal(false);
   readonly saving = signal(false);
   readonly providers = signal<NotificationProviderDto[]>([]);
@@ -274,15 +275,15 @@ export class NotificationsComponent implements OnInit, HasPendingChanges {
   }
 
   private loadProviders(): void {
-    this.loading.set(true);
+    this.loader.start();
     this.api.getProviders().subscribe({
       next: (config) => {
         this.providers.set(config.providers ?? []);
-        this.loading.set(false);
+        this.loader.stop();
       },
       error: () => {
         this.toast.error('Failed to load notification providers');
-        this.loading.set(false);
+        this.loader.stop();
         this.loadError.set(true);
       },
     });

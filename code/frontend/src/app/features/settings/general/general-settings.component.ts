@@ -3,7 +3,7 @@ import { PageHeaderComponent } from '@layout/page-header/page-header.component';
 import {
   CardComponent, ButtonComponent, ToggleComponent,
   NumberInputComponent, SelectComponent, ChipInputComponent, AccordionComponent,
-  EmptyStateComponent,
+  EmptyStateComponent, LoadingStateComponent,
   type SelectOption,
 } from '@ui';
 import { GeneralConfigApi } from '@core/api/general-config.api';
@@ -11,6 +11,7 @@ import { ToastService } from '@core/services/toast.service';
 import { GeneralConfig, LoggingConfig } from '@shared/models/general-config.model';
 import { CertificateValidationType, LogEventLevel } from '@shared/models/enums';
 import { HasPendingChanges } from '@core/guards/pending-changes.guard';
+import { DeferredLoader } from '@shared/utils/loading.util';
 
 const CERT_OPTIONS: SelectOption[] = [
   { label: 'Enabled', value: CertificateValidationType.Enabled },
@@ -33,7 +34,7 @@ const LOG_LEVEL_OPTIONS: SelectOption[] = [
   imports: [
     PageHeaderComponent, CardComponent, ButtonComponent,
     ToggleComponent, NumberInputComponent, SelectComponent, ChipInputComponent,
-    AccordionComponent, EmptyStateComponent,
+    AccordionComponent, EmptyStateComponent, LoadingStateComponent,
   ],
   templateUrl: './general-settings.component.html',
   styleUrl: './general-settings.component.scss',
@@ -48,7 +49,7 @@ export class GeneralSettingsComponent implements OnInit, HasPendingChanges {
 
   readonly certOptions = CERT_OPTIONS;
   readonly logLevelOptions = LOG_LEVEL_OPTIONS;
-  readonly loading = signal(false);
+  readonly loader = new DeferredLoader();
   readonly loadError = signal(false);
   readonly saving = signal(false);
   readonly saved = signal(false);
@@ -154,7 +155,7 @@ export class GeneralSettingsComponent implements OnInit, HasPendingChanges {
   }
 
   private loadConfig(): void {
-    this.loading.set(true);
+    this.loader.start();
     this.api.get().subscribe({
       next: (config) => {
         this.displaySupportBanner.set(config.displaySupportBanner);
@@ -174,12 +175,12 @@ export class GeneralSettingsComponent implements OnInit, HasPendingChanges {
           this.logArchiveRetainedCount.set(config.log.archiveRetainedCount);
           this.logArchiveTimeLimitHours.set(config.log.archiveTimeLimitHours);
         }
-        this.loading.set(false);
+        this.loader.stop();
         this.savedSnapshot.set(this.buildSnapshot());
       },
       error: () => {
         this.toast.error('Failed to load general settings');
-        this.loading.set(false);
+        this.loader.stop();
         this.loadError.set(true);
       },
     });
