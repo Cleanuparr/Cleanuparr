@@ -45,14 +45,15 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
-  height: 26px;
-  padding: 0 var(--space-2);
+  min-height: 26px;
+  padding: var(--space-1) var(--space-2);
   background: var(--color-primary-subtle);
   border: 1px solid rgba(126, 87, 194, 0.2);
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-lg);
   font-size: var(--font-size-xs);
   color: var(--text-primary);
-  white-space: nowrap;
+  max-width: 100%;
+  word-break: break-word;
   animation: scale-in var(--duration-fast) cubic-bezier(0.34, 1.56, 0.64, 1);
 
   &__remove {
