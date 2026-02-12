@@ -62,6 +62,7 @@ export class GeneralSettingsComponent implements OnInit, HasPendingChanges {
   readonly httpCertificateValidation = signal<unknown>(CertificateValidationType.Enabled);
   readonly searchEnabled = signal(true);
   readonly searchDelay = signal<number | null>(5);
+  readonly statusCheckEnabled = signal(true);
   readonly ignoredDownloads = signal<string[]>([]);
 
   // Logging
@@ -165,6 +166,7 @@ export class GeneralSettingsComponent implements OnInit, HasPendingChanges {
         this.httpCertificateValidation.set(config.httpCertificateValidation);
         this.searchEnabled.set(config.searchEnabled);
         this.searchDelay.set(config.searchDelay);
+        this.statusCheckEnabled.set(config.statusCheckEnabled);
         this.ignoredDownloads.set(config.ignoredDownloads ?? []);
         if (config.log) {
           this.logLevel.set(config.log.level);
@@ -200,6 +202,7 @@ export class GeneralSettingsComponent implements OnInit, HasPendingChanges {
       httpCertificateValidation: this.httpCertificateValidation() as CertificateValidationType,
       searchEnabled: this.searchEnabled(),
       searchDelay: this.searchDelay() ?? 5,
+      statusCheckEnabled: this.statusCheckEnabled(),
       ignoredDownloads: this.ignoredDownloads(),
       log: {
         level: this.logLevel() as LogEventLevel,
@@ -237,6 +240,7 @@ export class GeneralSettingsComponent implements OnInit, HasPendingChanges {
       httpCertificateValidation: this.httpCertificateValidation(),
       searchEnabled: this.searchEnabled(),
       searchDelay: this.searchDelay(),
+      statusCheckEnabled: this.statusCheckEnabled(),
       ignoredDownloads: this.ignoredDownloads(),
       logLevel: this.logLevel(),
       logRollingSizeMB: this.logRollingSizeMB(),

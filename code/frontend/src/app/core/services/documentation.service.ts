@@ -49,6 +49,7 @@ export class DocumentationService {
       'httpCertificateValidation': 'http-certificate-validation',
       'searchEnabled': 'search-enabled',
       'searchDelay': 'search-delay',
+      'statusCheckEnabled': 'status-check',
       'log.level': 'log-level',
       'log.rollingSizeMB': 'rolling-size-mb',
       'log.retainedFileCount': 'retained-file-count',
