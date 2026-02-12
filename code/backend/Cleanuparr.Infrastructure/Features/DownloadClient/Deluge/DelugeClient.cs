@@ -38,7 +38,7 @@ public sealed class DelugeClient
     
     public async Task<bool> LoginAsync()
     {
-        return await SendRequest<bool>("auth.login", _config.Password);
+        return await SendRequest<bool>("auth.login", _config.Password ?? "");
     }
 
     public async Task<bool> IsConnected()
