@@ -70,7 +70,7 @@
   display: flex;
   justify-content: flex-end;
   gap: var(--space-3);
-  padding: var(--space-4) 0;
+  padding: var(--space-4) var(--space-2);
 
   // Sticky at bottom of scroll container (shell__content)
   position: sticky;
