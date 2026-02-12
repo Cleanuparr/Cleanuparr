@@ -1,0 +1,14 @@
+<div class="empty-state">
+  @if (icon()) {
+    <ng-icon [name]="icon()!" class="empty-state__icon" />
+  }
+  @if (heading()) {
+    <h3 class="empty-state__heading">{{ heading() }}</h3>
+  }
+  @if (description()) {
+    <p class="empty-state__description">{{ description() }}</p>
+  }
+  <div class="empty-state__actions">
+    <ng-content />
+  </div>
+</div>

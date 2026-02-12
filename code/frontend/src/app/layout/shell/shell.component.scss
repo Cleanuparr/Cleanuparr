@@ -1,0 +1,112 @@
+.shell {
+  display: flex;
+  height: 100vh;
+  height: 100dvh;
+
+  &__main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    margin-left: var(--sidebar-width);
+    transition: margin-left var(--duration-normal) var(--ease-default);
+  }
+
+  &--collapsed &__main {
+    margin-left: var(--sidebar-collapsed-width);
+  }
+
+  // Ambient gradient orbs for glassmorphism depth
+  &__main::before,
+  &__main::after {
+    content: '';
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(var(--orb-blur));
+    opacity: var(--orb-opacity);
+    pointer-events: none;
+    z-index: 0;
+    animation:
+      float 20s ease-in-out infinite alternate,
+      hue-drift 60s ease-in-out infinite;
+    transition: opacity 0.5s ease, filter 0.5s ease;
+  }
+
+  &__main::before {
+    width: 500px;
+    height: 500px;
+    background: var(--orb-primary);
+    top: -100px;
+    right: -100px;
+  }
+
+  &__main::after {
+    width: 400px;
+    height: 400px;
+    background: var(--orb-secondary);
+    bottom: -100px;
+    left: -50px;
+    animation-delay: -10s;
+  }
+
+  // Third orb: teal/blue accent for color variety
+  &::after {
+    content: '';
+    position: fixed;
+    width: 300px;
+    height: 300px;
+    border-radius: 50%;
+    background: var(--orb-tertiary);
+    filter: blur(var(--orb-blur));
+    opacity: var(--orb-opacity);
+    pointer-events: none;
+    z-index: 0;
+    top: 50%;
+    left: 30%;
+    animation:
+      float 15s ease-in-out infinite alternate,
+      hue-drift 60s ease-in-out infinite;
+    animation-delay: -5s;
+    transition: opacity 0.5s ease, filter 0.5s ease;
+  }
+
+  &__content {
+    flex: 1;
+    padding: var(--space-6);
+    overflow-y: auto;
+    scroll-behavior: smooth;
+    max-width: var(--content-max-width);
+    width: 100%;
+    margin: 0 auto;
+    position: relative;
+    z-index: 1;
+
+    // Route transition: animate routed component on mount
+    > :not(router-outlet) {
+      animation: page-enter var(--duration-normal) var(--ease-default) backwards;
+    }
+  }
+
+  &__backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: calc(var(--z-fixed) - 1);
+    animation: fade-in var(--duration-fast) var(--ease-default);
+  }
+
+  // Tablet layout
+  &--collapsed &__content {
+    padding: var(--space-5);
+  }
+
+  // Mobile layout
+  &--mobile &__main {
+    margin-left: 0;
+  }
+
+  &--mobile &__content {
+    padding: var(--space-4);
+    overflow-x: hidden;
+  }
+}

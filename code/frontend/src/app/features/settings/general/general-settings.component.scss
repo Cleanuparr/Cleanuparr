@@ -1,0 +1,9 @@
+@use 'settings-layout' as *;
+
+:host { @include settings-page; }
+
+.settings-form { @include settings-form; }
+.form-stack { @include form-stack; }
+.form-row { @include form-row; }
+.form-divider { @include form-divider; }
+.form-actions { @include form-actions; }

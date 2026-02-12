@@ -1,19 +1,15 @@
-import { Injectable } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import { ApplicationPathService } from './base-path.service';
 
-export interface FieldDocumentationMapping {
-  [section: string]: {
-    [fieldName: string]: string; // anchor ID
-  };
+interface FieldMappings {
+  [section: string]: { [field: string]: string };
 }
 
-@Injectable({
-  providedIn: 'root'
-})
+@Injectable({ providedIn: 'root' })
 export class DocumentationService {
-  
-  // Field to anchor mappings for each configuration section
-  private readonly fieldMappings: FieldDocumentationMapping = {
+  private readonly pathService = inject(ApplicationPathService);
+
+  private readonly fieldMappings: FieldMappings = {
     'queue-cleaner': {
       'enabled': 'enable-queue-cleaner',
       'ignoredDownloads': 'ignored-downloads',
@@ -43,7 +39,7 @@ export class DocumentationService {
       'slowRule.completionRange': 'slow-completion-percentage-range',
       'slowRule.ignoreAboveSize': 'slow-ignore-above-size',
       'slowRule.resetStrikesOnProgress': 'slow-reset-strikes-on-progress',
-      'slowRule.deletePrivateTorrentsFromClient': 'slow-delete-private-from-client'
+      'slowRule.deletePrivateTorrentsFromClient': 'slow-delete-private-from-client',
     },
     'general': {
       'displaySupportBanner': 'display-support-banner',
@@ -60,7 +56,7 @@ export class DocumentationService {
       'log.archiveEnabled': 'archive-enabled',
       'log.archiveRetainedCount': 'archive-retained-count',
       'log.archiveTimeLimitHours': 'archive-time-limit',
-      'ignoredDownloads': 'ignored-downloads'
+      'ignoredDownloads': 'ignored-downloads',
     },
     'download-cleaner': {
       'enabled': 'enable-download-cleaner',
@@ -77,7 +73,7 @@ export class DocumentationService {
       'unlinkedTargetCategory': 'target-category',
       'unlinkedUseTag': 'use-tag',
       'unlinkedIgnoredRootDir': 'ignored-root-directory',
-      'unlinkedCategories': 'unlinked-categories'
+      'unlinkedCategories': 'unlinked-categories',
     },
     'malware-blocker': {
       'enabled': 'enable-malware-blocker',
@@ -95,7 +91,7 @@ export class DocumentationService {
       'radarr.blocklistType': 'blocklist-type',
       'lidarr.enabled': 'enable-blocklist',
       'lidarr.blocklistPath': 'blocklist-path',
-      'lidarr.blocklistType': 'blocklist-type'
+      'lidarr.blocklistType': 'blocklist-type',
     },
     'download-client': {
       'enabled': 'enable-download-client',
@@ -104,114 +100,92 @@ export class DocumentationService {
       'host': 'client-host',
       'urlBase': 'url-base-path',
       'username': 'username',
-      'password': 'password'
+      'password': 'password',
     },
     'blacklist-sync': {
       'enabled': 'enable-blacklist-sync',
-      'blacklistPath': 'blacklist-path'
+      'blacklistPath': 'blacklist-path',
     },
     'notifications': {
       'enabled': 'enabled',
       'name': 'provider-name',
-      'eventTriggers': 'event-configuration'
+      'eventTriggers': 'event-configuration',
+      'onFailedImportStrike': 'event-configuration',
+      'onStalledStrike': 'event-configuration',
+      'onSlowStrike': 'event-configuration',
+      'onQueueItemDeleted': 'event-configuration',
+      'onDownloadCleaned': 'event-configuration',
+      'onCategoryChanged': 'event-configuration',
     },
     'notifications/notifiarr': {
-      'notifiarr.apiKey': 'api-key',
-      'notifiarr.channelId': 'channel-id'
+      'apiKey': 'api-key',
+      'channelId': 'channel-id',
     },
     'notifications/apprise': {
-      'apprise.mode': 'mode',
-      'apprise.url': 'url',
-      'apprise.key': 'key',
-      'apprise.tags': 'tags',
-      'apprise.serviceUrls': 'service-urls'
+      'mode': 'mode',
+      'url': 'url',
+      'key': 'key',
+      'tags': 'tags',
+      'serviceUrls': 'service-urls',
     },
     'notifications/ntfy': {
-      'ntfy.serverUrl': 'server-url',
-      'ntfy.topics': 'topics',
-      'ntfy.authenticationType': 'authentication-type',
-      'ntfy.username': 'username',
-      'ntfy.password': 'password',
-      'ntfy.accessToken': 'access-token',
-      'ntfy.priority': 'priority',
-      'ntfy.tags': 'tags'
+      'serverUrl': 'server-url',
+      'topics': 'topics',
+      'authenticationType': 'authentication-type',
+      'username': 'username',
+      'password': 'password',
+      'accessToken': 'access-token',
+      'priority': 'priority',
+      'tags': 'tags',
     },
     'notifications/pushover': {
-      'pushover.apiToken': 'pushover.apiToken',
-      'pushover.userKey': 'pushover.userKey',
-      'pushover.devices': 'pushover.devices',
-      'pushover.priority': 'pushover.priority',
-      'pushover.retry': 'pushover.retry',
-      'pushover.expire': 'pushover.expire',
-      'pushover.sound': 'pushover.sound',
-      'pushover.tags': 'pushover.tags'
+      'apiToken': 'api-token',
+      'userKey': 'user-key',
+      'devices': 'devices',
+      'priority': 'priority',
+      'retry': 'retry',
+      'expire': 'expire',
+      'sound': 'sound',
+      'customSound': 'sound',
+      'tags': 'tags',
     },
     'notifications/telegram': {
-      'telegram.botToken': 'bot-token',
-      'telegram.chatId': 'chat-id',
-      'telegram.topicId': 'topic-id',
-      'telegram.sendSilently': 'send-silently'
+      'botToken': 'bot-token',
+      'chatId': 'chat-id',
+      'topicId': 'topic-id',
+      'sendSilently': 'send-silently',
     },
     'notifications/discord': {
-      'discord.webhookUrl': 'webhook-url',
-      'discord.username': 'username',
-      'discord.avatarUrl': 'avatar-url'
+      'webhookUrl': 'webhook-url',
+      'username': 'username',
+      'avatarUrl': 'avatar-url',
+    },
+    'arr': {
+      'enabled': 'enabled',
+      'name': 'instance-name',
+      'url': 'url',
+      'apiKey': 'api-key',
+      'version': 'api-version',
     },
     'notifications/gotify': {
-      'gotify.serverUrl': 'server-url',
-      'gotify.applicationToken': 'application-token',
-      'gotify.priority': 'priority'
+      'serverUrl': 'server-url',
+      'applicationToken': 'application-token',
+      'priority': 'priority',
     },
   };
 
-  constructor(private applicationPathService: ApplicationPathService) {}
-
-  /**
-   * Opens documentation for a specific field in a new tab
-   * @param section Configuration section (e.g., 'queue-cleaner')
-   * @param fieldName Field name (e.g., 'enabled', 'failedImport.maxStrikes')
-   */
   openFieldDocumentation(section: string, fieldName: string): void {
-    const anchor = this.getFieldAnchor(section, fieldName);
-    if (anchor) {
-      const url = this.applicationPathService.buildDocumentationUrl(section, anchor);
-      window.open(url, '_blank', 'noopener,noreferrer');
-    } else {
-      console.warn(`Documentation anchor not found for section: ${section}, field: ${fieldName}`);
-      // Fallback: open section documentation without anchor
-      const url = this.applicationPathService.buildDocumentationUrl(section);
-      window.open(url, '_blank', 'noopener,noreferrer');
-    }
+    const anchor = this.fieldMappings[section]?.[fieldName];
+    const url = this.pathService.buildDocumentationUrl(section, anchor);
+    window.open(url, '_blank', 'noopener,noreferrer');
   }
 
-  /**
-   * Gets the documentation URL for a specific field
-   * @param section Configuration section
-   * @param fieldName Field name
-   * @returns Full documentation URL
-   */
   getFieldDocumentationUrl(section: string, fieldName: string): string {
-    const anchor = this.getFieldAnchor(section, fieldName);
-    return this.applicationPathService.buildDocumentationUrl(section, anchor);
+    const anchor = this.fieldMappings[section]?.[fieldName];
+    return this.pathService.buildDocumentationUrl(section, anchor);
   }
 
-  /**
-   * Gets the anchor ID for a specific field
-   * @param section Configuration section
-   * @param fieldName Field name
-   * @returns Anchor ID or undefined if not found
-   */
-  private getFieldAnchor(section: string, fieldName: string): string | undefined {
-    return this.fieldMappings[section]?.[fieldName];
-  }
-
-  /**
-   * Checks if documentation exists for a field
-   * @param section Configuration section
-   * @param fieldName Field name
-   * @returns True if documentation exists
-   */
   hasFieldDocumentation(section: string, fieldName: string): boolean {
-    return !!this.getFieldAnchor(section, fieldName);
+    return !!this.fieldMappings[section]?.[fieldName];
   }
 }

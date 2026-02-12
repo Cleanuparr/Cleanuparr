@@ -1,0 +1,44 @@
+<app-page-header
+  title="Blacklist Sync"
+  subtitle="Synchronize custom blacklist patterns"
+/>
+
+@if (loadError()) {
+  <app-empty-state
+    icon="tablerPlugConnectedX"
+    heading="Could not connect to server"
+    description="Failed to load settings. Please check that the server is running and try again."
+  >
+    <app-button variant="primary" size="sm" (clicked)="retry()">
+      Retry
+    </app-button>
+  </app-empty-state>
+} @else if (loader.showSpinner()) {
+  <app-loading-state message="Loading settings..." />
+} @else if (!loader.loading()) {
+<div class="settings-form">
+  <app-card header="Configuration">
+    <div class="form-stack">
+      <app-toggle label="Enabled" [(checked)]="enabled"
+        hint="When enabled, blacklist patterns will be synchronized to enabled qBittorrent clients hourly"
+        helpKey="blacklist-sync:enabled" />
+      @if (enabled()) {
+        <app-input
+          label="Blacklist File Path"
+          placeholder="Local file path or URL"
+          hint="Path to blacklist file or HTTP(S) URL containing blacklist patterns"
+          [error]="blacklistPathError()"
+          [(value)]="blacklistPath"
+          helpKey="blacklist-sync:blacklistPath"
+        />
+      }
+    </div>
+  </app-card>
+
+  <div class="form-actions">
+    <app-button variant="primary" [glowing]="dirty()" [loading]="saving()" [disabled]="saving() || saved() || hasErrors()" (clicked)="save()">
+      {{ saved() ? 'Saved!' : 'Save Settings' }}
+    </app-button>
+  </div>
+</div>
+}

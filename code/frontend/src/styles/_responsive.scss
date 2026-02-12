@@ -1,0 +1,10 @@
+// =============================================================================
+// Responsive Breakpoint Mixins
+// DRY helpers so every component uses identical breakpoint values.
+// Usage: @use 'responsive' as *;
+// =============================================================================
+
+@use 'variables' as *;
+
+@mixin tablet { @media (max-width: $breakpoint-tablet) { @content; } }
+@mixin mobile { @media (max-width: $breakpoint-mobile) { @content; } }

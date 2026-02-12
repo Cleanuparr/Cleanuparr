@@ -1,0 +1,25 @@
+.login-title {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+  text-align: center;
+  margin-bottom: var(--space-2);
+}
+
+.login-subtitle {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  text-align: center;
+  margin-bottom: var(--space-8);
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.login-submit {
+  margin-top: var(--space-2);
+  width: 100%;
+}

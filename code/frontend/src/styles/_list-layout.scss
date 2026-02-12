@@ -1,0 +1,74 @@
+// =============================================================================
+// Shared List/Row Layout
+// Used by CRUD-style pages (arr, download-clients, notifications).
+// Usage: @use 'list-layout' as *;
+// =============================================================================
+
+@mixin list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-4);
+
+  &__title {
+    font-size: var(--font-size-base);
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+}
+
+@mixin item-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) 0;
+  gap: var(--space-4);
+  position: relative;
+  overflow: hidden;
+
+  // Glow rail — subtle gradient sweep on hover
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(126, 87, 194, 0.06), transparent);
+    transform: translateX(-100%);
+    transition: transform var(--duration-normal) var(--ease-default);
+    pointer-events: none;
+  }
+
+  &:hover::after {
+    transform: translateX(100%);
+  }
+
+  &:not(:last-child) {
+    border-bottom: 1px solid var(--divider);
+  }
+
+  &__info {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    flex: 1;
+    min-width: 0;
+    flex-wrap: wrap;
+  }
+
+  &__name {
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    color: var(--text-primary);
+  }
+
+  &__detail {
+    font-size: var(--font-size-xs);
+    color: var(--text-tertiary);
+    font-family: var(--font-mono);
+  }
+
+  &__actions {
+    display: flex;
+    gap: var(--space-2);
+    flex-shrink: 0;
+  }
+}

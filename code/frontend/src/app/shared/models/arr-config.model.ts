@@ -1,6 +1,3 @@
-/**
- * Represents an *arr instance with connection details
- */
 export interface ArrInstance {
   id?: string;
   enabled: boolean;
@@ -10,9 +7,11 @@ export interface ArrInstance {
   version: number;
 }
 
-/**
- * DTO for creating new Arr instances without requiring an ID
- */
+export interface ArrConfig {
+  failedImportMaxStrikes: number;
+  instances: ArrInstance[];
+}
+
 export interface CreateArrInstanceDto {
   enabled: boolean;
   name: string;
@@ -21,9 +20,6 @@ export interface CreateArrInstanceDto {
   version: number;
 }
 
-/**
- * Request for testing an Arr instance connection
- */
 export interface TestArrInstanceRequest {
   url: string;
   apiKey: string;

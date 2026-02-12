@@ -1,0 +1,62 @@
+@use 'glass' as *;
+
+:host {
+  display: block;
+}
+
+.card {
+  height: 100%;
+  @include glass('base');
+  padding: var(--space-6);
+  position: relative;
+  transition: transform var(--duration-fast) var(--ease-default),
+              box-shadow var(--duration-fast) var(--ease-default);
+
+  // Hover lift effect with inner glow
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--glass-shadow), 0 8px 24px rgba(126, 87, 194, 0.08),
+                inset 0 0 30px rgba(126, 87, 194, 0.03);
+
+    &::before {
+      opacity: 0.7;
+    }
+
+    &::after {
+      background-position: 80% 0;
+    }
+  }
+
+  &--elevated {
+    @include glass('elevated');
+  }
+
+  &--interactive {
+    @include glass-interactive;
+  }
+
+  &--no-padding {
+    padding: 0;
+  }
+
+  &__header {
+    margin-bottom: var(--space-4);
+  }
+
+  &__title {
+    font-size: var(--font-size-lg);
+    font-weight: 600;
+    color: var(--text-primary);
+    line-height: 1.3;
+  }
+
+  &__subtitle {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+    margin-top: var(--space-1);
+  }
+
+  &__body {
+    color: var(--text-secondary);
+  }
+}

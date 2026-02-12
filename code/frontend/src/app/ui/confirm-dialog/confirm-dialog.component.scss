@@ -1,0 +1,49 @@
+@use 'glass' as *;
+
+.confirm-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: var(--z-modal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  animation: fade-in var(--duration-fast) var(--ease-default);
+}
+
+.confirm {
+  @include glass('elevated');
+  width: 100%;
+  max-width: 420px;
+  animation: scale-in var(--duration-normal) var(--ease-default);
+
+  &__header {
+    padding: var(--space-5) var(--space-6) 0;
+  }
+
+  &__title {
+    font-size: var(--font-size-lg);
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  &__body {
+    padding: var(--space-4) var(--space-6);
+  }
+
+  &__message {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+    line-height: 1.5;
+  }
+
+  &__footer {
+    padding: var(--space-4) var(--space-6);
+    border-top: 1px solid var(--divider);
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--space-3);
+  }
+}

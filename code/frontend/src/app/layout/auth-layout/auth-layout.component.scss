@@ -1,0 +1,64 @@
+@use 'glass' as *;
+
+.auth-layout {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--surface-ground);
+  padding: var(--space-4);
+  position: relative;
+  overflow: hidden;
+
+  // Ambient orbs for glassmorphism atmosphere
+  &::before,
+  &::after {
+    content: '';
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(var(--orb-blur));
+    opacity: var(--orb-opacity);
+    pointer-events: none;
+    z-index: 0;
+    animation: float 20s ease-in-out infinite alternate,
+               hue-drift 60s ease-in-out infinite;
+  }
+
+  &::before {
+    width: 400px;
+    height: 400px;
+    background: var(--orb-primary);
+    top: -80px;
+    right: 10%;
+  }
+
+  &::after {
+    width: 350px;
+    height: 350px;
+    background: var(--orb-secondary);
+    bottom: -80px;
+    left: 10%;
+    animation-delay: -10s;
+  }
+
+  &__card {
+    @include glass('elevated');
+    width: 100%;
+    max-width: 420px;
+    padding: var(--space-10);
+    position: relative;
+    z-index: 1;
+  }
+
+  &__brand {
+    text-align: center;
+    margin-bottom: var(--space-8);
+
+    h1 {
+      font-size: var(--font-size-3xl);
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+  }
+}

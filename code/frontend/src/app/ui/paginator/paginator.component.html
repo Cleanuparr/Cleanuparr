@@ -1,0 +1,16 @@
+<div class="paginator">
+  <span class="paginator__info">
+    <app-animated-counter [value]="displayRange().start" [duration]="300" />–<app-animated-counter [value]="displayRange().end" [duration]="300" /> of <app-animated-counter [value]="totalRecords()" [duration]="300" />
+  </span>
+  <div class="paginator__controls">
+    <app-button variant="ghost" size="sm" [disabled]="!canGoPrevious()" (clicked)="previousPage()">
+      Previous
+    </app-button>
+    <span class="paginator__page">
+      Page <app-animated-counter [value]="currentPage()" [duration]="300" /> of <app-animated-counter [value]="totalPages()" [duration]="300" />
+    </span>
+    <app-button variant="ghost" size="sm" [disabled]="!canGoNext()" (clicked)="nextPage()">
+      Next
+    </app-button>
+  </div>
+</div>

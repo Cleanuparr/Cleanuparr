@@ -1,0 +1,334 @@
+<app-page-header
+  title="Queue Cleaner"
+  subtitle="Configure automatic queue cleanup rules"
+/>
+
+@if (loadError()) {
+  <app-empty-state
+    icon="tablerPlugConnectedX"
+    heading="Could not connect to server"
+    description="Failed to load settings. Please check that the server is running and try again."
+  >
+    <app-button variant="primary" size="sm" (clicked)="retry()">
+      Retry
+    </app-button>
+  </app-empty-state>
+} @else if (loader.showSpinner()) {
+  <app-loading-state message="Loading settings..." />
+} @else if (!loader.loading()) {
+<div class="settings-form">
+  <app-card header="General">
+    <div class="form-stack">
+      <app-toggle label="Enabled" [(checked)]="enabled"
+        hint="When enabled, the queue cleaner will run according to the schedule"
+        helpKey="queue-cleaner:enabled" />
+      @if (enabled()) {
+        <div class="form-divider"></div>
+        <app-toggle label="Advanced Scheduling" [(checked)]="useAdvancedScheduling"
+          hint="Choose between basic scheduling or advanced cron expression"
+          helpKey="queue-cleaner:useAdvancedScheduling" />
+        @if (useAdvancedScheduling()) {
+          <app-input label="Cron Expression" placeholder="0 0/5 * ? * * *" [(value)]="cronExpression"
+            hint="Enter a valid Quartz cron expression (e.g., &quot;0 0/5 * ? * * *&quot; runs every 5 minutes)"
+            [error]="cronError()"
+            helpKey="queue-cleaner:cronExpression" />
+        } @else {
+          <div class="form-row">
+            <app-select label="Schedule Unit" [options]="scheduleUnitOptions" [(value)]="scheduleUnit"
+              hint="Choose the time unit for the schedule"
+              helpKey="queue-cleaner:scheduleUnit" />
+            <app-select label="Every" [options]="scheduleIntervalOptions()" [(value)]="scheduleEvery"
+              hint="How often the job should run"
+              [error]="scheduleEveryError()"
+              helpKey="queue-cleaner:scheduleEvery" />
+          </div>
+        }
+        <div class="form-divider"></div>
+        <app-chip-input
+          label="Ignored Downloads"
+          placeholder="Add download pattern..."
+          hint="Downloads matching these patterns will be ignored (e.g. hash, tag, category, label, tracker)"
+          [(items)]="ignoredDownloads"
+          helpKey="queue-cleaner:ignoredDownloads"
+        />
+      }
+    </div>
+  </app-card>
+
+  @if (enabled()) {
+    <app-accordion header="Failed Import" subtitle="Settings for handling failed imports" [(expanded)]="failedExpanded">
+      <div class="form-stack">
+        <app-number-input label="Max Strikes" [(value)]="failedMaxStrikes" [min]="0" [max]="5000"
+          hint="Number of strikes before action is taken (0 to disable, min 3 to enable)"
+          [error]="failedMaxStrikesError()"
+          helpKey="queue-cleaner:failedImport.maxStrikes" />
+
+        <div class="form-divider"></div>
+
+        <app-toggle label="Ignore Private Torrents" [(checked)]="failedIgnorePrivate"
+          [disabled]="failedSubFieldsDisabled()"
+          hint="When enabled, private torrents will not be checked for being failed imports"
+          helpKey="queue-cleaner:failedImport.ignorePrivate" />
+        <app-toggle label="Delete Private from Client" [(checked)]="failedDeletePrivate"
+          [disabled]="failedDeletePrivateDisabled()"
+          hint="Disable this if you want to keep private torrents in the download client even if they are removed from the arrs"
+          helpKey="queue-cleaner:failedImport.deletePrivate" />
+        <app-toggle label="Skip if Not Found in Client" [(checked)]="failedSkipNotFound"
+          [disabled]="failedSubFieldsDisabled()"
+          hint="Skip failed import check for torrents not found in any enabled torrent client"
+          helpKey="queue-cleaner:failedImport.skipIfNotFoundInClient" />
+
+        <div class="form-divider"></div>
+
+        <app-select label="Pattern Mode" [options]="patternModeOptions" [(value)]="failedPatternMode"
+          [disabled]="failedSubFieldsDisabled()"
+          hint="Choose how the patterns are applied to failed imports"
+          helpKey="queue-cleaner:failedImport.pattern-mode" />
+        <app-chip-input
+          [label]="patternLabel()"
+          placeholder="Add a pattern..."
+          [hint]="patternHint()"
+          [error]="failedPatternsError()"
+          [disabled]="failedSubFieldsDisabled()"
+          [(items)]="failedPatterns"
+          helpKey="queue-cleaner:failedImport.patterns"
+        />
+      </div>
+    </app-accordion>
+
+    <app-accordion header="Downloading Metadata" subtitle="Settings for stalled metadata downloads (qBittorrent only)" [(expanded)]="metadataExpanded">
+      <div class="form-stack">
+        <app-number-input label="Max Strikes" [(value)]="metadataMaxStrikes" [min]="0" [max]="5000"
+          hint="Number of strikes before action is taken (0 to disable, min 3 to enable)"
+          [error]="metadataMaxStrikesError()"
+          helpKey="queue-cleaner:downloadingMetadataMaxStrikes" />
+      </div>
+    </app-accordion>
+
+    <!-- Stalled Download Rules -->
+    <app-accordion header="Stalled Download Rules" subtitle="Rules for detecting and handling stalled downloads" [(expanded)]="stallExpanded">
+      @if (stallCoverage().hasGaps) {
+        <div class="coverage-warning">
+          <ng-icon name="tablerAlertTriangle" size="16" class="coverage-warning__icon" />
+          <div class="coverage-warning__content">
+            <strong class="coverage-warning__title">Coverage Gaps Detected</strong>
+            <p class="coverage-warning__desc">Your stall rules don't cover all completion percentage ranges for all privacy types. Torrents in uncovered ranges won't be processed by stall rules.</p>
+            <div class="coverage-warning__gaps">
+              @for (gap of stallCoverage().gaps; track $index) {
+                <div class="coverage-warning__gap"><strong>{{ gap.privacyType }} torrents:</strong> {{ gap.from }}% - {{ gap.to }}% completion not covered</div>
+              }
+            </div>
+          </div>
+        </div>
+      }
+
+      @if (stallRules().length === 0 && !stallRulesLoading()) {
+        <app-empty-state
+          title="No Stall Rules"
+          message="Create a stall rule to detect downloads that have stopped progressing."
+        />
+      }
+
+      @for (rule of stallRules(); track rule.id) {
+        <div class="rule-card">
+          <div class="rule-card__header">
+            <h4 class="rule-card__name">{{ rule.name }}</h4>
+            <div class="rule-card__actions">
+              <button class="rule-card__action" (click)="openStallModal(rule)" aria-label="Edit rule">
+                <ng-icon name="tablerPencil" size="16" />
+              </button>
+              <button class="rule-card__action rule-card__action--danger" (click)="deleteStallRule(rule)" aria-label="Delete rule">
+                <ng-icon name="tablerTrash" size="16" />
+              </button>
+            </div>
+          </div>
+          <div class="rule-card__badges">
+            <app-badge [severity]="rule.enabled ? 'success' : 'default'">{{ rule.enabled ? 'Enabled' : 'Disabled' }}</app-badge>
+            <app-badge severity="info">{{ rule.privacyType }}</app-badge>
+            <app-badge>{{ rule.minCompletionPercentage }}% - {{ rule.maxCompletionPercentage }}%</app-badge>
+          </div>
+          <div class="rule-card__details">
+            <span>Max Strikes: {{ rule.maxStrikes }}</span>
+            <span>Reset on Progress: {{ rule.resetStrikesOnProgress ? 'Yes' : 'No' }}</span>
+            @if (rule.minimumProgress) {
+              <span>Min Progress: {{ rule.minimumProgress }}</span>
+            }
+          </div>
+        </div>
+      }
+
+      <div class="rule-actions">
+        <app-button variant="secondary" size="sm" (clicked)="openStallModal()">
+          <ng-icon name="tablerPlus" size="16" /> Add Stall Rule
+        </app-button>
+      </div>
+    </app-accordion>
+
+    <!-- Slow Download Rules -->
+    <app-accordion header="Slow Download Rules" subtitle="Rules for detecting and handling slow downloads" [(expanded)]="slowExpanded">
+      @if (slowCoverage().hasGaps) {
+        <div class="coverage-warning">
+          <ng-icon name="tablerAlertTriangle" size="16" class="coverage-warning__icon" />
+          <div class="coverage-warning__content">
+            <strong class="coverage-warning__title">Coverage Gaps Detected</strong>
+            <p class="coverage-warning__desc">Your slow rules don't cover all completion percentage ranges for all privacy types. Torrents in uncovered ranges won't be processed by slow rules.</p>
+            <div class="coverage-warning__gaps">
+              @for (gap of slowCoverage().gaps; track $index) {
+                <div class="coverage-warning__gap"><strong>{{ gap.privacyType }} torrents:</strong> {{ gap.from }}% - {{ gap.to }}% completion not covered</div>
+              }
+            </div>
+          </div>
+        </div>
+      }
+
+      @if (slowRules().length === 0 && !slowRulesLoading()) {
+        <app-empty-state
+          title="No Slow Rules"
+          message="Create a slow rule to detect downloads that are progressing too slowly."
+        />
+      }
+
+      @for (rule of slowRules(); track rule.id) {
+        <div class="rule-card">
+          <div class="rule-card__header">
+            <h4 class="rule-card__name">{{ rule.name }}</h4>
+            <div class="rule-card__actions">
+              <button class="rule-card__action" (click)="openSlowModal(rule)" aria-label="Edit rule">
+                <ng-icon name="tablerPencil" size="16" />
+              </button>
+              <button class="rule-card__action rule-card__action--danger" (click)="deleteSlowRule(rule)" aria-label="Delete rule">
+                <ng-icon name="tablerTrash" size="16" />
+              </button>
+            </div>
+          </div>
+          <div class="rule-card__badges">
+            <app-badge [severity]="rule.enabled ? 'success' : 'default'">{{ rule.enabled ? 'Enabled' : 'Disabled' }}</app-badge>
+            <app-badge severity="info">{{ rule.privacyType }}</app-badge>
+            <app-badge>{{ rule.minCompletionPercentage }}% - {{ rule.maxCompletionPercentage }}%</app-badge>
+            @if (rule.minSpeed) {
+              <app-badge severity="warning">{{ rule.minSpeed }}</app-badge>
+            }
+          </div>
+          <div class="rule-card__details">
+            <span>Max Strikes: {{ rule.maxStrikes }}</span>
+            <span>Min Speed: {{ rule.minSpeed }}</span>
+            @if (rule.maxTimeHours > 0) {
+              <span>Max Time: {{ rule.maxTimeHours }}h</span>
+            }
+            @if (rule.ignoreAboveSize) {
+              <span>Ignore Above: {{ rule.ignoreAboveSize }}</span>
+            }
+          </div>
+        </div>
+      }
+
+      <div class="rule-actions">
+        <app-button variant="secondary" size="sm" (clicked)="openSlowModal()">
+          <ng-icon name="tablerPlus" size="16" /> Add Slow Rule
+        </app-button>
+      </div>
+    </app-accordion>
+
+  }
+
+  <div class="form-actions">
+    <app-button variant="primary" [glowing]="dirty()" [loading]="saving()" [disabled]="saving() || saved() || hasErrors()" (clicked)="save()">
+      {{ saved() ? 'Saved!' : 'Save Settings' }}
+    </app-button>
+  </div>
+</div>
+}
+
+<!-- Stall Rule Modal -->
+<app-modal [title]="editingStallRule() ? 'Edit Stall Rule' : 'Add Stall Rule'" [(visible)]="stallModalVisible" size="lg">
+  <div class="form-grid">
+    <app-input label="Name" placeholder="My Stall Rule" [(value)]="stallName"
+      [error]="stallNameError()"
+      helpKey="queue-cleaner:stallRule.name" />
+    <app-toggle label="Enabled" [(checked)]="stallEnabled"
+      hint="Enable this rule"
+      helpKey="queue-cleaner:stallRule.enabled" />
+    <app-number-input label="Max Strikes" [(value)]="stallMaxStrikes" [min]="3" [max]="5000"
+      hint="Number of strikes before action is taken"
+      [error]="stallMaxStrikesError()"
+      helpKey="queue-cleaner:stallRule.maxStrikes" />
+    <app-select label="Privacy Type" [options]="privacyTypeOptions" [value]="stallPrivacyType()"
+      (valueChange)="onStallPrivacyTypeChange($event)"
+      hint="Which torrent types this rule applies to"
+      helpKey="queue-cleaner:stallRule.privacyType" />
+    <app-number-input label="Min Completion %" [(value)]="stallMinCompletion" [min]="0" [max]="100" suffix="%"
+      hint="Apply the rule once completion percentage exceeds this value (0 includes items at 0% and above)"
+      [error]="stallCompletionError()"
+      helpKey="queue-cleaner:stallRule.completionRange" />
+    <app-number-input label="Max Completion %" [(value)]="stallMaxCompletion" [min]="0" [max]="100" suffix="%"
+      hint="Apply the rule to items with a completion percentage less than or equal to this value"
+      helpKey="queue-cleaner:stallRule.completionRange" />
+    <app-toggle label="Reset Strikes on Progress" [(checked)]="stallResetOnProgress"
+      hint="Reset strike count when torrent shows progress"
+      helpKey="queue-cleaner:stallRule.resetStrikesOnProgress" />
+    @if (stallResetOnProgress()) {
+      <app-input label="Minimum Progress to Reset" placeholder="e.g. 1MB" [(value)]="stallMinProgress"
+        hint="Only reset strikes after the torrent downloads at least this amount. Leave blank to reset on any progress."
+        helpKey="queue-cleaner:stallRule.minimumProgress" />
+    }
+    <app-toggle label="Delete Private from Client" [(checked)]="stallDeletePrivate"
+      [disabled]="stallPrivacyType() === 'Public'"
+      hint="Disable this if you want to keep private torrents in the download client even if they are removed from the arrs"
+      helpKey="queue-cleaner:stallRule.deletePrivateTorrentsFromClient" />
+  </div>
+  <div modal-footer>
+    <app-button variant="secondary" (clicked)="stallModalVisible.set(false)">Cancel</app-button>
+    <app-button variant="primary" (clicked)="saveStallRule()">
+      {{ editingStallRule() ? 'Update' : 'Create' }}
+    </app-button>
+  </div>
+</app-modal>
+
+<!-- Slow Rule Modal -->
+<app-modal [title]="editingSlowRule() ? 'Edit Slow Rule' : 'Add Slow Rule'" [(visible)]="slowModalVisible" size="lg">
+  <div class="form-grid">
+    <app-input label="Name" placeholder="My Slow Rule" [(value)]="slowName"
+      [error]="slowNameError()"
+      helpKey="queue-cleaner:slowRule.name" />
+    <app-toggle label="Enabled" [(checked)]="slowEnabled"
+      hint="Enable this rule"
+      helpKey="queue-cleaner:slowRule.enabled" />
+    <app-number-input label="Max Strikes" [(value)]="slowMaxStrikes" [min]="3" [max]="5000"
+      hint="Number of strikes before action is taken"
+      [error]="slowMaxStrikesError()"
+      helpKey="queue-cleaner:slowRule.maxStrikes" />
+    <app-input label="Min Speed" placeholder="e.g. 100KB/s" [(value)]="slowMinSpeed"
+      hint="Minimum speed threshold for slow downloads (e.g., 100KB/s)"
+      helpKey="queue-cleaner:slowRule.minSpeed" />
+    <app-number-input label="Maximum Time (Hours)" [(value)]="slowMaxTimeHours" [min]="0"
+      hint="Maximum time allowed for slow downloads (0 means disabled)"
+      helpKey="queue-cleaner:slowRule.maxTimeHours" />
+    <app-select label="Privacy Type" [options]="privacyTypeOptions" [value]="slowPrivacyType()"
+      (valueChange)="onSlowPrivacyTypeChange($event)"
+      hint="Which torrent types this rule applies to"
+      helpKey="queue-cleaner:slowRule.privacyType" />
+    <app-number-input label="Min Completion %" [(value)]="slowMinCompletion" [min]="0" [max]="100" suffix="%"
+      hint="Apply the rule once completion percentage exceeds this value (0 still includes exactly 0%)"
+      [error]="slowCompletionError()"
+      helpKey="queue-cleaner:slowRule.completionRange" />
+    <app-number-input label="Max Completion %" [(value)]="slowMaxCompletion" [min]="0" [max]="100" suffix="%"
+      hint="Apply the rule up to and including this completion percentage"
+      helpKey="queue-cleaner:slowRule.completionRange" />
+    <app-input label="Ignore Above Size" placeholder="e.g. 25 GB" [(value)]="slowIgnoreAboveSize"
+      hint="Downloads will be ignored if size exceeds this threshold"
+      helpKey="queue-cleaner:slowRule.ignoreAboveSize" />
+    <app-toggle label="Reset Strikes on Progress" [(checked)]="slowResetOnProgress"
+      hint="Reset strike count when torrent shows progress"
+      helpKey="queue-cleaner:slowRule.resetStrikesOnProgress" />
+    <app-toggle label="Delete Private from Client" [(checked)]="slowDeletePrivate"
+      [disabled]="slowPrivacyType() === 'Public'"
+      hint="Disable this if you want to keep private torrents in the download client even if they are removed from the arrs"
+      helpKey="queue-cleaner:slowRule.deletePrivateTorrentsFromClient" />
+  </div>
+  <div modal-footer>
+    <app-button variant="secondary" (clicked)="slowModalVisible.set(false)">Cancel</app-button>
+    <app-button variant="primary" (clicked)="saveSlowRule()">
+      {{ editingSlowRule() ? 'Update' : 'Create' }}
+    </app-button>
+  </div>
+</app-modal>

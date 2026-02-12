@@ -1,0 +1,72 @@
+@use 'glass' as *;
+
+.accordion {
+  @include glass('subtle');
+  overflow: hidden;
+
+  &--disabled {
+    opacity: 0.6;
+  }
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: var(--space-4) var(--space-5);
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    transition: background var(--duration-fast) var(--ease-default);
+    font-family: var(--font-family);
+
+    @include glass-focus;
+
+    &:hover:not(:disabled) {
+      background: var(--glass-bg-hover);
+    }
+
+    &:disabled {
+      cursor: not-allowed;
+    }
+  }
+
+  &__header-text {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-0-5);
+  }
+
+  &__title {
+    font-size: var(--font-size-base);
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  &__subtitle {
+    font-size: var(--font-size-xs);
+    color: var(--text-secondary);
+  }
+
+  &__chevron {
+    font-size: 18px;
+    color: var(--text-tertiary);
+    flex-shrink: 0;
+    transition: transform var(--duration-fast) cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  &--expanded .accordion__chevron {
+    transform: rotate(0deg);
+  }
+
+  &__content {
+    padding: var(--space-3) var(--space-5) var(--space-5);
+    animation: slide-up var(--duration-normal) var(--ease-default);
+
+    // Inner content materialises slightly after the container expands
+    > * {
+      animation: content-fade var(--duration-normal) var(--ease-default) 100ms both;
+    }
+  }
+}

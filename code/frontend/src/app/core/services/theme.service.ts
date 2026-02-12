@@ -1,44 +1,72 @@
-import { Injectable } from '@angular/core';
+import { Injectable, signal, effect } from '@angular/core';
 
-@Injectable({
-  providedIn: 'root'
-})
+export type Theme = 'dark' | 'light';
+
+const THEME_KEY = 'cleanuparr-theme';
+const PERFORMANCE_MODE_KEY = 'cleanuparr-performance-mode';
+
+@Injectable({ providedIn: 'root' })
 export class ThemeService {
-  private readonly THEME_KEY = 'app-theme';
-  private currentTheme = 'dark'; // Always dark mode
+  private readonly _theme = signal<Theme>('dark');
+  private readonly _performanceMode = signal(false);
+
+  readonly theme = this._theme.asReadonly();
+  readonly performanceMode = this._performanceMode.asReadonly();
 
   constructor() {
-    this.initializeTheme();
+    this.restoreFromStorage();
+    this.detectSystemPreferences();
+    this.bindToDom();
   }
 
-  initializeTheme(): void {
-    // Apply our custom Noir preset (dark theme with purple primary, emerald secondary)
-    this.applyDarkTheme();
-    // Save the theme preference
-    localStorage.setItem(this.THEME_KEY, this.currentTheme);
+  toggleTheme(): void {
+    const next = this._theme() === 'dark' ? 'light' : 'dark';
+    this._theme.set(next);
+    localStorage.setItem(THEME_KEY, next);
   }
 
-  /**
-   * Apply the dark theme using our custom Noir preset
-   * The preset handles all colors including purple primary and emerald secondary
-   */
-  private applyDarkTheme(): void {
-    const documentElement = document.documentElement;
-    
-    // Set dark mode
-    documentElement.classList.add('dark');
-    documentElement.style.colorScheme = 'dark';
-    
-    // The Noir preset is applied in app.config.ts and handles all theme colors
-    // No need to manually set CSS variables as they're managed by PrimeNG
+  setTheme(theme: Theme): void {
+    this._theme.set(theme);
+    localStorage.setItem(THEME_KEY, theme);
   }
 
-  // Public API methods
-  getCurrentTheme(): string {
-    return this.currentTheme;
+  togglePerformanceMode(): void {
+    const next = !this._performanceMode();
+    this._performanceMode.set(next);
+    localStorage.setItem(PERFORMANCE_MODE_KEY, String(next));
   }
 
-  isDarkMode(): boolean {
-    return true; // Always dark mode
+  setPerformanceMode(value: boolean): void {
+    this._performanceMode.set(value);
+    localStorage.setItem(PERFORMANCE_MODE_KEY, String(value));
+  }
+
+  private restoreFromStorage(): void {
+    const savedTheme = localStorage.getItem(THEME_KEY);
+    if (savedTheme === 'light' || savedTheme === 'dark') {
+      this._theme.set(savedTheme);
+    }
+
+    const saved = localStorage.getItem(PERFORMANCE_MODE_KEY);
+    if (saved === 'true') {
+      this._performanceMode.set(true);
+    }
+  }
+
+  private detectSystemPreferences(): void {
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    if (prefersReducedMotion.matches && localStorage.getItem(PERFORMANCE_MODE_KEY) === null) {
+      this._performanceMode.set(true);
+    }
+  }
+
+  private bindToDom(): void {
+    effect(() => {
+      document.documentElement.setAttribute('data-theme', this._theme());
+    });
+
+    effect(() => {
+      document.documentElement.setAttribute('data-performance-mode', String(this._performanceMode()));
+    });
   }
 }

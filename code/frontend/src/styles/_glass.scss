@@ -1,0 +1,111 @@
+// =============================================================================
+// Glassmorphism Mixin Library
+// Provides reusable glass effects at different intensity levels.
+// All values reference CSS custom properties for theme compatibility.
+// =============================================================================
+
+// Faint SVG noise texture for frosted glass realism
+// Uses an inline SVG fractal noise filter at very low opacity
+$_glass-noise: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+
+// Base glass surface with configurable level
+// 'subtle'   - minimal: background + border only (no blur, good for nested elements)
+// 'base'     - standard: blur + border + shadow (default for cards and panels)
+// 'elevated' - prominent: stronger blur + glow (for modals, overlays, important elements)
+@mixin glass($level: 'base') {
+  @if $level == 'subtle' {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-xl);
+  } @else if $level == 'base' {
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--glass-shadow);
+
+    // Frost noise overlay for realism
+    background-image: #{$_glass-noise};
+    background-repeat: repeat;
+    background-size: 200px 200px;
+  } @else if $level == 'elevated' {
+    background: var(--surface-elevated);
+    backdrop-filter: blur(var(--glass-blur-lg));
+    -webkit-backdrop-filter: blur(var(--glass-blur-lg));
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--glass-shadow), 0 0 80px rgba(126, 87, 194, 0.04);
+
+    // Frost noise overlay for realism
+    background-image: #{$_glass-noise};
+    background-repeat: repeat;
+    background-size: 200px 200px;
+  }
+}
+
+// Hover effect for interactive glass elements
+@mixin glass-hover {
+  transition: background var(--duration-normal) var(--ease-default),
+              border-color var(--duration-normal) var(--ease-default);
+
+  &:hover {
+    background: var(--glass-bg-hover);
+    border-color: var(--glass-border-hover);
+  }
+
+  &:active {
+    background: var(--glass-bg-active);
+  }
+}
+
+// Focus ring for glass elements (keyboard navigation)
+@mixin glass-focus {
+  &:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+    animation: focus-ring-pulse 0.4s var(--ease-default);
+  }
+}
+
+// Combined interactive glass element (hover + focus)
+@mixin glass-interactive {
+  @include glass-hover;
+  @include glass-focus;
+  cursor: pointer;
+}
+
+// Glass input field style
+@mixin glass-input {
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: var(--radius-lg);
+  color: var(--input-text);
+  font-family: var(--font-family);
+  font-size: var(--font-size-sm);
+  transition: border-color var(--duration-fast) var(--ease-default),
+              background var(--duration-fast) var(--ease-default),
+              box-shadow var(--duration-fast) var(--ease-default);
+
+  &::placeholder {
+    color: var(--input-placeholder);
+  }
+
+  &:hover:not(:focus):not(:disabled) {
+    background: var(--input-bg-hover);
+    border-color: var(--input-border-hover);
+  }
+
+  &:focus {
+    outline: none;
+    border-color: var(--input-border-focus);
+    box-shadow: 0 0 0 3px var(--color-primary-subtle),
+                0 0 12px rgba(126, 87, 194, 0.15);
+    animation: glow-breathe 3s ease-in-out infinite;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}

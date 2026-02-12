@@ -1,0 +1,72 @@
+@use 'glass' as *;
+
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1-5);
+}
+
+.input-label {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.input-wrapper {
+  position: relative;
+}
+
+.input-field {
+  @include glass-input;
+  height: 38px;
+  padding: 0 var(--space-3);
+  width: 100%;
+
+  &--has-eye {
+    padding-right: 36px;
+  }
+
+  &--error {
+    border-color: var(--color-error) !important;
+
+    &:focus {
+      box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
+    }
+  }
+}
+
+.input-eye-btn {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border: none;
+  background: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: color var(--duration-fast) var(--ease-default);
+
+  &:hover {
+    color: var(--text-secondary);
+  }
+}
+
+.input-error {
+  font-size: var(--font-size-xs);
+  color: var(--color-error);
+}
+
+.input-hint {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+}
+
+:host:focus-within .input-label {
+  color: var(--color-primary);
+  transition: color var(--duration-fast) var(--ease-default);
+}

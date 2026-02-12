@@ -1,0 +1,9 @@
+@use 'settings-layout' as *;
+@use 'list-layout' as *;
+
+:host { @include settings-page; }
+
+.settings-form { @include settings-form; }
+.modal-form { @include modal-form; }
+.list-header { @include list-header; }
+.item-row { @include item-row; }

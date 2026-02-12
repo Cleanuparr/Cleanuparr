@@ -1,0 +1,19 @@
+<div class="accordion" [class.accordion--expanded]="expanded()" [class.accordion--disabled]="disabled()">
+  <button class="accordion__header" (click)="toggle()" [disabled]="disabled()" type="button">
+    <div class="accordion__header-text">
+      <span class="accordion__title">{{ header() }}</span>
+      @if (subtitle()) {
+        <span class="accordion__subtitle">{{ subtitle() }}</span>
+      }
+    </div>
+    <ng-icon
+      [name]="expanded() ? 'tablerChevronDown' : 'tablerChevronRight'"
+      class="accordion__chevron"
+    />
+  </button>
+  @if (expanded()) {
+    <div class="accordion__content">
+      <ng-content />
+    </div>
+  }
+</div>
