@@ -88,41 +88,17 @@ public partial class DelugeService : DownloadService, IDelugeService
     public override async Task<HealthCheckResult> HealthCheckAsync()
     {
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-        
+
         try
         {
-            bool hasCredentials = !string.IsNullOrEmpty(_downloadClientConfig.Username) || 
-                                  !string.IsNullOrEmpty(_downloadClientConfig.Password);
+            await _client.LoginAsync();
 
-            if (hasCredentials)
+            if (!await _client.IsConnected() && !await _client.Connect())
             {
-                // If credentials are provided, we must be able to login and connect for the service to be healthy
-                await _client.LoginAsync();
-                
-                if (!await _client.IsConnected() && !await _client.Connect())
-                {
-                    throw new Exception("Deluge WebUI is not connected to the daemon");
-                }
-                
-                _logger.LogDebug("Health check: Successfully logged in to Deluge client {clientId}", _downloadClientConfig.Id);
+                throw new Exception("Deluge WebUI is not connected to the daemon");
             }
-            else
-            {
-                // If no credentials, test basic connectivity to the web UI
-                // We'll try a simple HTTP request to verify the service is running
-                if (_httpClient == null)
-                {
-                    throw new InvalidOperationException("HTTP client is not initialized");
-                }
-                
-                var response = await _httpClient.GetAsync("/");
-                if (!response.IsSuccessStatusCode && response.StatusCode != System.Net.HttpStatusCode.Unauthorized)
-                {
-                    throw new Exception($"Service returned status code: {response.StatusCode}");
-                }
-                
-                _logger.LogDebug("Health check: Successfully connected to Deluge client {clientId}", _downloadClientConfig.Id);
-            }
+
+            _logger.LogDebug("Health check: Successfully logged in to Deluge client {clientId}", _downloadClientConfig.Id);
 
             stopwatch.Stop();
 
@@ -135,9 +111,9 @@ public partial class DelugeService : DownloadService, IDelugeService
         catch (Exception ex)
         {
             stopwatch.Stop();
-            
+
             _logger.LogWarning(ex, "Health check failed for Deluge client {clientId}", _downloadClientConfig.Id);
-            
+
             return new HealthCheckResult
             {
                 IsHealthy = false,
