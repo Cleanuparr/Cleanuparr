@@ -18,6 +18,7 @@ export interface GeneralConfig {
   httpCertificateValidation: CertificateValidationType;
   searchEnabled: boolean;
   searchDelay: number;
+  statusCheckEnabled: boolean;
   log?: LoggingConfig;
   ignoredDownloads: string[];
 }

@@ -24,6 +24,8 @@ public sealed record UpdateGeneralConfigRequest
 
     public ushort SearchDelay { get; init; } = Constants.DefaultSearchDelaySeconds;
 
+    public bool StatusCheckEnabled { get; init; } = true;
+
     public string EncryptionKey { get; init; } = Guid.NewGuid().ToString();
 
     public List<string> IgnoredDownloads { get; init; } = [];
@@ -39,6 +41,7 @@ public sealed record UpdateGeneralConfigRequest
         existingConfig.HttpCertificateValidation = HttpCertificateValidation;
         existingConfig.SearchEnabled = SearchEnabled;
         existingConfig.SearchDelay = SearchDelay;
+        existingConfig.StatusCheckEnabled = StatusCheckEnabled;
         existingConfig.EncryptionKey = EncryptionKey;
         existingConfig.IgnoredDownloads = IgnoredDownloads;
 

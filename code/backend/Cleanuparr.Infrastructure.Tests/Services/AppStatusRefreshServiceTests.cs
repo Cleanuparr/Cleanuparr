@@ -5,6 +5,7 @@ using Cleanuparr.Domain.Entities.AppStatus;
 using Cleanuparr.Infrastructure.Hubs;
 using Cleanuparr.Infrastructure.Services;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Moq.Protected;
@@ -20,6 +21,7 @@ public class AppStatusRefreshServiceTests : IDisposable
     private readonly AppStatusSnapshot _snapshot;
     private readonly JsonSerializerOptions _jsonOptions;
     private readonly Mock<HttpMessageHandler> _httpHandlerMock;
+    private readonly Mock<IServiceScopeFactory> _scopeFactoryMock;
     private AppStatusRefreshService? _service;
 
     public AppStatusRefreshServiceTests()
@@ -30,6 +32,7 @@ public class AppStatusRefreshServiceTests : IDisposable
         _snapshot = new AppStatusSnapshot();
         _jsonOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
         _httpHandlerMock = new Mock<HttpMessageHandler>();
+        _scopeFactoryMock = new Mock<IServiceScopeFactory>();
 
         // Setup hub context
         var clientsMock = new Mock<IHubClients>();
@@ -50,7 +53,8 @@ public class AppStatusRefreshServiceTests : IDisposable
             _hubContextMock.Object,
             _httpClientFactoryMock.Object,
             _snapshot,
-            _jsonOptions);
+            _jsonOptions,
+            _scopeFactoryMock.Object);
         return _service;
     }
 

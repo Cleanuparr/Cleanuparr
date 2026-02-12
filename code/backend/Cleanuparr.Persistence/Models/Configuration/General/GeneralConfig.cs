@@ -26,6 +26,8 @@ public sealed record GeneralConfig : IConfig
     
     public ushort SearchDelay { get; set; } = Constants.DefaultSearchDelaySeconds;
 
+    public bool StatusCheckEnabled { get; set; } = true;
+
     public string EncryptionKey { get; set; } = Guid.NewGuid().ToString();
 
     public List<string> IgnoredDownloads { get; set; } = [];
