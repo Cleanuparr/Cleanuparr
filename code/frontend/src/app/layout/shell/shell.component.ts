@@ -3,10 +3,12 @@ import {
   ChangeDetectionStrategy,
   signal,
   inject,
+  DestroyRef,
   HostListener,
   OnInit,
   OnDestroy,
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router, RouterOutlet, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs';
 import { NavSidebarComponent } from '../nav-sidebar/nav-sidebar.component';
@@ -24,6 +26,7 @@ import { AppHubService } from '@core/realtime/app-hub.service';
 export class ShellComponent implements OnInit, OnDestroy {
   private router = inject(Router);
   private hub = inject(AppHubService);
+  private destroyRef = inject(DestroyRef);
 
   sidebarCollapsed = signal(false);
   mobileMenuOpen = signal(false);
@@ -39,7 +42,10 @@ export class ShellComponent implements OnInit, OnDestroy {
 
     // Auto-close mobile menu on navigation
     this.router.events
-      .pipe(filter((e) => e instanceof NavigationEnd))
+      .pipe(
+        filter((e) => e instanceof NavigationEnd),
+        takeUntilDestroyed(this.destroyRef),
+      )
       .subscribe(() => this.mobileMenuOpen.set(false));
   }
 
