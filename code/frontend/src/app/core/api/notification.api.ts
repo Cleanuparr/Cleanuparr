@@ -12,12 +12,14 @@ import {
   CreateTelegramProviderRequest,
   CreateDiscordProviderRequest,
   CreatePushoverProviderRequest,
+  CreateGotifyProviderRequest,
   TestNotifiarrRequest,
   TestAppriseRequest,
   TestNtfyRequest,
   TestTelegramRequest,
   TestDiscordRequest,
   TestPushoverRequest,
+  TestGotifyRequest,
 } from '@shared/models/notification-provider.model';
 
 const BASE = '/api/configuration/notification_providers';
@@ -63,6 +65,10 @@ export class NotificationApi {
     return this.http.post<NotificationProviderDto>(`${BASE}/pushover`, data);
   }
 
+  createGotify(data: CreateGotifyProviderRequest): Observable<NotificationProviderDto> {
+    return this.http.post<NotificationProviderDto>(`${BASE}/gotify`, data);
+  }
+
   // Update providers (same request types, with id in URL)
   updateNotifiarr(id: string, data: CreateNotifiarrProviderRequest): Observable<NotificationProviderDto> {
     return this.http.put<NotificationProviderDto>(`${BASE}/notifiarr/${id}`, data);
@@ -88,6 +94,10 @@ export class NotificationApi {
     return this.http.put<NotificationProviderDto>(`${BASE}/pushover/${id}`, data);
   }
 
+  updateGotify(id: string, data: CreateGotifyProviderRequest): Observable<NotificationProviderDto> {
+    return this.http.put<NotificationProviderDto>(`${BASE}/gotify/${id}`, data);
+  }
+
   // Test providers
   testNotifiarr(data: TestNotifiarrRequest): Observable<TestNotificationResult> {
     return this.http.post<TestNotificationResult>(`${BASE}/notifiarr/test`, data);
@@ -111,5 +121,9 @@ export class NotificationApi {
 
   testPushover(data: TestPushoverRequest): Observable<TestNotificationResult> {
     return this.http.post<TestNotificationResult>(`${BASE}/pushover/test`, data);
+  }
+
+  testGotify(data: TestGotifyRequest): Observable<TestNotificationResult> {
+    return this.http.post<TestNotificationResult>(`${BASE}/gotify/test`, data);
   }
 }

@@ -167,6 +167,11 @@ export class DocumentationService {
       'apiKey': 'api-key',
       'version': 'api-version',
     },
+    'notifications/gotify': {
+      'serverUrl': 'server-url',
+      'applicationToken': 'application-token',
+      'priority': 'priority',
+    },
   };
 
   openFieldDocumentation(section: string, fieldName: string): void {

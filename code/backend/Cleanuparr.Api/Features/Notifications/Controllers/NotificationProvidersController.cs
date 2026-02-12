@@ -8,6 +8,7 @@ using Cleanuparr.Infrastructure.Features.Notifications.Apprise;
 using Cleanuparr.Infrastructure.Features.Notifications.Discord;
 using Cleanuparr.Infrastructure.Features.Notifications.Models;
 using Cleanuparr.Infrastructure.Features.Notifications.Telegram;
+using Cleanuparr.Infrastructure.Features.Notifications.Gotify;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.Notification;
 using Microsoft.AspNetCore.Mvc;
@@ -52,6 +53,7 @@ public sealed class NotificationProvidersController : ControllerBase
                 .Include(p => p.PushoverConfiguration)
                 .Include(p => p.TelegramConfiguration)
                 .Include(p => p.DiscordConfiguration)
+                .Include(p => p.GotifyConfiguration)
                 .AsNoTracking()
                 .ToListAsync();
 
@@ -79,6 +81,7 @@ public sealed class NotificationProvidersController : ControllerBase
                         NotificationProviderType.Pushover => p.PushoverConfiguration ?? new object(),
                         NotificationProviderType.Telegram => p.TelegramConfiguration ?? new object(),
                         NotificationProviderType.Discord => p.DiscordConfiguration ?? new object(),
+                        NotificationProviderType.Gotify => p.GotifyConfiguration ?? new object(),
                         _ => new object()
                     }
                 })
@@ -698,6 +701,7 @@ public sealed class NotificationProvidersController : ControllerBase
                 .Include(p => p.PushoverConfiguration)
                 .Include(p => p.TelegramConfiguration)
                 .Include(p => p.DiscordConfiguration)
+                .Include(p => p.GotifyConfiguration)
                 .FirstOrDefaultAsync(p => p.Id == id);
 
             if (existingProvider == null)
@@ -931,6 +935,7 @@ public sealed class NotificationProvidersController : ControllerBase
                 NotificationProviderType.Pushover => provider.PushoverConfiguration ?? new object(),
                 NotificationProviderType.Telegram => provider.TelegramConfiguration ?? new object(),
                 NotificationProviderType.Discord => provider.DiscordConfiguration ?? new object(),
+                NotificationProviderType.Gotify => provider.GotifyConfiguration ?? new object(),
                 _ => new object()
             }
         };
@@ -1318,6 +1323,194 @@ public sealed class NotificationProvidersController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to test Pushover provider");
+            return BadRequest(new { Message = $"Test failed: {ex.Message}" });
+        }
+    }
+
+    [HttpPost("gotify")]
+    public async Task<IActionResult> CreateGotifyProvider([FromBody] CreateGotifyProviderRequest newProvider)
+    {
+        await DataContext.Lock.WaitAsync();
+        try
+        {
+            if (string.IsNullOrWhiteSpace(newProvider.Name))
+            {
+                return BadRequest("Provider name is required");
+            }
+
+            var duplicateConfig = await _dataContext.NotificationConfigs.CountAsync(x => x.Name == newProvider.Name);
+            if (duplicateConfig > 0)
+            {
+                return BadRequest("A provider with this name already exists");
+            }
+
+            var gotifyConfig = new GotifyConfig
+            {
+                ServerUrl = newProvider.ServerUrl,
+                ApplicationToken = newProvider.ApplicationToken,
+                Priority = newProvider.Priority
+            };
+            gotifyConfig.Validate();
+
+            var provider = new NotificationConfig
+            {
+                Name = newProvider.Name,
+                Type = NotificationProviderType.Gotify,
+                IsEnabled = newProvider.IsEnabled,
+                OnFailedImportStrike = newProvider.OnFailedImportStrike,
+                OnStalledStrike = newProvider.OnStalledStrike,
+                OnSlowStrike = newProvider.OnSlowStrike,
+                OnQueueItemDeleted = newProvider.OnQueueItemDeleted,
+                OnDownloadCleaned = newProvider.OnDownloadCleaned,
+                OnCategoryChanged = newProvider.OnCategoryChanged,
+                GotifyConfiguration = gotifyConfig
+            };
+
+            _dataContext.NotificationConfigs.Add(provider);
+            await _dataContext.SaveChangesAsync();
+
+            await _notificationConfigurationService.InvalidateCacheAsync();
+
+            var providerDto = MapProvider(provider);
+            return CreatedAtAction(nameof(GetNotificationProviders), new { id = provider.Id }, providerDto);
+        }
+        catch (ValidationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to create Gotify provider");
+            throw;
+        }
+        finally
+        {
+            DataContext.Lock.Release();
+        }
+    }
+
+    [HttpPut("gotify/{id:guid}")]
+    public async Task<IActionResult> UpdateGotifyProvider(Guid id, [FromBody] UpdateGotifyProviderRequest updatedProvider)
+    {
+        await DataContext.Lock.WaitAsync();
+        try
+        {
+            var existingProvider = await _dataContext.NotificationConfigs
+                .Include(p => p.GotifyConfiguration)
+                .FirstOrDefaultAsync(p => p.Id == id && p.Type == NotificationProviderType.Gotify);
+
+            if (existingProvider == null)
+            {
+                return NotFound($"Gotify provider with ID {id} not found");
+            }
+
+            if (string.IsNullOrWhiteSpace(updatedProvider.Name))
+            {
+                return BadRequest("Provider name is required");
+            }
+
+            var duplicateConfig = await _dataContext.NotificationConfigs
+                .Where(x => x.Id != id)
+                .Where(x => x.Name == updatedProvider.Name)
+                .CountAsync();
+            if (duplicateConfig > 0)
+            {
+                return BadRequest("A provider with this name already exists");
+            }
+
+            var gotifyConfig = new GotifyConfig
+            {
+                ServerUrl = updatedProvider.ServerUrl,
+                ApplicationToken = updatedProvider.ApplicationToken,
+                Priority = updatedProvider.Priority
+            };
+
+            if (existingProvider.GotifyConfiguration != null)
+            {
+                gotifyConfig = gotifyConfig with { Id = existingProvider.GotifyConfiguration.Id };
+            }
+            gotifyConfig.Validate();
+
+            var newProvider = existingProvider with
+            {
+                Name = updatedProvider.Name,
+                IsEnabled = updatedProvider.IsEnabled,
+                OnFailedImportStrike = updatedProvider.OnFailedImportStrike,
+                OnStalledStrike = updatedProvider.OnStalledStrike,
+                OnSlowStrike = updatedProvider.OnSlowStrike,
+                OnQueueItemDeleted = updatedProvider.OnQueueItemDeleted,
+                OnDownloadCleaned = updatedProvider.OnDownloadCleaned,
+                OnCategoryChanged = updatedProvider.OnCategoryChanged,
+                GotifyConfiguration = gotifyConfig,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            _dataContext.NotificationConfigs.Remove(existingProvider);
+            _dataContext.NotificationConfigs.Add(newProvider);
+
+            await _dataContext.SaveChangesAsync();
+            await _notificationConfigurationService.InvalidateCacheAsync();
+
+            var providerDto = MapProvider(newProvider);
+            return Ok(providerDto);
+        }
+        catch (ValidationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to update Gotify provider with ID {Id}", id);
+            throw;
+        }
+        finally
+        {
+            DataContext.Lock.Release();
+        }
+    }
+
+    [HttpPost("gotify/test")]
+    public async Task<IActionResult> TestGotifyProvider([FromBody] TestGotifyProviderRequest testRequest)
+    {
+        try
+        {
+            var gotifyConfig = new GotifyConfig
+            {
+                ServerUrl = testRequest.ServerUrl,
+                ApplicationToken = testRequest.ApplicationToken,
+                Priority = testRequest.Priority
+            };
+            gotifyConfig.Validate();
+
+            var providerDto = new NotificationProviderDto
+            {
+                Id = Guid.NewGuid(),
+                Name = "Test Provider",
+                Type = NotificationProviderType.Gotify,
+                IsEnabled = true,
+                Events = new NotificationEventFlags
+                {
+                    OnFailedImportStrike = true,
+                    OnStalledStrike = false,
+                    OnSlowStrike = false,
+                    OnQueueItemDeleted = false,
+                    OnDownloadCleaned = false,
+                    OnCategoryChanged = false
+                },
+                Configuration = gotifyConfig
+            };
+
+            await _notificationService.SendTestNotificationAsync(providerDto);
+            return Ok(new { Message = "Test notification sent successfully" });
+        }
+        catch (GotifyException ex)
+        {
+            _logger.LogWarning(ex, "Failed to test Gotify provider");
+            return BadRequest(new { Message = $"Test failed: {ex.Message}" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to test Gotify provider");
             return BadRequest(new { Message = $"Test failed: {ex.Message}" });
         }
     }
