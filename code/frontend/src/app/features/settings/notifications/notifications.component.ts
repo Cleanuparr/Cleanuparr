@@ -17,6 +17,7 @@ import {
   CreateAppriseProviderRequest,
   CreateNtfyProviderRequest,
   CreatePushoverProviderRequest,
+  CreateGotifyProviderRequest,
 } from '@shared/models/notification-provider.model';
 import {
   NotificationProviderType,
@@ -45,6 +46,20 @@ const NTFY_PRIORITY_OPTIONS: SelectOption[] = [
   { label: 'Default', value: NtfyPriority.Default },
   { label: 'High', value: NtfyPriority.High },
   { label: 'Max', value: NtfyPriority.Max },
+];
+
+const GOTIFY_PRIORITY_OPTIONS: SelectOption[] = [
+  { label: '0', value: '0' },
+  { label: '1', value: '1' },
+  { label: '2', value: '2' },
+  { label: '3', value: '3' },
+  { label: '4', value: '4' },
+  { label: '5 (Default)', value: '5' },
+  { label: '6', value: '6' },
+  { label: '7', value: '7' },
+  { label: '8', value: '8' },
+  { label: '9', value: '9' },
+  { label: '10', value: '10' },
 ];
 
 const PUSHOVER_PRIORITY_OPTIONS: SelectOption[] = [
@@ -148,6 +163,11 @@ export class NotificationsComponent implements OnInit, HasPendingChanges {
   readonly modalNtfyPriority = signal<unknown>(NtfyPriority.Default);
   readonly modalNtfyTags = signal<string[]>([]);
 
+  // Gotify fields
+  readonly modalGotifyServerUrl = signal('');
+  readonly modalGotifyApplicationToken = signal('');
+  readonly modalGotifyPriority = signal<unknown>('5');
+
   // Pushover fields
   readonly modalPushoverApiToken = signal('');
   readonly modalPushoverUserKey = signal('');
@@ -192,6 +212,8 @@ export class NotificationsComponent implements OnInit, HasPendingChanges {
         return !this.modalNtfyServerUrl().trim() || this.modalNtfyTopics().length === 0;
       case NotificationProviderType.Pushover:
         return !this.modalPushoverApiToken().trim() || !this.modalPushoverUserKey().trim();
+      case NotificationProviderType.Gotify:
+        return !this.modalGotifyServerUrl().trim() || !this.modalGotifyApplicationToken().trim();
     }
     return false;
   });
@@ -252,8 +274,19 @@ export class NotificationsComponent implements OnInit, HasPendingChanges {
     if (!this.modalPushoverUserKey().trim()) return 'User key is required';
     return undefined;
   });
+  readonly gotifyServerUrlError = computed(() => {
+    if (this.modalType() !== NotificationProviderType.Gotify) return undefined;
+    if (!this.modalGotifyServerUrl().trim()) return 'Server URL is required';
+    return undefined;
+  });
+  readonly gotifyApplicationTokenError = computed(() => {
+    if (this.modalType() !== NotificationProviderType.Gotify) return undefined;
+    if (!this.modalGotifyApplicationToken().trim()) return 'Application token is required';
+    return undefined;
+  });
 
   // Options (exposed for template)
+  readonly gotifyPriorityOptions = GOTIFY_PRIORITY_OPTIONS;
   readonly appriseOptions = APPRISE_MODE_OPTIONS;
   readonly ntfyAuthOptions = NTFY_AUTH_OPTIONS;
   readonly ntfyPriorityOptions = NTFY_PRIORITY_OPTIONS;
@@ -264,6 +297,7 @@ export class NotificationsComponent implements OnInit, HasPendingChanges {
   readonly availableProviders = [
     { type: NotificationProviderType.Apprise, name: 'Apprise', iconUrl: 'icons/ext/apprise.svg', iconLightUrl: 'icons/ext/apprise-light.svg', description: 'github.com/caronc/apprise' },
     { type: NotificationProviderType.Discord, name: 'Discord', iconUrl: 'icons/ext/discord.svg', iconLightUrl: 'icons/ext/discord-light.svg', description: 'discord.com' },
+    { type: NotificationProviderType.Gotify, name: 'Gotify', iconUrl: 'icons/ext/gotify.svg', iconLightUrl: 'icons/ext/gotify-light.svg', description: 'gotify.net' },
     { type: NotificationProviderType.Notifiarr, name: 'Notifiarr', iconUrl: 'icons/ext/notifiarr.svg', iconLightUrl: 'icons/ext/notifiarr-light.svg', description: 'notifiarr.com' },
     { type: NotificationProviderType.Ntfy, name: 'ntfy', iconUrl: 'icons/ext/ntfy.svg', iconLightUrl: 'icons/ext/ntfy-light.svg', description: 'ntfy.sh' },
     { type: NotificationProviderType.Pushover, name: 'Pushover', iconUrl: 'icons/ext/pushover.svg', iconLightUrl: 'icons/ext/pushover-light.svg', description: 'pushover.net' },
@@ -361,6 +395,11 @@ export class NotificationsComponent implements OnInit, HasPendingChanges {
         this.modalPushoverCustomSound.set(config.customSound ?? '');
         this.modalPushoverTags.set(config.tags ?? []);
         break;
+      case NotificationProviderType.Gotify:
+        this.modalGotifyServerUrl.set(config.serverUrl ?? '');
+        this.modalGotifyApplicationToken.set(config.applicationToken ?? '');
+        this.modalGotifyPriority.set(String(config.priority ?? 5));
+        break;
     }
 
     this.onFailedImportStrike.set(provider.events.onFailedImportStrike);
@@ -410,6 +449,10 @@ export class NotificationsComponent implements OnInit, HasPendingChanges {
     this.modalPushoverSound.set('');
     this.modalPushoverCustomSound.set('');
     this.modalPushoverTags.set([]);
+    // Gotify
+    this.modalGotifyServerUrl.set('');
+    this.modalGotifyApplicationToken.set('');
+    this.modalGotifyPriority.set('5');
   }
 
   private resetEventFlags(): void {
@@ -511,6 +554,16 @@ export class NotificationsComponent implements OnInit, HasPendingChanges {
         });
         break;
       }
+      case NotificationProviderType.Gotify:
+        this.api.testGotify({
+          serverUrl: this.modalGotifyServerUrl(),
+          applicationToken: this.modalGotifyApplicationToken(),
+          priority: parseInt(this.modalGotifyPriority() as string, 10) || 5,
+        }).subscribe({
+          next: (r) => { this.toast.success(r.message || 'Test sent'); this.testing.set(false); },
+          error: () => { this.toast.error('Test failed'); this.testing.set(false); },
+        });
+        break;
     }
   }
 
@@ -610,6 +663,19 @@ export class NotificationsComponent implements OnInit, HasPendingChanges {
           ...eventFlags,
         };
         const obs = editing ? this.api.updatePushover(editing.id, request) : this.api.createPushover(request);
+        obs.subscribe({ next: () => this.onSaveSuccess(editing), error: () => this.onSaveError() });
+        break;
+      }
+      case NotificationProviderType.Gotify: {
+        const request: CreateGotifyProviderRequest = {
+          name: this.modalName(),
+          serverUrl: this.modalGotifyServerUrl(),
+          applicationToken: this.modalGotifyApplicationToken(),
+          priority: parseInt(this.modalGotifyPriority() as string, 10) || 5,
+          isEnabled: this.modalEnabled(),
+          ...eventFlags,
+        };
+        const obs = editing ? this.api.updateGotify(editing.id, request) : this.api.createGotify(request);
         obs.subscribe({ next: () => this.onSaveSuccess(editing), error: () => this.onSaveError() });
         break;
       }

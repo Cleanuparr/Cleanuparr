@@ -131,6 +131,20 @@ export interface CreatePushoverProviderRequest {
   onCategoryChanged: boolean;
 }
 
+export interface CreateGotifyProviderRequest {
+  name: string;
+  serverUrl: string;
+  applicationToken: string;
+  priority: number;
+  isEnabled: boolean;
+  onFailedImportStrike: boolean;
+  onStalledStrike: boolean;
+  onSlowStrike: boolean;
+  onQueueItemDeleted: boolean;
+  onDownloadCleaned: boolean;
+  onCategoryChanged: boolean;
+}
+
 // Test request types (minimal, no event flags needed)
 
 export interface TestNotifiarrRequest {
@@ -179,6 +193,12 @@ export interface TestPushoverRequest {
   retry?: number;
   expire?: number;
   tags?: string[];
+}
+
+export interface TestGotifyRequest {
+  serverUrl: string;
+  applicationToken: string;
+  priority: number;
 }
 
 export interface TestNotificationResult {

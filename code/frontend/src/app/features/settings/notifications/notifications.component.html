@@ -241,6 +241,21 @@
         helpKey="notifications/pushover:tags" />
     }
 
+    <!-- Gotify Fields -->
+    @if (modalType() === 'Gotify') {
+      <app-input label="Server URL" placeholder="https://gotify.example.com" [(value)]="modalGotifyServerUrl"
+        hint="The base URL of your Gotify server instance."
+        [error]="gotifyServerUrlError()"
+        helpKey="notifications/gotify:serverUrl" />
+      <app-input label="Application Token" placeholder="Enter application token" type="password" [(value)]="modalGotifyApplicationToken"
+        hint="The application token from your Gotify server. Create one under Apps in the Gotify web UI."
+        [error]="gotifyApplicationTokenError()"
+        helpKey="notifications/gotify:applicationToken" />
+      <app-select label="Priority" [options]="gotifyPriorityOptions" [(value)]="modalGotifyPriority"
+        hint="Message priority. Higher priority may trigger more intrusive notifications on clients."
+        helpKey="notifications/gotify:priority" />
+    }
+
     <div class="event-flags">
       <h4 class="event-flags__title">Events</h4>
       <div class="event-flags__grid">
