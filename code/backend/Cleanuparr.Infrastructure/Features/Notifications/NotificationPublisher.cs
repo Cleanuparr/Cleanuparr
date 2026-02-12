@@ -4,7 +4,6 @@ using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.Notifications.Models;
 using Cleanuparr.Infrastructure.Interceptors;
-using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
 using Microsoft.Extensions.Logging;
 
@@ -120,8 +119,8 @@ public class NotificationPublisher : INotificationPublisher
     {
         var record = ContextProvider.Get<QueueRecord>(nameof(QueueRecord));
         var instanceType = (InstanceType)ContextProvider.Get<object>(nameof(InstanceType));
-        var instanceVersion = (float)ContextProvider.Get<object>("version");
-        var instanceUrl = ContextProvider.Get<Uri>(nameof(ArrInstance) + nameof(ArrInstance.Url));
+        var instanceVersion = (float)ContextProvider.Get<object>(ContextProvider.Keys.Version);
+        var instanceUrl = ContextProvider.Get<Uri>(ContextProvider.Keys.ArrInstanceUrl);
         var imageUrl = GetImageFromContext(record, instanceType, instanceVersion);
 
         NotificationContext context = new()
@@ -154,8 +153,8 @@ public class NotificationPublisher : INotificationPublisher
     {
         var record = ContextProvider.Get<QueueRecord>(nameof(QueueRecord));
         var instanceType = (InstanceType)ContextProvider.Get<object>(nameof(InstanceType));
-        var instanceVersion = (float)ContextProvider.Get<object>("version");
-        var instanceUrl = ContextProvider.Get<Uri>(nameof(ArrInstance) + nameof(ArrInstance.Url));
+        var instanceVersion = (float)ContextProvider.Get<object>(ContextProvider.Keys.Version);
+        var instanceUrl = ContextProvider.Get<Uri>(ContextProvider.Keys.ArrInstanceUrl);
         var imageUrl = GetImageFromContext(record, instanceType, instanceVersion);
 
         return new NotificationContext
@@ -178,8 +177,9 @@ public class NotificationPublisher : INotificationPublisher
 
     private static NotificationContext BuildDownloadCleanedContext(double ratio, TimeSpan seedingTime, string categoryName, CleanReason reason)
     {
-        var downloadName = ContextProvider.Get<string>("downloadName");
-        var hash = ContextProvider.Get<string>("hash");
+        var downloadName = ContextProvider.Get<string>(ContextProvider.Keys.DownloadName);
+        var hash = ContextProvider.Get<string>(ContextProvider.Keys.Hash);
+        var clientUrl = ContextProvider.Get<Uri>(ContextProvider.Keys.DownloadClientUrl);
 
         return new NotificationContext
         {
@@ -189,6 +189,7 @@ public class NotificationPublisher : INotificationPublisher
             Severity = EventSeverity.Important,
             Data = new Dictionary<string, string>
             {
+                ["Url"] = clientUrl.ToString(),
                 ["Hash"] = hash.ToLowerInvariant(),
                 ["Category"] = categoryName.ToLowerInvariant(),
                 ["Ratio"] = ratio.ToString(CultureInfo.InvariantCulture),
@@ -199,7 +200,8 @@ public class NotificationPublisher : INotificationPublisher
 
     private NotificationContext BuildCategoryChangedContext(string oldCategory, string newCategory, bool isTag)
     {
-        string downloadName = ContextProvider.Get<string>("downloadName");
+        string downloadName = ContextProvider.Get<string>(ContextProvider.Keys.DownloadName);
+        Uri clientUrl = ContextProvider.Get<Uri>(ContextProvider.Keys.DownloadClientUrl);
 
         NotificationContext context = new()
         {
@@ -209,10 +211,11 @@ public class NotificationPublisher : INotificationPublisher
             Severity = EventSeverity.Information,
             Data = new Dictionary<string, string>
             {
-                ["hash"] = ContextProvider.Get<string>("hash").ToLowerInvariant()
+                ["Url"] = clientUrl.ToString(),
+                ["hash"] = ContextProvider.Get<string>(ContextProvider.Keys.Hash).ToLowerInvariant(),
             }
         };
-        
+
         if (isTag)
         {
             context.Data.Add("Tag", newCategory);

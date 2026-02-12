@@ -98,6 +98,26 @@ URL path prefix if your download client runs behind a reverse proxy with a subpa
 
 </ConfigSection>
 
+<ConfigSection
+  title="External URL"
+  icon="🔗"
+>
+
+Optional external URL used in notification messages instead of the internal host URL. This is useful for Docker users where internal container URLs (e.g., `http://qbittorrent:8080`) are not reachable from outside the Docker network.
+
+**When to Use**:
+- Running Cleanuparr in Docker with internal container networking.
+- Notification links need to be clickable from your browser or phone.
+- Internal URLs differ from externally-accessible URLs.
+
+**Examples**:
+- `https://qbit.mydomain.com`
+- `http://192.168.1.100:8080`
+
+If not set, the internal host URL will be used in notifications.
+
+</ConfigSection>
+
 </div>
 
 <div className={styles.section}>

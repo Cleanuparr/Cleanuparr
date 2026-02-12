@@ -124,8 +124,9 @@ public abstract class DownloadService : IDownloadService
                 continue;
             }
 
-            ContextProvider.Set("downloadName", torrent.Name);
-            ContextProvider.Set("hash", torrent.Hash);
+            ContextProvider.Set(ContextProvider.Keys.DownloadName, torrent.Name);
+            ContextProvider.Set(ContextProvider.Keys.Hash, torrent.Hash);
+            ContextProvider.Set(ContextProvider.Keys.DownloadClientUrl, _downloadClientConfig.ExternalOrInternalUrl);
 
             TimeSpan seedingTime = TimeSpan.FromSeconds(torrent.SeedingTimeSeconds);
             SeedingCheckResult result = ShouldCleanDownload(torrent.Ratio, seedingTime, category);
@@ -219,7 +220,7 @@ public abstract class DownloadService : IDownloadService
             return false;
         }
         
-        string downloadName = ContextProvider.Get<string>("downloadName");
+        string downloadName = ContextProvider.Get<string>(ContextProvider.Keys.DownloadName);
         TimeSpan minSeedingTime = TimeSpan.FromHours(category.MinSeedTime);
         
         if (category.MinSeedTime > 0 && seedingTime < minSeedingTime)
@@ -245,7 +246,7 @@ public abstract class DownloadService : IDownloadService
             return false;
         }
         
-        string downloadName = ContextProvider.Get<string>("downloadName");
+        string downloadName = ContextProvider.Get<string>(ContextProvider.Keys.DownloadName);
         TimeSpan maxSeedingTime = TimeSpan.FromHours(category.MaxSeedTime);
         
         if (category.MaxSeedTime > 0 && seedingTime < maxSeedingTime)

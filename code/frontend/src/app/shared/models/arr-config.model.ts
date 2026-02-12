@@ -3,6 +3,7 @@ export interface ArrInstance {
   enabled: boolean;
   name: string;
   url: string;
+  externalUrl?: string;
   apiKey: string;
   version: number;
 }
@@ -16,6 +17,7 @@ export interface CreateArrInstanceDto {
   enabled: boolean;
   name: string;
   url: string;
+  externalUrl?: string;
   apiKey: string;
   version: number;
 }

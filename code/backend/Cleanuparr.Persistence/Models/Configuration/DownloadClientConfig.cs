@@ -59,14 +59,26 @@ public sealed record DownloadClientConfig
     /// The base URL path component, used by clients like Transmission and Deluge
     /// </summary>
     public string? UrlBase { get; init; }
-    
+
+    /// <summary>
+    /// Optional external URL for notifications when internal Docker URLs are not reachable externally
+    /// </summary>
+    public Uri? ExternalUrl { get; init; }
+
     /// <summary>
     /// The computed full URL for the client
     /// </summary>
     [NotMapped]
     [JsonIgnore]
     public Uri Url => new($"{Host?.ToString().TrimEnd('/')}/{UrlBase?.TrimStart('/').TrimEnd('/')}");
-    
+
+    /// <summary>
+    /// Returns ExternalUrl if set, otherwise falls back to computed Url
+    /// </summary>
+    [NotMapped]
+    [JsonIgnore]
+    public Uri ExternalOrInternalUrl => ExternalUrl ?? Url;
+
     /// <summary>
     /// Validates the configuration
     /// </summary>

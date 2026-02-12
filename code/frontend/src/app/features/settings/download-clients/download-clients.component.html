@@ -82,6 +82,9 @@
     <app-input label="URL Base" placeholder="/api/v2" [(value)]="modalUrlBase"
       hint="Optional URL base path, leave blank for default"
       helpKey="download-client:urlBase" />
+    <app-input label="External URL" placeholder="https://qbit.example.com" type="url" [(value)]="modalExternalUrl"
+      hint="Optional URL used in notifications for clickable links (e.g., when internal Docker URLs are not reachable externally)"
+      helpKey="download-client:externalUrl" />
   </div>
   <div modal-footer>
     <app-button variant="secondary" size="sm" [loading]="testing()" (clicked)="testConnection()">

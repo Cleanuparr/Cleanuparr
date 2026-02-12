@@ -10,6 +10,7 @@ export interface ClientConfig {
   username: string;
   password?: string;
   urlBase: string;
+  externalUrl?: string;
 }
 
 export interface DownloadClientConfig {
@@ -25,6 +26,7 @@ export interface CreateDownloadClientDto {
   username?: string;
   password?: string;
   urlBase?: string;
+  externalUrl?: string;
 }
 
 export interface TestDownloadClientRequest {

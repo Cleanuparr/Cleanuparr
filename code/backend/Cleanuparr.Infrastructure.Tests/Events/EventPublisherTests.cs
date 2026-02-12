@@ -339,8 +339,8 @@ public class EventPublisherTests : IDisposable
     public async Task PublishQueueItemDeleted_SavesEventWithContextData()
     {
         // Arrange
-        ContextProvider.Set("downloadName", "Test Download");
-        ContextProvider.Set("hash", "abc123");
+        ContextProvider.Set(ContextProvider.Keys.DownloadName, "Test Download");
+        ContextProvider.Set(ContextProvider.Keys.Hash, "abc123");
 
         // Act
         await _publisher.PublishQueueItemDeleted(removeFromClient: true, DeleteReason.Stalled);
@@ -360,8 +360,8 @@ public class EventPublisherTests : IDisposable
     public async Task PublishQueueItemDeleted_SendsNotification()
     {
         // Arrange
-        ContextProvider.Set("downloadName", "Test Download");
-        ContextProvider.Set("hash", "abc123");
+        ContextProvider.Set(ContextProvider.Keys.DownloadName, "Test Download");
+        ContextProvider.Set(ContextProvider.Keys.Hash, "abc123");
 
         // Act
         await _publisher.PublishQueueItemDeleted(removeFromClient: false, DeleteReason.FailedImport);
@@ -378,8 +378,8 @@ public class EventPublisherTests : IDisposable
     public async Task PublishDownloadCleaned_SavesEventWithContextData()
     {
         // Arrange
-        ContextProvider.Set("downloadName", "Cleaned Download");
-        ContextProvider.Set("hash", "def456");
+        ContextProvider.Set(ContextProvider.Keys.DownloadName, "Cleaned Download");
+        ContextProvider.Set(ContextProvider.Keys.Hash, "def456");
 
         // Act
         await _publisher.PublishDownloadCleaned(
@@ -404,8 +404,8 @@ public class EventPublisherTests : IDisposable
     public async Task PublishDownloadCleaned_SendsNotification()
     {
         // Arrange
-        ContextProvider.Set("downloadName", "Test");
-        ContextProvider.Set("hash", "xyz");
+        ContextProvider.Set(ContextProvider.Keys.DownloadName, "Test");
+        ContextProvider.Set(ContextProvider.Keys.Hash, "xyz");
 
         var ratio = 1.5;
         var seedingTime = TimeSpan.FromHours(24);
@@ -428,7 +428,7 @@ public class EventPublisherTests : IDisposable
     {
         // Arrange
         ContextProvider.Set(nameof(InstanceType), (object)InstanceType.Sonarr);
-        ContextProvider.Set(nameof(ArrInstance) + nameof(ArrInstance.Url), new Uri("http://localhost:8989"));
+        ContextProvider.Set(ContextProvider.Keys.ArrInstanceUrl, new Uri("http://localhost:8989"));
 
         // Act
         await _publisher.PublishSearchNotTriggered("abc123", "Test Item");
@@ -452,7 +452,7 @@ public class EventPublisherTests : IDisposable
     {
         // Arrange
         ContextProvider.Set(nameof(InstanceType), (object)InstanceType.Radarr);
-        ContextProvider.Set(nameof(ArrInstance) + nameof(ArrInstance.Url), new Uri("http://localhost:7878"));
+        ContextProvider.Set(ContextProvider.Keys.ArrInstanceUrl, new Uri("http://localhost:7878"));
 
         // Act
         await _publisher.PublishRecurringItem("hash123", "Recurring Item", 5);
@@ -475,8 +475,8 @@ public class EventPublisherTests : IDisposable
     public async Task PublishCategoryChanged_SavesEventWithContextData()
     {
         // Arrange
-        ContextProvider.Set("downloadName", "Category Test");
-        ContextProvider.Set("hash", "cat123");
+        ContextProvider.Set(ContextProvider.Keys.DownloadName, "Category Test");
+        ContextProvider.Set(ContextProvider.Keys.Hash, "cat123");
 
         // Act
         await _publisher.PublishCategoryChanged("oldCat", "newCat", isTag: false);
@@ -493,8 +493,8 @@ public class EventPublisherTests : IDisposable
     public async Task PublishCategoryChanged_WithTag_SavesCorrectMessage()
     {
         // Arrange
-        ContextProvider.Set("downloadName", "Tag Test");
-        ContextProvider.Set("hash", "tag123");
+        ContextProvider.Set(ContextProvider.Keys.DownloadName, "Tag Test");
+        ContextProvider.Set(ContextProvider.Keys.Hash, "tag123");
 
         // Act
         await _publisher.PublishCategoryChanged("", "cleanuperr-done", isTag: true);
@@ -509,8 +509,8 @@ public class EventPublisherTests : IDisposable
     public async Task PublishCategoryChanged_SendsNotification()
     {
         // Arrange
-        ContextProvider.Set("downloadName", "Test");
-        ContextProvider.Set("hash", "xyz");
+        ContextProvider.Set(ContextProvider.Keys.DownloadName, "Test");
+        ContextProvider.Set(ContextProvider.Keys.Hash, "xyz");
 
         // Act
         await _publisher.PublishCategoryChanged("old", "new", isTag: true);
