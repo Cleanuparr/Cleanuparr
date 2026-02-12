@@ -16,7 +16,7 @@ export function analyzeCoverage(rules: QueueRule[]): CoverageResult {
   const enabledRules = rules.filter((r) => r.enabled);
   const gaps: CoverageGap[] = [];
 
-  for (const privacyType of ['Public', 'Private'] as const) {
+  for (const privacyType of [TorrentPrivacyType.Public, TorrentPrivacyType.Private]) {
     const intervals = enabledRules
       .filter((r) => r.privacyType === privacyType || r.privacyType === TorrentPrivacyType.Both)
       .map((r) => ({
