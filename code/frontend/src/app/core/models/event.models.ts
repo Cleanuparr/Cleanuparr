@@ -24,9 +24,30 @@ export interface EventStats {
   recentEventsCount: number;
 }
 
+export interface ManualEventStats {
+  totalEvents: number;
+  unresolvedEvents: number;
+  resolvedEvents: number;
+  eventsBySeverity: { severity: string; count: number }[];
+  unresolvedBySeverity: { severity: string; count: number }[];
+}
+
 export interface EventFilter {
+  page?: number;
+  pageSize?: number;
   severity?: string;
   eventType?: string;
+  fromDate?: string;
+  toDate?: string;
   search?: string;
-  count?: number;
-} 
+}
+
+export interface ManualEventFilter {
+  page?: number;
+  pageSize?: number;
+  isResolved?: boolean;
+  severity?: string;
+  fromDate?: string;
+  toDate?: string;
+  search?: string;
+}

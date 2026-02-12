@@ -1,0 +1,123 @@
+<app-page-header
+  title="Logs"
+  subtitle="View application logs and activity"
+/>
+
+<div class="page-content">
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <div class="toolbar__filters">
+      <app-select
+        placeholder="All Levels"
+        [options]="levelOptions"
+        [(value)]="selectedLevel"
+      />
+      <app-select
+        placeholder="All Categories"
+        [options]="categoryOptions()"
+        [(value)]="selectedCategory"
+      />
+      <app-input
+        placeholder="Search logs..."
+        type="search"
+        [(value)]="searchQuery"
+      />
+    </div>
+    <div class="toolbar__actions">
+      <app-badge [severity]="connected() ? 'success' : 'error'" size="sm" [rounded]="true">
+        {{ connected() ? 'Connected' : 'Disconnected' }}
+      </app-badge>
+      <app-button variant="ghost" size="sm" (clicked)="refreshLogs()">
+        Refresh
+      </app-button>
+      <app-button variant="ghost" size="sm" (clicked)="copyAllLogs()">
+        Copy All
+      </app-button>
+      <div class="export-wrapper">
+        <app-button variant="ghost" size="sm" (clicked)="showExportMenu.set(!showExportMenu())">
+          <ng-icon name="tablerFileExport" />
+          Export
+        </app-button>
+        @if (showExportMenu()) {
+          <div class="export-menu">
+            <button class="export-menu__item" (click)="exportLogs('json')">JSON</button>
+            <button class="export-menu__item" (click)="exportLogs('csv')">CSV</button>
+            <button class="export-menu__item" (click)="exportLogs('text')">Text</button>
+          </div>
+        }
+      </div>
+      <app-button variant="ghost" size="sm" (clicked)="clearLogs()">
+        Clear
+      </app-button>
+    </div>
+  </div>
+
+  <!-- Log Count -->
+  <div class="log-count" appScrollReveal>
+    <app-animated-counter [value]="filteredLogs().length" [duration]="400" /> logs
+  </div>
+
+  <!-- Log Entries -->
+  <app-card [noPadding]="true" appScrollReveal>
+    <div class="log-console">
+      @for (log of filteredLogs(); track $index) {
+        <div
+          class="log-entry"
+          [class.log-entry--expanded]="expandedIndex() === $index"
+        >
+          <div
+            class="log-entry__row"
+            [class.log-entry__row--expandable]="isExpandable(log)"
+            (click)="isExpandable(log) ? toggleExpand($index) : null"
+          >
+            <button class="log-entry__copy" (click)="copyLog(log); $event.stopPropagation()" title="Copy log">
+              <ng-icon name="tablerCopy" />
+            </button>
+            <span class="log-entry__time">{{ log.timestamp | date:'yyyy-MM-dd HH:mm:ss' }}</span>
+            <app-badge [severity]="logSeverity(log.level)" size="sm">
+              {{ logLevelLabel(log.level) }}
+            </app-badge>
+            @if (log.category) {
+              <span class="log-entry__category">{{ log.category }}</span>
+            }
+            <span class="log-entry__message">{{ log.message }}</span>
+            @if (isExpandable(log)) {
+              <ng-icon
+                [name]="expandedIndex() === $index ? 'tablerChevronUp' : 'tablerChevronDown'"
+                class="log-entry__chevron"
+              />
+            }
+          </div>
+          @if (expandedIndex() === $index) {
+            <div class="log-entry__details">
+              @if (log.exception) {
+                <div class="log-entry__exception">
+                  <span class="log-entry__detail-label">Exception</span>
+                  <pre class="log-entry__pre">{{ log.exception }}</pre>
+                </div>
+              }
+              @if (log.jobName) {
+                <div class="log-entry__detail">
+                  <span class="log-entry__detail-label">Job</span>
+                  <span>{{ log.jobName }}</span>
+                </div>
+              }
+              @if (log.instanceName) {
+                <div class="log-entry__detail">
+                  <span class="log-entry__detail-label">Instance</span>
+                  <span>{{ log.instanceName }}</span>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      } @empty {
+        <app-empty-state
+          icon="tablerFileText"
+          heading="No logs"
+          [description]="connected() ? 'No log entries match your filters.' : 'Connecting to the server...'"
+        />
+      }
+    </div>
+  </app-card>
+</div>

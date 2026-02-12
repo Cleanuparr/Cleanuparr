@@ -1,0 +1,145 @@
+<nav
+  class="sidebar"
+  [class.sidebar--collapsed]="collapsed()"
+  [class.sidebar--mobile]="isMobile()"
+  [class.sidebar--mobile-open]="mobileOpen()"
+>
+  <div class="sidebar__brand">
+    <img src="icons/128.png" alt="Cleanuparr" class="sidebar__logo-img" />
+    <span class="sidebar__logo-text">Cleanuparr</span>
+  </div>
+
+  <div class="sidebar__nav">
+    <!-- Main nav -->
+    @for (item of mainNavItems; track item.route) {
+      <a
+        class="sidebar__item"
+        [routerLink]="item.route"
+        routerLinkActive="sidebar__item--active"
+        (click)="onNavItemClick()"
+      >
+        <ng-icon [name]="item.icon" class="sidebar__item-icon" />
+        <span class="sidebar__item-label">{{ item.label }}</span>
+      </a>
+    }
+
+    <div class="sidebar__divider"></div>
+
+    <!-- Settings section -->
+    @if (!collapsed()) {
+      <button class="sidebar__section-toggle" (click)="toggleSettings()">
+        <span class="sidebar__section-label">Settings</span>
+        <ng-icon
+          [name]="settingsExpanded() ? 'tablerChevronDown' : 'tablerChevronRight'"
+          class="sidebar__section-chevron"
+        />
+      </button>
+    }
+
+    @if (settingsExpanded() || collapsed()) {
+      @for (item of settingsItems; track item.route) {
+        <a
+          class="sidebar__item sidebar__item--nested"
+          [routerLink]="item.route"
+          routerLinkActive="sidebar__item--active"
+          (click)="onNavItemClick()"
+        >
+          <ng-icon [name]="item.icon" class="sidebar__item-icon" />
+          <span class="sidebar__item-label">{{ item.label }}</span>
+        </a>
+      }
+
+      <!-- Media Apps sub-group -->
+      @if (!collapsed()) {
+        <button class="sidebar__section-toggle sidebar__section-toggle--sub" (click)="toggleMediaApps()">
+          <span class="sidebar__section-label">Media Apps</span>
+          <ng-icon
+            [name]="mediaAppsExpanded() ? 'tablerChevronDown' : 'tablerChevronRight'"
+            class="sidebar__section-chevron"
+          />
+        </button>
+      }
+
+      @if (mediaAppsExpanded() || collapsed()) {
+        @for (item of mediaAppItems; track item.route) {
+          <a
+            class="sidebar__item sidebar__item--deep"
+            [routerLink]="item.route"
+            routerLinkActive="sidebar__item--active"
+            (click)="onNavItemClick()"
+          >
+            @if (item.iconSrc) {
+              <img [src]="item.iconSrc" [alt]="item.label" class="sidebar__item-img" />
+            } @else if (item.icon) {
+              <ng-icon [name]="item.icon" class="sidebar__item-icon" />
+            }
+            <span class="sidebar__item-label">{{ item.label }}</span>
+          </a>
+        }
+      }
+
+      @for (item of otherSettingsItems; track item.route) {
+        <a
+          class="sidebar__item sidebar__item--nested"
+          [routerLink]="item.route"
+          routerLinkActive="sidebar__item--active"
+          (click)="onNavItemClick()"
+        >
+          <ng-icon [name]="item.icon" class="sidebar__item-icon" />
+          <span class="sidebar__item-label">{{ item.label }}</span>
+        </a>
+      }
+    }
+
+    <!-- Suggested Apps -->
+    @if (!collapsed()) {
+      <div class="sidebar__divider"></div>
+      <div class="sidebar__section-label-text">Suggested Apps</div>
+      @for (app of suggestedApps; track app.href) {
+        <a
+          class="sidebar__item sidebar__item--external"
+          [href]="app.href"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <ng-icon [name]="app.icon" class="sidebar__item-icon" />
+          <span class="sidebar__item-label">{{ app.label }}</span>
+        </a>
+      }
+    }
+  </div>
+
+  <div class="sidebar__footer">
+    <a
+      class="sidebar__sponsor"
+      href="https://cleanuparr.github.io/Cleanuparr/support"
+      target="_blank"
+      rel="noopener noreferrer"
+    >
+      <ng-icon name="tablerHeart" class="sidebar__sponsor-icon" />
+      @if (!collapsed()) {
+        <span>Support this project</span>
+      }
+    </a>
+    @if (!collapsed() && currentVersion()) {
+      <a
+        class="sidebar__version"
+        [href]="'https://github.com/Cleanuparr/Cleanuparr/releases/' + currentVersion()"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        {{ currentVersion() }}
+      </a>
+      @if (hasUpdate()) {
+        <a
+          class="sidebar__update"
+          [href]="'https://github.com/Cleanuparr/Cleanuparr/releases/' + latestVersion()"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Update available: {{ latestVersion() }}
+        </a>
+      }
+    }
+  </div>
+</nav>

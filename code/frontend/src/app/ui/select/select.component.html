@@ -1,0 +1,53 @@
+@if (label()) {
+  <label class="select-label">
+    {{ label() }}
+    @if (helpKey()) {
+      <button class="field-help-btn" (click)="onHelpClick($event)" aria-label="Open documentation" tabindex="-1">
+        <ng-icon name="tablerQuestionMark" size="14" />
+      </button>
+    }
+  </label>
+}
+<div class="select-wrapper">
+  <button
+    class="select-trigger"
+    [class.select-trigger--open]="isOpen()"
+    [class.select-trigger--error]="error()"
+    [class.select-trigger--has-value]="value() != null"
+    [disabled]="disabled()"
+    type="button"
+    role="combobox"
+    [attr.aria-expanded]="isOpen()"
+    (click)="toggleDropdown()"
+    (keydown)="onKeydown($event)"
+  >
+    <span class="select-trigger__text">
+      {{ selectedLabel || placeholder() }}
+    </span>
+    <ng-icon name="tablerChevronDown" class="select-trigger__chevron" />
+  </button>
+
+  @if (isOpen()) {
+    <div class="select-dropdown" role="listbox">
+      @for (option of options(); track option.value) {
+        <button
+          class="select-option"
+          [class.select-option--selected]="option.value === value()"
+          [class.select-option--disabled]="option.disabled"
+          [disabled]="option.disabled"
+          type="button"
+          role="option"
+          [attr.aria-selected]="option.value === value()"
+          (click)="selectOption(option)"
+        >
+          {{ option.label }}
+        </button>
+      }
+    </div>
+  }
+</div>
+@if (error()) {
+  <span class="select-error">{{ error() }}</span>
+} @else if (hint()) {
+  <span class="select-hint">{{ hint() }}</span>
+}

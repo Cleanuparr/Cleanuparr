@@ -1,0 +1,23 @@
+<header class="toolbar">
+  <div class="toolbar__left">
+    <button class="toolbar__menu-btn" (click)="onToggleSidebar()" aria-label="Toggle sidebar">
+      <ng-icon [name]="sidebarCollapsed() ? 'tablerMenu2' : 'tablerLayoutSidebarLeftCollapse'" />
+    </button>
+  </div>
+
+  <div class="toolbar__right">
+    <button
+      class="toolbar__icon-btn"
+      (click)="onToggleTheme()"
+      [attr.aria-label]="theme() === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'"
+    >
+      <ng-icon [name]="theme() === 'dark' ? 'tablerSun' : 'tablerMoon'" />
+    </button>
+
+    <app-toggle
+      [label]="'Performance mode'"
+      [checked]="performanceMode()"
+      (checkedChange)="onTogglePerformanceMode()"
+    />
+  </div>
+</header>

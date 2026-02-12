@@ -1,0 +1,178 @@
+// =============================================================================
+// Animations & Transitions
+// Reusable keyframes and animation utilities.
+// All durations use CSS custom properties so performance mode works.
+// =============================================================================
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes fade-out {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(8px); filter: blur(4px); }
+  to   { opacity: 1; transform: none; filter: none; }
+}
+
+@keyframes slide-down {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(16px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes slide-out-right {
+  from { opacity: 1; transform: translateX(0); }
+  to   { opacity: 0; transform: translateX(16px); }
+}
+
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.5; }
+}
+
+// Page enter: used for route transitions (opacity-only to avoid containing blocks that break sticky)
+@keyframes page-enter {
+  from { opacity: 0; }
+}
+
+// Gentle badge pulse for live data indicators
+@keyframes badge-pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.7; }
+}
+
+// Backdrop blur fade-in for modals — blur materialises
+@keyframes backdrop-blur-in {
+  from { backdrop-filter: blur(0); -webkit-backdrop-filter: blur(0); }
+  to   { backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
+}
+
+// Modal thaw — content defrosts from blurry to clear
+@keyframes thaw-in {
+  from { opacity: 0; transform: scale(0.95); filter: blur(6px); }
+  to   { opacity: 1; transform: scale(1); filter: blur(0); }
+}
+
+// Gentle glow breathe for focused inputs — very slow, very subtle
+@keyframes glow-breathe {
+  0%, 100% { box-shadow: 0 0 0 3px var(--color-primary-subtle), 0 0 12px rgba(126, 87, 194, 0.12); }
+  50%      { box-shadow: 0 0 0 3px var(--color-primary-subtle), 0 0 16px rgba(126, 87, 194, 0.22); }
+}
+
+// Delayed content materialise — used inside expanding containers
+@keyframes content-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+// Shimmer for skeleton loading placeholders
+@keyframes shimmer {
+  0%   { background-position: -200px 0; }
+  100% { background-position: calc(200px + 100%) 0; }
+}
+
+// Ambient orb float for glassmorphism background
+@keyframes float {
+  0%   { transform: translate(0, 0) scale(1); }
+  33%  { transform: translate(30px, -30px) scale(1.05); }
+  66%  { transform: translate(-20px, 20px) scale(0.95); }
+  100% { transform: translate(10px, -10px) scale(1.02); }
+}
+
+// Slow hue rotation for ambient orbs — barely noticeable color drift
+@keyframes hue-drift {
+  0%   { filter: blur(var(--orb-blur, 120px)) hue-rotate(0deg); }
+  50%  { filter: blur(var(--orb-blur, 120px)) hue-rotate(-35deg); }
+  100% { filter: blur(var(--orb-blur, 120px)) hue-rotate(0deg); }
+}
+
+// Toast entrance glow
+@keyframes toast-glow {
+  from { box-shadow: 0 0 20px var(--toast-glow-color, rgba(126, 87, 194, 0.3)); }
+  to   { box-shadow: none; }
+}
+
+// One-shot focus ring pulse — draws attention to newly focused element
+@keyframes focus-ring-pulse {
+  0%   { outline-offset: 2px; }
+  50%  { outline-offset: 4px; }
+  100% { outline-offset: 2px; }
+}
+
+// Gentle floating motion for decorative elements
+@keyframes float-gentle {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-6px); }
+}
+
+// Performance mode: disable decorative animations and transitions
+// Functional indicators ([role="status"] spinners) are exempted
+:root[data-performance-mode='true'],
+:root[data-performance-mode='true'] *:not([role='status']):not([role='status'] *) {
+  --glass-blur: 0px;
+  --glass-blur-sm: 0px;
+  --glass-blur-lg: 0px;
+  --glass-shadow: none;
+  --duration-fast: 0ms;
+  --duration-normal: 0ms;
+  --duration-slow: 0ms;
+  animation-duration: 0ms !important;
+  animation-delay: 0ms !important;
+  transition-duration: 0ms !important;
+  transition-delay: 0ms !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+:root[data-performance-mode='true'] .shell__main::before,
+:root[data-performance-mode='true'] .shell__main::after,
+:root[data-performance-mode='true'] .shell::after {
+  display: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --glass-blur: 0px;
+    --glass-blur-sm: 0px;
+    --glass-blur-lg: 0px;
+    --glass-shadow: none;
+    --duration-fast: 0ms;
+    --duration-normal: 0ms;
+    --duration-slow: 0ms;
+  }
+
+  *:not([role='status']):not([role='status'] *),
+  *:not([role='status']):not([role='status'] *)::before,
+  *:not([role='status']):not([role='status'] *)::after {
+    animation-duration: 0ms !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0ms !important;
+    transition-delay: 0ms !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  .shell__main::before,
+  .shell__main::after,
+  .shell::after {
+    display: none !important;
+  }
+}

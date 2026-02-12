@@ -1,0 +1,27 @@
+@keyframes spinner-rotate {
+  to { transform: rotate(360deg); }
+}
+
+.spinner {
+  display: inline-flex;
+  color: var(--color-primary);
+
+  svg {
+    animation: spinner-rotate 0.75s linear infinite;
+  }
+
+  &--sm svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  &--md svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  &--lg svg {
+    width: 40px;
+    height: 40px;
+  }
+}

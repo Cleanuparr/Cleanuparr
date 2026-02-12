@@ -1,13 +1,4 @@
-export enum TorrentPrivacyType {
-  Public = "Public",
-  Private = "Private",
-  Both = "Both"
-}
-
-export interface PrivacyTypeOption {
-  label: string;
-  value: TorrentPrivacyType;
-}
+import { TorrentPrivacyType } from './enums';
 
 export interface QueueRule {
   id?: string;
@@ -32,10 +23,8 @@ export interface SlowRule extends QueueRule {
   ignoreAboveSize?: string;
 }
 
-// DTO interfaces for API operations
 export interface CreateStallRuleDto {
   name: string;
-  description?: string;
   enabled: boolean;
   maxStrikes: number;
   privacyType: TorrentPrivacyType;
@@ -46,13 +35,8 @@ export interface CreateStallRuleDto {
   minimumProgress?: string | null;
 }
 
-export interface UpdateStallRuleDto extends CreateStallRuleDto {
-  id: string;
-}
-
 export interface CreateSlowRuleDto {
   name: string;
-  description?: string;
   enabled: boolean;
   maxStrikes: number;
   privacyType: TorrentPrivacyType;
@@ -63,8 +47,4 @@ export interface CreateSlowRuleDto {
   maxTimeHours: number;
   ignoreAboveSize?: string;
   deletePrivateTorrentsFromClient: boolean;
-}
-
-export interface UpdateSlowRuleDto extends CreateSlowRuleDto {
-  id: string;
 }

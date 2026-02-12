@@ -1,30 +1,16 @@
-// Import the rule types
+import { PatternMode, ScheduleUnit } from './enums';
 import { StallRule, SlowRule } from './queue-rule.model';
-
-export enum ScheduleUnit {
-  Seconds = 'Seconds',
-  Minutes = 'Minutes',
-  Hours = 'Hours'
-}
-
-export enum PatternMode {
-  Exclude = 'Exclude',
-  Include = 'Include'
-}
-
-/**
- * Valid values for each schedule unit
- */
-export const ScheduleOptions = {
-  [ScheduleUnit.Seconds]: [30],
-  [ScheduleUnit.Minutes]: [1, 2, 3, 4, 5, 6, 10, 12, 15, 20, 30],
-  [ScheduleUnit.Hours]: [1, 2, 3, 4, 6]
-};
 
 export interface JobSchedule {
   every: number;
   type: ScheduleUnit;
 }
+
+export const ScheduleOptions: Record<ScheduleUnit, number[]> = {
+  [ScheduleUnit.Seconds]: [30],
+  [ScheduleUnit.Minutes]: [1, 2, 3, 4, 5, 6, 10, 12, 15, 20, 30],
+  [ScheduleUnit.Hours]: [1, 2, 3, 4, 6],
+};
 
 export interface FailedImportConfig {
   maxStrikes: number;
@@ -39,12 +25,10 @@ export interface QueueCleanerConfig {
   enabled: boolean;
   cronExpression: string;
   useAdvancedScheduling: boolean;
-  jobSchedule?: JobSchedule; // UI-only field, not sent to API
+  jobSchedule?: JobSchedule;
   ignoredDownloads: string[];
   failedImport: FailedImportConfig;
   downloadingMetadataMaxStrikes: number;
-  
-  // Queue Rules
   stallRules?: StallRule[];
   slowRules?: SlowRule[];
 }

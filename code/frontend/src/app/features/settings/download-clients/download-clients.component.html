@@ -1,0 +1,94 @@
+<app-page-header
+  title="Download Clients"
+  subtitle="Manage download client connections"
+/>
+
+@if (loadError()) {
+  <app-empty-state
+    icon="tablerPlugConnectedX"
+    heading="Could not connect to server"
+    description="Failed to load settings. Please check that the server is running and try again."
+  >
+    <app-button variant="primary" size="sm" (clicked)="retry()">
+      Retry
+    </app-button>
+  </app-empty-state>
+} @else if (loader.showSpinner()) {
+  <app-loading-state message="Loading settings..." />
+} @else if (!loader.loading()) {
+<div class="settings-form">
+  <app-card>
+    <div class="list-header">
+      <h3 class="list-header__title">Clients</h3>
+      <app-button variant="primary" size="sm" (clicked)="openAddModal()">
+        Add Client
+      </app-button>
+    </div>
+
+    @for (client of clients(); track client.id) {
+      <div class="item-row">
+        <div class="item-row__info">
+          <span class="item-row__name">{{ client.name }}</span>
+          <app-badge [severity]="client.enabled ? 'success' : 'default'" size="sm">
+            {{ client.enabled ? 'Enabled' : 'Disabled' }}
+          </app-badge>
+          <app-badge severity="primary" size="sm">{{ client.typeName }}</app-badge>
+          <span class="item-row__detail">{{ client.host }}</span>
+        </div>
+        <div class="item-row__actions">
+          <app-button variant="ghost" size="sm" (clicked)="openEditModal(client)">Edit</app-button>
+          <app-button variant="destructive" size="sm" (clicked)="deleteClient(client)">Delete</app-button>
+        </div>
+      </div>
+    } @empty {
+      <app-empty-state
+        heading="No download clients"
+        description="Add a download client to enable cleanup features."
+      />
+    }
+  </app-card>
+</div>
+}
+
+<!-- Add/Edit Modal -->
+<app-modal
+  [title]="editingClient() ? 'Edit Client' : 'Add Client'"
+  [(visible)]="modalVisible"
+>
+  <div class="modal-form">
+    <app-toggle label="Enabled" [(checked)]="modalEnabled"
+      hint="Enable or disable this client"
+      helpKey="download-client:enabled" />
+    <app-input label="Name" placeholder="My qBittorrent" [(value)]="modalName"
+      hint="A unique name to identify this client"
+      [error]="modalNameError()"
+      helpKey="download-client:name" />
+    <app-select label="Client Type" [options]="typeOptions" [value]="modalTypeName()"
+      (valueChange)="onClientTypeChange($event)"
+      hint="The type of download client"
+      helpKey="download-client:typeName" />
+    <app-input label="Host" placeholder="http://localhost:8080" [(value)]="modalHost"
+      hint="Full URL including protocol and port (e.g., http://localhost:8080)"
+      [error]="modalHostError()"
+      helpKey="download-client:host" />
+    @if (showUsernameField()) {
+      <app-input label="Username" placeholder="admin" [(value)]="modalUsername"
+        hint="Username for authentication"
+        helpKey="download-client:username" />
+    }
+    <app-input label="Password" placeholder="Enter password" type="password" [(value)]="modalPassword"
+      hint="Password for authentication"
+      helpKey="download-client:password" />
+    <app-input label="URL Base" placeholder="/api/v2" [(value)]="modalUrlBase"
+      hint="Optional URL base path, leave blank for default"
+      helpKey="download-client:urlBase" />
+  </div>
+  <div modal-footer>
+    <app-button variant="secondary" size="sm" [loading]="testing()" (clicked)="testConnection()">
+      Test
+    </app-button>
+    <app-button variant="primary" size="sm" [loading]="saving()" [disabled]="hasModalErrors()" (clicked)="saveClient()">
+      Save
+    </app-button>
+  </div>
+</app-modal>

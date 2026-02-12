@@ -1,0 +1,229 @@
+<app-page-header
+  title="Dashboard"
+  subtitle="Overview of your Cleanuparr instance"
+/>
+
+<!-- Action Required Banner -->
+@if (currentManualEvent(); as event) {
+  <div class="manual-event" [class]="manualEventSeverityClass(event.severity)">
+    <div class="manual-event__header">
+      <ng-icon name="tablerBellRinging" class="manual-event__icon" />
+      <span class="manual-event__title">Action Required</span>
+      <app-badge [severity]="eventSeverity(event.severity)" size="sm">
+        {{ event.severity }}
+      </app-badge>
+    </div>
+    <p class="manual-event__message" [innerHTML]="processManualEventMessage(event.message)"></p>
+    @if (event.data) {
+      <details class="manual-event__details">
+        <summary class="manual-event__details-toggle">Event Details</summary>
+        <pre class="manual-event__details-content">{{ parseEventData(event.data) | json }}</pre>
+      </details>
+    }
+    <div class="manual-event__meta">
+      <span class="manual-event__time">{{ event.timestamp | date:'short' }}</span>
+      @if (unresolvedManualEvents().length > 1) {
+        <span class="manual-event__counter">
+          {{ manualEventIndex() + 1 }} of {{ unresolvedManualEvents().length }}
+        </span>
+      }
+    </div>
+    <div class="manual-event__actions">
+      @if (unresolvedManualEvents().length > 1) {
+        <app-button variant="ghost" size="sm" [disabled]="!canNavigatePrev()" (clicked)="prevManualEvent()">
+          Previous
+        </app-button>
+        <app-button variant="ghost" size="sm" [disabled]="!canNavigateNext()" (clicked)="nextManualEvent()">
+          Next
+        </app-button>
+      }
+      <app-button variant="primary" size="sm" (clicked)="dismissManualEvent(event)">
+        Dismiss
+      </app-button>
+    </div>
+  </div>
+}
+
+<!-- Support Section -->
+@if (showSupportSection()) {
+  <div class="support-section">
+    <a
+      class="support-section__link"
+      href="https://github.com/Cleanuparr/Cleanuparr"
+      target="_blank"
+      rel="noopener noreferrer"
+    >
+      <ng-icon name="tablerBrandGithub" class="support-section__icon" />
+      <div class="support-section__text">
+        <span class="support-section__title">Star on GitHub</span>
+        <span class="support-section__desc">Support development &amp; features</span>
+      </div>
+    </a>
+    <a
+      class="support-section__link"
+      href="https://discord.gg/SCtMCgtsc4"
+      target="_blank"
+      rel="noopener noreferrer"
+    >
+      <ng-icon name="tablerBrandDiscord" class="support-section__icon" />
+      <div class="support-section__text">
+        <span class="support-section__title">Join Discord</span>
+        <span class="support-section__desc">Get help and share feedback</span>
+      </div>
+    </a>
+    <a
+      class="support-section__link"
+      href="https://cleanuparr.github.io/Cleanuparr/support"
+      target="_blank"
+      rel="noopener noreferrer"
+    >
+      <ng-icon name="tablerHeart" class="support-section__icon support-section__icon--heart" />
+      <div class="support-section__text">
+        <span class="support-section__title">Donate</span>
+        <span class="support-section__desc">Thank you for your support!</span>
+      </div>
+    </a>
+  </div>
+}
+
+<div class="dashboard-grid">
+  <!-- Recent Logs -->
+  <app-card [noPadding]="true">
+    <div class="card-inner">
+      <div class="card-header">
+        <div class="card-header__left">
+          <h3 class="card-header__title">Recent Logs</h3>
+          <app-badge [severity]="connected() ? 'success' : 'error'" size="sm" [rounded]="true" [class.badge--live]="connected()">
+            {{ connected() ? 'Connected' : 'Disconnected' }}
+          </app-badge>
+        </div>
+        <a class="card-header__link" routerLink="/logs">View All</a>
+      </div>
+      <div class="timeline">
+        <span class="timeline__direction">
+          <ng-icon name="tablerArrowDown" class="timeline__direction-icon" />
+          Newest first
+        </span>
+        @for (log of recentLogs(); track $index) {
+          <div class="timeline__item">
+            <div class="timeline__marker" [class]="'timeline__marker--' + logSeverity(log.level)">
+              <ng-icon [name]="logIcon(log.level)" />
+            </div>
+            <div class="timeline__content">
+              <div class="timeline__row">
+                <app-badge [severity]="logBadgeSeverity(log.level)" size="sm">
+                  {{ logLevelLabel(log.level) }}
+                </app-badge>
+                @if (log.category) {
+                  <span class="timeline__category">{{ log.category }}</span>
+                }
+                <span class="timeline__time">{{ log.timestamp | date:'yyyy-MM-dd HH:mm:ss' }}</span>
+              </div>
+              <p class="timeline__message">{{ truncate(log.message) }}</p>
+            </div>
+          </div>
+        } @empty {
+          <div class="timeline__empty">
+            @if (!connected()) {
+              <app-spinner size="sm" />
+              <span>Connecting...</span>
+            } @else {
+              <span>No recent logs</span>
+            }
+          </div>
+        }
+      </div>
+    </div>
+  </app-card>
+
+  <!-- Recent Events -->
+  <app-card [noPadding]="true">
+    <div class="card-inner">
+      <div class="card-header">
+        <div class="card-header__left">
+          <h3 class="card-header__title">Recent Events</h3>
+          <app-badge [severity]="connected() ? 'success' : 'error'" size="sm" [rounded]="true" [class.badge--live]="connected()">
+            {{ connected() ? 'Connected' : 'Disconnected' }}
+          </app-badge>
+        </div>
+        <a class="card-header__link" routerLink="/events">View All</a>
+      </div>
+      <div class="timeline">
+        <span class="timeline__direction">
+          <ng-icon name="tablerArrowDown" class="timeline__direction-icon" />
+          Newest first
+        </span>
+        @for (event of recentEvents(); track $index) {
+          <div class="timeline__item">
+            <div class="timeline__marker" [class]="'timeline__marker--' + eventMarkerClass(event.eventType, event.severity)">
+              <ng-icon [name]="eventIcon(event.eventType)" />
+            </div>
+            <div class="timeline__content">
+              <div class="timeline__row">
+                <app-badge [severity]="eventSeverity(event.severity)" size="sm">
+                  {{ event.severity }}
+                </app-badge>
+                <app-badge severity="default" size="sm">
+                  {{ formatEventType(event.eventType) }}
+                </app-badge>
+                <span class="timeline__time">{{ event.timestamp | date:'yyyy-MM-dd HH:mm:ss' }}</span>
+              </div>
+              <p class="timeline__message">{{ truncate(event.message) }}</p>
+              @if (getDownloadName(event); as name) {
+                <p class="timeline__download-name">{{ name }}</p>
+              }
+            </div>
+          </div>
+        } @empty {
+          <div class="timeline__empty">
+            @if (!connected()) {
+              <app-spinner size="sm" />
+              <span>Connecting...</span>
+            } @else {
+              <span>No recent events</span>
+            }
+          </div>
+        }
+      </div>
+    </div>
+  </app-card>
+
+  <!-- Jobs -->
+  <app-card [noPadding]="true" class="dashboard-grid__jobs">
+    <div class="card-inner">
+      <div class="card-header">
+        <h3 class="card-header__title">Jobs</h3>
+      </div>
+      <div class="jobs-table">
+        @for (job of jobs(); track job.jobType) {
+          <div class="jobs-table__row" [class.jobs-table__row--running]="job.status === 'Running'">
+            <div class="jobs-table__info">
+              <span class="jobs-table__name">{{ jobDisplayName(job.jobType) }}</span>
+              <app-badge [severity]="jobStatusSeverity(job.status)" size="sm">
+                {{ job.status }}
+              </app-badge>
+            </div>
+            <div class="jobs-table__details">
+              @if (job.nextRunTime) {
+                <span class="jobs-table__next">Next: {{ job.nextRunTime | date:'shortTime' }}</span>
+              }
+              <span class="jobs-table__schedule">{{ job.schedule }}</span>
+            </div>
+            <app-button variant="ghost" size="sm" (clicked)="triggerJob(job.jobType)">
+              Run Now
+            </app-button>
+          </div>
+        } @empty {
+          <div class="jobs-table__empty">
+            @if (!connected()) {
+              <app-spinner size="sm" />
+              <span>Connecting...</span>
+            } @else {
+              <span>No jobs configured</span>
+            }
+          </div>
+        }
+      </div>
+    </div>
+  </app-card>
+</div>

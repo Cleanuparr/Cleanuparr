@@ -1,0 +1,34 @@
+@use 'settings-layout' as *;
+
+:host { @include settings-page; }
+
+.settings-form { @include settings-form; }
+.form-stack { @include form-stack; }
+.form-row { @include form-row; }
+.form-divider { @include form-divider; }
+.form-actions { @include form-actions; }
+
+.category-row {
+  padding: var(--space-4) 0;
+
+  &:not(:last-of-type) {
+    border-bottom: 1px solid var(--divider);
+  }
+
+  &__header {
+    display: flex;
+    align-items: flex-end;
+    gap: var(--space-3);
+    margin-bottom: var(--space-4);
+
+    app-input {
+      flex: 1;
+    }
+  }
+}
+
+.category-error {
+  font-size: var(--font-size-xs);
+  color: var(--color-error);
+  margin-bottom: var(--space-3);
+}

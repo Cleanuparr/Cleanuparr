@@ -1,0 +1,35 @@
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-12) var(--space-6);
+  text-align: center;
+
+  &__icon {
+    font-size: 48px;
+    color: var(--text-tertiary);
+    margin-bottom: var(--space-4);
+    animation: float-gentle 3s ease-in-out infinite;
+  }
+
+  &__heading {
+    font-size: var(--font-size-lg);
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: var(--space-2);
+  }
+
+  &__description {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+    max-width: 360px;
+    line-height: 1.5;
+  }
+
+  &__actions {
+    margin-top: var(--space-6);
+    display: flex;
+    gap: var(--space-3);
+  }
+}

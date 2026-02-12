@@ -1,0 +1,7 @@
+<span
+  class="badge"
+  [class]="'badge badge--' + severity() + ' badge--' + size()"
+  [class.badge--rounded]="rounded()"
+>
+  <ng-content />
+</span>

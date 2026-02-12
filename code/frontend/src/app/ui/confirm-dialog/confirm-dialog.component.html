@@ -1,0 +1,31 @@
+@if (confirm.state(); as state) {
+  <div class="confirm-backdrop" (click)="confirm.cancel()">
+    <div
+      class="confirm"
+      (click)="$event.stopPropagation()"
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby="confirm-title"
+      aria-describedby="confirm-message"
+    >
+      <div class="confirm__header">
+        <h2 id="confirm-title" class="confirm__title">{{ state.title ?? 'Confirm' }}</h2>
+      </div>
+      <div class="confirm__body">
+        <p id="confirm-message" class="confirm__message">{{ state.message }}</p>
+      </div>
+      <div class="confirm__footer">
+        <app-button variant="ghost" size="sm" (clicked)="confirm.cancel()">
+          {{ state.cancelLabel ?? 'Cancel' }}
+        </app-button>
+        <app-button
+          [variant]="state.destructive ? 'destructive' : 'primary'"
+          size="sm"
+          (clicked)="confirm.accept()"
+        >
+          {{ state.confirmLabel ?? 'Confirm' }}
+        </app-button>
+      </div>
+    </div>
+  </div>
+}

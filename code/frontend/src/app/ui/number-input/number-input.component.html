@@ -1,0 +1,47 @@
+@if (label()) {
+  <label class="number-label">
+    {{ label() }}
+    @if (helpKey()) {
+      <button class="field-help-btn" (click)="onHelpClick($event)" aria-label="Open documentation" tabindex="-1">
+        <ng-icon name="tablerQuestionMark" size="14" />
+      </button>
+    }
+  </label>
+}
+<div class="number-wrapper">
+  <button
+    class="number-btn"
+    type="button"
+    [disabled]="disabled()"
+    (click)="decrement()"
+    aria-label="Decrease"
+  >−</button>
+  <input
+    class="number-field"
+    [class.number-field--error]="error()"
+    type="number"
+    [placeholder]="placeholder()"
+    [disabled]="disabled()"
+    [min]="min()"
+    [max]="max()"
+    [step]="step()"
+    [value]="value()"
+    (input)="onInput($event)"
+    (blur)="blurred.emit($event)"
+  />
+  @if (suffix()) {
+    <span class="number-suffix">{{ suffix() }}</span>
+  }
+  <button
+    class="number-btn"
+    type="button"
+    [disabled]="disabled()"
+    (click)="increment()"
+    aria-label="Increase"
+  >+</button>
+</div>
+@if (error()) {
+  <span class="number-error">{{ error() }}</span>
+} @else if (hint()) {
+  <span class="number-hint">{{ hint() }}</span>
+}

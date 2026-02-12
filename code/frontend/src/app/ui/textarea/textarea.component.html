@@ -1,0 +1,25 @@
+@if (label()) {
+  <label class="textarea-label">
+    {{ label() }}
+    @if (helpKey()) {
+      <button class="field-help-btn" (click)="onHelpClick($event)" aria-label="Open documentation" tabindex="-1">
+        <ng-icon name="tablerQuestionMark" size="14" />
+      </button>
+    }
+  </label>
+}
+<textarea
+  class="textarea-field"
+  [class.textarea-field--error]="error()"
+  [placeholder]="placeholder()"
+  [disabled]="disabled()"
+  [readOnly]="readonly()"
+  [rows]="rows()"
+  [(ngModel)]="value"
+  (blur)="blurred.emit($event)"
+></textarea>
+@if (error()) {
+  <span class="textarea-error">{{ error() }}</span>
+} @else if (hint()) {
+  <span class="textarea-hint">{{ hint() }}</span>
+}

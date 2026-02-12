@@ -1,0 +1,69 @@
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: var(--toolbar-height);
+  padding: 0 var(--space-4);
+  background: var(--toolbar-bg);
+  backdrop-filter: blur(var(--glass-blur-sm));
+  -webkit-backdrop-filter: blur(var(--glass-blur-sm));
+  border-bottom: 1px solid var(--toolbar-border);
+  border-image: linear-gradient(90deg, transparent, var(--glass-border), transparent) 1;
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+
+  // Shine line at bottom edge
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(126, 87, 194, 0.3), transparent);
+    pointer-events: none;
+  }
+
+  &__left {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+  }
+
+  &__right {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+  }
+
+  &__menu-btn,
+  &__icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-lg);
+    color: var(--text-secondary);
+    transition: all var(--duration-fast) var(--ease-default);
+    background: none;
+    border: none;
+    cursor: pointer;
+
+    &:hover {
+      background: var(--glass-bg);
+      color: var(--text-primary);
+      box-shadow: 0 0 12px rgba(126, 87, 194, 0.15);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--focus-ring);
+      outline-offset: 2px;
+    }
+
+    ng-icon {
+      font-size: 20px;
+    }
+  }
+}

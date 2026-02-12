@@ -1,0 +1,151 @@
+@use 'glass' as *;
+
+@keyframes fire-glow {
+  0%, 100% {
+    box-shadow:
+      0 0 14px rgba(255, 180, 0, 0.5),
+      0 0 28px rgba(255, 120, 0, 0.3),
+      0 0 0 1px rgba(255, 180, 0, 0.2);
+  }
+  50% {
+    box-shadow:
+      0 0 24px rgba(255, 200, 30, 0.7),
+      0 0 48px rgba(255, 140, 0, 0.45),
+      0 0 0 1px rgba(255, 200, 30, 0.35);
+  }
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  font-family: var(--font-family);
+  font-weight: 500;
+  border-radius: var(--radius-lg);
+  transition: all var(--duration-fast) var(--ease-default);
+  position: relative;
+  white-space: nowrap;
+  user-select: none;
+
+  @include glass-focus;
+
+  // Press effect
+  &:active:not(:disabled) {
+    transform: scale(0.97);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  // Sizes
+  &--sm {
+    height: 32px;
+    padding: 0 var(--space-3);
+    font-size: var(--font-size-xs);
+  }
+
+  &--md {
+    height: 38px;
+    padding: 0 var(--space-4);
+    font-size: var(--font-size-sm);
+  }
+
+  &--lg {
+    height: 44px;
+    padding: 0 var(--space-6);
+    font-size: var(--font-size-base);
+  }
+
+  &--icon {
+    height: 38px;
+    width: 38px;
+    padding: 0;
+  }
+
+  // Variants
+  &--primary {
+    background: var(--color-primary);
+    color: var(--color-primary-text);
+    border: 1px solid transparent;
+    box-shadow: 0 0 20px rgba(126, 87, 194, 0.3),
+                0 4px 12px rgba(126, 87, 194, 0.2);
+
+    &:hover:not(:disabled) {
+      background: var(--color-primary-hover);
+      box-shadow: 0 0 30px rgba(126, 87, 194, 0.4),
+                  0 6px 16px rgba(126, 87, 194, 0.3);
+    }
+
+    &:active:not(:disabled) {
+      background: var(--color-primary-active);
+    }
+  }
+
+  &--secondary {
+    @include glass('subtle');
+    color: var(--text-primary);
+
+    &:hover:not(:disabled) {
+      background: var(--glass-bg-hover);
+      border-color: var(--glass-border-hover);
+    }
+
+    &:active:not(:disabled) {
+      background: var(--glass-bg-active);
+    }
+  }
+
+  &--ghost {
+    background: transparent;
+    color: var(--text-secondary);
+    border: 1px solid transparent;
+
+    &:hover:not(:disabled) {
+      background: var(--glass-bg);
+      color: var(--text-primary);
+    }
+
+    &:active:not(:disabled) {
+      background: var(--glass-bg-hover);
+    }
+  }
+
+  &--destructive {
+    background: var(--color-error);
+    color: var(--color-primary-text);
+    border: 1px solid transparent;
+
+    &:hover:not(:disabled) {
+      background: var(--color-error-dim);
+    }
+  }
+
+  // Fire glow for dirty state — breathing amber/orange pulse
+  &--glowing:not(:disabled) {
+    animation: fire-glow 2s ease-in-out infinite;
+  }
+
+  // Loading state
+  &__spinner {
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    border: 2px solid currentColor;
+    border-top-color: transparent;
+    border-radius: var(--radius-full);
+    animation: spin var(--duration-slow) linear infinite;
+  }
+
+  &__content {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+
+    &--hidden {
+      visibility: hidden;
+    }
+  }
+}

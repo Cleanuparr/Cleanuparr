@@ -1,0 +1,71 @@
+@use 'glass' as *;
+
+:host {
+  display: block;
+}
+
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  cursor: pointer;
+
+  &--disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  &__track {
+    position: relative;
+    width: 44px;
+    height: 24px;
+    flex-shrink: 0;
+    background: linear-gradient(135deg, var(--brand-500), var(--brand-400)) no-repeat left center;
+    background-size: 0% 100%;
+    background-color: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-full);
+    transition: background-size 250ms cubic-bezier(0.34, 1.56, 0.64, 1),
+                border-color var(--duration-fast) var(--ease-default);
+    padding: 0;
+
+    @include glass-focus;
+
+    &--checked {
+      background-size: 100% 100%;
+      border-color: var(--brand-500);
+
+      .toggle__thumb {
+        transform: translateX(20px);
+      }
+    }
+
+    &:hover:not(:disabled) {
+      border-color: var(--glass-border-hover);
+    }
+  }
+
+  &__thumb {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 18px;
+    height: 18px;
+    background: var(--text-primary);
+    border-radius: var(--radius-full);
+    transition: transform 200ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  &__label {
+    font-size: var(--font-size-sm);
+    color: var(--text-primary);
+    user-select: none;
+  }
+
+  &__hint {
+    display: block;
+    font-size: var(--font-size-xs);
+    color: var(--text-tertiary);
+    margin-top: var(--space-1);
+  }
+}
