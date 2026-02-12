@@ -80,11 +80,11 @@
               hint="Maximum ratio to seed before removing (-1 means disabled)"
               helpKey="download-cleaner:maxRatio" />
             <app-number-input label="Min Seed Time" [value]="cat.minSeedTime"
-              (valueChange)="updateCategory(i, 'minSeedTime', $event)" suffix="min" [min]="0"
+              (valueChange)="updateCategory(i, 'minSeedTime', $event)" suffix="hours" [min]="0"
               hint="Minimum time to seed before removing a download that has reached the max ratio (0 means disabled)"
               helpKey="download-cleaner:minSeedTime" />
             <app-number-input label="Max Seed Time" [value]="cat.maxSeedTime"
-              (valueChange)="updateCategory(i, 'maxSeedTime', $event)" suffix="min" [min]="-1"
+              (valueChange)="updateCategory(i, 'maxSeedTime', $event)" suffix="hours" [min]="-1"
               hint="Maximum time to seed before removing (-1 means disabled)"
               helpKey="download-cleaner:maxSeedTime" />
           </div>
