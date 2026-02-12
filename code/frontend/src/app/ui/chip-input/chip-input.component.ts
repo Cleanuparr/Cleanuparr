@@ -31,7 +31,7 @@ export class ChipInputComponent {
 
   readonly uncommittedError = computed(() => {
     if (this.hasUncommittedInput() && (this.touched() || this.inputValue().length > 0)) {
-      return 'Press Enter to add this item';
+      return 'Press Enter or the + button to add this item';
     }
     return undefined;
   });
@@ -43,6 +43,13 @@ export class ChipInputComponent {
       this.addItem(val);
     } else if (event.key === 'Backspace' && !this.inputValue()) {
       this.removeLastItem();
+    }
+  }
+
+  commitInput(): void {
+    const val = this.inputValue().trim();
+    if (val) {
+      this.addItem(val);
     }
   }
 

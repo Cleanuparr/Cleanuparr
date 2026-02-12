@@ -19,12 +19,16 @@
   }
   <input
     class="chip-input"
+    enterkeyhint="enter"
     [placeholder]="items().length === 0 ? placeholder() : ''"
     [disabled]="disabled()"
     [(ngModel)]="inputValue"
     (keydown)="onKeydown($event)"
     (blur)="onBlur()"
   />
+  @if (hasUncommittedInput()) {
+    <button class="chip-add" type="button" (click)="commitInput()" aria-label="Add item">+</button>
+  }
 </div>
 @if (error()) {
   <span class="chip-error">{{ error() }}</span>
