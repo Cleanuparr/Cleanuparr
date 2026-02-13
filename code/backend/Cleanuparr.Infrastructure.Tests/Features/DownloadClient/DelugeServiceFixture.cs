@@ -6,9 +6,7 @@ using Cleanuparr.Infrastructure.Features.MalwareBlocker;
 using Cleanuparr.Infrastructure.Http;
 using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Infrastructure.Services.Interfaces;
-using Cleanuparr.Infrastructure.Tests.Features.DownloadClient.TestHelpers;
 using Cleanuparr.Persistence.Models.Configuration;
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Moq;
 
@@ -23,7 +21,7 @@ public class DelugeServiceFixture : IDisposable
     public Mock<IHardLinkFileService> HardLinkFileService { get; }
     public Mock<IDynamicHttpClientProvider> HttpClientProvider { get; }
     public Mock<IEventPublisher> EventPublisher { get; }
-    public BlocklistProvider BlocklistProvider { get; }
+    public Mock<IBlocklistProvider> BlocklistProvider { get; }
     public Mock<IRuleEvaluator> RuleEvaluator { get; }
     public Mock<IRuleManager> RuleManager { get; }
     public Mock<IDelugeClientWrapper> ClientWrapper { get; }
@@ -37,7 +35,7 @@ public class DelugeServiceFixture : IDisposable
         HardLinkFileService = new Mock<IHardLinkFileService>();
         HttpClientProvider = new Mock<IDynamicHttpClientProvider>();
         EventPublisher = new Mock<IEventPublisher>();
-        BlocklistProvider = TestBlocklistProviderFactory.Create();
+        BlocklistProvider = new Mock<IBlocklistProvider>();
         RuleEvaluator = new Mock<IRuleEvaluator>();
         RuleManager = new Mock<IRuleManager>();
         ClientWrapper = new Mock<IDelugeClientWrapper>();
@@ -78,7 +76,7 @@ public class DelugeServiceFixture : IDisposable
             HardLinkFileService.Object,
             HttpClientProvider.Object,
             EventPublisher.Object,
-            BlocklistProvider,
+            BlocklistProvider.Object,
             config,
             RuleEvaluator.Object,
             RuleManager.Object,
