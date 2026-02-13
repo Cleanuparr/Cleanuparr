@@ -33,9 +33,20 @@ public class EventsController : ControllerBase
         [FromQuery] string? jobRunId = null)
     {
         // Validate pagination parameters
-        if (page < 1) page = 1;
-        if (pageSize < 1) pageSize = 100;
-        if (pageSize > 1000) pageSize = 1000; // Cap at 1000 for performance
+        if (page < 1)
+        {
+            page = 1;
+        }
+
+        if (pageSize < 1)
+        {
+            pageSize = 100;
+        }
+        
+        if (pageSize > 1000)
+        {
+            pageSize = 1000; // Cap at 1000 for performance
+        }
         
         var query = _context.Events.AsQueryable();
 
@@ -64,10 +75,9 @@ public class EventsController : ControllerBase
         }
 
         // Apply job run ID exact-match filter
-        if (!string.IsNullOrWhiteSpace(jobRunId))
+        if (!string.IsNullOrWhiteSpace(jobRunId) && Guid.TryParse(jobRunId, out var jobRunGuid))
         {
-            if (Guid.TryParse(jobRunId, out var jobRunGuid))
-                query = query.Where(e => e.JobRunId == jobRunGuid);
+            query = query.Where(e => e.JobRunId == jobRunGuid);
         }
 
         // Apply search filter if provided
