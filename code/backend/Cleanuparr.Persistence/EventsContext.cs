@@ -58,6 +58,11 @@ public class EventsContext : DbContext
         {
             entity.Property(e => e.Timestamp)
                 .HasConversion(new UtcDateTimeConverter());
+
+            entity.HasOne(e => e.Strike)
+                .WithMany()
+                .HasForeignKey(e => e.StrikeId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
 
         modelBuilder.Entity<Strike>(entity =>
