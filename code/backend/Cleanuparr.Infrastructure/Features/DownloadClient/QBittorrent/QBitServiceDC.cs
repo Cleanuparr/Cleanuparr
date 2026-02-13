@@ -120,8 +120,6 @@ public partial class QBitService
                 }
 
                 string filePath = string.Join(Path.DirectorySeparatorChar, Path.Combine(torrent.Info.SavePath, file.Name).Split(['\\', '/']));
-                filePath = filePath.Replace("/downloads",
-                    "/Users/marius/workspace/projects/cleanuparr-test/data/qbittorrent/downloads");
 
                 if (file.Priority is TorrentContentPriority.Skip)
                 {
