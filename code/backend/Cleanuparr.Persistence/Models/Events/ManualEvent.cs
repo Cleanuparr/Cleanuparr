@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Persistence.Models.State;
 using Microsoft.EntityFrameworkCore;
@@ -34,6 +35,7 @@ public class ManualEvent
 
     public Guid? JobRunId { get; set; }
 
+    [JsonIgnore]
     public JobRun? JobRun { get; set; }
 
     /// <summary>

@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cleanuparr.Persistence.Models.State;
@@ -17,5 +18,6 @@ public class DownloadItem
     [MaxLength(500)]
     public required string Title { get; set; }
 
+    [JsonIgnore]
     public List<Strike> Strikes { get; set; } = [];
 }

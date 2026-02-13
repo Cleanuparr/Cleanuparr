@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Persistence.Models.Events;
 using Microsoft.EntityFrameworkCore;
@@ -21,9 +22,12 @@ public class JobRun
 
     public JobRunStatus? Status { get; set; }
 
+    [JsonIgnore]
     public List<Strike> Strikes { get; set; } = [];
 
+    [JsonIgnore]
     public List<AppEvent> Events { get; set; } = [];
 
+    [JsonIgnore]
     public List<ManualEvent> ManualEvents { get; set; } = [];
 }

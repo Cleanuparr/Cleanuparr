@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 using Cleanuparr.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 
@@ -15,11 +16,13 @@ public class Strike
     [Required]
     public Guid DownloadItemId { get; set; }
 
+    [JsonIgnore]
     public DownloadItem DownloadItem { get; set; } = null!;
 
     [Required]
     public Guid JobRunId { get; set; }
 
+    [JsonIgnore]
     public JobRun JobRun { get; set; } = null!;
 
     [Required]
