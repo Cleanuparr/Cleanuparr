@@ -4,11 +4,11 @@ namespace Cleanuparr.Infrastructure.Events.Interfaces;
 
 public interface IEventPublisher
 {
-    Task PublishAsync(EventType eventType, string message, EventSeverity severity, object? data = null, Guid? trackingId = null);
+    Task PublishAsync(EventType eventType, string message, EventSeverity severity, object? data = null, Guid? trackingId = null, Guid? strikeId = null);
 
     Task PublishManualAsync(string message, EventSeverity severity, object? data = null);
 
-    Task PublishStrike(StrikeType strikeType, int strikeCount, string hash, string itemName);
+    Task PublishStrike(StrikeType strikeType, int strikeCount, string hash, string itemName, Guid? strikeId = null);
 
     Task PublishQueueItemDeleted(bool removeFromClient, DeleteReason deleteReason);
 

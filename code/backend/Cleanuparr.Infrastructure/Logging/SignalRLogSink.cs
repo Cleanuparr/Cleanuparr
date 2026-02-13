@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Globalization;
+using Cleanuparr.Infrastructure.Helpers;
 using Cleanuparr.Infrastructure.Hubs;
 using Microsoft.AspNetCore.SignalR;
 using Serilog;
@@ -48,8 +49,12 @@ public class SignalRLogSink : ILogEventSink
                 Level = logEvent.Level.ToString(),
                 Message = stringWriter.ToString(),
                 Exception = logEvent.Exception?.ToString(),
-                JobName = GetPropertyValue(logEvent, "JobName"),
-                Category = GetPropertyValue(logEvent, "Category", "SYSTEM"),
+                JobName = GetPropertyValue(logEvent, LogProperties.JobName),
+                Category = GetPropertyValue(logEvent, LogProperties.Category, "SYSTEM"),
+                InstanceName = GetPropertyValue(logEvent, LogProperties.InstanceName),
+                DownloadClientType = GetPropertyValue(logEvent, LogProperties.DownloadClientType),
+                DownloadClientName = GetPropertyValue(logEvent, LogProperties.DownloadClientName),
+                JobRunId = GetPropertyValue(logEvent, LogProperties.JobRunId),
             };
             
             // Add to buffer for new clients

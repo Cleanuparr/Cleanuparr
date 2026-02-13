@@ -14,4 +14,8 @@ export class GeneralConfigApi {
   update(config: GeneralConfig): Observable<void> {
     return this.http.put<void>('/api/configuration/general', config);
   }
+
+  purgeStrikes(): Observable<{ deletedStrikes: number; deletedItems: number }> {
+    return this.http.post<{ deletedStrikes: number; deletedItems: number }>('/api/configuration/strikes/purge', {});
+  }
 }

@@ -1,4 +1,5 @@
 using Cleanuparr.Domain.Entities.Deluge.Response;
+using Cleanuparr.Domain.Entities.HealthCheck;
 using Cleanuparr.Domain.Exceptions;
 using Cleanuparr.Infrastructure.Events;
 using Cleanuparr.Infrastructure.Events.Interfaces;

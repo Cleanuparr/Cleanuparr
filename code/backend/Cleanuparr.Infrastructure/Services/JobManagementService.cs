@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Models;
 using Cleanuparr.Infrastructure.Services.Interfaces;
 using Cleanuparr.Infrastructure.Utilities;

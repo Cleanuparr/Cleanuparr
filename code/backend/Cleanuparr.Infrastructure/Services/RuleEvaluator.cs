@@ -1,14 +1,14 @@
 using Cleanuparr.Domain.Entities;
-using Cleanuparr.Domain.Entities.Cache;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
 using Cleanuparr.Infrastructure.Features.ItemStriker;
-using Cleanuparr.Infrastructure.Helpers;
 using Cleanuparr.Infrastructure.Services.Interfaces;
+using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
+using Cleanuparr.Persistence.Models.State;
 using Cleanuparr.Shared.Helpers;
-using Microsoft.Extensions.Caching.Memory;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace Cleanuparr.Infrastructure.Services;
@@ -17,29 +17,25 @@ public class RuleEvaluator : IRuleEvaluator
 {
     private readonly IRuleManager _ruleManager;
     private readonly IStriker _striker;
-    private readonly IMemoryCache _cache;
-    private readonly MemoryCacheEntryOptions _cacheOptions;
+    private readonly EventsContext _context;
     private readonly ILogger<RuleEvaluator> _logger;
 
     public RuleEvaluator(
         IRuleManager ruleManager,
         IStriker striker,
-        IMemoryCache cache,
+        EventsContext context,
         ILogger<RuleEvaluator> logger)
     {
         _ruleManager = ruleManager;
         _striker = striker;
-        _cache = cache;
+        _context = context;
         _logger = logger;
-        _cacheOptions = new MemoryCacheEntryOptions()
-            .SetSlidingExpiration(StaticConfiguration.TriggerValue + Constants.CacheLimitBuffer);
     }
 
     public async Task<(bool ShouldRemove, DeleteReason Reason, bool DeleteFromClient)> EvaluateStallRulesAsync(ITorrentItemWrapper torrent)
     {
         _logger.LogTrace("Evaluating stall rules | {name}", torrent.Name);
 
-        // Get matching stall rules in priority order
         var rule = _ruleManager.GetMatchingStallRule(torrent);
 
         if (rule is null)
@@ -57,12 +53,13 @@ public class RuleEvaluator : IRuleEvaluator
             rule.MinimumProgressByteSize?.Bytes
         );
 
-        // Apply strike and check if torrent should be removed
+        long currentDownloaded = Math.Max(0, torrent.DownloadedBytes);
         bool shouldRemove = await _striker.StrikeAndCheckLimit(
             torrent.Hash,
             torrent.Name,
             (ushort)rule.MaxStrikes,
-            StrikeType.Stalled
+            StrikeType.Stalled,
+            currentDownloaded
         );
 
         if (shouldRemove)
@@ -77,7 +74,6 @@ public class RuleEvaluator : IRuleEvaluator
     {
         _logger.LogTrace("Evaluating slow rules | {name}", torrent.Name);
 
-        // Get matching slow rules in priority order
         SlowRule? rule = _ruleManager.GetMatchingSlowRule(torrent);
 
         if (rule is null)
@@ -89,7 +85,6 @@ public class RuleEvaluator : IRuleEvaluator
         _logger.LogTrace("Applying slow rule {rule} | {name}", rule.Name, torrent.Name);
         ContextProvider.Set<QueueRule>(rule);
 
-        // Check if slow speed
         if (!string.IsNullOrWhiteSpace(rule.MinSpeed))
         {
             ByteSize minSpeed = rule.MinSpeedByteSize;
@@ -114,7 +109,6 @@ public class RuleEvaluator : IRuleEvaluator
             }
         }
 
-        // Check if slow time
         if (rule.MaxTimeHours > 0)
         {
             SmartTimeSpan maxTime = SmartTimeSpan.FromHours(rule.MaxTimeHours);
@@ -153,7 +147,8 @@ public class RuleEvaluator : IRuleEvaluator
             return;
         }
 
-        if (!HasStalledDownloadProgress(torrent, StrikeType.Stalled, out long previous, out long current))
+        var (hasProgress, previous, current) = await GetDownloadProgressAsync(torrent);
+        if (!hasProgress)
         {
             _logger.LogTrace("No progress detected | strikes are not reset | {name}", torrent.Name);
             return;
@@ -171,10 +166,10 @@ public class RuleEvaluator : IRuleEvaluator
                     minimumProgressBytes,
                     torrent.Name
                 );
-                
+
                 return;
             }
-            
+
             _logger.LogTrace(
                 "Progress detected | strikes are reset | progress: {progress}b | minimum: {minimum}b | {name}",
                 progressBytes,
@@ -204,34 +199,36 @@ public class RuleEvaluator : IRuleEvaluator
         {
             return;
         }
-        
+
         await _striker.ResetStrikeAsync(torrent.Hash, torrent.Name, strikeType);
     }
 
-    private bool HasStalledDownloadProgress(ITorrentItemWrapper torrent, StrikeType strikeType, out long previousDownloaded, out long currentDownloaded)
+    private async Task<(bool HasProgress, long PreviousDownloaded, long CurrentDownloaded)> GetDownloadProgressAsync(ITorrentItemWrapper torrent)
     {
-        previousDownloaded = 0;
-        currentDownloaded = Math.Max(0, torrent.DownloadedBytes);
+        long currentDownloaded = Math.Max(0, torrent.DownloadedBytes);
 
-        string cacheKey = CacheKeys.StrikeItem(torrent.Hash, strikeType);
+        var downloadItem = await _context.DownloadItems
+            .FirstOrDefaultAsync(d => d.DownloadId == torrent.Hash);
 
-        if (!_cache.TryGetValue(cacheKey, out StalledCacheItem? cachedItem) || cachedItem is null)
+        if (downloadItem is null)
         {
-            cachedItem = new StalledCacheItem { Downloaded = currentDownloaded };
-            _cache.Set(cacheKey, cachedItem, _cacheOptions);
-            return false;
+            return (false, 0, currentDownloaded);
         }
 
-        previousDownloaded = cachedItem.Downloaded;
+        // Get the most recent strike for this download item (Stalled type) to check progress
+        var mostRecentStrike = await _context.Strikes
+            .Where(s => s.DownloadItemId == downloadItem.Id && s.Type == StrikeType.Stalled)
+            .OrderByDescending(s => s.CreatedAt)
+            .FirstOrDefaultAsync();
 
-        bool progressed = currentDownloaded > cachedItem.Downloaded;
-
-        if (progressed || currentDownloaded != cachedItem.Downloaded)
+        if (mostRecentStrike is null)
         {
-            cachedItem.Downloaded = currentDownloaded;
-            _cache.Set(cacheKey, cachedItem, _cacheOptions);
+            return (false, 0, currentDownloaded);
         }
 
-        return progressed;
+        long previousDownloaded = mostRecentStrike.LastDownloadedBytes ?? 0;
+        bool progressed = currentDownloaded > previousDownloaded;
+
+        return (progressed, previousDownloaded, currentDownloaded);
     }
 }

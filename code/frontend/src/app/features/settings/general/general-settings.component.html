@@ -72,6 +72,27 @@
     </div>
   </app-card>
 
+  <app-card header="State Management">
+    <div class="form-stack">
+      <app-number-input label="Strike Inactivity Window" [(value)]="strikeInactivityWindowHours" [min]="1" [max]="168" suffix="hours"
+        hint="Strikes for a download are cleared after it goes this many hours without receiving a new strike. As long as new strikes keep occurring, all strikes for that download are retained."
+        [error]="strikeInactivityWindowHoursError()"
+        helpKey="general:strikeInactivityWindowHours" />
+
+      <div class="form-divider"></div>
+
+      <div class="purge-section">
+        <div class="purge-section__info">
+          <span class="purge-section__label">Purge All Strikes</span>
+          <span class="purge-section__hint">Permanently deletes all strike data for every download. Strike counts will reset to zero.</span>
+        </div>
+        <app-button variant="destructive" size="sm" [loading]="purgingStrikes()" [disabled]="purgingStrikes()" (clicked)="confirmPurgeStrikes()">
+          Purge Strikes
+        </app-button>
+      </div>
+    </div>
+  </app-card>
+
   <app-accordion header="Logging" subtitle="Log file settings" [(expanded)]="logExpanded">
     <div class="form-stack">
       <app-select label="Log Level" [options]="logLevelOptions" [(value)]="logLevel"

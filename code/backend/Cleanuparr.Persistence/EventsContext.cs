@@ -1,5 +1,7 @@
+using Cleanuparr.Domain.Enums;
 using Cleanuparr.Persistence.Converters;
 using Cleanuparr.Persistence.Models.Events;
+using Cleanuparr.Persistence.Models.State;
 using Cleanuparr.Shared.Helpers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
@@ -12,8 +14,14 @@ namespace Cleanuparr.Persistence;
 public class EventsContext : DbContext
 {
     public DbSet<AppEvent> Events { get; set; }
-    
+
     public DbSet<ManualEvent> ManualEvents { get; set; }
+
+    public DbSet<Strike> Strikes { get; set; }
+
+    public DbSet<DownloadItem> DownloadItems { get; set; }
+
+    public DbSet<JobRun> JobRuns { get; set; }
     
     public EventsContext()
     {
@@ -49,6 +57,24 @@ public class EventsContext : DbContext
         modelBuilder.Entity<AppEvent>(entity =>
         {
             entity.Property(e => e.Timestamp)
+                .HasConversion(new UtcDateTimeConverter());
+        });
+
+        modelBuilder.Entity<Strike>(entity =>
+        {
+            entity.Property(e => e.CreatedAt)
+                .HasConversion(new UtcDateTimeConverter());
+
+            entity.Property(e => e.Type)
+                .HasConversion(new LowercaseEnumConverter<StrikeType>());
+        });
+
+        modelBuilder.Entity<JobRun>(entity =>
+        {
+            entity.Property(e => e.StartedAt)
+                .HasConversion(new UtcDateTimeConverter());
+
+            entity.Property(e => e.CompletedAt)
                 .HasConversion(new UtcDateTimeConverter());
         });
         

@@ -1,4 +1,4 @@
-﻿using System.Collections.Immutable;
+using System.Collections.Immutable;
 
 namespace Cleanuparr.Infrastructure.Features.Context;
 
@@ -34,12 +34,23 @@ public static class ContextProvider
         return Get<T>(key);
     }
 
+    public const string JobRunIdKey = "JobRunId";
+
+    public static Guid GetJobRunId() =>
+        Get(JobRunIdKey) as Guid? ?? throw new InvalidOperationException("JobRunId not set in context");
+
+    public static Guid? TryGetJobRunId() => Get(JobRunIdKey) as Guid?;
+
+    public static void SetJobRunId(Guid id) => Set(JobRunIdKey, id);
+
     public static class Keys
     {
         public const string Version = "version";
-        public const string DownloadName = "downloadName";
+        public const string ItemName = "itemName";
         public const string Hash = "hash";
         public const string DownloadClientUrl = "downloadClientUrl";
+        public const string DownloadClientType = "downloadClientType";
+        public const string DownloadClientName = "downloadClientName";
         public const string ArrInstanceUrl = "arrInstanceUrl";
     }
 }

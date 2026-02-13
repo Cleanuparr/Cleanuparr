@@ -2,7 +2,7 @@ using System;
 using System.Threading.Tasks;
 
 using Cleanuparr.Api.Features.BlacklistSync.Contracts.Requests;
-using Cleanuparr.Infrastructure.Models;
+using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Services.Interfaces;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.BlacklistSync;

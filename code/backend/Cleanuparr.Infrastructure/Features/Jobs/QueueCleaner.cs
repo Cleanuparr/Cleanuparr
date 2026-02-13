@@ -86,9 +86,10 @@ public sealed class QueueCleaner : GenericHandler
         ignoredDownloads.AddRange(queueCleanerConfig.IgnoredDownloads);
         
         using var _ = LogContext.PushProperty(LogProperties.Category, instance.ArrConfig.Type.ToString());
-        
+        using var _2 = LogContext.PushProperty(LogProperties.InstanceName, instance.Name);
+
         IArrClient arrClient = _arrClientFactory.GetClient(instance.ArrConfig.Type, instance.Version);
-        
+
         // push to context
         ContextProvider.Set(ContextProvider.Keys.ArrInstanceUrl, instance.ExternalUrl ?? instance.Url);
         ContextProvider.Set(nameof(InstanceType), instance.ArrConfig.Type);

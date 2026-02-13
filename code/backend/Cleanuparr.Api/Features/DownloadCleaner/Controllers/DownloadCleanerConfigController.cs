@@ -3,7 +3,7 @@ using System.IO;
 using System.Linq;
 
 using Cleanuparr.Api.Features.DownloadCleaner.Contracts.Requests;
-using Cleanuparr.Infrastructure.Models;
+using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Services.Interfaces;
 using Cleanuparr.Infrastructure.Utilities;
 using Cleanuparr.Persistence;

@@ -5,10 +5,8 @@ using Cleanuparr.Api.Features.DownloadClient.Contracts.Requests;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
 using Cleanuparr.Infrastructure.Http.DynamicHttpClientSystem;
 using Cleanuparr.Persistence;
-using Cleanuparr.Persistence.Models.Configuration;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 
 namespace Cleanuparr.Api.Features.DownloadClient.Controllers;
 

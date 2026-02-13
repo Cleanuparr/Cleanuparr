@@ -29,7 +29,8 @@ public class EventsController : ControllerBase
         [FromQuery] string? eventType = null,
         [FromQuery] DateTime? fromDate = null,
         [FromQuery] DateTime? toDate = null,
-        [FromQuery] string? search = null)
+        [FromQuery] string? search = null,
+        [FromQuery] string? jobRunId = null)
     {
         // Validate pagination parameters
         if (page < 1) page = 1;
@@ -62,6 +63,13 @@ public class EventsController : ControllerBase
             query = query.Where(e => e.Timestamp <= toDate.Value);
         }
 
+        // Apply job run ID exact-match filter
+        if (!string.IsNullOrWhiteSpace(jobRunId))
+        {
+            if (Guid.TryParse(jobRunId, out var jobRunGuid))
+                query = query.Where(e => e.JobRunId == jobRunGuid);
+        }
+
         // Apply search filter if provided
         if (!string.IsNullOrWhiteSpace(search))
         {
@@ -69,7 +77,10 @@ public class EventsController : ControllerBase
             query = query.Where(e =>
                 EF.Functions.Like(e.Message, pattern) ||
                 EF.Functions.Like(e.Data, pattern) ||
-                EF.Functions.Like(e.TrackingId.ToString(), pattern)
+                EF.Functions.Like(e.TrackingId.ToString(), pattern) ||
+                EF.Functions.Like(e.InstanceUrl, pattern) ||
+                EF.Functions.Like(e.DownloadClientName, pattern) ||
+                EF.Functions.Like(e.JobRunId.ToString(), pattern)
             );
         }
 

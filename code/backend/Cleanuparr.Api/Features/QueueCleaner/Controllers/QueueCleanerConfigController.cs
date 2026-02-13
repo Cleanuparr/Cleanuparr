@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 
 using Cleanuparr.Api.Features.QueueCleaner.Contracts.Requests;
-using Cleanuparr.Infrastructure.Models;
+using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Services.Interfaces;
 using Cleanuparr.Infrastructure.Utilities;
 using Cleanuparr.Persistence;

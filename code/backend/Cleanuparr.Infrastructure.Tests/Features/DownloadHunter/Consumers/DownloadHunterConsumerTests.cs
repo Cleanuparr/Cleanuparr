@@ -101,7 +101,8 @@ public class DownloadHunterConsumerTests
             InstanceType = InstanceType.Lidarr,
             Instance = CreateArrInstance(),
             SearchItem = new SearchItem { Id = 999 },
-            Record = CreateQueueRecord()
+            Record = CreateQueueRecord(),
+            JobRunId = Guid.NewGuid()
         };
         var contextMock = CreateConsumeContextMock(request);
 
@@ -128,7 +129,8 @@ public class DownloadHunterConsumerTests
             InstanceType = InstanceType.Radarr,
             Instance = CreateArrInstance(),
             SearchItem = new SearchItem { Id = 123 },
-            Record = CreateQueueRecord()
+            Record = CreateQueueRecord(),
+            JobRunId = Guid.NewGuid()
         };
     }
 

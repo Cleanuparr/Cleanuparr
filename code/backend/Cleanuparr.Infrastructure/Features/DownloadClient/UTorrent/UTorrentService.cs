@@ -1,3 +1,4 @@
+using Cleanuparr.Domain.Entities.HealthCheck;
 using Cleanuparr.Infrastructure.Events.Interfaces;
 using Cleanuparr.Infrastructure.Features.Files;
 using Cleanuparr.Infrastructure.Features.ItemStriker;

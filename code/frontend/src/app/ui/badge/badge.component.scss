@@ -59,12 +59,19 @@
     border: 1px solid rgba(59, 130, 246, 0.2);
   }
 
+  &--accent {
+    background: rgba(20, 184, 166, 0.12);
+    color: rgb(20, 184, 166);
+    border: 1px solid rgba(20, 184, 166, 0.2);
+  }
+
   // Severity indicator dot for non-default badges
   &--primary,
   &--success,
   &--warning,
   &--error,
-  &--info {
+  &--info,
+  &--accent {
     &::before {
       content: '';
       width: 6px;

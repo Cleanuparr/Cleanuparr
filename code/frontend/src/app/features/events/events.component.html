@@ -58,6 +58,16 @@
     </div>
   </div>
 
+  <!-- Active Job Run Filter -->
+  @if (selectedJobRunId()) {
+    <div class="active-filter">
+      <span>Showing events for job run: {{ selectedJobRunId() }}</span>
+      <app-button variant="ghost" size="sm" (clicked)="clearJobRunFilter()">
+        Clear filter
+      </app-button>
+    </div>
+  }
+
   <!-- Events Count -->
   <div class="event-count">
     <app-animated-counter [value]="totalRecords()" [duration]="400" /> events
@@ -108,6 +118,38 @@
                 <div class="event-row__detail">
                   <span class="event-row__detail-label">Tracking ID</span>
                   <span class="event-row__detail-value">{{ event.trackingId }}</span>
+                </div>
+              }
+              @if (event.instanceType || event.downloadClientType) {
+                <div class="event-row__detail">
+                  <span class="event-row__detail-label">Source</span>
+                  <div class="event-row__source">
+                    @if (event.instanceType) {
+                      <app-badge severity="info" size="sm">{{ event.instanceType }}</app-badge>
+                      @if (event.instanceUrl) {
+                        <span class="event-row__source-url">{{ event.instanceUrl }}</span>
+                      }
+                    }
+                    @if (event.downloadClientType) {
+                      <app-badge severity="accent" size="sm">{{ event.downloadClientType }}</app-badge>
+                      @if (event.downloadClientName) {
+                        <span class="event-row__source-url">{{ event.downloadClientName }}</span>
+                      }
+                    }
+                  </div>
+                </div>
+              }
+              @if (event.jobRunId) {
+                <div class="event-row__detail">
+                  <span class="event-row__detail-label">Job Run</span>
+                  <div class="event-row__run-id-actions">
+                    <button class="event-row__run-id" (click)="filterByJobRunId(event.jobRunId!); $event.stopPropagation()">
+                      {{ event.jobRunId }}
+                    </button>
+                    <a class="event-row__run-id-link" routerLink="/logs" [queryParams]="{ jobRunId: event.jobRunId }" (click)="$event.stopPropagation()">
+                      View Logs
+                    </a>
+                  </div>
                 </div>
               }
               @if (parseEventData(event.data); as data) {

@@ -1,3 +1,4 @@
+using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Hubs;
 using Cleanuparr.Infrastructure.Models;
 using Cleanuparr.Infrastructure.Services;

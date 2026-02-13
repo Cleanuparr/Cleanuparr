@@ -157,6 +157,49 @@ mytracker.com
 
 <div className={styles.section}>
 
+<SectionTitle icon="🗃️">State Management</SectionTitle>
+
+<ConfigSection
+  title="Strike Inactivity Window"
+  icon="⏳"
+>
+
+Controls how long strike data is retained using a **sliding window**. Strikes for a download are automatically cleaned up after the download goes this many hours without receiving a new strike.
+
+**How it works:**
+- The window resets every time a new strike is recorded for a download
+- As long as a download keeps getting new strikes, all of its strike history is preserved
+- Once a download stops receiving strikes for the configured number of hours, all of its strikes are removed
+- This effectively means: "forget about downloads that haven't been problematic recently"
+
+**Example:** With a value of `72` hours (3 days):
+- Download A receives strikes on Monday, Tuesday, and Wednesday. On Saturday (72 hours after the last strike on Wednesday), all of its strikes are cleaned up.
+- Download B receives a strike on Monday. On Thursday (72 hours later), its strike is cleaned up.
+- Download C receives strikes on Monday and Thursday. The window resets on Thursday, so cleanup happens on Sunday (72 hours after Thursday).
+
+<Note>
+Lower values clean up strikes faster, but may cause Cleanuparr to re-strike downloads it has already dealt with. This value needs to be adjusted based on your Queue Cleaner run interval.
+</Note>
+
+</ConfigSection>
+
+<ConfigSection
+  title="Purge All Strikes"
+  icon="🧹"
+>
+
+Immediately and permanently deletes all strike data for all downloads. This resets all strike counters to zero.
+
+<Warning>
+This action cannot be undone. All downloads will start with zero strikes after a purge, which means previously problematic downloads may need to accumulate strikes again before being acted upon.
+</Warning>
+
+</ConfigSection>
+
+</div>
+
+<div className={styles.section}>
+
 <SectionTitle icon="📝">Logging Settings</SectionTitle>
 
 <ConfigSection

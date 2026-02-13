@@ -18,6 +18,7 @@ export class EventsApi {
       if (filter.fromDate) params = params.set('fromDate', filter.fromDate);
       if (filter.toDate) params = params.set('toDate', filter.toDate);
       if (filter.search) params = params.set('search', filter.search);
+      if (filter.jobRunId) params = params.set('jobRunId', filter.jobRunId);
     }
     return this.http.get<PaginatedResult<AppEvent>>('/api/events', { params });
   }

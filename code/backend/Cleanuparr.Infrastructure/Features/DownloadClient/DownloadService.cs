@@ -1,4 +1,5 @@
 using Cleanuparr.Domain.Entities;
+using Cleanuparr.Domain.Entities.HealthCheck;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Events.Interfaces;
 using Cleanuparr.Infrastructure.Features.Context;
@@ -10,17 +11,9 @@ using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Infrastructure.Services.Interfaces;
 using Cleanuparr.Persistence.Models.Configuration;
 using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
-using Cleanuparr.Shared.Helpers;
 using Microsoft.Extensions.Logging;
 
 namespace Cleanuparr.Infrastructure.Features.DownloadClient;
-
-public class HealthCheckResult
-{
-    public bool IsHealthy { get; set; }
-    public string? ErrorMessage { get; set; }
-    public TimeSpan ResponseTime { get; set; }
-}
 
 public abstract class DownloadService : IDownloadService
 {
@@ -116,9 +109,11 @@ public abstract class DownloadService : IDownloadService
                 continue;
             }
 
-            ContextProvider.Set(ContextProvider.Keys.DownloadName, torrent.Name);
+            ContextProvider.Set(ContextProvider.Keys.ItemName, torrent.Name);
             ContextProvider.Set(ContextProvider.Keys.Hash, torrent.Hash);
             ContextProvider.Set(ContextProvider.Keys.DownloadClientUrl, _downloadClientConfig.ExternalOrInternalUrl);
+            ContextProvider.Set(ContextProvider.Keys.DownloadClientType, _downloadClientConfig.TypeName);
+            ContextProvider.Set(ContextProvider.Keys.DownloadClientName, _downloadClientConfig.Name);
 
             TimeSpan seedingTime = TimeSpan.FromSeconds(torrent.SeedingTimeSeconds);
             SeedingCheckResult result = ShouldCleanDownload(torrent.Ratio, seedingTime, category);
@@ -212,7 +207,7 @@ public abstract class DownloadService : IDownloadService
             return false;
         }
         
-        string downloadName = ContextProvider.Get<string>(ContextProvider.Keys.DownloadName);
+        string downloadName = ContextProvider.Get<string>(ContextProvider.Keys.ItemName);
         TimeSpan minSeedingTime = TimeSpan.FromHours(category.MinSeedTime);
         
         if (category.MinSeedTime > 0 && seedingTime < minSeedingTime)
@@ -238,7 +233,7 @@ public abstract class DownloadService : IDownloadService
             return false;
         }
         
-        string downloadName = ContextProvider.Get<string>(ContextProvider.Keys.DownloadName);
+        string downloadName = ContextProvider.Get<string>(ContextProvider.Keys.ItemName);
         TimeSpan maxSeedingTime = TimeSpan.FromHours(category.MaxSeedTime);
         
         if (category.MaxSeedTime > 0 && seedingTime < maxSeedingTime)

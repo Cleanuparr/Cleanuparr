@@ -72,6 +72,9 @@ public sealed class DownloadCleaner : GenericHandler
 
         foreach (var downloadService in downloadServices)
         {
+            using var dcType = LogContext.PushProperty(LogProperties.DownloadClientType, downloadService.ClientConfig.Type.ToString());
+            using var dcName = LogContext.PushProperty(LogProperties.DownloadClientName, downloadService.ClientConfig.Name);
+
             try
             {
                 await downloadService.LoginAsync();
@@ -142,9 +145,10 @@ public sealed class DownloadCleaner : GenericHandler
     protected override async Task ProcessInstanceAsync(ArrInstance instance)
     {
         using var _ = LogContext.PushProperty(LogProperties.Category, instance.ArrConfig.Type.ToString());
-        
+        using var _2 = LogContext.PushProperty(LogProperties.InstanceName, instance.Name);
+
         IArrClient arrClient = _arrClientFactory.GetClient(instance.ArrConfig.Type, instance.Version);
-        
+
         await _arrArrQueueIterator.Iterate(arrClient, instance, async items =>
         {
             var groups = items
@@ -209,6 +213,9 @@ public sealed class DownloadCleaner : GenericHandler
         // Process each client with its own filtered downloads
         foreach (var (downloadService, downloadsToChangeCategory) in downloadServiceWithDownloads)
         {
+            using var dcType = LogContext.PushProperty(LogProperties.DownloadClientType, downloadService.ClientConfig.Type.ToString());
+            using var dcName = LogContext.PushProperty(LogProperties.DownloadClientName, downloadService.ClientConfig.Name);
+
             try
             {
                 await downloadService.CreateCategoryAsync(config.UnlinkedTargetCategory);
@@ -222,7 +229,7 @@ public sealed class DownloadCleaner : GenericHandler
                     downloadService.ClientConfig.Name
                 );
             }
-            
+
             try
             {
                 await downloadService.ChangeCategoryForNoHardLinksAsync(downloadsToChangeCategory);
@@ -275,6 +282,9 @@ public sealed class DownloadCleaner : GenericHandler
         // Process cleaning for each client
         foreach (var (downloadService, downloadsToClean) in downloadServiceWithDownloads)
         {
+            using var dcType = LogContext.PushProperty(LogProperties.DownloadClientType, downloadService.ClientConfig.Type.ToString());
+            using var dcName = LogContext.PushProperty(LogProperties.DownloadClientName, downloadService.ClientConfig.Name);
+
             try
             {
                 await downloadService.CleanDownloadsAsync(downloadsToClean, config.Categories);

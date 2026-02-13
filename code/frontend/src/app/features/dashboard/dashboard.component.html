@@ -114,8 +114,11 @@
                 <app-badge [severity]="logBadgeSeverity(log.level)" size="sm">
                   {{ logLevelLabel(log.level) }}
                 </app-badge>
-                @if (log.category) {
-                  <span class="timeline__category">{{ log.category }}</span>
+                @if (log.category && log.category !== 'SYSTEM') {
+                  <app-badge severity="info" size="sm">{{ log.category }}</app-badge>
+                }
+                @if (log.downloadClientType) {
+                  <app-badge severity="accent" size="sm">{{ log.downloadClientType }}</app-badge>
                 }
                 <span class="timeline__time">{{ log.timestamp | date:'yyyy-MM-dd HH:mm:ss' }}</span>
               </div>

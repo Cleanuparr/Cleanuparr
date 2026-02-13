@@ -6,6 +6,12 @@ export interface AppEvent {
   data?: string;
   severity: string;
   trackingId?: string;
+  strikeId?: string;
+  jobRunId?: string;
+  instanceType?: string;
+  instanceUrl?: string;
+  downloadClientType?: string;
+  downloadClientName?: string;
 }
 
 export interface ManualEvent {
@@ -15,6 +21,11 @@ export interface ManualEvent {
   data?: string;
   severity: string;
   isResolved: boolean;
+  jobRunId?: string;
+  instanceType?: string;
+  instanceUrl?: string;
+  downloadClientType?: string;
+  downloadClientName?: string;
 }
 
 export interface EventStats {
@@ -40,6 +51,7 @@ export interface EventFilter {
   fromDate?: string;
   toDate?: string;
   search?: string;
+  jobRunId?: string;
 }
 
 export interface ManualEventFilter {

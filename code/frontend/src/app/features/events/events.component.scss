@@ -168,6 +168,52 @@
     word-break: break-word;
   }
 
+  &__run-id {
+    background: none;
+    border: none;
+    color: var(--color-primary);
+    font-family: var(--font-mono);
+    font-size: var(--font-size-xs);
+    cursor: pointer;
+    padding: 0;
+    text-decoration: underline;
+    text-decoration-style: dotted;
+    align-self: flex-start;
+
+    &:hover {
+      color: var(--text-primary);
+    }
+  }
+
+  &__run-id-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+  }
+
+  &__run-id-link {
+    font-size: var(--font-size-xs);
+    color: var(--text-tertiary);
+    text-decoration: none;
+
+    &:hover {
+      color: var(--color-primary);
+    }
+  }
+
+  &__source {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+  }
+
+  &__source-url {
+    font-size: var(--font-size-xs);
+    color: var(--text-tertiary);
+    font-family: var(--font-mono);
+  }
+
   // 2-column key-value layout
   &__data {
     display: flex;
@@ -197,6 +243,20 @@
     color: var(--text-secondary);
     word-break: break-all;
   }
+}
+
+// Active job run filter bar
+.active-filter {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  margin-bottom: var(--space-3);
+  background: rgba(126, 87, 194, 0.1);
+  border: 1px solid rgba(126, 87, 194, 0.2);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  color: var(--color-primary);
 }
 
 // Export dropdown

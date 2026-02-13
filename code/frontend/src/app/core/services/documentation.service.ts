@@ -58,6 +58,7 @@ export class DocumentationService {
       'log.archiveRetainedCount': 'archive-retained-count',
       'log.archiveTimeLimitHours': 'archive-time-limit',
       'ignoredDownloads': 'ignored-downloads',
+      'strikeInactivityWindowHours': 'strike-inactivity-window',
     },
     'download-cleaner': {
       'enabled': 'enable-download-cleaner',

@@ -7,25 +7,48 @@ using Cleanuparr.Infrastructure.Features.DownloadClient;
 using Cleanuparr.Infrastructure.Features.ItemStriker;
 using Cleanuparr.Infrastructure.Services;
 using Cleanuparr.Infrastructure.Services.Interfaces;
+using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
-using Microsoft.Extensions.Caching.Memory;
+using Cleanuparr.Persistence.Models.State;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Services;
 
-public class RuleEvaluatorTests
+public class RuleEvaluatorTests : IDisposable
 {
+    private readonly EventsContext _context;
+
+    public RuleEvaluatorTests()
+    {
+        _context = CreateInMemoryEventsContext();
+    }
+
+    public void Dispose()
+    {
+        _context.Dispose();
+    }
+
+    private static EventsContext CreateInMemoryEventsContext()
+    {
+        var options = new DbContextOptionsBuilder<EventsContext>()
+            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .Options;
+        return new EventsContext(options);
+    }
+
     [Fact]
     public async Task ResetStrikes_ShouldRespectMinimumProgressThreshold()
     {
+        // Arrange
         var ruleManagerMock = new Mock<IRuleManager>();
         var strikerMock = new Mock<IStriker>();
-        using var memoryCache = new MemoryCache(new MemoryCacheOptions());
         var loggerMock = new Mock<ILogger<RuleEvaluator>>();
+        var context = CreateInMemoryEventsContext();
 
-        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, memoryCache, loggerMock.Object);
+        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
 
         var stallRule = new StallRule
         {
@@ -47,7 +70,7 @@ public class RuleEvaluatorTests
             .Returns(stallRule);
 
         strikerMock
-            .Setup(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.Stalled))
+            .Setup(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.Stalled, It.IsAny<long?>()))
             .ReturnsAsync(false);
 
         strikerMock
@@ -64,9 +87,14 @@ public class RuleEvaluatorTests
         torrentMock.SetupGet(t => t.CompletionPercentage).Returns(50);
         torrentMock.SetupGet(t => t.DownloadedBytes).Returns(() => downloadedBytes);
 
-        // Seed cache with initial observation (no reset expected)
-        await evaluator.EvaluateStallRulesAsync(torrentMock.Object);
-        strikerMock.Verify(x => x.ResetStrikeAsync(It.IsAny<string>(), It.IsAny<string>(), StrikeType.Stalled), Times.Never);
+        // Seed database with a DownloadItem and initial strike (simulating first observation at 0 bytes)
+        var downloadItem = new DownloadItem { DownloadId = "hash", Title = "Example Torrent" };
+        context.DownloadItems.Add(downloadItem);
+        await context.SaveChangesAsync();
+
+        var initialStrike = new Strike { DownloadItemId = downloadItem.Id, Type = StrikeType.Stalled, LastDownloadedBytes = 0 };
+        context.Strikes.Add(initialStrike);
+        await context.SaveChangesAsync();
 
         // Progress below threshold should not reset strikes
         downloadedBytes = ByteSize.Parse("1 MB").Bytes;
@@ -84,10 +112,10 @@ public class RuleEvaluatorTests
     {
         var ruleManagerMock = new Mock<IRuleManager>();
         var strikerMock = new Mock<IStriker>();
-        using var memoryCache = new MemoryCache(new MemoryCacheOptions());
         var loggerMock = new Mock<ILogger<RuleEvaluator>>();
+        var context = CreateInMemoryEventsContext();
 
-        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, memoryCache, loggerMock.Object);
+        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
 
         ruleManagerMock
             .Setup(x => x.GetMatchingStallRule(It.IsAny<ITorrentItemWrapper>()))
@@ -98,7 +126,7 @@ public class RuleEvaluatorTests
         var result = await evaluator.EvaluateStallRulesAsync(torrentMock.Object);
         Assert.False(result.ShouldRemove);
 
-        strikerMock.Verify(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.Stalled), Times.Never);
+        strikerMock.Verify(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.Stalled, It.IsAny<long?>()), Times.Never);
     }
 
     [Fact]
@@ -106,10 +134,10 @@ public class RuleEvaluatorTests
     {
         var ruleManagerMock = new Mock<IRuleManager>();
         var strikerMock = new Mock<IStriker>();
-        using var memoryCache = new MemoryCache(new MemoryCacheOptions());
         var loggerMock = new Mock<ILogger<RuleEvaluator>>();
+        var context = CreateInMemoryEventsContext();
 
-        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, memoryCache, loggerMock.Object);
+        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
 
         var stallRule = CreateStallRule("Stall Apply", resetOnProgress: false, maxStrikes: 5);
 
@@ -118,7 +146,7 @@ public class RuleEvaluatorTests
             .Returns(stallRule);
 
         strikerMock
-            .Setup(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.Stalled))
+            .Setup(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.Stalled, It.IsAny<long?>()))
             .ReturnsAsync(false);
 
         var torrentMock = CreateTorrentMock();
@@ -126,7 +154,7 @@ public class RuleEvaluatorTests
         var result = await evaluator.EvaluateStallRulesAsync(torrentMock.Object);
         Assert.False(result.ShouldRemove);
 
-        strikerMock.Verify(x => x.StrikeAndCheckLimit("hash", "Example Torrent", (ushort)stallRule.MaxStrikes, StrikeType.Stalled), Times.Once);
+        strikerMock.Verify(x => x.StrikeAndCheckLimit("hash", "Example Torrent", (ushort)stallRule.MaxStrikes, StrikeType.Stalled, It.IsAny<long?>()), Times.Once);
         strikerMock.Verify(x => x.ResetStrikeAsync(It.IsAny<string>(), It.IsAny<string>(), StrikeType.Stalled), Times.Never);
     }
 
@@ -135,10 +163,10 @@ public class RuleEvaluatorTests
     {
         var ruleManagerMock = new Mock<IRuleManager>();
         var strikerMock = new Mock<IStriker>();
-        using var memoryCache = new MemoryCache(new MemoryCacheOptions());
         var loggerMock = new Mock<ILogger<RuleEvaluator>>();
+        var context = CreateInMemoryEventsContext();
 
-        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, memoryCache, loggerMock.Object);
+        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
 
         var stallRule = CreateStallRule("Stall Remove", resetOnProgress: false, maxStrikes: 6);
 
@@ -147,7 +175,7 @@ public class RuleEvaluatorTests
             .Returns(stallRule);
 
         strikerMock
-            .Setup(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.Stalled))
+            .Setup(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.Stalled, It.IsAny<long?>()))
             .ReturnsAsync(true);
 
         var torrentMock = CreateTorrentMock();
@@ -155,7 +183,7 @@ public class RuleEvaluatorTests
         var result = await evaluator.EvaluateStallRulesAsync(torrentMock.Object);
         Assert.True(result.ShouldRemove);
 
-        strikerMock.Verify(x => x.StrikeAndCheckLimit("hash", "Example Torrent", (ushort)stallRule.MaxStrikes, StrikeType.Stalled), Times.Once);
+        strikerMock.Verify(x => x.StrikeAndCheckLimit("hash", "Example Torrent", (ushort)stallRule.MaxStrikes, StrikeType.Stalled, It.IsAny<long?>()), Times.Once);
     }
 
     [Fact]
@@ -163,10 +191,10 @@ public class RuleEvaluatorTests
     {
         var ruleManagerMock = new Mock<IRuleManager>();
         var strikerMock = new Mock<IStriker>();
-        using var memoryCache = new MemoryCache(new MemoryCacheOptions());
         var loggerMock = new Mock<ILogger<RuleEvaluator>>();
+        var context = CreateInMemoryEventsContext();
 
-        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, memoryCache, loggerMock.Object);
+        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
 
         var failingRule = CreateStallRule("Failing", resetOnProgress: false, maxStrikes: 4);
 
@@ -175,14 +203,14 @@ public class RuleEvaluatorTests
             .Returns(failingRule);
 
         strikerMock
-            .Setup(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.Stalled))
+            .Setup(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.Stalled, It.IsAny<long?>()))
             .ThrowsAsync(new InvalidOperationException("boom"));
 
         var torrentMock = CreateTorrentMock();
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => evaluator.EvaluateStallRulesAsync(torrentMock.Object));
 
-        strikerMock.Verify(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.Stalled), Times.Once);
+        strikerMock.Verify(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.Stalled, It.IsAny<long?>()), Times.Once);
     }
 
     [Fact]
@@ -190,10 +218,10 @@ public class RuleEvaluatorTests
     {
         var ruleManagerMock = new Mock<IRuleManager>();
         var strikerMock = new Mock<IStriker>();
-        using var memoryCache = new MemoryCache(new MemoryCacheOptions());
         var loggerMock = new Mock<ILogger<RuleEvaluator>>();
+        var context = CreateInMemoryEventsContext();
 
-        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, memoryCache, loggerMock.Object);
+        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
 
         ruleManagerMock
             .Setup(x => x.GetMatchingSlowRule(It.IsAny<ITorrentItemWrapper>()))
@@ -204,7 +232,7 @@ public class RuleEvaluatorTests
         var result = await evaluator.EvaluateSlowRulesAsync(torrentMock.Object);
         Assert.False(result.ShouldRemove);
 
-        strikerMock.Verify(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.SlowTime), Times.Never);
+        strikerMock.Verify(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.SlowTime, It.IsAny<long?>()), Times.Never);
     }
 
     [Fact]
@@ -212,10 +240,10 @@ public class RuleEvaluatorTests
     {
         var ruleManagerMock = new Mock<IRuleManager>();
         var strikerMock = new Mock<IStriker>();
-        using var memoryCache = new MemoryCache(new MemoryCacheOptions());
         var loggerMock = new Mock<ILogger<RuleEvaluator>>();
+        var context = CreateInMemoryEventsContext();
 
-        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, memoryCache, loggerMock.Object);
+        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
 
         var slowRule = CreateSlowRule("Slow Apply", resetOnProgress: false, maxStrikes: 3);
 
@@ -224,7 +252,7 @@ public class RuleEvaluatorTests
             .Returns(slowRule);
 
         strikerMock
-            .Setup(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.SlowTime))
+            .Setup(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.SlowTime, It.IsAny<long?>()))
             .ReturnsAsync(false);
 
         var torrentMock = CreateTorrentMock();
@@ -232,7 +260,7 @@ public class RuleEvaluatorTests
         var result = await evaluator.EvaluateSlowRulesAsync(torrentMock.Object);
         Assert.False(result.ShouldRemove);
 
-        strikerMock.Verify(x => x.StrikeAndCheckLimit("hash", "Example Torrent", (ushort)slowRule.MaxStrikes, StrikeType.SlowTime), Times.Once);
+        strikerMock.Verify(x => x.StrikeAndCheckLimit("hash", "Example Torrent", (ushort)slowRule.MaxStrikes, StrikeType.SlowTime, It.IsAny<long?>()), Times.Once);
     }
 
     [Fact]
@@ -240,10 +268,10 @@ public class RuleEvaluatorTests
     {
         var ruleManagerMock = new Mock<IRuleManager>();
         var strikerMock = new Mock<IStriker>();
-        using var memoryCache = new MemoryCache(new MemoryCacheOptions());
         var loggerMock = new Mock<ILogger<RuleEvaluator>>();
+        var context = CreateInMemoryEventsContext();
 
-        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, memoryCache, loggerMock.Object);
+        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
 
         var slowRule = CreateSlowRule("Slow Remove", resetOnProgress: false, maxStrikes: 8);
 
@@ -252,7 +280,7 @@ public class RuleEvaluatorTests
             .Returns(slowRule);
 
         strikerMock
-            .Setup(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.SlowTime))
+            .Setup(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.SlowTime, It.IsAny<long?>()))
             .ReturnsAsync(true);
 
         var torrentMock = CreateTorrentMock();
@@ -260,7 +288,7 @@ public class RuleEvaluatorTests
         var result = await evaluator.EvaluateSlowRulesAsync(torrentMock.Object);
         Assert.True(result.ShouldRemove);
 
-        strikerMock.Verify(x => x.StrikeAndCheckLimit("hash", "Example Torrent", (ushort)slowRule.MaxStrikes, StrikeType.SlowTime), Times.Once);
+        strikerMock.Verify(x => x.StrikeAndCheckLimit("hash", "Example Torrent", (ushort)slowRule.MaxStrikes, StrikeType.SlowTime, It.IsAny<long?>()), Times.Once);
     }
 
     [Fact]
@@ -268,10 +296,10 @@ public class RuleEvaluatorTests
     {
         var ruleManagerMock = new Mock<IRuleManager>();
         var strikerMock = new Mock<IStriker>();
-        using var memoryCache = new MemoryCache(new MemoryCacheOptions());
         var loggerMock = new Mock<ILogger<RuleEvaluator>>();
+        var context = CreateInMemoryEventsContext();
 
-        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, memoryCache, loggerMock.Object);
+        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
 
         var slowRule = CreateSlowRule("Slow Progress", resetOnProgress: true, maxStrikes: 4);
 
@@ -295,10 +323,10 @@ public class RuleEvaluatorTests
     {
         var ruleManagerMock = new Mock<IRuleManager>();
         var strikerMock = new Mock<IStriker>();
-        using var memoryCache = new MemoryCache(new MemoryCacheOptions());
         var loggerMock = new Mock<ILogger<RuleEvaluator>>();
+        var context = CreateInMemoryEventsContext();
 
-        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, memoryCache, loggerMock.Object);
+        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
 
         var failingRule = CreateSlowRule("Failing Slow", resetOnProgress: false, maxStrikes: 4);
 
@@ -307,14 +335,14 @@ public class RuleEvaluatorTests
             .Returns(failingRule);
 
         strikerMock
-            .Setup(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.SlowTime))
+            .Setup(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.SlowTime, It.IsAny<long?>()))
             .ThrowsAsync(new InvalidOperationException("slow fail"));
 
         var torrentMock = CreateTorrentMock();
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => evaluator.EvaluateSlowRulesAsync(torrentMock.Object));
 
-        strikerMock.Verify(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.SlowTime), Times.Once);
+        strikerMock.Verify(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.SlowTime, It.IsAny<long?>()), Times.Once);
     }
 
     [Fact]
@@ -322,10 +350,10 @@ public class RuleEvaluatorTests
     {
         var ruleManagerMock = new Mock<IRuleManager>();
         var strikerMock = new Mock<IStriker>();
-        using var memoryCache = new MemoryCache(new MemoryCacheOptions());
         var loggerMock = new Mock<ILogger<RuleEvaluator>>();
+        var context = CreateInMemoryEventsContext();
 
-        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, memoryCache, loggerMock.Object);
+        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
 
         var slowRule = CreateSlowRule(
             name: "Speed Rule",
@@ -339,7 +367,7 @@ public class RuleEvaluatorTests
             .Returns(slowRule);
 
         strikerMock
-            .Setup(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.SlowSpeed))
+            .Setup(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.SlowSpeed, It.IsAny<long?>()))
             .ReturnsAsync(true);
 
         var torrentMock = CreateTorrentMock();
@@ -348,7 +376,7 @@ public class RuleEvaluatorTests
         Assert.True(result.ShouldRemove);
 
         strikerMock.Verify(
-            x => x.StrikeAndCheckLimit("hash", "Example Torrent", (ushort)slowRule.MaxStrikes, StrikeType.SlowSpeed),
+            x => x.StrikeAndCheckLimit("hash", "Example Torrent", (ushort)slowRule.MaxStrikes, StrikeType.SlowSpeed, It.IsAny<long?>()),
             Times.Once);
         strikerMock.Verify(
             x => x.ResetStrikeAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<StrikeType>()),
@@ -360,10 +388,10 @@ public class RuleEvaluatorTests
     {
         var ruleManagerMock = new Mock<IRuleManager>();
         var strikerMock = new Mock<IStriker>();
-        using var memoryCache = new MemoryCache(new MemoryCacheOptions());
         var loggerMock = new Mock<ILogger<RuleEvaluator>>();
+        var context = CreateInMemoryEventsContext();
 
-        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, memoryCache, loggerMock.Object);
+        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
 
         var slowRule = CreateSlowRule(
             name: "Both Rule",
@@ -377,7 +405,7 @@ public class RuleEvaluatorTests
             .Returns(slowRule);
 
         strikerMock
-            .Setup(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.SlowSpeed))
+            .Setup(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.SlowSpeed, It.IsAny<long?>()))
             .ReturnsAsync(true);
 
         var torrentMock = CreateTorrentMock();
@@ -385,7 +413,7 @@ public class RuleEvaluatorTests
         var result = await evaluator.EvaluateSlowRulesAsync(torrentMock.Object);
         Assert.True(result.ShouldRemove);
 
-        strikerMock.Verify(x => x.StrikeAndCheckLimit("hash", "Example Torrent", (ushort)slowRule.MaxStrikes, StrikeType.SlowSpeed), Times.Once);
+        strikerMock.Verify(x => x.StrikeAndCheckLimit("hash", "Example Torrent", (ushort)slowRule.MaxStrikes, StrikeType.SlowSpeed, It.IsAny<long?>()), Times.Once);
     }
 
     [Fact]
@@ -393,10 +421,10 @@ public class RuleEvaluatorTests
     {
         var ruleManagerMock = new Mock<IRuleManager>();
         var strikerMock = new Mock<IStriker>();
-        using var memoryCache = new MemoryCache(new MemoryCacheOptions());
         var loggerMock = new Mock<ILogger<RuleEvaluator>>();
+        var context = CreateInMemoryEventsContext();
 
-        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, memoryCache, loggerMock.Object);
+        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
 
         // Neither minSpeed nor maxTime set (maxTimeHours = 0, minSpeed = null)
         var slowRule = CreateSlowRule(
@@ -415,7 +443,7 @@ public class RuleEvaluatorTests
         var result = await evaluator.EvaluateSlowRulesAsync(torrentMock.Object);
         Assert.False(result.ShouldRemove);
 
-        strikerMock.Verify(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), It.IsAny<StrikeType>()), Times.Never);
+        strikerMock.Verify(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), It.IsAny<StrikeType>(), It.IsAny<long?>()), Times.Never);
     }
 
     [Fact]
@@ -423,10 +451,10 @@ public class RuleEvaluatorTests
     {
         var ruleManagerMock = new Mock<IRuleManager>();
         var strikerMock = new Mock<IStriker>();
-        using var memoryCache = new MemoryCache(new MemoryCacheOptions());
         var loggerMock = new Mock<ILogger<RuleEvaluator>>();
+        var context = CreateInMemoryEventsContext();
 
-        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, memoryCache, loggerMock.Object);
+        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
 
         var slowRule = CreateSlowRule(
             name: "Speed Reset",
@@ -455,10 +483,10 @@ public class RuleEvaluatorTests
     {
         var ruleManagerMock = new Mock<IRuleManager>();
         var strikerMock = new Mock<IStriker>();
-        using var memoryCache = new MemoryCache(new MemoryCacheOptions());
         var loggerMock = new Mock<ILogger<RuleEvaluator>>();
+        var context = CreateInMemoryEventsContext();
 
-        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, memoryCache, loggerMock.Object);
+        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
 
         var slowRule = CreateSlowRule(
             name: "Speed No Reset",
@@ -483,10 +511,10 @@ public class RuleEvaluatorTests
     {
         var ruleManagerMock = new Mock<IRuleManager>();
         var strikerMock = new Mock<IStriker>();
-        using var memoryCache = new MemoryCache(new MemoryCacheOptions());
         var loggerMock = new Mock<ILogger<RuleEvaluator>>();
+        var context = CreateInMemoryEventsContext();
 
-        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, memoryCache, loggerMock.Object);
+        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
 
         var slowRule = CreateSlowRule(
             name: "Time No Reset",
@@ -511,10 +539,10 @@ public class RuleEvaluatorTests
     {
         var ruleManagerMock = new Mock<IRuleManager>();
         var strikerMock = new Mock<IStriker>();
-        using var memoryCache = new MemoryCache(new MemoryCacheOptions());
         var loggerMock = new Mock<ILogger<RuleEvaluator>>();
+        var context = CreateInMemoryEventsContext();
 
-        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, memoryCache, loggerMock.Object);
+        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
 
         var slowRule = CreateSlowRule(
             name: "Speed Strike",
@@ -528,7 +556,7 @@ public class RuleEvaluatorTests
             .Returns(slowRule);
 
         strikerMock
-            .Setup(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.SlowSpeed))
+            .Setup(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.SlowSpeed, It.IsAny<long?>()))
             .ReturnsAsync(false);
 
         var torrentMock = CreateTorrentMock();
@@ -537,7 +565,7 @@ public class RuleEvaluatorTests
         var result = await evaluator.EvaluateSlowRulesAsync(torrentMock.Object);
         Assert.False(result.ShouldRemove);
 
-        strikerMock.Verify(x => x.StrikeAndCheckLimit("hash", "Example Torrent", 3, StrikeType.SlowSpeed), Times.Once);
+        strikerMock.Verify(x => x.StrikeAndCheckLimit("hash", "Example Torrent", 3, StrikeType.SlowSpeed, It.IsAny<long?>()), Times.Once);
     }
 
     [Fact]
@@ -545,10 +573,10 @@ public class RuleEvaluatorTests
     {
         var ruleManagerMock = new Mock<IRuleManager>();
         var strikerMock = new Mock<IStriker>();
-        using var memoryCache = new MemoryCache(new MemoryCacheOptions());
         var loggerMock = new Mock<ILogger<RuleEvaluator>>();
+        var context = CreateInMemoryEventsContext();
 
-        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, memoryCache, loggerMock.Object);
+        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
 
         var slowRule = CreateSlowRule(
             name: "Time Strike",
@@ -562,7 +590,7 @@ public class RuleEvaluatorTests
             .Returns(slowRule);
 
         strikerMock
-            .Setup(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.SlowTime))
+            .Setup(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.SlowTime, It.IsAny<long?>()))
             .ReturnsAsync(false);
 
         var torrentMock = CreateTorrentMock();
@@ -571,7 +599,7 @@ public class RuleEvaluatorTests
         var result = await evaluator.EvaluateSlowRulesAsync(torrentMock.Object);
         Assert.False(result.ShouldRemove);
 
-        strikerMock.Verify(x => x.StrikeAndCheckLimit("hash", "Example Torrent", 5, StrikeType.SlowTime), Times.Once);
+        strikerMock.Verify(x => x.StrikeAndCheckLimit("hash", "Example Torrent", 5, StrikeType.SlowTime, It.IsAny<long?>()), Times.Once);
     }
 
     [Fact]
@@ -579,10 +607,10 @@ public class RuleEvaluatorTests
     {
         var ruleManagerMock = new Mock<IRuleManager>();
         var strikerMock = new Mock<IStriker>();
-        using var memoryCache = new MemoryCache(new MemoryCacheOptions());
         var loggerMock = new Mock<ILogger<RuleEvaluator>>();
+        var context = CreateInMemoryEventsContext();
 
-        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, memoryCache, loggerMock.Object);
+        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
 
         var stallRule = CreateStallRule("No Reset", resetOnProgress: false, maxStrikes: 3);
 
@@ -591,7 +619,7 @@ public class RuleEvaluatorTests
             .Returns(stallRule);
 
         strikerMock
-            .Setup(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.Stalled))
+            .Setup(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.Stalled, It.IsAny<long?>()))
             .ReturnsAsync(false);
 
         long downloadedBytes = ByteSize.Parse("50 MB").Bytes;
@@ -609,12 +637,22 @@ public class RuleEvaluatorTests
     [Fact]
     public async Task EvaluateStallRulesAsync_WithProgressAndNoMinimumThreshold_ShouldReset()
     {
+        // Arrange
         var ruleManagerMock = new Mock<IRuleManager>();
         var strikerMock = new Mock<IStriker>();
-        using var memoryCache = new MemoryCache(new MemoryCacheOptions());
         var loggerMock = new Mock<ILogger<RuleEvaluator>>();
+        var context = CreateInMemoryEventsContext();
 
-        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, memoryCache, loggerMock.Object);
+        // Seed database with a DownloadItem and initial strike (simulating first observation at 0 bytes)
+        var downloadItem = new DownloadItem { DownloadId = "hash", Title = "Example Torrent" };
+        context.DownloadItems.Add(downloadItem);
+        await context.SaveChangesAsync();
+
+        var initialStrike = new Strike { DownloadItemId = downloadItem.Id, Type = StrikeType.Stalled, LastDownloadedBytes = 0 };
+        context.Strikes.Add(initialStrike);
+        await context.SaveChangesAsync();
+
+        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
 
         var stallRule = CreateStallRule("Reset No Minimum", resetOnProgress: true, maxStrikes: 3, minimumProgress: null);
 
@@ -623,23 +661,19 @@ public class RuleEvaluatorTests
             .Returns(stallRule);
 
         strikerMock
-            .Setup(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.Stalled))
+            .Setup(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.Stalled, It.IsAny<long?>()))
             .ReturnsAsync(false);
 
         strikerMock
             .Setup(x => x.ResetStrikeAsync(It.IsAny<string>(), It.IsAny<string>(), StrikeType.Stalled))
             .Returns(Task.CompletedTask);
 
-        long downloadedBytes = 0;
+        // Act - Any progress should trigger reset when no minimum is set
+        long downloadedBytes = ByteSize.Parse("1 KB").Bytes;
         var torrentMock = CreateTorrentMock(downloadedBytesFactory: () => downloadedBytes);
-
-        // Seed cache
         await evaluator.EvaluateStallRulesAsync(torrentMock.Object);
-        strikerMock.Verify(x => x.ResetStrikeAsync(It.IsAny<string>(), It.IsAny<string>(), StrikeType.Stalled), Times.Never);
 
-        // Any progress should trigger reset when no minimum is set
-        downloadedBytes = ByteSize.Parse("1 KB").Bytes;
-        await evaluator.EvaluateStallRulesAsync(torrentMock.Object);
+        // Assert
         strikerMock.Verify(x => x.ResetStrikeAsync("hash", "Example Torrent", StrikeType.Stalled), Times.Once);
     }
 
@@ -712,10 +746,10 @@ public class RuleEvaluatorTests
     {
         var ruleManagerMock = new Mock<IRuleManager>();
         var strikerMock = new Mock<IStriker>();
-        using var memoryCache = new MemoryCache(new MemoryCacheOptions());
         var loggerMock = new Mock<ILogger<RuleEvaluator>>();
+        var context = CreateInMemoryEventsContext();
 
-        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, memoryCache, loggerMock.Object);
+        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
 
         ruleManagerMock
             .Setup(x => x.GetMatchingStallRule(It.IsAny<ITorrentItemWrapper>()))
@@ -735,10 +769,10 @@ public class RuleEvaluatorTests
     {
         var ruleManagerMock = new Mock<IRuleManager>();
         var strikerMock = new Mock<IStriker>();
-        using var memoryCache = new MemoryCache(new MemoryCacheOptions());
         var loggerMock = new Mock<ILogger<RuleEvaluator>>();
+        var context = CreateInMemoryEventsContext();
 
-        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, memoryCache, loggerMock.Object);
+        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
 
         var stallRule = CreateStallRule("Test Rule", resetOnProgress: false, maxStrikes: 3, deletePrivateTorrentsFromClient: true);
 
@@ -747,7 +781,7 @@ public class RuleEvaluatorTests
             .Returns(stallRule);
 
         strikerMock
-            .Setup(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.Stalled))
+            .Setup(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.Stalled, It.IsAny<long?>()))
             .ReturnsAsync(false);
 
         var torrentMock = CreateTorrentMock();
@@ -764,10 +798,10 @@ public class RuleEvaluatorTests
     {
         var ruleManagerMock = new Mock<IRuleManager>();
         var strikerMock = new Mock<IStriker>();
-        using var memoryCache = new MemoryCache(new MemoryCacheOptions());
         var loggerMock = new Mock<ILogger<RuleEvaluator>>();
+        var context = CreateInMemoryEventsContext();
 
-        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, memoryCache, loggerMock.Object);
+        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
 
         var stallRule = CreateStallRule("Delete True Rule", resetOnProgress: false, maxStrikes: 3, deletePrivateTorrentsFromClient: true);
 
@@ -776,7 +810,7 @@ public class RuleEvaluatorTests
             .Returns(stallRule);
 
         strikerMock
-            .Setup(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.Stalled))
+            .Setup(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.Stalled, It.IsAny<long?>()))
             .ReturnsAsync(true);
 
         var torrentMock = CreateTorrentMock();
@@ -793,10 +827,10 @@ public class RuleEvaluatorTests
     {
         var ruleManagerMock = new Mock<IRuleManager>();
         var strikerMock = new Mock<IStriker>();
-        using var memoryCache = new MemoryCache(new MemoryCacheOptions());
         var loggerMock = new Mock<ILogger<RuleEvaluator>>();
+        var context = CreateInMemoryEventsContext();
 
-        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, memoryCache, loggerMock.Object);
+        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
 
         var stallRule = CreateStallRule("Delete False Rule", resetOnProgress: false, maxStrikes: 3, deletePrivateTorrentsFromClient: false);
 
@@ -805,7 +839,7 @@ public class RuleEvaluatorTests
             .Returns(stallRule);
 
         strikerMock
-            .Setup(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.Stalled))
+            .Setup(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.Stalled, It.IsAny<long?>()))
             .ReturnsAsync(true);
 
         var torrentMock = CreateTorrentMock();
@@ -822,10 +856,10 @@ public class RuleEvaluatorTests
     {
         var ruleManagerMock = new Mock<IRuleManager>();
         var strikerMock = new Mock<IStriker>();
-        using var memoryCache = new MemoryCache(new MemoryCacheOptions());
         var loggerMock = new Mock<ILogger<RuleEvaluator>>();
+        var context = CreateInMemoryEventsContext();
 
-        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, memoryCache, loggerMock.Object);
+        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
 
         ruleManagerMock
             .Setup(x => x.GetMatchingSlowRule(It.IsAny<ITorrentItemWrapper>()))
@@ -845,10 +879,10 @@ public class RuleEvaluatorTests
     {
         var ruleManagerMock = new Mock<IRuleManager>();
         var strikerMock = new Mock<IStriker>();
-        using var memoryCache = new MemoryCache(new MemoryCacheOptions());
         var loggerMock = new Mock<ILogger<RuleEvaluator>>();
+        var context = CreateInMemoryEventsContext();
 
-        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, memoryCache, loggerMock.Object);
+        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
 
         var slowRule = CreateSlowRule("Slow Delete True", resetOnProgress: false, maxStrikes: 3, maxTimeHours: 1, deletePrivateTorrentsFromClient: true);
 
@@ -857,7 +891,7 @@ public class RuleEvaluatorTests
             .Returns(slowRule);
 
         strikerMock
-            .Setup(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.SlowTime))
+            .Setup(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.SlowTime, It.IsAny<long?>()))
             .ReturnsAsync(true);
 
         var torrentMock = CreateTorrentMock();
@@ -874,10 +908,10 @@ public class RuleEvaluatorTests
     {
         var ruleManagerMock = new Mock<IRuleManager>();
         var strikerMock = new Mock<IStriker>();
-        using var memoryCache = new MemoryCache(new MemoryCacheOptions());
         var loggerMock = new Mock<ILogger<RuleEvaluator>>();
+        var context = CreateInMemoryEventsContext();
 
-        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, memoryCache, loggerMock.Object);
+        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
 
         var slowRule = CreateSlowRule("Slow Delete False", resetOnProgress: false, maxStrikes: 3, maxTimeHours: 1, deletePrivateTorrentsFromClient: false);
 
@@ -886,7 +920,7 @@ public class RuleEvaluatorTests
             .Returns(slowRule);
 
         strikerMock
-            .Setup(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.SlowTime))
+            .Setup(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.SlowTime, It.IsAny<long?>()))
             .ReturnsAsync(true);
 
         var torrentMock = CreateTorrentMock();
@@ -903,10 +937,10 @@ public class RuleEvaluatorTests
     {
         var ruleManagerMock = new Mock<IRuleManager>();
         var strikerMock = new Mock<IStriker>();
-        using var memoryCache = new MemoryCache(new MemoryCacheOptions());
         var loggerMock = new Mock<ILogger<RuleEvaluator>>();
+        var context = CreateInMemoryEventsContext();
 
-        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, memoryCache, loggerMock.Object);
+        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
 
         var slowRule = CreateSlowRule(
             "Speed Delete True",
@@ -921,7 +955,7 @@ public class RuleEvaluatorTests
             .Returns(slowRule);
 
         strikerMock
-            .Setup(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.SlowSpeed))
+            .Setup(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.SlowSpeed, It.IsAny<long?>()))
             .ReturnsAsync(true);
 
         var torrentMock = CreateTorrentMock();
@@ -939,10 +973,10 @@ public class RuleEvaluatorTests
     {
         var ruleManagerMock = new Mock<IRuleManager>();
         var strikerMock = new Mock<IStriker>();
-        using var memoryCache = new MemoryCache(new MemoryCacheOptions());
         var loggerMock = new Mock<ILogger<RuleEvaluator>>();
+        var context = CreateInMemoryEventsContext();
 
-        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, memoryCache, loggerMock.Object);
+        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
 
         var slowRule = CreateSlowRule("Test Slow Rule", resetOnProgress: false, maxStrikes: 3, maxTimeHours: 1, deletePrivateTorrentsFromClient: true);
 
@@ -951,7 +985,7 @@ public class RuleEvaluatorTests
             .Returns(slowRule);
 
         strikerMock
-            .Setup(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.SlowTime))
+            .Setup(x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), StrikeType.SlowTime, It.IsAny<long?>()))
             .ReturnsAsync(false);
 
         var torrentMock = CreateTorrentMock();

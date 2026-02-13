@@ -105,7 +105,8 @@ public class DownloadRemoverConsumerTests
             SearchItem = new SearchItem { Id = 456 },
             Record = CreateQueueRecord(),
             RemoveFromClient = true,
-            DeleteReason = DeleteReason.Stalled
+            DeleteReason = DeleteReason.Stalled,
+            JobRunId = Guid.NewGuid()
         };
         var contextMock = CreateConsumeContextMock(request);
 
@@ -134,7 +135,8 @@ public class DownloadRemoverConsumerTests
             SearchItem = new SearchItem { Id = 789 },
             Record = CreateQueueRecord(),
             RemoveFromClient = false,
-            DeleteReason = DeleteReason.FailedImport
+            DeleteReason = DeleteReason.FailedImport,
+            JobRunId = Guid.NewGuid()
         };
         var contextMock = CreateConsumeContextMock(request);
 
@@ -162,7 +164,8 @@ public class DownloadRemoverConsumerTests
             SearchItem = new SearchItem { Id = 111 },
             Record = CreateQueueRecord(),
             RemoveFromClient = true,
-            DeleteReason = DeleteReason.SlowSpeed
+            DeleteReason = DeleteReason.SlowSpeed,
+            JobRunId = Guid.NewGuid()
         };
         var contextMock = CreateConsumeContextMock(request);
 
@@ -191,7 +194,8 @@ public class DownloadRemoverConsumerTests
             SearchItem = new SearchItem { Id = 123 },
             Record = CreateQueueRecord(),
             RemoveFromClient = true,
-            DeleteReason = DeleteReason.Stalled
+            DeleteReason = DeleteReason.Stalled,
+            JobRunId = Guid.NewGuid()
         };
     }
 

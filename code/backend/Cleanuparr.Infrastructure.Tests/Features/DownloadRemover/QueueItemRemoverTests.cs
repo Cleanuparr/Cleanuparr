@@ -455,7 +455,8 @@ public class QueueItemRemoverTests : IDisposable
             SearchItem = new SearchItem { Id = 123 },
             Record = CreateQueueRecord(),
             RemoveFromClient = removeFromClient,
-            DeleteReason = deleteReason
+            DeleteReason = deleteReason,
+            JobRunId = Guid.NewGuid()
         };
     }
 

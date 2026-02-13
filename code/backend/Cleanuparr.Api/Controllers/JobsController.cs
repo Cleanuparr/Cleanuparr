@@ -1,4 +1,5 @@
 using Cleanuparr.Api.Models;
+using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Models;
 using Cleanuparr.Infrastructure.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;

@@ -150,7 +150,7 @@ export class DashboardComponent implements OnInit {
   getDownloadName(event: { data?: string }): string | null {
     if (!event.data) return null;
     try {
-      return JSON.parse(event.data)?.downloadName || null;
+      return JSON.parse(event.data)?.itemName || null;
     } catch {
       return null;
     }
