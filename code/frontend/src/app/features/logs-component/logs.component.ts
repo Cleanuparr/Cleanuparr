@@ -85,7 +85,7 @@ export class LogsComponent {
   });
 
   isExpandable(log: LogEntry): boolean {
-    return !!(log.exception || log.jobName || log.instanceName);
+    return !!(log.exception || log.jobName || log.instanceName || log.message.length > 80);
   }
 
   toggleExpand(index: number): void {

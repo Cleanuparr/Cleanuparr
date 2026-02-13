@@ -90,6 +90,10 @@
           </div>
           @if (expandedIndex() === $index) {
             <div class="log-entry__details">
+              <div class="log-entry__detail">
+                <span class="log-entry__detail-label">Full Message</span>
+                <span>{{ log.message }}</span>
+              </div>
               @if (log.exception) {
                 <div class="log-entry__exception">
                   <span class="log-entry__detail-label">Exception</span>
