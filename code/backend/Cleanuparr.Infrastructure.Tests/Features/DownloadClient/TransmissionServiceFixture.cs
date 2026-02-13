@@ -8,7 +8,6 @@ using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Infrastructure.Services.Interfaces;
 using Cleanuparr.Infrastructure.Tests.Features.DownloadClient.TestHelpers;
 using Cleanuparr.Persistence.Models.Configuration;
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Moq;
 
@@ -17,7 +16,6 @@ namespace Cleanuparr.Infrastructure.Tests.Features.DownloadClient;
 public class TransmissionServiceFixture : IDisposable
 {
     public Mock<ILogger<TransmissionService>> Logger { get; }
-    public MemoryCache Cache { get; }
     public Mock<IFilenameEvaluator> FilenameEvaluator { get; }
     public Mock<IStriker> Striker { get; }
     public Mock<IDryRunInterceptor> DryRunInterceptor { get; }
@@ -32,7 +30,6 @@ public class TransmissionServiceFixture : IDisposable
     public TransmissionServiceFixture()
     {
         Logger = new Mock<ILogger<TransmissionService>>();
-        Cache = new MemoryCache(new MemoryCacheOptions());
         FilenameEvaluator = new Mock<IFilenameEvaluator>();
         Striker = new Mock<IStriker>();
         DryRunInterceptor = new Mock<IDryRunInterceptor>();
@@ -74,7 +71,6 @@ public class TransmissionServiceFixture : IDisposable
 
         return new TransmissionService(
             Logger.Object,
-            Cache,
             FilenameEvaluator.Object,
             Striker.Object,
             DryRunInterceptor.Object,
@@ -112,7 +108,6 @@ public class TransmissionServiceFixture : IDisposable
 
     public void Dispose()
     {
-        Cache.Dispose();
         GC.SuppressFinalize(this);
     }
 }

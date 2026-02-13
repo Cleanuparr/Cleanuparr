@@ -17,7 +17,6 @@ namespace Cleanuparr.Infrastructure.Tests.Features.DownloadClient;
 public class DelugeServiceFixture : IDisposable
 {
     public Mock<ILogger<DelugeService>> Logger { get; }
-    public MemoryCache Cache { get; }
     public Mock<IFilenameEvaluator> FilenameEvaluator { get; }
     public Mock<IStriker> Striker { get; }
     public Mock<IDryRunInterceptor> DryRunInterceptor { get; }
@@ -32,7 +31,6 @@ public class DelugeServiceFixture : IDisposable
     public DelugeServiceFixture()
     {
         Logger = new Mock<ILogger<DelugeService>>();
-        Cache = new MemoryCache(new MemoryCacheOptions());
         FilenameEvaluator = new Mock<IFilenameEvaluator>();
         Striker = new Mock<IStriker>();
         DryRunInterceptor = new Mock<IDryRunInterceptor>();
@@ -74,7 +72,6 @@ public class DelugeServiceFixture : IDisposable
 
         return new DelugeService(
             Logger.Object,
-            Cache,
             FilenameEvaluator.Object,
             Striker.Object,
             DryRunInterceptor.Object,
@@ -112,7 +109,6 @@ public class DelugeServiceFixture : IDisposable
 
     public void Dispose()
     {
-        Cache.Dispose();
         GC.SuppressFinalize(this);
     }
 }

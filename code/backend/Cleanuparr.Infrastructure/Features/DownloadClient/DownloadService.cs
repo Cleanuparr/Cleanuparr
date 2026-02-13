@@ -1,6 +1,5 @@
 using Cleanuparr.Domain.Entities;
 using Cleanuparr.Domain.Enums;
-using Cleanuparr.Infrastructure.Events;
 using Cleanuparr.Infrastructure.Events.Interfaces;
 using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.Files;
@@ -12,7 +11,6 @@ using Cleanuparr.Infrastructure.Services.Interfaces;
 using Cleanuparr.Persistence.Models.Configuration;
 using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
 using Cleanuparr.Shared.Helpers;
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 
 namespace Cleanuparr.Infrastructure.Features.DownloadClient;
@@ -27,10 +25,8 @@ public class HealthCheckResult
 public abstract class DownloadService : IDownloadService
 {
     protected readonly ILogger<DownloadService> _logger;
-    protected readonly IMemoryCache _cache;
     protected readonly IFilenameEvaluator _filenameEvaluator;
     protected readonly IStriker _striker;
-    protected readonly MemoryCacheEntryOptions _cacheOptions;
     protected readonly IDryRunInterceptor _dryRunInterceptor;
     protected readonly IHardLinkFileService _hardLinkFileService;
     protected readonly IEventPublisher _eventPublisher;
@@ -42,7 +38,6 @@ public abstract class DownloadService : IDownloadService
 
     protected DownloadService(
         ILogger<DownloadService> logger,
-        IMemoryCache cache,
         IFilenameEvaluator filenameEvaluator,
         IStriker striker,
         IDryRunInterceptor dryRunInterceptor,
@@ -56,15 +51,12 @@ public abstract class DownloadService : IDownloadService
     )
     {
         _logger = logger;
-        _cache = cache;
         _filenameEvaluator = filenameEvaluator;
         _striker = striker;
         _dryRunInterceptor = dryRunInterceptor;
         _hardLinkFileService = hardLinkFileService;
         _eventPublisher = eventPublisher;
         _blocklistProvider = blocklistProvider;
-        _cacheOptions = new MemoryCacheEntryOptions()
-            .SetSlidingExpiration(StaticConfiguration.TriggerValue + Constants.CacheLimitBuffer);
         _downloadClientConfig = downloadClientConfig;
         _httpClient = httpClientProvider.CreateClient(downloadClientConfig);
         _ruleEvaluator = ruleEvaluator;

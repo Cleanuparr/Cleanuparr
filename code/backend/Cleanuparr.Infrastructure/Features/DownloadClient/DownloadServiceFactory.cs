@@ -61,7 +61,6 @@ public sealed class DownloadServiceFactory : IDownloadServiceFactory
     private QBitService CreateQBitService(DownloadClientConfig downloadClientConfig)
     {
         var logger = _serviceProvider.GetRequiredService<ILogger<QBitService>>();
-        var cache = _serviceProvider.GetRequiredService<IMemoryCache>();
         var filenameEvaluator = _serviceProvider.GetRequiredService<IFilenameEvaluator>();
         var striker = _serviceProvider.GetRequiredService<IStriker>();
         var dryRunInterceptor = _serviceProvider.GetRequiredService<IDryRunInterceptor>();
@@ -75,7 +74,7 @@ public sealed class DownloadServiceFactory : IDownloadServiceFactory
 
         // Create the QBitService instance
         QBitService service = new(
-            logger, cache, filenameEvaluator, striker, dryRunInterceptor,
+            logger, filenameEvaluator, striker, dryRunInterceptor,
             hardLinkFileService, httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, ruleEvaluator, ruleManager
         );
 
@@ -86,7 +85,6 @@ public sealed class DownloadServiceFactory : IDownloadServiceFactory
     {
         var logger = _serviceProvider.GetRequiredService<ILogger<DelugeService>>();
         var filenameEvaluator = _serviceProvider.GetRequiredService<IFilenameEvaluator>();
-        var cache = _serviceProvider.GetRequiredService<IMemoryCache>();
         var striker = _serviceProvider.GetRequiredService<IStriker>();
         var dryRunInterceptor = _serviceProvider.GetRequiredService<IDryRunInterceptor>();
         var hardLinkFileService = _serviceProvider.GetRequiredService<IHardLinkFileService>();
@@ -99,7 +97,7 @@ public sealed class DownloadServiceFactory : IDownloadServiceFactory
 
         // Create the DelugeService instance
         DelugeService service = new(
-            logger, cache, filenameEvaluator, striker, dryRunInterceptor,
+            logger, filenameEvaluator, striker, dryRunInterceptor,
             hardLinkFileService, httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, ruleEvaluator, ruleManager
         );
 
@@ -109,7 +107,6 @@ public sealed class DownloadServiceFactory : IDownloadServiceFactory
     private TransmissionService CreateTransmissionService(DownloadClientConfig downloadClientConfig)
     {
         var logger = _serviceProvider.GetRequiredService<ILogger<TransmissionService>>();
-        var cache = _serviceProvider.GetRequiredService<IMemoryCache>();
         var filenameEvaluator = _serviceProvider.GetRequiredService<IFilenameEvaluator>();
         var striker = _serviceProvider.GetRequiredService<IStriker>();
         var dryRunInterceptor = _serviceProvider.GetRequiredService<IDryRunInterceptor>();
@@ -123,7 +120,7 @@ public sealed class DownloadServiceFactory : IDownloadServiceFactory
 
         // Create the TransmissionService instance
         TransmissionService service = new(
-            logger, cache, filenameEvaluator, striker, dryRunInterceptor,
+            logger, filenameEvaluator, striker, dryRunInterceptor,
             hardLinkFileService, httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, ruleEvaluator, ruleManager
         );
 

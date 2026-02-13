@@ -20,7 +20,6 @@ public partial class DelugeService : DownloadService, IDelugeService
 
     public DelugeService(
         ILogger<DelugeService> logger,
-        IMemoryCache cache,
         IFilenameEvaluator filenameEvaluator,
         IStriker striker,
         IDryRunInterceptor dryRunInterceptor,
@@ -32,7 +31,7 @@ public partial class DelugeService : DownloadService, IDelugeService
         IRuleEvaluator ruleEvaluator,
         IRuleManager ruleManager
     ) : base(
-        logger, cache,
+        logger,
         filenameEvaluator, striker, dryRunInterceptor, hardLinkFileService,
         httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, ruleEvaluator, ruleManager
     )
@@ -44,7 +43,6 @@ public partial class DelugeService : DownloadService, IDelugeService
     // Internal constructor for testing
     internal DelugeService(
         ILogger<DelugeService> logger,
-        IMemoryCache cache,
         IFilenameEvaluator filenameEvaluator,
         IStriker striker,
         IDryRunInterceptor dryRunInterceptor,
@@ -57,7 +55,7 @@ public partial class DelugeService : DownloadService, IDelugeService
         IRuleManager ruleManager,
         IDelugeClientWrapper clientWrapper
     ) : base(
-        logger, cache,
+        logger,
         filenameEvaluator, striker, dryRunInterceptor, hardLinkFileService,
         httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, ruleEvaluator, ruleManager
     )
