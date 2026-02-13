@@ -104,8 +104,9 @@ public partial class QBitService
                 continue;
             }
 
-            ContextProvider.Set("downloadName", torrent.Name);
-            ContextProvider.Set("hash", torrent.Hash);
+            ContextProvider.Set(ContextProvider.Keys.DownloadName, torrent.Name);
+            ContextProvider.Set(ContextProvider.Keys.Hash, torrent.Hash);
+            ContextProvider.Set(ContextProvider.Keys.DownloadClientUrl, _downloadClientConfig.ExternalOrInternalUrl);
             bool hasHardlinks = false;
             bool hasErrors = false;
 
@@ -119,6 +120,8 @@ public partial class QBitService
                 }
 
                 string filePath = string.Join(Path.DirectorySeparatorChar, Path.Combine(torrent.Info.SavePath, file.Name).Split(['\\', '/']));
+                filePath = filePath.Replace("/downloads",
+                    "/Users/marius/workspace/projects/cleanuparr-test/data/qbittorrent/downloads");
 
                 if (file.Priority is TorrentContentPriority.Skip)
                 {

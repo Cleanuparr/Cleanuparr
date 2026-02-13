@@ -66,8 +66,9 @@ public partial class TransmissionService
                 continue;
             }
             
-            ContextProvider.Set("downloadName", torrent.Name);
-            ContextProvider.Set("hash", torrent.Hash);
+            ContextProvider.Set(ContextProvider.Keys.DownloadName, torrent.Name);
+            ContextProvider.Set(ContextProvider.Keys.Hash, torrent.Hash);
+            ContextProvider.Set(ContextProvider.Keys.DownloadClientUrl, _downloadClientConfig.ExternalOrInternalUrl);
 
             if (torrent.Info.Files is null || torrent.Info.FileStats is null)
             {

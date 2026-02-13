@@ -59,14 +59,15 @@ public class NotificationPublisherTests
 
         ContextProvider.Set(nameof(QueueRecord), record);
         ContextProvider.Set(nameof(InstanceType), instanceType);
-        ContextProvider.Set(nameof(ArrInstance) + nameof(ArrInstance.Url), new Uri("http://sonarr.local"));
-        ContextProvider.Set("version", 1f);
+        ContextProvider.Set(ContextProvider.Keys.ArrInstanceUrl, new Uri("http://sonarr.local"));
+        ContextProvider.Set(ContextProvider.Keys.Version, 1f);
     }
 
     private void SetupDownloadCleanerContext()
     {
-        ContextProvider.Set("downloadName", "Test Download");
-        ContextProvider.Set("hash", "HASH123");
+        ContextProvider.Set(ContextProvider.Keys.DownloadName, "Test Download");
+        ContextProvider.Set(ContextProvider.Keys.DownloadClientUrl, new Uri("http://downloadclient.local"));
+        ContextProvider.Set(ContextProvider.Keys.Hash, "HASH123");
     }
 
     #region Constructor Tests
@@ -204,6 +205,28 @@ public class NotificationPublisherTests
             Times.Once);
     }
 
+    [Fact]
+    public async Task NotifyStrike_WithoutExternalUrl_UsesInternalUrlInNotification()
+    {
+        // Arrange
+        SetupContext();
+
+        var providerDto = CreateProviderDto();
+        var providerMock = new Mock<INotificationProvider>();
+
+        _configServiceMock.Setup(c => c.GetProvidersForEventAsync(NotificationEventType.FailedImportStrike))
+            .ReturnsAsync(new List<NotificationProviderDto> { providerDto });
+        _providerFactoryMock.Setup(f => f.CreateProvider(providerDto))
+            .Returns(providerMock.Object);
+
+        // Act
+        await _publisher.NotifyStrike(StrikeType.FailedImport, 1);
+
+        // Assert
+        providerMock.Verify(p => p.SendNotificationAsync(It.Is<NotificationContext>(
+            c => c.Data["Url"] == "http://sonarr.local/")), Times.Once);
+    }
+
     #endregion
 
     #region NotifyQueueItemDeleted Tests
@@ -310,6 +333,30 @@ public class NotificationPublisherTests
         // Assert
         Assert.NotNull(capturedContext);
         Assert.Equal("25", capturedContext.Data["Seeding hours"]); // Rounds to 25
+    }
+
+    [Fact]
+    public async Task NotifyDownloadCleaned_WithDownloadClientUrl_IncludesUrlInNotification()
+    {
+        // Arrange
+        SetupDownloadCleanerContext();
+        ContextProvider.Set(ContextProvider.Keys.DownloadClientUrl, new Uri("https://qbit.external.com"));
+
+        var providerDto = CreateProviderDto();
+        var providerMock = new Mock<INotificationProvider>();
+
+        _configServiceMock.Setup(c => c.GetProvidersForEventAsync(NotificationEventType.DownloadCleaned))
+            .ReturnsAsync(new List<NotificationProviderDto> { providerDto });
+        _providerFactoryMock.Setup(f => f.CreateProvider(providerDto))
+            .Returns(providerMock.Object);
+
+        // Act
+        await _publisher.NotifyDownloadCleaned(2.5, TimeSpan.FromHours(48), "movies", CleanReason.MaxRatioReached);
+
+        // Assert
+        providerMock.Verify(p => p.SendNotificationAsync(It.Is<NotificationContext>(
+            c => c.Data.ContainsKey("Url") &&
+                 c.Data["Url"] == "https://qbit.external.com/")), Times.Once);
     }
 
     #endregion

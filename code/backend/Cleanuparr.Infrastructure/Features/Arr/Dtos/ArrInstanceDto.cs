@@ -24,4 +24,6 @@ public record ArrInstanceDto
     
     [Required]
     public required string ApiKey { get; init; }
+
+    public string? ExternalUrl { get; init; }
 } 

@@ -55,6 +55,7 @@ export class DownloadClientsComponent implements OnInit, HasPendingChanges {
   readonly modalUsername = signal('');
   readonly modalPassword = signal('');
   readonly modalUrlBase = signal('');
+  readonly modalExternalUrl = signal('');
   readonly testing = signal(false);
 
   // Modal validation
@@ -117,6 +118,7 @@ export class DownloadClientsComponent implements OnInit, HasPendingChanges {
     this.modalUsername.set('');
     this.modalPassword.set('');
     this.modalUrlBase.set('');
+    this.modalExternalUrl.set('');
     this.modalVisible.set(true);
   }
 
@@ -129,6 +131,7 @@ export class DownloadClientsComponent implements OnInit, HasPendingChanges {
     this.modalUsername.set(client.username);
     this.modalPassword.set('');
     this.modalUrlBase.set(client.urlBase);
+    this.modalExternalUrl.set(client.externalUrl ?? '');
     this.modalVisible.set(true);
   }
 
@@ -169,6 +172,7 @@ export class DownloadClientsComponent implements OnInit, HasPendingChanges {
         username: this.modalUsername(),
         password: this.modalPassword() || undefined,
         urlBase: this.modalUrlBase(),
+        externalUrl: this.modalExternalUrl() || undefined,
       };
       this.api.update(editing.id, client).subscribe({
         next: () => {
@@ -192,6 +196,7 @@ export class DownloadClientsComponent implements OnInit, HasPendingChanges {
         username: this.modalUsername(),
         password: this.modalPassword(),
         urlBase: this.modalUrlBase(),
+        externalUrl: this.modalExternalUrl() || undefined,
       };
       this.api.create(dto).subscribe({
         next: () => {

@@ -55,6 +55,7 @@ export class ArrSettingsComponent implements HasPendingChanges {
   readonly editingInstance = signal<ArrInstance | null>(null);
   readonly modalName = signal('');
   readonly modalUrl = signal('');
+  readonly modalExternalUrl = signal('');
   readonly modalApiKey = signal('');
   readonly modalVersion = signal<unknown>(3);
   readonly modalEnabled = signal(true);
@@ -121,6 +122,7 @@ export class ArrSettingsComponent implements HasPendingChanges {
     this.editingInstance.set(null);
     this.modalName.set('');
     this.modalUrl.set('');
+    this.modalExternalUrl.set('');
     this.modalApiKey.set('');
     const options = this.versionOptions();
     this.modalVersion.set(options.length > 0 ? options[0].value : 3);
@@ -132,6 +134,7 @@ export class ArrSettingsComponent implements HasPendingChanges {
     this.editingInstance.set(instance);
     this.modalName.set(instance.name);
     this.modalUrl.set(instance.url);
+    this.modalExternalUrl.set(instance.externalUrl ?? '');
     this.modalApiKey.set(instance.apiKey);
     this.modalVersion.set(instance.version);
     this.modalEnabled.set(instance.enabled);
@@ -162,6 +165,7 @@ export class ArrSettingsComponent implements HasPendingChanges {
     const dto: CreateArrInstanceDto = {
       name: this.modalName(),
       url: this.modalUrl(),
+      externalUrl: this.modalExternalUrl() || undefined,
       apiKey: this.modalApiKey(),
       version: (this.modalVersion() as number) ?? 3,
       enabled: this.modalEnabled(),

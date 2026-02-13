@@ -21,11 +21,14 @@ public sealed record ArrInstanceRequest
     [Required]
     public required float Version { get; init; }
 
+    public string? ExternalUrl { get; init; }
+
     public ArrInstance ToEntity(Guid configId) => new()
     {
         Enabled = Enabled,
         Name = Name,
         Url = new Uri(Url),
+        ExternalUrl = ExternalUrl is not null ? new Uri(ExternalUrl) : null,
         ApiKey = ApiKey,
         ArrConfigId = configId,
         Version = Version,
@@ -36,6 +39,7 @@ public sealed record ArrInstanceRequest
         instance.Enabled = Enabled;
         instance.Name = Name;
         instance.Url = new Uri(Url);
+        instance.ExternalUrl = ExternalUrl is not null ? new Uri(ExternalUrl) : null;
         instance.ApiKey = ApiKey;
         instance.Version = Version;
     }

@@ -104,7 +104,7 @@
 //     {
 //         public ShouldCleanDownloadTests(DownloadServiceFixture fixture) : base(fixture) 
 //         {
-//             ContextProvider.Set("downloadName", "test-download");
+//             ContextProvider.Set(ContextProvider.Keys.DownloadName, "test-download");
 //         }
 //
 //         [Fact]

@@ -33,4 +33,13 @@ public static class ContextProvider
         string key = typeof(T).Name ?? throw new Exception("Type name is null");
         return Get<T>(key);
     }
+
+    public static class Keys
+    {
+        public const string Version = "version";
+        public const string DownloadName = "downloadName";
+        public const string Hash = "hash";
+        public const string DownloadClientUrl = "downloadClientUrl";
+        public const string ArrInstanceUrl = "arrInstanceUrl";
+    }
 }

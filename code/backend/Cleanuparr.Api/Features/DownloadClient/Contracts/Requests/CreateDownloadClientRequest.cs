@@ -24,6 +24,8 @@ public sealed record CreateDownloadClientRequest
 
     public string? UrlBase { get; init; }
 
+    public Uri? ExternalUrl { get; init; }
+
     public void Validate()
     {
         if (string.IsNullOrWhiteSpace(Name))
@@ -47,5 +49,6 @@ public sealed record CreateDownloadClientRequest
         Username = Username,
         Password = Password,
         UrlBase = UrlBase,
+        ExternalUrl = ExternalUrl,
     };
 }

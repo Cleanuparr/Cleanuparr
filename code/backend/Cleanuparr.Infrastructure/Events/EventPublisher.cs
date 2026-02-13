@@ -145,8 +145,8 @@ public class EventPublisher : IEventPublisher
     public async Task PublishQueueItemDeleted(bool removeFromClient, DeleteReason deleteReason)
     {
         // Get context data for the event
-        string downloadName = ContextProvider.Get<string>("downloadName") ?? "Unknown";
-        string hash = ContextProvider.Get<string>("hash") ?? "Unknown";
+        string downloadName = ContextProvider.Get<string>(ContextProvider.Keys.DownloadName);
+        string hash = ContextProvider.Get<string>(ContextProvider.Keys.Hash);
 
         // Publish the event
         await PublishAsync(
@@ -165,8 +165,8 @@ public class EventPublisher : IEventPublisher
     public async Task PublishDownloadCleaned(double ratio, TimeSpan seedingTime, string categoryName, CleanReason reason)
     {
         // Get context data for the event
-        string downloadName = ContextProvider.Get<string>("downloadName");
-        string hash = ContextProvider.Get<string>("hash");
+        string downloadName = ContextProvider.Get<string>(ContextProvider.Keys.DownloadName);
+        string hash = ContextProvider.Get<string>(ContextProvider.Keys.Hash);
 
         // Publish the event
         await PublishAsync(
@@ -185,8 +185,8 @@ public class EventPublisher : IEventPublisher
     public async Task PublishCategoryChanged(string oldCategory, string newCategory, bool isTag = false)
     {
         // Get context data for the event
-        string downloadName = ContextProvider.Get<string>("downloadName");
-        string hash = ContextProvider.Get<string>("hash");
+        string downloadName = ContextProvider.Get<string>(ContextProvider.Keys.DownloadName);
+        string hash = ContextProvider.Get<string>(ContextProvider.Keys.Hash);
 
         // Publish the event
         await PublishAsync(
@@ -205,7 +205,7 @@ public class EventPublisher : IEventPublisher
     public async Task PublishRecurringItem(string hash, string itemName, int strikeCount)
     {
         var instanceType = (InstanceType)ContextProvider.Get<object>(nameof(InstanceType));
-        var instanceUrl = ContextProvider.Get<Uri>(nameof(ArrInstance) + nameof(ArrInstance.Url));
+        var instanceUrl = ContextProvider.Get<Uri>(ContextProvider.Keys.ArrInstanceUrl);
         
         // Publish the event
         await PublishManualAsync(
@@ -221,7 +221,7 @@ public class EventPublisher : IEventPublisher
     public async Task PublishSearchNotTriggered(string hash, string itemName)
     {
         var instanceType = (InstanceType)ContextProvider.Get<object>(nameof(InstanceType));
-        var instanceUrl = ContextProvider.Get<Uri>(nameof(ArrInstance) + nameof(ArrInstance.Url));
+        var instanceUrl = ContextProvider.Get<Uri>(ContextProvider.Keys.ArrInstanceUrl);
         
         await PublishManualAsync(
             "Replacement search was not triggered after removal because the item keeps coming back\nPlease trigger a manual search if needed",

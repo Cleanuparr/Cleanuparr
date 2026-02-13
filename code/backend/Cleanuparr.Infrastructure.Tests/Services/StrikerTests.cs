@@ -60,7 +60,7 @@ public class StrikerTests : IDisposable
 
         // Set up required context for recurring item events and FailedImport strikes
         ContextProvider.Set(nameof(InstanceType), (object)InstanceType.Sonarr);
-        ContextProvider.Set("ArrInstanceUrl", new Uri("http://localhost:8989"));
+        ContextProvider.Set(ContextProvider.Keys.ArrInstanceUrl, new Uri("http://localhost:8989"));
         ContextProvider.Set(new QueueRecord
         {
             Title = "Test Item",

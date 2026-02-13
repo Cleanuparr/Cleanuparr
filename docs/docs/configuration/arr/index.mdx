@@ -1,0 +1,113 @@
+---
+sidebar_position: 7
+---
+
+import {
+  ConfigSection,
+  SectionTitle,
+  ElementNavigator,
+  styles
+} from '@site/src/components/documentation';
+
+# Arr Applications
+
+Configure connections to your *arr applications (Sonarr, Radarr, Lidarr, Readarr, Whisparr). Each application type has its own configuration page where you can manage multiple instances.
+
+<ElementNavigator />
+
+<div className={styles.documentationPage}>
+
+<div className={styles.section}>
+
+<SectionTitle icon="📡">
+  Instance Settings
+</SectionTitle>
+
+<ConfigSection
+  title="Enabled"
+  icon="✅"
+>
+
+Controls whether this *arr instance is active and will be monitored by Cleanuparr.
+
+**When Enabled**:
+- Queue will be monitored for failed imports, stalled, and slow downloads.
+- Strikes will be tracked and items removed when limits are reached.
+
+**When Disabled**:
+- Instance will be ignored by all Cleanuparr operations.
+
+</ConfigSection>
+
+<ConfigSection
+  title="Instance Name"
+  icon="🏷️"
+>
+
+A descriptive name to identify this *arr instance in the Cleanuparr interface.
+
+</ConfigSection>
+
+<ConfigSection
+  title="URL"
+  icon="🌐"
+>
+
+The internal URL to access your *arr application's API.
+
+**Format**: `protocol://hostname:port`
+
+**Examples**:
+- `http://localhost:8989` (local Sonarr)
+- `http://sonarr:8989` (Docker container name)
+- `https://sonarr.mydomain.com` (reverse proxy with SSL)
+
+</ConfigSection>
+
+<ConfigSection
+  title="External URL"
+  icon="🔗"
+>
+
+Optional external URL used in notification messages instead of the internal URL. This is useful for Docker users where internal container URLs (e.g., `http://sonarr:8989`) are not reachable from outside the Docker network.
+
+**When to Use**:
+- Running Cleanuparr in Docker with internal container networking.
+- Notification links need to be clickable from your browser or phone.
+- Internal URLs differ from externally-accessible URLs.
+
+**Examples**:
+- `https://sonarr.mydomain.com`
+- `http://192.168.1.100:8989`
+
+If not set, the internal URL will be used in notifications.
+
+</ConfigSection>
+
+<ConfigSection
+  title="API Key"
+  icon="🔑"
+>
+
+The API key for authenticating with your *arr application. You can find this in your *arr application under **Settings > General > Security > API Key**.
+
+</ConfigSection>
+
+<ConfigSection
+  title="API Version"
+  icon="📋"
+>
+
+The API version for this *arr application. Select the version that matches your installed version:
+
+- **Sonarr**: v4
+- **Radarr**: v6
+- **Lidarr**: v3
+- **Readarr**: v0.4
+- **Whisparr**: v2 or v3
+
+</ConfigSection>
+
+</div>
+
+</div>
