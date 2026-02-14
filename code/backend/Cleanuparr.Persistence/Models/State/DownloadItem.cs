@@ -18,6 +18,10 @@ public class DownloadItem
     [MaxLength(500)]
     public required string Title { get; set; }
 
+    public bool IsMarkedForRemoval { get; set; }
+    public bool IsRemoved { get; set; }
+    public bool IsReturning { get; set; }
+
     [JsonIgnore]
     public List<Strike> Strikes { get; set; } = [];
 }

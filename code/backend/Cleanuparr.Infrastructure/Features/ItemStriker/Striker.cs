@@ -45,9 +45,24 @@ public sealed class Striker : IStriker
             LastDownloadedBytes = lastDownloadedBytes
         };
         _context.Strikes.Add(strike);
-        await _context.SaveChangesAsync();
 
         int strikeCount = existingStrikeCount + 1;
+
+        // If item was previously removed and gets a new strike, it has returned
+        if (downloadItem.IsRemoved)
+        {
+            downloadItem.IsReturning = true;
+            downloadItem.IsRemoved = false;
+            downloadItem.IsMarkedForRemoval = false;
+        }
+
+        // Mark for removal when strike limit reached
+        if (strikeCount >= maxStrikes)
+        {
+            downloadItem.IsMarkedForRemoval = true;
+        }
+
+        await _context.SaveChangesAsync();
 
         _logger.LogInformation("Item on strike number {strike} | reason {reason} | {name}", strikeCount, strikeType.ToString(), itemName);
 

@@ -11,8 +11,6 @@ import { GeneralConfigApi } from '@core/api/general-config.api';
 import { ToastService } from '@core/services/toast.service';
 import { LogEntry } from '@core/models/signalr.models';
 import { ManualEvent } from '@core/models/event.models';
-import { RecentStrike } from '@core/models/strike.models';
-import { StrikesApi } from '@core/api/strikes.api';
 import { JobType } from '@shared/models/enums';
 
 @Component({
@@ -38,15 +36,14 @@ export class DashboardComponent implements OnInit {
   private readonly eventsApi = inject(EventsApi);
   private readonly jobsApi = inject(JobsApi);
   private readonly generalConfigApi = inject(GeneralConfigApi);
-  private readonly strikesApi = inject(StrikesApi);
   private readonly toast = inject(ToastService);
   private readonly router = inject(Router);
 
   readonly connected = this.hub.isConnected;
   readonly jobs = this.hub.jobs;
   readonly showSupportSection = signal(false);
-  readonly recentStrikes = signal<RecentStrike[]>([]);
 
+  readonly recentStrikes = computed(() => this.hub.strikes().slice(0, 5));
   readonly recentLogs = computed(() => this.hub.logs().slice(0, 5));
   readonly recentEvents = computed(() => this.hub.events().slice(0, 5));
 
@@ -70,9 +67,6 @@ export class DashboardComponent implements OnInit {
   ngOnInit(): void {
     this.generalConfigApi.get().subscribe({
       next: (config) => this.showSupportSection.set(config.displaySupportBanner),
-    });
-    this.strikesApi.getRecentStrikes(5).subscribe({
-      next: (strikes) => this.recentStrikes.set(strikes),
     });
   }
 
@@ -140,6 +134,15 @@ export class DashboardComponent implements OnInit {
       return 'warning'; // strikes default to yellow/amber
     }
     return this.eventSeverity(severity);
+  }
+
+  eventTypeSeverity(eventType: string): 'error' | 'warning' | 'info' | 'success' | 'default' {
+    const t = eventType.toLowerCase();
+    if (t === 'failedimportstrike' || t === 'queueitemdeleted') return 'error';
+    if (t === 'stalledstrike' || t === 'downloadmarkedfordeletion') return 'warning';
+    if (t === 'downloadcleaned') return 'success';
+    if (t.includes('strike') || t === 'categorychanged') return 'info';
+    return 'default';
   }
 
   eventSeverity(severity: string): 'error' | 'warning' | 'info' | 'default' {

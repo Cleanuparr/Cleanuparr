@@ -147,6 +147,9 @@ public class EventPublisher : IEventPublisher
             data: data,
             strikeId: strikeId);
 
+        // Broadcast strike to SignalR clients for real-time dashboard updates
+        await BroadcastStrikeAsync(strikeId, strikeType, hash, itemName);
+
         // Send notification (uses ContextProvider internally)
         await _notificationPublisher.NotifyStrike(strikeType, strikeCount);
     }
@@ -270,6 +273,26 @@ public class EventPublisher : IEventPublisher
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to send event {eventId} to SignalR clients", appEventEntity.Id);
+        }
+    }
+
+    private async Task BroadcastStrikeAsync(Guid? strikeId, StrikeType strikeType, string hash, string itemName)
+    {
+        try
+        {
+            var strike = new
+            {
+                Id = strikeId ?? Guid.Empty,
+                Type = strikeType.ToString(),
+                CreatedAt = DateTime.UtcNow,
+                DownloadId = hash,
+                Title = itemName,
+            };
+            await _appHubContext.Clients.All.SendAsync("StrikeReceived", strike);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to send strike to SignalR clients");
         }
     }
 } 

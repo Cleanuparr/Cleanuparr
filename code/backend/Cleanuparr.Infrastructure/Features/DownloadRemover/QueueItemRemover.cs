@@ -11,9 +11,11 @@ using Cleanuparr.Infrastructure.Features.DownloadRemover.Interfaces;
 using Cleanuparr.Infrastructure.Features.DownloadRemover.Models;
 using Cleanuparr.Infrastructure.Features.ItemStriker;
 using Cleanuparr.Infrastructure.Helpers;
+using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Data.Models.Arr;
 using MassTransit;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 
@@ -26,13 +28,15 @@ public sealed class QueueItemRemover : IQueueItemRemover
     private readonly IMemoryCache _cache;
     private readonly IArrClientFactory _arrClientFactory;
     private readonly IEventPublisher _eventPublisher;
+    private readonly EventsContext _eventsContext;
 
     public QueueItemRemover(
         ILogger<QueueItemRemover> logger,
         IBus messageBus,
         IMemoryCache cache,
         IArrClientFactory arrClientFactory,
-        IEventPublisher eventPublisher
+        IEventPublisher eventPublisher,
+        EventsContext eventsContext
     )
     {
         _logger = logger;
@@ -40,6 +44,7 @@ public sealed class QueueItemRemover : IQueueItemRemover
         _cache = cache;
         _arrClientFactory = arrClientFactory;
         _eventPublisher = eventPublisher;
+        _eventsContext = eventsContext;
     }
 
     public async Task RemoveQueueItemAsync<T>(QueueItemRemoveRequest<T> request)
@@ -50,6 +55,15 @@ public sealed class QueueItemRemover : IQueueItemRemover
             var arrClient = _arrClientFactory.GetClient(request.InstanceType, request.Instance.Version);
             await arrClient.DeleteQueueItemAsync(request.Instance, request.Record, request.RemoveFromClient, request.DeleteReason);
 
+            // Mark the download item as removed in the database
+            await _eventsContext.DownloadItems
+                .Where(x => EF.Functions.Like(x.DownloadId, request.Record.DownloadId))
+                .ExecuteUpdateAsync(setter =>
+                {
+                    setter.SetProperty(x => x.IsRemoved, true);
+                    setter.SetProperty(x => x.IsMarkedForRemoval, false);
+                });
+            
             // Set context for EventPublisher
             ContextProvider.SetJobRunId(request.JobRunId);
             ContextProvider.Set(ContextProvider.Keys.ItemName, request.Record.Title);

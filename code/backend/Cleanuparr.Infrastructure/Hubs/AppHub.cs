@@ -90,6 +90,35 @@ public class AppHub : Hub
     }
 
     /// <summary>
+    /// Client requests recent strikes
+    /// </summary>
+    public async Task GetRecentStrikes(int count = 5)
+    {
+        try
+        {
+            var strikes = await _context.Strikes
+                .Include(s => s.DownloadItem)
+                .OrderByDescending(s => s.CreatedAt)
+                .Take(Math.Min(count, 50))
+                .Select(s => new
+                {
+                    s.Id,
+                    Type = s.Type.ToString(),
+                    s.CreatedAt,
+                    DownloadId = s.DownloadItem.DownloadId,
+                    Title = s.DownloadItem.Title,
+                })
+                .ToListAsync();
+
+            await Clients.Caller.SendAsync("StrikesReceived", strikes);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to send recent strikes to client");
+        }
+    }
+
+    /// <summary>
     /// Client requests current job statuses
     /// </summary>
     public async Task GetJobStatus()

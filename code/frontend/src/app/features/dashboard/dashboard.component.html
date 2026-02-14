@@ -93,6 +93,9 @@
       <div class="card-header">
         <div class="card-header__left">
           <h3 class="card-header__title">Recent Strikes</h3>
+          <app-badge [severity]="connected() ? 'success' : 'error'" size="sm" [rounded]="true" [class.badge--live]="connected()">
+            {{ connected() ? 'Connected' : 'Disconnected' }}
+          </app-badge>
         </div>
         <a class="card-header__link" routerLink="/strikes">View All</a>
       </div>
@@ -118,7 +121,12 @@
           </div>
         } @empty {
           <div class="timeline__empty">
-            <span>No recent strikes</span>
+            @if (!connected()) {
+              <app-spinner size="sm" />
+              <span>Connecting...</span>
+            } @else {
+              <span>No recent strikes</span>
+            }
           </div>
         }
       </div>
@@ -204,7 +212,7 @@
                 <app-badge [severity]="eventSeverity(event.severity)" size="sm">
                   {{ event.severity }}
                 </app-badge>
-                <app-badge severity="default" size="sm">
+                <app-badge [severity]="eventTypeSeverity(event.eventType)" size="sm">
                   {{ formatEventType(event.eventType) }}
                 </app-badge>
                 <span class="timeline__time">{{ event.timestamp | date:'yyyy-MM-dd HH:mm:ss' }}</span>
