@@ -10,12 +10,12 @@ using Cleanuparr.Infrastructure.Features.ItemStriker;
 using Cleanuparr.Infrastructure.Features.Notifications;
 using Cleanuparr.Infrastructure.Hubs;
 using Cleanuparr.Infrastructure.Interceptors;
+using Cleanuparr.Infrastructure.Tests.Features.Jobs.TestHelpers;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Data.Models.Arr;
 using MassTransit;
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -48,10 +48,7 @@ public class QueueItemRemoverTests : IDisposable
             .Returns(_arrClientMock.Object);
 
         // Create real EventPublisher with mocked dependencies
-        var eventsContextOptions = new DbContextOptionsBuilder<EventsContext>()
-            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
-            .Options;
-        _eventsContext = new EventsContext(eventsContextOptions);
+        _eventsContext = TestEventsContextFactory.Create();
 
         var hubContextMock = new Mock<IHubContext<AppHub>>();
         var clientsMock = new Mock<IHubClients>();
@@ -59,18 +56,10 @@ public class QueueItemRemoverTests : IDisposable
         hubContextMock.Setup(h => h.Clients).Returns(clientsMock.Object);
 
         var dryRunInterceptorMock = new Mock<IDryRunInterceptor>();
-        // Setup interceptor to execute the action with params using DynamicInvoke
+        // Setup interceptor to skip actual database saves (these tests verify QueueItemRemover, not EventPublisher)
         dryRunInterceptorMock
             .Setup(d => d.InterceptAsync(It.IsAny<Delegate>(), It.IsAny<object[]>()))
-            .Returns((Delegate action, object[] parameters) =>
-            {
-                var result = action.DynamicInvoke(parameters);
-                if (result is Task task)
-                {
-                    return task;
-                }
-                return Task.CompletedTask;
-            });
+            .Returns(Task.CompletedTask);
 
         _eventPublisher = new EventPublisher(
             _eventsContext,
