@@ -267,7 +267,8 @@
       hint="Reset strike count when torrent shows progress"
       helpKey="queue-cleaner:stallRule.resetStrikesOnProgress" />
     @if (stallResetOnProgress()) {
-      <app-input label="Minimum Progress to Reset" placeholder="e.g. 1MB" [(value)]="stallMinProgress"
+      <app-size-input label="Minimum Progress to Reset" [units]="sizeUnits" [(value)]="stallMinProgress"
+        placeholder="e.g. 1"
         hint="Only reset strikes after the torrent downloads at least this amount. Leave blank to reset on any progress."
         helpKey="queue-cleaner:stallRule.minimumProgress" />
     }
@@ -297,8 +298,9 @@
       hint="Number of strikes before action is taken"
       [error]="slowMaxStrikesError()"
       helpKey="queue-cleaner:slowRule.maxStrikes" />
-    <app-input label="Min Speed" placeholder="e.g. 100KB/s" [(value)]="slowMinSpeed"
-      hint="Minimum speed threshold for slow downloads (e.g., 100KB/s)"
+    <app-size-input label="Min Speed" [units]="speedUnits" [(value)]="slowMinSpeed"
+      placeholder="e.g. 100"
+      hint="Minimum speed threshold for slow downloads"
       helpKey="queue-cleaner:slowRule.minSpeed" />
     <app-number-input label="Maximum Time (Hours)" [(value)]="slowMaxTimeHours" [min]="0"
       hint="Maximum time allowed for slow downloads (0 means disabled)"
@@ -314,7 +316,8 @@
     <app-number-input label="Max Completion %" [(value)]="slowMaxCompletion" [min]="0" [max]="100" suffix="%"
       hint="Apply the rule up to and including this completion percentage"
       helpKey="queue-cleaner:slowRule.completionRange" />
-    <app-input label="Ignore Above Size" placeholder="e.g. 25 GB" [(value)]="slowIgnoreAboveSize"
+    <app-size-input label="Ignore Above Size" [units]="sizeUnitsLarge" [(value)]="slowIgnoreAboveSize"
+      placeholder="e.g. 25"
       hint="Downloads will be ignored if size exceeds this threshold"
       helpKey="queue-cleaner:slowRule.ignoreAboveSize" />
     <app-toggle label="Reset Strikes on Progress" [(checked)]="slowResetOnProgress"

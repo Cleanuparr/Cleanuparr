@@ -1,0 +1,40 @@
+@if (label()) {
+  <label class="size-label">
+    {{ label() }}
+    @if (helpKey()) {
+      <button class="field-help-btn" (click)="onHelpClick($event)" aria-label="Open documentation" tabindex="-1">
+        <ng-icon name="tablerQuestionMark" size="14" />
+      </button>
+    }
+  </label>
+}
+<div class="size-wrapper">
+  <input
+    class="size-field"
+    [class.size-field--error]="error()"
+    type="number"
+    [placeholder]="placeholder()"
+    [disabled]="disabled()"
+    [min]="min()"
+    [value]="numericValue()"
+    (input)="onNumericInput($event)"
+  />
+  <div class="size-units">
+    @for (unit of units(); track unit.value) {
+      <button
+        class="size-unit-btn"
+        [class.size-unit-btn--active]="selectedUnit() === unit.value"
+        [disabled]="disabled()"
+        type="button"
+        (click)="selectUnit(unit.value)"
+      >
+        {{ unit.label }}
+      </button>
+    }
+  </div>
+</div>
+@if (error()) {
+  <span class="size-error">{{ error() }}</span>
+} @else if (hint()) {
+  <span class="size-hint">{{ hint() }}</span>
+}
