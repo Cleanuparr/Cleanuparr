@@ -43,6 +43,7 @@ export class DashboardComponent implements OnInit {
   readonly jobs = this.hub.jobs;
   readonly showSupportSection = signal(false);
 
+  readonly recentStrikes = computed(() => this.hub.strikes().slice(0, 5));
   readonly recentLogs = computed(() => this.hub.logs().slice(0, 5));
   readonly recentEvents = computed(() => this.hub.events().slice(0, 5));
 
@@ -235,5 +236,18 @@ export class DashboardComponent implements OnInit {
 
   navigateTo(path: string): void {
     this.router.navigate([path]);
+  }
+
+  // Strike helpers
+  strikeTypeSeverity(type: string): 'error' | 'warning' | 'info' | 'default' {
+    const t = type.toLowerCase();
+    if (t === 'failedimport') return 'error';
+    if (t === 'stalled') return 'warning';
+    if (t === 'slowspeed' || t === 'slowtime') return 'info';
+    return 'default';
+  }
+
+  formatStrikeType(type: string): string {
+    return type.replace(/([A-Z])/g, ' $1').trim();
   }
 }
