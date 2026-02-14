@@ -236,7 +236,4 @@ export class EventsComponent implements OnInit, OnDestroy {
     return Object.keys(obj);
   }
 
-  truncate(text: string, max = 100): string {
-    return text.length > max ? text.substring(0, max) + '...' : text;
-  }
 }

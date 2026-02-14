@@ -104,12 +104,9 @@
   }
 
   &__message {
-    flex: 1;
     color: var(--text-secondary);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    min-width: 0;
+    padding: 0 var(--space-4) var(--space-2);
+    word-break: break-word;
   }
 
   &__copy {
@@ -132,6 +129,7 @@
     font-size: 14px;
     color: var(--text-tertiary);
     flex-shrink: 0;
+    margin-left: auto;
     transition: color var(--duration-fast) var(--ease-default);
   }
 
@@ -309,12 +307,6 @@
     flex-wrap: wrap;
   }
 
-  .event-row__message {
-    order: 10;
-    width: 100%;
-    flex-basis: 100%;
-  }
-
   .event-row__data-key {
     min-width: auto;
   }
@@ -333,13 +325,6 @@
   .event-row__main {
     flex-wrap: wrap;
     padding: var(--space-2) var(--space-3);
-  }
-
-  .event-row__message {
-    order: 10;
-    width: 100%;
-    flex-basis: 100%;
-    white-space: normal;
   }
 
   .event-row__tracking {

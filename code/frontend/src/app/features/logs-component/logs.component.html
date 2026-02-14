@@ -96,7 +96,6 @@
             @if (log.downloadClientType) {
               <app-badge severity="accent" size="sm">{{ log.downloadClientType }}</app-badge>
             }
-            <span class="log-entry__message">{{ log.message }}</span>
             @if (isExpandable(log)) {
               <ng-icon
                 [name]="expandedIndex() === $index ? 'tablerChevronUp' : 'tablerChevronDown'"
@@ -104,12 +103,9 @@
               />
             }
           </div>
+          <div class="log-entry__message">{{ log.message }}</div>
           @if (expandedIndex() === $index) {
             <div class="log-entry__details">
-              <div class="log-entry__detail">
-                <span class="log-entry__detail-label">Full Message</span>
-                <span>{{ log.message }}</span>
-              </div>
               @if (log.exception) {
                 <div class="log-entry__exception">
                   <span class="log-entry__detail-label">Exception</span>

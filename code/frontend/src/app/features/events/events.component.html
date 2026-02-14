@@ -96,7 +96,6 @@
             <app-badge severity="default" size="sm">
               {{ formatEventType(event.eventType) }}
             </app-badge>
-            <span class="event-row__message">{{ truncate(event.message) }}</span>
             @if (event.trackingId) {
               <span class="event-row__tracking">{{ event.trackingId }}</span>
             }
@@ -107,13 +106,10 @@
               />
             }
           </div>
+          <div class="event-row__message">{{ event.message }}</div>
 
           @if (expandedId() === event.id) {
             <div class="event-row__details">
-              <div class="event-row__detail">
-                <span class="event-row__detail-label">Full Message</span>
-                <span class="event-row__detail-value">{{ event.message }}</span>
-              </div>
               @if (event.trackingId) {
                 <div class="event-row__detail">
                   <span class="event-row__detail-label">Tracking ID</span>

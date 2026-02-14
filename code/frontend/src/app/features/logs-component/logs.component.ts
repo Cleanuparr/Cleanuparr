@@ -103,7 +103,7 @@ export class LogsComponent implements OnInit {
   });
 
   isExpandable(log: LogEntry): boolean {
-    return !!(log.exception || log.jobName || log.instanceName || log.downloadClientType || log.jobRunId || log.message.length > 80);
+    return !!(log.exception || log.jobName || log.instanceName || log.downloadClientType || log.jobRunId);
   }
 
   toggleExpand(index: number): void {
