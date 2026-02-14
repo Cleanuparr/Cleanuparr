@@ -87,6 +87,44 @@
 }
 
 <div class="dashboard-grid">
+  <!-- Recent Strikes -->
+  <app-card [noPadding]="true" class="dashboard-grid__strikes">
+    <div class="card-inner card-inner--compact">
+      <div class="card-header">
+        <div class="card-header__left">
+          <h3 class="card-header__title">Recent Strikes</h3>
+        </div>
+        <a class="card-header__link" routerLink="/strikes">View All</a>
+      </div>
+      <div class="timeline">
+        <span class="timeline__direction">
+          <ng-icon name="tablerArrowDown" class="timeline__direction-icon" />
+          Newest first
+        </span>
+        @for (strike of recentStrikes(); track strike.id) {
+          <div class="timeline__item">
+            <div class="timeline__marker timeline__marker--warning">
+              <ng-icon name="tablerBolt" />
+            </div>
+            <div class="timeline__content">
+              <div class="timeline__row">
+                <app-badge [severity]="strikeTypeSeverity(strike.type)" size="sm">
+                  {{ formatStrikeType(strike.type) }}
+                </app-badge>
+                <span class="timeline__time">{{ strike.createdAt | date:'yyyy-MM-dd HH:mm:ss' }}</span>
+              </div>
+              <p class="timeline__message">{{ truncate(strike.title) }}</p>
+            </div>
+          </div>
+        } @empty {
+          <div class="timeline__empty">
+            <span>No recent strikes</span>
+          </div>
+        }
+      </div>
+    </div>
+  </app-card>
+
   <!-- Recent Logs -->
   <app-card [noPadding]="true">
     <div class="card-inner">

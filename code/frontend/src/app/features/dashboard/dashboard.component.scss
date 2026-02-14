@@ -119,11 +119,15 @@
     grid-template-columns: 1fr;
   }
 
+  &__strikes {
+    grid-column: 1 / -1;
+  }
+
   &__jobs {
     grid-column: 1 / -1;
   }
 
-  // Staggered entrance animations (Issue 1)
+  // Staggered entrance animations
   > app-card {
     min-width: 0; // Allow grid items to shrink below content size
     animation: slide-up var(--duration-normal) var(--ease-default) both;
@@ -131,6 +135,7 @@
     &:nth-child(1) { animation-delay: 0ms; }
     &:nth-child(2) { animation-delay: 80ms; }
     &:nth-child(3) { animation-delay: 160ms; }
+    &:nth-child(4) { animation-delay: 240ms; }
   }
 }
 
@@ -289,6 +294,10 @@
   display: flex;
   flex-direction: column;
   min-height: 320px;
+
+  &--compact {
+    min-height: auto;
+  }
 }
 
 .card-header {

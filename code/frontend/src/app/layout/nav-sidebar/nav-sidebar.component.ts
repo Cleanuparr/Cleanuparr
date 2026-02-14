@@ -47,6 +47,7 @@ export class NavSidebarComponent {
     { label: 'Dashboard', icon: 'tablerLayoutDashboard', route: '/dashboard' },
     { label: 'Logs', icon: 'tablerFileText', route: '/logs' },
     { label: 'Events', icon: 'tablerBell', route: '/events' },
+    { label: 'Strikes', icon: 'tablerBolt', route: '/strikes' },
   ];
 
   settingsItems: NavItem[] = [

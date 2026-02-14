@@ -9,3 +9,4 @@ export { NotificationApi } from './notification.api';
 export { JobsApi } from './jobs.api';
 export { EventsApi } from './events.api';
 export { SystemApi } from './system.api';
+export { StrikesApi } from './strikes.api';

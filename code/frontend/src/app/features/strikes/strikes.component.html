@@ -1,0 +1,131 @@
+<app-page-header
+  title="Strikes"
+  subtitle="Download items with active strikes"
+/>
+
+<div class="page-content">
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <div class="toolbar__filters">
+      <app-select
+        placeholder="All Types"
+        [options]="typeOptions()"
+        [(value)]="selectedType"
+        (valueChange)="onFilterChange()"
+      />
+      <app-input
+        placeholder="Search by title or hash..."
+        type="search"
+        [(value)]="searchQuery"
+        (blurred)="onFilterChange()"
+      />
+    </div>
+    <div class="toolbar__actions">
+      <app-button variant="ghost" size="sm" (clicked)="refresh()">
+        Refresh
+      </app-button>
+    </div>
+  </div>
+
+  <!-- Count -->
+  <div class="strike-count">
+    <app-animated-counter [value]="totalRecords()" [duration]="400" /> download items with strikes
+  </div>
+
+  <!-- Strikes List -->
+  <app-card [noPadding]="true">
+    <div class="strikes-list">
+      @for (item of items(); track item.downloadItemId) {
+        <div
+          class="strike-row"
+          [class.strike-row--expanded]="expandedId() === item.downloadItemId"
+        >
+          <div
+            class="strike-row__main"
+            (click)="toggleExpand(item.downloadItemId)"
+          >
+            <ng-icon name="tablerBolt" class="strike-row__icon" />
+            <span class="strike-row__title">{{ item.title }}</span>
+            <span class="strike-row__hash">{{ item.downloadId }}</span>
+            <div class="strike-row__type-badges">
+              @for (entry of strikeTypeEntries(item.strikesByType); track entry.type) {
+                <app-badge [severity]="strikeTypeSeverity(entry.type)" size="sm">
+                  {{ formatStrikeType(entry.type) }} &times;{{ entry.count }}
+                </app-badge>
+              }
+            </div>
+            <span class="strike-row__total">Total: {{ item.totalStrikes }}</span>
+            <span class="strike-row__time">{{ item.latestStrikeAt | date:'yyyy-MM-dd HH:mm' }}</span>
+            <button
+              class="strike-row__delete"
+              (click)="deleteItemStrikes(item); $event.stopPropagation()"
+              title="Delete all strikes for this item"
+            >
+              <ng-icon name="tablerTrash" />
+            </button>
+            <ng-icon
+              [name]="expandedId() === item.downloadItemId ? 'tablerChevronUp' : 'tablerChevronDown'"
+              class="strike-row__chevron"
+            />
+          </div>
+
+          @if (expandedId() === item.downloadItemId) {
+            <div class="strike-row__details">
+              <div class="strike-row__detail">
+                <span class="strike-row__detail-label">Download Hash</span>
+                <span class="strike-row__detail-value strike-row__detail-value--mono">{{ item.downloadId }}</span>
+              </div>
+              <div class="strike-row__detail">
+                <span class="strike-row__detail-label">First Strike</span>
+                <span class="strike-row__detail-value">{{ item.firstStrikeAt | date:'yyyy-MM-dd HH:mm:ss' }}</span>
+              </div>
+              <div class="strike-row__detail">
+                <span class="strike-row__detail-label">Latest Strike</span>
+                <span class="strike-row__detail-value">{{ item.latestStrikeAt | date:'yyyy-MM-dd HH:mm:ss' }}</span>
+              </div>
+
+              <!-- Individual strikes table -->
+              <div class="strike-row__detail">
+                <span class="strike-row__detail-label">Individual Strikes</span>
+                <div class="strike-table">
+                  <div class="strike-table__header">
+                    <span>Type</span>
+                    <span>Timestamp</span>
+                    <span>Downloaded</span>
+                    <span>Job Run</span>
+                  </div>
+                  @for (strike of item.strikes; track strike.id) {
+                    <div class="strike-table__row">
+                      <app-badge [severity]="strikeTypeSeverity(strike.type)" size="sm">
+                        {{ formatStrikeType(strike.type) }}
+                      </app-badge>
+                      <span class="strike-table__time">{{ strike.createdAt | date:'yyyy-MM-dd HH:mm:ss' }}</span>
+                      <span class="strike-table__bytes">{{ formatBytes(strike.lastDownloadedBytes) }}</span>
+                      <span class="strike-table__run-id">{{ strike.jobRunId }}</span>
+                    </div>
+                  }
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+      } @empty {
+        <app-empty-state
+          icon="tablerBolt"
+          heading="No strikes"
+          description="No download items have active strikes."
+        />
+      }
+    </div>
+  </app-card>
+
+  <!-- Pagination -->
+  @if (totalRecords() > pageSize()) {
+    <app-paginator
+      [totalRecords]="totalRecords()"
+      [pageSize]="pageSize()"
+      [currentPage]="currentPage()"
+      (pageChange)="onPageChange($event)"
+    />
+  }
+</div>

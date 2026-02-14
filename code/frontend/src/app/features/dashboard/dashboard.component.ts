@@ -11,6 +11,8 @@ import { GeneralConfigApi } from '@core/api/general-config.api';
 import { ToastService } from '@core/services/toast.service';
 import { LogEntry } from '@core/models/signalr.models';
 import { ManualEvent } from '@core/models/event.models';
+import { RecentStrike } from '@core/models/strike.models';
+import { StrikesApi } from '@core/api/strikes.api';
 import { JobType } from '@shared/models/enums';
 
 @Component({
@@ -36,12 +38,14 @@ export class DashboardComponent implements OnInit {
   private readonly eventsApi = inject(EventsApi);
   private readonly jobsApi = inject(JobsApi);
   private readonly generalConfigApi = inject(GeneralConfigApi);
+  private readonly strikesApi = inject(StrikesApi);
   private readonly toast = inject(ToastService);
   private readonly router = inject(Router);
 
   readonly connected = this.hub.isConnected;
   readonly jobs = this.hub.jobs;
   readonly showSupportSection = signal(false);
+  readonly recentStrikes = signal<RecentStrike[]>([]);
 
   readonly recentLogs = computed(() => this.hub.logs().slice(0, 5));
   readonly recentEvents = computed(() => this.hub.events().slice(0, 5));
@@ -66,6 +70,9 @@ export class DashboardComponent implements OnInit {
   ngOnInit(): void {
     this.generalConfigApi.get().subscribe({
       next: (config) => this.showSupportSection.set(config.displaySupportBanner),
+    });
+    this.strikesApi.getRecentStrikes(5).subscribe({
+      next: (strikes) => this.recentStrikes.set(strikes),
     });
   }
 
@@ -235,5 +242,18 @@ export class DashboardComponent implements OnInit {
 
   navigateTo(path: string): void {
     this.router.navigate([path]);
+  }
+
+  // Strike helpers
+  strikeTypeSeverity(type: string): 'error' | 'warning' | 'info' | 'default' {
+    const t = type.toLowerCase();
+    if (t === 'failedimport') return 'error';
+    if (t === 'stalled') return 'warning';
+    if (t === 'slowspeed' || t === 'slowtime') return 'info';
+    return 'default';
+  }
+
+  formatStrikeType(type: string): string {
+    return type.replace(/([A-Z])/g, ' $1').trim();
   }
 }
