@@ -22,3 +22,5 @@ export { EmptyStateComponent } from './empty-state/empty-state.component';
 export { LoadingStateComponent } from './loading-state/loading-state.component';
 export { ToastContainerComponent } from './toast-container/toast-container.component';
 export { ConfirmDialogComponent } from './confirm-dialog/confirm-dialog.component';
+export { SizeInputComponent } from './size-input/size-input.component';
+export type { SizeUnit } from './size-input/size-input.component';

@@ -4,7 +4,8 @@ import {
   CardComponent, ButtonComponent, InputComponent, ToggleComponent,
   NumberInputComponent, SelectComponent, ChipInputComponent, AccordionComponent,
   BadgeComponent, ModalComponent, EmptyStateComponent, LoadingStateComponent,
-  type SelectOption,
+  SizeInputComponent,
+  type SelectOption, type SizeUnit,
 } from '@ui';
 import { NgIcon } from '@ng-icons/core';
 import { QueueCleanerApi } from '@core/api/queue-cleaner.api';
@@ -41,7 +42,8 @@ const SCHEDULE_UNIT_OPTIONS: SelectOption[] = [
   imports: [
     PageHeaderComponent, CardComponent, ButtonComponent, InputComponent,
     ToggleComponent, NumberInputComponent, SelectComponent, ChipInputComponent,
-    AccordionComponent, BadgeComponent, ModalComponent, EmptyStateComponent, LoadingStateComponent, NgIcon,
+    AccordionComponent, BadgeComponent, ModalComponent, EmptyStateComponent, LoadingStateComponent,
+    SizeInputComponent, NgIcon,
   ],
   templateUrl: './queue-cleaner.component.html',
   styleUrl: './queue-cleaner.component.scss',
@@ -58,6 +60,18 @@ export class QueueCleanerComponent implements OnInit, HasPendingChanges {
   readonly patternModeOptions = PATTERN_MODE_OPTIONS;
   readonly privacyTypeOptions = PRIVACY_TYPE_OPTIONS;
   readonly scheduleUnitOptions = SCHEDULE_UNIT_OPTIONS;
+  readonly speedUnits: SizeUnit[] = [
+    { label: 'KB/s', value: 'KB' },
+    { label: 'MB/s', value: 'MB' },
+  ];
+  readonly sizeUnits: SizeUnit[] = [
+    { label: 'KB', value: 'KB' },
+    { label: 'MB', value: 'MB' },
+  ];
+  readonly sizeUnitsLarge: SizeUnit[] = [
+    { label: 'MB', value: 'MB' },
+    { label: 'GB', value: 'GB' },
+  ];
   readonly loader = new DeferredLoader();
   readonly loadError = signal(false);
   readonly saving = signal(false);
@@ -381,7 +395,7 @@ export class QueueCleanerComponent implements OnInit, HasPendingChanges {
         this.stallModalVisible.set(false);
         this.loadStallRules();
       },
-      error: () => this.toast.error('Failed to save stall rule'),
+      error: (e: Error) => this.toast.error(e.message),
     });
   }
 
@@ -461,7 +475,7 @@ export class QueueCleanerComponent implements OnInit, HasPendingChanges {
         this.slowModalVisible.set(false);
         this.loadSlowRules();
       },
-      error: () => this.toast.error('Failed to save slow rule'),
+      error: (e: Error) => this.toast.error(e.message),
     });
   }
 
