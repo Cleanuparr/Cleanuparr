@@ -19,6 +19,7 @@ export interface GeneralConfig {
   searchEnabled: boolean;
   searchDelay: number;
   statusCheckEnabled: boolean;
+  strikeInactivityWindowHours: number;
   log?: LoggingConfig;
   ignoredDownloads: string[];
 }

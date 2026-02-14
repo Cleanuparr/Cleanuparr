@@ -470,7 +470,7 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
                 });
 
             _fixture.Striker
-                .Setup(x => x.StrikeAndCheckLimit(hash, It.IsAny<string>(), (ushort)3, StrikeType.DownloadingMetadata))
+                .Setup(x => x.StrikeAndCheckLimit(hash, It.IsAny<string>(), (ushort)3, StrikeType.DownloadingMetadata, It.IsAny<long?>()))
                 .ReturnsAsync(false);
 
             // Act
@@ -479,7 +479,7 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
             // Assert
             Assert.False(result.ShouldRemove);
             _fixture.Striker.Verify(
-                x => x.StrikeAndCheckLimit(hash, It.IsAny<string>(), (ushort)3, StrikeType.DownloadingMetadata),
+                x => x.StrikeAndCheckLimit(hash, It.IsAny<string>(), (ushort)3, StrikeType.DownloadingMetadata, It.IsAny<long?>()),
                 Times.Once);
         }
 
@@ -533,7 +533,7 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
                 });
 
             _fixture.Striker
-                .Setup(x => x.StrikeAndCheckLimit(hash, It.IsAny<string>(), (ushort)3, StrikeType.DownloadingMetadata))
+                .Setup(x => x.StrikeAndCheckLimit(hash, It.IsAny<string>(), (ushort)3, StrikeType.DownloadingMetadata, It.IsAny<long?>()))
                 .ReturnsAsync(true); // Strike limit exceeded
 
             // Act
@@ -600,7 +600,7 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
             // Assert
             Assert.False(result.ShouldRemove);
             _fixture.Striker.Verify(
-                x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), It.IsAny<StrikeType>()),
+                x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), It.IsAny<StrikeType>(), It.IsAny<long?>()),
                 Times.Never);
         }
     }

@@ -314,6 +314,10 @@ namespace Cleanuparr.Persistence.Migrations.Data
                         .HasColumnType("INTEGER")
                         .HasColumnName("status_check_enabled");
 
+                    b.Property<ushort>("StrikeInactivityWindowHours")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("strike_inactivity_window_hours");
+
                     b.ComplexProperty(typeof(Dictionary<string, object>), "Log", "Cleanuparr.Persistence.Models.Configuration.General.GeneralConfig.Log#LoggingConfig", b1 =>
                         {
                             b1.IsRequired();

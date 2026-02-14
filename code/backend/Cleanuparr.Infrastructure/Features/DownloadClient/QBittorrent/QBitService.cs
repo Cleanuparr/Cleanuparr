@@ -1,3 +1,4 @@
+using Cleanuparr.Domain.Entities.HealthCheck;
 using Cleanuparr.Infrastructure.Events;
 using Cleanuparr.Infrastructure.Events.Interfaces;
 using Cleanuparr.Infrastructure.Features.Files;
@@ -21,7 +22,6 @@ public partial class QBitService : DownloadService, IQBitService
 
     public QBitService(
         ILogger<QBitService> logger,
-        IMemoryCache cache,
         IFilenameEvaluator filenameEvaluator,
         IStriker striker,
         IDryRunInterceptor dryRunInterceptor,
@@ -33,7 +33,7 @@ public partial class QBitService : DownloadService, IQBitService
         IRuleEvaluator ruleEvaluator,
         IRuleManager ruleManager
     ) : base(
-        logger, cache, filenameEvaluator, striker, dryRunInterceptor, hardLinkFileService,
+        logger, filenameEvaluator, striker, dryRunInterceptor, hardLinkFileService,
         httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, ruleEvaluator, ruleManager
     )
     {
@@ -44,7 +44,6 @@ public partial class QBitService : DownloadService, IQBitService
     // Internal constructor for testing
     internal QBitService(
         ILogger<QBitService> logger,
-        IMemoryCache cache,
         IFilenameEvaluator filenameEvaluator,
         IStriker striker,
         IDryRunInterceptor dryRunInterceptor,
@@ -57,7 +56,7 @@ public partial class QBitService : DownloadService, IQBitService
         IRuleManager ruleManager,
         IQBittorrentClientWrapper clientWrapper
     ) : base(
-        logger, cache, filenameEvaluator, striker, dryRunInterceptor, hardLinkFileService,
+        logger, filenameEvaluator, striker, dryRunInterceptor, hardLinkFileService,
         httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, ruleEvaluator, ruleManager
     )
     {

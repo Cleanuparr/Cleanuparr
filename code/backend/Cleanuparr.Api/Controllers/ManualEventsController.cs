@@ -66,7 +66,9 @@ public class ManualEventsController : ControllerBase
             string pattern = EventsContext.GetLikePattern(search);
             query = query.Where(e =>
                 EF.Functions.Like(e.Message, pattern) ||
-                EF.Functions.Like(e.Data, pattern)
+                EF.Functions.Like(e.Data, pattern) ||
+                EF.Functions.Like(e.InstanceUrl, pattern) ||
+                EF.Functions.Like(e.DownloadClientName, pattern)
             );
         }
 

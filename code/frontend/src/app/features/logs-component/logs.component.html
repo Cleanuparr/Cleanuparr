@@ -52,6 +52,16 @@
     </div>
   </div>
 
+  <!-- Active Job Run Filter -->
+  @if (selectedJobRunId()) {
+    <div class="active-filter">
+      <span>Showing logs for job run: {{ selectedJobRunId() }}</span>
+      <app-button variant="ghost" size="sm" (clicked)="clearJobRunFilter()">
+        Clear filter
+      </app-button>
+    </div>
+  }
+
   <!-- Log Count -->
   <div class="log-count" appScrollReveal>
     <app-animated-counter [value]="filteredLogs().length" [duration]="400" /> logs
@@ -77,10 +87,15 @@
             <app-badge [severity]="logSeverity(log.level)" size="sm">
               {{ logLevelLabel(log.level) }}
             </app-badge>
-            @if (log.category) {
-              <span class="log-entry__category">{{ log.category }}</span>
+            @if (log.jobName) {
+              <app-badge severity="default" size="sm">{{ jobDisplayName(log.jobName) }}</app-badge>
             }
-            <span class="log-entry__message">{{ log.message }}</span>
+            @if (log.category && log.category !== 'SYSTEM') {
+              <app-badge severity="info" size="sm">{{ log.category }}</app-badge>
+            }
+            @if (log.downloadClientType) {
+              <app-badge severity="accent" size="sm">{{ log.downloadClientType }}</app-badge>
+            }
             @if (isExpandable(log)) {
               <ng-icon
                 [name]="expandedIndex() === $index ? 'tablerChevronUp' : 'tablerChevronDown'"
@@ -88,12 +103,9 @@
               />
             }
           </div>
+          <div class="log-entry__message">{{ log.message }}</div>
           @if (expandedIndex() === $index) {
             <div class="log-entry__details">
-              <div class="log-entry__detail">
-                <span class="log-entry__detail-label">Full Message</span>
-                <span>{{ log.message }}</span>
-              </div>
               @if (log.exception) {
                 <div class="log-entry__exception">
                   <span class="log-entry__detail-label">Exception</span>
@@ -110,6 +122,20 @@
                 <div class="log-entry__detail">
                   <span class="log-entry__detail-label">Instance</span>
                   <span>{{ log.instanceName }}</span>
+                </div>
+              }
+              @if (log.downloadClientType) {
+                <div class="log-entry__detail">
+                  <span class="log-entry__detail-label">Download Client</span>
+                  <span>{{ log.downloadClientType }}{{ log.downloadClientName ? ' \u2014 ' + log.downloadClientName : '' }}</span>
+                </div>
+              }
+              @if (log.jobRunId) {
+                <div class="log-entry__detail">
+                  <span class="log-entry__detail-label">Job Run</span>
+                  <button class="log-entry__run-id" (click)="filterByJobRunId(log.jobRunId!); $event.stopPropagation()">
+                    {{ log.jobRunId }}
+                  </button>
                 </div>
               }
             </div>

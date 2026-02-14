@@ -6,9 +6,7 @@ using Cleanuparr.Infrastructure.Features.MalwareBlocker;
 using Cleanuparr.Infrastructure.Http;
 using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Infrastructure.Services.Interfaces;
-using Cleanuparr.Infrastructure.Tests.Features.DownloadClient.TestHelpers;
 using Cleanuparr.Persistence.Models.Configuration;
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Moq;
 
@@ -17,14 +15,13 @@ namespace Cleanuparr.Infrastructure.Tests.Features.DownloadClient;
 public class QBitServiceFixture : IDisposable
 {
     public Mock<ILogger<QBitService>> Logger { get; }
-    public MemoryCache Cache { get; }
     public Mock<IFilenameEvaluator> FilenameEvaluator { get; }
     public Mock<IStriker> Striker { get; }
     public Mock<IDryRunInterceptor> DryRunInterceptor { get; }
     public Mock<IHardLinkFileService> HardLinkFileService { get; }
     public Mock<IDynamicHttpClientProvider> HttpClientProvider { get; }
     public Mock<IEventPublisher> EventPublisher { get; }
-    public BlocklistProvider BlocklistProvider { get; }
+    public Mock<IBlocklistProvider> BlocklistProvider { get; }
     public Mock<IRuleEvaluator> RuleEvaluator { get; }
     public Mock<IRuleManager> RuleManager { get; }
     public Mock<IQBittorrentClientWrapper> ClientWrapper { get; }
@@ -32,14 +29,13 @@ public class QBitServiceFixture : IDisposable
     public QBitServiceFixture()
     {
         Logger = new Mock<ILogger<QBitService>>();
-        Cache = new MemoryCache(new MemoryCacheOptions());
         FilenameEvaluator = new Mock<IFilenameEvaluator>();
         Striker = new Mock<IStriker>();
         DryRunInterceptor = new Mock<IDryRunInterceptor>();
         HardLinkFileService = new Mock<IHardLinkFileService>();
         HttpClientProvider = new Mock<IDynamicHttpClientProvider>();
         EventPublisher = new Mock<IEventPublisher>();
-        BlocklistProvider = TestBlocklistProviderFactory.Create();
+        BlocklistProvider =new Mock<IBlocklistProvider>();
         RuleEvaluator = new Mock<IRuleEvaluator>();
         RuleManager = new Mock<IRuleManager>();
         ClientWrapper = new Mock<IQBittorrentClientWrapper>();
@@ -76,14 +72,13 @@ public class QBitServiceFixture : IDisposable
 
         return new QBitService(
             Logger.Object,
-            Cache,
             FilenameEvaluator.Object,
             Striker.Object,
             DryRunInterceptor.Object,
             HardLinkFileService.Object,
             HttpClientProvider.Object,
             EventPublisher.Object,
-            BlocklistProvider,
+            BlocklistProvider.Object,
             config,
             RuleEvaluator.Object,
             RuleManager.Object,
@@ -115,7 +110,6 @@ public class QBitServiceFixture : IDisposable
 
     public void Dispose()
     {
-        Cache.Dispose();
         GC.SuppressFinalize(this);
     }
 }

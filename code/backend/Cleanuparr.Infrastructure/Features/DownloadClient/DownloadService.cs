@@ -1,6 +1,6 @@
 using Cleanuparr.Domain.Entities;
+using Cleanuparr.Domain.Entities.HealthCheck;
 using Cleanuparr.Domain.Enums;
-using Cleanuparr.Infrastructure.Events;
 using Cleanuparr.Infrastructure.Events.Interfaces;
 using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.Files;
@@ -11,26 +11,15 @@ using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Infrastructure.Services.Interfaces;
 using Cleanuparr.Persistence.Models.Configuration;
 using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
-using Cleanuparr.Shared.Helpers;
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 
 namespace Cleanuparr.Infrastructure.Features.DownloadClient;
 
-public class HealthCheckResult
-{
-    public bool IsHealthy { get; set; }
-    public string? ErrorMessage { get; set; }
-    public TimeSpan ResponseTime { get; set; }
-}
-
 public abstract class DownloadService : IDownloadService
 {
     protected readonly ILogger<DownloadService> _logger;
-    protected readonly IMemoryCache _cache;
     protected readonly IFilenameEvaluator _filenameEvaluator;
     protected readonly IStriker _striker;
-    protected readonly MemoryCacheEntryOptions _cacheOptions;
     protected readonly IDryRunInterceptor _dryRunInterceptor;
     protected readonly IHardLinkFileService _hardLinkFileService;
     protected readonly IEventPublisher _eventPublisher;
@@ -42,7 +31,6 @@ public abstract class DownloadService : IDownloadService
 
     protected DownloadService(
         ILogger<DownloadService> logger,
-        IMemoryCache cache,
         IFilenameEvaluator filenameEvaluator,
         IStriker striker,
         IDryRunInterceptor dryRunInterceptor,
@@ -56,15 +44,12 @@ public abstract class DownloadService : IDownloadService
     )
     {
         _logger = logger;
-        _cache = cache;
         _filenameEvaluator = filenameEvaluator;
         _striker = striker;
         _dryRunInterceptor = dryRunInterceptor;
         _hardLinkFileService = hardLinkFileService;
         _eventPublisher = eventPublisher;
         _blocklistProvider = blocklistProvider;
-        _cacheOptions = new MemoryCacheEntryOptions()
-            .SetSlidingExpiration(StaticConfiguration.TriggerValue + Constants.CacheLimitBuffer);
         _downloadClientConfig = downloadClientConfig;
         _httpClient = httpClientProvider.CreateClient(downloadClientConfig);
         _ruleEvaluator = ruleEvaluator;
@@ -124,9 +109,11 @@ public abstract class DownloadService : IDownloadService
                 continue;
             }
 
-            ContextProvider.Set(ContextProvider.Keys.DownloadName, torrent.Name);
+            ContextProvider.Set(ContextProvider.Keys.ItemName, torrent.Name);
             ContextProvider.Set(ContextProvider.Keys.Hash, torrent.Hash);
             ContextProvider.Set(ContextProvider.Keys.DownloadClientUrl, _downloadClientConfig.ExternalOrInternalUrl);
+            ContextProvider.Set(ContextProvider.Keys.DownloadClientType, _downloadClientConfig.TypeName);
+            ContextProvider.Set(ContextProvider.Keys.DownloadClientName, _downloadClientConfig.Name);
 
             TimeSpan seedingTime = TimeSpan.FromSeconds(torrent.SeedingTimeSeconds);
             SeedingCheckResult result = ShouldCleanDownload(torrent.Ratio, seedingTime, category);
@@ -220,7 +207,7 @@ public abstract class DownloadService : IDownloadService
             return false;
         }
         
-        string downloadName = ContextProvider.Get<string>(ContextProvider.Keys.DownloadName);
+        string downloadName = ContextProvider.Get<string>(ContextProvider.Keys.ItemName);
         TimeSpan minSeedingTime = TimeSpan.FromHours(category.MinSeedTime);
         
         if (category.MinSeedTime > 0 && seedingTime < minSeedingTime)
@@ -246,7 +233,7 @@ public abstract class DownloadService : IDownloadService
             return false;
         }
         
-        string downloadName = ContextProvider.Get<string>(ContextProvider.Keys.DownloadName);
+        string downloadName = ContextProvider.Get<string>(ContextProvider.Keys.ItemName);
         TimeSpan maxSeedingTime = TimeSpan.FromHours(category.MaxSeedTime);
         
         if (category.MaxSeedTime > 0 && seedingTime < maxSeedingTime)

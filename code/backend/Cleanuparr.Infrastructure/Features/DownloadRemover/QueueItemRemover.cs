@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Events;
@@ -51,7 +51,8 @@ public sealed class QueueItemRemover : IQueueItemRemover
             await arrClient.DeleteQueueItemAsync(request.Instance, request.Record, request.RemoveFromClient, request.DeleteReason);
 
             // Set context for EventPublisher
-            ContextProvider.Set(ContextProvider.Keys.DownloadName, request.Record.Title);
+            ContextProvider.SetJobRunId(request.JobRunId);
+            ContextProvider.Set(ContextProvider.Keys.ItemName, request.Record.Title);
             ContextProvider.Set(ContextProvider.Keys.Hash, request.Record.DownloadId);
             ContextProvider.Set(nameof(QueueRecord), request.Record);
             ContextProvider.Set(ContextProvider.Keys.ArrInstanceUrl, request.Instance.ExternalUrl ?? request.Instance.Url);
@@ -75,7 +76,8 @@ public sealed class QueueItemRemover : IQueueItemRemover
                 InstanceType = request.InstanceType,
                 Instance = request.Instance,
                 SearchItem = request.SearchItem,
-                Record = request.Record
+                Record = request.Record,
+                JobRunId = request.JobRunId
             });
         }
         catch (HttpRequestException exception)

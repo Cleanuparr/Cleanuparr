@@ -14,4 +14,7 @@ export interface LogEntry {
   category?: string;
   jobName?: string;
   instanceName?: string;
+  downloadClientType?: string;
+  downloadClientName?: string;
+  jobRunId?: string;
 }

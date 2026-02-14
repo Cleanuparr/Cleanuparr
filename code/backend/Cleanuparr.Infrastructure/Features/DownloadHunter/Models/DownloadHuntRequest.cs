@@ -15,4 +15,6 @@ public sealed record DownloadHuntRequest<T>
     public required T SearchItem { get; init; }
     
     public required QueueRecord Record { get; init; }
+
+    public required Guid JobRunId { get; init; }
 }

@@ -9,7 +9,6 @@ using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Persistence;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Shouldly;
@@ -19,18 +18,18 @@ namespace Cleanuparr.Infrastructure.Tests.Services;
 
 public class StrikerTests : IDisposable
 {
-    private readonly IMemoryCache _cache;
+    private readonly EventsContext _strikerContext;
     private readonly ILogger<Striker> _logger;
     private readonly EventPublisher _eventPublisher;
     private readonly Striker _striker;
 
     public StrikerTests()
     {
-        _cache = new MemoryCache(new MemoryCacheOptions());
+        _strikerContext = CreateInMemoryEventsContext();
         _logger = Substitute.For<ILogger<Striker>>();
 
         // Create EventPublisher with mocked dependencies
-        var eventsContext = CreateMockEventsContext();
+        var eventsContext = CreateInMemoryEventsContext();
         var hubContext = Substitute.For<IHubContext<AppHub>>();
         var hubClients = Substitute.For<IHubClients>();
         var clientProxy = Substitute.For<IClientProxy>();
@@ -53,10 +52,13 @@ public class StrikerTests : IDisposable
             notificationPublisher,
             dryRunInterceptor);
 
-        _striker = new Striker(_logger, _cache, _eventPublisher);
+        _striker = new Striker(_logger, _strikerContext, _eventPublisher);
 
         // Clear static state before each test
         Striker.RecurringHashes.Clear();
+
+        // Set up required JobRunId for tests
+        ContextProvider.SetJobRunId(Guid.NewGuid());
 
         // Set up required context for recurring item events and FailedImport strikes
         ContextProvider.Set(nameof(InstanceType), (object)InstanceType.Sonarr);
@@ -71,7 +73,7 @@ public class StrikerTests : IDisposable
         });
     }
 
-    private static EventsContext CreateMockEventsContext()
+    private static EventsContext CreateInMemoryEventsContext()
     {
         var options = new DbContextOptionsBuilder<EventsContext>()
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
@@ -81,7 +83,7 @@ public class StrikerTests : IDisposable
 
     public void Dispose()
     {
-        _cache.Dispose();
+        _strikerContext.Dispose();
         Striker.RecurringHashes.Clear();
     }
 
@@ -335,5 +337,65 @@ public class StrikerTests : IDisposable
         // Assert - Hash should only appear once in RecurringHashes
         Striker.RecurringHashes.Count.ShouldBe(1);
         Striker.RecurringHashes.ShouldContainKey(hash.ToLowerInvariant());
+    }
+
+    [Fact]
+    public async Task StrikeAndCheckLimit_CreatesNewStrikeRowForEachStrike()
+    {
+        // Arrange
+        const string hash = "strike-rows-test";
+        const string itemName = "Test Item";
+        const ushort maxStrikes = 5;
+
+        // Act - Strike 3 times
+        await _striker.StrikeAndCheckLimit(hash, itemName, maxStrikes, StrikeType.Stalled);
+        await _striker.StrikeAndCheckLimit(hash, itemName, maxStrikes, StrikeType.Stalled);
+        await _striker.StrikeAndCheckLimit(hash, itemName, maxStrikes, StrikeType.Stalled);
+
+        // Assert - Should have 3 strike rows
+        var downloadItem = await _strikerContext.DownloadItems.FirstOrDefaultAsync(d => d.DownloadId == hash);
+        downloadItem.ShouldNotBeNull();
+
+        var strikeCount = await _strikerContext.Strikes
+            .CountAsync(s => s.DownloadItemId == downloadItem.Id && s.Type == StrikeType.Stalled);
+        strikeCount.ShouldBe(3);
+    }
+
+    [Fact]
+    public async Task StrikeAndCheckLimit_StoresTitleOnDownloadItem()
+    {
+        // Arrange
+        const string hash = "title-test";
+        const string itemName = "My Movie Title 2024";
+        const ushort maxStrikes = 3;
+
+        // Act
+        await _striker.StrikeAndCheckLimit(hash, itemName, maxStrikes, StrikeType.Stalled);
+
+        // Assert
+        var downloadItem = await _strikerContext.DownloadItems.FirstOrDefaultAsync(d => d.DownloadId == hash);
+        downloadItem.ShouldNotBeNull();
+        downloadItem.Title.ShouldBe(itemName);
+    }
+
+    [Fact]
+    public async Task StrikeAndCheckLimit_UpdatesTitleOnDownloadItem_WhenTitleChanges()
+    {
+        // Arrange
+        const string hash = "title-update-test";
+        const string initialTitle = "Initial Title";
+        const string updatedTitle = "Updated Title";
+        const ushort maxStrikes = 5;
+
+        // Act - Strike with initial title
+        await _striker.StrikeAndCheckLimit(hash, initialTitle, maxStrikes, StrikeType.Stalled);
+
+        // Strike with updated title
+        await _striker.StrikeAndCheckLimit(hash, updatedTitle, maxStrikes, StrikeType.Stalled);
+
+        // Assert - Title should be updated
+        var downloadItem = await _strikerContext.DownloadItems.FirstOrDefaultAsync(d => d.DownloadId == hash);
+        downloadItem.ShouldNotBeNull();
+        downloadItem.Title.ShouldBe(updatedTitle);
     }
 }

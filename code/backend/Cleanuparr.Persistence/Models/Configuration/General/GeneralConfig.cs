@@ -32,6 +32,8 @@ public sealed record GeneralConfig : IConfig
 
     public List<string> IgnoredDownloads { get; set; } = [];
 
+    public ushort StrikeInactivityWindowHours { get; set; } = 24;
+
     public LoggingConfig Log { get; set; } = new();
 
     public void Validate()

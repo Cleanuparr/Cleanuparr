@@ -7,3 +7,27 @@
 .form-row { @include form-row; }
 .form-divider { @include form-divider; }
 .form-actions { @include form-actions; }
+
+.purge-section {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+
+  &__info {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+
+  &__label {
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    color: var(--text-primary);
+  }
+
+  &__hint {
+    font-size: var(--font-size-xs);
+    color: var(--text-tertiary);
+  }
+}

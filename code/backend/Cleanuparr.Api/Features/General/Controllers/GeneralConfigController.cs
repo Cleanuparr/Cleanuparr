@@ -78,6 +78,21 @@ public sealed class GeneralConfigController : ControllerBase
         }
     }
 
+    [HttpPost("strikes/purge")]
+    public async Task<IActionResult> PurgeAllStrikes(
+        [FromServices] EventsContext eventsContext)
+    {
+        var deletedStrikes = await eventsContext.Strikes.ExecuteDeleteAsync();
+        var deletedItems = await eventsContext.DownloadItems
+            .Where(d => !d.Strikes.Any())
+            .ExecuteDeleteAsync();
+
+        _logger.LogWarning("Purged all strikes: {strikes} strikes, {items} download items removed",
+            deletedStrikes, deletedItems);
+
+        return Ok(new { DeletedStrikes = deletedStrikes, DeletedItems = deletedItems });
+    }
+
     private void ClearStrikesCacheIfNeeded(bool wasDryRun, bool isDryRun)
     {
         if (!wasDryRun || isDryRun)

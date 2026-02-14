@@ -149,7 +149,8 @@ public abstract class GenericHandler : IHandler
                 Record = record,
                 SearchItem = (SeriesSearchItem)GetRecordSearchItem(instanceType, instance.Version, record, isPack),
                 RemoveFromClient = removeFromClient,
-                DeleteReason = deleteReason
+                DeleteReason = deleteReason,
+                JobRunId = ContextProvider.GetJobRunId()
             };
 
             await _messageBus.Publish(removeRequest);
@@ -163,14 +164,16 @@ public abstract class GenericHandler : IHandler
                 Record = record,
                 SearchItem = GetRecordSearchItem(instanceType, instance.Version, record, isPack),
                 RemoveFromClient = removeFromClient,
-                DeleteReason = deleteReason
+                DeleteReason = deleteReason,
+                JobRunId = ContextProvider.GetJobRunId()
             };
 
             await _messageBus.Publish(removeRequest);
         }
 
         _logger.LogInformation("item marked for removal | {title} | {url}", record.Title, instance.Url);
-        await _eventPublisher.PublishAsync(EventType.DownloadMarkedForDeletion, "Download marked for deletion", EventSeverity.Important);
+        await _eventPublisher.PublishAsync(EventType.DownloadMarkedForDeletion, "Download marked for deletion", EventSeverity.Important,
+            data: new { itemName = record.Title, hash = record.DownloadId });
     }
     
     protected SearchItem GetRecordSearchItem(InstanceType type, float version, QueueRecord record, bool isPack = false)

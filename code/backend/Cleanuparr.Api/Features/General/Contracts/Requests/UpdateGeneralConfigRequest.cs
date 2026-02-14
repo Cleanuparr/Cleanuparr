@@ -30,6 +30,8 @@ public sealed record UpdateGeneralConfigRequest
 
     public List<string> IgnoredDownloads { get; init; } = [];
 
+    public ushort StrikeInactivityWindowHours { get; init; } = 24;
+
     public UpdateLoggingConfigRequest Log { get; init; } = new();
 
     public GeneralConfig ApplyTo(GeneralConfig existingConfig, IServiceProvider services, ILogger logger)
@@ -44,6 +46,7 @@ public sealed record UpdateGeneralConfigRequest
         existingConfig.StatusCheckEnabled = StatusCheckEnabled;
         existingConfig.EncryptionKey = EncryptionKey;
         existingConfig.IgnoredDownloads = IgnoredDownloads;
+        existingConfig.StrikeInactivityWindowHours = StrikeInactivityWindowHours;
 
         bool loggingChanged = Log.ApplyTo(existingConfig.Log);
 
@@ -59,6 +62,16 @@ public sealed record UpdateGeneralConfigRequest
         if (config.HttpTimeout is 0)
         {
             throw new ValidationException("HTTP_TIMEOUT must be greater than 0");
+        }
+
+        if (config.StrikeInactivityWindowHours is 0)
+        {
+            throw new ValidationException("STRIKE_INACTIVITY_WINDOW_HOURS must be greater than 0");
+        }
+
+        if (config.StrikeInactivityWindowHours > 168)
+        {
+            throw new ValidationException("STRIKE_INACTIVITY_WINDOW_HOURS must be less than or equal to 168");
         }
 
         config.Log.Validate();

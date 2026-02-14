@@ -65,6 +65,9 @@ public class EventPublisherTests : IDisposable
             _loggerMock.Object,
             _notificationPublisherMock.Object,
             _dryRunInterceptorMock.Object);
+
+        // Setup JobRunId in context for tests
+        ContextProvider.SetJobRunId(Guid.NewGuid());
     }
 
     public void Dispose()
@@ -339,7 +342,7 @@ public class EventPublisherTests : IDisposable
     public async Task PublishQueueItemDeleted_SavesEventWithContextData()
     {
         // Arrange
-        ContextProvider.Set(ContextProvider.Keys.DownloadName, "Test Download");
+        ContextProvider.Set(ContextProvider.Keys.ItemName, "Test Download");
         ContextProvider.Set(ContextProvider.Keys.Hash, "abc123");
 
         // Act
@@ -360,7 +363,7 @@ public class EventPublisherTests : IDisposable
     public async Task PublishQueueItemDeleted_SendsNotification()
     {
         // Arrange
-        ContextProvider.Set(ContextProvider.Keys.DownloadName, "Test Download");
+        ContextProvider.Set(ContextProvider.Keys.ItemName, "Test Download");
         ContextProvider.Set(ContextProvider.Keys.Hash, "abc123");
 
         // Act
@@ -378,7 +381,7 @@ public class EventPublisherTests : IDisposable
     public async Task PublishDownloadCleaned_SavesEventWithContextData()
     {
         // Arrange
-        ContextProvider.Set(ContextProvider.Keys.DownloadName, "Cleaned Download");
+        ContextProvider.Set(ContextProvider.Keys.ItemName, "Cleaned Download");
         ContextProvider.Set(ContextProvider.Keys.Hash, "def456");
 
         // Act
@@ -404,7 +407,7 @@ public class EventPublisherTests : IDisposable
     public async Task PublishDownloadCleaned_SendsNotification()
     {
         // Arrange
-        ContextProvider.Set(ContextProvider.Keys.DownloadName, "Test");
+        ContextProvider.Set(ContextProvider.Keys.ItemName, "Test");
         ContextProvider.Set(ContextProvider.Keys.Hash, "xyz");
 
         var ratio = 1.5;
@@ -475,7 +478,7 @@ public class EventPublisherTests : IDisposable
     public async Task PublishCategoryChanged_SavesEventWithContextData()
     {
         // Arrange
-        ContextProvider.Set(ContextProvider.Keys.DownloadName, "Category Test");
+        ContextProvider.Set(ContextProvider.Keys.ItemName, "Category Test");
         ContextProvider.Set(ContextProvider.Keys.Hash, "cat123");
 
         // Act
@@ -493,7 +496,7 @@ public class EventPublisherTests : IDisposable
     public async Task PublishCategoryChanged_WithTag_SavesCorrectMessage()
     {
         // Arrange
-        ContextProvider.Set(ContextProvider.Keys.DownloadName, "Tag Test");
+        ContextProvider.Set(ContextProvider.Keys.ItemName, "Tag Test");
         ContextProvider.Set(ContextProvider.Keys.Hash, "tag123");
 
         // Act
@@ -509,7 +512,7 @@ public class EventPublisherTests : IDisposable
     public async Task PublishCategoryChanged_SendsNotification()
     {
         // Arrange
-        ContextProvider.Set(ContextProvider.Keys.DownloadName, "Test");
+        ContextProvider.Set(ContextProvider.Keys.ItemName, "Test");
         ContextProvider.Set(ContextProvider.Keys.Hash, "xyz");
 
         // Act

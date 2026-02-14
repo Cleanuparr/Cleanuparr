@@ -1,7 +1,5 @@
-using System.Collections.Concurrent;
-using System.Text.RegularExpressions;
 using Cleanuparr.Domain.Entities;
-using Cleanuparr.Domain.Enums;
+using Cleanuparr.Domain.Entities.HealthCheck;
 using Cleanuparr.Persistence.Models.Configuration;
 using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
 

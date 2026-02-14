@@ -45,6 +45,9 @@ public class JobHandlerFixture : IDisposable
 
         // Setup default behaviors
         SetupDefaultBehaviors();
+
+        // Setup JobRunId in context for tests
+        ContextProvider.SetJobRunId(Guid.NewGuid());
     }
 
     private void SetupDefaultBehaviors()
@@ -56,6 +59,7 @@ public class JobHandlerFixture : IDisposable
                 It.IsAny<string>(),
                 It.IsAny<Domain.Enums.EventSeverity>(),
                 It.IsAny<object?>(),
+                It.IsAny<Guid?>(),
                 It.IsAny<Guid?>()))
             .Returns(Task.CompletedTask);
     }
@@ -123,6 +127,9 @@ public class JobHandlerFixture : IDisposable
         TimeProvider = new FakeTimeProvider();
 
         SetupDefaultBehaviors();
+
+        // Setup fresh JobRunId for each test
+        ContextProvider.SetJobRunId(Guid.NewGuid());
     }
 
     public void Dispose()

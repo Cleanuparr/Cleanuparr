@@ -65,7 +65,7 @@ public class NotificationPublisherTests
 
     private void SetupDownloadCleanerContext()
     {
-        ContextProvider.Set(ContextProvider.Keys.DownloadName, "Test Download");
+        ContextProvider.Set(ContextProvider.Keys.ItemName, "Test Download");
         ContextProvider.Set(ContextProvider.Keys.DownloadClientUrl, new Uri("http://downloadclient.local"));
         ContextProvider.Set(ContextProvider.Keys.Hash, "HASH123");
     }

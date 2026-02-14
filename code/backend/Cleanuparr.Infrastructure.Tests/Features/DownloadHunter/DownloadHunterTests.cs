@@ -282,7 +282,8 @@ public class DownloadHunterTests : IDisposable
             InstanceType = instanceType,
             Instance = CreateArrInstance(),
             SearchItem = new SearchItem { Id = 123 },
-            Record = CreateQueueRecord()
+            Record = CreateQueueRecord(),
+            JobRunId = Guid.NewGuid()
         };
     }
 

@@ -1,4 +1,4 @@
-using Cleanuparr.Infrastructure.Events;
+using Cleanuparr.Domain.Entities.HealthCheck;
 using Cleanuparr.Infrastructure.Events.Interfaces;
 using Cleanuparr.Infrastructure.Features.Files;
 using Cleanuparr.Infrastructure.Features.ItemStriker;
@@ -35,7 +35,7 @@ public partial class UTorrentService : DownloadService, IUTorrentService
         IRuleEvaluator ruleEvaluator,
         IRuleManager ruleManager
     ) : base(
-        logger, cache,
+        logger,
         filenameEvaluator, striker, dryRunInterceptor, hardLinkFileService,
         httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, ruleEvaluator, ruleManager
     )
@@ -63,7 +63,6 @@ public partial class UTorrentService : DownloadService, IUTorrentService
     // Internal constructor for testing
     internal UTorrentService(
         ILogger<UTorrentService> logger,
-        IMemoryCache cache,
         IFilenameEvaluator filenameEvaluator,
         IStriker striker,
         IDryRunInterceptor dryRunInterceptor,
@@ -76,7 +75,7 @@ public partial class UTorrentService : DownloadService, IUTorrentService
         IRuleManager ruleManager,
         IUTorrentClientWrapper clientWrapper
     ) : base(
-        logger, cache,
+        logger,
         filenameEvaluator, striker, dryRunInterceptor, hardLinkFileService,
         httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, ruleEvaluator, ruleManager
     )

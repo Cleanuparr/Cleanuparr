@@ -38,7 +38,7 @@ public class AppHub : Hub
         {
             var logs = _logSink.GetRecentLogs();
             await Clients.Caller.SendAsync("LogsReceived", logs);
-            _logger.LogDebug("Sent {count} recent logs to client {connectionId}", logs.Count(), Context.ConnectionId);
+            // _logger.LogDebug("Sent {count} recent logs to client {connectionId}", logs.Count(), Context.ConnectionId);
         }
         catch (Exception ex)
         {
@@ -59,7 +59,7 @@ public class AppHub : Hub
                 .ToListAsync();
 
             await Clients.Caller.SendAsync("EventsReceived", events);
-            _logger.LogDebug("Sent {count} recent events to client {connectionId}", events.Count, Context.ConnectionId);
+            // _logger.LogDebug("Sent {count} recent events to client {connectionId}", events.Count, Context.ConnectionId);
         }
         catch (Exception ex)
         {
@@ -81,7 +81,7 @@ public class AppHub : Hub
                 .ToListAsync();
 
             await Clients.Caller.SendAsync("ManualEventsReceived", manualEvents);
-            _logger.LogDebug("Sent {count} recent manual events to client {connectionId}", manualEvents.Count, Context.ConnectionId);
+            // _logger.LogDebug("Sent {count} recent manual events to client {connectionId}", manualEvents.Count, Context.ConnectionId);
         }
         catch (Exception ex)
         {
@@ -110,7 +110,7 @@ public class AppHub : Hub
     /// </summary>
     public override async Task OnConnectedAsync()
     {
-        _logger.LogTrace("Client connected to AppHub: {ConnectionId}", Context.ConnectionId);
+        // _logger.LogTrace("Client connected to AppHub: {ConnectionId}", Context.ConnectionId);
 
         var status = _statusSnapshot.Current;
         if (status.CurrentVersion is not null || status.LatestVersion is not null)
@@ -126,7 +126,7 @@ public class AppHub : Hub
     /// </summary>
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
-        _logger.LogTrace("Client disconnected from AppHub: {ConnectionId}", Context.ConnectionId);
+        // _logger.LogTrace("Client disconnected from AppHub: {ConnectionId}", Context.ConnectionId);
         await base.OnDisconnectedAsync(exception);
     }
 }

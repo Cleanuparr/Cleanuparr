@@ -43,7 +43,7 @@ public class EventPublisher : IEventPublisher
     /// <summary>
     /// Generic method for publishing events to database and SignalR clients
     /// </summary>
-    public async Task PublishAsync(EventType eventType, string message, EventSeverity severity, object? data = null, Guid? trackingId = null)
+    public async Task PublishAsync(EventType eventType, string message, EventSeverity severity, object? data = null, Guid? trackingId = null, Guid? strikeId = null)
     {
         AppEvent eventEntity = new()
         {
@@ -54,7 +54,13 @@ public class EventPublisher : IEventPublisher
             {
                 Converters = { new JsonStringEnumConverter() }
             }) : null,
-            TrackingId = trackingId
+            TrackingId = trackingId,
+            StrikeId = strikeId,
+            JobRunId = ContextProvider.TryGetJobRunId(),
+            InstanceType = ContextProvider.Get(nameof(InstanceType)) is InstanceType it ? it : null,
+            InstanceUrl = (ContextProvider.Get(ContextProvider.Keys.ArrInstanceUrl) as Uri)?.ToString(),
+            DownloadClientType = ContextProvider.Get(ContextProvider.Keys.DownloadClientType) is DownloadClientTypeName dct ? dct : null,
+            DownloadClientName = ContextProvider.Get(ContextProvider.Keys.DownloadClientName) as string,
         };
 
         // Save to database with dry run interception
@@ -65,7 +71,7 @@ public class EventPublisher : IEventPublisher
 
         _logger.LogTrace("Published event: {eventType}", eventType);
     }
-    
+
     public async Task PublishManualAsync(string message, EventSeverity severity, object? data = null)
     {
         ManualEvent eventEntity = new()
@@ -76,21 +82,26 @@ public class EventPublisher : IEventPublisher
             {
                 Converters = { new JsonStringEnumConverter() }
             }) : null,
+            JobRunId = ContextProvider.TryGetJobRunId(),
+            InstanceType = ContextProvider.Get(nameof(InstanceType)) is InstanceType it ? it : null,
+            InstanceUrl = (ContextProvider.Get(ContextProvider.Keys.ArrInstanceUrl) as Uri)?.ToString(),
+            DownloadClientType = ContextProvider.Get(ContextProvider.Keys.DownloadClientType) is DownloadClientTypeName dct ? dct : null,
+            DownloadClientName = ContextProvider.Get(ContextProvider.Keys.DownloadClientName) as string,
         };
-        
+
         // Save to database with dry run interception
         await _dryRunInterceptor.InterceptAsync(SaveManualEventToDatabase, eventEntity);
-        
+
         // Always send to SignalR clients (not affected by dry run)
         await NotifyClientsAsync(eventEntity);
-        
+
         _logger.LogTrace("Published manual event: {message}", message);
     }
 
     /// <summary>
     /// Publishes a strike event with context data and notifications
     /// </summary>
-    public async Task PublishStrike(StrikeType strikeType, int strikeCount, string hash, string itemName)
+    public async Task PublishStrike(StrikeType strikeType, int strikeCount, string hash, string itemName, Guid? strikeId = null)
     {
         // Determine the appropriate EventType based on StrikeType
         EventType eventType = strikeType switch
@@ -133,7 +144,8 @@ public class EventPublisher : IEventPublisher
             eventType,
             $"Item '{itemName}' has been struck {strikeCount} times for reason '{strikeType}'",
             EventSeverity.Important,
-            data: data);
+            data: data,
+            strikeId: strikeId);
 
         // Send notification (uses ContextProvider internally)
         await _notificationPublisher.NotifyStrike(strikeType, strikeCount);
@@ -145,7 +157,7 @@ public class EventPublisher : IEventPublisher
     public async Task PublishQueueItemDeleted(bool removeFromClient, DeleteReason deleteReason)
     {
         // Get context data for the event
-        string downloadName = ContextProvider.Get<string>(ContextProvider.Keys.DownloadName);
+        string itemName = ContextProvider.Get<string>(ContextProvider.Keys.ItemName);
         string hash = ContextProvider.Get<string>(ContextProvider.Keys.Hash);
 
         // Publish the event
@@ -153,7 +165,7 @@ public class EventPublisher : IEventPublisher
             EventType.QueueItemDeleted,
             $"Deleting item from queue with reason: {deleteReason}",
             EventSeverity.Important,
-            data: new { downloadName, hash, removeFromClient, deleteReason });
+            data: new { itemName, hash, removeFromClient, deleteReason });
 
         // Send notification (uses ContextProvider internally)
         await _notificationPublisher.NotifyQueueItemDeleted(removeFromClient, deleteReason);
@@ -165,7 +177,7 @@ public class EventPublisher : IEventPublisher
     public async Task PublishDownloadCleaned(double ratio, TimeSpan seedingTime, string categoryName, CleanReason reason)
     {
         // Get context data for the event
-        string downloadName = ContextProvider.Get<string>(ContextProvider.Keys.DownloadName);
+        string itemName = ContextProvider.Get<string>(ContextProvider.Keys.ItemName);
         string hash = ContextProvider.Get<string>(ContextProvider.Keys.Hash);
 
         // Publish the event
@@ -173,7 +185,7 @@ public class EventPublisher : IEventPublisher
             EventType.DownloadCleaned,
             $"Cleaned item from download client with reason: {reason}",
             EventSeverity.Important,
-            data: new { downloadName, hash, categoryName, ratio, seedingTime = seedingTime.TotalHours, reason });
+            data: new { itemName, hash, categoryName, ratio, seedingTime = seedingTime.TotalHours, reason });
 
         // Send notification (uses ContextProvider internally)
         await _notificationPublisher.NotifyDownloadCleaned(ratio, seedingTime, categoryName, reason);
@@ -185,7 +197,7 @@ public class EventPublisher : IEventPublisher
     public async Task PublishCategoryChanged(string oldCategory, string newCategory, bool isTag = false)
     {
         // Get context data for the event
-        string downloadName = ContextProvider.Get<string>(ContextProvider.Keys.DownloadName);
+        string itemName = ContextProvider.Get<string>(ContextProvider.Keys.ItemName);
         string hash = ContextProvider.Get<string>(ContextProvider.Keys.Hash);
 
         // Publish the event
@@ -193,7 +205,7 @@ public class EventPublisher : IEventPublisher
             EventType.CategoryChanged,
             isTag ? $"Tag '{newCategory}' added to download" : $"Category changed from '{oldCategory}' to '{newCategory}'",
             EventSeverity.Information,
-            data: new { downloadName, hash, oldCategory, newCategory, isTag });
+            data: new { itemName, hash, oldCategory, newCategory, isTag });
 
         // Send notification (uses ContextProvider internally)
         await _notificationPublisher.NotifyCategoryChanged(oldCategory, newCategory, isTag);
@@ -204,14 +216,10 @@ public class EventPublisher : IEventPublisher
     /// </summary>
     public async Task PublishRecurringItem(string hash, string itemName, int strikeCount)
     {
-        var instanceType = (InstanceType)ContextProvider.Get<object>(nameof(InstanceType));
-        var instanceUrl = ContextProvider.Get<Uri>(ContextProvider.Keys.ArrInstanceUrl);
-        
-        // Publish the event
         await PublishManualAsync(
             "Download keeps coming back after deletion\nTo prevent further issues, please consult the prerequisites: https://cleanuparr.github.io/Cleanuparr/docs/installation/",
             EventSeverity.Important,
-            data: new { itemName, hash, strikeCount, instanceType, instanceUrl }
+            data: new { itemName, hash, strikeCount }
         );
     }
 
@@ -220,13 +228,10 @@ public class EventPublisher : IEventPublisher
     /// </summary>
     public async Task PublishSearchNotTriggered(string hash, string itemName)
     {
-        var instanceType = (InstanceType)ContextProvider.Get<object>(nameof(InstanceType));
-        var instanceUrl = ContextProvider.Get<Uri>(ContextProvider.Keys.ArrInstanceUrl);
-        
         await PublishManualAsync(
             "Replacement search was not triggered after removal because the item keeps coming back\nPlease trigger a manual search if needed",
             EventSeverity.Warning,
-            data: new { itemName, hash, instanceType, instanceUrl }
+            data: new { itemName, hash }
         );
     }
 

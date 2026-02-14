@@ -1,6 +1,7 @@
-import { Component, ChangeDetectionStrategy, inject, computed, signal } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, computed, signal, OnInit } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import { NgIcon } from '@ng-icons/core';
 import { PageHeaderComponent } from '@layout/page-header/page-header.component';
 import { CardComponent, BadgeComponent, ButtonComponent, SelectComponent, InputComponent, EmptyStateComponent, type SelectOption } from '@ui';
@@ -38,9 +39,10 @@ const LOG_LEVELS: SelectOption[] = [
   styleUrl: './logs.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class LogsComponent {
+export class LogsComponent implements OnInit {
   private readonly hub = inject(AppHubService);
   private readonly toast = inject(ToastService);
+  private readonly route = inject(ActivatedRoute);
 
   readonly connected = this.hub.isConnected;
   readonly levelOptions = LOG_LEVELS;
@@ -50,13 +52,25 @@ export class LogsComponent {
   readonly searchQuery = signal('');
   readonly expandedIndex = signal<number | null>(null);
   readonly showExportMenu = signal(false);
+  readonly selectedJobRunId = signal<string | null>(null);
+
+  ngOnInit(): void {
+    const runId = this.route.snapshot.queryParamMap.get('jobRunId');
+    if (runId) {
+      this.selectedJobRunId.set(runId);
+    }
+  }
 
   readonly filteredLogs = computed(() => {
     let logs = this.hub.logs();
     const level = this.selectedLevel() as string;
     const category = this.selectedCategory() as string;
     const query = this.searchQuery().toLowerCase();
+    const runId = this.selectedJobRunId();
 
+    if (runId) {
+      logs = logs.filter((l) => l.jobRunId === runId);
+    }
     if (level) {
       logs = logs.filter((l) => l.level.toLowerCase() === level);
     }
@@ -68,7 +82,11 @@ export class LogsComponent {
         (l) =>
           l.message.toLowerCase().includes(query) ||
           l.category?.toLowerCase().includes(query) ||
-          l.exception?.toLowerCase().includes(query)
+          l.exception?.toLowerCase().includes(query) ||
+          l.instanceName?.toLowerCase().includes(query) ||
+          l.downloadClientType?.toLowerCase().includes(query) ||
+          l.downloadClientName?.toLowerCase().includes(query) ||
+          l.jobRunId?.toLowerCase().includes(query)
       );
     }
     return logs.slice().sort((a, b) =>
@@ -85,7 +103,7 @@ export class LogsComponent {
   });
 
   isExpandable(log: LogEntry): boolean {
-    return !!(log.exception || log.jobName || log.instanceName || log.message.length > 80);
+    return !!(log.exception || log.jobName || log.instanceName || log.downloadClientType || log.jobRunId);
   }
 
   toggleExpand(index: number): void {
@@ -130,9 +148,9 @@ export class LogsComponent {
         ext = 'json';
         break;
       case 'csv': {
-        const header = 'Timestamp,Level,Category,Message,Exception,JobName,InstanceName';
+        const header = 'Timestamp,Level,Category,Message,Exception,JobName,InstanceName,DownloadClientType,DownloadClientName,JobRunId';
         const rows = logs.map((l) =>
-          [l.timestamp, l.level, l.category ?? '', `"${(l.message ?? '').replace(/"/g, '""')}"`, `"${(l.exception ?? '').replace(/"/g, '""')}"`, l.jobName ?? '', l.instanceName ?? ''].join(',')
+          [l.timestamp, l.level, l.category ?? '', `"${(l.message ?? '').replace(/"/g, '""')}"`, `"${(l.exception ?? '').replace(/"/g, '""')}"`, l.jobName ?? '', l.instanceName ?? '', l.downloadClientType ?? '', l.downloadClientName ?? '', l.jobRunId ?? ''].join(',')
         );
         content = [header, ...rows].join('\n');
         mimeType = 'text/csv';
@@ -156,6 +174,24 @@ export class LogsComponent {
     a.click();
     URL.revokeObjectURL(url);
     this.toast.success(`Logs exported as ${format.toUpperCase()}`);
+  }
+
+  filterByJobRunId(runId: string): void {
+    this.selectedJobRunId.set(runId);
+  }
+
+  clearJobRunFilter(): void {
+    this.selectedJobRunId.set(null);
+  }
+
+  jobDisplayName(jobType: string): string {
+    switch (jobType) {
+      case 'QueueCleaner': return 'Queue Cleaner';
+      case 'MalwareBlocker': return 'Malware Blocker';
+      case 'DownloadCleaner': return 'Download Cleaner';
+      case 'BlacklistSynchronizer': return 'Blacklist Sync';
+      default: return jobType;
+    }
   }
 
   logSeverity(level: string): 'error' | 'warning' | 'info' | 'success' | 'default' {

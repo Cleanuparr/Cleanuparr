@@ -11,7 +11,9 @@ public interface IStriker
     /// <param name="itemName">The name of the item</param>
     /// <param name="maxStrikes">The maximum number of strikes</param>
     /// <param name="strikeType">The strike type</param>
+    /// <param name="lastDownloadedBytes">Optional: bytes downloaded at time of strike (for progress tracking)</param>
     /// <returns>True if the limit has been reached, otherwise false</returns>
-    Task<bool> StrikeAndCheckLimit(string hash, string itemName, ushort maxStrikes, StrikeType strikeType);
+    Task<bool> StrikeAndCheckLimit(string hash, string itemName, ushort maxStrikes, StrikeType strikeType, long? lastDownloadedBytes = null);
+    
     Task ResetStrikeAsync(string hash, string itemName, StrikeType strikeType);
 }

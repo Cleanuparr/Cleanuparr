@@ -8,6 +8,7 @@ import {
 } from '@ui';
 import { GeneralConfigApi } from '@core/api/general-config.api';
 import { ToastService } from '@core/services/toast.service';
+import { ConfirmService } from '@core/services/confirm.service';
 import { GeneralConfig, LoggingConfig } from '@shared/models/general-config.model';
 import { CertificateValidationType, LogEventLevel } from '@shared/models/enums';
 import { HasPendingChanges } from '@core/guards/pending-changes.guard';
@@ -43,6 +44,7 @@ const LOG_LEVEL_OPTIONS: SelectOption[] = [
 export class GeneralSettingsComponent implements OnInit, HasPendingChanges {
   private readonly api = inject(GeneralConfigApi);
   private readonly toast = inject(ToastService);
+  private readonly confirmService = inject(ConfirmService);
   private readonly chipInputs = viewChildren(ChipInputComponent);
 
   private readonly savedSnapshot = signal('');
@@ -64,6 +66,8 @@ export class GeneralSettingsComponent implements OnInit, HasPendingChanges {
   readonly searchDelay = signal<number | null>(5);
   readonly statusCheckEnabled = signal(true);
   readonly ignoredDownloads = signal<string[]>([]);
+  readonly strikeInactivityWindowHours = signal<number | null>(24);
+  readonly purgingStrikes = signal(false);
 
   // Logging
   readonly logLevel = signal<unknown>(LogEventLevel.Information);
@@ -139,7 +143,16 @@ export class GeneralSettingsComponent implements OnInit, HasPendingChanges {
     return undefined;
   });
 
+  readonly strikeInactivityWindowHoursError = computed(() => {
+    const v = this.strikeInactivityWindowHours();
+    if (v == null) return 'This field is required';
+    if (v < 1) return 'Minimum value is 1';
+    if (v > 168) return 'Maximum value is 168 hours (7 days)';
+    return undefined;
+  });
+
   readonly hasErrors = computed(() => !!(
+    this.strikeInactivityWindowHoursError() ||
     this.httpMaxRetriesError() ||
     this.httpTimeoutError() ||
     this.searchDelayError() ||
@@ -168,6 +181,7 @@ export class GeneralSettingsComponent implements OnInit, HasPendingChanges {
         this.searchDelay.set(config.searchDelay);
         this.statusCheckEnabled.set(config.statusCheckEnabled);
         this.ignoredDownloads.set(config.ignoredDownloads ?? []);
+        this.strikeInactivityWindowHours.set(config.strikeInactivityWindowHours);
         if (config.log) {
           this.logLevel.set(config.log.level);
           this.logRollingSizeMB.set(config.log.rollingSizeMB);
@@ -203,6 +217,7 @@ export class GeneralSettingsComponent implements OnInit, HasPendingChanges {
       searchEnabled: this.searchEnabled(),
       searchDelay: this.searchDelay() ?? 5,
       statusCheckEnabled: this.statusCheckEnabled(),
+      strikeInactivityWindowHours: this.strikeInactivityWindowHours() ?? 24,
       ignoredDownloads: this.ignoredDownloads(),
       log: {
         level: this.logLevel() as LogEventLevel,
@@ -241,6 +256,7 @@ export class GeneralSettingsComponent implements OnInit, HasPendingChanges {
       searchEnabled: this.searchEnabled(),
       searchDelay: this.searchDelay(),
       statusCheckEnabled: this.statusCheckEnabled(),
+      strikeInactivityWindowHours: this.strikeInactivityWindowHours(),
       ignoredDownloads: this.ignoredDownloads(),
       logLevel: this.logLevel(),
       logRollingSizeMB: this.logRollingSizeMB(),
@@ -259,5 +275,31 @@ export class GeneralSettingsComponent implements OnInit, HasPendingChanges {
 
   hasPendingChanges(): boolean {
     return this.dirty();
+  }
+
+  async confirmPurgeStrikes(): Promise<void> {
+    const confirmed = await this.confirmService.confirm({
+      title: 'Purge All Strikes',
+      message: 'This will permanently delete all strike data for all downloads. Strike counts will reset to zero. This action cannot be undone.',
+      confirmLabel: 'Purge',
+      destructive: true,
+    });
+    if (confirmed) {
+      this.purgeStrikes();
+    }
+  }
+
+  private purgeStrikes(): void {
+    this.purgingStrikes.set(true);
+    this.api.purgeStrikes().subscribe({
+      next: (result) => {
+        this.toast.success(`Purged ${result.deletedStrikes} strikes`);
+        this.purgingStrikes.set(false);
+      },
+      error: () => {
+        this.toast.error('Failed to purge strikes');
+        this.purgingStrikes.set(false);
+      },
+    });
   }
 }

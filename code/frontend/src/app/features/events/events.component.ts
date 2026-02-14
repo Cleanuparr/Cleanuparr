@@ -1,6 +1,7 @@
 import { Component, ChangeDetectionStrategy, inject, signal, OnInit, OnDestroy } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router, RouterLink } from '@angular/router';
 import { NgIcon } from '@ng-icons/core';
 import { PageHeaderComponent } from '@layout/page-header/page-header.component';
 import {
@@ -18,6 +19,7 @@ import { AppEvent, EventFilter } from '@core/models/event.models';
   imports: [
     DatePipe,
     FormsModule,
+    RouterLink,
     NgIcon,
     PageHeaderComponent,
     CardComponent,
@@ -36,6 +38,7 @@ import { AppEvent, EventFilter } from '@core/models/event.models';
 export class EventsComponent implements OnInit, OnDestroy {
   private readonly eventsApi = inject(EventsApi);
   private readonly toast = inject(ToastService);
+  private readonly router = inject(Router);
   private pollTimer: ReturnType<typeof setInterval> | null = null;
 
   readonly events = signal<AppEvent[]>([]);
@@ -43,6 +46,7 @@ export class EventsComponent implements OnInit, OnDestroy {
   readonly loading = signal(false);
   readonly expandedId = signal<string | null>(null);
   readonly showExportMenu = signal(false);
+  readonly selectedJobRunId = signal<string | null>(null);
 
   readonly currentPage = signal(1);
   readonly pageSize = signal(50);
@@ -78,11 +82,14 @@ export class EventsComponent implements OnInit, OnDestroy {
     const from = this.fromDate();
     const to = this.toDate();
 
+    const jobRunId = this.selectedJobRunId();
+
     if (severity) filter.severity = severity;
     if (type) filter.eventType = type;
     if (search) filter.search = search;
     if (from) filter.fromDate = from;
     if (to) filter.toDate = to;
+    if (jobRunId) filter.jobRunId = jobRunId;
 
     this.loading.set(true);
     this.eventsApi.getEvents(filter).subscribe({
@@ -128,7 +135,7 @@ export class EventsComponent implements OnInit, OnDestroy {
   }
 
   isExpandable(event: AppEvent): boolean {
-    return !!(event.data || event.trackingId);
+    return !!(event.data || event.trackingId || event.instanceType || event.downloadClientType || event.jobRunId);
   }
 
   toggleExpand(eventId: string): void {
@@ -145,6 +152,22 @@ export class EventsComponent implements OnInit, OnDestroy {
     this.loadEvents();
   }
 
+  filterByJobRunId(runId: string): void {
+    this.selectedJobRunId.set(runId);
+    this.currentPage.set(1);
+    this.loadEvents();
+  }
+
+  clearJobRunFilter(): void {
+    this.selectedJobRunId.set(null);
+    this.currentPage.set(1);
+    this.loadEvents();
+  }
+
+  viewLogsForJobRun(runId: string): void {
+    this.router.navigate(['/logs'], { queryParams: { jobRunId: runId } });
+  }
+
   exportEvents(format: 'json' | 'csv' | 'text'): void {
     this.showExportMenu.set(false);
     const events = this.events();
@@ -159,9 +182,9 @@ export class EventsComponent implements OnInit, OnDestroy {
         ext = 'json';
         break;
       case 'csv': {
-        const header = 'Timestamp,Severity,EventType,Message,Data,TrackingId';
+        const header = 'Timestamp,Severity,EventType,Message,Data,TrackingId,JobRunId,InstanceType,InstanceUrl,DownloadClientType,DownloadClientName';
         const rows = events.map((e) =>
-          [e.timestamp, e.severity, e.eventType, `"${(e.message ?? '').replace(/"/g, '""')}"`, `"${(e.data ?? '').replace(/"/g, '""')}"`, e.trackingId ?? ''].join(',')
+          [e.timestamp, e.severity, e.eventType, `"${(e.message ?? '').replace(/"/g, '""')}"`, `"${(e.data ?? '').replace(/"/g, '""')}"`, e.trackingId ?? '', e.jobRunId ?? '', e.instanceType ?? '', e.instanceUrl ?? '', e.downloadClientType ?? '', e.downloadClientName ?? ''].join(',')
         );
         content = [header, ...rows].join('\n');
         mimeType = 'text/csv';
@@ -213,7 +236,4 @@ export class EventsComponent implements OnInit, OnDestroy {
     return Object.keys(obj);
   }
 
-  truncate(text: string, max = 100): string {
-    return text.length > max ? text.substring(0, max) + '...' : text;
-  }
 }

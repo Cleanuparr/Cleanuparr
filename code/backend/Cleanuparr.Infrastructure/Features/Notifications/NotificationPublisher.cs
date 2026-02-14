@@ -177,7 +177,7 @@ public class NotificationPublisher : INotificationPublisher
 
     private static NotificationContext BuildDownloadCleanedContext(double ratio, TimeSpan seedingTime, string categoryName, CleanReason reason)
     {
-        var downloadName = ContextProvider.Get<string>(ContextProvider.Keys.DownloadName);
+        var downloadName = ContextProvider.Get<string>(ContextProvider.Keys.ItemName);
         var hash = ContextProvider.Get<string>(ContextProvider.Keys.Hash);
         var clientUrl = ContextProvider.Get<Uri>(ContextProvider.Keys.DownloadClientUrl);
 
@@ -200,7 +200,7 @@ public class NotificationPublisher : INotificationPublisher
 
     private NotificationContext BuildCategoryChangedContext(string oldCategory, string newCategory, bool isTag)
     {
-        string downloadName = ContextProvider.Get<string>(ContextProvider.Keys.DownloadName);
+        string downloadName = ContextProvider.Get<string>(ContextProvider.Keys.ItemName);
         Uri clientUrl = ContextProvider.Get<Uri>(ContextProvider.Keys.DownloadClientUrl);
 
         NotificationContext context = new()

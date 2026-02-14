@@ -1,10 +1,10 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using Cleanuparr.Domain.Enums;
-using Cleanuparr.Infrastructure.Events;
 using Cleanuparr.Infrastructure.Events.Interfaces;
-using Cleanuparr.Infrastructure.Helpers;
-using Cleanuparr.Shared.Helpers;
-using Microsoft.Extensions.Caching.Memory;
+using Cleanuparr.Infrastructure.Features.Context;
+using Cleanuparr.Persistence;
+using Cleanuparr.Persistence.Models.State;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace Cleanuparr.Infrastructure.Features.ItemStriker;
@@ -12,47 +12,47 @@ namespace Cleanuparr.Infrastructure.Features.ItemStriker;
 public sealed class Striker : IStriker
 {
     private readonly ILogger<Striker> _logger;
-    private readonly IMemoryCache _cache;
-    private readonly MemoryCacheEntryOptions _cacheOptions;
+    private readonly EventsContext _context;
     private readonly IEventPublisher _eventPublisher;
 
     public static readonly ConcurrentDictionary<string, string?> RecurringHashes = [];
 
-    public Striker(ILogger<Striker> logger, IMemoryCache cache, IEventPublisher eventPublisher)
+    public Striker(ILogger<Striker> logger, EventsContext context, IEventPublisher eventPublisher)
     {
         _logger = logger;
-        _cache = cache;
+        _context = context;
         _eventPublisher = eventPublisher;
-        _cacheOptions = new MemoryCacheEntryOptions()
-            .SetSlidingExpiration(StaticConfiguration.TriggerValue + Constants.CacheLimitBuffer);
     }
-    
-    /// <inheritdoc/>
-    public async Task<bool> StrikeAndCheckLimit(string hash, string itemName, ushort maxStrikes, StrikeType strikeType)
+
+    public async Task<bool> StrikeAndCheckLimit(string hash, string itemName, ushort maxStrikes, StrikeType strikeType, long? lastDownloadedBytes = null)
     {
         if (maxStrikes is 0)
         {
             _logger.LogTrace("skip striking for {reason} | max strikes is 0 | {name}", strikeType, itemName);
             return false;
         }
-        
-        string key = CacheKeys.Strike(strikeType, hash);
-        
-        if (!_cache.TryGetValue(key, out int strikeCount))
+
+        var downloadItem = await GetOrCreateDownloadItemAsync(hash, itemName);
+
+        int existingStrikeCount = await _context.Strikes
+            .CountAsync(s => s.DownloadItemId == downloadItem.Id && s.Type == strikeType);
+
+        var strike = new Strike
         {
-            strikeCount = 1;
-        }
-        else
-        {
-            ++strikeCount;
-        }
-        
+            DownloadItemId = downloadItem.Id,
+            JobRunId = ContextProvider.GetJobRunId(),
+            Type = strikeType,
+            LastDownloadedBytes = lastDownloadedBytes
+        };
+        _context.Strikes.Add(strike);
+        await _context.SaveChangesAsync();
+
+        int strikeCount = existingStrikeCount + 1;
+
         _logger.LogInformation("Item on strike number {strike} | reason {reason} | {name}", strikeCount, strikeType.ToString(), itemName);
 
-        await _eventPublisher.PublishStrike(strikeType, strikeCount, hash, itemName);
-        
-        _cache.Set(key, strikeCount, _cacheOptions);
-        
+        await _eventPublisher.PublishStrike(strikeType, strikeCount, hash, itemName, strike.Id);
+
         if (strikeCount < maxStrikes)
         {
             return false;
@@ -61,7 +61,7 @@ public sealed class Striker : IStriker
         if (strikeCount > maxStrikes)
         {
             _logger.LogWarning("Blocked item keeps coming back | {name}", itemName);
-            
+
             RecurringHashes.TryAdd(hash.ToLowerInvariant(), null);
             await _eventPublisher.PublishRecurringItem(hash, itemName, strikeCount);
         }
@@ -71,17 +71,51 @@ public sealed class Striker : IStriker
         return true;
     }
 
-    public Task ResetStrikeAsync(string hash, string itemName, StrikeType strikeType)
+    public async Task ResetStrikeAsync(string hash, string itemName, StrikeType strikeType)
     {
-        string key = CacheKeys.Strike(strikeType, hash);
+        var downloadItem = await _context.DownloadItems
+            .FirstOrDefaultAsync(d => d.DownloadId == hash);
 
-        if (_cache.TryGetValue(key, out int strikeCount) && strikeCount > 0)
+        if (downloadItem is null)
         {
-            _logger.LogTrace("Progress detected | resetting {reason} strikes from {strikeCount} to 0 | {name}", strikeType, strikeCount, itemName);
+            return;
         }
 
-        _cache.Remove(key);
+        var strikesToDelete = await _context.Strikes
+            .Where(s => s.DownloadItemId == downloadItem.Id && s.Type == strikeType)
+            .ToListAsync();
 
-        return Task.CompletedTask;
+        if (strikesToDelete.Count > 0)
+        {
+            _context.Strikes.RemoveRange(strikesToDelete);
+            await _context.SaveChangesAsync();
+            _logger.LogTrace("Progress detected | resetting {reason} strikes from {strikeCount} to 0 | {name}", strikeType, strikesToDelete.Count, itemName);
+        }
+    }
+
+    private async Task<DownloadItem> GetOrCreateDownloadItemAsync(string hash, string itemName)
+    {
+        var downloadItem = await _context.DownloadItems
+            .FirstOrDefaultAsync(d => d.DownloadId == hash);
+
+        if (downloadItem is not null)
+        {
+            if (downloadItem.Title != itemName)
+            {
+                downloadItem.Title = itemName;
+                await _context.SaveChangesAsync();
+            }
+            return downloadItem;
+        }
+
+        downloadItem = new DownloadItem
+        {
+            DownloadId = hash,
+            Title = itemName
+        };
+        _context.DownloadItems.Add(downloadItem);
+        await _context.SaveChangesAsync();
+
+        return downloadItem;
     }
 }
