@@ -1,0 +1,115 @@
+@use 'glass' as *;
+
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1-5);
+}
+
+.size-label {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.size-wrapper {
+  display: flex;
+  align-items: center;
+  @include glass-input;
+  height: 38px;
+  padding: 0;
+  overflow: hidden;
+
+  &:focus-within {
+    border-color: var(--input-border-focus);
+    box-shadow: 0 0 0 3px var(--color-primary-subtle),
+                0 0 12px rgba(126, 87, 194, 0.15);
+  }
+}
+
+.size-field {
+  flex: 1;
+  height: 100%;
+  background: none;
+  border: none;
+  color: var(--input-text);
+  font-family: var(--font-family);
+  font-size: var(--font-size-sm);
+  padding: 0 var(--space-3);
+  outline: none;
+  -moz-appearance: textfield;
+
+  &::-webkit-inner-spin-button,
+  &::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  &::placeholder {
+    color: var(--input-placeholder);
+  }
+
+  &--error {
+    border-color: var(--color-error) !important;
+  }
+}
+
+.size-units {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  flex-shrink: 0;
+  border-left: 1px solid var(--input-border);
+}
+
+.size-unit-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 0 var(--space-2-5);
+  background: none;
+  border: none;
+  color: var(--text-tertiary);
+  font-family: var(--font-family);
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color var(--duration-fast) var(--ease-default),
+              background var(--duration-fast) var(--ease-default);
+
+  &:not(:last-child) {
+    border-right: 1px solid var(--input-border);
+  }
+
+  &:hover:not(:disabled):not(.size-unit-btn--active) {
+    background: var(--glass-bg-hover);
+    color: var(--text-secondary);
+  }
+
+  &--active {
+    background: var(--color-primary);
+    color: #fff;
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+}
+
+.size-error {
+  font-size: var(--font-size-xs);
+  color: var(--color-error);
+}
+
+.size-hint {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+}
+
+:host:focus-within .size-label {
+  color: var(--color-primary);
+  transition: color var(--duration-fast) var(--ease-default);
+}
