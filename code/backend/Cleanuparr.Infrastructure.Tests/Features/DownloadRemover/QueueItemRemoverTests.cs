@@ -84,7 +84,8 @@ public class QueueItemRemoverTests : IDisposable
             _busMock.Object,
             _memoryCache,
             _arrClientFactoryMock.Object,
-            _eventPublisher
+            _eventPublisher,
+            _eventsContext
         );
 
         // Clear static RecurringHashes before each test

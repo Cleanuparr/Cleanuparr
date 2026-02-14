@@ -46,6 +46,12 @@
           >
             <ng-icon name="tablerBolt" class="strike-row__icon" />
             <span class="strike-row__title">{{ item.title }}</span>
+            @if (item.isRemoved) {
+              <app-badge severity="error" size="sm">Removed</app-badge>
+            }
+            @if (item.isReturning) {
+              <app-badge severity="warning" size="sm">Returning</app-badge>
+            }
             <span class="strike-row__hash">{{ item.downloadId }}</span>
             <div class="strike-row__type-badges">
               @for (entry of strikeTypeEntries(item.strikesByType); track entry.type) {

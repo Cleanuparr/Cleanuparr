@@ -72,6 +72,8 @@ public class StrikesController : ControllerBase
                 .ToDictionary(g => g.Key.ToString(), g => g.Count()),
             LatestStrikeAt = d.Strikes.Max(s => s.CreatedAt),
             FirstStrikeAt = d.Strikes.Min(s => s.CreatedAt),
+            IsRemoved = d.IsRemoved,
+            IsReturning = d.IsReturning,
             Strikes = d.Strikes
                 .OrderByDescending(s => s.CreatedAt)
                 .Select(s => new StrikeDetailDto
@@ -161,6 +163,8 @@ public class DownloadItemStrikesDto
     public Dictionary<string, int> StrikesByType { get; set; } = new();
     public DateTime LatestStrikeAt { get; set; }
     public DateTime FirstStrikeAt { get; set; }
+    public bool IsRemoved { get; set; }
+    public bool IsReturning { get; set; }
     public List<StrikeDetailDto> Strikes { get; set; } = [];
 }
 

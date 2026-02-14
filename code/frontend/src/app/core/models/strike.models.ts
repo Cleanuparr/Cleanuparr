@@ -2,6 +2,8 @@ export interface DownloadItemStrikes {
   downloadItemId: string;
   downloadId: string;
   title: string;
+  isRemoved: boolean;
+  isReturning: boolean;
   totalStrikes: number;
   strikesByType: Record<string, number>;
   latestStrikeAt: string;
