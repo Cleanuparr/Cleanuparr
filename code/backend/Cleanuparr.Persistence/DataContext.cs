@@ -12,6 +12,7 @@ using Cleanuparr.Persistence.Models.Configuration.BlacklistSync;
 using Cleanuparr.Persistence.Models.State;
 using Cleanuparr.Shared.Helpers;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Serilog.Events;
 
@@ -202,16 +203,32 @@ public class DataContext : DbContext
         
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())
         {
+            // Use OriginalString for Uri properties to preserve the exact input (including embedded credentials)
+            foreach (var property in entityType.GetProperties().Where(p => p.ClrType == typeof(Uri)))
+            {
+                property.SetValueConverter(
+                    new ValueConverter<Uri, string>(
+                        v => v.OriginalString,
+                        v => new Uri(v, UriKind.RelativeOrAbsolute)));
+
+                property.SetValueComparer(new ValueComparer<Uri>(
+                    (u1, u2) => u1 != null && u2 != null
+                        ? u1.OriginalString == u2.OriginalString
+                        : u1 == null && u2 == null,
+                    u => u == null ? 0 : u.OriginalString.GetHashCode(),
+                    u => u == null ? null! : new Uri(u.OriginalString, UriKind.RelativeOrAbsolute)));
+            }
+
             var enumProperties = entityType.ClrType.GetProperties()
-                .Where(p => p.PropertyType.IsEnum || 
-                            (p.PropertyType.IsGenericType && 
-                             p.PropertyType.GetGenericTypeDefinition() == typeof(Nullable<>) && 
+                .Where(p => p.PropertyType.IsEnum ||
+                            (p.PropertyType.IsGenericType &&
+                             p.PropertyType.GetGenericTypeDefinition() == typeof(Nullable<>) &&
                              p.PropertyType.GetGenericArguments()[0].IsEnum));
 
             foreach (var property in enumProperties)
             {
-                var enumType = property.PropertyType.IsEnum 
-                    ? property.PropertyType 
+                var enumType = property.PropertyType.IsEnum
+                    ? property.PropertyType
                     : property.PropertyType.GetGenericArguments()[0];
 
                 var converterType = typeof(LowercaseEnumConverter<>).MakeGenericType(enumType);

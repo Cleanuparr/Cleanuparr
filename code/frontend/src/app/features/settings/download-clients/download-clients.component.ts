@@ -129,7 +129,7 @@ export class DownloadClientsComponent implements OnInit, HasPendingChanges {
     this.modalTypeName.set(client.typeName);
     this.modalHost.set(client.host);
     this.modalUsername.set(client.username);
-    this.modalPassword.set('');
+    this.modalPassword.set(client.password ?? '');
     this.modalUrlBase.set(client.urlBase);
     this.modalExternalUrl.set(client.externalUrl ?? '');
     this.modalVisible.set(true);
