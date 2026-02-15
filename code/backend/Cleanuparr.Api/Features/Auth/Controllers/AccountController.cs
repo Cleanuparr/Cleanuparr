@@ -20,7 +20,6 @@ public sealed class AccountController : ControllerBase
     private readonly IPasswordService _passwordService;
     private readonly ITotpService _totpService;
     private readonly IPlexAuthService _plexAuthService;
-    private readonly IJwtService _jwtService;
     private readonly ILogger<AccountController> _logger;
 
     public AccountController(
@@ -28,14 +27,12 @@ public sealed class AccountController : ControllerBase
         IPasswordService passwordService,
         ITotpService totpService,
         IPlexAuthService plexAuthService,
-        IJwtService jwtService,
         ILogger<AccountController> logger)
     {
         _usersContext = usersContext;
         _passwordService = passwordService;
         _totpService = totpService;
         _plexAuthService = plexAuthService;
-        _jwtService = jwtService;
         _logger = logger;
     }
 
