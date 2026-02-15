@@ -93,7 +93,7 @@
             <app-badge [severity]="eventSeverity(event.severity)" size="sm">
               {{ event.severity }}
             </app-badge>
-            <app-badge severity="default" size="sm">
+            <app-badge [severity]="eventTypeSeverity(event.eventType)" size="sm">
               {{ formatEventType(event.eventType) }}
             </app-badge>
             @if (event.trackingId) {

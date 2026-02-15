@@ -5,6 +5,7 @@ import { SignalRHubConfig, LogEntry } from '@core/models/signalr.models';
 import { AppEvent, ManualEvent } from '@core/models/event.models';
 import { JobInfo } from '@core/models/job.models';
 import { AppStatus } from '@core/models/app-status.model';
+import { RecentStrike } from '@core/models/strike.models';
 
 const MAX_BUFFER = 1000;
 
@@ -22,12 +23,14 @@ export class AppHubService extends HubService {
   private readonly _logs = signal<LogEntry[]>([]);
   private readonly _events = signal<AppEvent[]>([]);
   private readonly _manualEvents = signal<ManualEvent[]>([]);
+  private readonly _strikes = signal<RecentStrike[]>([]);
   private readonly _jobs = signal<JobInfo[]>([]);
   private readonly _appStatus = signal<AppStatus | null>(null);
 
   readonly logs = this._logs.asReadonly();
   readonly events = this._events.asReadonly();
   readonly manualEvents = this._manualEvents.asReadonly();
+  readonly strikes = this._strikes.asReadonly();
   readonly jobs = this._jobs.asReadonly();
   readonly appStatus = this._appStatus.asReadonly();
 
@@ -71,6 +74,19 @@ export class AppHubService extends HubService {
       this._manualEvents.set(events);
     });
 
+    // Single strike
+    connection.on('StrikeReceived', (strike: RecentStrike) => {
+      this._strikes.update((strikes) => {
+        const updated = [strike, ...strikes];
+        return updated.length > MAX_BUFFER ? updated.slice(0, MAX_BUFFER) : updated;
+      });
+    });
+
+    // Bulk initial strikes
+    connection.on('StrikesReceived', (strikes: RecentStrike[]) => {
+      this._strikes.set(strikes);
+    });
+
     // Jobs status
     connection.on('JobsStatusUpdate', (jobs: JobInfo[]) => {
       this._jobs.set(jobs);
@@ -98,6 +114,7 @@ export class AppHubService extends HubService {
     this.requestRecentLogs();
     this.requestRecentEvents();
     this.requestRecentManualEvents();
+    this.requestRecentStrikes();
     this.requestJobStatus();
   }
 
@@ -115,6 +132,10 @@ export class AppHubService extends HubService {
 
   requestRecentManualEvents(count = 100): void {
     this.invoke('GetRecentManualEvents', count);
+  }
+
+  requestRecentStrikes(count = 5): void {
+    this.invoke('GetRecentStrikes', count);
   }
 
   requestJobStatus(): void {

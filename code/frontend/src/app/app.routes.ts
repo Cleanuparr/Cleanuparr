@@ -31,6 +31,13 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'strikes',
+        loadComponent: () =>
+          import('@features/strikes/strikes.component').then(
+            (m) => m.StrikesComponent,
+          ),
+      },
+      {
         path: 'settings',
         children: [
           {
