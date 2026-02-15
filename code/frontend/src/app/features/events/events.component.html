@@ -155,7 +155,7 @@
                     @for (key of objectKeys(data); track key) {
                       <div class="event-row__data-item">
                         <span class="event-row__data-key">{{ key }}</span>
-                        <span class="event-row__data-value">{{ data[key] }}</span>
+                        <span class="event-row__data-value">{{ formatValue(data[key]) }}</span>
                       </div>
                     }
                   </div>
