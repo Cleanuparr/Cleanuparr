@@ -111,6 +111,7 @@ public static class LoggingConfigManager
             .MinimumLevel.Override("MassTransit", LogEventLevel.Warning)
             .MinimumLevel.Override("Microsoft.Hosting.Lifetime", LogEventLevel.Information)
             .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+            .MinimumLevel.Override("Microsoft.AspNetCore.DataProtection", LogEventLevel.Error)
             .MinimumLevel.Override("Quartz", LogEventLevel.Warning)
             .MinimumLevel.Override("System.Net.Http.HttpClient", LogEventLevel.Error)
             .Enrich.WithProperty("ApplicationName", "Cleanuparr");
