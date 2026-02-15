@@ -37,6 +37,16 @@ public sealed record UpdateDownloadClientRequest
         {
             throw new ValidationException("Host cannot be empty");
         }
+
+        if (!Uri.TryCreate(Host, UriKind.RelativeOrAbsolute, out _))
+        {
+            throw new ValidationException("Host is not a valid URL");
+        }
+
+        if (!string.IsNullOrWhiteSpace(ExternalUrl) && !Uri.TryCreate(ExternalUrl, UriKind.RelativeOrAbsolute, out _))
+        {
+            throw new ValidationException("External URL is not a valid URL");
+        }
     }
 
     public DownloadClientConfig ApplyTo(DownloadClientConfig existing) => existing with

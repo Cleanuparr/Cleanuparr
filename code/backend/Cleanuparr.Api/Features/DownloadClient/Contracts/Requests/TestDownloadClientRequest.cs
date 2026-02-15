@@ -26,6 +26,11 @@ public sealed record TestDownloadClientRequest
         {
             throw new ValidationException("Host cannot be empty");
         }
+
+        if (!Uri.TryCreate(Host, UriKind.RelativeOrAbsolute, out _))
+        {
+            throw new ValidationException("Host is not a valid URL");
+        }
     }
 
     public DownloadClientConfig ToTestConfig() => new()

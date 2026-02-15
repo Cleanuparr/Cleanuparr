@@ -215,8 +215,8 @@ public class DataContext : DbContext
                     (u1, u2) => u1 != null && u2 != null
                         ? u1.OriginalString == u2.OriginalString
                         : u1 == null && u2 == null,
-                    u => u.OriginalString.GetHashCode(),
-                    u => new Uri(u.OriginalString, UriKind.RelativeOrAbsolute)));
+                    u => u == null ? 0 : u.OriginalString.GetHashCode(),
+                    u => u == null ? null! : new Uri(u.OriginalString, UriKind.RelativeOrAbsolute)));
             }
 
             var enumProperties = entityType.ClrType.GetProperties()
