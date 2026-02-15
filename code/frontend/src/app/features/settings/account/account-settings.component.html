@@ -54,6 +54,7 @@
       <div class="form-actions">
         <app-button
           variant="primary"
+          [glowing]="!!currentPassword() && !!newPassword() && !!confirmPassword()"
           [disabled]="!currentPassword() || !newPassword() || !confirmPassword() || changingPassword()"
           (clicked)="changePassword()"
         >
