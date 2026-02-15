@@ -112,7 +112,7 @@ public static class ApiDI
             
             context.Response.ContentType = "text/html";
             await context.Response.WriteAsync(indexContent, Encoding.UTF8);
-        });
+        }).AllowAnonymous();
         
         // Map SignalR hubs
         app.MapHub<HealthStatusHub>("/api/hubs/health").RequireAuthorization();
@@ -148,7 +148,7 @@ public static class ApiDI
             };
 
             return Results.Json(manifest, contentType: "application/manifest+json");
-        });
+        }).AllowAnonymous();
 
         return app;
     }
