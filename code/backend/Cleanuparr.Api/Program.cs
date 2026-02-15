@@ -70,12 +70,13 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 // Add services to the container
 builder.Services
     .AddInfrastructure(builder.Configuration)
-    .AddApiServices();
+    .AddApiServices()
+    .AddAuthServices();
 
 // Add CORS before SignalR
-builder.Services.AddCors(options => 
+builder.Services.AddCors(options =>
 {
-    options.AddPolicy("Any", policy => 
+    options.AddPolicy("Any", policy =>
     {
         policy
             // https://github.com/dotnet/aspnetcore/issues/4457#issuecomment-465669576

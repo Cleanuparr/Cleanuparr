@@ -1,0 +1,224 @@
+.setup-title {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+  text-align: center;
+  margin-bottom: var(--space-6);
+}
+
+.steps-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-6);
+
+  .step {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-semibold);
+    border: 2px solid var(--border-primary);
+    color: var(--text-secondary);
+    transition: all 0.2s ease;
+
+    &.active {
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+
+    &.completed {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: white;
+    }
+  }
+
+  .step-line {
+    width: 40px;
+    height: 2px;
+    background: var(--border-primary);
+    transition: background 0.2s ease;
+
+    &.active {
+      background: var(--primary);
+    }
+  }
+}
+
+.step-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.step-title {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+  margin-bottom: var(--space-1);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.step-subtitle {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  margin-bottom: var(--space-6);
+}
+
+.success-text {
+  color: var(--success);
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.error-message {
+  background: rgba(var(--danger-rgb, 239, 68, 68), 0.1);
+  color: var(--danger);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  margin-bottom: var(--space-4);
+  text-align: center;
+}
+
+.setup-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.field-error {
+  font-size: var(--font-size-xs);
+  color: var(--danger);
+  margin-top: calc(-1 * var(--space-2));
+}
+
+.submit-btn {
+  margin-top: var(--space-2);
+  width: 100%;
+}
+
+.loading-center {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-8) 0;
+}
+
+// QR / TOTP section
+.qr-section {
+  margin-bottom: var(--space-6);
+}
+
+.qr-placeholder {
+  background: var(--surface-secondary);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  text-align: center;
+  margin-bottom: var(--space-3);
+}
+
+.qr-manual-label,
+.qr-uri-label {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  margin-bottom: var(--space-1);
+}
+
+.qr-secret {
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  font-family: monospace;
+  word-break: break-all;
+}
+
+.qr-uri {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  font-family: monospace;
+  word-break: break-all;
+  display: block;
+  background: var(--surface-secondary);
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+}
+
+// Recovery codes
+.recovery-section {
+  margin-top: var(--space-4);
+}
+
+.recovery-title {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+  margin-bottom: var(--space-1);
+}
+
+.recovery-desc {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  margin-bottom: var(--space-4);
+}
+
+.recovery-codes {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.recovery-code {
+  font-family: monospace;
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  background: var(--surface-secondary);
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  text-align: center;
+}
+
+.recovery-actions {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  margin-bottom: var(--space-4);
+
+  input[type='checkbox'] {
+    accent-color: var(--primary);
+  }
+}
+
+// Plex section
+.plex-btn {
+  width: 100%;
+  margin-bottom: var(--space-4);
+}
+
+.plex-success {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--success);
+  font-size: var(--font-size-sm);
+  margin-bottom: var(--space-4);
+}
+
+.step-actions {
+  margin-top: var(--space-4);
+}

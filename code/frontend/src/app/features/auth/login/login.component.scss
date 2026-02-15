@@ -13,6 +13,16 @@
   margin-bottom: var(--space-8);
 }
 
+.error-message {
+  background: rgba(var(--danger-rgb, 239, 68, 68), 0.1);
+  color: var(--danger);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  margin-bottom: var(--space-4);
+  text-align: center;
+}
+
 .login-form {
   display: flex;
   flex-direction: column;
@@ -22,4 +32,52 @@
 .login-submit {
   margin-top: var(--space-2);
   width: 100%;
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: var(--space-6) 0;
+
+  &::before,
+  &::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border-primary);
+  }
+
+  span {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+    text-transform: lowercase;
+  }
+}
+
+.plex-login-btn {
+  width: 100%;
+}
+
+.login-links {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+
+.text-link {
+  background: none;
+  border: none;
+  color: var(--primary);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  padding: 0;
+  text-decoration: none;
+  transition: opacity 0.15s ease;
+
+  &:hover {
+    opacity: 0.8;
+  }
 }

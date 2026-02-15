@@ -7,12 +7,16 @@
     </PropertyGroup>
 
     <ItemGroup>
+      <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
       <PackageReference Include="CliWrap" Version="3.10.0" />
+      <PackageReference Include="Otp.NET" Version="1.4.0" />
       <PackageReference Include="FLM.QBittorrent" Version="1.0.2" />
       <PackageReference Include="FLM.Transmission" Version="1.0.3" />
       <PackageReference Include="Mapster" Version="7.4.0" />
       <PackageReference Include="MassTransit.Abstractions" Version="8.5.7" />
       <PackageReference Include="Microsoft.AspNetCore.SignalR" Version="1.2.0" />
+      <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="8.7.0" />
+      <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.7.0" />
       <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="10.0.1" />
       <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.Abstractions" Version="10.0.1" />
       <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.1" />

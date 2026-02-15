@@ -43,6 +43,8 @@ import {
   tablerChevronUp,
   tablerCopy,
   tablerFileExport,
+  tablerUser,
+  tablerLogout,
 } from '@ng-icons/tabler-icons';
 
 import { routes } from './app.routes';
@@ -96,6 +98,8 @@ export const appConfig: ApplicationConfig = {
       tablerChevronUp,
       tablerCopy,
       tablerFileExport,
+      tablerUser,
+      tablerLogout,
     }),
   ],
 };

@@ -1,7 +1,7 @@
 import { Routes } from '@angular/router';
 import { ShellComponent } from '@layout/shell/shell.component';
 import { AuthLayoutComponent } from '@layout/auth-layout/auth-layout.component';
-import { authGuard } from '@core/auth/auth.guard';
+import { authGuard, setupIncompleteGuard, loginGuard } from '@core/auth/auth.guard';
 import { pendingChangesGuard } from '@core/guards/pending-changes.guard';
 
 export const routes: Routes = [
@@ -104,6 +104,13 @@ export const routes: Routes = [
               ).then((m) => m.NotificationsComponent),
             canDeactivate: [pendingChangesGuard],
           },
+          {
+            path: 'account',
+            loadComponent: () =>
+              import(
+                '@features/settings/account/account-settings.component'
+              ).then((m) => m.AccountSettingsComponent),
+          },
         ],
       },
     ],
@@ -114,9 +121,18 @@ export const routes: Routes = [
     children: [
       {
         path: 'login',
+        canActivate: [loginGuard],
         loadComponent: () =>
           import('@features/auth/login/login.component').then(
             (m) => m.LoginComponent,
+          ),
+      },
+      {
+        path: 'setup',
+        canActivate: [setupIncompleteGuard],
+        loadComponent: () =>
+          import('@features/auth/setup/setup.component').then(
+            (m) => m.SetupComponent,
           ),
       },
     ],

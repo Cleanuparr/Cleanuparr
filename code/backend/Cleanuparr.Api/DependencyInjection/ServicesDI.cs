@@ -2,6 +2,7 @@ using Cleanuparr.Infrastructure.Events;
 using Cleanuparr.Infrastructure.Events.Interfaces;
 using Cleanuparr.Infrastructure.Features.Arr;
 using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
+using Cleanuparr.Infrastructure.Features.Auth;
 using Cleanuparr.Infrastructure.Features.BlacklistSync;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
 using Cleanuparr.Infrastructure.Features.DownloadHunter;
@@ -26,6 +27,11 @@ public static class ServicesDI
         services
             .AddScoped<EventsContext>()
             .AddScoped<DataContext>()
+            .AddScoped<UsersContext>()
+            .AddSingleton<IJwtService, JwtService>()
+            .AddSingleton<IPasswordService, PasswordService>()
+            .AddSingleton<ITotpService, TotpService>()
+            .AddScoped<IPlexAuthService, PlexAuthService>()
             .AddScoped<IEventPublisher, EventPublisher>()
             .AddHostedService<EventCleanupService>()
             .AddScoped<IDryRunInterceptor, DryRunInterceptor>()

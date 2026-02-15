@@ -1,0 +1,196 @@
+<h1 class="setup-title">Set Up Cleanuparr</h1>
+
+<div class="steps-indicator">
+  <div class="step" [class.active]="currentStep() >= 1" [class.completed]="currentStep() > 1">1</div>
+  <div class="step-line" [class.active]="currentStep() > 1"></div>
+  <div class="step" [class.active]="currentStep() >= 2" [class.completed]="currentStep() > 2">2</div>
+  <div class="step-line" [class.active]="currentStep() > 2"></div>
+  <div class="step" [class.active]="currentStep() >= 3">3</div>
+</div>
+
+@if (error()) {
+  <div class="error-message">{{ error() }}</div>
+}
+
+<!-- Step 1: Create Account -->
+@if (currentStep() === 1) {
+  <div class="step-content">
+    <h2 class="step-title">Create Admin Account</h2>
+    <p class="step-subtitle">Choose a username and strong password</p>
+
+    <form class="setup-form" (ngSubmit)="createAccount()">
+      <app-input
+        label="Username"
+        placeholder="Enter a username"
+        type="text"
+        [value]="username()"
+        (valueChange)="username.set($event)"
+      />
+      <app-input
+        label="Password"
+        placeholder="Minimum 8 characters"
+        type="password"
+        [value]="password()"
+        (valueChange)="password.set($event)"
+      />
+      <app-input
+        label="Confirm Password"
+        placeholder="Re-enter your password"
+        type="password"
+        [value]="confirmPassword()"
+        (valueChange)="confirmPassword.set($event)"
+      />
+
+      @if (password() && !passwordValid) {
+        <p class="field-error">Password must be at least 8 characters</p>
+      }
+      @if (confirmPassword() && !passwordsMatch) {
+        <p class="field-error">Passwords do not match</p>
+      }
+
+      <app-button
+        variant="primary"
+        class="submit-btn"
+        [disabled]="!username() || !passwordValid || !passwordsMatch || loading()"
+        type="submit"
+      >
+        @if (loading()) {
+          <app-spinner size="sm" />
+        } @else {
+          Continue
+        }
+      </app-button>
+    </form>
+  </div>
+}
+
+<!-- Step 2: Two-Factor Authentication -->
+@if (currentStep() === 2) {
+  <div class="step-content">
+    <h2 class="step-title">
+      <ng-icon name="tablerShieldLock" size="20" />
+      Two-Factor Authentication
+    </h2>
+
+    @if (!totpVerified()) {
+      <p class="step-subtitle">Scan the QR code with your authenticator app</p>
+
+      @if (loading()) {
+        <div class="loading-center">
+          <app-spinner />
+        </div>
+      } @else {
+        <div class="qr-section">
+          <div class="qr-placeholder">
+            <p class="qr-manual-label">Manual entry key:</p>
+            <code class="qr-secret">{{ totpSecret() }}</code>
+          </div>
+          <p class="qr-uri-label">QR Code URI (paste into authenticator):</p>
+          <code class="qr-uri">{{ qrCodeUri() }}</code>
+        </div>
+
+        <form class="setup-form" (ngSubmit)="verifyTotp()">
+          <app-input
+            label="Verification Code"
+            placeholder="Enter 6-digit code"
+            type="text"
+            [value]="verificationCode()"
+            (valueChange)="verificationCode.set($event)"
+          />
+          <app-button
+            variant="primary"
+            class="submit-btn"
+            [disabled]="verificationCode().length !== 6"
+            type="submit"
+          >
+            Verify Code
+          </app-button>
+        </form>
+      }
+    } @else {
+      <p class="step-subtitle success-text">
+        <ng-icon name="tablerCheck" size="16" />
+        2FA verified successfully!
+      </p>
+
+      <div class="recovery-section">
+        <h3 class="recovery-title">Save Your Recovery Codes</h3>
+        <p class="recovery-desc">Store these codes in a safe place. Each code can only be used once.</p>
+
+        <div class="recovery-codes">
+          @for (code of recoveryCodes(); track code) {
+            <code class="recovery-code">{{ code }}</code>
+          }
+        </div>
+
+        <div class="recovery-actions">
+          <app-button variant="secondary" (click)="copyRecoveryCodes()">
+            <ng-icon name="tablerCopy" size="16" />
+            Copy Codes
+          </app-button>
+          <app-button variant="secondary" (click)="downloadRecoveryCodes()">
+            Download
+          </app-button>
+        </div>
+
+        <label class="checkbox-label">
+          <input type="checkbox" [checked]="codesSaved()" (change)="codesSaved.set(!codesSaved())" />
+          I have saved my recovery codes
+        </label>
+
+        <app-button
+          variant="primary"
+          class="submit-btn"
+          [disabled]="!codesSaved()"
+          (click)="goToStep3()"
+        >
+          Continue
+        </app-button>
+      </div>
+    }
+  </div>
+}
+
+<!-- Step 3: Plex (Optional) -->
+@if (currentStep() === 3) {
+  <div class="step-content">
+    <h2 class="step-title">Link Plex Account</h2>
+    <p class="step-subtitle">Optional: Link your Plex account for quick sign-in</p>
+
+    @if (!plexLinked()) {
+      <app-button
+        variant="secondary"
+        class="plex-btn"
+        [disabled]="plexLinking()"
+        (click)="startPlexLink()"
+      >
+        @if (plexLinking()) {
+          <app-spinner size="sm" />
+          Waiting for Plex authorization...
+        } @else {
+          Link Plex Account
+        }
+      </app-button>
+    } @else {
+      <div class="plex-success">
+        <ng-icon name="tablerCheck" size="16" />
+        Plex account linked
+      </div>
+    }
+
+    <div class="step-actions">
+      <app-button
+        variant="primary"
+        class="submit-btn"
+        [disabled]="loading()"
+        (click)="completeSetup()"
+      >
+        @if (loading()) {
+          <app-spinner size="sm" />
+        } @else {
+          Complete Setup
+        }
+      </app-button>
+    </div>
+  </div>
+}

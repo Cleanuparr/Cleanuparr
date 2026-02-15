@@ -1,0 +1,117 @@
+@use 'settings-layout' as *;
+
+:host { @include settings-page; }
+
+.settings-form { @include settings-form; }
+.form-stack { @include form-stack; }
+.form-row { @include form-row; }
+.form-divider { @include form-divider; }
+.form-actions { @include form-actions; }
+
+.section-hint {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  line-height: 1.5;
+
+  code {
+    background: var(--surface-secondary);
+    padding: 0.125rem 0.375rem;
+    border-radius: var(--radius-sm);
+    font-size: var(--font-size-xs);
+  }
+}
+
+.status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.status-label {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+.status-value {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+
+  &--active {
+    color: var(--success);
+  }
+}
+
+// Recovery codes
+.recovery-section {
+  margin-top: var(--space-2);
+}
+
+.recovery-title {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+  margin-bottom: var(--space-1);
+}
+
+.recovery-desc {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  margin-bottom: var(--space-4);
+}
+
+.recovery-codes {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.recovery-code {
+  font-family: monospace;
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  background: var(--surface-secondary);
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  text-align: center;
+}
+
+.recovery-actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+// API key
+.api-key-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  background: var(--surface-secondary);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+}
+
+.api-key-display {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.api-key-value {
+  font-family: monospace;
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  word-break: break-all;
+
+  &--masked {
+    color: var(--text-secondary);
+  }
+}
+
+.api-key-actions {
+  display: flex;
+  gap: var(--space-1);
+  flex-shrink: 0;
+}
