@@ -1,11 +1,32 @@
-<h1 class="setup-title">Set Up Cleanuparr</h1>
+<h2 class="setup-title">Initial Setup</h2>
 
 <div class="steps-indicator">
-  <div class="step" [class.active]="currentStep() >= 1" [class.completed]="currentStep() > 1">1</div>
-  <div class="step-line" [class.active]="currentStep() > 1"></div>
-  <div class="step" [class.active]="currentStep() >= 2" [class.completed]="currentStep() > 2">2</div>
-  <div class="step-line" [class.active]="currentStep() > 2"></div>
-  <div class="step" [class.active]="currentStep() >= 3">3</div>
+  <div class="step-group" [class.active]="currentStep() === 1" [class.completed]="currentStep() > 1">
+    <div class="step-marker">
+      @if (currentStep() > 1) {
+        <ng-icon name="tablerCheck" size="14" />
+      } @else {
+        1
+      }
+    </div>
+    <span class="step-label">Account</span>
+  </div>
+  <div class="step-connector" [class.active]="currentStep() > 1"></div>
+  <div class="step-group" [class.active]="currentStep() === 2" [class.completed]="currentStep() > 2">
+    <div class="step-marker">
+      @if (currentStep() > 2) {
+        <ng-icon name="tablerCheck" size="14" />
+      } @else {
+        2
+      }
+    </div>
+    <span class="step-label">2FA</span>
+  </div>
+  <div class="step-connector" [class.active]="currentStep() > 2"></div>
+  <div class="step-group" [class.active]="currentStep() === 3" [class.completed]="currentStep() > 3">
+    <div class="step-marker">3</div>
+    <span class="step-label">Plex</span>
+  </div>
 </div>
 
 @if (error()) {
@@ -20,6 +41,7 @@
 
     <form class="setup-form" (ngSubmit)="createAccount()">
       <app-input
+        #usernameInput
         label="Username"
         placeholder="Enter a username"
         type="text"
@@ -33,6 +55,16 @@
         [value]="password()"
         (valueChange)="password.set($event)"
       />
+
+      @if (password()) {
+        <div class="password-strength">
+          <div class="password-strength__bar">
+            <div class="password-strength__fill password-strength__fill--{{ passwordStrength() }}"></div>
+          </div>
+          <span class="password-strength__label password-strength__label--{{ passwordStrength() }}">{{ passwordStrength() }}</span>
+        </div>
+      }
+
       <app-input
         label="Confirm Password"
         placeholder="Re-enter your password"
@@ -81,16 +113,22 @@
         </div>
       } @else {
         <div class="qr-section">
-          <div class="qr-placeholder">
-            <p class="qr-manual-label">Manual entry key:</p>
-            <code class="qr-secret">{{ totpSecret() }}</code>
+          <div class="qr-code-wrapper">
+            <qrcode [qrdata]="qrCodeUri()" [width]="200" errorCorrectionLevel="M" [margin]="2" />
           </div>
-          <p class="qr-uri-label">QR Code URI (paste into authenticator):</p>
-          <code class="qr-uri">{{ qrCodeUri() }}</code>
+
+          <details class="qr-manual-entry">
+            <summary>Can't scan? Enter manually</summary>
+            <div class="qr-manual-content">
+              <p class="qr-manual-label">Secret key:</p>
+              <code class="qr-secret">{{ totpSecret() }}</code>
+            </div>
+          </details>
         </div>
 
         <form class="setup-form" (ngSubmit)="verifyTotp()">
           <app-input
+            #verificationInput
             label="Verification Code"
             placeholder="Enter 6-digit code"
             type="text"

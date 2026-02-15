@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, inject, signal, OnInit } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, signal, computed, OnInit } from '@angular/core';
 import { PageHeaderComponent } from '@layout/page-header/page-header.component';
 import {
   CardComponent, ButtonComponent, InputComponent, SpinnerComponent,
@@ -34,6 +34,21 @@ export class AccountSettingsComponent implements OnInit {
   readonly newPassword = signal('');
   readonly confirmPassword = signal('');
   readonly changingPassword = signal(false);
+
+  // Password strength
+  readonly newPasswordStrength = computed(() => {
+    const pw = this.newPassword();
+    if (!pw) return null;
+    if (pw.length < 8) return 'weak';
+    const hasUpper = /[A-Z]/.test(pw);
+    const hasLower = /[a-z]/.test(pw);
+    const hasNumber = /[0-9]/.test(pw);
+    const hasSpecial = /[^A-Za-z0-9]/.test(pw);
+    const score = [hasUpper, hasLower, hasNumber, hasSpecial].filter(Boolean).length;
+    if (pw.length >= 12 && score >= 3) return 'strong';
+    if (pw.length >= 8 && score >= 2) return 'medium';
+    return 'weak';
+  });
 
   // 2FA regeneration
   readonly twoFaPassword = signal('');

@@ -34,6 +34,16 @@
         [value]="newPassword()"
         (valueChange)="newPassword.set($event)"
       />
+
+      @if (newPassword()) {
+        <div class="password-strength">
+          <div class="password-strength__bar">
+            <div class="password-strength__fill password-strength__fill--{{ newPasswordStrength() }}"></div>
+          </div>
+          <span class="password-strength__label password-strength__label--{{ newPasswordStrength() }}">{{ newPasswordStrength() }}</span>
+        </div>
+      }
+
       <app-input
         label="Confirm New Password"
         type="password"

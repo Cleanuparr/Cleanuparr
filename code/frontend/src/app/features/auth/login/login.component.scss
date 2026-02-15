@@ -1,21 +1,35 @@
-.login-title {
-  font-size: var(--font-size-2xl);
-  font-weight: var(--font-weight-bold);
-  color: var(--text-primary);
-  text-align: center;
-  margin-bottom: var(--space-2);
+@keyframes fadeSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-.login-subtitle {
-  font-size: var(--font-size-sm);
-  color: var(--text-secondary);
+.login-view {
+  animation: fadeSlideIn var(--duration-normal) var(--ease-default);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login-view {
+    animation: none;
+  }
+}
+
+.login-title {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
   text-align: center;
-  margin-bottom: var(--space-8);
+  margin-bottom: var(--space-6);
 }
 
 .error-message {
-  background: rgba(var(--danger-rgb, 239, 68, 68), 0.1);
-  color: var(--danger);
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--color-error);
   padding: var(--space-3);
   border-radius: var(--radius-md);
   font-size: var(--font-size-sm);
@@ -70,7 +84,7 @@
 .text-link {
   background: none;
   border: none;
-  color: var(--primary);
+  color: var(--color-primary);
   font-size: var(--font-size-sm);
   cursor: pointer;
   padding: 0;

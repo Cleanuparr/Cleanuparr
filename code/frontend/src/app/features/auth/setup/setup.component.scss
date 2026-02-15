@@ -1,58 +1,101 @@
+// Animations
+@keyframes fadeSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .setup-title {
-  font-size: var(--font-size-2xl);
-  font-weight: var(--font-weight-bold);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
   color: var(--text-primary);
   text-align: center;
   margin-bottom: var(--space-6);
 }
 
+// Timeline indicator
 .steps-indicator {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  margin-bottom: var(--space-6);
+}
+
+.step-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.step-marker {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--space-2);
-  margin-bottom: var(--space-6);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  background: rgba(148, 163, 184, 0.15);
+  color: var(--text-tertiary);
+  transition: all var(--duration-normal) var(--ease-default);
 
-  .step {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: var(--font-size-sm);
-    font-weight: var(--font-weight-semibold);
-    border: 2px solid var(--border-primary);
-    color: var(--text-secondary);
-    transition: all 0.2s ease;
-
-    &.active {
-      border-color: var(--primary);
-      color: var(--primary);
-    }
-
-    &.completed {
-      background: var(--primary);
-      border-color: var(--primary);
-      color: white;
-    }
+  .step-group.active & {
+    background: rgba(126, 87, 194, 0.15);
+    color: var(--color-primary);
+    box-shadow: 0 0 8px rgba(126, 87, 194, 0.25);
   }
 
-  .step-line {
-    width: 40px;
-    height: 2px;
-    background: var(--border-primary);
-    transition: background 0.2s ease;
-
-    &.active {
-      background: var(--primary);
-    }
+  .step-group.completed & {
+    background: var(--color-primary);
+    color: #ffffff;
+    box-shadow: 0 0 12px rgba(126, 87, 194, 0.35);
   }
 }
 
+.step-label {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+  transition: color var(--duration-normal) var(--ease-default);
+
+  .step-group.active & {
+    color: var(--color-primary);
+  }
+
+  .step-group.completed & {
+    color: var(--text-secondary);
+  }
+}
+
+.step-connector {
+  width: 48px;
+  height: 2px;
+  background: rgba(148, 163, 184, 0.15);
+  margin-top: 13px; // center vertically with 28px marker
+  transition: background var(--duration-normal) var(--ease-default);
+
+  &.active {
+    background: var(--color-primary);
+  }
+}
+
+// Step content
 .step-content {
   display: flex;
   flex-direction: column;
+  animation: fadeSlideIn var(--duration-normal) var(--ease-default);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .step-content {
+    animation: none;
+  }
 }
 
 .step-title {
@@ -72,15 +115,15 @@
 }
 
 .success-text {
-  color: var(--success);
+  color: var(--color-success);
   display: flex;
   align-items: center;
   gap: var(--space-1);
 }
 
 .error-message {
-  background: rgba(var(--danger-rgb, 239, 68, 68), 0.1);
-  color: var(--danger);
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--color-error);
   padding: var(--space-3);
   border-radius: var(--radius-md);
   font-size: var(--font-size-sm);
@@ -96,7 +139,7 @@
 
 .field-error {
   font-size: var(--font-size-xs);
-  color: var(--danger);
+  color: var(--color-error);
   margin-top: calc(-1 * var(--space-2));
 }
 
@@ -111,21 +154,103 @@
   padding: var(--space-8) 0;
 }
 
-// QR / TOTP section
+// Password strength indicator
+.password-strength {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: calc(-1 * var(--space-2));
+
+  &__bar {
+    flex: 1;
+    height: 4px;
+    background: rgba(148, 163, 184, 0.15);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+  }
+
+  &__fill {
+    height: 100%;
+    border-radius: var(--radius-full);
+    transition: width var(--duration-normal) var(--ease-default),
+                background-color var(--duration-normal) var(--ease-default);
+
+    &--weak {
+      width: 33%;
+      background-color: var(--color-error);
+    }
+
+    &--medium {
+      width: 66%;
+      background-color: var(--color-warning);
+    }
+
+    &--strong {
+      width: 100%;
+      background-color: var(--color-success);
+    }
+  }
+
+  &__label {
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-medium);
+    text-transform: capitalize;
+    min-width: 52px;
+
+    &--weak {
+      color: var(--color-error);
+    }
+
+    &--medium {
+      color: var(--color-warning);
+    }
+
+    &--strong {
+      color: var(--color-success);
+    }
+  }
+}
+
+// QR code section
 .qr-section {
   margin-bottom: var(--space-6);
 }
 
-.qr-placeholder {
-  background: var(--surface-secondary);
-  border-radius: var(--radius-md);
-  padding: var(--space-4);
-  text-align: center;
-  margin-bottom: var(--space-3);
+.qr-code-wrapper {
+  display: flex;
+  justify-content: center;
+  margin-bottom: var(--space-4);
+
+  qrcode {
+    background: #ffffff;
+    padding: var(--space-3);
+    border-radius: var(--radius-lg);
+  }
 }
 
-.qr-manual-label,
-.qr-uri-label {
+.qr-manual-entry {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+
+  summary {
+    cursor: pointer;
+    text-align: center;
+    margin-bottom: var(--space-2);
+
+    &:hover {
+      color: var(--text-primary);
+    }
+  }
+}
+
+.qr-manual-content {
+  background: var(--surface-secondary);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  text-align: center;
+}
+
+.qr-manual-label {
   font-size: var(--font-size-xs);
   color: var(--text-secondary);
   margin-bottom: var(--space-1);
@@ -134,19 +259,8 @@
 .qr-secret {
   font-size: var(--font-size-sm);
   color: var(--text-primary);
-  font-family: monospace;
+  font-family: var(--font-mono);
   word-break: break-all;
-}
-
-.qr-uri {
-  font-size: var(--font-size-xs);
-  color: var(--text-secondary);
-  font-family: monospace;
-  word-break: break-all;
-  display: block;
-  background: var(--surface-secondary);
-  padding: var(--space-2);
-  border-radius: var(--radius-sm);
 }
 
 // Recovery codes
@@ -175,7 +289,7 @@
 }
 
 .recovery-code {
-  font-family: monospace;
+  font-family: var(--font-mono);
   font-size: var(--font-size-sm);
   color: var(--text-primary);
   background: var(--surface-secondary);
@@ -200,7 +314,7 @@
   margin-bottom: var(--space-4);
 
   input[type='checkbox'] {
-    accent-color: var(--primary);
+    accent-color: var(--color-primary);
   }
 }
 
@@ -214,7 +328,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  color: var(--success);
+  color: var(--color-success);
   font-size: var(--font-size-sm);
   margin-bottom: var(--space-4);
 }

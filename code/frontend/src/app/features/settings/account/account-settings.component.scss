@@ -38,7 +38,7 @@
   color: var(--text-primary);
 
   &--active {
-    color: var(--success);
+    color: var(--color-success);
   }
 }
 
@@ -114,4 +114,60 @@
   display: flex;
   gap: var(--space-1);
   flex-shrink: 0;
+}
+
+// Password strength indicator
+.password-strength {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+
+  &__bar {
+    flex: 1;
+    height: 4px;
+    background: rgba(148, 163, 184, 0.15);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+  }
+
+  &__fill {
+    height: 100%;
+    border-radius: var(--radius-full);
+    transition: width var(--duration-normal) var(--ease-default),
+                background-color var(--duration-normal) var(--ease-default);
+
+    &--weak {
+      width: 33%;
+      background-color: var(--color-error);
+    }
+
+    &--medium {
+      width: 66%;
+      background-color: var(--color-warning);
+    }
+
+    &--strong {
+      width: 100%;
+      background-color: var(--color-success);
+    }
+  }
+
+  &__label {
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-medium);
+    text-transform: capitalize;
+    min-width: 52px;
+
+    &--weak {
+      color: var(--color-error);
+    }
+
+    &--medium {
+      color: var(--color-warning);
+    }
+
+    &--strong {
+      color: var(--color-success);
+    }
+  }
 }

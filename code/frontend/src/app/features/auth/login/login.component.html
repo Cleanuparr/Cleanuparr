@@ -1,5 +1,4 @@
-<h1 class="login-title">Welcome to Cleanuparr</h1>
-<p class="login-subtitle">Sign in to continue</p>
+<h2 class="login-title">Sign In</h2>
 
 @if (error()) {
   <div class="error-message">{{ error() }}</div>
@@ -7,110 +6,119 @@
 
 <!-- Credentials view -->
 @if (view() === 'credentials') {
-  <form class="login-form" (ngSubmit)="submitLogin()">
-    <app-input
-      label="Username"
-      placeholder="Enter your username"
-      type="text"
-      [value]="username()"
-      (valueChange)="username.set($event)"
-    />
-    <app-input
-      label="Password"
-      placeholder="Enter your password"
-      type="password"
-      [value]="password()"
-      (valueChange)="password.set($event)"
-    />
-    <app-button
-      variant="primary"
-      class="login-submit"
-      [disabled]="!username() || !password() || loading()"
-      type="submit"
-    >
-      @if (loading()) {
-        <app-spinner size="sm" />
-      } @else {
-        Sign In
-      }
-    </app-button>
-  </form>
+  <div class="login-view">
+    <form class="login-form" (ngSubmit)="submitLogin()">
+      <app-input
+        #usernameInput
+        label="Username"
+        placeholder="Enter your username"
+        type="text"
+        [value]="username()"
+        (valueChange)="username.set($event)"
+      />
+      <app-input
+        label="Password"
+        placeholder="Enter your password"
+        type="password"
+        [value]="password()"
+        (valueChange)="password.set($event)"
+      />
+      <app-button
+        variant="primary"
+        class="login-submit"
+        [disabled]="!username() || !password() || loading()"
+        type="submit"
+      >
+        @if (loading()) {
+          <app-spinner size="sm" />
+        } @else {
+          Sign In
+        }
+      </app-button>
+    </form>
 
-  @if (plexLinked()) {
-    <div class="divider">
-      <span>or</span>
-    </div>
-    <app-button
-      variant="secondary"
-      class="plex-login-btn"
-      [disabled]="plexLoading()"
-      (click)="startPlexLogin()"
-    >
-      @if (plexLoading()) {
-        <app-spinner size="sm" />
-        Waiting for Plex...
-      } @else {
-        Sign in with Plex
-      }
-    </app-button>
-  }
+    @if (plexLinked()) {
+      <div class="divider">
+        <span>or</span>
+      </div>
+      <app-button
+        variant="secondary"
+        class="plex-login-btn"
+        [disabled]="plexLoading()"
+        (click)="startPlexLogin()"
+      >
+        @if (plexLoading()) {
+          <app-spinner size="sm" />
+          Waiting for Plex...
+        } @else {
+          Sign in with Plex
+        }
+      </app-button>
+    }
+  </div>
 }
 
 <!-- 2FA view -->
 @if (view() === '2fa') {
-  <form class="login-form" (ngSubmit)="submit2fa()">
-    <app-input
-      label="Authentication Code"
-      placeholder="Enter 6-digit code"
-      type="text"
-      [value]="totpCode()"
-      (valueChange)="totpCode.set($event)"
-    />
-    <app-button
-      variant="primary"
-      class="login-submit"
-      [disabled]="totpCode().length !== 6 || loading()"
-      type="submit"
-    >
-      @if (loading()) {
-        <app-spinner size="sm" />
-      } @else {
-        Verify
-      }
-    </app-button>
-  </form>
+  <div class="login-view">
+    <form class="login-form" (ngSubmit)="submit2fa()">
+      <app-input
+        #totpInput
+        label="Authentication Code"
+        placeholder="Enter 6-digit code"
+        type="text"
+        [value]="totpCode()"
+        (valueChange)="totpCode.set($event)"
+      />
+      <app-button
+        variant="primary"
+        class="login-submit"
+        [disabled]="totpCode().length !== 6 || loading()"
+        type="submit"
+      >
+        @if (loading()) {
+          <app-spinner size="sm" />
+        } @else {
+          Verify
+        }
+      </app-button>
+    </form>
 
-  <div class="login-links">
-    <button class="text-link" (click)="useRecoveryCode()">Use a recovery code</button>
-    <button class="text-link" (click)="backToCredentials()">Back to sign in</button>
+    <div class="login-links">
+      <button class="text-link" (click)="useRecoveryCode()">Use a recovery code</button>
+      <button class="text-link" (click)="backToCredentials()">Back to sign in</button>
+    </div>
   </div>
 }
 
 <!-- Recovery code view -->
 @if (view() === 'recovery') {
-  <form class="login-form" (ngSubmit)="submitRecoveryCode()">
-    <app-input
-      label="Recovery Code"
-      placeholder="XXXX-XXXX"
-      type="text"
-      [value]="recoveryCode()"
-      (valueChange)="recoveryCode.set($event)"
-    />
-    <app-button
-      variant="primary"
-      class="login-submit"
-      [disabled]="!recoveryCode() || loading()"
-      type="submit"
-    >
-      @if (loading()) {
-        <app-spinner size="sm" />
-      } @else {
-        Verify Recovery Code
-      }
-    </app-button>
-  </form>
+  <div class="login-view">
+    <form class="login-form" (ngSubmit)="submitRecoveryCode()">
+      <app-input
+        #recoveryInput
+        label="Recovery Code"
+        placeholder="XXXX-XXXX"
+        type="text"
+        [value]="recoveryCode()"
+        (valueChange)="recoveryCode.set($event)"
+      />
+      <app-button
+        variant="primary"
+        class="login-submit"
+        [disabled]="!recoveryCode() || loading()"
+        type="submit"
+      >
+        @if (loading()) {
+          <app-spinner size="sm" />
+        } @else {
+          Verify Recovery Code
+        }
+      </app-button>
+    </form>
 
-  <div class="login-links">
-    <button class="text-link" (click)="backTo2fa()">Back to authenticator code</button>
+    <div class="login-links">
+      <button class="text-link" (click)="backTo2fa()">Back to authenticator code</button>
+    </div>
   </div>
 }

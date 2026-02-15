@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, inject, signal } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, signal, viewChild, effect, afterNextRender } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ButtonComponent, InputComponent, SpinnerComponent } from '@ui';
@@ -35,6 +35,28 @@ export class LoginComponent {
   plexLinked = this.auth.plexLinked;
   plexLoading = signal(false);
   plexPinId = signal(0);
+
+  // Auto-focus refs
+  usernameInput = viewChild<InputComponent>('usernameInput');
+  totpInput = viewChild<InputComponent>('totpInput');
+  recoveryInput = viewChild<InputComponent>('recoveryInput');
+
+  constructor() {
+    // Auto-focus username input on initial render
+    afterNextRender(() => {
+      this.usernameInput()?.focus();
+    });
+
+    // Auto-focus on view change
+    effect(() => {
+      const currentView = this.view();
+      if (currentView === '2fa') {
+        setTimeout(() => this.totpInput()?.focus());
+      } else if (currentView === 'recovery') {
+        setTimeout(() => this.recoveryInput()?.focus());
+      }
+    });
+  }
 
   submitLogin(): void {
     this.loading.set(true);

@@ -1,15 +1,17 @@
-import { Component, ChangeDetectionStrategy, inject, signal } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, signal, computed, viewChild, effect, afterNextRender } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ButtonComponent, InputComponent, SpinnerComponent } from '@ui';
 import { AuthService } from '@core/auth/auth.service';
+import { ToastService } from '@core/services/toast.service';
 import { NgIconComponent, provideIcons } from '@ng-icons/core';
 import { tablerCheck, tablerCopy, tablerShieldLock } from '@ng-icons/tabler-icons';
+import { QRCodeComponent } from 'angularx-qrcode';
 
 @Component({
   selector: 'app-setup',
   standalone: true,
-  imports: [FormsModule, ButtonComponent, InputComponent, SpinnerComponent, NgIconComponent],
+  imports: [FormsModule, ButtonComponent, InputComponent, SpinnerComponent, NgIconComponent, QRCodeComponent],
   templateUrl: './setup.component.html',
   styleUrl: './setup.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -18,6 +20,7 @@ import { tablerCheck, tablerCopy, tablerShieldLock } from '@ng-icons/tabler-icon
 export class SetupComponent {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly toast = inject(ToastService);
 
   currentStep = signal(1);
   loading = signal(false);
@@ -42,12 +45,46 @@ export class SetupComponent {
   plexUsername = signal('');
   plexPinId = signal(0);
 
+  // Auto-focus refs
+  usernameInput = viewChild<InputComponent>('usernameInput');
+  verificationInput = viewChild<InputComponent>('verificationInput');
+
+  // Password strength
+  passwordStrength = computed(() => {
+    const pw = this.password();
+    if (!pw) return null;
+    if (pw.length < 8) return 'weak';
+    const hasUpper = /[A-Z]/.test(pw);
+    const hasLower = /[a-z]/.test(pw);
+    const hasNumber = /[0-9]/.test(pw);
+    const hasSpecial = /[^A-Za-z0-9]/.test(pw);
+    const score = [hasUpper, hasLower, hasNumber, hasSpecial].filter(Boolean).length;
+    if (pw.length >= 12 && score >= 3) return 'strong';
+    if (pw.length >= 8 && score >= 2) return 'medium';
+    return 'weak';
+  });
+
   get passwordsMatch(): boolean {
     return this.password() === this.confirmPassword();
   }
 
   get passwordValid(): boolean {
     return this.password().length >= 8;
+  }
+
+  constructor() {
+    // Auto-focus username input on initial render
+    afterNextRender(() => {
+      this.usernameInput()?.focus();
+    });
+
+    // Auto-focus verification input when entering step 2
+    effect(() => {
+      const step = this.currentStep();
+      if (step === 2) {
+        setTimeout(() => this.verificationInput()?.focus());
+      }
+    });
   }
 
   // Step 1: Create account
@@ -110,6 +147,7 @@ export class SetupComponent {
   copyRecoveryCodes(): void {
     const text = this.recoveryCodes().join('\n');
     navigator.clipboard.writeText(text);
+    this.toast.success('Recovery codes copied to clipboard');
   }
 
   downloadRecoveryCodes(): void {
