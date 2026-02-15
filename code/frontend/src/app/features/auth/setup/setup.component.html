@@ -196,8 +196,7 @@
     <p class="step-subtitle">Optional: Link your Plex account for quick sign-in</p>
 
     @if (!plexLinked()) {
-      <app-button
-        variant="secondary"
+      <button
         class="plex-btn"
         [disabled]="plexLinking()"
         (click)="startPlexLink()"
@@ -206,9 +205,12 @@
           <app-spinner size="sm" />
           Waiting for Plex authorization...
         } @else {
+          <svg class="plex-btn__icon" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M5.074 1L12 12 5.074 23h5.854L18.926 12 11.928 1z"/>
+          </svg>
           Link Plex Account
         }
-      </app-button>
+      </button>
     } @else {
       <div class="plex-success">
         <ng-icon name="tablerCheck" size="16" />

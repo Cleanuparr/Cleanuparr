@@ -166,7 +166,7 @@ export class SetupComponent {
     this.plexLinking.set(true);
     this.error.set('');
 
-    this.auth.requestPlexPin().subscribe({
+    this.auth.requestSetupPlexPin().subscribe({
       next: (result) => {
         this.plexPinId.set(result.pinId);
         window.open(result.authUrl, '_blank');
@@ -193,7 +193,7 @@ export class SetupComponent {
         return;
       }
 
-      this.auth.verifyPlexPin(this.plexPinId()).subscribe({
+      this.auth.verifySetupPlexPin(this.plexPinId()).subscribe({
         next: (result) => {
           if (result.completed) {
             clearInterval(this.plexPollTimer!);

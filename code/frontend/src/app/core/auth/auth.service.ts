@@ -104,6 +104,15 @@ export class AuthService {
       .pipe(tap((tokens) => this.handleTokens(tokens)));
   }
 
+  // Setup Plex linking
+  requestSetupPlexPin(): Observable<PlexPinResponse> {
+    return this.http.post<PlexPinResponse>('/api/auth/setup/plex/pin', {});
+  }
+
+  verifySetupPlexPin(pinId: number): Observable<PlexVerifyResponse> {
+    return this.http.post<PlexVerifyResponse>('/api/auth/setup/plex/verify', { pinId });
+  }
+
   // Plex login
   requestPlexPin(): Observable<PlexPinResponse> {
     return this.http.post<PlexPinResponse>('/api/auth/login/plex/pin', {});

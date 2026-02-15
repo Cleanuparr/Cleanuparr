@@ -346,6 +346,63 @@ public sealed class AuthController : ControllerBase
         }
     }
 
+    [HttpPost("setup/plex/pin")]
+    public async Task<IActionResult> RequestSetupPlexPin()
+    {
+        var user = await _usersContext.Users.AsNoTracking().FirstOrDefaultAsync();
+        if (user is null)
+        {
+            return BadRequest(new { error = "Create an account first" });
+        }
+
+        var pin = await _plexAuthService.RequestPin();
+
+        return Ok(new PlexPinStatusResponse
+        {
+            PinId = pin.PinId,
+            AuthUrl = pin.AuthUrl
+        });
+    }
+
+    [HttpPost("setup/plex/verify")]
+    public async Task<IActionResult> VerifySetupPlexLink([FromBody] PlexPinRequest request)
+    {
+        var pinResult = await _plexAuthService.CheckPin(request.PinId);
+
+        if (!pinResult.Completed || pinResult.AuthToken is null)
+        {
+            return Ok(new PlexVerifyResponse { Completed = false });
+        }
+
+        var plexAccount = await _plexAuthService.GetAccount(pinResult.AuthToken);
+
+        await UsersContext.Lock.WaitAsync();
+        try
+        {
+            var user = await _usersContext.Users.FirstOrDefaultAsync();
+            if (user is null)
+            {
+                return BadRequest(new { error = "Create an account first" });
+            }
+
+            user.PlexAccountId = plexAccount.AccountId;
+            user.PlexUsername = plexAccount.Username;
+            user.PlexEmail = plexAccount.Email;
+            user.PlexAuthToken = pinResult.AuthToken;
+            user.UpdatedAt = DateTime.UtcNow;
+            await _usersContext.SaveChangesAsync();
+
+            _logger.LogInformation("Plex account linked during setup for user {Username}: {PlexUsername}",
+                user.Username, plexAccount.Username);
+
+            return Ok(new PlexVerifyResponse { Completed = true });
+        }
+        finally
+        {
+            UsersContext.Lock.Release();
+        }
+    }
+
     [HttpPost("login/plex/pin")]
     public async Task<IActionResult> RequestPlexPin()
     {
