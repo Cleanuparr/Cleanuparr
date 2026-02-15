@@ -232,6 +232,11 @@ export class EventsComponent implements OnInit, OnDestroy {
     }
   }
 
+  formatValue(value: unknown): string {
+    if (value !== null && typeof value === 'object') return JSON.stringify(value);
+    return String(value ?? '');
+  }
+
   objectKeys(obj: Record<string, unknown>): string[] {
     return Object.keys(obj);
   }
