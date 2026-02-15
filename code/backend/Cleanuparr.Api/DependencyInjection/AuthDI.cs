@@ -57,10 +57,13 @@ public static class AuthDI
 
         services.AddAuthorization(options =>
         {
-            options.DefaultPolicy = new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder()
+            var defaultPolicy = new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder()
                 .AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme, ApiKeyAuthenticationDefaults.AuthenticationScheme)
                 .RequireAuthenticatedUser()
                 .Build();
+
+            options.DefaultPolicy = defaultPolicy;
+            options.FallbackPolicy = defaultPolicy;
         });
 
         return services;
