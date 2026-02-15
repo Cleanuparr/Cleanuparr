@@ -182,6 +182,11 @@ export class LoginComponent implements OnInit, OnDestroy {
             this.router.navigate(['/dashboard']);
           }
         },
+        error: (err) => {
+          clearInterval(this.plexPollTimer!);
+          this.plexLoading.set(false);
+          this.error.set(err.message || 'Plex authorization failed');
+        },
       });
     }, 2000);
   }

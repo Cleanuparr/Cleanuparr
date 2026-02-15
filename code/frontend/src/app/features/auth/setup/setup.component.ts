@@ -201,6 +201,11 @@ export class SetupComponent {
             this.plexLinking.set(false);
           }
         },
+        error: (err) => {
+          clearInterval(this.plexPollTimer!);
+          this.plexLinking.set(false);
+          this.error.set(err.message || 'Plex linking failed');
+        },
       });
     }, 2000);
   }

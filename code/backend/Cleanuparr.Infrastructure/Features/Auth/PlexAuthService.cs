@@ -57,7 +57,11 @@ public sealed class PlexAuthService : IPlexAuthService
         AddPlexHeaders(request);
 
         var response = await _httpClient.SendAsync(request);
-        response.EnsureSuccessStatusCode();
+
+        if (!response.IsSuccessStatusCode)
+        {
+            return new PlexPinCheckResult { Completed = false };
+        }
 
         var json = await response.Content.ReadAsStringAsync();
         var pin = JsonSerializer.Deserialize<PlexPinResponse>(json);
