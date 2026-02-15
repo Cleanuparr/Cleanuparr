@@ -6,7 +6,7 @@ export interface AccountInfo {
   username: string;
   plexLinked: boolean;
   plexUsername: string | null;
-  has2FA: boolean;
+  twoFactorEnabled: boolean;
   apiKeyPreview: string;
 }
 
@@ -16,7 +16,7 @@ export interface ChangePasswordRequest {
 }
 
 export interface Regenerate2faRequest {
-  currentPassword: string;
+  password: string;
   totpCode: string;
 }
 
