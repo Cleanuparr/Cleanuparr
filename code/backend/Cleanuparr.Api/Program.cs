@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 using System.Text.Json.Serialization;
 using Cleanuparr.Api;
 using Cleanuparr.Api.DependencyInjection;
+using Microsoft.AspNetCore.DataProtection;
 using Cleanuparr.Infrastructure.Hubs;
 using Cleanuparr.Infrastructure.Logging;
 using Cleanuparr.Shared.Helpers;
@@ -72,6 +73,12 @@ builder.Services
     .AddInfrastructure(builder.Configuration)
     .AddApiServices()
     .AddAuthServices();
+
+// Persist Data Protection keys to the config directory
+builder.Services
+    .AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(ConfigurationPathProvider.GetConfigPath(), "DataProtection-Keys")))
+    .SetApplicationName("Cleanuparr");
 
 // Add CORS before SignalR
 builder.Services.AddCors(options =>
