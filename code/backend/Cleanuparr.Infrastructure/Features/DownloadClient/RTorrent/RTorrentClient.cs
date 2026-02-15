@@ -71,22 +71,20 @@ public sealed class RTorrentClient
     /// </summary>
     public async Task<RTorrentTorrent?> GetTorrentAsync(string hash)
     {
-        // Fetch using multicall with a filter - rTorrent doesn't have a simple get-by-hash
-        // We'll fetch all and filter, or use individual d.* calls
         try
         {
             var fields = TorrentFields.Select(f => f.TrimEnd('=')).ToArray();
-            var values = new List<object?>();
+            var tasks = fields.Select(field => CallAsync(field, hash)).ToArray();
+            var responses = await Task.WhenAll(tasks);
+            var values = responses.Select(ParseSingleValue).ToArray();
 
-            foreach (var field in fields)
-            {
-                var response = await CallAsync(field, hash);
-                values.Add(ParseSingleValue(response));
-            }
-
-            return CreateTorrentFromValues(values.ToArray());
+            return CreateTorrentFromValues(values);
         }
         catch (RTorrentClientException)
+        {
+            return null;
+        }
+        catch (HttpRequestException)
         {
             return null;
         }
@@ -363,8 +361,8 @@ public sealed class RTorrentClient
                     CompletedChunks = Convert.ToInt64(values[3] ?? 0),
                     SizeChunks = Convert.ToInt64(values[4] ?? 0)
                 });
+                index++;
             }
-            index++;
         }
 
         return result;

@@ -20,6 +20,7 @@ const TYPE_OPTIONS: SelectOption[] = [
   { label: 'Deluge', value: DownloadClientTypeName.Deluge },
   { label: 'Transmission', value: DownloadClientTypeName.Transmission },
   { label: 'uTorrent', value: DownloadClientTypeName.uTorrent },
+  { label: 'rTorrent', value: DownloadClientTypeName.rTorrent },
 ];
 
 @Component({

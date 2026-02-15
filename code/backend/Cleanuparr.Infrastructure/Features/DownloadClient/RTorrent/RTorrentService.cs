@@ -1,3 +1,4 @@
+using Cleanuparr.Domain.Entities.HealthCheck;
 using Cleanuparr.Infrastructure.Events.Interfaces;
 using Cleanuparr.Infrastructure.Features.Files;
 using Cleanuparr.Infrastructure.Features.ItemStriker;
@@ -6,7 +7,6 @@ using Cleanuparr.Infrastructure.Http;
 using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Infrastructure.Services.Interfaces;
 using Cleanuparr.Persistence.Models.Configuration;
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 
 namespace Cleanuparr.Infrastructure.Features.DownloadClient.RTorrent;
@@ -17,7 +17,6 @@ public partial class RTorrentService : DownloadService, IRTorrentService
 
     public RTorrentService(
         ILogger<RTorrentService> logger,
-        IMemoryCache cache,
         IFilenameEvaluator filenameEvaluator,
         IStriker striker,
         IDryRunInterceptor dryRunInterceptor,
@@ -29,8 +28,7 @@ public partial class RTorrentService : DownloadService, IRTorrentService
         IRuleEvaluator ruleEvaluator,
         IRuleManager ruleManager
     ) : base(
-        logger, cache,
-        filenameEvaluator, striker, dryRunInterceptor, hardLinkFileService,
+        logger, filenameEvaluator, striker, dryRunInterceptor, hardLinkFileService,
         httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, ruleEvaluator, ruleManager
     )
     {
@@ -41,7 +39,6 @@ public partial class RTorrentService : DownloadService, IRTorrentService
     // Internal constructor for testing
     internal RTorrentService(
         ILogger<RTorrentService> logger,
-        IMemoryCache cache,
         IFilenameEvaluator filenameEvaluator,
         IStriker striker,
         IDryRunInterceptor dryRunInterceptor,
@@ -54,8 +51,7 @@ public partial class RTorrentService : DownloadService, IRTorrentService
         IRuleManager ruleManager,
         IRTorrentClientWrapper clientWrapper
     ) : base(
-        logger, cache,
-        filenameEvaluator, striker, dryRunInterceptor, hardLinkFileService,
+        logger, filenameEvaluator, striker, dryRunInterceptor, hardLinkFileService,
         httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, ruleEvaluator, ruleManager
     )
     {

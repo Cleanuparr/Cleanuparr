@@ -157,7 +157,6 @@ public sealed class DownloadServiceFactory : IDownloadServiceFactory
     private RTorrentService CreateRTorrentService(DownloadClientConfig downloadClientConfig)
     {
         var logger = _serviceProvider.GetRequiredService<ILogger<RTorrentService>>();
-        var cache = _serviceProvider.GetRequiredService<IMemoryCache>();
         var filenameEvaluator = _serviceProvider.GetRequiredService<IFilenameEvaluator>();
         var striker = _serviceProvider.GetRequiredService<IStriker>();
         var dryRunInterceptor = _serviceProvider.GetRequiredService<IDryRunInterceptor>();
@@ -171,7 +170,7 @@ public sealed class DownloadServiceFactory : IDownloadServiceFactory
 
         // Create the RTorrentService instance
         RTorrentService service = new(
-            logger, cache, filenameEvaluator, striker, dryRunInterceptor,
+            logger, filenameEvaluator, striker, dryRunInterceptor,
             hardLinkFileService, httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, ruleEvaluator, ruleManager
         );
 
