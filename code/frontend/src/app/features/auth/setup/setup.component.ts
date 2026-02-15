@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, inject, signal, computed, viewChild, effect, afterNextRender } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, signal, computed, viewChild, effect, afterNextRender, OnDestroy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ButtonComponent, InputComponent, SpinnerComponent } from '@ui';
@@ -17,7 +17,7 @@ import { QRCodeComponent } from 'angularx-qrcode';
   changeDetection: ChangeDetectionStrategy.OnPush,
   viewProviders: [provideIcons({ tablerCheck, tablerCopy, tablerShieldLock })],
 })
-export class SetupComponent {
+export class SetupComponent implements OnDestroy {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   private readonly toast = inject(ToastService);
@@ -180,6 +180,12 @@ export class SetupComponent {
   }
 
   private plexPollTimer: ReturnType<typeof setInterval> | null = null;
+
+  ngOnDestroy(): void {
+    if (this.plexPollTimer) {
+      clearInterval(this.plexPollTimer);
+    }
+  }
 
   private pollPlexPin(): void {
     let attempts = 0;

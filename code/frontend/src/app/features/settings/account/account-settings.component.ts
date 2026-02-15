@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, inject, signal, computed, OnInit } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, signal, computed, OnInit, OnDestroy } from '@angular/core';
 import { PageHeaderComponent } from '@layout/page-header/page-header.component';
 import {
   CardComponent, ButtonComponent, InputComponent, SpinnerComponent,
@@ -8,19 +8,20 @@ import { AccountApi, AccountInfo } from '@core/api/account.api';
 import { ToastService } from '@core/services/toast.service';
 import { ConfirmService } from '@core/services/confirm.service';
 import { DeferredLoader } from '@shared/utils/loading.util';
+import { QRCodeComponent } from 'angularx-qrcode';
 
 @Component({
   selector: 'app-account-settings',
   standalone: true,
   imports: [
     PageHeaderComponent, CardComponent, ButtonComponent, InputComponent,
-    SpinnerComponent, EmptyStateComponent, LoadingStateComponent,
+    SpinnerComponent, EmptyStateComponent, LoadingStateComponent, QRCodeComponent,
   ],
   templateUrl: './account-settings.component.html',
   styleUrl: './account-settings.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class AccountSettingsComponent implements OnInit {
+export class AccountSettingsComponent implements OnInit, OnDestroy {
   private readonly api = inject(AccountApi);
   private readonly toast = inject(ToastService);
   private readonly confirmService = inject(ConfirmService);
@@ -55,6 +56,8 @@ export class AccountSettingsComponent implements OnInit {
   readonly twoFaCode = signal('');
   readonly regenerating2fa = signal(false);
   readonly newRecoveryCodes = signal<string[]>([]);
+  readonly newQrCodeUri = signal('');
+  readonly newTotpSecret = signal('');
 
   // API key
   readonly apiKey = signal('');
@@ -68,6 +71,12 @@ export class AccountSettingsComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadAccount();
+  }
+
+  ngOnDestroy(): void {
+    if (this.plexPollTimer) {
+      clearInterval(this.plexPollTimer);
+    }
   }
 
   private loadAccount(): void {
@@ -132,12 +141,14 @@ export class AccountSettingsComponent implements OnInit {
 
     this.regenerating2fa.set(true);
     this.api.regenerate2fa({
-      currentPassword: this.twoFaPassword(),
+      password: this.twoFaPassword(),
       totpCode: this.twoFaCode(),
     }).subscribe({
       next: (result) => {
         this.newRecoveryCodes.set(result.recoveryCodes);
-        this.toast.success('2FA regenerated. Save your new recovery codes!');
+        this.newQrCodeUri.set(result.qrCodeUri);
+        this.newTotpSecret.set(result.secret);
+        this.toast.success('2FA regenerated. Scan the QR code and save your recovery codes!');
         this.twoFaPassword.set('');
         this.twoFaCode.set('');
         this.regenerating2fa.set(false);
@@ -157,6 +168,8 @@ export class AccountSettingsComponent implements OnInit {
 
   dismissRecoveryCodes(): void {
     this.newRecoveryCodes.set([]);
+    this.newQrCodeUri.set('');
+    this.newTotpSecret.set('');
   }
 
   // API key
@@ -239,6 +252,11 @@ export class AccountSettingsComponent implements OnInit {
             this.toast.success('Plex account linked');
             this.loadAccount();
           }
+        },
+        error: () => {
+          clearInterval(this.plexPollTimer!);
+          this.plexLinking.set(false);
+          this.toast.error('Plex linking failed');
         },
       });
     }, 2000);

@@ -42,6 +42,58 @@
   }
 }
 
+// QR code (2FA regeneration)
+.qr-section {
+  margin-bottom: var(--space-4);
+}
+
+.qr-code-wrapper {
+  display: flex;
+  justify-content: center;
+  margin-bottom: var(--space-4);
+
+  qrcode {
+    background: #ffffff;
+    padding: var(--space-3);
+    border-radius: var(--radius-lg);
+  }
+}
+
+.qr-manual-entry {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+
+  summary {
+    cursor: pointer;
+    text-align: center;
+    margin-bottom: var(--space-2);
+
+    &:hover {
+      color: var(--text-primary);
+    }
+  }
+}
+
+.qr-manual-content {
+  background: var(--surface-secondary);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  text-align: center;
+}
+
+.qr-manual-label {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  margin-bottom: var(--space-1);
+}
+
+.qr-secret {
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  font-family: monospace;
+  word-break: break-all;
+}
+
 // Recovery codes
 .recovery-section {
   margin-top: var(--space-2);

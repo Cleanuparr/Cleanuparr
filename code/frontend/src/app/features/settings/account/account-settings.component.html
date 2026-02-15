@@ -77,6 +77,21 @@
 
       @if (newRecoveryCodes().length > 0) {
         <div class="recovery-section">
+          <p class="recovery-title">New Authenticator Setup</p>
+          <p class="recovery-desc">Scan this QR code with your authenticator app to complete the setup.</p>
+          <div class="qr-section">
+            <div class="qr-code-wrapper">
+              <qrcode [qrdata]="newQrCodeUri()" [width]="200" errorCorrectionLevel="M" [margin]="2" />
+            </div>
+            <details class="qr-manual-entry">
+              <summary>Can't scan? Enter manually</summary>
+              <div class="qr-manual-content">
+                <p class="qr-manual-label">Secret key:</p>
+                <code class="qr-secret">{{ newTotpSecret() }}</code>
+              </div>
+            </details>
+          </div>
+          <div class="form-divider"></div>
           <p class="recovery-title">New Recovery Codes</p>
           <p class="recovery-desc">Save these codes in a secure location. Each code can only be used once.</p>
           <div class="recovery-codes">
