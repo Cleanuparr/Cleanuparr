@@ -1,6 +1,6 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, tap, of, catchError } from 'rxjs';
+import { Observable, tap, of, catchError, finalize, shareReplay } from 'rxjs';
 import { Router } from '@angular/router';
 
 export interface AuthStatus {
@@ -51,6 +51,8 @@ export class AuthService {
   readonly isLoading = this._isLoading.asReadonly();
 
   private refreshTimer: ReturnType<typeof setTimeout> | null = null;
+  private refreshInFlight$: Observable<TokenResponse | null> | null = null;
+  private visibilityHandler: (() => void) | null = null;
 
   checkStatus(): Observable<AuthStatus> {
     return this.http.get<AuthStatus>('/api/auth/status').pipe(
@@ -58,11 +60,26 @@ export class AuthService {
         this._isSetupComplete.set(status.setupCompleted);
         this._plexLinked.set(status.plexLinked);
 
-        // Check if we have a valid token
         const token = localStorage.getItem('access_token');
         if (token && status.setupCompleted) {
+          if (this.isTokenExpired(60)) {
+            // Access token expired — try to refresh before marking as authenticated
+            this.refreshToken().subscribe((result) => {
+              if (result) {
+                this._isAuthenticated.set(true);
+                this.setupVisibilityListener();
+              } else {
+                this._isAuthenticated.set(false);
+                this.router.navigate(['/auth/login']);
+              }
+              this._isLoading.set(false);
+            });
+            return;
+          }
+
           this._isAuthenticated.set(true);
           this.scheduleRefresh();
+          this.setupVisibilityListener();
         }
 
         this._isLoading.set(false);
@@ -130,19 +147,32 @@ export class AuthService {
 
   // Token management
   refreshToken(): Observable<TokenResponse | null> {
-    const refreshToken = localStorage.getItem('refresh_token');
-    if (!refreshToken) {
+    // Deduplicate: if a refresh is already in-flight, share the same observable
+    if (this.refreshInFlight$) {
+      return this.refreshInFlight$;
+    }
+
+    const storedRefreshToken = localStorage.getItem('refresh_token');
+    if (!storedRefreshToken) {
       this.clearAuth();
       return of(null);
     }
 
-    return this.http.post<TokenResponse>('/api/auth/refresh', { refreshToken }).pipe(
-      tap((tokens) => this.handleTokens(tokens)),
-      catchError(() => {
-        this.clearAuth();
-        return of(null);
-      }),
-    );
+    this.refreshInFlight$ = this.http
+      .post<TokenResponse>('/api/auth/refresh', { refreshToken: storedRefreshToken })
+      .pipe(
+        tap((tokens) => this.handleTokens(tokens)),
+        catchError(() => {
+          this.clearAuth();
+          return of(null);
+        }),
+        finalize(() => {
+          this.refreshInFlight$ = null;
+        }),
+        shareReplay(1),
+      );
+
+    return this.refreshInFlight$;
   }
 
   logout(): void {
@@ -158,20 +188,51 @@ export class AuthService {
     return localStorage.getItem('access_token');
   }
 
+  /** Returns true if the access token is expired or will expire within the buffer period. */
+  isTokenExpired(bufferSeconds = 30): boolean {
+    const token = localStorage.getItem('access_token');
+    if (!token) return true;
+
+    const exp = this.getTokenExpiry(token);
+    if (exp === null) return true;
+
+    return Date.now() / 1000 >= exp - bufferSeconds;
+  }
+
   private handleTokens(tokens: TokenResponse): void {
     localStorage.setItem('access_token', tokens.accessToken);
     localStorage.setItem('refresh_token', tokens.refreshToken);
     this._isAuthenticated.set(true);
     this.scheduleRefresh(tokens.expiresIn);
+    this.setupVisibilityListener();
   }
 
-  private scheduleRefresh(expiresInSeconds = 900): void {
+  private scheduleRefresh(expiresInSeconds?: number): void {
     if (this.refreshTimer) {
       clearTimeout(this.refreshTimer);
     }
 
-    // Refresh at 80% of lifetime
-    const refreshMs = expiresInSeconds * 800;
+    let refreshMs: number;
+    if (expiresInSeconds !== undefined) {
+      // Refresh at 80% of lifetime
+      refreshMs = expiresInSeconds * 800;
+    } else {
+      // No expiresIn provided (e.g. on app init) — calculate from token's actual exp claim
+      const token = localStorage.getItem('access_token');
+      if (!token) return;
+
+      const exp = this.getTokenExpiry(token);
+      if (exp === null) return;
+
+      const remainingSec = exp - Date.now() / 1000;
+      if (remainingSec <= 30) {
+        this.refreshToken().subscribe();
+        return;
+      }
+      // Refresh at 80% of remaining lifetime
+      refreshMs = remainingSec * 800;
+    }
+
     this.refreshTimer = setTimeout(() => {
       this.refreshToken().subscribe();
     }, refreshMs);
@@ -181,9 +242,57 @@ export class AuthService {
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
     this._isAuthenticated.set(false);
+    this.refreshInFlight$ = null;
+
     if (this.refreshTimer) {
       clearTimeout(this.refreshTimer);
       this.refreshTimer = null;
+    }
+
+    this.teardownVisibilityListener();
+  }
+
+  /** Extracts the exp claim (seconds since epoch) from a JWT. */
+  private getTokenExpiry(token: string): number | null {
+    try {
+      const payload = token.split('.')[1];
+      if (!payload) return null;
+      const decoded = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
+      const parsed = JSON.parse(decoded);
+      return typeof parsed.exp === 'number' ? parsed.exp : null;
+    } catch {
+      return null;
+    }
+  }
+
+  private setupVisibilityListener(): void {
+    if (this.visibilityHandler) return;
+
+    this.visibilityHandler = () => {
+      if (document.visibilityState !== 'visible' || !this._isAuthenticated()) {
+        return;
+      }
+
+      if (this.isTokenExpired(60)) {
+        // Token expired during sleep — refresh immediately
+        this.refreshToken().subscribe((result) => {
+          if (!result) {
+            this.router.navigate(['/auth/login']);
+          }
+        });
+      } else {
+        // Token still valid — reschedule timer (old setTimeout was frozen during sleep)
+        this.scheduleRefresh();
+      }
+    };
+
+    document.addEventListener('visibilitychange', this.visibilityHandler);
+  }
+
+  private teardownVisibilityListener(): void {
+    if (this.visibilityHandler) {
+      document.removeEventListener('visibilitychange', this.visibilityHandler);
+      this.visibilityHandler = null;
     }
   }
 }

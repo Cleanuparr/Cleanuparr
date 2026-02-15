@@ -1,7 +1,9 @@
-import { HttpInterceptorFn, HttpErrorResponse } from '@angular/common/http';
+import { HttpInterceptorFn, HttpErrorResponse, HttpContextToken, HttpContext } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { catchError, switchMap, throwError } from 'rxjs';
 import { AuthService } from './auth.service';
+
+const IS_RETRY = new HttpContextToken<boolean>(() => false);
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const auth = inject(AuthService);
@@ -20,14 +22,15 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
 
   return next(req).pipe(
     catchError((error: HttpErrorResponse) => {
-      if (error.status === 401 && token) {
-        // Try to refresh the token
+      // Only attempt refresh on 401, if we had a token, and this isn't already a retry
+      if (error.status === 401 && token && !req.context.get(IS_RETRY)) {
         return auth.refreshToken().pipe(
           switchMap((result) => {
             if (result) {
               // Retry the request with the new token
               const retryReq = req.clone({
                 setHeaders: { Authorization: `Bearer ${result.accessToken}` },
+                context: new HttpContext().set(IS_RETRY, true),
               });
               return next(retryReq);
             }

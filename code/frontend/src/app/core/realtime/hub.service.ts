@@ -1,5 +1,6 @@
 import { Injectable, inject, signal, OnDestroy } from '@angular/core';
 import * as signalR from '@microsoft/signalr';
+import { firstValueFrom } from 'rxjs';
 import { SignalRHubConfig } from '@core/models/signalr.models';
 import { ApplicationPathService } from '@core/services/base-path.service';
 import { AuthService } from '@core/auth/auth.service';
@@ -27,7 +28,16 @@ export abstract class HubService implements OnDestroy {
 
     this.connection = new signalR.HubConnectionBuilder()
       .withUrl(hubUrl, {
-        accessTokenFactory: () => this.authService.getAccessToken() ?? '',
+        accessTokenFactory: async () => {
+          if (this.authService.isTokenExpired(30)) {
+            const result = await firstValueFrom(this.authService.refreshToken());
+            if (result) {
+              return result.accessToken;
+            }
+            return '';
+          }
+          return this.authService.getAccessToken() ?? '';
+        },
       })
       .withAutomaticReconnect({
         nextRetryDelayInMilliseconds: (retryContext) => {
