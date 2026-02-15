@@ -115,8 +115,8 @@ public static class ApiDI
         });
         
         // Map SignalR hubs
-        app.MapHub<HealthStatusHub>("/api/hubs/health");
-        app.MapHub<AppHub>("/api/hubs/app");
+        app.MapHub<HealthStatusHub>("/api/hubs/health").RequireAuthorization();
+        app.MapHub<AppHub>("/api/hubs/app").RequireAuthorization();
         
         app.MapGet("/manifest.webmanifest", (HttpContext context) =>
         {
