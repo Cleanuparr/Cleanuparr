@@ -16,7 +16,7 @@ public sealed record CreateDownloadClientRequest
 
     public DownloadClientType Type { get; init; }
 
-    public Uri? Host { get; init; }
+    public string? Host { get; init; }
 
     public string? Username { get; init; }
 
@@ -24,7 +24,7 @@ public sealed record CreateDownloadClientRequest
 
     public string? UrlBase { get; init; }
 
-    public Uri? ExternalUrl { get; init; }
+    public string? ExternalUrl { get; init; }
 
     public void Validate()
     {
@@ -33,7 +33,7 @@ public sealed record CreateDownloadClientRequest
             throw new ValidationException("Client name cannot be empty");
         }
 
-        if (Host is null)
+        if (string.IsNullOrWhiteSpace(Host))
         {
             throw new ValidationException("Host cannot be empty");
         }
@@ -45,10 +45,10 @@ public sealed record CreateDownloadClientRequest
         Name = Name,
         TypeName = TypeName,
         Type = Type,
-        Host = Host,
+        Host = new Uri(Host!, UriKind.RelativeOrAbsolute),
         Username = Username,
         Password = Password,
         UrlBase = UrlBase,
-        ExternalUrl = ExternalUrl,
+        ExternalUrl = !string.IsNullOrWhiteSpace(ExternalUrl) ? new Uri(ExternalUrl, UriKind.RelativeOrAbsolute) : null,
     };
 }
