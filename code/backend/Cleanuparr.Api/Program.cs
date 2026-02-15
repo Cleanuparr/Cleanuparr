@@ -147,14 +147,14 @@ app.Init();
 var appHub = app.Services.GetRequiredService<IHubContext<AppHub>>();
 SignalRLogSink.Instance.SetAppHubContext(appHub);
 
-// Configure health check endpoints before the API configuration
-app.MapHealthChecks("/health", new HealthCheckOptions
+// Configure health check endpoints as middleware (before auth pipeline) so they don't require authentication
+app.UseHealthChecks("/health", new HealthCheckOptions
 {
     Predicate = registration => registration.Tags.Contains("liveness"),
     ResponseWriter = HealthCheckResponseWriter.WriteMinimalPlaintext
 });
 
-app.MapHealthChecks("/health/ready", new HealthCheckOptions
+app.UseHealthChecks("/health/ready", new HealthCheckOptions
 {
     Predicate = registration => registration.Tags.Contains("readiness"),
     ResponseWriter = HealthCheckResponseWriter.WriteMinimalPlaintext
