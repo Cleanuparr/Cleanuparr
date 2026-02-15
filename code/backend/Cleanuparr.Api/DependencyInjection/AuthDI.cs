@@ -1,4 +1,3 @@
-using System.Text;
 using Cleanuparr.Api.Auth;
 using Cleanuparr.Infrastructure.Features.Auth;
 using Microsoft.AspNetCore.Authentication;
@@ -9,6 +8,8 @@ namespace Cleanuparr.Api.DependencyInjection;
 
 public static class AuthDI
 {
+    private const string SmartScheme = "Smart";
+
     public static IServiceCollection AddAuthServices(this IServiceCollection services)
     {
         // Get the signing key from the JwtService
@@ -16,10 +17,20 @@ public static class AuthDI
         var signingKey = jwtService.GetOrCreateSigningKey();
 
         services
-            .AddAuthentication(options =>
+            .AddAuthentication(SmartScheme)
+            .AddPolicyScheme(SmartScheme, "JWT or API Key", options =>
             {
-                options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-                options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+                // Route to the correct auth handler based on the request
+                options.ForwardDefaultSelector = context =>
+                {
+                    if (context.Request.Headers.ContainsKey(ApiKeyAuthenticationDefaults.HeaderName) ||
+                        context.Request.Query.ContainsKey(ApiKeyAuthenticationDefaults.QueryParameterName))
+                    {
+                        return ApiKeyAuthenticationDefaults.AuthenticationScheme;
+                    }
+
+                    return JwtBearerDefaults.AuthenticationScheme;
+                };
             })
             .AddJwtBearer(options =>
             {
@@ -58,7 +69,6 @@ public static class AuthDI
         services.AddAuthorization(options =>
         {
             var defaultPolicy = new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder()
-                .AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme, ApiKeyAuthenticationDefaults.AuthenticationScheme)
                 .RequireAuthenticatedUser()
                 .Build();
 
