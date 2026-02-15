@@ -4,6 +4,10 @@
   <div class="error-message">{{ error() }}</div>
 }
 
+@if (retryCountdown() > 0) {
+  <div class="retry-countdown">Try again in {{ retryCountdown() }}s</div>
+}
+
 <!-- Credentials view -->
 @if (view() === 'credentials') {
   <div class="login-view">
@@ -26,7 +30,7 @@
       <app-button
         variant="primary"
         class="login-submit"
-        [disabled]="!username() || !password() || loading()"
+        [disabled]="!username() || !password() || loading() || retryCountdown() > 0"
         type="submit"
       >
         @if (loading()) {
@@ -41,8 +45,7 @@
       <div class="divider">
         <span>or</span>
       </div>
-      <app-button
-        variant="secondary"
+      <button
         class="plex-login-btn"
         [disabled]="plexLoading()"
         (click)="startPlexLogin()"
@@ -51,9 +54,12 @@
           <app-spinner size="sm" />
           Waiting for Plex...
         } @else {
+          <svg class="plex-login-btn__icon" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M5.074 1L12 12 5.074 23h5.854L18.926 12 11.928 1z"/>
+          </svg>
           Sign in with Plex
         }
-      </app-button>
+      </button>
     }
   </div>
 }

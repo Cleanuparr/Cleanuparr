@@ -235,8 +235,8 @@ public sealed class AuthController : ControllerBase
         if (!_passwordService.VerifyPassword(request.Password, user.PasswordHash) ||
             !string.Equals(user.Username, request.Username, StringComparison.OrdinalIgnoreCase))
         {
-            await IncrementFailedAttempts(user.Id);
-            return Unauthorized(new { error = "Invalid credentials" });
+            var retryAfterSeconds = await IncrementFailedAttempts(user.Id);
+            return Unauthorized(new { error = "Invalid credentials", retryAfterSeconds });
         }
 
         // Reset failed attempts on successful password verification
@@ -507,22 +507,20 @@ public sealed class AuthController : ControllerBase
         }
     }
 
-    private async Task IncrementFailedAttempts(Guid userId)
+    private async Task<int> IncrementFailedAttempts(Guid userId)
     {
         await UsersContext.Lock.WaitAsync();
         try
         {
             var user = await _usersContext.Users.FirstAsync(u => u.Id == userId);
             user.FailedLoginAttempts++;
-
-            if (user.FailedLoginAttempts >= 5)
-            {
-                user.LockoutEnd = DateTime.UtcNow.AddMinutes(15);
-                _logger.LogWarning("Account locked for user {Username} after {Attempts} failed attempts",
-                    user.Username, user.FailedLoginAttempts);
-            }
-
+            user.LockoutEnd = DateTime.UtcNow.AddSeconds(user.FailedLoginAttempts * 2);
             await _usersContext.SaveChangesAsync();
+
+            _logger.LogWarning("Failed login attempt {Attempts} for user {Username}, locked for {Seconds}s",
+                user.FailedLoginAttempts, user.Username, user.FailedLoginAttempts * 2);
+
+            return user.FailedLoginAttempts * 2;
         }
         finally
         {

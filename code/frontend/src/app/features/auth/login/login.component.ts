@@ -1,8 +1,9 @@
-import { Component, ChangeDetectionStrategy, inject, signal, viewChild, effect, afterNextRender } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, signal, viewChild, effect, afterNextRender, OnInit, OnDestroy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ButtonComponent, InputComponent, SpinnerComponent } from '@ui';
 import { AuthService } from '@core/auth/auth.service';
+import { ApiError } from '@core/interceptors/error.interceptor';
 
 type LoginView = 'credentials' | '2fa' | 'recovery';
 
@@ -14,7 +15,7 @@ type LoginView = 'credentials' | '2fa' | 'recovery';
   styleUrl: './login.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class LoginComponent {
+export class LoginComponent implements OnInit, OnDestroy {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
 
@@ -30,6 +31,10 @@ export class LoginComponent {
   loginToken = signal('');
   totpCode = signal('');
   recoveryCode = signal('');
+
+  // Retry countdown
+  retryCountdown = signal(0);
+  private countdownTimer: ReturnType<typeof setInterval> | null = null;
 
   // Plex
   plexLinked = this.auth.plexLinked;
@@ -58,6 +63,17 @@ export class LoginComponent {
     });
   }
 
+  ngOnInit(): void {
+    this.auth.checkStatus().subscribe();
+  }
+
+  ngOnDestroy(): void {
+    this.clearCountdown();
+    if (this.plexPollTimer) {
+      clearInterval(this.plexPollTimer);
+    }
+  }
+
   submitLogin(): void {
     this.loading.set(true);
     this.error.set('');
@@ -73,6 +89,11 @@ export class LoginComponent {
       error: (err) => {
         this.error.set(err.message || 'Invalid credentials');
         this.loading.set(false);
+
+        const retryAfter = (err as ApiError).retryAfterSeconds;
+        if (retryAfter && retryAfter > 0) {
+          this.startCountdown(retryAfter);
+        }
       },
     });
   }
@@ -163,5 +184,26 @@ export class LoginComponent {
         },
       });
     }, 2000);
+  }
+
+  private startCountdown(seconds: number): void {
+    this.clearCountdown();
+    this.retryCountdown.set(seconds);
+    this.countdownTimer = setInterval(() => {
+      const current = this.retryCountdown();
+      if (current <= 1) {
+        this.clearCountdown();
+      } else {
+        this.retryCountdown.set(current - 1);
+      }
+    }, 1000);
+  }
+
+  private clearCountdown(): void {
+    this.retryCountdown.set(0);
+    if (this.countdownTimer) {
+      clearInterval(this.countdownTimer);
+      this.countdownTimer = null;
+    }
   }
 }

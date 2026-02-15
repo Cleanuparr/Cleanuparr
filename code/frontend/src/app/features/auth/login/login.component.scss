@@ -37,6 +37,17 @@
   text-align: center;
 }
 
+.retry-countdown {
+  background: rgba(234, 179, 8, 0.1);
+  color: var(--color-warning);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  margin-bottom: var(--space-4);
+  text-align: center;
+}
+
 .login-form {
   display: flex;
   flex-direction: column;
@@ -70,7 +81,41 @@
 }
 
 .plex-login-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
   width: 100%;
+  height: 44px;
+  padding: 0 var(--space-4);
+  font-family: var(--font-family);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: #1a1a2e;
+  background: #e5a00d;
+  border: 1px solid transparent;
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-default);
+
+  &:hover:not(:disabled) {
+    background: #d4920c;
+    box-shadow: 0 0 20px rgba(229, 160, 13, 0.3);
+  }
+
+  &:active:not(:disabled) {
+    transform: scale(0.97);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  &__icon {
+    width: 18px;
+    height: 18px;
+  }
 }
 
 .login-links {
