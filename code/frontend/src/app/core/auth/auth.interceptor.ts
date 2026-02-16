@@ -13,6 +13,24 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
     return next(req);
   }
 
+  // Pre-flight: if token is expired, refresh before sending the request
+  if (auth.getAccessToken() && auth.isTokenExpired(30)) {
+    return auth.refreshToken().pipe(
+      switchMap((result) => {
+        if (result) {
+          const freshReq = req.clone({
+            setHeaders: { Authorization: `Bearer ${result.accessToken}` },
+            context: new HttpContext().set(IS_RETRY, true),
+          });
+          return next(freshReq);
+        }
+        auth.logout();
+        return throwError(() => new HttpErrorResponse({ status: 401 }));
+      }),
+    );
+  }
+
+  // Normal path: token is valid
   const token = auth.getAccessToken();
   if (token) {
     req = req.clone({
@@ -22,12 +40,11 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
 
   return next(req).pipe(
     catchError((error: HttpErrorResponse) => {
-      // Only attempt refresh on 401, if we had a token, and this isn't already a retry
+      // Fallback: 401 catch for edge cases (e.g., token expired between check and send)
       if (error.status === 401 && token && !req.context.get(IS_RETRY)) {
         return auth.refreshToken().pipe(
           switchMap((result) => {
             if (result) {
-              // Retry the request with the new token
               const retryReq = req.clone({
                 setHeaders: { Authorization: `Bearer ${result.accessToken}` },
                 context: new HttpContext().set(IS_RETRY, true),

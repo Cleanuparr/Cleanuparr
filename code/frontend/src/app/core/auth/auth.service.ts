@@ -203,36 +203,30 @@ export class AuthService {
     localStorage.setItem('access_token', tokens.accessToken);
     localStorage.setItem('refresh_token', tokens.refreshToken);
     this._isAuthenticated.set(true);
-    this.scheduleRefresh(tokens.expiresIn);
+    this.scheduleRefresh();
     this.setupVisibilityListener();
   }
 
-  private scheduleRefresh(expiresInSeconds?: number): void {
+  private scheduleRefresh(): void {
     if (this.refreshTimer) {
       clearTimeout(this.refreshTimer);
     }
 
-    let refreshMs: number;
-    if (expiresInSeconds !== undefined) {
-      // Refresh at 80% of lifetime
-      refreshMs = expiresInSeconds * 800;
-    } else {
-      // No expiresIn provided (e.g. on app init) — calculate from token's actual exp claim
-      const token = localStorage.getItem('access_token');
-      if (!token) return;
+    // Always derive from the JWT's actual exp claim — never trust ExpiresIn from response
+    const token = localStorage.getItem('access_token');
+    if (!token) return;
 
-      const exp = this.getTokenExpiry(token);
-      if (exp === null) return;
+    const exp = this.getTokenExpiry(token);
+    if (exp === null) return;
 
-      const remainingSec = exp - Date.now() / 1000;
-      if (remainingSec <= 30) {
-        this.refreshToken().subscribe();
-        return;
-      }
-      // Refresh at 80% of remaining lifetime
-      refreshMs = remainingSec * 800;
+    const remainingSec = exp - Date.now() / 1000;
+    if (remainingSec <= 30) {
+      this.refreshToken().subscribe();
+      return;
     }
 
+    // Refresh at 80% of remaining lifetime
+    const refreshMs = remainingSec * 800;
     this.refreshTimer = setTimeout(() => {
       this.refreshToken().subscribe();
     }, refreshMs);
