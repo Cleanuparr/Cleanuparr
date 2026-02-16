@@ -131,6 +131,7 @@
   --glass-blur-sm: 0px;
   --glass-blur-lg: 0px;
   --glass-shadow: none;
+  --surface-elevated: #1e1232;
   --duration-fast: 0ms;
   --duration-normal: 0ms;
   --duration-slow: 0ms;
@@ -140,6 +141,11 @@
   transition-delay: 0ms !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
+}
+
+:root[data-performance-mode='true'][data-theme='light'],
+:root[data-performance-mode='true'][data-theme='light'] *:not([role='status']):not([role='status'] *) {
+  --surface-elevated: #ffffff;
 }
 
 :root[data-performance-mode='true'] .shell__main::before,
@@ -154,9 +160,14 @@
     --glass-blur-sm: 0px;
     --glass-blur-lg: 0px;
     --glass-shadow: none;
+    --surface-elevated: #1e1232;
     --duration-fast: 0ms;
     --duration-normal: 0ms;
     --duration-slow: 0ms;
+  }
+
+  :root[data-theme='light'] {
+    --surface-elevated: #ffffff;
   }
 
   *:not([role='status']):not([role='status'] *),
