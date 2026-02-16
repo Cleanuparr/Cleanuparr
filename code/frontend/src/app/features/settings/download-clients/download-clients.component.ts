@@ -73,7 +73,19 @@ export class DownloadClientsComponent implements OnInit, HasPendingChanges {
   ));
 
   readonly showUsernameField = computed(() => {
-    return this.modalTypeName() !== DownloadClientTypeName.Deluge;
+    const type = this.modalTypeName();
+    return type !== DownloadClientTypeName.Deluge && type !== DownloadClientTypeName.rTorrent;
+  });
+
+  readonly showPasswordField = computed(() => {
+    return this.modalTypeName() !== DownloadClientTypeName.rTorrent;
+  });
+
+  readonly urlBaseHint = computed(() => {
+    if (this.modalTypeName() === DownloadClientTypeName.rTorrent) {
+      return 'Path to the XMLRPC endpoint. Usually RPC2 for rTorrent or plugins/httprpc/action.php for ruTorrent.';
+    }
+    return 'Optional URL base path, leave blank for default';
   });
 
   onClientTypeChange(value: unknown): void {
@@ -83,6 +95,11 @@ export class DownloadClientsComponent implements OnInit, HasPendingChanges {
     }
     if (value === DownloadClientTypeName.Transmission) {
       this.modalUrlBase.set('transmission');
+    }
+    if (value === DownloadClientTypeName.rTorrent) {
+      this.modalUrlBase.set('plugins/httprpc/action.php');
+      this.modalUsername.set('');
+      this.modalPassword.set('');
     }
   }
 
