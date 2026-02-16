@@ -17,7 +17,7 @@ public partial class RTorrentService
 
         RTorrentTorrent? download = await _client.GetTorrentAsync(hash);
 
-        if (download?.Hash is null)
+        if (string.IsNullOrEmpty(download?.Hash))
         {
             _logger.LogDebug("Failed to find torrent {hash} in the {name} download client", hash, _downloadClientConfig.Name);
             return result;

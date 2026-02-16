@@ -62,7 +62,8 @@ public sealed class RTorrentClient
     /// </summary>
     public async Task<List<RTorrentTorrent>> GetAllTorrentsAsync()
     {
-        var response = await CallAsync("d.multicall2", "", "main", TorrentFields);
+        var args = new object[] { "", "main" }.Concat(TorrentFields.Cast<object>()).ToArray();
+        var response = await CallAsync("d.multicall2", args);
         return ParseTorrentList(response);
     }
 
@@ -95,7 +96,8 @@ public sealed class RTorrentClient
     /// </summary>
     public async Task<List<RTorrentFile>> GetTorrentFilesAsync(string hash)
     {
-        var response = await CallAsync("f.multicall", hash, "", FileFields);
+        var args = new object[] { hash, "" }.Concat(FileFields.Cast<object>()).ToArray();
+        var response = await CallAsync("f.multicall", args);
         return ParseFileList(response);
     }
 
