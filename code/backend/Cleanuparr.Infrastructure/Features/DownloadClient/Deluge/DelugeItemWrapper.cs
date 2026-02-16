@@ -44,7 +44,7 @@ public sealed class DelugeItemWrapper : ITorrentItemWrapper
         set => Info.Label = value;
     }
 
-    public string SavePath => throw new NotImplementedException();
+    public string SavePath => Info.DownloadLocation ?? string.Empty;
 
     public bool IsDownloading() => Info.State?.Equals("Downloading", StringComparison.InvariantCultureIgnoreCase) == true;
     

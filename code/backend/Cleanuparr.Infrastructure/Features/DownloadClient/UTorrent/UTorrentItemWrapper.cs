@@ -45,7 +45,7 @@ public sealed class UTorrentItemWrapper : ITorrentItemWrapper
         set => Info.Label = value ?? throw new ArgumentNullException(nameof(value));
     }
 
-    public string SavePath => throw new NotImplementedException();
+    public string SavePath => Info.SavePath ?? string.Empty;
 
     public bool IsDownloading() =>
         (Info.Status & UTorrentStatus.Started) != 0 &&

@@ -47,7 +47,7 @@ public sealed class QBitItemWrapper : ITorrentItemWrapper
         set => Info.Category = value;
     }
 
-    public string SavePath => throw new NotImplementedException();
+    public string SavePath => Info.SavePath ?? string.Empty;
 
     public IReadOnlyList<string> Tags => Info.Tags?.ToList().AsReadOnly() ?? (IReadOnlyList<string>)Array.Empty<string>();
 

@@ -259,14 +259,30 @@ public abstract class DownloadService : IDownloadService
 
         if (Directory.Exists(path))
         {
-            Directory.Delete(path, true);
-            return true;
+            try
+            {
+                Directory.Delete(path, true);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to delete directory: {path}", path);
+                return false;
+            }
         }
 
         if (File.Exists(path))
         {
-            File.Delete(path);
-            return true;
+            try
+            {
+                File.Delete(path);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to delete file: {path}", path);
+                return false;
+            }
         }
         
         _logger.LogTrace("File path to delete not found: {path}", path);
