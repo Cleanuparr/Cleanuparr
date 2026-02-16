@@ -298,4 +298,392 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
             _fixture.ClientWrapper.VerifyNoOtherCalls();
         }
     }
+
+    public class ChangeCategoryForNoHardLinksAsync_Tests : RTorrentServiceDCTests
+    {
+        public ChangeCategoryForNoHardLinksAsync_Tests(RTorrentServiceFixture fixture) : base(fixture)
+        {
+        }
+
+        [Fact]
+        public async Task NullDownloads_DoesNothing()
+        {
+            // Arrange
+            var sut = _fixture.CreateSut();
+
+            var config = new DownloadCleanerConfig
+            {
+                Id = Guid.NewGuid(),
+                UnlinkedTargetCategory = "unlinked"
+            };
+            ContextProvider.Set(nameof(DownloadCleanerConfig), config);
+
+            // Act
+            await sut.ChangeCategoryForNoHardLinksAsync(null);
+
+            // Assert
+            _fixture.ClientWrapper.Verify(
+                x => x.SetLabelAsync(It.IsAny<string>(), It.IsAny<string>()),
+                Times.Never);
+        }
+
+        [Fact]
+        public async Task EmptyDownloads_DoesNothing()
+        {
+            // Arrange
+            var sut = _fixture.CreateSut();
+
+            var config = new DownloadCleanerConfig
+            {
+                Id = Guid.NewGuid(),
+                UnlinkedTargetCategory = "unlinked"
+            };
+            ContextProvider.Set(nameof(DownloadCleanerConfig), config);
+
+            // Act
+            await sut.ChangeCategoryForNoHardLinksAsync(new List<ITorrentItemWrapper>());
+
+            // Assert
+            _fixture.ClientWrapper.Verify(
+                x => x.SetLabelAsync(It.IsAny<string>(), It.IsAny<string>()),
+                Times.Never);
+        }
+
+        [Fact]
+        public async Task MissingHash_SkipsTorrent()
+        {
+            // Arrange
+            var sut = _fixture.CreateSut();
+
+            var config = new DownloadCleanerConfig
+            {
+                Id = Guid.NewGuid(),
+                UnlinkedTargetCategory = "unlinked"
+            };
+            ContextProvider.Set(nameof(DownloadCleanerConfig), config);
+
+            var downloads = new List<ITorrentItemWrapper>
+            {
+                new RTorrentItemWrapper(new RTorrentTorrent { Hash = "", Name = "Test", Label = "movies", BasePath = "/downloads" })
+            };
+
+            // Act
+            await sut.ChangeCategoryForNoHardLinksAsync(downloads);
+
+            // Assert
+            _fixture.ClientWrapper.Verify(
+                x => x.SetLabelAsync(It.IsAny<string>(), It.IsAny<string>()),
+                Times.Never);
+        }
+
+        [Fact]
+        public async Task MissingName_SkipsTorrent()
+        {
+            // Arrange
+            var sut = _fixture.CreateSut();
+
+            var config = new DownloadCleanerConfig
+            {
+                Id = Guid.NewGuid(),
+                UnlinkedTargetCategory = "unlinked"
+            };
+            ContextProvider.Set(nameof(DownloadCleanerConfig), config);
+
+            var downloads = new List<ITorrentItemWrapper>
+            {
+                new RTorrentItemWrapper(new RTorrentTorrent { Hash = "HASH1", Name = "", Label = "movies", BasePath = "/downloads" })
+            };
+
+            // Act
+            await sut.ChangeCategoryForNoHardLinksAsync(downloads);
+
+            // Assert
+            _fixture.ClientWrapper.Verify(
+                x => x.SetLabelAsync(It.IsAny<string>(), It.IsAny<string>()),
+                Times.Never);
+        }
+
+        [Fact]
+        public async Task MissingCategory_SkipsTorrent()
+        {
+            // Arrange
+            var sut = _fixture.CreateSut();
+
+            var config = new DownloadCleanerConfig
+            {
+                Id = Guid.NewGuid(),
+                UnlinkedTargetCategory = "unlinked"
+            };
+            ContextProvider.Set(nameof(DownloadCleanerConfig), config);
+
+            var downloads = new List<ITorrentItemWrapper>
+            {
+                new RTorrentItemWrapper(new RTorrentTorrent { Hash = "HASH1", Name = "Test", Label = "", BasePath = "/downloads" })
+            };
+
+            // Act
+            await sut.ChangeCategoryForNoHardLinksAsync(downloads);
+
+            // Assert
+            _fixture.ClientWrapper.Verify(
+                x => x.SetLabelAsync(It.IsAny<string>(), It.IsAny<string>()),
+                Times.Never);
+        }
+
+        [Fact]
+        public async Task GetFilesThrows_SkipsTorrent()
+        {
+            // Arrange
+            var sut = _fixture.CreateSut();
+
+            var config = new DownloadCleanerConfig
+            {
+                Id = Guid.NewGuid(),
+                UnlinkedTargetCategory = "unlinked"
+            };
+            ContextProvider.Set(nameof(DownloadCleanerConfig), config);
+
+            var downloads = new List<ITorrentItemWrapper>
+            {
+                new RTorrentItemWrapper(new RTorrentTorrent { Hash = "HASH1", Name = "Test", Label = "movies", BasePath = "/downloads" })
+            };
+
+            _fixture.ClientWrapper
+                .Setup(x => x.GetTorrentFilesAsync("HASH1"))
+                .ThrowsAsync(new Exception("XML-RPC error"));
+
+            // Act
+            await sut.ChangeCategoryForNoHardLinksAsync(downloads);
+
+            // Assert
+            _fixture.ClientWrapper.Verify(
+                x => x.SetLabelAsync(It.IsAny<string>(), It.IsAny<string>()),
+                Times.Never);
+        }
+
+        [Fact]
+        public async Task SkippedFiles_IgnoredInCheck()
+        {
+            // Arrange
+            var sut = _fixture.CreateSut();
+
+            var config = new DownloadCleanerConfig
+            {
+                Id = Guid.NewGuid(),
+                UnlinkedTargetCategory = "unlinked"
+            };
+            ContextProvider.Set(nameof(DownloadCleanerConfig), config);
+
+            var downloads = new List<ITorrentItemWrapper>
+            {
+                new RTorrentItemWrapper(new RTorrentTorrent { Hash = "HASH1", Name = "Test", Label = "movies", BasePath = "/downloads" })
+            };
+
+            _fixture.ClientWrapper
+                .Setup(x => x.GetTorrentFilesAsync("HASH1"))
+                .ReturnsAsync(new List<RTorrentFile>
+                {
+                    new RTorrentFile { Index = 0, Path = "file1.mkv", Priority = 0 }, // Skipped
+                    new RTorrentFile { Index = 1, Path = "file2.mkv", Priority = 1 }  // Active
+                });
+
+            _fixture.HardLinkFileService
+                .Setup(x => x.GetHardLinkCount(It.IsAny<string>(), It.IsAny<bool>()))
+                .Returns(0);
+
+            // Act
+            await sut.ChangeCategoryForNoHardLinksAsync(downloads);
+
+            // Assert - only called for file2.mkv (the active file)
+            _fixture.HardLinkFileService.Verify(
+                x => x.GetHardLinkCount(It.IsAny<string>(), It.IsAny<bool>()),
+                Times.Once);
+        }
+
+        [Fact]
+        public async Task NoHardlinks_ChangesLabel()
+        {
+            // Arrange
+            var sut = _fixture.CreateSut();
+
+            var config = new DownloadCleanerConfig
+            {
+                Id = Guid.NewGuid(),
+                UnlinkedTargetCategory = "unlinked"
+            };
+            ContextProvider.Set(nameof(DownloadCleanerConfig), config);
+
+            var downloads = new List<ITorrentItemWrapper>
+            {
+                new RTorrentItemWrapper(new RTorrentTorrent { Hash = "HASH1", Name = "Test", Label = "movies", BasePath = "/downloads" })
+            };
+
+            _fixture.ClientWrapper
+                .Setup(x => x.GetTorrentFilesAsync("HASH1"))
+                .ReturnsAsync(new List<RTorrentFile>
+                {
+                    new RTorrentFile { Index = 0, Path = "file1.mkv", Priority = 1 }
+                });
+
+            _fixture.HardLinkFileService
+                .Setup(x => x.GetHardLinkCount(It.IsAny<string>(), It.IsAny<bool>()))
+                .Returns(0);
+
+            // Act
+            await sut.ChangeCategoryForNoHardLinksAsync(downloads);
+
+            // Assert - rTorrent uses SetLabelAsync (not SetTorrentCategoryAsync)
+            _fixture.ClientWrapper.Verify(
+                x => x.SetLabelAsync("HASH1", "unlinked"),
+                Times.Once);
+        }
+
+        [Fact]
+        public async Task HasHardlinks_SkipsTorrent()
+        {
+            // Arrange
+            var sut = _fixture.CreateSut();
+
+            var config = new DownloadCleanerConfig
+            {
+                Id = Guid.NewGuid(),
+                UnlinkedTargetCategory = "unlinked"
+            };
+            ContextProvider.Set(nameof(DownloadCleanerConfig), config);
+
+            var downloads = new List<ITorrentItemWrapper>
+            {
+                new RTorrentItemWrapper(new RTorrentTorrent { Hash = "HASH1", Name = "Test", Label = "movies", BasePath = "/downloads" })
+            };
+
+            _fixture.ClientWrapper
+                .Setup(x => x.GetTorrentFilesAsync("HASH1"))
+                .ReturnsAsync(new List<RTorrentFile>
+                {
+                    new RTorrentFile { Index = 0, Path = "file1.mkv", Priority = 1 }
+                });
+
+            _fixture.HardLinkFileService
+                .Setup(x => x.GetHardLinkCount(It.IsAny<string>(), It.IsAny<bool>()))
+                .Returns(2); // Has hardlinks
+
+            // Act
+            await sut.ChangeCategoryForNoHardLinksAsync(downloads);
+
+            // Assert
+            _fixture.ClientWrapper.Verify(
+                x => x.SetLabelAsync(It.IsAny<string>(), It.IsAny<string>()),
+                Times.Never);
+        }
+
+        [Fact]
+        public async Task FileNotFound_SkipsTorrent()
+        {
+            // Arrange
+            var sut = _fixture.CreateSut();
+
+            var config = new DownloadCleanerConfig
+            {
+                Id = Guid.NewGuid(),
+                UnlinkedTargetCategory = "unlinked"
+            };
+            ContextProvider.Set(nameof(DownloadCleanerConfig), config);
+
+            var downloads = new List<ITorrentItemWrapper>
+            {
+                new RTorrentItemWrapper(new RTorrentTorrent { Hash = "HASH1", Name = "Test", Label = "movies", BasePath = "/downloads" })
+            };
+
+            _fixture.ClientWrapper
+                .Setup(x => x.GetTorrentFilesAsync("HASH1"))
+                .ReturnsAsync(new List<RTorrentFile>
+                {
+                    new RTorrentFile { Index = 0, Path = "file1.mkv", Priority = 1 }
+                });
+
+            _fixture.HardLinkFileService
+                .Setup(x => x.GetHardLinkCount(It.IsAny<string>(), It.IsAny<bool>()))
+                .Returns(-1); // Error / file not found
+
+            // Act
+            await sut.ChangeCategoryForNoHardLinksAsync(downloads);
+
+            // Assert
+            _fixture.ClientWrapper.Verify(
+                x => x.SetLabelAsync(It.IsAny<string>(), It.IsAny<string>()),
+                Times.Never);
+        }
+
+        [Fact]
+        public async Task PublishesCategoryChangedEvent()
+        {
+            // Arrange
+            var sut = _fixture.CreateSut();
+
+            var config = new DownloadCleanerConfig
+            {
+                Id = Guid.NewGuid(),
+                UnlinkedTargetCategory = "unlinked"
+            };
+            ContextProvider.Set(nameof(DownloadCleanerConfig), config);
+
+            var downloads = new List<ITorrentItemWrapper>
+            {
+                new RTorrentItemWrapper(new RTorrentTorrent { Hash = "HASH1", Name = "Test", Label = "movies", BasePath = "/downloads" })
+            };
+
+            _fixture.ClientWrapper
+                .Setup(x => x.GetTorrentFilesAsync("HASH1"))
+                .ReturnsAsync(new List<RTorrentFile>
+                {
+                    new RTorrentFile { Index = 0, Path = "file1.mkv", Priority = 1 }
+                });
+
+            _fixture.HardLinkFileService
+                .Setup(x => x.GetHardLinkCount(It.IsAny<string>(), It.IsAny<bool>()))
+                .Returns(0);
+
+            // Act
+            await sut.ChangeCategoryForNoHardLinksAsync(downloads);
+
+            // Assert
+            _fixture.EventPublisher.Verify(
+                x => x.PublishCategoryChanged("movies", "unlinked", false),
+                Times.Once);
+        }
+
+        [Fact]
+        public async Task UpdatesCategoryOnWrapper()
+        {
+            // Arrange
+            var sut = _fixture.CreateSut();
+
+            var config = new DownloadCleanerConfig
+            {
+                Id = Guid.NewGuid(),
+                UnlinkedTargetCategory = "unlinked"
+            };
+            ContextProvider.Set(nameof(DownloadCleanerConfig), config);
+
+            var wrapper = new RTorrentItemWrapper(new RTorrentTorrent { Hash = "HASH1", Name = "Test", Label = "movies", BasePath = "/downloads" });
+            var downloads = new List<ITorrentItemWrapper> { wrapper };
+
+            _fixture.ClientWrapper
+                .Setup(x => x.GetTorrentFilesAsync("HASH1"))
+                .ReturnsAsync(new List<RTorrentFile>
+                {
+                    new RTorrentFile { Index = 0, Path = "file1.mkv", Priority = 1 }
+                });
+
+            _fixture.HardLinkFileService
+                .Setup(x => x.GetHardLinkCount(It.IsAny<string>(), It.IsAny<bool>()))
+                .Returns(0);
+
+            // Act
+            await sut.ChangeCategoryForNoHardLinksAsync(downloads);
+
+            // Assert
+            Assert.Equal("unlinked", wrapper.Category);
+        }
+    }
 }
