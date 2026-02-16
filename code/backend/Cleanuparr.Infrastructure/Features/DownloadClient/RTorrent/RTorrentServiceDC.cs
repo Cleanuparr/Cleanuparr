@@ -71,8 +71,11 @@ public partial class RTorrentService
                 continue;
             }
 
-            ContextProvider.Set("downloadName", torrent.Name);
-            ContextProvider.Set("hash", torrent.Hash);
+            ContextProvider.Set(ContextProvider.Keys.ItemName, torrent.Name);
+            ContextProvider.Set(ContextProvider.Keys.Hash, torrent.Hash);
+            ContextProvider.Set(ContextProvider.Keys.DownloadClientUrl, _downloadClientConfig.ExternalOrInternalUrl);
+            ContextProvider.Set(ContextProvider.Keys.DownloadClientType, _downloadClientConfig.TypeName);
+            ContextProvider.Set(ContextProvider.Keys.DownloadClientName, _downloadClientConfig.Name);
 
             List<RTorrentFile> files;
             try
