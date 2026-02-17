@@ -27,7 +27,7 @@ export interface DownloadCleanerConfig {
 export function createDefaultCategory(): CleanCategory {
   return {
     name: '',
-    privacyType: TorrentPrivacyType.Both,
+    privacyType: TorrentPrivacyType.Public,
     maxRatio: -1,
     minSeedTime: 0,
     maxSeedTime: -1,

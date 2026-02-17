@@ -1,3 +1,4 @@
+using Cleanuparr.Domain.Enums;
 using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
 using Shouldly;
 using Xunit;
@@ -7,6 +8,25 @@ namespace Cleanuparr.Persistence.Tests.Models.Configuration.DownloadCleaner;
 
 public sealed class SeedingRuleTests
 {
+    #region Default Values
+
+    [Fact]
+    public void PrivacyType_DefaultsToPublic()
+    {
+        var rule = new SeedingRule
+        {
+            Name = "test",
+            MaxRatio = -1,
+            MinSeedTime = 0,
+            MaxSeedTime = 24,
+            DeleteSourceFiles = false
+        };
+
+        rule.PrivacyType.ShouldBe(TorrentPrivacyType.Public);
+    }
+
+    #endregion
+
     #region Validate - Valid Configurations
 
     [Fact]

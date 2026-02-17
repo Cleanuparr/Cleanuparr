@@ -20,7 +20,7 @@ public sealed record SeedingRule : IConfig
     /// <summary>
     /// Which torrent privacy types this rule applies to.
     /// </summary>
-    public TorrentPrivacyType PrivacyType { get; init; } = TorrentPrivacyType.Both;
+    public TorrentPrivacyType PrivacyType { get; init; } = TorrentPrivacyType.Public;
 
     /// <summary>
     /// Max ratio before removing a download.

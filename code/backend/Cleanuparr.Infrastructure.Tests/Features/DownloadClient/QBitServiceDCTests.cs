@@ -302,6 +302,203 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
         }
     }
 
+    public class CleanDownloadsAsync_Tests : QBitServiceDCTests
+    {
+        public CleanDownloadsAsync_Tests(QBitServiceFixture fixture) : base(fixture)
+        {
+        }
+
+        private static QBitItemWrapper CreateTorrent(string hash, string category, bool isPrivate) =>
+            new(new TorrentInfo
+            {
+                Hash = hash,
+                Name = $"Test {hash}",
+                Category = category,
+                Ratio = 2.0,
+                SeedingTime = TimeSpan.FromHours(10)
+            }, Array.Empty<TorrentTracker>(), isPrivate);
+
+        private static SeedingRule CreateRule(string name, TorrentPrivacyType privacyType) =>
+            new()
+            {
+                Name = name,
+                PrivacyType = privacyType,
+                MaxRatio = 0,
+                MinSeedTime = 0,
+                MaxSeedTime = -1,
+                DeleteSourceFiles = false
+            };
+
+        private void SetupDeleteMock()
+        {
+            _fixture.ClientWrapper
+                .Setup(x => x.DeleteAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<bool>()))
+                .Returns(Task.CompletedTask);
+        }
+
+        [Fact]
+        public async Task SkipsPrivateTorrent_WhenRuleIsPublicOnly()
+        {
+            // Arrange
+            var sut = _fixture.CreateSut();
+            SetupDeleteMock();
+
+            var downloads = new List<Domain.Entities.ITorrentItemWrapper>
+            {
+                CreateTorrent("hash1", "movies", isPrivate: true)
+            };
+            var rules = new List<SeedingRule> { CreateRule("movies", TorrentPrivacyType.Public) };
+
+            // Act
+            await sut.CleanDownloadsAsync(downloads, rules);
+
+            // Assert
+            _fixture.ClientWrapper.Verify(
+                x => x.DeleteAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<bool>()),
+                Times.Never);
+        }
+
+        [Fact]
+        public async Task CleansPublicTorrent_WhenRuleIsPublicOnly()
+        {
+            // Arrange
+            var sut = _fixture.CreateSut();
+            SetupDeleteMock();
+
+            var downloads = new List<Domain.Entities.ITorrentItemWrapper>
+            {
+                CreateTorrent("hash1", "movies", isPrivate: false)
+            };
+            var rules = new List<SeedingRule> { CreateRule("movies", TorrentPrivacyType.Public) };
+
+            // Act
+            await sut.CleanDownloadsAsync(downloads, rules);
+
+            // Assert
+            _fixture.ClientWrapper.Verify(
+                x => x.DeleteAsync(It.Is<IEnumerable<string>>(h => h.Contains("hash1")), false),
+                Times.Once);
+        }
+
+        [Fact]
+        public async Task SkipsPublicTorrent_WhenRuleIsPrivateOnly()
+        {
+            // Arrange
+            var sut = _fixture.CreateSut();
+            SetupDeleteMock();
+
+            var downloads = new List<Domain.Entities.ITorrentItemWrapper>
+            {
+                CreateTorrent("hash1", "movies", isPrivate: false)
+            };
+            var rules = new List<SeedingRule> { CreateRule("movies", TorrentPrivacyType.Private) };
+
+            // Act
+            await sut.CleanDownloadsAsync(downloads, rules);
+
+            // Assert
+            _fixture.ClientWrapper.Verify(
+                x => x.DeleteAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<bool>()),
+                Times.Never);
+        }
+
+        [Fact]
+        public async Task CleansPrivateTorrent_WhenRuleIsPrivateOnly()
+        {
+            // Arrange
+            var sut = _fixture.CreateSut();
+            SetupDeleteMock();
+
+            var downloads = new List<Domain.Entities.ITorrentItemWrapper>
+            {
+                CreateTorrent("hash1", "movies", isPrivate: true)
+            };
+            var rules = new List<SeedingRule> { CreateRule("movies", TorrentPrivacyType.Private) };
+
+            // Act
+            await sut.CleanDownloadsAsync(downloads, rules);
+
+            // Assert
+            _fixture.ClientWrapper.Verify(
+                x => x.DeleteAsync(It.Is<IEnumerable<string>>(h => h.Contains("hash1")), false),
+                Times.Once);
+        }
+
+        [Fact]
+        public async Task CleansPublicTorrent_WhenRuleIsBoth()
+        {
+            // Arrange
+            var sut = _fixture.CreateSut();
+            SetupDeleteMock();
+
+            var downloads = new List<Domain.Entities.ITorrentItemWrapper>
+            {
+                CreateTorrent("hash1", "movies", isPrivate: false)
+            };
+            var rules = new List<SeedingRule> { CreateRule("movies", TorrentPrivacyType.Both) };
+
+            // Act
+            await sut.CleanDownloadsAsync(downloads, rules);
+
+            // Assert
+            _fixture.ClientWrapper.Verify(
+                x => x.DeleteAsync(It.Is<IEnumerable<string>>(h => h.Contains("hash1")), false),
+                Times.Once);
+        }
+
+        [Fact]
+        public async Task CleansPrivateTorrent_WhenRuleIsBoth()
+        {
+            // Arrange
+            var sut = _fixture.CreateSut();
+            SetupDeleteMock();
+
+            var downloads = new List<Domain.Entities.ITorrentItemWrapper>
+            {
+                CreateTorrent("hash1", "movies", isPrivate: true)
+            };
+            var rules = new List<SeedingRule> { CreateRule("movies", TorrentPrivacyType.Both) };
+
+            // Act
+            await sut.CleanDownloadsAsync(downloads, rules);
+
+            // Assert
+            _fixture.ClientWrapper.Verify(
+                x => x.DeleteAsync(It.Is<IEnumerable<string>>(h => h.Contains("hash1")), false),
+                Times.Once);
+        }
+
+        [Fact]
+        public async Task MatchesCorrectRule_WhenMultipleRulesForSameCategory()
+        {
+            // Arrange
+            var sut = _fixture.CreateSut();
+            SetupDeleteMock();
+
+            var downloads = new List<Domain.Entities.ITorrentItemWrapper>
+            {
+                CreateTorrent("public-hash", "movies", isPrivate: false),
+                CreateTorrent("private-hash", "movies", isPrivate: true)
+            };
+            var rules = new List<SeedingRule>
+            {
+                CreateRule("movies", TorrentPrivacyType.Public),
+                CreateRule("movies", TorrentPrivacyType.Private)
+            };
+
+            // Act
+            await sut.CleanDownloadsAsync(downloads, rules);
+
+            // Assert - both torrents should be cleaned, each matching their respective rule
+            _fixture.ClientWrapper.Verify(
+                x => x.DeleteAsync(It.Is<IEnumerable<string>>(h => h.Contains("public-hash")), false),
+                Times.Once);
+            _fixture.ClientWrapper.Verify(
+                x => x.DeleteAsync(It.Is<IEnumerable<string>>(h => h.Contains("private-hash")), false),
+                Times.Once);
+        }
+    }
+
     public class FilterDownloadsToChangeCategoryAsync_Tests : QBitServiceDCTests
     {
         public FilterDownloadsToChangeCategoryAsync_Tests(QBitServiceFixture fixture) : base(fixture)

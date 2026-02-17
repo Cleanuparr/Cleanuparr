@@ -314,7 +314,8 @@ public static class TestDataContextFactory
         string name = "completed",
         double maxRatio = 1.0,
         double minSeedTime = 1.0,
-        double maxSeedTime = -1)
+        double maxSeedTime = -1,
+        TorrentPrivacyType privacyType = TorrentPrivacyType.Both)
     {
         var config = context.DownloadCleanerConfigs.Include(x => x.Categories).First();
         var category = new SeedingRule
@@ -324,6 +325,7 @@ public static class TestDataContextFactory
             MaxRatio = maxRatio,
             MinSeedTime = minSeedTime,
             MaxSeedTime = maxSeedTime,
+            PrivacyType = privacyType,
             DeleteSourceFiles = true,
             DownloadCleanerConfigId = config.Id
         };

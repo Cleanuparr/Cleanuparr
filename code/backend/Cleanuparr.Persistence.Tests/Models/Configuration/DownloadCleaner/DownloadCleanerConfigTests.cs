@@ -126,6 +126,24 @@ public sealed class DownloadCleanerConfigTests
     }
 
     [Fact]
+    public void Validate_WhenSameCategoryWithBothAndPrivate_ThrowsValidationException()
+    {
+        var config = new DownloadCleanerConfig
+        {
+            Enabled = true,
+            Categories =
+            [
+                new SeedingRule { Name = "movies", PrivacyType = TorrentPrivacyType.Both, MaxRatio = 2.0, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true },
+                new SeedingRule { Name = "movies", PrivacyType = TorrentPrivacyType.Private, MaxRatio = 1.5, MinSeedTime = 24, MaxSeedTime = -1, DeleteSourceFiles = true }
+            ],
+            UnlinkedEnabled = false
+        };
+
+        var exception = Should.Throw<ValidationException>(() => config.Validate());
+        exception.Message.ShouldContain("already covers all torrent types");
+    }
+
+    [Fact]
     public void Validate_WhenSameCategoryWithPublicAndPrivate_DoesNotThrow()
     {
         var config = new DownloadCleanerConfig
