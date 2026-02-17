@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Cleanuparr.Domain.Enums;
 using ValidationException = Cleanuparr.Domain.Exceptions.ValidationException;
 
 namespace Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
@@ -15,7 +16,12 @@ public sealed record SeedingRule : IConfig
     public DownloadCleanerConfig DownloadCleanerConfig { get; set; }
     
     public required string Name { get; init; }
-    
+
+    /// <summary>
+    /// Which torrent privacy types this rule applies to.
+    /// </summary>
+    public TorrentPrivacyType PrivacyType { get; init; } = TorrentPrivacyType.Both;
+
     /// <summary>
     /// Max ratio before removing a download.
     /// </summary>

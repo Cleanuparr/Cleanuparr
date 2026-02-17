@@ -23,12 +23,6 @@
         hint="When enabled, the download cleaner will run according to the schedule"
         helpKey="download-cleaner:enabled" />
       @if (enabled()) {
-        <app-toggle label="Delete Private Torrents" [(checked)]="deletePrivate"
-          hint="When enabled, private torrents will be deleted"
-          helpKey="download-cleaner:deletePrivate" />
-
-        <div class="form-divider"></div>
-
         <app-toggle label="Advanced Scheduling" [(checked)]="useAdvancedScheduling"
           hint="Choose between basic scheduling or advanced cron expression"
           helpKey="download-cleaner:useAdvancedScheduling" />
@@ -70,6 +64,7 @@
             <app-input label="Category Name" placeholder="tv-sonarr" [value]="cat.name"
               (valueChange)="updateCategory(i, 'name', $event)"
               [error]="categoryNameError(cat)"
+              hint="The category name from your download client (e.g. tv-sonarr, radarr)"
               helpKey="download-cleaner:name" />
             <app-button variant="destructive" size="sm" (clicked)="removeCategory(i)">Remove</app-button>
           </div>
@@ -89,6 +84,13 @@
               (valueChange)="updateCategory(i, 'maxSeedTime', $event)" suffix="hours" [min]="-1"
               hint="Maximum time to seed before removing (-1 means disabled)"
               helpKey="download-cleaner:maxSeedTime" />
+          </div>
+          <div class="form-row">
+            <app-select label="Privacy Type" [options]="privacyTypeOptions" [value]="cat.privacyType"
+              (valueChange)="updateCategory(i, 'privacyType', $event)"
+              hint="Which torrent types this rule applies to"
+              helpKey="download-cleaner:privacyType"
+            />
           </div>
           <app-toggle label="Delete Source Files" [checked]="cat.deleteSourceFiles"
             (checkedChange)="updateCategory(i, 'deleteSourceFiles', $event)"

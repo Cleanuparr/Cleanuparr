@@ -1,3 +1,4 @@
+using Cleanuparr.Domain.Enums;
 using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
 using Shouldly;
 using Xunit;
@@ -103,7 +104,42 @@ public sealed class DownloadCleanerConfigTests
         };
 
         var exception = Should.Throw<ValidationException>(() => config.Validate());
-        exception.Message.ShouldBe("Duplicated clean categories found");
+        exception.Message.ShouldBe("Duplicated clean category and privacy type combination found");
+    }
+
+    [Fact]
+    public void Validate_WhenSameCategoryWithBothAndPublic_ThrowsValidationException()
+    {
+        var config = new DownloadCleanerConfig
+        {
+            Enabled = true,
+            Categories =
+            [
+                new SeedingRule { Name = "movies", PrivacyType = TorrentPrivacyType.Both, MaxRatio = 2.0, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true },
+                new SeedingRule { Name = "movies", PrivacyType = TorrentPrivacyType.Public, MaxRatio = 1.5, MinSeedTime = 24, MaxSeedTime = -1, DeleteSourceFiles = true }
+            ],
+            UnlinkedEnabled = false
+        };
+
+        var exception = Should.Throw<ValidationException>(() => config.Validate());
+        exception.Message.ShouldContain("already covers all torrent types");
+    }
+
+    [Fact]
+    public void Validate_WhenSameCategoryWithPublicAndPrivate_DoesNotThrow()
+    {
+        var config = new DownloadCleanerConfig
+        {
+            Enabled = true,
+            Categories =
+            [
+                new SeedingRule { Name = "movies", PrivacyType = TorrentPrivacyType.Public, MaxRatio = 2.0, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true },
+                new SeedingRule { Name = "movies", PrivacyType = TorrentPrivacyType.Private, MaxRatio = 1.5, MinSeedTime = 24, MaxSeedTime = -1, DeleteSourceFiles = true }
+            ],
+            UnlinkedEnabled = false
+        };
+
+        Should.NotThrow(() => config.Validate());
     }
 
     [Fact]

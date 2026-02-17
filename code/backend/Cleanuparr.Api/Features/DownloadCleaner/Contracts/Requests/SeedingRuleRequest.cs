@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Cleanuparr.Domain.Enums;
 
 namespace Cleanuparr.Api.Features.DownloadCleaner.Contracts.Requests;
 
@@ -6,7 +7,12 @@ public record SeedingRuleRequest
 {
     [Required]
     public string Name { get; init; } = string.Empty;
-    
+
+    /// <summary>
+    /// Which torrent privacy types this rule applies to.
+    /// </summary>
+    public TorrentPrivacyType PrivacyType { get; init; } = TorrentPrivacyType.Public;
+
     /// <summary>
     /// Max ratio before removing a download.
     /// </summary>
