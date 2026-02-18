@@ -108,6 +108,24 @@ public sealed class DownloadCleanerConfigTests
     }
 
     [Fact]
+    public void Validate_WhenDuplicateCategoryNamesDifferentCase_ThrowsValidationException()
+    {
+        var config = new DownloadCleanerConfig
+        {
+            Enabled = true,
+            Categories =
+            [
+                new SeedingRule { Name = "Movies", MaxRatio = 2.0, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true },
+                new SeedingRule { Name = "movies", MaxRatio = 1.5, MinSeedTime = 24, MaxSeedTime = -1, DeleteSourceFiles = true }
+            ],
+            UnlinkedEnabled = false
+        };
+
+        var exception = Should.Throw<ValidationException>(() => config.Validate());
+        exception.Message.ShouldBe("Duplicated clean category and privacy type combination found");
+    }
+
+    [Fact]
     public void Validate_WhenSameCategoryWithBothAndPublic_ThrowsValidationException()
     {
         var config = new DownloadCleanerConfig

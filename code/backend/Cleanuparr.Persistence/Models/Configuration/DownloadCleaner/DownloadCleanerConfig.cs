@@ -53,7 +53,7 @@ public sealed record DownloadCleanerConfig : IJobConfig
             throw new ValidationException("No features are enabled");
         }
 
-        if (Categories.GroupBy(x => new { x.Name, x.PrivacyType }).Any(x => x.Count() > 1))
+        if (Categories.GroupBy(x => new { Name = x.Name.ToUpperInvariant(), x.PrivacyType }).Any(x => x.Count() > 1))
         {
             throw new ValidationException("Duplicated clean category and privacy type combination found");
         }
