@@ -59,12 +59,11 @@ public partial class RTorrentService : DownloadService, IRTorrentService
     }
 
     /// <summary>
-    /// rTorrent doesn't have its own authentication - it relies on HTTP Basic Auth
-    /// handled by the reverse proxy (nginx/apache). No action needed here.
+    /// rTorrent uses HTTP Basic Auth (typically via reverse proxy).
+    /// Credentials are sent automatically with each request when configured.
     /// </summary>
     public override Task LoginAsync()
     {
-        _logger.LogDebug("rTorrent authentication is handled by HTTP Basic Auth via reverse proxy for client {clientId}", _downloadClientConfig.Id);
         return Task.CompletedTask;
     }
 

@@ -206,7 +206,16 @@ public sealed class RTorrentClient
         var content = new StringContent(requestXml, Encoding.UTF8, "text/xml");
         content.Headers.ContentType = new MediaTypeHeaderValue("text/xml");
 
-        var response = await _httpClient.PostAsync(_config.Url, content);
+        var request = new HttpRequestMessage(HttpMethod.Post, _config.Url) { Content = content };
+
+        if (!string.IsNullOrEmpty(_config.Username))
+        {
+            var credentials = Convert.ToBase64String(
+                Encoding.UTF8.GetBytes($"{_config.Username}:{_config.Password ?? ""}"));
+            request.Headers.Authorization = new AuthenticationHeaderValue("Basic", credentials);
+        }
+
+        var response = await _httpClient.SendAsync(request);
         response.EnsureSuccessStatusCode();
 
         return await response.Content.ReadAsStringAsync();

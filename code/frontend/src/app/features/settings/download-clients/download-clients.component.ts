@@ -73,12 +73,23 @@ export class DownloadClientsComponent implements OnInit, HasPendingChanges {
   ));
 
   readonly showUsernameField = computed(() => {
-    const type = this.modalTypeName();
-    return type !== DownloadClientTypeName.Deluge && type !== DownloadClientTypeName.rTorrent;
+    return this.modalTypeName() !== DownloadClientTypeName.Deluge;
   });
 
-  readonly showPasswordField = computed(() => {
-    return this.modalTypeName() !== DownloadClientTypeName.rTorrent;
+  readonly showPasswordField = computed(() => true);
+
+  readonly usernameHint = computed(() => {
+    if (this.modalTypeName() === DownloadClientTypeName.rTorrent) {
+      return 'Username for HTTP Basic Auth';
+    }
+    return 'Username for authentication';
+  });
+
+  readonly passwordHint = computed(() => {
+    if (this.modalTypeName() === DownloadClientTypeName.rTorrent) {
+      return 'Password for HTTP Basic Auth';
+    }
+    return 'Password for authentication';
   });
 
   readonly urlBaseHint = computed(() => {
@@ -98,8 +109,6 @@ export class DownloadClientsComponent implements OnInit, HasPendingChanges {
     }
     if (value === DownloadClientTypeName.rTorrent) {
       this.modalUrlBase.set('plugins/httprpc/action.php');
-      this.modalUsername.set('');
-      this.modalPassword.set('');
     }
   }
 

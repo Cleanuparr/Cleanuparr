@@ -73,12 +73,12 @@
       helpKey="download-client:host" />
     @if (showUsernameField()) {
       <app-input label="Username" placeholder="admin" [(value)]="modalUsername"
-        hint="Username for authentication"
+        [hint]="usernameHint()"
         helpKey="download-client:username" />
     }
     @if (showPasswordField()) {
       <app-input label="Password" placeholder="Enter password" type="password" [(value)]="modalPassword"
-        hint="Password for authentication"
+        [hint]="passwordHint()"
         helpKey="download-client:password" />
     }
     <app-input label="URL Base" placeholder="/api/v2" [(value)]="modalUrlBase"
