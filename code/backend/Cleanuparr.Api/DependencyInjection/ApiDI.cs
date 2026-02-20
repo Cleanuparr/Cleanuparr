@@ -65,9 +65,13 @@ public static class ApiDI
         // Add the global exception handling middleware first
         app.UseMiddleware<ExceptionMiddleware>();
 
+        // Block non-auth requests until setup is complete
+        app.UseMiddleware<SetupGuardMiddleware>();
+
         app.UseCors("Any");
         app.UseRouting();
 
+        app.UseAuthentication();
         app.UseAuthorization();
         app.MapControllers();
         
@@ -108,11 +112,11 @@ public static class ApiDI
             
             context.Response.ContentType = "text/html";
             await context.Response.WriteAsync(indexContent, Encoding.UTF8);
-        });
+        }).AllowAnonymous();
         
         // Map SignalR hubs
-        app.MapHub<HealthStatusHub>("/api/hubs/health");
-        app.MapHub<AppHub>("/api/hubs/app");
+        app.MapHub<HealthStatusHub>("/api/hubs/health").RequireAuthorization();
+        app.MapHub<AppHub>("/api/hubs/app").RequireAuthorization();
         
         app.MapGet("/manifest.webmanifest", (HttpContext context) =>
         {
@@ -150,7 +154,7 @@ public static class ApiDI
             };
 
             return Results.Json(manifest, contentType: "application/manifest+json");
-        });
+        }).AllowAnonymous();
 
         return app;
     }

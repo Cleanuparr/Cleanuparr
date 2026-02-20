@@ -110,6 +110,12 @@
   </div>
 
   <div class="sidebar__footer">
+    <button class="sidebar__logout" (click)="logout()">
+      <ng-icon name="tablerLogout" class="sidebar__logout-icon" />
+      @if (!collapsed()) {
+        <span>Logout</span>
+      }
+    </button>
     <a
       class="sidebar__sponsor"
       href="https://cleanuparr.github.io/Cleanuparr/support"

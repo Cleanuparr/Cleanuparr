@@ -189,6 +189,32 @@
     letter-spacing: 0.05em;
   }
 
+  &__logout {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-lg);
+    color: var(--sidebar-item-text);
+    font-size: var(--font-size-xs);
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: all var(--duration-fast) var(--ease-default);
+    white-space: nowrap;
+    width: 100%;
+
+    &:hover {
+      background: var(--sidebar-item-hover);
+      color: #ffffff;
+    }
+  }
+
+  &__logout-icon {
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+
   &__sponsor {
     display: flex;
     align-items: center;
@@ -286,7 +312,8 @@
     padding: var(--space-3) var(--space-2);
   }
 
-  .sidebar__sponsor {
+  .sidebar__sponsor,
+  .sidebar__logout {
     justify-content: center;
     padding: var(--space-2);
   }

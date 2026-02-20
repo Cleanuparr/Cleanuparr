@@ -15,6 +15,12 @@ ifndef name
 endif
 	dotnet ef migrations add $(name) --context EventsContext --project backend/Cleanuparr.Persistence/Cleanuparr.Persistence.csproj --startup-project backend/Cleanuparr.Api/Cleanuparr.Api.csproj --output-dir Migrations/Events
 
+migrate-users:
+ifndef name
+	$(error name is required. Usage: make migrate-users name=YourMigrationName)
+endif
+	dotnet ef migrations add $(name) --context UsersContext --project backend/Cleanuparr.Persistence/Cleanuparr.Persistence.csproj --startup-project backend/Cleanuparr.Api/Cleanuparr.Api.csproj --output-dir Migrations/Users
+
 docker-build:
 ifndef tag
 	$(error tag is required. Usage: make docker-build tag=latest version=1.0.0 user=... pat=...)

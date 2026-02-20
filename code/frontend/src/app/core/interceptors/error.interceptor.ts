@@ -1,6 +1,11 @@
 import { HttpInterceptorFn, HttpErrorResponse } from '@angular/common/http';
 import { catchError, throwError } from 'rxjs';
 
+export class ApiError extends Error {
+  retryAfterSeconds?: number;
+  statusCode?: number;
+}
+
 export const errorInterceptor: HttpInterceptorFn = (req, next) => {
   return next(req).pipe(
     catchError((error: HttpErrorResponse) => {
@@ -17,7 +22,10 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
           ?? `Error ${error.status}`;
       }
 
-      return throwError(() => new Error(message));
+      const apiError = new ApiError(message);
+      apiError.retryAfterSeconds = error.error?.retryAfterSeconds;
+      apiError.statusCode = error.status;
+      return throwError(() => apiError);
     }),
   );
 };

@@ -14,6 +14,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cleanuparr.Infrastructure.T
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cleanuparr.Persistence.Tests", "Cleanuparr.Persistence.Tests\Cleanuparr.Persistence.Tests.csproj", "{7037FF30-4890-4435-B4A9-04A7A48188CE}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cleanuparr.Api.Tests", "Cleanuparr.Api.Tests\Cleanuparr.Api.Tests.csproj", "{8D4A0C27-5D8F-44B6-967C-85E6CEE6BE7F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -48,5 +50,9 @@ Global
 		{7037FF30-4890-4435-B4A9-04A7A48188CE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7037FF30-4890-4435-B4A9-04A7A48188CE}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7037FF30-4890-4435-B4A9-04A7A48188CE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8D4A0C27-5D8F-44B6-967C-85E6CEE6BE7F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8D4A0C27-5D8F-44B6-967C-85E6CEE6BE7F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8D4A0C27-5D8F-44B6-967C-85E6CEE6BE7F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8D4A0C27-5D8F-44B6-967C-85E6CEE6BE7F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 using System.Text.Json.Serialization;
 using Cleanuparr.Api;
 using Cleanuparr.Api.DependencyInjection;
+using Microsoft.AspNetCore.DataProtection;
 using Cleanuparr.Infrastructure.Hubs;
 using Cleanuparr.Infrastructure.Logging;
 using Cleanuparr.Shared.Helpers;
@@ -70,12 +71,19 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 // Add services to the container
 builder.Services
     .AddInfrastructure(builder.Configuration)
-    .AddApiServices();
+    .AddApiServices()
+    .AddAuthServices();
+
+// Persist Data Protection keys to the config directory
+builder.Services
+    .AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(ConfigurationPathProvider.GetConfigPath(), "DataProtection-Keys")))
+    .SetApplicationName("Cleanuparr");
 
 // Add CORS before SignalR
-builder.Services.AddCors(options => 
+builder.Services.AddCors(options =>
 {
-    options.AddPolicy("Any", policy => 
+    options.AddPolicy("Any", policy =>
     {
         policy
             // https://github.com/dotnet/aspnetcore/issues/4457#issuecomment-465669576
@@ -146,14 +154,14 @@ app.Init();
 var appHub = app.Services.GetRequiredService<IHubContext<AppHub>>();
 SignalRLogSink.Instance.SetAppHubContext(appHub);
 
-// Configure health check endpoints before the API configuration
-app.MapHealthChecks("/health", new HealthCheckOptions
+// Configure health check endpoints as middleware (before auth pipeline) so they don't require authentication
+app.UseHealthChecks("/health", new HealthCheckOptions
 {
     Predicate = registration => registration.Tags.Contains("liveness"),
     ResponseWriter = HealthCheckResponseWriter.WriteMinimalPlaintext
 });
 
-app.MapHealthChecks("/health/ready", new HealthCheckOptions
+app.UseHealthChecks("/health/ready", new HealthCheckOptions
 {
     Predicate = registration => registration.Tags.Contains("readiness"),
     ResponseWriter = HealthCheckResponseWriter.WriteMinimalPlaintext

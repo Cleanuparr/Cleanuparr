@@ -1,0 +1,226 @@
+<app-page-header
+  title="Account Settings"
+  subtitle="Manage your account, security, and integrations"
+/>
+
+@if (loadError()) {
+  <app-empty-state
+    icon="tablerPlugConnectedX"
+    heading="Could not connect to server"
+    description="Failed to load account settings. Please check that the server is running and try again."
+  >
+    <app-button variant="primary" size="sm" (clicked)="retry()">
+      Retry
+    </app-button>
+  </app-empty-state>
+} @else if (loader.showSpinner()) {
+  <app-loading-state message="Loading account settings..." />
+} @else if (!loader.loading() && account()) {
+<div class="settings-form">
+  <!-- Change Password -->
+  <app-card header="Change Password">
+    <div class="form-stack">
+      <app-input
+        label="Current Password"
+        type="password"
+        placeholder="Enter current password"
+        [value]="currentPassword()"
+        (valueChange)="currentPassword.set($event)"
+      />
+      <app-input
+        label="New Password"
+        type="password"
+        placeholder="Enter new password (min 8 characters)"
+        [value]="newPassword()"
+        (valueChange)="newPassword.set($event)"
+      />
+
+      @if (newPassword()) {
+        <div class="password-strength">
+          <div class="password-strength__bar">
+            <div class="password-strength__fill password-strength__fill--{{ newPasswordStrength() }}"></div>
+          </div>
+          <span class="password-strength__label password-strength__label--{{ newPasswordStrength() }}">{{ newPasswordStrength() }}</span>
+        </div>
+      }
+
+      <app-input
+        label="Confirm New Password"
+        type="password"
+        placeholder="Confirm new password"
+        [value]="confirmPassword()"
+        (valueChange)="confirmPassword.set($event)"
+      />
+      <div class="form-actions">
+        <app-button
+          variant="primary"
+          [glowing]="!!currentPassword() && !!newPassword() && !!confirmPassword()"
+          [disabled]="!currentPassword() || !newPassword() || !confirmPassword() || changingPassword()"
+          (clicked)="changePassword()"
+        >
+          @if (changingPassword()) {
+            <app-spinner size="sm" /> Changing...
+          } @else {
+            Change Password
+          }
+        </app-button>
+      </div>
+    </div>
+  </app-card>
+
+  <!-- Two-Factor Authentication -->
+  <app-card header="Two-Factor Authentication">
+    <div class="form-stack">
+      <div class="status-row">
+        <span class="status-label">Status</span>
+        <span class="status-value status-value--active">Active</span>
+      </div>
+
+      @if (newRecoveryCodes().length > 0) {
+        <div class="recovery-section">
+          <p class="recovery-title">New Authenticator Setup</p>
+          <p class="recovery-desc">Scan this QR code with your authenticator app to complete the setup.</p>
+          <div class="qr-section">
+            <div class="qr-code-wrapper">
+              <qrcode [qrdata]="newQrCodeUri()" [width]="200" errorCorrectionLevel="M" [margin]="2" />
+            </div>
+            <details class="qr-manual-entry">
+              <summary>Can't scan? Enter manually</summary>
+              <div class="qr-manual-content">
+                <p class="qr-manual-label">Secret key:</p>
+                <code class="qr-secret">{{ newTotpSecret() }}</code>
+              </div>
+            </details>
+          </div>
+          <div class="form-divider"></div>
+          <p class="recovery-title">New Recovery Codes</p>
+          <p class="recovery-desc">Save these codes in a secure location. Each code can only be used once.</p>
+          <div class="recovery-codes">
+            @for (code of newRecoveryCodes(); track code) {
+              <div class="recovery-code">{{ code }}</div>
+            }
+          </div>
+          <div class="recovery-actions">
+            <app-button variant="secondary" size="sm" (clicked)="copyRecoveryCodes()">Copy Codes</app-button>
+            <app-button variant="ghost" size="sm" (clicked)="dismissRecoveryCodes()">Dismiss</app-button>
+          </div>
+        </div>
+      } @else {
+        <div class="form-divider"></div>
+        <p class="section-hint">To regenerate your 2FA, enter your current password and a valid authenticator code.</p>
+        <app-input
+          label="Current Password"
+          type="password"
+          placeholder="Enter your password"
+          [value]="twoFaPassword()"
+          (valueChange)="twoFaPassword.set($event)"
+        />
+        <app-input
+          label="Authenticator Code"
+          type="text"
+          placeholder="Enter 6-digit code"
+          [value]="twoFaCode()"
+          (valueChange)="twoFaCode.set($event)"
+        />
+        <div class="form-actions">
+          <app-button
+            variant="destructive"
+            [disabled]="!twoFaPassword() || twoFaCode().length !== 6 || regenerating2fa()"
+            (clicked)="confirmRegenerate2fa()"
+          >
+            @if (regenerating2fa()) {
+              <app-spinner size="sm" /> Regenerating...
+            } @else {
+              Regenerate 2FA
+            }
+          </app-button>
+        </div>
+      }
+    </div>
+  </app-card>
+
+  <!-- API Key -->
+  <app-card header="API Key">
+    <div class="form-stack">
+      <p class="section-hint">
+        Use this API key to access the Cleanuparr API without authentication.
+        Include it as the <code>X-Api-Key</code> header or <code>?apikey=</code> query parameter.
+      </p>
+
+      <div class="api-key-row">
+        <div class="api-key-display">
+          @if (apiKeyRevealed()) {
+            <code class="api-key-value">{{ apiKey() }}</code>
+          } @else {
+            <code class="api-key-value api-key-value--masked">{{ account()!.apiKeyPreview }}</code>
+          }
+        </div>
+        <div class="api-key-actions">
+          <app-button variant="ghost" size="sm" (clicked)="revealApiKey()">
+            {{ apiKeyRevealed() ? 'Hide' : 'Reveal' }}
+          </app-button>
+          @if (apiKeyRevealed()) {
+            <app-button variant="ghost" size="sm" (clicked)="copyApiKey()">Copy</app-button>
+          }
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <app-button
+          variant="destructive"
+          [disabled]="regeneratingApiKey()"
+          (clicked)="confirmRegenerateApiKey()"
+        >
+          @if (regeneratingApiKey()) {
+            <app-spinner size="sm" /> Regenerating...
+          } @else {
+            Regenerate API Key
+          }
+        </app-button>
+      </div>
+    </div>
+  </app-card>
+
+  <!-- Plex Integration -->
+  <app-card header="Plex Integration">
+    <div class="form-stack">
+      @if (account()!.plexLinked) {
+        <div class="status-row">
+          <span class="status-label">Linked Account</span>
+          <span class="status-value">{{ account()!.plexUsername }}</span>
+        </div>
+        <div class="form-actions">
+          <app-button
+            variant="destructive"
+            [disabled]="plexUnlinking()"
+            (clicked)="confirmUnlinkPlex()"
+          >
+            @if (plexUnlinking()) {
+              <app-spinner size="sm" /> Unlinking...
+            } @else {
+              Unlink Plex Account
+            }
+          </app-button>
+        </div>
+      } @else {
+        <p class="section-hint">
+          Link your Plex account to enable signing in with Plex as an alternative to username and password.
+        </p>
+        <div class="form-actions">
+          <app-button
+            variant="primary"
+            [disabled]="plexLinking()"
+            (clicked)="startPlexLink()"
+          >
+            @if (plexLinking()) {
+              <app-spinner size="sm" /> Waiting for Plex...
+            } @else {
+              Link Plex Account
+            }
+          </app-button>
+        </div>
+      }
+    </div>
+  </app-card>
+</div>
+}

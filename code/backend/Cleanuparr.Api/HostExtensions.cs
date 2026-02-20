@@ -63,7 +63,14 @@ public static class HostExtensions
         {
             await configContext.Database.MigrateAsync();
         }
-        
+
+        // Apply users db migrations
+        await using var usersContext = UsersContext.CreateStaticInstance();
+        if ((await usersContext.Database.GetPendingMigrationsAsync()).Any())
+        {
+            await usersContext.Database.MigrateAsync();
+        }
+
         return builder;
     }
 }

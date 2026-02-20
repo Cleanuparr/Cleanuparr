@@ -1,0 +1,225 @@
+@use 'settings-layout' as *;
+
+:host { @include settings-page; }
+
+.settings-form { @include settings-form; }
+.form-stack { @include form-stack; }
+.form-row { @include form-row; }
+.form-divider { @include form-divider; }
+.form-actions { @include form-actions; }
+
+.section-hint {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  line-height: 1.5;
+
+  code {
+    background: var(--surface-secondary);
+    padding: 0.125rem 0.375rem;
+    border-radius: var(--radius-sm);
+    font-size: var(--font-size-xs);
+  }
+}
+
+.status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.status-label {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+.status-value {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+
+  &--active {
+    color: var(--color-success);
+  }
+}
+
+// QR code (2FA regeneration)
+.qr-section {
+  margin-bottom: var(--space-4);
+}
+
+.qr-code-wrapper {
+  display: flex;
+  justify-content: center;
+  margin-bottom: var(--space-4);
+
+  qrcode {
+    background: #ffffff;
+    padding: var(--space-3);
+    border-radius: var(--radius-lg);
+  }
+}
+
+.qr-manual-entry {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+
+  summary {
+    cursor: pointer;
+    text-align: center;
+    margin-bottom: var(--space-2);
+
+    &:hover {
+      color: var(--text-primary);
+    }
+  }
+}
+
+.qr-manual-content {
+  background: var(--surface-secondary);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  text-align: center;
+}
+
+.qr-manual-label {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  margin-bottom: var(--space-1);
+}
+
+.qr-secret {
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  font-family: monospace;
+  word-break: break-all;
+}
+
+// Recovery codes
+.recovery-section {
+  margin-top: var(--space-2);
+}
+
+.recovery-title {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+  margin-bottom: var(--space-1);
+}
+
+.recovery-desc {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  margin-bottom: var(--space-4);
+}
+
+.recovery-codes {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.recovery-code {
+  font-family: monospace;
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  background: var(--surface-secondary);
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  text-align: center;
+}
+
+.recovery-actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+// API key
+.api-key-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  background: var(--surface-secondary);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+}
+
+.api-key-display {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.api-key-value {
+  font-family: monospace;
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  word-break: break-all;
+
+  &--masked {
+    color: var(--text-secondary);
+  }
+}
+
+.api-key-actions {
+  display: flex;
+  gap: var(--space-1);
+  flex-shrink: 0;
+}
+
+// Password strength indicator
+.password-strength {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+
+  &__bar {
+    flex: 1;
+    height: 4px;
+    background: rgba(148, 163, 184, 0.15);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+  }
+
+  &__fill {
+    height: 100%;
+    border-radius: var(--radius-full);
+    transition: width var(--duration-normal) var(--ease-default),
+                background-color var(--duration-normal) var(--ease-default);
+
+    &--weak {
+      width: 33%;
+      background-color: var(--color-error);
+    }
+
+    &--medium {
+      width: 66%;
+      background-color: var(--color-warning);
+    }
+
+    &--strong {
+      width: 100%;
+      background-color: var(--color-success);
+    }
+  }
+
+  &__label {
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-medium);
+    text-transform: capitalize;
+    min-width: 52px;
+
+    &--weak {
+      color: var(--color-error);
+    }
+
+    &--medium {
+      color: var(--color-warning);
+    }
+
+    &--strong {
+      color: var(--color-success);
+    }
+  }
+}
