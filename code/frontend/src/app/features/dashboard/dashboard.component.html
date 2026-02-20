@@ -254,7 +254,7 @@
             </div>
             <div class="jobs-table__details">
               @if (job.nextRunTime) {
-                <span class="jobs-table__next">Next: {{ job.nextRunTime | date:'shortTime' }}</span>
+                <span class="jobs-table__next">Next: {{ job.nextRunTime | date:'HH:mm:ss' }}</span>
               }
               <span class="jobs-table__schedule">{{ job.schedule }}</span>
             </div>
