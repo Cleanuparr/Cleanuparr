@@ -150,33 +150,6 @@ public class EventsController : ControllerBase
     }
 
     /// <summary>
-    /// Gets event statistics
-    /// </summary>
-    [HttpGet("stats")]
-    public async Task<ActionResult<object>> GetEventStats()
-    {
-        var stats = new
-        {
-            TotalEvents = await _context.Events.CountAsync(),
-            EventsBySeverity = await _context.Events
-                .GroupBy(e => e.Severity)
-                .Select(g => new { Severity = g.Key.ToString(), Count = g.Count() })
-                .ToListAsync(),
-            EventsByType = await _context.Events
-                .GroupBy(e => e.EventType)
-                .Select(g => new { EventType = g.Key.ToString(), Count = g.Count() })
-                .OrderByDescending(x => x.Count)
-                .Take(10)
-                .ToListAsync(),
-            RecentEventsCount = await _context.Events
-                .Where(e => e.Timestamp > DateTime.UtcNow.AddHours(-24))
-                .CountAsync()
-        };
-
-        return Ok(stats);
-    }
-
-    /// <summary>
     /// Manually triggers cleanup of old events
     /// </summary>
     [HttpPost("cleanup")]

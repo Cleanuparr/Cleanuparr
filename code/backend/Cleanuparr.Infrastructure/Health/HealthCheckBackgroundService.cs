@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 namespace Cleanuparr.Infrastructure.Health;
 
 /// <summary>
-/// Background service that periodically checks the health of all download clients
+/// Background service that periodically checks the health of all download clients and arr instances
 /// </summary>
 public class HealthCheckBackgroundService : BackgroundService
 {
@@ -34,39 +34,67 @@ public class HealthCheckBackgroundService : BackgroundService
         {
             while (!stoppingToken.IsCancellationRequested)
             {
-                _logger.LogDebug("Performing periodic health check for all download clients");
-                
+                _logger.LogDebug("Performing periodic health check for all download clients and arr instances");
+
                 try
                 {
-                    // Check health of all clients
-                    var results = await _healthCheckService.CheckAllClientsHealthAsync();
-                    
-                    // Log summary
-                    var healthyCount = results.Count(r => r.Value.IsHealthy);
-                    var unhealthyCount = results.Count - healthyCount;
+                    // Check health of all download clients
+                    var clientResults = await _healthCheckService.CheckAllClientsHealthAsync();
 
-                    if (unhealthyCount is 0)
+                    var clientHealthy = clientResults.Count(r => r.Value.IsHealthy);
+                    var clientUnhealthy = clientResults.Count - clientHealthy;
+
+                    if (clientUnhealthy is 0)
                     {
                         _logger.LogDebug(
-                            "Health check completed. {healthyCount} healthy, {unhealthyCount} unhealthy download clients",
-                            healthyCount,
-                            unhealthyCount);
+                            "Download client health check completed. {healthyCount} healthy, {unhealthyCount} unhealthy",
+                            clientHealthy,
+                            clientUnhealthy);
                     }
                     else
                     {
                         _logger.LogWarning(
-                            "Health check completed. {healthyCount} healthy, {unhealthyCount} unhealthy download clients",
-                            healthyCount,
-                            unhealthyCount);
+                            "Download client health check completed. {healthyCount} healthy, {unhealthyCount} unhealthy",
+                            clientHealthy,
+                            clientUnhealthy);
                     }
-                    
-                    // Log detailed information for unhealthy clients
-                    foreach (var result in results.Where(r => !r.Value.IsHealthy))
+
+                    foreach (var result in clientResults.Where(r => !r.Value.IsHealthy))
                     {
                         _logger.LogWarning(
                             "Download client {clientId} ({clientName}) is unhealthy: {errorMessage}",
                             result.Key,
                             result.Value.ClientName,
+                            result.Value.ErrorMessage);
+                    }
+
+                    // Check health of all arr instances
+                    var arrResults = await _healthCheckService.CheckAllArrInstancesHealthAsync();
+
+                    var arrHealthy = arrResults.Count(r => r.Value.IsHealthy);
+                    var arrUnhealthy = arrResults.Count - arrHealthy;
+
+                    if (arrUnhealthy is 0)
+                    {
+                        _logger.LogDebug(
+                            "Arr instance health check completed. {healthyCount} healthy, {unhealthyCount} unhealthy",
+                            arrHealthy,
+                            arrUnhealthy);
+                    }
+                    else
+                    {
+                        _logger.LogWarning(
+                            "Arr instance health check completed. {healthyCount} healthy, {unhealthyCount} unhealthy",
+                            arrHealthy,
+                            arrUnhealthy);
+                    }
+
+                    foreach (var result in arrResults.Where(r => !r.Value.IsHealthy))
+                    {
+                        _logger.LogWarning(
+                            "Arr instance {instanceId} ({instanceName}) is unhealthy: {errorMessage}",
+                            result.Key,
+                            result.Value.InstanceName,
                             result.Value.ErrorMessage);
                     }
                 }
