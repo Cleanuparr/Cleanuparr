@@ -1,8 +1,9 @@
-import { ScheduleUnit } from './enums';
+import { ScheduleUnit, TorrentPrivacyType } from './enums';
 import { JobSchedule } from './queue-cleaner-config.model';
 
 export interface CleanCategory {
   name: string;
+  privacyType: TorrentPrivacyType;
   maxRatio: number;
   minSeedTime: number;
   maxSeedTime: number;
@@ -15,7 +16,6 @@ export interface DownloadCleanerConfig {
   useAdvancedScheduling: boolean;
   jobSchedule?: JobSchedule;
   categories: CleanCategory[];
-  deletePrivate: boolean;
   ignoredDownloads: string[];
   unlinkedEnabled: boolean;
   unlinkedTargetCategory: string;
@@ -27,6 +27,7 @@ export interface DownloadCleanerConfig {
 export function createDefaultCategory(): CleanCategory {
   return {
     name: '',
+    privacyType: TorrentPrivacyType.Public,
     maxRatio: -1,
     minSeedTime: 0,
     maxSeedTime: -1,

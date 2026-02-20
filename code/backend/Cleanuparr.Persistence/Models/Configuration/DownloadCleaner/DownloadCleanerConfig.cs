@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Cleanuparr.Domain.Enums;
 using ValidationException = Cleanuparr.Domain.Exceptions.ValidationException;
 
 namespace Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
@@ -21,8 +22,6 @@ public sealed record DownloadCleanerConfig : IJobConfig
 
     public List<SeedingRule> Categories { get; set; } = [];
 
-    public bool DeletePrivate { get; set; }
-    
     /// <summary>
     /// Indicates whether unlinked download handling is enabled
     /// </summary>
@@ -54,9 +53,19 @@ public sealed record DownloadCleanerConfig : IJobConfig
             throw new ValidationException("No features are enabled");
         }
 
-        if (Categories.GroupBy(x => x.Name).Any(x => x.Count() > 1))
+        if (Categories.GroupBy(x => new { Name = x.Name.ToUpperInvariant(), x.PrivacyType }).Any(x => x.Count() > 1))
         {
-            throw new ValidationException("Duplicated clean categories found");
+            throw new ValidationException("Duplicated clean category and privacy type combination found");
+        }
+
+        var categoriesByName = Categories.GroupBy(x => x.Name, StringComparer.InvariantCultureIgnoreCase);
+        foreach (var group in categoriesByName)
+        {
+            if (group.Count() > 1 && group.Any(x => x.PrivacyType == TorrentPrivacyType.Both))
+            {
+                throw new ValidationException(
+                    $"Category '{group.Key}' has a rule with privacy type 'Both' which already covers all torrent types");
+            }
         }
         
         Categories.ForEach(x => x.Validate());

@@ -13,8 +13,6 @@ public sealed record UpdateDownloadCleanerConfigRequest
 
     public List<SeedingRuleRequest> Categories { get; init; } = [];
 
-    public bool DeletePrivate { get; init; }
-    
     /// <summary>
     /// Indicates whether unlinked download handling is enabled.
     /// </summary>

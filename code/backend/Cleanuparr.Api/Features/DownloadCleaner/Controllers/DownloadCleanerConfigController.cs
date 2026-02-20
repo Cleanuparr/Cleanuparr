@@ -76,7 +76,6 @@ public sealed class DownloadCleanerConfigController : ControllerBase
             oldConfig.Enabled = newConfigDto.Enabled;
             oldConfig.CronExpression = newConfigDto.CronExpression;
             oldConfig.UseAdvancedScheduling = newConfigDto.UseAdvancedScheduling;
-            oldConfig.DeletePrivate = newConfigDto.DeletePrivate;
             oldConfig.UnlinkedEnabled = newConfigDto.UnlinkedEnabled;
             oldConfig.UnlinkedTargetCategory = newConfigDto.UnlinkedTargetCategory;
             oldConfig.UnlinkedUseTag = newConfigDto.UnlinkedUseTag;
@@ -93,6 +92,7 @@ public sealed class DownloadCleanerConfigController : ControllerBase
                 _dataContext.SeedingRules.Add(new SeedingRule
                 {
                     Name = categoryDto.Name,
+                    PrivacyType = categoryDto.PrivacyType,
                     MaxRatio = categoryDto.MaxRatio,
                     MinSeedTime = categoryDto.MinSeedTime,
                     MaxSeedTime = categoryDto.MaxSeedTime,

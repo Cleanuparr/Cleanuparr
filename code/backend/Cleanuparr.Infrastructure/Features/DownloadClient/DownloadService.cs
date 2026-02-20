@@ -94,18 +94,17 @@ public abstract class DownloadService : IDownloadService
             }
 
             SeedingRule? category = seedingRules
-                .FirstOrDefault(x => (torrent.Category ?? string.Empty).Equals(x.Name, StringComparison.InvariantCultureIgnoreCase));
+                .FirstOrDefault(x =>
+                    (torrent.Category ?? string.Empty).Equals(x.Name, StringComparison.InvariantCultureIgnoreCase) &&
+                    x.PrivacyType switch
+                    {
+                        TorrentPrivacyType.Public => !torrent.IsPrivate,
+                        TorrentPrivacyType.Private => torrent.IsPrivate,
+                        _ => true
+                    });
 
             if (category is null)
             {
-                continue;
-            }
-
-            var downloadCleanerConfig = ContextProvider.Get<DownloadCleanerConfig>(nameof(DownloadCleanerConfig));
-
-            if (!downloadCleanerConfig.DeletePrivate && torrent.IsPrivate)
-            {
-                _logger.LogDebug("skip | download is private | {name}", torrent.Name);
                 continue;
             }
 
