@@ -124,12 +124,18 @@ public static class ApiDI
             {
                 name = "Cleanuparr",
                 short_name = "Cleanuparr",
+                description = "Automated cleanup for *arr applications and download clients",
                 start_url = basePath,
                 display = "standalone",
-                background_color = "#ffffff",
-                theme_color = "#ffffff",
+                background_color = "#0e0a1a",
+                theme_color = "#1a1135",
                 icons = new[]
                 {
+                    new {
+                        src = "icons/128.png",
+                        sizes = "128x128",
+                        type = "image/png"
+                    },
                     new {
                         src = "icons/icon-192x192.png",
                         sizes = "192x192",
