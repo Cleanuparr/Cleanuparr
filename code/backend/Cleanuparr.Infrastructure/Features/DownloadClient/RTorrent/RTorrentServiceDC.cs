@@ -1,27 +1,23 @@
 using Cleanuparr.Domain.Entities;
-using Cleanuparr.Domain.Entities.UTorrent.Response;
-using Cleanuparr.Domain.Enums;
+using Cleanuparr.Domain.Entities.RTorrent.Response;
 using Cleanuparr.Infrastructure.Features.Context;
-using Cleanuparr.Infrastructure.Features.DownloadClient.UTorrent.Extensions;
 using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
 using Microsoft.Extensions.Logging;
 
-namespace Cleanuparr.Infrastructure.Features.DownloadClient.UTorrent;
+namespace Cleanuparr.Infrastructure.Features.DownloadClient.RTorrent;
 
-public partial class UTorrentService
+public partial class RTorrentService
 {
     public override async Task<List<ITorrentItemWrapper>> GetSeedingDownloads()
     {
-        var torrents = await _client.GetTorrentsAsync();
-        var result = new List<ITorrentItemWrapper>();
+        var downloads = await _client.GetAllTorrentsAsync();
 
-        foreach (UTorrentItem torrent in torrents.Where(x => !string.IsNullOrEmpty(x.Hash) && x.IsSeeding()))
-        {
-            var properties = await _client.GetTorrentPropertiesAsync(torrent.Hash);
-            result.Add(new UTorrentItemWrapper(torrent, properties));
-        }
-
-        return result;
+        return downloads
+            .Where(x => !string.IsNullOrEmpty(x.Hash))
+            // Seeding: complete=1 (finished) and state=1 (started)
+            .Where(x => x is { Complete: 1, State: 1 })
+            .Select(ITorrentItemWrapper (x) => new RTorrentItemWrapper(x))
+            .ToList();
     }
 
     public override List<ITorrentItemWrapper>? FilterDownloadsToBeCleanedAsync(List<ITorrentItemWrapper>? downloads, List<SeedingRule> seedingRules) =>
@@ -38,13 +34,25 @@ public partial class UTorrentService
     /// <inheritdoc/>
     public override async Task DeleteDownload(ITorrentItemWrapper torrent, bool deleteSourceFiles)
     {
-        string hash = torrent.Hash.ToLowerInvariant();
-        await _client.RemoveTorrentsAsync([hash], deleteSourceFiles);
+        string hash = torrent.Hash.ToUpperInvariant();
+        await _client.DeleteTorrentAsync(hash);
+        
+        if (deleteSourceFiles)
+        {
+            if (!TryDeleteFiles(torrent.SavePath, true))
+            {
+                _logger.LogWarning("Failed to delete files | {name}", torrent.Name);
+            }
+        }
     }
 
-    public override async Task CreateCategoryAsync(string name)
+    /// <summary>
+    /// rTorrent doesn't have native category management. Labels are stored in d.custom1
+    /// and are created implicitly when set. This is a no-op.
+    /// </summary>
+    public override Task CreateCategoryAsync(string name)
     {
-        await Task.CompletedTask;
+        return Task.CompletedTask;
     }
 
     public override async Task ChangeCategoryForNoHardLinksAsync(List<ITorrentItemWrapper>? downloads)
@@ -56,27 +64,37 @@ public partial class UTorrentService
 
         var downloadCleanerConfig = ContextProvider.Get<DownloadCleanerConfig>(nameof(DownloadCleanerConfig));
 
-        foreach (UTorrentItemWrapper torrent in downloads.Cast<UTorrentItemWrapper>())
+        foreach (RTorrentItemWrapper torrent in downloads.Cast<RTorrentItemWrapper>())
         {
             if (string.IsNullOrEmpty(torrent.Hash) || string.IsNullOrEmpty(torrent.Name) || string.IsNullOrEmpty(torrent.Category))
             {
                 continue;
             }
-            
+
             ContextProvider.Set(ContextProvider.Keys.ItemName, torrent.Name);
             ContextProvider.Set(ContextProvider.Keys.Hash, torrent.Hash);
             ContextProvider.Set(ContextProvider.Keys.DownloadClientUrl, _downloadClientConfig.ExternalOrInternalUrl);
             ContextProvider.Set(ContextProvider.Keys.DownloadClientType, _downloadClientConfig.TypeName);
             ContextProvider.Set(ContextProvider.Keys.DownloadClientName, _downloadClientConfig.Name);
 
-            List<UTorrentFile>? files = await _client.GetTorrentFilesAsync(torrent.Hash);
+            List<RTorrentFile> files;
+            try
+            {
+                files = await _client.GetTorrentFilesAsync(torrent.Hash);
+            }
+            catch (Exception exception)
+            {
+                _logger.LogDebug(exception, "failed to find torrent files for {name}", torrent.Name);
+                continue;
+            }
 
             bool hasHardlinks = false;
             bool hasErrors = false;
 
-            foreach (var file in files ?? [])
+            foreach (var file in files)
             {
-                string filePath = string.Join(Path.DirectorySeparatorChar, Path.Combine(torrent.Info.SavePath, file.Name).Split(['\\', '/']));
+                string filePath = string.Join(Path.DirectorySeparatorChar,
+                    Path.Combine(torrent.Info.BasePath ?? "", file.Path).Split(['\\', '/']));
 
                 if (file.Priority <= 0)
                 {
@@ -91,7 +109,7 @@ public partial class UTorrentService
                 {
                     _logger.LogError("skip | file does not exist or insufficient permissions | {file}", filePath);
                     hasErrors = true;
-                    break;
+                    continue;
                 }
 
                 if (hardlinkCount > 0)
@@ -114,16 +132,16 @@ public partial class UTorrentService
 
             await _dryRunInterceptor.InterceptAsync(ChangeLabel, torrent.Hash, downloadCleanerConfig.UnlinkedTargetCategory);
 
+            _logger.LogInformation("category changed for {name}", torrent.Name);
+
             await _eventPublisher.PublishCategoryChanged(torrent.Category, downloadCleanerConfig.UnlinkedTargetCategory);
 
-            _logger.LogInformation("category changed for {name}", torrent.Name);
-            
             torrent.Category = downloadCleanerConfig.UnlinkedTargetCategory;
         }
     }
-    
+
     protected virtual async Task ChangeLabel(string hash, string newLabel)
     {
-        await _client.SetTorrentLabelAsync(hash, newLabel);
+        await _client.SetLabelAsync(hash, newLabel);
     }
-} 
+}

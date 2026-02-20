@@ -1,3 +1,4 @@
+using Cleanuparr.Domain.Entities;
 using Cleanuparr.Domain.Entities.Deluge.Response;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Context;
@@ -340,13 +341,15 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
             // Arrange
             var sut = _fixture.CreateSut();
             const string hash = "TEST-HASH";
+            var mockTorrent = new Mock<ITorrentItemWrapper>();
+            mockTorrent.Setup(x => x.Hash).Returns(hash);
 
             _fixture.ClientWrapper
                 .Setup(x => x.DeleteTorrents(It.Is<List<string>>(h => h.Contains("test-hash")), true))
                 .Returns(Task.CompletedTask);
 
             // Act
-            await sut.DeleteDownload(hash, true);
+            await sut.DeleteDownload(mockTorrent.Object, true);
 
             // Assert
             _fixture.ClientWrapper.Verify(
@@ -360,13 +363,15 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
             // Arrange
             var sut = _fixture.CreateSut();
             const string hash = "UPPERCASE-HASH";
+            var mockTorrent = new Mock<ITorrentItemWrapper>();
+            mockTorrent.Setup(x => x.Hash).Returns(hash);
 
             _fixture.ClientWrapper
                 .Setup(x => x.DeleteTorrents(It.IsAny<List<string>>(), true))
                 .Returns(Task.CompletedTask);
 
             // Act
-            await sut.DeleteDownload(hash, true);
+            await sut.DeleteDownload(mockTorrent.Object, true);
 
             // Assert
             _fixture.ClientWrapper.Verify(
@@ -380,13 +385,15 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
             // Arrange
             var sut = _fixture.CreateSut();
             const string hash = "TEST-HASH";
+            var mockTorrent = new Mock<ITorrentItemWrapper>();
+            mockTorrent.Setup(x => x.Hash).Returns(hash);
 
             _fixture.ClientWrapper
                 .Setup(x => x.DeleteTorrents(It.Is<List<string>>(h => h.Contains("test-hash")), false))
                 .Returns(Task.CompletedTask);
 
             // Act
-            await sut.DeleteDownload(hash, false);
+            await sut.DeleteDownload(mockTorrent.Object, false);
 
             // Assert
             _fixture.ClientWrapper.Verify(

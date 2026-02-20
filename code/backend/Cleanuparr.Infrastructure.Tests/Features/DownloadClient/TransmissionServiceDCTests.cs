@@ -303,44 +303,15 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
             // Arrange
             var sut = _fixture.CreateSut();
             const string hash = "test-hash";
-
-            var fields = new[]
-            {
-                TorrentFields.FILES,
-                TorrentFields.FILE_STATS,
-                TorrentFields.HASH_STRING,
-                TorrentFields.ID,
-                TorrentFields.ETA,
-                TorrentFields.NAME,
-                TorrentFields.STATUS,
-                TorrentFields.IS_PRIVATE,
-                TorrentFields.DOWNLOADED_EVER,
-                TorrentFields.DOWNLOAD_DIR,
-                TorrentFields.SECONDS_SEEDING,
-                TorrentFields.UPLOAD_RATIO,
-                TorrentFields.TRACKERS,
-                TorrentFields.RATE_DOWNLOAD,
-                TorrentFields.TOTAL_SIZE
-            };
-
-            var torrents = new TransmissionTorrents
-            {
-                Torrents = new[]
-                {
-                    new TorrentInfo { Id = 123, HashString = hash }
-                }
-            };
-
-            _fixture.ClientWrapper
-                .Setup(x => x.TorrentGetAsync(fields, hash))
-                .ReturnsAsync(torrents);
+            var torrentInfo = new TorrentInfo { Id = 123, HashString = hash };
+            var torrentWrapper = new TransmissionItemWrapper(torrentInfo);
 
             _fixture.ClientWrapper
                 .Setup(x => x.TorrentRemoveAsync(It.Is<long[]>(ids => ids.Contains(123)), true))
                 .Returns(Task.CompletedTask);
 
             // Act
-            await sut.DeleteDownload(hash, true);
+            await sut.DeleteDownload(torrentWrapper, true);
 
             // Assert
             _fixture.ClientWrapper.Verify(
@@ -354,37 +325,20 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
             // Arrange
             var sut = _fixture.CreateSut();
             const string hash = "nonexistent-hash";
-
-            var fields = new[]
-            {
-                TorrentFields.FILES,
-                TorrentFields.FILE_STATS,
-                TorrentFields.HASH_STRING,
-                TorrentFields.ID,
-                TorrentFields.ETA,
-                TorrentFields.NAME,
-                TorrentFields.STATUS,
-                TorrentFields.IS_PRIVATE,
-                TorrentFields.DOWNLOADED_EVER,
-                TorrentFields.DOWNLOAD_DIR,
-                TorrentFields.SECONDS_SEEDING,
-                TorrentFields.UPLOAD_RATIO,
-                TorrentFields.TRACKERS,
-                TorrentFields.RATE_DOWNLOAD,
-                TorrentFields.TOTAL_SIZE
-            };
+            var torrentInfo = new TorrentInfo { Id = 456, HashString = hash };
+            var torrentWrapper = new TransmissionItemWrapper(torrentInfo);
 
             _fixture.ClientWrapper
-                .Setup(x => x.TorrentGetAsync(fields, hash))
-                .ReturnsAsync((TransmissionTorrents?)null);
+                .Setup(x => x.TorrentRemoveAsync(It.Is<long[]>(ids => ids.Contains(456)), true))
+                .Returns(Task.CompletedTask);
 
             // Act
-            await sut.DeleteDownload(hash, true);
+            await sut.DeleteDownload(torrentWrapper, true);
 
-            // Assert - no exception thrown
+            // Assert
             _fixture.ClientWrapper.Verify(
-                x => x.TorrentRemoveAsync(It.IsAny<long[]>(), It.IsAny<bool>()),
-                Times.Never);
+                x => x.TorrentRemoveAsync(It.Is<long[]>(ids => ids.Contains(456)), true),
+                Times.Once);
         }
 
         [Fact]
@@ -393,40 +347,15 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
             // Arrange
             var sut = _fixture.CreateSut();
             const string hash = "test-hash";
-
-            var fields = new[]
-            {
-                TorrentFields.FILES,
-                TorrentFields.FILE_STATS,
-                TorrentFields.HASH_STRING,
-                TorrentFields.ID,
-                TorrentFields.ETA,
-                TorrentFields.NAME,
-                TorrentFields.STATUS,
-                TorrentFields.IS_PRIVATE,
-                TorrentFields.DOWNLOADED_EVER,
-                TorrentFields.DOWNLOAD_DIR,
-                TorrentFields.SECONDS_SEEDING,
-                TorrentFields.UPLOAD_RATIO,
-                TorrentFields.TRACKERS,
-                TorrentFields.RATE_DOWNLOAD,
-                TorrentFields.TOTAL_SIZE
-            };
-
-            var torrents = new TransmissionTorrents
-            {
-                Torrents = new[]
-                {
-                    new TorrentInfo { Id = 123, HashString = hash }
-                }
-            };
+            var torrentInfo = new TorrentInfo { Id = 123, HashString = hash };
+            var torrentWrapper = new TransmissionItemWrapper(torrentInfo);
 
             _fixture.ClientWrapper
-                .Setup(x => x.TorrentGetAsync(fields, hash))
-                .ReturnsAsync(torrents);
+                .Setup(x => x.TorrentRemoveAsync(It.IsAny<long[]>(), true))
+                .Returns(Task.CompletedTask);
 
             // Act
-            await sut.DeleteDownload(hash, true);
+            await sut.DeleteDownload(torrentWrapper, true);
 
             // Assert
             _fixture.ClientWrapper.Verify(

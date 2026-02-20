@@ -61,9 +61,9 @@ public partial class QBitService
     }
 
     /// <inheritdoc/>
-    protected override async Task DeleteDownloadInternal(ITorrentItemWrapper torrent, bool deleteSourceFiles)
+    public override async Task DeleteDownload(ITorrentItemWrapper torrent, bool deleteSourceFiles)
     {
-        await DeleteDownload(torrent.Hash, deleteSourceFiles);
+        await _client.DeleteAsync([torrent.Hash], deleteSourceFiles);
     }
 
     public override async Task CreateCategoryAsync(string name)
@@ -170,12 +170,6 @@ public partial class QBitService
                 torrent.Category = downloadCleanerConfig.UnlinkedTargetCategory;
             }
         }
-    }
-
-    /// <inheritdoc/>
-    public override async Task DeleteDownload(string hash, bool deleteSourceFiles)
-    {
-        await _client.DeleteAsync([hash], deleteDownloadedData: deleteSourceFiles);
     }
 
     protected async Task CreateCategory(string name)
