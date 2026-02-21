@@ -87,29 +87,6 @@ mytracker.com
 
 <div className={styles.section}>
 
-<SectionTitle icon="🌱">Seeding Settings</SectionTitle>
-
-<p className={styles.sectionDescription}>
-  Settings that control how downloads are cleaned after they finish downloading.
-</p>
-
-<ConfigSection
-  title="Delete Private Torrents"
-  icon="🗑️"
->
-
-When enabled, private torrents will be deleted from the download client when they meet the cleanup criteria. Use with caution as this permanently removes the download.
-
-<Warning>
-Setting this to true means private torrents will be permanently deleted, potentially affecting your private tracker account by receiving H&R if the seeding requirements are not met.
-</Warning>
-
-</ConfigSection>
-
-</div>
-
-<div className={styles.section}>
-
 <SectionTitle icon="📏">Seeding Rules</SectionTitle>
 
 <p className={styles.sectionDescription}>
@@ -135,6 +112,24 @@ The name of the download client category to apply these rules to. Must match the
 - `tv-sonarr`
 - `radarr`
 - `lidarr`
+
+</ConfigSection>
+
+<ConfigSection
+  title="Privacy Type"
+  icon="🔒"
+>
+
+Controls which torrent types this rule applies to:
+- **Public**: Rule only applies to public torrents
+- **Private**: Rule only applies to private torrents
+- **Both**: Rule applies to all torrents (default)
+
+You can create multiple rules for the same category with different privacy types to apply different cleanup settings to public and private torrents.
+
+<Warning>
+Setting privacy type to `Private` or `Both` means private torrents matching this rule will be permanently deleted, potentially affecting your private tracker account by receiving H&R if the seeding requirements are not met.
+</Warning>
 
 </ConfigSection>
 

@@ -9,7 +9,7 @@ import { DownloadCleanerApi } from '@core/api/download-cleaner.api';
 import { ToastService } from '@core/services/toast.service';
 import { DownloadCleanerConfig, CleanCategory, createDefaultCategory } from '@shared/models/download-cleaner-config.model';
 import { ScheduleOptions } from '@shared/models/queue-cleaner-config.model';
-import { ScheduleUnit } from '@shared/models/enums';
+import { ScheduleUnit, TorrentPrivacyType } from '@shared/models/enums';
 import { HasPendingChanges } from '@core/guards/pending-changes.guard';
 import { DeferredLoader } from '@shared/utils/loading.util';
 import { generateCronExpression, parseCronToJobSchedule } from '@shared/utils/schedule.util';
@@ -18,6 +18,12 @@ const SCHEDULE_UNIT_OPTIONS: SelectOption[] = [
   { label: 'Seconds', value: ScheduleUnit.Seconds },
   { label: 'Minutes', value: ScheduleUnit.Minutes },
   { label: 'Hours', value: ScheduleUnit.Hours },
+];
+
+const PRIVACY_TYPE_OPTIONS: SelectOption[] = [
+  { label: 'Public', value: TorrentPrivacyType.Public },
+  { label: 'Private', value: TorrentPrivacyType.Private },
+  { label: 'Both', value: TorrentPrivacyType.Both },
 ];
 
 @Component({
@@ -40,6 +46,7 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
   private readonly savedSnapshot = signal('');
 
   readonly scheduleUnitOptions = SCHEDULE_UNIT_OPTIONS;
+  readonly privacyTypeOptions = PRIVACY_TYPE_OPTIONS;
   readonly loader = new DeferredLoader();
   readonly loadError = signal(false);
   readonly saving = signal(false);
@@ -50,7 +57,6 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
   readonly cronExpression = signal('');
   readonly scheduleEvery = signal<unknown>(5);
   readonly scheduleUnit = signal<unknown>(ScheduleUnit.Minutes);
-  readonly deletePrivate = signal(false);
 
   readonly scheduleIntervalOptions = computed(() => {
     const unit = this.scheduleUnit() as ScheduleUnit;
@@ -148,7 +154,6 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
           this.scheduleEvery.set(parsed.every);
           this.scheduleUnit.set(parsed.type);
         }
-        this.deletePrivate.set(config.deletePrivate);
         this.ignoredDownloads.set(config.ignoredDownloads ?? []);
         this.categories.set(config.categories ?? []);
         this.unlinkedEnabled.set(config.unlinkedEnabled);
@@ -201,7 +206,6 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
       enabled: this.enabled(),
       useAdvancedScheduling: this.useAdvancedScheduling(),
       cronExpression,
-      deletePrivate: this.deletePrivate(),
       ignoredDownloads: this.ignoredDownloads(),
       categories: this.categories(),
       unlinkedEnabled: this.unlinkedEnabled(),
@@ -234,7 +238,6 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
       cronExpression: this.cronExpression(),
       scheduleEvery: this.scheduleEvery(),
       scheduleUnit: this.scheduleUnit(),
-      deletePrivate: this.deletePrivate(),
       ignoredDownloads: this.ignoredDownloads(),
       categories: this.categories(),
       unlinkedEnabled: this.unlinkedEnabled(),
