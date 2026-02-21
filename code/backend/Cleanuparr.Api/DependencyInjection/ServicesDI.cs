@@ -17,6 +17,7 @@ using Cleanuparr.Infrastructure.Helpers;
 using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Infrastructure.Services;
 using Cleanuparr.Infrastructure.Services.Interfaces;
+using Cleanuparr.Infrastructure.Stats;
 using Cleanuparr.Persistence;
 
 namespace Cleanuparr.Api.DependencyInjection;
@@ -60,6 +61,7 @@ public static class ServicesDI
             .AddScoped<IRuleManager, RuleManager>()
             .AddScoped<IRuleEvaluator, RuleEvaluator>()
             .AddScoped<IRuleIntervalValidator, RuleIntervalValidator>()
+            .AddScoped<IStatsService, StatsService>()
             .AddSingleton<IJobManagementService, JobManagementService>()
             .AddSingleton<IBlocklistProvider, BlocklistProvider>()
             .AddSingleton(TimeProvider.System)

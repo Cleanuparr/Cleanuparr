@@ -1,0 +1,322 @@
+---
+sidebar_position: 9
+---
+
+import {
+  ConfigSection,
+  Note,
+  Important,
+  Warning,
+  ElementNavigator,
+  SectionTitle,
+  styles
+} from '@site/src/components/documentation';
+
+# Stats API
+
+Cleanuparr provides a stats endpoint that exposes aggregated application statistics. This is designed for integration with dashboard tools like [Homepage](https://gethomepage.dev), [Homarr](https://homarr.dev), or any tool that can consume JSON APIs.
+
+<ElementNavigator />
+
+<div className={styles.documentationPage}>
+
+<div className={styles.section}>
+
+<SectionTitle icon="🔐">Authentication</SectionTitle>
+
+<ConfigSection
+  title="API Key"
+  icon="🔑"
+>
+
+This endpoint requires authentication. You can authenticate using your API key in one of two ways:
+
+**Header (recommended):**
+```bash
+curl -H "X-Api-Key: YOUR_API_KEY" http://localhost:11011/api/stats
+```
+
+**Query parameter:**
+```bash
+curl http://localhost:11011/api/stats?apikey=YOUR_API_KEY
+```
+
+You can find your API key in the Cleanuparr UI under **Account Settings**.
+
+<Note>
+JWT Bearer tokens are also supported for browser-based access.
+</Note>
+
+</ConfigSection>
+
+</div>
+
+<div className={styles.section}>
+
+<SectionTitle icon="📊">Endpoint</SectionTitle>
+
+<ConfigSection
+  title="GET /api/stats"
+  icon="🔗"
+>
+
+Returns aggregated statistics including events, strikes, job runs, and health status.
+
+**Query Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `hours` | integer | `24` | Timeframe in hours (range: 1–720) |
+| `includeEvents` | integer | `0` | Number of recent events to include (range: 0–100). Omitted from response when 0. |
+| `includeStrikes` | integer | `0` | Number of recent strikes to include (range: 0–100). Omitted from response when 0. |
+
+**Examples:**
+
+```bash
+# Last 24 hours (default)
+curl -H "X-Api-Key: YOUR_API_KEY" http://localhost:11011/api/stats
+
+# Last hour
+curl -H "X-Api-Key: YOUR_API_KEY" http://localhost:11011/api/stats?hours=1
+
+# Last 7 days
+curl -H "X-Api-Key: YOUR_API_KEY" http://localhost:11011/api/stats?hours=168
+
+# Include 5 recent events and 5 recent strikes
+curl -H "X-Api-Key: YOUR_API_KEY" "http://localhost:11011/api/stats?includeEvents=5&includeStrikes=5"
+```
+
+<Note>
+If `BASE_PATH` is set, include it in the URL: `http://localhost:11011/cleanuparr/api/stats`
+</Note>
+
+</ConfigSection>
+
+</div>
+
+<div className={styles.section}>
+
+<SectionTitle icon="📋">Response Reference</SectionTitle>
+
+<ConfigSection
+  title="events"
+  icon="📝"
+>
+
+Event statistics within the specified timeframe.
+
+```json
+{
+  "totalCount": 42,
+  "byType": {
+    "FailedImportStrike": 5,
+    "StalledStrike": 12,
+    "QueueItemDeleted": 8,
+    "DownloadCleaned": 6
+  },
+  "bySeverity": {
+    "Information": 20,
+    "Warning": 15,
+    "Error": 7
+  },
+  "timeframeHours": 24,
+  "recentItems": [
+    {
+      "id": "...",
+      "timestamp": "2025-01-15T12:00:00Z",
+      "eventType": "StalledStrike",
+      "message": "Strike issued for stalled download",
+      "severity": "Warning",
+      "data": null
+    }
+  ]
+}
+```
+
+- **totalCount** — Total number of events in the timeframe
+- **byType** — Events grouped by type (only types with events are included)
+- **bySeverity** — Events grouped by severity level
+- **timeframeHours** — The requested timeframe
+- **recentItems** — Recent event records (only present when `includeEvents` > 0)
+
+</ConfigSection>
+
+<ConfigSection
+  title="strikes"
+  icon="⚡"
+>
+
+Strike statistics within the specified timeframe.
+
+```json
+{
+  "totalCount": 23,
+  "byType": {
+    "Stalled": 8,
+    "FailedImport": 5,
+    "SlowSpeed": 4,
+    "SlowTime": 3,
+    "DownloadingMetadata": 3
+  },
+  "itemsRemoved": 10,
+  "timeframeHours": 24,
+  "recentItems": [
+    {
+      "id": "...",
+      "type": "Stalled",
+      "createdAt": "2025-01-15T12:00:00Z",
+      "downloadId": "abc123",
+      "title": "Some.Download.Title"
+    }
+  ]
+}
+```
+
+- **totalCount** — Total number of strikes issued in the timeframe
+- **byType** — Strikes grouped by type (only types with strikes are included)
+- **itemsRemoved** — Number of download items removed that had strikes in the timeframe
+- **recentItems** — Recent strike records with download info (only present when `includeStrikes` > 0)
+
+</ConfigSection>
+
+<ConfigSection
+  title="jobs"
+  icon="⏱️"
+>
+
+Job run statistics within the specified timeframe.
+
+```json
+{
+  "byType": {
+    "QueueCleaner": {
+      "totalRuns": 48,
+      "completed": 46,
+      "failed": 2,
+      "lastRunAt": "2025-01-15T12:00:00Z",
+      "nextRunAt": "2025-01-15T12:30:00Z"
+    },
+    "MalwareBlocker": {
+      "totalRuns": 48,
+      "completed": 48,
+      "failed": 0,
+      "lastRunAt": "2025-01-15T12:00:00Z",
+      "nextRunAt": "2025-01-15T12:30:00Z"
+    }
+  },
+  "timeframeHours": 24
+}
+```
+
+- **byType** — Stats per job type (QueueCleaner, MalwareBlocker, DownloadCleaner, BlacklistSynchronizer)
+- **totalRuns** — Total executions in the timeframe
+- **completed** / **failed** — Breakdown by outcome
+- **lastRunAt** — Timestamp of the most recent run
+- **nextRunAt** — When this job is next scheduled to run
+
+</ConfigSection>
+
+<ConfigSection
+  title="health"
+  icon="🏥"
+>
+
+Current health status of all configured download clients and arr instances. Health data is cached and updated every ~5 minutes by a background service.
+
+```json
+{
+  "downloadClients": [
+    {
+      "id": "...",
+      "name": "qBittorrent",
+      "type": "qBittorrent",
+      "isHealthy": true,
+      "lastChecked": "2025-01-15T12:00:00Z",
+      "responseTimeMs": 45.2,
+      "errorMessage": null
+    }
+  ],
+  "arrInstances": [
+    {
+      "id": "...",
+      "name": "Sonarr",
+      "type": "Sonarr",
+      "isHealthy": true,
+      "lastChecked": "2025-01-15T12:00:00Z",
+      "errorMessage": null
+    }
+  ]
+}
+```
+
+- **downloadClients** — Health of each enabled download client
+- **arrInstances** — Health of each enabled arr instance (Sonarr, Radarr, Lidarr, Readarr, Whisparr)
+
+<Important>
+Health data reflects the last background check (~5 minute interval). It does not perform live checks on each request, keeping the endpoint fast for frequent polling.
+</Important>
+
+</ConfigSection>
+
+</div>
+
+<div className={styles.section}>
+
+<SectionTitle icon="🖥️">Dashboard Integration</SectionTitle>
+
+<ConfigSection
+  title="Homepage Example"
+  icon="🏠"
+>
+
+[Homepage](https://gethomepage.dev) can use the `customapi` widget to display Cleanuparr stats:
+
+```yaml
+- Cleanuparr:
+    icon: cleanuparr.png
+    href: http://localhost:11011
+    description: Arr Cleanup Service
+    widget:
+      type: customapi
+      url: http://localhost:11011/api/stats
+      headers:
+        X-Api-Key: YOUR_API_KEY
+      mappings:
+        - field: events.totalCount
+          label: Events (24h)
+          format: number
+        - field: strikes.totalCount
+          label: Strikes (24h)
+          format: number
+        - field: strikes.itemsRemoved
+          label: Removed
+          format: number
+```
+
+You can reference any field in the response using dot notation (e.g., `jobs.byType.QueueCleaner.failed`).
+
+To change the timeframe, add a query parameter to the URL: `http://localhost:11011/api/stats?hours=168` for a weekly view.
+
+</ConfigSection>
+
+<ConfigSection
+  title="Other Dashboard Tools"
+  icon="🔧"
+>
+
+Any tool that can fetch and parse JSON can use this endpoint. The response is a flat, predictable JSON structure designed for easy field mapping.
+
+Key fields for dashboards:
+- `events.totalCount` — Total events in timeframe
+- `strikes.totalCount` — Total strikes in timeframe
+- `strikes.itemsRemoved` — Downloads removed
+- `jobs.byType.<JobType>.failed` — Failed job runs
+- `jobs.byType.<JobType>.nextRunAt` — Next scheduled run
+- `health.downloadClients[0].isHealthy` — First download client health
+- `health.arrInstances[0].isHealthy` — First arr instance health
+
+</ConfigSection>
+
+</div>
+
+</div>
