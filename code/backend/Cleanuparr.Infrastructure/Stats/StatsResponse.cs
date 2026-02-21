@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace Cleanuparr.Infrastructure.Stats;
 
 /// <summary>
@@ -55,6 +57,12 @@ public class EventStats
     /// The timeframe in hours that these stats cover
     /// </summary>
     public int TimeframeHours { get; set; }
+
+    /// <summary>
+    /// Recent event items (only included when includeEvents > 0)
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public List<RecentEventDto>? RecentItems { get; set; }
 }
 
 /// <summary>
@@ -81,6 +89,12 @@ public class StrikeStats
     /// The timeframe in hours that these stats cover
     /// </summary>
     public int TimeframeHours { get; set; }
+
+    /// <summary>
+    /// Recent strike items (only included when includeStrikes > 0)
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public List<RecentStrikeDto>? RecentItems { get; set; }
 }
 
 /// <summary>
@@ -171,4 +185,29 @@ public class ArrInstanceHealthDto
     public bool IsHealthy { get; set; }
     public DateTime LastChecked { get; set; }
     public string? ErrorMessage { get; set; }
+}
+
+/// <summary>
+/// Recent event DTO for stats endpoint
+/// </summary>
+public class RecentEventDto
+{
+    public Guid Id { get; set; }
+    public DateTime Timestamp { get; set; }
+    public string EventType { get; set; } = string.Empty;
+    public string Message { get; set; } = string.Empty;
+    public string Severity { get; set; } = string.Empty;
+    public string? Data { get; set; }
+}
+
+/// <summary>
+/// Recent strike DTO for stats endpoint
+/// </summary>
+public class RecentStrikeDto
+{
+    public Guid Id { get; set; }
+    public string Type { get; set; } = string.Empty;
+    public DateTime CreatedAt { get; set; }
+    public string DownloadId { get; set; } = string.Empty;
+    public string Title { get; set; } = string.Empty;
 }

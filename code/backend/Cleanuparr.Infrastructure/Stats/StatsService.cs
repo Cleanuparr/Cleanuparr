@@ -30,12 +30,12 @@ public class StatsService : IStatsService
     }
 
     /// <inheritdoc />
-    public async Task<StatsResponse> GetStatsAsync(int hours = 24)
+    public async Task<StatsResponse> GetStatsAsync(int hours = 24, int includeEvents = 0, int includeStrikes = 0)
     {
         var cutoff = DateTime.UtcNow.AddHours(-hours);
 
-        var eventStats = await GetEventStatsAsync(cutoff, hours);
-        var strikeStats = await GetStrikeStatsAsync(cutoff, hours);
+        var eventStats = await GetEventStatsAsync(cutoff, hours, includeEvents);
+        var strikeStats = await GetStrikeStatsAsync(cutoff, hours, includeStrikes);
         var jobStats = await GetJobStatsAsync(cutoff, hours);
         var healthStats = GetHealthStats();
 
@@ -49,7 +49,7 @@ public class StatsService : IStatsService
         };
     }
 
-    private async Task<EventStats> GetEventStatsAsync(DateTime cutoff, int hours)
+    private async Task<EventStats> GetEventStatsAsync(DateTime cutoff, int hours, int includeEvents)
     {
         var eventsByType = await _eventsContext.Events
             .Where(e => e.Timestamp >= cutoff)
@@ -63,16 +63,36 @@ public class StatsService : IStatsService
             .Select(g => new { Severity = g.Key, Count = g.Count() })
             .ToListAsync();
 
-        return new EventStats
+        var stats = new EventStats
         {
             TotalCount = eventsByType.Sum(e => e.Count),
             ByType = eventsByType.ToDictionary(e => e.Type.ToString(), e => e.Count),
             BySeverity = eventsBySeverity.ToDictionary(e => e.Severity.ToString(), e => e.Count),
             TimeframeHours = hours
         };
+
+        if (includeEvents > 0)
+        {
+            stats.RecentItems = await _eventsContext.Events
+                .Where(e => e.Timestamp >= cutoff)
+                .OrderByDescending(e => e.Timestamp)
+                .Take(includeEvents)
+                .Select(e => new RecentEventDto
+                {
+                    Id = e.Id,
+                    Timestamp = e.Timestamp,
+                    EventType = e.EventType.ToString(),
+                    Message = e.Message,
+                    Severity = e.Severity.ToString(),
+                    Data = e.Data
+                })
+                .ToListAsync();
+        }
+
+        return stats;
     }
 
-    private async Task<StrikeStats> GetStrikeStatsAsync(DateTime cutoff, int hours)
+    private async Task<StrikeStats> GetStrikeStatsAsync(DateTime cutoff, int hours, int includeStrikes)
     {
         var strikesByType = await _eventsContext.Strikes
             .Where(s => s.CreatedAt >= cutoff)
@@ -84,13 +104,33 @@ public class StatsService : IStatsService
             .Where(d => d.IsRemoved && d.Strikes.Any(s => s.CreatedAt >= cutoff))
             .CountAsync();
 
-        return new StrikeStats
+        var stats = new StrikeStats
         {
             TotalCount = strikesByType.Sum(s => s.Count),
             ByType = strikesByType.ToDictionary(s => s.Type.ToString(), s => s.Count),
             ItemsRemoved = itemsRemoved,
             TimeframeHours = hours
         };
+
+        if (includeStrikes > 0)
+        {
+            stats.RecentItems = await _eventsContext.Strikes
+                .Include(s => s.DownloadItem)
+                .Where(s => s.CreatedAt >= cutoff)
+                .OrderByDescending(s => s.CreatedAt)
+                .Take(includeStrikes)
+                .Select(s => new RecentStrikeDto
+                {
+                    Id = s.Id,
+                    Type = s.Type.ToString(),
+                    CreatedAt = s.CreatedAt,
+                    DownloadId = s.DownloadItem.DownloadId,
+                    Title = s.DownloadItem.Title
+                })
+                .ToListAsync();
+        }
+
+        return stats;
     }
 
     private async Task<JobStats> GetJobStatsAsync(DateTime cutoff, int hours)

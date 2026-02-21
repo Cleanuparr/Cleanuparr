@@ -67,6 +67,8 @@ Returns aggregated statistics including events, strikes, job runs, and health st
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `hours` | integer | `24` | Timeframe in hours (range: 1–720) |
+| `includeEvents` | integer | `0` | Number of recent events to include (range: 0–100). Omitted from response when 0. |
+| `includeStrikes` | integer | `0` | Number of recent strikes to include (range: 0–100). Omitted from response when 0. |
 
 **Examples:**
 
@@ -79,6 +81,9 @@ curl -H "X-Api-Key: YOUR_API_KEY" http://localhost:11011/api/stats?hours=1
 
 # Last 7 days
 curl -H "X-Api-Key: YOUR_API_KEY" http://localhost:11011/api/stats?hours=168
+
+# Include 5 recent events and 5 recent strikes
+curl -H "X-Api-Key: YOUR_API_KEY" "http://localhost:11011/api/stats?includeEvents=5&includeStrikes=5"
 ```
 
 <Note>
@@ -114,7 +119,17 @@ Event statistics within the specified timeframe.
     "Warning": 15,
     "Error": 7
   },
-  "timeframeHours": 24
+  "timeframeHours": 24,
+  "recentItems": [
+    {
+      "id": "...",
+      "timestamp": "2025-01-15T12:00:00Z",
+      "eventType": "StalledStrike",
+      "message": "Strike issued for stalled download",
+      "severity": "Warning",
+      "data": null
+    }
+  ]
 }
 ```
 
@@ -122,6 +137,7 @@ Event statistics within the specified timeframe.
 - **byType** — Events grouped by type (only types with events are included)
 - **bySeverity** — Events grouped by severity level
 - **timeframeHours** — The requested timeframe
+- **recentItems** — Recent event records (only present when `includeEvents` > 0)
 
 </ConfigSection>
 
@@ -143,13 +159,23 @@ Strike statistics within the specified timeframe.
     "DownloadingMetadata": 3
   },
   "itemsRemoved": 10,
-  "timeframeHours": 24
+  "timeframeHours": 24,
+  "recentItems": [
+    {
+      "id": "...",
+      "type": "Stalled",
+      "createdAt": "2025-01-15T12:00:00Z",
+      "downloadId": "abc123",
+      "title": "Some.Download.Title"
+    }
+  ]
 }
 ```
 
 - **totalCount** — Total number of strikes issued in the timeframe
 - **byType** — Strikes grouped by type (only types with strikes are included)
 - **itemsRemoved** — Number of download items removed that had strikes in the timeframe
+- **recentItems** — Recent strike records with download info (only present when `includeStrikes` > 0)
 
 </ConfigSection>
 

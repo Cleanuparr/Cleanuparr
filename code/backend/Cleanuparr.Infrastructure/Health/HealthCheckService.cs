@@ -162,11 +162,16 @@ public class HealthCheckService : IHealthCheckService
             await using var dataContext = scope.ServiceProvider.GetRequiredService<DataContext>();
 
             // Get the arr instance with its config (needed for InstanceType)
-            var arrInstance = await dataContext.ArrConfigs
+            // Load config with instances first, then find in memory (SQLite doesn't support APPLY)
+            var config = await dataContext.ArrConfigs
                 .Include(x => x.Instances)
-                .SelectMany(c => c.Instances.Select(i => new { Instance = i, Config = c }))
-                .Where(x => x.Instance.Id == instanceId)
-                .FirstOrDefaultAsync();
+                .FirstOrDefaultAsync(c => c.Instances.Any(i => i.Id == instanceId));
+
+            var arrInstance = config is null ? null : new
+            {
+                Instance = config.Instances.First(i => i.Id == instanceId),
+                Config = config
+            };
 
             if (arrInstance is null)
             {
@@ -228,12 +233,16 @@ public class HealthCheckService : IHealthCheckService
             await using var dataContext = scope.ServiceProvider.GetRequiredService<DataContext>();
 
             // Get all enabled arr instances across all configs
-            var enabledInstances = await dataContext.ArrConfigs
+            // Load configs with instances first, then flatten in memory (SQLite doesn't support APPLY)
+            var configs = await dataContext.ArrConfigs
                 .Include(x => x.Instances)
+                .ToListAsync();
+
+            var enabledInstances = configs
                 .SelectMany(c => c.Instances
                     .Where(i => i.Enabled)
                     .Select(i => new { Instance = i, Config = c }))
-                .ToListAsync();
+                .ToList();
 
             var results = new Dictionary<Guid, ArrHealthStatus>();
             var arrClientFactory = scope.ServiceProvider.GetRequiredService<IArrClientFactory>();

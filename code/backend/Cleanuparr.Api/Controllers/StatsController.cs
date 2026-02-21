@@ -25,14 +25,21 @@ public class StatsController : ControllerBase
     /// Gets aggregated application statistics for the specified timeframe
     /// </summary>
     /// <param name="hours">Timeframe in hours (default 24, range 1-720)</param>
+    /// <param name="includeEvents">Number of recent events to include (0 = none, max 100)</param>
+    /// <param name="includeStrikes">Number of recent strikes to include (0 = none, max 100)</param>
     [HttpGet]
-    public async Task<IActionResult> GetStats([FromQuery] int hours = 24)
+    public async Task<IActionResult> GetStats(
+        [FromQuery] int hours = 24,
+        [FromQuery] int includeEvents = 0,
+        [FromQuery] int includeStrikes = 0)
     {
         try
         {
             hours = Math.Clamp(hours, 1, 720);
+            includeEvents = Math.Clamp(includeEvents, 0, 100);
+            includeStrikes = Math.Clamp(includeStrikes, 0, 100);
 
-            var stats = await _statsService.GetStatsAsync(hours);
+            var stats = await _statsService.GetStatsAsync(hours, includeEvents, includeStrikes);
             return Ok(stats);
         }
         catch (Exception ex)
