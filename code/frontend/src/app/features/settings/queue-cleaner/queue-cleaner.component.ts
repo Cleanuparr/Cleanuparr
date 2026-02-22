@@ -182,6 +182,7 @@ export class QueueCleanerComponent implements OnInit, HasPendingChanges {
   });
 
   readonly failedPatternsError = computed(() => {
+    if (this.failedSubFieldsDisabled()) return undefined;
     if (this.failedPatternMode() === PatternMode.Include && this.failedPatterns().length === 0) {
       return 'At least one pattern is required when using Include mode';
     }
