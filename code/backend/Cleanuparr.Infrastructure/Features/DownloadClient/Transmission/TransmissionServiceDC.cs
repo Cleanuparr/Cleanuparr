@@ -1,5 +1,4 @@
 using Cleanuparr.Domain.Entities;
-using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Extensions;
 using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
@@ -39,10 +38,10 @@ public partial class TransmissionService
     }
 
     /// <inheritdoc/>
-    protected override async Task DeleteDownloadInternal(ITorrentItemWrapper torrent, bool deleteSourceFiles)
+    public override async Task DeleteDownload(ITorrentItemWrapper torrent, bool deleteSourceFiles)
     {
         var transmissionTorrent = (TransmissionItemWrapper)torrent;
-        await RemoveDownloadAsync(transmissionTorrent.Info.Id, deleteSourceFiles);
+        await _client.TorrentRemoveAsync([transmissionTorrent.Info.Id], deleteSourceFiles);
     }
     
     public override async Task CreateCategoryAsync(string name)
@@ -136,22 +135,5 @@ public partial class TransmissionService
     protected virtual async Task ChangeDownloadLocation(long downloadId, string newLocation)
     {
         await _client.TorrentSetLocationAsync([downloadId], newLocation, true);
-    }
-
-    public override async Task DeleteDownload(string hash, bool deleteSourceFiles)
-    {
-        TorrentInfo? torrent = await GetTorrentAsync(hash);
-
-        if (torrent is null)
-        {
-            return;
-        }
-
-        await _client.TorrentRemoveAsync([torrent.Id], deleteSourceFiles);
-    }
-
-    protected virtual async Task RemoveDownloadAsync(long downloadId, bool deleteSourceFiles)
-    {
-        await _client.TorrentRemoveAsync([downloadId], deleteSourceFiles);
     }
 }

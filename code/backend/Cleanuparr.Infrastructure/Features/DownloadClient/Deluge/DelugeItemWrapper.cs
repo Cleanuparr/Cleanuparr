@@ -44,6 +44,8 @@ public sealed class DelugeItemWrapper : ITorrentItemWrapper
         set => Info.Label = value;
     }
 
+    public string SavePath => Info.DownloadLocation ?? string.Empty;
+
     public bool IsDownloading() => Info.State?.Equals("Downloading", StringComparison.InvariantCultureIgnoreCase) == true;
     
     public bool IsStalled() => Info.State?.Equals("Downloading", StringComparison.InvariantCultureIgnoreCase) == true && Info is { DownloadSpeed: <= 0, Eta: <= 0 };

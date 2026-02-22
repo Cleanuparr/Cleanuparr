@@ -14,6 +14,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using DelugeService = Cleanuparr.Infrastructure.Features.DownloadClient.Deluge.DelugeService;
 using QBitService = Cleanuparr.Infrastructure.Features.DownloadClient.QBittorrent.QBitService;
+using RTorrentService = Cleanuparr.Infrastructure.Features.DownloadClient.RTorrent.RTorrentService;
 using TransmissionService = Cleanuparr.Infrastructure.Features.DownloadClient.Transmission.TransmissionService;
 using UTorrentService = Cleanuparr.Infrastructure.Features.DownloadClient.UTorrent.UTorrentService;
 
@@ -54,6 +55,7 @@ public sealed class DownloadServiceFactory : IDownloadServiceFactory
             DownloadClientTypeName.Deluge => CreateDelugeService(downloadClientConfig),
             DownloadClientTypeName.Transmission => CreateTransmissionService(downloadClientConfig),
             DownloadClientTypeName.uTorrent => CreateUTorrentService(downloadClientConfig),
+            DownloadClientTypeName.rTorrent => CreateRTorrentService(downloadClientConfig),
             _ => throw new NotSupportedException($"Download client type {downloadClientConfig.TypeName} is not supported")
         };
     }
@@ -147,6 +149,29 @@ public sealed class DownloadServiceFactory : IDownloadServiceFactory
         UTorrentService service = new(
             logger, cache, filenameEvaluator, striker, dryRunInterceptor,
             hardLinkFileService, httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, loggerFactory, ruleEvaluator, ruleManager
+        );
+
+        return service;
+    }
+
+    private RTorrentService CreateRTorrentService(DownloadClientConfig downloadClientConfig)
+    {
+        var logger = _serviceProvider.GetRequiredService<ILogger<RTorrentService>>();
+        var filenameEvaluator = _serviceProvider.GetRequiredService<IFilenameEvaluator>();
+        var striker = _serviceProvider.GetRequiredService<IStriker>();
+        var dryRunInterceptor = _serviceProvider.GetRequiredService<IDryRunInterceptor>();
+        var hardLinkFileService = _serviceProvider.GetRequiredService<IHardLinkFileService>();
+        var httpClientProvider = _serviceProvider.GetRequiredService<IDynamicHttpClientProvider>();
+        var eventPublisher = _serviceProvider.GetRequiredService<IEventPublisher>();
+        var blocklistProvider = _serviceProvider.GetRequiredService<IBlocklistProvider>();
+
+        var ruleEvaluator = _serviceProvider.GetRequiredService<IRuleEvaluator>();
+        var ruleManager = _serviceProvider.GetRequiredService<IRuleManager>();
+
+        // Create the RTorrentService instance
+        RTorrentService service = new(
+            logger, filenameEvaluator, striker, dryRunInterceptor,
+            hardLinkFileService, httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, ruleEvaluator, ruleManager
         );
 
         return service;

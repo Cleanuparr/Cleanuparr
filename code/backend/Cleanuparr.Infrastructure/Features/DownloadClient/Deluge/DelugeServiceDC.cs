@@ -37,9 +37,11 @@ public partial class DelugeService
             .ToList();
 
     /// <inheritdoc/>
-    protected override async Task DeleteDownloadInternal(ITorrentItemWrapper torrent, bool deleteSourceFiles)
+    public override async Task DeleteDownload(ITorrentItemWrapper torrent, bool deleteSourceFiles)
     {
-        await DeleteDownload(torrent.Hash, deleteSourceFiles);
+        string hash = torrent.Hash.ToLowerInvariant();
+
+        await _client.DeleteTorrents([hash], deleteSourceFiles);
     }
 
     public override async Task CreateCategoryAsync(string name)
@@ -137,14 +139,6 @@ public partial class DelugeService
             
             torrent.Category = downloadCleanerConfig.UnlinkedTargetCategory;
         }
-    }
-
-    /// <inheritdoc/>
-    public override async Task DeleteDownload(string hash, bool deleteSourceFiles)
-    {
-        hash = hash.ToLowerInvariant();
-
-        await _client.DeleteTorrents([hash], deleteSourceFiles);
     }
 
     protected async Task CreateLabel(string name)

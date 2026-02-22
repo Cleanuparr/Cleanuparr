@@ -73,14 +73,16 @@
       helpKey="download-client:host" />
     @if (showUsernameField()) {
       <app-input label="Username" placeholder="admin" [(value)]="modalUsername"
-        hint="Username for authentication"
+        [hint]="usernameHint()"
         helpKey="download-client:username" />
     }
-    <app-input label="Password" placeholder="Enter password" type="password" [(value)]="modalPassword"
-      hint="Password for authentication"
-      helpKey="download-client:password" />
+    @if (showPasswordField()) {
+      <app-input label="Password" placeholder="Enter password" type="password" [(value)]="modalPassword"
+        [hint]="passwordHint()"
+        helpKey="download-client:password" />
+    }
     <app-input label="URL Base" placeholder="/api/v2" [(value)]="modalUrlBase"
-      hint="Optional URL base path, leave blank for default"
+      [hint]="urlBaseHint()"
       helpKey="download-client:urlBase" />
     <app-input label="External URL" placeholder="https://qbit.example.com" type="url" [(value)]="modalExternalUrl"
       hint="Optional URL used in notifications for clickable links (e.g., when internal Docker URLs are not reachable externally)"
