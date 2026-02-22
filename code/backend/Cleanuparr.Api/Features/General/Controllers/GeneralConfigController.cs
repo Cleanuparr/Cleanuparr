@@ -3,12 +3,9 @@ using System.Linq;
 using System.Threading.Tasks;
 
 using Cleanuparr.Api.Features.General.Contracts.Requests;
-using Cleanuparr.Domain.Enums;
 using Cleanuparr.Persistence;
-using Cleanuparr.Persistence.Models.Configuration.General;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 
 namespace Cleanuparr.Api.Features.General.Controllers;
@@ -19,16 +16,13 @@ public sealed class GeneralConfigController : ControllerBase
 {
     private readonly ILogger<GeneralConfigController> _logger;
     private readonly DataContext _dataContext;
-    private readonly MemoryCache _cache;
 
     public GeneralConfigController(
         ILogger<GeneralConfigController> logger,
-        DataContext dataContext,
-        MemoryCache cache)
+        DataContext dataContext)
     {
         _logger = logger;
         _dataContext = dataContext;
-        _cache = cache;
     }
 
     [HttpGet("general")]
@@ -49,7 +43,9 @@ public sealed class GeneralConfigController : ControllerBase
     }
 
     [HttpPut("general")]
-    public async Task<IActionResult> UpdateGeneralConfig([FromBody] UpdateGeneralConfigRequest request)
+    public async Task<IActionResult> UpdateGeneralConfig(
+        [FromBody] UpdateGeneralConfigRequest request,
+        [FromServices] EventsContext eventsContext)
     {
         await DataContext.Lock.WaitAsync();
         try
@@ -63,7 +59,17 @@ public sealed class GeneralConfigController : ControllerBase
 
             await _dataContext.SaveChangesAsync();
 
-            ClearStrikesCacheIfNeeded(wasDryRun, config.DryRun);
+            if (wasDryRun && !config.DryRun)
+            {
+                var deletedStrikes = await eventsContext.Strikes.ExecuteDeleteAsync();
+                var deletedItems = await eventsContext.DownloadItems
+                    .Where(d => !d.Strikes.Any())
+                    .ExecuteDeleteAsync();
+
+                _logger.LogWarning(
+                    "Dry run disabled — purged all strikes: {Strikes} strikes, {Items} download items removed",
+                    deletedStrikes, deletedItems);
+            }
 
             return Ok(new { Message = "General configuration updated successfully" });
         }
@@ -91,40 +97,5 @@ public sealed class GeneralConfigController : ControllerBase
             deletedStrikes, deletedItems);
 
         return Ok(new { DeletedStrikes = deletedStrikes, DeletedItems = deletedItems });
-    }
-
-    private void ClearStrikesCacheIfNeeded(bool wasDryRun, bool isDryRun)
-    {
-        if (!wasDryRun || isDryRun)
-        {
-            return;
-        }
-
-        List<object> keys;
-
-        // Remove strikes
-        foreach (string strikeType in Enum.GetNames(typeof(StrikeType)))
-        {
-            keys = _cache.Keys
-                .Where(key => key.ToString()?.StartsWith(strikeType, StringComparison.InvariantCultureIgnoreCase) is true)
-                .ToList();
-
-            foreach (object key in keys)
-            {
-                _cache.Remove(key);
-            }
-
-            _logger.LogTrace("Removed all cache entries for strike type: {StrikeType}", strikeType);
-        }
-
-        // Remove strike cache items
-        keys = _cache.Keys
-            .Where(key => key.ToString()?.StartsWith("item_", StringComparison.InvariantCultureIgnoreCase) is true)
-            .ToList();
-        
-        foreach (object key in keys)
-        {
-            _cache.Remove(key);
-        }
     }
 }
