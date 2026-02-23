@@ -131,6 +131,13 @@ if (basePath is not null)
         {
             if (!string.IsNullOrEmpty(basePath) && !context.Request.Path.StartsWithSegments(basePath, StringComparison.OrdinalIgnoreCase))
             {
+                // Redirect root to the base path for convenience
+                if (!context.Request.Path.HasValue || context.Request.Path.Value == "/")
+                {
+                    context.Response.Redirect(basePath + "/");
+                    return;
+                }
+
                 context.Response.StatusCode = StatusCodes.Status404NotFound;
                 return;
             }
