@@ -101,14 +101,6 @@ We welcome contributions from the community! Whether it's bug fixes, new feature
 - **[Feature Requests](https://github.com/Cleanuparr/Cleanuparr/issues/new/choose)** - Share your ideas for new features
 - **[Help Test Features](https://discord.gg/SCtMCgtsc4)** - Join Discord to test pre-release features and provide feedback
 
-# <img style="vertical-align: middle;" width="24px" src="./Logo/256.png" alt="Cleanuparr"> <span style="vertical-align: middle;">Cleanuparr</span> <img src="https://raw.githubusercontent.com/FortAwesome/Font-Awesome/6.x/svgs/solid/x.svg" height="24px" width="30px" style="vertical-align: middle;"> <span style="vertical-align: middle;">Huntarr</span> <img style="vertical-align: middle;" width="24px" src="https://github.com/plexguide/Huntarr.io/blob/main/frontend/static/logo/512.png?raw=true" alt Huntarr></img>
-
-Think of **Cleanuparr** as the janitor of your server; it keeps your download queue spotless, removes clutter, and blocks malicious files. Now imagine combining that with **Huntarr**, the compulsive librarian who finds missing and upgradable media to complete your collection
-
-While **Huntarr** fills in the blanks and improves what you already have, **Cleanuparr** makes sure that only clean downloads get through. If you're aiming for a reliable and self-sufficient setup, **Cleanuparr** and **Huntarr** will take your automated media stack to another level.
-
-<span style="font-size:24px"> ➡️ [**Huntarr**](https://github.com/plexguide/Huntarr.io) <span style="vertical-align: middle">![Huntarr](https://img.shields.io/github/stars/plexguide/Huntarr.io?style=social)</span></span> 
-
 # Credits
 Special thanks for inspiration go to:
 - [ThijmenGThN/swaparr](https://github.com/ThijmenGThN/swaparr)

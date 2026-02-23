@@ -75,7 +75,6 @@ export class NavSidebarComponent {
   ];
 
   suggestedApps: ExternalLink[] = [
-    { label: 'Huntarr', icon: 'tablerExternalLink', href: 'https://github.com/plexguide/Huntarr.io' },
   ];
 
   onNavItemClick(): void {
