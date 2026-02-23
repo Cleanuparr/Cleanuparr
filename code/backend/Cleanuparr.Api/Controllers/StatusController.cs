@@ -2,6 +2,7 @@ using System.Diagnostics;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 using Cleanuparr.Persistence;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -9,6 +10,7 @@ namespace Cleanuparr.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class StatusController : ControllerBase
 {
     private readonly ILogger<StatusController> _logger;

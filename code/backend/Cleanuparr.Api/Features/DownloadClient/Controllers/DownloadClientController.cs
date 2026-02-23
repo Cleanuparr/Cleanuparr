@@ -5,6 +5,7 @@ using Cleanuparr.Api.Features.DownloadClient.Contracts.Requests;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
 using Cleanuparr.Infrastructure.Http.DynamicHttpClientSystem;
 using Cleanuparr.Persistence;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -12,6 +13,7 @@ namespace Cleanuparr.Api.Features.DownloadClient.Controllers;
 
 [ApiController]
 [Route("api/configuration")]
+[Authorize]
 public sealed class DownloadClientController : ControllerBase
 {
     private readonly ILogger<DownloadClientController> _logger;

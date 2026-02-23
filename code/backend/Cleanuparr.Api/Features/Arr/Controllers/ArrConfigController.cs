@@ -4,6 +4,7 @@ using Cleanuparr.Infrastructure.Features.Arr.Dtos;
 using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 using Cleanuparr.Persistence;
 using Mapster;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -11,6 +12,7 @@ namespace Cleanuparr.Api.Features.Arr.Controllers;
 
 [ApiController]
 [Route("api/configuration")]
+[Authorize]
 public sealed class ArrConfigController : ControllerBase
 {
     private readonly ILogger<ArrConfigController> _logger;

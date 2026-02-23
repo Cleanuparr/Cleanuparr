@@ -1,6 +1,7 @@
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.State;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -8,6 +9,7 @@ namespace Cleanuparr.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class StrikesController : ControllerBase
 {
     private readonly EventsContext _context;

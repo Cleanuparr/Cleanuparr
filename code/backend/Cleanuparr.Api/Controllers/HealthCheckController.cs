@@ -1,4 +1,5 @@
 using Cleanuparr.Infrastructure.Health;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Cleanuparr.Api.Controllers;
@@ -8,6 +9,7 @@ namespace Cleanuparr.Api.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/health")]
+[Authorize]
 public class HealthCheckController : ControllerBase
 {
     private readonly ILogger<HealthCheckController> _logger;

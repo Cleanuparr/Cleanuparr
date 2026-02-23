@@ -2,6 +2,7 @@ using System.Text.Json.Serialization;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Events;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -9,6 +10,7 @@ namespace Cleanuparr.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class EventsController : ControllerBase
 {
     private readonly EventsContext _context;
