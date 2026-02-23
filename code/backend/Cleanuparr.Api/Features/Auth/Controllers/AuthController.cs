@@ -119,9 +119,9 @@ public sealed class AuthController : ControllerBase
                 return BadRequest(new { error = "Create an account first" });
             }
 
-            if (user.SetupCompleted && user.TotpEnabled)
+            if (user.SetupCompleted)
             {
-                return Conflict(new { error = "2FA is already configured" });
+                return Conflict(new { error = "Setup already completed. Use account settings to manage 2FA." });
             }
 
             // Generate new TOTP secret
@@ -176,6 +176,11 @@ public sealed class AuthController : ControllerBase
                 return BadRequest(new { error = "Create an account first" });
             }
 
+            if (user.SetupCompleted)
+            {
+                return Conflict(new { error = "Setup already completed. Use account settings to manage 2FA." });
+            }
+
             if (string.IsNullOrEmpty(user.TotpSecret))
             {
                 return BadRequest(new { error = "Generate 2FA setup first" });
@@ -210,6 +215,11 @@ public sealed class AuthController : ControllerBase
             if (user is null)
             {
                 return BadRequest(new { error = "Create an account first" });
+            }
+
+            if (user.SetupCompleted)
+            {
+                return Conflict(new { error = "Setup already completed" });
             }
 
             user.SetupCompleted = true;
@@ -382,6 +392,11 @@ public sealed class AuthController : ControllerBase
             return BadRequest(new { error = "Create an account first" });
         }
 
+        if (user.SetupCompleted)
+        {
+            return Conflict(new { error = "Setup already completed. Use account settings to manage Plex." });
+        }
+
         var pin = await _plexAuthService.RequestPin();
 
         return Ok(new PlexPinStatusResponse
@@ -410,6 +425,11 @@ public sealed class AuthController : ControllerBase
             if (user is null)
             {
                 return BadRequest(new { error = "Create an account first" });
+            }
+
+            if (user.SetupCompleted)
+            {
+                return Conflict(new { error = "Setup already completed. Use account settings to manage Plex." });
             }
 
             user.PlexAccountId = plexAccount.AccountId;
@@ -472,7 +492,10 @@ public sealed class AuthController : ControllerBase
             return Unauthorized(new { error = "Plex account does not match the linked account" });
         }
 
-        // Plex login bypasses 2FA
+        // Plex OAuth acts as a trusted identity provider — the user explicitly linked their
+        // Plex account during setup or via account settings (both require authentication).
+        // Since Plex login verifies the exact same Plex account ID that was linked,
+        // 2FA is not required for Plex login.
         _logger.LogInformation("User {Username} logged in via Plex", user.Username);
 
         var tokenResponse = await GenerateTokenResponse(user);

@@ -178,6 +178,61 @@ public class AuthControllerTests : IClassFixture<CustomWebApplicationFactory>
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
     }
 
+    [Fact, TestPriority(11)]
+    public async Task Setup_2FAGenerate_AfterCompletion_IsBlocked()
+    {
+        var response = await _client.PostAsJsonAsync("/api/auth/setup/2fa/generate", new { });
+
+        // Blocked by middleware (403) or controller defense-in-depth (409)
+        new[] { HttpStatusCode.Forbidden, HttpStatusCode.Conflict }
+            .ShouldContain(response.StatusCode);
+    }
+
+    [Fact, TestPriority(12)]
+    public async Task Setup_PlexPin_AfterCompletion_IsBlocked()
+    {
+        var response = await _client.PostAsync("/api/auth/setup/plex/pin", null);
+
+        // Blocked by middleware (403) or controller defense-in-depth (409)
+        new[] { HttpStatusCode.Forbidden, HttpStatusCode.Conflict }
+            .ShouldContain(response.StatusCode);
+    }
+
+    [Fact, TestPriority(13)]
+    public async Task Setup_Complete_AfterCompletion_IsBlocked()
+    {
+        var response = await _client.PostAsJsonAsync("/api/auth/setup/complete", new { });
+
+        // Blocked by middleware (403) or controller defense-in-depth (409)
+        new[] { HttpStatusCode.Forbidden, HttpStatusCode.Conflict }
+            .ShouldContain(response.StatusCode);
+    }
+
+    [Fact, TestPriority(14)]
+    public async Task Login_NotBlockedByMiddleware_AfterSetupEndpointsBlocked()
+    {
+        var response = await _client.PostAsJsonAsync("/api/auth/login", new
+        {
+            username = "admin",
+            password = "TestPassword123!"
+        });
+
+        // Login endpoint must NOT be blocked by the middleware (403).
+        // It may return OK (200) or TooManyRequests (429) due to brute force lockout from earlier tests.
+        response.StatusCode.ShouldNotBe(HttpStatusCode.Forbidden);
+    }
+
+    [Fact, TestPriority(15)]
+    public async Task AuthStatus_StillWorks_AfterSetupEndpointsBlocked()
+    {
+        var response = await _client.GetAsync("/api/auth/status");
+
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        body.GetProperty("setupCompleted").GetBoolean().ShouldBeTrue();
+    }
+
     #region TOTP helpers
 
     private static string _totpSecret = "";
