@@ -59,6 +59,15 @@ export class AccountSettingsComponent implements OnInit, OnDestroy {
   readonly newQrCodeUri = signal('');
   readonly newTotpSecret = signal('');
 
+  // 2FA enable
+  readonly enablePassword = signal('');
+  readonly enableVerificationCode = signal('');
+  readonly enabling2fa = signal(false);
+  readonly enableSetup = signal(false);
+
+  // 2FA disable
+  readonly disabling2fa = signal(false);
+
   // API key
   readonly apiKey = signal('');
   readonly apiKeyRevealed = signal(false);
@@ -170,6 +179,75 @@ export class AccountSettingsComponent implements OnInit, OnDestroy {
     this.newRecoveryCodes.set([]);
     this.newQrCodeUri.set('');
     this.newTotpSecret.set('');
+  }
+
+  // 2FA enable flow
+  startEnable2fa(): void {
+    this.enabling2fa.set(true);
+    this.api.enable2fa(this.enablePassword()).subscribe({
+      next: (result) => {
+        this.newQrCodeUri.set(result.qrCodeUri);
+        this.newTotpSecret.set(result.secret);
+        this.newRecoveryCodes.set(result.recoveryCodes);
+        this.enableSetup.set(true);
+        this.enabling2fa.set(false);
+      },
+      error: () => {
+        this.toast.error('Failed to start 2FA setup. Check your password.');
+        this.enabling2fa.set(false);
+      },
+    });
+  }
+
+  verifyEnable2fa(): void {
+    this.enabling2fa.set(true);
+    this.api.verifyEnable2fa(this.enableVerificationCode()).subscribe({
+      next: () => {
+        this.toast.success('Two-factor authentication enabled');
+        this.cancelEnable2fa();
+        this.enabling2fa.set(false);
+        this.loadAccount();
+      },
+      error: () => {
+        this.toast.error('Invalid verification code');
+        this.enabling2fa.set(false);
+      },
+    });
+  }
+
+  cancelEnable2fa(): void {
+    this.enableSetup.set(false);
+    this.enablePassword.set('');
+    this.enableVerificationCode.set('');
+    this.newRecoveryCodes.set([]);
+    this.newQrCodeUri.set('');
+    this.newTotpSecret.set('');
+  }
+
+  // 2FA disable flow
+  async confirmDisable2fa(): Promise<void> {
+    const confirmed = await this.confirmService.confirm({
+      title: 'Disable 2FA',
+      message: 'This will remove two-factor authentication from your account. Your recovery codes will be deleted.',
+      confirmLabel: 'Disable',
+      destructive: true,
+    });
+    if (!confirmed) return;
+
+    this.disabling2fa.set(true);
+    this.api.disable2fa(this.twoFaPassword(), this.twoFaCode()).subscribe({
+      next: () => {
+        this.toast.success('Two-factor authentication disabled');
+        this.twoFaPassword.set('');
+        this.twoFaCode.set('');
+        this.disabling2fa.set(false);
+        this.loadAccount();
+      },
+      error: () => {
+        this.toast.error('Failed to disable 2FA. Check your password and code.');
+        this.disabling2fa.set(false);
+      },
+    });
   }
 
   // API key

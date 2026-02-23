@@ -6,11 +6,13 @@ import { Router } from '@angular/router';
 export interface AuthStatus {
   setupCompleted: boolean;
   plexLinked: boolean;
+  authBypassActive?: boolean;
 }
 
 export interface LoginResponse {
   requiresTwoFactor: boolean;
   loginToken?: string;
+  tokens?: TokenResponse;
 }
 
 export interface TokenResponse {
@@ -59,6 +61,13 @@ export class AuthService {
       tap((status) => {
         this._isSetupComplete.set(status.setupCompleted);
         this._plexLinked.set(status.plexLinked);
+
+        // Trusted network bypass — no tokens needed
+        if (status.authBypassActive && status.setupCompleted) {
+          this._isAuthenticated.set(true);
+          this._isLoading.set(false);
+          return;
+        }
 
         const token = localStorage.getItem('access_token');
         if (token && status.setupCompleted) {
@@ -112,7 +121,13 @@ export class AuthService {
 
   // Login flow
   login(username: string, password: string): Observable<LoginResponse> {
-    return this.http.post<LoginResponse>('/api/auth/login', { username, password });
+    return this.http.post<LoginResponse>('/api/auth/login', { username, password }).pipe(
+      tap((response) => {
+        if (!response.requiresTwoFactor && response.tokens) {
+          this.handleTokens(response.tokens);
+        }
+      }),
+    );
   }
 
   verify2fa(loginToken: string, code: string, isRecoveryCode = false): Observable<TokenResponse> {

@@ -73,68 +73,167 @@
     <div class="form-stack">
       <div class="status-row">
         <span class="status-label">Status</span>
-        <span class="status-value status-value--active">Active</span>
+        @if (account()!.twoFactorEnabled) {
+          <span class="status-value status-value--active">Active</span>
+        } @else {
+          <span class="status-value status-value--inactive">Disabled</span>
+        }
       </div>
 
-      @if (newRecoveryCodes().length > 0) {
-        <div class="recovery-section">
-          <p class="recovery-title">New Authenticator Setup</p>
-          <p class="recovery-desc">Scan this QR code with your authenticator app to complete the setup.</p>
-          <div class="qr-section">
-            <div class="qr-code-wrapper">
-              <qrcode [qrdata]="newQrCodeUri()" [width]="200" errorCorrectionLevel="M" [margin]="2" />
-            </div>
-            <details class="qr-manual-entry">
-              <summary>Can't scan? Enter manually</summary>
-              <div class="qr-manual-content">
-                <p class="qr-manual-label">Secret key:</p>
-                <code class="qr-secret">{{ newTotpSecret() }}</code>
+      @if (account()!.twoFactorEnabled) {
+        <!-- 2FA Enabled: Regenerate or Disable -->
+        @if (newRecoveryCodes().length > 0) {
+          <div class="recovery-section">
+            <p class="recovery-title">New Authenticator Setup</p>
+            <p class="recovery-desc">Scan this QR code with your authenticator app to complete the setup.</p>
+            <div class="qr-section">
+              <div class="qr-code-wrapper">
+                <qrcode [qrdata]="newQrCodeUri()" [width]="200" errorCorrectionLevel="M" [margin]="2" />
               </div>
-            </details>
+              <details class="qr-manual-entry">
+                <summary>Can't scan? Enter manually</summary>
+                <div class="qr-manual-content">
+                  <p class="qr-manual-label">Secret key:</p>
+                  <code class="qr-secret">{{ newTotpSecret() }}</code>
+                </div>
+              </details>
+            </div>
+            <div class="form-divider"></div>
+            <p class="recovery-title">New Recovery Codes</p>
+            <p class="recovery-desc">Save these codes in a secure location. Each code can only be used once.</p>
+            <div class="recovery-codes">
+              @for (code of newRecoveryCodes(); track code) {
+                <div class="recovery-code">{{ code }}</div>
+              }
+            </div>
+            <div class="recovery-actions">
+              <app-button variant="secondary" size="sm" (clicked)="copyRecoveryCodes()">Copy Codes</app-button>
+              <app-button variant="ghost" size="sm" (clicked)="dismissRecoveryCodes()">Dismiss</app-button>
+            </div>
           </div>
+        } @else {
           <div class="form-divider"></div>
-          <p class="recovery-title">New Recovery Codes</p>
-          <p class="recovery-desc">Save these codes in a secure location. Each code can only be used once.</p>
-          <div class="recovery-codes">
-            @for (code of newRecoveryCodes(); track code) {
-              <div class="recovery-code">{{ code }}</div>
-            }
+          <p class="section-hint">To regenerate your 2FA, enter your current password and a valid authenticator code.</p>
+          <app-input
+            label="Current Password"
+            type="password"
+            placeholder="Enter your password"
+            [value]="twoFaPassword()"
+            (valueChange)="twoFaPassword.set($event)"
+          />
+          <app-input
+            label="Authenticator Code"
+            type="text"
+            placeholder="Enter 6-digit code"
+            [value]="twoFaCode()"
+            (valueChange)="twoFaCode.set($event)"
+          />
+          <div class="form-actions">
+            <app-button
+              variant="destructive"
+              [disabled]="!twoFaPassword() || twoFaCode().length !== 6 || regenerating2fa()"
+              (clicked)="confirmRegenerate2fa()"
+            >
+              @if (regenerating2fa()) {
+                <app-spinner size="sm" /> Regenerating...
+              } @else {
+                Regenerate 2FA
+              }
+            </app-button>
+            <app-button
+              variant="destructive"
+              [disabled]="!twoFaPassword() || twoFaCode().length !== 6 || disabling2fa()"
+              (clicked)="confirmDisable2fa()"
+            >
+              @if (disabling2fa()) {
+                <app-spinner size="sm" /> Disabling...
+              } @else {
+                Disable 2FA
+              }
+            </app-button>
           </div>
-          <div class="recovery-actions">
-            <app-button variant="secondary" size="sm" (clicked)="copyRecoveryCodes()">Copy Codes</app-button>
-            <app-button variant="ghost" size="sm" (clicked)="dismissRecoveryCodes()">Dismiss</app-button>
-          </div>
-        </div>
+        }
       } @else {
-        <div class="form-divider"></div>
-        <p class="section-hint">To regenerate your 2FA, enter your current password and a valid authenticator code.</p>
-        <app-input
-          label="Current Password"
-          type="password"
-          placeholder="Enter your password"
-          [value]="twoFaPassword()"
-          (valueChange)="twoFaPassword.set($event)"
-        />
-        <app-input
-          label="Authenticator Code"
-          type="text"
-          placeholder="Enter 6-digit code"
-          [value]="twoFaCode()"
-          (valueChange)="twoFaCode.set($event)"
-        />
-        <div class="form-actions">
-          <app-button
-            variant="destructive"
-            [disabled]="!twoFaPassword() || twoFaCode().length !== 6 || regenerating2fa()"
-            (clicked)="confirmRegenerate2fa()"
-          >
-            @if (regenerating2fa()) {
-              <app-spinner size="sm" /> Regenerating...
-            } @else {
-              Regenerate 2FA
+        <!-- 2FA Disabled: Enable flow -->
+        @if (enableSetup()) {
+          <!-- QR code + verify flow -->
+          <div class="recovery-section">
+            <p class="recovery-title">Set Up Authenticator</p>
+            <p class="recovery-desc">Scan this QR code with your authenticator app.</p>
+            <div class="qr-section">
+              <div class="qr-code-wrapper">
+                <qrcode [qrdata]="newQrCodeUri()" [width]="200" errorCorrectionLevel="M" [margin]="2" />
+              </div>
+              <details class="qr-manual-entry">
+                <summary>Can't scan? Enter manually</summary>
+                <div class="qr-manual-content">
+                  <p class="qr-manual-label">Secret key:</p>
+                  <code class="qr-secret">{{ newTotpSecret() }}</code>
+                </div>
+              </details>
+            </div>
+
+            @if (newRecoveryCodes().length > 0) {
+              <div class="form-divider"></div>
+              <p class="recovery-title">Recovery Codes</p>
+              <p class="recovery-desc">Save these codes in a secure location. Each code can only be used once.</p>
+              <div class="recovery-codes">
+                @for (code of newRecoveryCodes(); track code) {
+                  <div class="recovery-code">{{ code }}</div>
+                }
+              </div>
+              <div class="recovery-actions">
+                <app-button variant="secondary" size="sm" (clicked)="copyRecoveryCodes()">Copy Codes</app-button>
+              </div>
             }
-          </app-button>
-        </div>
+
+            <div class="form-divider"></div>
+            <app-input
+              label="Verification Code"
+              type="text"
+              placeholder="Enter 6-digit code from your app"
+              [value]="enableVerificationCode()"
+              (valueChange)="enableVerificationCode.set($event)"
+            />
+            <div class="form-actions">
+              <app-button
+                variant="primary"
+                [disabled]="enableVerificationCode().length !== 6 || enabling2fa()"
+                (clicked)="verifyEnable2fa()"
+              >
+                @if (enabling2fa()) {
+                  <app-spinner size="sm" /> Verifying...
+                } @else {
+                  Verify & Enable 2FA
+                }
+              </app-button>
+              <app-button variant="ghost" (clicked)="cancelEnable2fa()">Cancel</app-button>
+            </div>
+          </div>
+        } @else {
+          <div class="form-divider"></div>
+          <p class="section-hint">Two-factor authentication adds an extra layer of security to your account.</p>
+          <app-input
+            label="Password"
+            type="password"
+            placeholder="Enter your password to enable 2FA"
+            [value]="enablePassword()"
+            (valueChange)="enablePassword.set($event)"
+          />
+          <div class="form-actions">
+            <app-button
+              variant="primary"
+              [disabled]="!enablePassword() || enabling2fa()"
+              (clicked)="startEnable2fa()"
+            >
+              @if (enabling2fa()) {
+                <app-spinner size="sm" /> Setting up...
+              } @else {
+                Enable 2FA
+              }
+            </app-button>
+          </div>
+        }
       }
     </div>
   </app-card>
