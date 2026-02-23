@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using Cleanuparr.Api.Auth;
 using Cleanuparr.Api.Features.Auth.Contracts.Requests;
 using Cleanuparr.Api.Features.Auth.Contracts.Responses;
 using Cleanuparr.Infrastructure.Features.Auth;
@@ -43,10 +44,25 @@ public sealed class AuthController : ControllerBase
     {
         var user = await _usersContext.Users.AsNoTracking().FirstOrDefaultAsync();
 
+        var authBypass = false;
+        await using var dataContext = DataContext.CreateStaticInstance();
+        var generalConfig = await dataContext.GeneralConfigs.AsNoTracking().FirstOrDefaultAsync();
+        if (generalConfig is { Auth.DisableAuthForLocalAddresses: true })
+        {
+            var clientIp = TrustedNetworkAuthenticationHandler.ResolveClientIp(
+                HttpContext, generalConfig.Auth.TrustForwardedHeaders);
+            if (clientIp is not null)
+            {
+                authBypass = TrustedNetworkAuthenticationHandler.IsTrustedAddress(
+                    clientIp, generalConfig.Auth.TrustedNetworks);
+            }
+        }
+
         return Ok(new AuthStatusResponse
         {
             SetupCompleted = user is { SetupCompleted: true },
-            PlexLinked = user?.PlexAccountId is not null
+            PlexLinked = user?.PlexAccountId is not null,
+            AuthBypassActive = authBypass
         });
     }
 
@@ -196,11 +212,6 @@ public sealed class AuthController : ControllerBase
                 return BadRequest(new { error = "Create an account first" });
             }
 
-            if (!user.TotpEnabled)
-            {
-                return BadRequest(new { error = "2FA must be configured before completing setup" });
-            }
-
             user.SetupCompleted = true;
             user.UpdatedAt = DateTime.UtcNow;
             await _usersContext.SaveChangesAsync();
@@ -241,6 +252,22 @@ public sealed class AuthController : ControllerBase
 
         // Reset failed attempts on successful password verification
         await ResetFailedAttempts(user.Id);
+
+        // If 2FA is not enabled, issue tokens directly
+        if (!user.TotpEnabled)
+        {
+            // Re-fetch with tracking since the query above used AsNoTracking
+            var trackedUser = await _usersContext.Users.FirstAsync(u => u.Id == user.Id);
+            var tokenResponse = await GenerateTokenResponse(trackedUser);
+
+            _logger.LogInformation("User {Username} logged in (2FA disabled)", user.Username);
+
+            return Ok(new LoginResponse
+            {
+                RequiresTwoFactor = false,
+                Tokens = tokenResponse
+            });
+        }
 
         // Password valid - require 2FA
         var loginToken = _jwtService.GenerateLoginToken(user.Id);

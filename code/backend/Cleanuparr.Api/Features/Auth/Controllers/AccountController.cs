@@ -139,6 +139,145 @@ public sealed class AccountController : ControllerBase
         }
     }
 
+    [HttpPost("2fa/enable")]
+    public async Task<IActionResult> Enable2fa([FromBody] Enable2faRequest request)
+    {
+        await UsersContext.Lock.WaitAsync();
+        try
+        {
+            var user = await GetCurrentUser(includeRecoveryCodes: true);
+            if (user is null) return Unauthorized();
+
+            if (user.TotpEnabled)
+            {
+                return Conflict(new { error = "2FA is already enabled" });
+            }
+
+            if (!_passwordService.VerifyPassword(request.Password, user.PasswordHash))
+            {
+                return BadRequest(new { error = "Incorrect password" });
+            }
+
+            // Generate new TOTP
+            var secret = _totpService.GenerateSecret();
+            var qrUri = _totpService.GetQrCodeUri(secret, user.Username);
+            var recoveryCodes = _totpService.GenerateRecoveryCodes();
+
+            user.TotpSecret = secret;
+            user.UpdatedAt = DateTime.UtcNow;
+
+            // Replace any existing recovery codes
+            _usersContext.RecoveryCodes.RemoveRange(user.RecoveryCodes);
+
+            foreach (var code in recoveryCodes)
+            {
+                _usersContext.RecoveryCodes.Add(new RecoveryCode
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = user.Id,
+                    CodeHash = _totpService.HashRecoveryCode(code),
+                    IsUsed = false
+                });
+            }
+
+            await _usersContext.SaveChangesAsync();
+
+            _logger.LogInformation("2FA setup generated for user {Username}", user.Username);
+
+            return Ok(new TotpSetupResponse
+            {
+                Secret = secret,
+                QrCodeUri = qrUri,
+                RecoveryCodes = recoveryCodes
+            });
+        }
+        finally
+        {
+            UsersContext.Lock.Release();
+        }
+    }
+
+    [HttpPost("2fa/enable/verify")]
+    public async Task<IActionResult> VerifyEnable2fa([FromBody] VerifyTotpRequest request)
+    {
+        await UsersContext.Lock.WaitAsync();
+        try
+        {
+            var user = await GetCurrentUser();
+            if (user is null) return Unauthorized();
+
+            if (user.TotpEnabled)
+            {
+                return Conflict(new { error = "2FA is already enabled" });
+            }
+
+            if (string.IsNullOrEmpty(user.TotpSecret))
+            {
+                return BadRequest(new { error = "Generate 2FA setup first" });
+            }
+
+            if (!_totpService.ValidateCode(user.TotpSecret, request.Code))
+            {
+                return BadRequest(new { error = "Invalid verification code" });
+            }
+
+            user.TotpEnabled = true;
+            user.UpdatedAt = DateTime.UtcNow;
+            await _usersContext.SaveChangesAsync();
+
+            _logger.LogInformation("2FA enabled for user {Username}", user.Username);
+
+            return Ok(new { message = "2FA enabled" });
+        }
+        finally
+        {
+            UsersContext.Lock.Release();
+        }
+    }
+
+    [HttpPost("2fa/disable")]
+    public async Task<IActionResult> Disable2fa([FromBody] Disable2faRequest request)
+    {
+        await UsersContext.Lock.WaitAsync();
+        try
+        {
+            var user = await GetCurrentUser(includeRecoveryCodes: true);
+            if (user is null) return Unauthorized();
+
+            if (!user.TotpEnabled)
+            {
+                return BadRequest(new { error = "2FA is not enabled" });
+            }
+
+            if (!_passwordService.VerifyPassword(request.Password, user.PasswordHash))
+            {
+                return BadRequest(new { error = "Incorrect password" });
+            }
+
+            if (!_totpService.ValidateCode(user.TotpSecret, request.TotpCode))
+            {
+                return BadRequest(new { error = "Invalid 2FA code" });
+            }
+
+            user.TotpEnabled = false;
+            user.TotpSecret = string.Empty;
+            user.UpdatedAt = DateTime.UtcNow;
+
+            // Remove all recovery codes
+            _usersContext.RecoveryCodes.RemoveRange(user.RecoveryCodes);
+
+            await _usersContext.SaveChangesAsync();
+
+            _logger.LogInformation("2FA disabled for user {Username}", user.Username);
+
+            return Ok(new { message = "2FA disabled" });
+        }
+        finally
+        {
+            UsersContext.Lock.Release();
+        }
+    }
+
     [HttpGet("api-key")]
     public async Task<IActionResult> GetApiKey()
     {

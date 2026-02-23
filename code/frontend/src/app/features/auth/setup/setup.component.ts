@@ -139,6 +139,11 @@ export class SetupComponent implements OnDestroy {
     });
   }
 
+  skip2fa(): void {
+    this.currentStep.set(3);
+    this.error.set('');
+  }
+
   goToStep3(): void {
     this.currentStep.set(3);
     this.error.set('');

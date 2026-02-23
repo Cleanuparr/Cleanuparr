@@ -52,6 +52,18 @@ export class AccountApi {
     return this.http.post<TotpSetupResponse>('/api/account/2fa/regenerate', request);
   }
 
+  enable2fa(password: string): Observable<TotpSetupResponse> {
+    return this.http.post<TotpSetupResponse>('/api/account/2fa/enable', { password });
+  }
+
+  verifyEnable2fa(code: string): Observable<void> {
+    return this.http.post<void>('/api/account/2fa/enable/verify', { code });
+  }
+
+  disable2fa(password: string, totpCode: string): Observable<void> {
+    return this.http.post<void>('/api/account/2fa/disable', { password, totpCode });
+  }
+
   getApiKey(): Observable<{ apiKey: string }> {
     return this.http.get<{ apiKey: string }>('/api/account/api-key');
   }

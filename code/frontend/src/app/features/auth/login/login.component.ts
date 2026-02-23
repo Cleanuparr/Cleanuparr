@@ -83,6 +83,9 @@ export class LoginComponent implements OnInit, OnDestroy {
         if (result.requiresTwoFactor && result.loginToken) {
           this.loginToken.set(result.loginToken);
           this.view.set('2fa');
+        } else if (!result.requiresTwoFactor) {
+          // 2FA not enabled — tokens already handled by AuthService
+          this.router.navigate(['/dashboard']);
         }
         this.loading.set(false);
       },
