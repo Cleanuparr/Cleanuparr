@@ -4,4 +4,5 @@ public sealed record LoginResponse
 {
     public required bool RequiresTwoFactor { get; init; }
     public string? LoginToken { get; init; }
+    public TokenResponse? Tokens { get; init; }
 }

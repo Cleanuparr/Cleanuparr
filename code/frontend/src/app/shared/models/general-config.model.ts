@@ -10,6 +10,12 @@ export interface LoggingConfig {
   archiveTimeLimitHours: number;
 }
 
+export interface AuthConfig {
+  disableAuthForLocalAddresses: boolean;
+  trustForwardedHeaders: boolean;
+  trustedNetworks: string[];
+}
+
 export interface GeneralConfig {
   displaySupportBanner: boolean;
   dryRun: boolean;
@@ -21,5 +27,6 @@ export interface GeneralConfig {
   statusCheckEnabled: boolean;
   strikeInactivityWindowHours: number;
   log?: LoggingConfig;
+  auth?: AuthConfig;
   ignoredDownloads: string[];
 }

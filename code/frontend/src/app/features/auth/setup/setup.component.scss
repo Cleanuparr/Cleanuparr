@@ -372,3 +372,20 @@
   justify-content: flex-end;
   margin-top: var(--space-4);
 }
+
+.skip-link {
+  display: block;
+  background: none;
+  border: none;
+  color: var(--text-tertiary);
+  font-family: var(--font-family);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  text-align: center;
+  margin-top: var(--space-2);
+  padding: var(--space-1);
+
+  &:hover {
+    color: var(--text-secondary);
+  }
+}

@@ -34,6 +34,8 @@ public sealed record UpdateGeneralConfigRequest
 
     public UpdateLoggingConfigRequest Log { get; init; } = new();
 
+    public UpdateAuthConfigRequest Auth { get; init; } = new();
+
     public GeneralConfig ApplyTo(GeneralConfig existingConfig, IServiceProvider services, ILogger logger)
     {
         existingConfig.DisplaySupportBanner = DisplaySupportBanner;
@@ -49,6 +51,7 @@ public sealed record UpdateGeneralConfigRequest
         existingConfig.StrikeInactivityWindowHours = StrikeInactivityWindowHours;
 
         bool loggingChanged = Log.ApplyTo(existingConfig.Log);
+        Auth.ApplyTo(existingConfig.Auth);
 
         Validate(existingConfig);
 
@@ -75,6 +78,7 @@ public sealed record UpdateGeneralConfigRequest
         }
 
         config.Log.Validate();
+        config.Auth.Validate();
     }
 
     private void ApplySideEffects(GeneralConfig config, IServiceProvider services, ILogger logger, bool loggingChanged)
@@ -144,4 +148,20 @@ public sealed record UpdateLoggingConfigRequest
     }
 
     public bool LevelOnlyChange { get; private set; }
+}
+
+public sealed record UpdateAuthConfigRequest
+{
+    public bool DisableAuthForLocalAddresses { get; init; }
+
+    public bool TrustForwardedHeaders { get; init; }
+
+    public List<string> TrustedNetworks { get; init; } = [];
+
+    public void ApplyTo(AuthConfig existingConfig)
+    {
+        existingConfig.DisableAuthForLocalAddresses = DisableAuthForLocalAddresses;
+        existingConfig.TrustForwardedHeaders = TrustForwardedHeaders;
+        existingConfig.TrustedNetworks = TrustedNetworks;
+    }
 }

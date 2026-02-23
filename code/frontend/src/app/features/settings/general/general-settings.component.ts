@@ -69,6 +69,11 @@ export class GeneralSettingsComponent implements OnInit, HasPendingChanges {
   readonly strikeInactivityWindowHours = signal<number | null>(24);
   readonly purgingStrikes = signal(false);
 
+  // Auth
+  readonly authDisableLocalAuth = signal(false);
+  readonly authTrustForwardedHeaders = signal(false);
+  readonly authTrustedNetworks = signal<string[]>([]);
+
   // Logging
   readonly logLevel = signal<unknown>(LogEventLevel.Information);
   readonly logRollingSizeMB = signal<number | null>(10);
@@ -182,6 +187,11 @@ export class GeneralSettingsComponent implements OnInit, HasPendingChanges {
         this.statusCheckEnabled.set(config.statusCheckEnabled);
         this.ignoredDownloads.set(config.ignoredDownloads ?? []);
         this.strikeInactivityWindowHours.set(config.strikeInactivityWindowHours);
+        if (config.auth) {
+          this.authDisableLocalAuth.set(config.auth.disableAuthForLocalAddresses);
+          this.authTrustForwardedHeaders.set(config.auth.trustForwardedHeaders);
+          this.authTrustedNetworks.set(config.auth.trustedNetworks ?? []);
+        }
         if (config.log) {
           this.logLevel.set(config.log.level);
           this.logRollingSizeMB.set(config.log.rollingSizeMB);
@@ -219,6 +229,11 @@ export class GeneralSettingsComponent implements OnInit, HasPendingChanges {
       statusCheckEnabled: this.statusCheckEnabled(),
       strikeInactivityWindowHours: this.strikeInactivityWindowHours() ?? 24,
       ignoredDownloads: this.ignoredDownloads(),
+      auth: {
+        disableAuthForLocalAddresses: this.authDisableLocalAuth(),
+        trustForwardedHeaders: this.authTrustForwardedHeaders(),
+        trustedNetworks: this.authTrustedNetworks(),
+      },
       log: {
         level: this.logLevel() as LogEventLevel,
         rollingSizeMB: this.logRollingSizeMB() ?? 10,
@@ -258,6 +273,9 @@ export class GeneralSettingsComponent implements OnInit, HasPendingChanges {
       statusCheckEnabled: this.statusCheckEnabled(),
       strikeInactivityWindowHours: this.strikeInactivityWindowHours(),
       ignoredDownloads: this.ignoredDownloads(),
+      authDisableLocalAuth: this.authDisableLocalAuth(),
+      authTrustForwardedHeaders: this.authTrustForwardedHeaders(),
+      authTrustedNetworks: this.authTrustedNetworks(),
       logLevel: this.logLevel(),
       logRollingSizeMB: this.logRollingSizeMB(),
       logRetainedFileCount: this.logRetainedFileCount(),
