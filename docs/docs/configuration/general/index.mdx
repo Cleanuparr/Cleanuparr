@@ -58,6 +58,61 @@ When disabled, the version check and "update available" notification in the side
 
 <div className={styles.section}>
 
+<SectionTitle icon="🔐">Authentication</SectionTitle>
+
+<ConfigSection
+  title="Disable Auth for Local Addresses"
+  icon="🏠"
+>
+
+Bypass authentication for requests originating from local network addresses. When enabled, users on the local network can access Cleanuparr without logging in.
+
+**Built-in trusted ranges:**
+- `127.0.0.0/8` / `::1` (localhost)
+- `10.0.0.0/8` (Class A private)
+- `172.16.0.0/12` (Class B private)
+- `192.168.0.0/16` (Class C private)
+- IPv6 link-local (`fe80::`) and unique-local (`fd00::`) addresses
+
+<Warning>
+Only enable this if your Cleanuparr instance is not exposed to the internet. Anyone on your local network will have full access without authentication.
+</Warning>
+
+</ConfigSection>
+
+<ConfigSection
+  title="Trust Forwarded Headers"
+  icon="🔀"
+>
+
+When running behind a reverse proxy (e.g. Nginx, Caddy, Traefik), enable this to use `X-Forwarded-For` and `X-Real-IP` headers to determine the client's real IP address instead of the proxy's address.
+
+<Warning>
+Only enable this if you are using a reverse proxy. Forwarded headers are only trusted when the direct connection comes from a local address, preventing spoofing from remote attackers.
+</Warning>
+
+</ConfigSection>
+
+<ConfigSection
+  title="Additional Trusted Networks"
+  icon="🌐"
+>
+
+Add custom IP addresses or CIDR ranges that should bypass authentication, in addition to the built-in local address ranges.
+
+**Examples:**
+```
+192.168.1.0/24
+10.0.50.0/24
+172.20.0.5
+```
+
+</ConfigSection>
+
+</div>
+
+<div className={styles.section}>
+
 <SectionTitle icon="🌐">HTTP Configuration</SectionTitle>
 
 <ConfigSection

@@ -59,6 +59,9 @@ export class DocumentationService {
       'log.archiveTimeLimitHours': 'archive-time-limit',
       'ignoredDownloads': 'ignored-downloads',
       'strikeInactivityWindowHours': 'strike-inactivity-window',
+      'auth.disableLocalAuth': 'disable-auth-for-local-addresses',
+      'auth.trustForwardedHeaders': 'trust-forwarded-headers',
+      'auth.trustedNetworks': 'additional-trusted-networks',
     },
     'download-cleaner': {
       'enabled': 'enable-download-cleaner',
