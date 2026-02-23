@@ -41,6 +41,23 @@
     </div>
   </app-card>
 
+  <app-card header="Authentication">
+    <div class="form-stack">
+      <app-toggle label="Disable Authentication for Local Addresses" [(checked)]="authDisableLocalAuth"
+        hint="When enabled, requests from local network addresses (localhost, 192.168.x.x, 10.x.x.x, 172.16-31.x.x) will bypass authentication" />
+      @if (authDisableLocalAuth()) {
+        <app-toggle label="Trust Forwarded Headers" [(checked)]="authTrustForwardedHeaders"
+          hint="When behind a reverse proxy, trust X-Forwarded-For and X-Real-IP headers to determine the client's real IP address. Only enable this if you are using a reverse proxy." />
+        <app-chip-input
+          label="Additional Trusted Networks"
+          placeholder="e.g. 192.168.1.0/24"
+          hint="Add custom IP addresses or CIDR ranges that should bypass authentication"
+          [(items)]="authTrustedNetworks"
+        />
+      }
+    </div>
+  </app-card>
+
   <app-card header="HTTP Settings">
     <div class="form-stack">
       <div class="form-row">

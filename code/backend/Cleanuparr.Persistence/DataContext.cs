@@ -88,11 +88,20 @@ public class DataContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<GeneralConfig>(entity =>
+        {
             entity.ComplexProperty(e => e.Log, cp =>
             {
                 cp.Property(l => l.Level).HasConversion<LowercaseEnumConverter<LogEventLevel>>();
-            })
-        );
+            });
+
+            entity.ComplexProperty(e => e.Auth, cp =>
+            {
+                cp.Property(a => a.TrustedNetworks)
+                    .HasConversion(
+                        v => string.Join(',', v),
+                        v => v.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList());
+            });
+        });
         
         modelBuilder.Entity<QueueCleanerConfig>(entity =>
         {

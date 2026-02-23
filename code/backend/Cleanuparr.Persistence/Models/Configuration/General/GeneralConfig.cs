@@ -36,6 +36,8 @@ public sealed record GeneralConfig : IConfig
 
     public LoggingConfig Log { get; set; } = new();
 
+    public AuthConfig Auth { get; set; } = new();
+
     public void Validate()
     {
         if (HttpTimeout is 0)
@@ -49,5 +51,6 @@ public sealed record GeneralConfig : IConfig
         }
 
         Log.Validate();
+        Auth.Validate();
     }
 }

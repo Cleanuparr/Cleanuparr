@@ -29,7 +29,16 @@ public static class AuthDI
                         return ApiKeyAuthenticationDefaults.AuthenticationScheme;
                     }
 
-                    return JwtBearerDefaults.AuthenticationScheme;
+                    // Check for Bearer token or SignalR access_token
+                    if (context.Request.Headers.ContainsKey("Authorization") ||
+                        (context.Request.Path.StartsWithSegments("/api/hubs") &&
+                         context.Request.Query.ContainsKey("access_token")))
+                    {
+                        return JwtBearerDefaults.AuthenticationScheme;
+                    }
+
+                    // Fall through to trusted network handler (returns NoResult if disabled)
+                    return TrustedNetworkAuthenticationDefaults.AuthenticationScheme;
                 };
             })
             .AddJwtBearer(options =>
@@ -64,7 +73,9 @@ public static class AuthDI
                 };
             })
             .AddScheme<AuthenticationSchemeOptions, ApiKeyAuthenticationHandler>(
-                ApiKeyAuthenticationDefaults.AuthenticationScheme, _ => { });
+                ApiKeyAuthenticationDefaults.AuthenticationScheme, _ => { })
+            .AddScheme<AuthenticationSchemeOptions, TrustedNetworkAuthenticationHandler>(
+                TrustedNetworkAuthenticationDefaults.AuthenticationScheme, _ => { });
 
         services.AddAuthorization(options =>
         {
