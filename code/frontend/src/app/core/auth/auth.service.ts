@@ -7,6 +7,8 @@ export interface AuthStatus {
   setupCompleted: boolean;
   plexLinked: boolean;
   authBypassActive?: boolean;
+  oidcEnabled?: boolean;
+  oidcProviderName?: string;
 }
 
 export interface LoginResponse {
@@ -46,11 +48,15 @@ export class AuthService {
   private readonly _isSetupComplete = signal(false);
   private readonly _plexLinked = signal(false);
   private readonly _isLoading = signal(true);
+  private readonly _oidcEnabled = signal(false);
+  private readonly _oidcProviderName = signal('');
 
   readonly isAuthenticated = this._isAuthenticated.asReadonly();
   readonly isSetupComplete = this._isSetupComplete.asReadonly();
   readonly plexLinked = this._plexLinked.asReadonly();
   readonly isLoading = this._isLoading.asReadonly();
+  readonly oidcEnabled = this._oidcEnabled.asReadonly();
+  readonly oidcProviderName = this._oidcProviderName.asReadonly();
 
   private refreshTimer: ReturnType<typeof setTimeout> | null = null;
   private refreshInFlight$: Observable<TokenResponse | null> | null = null;
@@ -61,6 +67,8 @@ export class AuthService {
       tap((status) => {
         this._isSetupComplete.set(status.setupCompleted);
         this._plexLinked.set(status.plexLinked);
+        this._oidcEnabled.set(status.oidcEnabled ?? false);
+        this._oidcProviderName.set(status.oidcProviderName ?? '');
 
         // Trusted network bypass — no tokens needed
         if (status.authBypassActive && status.setupCompleted) {
@@ -158,6 +166,21 @@ export class AuthService {
         }
       }),
     );
+  }
+
+  // OIDC login
+  startOidcLogin(): Observable<{ authorizationUrl: string }> {
+    return this.http.post<{ authorizationUrl: string }>('/api/auth/oidc/start', {});
+  }
+
+  exchangeOidcCode(code: string): Observable<TokenResponse> {
+    return this.http
+      .post<TokenResponse>('/api/auth/oidc/exchange', { code })
+      .pipe(tap((tokens) => this.handleTokens(tokens)));
+  }
+
+  startOidcLink(): Observable<{ authorizationUrl: string }> {
+    return this.http.post<{ authorizationUrl: string }>('/api/account/oidc/link', {});
   }
 
   // Token management

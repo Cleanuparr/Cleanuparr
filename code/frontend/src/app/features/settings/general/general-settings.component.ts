@@ -1,15 +1,17 @@
 import { Component, ChangeDetectionStrategy, inject, signal, computed, OnInit, viewChildren } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 import { PageHeaderComponent } from '@layout/page-header/page-header.component';
 import {
-  CardComponent, ButtonComponent, ToggleComponent,
+  CardComponent, ButtonComponent, ToggleComponent, InputComponent,
   NumberInputComponent, SelectComponent, ChipInputComponent, AccordionComponent,
   EmptyStateComponent, LoadingStateComponent,
   type SelectOption,
 } from '@ui';
 import { GeneralConfigApi } from '@core/api/general-config.api';
+import { AuthService } from '@core/auth/auth.service';
 import { ToastService } from '@core/services/toast.service';
 import { ConfirmService } from '@core/services/confirm.service';
-import { GeneralConfig, LoggingConfig } from '@shared/models/general-config.model';
+import { GeneralConfig, LoggingConfig, OidcConfig } from '@shared/models/general-config.model';
 import { CertificateValidationType, LogEventLevel } from '@shared/models/enums';
 import { HasPendingChanges } from '@core/guards/pending-changes.guard';
 import { DeferredLoader } from '@shared/utils/loading.util';
@@ -34,7 +36,7 @@ const LOG_LEVEL_OPTIONS: SelectOption[] = [
   standalone: true,
   imports: [
     PageHeaderComponent, CardComponent, ButtonComponent,
-    ToggleComponent, NumberInputComponent, SelectComponent, ChipInputComponent,
+    ToggleComponent, InputComponent, NumberInputComponent, SelectComponent, ChipInputComponent,
     AccordionComponent, EmptyStateComponent, LoadingStateComponent,
   ],
   templateUrl: './general-settings.component.html',
@@ -43,8 +45,10 @@ const LOG_LEVEL_OPTIONS: SelectOption[] = [
 })
 export class GeneralSettingsComponent implements OnInit, HasPendingChanges {
   private readonly api = inject(GeneralConfigApi);
+  private readonly auth = inject(AuthService);
   private readonly toast = inject(ToastService);
   private readonly confirmService = inject(ConfirmService);
+  private readonly route = inject(ActivatedRoute);
   private readonly chipInputs = viewChildren(ChipInputComponent);
 
   private readonly savedSnapshot = signal('');
@@ -73,6 +77,17 @@ export class GeneralSettingsComponent implements OnInit, HasPendingChanges {
   readonly authDisableLocalAuth = signal(false);
   readonly authTrustForwardedHeaders = signal(false);
   readonly authTrustedNetworks = signal<string[]>([]);
+
+  // OIDC
+  readonly oidcEnabled = signal(false);
+  readonly oidcIssuerUrl = signal('');
+  readonly oidcClientId = signal('');
+  readonly oidcClientSecret = signal('');
+  readonly oidcScopes = signal('openid profile email');
+  readonly oidcProviderName = signal('OIDC');
+  readonly oidcAuthorizedSubject = signal('');
+  readonly oidcExpanded = signal(false);
+  readonly oidcLinking = signal(false);
 
   // Logging
   readonly logLevel = signal<unknown>(LogEventLevel.Information);
@@ -170,6 +185,14 @@ export class GeneralSettingsComponent implements OnInit, HasPendingChanges {
   ));
 
   ngOnInit(): void {
+    const params = this.route.snapshot.queryParams;
+    if (params['oidc_link'] === 'success') {
+      this.toast.success('OIDC account linked successfully');
+      this.oidcExpanded.set(true);
+    } else if (params['oidc_link_error']) {
+      this.toast.error('Failed to link OIDC account');
+      this.oidcExpanded.set(true);
+    }
     this.loadConfig();
   }
 
@@ -191,6 +214,15 @@ export class GeneralSettingsComponent implements OnInit, HasPendingChanges {
           this.authDisableLocalAuth.set(config.auth.disableAuthForLocalAddresses);
           this.authTrustForwardedHeaders.set(config.auth.trustForwardedHeaders);
           this.authTrustedNetworks.set(config.auth.trustedNetworks ?? []);
+          if (config.auth.oidc) {
+            this.oidcEnabled.set(config.auth.oidc.enabled);
+            this.oidcIssuerUrl.set(config.auth.oidc.issuerUrl);
+            this.oidcClientId.set(config.auth.oidc.clientId);
+            this.oidcClientSecret.set(config.auth.oidc.clientSecret);
+            this.oidcScopes.set(config.auth.oidc.scopes || 'openid profile email');
+            this.oidcProviderName.set(config.auth.oidc.providerName || 'OIDC');
+            this.oidcAuthorizedSubject.set(config.auth.oidc.authorizedSubject);
+          }
         }
         if (config.log) {
           this.logLevel.set(config.log.level);
@@ -233,6 +265,15 @@ export class GeneralSettingsComponent implements OnInit, HasPendingChanges {
         disableAuthForLocalAddresses: this.authDisableLocalAuth(),
         trustForwardedHeaders: this.authTrustForwardedHeaders(),
         trustedNetworks: this.authTrustedNetworks(),
+        oidc: {
+          enabled: this.oidcEnabled(),
+          issuerUrl: this.oidcIssuerUrl(),
+          clientId: this.oidcClientId(),
+          clientSecret: this.oidcClientSecret(),
+          scopes: this.oidcScopes(),
+          authorizedSubject: this.oidcAuthorizedSubject(),
+          providerName: this.oidcProviderName(),
+        },
       },
       log: {
         level: this.logLevel() as LogEventLevel,
@@ -276,6 +317,12 @@ export class GeneralSettingsComponent implements OnInit, HasPendingChanges {
       authDisableLocalAuth: this.authDisableLocalAuth(),
       authTrustForwardedHeaders: this.authTrustForwardedHeaders(),
       authTrustedNetworks: this.authTrustedNetworks(),
+      oidcEnabled: this.oidcEnabled(),
+      oidcIssuerUrl: this.oidcIssuerUrl(),
+      oidcClientId: this.oidcClientId(),
+      oidcClientSecret: this.oidcClientSecret(),
+      oidcScopes: this.oidcScopes(),
+      oidcProviderName: this.oidcProviderName(),
       logLevel: this.logLevel(),
       logRollingSizeMB: this.logRollingSizeMB(),
       logRetainedFileCount: this.logRetainedFileCount(),
@@ -305,6 +352,19 @@ export class GeneralSettingsComponent implements OnInit, HasPendingChanges {
     if (confirmed) {
       this.purgeStrikes();
     }
+  }
+
+  startOidcLink(): void {
+    this.oidcLinking.set(true);
+    this.auth.startOidcLink().subscribe({
+      next: (result) => {
+        window.location.href = result.authorizationUrl;
+      },
+      error: () => {
+        this.toast.error('Failed to start OIDC account linking');
+        this.oidcLinking.set(false);
+      },
+    });
   }
 
   private purgeStrikes(): void {

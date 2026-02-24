@@ -1,6 +1,6 @@
 import { Component, ChangeDetectionStrategy, inject, signal, viewChild, effect, afterNextRender, OnInit, OnDestroy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { ButtonComponent, InputComponent, SpinnerComponent } from '@ui';
 import { AuthService } from '@core/auth/auth.service';
 import { ApiError } from '@core/interceptors/error.interceptor';
@@ -18,6 +18,7 @@ type LoginView = 'credentials' | '2fa' | 'recovery';
 export class LoginComponent implements OnInit, OnDestroy {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
 
   view = signal<LoginView>('credentials');
   loading = signal(false);
@@ -40,6 +41,11 @@ export class LoginComponent implements OnInit, OnDestroy {
   plexLinked = this.auth.plexLinked;
   plexLoading = signal(false);
   plexPinId = signal(0);
+
+  // OIDC
+  oidcEnabled = this.auth.oidcEnabled;
+  oidcProviderName = this.auth.oidcProviderName;
+  oidcLoading = signal(false);
 
   // Auto-focus refs
   usernameInput = viewChild<InputComponent>('usernameInput');
@@ -65,6 +71,18 @@ export class LoginComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.auth.checkStatus().subscribe();
+
+    const oidcError = this.route.snapshot.queryParams['oidc_error'];
+    if (oidcError) {
+      const messages: Record<string, string> = {
+        provider_error: 'The identity provider returned an error',
+        invalid_request: 'Invalid authentication request',
+        authentication_failed: 'Authentication failed',
+        unauthorized: 'Your account is not authorized for OIDC login',
+        no_account: 'No account found',
+      };
+      this.error.set(messages[oidcError] || 'OIDC authentication failed');
+    }
   }
 
   ngOnDestroy(): void {
@@ -162,6 +180,22 @@ export class LoginComponent implements OnInit, OnDestroy {
       error: (err) => {
         this.error.set(err.message || 'Failed to start Plex login');
         this.plexLoading.set(false);
+      },
+    });
+  }
+
+  startOidcLogin(): void {
+    this.oidcLoading.set(true);
+    this.error.set('');
+
+    this.auth.startOidcLogin().subscribe({
+      next: (result) => {
+        // Full page redirect to IdP
+        window.location.href = result.authorizationUrl;
+      },
+      error: (err) => {
+        this.error.set(err.message || 'Failed to start OIDC login');
+        this.oidcLoading.set(false);
       },
     });
   }

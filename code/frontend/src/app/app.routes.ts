@@ -135,6 +135,13 @@ export const routes: Routes = [
             (m) => m.SetupComponent,
           ),
       },
+      {
+        path: 'oidc/callback',
+        loadComponent: () =>
+          import(
+            '@features/auth/oidc-callback/oidc-callback.component'
+          ).then((m) => m.OidcCallbackComponent),
+      },
     ],
   },
   { path: '**', redirectTo: 'dashboard' },

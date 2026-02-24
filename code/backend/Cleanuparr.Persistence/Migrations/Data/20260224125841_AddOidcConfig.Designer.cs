@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Cleanuparr.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Cleanuparr.Persistence.Migrations.Data
 {
     [DbContext(typeof(DataContext))]
-    partial class DataContextModelSnapshot : ModelSnapshot
+    [Migration("20260224125841_AddOidcConfig")]
+    partial class AddOidcConfig
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.1");
@@ -434,6 +437,10 @@ namespace Cleanuparr.Persistence.Migrations.Data
                         .HasColumnType("TEXT")
                         .HasColumnName("cron_expression");
 
+                    b.Property<bool>("DeleteKnownMalware")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("delete_known_malware");
+
                     b.Property<bool>("DeletePrivate")
                         .HasColumnType("INTEGER")
                         .HasColumnName("delete_private");
@@ -450,10 +457,6 @@ namespace Cleanuparr.Persistence.Migrations.Data
                         .IsRequired()
                         .HasColumnType("TEXT")
                         .HasColumnName("ignored_downloads");
-
-                    b.Property<bool>("ProcessNoContentId")
-                        .HasColumnType("INTEGER")
-                        .HasColumnName("process_no_content_id");
 
                     b.Property<bool>("UseAdvancedScheduling")
                         .HasColumnType("INTEGER")
@@ -964,10 +967,6 @@ namespace Cleanuparr.Persistence.Migrations.Data
                         .IsRequired()
                         .HasColumnType("TEXT")
                         .HasColumnName("ignored_downloads");
-
-                    b.Property<bool>("ProcessNoContentId")
-                        .HasColumnType("INTEGER")
-                        .HasColumnName("process_no_content_id");
 
                     b.Property<bool>("UseAdvancedScheduling")
                         .HasColumnType("INTEGER")

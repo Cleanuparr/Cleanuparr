@@ -23,6 +23,7 @@ public sealed class AuthController : ControllerBase
     private readonly IPasswordService _passwordService;
     private readonly ITotpService _totpService;
     private readonly IPlexAuthService _plexAuthService;
+    private readonly IOidcAuthService _oidcAuthService;
     private readonly ILogger<AuthController> _logger;
 
     public AuthController(
@@ -31,6 +32,7 @@ public sealed class AuthController : ControllerBase
         IPasswordService passwordService,
         ITotpService totpService,
         IPlexAuthService plexAuthService,
+        IOidcAuthService oidcAuthService,
         ILogger<AuthController> logger)
     {
         _usersContext = usersContext;
@@ -38,6 +40,7 @@ public sealed class AuthController : ControllerBase
         _passwordService = passwordService;
         _totpService = totpService;
         _plexAuthService = plexAuthService;
+        _oidcAuthService = oidcAuthService;
         _logger = logger;
     }
 
@@ -60,11 +63,17 @@ public sealed class AuthController : ControllerBase
             }
         }
 
+        var oidcConfig = generalConfig?.Auth.Oidc;
+        var oidcEnabled = oidcConfig is { Enabled: true } &&
+                          !string.IsNullOrEmpty(oidcConfig.AuthorizedSubject);
+
         return Ok(new AuthStatusResponse
         {
             SetupCompleted = user is { SetupCompleted: true },
             PlexLinked = user?.PlexAccountId is not null,
-            AuthBypassActive = authBypass
+            AuthBypassActive = authBypass,
+            OidcEnabled = oidcEnabled,
+            OidcProviderName = oidcEnabled ? oidcConfig!.ProviderName : string.Empty
         });
     }
 
@@ -507,6 +516,127 @@ public sealed class AuthController : ControllerBase
             Completed = true,
             Tokens = tokenResponse
         });
+    }
+
+    [HttpPost("oidc/start")]
+    public async Task<IActionResult> StartOidc()
+    {
+        await using var dataContext = DataContext.CreateStaticInstance();
+        var generalConfig = await dataContext.GeneralConfigs.AsNoTracking().FirstOrDefaultAsync();
+        var oidcConfig = generalConfig?.Auth.Oidc;
+
+        if (oidcConfig is not { Enabled: true } || string.IsNullOrEmpty(oidcConfig.AuthorizedSubject))
+        {
+            return BadRequest(new { error = "OIDC is not enabled or not configured" });
+        }
+
+        var redirectUri = GetOidcCallbackUrl();
+
+        try
+        {
+            var result = await _oidcAuthService.StartAuthorization(redirectUri);
+            return Ok(new OidcStartResponse { AuthorizationUrl = result.AuthorizationUrl });
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning(ex, "Failed to start OIDC authorization");
+            return StatusCode(429, new { error = ex.Message });
+        }
+    }
+
+    [HttpGet("oidc/callback")]
+    public async Task<IActionResult> OidcCallback(
+        [FromQuery] string? code,
+        [FromQuery] string? state,
+        [FromQuery] string? error)
+    {
+        var basePath = GetFrontendBasePath();
+
+        // Handle IdP error responses
+        if (!string.IsNullOrEmpty(error))
+        {
+            _logger.LogWarning("OIDC callback received error: {Error}", error);
+            return Redirect($"{basePath}/auth/login?oidc_error=provider_error");
+        }
+
+        if (string.IsNullOrEmpty(code) || string.IsNullOrEmpty(state))
+        {
+            return Redirect($"{basePath}/auth/login?oidc_error=invalid_request");
+        }
+
+        var redirectUri = GetOidcCallbackUrl();
+        var result = await _oidcAuthService.HandleCallback(code, state, redirectUri);
+
+        if (!result.Success)
+        {
+            _logger.LogWarning("OIDC callback failed: {Error}", result.Error);
+            return Redirect($"{basePath}/auth/login?oidc_error=authentication_failed");
+        }
+
+        // Verify the subject matches the authorized subject
+        await using var dataContext = DataContext.CreateStaticInstance();
+        var generalConfig = await dataContext.GeneralConfigs.AsNoTracking().FirstOrDefaultAsync();
+        var oidcConfig = generalConfig?.Auth.Oidc;
+
+        if (oidcConfig is null || result.Subject != oidcConfig.AuthorizedSubject)
+        {
+            _logger.LogWarning("OIDC subject mismatch. Expected: {Expected}, Got: {Got}",
+                oidcConfig?.AuthorizedSubject, result.Subject);
+            return Redirect($"{basePath}/auth/login?oidc_error=unauthorized");
+        }
+
+        // Load the user and generate Cleanuparr tokens
+        var user = await _usersContext.Users.FirstOrDefaultAsync(u => u.SetupCompleted);
+        if (user is null)
+        {
+            return Redirect($"{basePath}/auth/login?oidc_error=no_account");
+        }
+
+        var tokenResponse = await GenerateTokenResponse(user);
+
+        // Store tokens with a one-time code (never put tokens in the URL)
+        var oneTimeCode = _oidcAuthService.StoreOneTimeCode(
+            tokenResponse.AccessToken,
+            tokenResponse.RefreshToken,
+            tokenResponse.ExpiresIn);
+
+        _logger.LogInformation("User {Username} authenticated via OIDC (subject: {Subject})",
+            user.Username, result.Subject);
+
+        return Redirect($"{basePath}/auth/oidc/callback?code={Uri.EscapeDataString(oneTimeCode)}");
+    }
+
+    [HttpPost("oidc/exchange")]
+    public IActionResult ExchangeOidcCode([FromBody] OidcExchangeRequest request)
+    {
+        var result = _oidcAuthService.ExchangeOneTimeCode(request.Code);
+
+        if (result is null)
+        {
+            return NotFound(new { error = "Invalid or expired code" });
+        }
+
+        return Ok(new TokenResponse
+        {
+            AccessToken = result.AccessToken,
+            RefreshToken = result.RefreshToken,
+            ExpiresIn = result.ExpiresIn
+        });
+    }
+
+    private string GetFrontendBasePath()
+    {
+        var basePath = HttpContext.Request.PathBase.Value?.TrimEnd('/') ?? "";
+        return basePath;
+    }
+
+    private string GetOidcCallbackUrl()
+    {
+        var request = HttpContext.Request;
+        var scheme = request.Scheme;
+        var host = request.Host.ToString();
+        var basePath = request.PathBase.Value?.TrimEnd('/') ?? "";
+        return $"{scheme}://{host}{basePath}/api/auth/oidc/callback";
     }
 
     private async Task<TokenResponse> GenerateTokenResponse(User user)

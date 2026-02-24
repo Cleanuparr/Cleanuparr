@@ -22,6 +22,7 @@ public sealed class AccountController : ControllerBase
     private readonly IPasswordService _passwordService;
     private readonly ITotpService _totpService;
     private readonly IPlexAuthService _plexAuthService;
+    private readonly IOidcAuthService _oidcAuthService;
     private readonly ILogger<AccountController> _logger;
 
     public AccountController(
@@ -29,12 +30,14 @@ public sealed class AccountController : ControllerBase
         IPasswordService passwordService,
         ITotpService totpService,
         IPlexAuthService plexAuthService,
+        IOidcAuthService oidcAuthService,
         ILogger<AccountController> logger)
     {
         _usersContext = usersContext;
         _passwordService = passwordService;
         _totpService = totpService;
         _plexAuthService = plexAuthService;
+        _oidcAuthService = oidcAuthService;
         _logger = logger;
     }
 
@@ -397,6 +400,79 @@ public sealed class AccountController : ControllerBase
         {
             UsersContext.Lock.Release();
         }
+    }
+
+    [HttpPost("oidc/link")]
+    public async Task<IActionResult> StartOidcLink()
+    {
+        await using var dataContext = DataContext.CreateStaticInstance();
+        var generalConfig = await dataContext.GeneralConfigs.AsNoTracking().FirstOrDefaultAsync();
+        var oidcConfig = generalConfig?.Auth.Oidc;
+
+        if (oidcConfig is not { Enabled: true })
+        {
+            return BadRequest(new { error = "OIDC is not enabled" });
+        }
+
+        var redirectUri = GetOidcLinkCallbackUrl();
+
+        try
+        {
+            var result = await _oidcAuthService.StartAuthorization(redirectUri);
+            return Ok(new OidcStartResponse { AuthorizationUrl = result.AuthorizationUrl });
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning(ex, "Failed to start OIDC link authorization");
+            return StatusCode(429, new { error = ex.Message });
+        }
+    }
+
+    [HttpGet("oidc/link/callback")]
+    public async Task<IActionResult> OidcLinkCallback(
+        [FromQuery] string? code,
+        [FromQuery] string? state,
+        [FromQuery] string? error)
+    {
+        var basePath = HttpContext.Request.PathBase.Value?.TrimEnd('/') ?? "";
+
+        if (!string.IsNullOrEmpty(error) || string.IsNullOrEmpty(code) || string.IsNullOrEmpty(state))
+        {
+            return Redirect($"{basePath}/settings/general?oidc_link_error=failed");
+        }
+
+        var redirectUri = GetOidcLinkCallbackUrl();
+        var result = await _oidcAuthService.HandleCallback(code, state, redirectUri);
+
+        if (!result.Success || string.IsNullOrEmpty(result.Subject))
+        {
+            _logger.LogWarning("OIDC link callback failed: {Error}", result.Error);
+            return Redirect($"{basePath}/settings/general?oidc_link_error=failed");
+        }
+
+        // Save the authorized subject to config
+        await using var dataContext = DataContext.CreateStaticInstance();
+        var generalConfig = await dataContext.GeneralConfigs.FirstOrDefaultAsync();
+        if (generalConfig is null)
+        {
+            return Redirect($"{basePath}/settings/general?oidc_link_error=no_config");
+        }
+
+        generalConfig.Auth.Oidc.AuthorizedSubject = result.Subject;
+        await dataContext.SaveChangesAsync();
+
+        _logger.LogInformation("OIDC account linked with subject: {Subject}", result.Subject);
+
+        return Redirect($"{basePath}/settings/general?oidc_link=success");
+    }
+
+    private string GetOidcLinkCallbackUrl()
+    {
+        var request = HttpContext.Request;
+        var scheme = request.Scheme;
+        var host = request.Host.ToString();
+        var basePath = request.PathBase.Value?.TrimEnd('/') ?? "";
+        return $"{scheme}://{host}{basePath}/api/account/oidc/link/callback";
     }
 
     private async Task<User?> GetCurrentUser(bool includeRecoveryCodes = false)

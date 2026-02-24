@@ -41,10 +41,13 @@
       </app-button>
     </form>
 
-    @if (plexLinked()) {
+    @if (plexLinked() || oidcEnabled()) {
       <div class="divider">
         <span>or</span>
       </div>
+    }
+
+    @if (plexLinked()) {
       <button
         class="plex-login-btn"
         [disabled]="plexLoading()"
@@ -58,6 +61,24 @@
             <path d="M5.074 1L12 12 5.074 23h5.854L18.926 12 11.928 1z"/>
           </svg>
           Sign in with Plex
+        }
+      </button>
+    }
+
+    @if (oidcEnabled()) {
+      <button
+        class="oidc-login-btn"
+        [disabled]="oidcLoading()"
+        (click)="startOidcLogin()"
+      >
+        @if (oidcLoading()) {
+          <app-spinner size="sm" />
+          Redirecting...
+        } @else {
+          <svg class="oidc-login-btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+          Sign in with {{ oidcProviderName() }}
         }
       </button>
     }
