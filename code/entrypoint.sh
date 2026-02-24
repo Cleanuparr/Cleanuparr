@@ -1,12 +1,29 @@
 #!/bin/bash
 set -e
 
+# Default UMASK if unset to prevent errors with set -e
+UMASK="${UMASK:-022}"
 CURRENT_UID=$(id -u)
 
 # If not running as root, skip all user/permission management.
 # This supports docker-compose `user: PUID:PGID` (rootless mode).
 if [ "$CURRENT_UID" != "0" ]; then
     umask "$UMASK"
+
+    # In rootless mode, the app uses /config for all writable state.
+    # A non-root user cannot create directories under /, so validate early.
+    if [ ! -d /config ]; then
+        echo "ERROR: /config does not exist and the container is running as non-root (UID $CURRENT_UID)." >&2
+        echo "Please mount a writable volume at /config." >&2
+        exit 1
+    fi
+
+    if [ ! -w /config ]; then
+        echo "ERROR: /config is not writable by UID $CURRENT_UID." >&2
+        echo "Please adjust permissions or mount /config as a writable volume." >&2
+        exit 1
+    fi
+
     exec "$@"
 fi
 
