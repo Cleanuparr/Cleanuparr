@@ -1,6 +1,34 @@
 #!/bin/bash
 set -e
 
+# Default UMASK if unset to prevent errors with set -e
+UMASK="${UMASK:-022}"
+CURRENT_UID=$(id -u)
+
+# If not running as root, skip all user/permission management.
+# This supports docker-compose `user: PUID:PGID` (rootless mode).
+if [ "$CURRENT_UID" != "0" ]; then
+    umask "$UMASK"
+
+    # In rootless mode, the app uses /config for all writable state.
+    # A non-root user cannot create directories under /, so validate early.
+    if [ ! -d /config ]; then
+        echo "ERROR: /config does not exist and the container is running as non-root (UID $CURRENT_UID)." >&2
+        echo "Please mount a writable volume at /config." >&2
+        exit 1
+    fi
+
+    if [ ! -w /config ]; then
+        echo "ERROR: /config is not writable by UID $CURRENT_UID." >&2
+        echo "Please adjust permissions or mount /config as a writable volume." >&2
+        exit 1
+    fi
+
+    exec "$@"
+fi
+
+# Running as root — use PUID/PGID to create user and drop privileges
+
 # Create group if it doesn't exist
 if ! getent group "$PGID" > /dev/null 2>&1; then
     echo "Creating group with GID $PGID"
@@ -16,16 +44,14 @@ fi
 # Set umask
 umask "$UMASK"
 
-# Change ownership of app directory if not running as root
+# Ensure /config is writable by the target user
 if [ "$PUID" != "0" ] || [ "$PGID" != "0" ]; then
     mkdir -p /config
-    chown -R "$PUID:$PGID" /app
     chown -R "$PUID:$PGID" /config
 fi
 
-# Execute the main command as the specified user
+# Execute as the specified user (or root if PUID=0)
 if [ "$PUID" = "0" ] && [ "$PGID" = "0" ]; then
-    # Running as root, no need for gosu
     exec "$@"
 else
     # Use gosu to drop privileges
