@@ -57,7 +57,7 @@
   </app-card>
 
   @if (enabled()) {
-    <app-accordion header="Seeding rules" subtitle="Define cleanup rules per category" [(expanded)]="categoriesExpanded">
+    <app-accordion header="Seeding rules" subtitle="Define cleanup rules per category" [(expanded)]="categoriesExpanded" [error]="noFeaturesError()">
       @for (cat of categories(); track $index; let i = $index) {
         <div class="category-row">
           <div class="category-row__header">
@@ -105,7 +105,7 @@
       </app-button>
     </app-accordion>
 
-    <app-accordion header="Unlinked Downloads" subtitle="Clean up orphaned downloads" [(expanded)]="unlinkedExpanded">
+    <app-accordion header="Unlinked Downloads" subtitle="Clean up orphaned downloads" [(expanded)]="unlinkedExpanded" [error]="noFeaturesError()">
       <div class="form-stack">
         <app-toggle label="Enabled" [(checked)]="unlinkedEnabled"
           hint="Enable management of downloads that have no hardlinks"

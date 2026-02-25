@@ -49,6 +49,14 @@
     color: var(--text-secondary);
   }
 
+  &__error {
+    font-size: var(--font-size-xs);
+    color: var(--color-error);
+    margin-left: auto;
+    margin-right: var(--space-3);
+    flex-shrink: 0;
+  }
+
   &__chevron {
     font-size: 18px;
     color: var(--text-tertiary);

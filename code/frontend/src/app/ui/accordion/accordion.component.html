@@ -6,6 +6,9 @@
         <span class="accordion__subtitle">{{ subtitle() }}</span>
       }
     </div>
+    @if (error()) {
+      <span class="accordion__error">{{ error() }}</span>
+    }
     <ng-icon
       [name]="expanded() ? 'tablerChevronDown' : 'tablerChevronRight'"
       class="accordion__chevron"
