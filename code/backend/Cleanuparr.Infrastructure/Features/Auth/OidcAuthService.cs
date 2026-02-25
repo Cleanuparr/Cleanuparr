@@ -14,7 +14,7 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace Cleanuparr.Infrastructure.Features.Auth;
 
-public sealed class OidcAuthService : IOidcAuthService, IDisposable
+public sealed class OidcAuthService : IOidcAuthService
 {
     private const int MaxPendingFlows = 100;
     private const int MaxOneTimeCodes = 100;
@@ -23,13 +23,16 @@ public sealed class OidcAuthService : IOidcAuthService, IDisposable
 
     private static readonly ConcurrentDictionary<string, OidcFlowState> PendingFlows = new();
     private static readonly ConcurrentDictionary<string, OidcOneTimeCodeEntry> OneTimeCodes = new();
+    private static readonly ConcurrentDictionary<string, ConfigurationManager<OpenIdConnectConfiguration>> ConfigManagers = new();
+    
+    // Reference held to prevent GC collection; the timer fires CleanupExpiredEntries every minute
+    #pragma warning disable IDE0052
+    private static readonly Timer CleanupTimer = new(CleanupExpiredEntries, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
+    #pragma warning restore IDE0052
 
     private readonly HttpClient _httpClient;
     private readonly DataContext _dataContext;
     private readonly ILogger<OidcAuthService> _logger;
-    private readonly Timer _cleanupTimer;
-
-    private static readonly ConcurrentDictionary<string, ConfigurationManager<OpenIdConnectConfiguration>> ConfigManagers = new();
 
     public OidcAuthService(
         IHttpClientFactory httpClientFactory,
@@ -39,10 +42,9 @@ public sealed class OidcAuthService : IOidcAuthService, IDisposable
         _httpClient = httpClientFactory.CreateClient("OidcAuth");
         _dataContext = dataContext;
         _logger = logger;
-        _cleanupTimer = new Timer(CleanupExpiredEntries, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
     }
 
-    public async Task<OidcAuthorizationResult> StartAuthorization(string redirectUri)
+    public async Task<OidcAuthorizationResult> StartAuthorization(string redirectUri, string? initiatorUserId = null)
     {
         var oidcConfig = await GetOidcConfig();
 
@@ -60,7 +62,7 @@ public sealed class OidcAuthService : IOidcAuthService, IDisposable
 
         var state = GenerateRandomString();
         var nonce = GenerateRandomString();
-        var codeVerifier = GenerateCodeVerifier();
+        var codeVerifier = GenerateRandomString();
         var codeChallenge = ComputeCodeChallenge(codeVerifier);
 
         var flowState = new OidcFlowState
@@ -69,6 +71,7 @@ public sealed class OidcAuthService : IOidcAuthService, IDisposable
             Nonce = nonce,
             CodeVerifier = codeVerifier,
             RedirectUri = redirectUri,
+            InitiatorUserId = initiatorUserId,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -184,7 +187,8 @@ public sealed class OidcAuthService : IOidcAuthService, IDisposable
             Success = true,
             Subject = subject,
             PreferredUsername = preferredUsername,
-            Email = email
+            Email = email,
+            InitiatorUserId = flowState.InitiatorUserId
         };
     }
 
@@ -321,22 +325,12 @@ public sealed class OidcAuthService : IOidcAuthService, IDisposable
             handler.ValidateToken(idToken, validationParameters, out var validatedSecurityToken);
             var jwtToken = (JwtSecurityToken)validatedSecurityToken;
 
-            // Validate nonce
-            var tokenNonce = jwtToken.Claims.FirstOrDefault(c => c.Type == "nonce")?.Value;
-            if (tokenNonce != expectedNonce)
-            {
-                _logger.LogWarning("OIDC ID token nonce mismatch. Expected: {Expected}, Got: {Got}",
-                    expectedNonce, tokenNonce);
-                return null;
-            }
-
-            return jwtToken;
+            return ValidateNonce(jwtToken, expectedNonce) ? jwtToken : null;
         }
         catch (SecurityTokenSignatureKeyNotFoundException)
         {
             // Try refreshing the configuration (JWKS key rotation)
             _logger.LogInformation("OIDC signing key not found, refreshing configuration");
-            var metadataAddress = oidcConfig.IssuerUrl.TrimEnd('/') + "/.well-known/openid-configuration";
 
             if (ConfigManagers.TryGetValue(oidcConfig.IssuerUrl, out var configManager))
             {
@@ -349,14 +343,7 @@ public sealed class OidcAuthService : IOidcAuthService, IDisposable
                     handler.ValidateToken(idToken, validationParameters, out var retryToken);
                     var jwtRetryToken = (JwtSecurityToken)retryToken;
 
-                    var tokenNonce = jwtRetryToken.Claims.FirstOrDefault(c => c.Type == "nonce")?.Value;
-                    if (tokenNonce != expectedNonce)
-                    {
-                        _logger.LogWarning("OIDC ID token nonce mismatch after key refresh");
-                        return null;
-                    }
-
-                    return jwtRetryToken;
+                    return ValidateNonce(jwtRetryToken, expectedNonce) ? jwtRetryToken : null;
                 }
                 catch (Exception retryEx)
                 {
@@ -401,15 +388,17 @@ public sealed class OidcAuthService : IOidcAuthService, IDisposable
         return $"{authorizationEndpoint}?{queryString}";
     }
 
-    private static string GenerateRandomString()
+    private bool ValidateNonce(JwtSecurityToken jwtToken, string expectedNonce)
     {
-        var bytes = new byte[32];
-        using var rng = RandomNumberGenerator.Create();
-        rng.GetBytes(bytes);
-        return Base64UrlEncode(bytes);
+        var tokenNonce = jwtToken.Claims.FirstOrDefault(c => c.Type == "nonce")?.Value;
+        if (tokenNonce == expectedNonce) return true;
+
+        _logger.LogWarning("OIDC ID token nonce mismatch. Expected: {Expected}, Got: {Got}",
+            expectedNonce, tokenNonce);
+        return false;
     }
 
-    private static string GenerateCodeVerifier()
+    private static string GenerateRandomString()
     {
         var bytes = new byte[32];
         using var rng = RandomNumberGenerator.Create();
@@ -457,11 +446,6 @@ public sealed class OidcAuthService : IOidcAuthService, IDisposable
         }
     }
 
-    public void Dispose()
-    {
-        _cleanupTimer.Dispose();
-    }
-
     /// <summary>
     /// Clears the cached OIDC discovery configuration. Used when issuer URL changes.
     /// </summary>
@@ -476,6 +460,7 @@ public sealed class OidcAuthService : IOidcAuthService, IDisposable
         public required string Nonce { get; init; }
         public required string CodeVerifier { get; init; }
         public required string RedirectUri { get; init; }
+        public string? InitiatorUserId { get; init; }
         public required DateTime CreatedAt { get; init; }
     }
 
@@ -489,17 +474,13 @@ public sealed class OidcAuthService : IOidcAuthService, IDisposable
 
     private sealed class OidcTokenResponse
     {
-        public string IdToken { get; set; } = string.Empty;
-        public string AccessToken { get; set; } = string.Empty;
-        public string TokenType { get; set; } = string.Empty;
-
         [System.Text.Json.Serialization.JsonPropertyName("id_token")]
-        public string IdTokenSnakeCase { set => IdToken = value; }
+        public string IdToken { get; set; } = string.Empty;
 
         [System.Text.Json.Serialization.JsonPropertyName("access_token")]
-        public string AccessTokenSnakeCase { set => AccessToken = value; }
+        public string AccessToken { get; set; } = string.Empty;
 
         [System.Text.Json.Serialization.JsonPropertyName("token_type")]
-        public string TokenTypeSnakeCase { set => TokenType = value; }
+        public string TokenType { get; set; } = string.Empty;
     }
 }

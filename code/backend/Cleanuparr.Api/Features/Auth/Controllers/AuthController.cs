@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using Cleanuparr.Api.Auth;
+using Cleanuparr.Api.Extensions;
 using Cleanuparr.Api.Features.Auth.Contracts.Requests;
 using Cleanuparr.Api.Features.Auth.Contracts.Responses;
 using Cleanuparr.Api.Filters;
@@ -19,6 +20,7 @@ namespace Cleanuparr.Api.Features.Auth.Controllers;
 public sealed class AuthController : ControllerBase
 {
     private readonly UsersContext _usersContext;
+    private readonly DataContext _dataContext;
     private readonly IJwtService _jwtService;
     private readonly IPasswordService _passwordService;
     private readonly ITotpService _totpService;
@@ -28,6 +30,7 @@ public sealed class AuthController : ControllerBase
 
     public AuthController(
         UsersContext usersContext,
+        DataContext dataContext,
         IJwtService jwtService,
         IPasswordService passwordService,
         ITotpService totpService,
@@ -36,6 +39,7 @@ public sealed class AuthController : ControllerBase
         ILogger<AuthController> logger)
     {
         _usersContext = usersContext;
+        _dataContext = dataContext;
         _jwtService = jwtService;
         _passwordService = passwordService;
         _totpService = totpService;
@@ -50,8 +54,7 @@ public sealed class AuthController : ControllerBase
         var user = await _usersContext.Users.AsNoTracking().FirstOrDefaultAsync();
 
         var authBypass = false;
-        await using var dataContext = DataContext.CreateStaticInstance();
-        var generalConfig = await dataContext.GeneralConfigs.AsNoTracking().FirstOrDefaultAsync();
+        var generalConfig = await _dataContext.GeneralConfigs.AsNoTracking().FirstOrDefaultAsync();
         if (generalConfig is { Auth.DisableAuthForLocalAddresses: true })
         {
             var clientIp = TrustedNetworkAuthenticationHandler.ResolveClientIp(
@@ -521,8 +524,7 @@ public sealed class AuthController : ControllerBase
     [HttpPost("oidc/start")]
     public async Task<IActionResult> StartOidc()
     {
-        await using var dataContext = DataContext.CreateStaticInstance();
-        var generalConfig = await dataContext.GeneralConfigs.AsNoTracking().FirstOrDefaultAsync();
+        var generalConfig = await _dataContext.GeneralConfigs.AsNoTracking().FirstOrDefaultAsync();
         var oidcConfig = generalConfig?.Auth.Oidc;
 
         if (oidcConfig is not { Enabled: true } || string.IsNullOrEmpty(oidcConfig.AuthorizedSubject))
@@ -550,7 +552,7 @@ public sealed class AuthController : ControllerBase
         [FromQuery] string? state,
         [FromQuery] string? error)
     {
-        var basePath = GetFrontendBasePath();
+        var basePath = HttpContext.Request.GetSafeBasePath();
 
         // Handle IdP error responses
         if (!string.IsNullOrEmpty(error))
@@ -574,8 +576,7 @@ public sealed class AuthController : ControllerBase
         }
 
         // Verify the subject matches the authorized subject
-        await using var dataContext = DataContext.CreateStaticInstance();
-        var generalConfig = await dataContext.GeneralConfigs.AsNoTracking().FirstOrDefaultAsync();
+        var generalConfig = await _dataContext.GeneralConfigs.AsNoTracking().FirstOrDefaultAsync();
         var oidcConfig = generalConfig?.Auth.Oidc;
 
         if (oidcConfig is null || result.Subject != oidcConfig.AuthorizedSubject)
@@ -622,12 +623,6 @@ public sealed class AuthController : ControllerBase
             RefreshToken = result.RefreshToken,
             ExpiresIn = result.ExpiresIn
         });
-    }
-
-    private string GetFrontendBasePath()
-    {
-        var basePath = HttpContext.Request.PathBase.Value?.TrimEnd('/') ?? "";
-        return basePath;
     }
 
     private string GetOidcCallbackUrl()

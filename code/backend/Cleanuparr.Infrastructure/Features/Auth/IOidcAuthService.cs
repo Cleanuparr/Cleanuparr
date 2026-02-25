@@ -13,6 +13,13 @@ public sealed record OidcCallbackResult
     public string? PreferredUsername { get; init; }
     public string? Email { get; init; }
     public string? Error { get; init; }
+
+    /// <summary>
+    /// The user ID of the authenticated user who initiated this OIDC flow.
+    /// Set when the flow is started from an authenticated context (e.g., account linking).
+    /// Used to verify the callback is completing the correct user's flow.
+    /// </summary>
+    public string? InitiatorUserId { get; init; }
 }
 
 public interface IOidcAuthService
@@ -20,7 +27,9 @@ public interface IOidcAuthService
     /// <summary>
     /// Generates the OIDC authorization URL and stores state/verifier for the callback.
     /// </summary>
-    Task<OidcAuthorizationResult> StartAuthorization(string redirectUri);
+    /// <param name="redirectUri">The callback URI for the OIDC provider.</param>
+    /// <param name="initiatorUserId">Optional user ID of the authenticated user initiating the flow (for account linking).</param>
+    Task<OidcAuthorizationResult> StartAuthorization(string redirectUri, string? initiatorUserId = null);
 
     /// <summary>
     /// Handles the OIDC callback: validates state, exchanges code for tokens, validates the ID token.

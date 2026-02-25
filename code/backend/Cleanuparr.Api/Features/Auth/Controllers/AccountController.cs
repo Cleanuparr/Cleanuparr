@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.Security.Cryptography;
+using Cleanuparr.Api.Extensions;
 using Cleanuparr.Api.Features.Auth.Contracts.Requests;
 using Cleanuparr.Api.Features.Auth.Contracts.Responses;
 using Cleanuparr.Api.Filters;
@@ -19,6 +20,7 @@ namespace Cleanuparr.Api.Features.Auth.Controllers;
 public sealed class AccountController : ControllerBase
 {
     private readonly UsersContext _usersContext;
+    private readonly DataContext _dataContext;
     private readonly IPasswordService _passwordService;
     private readonly ITotpService _totpService;
     private readonly IPlexAuthService _plexAuthService;
@@ -27,6 +29,7 @@ public sealed class AccountController : ControllerBase
 
     public AccountController(
         UsersContext usersContext,
+        DataContext dataContext,
         IPasswordService passwordService,
         ITotpService totpService,
         IPlexAuthService plexAuthService,
@@ -34,6 +37,7 @@ public sealed class AccountController : ControllerBase
         ILogger<AccountController> logger)
     {
         _usersContext = usersContext;
+        _dataContext = dataContext;
         _passwordService = passwordService;
         _totpService = totpService;
         _plexAuthService = plexAuthService;
@@ -405,8 +409,7 @@ public sealed class AccountController : ControllerBase
     [HttpPost("oidc/link")]
     public async Task<IActionResult> StartOidcLink()
     {
-        await using var dataContext = DataContext.CreateStaticInstance();
-        var generalConfig = await dataContext.GeneralConfigs.AsNoTracking().FirstOrDefaultAsync();
+        var generalConfig = await _dataContext.GeneralConfigs.AsNoTracking().FirstOrDefaultAsync();
         var oidcConfig = generalConfig?.Auth.Oidc;
 
         if (oidcConfig is not { Enabled: true })
@@ -415,10 +418,11 @@ public sealed class AccountController : ControllerBase
         }
 
         var redirectUri = GetOidcLinkCallbackUrl();
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
         try
         {
-            var result = await _oidcAuthService.StartAuthorization(redirectUri);
+            var result = await _oidcAuthService.StartAuthorization(redirectUri, userIdClaim);
             return Ok(new OidcStartResponse { AuthorizationUrl = result.AuthorizationUrl });
         }
         catch (InvalidOperationException ex)
@@ -428,13 +432,19 @@ public sealed class AccountController : ControllerBase
         }
     }
 
+    /// <remarks>
+    /// This endpoint must be [AllowAnonymous] because the IdP redirects the user's browser here
+    /// without a Bearer token. Security is ensured by validating that the OIDC flow was initiated
+    /// by an authenticated user (InitiatorUserId stored in the flow state during StartOidcLink).
+    /// </remarks>
+    [AllowAnonymous]
     [HttpGet("oidc/link/callback")]
     public async Task<IActionResult> OidcLinkCallback(
         [FromQuery] string? code,
         [FromQuery] string? state,
         [FromQuery] string? error)
     {
-        var basePath = HttpContext.Request.PathBase.Value?.TrimEnd('/') ?? "";
+        var basePath = HttpContext.Request.GetSafeBasePath();
 
         if (!string.IsNullOrEmpty(error) || string.IsNullOrEmpty(code) || string.IsNullOrEmpty(state))
         {
@@ -450,18 +460,37 @@ public sealed class AccountController : ControllerBase
             return Redirect($"{basePath}/settings/general?oidc_link_error=failed");
         }
 
+        // Verify the flow was initiated by an authenticated user
+        if (string.IsNullOrEmpty(result.InitiatorUserId) ||
+            !Guid.TryParse(result.InitiatorUserId, out var initiatorId))
+        {
+            _logger.LogWarning("OIDC link callback missing initiator user ID");
+            return Redirect($"{basePath}/settings/general?oidc_link_error=failed");
+        }
+
+        // Verify the initiator user exists
+        var user = await _usersContext.Users.AsNoTracking()
+            .FirstOrDefaultAsync(u => u.Id == initiatorId);
+
+        if (user is null)
+        {
+            _logger.LogWarning("OIDC link callback initiator user not found: {UserId}", result.InitiatorUserId);
+            return Redirect($"{basePath}/settings/general?oidc_link_error=failed");
+        }
+
         // Save the authorized subject to config
-        await using var dataContext = DataContext.CreateStaticInstance();
-        var generalConfig = await dataContext.GeneralConfigs.FirstOrDefaultAsync();
+        var generalConfig = await _dataContext.GeneralConfigs.FirstOrDefaultAsync();
+        
         if (generalConfig is null)
         {
             return Redirect($"{basePath}/settings/general?oidc_link_error=no_config");
         }
 
         generalConfig.Auth.Oidc.AuthorizedSubject = result.Subject;
-        await dataContext.SaveChangesAsync();
+        await _dataContext.SaveChangesAsync();
 
-        _logger.LogInformation("OIDC account linked with subject: {Subject}", result.Subject);
+        _logger.LogInformation("OIDC account linked with subject: {Subject} by user: {Username}",
+            result.Subject, user.Username);
 
         return Redirect($"{basePath}/settings/general?oidc_link=success");
     }
