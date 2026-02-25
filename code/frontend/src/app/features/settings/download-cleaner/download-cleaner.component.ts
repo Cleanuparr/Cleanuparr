@@ -6,6 +6,7 @@ import {
   EmptyStateComponent, LoadingStateComponent, type SelectOption,
 } from '@ui';
 import { DownloadCleanerApi } from '@core/api/download-cleaner.api';
+import { ApiError } from '@core/interceptors/error.interceptor';
 import { ToastService } from '@core/services/toast.service';
 import { DownloadCleanerConfig, CleanCategory, createDefaultCategory } from '@shared/models/download-cleaner-config.model';
 import { ScheduleOptions } from '@shared/models/queue-cleaner-config.model';
@@ -123,7 +124,20 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
     return undefined;
   }
 
+  readonly noFeaturesError = computed(() => {
+    if (!this.enabled()) return undefined;
+    const hasSeedingCategories = this.categories().length > 0;
+    const hasUnlinkedFeature = this.unlinkedEnabled()
+      && !this.unlinkedTargetCategoryError()
+      && !this.unlinkedCategoriesError();
+    if (!hasSeedingCategories && !hasUnlinkedFeature) {
+      return 'At least one feature must be configured';
+    }
+    return undefined;
+  });
+
   readonly hasErrors = computed(() => {
+    if (this.noFeaturesError()) return true;
     if (this.scheduleEveryError()) return true;
     if (this.cronError()) return true;
     if (this.unlinkedTargetCategoryError()) return true;
@@ -224,8 +238,10 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
         setTimeout(() => this.saved.set(false), 1500);
         this.savedSnapshot.set(this.buildSnapshot());
       },
-      error: () => {
-        this.toast.error('Failed to save download cleaner settings');
+      error: (err: ApiError) => {
+        this.toast.error(err.statusCode === 400
+          ? err.message
+          : 'Failed to save download cleaner settings');
         this.saving.set(false);
       },
     });

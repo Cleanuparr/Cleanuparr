@@ -12,6 +12,7 @@ import { NgIcon } from '@ng-icons/core';
 export class AccordionComponent {
   header = input.required<string>();
   subtitle = input<string>();
+  error = input<string>();
   expanded = model(false);
   disabled = input(false);
 
