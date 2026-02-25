@@ -243,6 +243,30 @@ public class AuthControllerTests : IClassFixture<CustomWebApplicationFactory>
         body.GetProperty("setupCompleted").GetBoolean().ShouldBeTrue();
     }
 
+    [Fact, TestPriority(16)]
+    public async Task OidcExchange_WithNonexistentCode_ReturnsNotFound()
+    {
+        var response = await _client.PostAsJsonAsync("/api/auth/oidc/exchange", new
+        {
+            code = "nonexistent-one-time-code"
+        });
+
+        response.StatusCode.ShouldBe(HttpStatusCode.NotFound);
+    }
+
+    [Fact, TestPriority(17)]
+    public async Task AuthStatus_IncludesOidcFields()
+    {
+        var response = await _client.GetAsync("/api/auth/status");
+
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        // Verify OIDC fields exist in the response (values depend on shared static DB state)
+        body.TryGetProperty("oidcEnabled", out _).ShouldBeTrue();
+        body.TryGetProperty("oidcProviderName", out _).ShouldBeTrue();
+    }
+
     #region TOTP helpers
 
     private static string _totpSecret = "";

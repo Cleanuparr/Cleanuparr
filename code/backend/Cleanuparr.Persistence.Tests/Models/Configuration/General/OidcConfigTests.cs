@@ -224,4 +224,53 @@ public sealed class OidcConfigTests
     }
 
     #endregion
+
+    #region Additional Edge Cases
+
+    [Fact]
+    public void Validate_Enabled_HttpLocalhostWithoutPort_DoesNotThrow()
+    {
+        var config = new OidcConfig
+        {
+            Enabled = true,
+            IssuerUrl = "http://localhost/auth",
+            ClientId = "my-client",
+            ProviderName = "Dev"
+        };
+
+        Should.NotThrow(() => config.Validate());
+    }
+
+    [Fact]
+    public void Validate_Enabled_ScopesWithoutOpenid_StillPasses()
+    {
+        // Documenting current behavior: the Validate method does not enforce "openid" in scopes.
+        // This is intentional — the IdP will reject if openid is missing, giving a clear error.
+        var config = new OidcConfig
+        {
+            Enabled = true,
+            IssuerUrl = "https://auth.example.com",
+            ClientId = "my-client",
+            Scopes = "profile email",
+            ProviderName = "Test"
+        };
+
+        Should.NotThrow(() => config.Validate());
+    }
+
+    [Fact]
+    public void Validate_Enabled_FtpScheme_ThrowsValidationException()
+    {
+        var config = new OidcConfig
+        {
+            Enabled = true,
+            IssuerUrl = "ftp://auth.example.com",
+            ClientId = "my-client"
+        };
+
+        var exception = Should.Throw<ValidationException>(() => config.Validate());
+        exception.Message.ShouldBe("OIDC Issuer URL must use HTTPS");
+    }
+
+    #endregion
 }

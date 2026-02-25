@@ -274,6 +274,34 @@ public class OidcAuthControllerTests : IClassFixture<OidcAuthControllerTests.Oid
         body.GetProperty("requiresTwoFactor").GetBoolean().ShouldBeFalse();
     }
 
+    [Fact, TestPriority(17)]
+    public async Task OidcStatus_WhenPartiallyConfigured_ReturnsFalse()
+    {
+        // Enable OIDC but remove the authorized subject
+        await _factory.SetOidcAuthorizedSubjectAsync("");
+
+        var response = await _client.GetAsync("/api/auth/status");
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        // OIDC should show as disabled when there's no authorized subject
+        body.GetProperty("oidcEnabled").GetBoolean().ShouldBeFalse();
+
+        // Restore for subsequent tests
+        await _factory.SetOidcAuthorizedSubjectAsync(MockOidcAuthService.AuthorizedSubject);
+    }
+
+    [Fact, TestPriority(18)]
+    public async Task OidcExchange_RandomCode_ReturnsNotFound()
+    {
+        var response = await _client.PostAsJsonAsync("/api/auth/oidc/exchange", new
+        {
+            code = "completely-random-nonexistent-code"
+        });
+
+        response.StatusCode.ShouldBe(HttpStatusCode.NotFound);
+    }
+
     #region Test Infrastructure
 
     /// <summary>
@@ -368,6 +396,17 @@ public class OidcAuthControllerTests : IClassFixture<OidcAuthControllerTests.Oid
             await dataContext.SaveChangesAsync();
         }
 
+        public async Task SetOidcAuthorizedSubjectAsync(string subject)
+        {
+            await using var dataContext = DataContext.CreateStaticInstance();
+            var config = await dataContext.GeneralConfigs.FirstOrDefaultAsync();
+            if (config is not null)
+            {
+                config.Auth.Oidc.AuthorizedSubject = subject;
+                await dataContext.SaveChangesAsync();
+            }
+        }
+
         protected override void Dispose(bool disposing)
         {
             base.Dispose(disposing);
@@ -382,7 +421,7 @@ public class OidcAuthControllerTests : IClassFixture<OidcAuthControllerTests.Oid
     /// <summary>
     /// Mock OIDC auth service that simulates IdP behavior without network calls.
     /// </summary>
-    private sealed class MockOidcAuthService : IOidcAuthService, IDisposable
+    private sealed class MockOidcAuthService : IOidcAuthService
     {
         public const string ValidState = "mock-valid-state";
         public const string WrongSubjectState = "mock-wrong-subject-state";
@@ -390,7 +429,7 @@ public class OidcAuthControllerTests : IClassFixture<OidcAuthControllerTests.Oid
 
         private readonly System.Collections.Concurrent.ConcurrentDictionary<string, OidcTokenExchangeResult> _oneTimeCodes = new();
 
-        public Task<OidcAuthorizationResult> StartAuthorization(string redirectUri)
+        public Task<OidcAuthorizationResult> StartAuthorization(string redirectUri, string? initiatorUserId = null)
         {
             return Task.FromResult(new OidcAuthorizationResult
             {
@@ -446,8 +485,6 @@ public class OidcAuthControllerTests : IClassFixture<OidcAuthControllerTests.Oid
         {
             return _oneTimeCodes.TryRemove(code, out var result) ? result : null;
         }
-
-        public void Dispose() { }
     }
 
     #endregion
