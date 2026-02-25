@@ -14,8 +14,11 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
       if (error.error instanceof ErrorEvent) {
         // Client-side error
         message = error.error.message;
+      } else if (typeof error.error === 'string') {
+        // Server-side error with plain string body
+        message = error.error;
       } else {
-        // Server-side error
+        // Server-side error with JSON body
         message = error.error?.error
           ?? error.error?.message
           ?? error.message
