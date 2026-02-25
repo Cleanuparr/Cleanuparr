@@ -128,8 +128,8 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
     if (!this.enabled()) return undefined;
     const hasSeedingCategories = this.categories().length > 0;
     const hasUnlinkedFeature = this.unlinkedEnabled()
-      && this.unlinkedCategories().length > 0
-      && !!this.unlinkedTargetCategory().trim();
+      && !this.unlinkedTargetCategoryError()
+      && !this.unlinkedCategoriesError();
     if (!hasSeedingCategories && !hasUnlinkedFeature) {
       return 'At least one feature must be configured';
     }
