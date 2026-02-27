@@ -76,7 +76,8 @@ export abstract class HubService implements OnDestroy {
       this.connected.set(true);
       this.reconnectAttempts = 0;
       this.onConnected();
-    } catch {
+    } catch (err) {
+      console.warn('[SignalR] Connection failed:', err);
       this.scheduleReconnect();
     }
   }
