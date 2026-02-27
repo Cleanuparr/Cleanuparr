@@ -46,20 +46,22 @@ public sealed class SensitiveDataResolver : IJsonTypeInfoResolver
     {
         var originalGet = property.Get;
         if (originalGet is null)
+        {
             return;
+        }
 
         property.Get = maskType switch
         {
             SensitiveDataType.Full => obj =>
             {
                 var value = originalGet(obj);
-                return value is null ? null : SensitiveDataHelper.Placeholder;
+                return value is string ? SensitiveDataHelper.Placeholder : value;
             },
 
             SensitiveDataType.AppriseUrl => obj =>
             {
-                var value = originalGet(obj) as string;
-                return value is null ? null : SensitiveDataHelper.MaskAppriseUrls(value);
+                var value = originalGet(obj);
+                return value is string s ? SensitiveDataHelper.MaskAppriseUrls(s) : value;
             },
 
             _ => originalGet,
