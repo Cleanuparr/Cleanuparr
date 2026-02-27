@@ -3,6 +3,7 @@ using System;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Domain.Exceptions;
 using Cleanuparr.Persistence.Models.Configuration;
+using Cleanuparr.Shared.Helpers;
 
 namespace Cleanuparr.Api.Features.DownloadClient.Contracts.Requests;
 
@@ -30,6 +31,11 @@ public sealed record TestDownloadClientRequest
         if (!Uri.TryCreate(Host, UriKind.RelativeOrAbsolute, out _))
         {
             throw new ValidationException("Host is not a valid URL");
+        }
+
+        if (Password.IsPlaceholder())
+        {
+            throw new ValidationException("Password cannot be a placeholder value");
         }
     }
 
