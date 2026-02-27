@@ -195,6 +195,9 @@ jobs:
           context: ${{ github.workspace }}/code
           file: ${{ github.workspace }}/code/Dockerfile
           provenance: false
+          labels: |
+            commit=sha-${{ needs.prepare.outputs.github_sha }}
+            version=${{ needs.prepare.outputs.version_docker_tag }}
           build-args: |
             VERSION=${{ needs.prepare.outputs.version }}
             PACKAGES_USERNAME=${{ secrets.PACKAGES_USERNAME }}
