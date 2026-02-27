@@ -29,7 +29,9 @@ public static partial class SensitiveDataHelper
     public static string MaskAppriseUrls(string serviceUrls)
     {
         if (string.IsNullOrWhiteSpace(serviceUrls))
+        {
             return serviceUrls;
+        }
 
         return AppriseUrlPattern().Replace(serviceUrls, match =>
         {
