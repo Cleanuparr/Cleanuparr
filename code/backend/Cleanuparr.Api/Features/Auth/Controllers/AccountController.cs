@@ -68,6 +68,17 @@ public sealed class AccountController : ControllerBase
 
             user.PasswordHash = _passwordService.HashPassword(request.NewPassword);
             user.UpdatedAt = DateTime.UtcNow;
+
+            // Revoke all existing refresh tokens so old sessions can't be reused
+            var activeTokens = await _usersContext.RefreshTokens
+                .Where(r => r.UserId == user.Id && r.RevokedAt == null)
+                .ToListAsync();
+
+            foreach (var token in activeTokens)
+            {
+                token.RevokedAt = DateTime.UtcNow;
+            }
+
             await _usersContext.SaveChangesAsync();
 
             _logger.LogInformation("Password changed for user {Username}", user.Username);
