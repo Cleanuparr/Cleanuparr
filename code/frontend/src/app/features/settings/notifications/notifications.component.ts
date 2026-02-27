@@ -478,6 +478,7 @@ export class NotificationsComponent implements OnInit, HasPendingChanges {
   testNotification(): void {
     const type = this.modalType();
     this.testing.set(true);
+    const providerId = this.editingProvider()?.id;
 
     switch (type) {
       case NotificationProviderType.Discord:
@@ -485,6 +486,7 @@ export class NotificationsComponent implements OnInit, HasPendingChanges {
           webhookUrl: this.modalWebhookUrl(),
           username: this.modalUsername() || undefined,
           avatarUrl: this.modalAvatarUrl() || undefined,
+          providerId,
         }).subscribe({
           next: (r) => { this.toast.success(r.message || 'Test sent'); this.testing.set(false); },
           error: () => { this.toast.error('Test failed'); this.testing.set(false); },
@@ -496,6 +498,7 @@ export class NotificationsComponent implements OnInit, HasPendingChanges {
           chatId: this.modalChatId(),
           topicId: this.modalTopicId() || undefined,
           sendSilently: this.modalSendSilently(),
+          providerId,
         }).subscribe({
           next: (r) => { this.toast.success(r.message || 'Test sent'); this.testing.set(false); },
           error: () => { this.toast.error('Test failed'); this.testing.set(false); },
@@ -505,6 +508,7 @@ export class NotificationsComponent implements OnInit, HasPendingChanges {
         this.api.testNotifiarr({
           apiKey: this.modalApiKey(),
           channelId: this.modalChannelId(),
+          providerId,
         }).subscribe({
           next: (r) => { this.toast.success(r.message || 'Test sent'); this.testing.set(false); },
           error: () => { this.toast.error('Test failed'); this.testing.set(false); },
@@ -517,6 +521,7 @@ export class NotificationsComponent implements OnInit, HasPendingChanges {
           key: this.modalAppriseKey() || undefined,
           tags: this.modalAppriseTags() || undefined,
           serviceUrls: this.modalAppriseServiceUrls().join('\n') || undefined,
+          providerId,
         }).subscribe({
           next: (r) => { this.toast.success(r.message || 'Test sent'); this.testing.set(false); },
           error: () => { this.toast.error('Test failed'); this.testing.set(false); },
@@ -532,6 +537,7 @@ export class NotificationsComponent implements OnInit, HasPendingChanges {
           accessToken: this.modalNtfyAccessToken() || undefined,
           priority: this.modalNtfyPriority() as NtfyPriority,
           tags: this.modalNtfyTags().length > 0 ? this.modalNtfyTags() : undefined,
+          providerId,
         }).subscribe({
           next: (r) => { this.toast.success(r.message || 'Test sent'); this.testing.set(false); },
           error: () => { this.toast.error('Test failed'); this.testing.set(false); },
@@ -548,6 +554,7 @@ export class NotificationsComponent implements OnInit, HasPendingChanges {
           retry: this.modalPushoverPriority() === PushoverPriority.Emergency ? (this.modalPushoverRetry() ?? 30) : undefined,
           expire: this.modalPushoverPriority() === PushoverPriority.Emergency ? (this.modalPushoverExpire() ?? 3600) : undefined,
           tags: this.modalPushoverTags().length > 0 ? this.modalPushoverTags() : undefined,
+          providerId,
         }).subscribe({
           next: (r) => { this.toast.success(r.message || 'Test sent'); this.testing.set(false); },
           error: () => { this.toast.error('Test failed'); this.testing.set(false); },
@@ -559,6 +566,7 @@ export class NotificationsComponent implements OnInit, HasPendingChanges {
           serverUrl: this.modalGotifyServerUrl(),
           applicationToken: this.modalGotifyApplicationToken(),
           priority: parseInt(this.modalGotifyPriority() as string, 10) || 5,
+          providerId,
         }).subscribe({
           next: (r) => { this.toast.success(r.message || 'Test sent'); this.testing.set(false); },
           error: () => { this.toast.error('Test failed'); this.testing.set(false); },

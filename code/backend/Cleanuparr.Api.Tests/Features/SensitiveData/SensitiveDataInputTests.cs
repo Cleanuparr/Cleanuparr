@@ -110,7 +110,7 @@ public class SensitiveDataInputTests
     #region TestArrInstanceRequest — TEST
 
     [Fact]
-    public void TestArrInstanceRequest_ToTestInstance_WithPlaceholderApiKey_ThrowsValidationException()
+    public void TestArrInstanceRequest_ToTestInstance_WithPlaceholderApiKey_AndNoResolvedKey_ThrowsValidationException()
     {
         var request = new TestArrInstanceRequest
         {
@@ -120,6 +120,21 @@ public class SensitiveDataInputTests
         };
 
         Should.Throw<ValidationException>(() => request.ToTestInstance());
+    }
+
+    [Fact]
+    public void TestArrInstanceRequest_ToTestInstance_WithPlaceholderApiKey_AndResolvedKey_UsesResolvedKey()
+    {
+        var request = new TestArrInstanceRequest
+        {
+            Url = "http://sonarr:8989",
+            ApiKey = Placeholder,
+            Version = 4,
+            InstanceId = Guid.NewGuid(),
+        };
+
+        var instance = request.ToTestInstance("resolved-api-key-from-db");
+        instance.ApiKey.ShouldBe("resolved-api-key-from-db");
     }
 
     [Fact]
@@ -251,7 +266,7 @@ public class SensitiveDataInputTests
     #region TestDownloadClientRequest — TEST
 
     [Fact]
-    public void TestDownloadClientRequest_Validate_WithPlaceholderPassword_ThrowsValidationException()
+    public void TestDownloadClientRequest_ToTestConfig_WithPlaceholderPassword_AndNoResolvedPassword_ThrowsValidationException()
     {
         var request = new TestDownloadClientRequest
         {
@@ -261,11 +276,29 @@ public class SensitiveDataInputTests
             Password = Placeholder,
         };
 
-        Should.Throw<ValidationException>(() => request.Validate());
+        request.Validate();
+        Should.Throw<ValidationException>(() => request.ToTestConfig());
     }
 
     [Fact]
-    public void TestDownloadClientRequest_Validate_WithRealPassword_Succeeds()
+    public void TestDownloadClientRequest_ToTestConfig_WithPlaceholderPassword_AndResolvedPassword_UsesResolvedPassword()
+    {
+        var request = new TestDownloadClientRequest
+        {
+            TypeName = DownloadClientTypeName.qBittorrent,
+            Type = DownloadClientType.Torrent,
+            Host = "http://qbit:8080",
+            Password = Placeholder,
+            ClientId = Guid.NewGuid(),
+        };
+
+        request.Validate();
+        var config = request.ToTestConfig("resolved-password-from-db");
+        config.Password.ShouldBe("resolved-password-from-db");
+    }
+
+    [Fact]
+    public void TestDownloadClientRequest_ToTestConfig_WithRealPassword_Succeeds()
     {
         var request = new TestDownloadClientRequest
         {
@@ -275,7 +308,9 @@ public class SensitiveDataInputTests
             Password = "real-password",
         };
 
-        Should.NotThrow(() => request.Validate());
+        request.Validate();
+        var config = request.ToTestConfig();
+        config.Password.ShouldBe("real-password");
     }
 
     #endregion

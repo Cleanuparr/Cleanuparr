@@ -5,6 +5,7 @@ using Cleanuparr.Api.Features.DownloadClient.Contracts.Requests;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
 using Cleanuparr.Infrastructure.Http.DynamicHttpClientSystem;
 using Cleanuparr.Persistence;
+using Cleanuparr.Shared.Helpers;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -156,7 +157,23 @@ public sealed class DownloadClientController : ControllerBase
         {
             request.Validate();
 
-            var testConfig = request.ToTestConfig();
+            string? resolvedPassword = null;
+
+            if (request.Password.IsPlaceholder() && request.ClientId.HasValue)
+            {
+                var existingClient = await _dataContext.DownloadClients
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(c => c.Id == request.ClientId.Value);
+
+                if (existingClient is null)
+                {
+                    return NotFound($"Download client with ID {request.ClientId.Value} not found");
+                }
+
+                resolvedPassword = existingClient.Password;
+            }
+
+            var testConfig = request.ToTestConfig(resolvedPassword);
             using var downloadService = _downloadServiceFactory.GetDownloadService(testConfig);
             var healthResult = await downloadService.HealthCheckAsync();
 

@@ -7,4 +7,6 @@ public record TestGotifyProviderRequest
     public string ApplicationToken { get; init; } = string.Empty;
 
     public int Priority { get; init; } = 5;
+
+    public Guid? ProviderId { get; init; }
 }

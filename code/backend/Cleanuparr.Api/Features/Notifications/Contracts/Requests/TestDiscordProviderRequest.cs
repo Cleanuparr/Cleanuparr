@@ -7,4 +7,6 @@ public record TestDiscordProviderRequest
     public string Username { get; init; } = string.Empty;
 
     public string AvatarUrl { get; init; } = string.Empty;
+
+    public Guid? ProviderId { get; init; }
 }

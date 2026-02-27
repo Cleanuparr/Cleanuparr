@@ -150,6 +150,7 @@ export interface CreateGotifyProviderRequest {
 export interface TestNotifiarrRequest {
   apiKey: string;
   channelId: string;
+  providerId?: string;
 }
 
 export interface TestAppriseRequest {
@@ -158,6 +159,7 @@ export interface TestAppriseRequest {
   key?: string;
   tags?: string;
   serviceUrls?: string;
+  providerId?: string;
 }
 
 export interface TestNtfyRequest {
@@ -169,6 +171,7 @@ export interface TestNtfyRequest {
   accessToken?: string;
   priority: NtfyPriority;
   tags?: string[];
+  providerId?: string;
 }
 
 export interface TestTelegramRequest {
@@ -176,12 +179,14 @@ export interface TestTelegramRequest {
   chatId: string;
   topicId?: string;
   sendSilently: boolean;
+  providerId?: string;
 }
 
 export interface TestDiscordRequest {
   webhookUrl: string;
   username?: string;
   avatarUrl?: string;
+  providerId?: string;
 }
 
 export interface TestPushoverRequest {
@@ -193,12 +198,14 @@ export interface TestPushoverRequest {
   retry?: number;
   expire?: number;
   tags?: string[];
+  providerId?: string;
 }
 
 export interface TestGotifyRequest {
   serverUrl: string;
   applicationToken: string;
   priority: number;
+  providerId?: string;
 }
 
 export interface TestNotificationResult {
