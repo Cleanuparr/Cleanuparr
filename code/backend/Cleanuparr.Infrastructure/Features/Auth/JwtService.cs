@@ -11,7 +11,7 @@ public sealed class JwtService : IJwtService
 {
     private const string Issuer = "Cleanuparr";
     private const string Audience = "Cleanuparr";
-    private static readonly TimeSpan AccessTokenLifetime = TimeSpan.FromMinutes(1);
+    private static readonly TimeSpan AccessTokenLifetime = TimeSpan.FromHours(1);
     private static readonly TimeSpan LoginTokenLifetime = TimeSpan.FromMinutes(5);
 
     private readonly byte[] _signingKey;
