@@ -19,6 +19,7 @@ export class InputComponent {
   type = input<'text' | 'password' | 'email' | 'url' | 'search' | 'datetime-local' | 'date' | 'number'>('text');
   disabled = input(false);
   readonly = input(false);
+  revealable = input(true);
   error = input<string>();
   hint = input<string>();
   helpKey = input<string>();
@@ -30,7 +31,7 @@ export class InputComponent {
 
   readonly showSecret = signal(false);
   readonly effectiveType = computed(() => {
-    if (this.type() === 'password' && this.showSecret()) return 'text';
+    if (this.type() === 'password' && this.showSecret() && this.revealable()) return 'text';
     return this.type();
   });
 

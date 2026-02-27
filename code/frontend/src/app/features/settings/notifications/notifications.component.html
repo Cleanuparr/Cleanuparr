@@ -103,7 +103,7 @@
 
     <!-- Discord Fields -->
     @if (modalType() === 'Discord') {
-      <app-input label="Webhook URL" placeholder="https://discord.com/api/webhooks/..." type="password" [(value)]="modalWebhookUrl"
+      <app-input label="Webhook URL" placeholder="https://discord.com/api/webhooks/..." type="password" [revealable]="false" [(value)]="modalWebhookUrl"
         hint="Your Discord webhook URL. Create one in your Discord server's channel settings under Integrations."
         [error]="discordWebhookError()"
         helpKey="notifications/discord:webhookUrl" />
@@ -117,7 +117,7 @@
 
     <!-- Telegram Fields -->
     @if (modalType() === 'Telegram') {
-      <app-input label="Bot Token" placeholder="123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11" type="password" [(value)]="modalBotToken"
+      <app-input label="Bot Token" placeholder="123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11" type="password" [revealable]="false" [(value)]="modalBotToken"
         hint="Create a bot with BotFather and paste the API token"
         [error]="telegramBotTokenError()"
         helpKey="notifications/telegram:botToken" />
@@ -135,7 +135,7 @@
 
     <!-- Notifiarr Fields -->
     @if (modalType() === 'Notifiarr') {
-      <app-input label="API Key" placeholder="Enter API key" type="password" [(value)]="modalApiKey"
+      <app-input label="API Key" placeholder="Enter API key" type="password" [revealable]="false" [(value)]="modalApiKey"
         hint="Your Notifiarr API key from your dashboard. Requires Passthrough integration."
         [error]="notifiarrApiKeyError()"
         helpKey="notifications/notifiarr:apiKey" />
@@ -187,12 +187,12 @@
         <app-input label="Username" placeholder="Enter username" [(value)]="modalNtfyUsername"
           hint="Your username for basic authentication."
           helpKey="notifications/ntfy:username" />
-        <app-input label="Password" placeholder="Enter password" type="password" [(value)]="modalNtfyPassword"
+        <app-input label="Password" placeholder="Enter password" type="password" [revealable]="false" [(value)]="modalNtfyPassword"
           hint="Your password for basic authentication."
           helpKey="notifications/ntfy:password" />
       }
       @if (modalNtfyAuthType() === 'AccessToken') {
-        <app-input label="Access Token" placeholder="Enter access token" type="password" [(value)]="modalNtfyAccessToken"
+        <app-input label="Access Token" placeholder="Enter access token" type="password" [revealable]="false" [(value)]="modalNtfyAccessToken"
           hint="Your access token for bearer token authentication."
           helpKey="notifications/ntfy:accessToken" />
       }
@@ -206,11 +206,11 @@
 
     <!-- Pushover Fields -->
     @if (modalType() === 'Pushover') {
-      <app-input label="API Token" placeholder="Enter API token" type="password" [(value)]="modalPushoverApiToken"
+      <app-input label="API Token" placeholder="Enter API token" type="password" [revealable]="false" [(value)]="modalPushoverApiToken"
         hint="Your application API token from Pushover. Create one at pushover.net/apps/build."
         [error]="pushoverApiTokenError()"
         helpKey="notifications/pushover:apiToken" />
-      <app-input label="User Key" placeholder="Enter user key" type="password" [(value)]="modalPushoverUserKey"
+      <app-input label="User Key" placeholder="Enter user key" type="password" [revealable]="false" [(value)]="modalPushoverUserKey"
         hint="Your user/group key from your Pushover dashboard."
         [error]="pushoverUserKeyError()"
         helpKey="notifications/pushover:userKey" />
@@ -247,7 +247,7 @@
         hint="The base URL of your Gotify server instance."
         [error]="gotifyServerUrlError()"
         helpKey="notifications/gotify:serverUrl" />
-      <app-input label="Application Token" placeholder="Enter application token" type="password" [(value)]="modalGotifyApplicationToken"
+      <app-input label="Application Token" placeholder="Enter application token" type="password" [revealable]="false" [(value)]="modalGotifyApplicationToken"
         hint="The application token from your Gotify server. Create one under Apps in the Gotify web UI."
         [error]="gotifyApplicationTokenError()"
         helpKey="notifications/gotify:applicationToken" />

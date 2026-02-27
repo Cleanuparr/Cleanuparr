@@ -77,7 +77,7 @@
         helpKey="download-client:username" />
     }
     @if (showPasswordField()) {
-      <app-input label="Password" placeholder="Enter password" type="password" [(value)]="modalPassword"
+      <app-input label="Password" placeholder="Enter password" type="password" [revealable]="false" [(value)]="modalPassword"
         [hint]="passwordHint()"
         helpKey="download-client:password" />
     }
