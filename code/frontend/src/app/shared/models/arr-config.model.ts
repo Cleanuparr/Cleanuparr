@@ -26,4 +26,5 @@ export interface TestArrInstanceRequest {
   url: string;
   apiKey: string;
   version: number;
+  instanceId?: string;
 }

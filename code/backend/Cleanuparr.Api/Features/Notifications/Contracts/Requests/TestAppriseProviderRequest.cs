@@ -15,4 +15,6 @@ public record TestAppriseProviderRequest
 
     // CLI mode fields
     public string? ServiceUrls { get; init; }
+
+    public Guid? ProviderId { get; init; }
 }

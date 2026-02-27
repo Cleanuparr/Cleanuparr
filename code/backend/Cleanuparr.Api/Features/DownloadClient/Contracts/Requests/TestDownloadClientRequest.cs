@@ -21,6 +21,8 @@ public sealed record TestDownloadClientRequest
 
     public string? UrlBase { get; init; }
 
+    public Guid? ClientId { get; init; }
+
     public void Validate()
     {
         if (string.IsNullOrWhiteSpace(Host))
@@ -32,23 +34,28 @@ public sealed record TestDownloadClientRequest
         {
             throw new ValidationException("Host is not a valid URL");
         }
+    }
 
-        if (Password.IsPlaceholder())
+    public DownloadClientConfig ToTestConfig(string? resolvedPassword = null)
+    {
+        var password = resolvedPassword ?? Password;
+
+        if (password.IsPlaceholder())
         {
             throw new ValidationException("Password cannot be a placeholder value");
         }
-    }
 
-    public DownloadClientConfig ToTestConfig() => new()
-    {
-        Id = Guid.NewGuid(),
-        Enabled = true,
-        Name = "Test Client",
-        TypeName = TypeName,
-        Type = Type,
-        Host = new Uri(Host!, UriKind.RelativeOrAbsolute),
-        Username = Username,
-        Password = Password,
-        UrlBase = UrlBase,
-    };
+        return new()
+        {
+            Id = Guid.NewGuid(),
+            Enabled = true,
+            Name = "Test Client",
+            TypeName = TypeName,
+            Type = Type,
+            Host = new Uri(Host!, UriKind.RelativeOrAbsolute),
+            Username = Username,
+            Password = password,
+            UrlBase = UrlBase,
+        };
+    }
 }

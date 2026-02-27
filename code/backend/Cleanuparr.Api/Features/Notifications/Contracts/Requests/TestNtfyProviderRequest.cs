@@ -19,4 +19,6 @@ public record TestNtfyProviderRequest
     public NtfyPriority Priority { get; init; } = NtfyPriority.Default;
     
     public List<string> Tags { get; init; } = [];
+
+    public Guid? ProviderId { get; init; }
 }

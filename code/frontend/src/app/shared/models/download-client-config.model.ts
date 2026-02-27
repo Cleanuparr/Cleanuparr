@@ -36,6 +36,7 @@ export interface TestDownloadClientRequest {
   username?: string;
   password?: string;
   urlBase?: string;
+  clientId?: string;
 }
 
 export interface TestConnectionResult {

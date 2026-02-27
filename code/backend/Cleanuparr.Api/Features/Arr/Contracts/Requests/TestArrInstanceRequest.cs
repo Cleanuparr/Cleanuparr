@@ -18,9 +18,13 @@ public sealed record TestArrInstanceRequest
     [Required]
     public required float Version { get; init; }
 
-    public ArrInstance ToTestInstance()
+    public Guid? InstanceId { get; init; }
+
+    public ArrInstance ToTestInstance(string? resolvedApiKey = null)
     {
-        if (ApiKey.IsPlaceholder())
+        var apiKey = resolvedApiKey ?? ApiKey;
+
+        if (apiKey.IsPlaceholder())
         {
             throw new ValidationException("API key cannot be a placeholder value");
         }
@@ -30,7 +34,7 @@ public sealed record TestArrInstanceRequest
             Enabled = true,
             Name = "Test Instance",
             Url = new Uri(Url),
-            ApiKey = ApiKey,
+            ApiKey = apiKey,
             ArrConfigId = Guid.Empty,
             Version = Version,
         };
