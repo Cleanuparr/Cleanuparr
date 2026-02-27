@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Diagnostics.CodeAnalysis;
 using Cleanuparr.Persistence.Models.Configuration;
+using Cleanuparr.Shared.Attributes;
 using ValidationException = Cleanuparr.Domain.Exceptions.ValidationException;
 
 namespace Cleanuparr.Persistence.Models.Configuration.Notification;
@@ -20,6 +21,7 @@ public sealed record TelegramConfig : IConfig
 
     [Required]
     [MaxLength(255)]
+    [SensitiveData]
     public string BotToken { get; init; } = string.Empty;
 
     [Required]

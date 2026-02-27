@@ -3,6 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 using System.Diagnostics.CodeAnalysis;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Persistence.Models.Configuration;
+using Cleanuparr.Shared.Attributes;
 using ValidationException = Cleanuparr.Domain.Exceptions.ValidationException;
 
 namespace Cleanuparr.Persistence.Models.Configuration.Notification;
@@ -29,6 +30,7 @@ public sealed record AppriseConfig : IConfig
     public string Url { get; init; } = string.Empty;
 
     [MaxLength(255)]
+    [SensitiveData]
     public string Key { get; init; } = string.Empty;
 
     [MaxLength(255)]
@@ -40,6 +42,7 @@ public sealed record AppriseConfig : IConfig
     /// Example: discord://webhook_id/webhook_token
     /// </summary>
     [MaxLength(4000)]
+    [SensitiveData(SensitiveDataType.AppriseUrl)]
     public string? ServiceUrls { get; init; }
 
     [NotMapped]

@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Cleanuparr.Persistence.Models.Configuration;
+using Cleanuparr.Shared.Attributes;
 using ValidationException = Cleanuparr.Domain.Exceptions.ValidationException;
 
 namespace Cleanuparr.Persistence.Models.Configuration.Notification;
@@ -19,6 +20,7 @@ public sealed record NotifiarrConfig : IConfig
     
     [Required]
     [MaxLength(255)]
+    [SensitiveData]
     public string ApiKey { get; init; } = string.Empty;
     
     [Required]
