@@ -527,7 +527,7 @@ public sealed class AuthController : ControllerBase
         {
             AccessToken = accessToken,
             RefreshToken = refreshToken,
-            ExpiresIn = 60 // seconds
+            ExpiresIn = 3600 // seconds
         };
     }
 
