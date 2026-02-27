@@ -104,6 +104,8 @@ jobs:
             githubTags="$githubTags,ghcr.io/cleanuparr/cleanuparr:$majorVersionDockerTag"
           fi
 
+          githubTags="${githubTags#,}"
+
           # Determine push decision
           push="${{ github.event_name == 'pull_request' || inputs.push_docker == true }}"
 
