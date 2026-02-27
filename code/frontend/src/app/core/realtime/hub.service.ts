@@ -29,6 +29,10 @@ export abstract class HubService implements OnDestroy {
     this.connection = new signalR.HubConnectionBuilder()
       .withUrl(hubUrl, {
         accessTokenFactory: async () => {
+          // No tokens stored — trusted network bypass, no token needed
+          if (!this.authService.getAccessToken() && !localStorage.getItem('refresh_token')) {
+            return '';
+          }
           if (this.authService.isTokenExpired(30)) {
             const result = await firstValueFrom(this.authService.refreshToken());
             if (result) {
