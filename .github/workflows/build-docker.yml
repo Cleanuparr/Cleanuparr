@@ -93,16 +93,16 @@ jobs:
 
           githubTags=""
           if [ -n "$latestDockerTag" ]; then
-            githubTags="$githubTags,ghcr.io/cleanuparr/cleanuparr:$latestDockerTag"
+            githubTags="$githubTags,$REGISTRY_IMAGE:$latestDockerTag"
           fi
           if [ -n "$versionDockerTag" ]; then
-            githubTags="$githubTags,ghcr.io/cleanuparr/cleanuparr:$versionDockerTag"
+            githubTags="$githubTags,$REGISTRY_IMAGE:$versionDockerTag"
           fi
           if [ -n "$minorVersionDockerTag" ]; then
-            githubTags="$githubTags,ghcr.io/cleanuparr/cleanuparr:$minorVersionDockerTag"
+            githubTags="$githubTags,$REGISTRY_IMAGE:$minorVersionDockerTag"
           fi
           if [ -n "$majorVersionDockerTag" ]; then
-            githubTags="$githubTags,ghcr.io/cleanuparr/cleanuparr:$majorVersionDockerTag"
+            githubTags="$githubTags,$REGISTRY_IMAGE:$majorVersionDockerTag"
           fi
 
           githubTags="${githubTags#,}"
