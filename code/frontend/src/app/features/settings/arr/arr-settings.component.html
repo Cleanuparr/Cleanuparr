@@ -69,7 +69,7 @@
     <app-input label="External URL" placeholder="https://sonarr.example.com" type="url" [(value)]="modalExternalUrl"
       hint="Optional URL used in notifications for clickable links (e.g., when internal Docker URLs are not reachable externally)"
       helpKey="arr:externalUrl" />
-    <app-input label="API Key" placeholder="Enter API key" type="password" [(value)]="modalApiKey"
+    <app-input label="API Key" placeholder="Enter API key" type="password" [revealable]="false" [(value)]="modalApiKey"
       hint="API key from your arr application's Settings > General"
       [error]="modalApiKeyError()"
       helpKey="arr:apiKey" />
