@@ -3,6 +3,7 @@ using System;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Domain.Exceptions;
 using Cleanuparr.Persistence.Models.Configuration;
+using Cleanuparr.Shared.Helpers;
 
 namespace Cleanuparr.Api.Features.DownloadClient.Contracts.Requests;
 
@@ -46,6 +47,11 @@ public sealed record CreateDownloadClientRequest
         if (!string.IsNullOrWhiteSpace(ExternalUrl) && !Uri.TryCreate(ExternalUrl, UriKind.RelativeOrAbsolute, out _))
         {
             throw new ValidationException("External URL is not a valid URL");
+        }
+
+        if (Password.IsPlaceholder())
+        {
+            throw new ValidationException("Password cannot be a placeholder value");
         }
     }
 

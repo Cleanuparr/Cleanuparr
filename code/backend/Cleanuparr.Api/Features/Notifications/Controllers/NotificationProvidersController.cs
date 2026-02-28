@@ -11,6 +11,7 @@ using Cleanuparr.Infrastructure.Features.Notifications.Telegram;
 using Cleanuparr.Infrastructure.Features.Notifications.Gotify;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.Notification;
+using Cleanuparr.Shared.Helpers;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -127,6 +128,11 @@ public sealed class NotificationProvidersController : ControllerBase
                 return BadRequest("A provider with this name already exists");
             }
 
+            if (newProvider.ApiKey.IsPlaceholder())
+            {
+                return BadRequest("API key cannot be a placeholder value");
+            }
+
             var notifiarrConfig = new NotifiarrConfig
             {
                 ApiKey = newProvider.ApiKey,
@@ -182,6 +188,16 @@ public sealed class NotificationProvidersController : ControllerBase
             if (duplicateConfig > 0)
             {
                 return BadRequest("A provider with this name already exists");
+            }
+
+            if (newProvider.Key.IsPlaceholder())
+            {
+                return BadRequest("Key cannot be a placeholder value");
+            }
+
+            if (newProvider.ServiceUrls.IsPlaceholder())
+            {
+                return BadRequest("Service URLs cannot be a placeholder value");
             }
 
             var appriseConfig = new AppriseConfig
@@ -246,6 +262,16 @@ public sealed class NotificationProvidersController : ControllerBase
             if (duplicateConfig > 0)
             {
                 return BadRequest("A provider with this name already exists");
+            }
+
+            if (newProvider.Password.IsPlaceholder())
+            {
+                return BadRequest("Password cannot be a placeholder value");
+            }
+
+            if (newProvider.AccessToken.IsPlaceholder())
+            {
+                return BadRequest("Access token cannot be a placeholder value");
             }
 
             var ntfyConfig = new NtfyConfig
@@ -313,6 +339,11 @@ public sealed class NotificationProvidersController : ControllerBase
             if (duplicateConfig > 0)
             {
                 return BadRequest("A provider with this name already exists");
+            }
+
+            if (newProvider.BotToken.IsPlaceholder())
+            {
+                return BadRequest("Bot token cannot be a placeholder value");
             }
 
             var telegramConfig = new TelegramConfig
@@ -392,7 +423,9 @@ public sealed class NotificationProvidersController : ControllerBase
 
             var notifiarrConfig = new NotifiarrConfig
             {
-                ApiKey = updatedProvider.ApiKey,
+                ApiKey = updatedProvider.ApiKey.IsPlaceholder()
+                    ? existingProvider.NotifiarrConfiguration!.ApiKey
+                    : updatedProvider.ApiKey,
                 ChannelId = updatedProvider.ChannelId
             };
 
@@ -473,9 +506,13 @@ public sealed class NotificationProvidersController : ControllerBase
             {
                 Mode = updatedProvider.Mode,
                 Url = updatedProvider.Url,
-                Key = updatedProvider.Key,
+                Key = updatedProvider.Key.IsPlaceholder()
+                    ? existingProvider.AppriseConfiguration!.Key
+                    : updatedProvider.Key,
                 Tags = updatedProvider.Tags,
-                ServiceUrls = updatedProvider.ServiceUrls
+                ServiceUrls = updatedProvider.ServiceUrls.IsPlaceholder()
+                    ? existingProvider.AppriseConfiguration!.ServiceUrls
+                    : updatedProvider.ServiceUrls
             };
 
             if (existingProvider.AppriseConfiguration != null)
@@ -557,8 +594,12 @@ public sealed class NotificationProvidersController : ControllerBase
                 Topics = updatedProvider.Topics,
                 AuthenticationType = updatedProvider.AuthenticationType,
                 Username = updatedProvider.Username,
-                Password = updatedProvider.Password,
-                AccessToken = updatedProvider.AccessToken,
+                Password = updatedProvider.Password.IsPlaceholder()
+                    ? existingProvider.NtfyConfiguration!.Password
+                    : updatedProvider.Password,
+                AccessToken = updatedProvider.AccessToken.IsPlaceholder()
+                    ? existingProvider.NtfyConfiguration!.AccessToken
+                    : updatedProvider.AccessToken,
                 Priority = updatedProvider.Priority,
                 Tags = updatedProvider.Tags
             };
@@ -638,7 +679,9 @@ public sealed class NotificationProvidersController : ControllerBase
 
             var telegramConfig = new TelegramConfig
             {
-                BotToken = updatedProvider.BotToken,
+                BotToken = updatedProvider.BotToken.IsPlaceholder()
+                    ? existingProvider.TelegramConfiguration!.BotToken
+                    : updatedProvider.BotToken,
                 ChatId = updatedProvider.ChatId,
                 TopicId = updatedProvider.TopicId,
                 SendSilently = updatedProvider.SendSilently
@@ -735,9 +778,24 @@ public sealed class NotificationProvidersController : ControllerBase
     {
         try
         {
+            var apiKey = testRequest.ApiKey;
+
+            if (apiKey.IsPlaceholder())
+            {
+                var existing = await GetExistingProviderConfig<NotifiarrConfig>(
+                    testRequest.ProviderId, NotificationProviderType.Notifiarr, p => p.NotifiarrConfiguration);
+
+                if (existing is null)
+                {
+                    return BadRequest(new { Message = "API key cannot be a placeholder value" });
+                }
+
+                apiKey = existing.ApiKey;
+            }
+
             var notifiarrConfig = new NotifiarrConfig
             {
-                ApiKey = testRequest.ApiKey,
+                ApiKey = apiKey,
                 ChannelId = testRequest.ChannelId
             };
             notifiarrConfig.Validate();
@@ -775,13 +833,37 @@ public sealed class NotificationProvidersController : ControllerBase
     {
         try
         {
+            var key = testRequest.Key;
+            var serviceUrls = testRequest.ServiceUrls;
+
+            if (key.IsPlaceholder() || serviceUrls.IsPlaceholder())
+            {
+                var existing = await GetExistingProviderConfig<AppriseConfig>(
+                    testRequest.ProviderId, NotificationProviderType.Apprise, p => p.AppriseConfiguration);
+
+                if (existing is null)
+                {
+                    return BadRequest(new { Message = "Sensitive fields cannot be placeholder values" });
+                }
+
+                if (key.IsPlaceholder())
+                {
+                    key = existing.Key;
+                }
+
+                if (serviceUrls.IsPlaceholder())
+                {
+                    serviceUrls = existing.ServiceUrls;
+                }
+            }
+
             var appriseConfig = new AppriseConfig
             {
                 Mode = testRequest.Mode,
                 Url = testRequest.Url,
-                Key = testRequest.Key,
+                Key = key,
                 Tags = testRequest.Tags,
-                ServiceUrls = testRequest.ServiceUrls
+                ServiceUrls = serviceUrls
             };
             appriseConfig.Validate();
 
@@ -822,14 +904,38 @@ public sealed class NotificationProvidersController : ControllerBase
     {
         try
         {
+            var password = testRequest.Password;
+            var accessToken = testRequest.AccessToken;
+
+            if (password.IsPlaceholder() || accessToken.IsPlaceholder())
+            {
+                var existing = await GetExistingProviderConfig<NtfyConfig>(
+                    testRequest.ProviderId, NotificationProviderType.Ntfy, p => p.NtfyConfiguration);
+
+                if (existing is null)
+                {
+                    return BadRequest(new { Message = "Sensitive fields cannot be placeholder values" });
+                }
+
+                if (password.IsPlaceholder())
+                {
+                    password = existing.Password;
+                }
+
+                if (accessToken.IsPlaceholder())
+                {
+                    accessToken = existing.AccessToken;
+                }
+            }
+
             var ntfyConfig = new NtfyConfig
             {
                 ServerUrl = testRequest.ServerUrl,
                 Topics = testRequest.Topics,
                 AuthenticationType = testRequest.AuthenticationType,
                 Username = testRequest.Username,
-                Password = testRequest.Password,
-                AccessToken = testRequest.AccessToken,
+                Password = password,
+                AccessToken = accessToken,
                 Priority = testRequest.Priority,
                 Tags = testRequest.Tags
             };
@@ -868,9 +974,24 @@ public sealed class NotificationProvidersController : ControllerBase
     {
         try
         {
+            var botToken = testRequest.BotToken;
+
+            if (botToken.IsPlaceholder())
+            {
+                var existing = await GetExistingProviderConfig<TelegramConfig>(
+                    testRequest.ProviderId, NotificationProviderType.Telegram, p => p.TelegramConfiguration);
+
+                if (existing is null)
+                {
+                    return BadRequest(new { Message = "Bot token cannot be a placeholder value" });
+                }
+
+                botToken = existing.BotToken;
+            }
+
             var telegramConfig = new TelegramConfig
             {
-                BotToken = testRequest.BotToken,
+                BotToken = botToken,
                 ChatId = testRequest.ChatId,
                 TopicId = testRequest.TopicId,
                 SendSilently = testRequest.SendSilently
@@ -958,6 +1079,11 @@ public sealed class NotificationProvidersController : ControllerBase
                 return BadRequest("A provider with this name already exists");
             }
 
+            if (newProvider.WebhookUrl.IsPlaceholder())
+            {
+                return BadRequest("Webhook URL cannot be a placeholder value");
+            }
+
             var discordConfig = new DiscordConfig
             {
                 WebhookUrl = newProvider.WebhookUrl,
@@ -1034,7 +1160,9 @@ public sealed class NotificationProvidersController : ControllerBase
 
             var discordConfig = new DiscordConfig
             {
-                WebhookUrl = updatedProvider.WebhookUrl,
+                WebhookUrl = updatedProvider.WebhookUrl.IsPlaceholder()
+                    ? existingProvider.DiscordConfiguration!.WebhookUrl
+                    : updatedProvider.WebhookUrl,
                 Username = updatedProvider.Username,
                 AvatarUrl = updatedProvider.AvatarUrl
             };
@@ -1088,9 +1216,24 @@ public sealed class NotificationProvidersController : ControllerBase
     {
         try
         {
+            var webhookUrl = testRequest.WebhookUrl;
+
+            if (webhookUrl.IsPlaceholder())
+            {
+                var existing = await GetExistingProviderConfig<DiscordConfig>(
+                    testRequest.ProviderId, NotificationProviderType.Discord, p => p.DiscordConfiguration);
+
+                if (existing is null)
+                {
+                    return BadRequest(new { Message = "Webhook URL cannot be a placeholder value" });
+                }
+
+                webhookUrl = existing.WebhookUrl;
+            }
+
             var discordConfig = new DiscordConfig
             {
-                WebhookUrl = testRequest.WebhookUrl,
+                WebhookUrl = webhookUrl,
                 Username = testRequest.Username,
                 AvatarUrl = testRequest.AvatarUrl
             };
@@ -1144,6 +1287,16 @@ public sealed class NotificationProvidersController : ControllerBase
             if (duplicateConfig > 0)
             {
                 return BadRequest("A provider with this name already exists");
+            }
+
+            if (newProvider.ApiToken.IsPlaceholder())
+            {
+                return BadRequest("API token cannot be a placeholder value");
+            }
+
+            if (newProvider.UserKey.IsPlaceholder())
+            {
+                return BadRequest("User key cannot be a placeholder value");
             }
 
             var pushoverConfig = new PushoverConfig
@@ -1227,8 +1380,12 @@ public sealed class NotificationProvidersController : ControllerBase
 
             var pushoverConfig = new PushoverConfig
             {
-                ApiToken = updatedProvider.ApiToken,
-                UserKey = updatedProvider.UserKey,
+                ApiToken = updatedProvider.ApiToken.IsPlaceholder()
+                    ? existingProvider.PushoverConfiguration!.ApiToken
+                    : updatedProvider.ApiToken,
+                UserKey = updatedProvider.UserKey.IsPlaceholder()
+                    ? existingProvider.PushoverConfiguration!.UserKey
+                    : updatedProvider.UserKey,
                 Devices = updatedProvider.Devices,
                 Priority = updatedProvider.Priority,
                 Sound = updatedProvider.Sound,
@@ -1286,10 +1443,34 @@ public sealed class NotificationProvidersController : ControllerBase
     {
         try
         {
+            var apiToken = testRequest.ApiToken;
+            var userKey = testRequest.UserKey;
+
+            if (apiToken.IsPlaceholder() || userKey.IsPlaceholder())
+            {
+                var existing = await GetExistingProviderConfig<PushoverConfig>(
+                    testRequest.ProviderId, NotificationProviderType.Pushover, p => p.PushoverConfiguration);
+
+                if (existing is null)
+                {
+                    return BadRequest(new { Message = "Sensitive fields cannot be placeholder values" });
+                }
+
+                if (apiToken.IsPlaceholder())
+                {
+                    apiToken = existing.ApiToken;
+                }
+
+                if (userKey.IsPlaceholder())
+                {
+                    userKey = existing.UserKey;
+                }
+            }
+
             var pushoverConfig = new PushoverConfig
             {
-                ApiToken = testRequest.ApiToken,
-                UserKey = testRequest.UserKey,
+                ApiToken = apiToken,
+                UserKey = userKey,
                 Devices = testRequest.Devices,
                 Priority = testRequest.Priority,
                 Sound = testRequest.Sound,
@@ -1342,6 +1523,11 @@ public sealed class NotificationProvidersController : ControllerBase
             if (duplicateConfig > 0)
             {
                 return BadRequest("A provider with this name already exists");
+            }
+
+            if (newProvider.ApplicationToken.IsPlaceholder())
+            {
+                return BadRequest("Application token cannot be a placeholder value");
             }
 
             var gotifyConfig = new GotifyConfig
@@ -1421,7 +1607,9 @@ public sealed class NotificationProvidersController : ControllerBase
             var gotifyConfig = new GotifyConfig
             {
                 ServerUrl = updatedProvider.ServerUrl,
-                ApplicationToken = updatedProvider.ApplicationToken,
+                ApplicationToken = updatedProvider.ApplicationToken.IsPlaceholder()
+                    ? existingProvider.GotifyConfiguration!.ApplicationToken
+                    : updatedProvider.ApplicationToken,
                 Priority = updatedProvider.Priority
             };
 
@@ -1474,10 +1662,23 @@ public sealed class NotificationProvidersController : ControllerBase
     {
         try
         {
+            var applicationToken = testRequest.ApplicationToken;
+
+            if (applicationToken.IsPlaceholder())
+            {
+                var existing = await GetExistingProviderConfig<GotifyConfig>(
+                    testRequest.ProviderId, NotificationProviderType.Gotify, p => p.GotifyConfiguration);
+
+                if (existing is null)
+                    return BadRequest(new { Message = "Application token cannot be a placeholder value" });
+
+                applicationToken = existing.ApplicationToken;
+            }
+
             var gotifyConfig = new GotifyConfig
             {
                 ServerUrl = testRequest.ServerUrl,
-                ApplicationToken = testRequest.ApplicationToken,
+                ApplicationToken = applicationToken,
                 Priority = testRequest.Priority
             };
             gotifyConfig.Validate();
@@ -1513,5 +1714,35 @@ public sealed class NotificationProvidersController : ControllerBase
             _logger.LogError(ex, "Failed to test Gotify provider");
             return BadRequest(new { Message = $"Test failed: {ex.Message}" });
         }
+    }
+
+    private async Task<T?> GetExistingProviderConfig<T>(
+        Guid? providerId,
+        NotificationProviderType expectedType,
+        Func<NotificationConfig, T?> configSelector) where T : class
+    {
+        if (!providerId.HasValue)
+        {
+            return null;
+        }
+
+        IQueryable<NotificationConfig> query = _dataContext.NotificationConfigs.AsNoTracking();
+
+        query = expectedType switch
+        {
+            NotificationProviderType.Notifiarr => query.Include(p => p.NotifiarrConfiguration),
+            NotificationProviderType.Apprise => query.Include(p => p.AppriseConfiguration),
+            NotificationProviderType.Ntfy => query.Include(p => p.NtfyConfiguration),
+            NotificationProviderType.Pushover => query.Include(p => p.PushoverConfiguration),
+            NotificationProviderType.Telegram => query.Include(p => p.TelegramConfiguration),
+            NotificationProviderType.Discord => query.Include(p => p.DiscordConfiguration),
+            NotificationProviderType.Gotify => query.Include(p => p.GotifyConfiguration),
+            _ => query
+        };
+
+        var provider = await query
+            .FirstOrDefaultAsync(p => p.Id == providerId.Value && p.Type == expectedType);
+
+        return provider is null ? null : configSelector(provider);
     }
 }

@@ -146,6 +146,7 @@ export class ArrSettingsComponent implements HasPendingChanges {
       url: this.modalUrl(),
       apiKey: this.modalApiKey(),
       version: (this.modalVersion() as number) ?? 3,
+      instanceId: this.editingInstance()?.id,
     };
     this.testing.set(true);
     this.api.testInstance(this.arrType() as ArrType, request).subscribe({

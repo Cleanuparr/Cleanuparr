@@ -3,6 +3,7 @@ using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Arr.Dtos;
 using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 using Cleanuparr.Persistence;
+using Cleanuparr.Shared.Helpers;
 using Mapster;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -282,7 +283,23 @@ public sealed class ArrConfigController : ControllerBase
     {
         try
         {
-            var testInstance = request.ToTestInstance();
+            string? resolvedApiKey = null;
+
+            if (request.ApiKey.IsPlaceholder() && request.InstanceId.HasValue)
+            {
+                var existingInstance = await _dataContext.ArrInstances
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(i => i.Id == request.InstanceId.Value);
+
+                if (existingInstance is null)
+                {
+                    return NotFound($"Instance with ID {request.InstanceId.Value} not found");
+                }
+
+                resolvedApiKey = existingInstance.ApiKey;
+            }
+
+            var testInstance = request.ToTestInstance(resolvedApiKey);
             var client = _arrClientFactory.GetClient(type, request.Version);
             await client.HealthCheckAsync(testInstance);
 

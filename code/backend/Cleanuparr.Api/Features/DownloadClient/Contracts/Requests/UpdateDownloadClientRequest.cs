@@ -3,6 +3,7 @@ using System;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Domain.Exceptions;
 using Cleanuparr.Persistence.Models.Configuration;
+using Cleanuparr.Shared.Helpers;
 
 namespace Cleanuparr.Api.Features.DownloadClient.Contracts.Requests;
 
@@ -57,7 +58,7 @@ public sealed record UpdateDownloadClientRequest
         Type = Type,
         Host = new Uri(Host!, UriKind.RelativeOrAbsolute),
         Username = Username,
-        Password = Password,
+        Password = Password.IsPlaceholder() ? existing.Password : Password,
         UrlBase = UrlBase,
         ExternalUrl = !string.IsNullOrWhiteSpace(ExternalUrl) ? new Uri(ExternalUrl, UriKind.RelativeOrAbsolute) : null,
     };

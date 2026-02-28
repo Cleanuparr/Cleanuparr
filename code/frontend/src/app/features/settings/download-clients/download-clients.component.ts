@@ -170,6 +170,7 @@ export class DownloadClientsComponent implements OnInit, HasPendingChanges {
       username: this.modalUsername(),
       password: this.modalPassword(),
       urlBase: this.modalUrlBase(),
+      clientId: this.editingClient()?.id,
     };
     this.testing.set(true);
     this.api.test(request).subscribe({

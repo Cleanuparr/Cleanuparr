@@ -3,6 +3,7 @@ using System;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Domain.Exceptions;
 using Cleanuparr.Persistence.Models.Configuration;
+using Cleanuparr.Shared.Helpers;
 
 namespace Cleanuparr.Api.Features.DownloadClient.Contracts.Requests;
 
@@ -20,6 +21,8 @@ public sealed record TestDownloadClientRequest
 
     public string? UrlBase { get; init; }
 
+    public Guid? ClientId { get; init; }
+
     public void Validate()
     {
         if (string.IsNullOrWhiteSpace(Host))
@@ -33,16 +36,26 @@ public sealed record TestDownloadClientRequest
         }
     }
 
-    public DownloadClientConfig ToTestConfig() => new()
+    public DownloadClientConfig ToTestConfig(string? resolvedPassword = null)
     {
-        Id = Guid.NewGuid(),
-        Enabled = true,
-        Name = "Test Client",
-        TypeName = TypeName,
-        Type = Type,
-        Host = new Uri(Host!, UriKind.RelativeOrAbsolute),
-        Username = Username,
-        Password = Password,
-        UrlBase = UrlBase,
-    };
+        var password = resolvedPassword ?? Password;
+
+        if (password.IsPlaceholder())
+        {
+            throw new ValidationException("Password cannot be a placeholder value");
+        }
+
+        return new()
+        {
+            Id = Guid.NewGuid(),
+            Enabled = true,
+            Name = "Test Client",
+            TypeName = TypeName,
+            Type = Type,
+            Host = new Uri(Host!, UriKind.RelativeOrAbsolute),
+            Username = Username,
+            Password = password,
+            UrlBase = UrlBase,
+        };
+    }
 }

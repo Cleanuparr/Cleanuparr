@@ -1,4 +1,6 @@
 using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
+using Cleanuparr.Api.Json;
 using Cleanuparr.Infrastructure.Health;
 using Cleanuparr.Infrastructure.Hubs;
 using Microsoft.AspNetCore.Http.Json;
@@ -17,12 +19,14 @@ public static class ApiDI
             options.SerializerOptions.PropertyNameCaseInsensitive = true;
             options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
             options.SerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
+            options.SerializerOptions.TypeInfoResolver = new SensitiveDataResolver(
+                options.SerializerOptions.TypeInfoResolver ?? new DefaultJsonTypeInfoResolver());
         });
-        
+
         // Make JsonSerializerOptions available for injection
         services.AddSingleton(sp =>
             sp.GetRequiredService<IOptions<JsonOptions>>().Value.SerializerOptions);
-        
+
         // Add API-specific services
         services
             .AddControllers()
@@ -31,9 +35,11 @@ public static class ApiDI
                 options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
                 options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
                 options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
+                options.JsonSerializerOptions.TypeInfoResolver = new SensitiveDataResolver(
+                    options.JsonSerializerOptions.TypeInfoResolver ?? new DefaultJsonTypeInfoResolver());
             });
         services.AddEndpointsApiExplorer();
-        
+
         // Add SignalR for real-time updates
         services
             .AddSignalR()
@@ -41,6 +47,8 @@ public static class ApiDI
             {
                 options.PayloadSerializerOptions.PropertyNameCaseInsensitive = true;
                 options.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+                options.PayloadSerializerOptions.TypeInfoResolver = new SensitiveDataResolver(
+                    options.PayloadSerializerOptions.TypeInfoResolver ?? new DefaultJsonTypeInfoResolver());
             });
         
         // Add health status broadcaster

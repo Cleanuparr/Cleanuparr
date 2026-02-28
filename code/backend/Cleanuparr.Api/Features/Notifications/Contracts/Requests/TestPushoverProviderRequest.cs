@@ -19,4 +19,6 @@ public record TestPushoverProviderRequest
     public int? Expire { get; init; }
 
     public List<string> Tags { get; init; } = [];
+
+    public Guid? ProviderId { get; init; }
 }
