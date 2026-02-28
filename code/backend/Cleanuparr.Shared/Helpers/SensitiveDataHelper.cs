@@ -40,6 +40,6 @@ public static partial class SensitiveDataHelper
         });
     }
 
-    [GeneratedRegex(@"(\w+)://\S+")]
+    [GeneratedRegex(@"([a-zA-Z][a-zA-Z0-9+.\-]*)://\S+")]
     private static partial Regex AppriseUrlPattern();
 }
