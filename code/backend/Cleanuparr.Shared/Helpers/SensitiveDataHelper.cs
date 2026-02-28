@@ -26,7 +26,7 @@ public static partial class SensitiveDataHelper
     /// Input:  "discord://token slack://tokenA/tokenB"
     /// Output: "discord://•••••••• slack://••••••••"
     /// </summary>
-    public static string MaskAppriseUrls(string serviceUrls)
+    public static string? MaskAppriseUrls(string? serviceUrls)
     {
         if (string.IsNullOrWhiteSpace(serviceUrls))
         {
