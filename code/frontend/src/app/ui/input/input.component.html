@@ -13,7 +13,7 @@
     #inputEl
     class="input-field"
     [class.input-field--error]="error()"
-    [class.input-field--has-eye]="type() === 'password' && revealable()"
+    [class.input-field--has-eye]="hasEye()"
     [type]="effectiveType()"
     [placeholder]="placeholder()"
     [disabled]="disabled()"
@@ -21,7 +21,7 @@
     [(ngModel)]="value"
     (blur)="blurred.emit($event)"
   />
-  @if (type() === 'password' && revealable()) {
+  @if (hasEye()) {
     <button class="input-eye-btn" (click)="toggleSecret($event)" tabindex="-1" aria-label="Toggle visibility">
       <ng-icon [name]="showSecret() ? 'tablerEyeOff' : 'tablerEye'" size="16" />
     </button>
