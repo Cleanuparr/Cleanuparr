@@ -39,6 +39,7 @@ public class SensitiveDataHelperTests
     [InlineData("discord://webhook_id/webhook_token", "discord://••••••••")]
     [InlineData("slack://tokenA/tokenB/tokenC", "slack://••••••••")]
     [InlineData("mailto://user:pass@gmail.com", "mailto://••••••••")]
+    [InlineData("json+http://user:pass@host/path", "json+http://••••••••")]
     public void MaskAppriseUrls_SingleUrl_MasksCorrectly(string input, string expected)
     {
         SensitiveDataHelper.MaskAppriseUrls(input).ShouldBe(expected);
