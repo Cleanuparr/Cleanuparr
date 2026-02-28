@@ -73,6 +73,6 @@ public class SensitiveDataHelperTests
     [InlineData("   ")]
     public void MaskAppriseUrls_EmptyOrNull_ReturnsAsIs(string? input)
     {
-        SensitiveDataHelper.MaskAppriseUrls(input!).ShouldBe(input);
+        SensitiveDataHelper.MaskAppriseUrls(input).ShouldBe(input);
     }
 }
