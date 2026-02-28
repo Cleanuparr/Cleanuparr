@@ -30,8 +30,9 @@ export class InputComponent {
   blurred = output<FocusEvent>();
 
   readonly showSecret = signal(false);
+  readonly hasEye = computed(() => this.type() === 'password' && this.revealable());
   readonly effectiveType = computed(() => {
-    if (this.type() === 'password' && this.showSecret() && this.revealable()) return 'text';
+    if (this.hasEye() && this.showSecret()) return 'text';
     return this.type();
   });
 
@@ -41,6 +42,7 @@ export class InputComponent {
 
   toggleSecret(event: Event): void {
     event.preventDefault();
+    if (!this.revealable()) return;
     this.showSecret.update(v => !v);
   }
 
