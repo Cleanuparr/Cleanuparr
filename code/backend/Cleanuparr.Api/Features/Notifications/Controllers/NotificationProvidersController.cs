@@ -1726,15 +1726,21 @@ public sealed class NotificationProvidersController : ControllerBase
             return null;
         }
 
-        var provider = await _dataContext.NotificationConfigs
-            .Include(p => p.NotifiarrConfiguration)
-            .Include(p => p.AppriseConfiguration)
-            .Include(p => p.NtfyConfiguration)
-            .Include(p => p.PushoverConfiguration)
-            .Include(p => p.TelegramConfiguration)
-            .Include(p => p.DiscordConfiguration)
-            .Include(p => p.GotifyConfiguration)
-            .AsNoTracking()
+        IQueryable<NotificationConfig> query = _dataContext.NotificationConfigs.AsNoTracking();
+
+        query = expectedType switch
+        {
+            NotificationProviderType.Notifiarr => query.Include(p => p.NotifiarrConfiguration),
+            NotificationProviderType.Apprise => query.Include(p => p.AppriseConfiguration),
+            NotificationProviderType.Ntfy => query.Include(p => p.NtfyConfiguration),
+            NotificationProviderType.Pushover => query.Include(p => p.PushoverConfiguration),
+            NotificationProviderType.Telegram => query.Include(p => p.TelegramConfiguration),
+            NotificationProviderType.Discord => query.Include(p => p.DiscordConfiguration),
+            NotificationProviderType.Gotify => query.Include(p => p.GotifyConfiguration),
+            _ => query
+        };
+
+        var provider = await query
             .FirstOrDefaultAsync(p => p.Id == providerId.Value && p.Type == expectedType);
 
         return provider is null ? null : configSelector(provider);
