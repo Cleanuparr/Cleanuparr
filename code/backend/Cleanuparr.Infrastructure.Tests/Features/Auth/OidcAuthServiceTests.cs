@@ -1,3 +1,7 @@
+using System.Net;
+using System.Reflection;
+using System.Text;
+using System.Text.Json;
 using Cleanuparr.Infrastructure.Features.Auth;
 using Cleanuparr.Infrastructure.Tests.Features.Jobs.TestHelpers;
 using Cleanuparr.Persistence;
@@ -229,10 +233,178 @@ public sealed class OidcAuthServiceTests : IDisposable
         return await _dataContext.Set<T>().FirstAsync();
     }
 
+    /// <summary>
+    /// Creates an OidcAuthService using the given HttpMessageHandler instead of the default mock.
+    /// </summary>
+    private OidcAuthService CreateServiceWithHandler(HttpMessageHandler handler)
+    {
+        var factory = new Mock<IHttpClientFactory>();
+        factory.Setup(f => f.CreateClient("OidcAuth")).Returns(new HttpClient(handler));
+        return new OidcAuthService(factory.Object, _dataContext, _logger.Object);
+    }
+
+    /// <summary>
+    /// Returns a handler that serves a minimal OIDC discovery document for the mock issuer.
+    /// Optionally also handles a token endpoint and JWKS endpoint.
+    /// </summary>
+    private static MockHttpMessageHandler CreateDiscoveryHandler(
+        string? tokenResponse = null,
+        HttpStatusCode tokenStatusCode = HttpStatusCode.OK,
+        bool throwNetworkErrorOnToken = false,
+        string? jwksJson = null)
+    {
+        const string issuer = "https://mock-oidc-provider.test";
+
+        var discoveryJson = JsonSerializer.Serialize(new
+        {
+            issuer,
+            authorization_endpoint = $"{issuer}/authorize",
+            token_endpoint = $"{issuer}/token",
+            jwks_uri = $"{issuer}/.well-known/jwks",
+            response_types_supported = new[] { "code" },
+            subject_types_supported = new[] { "public" },
+            id_token_signing_alg_values_supported = new[] { "RS256" }
+        });
+
+        return new MockHttpMessageHandler(request =>
+        {
+            var url = request.RequestUri?.ToString() ?? "";
+
+            if (url.Contains("/.well-known/openid-configuration"))
+            {
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent(discoveryJson, Encoding.UTF8, "application/json")
+                };
+            }
+
+            if (url.Contains("/.well-known/jwks"))
+            {
+                // Default to an empty JWKS (sufficient for PKCE/URL tests; JWT tests pass a real key)
+                var keysJson = jwksJson ?? """{"keys": []}""";
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent(keysJson, Encoding.UTF8, "application/json")
+                };
+            }
+
+            if (url.Contains("/token"))
+            {
+                if (throwNetworkErrorOnToken)
+                    throw new HttpRequestException("Simulated network failure");
+
+                return new HttpResponseMessage(tokenStatusCode)
+                {
+                    Content = new StringContent(tokenResponse ?? "{}", Encoding.UTF8, "application/json")
+                };
+            }
+
+            return new HttpResponseMessage(HttpStatusCode.NotFound);
+        });
+    }
+
+    #endregion
+
+    #region PKCE and Authorization URL Tests
+
+    [Fact]
+    public async Task StartAuthorization_ReturnUrl_ContainsPkceParameters()
+    {
+        await EnableOidcInConfig();
+        OidcAuthService.ClearDiscoveryCache();
+
+        var service = CreateServiceWithHandler(CreateDiscoveryHandler());
+        try
+        {
+            var result = await service.StartAuthorization("https://app.test/api/auth/oidc/callback");
+
+            result.AuthorizationUrl.ShouldContain("code_challenge=");
+            result.AuthorizationUrl.ShouldContain("code_challenge_method=S256");
+        }
+        finally
+        {
+            OidcAuthService.ClearDiscoveryCache();
+        }
+    }
+
+    [Fact]
+    public async Task StartAuthorization_ReturnUrl_ContainsAllRequiredOAuthParams()
+    {
+        await EnableOidcInConfig();
+        OidcAuthService.ClearDiscoveryCache();
+
+        var service = CreateServiceWithHandler(CreateDiscoveryHandler());
+        const string redirectUri = "https://app.test/api/auth/oidc/callback";
+        try
+        {
+            var result = await service.StartAuthorization(redirectUri);
+            var url = result.AuthorizationUrl;
+
+            url.ShouldContain("response_type=code");
+            url.ShouldContain("client_id=");
+            url.ShouldContain("redirect_uri=");
+            url.ShouldContain("scope=");
+            url.ShouldContain("state=");
+            url.ShouldContain("nonce=");
+        }
+        finally
+        {
+            OidcAuthService.ClearDiscoveryCache();
+        }
+    }
+
+    [Fact]
+    public async Task StartAuthorization_PkceChallenge_IsValidBase64Url()
+    {
+        await EnableOidcInConfig();
+        OidcAuthService.ClearDiscoveryCache();
+
+        var service = CreateServiceWithHandler(CreateDiscoveryHandler());
+        try
+        {
+            var result = await service.StartAuthorization("https://app.test/api/auth/oidc/callback");
+
+            // Extract code_challenge from URL
+            var uri = new Uri(result.AuthorizationUrl);
+            var queryParts = uri.Query.TrimStart('?').Split('&');
+            var challengePart = queryParts.FirstOrDefault(p => p.StartsWith("code_challenge="));
+            challengePart.ShouldNotBeNull();
+
+            var challengeValue = Uri.UnescapeDataString(challengePart.Substring("code_challenge=".Length));
+
+            // Base64url characters: A-Z a-z 0-9 - _ (no +, /, or =)
+            challengeValue.ShouldNotContain("+");
+            challengeValue.ShouldNotContain("/");
+            challengeValue.ShouldNotContain("=");
+            challengeValue.Length.ShouldBeGreaterThan(0);
+        }
+        finally
+        {
+            OidcAuthService.ClearDiscoveryCache();
+        }
+    }
+
     #endregion
 
     public void Dispose()
     {
         _dataContext.Dispose();
+    }
+
+    private sealed class MockHttpMessageHandler : HttpMessageHandler
+    {
+        private readonly Func<HttpRequestMessage, HttpResponseMessage> _handler;
+
+        public MockHttpMessageHandler(Func<HttpRequestMessage, HttpResponseMessage> handler)
+        {
+            _handler = handler;
+        }
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            return Task.FromResult(_handler(request));
+        }
     }
 }
