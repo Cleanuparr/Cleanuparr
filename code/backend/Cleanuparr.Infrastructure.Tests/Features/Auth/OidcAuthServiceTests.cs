@@ -1,8 +1,12 @@
+using System.IdentityModel.Tokens.Jwt;
 using System.Net;
 using System.Reflection;
+using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Cleanuparr.Infrastructure.Features.Auth;
+using Microsoft.IdentityModel.Tokens;
 using Cleanuparr.Infrastructure.Tests.Features.Jobs.TestHelpers;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.General;
@@ -244,6 +248,26 @@ public sealed class OidcAuthServiceTests : IDisposable
     }
 
     /// <summary>
+    /// Uses reflection to retrieve the nonce stored in a pending OIDC flow state.
+    /// Required for constructing a valid JWT in tests before HandleCallback is called.
+    /// </summary>
+    private static string GetFlowNonce(string state)
+    {
+        var pendingFlowsField = typeof(OidcAuthService)
+            .GetField("PendingFlows", BindingFlags.NonPublic | BindingFlags.Static)!;
+        var pendingFlows = pendingFlowsField.GetValue(null)!;
+
+        // Use ConcurrentDictionary indexer: pendingFlows[state]
+        var indexer = pendingFlows.GetType().GetProperty("Item")!;
+        var flowState = indexer.GetValue(pendingFlows, new object[] { state })
+            ?? throw new InvalidOperationException($"No pending flow found for state: {state}");
+
+        var nonceProp = flowState.GetType()
+            .GetProperty("Nonce", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)!;
+        return (string)nonceProp.GetValue(flowState)!;
+    }
+
+    /// <summary>
     /// Returns a handler that serves a minimal OIDC discovery document for the mock issuer.
     /// Optionally also handles a token endpoint and JWKS endpoint.
     /// </summary>
@@ -251,7 +275,8 @@ public sealed class OidcAuthServiceTests : IDisposable
         string? tokenResponse = null,
         HttpStatusCode tokenStatusCode = HttpStatusCode.OK,
         bool throwNetworkErrorOnToken = false,
-        string? jwksJson = null)
+        string? jwksJson = null,
+        Func<string>? tokenResponseFactory = null)
     {
         const string issuer = "https://mock-oidc-provider.test";
 
@@ -293,14 +318,184 @@ public sealed class OidcAuthServiceTests : IDisposable
                 if (throwNetworkErrorOnToken)
                     throw new HttpRequestException("Simulated network failure");
 
+                // tokenResponseFactory allows dynamic response generation (needed for JWT nonce)
+                var body = tokenResponseFactory?.Invoke() ?? tokenResponse ?? "{}";
                 return new HttpResponseMessage(tokenStatusCode)
                 {
-                    Content = new StringContent(tokenResponse ?? "{}", Encoding.UTF8, "application/json")
+                    Content = new StringContent(body, Encoding.UTF8, "application/json")
                 };
             }
 
             return new HttpResponseMessage(HttpStatusCode.NotFound);
         });
+    }
+
+    #endregion
+
+    #region JWT ID Token Validation Tests
+
+    private const string MockIssuer = "https://mock-oidc-provider.test";
+    private const string MockClientId = "test-client";
+    private const string MockSubject = "test-subject-123";
+    private const string MockRedirectUri = "https://app.test/api/auth/oidc/callback";
+
+    [Fact]
+    public async Task HandleCallback_ValidIdToken_ReturnsSuccessWithSubject()
+    {
+        await EnableOidcInConfig();
+        OidcAuthService.ClearDiscoveryCache();
+
+        var jwt = new JwtTestHelper();
+        string? capturedJwt = null;
+
+        var handler = CreateDiscoveryHandler(
+            jwksJson: jwt.GetJwksJson(),
+            tokenResponseFactory: () =>
+                $$"""{"id_token":"{{capturedJwt}}","access_token":"access-123","token_type":"Bearer"}""");
+
+        var service = CreateServiceWithHandler(handler);
+        try
+        {
+            var startResult = await service.StartAuthorization(MockRedirectUri);
+            var nonce = GetFlowNonce(startResult.State);
+            capturedJwt = jwt.CreateIdToken(MockIssuer, MockClientId, MockSubject, nonce);
+
+            var callbackResult = await service.HandleCallback("code", startResult.State, MockRedirectUri);
+
+            callbackResult.Success.ShouldBeTrue();
+            callbackResult.Subject.ShouldBe(MockSubject);
+        }
+        finally
+        {
+            OidcAuthService.ClearDiscoveryCache();
+        }
+    }
+
+    [Fact]
+    public async Task HandleCallback_ExpiredIdToken_ReturnsFailure()
+    {
+        await EnableOidcInConfig();
+        OidcAuthService.ClearDiscoveryCache();
+
+        var jwt = new JwtTestHelper();
+        string? capturedJwt = null;
+
+        var handler = CreateDiscoveryHandler(
+            jwksJson: jwt.GetJwksJson(),
+            tokenResponseFactory: () =>
+                $$"""{"id_token":"{{capturedJwt}}","access_token":"access-123","token_type":"Bearer"}""");
+
+        var service = CreateServiceWithHandler(handler);
+        try
+        {
+            var startResult = await service.StartAuthorization(MockRedirectUri);
+            var nonce = GetFlowNonce(startResult.State);
+            // Token expired 1 hour ago (well outside the 2-minute clock skew)
+            capturedJwt = jwt.CreateIdToken(MockIssuer, MockClientId, MockSubject, nonce,
+                expiry: DateTime.UtcNow.AddHours(-1),
+                notBefore: DateTime.UtcNow.AddHours(-2));
+
+            var callbackResult = await service.HandleCallback("code", startResult.State, MockRedirectUri);
+
+            callbackResult.Success.ShouldBeFalse();
+            callbackResult.Error.ShouldContain("ID token validation failed");
+        }
+        finally
+        {
+            OidcAuthService.ClearDiscoveryCache();
+        }
+    }
+
+    [Fact]
+    public async Task HandleCallback_WrongNonce_ReturnsFailure()
+    {
+        await EnableOidcInConfig();
+        OidcAuthService.ClearDiscoveryCache();
+
+        var jwt = new JwtTestHelper();
+        var handler = CreateDiscoveryHandler(
+            jwksJson: jwt.GetJwksJson(),
+            tokenResponseFactory: () =>
+                $$"""{"id_token":"{{jwt.CreateIdToken(MockIssuer, MockClientId, MockSubject, "wrong-nonce")}}","access_token":"access-123","token_type":"Bearer"}""");
+
+        var service = CreateServiceWithHandler(handler);
+        try
+        {
+            var startResult = await service.StartAuthorization(MockRedirectUri);
+            var callbackResult = await service.HandleCallback("code", startResult.State, MockRedirectUri);
+
+            callbackResult.Success.ShouldBeFalse();
+            callbackResult.Error.ShouldContain("ID token validation failed");
+        }
+        finally
+        {
+            OidcAuthService.ClearDiscoveryCache();
+        }
+    }
+
+    [Fact]
+    public async Task HandleCallback_WrongIssuer_ReturnsFailure()
+    {
+        await EnableOidcInConfig();
+        OidcAuthService.ClearDiscoveryCache();
+
+        var jwt = new JwtTestHelper();
+        string? capturedJwt = null;
+
+        var handler = CreateDiscoveryHandler(
+            jwksJson: jwt.GetJwksJson(),
+            tokenResponseFactory: () =>
+                $$"""{"id_token":"{{capturedJwt}}","access_token":"access-123","token_type":"Bearer"}""");
+
+        var service = CreateServiceWithHandler(handler);
+        try
+        {
+            var startResult = await service.StartAuthorization(MockRedirectUri);
+            var nonce = GetFlowNonce(startResult.State);
+            // Use a different issuer than what's in config
+            capturedJwt = jwt.CreateIdToken("https://evil-issuer.test", MockClientId, MockSubject, nonce);
+
+            var callbackResult = await service.HandleCallback("code", startResult.State, MockRedirectUri);
+
+            callbackResult.Success.ShouldBeFalse();
+            callbackResult.Error.ShouldContain("ID token validation failed");
+        }
+        finally
+        {
+            OidcAuthService.ClearDiscoveryCache();
+        }
+    }
+
+    [Fact]
+    public async Task HandleCallback_MissingSubClaim_ReturnsFailure()
+    {
+        await EnableOidcInConfig();
+        OidcAuthService.ClearDiscoveryCache();
+
+        var jwt = new JwtTestHelper();
+        string? capturedJwt = null;
+
+        var handler = CreateDiscoveryHandler(
+            jwksJson: jwt.GetJwksJson(),
+            tokenResponseFactory: () =>
+                $$"""{"id_token":"{{capturedJwt}}","access_token":"access-123","token_type":"Bearer"}""");
+
+        var service = CreateServiceWithHandler(handler);
+        try
+        {
+            var startResult = await service.StartAuthorization(MockRedirectUri);
+            var nonce = GetFlowNonce(startResult.State);
+            capturedJwt = jwt.CreateIdToken(MockIssuer, MockClientId, subject: null, nonce);
+
+            var callbackResult = await service.HandleCallback("code", startResult.State, MockRedirectUri);
+
+            callbackResult.Success.ShouldBeFalse();
+            callbackResult.Error.ShouldContain("missing 'sub' claim");
+        }
+        finally
+        {
+            OidcAuthService.ClearDiscoveryCache();
+        }
     }
 
     #endregion
@@ -463,6 +658,69 @@ public sealed class OidcAuthServiceTests : IDisposable
     public void Dispose()
     {
         _dataContext.Dispose();
+    }
+
+    /// <summary>
+    /// Creates RSA-signed JWTs for use in ID token validation tests.
+    /// </summary>
+    private sealed class JwtTestHelper
+    {
+        private readonly RSA _rsa = RSA.Create(2048);
+        private readonly RsaSecurityKey _key;
+
+        public JwtTestHelper()
+        {
+            _key = new RsaSecurityKey(_rsa) { KeyId = "test-key-1" };
+        }
+
+        /// <summary>Creates a signed JWT. Pass subject=null to produce a token with no 'sub' claim.</summary>
+        public string CreateIdToken(string issuer, string audience, string? subject, string nonce,
+            DateTime? expiry = null, DateTime? notBefore = null)
+        {
+            var claims = new List<Claim> { new("nonce", nonce) };
+            if (subject is not null)
+                claims.Add(new Claim("sub", subject));
+
+            var expiresAt = expiry ?? DateTime.UtcNow.AddHours(1);
+            var notBeforeAt = notBefore ?? DateTime.UtcNow.AddMinutes(-1);
+
+            var descriptor = new SecurityTokenDescriptor
+            {
+                Issuer = issuer,
+                Audience = audience,
+                Subject = new ClaimsIdentity(claims),
+                NotBefore = notBeforeAt,
+                Expires = expiresAt,
+                IssuedAt = notBeforeAt,
+                SigningCredentials = new SigningCredentials(_key, SecurityAlgorithms.RsaSha256)
+            };
+
+            var handler = new JwtSecurityTokenHandler();
+            return handler.WriteToken(handler.CreateToken(descriptor));
+        }
+
+        public string GetJwksJson()
+        {
+            var rsaParams = _rsa.ExportParameters(includePrivateParameters: false);
+            return JsonSerializer.Serialize(new
+            {
+                keys = new[]
+                {
+                    new
+                    {
+                        kty = "RSA",
+                        use = "sig",
+                        kid = _key.KeyId,
+                        alg = "RS256",
+                        n = Base64UrlEncode(rsaParams.Modulus!),
+                        e = Base64UrlEncode(rsaParams.Exponent!)
+                    }
+                }
+            });
+        }
+
+        private static string Base64UrlEncode(byte[] bytes) =>
+            Convert.ToBase64String(bytes).TrimEnd('=').Replace('+', '-').Replace('/', '_');
     }
 
     private sealed class MockHttpMessageHandler : HttpMessageHandler
