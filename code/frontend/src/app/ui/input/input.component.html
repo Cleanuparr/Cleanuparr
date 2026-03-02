@@ -2,7 +2,7 @@
   <label class="input-label">
     {{ label() }}
     @if (helpKey()) {
-      <button class="field-help-btn" (click)="onHelpClick($event)" aria-label="Open documentation" tabindex="-1">
+      <button type="button" class="field-help-btn" (click)="onHelpClick($event)" aria-label="Open documentation" tabindex="-1">
         <ng-icon name="tablerQuestionMark" size="14" />
       </button>
     }
@@ -22,7 +22,7 @@
     (blur)="blurred.emit($event)"
   />
   @if (type() === 'password') {
-    <button class="input-eye-btn" (click)="toggleSecret($event)" tabindex="-1" aria-label="Toggle visibility">
+    <button type="button" class="input-eye-btn" (click)="toggleSecret($event)" tabindex="-1" aria-label="Toggle visibility">
       <ng-icon [name]="showSecret() ? 'tablerEyeOff' : 'tablerEye'" size="16" />
     </button>
   }
