@@ -10,6 +10,7 @@ namespace Cleanuparr.Api.Tests.Features.Auth;
 /// Uses a single shared factory to avoid static state conflicts.
 /// Tests are ordered to build on each other: setup → login → protected endpoints.
 /// </summary>
+[Collection("Auth Integration Tests")]
 [TestCaseOrderer("Cleanuparr.Api.Tests.PriorityOrderer", "Cleanuparr.Api.Tests")]
 public class AuthControllerTests : IClassFixture<CustomWebApplicationFactory>
 {

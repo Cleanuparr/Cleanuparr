@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Shouldly;
 
 namespace Cleanuparr.Api.Tests.Features.Auth;
@@ -17,6 +18,7 @@ namespace Cleanuparr.Api.Tests.Features.Auth;
 /// Uses a mock IOidcAuthService to simulate IdP behavior.
 /// Tests are ordered to build on each other: setup → enable OIDC → test flow.
 /// </summary>
+[Collection("Auth Integration Tests")]
 [TestCaseOrderer("Cleanuparr.Api.Tests.PriorityOrderer", "Cleanuparr.Api.Tests")]
 public class OidcAuthControllerTests : IClassFixture<OidcAuthControllerTests.OidcWebApplicationFactory>
 {
@@ -353,10 +355,19 @@ public class OidcAuthControllerTests : IClassFixture<OidcAuthControllerTests.Oid
 
                 services.AddSingleton<IOidcAuthService, MockOidcAuthService>();
 
-                // Ensure DB is created
-                var sp = services.BuildServiceProvider();
-                using var scope = sp.CreateScope();
-                var db = scope.ServiceProvider.GetRequiredService<UsersContext>();
+                // Remove all hosted services (Quartz scheduler, BackgroundJobManager) to prevent
+                // Quartz.Logging.LogProvider.ResolvedLogProvider (a cached Lazy<T>) from being accessed
+                // with a disposed ILoggerFactory from the previous factory lifecycle.
+                // Auth tests don't depend on background job scheduling, so this is safe.
+                foreach (var hostedService in services.Where(d => d.ServiceType == typeof(IHostedService)).ToList())
+                    services.Remove(hostedService);
+
+                // Ensure DB is created using a minimal isolated context (not the full app DI container)
+                // to avoid any residual static state contamination.
+                using var db = new UsersContext(
+                    new DbContextOptionsBuilder<UsersContext>()
+                        .UseSqlite($"Data Source={dbPath}")
+                        .Options);
                 db.Database.EnsureCreated();
             });
         }
