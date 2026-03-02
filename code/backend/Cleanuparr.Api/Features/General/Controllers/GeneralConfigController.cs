@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 
 using Cleanuparr.Api.Features.General.Contracts.Requests;
 using Cleanuparr.Persistence;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -12,6 +13,7 @@ namespace Cleanuparr.Api.Features.General.Controllers;
 
 [ApiController]
 [Route("api/configuration")]
+[Authorize]
 public sealed class GeneralConfigController : ControllerBase
 {
     private readonly ILogger<GeneralConfigController> _logger;

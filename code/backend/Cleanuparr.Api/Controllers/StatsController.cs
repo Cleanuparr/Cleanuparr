@@ -1,4 +1,5 @@
 using Cleanuparr.Infrastructure.Stats;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Cleanuparr.Api.Controllers;
@@ -8,6 +9,7 @@ namespace Cleanuparr.Api.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class StatsController : ControllerBase
 {
     private readonly ILogger<StatsController> _logger;

@@ -3,6 +3,7 @@ using Cleanuparr.Domain.Exceptions;
 using Cleanuparr.Infrastructure.Services.Interfaces;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -11,6 +12,7 @@ namespace Cleanuparr.Api.Features.QueueCleaner.Controllers;
 
 [ApiController]
 [Route("api/queue-rules")]
+[Authorize]
 public class QueueRulesController : ControllerBase
 {
     private readonly ILogger<QueueRulesController> _logger;

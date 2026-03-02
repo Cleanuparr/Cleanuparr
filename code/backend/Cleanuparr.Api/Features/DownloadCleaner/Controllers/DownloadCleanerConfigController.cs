@@ -9,6 +9,7 @@ using Cleanuparr.Infrastructure.Utilities;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration;
 using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -17,6 +18,7 @@ namespace Cleanuparr.Api.Features.DownloadCleaner.Controllers;
 
 [ApiController]
 [Route("api/configuration")]
+[Authorize]
 public sealed class DownloadCleanerConfigController : ControllerBase
 {
     private readonly ILogger<DownloadCleanerConfigController> _logger;

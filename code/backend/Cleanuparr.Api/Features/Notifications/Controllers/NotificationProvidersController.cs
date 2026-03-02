@@ -11,6 +11,7 @@ using Cleanuparr.Infrastructure.Features.Notifications.Telegram;
 using Cleanuparr.Infrastructure.Features.Notifications.Gotify;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.Notification;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -18,6 +19,7 @@ namespace Cleanuparr.Api.Features.Notifications.Controllers;
 
 [ApiController]
 [Route("api/configuration/notification_providers")]
+[Authorize]
 public sealed class NotificationProvidersController : ControllerBase
 {
     private readonly ILogger<NotificationProvidersController> _logger;

@@ -6,6 +6,7 @@ using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Services.Interfaces;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.BlacklistSync;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -14,6 +15,7 @@ namespace Cleanuparr.Api.Features.BlacklistSync.Controllers;
 
 [ApiController]
 [Route("api/configuration")]
+[Authorize]
 public sealed class BlacklistSyncConfigController : ControllerBase
 {
     private readonly ILogger<BlacklistSyncConfigController> _logger;

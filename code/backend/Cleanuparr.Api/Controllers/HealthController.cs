@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 
@@ -8,6 +9,7 @@ namespace Cleanuparr.Api.Controllers;
 /// </summary>
 [ApiController]
 [Route("[controller]")]
+[Authorize]
 public class HealthController : ControllerBase
 {
     private readonly HealthCheckService _healthCheckService;
@@ -23,6 +25,7 @@ public class HealthController : ControllerBase
     /// Basic liveness probe - checks if the application is running
     /// Used by Docker HEALTHCHECK and Kubernetes liveness probes
     /// </summary>
+    [AllowAnonymous]
     [HttpGet]
     [Route("/health")]
     public async Task<IActionResult> GetHealth()
@@ -47,6 +50,7 @@ public class HealthController : ControllerBase
     /// Readiness probe - checks if the application is ready to serve traffic
     /// Used by Kubernetes readiness probes
     /// </summary>
+    [AllowAnonymous]
     [HttpGet]
     [Route("/health/ready")]
     public async Task<IActionResult> GetReadiness()

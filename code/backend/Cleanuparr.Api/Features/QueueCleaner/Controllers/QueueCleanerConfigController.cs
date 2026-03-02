@@ -7,6 +7,7 @@ using Cleanuparr.Infrastructure.Utilities;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration;
 using Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -15,6 +16,7 @@ namespace Cleanuparr.Api.Features.QueueCleaner.Controllers;
 
 [ApiController]
 [Route("api/configuration")]
+[Authorize]
 public sealed class QueueCleanerConfigController : ControllerBase
 {
     private readonly ILogger<QueueCleanerConfigController> _logger;
