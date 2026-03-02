@@ -574,6 +574,175 @@ public sealed class OidcAuthServiceTests : IDisposable
 
     #endregion
 
+    #region Expiry and Capacity Tests (via reflection)
+
+    [Fact]
+    public void ExchangeOneTimeCode_ExpiredCode_ReturnsNull()
+    {
+        var service = CreateService();
+
+        // Insert a pre-expired entry directly into the static dictionary
+        var code = InsertExpiredOneTimeCode();
+
+        var result = service.ExchangeOneTimeCode(code);
+
+        result.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task HandleCallback_ExpiredFlowState_ReturnsExpiredError()
+    {
+        await EnableOidcInConfig();
+        OidcAuthService.ClearDiscoveryCache();
+
+        const string redirectUri = "https://app.test/api/auth/oidc/callback";
+        var handler = CreateDiscoveryHandler();
+        var service = CreateServiceWithHandler(handler);
+        try
+        {
+            // Get a valid state from StartAuthorization, then backdate its CreatedAt
+            var startResult = await service.StartAuthorization(redirectUri);
+            BackdateFlowState(startResult.State, TimeSpan.FromMinutes(11));
+
+            var callbackResult = await service.HandleCallback("some-code", startResult.State, redirectUri);
+
+            callbackResult.Success.ShouldBeFalse();
+            callbackResult.Error.ShouldContain("OIDC flow has expired");
+        }
+        finally
+        {
+            OidcAuthService.ClearDiscoveryCache();
+        }
+    }
+
+    [Fact]
+    public async Task StartAuthorization_WhenAtCapacity_ThrowsInvalidOperationException()
+    {
+        await EnableOidcInConfig();
+        OidcAuthService.ClearDiscoveryCache();
+
+        const string redirectUri = "https://app.test/api/auth/oidc/callback";
+        var handler = CreateDiscoveryHandler();
+        var service = CreateServiceWithHandler(handler);
+
+        var insertedKeys = new List<string>();
+        try
+        {
+            // Fill PendingFlows up to the maximum (100 entries)
+            for (var i = 0; i < 100; i++)
+            {
+                var key = InsertPendingFlowState(redirectUri);
+                insertedKeys.Add(key);
+            }
+
+            // The 101st attempt should throw
+            await Should.ThrowAsync<InvalidOperationException>(
+                () => service.StartAuthorization(redirectUri),
+                "Too many pending OIDC flows");
+        }
+        finally
+        {
+            RemovePendingFlowStates(insertedKeys);
+            OidcAuthService.ClearDiscoveryCache();
+        }
+    }
+
+    // --- Reflection helpers ---
+
+    private static string InsertExpiredOneTimeCode()
+    {
+        var oneTimeCodesField = typeof(OidcAuthService)
+            .GetField("OneTimeCodes", BindingFlags.NonPublic | BindingFlags.Static)!;
+        var oneTimeCodes = oneTimeCodesField.GetValue(null)!;
+
+        var entryType = typeof(OidcAuthService)
+            .GetNestedType("OidcOneTimeCodeEntry", BindingFlags.NonPublic)!;
+        var entry = Activator.CreateInstance(entryType)!;
+
+        SetReflectionProperty(entry, "AccessToken", "test-access");
+        SetReflectionProperty(entry, "RefreshToken", "test-refresh");
+        SetReflectionProperty(entry, "ExpiresIn", 3600);
+        SetReflectionProperty(entry, "CreatedAt", DateTime.UtcNow - TimeSpan.FromSeconds(31));
+
+        var code = "expired-test-code-" + Guid.NewGuid().ToString("N");
+        oneTimeCodes.GetType().GetMethod("TryAdd")!.Invoke(oneTimeCodes, new[] { code, entry });
+        return code;
+    }
+
+    /// <summary>Replaces the stored OidcFlowState with one whose CreatedAt is backdated by the given age.</summary>
+    private static void BackdateFlowState(string state, TimeSpan age)
+    {
+        var pendingFlowsField = typeof(OidcAuthService)
+            .GetField("PendingFlows", BindingFlags.NonPublic | BindingFlags.Static)!;
+        var pendingFlows = pendingFlowsField.GetValue(null)!;
+        var dictType = pendingFlows.GetType();
+
+        // Get the existing entry
+        var indexer = dictType.GetProperty("Item")!;
+        var existing = indexer.GetValue(pendingFlows, new object[] { state })!;
+
+        // Build a new entry with CreatedAt backdated
+        var flowType = existing.GetType();
+        var newEntry = Activator.CreateInstance(flowType)!;
+
+        foreach (var prop in flowType.GetProperties())
+        {
+            var value = prop.Name == "CreatedAt"
+                ? DateTime.UtcNow - age
+                : prop.GetValue(existing);
+            SetReflectionProperty(newEntry, prop.Name, value!);
+        }
+
+        // Replace the entry: TryUpdate(state, newEntry, existing)
+        var tryUpdate = dictType.GetMethod("TryUpdate")!;
+        tryUpdate.Invoke(pendingFlows, new[] { state, newEntry, existing });
+    }
+
+    private static string InsertPendingFlowState(string redirectUri)
+    {
+        var pendingFlowsField = typeof(OidcAuthService)
+            .GetField("PendingFlows", BindingFlags.NonPublic | BindingFlags.Static)!;
+        var pendingFlows = pendingFlowsField.GetValue(null)!;
+
+        var flowType = typeof(OidcAuthService)
+            .GetNestedType("OidcFlowState", BindingFlags.NonPublic)!;
+        var entry = Activator.CreateInstance(flowType)!;
+        var key = "capacity-test-" + Guid.NewGuid().ToString("N");
+
+        SetReflectionProperty(entry, "State", key);
+        SetReflectionProperty(entry, "Nonce", "test-nonce");
+        SetReflectionProperty(entry, "CodeVerifier", "test-verifier");
+        SetReflectionProperty(entry, "RedirectUri", redirectUri);
+        SetReflectionProperty(entry, "CreatedAt", DateTime.UtcNow);
+
+        pendingFlows.GetType().GetMethod("TryAdd")!.Invoke(pendingFlows, new[] { key, entry });
+        return key;
+    }
+
+    private static void RemovePendingFlowStates(IEnumerable<string> keys)
+    {
+        var pendingFlowsField = typeof(OidcAuthService)
+            .GetField("PendingFlows", BindingFlags.NonPublic | BindingFlags.Static)!;
+        var pendingFlows = pendingFlowsField.GetValue(null)!;
+        var tryRemove = pendingFlows.GetType().GetMethod("TryRemove",
+            new[] { typeof(string), pendingFlows.GetType().GetGenericArguments()[1].MakeByRefType() })!;
+
+        foreach (var key in keys)
+        {
+            var args = new object?[] { key, null };
+            tryRemove.Invoke(pendingFlows, args);
+        }
+    }
+
+    private static void SetReflectionProperty(object obj, string propertyName, object value)
+    {
+        var prop = obj.GetType()
+            .GetProperty(propertyName, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)!;
+        prop.SetValue(obj, value);
+    }
+
+    #endregion
+
     #region PKCE and Authorization URL Tests
 
     [Fact]
