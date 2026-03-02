@@ -169,7 +169,6 @@ export class AuthService {
 
     const storedRefreshToken = localStorage.getItem('refresh_token');
     if (!storedRefreshToken) {
-      this.clearAuth();
       return of(null);
     }
 

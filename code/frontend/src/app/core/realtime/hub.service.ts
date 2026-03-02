@@ -29,6 +29,10 @@ export abstract class HubService implements OnDestroy {
     this.connection = new signalR.HubConnectionBuilder()
       .withUrl(hubUrl, {
         accessTokenFactory: async () => {
+          // No tokens stored — trusted network bypass, no token needed
+          if (!this.authService.getAccessToken() && !localStorage.getItem('refresh_token')) {
+            return '';
+          }
           if (this.authService.isTokenExpired(30)) {
             const result = await firstValueFrom(this.authService.refreshToken());
             if (result) {
@@ -72,7 +76,8 @@ export abstract class HubService implements OnDestroy {
       this.connected.set(true);
       this.reconnectAttempts = 0;
       this.onConnected();
-    } catch {
+    } catch (err) {
+      console.warn('[SignalR] Connection failed:', err);
       this.scheduleReconnect();
     }
   }
