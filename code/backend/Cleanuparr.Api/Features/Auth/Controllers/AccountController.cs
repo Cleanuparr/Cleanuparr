@@ -66,8 +66,10 @@ public sealed class AccountController : ControllerBase
                 return BadRequest(new { error = "Current password is incorrect" });
             }
 
+            DateTime now = DateTime.UtcNow;
+
             user.PasswordHash = _passwordService.HashPassword(request.NewPassword);
-            user.UpdatedAt = DateTime.UtcNow;
+            user.UpdatedAt = now;
 
             // Revoke all existing refresh tokens so old sessions can't be reused
             var activeTokens = await _usersContext.RefreshTokens
@@ -76,7 +78,7 @@ public sealed class AccountController : ControllerBase
 
             foreach (var token in activeTokens)
             {
-                token.RevokedAt = DateTime.UtcNow;
+                token.RevokedAt = now;
             }
 
             await _usersContext.SaveChangesAsync();
