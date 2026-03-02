@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.RegularExpressions;
 using Cleanuparr.Domain.Enums;
+using Cleanuparr.Shared.Attributes;
 using ValidationException = Cleanuparr.Domain.Exceptions.ValidationException;
 
 namespace Cleanuparr.Persistence.Models.Configuration.Notification;
@@ -22,6 +23,7 @@ public sealed partial record PushoverConfig : IConfig
     /// </summary>
     [Required]
     [MaxLength(50)]
+    [SensitiveData]
     public string ApiToken { get; init; } = string.Empty;
 
     /// <summary>
@@ -29,6 +31,7 @@ public sealed partial record PushoverConfig : IConfig
     /// </summary>
     [Required]
     [MaxLength(50)]
+    [SensitiveData]
     public string UserKey { get; init; } = string.Empty;
 
     /// <summary>

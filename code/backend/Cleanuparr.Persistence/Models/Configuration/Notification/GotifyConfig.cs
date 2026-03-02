@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Cleanuparr.Shared.Attributes;
 using ValidationException = Cleanuparr.Domain.Exceptions.ValidationException;
 
 namespace Cleanuparr.Persistence.Models.Configuration.Notification;
@@ -22,6 +23,7 @@ public sealed record GotifyConfig : IConfig
 
     [Required]
     [MaxLength(200)]
+    [SensitiveData]
     public string ApplicationToken { get; init; } = string.Empty;
 
     public int Priority { get; init; } = 5;

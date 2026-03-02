@@ -9,4 +9,6 @@ public sealed record TestTelegramProviderRequest
     public string? TopicId { get; init; }
 
     public bool SendSilently { get; init; }
+
+    public Guid? ProviderId { get; init; }
 }

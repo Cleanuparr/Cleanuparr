@@ -46,7 +46,6 @@ public sealed record DownloadClientConfig
     /// <summary>
     /// Username for authentication
     /// </summary>
-    [SensitiveData]
     public string? Username { get; init; }
     
     /// <summary>

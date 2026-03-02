@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Cleanuparr.Shared.Attributes;
 
 namespace Cleanuparr.Infrastructure.Features.Arr.Dtos;
 
@@ -23,6 +24,7 @@ public record ArrInstanceDto
     public required string Url { get; init; }
     
     [Required]
+    [SensitiveData]
     public required string ApiKey { get; init; }
 
     public string? ExternalUrl { get; init; }
