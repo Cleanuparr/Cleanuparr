@@ -305,6 +305,80 @@ public sealed class OidcAuthServiceTests : IDisposable
 
     #endregion
 
+    #region Token Exchange Error Handling Tests
+
+    [Fact]
+    public async Task HandleCallback_TokenEndpointReturnsHttpError_ReturnsFailure()
+    {
+        await EnableOidcInConfig();
+        OidcAuthService.ClearDiscoveryCache();
+
+        const string redirectUri = "https://app.test/api/auth/oidc/callback";
+        var handler = CreateDiscoveryHandler(tokenResponse: """{"error":"invalid_grant"}""", tokenStatusCode: HttpStatusCode.BadRequest);
+        var service = CreateServiceWithHandler(handler);
+        try
+        {
+            var startResult = await service.StartAuthorization(redirectUri);
+            var callbackResult = await service.HandleCallback("some-code", startResult.State, redirectUri);
+
+            callbackResult.Success.ShouldBeFalse();
+            callbackResult.Error.ShouldContain("Failed to exchange authorization code");
+        }
+        finally
+        {
+            OidcAuthService.ClearDiscoveryCache();
+        }
+    }
+
+    [Fact]
+    public async Task HandleCallback_TokenEndpointThrowsNetworkError_ReturnsFailure()
+    {
+        await EnableOidcInConfig();
+        OidcAuthService.ClearDiscoveryCache();
+
+        const string redirectUri = "https://app.test/api/auth/oidc/callback";
+        var handler = CreateDiscoveryHandler(throwNetworkErrorOnToken: true);
+        var service = CreateServiceWithHandler(handler);
+        try
+        {
+            var startResult = await service.StartAuthorization(redirectUri);
+            var callbackResult = await service.HandleCallback("some-code", startResult.State, redirectUri);
+
+            callbackResult.Success.ShouldBeFalse();
+            callbackResult.Error.ShouldContain("Failed to exchange authorization code");
+        }
+        finally
+        {
+            OidcAuthService.ClearDiscoveryCache();
+        }
+    }
+
+    [Fact]
+    public async Task HandleCallback_TokenResponseMissingIdToken_ReturnsFailure()
+    {
+        await EnableOidcInConfig();
+        OidcAuthService.ClearDiscoveryCache();
+
+        const string redirectUri = "https://app.test/api/auth/oidc/callback";
+        // Token response with access_token but no id_token — ValidateIdToken will fail on empty string
+        var handler = CreateDiscoveryHandler(tokenResponse: """{"access_token":"abc","token_type":"Bearer"}""");
+        var service = CreateServiceWithHandler(handler);
+        try
+        {
+            var startResult = await service.StartAuthorization(redirectUri);
+            var callbackResult = await service.HandleCallback("some-code", startResult.State, redirectUri);
+
+            callbackResult.Success.ShouldBeFalse();
+            callbackResult.Error.ShouldContain("ID token validation failed");
+        }
+        finally
+        {
+            OidcAuthService.ClearDiscoveryCache();
+        }
+    }
+
+    #endregion
+
     #region PKCE and Authorization URL Tests
 
     [Fact]
@@ -404,7 +478,15 @@ public sealed class OidcAuthServiceTests : IDisposable
             HttpRequestMessage request,
             CancellationToken cancellationToken)
         {
-            return Task.FromResult(_handler(request));
+            try
+            {
+                return Task.FromResult(_handler(request));
+            }
+            catch (Exception ex)
+            {
+                // Convert synchronous exceptions to faulted Tasks so HttpClient propagates them correctly
+                return Task.FromException<HttpResponseMessage>(ex);
+            }
         }
     }
 }
