@@ -49,6 +49,7 @@ https://cleanuparr.github.io/Cleanuparr/docs/screenshots
 - **Transmission**
 - **Deluge**
 - **µTorrent**
+- **rTorrent**
 
 ### Platforms
 - **Docker**

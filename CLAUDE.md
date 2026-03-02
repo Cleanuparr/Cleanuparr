@@ -10,7 +10,7 @@
 
 ## Project Overview
 
-Cleanuparr is a tool for automating the cleanup of unwanted or blocked files in Sonarr, Radarr, Lidarr, Readarr, Whisparr and supported download clients like qBittorrent, Transmission, Deluge, and µTorrent. It provides malware protection, automated cleanup, and queue management for *arr applications.
+Cleanuparr is a tool for automating the cleanup of unwanted or blocked files in Sonarr, Radarr, Lidarr, Readarr, Whisparr and supported download clients like qBittorrent, Transmission, Deluge, µTorrent and rTorrent. It provides malware protection, automated cleanup, and queue management for *arr applications.
 
 **Key Features:**
 - Strike system for bad downloads
