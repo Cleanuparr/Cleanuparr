@@ -824,6 +824,61 @@ public sealed class OidcAuthServiceTests : IDisposable
 
     #endregion
 
+    #region Cleanup Timer Tests
+
+    [Fact]
+    public void CleanupExpiredEntries_RemovesExpiredFlowsAndCodes()
+    {
+        const string redirectUri = "https://app.test/api/auth/oidc/callback";
+        var service = CreateService();
+
+        // Insert an expired flow state and backdate it beyond the expiry window
+        var expiredFlowKey = InsertPendingFlowState(redirectUri);
+        BackdateFlowState(expiredFlowKey, TimeSpan.FromMinutes(11));
+
+        // Insert a valid (non-expired) flow state that cleanup must leave in place
+        var validFlowKey = InsertPendingFlowState(redirectUri);
+
+        // Insert an expired one-time code and a valid one-time code
+        var expiredCodeKey = InsertExpiredOneTimeCode();
+        var validCodeKey = service.StoreOneTimeCode("access", "refresh", 3600);
+
+        try
+        {
+            // Invoke the private static CleanupExpiredEntries directly (bypassing the timer)
+            var method = typeof(OidcAuthService)
+                .GetMethod("CleanupExpiredEntries", BindingFlags.NonPublic | BindingFlags.Static)!;
+            method.Invoke(null, new object?[] { null });
+
+            // Expired flow state must have been removed
+            var pendingFlowsField = typeof(OidcAuthService)
+                .GetField("PendingFlows", BindingFlags.NonPublic | BindingFlags.Static)!;
+            var pendingFlows = pendingFlowsField.GetValue(null)!;
+            var containsKeyFlow = pendingFlows.GetType().GetMethod("ContainsKey")!;
+            ((bool)containsKeyFlow.Invoke(pendingFlows, new object[] { expiredFlowKey })!).ShouldBeFalse();
+
+            // Valid flow state must still be present
+            ((bool)containsKeyFlow.Invoke(pendingFlows, new object[] { validFlowKey })!).ShouldBeTrue();
+
+            // Expired one-time code must have been removed
+            var oneTimeCodesField = typeof(OidcAuthService)
+                .GetField("OneTimeCodes", BindingFlags.NonPublic | BindingFlags.Static)!;
+            var oneTimeCodes = oneTimeCodesField.GetValue(null)!;
+            var containsKeyCode = oneTimeCodes.GetType().GetMethod("ContainsKey")!;
+            ((bool)containsKeyCode.Invoke(oneTimeCodes, new object[] { expiredCodeKey })!).ShouldBeFalse();
+
+            // Valid one-time code must still be present
+            ((bool)containsKeyCode.Invoke(oneTimeCodes, new object[] { validCodeKey })!).ShouldBeTrue();
+        }
+        finally
+        {
+            RemovePendingFlowStates(new[] { validFlowKey });
+            service.ExchangeOneTimeCode(validCodeKey); // consume to clean up
+        }
+    }
+
+    #endregion
+
     public void Dispose()
     {
         _dataContext.Dispose();
