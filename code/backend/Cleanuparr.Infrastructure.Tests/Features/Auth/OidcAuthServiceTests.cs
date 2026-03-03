@@ -822,6 +822,39 @@ public sealed class OidcAuthServiceTests : IDisposable
         }
     }
 
+    [Fact]
+    public async Task StartAuthorization_SpecialCharsInConfig_UrlEncodesParameters()
+    {
+        // Configure OIDC with special characters in ClientId and Scopes
+        var config = await _dataContext.GeneralConfigs.FirstAsync();
+        config.Auth.Oidc = new OidcConfig
+        {
+            Enabled = true,
+            IssuerUrl = "https://mock-oidc-provider.test",
+            ClientId = "test client+id",        // space and plus sign require encoding
+            Scopes = "openid profile email",    // spaces between scopes require encoding
+            AuthorizedSubject = "test-subject",
+            ProviderName = "TestProvider"
+        };
+        await _dataContext.SaveChangesAsync();
+        OidcAuthService.ClearDiscoveryCache();
+
+        var service = CreateServiceWithHandler(CreateDiscoveryHandler());
+        try
+        {
+            var result = await service.StartAuthorization("https://app.test/api/auth/oidc/callback");
+            var url = result.AuthorizationUrl;
+
+            // Uri.EscapeDataString: space → %20, + → %2B
+            url.ShouldContain("client_id=test%20client%2Bid");
+            url.ShouldContain("scope=openid%20profile%20email");
+        }
+        finally
+        {
+            OidcAuthService.ClearDiscoveryCache();
+        }
+    }
+
     #endregion
 
     #region Cleanup Timer Tests
