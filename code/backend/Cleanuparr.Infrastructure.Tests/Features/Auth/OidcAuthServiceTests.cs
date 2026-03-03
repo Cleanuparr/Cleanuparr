@@ -213,6 +213,22 @@ public sealed class OidcAuthServiceTests : IDisposable
         codes.Count.ShouldBe(10);
     }
 
+    [Fact]
+    public void StoreOneTimeCode_Concurrent_AllCodesAreUnique()
+    {
+        var service = CreateService();
+        var codes = new System.Collections.Concurrent.ConcurrentBag<string>();
+
+        Parallel.For(0, 50, i =>
+        {
+            var code = service.StoreOneTimeCode($"access-{i}", $"refresh-{i}", 3600);
+            codes.Add(code);
+        });
+
+        codes.Count.ShouldBe(50);
+        codes.Distinct().Count().ShouldBe(50);
+    }
+
     #endregion
 
     #region Helpers
