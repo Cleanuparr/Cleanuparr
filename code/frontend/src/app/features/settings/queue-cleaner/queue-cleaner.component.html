@@ -23,6 +23,9 @@
         hint="When enabled, the queue cleaner will run according to the schedule"
         helpKey="queue-cleaner:enabled" />
       @if (enabled()) {
+        <app-toggle label="Process downloads with no content ID" [(checked)]="processNoContentId"
+          hint="Process downloads from the queue that are not linked to any content in the arr app. Cleanuparr will not be able to trigger a search for a replacement when this happens."
+          helpKey="queue-cleaner:processNoContentId" />
         <div class="form-divider"></div>
         <app-toggle label="Advanced Scheduling" [(checked)]="useAdvancedScheduling"
           hint="Choose between basic scheduling or advanced cron expression"

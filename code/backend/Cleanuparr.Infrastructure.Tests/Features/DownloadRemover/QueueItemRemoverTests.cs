@@ -275,6 +275,55 @@ public class QueueItemRemoverTests : IDisposable
 
     #endregion
 
+    #region RemoveQueueItemAsync - SkipSearch Tests
+
+    [Fact]
+    public async Task RemoveQueueItemAsync_WhenSkipSearch_DoesNotPublishHuntRequest()
+    {
+        // Arrange
+        var request = CreateRemoveRequest(skipSearch: true);
+
+        _arrClientMock
+            .Setup(c => c.DeleteQueueItemAsync(
+                It.IsAny<ArrInstance>(),
+                It.IsAny<QueueRecord>(),
+                It.IsAny<bool>(),
+                It.IsAny<DeleteReason>()))
+            .Returns(Task.CompletedTask);
+
+        // Act
+        await _queueItemRemover.RemoveQueueItemAsync(request);
+
+        // Assert
+        _busMock.Verify(b => b.Publish(
+            It.IsAny<DownloadHuntRequest<SearchItem>>(),
+            It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task RemoveQueueItemAsync_WhenSkipSearch_AndHashIsNotRecurring_DoesNotModifyRecurringHashes()
+    {
+        // Arrange
+        var request = CreateRemoveRequest(skipSearch: true);
+        var hash = request.Record.DownloadId.ToLowerInvariant();
+
+        _arrClientMock
+            .Setup(c => c.DeleteQueueItemAsync(
+                It.IsAny<ArrInstance>(),
+                It.IsAny<QueueRecord>(),
+                It.IsAny<bool>(),
+                It.IsAny<DeleteReason>()))
+            .Returns(Task.CompletedTask);
+
+        // Act
+        await _queueItemRemover.RemoveQueueItemAsync(request);
+
+        // Assert - hash was never in recurring, should still not be there
+        Assert.False(Striker.RecurringHashes.ContainsKey(hash));
+    }
+
+    #endregion
+
     #region RemoveQueueItemAsync - HTTP Error Tests
 
     [Fact]
@@ -435,7 +484,8 @@ public class QueueItemRemoverTests : IDisposable
     private static QueueItemRemoveRequest<SearchItem> CreateRemoveRequest(
         InstanceType instanceType = InstanceType.Sonarr,
         bool removeFromClient = true,
-        DeleteReason deleteReason = DeleteReason.Stalled)
+        DeleteReason deleteReason = DeleteReason.Stalled,
+        bool skipSearch = false)
     {
         return new QueueItemRemoveRequest<SearchItem>
         {
@@ -445,6 +495,7 @@ public class QueueItemRemoverTests : IDisposable
             Record = CreateQueueRecord(),
             RemoveFromClient = removeFromClient,
             DeleteReason = deleteReason,
+            SkipSearch = skipSearch,
             JobRunId = Guid.NewGuid()
         };
     }

@@ -21,4 +21,6 @@ public sealed record QueueItemRemoveRequest<T>
     public required DeleteReason DeleteReason { get; init; }
 
     public required Guid JobRunId { get; init; }
+
+    public bool SkipSearch { get; init; }
 }

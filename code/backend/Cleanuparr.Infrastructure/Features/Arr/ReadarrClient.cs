@@ -92,16 +92,7 @@ public class ReadarrClient : ArrClient, IReadarrClient
         }
     }
 
-    public override bool IsRecordValid(QueueRecord record)
-    {
-        if (record.AuthorId is 0 || record.BookId is 0)
-        {
-            _logger.LogDebug("skip | author id and/or book id missing | {title}", record.Title);
-            return false;
-        }
-        
-        return base.IsRecordValid(record);
-    }
+    public override bool HasContentId(QueueRecord record) => record.AuthorId is not 0 && record.BookId is not 0;
 
     private static string GetSearchLog(Uri instanceUrl, ReadarrCommand command, bool success, string? logContext)
     {

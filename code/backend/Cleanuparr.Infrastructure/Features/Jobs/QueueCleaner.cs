@@ -106,18 +106,11 @@ public sealed class QueueCleaner : GenericHandler
             var groups = items
                 .GroupBy(x => x.DownloadId)
                 .ToList();
-            
+
             foreach (var group in groups)
             {
-                if (group.Any(x => !arrClient.IsRecordValid(x)))
-                {
-                    continue;
-                }
-                
                 QueueRecord record = group.First();
-                
-                _logger.LogTrace("processing | {title} | {id}", record.Title, record.DownloadId);
-                
+
                 if (!arrClient.IsRecordValid(record))
                 {
                     continue;
@@ -127,6 +120,21 @@ public sealed class QueueCleaner : GenericHandler
                 {
                     _logger.LogInformation("skip | download is ignored | {name}", record.Title);
                     continue;
+                }
+                
+                _logger.LogDebug("processing | {title} | {id}", record.Title, record.DownloadId);
+                
+                bool hasContentId = arrClient.HasContentId(record);
+
+                if (!hasContentId)
+                {
+                    if (!queueCleanerConfig.ProcessNoContentId)
+                    {
+                        _logger.LogInformation("skip | item is missing the content id | {title}", record.Title);
+                        continue;
+                    }
+                    
+                    _logger.LogDebug("item is missing the content id | {title}", record.Title);
                 }
                 
                 string downloadRemovalKey = CacheKeys.DownloadMarkedForRemoval(record.DownloadId, instance.Url);
@@ -190,7 +198,8 @@ public sealed class QueueCleaner : GenericHandler
                         record,
                         group.Count() > 1,
                         removeFromClient,
-                        downloadCheckResult.DeleteReason
+                        downloadCheckResult.DeleteReason,
+                        skipSearch: !hasContentId
                     );
 
                     continue;
@@ -218,7 +227,8 @@ public sealed class QueueCleaner : GenericHandler
                         record,
                         group.Count() > 1,
                         removeFromClient,
-                        DeleteReason.FailedImport
+                        DeleteReason.FailedImport,
+                        skipSearch: !hasContentId
                     );
 
                     continue;

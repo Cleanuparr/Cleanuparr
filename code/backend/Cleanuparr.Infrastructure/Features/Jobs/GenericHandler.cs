@@ -131,7 +131,8 @@ public abstract class GenericHandler : IHandler
         QueueRecord record,
         bool isPack,
         bool removeFromClient,
-        DeleteReason deleteReason
+        DeleteReason deleteReason,
+        bool skipSearch = false
     )
     {
         if (_cache.TryGetValue(downloadRemovalKey, out bool _))
@@ -139,7 +140,7 @@ public abstract class GenericHandler : IHandler
             _logger.LogDebug("skip removal request | already marked for removal | {title}", record.Title);
             return;
         }
-        
+
         if (instanceType is InstanceType.Sonarr || (instanceType is InstanceType.Whisparr && instance.Version is 2))
         {
             QueueItemRemoveRequest<SeriesSearchItem> removeRequest = new()
@@ -150,7 +151,8 @@ public abstract class GenericHandler : IHandler
                 SearchItem = (SeriesSearchItem)GetRecordSearchItem(instanceType, instance.Version, record, isPack),
                 RemoveFromClient = removeFromClient,
                 DeleteReason = deleteReason,
-                JobRunId = ContextProvider.GetJobRunId()
+                JobRunId = ContextProvider.GetJobRunId(),
+                SkipSearch = skipSearch
             };
 
             await _messageBus.Publish(removeRequest);
@@ -165,7 +167,8 @@ public abstract class GenericHandler : IHandler
                 SearchItem = GetRecordSearchItem(instanceType, instance.Version, record, isPack),
                 RemoveFromClient = removeFromClient,
                 DeleteReason = deleteReason,
-                JobRunId = ContextProvider.GetJobRunId()
+                JobRunId = ContextProvider.GetJobRunId(),
+                SkipSearch = skipSearch
             };
 
             await _messageBus.Publish(removeRequest);
