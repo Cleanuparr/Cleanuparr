@@ -87,7 +87,6 @@ export class DocumentationService {
       'cronExpression': 'cron-expression',
       'ignorePrivate': 'ignore-private',
       'deletePrivate': 'delete-private',
-      'deleteKnownMalware': 'delete-known-malware',
       'sonarr.enabled': 'enable-blocklist',
       'sonarr.blocklistPath': 'blocklist-path',
       'sonarr.blocklistType': 'blocklist-type',

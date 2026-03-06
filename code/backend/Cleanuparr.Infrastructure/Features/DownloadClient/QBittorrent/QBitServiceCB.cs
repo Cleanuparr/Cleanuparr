@@ -73,8 +73,7 @@ public partial class QBitService
         BlocklistType blocklistType = _blocklistProvider.GetBlocklistType(instanceType);
         ConcurrentBag<string> patterns = _blocklistProvider.GetPatterns(instanceType);
         ConcurrentBag<Regex> regexes = _blocklistProvider.GetRegexes(instanceType);
-        ConcurrentBag<string> malwarePatterns = _blocklistProvider.GetMalwarePatterns();
-        
+
         foreach (TorrentContent file in files)
         {
             if (!file.Index.HasValue)
@@ -84,14 +83,6 @@ public partial class QBitService
             }
 
             totalFiles++;
-            
-            if (malwareBlockerConfig.DeleteKnownMalware && _filenameEvaluator.IsKnownMalware(file.Name, malwarePatterns))
-            {
-                _logger.LogInformation("malware file found | {file} | {title}", file.Name, download.Name);
-                result.ShouldRemove = true;
-                result.DeleteReason = DeleteReason.MalwareFileFound;
-                return result;
-            }
 
             if (file.Priority is TorrentContentPriority.Skip)
             {

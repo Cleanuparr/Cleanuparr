@@ -75,7 +75,6 @@ public static class TestDataContextFactory
         {
             Id = Guid.NewGuid(),
             IgnoredDownloads = [],
-            DeleteKnownMalware = false,
             DeletePrivate = false,
             Sonarr = new BlocklistSettings { Enabled = false },
             Radarr = new BlocklistSettings { Enabled = false },

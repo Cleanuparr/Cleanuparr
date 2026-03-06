@@ -377,7 +377,6 @@ public class QueueItemRemoverTests : IDisposable
     [InlineData(DeleteReason.SlowSpeed)]
     [InlineData(DeleteReason.SlowTime)]
     [InlineData(DeleteReason.DownloadingMetadata)]
-    [InlineData(DeleteReason.MalwareFileFound)]
     public async Task RemoveQueueItemAsync_PassesCorrectDeleteReason(DeleteReason deleteReason)
     {
         // Arrange

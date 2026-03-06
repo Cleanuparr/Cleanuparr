@@ -71,7 +71,6 @@ public partial class RTorrentService
         BlocklistType blocklistType = _blocklistProvider.GetBlocklistType(instanceType);
         ConcurrentBag<string> patterns = _blocklistProvider.GetPatterns(instanceType);
         ConcurrentBag<Regex> regexes = _blocklistProvider.GetRegexes(instanceType);
-        ConcurrentBag<string> malwarePatterns = _blocklistProvider.GetMalwarePatterns();
 
         List<(int Index, int Priority)> priorityUpdates = [];
 
@@ -83,13 +82,6 @@ public partial class RTorrentService
             if (result.ShouldRemove)
             {
                 continue;
-            }
-
-            if (malwareBlockerConfig.DeleteKnownMalware && _filenameEvaluator.IsKnownMalware(fileName, malwarePatterns))
-            {
-                _logger.LogInformation("malware file found | {file} | {title}", file.Path, download.Name);
-                result.ShouldRemove = true;
-                result.DeleteReason = DeleteReason.MalwareFileFound;
             }
 
             if (file.Priority == 0)

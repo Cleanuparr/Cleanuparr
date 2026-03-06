@@ -68,7 +68,6 @@ public partial class DelugeService
         BlocklistType blocklistType = _blocklistProvider.GetBlocklistType(instanceType);
         ConcurrentBag<string> patterns = _blocklistProvider.GetPatterns(instanceType);
         ConcurrentBag<Regex> regexes = _blocklistProvider.GetRegexes(instanceType);
-        ConcurrentBag<string> malwarePatterns = _blocklistProvider.GetMalwarePatterns();
 
         ProcessFiles(contents.Contents, (name, file) =>
         {
@@ -78,13 +77,6 @@ public partial class DelugeService
             if (result.ShouldRemove)
             {
                 return;
-            }
-            
-            if (malwareBlockerConfig.DeleteKnownMalware && _filenameEvaluator.IsKnownMalware(name, malwarePatterns))
-            {
-                _logger.LogInformation("malware file found | {file} | {title}", file.Path, download.Name);
-                result.ShouldRemove = true;
-                result.DeleteReason = DeleteReason.MalwareFileFound;
             }
 
             if (file.Priority is 0)
