@@ -271,12 +271,12 @@ public class NotificationPublisherTests
             .Returns(providerMock.Object);
 
         // Act
-        await _publisher.NotifyQueueItemDeleted(false, DeleteReason.MalwareFileFound);
+        await _publisher.NotifyQueueItemDeleted(false, DeleteReason.AllFilesBlocked);
 
         // Assert
         providerMock.Verify(p => p.SendNotificationAsync(It.Is<NotificationContext>(
             c => c.Data["Removed from client?"] == "False" &&
-                 c.Data["Reason"] == "MalwareFileFound")), Times.Once);
+                 c.Data["Reason"] == "AllFilesBlocked")), Times.Once);
     }
 
     #endregion
