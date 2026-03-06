@@ -86,6 +86,8 @@ public sealed class QueueItemRemover : IQueueItemRemover
                 {
                     Striker.RecurringHashes.Remove(hash, out _);
                 }
+
+                return;
             }
 
             await _messageBus.Publish(new DownloadHuntRequest<T>
