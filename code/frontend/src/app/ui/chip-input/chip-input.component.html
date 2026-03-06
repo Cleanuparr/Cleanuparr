@@ -30,10 +30,10 @@
     <button class="chip-add" type="button" (click)="commitInput()" aria-label="Add item">+</button>
   }
 </div>
-@if (error()) {
-  <span class="chip-error">{{ error() }}</span>
-} @else if (uncommittedError()) {
+@if (uncommittedError()) {
   <span class="chip-error">{{ uncommittedError() }}</span>
+} @else if (error()) {
+  <span class="chip-error">{{ error() }}</span>
 } @else if (hint()) {
   <span class="chip-hint">{{ hint() }}</span>
 }
