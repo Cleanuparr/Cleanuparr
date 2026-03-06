@@ -20,6 +20,10 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Create directory for static files
+        run: |
+          mkdir -p Cloudflare/static
       
       - name: Copy root static files to Cloudflare static directory
         run: |
