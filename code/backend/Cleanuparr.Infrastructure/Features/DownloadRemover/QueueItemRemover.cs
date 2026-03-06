@@ -76,11 +76,16 @@ public sealed class QueueItemRemover : IQueueItemRemover
             await _eventPublisher.PublishQueueItemDeleted(request.RemoveFromClient, request.DeleteReason);
 
             string hash = request.Record.DownloadId.ToLowerInvariant();
-            if (Striker.RecurringHashes.ContainsKey(hash) || request.SkipSearch)
+            var isRecurring = Striker.RecurringHashes.ContainsKey(hash);
+            
+            if (isRecurring || request.SkipSearch)
             {
                 await _eventPublisher.PublishSearchNotTriggered(request.Record.DownloadId, request.Record.Title);
-                Striker.RecurringHashes.Remove(hash, out _);
-                return;
+                
+                if (isRecurring)
+                {
+                    Striker.RecurringHashes.Remove(hash, out _);
+                }
             }
 
             await _messageBus.Publish(new DownloadHuntRequest<T>
