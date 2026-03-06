@@ -87,16 +87,7 @@ public class LidarrClient : ArrClient, ILidarrClient
         }
     }
 
-    public override bool IsRecordValid(QueueRecord record)
-    {
-        if (record.ArtistId is 0 || record.AlbumId is 0)
-        {
-            _logger.LogDebug("skip | artist id and/or album id missing | {title}", record.Title);
-            return false;
-        }
-
-        return base.IsRecordValid(record);
-    }
+    public override bool HasContentId(QueueRecord record) => record.ArtistId is not 0 && record.AlbumId is not 0;
 
     private static string GetSearchLog(
         Uri instanceUrl,

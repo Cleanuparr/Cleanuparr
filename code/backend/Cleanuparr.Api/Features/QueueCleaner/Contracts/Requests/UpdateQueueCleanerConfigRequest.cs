@@ -13,6 +13,8 @@ public sealed record UpdateQueueCleanerConfigRequest
     public FailedImportConfig FailedImport { get; init; } = new();
 
     public ushort DownloadingMetadataMaxStrikes { get; init; }
-    
+
+    public bool ProcessNoContentId { get; init; }
+
     public List<string> IgnoredDownloads { get; set; } = [];
 }

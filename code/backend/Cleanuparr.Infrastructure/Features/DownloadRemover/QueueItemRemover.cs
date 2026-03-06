@@ -73,12 +73,10 @@ public sealed class QueueItemRemover : IQueueItemRemover
             ContextProvider.Set(nameof(InstanceType), request.InstanceType);
             ContextProvider.Set(ContextProvider.Keys.Version, request.Instance.Version);
 
-            // Use the new centralized EventPublisher method
             await _eventPublisher.PublishQueueItemDeleted(request.RemoveFromClient, request.DeleteReason);
 
-            // If recurring, do not search for replacement
             string hash = request.Record.DownloadId.ToLowerInvariant();
-            if (Striker.RecurringHashes.ContainsKey(hash))
+            if (Striker.RecurringHashes.ContainsKey(hash) || request.SkipSearch)
             {
                 await _eventPublisher.PublishSearchNotTriggered(request.Record.DownloadId, request.Record.Title);
                 Striker.RecurringHashes.Remove(hash, out _);

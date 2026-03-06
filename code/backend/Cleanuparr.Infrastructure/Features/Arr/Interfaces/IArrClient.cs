@@ -18,6 +18,13 @@ public interface IArrClient
     bool IsRecordValid(QueueRecord record);
 
     /// <summary>
+    /// Checks whether the record has an id (movie id, tv show id etc.)
+    /// </summary>
+    /// <param name="record">The record to check</param>
+    /// <returns>True if the record has an id, false otherwise</returns>
+    bool HasContentId(QueueRecord record);
+
+    /// <summary>
     /// Tests the connection to an Arr instance
     /// </summary>
     /// <param name="arrInstance">The instance to test connection to</param>

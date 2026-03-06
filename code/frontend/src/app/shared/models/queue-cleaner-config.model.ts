@@ -27,6 +27,7 @@ export interface QueueCleanerConfig {
   useAdvancedScheduling: boolean;
   jobSchedule?: JobSchedule;
   ignoredDownloads: string[];
+  processNoContentId: boolean;
   failedImport: FailedImportConfig;
   downloadingMetadataMaxStrikes: number;
   stallRules?: StallRule[];

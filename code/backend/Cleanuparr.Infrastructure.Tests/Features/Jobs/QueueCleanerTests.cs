@@ -220,6 +220,7 @@ public class QueueCleanerTests : IDisposable
 
         var mockArrClient = new Mock<IArrClient>();
         mockArrClient.Setup(x => x.IsRecordValid(It.IsAny<QueueRecord>())).Returns(true);
+        mockArrClient.Setup(x => x.HasContentId(It.IsAny<QueueRecord>())).Returns(true);
 
         _fixture.ArrClientFactory
             .Setup(x => x.GetClient(InstanceType.Sonarr, It.IsAny<float>()))
@@ -230,7 +231,9 @@ public class QueueCleanerTests : IDisposable
             Id = 1,
             DownloadId = "ignored-download-id",
             Title = "Ignored Download",
-            Protocol = "torrent"
+            Protocol = "torrent",
+            SeriesId = 1,
+            EpisodeId = 1
         };
 
         _fixture.ArrQueueIterator
@@ -275,6 +278,7 @@ public class QueueCleanerTests : IDisposable
 
         var mockArrClient = new Mock<IArrClient>();
         mockArrClient.Setup(x => x.IsRecordValid(It.IsAny<QueueRecord>())).Returns(true);
+        mockArrClient.Setup(x => x.HasContentId(It.IsAny<QueueRecord>())).Returns(true);
 
         _fixture.ArrClientFactory
             .Setup(x => x.GetClient(InstanceType.Sonarr, It.IsAny<float>()))
@@ -285,7 +289,9 @@ public class QueueCleanerTests : IDisposable
             Id = 1,
             DownloadId = "cached-download-id",
             Title = "Cached Download",
-            Protocol = "torrent"
+            Protocol = "torrent",
+            SeriesId = 1,
+            EpisodeId = 1
         };
 
         _fixture.ArrQueueIterator
@@ -326,6 +332,7 @@ public class QueueCleanerTests : IDisposable
 
         var mockArrClient = new Mock<IArrClient>();
         mockArrClient.Setup(x => x.IsRecordValid(It.IsAny<QueueRecord>())).Returns(true);
+        mockArrClient.Setup(x => x.HasContentId(It.IsAny<QueueRecord>())).Returns(true);
         mockArrClient.Setup(x => x.ShouldRemoveFromQueue(
             It.IsAny<InstanceType>(),
             It.IsAny<QueueRecord>(),
@@ -342,7 +349,9 @@ public class QueueCleanerTests : IDisposable
             Id = 1,
             DownloadId = "torrent-download-id",
             Title = "Torrent Download",
-            Protocol = "torrent"
+            Protocol = "torrent",
+            SeriesId = 1,
+            EpisodeId = 1
         };
 
         _fixture.ArrQueueIterator
@@ -389,6 +398,7 @@ public class QueueCleanerTests : IDisposable
 
         var mockArrClient = new Mock<IArrClient>();
         mockArrClient.Setup(x => x.IsRecordValid(It.IsAny<QueueRecord>())).Returns(true);
+        mockArrClient.Setup(x => x.HasContentId(It.IsAny<QueueRecord>())).Returns(true);
 
         _fixture.ArrClientFactory
             .Setup(x => x.GetClient(InstanceType.Sonarr, It.IsAny<float>()))
@@ -458,6 +468,7 @@ public class QueueCleanerTests : IDisposable
 
         var mockArrClient = new Mock<IArrClient>();
         mockArrClient.Setup(x => x.IsRecordValid(It.IsAny<QueueRecord>())).Returns(true);
+        mockArrClient.Setup(x => x.HasContentId(It.IsAny<QueueRecord>())).Returns(true);
         mockArrClient.Setup(x => x.ShouldRemoveFromQueue(
             It.IsAny<InstanceType>(),
             It.IsAny<QueueRecord>(),
@@ -474,7 +485,9 @@ public class QueueCleanerTests : IDisposable
             Id = 1,
             DownloadId = "missing-download-id",
             Title = "Missing Download",
-            Protocol = "torrent"
+            Protocol = "torrent",
+            SeriesId = 1,
+            EpisodeId = 1
         };
 
         _fixture.ArrQueueIterator
@@ -527,6 +540,7 @@ public class QueueCleanerTests : IDisposable
 
         var mockArrClient = new Mock<IArrClient>();
         mockArrClient.Setup(x => x.IsRecordValid(It.IsAny<QueueRecord>())).Returns(true);
+        mockArrClient.Setup(x => x.HasContentId(It.IsAny<QueueRecord>())).Returns(true);
         mockArrClient.Setup(x => x.ShouldRemoveFromQueue(
             It.IsAny<InstanceType>(),
             It.IsAny<QueueRecord>(),
@@ -543,7 +557,9 @@ public class QueueCleanerTests : IDisposable
             Id = 1,
             DownloadId = "download-id",
             Title = "Test Download",
-            Protocol = "torrent"
+            Protocol = "torrent",
+            SeriesId = 1,
+            EpisodeId = 1
         };
 
         _fixture.ArrQueueIterator
@@ -595,6 +611,7 @@ public class QueueCleanerTests : IDisposable
 
         var mockArrClient = new Mock<IArrClient>();
         mockArrClient.Setup(x => x.IsRecordValid(It.IsAny<QueueRecord>())).Returns(true);
+        mockArrClient.Setup(x => x.HasContentId(It.IsAny<QueueRecord>())).Returns(true);
         mockArrClient.Setup(x => x.ShouldRemoveFromQueue(
             It.IsAny<InstanceType>(),
             It.IsAny<QueueRecord>(),
@@ -669,6 +686,7 @@ public class QueueCleanerTests : IDisposable
 
         var mockArrClient = new Mock<IArrClient>();
         mockArrClient.Setup(x => x.IsRecordValid(It.IsAny<QueueRecord>())).Returns(true);
+        mockArrClient.Setup(x => x.HasContentId(It.IsAny<QueueRecord>())).Returns(true);
         mockArrClient.Setup(x => x.ShouldRemoveFromQueue(
             It.IsAny<InstanceType>(),
             It.IsAny<QueueRecord>(),
@@ -685,7 +703,9 @@ public class QueueCleanerTests : IDisposable
             Id = 1,
             DownloadId = "error-download-id",
             Title = "Error Download",
-            Protocol = "torrent"
+            Protocol = "torrent",
+            SeriesId = 1,
+            EpisodeId = 1
         };
 
         _fixture.ArrQueueIterator
@@ -744,6 +764,7 @@ public class QueueCleanerTests : IDisposable
 
         var mockArrClient = new Mock<IArrClient>();
         mockArrClient.Setup(x => x.IsRecordValid(It.IsAny<QueueRecord>())).Returns(true);
+        mockArrClient.Setup(x => x.HasContentId(It.IsAny<QueueRecord>())).Returns(true);
 
         _fixture.ArrClientFactory
             .Setup(x => x.GetClient(InstanceType.Radarr, It.IsAny<float>()))
@@ -833,6 +854,7 @@ public class QueueCleanerTests : IDisposable
 
         var mockArrClient = new Mock<IArrClient>();
         mockArrClient.Setup(x => x.IsRecordValid(It.IsAny<QueueRecord>())).Returns(true);
+        mockArrClient.Setup(x => x.HasContentId(It.IsAny<QueueRecord>())).Returns(true);
 
         _fixture.ArrClientFactory
             .Setup(x => x.GetClient(InstanceType.Radarr, It.IsAny<float>()))
@@ -905,6 +927,7 @@ public class QueueCleanerTests : IDisposable
 
         var mockArrClient = new Mock<IArrClient>();
         mockArrClient.Setup(x => x.IsRecordValid(It.IsAny<QueueRecord>())).Returns(true);
+        mockArrClient.Setup(x => x.HasContentId(It.IsAny<QueueRecord>())).Returns(true);
 
         _fixture.ArrClientFactory
             .Setup(x => x.GetClient(InstanceType.Lidarr, It.IsAny<float>()))
@@ -977,6 +1000,7 @@ public class QueueCleanerTests : IDisposable
 
         var mockArrClient = new Mock<IArrClient>();
         mockArrClient.Setup(x => x.IsRecordValid(It.IsAny<QueueRecord>())).Returns(true);
+        mockArrClient.Setup(x => x.HasContentId(It.IsAny<QueueRecord>())).Returns(true);
 
         _fixture.ArrClientFactory
             .Setup(x => x.GetClient(InstanceType.Readarr, It.IsAny<float>()))
@@ -1049,6 +1073,7 @@ public class QueueCleanerTests : IDisposable
 
         var mockArrClient = new Mock<IArrClient>();
         mockArrClient.Setup(x => x.IsRecordValid(It.IsAny<QueueRecord>())).Returns(true);
+        mockArrClient.Setup(x => x.HasContentId(It.IsAny<QueueRecord>())).Returns(true);
 
         _fixture.ArrClientFactory
             .Setup(x => x.GetClient(InstanceType.Whisparr, 2f))
@@ -1124,6 +1149,7 @@ public class QueueCleanerTests : IDisposable
 
         var mockArrClient = new Mock<IArrClient>();
         mockArrClient.Setup(x => x.IsRecordValid(It.IsAny<QueueRecord>())).Returns(true);
+        mockArrClient.Setup(x => x.HasContentId(It.IsAny<QueueRecord>())).Returns(true);
 
         _fixture.ArrClientFactory
             .Setup(x => x.GetClient(InstanceType.Whisparr, 3f))
@@ -1196,6 +1222,7 @@ public class QueueCleanerTests : IDisposable
 
         var mockArrClient = new Mock<IArrClient>();
         mockArrClient.Setup(x => x.IsRecordValid(It.IsAny<QueueRecord>())).Returns(true);
+        mockArrClient.Setup(x => x.HasContentId(It.IsAny<QueueRecord>())).Returns(true);
 
         _fixture.ArrClientFactory
             .Setup(x => x.GetClient(InstanceType.Whisparr, 2f))
