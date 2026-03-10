@@ -31,6 +31,16 @@ public class AuthControllerTests : IClassFixture<CustomWebApplicationFactory>
         body.GetProperty("setupCompleted").GetBoolean().ShouldBeFalse();
     }
 
+    [Fact, TestPriority(0)]
+    public async Task AuthEndpoints_AlwaysReturnNoCacheHeaders()
+    {
+        var response = await _client.GetAsync("/api/auth/status");
+
+        response.Headers.CacheControl.ShouldNotBeNull();
+        response.Headers.CacheControl!.NoCache.ShouldBeTrue();
+        response.Headers.CacheControl!.NoStore.ShouldBeTrue();
+    }
+
     [Fact, TestPriority(1)]
     public async Task Setup_CreateAccount_ReturnsCreated()
     {

@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using Cleanuparr.Api.Auth;
 using Cleanuparr.Api.Features.Auth.Contracts.Requests;
 using Cleanuparr.Api.Features.Auth.Contracts.Responses;
+using Cleanuparr.Api.Filters;
 using Cleanuparr.Infrastructure.Features.Auth;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Auth;
@@ -14,6 +15,7 @@ namespace Cleanuparr.Api.Features.Auth.Controllers;
 [ApiController]
 [Route("api/auth")]
 [AllowAnonymous]
+[NoCache]
 public sealed class AuthController : ControllerBase
 {
     private readonly UsersContext _usersContext;

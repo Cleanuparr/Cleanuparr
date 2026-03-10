@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
+using Cleanuparr.Api.Filters;
 using Cleanuparr.Api.Json;
 using Cleanuparr.Infrastructure.Health;
 using Cleanuparr.Infrastructure.Hubs;
@@ -64,10 +65,10 @@ public static class ApiDI
         // Enable compression
         app.UseResponseCompression();
         
-        // Serve static files with caching
+        // Serve static files without caching
         app.UseStaticFiles(new StaticFileOptions
         {
-            OnPrepareResponse = _ => {}
+            OnPrepareResponse = ctx => NoCacheAttribute.Apply(ctx.Context.Response.Headers)
         });
         
         // Add the global exception handling middleware first
@@ -119,6 +120,7 @@ public static class ApiDI
             );
             
             context.Response.ContentType = "text/html";
+            NoCacheAttribute.Apply(context.Response.Headers);
             await context.Response.WriteAsync(indexContent, Encoding.UTF8);
         }).AllowAnonymous();
         
