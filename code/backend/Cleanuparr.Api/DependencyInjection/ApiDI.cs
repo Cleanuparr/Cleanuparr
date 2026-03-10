@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
+using Cleanuparr.Api.Filters;
 using Cleanuparr.Api.Json;
 using Cleanuparr.Infrastructure.Health;
 using Cleanuparr.Infrastructure.Hubs;
@@ -67,12 +68,7 @@ public static class ApiDI
         // Serve static files without caching
         app.UseStaticFiles(new StaticFileOptions
         {
-            OnPrepareResponse = ctx =>
-            {
-                ctx.Context.Response.Headers.CacheControl = "no-cache, no-store";
-                ctx.Context.Response.Headers.Pragma = "no-cache";
-                ctx.Context.Response.Headers.Expires = "-1";
-            }
+            OnPrepareResponse = ctx => NoCacheAttribute.Apply(ctx.Context.Response.Headers)
         });
         
         // Add the global exception handling middleware first
@@ -124,9 +120,7 @@ public static class ApiDI
             );
             
             context.Response.ContentType = "text/html";
-            context.Response.Headers.CacheControl = "no-cache, no-store";
-            context.Response.Headers.Pragma = "no-cache";
-            context.Response.Headers.Expires = "-1";
+            NoCacheAttribute.Apply(context.Response.Headers);
             await context.Response.WriteAsync(indexContent, Encoding.UTF8);
         }).AllowAnonymous();
         
