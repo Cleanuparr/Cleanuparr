@@ -69,6 +69,7 @@ public sealed class QueueCleanerConfigController : ControllerBase
             oldConfig.UseAdvancedScheduling = newConfigDto.UseAdvancedScheduling;
             oldConfig.FailedImport = newConfigDto.FailedImport;
             oldConfig.DownloadingMetadataMaxStrikes = newConfigDto.DownloadingMetadataMaxStrikes;
+            oldConfig.ProcessNoContentId = newConfigDto.ProcessNoContentId;
             oldConfig.IgnoredDownloads = newConfigDto.IgnoredDownloads;
             
             oldConfig.Validate();

@@ -5,6 +5,7 @@ sidebar_position: 3
 import useBaseUrl from '@docusaurus/useBaseUrl';
 import {
   ConfigSection,
+  Note,
   Important,
   Warning,
   ElementNavigator,
@@ -79,6 +80,21 @@ tv-sonarr
 qbit-tag
 mytracker.com
 ```
+
+</ConfigSection>
+
+<ConfigSection
+  title="Process downloads with no content ID"
+  icon="🔍"
+>
+
+When enabled, downloads that are not linked to any content in the *arr app will be processed normally. If such a download is removed, Cleanuparr will **not** be able to trigger a search for a replacement, since the content ID is unknown.
+
+<Note>
+This setting will enable the processing of items that appear in the logs with the following message:
+
+`skip | item is missing the content id`
+</Note>
 
 </ConfigSection>
 

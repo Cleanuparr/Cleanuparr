@@ -158,7 +158,7 @@ public abstract class ArrClient : IArrClient
 
     public abstract Task SearchItemsAsync(ArrInstance arrInstance, HashSet<SearchItem>? items);
 
-    public virtual bool IsRecordValid(QueueRecord record)
+    public bool IsRecordValid(QueueRecord record)
     {
         if (string.IsNullOrEmpty(record.DownloadId))
         {
@@ -168,6 +168,8 @@ public abstract class ArrClient : IArrClient
 
         return true;
     }
+
+    public abstract bool HasContentId(QueueRecord record);
 
     /// <inheritdoc/>
     public async Task HealthCheckAsync(ArrInstance arrInstance)

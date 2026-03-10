@@ -22,7 +22,9 @@ public sealed record QueueCleanerConfig : IJobConfig
     public FailedImportConfig FailedImport { get; set; } = new();
     
     public List<string> IgnoredDownloads { get; set; } = [];
-    
+
+    public bool ProcessNoContentId { get; set; }
+
     public ushort DownloadingMetadataMaxStrikes { get; set; }
     
     public List<StallRule> StallRules { get; set; } = [];

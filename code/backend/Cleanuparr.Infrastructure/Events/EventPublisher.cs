@@ -232,7 +232,7 @@ public class EventPublisher : IEventPublisher
     public async Task PublishSearchNotTriggered(string hash, string itemName)
     {
         await PublishManualAsync(
-            "Replacement search was not triggered after removal because the item keeps coming back\nPlease trigger a manual search if needed",
+            "Replacement search was not triggered after removal\nPlease trigger a manual search if needed",
             EventSeverity.Warning,
             data: new { itemName, hash }
         );

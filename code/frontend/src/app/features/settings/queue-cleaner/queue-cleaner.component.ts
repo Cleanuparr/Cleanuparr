@@ -83,6 +83,7 @@ export class QueueCleanerComponent implements OnInit, HasPendingChanges {
   readonly scheduleEvery = signal<unknown>(5);
   readonly scheduleUnit = signal<unknown>(ScheduleUnit.Minutes);
   readonly ignoredDownloads = signal<string[]>([]);
+  readonly processNoContentId = signal(false);
 
   readonly scheduleIntervalOptions = computed(() => {
     const unit = this.scheduleUnit() as ScheduleUnit;
@@ -290,6 +291,7 @@ export class QueueCleanerComponent implements OnInit, HasPendingChanges {
           this.scheduleUnit.set(parsed.type);
         }
         this.ignoredDownloads.set(config.ignoredDownloads ?? []);
+        this.processNoContentId.set(config.processNoContentId);
         this.failedMaxStrikes.set(config.failedImport.maxStrikes);
         this.failedIgnorePrivate.set(config.failedImport.ignorePrivate);
         this.failedDeletePrivate.set(config.failedImport.deletePrivate);
@@ -511,6 +513,7 @@ export class QueueCleanerComponent implements OnInit, HasPendingChanges {
       useAdvancedScheduling: this.useAdvancedScheduling(),
       cronExpression,
       ignoredDownloads: this.ignoredDownloads(),
+      processNoContentId: this.processNoContentId(),
       failedImport: {
         maxStrikes: this.failedMaxStrikes() ?? 3,
         ignorePrivate: this.failedIgnorePrivate(),
@@ -546,6 +549,7 @@ export class QueueCleanerComponent implements OnInit, HasPendingChanges {
       scheduleEvery: this.scheduleEvery(),
       scheduleUnit: this.scheduleUnit(),
       ignoredDownloads: this.ignoredDownloads(),
+      processNoContentId: this.processNoContentId(),
       failedMaxStrikes: this.failedMaxStrikes(),
       failedIgnorePrivate: this.failedIgnorePrivate(),
       failedDeletePrivate: this.failedDeletePrivate(),

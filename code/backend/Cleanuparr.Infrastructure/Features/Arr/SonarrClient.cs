@@ -90,16 +90,7 @@ public class SonarrClient : ArrClient, ISonarrClient
         }
     }
 
-    public override bool IsRecordValid(QueueRecord record)
-    {
-        if (record.EpisodeId is 0 || record.SeriesId is 0)
-        {
-            _logger.LogDebug("skip | episode id and/or series id missing | {title}", record.Title);
-            return false;
-        }
-
-        return base.IsRecordValid(record);
-    }
+    public override bool HasContentId(QueueRecord record) => record.EpisodeId is not 0 && record.SeriesId is not 0;
 
     private static string GetSearchLog(
         SeriesSearchType searchType,

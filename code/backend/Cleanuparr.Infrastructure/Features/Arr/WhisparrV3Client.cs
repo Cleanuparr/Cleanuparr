@@ -93,16 +93,7 @@ public class WhisparrV3Client : ArrClient, IWhisparrV3Client
         }
     }
 
-    public override bool IsRecordValid(QueueRecord record)
-    {
-        if (record.MovieId is 0)
-        {
-            _logger.LogDebug("skip | movie id missing | {title}", record.Title);
-            return false;
-        }
-        
-        return base.IsRecordValid(record);
-    }
+    public override bool HasContentId(QueueRecord record) => record.MovieId is not 0;
 
     private static string GetSearchLog(Uri instanceUrl, WhisparrV3Command command, bool success, string? logContext)
     {
