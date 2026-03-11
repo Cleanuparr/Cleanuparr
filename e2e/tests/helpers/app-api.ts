@@ -69,6 +69,40 @@ export async function loginAndGetToken(): Promise<string> {
   return data.tokens.accessToken;
 }
 
+export async function updateOidcConfig(
+  accessToken: string,
+  updates: Partial<{
+    enabled: boolean;
+    providerName: string;
+    issuerUrl: string;
+    clientId: string;
+    clientSecret: string;
+    scopes: string;
+  }>,
+): Promise<void> {
+  const getRes = await fetch(`${API}/api/configuration/general`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!getRes.ok) throw new Error(`Failed to get config: ${getRes.status}`);
+
+  const config = await getRes.json();
+  config.auth = config.auth ?? {};
+  config.auth.oidc = { ...config.auth.oidc, ...updates };
+
+  const putRes = await fetch(`${API}/api/configuration/general`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify(config),
+  });
+  if (!putRes.ok) {
+    const body = await putRes.text();
+    throw new Error(`Failed to update OIDC config: ${putRes.status} ${body}`);
+  }
+}
+
 export async function configureOidc(accessToken: string): Promise<void> {
   const getRes = await fetch(`${API}/api/configuration/general`, {
     headers: { Authorization: `Bearer ${accessToken}` },

@@ -1,24 +1,17 @@
 import { test, expect } from '@playwright/test';
 import { TEST_CONFIG } from './helpers/test-config';
 
-test.describe.serial('OIDC Login', () => {
-  test('OIDC login button is visible after account linking', async ({
+test.describe.serial('OIDC Login Persistence', () => {
+  test('OIDC login still works after configuration changes', async ({
     page,
   }) => {
     await page.goto(`${TEST_CONFIG.appUrl}/auth/login`);
 
-    // The button should now be visible since AuthorizedSubject was set by the link test
     const oidcButton = page.getByRole('button', { name: /sign in with/i });
     await expect(oidcButton).toBeVisible({ timeout: 10_000 });
     await expect(oidcButton).toContainText(TEST_CONFIG.oidcProviderName);
-  });
 
-  test('full OIDC login flow authenticates and redirects to dashboard', async ({
-    page,
-  }) => {
-    await page.goto(`${TEST_CONFIG.appUrl}/auth/login`);
-
-    await page.getByRole('button', { name: /sign in with/i }).click();
+    await oidcButton.click();
 
     // Should redirect to Keycloak
     await expect(page).toHaveURL(/localhost:8080/, { timeout: 10_000 });
@@ -32,7 +25,7 @@ test.describe.serial('OIDC Login', () => {
     // Full flow: Keycloak → /api/auth/oidc/callback → /auth/oidc/callback?code=... → /dashboard
     await expect(page).toHaveURL(/\/dashboard/, { timeout: 15_000 });
 
-    // Verify we're authenticated — dashboard content visible, not redirected to login
+    // Verify we're authenticated
     await expect(page.locator('body')).not.toContainText('Sign In', {
       timeout: 5_000,
     });

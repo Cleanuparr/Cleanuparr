@@ -31,6 +31,46 @@ export async function getSubjectForUser(username: string): Promise<string> {
   return users[0].id;
 }
 
+export async function createKeycloakUser(
+  username: string,
+  password: string,
+  email: string,
+): Promise<void> {
+  const token = await getAdminToken();
+  const res = await fetch(`${KC}/admin/realms/${REALM}/users`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      username,
+      email,
+      enabled: true,
+      emailVerified: true,
+      firstName: 'Test',
+      lastName: 'User',
+      requiredActions: [],
+      credentials: [{ type: 'password', value: password, temporary: false }],
+    }),
+  });
+  if (!res.ok && res.status !== 409) {
+    throw new Error(`Failed to create Keycloak user: ${res.status}`);
+  }
+}
+
+export async function deleteKeycloakUser(username: string): Promise<void> {
+  const token = await getAdminToken();
+  const userId = await getSubjectForUser(username);
+  const res = await fetch(`${KC}/admin/realms/${REALM}/users/${userId}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok && res.status !== 404) {
+    throw new Error(`Failed to delete Keycloak user: ${res.status}`);
+  }
+}
+
 export async function waitForKeycloak(timeoutMs = 90_000): Promise<void> {
   const start = Date.now();
   const discoveryUrl = `${KC}/realms/${REALM}/.well-known/openid-configuration`;
