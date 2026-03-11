@@ -335,51 +335,6 @@ namespace Cleanuparr.Persistence.Migrations.Data
                                 .IsRequired()
                                 .HasColumnType("TEXT")
                                 .HasColumnName("auth_trusted_networks");
-
-                            b1.ComplexProperty(typeof(Dictionary<string, object>), "Oidc", "Cleanuparr.Persistence.Models.Configuration.General.GeneralConfig.Auth#AuthConfig.Oidc#OidcConfig", b2 =>
-                                {
-                                    b2.IsRequired();
-
-                                    b2.Property<string>("AuthorizedSubject")
-                                        .IsRequired()
-                                        .HasMaxLength(500)
-                                        .HasColumnType("TEXT")
-                                        .HasColumnName("auth_oidc_authorized_subject");
-
-                                    b2.Property<string>("ClientId")
-                                        .IsRequired()
-                                        .HasMaxLength(200)
-                                        .HasColumnType("TEXT")
-                                        .HasColumnName("auth_oidc_client_id");
-
-                                    b2.Property<string>("ClientSecret")
-                                        .IsRequired()
-                                        .HasMaxLength(500)
-                                        .HasColumnType("TEXT")
-                                        .HasColumnName("auth_oidc_client_secret");
-
-                                    b2.Property<bool>("Enabled")
-                                        .HasColumnType("INTEGER")
-                                        .HasColumnName("auth_oidc_enabled");
-
-                                    b2.Property<string>("IssuerUrl")
-                                        .IsRequired()
-                                        .HasMaxLength(500)
-                                        .HasColumnType("TEXT")
-                                        .HasColumnName("auth_oidc_issuer_url");
-
-                                    b2.Property<string>("ProviderName")
-                                        .IsRequired()
-                                        .HasMaxLength(100)
-                                        .HasColumnType("TEXT")
-                                        .HasColumnName("auth_oidc_provider_name");
-
-                                    b2.Property<string>("Scopes")
-                                        .IsRequired()
-                                        .HasMaxLength(500)
-                                        .HasColumnType("TEXT")
-                                        .HasColumnName("auth_oidc_scopes");
-                                });
                         });
 
                     b.ComplexProperty(typeof(Dictionary<string, object>), "Log", "Cleanuparr.Persistence.Models.Configuration.General.GeneralConfig.Log#LoggingConfig", b1 =>
