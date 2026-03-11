@@ -533,6 +533,7 @@ public sealed class AuthController : ControllerBase
         }
 
         var redirectUri = GetOidcCallbackUrl();
+        _logger.LogDebug("OIDC login start: using redirect URI {RedirectUri}", redirectUri);
 
         try
         {
@@ -567,6 +568,7 @@ public sealed class AuthController : ControllerBase
         }
 
         var redirectUri = GetOidcCallbackUrl();
+        _logger.LogDebug("OIDC login callback: using redirect URI {RedirectUri}", redirectUri);
         var result = await _oidcAuthService.HandleCallback(code, state, redirectUri);
 
         if (!result.Success)
