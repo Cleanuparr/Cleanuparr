@@ -244,10 +244,14 @@ public sealed class OidcAuthService : IOidcAuthService
         var metadataAddress = issuerUrl.TrimEnd('/') + "/.well-known/openid-configuration";
 
         var configManager = ConfigManagers.GetOrAdd(issuerUrl, _ =>
-            new ConfigurationManager<OpenIdConnectConfiguration>(
+        {
+            var isLocalhost = Uri.TryCreate(issuerUrl, UriKind.Absolute, out var uri) &&
+                              uri.Host is "localhost" or "127.0.0.1" or "::1" or "[::1]";
+            return new ConfigurationManager<OpenIdConnectConfiguration>(
                 metadataAddress,
                 new OpenIdConnectConfigurationRetriever(),
-                _httpClient));
+                new HttpDocumentRetriever(_httpClient) { RequireHttps = !isLocalhost });
+        });
 
         return await configManager.GetConfigurationAsync();
     }
