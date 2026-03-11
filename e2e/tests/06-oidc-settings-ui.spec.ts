@@ -19,7 +19,7 @@ test.describe.serial('OIDC Settings UI', () => {
 
   test('settings page shows linked OIDC subject', async ({ page }) => {
     await loginAndGoToSettings(page);
-    await page.goto(`${TEST_CONFIG.appUrl}/settings/general`);
+    await page.goto(`${TEST_CONFIG.appUrl}/settings/account`);
 
     // Expand OIDC accordion
     await page.getByText('OIDC / SSO').click();
@@ -36,7 +36,7 @@ test.describe.serial('OIDC Settings UI', () => {
     page,
   }) => {
     await loginAndGoToSettings(page);
-    await page.goto(`${TEST_CONFIG.appUrl}/settings/general`);
+    await page.goto(`${TEST_CONFIG.appUrl}/settings/account`);
 
     await page.getByText('OIDC / SSO').click();
 
@@ -49,7 +49,7 @@ test.describe.serial('OIDC Settings UI', () => {
   }) => {
     await loginAndGoToSettings(page);
     await page.goto(
-      `${TEST_CONFIG.appUrl}/settings/general?oidc_link=success`,
+      `${TEST_CONFIG.appUrl}/settings/account?oidc_link=success`,
     );
 
     // Toast should appear with success message
@@ -67,7 +67,7 @@ test.describe.serial('OIDC Settings UI', () => {
   }) => {
     await loginAndGoToSettings(page);
     await page.goto(
-      `${TEST_CONFIG.appUrl}/settings/general?oidc_link_error=failed`,
+      `${TEST_CONFIG.appUrl}/settings/account?oidc_link_error=failed`,
     );
 
     // Toast should appear with error message

@@ -451,7 +451,7 @@ public sealed class AccountController : ControllerBase
 
         if (!string.IsNullOrEmpty(error) || string.IsNullOrEmpty(code) || string.IsNullOrEmpty(state))
         {
-            return Redirect($"{basePath}/settings/general?oidc_link_error=failed");
+            return Redirect($"{basePath}/settings/account?oidc_link_error=failed");
         }
 
         var redirectUri = GetOidcLinkCallbackUrl();
@@ -460,7 +460,7 @@ public sealed class AccountController : ControllerBase
         if (!result.Success || string.IsNullOrEmpty(result.Subject))
         {
             _logger.LogWarning("OIDC link callback failed: {Error}", result.Error);
-            return Redirect($"{basePath}/settings/general?oidc_link_error=failed");
+            return Redirect($"{basePath}/settings/account?oidc_link_error=failed");
         }
 
         // Verify the flow was initiated by an authenticated user
@@ -468,7 +468,7 @@ public sealed class AccountController : ControllerBase
             !Guid.TryParse(result.InitiatorUserId, out var initiatorId))
         {
             _logger.LogWarning("OIDC link callback missing initiator user ID");
-            return Redirect($"{basePath}/settings/general?oidc_link_error=failed");
+            return Redirect($"{basePath}/settings/account?oidc_link_error=failed");
         }
 
         // Save the authorized subject to the user's OIDC config
@@ -477,7 +477,7 @@ public sealed class AccountController : ControllerBase
         if (user is null)
         {
             _logger.LogWarning("OIDC link callback initiator user not found: {UserId}", result.InitiatorUserId);
-            return Redirect($"{basePath}/settings/general?oidc_link_error=failed");
+            return Redirect($"{basePath}/settings/account?oidc_link_error=failed");
         }
 
         user.Oidc.AuthorizedSubject = result.Subject;
@@ -487,7 +487,7 @@ public sealed class AccountController : ControllerBase
         _logger.LogInformation("OIDC account linked with subject: {Subject} by user: {Username}",
             result.Subject, user.Username);
 
-        return Redirect($"{basePath}/settings/general?oidc_link=success");
+        return Redirect($"{basePath}/settings/account?oidc_link=success");
     }
 
     [HttpDelete("oidc/link")]

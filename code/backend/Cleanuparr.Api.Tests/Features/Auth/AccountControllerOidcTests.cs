@@ -123,7 +123,7 @@ public class AccountControllerOidcTests : IClassFixture<AccountControllerOidcTes
         response.StatusCode.ShouldBe(HttpStatusCode.Redirect);
         var location = response.Headers.Location?.ToString();
         location.ShouldNotBeNull();
-        location.ShouldContain("/settings/general");
+        location.ShouldContain("/settings/account");
         location.ShouldContain("oidc_link_error=failed");
     }
 
@@ -153,7 +153,7 @@ public class AccountControllerOidcTests : IClassFixture<AccountControllerOidcTes
         callbackResponse.StatusCode.ShouldBe(HttpStatusCode.Redirect);
         var location = callbackResponse.Headers.Location?.ToString();
         location.ShouldNotBeNull();
-        location.ShouldContain("/settings/general");
+        location.ShouldContain("/settings/account");
         location.ShouldContain("oidc_link=success");
         location.ShouldNotContain("oidc_link_error");
 

@@ -21,8 +21,8 @@ test.describe.serial('OIDC Account Linking', () => {
     await expect(page).toHaveURL(/\/dashboard/, { timeout: 10_000 });
 
     // Navigate to settings and expand the OIDC accordion
-    await page.goto(`${TEST_CONFIG.appUrl}/settings/general`);
-    await expect(page).toHaveURL(/\/settings\/general/);
+    await page.goto(`${TEST_CONFIG.appUrl}/settings/account`);
+    await expect(page).toHaveURL(/\/settings\/account/);
 
     await page.getByText('OIDC / SSO').click();
 
@@ -39,7 +39,7 @@ test.describe.serial('OIDC Account Linking', () => {
     await page.locator('#kc-login').click();
 
     // Should redirect back to settings with success
-    await expect(page).toHaveURL(/settings\/general\?oidc_link=success/, {
+    await expect(page).toHaveURL(/settings\/account\?oidc_link=success/, {
       timeout: 15_000,
     });
   });
