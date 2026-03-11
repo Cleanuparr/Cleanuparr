@@ -100,7 +100,7 @@ public sealed class OidcAuthService : IOidcAuthService
 
     public async Task<OidcCallbackResult> HandleCallback(string code, string state, string redirectUri)
     {
-        if (!PendingFlows.TryRemove(state, out var flowState))
+        if (!PendingFlows.TryGetValue(state, out var flowState))
         {
             _logger.LogWarning("OIDC callback with invalid or expired state: {State}", state);
             return new OidcCallbackResult
@@ -112,6 +112,7 @@ public sealed class OidcAuthService : IOidcAuthService
 
         if (DateTime.UtcNow - flowState.CreatedAt > FlowStateExpiry)
         {
+            PendingFlows.TryRemove(state, out _);
             _logger.LogWarning("OIDC flow state expired for state: {State}", state);
             return new OidcCallbackResult
             {
@@ -129,6 +130,9 @@ public sealed class OidcAuthService : IOidcAuthService
                 Error = "Redirect URI mismatch"
             };
         }
+
+        // Validation passed — consume the state
+        PendingFlows.TryRemove(state, out _);
 
         var oidcConfig = await GetOidcConfig();
         var discovery = await GetDiscoveryDocument(oidcConfig.IssuerUrl);
@@ -198,9 +202,22 @@ public sealed class OidcAuthService : IOidcAuthService
         if (OneTimeCodes.Count >= MaxOneTimeCodes)
         {
             CleanupExpiredOneTimeCodes();
+
+            // If still at capacity after cleanup, evict oldest entries
+            while (OneTimeCodes.Count >= MaxOneTimeCodes)
+            {
+                var oldest = OneTimeCodes.OrderBy(x => x.Value.CreatedAt).FirstOrDefault();
+                if (oldest.Key is not null)
+                {
+                    OneTimeCodes.TryRemove(oldest.Key, out _);
+                }
+                else
+                {
+                    break;
+                }
+            }
         }
 
-        var code = GenerateRandomString();
         var entry = new OidcOneTimeCodeEntry
         {
             AccessToken = accessToken,
@@ -209,8 +226,17 @@ public sealed class OidcAuthService : IOidcAuthService
             CreatedAt = DateTime.UtcNow
         };
 
-        OneTimeCodes.TryAdd(code, entry);
-        return code;
+        // Retry with new codes on collision
+        for (var i = 0; i < 3; i++)
+        {
+            var code = GenerateRandomString();
+            if (OneTimeCodes.TryAdd(code, entry))
+            {
+                return code;
+            }
+        }
+
+        throw new InvalidOperationException("Failed to generate a unique one-time code");
     }
 
     public OidcTokenExchangeResult? ExchangeOneTimeCode(string code)
