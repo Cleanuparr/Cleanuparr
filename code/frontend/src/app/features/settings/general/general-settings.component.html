@@ -74,7 +74,7 @@
         <div class="form-row">
           <app-input label="Client ID" [(value)]="oidcClientId"
             hint="The client ID assigned by your identity provider" />
-          <app-input label="Client Secret" [(value)]="oidcClientSecret" type="password"
+          <app-input label="Client Secret" [(value)]="oidcClientSecret" type="password" [revealable]="false"
             hint="Optional. Required for confidential clients." />
         </div>
         <app-input label="Scopes" [(value)]="oidcScopes"
