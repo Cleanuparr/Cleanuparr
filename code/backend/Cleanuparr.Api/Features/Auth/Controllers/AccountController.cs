@@ -516,14 +516,8 @@ public sealed class AccountController : ControllerBase
         }
     }
 
-    private string GetOidcLinkCallbackUrl()
-    {
-        var request = HttpContext.Request;
-        var scheme = request.Scheme;
-        var host = request.Host.ToString();
-        var basePath = request.PathBase.Value?.TrimEnd('/') ?? "";
-        return $"{scheme}://{host}{basePath}/api/account/oidc/link/callback";
-    }
+    private string GetOidcLinkCallbackUrl() =>
+        $"{HttpContext.GetExternalBaseUrl()}/api/account/oidc/link/callback";
 
     private async Task<User?> GetCurrentUser(bool includeRecoveryCodes = false)
     {
