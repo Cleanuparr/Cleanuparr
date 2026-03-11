@@ -191,7 +191,10 @@ public sealed record UpdateOidcConfigRequest
         existingConfig.Enabled = Enabled;
         existingConfig.IssuerUrl = IssuerUrl;
         existingConfig.ClientId = ClientId;
-        existingConfig.ClientSecret = ClientSecret;
+        if (!ClientSecret.IsPlaceholder())
+        {
+            existingConfig.ClientSecret = ClientSecret;
+        }
         existingConfig.Scopes = Scopes;
         existingConfig.ProviderName = ProviderName;
         // AuthorizedSubject is intentionally NOT mapped here — it is set only via the OIDC link callback
