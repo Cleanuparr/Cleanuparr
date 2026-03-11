@@ -66,7 +66,7 @@ public sealed class AuthController : ControllerBase
             }
         }
 
-        var oidcConfig = generalConfig?.Auth.Oidc;
+        var oidcConfig = user?.Oidc;
         var oidcEnabled = oidcConfig is { Enabled: true } &&
                           !string.IsNullOrEmpty(oidcConfig.AuthorizedSubject);
 
@@ -524,8 +524,8 @@ public sealed class AuthController : ControllerBase
     [HttpPost("oidc/start")]
     public async Task<IActionResult> StartOidc()
     {
-        var generalConfig = await _dataContext.GeneralConfigs.AsNoTracking().FirstOrDefaultAsync();
-        var oidcConfig = generalConfig?.Auth.Oidc;
+        var user = await _usersContext.Users.AsNoTracking().FirstOrDefaultAsync();
+        var oidcConfig = user?.Oidc;
 
         if (oidcConfig is not { Enabled: true } || string.IsNullOrEmpty(oidcConfig.AuthorizedSubject))
         {
@@ -575,22 +575,18 @@ public sealed class AuthController : ControllerBase
             return Redirect($"{basePath}/auth/login?oidc_error=authentication_failed");
         }
 
-        // Verify the subject matches the authorized subject
-        var generalConfig = await _dataContext.GeneralConfigs.AsNoTracking().FirstOrDefaultAsync();
-        var oidcConfig = generalConfig?.Auth.Oidc;
-
-        if (oidcConfig is null || result.Subject != oidcConfig.AuthorizedSubject)
-        {
-            _logger.LogWarning("OIDC subject mismatch. Expected: {Expected}, Got: {Got}",
-                oidcConfig?.AuthorizedSubject, result.Subject);
-            return Redirect($"{basePath}/auth/login?oidc_error=unauthorized");
-        }
-
-        // Load the user and generate Cleanuparr tokens
+        // Load the user and verify the subject matches the authorized subject
         var user = await _usersContext.Users.FirstOrDefaultAsync(u => u.SetupCompleted);
         if (user is null)
         {
             return Redirect($"{basePath}/auth/login?oidc_error=no_account");
+        }
+
+        if (result.Subject != user.Oidc.AuthorizedSubject)
+        {
+            _logger.LogWarning("OIDC subject mismatch. Expected: {Expected}, Got: {Got}",
+                user.Oidc.AuthorizedSubject, result.Subject);
+            return Redirect($"{basePath}/auth/login?oidc_error=unauthorized");
         }
 
         var tokenResponse = await GenerateTokenResponse(user);

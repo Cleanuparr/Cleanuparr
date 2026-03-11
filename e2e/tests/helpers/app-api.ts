@@ -80,22 +80,20 @@ export async function updateOidcConfig(
     scopes: string;
   }>,
 ): Promise<void> {
-  const getRes = await fetch(`${API}/api/configuration/general`, {
+  const getRes = await fetch(`${API}/api/account/oidc`, {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
-  if (!getRes.ok) throw new Error(`Failed to get config: ${getRes.status}`);
+  if (!getRes.ok) throw new Error(`Failed to get OIDC config: ${getRes.status}`);
 
-  const config = await getRes.json();
-  config.auth = config.auth ?? {};
-  config.auth.oidc = { ...config.auth.oidc, ...updates };
+  const currentConfig = await getRes.json();
 
-  const putRes = await fetch(`${API}/api/configuration/general`, {
+  const putRes = await fetch(`${API}/api/account/oidc`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${accessToken}`,
     },
-    body: JSON.stringify(config),
+    body: JSON.stringify({ ...currentConfig, ...updates }),
   });
   if (!putRes.ok) {
     const body = await putRes.text();
@@ -104,30 +102,20 @@ export async function updateOidcConfig(
 }
 
 export async function configureOidc(accessToken: string): Promise<void> {
-  const getRes = await fetch(`${API}/api/configuration/general`, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
-  if (!getRes.ok) throw new Error(`Failed to get config: ${getRes.status}`);
-
-  const config = await getRes.json();
-
-  config.auth = config.auth ?? {};
-  config.auth.oidc = {
-    enabled: true,
-    issuerUrl: `${TEST_CONFIG.keycloakUrl}/realms/${TEST_CONFIG.realm}`,
-    clientId: TEST_CONFIG.clientId,
-    clientSecret: TEST_CONFIG.clientSecret,
-    scopes: 'openid profile email',
-    providerName: TEST_CONFIG.oidcProviderName,
-  };
-
-  const putRes = await fetch(`${API}/api/configuration/general`, {
+  const putRes = await fetch(`${API}/api/account/oidc`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${accessToken}`,
     },
-    body: JSON.stringify(config),
+    body: JSON.stringify({
+      enabled: true,
+      issuerUrl: `${TEST_CONFIG.keycloakUrl}/realms/${TEST_CONFIG.realm}`,
+      clientId: TEST_CONFIG.clientId,
+      clientSecret: TEST_CONFIG.clientSecret,
+      scopes: 'openid profile email',
+      providerName: TEST_CONFIG.oidcProviderName,
+    }),
   });
   if (!putRes.ok) {
     const body = await putRes.text();

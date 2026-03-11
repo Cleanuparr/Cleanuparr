@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 using Cleanuparr.Shared.Attributes;
 using ValidationException = Cleanuparr.Domain.Exceptions.ValidationException;
 
-namespace Cleanuparr.Persistence.Models.Configuration.General;
+namespace Cleanuparr.Persistence.Models.Auth;
 
 [ComplexType]
 public sealed record OidcConfig

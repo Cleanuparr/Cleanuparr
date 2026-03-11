@@ -1,9 +1,9 @@
-using Cleanuparr.Persistence.Models.Configuration.General;
+using Cleanuparr.Persistence.Models.Auth;
 using Shouldly;
 using Xunit;
 using ValidationException = Cleanuparr.Domain.Exceptions.ValidationException;
 
-namespace Cleanuparr.Persistence.Tests.Models.Configuration.General;
+namespace Cleanuparr.Persistence.Tests.Models.Auth;
 
 public sealed class OidcConfigTests
 {

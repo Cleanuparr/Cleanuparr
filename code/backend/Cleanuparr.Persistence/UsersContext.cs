@@ -54,6 +54,8 @@ public class UsersContext : DbContext
             entity.Property(u => u.LockoutEnd)
                 .HasConversion(new UtcDateTimeConverter());
 
+            entity.ComplexProperty(u => u.Oidc);
+
             entity.HasMany(u => u.RecoveryCodes)
                 .WithOne(r => r.User)
                 .HasForeignKey(r => r.UserId)

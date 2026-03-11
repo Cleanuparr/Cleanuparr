@@ -3,7 +3,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using Cleanuparr.Infrastructure.Features.Auth;
 using Cleanuparr.Persistence;
-using Cleanuparr.Persistence.Models.Configuration.General;
+using Cleanuparr.Persistence.Models.Auth;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
@@ -373,27 +373,20 @@ public class OidcAuthControllerTests : IClassFixture<OidcAuthControllerTests.Oid
         }
 
         /// <summary>
-        /// Enables OIDC in the DataContext config database.
-        /// Uses CreateStaticInstance() which reads from ConfigurationPathProvider.GetConfigPath().
+        /// Enables OIDC on the user in the UsersContext database.
         /// </summary>
         public async Task EnableOidcAsync()
         {
-            await using var dataContext = DataContext.CreateStaticInstance();
-            dataContext.Database.EnsureCreated();
+            using var scope = Services.CreateScope();
+            var usersContext = scope.ServiceProvider.GetRequiredService<UsersContext>();
 
-            var config = await dataContext.GeneralConfigs.FirstOrDefaultAsync();
-            if (config is null)
+            var user = await usersContext.Users.FirstOrDefaultAsync();
+            if (user is null)
             {
-                config = new GeneralConfig
-                {
-                    Id = Guid.NewGuid(),
-                    IgnoredDownloads = [],
-                    Log = new LoggingConfig()
-                };
-                dataContext.GeneralConfigs.Add(config);
+                return;
             }
 
-            config.Auth.Oidc = new OidcConfig
+            user.Oidc = new OidcConfig
             {
                 Enabled = true,
                 IssuerUrl = "https://mock-oidc-provider.test",
@@ -404,17 +397,19 @@ public class OidcAuthControllerTests : IClassFixture<OidcAuthControllerTests.Oid
                 ProviderName = "TestProvider"
             };
 
-            await dataContext.SaveChangesAsync();
+            await usersContext.SaveChangesAsync();
         }
 
         public async Task SetOidcAuthorizedSubjectAsync(string subject)
         {
-            await using var dataContext = DataContext.CreateStaticInstance();
-            var config = await dataContext.GeneralConfigs.FirstOrDefaultAsync();
-            if (config is not null)
+            using var scope = Services.CreateScope();
+            var usersContext = scope.ServiceProvider.GetRequiredService<UsersContext>();
+
+            var user = await usersContext.Users.FirstOrDefaultAsync();
+            if (user is not null)
             {
-                config.Auth.Oidc.AuthorizedSubject = subject;
-                await dataContext.SaveChangesAsync();
+                user.Oidc.AuthorizedSubject = subject;
+                await usersContext.SaveChangesAsync();
             }
         }
 

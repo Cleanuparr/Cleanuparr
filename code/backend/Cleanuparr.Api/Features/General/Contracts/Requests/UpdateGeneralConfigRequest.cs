@@ -1,5 +1,4 @@
 using Cleanuparr.Domain.Enums;
-using Cleanuparr.Infrastructure.Features.Auth;
 using Cleanuparr.Infrastructure.Http.DynamicHttpClientSystem;
 using Cleanuparr.Infrastructure.Logging;
 using Cleanuparr.Persistence.Models.Configuration.General;
@@ -159,49 +158,10 @@ public sealed record UpdateAuthConfigRequest
 
     public List<string> TrustedNetworks { get; init; } = [];
 
-    public UpdateOidcConfigRequest? Oidc { get; init; }
-
     public void ApplyTo(AuthConfig existingConfig)
     {
         existingConfig.DisableAuthForLocalAddresses = DisableAuthForLocalAddresses;
         existingConfig.TrustForwardedHeaders = TrustForwardedHeaders;
         existingConfig.TrustedNetworks = TrustedNetworks;
-        Oidc?.ApplyTo(existingConfig.Oidc);
-    }
-}
-
-public sealed record UpdateOidcConfigRequest
-{
-    public bool Enabled { get; init; }
-
-    public string IssuerUrl { get; init; } = string.Empty;
-
-    public string ClientId { get; init; } = string.Empty;
-
-    public string ClientSecret { get; init; } = string.Empty;
-
-    public string Scopes { get; init; } = "openid profile email";
-
-    public string ProviderName { get; init; } = "OIDC";
-
-    public void ApplyTo(OidcConfig existingConfig)
-    {
-        var previousIssuerUrl = existingConfig.IssuerUrl;
-
-        existingConfig.Enabled = Enabled;
-        existingConfig.IssuerUrl = IssuerUrl;
-        existingConfig.ClientId = ClientId;
-        if (!ClientSecret.IsPlaceholder())
-        {
-            existingConfig.ClientSecret = ClientSecret;
-        }
-        existingConfig.Scopes = Scopes;
-        existingConfig.ProviderName = ProviderName;
-        // AuthorizedSubject is intentionally NOT mapped here — it is set only via the OIDC link callback
-
-        if (previousIssuerUrl != IssuerUrl)
-        {
-            OidcAuthService.ClearDiscoveryCache();
-        }
     }
 }

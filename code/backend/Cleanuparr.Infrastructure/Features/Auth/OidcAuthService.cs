@@ -5,7 +5,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Cleanuparr.Persistence;
-using Cleanuparr.Persistence.Models.Configuration.General;
+using Cleanuparr.Persistence.Models.Auth;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Protocols;
@@ -31,16 +31,16 @@ public sealed class OidcAuthService : IOidcAuthService
     #pragma warning restore IDE0052
 
     private readonly HttpClient _httpClient;
-    private readonly DataContext _dataContext;
+    private readonly UsersContext _usersContext;
     private readonly ILogger<OidcAuthService> _logger;
 
     public OidcAuthService(
         IHttpClientFactory httpClientFactory,
-        DataContext dataContext,
+        UsersContext usersContext,
         ILogger<OidcAuthService> logger)
     {
         _httpClient = httpClientFactory.CreateClient("OidcAuth");
-        _dataContext = dataContext;
+        _usersContext = usersContext;
         _logger = logger;
     }
 
@@ -235,8 +235,8 @@ public sealed class OidcAuthService : IOidcAuthService
 
     private async Task<OidcConfig> GetOidcConfig()
     {
-        var config = await _dataContext.GeneralConfigs.AsNoTracking().FirstOrDefaultAsync();
-        return config?.Auth.Oidc ?? new OidcConfig();
+        var user = await _usersContext.Users.AsNoTracking().FirstOrDefaultAsync();
+        return user?.Oidc ?? new OidcConfig();
     }
 
     private async Task<OpenIdConnectConfiguration> GetDiscoveryDocument(string issuerUrl)

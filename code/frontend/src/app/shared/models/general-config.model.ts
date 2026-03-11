@@ -10,21 +10,10 @@ export interface LoggingConfig {
   archiveTimeLimitHours: number;
 }
 
-export interface OidcConfig {
-  enabled: boolean;
-  issuerUrl: string;
-  clientId: string;
-  clientSecret: string;
-  scopes: string;
-  authorizedSubject: string;
-  providerName: string;
-}
-
 export interface AuthConfig {
   disableAuthForLocalAddresses: boolean;
   trustForwardedHeaders: boolean;
   trustedNetworks: string[];
-  oidc?: OidcConfig;
 }
 
 export interface GeneralConfig {

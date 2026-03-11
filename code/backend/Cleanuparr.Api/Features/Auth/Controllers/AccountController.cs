@@ -10,6 +10,7 @@ using Cleanuparr.Persistence.Models.Auth;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using ValidationException = Cleanuparr.Domain.Exceptions.ValidationException;
 
 namespace Cleanuparr.Api.Features.Auth.Controllers;
 
@@ -20,7 +21,6 @@ namespace Cleanuparr.Api.Features.Auth.Controllers;
 public sealed class AccountController : ControllerBase
 {
     private readonly UsersContext _usersContext;
-    private readonly DataContext _dataContext;
     private readonly IPasswordService _passwordService;
     private readonly ITotpService _totpService;
     private readonly IPlexAuthService _plexAuthService;
@@ -29,7 +29,6 @@ public sealed class AccountController : ControllerBase
 
     public AccountController(
         UsersContext usersContext,
-        DataContext dataContext,
         IPasswordService passwordService,
         ITotpService totpService,
         IPlexAuthService plexAuthService,
@@ -37,7 +36,6 @@ public sealed class AccountController : ControllerBase
         ILogger<AccountController> logger)
     {
         _usersContext = usersContext;
-        _dataContext = dataContext;
         _passwordService = passwordService;
         _totpService = totpService;
         _plexAuthService = plexAuthService;
@@ -49,7 +47,10 @@ public sealed class AccountController : ControllerBase
     public async Task<IActionResult> GetAccountInfo()
     {
         var user = await GetCurrentUser();
-        if (user is null) return Unauthorized();
+        if (user is null)
+        {
+            return Unauthorized();
+        }
 
         return Ok(new AccountInfoResponse
         {
@@ -64,247 +65,225 @@ public sealed class AccountController : ControllerBase
     [HttpPut("password")]
     public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest request)
     {
-        await UsersContext.Lock.WaitAsync();
-        try
+        var user = await GetCurrentUser();
+        if (user is null)
         {
-            var user = await GetCurrentUser();
-            if (user is null) return Unauthorized();
-
-            if (!_passwordService.VerifyPassword(request.CurrentPassword, user.PasswordHash))
-            {
-                return BadRequest(new { error = "Current password is incorrect" });
-            }
-
-            DateTime now = DateTime.UtcNow;
-
-            user.PasswordHash = _passwordService.HashPassword(request.NewPassword);
-            user.UpdatedAt = now;
-
-            // Revoke all existing refresh tokens so old sessions can't be reused
-            var activeTokens = await _usersContext.RefreshTokens
-                .Where(r => r.UserId == user.Id && r.RevokedAt == null)
-                .ToListAsync();
-
-            foreach (var token in activeTokens)
-            {
-                token.RevokedAt = now;
-            }
-
-            await _usersContext.SaveChangesAsync();
-
-            _logger.LogInformation("Password changed for user {Username}", user.Username);
-
-            return Ok(new { message = "Password changed" });
+            return Unauthorized();
         }
-        finally
+
+        if (!_passwordService.VerifyPassword(request.CurrentPassword, user.PasswordHash))
         {
-            UsersContext.Lock.Release();
+            return BadRequest(new { error = "Current password is incorrect" });
         }
+
+        DateTime now = DateTime.UtcNow;
+
+        user.PasswordHash = _passwordService.HashPassword(request.NewPassword);
+        user.UpdatedAt = now;
+
+        // Revoke all existing refresh tokens so old sessions can't be reused
+        var activeTokens = await _usersContext.RefreshTokens
+            .Where(r => r.UserId == user.Id && r.RevokedAt == null)
+            .ToListAsync();
+
+        foreach (var token in activeTokens)
+        {
+            token.RevokedAt = now;
+        }
+
+        await _usersContext.SaveChangesAsync();
+
+        _logger.LogInformation("Password changed for user {Username}", user.Username);
+
+        return Ok(new { message = "Password changed" });
     }
 
     [HttpPost("2fa/regenerate")]
     public async Task<IActionResult> Regenerate2fa([FromBody] Regenerate2faRequest request)
     {
-        await UsersContext.Lock.WaitAsync();
-        try
+        var user = await GetCurrentUser(includeRecoveryCodes: true);
+        if (user is null)
         {
-            var user = await GetCurrentUser(includeRecoveryCodes: true);
-            if (user is null) return Unauthorized();
+            return Unauthorized();
+        }
 
-            // Verify current credentials
-            if (!_passwordService.VerifyPassword(request.Password, user.PasswordHash))
+        // Verify current credentials
+        if (!_passwordService.VerifyPassword(request.Password, user.PasswordHash))
+        {
+            return BadRequest(new { error = "Incorrect password" });
+        }
+
+        if (!_totpService.ValidateCode(user.TotpSecret, request.TotpCode))
+        {
+            return BadRequest(new { error = "Invalid 2FA code" });
+        }
+
+        // Generate new TOTP
+        var secret = _totpService.GenerateSecret();
+        var qrUri = _totpService.GetQrCodeUri(secret, user.Username);
+        var recoveryCodes = _totpService.GenerateRecoveryCodes();
+
+        user.TotpSecret = secret;
+        user.UpdatedAt = DateTime.UtcNow;
+
+        // Replace recovery codes
+        _usersContext.RecoveryCodes.RemoveRange(user.RecoveryCodes);
+
+        foreach (var code in recoveryCodes)
+        {
+            _usersContext.RecoveryCodes.Add(new RecoveryCode
             {
-                return BadRequest(new { error = "Incorrect password" });
-            }
-
-            if (!_totpService.ValidateCode(user.TotpSecret, request.TotpCode))
-            {
-                return BadRequest(new { error = "Invalid 2FA code" });
-            }
-
-            // Generate new TOTP
-            var secret = _totpService.GenerateSecret();
-            var qrUri = _totpService.GetQrCodeUri(secret, user.Username);
-            var recoveryCodes = _totpService.GenerateRecoveryCodes();
-
-            user.TotpSecret = secret;
-            user.UpdatedAt = DateTime.UtcNow;
-
-            // Replace recovery codes
-            _usersContext.RecoveryCodes.RemoveRange(user.RecoveryCodes);
-
-            foreach (var code in recoveryCodes)
-            {
-                _usersContext.RecoveryCodes.Add(new RecoveryCode
-                {
-                    Id = Guid.NewGuid(),
-                    UserId = user.Id,
-                    CodeHash = _totpService.HashRecoveryCode(code),
-                    IsUsed = false
-                });
-            }
-
-            await _usersContext.SaveChangesAsync();
-
-            _logger.LogInformation("2FA regenerated for user {Username}", user.Username);
-
-            return Ok(new TotpSetupResponse
-            {
-                Secret = secret,
-                QrCodeUri = qrUri,
-                RecoveryCodes = recoveryCodes
+                Id = Guid.NewGuid(),
+                UserId = user.Id,
+                CodeHash = _totpService.HashRecoveryCode(code),
+                IsUsed = false
             });
         }
-        finally
+
+        await _usersContext.SaveChangesAsync();
+
+        _logger.LogInformation("2FA regenerated for user {Username}", user.Username);
+
+        return Ok(new TotpSetupResponse
         {
-            UsersContext.Lock.Release();
-        }
+            Secret = secret,
+            QrCodeUri = qrUri,
+            RecoveryCodes = recoveryCodes
+        });
     }
 
     [HttpPost("2fa/enable")]
     public async Task<IActionResult> Enable2fa([FromBody] Enable2faRequest request)
     {
-        await UsersContext.Lock.WaitAsync();
-        try
+        var user = await GetCurrentUser(includeRecoveryCodes: true);
+        if (user is null)
         {
-            var user = await GetCurrentUser(includeRecoveryCodes: true);
-            if (user is null) return Unauthorized();
+            return Unauthorized();
+        }
 
-            if (user.TotpEnabled)
+        if (user.TotpEnabled)
+        {
+            return Conflict(new { error = "2FA is already enabled" });
+        }
+
+        if (!_passwordService.VerifyPassword(request.Password, user.PasswordHash))
+        {
+            return BadRequest(new { error = "Incorrect password" });
+        }
+
+        // Generate new TOTP
+        var secret = _totpService.GenerateSecret();
+        var qrUri = _totpService.GetQrCodeUri(secret, user.Username);
+        var recoveryCodes = _totpService.GenerateRecoveryCodes();
+
+        user.TotpSecret = secret;
+        user.UpdatedAt = DateTime.UtcNow;
+
+        // Replace any existing recovery codes
+        _usersContext.RecoveryCodes.RemoveRange(user.RecoveryCodes);
+
+        foreach (var code in recoveryCodes)
+        {
+            _usersContext.RecoveryCodes.Add(new RecoveryCode
             {
-                return Conflict(new { error = "2FA is already enabled" });
-            }
-
-            if (!_passwordService.VerifyPassword(request.Password, user.PasswordHash))
-            {
-                return BadRequest(new { error = "Incorrect password" });
-            }
-
-            // Generate new TOTP
-            var secret = _totpService.GenerateSecret();
-            var qrUri = _totpService.GetQrCodeUri(secret, user.Username);
-            var recoveryCodes = _totpService.GenerateRecoveryCodes();
-
-            user.TotpSecret = secret;
-            user.UpdatedAt = DateTime.UtcNow;
-
-            // Replace any existing recovery codes
-            _usersContext.RecoveryCodes.RemoveRange(user.RecoveryCodes);
-
-            foreach (var code in recoveryCodes)
-            {
-                _usersContext.RecoveryCodes.Add(new RecoveryCode
-                {
-                    Id = Guid.NewGuid(),
-                    UserId = user.Id,
-                    CodeHash = _totpService.HashRecoveryCode(code),
-                    IsUsed = false
-                });
-            }
-
-            await _usersContext.SaveChangesAsync();
-
-            _logger.LogInformation("2FA setup generated for user {Username}", user.Username);
-
-            return Ok(new TotpSetupResponse
-            {
-                Secret = secret,
-                QrCodeUri = qrUri,
-                RecoveryCodes = recoveryCodes
+                Id = Guid.NewGuid(),
+                UserId = user.Id,
+                CodeHash = _totpService.HashRecoveryCode(code),
+                IsUsed = false
             });
         }
-        finally
+
+        await _usersContext.SaveChangesAsync();
+
+        _logger.LogInformation("2FA setup generated for user {Username}", user.Username);
+
+        return Ok(new TotpSetupResponse
         {
-            UsersContext.Lock.Release();
-        }
+            Secret = secret,
+            QrCodeUri = qrUri,
+            RecoveryCodes = recoveryCodes
+        });
     }
 
     [HttpPost("2fa/enable/verify")]
     public async Task<IActionResult> VerifyEnable2fa([FromBody] VerifyTotpRequest request)
     {
-        await UsersContext.Lock.WaitAsync();
-        try
+        var user = await GetCurrentUser();
+        if (user is null)
         {
-            var user = await GetCurrentUser();
-            if (user is null) return Unauthorized();
-
-            if (user.TotpEnabled)
-            {
-                return Conflict(new { error = "2FA is already enabled" });
-            }
-
-            if (string.IsNullOrEmpty(user.TotpSecret))
-            {
-                return BadRequest(new { error = "Generate 2FA setup first" });
-            }
-
-            if (!_totpService.ValidateCode(user.TotpSecret, request.Code))
-            {
-                return BadRequest(new { error = "Invalid verification code" });
-            }
-
-            user.TotpEnabled = true;
-            user.UpdatedAt = DateTime.UtcNow;
-            await _usersContext.SaveChangesAsync();
-
-            _logger.LogInformation("2FA enabled for user {Username}", user.Username);
-
-            return Ok(new { message = "2FA enabled" });
+            return Unauthorized();
         }
-        finally
+
+        if (user.TotpEnabled)
         {
-            UsersContext.Lock.Release();
+            return Conflict(new { error = "2FA is already enabled" });
         }
+
+        if (string.IsNullOrEmpty(user.TotpSecret))
+        {
+            return BadRequest(new { error = "Generate 2FA setup first" });
+        }
+
+        if (!_totpService.ValidateCode(user.TotpSecret, request.Code))
+        {
+            return BadRequest(new { error = "Invalid verification code" });
+        }
+
+        user.TotpEnabled = true;
+        user.UpdatedAt = DateTime.UtcNow;
+        await _usersContext.SaveChangesAsync();
+
+        _logger.LogInformation("2FA enabled for user {Username}", user.Username);
+
+        return Ok(new { message = "2FA enabled" });
     }
 
     [HttpPost("2fa/disable")]
     public async Task<IActionResult> Disable2fa([FromBody] Disable2faRequest request)
     {
-        await UsersContext.Lock.WaitAsync();
-        try
+        var user = await GetCurrentUser(includeRecoveryCodes: true);
+        if (user is null)
         {
-            var user = await GetCurrentUser(includeRecoveryCodes: true);
-            if (user is null) return Unauthorized();
-
-            if (!user.TotpEnabled)
-            {
-                return BadRequest(new { error = "2FA is not enabled" });
-            }
-
-            if (!_passwordService.VerifyPassword(request.Password, user.PasswordHash))
-            {
-                return BadRequest(new { error = "Incorrect password" });
-            }
-
-            if (!_totpService.ValidateCode(user.TotpSecret, request.TotpCode))
-            {
-                return BadRequest(new { error = "Invalid 2FA code" });
-            }
-
-            user.TotpEnabled = false;
-            user.TotpSecret = string.Empty;
-            user.UpdatedAt = DateTime.UtcNow;
-
-            // Remove all recovery codes
-            _usersContext.RecoveryCodes.RemoveRange(user.RecoveryCodes);
-
-            await _usersContext.SaveChangesAsync();
-
-            _logger.LogInformation("2FA disabled for user {Username}", user.Username);
-
-            return Ok(new { message = "2FA disabled" });
+            return Unauthorized();
         }
-        finally
+
+        if (!user.TotpEnabled)
         {
-            UsersContext.Lock.Release();
+            return BadRequest(new { error = "2FA is not enabled" });
         }
+
+        if (!_passwordService.VerifyPassword(request.Password, user.PasswordHash))
+        {
+            return BadRequest(new { error = "Incorrect password" });
+        }
+
+        if (!_totpService.ValidateCode(user.TotpSecret, request.TotpCode))
+        {
+            return BadRequest(new { error = "Invalid 2FA code" });
+        }
+
+        user.TotpEnabled = false;
+        user.TotpSecret = string.Empty;
+        user.UpdatedAt = DateTime.UtcNow;
+
+        // Remove all recovery codes
+        _usersContext.RecoveryCodes.RemoveRange(user.RecoveryCodes);
+
+        await _usersContext.SaveChangesAsync();
+
+        _logger.LogInformation("2FA disabled for user {Username}", user.Username);
+
+        return Ok(new { message = "2FA disabled" });
     }
 
     [HttpGet("api-key")]
     public async Task<IActionResult> GetApiKey()
     {
         var user = await GetCurrentUser();
-        if (user is null) return Unauthorized();
+        if (user is null)
+        {
+            return Unauthorized();
+        }
 
         return Ok(new { apiKey = user.ApiKey });
     }
@@ -312,28 +291,23 @@ public sealed class AccountController : ControllerBase
     [HttpPost("api-key/regenerate")]
     public async Task<IActionResult> RegenerateApiKey()
     {
-        await UsersContext.Lock.WaitAsync();
-        try
+        var user = await GetCurrentUser();
+        if (user is null)
         {
-            var user = await GetCurrentUser();
-            if (user is null) return Unauthorized();
-
-            var bytes = new byte[32];
-            using var rng = RandomNumberGenerator.Create();
-            rng.GetBytes(bytes);
-
-            user.ApiKey = Convert.ToHexString(bytes).ToLowerInvariant();
-            user.UpdatedAt = DateTime.UtcNow;
-            await _usersContext.SaveChangesAsync();
-
-            _logger.LogInformation("API key regenerated for user {Username}", user.Username);
-
-            return Ok(new { apiKey = user.ApiKey });
+            return Unauthorized();
         }
-        finally
-        {
-            UsersContext.Lock.Release();
-        }
+
+        var bytes = new byte[32];
+        using var rng = RandomNumberGenerator.Create();
+        rng.GetBytes(bytes);
+
+        user.ApiKey = Convert.ToHexString(bytes).ToLowerInvariant();
+        user.UpdatedAt = DateTime.UtcNow;
+        await _usersContext.SaveChangesAsync();
+
+        _logger.LogInformation("API key regenerated for user {Username}", user.Username);
+
+        return Ok(new { apiKey = user.ApiKey });
     }
 
     [HttpPost("plex/link")]
@@ -356,63 +330,92 @@ public sealed class AccountController : ControllerBase
 
         var plexAccount = await _plexAuthService.GetAccount(pinResult.AuthToken);
 
-        await UsersContext.Lock.WaitAsync();
-        try
+        var user = await GetCurrentUser();
+        if (user is null)
         {
-            var user = await GetCurrentUser();
-            if (user is null) return Unauthorized();
-
-            user.PlexAccountId = plexAccount.AccountId;
-            user.PlexUsername = plexAccount.Username;
-            user.PlexEmail = plexAccount.Email;
-            user.PlexAuthToken = pinResult.AuthToken;
-            user.UpdatedAt = DateTime.UtcNow;
-            await _usersContext.SaveChangesAsync();
-
-            _logger.LogInformation("Plex account linked for user {Username}: {PlexUsername}",
-                user.Username, plexAccount.Username);
-
-            return Ok(new { completed = true, plexUsername = plexAccount.Username });
+            return Unauthorized();
         }
-        finally
-        {
-            UsersContext.Lock.Release();
-        }
+
+        user.PlexAccountId = plexAccount.AccountId;
+        user.PlexUsername = plexAccount.Username;
+        user.PlexEmail = plexAccount.Email;
+        user.PlexAuthToken = pinResult.AuthToken;
+        user.UpdatedAt = DateTime.UtcNow;
+        await _usersContext.SaveChangesAsync();
+
+        _logger.LogInformation("Plex account linked for user {Username}: {PlexUsername}",
+            user.Username, plexAccount.Username);
+
+        return Ok(new { completed = true, plexUsername = plexAccount.Username });
     }
 
     [HttpDelete("plex/link")]
     public async Task<IActionResult> UnlinkPlex()
     {
-        await UsersContext.Lock.WaitAsync();
+        var user = await GetCurrentUser();
+        if (user is null)
+        {
+            return Unauthorized();
+        }
+
+        user.PlexAccountId = null;
+        user.PlexUsername = null;
+        user.PlexEmail = null;
+        user.PlexAuthToken = null;
+        user.UpdatedAt = DateTime.UtcNow;
+        await _usersContext.SaveChangesAsync();
+
+        _logger.LogInformation("Plex account unlinked for user {Username}", user.Username);
+
+        return Ok(new { message = "Plex account unlinked" });
+    }
+
+    [HttpGet("oidc")]
+    public async Task<IActionResult> GetOidcConfig()
+    {
+        var user = await GetCurrentUser();
+        if (user is null)
+        {
+            return Unauthorized();
+        }
+
+        return Ok(user.Oidc);
+    }
+
+    [HttpPut("oidc")]
+    public async Task<IActionResult> UpdateOidcConfig([FromBody] UpdateOidcConfigRequest request)
+    {
         try
         {
             var user = await GetCurrentUser();
-            if (user is null) return Unauthorized();
+            if (user is null)
+            {
+                return Unauthorized();
+            }
 
-            user.PlexAccountId = null;
-            user.PlexUsername = null;
-            user.PlexEmail = null;
-            user.PlexAuthToken = null;
+            request.ApplyTo(user.Oidc);
+            user.Oidc.Validate();
             user.UpdatedAt = DateTime.UtcNow;
             await _usersContext.SaveChangesAsync();
 
-            _logger.LogInformation("Plex account unlinked for user {Username}", user.Username);
-
-            return Ok(new { message = "Plex account unlinked" });
+            return Ok(new { message = "OIDC configuration updated" });
         }
-        finally
+        catch (ValidationException ex)
         {
-            UsersContext.Lock.Release();
+            return BadRequest(new { error = ex.Message });
         }
     }
 
     [HttpPost("oidc/link")]
     public async Task<IActionResult> StartOidcLink()
     {
-        var generalConfig = await _dataContext.GeneralConfigs.AsNoTracking().FirstOrDefaultAsync();
-        var oidcConfig = generalConfig?.Auth.Oidc;
+        var user = await GetCurrentUser();
+        if (user is null)
+        {
+            return Unauthorized();
+        }
 
-        if (oidcConfig is not { Enabled: true })
+        if (user.Oidc is not { Enabled: true })
         {
             return BadRequest(new { error = "OIDC is not enabled" });
         }
@@ -468,9 +471,8 @@ public sealed class AccountController : ControllerBase
             return Redirect($"{basePath}/settings/general?oidc_link_error=failed");
         }
 
-        // Verify the initiator user exists
-        var user = await _usersContext.Users.AsNoTracking()
-            .FirstOrDefaultAsync(u => u.Id == initiatorId);
+        // Save the authorized subject to the user's OIDC config
+        var user = await _usersContext.Users.FirstOrDefaultAsync(u => u.Id == initiatorId);
 
         if (user is null)
         {
@@ -478,21 +480,40 @@ public sealed class AccountController : ControllerBase
             return Redirect($"{basePath}/settings/general?oidc_link_error=failed");
         }
 
-        // Save the authorized subject to config
-        var generalConfig = await _dataContext.GeneralConfigs.FirstOrDefaultAsync();
-        
-        if (generalConfig is null)
-        {
-            return Redirect($"{basePath}/settings/general?oidc_link_error=no_config");
-        }
-
-        generalConfig.Auth.Oidc.AuthorizedSubject = result.Subject;
-        await _dataContext.SaveChangesAsync();
+        user.Oidc.AuthorizedSubject = result.Subject;
+        user.UpdatedAt = DateTime.UtcNow;
+        await _usersContext.SaveChangesAsync();
 
         _logger.LogInformation("OIDC account linked with subject: {Subject} by user: {Username}",
             result.Subject, user.Username);
 
         return Redirect($"{basePath}/settings/general?oidc_link=success");
+    }
+
+    [HttpDelete("oidc/link")]
+    public async Task<IActionResult> UnlinkOidc()
+    {
+        await UsersContext.Lock.WaitAsync();
+        try
+        {
+            var user = await GetCurrentUser();
+            if (user is null)
+            {
+                return Unauthorized();
+            }
+
+            user.Oidc.AuthorizedSubject = string.Empty;
+            user.UpdatedAt = DateTime.UtcNow;
+            await _usersContext.SaveChangesAsync();
+
+            _logger.LogInformation("OIDC account unlinked for user {Username}", user.Username);
+
+            return Ok(new { message = "OIDC account unlinked" });
+        }
+        finally
+        {
+            UsersContext.Lock.Release();
+        }
     }
 
     private string GetOidcLinkCallbackUrl()

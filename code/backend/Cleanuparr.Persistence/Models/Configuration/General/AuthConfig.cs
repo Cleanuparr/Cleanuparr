@@ -13,8 +13,6 @@ public sealed record AuthConfig : IConfig
 
     public List<string> TrustedNetworks { get; set; } = [];
 
-    public OidcConfig Oidc { get; set; } = new();
-
     public void Validate()
     {
         foreach (var entry in TrustedNetworks)
@@ -24,8 +22,6 @@ public sealed record AuthConfig : IConfig
                 throw new ValidationException($"Invalid IP address or CIDR range: {entry}");
             }
         }
-
-        Oidc.Validate();
     }
 
     private static bool IsValidIpOrCidr(string value)

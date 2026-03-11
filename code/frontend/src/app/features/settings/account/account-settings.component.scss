@@ -168,6 +168,40 @@
   flex-shrink: 0;
 }
 
+// OIDC link section
+.oidc-link-section {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+
+  &__info {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+
+  &__label {
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    color: var(--text-primary);
+  }
+
+  &__hint {
+    font-size: var(--font-size-xs);
+    color: var(--text-tertiary);
+  }
+
+  &__subject {
+    font-family: var(--font-family-mono, monospace);
+    font-size: var(--font-size-xs);
+    color: var(--text-secondary);
+    background: var(--bg-tertiary);
+    padding: var(--space-0-5) var(--space-1);
+    border-radius: var(--radius-sm);
+  }
+}
+
 // Password strength indicator
 .password-strength {
   display: flex;

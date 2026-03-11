@@ -321,5 +321,56 @@
       }
     </div>
   </app-card>
+
+  <!-- OIDC / SSO -->
+  <app-accordion header="OIDC / SSO" subtitle="OpenID Connect single sign-on" [(expanded)]="oidcExpanded">
+    <div class="form-stack">
+      <app-toggle label="Enable OIDC" [(checked)]="oidcEnabled"
+        hint="Allow signing in with an external identity provider (Authentik, Authelia, Keycloak, etc.)" />
+      @if (oidcEnabled()) {
+        <app-input label="Provider Name" [(value)]="oidcProviderName"
+          hint="Display name shown on the login button (e.g. Authentik, Keycloak)" />
+        <app-input label="Issuer URL" [(value)]="oidcIssuerUrl"
+          placeholder="https://auth.example.com/application/o/cleanuparr/"
+          hint="The OpenID Connect issuer URL from your identity provider. Must use HTTPS." />
+        <div class="form-row">
+          <app-input label="Client ID" [(value)]="oidcClientId"
+            hint="The client ID assigned by your identity provider" />
+          <app-input label="Client Secret" [(value)]="oidcClientSecret" type="password" [revealable]="false"
+            hint="Optional. Required for confidential clients." />
+        </div>
+        <app-input label="Scopes" [(value)]="oidcScopes"
+          hint="Space-separated list of OIDC scopes to request (default: openid profile email)" />
+
+        <div class="form-divider"></div>
+
+        <div class="oidc-link-section">
+          <div class="oidc-link-section__info">
+            <span class="oidc-link-section__label">Link OIDC Account</span>
+            @if (oidcAuthorizedSubject()) {
+              <span class="oidc-link-section__hint">
+                Linked to subject: <code class="oidc-link-section__subject">{{ oidcAuthorizedSubject() }}</code>
+              </span>
+            } @else {
+              <span class="oidc-link-section__hint">
+                Authenticate with your identity provider to link your account. Save your OIDC settings first.
+              </span>
+            }
+          </div>
+          <app-button variant="secondary" size="sm" [loading]="oidcLinking()" [disabled]="oidcLinking()" (clicked)="startOidcLink()">
+            {{ oidcAuthorizedSubject() ? 'Re-link' : 'Link Account' }}
+          </app-button>
+        </div>
+      }
+
+      <div class="form-divider"></div>
+
+      <div class="form-actions">
+        <app-button variant="primary" [loading]="oidcSaving()" [disabled]="oidcSaving() || oidcSaved()" (clicked)="saveOidcConfig()">
+          {{ oidcSaved() ? 'Saved!' : 'Save OIDC Settings' }}
+        </app-button>
+      </div>
+    </div>
+  </app-accordion>
 </div>
 }

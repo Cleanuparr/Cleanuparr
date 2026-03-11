@@ -7,9 +7,9 @@ using System.Text;
 using System.Text.Json;
 using Cleanuparr.Infrastructure.Features.Auth;
 using Microsoft.IdentityModel.Tokens;
-using Cleanuparr.Infrastructure.Tests.Features.Jobs.TestHelpers;
 using Cleanuparr.Persistence;
-using Cleanuparr.Persistence.Models.Configuration.General;
+using Cleanuparr.Persistence.Models.Auth;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -20,13 +20,37 @@ namespace Cleanuparr.Infrastructure.Tests.Features.Auth;
 
 public sealed class OidcAuthServiceTests : IDisposable
 {
-    private readonly DataContext _dataContext;
+    private readonly SqliteConnection _connection;
+    private readonly UsersContext _usersContext;
     private readonly Mock<IHttpClientFactory> _httpClientFactory;
     private readonly Mock<ILogger<OidcAuthService>> _logger;
 
     public OidcAuthServiceTests()
     {
-        _dataContext = TestDataContextFactory.Create(seedData: true);
+        _connection = new SqliteConnection("DataSource=:memory:");
+        _connection.Open();
+
+        var options = new DbContextOptionsBuilder<UsersContext>()
+            .UseSqlite(_connection)
+            .Options;
+
+        _usersContext = new UsersContext(options);
+        _usersContext.Database.EnsureCreated();
+
+        // Seed a user
+        _usersContext.Users.Add(new User
+        {
+            Id = Guid.NewGuid(),
+            Username = "admin",
+            PasswordHash = "hash",
+            TotpSecret = "secret",
+            ApiKey = "test-api-key",
+            SetupCompleted = true,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+        });
+        _usersContext.SaveChanges();
+
         _httpClientFactory = new Mock<IHttpClientFactory>();
         _logger = new Mock<ILogger<OidcAuthService>>();
 
@@ -38,7 +62,7 @@ public sealed class OidcAuthServiceTests : IDisposable
 
     private OidcAuthService CreateService()
     {
-        return new OidcAuthService(_httpClientFactory.Object, _dataContext, _logger.Object);
+        return new OidcAuthService(_httpClientFactory.Object, _usersContext, _logger.Object);
     }
 
     #region StoreOneTimeCode Tests
@@ -235,8 +259,8 @@ public sealed class OidcAuthServiceTests : IDisposable
 
     private async Task EnableOidcInConfig()
     {
-        var config = await _dataContext.GeneralConfigs.FirstAsync();
-        config.Auth.Oidc = new OidcConfig
+        var user = await _usersContext.Users.FirstAsync();
+        user.Oidc = new OidcConfig
         {
             Enabled = true,
             IssuerUrl = "https://mock-oidc-provider.test",
@@ -245,12 +269,7 @@ public sealed class OidcAuthServiceTests : IDisposable
             AuthorizedSubject = "test-subject",
             ProviderName = "TestProvider"
         };
-        await _dataContext.SaveChangesAsync();
-    }
-
-    private async Task<T> FirstAsync<T>() where T : class
-    {
-        return await _dataContext.Set<T>().FirstAsync();
+        await _usersContext.SaveChangesAsync();
     }
 
     /// <summary>
@@ -260,7 +279,7 @@ public sealed class OidcAuthServiceTests : IDisposable
     {
         var factory = new Mock<IHttpClientFactory>();
         factory.Setup(f => f.CreateClient("OidcAuth")).Returns(new HttpClient(handler));
-        return new OidcAuthService(factory.Object, _dataContext, _logger.Object);
+        return new OidcAuthService(factory.Object, _usersContext, _logger.Object);
     }
 
     /// <summary>
@@ -842,8 +861,8 @@ public sealed class OidcAuthServiceTests : IDisposable
     public async Task StartAuthorization_SpecialCharsInConfig_UrlEncodesParameters()
     {
         // Configure OIDC with special characters in ClientId and Scopes
-        var config = await _dataContext.GeneralConfigs.FirstAsync();
-        config.Auth.Oidc = new OidcConfig
+        var user = await _usersContext.Users.FirstAsync();
+        user.Oidc = new OidcConfig
         {
             Enabled = true,
             IssuerUrl = "https://mock-oidc-provider.test",
@@ -852,7 +871,7 @@ public sealed class OidcAuthServiceTests : IDisposable
             AuthorizedSubject = "test-subject",
             ProviderName = "TestProvider"
         };
-        await _dataContext.SaveChangesAsync();
+        await _usersContext.SaveChangesAsync();
         OidcAuthService.ClearDiscoveryCache();
 
         var service = CreateServiceWithHandler(CreateDiscoveryHandler());
@@ -930,7 +949,8 @@ public sealed class OidcAuthServiceTests : IDisposable
 
     public void Dispose()
     {
-        _dataContext.Dispose();
+        _usersContext.Dispose();
+        _connection.Dispose();
     }
 
     /// <summary>

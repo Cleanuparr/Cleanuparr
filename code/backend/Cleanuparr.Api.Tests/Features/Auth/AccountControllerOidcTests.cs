@@ -5,7 +5,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using Cleanuparr.Infrastructure.Features.Auth;
 using Cleanuparr.Persistence;
-using Cleanuparr.Persistence.Models.Configuration.General;
+using Cleanuparr.Persistence.Models.Auth;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
@@ -265,22 +265,16 @@ public class AccountControllerOidcTests : IClassFixture<AccountControllerOidcTes
 
         public async Task EnableOidcAsync()
         {
-            await using var dataContext = DataContext.CreateStaticInstance();
-            dataContext.Database.EnsureCreated();
+            using var scope = Services.CreateScope();
+            var usersContext = scope.ServiceProvider.GetRequiredService<UsersContext>();
 
-            var config = await dataContext.GeneralConfigs.FirstOrDefaultAsync();
-            if (config is null)
+            var user = await usersContext.Users.FirstOrDefaultAsync();
+            if (user is null)
             {
-                config = new GeneralConfig
-                {
-                    Id = Guid.NewGuid(),
-                    IgnoredDownloads = [],
-                    Log = new LoggingConfig()
-                };
-                dataContext.GeneralConfigs.Add(config);
+                return;
             }
 
-            config.Auth.Oidc = new OidcConfig
+            user.Oidc = new OidcConfig
             {
                 Enabled = true,
                 IssuerUrl = "https://mock-oidc-provider.test",
@@ -291,14 +285,16 @@ public class AccountControllerOidcTests : IClassFixture<AccountControllerOidcTes
                 ProviderName = "TestProvider"
             };
 
-            await dataContext.SaveChangesAsync();
+            await usersContext.SaveChangesAsync();
         }
 
         public async Task<string?> GetAuthorizedSubjectAsync()
         {
-            await using var dataContext = DataContext.CreateStaticInstance();
-            var config = await dataContext.GeneralConfigs.AsNoTracking().FirstOrDefaultAsync();
-            return config?.Auth.Oidc.AuthorizedSubject;
+            using var scope = Services.CreateScope();
+            var usersContext = scope.ServiceProvider.GetRequiredService<UsersContext>();
+
+            var user = await usersContext.Users.AsNoTracking().FirstOrDefaultAsync();
+            return user?.Oidc.AuthorizedSubject;
         }
 
         protected override void Dispose(bool disposing)

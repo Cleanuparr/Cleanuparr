@@ -1,10 +1,11 @@
 using Cleanuparr.Api.Features.Arr.Contracts.Requests;
 using Cleanuparr.Api.Features.DownloadClient.Contracts.Requests;
+using Cleanuparr.Api.Features.Auth.Contracts.Requests;
 using Cleanuparr.Api.Features.General.Contracts.Requests;
 using Cleanuparr.Domain.Enums;
+using Cleanuparr.Persistence.Models.Auth;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Cleanuparr.Persistence.Models.Configuration;
-using Cleanuparr.Persistence.Models.Configuration.General;
 using Cleanuparr.Shared.Helpers;
 using Shouldly;
 using ValidationException = Cleanuparr.Domain.Exceptions.ValidationException;

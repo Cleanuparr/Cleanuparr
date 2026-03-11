@@ -1,6 +1,4 @@
 ﻿using System.Reflection;
-using Cleanuparr.Infrastructure.Health;
-using Cleanuparr.Infrastructure.Logging;
 using Cleanuparr.Infrastructure.Services;
 using Cleanuparr.Persistence;
 using Microsoft.EntityFrameworkCore;
