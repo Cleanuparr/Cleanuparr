@@ -351,6 +351,8 @@ public sealed class OidcAuthService : IOidcAuthService
             ValidAudience = oidcConfig.ClientId,
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
+            // Bypass lifetime validation
+            IssuerSigningKeyValidator = (_, _, _) => true,
             IssuerSigningKeys = discovery.SigningKeys,
             ClockSkew = TimeSpan.FromMinutes(2)
         };
