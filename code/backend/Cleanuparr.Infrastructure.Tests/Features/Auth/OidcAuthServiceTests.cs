@@ -502,6 +502,39 @@ public sealed class OidcAuthServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task HandleCallback_IssuerWithTrailingSlash_ReturnsSuccess()
+    {
+        await EnableOidcInConfig();
+        OidcAuthService.ClearDiscoveryCache();
+
+        var jwt = new JwtTestHelper();
+        string? capturedJwt = null;
+
+        var handler = CreateDiscoveryHandler(
+            jwksJson: jwt.GetJwksJson(),
+            tokenResponseFactory: () =>
+                $$"""{"id_token":"{{capturedJwt}}","access_token":"access-123","token_type":"Bearer"}""");
+
+        var service = CreateServiceWithHandler(handler);
+        try
+        {
+            var startResult = await service.StartAuthorization(MockRedirectUri);
+            var nonce = GetFlowNonce(startResult.State);
+            // Use issuer WITH trailing slash (Authentik-style) while config has no trailing slash
+            capturedJwt = jwt.CreateIdToken(MockIssuer + "/", MockClientId, MockSubject, nonce);
+
+            var callbackResult = await service.HandleCallback("code", startResult.State, MockRedirectUri);
+
+            callbackResult.Success.ShouldBeTrue();
+            callbackResult.Subject.ShouldBe(MockSubject);
+        }
+        finally
+        {
+            OidcAuthService.ClearDiscoveryCache();
+        }
+    }
+
+    [Fact]
     public async Task HandleCallback_MissingSubClaim_ReturnsFailure()
     {
         await EnableOidcInConfig();

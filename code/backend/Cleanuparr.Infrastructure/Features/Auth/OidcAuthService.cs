@@ -123,7 +123,8 @@ public sealed class OidcAuthService : IOidcAuthService
 
         if (flowState.RedirectUri != redirectUri)
         {
-            _logger.LogWarning("OIDC callback redirect URI mismatch");
+            _logger.LogWarning("OIDC callback redirect URI mismatch. Expected: {Expected}, Got: {Got}",
+                flowState.RedirectUri, redirectUri);
             return new OidcCallbackResult
             {
                 Success = false,
@@ -341,7 +342,11 @@ public sealed class OidcAuthService : IOidcAuthService
         var validationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
-            ValidIssuer = oidcConfig.IssuerUrl.TrimEnd('/'),
+            ValidIssuers = new[]
+            {
+                oidcConfig.IssuerUrl.TrimEnd('/'),
+                oidcConfig.IssuerUrl.TrimEnd('/') + "/"
+            },
             ValidateAudience = true,
             ValidAudience = oidcConfig.ClientId,
             ValidateLifetime = true,
