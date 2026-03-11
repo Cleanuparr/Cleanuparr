@@ -1,0 +1,91 @@
+name: E2E Tests
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'code/**'
+      - 'e2e/**'
+      - '.github/workflows/e2e.yml'
+  pull_request:
+    paths:
+      - 'code/**'
+      - 'e2e/**'
+      - '.github/workflows/e2e.yml'
+  workflow_call:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        timeout-minutes: 1
+
+      - name: Get vault secrets
+        uses: hashicorp/vault-action@v2
+        with:
+          url: ${{ secrets.VAULT_HOST }}
+          method: approle
+          roleId: ${{ secrets.VAULT_ROLE_ID }}
+          secretId: ${{ secrets.VAULT_SECRET_ID }}
+          secrets:
+            secrets/data/github packages_pat | PACKAGES_PAT
+
+      - name: Start services
+        working-directory: e2e
+        run: docker compose -f docker-compose.e2e.yml up -d --build
+        env:
+          PACKAGES_USERNAME: ${{ github.repository_owner }}
+          PACKAGES_PAT: ${{ env.PACKAGES_PAT }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install E2E dependencies
+        working-directory: e2e
+        run: npm ci
+
+      - name: Install Playwright browsers
+        working-directory: e2e
+        run: npx playwright install --with-deps chromium
+
+      - name: Wait for Keycloak
+        run: |
+          echo "Waiting for Keycloak realm to be ready..."
+          timeout 120 bash -c 'until curl -sf http://localhost:8080/realms/cleanuparr-test/.well-known/openid-configuration; do sleep 3; done'
+          echo "Keycloak ready!"
+
+      - name: Wait for app
+        run: |
+          echo "Waiting for Cleanuparr to be ready..."
+          timeout 120 bash -c 'until curl -sf http://localhost:5000/health; do sleep 3; done'
+          echo "App ready!"
+
+      - name: Run E2E tests
+        working-directory: e2e
+        run: npx playwright test
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-test-results
+          path: |
+            e2e/playwright-report/
+            e2e/test-results/
+          retention-days: 7
+
+      - name: Stop services
+        if: always()
+        working-directory: e2e
+        run: docker compose -f docker-compose.e2e.yml down
