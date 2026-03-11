@@ -49,6 +49,13 @@ public sealed record OidcConfig
     [MaxLength(100)]
     public string ProviderName { get; set; } = "OIDC";
 
+    /// <summary>
+    /// Optional full OIDC redirect URL (e.g., https://cleanuparr.example.com/api/auth/oidc/callback).
+    /// When set, used directly as the callback URL instead of auto-detecting from the request.
+    /// </summary>
+    [MaxLength(500)]
+    public string RedirectUrl { get; set; } = string.Empty;
+
     public void Validate()
     {
         if (!Enabled)
@@ -80,6 +87,19 @@ public sealed record OidcConfig
         if (string.IsNullOrWhiteSpace(ProviderName))
         {
             throw new ValidationException("OIDC Provider Name is required when OIDC is enabled");
+        }
+
+        if (!string.IsNullOrWhiteSpace(RedirectUrl))
+        {
+            if (!Uri.TryCreate(RedirectUrl, UriKind.Absolute, out var redirectUri))
+            {
+                throw new ValidationException("OIDC Redirect URL must be a valid absolute URL");
+            }
+
+            if (redirectUri.Scheme is not ("http" or "https"))
+            {
+                throw new ValidationException("OIDC Redirect URL must use HTTP or HTTPS");
+            }
         }
     }
 

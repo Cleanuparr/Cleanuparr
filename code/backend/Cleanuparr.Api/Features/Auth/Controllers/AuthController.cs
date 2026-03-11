@@ -532,7 +532,7 @@ public sealed class AuthController : ControllerBase
             return BadRequest(new { error = "OIDC is not enabled or not configured" });
         }
 
-        var redirectUri = GetOidcCallbackUrl();
+        var redirectUri = GetOidcCallbackUrl(oidcConfig.RedirectUrl);
         _logger.LogDebug("OIDC login start: using redirect URI {RedirectUri}", redirectUri);
 
         try
@@ -567,7 +567,14 @@ public sealed class AuthController : ControllerBase
             return Redirect($"{basePath}/auth/login?oidc_error=invalid_request");
         }
 
-        var redirectUri = GetOidcCallbackUrl();
+        // Load the user early so we can use the configured redirect URL
+        var user = await _usersContext.Users.FirstOrDefaultAsync(u => u.SetupCompleted);
+        if (user is null)
+        {
+            return Redirect($"{basePath}/auth/login?oidc_error=no_account");
+        }
+
+        var redirectUri = GetOidcCallbackUrl(user.Oidc.RedirectUrl);
         _logger.LogDebug("OIDC login callback: using redirect URI {RedirectUri}", redirectUri);
         var result = await _oidcAuthService.HandleCallback(code, state, redirectUri);
 
@@ -575,13 +582,6 @@ public sealed class AuthController : ControllerBase
         {
             _logger.LogWarning("OIDC callback failed: {Error}", result.Error);
             return Redirect($"{basePath}/auth/login?oidc_error=authentication_failed");
-        }
-
-        // Load the user and verify the subject matches the authorized subject
-        var user = await _usersContext.Users.FirstOrDefaultAsync(u => u.SetupCompleted);
-        if (user is null)
-        {
-            return Redirect($"{basePath}/auth/login?oidc_error=no_account");
         }
 
         if (result.Subject != user.Oidc.AuthorizedSubject)
@@ -623,7 +623,15 @@ public sealed class AuthController : ControllerBase
         });
     }
 
-    private string GetOidcCallbackUrl() => $"{HttpContext.GetExternalBaseUrl()}/api/auth/oidc/callback";
+    private string GetOidcCallbackUrl(string? redirectUrl = null)
+    {
+        if (!string.IsNullOrEmpty(redirectUrl))
+        {
+            return redirectUrl.TrimEnd('/');
+        }
+
+        return $"{HttpContext.GetExternalBaseUrl()}/api/auth/oidc/callback";
+    }
 
     private async Task<TokenResponse> GenerateTokenResponse(User user)
     {

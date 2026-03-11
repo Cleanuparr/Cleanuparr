@@ -92,6 +92,7 @@ export class AccountSettingsComponent implements OnInit, OnDestroy {
   readonly oidcClientSecret = signal('');
   readonly oidcScopes = signal('openid profile email');
   readonly oidcProviderName = signal('OIDC');
+  readonly oidcRedirectUrl = signal('');
   readonly oidcAuthorizedSubject = signal('');
   readonly oidcExpanded = signal(false);
   readonly oidcLinking = signal(false);
@@ -127,6 +128,7 @@ export class AccountSettingsComponent implements OnInit, OnDestroy {
         this.oidcClientSecret.set(oidc.clientSecret);
         this.oidcScopes.set(oidc.scopes || 'openid profile email');
         this.oidcProviderName.set(oidc.providerName || 'OIDC');
+        this.oidcRedirectUrl.set(oidc.redirectUrl || '');
         this.oidcAuthorizedSubject.set(oidc.authorizedSubject);
         this.loader.stop();
       },
@@ -409,6 +411,7 @@ export class AccountSettingsComponent implements OnInit, OnDestroy {
       scopes: this.oidcScopes(),
       authorizedSubject: this.oidcAuthorizedSubject(),
       providerName: this.oidcProviderName(),
+      redirectUrl: this.oidcRedirectUrl(),
     }).subscribe({
       next: () => {
         this.toast.success('OIDC settings saved');

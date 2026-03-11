@@ -420,7 +420,7 @@ public sealed class AccountController : ControllerBase
             return BadRequest(new { error = "OIDC is not enabled" });
         }
 
-        var redirectUri = GetOidcLinkCallbackUrl();
+        var redirectUri = GetOidcLinkCallbackUrl(user.Oidc.RedirectUrl);
         _logger.LogDebug("OIDC link start: using redirect URI {RedirectUri}", redirectUri);
 
         try
@@ -454,7 +454,9 @@ public sealed class AccountController : ControllerBase
             return Redirect($"{basePath}/settings/account?oidc_link_error=failed");
         }
 
-        var redirectUri = GetOidcLinkCallbackUrl();
+        // Fetch any user to get the configured redirect URL for the OIDC callback
+        var oidcConfig = (await _usersContext.Users.AsNoTracking().FirstOrDefaultAsync())?.Oidc;
+        var redirectUri = GetOidcLinkCallbackUrl(oidcConfig?.RedirectUrl);
         _logger.LogDebug("OIDC link callback: using redirect URI {RedirectUri}", redirectUri);
         var result = await _oidcAuthService.HandleCallback(code, state, redirectUri);
 
@@ -517,8 +519,19 @@ public sealed class AccountController : ControllerBase
         }
     }
 
-    private string GetOidcLinkCallbackUrl() =>
-        $"{HttpContext.GetExternalBaseUrl()}/api/account/oidc/link/callback";
+    private const string OidcCallbackSuffix = "/api/auth/oidc/callback";
+
+    private string GetOidcLinkCallbackUrl(string? redirectUrl = null)
+    {
+        if (!string.IsNullOrEmpty(redirectUrl) &&
+            redirectUrl.EndsWith(OidcCallbackSuffix, StringComparison.OrdinalIgnoreCase))
+        {
+            var baseUrl = redirectUrl[..^OidcCallbackSuffix.Length];
+            return $"{baseUrl}/api/account/oidc/link/callback";
+        }
+
+        return $"{HttpContext.GetExternalBaseUrl()}/api/account/oidc/link/callback";
+    }
 
     private async Task<User?> GetCurrentUser(bool includeRecoveryCodes = false)
     {

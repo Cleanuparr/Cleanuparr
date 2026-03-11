@@ -18,6 +18,8 @@ public sealed record UpdateOidcConfigRequest
 
     public string ProviderName { get; init; } = "OIDC";
 
+    public string RedirectUrl { get; init; } = string.Empty;
+
     public void ApplyTo(OidcConfig existingConfig)
     {
         var previousIssuerUrl = existingConfig.IssuerUrl;
@@ -27,7 +29,8 @@ public sealed record UpdateOidcConfigRequest
         existingConfig.ClientId = ClientId;
         existingConfig.Scopes = Scopes;
         existingConfig.ProviderName = ProviderName;
-        
+        existingConfig.RedirectUrl = RedirectUrl;
+
         if (!ClientSecret.IsPlaceholder())
         {
             existingConfig.ClientSecret = ClientSecret;

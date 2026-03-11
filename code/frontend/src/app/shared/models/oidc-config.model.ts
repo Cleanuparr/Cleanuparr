@@ -6,4 +6,5 @@ export interface OidcConfig {
   scopes: string;
   authorizedSubject: string;
   providerName: string;
+  redirectUrl: string;
 }
