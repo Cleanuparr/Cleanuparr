@@ -621,14 +621,7 @@ public sealed class AuthController : ControllerBase
         });
     }
 
-    private string GetOidcCallbackUrl()
-    {
-        var request = HttpContext.Request;
-        var scheme = request.Scheme;
-        var host = request.Host.ToString();
-        var basePath = request.PathBase.Value?.TrimEnd('/') ?? "";
-        return $"{scheme}://{host}{basePath}/api/auth/oidc/callback";
-    }
+    private string GetOidcCallbackUrl() => $"{HttpContext.GetExternalBaseUrl()}/api/auth/oidc/callback";
 
     private async Task<TokenResponse> GenerateTokenResponse(User user)
     {
