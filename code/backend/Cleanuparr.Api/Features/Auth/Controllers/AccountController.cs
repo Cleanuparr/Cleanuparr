@@ -421,11 +421,10 @@ public sealed class AccountController : ControllerBase
         }
 
         var redirectUri = GetOidcLinkCallbackUrl();
-        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
         try
         {
-            var result = await _oidcAuthService.StartAuthorization(redirectUri, userIdClaim);
+            var result = await _oidcAuthService.StartAuthorization(redirectUri, user.Id.ToString());
             return Ok(new OidcStartResponse { AuthorizationUrl = result.AuthorizationUrl });
         }
         catch (InvalidOperationException ex)
