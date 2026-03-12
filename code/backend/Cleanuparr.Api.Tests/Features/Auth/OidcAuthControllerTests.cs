@@ -277,17 +277,53 @@ public class OidcAuthControllerTests : IClassFixture<OidcAuthControllerTests.Oid
     }
 
     [Fact, TestPriority(17)]
-    public async Task OidcStatus_WhenPartiallyConfigured_ReturnsFalse()
+    public async Task OidcStatus_WhenSubjectCleared_StillEnabled()
     {
-        // Enable OIDC but remove the authorized subject
+        // Clearing the authorized subject should NOT disable OIDC — it just means any user can log in
         await _factory.SetOidcAuthorizedSubjectAsync("");
 
         var response = await _client.GetAsync("/api/auth/status");
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
 
         var body = await response.Content.ReadFromJsonAsync<JsonElement>();
-        // OIDC should show as disabled when there's no authorized subject
+        body.GetProperty("oidcEnabled").GetBoolean().ShouldBeTrue();
+
+        // Restore for subsequent tests
+        await _factory.SetOidcAuthorizedSubjectAsync(MockOidcAuthService.AuthorizedSubject);
+    }
+
+    [Fact, TestPriority(17)]
+    public async Task OidcStatus_WhenMissingIssuerUrl_ReturnsFalse()
+    {
+        // OIDC should be disabled when essential config (IssuerUrl) is missing
+        await _factory.SetOidcIssuerUrlAsync("");
+
+        var response = await _client.GetAsync("/api/auth/status");
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
         body.GetProperty("oidcEnabled").GetBoolean().ShouldBeFalse();
+
+        // Restore for subsequent tests
+        await _factory.SetOidcIssuerUrlAsync("https://mock-oidc-provider.test");
+    }
+
+    [Fact, TestPriority(17)]
+    public async Task OidcCallback_WithoutLinkedSubject_AllowsAnyUser()
+    {
+        // Clear the authorized subject — any OIDC user should be allowed
+        await _factory.SetOidcAuthorizedSubjectAsync("");
+
+        // Use the "wrong subject" state — this returns a different subject than the authorized one
+        // With no linked subject, it should still succeed
+        var response = await _client.GetAsync(
+            $"/api/auth/oidc/callback?code=valid-auth-code&state={MockOidcAuthService.WrongSubjectState}");
+
+        response.StatusCode.ShouldBe(HttpStatusCode.Redirect);
+        var location = response.Headers.Location?.ToString();
+        location.ShouldNotBeNull();
+        location.ShouldContain("code=");
+        location.ShouldNotContain("oidc_error");
 
         // Restore for subsequent tests
         await _factory.SetOidcAuthorizedSubjectAsync(MockOidcAuthService.AuthorizedSubject);
@@ -495,6 +531,19 @@ public class OidcAuthControllerTests : IClassFixture<OidcAuthControllerTests.Oid
             };
 
             await usersContext.SaveChangesAsync();
+        }
+
+        public async Task SetOidcIssuerUrlAsync(string issuerUrl)
+        {
+            using var scope = Services.CreateScope();
+            var usersContext = scope.ServiceProvider.GetRequiredService<UsersContext>();
+
+            var user = await usersContext.Users.FirstOrDefaultAsync();
+            if (user is not null)
+            {
+                user.Oidc.IssuerUrl = issuerUrl;
+                await usersContext.SaveChangesAsync();
+            }
         }
 
         public async Task SetOidcAuthorizedSubjectAsync(string subject)

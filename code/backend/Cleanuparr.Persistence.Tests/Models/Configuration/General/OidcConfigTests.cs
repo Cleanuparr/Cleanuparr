@@ -243,7 +243,7 @@ public sealed class OidcConfigTests
     }
 
     [Fact]
-    public void Validate_ExclusiveMode_WithoutAuthorizedSubject_Throws()
+    public void Validate_ExclusiveMode_WithoutAuthorizedSubject_DoesNotThrow()
     {
         var config = new OidcConfig
         {
@@ -255,8 +255,7 @@ public sealed class OidcConfigTests
             AuthorizedSubject = string.Empty
         };
 
-        var exception = Should.Throw<ValidationException>(() => config.Validate());
-        exception.Message.ShouldBe("An OIDC account must be linked before enabling exclusive mode");
+        Should.NotThrow(() => config.Validate());
     }
 
     [Fact]
@@ -290,7 +289,7 @@ public sealed class OidcConfigTests
     [Theory]
     [InlineData("")]
     [InlineData("   ")]
-    public void Validate_ExclusiveMode_WhitespaceAuthorizedSubject_Throws(string subject)
+    public void Validate_ExclusiveMode_WhitespaceAuthorizedSubject_DoesNotThrow(string subject)
     {
         var config = new OidcConfig
         {
@@ -302,8 +301,7 @@ public sealed class OidcConfigTests
             AuthorizedSubject = subject
         };
 
-        var exception = Should.Throw<ValidationException>(() => config.Validate());
-        exception.Message.ShouldBe("An OIDC account must be linked before enabling exclusive mode");
+        Should.NotThrow(() => config.Validate());
     }
 
     #endregion
