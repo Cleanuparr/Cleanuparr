@@ -163,61 +163,6 @@ namespace Cleanuparr.Persistence.Migrations.Users
                         .HasColumnType("TEXT")
                         .HasColumnName("username");
 
-                    b.ComplexProperty(typeof(Dictionary<string, object>), "Oidc", "Cleanuparr.Persistence.Models.Auth.User.Oidc#OidcConfig", b1 =>
-                        {
-                            b1.IsRequired();
-
-                            b1.Property<string>("AuthorizedSubject")
-                                .IsRequired()
-                                .HasMaxLength(500)
-                                .HasColumnType("TEXT")
-                                .HasColumnName("oidc_authorized_subject");
-
-                            b1.Property<string>("ClientId")
-                                .IsRequired()
-                                .HasMaxLength(200)
-                                .HasColumnType("TEXT")
-                                .HasColumnName("oidc_client_id");
-
-                            b1.Property<string>("ClientSecret")
-                                .IsRequired()
-                                .HasMaxLength(500)
-                                .HasColumnType("TEXT")
-                                .HasColumnName("oidc_client_secret");
-
-                            b1.Property<bool>("Enabled")
-                                .HasColumnType("INTEGER")
-                                .HasColumnName("oidc_enabled");
-
-                            b1.Property<bool>("ExclusiveMode")
-                                .HasColumnType("INTEGER")
-                                .HasColumnName("oidc_exclusive_mode");
-
-                            b1.Property<string>("IssuerUrl")
-                                .IsRequired()
-                                .HasMaxLength(500)
-                                .HasColumnType("TEXT")
-                                .HasColumnName("oidc_issuer_url");
-
-                            b1.Property<string>("ProviderName")
-                                .IsRequired()
-                                .HasMaxLength(100)
-                                .HasColumnType("TEXT")
-                                .HasColumnName("oidc_provider_name");
-
-                            b1.Property<string>("RedirectUrl")
-                                .IsRequired()
-                                .HasMaxLength(500)
-                                .HasColumnType("TEXT")
-                                .HasColumnName("oidc_redirect_url");
-
-                            b1.Property<string>("Scopes")
-                                .IsRequired()
-                                .HasMaxLength(500)
-                                .HasColumnType("TEXT")
-                                .HasColumnName("oidc_scopes");
-                        });
-
                     b.HasKey("Id")
                         .HasName("pk_users");
 
