@@ -26,7 +26,7 @@ test.describe.serial('OIDC Account Linking', () => {
 
     await page.getByText('OIDC / SSO').click();
 
-    const linkButton = page.getByRole('button', { name: /link account/i });
+    const linkButton = page.getByRole('button', { name: /link account|re-link/i });
     await expect(linkButton).toBeVisible({ timeout: 5_000 });
     await linkButton.click();
 

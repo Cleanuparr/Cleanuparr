@@ -78,6 +78,7 @@ export async function updateOidcConfig(
     clientId: string;
     clientSecret: string;
     scopes: string;
+    exclusiveMode: boolean;
   }>,
 ): Promise<void> {
   const getRes = await fetch(`${API}/api/account/oidc`, {
