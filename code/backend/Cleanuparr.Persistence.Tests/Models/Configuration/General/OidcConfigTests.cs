@@ -221,6 +221,89 @@ public sealed class OidcConfigTests
         config.Scopes.ShouldBe("openid profile email");
         config.AuthorizedSubject.ShouldBe(string.Empty);
         config.ProviderName.ShouldBe("OIDC");
+        config.ExclusiveMode.ShouldBeFalse();
+    }
+
+    #endregion
+
+    #region Validate - Exclusive Mode
+
+    [Fact]
+    public void Validate_ExclusiveMode_WhenOidcDisabled_Throws()
+    {
+        var config = new OidcConfig
+        {
+            Enabled = false,
+            ExclusiveMode = true,
+            AuthorizedSubject = "some-subject"
+        };
+
+        var exception = Should.Throw<ValidationException>(() => config.Validate());
+        exception.Message.ShouldBe("OIDC must be enabled to use exclusive mode");
+    }
+
+    [Fact]
+    public void Validate_ExclusiveMode_WithoutAuthorizedSubject_Throws()
+    {
+        var config = new OidcConfig
+        {
+            Enabled = true,
+            ExclusiveMode = true,
+            IssuerUrl = "https://auth.example.com",
+            ClientId = "my-client",
+            ProviderName = "Test",
+            AuthorizedSubject = string.Empty
+        };
+
+        var exception = Should.Throw<ValidationException>(() => config.Validate());
+        exception.Message.ShouldBe("An OIDC account must be linked before enabling exclusive mode");
+    }
+
+    [Fact]
+    public void Validate_ExclusiveMode_FullyConfigured_DoesNotThrow()
+    {
+        var config = new OidcConfig
+        {
+            Enabled = true,
+            ExclusiveMode = true,
+            IssuerUrl = "https://auth.example.com",
+            ClientId = "my-client",
+            ProviderName = "Test",
+            AuthorizedSubject = "user-123"
+        };
+
+        Should.NotThrow(() => config.Validate());
+    }
+
+    [Fact]
+    public void Validate_ExclusiveModeFalse_OidcDisabled_DoesNotThrow()
+    {
+        var config = new OidcConfig
+        {
+            Enabled = false,
+            ExclusiveMode = false
+        };
+
+        Should.NotThrow(() => config.Validate());
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void Validate_ExclusiveMode_WhitespaceAuthorizedSubject_Throws(string subject)
+    {
+        var config = new OidcConfig
+        {
+            Enabled = true,
+            ExclusiveMode = true,
+            IssuerUrl = "https://auth.example.com",
+            ClientId = "my-client",
+            ProviderName = "Test",
+            AuthorizedSubject = subject
+        };
+
+        var exception = Should.Throw<ValidationException>(() => config.Validate());
+        exception.Message.ShouldBe("An OIDC account must be linked before enabling exclusive mode");
     }
 
     #endregion

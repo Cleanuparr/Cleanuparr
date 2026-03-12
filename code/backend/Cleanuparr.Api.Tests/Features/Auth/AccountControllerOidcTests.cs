@@ -188,6 +188,97 @@ public class AccountControllerOidcTests : IClassFixture<AccountControllerOidcTes
         response.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
     }
 
+    #region Exclusive Mode
+
+    [Fact, TestPriority(10)]
+    public async Task EnableExclusiveMode_ViaDirectDbUpdate()
+    {
+        await _factory.SetOidcExclusiveModeAsync(true);
+
+        var response = await _client.GetAsync("/api/auth/status");
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        body.GetProperty("oidcExclusiveMode").GetBoolean().ShouldBeTrue();
+    }
+
+    [Fact, TestPriority(11)]
+    public async Task ChangePassword_Blocked_WhenExclusiveModeActive()
+    {
+        var response = await _client.PutAsJsonAsync("/api/account/password", new
+        {
+            currentPassword = "LinkPassword123!",
+            newPassword = "NewPassword456!"
+        });
+
+        response.StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+    }
+
+    [Fact, TestPriority(12)]
+    public async Task PlexLink_Blocked_WhenExclusiveModeActive()
+    {
+        var response = await _client.PostAsync("/api/account/plex/link", null);
+
+        response.StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+    }
+
+    [Fact, TestPriority(13)]
+    public async Task PlexUnlink_Blocked_WhenExclusiveModeActive()
+    {
+        var response = await _client.DeleteAsync("/api/account/plex/link");
+
+        response.StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+    }
+
+    [Fact, TestPriority(14)]
+    public async Task OidcConfigUpdate_StillWorks_WhenExclusiveModeActive()
+    {
+        var response = await _client.PutAsJsonAsync("/api/account/oidc", new
+        {
+            enabled = true,
+            issuerUrl = "https://mock-oidc-provider.test",
+            clientId = "test-client",
+            clientSecret = "test-secret",
+            scopes = "openid profile email",
+            authorizedSubject = MockOidcAuthService.LinkedSubject,
+            providerName = "TestProvider",
+            redirectUrl = "",
+            exclusiveMode = true
+        });
+
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+    }
+
+    [Fact, TestPriority(15)]
+    public async Task OidcUnlink_ResetsExclusiveMode()
+    {
+        var response = await _client.DeleteAsync("/api/account/oidc/link");
+
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        // Verify exclusive mode was reset
+        var exclusiveMode = await _factory.GetExclusiveModeAsync();
+        exclusiveMode.ShouldBeFalse();
+    }
+
+    [Fact, TestPriority(16)]
+    public async Task DisableExclusiveMode_PasswordChangeWorks_Again()
+    {
+        // Re-enable OIDC with a linked subject but without exclusive mode
+        await _factory.EnableOidcAsync();
+        await _factory.SetOidcExclusiveModeAsync(false);
+
+        var response = await _client.PutAsJsonAsync("/api/account/password", new
+        {
+            currentPassword = "LinkPassword123!",
+            newPassword = "NewPassword789!"
+        });
+
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+    }
+
+    #endregion
+
     #region Test Infrastructure
 
     public class OidcLinkWebApplicationFactory : WebApplicationFactory<Program>
@@ -295,6 +386,28 @@ public class AccountControllerOidcTests : IClassFixture<AccountControllerOidcTes
 
             var user = await usersContext.Users.AsNoTracking().FirstOrDefaultAsync();
             return user?.Oidc.AuthorizedSubject;
+        }
+
+        public async Task SetOidcExclusiveModeAsync(bool enabled)
+        {
+            using var scope = Services.CreateScope();
+            var usersContext = scope.ServiceProvider.GetRequiredService<UsersContext>();
+
+            var user = await usersContext.Users.FirstOrDefaultAsync();
+            if (user is not null)
+            {
+                user.Oidc.ExclusiveMode = enabled;
+                await usersContext.SaveChangesAsync();
+            }
+        }
+
+        public async Task<bool> GetExclusiveModeAsync()
+        {
+            using var scope = Services.CreateScope();
+            var usersContext = scope.ServiceProvider.GetRequiredService<UsersContext>();
+
+            var user = await usersContext.Users.AsNoTracking().FirstOrDefaultAsync();
+            return user?.Oidc.ExclusiveMode ?? false;
         }
 
         protected override void Dispose(bool disposing)

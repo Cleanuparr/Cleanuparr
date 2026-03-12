@@ -304,6 +304,103 @@ public class OidcAuthControllerTests : IClassFixture<OidcAuthControllerTests.Oid
         response.StatusCode.ShouldBe(HttpStatusCode.NotFound);
     }
 
+    #region Exclusive Mode
+
+    [Fact, TestPriority(19)]
+    public async Task EnableExclusiveMode_AuthStatusReflectsIt()
+    {
+        await _factory.SetOidcExclusiveModeAsync(true);
+
+        var response = await _client.GetAsync("/api/auth/status");
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        body.GetProperty("oidcExclusiveMode").GetBoolean().ShouldBeTrue();
+    }
+
+    [Fact, TestPriority(20)]
+    public async Task PasswordLogin_Blocked_WhenExclusiveModeActive()
+    {
+        var response = await _client.PostAsJsonAsync("/api/auth/login", new
+        {
+            username = "admin",
+            password = "TestPassword123!"
+        });
+
+        response.StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+    }
+
+    [Fact, TestPriority(21)]
+    public async Task TwoFactorLogin_Blocked_WhenExclusiveModeActive()
+    {
+        var response = await _client.PostAsJsonAsync("/api/auth/login/2fa", new
+        {
+            loginToken = "some-token",
+            code = "123456"
+        });
+
+        response.StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+    }
+
+    [Fact, TestPriority(22)]
+    public async Task PlexLoginPin_Blocked_WhenExclusiveModeActive()
+    {
+        var response = await _client.PostAsync("/api/auth/login/plex/pin", null);
+
+        response.StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+    }
+
+    [Fact, TestPriority(23)]
+    public async Task PlexLoginVerify_Blocked_WhenExclusiveModeActive()
+    {
+        var response = await _client.PostAsJsonAsync("/api/auth/login/plex/verify", new
+        {
+            pinId = 12345
+        });
+
+        response.StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+    }
+
+    [Fact, TestPriority(24)]
+    public async Task OidcStart_StillWorks_WhenExclusiveModeActive()
+    {
+        var response = await _client.PostAsync("/api/auth/oidc/start", null);
+
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        body.GetProperty("authorizationUrl").GetString().ShouldNotBeNullOrEmpty();
+    }
+
+    [Fact, TestPriority(25)]
+    public async Task OidcCallback_StillWorks_WhenExclusiveModeActive()
+    {
+        var response = await _client.GetAsync(
+            $"/api/auth/oidc/callback?code=valid-auth-code&state={MockOidcAuthService.ValidState}");
+
+        response.StatusCode.ShouldBe(HttpStatusCode.Redirect);
+        var location = response.Headers.Location?.ToString();
+        location.ShouldNotBeNull();
+        location.ShouldContain("code=");
+        location.ShouldNotContain("oidc_error");
+    }
+
+    [Fact, TestPriority(26)]
+    public async Task DisableExclusiveMode_PasswordLoginWorks_Again()
+    {
+        await _factory.SetOidcExclusiveModeAsync(false);
+
+        var response = await _client.PostAsJsonAsync("/api/auth/login", new
+        {
+            username = "admin",
+            password = "TestPassword123!"
+        });
+
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+    }
+
+    #endregion
+
     #region Test Infrastructure
 
     /// <summary>
@@ -409,6 +506,19 @@ public class OidcAuthControllerTests : IClassFixture<OidcAuthControllerTests.Oid
             if (user is not null)
             {
                 user.Oidc.AuthorizedSubject = subject;
+                await usersContext.SaveChangesAsync();
+            }
+        }
+
+        public async Task SetOidcExclusiveModeAsync(bool enabled)
+        {
+            using var scope = Services.CreateScope();
+            var usersContext = scope.ServiceProvider.GetRequiredService<UsersContext>();
+
+            var user = await usersContext.Users.FirstOrDefaultAsync();
+            if (user is not null)
+            {
+                user.Oidc.ExclusiveMode = enabled;
                 await usersContext.SaveChangesAsync();
             }
         }
