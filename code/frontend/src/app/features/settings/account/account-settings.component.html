@@ -333,7 +333,7 @@
   </app-card>
 
   <!-- OIDC / SSO -->
-  <app-accordion header="OIDC / SSO" subtitle="OpenID Connect single sign-on" [(expanded)]="oidcExpanded">
+  <app-card header="OIDC / SSO">
     <div class="form-stack">
       <app-toggle label="Enable OIDC" [(checked)]="oidcEnabled"
         helpKey="account:oidcEnabled"
@@ -398,6 +398,6 @@
         </app-button>
       </div>
     </div>
-  </app-accordion>
+  </app-card>
 </div>
 }
