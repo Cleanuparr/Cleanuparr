@@ -1,17 +1,18 @@
 import { Component, ChangeDetectionStrategy, inject, signal, computed, viewChild, effect, afterNextRender, OnDestroy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { ButtonComponent, InputComponent, SpinnerComponent } from '@ui';
+import { ButtonComponent, InputComponent, SpinnerComponent, EmptyStateComponent } from '@ui';
 import { AuthService } from '@core/auth/auth.service';
 import { ToastService } from '@core/services/toast.service';
 import { NgIconComponent, provideIcons } from '@ng-icons/core';
 import { tablerCheck, tablerCopy, tablerShieldLock } from '@ng-icons/tabler-icons';
 import { QRCodeComponent } from 'angularx-qrcode';
+import { forkJoin, timer } from 'rxjs';
 
 @Component({
   selector: 'app-setup',
   standalone: true,
-  imports: [FormsModule, ButtonComponent, InputComponent, SpinnerComponent, NgIconComponent, QRCodeComponent],
+  imports: [FormsModule, ButtonComponent, InputComponent, SpinnerComponent, EmptyStateComponent, NgIconComponent, QRCodeComponent],
   templateUrl: './setup.component.html',
   styleUrl: './setup.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -21,6 +22,9 @@ export class SetupComponent implements OnDestroy {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   private readonly toast = inject(ToastService);
+
+  readonly connectionError = this.auth.connectionError;
+  readonly retrying = signal(false);
 
   currentStep = signal(1);
   loading = signal(false);
@@ -83,6 +87,16 @@ export class SetupComponent implements OnDestroy {
       const step = this.currentStep();
       if (step === 2) {
         setTimeout(() => this.verificationInput()?.focus());
+      }
+    });
+  }
+
+  retryConnection(): void {
+    this.retrying.set(true);
+    forkJoin([this.auth.retryConnection(), timer(500)]).subscribe(() => {
+      this.retrying.set(false);
+      if (this.auth.isSetupComplete()) {
+        this.router.navigate(['/auth/login']);
       }
     });
   }
