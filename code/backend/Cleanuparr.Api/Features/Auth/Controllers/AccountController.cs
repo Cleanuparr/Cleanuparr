@@ -557,8 +557,7 @@ public sealed class AccountController : ControllerBase
         }
 
         var oidc = user.Oidc;
-        return oidc is { Enabled: true, ExclusiveMode: true }
-               && !string.IsNullOrEmpty(oidc.AuthorizedSubject);
+        return oidc is { Enabled: true, ExclusiveMode: true };
     }
 
     private async Task<User?> GetCurrentUser(bool includeRecoveryCodes = false)

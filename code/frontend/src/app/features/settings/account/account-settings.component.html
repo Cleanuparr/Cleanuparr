@@ -382,12 +382,10 @@
           </app-button>
         </div>
 
-        @if (oidcAuthorizedSubject()) {
-          <div class="form-divider"></div>
-          <app-toggle label="Exclusive Mode" [(checked)]="oidcExclusiveMode"
-            helpKey="account:oidcExclusiveMode"
-            hint="When enabled, only OIDC login is allowed. Username/password and Plex login will be disabled." />
-        }
+        <div class="form-divider"></div>
+        <app-toggle label="Exclusive Mode" [(checked)]="oidcExclusiveMode"
+          helpKey="account:oidcExclusiveMode"
+          hint="When enabled, only OIDC login is allowed. Username/password and Plex login will be disabled." />
       }
 
       <div class="form-divider"></div>

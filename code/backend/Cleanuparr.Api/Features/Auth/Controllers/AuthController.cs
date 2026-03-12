@@ -68,7 +68,8 @@ public sealed class AuthController : ControllerBase
 
         var oidcConfig = user?.Oidc;
         var oidcEnabled = oidcConfig is { Enabled: true } &&
-                          !string.IsNullOrEmpty(oidcConfig.AuthorizedSubject);
+                          !string.IsNullOrEmpty(oidcConfig.IssuerUrl) &&
+                          !string.IsNullOrEmpty(oidcConfig.ClientId);
 
         var oidcExclusiveMode = oidcEnabled && oidcConfig!.ExclusiveMode;
 
@@ -550,7 +551,9 @@ public sealed class AuthController : ControllerBase
         var user = await _usersContext.Users.AsNoTracking().FirstOrDefaultAsync();
         var oidcConfig = user?.Oidc;
 
-        if (oidcConfig is not { Enabled: true } || string.IsNullOrEmpty(oidcConfig.AuthorizedSubject))
+        if (oidcConfig is not { Enabled: true } ||
+            string.IsNullOrEmpty(oidcConfig.IssuerUrl) ||
+            string.IsNullOrEmpty(oidcConfig.ClientId))
         {
             return BadRequest(new { error = "OIDC is not enabled or not configured" });
         }
@@ -607,7 +610,8 @@ public sealed class AuthController : ControllerBase
             return Redirect($"{basePath}/auth/login?oidc_error=authentication_failed");
         }
 
-        if (result.Subject != user.Oidc.AuthorizedSubject)
+        if (!string.IsNullOrEmpty(user.Oidc.AuthorizedSubject) &&
+            result.Subject != user.Oidc.AuthorizedSubject)
         {
             _logger.LogWarning("OIDC subject mismatch. Expected: {Expected}, Got: {Got}",
                 user.Oidc.AuthorizedSubject, result.Subject);
@@ -765,7 +769,6 @@ public sealed class AuthController : ControllerBase
         }
 
         var oidc = user.Oidc;
-        return oidc is { Enabled: true, ExclusiveMode: true }
-               && !string.IsNullOrEmpty(oidc.AuthorizedSubject);
+        return oidc is { Enabled: true, ExclusiveMode: true };
     }
 }

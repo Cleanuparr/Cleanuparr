@@ -69,12 +69,6 @@ public sealed record OidcConfig
             throw new ValidationException("OIDC must be enabled to use exclusive mode");
         }
 
-        if (ExclusiveMode && string.IsNullOrWhiteSpace(AuthorizedSubject))
-        {
-            throw new ValidationException(
-                "An OIDC account must be linked before enabling exclusive mode");
-        }
-
         if (!Enabled)
         {
             return;
