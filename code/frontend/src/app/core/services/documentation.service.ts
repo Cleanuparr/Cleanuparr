@@ -183,6 +183,7 @@ export class DocumentationService {
       'oidcClientSecret': 'client-secret',
       'oidcScopes': 'scopes',
       'oidcRedirectUrl': 'redirect-url',
+      'oidcLinkAccount': 'link-account',
       'oidcExclusiveMode': 'exclusive-mode',
     },
     'notifications/gotify': {

@@ -11,8 +11,10 @@ import { AccountApi, AccountInfo } from '@core/api/account.api';
 import { AuthService } from '@core/auth/auth.service';
 import { ToastService } from '@core/services/toast.service';
 import { ConfirmService } from '@core/services/confirm.service';
+import { DocumentationService } from '@core/services/documentation.service';
 import { DeferredLoader } from '@shared/utils/loading.util';
 import { QRCodeComponent } from 'angularx-qrcode';
+import { NgIcon } from '@ng-icons/core';
 
 @Component({
   selector: 'app-account-settings',
@@ -20,7 +22,7 @@ import { QRCodeComponent } from 'angularx-qrcode';
   imports: [
     PageHeaderComponent, CardComponent, ButtonComponent, InputComponent,
     SpinnerComponent, AccordionComponent, ToggleComponent,
-    EmptyStateComponent, LoadingStateComponent, QRCodeComponent,
+    EmptyStateComponent, LoadingStateComponent, QRCodeComponent, NgIcon,
   ],
   templateUrl: './account-settings.component.html',
   styleUrl: './account-settings.component.scss',
@@ -32,6 +34,7 @@ export class AccountSettingsComponent implements OnInit, OnDestroy {
   private readonly toast = inject(ToastService);
   private readonly confirmService = inject(ConfirmService);
   private readonly route = inject(ActivatedRoute);
+  private readonly docs = inject(DocumentationService);
 
   readonly loader = new DeferredLoader();
   readonly loadError = signal(false);
@@ -413,6 +416,12 @@ export class AccountSettingsComponent implements OnInit, OnDestroy {
   }
 
   // OIDC
+  openLinkAccountDocs(event: Event): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.docs.openFieldDocumentation('account', 'oidcLinkAccount');
+  }
+
   saveOidcConfig(): void {
     this.oidcSaving.set(true);
     this.api.updateOidcConfig({

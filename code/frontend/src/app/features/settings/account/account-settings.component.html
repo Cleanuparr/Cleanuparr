@@ -366,7 +366,11 @@
 
         <div class="oidc-link-section">
           <div class="oidc-link-section__info">
-            <span class="oidc-link-section__label">Link OIDC Account</span>
+            <span class="oidc-link-section__label">Link OIDC Account
+              <button type="button" class="field-help-btn" (click)="openLinkAccountDocs($event)" aria-label="Open documentation for Link OIDC Account">
+                <ng-icon name="tablerQuestionMark" size="14" />
+              </button>
+            </span>
             @if (oidcAuthorizedSubject()) {
               <span class="oidc-link-section__hint">
                 Linked to subject: <code class="oidc-link-section__subject">{{ oidcAuthorizedSubject() }}</code>
