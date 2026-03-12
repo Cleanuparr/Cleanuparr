@@ -65,6 +65,11 @@ public sealed class AccountController : ControllerBase
     [HttpPut("password")]
     public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest request)
     {
+        if (await IsOidcExclusiveModeActive())
+        {
+            return StatusCode(403, new { error = "Password changes are disabled while OIDC exclusive mode is active." });
+        }
+
         var user = await GetCurrentUser();
         if (user is null)
         {
@@ -313,6 +318,11 @@ public sealed class AccountController : ControllerBase
     [HttpPost("plex/link")]
     public async Task<IActionResult> StartPlexLink()
     {
+        if (await IsOidcExclusiveModeActive())
+        {
+            return StatusCode(403, new { error = "Plex account management is disabled while OIDC exclusive mode is active." });
+        }
+
         var pin = await _plexAuthService.RequestPin();
 
         return Ok(new { pinId = pin.PinId, authUrl = pin.AuthUrl });
@@ -321,6 +331,11 @@ public sealed class AccountController : ControllerBase
     [HttpPost("plex/link/verify")]
     public async Task<IActionResult> VerifyPlexLink([FromBody] PlexPinRequest request)
     {
+        if (await IsOidcExclusiveModeActive())
+        {
+            return StatusCode(403, new { error = "Plex account management is disabled while OIDC exclusive mode is active." });
+        }
+
         var pinResult = await _plexAuthService.CheckPin(request.PinId);
 
         if (!pinResult.Completed || pinResult.AuthToken is null)
@@ -352,6 +367,11 @@ public sealed class AccountController : ControllerBase
     [HttpDelete("plex/link")]
     public async Task<IActionResult> UnlinkPlex()
     {
+        if (await IsOidcExclusiveModeActive())
+        {
+            return StatusCode(403, new { error = "Plex account management is disabled while OIDC exclusive mode is active." });
+        }
+
         var user = await GetCurrentUser();
         if (user is null)
         {
@@ -506,6 +526,7 @@ public sealed class AccountController : ControllerBase
             }
 
             user.Oidc.AuthorizedSubject = string.Empty;
+            user.Oidc.ExclusiveMode = false;
             user.UpdatedAt = DateTime.UtcNow;
             await _usersContext.SaveChangesAsync();
 
@@ -525,6 +546,19 @@ public sealed class AccountController : ControllerBase
             ? HttpContext.GetExternalBaseUrl()
             : redirectUrl.TrimEnd('/');
         return $"{baseUrl}/api/account/oidc/link/callback";
+    }
+
+    private async Task<bool> IsOidcExclusiveModeActive()
+    {
+        var user = await _usersContext.Users.AsNoTracking().FirstOrDefaultAsync();
+        if (user is not { SetupCompleted: true })
+        {
+            return false;
+        }
+
+        var oidc = user.Oidc;
+        return oidc is { Enabled: true, ExclusiveMode: true }
+               && !string.IsNullOrEmpty(oidc.AuthorizedSubject);
     }
 
     private async Task<User?> GetCurrentUser(bool includeRecoveryCodes = false)

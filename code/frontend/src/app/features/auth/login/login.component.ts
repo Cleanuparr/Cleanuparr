@@ -45,6 +45,7 @@ export class LoginComponent implements OnInit, OnDestroy {
   // OIDC
   oidcEnabled = this.auth.oidcEnabled;
   oidcProviderName = this.auth.oidcProviderName;
+  oidcExclusiveMode = this.auth.oidcExclusiveMode;
   oidcLoading = signal(false);
 
   // Auto-focus refs

@@ -7,4 +7,5 @@ public sealed record AuthStatusResponse
     public bool AuthBypassActive { get; init; }
     public bool OidcEnabled { get; init; }
     public string OidcProviderName { get; init; } = string.Empty;
+    public bool OidcExclusiveMode { get; init; }
 }

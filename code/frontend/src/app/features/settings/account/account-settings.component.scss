@@ -8,6 +8,15 @@
 .form-divider { @include form-divider; }
 .form-actions { @include form-actions; }
 
+.section-notice {
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: rgba(234, 179, 8, 0.1);
+  color: var(--color-warning);
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+}
+
 .section-hint {
   font-size: var(--font-size-sm);
   color: var(--text-secondary);

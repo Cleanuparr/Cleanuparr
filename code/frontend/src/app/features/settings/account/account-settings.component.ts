@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, inject, signal, computed, OnInit, OnDestroy } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, signal, computed, effect, OnInit, OnDestroy } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { PageHeaderComponent } from '@layout/page-header/page-header.component';
 import {
@@ -95,9 +95,19 @@ export class AccountSettingsComponent implements OnInit, OnDestroy {
   readonly oidcRedirectUrl = signal('');
   readonly oidcAuthorizedSubject = signal('');
   readonly oidcExpanded = signal(false);
+  readonly oidcExclusiveMode = signal(false);
   readonly oidcLinking = signal(false);
   readonly oidcSaving = signal(false);
   readonly oidcSaved = signal(false);
+
+  constructor() {
+    // Reset exclusive mode when OIDC is toggled off
+    effect(() => {
+      if (!this.oidcEnabled()) {
+        this.oidcExclusiveMode.set(false);
+      }
+    });
+  }
 
   ngOnInit(): void {
     const params = this.route.snapshot.queryParams;
@@ -130,6 +140,7 @@ export class AccountSettingsComponent implements OnInit, OnDestroy {
         this.oidcProviderName.set(oidc.providerName || 'OIDC');
         this.oidcRedirectUrl.set(oidc.redirectUrl || '');
         this.oidcAuthorizedSubject.set(oidc.authorizedSubject);
+        this.oidcExclusiveMode.set(oidc.exclusiveMode);
         this.loader.stop();
       },
       error: () => {
@@ -412,6 +423,7 @@ export class AccountSettingsComponent implements OnInit, OnDestroy {
       authorizedSubject: this.oidcAuthorizedSubject(),
       providerName: this.oidcProviderName(),
       redirectUrl: this.oidcRedirectUrl(),
+      exclusiveMode: this.oidcExclusiveMode(),
     }).subscribe({
       next: () => {
         this.toast.success('OIDC settings saved');

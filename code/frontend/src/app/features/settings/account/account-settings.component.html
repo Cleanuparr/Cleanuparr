@@ -20,6 +20,11 @@
   <!-- Change Password -->
   <app-card header="Change Password">
     <div class="form-stack">
+      @if (oidcExclusiveMode()) {
+        <div class="section-notice">
+          Password login is disabled while OIDC exclusive mode is active.
+        </div>
+      }
       <app-input
         label="Current Password"
         type="password"
@@ -54,8 +59,8 @@
       <div class="form-actions">
         <app-button
           variant="primary"
-          [glowing]="!!currentPassword() && !!newPassword() && !!confirmPassword()"
-          [disabled]="!currentPassword() || !newPassword() || !confirmPassword() || changingPassword()"
+          [glowing]="!!currentPassword() && !!newPassword() && !!confirmPassword() && !oidcExclusiveMode()"
+          [disabled]="!currentPassword() || !newPassword() || !confirmPassword() || changingPassword() || oidcExclusiveMode()"
           (clicked)="changePassword()"
         >
           @if (changingPassword()) {
@@ -283,6 +288,11 @@
   <!-- Plex Integration -->
   <app-card header="Plex Integration">
     <div class="form-stack">
+      @if (oidcExclusiveMode()) {
+        <div class="section-notice">
+          Plex login is disabled while OIDC exclusive mode is active.
+        </div>
+      }
       @if (account()!.plexLinked) {
         <div class="status-row">
           <span class="status-label">Linked Account</span>
@@ -291,7 +301,7 @@
         <div class="form-actions">
           <app-button
             variant="destructive"
-            [disabled]="plexUnlinking()"
+            [disabled]="plexUnlinking() || oidcExclusiveMode()"
             (clicked)="confirmUnlinkPlex()"
           >
             @if (plexUnlinking()) {
@@ -308,7 +318,7 @@
         <div class="form-actions">
           <app-button
             variant="primary"
-            [disabled]="plexLinking()"
+            [disabled]="plexLinking() || oidcExclusiveMode()"
             (clicked)="startPlexLink()"
           >
             @if (plexLinking()) {
@@ -364,6 +374,12 @@
             {{ oidcAuthorizedSubject() ? 'Re-link' : 'Link Account' }}
           </app-button>
         </div>
+
+        @if (oidcAuthorizedSubject()) {
+          <div class="form-divider"></div>
+          <app-toggle label="Exclusive Mode" [(checked)]="oidcExclusiveMode"
+            hint="When enabled, only OIDC login is allowed. Username/password and Plex login will be disabled." />
+        }
       }
 
       <div class="form-divider"></div>

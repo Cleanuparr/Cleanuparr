@@ -56,8 +56,25 @@ public sealed record OidcConfig
     [MaxLength(500)]
     public string RedirectUrl { get; set; } = string.Empty;
 
+    /// <summary>
+    /// When enabled, all non-OIDC login methods (username/password, Plex) are disabled.
+    /// Requires OIDC to be fully configured with an authorized subject.
+    /// </summary>
+    public bool ExclusiveMode { get; set; }
+
     public void Validate()
     {
+        if (ExclusiveMode && !Enabled)
+        {
+            throw new ValidationException("OIDC must be enabled to use exclusive mode");
+        }
+
+        if (ExclusiveMode && string.IsNullOrWhiteSpace(AuthorizedSubject))
+        {
+            throw new ValidationException(
+                "An OIDC account must be linked before enabling exclusive mode");
+        }
+
         if (!Enabled)
         {
             return;

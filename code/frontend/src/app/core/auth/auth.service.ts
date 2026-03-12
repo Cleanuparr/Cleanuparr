@@ -9,6 +9,7 @@ export interface AuthStatus {
   authBypassActive?: boolean;
   oidcEnabled?: boolean;
   oidcProviderName?: string;
+  oidcExclusiveMode?: boolean;
 }
 
 export interface LoginResponse {
@@ -50,6 +51,7 @@ export class AuthService {
   private readonly _isLoading = signal(true);
   private readonly _oidcEnabled = signal(false);
   private readonly _oidcProviderName = signal('');
+  private readonly _oidcExclusiveMode = signal(false);
 
   readonly isAuthenticated = this._isAuthenticated.asReadonly();
   readonly isSetupComplete = this._isSetupComplete.asReadonly();
@@ -57,6 +59,7 @@ export class AuthService {
   readonly isLoading = this._isLoading.asReadonly();
   readonly oidcEnabled = this._oidcEnabled.asReadonly();
   readonly oidcProviderName = this._oidcProviderName.asReadonly();
+  readonly oidcExclusiveMode = this._oidcExclusiveMode.asReadonly();
 
   private refreshTimer: ReturnType<typeof setTimeout> | null = null;
   private refreshInFlight$: Observable<TokenResponse | null> | null = null;
@@ -69,6 +72,7 @@ export class AuthService {
         this._plexLinked.set(status.plexLinked);
         this._oidcEnabled.set(status.oidcEnabled ?? false);
         this._oidcProviderName.set(status.oidcProviderName ?? '');
+        this._oidcExclusiveMode.set(status.oidcExclusiveMode ?? false);
 
         // Trusted network bypass — no tokens needed
         if (status.authBypassActive && status.setupCompleted) {

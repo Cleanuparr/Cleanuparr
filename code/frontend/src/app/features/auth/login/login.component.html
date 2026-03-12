@@ -11,58 +11,60 @@
 <!-- Credentials view -->
 @if (view() === 'credentials') {
   <div class="login-view">
-    <form class="login-form" (ngSubmit)="submitLogin()">
-      <app-input
-        #usernameInput
-        label="Username"
-        placeholder="Enter your username"
-        type="text"
-        [value]="username()"
-        (valueChange)="username.set($event)"
-      />
-      <app-input
-        label="Password"
-        placeholder="Enter your password"
-        type="password"
-        [value]="password()"
-        (valueChange)="password.set($event)"
-      />
-      <app-button
-        variant="primary"
-        class="login-submit"
-        [disabled]="!username() || !password() || loading() || retryCountdown() > 0"
-        type="submit"
-      >
-        @if (loading()) {
-          <app-spinner size="sm" />
-        } @else {
-          Sign In
-        }
-      </app-button>
-    </form>
+    @if (!oidcExclusiveMode()) {
+      <form class="login-form" (ngSubmit)="submitLogin()">
+        <app-input
+          #usernameInput
+          label="Username"
+          placeholder="Enter your username"
+          type="text"
+          [value]="username()"
+          (valueChange)="username.set($event)"
+        />
+        <app-input
+          label="Password"
+          placeholder="Enter your password"
+          type="password"
+          [value]="password()"
+          (valueChange)="password.set($event)"
+        />
+        <app-button
+          variant="primary"
+          class="login-submit"
+          [disabled]="!username() || !password() || loading() || retryCountdown() > 0"
+          type="submit"
+        >
+          @if (loading()) {
+            <app-spinner size="sm" />
+          } @else {
+            Sign In
+          }
+        </app-button>
+      </form>
 
-    @if (plexLinked() || oidcEnabled()) {
-      <div class="divider">
-        <span>or</span>
-      </div>
-    }
+      @if (plexLinked() || oidcEnabled()) {
+        <div class="divider">
+          <span>or</span>
+        </div>
+      }
 
-    @if (plexLinked()) {
-      <button
-        class="plex-login-btn"
-        [disabled]="plexLoading()"
-        (click)="startPlexLogin()"
-      >
-        @if (plexLoading()) {
-          <app-spinner size="sm" />
-          Waiting for Plex...
-        } @else {
-          <svg class="plex-login-btn__icon" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M5.074 1L12 12 5.074 23h5.854L18.926 12 11.928 1z"/>
-          </svg>
-          Sign in with Plex
-        }
-      </button>
+      @if (plexLinked()) {
+        <button
+          class="plex-login-btn"
+          [disabled]="plexLoading()"
+          (click)="startPlexLogin()"
+        >
+          @if (plexLoading()) {
+            <app-spinner size="sm" />
+            Waiting for Plex...
+          } @else {
+            <svg class="plex-login-btn__icon" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M5.074 1L12 12 5.074 23h5.854L18.926 12 11.928 1z"/>
+            </svg>
+            Sign in with Plex
+          }
+        </button>
+      }
     }
 
     @if (oidcEnabled()) {

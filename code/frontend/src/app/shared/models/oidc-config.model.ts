@@ -7,4 +7,5 @@ export interface OidcConfig {
   authorizedSubject: string;
   providerName: string;
   redirectUrl: string;
+  exclusiveMode: boolean;
 }

@@ -70,13 +70,16 @@ public sealed class AuthController : ControllerBase
         var oidcEnabled = oidcConfig is { Enabled: true } &&
                           !string.IsNullOrEmpty(oidcConfig.AuthorizedSubject);
 
+        var oidcExclusiveMode = oidcEnabled && oidcConfig!.ExclusiveMode;
+
         return Ok(new AuthStatusResponse
         {
             SetupCompleted = user is { SetupCompleted: true },
             PlexLinked = user?.PlexAccountId is not null,
             AuthBypassActive = authBypass,
             OidcEnabled = oidcEnabled,
-            OidcProviderName = oidcEnabled ? oidcConfig!.ProviderName : string.Empty
+            OidcProviderName = oidcEnabled ? oidcConfig!.ProviderName : string.Empty,
+            OidcExclusiveMode = oidcExclusiveMode
         });
     }
 
@@ -253,6 +256,11 @@ public sealed class AuthController : ControllerBase
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {
+        if (await IsOidcExclusiveModeActive())
+        {
+            return StatusCode(403, new { error = "Login with credentials is disabled. Use OIDC to sign in." });
+        }
+
         var user = await _usersContext.Users.AsNoTracking().FirstOrDefaultAsync();
 
         if (user is null || !user.SetupCompleted)
@@ -306,6 +314,11 @@ public sealed class AuthController : ControllerBase
     [HttpPost("login/2fa")]
     public async Task<IActionResult> VerifyTwoFactor([FromBody] TwoFactorRequest request)
     {
+        if (await IsOidcExclusiveModeActive())
+        {
+            return StatusCode(403, new { error = "Login with credentials is disabled. Use OIDC to sign in." });
+        }
+
         var userId = _jwtService.ValidateLoginToken(request.LoginToken);
         if (userId is null)
         {
@@ -467,6 +480,11 @@ public sealed class AuthController : ControllerBase
     [HttpPost("login/plex/pin")]
     public async Task<IActionResult> RequestPlexPin()
     {
+        if (await IsOidcExclusiveModeActive())
+        {
+            return StatusCode(403, new { error = "Plex login is disabled. Use OIDC to sign in." });
+        }
+
         var user = await _usersContext.Users.AsNoTracking().FirstOrDefaultAsync();
         if (user is null || !user.SetupCompleted || user.PlexAccountId is null)
         {
@@ -485,6 +503,11 @@ public sealed class AuthController : ControllerBase
     [HttpPost("login/plex/verify")]
     public async Task<IActionResult> VerifyPlexLogin([FromBody] PlexPinRequest request)
     {
+        if (await IsOidcExclusiveModeActive())
+        {
+            return StatusCode(403, new { error = "Plex login is disabled. Use OIDC to sign in." });
+        }
+
         var user = await _usersContext.Users.FirstOrDefaultAsync();
         if (user is null || !user.SetupCompleted || user.PlexAccountId is null)
         {
@@ -731,5 +754,18 @@ public sealed class AuthController : ControllerBase
         var bytes = System.Text.Encoding.UTF8.GetBytes(token);
         var hash = SHA256.HashData(bytes);
         return Convert.ToBase64String(hash);
+    }
+
+    private async Task<bool> IsOidcExclusiveModeActive()
+    {
+        var user = await _usersContext.Users.AsNoTracking().FirstOrDefaultAsync();
+        if (user is not { SetupCompleted: true })
+        {
+            return false;
+        }
+
+        var oidc = user.Oidc;
+        return oidc is { Enabled: true, ExclusiveMode: true }
+               && !string.IsNullOrEmpty(oidc.AuthorizedSubject);
     }
 }

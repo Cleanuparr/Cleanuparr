@@ -20,6 +20,8 @@ public sealed record UpdateOidcConfigRequest
 
     public string RedirectUrl { get; init; } = string.Empty;
 
+    public bool ExclusiveMode { get; init; }
+
     public void ApplyTo(OidcConfig existingConfig)
     {
         var previousIssuerUrl = existingConfig.IssuerUrl;
@@ -30,6 +32,7 @@ public sealed record UpdateOidcConfigRequest
         existingConfig.Scopes = Scopes;
         existingConfig.ProviderName = ProviderName;
         existingConfig.RedirectUrl = RedirectUrl;
+        existingConfig.ExclusiveMode = ExclusiveMode;
 
         if (!ClientSecret.IsPlaceholder())
         {
