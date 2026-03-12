@@ -15,7 +15,7 @@ on:
 
 # Cancel in-progress runs for the same PR
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: Tests-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
