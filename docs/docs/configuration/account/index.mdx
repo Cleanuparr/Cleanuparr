@@ -147,9 +147,9 @@ Replace `https://cleanuparr.example.com` with your actual base URL.
   title="Link Account"
 >
 
-After saving your OIDC settings, click the **Link Account** button to connect your Cleanuparr account to your identity provider. This opens your provider's login page in a new window, where you authenticate and authorize Cleanuparr.
+Linking an account is **optional**. By default, when no account is linked, **any user who can authenticate with your identity provider** is allowed to sign in. Your provider controls who has access — if a user can log in to the configured OIDC client, they are permitted into Cleanuparr.
 
-Once linking is complete, your provider's **subject identifier** (a unique ID for your account) is displayed. Only this specific identity can sign in via OIDC — no other accounts from your provider will be able to log in.
+If you want to **restrict access to a single identity**, click the **Link Account** button to connect your Cleanuparr account to a specific user from your provider. This opens your provider's login page, where you authenticate and authorize Cleanuparr. Once linked, **only that specific identity** can sign in via OIDC — all other users from your provider will be rejected.
 
 **Steps to link:**
 1. Fill in all OIDC settings above and click **Save OIDC Settings**.
@@ -168,8 +168,6 @@ You can re-link at any time by clicking **Re-link**. This replaces the currently
 >
 
 When enabled, **only OIDC login is allowed**. Username/password login and Plex login are completely disabled. This is useful if you want to enforce that all authentication goes through your identity provider.
-
-Exclusive Mode can only be enabled after you have successfully linked an OIDC account.
 
 <Warning>
 **Lockout risk:** If your identity provider goes down or becomes unreachable while exclusive mode is active, you will not be able to sign in to Cleanuparr. To recover, you would need to directly modify the database to disable exclusive mode.
