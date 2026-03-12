@@ -1,0 +1,9 @@
+<span class="label">
+  {{ label() }}
+  @if (helpKey()) {
+    <button type="button" class="field-help-btn" (click)="onHelpClick($event)"
+      [attr.aria-label]="'Open documentation for ' + label()" tabindex="-1">
+      <ng-icon name="tablerQuestionMark" size="14" />
+    </button>
+  }
+</span>

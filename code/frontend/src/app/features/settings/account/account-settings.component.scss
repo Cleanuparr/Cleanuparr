@@ -190,12 +190,6 @@
     gap: var(--space-1);
   }
 
-  &__label {
-    font-size: var(--font-size-sm);
-    font-weight: 500;
-    color: var(--text-primary);
-  }
-
   &__hint {
     font-size: var(--font-size-xs);
     color: var(--text-tertiary);

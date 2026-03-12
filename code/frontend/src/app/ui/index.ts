@@ -3,6 +3,7 @@ export { ButtonComponent } from './button/button.component';
 export type { ButtonVariant, ButtonSize } from './button/button.component';
 export { CardComponent } from './card/card.component';
 export { InputComponent } from './input/input.component';
+export { LabelComponent } from './label/label.component';
 export { SpinnerComponent } from './spinner/spinner.component';
 export { ToggleComponent } from './toggle/toggle.component';
 export { IconComponent } from './icon/icon.component';
