@@ -1,3 +1,18 @@
+@if (connectionError() || retrying()) {
+  <app-empty-state
+    heading="Could not connect to server"
+    description="Failed to connect to the server. Please check that the server is running and try again."
+  >
+    <app-button variant="primary" size="sm" [disabled]="retrying()" (clicked)="retryConnection()">
+      @if (retrying()) {
+        <app-spinner size="sm" />
+      } @else {
+        Retry
+      }
+    </app-button>
+  </app-empty-state>
+} @else {
+
 <h2 class="setup-title">Initial Setup</h2>
 
 <div class="steps-indicator">
@@ -235,4 +250,6 @@
       </app-button>
     </div>
   </div>
+}
+
 }

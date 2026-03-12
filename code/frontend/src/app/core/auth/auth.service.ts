@@ -49,6 +49,7 @@ export class AuthService {
   private readonly _isSetupComplete = signal(false);
   private readonly _plexLinked = signal(false);
   private readonly _isLoading = signal(true);
+  private readonly _connectionError = signal(false);
   private readonly _oidcEnabled = signal(false);
   private readonly _oidcProviderName = signal('');
   private readonly _oidcExclusiveMode = signal(false);
@@ -57,6 +58,7 @@ export class AuthService {
   readonly isSetupComplete = this._isSetupComplete.asReadonly();
   readonly plexLinked = this._plexLinked.asReadonly();
   readonly isLoading = this._isLoading.asReadonly();
+  readonly connectionError = this._connectionError.asReadonly();
   readonly oidcEnabled = this._oidcEnabled.asReadonly();
   readonly oidcProviderName = this._oidcProviderName.asReadonly();
   readonly oidcExclusiveMode = this._oidcExclusiveMode.asReadonly();
@@ -68,6 +70,7 @@ export class AuthService {
   checkStatus(): Observable<AuthStatus> {
     return this.http.get<AuthStatus>('/api/auth/status').pipe(
       tap((status) => {
+        this._connectionError.set(false);
         this._isSetupComplete.set(status.setupCompleted);
         this._plexLinked.set(status.plexLinked);
         this._oidcEnabled.set(status.oidcEnabled ?? false);
@@ -106,6 +109,7 @@ export class AuthService {
         this._isLoading.set(false);
       }),
       catchError(() => {
+        this._connectionError.set(true);
         this._isLoading.set(false);
         return of({ setupCompleted: false, plexLinked: false });
       }),
@@ -129,6 +133,12 @@ export class AuthService {
     return this.http.post<{ message: string }>('/api/auth/setup/complete', {}).pipe(
       tap(() => this._isSetupComplete.set(true)),
     );
+  }
+
+  retryConnection(): Observable<AuthStatus> {
+    this._connectionError.set(false);
+    this._isLoading.set(true);
+    return this.checkStatus();
   }
 
   // Login flow
