@@ -464,7 +464,7 @@ export class AccountSettingsComponent implements OnInit, OnDestroy {
   async confirmUnlinkOidc(): Promise<void> {
     const confirmed = await this.confirmService.confirm({
       title: 'Unlink OIDC Account',
-      message: 'This will remove the linked identity. Any user who can authenticate with your identity provider will be able to sign in.',
+      message: 'This will remove the linked identity. Anyone who can authenticate with your identity provider and is allowed to access this application will be able to sign in.',
       confirmLabel: 'Unlink',
       destructive: true,
     });
