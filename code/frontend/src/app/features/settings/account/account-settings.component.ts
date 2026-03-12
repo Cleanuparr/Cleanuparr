@@ -97,6 +97,7 @@ export class AccountSettingsComponent implements OnInit, OnDestroy {
   readonly oidcExpanded = signal(false);
   readonly oidcExclusiveMode = signal(false);
   readonly oidcLinking = signal(false);
+  readonly oidcUnlinking = signal(false);
   readonly oidcSaving = signal(false);
   readonly oidcSaved = signal(false);
 
@@ -447,6 +448,30 @@ export class AccountSettingsComponent implements OnInit, OnDestroy {
       error: () => {
         this.toast.error('Failed to start OIDC account linking');
         this.oidcLinking.set(false);
+      },
+    });
+  }
+
+  async confirmUnlinkOidc(): Promise<void> {
+    const confirmed = await this.confirmService.confirm({
+      title: 'Unlink OIDC Account',
+      message: 'This will remove the linked identity. Any user who can authenticate with your identity provider will be able to sign in.',
+      confirmLabel: 'Unlink',
+      destructive: true,
+    });
+    if (!confirmed) return;
+
+    this.oidcUnlinking.set(true);
+    this.api.unlinkOidc().subscribe({
+      next: () => {
+        this.oidcAuthorizedSubject.set('');
+        this.oidcExclusiveMode.set(false);
+        this.toast.success('OIDC account unlinked');
+        this.oidcUnlinking.set(false);
+      },
+      error: () => {
+        this.toast.error('Failed to unlink OIDC account');
+        this.oidcUnlinking.set(false);
       },
     });
   }

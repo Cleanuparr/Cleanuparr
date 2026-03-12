@@ -373,13 +373,20 @@
               </span>
             } @else {
               <span class="oidc-link-section__hint">
-                Authenticate with your identity provider to link your account. Save your OIDC settings first.
+                No account linked — any user who can authenticate with your provider can sign in. Link an account to restrict access.
               </span>
             }
           </div>
-          <app-button variant="secondary" size="sm" [loading]="oidcLinking()" [disabled]="oidcLinking()" (clicked)="startOidcLink()">
-            {{ oidcAuthorizedSubject() ? 'Re-link' : 'Link Account' }}
-          </app-button>
+          <div class="oidc-link-section__actions">
+            <app-button variant="secondary" size="sm" [loading]="oidcLinking()" [disabled]="oidcLinking()" (clicked)="startOidcLink()">
+              {{ oidcAuthorizedSubject() ? 'Re-link' : 'Link Account' }}
+            </app-button>
+            @if (oidcAuthorizedSubject()) {
+              <app-button variant="destructive" size="sm" [loading]="oidcUnlinking()" [disabled]="oidcUnlinking()" (clicked)="confirmUnlinkOidc()">
+                Unlink
+              </app-button>
+            }
+          </div>
         </div>
 
         <div class="form-divider"></div>
