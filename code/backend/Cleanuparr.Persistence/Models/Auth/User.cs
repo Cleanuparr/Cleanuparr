@@ -33,6 +33,8 @@ public class User
     [SensitiveData]
     public string? PlexAuthToken { get; set; }
 
+    public OidcConfig Oidc { get; set; } = new();
+
     [Required]
     [SensitiveData]
     public required string ApiKey { get; set; }

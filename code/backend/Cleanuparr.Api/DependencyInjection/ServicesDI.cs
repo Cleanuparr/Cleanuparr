@@ -33,6 +33,7 @@ public static class ServicesDI
             .AddSingleton<IPasswordService, PasswordService>()
             .AddSingleton<ITotpService, TotpService>()
             .AddScoped<IPlexAuthService, PlexAuthService>()
+            .AddScoped<IOidcAuthService, OidcAuthService>()
             .AddScoped<IEventPublisher, EventPublisher>()
             .AddHostedService<EventCleanupService>()
             .AddScoped<IDryRunInterceptor, DryRunInterceptor>()

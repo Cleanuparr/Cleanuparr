@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using Cleanuparr.Api.Auth;
+using Cleanuparr.Api.Extensions;
 using Cleanuparr.Api.Features.Auth.Contracts.Requests;
 using Cleanuparr.Api.Features.Auth.Contracts.Responses;
 using Cleanuparr.Api.Filters;
@@ -19,25 +20,31 @@ namespace Cleanuparr.Api.Features.Auth.Controllers;
 public sealed class AuthController : ControllerBase
 {
     private readonly UsersContext _usersContext;
+    private readonly DataContext _dataContext;
     private readonly IJwtService _jwtService;
     private readonly IPasswordService _passwordService;
     private readonly ITotpService _totpService;
     private readonly IPlexAuthService _plexAuthService;
+    private readonly IOidcAuthService _oidcAuthService;
     private readonly ILogger<AuthController> _logger;
 
     public AuthController(
         UsersContext usersContext,
+        DataContext dataContext,
         IJwtService jwtService,
         IPasswordService passwordService,
         ITotpService totpService,
         IPlexAuthService plexAuthService,
+        IOidcAuthService oidcAuthService,
         ILogger<AuthController> logger)
     {
         _usersContext = usersContext;
+        _dataContext = dataContext;
         _jwtService = jwtService;
         _passwordService = passwordService;
         _totpService = totpService;
         _plexAuthService = plexAuthService;
+        _oidcAuthService = oidcAuthService;
         _logger = logger;
     }
 
@@ -47,8 +54,7 @@ public sealed class AuthController : ControllerBase
         var user = await _usersContext.Users.AsNoTracking().FirstOrDefaultAsync();
 
         var authBypass = false;
-        await using var dataContext = DataContext.CreateStaticInstance();
-        var generalConfig = await dataContext.GeneralConfigs.AsNoTracking().FirstOrDefaultAsync();
+        var generalConfig = await _dataContext.GeneralConfigs.AsNoTracking().FirstOrDefaultAsync();
         if (generalConfig is { Auth.DisableAuthForLocalAddresses: true })
         {
             var clientIp = TrustedNetworkAuthenticationHandler.ResolveClientIp(
@@ -60,11 +66,21 @@ public sealed class AuthController : ControllerBase
             }
         }
 
+        var oidcConfig = user?.Oidc;
+        var oidcEnabled = oidcConfig is { Enabled: true } &&
+                          !string.IsNullOrEmpty(oidcConfig.IssuerUrl) &&
+                          !string.IsNullOrEmpty(oidcConfig.ClientId);
+
+        var oidcExclusiveMode = oidcEnabled && oidcConfig!.ExclusiveMode;
+
         return Ok(new AuthStatusResponse
         {
             SetupCompleted = user is { SetupCompleted: true },
             PlexLinked = user?.PlexAccountId is not null,
-            AuthBypassActive = authBypass
+            AuthBypassActive = authBypass,
+            OidcEnabled = oidcEnabled,
+            OidcProviderName = oidcEnabled ? oidcConfig!.ProviderName : string.Empty,
+            OidcExclusiveMode = oidcExclusiveMode
         });
     }
 
@@ -241,6 +257,11 @@ public sealed class AuthController : ControllerBase
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {
+        if (await IsOidcExclusiveModeActive())
+        {
+            return StatusCode(403, new { error = "Login with credentials is disabled. Use OIDC to sign in." });
+        }
+
         var user = await _usersContext.Users.AsNoTracking().FirstOrDefaultAsync();
 
         if (user is null || !user.SetupCompleted)
@@ -294,6 +315,11 @@ public sealed class AuthController : ControllerBase
     [HttpPost("login/2fa")]
     public async Task<IActionResult> VerifyTwoFactor([FromBody] TwoFactorRequest request)
     {
+        if (await IsOidcExclusiveModeActive())
+        {
+            return StatusCode(403, new { error = "Login with credentials is disabled. Use OIDC to sign in." });
+        }
+
         var userId = _jwtService.ValidateLoginToken(request.LoginToken);
         if (userId is null)
         {
@@ -455,6 +481,11 @@ public sealed class AuthController : ControllerBase
     [HttpPost("login/plex/pin")]
     public async Task<IActionResult> RequestPlexPin()
     {
+        if (await IsOidcExclusiveModeActive())
+        {
+            return StatusCode(403, new { error = "Plex login is disabled. Use OIDC to sign in." });
+        }
+
         var user = await _usersContext.Users.AsNoTracking().FirstOrDefaultAsync();
         if (user is null || !user.SetupCompleted || user.PlexAccountId is null)
         {
@@ -473,6 +504,11 @@ public sealed class AuthController : ControllerBase
     [HttpPost("login/plex/verify")]
     public async Task<IActionResult> VerifyPlexLogin([FromBody] PlexPinRequest request)
     {
+        if (await IsOidcExclusiveModeActive())
+        {
+            return StatusCode(403, new { error = "Plex login is disabled. Use OIDC to sign in." });
+        }
+
         var user = await _usersContext.Users.FirstOrDefaultAsync();
         if (user is null || !user.SetupCompleted || user.PlexAccountId is null)
         {
@@ -507,6 +543,119 @@ public sealed class AuthController : ControllerBase
             Completed = true,
             Tokens = tokenResponse
         });
+    }
+
+    [HttpPost("oidc/start")]
+    public async Task<IActionResult> StartOidc()
+    {
+        var user = await _usersContext.Users.AsNoTracking().FirstOrDefaultAsync();
+        var oidcConfig = user?.Oidc;
+
+        if (oidcConfig is not { Enabled: true } ||
+            string.IsNullOrEmpty(oidcConfig.IssuerUrl) ||
+            string.IsNullOrEmpty(oidcConfig.ClientId))
+        {
+            return BadRequest(new { error = "OIDC is not enabled or not configured" });
+        }
+
+        var redirectUri = GetOidcCallbackUrl(oidcConfig.RedirectUrl);
+        _logger.LogDebug("OIDC login start: using redirect URI {RedirectUri}", redirectUri);
+
+        try
+        {
+            var result = await _oidcAuthService.StartAuthorization(redirectUri);
+            return Ok(new OidcStartResponse { AuthorizationUrl = result.AuthorizationUrl });
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning(ex, "Failed to start OIDC authorization");
+            return StatusCode(429, new { error = ex.Message });
+        }
+    }
+
+    [HttpGet("oidc/callback")]
+    public async Task<IActionResult> OidcCallback(
+        [FromQuery] string? code,
+        [FromQuery] string? state,
+        [FromQuery] string? error)
+    {
+        var basePath = HttpContext.Request.GetSafeBasePath();
+
+        // Handle IdP error responses
+        if (!string.IsNullOrEmpty(error))
+        {
+            _logger.LogWarning("OIDC callback received error: {Error}", error);
+            return Redirect($"{basePath}/auth/login?oidc_error=provider_error");
+        }
+
+        if (string.IsNullOrEmpty(code) || string.IsNullOrEmpty(state))
+        {
+            return Redirect($"{basePath}/auth/login?oidc_error=invalid_request");
+        }
+
+        // Load the user early so we can use the configured redirect URL
+        var user = await _usersContext.Users.FirstOrDefaultAsync(u => u.SetupCompleted);
+        if (user is null)
+        {
+            return Redirect($"{basePath}/auth/login?oidc_error=no_account");
+        }
+
+        var redirectUri = GetOidcCallbackUrl(user.Oidc.RedirectUrl);
+        _logger.LogDebug("OIDC login callback: using redirect URI {RedirectUri}", redirectUri);
+        var result = await _oidcAuthService.HandleCallback(code, state, redirectUri);
+
+        if (!result.Success)
+        {
+            _logger.LogWarning("OIDC callback failed: {Error}", result.Error);
+            return Redirect($"{basePath}/auth/login?oidc_error=authentication_failed");
+        }
+
+        if (!string.IsNullOrEmpty(user.Oidc.AuthorizedSubject) &&
+            result.Subject != user.Oidc.AuthorizedSubject)
+        {
+            _logger.LogWarning("OIDC subject mismatch. Expected: {Expected}, Got: {Got}",
+                user.Oidc.AuthorizedSubject, result.Subject);
+            return Redirect($"{basePath}/auth/login?oidc_error=unauthorized");
+        }
+
+        var tokenResponse = await GenerateTokenResponse(user);
+
+        // Store tokens with a one-time code (never put tokens in the URL)
+        var oneTimeCode = _oidcAuthService.StoreOneTimeCode(
+            tokenResponse.AccessToken,
+            tokenResponse.RefreshToken,
+            tokenResponse.ExpiresIn);
+
+        _logger.LogInformation("User {Username} authenticated via OIDC (subject: {Subject})",
+            user.Username, result.Subject);
+
+        return Redirect($"{basePath}/auth/oidc/callback?code={Uri.EscapeDataString(oneTimeCode)}");
+    }
+
+    [HttpPost("oidc/exchange")]
+    public IActionResult ExchangeOidcCode([FromBody] OidcExchangeRequest request)
+    {
+        var result = _oidcAuthService.ExchangeOneTimeCode(request.Code);
+
+        if (result is null)
+        {
+            return NotFound(new { error = "Invalid or expired code" });
+        }
+
+        return Ok(new TokenResponse
+        {
+            AccessToken = result.AccessToken,
+            RefreshToken = result.RefreshToken,
+            ExpiresIn = result.ExpiresIn
+        });
+    }
+
+    private string GetOidcCallbackUrl(string? redirectUrl = null)
+    {
+        var baseUrl = string.IsNullOrEmpty(redirectUrl)
+            ? HttpContext.GetExternalBaseUrl()
+            : redirectUrl.TrimEnd('/');
+        return $"{baseUrl}/api/auth/oidc/callback";
     }
 
     private async Task<TokenResponse> GenerateTokenResponse(User user)
@@ -609,5 +758,17 @@ public sealed class AuthController : ControllerBase
         var bytes = System.Text.Encoding.UTF8.GetBytes(token);
         var hash = SHA256.HashData(bytes);
         return Convert.ToBase64String(hash);
+    }
+
+    private async Task<bool> IsOidcExclusiveModeActive()
+    {
+        var user = await _usersContext.Users.AsNoTracking().FirstOrDefaultAsync();
+        if (user is not { SetupCompleted: true })
+        {
+            return false;
+        }
+
+        var oidc = user.Oidc;
+        return oidc is { Enabled: true, ExclusiveMode: true };
     }
 }

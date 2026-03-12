@@ -96,24 +96,33 @@ jobs:
     uses: ./.github/workflows/test.yml
     secrets: inherit
 
+  # Run E2E tests
+  e2e:
+    needs: validate
+    if: ${{ needs.validate.outputs.is_tag == 'true' || github.event.inputs.runTests == 'true' }}
+    uses: ./.github/workflows/e2e.yml
+    secrets: inherit
+
   # Build frontend once for all build jobs and cache it
   build-frontend:
-    needs: [validate, test]
+    needs: [validate, test, e2e]
     if: |
       always() &&
       needs.validate.result == 'success' &&
       (needs.test.result == 'success' || needs.test.result == 'skipped') &&
+      (needs.e2e.result == 'success' || needs.e2e.result == 'skipped') &&
       (needs.validate.outputs.is_tag == 'true' || github.event.inputs.buildBinaries == 'true')
     uses: ./.github/workflows/build-frontend.yml
     secrets: inherit
 
   # Build portable executables
   build-executables:
-    needs: [validate, test, build-frontend]
+    needs: [validate, test, e2e, build-frontend]
     if: |
       always() &&
       needs.validate.result == 'success' &&
       (needs.test.result == 'success' || needs.test.result == 'skipped') &&
+      (needs.e2e.result == 'success' || needs.e2e.result == 'skipped') &&
       needs.build-frontend.result == 'success' &&
       (needs.validate.outputs.is_tag == 'true' || github.event.inputs.buildBinaries == 'true')
     uses: ./.github/workflows/build-executable.yml
@@ -123,11 +132,12 @@ jobs:
 
   # Build Windows installer
   build-windows-installer:
-    needs: [validate, test, build-frontend]
+    needs: [validate, test, e2e, build-frontend]
     if: |
       always() &&
       needs.validate.result == 'success' &&
       (needs.test.result == 'success' || needs.test.result == 'skipped') &&
+      (needs.e2e.result == 'success' || needs.e2e.result == 'skipped') &&
       needs.build-frontend.result == 'success' &&
       (needs.validate.outputs.is_tag == 'true' || github.event.inputs.buildBinaries == 'true')
     uses: ./.github/workflows/build-windows-installer.yml
@@ -137,11 +147,12 @@ jobs:
 
   # Build macOS installers (Intel and ARM)
   build-macos:
-    needs: [validate, test, build-frontend]
+    needs: [validate, test, e2e, build-frontend]
     if: |
       always() &&
       needs.validate.result == 'success' &&
       (needs.test.result == 'success' || needs.test.result == 'skipped') &&
+      (needs.e2e.result == 'success' || needs.e2e.result == 'skipped') &&
       needs.build-frontend.result == 'success' &&
       (needs.validate.outputs.is_tag == 'true' || github.event.inputs.buildBinaries == 'true')
     uses: ./.github/workflows/build-macos-installer.yml
@@ -151,11 +162,12 @@ jobs:
 
   # Build and push Docker image(s)
   build-docker:
-    needs: [validate, test]
+    needs: [validate, test, e2e]
     if: |
       always() &&
       needs.validate.result == 'success' &&
       (needs.test.result == 'success' || needs.test.result == 'skipped') &&
+      (needs.e2e.result == 'success' || needs.e2e.result == 'skipped') &&
       (needs.validate.outputs.is_tag == 'true' || github.event.inputs.buildDocker == 'true')
     uses: ./.github/workflows/build-docker.yml
     with:
@@ -232,7 +244,7 @@ jobs:
 
   # Summary job
   summary:
-    needs: [validate, test, build-frontend, build-executables, build-windows-installer, build-macos, build-docker]
+    needs: [validate, test, e2e, build-frontend, build-executables, build-windows-installer, build-macos, build-docker]
     runs-on: ubuntu-latest
     if: always()
 
@@ -277,6 +289,7 @@ jobs:
           }
 
           print_result "Tests" "${{ needs.test.result }}"
+          print_result "E2E Tests" "${{ needs.e2e.result }}"
           print_result "Frontend Build" "${{ needs.build-frontend.result }}"
           print_result "Portable Executables" "${{ needs.build-executables.result }}"
           print_result "Windows Installer" "${{ needs.build-windows-installer.result }}"

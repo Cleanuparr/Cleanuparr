@@ -3,6 +3,12 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Xunit;
+
+// Integration tests share file-system state (config-dir users.db used by SetupGuardMiddleware),
+// so we must run them sequentially to avoid interference between factories.
+[assembly: CollectionBehavior(DisableTestParallelization = true)]
 
 namespace Cleanuparr.Api.Tests;
 
@@ -41,10 +47,19 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
                 options.UseSqlite($"Data Source={dbPath}");
             });
 
-            // Ensure DB is created
-            var sp = services.BuildServiceProvider();
-            using var scope = sp.CreateScope();
-            var db = scope.ServiceProvider.GetRequiredService<UsersContext>();
+            // Remove all hosted services (Quartz scheduler, BackgroundJobManager) to prevent
+            // Quartz.Logging.LogProvider.ResolvedLogProvider (a cached Lazy<T>) from being accessed
+            // with a disposed ILoggerFactory from the previous factory lifecycle.
+            // Auth tests don't depend on background job scheduling, so this is safe.
+            foreach (var hostedService in services.Where(d => d.ServiceType == typeof(IHostedService)).ToList())
+                services.Remove(hostedService);
+
+            // Ensure DB is created using a minimal isolated context (not the full app DI container)
+            // to avoid any residual static state contamination.
+            using var db = new UsersContext(
+                new DbContextOptionsBuilder<UsersContext>()
+                    .UseSqlite($"Data Source={dbPath}")
+                    .Options);
             db.Database.EnsureCreated();
         });
     }

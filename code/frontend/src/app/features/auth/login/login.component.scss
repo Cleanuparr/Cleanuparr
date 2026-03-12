@@ -118,6 +118,45 @@
   }
 }
 
+.oidc-login-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  width: 100%;
+  height: 44px;
+  padding: 0 var(--space-4);
+  margin-top: var(--space-2);
+  font-family: var(--font-family);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: #ffffff;
+  background: #7E57C2;
+  border: 1px solid transparent;
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-default);
+
+  &:hover:not(:disabled) {
+    background: #6D28D9;
+    box-shadow: 0 0 20px rgba(126, 87, 194, 0.4);
+  }
+
+  &:active:not(:disabled) {
+    transform: scale(0.97);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  &__icon {
+    width: 18px;
+    height: 18px;
+  }
+}
+
 .login-links {
   display: flex;
   flex-direction: column;

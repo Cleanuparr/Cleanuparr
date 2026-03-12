@@ -94,6 +94,9 @@ public static class MainDI
         // Add HTTP client for Plex authentication
         services.AddHttpClient("PlexAuth");
 
+        // Add HTTP client for OIDC authentication
+        services.AddHttpClient("OidcAuth");
+
         return services;
     }
 

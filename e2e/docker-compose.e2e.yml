@@ -1,0 +1,37 @@
+services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.2
+    command: start-dev --import-realm
+    volumes:
+      - ./keycloak-realm.json:/opt/keycloak/data/import/realm.json:ro
+    ports:
+      - "8080:8080"
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_HOSTNAME: localhost
+      KC_HOSTNAME_PORT: "8080"
+      KC_HTTP_ENABLED: "true"
+      KC_HOSTNAME_STRICT: "false"
+    healthcheck:
+      test: ["CMD-SHELL", "cat < /dev/null > /dev/tcp/localhost/8080"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 30s
+
+  app:
+    build:
+      context: ../code
+      args:
+        PACKAGES_USERNAME: ${PACKAGES_USERNAME}
+        PACKAGES_PAT: ${PACKAGES_PAT}
+    network_mode: host
+    depends_on:
+      keycloak:
+        condition: service_healthy
+    environment:
+      PORT: "5000"
+      HTTP_PORTS: "5000"
+    tmpfs:
+      - /config

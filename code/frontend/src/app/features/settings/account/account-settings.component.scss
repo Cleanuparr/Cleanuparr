@@ -8,6 +8,15 @@
 .form-divider { @include form-divider; }
 .form-actions { @include form-actions; }
 
+.section-notice {
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: rgba(234, 179, 8, 0.1);
+  color: var(--color-warning);
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+}
+
 .section-hint {
   font-size: var(--font-size-sm);
   color: var(--text-secondary);
@@ -166,6 +175,40 @@
   display: flex;
   gap: var(--space-1);
   flex-shrink: 0;
+}
+
+// OIDC link section
+.oidc-link-section {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+
+  &__info {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+
+  &__hint {
+    font-size: var(--font-size-xs);
+    color: var(--text-tertiary);
+  }
+
+  &__actions {
+    display: flex;
+    gap: var(--space-2);
+    flex-shrink: 0;
+  }
+
+  &__subject {
+    font-family: var(--font-family-mono, monospace);
+    font-size: var(--font-size-xs);
+    color: var(--text-secondary);
+    background: var(--bg-tertiary);
+    padding: var(--space-0-5) var(--space-1);
+    border-radius: var(--radius-sm);
+  }
 }
 
 // Password strength indicator

@@ -1,6 +1,9 @@
 using Cleanuparr.Api.Features.Arr.Contracts.Requests;
 using Cleanuparr.Api.Features.DownloadClient.Contracts.Requests;
+using Cleanuparr.Api.Features.Auth.Contracts.Requests;
+using Cleanuparr.Api.Features.General.Contracts.Requests;
 using Cleanuparr.Domain.Enums;
+using Cleanuparr.Persistence.Models.Auth;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Cleanuparr.Persistence.Models.Configuration;
 using Cleanuparr.Shared.Helpers;
@@ -311,6 +314,67 @@ public class SensitiveDataInputTests
         request.Validate();
         var config = request.ToTestConfig();
         config.Password.ShouldBe("real-password");
+    }
+
+    #endregion
+
+    #region UpdateOidcConfigRequest — UPDATE
+
+    [Fact]
+    public void UpdateOidcConfigRequest_ApplyTo_WithPlaceholderClientSecret_PreservesExistingValue()
+    {
+        var request = new UpdateOidcConfigRequest
+        {
+            Enabled = true,
+            IssuerUrl = "http://localhost:8080/realms/test",
+            ClientId = "cleanuparr",
+            ClientSecret = Placeholder,
+            Scopes = "openid profile email",
+            ProviderName = "Keycloak",
+        };
+
+        var existingConfig = new OidcConfig
+        {
+            Enabled = true,
+            IssuerUrl = "http://localhost:8080/realms/test",
+            ClientId = "cleanuparr",
+            ClientSecret = "original-secret",
+            Scopes = "openid profile email",
+            ProviderName = "OIDC",
+        };
+
+        request.ApplyTo(existingConfig);
+
+        existingConfig.ClientSecret.ShouldBe("original-secret");
+        existingConfig.ProviderName.ShouldBe("Keycloak");
+    }
+
+    [Fact]
+    public void UpdateOidcConfigRequest_ApplyTo_WithRealClientSecret_UpdatesValue()
+    {
+        var request = new UpdateOidcConfigRequest
+        {
+            Enabled = true,
+            IssuerUrl = "http://localhost:8080/realms/test",
+            ClientId = "cleanuparr",
+            ClientSecret = "brand-new-secret",
+            Scopes = "openid profile email",
+            ProviderName = "Keycloak",
+        };
+
+        var existingConfig = new OidcConfig
+        {
+            Enabled = true,
+            IssuerUrl = "http://localhost:8080/realms/test",
+            ClientId = "cleanuparr",
+            ClientSecret = "original-secret",
+            Scopes = "openid profile email",
+            ProviderName = "OIDC",
+        };
+
+        request.ApplyTo(existingConfig);
+
+        existingConfig.ClientSecret.ShouldBe("brand-new-secret");
     }
 
     #endregion

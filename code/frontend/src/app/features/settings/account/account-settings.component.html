@@ -20,6 +20,11 @@
   <!-- Change Password -->
   <app-card header="Change Password">
     <div class="form-stack">
+      @if (oidcExclusiveMode()) {
+        <div class="section-notice">
+          Password login is disabled while OIDC exclusive mode is active.
+        </div>
+      }
       <app-input
         label="Current Password"
         type="password"
@@ -54,8 +59,8 @@
       <div class="form-actions">
         <app-button
           variant="primary"
-          [glowing]="!!currentPassword() && !!newPassword() && !!confirmPassword()"
-          [disabled]="!currentPassword() || !newPassword() || !confirmPassword() || changingPassword()"
+          [glowing]="!!currentPassword() && !!newPassword() && !!confirmPassword() && !oidcExclusiveMode()"
+          [disabled]="!currentPassword() || !newPassword() || !confirmPassword() || changingPassword() || oidcExclusiveMode()"
           (clicked)="changePassword()"
         >
           @if (changingPassword()) {
@@ -283,6 +288,11 @@
   <!-- Plex Integration -->
   <app-card header="Plex Integration">
     <div class="form-stack">
+      @if (oidcExclusiveMode()) {
+        <div class="section-notice">
+          Plex login is disabled while OIDC exclusive mode is active.
+        </div>
+      }
       @if (account()!.plexLinked) {
         <div class="status-row">
           <span class="status-label">Linked Account</span>
@@ -291,7 +301,7 @@
         <div class="form-actions">
           <app-button
             variant="destructive"
-            [disabled]="plexUnlinking()"
+            [disabled]="plexUnlinking() || oidcExclusiveMode()"
             (clicked)="confirmUnlinkPlex()"
           >
             @if (plexUnlinking()) {
@@ -308,7 +318,7 @@
         <div class="form-actions">
           <app-button
             variant="primary"
-            [disabled]="plexLinking()"
+            [disabled]="plexLinking() || oidcExclusiveMode()"
             (clicked)="startPlexLink()"
           >
             @if (plexLinking()) {
@@ -319,6 +329,79 @@
           </app-button>
         </div>
       }
+    </div>
+  </app-card>
+
+  <!-- OIDC / SSO -->
+  <app-card header="OIDC / SSO">
+    <div class="form-stack">
+      <app-toggle label="Enable OIDC" [(checked)]="oidcEnabled"
+        helpKey="account:oidcEnabled"
+        hint="Allow signing in with an external identity provider (Authentik, Authelia, Keycloak, etc.)" />
+      @if (oidcEnabled()) {
+        <app-input label="Provider Name" [(value)]="oidcProviderName"
+          helpKey="account:oidcProviderName"
+          hint="Display name shown on the login button (e.g. Authentik, Keycloak)" />
+        <app-input label="Issuer URL" [(value)]="oidcIssuerUrl"
+          helpKey="account:oidcIssuerUrl"
+          placeholder="https://auth.example.com/application/o/cleanuparr/"
+          hint="The OpenID Connect issuer URL from your identity provider. Must use HTTPS." />
+        <div class="form-row">
+          <app-input label="Client ID" [(value)]="oidcClientId"
+            helpKey="account:oidcClientId"
+            hint="The client ID assigned by your identity provider" />
+          <app-input label="Client Secret" [(value)]="oidcClientSecret" type="password" [revealable]="false"
+            helpKey="account:oidcClientSecret"
+            hint="Optional. Required for confidential clients." />
+        </div>
+        <app-input label="Scopes" [(value)]="oidcScopes"
+          helpKey="account:oidcScopes"
+          hint="Space-separated list of OIDC scopes to request (default: openid profile email)" />
+        <app-input label="Redirect URL" [(value)]="oidcRedirectUrl"
+          helpKey="account:oidcRedirectUrl"
+          placeholder="https://cleanuparr.example.com"
+          hint="The base URL where Cleanuparr is accessible. Callback paths are appended automatically. Leave empty to auto-detect." />
+
+        <div class="form-divider"></div>
+
+        <div class="oidc-link-section">
+          <div class="oidc-link-section__info">
+            <app-label label="Link OIDC Account" helpKey="account:oidcLinkAccount" />
+            @if (oidcAuthorizedSubject()) {
+              <span class="oidc-link-section__hint">
+                Linked to subject: <code class="oidc-link-section__subject">{{ oidcAuthorizedSubject() }}</code>
+              </span>
+            } @else {
+              <span class="oidc-link-section__hint">
+                No account linked — any user who can authenticate with your provider and is allowed to access this app can sign in. Link an account to restrict access.
+              </span>
+            }
+          </div>
+          <div class="oidc-link-section__actions">
+            <app-button variant="secondary" size="sm" [loading]="oidcLinking()" [disabled]="oidcLinking()" (clicked)="startOidcLink()">
+              {{ oidcAuthorizedSubject() ? 'Re-link' : 'Link Account' }}
+            </app-button>
+            @if (oidcAuthorizedSubject()) {
+              <app-button variant="destructive" size="sm" [loading]="oidcUnlinking()" [disabled]="oidcUnlinking()" (clicked)="confirmUnlinkOidc()">
+                Unlink
+              </app-button>
+            }
+          </div>
+        </div>
+
+        <div class="form-divider"></div>
+        <app-toggle label="Exclusive Mode" [(checked)]="oidcExclusiveMode"
+          helpKey="account:oidcExclusiveMode"
+          hint="When enabled, only OIDC login is allowed. Username/password and Plex login will be disabled." />
+      }
+
+      <div class="form-divider"></div>
+
+      <div class="form-actions">
+        <app-button variant="primary" [loading]="oidcSaving()" [disabled]="oidcSaving() || oidcSaved()" (clicked)="saveOidcConfig()">
+          {{ oidcSaved() ? 'Saved!' : 'Save OIDC Settings' }}
+        </app-button>
+      </div>
     </div>
   </app-card>
 </div>

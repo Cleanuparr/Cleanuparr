@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { OidcConfig } from '@shared/models/oidc-config.model';
 
 export interface AccountInfo {
   username: string;
@@ -82,5 +83,17 @@ export class AccountApi {
 
   unlinkPlex(): Observable<void> {
     return this.http.delete<void>('/api/account/plex/link');
+  }
+
+  getOidcConfig(): Observable<OidcConfig> {
+    return this.http.get<OidcConfig>('/api/account/oidc');
+  }
+
+  updateOidcConfig(config: Partial<OidcConfig>): Observable<void> {
+    return this.http.put<void>('/api/account/oidc', config);
+  }
+
+  unlinkOidc(): Observable<void> {
+    return this.http.delete<void>('/api/account/oidc/link');
   }
 }

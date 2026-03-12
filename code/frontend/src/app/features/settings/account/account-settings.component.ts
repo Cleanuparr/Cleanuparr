@@ -1,10 +1,14 @@
-import { Component, ChangeDetectionStrategy, inject, signal, computed, OnInit, OnDestroy } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, signal, computed, effect, OnInit, OnDestroy } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 import { PageHeaderComponent } from '@layout/page-header/page-header.component';
 import {
   CardComponent, ButtonComponent, InputComponent, SpinnerComponent,
+  AccordionComponent, ToggleComponent, LabelComponent,
   EmptyStateComponent, LoadingStateComponent,
 } from '@ui';
+import { forkJoin } from 'rxjs';
 import { AccountApi, AccountInfo } from '@core/api/account.api';
+import { AuthService } from '@core/auth/auth.service';
 import { ToastService } from '@core/services/toast.service';
 import { ConfirmService } from '@core/services/confirm.service';
 import { DeferredLoader } from '@shared/utils/loading.util';
@@ -15,7 +19,8 @@ import { QRCodeComponent } from 'angularx-qrcode';
   standalone: true,
   imports: [
     PageHeaderComponent, CardComponent, ButtonComponent, InputComponent,
-    SpinnerComponent, EmptyStateComponent, LoadingStateComponent, QRCodeComponent,
+    SpinnerComponent, AccordionComponent, ToggleComponent,
+    EmptyStateComponent, LoadingStateComponent, QRCodeComponent, LabelComponent,
   ],
   templateUrl: './account-settings.component.html',
   styleUrl: './account-settings.component.scss',
@@ -23,8 +28,10 @@ import { QRCodeComponent } from 'angularx-qrcode';
 })
 export class AccountSettingsComponent implements OnInit, OnDestroy {
   private readonly api = inject(AccountApi);
+  private readonly auth = inject(AuthService);
   private readonly toast = inject(ToastService);
   private readonly confirmService = inject(ConfirmService);
+  private readonly route = inject(ActivatedRoute);
 
   readonly loader = new DeferredLoader();
   readonly loadError = signal(false);
@@ -78,7 +85,40 @@ export class AccountSettingsComponent implements OnInit, OnDestroy {
   readonly plexUnlinking = signal(false);
   private plexPollTimer: ReturnType<typeof setInterval> | null = null;
 
+  // OIDC
+  readonly oidcEnabled = signal(false);
+  readonly oidcIssuerUrl = signal('');
+  readonly oidcClientId = signal('');
+  readonly oidcClientSecret = signal('');
+  readonly oidcScopes = signal('openid profile email');
+  readonly oidcProviderName = signal('OIDC');
+  readonly oidcRedirectUrl = signal('');
+  readonly oidcAuthorizedSubject = signal('');
+  readonly oidcExpanded = signal(false);
+  readonly oidcExclusiveMode = signal(false);
+  readonly oidcLinking = signal(false);
+  readonly oidcUnlinking = signal(false);
+  readonly oidcSaving = signal(false);
+  readonly oidcSaved = signal(false);
+
+  constructor() {
+    // Reset exclusive mode when OIDC is toggled off
+    effect(() => {
+      if (!this.oidcEnabled()) {
+        this.oidcExclusiveMode.set(false);
+      }
+    });
+  }
+
   ngOnInit(): void {
+    const params = this.route.snapshot.queryParams;
+    if (params['oidc_link'] === 'success') {
+      this.toast.success('OIDC account linked successfully');
+      this.oidcExpanded.set(true);
+    } else if (params['oidc_link_error']) {
+      this.toast.error('Failed to link OIDC account');
+      this.oidcExpanded.set(true);
+    }
     this.loadAccount();
   }
 
@@ -90,9 +130,18 @@ export class AccountSettingsComponent implements OnInit, OnDestroy {
 
   private loadAccount(): void {
     this.loader.start();
-    this.api.getInfo().subscribe({
-      next: (info) => {
+    forkJoin([this.api.getInfo(), this.api.getOidcConfig()]).subscribe({
+      next: ([info, oidc]) => {
         this.account.set(info);
+        this.oidcEnabled.set(oidc.enabled);
+        this.oidcIssuerUrl.set(oidc.issuerUrl);
+        this.oidcClientId.set(oidc.clientId);
+        this.oidcClientSecret.set(oidc.clientSecret);
+        this.oidcScopes.set(oidc.scopes || 'openid profile email');
+        this.oidcProviderName.set(oidc.providerName || 'OIDC');
+        this.oidcRedirectUrl.set(oidc.redirectUrl || '');
+        this.oidcAuthorizedSubject.set(oidc.authorizedSubject);
+        this.oidcExclusiveMode.set(oidc.exclusiveMode);
         this.loader.stop();
       },
       error: () => {
@@ -359,6 +408,70 @@ export class AccountSettingsComponent implements OnInit, OnDestroy {
       error: () => {
         this.toast.error('Failed to unlink Plex account');
         this.plexUnlinking.set(false);
+      },
+    });
+  }
+
+  // OIDC
+  saveOidcConfig(): void {
+    this.oidcSaving.set(true);
+    this.api.updateOidcConfig({
+      enabled: this.oidcEnabled(),
+      issuerUrl: this.oidcIssuerUrl(),
+      clientId: this.oidcClientId(),
+      clientSecret: this.oidcClientSecret(),
+      scopes: this.oidcScopes(),
+      authorizedSubject: this.oidcAuthorizedSubject(),
+      providerName: this.oidcProviderName(),
+      redirectUrl: this.oidcRedirectUrl(),
+      exclusiveMode: this.oidcExclusiveMode(),
+    }).subscribe({
+      next: () => {
+        this.toast.success('OIDC settings saved');
+        this.oidcSaving.set(false);
+        this.oidcSaved.set(true);
+        setTimeout(() => this.oidcSaved.set(false), 1500);
+      },
+      error: () => {
+        this.toast.error('Failed to save OIDC settings');
+        this.oidcSaving.set(false);
+      },
+    });
+  }
+
+  startOidcLink(): void {
+    this.oidcLinking.set(true);
+    this.auth.startOidcLink().subscribe({
+      next: (result) => {
+        window.location.href = result.authorizationUrl;
+      },
+      error: () => {
+        this.toast.error('Failed to start OIDC account linking');
+        this.oidcLinking.set(false);
+      },
+    });
+  }
+
+  async confirmUnlinkOidc(): Promise<void> {
+    const confirmed = await this.confirmService.confirm({
+      title: 'Unlink OIDC Account',
+      message: 'This will remove the linked identity. Anyone who can authenticate with your identity provider and is allowed to access this application will be able to sign in.',
+      confirmLabel: 'Unlink',
+      destructive: true,
+    });
+    if (!confirmed) return;
+
+    this.oidcUnlinking.set(true);
+    this.api.unlinkOidc().subscribe({
+      next: () => {
+        this.oidcAuthorizedSubject.set('');
+        this.oidcExclusiveMode.set(false);
+        this.toast.success('OIDC account unlinked');
+        this.oidcUnlinking.set(false);
+      },
+      error: () => {
+        this.toast.error('Failed to unlink OIDC account');
+        this.oidcUnlinking.set(false);
       },
     });
   }

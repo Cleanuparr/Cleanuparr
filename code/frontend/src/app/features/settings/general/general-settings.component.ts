@@ -1,7 +1,7 @@
 import { Component, ChangeDetectionStrategy, inject, signal, computed, OnInit, viewChildren } from '@angular/core';
 import { PageHeaderComponent } from '@layout/page-header/page-header.component';
 import {
-  CardComponent, ButtonComponent, ToggleComponent,
+  CardComponent, ButtonComponent, ToggleComponent, InputComponent,
   NumberInputComponent, SelectComponent, ChipInputComponent, AccordionComponent,
   EmptyStateComponent, LoadingStateComponent,
   type SelectOption,
@@ -9,7 +9,7 @@ import {
 import { GeneralConfigApi } from '@core/api/general-config.api';
 import { ToastService } from '@core/services/toast.service';
 import { ConfirmService } from '@core/services/confirm.service';
-import { GeneralConfig, LoggingConfig } from '@shared/models/general-config.model';
+import { GeneralConfig } from '@shared/models/general-config.model';
 import { CertificateValidationType, LogEventLevel } from '@shared/models/enums';
 import { HasPendingChanges } from '@core/guards/pending-changes.guard';
 import { DeferredLoader } from '@shared/utils/loading.util';
@@ -34,7 +34,7 @@ const LOG_LEVEL_OPTIONS: SelectOption[] = [
   standalone: true,
   imports: [
     PageHeaderComponent, CardComponent, ButtonComponent,
-    ToggleComponent, NumberInputComponent, SelectComponent, ChipInputComponent,
+    ToggleComponent, InputComponent, NumberInputComponent, SelectComponent, ChipInputComponent,
     AccordionComponent, EmptyStateComponent, LoadingStateComponent,
   ],
   templateUrl: './general-settings.component.html',
