@@ -342,8 +342,8 @@
         <app-input label="Scopes" [(value)]="oidcScopes"
           hint="Space-separated list of OIDC scopes to request (default: openid profile email)" />
         <app-input label="Redirect URL" [(value)]="oidcRedirectUrl"
-          placeholder="https://cleanuparr.example.com/api/auth/oidc/callback"
-          hint="The full OIDC callback URL as registered with your identity provider. Leave empty to auto-detect from the request." />
+          placeholder="https://cleanuparr.example.com"
+          hint="The base URL where Cleanuparr is accessible. Callback paths are appended automatically. Leave empty to auto-detect." />
 
         <div class="form-divider"></div>
 

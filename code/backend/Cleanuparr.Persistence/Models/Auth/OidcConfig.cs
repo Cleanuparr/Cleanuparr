@@ -50,8 +50,8 @@ public sealed record OidcConfig
     public string ProviderName { get; set; } = "OIDC";
 
     /// <summary>
-    /// Optional full OIDC redirect URL (e.g., https://cleanuparr.example.com/api/auth/oidc/callback).
-    /// When set, used directly as the callback URL instead of auto-detecting from the request.
+    /// Optional base URL for OIDC callback URIs (e.g., https://cleanuparr.example.com).
+    /// When set, callback paths are appended to this URL instead of auto-detecting from the request.
     /// </summary>
     [MaxLength(500)]
     public string RedirectUrl { get; set; } = string.Empty;

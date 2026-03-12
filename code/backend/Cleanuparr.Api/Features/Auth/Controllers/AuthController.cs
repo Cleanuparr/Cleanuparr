@@ -625,12 +625,10 @@ public sealed class AuthController : ControllerBase
 
     private string GetOidcCallbackUrl(string? redirectUrl = null)
     {
-        if (!string.IsNullOrEmpty(redirectUrl))
-        {
-            return redirectUrl.TrimEnd('/');
-        }
-
-        return $"{HttpContext.GetExternalBaseUrl()}/api/auth/oidc/callback";
+        var baseUrl = string.IsNullOrEmpty(redirectUrl)
+            ? HttpContext.GetExternalBaseUrl()
+            : redirectUrl.TrimEnd('/');
+        return $"{baseUrl}/api/auth/oidc/callback";
     }
 
     private async Task<TokenResponse> GenerateTokenResponse(User user)

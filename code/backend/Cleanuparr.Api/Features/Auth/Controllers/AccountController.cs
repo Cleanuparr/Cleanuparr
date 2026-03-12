@@ -519,18 +519,12 @@ public sealed class AccountController : ControllerBase
         }
     }
 
-    private const string OidcCallbackSuffix = "/api/auth/oidc/callback";
-
     private string GetOidcLinkCallbackUrl(string? redirectUrl = null)
     {
-        if (!string.IsNullOrEmpty(redirectUrl) &&
-            redirectUrl.EndsWith(OidcCallbackSuffix, StringComparison.OrdinalIgnoreCase))
-        {
-            var baseUrl = redirectUrl[..^OidcCallbackSuffix.Length];
-            return $"{baseUrl}/api/account/oidc/link/callback";
-        }
-
-        return $"{HttpContext.GetExternalBaseUrl()}/api/account/oidc/link/callback";
+        var baseUrl = string.IsNullOrEmpty(redirectUrl)
+            ? HttpContext.GetExternalBaseUrl()
+            : redirectUrl.TrimEnd('/');
+        return $"{baseUrl}/api/account/oidc/link/callback";
     }
 
     private async Task<User?> GetCurrentUser(bool includeRecoveryCodes = false)
