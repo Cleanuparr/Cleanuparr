@@ -175,6 +175,16 @@ export class DocumentationService {
       'apiKey': 'api-key',
       'version': 'api-version',
     },
+    'account': {
+      'oidcEnabled': 'enable-oidc',
+      'oidcProviderName': 'provider-name',
+      'oidcIssuerUrl': 'issuer-url',
+      'oidcClientId': 'client-id',
+      'oidcClientSecret': 'client-secret',
+      'oidcScopes': 'scopes',
+      'oidcRedirectUrl': 'redirect-url',
+      'oidcExclusiveMode': 'exclusive-mode',
+    },
     'notifications/gotify': {
       'serverUrl': 'server-url',
       'applicationToken': 'application-token',

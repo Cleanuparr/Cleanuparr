@@ -1,0 +1,184 @@
+---
+sidebar_position: 8
+---
+
+import {
+  ConfigSection,
+  Note,
+  Important,
+  Warning,
+  ElementNavigator,
+  SectionTitle,
+  styles
+} from '@site/src/components/documentation';
+
+# Account Settings
+
+Manage your account security and external identity provider integrations.
+
+<ElementNavigator />
+
+<div className={styles.documentationPage}>
+
+<div className={styles.section}>
+
+<SectionTitle>OIDC Settings</SectionTitle>
+
+<ConfigSection
+  title="Enable OIDC"
+>
+
+Master switch to enable or disable OIDC authentication. When disabled, the OIDC login button is hidden and all OIDC-related settings are ignored.
+
+</ConfigSection>
+
+<ConfigSection
+  title="Provider Name"
+>
+
+The display name shown on the login button. Set this to the name of your identity provider so users know where they're signing in.
+
+**Examples:**
+```
+Authentik
+Authelia
+Keycloak
+My SSO
+```
+
+</ConfigSection>
+
+<ConfigSection
+  title="Issuer URL"
+>
+
+The OpenID Connect issuer URL from your identity provider. Cleanuparr uses this to automatically discover your provider's endpoints (authorization, token, user info, etc.).
+
+This URL must use **HTTPS** (except `localhost` for development purposes). You can find it in your provider's application or client settings — it is sometimes called the "Discovery URL" or "OpenID Configuration URL".
+
+**Where to find it:**
+
+| Provider | Issuer URL format |
+|----------|-------------------|
+| **Authentik** | `https://auth.example.com/application/o/cleanuparr/` |
+| **Authelia** | `https://auth.example.com` |
+| **Keycloak** | `https://keycloak.example.com/realms/your-realm` |
+
+<Note>
+If you are unsure, visit `{your-provider-url}/.well-known/openid-configuration` in a browser. The `issuer` field in the JSON response is the value you need.
+</Note>
+
+</ConfigSection>
+
+<ConfigSection
+  title="Client ID"
+>
+
+The client identifier assigned to Cleanuparr by your identity provider. You get this when you create a new application/client in your provider.
+
+**Where to find it:**
+
+| Provider | Location |
+|----------|----------|
+| **Authentik** | Applications → your app → Provider → Client ID |
+| **Authelia** | Configuration file → identity_providers → oidc → clients → client_id |
+| **Keycloak** | Clients → your client → Client ID |
+
+</ConfigSection>
+
+<ConfigSection
+  title="Client Secret"
+>
+
+The client secret assigned by your identity provider. This is **optional** — whether you need it depends on your provider's configuration:
+
+- **Confidential client** (most common): A secret is required. Your provider generates one when you create the application.
+- **Public client**: No secret is needed. Some providers support this for applications that cannot securely store a secret.
+
+If you are unsure, your provider most likely requires a secret.
+
+</ConfigSection>
+
+<ConfigSection
+  title="Scopes"
+>
+
+Space-separated list of OIDC scopes to request from your identity provider. Scopes control what information Cleanuparr receives about the authenticated user.
+
+**Default:** `openid profile email`
+
+You typically do not need to change this. The default scopes request the user's identity (`openid`), profile information (`profile`), and email address (`email`).
+
+<Note>
+Only change this if your provider requires different scopes or you have a specific need. The `openid` scope is always required.
+</Note>
+
+</ConfigSection>
+
+<ConfigSection
+  title="Redirect URL"
+>
+
+The base URL where Cleanuparr is accessible from the outside. Cleanuparr appends callback paths automatically — you only need to provide the base URL.
+
+**Leave this empty** to let Cleanuparr auto-detect the URL from incoming requests. Set it explicitly if:
+- Cleanuparr is behind a reverse proxy
+- The auto-detected URL is incorrect
+- You access Cleanuparr via a custom domain
+
+**Examples:**
+```
+https://cleanuparr.example.com
+https://media.example.com/cleanuparr
+```
+
+<Important>
+This URL must match the **redirect URI** configured in your identity provider. In your provider, set the redirect/callback URI to:
+
+- **Login callback:** `https://cleanuparr.example.com/api/auth/oidc/callback`
+- **Link callback:** `https://cleanuparr.example.com/api/account/oidc/link/callback`
+
+Replace `https://cleanuparr.example.com` with your actual base URL.
+</Important>
+
+</ConfigSection>
+
+<ConfigSection
+  title="Link Account"
+>
+
+After saving your OIDC settings, click the **Link Account** button to connect your Cleanuparr account to your identity provider. This opens your provider's login page in a new window, where you authenticate and authorize Cleanuparr.
+
+Once linking is complete, your provider's **subject identifier** (a unique ID for your account) is displayed. Only this specific identity can sign in via OIDC — no other accounts from your provider will be able to log in.
+
+**Steps to link:**
+1. Fill in all OIDC settings above and click **Save OIDC Settings**.
+2. Click **Link Account**.
+3. Sign in with your identity provider when prompted.
+4. You are redirected back to Cleanuparr with a success message.
+
+<Note>
+You can re-link at any time by clicking **Re-link**. This replaces the currently linked identity with the new one.
+</Note>
+
+</ConfigSection>
+
+<ConfigSection
+  title="Exclusive Mode"
+>
+
+When enabled, **only OIDC login is allowed**. Username/password login and Plex login are completely disabled. This is useful if you want to enforce that all authentication goes through your identity provider.
+
+Exclusive Mode can only be enabled after you have successfully linked an OIDC account.
+
+<Warning>
+**Lockout risk:** If your identity provider goes down or becomes unreachable while exclusive mode is active, you will not be able to sign in to Cleanuparr. To recover, you would need to directly modify the database to disable exclusive mode.
+
+Only enable this if your identity provider is reliable and you have a recovery plan.
+</Warning>
+
+</ConfigSection>
+
+</div>
+
+</div>

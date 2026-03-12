@@ -336,22 +336,29 @@
   <app-accordion header="OIDC / SSO" subtitle="OpenID Connect single sign-on" [(expanded)]="oidcExpanded">
     <div class="form-stack">
       <app-toggle label="Enable OIDC" [(checked)]="oidcEnabled"
+        helpKey="account:oidcEnabled"
         hint="Allow signing in with an external identity provider (Authentik, Authelia, Keycloak, etc.)" />
       @if (oidcEnabled()) {
         <app-input label="Provider Name" [(value)]="oidcProviderName"
+          helpKey="account:oidcProviderName"
           hint="Display name shown on the login button (e.g. Authentik, Keycloak)" />
         <app-input label="Issuer URL" [(value)]="oidcIssuerUrl"
+          helpKey="account:oidcIssuerUrl"
           placeholder="https://auth.example.com/application/o/cleanuparr/"
           hint="The OpenID Connect issuer URL from your identity provider. Must use HTTPS." />
         <div class="form-row">
           <app-input label="Client ID" [(value)]="oidcClientId"
+            helpKey="account:oidcClientId"
             hint="The client ID assigned by your identity provider" />
           <app-input label="Client Secret" [(value)]="oidcClientSecret" type="password" [revealable]="false"
+            helpKey="account:oidcClientSecret"
             hint="Optional. Required for confidential clients." />
         </div>
         <app-input label="Scopes" [(value)]="oidcScopes"
+          helpKey="account:oidcScopes"
           hint="Space-separated list of OIDC scopes to request (default: openid profile email)" />
         <app-input label="Redirect URL" [(value)]="oidcRedirectUrl"
+          helpKey="account:oidcRedirectUrl"
           placeholder="https://cleanuparr.example.com"
           hint="The base URL where Cleanuparr is accessible. Callback paths are appended automatically. Leave empty to auto-detect." />
 
@@ -378,6 +385,7 @@
         @if (oidcAuthorizedSubject()) {
           <div class="form-divider"></div>
           <app-toggle label="Exclusive Mode" [(checked)]="oidcExclusiveMode"
+            helpKey="account:oidcExclusiveMode"
             hint="When enabled, only OIDC login is allowed. Username/password and Plex login will be disabled." />
         }
       }
