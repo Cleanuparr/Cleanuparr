@@ -5,9 +5,9 @@ public sealed class PasswordService : IPasswordService
     private const int WorkFactor = 12;
 
     /// <summary>
-    /// Pre-computed BCrypt hash used as a fallback when no user exists
+    /// Pre-computed BCrypt hash with a work factor of 12 used as a fallback when no user exists
     /// </summary>
-    public static readonly string DummyHash = BCrypt.Net.BCrypt.HashPassword("timing-safe-dummy", WorkFactor);
+    public const string DummyHash = "$2a$12$tQw4MgGGq7WTFro3Me4mQOekctJ0mIOYmFMn.XEmEbyZhBq0i4qKy";
 
     public string HashPassword(string password)
     {
