@@ -23,6 +23,21 @@ public class LoginTimingTests : IClassFixture<TimingTestWebApplicationFactory>
     }
 
     [Fact, TestPriority(0)]
+    public async Task Login_NoUserExists_StillCallsPasswordVerification()
+    {
+        _factory.TrackingPasswordService.Reset();
+
+        var response = await _client.PostAsJsonAsync("/api/auth/login", new
+        {
+            username = "nouser",
+            password = "SomePassword123!"
+        });
+
+        response.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+        _factory.TrackingPasswordService.VerifyPasswordCallCount.ShouldBeGreaterThanOrEqualTo(1);
+    }
+
+    [Fact, TestPriority(1)]
     public async Task Setup_CreateAccountAndComplete()
     {
         var createResponse = await _client.PostAsJsonAsync("/api/auth/setup/account", new
@@ -36,7 +51,7 @@ public class LoginTimingTests : IClassFixture<TimingTestWebApplicationFactory>
         completeResponse.StatusCode.ShouldBe(HttpStatusCode.OK);
     }
 
-    [Fact, TestPriority(1)]
+    [Fact, TestPriority(2)]
     public async Task Login_ValidUsername_CallsPasswordVerification()
     {
         _factory.TrackingPasswordService.Reset();
@@ -50,7 +65,7 @@ public class LoginTimingTests : IClassFixture<TimingTestWebApplicationFactory>
         _factory.TrackingPasswordService.VerifyPasswordCallCount.ShouldBeGreaterThanOrEqualTo(1);
     }
 
-    [Fact, TestPriority(2)]
+    [Fact, TestPriority(3)]
     public async Task Login_NonexistentUsername_StillCallsPasswordVerification()
     {
         _factory.TrackingPasswordService.Reset();
@@ -65,7 +80,7 @@ public class LoginTimingTests : IClassFixture<TimingTestWebApplicationFactory>
         _factory.TrackingPasswordService.VerifyPasswordCallCount.ShouldBeGreaterThanOrEqualTo(1);
     }
 
-    [Fact, TestPriority(3)]
+    [Fact, TestPriority(4)]
     public async Task Login_LockedOutUser_StillCallsPasswordVerification()
     {
         // Trigger lockout by making several failed login attempts
@@ -90,7 +105,7 @@ public class LoginTimingTests : IClassFixture<TimingTestWebApplicationFactory>
         _factory.TrackingPasswordService.VerifyPasswordCallCount.ShouldBeGreaterThanOrEqualTo(1);
     }
 
-    [Fact, TestPriority(4)]
+    [Fact, TestPriority(5)]
     public async Task Login_TimingConsistency_InvalidAndValidUsernamesTakeSimilarTime()
     {
         const int iterations = 10;
