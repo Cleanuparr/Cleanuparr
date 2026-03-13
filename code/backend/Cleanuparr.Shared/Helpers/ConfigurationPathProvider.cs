@@ -48,4 +48,19 @@ public static class ConfigurationPathProvider
     {
         return _configPath ?? InitializeConfigPath();
     }
+
+    public static void SetConfigPath(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            throw new ArgumentException("Value cannot be null or whitespace.", nameof(path));
+        }
+        
+        if (!Directory.Exists(path))
+        {
+            Directory.CreateDirectory(path);
+        }
+
+        _configPath = path;
+    }
 }
