@@ -51,6 +51,11 @@ public static class ConfigurationPathProvider
 
     public static void SetConfigPath(string path)
     {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            throw new ArgumentException("Value cannot be null or whitespace.", nameof(path));
+        }
+        
         _configPath = path;
 
         if (!Directory.Exists(path))
