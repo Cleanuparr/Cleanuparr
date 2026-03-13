@@ -10,7 +10,6 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Shouldly;
 
 namespace Cleanuparr.Api.Tests.Features.Auth;
@@ -281,76 +280,18 @@ public class AccountControllerOidcTests : IClassFixture<AccountControllerOidcTes
 
     #region Test Infrastructure
 
-    public class OidcLinkWebApplicationFactory : WebApplicationFactory<Program>
+    public class OidcLinkWebApplicationFactory : CustomWebApplicationFactory
     {
-        private readonly string _configDir;
-
-        public OidcLinkWebApplicationFactory()
-        {
-            _configDir = Cleanuparr.Shared.Helpers.ConfigurationPathProvider.GetConfigPath();
-
-            // Delete both databases (and their WAL sidecar files) so each test run starts clean.
-            // users.db must be at the config path so CreateStaticInstance() (used by
-            // SetupGuardMiddleware) reads the same file as the DI-injected UsersContext.
-            // ClearAllPools() releases any SQLite connections held by the previous test factory's
-            // connection pool, which would otherwise prevent file deletion on Windows or cause
-            // SQLite to reconstruct a partial database from stale WAL files on other platforms.
-            Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
-            foreach (var name in new[] {
-                "users.db", "users.db-shm", "users.db-wal",
-                "cleanuparr.db", "cleanuparr.db-shm", "cleanuparr.db-wal" })
-            {
-                var path = Path.Combine(_configDir, name);
-                if (File.Exists(path))
-                    try { File.Delete(path); } catch { /* best effort */ }
-            }
-        }
-
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
-            builder.UseEnvironment("Testing");
+            base.ConfigureWebHost(builder);
 
             builder.ConfigureServices(services =>
             {
-                var descriptor = services.SingleOrDefault(d => d.ServiceType == typeof(DbContextOptions<UsersContext>));
-                if (descriptor != null) services.Remove(descriptor);
-
-                var contextDescriptor = services.SingleOrDefault(d => d.ServiceType == typeof(UsersContext));
-                if (contextDescriptor != null) services.Remove(contextDescriptor);
-
-                // Use the config-path db so SetupGuardMiddleware (CreateStaticInstance) sees
-                // the same data as the DI-injected context. Apply the same naming conventions
-                // as CreateStaticInstance() so the schemas match.
-                var dbPath = Path.Combine(_configDir, "users.db");
-                services.AddDbContext<UsersContext>(options =>
-                {
-                    options
-                        .UseSqlite($"Data Source={dbPath}")
-                        .UseLowerCaseNamingConvention()
-                        .UseSnakeCaseNamingConvention();
-                });
-
                 var oidcDescriptor = services.SingleOrDefault(d => d.ServiceType == typeof(IOidcAuthService));
                 if (oidcDescriptor != null) services.Remove(oidcDescriptor);
 
                 services.AddSingleton<IOidcAuthService, MockOidcAuthService>();
-
-                // Remove all hosted services (Quartz scheduler, BackgroundJobManager) to prevent
-                // Quartz.Logging.LogProvider.ResolvedLogProvider (a cached Lazy<T>) from being accessed
-                // with a disposed ILoggerFactory from the previous factory lifecycle.
-                // Auth tests don't depend on background job scheduling, so this is safe.
-                foreach (var hostedService in services.Where(d => d.ServiceType == typeof(IHostedService)).ToList())
-                    services.Remove(hostedService);
-
-                // Ensure DB is created using a minimal isolated context (not the full app DI container)
-                // to avoid any residual static state contamination.
-                using var db = new UsersContext(
-                    new DbContextOptionsBuilder<UsersContext>()
-                        .UseSqlite($"Data Source={dbPath}")
-                        .UseLowerCaseNamingConvention()
-                        .UseSnakeCaseNamingConvention()
-                        .Options);
-                db.Database.EnsureCreated();
             });
         }
 
@@ -410,22 +351,6 @@ public class AccountControllerOidcTests : IClassFixture<AccountControllerOidcTes
             return user?.Oidc.ExclusiveMode ?? false;
         }
 
-        protected override void Dispose(bool disposing)
-        {
-            base.Dispose(disposing);
-            if (disposing)
-            {
-                Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
-                foreach (var name in new[] {
-                    "users.db", "users.db-shm", "users.db-wal",
-                    "cleanuparr.db", "cleanuparr.db-shm", "cleanuparr.db-wal" })
-                {
-                    var path = Path.Combine(_configDir, name);
-                    if (File.Exists(path))
-                        try { File.Delete(path); } catch { /* best effort */ }
-                }
-            }
-        }
     }
 
     private sealed class MockOidcAuthService : IOidcAuthService

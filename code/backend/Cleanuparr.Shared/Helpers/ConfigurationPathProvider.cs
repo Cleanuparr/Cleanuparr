@@ -48,4 +48,14 @@ public static class ConfigurationPathProvider
     {
         return _configPath ?? InitializeConfigPath();
     }
+
+    public static void SetConfigPath(string path)
+    {
+        _configPath = path;
+
+        if (!Directory.Exists(path))
+        {
+            Directory.CreateDirectory(path);
+        }
+    }
 }

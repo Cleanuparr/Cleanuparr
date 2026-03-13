@@ -13,17 +13,6 @@ public class TimingTestWebApplicationFactory : CustomWebApplicationFactory
 {
     public TrackingPasswordService TrackingPasswordService { get; } = new();
 
-    public TimingTestWebApplicationFactory()
-    {
-        // Clean up any existing DataContext DB from previous test runs.
-        var configDir = Cleanuparr.Shared.Helpers.ConfigurationPathProvider.GetConfigPath();
-        var dataDbPath = Path.Combine(configDir, "cleanuparr.db");
-        if (File.Exists(dataDbPath))
-        {
-            try { File.Delete(dataDbPath); } catch { /* best effort */ }
-        }
-    }
-
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         base.ConfigureWebHost(builder);

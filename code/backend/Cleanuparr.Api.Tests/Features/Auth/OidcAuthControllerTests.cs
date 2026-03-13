@@ -4,6 +4,7 @@ using System.Text.Json;
 using Cleanuparr.Infrastructure.Features.Auth;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Auth;
+using Cleanuparr.Shared.Helpers;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
@@ -451,16 +452,8 @@ public class OidcAuthControllerTests : IClassFixture<OidcAuthControllerTests.Oid
             _tempDir = Path.Combine(Path.GetTempPath(), $"cleanuparr-oidc-test-{Guid.NewGuid():N}");
             Directory.CreateDirectory(_tempDir);
 
-            // Clean up any existing DataContext DB from previous test runs.
-            // DataContext.CreateStaticInstance() uses ConfigurationPathProvider which
-            // resolves to {AppContext.BaseDirectory}/config/cleanuparr.db.
-            // We need to ensure a clean state for our tests.
-            var configDir = Cleanuparr.Shared.Helpers.ConfigurationPathProvider.GetConfigPath();
-            var dataDbPath = Path.Combine(configDir, "cleanuparr.db");
-            if (File.Exists(dataDbPath))
-            {
-                try { File.Delete(dataDbPath); } catch { /* best effort */ }
-            }
+            // Redirect all database contexts to this factory's temp directory.
+            ConfigurationPathProvider.SetConfigPath(_tempDir);
         }
 
         protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -469,19 +462,6 @@ public class OidcAuthControllerTests : IClassFixture<OidcAuthControllerTests.Oid
 
             builder.ConfigureServices(services =>
             {
-                // Remove existing UsersContext registration
-                var descriptor = services.SingleOrDefault(d => d.ServiceType == typeof(DbContextOptions<UsersContext>));
-                if (descriptor != null) services.Remove(descriptor);
-
-                var contextDescriptor = services.SingleOrDefault(d => d.ServiceType == typeof(UsersContext));
-                if (contextDescriptor != null) services.Remove(contextDescriptor);
-
-                var dbPath = Path.Combine(_tempDir, "users.db");
-                services.AddDbContext<UsersContext>(options =>
-                {
-                    options.UseSqlite($"Data Source={dbPath}");
-                });
-
                 // Replace IOidcAuthService with mock
                 var oidcDescriptor = services.SingleOrDefault(d => d.ServiceType == typeof(IOidcAuthService));
                 if (oidcDescriptor != null) services.Remove(oidcDescriptor);
@@ -494,14 +474,6 @@ public class OidcAuthControllerTests : IClassFixture<OidcAuthControllerTests.Oid
                 // Auth tests don't depend on background job scheduling, so this is safe.
                 foreach (var hostedService in services.Where(d => d.ServiceType == typeof(IHostedService)).ToList())
                     services.Remove(hostedService);
-
-                // Ensure DB is created using a minimal isolated context (not the full app DI container)
-                // to avoid any residual static state contamination.
-                using var db = new UsersContext(
-                    new DbContextOptionsBuilder<UsersContext>()
-                        .UseSqlite($"Data Source={dbPath}")
-                        .Options);
-                db.Database.EnsureCreated();
             });
         }
 
