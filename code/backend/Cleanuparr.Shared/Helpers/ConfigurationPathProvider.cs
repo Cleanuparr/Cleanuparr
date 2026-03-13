@@ -56,11 +56,11 @@ public static class ConfigurationPathProvider
             throw new ArgumentException("Value cannot be null or whitespace.", nameof(path));
         }
         
-        _configPath = path;
-
         if (!Directory.Exists(path))
         {
             Directory.CreateDirectory(path);
         }
+
+        _configPath = path;
     }
 }
