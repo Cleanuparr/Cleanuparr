@@ -264,6 +264,11 @@ public sealed class AuthController : ControllerBase
 
         var user = await _usersContext.Users.AsNoTracking().FirstOrDefaultAsync();
 
+        // Always verify the submitted password to prevent timing-based username enumeration
+        var userHasPassword = user?.PasswordHash is not null;
+        var passwordHash = user?.PasswordHash ?? PasswordService.DummyHash;
+        var passwordValid = _passwordService.VerifyPassword(request.Password, passwordHash) && userHasPassword;
+
         if (user is null || !user.SetupCompleted)
         {
             return Unauthorized(new { error = "Invalid credentials" });
@@ -276,8 +281,7 @@ public sealed class AuthController : ControllerBase
             return StatusCode(429, new { error = "Account is locked", retryAfterSeconds = remaining });
         }
 
-        if (!_passwordService.VerifyPassword(request.Password, user.PasswordHash) ||
-            !string.Equals(user.Username, request.Username, StringComparison.OrdinalIgnoreCase))
+        if (!passwordValid || !string.Equals(user.Username, request.Username, StringComparison.OrdinalIgnoreCase))
         {
             var retryAfterSeconds = await IncrementFailedAttempts(user.Id);
             return Unauthorized(new { error = "Invalid credentials", retryAfterSeconds });
