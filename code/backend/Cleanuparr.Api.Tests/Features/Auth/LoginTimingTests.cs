@@ -93,6 +93,8 @@ public class LoginTimingTests : IClassFixture<TimingTestWebApplicationFactory>
     [Fact, TestPriority(4)]
     public async Task Login_TimingConsistency_InvalidAndValidUsernamesTakeSimilarTime()
     {
+        const int iterations = 10;
+
         // Warm up the server and BCrypt static init
         await _client.PostAsJsonAsync("/api/auth/login", new
         {
@@ -100,37 +102,53 @@ public class LoginTimingTests : IClassFixture<TimingTestWebApplicationFactory>
             password = "WarmupPassword123!"
         });
 
-        // Measure response time for a non-existent username
-        var invalidSw = Stopwatch.StartNew();
-        await _client.PostAsJsonAsync("/api/auth/login", new
+        var invalidTimings = new List<long>(iterations);
+        var validTimings = new List<long>(iterations);
+
+        for (var i = 0; i < iterations; i++)
         {
-            username = "nonexistent_user",
-            password = "SomePassword123!"
-        });
-        invalidSw.Stop();
+            // Alternate to avoid ordering bias
+            var invalidSw = Stopwatch.StartNew();
+            await _client.PostAsJsonAsync("/api/auth/login", new
+            {
+                username = $"nonexistent_{i}",
+                password = "SomePassword123!"
+            });
+            invalidSw.Stop();
+            invalidTimings.Add(invalidSw.ElapsedMilliseconds);
 
-        // Measure response time for the valid username
-        var validSw = Stopwatch.StartNew();
-        await _client.PostAsJsonAsync("/api/auth/login", new
-        {
-            username = "timingtest",
-            password = "WrongPasswordForTiming!"
-        });
-        validSw.Stop();
+            var validSw = Stopwatch.StartNew();
+            await _client.PostAsJsonAsync("/api/auth/login", new
+            {
+                username = "timingtest",
+                password = "WrongPasswordForTiming!"
+            });
+            validSw.Stop();
+            validTimings.Add(validSw.ElapsedMilliseconds);
+        }
 
-        var invalidMs = invalidSw.ElapsedMilliseconds;
-        var validMs = validSw.ElapsedMilliseconds;
+        var invalidMedian = Median(invalidTimings);
+        var validMedian = Median(validTimings);
 
-        // The invalid-username path must not be suspiciously fast (< 50ms would mean BCrypt was skipped)
-        invalidMs.ShouldBeGreaterThan(50,
-            $"Non-existent username returned too quickly ({invalidMs}ms) — BCrypt may have been skipped");
+        // The invalid-username path must not be suspiciously fast
+        invalidMedian.ShouldBeGreaterThan(50,
+            $"Non-existent username median too fast ({invalidMedian}ms) — BCrypt may have been skipped");
 
-        // The ratio between the two should be reasonable
-        var ratio = invalidMs > validMs
-            ? (double)invalidMs / validMs
-            : (double)validMs / invalidMs;
+        // Medians should be in the same ballpark
+        var ratio = invalidMedian > validMedian
+            ? (double)invalidMedian / validMedian
+            : (double)validMedian / invalidMedian;
 
-        ratio.ShouldBeLessThan(5.0,
-            $"Timing difference too large: invalid={invalidMs}ms, valid={validMs}ms (ratio={ratio:F1}x)");
+        ratio.ShouldBeLessThan(3.0,
+            $"Timing difference too large: invalid median={invalidMedian}ms, valid median={validMedian}ms (ratio={ratio:F1}x)");
+    }
+
+    private static long Median(List<long> values)
+    {
+        values.Sort();
+        var mid = values.Count / 2;
+        return values.Count % 2 == 0
+            ? (values[mid - 1] + values[mid]) / 2
+            : values[mid];
     }
 }
