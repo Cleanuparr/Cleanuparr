@@ -277,7 +277,7 @@ public sealed class AuthController : ControllerBase
         // Check lockout
         if (user.LockoutEnd.HasValue && user.LockoutEnd.Value > DateTime.UtcNow)
         {
-            var remaining = (int)(user.LockoutEnd.Value - DateTime.UtcNow).TotalSeconds;
+            var remaining = (int)Math.Ceiling((user.LockoutEnd.Value - DateTime.UtcNow).TotalSeconds);
             return StatusCode(429, new { error = "Account is locked", retryAfterSeconds = remaining });
         }
 
