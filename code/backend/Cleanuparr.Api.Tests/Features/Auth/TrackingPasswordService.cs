@@ -12,6 +12,8 @@ public sealed class TrackingPasswordService : IPasswordService
     private int _verifyPasswordCallCount;
 
     public int VerifyPasswordCallCount => _verifyPasswordCallCount;
+    
+    public string DummyHash => _inner.DummyHash;
 
     public string HashPassword(string password)
     {

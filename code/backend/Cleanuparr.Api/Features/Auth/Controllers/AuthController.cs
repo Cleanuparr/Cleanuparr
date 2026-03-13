@@ -266,7 +266,7 @@ public sealed class AuthController : ControllerBase
 
         // Always verify the submitted password to prevent timing-based username enumeration
         var userHasPassword = user?.PasswordHash is not null;
-        var passwordHash = user?.PasswordHash ?? PasswordService.DummyHash;
+        var passwordHash = user?.PasswordHash ?? _passwordService.DummyHash;
         var passwordValid = _passwordService.VerifyPassword(request.Password, passwordHash) && userHasPassword;
 
         if (user is null || !user.SetupCompleted)

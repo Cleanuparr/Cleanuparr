@@ -7,7 +7,7 @@ public sealed class PasswordService : IPasswordService
     /// <summary>
     /// Pre-computed BCrypt hash with a work factor of 12 used as a fallback when no user exists
     /// </summary>
-    public const string DummyHash = "$2a$12$tQw4MgGGq7WTFro3Me4mQOekctJ0mIOYmFMn.XEmEbyZhBq0i4qKy";
+    public string DummyHash => "$2a$12$tQw4MgGGq7WTFro3Me4mQOekctJ0mIOYmFMn.XEmEbyZhBq0i4qKy";
 
     public string HashPassword(string password)
     {
