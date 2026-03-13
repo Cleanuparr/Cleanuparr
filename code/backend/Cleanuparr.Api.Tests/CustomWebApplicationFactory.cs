@@ -2,6 +2,7 @@ using Cleanuparr.Shared.Helpers;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Hosting;
+using Xunit;
 
 // Integration tests share file-system state (config-dir used by SetupGuardMiddleware),
 // so they must be run sequentially to avoid interference between factories.
