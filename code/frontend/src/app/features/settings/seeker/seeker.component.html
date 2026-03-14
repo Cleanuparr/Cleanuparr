@@ -1,0 +1,100 @@
+<app-page-header
+  title="Seeker"
+  subtitle="Search for missing items and quality upgrades"
+/>
+
+@if (loadError()) {
+  <app-empty-state
+    icon="tablerPlugConnectedX"
+    heading="Could not connect to server"
+    description="Failed to load settings. Please check that the server is running and try again."
+  >
+    <app-button variant="primary" size="sm" (clicked)="retry()">
+      Retry
+    </app-button>
+  </app-empty-state>
+} @else if (loader.showSpinner()) {
+  <app-loading-state message="Loading settings..." />
+} @else if (!loader.loading()) {
+<div class="settings-form">
+  <app-card header="Configuration">
+    <div class="form-stack">
+      <app-toggle label="Enabled" [(checked)]="enabled"
+        hint="When enabled, the seeker will periodically search for missing items and quality upgrades" />
+      @if (enabled()) {
+        <app-toggle label="Advanced Scheduling" [(checked)]="useAdvancedScheduling"
+          hint="Choose between basic scheduling or advanced cron expression" />
+        @if (useAdvancedScheduling()) {
+          <app-input label="Cron Expression" placeholder="0 0 */6 ? * * *" [(value)]="cronExpression"
+            hint="Enter a valid Quartz cron expression (e.g., &quot;0 0 */6 ? * * *&quot; runs every 6 hours)"
+            [error]="cronError()" />
+        } @else {
+          <div class="form-row">
+            <app-select label="Schedule Unit" [options]="scheduleUnitOptions" [(value)]="scheduleUnit"
+              hint="Choose the time unit for the schedule" />
+            <app-select label="Every" [options]="scheduleIntervalOptions()" [(value)]="scheduleEvery"
+              hint="How often the job should run"
+              [error]="scheduleEveryError()" />
+          </div>
+        }
+        <app-select label="Selection Strategy" [options]="strategyOptions" [(value)]="selectionStrategy"
+          hint="How items are selected for searching" />
+        @if (strategyDescription()) {
+          <p class="strategy-hint">{{ strategyDescription() }}</p>
+        }
+        <div class="form-divider"></div>
+        <app-toggle label="Monitored Only" [(checked)]="monitoredOnly"
+          hint="Only search for items that are monitored in the arr app" />
+        <app-toggle label="Use Cutoff" [(checked)]="useCutoff"
+          hint="Skip items that have already met their quality cutoff" />
+        <app-toggle label="Round Robin" [checked]="useRoundRobin()" (checkedChange)="toggleRoundRobin($event)"
+          hint="Process one instance per run to spread indexer load" />
+      }
+    </div>
+  </app-card>
+
+  @if (enabled() && instances().length > 0) {
+    <app-card header="Instances">
+      @if (instanceError()) {
+        <div class="instance-error">{{ instanceError() }}</div>
+      }
+      <div class="instance-list">
+        @for (instance of instances(); track instance.arrInstanceId) {
+          <div class="instance-row">
+            <div class="instance-row__header">
+              <div class="instance-row__info">
+                <img [src]="getInstanceIcon(instance.instanceType)" [alt]="instance.instanceType" class="instance-row__icon" />
+                <span class="instance-row__name">{{ instance.instanceName }}</span>
+                <span class="instance-row__type">{{ instance.instanceType }}</span>
+              </div>
+              <app-toggle [checked]="instance.enabled" (checkedChange)="toggleInstance($index)" />
+            </div>
+            @if (instance.enabled) {
+              <div class="instance-row__details">
+                <app-chip-input
+                  label="Skip Tags"
+                  placeholder="Add tag ID..."
+                  hint="Arr tag IDs to exclude from search"
+                  [items]="instance.skipTags"
+                  (itemsChange)="updateInstanceSkipTags($index, $event)"
+                />
+              </div>
+            }
+            @if (instance.lastProcessedAt) {
+              <div class="instance-row__meta">
+                Last processed: {{ instance.lastProcessedAt | date:'medium' }}
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </app-card>
+  }
+
+  <div class="form-actions">
+    <app-button variant="primary" [glowing]="dirty()" [loading]="saving()" [disabled]="saving() || saved() || hasErrors()" (clicked)="save()">
+      {{ saved() ? 'Saved!' : 'Save Settings' }}
+    </app-button>
+  </div>
+</div>
+}

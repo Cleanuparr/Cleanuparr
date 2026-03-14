@@ -9,6 +9,7 @@ using Cleanuparr.Persistence.Models.Configuration.MalwareBlocker;
 using Cleanuparr.Persistence.Models.Configuration.Notification;
 using Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
 using Cleanuparr.Persistence.Models.Configuration.BlacklistSync;
+using Cleanuparr.Persistence.Models.Configuration.Seeker;
 using Cleanuparr.Persistence.Models.State;
 using Cleanuparr.Shared.Helpers;
 using Microsoft.EntityFrameworkCore;
@@ -64,6 +65,12 @@ public class DataContext : DbContext
     public DbSet<BlacklistSyncHistory> BlacklistSyncHistory { get; set; }
 
     public DbSet<BlacklistSyncConfig> BlacklistSyncConfigs { get; set; }
+
+    public DbSet<SeekerConfig> SeekerConfigs { get; set; }
+
+    public DbSet<SeekerInstanceConfig> SeekerInstanceConfigs { get; set; }
+
+    public DbSet<SeekerHistory> SeekerHistory { get; set; }
 
     public DataContext()
     {
@@ -195,6 +202,26 @@ public class DataContext : DbContext
                   .HasConversion(
                       v => string.Join(',', v),
                       v => v.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList());
+        });
+
+        modelBuilder.Entity<SeekerInstanceConfig>(entity =>
+        {
+            entity.HasOne(s => s.ArrInstance)
+                  .WithMany()
+                  .HasForeignKey(s => s.ArrInstanceId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(s => s.ArrInstanceId).IsUnique();
+        });
+
+        modelBuilder.Entity<SeekerHistory>(entity =>
+        {
+            entity.HasOne(s => s.ArrInstance)
+                  .WithMany()
+                  .HasForeignKey(s => s.ArrInstanceId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(s => new { s.ArrInstanceId, s.ExternalItemId, s.ItemType }).IsUnique();
         });
 
         // Configure BlacklistSyncState relationships and indexes

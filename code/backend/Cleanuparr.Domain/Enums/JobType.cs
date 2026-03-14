@@ -6,4 +6,5 @@ public enum JobType
     MalwareBlocker,
     DownloadCleaner,
     BlacklistSynchronizer,
+    Seeker,
 }

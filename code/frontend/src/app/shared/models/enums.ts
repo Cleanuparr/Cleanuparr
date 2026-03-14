@@ -92,4 +92,13 @@ export enum JobType {
   BlacklistSynchronizer = 'BlacklistSynchronizer',
 }
 
+export enum SelectionStrategy {
+  BalancedWeighted = 'BalancedWeighted',
+  OldestSearchFirst = 'OldestSearchFirst',
+  OldestSearchWeighted = 'OldestSearchWeighted',
+  NewestFirst = 'NewestFirst',
+  NewestWeighted = 'NewestWeighted',
+  Random = 'Random',
+}
+
 export type ArrType = 'sonarr' | 'radarr' | 'lidarr' | 'readarr' | 'whisparr';

@@ -81,6 +81,14 @@ export const routes: Routes = [
             canDeactivate: [pendingChangesGuard],
           },
           {
+            path: 'seeker',
+            loadComponent: () =>
+              import(
+                '@features/settings/seeker/seeker.component'
+              ).then((m) => m.SeekerComponent),
+            canDeactivate: [pendingChangesGuard],
+          },
+          {
             path: 'arr/:type',
             loadComponent: () =>
               import(

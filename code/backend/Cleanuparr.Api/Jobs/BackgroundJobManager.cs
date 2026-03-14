@@ -6,6 +6,8 @@ using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
 using Cleanuparr.Persistence.Models.Configuration.MalwareBlocker;
 using Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
 using Cleanuparr.Persistence.Models.Configuration.BlacklistSync;
+using Cleanuparr.Persistence.Models.Configuration.Seeker;
+using SeekerJob = Cleanuparr.Infrastructure.Features.Jobs.Seeker;
 using Cleanuparr.Shared.Helpers;
 using Microsoft.EntityFrameworkCore;
 using Quartz;
@@ -100,12 +102,16 @@ public class BackgroundJobManager : IHostedService
         BlacklistSyncConfig blacklistSyncConfig = await dataContext.BlacklistSyncConfigs
             .AsNoTracking()
             .FirstAsync(cancellationToken);
-        
+        SeekerConfig seekerConfig = await dataContext.SeekerConfigs
+            .AsNoTracking()
+            .FirstAsync(cancellationToken);
+
         // Always register jobs, regardless of enabled status
         await RegisterQueueCleanerJob(queueCleanerConfig, cancellationToken);
         await RegisterMalwareBlockerJob(malwareBlockerConfig, cancellationToken);
         await RegisterDownloadCleanerJob(downloadCleanerConfig, cancellationToken);
         await RegisterBlacklistSyncJob(blacklistSyncConfig, cancellationToken);
+        await RegisterSeekerJob(seekerConfig, cancellationToken);
     }
     
     /// <summary>
@@ -171,6 +177,20 @@ public class BackgroundJobManager : IHostedService
         }
     }
     
+    /// <summary>
+    /// Registers the Seeker job and optionally adds triggers based on configuration.
+    /// </summary>
+    public async Task RegisterSeekerJob(SeekerConfig config, CancellationToken cancellationToken = default)
+    {
+        // Always register the job definition
+        await AddJobWithoutTrigger<SeekerJob>(cancellationToken);
+
+        if (config.Enabled)
+        {
+            await AddTriggersForJob<SeekerJob>(config.CronExpression, cancellationToken);
+        }
+    }
+
     /// <summary>
     /// Helper method to add triggers for an existing job.
     /// </summary>

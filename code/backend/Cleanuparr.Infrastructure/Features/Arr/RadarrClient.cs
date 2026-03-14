@@ -1,4 +1,5 @@
 using System.Text;
+using Cleanuparr.Domain.Entities.Arr;
 using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Entities.Radarr;
 using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
@@ -128,6 +129,21 @@ public class RadarrClient : ArrClient, IRadarrClient
         }
 
         return null;
+    }
+
+    public async Task<List<SearchableMovie>> GetAllMoviesAsync(ArrInstance arrInstance)
+    {
+        UriBuilder uriBuilder = new(arrInstance.Url);
+        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/v3/movie";
+
+        using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
+        SetApiKey(request, arrInstance.ApiKey);
+
+        using HttpResponseMessage response = await _httpClient.SendAsync(request);
+        response.EnsureSuccessStatusCode();
+
+        string responseBody = await response.Content.ReadAsStringAsync();
+        return JsonConvert.DeserializeObject<List<SearchableMovie>>(responseBody) ?? [];
     }
 
     private async Task<Movie?> GetMovie(ArrInstance arrInstance, long movieId)

@@ -45,6 +45,7 @@ import {
   tablerFileExport,
   tablerUser,
   tablerLogout,
+  tablerSearch,
 } from '@ng-icons/tabler-icons';
 
 import { routes } from './app.routes';
@@ -100,6 +101,7 @@ export const appConfig: ApplicationConfig = {
       tablerFileExport,
       tablerUser,
       tablerLogout,
+      tablerSearch,
     }),
   ],
 };
