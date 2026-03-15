@@ -2,6 +2,7 @@ using Cleanuparr.Api.Features.Seeker.Contracts.Requests;
 using Cleanuparr.Api.Features.Seeker.Contracts.Responses;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Services.Interfaces;
+using Cleanuparr.Infrastructure.Utilities;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.Seeker;
 using Microsoft.AspNetCore.Authorization;
@@ -91,6 +92,11 @@ public sealed class SeekerConfigController : ControllerBase
         try
         {
             var config = await _dataContext.SeekerConfigs.FirstAsync();
+
+            if (!string.IsNullOrEmpty(request.CronExpression))
+            {
+                CronValidationHelper.ValidateCronExpression(request.CronExpression, JobType.Seeker);
+            }
 
             bool enabledChanged = config.Enabled != request.Enabled;
             bool becameEnabled = !config.Enabled && request.Enabled;

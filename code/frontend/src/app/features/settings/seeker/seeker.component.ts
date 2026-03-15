@@ -12,16 +12,17 @@ import { ToastService } from '@core/services/toast.service';
 import { ConfirmService } from '@core/services/confirm.service';
 import { UpdateSeekerConfig } from '@shared/models/seeker-config.model';
 import { HasPendingChanges } from '@core/guards/pending-changes.guard';
+import { ApiError } from '@core/interceptors/error.interceptor';
 import { DeferredLoader } from '@shared/utils/loading.util';
 import { ScheduleUnit, SelectionStrategy } from '@shared/models/enums';
 import { ScheduleOptions, generateCronExpression, parseCronToJobSchedule } from '@shared/utils/schedule.util';
 
 const STRATEGY_OPTIONS: SelectOption[] = [
+  { label: 'Balanced Weighted', value: SelectionStrategy.BalancedWeighted },
   { label: 'Oldest Search First', value: SelectionStrategy.OldestSearchFirst },
   { label: 'Oldest Search Weighted', value: SelectionStrategy.OldestSearchWeighted },
   { label: 'Newest First', value: SelectionStrategy.NewestFirst },
   { label: 'Newest Weighted', value: SelectionStrategy.NewestWeighted },
-  { label: 'Balanced Weighted', value: SelectionStrategy.BalancedWeighted },
   { label: 'Random', value: SelectionStrategy.Random },
 ];
 
@@ -247,8 +248,10 @@ export class SeekerComponent implements OnInit, HasPendingChanges {
         setTimeout(() => this.saved.set(false), 1500);
         this.savedSnapshot.set(this.buildSnapshot());
       },
-      error: () => {
-        this.toast.error('Failed to save seeker settings');
+      error: (err: ApiError) => {
+        this.toast.error(err.statusCode === 400
+          ? err.message
+          : 'Failed to save seeker settings');
         this.saving.set(false);
       },
     });

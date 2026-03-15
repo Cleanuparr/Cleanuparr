@@ -53,6 +53,11 @@ public static class CronValidationHelper
                 throw new ValidationException($"{cronExpression} should have a fire time of maximum {Constants.TriggerMaxLimit.TotalHours} hours");
             }
             
+            if (jobType is JobType.Seeker && triggerValue < Constants.SeekerMinLimit)
+            {
+                throw new ValidationException($"{cronExpression} should have a fire time of minimum {Constants.SeekerMinLimit.TotalMinutes} minutes");
+            }
+
             if (jobType is not JobType.MalwareBlocker && triggerValue < Constants.TriggerMinLimit)
             {
                 throw new ValidationException($"{cronExpression} should have a fire time of minimum {Constants.TriggerMinLimit.TotalSeconds} seconds");
@@ -65,7 +70,7 @@ public static class CronValidationHelper
         }
         catch (Exception ex)
         {
-            throw new ValidationException($"Error validating cron expression '{cronExpression}': {ex.Message}");
+            throw new ValidationException($"Error validating cron expression '{cronExpression}'", ex);
         }
     }
 } 
