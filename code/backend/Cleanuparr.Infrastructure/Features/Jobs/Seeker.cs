@@ -56,13 +56,13 @@ public sealed class Seeker : IHandler
         }
 
         // Replacement searches queued after download removal
-        SearchQueueItem? reactiveItem = await _dataContext.SearchQueue
+        SearchQueueItem? replacementItem = await _dataContext.SearchQueue
             .OrderBy(q => q.CreatedAt)
             .FirstOrDefaultAsync();
 
-        if (reactiveItem is not null)
+        if (replacementItem is not null)
         {
-            await ProcessReactiveItemAsync(reactiveItem);
+            await ProcessReplacementItemAsync(replacementItem);
             return;
         }
 
@@ -75,7 +75,7 @@ public sealed class Seeker : IHandler
         await ProcessProactiveSearchAsync(config);
     }
 
-    private async Task ProcessReactiveItemAsync(SearchQueueItem item)
+    private async Task ProcessReplacementItemAsync(SearchQueueItem item)
     {
         ArrInstance? arrInstance = await _dataContext.ArrInstances
             .Include(a => a.ArrConfig)
@@ -84,7 +84,7 @@ public sealed class Seeker : IHandler
         if (arrInstance is null)
         {
             _logger.LogWarning(
-                "Skipping reactive search for '{Title}' — arr instance {InstanceId} no longer exists",
+                "Skipping replacement search for '{Title}' — arr instance {InstanceId} no longer exists",
                 item.Title, item.ArrInstanceId);
             _dataContext.SearchQueue.Remove(item);
             await _dataContext.SaveChangesAsync();
@@ -103,7 +103,7 @@ public sealed class Seeker : IHandler
 
             await _eventPublisher.PublishSearchTriggered(arrInstance.Name, 1, [item.Title]);
 
-            _logger.LogInformation("Reactive search triggered for '{Title}' on {InstanceName}",
+            _logger.LogInformation("Replacement search triggered for '{Title}' on {InstanceName}",
                 item.Title, arrInstance.Name);
 
             // Update search history for proactive search awareness
@@ -111,7 +111,7 @@ public sealed class Seeker : IHandler
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to process reactive search for '{Title}' on {InstanceName}",
+            _logger.LogError(ex, "Failed to process replacement search for '{Title}' on {InstanceName}",
                 item.Title, arrInstance.Name);
         }
         finally
