@@ -67,7 +67,7 @@ public sealed record SeekerConfig : IConfig
                 $"{nameof(SearchInterval)} must be at most {Constants.MaxSearchIntervalMinutes} minutes");
         }
 
-        if (!new List<int> { 1, 2, 3, 4, 5, 6, 10 }.Contains(SearchInterval))
+        if (!new List<int> { 2, 3, 4, 5, 6, 10, 12, 15, 20, 30 }.Contains(SearchInterval))
         {
             throw new ValidationException($"Invalid search interval {SearchInterval}");
         }

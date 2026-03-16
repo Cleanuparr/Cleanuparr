@@ -3,7 +3,7 @@ import { DatePipe } from '@angular/common';
 import { PageHeaderComponent } from '@layout/page-header/page-header.component';
 import {
   CardComponent, ButtonComponent, ToggleComponent,
-  NumberInputComponent, SelectComponent, ChipInputComponent,
+  SelectComponent, ChipInputComponent,
   EmptyStateComponent, LoadingStateComponent,
   type SelectOption,
 } from '@ui';
@@ -15,6 +15,19 @@ import { HasPendingChanges } from '@core/guards/pending-changes.guard';
 import { ApiError } from '@core/interceptors/error.interceptor';
 import { DeferredLoader } from '@shared/utils/loading.util';
 import { SelectionStrategy } from '@shared/models/enums';
+
+const INTERVAL_OPTIONS: SelectOption[] = [
+  { label: '2 minutes', value: 2 },
+  { label: '3 minutes', value: 3 },
+  { label: '4 minutes', value: 4 },
+  { label: '5 minutes', value: 5 },
+  { label: '6 minutes', value: 6 },
+  { label: '10 minutes', value: 10 },
+  { label: '12 minutes', value: 12 },
+  { label: '15 minutes', value: 15 },
+  { label: '20 minutes', value: 20 },
+  { label: '30 minutes', value: 30 },
+];
 
 const STRATEGY_OPTIONS: SelectOption[] = [
   { label: 'Balanced Weighted', value: SelectionStrategy.BalancedWeighted },
@@ -48,7 +61,7 @@ interface InstanceState {
   standalone: true,
   imports: [
     PageHeaderComponent, CardComponent, ButtonComponent,
-    ToggleComponent, NumberInputComponent, SelectComponent, ChipInputComponent,
+    ToggleComponent, SelectComponent, ChipInputComponent,
     EmptyStateComponent, LoadingStateComponent, DatePipe,
   ],
   templateUrl: './seeker.component.html',
@@ -62,6 +75,7 @@ export class SeekerComponent implements OnInit, HasPendingChanges {
 
   private readonly savedSnapshot = signal('');
 
+  readonly intervalOptions = INTERVAL_OPTIONS;
   readonly strategyOptions = STRATEGY_OPTIONS;
   readonly loader = new DeferredLoader();
   readonly loadError = signal(false);
@@ -69,7 +83,7 @@ export class SeekerComponent implements OnInit, HasPendingChanges {
   readonly saved = signal(false);
 
   readonly searchEnabled = signal(true);
-  readonly searchInterval = signal<number | null>(2);
+  readonly searchInterval = signal<unknown>(2);
   readonly proactiveSearchEnabled = signal(false);
   readonly selectionStrategy = signal<unknown>(SelectionStrategy.BalancedWeighted);
   readonly monitoredOnly = signal(true);
@@ -80,15 +94,6 @@ export class SeekerComponent implements OnInit, HasPendingChanges {
 
   readonly strategyDescription = computed(() => STRATEGY_DESCRIPTIONS[this.selectionStrategy() as SelectionStrategy] ?? '');
 
-  // Validation
-  readonly searchIntervalError = computed(() => {
-    const v = this.searchInterval();
-    if (v == null) return 'This field is required';
-    if (v < 1) return 'Minimum value is 1';
-    if (v > 10) return 'Maximum value is 10';
-    return undefined;
-  });
-
   readonly instanceError = computed(() => {
     if (this.proactiveSearchEnabled() && this.instances().length > 0 && !this.instances().some(i => i.enabled)) {
       return 'At least one instance must be enabled when proactive search is enabled';
@@ -96,10 +101,7 @@ export class SeekerComponent implements OnInit, HasPendingChanges {
     return undefined;
   });
 
-  readonly hasErrors = computed(() => !!(
-    this.searchIntervalError() ||
-    this.instanceError()
-  ));
+  readonly hasErrors = computed(() => !!this.instanceError());
 
   ngOnInit(): void {
     this.loadConfig();
@@ -183,7 +185,7 @@ export class SeekerComponent implements OnInit, HasPendingChanges {
   save(): void {
     const config: UpdateSeekerConfig = {
       searchEnabled: this.searchEnabled(),
-      searchInterval: this.searchInterval() ?? 2,
+      searchInterval: (this.searchInterval() as number) ?? 2,
       proactiveSearchEnabled: this.proactiveSearchEnabled(),
       selectionStrategy: this.selectionStrategy() as SelectionStrategy,
       monitoredOnly: this.monitoredOnly(),

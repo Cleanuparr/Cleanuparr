@@ -22,9 +22,8 @@
       <app-toggle label="Search Enabled" [(checked)]="searchEnabled"
         hint="Master toggle for all searching. When disabled, no replacement or proactive searches will be performed." />
       @if (searchEnabled()) {
-        <app-number-input label="Search Interval" [(value)]="searchInterval" [min]="2" [max]="10" suffix="minutes"
-          hint="How often the seeker runs to process searches (1-10 minutes)"
-          [error]="searchIntervalError()" />
+        <app-select label="Search Interval" [options]="intervalOptions" [(value)]="searchInterval"
+          hint="How often the seeker runs to process searches" />
       }
       <app-toggle label="Enable Replacement Search" [checked]="true" [disabled]="true"
         hint="Automatically searches for a replacement whenever a download is removed from an arr queue" />
