@@ -6,6 +6,7 @@ using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
 using Cleanuparr.Persistence.Models.Configuration.General;
 using Cleanuparr.Persistence.Models.Configuration.MalwareBlocker;
 using Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
+using Cleanuparr.Persistence.Models.Configuration.Seeker;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 
@@ -92,6 +93,14 @@ public static class TestDataContextFactory
             UnlinkedEnabled = false,
             UnlinkedTargetCategory = "",
             UnlinkedCategories = []
+        });
+
+        // Seeker config
+        context.SeekerConfigs.Add(new SeekerConfig
+        {
+            Id = Guid.NewGuid(),
+            SearchEnabled = true,
+            ProactiveSearchEnabled = false
         });
 
         context.SaveChanges();

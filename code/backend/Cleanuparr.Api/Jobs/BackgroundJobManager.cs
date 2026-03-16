@@ -178,17 +178,13 @@ public class BackgroundJobManager : IHostedService
     }
     
     /// <summary>
-    /// Registers the Seeker job and optionally adds triggers based on configuration.
+    /// Registers the Seeker job with a trigger based on SearchInterval.
+    /// The Seeker is always running.
     /// </summary>
     public async Task RegisterSeekerJob(SeekerConfig config, CancellationToken cancellationToken = default)
     {
-        // Always register the job definition
         await AddJobWithoutTrigger<SeekerJob>(cancellationToken);
-
-        if (config.Enabled)
-        {
-            await AddTriggersForJob<SeekerJob>(config.CronExpression, cancellationToken);
-        }
+        await AddTriggersForJob<SeekerJob>(config.ToCronExpression(), cancellationToken);
     }
 
     /// <summary>

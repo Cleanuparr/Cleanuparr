@@ -4,16 +4,16 @@ namespace Cleanuparr.Api.Features.Seeker.Contracts.Responses;
 
 public sealed record SeekerConfigResponse
 {
-    public bool Enabled { get; init; }
-    
-    public string CronExpression { get; init; } = string.Empty;
+    public bool SearchEnabled { get; init; }
 
-    public bool UseAdvancedScheduling { get; init; }
+    public ushort SearchInterval { get; init; }
+
+    public bool ProactiveSearchEnabled { get; init; }
 
     public SelectionStrategy SelectionStrategy { get; init; }
-    
+
     public bool MonitoredOnly { get; init; }
-    
+
     public bool UseCutoff { get; init; }
 
     public bool UseRoundRobin { get; init; }

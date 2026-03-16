@@ -62,8 +62,6 @@ export class GeneralSettingsComponent implements OnInit, HasPendingChanges {
   readonly httpMaxRetries = signal<number | null>(3);
   readonly httpTimeout = signal<number | null>(30);
   readonly httpCertificateValidation = signal<unknown>(CertificateValidationType.Enabled);
-  readonly searchEnabled = signal(true);
-  readonly searchDelay = signal<number | null>(5);
   readonly statusCheckEnabled = signal(true);
   readonly ignoredDownloads = signal<string[]>([]);
   readonly strikeInactivityWindowHours = signal<number | null>(24);
@@ -97,14 +95,6 @@ export class GeneralSettingsComponent implements OnInit, HasPendingChanges {
     if (v == null) return 'This field is required';
     if (v < 1) return 'Minimum value is 1';
     if (v > 100) return 'Maximum value is 100';
-    return undefined;
-  });
-
-  readonly searchDelayError = computed(() => {
-    const v = this.searchDelay();
-    if (v == null) return 'This field is required';
-    if (v < 60) return 'Minimum value is 60';
-    if (v > 300) return 'Maximum value is 300';
     return undefined;
   });
 
@@ -160,7 +150,6 @@ export class GeneralSettingsComponent implements OnInit, HasPendingChanges {
     this.strikeInactivityWindowHoursError() ||
     this.httpMaxRetriesError() ||
     this.httpTimeoutError() ||
-    this.searchDelayError() ||
     this.logRollingSizeError() ||
     this.logRetainedFileCountError() ||
     this.logTimeLimitError() ||
@@ -182,8 +171,6 @@ export class GeneralSettingsComponent implements OnInit, HasPendingChanges {
         this.httpMaxRetries.set(config.httpMaxRetries);
         this.httpTimeout.set(config.httpTimeout);
         this.httpCertificateValidation.set(config.httpCertificateValidation);
-        this.searchEnabled.set(config.searchEnabled);
-        this.searchDelay.set(config.searchDelay);
         this.statusCheckEnabled.set(config.statusCheckEnabled);
         this.ignoredDownloads.set(config.ignoredDownloads ?? []);
         this.strikeInactivityWindowHours.set(config.strikeInactivityWindowHours);
@@ -224,8 +211,6 @@ export class GeneralSettingsComponent implements OnInit, HasPendingChanges {
       httpMaxRetries: this.httpMaxRetries() ?? 3,
       httpTimeout: this.httpTimeout() ?? 30,
       httpCertificateValidation: this.httpCertificateValidation() as CertificateValidationType,
-      searchEnabled: this.searchEnabled(),
-      searchDelay: this.searchDelay() ?? 5,
       statusCheckEnabled: this.statusCheckEnabled(),
       strikeInactivityWindowHours: this.strikeInactivityWindowHours() ?? 24,
       ignoredDownloads: this.ignoredDownloads(),
@@ -268,8 +253,6 @@ export class GeneralSettingsComponent implements OnInit, HasPendingChanges {
       httpMaxRetries: this.httpMaxRetries(),
       httpTimeout: this.httpTimeout(),
       httpCertificateValidation: this.httpCertificateValidation(),
-      searchEnabled: this.searchEnabled(),
-      searchDelay: this.searchDelay(),
       statusCheckEnabled: this.statusCheckEnabled(),
       strikeInactivityWindowHours: this.strikeInactivityWindowHours(),
       ignoredDownloads: this.ignoredDownloads(),

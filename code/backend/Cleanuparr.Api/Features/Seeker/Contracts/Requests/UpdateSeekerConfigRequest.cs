@@ -5,11 +5,11 @@ namespace Cleanuparr.Api.Features.Seeker.Contracts.Requests;
 
 public sealed record UpdateSeekerConfigRequest
 {
-    public bool Enabled { get; init; }
+    public bool SearchEnabled { get; init; } = true;
 
-    public string CronExpression { get; init; } = "0 0 * * * ?";
+    public ushort SearchInterval { get; init; } = 3;
 
-    public bool UseAdvancedScheduling { get; init; }
+    public bool ProactiveSearchEnabled { get; init; }
 
     public SelectionStrategy SelectionStrategy { get; init; } = SelectionStrategy.BalancedWeighted;
 
@@ -23,9 +23,9 @@ public sealed record UpdateSeekerConfigRequest
 
     public SeekerConfig ApplyTo(SeekerConfig config)
     {
-        config.Enabled = Enabled;
-        config.CronExpression = CronExpression;
-        config.UseAdvancedScheduling = UseAdvancedScheduling;
+        config.SearchEnabled = SearchEnabled;
+        config.SearchInterval = SearchInterval;
+        config.ProactiveSearchEnabled = ProactiveSearchEnabled;
         config.SelectionStrategy = SelectionStrategy;
         config.MonitoredOnly = MonitoredOnly;
         config.UseCutoff = UseCutoff;

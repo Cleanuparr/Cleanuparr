@@ -49,12 +49,102 @@ public sealed class Seeker : IHandler
             .AsNoTracking()
             .FirstAsync();
 
-        if (!config.Enabled)
+        if (!config.SearchEnabled)
         {
-            _logger.LogDebug("Seeker is disabled");
+            _logger.LogDebug("Search is disabled");
             return;
         }
 
+        // Replacement searches queued after download removal
+        SearchQueueItem? reactiveItem = await _dataContext.SearchQueue
+            .OrderBy(q => q.CreatedAt)
+            .FirstOrDefaultAsync();
+
+        if (reactiveItem is not null)
+        {
+            await ProcessReactiveItemAsync(reactiveItem);
+            return;
+        }
+
+        // Missing items and quality upgrades
+        if (!config.ProactiveSearchEnabled)
+        {
+            return;
+        }
+
+        await ProcessProactiveSearchAsync(config);
+    }
+
+    private async Task ProcessReactiveItemAsync(SearchQueueItem item)
+    {
+        ArrInstance? arrInstance = await _dataContext.ArrInstances
+            .Include(a => a.ArrConfig)
+            .FirstOrDefaultAsync(a => a.Id == item.ArrInstanceId);
+
+        if (arrInstance is null)
+        {
+            _logger.LogWarning(
+                "Skipping reactive search for '{Title}' — arr instance {InstanceId} no longer exists",
+                item.Title, item.ArrInstanceId);
+            _dataContext.SearchQueue.Remove(item);
+            await _dataContext.SaveChangesAsync();
+            return;
+        }
+
+        ContextProvider.Set(nameof(InstanceType), item.ArrInstance.ArrConfig.Type);
+        ContextProvider.Set(ContextProvider.Keys.ArrInstanceUrl, arrInstance.ExternalUrl ?? arrInstance.Url);
+
+        try
+        {
+            IArrClient arrClient = _arrClientFactory.GetClient(item.ArrInstance.ArrConfig.Type, arrInstance.Version);
+            HashSet<SearchItem> searchItems = BuildSearchItems(item);
+
+            await _dryRunInterceptor.InterceptAsync(arrClient.SearchItemsAsync, arrInstance, searchItems);
+
+            await _eventPublisher.PublishAsync(
+                EventType.SearchTriggered,
+                $"Searched for replacement: {item.Title} on {arrInstance.Name}",
+                EventSeverity.Information,
+                new { InstanceName = arrInstance.Name, InstanceType = item.ArrInstance.ArrConfig.Type.ToString(), ItemCount = 1, Items = new[] { item.Title } });
+
+            _logger.LogInformation("Reactive search triggered for '{Title}' on {InstanceName}",
+                item.Title, arrInstance.Name);
+
+            // Update search history for proactive search awareness
+            await UpdateSearchHistoryAsync(arrInstance.Id, item.ArrInstance.ArrConfig.Type, [item.ItemId]);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to process reactive search for '{Title}' on {InstanceName}",
+                item.Title, arrInstance.Name);
+        }
+        finally
+        {
+            _dataContext.SearchQueue.Remove(item);
+            await _dataContext.SaveChangesAsync();
+        }
+    }
+
+    private static HashSet<SearchItem> BuildSearchItems(SearchQueueItem item)
+    {
+        if (item.SeriesId.HasValue && Enum.TryParse<SeriesSearchType>(item.SearchType, out var searchType))
+        {
+            return
+            [
+                new SeriesSearchItem
+                {
+                    Id = item.ItemId,
+                    SeriesId = item.SeriesId.Value,
+                    SearchType = searchType
+                }
+            ];
+        }
+
+        return [new SearchItem { Id = item.ItemId }];
+    }
+
+    private async Task ProcessProactiveSearchAsync(SeekerConfig config)
+    {
         List<SeekerInstanceConfig> instanceConfigs = await _dataContext.SeekerInstanceConfigs
             .Include(s => s.ArrInstance)
                 .ThenInclude(a => a.ArrConfig)
@@ -67,7 +157,7 @@ public sealed class Seeker : IHandler
 
         if (instanceConfigs.Count == 0)
         {
-            _logger.LogDebug("No enabled Seeker instances found");
+            _logger.LogDebug("No enabled Seeker instances found for proactive search");
             return;
         }
 

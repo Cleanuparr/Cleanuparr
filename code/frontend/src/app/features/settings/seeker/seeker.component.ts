@@ -1,8 +1,8 @@
-import { Component, ChangeDetectionStrategy, inject, signal, computed, OnInit, effect, untracked } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, signal, computed, OnInit } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { PageHeaderComponent } from '@layout/page-header/page-header.component';
 import {
-  CardComponent, ButtonComponent, InputComponent, ToggleComponent,
+  CardComponent, ButtonComponent, ToggleComponent,
   NumberInputComponent, SelectComponent, ChipInputComponent,
   EmptyStateComponent, LoadingStateComponent,
   type SelectOption,
@@ -14,8 +14,7 @@ import { UpdateSeekerConfig } from '@shared/models/seeker-config.model';
 import { HasPendingChanges } from '@core/guards/pending-changes.guard';
 import { ApiError } from '@core/interceptors/error.interceptor';
 import { DeferredLoader } from '@shared/utils/loading.util';
-import { ScheduleUnit, SelectionStrategy } from '@shared/models/enums';
-import { ScheduleOptions, generateCronExpression, parseCronToJobSchedule } from '@shared/utils/schedule.util';
+import { SelectionStrategy } from '@shared/models/enums';
 
 const STRATEGY_OPTIONS: SelectOption[] = [
   { label: 'Balanced Weighted', value: SelectionStrategy.BalancedWeighted },
@@ -35,12 +34,6 @@ const STRATEGY_DESCRIPTIONS: Record<SelectionStrategy, string> = {
   [SelectionStrategy.Random]: 'Every item has an equal chance of being picked. No prioritization.',
 };
 
-const SCHEDULE_UNIT_OPTIONS: SelectOption[] = [
-  { label: 'Seconds', value: ScheduleUnit.Seconds },
-  { label: 'Minutes', value: ScheduleUnit.Minutes },
-  { label: 'Hours', value: ScheduleUnit.Hours },
-];
-
 interface InstanceState {
   arrInstanceId: string;
   instanceName: string;
@@ -54,7 +47,7 @@ interface InstanceState {
   selector: 'app-seeker',
   standalone: true,
   imports: [
-    PageHeaderComponent, CardComponent, ButtonComponent, InputComponent,
+    PageHeaderComponent, CardComponent, ButtonComponent,
     ToggleComponent, NumberInputComponent, SelectComponent, ChipInputComponent,
     EmptyStateComponent, LoadingStateComponent, DatePipe,
   ],
@@ -70,17 +63,14 @@ export class SeekerComponent implements OnInit, HasPendingChanges {
   private readonly savedSnapshot = signal('');
 
   readonly strategyOptions = STRATEGY_OPTIONS;
-  readonly scheduleUnitOptions = SCHEDULE_UNIT_OPTIONS;
   readonly loader = new DeferredLoader();
   readonly loadError = signal(false);
   readonly saving = signal(false);
   readonly saved = signal(false);
 
-  readonly enabled = signal(false);
-  readonly useAdvancedScheduling = signal(false);
-  readonly cronExpression = signal('');
-  readonly scheduleEvery = signal<unknown>(1);
-  readonly scheduleUnit = signal<unknown>(ScheduleUnit.Hours);
+  readonly searchEnabled = signal(true);
+  readonly searchInterval = signal<number | null>(2);
+  readonly proactiveSearchEnabled = signal(false);
   readonly selectionStrategy = signal<unknown>(SelectionStrategy.BalancedWeighted);
   readonly monitoredOnly = signal(true);
   readonly useCutoff = signal(false);
@@ -90,47 +80,24 @@ export class SeekerComponent implements OnInit, HasPendingChanges {
 
   readonly strategyDescription = computed(() => STRATEGY_DESCRIPTIONS[this.selectionStrategy() as SelectionStrategy] ?? '');
 
-  readonly scheduleIntervalOptions = computed(() => {
-    const unit = this.scheduleUnit() as ScheduleUnit;
-    const values = ScheduleOptions[unit] ?? [];
-    return values.map(v => ({ label: `${v}`, value: v }));
-  });
-
-  constructor() {
-    effect(() => {
-      const unit = this.scheduleUnit();
-      const options = ScheduleOptions[unit as ScheduleUnit] ?? [];
-      const current = this.scheduleEvery();
-      if (options.length > 0 && !options.includes(current as number)) {
-        untracked(() => this.scheduleEvery.set(options[0]));
-      }
-    });
-  }
-
   // Validation
-  readonly scheduleEveryError = computed(() => {
-    if (this.useAdvancedScheduling()) return undefined;
-    const unit = this.scheduleUnit() as ScheduleUnit;
-    const options = ScheduleOptions[unit] ?? [];
-    if (!options.includes(this.scheduleEvery() as number)) return 'Please select a value';
-    return undefined;
-  });
-
-  readonly cronError = computed(() => {
-    if (this.useAdvancedScheduling() && !this.cronExpression().trim()) return 'Cron expression is required';
+  readonly searchIntervalError = computed(() => {
+    const v = this.searchInterval();
+    if (v == null) return 'This field is required';
+    if (v < 1) return 'Minimum value is 1';
+    if (v > 10) return 'Maximum value is 10';
     return undefined;
   });
 
   readonly instanceError = computed(() => {
-    if (this.enabled() && this.instances().length > 0 && !this.instances().some(i => i.enabled)) {
-      return 'At least one instance must be enabled';
+    if (this.proactiveSearchEnabled() && this.instances().length > 0 && !this.instances().some(i => i.enabled)) {
+      return 'At least one instance must be enabled when proactive search is enabled';
     }
     return undefined;
   });
 
   readonly hasErrors = computed(() => !!(
-    this.scheduleEveryError() ||
-    this.cronError() ||
+    this.searchIntervalError() ||
     this.instanceError()
   ));
 
@@ -142,14 +109,9 @@ export class SeekerComponent implements OnInit, HasPendingChanges {
     this.loader.start();
     this.api.getConfig().subscribe({
       next: (config) => {
-        this.enabled.set(config.enabled);
-        this.useAdvancedScheduling.set(config.useAdvancedScheduling);
-        this.cronExpression.set(config.cronExpression);
-        const parsed = parseCronToJobSchedule(config.cronExpression);
-        if (parsed) {
-          this.scheduleEvery.set(parsed.every);
-          this.scheduleUnit.set(parsed.type);
-        }
+        this.searchEnabled.set(config.searchEnabled);
+        this.searchInterval.set(config.searchInterval);
+        this.proactiveSearchEnabled.set(config.proactiveSearchEnabled);
         this.selectionStrategy.set(config.selectionStrategy);
         this.monitoredOnly.set(config.monitoredOnly);
         this.useCutoff.set(config.useCutoff);
@@ -219,15 +181,10 @@ export class SeekerComponent implements OnInit, HasPendingChanges {
   }
 
   save(): void {
-    const jobSchedule = { every: (this.scheduleEvery() as number) ?? 1, type: this.scheduleUnit() as ScheduleUnit };
-    const cronExpression = this.useAdvancedScheduling()
-      ? this.cronExpression()
-      : generateCronExpression(jobSchedule);
-
     const config: UpdateSeekerConfig = {
-      enabled: this.enabled(),
-      cronExpression,
-      useAdvancedScheduling: this.useAdvancedScheduling(),
+      searchEnabled: this.searchEnabled(),
+      searchInterval: this.searchInterval() ?? 2,
+      proactiveSearchEnabled: this.proactiveSearchEnabled(),
       selectionStrategy: this.selectionStrategy() as SelectionStrategy,
       monitoredOnly: this.monitoredOnly(),
       useCutoff: this.useCutoff(),
@@ -259,11 +216,9 @@ export class SeekerComponent implements OnInit, HasPendingChanges {
 
   private buildSnapshot(): string {
     return JSON.stringify({
-      enabled: this.enabled(),
-      useAdvancedScheduling: this.useAdvancedScheduling(),
-      cronExpression: this.cronExpression(),
-      scheduleEvery: this.scheduleEvery(),
-      scheduleUnit: this.scheduleUnit(),
+      searchEnabled: this.searchEnabled(),
+      searchInterval: this.searchInterval(),
+      proactiveSearchEnabled: this.proactiveSearchEnabled(),
       selectionStrategy: this.selectionStrategy(),
       monitoredOnly: this.monitoredOnly(),
       useCutoff: this.useCutoff(),

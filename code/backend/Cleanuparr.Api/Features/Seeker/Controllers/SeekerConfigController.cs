@@ -2,7 +2,6 @@ using Cleanuparr.Api.Features.Seeker.Contracts.Requests;
 using Cleanuparr.Api.Features.Seeker.Contracts.Responses;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Services.Interfaces;
-using Cleanuparr.Infrastructure.Utilities;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.Seeker;
 using Microsoft.AspNetCore.Authorization;
@@ -67,9 +66,9 @@ public sealed class SeekerConfigController : ControllerBase
 
             var response = new SeekerConfigResponse
             {
-                Enabled = config.Enabled,
-                CronExpression = config.CronExpression,
-                UseAdvancedScheduling = config.UseAdvancedScheduling,
+                SearchEnabled = config.SearchEnabled,
+                SearchInterval = config.SearchInterval,
+                ProactiveSearchEnabled = config.ProactiveSearchEnabled,
                 SelectionStrategy = config.SelectionStrategy,
                 MonitoredOnly = config.MonitoredOnly,
                 UseCutoff = config.UseCutoff,
@@ -93,21 +92,15 @@ public sealed class SeekerConfigController : ControllerBase
         {
             var config = await _dataContext.SeekerConfigs.FirstAsync();
 
-            if (!string.IsNullOrEmpty(request.CronExpression))
-            {
-                CronValidationHelper.ValidateCronExpression(request.CronExpression, JobType.Seeker);
-            }
-
-            bool enabledChanged = config.Enabled != request.Enabled;
-            bool becameEnabled = !config.Enabled && request.Enabled;
+            ushort previousInterval = config.SearchInterval;
 
             request.ApplyTo(config);
             config.Validate();
 
-            if (request.Enabled && request.Instances.Count > 0 && !request.Instances.Any(i => i.Enabled))
+            if (request.ProactiveSearchEnabled && request.Instances.Count > 0 && !request.Instances.Any(i => i.Enabled))
             {
                 throw new Domain.Exceptions.ValidationException(
-                    "At least one instance must be enabled when the Seeker is enabled");
+                    "At least one instance must be enabled when proactive search is enabled");
             }
 
             // Sync instance configs
@@ -145,18 +138,12 @@ public sealed class SeekerConfigController : ControllerBase
 
             await _dataContext.SaveChangesAsync();
 
-            if (enabledChanged)
+            // Update Quartz trigger if SearchInterval changed
+            if (config.SearchInterval != previousInterval)
             {
-                if (becameEnabled)
-                {
-                    _logger.LogInformation("Seeker enabled, starting job");
-                    await _jobManagementService.StartJob(JobType.Seeker, null, config.CronExpression);
-                }
-                else
-                {
-                    _logger.LogInformation("Seeker disabled, stopping the job");
-                    await _jobManagementService.StopJob(JobType.Seeker);
-                }
+                _logger.LogInformation("Search interval changed from {Old} to {New} minutes, updating Seeker schedule",
+                    previousInterval, config.SearchInterval);
+                await _jobManagementService.StartJob(JobType.Seeker, null, config.ToCronExpression());
             }
 
             return Ok(new { Message = "Seeker configuration updated successfully" });

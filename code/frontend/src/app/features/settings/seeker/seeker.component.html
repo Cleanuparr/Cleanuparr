@@ -17,26 +17,23 @@
   <app-loading-state message="Loading settings..." />
 } @else if (!loader.loading()) {
 <div class="settings-form">
-  <app-card header="Configuration">
+  <app-card header="Search Settings">
     <div class="form-stack">
-      <app-toggle label="Enabled" [(checked)]="enabled"
-        hint="When enabled, the seeker will periodically search for missing items and quality upgrades" />
-      @if (enabled()) {
-        <app-toggle label="Advanced Scheduling" [(checked)]="useAdvancedScheduling"
-          hint="Choose between basic scheduling or advanced cron expression" />
-        @if (useAdvancedScheduling()) {
-          <app-input label="Cron Expression" placeholder="0 0 */6 ? * * *" [(value)]="cronExpression"
-            hint="Enter a valid Quartz cron expression (e.g., &quot;0 0 */6 ? * * *&quot; runs every 6 hours)"
-            [error]="cronError()" />
-        } @else {
-          <div class="form-row">
-            <app-select label="Schedule Unit" [options]="scheduleUnitOptions" [(value)]="scheduleUnit"
-              hint="Choose the time unit for the schedule" />
-            <app-select label="Every" [options]="scheduleIntervalOptions()" [(value)]="scheduleEvery"
-              hint="How often the job should run"
-              [error]="scheduleEveryError()" />
-          </div>
-        }
+      <app-toggle label="Search Enabled" [(checked)]="searchEnabled"
+        hint="Master toggle for all searching. When disabled, no reactive or proactive searches will be performed." />
+      @if (searchEnabled()) {
+        <app-number-input label="Search Interval" [(value)]="searchInterval" [min]="1" [max]="10" suffix="minutes"
+          hint="How often the seeker runs to process searches (1-10 minutes)"
+          [error]="searchIntervalError()" />
+      }
+    </div>
+  </app-card>
+
+  <app-card header="Proactive Search">
+    <div class="form-stack">
+      <app-toggle label="Proactive Search" [(checked)]="proactiveSearchEnabled"
+        hint="When enabled, the seeker will periodically search for missing items and quality upgrades across your library" />
+      @if (proactiveSearchEnabled()) {
         <app-select label="Selection Strategy" [options]="strategyOptions" [(value)]="selectionStrategy"
           hint="How items are selected for searching" />
         @if (strategyDescription()) {
@@ -53,7 +50,7 @@
     </div>
   </app-card>
 
-  @if (enabled() && instances().length > 0) {
+  @if (proactiveSearchEnabled() && instances().length > 0) {
     <app-card header="Instances">
       @if (instanceError()) {
         <div class="instance-error">{{ instanceError() }}</div>

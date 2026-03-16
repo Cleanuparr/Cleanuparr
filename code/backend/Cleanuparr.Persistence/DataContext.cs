@@ -72,6 +72,8 @@ public class DataContext : DbContext
 
     public DbSet<SeekerHistory> SeekerHistory { get; set; }
 
+    public DbSet<SearchQueueItem> SearchQueue { get; set; }
+
     public DataContext()
     {
     }
@@ -222,6 +224,14 @@ public class DataContext : DbContext
                   .OnDelete(DeleteBehavior.Cascade);
 
             entity.HasIndex(s => new { s.ArrInstanceId, s.ExternalItemId, s.ItemType }).IsUnique();
+        });
+
+        modelBuilder.Entity<SearchQueueItem>(entity =>
+        {
+            entity.HasOne(s => s.ArrInstance)
+                  .WithMany()
+                  .HasForeignKey(s => s.ArrInstanceId)
+                  .OnDelete(DeleteBehavior.Cascade);
         });
 
         // Configure BlacklistSyncState relationships and indexes

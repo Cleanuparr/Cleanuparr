@@ -1,9 +1,9 @@
 import { SelectionStrategy } from './enums';
 
 export interface SeekerConfig {
-  enabled: boolean;
-  cronExpression: string;
-  useAdvancedScheduling: boolean;
+  searchEnabled: boolean;
+  searchInterval: number;
+  proactiveSearchEnabled: boolean;
   selectionStrategy: SelectionStrategy;
   monitoredOnly: boolean;
   useCutoff: boolean;
@@ -21,9 +21,9 @@ export interface SeekerInstanceConfig {
 }
 
 export interface UpdateSeekerConfig {
-  enabled: boolean;
-  cronExpression: string;
-  useAdvancedScheduling: boolean;
+  searchEnabled: boolean;
+  searchInterval: number;
+  proactiveSearchEnabled: boolean;
   selectionStrategy: SelectionStrategy;
   monitoredOnly: boolean;
   useCutoff: boolean;

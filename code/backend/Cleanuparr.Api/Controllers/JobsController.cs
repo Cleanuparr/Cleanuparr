@@ -59,6 +59,11 @@ public class JobsController : ControllerBase
     [HttpPost("{jobType}/start")]
     public async Task<IActionResult> StartJob(JobType jobType, [FromBody] ScheduleRequest scheduleRequest = null)
     {
+        if (jobType == JobType.Seeker)
+        {
+            return BadRequest("The Seeker job cannot be manually controlled");
+        }
+
         try
         {
             // Get the schedule from the request body if provided
@@ -82,6 +87,11 @@ public class JobsController : ControllerBase
     [HttpPost("{jobType}/trigger")]
     public async Task<IActionResult> TriggerJob(JobType jobType)
     {
+        if (jobType == JobType.Seeker)
+        {
+            return BadRequest("The Seeker job cannot be manually triggered");
+        }
+
         try
         {
             var result = await _jobManagementService.TriggerJobOnce(jobType);
@@ -102,6 +112,11 @@ public class JobsController : ControllerBase
     [HttpPut("{jobType}/schedule")]
     public async Task<IActionResult> UpdateJobSchedule(JobType jobType, [FromBody] ScheduleRequest scheduleRequest)
     {
+        if (jobType == JobType.Seeker)
+        {
+            return BadRequest("The Seeker job schedule cannot be manually modified");
+        }
+
         if (scheduleRequest?.Schedule == null)
         {
             return BadRequest("Schedule is required");
