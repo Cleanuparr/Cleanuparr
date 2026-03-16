@@ -181,7 +181,7 @@ public sealed class Seeker : IHandler
         ArrInstance arrInstance = instanceConfig.ArrInstance;
         InstanceType instanceType = arrInstance.ArrConfig.Type;
 
-        _logger.LogInformation("Seeker processing {InstanceType} instance: {InstanceName}",
+        _logger.LogDebug("Processing {InstanceType} instance: {InstanceName}",
             instanceType, arrInstance.Name);
 
         // Set context for event publishing
@@ -194,7 +194,7 @@ public sealed class Seeker : IHandler
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Seeker failed to process {InstanceType} instance: {InstanceName}",
+            _logger.LogError(ex, "Failed to process {InstanceType} instance: {InstanceName}",
                 instanceType, arrInstance.Name);
         }
 
@@ -240,7 +240,15 @@ public sealed class Seeker : IHandler
 
         // Trigger search
         IArrClient arrClient = _arrClientFactory.GetClient(instanceType, arrInstance.Version);
-        HashSet<SearchItem> searchItems = selectedIds.Select(id => new SearchItem { Id = id }).ToHashSet();
+        HashSet<SearchItem> searchItems = instanceType switch
+        {
+            InstanceType.Sonarr => selectedIds.Select(id => (SearchItem)new SeriesSearchItem
+            {
+                Id = id,
+                SearchType = SeriesSearchType.Series
+            }).ToHashSet(),
+            _ => selectedIds.Select(id => new SearchItem { Id = id }).ToHashSet()
+        };
 
         await _dryRunInterceptor.InterceptAsync(arrClient.SearchItemsAsync, arrInstance, searchItems);
 
@@ -250,7 +258,7 @@ public sealed class Seeker : IHandler
         // Publish event
         await _eventPublisher.PublishSearchTriggered(arrInstance.Name, selectedIds.Count, selectedNames);
 
-        _logger.LogInformation("Seeker searched {Count} items on {InstanceName}: {Items}",
+        _logger.LogInformation("Searched {Count} items on {InstanceName}: {Items}",
             selectedIds.Count, arrInstance.Name, string.Join(", ", selectedNames));
 
         // Cleanup stale history entries
