@@ -22,7 +22,7 @@
       <app-toggle label="Search Enabled" [(checked)]="searchEnabled"
         hint="Master toggle for all searching. When disabled, no reactive or proactive searches will be performed." />
       @if (searchEnabled()) {
-        <app-number-input label="Search Interval" [(value)]="searchInterval" [min]="1" [max]="10" suffix="minutes"
+        <app-number-input label="Search Interval" [(value)]="searchInterval" [min]="2" [max]="10" suffix="minutes"
           hint="How often the seeker runs to process searches (1-10 minutes)"
           [error]="searchIntervalError()" />
       }
