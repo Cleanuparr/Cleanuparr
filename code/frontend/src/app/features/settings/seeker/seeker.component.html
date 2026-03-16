@@ -91,7 +91,7 @@
   }
 
   <div class="form-actions">
-    <app-button variant="primary" [glowing]="dirty()" [loading]="saving()" [disabled]="saving() || saved() || hasErrors()" (clicked)="save()">
+    <app-button variant="primary" [glowing]="dirty()" [loading]="saving()" [disabled]="!dirty() || saving() || saved() || hasErrors()" (clicked)="save()">
       {{ saved() ? 'Saved!' : 'Save Settings' }}
     </app-button>
   </div>
