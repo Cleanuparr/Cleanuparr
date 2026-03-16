@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Cleanuparr.Persistence.Migrations.Data
 {
     [DbContext(typeof(DataContext))]
-    [Migration("20260315002859_AddSeeker")]
+    [Migration("20260316125448_AddSeeker")]
     partial class AddSeeker
     {
         /// <inheritdoc />
@@ -305,14 +305,6 @@ namespace Cleanuparr.Persistence.Migrations.Data
                         .IsRequired()
                         .HasColumnType("TEXT")
                         .HasColumnName("ignored_downloads");
-
-                    b.Property<ushort>("SearchDelay")
-                        .HasColumnType("INTEGER")
-                        .HasColumnName("search_delay");
-
-                    b.Property<bool>("SearchEnabled")
-                        .HasColumnType("INTEGER")
-                        .HasColumnName("search_enabled");
 
                     b.Property<bool>("StatusCheckEnabled")
                         .HasColumnType("INTEGER")
@@ -1100,27 +1092,26 @@ namespace Cleanuparr.Persistence.Migrations.Data
                         .HasColumnType("TEXT")
                         .HasColumnName("id");
 
-                    b.Property<string>("CronExpression")
-                        .IsRequired()
-                        .HasColumnType("TEXT")
-                        .HasColumnName("cron_expression");
-
-                    b.Property<bool>("Enabled")
-                        .HasColumnType("INTEGER")
-                        .HasColumnName("enabled");
-
                     b.Property<bool>("MonitoredOnly")
                         .HasColumnType("INTEGER")
                         .HasColumnName("monitored_only");
+
+                    b.Property<bool>("ProactiveSearchEnabled")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("proactive_search_enabled");
+
+                    b.Property<bool>("SearchEnabled")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("search_enabled");
+
+                    b.Property<ushort>("SearchInterval")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("search_interval");
 
                     b.Property<string>("SelectionStrategy")
                         .IsRequired()
                         .HasColumnType("TEXT")
                         .HasColumnName("selection_strategy");
-
-                    b.Property<bool>("UseAdvancedScheduling")
-                        .HasColumnType("INTEGER")
-                        .HasColumnName("use_advanced_scheduling");
 
                     b.Property<bool>("UseCutoff")
                         .HasColumnType("INTEGER")
@@ -1200,6 +1191,47 @@ namespace Cleanuparr.Persistence.Migrations.Data
                         .HasDatabaseName("ix_blacklist_sync_history_hash_download_client_id");
 
                     b.ToTable("blacklist_sync_history", (string)null);
+                });
+
+            modelBuilder.Entity("Cleanuparr.Persistence.Models.State.SearchQueueItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("ArrInstanceId")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("arr_instance_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("created_at");
+
+                    b.Property<long>("ItemId")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("item_id");
+
+                    b.Property<string>("SearchType")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("search_type");
+
+                    b.Property<long?>("SeriesId")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("series_id");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("title");
+
+                    b.HasKey("Id")
+                        .HasName("pk_search_queue");
+
+                    b.HasIndex("ArrInstanceId")
+                        .HasDatabaseName("ix_search_queue_arr_instance_id");
+
+                    b.ToTable("search_queue", (string)null);
                 });
 
             modelBuilder.Entity("Cleanuparr.Persistence.Models.State.SeekerHistory", b =>
@@ -1390,6 +1422,18 @@ namespace Cleanuparr.Persistence.Migrations.Data
                         .HasConstraintName("fk_blacklist_sync_history_download_clients_download_client_id");
 
                     b.Navigation("DownloadClient");
+                });
+
+            modelBuilder.Entity("Cleanuparr.Persistence.Models.State.SearchQueueItem", b =>
+                {
+                    b.HasOne("Cleanuparr.Persistence.Models.Configuration.Arr.ArrInstance", "ArrInstance")
+                        .WithMany()
+                        .HasForeignKey("ArrInstanceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_search_queue_arr_instances_arr_instance_id");
+
+                    b.Navigation("ArrInstance");
                 });
 
             modelBuilder.Entity("Cleanuparr.Persistence.Models.State.SeekerHistory", b =>

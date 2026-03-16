@@ -12,13 +12,36 @@ namespace Cleanuparr.Persistence.Migrations.Data
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
+                name: "search_queue",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    arr_instance_id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    item_id = table.Column<long>(type: "INTEGER", nullable: false),
+                    series_id = table.Column<long>(type: "INTEGER", nullable: true),
+                    search_type = table.Column<string>(type: "TEXT", nullable: true),
+                    title = table.Column<string>(type: "TEXT", nullable: false),
+                    created_at = table.Column<DateTime>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("pk_search_queue", x => x.id);
+                    table.ForeignKey(
+                        name: "fk_search_queue_arr_instances_arr_instance_id",
+                        column: x => x.arr_instance_id,
+                        principalTable: "arr_instances",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "seeker_configs",
                 columns: table => new
                 {
                     id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    enabled = table.Column<bool>(type: "INTEGER", nullable: false),
-                    cron_expression = table.Column<string>(type: "TEXT", nullable: false),
-                    use_advanced_scheduling = table.Column<bool>(type: "INTEGER", nullable: false),
+                    search_enabled = table.Column<bool>(type: "INTEGER", nullable: false),
+                    search_interval = table.Column<ushort>(type: "INTEGER", nullable: false),
+                    proactive_search_enabled = table.Column<bool>(type: "INTEGER", nullable: false),
                     selection_strategy = table.Column<string>(type: "TEXT", nullable: false),
                     monitored_only = table.Column<bool>(type: "INTEGER", nullable: false),
                     use_cutoff = table.Column<bool>(type: "INTEGER", nullable: false),
@@ -28,6 +51,25 @@ namespace Cleanuparr.Persistence.Migrations.Data
                 {
                     table.PrimaryKey("pk_seeker_configs", x => x.id);
                 });
+            
+            migrationBuilder.InsertData(
+                table: "seeker_configs",
+                columns: new[] { "id", "search_enabled", "search_interval", "proactive_search_enabled", "selection_strategy", "monitored_only", "use_cutoff", "use_round_robin" },
+                values: new object[] { Guid.NewGuid(), true, 3, false, "balancedweighted", true, false, true });
+            
+            // Migrate old data
+            migrationBuilder.Sql(@"
+                UPDATE seeker_configs SET search_enabled = (
+                    SELECT COALESCE(g.search_enabled, 1) FROM general_configs g LIMIT 1
+                )");
+            
+            migrationBuilder.DropColumn(
+                name: "search_delay",
+                table: "general_configs");
+
+            migrationBuilder.DropColumn(
+                name: "search_enabled",
+                table: "general_configs");
 
             migrationBuilder.CreateTable(
                 name: "seeker_history",
@@ -70,11 +112,11 @@ namespace Cleanuparr.Persistence.Migrations.Data
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
                 });
-            
-            migrationBuilder.InsertData(
-                table: "seeker_configs",
-                columns: new[] { "id", "enabled", "cron_expression", "use_advanced_scheduling", "selection_strategy", "monitored_only", "use_cutoff", "use_round_robin" },
-                values: new object[] { Guid.NewGuid(), false, "0 0/5 * * * ?", false, "balancedweighted", true, false, true });
+
+            migrationBuilder.CreateIndex(
+                name: "ix_search_queue_arr_instance_id",
+                table: "search_queue",
+                column: "arr_instance_id");
 
             migrationBuilder.CreateIndex(
                 name: "ix_seeker_history_arr_instance_id_external_item_id_item_type",
@@ -93,6 +135,9 @@ namespace Cleanuparr.Persistence.Migrations.Data
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
+                name: "search_queue");
+
+            migrationBuilder.DropTable(
                 name: "seeker_configs");
 
             migrationBuilder.DropTable(
@@ -100,6 +145,20 @@ namespace Cleanuparr.Persistence.Migrations.Data
 
             migrationBuilder.DropTable(
                 name: "seeker_instance_configs");
+
+            migrationBuilder.AddColumn<ushort>(
+                name: "search_delay",
+                table: "general_configs",
+                type: "INTEGER",
+                nullable: false,
+                defaultValue: (ushort)0);
+
+            migrationBuilder.AddColumn<bool>(
+                name: "search_enabled",
+                table: "general_configs",
+                type: "INTEGER",
+                nullable: false,
+                defaultValue: false);
         }
     }
 }
