@@ -29,6 +29,7 @@
     </div>
   </app-card>
 
+  @if (searchEnabled()) {
   <app-card header="Proactive Search">
     <div class="form-stack">
       <app-toggle label="Proactive Search" [(checked)]="proactiveSearchEnabled"
@@ -86,6 +87,7 @@
         }
       </div>
     </app-card>
+  }
   }
 
   <div class="form-actions">
