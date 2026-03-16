@@ -15,6 +15,18 @@
   margin: calc(-1 * var(--space-1)) 0 0;
 }
 
+.interval-warning {
+  font-size: var(--font-size-sm);
+  color: var(--color-error);
+  margin: calc(-1 * var(--space-1)) 0 0;
+}
+
+.priority-note {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  margin: calc(-1 * var(--space-1)) 0 0;
+}
+
 .instance-error {
   font-size: var(--font-size-sm);
   color: var(--color-error);

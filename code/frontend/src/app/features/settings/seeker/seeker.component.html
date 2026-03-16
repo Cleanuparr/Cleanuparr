@@ -24,6 +24,7 @@
       @if (searchEnabled()) {
         <app-select label="Search Interval" [options]="intervalOptions" [(value)]="searchInterval"
           hint="How often the seeker runs to process searches" />
+        <p class="interval-warning">Using a very low interval will trigger searches more frequently, increasing indexer load significantly. This can result in rate limit warnings or a ban from your indexer, so be careful!</p>
       }
       <app-toggle label="Enable Replacement Search" [checked]="true" [disabled]="true"
         hint="Automatically searches for a replacement whenever a download is removed from an arr queue" />
@@ -41,6 +42,7 @@
         @if (strategyDescription()) {
           <p class="strategy-hint">{{ strategyDescription() }}</p>
         }
+        <p class="priority-note">Replacement searches (triggered when an item is removed from an arr queue) always take priority over proactive searches, regardless of the selection strategy.</p>
         <div class="form-divider"></div>
         <app-toggle label="Monitored Only" [(checked)]="monitoredOnly"
           hint="Only search for items that are monitored in the arr app" />
