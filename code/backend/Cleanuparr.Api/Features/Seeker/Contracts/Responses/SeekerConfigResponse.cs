@@ -18,5 +18,7 @@ public sealed record SeekerConfigResponse
 
     public bool UseRoundRobin { get; init; }
 
+    public SeriesSearchType SonarrSearchType { get; init; }
+
     public List<SeekerInstanceConfigResponse> Instances { get; init; } = [];
 }

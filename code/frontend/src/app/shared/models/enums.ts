@@ -102,4 +102,10 @@ export enum SelectionStrategy {
   Random = 'Random',
 }
 
+export enum SeriesSearchType {
+  Episode = 'Episode',
+  Season = 'Season',
+  Series = 'Series',
+}
+
 export type ArrType = 'sonarr' | 'radarr' | 'lidarr' | 'readarr' | 'whisparr';

@@ -53,6 +53,12 @@ public sealed record SeekerConfig : IConfig
     /// </summary>
     public bool UseRoundRobin { get; set; } = true;
 
+    /// <summary>
+    /// Controls the granularity of proactive Sonarr searches.
+    /// Episode searches for a single episode; Season searches all episodes in a season.
+    /// </summary>
+    public SeriesSearchType SonarrSearchType { get; set; } = SeriesSearchType.Season;
+
     public void Validate()
     {
         if (SearchInterval < Constants.MinSearchIntervalMinutes)
@@ -70,6 +76,12 @@ public sealed record SeekerConfig : IConfig
         if (!new List<int> { 2, 3, 4, 5, 6, 10, 12, 15, 20, 30 }.Contains(SearchInterval))
         {
             throw new ValidationException($"Invalid search interval {SearchInterval}");
+        }
+
+        if (SonarrSearchType is SeriesSearchType.Series)
+        {
+            throw new ValidationException(
+                $"{nameof(SonarrSearchType)} must be {SeriesSearchType.Episode} or {SeriesSearchType.Season}");
         }
     }
 

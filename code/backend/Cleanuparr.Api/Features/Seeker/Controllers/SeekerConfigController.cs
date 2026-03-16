@@ -73,6 +73,7 @@ public sealed class SeekerConfigController : ControllerBase
                 MonitoredOnly = config.MonitoredOnly,
                 UseCutoff = config.UseCutoff,
                 UseRoundRobin = config.UseRoundRobin,
+                SonarrSearchType = config.SonarrSearchType,
                 Instances = instanceResponses,
             };
 

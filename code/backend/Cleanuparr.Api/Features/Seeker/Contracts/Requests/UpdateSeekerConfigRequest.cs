@@ -19,6 +19,8 @@ public sealed record UpdateSeekerConfigRequest
 
     public bool UseRoundRobin { get; init; } = true;
 
+    public SeriesSearchType SonarrSearchType { get; init; } = SeriesSearchType.Season;
+
     public List<UpdateSeekerInstanceConfigRequest> Instances { get; init; } = [];
 
     public SeekerConfig ApplyTo(SeekerConfig config)
@@ -30,6 +32,7 @@ public sealed record UpdateSeekerConfigRequest
         config.MonitoredOnly = MonitoredOnly;
         config.UseCutoff = UseCutoff;
         config.UseRoundRobin = UseRoundRobin;
+        config.SonarrSearchType = SonarrSearchType;
 
         return config;
     }
