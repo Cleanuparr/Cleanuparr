@@ -14,7 +14,7 @@ import { UpdateSeekerConfig } from '@shared/models/seeker-config.model';
 import { HasPendingChanges } from '@core/guards/pending-changes.guard';
 import { ApiError } from '@core/interceptors/error.interceptor';
 import { DeferredLoader } from '@shared/utils/loading.util';
-import { SelectionStrategy } from '@shared/models/enums';
+import { SelectionStrategy, SeriesSearchType } from '@shared/models/enums';
 
 const INTERVAL_OPTIONS: SelectOption[] = [
   { label: '2 minutes', value: 2 },
@@ -36,6 +36,11 @@ const STRATEGY_OPTIONS: SelectOption[] = [
   { label: 'Newest First', value: SelectionStrategy.NewestFirst },
   { label: 'Newest Weighted', value: SelectionStrategy.NewestWeighted },
   { label: 'Random', value: SelectionStrategy.Random },
+];
+
+const SONARR_SEARCH_TYPE_OPTIONS: SelectOption[] = [
+  { label: 'Season', value: SeriesSearchType.Season },
+  { label: 'Episode', value: SeriesSearchType.Episode },
 ];
 
 const STRATEGY_DESCRIPTIONS: Record<SelectionStrategy, string> = {
@@ -77,6 +82,7 @@ export class SeekerComponent implements OnInit, HasPendingChanges {
 
   readonly intervalOptions = INTERVAL_OPTIONS;
   readonly strategyOptions = STRATEGY_OPTIONS;
+  readonly sonarrSearchTypeOptions = SONARR_SEARCH_TYPE_OPTIONS;
   readonly loader = new DeferredLoader();
   readonly loadError = signal(false);
   readonly saving = signal(false);
@@ -89,6 +95,7 @@ export class SeekerComponent implements OnInit, HasPendingChanges {
   readonly monitoredOnly = signal(true);
   readonly useCutoff = signal(false);
   readonly useRoundRobin = signal(true);
+  readonly sonarrSearchType = signal<unknown>(SeriesSearchType.Season);
 
   readonly instances = signal<InstanceState[]>([]);
 
@@ -118,6 +125,7 @@ export class SeekerComponent implements OnInit, HasPendingChanges {
         this.monitoredOnly.set(config.monitoredOnly);
         this.useCutoff.set(config.useCutoff);
         this.useRoundRobin.set(config.useRoundRobin);
+        this.sonarrSearchType.set(config.sonarrSearchType);
         this.instances.set(config.instances.map(i => ({
           arrInstanceId: i.arrInstanceId,
           instanceName: i.instanceName,
@@ -191,6 +199,7 @@ export class SeekerComponent implements OnInit, HasPendingChanges {
       monitoredOnly: this.monitoredOnly(),
       useCutoff: this.useCutoff(),
       useRoundRobin: this.useRoundRobin(),
+      sonarrSearchType: this.sonarrSearchType() as SeriesSearchType,
       instances: this.instances().map(i => ({
         arrInstanceId: i.arrInstanceId,
         enabled: i.enabled,
@@ -225,6 +234,7 @@ export class SeekerComponent implements OnInit, HasPendingChanges {
       monitoredOnly: this.monitoredOnly(),
       useCutoff: this.useCutoff(),
       useRoundRobin: this.useRoundRobin(),
+      sonarrSearchType: this.sonarrSearchType(),
       instances: this.instances(),
     });
   }

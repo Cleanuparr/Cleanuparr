@@ -48,6 +48,8 @@
           hint="Only search for items that are monitored in the arr app" />
         <app-toggle label="Use Cutoff" [(checked)]="useCutoff"
           hint="Skip items that have already met their quality cutoff" />
+        <app-select label="Sonarr Search Type" [options]="sonarrSearchTypeOptions" [(value)]="sonarrSearchType"
+          hint="Controls what is searched per run: a single episode or an entire season" />
         <app-toggle label="Round Robin" [checked]="useRoundRobin()" (checkedChange)="toggleRoundRobin($event)"
           hint="Process one instance per run to spread indexer load" />
       }
