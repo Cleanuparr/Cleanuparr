@@ -32,6 +32,8 @@ import { JobType } from '@shared/models/enums';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DashboardComponent implements OnInit {
+  readonly JobType = JobType;
+
   private readonly hub = inject(AppHubService);
   private readonly eventsApi = inject(EventsApi);
   private readonly jobsApi = inject(JobsApi);

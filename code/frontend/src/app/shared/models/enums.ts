@@ -90,6 +90,7 @@ export enum JobType {
   MalwareBlocker = 'MalwareBlocker',
   DownloadCleaner = 'DownloadCleaner',
   BlacklistSynchronizer = 'BlacklistSynchronizer',
+  Seeker = 'Seeker',
 }
 
 export enum SelectionStrategy {

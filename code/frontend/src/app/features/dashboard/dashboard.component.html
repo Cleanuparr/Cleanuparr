@@ -258,9 +258,11 @@
               }
               <span class="jobs-table__schedule">{{ job.schedule }}</span>
             </div>
-            <app-button variant="ghost" size="sm" (clicked)="triggerJob(job.jobType)">
-              Run Now
-            </app-button>
+            @if (job.jobType !== JobType.Seeker) {
+              <app-button variant="ghost" size="sm" (clicked)="triggerJob(job.jobType)">
+                Run Now
+              </app-button>
+            }
           </div>
         } @empty {
           <div class="jobs-table__empty">
