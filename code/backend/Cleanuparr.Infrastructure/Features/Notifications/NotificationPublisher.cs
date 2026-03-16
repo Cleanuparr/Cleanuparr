@@ -82,6 +82,19 @@ public class NotificationPublisher : INotificationPublisher
         }
     }
 
+    public virtual async Task NotifySearchTriggered(string instanceName, int itemCount, IEnumerable<string> items)
+    {
+        try
+        {
+            var context = BuildSearchTriggeredContext(instanceName, itemCount, items);
+            await SendNotificationAsync(NotificationEventType.SearchTriggered, context);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to notify search triggered");
+        }
+    }
+
     private async Task SendNotificationAsync(NotificationEventType eventType, NotificationContext context)
     {
         await _dryRunInterceptor.InterceptAsync(SendNotificationInternalAsync, (eventType, context));
@@ -227,6 +240,29 @@ public class NotificationPublisher : INotificationPublisher
         }
 
         return context;
+    }
+
+    private static NotificationContext BuildSearchTriggeredContext(string instanceName, int itemCount, IEnumerable<string> items)
+    {
+        var instanceType = (InstanceType)ContextProvider.Get<object>(nameof(InstanceType));
+        var instanceUrl = ContextProvider.Get<Uri>(ContextProvider.Keys.ArrInstanceUrl);
+        var itemList = items as string[] ?? items.ToArray();
+        var itemsDisplay = string.Join(", ", itemList.Take(5)) + (itemList.Length > 5 ? $" (+{itemList.Length - 5} more)" : "");
+
+        return new NotificationContext
+        {
+            EventType = NotificationEventType.SearchTriggered,
+            Title = "Search triggered",
+            Description = $"Searched {itemCount} items on {instanceName}",
+            Severity = EventSeverity.Information,
+            Data = new Dictionary<string, string>
+            {
+                ["Instance type"] = instanceType.ToString(),
+                ["Url"] = instanceUrl.ToString(),
+                ["Item count"] = itemCount.ToString(),
+                ["Items"] = itemsDisplay,
+            }
+        };
     }
 
     private static NotificationEventType MapStrikeTypeToEventType(StrikeType strikeType)

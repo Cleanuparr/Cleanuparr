@@ -13,6 +13,7 @@ export interface NotificationEventFlags {
   onQueueItemDeleted: boolean;
   onDownloadCleaned: boolean;
   onCategoryChanged: boolean;
+  onSearchTriggered: boolean;
 }
 
 export interface NotificationProviderDto {
@@ -46,6 +47,7 @@ export interface CreateNotifiarrProviderRequest {
   onQueueItemDeleted: boolean;
   onDownloadCleaned: boolean;
   onCategoryChanged: boolean;
+  onSearchTriggered: boolean;
 }
 
 export interface CreateAppriseProviderRequest {
@@ -62,6 +64,7 @@ export interface CreateAppriseProviderRequest {
   onQueueItemDeleted: boolean;
   onDownloadCleaned: boolean;
   onCategoryChanged: boolean;
+  onSearchTriggered: boolean;
 }
 
 export interface CreateNtfyProviderRequest {
@@ -81,6 +84,7 @@ export interface CreateNtfyProviderRequest {
   onQueueItemDeleted: boolean;
   onDownloadCleaned: boolean;
   onCategoryChanged: boolean;
+  onSearchTriggered: boolean;
 }
 
 export interface CreateTelegramProviderRequest {
@@ -96,6 +100,7 @@ export interface CreateTelegramProviderRequest {
   onQueueItemDeleted: boolean;
   onDownloadCleaned: boolean;
   onCategoryChanged: boolean;
+  onSearchTriggered: boolean;
 }
 
 export interface CreateDiscordProviderRequest {
@@ -110,6 +115,7 @@ export interface CreateDiscordProviderRequest {
   onQueueItemDeleted: boolean;
   onDownloadCleaned: boolean;
   onCategoryChanged: boolean;
+  onSearchTriggered: boolean;
 }
 
 export interface CreatePushoverProviderRequest {
@@ -129,6 +135,7 @@ export interface CreatePushoverProviderRequest {
   onQueueItemDeleted: boolean;
   onDownloadCleaned: boolean;
   onCategoryChanged: boolean;
+  onSearchTriggered: boolean;
 }
 
 export interface CreateGotifyProviderRequest {
@@ -143,6 +150,7 @@ export interface CreateGotifyProviderRequest {
   onQueueItemDeleted: boolean;
   onDownloadCleaned: boolean;
   onCategoryChanged: boolean;
+  onSearchTriggered: boolean;
 }
 
 // Test request types (minimal, no event flags needed)

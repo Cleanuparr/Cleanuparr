@@ -19,4 +19,6 @@ public interface IEventPublisher
     Task PublishRecurringItem(string hash, string itemName, int strikeCount);
 
     Task PublishSearchNotTriggered(string hash, string itemName);
+
+    Task PublishSearchTriggered(string instanceName, int itemCount, IEnumerable<string> items);
 }

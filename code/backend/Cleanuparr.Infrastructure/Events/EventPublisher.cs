@@ -227,6 +227,23 @@ public class EventPublisher : IEventPublisher
     }
 
     /// <summary>
+    /// Publishes a search triggered event with context data and notifications
+    /// </summary>
+    public async Task PublishSearchTriggered(string instanceName, int itemCount, IEnumerable<string> items)
+    {
+        var itemList = items as string[] ?? items.ToArray();
+        var itemsDisplay = string.Join(", ", itemList.Take(5)) + (itemList.Length > 5 ? $" (+{itemList.Length - 5} more)" : "");
+
+        await PublishAsync(
+            EventType.SearchTriggered,
+            $"Searched {itemCount} items on {instanceName}: {itemsDisplay}",
+            EventSeverity.Information,
+            new { InstanceName = instanceName, ItemCount = itemCount, Items = itemList });
+
+        await _notificationPublisher.NotifySearchTriggered(instanceName, itemCount, itemList);
+    }
+
+    /// <summary>
     /// Publishes an event alerting that search was not triggered for an item
     /// </summary>
     public async Task PublishSearchNotTriggered(string hash, string itemName)

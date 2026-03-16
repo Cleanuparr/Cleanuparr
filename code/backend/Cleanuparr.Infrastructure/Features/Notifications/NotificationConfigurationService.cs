@@ -131,7 +131,8 @@ public sealed class NotificationConfigurationService : INotificationConfiguratio
             OnSlowStrike = config.OnSlowStrike,
             OnQueueItemDeleted = config.OnQueueItemDeleted,
             OnDownloadCleaned = config.OnDownloadCleaned,
-            OnCategoryChanged = config.OnCategoryChanged
+            OnCategoryChanged = config.OnCategoryChanged,
+            OnSearchTriggered = config.OnSearchTriggered
         };
 
         var configuration = config.Type switch
@@ -167,6 +168,7 @@ public sealed class NotificationConfigurationService : INotificationConfiguratio
             NotificationEventType.QueueItemDeleted => events.OnQueueItemDeleted,
             NotificationEventType.DownloadCleaned => events.OnDownloadCleaned,
             NotificationEventType.CategoryChanged => events.OnCategoryChanged,
+            NotificationEventType.SearchTriggered => events.OnSearchTriggered,
             NotificationEventType.Test => true,
             _ => throw new ArgumentOutOfRangeException(nameof(eventType), $"Provider type {eventType} is not yet registered")
         };

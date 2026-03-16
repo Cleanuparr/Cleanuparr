@@ -101,11 +101,7 @@ public sealed class Seeker : IHandler
 
             await _dryRunInterceptor.InterceptAsync(arrClient.SearchItemsAsync, arrInstance, searchItems);
 
-            await _eventPublisher.PublishAsync(
-                EventType.SearchTriggered,
-                $"Searched for replacement: {item.Title} on {arrInstance.Name}",
-                EventSeverity.Information,
-                new { InstanceName = arrInstance.Name, InstanceType = item.ArrInstance.ArrConfig.Type.ToString(), ItemCount = 1, Items = new[] { item.Title } });
+            await _eventPublisher.PublishSearchTriggered(arrInstance.Name, 1, [item.Title]);
 
             _logger.LogInformation("Reactive search triggered for '{Title}' on {InstanceName}",
                 item.Title, arrInstance.Name);
@@ -252,11 +248,7 @@ public sealed class Seeker : IHandler
         await UpdateSearchHistoryAsync(arrInstance.Id, instanceType, selectedIds);
 
         // Publish event
-        await _eventPublisher.PublishAsync(
-            EventType.SearchTriggered,
-            $"Searched {selectedIds.Count} items on {arrInstance.Name}: {string.Join(", ", selectedNames.Take(5))}{(selectedNames.Count > 5 ? $" (+{selectedNames.Count - 5} more)" : "")}",
-            EventSeverity.Information,
-            new { InstanceName = arrInstance.Name, InstanceType = instanceType.ToString(), ItemCount = selectedIds.Count, Items = selectedNames });
+        await _eventPublisher.PublishSearchTriggered(arrInstance.Name, selectedIds.Count, selectedNames);
 
         _logger.LogInformation("Seeker searched {Count} items on {InstanceName}: {Items}",
             selectedIds.Count, arrInstance.Name, string.Join(", ", selectedNames));

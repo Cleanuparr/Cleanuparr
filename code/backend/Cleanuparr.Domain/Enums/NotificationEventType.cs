@@ -9,5 +9,6 @@ public enum NotificationEventType
     SlowTimeStrike,
     QueueItemDeleted,
     DownloadCleaned,
-    CategoryChanged
+    CategoryChanged,
+    SearchTriggered
 }
