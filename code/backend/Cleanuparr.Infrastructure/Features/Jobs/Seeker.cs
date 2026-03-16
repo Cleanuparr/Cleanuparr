@@ -107,7 +107,16 @@ public sealed class Seeker : IHandler
                 item.Title, arrInstance.Name);
 
             // Update search history for proactive search awareness
-            await UpdateSearchHistoryAsync(arrInstance.Id, item.ArrInstance.ArrConfig.Type, [item.ItemId]);
+            if (item.SeriesId.HasValue && Enum.TryParse<SeriesSearchType>(item.SearchType, out var historySearchType))
+            {
+                int seasonNum = historySearchType == SeriesSearchType.Season ? (int)item.ItemId : 0;
+                long epId = historySearchType == SeriesSearchType.Episode ? item.ItemId : 0;
+                await UpdateSearchHistoryAsync(arrInstance.Id, item.ArrInstance.ArrConfig.Type, [item.SeriesId.Value], seasonNum, epId);
+            }
+            else
+            {
+                await UpdateSearchHistoryAsync(arrInstance.Id, item.ArrInstance.ArrConfig.Type, [item.ItemId]);
+            }
         }
         catch (Exception ex)
         {
@@ -211,33 +220,43 @@ public sealed class Seeker : IHandler
         InstanceType instanceType)
     {
         // Load search history for this instance
-        Dictionary<long, DateTime> searchHistory = await _dataContext.SeekerHistory
+        List<SeekerHistory> allHistory = await _dataContext.SeekerHistory
             .AsNoTracking()
             .Where(h => h.ArrInstanceId == arrInstance.Id)
-            .ToDictionaryAsync(h => h.ExternalItemId, h => h.LastSearchedAt);
+            .ToListAsync();
+
+        // Derive series/movie-level history for item selection strategies
+        Dictionary<long, DateTime> itemSearchHistory = allHistory
+            .GroupBy(h => h.ExternalItemId)
+            .ToDictionary(g => g.Key, g => g.Max(h => h.LastSearchedAt));
 
         HashSet<SearchItem> searchItems;
         List<string> selectedNames;
-        List<long> allLibraryIds; 
+        List<long> allLibraryIds;
         List<long> historyIds;
+        int seasonNumber = 0;
+        long episodeId = 0;
 
         if (instanceType == InstanceType.Radarr)
         {
             List<long> selectedIds;
-            (selectedIds, selectedNames, allLibraryIds) = await ProcessRadarrAsync(config, arrInstance, instanceConfig.SkipTags, searchHistory);
+            (selectedIds, selectedNames, allLibraryIds) = await ProcessRadarrAsync(config, arrInstance, instanceConfig.SkipTags, itemSearchHistory);
             searchItems = selectedIds.Select(id => new SearchItem { Id = id }).ToHashSet();
             historyIds = selectedIds;
         }
         else
         {
-            (searchItems, selectedNames, allLibraryIds, historyIds) = await ProcessSonarrAsync(config, arrInstance, instanceConfig.SkipTags, searchHistory);
+            (searchItems, selectedNames, allLibraryIds, historyIds, seasonNumber, episodeId) =
+                await ProcessSonarrAsync(config, arrInstance, instanceConfig.SkipTags, itemSearchHistory, allHistory);
         }
+
+        IEnumerable<long> historyExternalIds = allHistory.Select(h => h.ExternalItemId);
 
         if (searchItems.Count == 0)
         {
             _logger.LogDebug("No items selected for search on {InstanceName}", arrInstance.Name);
             // Still cleanup stale entries even if no items selected
-            await CleanupStaleHistoryAsync(arrInstance.Id, instanceType, allLibraryIds, searchHistory);
+            await CleanupStaleHistoryAsync(arrInstance.Id, instanceType, allLibraryIds, historyExternalIds);
             return;
         }
 
@@ -246,7 +265,7 @@ public sealed class Seeker : IHandler
         await _dryRunInterceptor.InterceptAsync(arrClient.SearchItemsAsync, arrInstance, searchItems);
 
         // Update search history
-        await UpdateSearchHistoryAsync(arrInstance.Id, instanceType, historyIds);
+        await UpdateSearchHistoryAsync(arrInstance.Id, instanceType, historyIds, seasonNumber, episodeId);
 
         // Publish event
         await _eventPublisher.PublishSearchTriggered(arrInstance.Name, searchItems.Count, selectedNames);
@@ -255,7 +274,7 @@ public sealed class Seeker : IHandler
             searchItems.Count, arrInstance.Name, string.Join(", ", selectedNames));
 
         // Cleanup stale history entries
-        await CleanupStaleHistoryAsync(arrInstance.Id, instanceType, allLibraryIds, searchHistory);
+        await CleanupStaleHistoryAsync(arrInstance.Id, instanceType, allLibraryIds, historyExternalIds);
     }
 
     private async Task<(List<long> SelectedIds, List<string> SelectedNames, List<long> AllLibraryIds)> ProcessRadarrAsync(
@@ -296,11 +315,12 @@ public sealed class Seeker : IHandler
         return (selectedIds, selectedNames, allLibraryIds);
     }
 
-    private async Task<(HashSet<SearchItem> SearchItems, List<string> SelectedNames, List<long> AllLibraryIds, List<long> HistoryIds)> ProcessSonarrAsync(
+    private async Task<(HashSet<SearchItem> SearchItems, List<string> SelectedNames, List<long> AllLibraryIds, List<long> HistoryIds, int SeasonNumber, long EpisodeId)> ProcessSonarrAsync(
         SeekerConfig config,
         ArrInstance arrInstance,
         List<string> skipTags,
-        Dictionary<long, DateTime> searchHistory)
+        Dictionary<long, DateTime> seriesSearchHistory,
+        List<SeekerHistory> fullHistory)
     {
         List<SearchableSeries> series = await _sonarrClient.GetAllSeriesAsync(arrInstance);
         List<long> allLibraryIds = series.Select(s => s.Id).ToList();
@@ -313,12 +333,12 @@ public sealed class Seeker : IHandler
 
         if (candidates.Count == 0)
         {
-            return ([], [], allLibraryIds, []);
+            return ([], [], allLibraryIds, [], 0, 0);
         }
 
-        // Build selection candidates with history
+        // Build selection candidates with series-level history
         var selectionCandidates = candidates
-            .Select(s => (s.Id, s.Added, LastSearched: searchHistory.TryGetValue(s.Id, out var dt) ? (DateTime?)dt : null))
+            .Select(s => (s.Id, s.Added, LastSearched: seriesSearchHistory.TryGetValue(s.Id, out var dt) ? (DateTime?)dt : null))
             .ToList();
 
         // Over-select to compensate for series that may have no qualifying episodes
@@ -330,14 +350,26 @@ public sealed class Seeker : IHandler
         {
             try
             {
-                SeriesSearchItem? searchItem = await BuildSonarrSearchItemAsync(config, arrInstance, seriesId);
+                List<SeekerHistory> seriesHistory = fullHistory
+                    .Where(h => h.ExternalItemId == seriesId)
+                    .ToList();
+
+                (SeriesSearchItem? searchItem, SearchableEpisode? selectedEpisode) =
+                    await BuildSonarrSearchItemAsync(config, arrInstance, seriesId, seriesHistory);
 
                 if (searchItem is not null)
                 {
                     string seriesTitle = candidates.First(s => s.Id == seriesId).Title;
-                    string displayName = FormatSonarrDisplayName(seriesTitle, searchItem, config.SonarrSearchType);
+                    string displayName = FormatSonarrDisplayName(seriesTitle, searchItem, config.SonarrSearchType, selectedEpisode);
 
-                    return ([searchItem], [displayName], allLibraryIds, [seriesId]);
+                    int seasonNumber = config.SonarrSearchType == SeriesSearchType.Season
+                        ? (int)searchItem.Id
+                        : selectedEpisode?.SeasonNumber ?? 0;
+                    long episodeId = config.SonarrSearchType == SeriesSearchType.Episode
+                        ? searchItem.Id
+                        : 0;
+
+                    return ([searchItem], [displayName], allLibraryIds, [seriesId], seasonNumber, episodeId);
                 }
 
                 _logger.LogDebug("Skipping series {SeriesId} — no qualifying episodes found", seriesId);
@@ -348,17 +380,19 @@ public sealed class Seeker : IHandler
             }
         }
 
-        return ([], [], allLibraryIds, []);
+        return ([], [], allLibraryIds, [], 0, 0);
     }
 
     /// <summary>
     /// Fetches episodes for a series and builds the appropriate search item
     /// based on the configured Sonarr search type (Episode or Season).
+    /// Uses search history to prefer least-recently-searched seasons/episodes.
     /// </summary>
-    private async Task<SeriesSearchItem?> BuildSonarrSearchItemAsync(
+    private async Task<(SeriesSearchItem? SearchItem, SearchableEpisode? SelectedEpisode)> BuildSonarrSearchItemAsync(
         SeekerConfig config,
         ArrInstance arrInstance,
-        long seriesId)
+        long seriesId,
+        List<SeekerHistory> seriesHistory)
     {
         List<SearchableEpisode> episodes = await _sonarrClient.GetEpisodesAsync(arrInstance, seriesId);
 
@@ -372,21 +406,40 @@ public sealed class Seeker : IHandler
 
         if (qualifying.Count == 0)
         {
-            return null;
+            return (null, null);
         }
 
-        // Pick a random qualifying episode/season
+        // Select least-recently-searched season or episode using history
         SearchableEpisode selected = config.SonarrSearchType switch
         {
             SeriesSearchType.Season => qualifying
                 .GroupBy(e => e.SeasonNumber)
-                .OrderBy(_ => Random.Shared.Next())
+                .Select(g =>
+                {
+                    DateTime? lastSearched = seriesHistory
+                        .FirstOrDefault(h => h.SeasonNumber == g.Key && h.EpisodeId == 0)
+                        ?.LastSearchedAt;
+                    return (SeasonNumber: g.Key, LastSearched: lastSearched, FirstEpisode: g.First());
+                })
+                .OrderBy(s => s.LastSearched ?? DateTime.MinValue)
+                .ThenBy(_ => Random.Shared.Next())
                 .First()
-                .First(),
-            _ => qualifying[Random.Shared.Next(qualifying.Count)]
+                .FirstEpisode,
+            _ => qualifying
+                .Select(e =>
+                {
+                    DateTime? lastSearched = seriesHistory
+                        .FirstOrDefault(h => h.EpisodeId == e.Id)
+                        ?.LastSearchedAt;
+                    return (Episode: e, LastSearched: lastSearched);
+                })
+                .OrderBy(e => e.LastSearched ?? DateTime.MinValue)
+                .ThenBy(_ => Random.Shared.Next())
+                .First()
+                .Episode
         };
 
-        return config.SonarrSearchType switch
+        SeriesSearchItem searchItem = config.SonarrSearchType switch
         {
             SeriesSearchType.Season => new SeriesSearchItem
             {
@@ -402,25 +455,43 @@ public sealed class Seeker : IHandler
             },
             _ => throw new ArgumentOutOfRangeException(nameof(config.SonarrSearchType))
         };
+
+        return (searchItem, selected);
     }
 
-    private static string FormatSonarrDisplayName(string seriesTitle, SeriesSearchItem item, SeriesSearchType searchType)
+    private static string FormatSonarrDisplayName(
+        string seriesTitle,
+        SeriesSearchItem item,
+        SeriesSearchType searchType,
+        SearchableEpisode? selectedEpisode = null)
     {
         return searchType switch
         {
             SeriesSearchType.Season => $"{seriesTitle} S{item.Id:D2}",
+            SeriesSearchType.Episode when selectedEpisode is not null =>
+                $"{seriesTitle} S{selectedEpisode.SeasonNumber:D2}E{selectedEpisode.EpisodeNumber:D2}",
             _ => seriesTitle
         };
     }
 
-    private async Task UpdateSearchHistoryAsync(Guid arrInstanceId, InstanceType instanceType, List<long> searchedIds)
+    private async Task UpdateSearchHistoryAsync(
+        Guid arrInstanceId,
+        InstanceType instanceType,
+        List<long> searchedIds,
+        int seasonNumber = 0,
+        long episodeId = 0)
     {
         var now = DateTime.UtcNow;
 
         foreach (long id in searchedIds)
         {
             SeekerHistory? existing = await _dataContext.SeekerHistory
-                .FirstOrDefaultAsync(h => h.ArrInstanceId == arrInstanceId && h.ExternalItemId == id && h.ItemType == instanceType);
+                .FirstOrDefaultAsync(h =>
+                    h.ArrInstanceId == arrInstanceId
+                    && h.ExternalItemId == id
+                    && h.ItemType == instanceType
+                    && h.SeasonNumber == seasonNumber
+                    && h.EpisodeId == episodeId);
 
             if (existing is not null)
             {
@@ -433,6 +504,8 @@ public sealed class Seeker : IHandler
                     ArrInstanceId = arrInstanceId,
                     ExternalItemId = id,
                     ItemType = instanceType,
+                    SeasonNumber = seasonNumber,
+                    EpisodeId = episodeId,
                     LastSearchedAt = now,
                 });
             }
@@ -445,11 +518,12 @@ public sealed class Seeker : IHandler
         Guid arrInstanceId,
         InstanceType instanceType,
         List<long> currentLibraryIds,
-        Dictionary<long, DateTime> searchHistory)
+        IEnumerable<long> historyExternalIds)
     {
         // Find history entries for items no longer in the library
-        var staleIds = searchHistory.Keys
+        var staleIds = historyExternalIds
             .Except(currentLibraryIds)
+            .Distinct()
             .ToList();
 
         if (staleIds.Count == 0)

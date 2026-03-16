@@ -36,6 +36,16 @@ public sealed record SeekerHistory
     public InstanceType ItemType { get; set; }
 
     /// <summary>
+    /// For Sonarr season-level searches, the season number that was searched
+    /// </summary>
+    public int SeasonNumber { get; set; }
+
+    /// <summary>
+    /// For Sonarr episode-level searches, the episode ID that was searched
+    /// </summary>
+    public long EpisodeId { get; set; }
+
+    /// <summary>
     /// When this item was last searched
     /// </summary>
     public DateTime LastSearchedAt { get; set; }

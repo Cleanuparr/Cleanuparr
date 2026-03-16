@@ -223,7 +223,7 @@ public class DataContext : DbContext
                   .HasForeignKey(s => s.ArrInstanceId)
                   .OnDelete(DeleteBehavior.Cascade);
 
-            entity.HasIndex(s => new { s.ArrInstanceId, s.ExternalItemId, s.ItemType }).IsUnique();
+            entity.HasIndex(s => new { s.ArrInstanceId, s.ExternalItemId, s.ItemType, s.SeasonNumber, s.EpisodeId }).IsUnique();
         });
 
         modelBuilder.Entity<SearchQueueItem>(entity =>
