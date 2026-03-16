@@ -218,7 +218,7 @@ public sealed class Seeker : IHandler
 
         HashSet<SearchItem> searchItems;
         List<string> selectedNames;
-        List<long> allLibraryIds;
+        List<long> allLibraryIds; 
         List<long> historyIds;
 
         if (instanceType == InstanceType.Radarr)
@@ -375,19 +375,28 @@ public sealed class Seeker : IHandler
             return null;
         }
 
-        SearchableEpisode first = qualifying[0];
+        // Pick a random qualifying episode/season
+        SearchableEpisode selected = config.SonarrSearchType switch
+        {
+            SeriesSearchType.Season => qualifying
+                .GroupBy(e => e.SeasonNumber)
+                .OrderBy(_ => Random.Shared.Next())
+                .First()
+                .First(),
+            _ => qualifying[Random.Shared.Next(qualifying.Count)]
+        };
 
         return config.SonarrSearchType switch
         {
             SeriesSearchType.Season => new SeriesSearchItem
             {
-                Id = first.SeasonNumber,
+                Id = selected.SeasonNumber,
                 SeriesId = seriesId,
                 SearchType = SeriesSearchType.Season
             },
             SeriesSearchType.Episode => new SeriesSearchItem
             {
-                Id = first.Id,
+                Id = selected.Id,
                 SeriesId = seriesId,
                 SearchType = SeriesSearchType.Episode
             },
