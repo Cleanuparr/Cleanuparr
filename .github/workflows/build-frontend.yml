@@ -2,6 +2,12 @@ name: Build Frontend
 
 on:
   workflow_call:
+    inputs:
+      ref:
+        description: 'Git ref to checkout (branch, tag, or SHA). Defaults to github.ref_name.'
+        type: string
+        required: false
+        default: ''
 
 jobs:
   build-frontend:
@@ -22,7 +28,7 @@ jobs:
         timeout-minutes: 1
         with:
           repository: ${{ github.repository }}
-          ref: ${{ github.ref_name }}
+          ref: ${{ inputs.ref || github.ref_name }}
           token: ${{ env.REPO_READONLY_PAT }}
 
       - name: Setup Node.js
