@@ -145,6 +145,12 @@ jobs:
             const prSha = '${{ needs.validate.outputs.pr_sha }}';
             const shortSha = prSha.substring(0, 7);
 
+            // Skip comment for skipped builds
+            if (buildResult === 'skipped') {
+              console.log('Build was skipped, no comment needed.');
+              return;
+            }
+
             let body;
             if (buildResult === 'success') {
               body = [
@@ -152,6 +158,12 @@ jobs:
                 ``,
                 `**Download:** open the [workflow run](${runUrl}), scroll to the **Artifacts** section at the bottom.`,
                 `The artifact \`Cleanuparr-windows-installer\` is retained for 30 days.`
+              ].join('\n');
+            } else if (buildResult === 'cancelled') {
+              body = [
+                `Windows installer build was **cancelled** for \`${prRef}\` (\`${shortSha}\`).`,
+                ``,
+                `See the [workflow run](${runUrl}) for details.`
               ].join('\n');
             } else {
               body = [
