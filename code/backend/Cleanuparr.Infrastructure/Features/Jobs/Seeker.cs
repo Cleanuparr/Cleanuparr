@@ -288,6 +288,7 @@ public sealed class Seeker : IHandler
 
         // Apply filters
         var candidates = movies
+            .Where(m => m.Status is "released")
             .Where(m => !config.MonitoredOnly || m.Monitored)
             .Where(m => skipTags.Count == 0 || !m.Tags.Any(skipTags.Contains))
             .Where(m => !config.UseCutoff || !m.HasFile || (m.MovieFile?.QualityCutoffNotMet ?? true))
@@ -398,6 +399,7 @@ public sealed class Seeker : IHandler
 
         // Filter to qualifying episodes
         var qualifying = episodes
+            .Where(e => e.AirDateUtc.HasValue && e.AirDateUtc.Value <= DateTime.UtcNow)
             .Where(e => !config.MonitoredOnly || e.Monitored)
             .Where(e => !e.HasFile || (config.UseCutoff && (e.EpisodeFile?.QualityCutoffNotMet ?? true)))
             .OrderBy(e => e.SeasonNumber)
