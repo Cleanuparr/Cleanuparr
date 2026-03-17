@@ -10,7 +10,7 @@ concurrency:
 
 permissions:
   issues: write
-  pull-requests: read
+  pull-requests: write
   actions: read
 
 jobs:
@@ -25,6 +25,7 @@ jobs:
 
     steps:
       - name: React to comment
+        continue-on-error: true
         uses: actions/github-script@v7
         with:
           script: |
