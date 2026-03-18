@@ -76,23 +76,28 @@ public abstract class ArrClient : IArrClient
             return false;
         }
         
-        bool hasWarn() => record.TrackedDownloadStatus
+        bool HasWarn() => record.TrackedDownloadStatus
             .Equals("warning", StringComparison.InvariantCultureIgnoreCase);
-        bool isImportBlocked() => record.TrackedDownloadState
+        bool IsImportBlocked() => record.TrackedDownloadState
             .Equals("importBlocked", StringComparison.InvariantCultureIgnoreCase);
-        bool isImportPending() => record.TrackedDownloadState
+        bool IsImportPending() => record.TrackedDownloadState
             .Equals("importPending", StringComparison.InvariantCultureIgnoreCase);
-        bool isImportFailed() => record.TrackedDownloadState
+        bool IsImportFailed() => record.TrackedDownloadState
             .Equals("importFailed", StringComparison.InvariantCultureIgnoreCase);
-        bool isFailedLidarr() => instanceType is InstanceType.Lidarr &&
+        bool IsFailedLidarr() => instanceType is InstanceType.Lidarr &&
                                  (record.Status.Equals("failed", StringComparison.InvariantCultureIgnoreCase) ||
                                   record.Status.Equals("completed", StringComparison.InvariantCultureIgnoreCase)) &&
-                                 hasWarn();
-        bool isEdgeCase() => record.TrackedDownloadState
-            .Equals("downloading", StringComparison.InvariantCultureIgnoreCase) &&
-            record.StatusMessages.Any(status => status.Messages.Any(message => message.StartsWith("Unable to import automatically", StringComparison.InvariantCultureIgnoreCase)));
+                                 HasWarn();
+        bool IsDownloading() => record.TrackedDownloadState
+            .Equals("downloading", StringComparison.InvariantCultureIgnoreCase);
+        bool HasFailedImportMessage() => record.StatusMessages
+            ?.Any(status => status.Messages
+                ?.Any(message => message.StartsWith("Unable to import automatically", StringComparison.InvariantCultureIgnoreCase)) is true
+            ) is true;
+        bool IsEdgeCase() => IsDownloading() && HasFailedImportMessage();
+            
         
-        if (hasWarn() && (isImportBlocked() || isImportPending() || isImportFailed()) || isFailedLidarr() || isEdgeCase())
+        if (HasWarn() && (IsImportBlocked() || IsImportPending() || IsImportFailed()) || IsFailedLidarr() || IsEdgeCase())
         {
             if (!ShouldStrikeFailedImport(queueCleanerConfig, record))
             {
