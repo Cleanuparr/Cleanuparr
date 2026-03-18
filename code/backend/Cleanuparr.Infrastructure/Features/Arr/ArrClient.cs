@@ -88,8 +88,11 @@ public abstract class ArrClient : IArrClient
                                  (record.Status.Equals("failed", StringComparison.InvariantCultureIgnoreCase) ||
                                   record.Status.Equals("completed", StringComparison.InvariantCultureIgnoreCase)) &&
                                  hasWarn();
+        bool isEdgeCase() => record.TrackedDownloadState
+            .Equals("downloading", StringComparison.InvariantCultureIgnoreCase) &&
+            record.StatusMessages.Any(status => status.Messages.Any(message => message.StartsWith("Unable to import automatically", StringComparison.InvariantCultureIgnoreCase)));
         
-        if (hasWarn() && (isImportBlocked() || isImportPending() || isImportFailed()) || isFailedLidarr())
+        if (hasWarn() && (isImportBlocked() || isImportPending() || isImportFailed()) || isFailedLidarr() || isEdgeCase())
         {
             if (!ShouldStrikeFailedImport(queueCleanerConfig, record))
             {
@@ -117,6 +120,8 @@ public abstract class ArrClient : IArrClient
                 StrikeType.FailedImport
             );
         }
+        
+        _logger.LogDebug("skip | not a failed import | {name}", record.Title);
 
         return false;
     }
