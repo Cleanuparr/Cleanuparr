@@ -24,18 +24,6 @@ jobs:
       pr_number: ${{ steps.parse.outputs.pr_number }}
 
     steps:
-      - name: React to comment
-        continue-on-error: true
-        uses: actions/github-script@v7
-        with:
-          script: |
-            await github.rest.reactions.createForIssueComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              comment_id: context.payload.comment.id,
-              content: 'eyes'
-            });
-
       - name: Parse command and check permissions
         id: parse
         uses: actions/github-script@v7
@@ -53,6 +41,17 @@ jobs:
               console.log(`Comment "${comment}" is not a recognized build command, skipping.`);
               core.setOutput('build_windows', 'false');
               return;
+            }
+
+            try {
+              await github.rest.reactions.createForIssueComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: context.payload.comment.id,
+                content: 'eyes'
+              });
+            } catch (e) {
+              console.log(`Could not add reaction: ${e.message}`);
             }
 
             // Fetch PR details
