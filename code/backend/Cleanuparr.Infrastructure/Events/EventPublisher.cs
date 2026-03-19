@@ -253,7 +253,8 @@ public class EventPublisher : IEventPublisher
             CycleRunId = cycleRunId,
         };
 
-        await _dryRunInterceptor.InterceptAsync(SaveEventToDatabase, eventEntity);
+        eventEntity.IsDryRun = await _dryRunInterceptor.IsDryRunEnabled();
+        await SaveEventToDatabase(eventEntity);
         await NotifyClientsAsync(eventEntity);
         await _notificationPublisher.NotifySearchTriggered(instanceName, itemCount, itemList);
 

@@ -51,4 +51,5 @@ export interface SearchEvent {
   completedAt: string | null;
   grabbedItems: unknown[] | null;
   cycleRunId: string | null;
+  isDryRun: boolean;
 }

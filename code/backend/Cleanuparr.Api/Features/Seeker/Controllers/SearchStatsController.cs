@@ -257,6 +257,7 @@ public sealed class SearchStatsController : ControllerBase
                 CompletedAt = e.CompletedAt,
                 GrabbedItems = parsed.GrabbedItems,
                 CycleRunId = e.CycleRunId,
+                IsDryRun = e.IsDryRun,
             };
         }).ToList();
 

@@ -126,6 +126,9 @@
                     {{ event.searchStatus }}
                   </app-badge>
                 }
+                @if (event.isDryRun) {
+                  <app-badge severity="accent" size="sm">Dry Run</app-badge>
+                }
                 @if (event.cycleRunId) {
                   <span class="list-row__cycle">{{ event.cycleRunId.substring(0, 8) }}</span>
                 }

@@ -55,6 +55,8 @@ public sealed class Seeker : IHandler
             return;
         }
 
+        bool isDryRun = await _dryRunInterceptor.IsDryRunEnabled();
+
         // Replacement searches queued after download removal
         SearchQueueItem? replacementItem = await _dataContext.SearchQueue
             .OrderBy(q => q.CreatedAt)
@@ -62,7 +64,7 @@ public sealed class Seeker : IHandler
 
         if (replacementItem is not null)
         {
-            await ProcessReplacementItemAsync(replacementItem);
+            await ProcessReplacementItemAsync(replacementItem, isDryRun);
             return;
         }
 
@@ -72,10 +74,10 @@ public sealed class Seeker : IHandler
             return;
         }
 
-        await ProcessProactiveSearchAsync(config);
+        await ProcessProactiveSearchAsync(config, isDryRun);
     }
 
-    private async Task ProcessReplacementItemAsync(SearchQueueItem item)
+    private async Task ProcessReplacementItemAsync(SearchQueueItem item, bool isDryRun)
     {
         ArrInstance? arrInstance = await _dataContext.ArrInstances
             .Include(a => a.ArrConfig)
@@ -103,7 +105,10 @@ public sealed class Seeker : IHandler
 
             Guid eventId = await _eventPublisher.PublishSearchTriggered(arrInstance.Name, 1, [item.Title], SeekerSearchType.Replacement);
 
-            await SaveCommandTrackersAsync(commandIds, eventId, arrInstance.Id, item.ArrInstance.ArrConfig.Type, item.ItemId, item.Title);
+            if (!isDryRun)
+            {
+                await SaveCommandTrackersAsync(commandIds, eventId, arrInstance.Id, item.ArrInstance.ArrConfig.Type, item.ItemId, item.Title);
+            }
 
             _logger.LogInformation("Replacement search triggered for '{Title}' on {InstanceName}",
                 item.Title, arrInstance.Name);
@@ -115,8 +120,11 @@ public sealed class Seeker : IHandler
         }
         finally
         {
-            _dataContext.SearchQueue.Remove(item);
-            await _dataContext.SaveChangesAsync();
+            if (!isDryRun)
+            {
+                _dataContext.SearchQueue.Remove(item);
+                await _dataContext.SaveChangesAsync();
+            }
         }
     }
 
@@ -138,7 +146,7 @@ public sealed class Seeker : IHandler
         return [new SearchItem { Id = item.ItemId }];
     }
 
-    private async Task ProcessProactiveSearchAsync(SeekerConfig config)
+    private async Task ProcessProactiveSearchAsync(SeekerConfig config, bool isDryRun)
     {
         List<SeekerInstanceConfig> instanceConfigs = await _dataContext.SeekerInstanceConfigs
             .Include(s => s.ArrInstance)
@@ -163,19 +171,19 @@ public sealed class Seeker : IHandler
                 .OrderBy(s => s.LastProcessedAt ?? DateTime.MinValue)
                 .First();
 
-            await ProcessSingleInstanceAsync(config, nextInstance);
+            await ProcessSingleInstanceAsync(config, nextInstance, isDryRun);
         }
         else
         {
             // Process all enabled instances sequentially
             foreach (SeekerInstanceConfig instanceConfig in instanceConfigs)
             {
-                await ProcessSingleInstanceAsync(config, instanceConfig);
+                await ProcessSingleInstanceAsync(config, instanceConfig, isDryRun);
             }
         }
     }
 
-    private async Task ProcessSingleInstanceAsync(SeekerConfig config, SeekerInstanceConfig instanceConfig)
+    private async Task ProcessSingleInstanceAsync(SeekerConfig config, SeekerInstanceConfig instanceConfig, bool isDryRun)
     {
         ArrInstance arrInstance = instanceConfig.ArrInstance;
         InstanceType instanceType = arrInstance.ArrConfig.Type;
@@ -189,7 +197,7 @@ public sealed class Seeker : IHandler
 
         try
         {
-            await ProcessInstanceAsync(config, instanceConfig, arrInstance, instanceType);
+            await ProcessInstanceAsync(config, instanceConfig, arrInstance, instanceType, isDryRun);
         }
         catch (Exception ex)
         {
@@ -197,17 +205,21 @@ public sealed class Seeker : IHandler
                 instanceType, arrInstance.Name);
         }
 
-        // Always update LastProcessedAt so round-robin moves on
-        instanceConfig.LastProcessedAt = DateTime.UtcNow;
-        _dataContext.SeekerInstanceConfigs.Update(instanceConfig);
-        await _dataContext.SaveChangesAsync();
+        if (!isDryRun)
+        {
+            // Update LastProcessedAt so round-robin moves on
+            instanceConfig.LastProcessedAt = DateTime.UtcNow;
+            _dataContext.SeekerInstanceConfigs.Update(instanceConfig);
+            await _dataContext.SaveChangesAsync();
+        }
     }
 
     private async Task ProcessInstanceAsync(
         SeekerConfig config,
         SeekerInstanceConfig instanceConfig,
         ArrInstance arrInstance,
-        InstanceType instanceType)
+        InstanceType instanceType,
+        bool isDryRun)
     {
         // Load search history for the current cycle
         List<SeekerHistory> currentCycleHistory = await _dataContext.SeekerHistory
@@ -235,14 +247,14 @@ public sealed class Seeker : IHandler
         if (instanceType == InstanceType.Radarr)
         {
             List<long> selectedIds;
-            (selectedIds, selectedNames, allLibraryIds) = await ProcessRadarrAsync(config, arrInstance, instanceConfig, itemSearchHistory);
+            (selectedIds, selectedNames, allLibraryIds) = await ProcessRadarrAsync(config, arrInstance, instanceConfig, itemSearchHistory, isDryRun);
             searchItems = selectedIds.Select(id => new SearchItem { Id = id }).ToHashSet();
             historyIds = selectedIds;
         }
         else
         {
             (searchItems, selectedNames, allLibraryIds, historyIds, seasonNumber) =
-                await ProcessSonarrAsync(config, arrInstance, instanceConfig, itemSearchHistory, currentCycleHistory);
+                await ProcessSonarrAsync(config, arrInstance, instanceConfig, itemSearchHistory, currentCycleHistory, isDryRun);
         }
 
         IEnumerable<long> historyExternalIds = allHistory.Select(h => h.ExternalItemId);
@@ -250,37 +262,45 @@ public sealed class Seeker : IHandler
         if (searchItems.Count == 0)
         {
             _logger.LogDebug("No items selected for search on {InstanceName}", arrInstance.Name);
-            await CleanupStaleHistoryAsync(arrInstance.Id, instanceType, allLibraryIds, historyExternalIds);
+            if (!isDryRun)
+            {
+                await CleanupStaleHistoryAsync(arrInstance.Id, instanceType, allLibraryIds, historyExternalIds);
+            }
             return;
         }
 
-        // Trigger search
+        // Trigger search (arr client guards the HTTP request via dry run interceptor)
         IArrClient arrClient = _arrClientFactory.GetClient(instanceType, arrInstance.Version);
         List<long> commandIds = await arrClient.SearchItemsAsync(arrInstance, searchItems);
 
-        // Update search history
-        await UpdateSearchHistoryAsync(arrInstance.Id, instanceType, instanceConfig.CurrentRunId, historyIds, selectedNames, seasonNumber);
-
-        // Publish event and track commands
+        // Publish event (always saved, flagged with IsDryRun in EventPublisher)
         Guid eventId = await _eventPublisher.PublishSearchTriggered(arrInstance.Name, searchItems.Count, selectedNames, SeekerSearchType.Proactive, instanceConfig.CurrentRunId);
-
-        long externalItemId = historyIds.FirstOrDefault();
-        string itemTitle = selectedNames.FirstOrDefault() ?? string.Empty;
-        await SaveCommandTrackersAsync(commandIds, eventId, arrInstance.Id, instanceType, externalItemId, itemTitle, seasonNumber);
 
         _logger.LogInformation("Searched {Count} items on {InstanceName}: {Items}",
             searchItems.Count, arrInstance.Name, string.Join(", ", selectedNames));
 
-        // Cleanup stale history entries and old cycle history
-        await CleanupStaleHistoryAsync(arrInstance.Id, instanceType, allLibraryIds, historyExternalIds);
-        await CleanupOldCycleHistoryAsync(arrInstance.Id, instanceConfig.CurrentRunId);
+        if (!isDryRun)
+        {
+            // Update search history
+            await UpdateSearchHistoryAsync(arrInstance.Id, instanceType, instanceConfig.CurrentRunId, historyIds, selectedNames, seasonNumber);
+
+            // Track commands
+            long externalItemId = historyIds.FirstOrDefault();
+            string itemTitle = selectedNames.FirstOrDefault() ?? string.Empty;
+            await SaveCommandTrackersAsync(commandIds, eventId, arrInstance.Id, instanceType, externalItemId, itemTitle, seasonNumber);
+
+            // Cleanup stale history entries and old cycle history
+            await CleanupStaleHistoryAsync(arrInstance.Id, instanceType, allLibraryIds, historyExternalIds);
+            await CleanupOldCycleHistoryAsync(arrInstance.Id, instanceConfig.CurrentRunId);
+        }
     }
 
     private async Task<(List<long> SelectedIds, List<string> SelectedNames, List<long> AllLibraryIds)> ProcessRadarrAsync(
         SeekerConfig config,
         ArrInstance arrInstance,
         SeekerInstanceConfig instanceConfig,
-        Dictionary<long, DateTime> searchHistory)
+        Dictionary<long, DateTime> searchHistory,
+        bool isDryRun)
     {
         List<SearchableMovie> movies = await _radarrClient.GetAllMoviesAsync(arrInstance);
         List<long> allLibraryIds = movies.Select(m => m.Id).ToList();
@@ -320,9 +340,12 @@ public sealed class Seeker : IHandler
         {
             _logger.LogInformation("All {Count} items on {InstanceName} searched in current cycle, starting new cycle",
                 candidates.Count, arrInstance.Name);
-            instanceConfig.CurrentRunId = Guid.NewGuid();
-            _dataContext.SeekerInstanceConfigs.Update(instanceConfig);
-            await _dataContext.SaveChangesAsync();
+            if (!isDryRun)
+            {
+                instanceConfig.CurrentRunId = Guid.NewGuid();
+                _dataContext.SeekerInstanceConfigs.Update(instanceConfig);
+                await _dataContext.SaveChangesAsync();
+            }
             searchHistory = new Dictionary<long, DateTime>();
         }
 
@@ -348,7 +371,8 @@ public sealed class Seeker : IHandler
         ArrInstance arrInstance,
         SeekerInstanceConfig instanceConfig,
         Dictionary<long, DateTime> seriesSearchHistory,
-        List<SeekerHistory> currentCycleHistory)
+        List<SeekerHistory> currentCycleHistory,
+        bool isDryRun)
     {
         List<SearchableSeries> series = await _sonarrClient.GetAllSeriesAsync(arrInstance);
         List<long> allLibraryIds = series.Select(s => s.Id).ToList();
@@ -415,13 +439,16 @@ public sealed class Seeker : IHandler
         {
             _logger.LogInformation("All series/seasons on {InstanceName} searched in current cycle, starting new cycle",
                 arrInstance.Name);
-            instanceConfig.CurrentRunId = Guid.NewGuid();
-            _dataContext.SeekerInstanceConfigs.Update(instanceConfig);
-            await _dataContext.SaveChangesAsync();
+            if (!isDryRun)
+            {
+                instanceConfig.CurrentRunId = Guid.NewGuid();
+                _dataContext.SeekerInstanceConfigs.Update(instanceConfig);
+                await _dataContext.SaveChangesAsync();
+            }
 
             // Retry with fresh cycle
             return await ProcessSonarrAsync(config, arrInstance, instanceConfig,
-                new Dictionary<long, DateTime>(), []);
+                new Dictionary<long, DateTime>(), [], isDryRun);
         }
 
         return ([], [], allLibraryIds, [], 0);
