@@ -63,14 +63,22 @@ public sealed class GeneralConfigController : ControllerBase
 
             if (wasDryRun && !config.DryRun)
             {
-                var deletedStrikes = await eventsContext.Strikes.ExecuteDeleteAsync();
+                var deletedStrikes = await eventsContext.Strikes
+                    .Where(s => s.IsDryRun)
+                    .ExecuteDeleteAsync();
+                var deletedEvents = await eventsContext.Events
+                    .Where(e => e.IsDryRun)
+                    .ExecuteDeleteAsync();
+                var deletedManualEvents = await eventsContext.ManualEvents
+                    .Where(e => e.IsDryRun)
+                    .ExecuteDeleteAsync();
                 var deletedItems = await eventsContext.DownloadItems
                     .Where(d => !d.Strikes.Any())
                     .ExecuteDeleteAsync();
 
                 _logger.LogWarning(
-                    "Dry run disabled — purged all strikes: {Strikes} strikes, {Items} download items removed",
-                    deletedStrikes, deletedItems);
+                    "Dry run disabled — purged dry-run data: {Strikes} strikes, {Events} events, {ManualEvents} manual events, {Items} orphaned download items removed",
+                    deletedStrikes, deletedEvents, deletedManualEvents, deletedItems);
             }
 
             return Ok(new { Message = "General configuration updated successfully" });

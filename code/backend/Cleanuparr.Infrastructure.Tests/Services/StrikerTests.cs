@@ -40,10 +40,8 @@ public class StrikerTests : IDisposable
         var notificationPublisher = Substitute.For<INotificationPublisher>();
         var dryRunInterceptor = Substitute.For<IDryRunInterceptor>();
 
-        // Configure dry run interceptor to just complete the task (we don't need actual DB saves in tests)
-        dryRunInterceptor
-            .InterceptAsync(Arg.Any<Delegate>(), Arg.Any<object[]>())
-            .Returns(Task.CompletedTask);
+        // Configure dry run interceptor to report dry run as disabled by default
+        dryRunInterceptor.IsDryRunEnabled().Returns(false);
 
         _eventPublisher = new EventPublisher(
             eventsContext,
@@ -52,7 +50,7 @@ public class StrikerTests : IDisposable
             notificationPublisher,
             dryRunInterceptor);
 
-        _striker = new Striker(_logger, _strikerContext, _eventPublisher);
+        _striker = new Striker(_logger, _strikerContext, _eventPublisher, dryRunInterceptor);
 
         // Clear static state before each test
         Striker.RecurringHashes.Clear();

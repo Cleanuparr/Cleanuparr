@@ -55,6 +55,9 @@
             @if (item.isReturning) {
               <app-badge severity="warning" size="sm">Returning</app-badge>
             }
+            @if (item.hasDryRunStrikes) {
+              <app-badge severity="accent" size="sm">Dry Run</app-badge>
+            }
             <span class="strike-row__hash">{{ item.downloadId }}</span>
             <div class="strike-row__type-badges">
               @for (entry of strikeTypeEntries(item.strikesByType); track entry.type) {
@@ -108,6 +111,9 @@
                       <app-badge [severity]="strikeTypeSeverity(strike.type)" size="sm">
                         {{ formatStrikeType(strike.type) }}
                       </app-badge>
+                      @if (strike.isDryRun) {
+                        <app-badge severity="accent" size="sm">Dry Run</app-badge>
+                      }
                       <span class="strike-table__time">{{ strike.createdAt | date:'yyyy-MM-dd HH:mm:ss' }}</span>
                       <span class="strike-table__bytes">{{ formatBytes(strike.lastDownloadedBytes) }}</span>
                       <span class="strike-table__run-id">{{ strike.jobRunId }}</span>

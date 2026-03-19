@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Events.Interfaces;
 using Cleanuparr.Infrastructure.Features.Context;
+using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.State;
 using Microsoft.EntityFrameworkCore;
@@ -14,14 +15,16 @@ public sealed class Striker : IStriker
     private readonly ILogger<Striker> _logger;
     private readonly EventsContext _context;
     private readonly IEventPublisher _eventPublisher;
+    private readonly IDryRunInterceptor _dryRunInterceptor;
 
     public static readonly ConcurrentDictionary<string, string?> RecurringHashes = [];
 
-    public Striker(ILogger<Striker> logger, EventsContext context, IEventPublisher eventPublisher)
+    public Striker(ILogger<Striker> logger, EventsContext context, IEventPublisher eventPublisher, IDryRunInterceptor dryRunInterceptor)
     {
         _logger = logger;
         _context = context;
         _eventPublisher = eventPublisher;
+        _dryRunInterceptor = dryRunInterceptor;
     }
 
     public async Task<bool> StrikeAndCheckLimit(string hash, string itemName, ushort maxStrikes, StrikeType strikeType, long? lastDownloadedBytes = null)
@@ -37,12 +40,15 @@ public sealed class Striker : IStriker
         int existingStrikeCount = await _context.Strikes
             .CountAsync(s => s.DownloadItemId == downloadItem.Id && s.Type == strikeType);
 
+        bool isDryRun = await _dryRunInterceptor.IsDryRunEnabled();
+
         var strike = new Strike
         {
             DownloadItemId = downloadItem.Id,
             JobRunId = ContextProvider.GetJobRunId(),
             Type = strikeType,
-            LastDownloadedBytes = lastDownloadedBytes
+            LastDownloadedBytes = lastDownloadedBytes,
+            IsDryRun = isDryRun
         };
         _context.Strikes.Add(strike);
 

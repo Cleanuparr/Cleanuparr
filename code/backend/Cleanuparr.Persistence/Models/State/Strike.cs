@@ -31,4 +31,6 @@ public class Strike
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     public long? LastDownloadedBytes { get; set; }
+
+    public bool IsDryRun { get; set; }
 }

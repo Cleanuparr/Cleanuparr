@@ -73,4 +73,6 @@ public class AppEvent : IEvent
     /// </summary>
     [MaxLength(200)]
     public string? DownloadClientName { get; set; }
-} 
+
+    public bool IsDryRun { get; set; }
+}

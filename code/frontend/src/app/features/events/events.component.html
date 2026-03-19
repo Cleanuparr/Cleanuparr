@@ -96,6 +96,9 @@
             <app-badge [severity]="eventTypeSeverity(event.eventType)" size="sm">
               {{ formatEventType(event.eventType) }}
             </app-badge>
+            @if (event.isDryRun) {
+              <app-badge severity="accent" size="sm">Dry Run</app-badge>
+            }
             @if (event.trackingId) {
               <span class="event-row__tracking">{{ event.trackingId }}</span>
             }

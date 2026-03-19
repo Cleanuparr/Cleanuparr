@@ -63,10 +63,9 @@ public class EventPublisher : IEventPublisher
             DownloadClientName = ContextProvider.Get(ContextProvider.Keys.DownloadClientName) as string,
         };
 
-        // Save to database with dry run interception
-        await _dryRunInterceptor.InterceptAsync(SaveEventToDatabase, eventEntity);
+        eventEntity.IsDryRun = await _dryRunInterceptor.IsDryRunEnabled();
+        await SaveEventToDatabase(eventEntity);
 
-        // Always send to SignalR clients (not affected by dry run)
         await NotifyClientsAsync(eventEntity);
 
         _logger.LogTrace("Published event: {eventType}", eventType);
@@ -89,10 +88,9 @@ public class EventPublisher : IEventPublisher
             DownloadClientName = ContextProvider.Get(ContextProvider.Keys.DownloadClientName) as string,
         };
 
-        // Save to database with dry run interception
-        await _dryRunInterceptor.InterceptAsync(SaveManualEventToDatabase, eventEntity);
+        eventEntity.IsDryRun = await _dryRunInterceptor.IsDryRunEnabled();
+        await SaveManualEventToDatabase(eventEntity);
 
-        // Always send to SignalR clients (not affected by dry run)
         await NotifyClientsAsync(eventEntity);
 
         _logger.LogTrace("Published manual event: {message}", message);
@@ -148,7 +146,8 @@ public class EventPublisher : IEventPublisher
             strikeId: strikeId);
 
         // Broadcast strike to SignalR clients for real-time dashboard updates
-        await BroadcastStrikeAsync(strikeId, strikeType, hash, itemName);
+        bool isDryRun = await _dryRunInterceptor.IsDryRunEnabled();
+        await BroadcastStrikeAsync(strikeId, strikeType, hash, itemName, isDryRun);
 
         // Send notification (uses ContextProvider internally)
         await _notificationPublisher.NotifyStrike(strikeType, strikeCount);
@@ -276,7 +275,7 @@ public class EventPublisher : IEventPublisher
         }
     }
 
-    private async Task BroadcastStrikeAsync(Guid? strikeId, StrikeType strikeType, string hash, string itemName)
+    private async Task BroadcastStrikeAsync(Guid? strikeId, StrikeType strikeType, string hash, string itemName, bool isDryRun)
     {
         try
         {
@@ -287,6 +286,7 @@ public class EventPublisher : IEventPublisher
                 CreatedAt = DateTime.UtcNow,
                 DownloadId = hash,
                 Title = itemName,
+                IsDryRun = isDryRun,
             };
             await _appHubContext.Clients.All.SendAsync("StrikeReceived", strike);
         }
