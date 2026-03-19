@@ -8,6 +8,7 @@ import { AppHubService } from '@core/realtime/app-hub.service';
 import { EventsApi } from '@core/api/events.api';
 import { JobsApi } from '@core/api/jobs.api';
 import { GeneralConfigApi } from '@core/api/general-config.api';
+import { CfScoreApi, CfScoreStats, CfScoreUpgrade } from '@core/api/cf-score.api';
 import { ToastService } from '@core/services/toast.service';
 import { LogEntry } from '@core/models/signalr.models';
 import { ManualEvent } from '@core/models/event.models';
@@ -38,12 +39,15 @@ export class DashboardComponent implements OnInit {
   private readonly eventsApi = inject(EventsApi);
   private readonly jobsApi = inject(JobsApi);
   private readonly generalConfigApi = inject(GeneralConfigApi);
+  private readonly cfScoreApi = inject(CfScoreApi);
   private readonly toast = inject(ToastService);
   private readonly router = inject(Router);
 
   readonly connected = this.hub.isConnected;
   readonly jobs = this.hub.jobs;
   readonly showSupportSection = signal(false);
+  readonly cfScoreStats = signal<CfScoreStats | null>(null);
+  readonly cfScoreUpgrades = signal<CfScoreUpgrade[]>([]);
 
   readonly recentStrikes = computed(() => this.hub.strikes().slice(0, 5));
   readonly recentLogs = computed(() => this.hub.logs().slice(0, 5));
@@ -69,6 +73,16 @@ export class DashboardComponent implements OnInit {
   ngOnInit(): void {
     this.generalConfigApi.get().subscribe({
       next: (config) => this.showSupportSection.set(config.displaySupportBanner),
+    });
+    this.loadCfScoreData();
+  }
+
+  private loadCfScoreData(): void {
+    this.cfScoreApi.getStats().subscribe({
+      next: (stats) => this.cfScoreStats.set(stats),
+    });
+    this.cfScoreApi.getRecentUpgrades(1, 5).subscribe({
+      next: (res) => this.cfScoreUpgrades.set(res.items),
     });
   }
 

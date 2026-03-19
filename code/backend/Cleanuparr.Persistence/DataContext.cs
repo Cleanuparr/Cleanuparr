@@ -74,6 +74,12 @@ public class DataContext : DbContext
 
     public DbSet<SearchQueueItem> SearchQueue { get; set; }
 
+    public DbSet<CfScoreEntry> CfScoreEntries { get; set; }
+
+    public DbSet<CfScoreHistory> CfScoreHistory { get; set; }
+
+    public DbSet<SeekerCommandTracker> SeekerCommandTrackers { get; set; }
+
     public DataContext()
     {
     }
@@ -223,7 +229,15 @@ public class DataContext : DbContext
                   .HasForeignKey(s => s.ArrInstanceId)
                   .OnDelete(DeleteBehavior.Cascade);
 
-            entity.HasIndex(s => new { s.ArrInstanceId, s.ExternalItemId, s.ItemType, s.SeasonNumber, s.EpisodeId }).IsUnique();
+            entity.HasIndex(s => new { s.ArrInstanceId, s.ExternalItemId, s.ItemType, s.SeasonNumber, s.RunId }).IsUnique();
+        });
+
+        modelBuilder.Entity<SeekerCommandTracker>(entity =>
+        {
+            entity.HasOne(s => s.ArrInstance)
+                  .WithMany()
+                  .HasForeignKey(s => s.ArrInstanceId)
+                  .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<SearchQueueItem>(entity =>
@@ -232,6 +246,27 @@ public class DataContext : DbContext
                   .WithMany()
                   .HasForeignKey(s => s.ArrInstanceId)
                   .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<CfScoreEntry>(entity =>
+        {
+            entity.HasOne(s => s.ArrInstance)
+                  .WithMany()
+                  .HasForeignKey(s => s.ArrInstanceId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(s => new { s.ArrInstanceId, s.ExternalItemId, s.EpisodeId }).IsUnique();
+        });
+
+        modelBuilder.Entity<CfScoreHistory>(entity =>
+        {
+            entity.HasOne(s => s.ArrInstance)
+                  .WithMany()
+                  .HasForeignKey(s => s.ArrInstanceId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(s => new { s.ArrInstanceId, s.ExternalItemId, s.EpisodeId });
+            entity.HasIndex(s => s.RecordedAt);
         });
 
         // Configure BlacklistSyncState relationships and indexes

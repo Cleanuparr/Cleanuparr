@@ -123,6 +123,10 @@
     grid-column: 1 / -1;
   }
 
+  &__cf-scores {
+    grid-column: 1 / -1;
+  }
+
   &__jobs {
     grid-column: 1 / -1;
   }
@@ -136,7 +140,47 @@
     &:nth-child(2) { animation-delay: 80ms; }
     &:nth-child(3) { animation-delay: 160ms; }
     &:nth-child(4) { animation-delay: 240ms; }
+    &:nth-child(5) { animation-delay: 320ms; }
   }
+}
+
+// CF Scores card
+.cf-scores {
+  padding: var(--space-4) var(--space-5);
+
+  &__stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-4);
+    margin-bottom: var(--space-4);
+    @media (max-width: 768px) { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  &__stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-1);
+    padding: var(--space-3);
+    border-radius: var(--radius-md);
+    background: rgba(255, 255, 255, 0.03);
+    &--warning { background: rgba(245, 158, 11, 0.06); }
+    &--success { background: rgba(34, 197, 94, 0.06); }
+    &--info { background: rgba(59, 130, 246, 0.06); }
+  }
+
+  &__stat-value { font-size: var(--font-size-xl); font-weight: 700; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+  &__stat-label { font-size: var(--font-size-xs); color: var(--text-tertiary); }
+
+  &__upgrades { border-top: 1px solid var(--divider); padding-top: var(--space-3); }
+  &__upgrades-title { font-size: var(--font-size-sm); font-weight: 600; color: var(--text-secondary); margin-bottom: var(--space-2); }
+  &__upgrade-item { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) 0; &:not(:last-child) { border-bottom: 1px solid var(--divider); } }
+  &__upgrade-title { flex: 1; min-width: 0; font-size: var(--font-size-sm); color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  &__upgrade-scores { display: flex; align-items: center; gap: var(--space-1); flex-shrink: 0; }
+  &__score { font-size: var(--font-size-sm); font-weight: 600; &--old { color: var(--text-tertiary); } &--new { color: var(--color-success); } }
+  &__arrow { font-size: 12px; color: var(--text-tertiary); }
+  &__cutoff, &__upgrade-time { font-size: var(--font-size-xs); color: var(--text-tertiary); }
+  &__upgrade-time { font-family: var(--font-mono); }
 }
 
 // Manual event action-required banner

@@ -1,3 +1,4 @@
+using Cleanuparr.Domain.Entities.Arr;
 using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
@@ -12,9 +13,17 @@ public interface IArrClient
     Task<bool> ShouldRemoveFromQueue(InstanceType instanceType, QueueRecord record, bool isPrivateDownload, short arrMaxStrikes);
 
     Task DeleteQueueItemAsync(ArrInstance arrInstance, QueueRecord record, bool removeFromClient, DeleteReason deleteReason);
-    
-    Task SearchItemsAsync(ArrInstance arrInstance, HashSet<SearchItem>? items);
-    
+
+    /// <summary>
+    /// Triggers a search for the specified items and returns the arr command IDs
+    /// </summary>
+    Task<List<long>> SearchItemsAsync(ArrInstance arrInstance, HashSet<SearchItem>? items);
+
+    /// <summary>
+    /// Gets the status of an arr command by its ID
+    /// </summary>
+    Task<ArrCommandStatus> GetCommandStatusAsync(ArrInstance arrInstance, long commandId);
+
     bool IsRecordValid(QueueRecord record);
 
     /// <summary>

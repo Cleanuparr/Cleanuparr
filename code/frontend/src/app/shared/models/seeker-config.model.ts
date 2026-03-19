@@ -1,4 +1,4 @@
-import { SelectionStrategy, SeriesSearchType } from './enums';
+import { SelectionStrategy } from './enums';
 
 export interface SeekerConfig {
   searchEnabled: boolean;
@@ -7,8 +7,8 @@ export interface SeekerConfig {
   selectionStrategy: SelectionStrategy;
   monitoredOnly: boolean;
   useCutoff: boolean;
+  useCustomFormatScore: boolean;
   useRoundRobin: boolean;
-  sonarrSearchType: SeriesSearchType;
   instances: SeekerInstanceConfig[];
 }
 
@@ -19,6 +19,7 @@ export interface SeekerInstanceConfig {
   enabled: boolean;
   skipTags: string[];
   lastProcessedAt?: string;
+  arrInstanceEnabled: boolean;
 }
 
 export interface UpdateSeekerConfig {
@@ -28,8 +29,8 @@ export interface UpdateSeekerConfig {
   selectionStrategy: SelectionStrategy;
   monitoredOnly: boolean;
   useCutoff: boolean;
+  useCustomFormatScore: boolean;
   useRoundRobin: boolean;
-  sonarrSearchType: SeriesSearchType;
   instances: UpdateSeekerInstanceConfig[];
 }
 

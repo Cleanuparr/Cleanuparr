@@ -99,24 +99,14 @@ public sealed class Seeker : IHandler
             IArrClient arrClient = _arrClientFactory.GetClient(item.ArrInstance.ArrConfig.Type, arrInstance.Version);
             HashSet<SearchItem> searchItems = BuildSearchItems(item);
 
-            await _dryRunInterceptor.InterceptAsync(arrClient.SearchItemsAsync, arrInstance, searchItems);
+            List<long> commandIds = await arrClient.SearchItemsAsync(arrInstance, searchItems);
 
-            await _eventPublisher.PublishSearchTriggered(arrInstance.Name, 1, [item.Title]);
+            Guid eventId = await _eventPublisher.PublishSearchTriggered(arrInstance.Name, 1, [item.Title], SeekerSearchType.Replacement);
+
+            await SaveCommandTrackersAsync(commandIds, eventId, arrInstance.Id, item.ArrInstance.ArrConfig.Type, item.ItemId, item.Title);
 
             _logger.LogInformation("Replacement search triggered for '{Title}' on {InstanceName}",
                 item.Title, arrInstance.Name);
-
-            // Update search history for proactive search awareness
-            if (item.SeriesId.HasValue && Enum.TryParse<SeriesSearchType>(item.SearchType, out var historySearchType))
-            {
-                int seasonNum = historySearchType == SeriesSearchType.Season ? (int)item.ItemId : 0;
-                long epId = historySearchType == SeriesSearchType.Episode ? item.ItemId : 0;
-                await UpdateSearchHistoryAsync(arrInstance.Id, item.ArrInstance.ArrConfig.Type, [item.SeriesId.Value], seasonNum, epId);
-            }
-            else
-            {
-                await UpdateSearchHistoryAsync(arrInstance.Id, item.ArrInstance.ArrConfig.Type, [item.ItemId]);
-            }
         }
         catch (Exception ex)
         {
@@ -219,14 +209,20 @@ public sealed class Seeker : IHandler
         ArrInstance arrInstance,
         InstanceType instanceType)
     {
-        // Load search history for this instance
+        // Load search history for the current cycle
+        List<SeekerHistory> currentCycleHistory = await _dataContext.SeekerHistory
+            .AsNoTracking()
+            .Where(h => h.ArrInstanceId == arrInstance.Id && h.RunId == instanceConfig.CurrentRunId)
+            .ToListAsync();
+
+        // Load all history for stale cleanup
         List<SeekerHistory> allHistory = await _dataContext.SeekerHistory
             .AsNoTracking()
             .Where(h => h.ArrInstanceId == arrInstance.Id)
             .ToListAsync();
 
-        // Derive series/movie-level history for item selection strategies
-        Dictionary<long, DateTime> itemSearchHistory = allHistory
+        // Derive item-level history for selection strategies
+        Dictionary<long, DateTime> itemSearchHistory = currentCycleHistory
             .GroupBy(h => h.ExternalItemId)
             .ToDictionary(g => g.Key, g => g.Max(h => h.LastSearchedAt));
 
@@ -235,19 +231,18 @@ public sealed class Seeker : IHandler
         List<long> allLibraryIds;
         List<long> historyIds;
         int seasonNumber = 0;
-        long episodeId = 0;
 
         if (instanceType == InstanceType.Radarr)
         {
             List<long> selectedIds;
-            (selectedIds, selectedNames, allLibraryIds) = await ProcessRadarrAsync(config, arrInstance, instanceConfig.SkipTags, itemSearchHistory);
+            (selectedIds, selectedNames, allLibraryIds) = await ProcessRadarrAsync(config, arrInstance, instanceConfig, itemSearchHistory);
             searchItems = selectedIds.Select(id => new SearchItem { Id = id }).ToHashSet();
             historyIds = selectedIds;
         }
         else
         {
-            (searchItems, selectedNames, allLibraryIds, historyIds, seasonNumber, episodeId) =
-                await ProcessSonarrAsync(config, arrInstance, instanceConfig.SkipTags, itemSearchHistory, allHistory);
+            (searchItems, selectedNames, allLibraryIds, historyIds, seasonNumber) =
+                await ProcessSonarrAsync(config, arrInstance, instanceConfig, itemSearchHistory, currentCycleHistory);
         }
 
         IEnumerable<long> historyExternalIds = allHistory.Select(h => h.ExternalItemId);
@@ -255,57 +250,89 @@ public sealed class Seeker : IHandler
         if (searchItems.Count == 0)
         {
             _logger.LogDebug("No items selected for search on {InstanceName}", arrInstance.Name);
-            // Still cleanup stale entries even if no items selected
             await CleanupStaleHistoryAsync(arrInstance.Id, instanceType, allLibraryIds, historyExternalIds);
             return;
         }
 
         // Trigger search
         IArrClient arrClient = _arrClientFactory.GetClient(instanceType, arrInstance.Version);
-        await _dryRunInterceptor.InterceptAsync(arrClient.SearchItemsAsync, arrInstance, searchItems);
+        List<long> commandIds = await arrClient.SearchItemsAsync(arrInstance, searchItems);
 
         // Update search history
-        await UpdateSearchHistoryAsync(arrInstance.Id, instanceType, historyIds, seasonNumber, episodeId);
+        await UpdateSearchHistoryAsync(arrInstance.Id, instanceType, instanceConfig.CurrentRunId, historyIds, selectedNames, seasonNumber);
 
-        // Publish event
-        await _eventPublisher.PublishSearchTriggered(arrInstance.Name, searchItems.Count, selectedNames);
+        // Publish event and track commands
+        Guid eventId = await _eventPublisher.PublishSearchTriggered(arrInstance.Name, searchItems.Count, selectedNames, SeekerSearchType.Proactive, instanceConfig.CurrentRunId);
+
+        long externalItemId = historyIds.FirstOrDefault();
+        string itemTitle = selectedNames.FirstOrDefault() ?? string.Empty;
+        await SaveCommandTrackersAsync(commandIds, eventId, arrInstance.Id, instanceType, externalItemId, itemTitle, seasonNumber);
 
         _logger.LogInformation("Searched {Count} items on {InstanceName}: {Items}",
             searchItems.Count, arrInstance.Name, string.Join(", ", selectedNames));
 
-        // Cleanup stale history entries
+        // Cleanup stale history entries and old cycle history
         await CleanupStaleHistoryAsync(arrInstance.Id, instanceType, allLibraryIds, historyExternalIds);
+        await CleanupOldCycleHistoryAsync(arrInstance.Id, instanceConfig.CurrentRunId);
     }
 
     private async Task<(List<long> SelectedIds, List<string> SelectedNames, List<long> AllLibraryIds)> ProcessRadarrAsync(
         SeekerConfig config,
         ArrInstance arrInstance,
-        List<string> skipTags,
+        SeekerInstanceConfig instanceConfig,
         Dictionary<long, DateTime> searchHistory)
     {
         List<SearchableMovie> movies = await _radarrClient.GetAllMoviesAsync(arrInstance);
         List<long> allLibraryIds = movies.Select(m => m.Id).ToList();
 
-        // Apply filters
+        // Load cached CF scores when custom format score filtering is enabled
+        Dictionary<long, CfScoreEntry>? cfScores = null;
+        if (config.UseCustomFormatScore)
+        {
+            cfScores = await _dataContext.CfScoreEntries
+                .AsNoTracking()
+                .Where(e => e.ArrInstanceId == arrInstance.Id && e.ItemType == InstanceType.Radarr)
+                .ToDictionaryAsync(e => e.ExternalItemId);
+        }
+
+        // Apply filters — UseCutoff and UseCustomFormatScore are OR-ed: an item qualifies if it fails the quality cutoff OR the CF score cutoff.
+        // Items without a cached CF score pass the CF filter.
         var candidates = movies
             .Where(m => m.Status is "released")
             .Where(m => !config.MonitoredOnly || m.Monitored)
-            .Where(m => skipTags.Count == 0 || !m.Tags.Any(skipTags.Contains))
-            .Where(m => !config.UseCutoff || !m.HasFile || (m.MovieFile?.QualityCutoffNotMet ?? true))
+            .Where(m => instanceConfig.SkipTags.Count == 0 || !m.Tags.Any(instanceConfig.SkipTags.Contains))
+            .Where(m => !m.HasFile
+                || (!config.UseCutoff && !config.UseCustomFormatScore)
+                || (config.UseCutoff && (m.MovieFile?.QualityCutoffNotMet ?? true))
+                || (config.UseCustomFormatScore && (cfScores == null || !cfScores.TryGetValue(m.Id, out var entry) || entry.CurrentScore < entry.CutoffScore)))
             .ToList();
+
+        instanceConfig.TotalEligibleItems = candidates.Count;
 
         if (candidates.Count == 0)
         {
             return ([], [], allLibraryIds);
         }
 
-        // Build selection candidates with history
+        // Check for cycle completion: all candidates already searched in current cycle
+        bool cycleComplete = candidates.All(m => searchHistory.ContainsKey(m.Id));
+        if (cycleComplete)
+        {
+            _logger.LogInformation("All {Count} items on {InstanceName} searched in current cycle, starting new cycle",
+                candidates.Count, arrInstance.Name);
+            instanceConfig.CurrentRunId = Guid.NewGuid();
+            _dataContext.SeekerInstanceConfigs.Update(instanceConfig);
+            await _dataContext.SaveChangesAsync();
+            searchHistory = new Dictionary<long, DateTime>();
+        }
+
+        // Only pass unsearched items to the selector — already-searched items in this cycle are skipped
         var selectionCandidates = candidates
-            .Select(m => (m.Id, m.Added, LastSearched: searchHistory.TryGetValue(m.Id, out var dt) ? (DateTime?)dt : null))
+            .Where(m => !searchHistory.ContainsKey(m.Id))
+            .Select(m => (m.Id, m.Added, LastSearched: (DateTime?)null))
             .ToList();
 
         IItemSelector selector = ItemSelectorFactory.Create(config.SelectionStrategy);
-        // Only select 1 item to avoid being banned from indexers (might be configurable down the line?)
         List<long> selectedIds = selector.Select(selectionCandidates, 1);
 
         List<string> selectedNames = candidates
@@ -316,42 +343,50 @@ public sealed class Seeker : IHandler
         return (selectedIds, selectedNames, allLibraryIds);
     }
 
-    private async Task<(HashSet<SearchItem> SearchItems, List<string> SelectedNames, List<long> AllLibraryIds, List<long> HistoryIds, int SeasonNumber, long EpisodeId)> ProcessSonarrAsync(
+    private async Task<(HashSet<SearchItem> SearchItems, List<string> SelectedNames, List<long> AllLibraryIds, List<long> HistoryIds, int SeasonNumber)> ProcessSonarrAsync(
         SeekerConfig config,
         ArrInstance arrInstance,
-        List<string> skipTags,
+        SeekerInstanceConfig instanceConfig,
         Dictionary<long, DateTime> seriesSearchHistory,
-        List<SeekerHistory> fullHistory)
+        List<SeekerHistory> currentCycleHistory)
     {
         List<SearchableSeries> series = await _sonarrClient.GetAllSeriesAsync(arrInstance);
         List<long> allLibraryIds = series.Select(s => s.Id).ToList();
 
         // Apply filters
         var candidates = series
+            .Where(s => s.Status is "continuing" or "ended" or "released")
             .Where(s => !config.MonitoredOnly || s.Monitored)
-            .Where(s => skipTags.Count == 0 || !s.Tags.Any(skipTags.Contains))
+            .Where(s => instanceConfig.SkipTags.Count == 0 || !s.Tags.Any(instanceConfig.SkipTags.Contains))
+            // Skip fully-downloaded series (unless quality upgrade filters active)
+            .Where(s => config.UseCutoff || config.UseCustomFormatScore
+                || s.Statistics == null || s.Statistics.EpisodeCount == 0
+                || s.Statistics.EpisodeFileCount < s.Statistics.EpisodeCount)
             .ToList();
+
+        instanceConfig.TotalEligibleItems = candidates.Count;
 
         if (candidates.Count == 0)
         {
-            return ([], [], allLibraryIds, [], 0, 0);
+            return ([], [], allLibraryIds, [], 0);
         }
 
-        // Build selection candidates with series-level history
+        // Pass all candidates — BuildSonarrSearchItemAsync handles season-level exclusion
+        // LastSearched info helps the selector deprioritize recently-searched series
         var selectionCandidates = candidates
             .Select(s => (s.Id, s.Added, LastSearched: seriesSearchHistory.TryGetValue(s.Id, out var dt) ? (DateTime?)dt : null))
             .ToList();
 
-        // Over-select to compensate for series that may have no qualifying episodes
+        // Select all candidates in priority order so the loop can find one with unsearched seasons
         IItemSelector selector = ItemSelectorFactory.Create(config.SelectionStrategy);
-        List<long> candidateIds = selector.Select(selectionCandidates, 10);
+        List<long> candidateIds = selector.Select(selectionCandidates, selectionCandidates.Count);
 
-        // Drill down to find the first series with qualifying episodes
+        // Drill down to find the first series with qualifying unsearched seasons
         foreach (long seriesId in candidateIds)
         {
             try
             {
-                List<SeekerHistory> seriesHistory = fullHistory
+                List<SeekerHistory> seriesHistory = currentCycleHistory
                     .Where(h => h.ExternalItemId == seriesId)
                     .ToList();
 
@@ -361,19 +396,13 @@ public sealed class Seeker : IHandler
                 if (searchItem is not null)
                 {
                     string seriesTitle = candidates.First(s => s.Id == seriesId).Title;
-                    string displayName = FormatSonarrDisplayName(seriesTitle, searchItem, config.SonarrSearchType, selectedEpisode);
+                    string displayName = $"{seriesTitle} S{searchItem.Id:D2}";
+                    int seasonNumber = (int)searchItem.Id;
 
-                    int seasonNumber = config.SonarrSearchType == SeriesSearchType.Season
-                        ? (int)searchItem.Id
-                        : selectedEpisode?.SeasonNumber ?? 0;
-                    long episodeId = config.SonarrSearchType == SeriesSearchType.Episode
-                        ? searchItem.Id
-                        : 0;
-
-                    return ([searchItem], [displayName], allLibraryIds, [seriesId], seasonNumber, episodeId);
+                    return ([searchItem], [displayName], allLibraryIds, [seriesId], seasonNumber);
                 }
 
-                _logger.LogDebug("Skipping series {SeriesId} — no qualifying episodes found", seriesId);
+                _logger.LogDebug("Skipping series {SeriesId} — no qualifying seasons found", seriesId);
             }
             catch (Exception ex)
             {
@@ -381,13 +410,26 @@ public sealed class Seeker : IHandler
             }
         }
 
-        return ([], [], allLibraryIds, [], 0, 0);
+        // All candidates were tried and none had qualifying unsearched seasons — cycle complete
+        if (candidates.Count > 0)
+        {
+            _logger.LogInformation("All series/seasons on {InstanceName} searched in current cycle, starting new cycle",
+                arrInstance.Name);
+            instanceConfig.CurrentRunId = Guid.NewGuid();
+            _dataContext.SeekerInstanceConfigs.Update(instanceConfig);
+            await _dataContext.SaveChangesAsync();
+
+            // Retry with fresh cycle
+            return await ProcessSonarrAsync(config, arrInstance, instanceConfig,
+                new Dictionary<long, DateTime>(), []);
+        }
+
+        return ([], [], allLibraryIds, [], 0);
     }
 
     /// <summary>
-    /// Fetches episodes for a series and builds the appropriate search item
-    /// based on the configured Sonarr search type (Episode or Season).
-    /// Uses search history to prefer least-recently-searched seasons/episodes.
+    /// Fetches episodes for a series and builds a season-level search item.
+    /// Uses search history to prefer least-recently-searched seasons.
     /// </summary>
     private async Task<(SeriesSearchItem? SearchItem, SearchableEpisode? SelectedEpisode)> BuildSonarrSearchItemAsync(
         SeekerConfig config,
@@ -397,11 +439,26 @@ public sealed class Seeker : IHandler
     {
         List<SearchableEpisode> episodes = await _sonarrClient.GetEpisodesAsync(arrInstance, seriesId);
 
-        // Filter to qualifying episodes
+        // Load cached CF scores for this series when custom format score filtering is enabled
+        Dictionary<long, CfScoreEntry>? cfScores = null;
+        if (config.UseCustomFormatScore)
+        {
+            cfScores = await _dataContext.CfScoreEntries
+                .AsNoTracking()
+                .Where(e => e.ArrInstanceId == arrInstance.Id
+                    && e.ItemType == InstanceType.Sonarr
+                    && e.ExternalItemId == seriesId)
+                .ToDictionaryAsync(e => e.EpisodeId);
+        }
+
+        // Filter to qualifying episodes — UseCutoff and UseCustomFormatScore are OR-ed
         var qualifying = episodes
             .Where(e => e.AirDateUtc.HasValue && e.AirDateUtc.Value <= DateTime.UtcNow)
             .Where(e => !config.MonitoredOnly || e.Monitored)
-            .Where(e => !e.HasFile || (config.UseCutoff && (e.EpisodeFile?.QualityCutoffNotMet ?? true)))
+            .Where(e => !e.HasFile
+                || (!config.UseCutoff && !config.UseCustomFormatScore)
+                || (config.UseCutoff && (e.EpisodeFile?.QualityCutoffNotMet ?? true))
+                || (config.UseCustomFormatScore && (cfScores == null || !cfScores.TryGetValue(e.Id, out var entry) || entry.CurrentScore < entry.CutoffScore)))
             .OrderBy(e => e.SeasonNumber)
             .ThenBy(e => e.EpisodeNumber)
             .ToList();
@@ -411,93 +468,72 @@ public sealed class Seeker : IHandler
             return (null, null);
         }
 
-        // Select least-recently-searched season or episode using history
-        SearchableEpisode selected = config.SonarrSearchType switch
-        {
-            SeriesSearchType.Season => qualifying
-                .GroupBy(e => e.SeasonNumber)
-                .Select(g =>
-                {
-                    DateTime? lastSearched = seriesHistory
-                        .FirstOrDefault(h => h.SeasonNumber == g.Key && h.EpisodeId == 0)
-                        ?.LastSearchedAt;
-                    return (SeasonNumber: g.Key, LastSearched: lastSearched, FirstEpisode: g.First());
-                })
-                .OrderBy(s => s.LastSearched ?? DateTime.MinValue)
-                .ThenBy(_ => Random.Shared.Next())
-                .First()
-                .FirstEpisode,
-            _ => qualifying
-                .Select(e =>
-                {
-                    DateTime? lastSearched = seriesHistory
-                        .FirstOrDefault(h => h.EpisodeId == e.Id)
-                        ?.LastSearchedAt;
-                    return (Episode: e, LastSearched: lastSearched);
-                })
-                .OrderBy(e => e.LastSearched ?? DateTime.MinValue)
-                .ThenBy(_ => Random.Shared.Next())
-                .First()
-                .Episode
-        };
-
-        SeriesSearchItem searchItem = config.SonarrSearchType switch
-        {
-            SeriesSearchType.Season => new SeriesSearchItem
+        // Select least-recently-searched season using history
+        var seasonGroups = qualifying
+            .GroupBy(e => e.SeasonNumber)
+            .Select(g =>
             {
-                Id = selected.SeasonNumber,
-                SeriesId = seriesId,
-                SearchType = SeriesSearchType.Season
-            },
-            SeriesSearchType.Episode => new SeriesSearchItem
-            {
-                Id = selected.Id,
-                SeriesId = seriesId,
-                SearchType = SeriesSearchType.Episode
-            },
-            _ => throw new ArgumentOutOfRangeException(nameof(config.SonarrSearchType))
-        };
+                DateTime? lastSearched = seriesHistory
+                    .FirstOrDefault(h => h.SeasonNumber == g.Key)
+                    ?.LastSearchedAt;
+                return (SeasonNumber: g.Key, LastSearched: lastSearched, FirstEpisode: g.First());
+            })
+            .ToList();
 
-        return (searchItem, selected);
-    }
-
-    private static string FormatSonarrDisplayName(
-        string seriesTitle,
-        SeriesSearchItem item,
-        SeriesSearchType searchType,
-        SearchableEpisode? selectedEpisode = null)
-    {
-        return searchType switch
+        // Find unsearched seasons first
+        var unsearched = seasonGroups.Where(s => s.LastSearched is null).ToList();
+        if (unsearched.Count == 0)
         {
-            SeriesSearchType.Season => $"{seriesTitle} S{item.Id:D2}",
-            SeriesSearchType.Episode when selectedEpisode is not null =>
-                $"{seriesTitle} S{selectedEpisode.SeasonNumber:D2}E{selectedEpisode.EpisodeNumber:D2}",
-            _ => seriesTitle
+            // All seasons searched in current cycle — this series is done
+            return (null, null);
+        }
+
+        // Pick from unsearched seasons with some randomization
+        var selected = unsearched
+            .OrderBy(_ => Random.Shared.Next())
+            .First();
+
+        SeriesSearchItem searchItem = new()
+        {
+            Id = selected.SeasonNumber,
+            SeriesId = seriesId,
+            SearchType = SeriesSearchType.Season
         };
+
+        return (searchItem, selected.FirstEpisode);
     }
 
     private async Task UpdateSearchHistoryAsync(
         Guid arrInstanceId,
         InstanceType instanceType,
+        Guid runId,
         List<long> searchedIds,
-        int seasonNumber = 0,
-        long episodeId = 0)
+        List<string>? itemTitles = null,
+        int seasonNumber = 0)
     {
         var now = DateTime.UtcNow;
 
-        foreach (long id in searchedIds)
+        for (int i = 0; i < searchedIds.Count; i++)
         {
+            long id = searchedIds[i];
+            string title = itemTitles != null && i < itemTitles.Count ? itemTitles[i] : string.Empty;
+
             SeekerHistory? existing = await _dataContext.SeekerHistory
                 .FirstOrDefaultAsync(h =>
                     h.ArrInstanceId == arrInstanceId
                     && h.ExternalItemId == id
                     && h.ItemType == instanceType
                     && h.SeasonNumber == seasonNumber
-                    && h.EpisodeId == episodeId);
+                    && h.RunId == runId);
 
             if (existing is not null)
             {
                 existing.LastSearchedAt = now;
+                existing.SearchCount++;
+                if (!string.IsNullOrEmpty(title))
+                {
+                    existing.ItemTitle = title;
+                }
             }
             else
             {
@@ -507,10 +543,42 @@ public sealed class Seeker : IHandler
                     ExternalItemId = id,
                     ItemType = instanceType,
                     SeasonNumber = seasonNumber,
-                    EpisodeId = episodeId,
+                    RunId = runId,
                     LastSearchedAt = now,
+                    ItemTitle = title,
                 });
             }
+        }
+
+        await _dataContext.SaveChangesAsync();
+    }
+
+    private async Task SaveCommandTrackersAsync(
+        List<long> commandIds,
+        Guid eventId,
+        Guid arrInstanceId,
+        InstanceType instanceType,
+        long externalItemId,
+        string itemTitle,
+        int seasonNumber = 0)
+    {
+        if (commandIds.Count == 0)
+        {
+            return;
+        }
+
+        foreach (long commandId in commandIds)
+        {
+            _dataContext.SeekerCommandTrackers.Add(new SeekerCommandTracker
+            {
+                ArrInstanceId = arrInstanceId,
+                CommandId = commandId,
+                EventId = eventId,
+                ExternalItemId = externalItemId,
+                ItemTitle = itemTitle,
+                ItemType = instanceType,
+                SeasonNumber = seasonNumber,
+            });
         }
 
         await _dataContext.SaveChangesAsync();
@@ -544,5 +612,26 @@ public sealed class Seeker : IHandler
             staleIds.Count,
             arrInstanceId
         );
+    }
+
+    /// <summary>
+    /// Removes history entries from previous cycles that are older than 30 days.
+    /// Recent cycle history is retained for statistics and history viewing.
+    /// </summary>
+    private async Task CleanupOldCycleHistoryAsync(Guid arrInstanceId, Guid currentRunId)
+    {
+        DateTime cutoff = DateTime.UtcNow.AddDays(-30);
+
+        int deleted = await _dataContext.SeekerHistory
+            .Where(h => h.ArrInstanceId == arrInstanceId
+                && h.RunId != currentRunId
+                && h.LastSearchedAt < cutoff)
+            .ExecuteDeleteAsync();
+
+        if (deleted > 0)
+        {
+            _logger.LogDebug("Cleaned up {Count} old cycle history entries (>30 days) for instance {InstanceId}",
+                deleted, arrInstanceId);
+        }
     }
 }

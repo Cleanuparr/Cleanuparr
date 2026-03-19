@@ -53,11 +53,11 @@ public class WhisparrV2Client : ArrClient, IWhisparrV2Client
         return query;
     }
 
-    public override async Task SearchItemsAsync(ArrInstance arrInstance, HashSet<SearchItem>? items)
+    public override async Task<List<long>> SearchItemsAsync(ArrInstance arrInstance, HashSet<SearchItem>? items)
     {
         if (items?.Count is null or 0)
         {
-            return;
+            return [];
         }
 
         UriBuilder uriBuilder = new(arrInstance.Url);
@@ -88,6 +88,8 @@ public class WhisparrV2Client : ArrClient, IWhisparrV2Client
                 throw;
             }
         }
+
+        return [];
     }
 
     public override bool HasContentId(QueueRecord record) => record.EpisodeId is not 0 && record.SeriesId is not 0;

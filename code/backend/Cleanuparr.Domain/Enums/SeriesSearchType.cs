@@ -1,4 +1,4 @@
-﻿namespace Cleanuparr.Domain.Enums;
+namespace Cleanuparr.Domain.Enums;
 
 public enum SeriesSearchType
 {

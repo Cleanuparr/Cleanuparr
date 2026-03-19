@@ -14,4 +14,14 @@ public interface ISonarrClient : IArrClient
     /// Fetches all episodes for a specific series from a Sonarr instance
     /// </summary>
     Task<List<SearchableEpisode>> GetEpisodesAsync(ArrInstance arrInstance, long seriesId);
+
+    /// <summary>
+    /// Fetches quality profiles from a Sonarr instance
+    /// </summary>
+    Task<List<ArrQualityProfile>> GetQualityProfilesAsync(ArrInstance arrInstance);
+
+    /// <summary>
+    /// Fetches custom format scores for episode files in batches
+    /// </summary>
+    Task<Dictionary<long, int>> GetEpisodeFileScoresAsync(ArrInstance arrInstance, List<long> episodeFileIds);
 }

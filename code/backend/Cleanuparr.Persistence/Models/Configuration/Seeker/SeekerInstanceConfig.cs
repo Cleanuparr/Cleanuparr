@@ -38,4 +38,16 @@ public sealed record SeekerInstanceConfig
     /// Timestamp of when this instance was last processed (for round-robin scheduling)
     /// </summary>
     public DateTime? LastProcessedAt { get; set; }
+
+    /// <summary>
+    /// The current cycle run ID. All searches in the same cycle share this ID.
+    /// When all eligible items have been searched, a new ID is generated to start a fresh cycle.
+    /// </summary>
+    public Guid CurrentRunId { get; set; } = Guid.NewGuid();
+
+    /// <summary>
+    /// Total number of eligible items in the library for this instance.
+    /// Updated each time the Seeker processes the instance.
+    /// </summary>
+    public int TotalEligibleItems { get; set; }
 }

@@ -14,7 +14,7 @@ import { UpdateSeekerConfig } from '@shared/models/seeker-config.model';
 import { HasPendingChanges } from '@core/guards/pending-changes.guard';
 import { ApiError } from '@core/interceptors/error.interceptor';
 import { DeferredLoader } from '@shared/utils/loading.util';
-import { SelectionStrategy, SeriesSearchType } from '@shared/models/enums';
+import { SelectionStrategy } from '@shared/models/enums';
 
 const INTERVAL_OPTIONS: SelectOption[] = [
   { label: '2 minutes', value: 2 },
@@ -38,11 +38,6 @@ const STRATEGY_OPTIONS: SelectOption[] = [
   { label: 'Random', value: SelectionStrategy.Random },
 ];
 
-const SONARR_SEARCH_TYPE_OPTIONS: SelectOption[] = [
-  { label: 'Season', value: SeriesSearchType.Season },
-  { label: 'Episode', value: SeriesSearchType.Episode },
-];
-
 const STRATEGY_DESCRIPTIONS: Record<SelectionStrategy, string> = {
   [SelectionStrategy.BalancedWeighted]: 'Prioritizes items that are both newly added and haven\'t been searched recently. Good default for most libraries.',
   [SelectionStrategy.OldestSearchFirst]: 'Works through your library in order, starting with items that haven\'t been searched the longest. Guarantees every item gets covered.',
@@ -59,6 +54,7 @@ interface InstanceState {
   enabled: boolean;
   skipTags: string[];
   lastProcessedAt?: string;
+  arrInstanceEnabled: boolean;
 }
 
 @Component({
@@ -82,7 +78,6 @@ export class SeekerComponent implements OnInit, HasPendingChanges {
 
   readonly intervalOptions = INTERVAL_OPTIONS;
   readonly strategyOptions = STRATEGY_OPTIONS;
-  readonly sonarrSearchTypeOptions = SONARR_SEARCH_TYPE_OPTIONS;
   readonly loader = new DeferredLoader();
   readonly loadError = signal(false);
   readonly saving = signal(false);
@@ -94,8 +89,8 @@ export class SeekerComponent implements OnInit, HasPendingChanges {
   readonly selectionStrategy = signal<unknown>(SelectionStrategy.BalancedWeighted);
   readonly monitoredOnly = signal(true);
   readonly useCutoff = signal(false);
+  readonly useCustomFormatScore = signal(false);
   readonly useRoundRobin = signal(true);
-  readonly sonarrSearchType = signal<unknown>(SeriesSearchType.Season);
 
   readonly instances = signal<InstanceState[]>([]);
 
@@ -124,8 +119,8 @@ export class SeekerComponent implements OnInit, HasPendingChanges {
         this.selectionStrategy.set(config.selectionStrategy);
         this.monitoredOnly.set(config.monitoredOnly);
         this.useCutoff.set(config.useCutoff);
+        this.useCustomFormatScore.set(config.useCustomFormatScore);
         this.useRoundRobin.set(config.useRoundRobin);
-        this.sonarrSearchType.set(config.sonarrSearchType);
         this.instances.set(config.instances.map(i => ({
           arrInstanceId: i.arrInstanceId,
           instanceName: i.instanceName,
@@ -133,6 +128,7 @@ export class SeekerComponent implements OnInit, HasPendingChanges {
           enabled: i.enabled,
           skipTags: [...i.skipTags],
           lastProcessedAt: i.lastProcessedAt,
+          arrInstanceEnabled: i.arrInstanceEnabled,
         })));
         this.loader.stop();
         this.savedSnapshot.set(this.buildSnapshot());
@@ -198,8 +194,8 @@ export class SeekerComponent implements OnInit, HasPendingChanges {
       selectionStrategy: this.selectionStrategy() as SelectionStrategy,
       monitoredOnly: this.monitoredOnly(),
       useCutoff: this.useCutoff(),
+      useCustomFormatScore: this.useCustomFormatScore(),
       useRoundRobin: this.useRoundRobin(),
-      sonarrSearchType: this.sonarrSearchType() as SeriesSearchType,
       instances: this.instances().map(i => ({
         arrInstanceId: i.arrInstanceId,
         enabled: i.enabled,
@@ -233,8 +229,8 @@ export class SeekerComponent implements OnInit, HasPendingChanges {
       selectionStrategy: this.selectionStrategy(),
       monitoredOnly: this.monitoredOnly(),
       useCutoff: this.useCutoff(),
+      useCustomFormatScore: this.useCustomFormatScore(),
       useRoundRobin: this.useRoundRobin(),
-      sonarrSearchType: this.sonarrSearchType(),
       instances: this.instances(),
     });
   }

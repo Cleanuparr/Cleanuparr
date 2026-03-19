@@ -227,20 +227,82 @@ public class EventPublisher : IEventPublisher
     }
 
     /// <summary>
-    /// Publishes a search triggered event with context data and notifications
+    /// Publishes a search triggered event with context data and notifications.
+    /// Returns the event ID so the SeekerCommandMonitor can update it on completion.
     /// </summary>
-    public async Task PublishSearchTriggered(string instanceName, int itemCount, IEnumerable<string> items)
+    public async Task<Guid> PublishSearchTriggered(string instanceName, int itemCount, IEnumerable<string> items, SeekerSearchType searchType, Guid? cycleRunId = null)
     {
         var itemList = items as string[] ?? items.ToArray();
         var itemsDisplay = string.Join(", ", itemList.Take(5)) + (itemList.Length > 5 ? $" (+{itemList.Length - 5} more)" : "");
 
-        await PublishAsync(
-            EventType.SearchTriggered,
-            $"Searched {itemCount} items on {instanceName}: {itemsDisplay}",
-            EventSeverity.Information,
-            new { InstanceName = instanceName, ItemCount = itemCount, Items = itemList });
+        AppEvent eventEntity = new()
+        {
+            EventType = EventType.SearchTriggered,
+            Message = $"Searched {itemCount} items on {instanceName}: {itemsDisplay}",
+            Severity = EventSeverity.Information,
+            Data = JsonSerializer.Serialize(
+                new { InstanceName = instanceName, ItemCount = itemCount, Items = itemList, SearchType = searchType.ToString(), CycleRunId = cycleRunId },
+                new JsonSerializerOptions { Converters = { new JsonStringEnumConverter() } }),
+            SearchStatus = SearchCommandStatus.Pending,
+            JobRunId = ContextProvider.TryGetJobRunId(),
+            InstanceType = ContextProvider.Get(nameof(InstanceType)) is InstanceType it ? it : null,
+            InstanceUrl = (ContextProvider.Get(ContextProvider.Keys.ArrInstanceUrl) as Uri)?.ToString(),
+            DownloadClientType = ContextProvider.Get(ContextProvider.Keys.DownloadClientType) is DownloadClientTypeName dct ? dct : null,
+            DownloadClientName = ContextProvider.Get(ContextProvider.Keys.DownloadClientName) as string,
+            CycleRunId = cycleRunId,
+        };
 
+        await _dryRunInterceptor.InterceptAsync(SaveEventToDatabase, eventEntity);
+        await NotifyClientsAsync(eventEntity);
         await _notificationPublisher.NotifySearchTriggered(instanceName, itemCount, itemList);
+
+        return eventEntity.Id;
+    }
+
+    /// <summary>
+    /// Updates an existing search event with completion status and optional result data
+    /// </summary>
+    public async Task PublishSearchCompleted(Guid eventId, SearchCommandStatus status, object? resultData = null)
+    {
+        var existingEvent = await _context.Events.FindAsync(eventId);
+        if (existingEvent is null)
+        {
+            _logger.LogWarning("Could not find search event {EventId} to update completion status", eventId);
+            return;
+        }
+
+        existingEvent.SearchStatus = status;
+        existingEvent.CompletedAt = DateTime.UtcNow;
+
+        if (resultData is not null)
+        {
+            // Merge result data into existing Data JSON
+            var existingData = existingEvent.Data is not null
+                ? JsonSerializer.Deserialize<Dictionary<string, object>>(existingEvent.Data)
+                : new Dictionary<string, object>();
+
+            var resultJson = JsonSerializer.Serialize(resultData, new JsonSerializerOptions
+            {
+                Converters = { new JsonStringEnumConverter() }
+            });
+            var resultDict = JsonSerializer.Deserialize<Dictionary<string, object>>(resultJson);
+
+            if (existingData is not null && resultDict is not null)
+            {
+                foreach (var kvp in resultDict)
+                {
+                    existingData[kvp.Key] = kvp.Value;
+                }
+
+                existingEvent.Data = JsonSerializer.Serialize(existingData, new JsonSerializerOptions
+                {
+                    Converters = { new JsonStringEnumConverter() }
+                });
+            }
+        }
+
+        await _context.SaveChangesAsync();
+        await NotifyClientsAsync(existingEvent);
     }
 
     /// <summary>

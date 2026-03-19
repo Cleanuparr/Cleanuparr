@@ -47,8 +47,23 @@ public sealed class SeekerConfigController : ControllerBase
                 .ToListAsync();
 
             var seekerInstanceConfigs = await _dataContext.SeekerInstanceConfigs
-                .AsNoTracking()
                 .ToListAsync();
+
+            // Auto-create missing seeker instance configs for new arr instances
+            foreach (var instance in arrInstances)
+            {
+                if (seekerInstanceConfigs.All(s => s.ArrInstanceId != instance.Id))
+                {
+                    var newConfig = new SeekerInstanceConfig
+                    {
+                        ArrInstanceId = instance.Id,
+                        Enabled = false,
+                    };
+                    _dataContext.SeekerInstanceConfigs.Add(newConfig);
+                    seekerInstanceConfigs.Add(newConfig);
+                }
+            }
+            await _dataContext.SaveChangesAsync();
 
             var instanceResponses = arrInstances.Select(instance =>
             {
@@ -61,6 +76,7 @@ public sealed class SeekerConfigController : ControllerBase
                     Enabled = seekerConfig?.Enabled ?? false,
                     SkipTags = seekerConfig?.SkipTags ?? [],
                     LastProcessedAt = seekerConfig?.LastProcessedAt,
+                    ArrInstanceEnabled = instance.Enabled,
                 };
             }).ToList();
 
@@ -72,8 +88,8 @@ public sealed class SeekerConfigController : ControllerBase
                 SelectionStrategy = config.SelectionStrategy,
                 MonitoredOnly = config.MonitoredOnly,
                 UseCutoff = config.UseCutoff,
+                UseCustomFormatScore = config.UseCustomFormatScore,
                 UseRoundRobin = config.UseRoundRobin,
-                SonarrSearchType = config.SonarrSearchType,
                 Instances = instanceResponses,
             };
 
@@ -94,6 +110,7 @@ public sealed class SeekerConfigController : ControllerBase
             var config = await _dataContext.SeekerConfigs.FirstAsync();
 
             ushort previousInterval = config.SearchInterval;
+            bool previousUseCustomFormatScore = config.UseCustomFormatScore;
 
             request.ApplyTo(config);
             config.Validate();
@@ -114,20 +131,11 @@ public sealed class SeekerConfigController : ControllerBase
 
                 if (existing is not null)
                 {
-                    if (!instanceReq.Enabled)
-                    {
-                        // Remove disabled instance config
-                        _dataContext.SeekerInstanceConfigs.Remove(existing);
-                    }
-                    else
-                    {
-                        existing.Enabled = instanceReq.Enabled;
-                        existing.SkipTags = instanceReq.SkipTags;
-                    }
+                    existing.Enabled = instanceReq.Enabled;
+                    existing.SkipTags = instanceReq.SkipTags;
                 }
-                else if (instanceReq.Enabled)
+                else
                 {
-                    // Create new instance config
                     _dataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
                     {
                         ArrInstanceId = instanceReq.ArrInstanceId,
@@ -145,6 +153,21 @@ public sealed class SeekerConfigController : ControllerBase
                 _logger.LogInformation("Search interval changed from {Old} to {New} minutes, updating Seeker schedule",
                     previousInterval, config.SearchInterval);
                 await _jobManagementService.StartJob(JobType.Seeker, null, config.ToCronExpression());
+            }
+
+            // Toggle CfScoreSyncer job when UseCustomFormatScore changes
+            if (config.UseCustomFormatScore != previousUseCustomFormatScore)
+            {
+                if (config.UseCustomFormatScore)
+                {
+                    _logger.LogInformation("UseCustomFormatScore enabled, starting CfScoreSyncer job");
+                    await _jobManagementService.StartJob(JobType.CfScoreSyncer, null, "0 0/30 * * * ?");
+                }
+                else
+                {
+                    _logger.LogInformation("UseCustomFormatScore disabled, stopping CfScoreSyncer job");
+                    await _jobManagementService.StopJob(JobType.CfScoreSyncer);
+                }
             }
 
             return Ok(new { Message = "Seeker configuration updated successfully" });

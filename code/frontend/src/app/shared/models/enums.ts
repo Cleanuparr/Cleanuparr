@@ -103,9 +103,16 @@ export enum SelectionStrategy {
 }
 
 export enum SeriesSearchType {
-  Episode = 'Episode',
   Season = 'Season',
   Series = 'Series',
+}
+
+export enum SearchCommandStatus {
+  Pending = 'Pending',
+  Started = 'Started',
+  Completed = 'Completed',
+  Failed = 'Failed',
+  TimedOut = 'TimedOut',
 }
 
 export type ArrType = 'sonarr' | 'radarr' | 'lidarr' | 'readarr' | 'whisparr';

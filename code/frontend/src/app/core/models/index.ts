@@ -3,3 +3,4 @@ export * from './job.models';
 export * from './signalr.models';
 export * from './app-status.model';
 export * from './pagination.model';
+export * from './search-stats.models';

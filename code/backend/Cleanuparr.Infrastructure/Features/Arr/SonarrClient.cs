@@ -53,16 +53,18 @@ public class SonarrClient : ArrClient, ISonarrClient
         return query;
     }
 
-    public override async Task SearchItemsAsync(ArrInstance arrInstance, HashSet<SearchItem>? items)
+    public override async Task<List<long>> SearchItemsAsync(ArrInstance arrInstance, HashSet<SearchItem>? items)
     {
         if (items?.Count is null or 0)
         {
-            return;
+            return [];
         }
+
+        List<long> commandIds = [];
 
         UriBuilder uriBuilder = new(arrInstance.Url);
         uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/v3/command";
-        
+
         foreach (SonarrCommand command in GetSearchCommands(items.Cast<SeriesSearchItem>().ToHashSet()))
         {
             using HttpRequestMessage request = new(HttpMethod.Post, uriBuilder.Uri);
@@ -78,8 +80,19 @@ public class SonarrClient : ArrClient, ISonarrClient
             try
             {
                 HttpResponseMessage? response = await _dryRunInterceptor.InterceptAsync<HttpResponseMessage>(SendRequestAsync, request);
-                response?.Dispose();
-                
+
+                if (response is not null)
+                {
+                    string responseBody = await response.Content.ReadAsStringAsync();
+                    response.Dispose();
+
+                    long? commandId = JsonConvert.DeserializeObject<dynamic>(responseBody)?.id;
+                    if (commandId.HasValue)
+                    {
+                        commandIds.Add(commandId.Value);
+                    }
+                }
+
                 _logger.LogInformation("{log}", GetSearchLog(command.SearchType, arrInstance.Url, command, true, logContext));
             }
             catch
@@ -88,6 +101,8 @@ public class SonarrClient : ArrClient, ISonarrClient
                 throw;
             }
         }
+
+        return commandIds;
     }
 
     public override bool HasContentId(QueueRecord record) => record.EpisodeId is not 0 && record.SeriesId is not 0;
@@ -224,6 +239,50 @@ public class SonarrClient : ArrClient, ISonarrClient
 
         string responseBody = await response.Content.ReadAsStringAsync();
         return JsonConvert.DeserializeObject<List<SearchableEpisode>>(responseBody) ?? [];
+    }
+
+    public async Task<List<ArrQualityProfile>> GetQualityProfilesAsync(ArrInstance arrInstance)
+    {
+        UriBuilder uriBuilder = new(arrInstance.Url);
+        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/v3/qualityprofile";
+
+        using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
+        SetApiKey(request, arrInstance.ApiKey);
+
+        using HttpResponseMessage response = await _httpClient.SendAsync(request);
+        response.EnsureSuccessStatusCode();
+
+        string responseBody = await response.Content.ReadAsStringAsync();
+        return JsonConvert.DeserializeObject<List<ArrQualityProfile>>(responseBody) ?? [];
+    }
+
+    public async Task<Dictionary<long, int>> GetEpisodeFileScoresAsync(ArrInstance arrInstance, List<long> episodeFileIds)
+    {
+        Dictionary<long, int> scores = new();
+
+        // Batch in chunks of 100 to avoid 414 URI Too Long
+        foreach (long[] batch in episodeFileIds.Chunk(100))
+        {
+            UriBuilder uriBuilder = new(arrInstance.Url);
+            uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/v3/episodefile";
+            uriBuilder.Query = string.Join('&', batch.Select(id => $"episodeFileIds={id}"));
+
+            using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
+            SetApiKey(request, arrInstance.ApiKey);
+
+            using HttpResponseMessage response = await _httpClient.SendAsync(request);
+            response.EnsureSuccessStatusCode();
+
+            string responseBody = await response.Content.ReadAsStringAsync();
+            List<MediaFileScore> files = JsonConvert.DeserializeObject<List<MediaFileScore>>(responseBody) ?? [];
+
+            foreach (MediaFileScore file in files)
+            {
+                scores[file.Id] = file.CustomFormatScore;
+            }
+        }
+
+        return scores;
     }
 
     private async Task<List<Episode>?> GetEpisodesAsync(ArrInstance arrInstance, List<long> episodeIds)

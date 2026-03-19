@@ -16,9 +16,9 @@ public sealed record SeekerConfigResponse
 
     public bool UseCutoff { get; init; }
 
-    public bool UseRoundRobin { get; init; }
+    public bool UseCustomFormatScore { get; init; }
 
-    public SeriesSearchType SonarrSearchType { get; init; }
+    public bool UseRoundRobin { get; init; }
 
     public List<SeekerInstanceConfigResponse> Instances { get; init; } = [];
 }

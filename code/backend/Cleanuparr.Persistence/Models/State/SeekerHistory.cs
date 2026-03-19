@@ -41,12 +41,23 @@ public sealed record SeekerHistory
     public int SeasonNumber { get; set; }
 
     /// <summary>
-    /// For Sonarr episode-level searches, the episode ID that was searched
+    /// The run ID for cycle-based tracking. All searches in the same cycle share a RunId.
+    /// When all items have been searched, a new RunId is generated to start a fresh cycle.
     /// </summary>
-    public long EpisodeId { get; set; }
+    public Guid RunId { get; set; }
 
     /// <summary>
     /// When this item was last searched
     /// </summary>
     public DateTime LastSearchedAt { get; set; }
+
+    /// <summary>
+    /// Display name of the item (movie title, series name, etc.)
+    /// </summary>
+    public string ItemTitle { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Running count of how many times this item has been searched
+    /// </summary>
+    public int SearchCount { get; set; } = 1;
 }

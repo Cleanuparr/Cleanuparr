@@ -14,6 +14,8 @@ public sealed record SearchableMovie
 
     public List<string> Tags { get; init; } = [];
 
+    public int QualityProfileId { get; init; }
+
     public string Status { get; init; } = string.Empty;
 
     public DateTime? Added { get; init; }

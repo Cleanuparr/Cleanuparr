@@ -96,4 +96,10 @@
     font-size: var(--font-size-xs);
     color: var(--text-tertiary);
   }
+
+  &__warning {
+    margin-top: var(--space-2);
+    font-size: var(--font-size-xs);
+    color: var(--color-warning);
+  }
 }

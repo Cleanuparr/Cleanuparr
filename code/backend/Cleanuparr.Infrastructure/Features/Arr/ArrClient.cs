@@ -1,3 +1,4 @@
+using Cleanuparr.Domain.Entities.Arr;
 using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
@@ -156,7 +157,7 @@ public abstract class ArrClient : IArrClient
         }
     }
 
-    public abstract Task SearchItemsAsync(ArrInstance arrInstance, HashSet<SearchItem>? items);
+    public abstract Task<List<long>> SearchItemsAsync(ArrInstance arrInstance, HashSet<SearchItem>? items);
 
     public bool IsRecordValid(QueueRecord record)
     {
@@ -185,6 +186,24 @@ public abstract class ArrClient : IArrClient
         response.EnsureSuccessStatusCode();
         
         _logger.LogDebug("Connection test successful for {url}", arrInstance.Url);
+    }
+
+    /// <inheritdoc/>
+    public async Task<ArrCommandStatus> GetCommandStatusAsync(ArrInstance arrInstance, long commandId)
+    {
+        UriBuilder uriBuilder = new(arrInstance.Url);
+        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/v3/command/{commandId}";
+
+        using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
+        SetApiKey(request, arrInstance.ApiKey);
+
+        using HttpResponseMessage response = await _httpClient.SendAsync(request);
+        response.EnsureSuccessStatusCode();
+
+        string responseBody = await response.Content.ReadAsStringAsync();
+        var result = JsonConvert.DeserializeObject<ArrCommandStatus>(responseBody);
+
+        return result ?? new ArrCommandStatus(commandId, "unknown", null);
     }
 
     protected abstract string GetSystemStatusUrlPath();

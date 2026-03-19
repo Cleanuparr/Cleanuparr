@@ -1,0 +1,304 @@
+@use 'data-toolbar' as *;
+
+// Staggered page content animations
+.page-content {
+  > .stats-bar {
+    animation: slide-up var(--duration-normal) var(--ease-default) both;
+    animation-delay: 0ms;
+  }
+  > .instance-cards {
+    animation: slide-up var(--duration-normal) var(--ease-default) both;
+    animation-delay: 40ms;
+  }
+  > .toolbar {
+    animation: slide-up var(--duration-normal) var(--ease-default) both;
+    animation-delay: 80ms;
+    position: relative;
+    z-index: 1;
+  }
+  > app-tabs {
+    animation: slide-up var(--duration-normal) var(--ease-default) both;
+    animation-delay: 120ms;
+  }
+  > .tab-description {
+    animation: slide-up var(--duration-normal) var(--ease-default) both;
+    animation-delay: 140ms;
+  }
+  > .tab-toolbar {
+    animation: slide-up var(--duration-normal) var(--ease-default) both;
+    animation-delay: 150ms;
+  }
+  > app-card {
+    animation: slide-up var(--duration-normal) var(--ease-default) both;
+    animation-delay: 160ms;
+  }
+  > app-paginator {
+    animation: slide-up var(--duration-normal) var(--ease-default) both;
+    animation-delay: 200ms;
+  }
+}
+
+.toolbar {
+  @include data-toolbar;
+}
+
+// Tab description
+.tab-description {
+  font-size: var(--font-size-sm);
+  color: var(--text-tertiary);
+  margin: 0 0 var(--space-3);
+  line-height: 1.5;
+}
+
+// Tab toolbar (sort toggle)
+.tab-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: var(--space-2);
+}
+
+// Stats bar
+.stats-bar {
+  display: flex;
+  gap: var(--space-4);
+  margin-bottom: var(--space-3);
+
+  &__item {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+
+  &__value {
+    font-size: var(--font-size-lg);
+    font-weight: 600;
+    color: var(--text-primary);
+
+    &--warning { color: var(--color-warning); }
+    &--success { color: var(--color-success); }
+    &--info { color: var(--color-primary); }
+  }
+
+  &__label {
+    font-size: var(--font-size-xs);
+    color: var(--text-tertiary);
+  }
+}
+
+// Instance cards
+.instance-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.instance-card {
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--space-2);
+  }
+
+  &__name {
+    font-weight: 600;
+    font-size: var(--font-size-sm);
+    color: var(--text-primary);
+  }
+
+  &__stats {
+    display: flex;
+    gap: var(--space-4);
+  }
+
+  &__stat {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  &__stat-value {
+    font-size: var(--font-size-md);
+    font-weight: 600;
+    font-family: var(--font-mono);
+    color: var(--text-primary);
+
+    &--small {
+      font-size: var(--font-size-xs);
+    }
+
+    &--dimmed {
+      font-weight: 400;
+      color: var(--text-tertiary);
+    }
+  }
+
+  &__stat-label {
+    font-size: var(--font-size-xs);
+    color: var(--text-tertiary);
+  }
+}
+
+// List rows (shared across tabs)
+.list {
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.list-row {
+  border-bottom: 1px solid var(--divider);
+  transition: background var(--duration-fast) var(--ease-default);
+  font-size: var(--font-size-sm);
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(126, 87, 194, 0.06), transparent);
+    transform: translateX(-100%);
+    transition: transform var(--duration-normal) var(--ease-default);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  &:hover::before {
+    transform: translateX(100%);
+  }
+
+  &:hover {
+    background: var(--glass-bg);
+  }
+
+  &__main {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-4);
+    min-height: 44px;
+  }
+
+  &__icon {
+    color: var(--color-primary);
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+
+  &__title {
+    font-weight: 500;
+    color: var(--text-primary);
+    min-width: 0;
+    flex: 1;
+    word-break: break-word;
+  }
+
+  &__extra {
+    font-family: var(--font-mono);
+    font-size: var(--font-size-xs);
+    color: var(--text-tertiary);
+    margin-left: var(--space-1);
+  }
+
+  &__meta {
+    font-size: var(--font-size-xs);
+    color: var(--text-tertiary);
+    flex-shrink: 0;
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__count {
+    font-family: var(--font-mono);
+    font-size: var(--font-size-xs);
+    color: var(--text-secondary);
+    flex-shrink: 0;
+
+    &--prominent {
+      font-weight: 600;
+      color: var(--color-primary);
+    }
+  }
+
+  &__cycle {
+    font-family: var(--font-mono);
+    font-size: var(--font-size-xs);
+    color: var(--text-tertiary);
+    background: var(--glass-bg);
+    padding: 1px 6px;
+    border-radius: var(--radius-sm);
+    flex-shrink: 0;
+  }
+
+  &__count-secondary {
+    font-size: var(--font-size-xs);
+    color: var(--text-tertiary);
+    flex-shrink: 0;
+  }
+
+  &__time {
+    font-size: var(--font-size-xs);
+    color: var(--text-tertiary);
+    flex-shrink: 0;
+  }
+
+  &__detail {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    padding: 0 var(--space-4) var(--space-2) calc(var(--space-4) + 18px + var(--space-2));
+    font-size: var(--font-size-xs);
+    color: var(--text-tertiary);
+  }
+
+  &__detail-icon {
+    font-size: 14px;
+    color: var(--color-success);
+    flex-shrink: 0;
+  }
+
+  &__detail-text {
+    min-width: 0;
+    word-break: break-word;
+  }
+}
+
+// Tablet
+@media (max-width: 1024px) {
+  .list-row__main {
+    flex-wrap: wrap;
+  }
+
+  .list-row__meta {
+    display: none;
+  }
+}
+
+// Mobile
+@media (max-width: 768px) {
+  .stats-bar {
+    flex-wrap: wrap;
+    gap: var(--space-3);
+  }
+
+  .instance-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .list-row__main {
+    flex-wrap: wrap;
+    padding: var(--space-2) var(--space-3);
+  }
+
+  .list-row__meta {
+    display: none;
+  }
+
+  .list-row__time {
+    order: 4;
+    flex-basis: 100%;
+  }
+}

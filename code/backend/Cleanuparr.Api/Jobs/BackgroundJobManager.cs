@@ -7,6 +7,7 @@ using Cleanuparr.Persistence.Models.Configuration.MalwareBlocker;
 using Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
 using Cleanuparr.Persistence.Models.Configuration.BlacklistSync;
 using Cleanuparr.Persistence.Models.Configuration.Seeker;
+using CfScoreSyncJob = Cleanuparr.Infrastructure.Features.Jobs.CfScoreSyncer;
 using SeekerJob = Cleanuparr.Infrastructure.Features.Jobs.Seeker;
 using Cleanuparr.Shared.Helpers;
 using Microsoft.EntityFrameworkCore;
@@ -112,6 +113,7 @@ public class BackgroundJobManager : IHostedService
         await RegisterDownloadCleanerJob(downloadCleanerConfig, cancellationToken);
         await RegisterBlacklistSyncJob(blacklistSyncConfig, cancellationToken);
         await RegisterSeekerJob(seekerConfig, cancellationToken);
+        await RegisterCfScoreSyncJob(seekerConfig, cancellationToken);
     }
     
     /// <summary>
@@ -185,6 +187,20 @@ public class BackgroundJobManager : IHostedService
     {
         await AddJobWithoutTrigger<SeekerJob>(cancellationToken);
         await AddTriggersForJob<SeekerJob>(config.ToCronExpression(), cancellationToken);
+    }
+
+    /// <summary>
+    /// Registers the CfScoreSyncer job. Only adds triggers when UseCustomFormatScore is enabled.
+    /// Runs every 30 minutes to sync custom format scores from arr instances.
+    /// </summary>
+    public async Task RegisterCfScoreSyncJob(SeekerConfig config, CancellationToken cancellationToken = default)
+    {
+        await AddJobWithoutTrigger<CfScoreSyncJob>(cancellationToken);
+
+        if (config.UseCustomFormatScore)
+        {
+            await AddTriggersForJob<CfScoreSyncJob>("0 0/30 * * * ?", cancellationToken);
+        }
     }
 
     /// <summary>

@@ -17,9 +17,9 @@ public sealed record UpdateSeekerConfigRequest
 
     public bool UseCutoff { get; init; }
 
-    public bool UseRoundRobin { get; init; } = true;
+    public bool UseCustomFormatScore { get; init; }
 
-    public SeriesSearchType SonarrSearchType { get; init; } = SeriesSearchType.Season;
+    public bool UseRoundRobin { get; init; } = true;
 
     public List<UpdateSeekerInstanceConfigRequest> Instances { get; init; } = [];
 
@@ -31,8 +31,8 @@ public sealed record UpdateSeekerConfigRequest
         config.SelectionStrategy = SelectionStrategy;
         config.MonitoredOnly = MonitoredOnly;
         config.UseCutoff = UseCutoff;
+        config.UseCustomFormatScore = UseCustomFormatScore;
         config.UseRoundRobin = UseRoundRobin;
-        config.SonarrSearchType = SonarrSearchType;
 
         return config;
     }

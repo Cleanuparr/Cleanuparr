@@ -38,6 +38,20 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'cf-scores',
+        loadComponent: () =>
+          import('@features/cf-scores/cf-scores.component').then(
+            (m) => m.CfScoresComponent,
+          ),
+      },
+      {
+        path: 'search-stats',
+        loadComponent: () =>
+          import('@features/search-stats/search-stats.component').then(
+            (m) => m.SearchStatsComponent,
+          ),
+      },
+      {
         path: 'settings',
         children: [
           {

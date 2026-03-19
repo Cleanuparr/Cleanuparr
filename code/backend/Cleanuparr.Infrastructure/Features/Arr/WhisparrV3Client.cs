@@ -51,11 +51,11 @@ public class WhisparrV3Client : ArrClient, IWhisparrV3Client
         return query;
     }
 
-    public override async Task SearchItemsAsync(ArrInstance arrInstance, HashSet<SearchItem>? items)
+    public override async Task<List<long>> SearchItemsAsync(ArrInstance arrInstance, HashSet<SearchItem>? items)
     {
         if (items?.Count is null or 0)
         {
-            return;
+            return [];
         }
 
         List<long> ids = items.Select(item => item.Id).ToList();
@@ -91,6 +91,8 @@ public class WhisparrV3Client : ArrClient, IWhisparrV3Client
             _logger.LogError("{log}", GetSearchLog(arrInstance.Url, command, false, logContext));
             throw;
         }
+
+        return [];
     }
 
     public override bool HasContentId(QueueRecord record) => record.MovieId is not 0;

@@ -1,0 +1,217 @@
+<app-page-header
+  title="Search Statistics"
+  subtitle="Monitor search activity across your arr instances"
+/>
+
+<div class="page-content">
+  <!-- Stats Bar -->
+  @if (summary(); as stats) {
+    <div class="stats-bar">
+      <div class="stats-bar__item">
+        <span class="stats-bar__value"><app-animated-counter [value]="stats.totalSearchesAllTime" [duration]="400" /></span>
+        <span class="stats-bar__label">Total Searches</span>
+      </div>
+      <div class="stats-bar__item">
+        <span class="stats-bar__value stats-bar__value--info"><app-animated-counter [value]="stats.searchesLast7Days" [duration]="400" /></span>
+        <span class="stats-bar__label">Last 7 Days</span>
+      </div>
+      <div class="stats-bar__item">
+        <span class="stats-bar__value"><app-animated-counter [value]="stats.searchesLast30Days" [duration]="400" /></span>
+        <span class="stats-bar__label">Last 30 Days</span>
+      </div>
+      <div class="stats-bar__item">
+        <span class="stats-bar__value"><app-animated-counter [value]="stats.uniqueItemsSearched" [duration]="400" /></span>
+        <span class="stats-bar__label">Unique Items</span>
+      </div>
+      <div class="stats-bar__item">
+        <span class="stats-bar__value" [class.stats-bar__value--warning]="stats.pendingReplacementSearches > 0">
+          <app-animated-counter [value]="stats.pendingReplacementSearches" [duration]="400" />
+        </span>
+        <span class="stats-bar__label">Pending Queue</span>
+      </div>
+      <div class="stats-bar__item">
+        <span class="stats-bar__value stats-bar__value--success"><app-animated-counter [value]="stats.enabledInstances" [duration]="400" /></span>
+        <span class="stats-bar__label">Instances</span>
+      </div>
+    </div>
+
+    <!-- Per-Instance Cards -->
+    @if (stats.perInstanceStats.length > 0) {
+      <div class="instance-cards">
+        @for (inst of stats.perInstanceStats; track inst.instanceId) {
+          <app-card class="instance-card">
+            <div class="instance-card__header">
+              <span class="instance-card__name">{{ inst.instanceName }}</span>
+              <app-badge [severity]="instanceTypeSeverity(inst.instanceType)" size="sm">
+                {{ inst.instanceType }}
+              </app-badge>
+            </div>
+            <div class="instance-card__stats">
+              <div class="instance-card__stat">
+                <span class="instance-card__stat-value">
+                  {{ inst.cycleItemsSearched }}<span class="instance-card__stat-value--dimmed"> / {{ inst.cycleItemsTotal }}</span>
+                </span>
+                <span class="instance-card__stat-label">Cycle Progress</span>
+              </div>
+              <div class="instance-card__stat">
+                <span class="instance-card__stat-value">{{ inst.totalSearchCount }}</span>
+                <span class="instance-card__stat-label">Searches</span>
+              </div>
+              <div class="instance-card__stat">
+                <span class="instance-card__stat-value instance-card__stat-value--small">
+                  {{ inst.lastSearchedAt ? (inst.lastSearchedAt | date:'MM/dd HH:mm') : 'Never' }}
+                </span>
+                <span class="instance-card__stat-label">Last Search</span>
+              </div>
+              <div class="instance-card__stat">
+                <span class="instance-card__stat-value instance-card__stat-value--small">
+                  {{ inst.currentRunId ? inst.currentRunId.substring(0, 8) : '—' }}
+                </span>
+                <span class="instance-card__stat-label">Cycle ID</span>
+              </div>
+            </div>
+          </app-card>
+        }
+      </div>
+    }
+  }
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <div class="toolbar__filters">
+      <app-select
+        [value]="selectedInstanceId()"
+        [options]="instanceOptions()"
+        (valueChange)="onInstanceFilterChange($any($event))"
+      />
+      <app-select
+        [value]="cycleFilter()"
+        [options]="cycleFilterOptions"
+        [disabled]="!selectedInstanceId()"
+        (valueChange)="onCycleFilterChange($any($event))"
+      />
+    </div>
+    <div class="toolbar__actions">
+      <app-button variant="ghost" size="sm" (clicked)="refresh()">
+        Refresh
+      </app-button>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <app-tabs [tabs]="tabs" [(activeTab)]="activeTab" (activeTabChange)="onTabChange($event)" />
+
+  <!-- Tab Content -->
+  @switch (activeTab()) {
+    <!-- Events Tab -->
+    @case ('events') {
+      <p class="tab-description">Search events triggered by the Seeker. Each entry represents a batch of items searched on an instance.</p>
+      <app-card [noPadding]="true">
+        <div class="list">
+          @for (event of events(); track event.id) {
+            <div class="list-row">
+              <div class="list-row__main">
+                <ng-icon name="tablerSearch" class="list-row__icon" />
+                <span class="list-row__title">
+                  {{ event.items.length > 0 ? event.items[0] : 'Search triggered' }}
+                  @if (event.items.length > 1) {
+                    <span class="list-row__extra">+{{ event.items.length - 1 }} more</span>
+                  }
+                </span>
+                <app-badge [severity]="searchTypeSeverity(event.searchType)" size="sm">
+                  {{ event.searchType }}
+                </app-badge>
+                @if (event.searchStatus) {
+                  <app-badge [severity]="searchStatusSeverity(event.searchStatus)" size="sm">
+                    {{ event.searchStatus }}
+                  </app-badge>
+                }
+                @if (event.cycleRunId) {
+                  <span class="list-row__cycle">{{ event.cycleRunId.substring(0, 8) }}</span>
+                }
+                <span class="list-row__meta">{{ event.instanceName }}</span>
+                <span class="list-row__time">{{ event.timestamp | date:'yyyy-MM-dd HH:mm' }}</span>
+              </div>
+              @if (event.grabbedItems && event.grabbedItems.length > 0) {
+                <div class="list-row__detail">
+                  <ng-icon name="tablerDownload" class="list-row__detail-icon" />
+                  <span class="list-row__detail-text">
+                    Grabbed: {{ formatGrabbedItems(event.grabbedItems) }}
+                  </span>
+                </div>
+              }
+            </div>
+          } @empty {
+            <app-empty-state
+              icon="tablerSearch"
+              heading="No search events"
+              description="Search events will appear here once the Seeker runs."
+            />
+          }
+        </div>
+      </app-card>
+
+      @if (eventsTotalRecords() > pageSize()) {
+        <app-paginator
+          [totalRecords]="eventsTotalRecords()"
+          [pageSize]="pageSize()"
+          [currentPage]="eventsPage()"
+          (pageChange)="onEventsPageChange($event)"
+        />
+      }
+    }
+
+    <!-- Items Tab -->
+    @case ('items') {
+      <p class="tab-description">Individual items tracked by the Seeker with their search count and last searched time.</p>
+      <div class="tab-toolbar">
+        <app-select
+          [value]="itemsSortBy()"
+          [options]="sortOptions"
+          (valueChange)="onItemsSortChange($any($event))"
+        />
+      </div>
+      <app-card [noPadding]="true">
+        <div class="list">
+          @for (item of items(); track item.id) {
+            <div class="list-row">
+              <div class="list-row__main">
+                <ng-icon name="tablerHistory" class="list-row__icon" />
+                <span class="list-row__title">
+                  {{ itemDisplayName(item) }}
+                  @if (item.seasonNumber > 0) {
+                    <span class="list-row__extra">S{{ item.seasonNumber }}</span>
+                  }
+                  </span>
+                <app-badge [severity]="instanceTypeSeverity(item.instanceType)" size="sm">
+                  {{ item.instanceType }}
+                </app-badge>
+                <span class="list-row__meta">{{ item.instanceName }}</span>
+                <span class="list-row__count">{{ item.totalSearchCount }}x</span>
+                @if (item.totalSearchCount !== item.searchCount) {
+                  <span class="list-row__count-secondary">({{ item.searchCount }}x this cycle)</span>
+                }
+                <span class="list-row__time">{{ item.lastSearchedAt | date:'yyyy-MM-dd HH:mm' }}</span>
+              </div>
+            </div>
+          } @empty {
+            <app-empty-state
+              icon="tablerHistory"
+              heading="No items tracked"
+              description="Items will appear here once the Seeker processes them."
+            />
+          }
+        </div>
+      </app-card>
+
+      @if (itemsTotalRecords() > pageSize()) {
+        <app-paginator
+          [totalRecords]="itemsTotalRecords()"
+          [pageSize]="pageSize()"
+          [currentPage]="itemsPage()"
+          (pageChange)="onItemsPageChange($event)"
+        />
+      }
+    }
+  }
+</div>

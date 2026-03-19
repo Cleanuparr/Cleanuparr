@@ -48,6 +48,7 @@ public static class ServicesDI
             .AddScoped<MalwareBlocker>()
             .AddScoped<DownloadCleaner>()
             .AddScoped<Seeker>()
+            .AddScoped<CfScoreSyncer>()
             .AddScoped<IQueueItemRemover, QueueItemRemover>()
             .AddScoped<IFilenameEvaluator, FilenameEvaluator>()
             .AddScoped<IHardLinkFileService, HardLinkFileService>()
@@ -65,5 +66,6 @@ public static class ServicesDI
             .AddSingleton<IBlocklistProvider, BlocklistProvider>()
             .AddSingleton(TimeProvider.System)
             .AddSingleton<AppStatusSnapshot>()
-            .AddHostedService<AppStatusRefreshService>();
+            .AddHostedService<AppStatusRefreshService>()
+            .AddHostedService<SeekerCommandMonitor>();
 }

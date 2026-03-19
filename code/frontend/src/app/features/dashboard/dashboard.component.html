@@ -237,6 +237,57 @@
     </div>
   </app-card>
 
+  <!-- CF Score Upgrades -->
+  @if (cfScoreStats(); as stats) {
+    <app-card [noPadding]="true" class="dashboard-grid__cf-scores">
+      <div class="card-inner card-inner--compact">
+        <div class="card-header">
+          <div class="card-header__left">
+            <h3 class="card-header__title">Custom Format Scores</h3>
+          </div>
+          <a class="card-header__link" routerLink="/cf-scores">View All</a>
+        </div>
+        <div class="cf-scores">
+          <div class="cf-scores__stats">
+            <div class="cf-scores__stat">
+              <span class="cf-scores__stat-value">{{ stats.totalTracked }}</span>
+              <span class="cf-scores__stat-label">Tracked</span>
+            </div>
+            <div class="cf-scores__stat cf-scores__stat--warning">
+              <span class="cf-scores__stat-value">{{ stats.belowCutoff }}</span>
+              <span class="cf-scores__stat-label">Below Cutoff</span>
+            </div>
+            <div class="cf-scores__stat cf-scores__stat--success">
+              <span class="cf-scores__stat-value">{{ stats.atOrAboveCutoff }}</span>
+              <span class="cf-scores__stat-label">Met Cutoff</span>
+            </div>
+            <div class="cf-scores__stat cf-scores__stat--info">
+              <span class="cf-scores__stat-value">{{ stats.recentUpgrades }}</span>
+              <span class="cf-scores__stat-label">Upgrades (7d)</span>
+            </div>
+          </div>
+          @if (cfScoreUpgrades().length > 0) {
+            <div class="cf-scores__upgrades">
+              <span class="cf-scores__upgrades-title">Recent Upgrades</span>
+              @for (upgrade of cfScoreUpgrades(); track $index) {
+                <div class="cf-scores__upgrade-item">
+                  <div class="cf-scores__upgrade-title">{{ upgrade.title }}</div>
+                  <div class="cf-scores__upgrade-scores">
+                    <span class="cf-scores__score cf-scores__score--old">{{ upgrade.previousScore }}</span>
+                    <ng-icon name="tablerArrowRight" class="cf-scores__arrow" />
+                    <span class="cf-scores__score cf-scores__score--new">{{ upgrade.newScore }}</span>
+                    <span class="cf-scores__cutoff">(cutoff: {{ upgrade.cutoffScore }})</span>
+                  </div>
+                  <span class="cf-scores__upgrade-time">{{ upgrade.upgradedAt | date:'yyyy-MM-dd HH:mm' }}</span>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      </div>
+    </app-card>
+  }
+
   <!-- Jobs -->
   <app-card [noPadding]="true" class="dashboard-grid__jobs">
     <div class="card-inner">

@@ -34,6 +34,8 @@ import {
   tablerEye,
   tablerEyeOff,
   tablerArrowDown,
+  tablerArrowRight,
+  tablerChartBar,
   tablerCircleX,
   tablerInfoCircle,
   tablerCode,
@@ -46,6 +48,8 @@ import {
   tablerUser,
   tablerLogout,
   tablerSearch,
+  tablerChartDots,
+  tablerHistory,
 } from '@ng-icons/tabler-icons';
 
 import { routes } from './app.routes';
@@ -90,6 +94,8 @@ export const appConfig: ApplicationConfig = {
       tablerEye,
       tablerEyeOff,
       tablerArrowDown,
+      tablerArrowRight,
+      tablerChartBar,
       tablerCircleX,
       tablerInfoCircle,
       tablerCode,
@@ -102,6 +108,8 @@ export const appConfig: ApplicationConfig = {
       tablerUser,
       tablerLogout,
       tablerSearch,
+      tablerChartDots,
+      tablerHistory,
     }),
   ],
 };
