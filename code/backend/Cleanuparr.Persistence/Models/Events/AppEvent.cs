@@ -89,4 +89,6 @@ public class AppEvent : IEvent
     /// The Seeker cycle run ID associated with this event (only set for SearchTriggered events)
     /// </summary>
     public Guid? CycleRunId { get; set; }
+
+    public bool IsDryRun { get; set; }
 }

@@ -3,6 +3,8 @@ using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Events;
 using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
+using Cleanuparr.Infrastructure.Features.Context;
+using Cleanuparr.Infrastructure.Features.DownloadHunter.Models;
 using Cleanuparr.Infrastructure.Features.DownloadRemover;
 using Cleanuparr.Infrastructure.Features.DownloadRemover.Models;
 using Cleanuparr.Infrastructure.Features.ItemStriker;
@@ -33,6 +35,7 @@ public class QueueItemRemoverTests : IDisposable
     private readonly EventsContext _eventsContext;
     private readonly DataContext _dataContext;
     private readonly QueueItemRemover _queueItemRemover;
+    private readonly Guid _jobRunId;
 
     public QueueItemRemoverTests()
     {
@@ -48,13 +51,20 @@ public class QueueItemRemoverTests : IDisposable
         // Create real EventPublisher with mocked dependencies
         _eventsContext = TestEventsContextFactory.Create();
 
+        // Create a JobRun so event FK constraints are satisfied when events are saved
+        _jobRunId = Guid.NewGuid();
+        _eventsContext.JobRuns.Add(new Persistence.Models.State.JobRun { Id = _jobRunId, Type = JobType.QueueCleaner });
+        _eventsContext.SaveChanges();
+        ContextProvider.SetJobRunId(_jobRunId);
+
         var hubContextMock = new Mock<IHubContext<AppHub>>();
         var clientsMock = new Mock<IHubClients>();
         clientsMock.Setup(c => c.All).Returns(Mock.Of<IClientProxy>());
         hubContextMock.Setup(h => h.Clients).Returns(clientsMock.Object);
 
         var dryRunInterceptorMock = new Mock<IDryRunInterceptor>();
-        // Setup interceptor to skip actual database saves (these tests verify QueueItemRemover, not EventPublisher)
+        dryRunInterceptorMock.Setup(d => d.IsDryRunEnabled()).ReturnsAsync(false);
+        // Setup interceptor for other uses (e.g., ArrClient deletion)
         dryRunInterceptorMock
             .Setup(d => d.InterceptAsync(It.IsAny<Delegate>(), It.IsAny<object[]>()))
             .Returns(Task.CompletedTask);
@@ -519,7 +529,7 @@ public class QueueItemRemoverTests : IDisposable
             RemoveFromClient = removeFromClient,
             DeleteReason = deleteReason,
             SkipSearch = skipSearch,
-            JobRunId = Guid.NewGuid()
+            JobRunId = _jobRunId
         };
     }
 

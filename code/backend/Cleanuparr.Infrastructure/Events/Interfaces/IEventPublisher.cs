@@ -4,9 +4,9 @@ namespace Cleanuparr.Infrastructure.Events.Interfaces;
 
 public interface IEventPublisher
 {
-    Task PublishAsync(EventType eventType, string message, EventSeverity severity, object? data = null, Guid? trackingId = null, Guid? strikeId = null);
+    Task PublishAsync(EventType eventType, string message, EventSeverity severity, object? data = null, Guid? trackingId = null, Guid? strikeId = null, bool? isDryRun = null);
 
-    Task PublishManualAsync(string message, EventSeverity severity, object? data = null);
+    Task PublishManualAsync(string message, EventSeverity severity, object? data = null, bool? isDryRun = null);
 
     Task PublishStrike(StrikeType strikeType, int strikeCount, string hash, string itemName, Guid? strikeId = null);
 

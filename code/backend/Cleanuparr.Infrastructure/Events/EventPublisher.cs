@@ -43,7 +43,7 @@ public class EventPublisher : IEventPublisher
     /// <summary>
     /// Generic method for publishing events to database and SignalR clients
     /// </summary>
-    public async Task PublishAsync(EventType eventType, string message, EventSeverity severity, object? data = null, Guid? trackingId = null, Guid? strikeId = null)
+    public async Task PublishAsync(EventType eventType, string message, EventSeverity severity, object? data = null, Guid? trackingId = null, Guid? strikeId = null, bool? isDryRun = null)
     {
         AppEvent eventEntity = new()
         {
@@ -63,16 +63,15 @@ public class EventPublisher : IEventPublisher
             DownloadClientName = ContextProvider.Get(ContextProvider.Keys.DownloadClientName) as string,
         };
 
-        // Save to database with dry run interception
-        await _dryRunInterceptor.InterceptAsync(SaveEventToDatabase, eventEntity);
+        eventEntity.IsDryRun = isDryRun ?? await _dryRunInterceptor.IsDryRunEnabled();
+        await SaveEventToDatabase(eventEntity);
 
-        // Always send to SignalR clients (not affected by dry run)
         await NotifyClientsAsync(eventEntity);
 
         _logger.LogTrace("Published event: {eventType}", eventType);
     }
 
-    public async Task PublishManualAsync(string message, EventSeverity severity, object? data = null)
+    public async Task PublishManualAsync(string message, EventSeverity severity, object? data = null, bool? isDryRun = null)
     {
         ManualEvent eventEntity = new()
         {
@@ -89,10 +88,9 @@ public class EventPublisher : IEventPublisher
             DownloadClientName = ContextProvider.Get(ContextProvider.Keys.DownloadClientName) as string,
         };
 
-        // Save to database with dry run interception
-        await _dryRunInterceptor.InterceptAsync(SaveManualEventToDatabase, eventEntity);
+        eventEntity.IsDryRun = isDryRun ?? await _dryRunInterceptor.IsDryRunEnabled();
+        await SaveManualEventToDatabase(eventEntity);
 
-        // Always send to SignalR clients (not affected by dry run)
         await NotifyClientsAsync(eventEntity);
 
         _logger.LogTrace("Published manual event: {message}", message);
@@ -139,16 +137,19 @@ public class EventPublisher : IEventPublisher
             };
         }
 
+        bool isDryRun = await _dryRunInterceptor.IsDryRunEnabled();
+
         // Publish the event
         await PublishAsync(
             eventType,
             $"Item '{itemName}' has been struck {strikeCount} times for reason '{strikeType}'",
             EventSeverity.Important,
             data: data,
-            strikeId: strikeId);
+            strikeId: strikeId,
+            isDryRun: isDryRun);
 
         // Broadcast strike to SignalR clients for real-time dashboard updates
-        await BroadcastStrikeAsync(strikeId, strikeType, hash, itemName);
+        await BroadcastStrikeAsync(strikeId, strikeType, hash, itemName, isDryRun);
 
         // Send notification (uses ContextProvider internally)
         await _notificationPublisher.NotifyStrike(strikeType, strikeCount);
@@ -355,7 +356,7 @@ public class EventPublisher : IEventPublisher
         }
     }
 
-    private async Task BroadcastStrikeAsync(Guid? strikeId, StrikeType strikeType, string hash, string itemName)
+    private async Task BroadcastStrikeAsync(Guid? strikeId, StrikeType strikeType, string hash, string itemName, bool isDryRun)
     {
         try
         {
@@ -366,6 +367,7 @@ public class EventPublisher : IEventPublisher
                 CreatedAt = DateTime.UtcNow,
                 DownloadId = hash,
                 Title = itemName,
+                IsDryRun = isDryRun,
             };
             await _appHubContext.Clients.All.SendAsync("StrikeReceived", strike);
         }

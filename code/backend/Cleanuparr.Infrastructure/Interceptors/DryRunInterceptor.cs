@@ -78,4 +78,13 @@ public class DryRunInterceptor : IDryRunInterceptor
 
         return default;
     }
+
+    public async Task<bool> IsDryRunEnabled()
+    {
+        var config = await _dataContext.GeneralConfigs
+            .AsNoTracking()
+            .FirstAsync();
+
+        return config.DryRun;
+    }
 }
