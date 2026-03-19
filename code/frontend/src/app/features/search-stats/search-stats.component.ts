@@ -143,8 +143,10 @@ export class SearchStatsComponent implements OnInit, OnDestroy {
     return type === SeekerSearchType.Replacement ? 'warning' : 'info';
   }
 
-  instanceTypeSeverity(type: string): 'info' | 'default' {
-    return type === 'Radarr' || type === 'Sonarr' ? 'info' : 'default';
+  instanceTypeSeverity(type: string): BadgeSeverity {
+    if (type === 'Radarr') return 'warning';
+    if (type === 'Sonarr') return 'info';
+    return 'default';
   }
 
   itemDisplayName(item: { itemTitle: string; externalItemId: number }): string {
