@@ -77,6 +77,7 @@ public class StrikesController : ControllerBase
             IsMarkedForRemoval = d.IsMarkedForRemoval,
             IsRemoved = d.IsRemoved,
             IsReturning = d.IsReturning,
+            HasDryRunStrikes = d.Strikes.Any(s => s.IsDryRun),
             Strikes = d.Strikes
                 .OrderByDescending(s => s.CreatedAt)
                 .Select(s => new StrikeDetailDto
@@ -86,6 +87,7 @@ public class StrikesController : ControllerBase
                     CreatedAt = s.CreatedAt,
                     LastDownloadedBytes = s.LastDownloadedBytes,
                     JobRunId = s.JobRunId,
+                    IsDryRun = s.IsDryRun,
                 }).ToList(),
         }).ToList();
 
@@ -120,6 +122,7 @@ public class StrikesController : ControllerBase
                 CreatedAt = s.CreatedAt,
                 DownloadId = s.DownloadItem.DownloadId,
                 Title = s.DownloadItem.Title,
+                IsDryRun = s.IsDryRun,
             })
             .ToListAsync();
 
@@ -169,6 +172,7 @@ public class DownloadItemStrikesDto
     public bool IsMarkedForRemoval { get; set; }
     public bool IsRemoved { get; set; }
     public bool IsReturning { get; set; }
+    public bool HasDryRunStrikes { get; set; }
     public List<StrikeDetailDto> Strikes { get; set; } = [];
 }
 
@@ -179,6 +183,7 @@ public class StrikeDetailDto
     public DateTime CreatedAt { get; set; }
     public long? LastDownloadedBytes { get; set; }
     public Guid JobRunId { get; set; }
+    public bool IsDryRun { get; set; }
 }
 
 public class RecentStrikeDto
@@ -188,4 +193,5 @@ public class RecentStrikeDto
     public DateTime CreatedAt { get; set; }
     public string DownloadId { get; set; } = string.Empty;
     public string Title { get; set; } = string.Empty;
+    public bool IsDryRun { get; set; }
 }

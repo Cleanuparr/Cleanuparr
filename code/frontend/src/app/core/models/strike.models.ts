@@ -5,6 +5,7 @@ export interface DownloadItemStrikes {
   isMarkedForRemoval: boolean;
   isRemoved: boolean;
   isReturning: boolean;
+  hasDryRunStrikes: boolean;
   totalStrikes: number;
   strikesByType: Record<string, number>;
   latestStrikeAt: string;
@@ -18,6 +19,7 @@ export interface StrikeDetail {
   createdAt: string;
   lastDownloadedBytes: number | null;
   jobRunId: string;
+  isDryRun: boolean;
 }
 
 export interface RecentStrike {
@@ -26,6 +28,7 @@ export interface RecentStrike {
   createdAt: string;
   downloadId: string;
   title: string;
+  isDryRun: boolean;
 }
 
 export interface StrikeFilter {

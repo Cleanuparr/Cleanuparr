@@ -12,6 +12,7 @@ export interface AppEvent {
   instanceUrl?: string;
   downloadClientType?: string;
   downloadClientName?: string;
+  isDryRun: boolean;
 }
 
 export interface ManualEvent {
@@ -26,6 +27,7 @@ export interface ManualEvent {
   instanceUrl?: string;
   downloadClientType?: string;
   downloadClientName?: string;
+  isDryRun: boolean;
 }
 
 export interface EventStats {

@@ -45,19 +45,8 @@ public class EventPublisherTests : IDisposable
         clientsMock.Setup(c => c.All).Returns(_clientProxyMock.Object);
         _hubContextMock.Setup(h => h.Clients).Returns(clientsMock.Object);
 
-        // Setup dry run interceptor to execute the delegate
-        _dryRunInterceptorMock.Setup(d => d.InterceptAsync(It.IsAny<Delegate>(), It.IsAny<object[]>()))
-            .Returns<Delegate, object[]>(async (del, args) =>
-            {
-                if (del is Func<AppEvent, Task> func && args.Length > 0 && args[0] is AppEvent appEvent)
-                {
-                    await func(appEvent);
-                }
-                else if (del is Func<ManualEvent, Task> manualFunc && args.Length > 0 && args[0] is ManualEvent manualEvent)
-                {
-                    await manualFunc(manualEvent);
-                }
-            });
+        // Setup dry run interceptor to report dry run as disabled by default
+        _dryRunInterceptorMock.Setup(d => d.IsDryRunEnabled()).ReturnsAsync(false);
 
         _publisher = new EventPublisher(
             _context,
@@ -251,10 +240,10 @@ public class EventPublisherTests : IDisposable
 
     #endregion
 
-    #region DryRun Interceptor Tests
+    #region DryRun Tests
 
     [Fact]
-    public async Task PublishAsync_UsesDryRunInterceptor()
+    public async Task PublishAsync_ChecksDryRunStatus()
     {
         // Arrange
         var eventType = EventType.StalledStrike;
@@ -265,13 +254,11 @@ public class EventPublisherTests : IDisposable
         await _publisher.PublishAsync(eventType, message, severity);
 
         // Assert
-        _dryRunInterceptorMock.Verify(d => d.InterceptAsync(
-            It.IsAny<Delegate>(),
-            It.IsAny<object[]>()), Times.Once);
+        _dryRunInterceptorMock.Verify(d => d.IsDryRunEnabled(), Times.Once);
     }
 
     [Fact]
-    public async Task PublishManualAsync_UsesDryRunInterceptor()
+    public async Task PublishManualAsync_ChecksDryRunStatus()
     {
         // Arrange
         var message = "Manual test";
@@ -281,9 +268,77 @@ public class EventPublisherTests : IDisposable
         await _publisher.PublishManualAsync(message, severity);
 
         // Assert
-        _dryRunInterceptorMock.Verify(d => d.InterceptAsync(
-            It.IsAny<Delegate>(),
-            It.IsAny<object[]>()), Times.Once);
+        _dryRunInterceptorMock.Verify(d => d.IsDryRunEnabled(), Times.Once);
+    }
+
+    [Fact]
+    public async Task PublishAsync_WhenDryRunEnabled_SetsIsDryRunTrue()
+    {
+        // Arrange
+        _dryRunInterceptorMock.Setup(d => d.IsDryRunEnabled()).ReturnsAsync(true);
+        var eventType = EventType.StalledStrike;
+        var message = "Dry run event";
+        var severity = EventSeverity.Warning;
+
+        // Act
+        await _publisher.PublishAsync(eventType, message, severity);
+
+        // Assert
+        var savedEvent = await _context.Events.FirstOrDefaultAsync();
+        Assert.NotNull(savedEvent);
+        Assert.True(savedEvent.IsDryRun);
+    }
+
+    [Fact]
+    public async Task PublishAsync_WhenDryRunDisabled_SetsIsDryRunFalse()
+    {
+        // Arrange
+        var eventType = EventType.QueueItemDeleted;
+        var message = "Normal event";
+        var severity = EventSeverity.Important;
+
+        // Act
+        await _publisher.PublishAsync(eventType, message, severity);
+
+        // Assert
+        var savedEvent = await _context.Events.FirstOrDefaultAsync();
+        Assert.NotNull(savedEvent);
+        Assert.False(savedEvent.IsDryRun);
+    }
+
+    [Fact]
+    public async Task PublishManualAsync_WhenDryRunEnabled_SetsIsDryRunTrue()
+    {
+        // Arrange
+        _dryRunInterceptorMock.Setup(d => d.IsDryRunEnabled()).ReturnsAsync(true);
+        var message = "Dry run manual event";
+        var severity = EventSeverity.Important;
+
+        // Act
+        await _publisher.PublishManualAsync(message, severity);
+
+        // Assert
+        var savedEvent = await _context.ManualEvents.FirstOrDefaultAsync();
+        Assert.NotNull(savedEvent);
+        Assert.True(savedEvent.IsDryRun);
+    }
+
+    [Fact]
+    public async Task PublishAsync_WhenDryRunEnabled_StillSavesToDatabase()
+    {
+        // Arrange
+        _dryRunInterceptorMock.Setup(d => d.IsDryRunEnabled()).ReturnsAsync(true);
+        var eventType = EventType.StalledStrike;
+        var message = "Should be saved";
+        var severity = EventSeverity.Warning;
+
+        // Act
+        await _publisher.PublishAsync(eventType, message, severity);
+
+        // Assert
+        var savedEvent = await _context.Events.FirstOrDefaultAsync();
+        Assert.NotNull(savedEvent);
+        Assert.Equal(message, savedEvent.Message);
     }
 
     #endregion
