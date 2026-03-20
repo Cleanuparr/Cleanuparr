@@ -37,4 +37,5 @@ public sealed record QueueRecord
     public required string DownloadId { get; init; }
     public required string Protocol { get; init; }
     public required long Id { get; init; }
+    public long SizeLeft { get; init; }
 }

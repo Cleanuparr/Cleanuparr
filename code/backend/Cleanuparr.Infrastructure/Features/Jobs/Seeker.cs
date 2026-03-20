@@ -195,6 +195,27 @@ public sealed class Seeker : IHandler
         ContextProvider.Set(nameof(InstanceType), instanceType);
         ContextProvider.Set(ContextProvider.Keys.ArrInstanceUrl, arrInstance.ExternalUrl ?? arrInstance.Url);
 
+        if (instanceConfig.ActiveDownloadLimit > 0)
+        {
+            try
+            {
+                IArrClient arrClient = _arrClientFactory.GetClient(instanceType, arrInstance.Version);
+                int activeDownloads = await arrClient.GetActiveDownloadCountAsync(arrInstance);
+                if (activeDownloads >= instanceConfig.ActiveDownloadLimit)
+                {
+                    _logger.LogInformation(
+                        "Skipping proactive search for {InstanceName} — {Count} items actively downloading (limit: {Limit})",
+                        arrInstance.Name, activeDownloads, instanceConfig.ActiveDownloadLimit);
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to check active downloads for {InstanceName}, proceeding anyway",
+                    arrInstance.Name);
+            }
+        }
+
         try
         {
             await ProcessInstanceAsync(config, instanceConfig, arrInstance, instanceType, isDryRun);

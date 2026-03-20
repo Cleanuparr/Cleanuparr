@@ -7,4 +7,6 @@ public sealed record UpdateSeekerInstanceConfigRequest
     public bool Enabled { get; init; } = true;
 
     public List<string> SkipTags { get; init; } = [];
+
+    public int ActiveDownloadLimit { get; init; } = 0;
 }

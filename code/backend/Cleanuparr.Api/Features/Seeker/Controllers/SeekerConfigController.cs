@@ -77,6 +77,7 @@ public sealed class SeekerConfigController : ControllerBase
                     SkipTags = seekerConfig?.SkipTags ?? [],
                     LastProcessedAt = seekerConfig?.LastProcessedAt,
                     ArrInstanceEnabled = instance.Enabled,
+                    ActiveDownloadLimit = seekerConfig?.ActiveDownloadLimit ?? 0,
                 };
             }).ToList();
 
@@ -133,6 +134,7 @@ public sealed class SeekerConfigController : ControllerBase
                 {
                     existing.Enabled = instanceReq.Enabled;
                     existing.SkipTags = instanceReq.SkipTags;
+                    existing.ActiveDownloadLimit = instanceReq.ActiveDownloadLimit;
                 }
                 else
                 {
@@ -141,6 +143,7 @@ public sealed class SeekerConfigController : ControllerBase
                         ArrInstanceId = instanceReq.ArrInstanceId,
                         Enabled = instanceReq.Enabled,
                         SkipTags = instanceReq.SkipTags,
+                        ActiveDownloadLimit = instanceReq.ActiveDownloadLimit,
                     });
                 }
             }

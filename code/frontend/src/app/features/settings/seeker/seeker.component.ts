@@ -3,7 +3,7 @@ import { DatePipe } from '@angular/common';
 import { PageHeaderComponent } from '@layout/page-header/page-header.component';
 import {
   CardComponent, ButtonComponent, ToggleComponent,
-  SelectComponent, ChipInputComponent,
+  SelectComponent, ChipInputComponent, NumberInputComponent,
   EmptyStateComponent, LoadingStateComponent,
   type SelectOption,
 } from '@ui';
@@ -55,6 +55,7 @@ interface InstanceState {
   skipTags: string[];
   lastProcessedAt?: string;
   arrInstanceEnabled: boolean;
+  activeDownloadLimit: number;
 }
 
 @Component({
@@ -62,7 +63,7 @@ interface InstanceState {
   standalone: true,
   imports: [
     PageHeaderComponent, CardComponent, ButtonComponent,
-    ToggleComponent, SelectComponent, ChipInputComponent,
+    ToggleComponent, SelectComponent, ChipInputComponent, NumberInputComponent,
     EmptyStateComponent, LoadingStateComponent, DatePipe,
   ],
   templateUrl: './seeker.component.html',
@@ -129,6 +130,7 @@ export class SeekerComponent implements OnInit, HasPendingChanges {
           skipTags: [...i.skipTags],
           lastProcessedAt: i.lastProcessedAt,
           arrInstanceEnabled: i.arrInstanceEnabled,
+          activeDownloadLimit: i.activeDownloadLimit,
         })));
         this.loader.stop();
         this.savedSnapshot.set(this.buildSnapshot());
@@ -182,6 +184,14 @@ export class SeekerComponent implements OnInit, HasPendingChanges {
     });
   }
 
+  updateInstanceActiveDownloadLimit(index: number, limit: number | null): void {
+    this.instances.update(instances => {
+      const updated = [...instances];
+      updated[index] = { ...updated[index], activeDownloadLimit: limit ?? 3 };
+      return updated;
+    });
+  }
+
   getInstanceIcon(instanceType: string): string {
     return `icons/ext/${instanceType.toLowerCase()}-light.svg`;
   }
@@ -200,6 +210,7 @@ export class SeekerComponent implements OnInit, HasPendingChanges {
         arrInstanceId: i.arrInstanceId,
         enabled: i.enabled,
         skipTags: i.skipTags,
+        activeDownloadLimit: i.activeDownloadLimit,
       })),
     };
 

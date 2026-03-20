@@ -17,4 +17,6 @@ public sealed record SeekerInstanceConfigResponse
     public DateTime? LastProcessedAt { get; init; }
 
     public bool ArrInstanceEnabled { get; init; }
+
+    public int ActiveDownloadLimit { get; init; }
 }

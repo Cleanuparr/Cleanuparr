@@ -30,7 +30,24 @@ export class NumberInputComponent {
 
   onInput(event: Event): void {
     const target = event.target as HTMLInputElement;
-    const num = target.value === '' ? null : Number(target.value);
+    if (target.value === '') {
+      this.value.set(null);
+      return;
+    }
+
+    let num = Number(target.value);
+    const minVal = this.min();
+    const maxVal = this.max();
+
+    if (minVal != null) {
+      num = Math.max(num, minVal);
+    }
+
+    if (maxVal != null) {
+      num = Math.min(num, maxVal);
+    }
+    
+    target.value = String(num);
     this.value.set(num);
   }
 

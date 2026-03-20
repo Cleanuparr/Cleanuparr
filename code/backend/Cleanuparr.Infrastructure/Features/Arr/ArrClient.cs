@@ -66,6 +66,35 @@ public abstract class ArrClient : IArrClient
         return queueResponse;
     }
 
+    public async Task<int> GetActiveDownloadCountAsync(ArrInstance arrInstance)
+    {
+        int count = 0;
+        int page = 1;
+        int processed = 0;
+
+        while (true)
+        {
+            QueueListResponse response = await GetQueueItemsAsync(arrInstance, page);
+
+            if (response.Records.Count == 0)
+            {
+                break;
+            }
+
+            count += response.Records.Count(r => r.SizeLeft > 0);
+            processed += response.Records.Count;
+
+            if (processed >= response.TotalRecords)
+            {
+                break;
+            }
+
+            page++;
+        }
+
+        return count;
+    }
+
     public virtual async Task<bool> ShouldRemoveFromQueue(InstanceType instanceType, QueueRecord record, bool isPrivateDownload, short arrMaxStrikes)
     {
         var queueCleanerConfig = ContextProvider.Get<QueueCleanerConfig>();

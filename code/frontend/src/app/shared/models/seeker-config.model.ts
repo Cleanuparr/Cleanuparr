@@ -20,6 +20,7 @@ export interface SeekerInstanceConfig {
   skipTags: string[];
   lastProcessedAt?: string;
   arrInstanceEnabled: boolean;
+  activeDownloadLimit: number;
 }
 
 export interface UpdateSeekerConfig {
@@ -38,4 +39,5 @@ export interface UpdateSeekerInstanceConfig {
   arrInstanceId: string;
   enabled: boolean;
   skipTags: string[];
+  activeDownloadLimit: number;
 }
