@@ -312,7 +312,7 @@ public sealed class SearchStatsController : ControllerBase
 
             return (instanceName, itemCount, items, searchType, grabbedItems);
         }
-        catch
+        catch (JsonException)
         {
             return ("Unknown", 0, [], SeekerSearchType.Proactive, null);
         }
