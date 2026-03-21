@@ -14,6 +14,8 @@ import type { SearchStatsSummary, SearchHistoryEntry, SearchEvent } from '@core/
 import { SeekerSearchType } from '@core/models/search-stats.models';
 import { ToastService } from '@core/services/toast.service';
 
+const POLL_INTERVAL_MS = 10_000;
+
 type TabId = 'events' | 'items';
 type ItemsSortBy = 'lastSearched' | 'searchCount';
 type CycleFilter = 'current' | 'all';
@@ -88,7 +90,7 @@ export class SearchStatsComponent implements OnInit, OnDestroy {
     this.pollTimer = setInterval(() => {
       this.loadSummary();
       this.loadActiveTab();
-    }, 10_000);
+    }, POLL_INTERVAL_MS);
   }
 
   ngOnDestroy(): void {

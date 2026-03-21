@@ -12,6 +12,8 @@ import {
 } from '@core/api/cf-score.api';
 import { ToastService } from '@core/services/toast.service';
 
+const POLL_INTERVAL_MS = 10_000;
+
 @Component({
   selector: 'app-cf-scores',
   standalone: true,
@@ -55,7 +57,7 @@ export class CfScoresComponent implements OnInit, OnDestroy {
     this.pollTimer = setInterval(() => {
       this.loadScores();
       this.loadStats();
-    }, 10_000);
+    }, POLL_INTERVAL_MS);
   }
 
   ngOnDestroy(): void {
