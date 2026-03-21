@@ -421,7 +421,8 @@ public sealed class Seeker : IHandler
         SeekerInstanceConfig instanceConfig,
         Dictionary<long, DateTime> seriesSearchHistory,
         List<SeekerHistory> currentCycleHistory,
-        bool isDryRun)
+        bool isDryRun,
+        bool isRetry = false)
     {
         List<SearchableSeries> series = await _sonarrClient.GetAllSeriesAsync(arrInstance);
         List<long> allLibraryIds = series.Select(s => s.Id).ToList();
@@ -484,7 +485,7 @@ public sealed class Seeker : IHandler
         }
 
         // All candidates were tried and none had qualifying unsearched seasons — cycle complete
-        if (candidates.Count > 0)
+        if (candidates.Count > 0 && !isRetry)
         {
             _logger.LogInformation("All series/seasons on {InstanceName} searched in current cycle, starting new cycle",
                 arrInstance.Name);
@@ -495,9 +496,9 @@ public sealed class Seeker : IHandler
                 await _dataContext.SaveChangesAsync();
             }
 
-            // Retry with fresh cycle
+            // Retry with fresh cycle (only once to prevent infinite recursion)
             return await ProcessSonarrAsync(config, arrInstance, instanceConfig,
-                new Dictionary<long, DateTime>(), [], isDryRun);
+                new Dictionary<long, DateTime>(), [], isDryRun, isRetry: true);
         }
 
         return ([], [], allLibraryIds, [], 0);
