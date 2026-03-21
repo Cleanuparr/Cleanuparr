@@ -98,7 +98,7 @@ public sealed class SeekerConfigController : ControllerBase
             request.ApplyTo(config);
             config.Validate();
 
-            if (request.ProactiveSearchEnabled && request.Instances.Count > 0 && !request.Instances.Any(i => i.Enabled))
+            if (request.ProactiveSearchEnabled && !request.Instances.Any(i => i.Enabled))
             {
                 throw new Domain.Exceptions.ValidationException(
                     "At least one instance must be enabled when proactive search is enabled");
