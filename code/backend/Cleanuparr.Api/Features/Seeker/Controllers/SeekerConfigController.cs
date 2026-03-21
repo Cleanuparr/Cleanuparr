@@ -85,7 +85,11 @@ public sealed class SeekerConfigController : ControllerBase
     [HttpPut("seeker")]
     public async Task<IActionResult> UpdateSeekerConfig([FromBody] UpdateSeekerConfigRequest request)
     {
-        await DataContext.Lock.WaitAsync();
+        if (!await DataContext.Lock.WaitAsync(TimeSpan.FromSeconds(30)))
+        {
+            return StatusCode(503, "Database is busy, please try again");
+        }
+
         try
         {
             var config = await _dataContext.SeekerConfigs.FirstAsync();
