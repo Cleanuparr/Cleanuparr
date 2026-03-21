@@ -18,7 +18,7 @@ namespace Cleanuparr.Infrastructure.Features.Jobs;
 
 public sealed class Seeker : IHandler
 {
-    private const double JitterFactor = 0.8;
+    private const double JitterFactor = 0.7;
 
     private readonly ILogger<Seeker> _logger;
     private readonly DataContext _dataContext;

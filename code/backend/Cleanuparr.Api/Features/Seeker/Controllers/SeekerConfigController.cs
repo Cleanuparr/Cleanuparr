@@ -1,4 +1,5 @@
 using Cleanuparr.Api.Features.Seeker.Contracts.Requests;
+using Cleanuparr.Shared.Helpers;
 using Cleanuparr.Api.Features.Seeker.Contracts.Responses;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Services.Interfaces;
@@ -112,6 +113,8 @@ public sealed class SeekerConfigController : ControllerBase
 
             ushort previousInterval = config.SearchInterval;
             bool previousUseCustomFormatScore = config.UseCustomFormatScore;
+            bool previousSearchEnabled = config.SearchEnabled;
+            bool previousProactiveSearchEnabled = config.ProactiveSearchEnabled;
 
             request.ApplyTo(config);
             config.Validate();
@@ -171,6 +174,19 @@ public sealed class SeekerConfigController : ControllerBase
                 {
                     _logger.LogInformation("UseCustomFormatScore disabled, stopping CustomFormatScoreSyncer job");
                     await _jobManagementService.StopJob(JobType.CustomFormatScoreSyncer);
+                }
+            }
+
+            // Trigger CustomFormatScoreSyncer once when search or proactive search is re-enabled with custom format scores active
+            if (previousUseCustomFormatScore && config.UseCustomFormatScore)
+            {
+                bool searchJustEnabled = !previousSearchEnabled && config.SearchEnabled;
+                bool proactiveJustEnabled = !previousProactiveSearchEnabled && config.ProactiveSearchEnabled;
+
+                if (searchJustEnabled || proactiveJustEnabled)
+                {
+                    _logger.LogInformation("Search re-enabled with UseCustomFormatScore active, triggering CustomFormatScoreSyncer");
+                    await _jobManagementService.TriggerJobOnce(JobType.CustomFormatScoreSyncer);
                 }
             }
 
