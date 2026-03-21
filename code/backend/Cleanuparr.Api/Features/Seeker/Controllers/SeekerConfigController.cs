@@ -158,18 +158,18 @@ public sealed class SeekerConfigController : ControllerBase
                 await _jobManagementService.StartJob(JobType.Seeker, null, config.ToCronExpression());
             }
 
-            // Toggle CfScoreSyncer job when UseCustomFormatScore changes
+            // Toggle CustomFormatScoreSyncer job when UseCustomFormatScore changes
             if (config.UseCustomFormatScore != previousUseCustomFormatScore)
             {
                 if (config.UseCustomFormatScore)
                 {
-                    _logger.LogInformation("UseCustomFormatScore enabled, starting CfScoreSyncer job");
-                    await _jobManagementService.StartJob(JobType.CfScoreSyncer, null, "0 0/30 * * * ?");
+                    _logger.LogInformation("UseCustomFormatScore enabled, starting CustomFormatScoreSyncer job");
+                    await _jobManagementService.StartJob(JobType.CustomFormatScoreSyncer, null, "0 0/30 * * * ?");
                 }
                 else
                 {
-                    _logger.LogInformation("UseCustomFormatScore disabled, stopping CfScoreSyncer job");
-                    await _jobManagementService.StopJob(JobType.CfScoreSyncer);
+                    _logger.LogInformation("UseCustomFormatScore disabled, stopping CustomFormatScoreSyncer job");
+                    await _jobManagementService.StopJob(JobType.CustomFormatScoreSyncer);
                 }
             }
 

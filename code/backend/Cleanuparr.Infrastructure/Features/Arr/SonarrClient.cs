@@ -225,6 +225,23 @@ public class SonarrClient : ArrClient, ISonarrClient
         return JsonConvert.DeserializeObject<List<SearchableSeries>>(responseBody) ?? [];
     }
 
+    public async Task<PagedResponse<SearchableSeries>> GetSeriesPagedAsync(ArrInstance arrInstance, int page, int pageSize)
+    {
+        UriBuilder uriBuilder = new(arrInstance.Url);
+        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/v3/series";
+        uriBuilder.Query = $"page={page}&pageSize={pageSize}";
+
+        using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
+        SetApiKey(request, arrInstance.ApiKey);
+
+        using HttpResponseMessage response = await _httpClient.SendAsync(request);
+        response.EnsureSuccessStatusCode();
+
+        string responseBody = await response.Content.ReadAsStringAsync();
+        return JsonConvert.DeserializeObject<PagedResponse<SearchableSeries>>(responseBody)
+            ?? new PagedResponse<SearchableSeries>();
+    }
+
     public async Task<List<SearchableEpisode>> GetEpisodesAsync(ArrInstance arrInstance, long seriesId)
     {
         UriBuilder uriBuilder = new(arrInstance.Url);

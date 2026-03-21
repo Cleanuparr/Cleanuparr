@@ -7,5 +7,5 @@ public enum JobType
     DownloadCleaner,
     BlacklistSynchronizer,
     Seeker,
-    CfScoreSyncer,
+    CustomFormatScoreSyncer,
 }

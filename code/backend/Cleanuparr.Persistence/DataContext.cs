@@ -74,9 +74,9 @@ public class DataContext : DbContext
 
     public DbSet<SearchQueueItem> SearchQueue { get; set; }
 
-    public DbSet<CfScoreEntry> CfScoreEntries { get; set; }
+    public DbSet<CustomFormatScoreEntry> CustomFormatScoreEntries { get; set; }
 
-    public DbSet<CfScoreHistory> CfScoreHistory { get; set; }
+    public DbSet<CustomFormatScoreHistory> CustomFormatScoreHistory { get; set; }
 
     public DbSet<SeekerCommandTracker> SeekerCommandTrackers { get; set; }
 
@@ -248,7 +248,7 @@ public class DataContext : DbContext
                   .OnDelete(DeleteBehavior.Cascade);
         });
 
-        modelBuilder.Entity<CfScoreEntry>(entity =>
+        modelBuilder.Entity<CustomFormatScoreEntry>(entity =>
         {
             entity.HasOne(s => s.ArrInstance)
                   .WithMany()
@@ -258,7 +258,7 @@ public class DataContext : DbContext
             entity.HasIndex(s => new { s.ArrInstanceId, s.ExternalItemId, s.EpisodeId }).IsUnique();
         });
 
-        modelBuilder.Entity<CfScoreHistory>(entity =>
+        modelBuilder.Entity<CustomFormatScoreHistory>(entity =>
         {
             entity.HasOne(s => s.ArrInstance)
                   .WithMany()

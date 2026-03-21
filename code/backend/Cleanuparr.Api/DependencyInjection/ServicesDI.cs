@@ -48,7 +48,7 @@ public static class ServicesDI
             .AddScoped<MalwareBlocker>()
             .AddScoped<DownloadCleaner>()
             .AddScoped<Seeker>()
-            .AddScoped<CfScoreSyncer>()
+            .AddScoped<CustomFormatScoreSyncer>()
             .AddScoped<IQueueItemRemover, QueueItemRemover>()
             .AddScoped<IFilenameEvaluator, FilenameEvaluator>()
             .AddScoped<IHardLinkFileService, HardLinkFileService>()

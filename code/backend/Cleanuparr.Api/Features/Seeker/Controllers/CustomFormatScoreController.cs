@@ -1,4 +1,4 @@
-using Cleanuparr.Domain.Enums;
+using Cleanuparr.Api.Features.Seeker.Contracts.Responses;
 using Cleanuparr.Persistence;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -9,11 +9,11 @@ namespace Cleanuparr.Api.Features.Seeker.Controllers;
 [ApiController]
 [Route("api/seeker/cf-scores")]
 [Authorize]
-public sealed class CfScoreController : ControllerBase
+public sealed class CustomFormatScoreController : ControllerBase
 {
     private readonly DataContext _dataContext;
 
-    public CfScoreController(DataContext dataContext)
+    public CustomFormatScoreController(DataContext dataContext)
     {
         _dataContext = dataContext;
     }
@@ -22,7 +22,7 @@ public sealed class CfScoreController : ControllerBase
     /// Gets current CF scores with pagination, optionally filtered by instance.
     /// </summary>
     [HttpGet]
-    public async Task<IActionResult> GetCfScores(
+    public async Task<IActionResult> GetCustomFormatScores(
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 50,
         [FromQuery] Guid? instanceId = null)
@@ -31,7 +31,7 @@ public sealed class CfScoreController : ControllerBase
         if (pageSize < 1) pageSize = 50;
         if (pageSize > 100) pageSize = 100;
 
-        var query = _dataContext.CfScoreEntries
+        var query = _dataContext.CustomFormatScoreEntries
             .AsNoTracking()
             .AsQueryable();
 
@@ -46,7 +46,7 @@ public sealed class CfScoreController : ControllerBase
             .OrderBy(e => e.Title)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
-            .Select(e => new CfScoreEntryResponse
+            .Select(e => new CustomFormatScoreEntryResponse
             {
                 Id = e.Id,
                 ArrInstanceId = e.ArrInstanceId,
@@ -88,7 +88,7 @@ public sealed class CfScoreController : ControllerBase
 
         // Find history entries where a newer entry has a higher score than an older one
         // We group by item and look for score increases between consecutive records
-        var query = _dataContext.CfScoreHistory
+        var query = _dataContext.CustomFormatScoreHistory
             .AsNoTracking()
             .AsQueryable();
 
@@ -103,7 +103,7 @@ public sealed class CfScoreController : ControllerBase
             .OrderByDescending(h => h.RecordedAt)
             .ToListAsync();
 
-        var upgrades = new List<CfScoreUpgradeResponse>();
+        var upgrades = new List<CustomFormatScoreUpgradeResponse>();
 
         // Group by (ArrInstanceId, ExternalItemId, EpisodeId) and find score increases
         var grouped = allHistory
@@ -116,7 +116,7 @@ public sealed class CfScoreController : ControllerBase
             {
                 if (entries[i].Score > entries[i - 1].Score)
                 {
-                    upgrades.Add(new CfScoreUpgradeResponse
+                    upgrades.Add(new CustomFormatScoreUpgradeResponse
                     {
                         ArrInstanceId = entries[i].ArrInstanceId,
                         ExternalItemId = entries[i].ExternalItemId,
@@ -157,7 +157,7 @@ public sealed class CfScoreController : ControllerBase
     [HttpGet("stats")]
     public async Task<IActionResult> GetStats()
     {
-        var entries = await _dataContext.CfScoreEntries
+        var entries = await _dataContext.CustomFormatScoreEntries
             .AsNoTracking()
             .ToListAsync();
 
@@ -167,7 +167,7 @@ public sealed class CfScoreController : ControllerBase
 
         // Count upgrades in the last 7 days
         var sevenDaysAgo = DateTime.UtcNow.AddDays(-7);
-        var recentHistory = await _dataContext.CfScoreHistory
+        var recentHistory = await _dataContext.CustomFormatScoreHistory
             .AsNoTracking()
             .Where(h => h.RecordedAt >= sevenDaysAgo)
             .OrderBy(h => h.RecordedAt)
@@ -189,7 +189,7 @@ public sealed class CfScoreController : ControllerBase
 
         double avgScore = entries.Count > 0 ? entries.Average(e => e.CurrentScore) : 0;
 
-        return Ok(new CfScoreStatsResponse
+        return Ok(new CustomFormatScoreStatsResponse
         {
             TotalTracked = totalTracked,
             BelowCutoff = belowCutoff,
@@ -208,13 +208,13 @@ public sealed class CfScoreController : ControllerBase
         long itemId,
         [FromQuery] long episodeId = 0)
     {
-        var history = await _dataContext.CfScoreHistory
+        var history = await _dataContext.CustomFormatScoreHistory
             .AsNoTracking()
             .Where(h => h.ArrInstanceId == instanceId
                         && h.ExternalItemId == itemId
                         && h.EpisodeId == episodeId)
             .OrderByDescending(h => h.RecordedAt)
-            .Select(h => new CfScoreHistoryEntryResponse
+            .Select(h => new CustomFormatScoreHistoryEntryResponse
             {
                 Score = h.Score,
                 CutoffScore = h.CutoffScore,
@@ -226,47 +226,3 @@ public sealed class CfScoreController : ControllerBase
     }
 }
 
-public sealed record CfScoreEntryResponse
-{
-    public Guid Id { get; init; }
-    public Guid ArrInstanceId { get; init; }
-    public long ExternalItemId { get; init; }
-    public long EpisodeId { get; init; }
-    public InstanceType ItemType { get; init; }
-    public string Title { get; init; } = string.Empty;
-    public long FileId { get; init; }
-    public int CurrentScore { get; init; }
-    public int CutoffScore { get; init; }
-    public string QualityProfileName { get; init; } = string.Empty;
-    public bool IsBelowCutoff { get; init; }
-    public DateTime LastSyncedAt { get; init; }
-}
-
-public sealed record CfScoreUpgradeResponse
-{
-    public Guid ArrInstanceId { get; init; }
-    public long ExternalItemId { get; init; }
-    public long EpisodeId { get; init; }
-    public InstanceType ItemType { get; init; }
-    public string Title { get; init; } = string.Empty;
-    public int PreviousScore { get; init; }
-    public int NewScore { get; init; }
-    public int CutoffScore { get; init; }
-    public DateTime UpgradedAt { get; init; }
-}
-
-public sealed record CfScoreStatsResponse
-{
-    public int TotalTracked { get; init; }
-    public int BelowCutoff { get; init; }
-    public int AtOrAboveCutoff { get; init; }
-    public int RecentUpgrades { get; init; }
-    public double AverageScore { get; init; }
-}
-
-public sealed record CfScoreHistoryEntryResponse
-{
-    public int Score { get; init; }
-    public int CutoffScore { get; init; }
-    public DateTime RecordedAt { get; init; }
-}

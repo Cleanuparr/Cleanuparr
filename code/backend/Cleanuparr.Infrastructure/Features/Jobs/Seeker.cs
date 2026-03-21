@@ -10,6 +10,7 @@ using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Cleanuparr.Persistence.Models.Configuration.Seeker;
 using Cleanuparr.Persistence.Models.State;
 using Data.Models.Arr;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -24,6 +25,7 @@ public sealed class Seeker : IHandler
     private readonly IArrClientFactory _arrClientFactory;
     private readonly IEventPublisher _eventPublisher;
     private readonly IDryRunInterceptor _dryRunInterceptor;
+    private readonly IHostingEnvironment _environment;
 
     public Seeker(
         ILogger<Seeker> logger,
@@ -32,7 +34,8 @@ public sealed class Seeker : IHandler
         ISonarrClient sonarrClient,
         IArrClientFactory arrClientFactory,
         IEventPublisher eventPublisher,
-        IDryRunInterceptor dryRunInterceptor)
+        IDryRunInterceptor dryRunInterceptor,
+        IHostingEnvironment environment)
     {
         _logger = logger;
         _dataContext = dataContext;
@@ -41,6 +44,7 @@ public sealed class Seeker : IHandler
         _arrClientFactory = arrClientFactory;
         _eventPublisher = eventPublisher;
         _dryRunInterceptor = dryRunInterceptor;
+        _environment = environment;
     }
 
     public async Task ExecuteAsync()
@@ -327,10 +331,10 @@ public sealed class Seeker : IHandler
         List<long> allLibraryIds = movies.Select(m => m.Id).ToList();
 
         // Load cached CF scores when custom format score filtering is enabled
-        Dictionary<long, CfScoreEntry>? cfScores = null;
+        Dictionary<long, CustomFormatScoreEntry>? cfScores = null;
         if (config.UseCustomFormatScore)
         {
-            cfScores = await _dataContext.CfScoreEntries
+            cfScores = await _dataContext.CustomFormatScoreEntries
                 .AsNoTracking()
                 .Where(e => e.ArrInstanceId == arrInstance.Id && e.ItemType == InstanceType.Radarr)
                 .ToDictionaryAsync(e => e.ExternalItemId);
@@ -488,10 +492,10 @@ public sealed class Seeker : IHandler
         List<SearchableEpisode> episodes = await _sonarrClient.GetEpisodesAsync(arrInstance, seriesId);
 
         // Load cached CF scores for this series when custom format score filtering is enabled
-        Dictionary<long, CfScoreEntry>? cfScores = null;
+        Dictionary<long, CustomFormatScoreEntry>? cfScores = null;
         if (config.UseCustomFormatScore)
         {
-            cfScores = await _dataContext.CfScoreEntries
+            cfScores = await _dataContext.CustomFormatScoreEntries
                 .AsNoTracking()
                 .Where(e => e.ArrInstanceId == arrInstance.Id
                     && e.ItemType == InstanceType.Sonarr

@@ -7,7 +7,6 @@ using Cleanuparr.Persistence.Models.Configuration.MalwareBlocker;
 using Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
 using Cleanuparr.Persistence.Models.Configuration.BlacklistSync;
 using Cleanuparr.Persistence.Models.Configuration.Seeker;
-using CfScoreSyncJob = Cleanuparr.Infrastructure.Features.Jobs.CfScoreSyncer;
 using SeekerJob = Cleanuparr.Infrastructure.Features.Jobs.Seeker;
 using Cleanuparr.Shared.Helpers;
 using Microsoft.EntityFrameworkCore;
@@ -113,7 +112,7 @@ public class BackgroundJobManager : IHostedService
         await RegisterDownloadCleanerJob(downloadCleanerConfig, cancellationToken);
         await RegisterBlacklistSyncJob(blacklistSyncConfig, cancellationToken);
         await RegisterSeekerJob(seekerConfig, cancellationToken);
-        await RegisterCfScoreSyncJob(seekerConfig, cancellationToken);
+        await RegisterCustomFormatScoreSyncJob(seekerConfig, cancellationToken);
     }
     
     /// <summary>
@@ -190,16 +189,16 @@ public class BackgroundJobManager : IHostedService
     }
 
     /// <summary>
-    /// Registers the CfScoreSyncer job. Only adds triggers when UseCustomFormatScore is enabled.
+    /// Registers the CustomFormatScoreSyncer job. Only adds triggers when UseCustomFormatScore is enabled.
     /// Runs every 30 minutes to sync custom format scores from arr instances.
     /// </summary>
-    public async Task RegisterCfScoreSyncJob(SeekerConfig config, CancellationToken cancellationToken = default)
+    public async Task RegisterCustomFormatScoreSyncJob(SeekerConfig config, CancellationToken cancellationToken = default)
     {
-        await AddJobWithoutTrigger<CfScoreSyncJob>(cancellationToken);
+        await AddJobWithoutTrigger<CustomFormatScoreSyncer>(cancellationToken);
 
         if (config.UseCustomFormatScore)
         {
-            await AddTriggersForJob<CfScoreSyncJob>("0 0/30 * * * ?", cancellationToken);
+            await AddTriggersForJob<CustomFormatScoreSyncer>("0 0/30 * * * ?", cancellationToken);
         }
     }
 

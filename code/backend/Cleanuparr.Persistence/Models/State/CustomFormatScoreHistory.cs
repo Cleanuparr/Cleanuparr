@@ -9,7 +9,7 @@ namespace Cleanuparr.Persistence.Models.State;
 /// Historical record of custom format score changes.
 /// Only written when a score value actually changes (deduplication).
 /// </summary>
-public sealed record CfScoreHistory
+public sealed record CustomFormatScoreHistory
 {
     [Key]
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]

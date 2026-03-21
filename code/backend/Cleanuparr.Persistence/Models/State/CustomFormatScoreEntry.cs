@@ -7,9 +7,9 @@ namespace Cleanuparr.Persistence.Models.State;
 
 /// <summary>
 /// Current custom format score state for a library item.
-/// Updated periodically by the CfScoreSyncer job.
+/// Updated periodically by the CustomFormatScoreSyncer job.
 /// </summary>
-public sealed record CfScoreEntry
+public sealed record CustomFormatScoreEntry
 {
     [Key]
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]

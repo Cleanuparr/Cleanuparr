@@ -157,6 +157,23 @@ public class RadarrClient : ArrClient, IRadarrClient
         return JsonConvert.DeserializeObject<List<SearchableMovie>>(responseBody) ?? [];
     }
 
+    public async Task<PagedResponse<SearchableMovie>> GetMoviesPagedAsync(ArrInstance arrInstance, int page, int pageSize)
+    {
+        UriBuilder uriBuilder = new(arrInstance.Url);
+        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/v3/movie";
+        uriBuilder.Query = $"page={page}&pageSize={pageSize}";
+
+        using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
+        SetApiKey(request, arrInstance.ApiKey);
+
+        using HttpResponseMessage response = await _httpClient.SendAsync(request);
+        response.EnsureSuccessStatusCode();
+
+        string responseBody = await response.Content.ReadAsStringAsync();
+        return JsonConvert.DeserializeObject<PagedResponse<SearchableMovie>>(responseBody)
+            ?? new PagedResponse<SearchableMovie>();
+    }
+
     public async Task<List<ArrQualityProfile>> GetQualityProfilesAsync(ArrInstance arrInstance)
     {
         UriBuilder uriBuilder = new(arrInstance.Url);
