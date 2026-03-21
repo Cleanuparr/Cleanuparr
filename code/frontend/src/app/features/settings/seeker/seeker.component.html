@@ -25,9 +25,9 @@
         <app-select label="Search Interval" [options]="intervalOptions" [(value)]="searchInterval"
           hint="How often the seeker runs to process searches" />
         <p class="interval-warning">Using a very low interval will trigger searches more frequently, increasing indexer load significantly. This can result in rate limit warnings or a ban from your indexer, so be careful!</p>
+        <app-toggle label="Enable Replacement Search" [checked]="true" [disabled]="true"
+          hint="Automatically searches for a replacement whenever a download is removed from an arr queue" />
       }
-      <app-toggle label="Enable Replacement Search" [checked]="true" [disabled]="true"
-        hint="Automatically searches for a replacement whenever a download is removed from an arr queue" />
     </div>
   </app-card>
 
