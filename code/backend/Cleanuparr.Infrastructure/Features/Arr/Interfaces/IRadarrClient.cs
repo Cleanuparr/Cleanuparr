@@ -16,11 +16,6 @@ public interface IRadarrClient : IArrClient
     Task<List<ArrQualityProfile>> GetQualityProfilesAsync(ArrInstance arrInstance);
 
     /// <summary>
-    /// Fetches movies from a Radarr instance with paging support
-    /// </summary>
-    Task<PagedResponse<SearchableMovie>> GetMoviesPagedAsync(ArrInstance arrInstance, int page, int pageSize);
-
-    /// <summary>
     /// Fetches custom format scores for movie files in batches
     /// </summary>
     Task<Dictionary<long, int>> GetMovieFileScoresAsync(ArrInstance arrInstance, List<long> movieFileIds);

@@ -21,11 +21,6 @@ public interface ISonarrClient : IArrClient
     Task<List<ArrQualityProfile>> GetQualityProfilesAsync(ArrInstance arrInstance);
 
     /// <summary>
-    /// Fetches series from a Sonarr instance with paging support
-    /// </summary>
-    Task<PagedResponse<SearchableSeries>> GetSeriesPagedAsync(ArrInstance arrInstance, int page, int pageSize);
-
-    /// <summary>
     /// Fetches custom format scores for episode files in batches
     /// </summary>
     Task<Dictionary<long, int>> GetEpisodeFileScoresAsync(ArrInstance arrInstance, List<long> episodeFileIds);

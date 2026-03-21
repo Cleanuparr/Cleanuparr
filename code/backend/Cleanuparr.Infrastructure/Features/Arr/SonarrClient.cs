@@ -218,28 +218,14 @@ public class SonarrClient : ArrClient, ISonarrClient
         using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
         SetApiKey(request, arrInstance.ApiKey);
 
-        using HttpResponseMessage response = await _httpClient.SendAsync(request);
+        using HttpResponseMessage response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
         response.EnsureSuccessStatusCode();
 
-        string responseBody = await response.Content.ReadAsStringAsync();
-        return JsonConvert.DeserializeObject<List<SearchableSeries>>(responseBody) ?? [];
-    }
-
-    public async Task<PagedResponse<SearchableSeries>> GetSeriesPagedAsync(ArrInstance arrInstance, int page, int pageSize)
-    {
-        UriBuilder uriBuilder = new(arrInstance.Url);
-        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/v3/series";
-        uriBuilder.Query = $"page={page}&pageSize={pageSize}";
-
-        using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
-        SetApiKey(request, arrInstance.ApiKey);
-
-        using HttpResponseMessage response = await _httpClient.SendAsync(request);
-        response.EnsureSuccessStatusCode();
-
-        string responseBody = await response.Content.ReadAsStringAsync();
-        return JsonConvert.DeserializeObject<PagedResponse<SearchableSeries>>(responseBody)
-            ?? new PagedResponse<SearchableSeries>();
+        using Stream stream = await response.Content.ReadAsStreamAsync();
+        using StreamReader sr = new(stream);
+        using JsonTextReader reader = new(sr);
+        JsonSerializer serializer = JsonSerializer.CreateDefault();
+        return serializer.Deserialize<List<SearchableSeries>>(reader) ?? [];
     }
 
     public async Task<List<SearchableEpisode>> GetEpisodesAsync(ArrInstance arrInstance, long seriesId)

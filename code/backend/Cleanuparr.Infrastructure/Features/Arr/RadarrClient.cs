@@ -150,28 +150,14 @@ public class RadarrClient : ArrClient, IRadarrClient
         using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
         SetApiKey(request, arrInstance.ApiKey);
 
-        using HttpResponseMessage response = await _httpClient.SendAsync(request);
+        using HttpResponseMessage response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
         response.EnsureSuccessStatusCode();
 
-        string responseBody = await response.Content.ReadAsStringAsync();
-        return JsonConvert.DeserializeObject<List<SearchableMovie>>(responseBody) ?? [];
-    }
-
-    public async Task<PagedResponse<SearchableMovie>> GetMoviesPagedAsync(ArrInstance arrInstance, int page, int pageSize)
-    {
-        UriBuilder uriBuilder = new(arrInstance.Url);
-        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/v3/movie";
-        uriBuilder.Query = $"page={page}&pageSize={pageSize}";
-
-        using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
-        SetApiKey(request, arrInstance.ApiKey);
-
-        using HttpResponseMessage response = await _httpClient.SendAsync(request);
-        response.EnsureSuccessStatusCode();
-
-        string responseBody = await response.Content.ReadAsStringAsync();
-        return JsonConvert.DeserializeObject<PagedResponse<SearchableMovie>>(responseBody)
-            ?? new PagedResponse<SearchableMovie>();
+        using Stream stream = await response.Content.ReadAsStreamAsync();
+        using StreamReader sr = new(stream);
+        using JsonTextReader reader = new(sr);
+        JsonSerializer serializer = JsonSerializer.CreateDefault();
+        return serializer.Deserialize<List<SearchableMovie>>(reader) ?? [];
     }
 
     public async Task<List<ArrQualityProfile>> GetQualityProfilesAsync(ArrInstance arrInstance)

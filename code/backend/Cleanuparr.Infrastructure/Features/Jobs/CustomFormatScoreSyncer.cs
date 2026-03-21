@@ -13,11 +13,10 @@ namespace Cleanuparr.Infrastructure.Features.Jobs;
 /// <summary>
 /// Periodically syncs custom format scores from Radarr/Sonarr instances.
 /// Tracks score changes over time for dashboard display and Seeker filtering.
-/// Uses paged API fetching to handle large libraries efficiently.
 /// </summary>
 public sealed class CustomFormatScoreSyncer : IHandler
 {
-    private const int PageSize = 200;
+    private const int ChunkSize = 200;
     private static readonly TimeSpan HistoryRetention = TimeSpan.FromDays(120);
 
     private readonly ILogger<CustomFormatScoreSyncer> _logger;
@@ -45,7 +44,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
 
         if (!config.UseCustomFormatScore)
         {
-            _logger.LogDebug("Custom format score tracking is disabled");
+            _logger.LogTrace("Custom format score tracking is disabled");
             return;
         }
 
@@ -103,68 +102,47 @@ public sealed class CustomFormatScoreSyncer : IHandler
         List<ArrQualityProfile> profiles = await _radarrClient.GetQualityProfilesAsync(arrInstance);
         Dictionary<int, ArrQualityProfile> profileMap = profiles.ToDictionary(p => p.Id);
 
+        List<SearchableMovie> allMovies = await _radarrClient.GetAllMoviesAsync(arrInstance);
+
+        List<(SearchableMovie Movie, long FileId)> moviesWithFiles = allMovies
+            .Where(m => m.HasFile && m.MovieFile is not null)
+            .Select(m => (Movie: m, FileId: m.MovieFile!.Id))
+            .Where(x => x.FileId > 0)
+            .ToList();
+
         DateTime syncStartTime = DateTime.UtcNow;
-        int page = 1;
         int totalSynced = 0;
-        int processedRecords = 0;
 
-        while (true)
+        foreach ((SearchableMovie Movie, long FileId)[] chunk in moviesWithFiles.Chunk(ChunkSize))
         {
-            PagedResponse<SearchableMovie> response = await _radarrClient.GetMoviesPagedAsync(arrInstance, page, PageSize);
+            List<long> fileIds = chunk.Select(x => x.FileId).ToList();
+            Dictionary<long, int> scores = await _radarrClient.GetMovieFileScoresAsync(arrInstance, fileIds);
 
-            if (response.Records.Count == 0)
+            List<long> movieIds = chunk.Select(x => x.Movie.Id).ToList();
+            Dictionary<long, CustomFormatScoreEntry> existingEntries = await _dataContext.CustomFormatScoreEntries
+                .Where(e => e.ArrInstanceId == arrInstance.Id
+                    && e.ItemType == InstanceType.Radarr
+                    && movieIds.Contains(e.ExternalItemId))
+                .ToDictionaryAsync(e => e.ExternalItemId);
+
+            foreach ((SearchableMovie movie, long fileId) in chunk)
             {
-                break;
-            }
-
-            List<(SearchableMovie Movie, long FileId)> moviesWithFiles = response.Records
-                .Where(m => m.HasFile && m.MovieFile is not null)
-                .Select(m => (Movie: m, FileId: m.MovieFile!.Id))
-                .Where(x => x.FileId > 0)
-                .ToList();
-
-            if (moviesWithFiles.Count > 0)
-            {
-                List<long> fileIds = moviesWithFiles.Select(x => x.FileId).ToList();
-                Dictionary<long, int> scores = await _radarrClient.GetMovieFileScoresAsync(arrInstance, fileIds);
-
-                // Load existing entries for this page's movie IDs
-                List<long> movieIds = moviesWithFiles.Select(x => x.Movie.Id).ToList();
-                Dictionary<long, CustomFormatScoreEntry> existingEntries = await _dataContext.CustomFormatScoreEntries
-                    .Where(e => e.ArrInstanceId == arrInstance.Id
-                        && e.ItemType == InstanceType.Radarr
-                        && movieIds.Contains(e.ExternalItemId))
-                    .ToDictionaryAsync(e => e.ExternalItemId);
-
-                foreach ((SearchableMovie movie, long fileId) in moviesWithFiles)
+                if (!scores.TryGetValue(fileId, out int cfScore))
                 {
-                    if (!scores.TryGetValue(fileId, out int cfScore))
-                    {
-                        continue;
-                    }
-
-                    profileMap.TryGetValue(movie.QualityProfileId, out ArrQualityProfile? profile);
-                    int cutoffScore = profile?.CutoffFormatScore ?? 0;
-                    string profileName = profile?.Name ?? "Unknown";
-
-                    existingEntries.TryGetValue(movie.Id, out CustomFormatScoreEntry? existing);
-                    UpsertCustomFormatScore(existing, arrInstance.Id, movie.Id, 0, InstanceType.Radarr, movie.Title, fileId, cfScore, cutoffScore, profileName, syncStartTime);
-
-                    totalSynced++;
+                    continue;
                 }
 
-                await _dataContext.SaveChangesAsync();
+                profileMap.TryGetValue(movie.QualityProfileId, out ArrQualityProfile? profile);
+                int cutoffScore = profile?.CutoffFormatScore ?? 0;
+                string profileName = profile?.Name ?? "Unknown";
+
+                existingEntries.TryGetValue(movie.Id, out CustomFormatScoreEntry? existing);
+                UpsertCustomFormatScore(existing, arrInstance.Id, movie.Id, 0, InstanceType.Radarr, movie.Title, fileId, cfScore, cutoffScore, profileName, syncStartTime);
+
+                totalSynced++;
             }
 
-            processedRecords += response.Records.Count;
-
-            if (processedRecords >= response.TotalRecords)
-            {
-                break;
-            }
-
-            page++;
-            await Task.Delay(200);
+            await _dataContext.SaveChangesAsync();
         }
 
         await CleanupStaleEntriesAsync(arrInstance.Id, InstanceType.Radarr, syncStartTime);
@@ -178,69 +156,33 @@ public sealed class CustomFormatScoreSyncer : IHandler
         List<ArrQualityProfile> profiles = await _sonarrClient.GetQualityProfilesAsync(arrInstance);
         Dictionary<int, ArrQualityProfile> profileMap = profiles.ToDictionary(p => p.Id);
 
+        List<SearchableSeries> allSeries = await _sonarrClient.GetAllSeriesAsync(arrInstance);
+
         DateTime syncStartTime = DateTime.UtcNow;
-        int page = 1;
         int totalSynced = 0;
-        int processedRecords = 0;
 
-        while (true)
+        foreach (SearchableSeries[] chunk in allSeries.Chunk(ChunkSize))
         {
-            PagedResponse<SearchableSeries> response = await _sonarrClient.GetSeriesPagedAsync(arrInstance, page, PageSize);
+            // Collect all episodes with files for this chunk of series
+            List<(SearchableSeries Series, SearchableEpisode Episode, long FileId)> itemsInChunk = [];
 
-            if (response.Records.Count == 0)
-            {
-                break;
-            }
-
-            foreach (SearchableSeries series in response.Records)
+            foreach (SearchableSeries series in chunk)
             {
                 try
                 {
                     List<SearchableEpisode> episodes = await _sonarrClient.GetEpisodesAsync(arrInstance, series.Id);
 
-                    List<(SearchableEpisode Episode, long FileId)> episodesWithFiles = episodes
-                        .Where(e => e.HasFile && e.EpisodeFile is not null)
-                        .Select(e => (Episode: e, FileId: e.EpisodeFile!.Id))
-                        .Where(x => x.FileId > 0)
-                        .ToList();
-
-                    if (episodesWithFiles.Count == 0)
+                    foreach (SearchableEpisode episode in episodes)
                     {
-                        continue;
-                    }
-
-                    List<long> fileIds = episodesWithFiles.Select(x => x.FileId).ToList();
-                    Dictionary<long, int> scores = await _sonarrClient.GetEpisodeFileScoresAsync(arrInstance, fileIds);
-
-                    profileMap.TryGetValue(series.QualityProfileId, out ArrQualityProfile? profile);
-                    int cutoffScore = profile?.CutoffFormatScore ?? 0;
-                    string profileName = profile?.Name ?? "Unknown";
-
-                    // Load existing entries for this series
-                    Dictionary<(long, long), CustomFormatScoreEntry> existingEntries = await _dataContext.CustomFormatScoreEntries
-                        .Where(e => e.ArrInstanceId == arrInstance.Id
-                            && e.ItemType == InstanceType.Sonarr
-                            && e.ExternalItemId == series.Id)
-                        .ToDictionaryAsync(e => (e.ExternalItemId, e.EpisodeId));
-
-                    foreach ((SearchableEpisode episode, long fileId) in episodesWithFiles)
-                    {
-                        if (!scores.TryGetValue(fileId, out int cfScore))
+                        if (episode.HasFile && episode.EpisodeFile is not null && episode.EpisodeFile.Id > 0)
                         {
-                            continue;
+                            itemsInChunk.Add((series, episode, episode.EpisodeFile.Id));
                         }
-
-                        string title = $"{series.Title} S{episode.SeasonNumber:D2}E{episode.EpisodeNumber:D2}";
-
-                        existingEntries.TryGetValue((series.Id, episode.Id), out CustomFormatScoreEntry? existing);
-                        UpsertCustomFormatScore(existing, arrInstance.Id, series.Id, episode.Id, InstanceType.Sonarr, title, fileId, cfScore, cutoffScore, profileName, syncStartTime);
-
-                        totalSynced++;
                     }
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "Failed to sync CF scores for series {SeriesId} on {InstanceName}",
+                    _logger.LogWarning(ex, "Failed to fetch episodes for series {SeriesId} on {InstanceName}",
                         series.Id, arrInstance.Name);
                 }
 
@@ -248,17 +190,41 @@ public sealed class CustomFormatScoreSyncer : IHandler
                 await Task.Delay(Random.Shared.Next(500, 1500));
             }
 
-            // Save per page to avoid large transactions
-            await _dataContext.SaveChangesAsync();
-
-            processedRecords += response.Records.Count;
-
-            if (processedRecords >= response.TotalRecords)
+            if (itemsInChunk.Count == 0)
             {
-                break;
+                continue;
             }
 
-            page++;
+            List<long> fileIds = itemsInChunk.Select(x => x.FileId).ToList();
+            Dictionary<long, int> scores = await _sonarrClient.GetEpisodeFileScoresAsync(arrInstance, fileIds);
+
+            List<long> seriesIds = itemsInChunk.Select(x => x.Series.Id).Distinct().ToList();
+            Dictionary<(long, long), CustomFormatScoreEntry> existingEntries = await _dataContext.CustomFormatScoreEntries
+                .Where(e => e.ArrInstanceId == arrInstance.Id
+                    && e.ItemType == InstanceType.Sonarr
+                    && seriesIds.Contains(e.ExternalItemId))
+                .ToDictionaryAsync(e => (e.ExternalItemId, e.EpisodeId));
+
+            foreach ((SearchableSeries series, SearchableEpisode episode, long fileId) in itemsInChunk)
+            {
+                if (!scores.TryGetValue(fileId, out int cfScore))
+                {
+                    continue;
+                }
+
+                profileMap.TryGetValue(series.QualityProfileId, out ArrQualityProfile? profile);
+                int cutoffScore = profile?.CutoffFormatScore ?? 0;
+                string profileName = profile?.Name ?? "Unknown";
+
+                string title = $"{series.Title} S{episode.SeasonNumber:D2}E{episode.EpisodeNumber:D2}";
+
+                existingEntries.TryGetValue((series.Id, episode.Id), out CustomFormatScoreEntry? existing);
+                UpsertCustomFormatScore(existing, arrInstance.Id, series.Id, episode.Id, InstanceType.Sonarr, title, fileId, cfScore, cutoffScore, profileName, syncStartTime);
+
+                totalSynced++;
+            }
+
+            await _dataContext.SaveChangesAsync();
         }
 
         await CleanupStaleEntriesAsync(arrInstance.Id, InstanceType.Sonarr, syncStartTime);
