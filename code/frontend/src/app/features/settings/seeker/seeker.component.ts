@@ -158,10 +158,10 @@ export class SeekerComponent implements OnInit, HasPendingChanges {
       });
       if (!confirmed) {
         // The toggle already flipped its internal state to false.
-        // Sync our signal to false first, then restore to true in the next tick
+        // Sync our signal to false first, then restore to true in the next microtask
         // so Angular detects an actual change and pushes it back to the toggle.
         this.useRoundRobin.set(false);
-        setTimeout(() => this.useRoundRobin.set(true));
+        queueMicrotask(() => this.useRoundRobin.set(true));
         return;
       }
     }
