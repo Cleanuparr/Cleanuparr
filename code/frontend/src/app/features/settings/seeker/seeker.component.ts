@@ -242,7 +242,7 @@ export class SeekerComponent implements OnInit, HasPendingChanges {
       useCutoff: this.useCutoff(),
       useCustomFormatScore: this.useCustomFormatScore(),
       useRoundRobin: this.useRoundRobin(),
-      instances: this.instances(),
+      instances: [...this.instances()].sort((a, b) => a.arrInstanceId.localeCompare(b.arrInstanceId)),
     });
   }
 
