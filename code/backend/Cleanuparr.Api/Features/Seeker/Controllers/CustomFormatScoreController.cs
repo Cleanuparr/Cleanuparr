@@ -80,7 +80,8 @@ public sealed class CustomFormatScoreController : ControllerBase
     public async Task<IActionResult> GetRecentUpgrades(
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20,
-        [FromQuery] Guid? instanceId = null)
+        [FromQuery] Guid? instanceId = null,
+        [FromQuery] int days = 30)
     {
         if (page < 1) page = 1;
         if (pageSize < 1) pageSize = 20;
@@ -97,9 +98,8 @@ public sealed class CustomFormatScoreController : ControllerBase
             query = query.Where(h => h.ArrInstanceId == instanceId.Value);
         }
 
-        // Get all history ordered by item + time, then detect upgrades in memory
-        // This is acceptable because history entries are deduplicated (only written on change)
         var allHistory = await query
+            .Where(h => h.RecordedAt >= DateTime.UtcNow.AddDays(-days))
             .OrderByDescending(h => h.RecordedAt)
             .ToListAsync();
 
