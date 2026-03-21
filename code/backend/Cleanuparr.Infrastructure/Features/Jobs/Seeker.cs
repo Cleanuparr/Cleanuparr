@@ -18,6 +18,8 @@ namespace Cleanuparr.Infrastructure.Features.Jobs;
 
 public sealed class Seeker : IHandler
 {
+    private const double JitterFactor = 0.8;
+
     private readonly ILogger<Seeker> _logger;
     private readonly DataContext _dataContext;
     private readonly IRadarrClient _radarrClient;
@@ -26,6 +28,7 @@ public sealed class Seeker : IHandler
     private readonly IEventPublisher _eventPublisher;
     private readonly IDryRunInterceptor _dryRunInterceptor;
     private readonly IHostingEnvironment _environment;
+    private readonly TimeProvider _timeProvider;
 
     public Seeker(
         ILogger<Seeker> logger,
@@ -35,7 +38,8 @@ public sealed class Seeker : IHandler
         IArrClientFactory arrClientFactory,
         IEventPublisher eventPublisher,
         IDryRunInterceptor dryRunInterceptor,
-        IHostingEnvironment environment)
+        IHostingEnvironment environment,
+        TimeProvider timeProvider)
     {
         _logger = logger;
         _dataContext = dataContext;
@@ -45,6 +49,7 @@ public sealed class Seeker : IHandler
         _eventPublisher = eventPublisher;
         _dryRunInterceptor = dryRunInterceptor;
         _environment = environment;
+        _timeProvider = timeProvider;
     }
 
     public async Task ExecuteAsync()
@@ -58,6 +63,8 @@ public sealed class Seeker : IHandler
             _logger.LogDebug("Search is disabled");
             return;
         }
+
+        await ApplyJitter(config);
 
         bool isDryRun = await _dryRunInterceptor.IsDryRunEnabled();
 
@@ -79,6 +86,23 @@ public sealed class Seeker : IHandler
         }
 
         await ProcessProactiveSearchAsync(config, isDryRun);
+    }
+
+    private async Task ApplyJitter(SeekerConfig config)
+    {
+        if (_environment.IsDevelopment())
+        {
+            return;
+        }
+        
+        int maxJitterSeconds = (int)(config.SearchInterval * 60 * JitterFactor);
+        int jitterSeconds = Random.Shared.Next(0, maxJitterSeconds + 1);
+
+        if (jitterSeconds > 0)
+        {
+            _logger.LogDebug("Waiting {Jitter}s before searching", jitterSeconds);
+            await Task.Delay(TimeSpan.FromSeconds(jitterSeconds), _timeProvider);
+        }
     }
 
     private async Task ProcessReplacementItemAsync(SearchQueueItem item, bool isDryRun)
