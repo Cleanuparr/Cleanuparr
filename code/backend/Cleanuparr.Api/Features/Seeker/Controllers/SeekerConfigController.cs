@@ -33,74 +33,53 @@ public sealed class SeekerConfigController : ControllerBase
     [HttpGet("seeker")]
     public async Task<IActionResult> GetSeekerConfig()
     {
-        await DataContext.Lock.WaitAsync();
-        try
+        var config = await _dataContext.SeekerConfigs
+            .AsNoTracking()
+            .FirstAsync();
+
+        // Get all Sonarr/Radarr instances with their seeker configs
+        var arrInstances = await _dataContext.ArrInstances
+            .AsNoTracking()
+            .Include(a => a.ArrConfig)
+            .Where(a => a.ArrConfig.Type == InstanceType.Sonarr || a.ArrConfig.Type == InstanceType.Radarr)
+            .ToListAsync();
+
+        var arrInstanceIds = arrInstances.Select(a => a.Id).ToHashSet();
+        var seekerInstanceConfigs = await _dataContext.SeekerInstanceConfigs
+            .AsNoTracking()
+            .Where(s => arrInstanceIds.Contains(s.ArrInstanceId))
+            .ToListAsync();
+
+        var instanceResponses = arrInstances.Select(instance =>
         {
-            var config = await _dataContext.SeekerConfigs
-                .AsNoTracking()
-                .FirstAsync();
-
-            // Get all Sonarr/Radarr instances with their seeker configs
-            var arrInstances = await _dataContext.ArrInstances
-                .AsNoTracking()
-                .Include(a => a.ArrConfig)
-                .Where(a => a.ArrConfig.Type == InstanceType.Sonarr || a.ArrConfig.Type == InstanceType.Radarr)
-                .ToListAsync();
-
-            var seekerInstanceConfigs = await _dataContext.SeekerInstanceConfigs
-                .ToListAsync();
-
-            // Auto-create missing seeker instance configs for new arr instances
-            foreach (var instance in arrInstances)
+            var seekerConfig = seekerInstanceConfigs.FirstOrDefault(s => s.ArrInstanceId == instance.Id);
+            return new SeekerInstanceConfigResponse
             {
-                if (seekerInstanceConfigs.All(s => s.ArrInstanceId != instance.Id))
-                {
-                    var newConfig = new SeekerInstanceConfig
-                    {
-                        ArrInstanceId = instance.Id,
-                        Enabled = false,
-                    };
-                    _dataContext.SeekerInstanceConfigs.Add(newConfig);
-                    seekerInstanceConfigs.Add(newConfig);
-                }
-            }
-            await _dataContext.SaveChangesAsync();
-
-            var instanceResponses = arrInstances.Select(instance =>
-            {
-                var seekerConfig = seekerInstanceConfigs.FirstOrDefault(s => s.ArrInstanceId == instance.Id);
-                return new SeekerInstanceConfigResponse
-                {
-                    ArrInstanceId = instance.Id,
-                    InstanceName = instance.Name,
-                    InstanceType = instance.ArrConfig.Type,
-                    Enabled = seekerConfig?.Enabled ?? false,
-                    SkipTags = seekerConfig?.SkipTags ?? [],
-                    LastProcessedAt = seekerConfig?.LastProcessedAt,
-                    ArrInstanceEnabled = instance.Enabled,
-                    ActiveDownloadLimit = seekerConfig?.ActiveDownloadLimit ?? 0,
-                };
-            }).ToList();
-
-            var response = new SeekerConfigResponse
-            {
-                SearchEnabled = config.SearchEnabled,
-                SearchInterval = config.SearchInterval,
-                ProactiveSearchEnabled = config.ProactiveSearchEnabled,
-                SelectionStrategy = config.SelectionStrategy,
-                MonitoredOnly = config.MonitoredOnly,
-                UseCutoff = config.UseCutoff,
-                UseCustomFormatScore = config.UseCustomFormatScore,
-                UseRoundRobin = config.UseRoundRobin,
-                Instances = instanceResponses,
+                ArrInstanceId = instance.Id,
+                InstanceName = instance.Name,
+                InstanceType = instance.ArrConfig.Type,
+                Enabled = seekerConfig?.Enabled ?? false,
+                SkipTags = seekerConfig?.SkipTags ?? [],
+                LastProcessedAt = seekerConfig?.LastProcessedAt,
+                ArrInstanceEnabled = instance.Enabled,
+                ActiveDownloadLimit = seekerConfig?.ActiveDownloadLimit ?? 0,
             };
+        }).ToList();
 
-            return Ok(response);
-        }
-        finally
+        var response = new SeekerConfigResponse
         {
-            DataContext.Lock.Release();
-        }
+            SearchEnabled = config.SearchEnabled,
+            SearchInterval = config.SearchInterval,
+            ProactiveSearchEnabled = config.ProactiveSearchEnabled,
+            SelectionStrategy = config.SelectionStrategy,
+            MonitoredOnly = config.MonitoredOnly,
+            UseCutoff = config.UseCutoff,
+            UseCustomFormatScore = config.UseCustomFormatScore,
+            UseRoundRobin = config.UseRoundRobin,
+            Instances = instanceResponses,
+        };
+
+        return Ok(response);
     }
 
     [HttpPut("seeker")]
