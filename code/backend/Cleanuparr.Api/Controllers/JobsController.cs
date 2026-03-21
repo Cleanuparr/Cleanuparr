@@ -57,7 +57,7 @@ public class JobsController : ControllerBase
     }
 
     [HttpPost("{jobType}/start")]
-    public async Task<IActionResult> StartJob(JobType jobType, [FromBody] ScheduleRequest scheduleRequest = null)
+    public async Task<IActionResult> StartJob(JobType jobType, [FromBody] ScheduleRequest scheduleRequest)
     {
         if (jobType == JobType.Seeker)
         {
