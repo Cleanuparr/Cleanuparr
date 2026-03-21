@@ -177,44 +177,52 @@ public class SeekerCommandMonitor : BackgroundService
         List<SeekerCommandTracker> trackers,
         IArrClientFactory arrClientFactory)
     {
-        try
+        var allGrabbedItems = new List<object>();
+
+        // Group by instance to inspect each instance's queue separately
+        foreach (var instanceGroup in trackers.GroupBy(t => t.ArrInstanceId))
         {
-            var tracker = trackers.First();
-            var arrInstance = tracker.ArrInstance;
-            IArrClient arrClient = arrClientFactory.GetClient(arrInstance.ArrConfig.Type, arrInstance.Version);
-
-            // Fetch the first page of the queue
-            QueueListResponse queue = await arrClient.GetQueueItemsAsync(arrInstance, 1);
-
-            // Find records matching the searched item (and season for Sonarr)
-            var grabbedItems = queue.Records
-                .Where(r => tracker.ItemType == InstanceType.Radarr
-                    ? r.MovieId == tracker.ExternalItemId
-                    : r.SeriesId == tracker.ExternalItemId
-                        && (tracker.SeasonNumber == 0 || r.SeasonNumber == tracker.SeasonNumber))
-                .Select(r => new
-                {
-                    r.Title,
-                    r.Status,
-                    r.Protocol,
-                })
-                .ToList();
-
-            if (grabbedItems.Count > 0)
+            try
             {
-                _logger.LogInformation("Search for '{Title}' on {Instance} grabbed {Count} items: {Items}",
-                    tracker.ItemTitle, arrInstance.Name, grabbedItems.Count,
-                    string.Join(", ", grabbedItems.Select(g => g.Title)));
+                var tracker = instanceGroup.First();
+                var arrInstance = tracker.ArrInstance;
+                IArrClient arrClient = arrClientFactory.GetClient(arrInstance.ArrConfig.Type, arrInstance.Version);
 
-                return new { GrabbedItems = grabbedItems };
+                // Fetch the first page of the queue
+                QueueListResponse queue = await arrClient.GetQueueItemsAsync(arrInstance, 1);
+
+                // Find records matching any tracker in this instance group
+                foreach (var t in instanceGroup)
+                {
+                    var grabbedItems = queue.Records
+                        .Where(r => t.ItemType == InstanceType.Radarr
+                            ? r.MovieId == t.ExternalItemId
+                            : r.SeriesId == t.ExternalItemId
+                                && (t.SeasonNumber == 0 || r.SeasonNumber == t.SeasonNumber))
+                        .Select(r => new
+                        {
+                            r.Title,
+                            r.Status,
+                            r.Protocol,
+                        })
+                        .ToList();
+
+                    if (grabbedItems.Count > 0)
+                    {
+                        _logger.LogInformation("Search for '{Title}' on {Instance} grabbed {Count} items: {Items}",
+                            t.ItemTitle, arrInstance.Name, grabbedItems.Count,
+                            string.Join(", ", grabbedItems.Select(g => g.Title)));
+
+                        allGrabbedItems.AddRange(grabbedItems);
+                    }
+                }
             }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to inspect download queue after search completion");
+            }
+        }
 
-            return null;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Failed to inspect download queue after search completion");
-            return null;
-        }
+        return allGrabbedItems.Count > 0 ? new { GrabbedItems = allGrabbedItems } : null;
     }
 }
