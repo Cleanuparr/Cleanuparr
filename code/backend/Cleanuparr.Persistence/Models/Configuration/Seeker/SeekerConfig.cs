@@ -23,7 +23,7 @@ public sealed record SeekerConfig : IConfig
 
     /// <summary>
     /// Interval in minutes between Seeker runs. Controls how frequently searches are triggered.
-    /// Valid values: 1, 2, 3, 4, 5, 6, 10 (must divide 60 evenly for cron compatibility).
+    /// Valid values: 2, 3, 4, 5, 6, 10, 12, 15, 20, 30 (must divide 60 evenly for cron compatibility).
     /// </summary>
     public ushort SearchInterval { get; set; } = Constants.DefaultSearchIntervalMinutes;
 
