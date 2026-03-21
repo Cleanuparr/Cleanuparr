@@ -27,7 +27,7 @@
         <span class="stats-bar__value" [class.stats-bar__value--warning]="stats.pendingReplacementSearches > 0">
           <app-animated-counter [value]="stats.pendingReplacementSearches" [duration]="400" />
         </span>
-        <span class="stats-bar__label">Pending Queue</span>
+        <span class="stats-bar__label">Pending replacement searches</span>
       </div>
       <div class="stats-bar__item">
         <span class="stats-bar__value stats-bar__value--success"><app-animated-counter [value]="stats.enabledInstances" [duration]="400" /></span>
