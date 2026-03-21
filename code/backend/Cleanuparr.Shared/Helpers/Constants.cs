@@ -20,4 +20,6 @@ public static class Constants
     public const ushort MaxSearchIntervalMinutes = 30;
 
     public const string LogoUrl = "https://cdn.jsdelivr.net/gh/Cleanuparr/Cleanuparr@main/Logo/48.png";
+
+    public const string CustomFormatScoreSyncerCron = "0 0/30 * * * ?";
 }

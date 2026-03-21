@@ -198,7 +198,7 @@ public class BackgroundJobManager : IHostedService
 
         if (config.UseCustomFormatScore)
         {
-            await AddTriggersForJob<CustomFormatScoreSyncer>("0 0/30 * * * ?", cancellationToken);
+            await AddTriggersForJob<CustomFormatScoreSyncer>(Constants.CustomFormatScoreSyncerCron, cancellationToken);
         }
     }
 

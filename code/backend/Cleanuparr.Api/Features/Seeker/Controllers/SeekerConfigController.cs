@@ -164,7 +164,8 @@ public sealed class SeekerConfigController : ControllerBase
                 if (config.UseCustomFormatScore)
                 {
                     _logger.LogInformation("UseCustomFormatScore enabled, starting CustomFormatScoreSyncer job");
-                    await _jobManagementService.StartJob(JobType.CustomFormatScoreSyncer, null, "0 0/30 * * * ?");
+                    await _jobManagementService.StartJob(JobType.CustomFormatScoreSyncer, null, Constants.CustomFormatScoreSyncerCron);
+                    await _jobManagementService.TriggerJobOnce(JobType.CustomFormatScoreSyncer);
                 }
                 else
                 {
