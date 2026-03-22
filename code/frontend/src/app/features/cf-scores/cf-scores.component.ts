@@ -4,8 +4,9 @@ import { NgIcon } from '@ng-icons/core';
 import { PageHeaderComponent } from '@layout/page-header/page-header.component';
 import {
   CardComponent, BadgeComponent, ButtonComponent, InputComponent,
-  PaginatorComponent, EmptyStateComponent,
+  PaginatorComponent, EmptyStateComponent, SelectComponent,
 } from '@ui';
+import type { SelectOption } from '@ui';
 import { AnimatedCounterComponent } from '@ui/animated-counter/animated-counter.component';
 import {
   CfScoreApi, CfScoreEntry, CfScoreStats, CfScoreHistoryEntry,
@@ -25,6 +26,7 @@ const POLL_INTERVAL_MS = 10_000;
     BadgeComponent,
     ButtonComponent,
     InputComponent,
+    SelectComponent,
     PaginatorComponent,
     EmptyStateComponent,
     AnimatedCounterComponent,
@@ -46,12 +48,15 @@ export class CfScoresComponent implements OnInit, OnDestroy {
   readonly currentPage = signal(1);
   readonly pageSize = signal(50);
   readonly searchQuery = signal('');
+  readonly selectedInstanceId = signal<string>('');
+  readonly instanceOptions = signal<SelectOption[]>([]);
 
   readonly expandedId = signal<string | null>(null);
   readonly historyEntries = signal<CfScoreHistoryEntry[]>([]);
   readonly historyLoading = signal(false);
 
   ngOnInit(): void {
+    this.loadInstances();
     this.loadScores();
     this.loadStats();
     this.pollTimer = setInterval(() => {
@@ -68,7 +73,7 @@ export class CfScoresComponent implements OnInit, OnDestroy {
 
   loadScores(): void {
     this.loading.set(true);
-    this.api.getScores(this.currentPage(), this.pageSize(), this.searchQuery() || undefined).subscribe({
+    this.api.getScores(this.currentPage(), this.pageSize(), this.searchQuery() || undefined, this.selectedInstanceId() || undefined).subscribe({
       next: (result) => {
         this.items.set(result.items);
         this.totalRecords.set(result.totalCount);
@@ -79,6 +84,26 @@ export class CfScoresComponent implements OnInit, OnDestroy {
         this.toast.error('Failed to load CF scores');
       },
     });
+  }
+
+  private loadInstances(): void {
+    this.api.getInstances().subscribe({
+      next: (result) => {
+        this.instanceOptions.set([
+          { label: 'All Instances', value: '' },
+          ...result.instances.map(i => ({
+            label: `${i.name} (${i.itemType})`,
+            value: i.id,
+          })),
+        ]);
+      },
+    });
+  }
+
+  onInstanceFilterChange(value: string): void {
+    this.selectedInstanceId.set(value);
+    this.currentPage.set(1);
+    this.loadScores();
   }
 
   private loadStats(): void {

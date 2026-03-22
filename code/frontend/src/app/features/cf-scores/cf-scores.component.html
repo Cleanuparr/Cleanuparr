@@ -7,6 +7,12 @@
   <!-- Toolbar -->
   <div class="toolbar">
     <div class="toolbar__filters">
+      <app-select
+        placeholder="All Instances"
+        [options]="instanceOptions()"
+        [value]="selectedInstanceId()"
+        (valueChange)="onInstanceFilterChange($any($event))"
+      />
       <app-input
         placeholder="Search by title..."
         type="search"

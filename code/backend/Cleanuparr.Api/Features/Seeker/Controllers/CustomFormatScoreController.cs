@@ -25,7 +25,8 @@ public sealed class CustomFormatScoreController : ControllerBase
     public async Task<IActionResult> GetCustomFormatScores(
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 50,
-        [FromQuery] Guid? instanceId = null)
+        [FromQuery] Guid? instanceId = null,
+        [FromQuery] string? search = null)
     {
         if (page < 1) page = 1;
         if (pageSize < 1) pageSize = 50;
@@ -38,6 +39,11 @@ public sealed class CustomFormatScoreController : ControllerBase
         if (instanceId.HasValue)
         {
             query = query.Where(e => e.ArrInstanceId == instanceId.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            query = query.Where(e => e.Title.Contains(search));
         }
 
         int totalCount = await query.CountAsync();
@@ -149,6 +155,29 @@ public sealed class CustomFormatScoreController : ControllerBase
             TotalCount = totalCount,
             TotalPages = (int)Math.Ceiling(totalCount / (double)pageSize),
         });
+    }
+
+    [HttpGet("instances")]
+    public async Task<IActionResult> GetInstances()
+    {
+        var instances = await _dataContext.CustomFormatScoreEntries
+            .AsNoTracking()
+            .Select(e => new { e.ArrInstanceId, e.ItemType })
+            .Distinct()
+            .Join(
+                _dataContext.ArrInstances.AsNoTracking(),
+                e => e.ArrInstanceId,
+                a => a.Id,
+                (e, a) => new
+                {
+                    Id = e.ArrInstanceId,
+                    a.Name,
+                    e.ItemType,
+                })
+            .OrderBy(x => x.Name)
+            .ToListAsync();
+
+        return Ok(new { Instances = instances });
     }
 
     /// <summary>

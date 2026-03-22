@@ -63,6 +63,12 @@ export interface CfScoreHistoryResponse {
   entries: CfScoreHistoryEntry[];
 }
 
+export interface CfScoreInstance {
+  id: string;
+  name: string;
+  itemType: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class CfScoreApi {
   private http = inject(HttpClient);
@@ -77,10 +83,15 @@ export class CfScoreApi {
     });
   }
 
-  getScores(page = 1, pageSize = 50, search?: string): Observable<CfScoreEntriesResponse> {
+  getScores(page = 1, pageSize = 50, search?: string, instanceId?: string): Observable<CfScoreEntriesResponse> {
     const params: Record<string, string | number> = { page, pageSize };
     if (search) params['search'] = search;
+    if (instanceId) params['instanceId'] = instanceId;
     return this.http.get<CfScoreEntriesResponse>('/api/seeker/cf-scores', { params });
+  }
+
+  getInstances(): Observable<{ instances: CfScoreInstance[] }> {
+    return this.http.get<{ instances: CfScoreInstance[] }>('/api/seeker/cf-scores/instances');
   }
 
   getItemHistory(instanceId: string, itemId: number, episodeId = 0): Observable<CfScoreHistoryResponse> {
