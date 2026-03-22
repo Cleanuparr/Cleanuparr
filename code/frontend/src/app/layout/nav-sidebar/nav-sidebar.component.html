@@ -90,23 +90,6 @@
         </a>
       }
     }
-
-    <!-- Suggested Apps -->
-    @if (!collapsed()) {
-      <div class="sidebar__divider"></div>
-      <div class="sidebar__section-label-text">Suggested Apps</div>
-      @for (app of suggestedApps; track app.href) {
-        <a
-          class="sidebar__item sidebar__item--external"
-          [href]="app.href"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <ng-icon [name]="app.icon" class="sidebar__item-icon" />
-          <span class="sidebar__item-label">{{ app.label }}</span>
-        </a>
-      }
-    }
   </div>
 
   <div class="sidebar__footer">
