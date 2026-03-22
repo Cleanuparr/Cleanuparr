@@ -51,7 +51,7 @@ jobs:
                 content: 'eyes'
               });
             } catch (e) {
-              console.log(`Could not add reaction: ${e.message}`);
+              console.log(`Could not add reaction: ${e}`);
             }
 
             // Fetch PR details
