@@ -365,15 +365,15 @@ public sealed class Seeker : IHandler
         }
 
         // Apply filters — UseCutoff and UseCustomFormatScore are OR-ed: an item qualifies if it fails the quality cutoff OR the CF score cutoff.
-        // Items without a cached CF score pass the CF filter.
+        // Items without cutoff data or a cached CF score are excluded from the respective filter.
         var candidates = movies
             .Where(m => m.Status is "released")
             .Where(m => !config.MonitoredOnly || m.Monitored)
             .Where(m => instanceConfig.SkipTags.Count == 0 || !m.Tags.Any(instanceConfig.SkipTags.Contains))
             .Where(m => !m.HasFile
                 || (!config.UseCutoff && !config.UseCustomFormatScore)
-                || (config.UseCutoff && (m.MovieFile?.QualityCutoffNotMet ?? true))
-                || (config.UseCustomFormatScore && (cfScores == null || !cfScores.TryGetValue(m.Id, out var entry) || entry.CurrentScore < entry.CutoffScore)))
+                || (config.UseCutoff && (m.MovieFile?.QualityCutoffNotMet ?? false))
+                || (config.UseCustomFormatScore && cfScores != null && cfScores.TryGetValue(m.Id, out var entry) && entry.CurrentScore < entry.CutoffScore))
             .ToList();
 
         instanceConfig.TotalEligibleItems = candidates.Count;
@@ -411,6 +411,18 @@ public sealed class Seeker : IHandler
             .Where(m => selectedIds.Contains(m.Id))
             .Select(m => m.Title)
             .ToList();
+
+        foreach (long movieId in selectedIds)
+        {
+            SearchableMovie movie = candidates.First(m => m.Id == movieId);
+            string reason = !movie.HasFile
+                ? "missing file"
+                : config.UseCutoff && (movie.MovieFile?.QualityCutoffNotMet ?? false)
+                    ? "does not meet quality cutoff"
+                    : "custom format score below cutoff";
+            _logger.LogDebug("Selected '{Title}' for search on {InstanceName}: {Reason}",
+                movie.Title, arrInstance.Name, reason);
+        }
 
         return (selectedIds, selectedNames, allLibraryIds);
     }
@@ -464,12 +476,13 @@ public sealed class Seeker : IHandler
                     .Where(h => h.ExternalItemId == seriesId)
                     .ToList();
 
+                string seriesTitle = candidates.First(s => s.Id == seriesId).Title;
+
                 (SeriesSearchItem? searchItem, SearchableEpisode? selectedEpisode) =
-                    await BuildSonarrSearchItemAsync(config, arrInstance, seriesId, seriesHistory);
+                    await BuildSonarrSearchItemAsync(config, arrInstance, seriesId, seriesHistory, seriesTitle);
 
                 if (searchItem is not null)
                 {
-                    string seriesTitle = candidates.First(s => s.Id == seriesId).Title;
                     string displayName = $"{seriesTitle} S{searchItem.Id:D2}";
                     int seasonNumber = (int)searchItem.Id;
 
@@ -512,9 +525,21 @@ public sealed class Seeker : IHandler
         SeekerConfig config,
         ArrInstance arrInstance,
         long seriesId,
-        List<SeekerHistory> seriesHistory)
+        List<SeekerHistory> seriesHistory,
+        string seriesTitle)
     {
         List<SearchableEpisode> episodes = await _sonarrClient.GetEpisodesAsync(arrInstance, seriesId);
+
+        // Fetch episode file metadata to determine cutoff status from the dedicated episodefile endpoint
+        HashSet<long> cutoffNotMetFileIds = [];
+        if (config.UseCutoff)
+        {
+            List<ArrEpisodeFile> episodeFiles = await _sonarrClient.GetEpisodeFilesAsync(arrInstance, seriesId);
+            cutoffNotMetFileIds = episodeFiles
+                .Where(f => f.QualityCutoffNotMet)
+                .Select(f => f.Id)
+                .ToHashSet();
+        }
 
         // Load cached CF scores for this series when custom format score filtering is enabled
         Dictionary<long, CustomFormatScoreEntry>? cfScores = null;
@@ -528,14 +553,15 @@ public sealed class Seeker : IHandler
                 .ToDictionaryAsync(e => e.EpisodeId);
         }
 
-        // Filter to qualifying episodes — UseCutoff and UseCustomFormatScore are OR-ed
+        // Filter to qualifying episodes — UseCutoff and UseCustomFormatScore are OR-ed.
+        // Cutoff status comes from the episodefile endpoint; items without a cached CF score are excluded.
         var qualifying = episodes
             .Where(e => e.AirDateUtc.HasValue && e.AirDateUtc.Value <= DateTime.UtcNow)
             .Where(e => !config.MonitoredOnly || e.Monitored)
             .Where(e => !e.HasFile
                 || (!config.UseCutoff && !config.UseCustomFormatScore)
-                || (config.UseCutoff && (e.EpisodeFile?.QualityCutoffNotMet ?? true))
-                || (config.UseCustomFormatScore && (cfScores == null || !cfScores.TryGetValue(e.Id, out var entry) || entry.CurrentScore < entry.CutoffScore)))
+                || (config.UseCutoff && cutoffNotMetFileIds.Contains(e.EpisodeFileId))
+                || (config.UseCustomFormatScore && cfScores != null && cfScores.TryGetValue(e.Id, out var entry) && entry.CurrentScore < entry.CutoffScore))
             .OrderBy(e => e.SeasonNumber)
             .ThenBy(e => e.EpisodeNumber)
             .ToList();
@@ -569,6 +595,32 @@ public sealed class Seeker : IHandler
         var selected = unsearched
             .OrderBy(_ => Random.Shared.Next())
             .First();
+
+        // Log why this season was selected
+        var seasonEpisodes = qualifying.Where(e => e.SeasonNumber == selected.SeasonNumber).ToList();
+        int missingCount = seasonEpisodes.Count(e => !e.HasFile);
+        int cutoffCount = seasonEpisodes.Count(e => e.HasFile && cutoffNotMetFileIds.Contains(e.EpisodeFileId));
+        int cfCount = seasonEpisodes.Count(e => e.HasFile && cfScores != null
+            && cfScores.TryGetValue(e.Id, out var cfEntry) && cfEntry.CurrentScore < cfEntry.CutoffScore);
+
+        List<string> reasons = [];
+        if (missingCount > 0)
+        {
+            reasons.Add($"{missingCount} missing");
+        }
+
+        if (cutoffCount > 0)
+        {
+            reasons.Add($"{cutoffCount} cutoff unmet");
+        }
+
+        if (cfCount > 0)
+        {
+            reasons.Add($"{cfCount} below CF score cutoff");
+        }
+
+        _logger.LogDebug("Selected '{SeriesTitle}' S{Season:D2} for search on {InstanceName}: {Reasons}",
+            seriesTitle, selected.SeasonNumber, arrInstance.Name, string.Join(", ", reasons));
 
         SeriesSearchItem searchItem = new()
         {

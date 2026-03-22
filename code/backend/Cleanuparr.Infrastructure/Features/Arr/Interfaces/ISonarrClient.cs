@@ -21,6 +21,11 @@ public interface ISonarrClient : IArrClient
     Task<List<ArrQualityProfile>> GetQualityProfilesAsync(ArrInstance arrInstance);
 
     /// <summary>
+    /// Fetches episode file metadata for a specific series, including quality cutoff status
+    /// </summary>
+    Task<List<ArrEpisodeFile>> GetEpisodeFilesAsync(ArrInstance arrInstance, long seriesId);
+
+    /// <summary>
     /// Fetches custom format scores for episode files in batches
     /// </summary>
     Task<Dictionary<long, int>> GetEpisodeFileScoresAsync(ArrInstance arrInstance, List<long> episodeFileIds);
