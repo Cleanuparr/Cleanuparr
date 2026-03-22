@@ -58,6 +58,10 @@ public sealed class CustomFormatScoreSyncer : IHandler
             .Where(s => s.ArrInstance.ArrConfig.Type is InstanceType.Sonarr or InstanceType.Radarr)
             .ToList();
 
+        _logger.LogDebug("CF score sync found {Count} enabled instance(s): {Instances}",
+            instanceConfigs.Count,
+            string.Join(", ", instanceConfigs.Select(c => $"{c.ArrInstance.Name} ({c.ArrInstance.ArrConfig.Type})")));
+
         if (instanceConfigs.Count == 0)
         {
             _logger.LogDebug("No enabled instances for CF score sync");
@@ -102,6 +106,9 @@ public sealed class CustomFormatScoreSyncer : IHandler
         List<ArrQualityProfile> profiles = await _radarrClient.GetQualityProfilesAsync(arrInstance);
         Dictionary<int, ArrQualityProfile> profileMap = profiles.ToDictionary(p => p.Id);
 
+        _logger.LogTrace("[Radarr] {InstanceName}: fetched {ProfileCount} quality profile(s)",
+            arrInstance.Name, profiles.Count);
+
         List<SearchableMovie> allMovies = await _radarrClient.GetAllMoviesAsync(arrInstance);
 
         List<(SearchableMovie Movie, long FileId)> moviesWithFiles = allMovies
@@ -110,13 +117,20 @@ public sealed class CustomFormatScoreSyncer : IHandler
             .Where(x => x.FileId > 0)
             .ToList();
 
+        _logger.LogTrace("[Radarr] {InstanceName}: found {TotalMovies} total movies, {WithFiles} with files",
+            arrInstance.Name, allMovies.Count, moviesWithFiles.Count);
+
         DateTime syncStartTime = DateTime.UtcNow;
         int totalSynced = 0;
+        int totalSkipped = 0;
 
         foreach ((SearchableMovie Movie, long FileId)[] chunk in moviesWithFiles.Chunk(ChunkSize))
         {
             List<long> fileIds = chunk.Select(x => x.FileId).ToList();
             Dictionary<long, int> scores = await _radarrClient.GetMovieFileScoresAsync(arrInstance, fileIds);
+
+            _logger.LogTrace("[Radarr] {InstanceName}: chunk of {FileCount} file IDs returned {ScoreCount} score(s)",
+                arrInstance.Name, fileIds.Count, scores.Count);
 
             List<long> movieIds = chunk.Select(x => x.Movie.Id).ToList();
             Dictionary<long, CustomFormatScoreEntry> existingEntries = await _dataContext.CustomFormatScoreEntries
@@ -129,6 +143,9 @@ public sealed class CustomFormatScoreSyncer : IHandler
             {
                 if (!scores.TryGetValue(fileId, out int cfScore))
                 {
+                    totalSkipped++;
+                    _logger.LogTrace("[Radarr] {InstanceName}: skipping movie '{Title}' (fileId={FileId}) — no score returned",
+                        arrInstance.Name, movie.Title, fileId);
                     continue;
                 }
 
@@ -147,8 +164,8 @@ public sealed class CustomFormatScoreSyncer : IHandler
 
         await CleanupStaleEntriesAsync(arrInstance.Id, InstanceType.Radarr, syncStartTime);
 
-        _logger.LogInformation("Synced CF scores for {Count} movies on {InstanceName}",
-            totalSynced, arrInstance.Name);
+        _logger.LogInformation("[Radarr] Synced CF scores for {Count} movies on {InstanceName} ({Skipped} skipped — no score returned)",
+            totalSynced, arrInstance.Name, totalSkipped);
     }
 
     private async Task SyncSonarrAsync(ArrInstance arrInstance)
@@ -156,10 +173,17 @@ public sealed class CustomFormatScoreSyncer : IHandler
         List<ArrQualityProfile> profiles = await _sonarrClient.GetQualityProfilesAsync(arrInstance);
         Dictionary<int, ArrQualityProfile> profileMap = profiles.ToDictionary(p => p.Id);
 
+        _logger.LogTrace("[Sonarr] {InstanceName}: fetched {ProfileCount} quality profile(s)",
+            arrInstance.Name, profiles.Count);
+
         List<SearchableSeries> allSeries = await _sonarrClient.GetAllSeriesAsync(arrInstance);
+
+        _logger.LogTrace("[Sonarr] {InstanceName}: found {SeriesCount} total series",
+            arrInstance.Name, allSeries.Count);
 
         DateTime syncStartTime = DateTime.UtcNow;
         int totalSynced = 0;
+        int totalSkipped = 0;
 
         foreach (SearchableSeries[] chunk in allSeries.Chunk(ChunkSize))
         {
@@ -171,6 +195,10 @@ public sealed class CustomFormatScoreSyncer : IHandler
                 try
                 {
                     List<SearchableEpisode> episodes = await _sonarrClient.GetEpisodesAsync(arrInstance, series.Id);
+                    int episodesWithFiles = episodes.Count(e => e.HasFile && e.EpisodeFile is not null && e.EpisodeFile.Id > 0);
+
+                    _logger.LogTrace("[Sonarr] {InstanceName}: series '{SeriesTitle}' (id={SeriesId}) has {TotalEpisodes} episodes, {WithFiles} with files",
+                        arrInstance.Name, series.Title, series.Id, episodes.Count, episodesWithFiles);
 
                     foreach (SearchableEpisode episode in episodes)
                     {
@@ -182,8 +210,8 @@ public sealed class CustomFormatScoreSyncer : IHandler
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "Failed to fetch episodes for series {SeriesId} on {InstanceName}",
-                        series.Id, arrInstance.Name);
+                    _logger.LogWarning(ex, "[Sonarr] Failed to fetch episodes for series '{SeriesTitle}' (id={SeriesId}) on {InstanceName}",
+                        series.Title, series.Id, arrInstance.Name);
                 }
 
                 // Rate limit to avoid overloading the Sonarr API
@@ -192,11 +220,16 @@ public sealed class CustomFormatScoreSyncer : IHandler
 
             if (itemsInChunk.Count == 0)
             {
+                _logger.LogTrace("[Sonarr] {InstanceName}: chunk of {ChunkSize} series yielded 0 episodes with files, skipping",
+                    arrInstance.Name, chunk.Length);
                 continue;
             }
 
             List<long> fileIds = itemsInChunk.Select(x => x.FileId).ToList();
             Dictionary<long, int> scores = await _sonarrClient.GetEpisodeFileScoresAsync(arrInstance, fileIds);
+
+            _logger.LogTrace("[Sonarr] {InstanceName}: chunk of {FileCount} file IDs returned {ScoreCount} score(s)",
+                arrInstance.Name, fileIds.Count, scores.Count);
 
             List<long> seriesIds = itemsInChunk.Select(x => x.Series.Id).Distinct().ToList();
             Dictionary<(long, long), CustomFormatScoreEntry> existingEntries = await _dataContext.CustomFormatScoreEntries
@@ -209,6 +242,9 @@ public sealed class CustomFormatScoreSyncer : IHandler
             {
                 if (!scores.TryGetValue(fileId, out int cfScore))
                 {
+                    totalSkipped++;
+                    _logger.LogTrace("[Sonarr] {InstanceName}: skipping '{SeriesTitle}' S{Season:D2}E{Episode:D2} (fileId={FileId}) — no score returned",
+                        arrInstance.Name, series.Title, episode.SeasonNumber, episode.EpisodeNumber, fileId);
                     continue;
                 }
 
@@ -229,8 +265,8 @@ public sealed class CustomFormatScoreSyncer : IHandler
 
         await CleanupStaleEntriesAsync(arrInstance.Id, InstanceType.Sonarr, syncStartTime);
 
-        _logger.LogInformation("Synced CF scores for {Count} episodes on {InstanceName}",
-            totalSynced, arrInstance.Name);
+        _logger.LogInformation("[Sonarr] Synced CF scores for {Count} episodes on {InstanceName} ({Skipped} skipped — no score returned)",
+            totalSynced, arrInstance.Name, totalSkipped);
     }
 
     /// <summary>
@@ -336,7 +372,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
 
         await _dataContext.SaveChangesAsync();
 
-        _logger.LogDebug("Cleaned up {Count} stale CF score entries for instance {InstanceId}",
+        _logger.LogTrace("Cleaned up {Count} stale CF score entries for instance {InstanceId}",
             staleEntries.Count, arrInstanceId);
     }
 
