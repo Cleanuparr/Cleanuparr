@@ -254,13 +254,10 @@ public sealed class Seeker : IHandler
                 instanceType, arrInstance.Name);
         }
 
-        if (!isDryRun)
-        {
-            // Update LastProcessedAt so round-robin moves on
-            instanceConfig.LastProcessedAt = DateTime.UtcNow;
-            _dataContext.SeekerInstanceConfigs.Update(instanceConfig);
-            await _dataContext.SaveChangesAsync();
-        }
+        // Update LastProcessedAt so round-robin moves on
+        instanceConfig.LastProcessedAt = DateTime.UtcNow;
+        _dataContext.SeekerInstanceConfigs.Update(instanceConfig);
+        await _dataContext.SaveChangesAsync();
     }
 
     private async Task ProcessInstanceAsync(
