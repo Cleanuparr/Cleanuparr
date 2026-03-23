@@ -4,6 +4,7 @@ import {
   input,
   signal,
   effect,
+  untracked,
   OnDestroy,
   PLATFORM_ID,
   inject,
@@ -61,7 +62,7 @@ export class AnimatedCounterComponent implements OnDestroy {
   private animateTo(target: number, duration: number): void {
     cancelAnimationFrame(this.animationId);
 
-    const start = this.displayValue();
+    const start = untracked(() => this.displayValue());
     const diff = target - start;
     if (diff === 0) return;
 
