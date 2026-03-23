@@ -62,7 +62,7 @@ public sealed class SeekerConfigController : ControllerBase
                 SkipTags = seekerConfig?.SkipTags ?? [],
                 LastProcessedAt = seekerConfig?.LastProcessedAt,
                 ArrInstanceEnabled = instance.Enabled,
-                ActiveDownloadLimit = seekerConfig?.ActiveDownloadLimit ?? 0,
+                ActiveDownloadLimit = seekerConfig?.ActiveDownloadLimit ?? 3,
             };
         }).ToList();
 
