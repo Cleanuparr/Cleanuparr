@@ -50,8 +50,8 @@ export class NavSidebarComponent {
     { label: 'Logs', icon: 'tablerFileText', route: '/logs' },
     { label: 'Events', icon: 'tablerBell', route: '/events' },
     { label: 'Strikes', icon: 'tablerBolt', route: '/strikes' },
-    { label: 'CF Scores', icon: 'tablerChartBar', route: '/cf-scores' },
     { label: 'Search Stats', icon: 'tablerChartDots', route: '/search-stats' },
+    { label: 'CF Scores', icon: 'tablerChartBar', route: '/cf-scores' },
   ];
 
   settingsItems: NavItem[] = [
