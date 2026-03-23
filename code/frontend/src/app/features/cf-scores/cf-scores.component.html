@@ -73,9 +73,6 @@
           >
             <ng-icon name="tablerChartBar" class="score-row__icon" />
             <span class="score-row__title">{{ item.title }}</span>
-            <app-badge [severity]="itemTypeSeverity(item.itemType)" size="sm">
-              {{ item.itemType }}
-            </app-badge>
             <span class="score-row__scores">
               <span class="score-row__current">{{ item.currentScore }}</span>
               <span class="score-row__separator">/</span>
@@ -84,6 +81,9 @@
             <span class="score-row__profile">{{ item.qualityProfileName }}</span>
             <app-badge [severity]="statusSeverity(item.isBelowCutoff)" size="sm">
               {{ statusLabel(item.isBelowCutoff) }}
+            </app-badge>
+            <app-badge [severity]="itemTypeSeverity(item.itemType)" size="sm">
+              {{ item.itemType }}
             </app-badge>
             <span class="score-row__time">{{ item.lastSyncedAt | date:'yyyy-MM-dd HH:mm' }}</span>
             <ng-icon
