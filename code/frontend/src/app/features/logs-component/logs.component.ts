@@ -49,6 +49,7 @@ export class LogsComponent implements OnInit {
 
   readonly selectedLevel = signal<unknown>('');
   readonly selectedCategory = signal<unknown>('');
+  readonly selectedJobName = signal<unknown>('');
   readonly searchQuery = signal('');
   readonly expandedIndex = signal<number | null>(null);
   readonly showExportMenu = signal(false);
@@ -65,6 +66,7 @@ export class LogsComponent implements OnInit {
     let logs = this.hub.logs();
     const level = this.selectedLevel() as string;
     const category = this.selectedCategory() as string;
+    const jobName = this.selectedJobName() as string;
     const query = this.searchQuery().toLowerCase();
     const runId = this.selectedJobRunId();
 
@@ -76,6 +78,9 @@ export class LogsComponent implements OnInit {
     }
     if (category) {
       logs = logs.filter((l) => l.category === category);
+    }
+    if (jobName) {
+      logs = logs.filter((l) => l.jobName === jobName);
     }
     if (query) {
       logs = logs.filter(
@@ -99,6 +104,14 @@ export class LogsComponent implements OnInit {
     return [
       { label: 'All Categories', value: '' },
       ...Array.from(cats).sort().map((c) => ({ label: c!, value: c! })),
+    ];
+  });
+
+  readonly jobNameOptions = computed<SelectOption[]>(() => {
+    const names = new Set(this.hub.logs().map((l) => l.jobName).filter(Boolean));
+    return [
+      { label: 'All Jobs', value: '' },
+      ...Array.from(names).sort().map((n) => ({ label: this.jobDisplayName(n!), value: n! })),
     ];
   });
 
