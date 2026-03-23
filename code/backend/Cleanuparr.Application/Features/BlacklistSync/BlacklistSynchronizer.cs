@@ -38,7 +38,7 @@ public sealed class BlacklistSynchronizer : IHandler
         _dryRunInterceptor = dryRunInterceptor;
     }
 
-    public async Task ExecuteAsync()
+    public async Task ExecuteAsync(CancellationToken cancellationToken = default)
     {
         BlacklistSyncConfig config = await _dataContext.BlacklistSyncConfigs
             .AsNoTracking()
@@ -73,7 +73,7 @@ public sealed class BlacklistSynchronizer : IHandler
             .AsNoTracking()
             .Where(c => c.Enabled && c.TypeName == DownloadClientTypeName.qBittorrent)
             .ToListAsync();
-        
+
         if (qBittorrentClients.Count is 0)
         {
             _logger.LogDebug("No enabled qBittorrent clients found for blacklist sync");

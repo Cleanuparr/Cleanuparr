@@ -51,7 +51,7 @@ public sealed class GenericJob<T> : IJob
             await BroadcastJobStatus(hubContext, jobManagementService, jobType, false);
 
             var handler = scope.ServiceProvider.GetRequiredService<T>();
-            await handler.ExecuteAsync();
+            await handler.ExecuteAsync(context.CancellationToken);
 
             status = JobRunStatus.Completed;
             await BroadcastJobStatus(hubContext, jobManagementService, jobType, true);

@@ -44,7 +44,7 @@ public sealed class DownloadCleaner : GenericHandler
         _hardLinkFileService = hardLinkFileService;
     }
     
-    protected override async Task ExecuteInternalAsync()
+    protected override async Task ExecuteInternalAsync(CancellationToken cancellationToken = default)
     {
         var downloadServices = await GetInitializedDownloadServicesAsync();
 
@@ -101,7 +101,7 @@ public sealed class DownloadCleaner : GenericHandler
         _logger.LogTrace("Found {count} seeding downloads across {clientCount} clients", totalDownloads, downloadServiceToDownloadsMap.Count);
 
         // wait for the downloads to appear in the arr queue
-        await Task.Delay(TimeSpan.FromSeconds(10), _timeProvider);
+        await Task.Delay(TimeSpan.FromSeconds(10), _timeProvider, cancellationToken);
 
         await ProcessArrConfigAsync(ContextProvider.Get<ArrConfig>(nameof(InstanceType.Sonarr)), true);
         await ProcessArrConfigAsync(ContextProvider.Get<ArrConfig>(nameof(InstanceType.Radarr)), true);

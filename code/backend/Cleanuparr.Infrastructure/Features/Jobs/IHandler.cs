@@ -2,5 +2,5 @@
 
 public interface IHandler
 {
-    Task ExecuteAsync();
+    Task ExecuteAsync(CancellationToken cancellationToken = default);
 }

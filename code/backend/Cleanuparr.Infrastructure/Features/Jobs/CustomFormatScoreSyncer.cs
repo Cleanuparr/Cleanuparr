@@ -39,7 +39,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
         _timeProvider = timeProvider;
     }
 
-    public async Task ExecuteAsync()
+    public async Task ExecuteAsync(CancellationToken cancellationToken = default)
     {
         SeekerConfig config = await _dataContext.SeekerConfigs
             .AsNoTracking()
@@ -75,7 +75,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
         {
             try
             {
-                await SyncInstanceAsync(instanceConfig.ArrInstance);
+                await SyncInstanceAsync(instanceConfig.ArrInstance, cancellationToken);
             }
             catch (Exception ex)
             {
@@ -87,7 +87,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
         await CleanupOldHistoryAsync();
     }
 
-    private async Task SyncInstanceAsync(ArrInstance arrInstance)
+    private async Task SyncInstanceAsync(ArrInstance arrInstance, CancellationToken cancellationToken)
     {
         InstanceType instanceType = arrInstance.ArrConfig.Type;
 
@@ -100,7 +100,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
         }
         else
         {
-            await SyncSonarrAsync(arrInstance);
+            await SyncSonarrAsync(arrInstance, cancellationToken);
         }
     }
 
@@ -171,7 +171,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
             totalSynced, arrInstance.Name, totalSkipped);
     }
 
-    private async Task SyncSonarrAsync(ArrInstance arrInstance)
+    private async Task SyncSonarrAsync(ArrInstance arrInstance, CancellationToken cancellationToken)
     {
         List<ArrQualityProfile> profiles = await _sonarrClient.GetQualityProfilesAsync(arrInstance);
         Dictionary<int, ArrQualityProfile> profileMap = profiles.ToDictionary(p => p.Id);
@@ -228,7 +228,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
                 }
 
                 // Rate limit to avoid overloading the Sonarr API
-                await Task.Delay(Random.Shared.Next(500, 1500));
+                await Task.Delay(Random.Shared.Next(500, 1500), cancellationToken);
             }
 
             if (itemsInChunk.Count == 0)

@@ -52,7 +52,7 @@ public sealed class Seeker : IHandler
         _timeProvider = timeProvider;
     }
 
-    public async Task ExecuteAsync()
+    public async Task ExecuteAsync(CancellationToken cancellationToken = default)
     {
         SeekerConfig config = await _dataContext.SeekerConfigs
             .AsNoTracking()
@@ -64,7 +64,7 @@ public sealed class Seeker : IHandler
             return;
         }
 
-        await ApplyJitter(config);
+        await ApplyJitter(config, cancellationToken);
 
         bool isDryRun = await _dryRunInterceptor.IsDryRunEnabled();
 
@@ -88,20 +88,20 @@ public sealed class Seeker : IHandler
         await ProcessProactiveSearchAsync(config, isDryRun);
     }
 
-    private async Task ApplyJitter(SeekerConfig config)
+    private async Task ApplyJitter(SeekerConfig config, CancellationToken cancellationToken)
     {
         if (_environment.IsDevelopment())
         {
             return;
         }
-        
+
         int maxJitterSeconds = (int)(config.SearchInterval * 60 * JitterFactor);
         int jitterSeconds = Random.Shared.Next(0, maxJitterSeconds + 1);
 
         if (jitterSeconds > 0)
         {
             _logger.LogDebug("Waiting {Jitter}s before searching", jitterSeconds);
-            await Task.Delay(TimeSpan.FromSeconds(jitterSeconds), _timeProvider);
+            await Task.Delay(TimeSpan.FromSeconds(jitterSeconds), _timeProvider, cancellationToken);
         }
     }
 
