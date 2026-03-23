@@ -77,9 +77,6 @@ export class NavSidebarComponent {
     { label: 'Account', icon: 'tablerUser', route: '/settings/account' },
   ];
 
-  suggestedApps: ExternalLink[] = [
-  ];
-
   onNavItemClick(): void {
     if (this.isMobile()) {
       this.navClicked.emit();
