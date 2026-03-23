@@ -24,14 +24,6 @@ namespace Cleanuparr.Persistence.Migrations.Events
                         .HasColumnType("TEXT")
                         .HasColumnName("id");
 
-                    b.Property<DateTime?>("CompletedAt")
-                        .HasColumnType("TEXT")
-                        .HasColumnName("completed_at");
-
-                    b.Property<Guid?>("CycleRunId")
-                        .HasColumnType("TEXT")
-                        .HasColumnName("cycle_run_id");
-
                     b.Property<string>("Data")
                         .HasColumnType("TEXT")
                         .HasColumnName("data");
@@ -73,10 +65,6 @@ namespace Cleanuparr.Persistence.Migrations.Events
                         .HasColumnType("TEXT")
                         .HasColumnName("message");
 
-                    b.Property<string>("SearchStatus")
-                        .HasColumnType("TEXT")
-                        .HasColumnName("search_status");
-
                     b.Property<string>("Severity")
                         .IsRequired()
                         .HasColumnType("TEXT")
@@ -96,9 +84,6 @@ namespace Cleanuparr.Persistence.Migrations.Events
 
                     b.HasKey("Id")
                         .HasName("pk_events");
-
-                    b.HasIndex("CycleRunId")
-                        .HasDatabaseName("ix_events_cycle_run_id");
 
                     b.HasIndex("DownloadClientType")
                         .HasDatabaseName("ix_events_download_client_type");
