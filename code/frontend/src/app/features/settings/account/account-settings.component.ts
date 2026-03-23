@@ -19,7 +19,7 @@ import { QRCodeComponent } from 'angularx-qrcode';
   standalone: true,
   imports: [
     PageHeaderComponent, CardComponent, ButtonComponent, InputComponent,
-    SpinnerComponent, AccordionComponent, ToggleComponent,
+    SpinnerComponent, ToggleComponent,
     EmptyStateComponent, LoadingStateComponent, QRCodeComponent, LabelComponent,
   ],
   templateUrl: './account-settings.component.html',

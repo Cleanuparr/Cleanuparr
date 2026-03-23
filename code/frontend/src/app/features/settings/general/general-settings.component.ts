@@ -34,7 +34,7 @@ const LOG_LEVEL_OPTIONS: SelectOption[] = [
   standalone: true,
   imports: [
     PageHeaderComponent, CardComponent, ButtonComponent,
-    ToggleComponent, InputComponent, NumberInputComponent, SelectComponent, ChipInputComponent,
+    ToggleComponent, NumberInputComponent, SelectComponent, ChipInputComponent,
     AccordionComponent, EmptyStateComponent, LoadingStateComponent,
   ],
   templateUrl: './general-settings.component.html',
