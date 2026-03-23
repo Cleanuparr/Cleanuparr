@@ -188,25 +188,31 @@ public sealed class CustomFormatScoreSyncer : IHandler
         foreach (SearchableSeries[] chunk in allSeries.Chunk(ChunkSize))
         {
             // Collect all episodes with files for this chunk of series
-            List<(SearchableSeries Series, SearchableEpisode Episode, long FileId)> itemsInChunk = [];
+            List<(SearchableSeries Series, SearchableEpisode Episode, long FileId, int CfScore)> itemsInChunk = [];
 
             foreach (SearchableSeries series in chunk)
             {
                 try
                 {
                     List<SearchableEpisode> episodes = await _sonarrClient.GetEpisodesAsync(arrInstance, series.Id);
-                    int episodesWithFiles = episodes.Count(e => e.HasFile && e.EpisodeFile is not null && e.EpisodeFile.Id > 0);
+                    List<ArrEpisodeFile> episodeFiles = await _sonarrClient.GetEpisodeFilesAsync(arrInstance, series.Id);
 
-                    _logger.LogTrace("[Sonarr] {InstanceName}: series '{SeriesTitle}' (id={SeriesId}) has {TotalEpisodes} episodes, {WithFiles} with files",
-                        arrInstance.Name, series.Title, series.Id, episodes.Count, episodesWithFiles);
+                    // Build a map of fileId -> episode file
+                    Dictionary<long, ArrEpisodeFile> fileMap = episodeFiles.ToDictionary(f => f.Id);
 
+                    // Match episodes to their files via EpisodeFileId
+                    int matched = 0;
                     foreach (SearchableEpisode episode in episodes)
                     {
-                        if (episode.HasFile && episode.EpisodeFile is not null && episode.EpisodeFile.Id > 0)
+                        if (episode.EpisodeFileId > 0 && fileMap.TryGetValue(episode.EpisodeFileId, out ArrEpisodeFile? file))
                         {
-                            itemsInChunk.Add((series, episode, episode.EpisodeFile.Id));
+                            itemsInChunk.Add((series, episode, file.Id, file.CustomFormatScore));
+                            matched++;
                         }
                     }
+
+                    _logger.LogTrace("[Sonarr] {InstanceName}: series '{SeriesTitle}' (id={SeriesId}) has {TotalEpisodes} episodes, {FileCount} files, {Matched} matched",
+                        arrInstance.Name, series.Title, series.Id, episodes.Count, episodeFiles.Count, matched);
                 }
                 catch (Exception ex)
                 {
@@ -225,12 +231,6 @@ public sealed class CustomFormatScoreSyncer : IHandler
                 continue;
             }
 
-            List<long> fileIds = itemsInChunk.Select(x => x.FileId).ToList();
-            Dictionary<long, int> scores = await _sonarrClient.GetEpisodeFileScoresAsync(arrInstance, fileIds);
-
-            _logger.LogTrace("[Sonarr] {InstanceName}: chunk of {FileCount} file IDs returned {ScoreCount} score(s)",
-                arrInstance.Name, fileIds.Count, scores.Count);
-
             List<long> seriesIds = itemsInChunk.Select(x => x.Series.Id).Distinct().ToList();
             Dictionary<(long, long), CustomFormatScoreEntry> existingEntries = await _dataContext.CustomFormatScoreEntries
                 .Where(e => e.ArrInstanceId == arrInstance.Id
@@ -238,16 +238,8 @@ public sealed class CustomFormatScoreSyncer : IHandler
                     && seriesIds.Contains(e.ExternalItemId))
                 .ToDictionaryAsync(e => (e.ExternalItemId, e.EpisodeId));
 
-            foreach ((SearchableSeries series, SearchableEpisode episode, long fileId) in itemsInChunk)
+            foreach ((SearchableSeries series, SearchableEpisode episode, long fileId, int cfScore) in itemsInChunk)
             {
-                if (!scores.TryGetValue(fileId, out int cfScore))
-                {
-                    totalSkipped++;
-                    _logger.LogTrace("[Sonarr] {InstanceName}: skipping '{SeriesTitle}' S{Season:D2}E{Episode:D2} (fileId={FileId}) — no score returned",
-                        arrInstance.Name, series.Title, episode.SeasonNumber, episode.EpisodeNumber, fileId);
-                    continue;
-                }
-
                 profileMap.TryGetValue(series.QualityProfileId, out ArrQualityProfile? profile);
                 int cutoffScore = profile?.CutoffFormatScore ?? 0;
                 string profileName = profile?.Name ?? "Unknown";
@@ -265,7 +257,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
 
         await CleanupStaleEntriesAsync(arrInstance.Id, InstanceType.Sonarr, syncStartTime);
 
-        _logger.LogInformation("[Sonarr] Synced CF scores for {Count} episodes on {InstanceName} ({Skipped} skipped — no score returned)",
+        _logger.LogInformation("[Sonarr] Synced CF scores for {Count} episodes on {InstanceName} ({Skipped} skipped)",
             totalSynced, arrInstance.Name, totalSkipped);
     }
 

@@ -15,6 +15,4 @@ public sealed record SearchableEpisode
     public bool HasFile { get; init; }
 
     public long EpisodeFileId { get; init; }
-
-    public EpisodeFileInfo? EpisodeFile { get; init; }
 }
