@@ -467,13 +467,15 @@ public sealed class Seeker : IHandler
         // Drill down to find the first series with qualifying unsearched seasons
         foreach (long seriesId in candidateIds)
         {
+            string seriesTitle = string.Empty;
+            
             try
             {
                 List<SeekerHistory> seriesHistory = currentCycleHistory
                     .Where(h => h.ExternalItemId == seriesId)
                     .ToList();
 
-                string seriesTitle = candidates.First(s => s.Id == seriesId).Title;
+                seriesTitle = candidates.First(s => s.Id == seriesId).Title;
 
                 (SeriesSearchItem? searchItem, SearchableEpisode? selectedEpisode) =
                     await BuildSonarrSearchItemAsync(config, arrInstance, seriesId, seriesHistory, seriesTitle);
@@ -486,19 +488,19 @@ public sealed class Seeker : IHandler
                     return ([searchItem], [displayName], allLibraryIds, [seriesId], seasonNumber);
                 }
 
-                _logger.LogDebug("Skipping series {SeriesId} — no qualifying seasons found", seriesId);
+                _logger.LogDebug("Skipping '{SeriesTitle}' — no qualifying seasons found", seriesTitle);
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Failed to check episodes for series {SeriesId}, skipping", seriesId);
+                _logger.LogWarning(ex, "Failed to check episodes for '{SeriesTitle}', skipping", seriesTitle);
             }
         }
 
         // All candidates were tried and none had qualifying unsearched seasons — cycle complete
         if (candidates.Count > 0 && !isRetry)
         {
-            _logger.LogInformation("All series/seasons on {InstanceName} searched in current cycle, starting new cycle",
-                arrInstance.Name);
+            _logger.LogInformation("All {Count} series on {InstanceName} searched in current cycle, starting new cycle",
+                candidates.Count, arrInstance.Name);
             if (!isDryRun)
             {
                 instanceConfig.CurrentRunId = Guid.NewGuid();
