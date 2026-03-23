@@ -228,7 +228,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
                 }
 
                 // Rate limit to avoid overloading the Sonarr API
-                await Task.Delay(Random.Shared.Next(500, 1500), cancellationToken);
+                await Task.Delay(Random.Shared.Next(100, 500), cancellationToken);
             }
 
             if (itemsInChunk.Count == 0)
