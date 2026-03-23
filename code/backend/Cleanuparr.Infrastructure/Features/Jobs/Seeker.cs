@@ -255,7 +255,7 @@ public sealed class Seeker : IHandler
         }
 
         // Update LastProcessedAt so round-robin moves on
-        instanceConfig.LastProcessedAt = DateTime.UtcNow;
+        instanceConfig.LastProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
         _dataContext.SeekerInstanceConfigs.Update(instanceConfig);
         await _dataContext.SaveChangesAsync();
     }
@@ -555,7 +555,7 @@ public sealed class Seeker : IHandler
         // Filter to qualifying episodes — UseCutoff and UseCustomFormatScore are OR-ed.
         // Cutoff status comes from the episodefile endpoint; items without a cached CF score are excluded.
         var qualifying = episodes
-            .Where(e => e.AirDateUtc.HasValue && e.AirDateUtc.Value <= DateTime.UtcNow)
+            .Where(e => e.AirDateUtc.HasValue && e.AirDateUtc.Value <= _timeProvider.GetUtcNow().UtcDateTime)
             .Where(e => !config.MonitoredOnly || e.Monitored)
             .Where(e => !e.HasFile
                 || (!config.UseCutoff && !config.UseCustomFormatScore)
@@ -640,7 +640,7 @@ public sealed class Seeker : IHandler
         int seasonNumber = 0,
         bool isDryRun = false)
     {
-        var now = DateTime.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
 
         for (int i = 0; i < searchedIds.Count; i++)
         {
@@ -750,7 +750,7 @@ public sealed class Seeker : IHandler
     /// </summary>
     private async Task CleanupOldCycleHistoryAsync(Guid arrInstanceId, Guid currentRunId)
     {
-        DateTime cutoff = DateTime.UtcNow.AddDays(-30);
+        DateTime cutoff = _timeProvider.GetUtcNow().UtcDateTime.AddDays(-30);
 
         int deleted = await _dataContext.SeekerHistory
             .Where(h => h.ArrInstanceId == arrInstanceId

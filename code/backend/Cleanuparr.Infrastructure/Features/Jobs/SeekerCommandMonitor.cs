@@ -25,13 +25,16 @@ public class SeekerCommandMonitor : BackgroundService
 
     private readonly ILogger<SeekerCommandMonitor> _logger;
     private readonly IServiceScopeFactory _scopeFactory;
+    private readonly TimeProvider _timeProvider;
 
     public SeekerCommandMonitor(
         ILogger<SeekerCommandMonitor> logger,
-        IServiceScopeFactory scopeFactory)
+        IServiceScopeFactory scopeFactory,
+        TimeProvider timeProvider)
     {
         _logger = logger;
         _scopeFactory = scopeFactory;
+        _timeProvider = timeProvider;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -80,7 +83,7 @@ public class SeekerCommandMonitor : BackgroundService
 
         // Handle timed-out commands
         var timedOut = pendingTrackers
-            .Where(t => DateTime.UtcNow - t.CreatedAt > CommandTimeout)
+            .Where(t => _timeProvider.GetUtcNow().UtcDateTime - t.CreatedAt > CommandTimeout)
             .ToList();
 
         foreach (var tracker in timedOut)

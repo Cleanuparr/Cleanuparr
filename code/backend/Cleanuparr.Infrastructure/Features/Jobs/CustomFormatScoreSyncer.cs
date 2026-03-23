@@ -23,17 +23,20 @@ public sealed class CustomFormatScoreSyncer : IHandler
     private readonly DataContext _dataContext;
     private readonly IRadarrClient _radarrClient;
     private readonly ISonarrClient _sonarrClient;
+    private readonly TimeProvider _timeProvider;
 
     public CustomFormatScoreSyncer(
         ILogger<CustomFormatScoreSyncer> logger,
         DataContext dataContext,
         IRadarrClient radarrClient,
-        ISonarrClient sonarrClient)
+        ISonarrClient sonarrClient,
+        TimeProvider timeProvider)
     {
         _logger = logger;
         _dataContext = dataContext;
         _radarrClient = radarrClient;
         _sonarrClient = sonarrClient;
+        _timeProvider = timeProvider;
     }
 
     public async Task ExecuteAsync()
@@ -120,7 +123,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
         _logger.LogTrace("[Radarr] {InstanceName}: found {TotalMovies} total movies, {WithFiles} with files",
             arrInstance.Name, allMovies.Count, moviesWithFiles.Count);
 
-        DateTime syncStartTime = DateTime.UtcNow;
+        DateTime syncStartTime = _timeProvider.GetUtcNow().UtcDateTime;
         int totalSynced = 0;
         int totalSkipped = 0;
 
@@ -181,7 +184,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
         _logger.LogTrace("[Sonarr] {InstanceName}: found {SeriesCount} total series",
             arrInstance.Name, allSeries.Count);
 
-        DateTime syncStartTime = DateTime.UtcNow;
+        DateTime syncStartTime = _timeProvider.GetUtcNow().UtcDateTime;
         int totalSynced = 0;
         int totalSkipped = 0;
 
@@ -377,7 +380,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
     /// </summary>
     private async Task CleanupOldHistoryAsync()
     {
-        DateTime threshold = DateTime.UtcNow - HistoryRetention;
+        DateTime threshold = _timeProvider.GetUtcNow().UtcDateTime - HistoryRetention;
         int deleted = await _dataContext.CustomFormatScoreHistory
             .Where(h => h.RecordedAt < threshold)
             .ExecuteDeleteAsync();
