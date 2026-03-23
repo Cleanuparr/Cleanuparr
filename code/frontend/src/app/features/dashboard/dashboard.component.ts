@@ -275,4 +275,10 @@ export class DashboardComponent implements OnInit {
   formatStrikeType(type: string): string {
     return type.replace(/([A-Z])/g, ' $1').trim();
   }
+
+  instanceTypeSeverity(type: string): 'info' | 'warning' | 'default' {
+    if (type === 'Radarr') return 'warning';
+    if (type === 'Sonarr') return 'info';
+    return 'default';
+  }
 }

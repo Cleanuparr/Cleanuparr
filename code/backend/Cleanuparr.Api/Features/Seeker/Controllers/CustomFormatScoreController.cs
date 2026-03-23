@@ -218,6 +218,46 @@ public sealed class CustomFormatScoreController : ControllerBase
 
         double avgScore = entries.Count > 0 ? entries.Average(e => e.CurrentScore) : 0;
 
+        // Per-instance stats
+        var instanceIds = entries.Select(e => e.ArrInstanceId).Distinct().ToList();
+        var instances = await _dataContext.ArrInstances
+            .AsNoTracking()
+            .Include(a => a.ArrConfig)
+            .Where(a => instanceIds.Contains(a.Id))
+            .ToListAsync();
+
+        var perInstanceStats = instanceIds.Select(instanceId =>
+        {
+            var instanceEntries = entries.Where(e => e.ArrInstanceId == instanceId).ToList();
+            int instTracked = instanceEntries.Count;
+            int instBelow = instanceEntries.Count(e => e.CurrentScore < e.CutoffScore);
+
+            int instUpgrades = 0;
+            var instHistory = recentGrouped
+                .Where(g => g.Key.ArrInstanceId == instanceId);
+            foreach (var group in instHistory)
+            {
+                var ordered = group.OrderBy(h => h.RecordedAt).ToList();
+                for (int i = 1; i < ordered.Count; i++)
+                {
+                    if (ordered[i].Score > ordered[i - 1].Score)
+                        instUpgrades++;
+                }
+            }
+
+            var instance = instances.FirstOrDefault(a => a.Id == instanceId);
+            return new InstanceCfScoreStat
+            {
+                InstanceId = instanceId,
+                InstanceName = instance?.Name ?? "Unknown",
+                InstanceType = instance?.ArrConfig.Type.ToString() ?? "Unknown",
+                TotalTracked = instTracked,
+                BelowCutoff = instBelow,
+                AtOrAboveCutoff = instTracked - instBelow,
+                RecentUpgrades = instUpgrades,
+            };
+        }).OrderBy(s => s.InstanceName).ToList();
+
         return Ok(new CustomFormatScoreStatsResponse
         {
             TotalTracked = totalTracked,
@@ -225,6 +265,7 @@ public sealed class CustomFormatScoreController : ControllerBase
             AtOrAboveCutoff = atOrAboveCutoff,
             RecentUpgrades = recentUpgrades,
             AverageScore = Math.Round(avgScore, 1),
+            PerInstanceStats = perInstanceStats,
         });
     }
 

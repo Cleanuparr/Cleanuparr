@@ -172,6 +172,48 @@
   &__stat-value { font-size: var(--font-size-xl); font-weight: 700; color: var(--text-primary); font-variant-numeric: tabular-nums; }
   &__stat-label { font-size: var(--font-size-xs); color: var(--text-tertiary); }
 
+  &__instances {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: var(--space-3);
+    margin-bottom: var(--space-4);
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--divider);
+  }
+
+  &__instance {
+    padding: var(--space-3);
+    border-radius: var(--radius-md);
+    background: rgba(255, 255, 255, 0.03);
+  }
+
+  &__instance-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-bottom: var(--space-2);
+  }
+
+  &__instance-name {
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  &__instance-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+
+  &__instance-stat {
+    font-size: var(--font-size-xs);
+    color: var(--text-tertiary);
+    &--warning { color: var(--color-warning); }
+    &--success { color: var(--color-success); }
+    &--info { color: var(--color-info); }
+  }
+
   &__upgrades { border-top: 1px solid var(--divider); padding-top: var(--space-3); }
   &__upgrades-title { font-size: var(--font-size-sm); font-weight: 600; color: var(--text-secondary); margin-bottom: var(--space-2); }
   &__upgrade-item { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) 0; &:not(:last-child) { border-bottom: 1px solid var(--divider); } }

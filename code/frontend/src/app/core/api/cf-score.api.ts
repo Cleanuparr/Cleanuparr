@@ -8,6 +8,17 @@ export interface CfScoreStats {
   atOrAboveCutoff: number;
   recentUpgrades: number;
   averageScore: number;
+  perInstanceStats: InstanceCfScoreStat[];
+}
+
+export interface InstanceCfScoreStat {
+  instanceId: string;
+  instanceName: string;
+  instanceType: string;
+  totalTracked: number;
+  belowCutoff: number;
+  atOrAboveCutoff: number;
+  recentUpgrades: number;
 }
 
 export interface CfScoreUpgrade {
