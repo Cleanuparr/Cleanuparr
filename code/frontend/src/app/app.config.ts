@@ -50,6 +50,7 @@ import {
   tablerSearch,
   tablerChartDots,
   tablerHistory,
+  tablerGripVertical,
 } from '@ng-icons/tabler-icons';
 
 import { routes } from './app.routes';
@@ -110,6 +111,7 @@ export const appConfig: ApplicationConfig = {
       tablerSearch,
       tablerChartDots,
       tablerHistory,
+      tablerGripVertical,
     }),
   ],
 };

@@ -109,8 +109,25 @@
   100% { transform: scale(1.15); }
 }
 
-// Dashboard grid
-.dashboard-grid {
+// Dashboard rows (drag-and-drop)
+.dashboard-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.dashboard-row {
+  min-width: 0;
+  animation: slide-up var(--duration-normal) var(--ease-default) both;
+
+  &:nth-child(1) { animation-delay: 0ms; }
+  &:nth-child(2) { animation-delay: 80ms; }
+  &:nth-child(3) { animation-delay: 160ms; }
+  &:nth-child(4) { animation-delay: 240ms; }
+}
+
+// Logs + Events side-by-side row
+.logs-events-row {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: var(--space-6);
@@ -118,30 +135,45 @@
   @media (max-width: 1024px) {
     grid-template-columns: 1fr;
   }
+}
 
-  &__strikes {
-    grid-column: 1 / -1;
+// Drag handle icon inside card headers
+.drag-handle__icon {
+  font-size: 18px;
+  color: var(--text-secondary);
+  cursor: grab;
+  opacity: 0.6;
+  flex-shrink: 0;
+  transition: opacity var(--duration-fast) var(--ease-default), color var(--duration-fast) var(--ease-default);
+
+  &:hover {
+    opacity: 1;
+    color: var(--text-primary);
   }
 
-  &__cf-scores {
-    grid-column: 1 / -1;
+  &:active {
+    cursor: grabbing;
   }
+}
 
-  &__jobs {
-    grid-column: 1 / -1;
-  }
+// CDK drag-and-drop styles
+.cdk-drag-preview {
+  border-radius: var(--radius-lg);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+  opacity: 0.9;
+  cursor: grabbing;
+}
 
-  // Staggered entrance animations
-  > app-card {
-    min-width: 0; // Allow grid items to shrink below content size
-    animation: slide-up var(--duration-normal) var(--ease-default) both;
+.cdk-drag-placeholder {
+  opacity: 0;
+}
 
-    &:nth-child(1) { animation-delay: 0ms; }
-    &:nth-child(2) { animation-delay: 80ms; }
-    &:nth-child(3) { animation-delay: 160ms; }
-    &:nth-child(4) { animation-delay: 240ms; }
-    &:nth-child(5) { animation-delay: 320ms; }
-  }
+.cdk-drag-animating {
+  transition: transform 250ms var(--ease-default);
+}
+
+.dashboard-rows.cdk-drop-list-dragging .dashboard-row:not(.cdk-drag-placeholder) {
+  transition: transform 250ms var(--ease-default);
 }
 
 // CF Scores card
