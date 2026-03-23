@@ -136,14 +136,13 @@ public class ReadarrClient : ArrClient, IReadarrClient
     {
         UriBuilder uriBuilder = new(arrInstance.Url);
         uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/v1/book/{bookId}";
-        
+
         using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
         SetApiKey(request, arrInstance.ApiKey);
 
-        using HttpResponseMessage response = await _httpClient.SendAsync(request);
+        using HttpResponseMessage response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
         response.EnsureSuccessStatusCode();
-                
-        string responseBody = await response.Content.ReadAsStringAsync();
-        return JsonConvert.DeserializeObject<Book>(responseBody);
+
+        return await DeserializeStreamAsync<Book>(response);
     }
 } 

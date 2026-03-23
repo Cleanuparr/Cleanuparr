@@ -139,15 +139,14 @@ public class LidarrClient : ArrClient, ILidarrClient
         UriBuilder uriBuilder = new(arrInstance.Url);
         uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/v1/album";
         uriBuilder.Query = string.Join('&', albumIds.Select(x => $"albumIds={x}"));
-        
+
         using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
         SetApiKey(request, arrInstance.ApiKey);
 
-        using var response = await _httpClient.SendAsync(request);
+        using HttpResponseMessage response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
         response.EnsureSuccessStatusCode();
 
-        string responseBody = await response.Content.ReadAsStringAsync();
-        return JsonConvert.DeserializeObject<List<Album>>(responseBody);
+        return await DeserializeStreamAsync<List<Album>>(response);
     }
 
     private List<LidarrCommand> GetSearchCommands(HashSet<SearchItem> items)

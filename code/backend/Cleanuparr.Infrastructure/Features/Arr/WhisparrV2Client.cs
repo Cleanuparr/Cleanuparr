@@ -206,10 +206,10 @@ public class WhisparrV2Client : ArrClient, IWhisparrV2Client
         using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
         SetApiKey(request, arrInstance.ApiKey);
 
-        HttpResponseMessage response = await SendRequestAsync(request);
-        string responseContent = await response.Content.ReadAsStringAsync();
+        using HttpResponseMessage response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+        response.EnsureSuccessStatusCode();
 
-        return JsonConvert.DeserializeObject<List<Episode>>(responseContent);
+        return await DeserializeStreamAsync<List<Episode>>(response);
     }
 
     private async Task<Series?> GetSeriesAsync(ArrInstance arrInstance, long seriesId)
@@ -220,10 +220,10 @@ public class WhisparrV2Client : ArrClient, IWhisparrV2Client
         using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
         SetApiKey(request, arrInstance.ApiKey);
 
-        HttpResponseMessage response = await SendRequestAsync(request);
-        string responseContent = await response.Content.ReadAsStringAsync();
+        using HttpResponseMessage response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+        response.EnsureSuccessStatusCode();
 
-        return JsonConvert.DeserializeObject<Series>(responseContent);
+        return await DeserializeStreamAsync<Series>(response);
     }
 
     private List<WhisparrV2Command> GetSearchCommands(HashSet<SeriesSearchItem> items)

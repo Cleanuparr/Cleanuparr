@@ -42,8 +42,8 @@ public abstract class ArrClient : IArrClient
 
         using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
         SetApiKey(request, arrInstance.ApiKey);
-        
-        using HttpResponseMessage response = await _httpClient.SendAsync(request);
+
+        using HttpResponseMessage response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
 
         try
         {
@@ -54,13 +54,12 @@ public abstract class ArrClient : IArrClient
             _logger.LogError("queue list failed | {uri}", uriBuilder.Uri);
             throw;
         }
-        
-        string responseBody = await response.Content.ReadAsStringAsync();
-        QueueListResponse? queueResponse = JsonConvert.DeserializeObject<QueueListResponse>(responseBody);
+
+        QueueListResponse? queueResponse = await DeserializeStreamAsync<QueueListResponse>(response);
 
         if (queueResponse is null)
         {
-            throw new Exception($"unrecognized queue list response | {uriBuilder.Uri} | {responseBody}");
+            throw new Exception($"unrecognized queue list response | {uriBuilder.Uri}");
         }
 
         return queueResponse;
@@ -236,11 +235,10 @@ public abstract class ArrClient : IArrClient
         using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
         SetApiKey(request, arrInstance.ApiKey);
 
-        using HttpResponseMessage response = await _httpClient.SendAsync(request);
+        using HttpResponseMessage response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
         response.EnsureSuccessStatusCode();
 
-        string responseBody = await response.Content.ReadAsStringAsync();
-        var result = JsonConvert.DeserializeObject<ArrCommandStatus>(responseBody);
+        var result = await DeserializeStreamAsync<ArrCommandStatus>(response);
 
         return result ?? new ArrCommandStatus(commandId, "unknown", null);
     }
@@ -269,6 +267,26 @@ public abstract class ArrClient : IArrClient
         return response;
     }
     
+    protected static async Task<T?> DeserializeStreamAsync<T>(HttpResponseMessage response)
+    {
+        using Stream stream = await response.Content.ReadAsStreamAsync();
+        using StreamReader sr = new(stream);
+        using JsonTextReader reader = new(sr);
+        return JsonSerializer.CreateDefault().Deserialize<T>(reader);
+    }
+
+    protected static async Task<long?> ReadCommandIdAsync(HttpResponseMessage response)
+    {
+        CommandIdResponse? result = await DeserializeStreamAsync<CommandIdResponse>(response);
+        return result?.Id;
+    }
+
+    private sealed class CommandIdResponse
+    {
+        [JsonProperty("id")]
+        public long? Id { get; init; }
+    }
+
     /// <summary>
     /// Determines whether the failed import record should be skipped
     /// </summary>

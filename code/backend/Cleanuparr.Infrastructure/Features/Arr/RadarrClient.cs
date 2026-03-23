@@ -88,10 +88,8 @@ public class RadarrClient : ArrClient, IRadarrClient
                 return [];
             }
 
-            string responseBody = await response.Content.ReadAsStringAsync();
+            long? commandId = await ReadCommandIdAsync(response);
             response.Dispose();
-
-            long? commandId = JsonConvert.DeserializeObject<dynamic>(responseBody)?.id;
 
             _logger.LogInformation("{log}", GetSearchLog(arrInstance.Url, command, true, logContext));
 
@@ -168,11 +166,10 @@ public class RadarrClient : ArrClient, IRadarrClient
         using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
         SetApiKey(request, arrInstance.ApiKey);
 
-        using HttpResponseMessage response = await _httpClient.SendAsync(request);
+        using HttpResponseMessage response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
         response.EnsureSuccessStatusCode();
 
-        string responseBody = await response.Content.ReadAsStringAsync();
-        return JsonConvert.DeserializeObject<List<ArrQualityProfile>>(responseBody) ?? [];
+        return await DeserializeStreamAsync<List<ArrQualityProfile>>(response) ?? [];
     }
 
     public async Task<Dictionary<long, int>> GetMovieFileScoresAsync(ArrInstance arrInstance, List<long> movieFileIds)
@@ -189,11 +186,10 @@ public class RadarrClient : ArrClient, IRadarrClient
             using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
             SetApiKey(request, arrInstance.ApiKey);
 
-            using HttpResponseMessage response = await _httpClient.SendAsync(request);
+            using HttpResponseMessage response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
             response.EnsureSuccessStatusCode();
 
-            string responseBody = await response.Content.ReadAsStringAsync();
-            List<MediaFileScore> files = JsonConvert.DeserializeObject<List<MediaFileScore>>(responseBody) ?? [];
+            List<MediaFileScore> files = await DeserializeStreamAsync<List<MediaFileScore>>(response) ?? [];
 
             foreach (MediaFileScore file in files)
             {
@@ -208,14 +204,13 @@ public class RadarrClient : ArrClient, IRadarrClient
     {
         UriBuilder uriBuilder = new(arrInstance.Url);
         uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/v3/movie/{movieId}";
-        
+
         using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
         SetApiKey(request, arrInstance.ApiKey);
 
-        using HttpResponseMessage response = await _httpClient.SendAsync(request);
+        using HttpResponseMessage response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
         response.EnsureSuccessStatusCode();
-                
-        string responseBody = await response.Content.ReadAsStringAsync();
-        return JsonConvert.DeserializeObject<Movie>(responseBody);
+
+        return await DeserializeStreamAsync<Movie>(response);
     }
 }

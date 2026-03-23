@@ -137,14 +137,13 @@ public class WhisparrV3Client : ArrClient, IWhisparrV3Client
     {
         UriBuilder uriBuilder = new(arrInstance.Url);
         uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/v3/movie/{movieId}";
-        
+
         using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
         SetApiKey(request, arrInstance.ApiKey);
 
-        using HttpResponseMessage response = await _httpClient.SendAsync(request);
+        using HttpResponseMessage response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
         response.EnsureSuccessStatusCode();
-                
-        string responseBody = await response.Content.ReadAsStringAsync();
-        return JsonConvert.DeserializeObject<Movie>(responseBody);
+
+        return await DeserializeStreamAsync<Movie>(response);
     }
 } 

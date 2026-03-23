@@ -83,10 +83,9 @@ public class SonarrClient : ArrClient, ISonarrClient
 
                 if (response is not null)
                 {
-                    string responseBody = await response.Content.ReadAsStringAsync();
+                    long? commandId = await ReadCommandIdAsync(response);
                     response.Dispose();
 
-                    long? commandId = JsonConvert.DeserializeObject<dynamic>(responseBody)?.id;
                     if (commandId.HasValue)
                     {
                         commandIds.Add(commandId.Value);
@@ -237,11 +236,10 @@ public class SonarrClient : ArrClient, ISonarrClient
         using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
         SetApiKey(request, arrInstance.ApiKey);
 
-        using HttpResponseMessage response = await _httpClient.SendAsync(request);
+        using HttpResponseMessage response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
         response.EnsureSuccessStatusCode();
 
-        string responseBody = await response.Content.ReadAsStringAsync();
-        return JsonConvert.DeserializeObject<List<SearchableEpisode>>(responseBody) ?? [];
+        return await DeserializeStreamAsync<List<SearchableEpisode>>(response) ?? [];
     }
 
     public async Task<List<ArrEpisodeFile>> GetEpisodeFilesAsync(ArrInstance arrInstance, long seriesId)
@@ -253,11 +251,10 @@ public class SonarrClient : ArrClient, ISonarrClient
         using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
         SetApiKey(request, arrInstance.ApiKey);
 
-        using HttpResponseMessage response = await _httpClient.SendAsync(request);
+        using HttpResponseMessage response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
         response.EnsureSuccessStatusCode();
 
-        string responseBody = await response.Content.ReadAsStringAsync();
-        return JsonConvert.DeserializeObject<List<ArrEpisodeFile>>(responseBody) ?? [];
+        return await DeserializeStreamAsync<List<ArrEpisodeFile>>(response) ?? [];
     }
 
     public async Task<List<ArrQualityProfile>> GetQualityProfilesAsync(ArrInstance arrInstance)
@@ -268,11 +265,10 @@ public class SonarrClient : ArrClient, ISonarrClient
         using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
         SetApiKey(request, arrInstance.ApiKey);
 
-        using HttpResponseMessage response = await _httpClient.SendAsync(request);
+        using HttpResponseMessage response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
         response.EnsureSuccessStatusCode();
 
-        string responseBody = await response.Content.ReadAsStringAsync();
-        return JsonConvert.DeserializeObject<List<ArrQualityProfile>>(responseBody) ?? [];
+        return await DeserializeStreamAsync<List<ArrQualityProfile>>(response) ?? [];
     }
 
     public async Task<Dictionary<long, int>> GetEpisodeFileScoresAsync(ArrInstance arrInstance, List<long> episodeFileIds)
@@ -289,11 +285,10 @@ public class SonarrClient : ArrClient, ISonarrClient
             using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
             SetApiKey(request, arrInstance.ApiKey);
 
-            using HttpResponseMessage response = await _httpClient.SendAsync(request);
+            using HttpResponseMessage response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
             response.EnsureSuccessStatusCode();
 
-            string responseBody = await response.Content.ReadAsStringAsync();
-            List<MediaFileScore> files = JsonConvert.DeserializeObject<List<MediaFileScore>>(responseBody) ?? [];
+            List<MediaFileScore> files = await DeserializeStreamAsync<List<MediaFileScore>>(response) ?? [];
 
             foreach (MediaFileScore file in files)
             {
@@ -309,30 +304,28 @@ public class SonarrClient : ArrClient, ISonarrClient
         UriBuilder uriBuilder = new(arrInstance.Url);
         uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/v3/episode";
         uriBuilder.Query = string.Join('&', episodeIds.Select(x => $"episodeIds={x}"));
-        
+
         using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
         SetApiKey(request, arrInstance.ApiKey);
 
-        using HttpResponseMessage response = await _httpClient.SendAsync(request);
+        using HttpResponseMessage response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
         response.EnsureSuccessStatusCode();
-                
-        string responseBody = await response.Content.ReadAsStringAsync();
-        return JsonConvert.DeserializeObject<List<Episode>>(responseBody);
+
+        return await DeserializeStreamAsync<List<Episode>>(response);
     }
 
     private async Task<Series?> GetSeriesAsync(ArrInstance arrInstance, long seriesId)
     {
         UriBuilder uriBuilder = new(arrInstance.Url);
         uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/v3/series/{seriesId}";
-        
+
         using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
         SetApiKey(request, arrInstance.ApiKey);
 
-        using HttpResponseMessage response = await _httpClient.SendAsync(request);
+        using HttpResponseMessage response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
         response.EnsureSuccessStatusCode();
-                
-        string responseBody = await response.Content.ReadAsStringAsync();
-        return JsonConvert.DeserializeObject<Series>(responseBody);
+
+        return await DeserializeStreamAsync<Series>(response);
     }
 
     private List<SonarrCommand> GetSearchCommands(HashSet<SeriesSearchItem> items)
