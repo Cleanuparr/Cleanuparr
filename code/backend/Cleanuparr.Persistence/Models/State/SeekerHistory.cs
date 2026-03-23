@@ -60,4 +60,9 @@ public sealed record SeekerHistory
     /// Running count of how many times this item has been searched
     /// </summary>
     public int SearchCount { get; set; } = 1;
+
+    /// <summary>
+    /// Whether this history entry was created during a dry run
+    /// </summary>
+    public bool IsDryRun { get; set; }
 }

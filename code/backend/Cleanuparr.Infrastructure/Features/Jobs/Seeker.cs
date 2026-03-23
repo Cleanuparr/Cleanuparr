@@ -325,11 +325,11 @@ public sealed class Seeker : IHandler
         _logger.LogInformation("Searched {Count} items on {InstanceName}: {Items}",
             searchItems.Count, arrInstance.Name, string.Join(", ", selectedNames));
 
+        // Update search history (always, so stats are accurate during dry run)
+        await UpdateSearchHistoryAsync(arrInstance.Id, instanceType, instanceConfig.CurrentRunId, historyIds, selectedNames, seasonNumber, isDryRun);
+
         if (!isDryRun)
         {
-            // Update search history
-            await UpdateSearchHistoryAsync(arrInstance.Id, instanceType, instanceConfig.CurrentRunId, historyIds, selectedNames, seasonNumber);
-
             // Track commands
             long externalItemId = historyIds.FirstOrDefault();
             string itemTitle = selectedNames.FirstOrDefault() ?? string.Empty;
@@ -635,7 +635,8 @@ public sealed class Seeker : IHandler
         Guid runId,
         List<long> searchedIds,
         List<string>? itemTitles = null,
-        int seasonNumber = 0)
+        int seasonNumber = 0,
+        bool isDryRun = false)
     {
         var now = DateTime.UtcNow;
 
@@ -672,6 +673,7 @@ public sealed class Seeker : IHandler
                     RunId = runId,
                     LastSearchedAt = now,
                     ItemTitle = title,
+                    IsDryRun = isDryRun,
                 });
             }
         }
