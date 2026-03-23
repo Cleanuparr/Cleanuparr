@@ -1,4 +1,12 @@
-<span class="tooltip-wrapper">
+<span class="tooltip-wrapper" #wrapper>
   <ng-content />
-  <span class="tooltip-bubble" [class]="'tooltip-bubble--' + position()">{{ text() }}</span>
+  <span
+    #bubble
+    class="tooltip-bubble"
+    [class.tooltip-bubble--top]="resolvedPosition() === 'top'"
+    [class.tooltip-bubble--bottom]="resolvedPosition() === 'bottom'"
+    [class.tooltip-bubble--left]="resolvedPosition() === 'left'"
+    [class.tooltip-bubble--right]="resolvedPosition() === 'right'"
+    [class.tooltip-bubble--visible]="visible()"
+  >{{ text() }}</span>
 </span>

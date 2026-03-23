@@ -94,6 +94,13 @@
 }
 
 .instance-card {
+  position: relative;
+  z-index: 0;
+
+  &:has(.tooltip-bubble--visible) {
+    z-index: 1;
+  }
+
   &__header {
     display: flex;
     align-items: center;
