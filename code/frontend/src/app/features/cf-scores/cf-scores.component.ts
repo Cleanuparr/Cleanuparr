@@ -4,7 +4,7 @@ import { NgIcon } from '@ng-icons/core';
 import { PageHeaderComponent } from '@layout/page-header/page-header.component';
 import {
   CardComponent, BadgeComponent, ButtonComponent, InputComponent,
-  PaginatorComponent, EmptyStateComponent, SelectComponent,
+  PaginatorComponent, EmptyStateComponent, SelectComponent, ToggleComponent,
 } from '@ui';
 import type { SelectOption } from '@ui';
 import { AnimatedCounterComponent } from '@ui/animated-counter/animated-counter.component';
@@ -27,6 +27,7 @@ const POLL_INTERVAL_MS = 10_000;
     ButtonComponent,
     InputComponent,
     SelectComponent,
+    ToggleComponent,
     PaginatorComponent,
     EmptyStateComponent,
     AnimatedCounterComponent,
@@ -51,6 +52,13 @@ export class CfScoresComponent implements OnInit, OnDestroy {
   readonly selectedInstanceId = signal<string>('');
   readonly instanceOptions = signal<SelectOption[]>([]);
 
+  readonly sortBy = signal<string>('title');
+  readonly hideMet = signal(false);
+  readonly sortOptions: SelectOption[] = [
+    { label: 'Title', value: 'title' },
+    { label: 'Last Synced', value: 'date' },
+  ];
+
   readonly expandedId = signal<string | null>(null);
   readonly historyEntries = signal<CfScoreHistoryEntry[]>([]);
   readonly historyLoading = signal(false);
@@ -73,7 +81,7 @@ export class CfScoresComponent implements OnInit, OnDestroy {
 
   loadScores(): void {
     this.loading.set(true);
-    this.api.getScores(this.currentPage(), this.pageSize(), this.searchQuery() || undefined, this.selectedInstanceId() || undefined).subscribe({
+    this.api.getScores(this.currentPage(), this.pageSize(), this.searchQuery() || undefined, this.selectedInstanceId() || undefined, this.sortBy(), this.hideMet()).subscribe({
       next: (result) => {
         this.items.set(result.items);
         this.totalRecords.set(result.totalCount);
@@ -113,6 +121,18 @@ export class CfScoresComponent implements OnInit, OnDestroy {
   }
 
   onFilterChange(): void {
+    this.currentPage.set(1);
+    this.loadScores();
+  }
+
+  onSortChange(value: string): void {
+    this.sortBy.set(value);
+    this.currentPage.set(1);
+    this.loadScores();
+  }
+
+  onHideMetChange(value: boolean): void {
+    this.hideMet.set(value);
     this.currentPage.set(1);
     this.loadScores();
   }

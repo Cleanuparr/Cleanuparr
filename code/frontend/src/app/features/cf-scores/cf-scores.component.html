@@ -19,6 +19,16 @@
         [(value)]="searchQuery"
         (blurred)="onFilterChange()"
       />
+      <app-select
+        [value]="sortBy()"
+        [options]="sortOptions"
+        (valueChange)="onSortChange($any($event))"
+      />
+      <app-toggle
+        label="Hide met"
+        [checked]="hideMet()"
+        (checkedChange)="onHideMetChange($event)"
+      />
     </div>
     <div class="toolbar__actions">
       <app-button variant="ghost" size="sm" (clicked)="refresh()">

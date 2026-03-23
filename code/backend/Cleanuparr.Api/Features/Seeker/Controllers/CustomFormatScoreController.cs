@@ -26,7 +26,9 @@ public sealed class CustomFormatScoreController : ControllerBase
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 50,
         [FromQuery] Guid? instanceId = null,
-        [FromQuery] string? search = null)
+        [FromQuery] string? search = null,
+        [FromQuery] string sortBy = "title",
+        [FromQuery] bool hideMet = false)
     {
         if (page < 1) page = 1;
         if (pageSize < 1) pageSize = 50;
@@ -46,10 +48,16 @@ public sealed class CustomFormatScoreController : ControllerBase
             query = query.Where(e => e.Title.Contains(search));
         }
 
+        if (hideMet)
+        {
+            query = query.Where(e => e.CurrentScore < e.CutoffScore);
+        }
+
         int totalCount = await query.CountAsync();
 
-        var items = await query
-            .OrderBy(e => e.Title)
+        var items = await (sortBy == "date"
+                ? query.OrderByDescending(e => e.LastSyncedAt)
+                : query.OrderBy(e => e.Title))
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .Select(e => new CustomFormatScoreEntryResponse

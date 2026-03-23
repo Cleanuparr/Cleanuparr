@@ -94,10 +94,12 @@ export class CfScoreApi {
     });
   }
 
-  getScores(page = 1, pageSize = 50, search?: string, instanceId?: string): Observable<CfScoreEntriesResponse> {
-    const params: Record<string, string | number> = { page, pageSize };
+  getScores(page = 1, pageSize = 50, search?: string, instanceId?: string, sortBy?: string, hideMet?: boolean): Observable<CfScoreEntriesResponse> {
+    const params: Record<string, string | number | boolean> = { page, pageSize };
     if (search) params['search'] = search;
     if (instanceId) params['instanceId'] = instanceId;
+    if (sortBy) params['sortBy'] = sortBy;
+    if (hideMet) params['hideMet'] = true;
     return this.http.get<CfScoreEntriesResponse>('/api/seeker/cf-scores', { params });
   }
 
