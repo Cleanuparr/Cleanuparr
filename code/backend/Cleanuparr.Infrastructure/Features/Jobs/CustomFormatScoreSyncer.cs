@@ -209,6 +209,10 @@ public sealed class CustomFormatScoreSyncer : IHandler
                             itemsInChunk.Add((series, episode, file.Id, file.CustomFormatScore));
                             matched++;
                         }
+                        else if (episode.EpisodeFileId > 0)
+                        {
+                            totalSkipped++;
+                        }
                     }
 
                     _logger.LogTrace("[Sonarr] {InstanceName}: series '{SeriesTitle}' (id={SeriesId}) has {TotalEpisodes} episodes, {FileCount} files, {Matched} matched",
