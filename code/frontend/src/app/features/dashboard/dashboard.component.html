@@ -285,7 +285,7 @@
                       <span class="cf-scores__stat-label">Upgrades (7d)</span>
                     </div>
                   </div>
-                  @if (stats.perInstanceStats.length > 1) {
+                  @if (stats.perInstanceStats.length > 0) {
                     <div class="cf-scores__instances">
                       @for (inst of stats.perInstanceStats; track inst.instanceId) {
                         <div class="cf-scores__instance">
@@ -299,9 +299,7 @@
                             <span class="cf-scores__instance-stat">{{ inst.totalTracked }} tracked</span>
                             <span class="cf-scores__instance-stat cf-scores__instance-stat--warning">{{ inst.belowCutoff }} below</span>
                             <span class="cf-scores__instance-stat cf-scores__instance-stat--success">{{ inst.atOrAboveCutoff }} met</span>
-                            @if (inst.recentUpgrades > 0) {
-                              <span class="cf-scores__instance-stat cf-scores__instance-stat--info">{{ inst.recentUpgrades }} upgrades</span>
-                            }
+                            <span class="cf-scores__instance-stat cf-scores__instance-stat--info">{{ inst.recentUpgrades }} upgrades</span>
                           </div>
                         </div>
                       }
