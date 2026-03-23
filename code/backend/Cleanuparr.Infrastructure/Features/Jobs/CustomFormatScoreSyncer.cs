@@ -5,6 +5,8 @@ using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Cleanuparr.Persistence.Models.Configuration.Seeker;
 using Cleanuparr.Persistence.Models.State;
+using Cleanuparr.Infrastructure.Hubs;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -24,19 +26,22 @@ public sealed class CustomFormatScoreSyncer : IHandler
     private readonly IRadarrClient _radarrClient;
     private readonly ISonarrClient _sonarrClient;
     private readonly TimeProvider _timeProvider;
+    private readonly IHubContext<AppHub> _hubContext;
 
     public CustomFormatScoreSyncer(
         ILogger<CustomFormatScoreSyncer> logger,
         DataContext dataContext,
         IRadarrClient radarrClient,
         ISonarrClient sonarrClient,
-        TimeProvider timeProvider)
+        TimeProvider timeProvider,
+        IHubContext<AppHub> hubContext)
     {
         _logger = logger;
         _dataContext = dataContext;
         _radarrClient = radarrClient;
         _sonarrClient = sonarrClient;
         _timeProvider = timeProvider;
+        _hubContext = hubContext;
     }
 
     public async Task ExecuteAsync(CancellationToken cancellationToken = default)
@@ -85,6 +90,8 @@ public sealed class CustomFormatScoreSyncer : IHandler
         }
 
         await CleanupOldHistoryAsync();
+
+        await _hubContext.Clients.All.SendAsync("CfScoresUpdated");
     }
 
     private async Task SyncInstanceAsync(ArrInstance arrInstance, CancellationToken cancellationToken)

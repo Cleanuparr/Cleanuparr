@@ -114,6 +114,12 @@
     color: var(--text-primary);
   }
 
+  &__warning-icon {
+    color: var(--color-warning);
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+
   &__stats {
     display: flex;
     gap: var(--space-4);

@@ -26,6 +26,8 @@ export class AppHubService extends HubService {
   private readonly _strikes = signal<RecentStrike[]>([]);
   private readonly _jobs = signal<JobInfo[]>([]);
   private readonly _appStatus = signal<AppStatus | null>(null);
+  private readonly _cfScoresVersion = signal(0);
+  private readonly _searchStatsVersion = signal(0);
 
   readonly logs = this._logs.asReadonly();
   readonly events = this._events.asReadonly();
@@ -33,6 +35,8 @@ export class AppHubService extends HubService {
   readonly strikes = this._strikes.asReadonly();
   readonly jobs = this._jobs.asReadonly();
   readonly appStatus = this._appStatus.asReadonly();
+  readonly cfScoresVersion = this._cfScoresVersion.asReadonly();
+  readonly searchStatsVersion = this._searchStatsVersion.asReadonly();
 
   protected registerHandlers(connection: signalR.HubConnection): void {
     // Single log entry
@@ -107,6 +111,16 @@ export class AppHubService extends HubService {
     // App status
     connection.on('AppStatusUpdated', (status: AppStatus) => {
       this._appStatus.set(status);
+    });
+
+    // CF scores refresh
+    connection.on('CfScoresUpdated', () => {
+      this._cfScoresVersion.update(v => v + 1);
+    });
+
+    // Search stats refresh
+    connection.on('SearchStatsUpdated', () => {
+      this._searchStatsVersion.update(v => v + 1);
     });
   }
 

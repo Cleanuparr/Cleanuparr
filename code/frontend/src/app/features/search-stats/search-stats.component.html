@@ -44,6 +44,11 @@
           <app-card class="instance-card">
             <div class="instance-card__header">
               <span class="instance-card__name">{{ inst.instanceName }}</span>
+              @if (instanceHealthWarning(inst); as warning) {
+                <app-tooltip [text]="warning">
+                  <ng-icon name="tablerAlertTriangle" class="instance-card__warning-icon" />
+                </app-tooltip>
+              }
               <app-badge [severity]="instanceTypeSeverity(inst.instanceType)" size="sm">
                 {{ inst.instanceType }}
               </app-badge>

@@ -8,7 +8,9 @@ using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Cleanuparr.Persistence.Models.Configuration.Seeker;
 using Cleanuparr.Persistence.Models.State;
 using Data.Models.Arr;
+using Cleanuparr.Infrastructure.Hubs;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -26,6 +28,7 @@ public class SeekerTests : IDisposable
     private readonly Mock<ISonarrClient> _sonarrClient;
     private readonly Mock<IDryRunInterceptor> _dryRunInterceptor;
     private readonly Mock<IHostingEnvironment> _hostingEnvironment;
+    private readonly Mock<IHubContext<AppHub>> _hubContext;
 
     public SeekerTests(JobHandlerFixture fixture)
     {
@@ -37,6 +40,13 @@ public class SeekerTests : IDisposable
         _sonarrClient = new Mock<ISonarrClient>();
         _dryRunInterceptor = new Mock<IDryRunInterceptor>();
         _hostingEnvironment = new Mock<IHostingEnvironment>();
+        _hubContext = new Mock<IHubContext<AppHub>>();
+
+        // Default: hub context setup
+        var mockClients = new Mock<IHubClients>();
+        var mockClientProxy = new Mock<IClientProxy>();
+        mockClients.Setup(c => c.All).Returns(mockClientProxy.Object);
+        _hubContext.Setup(h => h.Clients).Returns(mockClients.Object);
 
         // Default: development mode (skips jitter)
         _hostingEnvironment.Setup(x => x.EnvironmentName).Returns("Development");
@@ -71,7 +81,8 @@ public class SeekerTests : IDisposable
             _fixture.EventPublisher.Object,
             _dryRunInterceptor.Object,
             _hostingEnvironment.Object,
-            _fixture.TimeProvider
+            _fixture.TimeProvider,
+            _hubContext.Object
         );
     }
 

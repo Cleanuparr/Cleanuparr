@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, inject, signal, OnInit, OnDestroy } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, signal, effect, OnInit } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { NgIcon } from '@ng-icons/core';
 import { PageHeaderComponent } from '@layout/page-header/page-header.component';
@@ -11,9 +11,8 @@ import { AnimatedCounterComponent } from '@ui/animated-counter/animated-counter.
 import {
   CfScoreApi, CfScoreEntry, CfScoreStats, CfScoreHistoryEntry,
 } from '@core/api/cf-score.api';
+import { AppHubService } from '@core/realtime/app-hub.service';
 import { ToastService } from '@core/services/toast.service';
-
-const POLL_INTERVAL_MS = 10_000;
 
 @Component({
   selector: 'app-cf-scores',
@@ -36,10 +35,11 @@ const POLL_INTERVAL_MS = 10_000;
   styleUrl: './cf-scores.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class CfScoresComponent implements OnInit, OnDestroy {
+export class CfScoresComponent implements OnInit {
   private readonly api = inject(CfScoreApi);
+  private readonly hub = inject(AppHubService);
   private readonly toast = inject(ToastService);
-  private pollTimer: ReturnType<typeof setInterval> | null = null;
+  private initialLoad = true;
 
   readonly items = signal<CfScoreEntry[]>([]);
   readonly stats = signal<CfScoreStats | null>(null);
@@ -63,20 +63,22 @@ export class CfScoresComponent implements OnInit, OnDestroy {
   readonly historyEntries = signal<CfScoreHistoryEntry[]>([]);
   readonly historyLoading = signal(false);
 
+  constructor() {
+    effect(() => {
+      this.hub.cfScoresVersion(); // subscribe to changes
+      if (this.initialLoad) {
+        this.initialLoad = false;
+        return;
+      }
+      this.loadScores();
+      this.loadStats();
+    });
+  }
+
   ngOnInit(): void {
     this.loadInstances();
     this.loadScores();
     this.loadStats();
-    this.pollTimer = setInterval(() => {
-      this.loadScores();
-      this.loadStats();
-    }, POLL_INTERVAL_MS);
-  }
-
-  ngOnDestroy(): void {
-    if (this.pollTimer) {
-      clearInterval(this.pollTimer);
-    }
   }
 
   loadScores(): void {
@@ -105,6 +107,7 @@ export class CfScoresComponent implements OnInit, OnDestroy {
           })),
         ]);
       },
+      error: () => this.toast.error('Failed to load instances'),
     });
   }
 
@@ -117,6 +120,7 @@ export class CfScoresComponent implements OnInit, OnDestroy {
   private loadStats(): void {
     this.api.getStats().subscribe({
       next: (stats) => this.stats.set(stats),
+      error: () => this.toast.error('Failed to load CF score stats'),
     });
   }
 

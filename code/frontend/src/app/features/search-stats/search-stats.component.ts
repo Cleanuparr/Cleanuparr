@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, inject, signal, OnInit, OnDestroy } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, signal, effect, OnInit } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { NgIcon } from '@ng-icons/core';
 import { PageHeaderComponent } from '@layout/page-header/page-header.component';
@@ -10,11 +10,10 @@ import type { Tab, SelectOption } from '@ui';
 import type { BadgeSeverity } from '@ui/badge/badge.component';
 import { AnimatedCounterComponent } from '@ui/animated-counter/animated-counter.component';
 import { SearchStatsApi } from '@core/api/search-stats.api';
-import type { SearchStatsSummary, SearchHistoryEntry, SearchEvent } from '@core/models/search-stats.models';
+import type { SearchStatsSummary, SearchHistoryEntry, SearchEvent, InstanceSearchStat } from '@core/models/search-stats.models';
 import { SeekerSearchType } from '@core/models/search-stats.models';
+import { AppHubService } from '@core/realtime/app-hub.service';
 import { ToastService } from '@core/services/toast.service';
-
-const POLL_INTERVAL_MS = 10_000;
 
 type TabId = 'events' | 'items';
 type ItemsSortBy = 'lastSearched' | 'searchCount';
@@ -41,10 +40,11 @@ type CycleFilter = 'current' | 'all';
   styleUrl: './search-stats.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class SearchStatsComponent implements OnInit, OnDestroy {
+export class SearchStatsComponent implements OnInit {
   private readonly api = inject(SearchStatsApi);
+  private readonly hub = inject(AppHubService);
   private readonly toast = inject(ToastService);
-  private pollTimer: ReturnType<typeof setInterval> | null = null;
+  private initialLoad = true;
 
   readonly summary = signal<SearchStatsSummary | null>(null);
   readonly loading = signal(false);
@@ -85,19 +85,21 @@ export class SearchStatsComponent implements OnInit, OnDestroy {
 
   readonly pageSize = signal(50);
 
+  constructor() {
+    effect(() => {
+      this.hub.searchStatsVersion(); // subscribe to changes
+      if (this.initialLoad) {
+        this.initialLoad = false;
+        return;
+      }
+      this.loadSummary();
+      this.loadActiveTab();
+    });
+  }
+
   ngOnInit(): void {
     this.loadSummary();
     this.loadActiveTab();
-    this.pollTimer = setInterval(() => {
-      this.loadSummary();
-      this.loadActiveTab();
-    }, POLL_INTERVAL_MS);
-  }
-
-  ngOnDestroy(): void {
-    if (this.pollTimer) {
-      clearInterval(this.pollTimer);
-    }
   }
 
   onTabChange(tabId: string): void {
@@ -170,6 +172,13 @@ export class SearchStatsComponent implements OnInit, OnDestroy {
     return items.map((i: any) => i.Title || i.title || 'Unknown').join(', ');
   }
 
+  instanceHealthWarning(stat: InstanceSearchStat): string | null {
+    if (!stat.lastSearchedAt && stat.totalSearchCount === 0) {
+      return 'Never searched';
+    }
+    return null;
+  }
+
   private loadSummary(): void {
     this.api.getSummary().subscribe({
       next: (summary) => {
@@ -182,6 +191,7 @@ export class SearchStatsComponent implements OnInit, OnDestroy {
           })),
         ]);
       },
+      error: () => this.toast.error('Failed to load search stats'),
     });
   }
 

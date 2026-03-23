@@ -1,10 +1,12 @@
 using Cleanuparr.Domain.Entities.Arr;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
+using Cleanuparr.Infrastructure.Hubs;
 using Cleanuparr.Infrastructure.Tests.Features.Jobs.TestHelpers;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Cleanuparr.Persistence.Models.Configuration.Seeker;
 using Cleanuparr.Persistence.Models.State;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -20,6 +22,7 @@ public class CustomFormatScoreSyncerTests : IDisposable
     private readonly Mock<ILogger<CustomFormatScoreSyncer>> _logger;
     private readonly Mock<IRadarrClient> _radarrClient;
     private readonly Mock<ISonarrClient> _sonarrClient;
+    private readonly Mock<IHubContext<AppHub>> _hubContext;
 
     public CustomFormatScoreSyncerTests(JobHandlerFixture fixture)
     {
@@ -29,6 +32,12 @@ public class CustomFormatScoreSyncerTests : IDisposable
         _logger = new Mock<ILogger<CustomFormatScoreSyncer>>();
         _radarrClient = new Mock<IRadarrClient>();
         _sonarrClient = new Mock<ISonarrClient>();
+        _hubContext = new Mock<IHubContext<AppHub>>();
+
+        var mockClients = new Mock<IHubClients>();
+        var mockClientProxy = new Mock<IClientProxy>();
+        mockClients.Setup(c => c.All).Returns(mockClientProxy.Object);
+        _hubContext.Setup(h => h.Clients).Returns(mockClients.Object);
     }
 
     public void Dispose()
@@ -43,7 +52,8 @@ public class CustomFormatScoreSyncerTests : IDisposable
             _fixture.DataContext,
             _radarrClient.Object,
             _sonarrClient.Object,
-            _fixture.TimeProvider
+            _fixture.TimeProvider,
+            _hubContext.Object
         );
     }
 
