@@ -4,7 +4,7 @@ import { NgIcon } from '@ng-icons/core';
 import { PageHeaderComponent } from '@layout/page-header/page-header.component';
 import {
   CardComponent, BadgeComponent, ButtonComponent, SelectComponent,
-  PaginatorComponent, EmptyStateComponent, TabsComponent,
+  PaginatorComponent, EmptyStateComponent, TabsComponent, TooltipComponent,
 } from '@ui';
 import type { Tab, SelectOption } from '@ui';
 import type { BadgeSeverity } from '@ui/badge/badge.component';
@@ -35,6 +35,7 @@ type CycleFilter = 'current' | 'all';
     EmptyStateComponent,
     TabsComponent,
     AnimatedCounterComponent,
+    TooltipComponent,
   ],
   templateUrl: './search-stats.component.html',
   styleUrl: './search-stats.component.scss',

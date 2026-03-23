@@ -27,7 +27,9 @@
         <span class="stats-bar__value" [class.stats-bar__value--warning]="stats.pendingReplacementSearches > 0">
           <app-animated-counter [value]="stats.pendingReplacementSearches" [duration]="400" />
         </span>
-        <span class="stats-bar__label">Pending replacement searches</span>
+        <app-tooltip text="Searches queued after a download was removed, waiting to be processed">
+          <span class="stats-bar__label">Pending replacement searches</span>
+        </app-tooltip>
       </div>
       <div class="stats-bar__item">
         <span class="stats-bar__value stats-bar__value--success"><app-animated-counter [value]="stats.enabledInstances" [duration]="400" /></span>
@@ -51,7 +53,9 @@
                 <span class="instance-card__stat-value">
                   {{ inst.cycleItemsSearched }}<span class="instance-card__stat-value--dimmed"> / {{ inst.cycleItemsTotal }}</span>
                 </span>
-                <span class="instance-card__stat-label">Cycle Progress</span>
+                <app-tooltip text="Items searched in the current cycle out of total eligible items">
+                  <span class="instance-card__stat-label">Cycle Progress</span>
+                </app-tooltip>
               </div>
               <div class="instance-card__stat">
                 <span class="instance-card__stat-value">{{ inst.totalSearchCount }}</span>
@@ -61,13 +65,17 @@
                 <span class="instance-card__stat-value instance-card__stat-value--small">
                   {{ inst.lastSearchedAt ? (inst.lastSearchedAt | date:'MM/dd HH:mm') : 'Never' }}
                 </span>
-                <span class="instance-card__stat-label">Last Search</span>
+                <app-tooltip text="When the last search was triggered for this instance">
+                  <span class="instance-card__stat-label">Last Search</span>
+                </app-tooltip>
               </div>
               <div class="instance-card__stat">
                 <span class="instance-card__stat-value instance-card__stat-value--small">
                   {{ inst.currentRunId ? inst.currentRunId.substring(0, 8) : '—' }}
                 </span>
-                <span class="instance-card__stat-label">Cycle ID</span>
+                <app-tooltip text="Unique identifier for the current search cycle. Changes when all items have been searched">
+                  <span class="instance-card__stat-label">Cycle ID</span>
+                </app-tooltip>
               </div>
             </div>
           </app-card>

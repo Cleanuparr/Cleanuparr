@@ -1,0 +1,41 @@
+.tooltip-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  cursor: help;
+
+  &:hover .tooltip-bubble {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.tooltip-bubble {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface-overlay, rgba(30, 20, 50, 0.95));
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-xs);
+  color: var(--text-primary);
+  white-space: nowrap;
+  z-index: var(--z-tooltip);
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity var(--duration-fast) ease, visibility var(--duration-fast) ease, transform var(--duration-fast) ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+
+  &--top {
+    bottom: calc(100% + 6px);
+    top: auto;
+  }
+
+  &--bottom {
+    top: calc(100% + 6px);
+    bottom: auto;
+  }
+}
