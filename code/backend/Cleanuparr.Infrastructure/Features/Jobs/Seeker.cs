@@ -222,7 +222,7 @@ public sealed class Seeker : IHandler
 
         if (instanceConfigs.Count == 0)
         {
-            _logger.LogDebug("All instances are waiting for MinCycleTimeDays to elapse");
+            _logger.LogDebug("All instances are waiting for min cycle time to elapse");
             return;
         }
 
@@ -465,16 +465,26 @@ public sealed class Seeker : IHandler
         bool cycleComplete = candidates.All(m => searchHistory.ContainsKey(m.Id));
         if (cycleComplete)
         {
+            // Respect MinCycleTimeDays even when cycle completes due to queue filtering
+            DateTime? cycleStartedAt = searchHistory.Count > 0 ? searchHistory.Values.Min() : null;
+            if (ShouldWaitForMinCycleTime(instanceConfig, cycleStartedAt))
+            {
+                _logger.LogDebug(
+                    "skip | cycle complete but min time ({Days}) not elapsed (started {StartedAt}) | {InstanceName}",
+                    instanceConfig.MinCycleTimeDays, cycleStartedAt, arrInstance.Name);
+                return ([], [], allLibraryIds);
+            }
+
             _logger.LogInformation("All {Count} items on {InstanceName} searched in current cycle, starting new cycle",
                 candidates.Count, arrInstance.Name);
-            
+
             if (!isDryRun)
             {
                 instanceConfig.CurrentCycleId = Guid.NewGuid();
                 _dataContext.SeekerInstanceConfigs.Update(instanceConfig);
                 await _dataContext.SaveChangesAsync();
             }
-            
+
             searchHistory = new Dictionary<long, DateTime>();
         }
 
@@ -583,6 +593,16 @@ public sealed class Seeker : IHandler
         // All candidates were tried and none had qualifying unsearched seasons — cycle complete
         if (candidates.Count > 0 && !isRetry)
         {
+            // Respect MinCycleTimeDays even when cycle completes due to queue filtering
+            DateTime? cycleStartedAt = seriesSearchHistory.Count > 0 ? seriesSearchHistory.Values.Min() : null;
+            if (ShouldWaitForMinCycleTime(instanceConfig, cycleStartedAt))
+            {
+                _logger.LogDebug(
+                    "skip | cycle complete but min time ({Days}) not elapsed (started {StartedAt}) | {InstanceName}",
+                    instanceConfig.MinCycleTimeDays, cycleStartedAt, arrInstance.Name);
+                return ([], [], allLibraryIds, [], 0);
+            }
+
             _logger.LogInformation("All {Count} series on {InstanceName} searched in current cycle, starting new cycle",
                 candidates.Count, arrInstance.Name);
             if (!isDryRun)
