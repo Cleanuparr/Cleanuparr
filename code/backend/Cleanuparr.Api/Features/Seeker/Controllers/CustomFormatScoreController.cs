@@ -45,7 +45,7 @@ public sealed class CustomFormatScoreController : ControllerBase
 
         if (!string.IsNullOrWhiteSpace(search))
         {
-            query = query.Where(e => e.Title.Contains(search));
+            query = query.Where(e => e.Title.ToLower().Contains(search.ToLower()));
         }
 
         if (hideMet)
