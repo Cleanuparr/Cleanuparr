@@ -310,9 +310,10 @@ public sealed class Seeker : IHandler
             .ToListAsync();
 
         // Load all history for stale cleanup
-        List<SeekerHistory> allHistory = await _dataContext.SeekerHistory
+        List<long> allHistoryExternalIds = await _dataContext.SeekerHistory
             .AsNoTracking()
             .Where(h => h.ArrInstanceId == arrInstance.Id)
+            .Select(x => x.ExternalItemId)
             .ToListAsync();
 
         // Derive item-level history for selection strategies
@@ -325,16 +326,6 @@ public sealed class Seeker : IHandler
             .Where(r => ActiveQueueStates.Contains(r.TrackedDownloadState))
             .ToList();
 
-        HashSet<long> queuedMovieIds = activeQueueRecords
-            .Where(r => r.MovieId > 0)
-            .Select(r => r.MovieId)
-            .ToHashSet();
-
-        HashSet<(long SeriesId, long SeasonNumber)> queuedSeasons = activeQueueRecords
-            .Where(r => r.SeriesId > 0)
-            .Select(r => (r.SeriesId, r.SeasonNumber))
-            .ToHashSet();
-
         HashSet<SearchItem> searchItems;
         List<string> selectedNames;
         List<long> allLibraryIds;
@@ -343,6 +334,11 @@ public sealed class Seeker : IHandler
 
         if (instanceType == InstanceType.Radarr)
         {
+            HashSet<long> queuedMovieIds = activeQueueRecords
+                .Where(r => r.MovieId > 0)
+                .Select(r => r.MovieId)
+                .ToHashSet();
+            
             List<long> selectedIds;
             (selectedIds, selectedNames, allLibraryIds) = await ProcessRadarrAsync(config, arrInstance, instanceConfig, itemSearchHistory, isDryRun, queuedMovieIds);
             searchItems = selectedIds.Select(id => new SearchItem { Id = id }).ToHashSet();
@@ -350,18 +346,21 @@ public sealed class Seeker : IHandler
         }
         else
         {
+            HashSet<(long SeriesId, long SeasonNumber)> queuedSeasons = activeQueueRecords
+                .Where(r => r.SeriesId > 0)
+                .Select(r => (r.SeriesId, r.SeasonNumber))
+                .ToHashSet();
+            
             (searchItems, selectedNames, allLibraryIds, historyIds, seasonNumber) =
                 await ProcessSonarrAsync(config, arrInstance, instanceConfig, itemSearchHistory, currentCycleHistory, isDryRun, queuedSeasons: queuedSeasons);
         }
-
-        IEnumerable<long> historyExternalIds = allHistory.Select(h => h.ExternalItemId);
 
         if (searchItems.Count == 0)
         {
             _logger.LogDebug("No items selected for search on {InstanceName}", arrInstance.Name);
             if (!isDryRun)
             {
-                await CleanupStaleHistoryAsync(arrInstance.Id, instanceType, allLibraryIds, historyExternalIds);
+                await CleanupStaleHistoryAsync(arrInstance.Id, instanceType, allLibraryIds, allHistoryExternalIds);
             }
             return;
         }
@@ -387,7 +386,7 @@ public sealed class Seeker : IHandler
             await SaveCommandTrackersAsync(commandIds, eventId, arrInstance.Id, instanceType, externalItemId, itemTitle, seasonNumber);
 
             // Cleanup stale history entries and old cycle history
-            await CleanupStaleHistoryAsync(arrInstance.Id, instanceType, allLibraryIds, historyExternalIds);
+            await CleanupStaleHistoryAsync(arrInstance.Id, instanceType, allLibraryIds, allHistoryExternalIds);
             await CleanupOldCycleHistoryAsync(arrInstance.Id, instanceConfig.CurrentRunId);
         }
     }
