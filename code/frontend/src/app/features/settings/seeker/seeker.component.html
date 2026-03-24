@@ -20,13 +20,16 @@
   <app-card header="Search Settings">
     <div class="form-stack">
       <app-toggle label="Search Enabled" [(checked)]="searchEnabled"
-        hint="Master toggle for all searching. When disabled, no replacement or proactive searches will be performed." />
+        hint="Master toggle for all searching. When disabled, no replacement or proactive searches will be performed."
+        helpKey="seeker:searchEnabled" />
       @if (searchEnabled()) {
         <app-select label="Search Interval" [options]="intervalOptions" [(value)]="searchInterval"
-          hint="How often the seeker runs to process searches" />
+          hint="How often the seeker runs to process searches"
+          helpKey="seeker:searchInterval" />
         <p class="interval-warning">Using a very low interval will trigger searches more frequently, increasing indexer load significantly. This can result in rate limit warnings or a ban from your indexer, so be careful!</p>
         <app-toggle label="Enable Replacement Search" [checked]="true" [disabled]="true"
-          hint="Automatically searches for a replacement whenever a download is removed from an arr queue" />
+          hint="Automatically searches for a replacement whenever a download is removed from an arr queue"
+          helpKey="seeker:replacementSearchEnabled" />
       }
     </div>
   </app-card>
@@ -35,23 +38,32 @@
   <app-card header="Proactive Search">
     <div class="form-stack">
       <app-toggle label="Proactive Search" [(checked)]="proactiveSearchEnabled"
-        hint="When enabled, the seeker will periodically search for missing items and quality upgrades across your library" />
+        hint="When enabled, the seeker will periodically search for missing items and quality upgrades across your library"
+        helpKey="seeker:proactiveSearchEnabled" />
       @if (proactiveSearchEnabled()) {
         <app-select label="Selection Strategy" [options]="strategyOptions" [(value)]="selectionStrategy"
-          hint="How items are selected for searching" />
+          hint="How items are selected for searching"
+          helpKey="seeker:selectionStrategy" />
         @if (strategyDescription()) {
           <p class="strategy-hint">{{ strategyDescription() }}</p>
         }
         <p class="priority-note">Replacement searches (triggered when an item is removed from an arr queue) always take priority over proactive searches, regardless of the selection strategy.</p>
         <div class="form-divider"></div>
+        <app-toggle label="Enable Missing Search" [checked]="true" [disabled]="true"
+          hint="Always searches for items with no file. This cannot be disabled."
+          helpKey="seeker:missingSearchEnabled" />
         <app-toggle label="Monitored Only" [(checked)]="monitoredOnly"
-          hint="Only search for items that are monitored in the arr app" />
+          hint="Only search for items that are monitored in the arr app"
+          helpKey="seeker:monitoredOnly" />
         <app-toggle label="Use Cutoff" [(checked)]="useCutoff"
-          hint="Skip items that have already met their quality cutoff" />
+          hint="Skip items that have already met their quality cutoff"
+          helpKey="seeker:useCutoff" />
         <app-toggle label="Use Custom Format Score" [(checked)]="useCustomFormatScore"
-          hint="Search for upgrades when a file's custom format score is below the quality profile's cutoff format score" />
+          hint="Search for upgrades when a file's custom format score is below the quality profile's cutoff format score"
+          helpKey="seeker:useCustomFormatScore" />
         <app-toggle label="Round Robin" [checked]="useRoundRobin()" (checkedChange)="toggleRoundRobin($event)"
-          hint="Process one instance per run to spread indexer load" />
+          hint="Process one instance per run to spread indexer load"
+          helpKey="seeker:useRoundRobin" />
       }
     </div>
   </app-card>
@@ -70,7 +82,7 @@
                 <span class="instance-row__name">{{ instance.instanceName }}</span>
                 <span class="instance-row__type">{{ instance.instanceType }}</span>
               </div>
-              <app-toggle [checked]="instance.enabled" [disabled]="!instance.arrInstanceEnabled" (checkedChange)="toggleInstance($index)" />
+              <app-toggle [checked]="instance.enabled" [disabled]="!instance.arrInstanceEnabled" (checkedChange)="toggleInstance($index)" helpKey="seeker:enabled" />
             </div>
             @if (!instance.arrInstanceEnabled) {
               <div class="instance-row__warning">
@@ -81,19 +93,21 @@
               <div class="instance-row__details">
                 <app-chip-input
                   label="Skip Tags"
-                  placeholder="Add tag ID..."
-                  hint="Arr tag IDs to exclude from search"
+                  placeholder="Add tag..."
+                  hint="Arr tags to exclude from search"
                   [items]="instance.skipTags"
                   (itemsChange)="updateInstanceSkipTags($index, $event)"
+                  helpKey="seeker:skipTags"
                 />
                 <app-number-input
                   label="Active Download Limit"
                   placeholder="3"
-                  hint="Skip search cycle when this many items are actively downloading in the arr queue (0 = disabled)"
+                  hint="Skip proactive search when this many items have bytes remaining to download in the arr queue (0 = disabled)"
                   [value]="instance.activeDownloadLimit"
                   [min]="0"
                   [max]="10"
                   (valueChange)="updateInstanceActiveDownloadLimit($index, $event)"
+                  helpKey="seeker:activeDownloadLimit"
                 />
               </div>
             }

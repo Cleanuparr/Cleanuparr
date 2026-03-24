@@ -189,6 +189,21 @@ export class DocumentationService {
       'applicationToken': 'application-token',
       'priority': 'priority',
     },
+    'seeker': {
+      'searchEnabled': 'search-enabled',
+      'searchInterval': 'search-interval',
+      'replacementSearchEnabled': 'replacement-search',
+      'proactiveSearchEnabled': 'proactive-search',
+      'selectionStrategy': 'selection-strategy',
+      'monitoredOnly': 'monitored-only',
+      'useCutoff': 'use-cutoff',
+      'useCustomFormatScore': 'use-custom-format-score',
+      'useRoundRobin': 'round-robin',
+      'missingSearchEnabled': 'enable-missing-search',
+      'enabled': 'instance-enabled',
+      'skipTags': 'instance-skip-tags',
+      'activeDownloadLimit': 'instance-active-download-limit',
+    },
   };
 
   openFieldDocumentation(section: string, fieldName: string): void {

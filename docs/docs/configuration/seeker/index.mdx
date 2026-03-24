@@ -1,0 +1,198 @@
+---
+sidebar_position: 4.5
+---
+
+import {
+  ConfigSection,
+  Note,
+  Important,
+  Warning,
+  ElementNavigator,
+  SectionTitle,
+  PrefixedSection,
+  styles
+} from '@site/src/components/documentation';
+
+# Seeker
+
+The Seeker automates searching for missing items and quality upgrades across your Radarr and Sonarr libraries. It runs on a configurable schedule and works through your library one item at a time to avoid overwhelming your indexers.
+
+<ElementNavigator />
+
+<div className={styles.documentationPage}>
+
+<div className={styles.section}>
+
+<ConfigSection
+  title="Search Enabled"
+>
+
+Master toggle for all searching. When disabled, neither replacement searches nor proactive searches will run.
+
+</ConfigSection>
+
+<ConfigSection
+  title="Search Interval"
+>
+
+How often the Seeker job runs, in minutes. Available options are 2, 3, 4, 5, 6, 10, 12, 15, 20, and 30 minutes.
+
+<Warning>
+Using a very low interval will trigger searches more frequently, which significantly increases the load on your indexers. This can result in rate limit warnings or a ban from your indexer.
+</Warning>
+
+</ConfigSection>
+
+<ConfigSection
+  title="Replacement Search"
+>
+
+Replacement search is always enabled when Search is on and cannot be disabled. Whenever a download is removed from an *arr queue (by Queue Cleaner or any other mechanism), Seeker immediately queues a replacement search for that item. Replacement searches always take priority over proactive searches, which means the proactive cycle is paused until all queued replacement searches have been processed.
+
+</ConfigSection>
+
+</div>
+
+<div className={styles.section}>
+
+<SectionTitle>Proactive Search</SectionTitle>
+
+<p className={styles.sectionDescription}>
+  Proactive search works through your library systematically to find items that are missing or could be upgraded. Each run processes one item at a time to keep indexer load predictable.
+</p>
+
+<Note>
+Proactive search operates in cycles. Seeker tracks which items have been searched in the current cycle. Once every eligible item in an instance has been searched, the cycle resets and starts over. For Sonarr, the cycle is tracked at the season level — each season of each series is treated as a separate entry.
+</Note>
+
+<ConfigSection
+  title="Proactive Search"
+>
+
+When enabled, Seeker will periodically search for missing items and quality upgrades across your library. Each run selects one item according to the configured selection strategy and triggers a search in the corresponding *arr application.
+
+</ConfigSection>
+
+<ConfigSection
+  title="Enable Missing Search"
+>
+
+Missing search is always enabled when proactive search is on. Items with no file are always included as search candidates, regardless of any other quality upgrade settings.
+
+</ConfigSection>
+
+<ConfigSection
+  title="Selection Strategy"
+>
+
+Controls how Seeker selects which item to search next from the pool of eligible candidates. Available strategies:
+
+- **Balanced Weighted** — Prioritizes items that are both newly added and have not been searched recently. A good default for most libraries.
+- **Oldest Search First** — Works through items in order, starting with those that have not been searched for the longest time. Guarantees every item is covered in sequence.
+- **Oldest Search Weighted** — Favors items that have not been searched recently, but still gives other items a chance.
+- **Newest First** — Always picks the most recently added items first. Best for keeping new additions up to date quickly.
+- **Newest Weighted** — Favors recently added items, but still gives older items a chance.
+- **Random** — Every eligible item has an equal chance of being picked with no prioritization.
+
+<Note>
+Regardless of the strategy, items already searched in the current cycle are excluded from selection. The strategy only determines the order in which unsearched items are considered.
+</Note>
+
+</ConfigSection>
+
+<ConfigSection
+  title="Monitored Only"
+>
+
+When enabled, only items that are marked as monitored in Radarr or Sonarr will be included as search candidates. Unmonitored movies, series, and episodes are skipped entirely.
+
+</ConfigSection>
+
+<ConfigSection
+  title="Use Cutoff"
+>
+
+When enabled, items that already have a file but have not yet met the quality profile's cutoff will be included as upgrade candidates. Items that have already met their cutoff are excluded unless Use Custom Format Score also applies to them.
+
+</ConfigSection>
+
+<ConfigSection
+  title="Use Custom Format Score"
+>
+
+When enabled, items whose current custom format score is below the quality profile's cutoff format score will be included as upgrade candidates. Seeker uses cached score data that is kept up to date by the Custom Format Score Syncer, which runs automatically when this setting is enabled.
+
+<Note>
+Custom format scores are tracked at the episode level for Sonarr. If a series has episodes with scores below the cutoff, the corresponding season will be searched.
+</Note>
+
+</ConfigSection>
+
+<ConfigSection
+  title="Round Robin"
+>
+
+When enabled, only one instance is processed per Seeker run. Instances are rotated based on which was processed least recently, spreading indexer load evenly across all configured instances.
+
+When disabled, all enabled instances are processed on every run.
+
+<Warning>
+Disabling round robin will trigger a search for each enabled instance on every run. With a low search interval and multiple instances, this can result in a large number of indexer requests in a short period.
+</Warning>
+
+</ConfigSection>
+
+</div>
+
+<PrefixedSection prefix="instance">
+
+<div className={styles.section}>
+
+<SectionTitle>Instance Configuration</SectionTitle>
+
+<p className={styles.sectionDescription}>
+  Per-instance settings allow you to control which Radarr and Sonarr instances participate in proactive search and how they behave.
+</p>
+
+<Important>
+An instance must also be enabled in Arr Settings for it to be used by Seeker.
+</Important>
+
+<ConfigSection
+  title="Enabled"
+>
+
+Enables this instance for proactive search. When disabled, the instance will not be included in any proactive search cycles. Replacement searches are not affected by this setting — they are always processed for any instance where a download was removed.
+
+</ConfigSection>
+
+<ConfigSection
+  title="Skip Tags"
+>
+
+Arr tags to exclude from search. Any movie or series in the corresponding *arr application that has one of these tags assigned will be skipped entirely during proactive search.
+
+**Examples:**
+```
+no-search
+skip-upgrade
+manual-only
+```
+
+</ConfigSection>
+
+<ConfigSection
+  title="Active Download Limit"
+>
+
+When the number of items with bytes remaining to download (`SizeLeft > 0`) in the arr queue reaches this limit, the proactive search cycle is skipped for that instance. This prevents Seeker from triggering new searches while the download client is already busy.
+
+Set to `0` to disable this check and always run the proactive search regardless of queue activity.
+
+</ConfigSection>
+
+</div>
+
+</PrefixedSection>
+
+</div>
