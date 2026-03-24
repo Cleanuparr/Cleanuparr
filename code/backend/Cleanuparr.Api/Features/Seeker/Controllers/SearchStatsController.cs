@@ -271,6 +271,88 @@ public sealed class SearchStatsController : ControllerBase
         });
     }
 
+    /// <summary>
+    /// Gets individual search events for a specific item.
+    /// </summary>
+    [HttpGet("history/{instanceId}/{itemId}/detail")]
+    public async Task<IActionResult> GetHistoryDetail(
+        Guid instanceId,
+        long itemId,
+        [FromQuery] int seasonNumber = 0)
+    {
+        var historyItem = await _dataContext.SeekerHistory
+            .AsNoTracking()
+            .Where(h => h.ArrInstanceId == instanceId
+                        && h.ExternalItemId == itemId
+                        && h.SeasonNumber == seasonNumber)
+            .OrderByDescending(h => h.LastSearchedAt)
+            .FirstOrDefaultAsync();
+
+        if (historyItem is null)
+        {
+            return Ok(new { Entries = Array.Empty<SearchEventResponse>() });
+        }
+
+        // Build the display name matching the event Items format
+        string displayName = seasonNumber > 0
+            ? $"{historyItem.ItemTitle} S{seasonNumber:D2}"
+            : historyItem.ItemTitle;
+
+        // Get instance URL for event filtering
+        var instance = await _dataContext.ArrInstances
+            .AsNoTracking()
+            .FirstOrDefaultAsync(a => a.Id == instanceId);
+
+        if (instance is null)
+        {
+            return Ok(new { Entries = Array.Empty<SearchEventResponse>() });
+        }
+
+        string url = (instance.ExternalUrl ?? instance.Url).ToString();
+
+        // Pre-filter events containing the item title, then verify with JSON parsing
+        var rawEvents = await _eventsContext.Events
+            .AsNoTracking()
+            .Where(e => e.EventType == EventType.SearchTriggered
+                        && e.InstanceUrl == url
+                        && e.Data != null
+                        && e.Data.Contains(historyItem.ItemTitle))
+            .OrderByDescending(e => e.Timestamp)
+            .Take(100)
+            .ToListAsync();
+
+        var entries = rawEvents
+            .Select(e =>
+            {
+                var parsed = ParseEventData(e.Data);
+                bool containsItem = parsed.Items.Any(i =>
+                    i.Contains(displayName, StringComparison.OrdinalIgnoreCase)
+                    || i.Contains(historyItem.ItemTitle, StringComparison.OrdinalIgnoreCase));
+
+                return containsItem
+                    ? new SearchEventResponse
+                    {
+                        Id = e.Id,
+                        Timestamp = e.Timestamp,
+                        InstanceName = parsed.InstanceName,
+                        InstanceType = e.InstanceType?.ToString(),
+                        ItemCount = parsed.ItemCount,
+                        Items = parsed.Items,
+                        SearchType = parsed.SearchType,
+                        SearchStatus = e.SearchStatus,
+                        CompletedAt = e.CompletedAt,
+                        GrabbedItems = parsed.GrabbedItems,
+                        CycleRunId = e.CycleRunId,
+                        IsDryRun = e.IsDryRun,
+                    }
+                    : null;
+            })
+            .Where(e => e is not null)
+            .ToList();
+
+        return Ok(new { Entries = entries });
+    }
+
     private static (string InstanceName, int ItemCount, List<string> Items, SeekerSearchType SearchType, object? GrabbedItems) ParseEventData(string? data)
     {
         if (string.IsNullOrWhiteSpace(data))

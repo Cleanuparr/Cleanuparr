@@ -85,6 +85,11 @@ export class SearchStatsComponent implements OnInit {
 
   readonly pageSize = signal(50);
 
+  // Item expand
+  readonly expandedItemId = signal<string | null>(null);
+  readonly detailEntries = signal<SearchEvent[]>([]);
+  readonly detailLoading = signal(false);
+
   constructor() {
     effect(() => {
       this.hub.searchStatsVersion(); // subscribe to changes
@@ -142,6 +147,30 @@ export class SearchStatsComponent implements OnInit {
   refresh(): void {
     this.loadSummary();
     this.loadActiveTab();
+  }
+
+  toggleItemExpand(item: SearchHistoryEntry): void {
+    const id = item.id;
+    if (this.expandedItemId() === id) {
+      this.expandedItemId.set(null);
+      this.detailEntries.set([]);
+      return;
+    }
+
+    this.expandedItemId.set(id);
+    this.detailLoading.set(true);
+    this.detailEntries.set([]);
+
+    this.api.getItemDetail(item.arrInstanceId, item.externalItemId, item.seasonNumber).subscribe({
+      next: (res) => {
+        this.detailEntries.set(res.entries);
+        this.detailLoading.set(false);
+      },
+      error: () => {
+        this.detailLoading.set(false);
+        this.toast.error('Failed to load item detail');
+      },
+    });
   }
 
   searchTypeSeverity(type: SeekerSearchType): 'info' | 'warning' {
@@ -232,6 +261,8 @@ export class SearchStatsComponent implements OnInit {
 
   private loadItems(): void {
     this.loading.set(true);
+    this.expandedItemId.set(null);
+    this.detailEntries.set([]);
     const instanceId = this.selectedInstanceId() || undefined;
     this.api.getHistory(this.itemsPage(), this.pageSize(), instanceId, this.itemsSortBy()).subscribe({
       next: (result) => {

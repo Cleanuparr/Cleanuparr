@@ -18,6 +18,13 @@ export class SearchStatsApi {
     return this.http.get<PaginatedResult<SearchHistoryEntry>>('/api/seeker/search-stats/history', { params });
   }
 
+  getItemDetail(instanceId: string, itemId: number, seasonNumber = 0): Observable<{ entries: SearchEvent[] }> {
+    return this.http.get<{ entries: SearchEvent[] }>(
+      `/api/seeker/search-stats/history/${instanceId}/${itemId}/detail`,
+      { params: { seasonNumber } },
+    );
+  }
+
   getEvents(page = 1, pageSize = 50, instanceId?: string, cycleRunId?: string): Observable<PaginatedResult<SearchEvent>> {
     const params: Record<string, string | number> = { page, pageSize };
     if (instanceId) params['instanceId'] = instanceId;
