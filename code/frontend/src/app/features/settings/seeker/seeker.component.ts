@@ -56,6 +56,7 @@ interface InstanceState {
   lastProcessedAt?: string;
   arrInstanceEnabled: boolean;
   activeDownloadLimit: number;
+  minCycleTimeDays: number;
 }
 
 @Component({
@@ -131,6 +132,7 @@ export class SeekerComponent implements OnInit, HasPendingChanges {
           lastProcessedAt: i.lastProcessedAt,
           arrInstanceEnabled: i.arrInstanceEnabled,
           activeDownloadLimit: i.activeDownloadLimit,
+          minCycleTimeDays: i.minCycleTimeDays,
         })));
         this.loader.stop();
         this.savedSnapshot.set(this.buildSnapshot());
@@ -192,6 +194,14 @@ export class SeekerComponent implements OnInit, HasPendingChanges {
     });
   }
 
+  updateInstanceMinCycleTimeDays(index: number, days: number | null): void {
+    this.instances.update(instances => {
+      const updated = [...instances];
+      updated[index] = { ...updated[index], minCycleTimeDays: days ?? 5 };
+      return updated;
+    });
+  }
+
   getInstanceIcon(instanceType: string): string {
     return `icons/ext/${instanceType.toLowerCase()}-light.svg`;
   }
@@ -211,6 +221,7 @@ export class SeekerComponent implements OnInit, HasPendingChanges {
         enabled: i.enabled,
         skipTags: i.skipTags,
         activeDownloadLimit: i.activeDownloadLimit,
+        minCycleTimeDays: i.minCycleTimeDays,
       })),
     };
 

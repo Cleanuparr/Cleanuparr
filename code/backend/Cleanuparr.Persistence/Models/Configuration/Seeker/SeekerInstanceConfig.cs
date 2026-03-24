@@ -56,4 +56,10 @@ public sealed record SeekerInstanceConfig
     /// (SizeLeft > 0) in the arr queue is at or above this threshold. 0 = disabled.
     /// </summary>
     public int ActiveDownloadLimit { get; set; } = 3;
+
+    /// <summary>
+    /// Minimum number of days a cycle must span before a new one can start.
+    /// If a cycle completes faster, no searches are triggered until this time has elapsed.
+    /// </summary>
+    public int MinCycleTimeDays { get; set; } = 5;
 }

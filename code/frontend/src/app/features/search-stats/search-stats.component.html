@@ -63,6 +63,14 @@
                 </app-tooltip>
               </div>
               <div class="instance-card__stat">
+                <span class="instance-card__stat-value instance-card__stat-value--small">
+                  {{ inst.cycleStartedAt ? formatCycleDuration(inst.cycleStartedAt) : '—' }}
+                </span>
+                <app-tooltip text="How long the current search cycle has been running">
+                  <span class="instance-card__stat-label">Cycle Duration</span>
+                </app-tooltip>
+              </div>
+              <div class="instance-card__stat">
                 <span class="instance-card__stat-value">{{ inst.totalSearchCount }}</span>
                 <span class="instance-card__stat-label">Searches</span>
               </div>

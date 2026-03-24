@@ -109,6 +109,16 @@
                   (valueChange)="updateInstanceActiveDownloadLimit($index, $event)"
                   helpKey="seeker:activeDownloadLimit"
                 />
+                <app-number-input
+                  label="Min Cycle Time (Days)"
+                  placeholder="5"
+                  hint="Minimum number of days a complete search cycle must span before starting a new one"
+                  [value]="instance.minCycleTimeDays"
+                  [min]="1"
+                  [max]="365"
+                  (valueChange)="updateInstanceMinCycleTimeDays($index, $event)"
+                  helpKey="seeker:minCycleTimeDays"
+                />
               </div>
             }
             @if (instance.lastProcessedAt) {

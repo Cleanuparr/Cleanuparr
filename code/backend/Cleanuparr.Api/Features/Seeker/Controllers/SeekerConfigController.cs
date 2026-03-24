@@ -63,6 +63,7 @@ public sealed class SeekerConfigController : ControllerBase
                 LastProcessedAt = seekerConfig?.LastProcessedAt,
                 ArrInstanceEnabled = instance.Enabled,
                 ActiveDownloadLimit = seekerConfig?.ActiveDownloadLimit ?? 3,
+                MinCycleTimeDays = seekerConfig?.MinCycleTimeDays ?? 5,
             };
         }).ToList();
 
@@ -121,6 +122,7 @@ public sealed class SeekerConfigController : ControllerBase
                     existing.Enabled = instanceReq.Enabled;
                     existing.SkipTags = instanceReq.SkipTags;
                     existing.ActiveDownloadLimit = instanceReq.ActiveDownloadLimit;
+                    existing.MinCycleTimeDays = instanceReq.MinCycleTimeDays;
                 }
                 else
                 {
@@ -130,6 +132,7 @@ public sealed class SeekerConfigController : ControllerBase
                         Enabled = instanceReq.Enabled,
                         SkipTags = instanceReq.SkipTags,
                         ActiveDownloadLimit = instanceReq.ActiveDownloadLimit,
+                        MinCycleTimeDays = instanceReq.MinCycleTimeDays,
                     });
                 }
             }

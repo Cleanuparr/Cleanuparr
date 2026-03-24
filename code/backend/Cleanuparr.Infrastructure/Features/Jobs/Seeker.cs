@@ -217,6 +217,15 @@ public sealed class Seeker : IHandler
             return;
         }
 
+        // Pre-filter instances
+        instanceConfigs = await FilterInstancesAsync(instanceConfigs);
+
+        if (instanceConfigs.Count == 0)
+        {
+            _logger.LogDebug("All instances are waiting for MinCycleTimeDays to elapse");
+            return;
+        }
+
         if (config.UseRoundRobin)
         {
             // Round-robin: pick the instance with the oldest LastProcessedAt
@@ -338,7 +347,7 @@ public sealed class Seeker : IHandler
                 .Where(r => r.MovieId > 0)
                 .Select(r => r.MovieId)
                 .ToHashSet();
-            
+
             List<long> selectedIds;
             (selectedIds, selectedNames, allLibraryIds) = await ProcessRadarrAsync(config, arrInstance, instanceConfig, itemSearchHistory, isDryRun, queuedMovieIds);
             searchItems = selectedIds.Select(id => new SearchItem { Id = id }).ToHashSet();
@@ -350,7 +359,7 @@ public sealed class Seeker : IHandler
                 .Where(r => r.SeriesId > 0)
                 .Select(r => (r.SeriesId, r.SeasonNumber))
                 .ToHashSet();
-            
+
             (searchItems, selectedNames, allLibraryIds, historyIds, seasonNumber) =
                 await ProcessSonarrAsync(config, arrInstance, instanceConfig, itemSearchHistory, currentCycleHistory, isDryRun, queuedSeasons: queuedSeasons);
         }
@@ -387,7 +396,7 @@ public sealed class Seeker : IHandler
 
             // Cleanup stale history entries and old cycle history
             await CleanupStaleHistoryAsync(arrInstance.Id, instanceType, allLibraryIds, allHistoryExternalIds);
-            await CleanupOldCycleHistoryAsync(arrInstance.Id, instanceConfig.CurrentRunId);
+            await CleanupOldCycleHistoryAsync(arrInstance, instanceConfig.CurrentRunId);
         }
     }
 
@@ -458,12 +467,14 @@ public sealed class Seeker : IHandler
         {
             _logger.LogInformation("All {Count} items on {InstanceName} searched in current cycle, starting new cycle",
                 candidates.Count, arrInstance.Name);
+            
             if (!isDryRun)
             {
                 instanceConfig.CurrentRunId = Guid.NewGuid();
                 _dataContext.SeekerInstanceConfigs.Update(instanceConfig);
                 await _dataContext.SaveChangesAsync();
             }
+            
             searchHistory = new Dictionary<long, DateTime>();
         }
 
@@ -839,21 +850,85 @@ public sealed class Seeker : IHandler
     /// Removes history entries from previous cycles that are older than 30 days.
     /// Recent cycle history is retained for statistics and history viewing.
     /// </summary>
-    private async Task CleanupOldCycleHistoryAsync(Guid arrInstanceId, Guid currentRunId)
+    private async Task CleanupOldCycleHistoryAsync(ArrInstance arrInstance, Guid currentRunId)
     {
         DateTime cutoff = _timeProvider.GetUtcNow().UtcDateTime.AddDays(-30);
 
         int deleted = await _dataContext.SeekerHistory
-            .Where(h => h.ArrInstanceId == arrInstanceId
+            .Where(h => h.ArrInstanceId == arrInstance.Id
                 && h.RunId != currentRunId
                 && h.LastSearchedAt < cutoff)
             .ExecuteDeleteAsync();
 
         if (deleted > 0)
         {
-            _logger.LogDebug("Cleaned up {Count} old cycle history entries (>30 days) for instance {InstanceId}",
-                deleted, arrInstanceId);
+            _logger.LogDebug("Cleaned up {Count} old cycle history entries (>30 days) for instance {InstanceName}",
+                deleted, arrInstance.Name);
         }
+    }
+
+    private async Task<List<SeekerInstanceConfig>> FilterInstancesAsync(
+        List<SeekerInstanceConfig> instanceConfigs)
+    {
+        var result = new List<SeekerInstanceConfig>();
+
+        foreach (var ic in instanceConfigs)
+        {
+            // Count distinct items searched in current cycle
+            int cycleItemsSearched = await _dataContext.SeekerHistory
+                .AsNoTracking()
+                .Where(h => h.ArrInstanceId == ic.ArrInstanceId && h.RunId == ic.CurrentRunId)
+                .Select(h => h.ExternalItemId)
+                .Distinct()
+                .CountAsync();
+            
+            // No searches have been performed
+            if (cycleItemsSearched is 0)
+            {
+                result.Add(ic);
+                continue;
+            }
+
+            // Cycle not complete
+            if (cycleItemsSearched < ic.TotalEligibleItems)
+            {
+                result.Add(ic);
+                continue;
+            }
+
+            // Cycle is complete, but check if min time has elapsed
+            DateTime? cycleStartedAt = await _dataContext.SeekerHistory
+                .AsNoTracking()
+                .Where(h => h.ArrInstanceId == ic.ArrInstanceId && h.RunId == ic.CurrentRunId)
+                .MinAsync(h => (DateTime?)h.LastSearchedAt);
+
+            if (ShouldWaitForMinCycleTime(ic, cycleStartedAt))
+            {
+                _logger.LogDebug(
+                    "skip | cycle complete but min time ({Days}) not elapsed (started {StartedAt}) | {InstanceName}",
+                    ic.ArrInstance.Name, ic.MinCycleTimeDays, cycleStartedAt);
+                continue;
+            }
+
+            result.Add(ic);
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Checks whether the minimum cycle time constraint prevents starting a new cycle.
+    /// Returns true if the cycle started recently and MinCycleTimeDays has not yet elapsed.
+    /// </summary>
+    private bool ShouldWaitForMinCycleTime(SeekerInstanceConfig instanceConfig, DateTime? cycleStartedAt)
+    {
+        if (cycleStartedAt is null)
+        {
+            return false;
+        }
+
+        var elapsed = _timeProvider.GetUtcNow().UtcDateTime - cycleStartedAt.Value;
+        return elapsed.TotalDays < instanceConfig.MinCycleTimeDays;
     }
 
 }

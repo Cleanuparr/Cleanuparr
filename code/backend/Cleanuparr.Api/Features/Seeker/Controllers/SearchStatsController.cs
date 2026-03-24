@@ -81,6 +81,7 @@ public sealed class SearchStatsController : ControllerBase
             {
                 InstanceId = g.Key,
                 CycleItemsSearched = g.Select(h => h.ExternalItemId).Distinct().Count(),
+                CycleStartedAt = (DateTime?)g.Min(h => h.LastSearchedAt),
             })
             .ToListAsync();
 
@@ -100,6 +101,7 @@ public sealed class SearchStatsController : ControllerBase
                 CurrentRunId = ic.CurrentRunId,
                 CycleItemsSearched = cycleProgress?.CycleItemsSearched ?? 0,
                 CycleItemsTotal = ic.TotalEligibleItems,
+                CycleStartedAt = cycleProgress?.CycleStartedAt,
             };
         }).ToList();
 

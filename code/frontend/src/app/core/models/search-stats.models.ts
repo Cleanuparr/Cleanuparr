@@ -9,6 +9,7 @@ export interface InstanceSearchStat {
   currentRunId: string | null;
   cycleItemsSearched: number;
   cycleItemsTotal: number;
+  cycleStartedAt: string | null;
 }
 
 export interface SearchStatsSummary {

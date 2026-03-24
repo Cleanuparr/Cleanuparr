@@ -9,4 +9,6 @@ public sealed record UpdateSeekerInstanceConfigRequest
     public List<string> SkipTags { get; init; } = [];
 
     public int ActiveDownloadLimit { get; init; } = 0;
+
+    public int MinCycleTimeDays { get; init; } = 5;
 }

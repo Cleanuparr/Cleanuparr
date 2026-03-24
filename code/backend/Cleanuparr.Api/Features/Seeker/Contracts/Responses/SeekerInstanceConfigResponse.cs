@@ -19,4 +19,6 @@ public sealed record SeekerInstanceConfigResponse
     public bool ArrInstanceEnabled { get; init; }
 
     public int ActiveDownloadLimit { get; init; }
+
+    public int MinCycleTimeDays { get; init; }
 }
