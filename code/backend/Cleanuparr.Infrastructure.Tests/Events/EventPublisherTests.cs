@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Events;
 using Cleanuparr.Infrastructure.Features.Context;
@@ -575,6 +576,222 @@ public class EventPublisherTests : IDisposable
 
         // Assert
         _notificationPublisherMock.Verify(n => n.NotifyCategoryChanged("old", "new", true), Times.Once);
+    }
+
+    #endregion
+
+    #region PublishSearchTriggered Tests
+
+    [Fact]
+    public async Task PublishSearchTriggered_SavesEventWithCorrectType()
+    {
+        // Act
+        await _publisher.PublishSearchTriggered("Radarr-1", 2, ["Movie A", "Movie B"], SeekerSearchType.Proactive);
+
+        // Assert
+        var savedEvent = await _context.Events.FirstOrDefaultAsync();
+        Assert.NotNull(savedEvent);
+        Assert.Equal(EventType.SearchTriggered, savedEvent.EventType);
+        Assert.Equal(EventSeverity.Information, savedEvent.Severity);
+    }
+
+    [Fact]
+    public async Task PublishSearchTriggered_SetsSearchStatusToPending()
+    {
+        // Act
+        await _publisher.PublishSearchTriggered("Radarr-1", 1, ["Movie A"], SeekerSearchType.Proactive);
+
+        // Assert
+        var savedEvent = await _context.Events.FirstOrDefaultAsync();
+        Assert.NotNull(savedEvent);
+        Assert.Equal(SearchCommandStatus.Pending, savedEvent.SearchStatus);
+    }
+
+    [Fact]
+    public async Task PublishSearchTriggered_SetsCycleRunId()
+    {
+        // Arrange
+        var cycleRunId = Guid.NewGuid();
+
+        // Act
+        await _publisher.PublishSearchTriggered("Radarr-1", 1, ["Movie A"], SeekerSearchType.Proactive, cycleRunId);
+
+        // Assert
+        var savedEvent = await _context.Events.FirstOrDefaultAsync();
+        Assert.NotNull(savedEvent);
+        Assert.Equal(cycleRunId, savedEvent.CycleRunId);
+    }
+
+    [Fact]
+    public async Task PublishSearchTriggered_ReturnsEventId()
+    {
+        // Act
+        Guid eventId = await _publisher.PublishSearchTriggered("Radarr-1", 1, ["Movie A"], SeekerSearchType.Proactive);
+
+        // Assert
+        Assert.NotEqual(Guid.Empty, eventId);
+        var savedEvent = await _context.Events.FindAsync(eventId);
+        Assert.NotNull(savedEvent);
+    }
+
+    [Fact]
+    public async Task PublishSearchTriggered_SerializesItemsAndSearchTypeToData()
+    {
+        // Act
+        await _publisher.PublishSearchTriggered("Sonarr-1", 2, ["Series A", "Series B"], SeekerSearchType.Replacement);
+
+        // Assert
+        var savedEvent = await _context.Events.FirstOrDefaultAsync();
+        Assert.NotNull(savedEvent);
+        Assert.NotNull(savedEvent.Data);
+        Assert.Contains("Series A", savedEvent.Data);
+        Assert.Contains("Series B", savedEvent.Data);
+        Assert.Contains("Replacement", savedEvent.Data);
+        Assert.Contains("Sonarr-1", savedEvent.Data);
+    }
+
+    [Fact]
+    public async Task PublishSearchTriggered_NotifiesSignalRClients()
+    {
+        // Act
+        await _publisher.PublishSearchTriggered("Radarr-1", 1, ["Movie A"], SeekerSearchType.Proactive);
+
+        // Assert
+        _clientProxyMock.Verify(c => c.SendCoreAsync(
+            "EventReceived",
+            It.Is<object[]>(args => args.Length == 1 && args[0] is AppEvent),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task PublishSearchTriggered_SendsNotification()
+    {
+        // Act
+        await _publisher.PublishSearchTriggered("Radarr-1", 2, ["Movie A", "Movie B"], SeekerSearchType.Proactive);
+
+        // Assert
+        _notificationPublisherMock.Verify(
+            n => n.NotifySearchTriggered("Radarr-1", 2, It.IsAny<IEnumerable<string>>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task PublishSearchTriggered_TruncatesDisplayForMoreThan5Items()
+    {
+        // Arrange
+        var items = new[] { "Item 1", "Item 2", "Item 3", "Item 4", "Item 5", "Item 6", "Item 7" };
+
+        // Act
+        await _publisher.PublishSearchTriggered("Radarr-1", 7, items, SeekerSearchType.Proactive);
+
+        // Assert
+        var savedEvent = await _context.Events.FirstOrDefaultAsync();
+        Assert.NotNull(savedEvent);
+        Assert.Contains("+2 more", savedEvent.Message);
+    }
+
+    #endregion
+
+    #region PublishSearchCompleted Tests
+
+    [Fact]
+    public async Task PublishSearchCompleted_UpdatesEventStatus()
+    {
+        // Arrange — create a search event first
+        Guid eventId = await _publisher.PublishSearchTriggered("Radarr-1", 1, ["Movie A"], SeekerSearchType.Proactive);
+
+        // Act
+        await _publisher.PublishSearchCompleted(eventId, SearchCommandStatus.Completed);
+
+        // Assert
+        var updatedEvent = await _context.Events.FindAsync(eventId);
+        Assert.NotNull(updatedEvent);
+        Assert.Equal(SearchCommandStatus.Completed, updatedEvent.SearchStatus);
+    }
+
+    [Fact]
+    public async Task PublishSearchCompleted_SetsCompletedAt()
+    {
+        // Arrange
+        Guid eventId = await _publisher.PublishSearchTriggered("Radarr-1", 1, ["Movie A"], SeekerSearchType.Proactive);
+
+        // Act
+        await _publisher.PublishSearchCompleted(eventId, SearchCommandStatus.Completed);
+
+        // Assert
+        var updatedEvent = await _context.Events.FindAsync(eventId);
+        Assert.NotNull(updatedEvent);
+        Assert.NotNull(updatedEvent.CompletedAt);
+    }
+
+    [Fact]
+    public async Task PublishSearchCompleted_MergesResultDataIntoExistingData()
+    {
+        // Arrange
+        Guid eventId = await _publisher.PublishSearchTriggered("Radarr-1", 1, ["Movie A"], SeekerSearchType.Proactive);
+
+        var resultData = new { GrabbedItems = new[] { new { Title = "Movie A (2024)", Status = "downloading" } } };
+
+        // Act
+        await _publisher.PublishSearchCompleted(eventId, SearchCommandStatus.Completed, resultData);
+
+        // Assert
+        var updatedEvent = await _context.Events.FindAsync(eventId);
+        Assert.NotNull(updatedEvent);
+        Assert.NotNull(updatedEvent.Data);
+        // Original data should still be present
+        Assert.Contains("Movie A", updatedEvent.Data);
+        // Merged result data should be present
+        Assert.Contains("GrabbedItems", updatedEvent.Data);
+        Assert.Contains("Movie A (2024)", updatedEvent.Data);
+    }
+
+    [Fact]
+    public async Task PublishSearchCompleted_WithNullResultData_DoesNotModifyData()
+    {
+        // Arrange
+        Guid eventId = await _publisher.PublishSearchTriggered("Radarr-1", 1, ["Movie A"], SeekerSearchType.Proactive);
+        var originalEvent = await _context.Events.FindAsync(eventId);
+        string? originalData = originalEvent!.Data;
+
+        // Act
+        await _publisher.PublishSearchCompleted(eventId, SearchCommandStatus.Completed);
+
+        // Assert
+        var updatedEvent = await _context.Events.FindAsync(eventId);
+        Assert.NotNull(updatedEvent);
+        Assert.Equal(originalData, updatedEvent.Data);
+    }
+
+    [Fact]
+    public async Task PublishSearchCompleted_EventNotFound_LogsWarningAndReturns()
+    {
+        // Act — use a non-existent event ID
+        await _publisher.PublishSearchCompleted(Guid.NewGuid(), SearchCommandStatus.Completed);
+
+        // Assert — should not throw, and the log warning is the important behavior
+        // (no exception thrown is the assertion)
+        var eventCount = await _context.Events.CountAsync();
+        Assert.Equal(0, eventCount);
+    }
+
+    [Fact]
+    public async Task PublishSearchCompleted_NotifiesSignalRClients()
+    {
+        // Arrange
+        Guid eventId = await _publisher.PublishSearchTriggered("Radarr-1", 1, ["Movie A"], SeekerSearchType.Proactive);
+
+        // Reset mock to only capture the completion call
+        _clientProxyMock.Invocations.Clear();
+
+        // Act
+        await _publisher.PublishSearchCompleted(eventId, SearchCommandStatus.Completed);
+
+        // Assert
+        _clientProxyMock.Verify(c => c.SendCoreAsync(
+            "EventReceived",
+            It.Is<object[]>(args => args.Length == 1 && args[0] is AppEvent),
+            It.IsAny<CancellationToken>()), Times.Once);
     }
 
     #endregion

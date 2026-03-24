@@ -537,4 +537,371 @@ public class SeekerTests : IDisposable
     }
 
     #endregion
+
+    #region Radarr Proactive Search Filters
+
+    [Fact]
+    public async Task ExecuteAsync_Radarr_MonitoredOnlyTrue_ExcludesUnmonitoredMovies()
+    {
+        // Arrange — MonitoredOnly is true by default in seed data
+        var config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
+        config.SearchEnabled = true;
+        config.ProactiveSearchEnabled = true;
+        config.MonitoredOnly = true;
+        await _fixture.DataContext.SaveChangesAsync();
+
+        var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
+
+        _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = radarrInstance.Id,
+            ArrInstance = radarrInstance,
+            Enabled = true
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+
+        var mockArrClient = new Mock<IArrClient>();
+
+        _fixture.ArrQueueIterator
+            .Setup(x => x.Iterate(mockArrClient.Object, It.IsAny<ArrInstance>(), It.IsAny<Func<IReadOnlyList<QueueRecord>, Task>>()))
+            .Returns(Task.CompletedTask);
+
+        _radarrClient
+            .Setup(x => x.GetAllMoviesAsync(radarrInstance))
+            .ReturnsAsync(
+            [
+                new SearchableMovie { Id = 1, Title = "Monitored Movie", Status = "released", Monitored = true, Tags = [] },
+                new SearchableMovie { Id = 2, Title = "Unmonitored Movie", Status = "released", Monitored = false, Tags = [] }
+            ]);
+
+        HashSet<SearchItem>? capturedSearchItems = null;
+        mockArrClient
+            .Setup(x => x.SearchItemsAsync(radarrInstance, It.IsAny<HashSet<SearchItem>>()))
+            .Callback<ArrInstance, HashSet<SearchItem>>((_, items) => capturedSearchItems = items)
+            .ReturnsAsync([100L]);
+
+        _fixture.ArrClientFactory
+            .Setup(x => x.GetClient(InstanceType.Radarr, It.IsAny<float>()))
+            .Returns(mockArrClient.Object);
+
+        var sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert — only monitored movie searched
+        Assert.NotNull(capturedSearchItems);
+        Assert.DoesNotContain(capturedSearchItems, item => item.Id == 2);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_Radarr_SkipTags_ExcludesMoviesWithMatchingTags()
+    {
+        // Arrange
+        var config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
+        config.SearchEnabled = true;
+        config.ProactiveSearchEnabled = true;
+        config.MonitoredOnly = false;
+        await _fixture.DataContext.SaveChangesAsync();
+
+        var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
+
+        _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = radarrInstance.Id,
+            ArrInstance = radarrInstance,
+            Enabled = true,
+            SkipTags = ["no-search"]
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+
+        var mockArrClient = new Mock<IArrClient>();
+
+        _fixture.ArrQueueIterator
+            .Setup(x => x.Iterate(mockArrClient.Object, It.IsAny<ArrInstance>(), It.IsAny<Func<IReadOnlyList<QueueRecord>, Task>>()))
+            .Returns(Task.CompletedTask);
+
+        _radarrClient
+            .Setup(x => x.GetAllMoviesAsync(radarrInstance))
+            .ReturnsAsync(
+            [
+                new SearchableMovie { Id = 1, Title = "Normal Movie", Status = "released", Monitored = true, Tags = ["movies"] },
+                new SearchableMovie { Id = 2, Title = "Skipped Movie", Status = "released", Monitored = true, Tags = ["no-search", "movies"] }
+            ]);
+
+        HashSet<SearchItem>? capturedSearchItems = null;
+        mockArrClient
+            .Setup(x => x.SearchItemsAsync(radarrInstance, It.IsAny<HashSet<SearchItem>>()))
+            .Callback<ArrInstance, HashSet<SearchItem>>((_, items) => capturedSearchItems = items)
+            .ReturnsAsync([100L]);
+
+        _fixture.ArrClientFactory
+            .Setup(x => x.GetClient(InstanceType.Radarr, It.IsAny<float>()))
+            .Returns(mockArrClient.Object);
+
+        var sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert — movie with skip tag excluded
+        Assert.NotNull(capturedSearchItems);
+        Assert.DoesNotContain(capturedSearchItems, item => item.Id == 2);
+        Assert.Contains(capturedSearchItems, item => item.Id == 1);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_Radarr_UseCutoff_SkipsCutoffMetMovies()
+    {
+        // Arrange — enable cutoff filtering: only movies with QualityCutoffNotMet should be searched
+        var config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
+        config.SearchEnabled = true;
+        config.ProactiveSearchEnabled = true;
+        config.MonitoredOnly = false;
+        config.UseCutoff = true;
+        await _fixture.DataContext.SaveChangesAsync();
+
+        var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
+
+        _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = radarrInstance.Id,
+            ArrInstance = radarrInstance,
+            Enabled = true
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+
+        var mockArrClient = new Mock<IArrClient>();
+
+        _fixture.ArrQueueIterator
+            .Setup(x => x.Iterate(mockArrClient.Object, It.IsAny<ArrInstance>(), It.IsAny<Func<IReadOnlyList<QueueRecord>, Task>>()))
+            .Returns(Task.CompletedTask);
+
+        _radarrClient
+            .Setup(x => x.GetAllMoviesAsync(radarrInstance))
+            .ReturnsAsync(
+            [
+                new SearchableMovie { Id = 1, Title = "Missing Movie", Status = "released", Monitored = true, HasFile = false, Tags = [] },
+                new SearchableMovie { Id = 2, Title = "Cutoff Met", Status = "released", Monitored = true, HasFile = true, MovieFile = new MovieFileInfo { Id = 200, QualityCutoffNotMet = false }, Tags = [] },
+                new SearchableMovie { Id = 3, Title = "Cutoff Not Met", Status = "released", Monitored = true, HasFile = true, MovieFile = new MovieFileInfo { Id = 300, QualityCutoffNotMet = true }, Tags = [] }
+            ]);
+
+        HashSet<SearchItem>? capturedSearchItems = null;
+        mockArrClient
+            .Setup(x => x.SearchItemsAsync(radarrInstance, It.IsAny<HashSet<SearchItem>>()))
+            .Callback<ArrInstance, HashSet<SearchItem>>((_, items) => capturedSearchItems = items)
+            .ReturnsAsync([100L]);
+
+        _fixture.ArrClientFactory
+            .Setup(x => x.GetClient(InstanceType.Radarr, It.IsAny<float>()))
+            .Returns(mockArrClient.Object);
+
+        var sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert — movie with cutoff met should be excluded; missing + cutoff not met should be eligible
+        Assert.NotNull(capturedSearchItems);
+        Assert.DoesNotContain(capturedSearchItems, item => item.Id == 2);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_Radarr_CycleComplete_StartsNewCycle()
+    {
+        // Arrange — all candidate movies are already in search history for current cycle
+        var config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
+        config.SearchEnabled = true;
+        config.ProactiveSearchEnabled = true;
+        config.MonitoredOnly = false;
+        await _fixture.DataContext.SaveChangesAsync();
+
+        var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
+        var currentRunId = Guid.NewGuid();
+
+        _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = radarrInstance.Id,
+            ArrInstance = radarrInstance,
+            Enabled = true,
+            CurrentRunId = currentRunId
+        });
+
+        // Add history entries for both movies in the current cycle
+        _fixture.DataContext.SeekerHistory.Add(new SeekerHistory
+        {
+            ArrInstanceId = radarrInstance.Id,
+            ExternalItemId = 1,
+            ItemType = InstanceType.Radarr,
+            RunId = currentRunId,
+            LastSearchedAt = DateTime.UtcNow.AddHours(-1),
+            ItemTitle = "Movie 1"
+        });
+        _fixture.DataContext.SeekerHistory.Add(new SeekerHistory
+        {
+            ArrInstanceId = radarrInstance.Id,
+            ExternalItemId = 2,
+            ItemType = InstanceType.Radarr,
+            RunId = currentRunId,
+            LastSearchedAt = DateTime.UtcNow.AddHours(-1),
+            ItemTitle = "Movie 2"
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+
+        var mockArrClient = new Mock<IArrClient>();
+
+        _fixture.ArrQueueIterator
+            .Setup(x => x.Iterate(mockArrClient.Object, It.IsAny<ArrInstance>(), It.IsAny<Func<IReadOnlyList<QueueRecord>, Task>>()))
+            .Returns(Task.CompletedTask);
+
+        _radarrClient
+            .Setup(x => x.GetAllMoviesAsync(radarrInstance))
+            .ReturnsAsync(
+            [
+                new SearchableMovie { Id = 1, Title = "Movie 1", Status = "released", Monitored = true, Tags = [] },
+                new SearchableMovie { Id = 2, Title = "Movie 2", Status = "released", Monitored = true, Tags = [] }
+            ]);
+
+        mockArrClient
+            .Setup(x => x.SearchItemsAsync(radarrInstance, It.IsAny<HashSet<SearchItem>>()))
+            .ReturnsAsync([100L]);
+
+        _fixture.ArrClientFactory
+            .Setup(x => x.GetClient(InstanceType.Radarr, It.IsAny<float>()))
+            .Returns(mockArrClient.Object);
+
+        var sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert — search was triggered (new cycle started) and the RunId changed
+        mockArrClient.Verify(
+            x => x.SearchItemsAsync(radarrInstance, It.IsAny<HashSet<SearchItem>>()),
+            Times.Once);
+
+        var instanceConfig = await _fixture.DataContext.SeekerInstanceConfigs
+            .FirstAsync(s => s.ArrInstanceId == radarrInstance.Id);
+        Assert.NotEqual(currentRunId, instanceConfig.CurrentRunId);
+    }
+
+    #endregion
+
+    #region Round-Robin
+
+    [Fact]
+    public async Task ExecuteAsync_RoundRobin_SelectsOldestProcessedInstance()
+    {
+        // Arrange — two Radarr instances, round-robin should pick the oldest processed one
+        var config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
+        config.SearchEnabled = true;
+        config.ProactiveSearchEnabled = true;
+        config.UseRoundRobin = true;
+        config.MonitoredOnly = false;
+        await _fixture.DataContext.SaveChangesAsync();
+
+        var radarrInstance1 = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext, "http://radarr1:7878");
+        var radarrInstance2 = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext, "http://radarr2:7878");
+
+        // Instance 1 was processed recently, instance 2 was processed long ago
+        _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = radarrInstance1.Id,
+            ArrInstance = radarrInstance1,
+            Enabled = true,
+            LastProcessedAt = DateTime.UtcNow
+        });
+        _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = radarrInstance2.Id,
+            ArrInstance = radarrInstance2,
+            Enabled = true,
+            LastProcessedAt = DateTime.UtcNow.AddHours(-24)
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+
+        var mockArrClient = new Mock<IArrClient>();
+
+        _fixture.ArrQueueIterator
+            .Setup(x => x.Iterate(mockArrClient.Object, It.IsAny<ArrInstance>(), It.IsAny<Func<IReadOnlyList<QueueRecord>, Task>>()))
+            .Returns(Task.CompletedTask);
+
+        // Return movies for both instances — only instance 2 should be called
+        _radarrClient
+            .Setup(x => x.GetAllMoviesAsync(It.Is<ArrInstance>(a => a.Id == radarrInstance2.Id)))
+            .ReturnsAsync([new SearchableMovie { Id = 1, Title = "Movie 1", Status = "released", Monitored = true, Tags = [] }]);
+
+        mockArrClient
+            .Setup(x => x.SearchItemsAsync(It.IsAny<ArrInstance>(), It.IsAny<HashSet<SearchItem>>()))
+            .ReturnsAsync([100L]);
+
+        _fixture.ArrClientFactory
+            .Setup(x => x.GetClient(InstanceType.Radarr, It.IsAny<float>()))
+            .Returns(mockArrClient.Object);
+
+        var sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert — instance 2 (oldest) was processed, verified by GetAllMoviesAsync being called for it
+        _radarrClient.Verify(
+            x => x.GetAllMoviesAsync(It.Is<ArrInstance>(a => a.Id == radarrInstance2.Id)),
+            Times.Once);
+        _radarrClient.Verify(
+            x => x.GetAllMoviesAsync(It.Is<ArrInstance>(a => a.Id == radarrInstance1.Id)),
+            Times.Never);
+    }
+
+    #endregion
+
+    #region Replacement Edge Cases
+
+    [Fact]
+    public async Task ExecuteAsync_ReplacementItem_MissingArrInstance_RemovesFromQueue()
+    {
+        // Arrange — replacement item references an instance that no longer exists
+        var config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
+        config.SearchEnabled = true;
+        await _fixture.DataContext.SaveChangesAsync();
+
+        // Add a valid instance just so we can create the queue item with its ID, then detach it
+        var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
+        var instanceId = radarrInstance.Id;
+
+        _fixture.DataContext.SearchQueue.Add(new SearchQueueItem
+        {
+            ArrInstanceId = instanceId,
+            ArrInstance = radarrInstance,
+            ItemId = 42,
+            Title = "Orphaned Movie",
+            CreatedAt = DateTime.UtcNow
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+
+        // Now remove the arr instance to simulate deletion
+        _fixture.DataContext.ArrInstances.Remove(radarrInstance);
+        await _fixture.DataContext.SaveChangesAsync();
+
+        var sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert — queue item should be cleaned up
+        var remaining = await _fixture.DataContext.SearchQueue.CountAsync();
+        Assert.Equal(0, remaining);
+
+        // No search should have been triggered
+        _fixture.EventPublisher.Verify(
+            x => x.PublishSearchTriggered(
+                It.IsAny<string>(),
+                It.IsAny<int>(),
+                It.IsAny<IEnumerable<string>>(),
+                It.IsAny<SeekerSearchType>(),
+                It.IsAny<Guid?>()),
+            Times.Never);
+    }
+
+    #endregion
 }
