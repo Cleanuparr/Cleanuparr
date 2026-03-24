@@ -231,7 +231,7 @@ public class EventPublisher : IEventPublisher
     /// Publishes a search triggered event with context data and notifications.
     /// Returns the event ID so the SeekerCommandMonitor can update it on completion.
     /// </summary>
-    public async Task<Guid> PublishSearchTriggered(string instanceName, int itemCount, IEnumerable<string> items, SeekerSearchType searchType, Guid? cycleRunId = null)
+    public async Task<Guid> PublishSearchTriggered(string instanceName, int itemCount, IEnumerable<string> items, SeekerSearchType searchType, Guid? cycleId = null)
     {
         var itemList = items as string[] ?? items.ToArray();
         var itemsDisplay = string.Join(", ", itemList.Take(5)) + (itemList.Length > 5 ? $" (+{itemList.Length - 5} more)" : "");
@@ -242,7 +242,7 @@ public class EventPublisher : IEventPublisher
             Message = $"Searched {itemCount} items on {instanceName}: {itemsDisplay}",
             Severity = EventSeverity.Information,
             Data = JsonSerializer.Serialize(
-                new { InstanceName = instanceName, ItemCount = itemCount, Items = itemList, SearchType = searchType.ToString(), CycleRunId = cycleRunId },
+                new { InstanceName = instanceName, ItemCount = itemCount, Items = itemList, SearchType = searchType.ToString(), CycleId = cycleId },
                 new JsonSerializerOptions { Converters = { new JsonStringEnumConverter() } }),
             SearchStatus = SearchCommandStatus.Pending,
             JobRunId = ContextProvider.TryGetJobRunId(),
@@ -250,7 +250,7 @@ public class EventPublisher : IEventPublisher
             InstanceUrl = (ContextProvider.Get(ContextProvider.Keys.ArrInstanceUrl) as Uri)?.ToString(),
             DownloadClientType = ContextProvider.Get(ContextProvider.Keys.DownloadClientType) is DownloadClientTypeName dct ? dct : null,
             DownloadClientName = ContextProvider.Get(ContextProvider.Keys.DownloadClientName) as string,
-            CycleRunId = cycleRunId,
+            CycleId = cycleId,
         };
 
         eventEntity.IsDryRun = await _dryRunInterceptor.IsDryRunEnabled();

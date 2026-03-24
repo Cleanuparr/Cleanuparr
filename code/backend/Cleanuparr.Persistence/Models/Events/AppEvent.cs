@@ -17,7 +17,7 @@ namespace Cleanuparr.Persistence.Models.Events;
 [Index(nameof(JobRunId))]
 [Index(nameof(InstanceType))]
 [Index(nameof(DownloadClientType))]
-[Index(nameof(CycleRunId))]
+[Index(nameof(CycleId))]
 public class AppEvent : IEvent
 {
     [Key]
@@ -86,9 +86,9 @@ public class AppEvent : IEvent
     public DateTime? CompletedAt { get; set; }
 
     /// <summary>
-    /// The Seeker cycle run ID associated with this event (only set for SearchTriggered events)
+    /// The Seeker cycle ID associated with this event (only set for SearchTriggered events)
     /// </summary>
-    public Guid? CycleRunId { get; set; }
+    public Guid? CycleId { get; set; }
 
     public bool IsDryRun { get; set; }
 }

@@ -40,10 +40,10 @@ public sealed record SeekerInstanceConfig
     public DateTime? LastProcessedAt { get; set; }
 
     /// <summary>
-    /// The current cycle run ID. All searches in the same cycle share this ID.
+    /// The current cycle ID. All searches in the same cycle share this ID.
     /// When all eligible items have been searched, a new ID is generated to start a fresh cycle.
     /// </summary>
-    public Guid CurrentRunId { get; set; } = Guid.NewGuid();
+    public Guid CurrentCycleId { get; set; } = Guid.NewGuid();
 
     /// <summary>
     /// Total number of eligible items in the library for this instance.

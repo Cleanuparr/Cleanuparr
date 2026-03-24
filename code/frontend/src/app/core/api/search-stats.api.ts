@@ -25,10 +25,10 @@ export class SearchStatsApi {
     );
   }
 
-  getEvents(page = 1, pageSize = 50, instanceId?: string, cycleRunId?: string): Observable<PaginatedResult<SearchEvent>> {
+  getEvents(page = 1, pageSize = 50, instanceId?: string, cycleId?: string): Observable<PaginatedResult<SearchEvent>> {
     const params: Record<string, string | number> = { page, pageSize };
     if (instanceId) params['instanceId'] = instanceId;
-    if (cycleRunId) params['cycleRunId'] = cycleRunId;
+    if (cycleId) params['cycleId'] = cycleId;
     return this.http.get<PaginatedResult<SearchEvent>>('/api/seeker/search-stats/events', { params });
   }
 }

@@ -717,7 +717,7 @@ public class SeekerTests : IDisposable
         await _fixture.DataContext.SaveChangesAsync();
 
         var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
-        var currentRunId = Guid.NewGuid();
+        var currentCycleId = Guid.NewGuid();
         var now = _fixture.TimeProvider.GetUtcNow().UtcDateTime;
 
         _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
@@ -725,7 +725,7 @@ public class SeekerTests : IDisposable
             ArrInstanceId = radarrInstance.Id,
             ArrInstance = radarrInstance,
             Enabled = true,
-            CurrentRunId = currentRunId
+            CurrentCycleId = currentCycleId
         });
 
         // Add history entries for both movies in the current cycle
@@ -735,7 +735,7 @@ public class SeekerTests : IDisposable
             ArrInstanceId = radarrInstance.Id,
             ExternalItemId = 1,
             ItemType = InstanceType.Radarr,
-            RunId = currentRunId,
+            CycleId = currentCycleId,
             LastSearchedAt = now.AddDays(-10),
             ItemTitle = "Movie 1"
         });
@@ -744,7 +744,7 @@ public class SeekerTests : IDisposable
             ArrInstanceId = radarrInstance.Id,
             ExternalItemId = 2,
             ItemType = InstanceType.Radarr,
-            RunId = currentRunId,
+            CycleId = currentCycleId,
             LastSearchedAt = now.AddDays(-10),
             ItemTitle = "Movie 2"
         });
@@ -777,14 +777,14 @@ public class SeekerTests : IDisposable
         // Act
         await sut.ExecuteAsync();
 
-        // Assert — search was triggered (new cycle started) and the RunId changed
+        // Assert — search was triggered (new cycle started) and the CycleId changed
         mockArrClient.Verify(
             x => x.SearchItemsAsync(radarrInstance, It.IsAny<HashSet<SearchItem>>()),
             Times.Once);
 
         var instanceConfig = await _fixture.DataContext.SeekerInstanceConfigs
             .FirstAsync(s => s.ArrInstanceId == radarrInstance.Id);
-        Assert.NotEqual(currentRunId, instanceConfig.CurrentRunId);
+        Assert.NotEqual(currentCycleId, instanceConfig.CurrentCycleId);
     }
 
     #endregion
@@ -920,7 +920,7 @@ public class SeekerTests : IDisposable
         await _fixture.DataContext.SaveChangesAsync();
 
         var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
-        var currentRunId = Guid.NewGuid();
+        var currentCycleId = Guid.NewGuid();
         var now = _fixture.TimeProvider.GetUtcNow().UtcDateTime;
 
         _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
@@ -928,7 +928,7 @@ public class SeekerTests : IDisposable
             ArrInstanceId = radarrInstance.Id,
             ArrInstance = radarrInstance,
             Enabled = true,
-            CurrentRunId = currentRunId,
+            CurrentCycleId = currentCycleId,
             MinCycleTimeDays = 7,
             TotalEligibleItems = 2
         });
@@ -939,7 +939,7 @@ public class SeekerTests : IDisposable
             ArrInstanceId = radarrInstance.Id,
             ExternalItemId = 1,
             ItemType = InstanceType.Radarr,
-            RunId = currentRunId,
+            CycleId = currentCycleId,
             LastSearchedAt = now.AddDays(-2),
             ItemTitle = "Movie 1"
         });
@@ -948,7 +948,7 @@ public class SeekerTests : IDisposable
             ArrInstanceId = radarrInstance.Id,
             ExternalItemId = 2,
             ItemType = InstanceType.Radarr,
-            RunId = currentRunId,
+            CycleId = currentCycleId,
             LastSearchedAt = now.AddDays(-1),
             ItemTitle = "Movie 2"
         });
@@ -984,7 +984,7 @@ public class SeekerTests : IDisposable
 
         var instanceConfig = await _fixture.DataContext.SeekerInstanceConfigs
             .FirstAsync(s => s.ArrInstanceId == radarrInstance.Id);
-        Assert.Equal(currentRunId, instanceConfig.CurrentRunId);
+        Assert.Equal(currentCycleId, instanceConfig.CurrentCycleId);
     }
 
     [Fact]
@@ -998,7 +998,7 @@ public class SeekerTests : IDisposable
         await _fixture.DataContext.SaveChangesAsync();
 
         var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
-        var currentRunId = Guid.NewGuid();
+        var currentCycleId = Guid.NewGuid();
         var now = _fixture.TimeProvider.GetUtcNow().UtcDateTime;
 
         _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
@@ -1006,7 +1006,7 @@ public class SeekerTests : IDisposable
             ArrInstanceId = radarrInstance.Id,
             ArrInstance = radarrInstance,
             Enabled = true,
-            CurrentRunId = currentRunId,
+            CurrentCycleId = currentCycleId,
             MinCycleTimeDays = 7,
             TotalEligibleItems = 2
         });
@@ -1017,7 +1017,7 @@ public class SeekerTests : IDisposable
             ArrInstanceId = radarrInstance.Id,
             ExternalItemId = 1,
             ItemType = InstanceType.Radarr,
-            RunId = currentRunId,
+            CycleId = currentCycleId,
             LastSearchedAt = now.AddDays(-10),
             ItemTitle = "Movie 1"
         });
@@ -1026,7 +1026,7 @@ public class SeekerTests : IDisposable
             ArrInstanceId = radarrInstance.Id,
             ExternalItemId = 2,
             ItemType = InstanceType.Radarr,
-            RunId = currentRunId,
+            CycleId = currentCycleId,
             LastSearchedAt = now.AddDays(-8),
             ItemTitle = "Movie 2"
         });
@@ -1066,7 +1066,7 @@ public class SeekerTests : IDisposable
 
         var instanceConfig = await _fixture.DataContext.SeekerInstanceConfigs
             .FirstAsync(s => s.ArrInstanceId == radarrInstance.Id);
-        Assert.NotEqual(currentRunId, instanceConfig.CurrentRunId);
+        Assert.NotEqual(currentCycleId, instanceConfig.CurrentCycleId);
     }
 
     [Fact]
@@ -1080,25 +1080,25 @@ public class SeekerTests : IDisposable
         await _fixture.DataContext.SaveChangesAsync();
 
         var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
-        var currentRunId = Guid.NewGuid();
+        var currentCycleId = Guid.NewGuid();
 
         _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
         {
             ArrInstanceId = radarrInstance.Id,
             ArrInstance = radarrInstance,
             Enabled = true,
-            CurrentRunId = currentRunId,
+            CurrentCycleId = currentCycleId,
             MinCycleTimeDays = 30
         });
 
-        // History uses a DIFFERENT RunId — current cycle has no history entries
-        var oldRunId = Guid.NewGuid();
+        // History uses a DIFFERENT CycleId — current cycle has no history entries
+        var oldCycleId = Guid.NewGuid();
         _fixture.DataContext.SeekerHistory.Add(new SeekerHistory
         {
             ArrInstanceId = radarrInstance.Id,
             ExternalItemId = 1,
             ItemType = InstanceType.Radarr,
-            RunId = oldRunId,
+            CycleId = oldCycleId,
             LastSearchedAt = DateTime.UtcNow.AddDays(-60),
             ItemTitle = "Movie 1"
         });
@@ -1147,7 +1147,7 @@ public class SeekerTests : IDisposable
         await _fixture.DataContext.SaveChangesAsync();
 
         var sonarrInstance = TestDataContextFactory.AddSonarrInstance(_fixture.DataContext);
-        var currentRunId = Guid.NewGuid();
+        var currentCycleId = Guid.NewGuid();
         var now = _fixture.TimeProvider.GetUtcNow().UtcDateTime;
 
         _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
@@ -1155,7 +1155,7 @@ public class SeekerTests : IDisposable
             ArrInstanceId = sonarrInstance.Id,
             ArrInstance = sonarrInstance,
             Enabled = true,
-            CurrentRunId = currentRunId,
+            CurrentCycleId = currentCycleId,
             MinCycleTimeDays = 7,
             TotalEligibleItems = 1
         });
@@ -1167,7 +1167,7 @@ public class SeekerTests : IDisposable
             ExternalItemId = 10,
             ItemType = InstanceType.Sonarr,
             SeasonNumber = 1,
-            RunId = currentRunId,
+            CycleId = currentCycleId,
             LastSearchedAt = now.AddDays(-2),
             ItemTitle = "Test Series"
         });
@@ -1210,7 +1210,7 @@ public class SeekerTests : IDisposable
 
         var instanceConfig = await _fixture.DataContext.SeekerInstanceConfigs
             .FirstAsync(s => s.ArrInstanceId == sonarrInstance.Id);
-        Assert.Equal(currentRunId, instanceConfig.CurrentRunId);
+        Assert.Equal(currentCycleId, instanceConfig.CurrentCycleId);
     }
 
     [Fact]
@@ -1224,7 +1224,7 @@ public class SeekerTests : IDisposable
         await _fixture.DataContext.SaveChangesAsync();
 
         var sonarrInstance = TestDataContextFactory.AddSonarrInstance(_fixture.DataContext);
-        var currentRunId = Guid.NewGuid();
+        var currentCycleId = Guid.NewGuid();
         var now = _fixture.TimeProvider.GetUtcNow().UtcDateTime;
 
         _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
@@ -1232,7 +1232,7 @@ public class SeekerTests : IDisposable
             ArrInstanceId = sonarrInstance.Id,
             ArrInstance = sonarrInstance,
             Enabled = true,
-            CurrentRunId = currentRunId,
+            CurrentCycleId = currentCycleId,
             MinCycleTimeDays = 7,
             TotalEligibleItems = 1
         });
@@ -1244,7 +1244,7 @@ public class SeekerTests : IDisposable
             ExternalItemId = 10,
             ItemType = InstanceType.Sonarr,
             SeasonNumber = 1,
-            RunId = currentRunId,
+            CycleId = currentCycleId,
             LastSearchedAt = now.AddDays(-10),
             ItemTitle = "Test Series"
         });
@@ -1291,7 +1291,7 @@ public class SeekerTests : IDisposable
 
         var instanceConfig = await _fixture.DataContext.SeekerInstanceConfigs
             .FirstAsync(s => s.ArrInstanceId == sonarrInstance.Id);
-        Assert.NotEqual(currentRunId, instanceConfig.CurrentRunId);
+        Assert.NotEqual(currentCycleId, instanceConfig.CurrentCycleId);
     }
 
     [Fact]
@@ -1309,13 +1309,13 @@ public class SeekerTests : IDisposable
 
         // Instance A: cycle complete, waiting for MinCycleTimeDays (oldest LastProcessedAt — would be picked first)
         var instanceA = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext, "http://radarr-a:7878");
-        var runIdA = Guid.NewGuid();
+        var cycleIdA = Guid.NewGuid();
         _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
         {
             ArrInstanceId = instanceA.Id,
             ArrInstance = instanceA,
             Enabled = true,
-            CurrentRunId = runIdA,
+            CurrentCycleId = cycleIdA,
             MinCycleTimeDays = 30,
             TotalEligibleItems = 1,
             LastProcessedAt = now.AddDays(-5) // Oldest — round-robin would pick this first
@@ -1325,20 +1325,20 @@ public class SeekerTests : IDisposable
             ArrInstanceId = instanceA.Id,
             ExternalItemId = 1,
             ItemType = InstanceType.Radarr,
-            RunId = runIdA,
+            CycleId = cycleIdA,
             LastSearchedAt = now.AddDays(-2), // Cycle started 2 days ago, MinCycleTimeDays=30
             ItemTitle = "Movie A"
         });
 
         // Instance B: has work to do (newer LastProcessedAt)
         var instanceB = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext, "http://radarr-b:7878");
-        var runIdB = Guid.NewGuid();
+        var cycleIdB = Guid.NewGuid();
         _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
         {
             ArrInstanceId = instanceB.Id,
             ArrInstance = instanceB,
             Enabled = true,
-            CurrentRunId = runIdB,
+            CurrentCycleId = cycleIdB,
             MinCycleTimeDays = 5,
             TotalEligibleItems = 1,
             LastProcessedAt = now.AddDays(-1)

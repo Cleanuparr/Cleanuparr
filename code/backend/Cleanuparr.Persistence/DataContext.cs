@@ -234,7 +234,7 @@ public class DataContext : DbContext
                   .HasForeignKey(s => s.ArrInstanceId)
                   .OnDelete(DeleteBehavior.Cascade);
 
-            entity.HasIndex(s => new { s.ArrInstanceId, s.ExternalItemId, s.ItemType, s.SeasonNumber, s.RunId }).IsUnique();
+            entity.HasIndex(s => new { s.ArrInstanceId, s.ExternalItemId, s.ItemType, s.SeasonNumber, s.CycleId }).IsUnique();
 
             entity.Property(s => s.LastSearchedAt).HasConversion(new UtcDateTimeConverter());
         });

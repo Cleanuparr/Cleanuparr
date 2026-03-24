@@ -315,7 +315,7 @@ public sealed class Seeker : IHandler
         // Load search history for the current cycle
         List<SeekerHistory> currentCycleHistory = await _dataContext.SeekerHistory
             .AsNoTracking()
-            .Where(h => h.ArrInstanceId == arrInstance.Id && h.RunId == instanceConfig.CurrentRunId)
+            .Where(h => h.ArrInstanceId == arrInstance.Id && h.CycleId == instanceConfig.CurrentCycleId)
             .ToListAsync();
 
         // Load all history for stale cleanup
@@ -379,13 +379,13 @@ public sealed class Seeker : IHandler
         List<long> commandIds = await arrClient.SearchItemsAsync(arrInstance, searchItems);
 
         // Publish event (always saved, flagged with IsDryRun in EventPublisher)
-        Guid eventId = await _eventPublisher.PublishSearchTriggered(arrInstance.Name, searchItems.Count, selectedNames, SeekerSearchType.Proactive, instanceConfig.CurrentRunId);
+        Guid eventId = await _eventPublisher.PublishSearchTriggered(arrInstance.Name, searchItems.Count, selectedNames, SeekerSearchType.Proactive, instanceConfig.CurrentCycleId);
 
         _logger.LogInformation("Searched {Count} items on {InstanceName}: {Items}",
             searchItems.Count, arrInstance.Name, string.Join(", ", selectedNames));
 
         // Update search history (always, so stats are accurate during dry run)
-        await UpdateSearchHistoryAsync(arrInstance.Id, instanceType, instanceConfig.CurrentRunId, historyIds, selectedNames, seasonNumber, isDryRun);
+        await UpdateSearchHistoryAsync(arrInstance.Id, instanceType, instanceConfig.CurrentCycleId, historyIds, selectedNames, seasonNumber, isDryRun);
 
         if (!isDryRun)
         {
@@ -396,7 +396,7 @@ public sealed class Seeker : IHandler
 
             // Cleanup stale history entries and old cycle history
             await CleanupStaleHistoryAsync(arrInstance.Id, instanceType, allLibraryIds, allHistoryExternalIds);
-            await CleanupOldCycleHistoryAsync(arrInstance, instanceConfig.CurrentRunId);
+            await CleanupOldCycleHistoryAsync(arrInstance, instanceConfig.CurrentCycleId);
         }
     }
 
@@ -470,7 +470,7 @@ public sealed class Seeker : IHandler
             
             if (!isDryRun)
             {
-                instanceConfig.CurrentRunId = Guid.NewGuid();
+                instanceConfig.CurrentCycleId = Guid.NewGuid();
                 _dataContext.SeekerInstanceConfigs.Update(instanceConfig);
                 await _dataContext.SaveChangesAsync();
             }
@@ -587,7 +587,7 @@ public sealed class Seeker : IHandler
                 candidates.Count, arrInstance.Name);
             if (!isDryRun)
             {
-                instanceConfig.CurrentRunId = Guid.NewGuid();
+                instanceConfig.CurrentCycleId = Guid.NewGuid();
                 _dataContext.SeekerInstanceConfigs.Update(instanceConfig);
                 await _dataContext.SaveChangesAsync();
             }
@@ -736,7 +736,7 @@ public sealed class Seeker : IHandler
     private async Task UpdateSearchHistoryAsync(
         Guid arrInstanceId,
         InstanceType instanceType,
-        Guid runId,
+        Guid cycleId,
         List<long> searchedIds,
         List<string>? itemTitles = null,
         int seasonNumber = 0,
@@ -755,7 +755,7 @@ public sealed class Seeker : IHandler
                     && h.ExternalItemId == id
                     && h.ItemType == instanceType
                     && h.SeasonNumber == seasonNumber
-                    && h.RunId == runId);
+                    && h.CycleId == cycleId);
 
             if (existing is not null)
             {
@@ -774,7 +774,7 @@ public sealed class Seeker : IHandler
                     ExternalItemId = id,
                     ItemType = instanceType,
                     SeasonNumber = seasonNumber,
-                    RunId = runId,
+                    CycleId = cycleId,
                     LastSearchedAt = now,
                     ItemTitle = title,
                     IsDryRun = isDryRun,
@@ -850,13 +850,13 @@ public sealed class Seeker : IHandler
     /// Removes history entries from previous cycles that are older than 30 days.
     /// Recent cycle history is retained for statistics and history viewing.
     /// </summary>
-    private async Task CleanupOldCycleHistoryAsync(ArrInstance arrInstance, Guid currentRunId)
+    private async Task CleanupOldCycleHistoryAsync(ArrInstance arrInstance, Guid currentCycleId)
     {
         DateTime cutoff = _timeProvider.GetUtcNow().UtcDateTime.AddDays(-30);
 
         int deleted = await _dataContext.SeekerHistory
             .Where(h => h.ArrInstanceId == arrInstance.Id
-                && h.RunId != currentRunId
+                && h.CycleId != currentCycleId
                 && h.LastSearchedAt < cutoff)
             .ExecuteDeleteAsync();
 
@@ -877,7 +877,7 @@ public sealed class Seeker : IHandler
             // Count distinct items searched in current cycle
             int cycleItemsSearched = await _dataContext.SeekerHistory
                 .AsNoTracking()
-                .Where(h => h.ArrInstanceId == ic.ArrInstanceId && h.RunId == ic.CurrentRunId)
+                .Where(h => h.ArrInstanceId == ic.ArrInstanceId && h.CycleId == ic.CurrentCycleId)
                 .Select(h => h.ExternalItemId)
                 .Distinct()
                 .CountAsync();
@@ -899,7 +899,7 @@ public sealed class Seeker : IHandler
             // Cycle is complete, but check if min time has elapsed
             DateTime? cycleStartedAt = await _dataContext.SeekerHistory
                 .AsNoTracking()
-                .Where(h => h.ArrInstanceId == ic.ArrInstanceId && h.RunId == ic.CurrentRunId)
+                .Where(h => h.ArrInstanceId == ic.ArrInstanceId && h.CycleId == ic.CurrentCycleId)
                 .MinAsync(h => (DateTime?)h.LastSearchedAt);
 
             if (ShouldWaitForMinCycleTime(ic, cycleStartedAt))

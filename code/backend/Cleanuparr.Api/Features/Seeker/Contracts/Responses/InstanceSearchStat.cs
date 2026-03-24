@@ -9,7 +9,7 @@ public sealed record InstanceSearchStat
     public int TotalSearchCount { get; init; }
     public DateTime? LastSearchedAt { get; init; }
     public DateTime? LastProcessedAt { get; init; }
-    public Guid? CurrentRunId { get; init; }
+    public Guid? CurrentCycleId { get; init; }
     public int CycleItemsSearched { get; init; }
     public int CycleItemsTotal { get; init; }
     public DateTime? CycleStartedAt { get; init; }

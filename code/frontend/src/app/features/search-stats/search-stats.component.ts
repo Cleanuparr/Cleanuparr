@@ -256,14 +256,14 @@ export class SearchStatsComponent implements OnInit {
   private loadEvents(): void {
     this.loading.set(true);
     const instanceId = this.selectedInstanceId() || undefined;
-    let cycleRunId: string | undefined;
+    let cycleId: string | undefined;
 
     if (this.cycleFilter() === 'current' && instanceId) {
       const instance = this.summary()?.perInstanceStats.find(s => s.instanceId === instanceId);
-      cycleRunId = instance?.currentRunId ?? undefined;
+      cycleId = instance?.currentCycleId ?? undefined;
     }
 
-    this.api.getEvents(this.eventsPage(), this.pageSize(), instanceId, cycleRunId).subscribe({
+    this.api.getEvents(this.eventsPage(), this.pageSize(), instanceId, cycleId).subscribe({
       next: (result) => {
         this.events.set(result.items);
         this.eventsTotalRecords.set(result.totalCount);

@@ -608,18 +608,18 @@ public class EventPublisherTests : IDisposable
     }
 
     [Fact]
-    public async Task PublishSearchTriggered_SetsCycleRunId()
+    public async Task PublishSearchTriggered_SetsCycleId()
     {
         // Arrange
-        var cycleRunId = Guid.NewGuid();
+        var cycleId = Guid.NewGuid();
 
         // Act
-        await _publisher.PublishSearchTriggered("Radarr-1", 1, ["Movie A"], SeekerSearchType.Proactive, cycleRunId);
+        await _publisher.PublishSearchTriggered("Radarr-1", 1, ["Movie A"], SeekerSearchType.Proactive, cycleId);
 
         // Assert
         var savedEvent = await _context.Events.FirstOrDefaultAsync();
         Assert.NotNull(savedEvent);
-        Assert.Equal(cycleRunId, savedEvent.CycleRunId);
+        Assert.Equal(cycleId, savedEvent.CycleId);
     }
 
     [Fact]

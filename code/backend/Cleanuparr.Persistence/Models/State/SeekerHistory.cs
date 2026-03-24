@@ -41,10 +41,10 @@ public sealed record SeekerHistory
     public int SeasonNumber { get; set; }
 
     /// <summary>
-    /// The run ID for cycle-based tracking. All searches in the same cycle share a RunId.
-    /// When all items have been searched, a new RunId is generated to start a fresh cycle.
+    /// The cycle ID. All searches in the same cycle share a CycleId.
+    /// When all items have been searched, a new CycleId is generated to start a fresh cycle.
     /// </summary>
-    public Guid RunId { get; set; }
+    public Guid CycleId { get; set; }
 
     /// <summary>
     /// When this item was last searched

@@ -14,6 +14,6 @@ public sealed record SearchEventResponse
     public SearchCommandStatus? SearchStatus { get; init; }
     public DateTime? CompletedAt { get; init; }
     public object? GrabbedItems { get; init; }
-    public Guid? CycleRunId { get; init; }
+    public Guid? CycleId { get; init; }
     public bool IsDryRun { get; init; }
 }

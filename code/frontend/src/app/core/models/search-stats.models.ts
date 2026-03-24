@@ -6,7 +6,7 @@ export interface InstanceSearchStat {
   totalSearchCount: number;
   lastSearchedAt: string | null;
   lastProcessedAt: string | null;
-  currentRunId: string | null;
+  currentCycleId: string | null;
   cycleItemsSearched: number;
   cycleItemsTotal: number;
   cycleStartedAt: string | null;
@@ -51,6 +51,6 @@ export interface SearchEvent {
   searchStatus: string | null;
   completedAt: string | null;
   grabbedItems: unknown[] | null;
-  cycleRunId: string | null;
+  cycleId: string | null;
   isDryRun: boolean;
 }

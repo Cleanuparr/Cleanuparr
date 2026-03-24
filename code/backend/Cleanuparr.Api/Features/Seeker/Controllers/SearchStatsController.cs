@@ -72,10 +72,10 @@ public sealed class SearchStatsController : ControllerBase
             .ToListAsync();
 
         // Count items searched in current cycle per instance
-        List<Guid> currentRunIds = instanceConfigs.Select(ic => ic.CurrentRunId).ToList();
+        List<Guid> currentCycleIds = instanceConfigs.Select(ic => ic.CurrentCycleId).ToList();
         var cycleItemsByInstance = await _dataContext.SeekerHistory
             .AsNoTracking()
-            .Where(h => currentRunIds.Contains(h.RunId))
+            .Where(h => currentCycleIds.Contains(h.CycleId))
             .GroupBy(h => h.ArrInstanceId)
             .Select(g => new
             {
@@ -98,7 +98,7 @@ public sealed class SearchStatsController : ControllerBase
                 TotalSearchCount = history?.TotalSearchCount ?? 0,
                 LastSearchedAt = history?.LastSearchedAt,
                 LastProcessedAt = ic.LastProcessedAt,
-                CurrentRunId = ic.CurrentRunId,
+                CurrentCycleId = ic.CurrentCycleId,
                 CycleItemsSearched = cycleProgress?.CycleItemsSearched ?? 0,
                 CycleItemsTotal = ic.TotalEligibleItems,
                 CycleStartedAt = cycleProgress?.CycleStartedAt,
@@ -205,7 +205,7 @@ public sealed class SearchStatsController : ControllerBase
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 50,
         [FromQuery] Guid? instanceId = null,
-        [FromQuery] Guid? cycleRunId = null)
+        [FromQuery] Guid? cycleId = null)
     {
         if (page < 1) page = 1;
         if (pageSize < 1) pageSize = 50;
@@ -229,10 +229,10 @@ public sealed class SearchStatsController : ControllerBase
             }
         }
 
-        // Filter by cycle run ID
-        if (cycleRunId.HasValue)
+        // Filter by cycle ID
+        if (cycleId.HasValue)
         {
-            query = query.Where(e => e.CycleRunId == cycleRunId.Value);
+            query = query.Where(e => e.CycleId == cycleId.Value);
         }
 
         int totalCount = await query.CountAsync();
@@ -258,7 +258,7 @@ public sealed class SearchStatsController : ControllerBase
                 SearchStatus = e.SearchStatus,
                 CompletedAt = e.CompletedAt,
                 GrabbedItems = parsed.GrabbedItems,
-                CycleRunId = e.CycleRunId,
+                CycleId = e.CycleId,
                 IsDryRun = e.IsDryRun,
             };
         }).ToList();
@@ -344,7 +344,7 @@ public sealed class SearchStatsController : ControllerBase
                         SearchStatus = e.SearchStatus,
                         CompletedAt = e.CompletedAt,
                         GrabbedItems = parsed.GrabbedItems,
-                        CycleRunId = e.CycleRunId,
+                        CycleId = e.CycleId,
                         IsDryRun = e.IsDryRun,
                     }
                     : null;
