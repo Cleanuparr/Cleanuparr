@@ -10,5 +10,5 @@ public sealed record UpdateSeekerInstanceConfigRequest
 
     public int ActiveDownloadLimit { get; init; } = 0;
 
-    public int MinCycleTimeDays { get; init; } = 5;
+    public int MinCycleTimeDays { get; init; } = 7;
 }

@@ -197,7 +197,7 @@ export class SeekerComponent implements OnInit, HasPendingChanges {
   updateInstanceMinCycleTimeDays(index: number, days: number | null): void {
     this.instances.update(instances => {
       const updated = [...instances];
-      updated[index] = { ...updated[index], minCycleTimeDays: days ?? 5 };
+      updated[index] = { ...updated[index], minCycleTimeDays: days ?? 7 };
       return updated;
     });
   }

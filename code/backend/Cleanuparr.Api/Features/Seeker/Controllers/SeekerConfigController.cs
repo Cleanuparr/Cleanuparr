@@ -63,7 +63,7 @@ public sealed class SeekerConfigController : ControllerBase
                 LastProcessedAt = seekerConfig?.LastProcessedAt,
                 ArrInstanceEnabled = instance.Enabled,
                 ActiveDownloadLimit = seekerConfig?.ActiveDownloadLimit ?? 3,
-                MinCycleTimeDays = seekerConfig?.MinCycleTimeDays ?? 5,
+                MinCycleTimeDays = seekerConfig?.MinCycleTimeDays ?? 7,
             };
         }).ToList();
 

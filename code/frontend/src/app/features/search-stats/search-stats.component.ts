@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, inject, signal, effect, OnInit } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, signal, computed, effect, OnInit } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { NgIcon } from '@ng-icons/core';
 import { PageHeaderComponent } from '@layout/page-header/page-header.component';
@@ -48,6 +48,13 @@ export class SearchStatsComponent implements OnInit {
 
   readonly summary = signal<SearchStatsSummary | null>(null);
   readonly loading = signal(false);
+
+  readonly sortedInstanceStats = computed(() =>
+    [...(this.summary()?.perInstanceStats ?? [])].sort((a, b) => {
+      const typeCompare = a.instanceType.localeCompare(b.instanceType);
+      return typeCompare !== 0 ? typeCompare : a.instanceName.localeCompare(b.instanceName);
+    })
+  );
 
   // Tabs
   readonly activeTab = signal<string>('events');
@@ -199,6 +206,11 @@ export class SearchStatsComponent implements OnInit {
 
   formatGrabbedItems(items: unknown[]): string {
     return items.map((i: any) => i.Title || i.title || 'Unknown').join(', ');
+  }
+
+  cycleProgress(inst: InstanceSearchStat): number {
+    if (!inst.cycleItemsTotal) return 0;
+    return Math.min(100, Math.round((inst.cycleItemsSearched / inst.cycleItemsTotal) * 100));
   }
 
   instanceHealthWarning(stat: InstanceSearchStat): string | null {

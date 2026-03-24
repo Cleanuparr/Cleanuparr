@@ -40,39 +40,48 @@
     <!-- Per-Instance Cards -->
     @if (stats.perInstanceStats.length > 0) {
       <div class="instance-cards">
-        @for (inst of stats.perInstanceStats; track inst.instanceId) {
+        @for (inst of sortedInstanceStats(); track inst.instanceId) {
           <app-card class="instance-card">
             <div class="instance-card__header">
               <span class="instance-card__name">{{ inst.instanceName }}</span>
-              @if (instanceHealthWarning(inst); as warning) {
-                <app-tooltip [text]="warning">
-                  <ng-icon name="tablerAlertTriangle" class="instance-card__warning-icon" />
-                </app-tooltip>
-              }
-              <app-badge [severity]="instanceTypeSeverity(inst.instanceType)" size="sm">
-                {{ inst.instanceType }}
-              </app-badge>
+              <div class="instance-card__header-right">
+                @if (instanceHealthWarning(inst); as warning) {
+                  <app-tooltip [text]="warning">
+                    <ng-icon name="tablerAlertTriangle" class="instance-card__warning-icon" />
+                  </app-tooltip>
+                }
+                <app-badge [severity]="instanceTypeSeverity(inst.instanceType)" size="sm">
+                  {{ inst.instanceType }}
+                </app-badge>
+              </div>
             </div>
+
+            <div class="instance-card__progress">
+              <div class="instance-card__progress-row">
+                <app-tooltip text="Items searched in the current cycle out of total eligible items">
+                  <span class="instance-card__progress-label">Cycle Progress</span>
+                </app-tooltip>
+                <span class="instance-card__progress-count">
+                  <strong>{{ inst.cycleItemsSearched }}</strong> / {{ inst.cycleItemsTotal }}
+                </span>
+              </div>
+              <div class="instance-card__progress-track">
+                <div class="instance-card__progress-fill" [style.width.%]="cycleProgress(inst)"></div>
+              </div>
+            </div>
+
             <div class="instance-card__stats">
               <div class="instance-card__stat">
-                <span class="instance-card__stat-value">
-                  {{ inst.cycleItemsSearched }}<span class="instance-card__stat-value--dimmed"> / {{ inst.cycleItemsTotal }}</span>
-                </span>
-                <app-tooltip text="Items searched in the current cycle out of total eligible items">
-                  <span class="instance-card__stat-label">Cycle Progress</span>
-                </app-tooltip>
+                <span class="instance-card__stat-value">{{ inst.totalSearchCount }}</span>
+                <span class="instance-card__stat-label">Searches</span>
               </div>
               <div class="instance-card__stat">
-                <span class="instance-card__stat-value instance-card__stat-value--small">
+                <span class="instance-card__stat-value">
                   {{ inst.cycleStartedAt ? formatCycleDuration(inst.cycleStartedAt) : '—' }}
                 </span>
                 <app-tooltip text="How long the current search cycle has been running">
                   <span class="instance-card__stat-label">Cycle Duration</span>
                 </app-tooltip>
-              </div>
-              <div class="instance-card__stat">
-                <span class="instance-card__stat-value">{{ inst.totalSearchCount }}</span>
-                <span class="instance-card__stat-label">Searches</span>
               </div>
               <div class="instance-card__stat">
                 <span class="instance-card__stat-value instance-card__stat-value--small">
@@ -82,14 +91,12 @@
                   <span class="instance-card__stat-label">Last Search</span>
                 </app-tooltip>
               </div>
-              <div class="instance-card__stat">
-                <span class="instance-card__stat-value instance-card__stat-value--small">
-                  {{ inst.currentCycleId ? inst.currentCycleId.substring(0, 8) : '—' }}
-                </span>
-                <app-tooltip text="Unique identifier for the current search cycle. Changes when all items have been searched">
-                  <span class="instance-card__stat-label">Cycle ID</span>
-                </app-tooltip>
-              </div>
+            </div>
+
+            <div class="instance-card__footer">
+              <app-tooltip text="Unique identifier for the current search cycle. Changes when all items have been searched">
+                <span class="instance-card__cycle-chip">{{ inst.currentCycleId ? inst.currentCycleId.substring(0, 8) : '—' }}</span>
+              </app-tooltip>
             </div>
           </app-card>
         }
