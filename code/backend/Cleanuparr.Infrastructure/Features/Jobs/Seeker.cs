@@ -1,4 +1,5 @@
 using Cleanuparr.Domain.Entities.Arr;
+using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Events.Interfaces;
 using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
@@ -22,11 +23,25 @@ public sealed class Seeker : IHandler
 {
     private const double JitterFactor = 0.7;
 
+    /// <summary>
+    /// Queue states that indicate an item is actively being processed.
+    /// Items in these states are excluded from proactive searches.
+    /// "importFailed" is intentionally excluded — failed imports should be re-searched.
+    /// </summary>
+    private static readonly HashSet<string> ActiveQueueStates = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "downloading",
+        "importing",
+        "importPending",
+        "importBlocked"
+    };
+
     private readonly ILogger<Seeker> _logger;
     private readonly DataContext _dataContext;
     private readonly IRadarrClient _radarrClient;
     private readonly ISonarrClient _sonarrClient;
     private readonly IArrClientFactory _arrClientFactory;
+    private readonly IArrQueueIterator _arrQueueIterator;
     private readonly IEventPublisher _eventPublisher;
     private readonly IDryRunInterceptor _dryRunInterceptor;
     private readonly IHostingEnvironment _environment;
@@ -39,6 +54,7 @@ public sealed class Seeker : IHandler
         IRadarrClient radarrClient,
         ISonarrClient sonarrClient,
         IArrClientFactory arrClientFactory,
+        IArrQueueIterator arrQueueIterator,
         IEventPublisher eventPublisher,
         IDryRunInterceptor dryRunInterceptor,
         IHostingEnvironment environment,
@@ -50,6 +66,7 @@ public sealed class Seeker : IHandler
         _radarrClient = radarrClient;
         _sonarrClient = sonarrClient;
         _arrClientFactory = arrClientFactory;
+        _arrQueueIterator = arrQueueIterator;
         _eventPublisher = eventPublisher;
         _dryRunInterceptor = dryRunInterceptor;
         _environment = environment;
@@ -231,30 +248,40 @@ public sealed class Seeker : IHandler
         ContextProvider.Set(nameof(InstanceType), instanceType);
         ContextProvider.Set(ContextProvider.Keys.ArrInstanceUrl, arrInstance.ExternalUrl ?? arrInstance.Url);
 
+        // Fetch queue once for both active download limit check and queue cross-referencing
+        IArrClient arrClient = _arrClientFactory.GetClient(instanceType, arrInstance.Version);
+        List<QueueRecord> queueRecords = [];
+
+        try
+        {
+            await _arrQueueIterator.Iterate(arrClient, arrInstance, records =>
+            {
+                queueRecords.AddRange(records);
+                return Task.CompletedTask;
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to fetch queue for {InstanceName}, proceeding without queue cross-referencing",
+                arrInstance.Name);
+        }
+
+        // Check active download limit using the fetched queue data
         if (instanceConfig.ActiveDownloadLimit > 0)
         {
-            try
+            int activeDownloads = queueRecords.Count(r => r.SizeLeft > 0);
+            if (activeDownloads >= instanceConfig.ActiveDownloadLimit)
             {
-                IArrClient arrClient = _arrClientFactory.GetClient(instanceType, arrInstance.Version);
-                int activeDownloads = await arrClient.GetActiveDownloadCountAsync(arrInstance);
-                if (activeDownloads >= instanceConfig.ActiveDownloadLimit)
-                {
-                    _logger.LogInformation(
-                        "Skipping proactive search for {InstanceName} — {Count} items actively downloading (limit: {Limit})",
-                        arrInstance.Name, activeDownloads, instanceConfig.ActiveDownloadLimit);
-                    return;
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Failed to check active downloads for {InstanceName}, proceeding anyway",
-                    arrInstance.Name);
+                _logger.LogInformation(
+                    "Skipping proactive search for {InstanceName} — {Count} items actively downloading (limit: {Limit})",
+                    arrInstance.Name, activeDownloads, instanceConfig.ActiveDownloadLimit);
+                return;
             }
         }
 
         try
         {
-            await ProcessInstanceAsync(config, instanceConfig, arrInstance, instanceType, isDryRun);
+            await ProcessInstanceAsync(config, instanceConfig, arrInstance, instanceType, isDryRun, queueRecords);
         }
         catch (Exception ex)
         {
@@ -273,7 +300,8 @@ public sealed class Seeker : IHandler
         SeekerInstanceConfig instanceConfig,
         ArrInstance arrInstance,
         InstanceType instanceType,
-        bool isDryRun)
+        bool isDryRun,
+        List<QueueRecord> queueRecords)
     {
         // Load search history for the current cycle
         List<SeekerHistory> currentCycleHistory = await _dataContext.SeekerHistory
@@ -292,6 +320,21 @@ public sealed class Seeker : IHandler
             .GroupBy(h => h.ExternalItemId)
             .ToDictionary(g => g.Key, g => g.Max(h => h.LastSearchedAt));
 
+        // Build queued-item lookups from active queue records
+        var activeQueueRecords = queueRecords
+            .Where(r => ActiveQueueStates.Contains(r.TrackedDownloadState))
+            .ToList();
+
+        HashSet<long> queuedMovieIds = activeQueueRecords
+            .Where(r => r.MovieId > 0)
+            .Select(r => r.MovieId)
+            .ToHashSet();
+
+        HashSet<(long SeriesId, long SeasonNumber)> queuedSeasons = activeQueueRecords
+            .Where(r => r.SeriesId > 0)
+            .Select(r => (r.SeriesId, r.SeasonNumber))
+            .ToHashSet();
+
         HashSet<SearchItem> searchItems;
         List<string> selectedNames;
         List<long> allLibraryIds;
@@ -301,14 +344,14 @@ public sealed class Seeker : IHandler
         if (instanceType == InstanceType.Radarr)
         {
             List<long> selectedIds;
-            (selectedIds, selectedNames, allLibraryIds) = await ProcessRadarrAsync(config, arrInstance, instanceConfig, itemSearchHistory, isDryRun);
+            (selectedIds, selectedNames, allLibraryIds) = await ProcessRadarrAsync(config, arrInstance, instanceConfig, itemSearchHistory, isDryRun, queuedMovieIds);
             searchItems = selectedIds.Select(id => new SearchItem { Id = id }).ToHashSet();
             historyIds = selectedIds;
         }
         else
         {
             (searchItems, selectedNames, allLibraryIds, historyIds, seasonNumber) =
-                await ProcessSonarrAsync(config, arrInstance, instanceConfig, itemSearchHistory, currentCycleHistory, isDryRun);
+                await ProcessSonarrAsync(config, arrInstance, instanceConfig, itemSearchHistory, currentCycleHistory, isDryRun, queuedSeasons: queuedSeasons);
         }
 
         IEnumerable<long> historyExternalIds = allHistory.Select(h => h.ExternalItemId);
@@ -354,7 +397,8 @@ public sealed class Seeker : IHandler
         ArrInstance arrInstance,
         SeekerInstanceConfig instanceConfig,
         Dictionary<long, DateTime> searchHistory,
-        bool isDryRun)
+        bool isDryRun,
+        HashSet<long> queuedMovieIds)
     {
         List<SearchableMovie> movies = await _radarrClient.GetAllMoviesAsync(arrInstance);
         List<long> allLibraryIds = movies.Select(m => m.Id).ToList();
@@ -386,6 +430,27 @@ public sealed class Seeker : IHandler
         if (candidates.Count == 0)
         {
             return ([], [], allLibraryIds);
+        }
+
+        // Exclude movies already in the download queue
+        if (queuedMovieIds.Count > 0)
+        {
+            int beforeCount = candidates.Count;
+            candidates = candidates
+                .Where(m => !queuedMovieIds.Contains(m.Id))
+                .ToList();
+
+            int skipped = beforeCount - candidates.Count;
+            if (skipped > 0)
+            {
+                _logger.LogDebug("Excluded {Count} movies already in queue on {InstanceName}",
+                    skipped, arrInstance.Name);
+            }
+
+            if (candidates.Count == 0)
+            {
+                return ([], [], allLibraryIds);
+            }
         }
 
         // Check for cycle completion: all candidates already searched in current cycle
@@ -439,7 +504,8 @@ public sealed class Seeker : IHandler
         Dictionary<long, DateTime> seriesSearchHistory,
         List<SeekerHistory> currentCycleHistory,
         bool isDryRun,
-        bool isRetry = false)
+        bool isRetry = false,
+        HashSet<(long SeriesId, long SeasonNumber)>? queuedSeasons = null)
     {
         List<SearchableSeries> series = await _sonarrClient.GetAllSeriesAsync(arrInstance);
         List<long> allLibraryIds = series.Select(s => s.Id).ToList();
@@ -486,7 +552,7 @@ public sealed class Seeker : IHandler
                 seriesTitle = candidates.First(s => s.Id == seriesId).Title;
 
                 (SeriesSearchItem? searchItem, SearchableEpisode? selectedEpisode) =
-                    await BuildSonarrSearchItemAsync(config, arrInstance, seriesId, seriesHistory, seriesTitle);
+                    await BuildSonarrSearchItemAsync(config, arrInstance, seriesId, seriesHistory, seriesTitle, queuedSeasons);
 
                 if (searchItem is not null)
                 {
@@ -518,7 +584,7 @@ public sealed class Seeker : IHandler
 
             // Retry with fresh cycle (only once to prevent infinite recursion)
             return await ProcessSonarrAsync(config, arrInstance, instanceConfig,
-                new Dictionary<long, DateTime>(), [], isDryRun, isRetry: true);
+                new Dictionary<long, DateTime>(), [], isDryRun, isRetry: true, queuedSeasons: queuedSeasons);
         }
 
         return ([], [], allLibraryIds, [], 0);
@@ -533,7 +599,8 @@ public sealed class Seeker : IHandler
         ArrInstance arrInstance,
         long seriesId,
         List<SeekerHistory> seriesHistory,
-        string seriesTitle)
+        string seriesTitle,
+        HashSet<(long SeriesId, long SeasonNumber)>? queuedSeasons = null)
     {
         List<SearchableEpisode> episodes = await _sonarrClient.GetEpisodesAsync(arrInstance, seriesId);
 
@@ -592,9 +659,26 @@ public sealed class Seeker : IHandler
 
         // Find unsearched seasons first
         var unsearched = seasonGroups.Where(s => s.LastSearched is null).ToList();
+
+        // Exclude seasons already in the download queue
+        if (queuedSeasons is { Count: > 0 })
+        {
+            int beforeCount = unsearched.Count;
+            unsearched = unsearched
+                .Where(s => !queuedSeasons.Contains((seriesId, (long)s.SeasonNumber)))
+                .ToList();
+
+            int skipped = beforeCount - unsearched.Count;
+            if (skipped > 0)
+            {
+                _logger.LogDebug("Excluded {Count} seasons already in queue for '{SeriesTitle}' on {InstanceName}",
+                    skipped, seriesTitle, arrInstance.Name);
+            }
+        }
+
         if (unsearched.Count == 0)
         {
-            // All seasons searched in current cycle — this series is done
+            // All unsearched seasons are either searched or in the queue
             return (null, null);
         }
 
@@ -772,4 +856,5 @@ public sealed class Seeker : IHandler
                 deleted, arrInstanceId);
         }
     }
+
 }

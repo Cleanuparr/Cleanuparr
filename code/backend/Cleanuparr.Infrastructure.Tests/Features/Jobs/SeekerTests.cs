@@ -1,3 +1,5 @@
+using Cleanuparr.Domain.Entities.Arr;
+using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Events.Interfaces;
 using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
@@ -78,6 +80,7 @@ public class SeekerTests : IDisposable
             _radarrClient.Object,
             _sonarrClient.Object,
             _fixture.ArrClientFactory.Object,
+            _fixture.ArrQueueIterator.Object,
             _fixture.EventPublisher.Object,
             _dryRunInterceptor.Object,
             _hostingEnvironment.Object,
@@ -255,10 +258,16 @@ public class SeekerTests : IDisposable
         await _fixture.DataContext.SaveChangesAsync();
 
         var mockArrClient = new Mock<IArrClient>();
-        // Current active downloads = 2, which meets the limit
-        mockArrClient
-            .Setup(x => x.GetActiveDownloadCountAsync(radarrInstance))
-            .ReturnsAsync(2);
+
+        // Return 2 queue items with SizeLeft > 0 (actively downloading), which meets the limit
+        QueueRecord[] activeDownloads =
+        [
+            new() { Id = 1, Title = "Download 1", DownloadId = "hash1", Protocol = "torrent", SizeLeft = 1000, MovieId = 10, TrackedDownloadState = "downloading" },
+            new() { Id = 2, Title = "Download 2", DownloadId = "hash2", Protocol = "torrent", SizeLeft = 2000, MovieId = 20, TrackedDownloadState = "downloading" }
+        ];
+        _fixture.ArrQueueIterator
+            .Setup(x => x.Iterate(mockArrClient.Object, It.IsAny<ArrInstance>(), It.IsAny<Func<IReadOnlyList<QueueRecord>, Task>>()))
+            .Returns<IArrClient, ArrInstance, Func<IReadOnlyList<QueueRecord>, Task>>((_, _, action) => action(activeDownloads));
 
         _fixture.ArrClientFactory
             .Setup(x => x.GetClient(InstanceType.Radarr, It.IsAny<float>()))
@@ -282,6 +291,249 @@ public class SeekerTests : IDisposable
                 SeekerSearchType.Proactive,
                 It.IsAny<Guid?>()),
             Times.Never);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_Radarr_ExcludesMoviesAlreadyInQueue()
+    {
+        // Arrange — proactive search enabled with 3 movies, one already in queue
+        var config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
+        config.SearchEnabled = true;
+        config.ProactiveSearchEnabled = true;
+        await _fixture.DataContext.SaveChangesAsync();
+
+        var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
+
+        _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = radarrInstance.Id,
+            ArrInstance = radarrInstance,
+            Enabled = true
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+
+        var mockArrClient = new Mock<IArrClient>();
+
+        // Movie 2 is already in the download queue
+        QueueRecord[] queuedRecords =
+        [
+            new() { Id = 1, Title = "Movie 2 Download", DownloadId = "hash1", Protocol = "torrent", SizeLeft = 1000, MovieId = 2, TrackedDownloadState = "downloading" }
+        ];
+        _fixture.ArrQueueIterator
+            .Setup(x => x.Iterate(mockArrClient.Object, It.IsAny<ArrInstance>(), It.IsAny<Func<IReadOnlyList<QueueRecord>, Task>>()))
+            .Returns<IArrClient, ArrInstance, Func<IReadOnlyList<QueueRecord>, Task>>((_, _, action) => action(queuedRecords));
+
+        _radarrClient
+            .Setup(x => x.GetAllMoviesAsync(radarrInstance))
+            .ReturnsAsync(
+            [
+                new SearchableMovie { Id = 1, Title = "Movie 1", Status = "released", Monitored = true, Tags = [] },
+                new SearchableMovie { Id = 2, Title = "Movie 2", Status = "released", Monitored = true, Tags = [] },
+                new SearchableMovie { Id = 3, Title = "Movie 3", Status = "released", Monitored = true, Tags = [] }
+            ]);
+
+        HashSet<SearchItem>? capturedSearchItems = null;
+        mockArrClient
+            .Setup(x => x.SearchItemsAsync(radarrInstance, It.IsAny<HashSet<SearchItem>>()))
+            .Callback<ArrInstance, HashSet<SearchItem>>((_, items) => capturedSearchItems = items)
+            .ReturnsAsync([100L]);
+
+        _fixture.ArrClientFactory
+            .Setup(x => x.GetClient(InstanceType.Radarr, It.IsAny<float>()))
+            .Returns(mockArrClient.Object);
+
+        var sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert — search was triggered, but NOT for movie 2
+        mockArrClient.Verify(
+            x => x.SearchItemsAsync(radarrInstance, It.IsAny<HashSet<SearchItem>>()),
+            Times.Once);
+
+        Assert.NotNull(capturedSearchItems);
+        Assert.DoesNotContain(capturedSearchItems, item => item.Id == 2);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_Radarr_DoesNotExcludeImportFailedItems()
+    {
+        // Arrange — movie in queue with importFailed state should still be searchable
+        var config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
+        config.SearchEnabled = true;
+        config.ProactiveSearchEnabled = true;
+        await _fixture.DataContext.SaveChangesAsync();
+
+        var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
+
+        _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = radarrInstance.Id,
+            ArrInstance = radarrInstance,
+            Enabled = true
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+
+        var mockArrClient = new Mock<IArrClient>();
+
+        // Movie 1 is in queue but with importFailed state — should NOT be excluded
+        QueueRecord[] queuedRecords =
+        [
+            new() { Id = 1, Title = "Movie 1 Download", DownloadId = "hash1", Protocol = "torrent", SizeLeft = 0, MovieId = 1, TrackedDownloadState = "importFailed" }
+        ];
+        _fixture.ArrQueueIterator
+            .Setup(x => x.Iterate(mockArrClient.Object, It.IsAny<ArrInstance>(), It.IsAny<Func<IReadOnlyList<QueueRecord>, Task>>()))
+            .Returns<IArrClient, ArrInstance, Func<IReadOnlyList<QueueRecord>, Task>>((_, _, action) => action(queuedRecords));
+
+        _radarrClient
+            .Setup(x => x.GetAllMoviesAsync(radarrInstance))
+            .ReturnsAsync(
+            [
+                new SearchableMovie { Id = 1, Title = "Movie 1", Status = "released", Monitored = true, Tags = [] }
+            ]);
+
+        mockArrClient
+            .Setup(x => x.SearchItemsAsync(radarrInstance, It.IsAny<HashSet<SearchItem>>()))
+            .ReturnsAsync([100L]);
+
+        _fixture.ArrClientFactory
+            .Setup(x => x.GetClient(InstanceType.Radarr, It.IsAny<float>()))
+            .Returns(mockArrClient.Object);
+
+        var sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert — search was triggered for movie 1 (importFailed does not exclude)
+        mockArrClient.Verify(
+            x => x.SearchItemsAsync(radarrInstance, It.IsAny<HashSet<SearchItem>>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_Sonarr_ExcludesSeasonsAlreadyInQueue()
+    {
+        // Arrange — series with 2 seasons, season 1 in queue
+        var config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
+        config.SearchEnabled = true;
+        config.ProactiveSearchEnabled = true;
+        await _fixture.DataContext.SaveChangesAsync();
+
+        var sonarrInstance = TestDataContextFactory.AddSonarrInstance(_fixture.DataContext);
+
+        _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = sonarrInstance.Id,
+            ArrInstance = sonarrInstance,
+            Enabled = true
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+
+        var mockArrClient = new Mock<IArrClient>();
+
+        // Season 1 of series 10 is in the queue
+        QueueRecord[] queuedRecords =
+        [
+            new() { Id = 1, Title = "Series Episode", DownloadId = "hash1", Protocol = "torrent", SizeLeft = 1000, SeriesId = 10, SeasonNumber = 1, TrackedDownloadState = "downloading" }
+        ];
+        _fixture.ArrQueueIterator
+            .Setup(x => x.Iterate(mockArrClient.Object, It.IsAny<ArrInstance>(), It.IsAny<Func<IReadOnlyList<QueueRecord>, Task>>()))
+            .Returns<IArrClient, ArrInstance, Func<IReadOnlyList<QueueRecord>, Task>>((_, _, action) => action(queuedRecords));
+
+        _sonarrClient
+            .Setup(x => x.GetAllSeriesAsync(It.IsAny<ArrInstance>()))
+            .ReturnsAsync(
+            [
+                new SearchableSeries { Id = 10, Title = "Test Series", Status = "continuing", Monitored = true, Tags = [], Statistics = new SeriesStatistics { EpisodeCount = 20, EpisodeFileCount = 10 } }
+            ]);
+
+        // Use dates relative to FakeTimeProvider (defaults to Jan 1, 2000)
+        var pastDate = _fixture.TimeProvider.GetUtcNow().UtcDateTime.AddDays(-30);
+        _sonarrClient
+            .Setup(x => x.GetEpisodesAsync(It.IsAny<ArrInstance>(), 10))
+            .ReturnsAsync(
+            [
+                new SearchableEpisode { Id = 100, SeasonNumber = 1, EpisodeNumber = 1, Monitored = true, AirDateUtc = pastDate, HasFile = false },
+                new SearchableEpisode { Id = 101, SeasonNumber = 2, EpisodeNumber = 1, Monitored = true, AirDateUtc = pastDate, HasFile = false }
+            ]);
+
+        SeriesSearchItem? capturedSearchItem = null;
+        mockArrClient
+            .Setup(x => x.SearchItemsAsync(It.IsAny<ArrInstance>(), It.IsAny<HashSet<SearchItem>>()))
+            .Callback<ArrInstance, HashSet<SearchItem>>((_, items) => capturedSearchItem = items.OfType<SeriesSearchItem>().FirstOrDefault())
+            .ReturnsAsync([100L]);
+
+        _fixture.ArrClientFactory
+            .Setup(x => x.GetClient(InstanceType.Sonarr, It.IsAny<float>()))
+            .Returns(mockArrClient.Object);
+
+        var sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert — season 2 was searched (season 1 excluded because it's in queue)
+        mockArrClient.Verify(
+            x => x.SearchItemsAsync(It.IsAny<ArrInstance>(), It.IsAny<HashSet<SearchItem>>()),
+            Times.Once);
+
+        Assert.NotNull(capturedSearchItem);
+        Assert.Equal(2, capturedSearchItem.Id); // Season 2
+        Assert.Equal(10, capturedSearchItem.SeriesId);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_QueueFetchFails_ProceedsWithoutFiltering()
+    {
+        // Arrange — queue fetch throws, but search should still proceed
+        var config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
+        config.SearchEnabled = true;
+        config.ProactiveSearchEnabled = true;
+        await _fixture.DataContext.SaveChangesAsync();
+
+        var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
+
+        _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = radarrInstance.Id,
+            ArrInstance = radarrInstance,
+            Enabled = true
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+
+        var mockArrClient = new Mock<IArrClient>();
+
+        // Queue fetch fails
+        _fixture.ArrQueueIterator
+            .Setup(x => x.Iterate(mockArrClient.Object, It.IsAny<ArrInstance>(), It.IsAny<Func<IReadOnlyList<QueueRecord>, Task>>()))
+            .ThrowsAsync(new HttpRequestException("Connection refused"));
+
+        _radarrClient
+            .Setup(x => x.GetAllMoviesAsync(radarrInstance))
+            .ReturnsAsync(
+            [
+                new SearchableMovie { Id = 1, Title = "Movie 1", Status = "released", Monitored = true, Tags = [] }
+            ]);
+
+        mockArrClient
+            .Setup(x => x.SearchItemsAsync(radarrInstance, It.IsAny<HashSet<SearchItem>>()))
+            .ReturnsAsync([100L]);
+
+        _fixture.ArrClientFactory
+            .Setup(x => x.GetClient(InstanceType.Radarr, It.IsAny<float>()))
+            .Returns(mockArrClient.Object);
+
+        var sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert — search still proceeded despite queue fetch failure
+        mockArrClient.Verify(
+            x => x.SearchItemsAsync(radarrInstance, It.IsAny<HashSet<SearchItem>>()),
+            Times.Once);
     }
 
     #endregion
