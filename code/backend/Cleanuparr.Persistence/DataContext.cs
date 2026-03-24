@@ -196,6 +196,9 @@ public class DataContext : DbContext
                 .OnDelete(DeleteBehavior.Cascade);
 
             entity.HasIndex(p => p.Name).IsUnique();
+
+            entity.Property(e => e.CreatedAt).HasConversion(new UtcDateTimeConverter());
+            entity.Property(e => e.UpdatedAt).HasConversion(new UtcDateTimeConverter());
         });
 
         // Configure PushoverConfig List<string> conversions
@@ -220,6 +223,8 @@ public class DataContext : DbContext
                   .OnDelete(DeleteBehavior.Cascade);
 
             entity.HasIndex(s => s.ArrInstanceId).IsUnique();
+
+            entity.Property(s => s.LastProcessedAt).HasConversion(new UtcDateTimeConverter());
         });
 
         modelBuilder.Entity<SeekerHistory>(entity =>
@@ -230,6 +235,8 @@ public class DataContext : DbContext
                   .OnDelete(DeleteBehavior.Cascade);
 
             entity.HasIndex(s => new { s.ArrInstanceId, s.ExternalItemId, s.ItemType, s.SeasonNumber, s.RunId }).IsUnique();
+
+            entity.Property(s => s.LastSearchedAt).HasConversion(new UtcDateTimeConverter());
         });
 
         modelBuilder.Entity<SeekerCommandTracker>(entity =>
@@ -238,6 +245,8 @@ public class DataContext : DbContext
                   .WithMany()
                   .HasForeignKey(s => s.ArrInstanceId)
                   .OnDelete(DeleteBehavior.Cascade);
+
+            entity.Property(s => s.CreatedAt).HasConversion(new UtcDateTimeConverter());
         });
 
         modelBuilder.Entity<SearchQueueItem>(entity =>
@@ -246,6 +255,8 @@ public class DataContext : DbContext
                   .WithMany()
                   .HasForeignKey(s => s.ArrInstanceId)
                   .OnDelete(DeleteBehavior.Cascade);
+
+            entity.Property(s => s.CreatedAt).HasConversion(new UtcDateTimeConverter());
         });
 
         modelBuilder.Entity<CustomFormatScoreEntry>(entity =>
@@ -256,6 +267,8 @@ public class DataContext : DbContext
                   .OnDelete(DeleteBehavior.Cascade);
 
             entity.HasIndex(s => new { s.ArrInstanceId, s.ExternalItemId, s.EpisodeId }).IsUnique();
+
+            entity.Property(s => s.LastSyncedAt).HasConversion(new UtcDateTimeConverter());
         });
 
         modelBuilder.Entity<CustomFormatScoreHistory>(entity =>
@@ -267,6 +280,8 @@ public class DataContext : DbContext
 
             entity.HasIndex(s => new { s.ArrInstanceId, s.ExternalItemId, s.EpisodeId });
             entity.HasIndex(s => s.RecordedAt);
+
+            entity.Property(s => s.RecordedAt).HasConversion(new UtcDateTimeConverter());
         });
 
         // Configure BlacklistSyncState relationships and indexes
