@@ -149,21 +149,17 @@ public class TransmissionItemWrapperTests
     }
 
     [Theory]
-    [InlineData(1024L, 512L, 2.0)] // Uploaded more than downloaded
-    [InlineData(512L, 1024L, 0.5)] // Uploaded less than downloaded
-    [InlineData(1024L, 1024L, 1.0)] // Equal
-    [InlineData(0L, 1024L, 0.0)] // No upload
-    [InlineData(1024L, 0L, 0.0)] // No download
-    [InlineData(null, 1024L, 0.0)] // Null upload
-    [InlineData(1024L, null, 0.0)] // Null download
-    [InlineData(null, null, 0.0)] // Both null
-    public void Ratio_ReturnsCorrectValue(long? uploadedEver, long? downloadedEver, double expected)
+    [InlineData(2.0, 2.0)]
+    [InlineData(0.5, 0.5)]
+    [InlineData(1.0, 1.0)]
+    [InlineData(0.0, 0.0)]
+    [InlineData(null, 0.0)]
+    public void Ratio_ReturnsCorrectValue(double? uploadRatio, double expected)
     {
         // Arrange
         var torrentInfo = new TorrentInfo
         {
-            UploadedEver = uploadedEver,
-            DownloadedEver = downloadedEver
+            uploadRatio = uploadRatio
         };
         var wrapper = new TransmissionItemWrapper(torrentInfo);
 
