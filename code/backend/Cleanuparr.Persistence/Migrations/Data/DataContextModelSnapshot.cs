@@ -303,6 +303,14 @@ namespace Cleanuparr.Persistence.Migrations.Data
                         .HasColumnType("TEXT")
                         .HasColumnName("ignored_downloads");
 
+                    b.Property<ushort>("SearchDelay")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("search_delay");
+
+                    b.Property<bool>("SearchEnabled")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("search_enabled");
+
                     b.Property<bool>("StatusCheckEnabled")
                         .HasColumnType("INTEGER")
                         .HasColumnName("status_check_enabled");
@@ -695,10 +703,6 @@ namespace Cleanuparr.Persistence.Migrations.Data
                         .HasColumnType("INTEGER")
                         .HasColumnName("on_queue_item_deleted");
 
-                    b.Property<bool>("OnSearchTriggered")
-                        .HasColumnType("INTEGER")
-                        .HasColumnName("on_search_triggered");
-
                     b.Property<bool>("OnSlowStrike")
                         .HasColumnType("INTEGER")
                         .HasColumnName("on_slow_strike");
@@ -1086,98 +1090,6 @@ namespace Cleanuparr.Persistence.Migrations.Data
                     b.ToTable("stall_rules", (string)null);
                 });
 
-            modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.Seeker.SeekerConfig", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT")
-                        .HasColumnName("id");
-
-                    b.Property<bool>("MonitoredOnly")
-                        .HasColumnType("INTEGER")
-                        .HasColumnName("monitored_only");
-
-                    b.Property<bool>("ProactiveSearchEnabled")
-                        .HasColumnType("INTEGER")
-                        .HasColumnName("proactive_search_enabled");
-
-                    b.Property<bool>("SearchEnabled")
-                        .HasColumnType("INTEGER")
-                        .HasColumnName("search_enabled");
-
-                    b.Property<ushort>("SearchInterval")
-                        .HasColumnType("INTEGER")
-                        .HasColumnName("search_interval");
-
-                    b.Property<string>("SelectionStrategy")
-                        .IsRequired()
-                        .HasColumnType("TEXT")
-                        .HasColumnName("selection_strategy");
-
-                    b.Property<bool>("UseCustomFormatScore")
-                        .HasColumnType("INTEGER")
-                        .HasColumnName("use_custom_format_score");
-
-                    b.Property<bool>("UseCutoff")
-                        .HasColumnType("INTEGER")
-                        .HasColumnName("use_cutoff");
-
-                    b.Property<bool>("UseRoundRobin")
-                        .HasColumnType("INTEGER")
-                        .HasColumnName("use_round_robin");
-
-                    b.HasKey("Id")
-                        .HasName("pk_seeker_configs");
-
-                    b.ToTable("seeker_configs", (string)null);
-                });
-
-            modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.Seeker.SeekerInstanceConfig", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT")
-                        .HasColumnName("id");
-
-                    b.Property<int>("ActiveDownloadLimit")
-                        .HasColumnType("INTEGER")
-                        .HasColumnName("active_download_limit");
-
-                    b.Property<Guid>("ArrInstanceId")
-                        .HasColumnType("TEXT")
-                        .HasColumnName("arr_instance_id");
-
-                    b.Property<Guid>("CurrentRunId")
-                        .HasColumnType("TEXT")
-                        .HasColumnName("current_run_id");
-
-                    b.Property<bool>("Enabled")
-                        .HasColumnType("INTEGER")
-                        .HasColumnName("enabled");
-
-                    b.Property<DateTime?>("LastProcessedAt")
-                        .HasColumnType("TEXT")
-                        .HasColumnName("last_processed_at");
-
-                    b.PrimitiveCollection<string>("SkipTags")
-                        .IsRequired()
-                        .HasColumnType("TEXT")
-                        .HasColumnName("skip_tags");
-
-                    b.Property<int>("TotalEligibleItems")
-                        .HasColumnType("INTEGER")
-                        .HasColumnName("total_eligible_items");
-
-                    b.HasKey("Id")
-                        .HasName("pk_seeker_instance_configs");
-
-                    b.HasIndex("ArrInstanceId")
-                        .IsUnique()
-                        .HasDatabaseName("ix_seeker_instance_configs_arr_instance_id");
-
-                    b.ToTable("seeker_instance_configs", (string)null);
-                });
-
             modelBuilder.Entity("Cleanuparr.Persistence.Models.State.BlacklistSyncHistory", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1208,270 +1120,6 @@ namespace Cleanuparr.Persistence.Migrations.Data
                         .HasDatabaseName("ix_blacklist_sync_history_hash_download_client_id");
 
                     b.ToTable("blacklist_sync_history", (string)null);
-                });
-
-            modelBuilder.Entity("Cleanuparr.Persistence.Models.State.CustomFormatScoreEntry", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT")
-                        .HasColumnName("id");
-
-                    b.Property<Guid>("ArrInstanceId")
-                        .HasColumnType("TEXT")
-                        .HasColumnName("arr_instance_id");
-
-                    b.Property<int>("CurrentScore")
-                        .HasColumnType("INTEGER")
-                        .HasColumnName("current_score");
-
-                    b.Property<int>("CutoffScore")
-                        .HasColumnType("INTEGER")
-                        .HasColumnName("cutoff_score");
-
-                    b.Property<long>("EpisodeId")
-                        .HasColumnType("INTEGER")
-                        .HasColumnName("episode_id");
-
-                    b.Property<long>("ExternalItemId")
-                        .HasColumnType("INTEGER")
-                        .HasColumnName("external_item_id");
-
-                    b.Property<long>("FileId")
-                        .HasColumnType("INTEGER")
-                        .HasColumnName("file_id");
-
-                    b.Property<string>("ItemType")
-                        .IsRequired()
-                        .HasColumnType("TEXT")
-                        .HasColumnName("item_type");
-
-                    b.Property<DateTime>("LastSyncedAt")
-                        .HasColumnType("TEXT")
-                        .HasColumnName("last_synced_at");
-
-                    b.Property<string>("QualityProfileName")
-                        .IsRequired()
-                        .HasColumnType("TEXT")
-                        .HasColumnName("quality_profile_name");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasColumnType("TEXT")
-                        .HasColumnName("title");
-
-                    b.HasKey("Id")
-                        .HasName("pk_custom_format_score_entries");
-
-                    b.HasIndex("ArrInstanceId", "ExternalItemId", "EpisodeId")
-                        .IsUnique()
-                        .HasDatabaseName("ix_custom_format_score_entries_arr_instance_id_external_item_id_episode_id");
-
-                    b.ToTable("custom_format_score_entries", (string)null);
-                });
-
-            modelBuilder.Entity("Cleanuparr.Persistence.Models.State.CustomFormatScoreHistory", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT")
-                        .HasColumnName("id");
-
-                    b.Property<Guid>("ArrInstanceId")
-                        .HasColumnType("TEXT")
-                        .HasColumnName("arr_instance_id");
-
-                    b.Property<int>("CutoffScore")
-                        .HasColumnType("INTEGER")
-                        .HasColumnName("cutoff_score");
-
-                    b.Property<long>("EpisodeId")
-                        .HasColumnType("INTEGER")
-                        .HasColumnName("episode_id");
-
-                    b.Property<long>("ExternalItemId")
-                        .HasColumnType("INTEGER")
-                        .HasColumnName("external_item_id");
-
-                    b.Property<string>("ItemType")
-                        .IsRequired()
-                        .HasColumnType("TEXT")
-                        .HasColumnName("item_type");
-
-                    b.Property<DateTime>("RecordedAt")
-                        .HasColumnType("TEXT")
-                        .HasColumnName("recorded_at");
-
-                    b.Property<int>("Score")
-                        .HasColumnType("INTEGER")
-                        .HasColumnName("score");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasColumnType("TEXT")
-                        .HasColumnName("title");
-
-                    b.HasKey("Id")
-                        .HasName("pk_custom_format_score_history");
-
-                    b.HasIndex("RecordedAt")
-                        .HasDatabaseName("ix_custom_format_score_history_recorded_at");
-
-                    b.HasIndex("ArrInstanceId", "ExternalItemId", "EpisodeId")
-                        .HasDatabaseName("ix_custom_format_score_history_arr_instance_id_external_item_id_episode_id");
-
-                    b.ToTable("custom_format_score_history", (string)null);
-                });
-
-            modelBuilder.Entity("Cleanuparr.Persistence.Models.State.SearchQueueItem", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT")
-                        .HasColumnName("id");
-
-                    b.Property<Guid>("ArrInstanceId")
-                        .HasColumnType("TEXT")
-                        .HasColumnName("arr_instance_id");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT")
-                        .HasColumnName("created_at");
-
-                    b.Property<long>("ItemId")
-                        .HasColumnType("INTEGER")
-                        .HasColumnName("item_id");
-
-                    b.Property<string>("SearchType")
-                        .HasColumnType("TEXT")
-                        .HasColumnName("search_type");
-
-                    b.Property<long?>("SeriesId")
-                        .HasColumnType("INTEGER")
-                        .HasColumnName("series_id");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasColumnType("TEXT")
-                        .HasColumnName("title");
-
-                    b.HasKey("Id")
-                        .HasName("pk_search_queue");
-
-                    b.HasIndex("ArrInstanceId")
-                        .HasDatabaseName("ix_search_queue_arr_instance_id");
-
-                    b.ToTable("search_queue", (string)null);
-                });
-
-            modelBuilder.Entity("Cleanuparr.Persistence.Models.State.SeekerCommandTracker", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT")
-                        .HasColumnName("id");
-
-                    b.Property<Guid>("ArrInstanceId")
-                        .HasColumnType("TEXT")
-                        .HasColumnName("arr_instance_id");
-
-                    b.Property<long>("CommandId")
-                        .HasColumnType("INTEGER")
-                        .HasColumnName("command_id");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT")
-                        .HasColumnName("created_at");
-
-                    b.Property<Guid>("EventId")
-                        .HasColumnType("TEXT")
-                        .HasColumnName("event_id");
-
-                    b.Property<long>("ExternalItemId")
-                        .HasColumnType("INTEGER")
-                        .HasColumnName("external_item_id");
-
-                    b.Property<string>("ItemTitle")
-                        .IsRequired()
-                        .HasColumnType("TEXT")
-                        .HasColumnName("item_title");
-
-                    b.Property<string>("ItemType")
-                        .IsRequired()
-                        .HasColumnType("TEXT")
-                        .HasColumnName("item_type");
-
-                    b.Property<int>("SeasonNumber")
-                        .HasColumnType("INTEGER")
-                        .HasColumnName("season_number");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("TEXT")
-                        .HasColumnName("status");
-
-                    b.HasKey("Id")
-                        .HasName("pk_seeker_command_trackers");
-
-                    b.HasIndex("ArrInstanceId")
-                        .HasDatabaseName("ix_seeker_command_trackers_arr_instance_id");
-
-                    b.ToTable("seeker_command_trackers", (string)null);
-                });
-
-            modelBuilder.Entity("Cleanuparr.Persistence.Models.State.SeekerHistory", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT")
-                        .HasColumnName("id");
-
-                    b.Property<Guid>("ArrInstanceId")
-                        .HasColumnType("TEXT")
-                        .HasColumnName("arr_instance_id");
-
-                    b.Property<long>("ExternalItemId")
-                        .HasColumnType("INTEGER")
-                        .HasColumnName("external_item_id");
-
-                    b.Property<bool>("IsDryRun")
-                        .HasColumnType("INTEGER")
-                        .HasColumnName("is_dry_run");
-
-                    b.Property<string>("ItemTitle")
-                        .IsRequired()
-                        .HasColumnType("TEXT")
-                        .HasColumnName("item_title");
-
-                    b.Property<string>("ItemType")
-                        .IsRequired()
-                        .HasColumnType("TEXT")
-                        .HasColumnName("item_type");
-
-                    b.Property<DateTime>("LastSearchedAt")
-                        .HasColumnType("TEXT")
-                        .HasColumnName("last_searched_at");
-
-                    b.Property<Guid>("RunId")
-                        .HasColumnType("TEXT")
-                        .HasColumnName("run_id");
-
-                    b.Property<int>("SearchCount")
-                        .HasColumnType("INTEGER")
-                        .HasColumnName("search_count");
-
-                    b.Property<int>("SeasonNumber")
-                        .HasColumnType("INTEGER")
-                        .HasColumnName("season_number");
-
-                    b.HasKey("Id")
-                        .HasName("pk_seeker_history");
-
-                    b.HasIndex("ArrInstanceId", "ExternalItemId", "ItemType", "SeasonNumber", "RunId")
-                        .IsUnique()
-                        .HasDatabaseName("ix_seeker_history_arr_instance_id_external_item_id_item_type_season_number_run_id");
-
-                    b.ToTable("seeker_history", (string)null);
                 });
 
             modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.Arr.ArrInstance", b =>
@@ -1606,18 +1254,6 @@ namespace Cleanuparr.Persistence.Migrations.Data
                     b.Navigation("QueueCleanerConfig");
                 });
 
-            modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.Seeker.SeekerInstanceConfig", b =>
-                {
-                    b.HasOne("Cleanuparr.Persistence.Models.Configuration.Arr.ArrInstance", "ArrInstance")
-                        .WithMany()
-                        .HasForeignKey("ArrInstanceId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_seeker_instance_configs_arr_instances_arr_instance_id");
-
-                    b.Navigation("ArrInstance");
-                });
-
             modelBuilder.Entity("Cleanuparr.Persistence.Models.State.BlacklistSyncHistory", b =>
                 {
                     b.HasOne("Cleanuparr.Persistence.Models.Configuration.DownloadClientConfig", "DownloadClient")
@@ -1628,66 +1264,6 @@ namespace Cleanuparr.Persistence.Migrations.Data
                         .HasConstraintName("fk_blacklist_sync_history_download_clients_download_client_id");
 
                     b.Navigation("DownloadClient");
-                });
-
-            modelBuilder.Entity("Cleanuparr.Persistence.Models.State.CustomFormatScoreEntry", b =>
-                {
-                    b.HasOne("Cleanuparr.Persistence.Models.Configuration.Arr.ArrInstance", "ArrInstance")
-                        .WithMany()
-                        .HasForeignKey("ArrInstanceId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_custom_format_score_entries_arr_instances_arr_instance_id");
-
-                    b.Navigation("ArrInstance");
-                });
-
-            modelBuilder.Entity("Cleanuparr.Persistence.Models.State.CustomFormatScoreHistory", b =>
-                {
-                    b.HasOne("Cleanuparr.Persistence.Models.Configuration.Arr.ArrInstance", "ArrInstance")
-                        .WithMany()
-                        .HasForeignKey("ArrInstanceId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_custom_format_score_history_arr_instances_arr_instance_id");
-
-                    b.Navigation("ArrInstance");
-                });
-
-            modelBuilder.Entity("Cleanuparr.Persistence.Models.State.SearchQueueItem", b =>
-                {
-                    b.HasOne("Cleanuparr.Persistence.Models.Configuration.Arr.ArrInstance", "ArrInstance")
-                        .WithMany()
-                        .HasForeignKey("ArrInstanceId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_search_queue_arr_instances_arr_instance_id");
-
-                    b.Navigation("ArrInstance");
-                });
-
-            modelBuilder.Entity("Cleanuparr.Persistence.Models.State.SeekerCommandTracker", b =>
-                {
-                    b.HasOne("Cleanuparr.Persistence.Models.Configuration.Arr.ArrInstance", "ArrInstance")
-                        .WithMany()
-                        .HasForeignKey("ArrInstanceId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_seeker_command_trackers_arr_instances_arr_instance_id");
-
-                    b.Navigation("ArrInstance");
-                });
-
-            modelBuilder.Entity("Cleanuparr.Persistence.Models.State.SeekerHistory", b =>
-                {
-                    b.HasOne("Cleanuparr.Persistence.Models.Configuration.Arr.ArrInstance", "ArrInstance")
-                        .WithMany()
-                        .HasForeignKey("ArrInstanceId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_seeker_history_arr_instances_arr_instance_id");
-
-                    b.Navigation("ArrInstance");
                 });
 
             modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.Arr.ArrConfig", b =>
