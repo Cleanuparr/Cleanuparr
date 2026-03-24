@@ -33,9 +33,7 @@ public sealed class TransmissionItemWrapper : ITorrentItemWrapper
 
     public long DownloadSpeed => Info.RateDownload ?? 0;
     
-    public double Ratio => (Info.UploadedEver ?? 0) > 0 && (Info.DownloadedEver ?? 0) > 0
-        ? (Info.UploadedEver ?? 0) / (double)(Info.DownloadedEver ?? 1)
-        : 0.0;
+    public double Ratio => Info.uploadRatio ?? 0.0;
 
     public long Eta => Info.Eta ?? 0;
     
