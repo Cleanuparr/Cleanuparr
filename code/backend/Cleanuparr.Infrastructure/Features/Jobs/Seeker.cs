@@ -423,8 +423,10 @@ public sealed class Seeker : IHandler
 
         // Apply filters — UseCutoff and UseCustomFormatScore are OR-ed: an item qualifies if it fails the quality cutoff OR the CF score cutoff.
         // Items without cutoff data or a cached CF score are excluded from the respective filter.
+        DateTime graceCutoff = _timeProvider.GetUtcNow().UtcDateTime.AddHours(-config.PostReleaseGraceHours);
         var candidates = movies
             .Where(m => m.Status is "released")
+            .Where(m => IsMoviePastGracePeriod(m, graceCutoff))
             .Where(m => !config.MonitoredOnly || m.Monitored)
             .Where(m => instanceConfig.SkipTags.Count == 0 || !m.Tags.Any(instanceConfig.SkipTags.Contains))
             .Where(m => !m.HasFile
@@ -529,6 +531,7 @@ public sealed class Seeker : IHandler
     {
         List<SearchableSeries> series = await _sonarrClient.GetAllSeriesAsync(arrInstance);
         List<long> allLibraryIds = series.Select(s => s.Id).ToList();
+        DateTime graceCutoff = _timeProvider.GetUtcNow().UtcDateTime.AddHours(-config.PostReleaseGraceHours);
 
         // Apply filters
         var candidates = series
@@ -572,7 +575,7 @@ public sealed class Seeker : IHandler
                 seriesTitle = candidates.First(s => s.Id == seriesId).Title;
 
                 (SeriesSearchItem? searchItem, SearchableEpisode? selectedEpisode) =
-                    await BuildSonarrSearchItemAsync(config, arrInstance, seriesId, seriesHistory, seriesTitle, queuedSeasons);
+                    await BuildSonarrSearchItemAsync(config, arrInstance, seriesId, seriesHistory, seriesTitle, graceCutoff, queuedSeasons);
 
                 if (searchItem is not null)
                 {
@@ -630,6 +633,7 @@ public sealed class Seeker : IHandler
         long seriesId,
         List<SeekerHistory> seriesHistory,
         string seriesTitle,
+        DateTime graceCutoff,
         HashSet<(long SeriesId, long SeasonNumber)>? queuedSeasons = null)
     {
         List<SearchableEpisode> episodes = await _sonarrClient.GetEpisodesAsync(arrInstance, seriesId);
@@ -660,7 +664,7 @@ public sealed class Seeker : IHandler
         // Filter to qualifying episodes — UseCutoff and UseCustomFormatScore are OR-ed.
         // Cutoff status comes from the episodefile endpoint; items without a cached CF score are excluded.
         var qualifying = episodes
-            .Where(e => e.AirDateUtc.HasValue && e.AirDateUtc.Value <= _timeProvider.GetUtcNow().UtcDateTime)
+            .Where(e => e.AirDateUtc.HasValue && e.AirDateUtc.Value <= graceCutoff)
             .Where(e => !config.MonitoredOnly || e.Monitored)
             .Where(e => !e.HasFile
                 || (!config.UseCutoff && !config.UseCustomFormatScore)
@@ -949,6 +953,16 @@ public sealed class Seeker : IHandler
 
         var elapsed = _timeProvider.GetUtcNow().UtcDateTime - cycleStartedAt.Value;
         return elapsed.TotalDays < instanceConfig.MinCycleTimeDays;
+    }
+
+    /// <summary>
+    /// Returns true when the movie's release date is past the grace period cutoff.
+    /// Movies without any release date info are treated as released.
+    /// </summary>
+    private static bool IsMoviePastGracePeriod(SearchableMovie movie, DateTime graceCutoff)
+    {
+        DateTime? releaseDate = movie.DigitalRelease ?? movie.PhysicalRelease ?? movie.InCinemas;
+        return releaseDate is null || releaseDate.Value <= graceCutoff;
     }
 
 }

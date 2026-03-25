@@ -64,6 +64,16 @@
         <app-toggle label="Round Robin" [checked]="useRoundRobin()" (checkedChange)="toggleRoundRobin($event)"
           hint="Process one instance per run to spread indexer load"
           helpKey="seeker:useRoundRobin" />
+        <app-number-input
+          label="Post-Release Grace Period (hours)"
+          placeholder="6"
+          hint="Wait this many hours after content is released before searching. Gives indexers time to process new releases. (0 = disabled)"
+          [value]="postReleaseGraceHours()"
+          [min]="0"
+          [max]="72"
+          (valueChange)="postReleaseGraceHours.set($event ?? 6)"
+          helpKey="seeker:postReleaseGraceHours"
+        />
       }
     </div>
   </app-card>

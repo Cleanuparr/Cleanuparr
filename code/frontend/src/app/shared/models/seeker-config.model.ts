@@ -9,6 +9,7 @@ export interface SeekerConfig {
   useCutoff: boolean;
   useCustomFormatScore: boolean;
   useRoundRobin: boolean;
+  postReleaseGraceHours: number;
   instances: SeekerInstanceConfig[];
 }
 
@@ -33,6 +34,7 @@ export interface UpdateSeekerConfig {
   useCutoff: boolean;
   useCustomFormatScore: boolean;
   useRoundRobin: boolean;
+  postReleaseGraceHours: number;
   instances: UpdateSeekerInstanceConfig[];
 }
 

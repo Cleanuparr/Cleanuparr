@@ -20,5 +20,7 @@ public sealed record SeekerConfigResponse
 
     public bool UseRoundRobin { get; init; }
 
+    public int PostReleaseGraceHours { get; init; }
+
     public List<SeekerInstanceConfigResponse> Instances { get; init; } = [];
 }

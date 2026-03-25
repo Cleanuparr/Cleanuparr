@@ -58,6 +58,12 @@ public sealed record SeekerConfig : IConfig
     /// </summary>
     public bool UseRoundRobin { get; set; } = true;
 
+    /// <summary>
+    /// Hours to wait after content is released before searching.
+    /// Gives indexers time to process new releases. 0 = disabled.
+    /// </summary>
+    public int PostReleaseGraceHours { get; set; } = 6;
+
     public void Validate()
     {
         if (SearchInterval < Constants.MinSearchIntervalMinutes)
@@ -75,6 +81,11 @@ public sealed record SeekerConfig : IConfig
         if (!new List<int> { 2, 3, 4, 5, 6, 10, 12, 15, 20, 30 }.Contains(SearchInterval))
         {
             throw new ValidationException($"Invalid search interval {SearchInterval}");
+        }
+
+        if (PostReleaseGraceHours is < 0 or > 72)
+        {
+            throw new ValidationException($"{nameof(PostReleaseGraceHours)} must be between 0 and 72");
         }
     }
 

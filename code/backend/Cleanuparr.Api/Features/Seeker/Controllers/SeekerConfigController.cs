@@ -77,6 +77,7 @@ public sealed class SeekerConfigController : ControllerBase
             UseCutoff = config.UseCutoff,
             UseCustomFormatScore = config.UseCustomFormatScore,
             UseRoundRobin = config.UseRoundRobin,
+            PostReleaseGraceHours = config.PostReleaseGraceHours,
             Instances = instanceResponses,
         };
 

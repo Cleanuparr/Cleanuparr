@@ -1383,4 +1383,303 @@ public class SeekerTests : IDisposable
     }
 
     #endregion
+
+    #region Post-Release Grace Period Tests
+
+    [Fact]
+    public async Task ExecuteAsync_Radarr_GracePeriod_ExcludesRecentlyReleasedMovies()
+    {
+        // Arrange — grace period of 6 hours, one movie released 2 hours ago (within grace), one released 10 hours ago (past grace)
+        var config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
+        config.SearchEnabled = true;
+        config.ProactiveSearchEnabled = true;
+        config.PostReleaseGraceHours = 6;
+        await _fixture.DataContext.SaveChangesAsync();
+
+        var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
+
+        _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = radarrInstance.Id,
+            ArrInstance = radarrInstance,
+            Enabled = true
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+
+        var mockArrClient = new Mock<IArrClient>();
+
+        _fixture.ArrQueueIterator
+            .Setup(x => x.Iterate(mockArrClient.Object, It.IsAny<ArrInstance>(), It.IsAny<Func<IReadOnlyList<QueueRecord>, Task>>()))
+            .Returns<IArrClient, ArrInstance, Func<IReadOnlyList<QueueRecord>, Task>>((_, _, action) => action([]));
+
+        var now = _fixture.TimeProvider.GetUtcNow().UtcDateTime;
+        _radarrClient
+            .Setup(x => x.GetAllMoviesAsync(radarrInstance))
+            .ReturnsAsync(
+            [
+                new SearchableMovie { Id = 1, Title = "Recent Movie", Status = "released", Monitored = true, Tags = [], DigitalRelease = now.AddHours(-2) },
+                new SearchableMovie { Id = 2, Title = "Old Movie", Status = "released", Monitored = true, Tags = [], DigitalRelease = now.AddHours(-10) }
+            ]);
+
+        HashSet<SearchItem>? capturedSearchItems = null;
+        mockArrClient
+            .Setup(x => x.SearchItemsAsync(radarrInstance, It.IsAny<HashSet<SearchItem>>()))
+            .Callback<ArrInstance, HashSet<SearchItem>>((_, items) => capturedSearchItems = items)
+            .ReturnsAsync([100L]);
+
+        _fixture.ArrClientFactory
+            .Setup(x => x.GetClient(InstanceType.Radarr, It.IsAny<float>()))
+            .Returns(mockArrClient.Object);
+
+        var sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert — only movie 2 (past grace) should be searched
+        mockArrClient.Verify(
+            x => x.SearchItemsAsync(radarrInstance, It.IsAny<HashSet<SearchItem>>()),
+            Times.Once);
+
+        Assert.NotNull(capturedSearchItems);
+        Assert.Single(capturedSearchItems);
+        Assert.Contains(capturedSearchItems, item => item.Id == 2);
+        Assert.DoesNotContain(capturedSearchItems, item => item.Id == 1);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_Radarr_GracePeriodZero_DoesNotFilterMovies()
+    {
+        // Arrange — grace period of 0 (disabled)
+        var config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
+        config.SearchEnabled = true;
+        config.ProactiveSearchEnabled = true;
+        config.PostReleaseGraceHours = 0;
+        await _fixture.DataContext.SaveChangesAsync();
+
+        var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
+
+        _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = radarrInstance.Id,
+            ArrInstance = radarrInstance,
+            Enabled = true
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+
+        var mockArrClient = new Mock<IArrClient>();
+
+        _fixture.ArrQueueIterator
+            .Setup(x => x.Iterate(mockArrClient.Object, It.IsAny<ArrInstance>(), It.IsAny<Func<IReadOnlyList<QueueRecord>, Task>>()))
+            .Returns<IArrClient, ArrInstance, Func<IReadOnlyList<QueueRecord>, Task>>((_, _, action) => action([]));
+
+        var now = _fixture.TimeProvider.GetUtcNow().UtcDateTime;
+        _radarrClient
+            .Setup(x => x.GetAllMoviesAsync(radarrInstance))
+            .ReturnsAsync(
+            [
+                new SearchableMovie { Id = 1, Title = "Just Released", Status = "released", Monitored = true, Tags = [], DigitalRelease = now.AddMinutes(-5) }
+            ]);
+
+        mockArrClient
+            .Setup(x => x.SearchItemsAsync(radarrInstance, It.IsAny<HashSet<SearchItem>>()))
+            .ReturnsAsync([100L]);
+
+        _fixture.ArrClientFactory
+            .Setup(x => x.GetClient(InstanceType.Radarr, It.IsAny<float>()))
+            .Returns(mockArrClient.Object);
+
+        var sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert — movie should be searched (grace period disabled)
+        mockArrClient.Verify(
+            x => x.SearchItemsAsync(radarrInstance, It.IsAny<HashSet<SearchItem>>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_Radarr_GracePeriod_NoReleaseDates_TreatsAsReleased()
+    {
+        // Arrange — movie with no release date info should not be filtered by grace period
+        var config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
+        config.SearchEnabled = true;
+        config.ProactiveSearchEnabled = true;
+        config.PostReleaseGraceHours = 6;
+        await _fixture.DataContext.SaveChangesAsync();
+
+        var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
+
+        _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = radarrInstance.Id,
+            ArrInstance = radarrInstance,
+            Enabled = true
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+
+        var mockArrClient = new Mock<IArrClient>();
+
+        _fixture.ArrQueueIterator
+            .Setup(x => x.Iterate(mockArrClient.Object, It.IsAny<ArrInstance>(), It.IsAny<Func<IReadOnlyList<QueueRecord>, Task>>()))
+            .Returns<IArrClient, ArrInstance, Func<IReadOnlyList<QueueRecord>, Task>>((_, _, action) => action([]));
+
+        _radarrClient
+            .Setup(x => x.GetAllMoviesAsync(radarrInstance))
+            .ReturnsAsync(
+            [
+                new SearchableMovie { Id = 1, Title = "No Dates Movie", Status = "released", Monitored = true, Tags = [] }
+            ]);
+
+        mockArrClient
+            .Setup(x => x.SearchItemsAsync(radarrInstance, It.IsAny<HashSet<SearchItem>>()))
+            .ReturnsAsync([100L]);
+
+        _fixture.ArrClientFactory
+            .Setup(x => x.GetClient(InstanceType.Radarr, It.IsAny<float>()))
+            .Returns(mockArrClient.Object);
+
+        var sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert — movie should be searched (no dates = treated as released)
+        mockArrClient.Verify(
+            x => x.SearchItemsAsync(radarrInstance, It.IsAny<HashSet<SearchItem>>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_Sonarr_GracePeriod_ExcludesRecentlyAiredEpisodes()
+    {
+        // Arrange — grace period of 6 hours, one episode aired 2 hours ago (within grace), one aired 10 hours ago (past grace)
+        var config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
+        config.SearchEnabled = true;
+        config.ProactiveSearchEnabled = true;
+        config.PostReleaseGraceHours = 6;
+        await _fixture.DataContext.SaveChangesAsync();
+
+        var sonarrInstance = TestDataContextFactory.AddSonarrInstance(_fixture.DataContext);
+
+        _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = sonarrInstance.Id,
+            ArrInstance = sonarrInstance,
+            Enabled = true
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+
+        var mockArrClient = new Mock<IArrClient>();
+
+        _fixture.ArrQueueIterator
+            .Setup(x => x.Iterate(mockArrClient.Object, It.IsAny<ArrInstance>(), It.IsAny<Func<IReadOnlyList<QueueRecord>, Task>>()))
+            .Returns<IArrClient, ArrInstance, Func<IReadOnlyList<QueueRecord>, Task>>((_, _, action) => action([]));
+
+        _sonarrClient
+            .Setup(x => x.GetAllSeriesAsync(It.IsAny<ArrInstance>()))
+            .ReturnsAsync(
+            [
+                new SearchableSeries { Id = 10, Title = "Test Series", Status = "continuing", Monitored = true, Tags = [], Statistics = new SeriesStatistics { EpisodeCount = 10, EpisodeFileCount = 8 } }
+            ]);
+
+        var now = _fixture.TimeProvider.GetUtcNow().UtcDateTime;
+        _sonarrClient
+            .Setup(x => x.GetEpisodesAsync(It.IsAny<ArrInstance>(), 10))
+            .ReturnsAsync(
+            [
+                new SearchableEpisode { Id = 100, SeasonNumber = 1, EpisodeNumber = 1, Monitored = true, AirDateUtc = now.AddHours(-2), HasFile = false },
+                new SearchableEpisode { Id = 101, SeasonNumber = 2, EpisodeNumber = 1, Monitored = true, AirDateUtc = now.AddHours(-10), HasFile = false }
+            ]);
+
+        SeriesSearchItem? capturedSearchItem = null;
+        mockArrClient
+            .Setup(x => x.SearchItemsAsync(It.IsAny<ArrInstance>(), It.IsAny<HashSet<SearchItem>>()))
+            .Callback<ArrInstance, HashSet<SearchItem>>((_, items) => capturedSearchItem = items.OfType<SeriesSearchItem>().FirstOrDefault())
+            .ReturnsAsync([100L]);
+
+        _fixture.ArrClientFactory
+            .Setup(x => x.GetClient(InstanceType.Sonarr, It.IsAny<float>()))
+            .Returns(mockArrClient.Object);
+
+        var sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert — only season 2 should be searched (season 1's episode is within grace period)
+        mockArrClient.Verify(
+            x => x.SearchItemsAsync(It.IsAny<ArrInstance>(), It.IsAny<HashSet<SearchItem>>()),
+            Times.Once);
+
+        Assert.NotNull(capturedSearchItem);
+        Assert.Equal(2, capturedSearchItem.Id); // Season 2
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_Radarr_GracePeriod_UsesReleaseDateFallbackOrder()
+    {
+        // Arrange — movie with only PhysicalRelease (no DigitalRelease), within grace period
+        var config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
+        config.SearchEnabled = true;
+        config.ProactiveSearchEnabled = true;
+        config.PostReleaseGraceHours = 6;
+        await _fixture.DataContext.SaveChangesAsync();
+
+        var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
+
+        _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = radarrInstance.Id,
+            ArrInstance = radarrInstance,
+            Enabled = true
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+
+        var mockArrClient = new Mock<IArrClient>();
+
+        _fixture.ArrQueueIterator
+            .Setup(x => x.Iterate(mockArrClient.Object, It.IsAny<ArrInstance>(), It.IsAny<Func<IReadOnlyList<QueueRecord>, Task>>()))
+            .Returns<IArrClient, ArrInstance, Func<IReadOnlyList<QueueRecord>, Task>>((_, _, action) => action([]));
+
+        var now = _fixture.TimeProvider.GetUtcNow().UtcDateTime;
+        _radarrClient
+            .Setup(x => x.GetAllMoviesAsync(radarrInstance))
+            .ReturnsAsync(
+            [
+                // DigitalRelease is null, PhysicalRelease is 2h ago (within grace)
+                new SearchableMovie { Id = 1, Title = "Physical Only", Status = "released", Monitored = true, Tags = [], PhysicalRelease = now.AddHours(-2) },
+                // DigitalRelease is 10h ago (past grace), PhysicalRelease is 2h ago — DigitalRelease takes precedence
+                new SearchableMovie { Id = 2, Title = "Digital First", Status = "released", Monitored = true, Tags = [], DigitalRelease = now.AddHours(-10), PhysicalRelease = now.AddHours(-2) }
+            ]);
+
+        HashSet<SearchItem>? capturedSearchItems = null;
+        mockArrClient
+            .Setup(x => x.SearchItemsAsync(radarrInstance, It.IsAny<HashSet<SearchItem>>()))
+            .Callback<ArrInstance, HashSet<SearchItem>>((_, items) => capturedSearchItems = items)
+            .ReturnsAsync([100L]);
+
+        _fixture.ArrClientFactory
+            .Setup(x => x.GetClient(InstanceType.Radarr, It.IsAny<float>()))
+            .Returns(mockArrClient.Object);
+
+        var sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert — movie 1 excluded (PhysicalRelease within grace), movie 2 included (DigitalRelease past grace)
+        mockArrClient.Verify(
+            x => x.SearchItemsAsync(radarrInstance, It.IsAny<HashSet<SearchItem>>()),
+            Times.Once);
+
+        Assert.NotNull(capturedSearchItems);
+        Assert.Single(capturedSearchItems);
+        Assert.Contains(capturedSearchItems, item => item.Id == 2);
+        Assert.DoesNotContain(capturedSearchItems, item => item.Id == 1);
+    }
+
+    #endregion
 }

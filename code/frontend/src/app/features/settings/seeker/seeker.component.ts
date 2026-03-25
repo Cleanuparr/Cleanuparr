@@ -93,6 +93,7 @@ export class SeekerComponent implements OnInit, HasPendingChanges {
   readonly useCutoff = signal(false);
   readonly useCustomFormatScore = signal(false);
   readonly useRoundRobin = signal(true);
+  readonly postReleaseGraceHours = signal<number>(6);
 
   readonly instances = signal<InstanceState[]>([]);
 
@@ -123,6 +124,7 @@ export class SeekerComponent implements OnInit, HasPendingChanges {
         this.useCutoff.set(config.useCutoff);
         this.useCustomFormatScore.set(config.useCustomFormatScore);
         this.useRoundRobin.set(config.useRoundRobin);
+        this.postReleaseGraceHours.set(config.postReleaseGraceHours);
         this.instances.set(config.instances.map(i => ({
           arrInstanceId: i.arrInstanceId,
           instanceName: i.instanceName,
@@ -216,6 +218,7 @@ export class SeekerComponent implements OnInit, HasPendingChanges {
       useCutoff: this.useCutoff(),
       useCustomFormatScore: this.useCustomFormatScore(),
       useRoundRobin: this.useRoundRobin(),
+      postReleaseGraceHours: this.postReleaseGraceHours(),
       instances: this.instances().map(i => ({
         arrInstanceId: i.arrInstanceId,
         enabled: i.enabled,
@@ -253,6 +256,7 @@ export class SeekerComponent implements OnInit, HasPendingChanges {
       useCutoff: this.useCutoff(),
       useCustomFormatScore: this.useCustomFormatScore(),
       useRoundRobin: this.useRoundRobin(),
+      postReleaseGraceHours: this.postReleaseGraceHours(),
       instances: [...this.instances()].sort((a, b) => a.arrInstanceId.localeCompare(b.arrInstanceId)),
     });
   }

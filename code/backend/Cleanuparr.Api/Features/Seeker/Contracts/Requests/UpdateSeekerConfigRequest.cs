@@ -21,6 +21,8 @@ public sealed record UpdateSeekerConfigRequest
 
     public bool UseRoundRobin { get; init; } = true;
 
+    public int PostReleaseGraceHours { get; init; } = 6;
+
     public List<UpdateSeekerInstanceConfigRequest> Instances { get; init; } = [];
 
     public SeekerConfig ApplyTo(SeekerConfig config)
@@ -33,6 +35,7 @@ public sealed record UpdateSeekerConfigRequest
         config.UseCutoff = UseCutoff;
         config.UseCustomFormatScore = UseCustomFormatScore;
         config.UseRoundRobin = UseRoundRobin;
+        config.PostReleaseGraceHours = PostReleaseGraceHours;
 
         return config;
     }

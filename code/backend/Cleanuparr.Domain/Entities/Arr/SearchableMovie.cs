@@ -19,4 +19,10 @@ public sealed record SearchableMovie
     public string Status { get; init; } = string.Empty;
 
     public DateTime? Added { get; init; }
+
+    public DateTime? DigitalRelease { get; init; }
+
+    public DateTime? PhysicalRelease { get; init; }
+
+    public DateTime? InCinemas { get; init; }
 }

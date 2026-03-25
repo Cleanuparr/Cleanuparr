@@ -174,7 +174,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
 
         await CleanupStaleEntriesAsync(arrInstance.Id, InstanceType.Radarr, syncStartTime);
 
-        _logger.LogInformation("[Radarr] Synced CF scores for {Count} movies on {InstanceName} ({Skipped} skipped — no score returned)",
+        _logger.LogInformation("[Radarr] Synced CF scores for {Count} movies on {InstanceName} ({Skipped} skipped)",
             totalSynced, arrInstance.Name, totalSkipped);
     }
 
