@@ -45,7 +45,7 @@ export class AppHubService extends HubService {
 
     // Bulk initial logs
     connection.on('LogsReceived', (logs: LogEntry[]) => {
-      this._logs.set(logs);
+      this._logs.set([...logs].reverse());
     });
 
     // Single event
