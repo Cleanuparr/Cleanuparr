@@ -4,7 +4,6 @@ import {
   getSeekerConfig,
   updateSeekerConfig,
   getSearchStatsSummary,
-  getSearchHistory,
   getSearchEvents,
   getCfScores,
   getCfScoreStats,
@@ -83,15 +82,6 @@ test.describe.serial('Seeker API', () => {
     expect(body).toHaveProperty('searchesLast30Days');
     expect(body).toHaveProperty('uniqueItemsSearched');
     expect(body.totalSearchesAllTime).toBeGreaterThanOrEqual(0);
-  });
-
-  test('should return empty search history', async () => {
-    const res = await getSearchHistory(token);
-    expect(res.status).toBe(200);
-
-    const body = await res.json();
-    expect(body).toHaveProperty('items');
-    expect(Array.isArray(body.items)).toBe(true);
   });
 
   test('should return empty search events', async () => {

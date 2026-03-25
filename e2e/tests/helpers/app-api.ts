@@ -130,12 +130,6 @@ export async function getSearchStatsSummary(accessToken: string): Promise<Respon
   });
 }
 
-export async function getSearchHistory(accessToken: string): Promise<Response> {
-  return fetch(`${API}/api/seeker/search-stats/history`, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
-}
-
 export async function getSearchEvents(accessToken: string): Promise<Response> {
   return fetch(`${API}/api/seeker/search-stats/events`, {
     headers: { Authorization: `Bearer ${accessToken}` },
