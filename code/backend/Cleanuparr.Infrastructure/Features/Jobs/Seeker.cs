@@ -21,7 +21,9 @@ namespace Cleanuparr.Infrastructure.Features.Jobs;
 
 public sealed class Seeker : IHandler
 {
-    private const double JitterFactor = 0.7;
+    private const double JitterFactor = 0.2;
+    private const int MinJitterSeconds = 30;
+    private const int MaxJitterSeconds = 120;
 
     /// <summary>
     /// Queue states that indicate an item is actively being processed.
@@ -120,7 +122,8 @@ public sealed class Seeker : IHandler
             return;
         }
 
-        int maxJitterSeconds = (int)(config.SearchInterval * 60 * JitterFactor);
+        int proportionalJitter = (int)(config.SearchInterval * 60 * JitterFactor);
+        int maxJitterSeconds = Math.Clamp(proportionalJitter, MinJitterSeconds, MaxJitterSeconds);
         int jitterSeconds = Random.Shared.Next(0, maxJitterSeconds + 1);
 
         if (jitterSeconds > 0)
