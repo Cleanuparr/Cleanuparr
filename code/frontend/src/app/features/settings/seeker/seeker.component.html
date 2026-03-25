@@ -105,7 +105,7 @@
                   hint="Skip proactive search when this many items have bytes remaining to download in the arr queue (0 = disabled)"
                   [value]="instance.activeDownloadLimit"
                   [min]="0"
-                  [max]="10"
+                  [max]="100"
                   (valueChange)="updateInstanceActiveDownloadLimit($index, $event)"
                   helpKey="seeker:activeDownloadLimit"
                 />
