@@ -1,46 +1,42 @@
 import { Component, ChangeDetectionStrategy, inject, signal, computed, effect, OnInit } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { NgIcon } from '@ng-icons/core';
-import { PageHeaderComponent } from '@layout/page-header/page-header.component';
 import {
   CardComponent, BadgeComponent, ButtonComponent, SelectComponent,
-  PaginatorComponent, EmptyStateComponent, TabsComponent, TooltipComponent,
+  InputComponent, PaginatorComponent, EmptyStateComponent, TooltipComponent,
 } from '@ui';
-import type { Tab, SelectOption } from '@ui';
+import type { SelectOption } from '@ui';
 import type { BadgeSeverity } from '@ui/badge/badge.component';
 import { AnimatedCounterComponent } from '@ui/animated-counter/animated-counter.component';
 import { SearchStatsApi } from '@core/api/search-stats.api';
-import type { SearchStatsSummary, SearchHistoryEntry, SearchEvent, InstanceSearchStat } from '@core/models/search-stats.models';
+import type { SearchStatsSummary, SearchEvent, InstanceSearchStat } from '@core/models/search-stats.models';
 import { SeekerSearchType } from '@core/models/search-stats.models';
 import { AppHubService } from '@core/realtime/app-hub.service';
 import { ToastService } from '@core/services/toast.service';
 
-type TabId = 'events' | 'items';
-type ItemsSortBy = 'lastSearched' | 'searchCount';
 type CycleFilter = 'current' | 'all';
 
 @Component({
-  selector: 'app-search-stats',
+  selector: 'app-searches-tab',
   standalone: true,
   imports: [
     DatePipe,
     NgIcon,
-    PageHeaderComponent,
     CardComponent,
     BadgeComponent,
     ButtonComponent,
     SelectComponent,
+    InputComponent,
     PaginatorComponent,
     EmptyStateComponent,
-    TabsComponent,
     AnimatedCounterComponent,
     TooltipComponent,
   ],
-  templateUrl: './search-stats.component.html',
-  styleUrl: './search-stats.component.scss',
+  templateUrl: './searches-tab.component.html',
+  styleUrl: './searches-tab.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class SearchStatsComponent implements OnInit {
+export class SearchesTabComponent implements OnInit {
   private readonly api = inject(SearchStatsApi);
   private readonly hub = inject(AppHubService);
   private readonly toast = inject(ToastService);
@@ -56,13 +52,6 @@ export class SearchStatsComponent implements OnInit {
     })
   );
 
-  // Tabs
-  readonly activeTab = signal<string>('events');
-  readonly tabs: Tab[] = [
-    { id: 'events', label: 'Events' },
-    { id: 'items', label: 'Items' },
-  ];
-
   // Instance filter
   readonly selectedInstanceId = signal<string>('');
   readonly instanceOptions = signal<SelectOption[]>([]);
@@ -74,49 +63,30 @@ export class SearchStatsComponent implements OnInit {
     { label: 'All Time', value: 'all' },
   ];
 
-  // Events tab
+  // Search filter
+  readonly searchQuery = signal('');
+
+  // Events
   readonly events = signal<SearchEvent[]>([]);
   readonly eventsTotalRecords = signal(0);
   readonly eventsPage = signal(1);
-
-  // Items tab
-  readonly items = signal<SearchHistoryEntry[]>([]);
-  readonly itemsTotalRecords = signal(0);
-  readonly itemsPage = signal(1);
-  readonly itemsSortBy = signal<ItemsSortBy>('lastSearched');
-
-  readonly sortOptions: SelectOption[] = [
-    { label: 'Last Searched', value: 'lastSearched' },
-    { label: 'Most Searched', value: 'searchCount' },
-  ];
-
   readonly pageSize = signal(50);
-
-  // Item expand
-  readonly expandedItemId = signal<string | null>(null);
-  readonly detailEntries = signal<SearchEvent[]>([]);
-  readonly detailLoading = signal(false);
 
   constructor() {
     effect(() => {
-      this.hub.searchStatsVersion(); // subscribe to changes
+      this.hub.searchStatsVersion();
       if (this.initialLoad) {
         this.initialLoad = false;
         return;
       }
       this.loadSummary();
-      this.loadActiveTab();
+      this.loadEvents();
     });
   }
 
   ngOnInit(): void {
     this.loadSummary();
-    this.loadActiveTab();
-  }
-
-  onTabChange(tabId: string): void {
-    this.activeTab.set(tabId);
-    this.loadActiveTab();
+    this.loadEvents();
   }
 
   onInstanceFilterChange(value: string): void {
@@ -125,12 +95,16 @@ export class SearchStatsComponent implements OnInit {
       this.cycleFilter.set('all');
     }
     this.eventsPage.set(1);
-    this.itemsPage.set(1);
-    this.loadActiveTab();
+    this.loadEvents();
   }
 
   onCycleFilterChange(value: string): void {
     this.cycleFilter.set(value as CycleFilter);
+    this.eventsPage.set(1);
+    this.loadEvents();
+  }
+
+  onSearchFilterChange(): void {
     this.eventsPage.set(1);
     this.loadEvents();
   }
@@ -140,44 +114,9 @@ export class SearchStatsComponent implements OnInit {
     this.loadEvents();
   }
 
-  onItemsPageChange(page: number): void {
-    this.itemsPage.set(page);
-    this.loadItems();
-  }
-
-  onItemsSortChange(value: string): void {
-    this.itemsSortBy.set(value as ItemsSortBy);
-    this.itemsPage.set(1);
-    this.loadItems();
-  }
-
   refresh(): void {
     this.loadSummary();
-    this.loadActiveTab();
-  }
-
-  toggleItemExpand(item: SearchHistoryEntry): void {
-    const id = item.id;
-    if (this.expandedItemId() === id) {
-      this.expandedItemId.set(null);
-      this.detailEntries.set([]);
-      return;
-    }
-
-    this.expandedItemId.set(id);
-    this.detailLoading.set(true);
-    this.detailEntries.set([]);
-
-    this.api.getItemDetail(item.arrInstanceId, item.externalItemId, item.seasonNumber).subscribe({
-      next: (res) => {
-        this.detailEntries.set(res.entries);
-        this.detailLoading.set(false);
-      },
-      error: () => {
-        this.detailLoading.set(false);
-        this.toast.error('Failed to load item detail');
-      },
-    });
+    this.loadEvents();
   }
 
   searchTypeSeverity(type: SeekerSearchType): 'info' | 'warning' {
@@ -188,10 +127,6 @@ export class SearchStatsComponent implements OnInit {
     if (type === 'Radarr') return 'warning';
     if (type === 'Sonarr') return 'info';
     return 'default';
-  }
-
-  itemDisplayName(item: { itemTitle: string; externalItemId: number }): string {
-    return item.itemTitle || `Item #${item.externalItemId}`;
   }
 
   searchStatusSeverity(status: string): BadgeSeverity {
@@ -253,21 +188,10 @@ export class SearchStatsComponent implements OnInit {
     });
   }
 
-  private loadActiveTab(): void {
-    const tab = this.activeTab() as TabId;
-    switch (tab) {
-      case 'events':
-        this.loadEvents();
-        break;
-      case 'items':
-        this.loadItems();
-        break;
-    }
-  }
-
   private loadEvents(): void {
     this.loading.set(true);
     const instanceId = this.selectedInstanceId() || undefined;
+    const search = this.searchQuery() || undefined;
     let cycleId: string | undefined;
 
     if (this.cycleFilter() === 'current' && instanceId) {
@@ -275,7 +199,7 @@ export class SearchStatsComponent implements OnInit {
       cycleId = instance?.currentCycleId ?? undefined;
     }
 
-    this.api.getEvents(this.eventsPage(), this.pageSize(), instanceId, cycleId).subscribe({
+    this.api.getEvents(this.eventsPage(), this.pageSize(), instanceId, cycleId, search).subscribe({
       next: (result) => {
         this.events.set(result.items);
         this.eventsTotalRecords.set(result.totalCount);
@@ -284,24 +208,6 @@ export class SearchStatsComponent implements OnInit {
       error: () => {
         this.loading.set(false);
         this.toast.error('Failed to load search events');
-      },
-    });
-  }
-
-  private loadItems(): void {
-    this.loading.set(true);
-    this.expandedItemId.set(null);
-    this.detailEntries.set([]);
-    const instanceId = this.selectedInstanceId() || undefined;
-    this.api.getHistory(this.itemsPage(), this.pageSize(), instanceId, this.itemsSortBy()).subscribe({
-      next: (result) => {
-        this.items.set(result.items);
-        this.itemsTotalRecords.set(result.totalCount);
-        this.loading.set(false);
-      },
-      error: () => {
-        this.loading.set(false);
-        this.toast.error('Failed to load items');
       },
     });
   }

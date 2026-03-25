@@ -1,0 +1,10 @@
+.page-content {
+  > app-tabs {
+    animation: slide-up var(--duration-normal) var(--ease-default) both;
+    animation-delay: 0ms;
+  }
+
+  > .tab-content {
+    margin-top: var(--space-6);
+  }
+}

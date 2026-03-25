@@ -1,10 +1,10 @@
 import { Component, ChangeDetectionStrategy, inject, signal, effect, OnInit } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { NgIcon } from '@ng-icons/core';
-import { PageHeaderComponent } from '@layout/page-header/page-header.component';
 import {
   CardComponent, BadgeComponent, ButtonComponent, InputComponent,
   PaginatorComponent, EmptyStateComponent, SelectComponent, ToggleComponent,
+  TooltipComponent,
 } from '@ui';
 import type { SelectOption } from '@ui';
 import { AnimatedCounterComponent } from '@ui/animated-counter/animated-counter.component';
@@ -15,12 +15,11 @@ import { AppHubService } from '@core/realtime/app-hub.service';
 import { ToastService } from '@core/services/toast.service';
 
 @Component({
-  selector: 'app-cf-scores',
+  selector: 'app-quality-tab',
   standalone: true,
   imports: [
     DatePipe,
     NgIcon,
-    PageHeaderComponent,
     CardComponent,
     BadgeComponent,
     ButtonComponent,
@@ -30,12 +29,13 @@ import { ToastService } from '@core/services/toast.service';
     PaginatorComponent,
     EmptyStateComponent,
     AnimatedCounterComponent,
+    TooltipComponent,
   ],
-  templateUrl: './cf-scores.component.html',
-  styleUrl: './cf-scores.component.scss',
+  templateUrl: './quality-tab.component.html',
+  styleUrl: './quality-tab.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class CfScoresComponent implements OnInit {
+export class QualityTabComponent implements OnInit {
   private readonly api = inject(CfScoreApi);
   private readonly hub = inject(AppHubService);
   private readonly toast = inject(ToastService);
@@ -65,7 +65,7 @@ export class CfScoresComponent implements OnInit {
 
   constructor() {
     effect(() => {
-      this.hub.cfScoresVersion(); // subscribe to changes
+      this.hub.cfScoresVersion();
       if (this.initialLoad) {
         this.initialLoad = false;
         return;

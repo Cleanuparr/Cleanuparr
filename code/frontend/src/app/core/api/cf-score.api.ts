@@ -88,10 +88,11 @@ export class CfScoreApi {
     return this.http.get<CfScoreStats>('/api/seeker/cf-scores/stats');
   }
 
-  getRecentUpgrades(page = 1, pageSize = 5): Observable<CfScoreUpgradesResponse> {
-    return this.http.get<CfScoreUpgradesResponse>('/api/seeker/cf-scores/upgrades', {
-      params: { page, pageSize },
-    });
+  getRecentUpgrades(page = 1, pageSize = 5, instanceId?: string, days?: number): Observable<CfScoreUpgradesResponse> {
+    const params: Record<string, string | number> = { page, pageSize };
+    if (instanceId) params['instanceId'] = instanceId;
+    if (days !== undefined) params['days'] = days;
+    return this.http.get<CfScoreUpgradesResponse>('/api/seeker/cf-scores/upgrades', { params });
   }
 
   getScores(page = 1, pageSize = 50, search?: string, instanceId?: string, sortBy?: string, hideMet?: boolean): Observable<CfScoreEntriesResponse> {

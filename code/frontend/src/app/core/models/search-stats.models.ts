@@ -22,19 +22,6 @@ export interface SearchStatsSummary {
   perInstanceStats: InstanceSearchStat[];
 }
 
-export interface SearchHistoryEntry {
-  id: string;
-  arrInstanceId: string;
-  instanceName: string;
-  instanceType: string;
-  externalItemId: number;
-  itemTitle: string;
-  seasonNumber: number;
-  lastSearchedAt: string;
-  searchCount: number;
-  totalSearchCount: number;
-}
-
 export enum SeekerSearchType {
   Proactive = 'Proactive',
   Replacement = 'Replacement',

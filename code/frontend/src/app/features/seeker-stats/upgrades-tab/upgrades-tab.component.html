@@ -1,0 +1,69 @@
+<!-- Toolbar -->
+<div class="toolbar">
+  <div class="toolbar__filters">
+    <app-select
+      [value]="timeRange()"
+      [options]="timeRangeOptions"
+      (valueChange)="onTimeRangeChange($any($event))"
+    />
+    <app-select
+      placeholder="All Instances"
+      [options]="instanceOptions()"
+      [value]="selectedInstanceId()"
+      (valueChange)="onInstanceFilterChange($any($event))"
+    />
+  </div>
+  <div class="toolbar__actions">
+    <app-button variant="ghost" size="sm" (clicked)="refresh()">
+      Refresh
+    </app-button>
+  </div>
+</div>
+
+<!-- Stats Bar -->
+<div class="stats-bar">
+  <div class="stats-bar__item">
+    <span class="stats-bar__value stats-bar__value--success"><app-animated-counter [value]="totalRecords()" [duration]="400" /></span>
+    <span class="stats-bar__label">Total Upgrades</span>
+  </div>
+</div>
+
+<!-- Upgrades List -->
+<app-card [noPadding]="true">
+  <div class="upgrades-list">
+    @for (upgrade of upgrades(); track $index) {
+      <div class="upgrade-row">
+        <div class="upgrade-row__main">
+          <ng-icon name="tablerTrendingUp" class="upgrade-row__icon" />
+          <span class="upgrade-row__title">{{ upgrade.title }}</span>
+          <div class="upgrade-row__scores">
+            <span class="upgrade-row__score upgrade-row__score--old">{{ upgrade.previousScore }}</span>
+            <ng-icon name="tablerArrowRight" class="upgrade-row__arrow" />
+            <span class="upgrade-row__score upgrade-row__score--new">{{ upgrade.newScore }}</span>
+            <span class="upgrade-row__cutoff">(cutoff: {{ upgrade.cutoffScore }})</span>
+          </div>
+          <app-badge [severity]="itemTypeSeverity(upgrade.itemType)" size="sm">
+            {{ upgrade.itemType }}
+          </app-badge>
+          <span class="upgrade-row__time">{{ upgrade.upgradedAt | date:'yyyy-MM-dd HH:mm' }}</span>
+        </div>
+      </div>
+    } @empty {
+      <app-empty-state
+        icon="tablerTrendingUp"
+        heading="No upgrades found"
+        description="Score upgrades will appear here when items improve their custom format scores."
+      />
+    }
+  </div>
+</app-card>
+
+<!-- Pagination -->
+@if (totalRecords() > pageSize()) {
+  <app-paginator
+    [totalRecords]="totalRecords()"
+    [pageSize]="pageSize()"
+    [currentPage]="currentPage()"
+    (pageChange)="onPageChange($event)"
+  />
+}

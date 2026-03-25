@@ -1,24 +1,24 @@
 @use 'data-toolbar' as *;
 
-// Staggered page content animations
-.page-content {
+// Staggered animations
+:host {
   > .toolbar {
     animation: slide-up var(--duration-normal) var(--ease-default) both;
-    animation-delay: 0ms;
+    animation-delay: 40ms;
     position: relative;
     z-index: 1;
   }
   > .stats-bar {
     animation: slide-up var(--duration-normal) var(--ease-default) both;
-    animation-delay: 40ms;
+    animation-delay: 80ms;
   }
   > app-card {
     animation: slide-up var(--duration-normal) var(--ease-default) both;
-    animation-delay: 80ms;
+    animation-delay: 120ms;
   }
   > app-paginator {
     animation: slide-up var(--duration-normal) var(--ease-default) both;
-    animation-delay: 120ms;
+    animation-delay: 160ms;
   }
 }
 
@@ -29,7 +29,7 @@
     app-input {
       flex: 1;
       min-width: 150px;
-      max-width: 400px;
+      max-width: 300px;
     }
   }
 }

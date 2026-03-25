@@ -264,7 +264,7 @@
                     <ng-icon name="tablerGripVertical" class="drag-handle__icon" cdkDragHandle title="Drag to reorder" />
                     <h3 class="card-header__title">Custom Format Scores</h3>
                   </div>
-                  <a class="card-header__link" routerLink="/cf-scores">View All</a>
+                  <a class="card-header__link" routerLink="/seeker-stats" [queryParams]="{ tab: 'quality' }">View All</a>
                 </div>
                 <div class="cf-scores">
                   <div class="cf-scores__stats">
@@ -307,7 +307,10 @@
                   }
                   @if (cfScoreUpgrades().length > 0) {
                     <div class="cf-scores__upgrades">
-                      <span class="cf-scores__upgrades-title">Recent Upgrades</span>
+                      <div class="cf-scores__upgrades-header">
+                        <span class="cf-scores__upgrades-title">Recent Upgrades</span>
+                        <a class="card-header__link" routerLink="/seeker-stats" [queryParams]="{ tab: 'upgrades' }">View All</a>
+                      </div>
                       @for (upgrade of cfScoreUpgrades(); track $index) {
                         <div class="cf-scores__upgrade-item">
                           <div class="cf-scores__upgrade-title">{{ upgrade.title }}</div>

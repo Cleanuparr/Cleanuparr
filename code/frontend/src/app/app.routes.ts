@@ -38,19 +38,14 @@ export const routes: Routes = [
           ),
       },
       {
-        path: 'cf-scores',
+        path: 'seeker-stats',
         loadComponent: () =>
-          import('@features/cf-scores/cf-scores.component').then(
-            (m) => m.CfScoresComponent,
+          import('@features/seeker-stats/seeker-stats.component').then(
+            (m) => m.SeekerStatsComponent,
           ),
       },
-      {
-        path: 'search-stats',
-        loadComponent: () =>
-          import('@features/search-stats/search-stats.component').then(
-            (m) => m.SearchStatsComponent,
-          ),
-      },
+      { path: 'cf-scores', redirectTo: 'seeker-stats', pathMatch: 'full' },
+      { path: 'search-stats', redirectTo: 'seeker-stats', pathMatch: 'full' },
       {
         path: 'settings',
         children: [

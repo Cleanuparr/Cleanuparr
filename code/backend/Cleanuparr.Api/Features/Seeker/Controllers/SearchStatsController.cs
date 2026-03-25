@@ -118,94 +118,16 @@ public sealed class SearchStatsController : ControllerBase
     }
 
     /// <summary>
-    /// Gets paginated search history from SeekerHistory.
-    /// Supports sorting by lastSearched (default) or searchCount.
-    /// </summary>
-    [HttpGet("history")]
-    public async Task<IActionResult> GetHistory(
-        [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 50,
-        [FromQuery] Guid? instanceId = null,
-        [FromQuery] string sortBy = "lastSearched")
-    {
-        if (page < 1) page = 1;
-        if (pageSize < 1) pageSize = 50;
-        if (pageSize > 100) pageSize = 100;
-
-        var query = _dataContext.SeekerHistory
-            .AsNoTracking()
-            .Include(h => h.ArrInstance)
-                .ThenInclude(a => a.ArrConfig)
-            .AsQueryable();
-
-        if (instanceId.HasValue)
-        {
-            query = query.Where(h => h.ArrInstanceId == instanceId.Value);
-        }
-
-        // Group by item across cycles to aggregate search counts
-        var grouped = query
-            .GroupBy(h => new { h.ArrInstanceId, h.ExternalItemId, h.ItemType, h.SeasonNumber })
-            .Select(g => new
-            {
-                g.Key.ArrInstanceId,
-                g.Key.ExternalItemId,
-                g.Key.SeasonNumber,
-                TotalSearchCount = g.Sum(h => h.SearchCount),
-                LastSearchedAt = g.Max(h => h.LastSearchedAt),
-                // Pick the most recent row's data for display fields
-                ItemTitle = g.OrderByDescending(h => h.LastSearchedAt).First().ItemTitle,
-                SearchCount = g.OrderByDescending(h => h.LastSearchedAt).First().SearchCount,
-                InstanceName = g.OrderByDescending(h => h.LastSearchedAt).First().ArrInstance.Name,
-                InstanceType = g.OrderByDescending(h => h.LastSearchedAt).First().ArrInstance.ArrConfig.Type,
-                Id = g.OrderByDescending(h => h.LastSearchedAt).First().Id,
-            });
-
-        int totalCount = await grouped.CountAsync();
-
-        var ordered = sortBy switch
-        {
-            "searchCount" => grouped.OrderByDescending(g => g.TotalSearchCount),
-            _ => grouped.OrderByDescending(g => g.LastSearchedAt),
-        };
-
-        var items = await ordered
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .Select(g => new SearchHistoryEntryResponse
-            {
-                Id = g.Id,
-                ArrInstanceId = g.ArrInstanceId,
-                InstanceName = g.InstanceName,
-                InstanceType = g.InstanceType.ToString(),
-                ExternalItemId = g.ExternalItemId,
-                ItemTitle = g.ItemTitle,
-                SeasonNumber = g.SeasonNumber,
-                LastSearchedAt = g.LastSearchedAt,
-                SearchCount = g.SearchCount,
-                TotalSearchCount = g.TotalSearchCount,
-            })
-            .ToListAsync();
-
-        return Ok(new
-        {
-            Items = items,
-            Page = page,
-            PageSize = pageSize,
-            TotalCount = totalCount,
-            TotalPages = (int)Math.Ceiling(totalCount / (double)pageSize),
-        });
-    }
-
-    /// <summary>
     /// Gets paginated search-triggered events with decoded data.
+    /// Supports optional text search across item names in event data.
     /// </summary>
     [HttpGet("events")]
     public async Task<IActionResult> GetEvents(
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 50,
         [FromQuery] Guid? instanceId = null,
-        [FromQuery] Guid? cycleId = null)
+        [FromQuery] Guid? cycleId = null,
+        [FromQuery] string? search = null)
     {
         if (page < 1) page = 1;
         if (pageSize < 1) pageSize = 50;
@@ -233,6 +155,12 @@ public sealed class SearchStatsController : ControllerBase
         if (cycleId.HasValue)
         {
             query = query.Where(e => e.CycleId == cycleId.Value);
+        }
+
+        // Pre-filter by search term on the JSON data field
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            query = query.Where(e => e.Data != null && e.Data.ToLower().Contains(search.ToLower()));
         }
 
         int totalCount = await query.CountAsync();
@@ -271,88 +199,6 @@ public sealed class SearchStatsController : ControllerBase
             TotalCount = totalCount,
             TotalPages = (int)Math.Ceiling(totalCount / (double)pageSize),
         });
-    }
-
-    /// <summary>
-    /// Gets individual search events for a specific item.
-    /// </summary>
-    [HttpGet("history/{instanceId}/{itemId}/detail")]
-    public async Task<IActionResult> GetHistoryDetail(
-        Guid instanceId,
-        long itemId,
-        [FromQuery] int seasonNumber = 0)
-    {
-        var historyItem = await _dataContext.SeekerHistory
-            .AsNoTracking()
-            .Where(h => h.ArrInstanceId == instanceId
-                        && h.ExternalItemId == itemId
-                        && h.SeasonNumber == seasonNumber)
-            .OrderByDescending(h => h.LastSearchedAt)
-            .FirstOrDefaultAsync();
-
-        if (historyItem is null)
-        {
-            return Ok(new { Entries = Array.Empty<SearchEventResponse>() });
-        }
-
-        // Build the display name matching the event Items format
-        string displayName = seasonNumber > 0
-            ? $"{historyItem.ItemTitle} S{seasonNumber:D2}"
-            : historyItem.ItemTitle;
-
-        // Get instance URL for event filtering
-        var instance = await _dataContext.ArrInstances
-            .AsNoTracking()
-            .FirstOrDefaultAsync(a => a.Id == instanceId);
-
-        if (instance is null)
-        {
-            return Ok(new { Entries = Array.Empty<SearchEventResponse>() });
-        }
-
-        string url = (instance.ExternalUrl ?? instance.Url).ToString();
-
-        // Pre-filter events containing the item title, then verify with JSON parsing
-        var rawEvents = await _eventsContext.Events
-            .AsNoTracking()
-            .Where(e => e.EventType == EventType.SearchTriggered
-                        && e.InstanceUrl == url
-                        && e.Data != null
-                        && e.Data.Contains(historyItem.ItemTitle))
-            .OrderByDescending(e => e.Timestamp)
-            .Take(100)
-            .ToListAsync();
-
-        var entries = rawEvents
-            .Select(e =>
-            {
-                var parsed = ParseEventData(e.Data);
-                bool containsItem = parsed.Items.Any(i =>
-                    i.Contains(displayName, StringComparison.OrdinalIgnoreCase)
-                    || i.Contains(historyItem.ItemTitle, StringComparison.OrdinalIgnoreCase));
-
-                return containsItem
-                    ? new SearchEventResponse
-                    {
-                        Id = e.Id,
-                        Timestamp = e.Timestamp,
-                        InstanceName = parsed.InstanceName,
-                        InstanceType = e.InstanceType?.ToString(),
-                        ItemCount = parsed.ItemCount,
-                        Items = parsed.Items,
-                        SearchType = parsed.SearchType,
-                        SearchStatus = e.SearchStatus,
-                        CompletedAt = e.CompletedAt,
-                        GrabbedItems = parsed.GrabbedItems,
-                        CycleId = e.CycleId,
-                        IsDryRun = e.IsDryRun,
-                    }
-                    : null;
-            })
-            .Where(e => e is not null)
-            .ToList();
-
-        return Ok(new { Entries = entries });
     }
 
     private static (string InstanceName, int ItemCount, List<string> Items, SeekerSearchType SearchType, object? GrabbedItems) ParseEventData(string? data)
