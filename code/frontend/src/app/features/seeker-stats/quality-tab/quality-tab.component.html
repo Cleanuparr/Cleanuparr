@@ -11,7 +11,7 @@
       placeholder="Search by title..."
       type="search"
       [(value)]="searchQuery"
-      (blurred)="onFilterChange()"
+      (entered)="onFilterChange()"
     />
     <app-select
       [value]="sortBy()"

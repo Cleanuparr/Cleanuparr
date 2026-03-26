@@ -20,6 +20,8 @@
     [readOnly]="readonly()"
     [(ngModel)]="value"
     (blur)="blurred.emit($event)"
+    (keydown.enter)="entered.emit()"
+    (search)="onSearchCleared($event)"
   />
   @if (hasEye()) {
     <button type="button" class="input-eye-btn" (click)="toggleSecret($event)" [attr.aria-label]="showSecret() ? 'Hide password' : 'Show password'">
