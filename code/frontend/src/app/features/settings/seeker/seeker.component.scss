@@ -73,18 +73,6 @@
     text-overflow: ellipsis;
   }
 
-  &__type {
-    font-size: var(--font-size-xs);
-    font-weight: 500;
-    color: var(--text-tertiary);
-    text-transform: capitalize;
-    padding: 2px 8px;
-    border-radius: var(--radius-sm);
-    background: var(--glass-bg);
-    border: 1px solid var(--glass-border);
-    white-space: nowrap;
-  }
-
   &__details {
     margin-top: var(--space-3);
     padding-top: var(--space-3);

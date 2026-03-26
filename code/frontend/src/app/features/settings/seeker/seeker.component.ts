@@ -4,8 +4,8 @@ import { PageHeaderComponent } from '@layout/page-header/page-header.component';
 import {
   CardComponent, ButtonComponent, ToggleComponent,
   SelectComponent, ChipInputComponent, NumberInputComponent,
-  EmptyStateComponent, LoadingStateComponent,
-  type SelectOption,
+  EmptyStateComponent, LoadingStateComponent, BadgeComponent,
+  type SelectOption, type BadgeSeverity,
 } from '@ui';
 import { SeekerApi } from '@core/api/seeker.api';
 import { ToastService } from '@core/services/toast.service';
@@ -65,7 +65,7 @@ interface InstanceState {
   imports: [
     PageHeaderComponent, CardComponent, ButtonComponent,
     ToggleComponent, SelectComponent, ChipInputComponent, NumberInputComponent,
-    EmptyStateComponent, LoadingStateComponent, DatePipe,
+    EmptyStateComponent, LoadingStateComponent, BadgeComponent, DatePipe,
   ],
   templateUrl: './seeker.component.html',
   styleUrl: './seeker.component.scss',
@@ -206,6 +206,12 @@ export class SeekerComponent implements OnInit, HasPendingChanges {
 
   getInstanceIcon(instanceType: string): string {
     return `icons/ext/${instanceType.toLowerCase()}-light.svg`;
+  }
+
+  getInstanceTypeSeverity(type: string): BadgeSeverity {
+    if (type === 'Radarr') return 'warning';
+    if (type === 'Sonarr') return 'info';
+    return 'default';
   }
 
   save(): void {
