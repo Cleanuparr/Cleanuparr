@@ -130,7 +130,25 @@ public sealed class CustomFormatScoreSyncer : IHandler
         _logger.LogTrace("[Radarr] {InstanceName}: found {TotalMovies} total movies, {WithFiles} with files",
             arrInstance.Name, allMovies.Count, moviesWithFiles.Count);
 
-        DateTime syncStartTime = _timeProvider.GetUtcNow().UtcDateTime;
+        DateTime now = _timeProvider.GetUtcNow().UtcDateTime;
+
+        // Touch entries for movies that still exist but have no file (e.g., RSS upgrade in progress)
+        HashSet<long> movieIdsWithFiles = moviesWithFiles.Select(x => x.Movie.Id).ToHashSet();
+        List<long> movieIdsWithoutFiles = allMovies
+            .Where(m => !movieIdsWithFiles.Contains(m.Id))
+            .Select(m => m.Id)
+            .ToList();
+
+        foreach (long[] touchChunk in movieIdsWithoutFiles.Chunk(ChunkSize))
+        {
+            List<long> chunkList = touchChunk.ToList();
+            await _dataContext.CustomFormatScoreEntries
+                .Where(e => e.ArrInstanceId == arrInstance.Id
+                    && e.ItemType == InstanceType.Radarr
+                    && chunkList.Contains(e.ExternalItemId))
+                .ExecuteUpdateAsync(s => s.SetProperty(e => e.LastSyncedAt, now));
+        }
+
         int totalSynced = 0;
         int totalSkipped = 0;
 
@@ -154,6 +172,11 @@ public sealed class CustomFormatScoreSyncer : IHandler
                 if (!scores.TryGetValue(fileId, out int cfScore))
                 {
                     totalSkipped++;
+                    // Touch existing entry to prevent stale cleanup — movie still exists
+                    if (existingEntries.TryGetValue(movie.Id, out CustomFormatScoreEntry? skippedEntry))
+                    {
+                        skippedEntry.LastSyncedAt = now;
+                    }
                     _logger.LogTrace("[Radarr] {InstanceName}: skipping movie '{Title}' (fileId={FileId}) — no score returned",
                         arrInstance.Name, movie.Title, fileId);
                     continue;
@@ -164,7 +187,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
                 string profileName = profile?.Name ?? "Unknown";
 
                 existingEntries.TryGetValue(movie.Id, out CustomFormatScoreEntry? existing);
-                UpsertCustomFormatScore(existing, arrInstance.Id, movie.Id, 0, InstanceType.Radarr, movie.Title, fileId, cfScore, cutoffScore, profileName, movie.Monitored, syncStartTime);
+                UpsertCustomFormatScore(existing, arrInstance.Id, movie.Id, 0, InstanceType.Radarr, movie.Title, fileId, cfScore, cutoffScore, profileName, movie.Monitored, now);
 
                 totalSynced++;
             }
@@ -172,7 +195,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
             await _dataContext.SaveChangesAsync();
         }
 
-        await CleanupStaleEntriesAsync(arrInstance.Id, InstanceType.Radarr, syncStartTime);
+        await CleanupStaleEntriesAsync(arrInstance.Id, InstanceType.Radarr, now);
 
         _logger.LogInformation("[Radarr] Synced CF scores for {Count} movies on {InstanceName} ({Skipped} skipped)",
             totalSynced, arrInstance.Name, totalSkipped);
@@ -191,7 +214,8 @@ public sealed class CustomFormatScoreSyncer : IHandler
         _logger.LogTrace("[Sonarr] {InstanceName}: found {SeriesCount} total series",
             arrInstance.Name, allSeries.Count);
 
-        DateTime syncStartTime = _timeProvider.GetUtcNow().UtcDateTime;
+        DateTime now = _timeProvider.GetUtcNow().UtcDateTime;
+
         int totalSynced = 0;
         int totalSkipped = 0;
 
@@ -199,6 +223,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
         {
             // Collect all episodes with files for this chunk of series
             List<(SearchableSeries Series, SearchableEpisode Episode, long FileId, int CfScore, bool IsMonitored)> itemsInChunk = [];
+            List<(long SeriesId, long EpisodeId)> episodesToTouch = [];
 
             foreach (SearchableSeries series in chunk)
             {
@@ -219,9 +244,14 @@ public sealed class CustomFormatScoreSyncer : IHandler
                             itemsInChunk.Add((series, episode, file.Id, file.CustomFormatScore, series.Monitored && episode.Monitored));
                             matched++;
                         }
-                        else if (episode.EpisodeFileId > 0)
+                        else
                         {
-                            totalSkipped++;
+                            // Episode exists but has no file — touch its entry to prevent stale cleanup
+                            episodesToTouch.Add((series.Id, episode.Id));
+                            if (episode.EpisodeFileId > 0)
+                            {
+                                totalSkipped++;
+                            }
                         }
                     }
 
@@ -238,38 +268,55 @@ public sealed class CustomFormatScoreSyncer : IHandler
                 await Task.Delay(Random.Shared.Next(100, 500), cancellationToken);
             }
 
-            if (itemsInChunk.Count == 0)
+            if (itemsInChunk.Count > 0)
             {
-                _logger.LogTrace("[Sonarr] {InstanceName}: chunk of {ChunkSize} series yielded 0 episodes with files, skipping",
+                List<long> seriesIds = itemsInChunk.Select(x => x.Series.Id).Distinct().ToList();
+                Dictionary<(long, long), CustomFormatScoreEntry> existingEntries = await _dataContext.CustomFormatScoreEntries
+                    .Where(e => e.ArrInstanceId == arrInstance.Id
+                        && e.ItemType == InstanceType.Sonarr
+                        && seriesIds.Contains(e.ExternalItemId))
+                    .ToDictionaryAsync(e => (e.ExternalItemId, e.EpisodeId));
+
+                foreach ((SearchableSeries series, SearchableEpisode episode, long fileId, int cfScore, bool isMonitored) in itemsInChunk)
+                {
+                    profileMap.TryGetValue(series.QualityProfileId, out ArrQualityProfile? profile);
+                    int cutoffScore = profile?.CutoffFormatScore ?? 0;
+                    string profileName = profile?.Name ?? "Unknown";
+
+                    string title = $"{series.Title} S{episode.SeasonNumber:D2}E{episode.EpisodeNumber:D2}";
+
+                    existingEntries.TryGetValue((series.Id, episode.Id), out CustomFormatScoreEntry? existing);
+                    UpsertCustomFormatScore(existing, arrInstance.Id, series.Id, episode.Id, InstanceType.Sonarr, title, fileId, cfScore, cutoffScore, profileName, isMonitored, now);
+
+                    totalSynced++;
+                }
+
+                await _dataContext.SaveChangesAsync();
+            }
+            else
+            {
+                _logger.LogTrace("[Sonarr] {InstanceName}: chunk of {ChunkSize} series yielded 0 episodes with files",
                     arrInstance.Name, chunk.Length);
-                continue;
             }
 
-            List<long> seriesIds = itemsInChunk.Select(x => x.Series.Id).Distinct().ToList();
-            Dictionary<(long, long), CustomFormatScoreEntry> existingEntries = await _dataContext.CustomFormatScoreEntries
-                .Where(e => e.ArrInstanceId == arrInstance.Id
-                    && e.ItemType == InstanceType.Sonarr
-                    && seriesIds.Contains(e.ExternalItemId))
-                .ToDictionaryAsync(e => (e.ExternalItemId, e.EpisodeId));
-
-            foreach ((SearchableSeries series, SearchableEpisode episode, long fileId, int cfScore, bool isMonitored) in itemsInChunk)
+            // Touch entries for episodes that exist but have no file (e.g., RSS upgrade in progress)
+            foreach (var group in episodesToTouch.GroupBy(x => x.SeriesId))
             {
-                profileMap.TryGetValue(series.QualityProfileId, out ArrQualityProfile? profile);
-                int cutoffScore = profile?.CutoffFormatScore ?? 0;
-                string profileName = profile?.Name ?? "Unknown";
-
-                string title = $"{series.Title} S{episode.SeasonNumber:D2}E{episode.EpisodeNumber:D2}";
-
-                existingEntries.TryGetValue((series.Id, episode.Id), out CustomFormatScoreEntry? existing);
-                UpsertCustomFormatScore(existing, arrInstance.Id, series.Id, episode.Id, InstanceType.Sonarr, title, fileId, cfScore, cutoffScore, profileName, isMonitored, syncStartTime);
-
-                totalSynced++;
+                List<long> episodeIds = group.Select(x => x.EpisodeId).ToList();
+                foreach (long[] epChunk in episodeIds.Chunk(ChunkSize))
+                {
+                    List<long> epChunkList = epChunk.ToList();
+                    await _dataContext.CustomFormatScoreEntries
+                        .Where(e => e.ArrInstanceId == arrInstance.Id
+                            && e.ItemType == InstanceType.Sonarr
+                            && e.ExternalItemId == group.Key
+                            && epChunkList.Contains(e.EpisodeId))
+                        .ExecuteUpdateAsync(s => s.SetProperty(e => e.LastSyncedAt, now));
+                }
             }
-
-            await _dataContext.SaveChangesAsync();
         }
 
-        await CleanupStaleEntriesAsync(arrInstance.Id, InstanceType.Sonarr, syncStartTime);
+        await CleanupStaleEntriesAsync(arrInstance.Id, InstanceType.Sonarr, now);
 
         _logger.LogInformation("[Sonarr] Synced CF scores for {Count} episodes on {InstanceName} ({Skipped} skipped)",
             totalSynced, arrInstance.Name, totalSkipped);
@@ -350,39 +397,44 @@ public sealed class CustomFormatScoreSyncer : IHandler
     }
 
     /// <summary>
-    /// Removes CF score entries not touched during this sync cycle (timestamp-based).
+    /// Removes CF score entries and history for items not seen during the current sync.
+    /// Items that still exist in the *arr app (even without files) have their LastSyncedAt
+    /// updated during sync, so any entry with LastSyncedAt &lt; syncStartTime is truly removed.
     /// </summary>
     private async Task CleanupStaleEntriesAsync(
-        Guid arrInstanceId,
-        InstanceType instanceType,
-        DateTime syncStartTime)
+        Guid arrInstanceId, InstanceType instanceType, DateTime syncStartTime)
     {
-        List<CustomFormatScoreEntry> staleEntries = await _dataContext.CustomFormatScoreEntries
+        List<long> staleItemIds = await _dataContext.CustomFormatScoreEntries
             .Where(e => e.ArrInstanceId == arrInstanceId
                 && e.ItemType == instanceType
                 && e.LastSyncedAt < syncStartTime)
+            .Select(e => e.ExternalItemId)
+            .Distinct()
             .ToListAsync();
 
-        if (staleEntries.Count == 0)
+        if (staleItemIds.Count == 0)
         {
             return;
         }
 
-        List<long> staleItemIds = staleEntries.Select(e => e.ExternalItemId).Distinct().ToList();
-
-        _dataContext.CustomFormatScoreEntries.RemoveRange(staleEntries);
-
-        // Also cleanup history for removed items
-        await _dataContext.CustomFormatScoreHistory
-            .Where(h => h.ArrInstanceId == arrInstanceId
-                && h.ItemType == instanceType
-                && staleItemIds.Contains(h.ExternalItemId))
+        await _dataContext.CustomFormatScoreEntries
+            .Where(e => e.ArrInstanceId == arrInstanceId
+                && e.ItemType == instanceType
+                && e.LastSyncedAt < syncStartTime)
             .ExecuteDeleteAsync();
 
-        await _dataContext.SaveChangesAsync();
+        foreach (long[] chunk in staleItemIds.Chunk(ChunkSize))
+        {
+            List<long> chunkList = chunk.ToList();
+            await _dataContext.CustomFormatScoreHistory
+                .Where(h => h.ArrInstanceId == arrInstanceId
+                    && h.ItemType == instanceType
+                    && chunkList.Contains(h.ExternalItemId))
+                .ExecuteDeleteAsync();
+        }
 
-        _logger.LogTrace("Cleaned up {Count} stale CF score entries for instance {InstanceId}",
-            staleEntries.Count, arrInstanceId);
+        _logger.LogTrace("Cleaned up {Count} stale CF score item(s) for instance {InstanceId}",
+            staleItemIds.Count, arrInstanceId);
     }
 
     /// <summary>

@@ -563,7 +563,7 @@ public class CustomFormatScoreSyncerTests : IDisposable
     #region Stale Entry Cleanup Tests
 
     [Fact]
-    public async Task ExecuteAsync_CleansUpStaleEntries()
+    public async Task ExecuteAsync_CleansUpEntriesForRemovedMovies()
     {
         // Arrange
         var config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
@@ -580,7 +580,6 @@ public class CustomFormatScoreSyncerTests : IDisposable
         });
 
         // Pre-existing entry for a movie that no longer exists in library
-        // Use a timestamp before FakeTimeProvider's default (2000-01-01) so it's treated as stale
         _fixture.DataContext.CustomFormatScoreEntries.Add(new CustomFormatScoreEntry
         {
             ArrInstanceId = radarrInstance.Id,
@@ -621,10 +620,248 @@ public class CustomFormatScoreSyncerTests : IDisposable
         // Act
         await sut.ExecuteAsync();
 
-        // Assert — stale entry for movie 999 should be removed
+        // Assert — entry for removed movie 999 should be deleted
         var entries = await _fixture.DataContext.CustomFormatScoreEntries.ToListAsync();
         Assert.Single(entries);
         Assert.Equal(10, entries[0].ExternalItemId);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_PreservesEntryWhenMovieExistsButHasNoFile()
+    {
+        // Arrange — simulates an RSS upgrade where the old file was removed
+        // but the new file hasn't been imported yet
+        var config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
+        config.UseCustomFormatScore = true;
+        await _fixture.DataContext.SaveChangesAsync();
+
+        var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
+
+        _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = radarrInstance.Id,
+            ArrInstance = radarrInstance,
+            Enabled = true
+        });
+
+        // Pre-existing entry with score history
+        _fixture.DataContext.CustomFormatScoreEntries.Add(new CustomFormatScoreEntry
+        {
+            ArrInstanceId = radarrInstance.Id,
+            ExternalItemId = 10,
+            EpisodeId = 0,
+            ItemType = InstanceType.Radarr,
+            Title = "Mario Bros",
+            FileId = 100,
+            CurrentScore = 250,
+            CutoffScore = 500,
+            QualityProfileName = "HD",
+            LastSyncedAt = DateTime.UtcNow.AddHours(-1)
+        });
+        _fixture.DataContext.CustomFormatScoreHistory.Add(new CustomFormatScoreHistory
+        {
+            ArrInstanceId = radarrInstance.Id,
+            ExternalItemId = 10,
+            EpisodeId = 0,
+            ItemType = InstanceType.Radarr,
+            Title = "Mario Bros",
+            Score = 250,
+            CutoffScore = 500,
+            RecordedAt = DateTime.UtcNow.AddHours(-1)
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+
+        _radarrClient
+            .Setup(x => x.GetQualityProfilesAsync(radarrInstance))
+            .ReturnsAsync([new ArrQualityProfile { Id = 1, Name = "HD", CutoffFormatScore = 500 }]);
+
+        // Movie still exists in Radarr but HasFile is false (RSS upgrade in progress)
+        _radarrClient
+            .Setup(x => x.GetAllMoviesAsync(radarrInstance))
+            .ReturnsAsync([
+                new SearchableMovie
+                {
+                    Id = 10, Title = "Mario Bros", HasFile = false,
+                    MovieFile = null,
+                    QualityProfileId = 1, Status = "released", Monitored = true
+                }
+            ]);
+
+        var sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert — entry and history should be preserved since the movie still exists
+        var entries = await _fixture.DataContext.CustomFormatScoreEntries.ToListAsync();
+        Assert.Single(entries);
+        Assert.Equal(10, entries[0].ExternalItemId);
+        Assert.Equal(250, entries[0].CurrentScore);
+
+        var history = await _fixture.DataContext.CustomFormatScoreHistory.ToListAsync();
+        Assert.Single(history);
+        Assert.Equal(250, history[0].Score);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_PreservesEntryWhenMovieFileScoreNotReturned()
+    {
+        // Arrange — simulates a newly imported file that doesn't have CF scores calculated yet
+        var config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
+        config.UseCustomFormatScore = true;
+        await _fixture.DataContext.SaveChangesAsync();
+
+        var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
+
+        _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = radarrInstance.Id,
+            ArrInstance = radarrInstance,
+            Enabled = true
+        });
+
+        // Pre-existing entry with history
+        _fixture.DataContext.CustomFormatScoreEntries.Add(new CustomFormatScoreEntry
+        {
+            ArrInstanceId = radarrInstance.Id,
+            ExternalItemId = 10,
+            EpisodeId = 0,
+            ItemType = InstanceType.Radarr,
+            Title = "Mario Bros",
+            FileId = 100,
+            CurrentScore = 250,
+            CutoffScore = 500,
+            QualityProfileName = "HD",
+            LastSyncedAt = DateTime.UtcNow.AddHours(-1)
+        });
+        _fixture.DataContext.CustomFormatScoreHistory.Add(new CustomFormatScoreHistory
+        {
+            ArrInstanceId = radarrInstance.Id,
+            ExternalItemId = 10,
+            EpisodeId = 0,
+            ItemType = InstanceType.Radarr,
+            Title = "Mario Bros",
+            Score = 250,
+            CutoffScore = 500,
+            RecordedAt = DateTime.UtcNow.AddHours(-1)
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+
+        _radarrClient
+            .Setup(x => x.GetQualityProfilesAsync(radarrInstance))
+            .ReturnsAsync([new ArrQualityProfile { Id = 1, Name = "HD", CutoffFormatScore = 500 }]);
+
+        // Movie has a new file (different FileId) after RSS upgrade
+        _radarrClient
+            .Setup(x => x.GetAllMoviesAsync(radarrInstance))
+            .ReturnsAsync([
+                new SearchableMovie
+                {
+                    Id = 10, Title = "Mario Bros", HasFile = true,
+                    MovieFile = new MovieFileInfo { Id = 200, QualityCutoffNotMet = false },
+                    QualityProfileId = 1, Status = "released", Monitored = true
+                }
+            ]);
+
+        // New file returns no score (not yet calculated by Radarr)
+        _radarrClient
+            .Setup(x => x.GetMovieFileScoresAsync(radarrInstance, It.IsAny<List<long>>()))
+            .ReturnsAsync(new Dictionary<long, int>());
+
+        var sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert — entry and history should be preserved since the movie still exists
+        var entries = await _fixture.DataContext.CustomFormatScoreEntries.ToListAsync();
+        Assert.Single(entries);
+        Assert.Equal(10, entries[0].ExternalItemId);
+        Assert.Equal(250, entries[0].CurrentScore);
+
+        var history = await _fixture.DataContext.CustomFormatScoreHistory.ToListAsync();
+        Assert.Single(history);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_Sonarr_PreservesEntryWhenEpisodeTemporarilyWithoutFile()
+    {
+        // Arrange — simulates a Sonarr episode whose file was replaced via RSS
+        var config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
+        config.UseCustomFormatScore = true;
+        await _fixture.DataContext.SaveChangesAsync();
+
+        var sonarrInstance = TestDataContextFactory.AddSonarrInstance(_fixture.DataContext);
+
+        _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = sonarrInstance.Id,
+            ArrInstance = sonarrInstance,
+            Enabled = true
+        });
+
+        // Pre-existing CF score entry for an episode
+        _fixture.DataContext.CustomFormatScoreEntries.Add(new CustomFormatScoreEntry
+        {
+            ArrInstanceId = sonarrInstance.Id,
+            ExternalItemId = 10,
+            EpisodeId = 100,
+            ItemType = InstanceType.Sonarr,
+            Title = "Test Series S01E01",
+            FileId = 500,
+            CurrentScore = 300,
+            CutoffScore = 500,
+            QualityProfileName = "HD",
+            LastSyncedAt = DateTime.UtcNow.AddHours(-1)
+        });
+        _fixture.DataContext.CustomFormatScoreHistory.Add(new CustomFormatScoreHistory
+        {
+            ArrInstanceId = sonarrInstance.Id,
+            ExternalItemId = 10,
+            EpisodeId = 100,
+            ItemType = InstanceType.Sonarr,
+            Title = "Test Series S01E01",
+            Score = 300,
+            CutoffScore = 500,
+            RecordedAt = DateTime.UtcNow.AddHours(-1)
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+
+        _sonarrClient
+            .Setup(x => x.GetQualityProfilesAsync(sonarrInstance))
+            .ReturnsAsync([new ArrQualityProfile { Id = 1, Name = "HD", CutoffFormatScore = 500 }]);
+
+        _sonarrClient
+            .Setup(x => x.GetAllSeriesAsync(sonarrInstance))
+            .ReturnsAsync([
+                new SearchableSeries { Id = 10, Title = "Test Series", QualityProfileId = 1, Monitored = true }
+            ]);
+
+        // Episode exists but has no file currently (RSS upgrade in progress)
+        _sonarrClient
+            .Setup(x => x.GetEpisodesAsync(sonarrInstance, 10))
+            .ReturnsAsync([
+                new SearchableEpisode { Id = 100, SeasonNumber = 1, EpisodeNumber = 1, EpisodeFileId = 0, HasFile = false, Monitored = true }
+            ]);
+
+        _sonarrClient
+            .Setup(x => x.GetEpisodeFilesAsync(sonarrInstance, 10))
+            .ReturnsAsync([]);
+
+        var sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert — entry and history should be preserved
+        var entries = await _fixture.DataContext.CustomFormatScoreEntries.ToListAsync();
+        Assert.Single(entries);
+        Assert.Equal(10, entries[0].ExternalItemId);
+        Assert.Equal(100, entries[0].EpisodeId);
+        Assert.Equal(300, entries[0].CurrentScore);
+
+        var history = await _fixture.DataContext.CustomFormatScoreHistory.ToListAsync();
+        Assert.Single(history);
     }
 
     #endregion
