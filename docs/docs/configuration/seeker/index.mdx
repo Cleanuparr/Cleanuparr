@@ -142,6 +142,16 @@ Disabling round robin will trigger a search for each enabled instance on every r
 
 </ConfigSection>
 
+<ConfigSection
+  title="Post-Release Grace Period"
+>
+
+The number of hours to wait after content is released before including it as a search candidate. This gives indexers time to process new releases before Seeker attempts to find them.
+
+Set to `0` to disable the grace period and search immediately.
+
+</ConfigSection>
+
 </div>
 
 <PrefixedSection prefix="instance">

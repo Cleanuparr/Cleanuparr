@@ -199,6 +199,7 @@ export class DocumentationService {
       'useCutoff': 'use-cutoff',
       'useCustomFormatScore': 'use-custom-format-score',
       'useRoundRobin': 'round-robin',
+      'postReleaseGraceHours': 'post-release-grace-period',
       'missingSearchEnabled': 'enable-missing-search',
       'enabled': 'instance-enabled',
       'skipTags': 'instance-skip-tags',
