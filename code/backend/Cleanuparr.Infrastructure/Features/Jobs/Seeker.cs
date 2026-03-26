@@ -220,23 +220,24 @@ public sealed class Seeker : IHandler
             return;
         }
 
-        // Pre-filter instances
-        instanceConfigs = await FilterInstancesAsync(instanceConfigs);
-
-        if (instanceConfigs.Count == 0)
-        {
-            _logger.LogDebug("All instances are waiting for min cycle time to elapse");
-            return;
-        }
-
         if (config.UseRoundRobin)
         {
-            // Round-robin: pick the instance with the oldest LastProcessedAt
-            SeekerInstanceConfig nextInstance = instanceConfigs
+            // Round-robin: try instances in order of oldest LastProcessedAt,
+            // stop after the first one that triggers a search.
+            // This prevents cycle-complete-waiting instances from wasting a run.
+            var ordered = instanceConfigs
                 .OrderBy(s => s.LastProcessedAt ?? DateTime.MinValue)
-                .First();
+                .ToList();
 
-            await ProcessSingleInstanceAsync(config, nextInstance, isDryRun);
+            foreach (SeekerInstanceConfig instance in ordered)
+            {
+                bool searched = await ProcessSingleInstanceAsync(config, instance, isDryRun);
+                
+                if (searched)
+                {
+                    break;
+                }
+            }
         }
         else
         {
@@ -248,7 +249,7 @@ public sealed class Seeker : IHandler
         }
     }
 
-    private async Task ProcessSingleInstanceAsync(SeekerConfig config, SeekerInstanceConfig instanceConfig, bool isDryRun)
+    private async Task<bool> ProcessSingleInstanceAsync(SeekerConfig config, SeekerInstanceConfig instanceConfig, bool isDryRun)
     {
         ArrInstance arrInstance = instanceConfig.ArrInstance;
         InstanceType instanceType = arrInstance.ArrConfig.Type;
@@ -287,13 +288,14 @@ public sealed class Seeker : IHandler
                 _logger.LogInformation(
                     "Skipping proactive search for {InstanceName} — {Count} items actively downloading (limit: {Limit})",
                     arrInstance.Name, activeDownloads, instanceConfig.ActiveDownloadLimit);
-                return;
+                return false;
             }
         }
 
+        bool searched = false;
         try
         {
-            await ProcessInstanceAsync(config, instanceConfig, arrInstance, instanceType, isDryRun, queueRecords);
+            searched = await ProcessInstanceAsync(config, instanceConfig, arrInstance, instanceType, isDryRun, queueRecords);
         }
         catch (Exception ex)
         {
@@ -305,9 +307,11 @@ public sealed class Seeker : IHandler
         instanceConfig.LastProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
         _dataContext.SeekerInstanceConfigs.Update(instanceConfig);
         await _dataContext.SaveChangesAsync();
+
+        return searched;
     }
 
-    private async Task ProcessInstanceAsync(
+    private async Task<bool> ProcessInstanceAsync(
         SeekerConfig config,
         SeekerInstanceConfig instanceConfig,
         ArrInstance arrInstance,
@@ -374,7 +378,7 @@ public sealed class Seeker : IHandler
             {
                 await CleanupStaleHistoryAsync(arrInstance.Id, instanceType, allLibraryIds, allHistoryExternalIds);
             }
-            return;
+            return false;
         }
 
         // Trigger search (arr client guards the HTTP request via dry run interceptor)
@@ -401,6 +405,8 @@ public sealed class Seeker : IHandler
             await CleanupStaleHistoryAsync(arrInstance.Id, instanceType, allLibraryIds, allHistoryExternalIds);
             await CleanupOldCycleHistoryAsync(arrInstance, instanceConfig.CurrentCycleId);
         }
+
+        return true;
     }
 
     private async Task<(List<long> SelectedIds, List<string> SelectedNames, List<long> AllLibraryIds)> ProcessRadarrAsync(
@@ -892,55 +898,6 @@ public sealed class Seeker : IHandler
             _logger.LogDebug("Cleaned up {Count} old cycle history entries (>30 days) for instance {InstanceName}",
                 deleted, arrInstance.Name);
         }
-    }
-
-    private async Task<List<SeekerInstanceConfig>> FilterInstancesAsync(
-        List<SeekerInstanceConfig> instanceConfigs)
-    {
-        var result = new List<SeekerInstanceConfig>();
-
-        foreach (var ic in instanceConfigs)
-        {
-            // Count distinct items searched in current cycle
-            int cycleItemsSearched = await _dataContext.SeekerHistory
-                .AsNoTracking()
-                .Where(h => h.ArrInstanceId == ic.ArrInstanceId && h.CycleId == ic.CurrentCycleId)
-                .Select(h => h.ExternalItemId)
-                .Distinct()
-                .CountAsync();
-            
-            // No searches have been performed
-            if (cycleItemsSearched is 0)
-            {
-                result.Add(ic);
-                continue;
-            }
-
-            // Cycle not complete
-            if (cycleItemsSearched < ic.TotalEligibleItems)
-            {
-                result.Add(ic);
-                continue;
-            }
-
-            // Cycle is complete, but check if min time has elapsed
-            DateTime? cycleStartedAt = await _dataContext.SeekerHistory
-                .AsNoTracking()
-                .Where(h => h.ArrInstanceId == ic.ArrInstanceId && h.CycleId == ic.CurrentCycleId)
-                .MinAsync(h => (DateTime?)h.LastSearchedAt);
-
-            if (ShouldWaitForMinCycleTime(ic, cycleStartedAt))
-            {
-                _logger.LogDebug(
-                    "skip | cycle complete but min time ({Days}) not elapsed (started {StartedAt}) | {InstanceName}",
-                    ic.ArrInstance.Name, ic.MinCycleTimeDays, cycleStartedAt);
-                continue;
-            }
-
-            result.Add(ic);
-        }
-
-        return result;
     }
 
     /// <summary>
