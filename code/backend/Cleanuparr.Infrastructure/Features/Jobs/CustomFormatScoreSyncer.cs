@@ -164,7 +164,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
                 string profileName = profile?.Name ?? "Unknown";
 
                 existingEntries.TryGetValue(movie.Id, out CustomFormatScoreEntry? existing);
-                UpsertCustomFormatScore(existing, arrInstance.Id, movie.Id, 0, InstanceType.Radarr, movie.Title, fileId, cfScore, cutoffScore, profileName, syncStartTime);
+                UpsertCustomFormatScore(existing, arrInstance.Id, movie.Id, 0, InstanceType.Radarr, movie.Title, fileId, cfScore, cutoffScore, profileName, movie.Monitored, syncStartTime);
 
                 totalSynced++;
             }
@@ -198,7 +198,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
         foreach (SearchableSeries[] chunk in allSeries.Chunk(ChunkSize))
         {
             // Collect all episodes with files for this chunk of series
-            List<(SearchableSeries Series, SearchableEpisode Episode, long FileId, int CfScore)> itemsInChunk = [];
+            List<(SearchableSeries Series, SearchableEpisode Episode, long FileId, int CfScore, bool IsMonitored)> itemsInChunk = [];
 
             foreach (SearchableSeries series in chunk)
             {
@@ -216,7 +216,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
                     {
                         if (episode.EpisodeFileId > 0 && fileMap.TryGetValue(episode.EpisodeFileId, out ArrEpisodeFile? file))
                         {
-                            itemsInChunk.Add((series, episode, file.Id, file.CustomFormatScore));
+                            itemsInChunk.Add((series, episode, file.Id, file.CustomFormatScore, series.Monitored && episode.Monitored));
                             matched++;
                         }
                         else if (episode.EpisodeFileId > 0)
@@ -252,7 +252,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
                     && seriesIds.Contains(e.ExternalItemId))
                 .ToDictionaryAsync(e => (e.ExternalItemId, e.EpisodeId));
 
-            foreach ((SearchableSeries series, SearchableEpisode episode, long fileId, int cfScore) in itemsInChunk)
+            foreach ((SearchableSeries series, SearchableEpisode episode, long fileId, int cfScore, bool isMonitored) in itemsInChunk)
             {
                 profileMap.TryGetValue(series.QualityProfileId, out ArrQualityProfile? profile);
                 int cutoffScore = profile?.CutoffFormatScore ?? 0;
@@ -261,7 +261,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
                 string title = $"{series.Title} S{episode.SeasonNumber:D2}E{episode.EpisodeNumber:D2}";
 
                 existingEntries.TryGetValue((series.Id, episode.Id), out CustomFormatScoreEntry? existing);
-                UpsertCustomFormatScore(existing, arrInstance.Id, series.Id, episode.Id, InstanceType.Sonarr, title, fileId, cfScore, cutoffScore, profileName, syncStartTime);
+                UpsertCustomFormatScore(existing, arrInstance.Id, series.Id, episode.Id, InstanceType.Sonarr, title, fileId, cfScore, cutoffScore, profileName, isMonitored, syncStartTime);
 
                 totalSynced++;
             }
@@ -289,6 +289,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
         int cfScore,
         int cutoffScore,
         string profileName,
+        bool isMonitored,
         DateTime now)
     {
         if (existing is not null)
@@ -313,6 +314,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
             existing.FileId = fileId;
             existing.QualityProfileName = profileName;
             existing.Title = title;
+            existing.IsMonitored = isMonitored;
             existing.LastSyncedAt = now;
         }
         else
@@ -328,6 +330,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
                 CurrentScore = cfScore,
                 CutoffScore = cutoffScore,
                 QualityProfileName = profileName,
+                IsMonitored = isMonitored,
                 LastSyncedAt = now,
             });
 

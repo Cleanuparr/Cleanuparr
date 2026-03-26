@@ -163,6 +163,7 @@ public class CustomFormatScoreSyncerTests : IDisposable
         Assert.Equal(500, entry.CutoffScore);
         Assert.Equal("HD", entry.QualityProfileName);
         Assert.Equal(InstanceType.Radarr, entry.ItemType);
+        Assert.True(entry.IsMonitored);
 
         // Initial history entry should also be created
         var history = await _fixture.DataContext.CustomFormatScoreHistory.ToListAsync();
@@ -245,6 +246,123 @@ public class CustomFormatScoreSyncerTests : IDisposable
         Assert.Equal(InstanceType.Radarr, history[0].ItemType);
     }
 
+    [Fact]
+    public async Task ExecuteAsync_TracksUnmonitoredMovie()
+    {
+        // Arrange
+        var config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
+        config.UseCustomFormatScore = true;
+        await _fixture.DataContext.SaveChangesAsync();
+
+        var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
+
+        _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = radarrInstance.Id,
+            ArrInstance = radarrInstance,
+            Enabled = true
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+
+        _radarrClient
+            .Setup(x => x.GetQualityProfilesAsync(radarrInstance))
+            .ReturnsAsync([new ArrQualityProfile { Id = 1, Name = "HD", CutoffFormatScore = 500 }]);
+
+        _radarrClient
+            .Setup(x => x.GetAllMoviesAsync(radarrInstance))
+            .ReturnsAsync([
+                new SearchableMovie
+                {
+                    Id = 10,
+                    Title = "Unmonitored Movie",
+                    HasFile = true,
+                    MovieFile = new MovieFileInfo { Id = 100, QualityCutoffNotMet = false },
+                    QualityProfileId = 1,
+                    Status = "released",
+                    Monitored = false
+                }
+            ]);
+
+        _radarrClient
+            .Setup(x => x.GetMovieFileScoresAsync(radarrInstance, It.Is<List<long>>(ids => ids.Contains(100))))
+            .ReturnsAsync(new Dictionary<long, int> { { 100, 250 } });
+
+        var sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert — entry should be saved with IsMonitored = false
+        var entries = await _fixture.DataContext.CustomFormatScoreEntries.ToListAsync();
+        Assert.Single(entries);
+        Assert.False(entries[0].IsMonitored);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_UpdatesMonitoredStatusOnSync()
+    {
+        // Arrange
+        var config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
+        config.UseCustomFormatScore = true;
+        await _fixture.DataContext.SaveChangesAsync();
+
+        var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
+
+        _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = radarrInstance.Id,
+            ArrInstance = radarrInstance,
+            Enabled = true
+        });
+
+        // Pre-existing entry that was monitored
+        _fixture.DataContext.CustomFormatScoreEntries.Add(new CustomFormatScoreEntry
+        {
+            ArrInstanceId = radarrInstance.Id,
+            ExternalItemId = 10,
+            EpisodeId = 0,
+            ItemType = InstanceType.Radarr,
+            Title = "Test Movie",
+            FileId = 100,
+            CurrentScore = 250,
+            CutoffScore = 500,
+            QualityProfileName = "HD",
+            IsMonitored = true,
+            LastSyncedAt = DateTime.UtcNow.AddHours(-1)
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+
+        _radarrClient
+            .Setup(x => x.GetQualityProfilesAsync(radarrInstance))
+            .ReturnsAsync([new ArrQualityProfile { Id = 1, Name = "HD", CutoffFormatScore = 500 }]);
+
+        // Movie is now unmonitored
+        _radarrClient
+            .Setup(x => x.GetAllMoviesAsync(radarrInstance))
+            .ReturnsAsync([
+                new SearchableMovie
+                {
+                    Id = 10, Title = "Test Movie", HasFile = true,
+                    MovieFile = new MovieFileInfo { Id = 100, QualityCutoffNotMet = false },
+                    QualityProfileId = 1, Status = "released", Monitored = false
+                }
+            ]);
+
+        _radarrClient
+            .Setup(x => x.GetMovieFileScoresAsync(radarrInstance, It.IsAny<List<long>>()))
+            .ReturnsAsync(new Dictionary<long, int> { { 100, 250 } });
+
+        var sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert — IsMonitored should be updated to false
+        var entries = await _fixture.DataContext.CustomFormatScoreEntries.ToListAsync();
+        Assert.Single(entries);
+        Assert.False(entries[0].IsMonitored);
+    }
+
     #endregion
 
     #region Sonarr Sync Tests
@@ -283,7 +401,7 @@ public class CustomFormatScoreSyncerTests : IDisposable
         _sonarrClient
             .Setup(x => x.GetEpisodesAsync(sonarrInstance, 10))
             .ReturnsAsync([
-                new SearchableEpisode { Id = 100, SeasonNumber = 1, EpisodeNumber = 1, EpisodeFileId = 500, HasFile = true },
+                new SearchableEpisode { Id = 100, SeasonNumber = 1, EpisodeNumber = 1, EpisodeFileId = 500, HasFile = true, Monitored = true },
                 new SearchableEpisode { Id = 101, SeasonNumber = 1, EpisodeNumber = 2, EpisodeFileId = 0, HasFile = false }
             ]);
 
@@ -310,6 +428,7 @@ public class CustomFormatScoreSyncerTests : IDisposable
         Assert.Equal(300, entry.CurrentScore);
         Assert.Equal(500, entry.CutoffScore);
         Assert.Equal(InstanceType.Sonarr, entry.ItemType);
+        Assert.True(entry.IsMonitored);
         Assert.Contains("S01E01", entry.Title);
 
         // Initial history should be created

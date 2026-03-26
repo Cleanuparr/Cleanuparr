@@ -73,6 +73,7 @@ public sealed class CustomFormatScoreController : ControllerBase
                 CutoffScore = e.CutoffScore,
                 QualityProfileName = e.QualityProfileName,
                 IsBelowCutoff = e.CurrentScore < e.CutoffScore,
+                IsMonitored = e.IsMonitored,
                 LastSyncedAt = e.LastSyncedAt,
             })
             .ToListAsync();
@@ -201,6 +202,8 @@ public sealed class CustomFormatScoreController : ControllerBase
         int totalTracked = entries.Count;
         int belowCutoff = entries.Count(e => e.CurrentScore < e.CutoffScore);
         int atOrAboveCutoff = totalTracked - belowCutoff;
+        int monitored = entries.Count(e => e.IsMonitored);
+        int unmonitored = totalTracked - monitored;
 
         // Count upgrades in the last 7 days
         var sevenDaysAgo = DateTime.UtcNow.AddDays(-7);
@@ -239,6 +242,7 @@ public sealed class CustomFormatScoreController : ControllerBase
             var instanceEntries = entries.Where(e => e.ArrInstanceId == instanceId).ToList();
             int instTracked = instanceEntries.Count;
             int instBelow = instanceEntries.Count(e => e.CurrentScore < e.CutoffScore);
+            int instMonitored = instanceEntries.Count(e => e.IsMonitored);
 
             int instUpgrades = 0;
             var instHistory = recentGrouped
@@ -262,6 +266,8 @@ public sealed class CustomFormatScoreController : ControllerBase
                 TotalTracked = instTracked,
                 BelowCutoff = instBelow,
                 AtOrAboveCutoff = instTracked - instBelow,
+                Monitored = instMonitored,
+                Unmonitored = instTracked - instMonitored,
                 RecentUpgrades = instUpgrades,
             };
         }).OrderBy(s => s.InstanceName).ToList();
@@ -271,6 +277,8 @@ public sealed class CustomFormatScoreController : ControllerBase
             TotalTracked = totalTracked,
             BelowCutoff = belowCutoff,
             AtOrAboveCutoff = atOrAboveCutoff,
+            Monitored = monitored,
+            Unmonitored = unmonitored,
             RecentUpgrades = recentUpgrades,
             AverageScore = Math.Round(avgScore, 1),
             PerInstanceStats = perInstanceStats,

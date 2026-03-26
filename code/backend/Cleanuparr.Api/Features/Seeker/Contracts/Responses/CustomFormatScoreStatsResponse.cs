@@ -5,6 +5,8 @@ public sealed record CustomFormatScoreStatsResponse
     public int TotalTracked { get; init; }
     public int BelowCutoff { get; init; }
     public int AtOrAboveCutoff { get; init; }
+    public int Monitored { get; init; }
+    public int Unmonitored { get; init; }
     public int RecentUpgrades { get; init; }
     public double AverageScore { get; init; }
     public List<InstanceCfScoreStat> PerInstanceStats { get; init; } = [];
@@ -18,5 +20,7 @@ public sealed record InstanceCfScoreStat
     public int TotalTracked { get; init; }
     public int BelowCutoff { get; init; }
     public int AtOrAboveCutoff { get; init; }
+    public int Monitored { get; init; }
+    public int Unmonitored { get; init; }
     public int RecentUpgrades { get; init; }
 }

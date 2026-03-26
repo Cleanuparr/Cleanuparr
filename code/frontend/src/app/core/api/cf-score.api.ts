@@ -6,6 +6,8 @@ export interface CfScoreStats {
   totalTracked: number;
   belowCutoff: number;
   atOrAboveCutoff: number;
+  monitored: number;
+  unmonitored: number;
   recentUpgrades: number;
   averageScore: number;
   perInstanceStats: InstanceCfScoreStat[];
@@ -18,6 +20,8 @@ export interface InstanceCfScoreStat {
   totalTracked: number;
   belowCutoff: number;
   atOrAboveCutoff: number;
+  monitored: number;
+  unmonitored: number;
   recentUpgrades: number;
 }
 
@@ -53,6 +57,7 @@ export interface CfScoreEntry {
   cutoffScore: number;
   qualityProfileName: string;
   isBelowCutoff: boolean;
+  isMonitored: boolean;
   lastSyncedAt: string;
 }
 

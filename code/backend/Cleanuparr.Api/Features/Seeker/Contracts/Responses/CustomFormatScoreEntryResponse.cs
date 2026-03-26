@@ -15,5 +15,6 @@ public sealed record CustomFormatScoreEntryResponse
     public int CutoffScore { get; init; }
     public string QualityProfileName { get; init; } = string.Empty;
     public bool IsBelowCutoff { get; init; }
+    public bool IsMonitored { get; init; }
     public DateTime LastSyncedAt { get; init; }
 }

@@ -46,6 +46,14 @@
       <span class="stats-bar__value stats-bar__value--success"><app-animated-counter [value]="stats.atOrAboveCutoff" [duration]="400" /></span>
       <span class="stats-bar__label">Met Cutoff</span>
     </div>
+    <div class="stats-bar__item">
+      <span class="stats-bar__value stats-bar__value--success"><app-animated-counter [value]="stats.monitored" [duration]="400" /></span>
+      <span class="stats-bar__label">Monitored</span>
+    </div>
+    <div class="stats-bar__item">
+      <span class="stats-bar__value"><app-animated-counter [value]="stats.unmonitored" [duration]="400" /></span>
+      <span class="stats-bar__label">Unmonitored</span>
+    </div>
     <app-tooltip text="Items that improved their custom format score in the last 7 days">
       <div class="stats-bar__item">
         <span class="stats-bar__value"><app-animated-counter [value]="stats.recentUpgrades" [duration]="400" /></span>
@@ -77,6 +85,9 @@
           <span class="score-row__profile">{{ item.qualityProfileName }}</span>
           <app-badge [severity]="statusSeverity(item.isBelowCutoff)" size="sm">
             {{ statusLabel(item.isBelowCutoff) }}
+          </app-badge>
+          <app-badge [severity]="item.isMonitored ? 'success' : 'default'" size="sm">
+            {{ item.isMonitored ? 'Monitored' : 'Unmonitored' }}
           </app-badge>
           <app-badge [severity]="itemTypeSeverity(item.itemType)" size="sm">
             {{ item.itemType }}

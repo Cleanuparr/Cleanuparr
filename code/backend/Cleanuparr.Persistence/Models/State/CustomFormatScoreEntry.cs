@@ -66,6 +66,11 @@ public sealed record CustomFormatScoreEntry
     public string QualityProfileName { get; set; } = string.Empty;
 
     /// <summary>
+    /// Whether the item is currently monitored in the arr app
+    /// </summary>
+    public bool IsMonitored { get; set; }
+
+    /// <summary>
     /// When this entry was last synced from the arr API
     /// </summary>
     public DateTime LastSyncedAt { get; set; }
