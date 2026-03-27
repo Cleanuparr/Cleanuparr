@@ -282,7 +282,11 @@ public sealed class Seeker : IHandler
         // Check active download limit using the fetched queue data
         if (instanceConfig.ActiveDownloadLimit > 0)
         {
-            int activeDownloads = queueRecords.Count(r => r.SizeLeft > 0);
+            int activeDownloads = queueRecords
+                .Where(r => r.SizeLeft > 0)
+                .Select(r => r.DownloadId)
+                .Distinct()
+                .Count();
             if (activeDownloads >= instanceConfig.ActiveDownloadLimit)
             {
                 _logger.LogInformation(
