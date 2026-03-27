@@ -32,31 +32,31 @@
 </div>
 
 <!-- Stats Bar -->
-@if (stats(); as stats) {
+@if (stats()) {
   <div class="stats-bar">
     <div class="stats-bar__item">
-      <span class="stats-bar__value"><app-animated-counter [value]="stats.totalTracked" [duration]="400" /></span>
+      <span class="stats-bar__value"><app-animated-counter [value]="displayStats()?.totalTracked ?? 0" [duration]="400" /></span>
       <span class="stats-bar__label">Tracked</span>
     </div>
     <div class="stats-bar__item">
-      <span class="stats-bar__value stats-bar__value--warning"><app-animated-counter [value]="stats.belowCutoff" [duration]="400" /></span>
+      <span class="stats-bar__value stats-bar__value--warning"><app-animated-counter [value]="displayStats()?.belowCutoff ?? 0" [duration]="400" /></span>
       <span class="stats-bar__label">Below Cutoff</span>
     </div>
     <div class="stats-bar__item">
-      <span class="stats-bar__value stats-bar__value--success"><app-animated-counter [value]="stats.atOrAboveCutoff" [duration]="400" /></span>
+      <span class="stats-bar__value stats-bar__value--success"><app-animated-counter [value]="displayStats()?.atOrAboveCutoff ?? 0" [duration]="400" /></span>
       <span class="stats-bar__label">Met Cutoff</span>
     </div>
     <div class="stats-bar__item">
-      <span class="stats-bar__value stats-bar__value--success"><app-animated-counter [value]="stats.monitored" [duration]="400" /></span>
+      <span class="stats-bar__value stats-bar__value--success"><app-animated-counter [value]="displayStats()?.monitored ?? 0" [duration]="400" /></span>
       <span class="stats-bar__label">Monitored</span>
     </div>
     <div class="stats-bar__item">
-      <span class="stats-bar__value"><app-animated-counter [value]="stats.unmonitored" [duration]="400" /></span>
+      <span class="stats-bar__value"><app-animated-counter [value]="displayStats()?.unmonitored ?? 0" [duration]="400" /></span>
       <span class="stats-bar__label">Unmonitored</span>
     </div>
     <app-tooltip text="Items that improved their custom format score in the last 7 days">
       <div class="stats-bar__item">
-        <span class="stats-bar__value"><app-animated-counter [value]="stats.recentUpgrades" [duration]="400" /></span>
+        <span class="stats-bar__value"><app-animated-counter [value]="displayStats()?.recentUpgrades ?? 0" [duration]="400" /></span>
         <span class="stats-bar__label">Recent Upgrades</span>
       </div>
     </app-tooltip>

@@ -8,7 +8,6 @@ public sealed record CustomFormatScoreStatsResponse
     public int Monitored { get; init; }
     public int Unmonitored { get; init; }
     public int RecentUpgrades { get; init; }
-    public double AverageScore { get; init; }
     public List<InstanceCfScoreStat> PerInstanceStats { get; init; } = [];
 }
 

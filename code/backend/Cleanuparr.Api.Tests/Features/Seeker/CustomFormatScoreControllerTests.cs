@@ -263,7 +263,6 @@ public class CustomFormatScoreControllerTests : IDisposable
         stats.BelowCutoff.ShouldBe(0);
         stats.AtOrAboveCutoff.ShouldBe(0);
         stats.RecentUpgrades.ShouldBe(0);
-        stats.AverageScore.ShouldBe(0);
     }
 
     [Fact]
@@ -281,7 +280,6 @@ public class CustomFormatScoreControllerTests : IDisposable
         stats.TotalTracked.ShouldBe(3);
         stats.BelowCutoff.ShouldBe(1);
         stats.AtOrAboveCutoff.ShouldBe(2);
-        stats.AverageScore.ShouldBe(400); // (100+500+600)/3 = 400
     }
 
     [Fact]

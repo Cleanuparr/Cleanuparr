@@ -9,7 +9,6 @@ export interface CfScoreStats {
   monitored: number;
   unmonitored: number;
   recentUpgrades: number;
-  averageScore: number;
   perInstanceStats: InstanceCfScoreStat[];
 }
 

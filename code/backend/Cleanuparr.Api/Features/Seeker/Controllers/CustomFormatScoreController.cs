@@ -227,8 +227,6 @@ public sealed class CustomFormatScoreController : ControllerBase
             }
         }
 
-        double avgScore = entries.Count > 0 ? entries.Average(e => e.CurrentScore) : 0;
-
         // Per-instance stats
         var instanceIds = entries.Select(e => e.ArrInstanceId).Distinct().ToList();
         var instances = await _dataContext.ArrInstances
@@ -280,7 +278,6 @@ public sealed class CustomFormatScoreController : ControllerBase
             Monitored = monitored,
             Unmonitored = unmonitored,
             RecentUpgrades = recentUpgrades,
-            AverageScore = Math.Round(avgScore, 1),
             PerInstanceStats = perInstanceStats,
         });
     }

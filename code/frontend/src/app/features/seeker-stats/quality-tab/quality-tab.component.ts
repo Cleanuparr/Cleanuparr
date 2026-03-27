@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, inject, signal, effect, OnInit } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, signal, computed, effect, OnInit } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { NgIcon } from '@ng-icons/core';
 import {
@@ -58,6 +58,16 @@ export class QualityTabComponent implements OnInit {
     { label: 'Title', value: 'title' },
     { label: 'Last Synced', value: 'date' },
   ];
+
+  readonly displayStats = computed(() => {
+    const s = this.stats();
+    if (!s) return null;
+    const instanceId = this.selectedInstanceId();
+    if (instanceId) {
+      return s.perInstanceStats.find(i => i.instanceId === instanceId) ?? null;
+    }
+    return s;
+  });
 
   readonly expandedId = signal<string | null>(null);
   readonly historyEntries = signal<CfScoreHistoryEntry[]>([]);
