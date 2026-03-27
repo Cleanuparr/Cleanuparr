@@ -140,8 +140,22 @@ public sealed class SeekerConfigController : ControllerBase
 
             await _dataContext.SaveChangesAsync();
 
-            // Update Quartz trigger if SearchInterval changed
-            if (config.SearchInterval != previousInterval)
+            // Start/stop Seeker based on SearchEnabled toggle
+            if (config.SearchEnabled != previousSearchEnabled)
+            {
+                if (config.SearchEnabled)
+                {
+                    _logger.LogInformation("SearchEnabled turned on, starting Seeker job");
+                    await _jobManagementService.StartJob(JobType.Seeker, null, config.ToCronExpression());
+                }
+                else
+                {
+                    _logger.LogInformation("SearchEnabled turned off, stopping Seeker job");
+                    await _jobManagementService.StopJob(JobType.Seeker);
+                }
+            }
+            // Update Quartz trigger if SearchInterval changed (only while search is enabled)
+            else if (config.SearchEnabled && config.SearchInterval != previousInterval)
             {
                 _logger.LogInformation("Search interval changed from {Old} to {New} minutes, updating Seeker schedule",
                     previousInterval, config.SearchInterval);

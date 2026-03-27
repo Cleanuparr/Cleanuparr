@@ -185,7 +185,10 @@ public class BackgroundJobManager : IHostedService
     public async Task RegisterSeekerJob(SeekerConfig config, CancellationToken cancellationToken = default)
     {
         await AddJobWithoutTrigger<SeekerJob>(cancellationToken);
-        await AddTriggersForJob<SeekerJob>(config.ToCronExpression(), cancellationToken);
+        if (config.SearchEnabled)
+        {
+            await AddTriggersForJob<SeekerJob>(config.ToCronExpression(), cancellationToken);
+        }
     }
 
     /// <summary>
