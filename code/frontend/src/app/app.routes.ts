@@ -38,6 +38,15 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'seeker-stats',
+        loadComponent: () =>
+          import('@features/seeker-stats/seeker-stats.component').then(
+            (m) => m.SeekerStatsComponent,
+          ),
+      },
+      { path: 'cf-scores', redirectTo: 'seeker-stats', pathMatch: 'full' },
+      { path: 'search-stats', redirectTo: 'seeker-stats', pathMatch: 'full' },
+      {
         path: 'settings',
         children: [
           {
@@ -78,6 +87,14 @@ export const routes: Routes = [
               import(
                 '@features/settings/blacklist-sync/blacklist-sync.component'
               ).then((m) => m.BlacklistSyncComponent),
+            canDeactivate: [pendingChangesGuard],
+          },
+          {
+            path: 'seeker',
+            loadComponent: () =>
+              import(
+                '@features/settings/seeker/seeker.component'
+              ).then((m) => m.SeekerComponent),
             canDeactivate: [pendingChangesGuard],
           },
           {

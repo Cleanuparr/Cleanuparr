@@ -59,6 +59,9 @@
           @if (provider.events.onCategoryChanged) {
             <span class="event-tag">Category Changed</span>
           }
+          @if (provider.events.onSearchTriggered) {
+            <span class="event-tag">Search Triggered</span>
+          }
         </div>
       </div>
     } @empty {
@@ -277,6 +280,9 @@
         <app-toggle label="Category Changed" [(checked)]="onCategoryChanged"
           hint="Notify when a download's category is changed"
           helpKey="notifications:onCategoryChanged" />
+        <app-toggle label="Search Triggered" [(checked)]="onSearchTriggered"
+          hint="Notify when a search is triggered by the Seeker"
+          helpKey="notifications:onSearchTriggered" />
       </div>
     </div>
   </div>

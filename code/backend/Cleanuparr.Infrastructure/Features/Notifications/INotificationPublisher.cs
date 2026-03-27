@@ -11,4 +11,6 @@ public interface INotificationPublisher
     Task NotifyDownloadCleaned(double ratio, TimeSpan seedingTime, string categoryName, CleanReason reason);
 
     Task NotifyCategoryChanged(string oldCategory, string newCategory, bool isTag = false);
+
+    Task NotifySearchTriggered(string instanceName, int itemCount, IEnumerable<string> items);
 }

@@ -1,0 +1,43 @@
+export interface InstanceSearchStat {
+  instanceId: string;
+  instanceName: string;
+  instanceType: string;
+  itemsTracked: number;
+  totalSearchCount: number;
+  lastSearchedAt: string | null;
+  lastProcessedAt: string | null;
+  currentCycleId: string | null;
+  cycleItemsSearched: number;
+  cycleItemsTotal: number;
+  cycleStartedAt: string | null;
+}
+
+export interface SearchStatsSummary {
+  totalSearchesAllTime: number;
+  searchesLast7Days: number;
+  searchesLast30Days: number;
+  uniqueItemsSearched: number;
+  pendingReplacementSearches: number;
+  enabledInstances: number;
+  perInstanceStats: InstanceSearchStat[];
+}
+
+export enum SeekerSearchType {
+  Proactive = 'Proactive',
+  Replacement = 'Replacement',
+}
+
+export interface SearchEvent {
+  id: string;
+  timestamp: string;
+  instanceName: string;
+  instanceType: string | null;
+  itemCount: number;
+  items: string[];
+  searchType: SeekerSearchType;
+  searchStatus: string | null;
+  completedAt: string | null;
+  grabbedItems: unknown[] | null;
+  cycleId: string | null;
+  isDryRun: boolean;
+}

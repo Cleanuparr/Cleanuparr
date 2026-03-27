@@ -22,8 +22,6 @@ export interface GeneralConfig {
   httpMaxRetries: number;
   httpTimeout: number;
   httpCertificateValidation: CertificateValidationType;
-  searchEnabled: boolean;
-  searchDelay: number;
   statusCheckEnabled: boolean;
   strikeInactivityWindowHours: number;
   log?: LoggingConfig;

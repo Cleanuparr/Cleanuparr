@@ -53,7 +53,7 @@ public abstract class GenericHandler : IHandler
         _dataContext = dataContext;
     }
 
-    public async Task ExecuteAsync()
+    public async Task ExecuteAsync(CancellationToken cancellationToken = default)
     {
         await DataContext.Lock.WaitAsync();
 
@@ -86,11 +86,11 @@ public abstract class GenericHandler : IHandler
         {
             DataContext.Lock.Release();
         }
-        
-        await ExecuteInternalAsync();
+
+        await ExecuteInternalAsync(cancellationToken);
     }
 
-    protected abstract Task ExecuteInternalAsync();
+    protected abstract Task ExecuteInternalAsync(CancellationToken cancellationToken = default);
     
     protected abstract Task ProcessInstanceAsync(ArrInstance instance);
     

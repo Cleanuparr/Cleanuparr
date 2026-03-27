@@ -17,6 +17,11 @@
         [options]="categoryOptions()"
         [(value)]="selectedCategory"
       />
+      <app-select
+        placeholder="All Jobs"
+        [options]="jobNameOptions()"
+        [(value)]="selectedJobName"
+      />
       <app-input
         placeholder="Search logs..."
         type="search"

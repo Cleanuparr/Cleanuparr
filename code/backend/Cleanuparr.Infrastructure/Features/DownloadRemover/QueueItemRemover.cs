@@ -1,20 +1,18 @@
 using System.Net;
+using Cleanuparr.Domain.Entities.Arr;
 using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Enums;
-using Cleanuparr.Infrastructure.Events;
 using Cleanuparr.Infrastructure.Events.Interfaces;
-using Cleanuparr.Infrastructure.Features.Arr;
 using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 using Cleanuparr.Infrastructure.Features.Context;
-using Cleanuparr.Infrastructure.Features.DownloadHunter.Models;
 using Cleanuparr.Infrastructure.Features.DownloadRemover.Interfaces;
 using Cleanuparr.Infrastructure.Features.DownloadRemover.Models;
 using Cleanuparr.Infrastructure.Features.ItemStriker;
 using Cleanuparr.Infrastructure.Helpers;
 using Cleanuparr.Persistence;
-using Cleanuparr.Persistence.Models.Configuration.Arr;
+using Cleanuparr.Persistence.Models.Configuration.Seeker;
+using Cleanuparr.Persistence.Models.State;
 using Data.Models.Arr;
-using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
@@ -24,27 +22,27 @@ namespace Cleanuparr.Infrastructure.Features.DownloadRemover;
 public sealed class QueueItemRemover : IQueueItemRemover
 {
     private readonly ILogger<QueueItemRemover> _logger;
-    private readonly IBus _messageBus;
     private readonly IMemoryCache _cache;
     private readonly IArrClientFactory _arrClientFactory;
     private readonly IEventPublisher _eventPublisher;
     private readonly EventsContext _eventsContext;
+    private readonly DataContext _dataContext;
 
     public QueueItemRemover(
         ILogger<QueueItemRemover> logger,
-        IBus messageBus,
         IMemoryCache cache,
         IArrClientFactory arrClientFactory,
         IEventPublisher eventPublisher,
-        EventsContext eventsContext
+        EventsContext eventsContext,
+        DataContext dataContext
     )
     {
         _logger = logger;
-        _messageBus = messageBus;
         _cache = cache;
         _arrClientFactory = arrClientFactory;
         _eventPublisher = eventPublisher;
         _eventsContext = eventsContext;
+        _dataContext = dataContext;
     }
 
     public async Task RemoveQueueItemAsync<T>(QueueItemRemoveRequest<T> request)
@@ -90,14 +88,26 @@ public sealed class QueueItemRemover : IQueueItemRemover
                 return;
             }
 
-            await _messageBus.Publish(new DownloadHuntRequest<T>
+            SeekerConfig seekerConfig = await _dataContext.SeekerConfigs
+                .AsNoTracking()
+                .FirstAsync();
+
+            if (!seekerConfig.SearchEnabled)
             {
-                InstanceType = request.InstanceType,
-                Instance = request.Instance,
-                SearchItem = request.SearchItem,
-                Record = request.Record,
-                JobRunId = request.JobRunId
+                _logger.LogDebug("Search not triggered | {name}", request.Record.Title);
+                return;
+            }
+
+            _dataContext.SearchQueue.Add(new SearchQueueItem
+            {
+                ArrInstanceId = request.Instance.Id,
+                ItemId = request.SearchItem.Id,
+                SeriesId = (request.SearchItem as SeriesSearchItem)?.SeriesId,
+                SearchType = (request.SearchItem as SeriesSearchItem)?.SearchType.ToString(),
+                Title = request.Record.Title,
             });
+            
+            await _dataContext.SaveChangesAsync();
         }
         catch (HttpRequestException exception)
         {

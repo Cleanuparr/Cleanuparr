@@ -6,6 +6,8 @@ using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
 using Cleanuparr.Persistence.Models.Configuration.MalwareBlocker;
 using Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
 using Cleanuparr.Persistence.Models.Configuration.BlacklistSync;
+using Cleanuparr.Persistence.Models.Configuration.Seeker;
+using SeekerJob = Cleanuparr.Infrastructure.Features.Jobs.Seeker;
 using Cleanuparr.Shared.Helpers;
 using Microsoft.EntityFrameworkCore;
 using Quartz;
@@ -100,12 +102,17 @@ public class BackgroundJobManager : IHostedService
         BlacklistSyncConfig blacklistSyncConfig = await dataContext.BlacklistSyncConfigs
             .AsNoTracking()
             .FirstAsync(cancellationToken);
-        
+        SeekerConfig seekerConfig = await dataContext.SeekerConfigs
+            .AsNoTracking()
+            .FirstAsync(cancellationToken);
+
         // Always register jobs, regardless of enabled status
         await RegisterQueueCleanerJob(queueCleanerConfig, cancellationToken);
         await RegisterMalwareBlockerJob(malwareBlockerConfig, cancellationToken);
         await RegisterDownloadCleanerJob(downloadCleanerConfig, cancellationToken);
         await RegisterBlacklistSyncJob(blacklistSyncConfig, cancellationToken);
+        await RegisterSeekerJob(seekerConfig, cancellationToken);
+        await RegisterCustomFormatScoreSyncJob(seekerConfig, cancellationToken);
     }
     
     /// <summary>
@@ -172,6 +179,30 @@ public class BackgroundJobManager : IHostedService
     }
     
     /// <summary>
+    /// Registers the Seeker job with a trigger based on SearchInterval.
+    /// The Seeker is always running.
+    /// </summary>
+    public async Task RegisterSeekerJob(SeekerConfig config, CancellationToken cancellationToken = default)
+    {
+        await AddJobWithoutTrigger<SeekerJob>(cancellationToken);
+        await AddTriggersForJob<SeekerJob>(config.ToCronExpression(), cancellationToken);
+    }
+
+    /// <summary>
+    /// Registers the CustomFormatScoreSyncer job. Only adds triggers when UseCustomFormatScore is enabled.
+    /// Runs every 30 minutes to sync custom format scores from arr instances.
+    /// </summary>
+    public async Task RegisterCustomFormatScoreSyncJob(SeekerConfig config, CancellationToken cancellationToken = default)
+    {
+        await AddJobWithoutTrigger<CustomFormatScoreSyncer>(cancellationToken);
+
+        if (config.UseCustomFormatScore)
+        {
+            await AddTriggersForJob<CustomFormatScoreSyncer>(Constants.CustomFormatScoreSyncerCron, cancellationToken);
+        }
+    }
+
+    /// <summary>
     /// Helper method to add triggers for an existing job.
     /// </summary>
     private async Task AddTriggersForJob<T>(
@@ -204,7 +235,11 @@ public class BackgroundJobManager : IHostedService
                 throw new ValidationException($"{cronExpression} should have a fire time of maximum {Constants.TriggerMaxLimit.TotalHours} hours");
             }
             
-            if (typeof(T) != typeof(MalwareBlocker) && triggerValue < Constants.TriggerMinLimit)
+            if (typeof(T) == typeof(SeekerJob) && triggerValue < Constants.SeekerMinLimit)
+            {
+                throw new ValidationException($"{cronExpression} should have a fire time of minimum {Constants.SeekerMinLimit.TotalMinutes} minutes");
+            }
+            else if (typeof(T) != typeof(MalwareBlocker) && triggerValue < Constants.TriggerMinLimit)
             {
                 throw new ValidationException($"{cronExpression} should have a fire time of minimum {Constants.TriggerMinLimit.TotalSeconds} seconds");
             }

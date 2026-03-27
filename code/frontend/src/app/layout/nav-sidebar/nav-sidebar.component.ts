@@ -50,6 +50,7 @@ export class NavSidebarComponent {
     { label: 'Logs', icon: 'tablerFileText', route: '/logs' },
     { label: 'Events', icon: 'tablerBell', route: '/events' },
     { label: 'Strikes', icon: 'tablerBolt', route: '/strikes' },
+    { label: 'Seeker Stats', icon: 'tablerChartDots', route: '/seeker-stats' },
   ];
 
   settingsItems: NavItem[] = [
@@ -58,6 +59,7 @@ export class NavSidebarComponent {
     { label: 'Malware Blocker', icon: 'tablerShieldLock', route: '/settings/malware-blocker' },
     { label: 'Download Cleaner', icon: 'tablerTrash', route: '/settings/download-cleaner' },
     { label: 'Blacklist Sync', icon: 'tablerBan', route: '/settings/blacklist-sync' },
+    { label: 'Seeker', icon: 'tablerSearch', route: '/settings/seeker' },
   ];
 
   mediaAppItems: NavItem[] = [

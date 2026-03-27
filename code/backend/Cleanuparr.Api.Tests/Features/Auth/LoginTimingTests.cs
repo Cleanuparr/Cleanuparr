@@ -1,6 +1,9 @@
 using System.Diagnostics;
 using System.Net;
 using System.Net.Http.Json;
+using Cleanuparr.Persistence;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Shouldly;
 
 namespace Cleanuparr.Api.Tests.Features.Auth;
@@ -83,14 +86,14 @@ public class LoginTimingTests : IClassFixture<TimingTestWebApplicationFactory>
     [Fact, TestPriority(4)]
     public async Task Login_LockedOutUser_StillCallsPasswordVerification()
     {
-        // Trigger lockout by making several failed login attempts
-        for (var i = 0; i < 5; i++)
+        // Set lockout state directly in the database to avoid timing sensitivity
+        using (var scope = _factory.Services.CreateScope())
         {
-            await _client.PostAsJsonAsync("/api/auth/login", new
-            {
-                username = "timingtest",
-                password = "WrongPassword!"
-            });
+            var context = scope.ServiceProvider.GetRequiredService<UsersContext>();
+            var user = await context.Users.FirstAsync();
+            user.FailedLoginAttempts = 5;
+            user.LockoutEnd = DateTime.UtcNow.AddMinutes(5);
+            await context.SaveChangesAsync();
         }
 
         _factory.TrackingPasswordService.Reset();
@@ -103,6 +106,16 @@ public class LoginTimingTests : IClassFixture<TimingTestWebApplicationFactory>
 
         response.StatusCode.ShouldBe(HttpStatusCode.TooManyRequests);
         _factory.TrackingPasswordService.VerifyPasswordCallCount.ShouldBeGreaterThanOrEqualTo(1);
+
+        // Reset lockout for subsequent tests
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<UsersContext>();
+            var user = await context.Users.FirstAsync();
+            user.FailedLoginAttempts = 0;
+            user.LockoutEnd = null;
+            await context.SaveChangesAsync();
+        }
     }
 
     [Fact, TestPriority(5)]

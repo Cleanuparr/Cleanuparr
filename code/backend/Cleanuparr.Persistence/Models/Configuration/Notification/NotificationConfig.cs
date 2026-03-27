@@ -30,7 +30,9 @@ public sealed record NotificationConfig
     public bool OnDownloadCleaned { get; init; }
     
     public bool OnCategoryChanged { get; init; }
-    
+
+    public bool OnSearchTriggered { get; init; }
+
     public DateTime CreatedAt { get; init; } = DateTime.UtcNow;
     
     public DateTime UpdatedAt { get; init; } = DateTime.UtcNow;
@@ -63,11 +65,12 @@ public sealed record NotificationConfig
     };
     
     [NotMapped]
-    public bool HasAnyEventEnabled => 
+    public bool HasAnyEventEnabled =>
         OnFailedImportStrike ||
         OnStalledStrike ||
         OnSlowStrike ||
         OnQueueItemDeleted ||
         OnDownloadCleaned ||
-        OnCategoryChanged;
+        OnCategoryChanged ||
+        OnSearchTriggered;
 }

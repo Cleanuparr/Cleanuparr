@@ -90,6 +90,29 @@ export enum JobType {
   MalwareBlocker = 'MalwareBlocker',
   DownloadCleaner = 'DownloadCleaner',
   BlacklistSynchronizer = 'BlacklistSynchronizer',
+  Seeker = 'Seeker',
+}
+
+export enum SelectionStrategy {
+  BalancedWeighted = 'BalancedWeighted',
+  OldestSearchFirst = 'OldestSearchFirst',
+  OldestSearchWeighted = 'OldestSearchWeighted',
+  NewestFirst = 'NewestFirst',
+  NewestWeighted = 'NewestWeighted',
+  Random = 'Random',
+}
+
+export enum SeriesSearchType {
+  Season = 'Season',
+  Series = 'Series',
+}
+
+export enum SearchCommandStatus {
+  Pending = 'Pending',
+  Started = 'Started',
+  Completed = 'Completed',
+  Failed = 'Failed',
+  TimedOut = 'TimedOut',
 }
 
 export type ArrType = 'sonarr' | 'radarr' | 'lidarr' | 'readarr' | 'whisparr';

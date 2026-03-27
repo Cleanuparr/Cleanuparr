@@ -10,5 +10,6 @@ public enum EventType
     QueueItemDeleted,
     DownloadCleaned,
     CategoryChanged,
-    DownloadMarkedForDeletion
+    DownloadMarkedForDeletion,
+    SearchTriggered,
 }

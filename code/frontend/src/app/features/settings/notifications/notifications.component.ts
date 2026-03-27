@@ -186,6 +186,7 @@ export class NotificationsComponent implements OnInit, HasPendingChanges {
   readonly onQueueItemDeleted = signal(true);
   readonly onDownloadCleaned = signal(true);
   readonly onCategoryChanged = signal(false);
+  readonly onSearchTriggered = signal(false);
 
   // Modal validation
   readonly modalNameError = computed(() => {
@@ -408,6 +409,7 @@ export class NotificationsComponent implements OnInit, HasPendingChanges {
     this.onQueueItemDeleted.set(provider.events.onQueueItemDeleted);
     this.onDownloadCleaned.set(provider.events.onDownloadCleaned);
     this.onCategoryChanged.set(provider.events.onCategoryChanged);
+    this.onSearchTriggered.set(provider.events.onSearchTriggered);
     this.modalVisible.set(true);
   }
 
@@ -462,6 +464,7 @@ export class NotificationsComponent implements OnInit, HasPendingChanges {
     this.onQueueItemDeleted.set(true);
     this.onDownloadCleaned.set(true);
     this.onCategoryChanged.set(false);
+    this.onSearchTriggered.set(false);
   }
 
   private getEventFlags() {
@@ -472,6 +475,7 @@ export class NotificationsComponent implements OnInit, HasPendingChanges {
       onQueueItemDeleted: this.onQueueItemDeleted(),
       onDownloadCleaned: this.onDownloadCleaned(),
       onCategoryChanged: this.onCategoryChanged(),
+      onSearchTriggered: this.onSearchTriggered(),
     };
   }
 

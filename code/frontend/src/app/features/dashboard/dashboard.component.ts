@@ -2,16 +2,22 @@ import { Component, ChangeDetectionStrategy, inject, computed, signal, OnInit } 
 import { Router, RouterLink } from '@angular/router';
 import { DatePipe, JsonPipe } from '@angular/common';
 import { NgIcon } from '@ng-icons/core';
+import { CdkDragDrop, CdkDropList, CdkDrag, CdkDragHandle, moveItemInArray } from '@angular/cdk/drag-drop';
 import { PageHeaderComponent } from '@layout/page-header/page-header.component';
 import { CardComponent, ButtonComponent, BadgeComponent, SpinnerComponent } from '@ui';
 import { AppHubService } from '@core/realtime/app-hub.service';
 import { EventsApi } from '@core/api/events.api';
 import { JobsApi } from '@core/api/jobs.api';
 import { GeneralConfigApi } from '@core/api/general-config.api';
+import { CfScoreApi, CfScoreStats, CfScoreUpgrade } from '@core/api/cf-score.api';
 import { ToastService } from '@core/services/toast.service';
 import { LogEntry } from '@core/models/signalr.models';
 import { ManualEvent } from '@core/models/event.models';
 import { JobType } from '@shared/models/enums';
+
+const DASHBOARD_ROW_ORDER_KEY = 'dashboard-row-order';
+const DEFAULT_ROW_ORDER = ['strikes', 'logs-events', 'cf-scores', 'jobs'] as const;
+type DashboardRowId = typeof DEFAULT_ROW_ORDER[number];
 
 @Component({
   selector: 'app-dashboard',
@@ -26,22 +32,36 @@ import { JobType } from '@shared/models/enums';
     ButtonComponent,
     BadgeComponent,
     SpinnerComponent,
+    CdkDropList,
+    CdkDrag,
+    CdkDragHandle,
   ],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DashboardComponent implements OnInit {
+  readonly JobType = JobType;
+
   private readonly hub = inject(AppHubService);
   private readonly eventsApi = inject(EventsApi);
   private readonly jobsApi = inject(JobsApi);
   private readonly generalConfigApi = inject(GeneralConfigApi);
+  private readonly cfScoreApi = inject(CfScoreApi);
   private readonly toast = inject(ToastService);
   private readonly router = inject(Router);
 
   readonly connected = this.hub.isConnected;
   readonly jobs = this.hub.jobs;
   readonly showSupportSection = signal(false);
+  readonly cfScoreStats = signal<CfScoreStats | null>(null);
+  readonly cfScoreUpgrades = signal<CfScoreUpgrade[]>([]);
+
+  readonly rowOrder = signal<DashboardRowId[]>(this.loadOrder());
+  readonly visibleRowOrder = computed(() => {
+    const order = this.rowOrder();
+    return this.cfScoreStats() ? order : order.filter((id) => id !== 'cf-scores');
+  });
 
   readonly recentStrikes = computed(() => this.hub.strikes().slice(0, 5));
   readonly recentLogs = computed(() => this.hub.logs().slice(0, 5));
@@ -67,6 +87,16 @@ export class DashboardComponent implements OnInit {
   ngOnInit(): void {
     this.generalConfigApi.get().subscribe({
       next: (config) => this.showSupportSection.set(config.displaySupportBanner),
+    });
+    this.loadCfScoreData();
+  }
+
+  private loadCfScoreData(): void {
+    this.cfScoreApi.getStats().subscribe({
+      next: (stats) => this.cfScoreStats.set(stats),
+    });
+    this.cfScoreApi.getRecentUpgrades(1, 5).subscribe({
+      next: (res) => this.cfScoreUpgrades.set(res.items),
     });
   }
 
@@ -247,6 +277,33 @@ export class DashboardComponent implements OnInit {
     this.router.navigate([path]);
   }
 
+  private loadOrder(): DashboardRowId[] {
+    try {
+      const saved = localStorage.getItem(DASHBOARD_ROW_ORDER_KEY);
+      if (saved) {
+        const parsed: unknown[] = JSON.parse(saved);
+        const valid = parsed.filter((id): id is DashboardRowId =>
+          (DEFAULT_ROW_ORDER as readonly unknown[]).includes(id)
+        );
+        // Ensure any newly added rows (future-proofing) are appended
+        for (const id of DEFAULT_ROW_ORDER) {
+          if (!valid.includes(id)) valid.push(id);
+        }
+        return valid;
+      }
+    } catch { /* ignore */ }
+    return [...DEFAULT_ROW_ORDER];
+  }
+
+  onDrop(event: CdkDragDrop<DashboardRowId[]>): void {
+    const visible = [...this.visibleRowOrder()];
+    moveItemInArray(visible, event.previousIndex, event.currentIndex);
+    const hidden = this.rowOrder().filter((id) => !visible.includes(id));
+    const newOrder = [...visible, ...hidden];
+    this.rowOrder.set(newOrder);
+    localStorage.setItem(DASHBOARD_ROW_ORDER_KEY, JSON.stringify(newOrder));
+  }
+
   // Strike helpers
   strikeTypeSeverity(type: string): 'error' | 'warning' | 'info' | 'default' {
     const t = type.toLowerCase();
@@ -258,5 +315,11 @@ export class DashboardComponent implements OnInit {
 
   formatStrikeType(type: string): string {
     return type.replace(/([A-Z])/g, ' $1').trim();
+  }
+
+  instanceTypeSeverity(type: string): 'info' | 'warning' | 'default' {
+    if (type === 'Radarr') return 'warning';
+    if (type === 'Sonarr') return 'info';
+    return 'default';
   }
 }

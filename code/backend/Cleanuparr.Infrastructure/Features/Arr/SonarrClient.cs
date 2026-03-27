@@ -53,16 +53,18 @@ public class SonarrClient : ArrClient, ISonarrClient
         return query;
     }
 
-    public override async Task SearchItemsAsync(ArrInstance arrInstance, HashSet<SearchItem>? items)
+    public override async Task<List<long>> SearchItemsAsync(ArrInstance arrInstance, HashSet<SearchItem>? items)
     {
         if (items?.Count is null or 0)
         {
-            return;
+            return [];
         }
+
+        List<long> commandIds = [];
 
         UriBuilder uriBuilder = new(arrInstance.Url);
         uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/v3/command";
-        
+
         foreach (SonarrCommand command in GetSearchCommands(items.Cast<SeriesSearchItem>().ToHashSet()))
         {
             using HttpRequestMessage request = new(HttpMethod.Post, uriBuilder.Uri);
@@ -78,8 +80,18 @@ public class SonarrClient : ArrClient, ISonarrClient
             try
             {
                 HttpResponseMessage? response = await _dryRunInterceptor.InterceptAsync<HttpResponseMessage>(SendRequestAsync, request);
-                response?.Dispose();
-                
+
+                if (response is not null)
+                {
+                    long? commandId = await ReadCommandIdAsync(response);
+                    response.Dispose();
+
+                    if (commandId.HasValue)
+                    {
+                        commandIds.Add(commandId.Value);
+                    }
+                }
+
                 _logger.LogInformation("{log}", GetSearchLog(command.SearchType, arrInstance.Url, command, true, logContext));
             }
             catch
@@ -88,6 +100,8 @@ public class SonarrClient : ArrClient, ISonarrClient
                 throw;
             }
         }
+
+        return commandIds;
     }
 
     public override bool HasContentId(QueueRecord record) => record.EpisodeId is not 0 && record.SeriesId is not 0;
@@ -195,35 +209,123 @@ public class SonarrClient : ArrClient, ISonarrClient
         return null;
     }
 
+    public async Task<List<SearchableSeries>> GetAllSeriesAsync(ArrInstance arrInstance)
+    {
+        UriBuilder uriBuilder = new(arrInstance.Url);
+        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/v3/series";
+
+        using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
+        SetApiKey(request, arrInstance.ApiKey);
+
+        using HttpResponseMessage response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+        response.EnsureSuccessStatusCode();
+
+        using Stream stream = await response.Content.ReadAsStreamAsync();
+        using StreamReader sr = new(stream);
+        using JsonTextReader reader = new(sr);
+        JsonSerializer serializer = JsonSerializer.CreateDefault();
+        return serializer.Deserialize<List<SearchableSeries>>(reader) ?? [];
+    }
+
+    public async Task<List<SearchableEpisode>> GetEpisodesAsync(ArrInstance arrInstance, long seriesId)
+    {
+        UriBuilder uriBuilder = new(arrInstance.Url);
+        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/v3/episode";
+        uriBuilder.Query = $"seriesId={seriesId}";
+
+        using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
+        SetApiKey(request, arrInstance.ApiKey);
+
+        using HttpResponseMessage response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+        response.EnsureSuccessStatusCode();
+
+        return await DeserializeStreamAsync<List<SearchableEpisode>>(response) ?? [];
+    }
+
+    public async Task<List<ArrEpisodeFile>> GetEpisodeFilesAsync(ArrInstance arrInstance, long seriesId)
+    {
+        UriBuilder uriBuilder = new(arrInstance.Url);
+        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/v3/episodefile";
+        uriBuilder.Query = $"seriesId={seriesId}";
+
+        using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
+        SetApiKey(request, arrInstance.ApiKey);
+
+        using HttpResponseMessage response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+        response.EnsureSuccessStatusCode();
+
+        return await DeserializeStreamAsync<List<ArrEpisodeFile>>(response) ?? [];
+    }
+
+    public async Task<List<ArrQualityProfile>> GetQualityProfilesAsync(ArrInstance arrInstance)
+    {
+        UriBuilder uriBuilder = new(arrInstance.Url);
+        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/v3/qualityprofile";
+
+        using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
+        SetApiKey(request, arrInstance.ApiKey);
+
+        using HttpResponseMessage response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+        response.EnsureSuccessStatusCode();
+
+        return await DeserializeStreamAsync<List<ArrQualityProfile>>(response) ?? [];
+    }
+
+    public async Task<Dictionary<long, int>> GetEpisodeFileScoresAsync(ArrInstance arrInstance, List<long> episodeFileIds)
+    {
+        Dictionary<long, int> scores = new();
+
+        // Batch in chunks of 100 to avoid 414 URI Too Long
+        foreach (long[] batch in episodeFileIds.Chunk(100))
+        {
+            UriBuilder uriBuilder = new(arrInstance.Url);
+            uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/v3/episodefile";
+            uriBuilder.Query = string.Join('&', batch.Select(id => $"episodeFileIds={id}"));
+
+            using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
+            SetApiKey(request, arrInstance.ApiKey);
+
+            using HttpResponseMessage response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+            response.EnsureSuccessStatusCode();
+
+            List<MediaFileScore> files = await DeserializeStreamAsync<List<MediaFileScore>>(response) ?? [];
+
+            foreach (MediaFileScore file in files)
+            {
+                scores[file.Id] = file.CustomFormatScore;
+            }
+        }
+
+        return scores;
+    }
+
     private async Task<List<Episode>?> GetEpisodesAsync(ArrInstance arrInstance, List<long> episodeIds)
     {
         UriBuilder uriBuilder = new(arrInstance.Url);
         uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/v3/episode";
         uriBuilder.Query = string.Join('&', episodeIds.Select(x => $"episodeIds={x}"));
-        
+
         using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
         SetApiKey(request, arrInstance.ApiKey);
 
-        using HttpResponseMessage response = await _httpClient.SendAsync(request);
+        using HttpResponseMessage response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
         response.EnsureSuccessStatusCode();
-                
-        string responseBody = await response.Content.ReadAsStringAsync();
-        return JsonConvert.DeserializeObject<List<Episode>>(responseBody);
+
+        return await DeserializeStreamAsync<List<Episode>>(response);
     }
 
     private async Task<Series?> GetSeriesAsync(ArrInstance arrInstance, long seriesId)
     {
         UriBuilder uriBuilder = new(arrInstance.Url);
         uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/v3/series/{seriesId}";
-        
+
         using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
         SetApiKey(request, arrInstance.ApiKey);
 
-        using HttpResponseMessage response = await _httpClient.SendAsync(request);
+        using HttpResponseMessage response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
         response.EnsureSuccessStatusCode();
-                
-        string responseBody = await response.Content.ReadAsStringAsync();
-        return JsonConvert.DeserializeObject<Series>(responseBody);
+
+        return await DeserializeStreamAsync<Series>(response);
     }
 
     private List<SonarrCommand> GetSearchCommands(HashSet<SeriesSearchItem> items)

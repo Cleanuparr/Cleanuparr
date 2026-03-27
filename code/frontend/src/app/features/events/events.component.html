@@ -35,7 +35,7 @@
         placeholder="Search events..."
         type="search"
         [(value)]="searchQuery"
-        (blurred)="onFilterChange()"
+        (entered)="onFilterChange()"
       />
     </div>
     <div class="toolbar__actions">

@@ -5,8 +5,6 @@ using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 using Cleanuparr.Infrastructure.Features.Auth;
 using Cleanuparr.Infrastructure.Features.BlacklistSync;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
-using Cleanuparr.Infrastructure.Features.DownloadHunter;
-using Cleanuparr.Infrastructure.Features.DownloadHunter.Interfaces;
 using Cleanuparr.Infrastructure.Features.DownloadRemover;
 using Cleanuparr.Infrastructure.Features.DownloadRemover.Interfaces;
 using Cleanuparr.Infrastructure.Features.Files;
@@ -49,8 +47,9 @@ public static class ServicesDI
             .AddScoped<BlacklistSynchronizer>()
             .AddScoped<MalwareBlocker>()
             .AddScoped<DownloadCleaner>()
+            .AddScoped<Seeker>()
+            .AddScoped<CustomFormatScoreSyncer>()
             .AddScoped<IQueueItemRemover, QueueItemRemover>()
-            .AddScoped<IDownloadHunter, DownloadHunter>()
             .AddScoped<IFilenameEvaluator, FilenameEvaluator>()
             .AddScoped<IHardLinkFileService, HardLinkFileService>()
             .AddScoped<IUnixHardLinkFileService, UnixHardLinkFileService>()
@@ -67,5 +66,6 @@ public static class ServicesDI
             .AddSingleton<IBlocklistProvider, BlocklistProvider>()
             .AddSingleton(TimeProvider.System)
             .AddSingleton<AppStatusSnapshot>()
-            .AddHostedService<AppStatusRefreshService>();
+            .AddHostedService<AppStatusRefreshService>()
+            .AddHostedService<SeekerCommandMonitor>();
 }

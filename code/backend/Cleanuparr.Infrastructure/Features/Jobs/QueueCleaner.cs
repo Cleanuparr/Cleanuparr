@@ -36,7 +36,7 @@ public sealed class QueueCleaner : GenericHandler
     {
     }
     
-    protected override async Task ExecuteInternalAsync()
+    protected override async Task ExecuteInternalAsync(CancellationToken cancellationToken = default)
     {
         List<StallRule> stallRules = await _dataContext.StallRules
             .Where(r => r.Enabled)

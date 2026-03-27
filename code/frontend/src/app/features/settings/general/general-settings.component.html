@@ -79,19 +79,6 @@
     </div>
   </app-card>
 
-  <app-card header="Search Settings">
-    <div class="form-stack">
-      <app-toggle label="Search Enabled" [(checked)]="searchEnabled"
-        hint="When enabled, the application will trigger a search after removing a download"
-        helpKey="general:searchEnabled" />
-      <app-number-input label="Search Delay" [(value)]="searchDelay" [min]="60" [max]="300" suffix="seconds"
-        hint="Delay between search operations in seconds"
-        [error]="searchDelayError()"
-        [disabled]="!searchEnabled()"
-        helpKey="general:searchDelay" />
-    </div>
-  </app-card>
-
   <app-card header="State Management">
     <div class="form-stack">
       <app-number-input label="Strike Inactivity Window" [(value)]="strikeInactivityWindowHours" [min]="1" [max]="168" suffix="hours"

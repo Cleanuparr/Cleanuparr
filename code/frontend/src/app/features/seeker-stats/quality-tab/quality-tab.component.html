@@ -1,0 +1,166 @@
+<!-- Toolbar -->
+<div class="toolbar">
+  <div class="toolbar__filters">
+    <app-select
+      placeholder="All Instances"
+      [options]="instanceOptions()"
+      [value]="selectedInstanceId()"
+      (valueChange)="onInstanceFilterChange($any($event))"
+    />
+    <app-input
+      placeholder="Search by title..."
+      type="search"
+      [(value)]="searchQuery"
+      (entered)="onFilterChange()"
+    />
+    <app-select
+      [value]="sortBy()"
+      [options]="sortOptions"
+      (valueChange)="onSortChange($any($event))"
+    />
+    <app-toggle
+      label="Hide met"
+      [checked]="hideMet()"
+      (checkedChange)="onHideMetChange($event)"
+    />
+  </div>
+  <div class="toolbar__actions">
+    <app-button variant="ghost" size="sm" (clicked)="refresh()">
+      Refresh
+    </app-button>
+  </div>
+</div>
+
+<!-- Stats Bar -->
+@if (stats()) {
+  <div class="stats-bar">
+    <div class="stats-bar__item">
+      <span class="stats-bar__value"><app-animated-counter [value]="displayStats()?.totalTracked ?? 0" [duration]="400" /></span>
+      <span class="stats-bar__label">Tracked</span>
+    </div>
+    <div class="stats-bar__item">
+      <span class="stats-bar__value stats-bar__value--warning"><app-animated-counter [value]="displayStats()?.belowCutoff ?? 0" [duration]="400" /></span>
+      <span class="stats-bar__label">Below Cutoff</span>
+    </div>
+    <div class="stats-bar__item">
+      <span class="stats-bar__value stats-bar__value--success"><app-animated-counter [value]="displayStats()?.atOrAboveCutoff ?? 0" [duration]="400" /></span>
+      <span class="stats-bar__label">Met Cutoff</span>
+    </div>
+    <div class="stats-bar__item">
+      <span class="stats-bar__value stats-bar__value--success"><app-animated-counter [value]="displayStats()?.monitored ?? 0" [duration]="400" /></span>
+      <span class="stats-bar__label">Monitored</span>
+    </div>
+    <div class="stats-bar__item">
+      <span class="stats-bar__value"><app-animated-counter [value]="displayStats()?.unmonitored ?? 0" [duration]="400" /></span>
+      <span class="stats-bar__label">Unmonitored</span>
+    </div>
+    <app-tooltip text="Items that improved their custom format score in the last 7 days">
+      <div class="stats-bar__item">
+        <span class="stats-bar__value"><app-animated-counter [value]="displayStats()?.recentUpgrades ?? 0" [duration]="400" /></span>
+        <span class="stats-bar__label">Recent Upgrades</span>
+      </div>
+    </app-tooltip>
+  </div>
+}
+
+<!-- Scores List -->
+<app-card [noPadding]="true">
+  <div class="scores-list">
+    @for (item of items(); track item.id) {
+      <div
+        class="score-row"
+        [class.score-row--expanded]="expandedId() === item.id"
+      >
+        <div
+          class="score-row__main"
+          (click)="toggleExpand(item)"
+        >
+          <ng-icon name="tablerChartBar" class="score-row__icon" />
+          <span class="score-row__title">{{ item.title }}</span>
+          <span class="score-row__scores">
+            <span class="score-row__current">{{ item.currentScore }}</span>
+            <span class="score-row__separator">/</span>
+            <span class="score-row__cutoff">{{ item.cutoffScore }}</span>
+          </span>
+          <span class="score-row__profile">{{ item.qualityProfileName }}</span>
+          <app-badge [severity]="statusSeverity(item.isBelowCutoff)" size="sm">
+            {{ statusLabel(item.isBelowCutoff) }}
+          </app-badge>
+          <app-badge [severity]="item.isMonitored ? 'success' : 'default'" size="sm">
+            {{ item.isMonitored ? 'Monitored' : 'Unmonitored' }}
+          </app-badge>
+          <app-badge [severity]="itemTypeSeverity(item.itemType)" size="sm">
+            {{ item.itemType }}
+          </app-badge>
+          <span class="score-row__time">{{ item.lastSyncedAt | date:'yyyy-MM-dd HH:mm' }}</span>
+          <ng-icon
+            [name]="expandedId() === item.id ? 'tablerChevronUp' : 'tablerChevronDown'"
+            class="score-row__chevron"
+          />
+        </div>
+
+        @if (expandedId() === item.id) {
+          <div class="score-row__details">
+            <div class="score-row__detail">
+              <span class="score-row__detail-label">Quality Profile</span>
+              <span class="score-row__detail-value">{{ item.qualityProfileName }}</span>
+            </div>
+            <div class="score-row__detail">
+              <span class="score-row__detail-label">Current Score</span>
+              <span class="score-row__detail-value">{{ item.currentScore }}</span>
+            </div>
+            <div class="score-row__detail">
+              <span class="score-row__detail-label">Cutoff Score</span>
+              <span class="score-row__detail-value">{{ item.cutoffScore }}</span>
+            </div>
+            <div class="score-row__detail">
+              <span class="score-row__detail-label">Last Synced</span>
+              <span class="score-row__detail-value">{{ item.lastSyncedAt | date:'yyyy-MM-dd HH:mm:ss' }}</span>
+            </div>
+
+            <!-- Score History -->
+            <div class="score-row__detail">
+              <span class="score-row__detail-label">Score History</span>
+              @if (historyLoading()) {
+                <span class="score-row__detail-value">Loading...</span>
+              } @else if (historyEntries().length === 0) {
+                <span class="score-row__detail-value">No history available</span>
+              } @else {
+                <div class="history-table">
+                  <div class="history-table__header">
+                    <span>Score</span>
+                    <span>Cutoff</span>
+                    <span>Recorded At</span>
+                  </div>
+                  @for (entry of historyEntries(); track entry.recordedAt) {
+                    <div class="history-table__row">
+                      <span class="history-table__score">{{ entry.score }}</span>
+                      <span class="history-table__cutoff">{{ entry.cutoffScore }}</span>
+                      <span class="history-table__time">{{ entry.recordedAt | date:'yyyy-MM-dd HH:mm:ss' }}</span>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          </div>
+        }
+      </div>
+    } @empty {
+      <app-empty-state
+        icon="tablerChartBar"
+        heading="No scores tracked"
+        description="Enable 'Use Custom Format Score' in Seeker settings to start tracking."
+      />
+    }
+  </div>
+</app-card>
+
+<!-- Pagination -->
+@if (totalRecords() > pageSize()) {
+  <app-paginator
+    [totalRecords]="totalRecords()"
+    [pageSize]="pageSize()"
+    [currentPage]="currentPage()"
+    (pageChange)="onPageChange($event)"
+  />
+}

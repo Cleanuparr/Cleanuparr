@@ -1,6 +1,5 @@
 using System.Text.Json.Serialization;
 using Cleanuparr.Domain.Entities.Arr;
-using Cleanuparr.Infrastructure.Features.DownloadHunter.Consumers;
 using Cleanuparr.Infrastructure.Features.DownloadRemover.Consumers;
 using Cleanuparr.Infrastructure.Features.Notifications.Consumers;
 using Cleanuparr.Infrastructure.Features.Notifications.Models;
@@ -30,9 +29,6 @@ public static class MainDI
                 
                 config.AddConsumer<DownloadRemoverConsumer<SearchItem>>();
                 config.AddConsumer<DownloadRemoverConsumer<SeriesSearchItem>>();
-                config.AddConsumer<DownloadHunterConsumer<SearchItem>>();
-                config.AddConsumer<DownloadHunterConsumer<SeriesSearchItem>>();
-                
                 config.AddConsumer<NotificationConsumer<FailedImportStrikeNotification>>();
                 config.AddConsumer<NotificationConsumer<StalledStrikeNotification>>();
                 config.AddConsumer<NotificationConsumer<SlowSpeedStrikeNotification>>();
@@ -56,14 +52,6 @@ public static class MainDI
                     {
                         e.ConfigureConsumer<DownloadRemoverConsumer<SearchItem>>(context);
                         e.ConfigureConsumer<DownloadRemoverConsumer<SeriesSearchItem>>(context);
-                        e.ConcurrentMessageLimit = 1;
-                        e.PrefetchCount = 1;
-                    });
-                    
-                    cfg.ReceiveEndpoint("download-hunter-queue", e =>
-                    {
-                        e.ConfigureConsumer<DownloadHunterConsumer<SearchItem>>(context);
-                        e.ConfigureConsumer<DownloadHunterConsumer<SeriesSearchItem>>(context);
                         e.ConcurrentMessageLimit = 1;
                         e.PrefetchCount = 1;
                     });

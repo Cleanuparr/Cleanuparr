@@ -102,6 +102,56 @@ export async function updateOidcConfig(
   }
 }
 
+// --- Seeker API helpers ---
+
+export async function getSeekerConfig(accessToken: string): Promise<Response> {
+  return fetch(`${API}/api/configuration/seeker`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+}
+
+export async function updateSeekerConfig(
+  accessToken: string,
+  config: Record<string, unknown>,
+): Promise<Response> {
+  return fetch(`${API}/api/configuration/seeker`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify(config),
+  });
+}
+
+export async function getSearchStatsSummary(accessToken: string): Promise<Response> {
+  return fetch(`${API}/api/seeker/search-stats/summary`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+}
+
+export async function getSearchEvents(accessToken: string): Promise<Response> {
+  return fetch(`${API}/api/seeker/search-stats/events`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+}
+
+export async function getCfScores(
+  accessToken: string,
+  params?: Record<string, string>,
+): Promise<Response> {
+  const query = params ? '?' + new URLSearchParams(params).toString() : '';
+  return fetch(`${API}/api/seeker/cf-scores${query}`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+}
+
+export async function getCfScoreStats(accessToken: string): Promise<Response> {
+  return fetch(`${API}/api/seeker/cf-scores/stats`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+}
+
 export async function configureOidc(accessToken: string): Promise<void> {
   const putRes = await fetch(`${API}/api/account/oidc`, {
     method: 'PUT',

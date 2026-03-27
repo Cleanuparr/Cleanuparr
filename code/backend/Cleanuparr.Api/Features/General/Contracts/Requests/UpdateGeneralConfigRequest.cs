@@ -2,7 +2,6 @@ using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Http.DynamicHttpClientSystem;
 using Cleanuparr.Infrastructure.Logging;
 using Cleanuparr.Persistence.Models.Configuration.General;
-using Cleanuparr.Shared.Helpers;
 using Serilog.Events;
 using ValidationException = Cleanuparr.Domain.Exceptions.ValidationException;
 
@@ -19,10 +18,6 @@ public sealed record UpdateGeneralConfigRequest
     public ushort HttpTimeout { get; init; } = 100;
 
     public CertificateValidationType HttpCertificateValidation { get; init; } = CertificateValidationType.Enabled;
-
-    public bool SearchEnabled { get; init; } = true;
-
-    public ushort SearchDelay { get; init; } = Constants.DefaultSearchDelaySeconds;
 
     public bool StatusCheckEnabled { get; init; } = true;
 
@@ -43,8 +38,6 @@ public sealed record UpdateGeneralConfigRequest
         existingConfig.HttpMaxRetries = HttpMaxRetries;
         existingConfig.HttpTimeout = HttpTimeout;
         existingConfig.HttpCertificateValidation = HttpCertificateValidation;
-        existingConfig.SearchEnabled = SearchEnabled;
-        existingConfig.SearchDelay = SearchDelay;
         existingConfig.StatusCheckEnabled = StatusCheckEnabled;
         existingConfig.EncryptionKey = EncryptionKey;
         existingConfig.IgnoredDownloads = IgnoredDownloads;

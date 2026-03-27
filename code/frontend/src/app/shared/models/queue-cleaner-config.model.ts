@@ -1,16 +1,10 @@
-import { PatternMode, ScheduleUnit } from './enums';
+import { PatternMode } from './enums';
 import { StallRule, SlowRule } from './queue-rule.model';
+import type { JobSchedule } from '@shared/utils/schedule.util';
 
-export interface JobSchedule {
-  every: number;
-  type: ScheduleUnit;
-}
-
-export const ScheduleOptions: Record<ScheduleUnit, number[]> = {
-  [ScheduleUnit.Seconds]: [30],
-  [ScheduleUnit.Minutes]: [1, 2, 3, 4, 5, 6, 10, 12, 15, 20, 30],
-  [ScheduleUnit.Hours]: [1, 2, 3, 4, 6],
-};
+// Re-export for backward compatibility
+export type { JobSchedule } from '@shared/utils/schedule.util';
+export { ScheduleOptions } from '@shared/utils/schedule.util';
 
 export interface FailedImportConfig {
   maxStrikes: number;

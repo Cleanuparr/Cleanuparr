@@ -9,6 +9,7 @@ using Cleanuparr.Persistence.Models.Configuration.MalwareBlocker;
 using Cleanuparr.Persistence.Models.Configuration.Notification;
 using Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
 using Cleanuparr.Persistence.Models.Configuration.BlacklistSync;
+using Cleanuparr.Persistence.Models.Configuration.Seeker;
 using Cleanuparr.Persistence.Models.State;
 using Cleanuparr.Shared.Helpers;
 using Microsoft.EntityFrameworkCore;
@@ -64,6 +65,20 @@ public class DataContext : DbContext
     public DbSet<BlacklistSyncHistory> BlacklistSyncHistory { get; set; }
 
     public DbSet<BlacklistSyncConfig> BlacklistSyncConfigs { get; set; }
+
+    public DbSet<SeekerConfig> SeekerConfigs { get; set; }
+
+    public DbSet<SeekerInstanceConfig> SeekerInstanceConfigs { get; set; }
+
+    public DbSet<SeekerHistory> SeekerHistory { get; set; }
+
+    public DbSet<SearchQueueItem> SearchQueue { get; set; }
+
+    public DbSet<CustomFormatScoreEntry> CustomFormatScoreEntries { get; set; }
+
+    public DbSet<CustomFormatScoreHistory> CustomFormatScoreHistory { get; set; }
+
+    public DbSet<SeekerCommandTracker> SeekerCommandTrackers { get; set; }
 
     public DataContext()
     {
@@ -181,6 +196,9 @@ public class DataContext : DbContext
                 .OnDelete(DeleteBehavior.Cascade);
 
             entity.HasIndex(p => p.Name).IsUnique();
+
+            entity.Property(e => e.CreatedAt).HasConversion(new UtcDateTimeConverter());
+            entity.Property(e => e.UpdatedAt).HasConversion(new UtcDateTimeConverter());
         });
 
         // Configure PushoverConfig List<string> conversions
@@ -195,6 +213,75 @@ public class DataContext : DbContext
                   .HasConversion(
                       v => string.Join(',', v),
                       v => v.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList());
+        });
+
+        modelBuilder.Entity<SeekerInstanceConfig>(entity =>
+        {
+            entity.HasOne(s => s.ArrInstance)
+                  .WithMany()
+                  .HasForeignKey(s => s.ArrInstanceId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(s => s.ArrInstanceId).IsUnique();
+
+            entity.Property(s => s.LastProcessedAt).HasConversion(new UtcDateTimeConverter());
+        });
+
+        modelBuilder.Entity<SeekerHistory>(entity =>
+        {
+            entity.HasOne(s => s.ArrInstance)
+                  .WithMany()
+                  .HasForeignKey(s => s.ArrInstanceId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(s => new { s.ArrInstanceId, s.ExternalItemId, s.ItemType, s.SeasonNumber, s.CycleId }).IsUnique();
+
+            entity.Property(s => s.LastSearchedAt).HasConversion(new UtcDateTimeConverter());
+        });
+
+        modelBuilder.Entity<SeekerCommandTracker>(entity =>
+        {
+            entity.HasOne(s => s.ArrInstance)
+                  .WithMany()
+                  .HasForeignKey(s => s.ArrInstanceId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.Property(s => s.CreatedAt).HasConversion(new UtcDateTimeConverter());
+        });
+
+        modelBuilder.Entity<SearchQueueItem>(entity =>
+        {
+            entity.HasOne(s => s.ArrInstance)
+                  .WithMany()
+                  .HasForeignKey(s => s.ArrInstanceId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.Property(s => s.CreatedAt).HasConversion(new UtcDateTimeConverter());
+        });
+
+        modelBuilder.Entity<CustomFormatScoreEntry>(entity =>
+        {
+            entity.HasOne(s => s.ArrInstance)
+                  .WithMany()
+                  .HasForeignKey(s => s.ArrInstanceId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(s => new { s.ArrInstanceId, s.ExternalItemId, s.EpisodeId }).IsUnique();
+
+            entity.Property(s => s.LastSyncedAt).HasConversion(new UtcDateTimeConverter());
+        });
+
+        modelBuilder.Entity<CustomFormatScoreHistory>(entity =>
+        {
+            entity.HasOne(s => s.ArrInstance)
+                  .WithMany()
+                  .HasForeignKey(s => s.ArrInstanceId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(s => new { s.ArrInstanceId, s.ExternalItemId, s.EpisodeId });
+            entity.HasIndex(s => s.RecordedAt);
+
+            entity.Property(s => s.RecordedAt).HasConversion(new UtcDateTimeConverter());
         });
 
         // Configure BlacklistSyncState relationships and indexes

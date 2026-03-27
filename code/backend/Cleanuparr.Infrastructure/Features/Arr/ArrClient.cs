@@ -1,3 +1,4 @@
+using Cleanuparr.Domain.Entities.Arr;
 using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
@@ -41,8 +42,8 @@ public abstract class ArrClient : IArrClient
 
         using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
         SetApiKey(request, arrInstance.ApiKey);
-        
-        using HttpResponseMessage response = await _httpClient.SendAsync(request);
+
+        using HttpResponseMessage response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
 
         try
         {
@@ -53,16 +54,44 @@ public abstract class ArrClient : IArrClient
             _logger.LogError("queue list failed | {uri}", uriBuilder.Uri);
             throw;
         }
-        
-        string responseBody = await response.Content.ReadAsStringAsync();
-        QueueListResponse? queueResponse = JsonConvert.DeserializeObject<QueueListResponse>(responseBody);
+
+        QueueListResponse? queueResponse = await DeserializeStreamAsync<QueueListResponse>(response);
 
         if (queueResponse is null)
         {
-            throw new Exception($"unrecognized queue list response | {uriBuilder.Uri} | {responseBody}");
+            throw new Exception($"unrecognized queue list response | {uriBuilder.Uri}");
         }
 
         return queueResponse;
+    }
+
+    public async Task<int> GetActiveDownloadCountAsync(ArrInstance arrInstance)
+    {
+        int count = 0;
+        int page = 1;
+        int processed = 0;
+
+        while (true)
+        {
+            QueueListResponse response = await GetQueueItemsAsync(arrInstance, page);
+
+            if (response.Records.Count == 0)
+            {
+                break;
+            }
+
+            count += response.Records.Count(r => r.SizeLeft > 0);
+            processed += response.Records.Count;
+
+            if (processed >= response.TotalRecords)
+            {
+                break;
+            }
+
+            page++;
+        }
+
+        return count;
     }
 
     public virtual async Task<bool> ShouldRemoveFromQueue(InstanceType instanceType, QueueRecord record, bool isPrivateDownload, short arrMaxStrikes)
@@ -166,7 +195,7 @@ public abstract class ArrClient : IArrClient
         }
     }
 
-    public abstract Task SearchItemsAsync(ArrInstance arrInstance, HashSet<SearchItem>? items);
+    public abstract Task<List<long>> SearchItemsAsync(ArrInstance arrInstance, HashSet<SearchItem>? items);
 
     public bool IsRecordValid(QueueRecord record)
     {
@@ -197,6 +226,23 @@ public abstract class ArrClient : IArrClient
         _logger.LogDebug("Connection test successful for {url}", arrInstance.Url);
     }
 
+    /// <inheritdoc/>
+    public async Task<ArrCommandStatus> GetCommandStatusAsync(ArrInstance arrInstance, long commandId)
+    {
+        UriBuilder uriBuilder = new(arrInstance.Url);
+        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/v3/command/{commandId}";
+
+        using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
+        SetApiKey(request, arrInstance.ApiKey);
+
+        using HttpResponseMessage response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+        response.EnsureSuccessStatusCode();
+
+        var result = await DeserializeStreamAsync<ArrCommandStatus>(response);
+
+        return result ?? new ArrCommandStatus(commandId, "unknown", null);
+    }
+
     protected abstract string GetSystemStatusUrlPath();
     
     protected abstract string GetQueueUrlPath();
@@ -221,6 +267,26 @@ public abstract class ArrClient : IArrClient
         return response;
     }
     
+    protected static async Task<T?> DeserializeStreamAsync<T>(HttpResponseMessage response)
+    {
+        using Stream stream = await response.Content.ReadAsStreamAsync();
+        using StreamReader sr = new(stream);
+        using JsonTextReader reader = new(sr);
+        return JsonSerializer.CreateDefault().Deserialize<T>(reader);
+    }
+
+    protected static async Task<long?> ReadCommandIdAsync(HttpResponseMessage response)
+    {
+        CommandIdResponse? result = await DeserializeStreamAsync<CommandIdResponse>(response);
+        return result?.Id;
+    }
+
+    private sealed class CommandIdResponse
+    {
+        [JsonProperty("id")]
+        public long? Id { get; init; }
+    }
+
     /// <summary>
     /// Determines whether the failed import record should be skipped
     /// </summary>

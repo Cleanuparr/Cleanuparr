@@ -28,6 +28,7 @@ export class InputComponent {
   inputRef = viewChild<ElementRef<HTMLInputElement>>('inputEl');
 
   blurred = output<FocusEvent>();
+  entered = output<void>();
 
   readonly showSecret = signal(false);
   readonly hasEye = computed(() => this.type() === 'password' && this.revealable());
@@ -44,6 +45,13 @@ export class InputComponent {
     event.preventDefault();
     if (!this.revealable()) return;
     this.showSecret.update(v => !v);
+  }
+
+  onSearchCleared(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (input.value === '') {
+      this.entered.emit();
+    }
   }
 
   onHelpClick(event: Event): void {

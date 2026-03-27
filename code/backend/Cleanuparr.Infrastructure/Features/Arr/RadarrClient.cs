@@ -1,4 +1,5 @@
 using System.Text;
+using Cleanuparr.Domain.Entities.Arr;
 using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Entities.Radarr;
 using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
@@ -50,24 +51,24 @@ public class RadarrClient : ArrClient, IRadarrClient
         return query;
     }
 
-    public override async Task SearchItemsAsync(ArrInstance arrInstance, HashSet<SearchItem>? items)
+    public override async Task<List<long>> SearchItemsAsync(ArrInstance arrInstance, HashSet<SearchItem>? items)
     {
         if (items?.Count is null or 0)
         {
-            return;
+            return [];
         }
 
         List<long> ids = items.Select(item => item.Id).ToList();
-        
+
         UriBuilder uriBuilder = new(arrInstance.Url);
         uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/v3/command";
-        
+
         RadarrCommand command = new()
         {
             Name = "MoviesSearch",
             MovieIds = ids,
         };
-        
+
         using HttpRequestMessage request = new(HttpMethod.Post, uriBuilder.Uri);
         request.Content = new StringContent(
             JsonConvert.SerializeObject(command),
@@ -81,9 +82,18 @@ public class RadarrClient : ArrClient, IRadarrClient
         try
         {
             HttpResponseMessage? response = await _dryRunInterceptor.InterceptAsync<HttpResponseMessage>(SendRequestAsync, request);
-            response?.Dispose();
-            
+
+            if (response is null)
+            {
+                return [];
+            }
+
+            long? commandId = await ReadCommandIdAsync(response);
+            response.Dispose();
+
             _logger.LogInformation("{log}", GetSearchLog(arrInstance.Url, command, true, logContext));
+
+            return commandId.HasValue ? [commandId.Value] : [];
         }
         catch
         {
@@ -130,18 +140,77 @@ public class RadarrClient : ArrClient, IRadarrClient
         return null;
     }
 
+    public async Task<List<SearchableMovie>> GetAllMoviesAsync(ArrInstance arrInstance)
+    {
+        UriBuilder uriBuilder = new(arrInstance.Url);
+        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/v3/movie";
+
+        using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
+        SetApiKey(request, arrInstance.ApiKey);
+
+        using HttpResponseMessage response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+        response.EnsureSuccessStatusCode();
+
+        using Stream stream = await response.Content.ReadAsStreamAsync();
+        using StreamReader sr = new(stream);
+        using JsonTextReader reader = new(sr);
+        JsonSerializer serializer = JsonSerializer.CreateDefault();
+        return serializer.Deserialize<List<SearchableMovie>>(reader) ?? [];
+    }
+
+    public async Task<List<ArrQualityProfile>> GetQualityProfilesAsync(ArrInstance arrInstance)
+    {
+        UriBuilder uriBuilder = new(arrInstance.Url);
+        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/v3/qualityprofile";
+
+        using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
+        SetApiKey(request, arrInstance.ApiKey);
+
+        using HttpResponseMessage response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+        response.EnsureSuccessStatusCode();
+
+        return await DeserializeStreamAsync<List<ArrQualityProfile>>(response) ?? [];
+    }
+
+    public async Task<Dictionary<long, int>> GetMovieFileScoresAsync(ArrInstance arrInstance, List<long> movieFileIds)
+    {
+        Dictionary<long, int> scores = new();
+
+        // Batch in chunks of 100 to avoid 414 URI Too Long
+        foreach (long[] batch in movieFileIds.Chunk(100))
+        {
+            UriBuilder uriBuilder = new(arrInstance.Url);
+            uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/v3/moviefile";
+            uriBuilder.Query = string.Join('&', batch.Select(id => $"movieFileIds={id}"));
+
+            using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
+            SetApiKey(request, arrInstance.ApiKey);
+
+            using HttpResponseMessage response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+            response.EnsureSuccessStatusCode();
+
+            List<MediaFileScore> files = await DeserializeStreamAsync<List<MediaFileScore>>(response) ?? [];
+
+            foreach (MediaFileScore file in files)
+            {
+                scores[file.Id] = file.CustomFormatScore;
+            }
+        }
+
+        return scores;
+    }
+
     private async Task<Movie?> GetMovie(ArrInstance arrInstance, long movieId)
     {
         UriBuilder uriBuilder = new(arrInstance.Url);
         uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/v3/movie/{movieId}";
-        
+
         using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
         SetApiKey(request, arrInstance.ApiKey);
 
-        using HttpResponseMessage response = await _httpClient.SendAsync(request);
+        using HttpResponseMessage response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
         response.EnsureSuccessStatusCode();
-                
-        string responseBody = await response.Content.ReadAsStringAsync();
-        return JsonConvert.DeserializeObject<Movie>(responseBody);
+
+        return await DeserializeStreamAsync<Movie>(response);
     }
 }

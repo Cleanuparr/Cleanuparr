@@ -80,10 +80,14 @@ public sealed class GeneralConfigController : ControllerBase
                         .Where(d => !d.Strikes.Any())
                         .ExecuteDeleteAsync();
 
+                    var deletedHistory = await _dataContext.SeekerHistory
+                        .Where(h => h.IsDryRun)
+                        .ExecuteDeleteAsync();
+
                     _logger.LogWarning(
-                        "Dry run disabled — purged dry-run data: {Strikes} strikes, {Events} events, {ManualEvents} manual events, {Items} orphaned download items removed",
-                        deletedStrikes, deletedEvents, deletedManualEvents, deletedItems);
-                    
+                        "Dry run disabled — purged dry-run data: {Strikes} strikes, {Events} events, {ManualEvents} manual events, {Items} orphaned download items, {History} search history entries removed",
+                        deletedStrikes, deletedEvents, deletedManualEvents, deletedItems, deletedHistory);
+
                     await transaction.CommitAsync();
                 }
                 catch

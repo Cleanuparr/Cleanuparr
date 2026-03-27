@@ -86,193 +86,298 @@
   </div>
 }
 
-<div class="dashboard-grid">
-  <!-- Recent Strikes -->
-  <app-card [noPadding]="true" class="dashboard-grid__strikes">
-    <div class="card-inner card-inner--compact">
-      <div class="card-header">
-        <div class="card-header__left">
-          <h3 class="card-header__title">Recent Strikes</h3>
-          <app-badge [severity]="connected() ? 'success' : 'error'" size="sm" [rounded]="true" [class.badge--live]="connected()">
-            {{ connected() ? 'Connected' : 'Disconnected' }}
-          </app-badge>
-        </div>
-        <a class="card-header__link" routerLink="/strikes">View All</a>
-      </div>
-      <div class="timeline">
-        <span class="timeline__direction">
-          <ng-icon name="tablerArrowDown" class="timeline__direction-icon" />
-          Newest first
-        </span>
-        @for (strike of recentStrikes(); track strike.id) {
-          <div class="timeline__item">
-            <div class="timeline__marker timeline__marker--warning">
-              <ng-icon name="tablerBolt" />
-            </div>
-            <div class="timeline__content">
-              <div class="timeline__row">
-                <app-badge [severity]="strikeTypeSeverity(strike.type)" size="sm">
-                  {{ formatStrikeType(strike.type) }}
-                </app-badge>
-                <span class="timeline__time">{{ strike.createdAt | date:'yyyy-MM-dd HH:mm:ss' }}</span>
-              </div>
-              <p class="timeline__message">{{ truncate(strike.title) }}</p>
-            </div>
-          </div>
-        } @empty {
-          <div class="timeline__empty">
-            @if (!connected()) {
-              <app-spinner size="sm" />
-              <span>Connecting...</span>
-            } @else {
-              <span>No recent strikes</span>
-            }
-          </div>
-        }
-      </div>
-    </div>
-  </app-card>
+<div
+  class="dashboard-rows"
+  cdkDropList
+  [cdkDropListData]="visibleRowOrder()"
+  (cdkDropListDropped)="onDrop($event)"
+>
+  @for (rowId of visibleRowOrder(); track rowId) {
+    <div class="dashboard-row" cdkDrag>
 
-  <!-- Recent Logs -->
-  <app-card [noPadding]="true">
-    <div class="card-inner">
-      <div class="card-header">
-        <div class="card-header__left">
-          <h3 class="card-header__title">Recent Logs</h3>
-          <app-badge [severity]="connected() ? 'success' : 'error'" size="sm" [rounded]="true" [class.badge--live]="connected()">
-            {{ connected() ? 'Connected' : 'Disconnected' }}
-          </app-badge>
-        </div>
-        <a class="card-header__link" routerLink="/logs">View All</a>
-      </div>
-      <div class="timeline">
-        <span class="timeline__direction">
-          <ng-icon name="tablerArrowDown" class="timeline__direction-icon" />
-          Newest first
-        </span>
-        @for (log of recentLogs(); track $index) {
-          <div class="timeline__item">
-            <div class="timeline__marker" [class]="'timeline__marker--' + logSeverity(log.level)">
-              <ng-icon [name]="logIcon(log.level)" />
-            </div>
-            <div class="timeline__content">
-              <div class="timeline__row">
-                <app-badge [severity]="logBadgeSeverity(log.level)" size="sm">
-                  {{ logLevelLabel(log.level) }}
-                </app-badge>
-                @if (log.category && log.category !== 'SYSTEM') {
-                  <app-badge severity="info" size="sm">{{ log.category }}</app-badge>
+      @switch (rowId) {
+
+        @case ('strikes') {
+          <!-- Recent Strikes -->
+          <app-card [noPadding]="true">
+            <div class="card-inner card-inner--compact">
+              <div class="card-header">
+                <div class="card-header__left">
+                  <ng-icon name="tablerGripVertical" class="drag-handle__icon" cdkDragHandle title="Drag to reorder" />
+                  <h3 class="card-header__title">Recent Strikes</h3>
+                  <app-badge [severity]="connected() ? 'success' : 'error'" size="sm" [rounded]="true" [class.badge--live]="connected()">
+                    {{ connected() ? 'Connected' : 'Disconnected' }}
+                  </app-badge>
+                </div>
+                <a class="card-header__link" routerLink="/strikes">View All</a>
+              </div>
+              <div class="timeline">
+                <span class="timeline__direction">
+                  <ng-icon name="tablerArrowDown" class="timeline__direction-icon" />
+                  Newest first
+                </span>
+                @for (strike of recentStrikes(); track strike.id) {
+                  <div class="timeline__item">
+                    <div class="timeline__marker timeline__marker--warning">
+                      <ng-icon name="tablerBolt" />
+                    </div>
+                    <div class="timeline__content">
+                      <div class="timeline__row">
+                        <app-badge [severity]="strikeTypeSeverity(strike.type)" size="sm">
+                          {{ formatStrikeType(strike.type) }}
+                        </app-badge>
+                        <span class="timeline__time">{{ strike.createdAt | date:'yyyy-MM-dd HH:mm:ss' }}</span>
+                      </div>
+                      <p class="timeline__message">{{ truncate(strike.title) }}</p>
+                    </div>
+                  </div>
+                } @empty {
+                  <div class="timeline__empty">
+                    @if (!connected()) {
+                      <app-spinner size="sm" />
+                      <span>Connecting...</span>
+                    } @else {
+                      <span>No recent strikes</span>
+                    }
+                  </div>
                 }
-                @if (log.downloadClientType) {
-                  <app-badge severity="accent" size="sm">{{ log.downloadClientType }}</app-badge>
+              </div>
+            </div>
+          </app-card>
+        }
+
+        @case ('logs-events') {
+          <!-- Recent Logs + Recent Events -->
+          <div class="logs-events-row">
+            <app-card [noPadding]="true">
+              <div class="card-inner">
+                <div class="card-header">
+                  <div class="card-header__left">
+                    <ng-icon name="tablerGripVertical" class="drag-handle__icon" cdkDragHandle title="Drag to reorder" />
+                    <h3 class="card-header__title">Recent Logs</h3>
+                    <app-badge [severity]="connected() ? 'success' : 'error'" size="sm" [rounded]="true" [class.badge--live]="connected()">
+                      {{ connected() ? 'Connected' : 'Disconnected' }}
+                    </app-badge>
+                  </div>
+                  <a class="card-header__link" routerLink="/logs">View All</a>
+                </div>
+                <div class="timeline">
+                  <span class="timeline__direction">
+                    <ng-icon name="tablerArrowDown" class="timeline__direction-icon" />
+                    Newest first
+                  </span>
+                  @for (log of recentLogs(); track $index) {
+                    <div class="timeline__item">
+                      <div class="timeline__marker" [class]="'timeline__marker--' + logSeverity(log.level)">
+                        <ng-icon [name]="logIcon(log.level)" />
+                      </div>
+                      <div class="timeline__content">
+                        <div class="timeline__row">
+                          <app-badge [severity]="logBadgeSeverity(log.level)" size="sm">
+                            {{ logLevelLabel(log.level) }}
+                          </app-badge>
+                          @if (log.category && log.category !== 'SYSTEM') {
+                            <app-badge severity="info" size="sm">{{ log.category }}</app-badge>
+                          }
+                          @if (log.downloadClientType) {
+                            <app-badge severity="accent" size="sm">{{ log.downloadClientType }}</app-badge>
+                          }
+                          <span class="timeline__time">{{ log.timestamp | date:'yyyy-MM-dd HH:mm:ss' }}</span>
+                        </div>
+                        <p class="timeline__message">{{ truncate(log.message) }}</p>
+                      </div>
+                    </div>
+                  } @empty {
+                    <div class="timeline__empty">
+                      @if (!connected()) {
+                        <app-spinner size="sm" />
+                        <span>Connecting...</span>
+                      } @else {
+                        <span>No recent logs</span>
+                      }
+                    </div>
+                  }
+                </div>
+              </div>
+            </app-card>
+
+            <app-card [noPadding]="true">
+              <div class="card-inner">
+                <div class="card-header">
+                  <div class="card-header__left">
+                    <h3 class="card-header__title">Recent Events</h3>
+                    <app-badge [severity]="connected() ? 'success' : 'error'" size="sm" [rounded]="true" [class.badge--live]="connected()">
+                      {{ connected() ? 'Connected' : 'Disconnected' }}
+                    </app-badge>
+                  </div>
+                  <a class="card-header__link" routerLink="/events">View All</a>
+                </div>
+                <div class="timeline">
+                  <span class="timeline__direction">
+                    <ng-icon name="tablerArrowDown" class="timeline__direction-icon" />
+                    Newest first
+                  </span>
+                  @for (event of recentEvents(); track $index) {
+                    <div class="timeline__item">
+                      <div class="timeline__marker" [class]="'timeline__marker--' + eventMarkerClass(event.eventType, event.severity)">
+                        <ng-icon [name]="eventIcon(event.eventType)" />
+                      </div>
+                      <div class="timeline__content">
+                        <div class="timeline__row">
+                          <app-badge [severity]="eventSeverity(event.severity)" size="sm">
+                            {{ event.severity }}
+                          </app-badge>
+                          <app-badge [severity]="eventTypeSeverity(event.eventType)" size="sm">
+                            {{ formatEventType(event.eventType) }}
+                          </app-badge>
+                          <span class="timeline__time">{{ event.timestamp | date:'yyyy-MM-dd HH:mm:ss' }}</span>
+                        </div>
+                        <p class="timeline__message">{{ truncate(event.message) }}</p>
+                        @if (getDownloadName(event); as name) {
+                          <p class="timeline__download-name">{{ name }}</p>
+                        }
+                      </div>
+                    </div>
+                  } @empty {
+                    <div class="timeline__empty">
+                      @if (!connected()) {
+                        <app-spinner size="sm" />
+                        <span>Connecting...</span>
+                      } @else {
+                        <span>No recent events</span>
+                      }
+                    </div>
+                  }
+                </div>
+              </div>
+            </app-card>
+          </div>
+        }
+
+        @case ('cf-scores') {
+          <!-- CF Score Upgrades -->
+          @if (cfScoreStats(); as stats) {
+            <app-card [noPadding]="true">
+              <div class="card-inner card-inner--compact">
+                <div class="card-header">
+                  <div class="card-header__left">
+                    <ng-icon name="tablerGripVertical" class="drag-handle__icon" cdkDragHandle title="Drag to reorder" />
+                    <h3 class="card-header__title">Custom Format Scores</h3>
+                  </div>
+                  <a class="card-header__link" routerLink="/seeker-stats" [queryParams]="{ tab: 'quality' }">View All</a>
+                </div>
+                <div class="cf-scores">
+                  <div class="cf-scores__stats">
+                    <div class="cf-scores__stat">
+                      <span class="cf-scores__stat-value">{{ stats.totalTracked }}</span>
+                      <span class="cf-scores__stat-label">Tracked</span>
+                    </div>
+                    <div class="cf-scores__stat cf-scores__stat--warning">
+                      <span class="cf-scores__stat-value">{{ stats.belowCutoff }}</span>
+                      <span class="cf-scores__stat-label">Below Cutoff</span>
+                    </div>
+                    <div class="cf-scores__stat cf-scores__stat--success">
+                      <span class="cf-scores__stat-value">{{ stats.atOrAboveCutoff }}</span>
+                      <span class="cf-scores__stat-label">Met Cutoff</span>
+                    </div>
+                    <div class="cf-scores__stat cf-scores__stat--info">
+                      <span class="cf-scores__stat-value">{{ stats.recentUpgrades }}</span>
+                      <span class="cf-scores__stat-label">Upgrades (7d)</span>
+                    </div>
+                  </div>
+                  @if (stats.perInstanceStats.length > 0) {
+                    <div class="cf-scores__instances">
+                      @for (inst of stats.perInstanceStats; track inst.instanceId) {
+                        <div class="cf-scores__instance">
+                          <div class="cf-scores__instance-header">
+                            <span class="cf-scores__instance-name">{{ inst.instanceName }}</span>
+                            <app-badge [severity]="instanceTypeSeverity(inst.instanceType)" size="sm">
+                              {{ inst.instanceType }}
+                            </app-badge>
+                          </div>
+                          <div class="cf-scores__instance-stats">
+                            <span class="cf-scores__instance-stat">{{ inst.totalTracked }} tracked</span>
+                            <span class="cf-scores__instance-stat cf-scores__instance-stat--warning">{{ inst.belowCutoff }} below</span>
+                            <span class="cf-scores__instance-stat cf-scores__instance-stat--success">{{ inst.atOrAboveCutoff }} met</span>
+                            <span class="cf-scores__instance-stat cf-scores__instance-stat--info">{{ inst.recentUpgrades }} upgrades</span>
+                          </div>
+                        </div>
+                      }
+                    </div>
+                  }
+                  @if (cfScoreUpgrades().length > 0) {
+                    <div class="cf-scores__upgrades">
+                      <div class="cf-scores__upgrades-header">
+                        <span class="cf-scores__upgrades-title">Recent Upgrades</span>
+                        <a class="card-header__link" routerLink="/seeker-stats" [queryParams]="{ tab: 'upgrades' }">View All</a>
+                      </div>
+                      @for (upgrade of cfScoreUpgrades(); track $index) {
+                        <div class="cf-scores__upgrade-item">
+                          <div class="cf-scores__upgrade-title">{{ upgrade.title }}</div>
+                          <div class="cf-scores__upgrade-scores">
+                            <span class="cf-scores__score cf-scores__score--old">{{ upgrade.previousScore }}</span>
+                            <ng-icon name="tablerArrowRight" class="cf-scores__arrow" />
+                            <span class="cf-scores__score cf-scores__score--new">{{ upgrade.newScore }}</span>
+                            <span class="cf-scores__cutoff">(cutoff: {{ upgrade.cutoffScore }})</span>
+                          </div>
+                          <span class="cf-scores__upgrade-time">{{ upgrade.upgradedAt | date:'yyyy-MM-dd HH:mm' }}</span>
+                        </div>
+                      }
+                    </div>
+                  }
+                </div>
+              </div>
+            </app-card>
+          }
+        }
+
+        @case ('jobs') {
+          <!-- Jobs -->
+          <app-card [noPadding]="true">
+            <div class="card-inner">
+              <div class="card-header">
+                <div class="card-header__left">
+                  <ng-icon name="tablerGripVertical" class="drag-handle__icon" cdkDragHandle title="Drag to reorder" />
+                  <h3 class="card-header__title">Jobs</h3>
+                </div>
+              </div>
+              <div class="jobs-table">
+                @for (job of jobs(); track job.jobType) {
+                  <div class="jobs-table__row" [class.jobs-table__row--running]="job.status === 'Running'">
+                    <div class="jobs-table__info">
+                      <span class="jobs-table__name">{{ jobDisplayName(job.jobType) }}</span>
+                      <app-badge [severity]="jobStatusSeverity(job.status)" size="sm">
+                        {{ job.status }}
+                      </app-badge>
+                    </div>
+                    <div class="jobs-table__details">
+                      @if (job.nextRunTime) {
+                        <span class="jobs-table__next">Next: {{ job.nextRunTime | date:'HH:mm:ss' }}</span>
+                      }
+                      <span class="jobs-table__schedule">{{ job.schedule }}</span>
+                    </div>
+                    @if (job.jobType !== JobType.Seeker) {
+                      <app-button variant="ghost" size="sm" (clicked)="triggerJob(job.jobType)">
+                        Run Now
+                      </app-button>
+                    }
+                  </div>
+                } @empty {
+                  <div class="jobs-table__empty">
+                    @if (!connected()) {
+                      <app-spinner size="sm" />
+                      <span>Connecting...</span>
+                    } @else {
+                      <span>No jobs configured</span>
+                    }
+                  </div>
                 }
-                <span class="timeline__time">{{ log.timestamp | date:'yyyy-MM-dd HH:mm:ss' }}</span>
               </div>
-              <p class="timeline__message">{{ truncate(log.message) }}</p>
             </div>
-          </div>
-        } @empty {
-          <div class="timeline__empty">
-            @if (!connected()) {
-              <app-spinner size="sm" />
-              <span>Connecting...</span>
-            } @else {
-              <span>No recent logs</span>
-            }
-          </div>
+          </app-card>
         }
-      </div>
-    </div>
-  </app-card>
 
-  <!-- Recent Events -->
-  <app-card [noPadding]="true">
-    <div class="card-inner">
-      <div class="card-header">
-        <div class="card-header__left">
-          <h3 class="card-header__title">Recent Events</h3>
-          <app-badge [severity]="connected() ? 'success' : 'error'" size="sm" [rounded]="true" [class.badge--live]="connected()">
-            {{ connected() ? 'Connected' : 'Disconnected' }}
-          </app-badge>
-        </div>
-        <a class="card-header__link" routerLink="/events">View All</a>
-      </div>
-      <div class="timeline">
-        <span class="timeline__direction">
-          <ng-icon name="tablerArrowDown" class="timeline__direction-icon" />
-          Newest first
-        </span>
-        @for (event of recentEvents(); track $index) {
-          <div class="timeline__item">
-            <div class="timeline__marker" [class]="'timeline__marker--' + eventMarkerClass(event.eventType, event.severity)">
-              <ng-icon [name]="eventIcon(event.eventType)" />
-            </div>
-            <div class="timeline__content">
-              <div class="timeline__row">
-                <app-badge [severity]="eventSeverity(event.severity)" size="sm">
-                  {{ event.severity }}
-                </app-badge>
-                <app-badge [severity]="eventTypeSeverity(event.eventType)" size="sm">
-                  {{ formatEventType(event.eventType) }}
-                </app-badge>
-                <span class="timeline__time">{{ event.timestamp | date:'yyyy-MM-dd HH:mm:ss' }}</span>
-              </div>
-              <p class="timeline__message">{{ truncate(event.message) }}</p>
-              @if (getDownloadName(event); as name) {
-                <p class="timeline__download-name">{{ name }}</p>
-              }
-            </div>
-          </div>
-        } @empty {
-          <div class="timeline__empty">
-            @if (!connected()) {
-              <app-spinner size="sm" />
-              <span>Connecting...</span>
-            } @else {
-              <span>No recent events</span>
-            }
-          </div>
-        }
-      </div>
+      }
     </div>
-  </app-card>
-
-  <!-- Jobs -->
-  <app-card [noPadding]="true" class="dashboard-grid__jobs">
-    <div class="card-inner">
-      <div class="card-header">
-        <h3 class="card-header__title">Jobs</h3>
-      </div>
-      <div class="jobs-table">
-        @for (job of jobs(); track job.jobType) {
-          <div class="jobs-table__row" [class.jobs-table__row--running]="job.status === 'Running'">
-            <div class="jobs-table__info">
-              <span class="jobs-table__name">{{ jobDisplayName(job.jobType) }}</span>
-              <app-badge [severity]="jobStatusSeverity(job.status)" size="sm">
-                {{ job.status }}
-              </app-badge>
-            </div>
-            <div class="jobs-table__details">
-              @if (job.nextRunTime) {
-                <span class="jobs-table__next">Next: {{ job.nextRunTime | date:'HH:mm:ss' }}</span>
-              }
-              <span class="jobs-table__schedule">{{ job.schedule }}</span>
-            </div>
-            <app-button variant="ghost" size="sm" (clicked)="triggerJob(job.jobType)">
-              Run Now
-            </app-button>
-          </div>
-        } @empty {
-          <div class="jobs-table__empty">
-            @if (!connected()) {
-              <app-spinner size="sm" />
-              <span>Connecting...</span>
-            } @else {
-              <span>No jobs configured</span>
-            }
-          </div>
-        }
-      </div>
-    </div>
-  </app-card>
+  }
 </div>

@@ -1,5 +1,15 @@
 import { ScheduleUnit } from '@shared/models/enums';
-import { JobSchedule } from '@shared/models/queue-cleaner-config.model';
+
+export interface JobSchedule {
+  every: number;
+  type: ScheduleUnit;
+}
+
+export const ScheduleOptions: Record<ScheduleUnit, number[]> = {
+  [ScheduleUnit.Seconds]: [30],
+  [ScheduleUnit.Minutes]: [1, 2, 3, 4, 5, 6, 10, 12, 15, 20, 30],
+  [ScheduleUnit.Hours]: [1, 2, 3, 4, 6],
+};
 
 export function generateCronExpression(schedule: JobSchedule): string {
   const { every, type } = schedule;

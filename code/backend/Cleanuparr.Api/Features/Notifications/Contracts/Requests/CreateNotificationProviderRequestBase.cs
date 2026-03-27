@@ -17,4 +17,6 @@ public abstract record CreateNotificationProviderRequestBase
     public bool OnDownloadCleaned { get; init; }
     
     public bool OnCategoryChanged { get; init; }
+
+    public bool OnSearchTriggered { get; init; }
 }

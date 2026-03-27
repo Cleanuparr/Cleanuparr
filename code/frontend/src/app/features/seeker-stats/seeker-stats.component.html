@@ -1,0 +1,22 @@
+<app-page-header
+  title="Seeker Stats"
+  subtitle="Monitor search activity and quality score progress"
+/>
+
+<div class="page-content">
+  <app-tabs [tabs]="tabs" [(activeTab)]="activeTab" (activeTabChange)="onTabChange($event)" />
+
+  <div class="tab-content">
+    @switch (activeTab()) {
+      @case ('searches') {
+        <app-searches-tab />
+      }
+      @case ('quality') {
+        <app-quality-tab />
+      }
+      @case ('upgrades') {
+        <app-upgrades-tab />
+      }
+    }
+  </div>
+</div>

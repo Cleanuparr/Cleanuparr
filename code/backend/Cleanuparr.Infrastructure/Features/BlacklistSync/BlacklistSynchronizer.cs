@@ -38,7 +38,7 @@ public sealed class BlacklistSynchronizer : IHandler
         _dryRunInterceptor = dryRunInterceptor;
     }
 
-    public async Task ExecuteAsync()
+    public async Task ExecuteAsync(CancellationToken cancellationToken = default)
     {
         BlacklistSyncConfig config = await _dataContext.BlacklistSyncConfigs
             .AsNoTracking()

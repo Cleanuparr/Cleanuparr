@@ -22,9 +22,6 @@ public sealed record GeneralConfig : IConfig
     
     public CertificateValidationType HttpCertificateValidation { get; set; } = CertificateValidationType.Enabled;
 
-    public bool SearchEnabled { get; set; } = true;
-    
-    public ushort SearchDelay { get; set; } = Constants.DefaultSearchDelaySeconds;
 
     public bool StatusCheckEnabled { get; set; } = true;
 
@@ -43,11 +40,6 @@ public sealed record GeneralConfig : IConfig
         if (HttpTimeout is 0)
         {
             throw new ValidationException($"{nameof(HttpTimeout)} must be greater than 0");
-        }
-
-        if (SearchDelay < Constants.MinSearchDelaySeconds)
-        {
-            throw new ValidationException($"{nameof(SearchDelay)} must be at least {Constants.MinSearchDelaySeconds} seconds");
         }
 
         Log.Validate();
