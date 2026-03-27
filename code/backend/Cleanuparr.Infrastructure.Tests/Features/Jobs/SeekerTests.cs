@@ -294,6 +294,53 @@ public class SeekerTests : IDisposable
     }
 
     [Fact]
+    public async Task ExecuteAsync_WhenActiveDownloadLimitNotReached_BecauseSameDownloadId_DoesNotSkip()
+    {
+        // Arrange — season pack: 2 queue records share the same DownloadId, so it's 1 unique download
+        var config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
+        config.SearchEnabled = true;
+        config.ProactiveSearchEnabled = true;
+        await _fixture.DataContext.SaveChangesAsync();
+
+        var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
+
+        _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = radarrInstance.Id,
+            ArrInstance = radarrInstance,
+            Enabled = true,
+            ActiveDownloadLimit = 2
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+
+        var mockArrClient = new Mock<IArrClient>();
+
+        // 2 queue records with the same DownloadId (season pack) — only 1 unique download
+        QueueRecord[] activeDownloads =
+        [
+            new() { Id = 1, Title = "Episode 1", DownloadId = "same-hash", Protocol = "torrent", SizeLeft = 1000, MovieId = 10, TrackedDownloadState = "downloading" },
+            new() { Id = 2, Title = "Episode 2", DownloadId = "same-hash", Protocol = "torrent", SizeLeft = 2000, MovieId = 20, TrackedDownloadState = "downloading" }
+        ];
+        _fixture.ArrQueueIterator
+            .Setup(x => x.Iterate(mockArrClient.Object, It.IsAny<ArrInstance>(), It.IsAny<Func<IReadOnlyList<QueueRecord>, Task>>()))
+            .Returns<IArrClient, ArrInstance, Func<IReadOnlyList<QueueRecord>, Task>>((_, _, action) => action(activeDownloads));
+
+        _fixture.ArrClientFactory
+            .Setup(x => x.GetClient(InstanceType.Radarr, It.IsAny<float>()))
+            .Returns(mockArrClient.Object);
+
+        var sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert — search should NOT be skipped because only 1 unique download (< limit of 2)
+        // The cycle completes (no eligible items) but the point is it wasn't blocked by the limit
+        var instanceConfig = await _fixture.DataContext.SeekerInstanceConfigs.FirstAsync();
+        Assert.NotNull(instanceConfig.LastProcessedAt);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_Radarr_ExcludesMoviesAlreadyInQueue()
     {
         // Arrange — proactive search enabled with 3 movies, one already in queue
