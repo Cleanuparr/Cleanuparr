@@ -24,15 +24,15 @@ public partial class UTorrentService
         return result;
     }
 
-    public override List<ITorrentItemWrapper>? FilterDownloadsToBeCleanedAsync(List<ITorrentItemWrapper>? downloads, List<SeedingRule> seedingRules) =>
+    public override List<ITorrentItemWrapper>? FilterDownloadsToBeCleanedAsync(List<ITorrentItemWrapper>? downloads, List<ISeedingRule> seedingRules) =>
         downloads
             ?.Where(x => seedingRules.Any(cat => cat.Name.Equals(x.Category, StringComparison.InvariantCultureIgnoreCase)))
             .ToList();
 
-    public override List<ITorrentItemWrapper>? FilterDownloadsToChangeCategoryAsync(List<ITorrentItemWrapper>? downloads, List<string> categories) =>
+    public override List<ITorrentItemWrapper>? FilterDownloadsToChangeCategoryAsync(List<ITorrentItemWrapper>? downloads, UnlinkedConfig unlinkedConfig) =>
         downloads
             ?.Where(x => !string.IsNullOrEmpty(x.Hash))
-            .Where(x => categories.Any(cat => cat.Equals(x.Category, StringComparison.InvariantCultureIgnoreCase)))
+            .Where(x => unlinkedConfig.Categories.Any(cat => cat.Equals(x.Category, StringComparison.InvariantCultureIgnoreCase)))
             .ToList();
 
     /// <inheritdoc/>
@@ -47,14 +47,12 @@ public partial class UTorrentService
         await Task.CompletedTask;
     }
 
-    public override async Task ChangeCategoryForNoHardLinksAsync(List<ITorrentItemWrapper>? downloads)
+    public override async Task ChangeCategoryForNoHardLinksAsync(List<ITorrentItemWrapper>? downloads, UnlinkedConfig unlinkedConfig)
     {
         if (downloads?.Count is null or 0)
         {
             return;
         }
-
-        var downloadCleanerConfig = ContextProvider.Get<DownloadCleanerConfig>(nameof(DownloadCleanerConfig));
 
         foreach (UTorrentItemWrapper torrent in downloads.Cast<UTorrentItemWrapper>())
         {
@@ -62,7 +60,7 @@ public partial class UTorrentService
             {
                 continue;
             }
-            
+
             ContextProvider.Set(ContextProvider.Keys.ItemName, torrent.Name);
             ContextProvider.Set(ContextProvider.Keys.Hash, torrent.Hash);
             ContextProvider.Set(ContextProvider.Keys.DownloadClientUrl, _downloadClientConfig.ExternalOrInternalUrl);
@@ -78,6 +76,12 @@ public partial class UTorrentService
             {
                 string filePath = string.Join(Path.DirectorySeparatorChar, Path.Combine(torrent.Info.SavePath, file.Name).Split(['\\', '/']));
 
+                if (!string.IsNullOrEmpty(unlinkedConfig.DownloadDirectorySource) &&
+                    !string.IsNullOrEmpty(unlinkedConfig.DownloadDirectoryTarget))
+                {
+                    filePath = filePath.Replace(unlinkedConfig.DownloadDirectorySource, unlinkedConfig.DownloadDirectoryTarget);
+                }
+
                 if (file.Priority <= 0)
                 {
                     _logger.LogDebug("skip | file is not downloaded | {file}", filePath);
@@ -85,7 +89,7 @@ public partial class UTorrentService
                 }
 
                 long hardlinkCount = _hardLinkFileService
-                    .GetHardLinkCount(filePath, downloadCleanerConfig.UnlinkedIgnoredRootDirs.Count > 0);
+                    .GetHardLinkCount(filePath, unlinkedConfig.IgnoredRootDirs.Count > 0);
 
                 if (hardlinkCount < 0)
                 {
@@ -112,18 +116,18 @@ public partial class UTorrentService
                 continue;
             }
 
-            await _dryRunInterceptor.InterceptAsync(ChangeLabel, torrent.Hash, downloadCleanerConfig.UnlinkedTargetCategory);
+            await _dryRunInterceptor.InterceptAsync(ChangeLabel, torrent.Hash, unlinkedConfig.TargetCategory);
 
-            await _eventPublisher.PublishCategoryChanged(torrent.Category, downloadCleanerConfig.UnlinkedTargetCategory);
+            await _eventPublisher.PublishCategoryChanged(torrent.Category, unlinkedConfig.TargetCategory);
 
             _logger.LogInformation("category changed for {name}", torrent.Name);
-            
-            torrent.Category = downloadCleanerConfig.UnlinkedTargetCategory;
+
+            torrent.Category = unlinkedConfig.TargetCategory;
         }
     }
-    
+
     protected virtual async Task ChangeLabel(string hash, string newLabel)
     {
         await _client.SetTorrentLabelAsync(hash, newLabel);
     }
-} 
+}

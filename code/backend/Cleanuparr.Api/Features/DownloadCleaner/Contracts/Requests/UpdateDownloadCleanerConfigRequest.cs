@@ -11,20 +11,7 @@ public sealed record UpdateDownloadCleanerConfigRequest
     /// </summary>
     public bool UseAdvancedScheduling { get; init; }
 
-    public List<SeedingRuleRequest> Categories { get; init; } = [];
-
-    /// <summary>
-    /// Indicates whether unlinked download handling is enabled.
-    /// </summary>
-    public bool UnlinkedEnabled { get; init; }
-    
-    public string UnlinkedTargetCategory { get; init; } = "cleanuparr-unlinked";
-
-    public bool UnlinkedUseTag { get; init; }
-
-    public List<string> UnlinkedIgnoredRootDirs { get; init; } = [];
-    
-    public List<string> UnlinkedCategories { get; init; } = [];
-
     public List<string> IgnoredDownloads { get; init; } = [];
+
+    public List<ClientCleanerConfigRequest> Clients { get; init; } = [];
 }

@@ -12,6 +12,7 @@ using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
 using Cleanuparr.Persistence.Models.Configuration.General;
 using MassTransit;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using LogContext = Serilog.Context.LogContext;
@@ -43,7 +44,7 @@ public sealed class DownloadCleaner : GenericHandler
         _timeProvider = timeProvider;
         _hardLinkFileService = hardLinkFileService;
     }
-    
+
     protected override async Task ExecuteInternalAsync(CancellationToken cancellationToken = default)
     {
         var downloadServices = await GetInitializedDownloadServicesAsync();
@@ -55,19 +56,10 @@ public sealed class DownloadCleaner : GenericHandler
         }
 
         var config = ContextProvider.Get<DownloadCleanerConfig>();
-        
-        bool isUnlinkedEnabled = config.UnlinkedEnabled && !string.IsNullOrEmpty(config.UnlinkedTargetCategory) && config.UnlinkedCategories.Count > 0;
-        bool isCleaningEnabled = config.Categories.Count > 0;
 
-        if (!isUnlinkedEnabled && !isCleaningEnabled)
-        {
-            _logger.LogWarning("No features are enabled for {name}", nameof(DownloadCleaner));
-            return;
-        }
-        
         List<string> ignoredDownloads = ContextProvider.Get<GeneralConfig>(nameof(GeneralConfig)).IgnoredDownloads;
-        ignoredDownloads.AddRange(ContextProvider.Get<DownloadCleanerConfig>().IgnoredDownloads);
-        
+        ignoredDownloads.AddRange(config.IgnoredDownloads);
+
         var downloadServiceToDownloadsMap = new Dictionary<IDownloadService, List<ITorrentItemWrapper>>();
 
         foreach (var downloadService in downloadServices)
@@ -112,7 +104,7 @@ public sealed class DownloadCleaner : GenericHandler
         foreach (var pair in downloadServiceToDownloadsMap)
         {
             List<ITorrentItemWrapper> filteredDownloads = [];
-            
+
             foreach (ITorrentItemWrapper download in pair.Value)
             {
                 if (download.IsIgnored(ignoredDownloads))
@@ -120,21 +112,38 @@ public sealed class DownloadCleaner : GenericHandler
                     _logger.LogDebug("skip | download is ignored | {name}", download.Name);
                     continue;
                 }
-                
+
                 if (_downloadsProcessedByArrs.Any(x => x.Equals(download.Hash, StringComparison.InvariantCultureIgnoreCase)))
                 {
                     _logger.LogDebug("skip | download is used by an arr | {name}", download.Name);
                     continue;
                 }
-        
+
                 filteredDownloads.Add(download);
             }
-        
+
             downloadServiceToDownloadsMap[pair.Key] = filteredDownloads;
         }
 
-        await ChangeUnlinkedCategoriesAsync(isUnlinkedEnabled, downloadServiceToDownloadsMap, config);
-        await CleanDownloadsAsync(downloadServiceToDownloadsMap, config);
+        // Process each client with its own per-client config
+        foreach (var (downloadService, clientDownloads) in downloadServiceToDownloadsMap)
+        {
+            using var dcType = LogContext.PushProperty(LogProperties.DownloadClientType, downloadService.ClientConfig.Type.ToString());
+            using var dcName = LogContext.PushProperty(LogProperties.DownloadClientName, downloadService.ClientConfig.Name);
+
+            var seedingRules = await LoadSeedingRulesForClient(downloadService.ClientConfig);
+            var unlinkedConfig = await LoadUnlinkedConfigForClient(downloadService.ClientConfig.Id);
+
+            if (unlinkedConfig is { Enabled: true, Categories.Count: > 0 })
+            {
+                await ChangeUnlinkedCategoriesForClientAsync(downloadService, clientDownloads, unlinkedConfig);
+            }
+
+            if (seedingRules.Count > 0)
+            {
+                await CleanDownloadsForClientAsync(downloadService, clientDownloads, seedingRules);
+            }
+        }
 
         foreach (var downloadService in downloadServices)
         {
@@ -163,138 +172,112 @@ public sealed class DownloadCleaner : GenericHandler
         });
     }
 
-    private async Task ChangeUnlinkedCategoriesAsync(bool isUnlinkedEnabled, Dictionary<IDownloadService, List<ITorrentItemWrapper>> downloadServiceToDownloadsMap, DownloadCleanerConfig config)
+    private async Task ChangeUnlinkedCategoriesForClientAsync(
+        IDownloadService downloadService,
+        List<ITorrentItemWrapper> clientDownloads,
+        UnlinkedConfig unlinkedConfig)
     {
-        if (!isUnlinkedEnabled)
+        if (unlinkedConfig.IgnoredRootDirs.Count > 0)
         {
-            return;
+            _hardLinkFileService.PopulateFileCounts(unlinkedConfig.IgnoredRootDirs);
         }
 
-        if (config.UnlinkedIgnoredRootDirs.Count > 0)
+        try
         {
-            _hardLinkFileService.PopulateFileCounts(config.UnlinkedIgnoredRootDirs);
-        }
+            var downloadsToChangeCategory = downloadService
+                .FilterDownloadsToChangeCategoryAsync(clientDownloads, unlinkedConfig);
 
-        Dictionary<IDownloadService, List<ITorrentItemWrapper>> downloadServiceWithDownloads = [];
-        
-        foreach (var (downloadService, clientDownloads) in downloadServiceToDownloadsMap)
-        {
-            try
+            if (downloadsToChangeCategory?.Count is null or 0)
             {
-                var downloadsToChangeCategory = downloadService
-                    .FilterDownloadsToChangeCategoryAsync(clientDownloads, config.UnlinkedCategories);
-                
-                if (downloadsToChangeCategory?.Count > 0)
-                {
-                    downloadServiceWithDownloads.Add(downloadService, downloadsToChangeCategory);
-                }
+                return;
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(
-                    ex, 
-                    "Failed to filter downloads for hardlinks evaluation for download client {clientName}",
-                    downloadService.ClientConfig.Name
-                );
-            }
-        }
 
-        if (downloadServiceWithDownloads.Count is 0)
-        {
-            _logger.LogInformation("No downloads found to evaluate for hardlinks");
-            return;
-        }
-
-        _logger.LogInformation(
-            "Evaluating {count} downloads for hardlinks",
-            downloadServiceWithDownloads.Sum(x => x.Value.Count)
-        );
-        
-        // Process each client with its own filtered downloads
-        foreach (var (downloadService, downloadsToChangeCategory) in downloadServiceWithDownloads)
-        {
-            using var dcType = LogContext.PushProperty(LogProperties.DownloadClientType, downloadService.ClientConfig.Type.ToString());
-            using var dcName = LogContext.PushProperty(LogProperties.DownloadClientName, downloadService.ClientConfig.Name);
+            _logger.LogInformation("Evaluating {count} downloads for hardlinks", downloadsToChangeCategory.Count);
 
             try
             {
-                await downloadService.CreateCategoryAsync(config.UnlinkedTargetCategory);
+                await downloadService.CreateCategoryAsync(unlinkedConfig.TargetCategory);
             }
             catch (Exception ex)
             {
-                _logger.LogError(
-                    ex,
-                    "Failed to create category {category} for download client {clientName}",
-                    config.UnlinkedTargetCategory,
-                    downloadService.ClientConfig.Name
-                );
+                _logger.LogError(ex, "Failed to create category {category}", unlinkedConfig.TargetCategory);
             }
 
-            try
-            {
-                await downloadService.ChangeCategoryForNoHardLinksAsync(downloadsToChangeCategory);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to change category for download client {clientName}", downloadService.ClientConfig.Name);
-            }
+            await downloadService.ChangeCategoryForNoHardLinksAsync(downloadsToChangeCategory, unlinkedConfig);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to process unlinked downloads for {clientName}", downloadService.ClientConfig.Name);
         }
 
         _logger.LogInformation("Finished hardlinks evaluation");
     }
-    
-    private async Task CleanDownloadsAsync(Dictionary<IDownloadService, List<ITorrentItemWrapper>> downloadServiceToDownloadsMap, DownloadCleanerConfig config)
+
+    private async Task CleanDownloadsForClientAsync(
+        IDownloadService downloadService,
+        List<ITorrentItemWrapper> clientDownloads,
+        List<ISeedingRule> seedingRules)
     {
-        if (config.Categories.Count is 0)
+        try
         {
-            return;
-        }
-        
-        Dictionary<IDownloadService, List<ITorrentItemWrapper>> downloadServiceWithDownloads = [];
+            var downloadsToClean = downloadService
+                .FilterDownloadsToBeCleanedAsync(clientDownloads, seedingRules);
 
-        foreach (var (downloadService, clientDownloads) in downloadServiceToDownloadsMap)
-        {
-            try
+            if (downloadsToClean?.Count is null or 0)
             {
-                var downloadsToClean = downloadService
-                    .FilterDownloadsToBeCleanedAsync(clientDownloads, config.Categories);
-                
-                if (downloadsToClean?.Count > 0)
-                {
-                    downloadServiceWithDownloads.Add(downloadService, downloadsToClean);
-                }
+                return;
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(
-                    ex,
-                    "Failed to filter downloads for cleaning for download client {clientName}",
-                    downloadService.ClientConfig.Name
-                );
-            }
-        }
-        
-        _logger.LogInformation(
-            "Evaluating {count} downloads for cleanup",
-            downloadServiceWithDownloads.Sum(x => x.Value.Count)
-        );
-        
-        // Process cleaning for each client
-        foreach (var (downloadService, downloadsToClean) in downloadServiceWithDownloads)
-        {
-            using var dcType = LogContext.PushProperty(LogProperties.DownloadClientType, downloadService.ClientConfig.Type.ToString());
-            using var dcName = LogContext.PushProperty(LogProperties.DownloadClientName, downloadService.ClientConfig.Name);
 
-            try
-            {
-                await downloadService.CleanDownloadsAsync(downloadsToClean, config.Categories);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to clean downloads for download client {clientName}", downloadService.ClientConfig.Name);
-            }
+            _logger.LogInformation("Evaluating {count} downloads for cleanup", downloadsToClean.Count);
+
+            await downloadService.CleanDownloadsAsync(downloadsToClean, seedingRules);
         }
-        
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to clean downloads for {clientName}", downloadService.ClientConfig.Name);
+        }
+
         _logger.LogInformation("Finished cleanup evaluation");
+    }
+
+    private async Task<List<ISeedingRule>> LoadSeedingRulesForClient(Persistence.Models.Configuration.DownloadClientConfig clientConfig)
+    {
+        await DataContext.Lock.WaitAsync();
+        try
+        {
+            return clientConfig.TypeName switch
+            {
+                DownloadClientTypeName.qBittorrent => (await _dataContext.QBitSeedingRules
+                    .Where(r => r.DownloadClientConfigId == clientConfig.Id).AsNoTracking().ToListAsync()).Cast<ISeedingRule>().ToList(),
+                DownloadClientTypeName.Deluge => (await _dataContext.DelugeSeedingRules
+                    .Where(r => r.DownloadClientConfigId == clientConfig.Id).AsNoTracking().ToListAsync()).Cast<ISeedingRule>().ToList(),
+                DownloadClientTypeName.Transmission => (await _dataContext.TransmissionSeedingRules
+                    .Where(r => r.DownloadClientConfigId == clientConfig.Id).AsNoTracking().ToListAsync()).Cast<ISeedingRule>().ToList(),
+                DownloadClientTypeName.uTorrent => (await _dataContext.UTorrentSeedingRules
+                    .Where(r => r.DownloadClientConfigId == clientConfig.Id).AsNoTracking().ToListAsync()).Cast<ISeedingRule>().ToList(),
+                DownloadClientTypeName.rTorrent => (await _dataContext.RTorrentSeedingRules
+                    .Where(r => r.DownloadClientConfigId == clientConfig.Id).AsNoTracking().ToListAsync()).Cast<ISeedingRule>().ToList(),
+                _ => []
+            };
+        }
+        finally
+        {
+            DataContext.Lock.Release();
+        }
+    }
+
+    private async Task<UnlinkedConfig?> LoadUnlinkedConfigForClient(Guid clientId)
+    {
+        await DataContext.Lock.WaitAsync();
+        try
+        {
+            return await _dataContext.UnlinkedConfigs
+                .AsNoTracking()
+                .FirstOrDefaultAsync(u => u.DownloadClientConfigId == clientId);
+        }
+        finally
+        {
+            DataContext.Lock.Release();
+        }
     }
 }

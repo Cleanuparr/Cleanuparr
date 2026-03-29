@@ -1,4 +1,4 @@
-﻿using Cleanuparr.Domain.Entities;
+using Cleanuparr.Domain.Entities;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
@@ -33,26 +33,24 @@ public partial class QBitService
     }
 
     /// <inheritdoc/>
-    public override List<ITorrentItemWrapper>? FilterDownloadsToBeCleanedAsync(List<ITorrentItemWrapper>? downloads, List<SeedingRule> seedingRules) =>
+    public override List<ITorrentItemWrapper>? FilterDownloadsToBeCleanedAsync(List<ITorrentItemWrapper>? downloads, List<ISeedingRule> seedingRules) =>
         downloads
             ?.Where(x => !string.IsNullOrEmpty(x.Hash))
             .Where(x => seedingRules.Any(cat => cat.Name.Equals(x.Category, StringComparison.InvariantCultureIgnoreCase)))
             .ToList();
 
     /// <inheritdoc/>
-    public override List<ITorrentItemWrapper>? FilterDownloadsToChangeCategoryAsync(List<ITorrentItemWrapper>? downloads, List<string> categories)
+    public override List<ITorrentItemWrapper>? FilterDownloadsToChangeCategoryAsync(List<ITorrentItemWrapper>? downloads, UnlinkedConfig unlinkedConfig)
     {
-        var downloadCleanerConfig = ContextProvider.Get<DownloadCleanerConfig>(nameof(DownloadCleanerConfig));
-
         return downloads
             ?.Where(x => !string.IsNullOrEmpty(x.Hash))
-            .Where(x => categories.Any(cat => cat.Equals(x.Category, StringComparison.InvariantCultureIgnoreCase)))
+            .Where(x => unlinkedConfig.Categories.Any(cat => cat.Equals(x.Category, StringComparison.InvariantCultureIgnoreCase)))
             .Where(x =>
             {
-                if (downloadCleanerConfig.UnlinkedUseTag && x is QBitItemWrapper qBitItemWrapper)
+                if (unlinkedConfig.UseTag && x is QBitItemWrapper qBitItemWrapper)
                 {
                     return !qBitItemWrapper.Tags.Any(tag =>
-                        tag.Equals(downloadCleanerConfig.UnlinkedTargetCategory, StringComparison.InvariantCultureIgnoreCase));
+                        tag.Equals(unlinkedConfig.TargetCategory, StringComparison.InvariantCultureIgnoreCase));
                 }
 
                 return true;
@@ -74,20 +72,18 @@ public partial class QBitService
         {
             return;
         }
-        
+
         _logger.LogDebug("Creating category {name}", name);
 
         await _dryRunInterceptor.InterceptAsync(CreateCategory, name);
     }
 
-    public override async Task ChangeCategoryForNoHardLinksAsync(List<ITorrentItemWrapper>? downloads)
+    public override async Task ChangeCategoryForNoHardLinksAsync(List<ITorrentItemWrapper>? downloads, UnlinkedConfig unlinkedConfig)
     {
         if (downloads?.Count is null or 0)
         {
             return;
         }
-
-        var downloadCleanerConfig = ContextProvider.Get<DownloadCleanerConfig>(nameof(DownloadCleanerConfig));
 
         foreach (QBitItemWrapper torrent in downloads.Cast<QBitItemWrapper>())
         {
@@ -95,7 +91,7 @@ public partial class QBitService
             {
                 continue;
             }
-            
+
             IReadOnlyList<TorrentContent>? files = await _client.GetTorrentContentsAsync(torrent.Hash);
 
             if (files is null)
@@ -123,13 +119,19 @@ public partial class QBitService
 
                 string filePath = string.Join(Path.DirectorySeparatorChar, Path.Combine(torrent.Info.SavePath, file.Name).Split(['\\', '/']));
 
+                if (!string.IsNullOrEmpty(unlinkedConfig.DownloadDirectorySource) &&
+                    !string.IsNullOrEmpty(unlinkedConfig.DownloadDirectoryTarget))
+                {
+                    filePath = filePath.Replace(unlinkedConfig.DownloadDirectorySource, unlinkedConfig.DownloadDirectoryTarget);
+                }
+
                 if (file.Priority is TorrentContentPriority.Skip)
                 {
                     _logger.LogDebug("skip | file is not downloaded | {file}", filePath);
                     continue;
                 }
 
-                long hardlinkCount = _hardLinkFileService.GetHardLinkCount(filePath, downloadCleanerConfig.UnlinkedIgnoredRootDirs.Count > 0);
+                long hardlinkCount = _hardLinkFileService.GetHardLinkCount(filePath, unlinkedConfig.IgnoredRootDirs.Count > 0);
 
                 if (hardlinkCount < 0)
                 {
@@ -156,18 +158,18 @@ public partial class QBitService
                 continue;
             }
 
-            await _dryRunInterceptor.InterceptAsync(ChangeCategory, torrent.Hash, downloadCleanerConfig.UnlinkedTargetCategory);
+            await _dryRunInterceptor.InterceptAsync(ChangeCategory, torrent.Hash, unlinkedConfig.TargetCategory, unlinkedConfig.UseTag);
 
-            await _eventPublisher.PublishCategoryChanged(torrent.Category, downloadCleanerConfig.UnlinkedTargetCategory, downloadCleanerConfig.UnlinkedUseTag);
+            await _eventPublisher.PublishCategoryChanged(torrent.Category, unlinkedConfig.TargetCategory, unlinkedConfig.UseTag);
 
-            if (downloadCleanerConfig.UnlinkedUseTag)
+            if (unlinkedConfig.UseTag)
             {
                 _logger.LogInformation("tag added for {name}", torrent.Name);
             }
             else
             {
                 _logger.LogInformation("category changed for {name}", torrent.Name);
-                torrent.Category = downloadCleanerConfig.UnlinkedTargetCategory;
+                torrent.Category = unlinkedConfig.TargetCategory;
             }
         }
     }
@@ -176,12 +178,10 @@ public partial class QBitService
     {
         await _client.AddCategoryAsync(name);
     }
-    
-    protected virtual async Task ChangeCategory(string hash, string newCategory)
+
+    protected virtual async Task ChangeCategory(string hash, string newCategory, bool useTag)
     {
-        var downloadCleanerConfig = ContextProvider.Get<DownloadCleanerConfig>(nameof(DownloadCleanerConfig));
-        
-        if (downloadCleanerConfig.UnlinkedUseTag)
+        if (useTag)
         {
             await _client.AddTorrentTagAsync([hash], newCategory);
             return;
