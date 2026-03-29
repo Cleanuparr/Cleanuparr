@@ -8,7 +8,10 @@ import {
 import { DownloadCleanerApi } from '@core/api/download-cleaner.api';
 import { ApiError } from '@core/interceptors/error.interceptor';
 import { ToastService } from '@core/services/toast.service';
-import { DownloadCleanerConfig, CleanCategory, createDefaultCategory } from '@shared/models/download-cleaner-config.model';
+import {
+  DownloadCleanerConfig, CleanCategory, ClientCleanerConfig,
+  createDefaultCategory, createDefaultUnlinkedConfig,
+} from '@shared/models/download-cleaner-config.model';
 import { ScheduleOptions } from '@shared/models/queue-cleaner-config.model';
 import { ScheduleUnit, TorrentPrivacyType } from '@shared/models/enums';
 import { HasPendingChanges } from '@core/guards/pending-changes.guard';
@@ -53,28 +56,34 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
   readonly saving = signal(false);
   readonly saved = signal(false);
 
+  // Global settings
   readonly enabled = signal(false);
   readonly useAdvancedScheduling = signal(false);
   readonly cronExpression = signal('');
   readonly scheduleEvery = signal<unknown>(5);
   readonly scheduleUnit = signal<unknown>(ScheduleUnit.Minutes);
+  readonly ignoredDownloads = signal<string[]>([]);
+
+  // Per-client settings
+  readonly clientConfigs = signal<ClientCleanerConfig[]>([]);
+  readonly selectedClientId = signal<string | null>(null);
+
+  readonly selectedClient = computed(() =>
+    this.clientConfigs().find(c => c.downloadClientId === this.selectedClientId()) ?? null
+  );
+
+  readonly clientOptions = computed<SelectOption[]>(() =>
+    this.clientConfigs().map(c => ({ label: c.downloadClientName, value: c.downloadClientId }))
+  );
+
+  readonly categoriesExpanded = signal(true);
+  readonly unlinkedExpanded = signal(false);
 
   readonly scheduleIntervalOptions = computed(() => {
     const unit = this.scheduleUnit() as ScheduleUnit;
     const values = ScheduleOptions[unit] ?? [];
     return values.map(v => ({ label: `${v}`, value: v }));
   });
-  readonly ignoredDownloads = signal<string[]>([]);
-  readonly categories = signal<CleanCategory[]>([]);
-  readonly categoriesExpanded = signal(true);
-
-  // Unlinked
-  readonly unlinkedEnabled = signal(false);
-  readonly unlinkedTargetCategory = signal('');
-  readonly unlinkedUseTag = signal(false);
-  readonly unlinkedIgnoredRootDirs = signal<string[]>([]);
-  readonly unlinkedCategories = signal<string[]>([]);
-  readonly unlinkedExpanded = signal(false);
 
   constructor() {
     effect(() => {
@@ -100,17 +109,30 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
     return undefined;
   });
 
-  readonly unlinkedTargetCategoryError = computed(() => {
-    if (this.unlinkedEnabled() && !this.unlinkedTargetCategory().trim()) return 'Target category is required';
+  unlinkedTargetCategoryError(): string | undefined {
+    const client = this.selectedClient();
+    if (client?.unlinkedConfig?.enabled && !client.unlinkedConfig.targetCategory?.trim()) return 'Target category is required';
     return undefined;
-  });
+  }
 
-  readonly unlinkedCategoriesError = computed(() => {
-    if (this.unlinkedEnabled() && this.unlinkedCategories().length === 0) {
+  unlinkedCategoriesError(): string | undefined {
+    const client = this.selectedClient();
+    if (client?.unlinkedConfig?.enabled && (client.unlinkedConfig.categories?.length ?? 0) === 0) {
       return 'At least one category is required when unlinked download handling is enabled';
     }
     return undefined;
-  });
+  }
+
+  directoryMappingError(): string | undefined {
+    const client = this.selectedClient();
+    if (!client?.unlinkedConfig) return undefined;
+    const src = client.unlinkedConfig.downloadDirectorySource;
+    const tgt = client.unlinkedConfig.downloadDirectoryTarget;
+    if ((src && !tgt) || (!src && tgt)) {
+      return 'Both source and target directories must be set, or both must be empty';
+    }
+    return undefined;
+  }
 
   categoryNameError(cat: CleanCategory): string | undefined {
     if (!cat.name?.trim()) return 'Name is required';
@@ -126,12 +148,11 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
 
   readonly noFeaturesError = computed(() => {
     if (!this.enabled()) return undefined;
-    const hasSeedingCategories = this.categories().length > 0;
-    const hasUnlinkedFeature = this.unlinkedEnabled()
-      && !this.unlinkedTargetCategoryError()
-      && !this.unlinkedCategoriesError();
-    if (!hasSeedingCategories && !hasUnlinkedFeature) {
-      return 'At least one feature must be configured';
+    const anyClientHasFeatures = this.clientConfigs().some(c =>
+      (c.seedingRules?.length ?? 0) > 0 || c.unlinkedConfig?.enabled
+    );
+    if (!anyClientHasFeatures) {
+      return 'At least one feature must be configured on at least one download client';
     }
     return undefined;
   });
@@ -140,11 +161,19 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
     if (this.noFeaturesError()) return true;
     if (this.scheduleEveryError()) return true;
     if (this.cronError()) return true;
-    if (this.unlinkedTargetCategoryError()) return true;
-    if (this.unlinkedCategoriesError()) return true;
     if (this.chipInputs().some(c => c.hasUncommittedInput())) return true;
-    for (const cat of this.categories()) {
-      if (this.categoryNameError(cat) || this.categoryDisabledError(cat)) return true;
+    // Validate all clients
+    for (const client of this.clientConfigs()) {
+      if (client.unlinkedConfig?.enabled) {
+        if (!client.unlinkedConfig.targetCategory?.trim()) return true;
+        if ((client.unlinkedConfig.categories?.length ?? 0) === 0) return true;
+        const src = client.unlinkedConfig.downloadDirectorySource;
+        const tgt = client.unlinkedConfig.downloadDirectoryTarget;
+        if ((src && !tgt) || (!src && tgt)) return true;
+      }
+      for (const cat of client.seedingRules ?? []) {
+        if (this.categoryNameError(cat) || this.categoryDisabledError(cat)) return true;
+      }
     }
     return false;
   });
@@ -169,12 +198,14 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
           this.scheduleUnit.set(parsed.type);
         }
         this.ignoredDownloads.set(config.ignoredDownloads ?? []);
-        this.categories.set(config.categories ?? []);
-        this.unlinkedEnabled.set(config.unlinkedEnabled);
-        this.unlinkedTargetCategory.set(config.unlinkedTargetCategory ?? '');
-        this.unlinkedUseTag.set(config.unlinkedUseTag);
-        this.unlinkedIgnoredRootDirs.set(config.unlinkedIgnoredRootDirs ?? []);
-        this.unlinkedCategories.set(config.unlinkedCategories ?? []);
+        this.clientConfigs.set((config.clients ?? []).map(c => ({
+          ...c,
+          seedingRules: c.seedingRules ?? [],
+          unlinkedConfig: c.unlinkedConfig ?? createDefaultUnlinkedConfig(),
+        })));
+        if (config.clients?.length > 0) {
+          this.selectedClientId.set(config.clients[0].downloadClientId);
+        }
         this.loader.stop();
         this.savedSnapshot.set(this.buildSnapshot());
       },
@@ -192,19 +223,43 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
   }
 
   addCategory(): void {
-    this.categories.update((cats) => [...cats, createDefaultCategory()]);
+    this.updateSelectedClient(client => ({
+      ...client,
+      seedingRules: [...(client.seedingRules ?? []), createDefaultCategory()],
+    }));
   }
 
   removeCategory(index: number): void {
-    this.categories.update((cats) => cats.filter((_, i) => i !== index));
+    this.updateSelectedClient(client => ({
+      ...client,
+      seedingRules: (client.seedingRules ?? []).filter((_, i) => i !== index),
+    }));
   }
 
   updateCategory(index: number, field: keyof CleanCategory, value: any): void {
-    this.categories.update((cats) => {
-      const updated = [...cats];
+    this.updateSelectedClient(client => {
+      const updated = [...(client.seedingRules ?? [])];
       updated[index] = { ...updated[index], [field]: value };
-      return updated;
+      return { ...client, seedingRules: updated };
     });
+  }
+
+  updateUnlinkedField(field: string, value: any): void {
+    this.updateSelectedClient(client => ({
+      ...client,
+      unlinkedConfig: {
+        ...(client.unlinkedConfig ?? createDefaultUnlinkedConfig()),
+        [field]: value,
+      },
+    }));
+  }
+
+  private updateSelectedClient(updater: (client: ClientCleanerConfig) => ClientCleanerConfig): void {
+    const id = this.selectedClientId();
+    if (!id) return;
+    this.clientConfigs.update(configs =>
+      configs.map(c => c.downloadClientId === id ? updater(c) : c)
+    );
   }
 
   save(): void {
@@ -216,17 +271,11 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
       : generateCronExpression(jobSchedule);
 
     const config: DownloadCleanerConfig = {
-      ...this.config,
       enabled: this.enabled(),
-      useAdvancedScheduling: this.useAdvancedScheduling(),
       cronExpression,
+      useAdvancedScheduling: this.useAdvancedScheduling(),
       ignoredDownloads: this.ignoredDownloads(),
-      categories: this.categories(),
-      unlinkedEnabled: this.unlinkedEnabled(),
-      unlinkedTargetCategory: this.unlinkedTargetCategory(),
-      unlinkedUseTag: this.unlinkedUseTag(),
-      unlinkedIgnoredRootDirs: this.unlinkedIgnoredRootDirs(),
-      unlinkedCategories: this.unlinkedCategories(),
+      clients: this.clientConfigs(),
     };
 
     this.saving.set(true);
@@ -255,12 +304,7 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
       scheduleEvery: this.scheduleEvery(),
       scheduleUnit: this.scheduleUnit(),
       ignoredDownloads: this.ignoredDownloads(),
-      categories: this.categories(),
-      unlinkedEnabled: this.unlinkedEnabled(),
-      unlinkedTargetCategory: this.unlinkedTargetCategory(),
-      unlinkedUseTag: this.unlinkedUseTag(),
-      unlinkedIgnoredRootDirs: this.unlinkedIgnoredRootDirs(),
-      unlinkedCategories: this.unlinkedCategories(),
+      clientConfigs: this.clientConfigs(),
     });
   }
 
