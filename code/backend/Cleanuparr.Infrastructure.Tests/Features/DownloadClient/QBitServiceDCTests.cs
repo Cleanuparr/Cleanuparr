@@ -1,6 +1,5 @@
 using Cleanuparr.Domain.Entities;
 using Cleanuparr.Domain.Enums;
-using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.DownloadClient.QBittorrent;
 using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
 using Moq;
@@ -215,10 +214,10 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
                 new QBitItemWrapper(new TorrentInfo { Hash = "hash3", Category = "music" }, Array.Empty<TorrentTracker>(), false)
             };
 
-            var categories = new List<SeedingRule>
+            var categories = new List<ISeedingRule>
             {
-                new SeedingRule { Name = "movies", MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true },
-                new SeedingRule { Name = "tv", MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true }
+                new QBitSeedingRule { Name = "movies", MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true },
+                new QBitSeedingRule { Name = "tv", MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true }
             };
 
             // Act
@@ -241,9 +240,9 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
                 new QBitItemWrapper(new TorrentInfo { Hash = "hash1", Category = "Movies" }, Array.Empty<TorrentTracker>(), false)
             };
 
-            var categories = new List<SeedingRule>
+            var categories = new List<ISeedingRule>
             {
-                new SeedingRule { Name = "movies", MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true }
+                new QBitSeedingRule { Name = "movies", MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true }
             };
 
             // Act
@@ -265,9 +264,9 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
                 new QBitItemWrapper(new TorrentInfo { Hash = "hash1", Category = "movies" }, Array.Empty<TorrentTracker>(), false)
             };
 
-            var categories = new List<SeedingRule>
+            var categories = new List<ISeedingRule>
             {
-                new SeedingRule { Name = "movies", MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true }
+                new QBitSeedingRule { Name = "movies", MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true }
             };
 
             // Act
@@ -289,9 +288,9 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
                 new QBitItemWrapper(new TorrentInfo { Hash = "hash1", Category = "music" }, Array.Empty<TorrentTracker>(), false)
             };
 
-            var categories = new List<SeedingRule>
+            var categories = new List<ISeedingRule>
             {
-                new SeedingRule { Name = "movies", MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true }
+                new QBitSeedingRule { Name = "movies", MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true }
             };
 
             // Act
@@ -319,7 +318,7 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
                 SeedingTime = TimeSpan.FromHours(10)
             }, Array.Empty<TorrentTracker>(), isPrivate);
 
-        private static SeedingRule CreateRule(string name, TorrentPrivacyType privacyType) =>
+        private static QBitSeedingRule CreateRule(string name, TorrentPrivacyType privacyType) =>
             new()
             {
                 Name = name,
@@ -348,7 +347,7 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
             {
                 CreateTorrent("hash1", "movies", isPrivate: true)
             };
-            var rules = new List<SeedingRule> { CreateRule("movies", TorrentPrivacyType.Public) };
+            var rules = new List<ISeedingRule> { CreateRule("movies", TorrentPrivacyType.Public) };
 
             // Act
             await sut.CleanDownloadsAsync(downloads, rules);
@@ -370,7 +369,7 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
             {
                 CreateTorrent("hash1", "movies", isPrivate: false)
             };
-            var rules = new List<SeedingRule> { CreateRule("movies", TorrentPrivacyType.Public) };
+            var rules = new List<ISeedingRule> { CreateRule("movies", TorrentPrivacyType.Public) };
 
             // Act
             await sut.CleanDownloadsAsync(downloads, rules);
@@ -392,7 +391,7 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
             {
                 CreateTorrent("hash1", "movies", isPrivate: false)
             };
-            var rules = new List<SeedingRule> { CreateRule("movies", TorrentPrivacyType.Private) };
+            var rules = new List<ISeedingRule> { CreateRule("movies", TorrentPrivacyType.Private) };
 
             // Act
             await sut.CleanDownloadsAsync(downloads, rules);
@@ -414,7 +413,7 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
             {
                 CreateTorrent("hash1", "movies", isPrivate: true)
             };
-            var rules = new List<SeedingRule> { CreateRule("movies", TorrentPrivacyType.Private) };
+            var rules = new List<ISeedingRule> { CreateRule("movies", TorrentPrivacyType.Private) };
 
             // Act
             await sut.CleanDownloadsAsync(downloads, rules);
@@ -436,7 +435,7 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
             {
                 CreateTorrent("hash1", "movies", isPrivate: false)
             };
-            var rules = new List<SeedingRule> { CreateRule("movies", TorrentPrivacyType.Both) };
+            var rules = new List<ISeedingRule> { CreateRule("movies", TorrentPrivacyType.Both) };
 
             // Act
             await sut.CleanDownloadsAsync(downloads, rules);
@@ -458,7 +457,7 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
             {
                 CreateTorrent("hash1", "movies", isPrivate: true)
             };
-            var rules = new List<SeedingRule> { CreateRule("movies", TorrentPrivacyType.Both) };
+            var rules = new List<ISeedingRule> { CreateRule("movies", TorrentPrivacyType.Both) };
 
             // Act
             await sut.CleanDownloadsAsync(downloads, rules);
@@ -481,7 +480,7 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
                 CreateTorrent("public-hash", "movies", isPrivate: false),
                 CreateTorrent("private-hash", "movies", isPrivate: true)
             };
-            var rules = new List<SeedingRule>
+            var rules = new List<ISeedingRule>
             {
                 CreateRule("movies", TorrentPrivacyType.Public),
                 CreateRule("movies", TorrentPrivacyType.Private)
@@ -512,13 +511,13 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
             // Arrange
             var sut = _fixture.CreateSut();
 
-            var config = new DownloadCleanerConfig
+            var unlinkedConfig = new UnlinkedConfig
             {
                 Id = Guid.NewGuid(),
-                UnlinkedUseTag = true,
-                UnlinkedTargetCategory = "unlinked"
+                UseTag = true,
+                TargetCategory = "unlinked",
+                Categories = ["movies"]
             };
-            ContextProvider.Set(nameof(DownloadCleanerConfig), config);
 
             var torrentInfo1 = new TorrentInfo { Hash = "hash1", Category = "movies", Tags = new[] { "unlinked" } };
             var torrentInfo2 = new TorrentInfo { Hash = "hash2", Category = "movies", Tags = Array.Empty<string>() };
@@ -530,7 +529,7 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
             };
 
             // Act
-            var result = sut.FilterDownloadsToChangeCategoryAsync(downloads, new List<string> { "movies" });
+            var result = sut.FilterDownloadsToChangeCategoryAsync(downloads, unlinkedConfig);
 
             // Assert
             Assert.NotNull(result);
@@ -544,13 +543,13 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
             // Arrange
             var sut = _fixture.CreateSut();
 
-            var config = new DownloadCleanerConfig
+            var unlinkedConfig = new UnlinkedConfig
             {
                 Id = Guid.NewGuid(),
-                UnlinkedUseTag = false,
-                UnlinkedTargetCategory = "unlinked"
+                UseTag = false,
+                TargetCategory = "unlinked",
+                Categories = ["movies"]
             };
-            ContextProvider.Set(nameof(DownloadCleanerConfig), config);
 
             var downloads = new List<Domain.Entities.ITorrentItemWrapper>
             {
@@ -559,7 +558,7 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
             };
 
             // Act
-            var result = sut.FilterDownloadsToChangeCategoryAsync(downloads, new List<string> { "movies" });
+            var result = sut.FilterDownloadsToChangeCategoryAsync(downloads, unlinkedConfig);
 
             // Assert
             Assert.NotNull(result);
@@ -572,12 +571,12 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
             // Arrange
             var sut = _fixture.CreateSut();
 
-            var config = new DownloadCleanerConfig
+            var unlinkedConfig = new UnlinkedConfig
             {
                 Id = Guid.NewGuid(),
-                UnlinkedUseTag = false
+                UseTag = false,
+                Categories = ["movies"]
             };
-            ContextProvider.Set(nameof(DownloadCleanerConfig), config);
 
             var downloads = new List<Domain.Entities.ITorrentItemWrapper>
             {
@@ -585,7 +584,7 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
             };
 
             // Act
-            var result = sut.FilterDownloadsToChangeCategoryAsync(downloads, new List<string> { "movies" });
+            var result = sut.FilterDownloadsToChangeCategoryAsync(downloads, unlinkedConfig);
 
             // Assert
             Assert.NotNull(result);
@@ -598,12 +597,12 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
             // Arrange
             var sut = _fixture.CreateSut();
 
-            var config = new DownloadCleanerConfig
+            var unlinkedConfig = new UnlinkedConfig
             {
                 Id = Guid.NewGuid(),
-                UnlinkedUseTag = false
+                UseTag = false,
+                Categories = ["movies"]
             };
-            ContextProvider.Set(nameof(DownloadCleanerConfig), config);
 
             var downloads = new List<Domain.Entities.ITorrentItemWrapper>
             {
@@ -612,7 +611,7 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
             };
 
             // Act
-            var result = sut.FilterDownloadsToChangeCategoryAsync(downloads, new List<string> { "movies" });
+            var result = sut.FilterDownloadsToChangeCategoryAsync(downloads, unlinkedConfig);
 
             // Assert
             Assert.NotNull(result);
@@ -752,16 +751,15 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
             // Arrange
             var sut = _fixture.CreateSut();
 
-            var config = new DownloadCleanerConfig
+            var unlinkedConfig = new UnlinkedConfig
             {
                 Id = Guid.NewGuid(),
-                UnlinkedUseTag = false,
-                UnlinkedTargetCategory = "unlinked"
+                UseTag = false,
+                TargetCategory = "unlinked"
             };
-            ContextProvider.Set(nameof(DownloadCleanerConfig), config);
 
             // Act
-            await sut.ChangeCategoryForNoHardLinksAsync(null);
+            await sut.ChangeCategoryForNoHardLinksAsync(null, unlinkedConfig);
 
             // Assert - no exceptions thrown
             _fixture.ClientWrapper.Verify(x => x.SetTorrentCategoryAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<string>()), Times.Never);
@@ -773,16 +771,15 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
             // Arrange
             var sut = _fixture.CreateSut();
 
-            var config = new DownloadCleanerConfig
+            var unlinkedConfig = new UnlinkedConfig
             {
                 Id = Guid.NewGuid(),
-                UnlinkedUseTag = false,
-                UnlinkedTargetCategory = "unlinked"
+                UseTag = false,
+                TargetCategory = "unlinked"
             };
-            ContextProvider.Set(nameof(DownloadCleanerConfig), config);
 
             // Act
-            await sut.ChangeCategoryForNoHardLinksAsync(new List<Domain.Entities.ITorrentItemWrapper>());
+            await sut.ChangeCategoryForNoHardLinksAsync(new List<Domain.Entities.ITorrentItemWrapper>(), unlinkedConfig);
 
             // Assert
             _fixture.ClientWrapper.Verify(x => x.SetTorrentCategoryAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<string>()), Times.Never);
@@ -794,13 +791,12 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
             // Arrange
             var sut = _fixture.CreateSut();
 
-            var config = new DownloadCleanerConfig
+            var unlinkedConfig = new UnlinkedConfig
             {
                 Id = Guid.NewGuid(),
-                UnlinkedUseTag = false,
-                UnlinkedTargetCategory = "unlinked"
+                UseTag = false,
+                TargetCategory = "unlinked"
             };
-            ContextProvider.Set(nameof(DownloadCleanerConfig), config);
 
             var downloads = new List<Domain.Entities.ITorrentItemWrapper>
             {
@@ -808,7 +804,7 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
             };
 
             // Act
-            await sut.ChangeCategoryForNoHardLinksAsync(downloads);
+            await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert
             _fixture.ClientWrapper.Verify(x => x.SetTorrentCategoryAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<string>()), Times.Never);
@@ -820,13 +816,12 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
             // Arrange
             var sut = _fixture.CreateSut();
 
-            var config = new DownloadCleanerConfig
+            var unlinkedConfig = new UnlinkedConfig
             {
                 Id = Guid.NewGuid(),
-                UnlinkedUseTag = false,
-                UnlinkedTargetCategory = "unlinked"
+                UseTag = false,
+                TargetCategory = "unlinked"
             };
-            ContextProvider.Set(nameof(DownloadCleanerConfig), config);
 
             var downloads = new List<Domain.Entities.ITorrentItemWrapper>
             {
@@ -834,7 +829,7 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
             };
 
             // Act
-            await sut.ChangeCategoryForNoHardLinksAsync(downloads);
+            await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert
             _fixture.ClientWrapper.Verify(x => x.SetTorrentCategoryAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<string>()), Times.Never);
@@ -846,13 +841,12 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
             // Arrange
             var sut = _fixture.CreateSut();
 
-            var config = new DownloadCleanerConfig
+            var unlinkedConfig = new UnlinkedConfig
             {
                 Id = Guid.NewGuid(),
-                UnlinkedUseTag = false,
-                UnlinkedTargetCategory = "unlinked"
+                UseTag = false,
+                TargetCategory = "unlinked"
             };
-            ContextProvider.Set(nameof(DownloadCleanerConfig), config);
 
             var downloads = new List<Domain.Entities.ITorrentItemWrapper>
             {
@@ -860,7 +854,7 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
             };
 
             // Act
-            await sut.ChangeCategoryForNoHardLinksAsync(downloads);
+            await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert
             _fixture.ClientWrapper.Verify(x => x.SetTorrentCategoryAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<string>()), Times.Never);
@@ -872,13 +866,12 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
             // Arrange
             var sut = _fixture.CreateSut();
 
-            var config = new DownloadCleanerConfig
+            var unlinkedConfig = new UnlinkedConfig
             {
                 Id = Guid.NewGuid(),
-                UnlinkedUseTag = false,
-                UnlinkedTargetCategory = "unlinked"
+                UseTag = false,
+                TargetCategory = "unlinked"
             };
-            ContextProvider.Set(nameof(DownloadCleanerConfig), config);
 
             var downloads = new List<Domain.Entities.ITorrentItemWrapper>
             {
@@ -890,7 +883,7 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
                 .ReturnsAsync((IReadOnlyList<TorrentContent>?)null);
 
             // Act
-            await sut.ChangeCategoryForNoHardLinksAsync(downloads);
+            await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert
             _fixture.ClientWrapper.Verify(x => x.SetTorrentCategoryAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<string>()), Times.Never);
@@ -902,13 +895,12 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
             // Arrange
             var sut = _fixture.CreateSut();
 
-            var config = new DownloadCleanerConfig
+            var unlinkedConfig = new UnlinkedConfig
             {
                 Id = Guid.NewGuid(),
-                UnlinkedUseTag = false,
-                UnlinkedTargetCategory = "unlinked"
+                UseTag = false,
+                TargetCategory = "unlinked"
             };
-            ContextProvider.Set(nameof(DownloadCleanerConfig), config);
 
             var downloads = new List<Domain.Entities.ITorrentItemWrapper>
             {
@@ -927,7 +919,7 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
                 .Returns(0);
 
             // Act
-            await sut.ChangeCategoryForNoHardLinksAsync(downloads);
+            await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert
             _fixture.ClientWrapper.Verify(
@@ -941,13 +933,12 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
             // Arrange
             var sut = _fixture.CreateSut();
 
-            var config = new DownloadCleanerConfig
+            var unlinkedConfig = new UnlinkedConfig
             {
                 Id = Guid.NewGuid(),
-                UnlinkedUseTag = true,
-                UnlinkedTargetCategory = "unlinked"
+                UseTag = true,
+                TargetCategory = "unlinked"
             };
-            ContextProvider.Set(nameof(DownloadCleanerConfig), config);
 
             var downloads = new List<Domain.Entities.ITorrentItemWrapper>
             {
@@ -966,7 +957,7 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
                 .Returns(0);
 
             // Act
-            await sut.ChangeCategoryForNoHardLinksAsync(downloads);
+            await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert
             _fixture.ClientWrapper.Verify(
@@ -983,13 +974,12 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
             // Arrange
             var sut = _fixture.CreateSut();
 
-            var config = new DownloadCleanerConfig
+            var unlinkedConfig = new UnlinkedConfig
             {
                 Id = Guid.NewGuid(),
-                UnlinkedUseTag = false,
-                UnlinkedTargetCategory = "unlinked"
+                UseTag = false,
+                TargetCategory = "unlinked"
             };
-            ContextProvider.Set(nameof(DownloadCleanerConfig), config);
 
             var downloads = new List<Domain.Entities.ITorrentItemWrapper>
             {
@@ -1008,7 +998,7 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
                 .Returns(2); // Has hardlinks
 
             // Act
-            await sut.ChangeCategoryForNoHardLinksAsync(downloads);
+            await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert
             _fixture.ClientWrapper.Verify(x => x.SetTorrentCategoryAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<string>()), Times.Never);
@@ -1020,13 +1010,12 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
             // Arrange
             var sut = _fixture.CreateSut();
 
-            var config = new DownloadCleanerConfig
+            var unlinkedConfig = new UnlinkedConfig
             {
                 Id = Guid.NewGuid(),
-                UnlinkedUseTag = false,
-                UnlinkedTargetCategory = "unlinked"
+                UseTag = false,
+                TargetCategory = "unlinked"
             };
-            ContextProvider.Set(nameof(DownloadCleanerConfig), config);
 
             var downloads = new List<Domain.Entities.ITorrentItemWrapper>
             {
@@ -1045,7 +1034,7 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
                 .Returns(-1); // Error
 
             // Act
-            await sut.ChangeCategoryForNoHardLinksAsync(downloads);
+            await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert
             _fixture.ClientWrapper.Verify(x => x.SetTorrentCategoryAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<string>()), Times.Never);
@@ -1057,13 +1046,12 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
             // Arrange
             var sut = _fixture.CreateSut();
 
-            var config = new DownloadCleanerConfig
+            var unlinkedConfig = new UnlinkedConfig
             {
                 Id = Guid.NewGuid(),
-                UnlinkedUseTag = false,
-                UnlinkedTargetCategory = "unlinked"
+                UseTag = false,
+                TargetCategory = "unlinked"
             };
-            ContextProvider.Set(nameof(DownloadCleanerConfig), config);
 
             var downloads = new List<Domain.Entities.ITorrentItemWrapper>
             {
@@ -1083,7 +1071,7 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
                 .Returns(0);
 
             // Act
-            await sut.ChangeCategoryForNoHardLinksAsync(downloads);
+            await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert
             _fixture.HardLinkFileService.Verify(
@@ -1097,13 +1085,12 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
             // Arrange
             var sut = _fixture.CreateSut();
 
-            var config = new DownloadCleanerConfig
+            var unlinkedConfig = new UnlinkedConfig
             {
                 Id = Guid.NewGuid(),
-                UnlinkedUseTag = false,
-                UnlinkedTargetCategory = "unlinked"
+                UseTag = false,
+                TargetCategory = "unlinked"
             };
-            ContextProvider.Set(nameof(DownloadCleanerConfig), config);
 
             var downloads = new List<Domain.Entities.ITorrentItemWrapper>
             {
@@ -1118,7 +1105,7 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
                 });
 
             // Act
-            await sut.ChangeCategoryForNoHardLinksAsync(downloads);
+            await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert
             _fixture.ClientWrapper.Verify(x => x.SetTorrentCategoryAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<string>()), Times.Never);
@@ -1130,13 +1117,12 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
             // Arrange
             var sut = _fixture.CreateSut();
 
-            var config = new DownloadCleanerConfig
+            var unlinkedConfig = new UnlinkedConfig
             {
                 Id = Guid.NewGuid(),
-                UnlinkedUseTag = false,
-                UnlinkedTargetCategory = "unlinked"
+                UseTag = false,
+                TargetCategory = "unlinked"
             };
-            ContextProvider.Set(nameof(DownloadCleanerConfig), config);
 
             var downloads = new List<Domain.Entities.ITorrentItemWrapper>
             {
@@ -1155,7 +1141,7 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
                 .Returns(0);
 
             // Act
-            await sut.ChangeCategoryForNoHardLinksAsync(downloads);
+            await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert - EventPublisher is not mocked, so we just verify the method completed
             _fixture.ClientWrapper.Verify(
@@ -1169,13 +1155,12 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
             // Arrange
             var sut = _fixture.CreateSut();
 
-            var config = new DownloadCleanerConfig
+            var unlinkedConfig = new UnlinkedConfig
             {
                 Id = Guid.NewGuid(),
-                UnlinkedUseTag = true,
-                UnlinkedTargetCategory = "unlinked"
+                UseTag = true,
+                TargetCategory = "unlinked"
             };
-            ContextProvider.Set(nameof(DownloadCleanerConfig), config);
 
             var downloads = new List<Domain.Entities.ITorrentItemWrapper>
             {
@@ -1194,7 +1179,7 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
                 .Returns(0);
 
             // Act
-            await sut.ChangeCategoryForNoHardLinksAsync(downloads);
+            await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert - EventPublisher is not mocked, so we just verify the method completed
             _fixture.ClientWrapper.Verify(

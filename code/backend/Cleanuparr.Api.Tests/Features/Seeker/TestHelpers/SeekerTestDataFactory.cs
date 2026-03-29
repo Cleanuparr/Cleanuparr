@@ -87,11 +87,7 @@ public static class SeekerTestDataFactory
         context.DownloadCleanerConfigs.Add(new DownloadCleanerConfig
         {
             Id = Guid.NewGuid(),
-            IgnoredDownloads = [],
-            Categories = [],
-            UnlinkedEnabled = false,
-            UnlinkedTargetCategory = "",
-            UnlinkedCategories = []
+            IgnoredDownloads = []
         });
 
         context.SeekerConfigs.Add(new SeekerConfig

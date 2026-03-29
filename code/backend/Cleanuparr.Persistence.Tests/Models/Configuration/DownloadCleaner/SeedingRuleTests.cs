@@ -6,14 +6,14 @@ using ValidationException = Cleanuparr.Domain.Exceptions.ValidationException;
 
 namespace Cleanuparr.Persistence.Tests.Models.Configuration.DownloadCleaner;
 
-public sealed class SeedingRuleTests
+public sealed class QBitSeedingRuleTests
 {
     #region Default Values
 
     [Fact]
     public void PrivacyType_DefaultsToPublic()
     {
-        var rule = new SeedingRule
+        var rule = new QBitSeedingRule
         {
             Name = "test",
             MaxRatio = -1,
@@ -32,7 +32,7 @@ public sealed class SeedingRuleTests
     [Fact]
     public void Validate_WithValidMaxRatio_DoesNotThrow()
     {
-        var config = new SeedingRule
+        var config = new QBitSeedingRule
         {
             Name = "test-category",
             MaxRatio = 2.0,
@@ -47,7 +47,7 @@ public sealed class SeedingRuleTests
     [Fact]
     public void Validate_WithValidMaxSeedTime_DoesNotThrow()
     {
-        var config = new SeedingRule
+        var config = new QBitSeedingRule
         {
             Name = "test-category",
             MaxRatio = -1,
@@ -62,7 +62,7 @@ public sealed class SeedingRuleTests
     [Fact]
     public void Validate_WithBothMaxRatioAndMaxSeedTime_DoesNotThrow()
     {
-        var config = new SeedingRule
+        var config = new QBitSeedingRule
         {
             Name = "test-category",
             MaxRatio = 2.0,
@@ -77,7 +77,7 @@ public sealed class SeedingRuleTests
     [Fact]
     public void Validate_WithZeroMaxRatio_DoesNotThrow()
     {
-        var config = new SeedingRule
+        var config = new QBitSeedingRule
         {
             Name = "test-category",
             MaxRatio = 0,
@@ -92,7 +92,7 @@ public sealed class SeedingRuleTests
     [Fact]
     public void Validate_WithZeroMaxSeedTime_DoesNotThrow()
     {
-        var config = new SeedingRule
+        var config = new QBitSeedingRule
         {
             Name = "test-category",
             MaxRatio = -1,
@@ -111,7 +111,7 @@ public sealed class SeedingRuleTests
     [Fact]
     public void Validate_WithEmptyName_ThrowsValidationException()
     {
-        var config = new SeedingRule
+        var config = new QBitSeedingRule
         {
             Name = "",
             MaxRatio = 2.0,
@@ -127,7 +127,7 @@ public sealed class SeedingRuleTests
     [Fact]
     public void Validate_WithWhitespaceName_ThrowsValidationException()
     {
-        var config = new SeedingRule
+        var config = new QBitSeedingRule
         {
             Name = "   ",
             MaxRatio = 2.0,
@@ -143,7 +143,7 @@ public sealed class SeedingRuleTests
     [Fact]
     public void Validate_WithTabOnlyName_ThrowsValidationException()
     {
-        var config = new SeedingRule
+        var config = new QBitSeedingRule
         {
             Name = "\t",
             MaxRatio = 2.0,
@@ -163,7 +163,7 @@ public sealed class SeedingRuleTests
     [Fact]
     public void Validate_WithBothNegative_ThrowsValidationException()
     {
-        var config = new SeedingRule
+        var config = new QBitSeedingRule
         {
             Name = "test-category",
             MaxRatio = -1,
@@ -182,7 +182,7 @@ public sealed class SeedingRuleTests
     [InlineData(-100, -100)]
     public void Validate_WithVariousNegativeValues_ThrowsValidationException(double maxRatio, double maxSeedTime)
     {
-        var config = new SeedingRule
+        var config = new QBitSeedingRule
         {
             Name = "test-category",
             MaxRatio = maxRatio,
@@ -202,7 +202,7 @@ public sealed class SeedingRuleTests
     [Fact]
     public void Validate_WithNegativeMinSeedTime_ThrowsValidationException()
     {
-        var config = new SeedingRule
+        var config = new QBitSeedingRule
         {
             Name = "test-category",
             MaxRatio = 2.0,
@@ -221,7 +221,7 @@ public sealed class SeedingRuleTests
     [InlineData(-100)]
     public void Validate_WithVariousNegativeMinSeedTime_ThrowsValidationException(double minSeedTime)
     {
-        var config = new SeedingRule
+        var config = new QBitSeedingRule
         {
             Name = "test-category",
             MaxRatio = 2.0,
@@ -237,7 +237,7 @@ public sealed class SeedingRuleTests
     [Fact]
     public void Validate_WithZeroMinSeedTime_DoesNotThrow()
     {
-        var config = new SeedingRule
+        var config = new QBitSeedingRule
         {
             Name = "test-category",
             MaxRatio = 2.0,
@@ -252,7 +252,7 @@ public sealed class SeedingRuleTests
     [Fact]
     public void Validate_WithPositiveMinSeedTime_DoesNotThrow()
     {
-        var config = new SeedingRule
+        var config = new QBitSeedingRule
         {
             Name = "test-category",
             MaxRatio = 2.0,
@@ -269,7 +269,7 @@ public sealed class SeedingRuleTests
     [Fact]
     public void DeleteSourceFiles_CanBeSetToFalse()
     {
-        var config = new SeedingRule
+        var config = new QBitSeedingRule
         {
             Name = "test-category",
             MaxRatio = 2.0,
