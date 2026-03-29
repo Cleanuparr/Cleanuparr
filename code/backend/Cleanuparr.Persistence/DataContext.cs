@@ -40,8 +40,6 @@ public class DataContext : DbContext
     
     public DbSet<DownloadCleanerConfig> DownloadCleanerConfigs { get; set; }
     
-    public DbSet<SeedingRule> SeedingRules { get; set; }
-
     public DbSet<QBitSeedingRule> QBitSeedingRules { get; set; }
 
     public DbSet<DelugeSeedingRule> DelugeSeedingRules { get; set; }
