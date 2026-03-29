@@ -1,5 +1,4 @@
-import { ScheduleUnit, TorrentPrivacyType } from './enums';
-import { JobSchedule } from './queue-cleaner-config.model';
+import { TorrentPrivacyType } from './enums';
 
 export interface CleanCategory {
   name: string;
@@ -10,18 +9,30 @@ export interface CleanCategory {
   deleteSourceFiles: boolean;
 }
 
+export interface UnlinkedConfigModel {
+  enabled: boolean;
+  targetCategory: string;
+  useTag: boolean;
+  ignoredRootDirs: string[];
+  categories: string[];
+  downloadDirectorySource: string | null;
+  downloadDirectoryTarget: string | null;
+}
+
+export interface ClientCleanerConfig {
+  downloadClientId: string;
+  downloadClientName: string;
+  downloadClientTypeName: string;
+  seedingRules: CleanCategory[];
+  unlinkedConfig: UnlinkedConfigModel | null;
+}
+
 export interface DownloadCleanerConfig {
   enabled: boolean;
   cronExpression: string;
   useAdvancedScheduling: boolean;
-  jobSchedule?: JobSchedule;
-  categories: CleanCategory[];
   ignoredDownloads: string[];
-  unlinkedEnabled: boolean;
-  unlinkedTargetCategory: string;
-  unlinkedUseTag: boolean;
-  unlinkedIgnoredRootDirs: string[];
-  unlinkedCategories: string[];
+  clients: ClientCleanerConfig[];
 }
 
 export function createDefaultCategory(): CleanCategory {
@@ -32,5 +43,17 @@ export function createDefaultCategory(): CleanCategory {
     minSeedTime: 0,
     maxSeedTime: -1,
     deleteSourceFiles: true,
+  };
+}
+
+export function createDefaultUnlinkedConfig(): UnlinkedConfigModel {
+  return {
+    enabled: false,
+    targetCategory: 'cleanuparr-unlinked',
+    useTag: false,
+    ignoredRootDirs: [],
+    categories: [],
+    downloadDirectorySource: null,
+    downloadDirectoryTarget: null,
   };
 }
