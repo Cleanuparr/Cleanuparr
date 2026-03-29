@@ -61,7 +61,8 @@
         <app-toggle label="Use Custom Format Score" [(checked)]="useCustomFormatScore"
           hint="Search for upgrades when a file's custom format score is below the quality profile's cutoff format score"
           helpKey="seeker:useCustomFormatScore" />
-        <app-toggle label="Round Robin" [checked]="useRoundRobin()" (checkedChange)="toggleRoundRobin($event)"
+        <app-toggle label="Round Robin" [(checked)]="useRoundRobin"
+          [beforeChange]="confirmRoundRobin"
           hint="Process one instance per run to spread indexer load"
           helpKey="seeker:useRoundRobin" />
         <app-number-input
