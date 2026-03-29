@@ -52,10 +52,11 @@ export class AppHubService extends HubService {
       this._logs.set([...logs].reverse());
     });
 
-    // Single event
+    // Single event (deduplicate by ID to handle updates like search completion)
     connection.on('EventReceived', (event: AppEvent) => {
       this._events.update((events) => {
-        const updated = [event, ...events];
+        const filtered = events.filter((e) => e.id !== event.id);
+        const updated = [event, ...filtered];
         return updated.length > MAX_BUFFER ? updated.slice(0, MAX_BUFFER) : updated;
       });
     });
@@ -65,10 +66,11 @@ export class AppHubService extends HubService {
       this._events.set(events);
     });
 
-    // Single manual event
+    // Single manual event (deduplicate by ID)
     connection.on('ManualEventReceived', (event: ManualEvent) => {
       this._manualEvents.update((events) => {
-        const updated = [event, ...events];
+        const filtered = events.filter((e) => e.id !== event.id);
+        const updated = [event, ...filtered];
         return updated.length > MAX_BUFFER ? updated.slice(0, MAX_BUFFER) : updated;
       });
     });
@@ -78,10 +80,11 @@ export class AppHubService extends HubService {
       this._manualEvents.set(events);
     });
 
-    // Single strike
+    // Single strike (deduplicate by ID)
     connection.on('StrikeReceived', (strike: RecentStrike) => {
       this._strikes.update((strikes) => {
-        const updated = [strike, ...strikes];
+        const filtered = strikes.filter((s) => s.id !== strike.id);
+        const updated = [strike, ...filtered];
         return updated.length > MAX_BUFFER ? updated.slice(0, MAX_BUFFER) : updated;
       });
     });
