@@ -41,6 +41,18 @@ public class DataContext : DbContext
     public DbSet<DownloadCleanerConfig> DownloadCleanerConfigs { get; set; }
     
     public DbSet<SeedingRule> SeedingRules { get; set; }
+
+    public DbSet<QBitSeedingRule> QBitSeedingRules { get; set; }
+
+    public DbSet<DelugeSeedingRule> DelugeSeedingRules { get; set; }
+
+    public DbSet<TransmissionSeedingRule> TransmissionSeedingRules { get; set; }
+
+    public DbSet<UTorrentSeedingRule> UTorrentSeedingRules { get; set; }
+
+    public DbSet<RTorrentSeedingRule> RTorrentSeedingRules { get; set; }
+
+    public DbSet<UnlinkedConfig> UnlinkedConfigs { get; set; }
     
     public DbSet<ArrConfig> ArrConfigs { get; set; }
     
@@ -282,6 +294,58 @@ public class DataContext : DbContext
             entity.HasIndex(s => s.RecordedAt);
 
             entity.Property(s => s.RecordedAt).HasConversion(new UtcDateTimeConverter());
+        });
+
+        // Configure per-client seeding rule relationships
+        modelBuilder.Entity<QBitSeedingRule>(entity =>
+        {
+            entity.HasOne(s => s.DownloadClientConfig)
+                  .WithMany()
+                  .HasForeignKey(s => s.DownloadClientConfigId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<DelugeSeedingRule>(entity =>
+        {
+            entity.HasOne(s => s.DownloadClientConfig)
+                  .WithMany()
+                  .HasForeignKey(s => s.DownloadClientConfigId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<TransmissionSeedingRule>(entity =>
+        {
+            entity.HasOne(s => s.DownloadClientConfig)
+                  .WithMany()
+                  .HasForeignKey(s => s.DownloadClientConfigId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<UTorrentSeedingRule>(entity =>
+        {
+            entity.HasOne(s => s.DownloadClientConfig)
+                  .WithMany()
+                  .HasForeignKey(s => s.DownloadClientConfigId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<RTorrentSeedingRule>(entity =>
+        {
+            entity.HasOne(s => s.DownloadClientConfig)
+                  .WithMany()
+                  .HasForeignKey(s => s.DownloadClientConfigId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Configure per-client unlinked config relationship
+        modelBuilder.Entity<UnlinkedConfig>(entity =>
+        {
+            entity.HasOne(u => u.DownloadClientConfig)
+                  .WithMany()
+                  .HasForeignKey(u => u.DownloadClientConfigId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(u => u.DownloadClientConfigId).IsUnique();
         });
 
         // Configure BlacklistSyncState relationships and indexes
