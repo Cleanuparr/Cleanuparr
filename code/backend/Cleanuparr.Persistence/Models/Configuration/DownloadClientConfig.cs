@@ -16,53 +16,53 @@ public sealed record DownloadClientConfig
     /// Unique identifier for this client
     /// </summary>
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-    public Guid Id { get; init; } = Guid.NewGuid();
+    public Guid Id { get; set; } = Guid.NewGuid();
     
     /// <summary>
     /// Whether this client is enabled
     /// </summary>
-    public bool Enabled { get; init; } = false;
+    public bool Enabled { get; set; } = false;
     
     /// <summary>
     /// Friendly name for this client
     /// </summary>
-    public required string Name { get; init; }
+    public required string Name { get; set; }
     
     /// <summary>
     /// Type name of download client
     /// </summary>
-    public required DownloadClientTypeName TypeName { get; init; }
+    public required DownloadClientTypeName TypeName { get; set; }
     
     /// <summary>
     /// Type of download client
     /// </summary>
-    public required DownloadClientType Type { get; init; }
+    public required DownloadClientType Type { get; set; }
     
     /// <summary>
     /// Host address for the download client
     /// </summary>
-    public Uri? Host { get; init; }
+    public Uri? Host { get; set; }
     
     /// <summary>
     /// Username for authentication
     /// </summary>
-    public string? Username { get; init; }
+    public string? Username { get; set; }
     
     /// <summary>
     /// Password for authentication
     /// </summary>
     [SensitiveData]
-    public string? Password { get; init; }
+    public string? Password { get; set; }
     
     /// <summary>
     /// The base URL path component, used by clients like Transmission and Deluge
     /// </summary>
-    public string? UrlBase { get; init; }
+    public string? UrlBase { get; set; }
 
     /// <summary>
     /// Optional external URL for notifications when internal Docker URLs are not reachable externally
     /// </summary>
-    public Uri? ExternalUrl { get; init; }
+    public Uri? ExternalUrl { get; set; }
 
     /// <summary>
     /// The computed full URL for the client

@@ -12,6 +12,4 @@ public sealed record UpdateDownloadCleanerConfigRequest
     public bool UseAdvancedScheduling { get; init; }
 
     public List<string> IgnoredDownloads { get; init; } = [];
-
-    public List<ClientCleanerConfigRequest> Clients { get; init; } = [];
 }

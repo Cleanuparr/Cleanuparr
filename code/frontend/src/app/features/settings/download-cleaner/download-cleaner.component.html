@@ -56,6 +56,12 @@
     </div>
   </app-card>
 
+  <div class="form-actions">
+    <app-button variant="primary" [glowing]="dirty()" [loading]="saving()" [disabled]="saving() || saved() || hasGlobalErrors()" (clicked)="save()">
+      {{ saved() ? 'Saved!' : 'Save Settings' }}
+    </app-button>
+  </div>
+
   @if (enabled()) {
     @if (clientOptions().length > 0) {
       <app-card header="Download Client">
@@ -67,55 +73,53 @@
       </app-card>
 
       @if (selectedClient(); as client) {
-        <app-accordion header="Seeding rules" subtitle="Define cleanup rules per category" [(expanded)]="categoriesExpanded" [error]="noFeaturesError()">
-          @for (cat of client.seedingRules; track $index; let i = $index) {
-            <div class="category-row">
-              <div class="category-row__header">
-                <app-input label="Category Name" placeholder="tv-sonarr" [value]="cat.name"
-                  (valueChange)="updateCategory(i, 'name', $event)"
-                  [error]="categoryNameError(cat)"
-                  hint="The category name from your download client (e.g. tv-sonarr, radarr)"
-                  helpKey="download-cleaner:name" />
-                <app-button variant="destructive" size="sm" (clicked)="removeCategory(i)">Remove</app-button>
+        <app-accordion header="Seeding Rules" subtitle="Define cleanup rules per category" [(expanded)]="seedingRulesExpanded">
+          @if (client.seedingRules.length === 0) {
+            <app-empty-state
+              icon="tablerListDetails"
+              heading="No seeding rules"
+              description="Add a seeding rule to start cleaning downloads for this client"
+            />
+          } @else {
+            @for (rule of client.seedingRules; track rule.id ?? $index) {
+              <div class="rule-card">
+                <div class="rule-card__header">
+                  <h4 class="rule-card__name">{{ rule.name }}</h4>
+                  <div class="rule-card__actions">
+                    <button class="rule-card__action" (click)="openRuleModal(rule)" aria-label="Edit rule">
+                      <ng-icon name="tablerPencil" size="16" />
+                    </button>
+                    <button class="rule-card__action rule-card__action--danger" (click)="deleteRule(rule)" aria-label="Delete rule">
+                      <ng-icon name="tablerTrash" size="16" />
+                    </button>
+                  </div>
+                </div>
+                <div class="rule-card__badges">
+                  <app-badge severity="info">{{ rule.privacyType }}</app-badge>
+                  @if (rule.maxRatio >= 0) {
+                    <app-badge>Ratio: {{ rule.maxRatio }}</app-badge>
+                  }
+                  @if (rule.maxSeedTime >= 0) {
+                    <app-badge>Max Seed: {{ rule.maxSeedTime }}h</app-badge>
+                  }
+                  @if (rule.minSeedTime > 0) {
+                    <app-badge>Min Seed: {{ rule.minSeedTime }}h</app-badge>
+                  }
+                </div>
+                <div class="rule-card__details">
+                  <span>Delete Files: {{ rule.deleteSourceFiles ? 'Yes' : 'No' }}</span>
+                </div>
               </div>
-              @if (categoryDisabledError(cat)) {
-                <div class="category-error">{{ categoryDisabledError(cat) }}</div>
-              }
-              <div class="form-row">
-                <app-number-input label="Max Ratio" [value]="cat.maxRatio"
-                  (valueChange)="updateCategory(i, 'maxRatio', $event)" [step]="0.1" [min]="-1"
-                  hint="Maximum ratio to seed before removing (-1 means disabled)"
-                  helpKey="download-cleaner:maxRatio" />
-                <app-number-input label="Min Seed Time" [value]="cat.minSeedTime"
-                  (valueChange)="updateCategory(i, 'minSeedTime', $event)" suffix="hours" [min]="0"
-                  hint="Minimum time to seed before removing a download that has reached the max ratio (0 means disabled)"
-                  helpKey="download-cleaner:minSeedTime" />
-                <app-number-input label="Max Seed Time" [value]="cat.maxSeedTime"
-                  (valueChange)="updateCategory(i, 'maxSeedTime', $event)" suffix="hours" [min]="-1"
-                  hint="Maximum time to seed before removing (-1 means disabled)"
-                  helpKey="download-cleaner:maxSeedTime" />
-              </div>
-              <div class="form-row">
-                <app-select label="Privacy Type" [options]="privacyTypeOptions" [value]="cat.privacyType"
-                  (valueChange)="updateCategory(i, 'privacyType', $event)"
-                  hint="Which torrent types this rule applies to"
-                  helpKey="download-cleaner:privacyType"
-                />
-              </div>
-              <app-toggle label="Delete Source Files" [checked]="cat.deleteSourceFiles"
-                (checkedChange)="updateCategory(i, 'deleteSourceFiles', $event)"
-                hint="When enabled, the source files will be deleted when the download is removed"
-                helpKey="download-cleaner:deleteSourceFiles"
-                style="margin-top: var(--space-4)"
-              />
-            </div>
+            }
           }
-          <app-button variant="secondary" size="sm" (clicked)="addCategory()">
-            Add Category
-          </app-button>
+          <div class="rule-actions">
+            <app-button variant="secondary" size="sm" (clicked)="openRuleModal()">
+              Add Seeding Rule
+            </app-button>
+          </div>
         </app-accordion>
 
-        <app-accordion header="Unlinked Downloads" subtitle="Clean up orphaned downloads" [(expanded)]="unlinkedExpanded" [error]="noFeaturesError()">
+        <app-accordion header="Unlinked Downloads" subtitle="Clean up orphaned downloads" [(expanded)]="unlinkedExpanded">
           <div class="form-stack">
             <app-toggle label="Enabled" [checked]="client.unlinkedConfig?.enabled ?? false"
               (checkedChange)="updateUnlinkedField('enabled', $event)"
@@ -125,7 +129,6 @@
               <app-input label="Target Category" placeholder="unlinked" [value]="client.unlinkedConfig?.targetCategory ?? ''"
                 (valueChange)="updateUnlinkedField('targetCategory', $event)"
                 hint="Category to move unlinked downloads to. You have to create a seeding rule for this category if you want to remove the downloads."
-                [error]="unlinkedTargetCategoryError()"
                 helpKey="download-cleaner:unlinkedTargetCategory" />
               <app-toggle label="Use Tag Instead" [checked]="client.unlinkedConfig?.useTag ?? false"
                 (checkedChange)="updateUnlinkedField('useTag', $event)"
@@ -138,7 +141,6 @@
                 [value]="client.unlinkedConfig?.downloadDirectorySource ?? ''"
                 (valueChange)="updateUnlinkedField('downloadDirectorySource', $event)"
                 hint="The path prefix as reported by the download client (e.g. /downloads)"
-                [error]="directoryMappingError()"
                 helpKey="download-cleaner:downloadDirectorySource" />
               <app-input label="Local Directory (Target)" placeholder="/downloads-deluge"
                 [value]="client.unlinkedConfig?.downloadDirectoryTarget ?? ''"
@@ -157,9 +159,13 @@
                 [items]="client.unlinkedConfig?.categories ?? []"
                 (itemsChange)="updateUnlinkedField('categories', $event)"
                 hint="Categories to check for unlinked downloads"
-                [error]="unlinkedCategoriesError()"
                 helpKey="download-cleaner:unlinkedCategories" />
             }
+            <div class="form-actions">
+              <app-button variant="primary" [loading]="unlinkedSaving()" [disabled]="unlinkedSaving() || unlinkedSaved()" (clicked)="saveUnlinkedConfig()">
+                {{ unlinkedSaved() ? 'Saved!' : 'Save Unlinked Config' }}
+              </app-button>
+            </div>
           </div>
         </app-accordion>
       }
@@ -171,11 +177,39 @@
       />
     }
   }
+</div>
 
-  <div class="form-actions">
-    <app-button variant="primary" [glowing]="dirty()" [loading]="saving()" [disabled]="saving() || saved() || hasErrors()" (clicked)="save()">
-      {{ saved() ? 'Saved!' : 'Save Settings' }}
+<!-- Seeding Rule Modal -->
+<app-modal [title]="editingRule() ? 'Edit Seeding Rule' : 'Add Seeding Rule'" [(visible)]="ruleModalVisible" size="lg">
+  <div class="form-grid">
+    <app-input label="Category Name" placeholder="tv-sonarr" [(value)]="ruleName"
+      [error]="ruleNameError()"
+      hint="The category name from your download client (e.g. tv-sonarr, radarr)"
+      helpKey="download-cleaner:name" />
+    <app-select label="Privacy Type" [options]="privacyTypeOptions" [(value)]="rulePrivacyType"
+      hint="Which torrent types this rule applies to"
+      helpKey="download-cleaner:privacyType" />
+    <app-number-input label="Max Ratio" [(value)]="ruleMaxRatio" [step]="0.1" [min]="-1"
+      hint="Maximum ratio to seed before removing (-1 means disabled)"
+      helpKey="download-cleaner:maxRatio" />
+    <app-number-input label="Min Seed Time" [(value)]="ruleMinSeedTime" suffix="hours" [min]="0"
+      hint="Minimum time to seed before removing a download that has reached the max ratio (0 means disabled)"
+      helpKey="download-cleaner:minSeedTime" />
+    <app-number-input label="Max Seed Time" [(value)]="ruleMaxSeedTime" suffix="hours" [min]="-1"
+      hint="Maximum time to seed before removing (-1 means disabled)"
+      helpKey="download-cleaner:maxSeedTime" />
+    @if (ruleDisabledError()) {
+      <div class="category-error">{{ ruleDisabledError() }}</div>
+    }
+    <app-toggle label="Delete Source Files" [(checked)]="ruleDeleteSourceFiles"
+      hint="When enabled, the source files will be deleted when the download is removed"
+      helpKey="download-cleaner:deleteSourceFiles" />
+  </div>
+  <div modal-footer>
+    <app-button variant="secondary" (clicked)="ruleModalVisible.set(false)">Cancel</app-button>
+    <app-button variant="primary" [disabled]="!!ruleNameError() || !!ruleDisabledError()" (clicked)="saveRule()">
+      {{ editingRule() ? 'Update' : 'Create' }}
     </app-button>
   </div>
-</div>
+</app-modal>
 }

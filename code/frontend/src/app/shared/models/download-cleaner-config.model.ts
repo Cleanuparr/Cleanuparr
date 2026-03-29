@@ -1,6 +1,7 @@
 import { TorrentPrivacyType } from './enums';
 
-export interface CleanCategory {
+export interface SeedingRule {
+  id?: string;
   name: string;
   privacyType: TorrentPrivacyType;
   maxRatio: number;
@@ -23,7 +24,7 @@ export interface ClientCleanerConfig {
   downloadClientId: string;
   downloadClientName: string;
   downloadClientTypeName: string;
-  seedingRules: CleanCategory[];
+  seedingRules: SeedingRule[];
   unlinkedConfig: UnlinkedConfigModel | null;
 }
 
@@ -35,7 +36,7 @@ export interface DownloadCleanerConfig {
   clients: ClientCleanerConfig[];
 }
 
-export function createDefaultCategory(): CleanCategory {
+export function createDefaultSeedingRule(): SeedingRule {
   return {
     name: '',
     privacyType: TorrentPrivacyType.Public,

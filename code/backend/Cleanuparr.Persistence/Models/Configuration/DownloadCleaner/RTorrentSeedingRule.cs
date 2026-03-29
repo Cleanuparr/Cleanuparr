@@ -9,38 +9,38 @@ public sealed record RTorrentSeedingRule : ISeedingRule
 {
     [Key]
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-    public Guid Id { get; init; } = Guid.NewGuid();
+    public Guid Id { get; set; } = Guid.NewGuid();
 
     public Guid DownloadClientConfigId { get; set; }
 
     public DownloadClientConfig DownloadClientConfig { get; set; } = null!;
 
-    public required string Name { get; init; }
+    public string Name { get; set; } = string.Empty;
 
     /// <summary>
     /// Which torrent privacy types this rule applies to.
     /// </summary>
-    public TorrentPrivacyType PrivacyType { get; init; } = TorrentPrivacyType.Public;
+    public TorrentPrivacyType PrivacyType { get; set; } = TorrentPrivacyType.Public;
 
     /// <summary>
     /// Max ratio before removing a download.
     /// </summary>
-    public required double MaxRatio { get; init; } = -1;
+    public double MaxRatio { get; set; } = -1;
 
     /// <summary>
     /// Min number of hours to seed before removing a download, if the ratio has been met.
     /// </summary>
-    public required double MinSeedTime { get; init; }
+    public double MinSeedTime { get; set; }
 
     /// <summary>
     /// Number of hours to seed before removing a download.
     /// </summary>
-    public required double MaxSeedTime { get; init; } = -1;
+    public double MaxSeedTime { get; set; } = -1;
 
     /// <summary>
     /// Whether to delete the source files when cleaning the download.
     /// </summary>
-    public required bool DeleteSourceFiles { get; init; }
+    public bool DeleteSourceFiles { get; set; }
 
     public void Validate()
     {

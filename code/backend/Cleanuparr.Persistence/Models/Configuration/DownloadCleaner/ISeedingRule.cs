@@ -4,21 +4,21 @@ namespace Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
 
 public interface ISeedingRule : IConfig
 {
-    Guid Id { get; }
+    Guid Id { get; set; }
 
     Guid DownloadClientConfigId { get; set; }
 
     DownloadClientConfig DownloadClientConfig { get; set; }
 
-    string Name { get; }
+    string Name { get; set; }
 
-    TorrentPrivacyType PrivacyType { get; }
+    TorrentPrivacyType PrivacyType { get; set; }
 
-    double MaxRatio { get; }
+    double MaxRatio { get; set; }
 
-    double MinSeedTime { get; }
+    double MinSeedTime { get; set; }
 
-    double MaxSeedTime { get; }
+    double MaxSeedTime { get; set; }
 
-    bool DeleteSourceFiles { get; }
+    bool DeleteSourceFiles { get; set; }
 }

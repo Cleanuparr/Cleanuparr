@@ -63,6 +63,7 @@ public sealed class DownloadCleanerConfigController : ControllerBase
                     downloadClientTypeName = client.TypeName,
                     seedingRules = seedingRules.Select(r => new
                     {
+                        id = r.Id,
                         name = r.Name,
                         privacyType = r.PrivacyType,
                         maxRatio = r.MaxRatio,
@@ -117,33 +118,13 @@ public sealed class DownloadCleanerConfigController : ControllerBase
                 CronValidationHelper.ValidateCronExpression(newConfigDto.CronExpression);
             }
 
-            // Update global config
+            // Update global config only
             var oldConfig = await _dataContext.DownloadCleanerConfigs.FirstAsync();
 
             oldConfig.Enabled = newConfigDto.Enabled;
             oldConfig.CronExpression = newConfigDto.CronExpression;
             oldConfig.UseAdvancedScheduling = newConfigDto.UseAdvancedScheduling;
             oldConfig.IgnoredDownloads = newConfigDto.IgnoredDownloads;
-
-            _dataContext.DownloadCleanerConfigs.Update(oldConfig);
-
-            // Update per-client configs
-            foreach (var clientDto in newConfigDto.Clients)
-            {
-                var client = await _dataContext.DownloadClients
-                    .FirstOrDefaultAsync(c => c.Id == clientDto.DownloadClientId);
-
-                if (client is null)
-                {
-                    throw new ValidationException($"Download client with id {clientDto.DownloadClientId} not found");
-                }
-
-                // Update seeding rules
-                await UpdateSeedingRulesForClient(client, clientDto.SeedingRules);
-
-                // Upsert unlinked config
-                await UpsertUnlinkedConfig(client, clientDto.UnlinkedConfig);
-            }
 
             await _dataContext.SaveChangesAsync();
 
@@ -182,132 +163,6 @@ public sealed class DownloadCleanerConfigController : ControllerBase
                 .Where(r => r.DownloadClientConfigId == client.Id).AsNoTracking().ToListAsync()).Cast<ISeedingRule>().ToList(),
             _ => []
         };
-    }
-
-    private async Task UpdateSeedingRulesForClient(DownloadClientConfig client, List<SeedingRuleRequest> rules)
-    {
-        // Remove existing rules
-        switch (client.TypeName)
-        {
-            case DownloadClientTypeName.qBittorrent:
-                _dataContext.QBitSeedingRules.RemoveRange(
-                    await _dataContext.QBitSeedingRules.Where(r => r.DownloadClientConfigId == client.Id).ToListAsync());
-                foreach (var rule in rules)
-                {
-                    _dataContext.QBitSeedingRules.Add(new QBitSeedingRule
-                    {
-                        Name = rule.Name, PrivacyType = rule.PrivacyType, MaxRatio = rule.MaxRatio,
-                        MinSeedTime = rule.MinSeedTime, MaxSeedTime = rule.MaxSeedTime,
-                        DeleteSourceFiles = rule.DeleteSourceFiles, DownloadClientConfigId = client.Id,
-                    });
-                }
-                break;
-            case DownloadClientTypeName.Deluge:
-                _dataContext.DelugeSeedingRules.RemoveRange(
-                    await _dataContext.DelugeSeedingRules.Where(r => r.DownloadClientConfigId == client.Id).ToListAsync());
-                foreach (var rule in rules)
-                {
-                    _dataContext.DelugeSeedingRules.Add(new DelugeSeedingRule
-                    {
-                        Name = rule.Name, PrivacyType = rule.PrivacyType, MaxRatio = rule.MaxRatio,
-                        MinSeedTime = rule.MinSeedTime, MaxSeedTime = rule.MaxSeedTime,
-                        DeleteSourceFiles = rule.DeleteSourceFiles, DownloadClientConfigId = client.Id,
-                    });
-                }
-                break;
-            case DownloadClientTypeName.Transmission:
-                _dataContext.TransmissionSeedingRules.RemoveRange(
-                    await _dataContext.TransmissionSeedingRules.Where(r => r.DownloadClientConfigId == client.Id).ToListAsync());
-                foreach (var rule in rules)
-                {
-                    _dataContext.TransmissionSeedingRules.Add(new TransmissionSeedingRule
-                    {
-                        Name = rule.Name, PrivacyType = rule.PrivacyType, MaxRatio = rule.MaxRatio,
-                        MinSeedTime = rule.MinSeedTime, MaxSeedTime = rule.MaxSeedTime,
-                        DeleteSourceFiles = rule.DeleteSourceFiles, DownloadClientConfigId = client.Id,
-                    });
-                }
-                break;
-            case DownloadClientTypeName.uTorrent:
-                _dataContext.UTorrentSeedingRules.RemoveRange(
-                    await _dataContext.UTorrentSeedingRules.Where(r => r.DownloadClientConfigId == client.Id).ToListAsync());
-                foreach (var rule in rules)
-                {
-                    _dataContext.UTorrentSeedingRules.Add(new UTorrentSeedingRule
-                    {
-                        Name = rule.Name, PrivacyType = rule.PrivacyType, MaxRatio = rule.MaxRatio,
-                        MinSeedTime = rule.MinSeedTime, MaxSeedTime = rule.MaxSeedTime,
-                        DeleteSourceFiles = rule.DeleteSourceFiles, DownloadClientConfigId = client.Id,
-                    });
-                }
-                break;
-            case DownloadClientTypeName.rTorrent:
-                _dataContext.RTorrentSeedingRules.RemoveRange(
-                    await _dataContext.RTorrentSeedingRules.Where(r => r.DownloadClientConfigId == client.Id).ToListAsync());
-                foreach (var rule in rules)
-                {
-                    _dataContext.RTorrentSeedingRules.Add(new RTorrentSeedingRule
-                    {
-                        Name = rule.Name, PrivacyType = rule.PrivacyType, MaxRatio = rule.MaxRatio,
-                        MinSeedTime = rule.MinSeedTime, MaxSeedTime = rule.MaxSeedTime,
-                        DeleteSourceFiles = rule.DeleteSourceFiles, DownloadClientConfigId = client.Id,
-                    });
-                }
-                break;
-        }
-
-        // Validate rules
-        foreach (var rule in rules)
-        {
-            if (string.IsNullOrEmpty(rule.Name?.Trim()))
-            {
-                throw new ValidationException("Category name can not be empty");
-            }
-
-            if (rule.MaxRatio < 0 && rule.MaxSeedTime < 0)
-            {
-                throw new ValidationException("Either max ratio or max seed time must be set to a non-negative value");
-            }
-
-            if (rule.MinSeedTime < 0)
-            {
-                throw new ValidationException("Min seed time can not be negative");
-            }
-        }
-    }
-
-    private async Task UpsertUnlinkedConfig(DownloadClientConfig client, UnlinkedConfigRequest? dto)
-    {
-        var existing = await _dataContext.UnlinkedConfigs
-            .FirstOrDefaultAsync(u => u.DownloadClientConfigId == client.Id);
-
-        if (dto is null)
-        {
-            if (existing is not null)
-            {
-                _dataContext.UnlinkedConfigs.Remove(existing);
-            }
-            return;
-        }
-
-        if (existing is null)
-        {
-            existing = new UnlinkedConfig
-            {
-                DownloadClientConfigId = client.Id,
-            };
-            _dataContext.UnlinkedConfigs.Add(existing);
-        }
-
-        existing.Enabled = dto.Enabled;
-        existing.TargetCategory = dto.TargetCategory;
-        existing.UseTag = dto.UseTag;
-        existing.IgnoredRootDirs = dto.IgnoredRootDirs;
-        existing.Categories = dto.Categories;
-        existing.DownloadDirectorySource = dto.DownloadDirectorySource;
-        existing.DownloadDirectoryTarget = dto.DownloadDirectoryTarget;
-
-        existing.Validate();
     }
 
     private async Task UpdateJobSchedule(IJobConfig config, JobType jobType)
