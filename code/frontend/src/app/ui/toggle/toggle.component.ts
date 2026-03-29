@@ -17,12 +17,30 @@ export class ToggleComponent {
   disabled = input(false);
   hint = input<string>();
   helpKey = input<string>();
+  beforeChange = input<(newValue: boolean) => Promise<boolean> | boolean>();
   checked = model(false);
 
-  toggle(): void {
-    if (!this.disabled()) {
-      this.checked.set(!this.checked());
+  private pending = false;
+
+  async toggle(): Promise<void> {
+    if (this.disabled() || this.pending) return;
+
+    const newValue = !this.checked();
+    const guard = this.beforeChange();
+
+    if (guard) {
+      this.pending = true;
+      try {
+        const allowed = await guard(newValue);
+        if (!allowed) return;
+      } catch {
+        return;
+      } finally {
+        this.pending = false;
+      }
     }
+
+    this.checked.set(newValue);
   }
 
   onKeydown(event: KeyboardEvent): void {

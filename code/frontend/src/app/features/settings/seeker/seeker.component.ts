@@ -152,25 +152,17 @@ export class SeekerComponent implements OnInit, HasPendingChanges {
     this.loadConfig();
   }
 
-  async toggleRoundRobin(newValue: boolean): Promise<void> {
+  readonly confirmRoundRobin = async (newValue: boolean): Promise<boolean> => {
     if (!newValue) {
-      const confirmed = await this.confirm.confirm({
+      return this.confirm.confirm({
         title: 'Disable Round Robin',
         message: 'Disabling round robin will trigger a search for each enabled arr instance per run. This could result in too many requests to your indexers and potentially get you banned.',
         confirmLabel: 'Disable',
         destructive: true,
       });
-      if (!confirmed) {
-        // The toggle already flipped its internal state to false.
-        // Sync our signal to false first, then restore to true in the next microtask
-        // so Angular detects an actual change and pushes it back to the toggle.
-        this.useRoundRobin.set(false);
-        queueMicrotask(() => this.useRoundRobin.set(true));
-        return;
-      }
     }
-    this.useRoundRobin.set(newValue);
-  }
+    return true;
+  };
 
   toggleInstance(index: number): void {
     this.instances.update(instances => {
