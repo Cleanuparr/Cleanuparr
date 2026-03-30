@@ -1108,4 +1108,126 @@ public class DownloadCleanerTests : IDisposable
     }
 
     #endregion
+
+    #region Per-Client Config Tests
+
+    [Fact]
+    public async Task ExecuteInternalAsync_ClientWithNoSeedingRules_SkipsCleanup()
+    {
+        // Arrange
+        TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
+        // No seeding rules added — only unlinked config disabled
+
+        var mockTorrent = new Mock<ITorrentItemWrapper>();
+        mockTorrent.Setup(x => x.Hash).Returns("test-hash");
+        mockTorrent.Setup(x => x.Name).Returns("Test Download");
+        mockTorrent.Setup(x => x.IsIgnored(It.IsAny<List<string>>())).Returns(false);
+        mockTorrent.Setup(x => x.Category).Returns("completed");
+
+        var mockDownloadService = _fixture.CreateMockDownloadService();
+        mockDownloadService
+            .Setup(x => x.GetSeedingDownloads())
+            .ReturnsAsync([mockTorrent.Object]);
+
+        _fixture.DownloadServiceFactory
+            .Setup(x => x.GetDownloadService(It.IsAny<DownloadClientConfig>()))
+            .Returns(mockDownloadService.Object);
+
+        var sut = CreateSut();
+
+        // Act
+        await ExecuteWithTimeAdvance(sut);
+
+        // Assert - CleanDownloadsAsync should never be called
+        mockDownloadService.Verify(
+            x => x.CleanDownloadsAsync(
+                It.IsAny<List<ITorrentItemWrapper>>(),
+                It.IsAny<List<ISeedingRule>>()
+            ),
+            Times.Never
+        );
+    }
+
+    [Fact]
+    public async Task ExecuteInternalAsync_ClientWithDisabledUnlinkedConfig_SkipsUnlinkedProcessing()
+    {
+        // Arrange
+        TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
+        TestDataContextFactory.AddUnlinkedConfig(_fixture.DataContext, enabled: false);
+
+        var mockTorrent = new Mock<ITorrentItemWrapper>();
+        mockTorrent.Setup(x => x.Hash).Returns("test-hash");
+        mockTorrent.Setup(x => x.Name).Returns("Test Download");
+        mockTorrent.Setup(x => x.IsIgnored(It.IsAny<List<string>>())).Returns(false);
+        mockTorrent.Setup(x => x.Category).Returns("completed");
+
+        var dbClient = _fixture.DataContext.DownloadClients.First();
+        var mockDownloadService = _fixture.CreateMockDownloadService();
+        mockDownloadService.Setup(x => x.ClientConfig).Returns(dbClient);
+        mockDownloadService
+            .Setup(x => x.GetSeedingDownloads())
+            .ReturnsAsync([mockTorrent.Object]);
+
+        _fixture.DownloadServiceFactory
+            .Setup(x => x.GetDownloadService(It.IsAny<DownloadClientConfig>()))
+            .Returns(mockDownloadService.Object);
+
+        var sut = CreateSut();
+
+        // Act
+        await ExecuteWithTimeAdvance(sut);
+
+        // Assert - FilterDownloadsToChangeCategoryAsync should never be called
+        mockDownloadService.Verify(
+            x => x.FilterDownloadsToChangeCategoryAsync(
+                It.IsAny<List<ITorrentItemWrapper>>(),
+                It.IsAny<UnlinkedConfig>()
+            ),
+            Times.Never
+        );
+    }
+
+    [Fact]
+    public async Task ExecuteInternalAsync_UnlinkedEnabledButNoCategories_LogsWarning()
+    {
+        // Arrange
+        TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
+        TestDataContextFactory.AddUnlinkedConfig(_fixture.DataContext, enabled: true, categories: []);
+
+        var mockTorrent = new Mock<ITorrentItemWrapper>();
+        mockTorrent.Setup(x => x.Hash).Returns("test-hash");
+        mockTorrent.Setup(x => x.Name).Returns("Test Download");
+        mockTorrent.Setup(x => x.IsIgnored(It.IsAny<List<string>>())).Returns(false);
+        mockTorrent.Setup(x => x.Category).Returns("completed");
+
+        var dbClient = _fixture.DataContext.DownloadClients.First();
+        var mockDownloadService = _fixture.CreateMockDownloadService();
+        mockDownloadService.Setup(x => x.ClientConfig).Returns(dbClient);
+        mockDownloadService
+            .Setup(x => x.GetSeedingDownloads())
+            .ReturnsAsync([mockTorrent.Object]);
+
+        _fixture.DownloadServiceFactory
+            .Setup(x => x.GetDownloadService(It.IsAny<DownloadClientConfig>()))
+            .Returns(mockDownloadService.Object);
+
+        var sut = CreateSut();
+
+        // Act
+        await ExecuteWithTimeAdvance(sut);
+
+        // Assert - should log warning about no categories
+        _logger.Verify(
+            x => x.Log(
+                LogLevel.Warning,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("no categories are configured")),
+                It.IsAny<Exception?>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()
+            ),
+            Times.Once
+        );
+    }
+
+    #endregion
 }
