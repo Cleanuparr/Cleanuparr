@@ -12,7 +12,7 @@ import { ApiError } from '@core/interceptors/error.interceptor';
 import { ToastService } from '@core/services/toast.service';
 import { ConfirmService } from '@core/services/confirm.service';
 import {
-  DownloadCleanerConfig, SeedingRule, ClientCleanerConfig,
+  DownloadCleanerConfig, SeedingRule, ClientCleanerConfig, UnlinkedConfigModel,
   createDefaultUnlinkedConfig,
 } from '@shared/models/download-cleaner-config.model';
 import { ScheduleOptions } from '@shared/models/queue-cleaner-config.model';
@@ -328,7 +328,7 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
 
   // --- Unlinked config ---
 
-  updateUnlinkedField(field: string, value: any): void {
+  updateUnlinkedField<K extends keyof UnlinkedConfigModel>(field: K, value: UnlinkedConfigModel[K]): void {
     this.updateSelectedClient(client => ({
       ...client,
       unlinkedConfig: {
