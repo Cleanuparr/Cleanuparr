@@ -2,6 +2,7 @@ using Cleanuparr.Domain.Entities;
 using Cleanuparr.Domain.Entities.RTorrent.Response;
 using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
+using Cleanuparr.Shared.Helpers;
 using Microsoft.Extensions.Logging;
 
 namespace Cleanuparr.Infrastructure.Features.DownloadClient.RTorrent;
@@ -94,12 +95,7 @@ public partial class RTorrentService
                 string filePath = string.Join(Path.DirectorySeparatorChar,
                     Path.Combine(torrent.Info.BasePath ?? "", file.Path).Split(['\\', '/']));
 
-                if (!string.IsNullOrEmpty(unlinkedConfig.DownloadDirectorySource) &&
-                    !string.IsNullOrEmpty(unlinkedConfig.DownloadDirectoryTarget) &&
-                    filePath.StartsWith(unlinkedConfig.DownloadDirectorySource, StringComparison.OrdinalIgnoreCase))
-                {
-                    filePath = unlinkedConfig.DownloadDirectoryTarget + filePath[unlinkedConfig.DownloadDirectorySource.Length..];
-                }
+                filePath = PathHelper.RemapPath(filePath, unlinkedConfig.DownloadDirectorySource, unlinkedConfig.DownloadDirectoryTarget);
 
                 if (file.Priority <= 0)
                 {

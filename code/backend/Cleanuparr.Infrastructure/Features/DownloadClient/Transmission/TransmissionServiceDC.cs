@@ -2,6 +2,7 @@ using Cleanuparr.Domain.Entities;
 using Cleanuparr.Infrastructure.Extensions;
 using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
+using Cleanuparr.Shared.Helpers;
 using Microsoft.Extensions.Logging;
 using Transmission.API.RPC.Entity;
 
@@ -90,12 +91,7 @@ public partial class TransmissionService
 
                 string filePath = string.Join(Path.DirectorySeparatorChar, Path.Combine(torrent.Info.DownloadDir, file.Name).Split(['\\', '/']));
 
-                if (!string.IsNullOrEmpty(unlinkedConfig.DownloadDirectorySource) &&
-                    !string.IsNullOrEmpty(unlinkedConfig.DownloadDirectoryTarget) &&
-                    filePath.StartsWith(unlinkedConfig.DownloadDirectorySource, StringComparison.OrdinalIgnoreCase))
-                {
-                    filePath = unlinkedConfig.DownloadDirectoryTarget + filePath[unlinkedConfig.DownloadDirectorySource.Length..];
-                }
+                filePath = PathHelper.RemapPath(filePath, unlinkedConfig.DownloadDirectorySource, unlinkedConfig.DownloadDirectoryTarget);
 
                 long hardlinkCount = _hardLinkFileService.GetHardLinkCount(filePath, unlinkedConfig.IgnoredRootDirs.Count > 0);
 
