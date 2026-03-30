@@ -62,6 +62,7 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
   readonly saved = signal(false);
   readonly unlinkedSaving = signal(false);
   readonly unlinkedSaved = signal(false);
+  private readonly unlinkedSnapshots = signal<Record<string, string>>({});
 
   // Global settings
   readonly enabled = signal(false);
@@ -83,7 +84,7 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
     this.clientConfigs().map(c => ({ label: c.downloadClientName, value: c.downloadClientId }))
   );
 
-  readonly seedingRulesExpanded = signal(true);
+  readonly seedingRulesExpanded = signal(false);
   readonly unlinkedExpanded = signal(false);
 
   // Seeding rule modal
@@ -138,6 +139,15 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
     return undefined;
   });
 
+  readonly unlinkedDirty = computed(() => {
+    const client = this.selectedClient();
+    if (!client) return false;
+    const snapshots = this.unlinkedSnapshots();
+    const saved = snapshots[client.downloadClientId];
+    if (!saved) return false;
+    return saved !== JSON.stringify(client.unlinkedConfig);
+  });
+
   readonly hasGlobalErrors = computed(() => {
     if (this.scheduleEveryError()) return true;
     if (this.cronError()) return true;
@@ -173,6 +183,13 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
         if (config.clients?.length > 0) {
           this.selectedClientId.set(config.clients[0].downloadClientId);
         }
+        // Save unlinked config snapshots per client
+        const snapshots: Record<string, string> = {};
+        for (const c of config.clients ?? []) {
+          snapshots[c.downloadClientId] = JSON.stringify(c.unlinkedConfig ?? createDefaultUnlinkedConfig());
+        }
+        this.unlinkedSnapshots.set(snapshots);
+
         this.loader.stop();
         // Defer snapshot so constructor effects (e.g. schedule unit clamping) settle first
         queueMicrotask(() => this.savedSnapshot.set(this.buildSnapshot()));
@@ -296,6 +313,11 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
         this.unlinkedSaving.set(false);
         this.unlinkedSaved.set(true);
         setTimeout(() => this.unlinkedSaved.set(false), 1500);
+        // Update snapshot for this client
+        this.unlinkedSnapshots.update(s => ({
+          ...s,
+          [clientId]: JSON.stringify(client.unlinkedConfig),
+        }));
       },
       error: (err: ApiError) => {
         this.toast.error(err.statusCode === 400 ? err.message : 'Failed to save unlinked config');
