@@ -42,7 +42,7 @@ public class SeedingRulesController : ControllerBase
                 return NotFound(new { Message = $"Download client with ID {downloadClientId} not found" });
             }
 
-            var rules = await GetSeedingRulesForClient(client);
+            var rules = await SeedingRuleHelper.GetForClientAsync(_dataContext, client);
 
             return Ok(rules);
         }
@@ -77,7 +77,7 @@ public class SeedingRulesController : ControllerBase
                 return NotFound(new { Message = $"Download client with ID {downloadClientId} not found" });
             }
 
-            var existingRules = await GetSeedingRulesForClient(client);
+            var existingRules = await SeedingRuleHelper.GetForClientAsync(_dataContext, client);
             var duplicate = existingRules.FirstOrDefault(r =>
                 r.Name.Equals(ruleDto.Name.Trim(), StringComparison.OrdinalIgnoreCase) &&
                 r.PrivacyType == ruleDto.PrivacyType);
@@ -132,7 +132,7 @@ public class SeedingRulesController : ControllerBase
         await DataContext.Lock.WaitAsync();
         try
         {
-            var (existingRule, _) = await FindRuleById(id);
+            var (existingRule, _) = await SeedingRuleHelper.FindByIdAsync(_dataContext, id);
 
             if (existingRule is null)
             {
@@ -140,7 +140,7 @@ public class SeedingRulesController : ControllerBase
             }
 
             // Check for duplicate name+privacyType on the same client, excluding this rule
-            var clientRules = await GetSeedingRulesForClientId(existingRule.DownloadClientConfigId);
+            var clientRules = await SeedingRuleHelper.GetForClientIdAsync(_dataContext, existingRule.DownloadClientConfigId);
             var duplicate = clientRules.FirstOrDefault(r =>
                 r.Id != id &&
                 r.Name.Equals(ruleDto.Name.Trim(), StringComparison.OrdinalIgnoreCase) &&
@@ -194,7 +194,7 @@ public class SeedingRulesController : ControllerBase
         await DataContext.Lock.WaitAsync();
         try
         {
-            var (existingRule, _) = await FindRuleById(id);
+            var (existingRule, _) = await SeedingRuleHelper.FindByIdAsync(_dataContext, id);
 
             if (existingRule is null)
             {
@@ -351,55 +351,4 @@ public class SeedingRulesController : ControllerBase
         }
     }
 
-    private async Task<(ISeedingRule? rule, object? dbSet)> FindRuleById(Guid id)
-    {
-        var qbit = await _dataContext.QBitSeedingRules.FirstOrDefaultAsync(r => r.Id == id);
-        if (qbit is not null) return (qbit, _dataContext.QBitSeedingRules);
-
-        var deluge = await _dataContext.DelugeSeedingRules.FirstOrDefaultAsync(r => r.Id == id);
-        if (deluge is not null) return (deluge, _dataContext.DelugeSeedingRules);
-
-        var transmission = await _dataContext.TransmissionSeedingRules.FirstOrDefaultAsync(r => r.Id == id);
-        if (transmission is not null) return (transmission, _dataContext.TransmissionSeedingRules);
-
-        var utorrent = await _dataContext.UTorrentSeedingRules.FirstOrDefaultAsync(r => r.Id == id);
-        if (utorrent is not null) return (utorrent, _dataContext.UTorrentSeedingRules);
-
-        var rtorrent = await _dataContext.RTorrentSeedingRules.FirstOrDefaultAsync(r => r.Id == id);
-        if (rtorrent is not null) return (rtorrent, _dataContext.RTorrentSeedingRules);
-
-        return (null, null);
-    }
-
-    private async Task<List<ISeedingRule>> GetSeedingRulesForClient(DownloadClientConfig client)
-    {
-        return client.TypeName switch
-        {
-            DownloadClientTypeName.qBittorrent => (await _dataContext.QBitSeedingRules
-                .Where(r => r.DownloadClientConfigId == client.Id).AsNoTracking().ToListAsync()).Cast<ISeedingRule>().ToList(),
-            DownloadClientTypeName.Deluge => (await _dataContext.DelugeSeedingRules
-                .Where(r => r.DownloadClientConfigId == client.Id).AsNoTracking().ToListAsync()).Cast<ISeedingRule>().ToList(),
-            DownloadClientTypeName.Transmission => (await _dataContext.TransmissionSeedingRules
-                .Where(r => r.DownloadClientConfigId == client.Id).AsNoTracking().ToListAsync()).Cast<ISeedingRule>().ToList(),
-            DownloadClientTypeName.uTorrent => (await _dataContext.UTorrentSeedingRules
-                .Where(r => r.DownloadClientConfigId == client.Id).AsNoTracking().ToListAsync()).Cast<ISeedingRule>().ToList(),
-            DownloadClientTypeName.rTorrent => (await _dataContext.RTorrentSeedingRules
-                .Where(r => r.DownloadClientConfigId == client.Id).AsNoTracking().ToListAsync()).Cast<ISeedingRule>().ToList(),
-            _ => []
-        };
-    }
-
-    private async Task<List<ISeedingRule>> GetSeedingRulesForClientId(Guid clientId)
-    {
-        var client = await _dataContext.DownloadClients
-            .AsNoTracking()
-            .FirstOrDefaultAsync(c => c.Id == clientId);
-
-        if (client is null)
-        {
-            return [];
-        }
-
-        return await GetSeedingRulesForClient(client);
-    }
 }

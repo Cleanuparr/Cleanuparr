@@ -47,14 +47,20 @@ public sealed class DownloadCleanerConfigController : ControllerBase
                 .AsNoTracking()
                 .ToListAsync();
 
+            var allQBitRules = await _dataContext.QBitSeedingRules.AsNoTracking().ToListAsync();
+            var allDelugeRules = await _dataContext.DelugeSeedingRules.AsNoTracking().ToListAsync();
+            var allTransmissionRules = await _dataContext.TransmissionSeedingRules.AsNoTracking().ToListAsync();
+            var allUTorrentRules = await _dataContext.UTorrentSeedingRules.AsNoTracking().ToListAsync();
+            var allRTorrentRules = await _dataContext.RTorrentSeedingRules.AsNoTracking().ToListAsync();
+            var allUnlinkedConfigs = await _dataContext.UnlinkedConfigs.AsNoTracking().ToListAsync();
+
             var clients = new List<object>();
 
             foreach (var client in downloadClients)
             {
-                var seedingRules = await GetSeedingRulesForClient(client);
-                var unlinkedConfig = await _dataContext.UnlinkedConfigs
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(u => u.DownloadClientConfigId == client.Id);
+                var seedingRules = SeedingRuleHelper.FilterForClient(
+                    client, allQBitRules, allDelugeRules, allTransmissionRules, allUTorrentRules, allRTorrentRules);
+                var unlinkedConfig = allUnlinkedConfigs.FirstOrDefault(u => u.DownloadClientConfigId == client.Id);
 
                 clients.Add(new
                 {
@@ -146,24 +152,6 @@ public sealed class DownloadCleanerConfigController : ControllerBase
         {
             DataContext.Lock.Release();
         }
-    }
-
-    private async Task<List<ISeedingRule>> GetSeedingRulesForClient(DownloadClientConfig client)
-    {
-        return client.TypeName switch
-        {
-            DownloadClientTypeName.qBittorrent => (await _dataContext.QBitSeedingRules
-                .Where(r => r.DownloadClientConfigId == client.Id).AsNoTracking().ToListAsync()).Cast<ISeedingRule>().ToList(),
-            DownloadClientTypeName.Deluge => (await _dataContext.DelugeSeedingRules
-                .Where(r => r.DownloadClientConfigId == client.Id).AsNoTracking().ToListAsync()).Cast<ISeedingRule>().ToList(),
-            DownloadClientTypeName.Transmission => (await _dataContext.TransmissionSeedingRules
-                .Where(r => r.DownloadClientConfigId == client.Id).AsNoTracking().ToListAsync()).Cast<ISeedingRule>().ToList(),
-            DownloadClientTypeName.uTorrent => (await _dataContext.UTorrentSeedingRules
-                .Where(r => r.DownloadClientConfigId == client.Id).AsNoTracking().ToListAsync()).Cast<ISeedingRule>().ToList(),
-            DownloadClientTypeName.rTorrent => (await _dataContext.RTorrentSeedingRules
-                .Where(r => r.DownloadClientConfigId == client.Id).AsNoTracking().ToListAsync()).Cast<ISeedingRule>().ToList(),
-            _ => []
-        };
     }
 
     private async Task UpdateJobSchedule(IJobConfig config, JobType jobType)
