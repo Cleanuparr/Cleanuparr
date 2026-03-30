@@ -141,6 +141,15 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
     return undefined;
   });
 
+  readonly unlinkedCategoriesError = computed(() => {
+    const client = this.selectedClient();
+    if (!client?.unlinkedConfig?.enabled) return undefined;
+    if ((client.unlinkedConfig.categories ?? []).length === 0) {
+      return 'At least one category is required';
+    }
+    return undefined;
+  });
+
   readonly unlinkedDirty = computed(() => {
     const client = this.selectedClient();
     if (!client) return false;

@@ -158,10 +158,11 @@
                     [items]="client.unlinkedConfig?.categories ?? []"
                     (itemsChange)="updateUnlinkedField('categories', $event)"
                     hint="Categories to check for unlinked downloads"
+                    [error]="unlinkedCategoriesError()"
                     helpKey="download-cleaner:unlinkedCategories" />
                 }
                 <div class="form-actions">
-                  <app-button variant="primary" [glowing]="unlinkedDirty()" [loading]="unlinkedSaving()" [disabled]="unlinkedSaving() || unlinkedSaved() || !unlinkedDirty()" (clicked)="saveUnlinkedConfig()">
+                  <app-button variant="primary" [glowing]="unlinkedDirty()" [loading]="unlinkedSaving()" [disabled]="unlinkedSaving() || unlinkedSaved() || !unlinkedDirty() || !!unlinkedCategoriesError()" (clicked)="saveUnlinkedConfig()">
                     {{ unlinkedSaved() ? 'Saved!' : 'Save Unlinked Config' }}
                   </app-button>
                 </div>
