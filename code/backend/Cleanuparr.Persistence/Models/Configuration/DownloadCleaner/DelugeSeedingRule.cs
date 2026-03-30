@@ -46,7 +46,7 @@ public sealed record DelugeSeedingRule : ISeedingRule
     {
         if (string.IsNullOrEmpty(Name.Trim()))
         {
-            throw new ValidationException("Category name can not be empty");
+            throw new ValidationException("Rule name can not be empty");
         }
 
         if (MaxRatio < 0 && MaxSeedTime < 0)

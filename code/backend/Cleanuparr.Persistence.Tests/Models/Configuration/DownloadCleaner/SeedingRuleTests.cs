@@ -121,7 +121,7 @@ public sealed class QBitSeedingRuleTests
         };
 
         var exception = Should.Throw<ValidationException>(() => config.Validate());
-        exception.Message.ShouldBe("Category name can not be empty");
+        exception.Message.ShouldBe("Rule name can not be empty");
     }
 
     [Fact]
@@ -137,7 +137,7 @@ public sealed class QBitSeedingRuleTests
         };
 
         var exception = Should.Throw<ValidationException>(() => config.Validate());
-        exception.Message.ShouldBe("Category name can not be empty");
+        exception.Message.ShouldBe("Rule name can not be empty");
     }
 
     [Fact]
@@ -153,7 +153,7 @@ public sealed class QBitSeedingRuleTests
         };
 
         var exception = Should.Throw<ValidationException>(() => config.Validate());
-        exception.Message.ShouldBe("Category name can not be empty");
+        exception.Message.ShouldBe("Rule name can not be empty");
     }
 
     #endregion
