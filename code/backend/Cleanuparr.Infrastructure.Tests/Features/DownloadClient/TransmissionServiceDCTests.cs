@@ -1,5 +1,3 @@
-using Cleanuparr.Domain.Enums;
-using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.DownloadClient.Transmission;
 using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
 using Moq;
@@ -138,10 +136,10 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
                 new TransmissionItemWrapper(new TorrentInfo { HashString = "hash3", DownloadDir = "/downloads/music" })
             };
 
-            var categories = new List<SeedingRule>
+            var categories = new List<ISeedingRule>
             {
-                new SeedingRule { Name = "movies", MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true },
-                new SeedingRule { Name = "tv", MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true }
+                new TransmissionSeedingRule { Name = "movies", MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true },
+                new TransmissionSeedingRule { Name = "tv", MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true }
             };
 
             // Act
@@ -165,9 +163,9 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
                 new TransmissionItemWrapper(new TorrentInfo { HashString = "hash1", DownloadDir = "/downloads/Movies" })
             };
 
-            var categories = new List<SeedingRule>
+            var categories = new List<ISeedingRule>
             {
-                new SeedingRule { Name = "movies", MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true }
+                new TransmissionSeedingRule { Name = "movies", MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true }
             };
 
             // Act
@@ -189,9 +187,9 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
                 new TransmissionItemWrapper(new TorrentInfo { HashString = "hash1", DownloadDir = "/downloads/music" })
             };
 
-            var categories = new List<SeedingRule>
+            var categories = new List<ISeedingRule>
             {
-                new SeedingRule { Name = "movies", MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true }
+                new TransmissionSeedingRule { Name = "movies", MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true }
             };
 
             // Act
@@ -222,7 +220,7 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
             };
 
             // Act
-            var result = sut.FilterDownloadsToChangeCategoryAsync(downloads, new List<string> { "movies" });
+            var result = sut.FilterDownloadsToChangeCategoryAsync(downloads, new UnlinkedConfig { Categories = ["movies"] });
 
             // Assert
             Assert.NotNull(result);
@@ -242,7 +240,7 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
             };
 
             // Act
-            var result = sut.FilterDownloadsToChangeCategoryAsync(downloads, new List<string> { "movies" });
+            var result = sut.FilterDownloadsToChangeCategoryAsync(downloads, new UnlinkedConfig { Categories = ["movies"] });
 
             // Assert
             Assert.NotNull(result);
@@ -262,12 +260,31 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
             };
 
             // Act
-            var result = sut.FilterDownloadsToChangeCategoryAsync(downloads, new List<string> { "movies" });
+            var result = sut.FilterDownloadsToChangeCategoryAsync(downloads, new UnlinkedConfig { Categories = ["movies"] });
 
             // Assert
             Assert.NotNull(result);
             Assert.Single(result);
             Assert.Equal("hash1", result[0].Hash);
+        }
+
+        [Fact]
+        public void ReturnsEmpty_WhenNoCategoriesMatch()
+        {
+            // Arrange
+            var sut = _fixture.CreateSut();
+
+            var downloads = new List<Domain.Entities.ITorrentItemWrapper>
+            {
+                new TransmissionItemWrapper(new TorrentInfo { HashString = "hash1", DownloadDir = "/downloads/tv" })
+            };
+
+            // Act
+            var result = sut.FilterDownloadsToChangeCategoryAsync(downloads, new UnlinkedConfig { Categories = ["movies"] });
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.Empty(result);
         }
     }
 
@@ -376,15 +393,14 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
             // Arrange
             var sut = _fixture.CreateSut();
 
-            var config = new DownloadCleanerConfig
+            var unlinkedConfig = new UnlinkedConfig
             {
                 Id = Guid.NewGuid(),
-                UnlinkedTargetCategory = "unlinked"
+                TargetCategory = "unlinked"
             };
-            ContextProvider.Set(nameof(DownloadCleanerConfig), config);
 
             // Act
-            await sut.ChangeCategoryForNoHardLinksAsync(null);
+            await sut.ChangeCategoryForNoHardLinksAsync(null, unlinkedConfig);
 
             // Assert
             _fixture.ClientWrapper.Verify(x => x.TorrentSetLocationAsync(It.IsAny<long[]>(), It.IsAny<string>(), It.IsAny<bool>()), Times.Never);
@@ -396,15 +412,14 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
             // Arrange
             var sut = _fixture.CreateSut();
 
-            var config = new DownloadCleanerConfig
+            var unlinkedConfig = new UnlinkedConfig
             {
                 Id = Guid.NewGuid(),
-                UnlinkedTargetCategory = "unlinked"
+                TargetCategory = "unlinked"
             };
-            ContextProvider.Set(nameof(DownloadCleanerConfig), config);
 
             // Act
-            await sut.ChangeCategoryForNoHardLinksAsync(new List<Domain.Entities.ITorrentItemWrapper>());
+            await sut.ChangeCategoryForNoHardLinksAsync(new List<Domain.Entities.ITorrentItemWrapper>(), unlinkedConfig);
 
             // Assert
             _fixture.ClientWrapper.Verify(x => x.TorrentSetLocationAsync(It.IsAny<long[]>(), It.IsAny<string>(), It.IsAny<bool>()), Times.Never);
@@ -416,12 +431,11 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
             // Arrange
             var sut = _fixture.CreateSut();
 
-            var config = new DownloadCleanerConfig
+            var unlinkedConfig = new UnlinkedConfig
             {
                 Id = Guid.NewGuid(),
-                UnlinkedTargetCategory = "unlinked"
+                TargetCategory = "unlinked"
             };
-            ContextProvider.Set(nameof(DownloadCleanerConfig), config);
 
             var downloads = new List<Domain.Entities.ITorrentItemWrapper>
             {
@@ -429,7 +443,7 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
             };
 
             // Act
-            await sut.ChangeCategoryForNoHardLinksAsync(downloads);
+            await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert
             _fixture.ClientWrapper.Verify(x => x.TorrentSetLocationAsync(It.IsAny<long[]>(), It.IsAny<string>(), It.IsAny<bool>()), Times.Never);
@@ -441,12 +455,11 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
             // Arrange
             var sut = _fixture.CreateSut();
 
-            var config = new DownloadCleanerConfig
+            var unlinkedConfig = new UnlinkedConfig
             {
                 Id = Guid.NewGuid(),
-                UnlinkedTargetCategory = "unlinked"
+                TargetCategory = "unlinked"
             };
-            ContextProvider.Set(nameof(DownloadCleanerConfig), config);
 
             var downloads = new List<Domain.Entities.ITorrentItemWrapper>
             {
@@ -454,7 +467,7 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
             };
 
             // Act
-            await sut.ChangeCategoryForNoHardLinksAsync(downloads);
+            await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert
             _fixture.ClientWrapper.Verify(x => x.TorrentSetLocationAsync(It.IsAny<long[]>(), It.IsAny<string>(), It.IsAny<bool>()), Times.Never);
@@ -466,12 +479,11 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
             // Arrange
             var sut = _fixture.CreateSut();
 
-            var config = new DownloadCleanerConfig
+            var unlinkedConfig = new UnlinkedConfig
             {
                 Id = Guid.NewGuid(),
-                UnlinkedTargetCategory = "unlinked"
+                TargetCategory = "unlinked"
             };
-            ContextProvider.Set(nameof(DownloadCleanerConfig), config);
 
             var downloads = new List<Domain.Entities.ITorrentItemWrapper>
             {
@@ -479,7 +491,7 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
             };
 
             // Act
-            await sut.ChangeCategoryForNoHardLinksAsync(downloads);
+            await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert
             _fixture.ClientWrapper.Verify(x => x.TorrentSetLocationAsync(It.IsAny<long[]>(), It.IsAny<string>(), It.IsAny<bool>()), Times.Never);
@@ -491,12 +503,11 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
             // Arrange
             var sut = _fixture.CreateSut();
 
-            var config = new DownloadCleanerConfig
+            var unlinkedConfig = new UnlinkedConfig
             {
                 Id = Guid.NewGuid(),
-                UnlinkedTargetCategory = "unlinked"
+                TargetCategory = "unlinked"
             };
-            ContextProvider.Set(nameof(DownloadCleanerConfig), config);
 
             var downloads = new List<Domain.Entities.ITorrentItemWrapper>
             {
@@ -504,7 +515,7 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
             };
 
             // Act
-            await sut.ChangeCategoryForNoHardLinksAsync(downloads);
+            await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert
             _fixture.ClientWrapper.Verify(x => x.TorrentSetLocationAsync(It.IsAny<long[]>(), It.IsAny<string>(), It.IsAny<bool>()), Times.Never);
@@ -516,12 +527,11 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
             // Arrange
             var sut = _fixture.CreateSut();
 
-            var config = new DownloadCleanerConfig
+            var unlinkedConfig = new UnlinkedConfig
             {
                 Id = Guid.NewGuid(),
-                UnlinkedTargetCategory = "unlinked"
+                TargetCategory = "unlinked"
             };
-            ContextProvider.Set(nameof(DownloadCleanerConfig), config);
 
             var downloads = new List<Domain.Entities.ITorrentItemWrapper>
             {
@@ -536,7 +546,7 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
             };
 
             // Act
-            await sut.ChangeCategoryForNoHardLinksAsync(downloads);
+            await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert
             _fixture.ClientWrapper.Verify(x => x.TorrentSetLocationAsync(It.IsAny<long[]>(), It.IsAny<string>(), It.IsAny<bool>()), Times.Never);
@@ -548,12 +558,11 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
             // Arrange
             var sut = _fixture.CreateSut();
 
-            var config = new DownloadCleanerConfig
+            var unlinkedConfig = new UnlinkedConfig
             {
                 Id = Guid.NewGuid(),
-                UnlinkedTargetCategory = "unlinked"
+                TargetCategory = "unlinked"
             };
-            ContextProvider.Set(nameof(DownloadCleanerConfig), config);
 
             var baseDownloadDir = Path.Combine("downloads", "movies");
             var expectedNewLocation = string.Join(Path.DirectorySeparatorChar,
@@ -577,7 +586,7 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
                 .Returns(0);
 
             // Act
-            await sut.ChangeCategoryForNoHardLinksAsync(downloads);
+            await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert
             _fixture.ClientWrapper.Verify(
@@ -591,12 +600,11 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
             // Arrange
             var sut = _fixture.CreateSut();
 
-            var config = new DownloadCleanerConfig
+            var unlinkedConfig = new UnlinkedConfig
             {
                 Id = Guid.NewGuid(),
-                UnlinkedTargetCategory = "unlinked"
+                TargetCategory = "unlinked"
             };
-            ContextProvider.Set(nameof(DownloadCleanerConfig), config);
 
             var downloads = new List<Domain.Entities.ITorrentItemWrapper>
             {
@@ -616,7 +624,7 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
                 .Returns(2);
 
             // Act
-            await sut.ChangeCategoryForNoHardLinksAsync(downloads);
+            await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert
             _fixture.ClientWrapper.Verify(x => x.TorrentSetLocationAsync(It.IsAny<long[]>(), It.IsAny<string>(), It.IsAny<bool>()), Times.Never);
@@ -628,12 +636,11 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
             // Arrange
             var sut = _fixture.CreateSut();
 
-            var config = new DownloadCleanerConfig
+            var unlinkedConfig = new UnlinkedConfig
             {
                 Id = Guid.NewGuid(),
-                UnlinkedTargetCategory = "unlinked"
+                TargetCategory = "unlinked"
             };
-            ContextProvider.Set(nameof(DownloadCleanerConfig), config);
 
             var downloads = new List<Domain.Entities.ITorrentItemWrapper>
             {
@@ -653,7 +660,7 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
                 .Returns(-1);
 
             // Act
-            await sut.ChangeCategoryForNoHardLinksAsync(downloads);
+            await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert
             _fixture.ClientWrapper.Verify(x => x.TorrentSetLocationAsync(It.IsAny<long[]>(), It.IsAny<string>(), It.IsAny<bool>()), Times.Never);
@@ -665,12 +672,11 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
             // Arrange
             var sut = _fixture.CreateSut();
 
-            var config = new DownloadCleanerConfig
+            var unlinkedConfig = new UnlinkedConfig
             {
                 Id = Guid.NewGuid(),
-                UnlinkedTargetCategory = "unlinked"
+                TargetCategory = "unlinked"
             };
-            ContextProvider.Set(nameof(DownloadCleanerConfig), config);
 
             var downloads = new List<Domain.Entities.ITorrentItemWrapper>
             {
@@ -698,7 +704,7 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
                 .Returns(0);
 
             // Act
-            await sut.ChangeCategoryForNoHardLinksAsync(downloads);
+            await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert
             _fixture.HardLinkFileService.Verify(
@@ -712,12 +718,11 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
             // Arrange
             var sut = _fixture.CreateSut();
 
-            var config = new DownloadCleanerConfig
+            var unlinkedConfig = new UnlinkedConfig
             {
                 Id = Guid.NewGuid(),
-                UnlinkedTargetCategory = "unlinked"
+                TargetCategory = "unlinked"
             };
-            ContextProvider.Set(nameof(DownloadCleanerConfig), config);
 
             var baseDownloadDir = Path.Combine("downloads", "movies");
             var expectedNewLocation = string.Join(Path.DirectorySeparatorChar,
@@ -741,7 +746,7 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
                 .Returns(0);
 
             // Act
-            await sut.ChangeCategoryForNoHardLinksAsync(downloads);
+            await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert - EventPublisher is not mocked, so we just verify the method completed
             _fixture.ClientWrapper.Verify(
@@ -755,12 +760,11 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
             // Arrange
             var sut = _fixture.CreateSut();
 
-            var config = new DownloadCleanerConfig
+            var unlinkedConfig = new UnlinkedConfig
             {
                 Id = Guid.NewGuid(),
-                UnlinkedTargetCategory = "unlinked"
+                TargetCategory = "unlinked"
             };
-            ContextProvider.Set(nameof(DownloadCleanerConfig), config);
 
             var baseDownloadDir = Path.Combine("downloads", "movies", "subfolder");
             var expectedNewLocation = string.Join(Path.DirectorySeparatorChar,
@@ -784,7 +788,7 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
                 .Returns(0);
 
             // Act
-            await sut.ChangeCategoryForNoHardLinksAsync(downloads);
+            await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert
             _fixture.ClientWrapper.Verify(

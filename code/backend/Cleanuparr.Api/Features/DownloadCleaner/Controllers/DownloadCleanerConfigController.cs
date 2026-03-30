@@ -1,6 +1,4 @@
 using System.ComponentModel.DataAnnotations;
-using System.IO;
-using System.Linq;
 
 using Cleanuparr.Api.Features.DownloadCleaner.Contracts.Requests;
 using Cleanuparr.Domain.Enums;
@@ -42,10 +40,67 @@ public sealed class DownloadCleanerConfigController : ControllerBase
         try
         {
             var config = await _dataContext.DownloadCleanerConfigs
-                .Include(x => x.Categories)
                 .AsNoTracking()
                 .FirstAsync();
-            return Ok(config);
+
+            var downloadClients = await _dataContext.DownloadClients
+                .AsNoTracking()
+                .ToListAsync();
+
+            var allQBitRules = await _dataContext.QBitSeedingRules.AsNoTracking().ToListAsync();
+            var allDelugeRules = await _dataContext.DelugeSeedingRules.AsNoTracking().ToListAsync();
+            var allTransmissionRules = await _dataContext.TransmissionSeedingRules.AsNoTracking().ToListAsync();
+            var allUTorrentRules = await _dataContext.UTorrentSeedingRules.AsNoTracking().ToListAsync();
+            var allRTorrentRules = await _dataContext.RTorrentSeedingRules.AsNoTracking().ToListAsync();
+            var allUnlinkedConfigs = await _dataContext.UnlinkedConfigs.AsNoTracking().ToListAsync();
+
+            var clients = new List<object>();
+
+            foreach (var client in downloadClients)
+            {
+                var seedingRules = SeedingRuleHelper.FilterForClient(
+                    client, allQBitRules, allDelugeRules, allTransmissionRules, allUTorrentRules, allRTorrentRules);
+                var unlinkedConfig = allUnlinkedConfigs.FirstOrDefault(u => u.DownloadClientConfigId == client.Id);
+
+                clients.Add(new
+                {
+                    downloadClientId = client.Id,
+                    downloadClientName = client.Name,
+                    downloadClientEnabled = client.Enabled,
+                    downloadClientTypeName = client.TypeName,
+                    seedingRules = seedingRules.Select(r => new
+                    {
+                        id = r.Id,
+                        name = r.Name,
+                        privacyType = r.PrivacyType,
+                        maxRatio = r.MaxRatio,
+                        minSeedTime = r.MinSeedTime,
+                        maxSeedTime = r.MaxSeedTime,
+                        deleteSourceFiles = r.DeleteSourceFiles,
+                    }),
+                    unlinkedConfig = unlinkedConfig is not null
+                        ? new
+                        {
+                            enabled = unlinkedConfig.Enabled,
+                            targetCategory = unlinkedConfig.TargetCategory,
+                            useTag = unlinkedConfig.UseTag,
+                            ignoredRootDirs = unlinkedConfig.IgnoredRootDirs,
+                            categories = unlinkedConfig.Categories,
+                            downloadDirectorySource = unlinkedConfig.DownloadDirectorySource,
+                            downloadDirectoryTarget = unlinkedConfig.DownloadDirectoryTarget,
+                        }
+                        : null,
+                });
+            }
+
+            return Ok(new
+            {
+                config.Enabled,
+                config.CronExpression,
+                config.UseAdvancedScheduling,
+                config.IgnoredDownloads,
+                clients,
+            });
         }
         finally
         {
@@ -70,40 +125,13 @@ public sealed class DownloadCleanerConfigController : ControllerBase
                 CronValidationHelper.ValidateCronExpression(newConfigDto.CronExpression);
             }
 
-            // Get existing configuration
-            var oldConfig = await _dataContext.DownloadCleanerConfigs
-                .Include(x => x.Categories)
-                .FirstAsync();
+            // Update global config only
+            var oldConfig = await _dataContext.DownloadCleanerConfigs.FirstAsync();
 
             oldConfig.Enabled = newConfigDto.Enabled;
             oldConfig.CronExpression = newConfigDto.CronExpression;
             oldConfig.UseAdvancedScheduling = newConfigDto.UseAdvancedScheduling;
-            oldConfig.UnlinkedEnabled = newConfigDto.UnlinkedEnabled;
-            oldConfig.UnlinkedTargetCategory = newConfigDto.UnlinkedTargetCategory;
-            oldConfig.UnlinkedUseTag = newConfigDto.UnlinkedUseTag;
-            oldConfig.UnlinkedIgnoredRootDirs = newConfigDto.UnlinkedIgnoredRootDirs;
-            oldConfig.UnlinkedCategories = newConfigDto.UnlinkedCategories;
             oldConfig.IgnoredDownloads = newConfigDto.IgnoredDownloads;
-            oldConfig.Categories.Clear();
-
-            _dataContext.SeedingRules.RemoveRange(oldConfig.Categories);
-            _dataContext.DownloadCleanerConfigs.Update(oldConfig);
-
-            foreach (var categoryDto in newConfigDto.Categories)
-            {
-                _dataContext.SeedingRules.Add(new SeedingRule
-                {
-                    Name = categoryDto.Name,
-                    PrivacyType = categoryDto.PrivacyType,
-                    MaxRatio = categoryDto.MaxRatio,
-                    MinSeedTime = categoryDto.MinSeedTime,
-                    MaxSeedTime = categoryDto.MaxSeedTime,
-                    DeleteSourceFiles = categoryDto.DeleteSourceFiles,
-                    DownloadCleanerConfigId = oldConfig.Id
-                });
-            }
-
-            oldConfig.Validate();
 
             await _dataContext.SaveChangesAsync();
 

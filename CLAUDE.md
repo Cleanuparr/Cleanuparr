@@ -1,83 +1,122 @@
 # Cleanuparr - Claude AI Rules
 
-## 🚨 Critical Guidelines
+## Rules
 
-**READ THIS FIRST:**
-1. ⚠️ **DO NOT break existing functionality** - All features are critical and must continue to work
-2. ❓ **When in doubt, ASK** - Always clarify before implementing uncertain changes
-3. 📋 **Follow existing patterns** - Study the codebase style before making changes
-4. 🆕 **Ask before introducing new patterns** - Use current coding standards or get approval first
+1. **DO NOT break existing functionality** - All features are critical and must continue to work
+2. **When in doubt, ASK** - Don't assume, clarify with the maintainer first
+3. **Always read existing code before making changes** - Understand the current architecture and patterns
+4. **Follow existing patterns** - Study the codebase style and match it exactly
+5. **Ask before introducing new patterns** - Use current coding standards or get approval first
+6. **Prefer editing existing files over creating new ones** - Build on existing work
+7. **Flag potential gotchas or issues immediately** - Document and report anything unexpected
+8. **If unsure about an approach, ask before implementing**
 
 ## Project Overview
 
-Cleanuparr is a tool for automating the cleanup of unwanted or blocked files in Sonarr, Radarr, Lidarr, Readarr, Whisparr and supported download clients like qBittorrent, Transmission, Deluge, µTorrent and rTorrent. It provides malware protection, automated cleanup, and queue management for *arr applications.
+Cleanuparr is a tool for automating the cleanup of unwanted or blocked files in Sonarr, Radarr, Lidarr, Readarr, Whisparr and supported download clients (qBittorrent, Transmission, Deluge, uTorrent, rTorrent). It provides malware protection, automated cleanup, and queue management for *arr applications.
 
 **Key Features:**
 - Strike system for bad downloads
 - Malware detection and blocking
-- Automatic search triggering after removal
+- Automatic search triggering after removal (Seeker)
+- Missing and upgrade search
 - Orphaned download cleanup with cross-seed support
-- Support for multiple notification providers (Discord, etc.)
+- Authentication (OIDC, 2FA)
+- Notification providers (Apprise, Discord, Gotify, Notifiarr, Ntfy, Pushover, Telegram)
 
 ## Architecture & Tech Stack
 
 ### Backend
 - **.NET 10.0** (C#) with ASP.NET Core
-- **Architecture**: Clean Architecture pattern
-  - `Cleanuparr.Domain` - Domain models and business logic
+- **Architecture**: Clean Architecture with `Features/` subdirectory pattern
+  - `Cleanuparr.Api` - REST API and web host (`Features/` for endpoint groups)
   - `Cleanuparr.Application` - Application services and use cases
-  - `Cleanuparr.Infrastructure` - External integrations (*arr apps, download clients)
+  - `Cleanuparr.Domain` - Domain models (Entities, Enums, Exceptions)
+  - `Cleanuparr.Infrastructure` - External integrations (`Features/` for Arr, DownloadClient, Notifications, etc.)
   - `Cleanuparr.Persistence` - Data access with EF Core (SQLite)
-  - `Cleanuparr.Api` - REST API and web host
   - `Cleanuparr.Shared` - Shared utilities
-- **Database**: SQLite with Entity Framework Core 10.0
-  - Two separate contexts: `DataContext` and `EventsContext`
+- **Database**: SQLite with Entity Framework Core
+  - Three separate contexts: `DataContext`, `EventsContext`, `UsersContext`
 - **Key Libraries**:
   - MassTransit (messaging)
   - Quartz.NET (scheduling)
   - Serilog (logging)
   - SignalR (real-time communication)
+- **Testing**: xUnit + NSubstitute + Shouldly
+  - Always use **NSubstitute** for mocking in new tests (Moq is being phased out)
 
 ### Frontend
 - **Angular 21** with TypeScript 5.9 (standalone components, zoneless, OnPush)
-- **UI**: Custom glassmorphism design system (no external UI frameworks)
+- **UI**: Custom glassmorphism design system with 33 custom components — no external UI frameworks
 - **Icons**: @ng-icons/core + @ng-icons/tabler-icons
-- **Design System**: 3-layer SCSS (`_variables` → `_tokens` → `_themes`), dark/light themes
+- **Design System**: 3-layer SCSS (`_variables` -> `_tokens` -> `_themes`), dark/light themes
 - **State Management**: @ngrx/signals (Angular signals-based)
-- **Real-time Updates**: SignalR (@microsoft/signalr)
+- **Real-time Updates**: @microsoft/signalr 10.0.0
 - **PWA**: Service Worker support enabled
 
-### Documentation
-- **Docusaurus** (TypeScript-based static site)
-- Hosted at https://cleanuparr.github.io/Cleanuparr/
+## Project Structure
 
-### Deployment
-- **Docker** (primary distribution method)
-- Standalone executables for Windows, macOS, and Linux
-- Platform installers for Windows (.exe) and macOS (.pkg)
-
-## Development Setup
-
-### Prerequisites
-- .NET 10.0 SDK
-- Node.js 18+
-- Git
-- (Optional) Make for database migrations
-- (Optional) JetBrains Rider or Visual Studio
-
-### GitHub Packages Authentication
-Cleanuparr uses GitHub Packages for NuGet dependencies. Configure access:
-
-```bash
-dotnet nuget add source \
-  --username YOUR_GITHUB_USERNAME \
-  --password YOUR_GITHUB_PAT \
-  --store-password-in-clear-text \
-  --name Cleanuparr \
-  https://nuget.pkg.github.com/Cleanuparr/index.json
+```
+Cleanuparr/
+├── code/
+│   ├── backend/
+│   │   ├── Cleanuparr.Api/              # REST API (Features/ for endpoint groups)
+│   │   ├── Cleanuparr.Api.Tests/        # API layer tests
+│   │   ├── Cleanuparr.Application/      # Business logic layer
+│   │   ├── Cleanuparr.Domain/           # Domain models
+│   │   ├── Cleanuparr.Infrastructure/   # External integrations (Features/ subdirs)
+│   │   ├── Cleanuparr.Infrastructure.Tests/
+│   │   ├── Cleanuparr.Persistence/      # SQLite data access
+│   │   ├── Cleanuparr.Persistence.Tests/
+│   │   └── Cleanuparr.Shared/           # Shared utilities
+│   ├── frontend/                        # Angular 21 application
+│   ├── e2e/                             # Playwright E2E tests
+│   ├── Dockerfile                       # Multi-stage Docker build
+│   ├── entrypoint.sh                    # Docker entrypoint
+│   └── Makefile                         # Build & migration helpers
+├── docs/                                # Docusaurus documentation
+├── .github/workflows/                   # CI/CD pipelines
+├── blacklist                            # Default malware patterns (strict)
+├── blacklist_permissive                 # Less strict malware patterns
+├── whitelist                            # Safe file extensions
+└── whitelist_with_subtitles             # Includes subtitle formats
 ```
 
-You need a GitHub PAT with `read:packages` permission.
+## Code Standards & Conventions
+
+**IMPORTANT:** Always study existing code in the relevant area before making changes. Match the existing style exactly.
+
+### Backend (C#)
+- Follow Microsoft C# Coding Conventions
+- Use nullable reference types (`<Nullable>enable</Nullable>`)
+- Add XML documentation comments for public APIs
+- Use meaningful names - avoid abbreviations unless widely understood
+- Keep services focused - single responsibility principle
+- New integrations go under `Features/` subdirectories (e.g., `Infrastructure/Features/Arr/`)
+
+### Frontend (TypeScript/Angular)
+- All components must be **standalone** with **ChangeDetectionStrategy.OnPush**
+- Use `input()` / `output()` function APIs (not `@Input()` / `@Output()` decorators)
+- Use Angular **signals** for reactive state (`signal()`, `computed()`, `effect()`)
+- Follow the 3-layer SCSS design system (`_variables` -> `_tokens` -> `_themes`)
+- **Do not introduce external UI frameworks** (no PrimeNG, Material, Tailwind, etc.)
+- Component naming: `{feature}.component.ts`
+- Service naming: `{feature}.service.ts`
+- **Look at similar existing components before creating new ones**
+
+### Testing
+- **Backend**: xUnit + NSubstitute + Shouldly
+- Always use **NSubstitute** for mocking (Moq is being phased out)
+- Write unit tests for new features and bug fixes
+- Use descriptive test names that explain what is being tested
+- No frontend unit tests currently
+
+### Git Commit Messages
+- Use clear, descriptive messages in imperative mood
+- Examples: "Add Discord notification support", "Fix memory leak in download client polling"
+- Reference issue numbers when applicable: "Fix #123: Handle null response from Radarr API"
+
+## Development Setup
 
 ### Running the Backend
 ```bash
@@ -101,250 +140,50 @@ cd code/backend
 dotnet test
 ```
 
-### Running Documentation
-```bash
-cd docs
-npm install
-npm start
-```
-Docs run at http://localhost:3000
-
-## Project Structure
-
-```
-Cleanuparr/
-├── code/
-│   ├── backend/
-│   │   ├── Cleanuparr.Api/           # API entry point
-│   │   ├── Cleanuparr.Application/   # Business logic layer
-│   │   ├── Cleanuparr.Domain/        # Domain models
-│   │   ├── Cleanuparr.Infrastructure/ # External integrations
-│   │   ├── Cleanuparr.Persistence/   # Database & EF Core
-│   │   ├── Cleanuparr.Shared/        # Shared utilities
-│   │   └── *.Tests/                  # Unit tests
-│   ├── frontend/                     # Angular 21 application
-│   ├── ui/                           # Built frontend assets
-│   ├── Dockerfile                    # Multi-stage Docker build
-│   ├── entrypoint.sh                 # Docker entrypoint
-│   └── Makefile                      # Build & migration helpers
-├── docs/                             # Docusaurus documentation
-├── Logo/                             # Branding assets
-├── .github/workflows/                # CI/CD pipelines
-├── blacklist                         # Default malware patterns
-├── blacklist_permissive              # Alternative blacklist
-├── whitelist                         # Safe file patterns
-└── CONTRIBUTING.md                   # Contribution guidelines
-```
-
-## Code Standards & Conventions
-
-**IMPORTANT:** Always study existing code in the relevant area before making changes. Match the existing style exactly.
-
-### Backend (C#)
-- Follow [Microsoft C# Coding Conventions](https://docs.microsoft.com/dotnet/csharp/fundamentals/coding-style/coding-conventions)
-- Use nullable reference types (`<Nullable>enable</Nullable>`)
-- Add XML documentation comments for public APIs
-- Write unit tests for business logic
-- Use meaningful names - avoid abbreviations unless widely understood
-- Keep services focused - single responsibility principle
-- **Study existing service implementations before creating new ones**
-
-### Frontend (TypeScript/Angular)
-- Follow [Angular Style Guide](https://angular.io/guide/styleguide)
-- Use TypeScript strict mode
-- All components must be **standalone** (no NgModules) with **ChangeDetectionStrategy.OnPush**
-- Use `input()` / `output()` function APIs (not `@Input()` / `@Output()` decorators)
-- Use Angular **signals** for reactive state (`signal()`, `computed()`, `effect()`)
-- Follow the 3-layer SCSS design system (`_variables` → `_tokens` → `_themes`) for styling
-- Component naming: `{feature}.component.ts`
-- Service naming: `{feature}.service.ts`
-- **Look at similar existing components before creating new ones**
-
-### Testing
-- Write unit tests for new features and bug fixes
-- Use descriptive test names that explain what is being tested
-- Backend: xUnit or NUnit conventions
-- Frontend: Jasmine/Karma
-- **Test that existing functionality still works after changes**
-
-### Git Commit Messages
-- Use clear, descriptive messages in imperative mood
-- Examples: "Add Discord notification support", "Fix memory leak in download client polling"
-- Reference issue numbers when applicable: "Fix #123: Handle null response from Radarr API"
-
-### Discovering Issues
-If you encounter potential gotchas, common mistakes, or areas that need special attention during development:
-- **Flag them to the maintainer immediately**
-- Document them if confirmed
-- Consider if they should be added to this guide
-
 ## Database Migrations
 
-Cleanuparr uses two separate database contexts:
-- **DataContext**: Main application data
-- **EventsContext**: Event logging and audit trail
-
-### Creating Migrations
-From the `code` directory:
+Three separate database contexts, all commands run from the `code` directory:
 
 ```bash
-# Data migrations
+# Data migrations (DataContext)
 make migrate-data name=YourMigrationName
 
-# Events migrations
+# Events migrations (EventsContext)
 make migrate-events name=YourMigrationName
-```
 
-Example:
-```bash
-make migrate-data name=AddDownloadClientConfig
-make migrate-events name=AddStrikeEvents
+# Users migrations (UsersContext)
+make migrate-users name=YourMigrationName
 ```
 
 ## Common Development Workflows
 
 ### Adding a New *arr Application Integration
-1. Add integration in `Cleanuparr.Infrastructure/Arr/`
+1. Add integration in `Cleanuparr.Infrastructure/Features/Arr/`
 2. Update domain models in `Cleanuparr.Domain/`
 3. Create/update services in `Cleanuparr.Application/`
-4. Add API endpoints in `Cleanuparr.Api/`
+4. Add API endpoints in `Cleanuparr.Api/Features/Arr/`
 5. Update frontend in `code/frontend/src/app/`
-6. Document in `docs/docs/`
 
 ### Adding a New Download Client
-1. Add client implementation in `Cleanuparr.Infrastructure/DownloadClients/`
+1. Add client implementation in `Cleanuparr.Infrastructure/Features/DownloadClient/`
 2. Follow existing patterns (qBittorrent, Transmission, etc.)
 3. Add configuration models to `Cleanuparr.Domain/`
 4. Update API and frontend as above
 
 ### Adding a New Notification Provider
-1. Add provider in `Cleanuparr.Infrastructure/Notifications/`
+1. Add provider in `Cleanuparr.Infrastructure/Features/Notifications/`
 2. Update configuration models
 3. Add UI configuration in frontend
-4. Test with actual service
 
-## Important Files
+## Key Gotchas
 
-### Configuration Files
-- `code/backend/Cleanuparr.Api/appsettings.json` - Backend configuration
-- `code/frontend/angular.json` - Angular build configuration
-- `code/Dockerfile` - Docker multi-stage build
-- `docs/docusaurus.config.ts` - Documentation site config
-
-### CI/CD Workflows
-- `.github/workflows/test.yml` - Run tests
-- `.github/workflows/build-docker.yml` - Build Docker images
-- `.github/workflows/build-executable.yml` - Build standalone executables
-- `.github/workflows/release.yml` - Create releases
-- `.github/workflows/docs.yml` - Deploy documentation
-
-### Malware Protection
-- `blacklist` - Default malware file patterns (strict)
-- `blacklist_permissive` - Less strict patterns
-- `whitelist` - Known safe file extensions
-- `whitelist_with_subtitles` - Includes subtitle formats
-
-## Contributing Guidelines
-
-### Before Starting Work
-1. **Announce your intent** - Comment on an issue or create a new one
-2. **Wait for approval** from maintainers
-3. Fork the repository and create a feature branch
-4. Make your changes following code standards
-5. Test thoroughly (both manual and automated tests)
-6. Submit a PR with clear description and testing notes
-
-### Pull Request Requirements
-- Link to related issue
-- Clear description of changes
-- Evidence of testing
-- Updated documentation if needed
-- No breaking changes without discussion
-
-## Docker Development
-
-### Build Local Docker Image
-```bash
-cd code
-docker build \
-  --build-arg PACKAGES_USERNAME=YOUR_GITHUB_USERNAME \
-  --build-arg PACKAGES_PAT=YOUR_GITHUB_PAT \
-  -t cleanuparr:local \
-  -f Dockerfile .
-```
-
-### Multi-Architecture Build
-```bash
-docker buildx build \
-  --platform linux/amd64,linux/arm64 \
-  --build-arg PACKAGES_USERNAME=YOUR_GITHUB_USERNAME \
-  --build-arg PACKAGES_PAT=YOUR_GITHUB_PAT \
-  -t cleanuparr:local \
-  -f Dockerfile .
-```
-
-## Environment Variables
-
-When running via Docker:
-- `PORT` - API port (default: 11011)
-- `PUID` - User ID for file permissions
-- `PGID` - Group ID for file permissions
-- `TZ` - Timezone (e.g., `America/New_York`)
-
-## Security & Safety
-
-- Never commit sensitive data (API keys, tokens, passwords)
-- All *arr and download client credentials are stored encrypted
-- The malware detection system uses pattern matching on file extensions and names
-- Always validate user input on both frontend and backend
-- Follow OWASP guidelines for web application security
-
-## Additional Resources
-
-- **Documentation**: https://cleanuparr.github.io/Cleanuparr/
-- **Discord**: https://discord.gg/SCtMCgtsc4
-- **GitHub Issues**: https://github.com/Cleanuparr/Cleanuparr/issues
-- **Releases**: https://github.com/Cleanuparr/Cleanuparr/releases
-
-## Working with Claude - IMPORTANT
-
-### Core Principles
-1. **When in doubt, ASK** - Don't assume, clarify with the maintainer first
-2. **Don't break existing functionality** - Everything is important and needs to work
-3. **Follow existing coding style** - Study the codebase patterns before making changes
-4. **Use current coding standards** - If you want to introduce something new, ask first
-
-### When Modifying Code
-- **ALWAYS read existing files before suggesting changes**
-- Understand the current architecture and patterns
-- Prefer editing existing files over creating new ones
-- Follow the established conventions in the codebase exactly
-- Test changes locally when possible
-- **If you're unsure about an approach, ask before implementing**
-
-### When Adding Features
-- Review similar existing features first to understand patterns
-- Maintain consistency with existing UI/UX patterns
-- Update both backend and frontend together
-- Add/update documentation
-- Consider backwards compatibility
-- **Ask about architectural decisions before implementing new patterns**
-
-### When Fixing Bugs
-- Understand the root cause before proposing a fix
-- **Be careful not to break other functionality** - test related areas
-- Add tests to prevent regression
-- Update relevant documentation if behavior changes
-- Consider if other parts of the codebase might have similar issues
-- **Flag any potential gotchas or issues you discover**
-
-## Notes
-
+- **Custom glassmorphism design system** - Do not introduce external UI frameworks (no PrimeNG, Material, Tailwind)
+- **All frontend components** must be standalone with OnPush change detection
+- **Database migrations** require awareness of all three contexts (Data, Events, Users)
+- **Malware blocker** is a critical security feature - changes require careful testing
+- **Cross-seed integration** allows keeping torrents that are actively seeding
+- **Real-time updates** use SignalR - maintain websocket patterns when adding features
+- Use `@ng-icons/core` + `@ng-icons/tabler-icons` for icons (NOT `angular-tabler-icons` which doesn't support Angular 21)
+- **Sidebar** stays dark purple in both themes - uses sidebar-specific CSS variables
 - The project uses **Clean Architecture** - respect layer boundaries
-- Database migrations require both contexts - don't forget EventsContext
-- Frontend uses a **custom glassmorphism design system** - don't introduce external UI frameworks (no PrimeNG, Material, etc.)
-- All frontend components are **standalone** with **OnPush** change detection
-- All downloads from *arr apps are processed through a **strike system**
-- The malware blocker is a critical security feature - changes require careful testing
-- Cross-seed integration allows keeping torrents that are actively seeding
-- Real-time updates use **SignalR** - maintain websocket patterns when adding features
+- **Settings dirty tracking** uses JSON snapshot comparison (`buildSnapshot()` + `hasPendingChanges()`)

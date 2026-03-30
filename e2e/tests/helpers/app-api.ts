@@ -152,6 +152,92 @@ export async function getCfScoreStats(accessToken: string): Promise<Response> {
   });
 }
 
+// --- Download Cleaner API helpers ---
+
+export async function getDownloadCleanerConfig(accessToken: string): Promise<Response> {
+  return fetch(`${API}/api/configuration/download_cleaner`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+}
+
+export async function updateDownloadCleanerConfig(
+  accessToken: string,
+  config: Record<string, unknown>,
+): Promise<Response> {
+  return fetch(`${API}/api/configuration/download_cleaner`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify(config),
+  });
+}
+
+export async function getSeedingRules(accessToken: string, downloadClientId: string): Promise<Response> {
+  return fetch(`${API}/api/seeding-rules/${downloadClientId}`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+}
+
+export async function createSeedingRule(
+  accessToken: string,
+  downloadClientId: string,
+  rule: Record<string, unknown>,
+): Promise<Response> {
+  return fetch(`${API}/api/seeding-rules/${downloadClientId}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify(rule),
+  });
+}
+
+export async function updateSeedingRule(
+  accessToken: string,
+  ruleId: string,
+  rule: Record<string, unknown>,
+): Promise<Response> {
+  return fetch(`${API}/api/seeding-rules/${ruleId}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify(rule),
+  });
+}
+
+export async function deleteSeedingRule(accessToken: string, ruleId: string): Promise<Response> {
+  return fetch(`${API}/api/seeding-rules/${ruleId}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+}
+
+export async function getUnlinkedConfig(accessToken: string, downloadClientId: string): Promise<Response> {
+  return fetch(`${API}/api/unlinked-config/${downloadClientId}`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+}
+
+export async function updateUnlinkedConfig(
+  accessToken: string,
+  downloadClientId: string,
+  config: Record<string, unknown>,
+): Promise<Response> {
+  return fetch(`${API}/api/unlinked-config/${downloadClientId}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify(config),
+  });
+}
+
 export async function configureOidc(accessToken: string): Promise<void> {
   const putRes = await fetch(`${API}/api/account/oidc`, {
     method: 'PUT',

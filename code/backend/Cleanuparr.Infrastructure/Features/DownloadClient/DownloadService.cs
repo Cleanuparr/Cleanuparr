@@ -70,13 +70,13 @@ public abstract class DownloadService : IDownloadService
     public abstract Task<List<ITorrentItemWrapper>> GetSeedingDownloads();
 
     /// <inheritdoc/>
-    public abstract List<ITorrentItemWrapper>? FilterDownloadsToBeCleanedAsync(List<ITorrentItemWrapper>? downloads, List<SeedingRule> seedingRules);
+    public abstract List<ITorrentItemWrapper>? FilterDownloadsToBeCleanedAsync(List<ITorrentItemWrapper>? downloads, List<ISeedingRule> seedingRules);
 
     /// <inheritdoc/>
-    public abstract List<ITorrentItemWrapper>? FilterDownloadsToChangeCategoryAsync(List<ITorrentItemWrapper>? downloads, List<string> categories);
+    public abstract List<ITorrentItemWrapper>? FilterDownloadsToChangeCategoryAsync(List<ITorrentItemWrapper>? downloads, UnlinkedConfig unlinkedConfig);
 
     /// <inheritdoc/>
-    public virtual async Task CleanDownloadsAsync(List<ITorrentItemWrapper>? downloads, List<SeedingRule> seedingRules)
+    public virtual async Task CleanDownloadsAsync(List<ITorrentItemWrapper>? downloads, List<ISeedingRule> seedingRules)
     {
         if (downloads?.Count is null or 0)
         {
@@ -90,7 +90,7 @@ public abstract class DownloadService : IDownloadService
                 continue;
             }
 
-            SeedingRule? category = seedingRules
+            ISeedingRule? category = seedingRules
                 .FirstOrDefault(x =>
                     (torrent.Category ?? string.Empty).Equals(x.Name, StringComparison.InvariantCultureIgnoreCase) &&
                     x.PrivacyType switch
@@ -135,7 +135,7 @@ public abstract class DownloadService : IDownloadService
     }
 
     /// <inheritdoc/>
-    public abstract Task ChangeCategoryForNoHardLinksAsync(List<ITorrentItemWrapper>? downloads);
+    public abstract Task ChangeCategoryForNoHardLinksAsync(List<ITorrentItemWrapper>? downloads, UnlinkedConfig unlinkedConfig);
 
     /// <inheritdoc/>
     public abstract Task CreateCategoryAsync(string name);
@@ -151,7 +151,7 @@ public abstract class DownloadService : IDownloadService
     /// <param name="deleteSourceFiles">Whether to delete the source files along with the torrent</param>
     public abstract Task DeleteDownload(ITorrentItemWrapper torrent, bool deleteSourceFiles);
     
-    protected SeedingCheckResult ShouldCleanDownload(double ratio, TimeSpan seedingTime, SeedingRule category)
+    protected SeedingCheckResult ShouldCleanDownload(double ratio, TimeSpan seedingTime, ISeedingRule category)
     {
         // check ratio
         if (DownloadReachedRatio(ratio, seedingTime, category))
@@ -196,7 +196,7 @@ public abstract class DownloadService : IDownloadService
         return parts.Length > 0 ? Path.Combine(root, parts[0]) : root;
     }
     
-    private bool DownloadReachedRatio(double ratio, TimeSpan seedingTime, SeedingRule category)
+    private bool DownloadReachedRatio(double ratio, TimeSpan seedingTime, ISeedingRule category)
     {
         if (category.MaxRatio < 0)
         {
@@ -222,7 +222,7 @@ public abstract class DownloadService : IDownloadService
         return true;
     }
     
-    private bool DownloadReachedMaxSeedTime(TimeSpan seedingTime, SeedingRule category)
+    private bool DownloadReachedMaxSeedTime(TimeSpan seedingTime, ISeedingRule category)
     {
         if (category.MaxSeedTime < 0)
         {

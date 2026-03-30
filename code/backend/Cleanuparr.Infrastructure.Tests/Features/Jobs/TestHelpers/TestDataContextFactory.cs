@@ -88,11 +88,7 @@ public static class TestDataContextFactory
         context.DownloadCleanerConfigs.Add(new DownloadCleanerConfig
         {
             Id = Guid.NewGuid(),
-            IgnoredDownloads = [],
-            Categories = [],
-            UnlinkedEnabled = false,
-            UnlinkedTargetCategory = "",
-            UnlinkedCategories = []
+            IgnoredDownloads = []
         });
 
         // Seeker config
@@ -315,9 +311,9 @@ public static class TestDataContextFactory
     }
 
     /// <summary>
-    /// Adds a clean category to the download cleaner config
+    /// Adds a seeding rule to a download client
     /// </summary>
-    public static SeedingRule AddSeedingRule(
+    public static QBitSeedingRule AddSeedingRule(
         DataContext context,
         string name = "completed",
         double maxRatio = 1.0,
@@ -325,8 +321,8 @@ public static class TestDataContextFactory
         double maxSeedTime = -1,
         TorrentPrivacyType privacyType = TorrentPrivacyType.Both)
     {
-        var config = context.DownloadCleanerConfigs.Include(x => x.Categories).First();
-        var category = new SeedingRule
+        var downloadClient = context.DownloadClients.First();
+        var rule = new QBitSeedingRule
         {
             Id = Guid.NewGuid(),
             Name = name,
@@ -335,13 +331,39 @@ public static class TestDataContextFactory
             MaxSeedTime = maxSeedTime,
             PrivacyType = privacyType,
             DeleteSourceFiles = true,
-            DownloadCleanerConfigId = config.Id
+            DownloadClientConfigId = downloadClient.Id
         };
 
-        config.Categories.Add(category);
-        context.SeedingRules.Add(category);
+        context.QBitSeedingRules.Add(rule);
         context.SaveChanges();
 
-        return category;
+        return rule;
+    }
+
+    /// <summary>
+    /// Adds an unlinked config for a download client
+    /// </summary>
+    public static UnlinkedConfig AddUnlinkedConfig(
+        DataContext context,
+        bool enabled = true,
+        string targetCategory = "unlinked",
+        List<string>? categories = null,
+        List<string>? ignoredRootDirs = null)
+    {
+        var downloadClient = context.DownloadClients.First();
+        var config = new UnlinkedConfig
+        {
+            Id = Guid.NewGuid(),
+            DownloadClientConfigId = downloadClient.Id,
+            Enabled = enabled,
+            TargetCategory = targetCategory,
+            Categories = categories ?? ["completed"],
+            IgnoredRootDirs = ignoredRootDirs ?? []
+        };
+
+        context.UnlinkedConfigs.Add(config);
+        context.SaveChanges();
+
+        return config;
     }
 }

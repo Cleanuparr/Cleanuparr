@@ -28,7 +28,6 @@ These settings need a download client to be configured.
 
 <ConfigSection
   title="Enable Download Cleaner"
-  icon="🔄"
 >
 
 When enabled, the Download Cleaner will run according to the configured schedule to automatically clean completed downloads from your download client.
@@ -37,7 +36,6 @@ When enabled, the Download Cleaner will run according to the configured schedule
 
 <ConfigSection
   title="Scheduling Mode"
-  icon="📅"
 >
 
 Choose how to configure the Download Cleaner schedule:
@@ -48,7 +46,6 @@ Choose how to configure the Download Cleaner schedule:
 
 <ConfigSection
   title="Cron Expression"
-  icon="⏲️"
 >
 
 Enter a valid Quartz.NET cron expression to control when the Download Cleaner runs. The example above runs every hour.
@@ -62,7 +59,6 @@ Enter a valid Quartz.NET cron expression to control when the Download Cleaner ru
 
 <ConfigSection
   title="Ignored Downloads"
-  icon="🚫"
 >
 
 Downloads matching these patterns will be ignored by Download Cleaner. Patterns can match any of these:
@@ -87,7 +83,7 @@ mytracker.com
 
 <div className={styles.section}>
 
-<SectionTitle icon="📏">Seeding Rules</SectionTitle>
+<SectionTitle>Seeding Rules</SectionTitle>
 
 <p className={styles.sectionDescription}>
   Categories define the cleanup rules for different types of downloads. Each category specifies when downloads should be removed based on ratio and time limits.
@@ -103,7 +99,6 @@ Both Max Ratio and Max Seed Time cannot be disabled (-1) at the same time. At le
 
 <ConfigSection
   title="Category Name"
-  icon="🏷️"
 >
 
 The name of the download client category to apply these rules to. Must match the category name exactly as configured in your download client.
@@ -117,7 +112,6 @@ The name of the download client category to apply these rules to. Must match the
 
 <ConfigSection
   title="Privacy Type"
-  icon="🔒"
 >
 
 Controls which torrent types this rule applies to:
@@ -135,7 +129,6 @@ Setting privacy type to `Private` or `Both` means private torrents matching this
 
 <ConfigSection
   title="Max Ratio"
-  icon="📊"
 >
 
 Maximum ratio to seed before considering the download for removal. Set to `-1` to disable ratio-based cleanup.
@@ -144,7 +137,6 @@ Maximum ratio to seed before considering the download for removal. Set to `-1` t
 
 <ConfigSection
   title="Min Seed Time"
-  icon="⏰"
 >
 
 Minimum time in hours to seed before removing a download that has reached the max ratio. Set to `0` to disable minimum time requirements.
@@ -153,7 +145,6 @@ Minimum time in hours to seed before removing a download that has reached the ma
 
 <ConfigSection
   title="Max Seed Time"
-  icon="⏳"
 >
 
 Maximum time in hours to seed before removing a download regardless of ratio. Set to `-1` to disable time-based cleanup.
@@ -162,7 +153,6 @@ Maximum time in hours to seed before removing a download regardless of ratio. Se
 
 <ConfigSection
   title="Delete Source Files"
-  icon="🗑️"
 >
 
 When enabled, the source files will be deleted from disk when the download is removed from the download client. When disabled, only the torrent entry is removed while preserving the underlying files.
@@ -173,7 +163,7 @@ When enabled, the source files will be deleted from disk when the download is re
 
 <div className={styles.section}>
 
-<SectionTitle icon="🔗">Unlinked Download Settings</SectionTitle>
+<SectionTitle>Unlinked Download Settings</SectionTitle>
 
 <p className={styles.sectionDescription}>
   Settings for managing downloads that no longer have hardlinks to media files (indicating they may no longer be needed by the *arr applications).
@@ -181,7 +171,6 @@ When enabled, the source files will be deleted from disk when the download is re
 
 <ConfigSection
   title="Enable Unlinked Download Handling"
-  icon="🔍"
 >
 
 Enable management of downloads that have no hardlinks remaining. This helps identify downloads that are no longer needed by your *arr applications.
@@ -194,16 +183,14 @@ If you are using Docker, make sure to mount the downloads directory the same way
 
 <ConfigSection
   title="Target Category"
-  icon="🎯"
 >
 
-Category to move unlinked downloads to.
+Category to move unlinked downloads to. You must create a seeding rule for this category if you want the downloads to eventually be removed.
 
 </ConfigSection>
 
 <ConfigSection
   title="Use Tag"
-  icon="🏷️"
 >
 
 When enabled, uses a tag instead of category for marking unlinked downloads (qBittorrent only).
@@ -211,11 +198,56 @@ When enabled, uses a tag instead of category for marking unlinked downloads (qBi
 </ConfigSection>
 
 <ConfigSection
-  title="Ignored Root Directory"
-  icon="📁"
+  title="Download Directory (Source) and Local Directory (Target)"
 >
 
-Root directory to ignore when checking for unlinked downloads. Useful for cross-seed setups where you want to ignore hardlinks (even though a movie is not in Radarr anymore, it can have hardlinks from cross-seed).
+The path prefix as reported by the download client (e.g. `/downloads`). Used for path mapping when the download client's internal paths differ from the paths accessible to Cleanuparr — common in Docker setups where volume mount paths differ between containers. Leave blank if no path translation is needed.
+
+<br/>
+
+**Docker example:**
+
+In a typical Docker Compose setup, each container has its own view of the filesystem. Download clients may each have their own host directory but both report paths starting with `/downloads`. Since Cleanuparr mounts those directories under different paths, you need to configure the mapping per client so Cleanuparr can locate the actual files.
+
+```yaml
+services:
+  qbittorrent:
+    image: ...
+    ...
+    volumes:
+      - /host/data/downloads-qbit:/downloads        # qBittorrent sees /downloads
+
+  deluge:
+    image: ...
+    ...
+    volumes:
+      - /host/data/downloads-deluge:/downloads      # Deluge sees /downloads
+
+  cleanuparr:
+    image: ghcr.io/cleanuparr/cleanuparr
+    ...
+    volumes:
+      - /host/data/downloads-qbit:/downloads-qbit   # Cleanuparr sees /downloads-qbit
+      - /host/data/downloads-qbit:/downloads-deluge # Cleanuparr sees /downloads-deluge
+```
+
+Both download clients store files in separate host directories but report paths under the same `/downloads` prefix. Cleanuparr mounts each host directory under a different path, so it needs to know the translation per client:
+
+- **qBittorrent** reports `/downloads/movie.mkv` while Cleanuparr finds it at `/downloads-qbit/movie.mkv`
+  - Download Directory (Source): `/downloads`
+  - Local Directory (Target): `/downloads-qbit`
+
+- **Deluge** reports `/downloads/movie.mkv` while Cleanuparr finds it at `/downloads-deluge/movie.mkv`
+  - Download Directory (Source): `/downloads`
+  - Local Directory (Target): `/downloads-deluge`
+
+</ConfigSection>
+
+<ConfigSection
+  title="Ignored Root Directory"
+>
+
+Root directories to ignore when checking for unlinked downloads. Multiple paths can be added. Useful for cross-seed setups where you want to ignore hardlinks (even though a movie is not in Radarr anymore, it can have hardlinks from cross-seed).
 
 ```
 /data
@@ -232,7 +264,6 @@ For the example above, the ignored root directory should be set to `/data/downlo
 
 <ConfigSection
   title="Unlinked Categories"
-  icon="📋"
 >
 
 Categories to check for unlinked downloads. Only downloads in these categories will be checked for missing hardlinks.

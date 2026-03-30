@@ -313,7 +313,7 @@ public class DownloadCleanerTests : IDisposable
         mockDownloadService
             .Setup(x => x.FilterDownloadsToBeCleanedAsync(
                 It.IsAny<List<ITorrentItemWrapper>>(),
-                It.IsAny<List<SeedingRule>>()
+                It.IsAny<List<ISeedingRule>>()
             ))
             .Returns([]);
 
@@ -358,14 +358,9 @@ public class DownloadCleanerTests : IDisposable
     public async Task ChangeUnlinkedCategoriesAsync_WhenIgnoredRootDirsConfigured_PopulatesFileCountsOnce()
     {
         // Arrange
-        var downloadCleanerConfig = _fixture.DataContext.DownloadCleanerConfigs.First();
-        downloadCleanerConfig.UnlinkedEnabled = true;
-        downloadCleanerConfig.UnlinkedTargetCategory = "unlinked";
-        downloadCleanerConfig.UnlinkedCategories = ["completed"];
-        downloadCleanerConfig.UnlinkedIgnoredRootDirs = ["/media/library"];
-        _fixture.DataContext.SaveChanges();
-
         TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
+        TestDataContextFactory.AddUnlinkedConfig(_fixture.DataContext,
+            ignoredRootDirs: ["/media/library"]);
 
         var mockTorrent = new Mock<ITorrentItemWrapper>();
         mockTorrent.Setup(x => x.Hash).Returns("test-hash");
@@ -373,21 +368,23 @@ public class DownloadCleanerTests : IDisposable
         mockTorrent.Setup(x => x.IsIgnored(It.IsAny<List<string>>())).Returns(false);
         mockTorrent.Setup(x => x.Category).Returns("completed");
 
+        var dbClient = _fixture.DataContext.DownloadClients.First();
         var mockDownloadService = _fixture.CreateMockDownloadService();
+        mockDownloadService.Setup(x => x.ClientConfig).Returns(dbClient);
         mockDownloadService
             .Setup(x => x.GetSeedingDownloads())
             .ReturnsAsync([mockTorrent.Object]);
         mockDownloadService
             .Setup(x => x.FilterDownloadsToChangeCategoryAsync(
                 It.IsAny<List<ITorrentItemWrapper>>(),
-                It.IsAny<List<string>>()
+                It.IsAny<UnlinkedConfig>()
             ))
             .Returns([mockTorrent.Object]);
         mockDownloadService
             .Setup(x => x.CreateCategoryAsync(It.IsAny<string>()))
             .Returns(Task.CompletedTask);
         mockDownloadService
-            .Setup(x => x.ChangeCategoryForNoHardLinksAsync(It.IsAny<List<ITorrentItemWrapper>>()))
+            .Setup(x => x.ChangeCategoryForNoHardLinksAsync(It.IsAny<List<ITorrentItemWrapper>>(), It.IsAny<UnlinkedConfig>()))
             .Returns(Task.CompletedTask);
 
         _fixture.DownloadServiceFactory
@@ -410,14 +407,9 @@ public class DownloadCleanerTests : IDisposable
     public async Task ChangeUnlinkedCategoriesAsync_WhenNoIgnoredRootDirsConfigured_DoesNotPopulateFileCounts()
     {
         // Arrange
-        var downloadCleanerConfig = _fixture.DataContext.DownloadCleanerConfigs.First();
-        downloadCleanerConfig.UnlinkedEnabled = true;
-        downloadCleanerConfig.UnlinkedTargetCategory = "unlinked";
-        downloadCleanerConfig.UnlinkedCategories = ["completed"];
-        downloadCleanerConfig.UnlinkedIgnoredRootDirs = []; // Empty list
-        _fixture.DataContext.SaveChanges();
-
         TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
+        TestDataContextFactory.AddUnlinkedConfig(_fixture.DataContext,
+            ignoredRootDirs: []);
 
         var mockTorrent = new Mock<ITorrentItemWrapper>();
         mockTorrent.Setup(x => x.Hash).Returns("test-hash");
@@ -425,21 +417,23 @@ public class DownloadCleanerTests : IDisposable
         mockTorrent.Setup(x => x.IsIgnored(It.IsAny<List<string>>())).Returns(false);
         mockTorrent.Setup(x => x.Category).Returns("completed");
 
+        var dbClient = _fixture.DataContext.DownloadClients.First();
         var mockDownloadService = _fixture.CreateMockDownloadService();
+        mockDownloadService.Setup(x => x.ClientConfig).Returns(dbClient);
         mockDownloadService
             .Setup(x => x.GetSeedingDownloads())
             .ReturnsAsync([mockTorrent.Object]);
         mockDownloadService
             .Setup(x => x.FilterDownloadsToChangeCategoryAsync(
                 It.IsAny<List<ITorrentItemWrapper>>(),
-                It.IsAny<List<string>>()
+                It.IsAny<UnlinkedConfig>()
             ))
             .Returns([mockTorrent.Object]);
         mockDownloadService
             .Setup(x => x.CreateCategoryAsync(It.IsAny<string>()))
             .Returns(Task.CompletedTask);
         mockDownloadService
-            .Setup(x => x.ChangeCategoryForNoHardLinksAsync(It.IsAny<List<ITorrentItemWrapper>>()))
+            .Setup(x => x.ChangeCategoryForNoHardLinksAsync(It.IsAny<List<ITorrentItemWrapper>>(), It.IsAny<UnlinkedConfig>()))
             .Returns(Task.CompletedTask);
 
         _fixture.DownloadServiceFactory
@@ -459,18 +453,27 @@ public class DownloadCleanerTests : IDisposable
     }
 
     [Fact]
-    public async Task ChangeUnlinkedCategoriesAsync_WithMultipleDownloadClients_PopulatesFileCountsOnlyOnce()
+    public async Task ChangeUnlinkedCategoriesAsync_WithMultipleDownloadClients_PopulatesFileCountsPerClient()
     {
         // Arrange
-        var downloadCleanerConfig = _fixture.DataContext.DownloadCleanerConfigs.First();
-        downloadCleanerConfig.UnlinkedEnabled = true;
-        downloadCleanerConfig.UnlinkedTargetCategory = "unlinked";
-        downloadCleanerConfig.UnlinkedCategories = ["completed"];
-        downloadCleanerConfig.UnlinkedIgnoredRootDirs = ["/media/library"];
-        _fixture.DataContext.SaveChanges();
-
         TestDataContextFactory.AddDownloadClient(_fixture.DataContext, "Client 1");
         TestDataContextFactory.AddDownloadClient(_fixture.DataContext, "Client 2");
+
+        // Add unlinked config for each client
+        var clients = _fixture.DataContext.DownloadClients.ToList();
+        foreach (var client in clients)
+        {
+            _fixture.DataContext.UnlinkedConfigs.Add(new UnlinkedConfig
+            {
+                Id = Guid.NewGuid(),
+                DownloadClientConfigId = client.Id,
+                Enabled = true,
+                TargetCategory = "unlinked",
+                Categories = ["completed"],
+                IgnoredRootDirs = ["/media/library"]
+            });
+        }
+        _fixture.DataContext.SaveChanges();
 
         var mockTorrent1 = new Mock<ITorrentItemWrapper>();
         mockTorrent1.Setup(x => x.Hash).Returns("test-hash-1");
@@ -485,37 +488,39 @@ public class DownloadCleanerTests : IDisposable
         mockTorrent2.Setup(x => x.Category).Returns("completed");
 
         var mockDownloadService1 = _fixture.CreateMockDownloadService("Client 1");
+        mockDownloadService1.Setup(x => x.ClientConfig).Returns(clients[0]);
         mockDownloadService1
             .Setup(x => x.GetSeedingDownloads())
             .ReturnsAsync([mockTorrent1.Object]);
         mockDownloadService1
             .Setup(x => x.FilterDownloadsToChangeCategoryAsync(
                 It.IsAny<List<ITorrentItemWrapper>>(),
-                It.IsAny<List<string>>()
+                It.IsAny<UnlinkedConfig>()
             ))
             .Returns([mockTorrent1.Object]);
         mockDownloadService1
             .Setup(x => x.CreateCategoryAsync(It.IsAny<string>()))
             .Returns(Task.CompletedTask);
         mockDownloadService1
-            .Setup(x => x.ChangeCategoryForNoHardLinksAsync(It.IsAny<List<ITorrentItemWrapper>>()))
+            .Setup(x => x.ChangeCategoryForNoHardLinksAsync(It.IsAny<List<ITorrentItemWrapper>>(), It.IsAny<UnlinkedConfig>()))
             .Returns(Task.CompletedTask);
 
         var mockDownloadService2 = _fixture.CreateMockDownloadService("Client 2");
+        mockDownloadService2.Setup(x => x.ClientConfig).Returns(clients[1]);
         mockDownloadService2
             .Setup(x => x.GetSeedingDownloads())
             .ReturnsAsync([mockTorrent2.Object]);
         mockDownloadService2
             .Setup(x => x.FilterDownloadsToChangeCategoryAsync(
                 It.IsAny<List<ITorrentItemWrapper>>(),
-                It.IsAny<List<string>>()
+                It.IsAny<UnlinkedConfig>()
             ))
             .Returns([mockTorrent2.Object]);
         mockDownloadService2
             .Setup(x => x.CreateCategoryAsync(It.IsAny<string>()))
             .Returns(Task.CompletedTask);
         mockDownloadService2
-            .Setup(x => x.ChangeCategoryForNoHardLinksAsync(It.IsAny<List<ITorrentItemWrapper>>()))
+            .Setup(x => x.ChangeCategoryForNoHardLinksAsync(It.IsAny<List<ITorrentItemWrapper>>(), It.IsAny<UnlinkedConfig>()))
             .Returns(Task.CompletedTask);
 
         var callCount = 0;
@@ -532,19 +537,19 @@ public class DownloadCleanerTests : IDisposable
         // Act
         await ExecuteWithTimeAdvance(sut);
 
-        // Assert - PopulateFileCounts should be called exactly once, not once per client
+        // Assert - PopulateFileCounts is called once per client with ignored root dirs
         _fixture.HardLinkFileService.Verify(
             x => x.PopulateFileCounts(It.IsAny<IEnumerable<string>>()),
-            Times.Once
+            Times.Exactly(2)
         );
 
         // Verify both clients had their ChangeCategoryForNoHardLinksAsync called
         mockDownloadService1.Verify(
-            x => x.ChangeCategoryForNoHardLinksAsync(It.IsAny<List<ITorrentItemWrapper>>()),
+            x => x.ChangeCategoryForNoHardLinksAsync(It.IsAny<List<ITorrentItemWrapper>>(), It.IsAny<UnlinkedConfig>()),
             Times.Once
         );
         mockDownloadService2.Verify(
-            x => x.ChangeCategoryForNoHardLinksAsync(It.IsAny<List<ITorrentItemWrapper>>()),
+            x => x.ChangeCategoryForNoHardLinksAsync(It.IsAny<List<ITorrentItemWrapper>>(), It.IsAny<UnlinkedConfig>()),
             Times.Once
         );
     }
@@ -553,13 +558,8 @@ public class DownloadCleanerTests : IDisposable
     public async Task ExecuteInternalAsync_WhenUnlinkedEnabled_EvaluatesDownloadsForHardlinks()
     {
         // Arrange
-        var downloadCleanerConfig = _fixture.DataContext.DownloadCleanerConfigs.First();
-        downloadCleanerConfig.UnlinkedEnabled = true;
-        downloadCleanerConfig.UnlinkedTargetCategory = "unlinked";
-        downloadCleanerConfig.UnlinkedCategories = ["completed"];
-        _fixture.DataContext.SaveChanges();
-
         TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
+        TestDataContextFactory.AddUnlinkedConfig(_fixture.DataContext);
 
         var mockTorrent = new Mock<ITorrentItemWrapper>();
         mockTorrent.Setup(x => x.Hash).Returns("test-hash");
@@ -567,21 +567,23 @@ public class DownloadCleanerTests : IDisposable
         mockTorrent.Setup(x => x.IsIgnored(It.IsAny<List<string>>())).Returns(false);
         mockTorrent.Setup(x => x.Category).Returns("completed");
 
+        var dbClient = _fixture.DataContext.DownloadClients.First();
         var mockDownloadService = _fixture.CreateMockDownloadService();
+        mockDownloadService.Setup(x => x.ClientConfig).Returns(dbClient);
         mockDownloadService
             .Setup(x => x.GetSeedingDownloads())
             .ReturnsAsync([mockTorrent.Object]);
         mockDownloadService
             .Setup(x => x.FilterDownloadsToChangeCategoryAsync(
                 It.IsAny<List<ITorrentItemWrapper>>(),
-                It.IsAny<List<string>>()
+                It.IsAny<UnlinkedConfig>()
             ))
             .Returns([mockTorrent.Object]);
         mockDownloadService
             .Setup(x => x.CreateCategoryAsync(It.IsAny<string>()))
             .Returns(Task.CompletedTask);
         mockDownloadService
-            .Setup(x => x.ChangeCategoryForNoHardLinksAsync(It.IsAny<List<ITorrentItemWrapper>>()))
+            .Setup(x => x.ChangeCategoryForNoHardLinksAsync(It.IsAny<List<ITorrentItemWrapper>>(), It.IsAny<UnlinkedConfig>()))
             .Returns(Task.CompletedTask);
 
         _fixture.DownloadServiceFactory
@@ -623,20 +625,22 @@ public class DownloadCleanerTests : IDisposable
         mockTorrent.Setup(x => x.IsIgnored(It.IsAny<List<string>>())).Returns(false);
         mockTorrent.Setup(x => x.Category).Returns("completed");
 
+        var dbClient = _fixture.DataContext.DownloadClients.First();
         var mockDownloadService = _fixture.CreateMockDownloadService();
+        mockDownloadService.Setup(x => x.ClientConfig).Returns(dbClient);
         mockDownloadService
             .Setup(x => x.GetSeedingDownloads())
             .ReturnsAsync([mockTorrent.Object]);
         mockDownloadService
             .Setup(x => x.FilterDownloadsToBeCleanedAsync(
                 It.IsAny<List<ITorrentItemWrapper>>(),
-                It.IsAny<List<SeedingRule>>()
+                It.IsAny<List<ISeedingRule>>()
             ))
             .Returns([mockTorrent.Object]);
         mockDownloadService
             .Setup(x => x.CleanDownloadsAsync(
                 It.IsAny<List<ITorrentItemWrapper>>(),
-                It.IsAny<List<SeedingRule>>()
+                It.IsAny<List<ISeedingRule>>()
             ))
             .Returns(Task.CompletedTask);
 
@@ -688,7 +692,7 @@ public class DownloadCleanerTests : IDisposable
         mockDownloadService
             .Setup(x => x.FilterDownloadsToBeCleanedAsync(
                 It.IsAny<List<ITorrentItemWrapper>>(),
-                It.IsAny<List<SeedingRule>>()
+                It.IsAny<List<ISeedingRule>>()
             ))
             .Returns([]);
 
@@ -787,13 +791,8 @@ public class DownloadCleanerTests : IDisposable
     public async Task ChangeUnlinkedCategoriesAsync_WhenFilterDownloadsThrows_LogsErrorAndContinues()
     {
         // Arrange
-        var downloadCleanerConfig = _fixture.DataContext.DownloadCleanerConfigs.First();
-        downloadCleanerConfig.UnlinkedEnabled = true;
-        downloadCleanerConfig.UnlinkedTargetCategory = "unlinked";
-        downloadCleanerConfig.UnlinkedCategories = ["completed"];
-        _fixture.DataContext.SaveChanges();
-
         TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
+        TestDataContextFactory.AddUnlinkedConfig(_fixture.DataContext);
 
         var mockTorrent = new Mock<ITorrentItemWrapper>();
         mockTorrent.Setup(x => x.Hash).Returns("test-hash");
@@ -801,14 +800,16 @@ public class DownloadCleanerTests : IDisposable
         mockTorrent.Setup(x => x.IsIgnored(It.IsAny<List<string>>())).Returns(false);
         mockTorrent.Setup(x => x.Category).Returns("completed");
 
+        var dbClient = _fixture.DataContext.DownloadClients.First();
         var mockDownloadService = _fixture.CreateMockDownloadService();
+        mockDownloadService.Setup(x => x.ClientConfig).Returns(dbClient);
         mockDownloadService
             .Setup(x => x.GetSeedingDownloads())
             .ReturnsAsync([mockTorrent.Object]);
         mockDownloadService
             .Setup(x => x.FilterDownloadsToChangeCategoryAsync(
                 It.IsAny<List<ITorrentItemWrapper>>(),
-                It.IsAny<List<string>>()
+                It.IsAny<UnlinkedConfig>()
             ))
             .Throws(new Exception("Filter failed"));
 
@@ -826,7 +827,7 @@ public class DownloadCleanerTests : IDisposable
             x => x.Log(
                 LogLevel.Error,
                 It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Failed to filter downloads for hardlinks evaluation")),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Failed to process unlinked downloads for")),
                 It.IsAny<Exception?>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()
             ),
@@ -838,13 +839,8 @@ public class DownloadCleanerTests : IDisposable
     public async Task ChangeUnlinkedCategoriesAsync_WhenCreateCategoryThrows_LogsErrorAndContinues()
     {
         // Arrange
-        var downloadCleanerConfig = _fixture.DataContext.DownloadCleanerConfigs.First();
-        downloadCleanerConfig.UnlinkedEnabled = true;
-        downloadCleanerConfig.UnlinkedTargetCategory = "unlinked";
-        downloadCleanerConfig.UnlinkedCategories = ["completed"];
-        _fixture.DataContext.SaveChanges();
-
         TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
+        TestDataContextFactory.AddUnlinkedConfig(_fixture.DataContext);
 
         var mockTorrent = new Mock<ITorrentItemWrapper>();
         mockTorrent.Setup(x => x.Hash).Returns("test-hash");
@@ -852,14 +848,16 @@ public class DownloadCleanerTests : IDisposable
         mockTorrent.Setup(x => x.IsIgnored(It.IsAny<List<string>>())).Returns(false);
         mockTorrent.Setup(x => x.Category).Returns("completed");
 
+        var dbClient = _fixture.DataContext.DownloadClients.First();
         var mockDownloadService = _fixture.CreateMockDownloadService();
+        mockDownloadService.Setup(x => x.ClientConfig).Returns(dbClient);
         mockDownloadService
             .Setup(x => x.GetSeedingDownloads())
             .ReturnsAsync([mockTorrent.Object]);
         mockDownloadService
             .Setup(x => x.FilterDownloadsToChangeCategoryAsync(
                 It.IsAny<List<ITorrentItemWrapper>>(),
-                It.IsAny<List<string>>()
+                It.IsAny<UnlinkedConfig>()
             ))
             .Returns([mockTorrent.Object]);
         mockDownloadService
@@ -892,13 +890,8 @@ public class DownloadCleanerTests : IDisposable
     public async Task ChangeUnlinkedCategoriesAsync_WhenChangeCategoryThrows_LogsErrorAndContinues()
     {
         // Arrange
-        var downloadCleanerConfig = _fixture.DataContext.DownloadCleanerConfigs.First();
-        downloadCleanerConfig.UnlinkedEnabled = true;
-        downloadCleanerConfig.UnlinkedTargetCategory = "unlinked";
-        downloadCleanerConfig.UnlinkedCategories = ["completed"];
-        _fixture.DataContext.SaveChanges();
-
         TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
+        TestDataContextFactory.AddUnlinkedConfig(_fixture.DataContext);
 
         var mockTorrent = new Mock<ITorrentItemWrapper>();
         mockTorrent.Setup(x => x.Hash).Returns("test-hash");
@@ -906,21 +899,23 @@ public class DownloadCleanerTests : IDisposable
         mockTorrent.Setup(x => x.IsIgnored(It.IsAny<List<string>>())).Returns(false);
         mockTorrent.Setup(x => x.Category).Returns("completed");
 
+        var dbClient = _fixture.DataContext.DownloadClients.First();
         var mockDownloadService = _fixture.CreateMockDownloadService();
+        mockDownloadService.Setup(x => x.ClientConfig).Returns(dbClient);
         mockDownloadService
             .Setup(x => x.GetSeedingDownloads())
             .ReturnsAsync([mockTorrent.Object]);
         mockDownloadService
             .Setup(x => x.FilterDownloadsToChangeCategoryAsync(
                 It.IsAny<List<ITorrentItemWrapper>>(),
-                It.IsAny<List<string>>()
+                It.IsAny<UnlinkedConfig>()
             ))
             .Returns([mockTorrent.Object]);
         mockDownloadService
             .Setup(x => x.CreateCategoryAsync(It.IsAny<string>()))
             .Returns(Task.CompletedTask);
         mockDownloadService
-            .Setup(x => x.ChangeCategoryForNoHardLinksAsync(It.IsAny<List<ITorrentItemWrapper>>()))
+            .Setup(x => x.ChangeCategoryForNoHardLinksAsync(It.IsAny<List<ITorrentItemWrapper>>(), It.IsAny<UnlinkedConfig>()))
             .ThrowsAsync(new Exception("Change category failed"));
 
         _fixture.DownloadServiceFactory
@@ -937,7 +932,7 @@ public class DownloadCleanerTests : IDisposable
             x => x.Log(
                 LogLevel.Error,
                 It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Failed to change category for download client")),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Failed to process unlinked downloads for")),
                 It.IsAny<Exception?>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()
             ),
@@ -958,14 +953,16 @@ public class DownloadCleanerTests : IDisposable
         mockTorrent.Setup(x => x.IsIgnored(It.IsAny<List<string>>())).Returns(false);
         mockTorrent.Setup(x => x.Category).Returns("completed");
 
+        var dbClient = _fixture.DataContext.DownloadClients.First();
         var mockDownloadService = _fixture.CreateMockDownloadService();
+        mockDownloadService.Setup(x => x.ClientConfig).Returns(dbClient);
         mockDownloadService
             .Setup(x => x.GetSeedingDownloads())
             .ReturnsAsync([mockTorrent.Object]);
         mockDownloadService
             .Setup(x => x.FilterDownloadsToBeCleanedAsync(
                 It.IsAny<List<ITorrentItemWrapper>>(),
-                It.IsAny<List<SeedingRule>>()
+                It.IsAny<List<ISeedingRule>>()
             ))
             .Throws(new Exception("Filter failed"));
 
@@ -983,7 +980,7 @@ public class DownloadCleanerTests : IDisposable
             x => x.Log(
                 LogLevel.Error,
                 It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Failed to filter downloads for cleaning")),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Failed to clean downloads for")),
                 It.IsAny<Exception?>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()
             ),
@@ -1004,20 +1001,22 @@ public class DownloadCleanerTests : IDisposable
         mockTorrent.Setup(x => x.IsIgnored(It.IsAny<List<string>>())).Returns(false);
         mockTorrent.Setup(x => x.Category).Returns("completed");
 
+        var dbClient = _fixture.DataContext.DownloadClients.First();
         var mockDownloadService = _fixture.CreateMockDownloadService();
+        mockDownloadService.Setup(x => x.ClientConfig).Returns(dbClient);
         mockDownloadService
             .Setup(x => x.GetSeedingDownloads())
             .ReturnsAsync([mockTorrent.Object]);
         mockDownloadService
             .Setup(x => x.FilterDownloadsToBeCleanedAsync(
                 It.IsAny<List<ITorrentItemWrapper>>(),
-                It.IsAny<List<SeedingRule>>()
+                It.IsAny<List<ISeedingRule>>()
             ))
             .Returns([mockTorrent.Object]);
         mockDownloadService
             .Setup(x => x.CleanDownloadsAsync(
                 It.IsAny<List<ITorrentItemWrapper>>(),
-                It.IsAny<List<SeedingRule>>()
+                It.IsAny<List<ISeedingRule>>()
             ))
             .ThrowsAsync(new Exception("Clean failed"));
 
@@ -1035,7 +1034,7 @@ public class DownloadCleanerTests : IDisposable
             x => x.Log(
                 LogLevel.Error,
                 It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Failed to clean downloads for download client")),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Failed to clean downloads for")),
                 It.IsAny<Exception?>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()
             ),
@@ -1064,7 +1063,7 @@ public class DownloadCleanerTests : IDisposable
         mockDownloadService
             .Setup(x => x.FilterDownloadsToBeCleanedAsync(
                 It.IsAny<List<ITorrentItemWrapper>>(),
-                It.IsAny<List<SeedingRule>>()
+                It.IsAny<List<ISeedingRule>>()
             ))
             .Returns([]);
 
@@ -1101,6 +1100,128 @@ public class DownloadCleanerTests : IDisposable
                 LogLevel.Error,
                 It.IsAny<EventId>(),
                 It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("failed to process")),
+                It.IsAny<Exception?>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()
+            ),
+            Times.Once
+        );
+    }
+
+    #endregion
+
+    #region Per-Client Config Tests
+
+    [Fact]
+    public async Task ExecuteInternalAsync_ClientWithNoSeedingRules_SkipsCleanup()
+    {
+        // Arrange
+        TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
+        // No seeding rules added — only unlinked config disabled
+
+        var mockTorrent = new Mock<ITorrentItemWrapper>();
+        mockTorrent.Setup(x => x.Hash).Returns("test-hash");
+        mockTorrent.Setup(x => x.Name).Returns("Test Download");
+        mockTorrent.Setup(x => x.IsIgnored(It.IsAny<List<string>>())).Returns(false);
+        mockTorrent.Setup(x => x.Category).Returns("completed");
+
+        var mockDownloadService = _fixture.CreateMockDownloadService();
+        mockDownloadService
+            .Setup(x => x.GetSeedingDownloads())
+            .ReturnsAsync([mockTorrent.Object]);
+
+        _fixture.DownloadServiceFactory
+            .Setup(x => x.GetDownloadService(It.IsAny<DownloadClientConfig>()))
+            .Returns(mockDownloadService.Object);
+
+        var sut = CreateSut();
+
+        // Act
+        await ExecuteWithTimeAdvance(sut);
+
+        // Assert - CleanDownloadsAsync should never be called
+        mockDownloadService.Verify(
+            x => x.CleanDownloadsAsync(
+                It.IsAny<List<ITorrentItemWrapper>>(),
+                It.IsAny<List<ISeedingRule>>()
+            ),
+            Times.Never
+        );
+    }
+
+    [Fact]
+    public async Task ExecuteInternalAsync_ClientWithDisabledUnlinkedConfig_SkipsUnlinkedProcessing()
+    {
+        // Arrange
+        TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
+        TestDataContextFactory.AddUnlinkedConfig(_fixture.DataContext, enabled: false);
+
+        var mockTorrent = new Mock<ITorrentItemWrapper>();
+        mockTorrent.Setup(x => x.Hash).Returns("test-hash");
+        mockTorrent.Setup(x => x.Name).Returns("Test Download");
+        mockTorrent.Setup(x => x.IsIgnored(It.IsAny<List<string>>())).Returns(false);
+        mockTorrent.Setup(x => x.Category).Returns("completed");
+
+        var dbClient = _fixture.DataContext.DownloadClients.First();
+        var mockDownloadService = _fixture.CreateMockDownloadService();
+        mockDownloadService.Setup(x => x.ClientConfig).Returns(dbClient);
+        mockDownloadService
+            .Setup(x => x.GetSeedingDownloads())
+            .ReturnsAsync([mockTorrent.Object]);
+
+        _fixture.DownloadServiceFactory
+            .Setup(x => x.GetDownloadService(It.IsAny<DownloadClientConfig>()))
+            .Returns(mockDownloadService.Object);
+
+        var sut = CreateSut();
+
+        // Act
+        await ExecuteWithTimeAdvance(sut);
+
+        // Assert - FilterDownloadsToChangeCategoryAsync should never be called
+        mockDownloadService.Verify(
+            x => x.FilterDownloadsToChangeCategoryAsync(
+                It.IsAny<List<ITorrentItemWrapper>>(),
+                It.IsAny<UnlinkedConfig>()
+            ),
+            Times.Never
+        );
+    }
+
+    [Fact]
+    public async Task ExecuteInternalAsync_UnlinkedEnabledButNoCategories_LogsWarning()
+    {
+        // Arrange
+        TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
+        TestDataContextFactory.AddUnlinkedConfig(_fixture.DataContext, enabled: true, categories: []);
+
+        var mockTorrent = new Mock<ITorrentItemWrapper>();
+        mockTorrent.Setup(x => x.Hash).Returns("test-hash");
+        mockTorrent.Setup(x => x.Name).Returns("Test Download");
+        mockTorrent.Setup(x => x.IsIgnored(It.IsAny<List<string>>())).Returns(false);
+        mockTorrent.Setup(x => x.Category).Returns("completed");
+
+        var dbClient = _fixture.DataContext.DownloadClients.First();
+        var mockDownloadService = _fixture.CreateMockDownloadService();
+        mockDownloadService.Setup(x => x.ClientConfig).Returns(dbClient);
+        mockDownloadService
+            .Setup(x => x.GetSeedingDownloads())
+            .ReturnsAsync([mockTorrent.Object]);
+
+        _fixture.DownloadServiceFactory
+            .Setup(x => x.GetDownloadService(It.IsAny<DownloadClientConfig>()))
+            .Returns(mockDownloadService.Object);
+
+        var sut = CreateSut();
+
+        // Act
+        await ExecuteWithTimeAdvance(sut);
+
+        // Assert - should log warning about no categories
+        _logger.Verify(
+            x => x.Log(
+                LogLevel.Warning,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("no categories are configured")),
                 It.IsAny<Exception?>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()
             ),

@@ -1,7 +1,6 @@
 using Cleanuparr.Domain.Entities;
 using Cleanuparr.Domain.Entities.Deluge.Response;
 using Cleanuparr.Domain.Enums;
-using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.DownloadClient.Deluge;
 using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
 using Moq;
@@ -134,10 +133,10 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
                 new DelugeItemWrapper(new DownloadStatus { Hash = "hash3", Label = "music", Trackers = new List<Tracker>(), DownloadLocation = "/downloads" })
             };
 
-            var categories = new List<SeedingRule>
+            var categories = new List<ISeedingRule>
             {
-                new SeedingRule { Name = "movies", MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true },
-                new SeedingRule { Name = "tv", MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true }
+                new DelugeSeedingRule { Name = "movies", MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true },
+                new DelugeSeedingRule { Name = "tv", MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true }
             };
 
             // Act
@@ -161,9 +160,9 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
                 new DelugeItemWrapper(new DownloadStatus { Hash = "hash1", Label = "Movies", Trackers = new List<Tracker>(), DownloadLocation = "/downloads" })
             };
 
-            var categories = new List<SeedingRule>
+            var categories = new List<ISeedingRule>
             {
-                new SeedingRule { Name = "movies", MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true }
+                new DelugeSeedingRule { Name = "movies", MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true }
             };
 
             // Act
@@ -185,9 +184,9 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
                 new DelugeItemWrapper(new DownloadStatus { Hash = "hash1", Label = "music", Trackers = new List<Tracker>(), DownloadLocation = "/downloads" })
             };
 
-            var categories = new List<SeedingRule>
+            var categories = new List<ISeedingRule>
             {
-                new SeedingRule { Name = "movies", MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true }
+                new DelugeSeedingRule { Name = "movies", MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true }
             };
 
             // Act
@@ -218,7 +217,7 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
             };
 
             // Act
-            var result = sut.FilterDownloadsToChangeCategoryAsync(downloads, new List<string> { "movies" });
+            var result = sut.FilterDownloadsToChangeCategoryAsync(downloads, new UnlinkedConfig { Categories = ["movies"] });
 
             // Assert
             Assert.NotNull(result);
@@ -238,7 +237,7 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
             };
 
             // Act
-            var result = sut.FilterDownloadsToChangeCategoryAsync(downloads, new List<string> { "movies" });
+            var result = sut.FilterDownloadsToChangeCategoryAsync(downloads, new UnlinkedConfig { Categories = ["movies"] });
 
             // Assert
             Assert.NotNull(result);
@@ -258,12 +257,31 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
             };
 
             // Act
-            var result = sut.FilterDownloadsToChangeCategoryAsync(downloads, new List<string> { "movies" });
+            var result = sut.FilterDownloadsToChangeCategoryAsync(downloads, new UnlinkedConfig { Categories = ["movies"] });
 
             // Assert
             Assert.NotNull(result);
             Assert.Single(result);
             Assert.Equal("hash1", result[0].Hash);
+        }
+
+        [Fact]
+        public void ReturnsEmpty_WhenNoCategoriesMatch()
+        {
+            // Arrange
+            var sut = _fixture.CreateSut();
+
+            var downloads = new List<Domain.Entities.ITorrentItemWrapper>
+            {
+                new DelugeItemWrapper(new DownloadStatus { Hash = "hash1", Label = "tv", Trackers = new List<Tracker>(), DownloadLocation = "/downloads" })
+            };
+
+            // Act
+            var result = sut.FilterDownloadsToChangeCategoryAsync(downloads, new UnlinkedConfig { Categories = ["movies"] });
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.Empty(result);
         }
     }
 
@@ -414,15 +432,14 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
             // Arrange
             var sut = _fixture.CreateSut();
 
-            var config = new DownloadCleanerConfig
+            var unlinkedConfig = new UnlinkedConfig
             {
                 Id = Guid.NewGuid(),
-                UnlinkedTargetCategory = "unlinked"
+                TargetCategory = "unlinked"
             };
-            ContextProvider.Set(nameof(DownloadCleanerConfig), config);
 
             // Act
-            await sut.ChangeCategoryForNoHardLinksAsync(null);
+            await sut.ChangeCategoryForNoHardLinksAsync(null, unlinkedConfig);
 
             // Assert
             _fixture.ClientWrapper.Verify(x => x.SetTorrentLabel(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
@@ -434,15 +451,14 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
             // Arrange
             var sut = _fixture.CreateSut();
 
-            var config = new DownloadCleanerConfig
+            var unlinkedConfig = new UnlinkedConfig
             {
                 Id = Guid.NewGuid(),
-                UnlinkedTargetCategory = "unlinked"
+                TargetCategory = "unlinked"
             };
-            ContextProvider.Set(nameof(DownloadCleanerConfig), config);
 
             // Act
-            await sut.ChangeCategoryForNoHardLinksAsync(new List<Domain.Entities.ITorrentItemWrapper>());
+            await sut.ChangeCategoryForNoHardLinksAsync(new List<Domain.Entities.ITorrentItemWrapper>(), unlinkedConfig);
 
             // Assert
             _fixture.ClientWrapper.Verify(x => x.SetTorrentLabel(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
@@ -454,12 +470,11 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
             // Arrange
             var sut = _fixture.CreateSut();
 
-            var config = new DownloadCleanerConfig
+            var unlinkedConfig = new UnlinkedConfig
             {
                 Id = Guid.NewGuid(),
-                UnlinkedTargetCategory = "unlinked"
+                TargetCategory = "unlinked"
             };
-            ContextProvider.Set(nameof(DownloadCleanerConfig), config);
 
             var downloads = new List<Domain.Entities.ITorrentItemWrapper>
             {
@@ -467,7 +482,7 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
             };
 
             // Act
-            await sut.ChangeCategoryForNoHardLinksAsync(downloads);
+            await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert
             _fixture.ClientWrapper.Verify(x => x.SetTorrentLabel(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
@@ -479,12 +494,11 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
             // Arrange
             var sut = _fixture.CreateSut();
 
-            var config = new DownloadCleanerConfig
+            var unlinkedConfig = new UnlinkedConfig
             {
                 Id = Guid.NewGuid(),
-                UnlinkedTargetCategory = "unlinked"
+                TargetCategory = "unlinked"
             };
-            ContextProvider.Set(nameof(DownloadCleanerConfig), config);
 
             var downloads = new List<Domain.Entities.ITorrentItemWrapper>
             {
@@ -492,7 +506,7 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
             };
 
             // Act
-            await sut.ChangeCategoryForNoHardLinksAsync(downloads);
+            await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert
             _fixture.ClientWrapper.Verify(x => x.SetTorrentLabel(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
@@ -504,12 +518,11 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
             // Arrange
             var sut = _fixture.CreateSut();
 
-            var config = new DownloadCleanerConfig
+            var unlinkedConfig = new UnlinkedConfig
             {
                 Id = Guid.NewGuid(),
-                UnlinkedTargetCategory = "unlinked"
+                TargetCategory = "unlinked"
             };
-            ContextProvider.Set(nameof(DownloadCleanerConfig), config);
 
             var downloads = new List<Domain.Entities.ITorrentItemWrapper>
             {
@@ -517,7 +530,7 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
             };
 
             // Act
-            await sut.ChangeCategoryForNoHardLinksAsync(downloads);
+            await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert
             _fixture.ClientWrapper.Verify(x => x.SetTorrentLabel(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
@@ -529,12 +542,11 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
             // Arrange
             var sut = _fixture.CreateSut();
 
-            var config = new DownloadCleanerConfig
+            var unlinkedConfig = new UnlinkedConfig
             {
                 Id = Guid.NewGuid(),
-                UnlinkedTargetCategory = "unlinked"
+                TargetCategory = "unlinked"
             };
-            ContextProvider.Set(nameof(DownloadCleanerConfig), config);
 
             var downloads = new List<Domain.Entities.ITorrentItemWrapper>
             {
@@ -546,7 +558,7 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
                 .ThrowsAsync(new InvalidOperationException("Failed to get files"));
 
             // Act
-            await sut.ChangeCategoryForNoHardLinksAsync(downloads);
+            await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert
             _fixture.ClientWrapper.Verify(x => x.SetTorrentLabel(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
@@ -558,12 +570,11 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
             // Arrange
             var sut = _fixture.CreateSut();
 
-            var config = new DownloadCleanerConfig
+            var unlinkedConfig = new UnlinkedConfig
             {
                 Id = Guid.NewGuid(),
-                UnlinkedTargetCategory = "unlinked"
+                TargetCategory = "unlinked"
             };
-            ContextProvider.Set(nameof(DownloadCleanerConfig), config);
 
             var downloads = new List<Domain.Entities.ITorrentItemWrapper>
             {
@@ -585,7 +596,7 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
                 .Returns(0);
 
             // Act
-            await sut.ChangeCategoryForNoHardLinksAsync(downloads);
+            await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert
             _fixture.ClientWrapper.Verify(
@@ -599,12 +610,11 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
             // Arrange
             var sut = _fixture.CreateSut();
 
-            var config = new DownloadCleanerConfig
+            var unlinkedConfig = new UnlinkedConfig
             {
                 Id = Guid.NewGuid(),
-                UnlinkedTargetCategory = "unlinked"
+                TargetCategory = "unlinked"
             };
-            ContextProvider.Set(nameof(DownloadCleanerConfig), config);
 
             var downloads = new List<Domain.Entities.ITorrentItemWrapper>
             {
@@ -626,7 +636,7 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
                 .Returns(2);
 
             // Act
-            await sut.ChangeCategoryForNoHardLinksAsync(downloads);
+            await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert
             _fixture.ClientWrapper.Verify(x => x.SetTorrentLabel(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
@@ -638,12 +648,11 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
             // Arrange
             var sut = _fixture.CreateSut();
 
-            var config = new DownloadCleanerConfig
+            var unlinkedConfig = new UnlinkedConfig
             {
                 Id = Guid.NewGuid(),
-                UnlinkedTargetCategory = "unlinked"
+                TargetCategory = "unlinked"
             };
-            ContextProvider.Set(nameof(DownloadCleanerConfig), config);
 
             var downloads = new List<Domain.Entities.ITorrentItemWrapper>
             {
@@ -665,7 +674,7 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
                 .Returns(-1);
 
             // Act
-            await sut.ChangeCategoryForNoHardLinksAsync(downloads);
+            await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert
             _fixture.ClientWrapper.Verify(x => x.SetTorrentLabel(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
@@ -677,12 +686,11 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
             // Arrange
             var sut = _fixture.CreateSut();
 
-            var config = new DownloadCleanerConfig
+            var unlinkedConfig = new UnlinkedConfig
             {
                 Id = Guid.NewGuid(),
-                UnlinkedTargetCategory = "unlinked"
+                TargetCategory = "unlinked"
             };
-            ContextProvider.Set(nameof(DownloadCleanerConfig), config);
 
             var downloads = new List<Domain.Entities.ITorrentItemWrapper>
             {
@@ -705,7 +713,7 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
                 .Returns(0);
 
             // Act
-            await sut.ChangeCategoryForNoHardLinksAsync(downloads);
+            await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert
             _fixture.HardLinkFileService.Verify(
@@ -719,12 +727,11 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
             // Arrange
             var sut = _fixture.CreateSut();
 
-            var config = new DownloadCleanerConfig
+            var unlinkedConfig = new UnlinkedConfig
             {
                 Id = Guid.NewGuid(),
-                UnlinkedTargetCategory = "unlinked"
+                TargetCategory = "unlinked"
             };
-            ContextProvider.Set(nameof(DownloadCleanerConfig), config);
 
             var downloads = new List<Domain.Entities.ITorrentItemWrapper>
             {
@@ -746,7 +753,7 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
                 .Returns(0);
 
             // Act
-            await sut.ChangeCategoryForNoHardLinksAsync(downloads);
+            await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert - EventPublisher is not mocked, so we just verify the method completed
             _fixture.ClientWrapper.Verify(

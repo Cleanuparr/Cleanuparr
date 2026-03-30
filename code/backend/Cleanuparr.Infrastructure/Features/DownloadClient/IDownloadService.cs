@@ -36,29 +36,30 @@ public interface IDownloadService : IDisposable
     /// <param name="downloads">The downloads to filter.</param>
     /// <param name="seedingRules">The seeding rules by which to filter the downloads.</param>
     /// <returns>A list of downloads for the provided categories.</returns>
-    List<ITorrentItemWrapper>? FilterDownloadsToBeCleanedAsync(List<ITorrentItemWrapper>? downloads, List<SeedingRule> seedingRules);
+    List<ITorrentItemWrapper>? FilterDownloadsToBeCleanedAsync(List<ITorrentItemWrapper>? downloads, List<ISeedingRule> seedingRules);
 
     /// <summary>
     /// Filters downloads that should have their category changed.
     /// </summary>
     /// <param name="downloads">The downloads to filter.</param>
-    /// <param name="categories">The categories by which to filter the downloads.</param>
+    /// <param name="unlinkedConfig">The unlinked config for this download client.</param>
     /// <returns>A list of downloads for the provided categories.</returns>
-    List<ITorrentItemWrapper>? FilterDownloadsToChangeCategoryAsync(List<ITorrentItemWrapper>? downloads, List<string> categories);
+    List<ITorrentItemWrapper>? FilterDownloadsToChangeCategoryAsync(List<ITorrentItemWrapper>? downloads, UnlinkedConfig unlinkedConfig);
 
     /// <summary>
     /// Cleans the downloads.
     /// </summary>
     /// <param name="downloads">The downloads to clean.</param>
     /// <param name="seedingRules">The seeding rules.</param>
-    Task CleanDownloadsAsync(List<ITorrentItemWrapper>? downloads, List<SeedingRule> seedingRules);
+    Task CleanDownloadsAsync(List<ITorrentItemWrapper>? downloads, List<ISeedingRule> seedingRules);
 
     /// <summary>
     /// Changes the category for downloads that have no hardlinks.
     /// </summary>
     /// <param name="downloads">The downloads to change.</param>
-    Task ChangeCategoryForNoHardLinksAsync(List<ITorrentItemWrapper>? downloads);
-    
+    /// <param name="unlinkedConfig">The unlinked config for this download client.</param>
+    Task ChangeCategoryForNoHardLinksAsync(List<ITorrentItemWrapper>? downloads, UnlinkedConfig unlinkedConfig);
+
     /// <summary>
     /// Deletes a download item.
     /// </summary>
@@ -71,7 +72,7 @@ public interface IDownloadService : IDisposable
     /// </summary>
     /// <param name="name">The category name.</param>
     public Task CreateCategoryAsync(string name);
-    
+
     /// <summary>
     /// Blocks unwanted files from being fully downloaded.
     /// </summary>

@@ -1,0 +1,62 @@
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+using Cleanuparr.Domain.Enums;
+using ValidationException = Cleanuparr.Domain.Exceptions.ValidationException;
+
+namespace Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
+
+public sealed record TransmissionSeedingRule : ISeedingRule
+{
+    [Key]
+    [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+    public Guid Id { get; set; } = Guid.NewGuid();
+
+    public Guid DownloadClientConfigId { get; set; }
+
+    public DownloadClientConfig DownloadClientConfig { get; set; } = null!;
+
+    public string Name { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Which torrent privacy types this rule applies to.
+    /// </summary>
+    public TorrentPrivacyType PrivacyType { get; set; } = TorrentPrivacyType.Public;
+
+    /// <summary>
+    /// Max ratio before removing a download.
+    /// </summary>
+    public double MaxRatio { get; set; } = -1;
+
+    /// <summary>
+    /// Min number of hours to seed before removing a download, if the ratio has been met.
+    /// </summary>
+    public double MinSeedTime { get; set; }
+
+    /// <summary>
+    /// Number of hours to seed before removing a download.
+    /// </summary>
+    public double MaxSeedTime { get; set; } = -1;
+
+    /// <summary>
+    /// Whether to delete the source files when cleaning the download.
+    /// </summary>
+    public bool DeleteSourceFiles { get; set; }
+
+    public void Validate()
+    {
+        if (string.IsNullOrEmpty(Name.Trim()))
+        {
+            throw new ValidationException("Rule name can not be empty");
+        }
+
+        if (MaxRatio < 0 && MaxSeedTime < 0)
+        {
+            throw new ValidationException("Either max ratio or max seed time must be set to a non-negative value");
+        }
+
+        if (MinSeedTime < 0)
+        {
+            throw new ValidationException("Min seed time can not be negative");
+        }
+    }
+}
