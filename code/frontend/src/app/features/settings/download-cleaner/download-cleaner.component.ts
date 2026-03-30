@@ -164,8 +164,13 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
     if (!client) return false;
     const snapshots = this.unlinkedSnapshots();
     const saved = snapshots[client.downloadClientId];
-    if (!saved) return false;
-    return saved !== JSON.stringify(client.unlinkedConfig);
+    const current = JSON.stringify(client.unlinkedConfig);
+    if (!saved) {
+      // Initialize snapshot on first access so future changes are tracked
+      this.unlinkedSnapshots.update(s => ({ ...s, [client.downloadClientId]: current }));
+      return false;
+    }
+    return saved !== current;
   });
 
   readonly hasGlobalErrors = computed(() => {
