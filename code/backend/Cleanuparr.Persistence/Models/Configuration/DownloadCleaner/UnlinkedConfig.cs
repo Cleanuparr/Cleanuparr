@@ -43,7 +43,7 @@ public sealed record UnlinkedConfig : IConfig
             return;
         }
 
-        if (string.IsNullOrEmpty(TargetCategory))
+        if (string.IsNullOrWhiteSpace(TargetCategory))
         {
             throw new ValidationException("Unlinked target category is required");
         }
@@ -53,12 +53,12 @@ public sealed record UnlinkedConfig : IConfig
             throw new ValidationException("No unlinked categories configured");
         }
 
-        if (Categories.Contains(TargetCategory))
+        if (Categories.Contains(TargetCategory, StringComparer.OrdinalIgnoreCase))
         {
             throw new ValidationException("The unlinked target category should not be present in unlinked categories");
         }
 
-        if (Categories.Any(string.IsNullOrEmpty))
+        if (Categories.Any(string.IsNullOrWhiteSpace))
         {
             throw new ValidationException("Empty unlinked category filter found");
         }
