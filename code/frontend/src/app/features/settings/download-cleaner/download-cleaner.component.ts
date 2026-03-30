@@ -174,7 +174,8 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
           this.selectedClientId.set(config.clients[0].downloadClientId);
         }
         this.loader.stop();
-        this.savedSnapshot.set(this.buildSnapshot());
+        // Defer snapshot so constructor effects (e.g. schedule unit clamping) settle first
+        queueMicrotask(() => this.savedSnapshot.set(this.buildSnapshot()));
       },
       error: () => {
         this.toast.error('Failed to load download cleaner settings');

@@ -53,122 +53,123 @@
           helpKey="download-cleaner:ignoredDownloads"
         />
       }
+      <div class="form-actions">
+        <app-button variant="primary" [glowing]="dirty()" [loading]="saving()" [disabled]="saving() || saved() || hasGlobalErrors() || !dirty()" (clicked)="save()">
+          {{ saved() ? 'Saved!' : 'Save Settings' }}
+        </app-button>
+      </div>
     </div>
   </app-card>
 
-  <div class="form-actions">
-    <app-button variant="primary" [glowing]="dirty()" [loading]="saving()" [disabled]="saving() || saved() || hasGlobalErrors()" (clicked)="save()">
-      {{ saved() ? 'Saved!' : 'Save Settings' }}
-    </app-button>
-  </div>
-
   @if (enabled()) {
     @if (clientOptions().length > 0) {
-      <app-card header="Download Client">
+      <app-card [header]="selectedClient()?.downloadClientName ?? 'Download Client'">
         <div class="form-stack">
           <app-select label="Download Client" [options]="clientOptions()" [(value)]="selectedClientId"
             hint="Select which download client to configure"
             helpKey="download-cleaner:downloadClient" />
-        </div>
-      </app-card>
 
-      @if (selectedClient(); as client) {
-        <app-accordion header="Seeding Rules" subtitle="Define cleanup rules per category" [(expanded)]="seedingRulesExpanded">
-          @if (client.seedingRules.length === 0) {
-            <app-empty-state
-              icon="tablerListDetails"
-              heading="No seeding rules"
-              description="Add a seeding rule to start cleaning downloads for this client"
-            />
-          } @else {
-            @for (rule of client.seedingRules; track rule.id ?? $index) {
-              <div class="rule-card">
-                <div class="rule-card__header">
-                  <h4 class="rule-card__name">{{ rule.name }}</h4>
-                  <div class="rule-card__actions">
-                    <button class="rule-card__action" (click)="openRuleModal(rule)" aria-label="Edit rule">
-                      <ng-icon name="tablerPencil" size="16" />
-                    </button>
-                    <button class="rule-card__action rule-card__action--danger" (click)="deleteRule(rule)" aria-label="Delete rule">
-                      <ng-icon name="tablerTrash" size="16" />
-                    </button>
+          @if (selectedClient(); as client) {
+            <div class="form-divider"></div>
+
+            <app-accordion header="Seeding Rules" subtitle="Define cleanup rules per category" [(expanded)]="seedingRulesExpanded">
+              @if (client.seedingRules.length === 0) {
+                <app-empty-state
+                  icon="tablerListDetails"
+                  heading="No seeding rules"
+                  description="Add a seeding rule to start cleaning downloads for this client"
+                />
+              } @else {
+                @for (rule of client.seedingRules; track rule.id ?? $index) {
+                  <div class="rule-card">
+                    <div class="rule-card__header">
+                      <h4 class="rule-card__name">{{ rule.name }}</h4>
+                      <div class="rule-card__actions">
+                        <button class="rule-card__action" (click)="openRuleModal(rule)" aria-label="Edit rule">
+                          <ng-icon name="tablerPencil" size="16" />
+                        </button>
+                        <button class="rule-card__action rule-card__action--danger" (click)="deleteRule(rule)" aria-label="Delete rule">
+                          <ng-icon name="tablerTrash" size="16" />
+                        </button>
+                      </div>
+                    </div>
+                    <div class="rule-card__badges">
+                      <app-badge severity="info">{{ rule.privacyType }}</app-badge>
+                      @if (rule.maxRatio >= 0) {
+                        <app-badge>Ratio: {{ rule.maxRatio }}</app-badge>
+                      }
+                      @if (rule.maxSeedTime >= 0) {
+                        <app-badge>Max Seed: {{ rule.maxSeedTime }}h</app-badge>
+                      }
+                      @if (rule.minSeedTime > 0) {
+                        <app-badge>Min Seed: {{ rule.minSeedTime }}h</app-badge>
+                      }
+                    </div>
+                    <div class="rule-card__details">
+                      <span>Delete Files: {{ rule.deleteSourceFiles ? 'Yes' : 'No' }}</span>
+                    </div>
                   </div>
-                </div>
-                <div class="rule-card__badges">
-                  <app-badge severity="info">{{ rule.privacyType }}</app-badge>
-                  @if (rule.maxRatio >= 0) {
-                    <app-badge>Ratio: {{ rule.maxRatio }}</app-badge>
-                  }
-                  @if (rule.maxSeedTime >= 0) {
-                    <app-badge>Max Seed: {{ rule.maxSeedTime }}h</app-badge>
-                  }
-                  @if (rule.minSeedTime > 0) {
-                    <app-badge>Min Seed: {{ rule.minSeedTime }}h</app-badge>
-                  }
-                </div>
-                <div class="rule-card__details">
-                  <span>Delete Files: {{ rule.deleteSourceFiles ? 'Yes' : 'No' }}</span>
+                }
+              }
+              <div class="rule-actions">
+                <app-button variant="secondary" size="sm" (clicked)="openRuleModal()">
+                  Add Seeding Rule
+                </app-button>
+              </div>
+            </app-accordion>
+
+            <app-accordion header="Unlinked Downloads" subtitle="Clean up orphaned downloads" [(expanded)]="unlinkedExpanded">
+              <div class="form-stack">
+                <app-toggle label="Enabled" [checked]="client.unlinkedConfig?.enabled ?? false"
+                  (checkedChange)="updateUnlinkedField('enabled', $event)"
+                  hint="Enable management of downloads that have no hardlinks"
+                  helpKey="download-cleaner:unlinkedEnabled" />
+                @if (client.unlinkedConfig?.enabled) {
+                  <app-input label="Target Category" placeholder="unlinked" [value]="client.unlinkedConfig?.targetCategory ?? ''"
+                    (valueChange)="updateUnlinkedField('targetCategory', $event)"
+                    hint="Category to move unlinked downloads to. You have to create a seeding rule for this category if you want to remove the downloads."
+                    helpKey="download-cleaner:unlinkedTargetCategory" />
+                  <app-toggle label="Use Tag Instead" [checked]="client.unlinkedConfig?.useTag ?? false"
+                    (checkedChange)="updateUnlinkedField('useTag', $event)"
+                    hint="When enabled, uses a tag instead of category (qBittorrent only)"
+                    helpKey="download-cleaner:unlinkedUseTag" />
+
+                  <div class="form-divider"></div>
+
+                  <app-input label="Download Directory (Source)" placeholder="/downloads"
+                    [value]="client.unlinkedConfig?.downloadDirectorySource ?? ''"
+                    (valueChange)="updateUnlinkedField('downloadDirectorySource', $event)"
+                    hint="The path prefix as reported by the download client (e.g. /downloads)"
+                    helpKey="download-cleaner:downloadDirectorySource" />
+                  <app-input label="Local Directory (Target)" placeholder="/downloads-deluge"
+                    [value]="client.unlinkedConfig?.downloadDirectoryTarget ?? ''"
+                    (valueChange)="updateUnlinkedField('downloadDirectoryTarget', $event)"
+                    hint="The actual local mount path that replaces the source prefix (e.g. /downloads-deluge)"
+                    helpKey="download-cleaner:downloadDirectoryTarget" />
+
+                  <div class="form-divider"></div>
+
+                  <app-chip-input label="Ignored Root Directories" placeholder="Add directory path..."
+                    [items]="client.unlinkedConfig?.ignoredRootDirs ?? []"
+                    (itemsChange)="updateUnlinkedField('ignoredRootDirs', $event)"
+                    hint="Root directories to ignore when checking for unlinked downloads (used for cross-seed)"
+                    helpKey="download-cleaner:unlinkedIgnoredRootDir" />
+                  <app-chip-input label="Unlinked Categories" placeholder="Add category..."
+                    [items]="client.unlinkedConfig?.categories ?? []"
+                    (itemsChange)="updateUnlinkedField('categories', $event)"
+                    hint="Categories to check for unlinked downloads"
+                    helpKey="download-cleaner:unlinkedCategories" />
+                }
+                <div class="form-actions">
+                  <app-button variant="primary" [loading]="unlinkedSaving()" [disabled]="unlinkedSaving() || unlinkedSaved()" (clicked)="saveUnlinkedConfig()">
+                    {{ unlinkedSaved() ? 'Saved!' : 'Save Unlinked Config' }}
+                  </app-button>
                 </div>
               </div>
-            }
+            </app-accordion>
           }
-          <div class="rule-actions">
-            <app-button variant="secondary" size="sm" (clicked)="openRuleModal()">
-              Add Seeding Rule
-            </app-button>
-          </div>
-        </app-accordion>
-
-        <app-accordion header="Unlinked Downloads" subtitle="Clean up orphaned downloads" [(expanded)]="unlinkedExpanded">
-          <div class="form-stack">
-            <app-toggle label="Enabled" [checked]="client.unlinkedConfig?.enabled ?? false"
-              (checkedChange)="updateUnlinkedField('enabled', $event)"
-              hint="Enable management of downloads that have no hardlinks"
-              helpKey="download-cleaner:unlinkedEnabled" />
-            @if (client.unlinkedConfig?.enabled) {
-              <app-input label="Target Category" placeholder="unlinked" [value]="client.unlinkedConfig?.targetCategory ?? ''"
-                (valueChange)="updateUnlinkedField('targetCategory', $event)"
-                hint="Category to move unlinked downloads to. You have to create a seeding rule for this category if you want to remove the downloads."
-                helpKey="download-cleaner:unlinkedTargetCategory" />
-              <app-toggle label="Use Tag Instead" [checked]="client.unlinkedConfig?.useTag ?? false"
-                (checkedChange)="updateUnlinkedField('useTag', $event)"
-                hint="When enabled, uses a tag instead of category (qBittorrent only)"
-                helpKey="download-cleaner:unlinkedUseTag" />
-
-              <div class="form-divider"></div>
-
-              <app-input label="Download Directory (Source)" placeholder="/downloads"
-                [value]="client.unlinkedConfig?.downloadDirectorySource ?? ''"
-                (valueChange)="updateUnlinkedField('downloadDirectorySource', $event)"
-                hint="The path prefix as reported by the download client (e.g. /downloads)"
-                helpKey="download-cleaner:downloadDirectorySource" />
-              <app-input label="Local Directory (Target)" placeholder="/downloads-deluge"
-                [value]="client.unlinkedConfig?.downloadDirectoryTarget ?? ''"
-                (valueChange)="updateUnlinkedField('downloadDirectoryTarget', $event)"
-                hint="The actual local mount path that replaces the source prefix (e.g. /downloads-deluge)"
-                helpKey="download-cleaner:downloadDirectoryTarget" />
-
-              <div class="form-divider"></div>
-
-              <app-chip-input label="Ignored Root Directories" placeholder="Add directory path..."
-                [items]="client.unlinkedConfig?.ignoredRootDirs ?? []"
-                (itemsChange)="updateUnlinkedField('ignoredRootDirs', $event)"
-                hint="Root directories to ignore when checking for unlinked downloads (used for cross-seed)"
-                helpKey="download-cleaner:unlinkedIgnoredRootDir" />
-              <app-chip-input label="Unlinked Categories" placeholder="Add category..."
-                [items]="client.unlinkedConfig?.categories ?? []"
-                (itemsChange)="updateUnlinkedField('categories', $event)"
-                hint="Categories to check for unlinked downloads"
-                helpKey="download-cleaner:unlinkedCategories" />
-            }
-            <div class="form-actions">
-              <app-button variant="primary" [loading]="unlinkedSaving()" [disabled]="unlinkedSaving() || unlinkedSaved()" (clicked)="saveUnlinkedConfig()">
-                {{ unlinkedSaved() ? 'Saved!' : 'Save Unlinked Config' }}
-              </app-button>
-            </div>
-          </div>
-        </app-accordion>
-      }
+        </div>
+      </app-card>
     } @else {
       <app-empty-state
         icon="tablerDownload"
