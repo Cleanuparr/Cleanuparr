@@ -31,7 +31,7 @@ public sealed record UnlinkedConfig : IConfig
     public string? DownloadDirectorySource { get; set; }
 
     /// <summary>
-    /// The actual local mount path (e.g., "/downloads-deluge").
+    /// The actual local mount path (e.g., "/downloads-other").
     /// Replaces <see cref="DownloadDirectorySource"/> in file paths for hardlink checking.
     /// </summary>
     public string? DownloadDirectoryTarget { get; set; }

@@ -151,10 +151,10 @@
                     (valueChange)="updateUnlinkedField('downloadDirectorySource', $event)"
                     hint="The path prefix as reported by the download client (e.g. /downloads)"
                     helpKey="download-cleaner:downloadDirectorySource" />
-                  <app-input label="Local Directory (Target)" placeholder="/downloads-deluge"
+                  <app-input label="Local Directory (Target)" placeholder="/downloads-other"
                     [value]="client.unlinkedConfig?.downloadDirectoryTarget ?? ''"
                     (valueChange)="updateUnlinkedField('downloadDirectoryTarget', $event)"
-                    hint="The actual local mount path that replaces the source prefix (e.g. /downloads-deluge)"
+                    hint="The actual local mount path that replaces the source prefix (e.g. /downloads-other)"
                     helpKey="download-cleaner:downloadDirectoryTarget" />
 
                   <div class="form-divider"></div>
