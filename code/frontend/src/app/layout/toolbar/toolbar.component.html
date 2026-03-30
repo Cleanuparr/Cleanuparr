@@ -14,10 +14,12 @@
       <ng-icon [name]="theme() === 'dark' ? 'tablerSun' : 'tablerMoon'" />
     </button>
 
-    <app-toggle
-      [label]="'Performance mode'"
-      [checked]="performanceMode()"
-      (checkedChange)="onTogglePerformanceMode()"
-    />
+    <app-tooltip text="Disables animations and visual effects for better UI performance. Auto-enabled when your system prefers reduced motion.">
+      <app-toggle
+        [label]="'Performance mode'"
+        [checked]="performanceMode()"
+        (checkedChange)="onTogglePerformanceMode()"
+      />
+    </app-tooltip>
   </div>
 </header>
