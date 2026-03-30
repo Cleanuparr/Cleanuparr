@@ -1,12 +1,12 @@
 import { Component, ChangeDetectionStrategy, input, output, inject } from '@angular/core';
 import { NgIcon } from '@ng-icons/core';
 import { ThemeService } from '@core/services/theme.service';
-import { ToggleComponent } from '@ui';
+import { ToggleComponent, TooltipComponent } from '@ui';
 
 @Component({
   selector: 'app-toolbar',
   standalone: true,
-  imports: [NgIcon, ToggleComponent],
+  imports: [NgIcon, ToggleComponent, TooltipComponent],
   templateUrl: './toolbar.component.html',
   styleUrl: './toolbar.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
