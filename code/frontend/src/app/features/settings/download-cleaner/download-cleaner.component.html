@@ -69,7 +69,15 @@
             hint="Select which download client to configure"
             helpKey="download-cleaner:downloadClient" />
 
+          @if (isSelectedClientDisabled()) {
+            <div class="disabled-client-notice">
+              <ng-icon name="tablerAlertCircle" size="16" />
+              This download client is disabled. Enable it in Download Client settings before configuring seeding rules or unlinked downloads.
+            </div>
+          }
+
           @if (selectedClient(); as client) {
+            @if (!isSelectedClientDisabled()) {
             <div class="form-divider"></div>
 
             <app-accordion header="Seeding Rules" subtitle="Define cleanup rules per category" [(expanded)]="seedingRulesExpanded">
@@ -168,6 +176,7 @@
                 </div>
               </div>
             </app-accordion>
+            }
           }
         </div>
       </app-card>

@@ -23,6 +23,7 @@ export interface UnlinkedConfigModel {
 export interface ClientCleanerConfig {
   downloadClientId: string;
   downloadClientName: string;
+  downloadClientEnabled: boolean;
   downloadClientTypeName: string;
   seedingRules: SeedingRule[];
   unlinkedConfig: UnlinkedConfigModel | null;

@@ -60,6 +60,7 @@ public sealed class DownloadCleanerConfigController : ControllerBase
                 {
                     downloadClientId = client.Id,
                     downloadClientName = client.Name,
+                    downloadClientEnabled = client.Enabled,
                     downloadClientTypeName = client.TypeName,
                     seedingRules = seedingRules.Select(r => new
                     {

@@ -86,6 +86,10 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
       .sort((a, b) => a.label.localeCompare(b.label))
   );
 
+  readonly isSelectedClientDisabled = computed(() =>
+    this.selectedClient()?.downloadClientEnabled === false
+  );
+
   readonly seedingRulesExpanded = signal(false);
   readonly unlinkedExpanded = signal(false);
 
