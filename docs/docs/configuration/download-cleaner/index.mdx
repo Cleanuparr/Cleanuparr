@@ -198,18 +198,48 @@ When enabled, uses a tag instead of category for marking unlinked downloads (qBi
 </ConfigSection>
 
 <ConfigSection
-  title="Download Directory (Source)"
+  title="Download Directory (Source) and Local Directory (Target)"
 >
 
 The path prefix as reported by the download client (e.g. `/downloads`). Used for path mapping when the download client's internal paths differ from the paths accessible to Cleanuparr — common in Docker setups where volume mount paths differ between containers. Leave blank if no path translation is needed.
 
-</ConfigSection>
+<br/>
 
-<ConfigSection
-  title="Local Directory (Target)"
->
+**Docker example:**
 
-The actual local path that replaces the source prefix when Cleanuparr accesses files (e.g. `/downloads-other`). Must be left blank if **Download Directory (Source)** is blank.
+In a typical Docker Compose setup, each container has its own view of the filesystem. Download clients may each have their own host directory but both report paths starting with `/downloads`. Since Cleanuparr mounts those directories under different paths, you need to configure the mapping per client so Cleanuparr can locate the actual files.
+
+```yaml
+services:
+  qbittorrent:
+    image: ...
+    ...
+    volumes:
+      - /host/data/downloads-qbit:/downloads        # qBittorrent sees /downloads
+
+  deluge:
+    image: ...
+    ...
+    volumes:
+      - /host/data/downloads-deluge:/downloads      # Deluge sees /downloads
+
+  cleanuparr:
+    image: ghcr.io/cleanuparr/cleanuparr
+    ...
+    volumes:
+      - /host/data/downloads-qbit:/downloads-qbit   # Cleanuparr sees /downloads-qbit
+      - /host/data/downloads-qbit:/downloads-deluge # Cleanuparr sees /downloads-deluge
+```
+
+Both download clients store files in separate host directories but report paths under the same `/downloads` prefix. Cleanuparr mounts each host directory under a different path, so it needs to know the translation per client:
+
+- **qBittorrent** reports `/downloads/movie.mkv` while Cleanuparr finds it at `/downloads-qbit/movie.mkv`
+  - Download Directory (Source): `/downloads`
+  - Local Directory (Target): `/downloads-qbit`
+
+- **Deluge** reports `/downloads/movie.mkv` while Cleanuparr finds it at `/downloads-deluge/movie.mkv`
+  - Download Directory (Source): `/downloads`
+  - Local Directory (Target): `/downloads-deluge`
 
 </ConfigSection>
 
