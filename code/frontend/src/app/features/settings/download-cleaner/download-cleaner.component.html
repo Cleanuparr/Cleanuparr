@@ -202,7 +202,7 @@
     @if (ruleDisabledError()) {
       <div class="category-error">{{ ruleDisabledError() }}</div>
     }
-    <app-toggle label="Delete Source Files" [(checked)]="ruleDeleteSourceFiles"
+    <app-toggle class="full-width" label="Delete Source Files" [(checked)]="ruleDeleteSourceFiles"
       hint="When enabled, the source files will be deleted when the download is removed"
       helpKey="download-cleaner:deleteSourceFiles" />
   </div>

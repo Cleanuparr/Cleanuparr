@@ -10,6 +10,10 @@
 .form-grid { @include form-grid; }
 .form-actions { @include form-actions; }
 
+.full-width {
+  grid-column: 1 / -1;
+}
+
 .category-error {
   font-size: var(--font-size-xs);
   color: var(--color-error);
