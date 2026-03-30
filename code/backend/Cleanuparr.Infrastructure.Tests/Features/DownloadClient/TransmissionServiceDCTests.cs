@@ -267,6 +267,25 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
             Assert.Single(result);
             Assert.Equal("hash1", result[0].Hash);
         }
+
+        [Fact]
+        public void ReturnsEmpty_WhenNoCategoriesMatch()
+        {
+            // Arrange
+            var sut = _fixture.CreateSut();
+
+            var downloads = new List<Domain.Entities.ITorrentItemWrapper>
+            {
+                new TransmissionItemWrapper(new TorrentInfo { HashString = "hash1", DownloadDir = "/downloads/tv" })
+            };
+
+            // Act
+            var result = sut.FilterDownloadsToChangeCategoryAsync(downloads, new UnlinkedConfig { Categories = ["movies"] });
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.Empty(result);
+        }
     }
 
     public class CreateCategoryAsync_Tests : TransmissionServiceDCTests

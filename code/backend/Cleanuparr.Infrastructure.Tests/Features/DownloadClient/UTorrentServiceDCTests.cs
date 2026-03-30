@@ -256,6 +256,25 @@ public class UTorrentServiceDCTests : IClassFixture<UTorrentServiceFixture>
             Assert.Single(result);
             Assert.Equal("hash1", result[0].Hash);
         }
+
+        [Fact]
+        public void ReturnsEmpty_WhenNoCategoriesMatch()
+        {
+            // Arrange
+            var sut = _fixture.CreateSut();
+
+            var downloads = new List<Domain.Entities.ITorrentItemWrapper>
+            {
+                new UTorrentItemWrapper(new UTorrentItem { Hash = "hash1", Label = "tv" }, new UTorrentProperties { Hash = "hash1", Pex = 1, Trackers = "" })
+            };
+
+            // Act
+            var result = sut.FilterDownloadsToChangeCategoryAsync(downloads, new UnlinkedConfig { Categories = ["movies"] });
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.Empty(result);
+        }
     }
 
     public class CreateCategoryAsync_Tests : UTorrentServiceDCTests

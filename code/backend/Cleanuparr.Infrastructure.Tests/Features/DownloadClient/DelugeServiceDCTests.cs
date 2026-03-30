@@ -264,6 +264,25 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
             Assert.Single(result);
             Assert.Equal("hash1", result[0].Hash);
         }
+
+        [Fact]
+        public void ReturnsEmpty_WhenNoCategoriesMatch()
+        {
+            // Arrange
+            var sut = _fixture.CreateSut();
+
+            var downloads = new List<Domain.Entities.ITorrentItemWrapper>
+            {
+                new DelugeItemWrapper(new DownloadStatus { Hash = "hash1", Label = "tv", Trackers = new List<Tracker>(), DownloadLocation = "/downloads" })
+            };
+
+            // Act
+            var result = sut.FilterDownloadsToChangeCategoryAsync(downloads, new UnlinkedConfig { Categories = ["movies"] });
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.Empty(result);
+        }
     }
 
     public class CreateCategoryAsync_Tests : DelugeServiceDCTests

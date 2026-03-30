@@ -618,6 +618,25 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
             Assert.Single(result);
             Assert.Equal("hash1", result[0].Hash);
         }
+
+        [Fact]
+        public void ReturnsEmpty_WhenNoCategoriesMatch()
+        {
+            // Arrange
+            var sut = _fixture.CreateSut();
+
+            var downloads = new List<Domain.Entities.ITorrentItemWrapper>
+            {
+                new QBitItemWrapper(new TorrentInfo { Hash = "hash1", Category = "tv" }, Array.Empty<TorrentTracker>(), false)
+            };
+
+            // Act
+            var result = sut.FilterDownloadsToChangeCategoryAsync(downloads, new UnlinkedConfig { Categories = ["movies"] });
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.Empty(result);
+        }
     }
 
     public class CreateCategoryAsync_Tests : QBitServiceDCTests

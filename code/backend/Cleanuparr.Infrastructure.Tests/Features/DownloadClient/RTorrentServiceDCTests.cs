@@ -244,6 +244,27 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
             Assert.Single(result);
             Assert.Equal("HASH1", result[0].Hash);
         }
+
+        [Fact]
+        public void ReturnsEmpty_WhenNoCategoriesMatch()
+        {
+            // Arrange
+            var sut = _fixture.CreateSut();
+
+            var downloads = new List<ITorrentItemWrapper>
+            {
+                new RTorrentItemWrapper(new RTorrentTorrent { Hash = "HASH1", Name = "Torrent 1", Label = "tv" })
+            };
+
+            var unlinkedConfig = new UnlinkedConfig { Categories = ["movies"] };
+
+            // Act
+            var result = sut.FilterDownloadsToChangeCategoryAsync(downloads, unlinkedConfig);
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.Empty(result);
+        }
     }
 
     public class DeleteDownload_Tests : RTorrentServiceDCTests
