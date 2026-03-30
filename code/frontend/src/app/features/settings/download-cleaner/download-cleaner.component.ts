@@ -405,6 +405,6 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
   });
 
   hasPendingChanges(): boolean {
-    return this.dirty();
+    return this.dirty() || this.unlinkedDirty();
   }
 }
