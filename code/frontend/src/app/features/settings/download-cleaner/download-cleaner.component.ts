@@ -16,7 +16,7 @@ import {
   createDefaultUnlinkedConfig,
 } from '@shared/models/download-cleaner-config.model';
 import { ScheduleOptions } from '@shared/models/queue-cleaner-config.model';
-import { ScheduleUnit, TorrentPrivacyType } from '@shared/models/enums';
+import { ScheduleUnit, TorrentPrivacyType, DownloadClientTypeName } from '@shared/models/enums';
 import { HasPendingChanges } from '@core/guards/pending-changes.guard';
 import { DeferredLoader } from '@shared/utils/loading.util';
 import { generateCronExpression, parseCronToJobSchedule } from '@shared/utils/schedule.util';
@@ -88,6 +88,10 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
 
   readonly isSelectedClientDisabled = computed(() =>
     this.selectedClient()?.downloadClientEnabled === false
+  );
+
+  readonly isSelectedClientQBittorrent = computed(() =>
+    this.selectedClient()?.downloadClientTypeName === DownloadClientTypeName.qBittorrent
   );
 
   readonly seedingRulesExpanded = signal(false);

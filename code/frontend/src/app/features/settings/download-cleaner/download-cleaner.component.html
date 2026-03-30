@@ -137,10 +137,12 @@
                     (valueChange)="updateUnlinkedField('targetCategory', $event)"
                     hint="Category to move unlinked downloads to. You have to create a seeding rule for this category if you want to remove the downloads."
                     helpKey="download-cleaner:unlinkedTargetCategory" />
-                  <app-toggle label="Use Tag Instead" [checked]="client.unlinkedConfig?.useTag ?? false"
-                    (checkedChange)="updateUnlinkedField('useTag', $event)"
-                    hint="When enabled, uses a tag instead of category (qBittorrent only)"
-                    helpKey="download-cleaner:unlinkedUseTag" />
+                  @if (isSelectedClientQBittorrent()) {
+                    <app-toggle label="Use Tag Instead" [checked]="client.unlinkedConfig?.useTag ?? false"
+                      (checkedChange)="updateUnlinkedField('useTag', $event)"
+                      hint="When enabled, uses a tag instead of category (qBittorrent only)"
+                      helpKey="download-cleaner:unlinkedUseTag" />
+                  }
 
                   <div class="form-divider"></div>
 
