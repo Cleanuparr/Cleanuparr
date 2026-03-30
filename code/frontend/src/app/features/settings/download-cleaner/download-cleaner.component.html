@@ -82,7 +82,11 @@
             <div class="form-divider"></div>
 
             <app-accordion header="Seeding Rules" subtitle="Define cleanup rules per category" [(expanded)]="seedingRulesExpanded">
-              @if (client.seedingRules.length === 0) {
+              @if (rulesReloading()) {
+                <div class="rules-loading">
+                  <app-spinner size="sm" /> Loading seeding rules...
+                </div>
+              } @else if (client.seedingRules.length === 0) {
                 <app-empty-state
                   icon="tablerListDetails"
                   heading="No seeding rules"

@@ -4,7 +4,7 @@ import { PageHeaderComponent } from '@layout/page-header/page-header.component';
 import {
   CardComponent, ButtonComponent, InputComponent, ToggleComponent,
   NumberInputComponent, SelectComponent, ChipInputComponent, AccordionComponent,
-  EmptyStateComponent, LoadingStateComponent, ModalComponent, BadgeComponent,
+  EmptyStateComponent, LoadingStateComponent, ModalComponent, BadgeComponent, SpinnerComponent,
   type SelectOption,
 } from '@ui';
 import { DownloadCleanerApi } from '@core/api/download-cleaner.api';
@@ -40,7 +40,7 @@ const PRIVACY_TYPE_OPTIONS: SelectOption[] = [
     NgIconComponent,
     PageHeaderComponent, CardComponent, ButtonComponent, InputComponent,
     ToggleComponent, NumberInputComponent, SelectComponent, ChipInputComponent, AccordionComponent,
-    EmptyStateComponent, LoadingStateComponent, ModalComponent, BadgeComponent,
+    EmptyStateComponent, LoadingStateComponent, ModalComponent, BadgeComponent, SpinnerComponent,
   ],
   templateUrl: './download-cleaner.component.html',
   styleUrl: './download-cleaner.component.scss',
@@ -62,6 +62,7 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
   readonly saved = signal(false);
   readonly unlinkedSaving = signal(false);
   readonly unlinkedSaved = signal(false);
+  readonly rulesReloading = signal(false);
   private readonly unlinkedSnapshots = signal<Record<string, string>>({});
 
   // Global settings
@@ -298,13 +299,18 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
   }
 
   private reloadSeedingRules(clientId: string): void {
+    this.rulesReloading.set(true);
     this.api.getSeedingRules(clientId).subscribe({
       next: (rules) => {
         this.clientConfigs.update(configs =>
           configs.map(c => c.downloadClientId === clientId ? { ...c, seedingRules: rules } : c)
         );
+        this.rulesReloading.set(false);
       },
-      error: () => this.toast.error('Failed to reload seeding rules'),
+      error: () => {
+        this.toast.error('Failed to reload seeding rules');
+        this.rulesReloading.set(false);
+      },
     });
   }
 
