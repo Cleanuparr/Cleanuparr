@@ -77,9 +77,10 @@ public partial class UTorrentService
                 string filePath = string.Join(Path.DirectorySeparatorChar, Path.Combine(torrent.Info.SavePath, file.Name).Split(['\\', '/']));
 
                 if (!string.IsNullOrEmpty(unlinkedConfig.DownloadDirectorySource) &&
-                    !string.IsNullOrEmpty(unlinkedConfig.DownloadDirectoryTarget))
+                    !string.IsNullOrEmpty(unlinkedConfig.DownloadDirectoryTarget) &&
+                    filePath.StartsWith(unlinkedConfig.DownloadDirectorySource, StringComparison.OrdinalIgnoreCase))
                 {
-                    filePath = filePath.Replace(unlinkedConfig.DownloadDirectorySource, unlinkedConfig.DownloadDirectoryTarget);
+                    filePath = unlinkedConfig.DownloadDirectoryTarget + filePath[unlinkedConfig.DownloadDirectorySource.Length..];
                 }
 
                 if (file.Priority <= 0)

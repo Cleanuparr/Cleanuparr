@@ -91,9 +91,10 @@ public partial class TransmissionService
                 string filePath = string.Join(Path.DirectorySeparatorChar, Path.Combine(torrent.Info.DownloadDir, file.Name).Split(['\\', '/']));
 
                 if (!string.IsNullOrEmpty(unlinkedConfig.DownloadDirectorySource) &&
-                    !string.IsNullOrEmpty(unlinkedConfig.DownloadDirectoryTarget))
+                    !string.IsNullOrEmpty(unlinkedConfig.DownloadDirectoryTarget) &&
+                    filePath.StartsWith(unlinkedConfig.DownloadDirectorySource, StringComparison.OrdinalIgnoreCase))
                 {
-                    filePath = filePath.Replace(unlinkedConfig.DownloadDirectorySource, unlinkedConfig.DownloadDirectoryTarget);
+                    filePath = unlinkedConfig.DownloadDirectoryTarget + filePath[unlinkedConfig.DownloadDirectorySource.Length..];
                 }
 
                 long hardlinkCount = _hardLinkFileService.GetHardLinkCount(filePath, unlinkedConfig.IgnoredRootDirs.Count > 0);
