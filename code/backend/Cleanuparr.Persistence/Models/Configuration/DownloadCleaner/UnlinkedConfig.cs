@@ -72,7 +72,7 @@ public sealed record UnlinkedConfig : IConfig
         {
             if (!Directory.Exists(dir))
             {
-                throw new ValidationException($"{dir} root directory does not exist");
+                throw new ValidationException($"{dir} root directory does not exist or is not accessible (check permissions)");
             }
         }
     }
