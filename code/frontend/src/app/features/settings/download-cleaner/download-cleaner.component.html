@@ -65,7 +65,8 @@
     @if (clientOptions().length > 0) {
       <app-card [header]="selectedClient()?.downloadClientName ?? 'Download Client'">
         <div class="form-stack">
-          <app-select label="Download Client" [options]="clientOptions()" [(value)]="selectedClientId"
+          <app-select label="Download Client" [options]="clientOptions()" [value]="selectedClientId()"
+            (valueChange)="onClientChange($event)"
             hint="Select which download client to configure"
             helpKey="download-cleaner:downloadClient" />
 

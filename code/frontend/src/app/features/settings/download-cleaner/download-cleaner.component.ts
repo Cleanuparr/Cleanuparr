@@ -308,6 +308,19 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
     });
   }
 
+  async onClientChange(newClientId: unknown): Promise<void> {
+    if (this.unlinkedDirty()) {
+      const confirmed = await this.confirm.confirm({
+        title: 'Unsaved Changes',
+        message: 'You have unsaved unlinked config changes. Discard them?',
+        confirmLabel: 'Discard',
+        destructive: true,
+      });
+      if (!confirmed) return;
+    }
+    this.selectedClientId.set(newClientId as string | null);
+  }
+
   // --- Unlinked config ---
 
   updateUnlinkedField(field: string, value: any): void {
