@@ -87,6 +87,12 @@ public class SeedingRulesController : ControllerBase
                 return BadRequest(new { Message = "A seeding rule with this name and privacy type already exists for this client" });
             }
 
+            var overlapError = GetPrivacyTypeOverlapError(ruleDto.Name.Trim(), ruleDto.PrivacyType, existingRules, excludeId: null);
+            if (overlapError is not null)
+            {
+                return BadRequest(new { Message = overlapError });
+            }
+
             var rule = CreateRule(client.TypeName, client.Id, ruleDto);
             rule.Validate();
 
@@ -143,6 +149,12 @@ public class SeedingRulesController : ControllerBase
             if (duplicate is not null)
             {
                 return BadRequest(new { Message = "A seeding rule with this name and privacy type already exists for this client" });
+            }
+
+            var overlapError = GetPrivacyTypeOverlapError(ruleDto.Name.Trim(), ruleDto.PrivacyType, clientRules, excludeId: id);
+            if (overlapError is not null)
+            {
+                return BadRequest(new { Message = overlapError });
             }
 
             existingRule.Name = ruleDto.Name.Trim();
@@ -204,6 +216,36 @@ public class SeedingRulesController : ControllerBase
         finally
         {
             DataContext.Lock.Release();
+        }
+    }
+
+    private static string? GetPrivacyTypeOverlapError(
+        string name,
+        TorrentPrivacyType privacyType,
+        IEnumerable<ISeedingRule> existingRules,
+        Guid? excludeId)
+    {
+        if (privacyType == TorrentPrivacyType.Both)
+        {
+            var hasConflict = existingRules.Any(r =>
+                r.Id != excludeId &&
+                r.Name.Equals(name, StringComparison.OrdinalIgnoreCase) &&
+                r.PrivacyType != TorrentPrivacyType.Both);
+
+            return hasConflict
+                ? "A 'Both' rule cannot coexist with a Public or Private rule for the same category"
+                : null;
+        }
+        else
+        {
+            var hasConflict = existingRules.Any(r =>
+                r.Id != excludeId &&
+                r.Name.Equals(name, StringComparison.OrdinalIgnoreCase) &&
+                r.PrivacyType == TorrentPrivacyType.Both);
+
+            return hasConflict
+                ? "A Public or Private rule cannot coexist with a 'Both' rule for the same category"
+                : null;
         }
     }
 
