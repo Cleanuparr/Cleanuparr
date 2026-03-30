@@ -134,9 +134,16 @@ public sealed class DownloadCleaner : GenericHandler
             var seedingRules = await LoadSeedingRulesForClient(downloadService.ClientConfig);
             var unlinkedConfig = await LoadUnlinkedConfigForClient(downloadService.ClientConfig.Id);
 
-            if (unlinkedConfig is { Enabled: true, Categories.Count: > 0 })
+            if (unlinkedConfig is { Enabled: true })
             {
-                await ChangeUnlinkedCategoriesForClientAsync(downloadService, clientDownloads, unlinkedConfig);
+                if (unlinkedConfig.Categories.Count > 0)
+                {
+                    await ChangeUnlinkedCategoriesForClientAsync(downloadService, clientDownloads, unlinkedConfig);
+                }
+                else
+                {
+                    _logger.LogWarning("Unlinked config is enabled but no categories are configured for {name}, skipping", downloadService.ClientConfig.Name);
+                }
             }
 
             if (seedingRules.Count > 0)
