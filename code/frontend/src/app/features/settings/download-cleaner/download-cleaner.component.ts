@@ -81,7 +81,9 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
   );
 
   readonly clientOptions = computed<SelectOption[]>(() =>
-    this.clientConfigs().map(c => ({ label: c.downloadClientName, value: c.downloadClientId }))
+    this.clientConfigs()
+      .map(c => ({ label: c.downloadClientName, value: c.downloadClientId }))
+      .sort((a, b) => a.label.localeCompare(b.label))
   );
 
   readonly seedingRulesExpanded = signal(false);
