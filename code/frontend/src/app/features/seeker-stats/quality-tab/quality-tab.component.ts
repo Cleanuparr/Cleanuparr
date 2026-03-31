@@ -123,9 +123,7 @@ export class QualityTabComponent implements OnInit {
   }
 
   onInstanceFilterChange(value: string): void {
-    this.selectedInstanceId.set(value);
-    this.currentPage.set(1);
-    this.loadScores();
+    this.applyFilterChange(this.selectedInstanceId, value);
   }
 
   private loadStats(): void {
@@ -141,19 +139,19 @@ export class QualityTabComponent implements OnInit {
   }
 
   onSortChange(value: string): void {
-    this.sortBy.set(value);
-    this.currentPage.set(1);
-    this.loadScores();
+    this.applyFilterChange(this.sortBy, value);
   }
 
   onHideMetChange(value: boolean): void {
-    this.hideMet.set(value);
-    this.currentPage.set(1);
-    this.loadScores();
+    this.applyFilterChange(this.hideMet, value);
   }
 
   onHideUnmonitoredChange(value: boolean): void {
-    this.hideUnmonitored.set(value);
+    this.applyFilterChange(this.hideUnmonitored, value);
+  }
+
+  private applyFilterChange<T>(setter: { set: (v: T) => void }, value: T): void {
+    setter.set(value);
     this.currentPage.set(1);
     this.loadScores();
   }
