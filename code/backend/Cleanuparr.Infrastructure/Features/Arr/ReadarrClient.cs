@@ -1,4 +1,5 @@
 using System.Text;
+using Cleanuparr.Domain.Entities.Arr;
 using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Entities.Readarr;
 using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
@@ -144,5 +145,10 @@ public class ReadarrClient : ArrClient, IReadarrClient
         response.EnsureSuccessStatusCode();
 
         return await DeserializeStreamAsync<Book>(response);
+    }
+    
+    public override async Task<List<Tag>> GetAllTagsAsync(ArrInstance arrInstance)
+    {
+        throw new NotImplementedException();
     }
 } 

@@ -12,7 +12,7 @@ public sealed record SearchableMovie
 
     public MovieFileInfo? MovieFile { get; init; }
 
-    public List<string> Tags { get; init; } = [];
+    public List<long> Tags { get; init; } = [];
 
     public int QualityProfileId { get; init; }
 

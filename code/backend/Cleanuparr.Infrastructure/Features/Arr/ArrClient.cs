@@ -330,4 +330,6 @@ public abstract class ArrClient : IArrClient
         
         return true;
     }
+
+    public abstract Task<List<Tag>> GetAllTagsAsync(ArrInstance arrInstance);
 }

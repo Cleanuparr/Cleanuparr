@@ -45,4 +45,6 @@ public interface IArrClient
     /// Items that are completed, import-blocked, or otherwise finished are not counted.
     /// </summary>
     Task<int> GetActiveDownloadCountAsync(ArrInstance arrInstance);
+
+    Task<List<Tag>> GetAllTagsAsync(ArrInstance arrInstance);
 }
