@@ -1,4 +1,5 @@
 using System.Text;
+using Cleanuparr.Domain.Entities.Arr;
 using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Entities.Radarr;
 using Cleanuparr.Domain.Entities.Whisparr;
@@ -145,5 +146,10 @@ public class WhisparrV3Client : ArrClient, IWhisparrV3Client
         response.EnsureSuccessStatusCode();
 
         return await DeserializeStreamAsync<Movie>(response);
+    }
+    
+    public override async Task<List<Tag>> GetAllTagsAsync(ArrInstance arrInstance)
+    {
+        throw new NotImplementedException();
     }
 } 

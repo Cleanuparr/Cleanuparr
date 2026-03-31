@@ -1,4 +1,5 @@
 using System.Text;
+using Cleanuparr.Domain.Entities.Arr;
 using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Entities.Lidarr;
 using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
@@ -154,5 +155,10 @@ public class LidarrClient : ArrClient, ILidarrClient
         const string albumSearch = "AlbumSearch";
 
         return [new LidarrCommand { Name = albumSearch, AlbumIds = items.Select(i => i.Id).ToList() }];
+    }
+
+    public override async Task<List<Tag>> GetAllTagsAsync(ArrInstance arrInstance)
+    {
+        throw new NotImplementedException();
     }
 }

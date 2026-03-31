@@ -422,7 +422,11 @@ public sealed class Seeker : IHandler
         HashSet<long> queuedMovieIds)
     {
         List<SearchableMovie> movies = await _radarrClient.GetAllMoviesAsync(arrInstance);
+        List<Tag> tags = await _radarrClient.GetAllTagsAsync(arrInstance);
         List<long> allLibraryIds = movies.Select(m => m.Id).ToList();
+
+        Dictionary<long, string> tagsById = tags.ToDictionary(t => t.Id, t => t.Label);
+        HashSet<string> skipTagSet = new(instanceConfig.SkipTags, StringComparer.InvariantCultureIgnoreCase);
 
         // Load cached CF scores when custom format score filtering is enabled
         Dictionary<long, CustomFormatScoreEntry>? cfScores = null;
@@ -441,7 +445,11 @@ public sealed class Seeker : IHandler
             .Where(m => m.Status is "released")
             .Where(m => IsMoviePastGracePeriod(m, graceCutoff))
             .Where(m => !config.MonitoredOnly || m.Monitored)
-            .Where(m => instanceConfig.SkipTags.Count == 0 || !m.Tags.Any(instanceConfig.SkipTags.Contains))
+            .Where(m => instanceConfig.SkipTags.Count == 0 ||
+                !m.Tags
+                    .Select(id => tagsById.TryGetValue(id, out var label) ? label : null)
+                    .Any(label => label is not null && skipTagSet.Contains(label))
+            )
             .Where(m => !m.HasFile
                 || (!config.UseCutoff && !config.UseCustomFormatScore)
                 || (config.UseCutoff && (m.MovieFile?.QualityCutoffNotMet ?? false))
@@ -543,14 +551,22 @@ public sealed class Seeker : IHandler
         HashSet<(long SeriesId, long SeasonNumber)>? queuedSeasons = null)
     {
         List<SearchableSeries> series = await _sonarrClient.GetAllSeriesAsync(arrInstance);
+        List<Tag> tags = await _sonarrClient.GetAllTagsAsync(arrInstance);
         List<long> allLibraryIds = series.Select(s => s.Id).ToList();
         DateTime graceCutoff = _timeProvider.GetUtcNow().UtcDateTime.AddHours(-config.PostReleaseGraceHours);
+
+        Dictionary<long, string> tagsById = tags.ToDictionary(t => t.Id, t => t.Label);
+        HashSet<string> skipTagSet = new(instanceConfig.SkipTags, StringComparer.InvariantCultureIgnoreCase);
 
         // Apply filters
         var candidates = series
             .Where(s => s.Status is "continuing" or "ended" or "released")
             .Where(s => !config.MonitoredOnly || s.Monitored)
-            .Where(s => instanceConfig.SkipTags.Count == 0 || !s.Tags.Any(instanceConfig.SkipTags.Contains))
+            .Where(s => instanceConfig.SkipTags.Count == 0 ||
+                !s.Tags
+                    .Select(id => tagsById.TryGetValue(id, out var label) ? label : null)
+                    .Any(label => label is not null && skipTagSet.Contains(label))
+            )
             // Skip fully-downloaded series (unless quality upgrade filters active)
             .Where(s => config.UseCutoff || config.UseCustomFormatScore
                 || s.Statistics == null || s.Statistics.EpisodeCount == 0

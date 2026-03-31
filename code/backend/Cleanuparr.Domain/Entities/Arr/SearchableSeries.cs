@@ -10,20 +10,11 @@ public sealed record SearchableSeries
 
     public bool Monitored { get; init; }
 
-    public List<string> Tags { get; init; } = [];
-
+    public List<long> Tags { get; init; } = [];
+    
     public DateTime? Added { get; init; }
 
     public string Status { get; init; } = string.Empty;
 
     public SeriesStatistics? Statistics { get; init; }
-}
-
-public sealed record SeriesStatistics
-{
-    public int EpisodeFileCount { get; init; }
-
-    public int EpisodeCount { get; init; }
-
-    public double PercentOfEpisodes { get; init; }
 }

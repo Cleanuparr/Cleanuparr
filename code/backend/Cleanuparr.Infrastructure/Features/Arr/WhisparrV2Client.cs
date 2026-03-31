@@ -277,4 +277,9 @@ public class WhisparrV2Client : ArrClient, IWhisparrV2Client
 
         return commands;
     }
+    
+    public override async Task<List<Tag>> GetAllTagsAsync(ArrInstance arrInstance)
+    {
+        throw new NotImplementedException();
+    }
 } 

@@ -157,6 +157,23 @@ public class RadarrClient : ArrClient, IRadarrClient
         JsonSerializer serializer = JsonSerializer.CreateDefault();
         return serializer.Deserialize<List<SearchableMovie>>(reader) ?? [];
     }
+    
+    public override async Task<List<Tag>> GetAllTagsAsync(ArrInstance arrInstance)
+    {
+        UriBuilder uriBuilder = new(arrInstance.Url);
+        uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/v3/tag";
+        using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
+        SetApiKey(request, arrInstance.ApiKey);
+        
+        using HttpResponseMessage response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+        response.EnsureSuccessStatusCode();
+        
+        using Stream stream = await response.Content.ReadAsStreamAsync();
+        using StreamReader sr = new(stream);
+        using JsonTextReader reader = new(sr);
+        JsonSerializer serializer = JsonSerializer.CreateDefault();
+        return serializer.Deserialize<List<Tag>>(reader) ?? [];
+    }
 
     public async Task<List<ArrQualityProfile>> GetQualityProfilesAsync(ArrInstance arrInstance)
     {
