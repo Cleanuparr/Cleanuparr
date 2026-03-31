@@ -425,6 +425,9 @@ public sealed class Seeker : IHandler
         List<Tag> tags = await _radarrClient.GetAllTagsAsync(arrInstance);
         List<long> allLibraryIds = movies.Select(m => m.Id).ToList();
 
+        Dictionary<long, string> tagsById = tags.ToDictionary(t => t.Id, t => t.Label);
+        HashSet<string> skipTagSet = new(instanceConfig.SkipTags, StringComparer.InvariantCultureIgnoreCase);
+
         // Load cached CF scores when custom format score filtering is enabled
         Dictionary<long, CustomFormatScoreEntry>? cfScores = null;
         if (config.UseCustomFormatScore)
@@ -442,10 +445,10 @@ public sealed class Seeker : IHandler
             .Where(m => m.Status is "released")
             .Where(m => IsMoviePastGracePeriod(m, graceCutoff))
             .Where(m => !config.MonitoredOnly || m.Monitored)
-            .Where(m => instanceConfig.SkipTags.Count == 0 || 
-                !tags
-                    .Where(tag => m.Tags.Any(id => id == tag.Id))
-                    .Any(tag => instanceConfig.SkipTags.Contains(tag.Label, StringComparer.InvariantCultureIgnoreCase))
+            .Where(m => instanceConfig.SkipTags.Count == 0 ||
+                !m.Tags
+                    .Select(id => tagsById.TryGetValue(id, out var label) ? label : null)
+                    .Any(label => label is not null && skipTagSet.Contains(label))
             )
             .Where(m => !m.HasFile
                 || (!config.UseCutoff && !config.UseCustomFormatScore)
@@ -552,14 +555,17 @@ public sealed class Seeker : IHandler
         List<long> allLibraryIds = series.Select(s => s.Id).ToList();
         DateTime graceCutoff = _timeProvider.GetUtcNow().UtcDateTime.AddHours(-config.PostReleaseGraceHours);
 
+        Dictionary<long, string> tagsById = tags.ToDictionary(t => t.Id, t => t.Label);
+        HashSet<string> skipTagSet = new(instanceConfig.SkipTags, StringComparer.InvariantCultureIgnoreCase);
+
         // Apply filters
         var candidates = series
             .Where(s => s.Status is "continuing" or "ended" or "released")
             .Where(s => !config.MonitoredOnly || s.Monitored)
             .Where(s => instanceConfig.SkipTags.Count == 0 ||
-                !tags
-                    .Where(tag => s.Tags.Any(id => id == tag.Id))
-                    .Any(tag => instanceConfig.SkipTags.Contains(tag.Label, StringComparer.InvariantCultureIgnoreCase))
+                !s.Tags
+                    .Select(id => tagsById.TryGetValue(id, out var label) ? label : null)
+                    .Any(label => label is not null && skipTagSet.Contains(label))
             )
             // Skip fully-downloaded series (unless quality upgrade filters active)
             .Where(s => config.UseCutoff || config.UseCustomFormatScore
