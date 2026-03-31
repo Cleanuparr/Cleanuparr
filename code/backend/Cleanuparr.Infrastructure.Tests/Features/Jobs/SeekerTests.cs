@@ -56,6 +56,14 @@ public class SeekerTests : IDisposable
         // Default: dry run disabled
         _dryRunInterceptor.Setup(x => x.IsDryRunEnabled()).ReturnsAsync(false);
 
+        // Default: GetAllTagsAsync returns empty list
+        _radarrClient
+            .Setup(x => x.GetAllTagsAsync(It.IsAny<ArrInstance>()))
+            .ReturnsAsync([]);
+        _sonarrClient
+            .Setup(x => x.GetAllTagsAsync(It.IsAny<ArrInstance>()))
+            .ReturnsAsync([]);
+
         // Default: PublishSearchTriggered returns a Guid
         _fixture.EventPublisher
             .Setup(x => x.PublishSearchTriggered(
@@ -672,8 +680,16 @@ public class SeekerTests : IDisposable
             .Setup(x => x.GetAllMoviesAsync(radarrInstance))
             .ReturnsAsync(
             [
-                new SearchableMovie { Id = 1, Title = "Normal Movie", Status = "released", Monitored = true, Tags = ["movies"] },
-                new SearchableMovie { Id = 2, Title = "Skipped Movie", Status = "released", Monitored = true, Tags = ["no-search", "movies"] }
+                new SearchableMovie { Id = 1, Title = "Normal Movie", Status = "released", Monitored = true, Tags = [1] },
+                new SearchableMovie { Id = 2, Title = "Skipped Movie", Status = "released", Monitored = true, Tags = [2, 1] }
+            ]);
+
+        _radarrClient
+            .Setup(x => x.GetAllTagsAsync(radarrInstance))
+            .ReturnsAsync(
+            [
+                new Tag { Id = 1, Label = "movies" },
+                new Tag { Id = 2, Label = "no-search" }
             ]);
 
         HashSet<SearchItem>? capturedSearchItems = null;
