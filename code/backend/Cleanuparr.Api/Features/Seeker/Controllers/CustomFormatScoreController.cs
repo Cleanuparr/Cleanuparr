@@ -28,7 +28,8 @@ public sealed class CustomFormatScoreController : ControllerBase
         [FromQuery] Guid? instanceId = null,
         [FromQuery] string? search = null,
         [FromQuery] string sortBy = "title",
-        [FromQuery] bool hideMet = false)
+        [FromQuery] bool hideMet = false,
+        [FromQuery] bool hideUnmonitored = false)
     {
         if (page < 1) page = 1;
         if (pageSize < 1) pageSize = 50;
@@ -51,6 +52,11 @@ public sealed class CustomFormatScoreController : ControllerBase
         if (hideMet)
         {
             query = query.Where(e => e.CurrentScore < e.CutoffScore);
+        }
+
+        if (hideUnmonitored)
+        {
+            query = query.Where(e => e.IsMonitored);
         }
 
         int totalCount = await query.CountAsync();
