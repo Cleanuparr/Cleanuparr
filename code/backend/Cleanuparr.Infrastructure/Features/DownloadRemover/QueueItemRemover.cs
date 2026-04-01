@@ -69,6 +69,7 @@ public sealed class QueueItemRemover : IQueueItemRemover
             ContextProvider.Set(nameof(QueueRecord), request.Record);
             ContextProvider.Set(ContextProvider.Keys.ArrInstanceUrl, request.Instance.ExternalUrl ?? request.Instance.Url);
             ContextProvider.Set(nameof(InstanceType), request.InstanceType);
+            ContextProvider.Set(ContextProvider.Keys.ArrInstanceId, request.Instance.Id);
             ContextProvider.Set(ContextProvider.Keys.Version, request.Instance.Version);
 
             await _eventPublisher.PublishQueueItemDeleted(request.RemoveFromClient, request.DeleteReason);

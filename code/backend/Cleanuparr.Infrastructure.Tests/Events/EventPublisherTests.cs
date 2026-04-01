@@ -10,6 +10,7 @@ using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Cleanuparr.Persistence.Models.Events;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -31,6 +32,7 @@ public class EventPublisherTests : IDisposable
         // Setup in-memory database
         var options = new DbContextOptionsBuilder<EventsContext>()
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .ConfigureWarnings(w => w.Ignore(InMemoryEventId.TransactionIgnoredWarning))
             .Options;
         _context = new EventsContext(options);
 
@@ -586,7 +588,7 @@ public class EventPublisherTests : IDisposable
     public async Task PublishSearchTriggered_SavesEventWithCorrectType()
     {
         // Act
-        await _publisher.PublishSearchTriggered("Radarr-1", 2, ["Movie A", "Movie B"], SeekerSearchType.Proactive);
+        await _publisher.PublishSearchTriggered("Movie A", SeekerSearchType.Proactive, SeekerSearchReason.Missing);
 
         // Assert
         var savedEvent = await _context.Events.FirstOrDefaultAsync();
@@ -599,7 +601,7 @@ public class EventPublisherTests : IDisposable
     public async Task PublishSearchTriggered_SetsSearchStatusToPending()
     {
         // Act
-        await _publisher.PublishSearchTriggered("Radarr-1", 1, ["Movie A"], SeekerSearchType.Proactive);
+        await _publisher.PublishSearchTriggered("Movie A", SeekerSearchType.Proactive, SeekerSearchReason.Missing);
 
         // Assert
         var savedEvent = await _context.Events.FirstOrDefaultAsync();
@@ -614,7 +616,7 @@ public class EventPublisherTests : IDisposable
         var cycleId = Guid.NewGuid();
 
         // Act
-        await _publisher.PublishSearchTriggered("Radarr-1", 1, ["Movie A"], SeekerSearchType.Proactive, cycleId);
+        await _publisher.PublishSearchTriggered("Movie A", SeekerSearchType.Proactive, SeekerSearchReason.Missing, cycleId);
 
         // Assert
         var savedEvent = await _context.Events.FirstOrDefaultAsync();
@@ -626,7 +628,7 @@ public class EventPublisherTests : IDisposable
     public async Task PublishSearchTriggered_ReturnsEventId()
     {
         // Act
-        Guid eventId = await _publisher.PublishSearchTriggered("Radarr-1", 1, ["Movie A"], SeekerSearchType.Proactive);
+        Guid eventId = await _publisher.PublishSearchTriggered("Movie A", SeekerSearchType.Proactive, SeekerSearchReason.Missing);
 
         // Assert
         Assert.NotEqual(Guid.Empty, eventId);
@@ -635,26 +637,27 @@ public class EventPublisherTests : IDisposable
     }
 
     [Fact]
-    public async Task PublishSearchTriggered_SerializesItemsAndSearchTypeToData()
+    public async Task PublishSearchTriggered_CreatesSearchEventData()
     {
         // Act
-        await _publisher.PublishSearchTriggered("Sonarr-1", 2, ["Series A", "Series B"], SeekerSearchType.Replacement);
+        await _publisher.PublishSearchTriggered("Series A", SeekerSearchType.Replacement, SeekerSearchReason.Replacement);
 
         // Assert
         var savedEvent = await _context.Events.FirstOrDefaultAsync();
         Assert.NotNull(savedEvent);
-        Assert.NotNull(savedEvent.Data);
-        Assert.Contains("Series A", savedEvent.Data);
-        Assert.Contains("Series B", savedEvent.Data);
-        Assert.Contains("Replacement", savedEvent.Data);
-        Assert.Contains("Sonarr-1", savedEvent.Data);
+
+        var searchData = await _context.SearchEventData.FirstOrDefaultAsync(s => s.AppEventId == savedEvent.Id);
+        Assert.NotNull(searchData);
+        Assert.Equal("Series A", searchData.ItemTitle);
+        Assert.Equal(SeekerSearchType.Replacement, searchData.SearchType);
+        Assert.Equal(SeekerSearchReason.Replacement, searchData.SearchReason);
     }
 
     [Fact]
     public async Task PublishSearchTriggered_NotifiesSignalRClients()
     {
         // Act
-        await _publisher.PublishSearchTriggered("Radarr-1", 1, ["Movie A"], SeekerSearchType.Proactive);
+        await _publisher.PublishSearchTriggered("Movie A", SeekerSearchType.Proactive, SeekerSearchReason.Missing);
 
         // Assert
         _clientProxyMock.Verify(c => c.SendCoreAsync(
@@ -667,27 +670,24 @@ public class EventPublisherTests : IDisposable
     public async Task PublishSearchTriggered_SendsNotification()
     {
         // Act
-        await _publisher.PublishSearchTriggered("Radarr-1", 2, ["Movie A", "Movie B"], SeekerSearchType.Proactive);
+        await _publisher.PublishSearchTriggered("Movie A", SeekerSearchType.Proactive, SeekerSearchReason.Missing);
 
         // Assert
         _notificationPublisherMock.Verify(
-            n => n.NotifySearchTriggered("Radarr-1", 2, It.IsAny<IEnumerable<string>>()),
+            n => n.NotifySearchTriggered("Movie A"),
             Times.Once);
     }
 
     [Fact]
-    public async Task PublishSearchTriggered_TruncatesDisplayForMoreThan5Items()
+    public async Task PublishSearchTriggered_IncludesItemTitleInMessage()
     {
-        // Arrange
-        var items = new[] { "Item 1", "Item 2", "Item 3", "Item 4", "Item 5", "Item 6", "Item 7" };
-
         // Act
-        await _publisher.PublishSearchTriggered("Radarr-1", 7, items, SeekerSearchType.Proactive);
+        await _publisher.PublishSearchTriggered("The Matrix", SeekerSearchType.Proactive, SeekerSearchReason.Missing);
 
         // Assert
         var savedEvent = await _context.Events.FirstOrDefaultAsync();
         Assert.NotNull(savedEvent);
-        Assert.Contains("+2 more", savedEvent.Message);
+        Assert.Contains("The Matrix", savedEvent.Message);
     }
 
     #endregion
@@ -698,7 +698,7 @@ public class EventPublisherTests : IDisposable
     public async Task PublishSearchCompleted_UpdatesEventStatus()
     {
         // Arrange — create a search event first
-        Guid eventId = await _publisher.PublishSearchTriggered("Radarr-1", 1, ["Movie A"], SeekerSearchType.Proactive);
+        Guid eventId = await _publisher.PublishSearchTriggered("Movie A", SeekerSearchType.Proactive, SeekerSearchReason.Missing);
 
         // Act
         await _publisher.PublishSearchCompleted(eventId, SearchCommandStatus.Completed);
@@ -713,7 +713,7 @@ public class EventPublisherTests : IDisposable
     public async Task PublishSearchCompleted_SetsCompletedAt()
     {
         // Arrange
-        Guid eventId = await _publisher.PublishSearchTriggered("Radarr-1", 1, ["Movie A"], SeekerSearchType.Proactive);
+        Guid eventId = await _publisher.PublishSearchTriggered("Movie A", SeekerSearchType.Proactive, SeekerSearchReason.Missing);
 
         // Act
         await _publisher.PublishSearchCompleted(eventId, SearchCommandStatus.Completed);
@@ -725,42 +725,35 @@ public class EventPublisherTests : IDisposable
     }
 
     [Fact]
-    public async Task PublishSearchCompleted_MergesResultDataIntoExistingData()
+    public async Task PublishSearchCompleted_UpdatesGrabbedItemsOnSearchEventData()
     {
         // Arrange
-        Guid eventId = await _publisher.PublishSearchTriggered("Radarr-1", 1, ["Movie A"], SeekerSearchType.Proactive);
+        Guid eventId = await _publisher.PublishSearchTriggered("Movie A", SeekerSearchType.Proactive, SeekerSearchReason.Missing);
 
-        var resultData = new { GrabbedItems = new[] { new { Title = "Movie A (2024)", Status = "downloading" } } };
+        var grabbedItems = new List<string> { "Movie A (2024)" };
 
         // Act
-        await _publisher.PublishSearchCompleted(eventId, SearchCommandStatus.Completed, resultData);
+        await _publisher.PublishSearchCompleted(eventId, SearchCommandStatus.Completed, grabbedItems);
 
         // Assert
-        var updatedEvent = await _context.Events.FindAsync(eventId);
-        Assert.NotNull(updatedEvent);
-        Assert.NotNull(updatedEvent.Data);
-        // Original data should still be present
-        Assert.Contains("Movie A", updatedEvent.Data);
-        // Merged result data should be present
-        Assert.Contains("GrabbedItems", updatedEvent.Data);
-        Assert.Contains("Movie A (2024)", updatedEvent.Data);
+        var searchData = await _context.SearchEventData.FirstOrDefaultAsync(s => s.AppEventId == eventId);
+        Assert.NotNull(searchData);
+        Assert.Contains("Movie A (2024)", searchData.GrabbedItems);
     }
 
     [Fact]
-    public async Task PublishSearchCompleted_WithNullResultData_DoesNotModifyData()
+    public async Task PublishSearchCompleted_WithNullGrabbedItems_DoesNotModifySearchEventData()
     {
         // Arrange
-        Guid eventId = await _publisher.PublishSearchTriggered("Radarr-1", 1, ["Movie A"], SeekerSearchType.Proactive);
-        var originalEvent = await _context.Events.FindAsync(eventId);
-        string? originalData = originalEvent!.Data;
+        Guid eventId = await _publisher.PublishSearchTriggered("Movie A", SeekerSearchType.Proactive, SeekerSearchReason.Missing);
 
         // Act
         await _publisher.PublishSearchCompleted(eventId, SearchCommandStatus.Completed);
 
         // Assert
-        var updatedEvent = await _context.Events.FindAsync(eventId);
-        Assert.NotNull(updatedEvent);
-        Assert.Equal(originalData, updatedEvent.Data);
+        var searchData = await _context.SearchEventData.FirstOrDefaultAsync(s => s.AppEventId == eventId);
+        Assert.NotNull(searchData);
+        Assert.Empty(searchData.GrabbedItems);
     }
 
     [Fact]
@@ -779,7 +772,7 @@ public class EventPublisherTests : IDisposable
     public async Task PublishSearchCompleted_NotifiesSignalRClients()
     {
         // Arrange
-        Guid eventId = await _publisher.PublishSearchTriggered("Radarr-1", 1, ["Movie A"], SeekerSearchType.Proactive);
+        Guid eventId = await _publisher.PublishSearchTriggered("Movie A", SeekerSearchType.Proactive, SeekerSearchReason.Missing);
 
         // Reset mock to only capture the completion call
         _clientProxyMock.Invocations.Clear();

@@ -49,8 +49,10 @@ public static class ContextProvider
         public const string ItemName = "itemName";
         public const string Hash = "hash";
         public const string DownloadClientUrl = "downloadClientUrl";
+        public const string DownloadClientId = "downloadClientId";
         public const string DownloadClientType = "downloadClientType";
         public const string DownloadClientName = "downloadClientName";
+        public const string ArrInstanceId = "arrInstanceId";
         public const string ArrInstanceUrl = "arrInstanceUrl";
     }
 }

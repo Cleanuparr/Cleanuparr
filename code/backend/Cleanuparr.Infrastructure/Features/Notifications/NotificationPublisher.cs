@@ -82,11 +82,11 @@ public class NotificationPublisher : INotificationPublisher
         }
     }
 
-    public virtual async Task NotifySearchTriggered(string instanceName, int itemCount, IEnumerable<string> items)
+    public virtual async Task NotifySearchTriggered(string itemTitle)
     {
         try
         {
-            var context = BuildSearchTriggeredContext(instanceName, itemCount, items);
+            var context = BuildSearchTriggeredContext(itemTitle);
             await SendNotificationAsync(NotificationEventType.SearchTriggered, context);
         }
         catch (Exception ex)
@@ -242,25 +242,22 @@ public class NotificationPublisher : INotificationPublisher
         return context;
     }
 
-    private static NotificationContext BuildSearchTriggeredContext(string instanceName, int itemCount, IEnumerable<string> items)
+    private static NotificationContext BuildSearchTriggeredContext(string itemTitle)
     {
         var instanceType = (InstanceType)ContextProvider.Get<object>(nameof(InstanceType));
         var instanceUrl = ContextProvider.Get<Uri>(ContextProvider.Keys.ArrInstanceUrl);
-        var itemList = items as string[] ?? items.ToArray();
-        var itemsDisplay = string.Join(", ", itemList.Take(5)) + (itemList.Length > 5 ? $" (+{itemList.Length - 5} more)" : "");
 
         return new NotificationContext
         {
             EventType = NotificationEventType.SearchTriggered,
             Title = "Search triggered",
-            Description = $"Searched {itemCount} items on {instanceName}",
+            Description = $"Search triggered for {itemTitle}",
             Severity = EventSeverity.Information,
             Data = new Dictionary<string, string>
             {
                 ["Instance type"] = instanceType.ToString(),
                 ["Url"] = instanceUrl.ToString(),
-                ["Item count"] = itemCount.ToString(),
-                ["Items"] = itemsDisplay,
+                ["Item"] = itemTitle,
             }
         };
     }

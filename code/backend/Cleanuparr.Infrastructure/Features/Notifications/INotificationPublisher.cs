@@ -12,5 +12,5 @@ public interface INotificationPublisher
 
     Task NotifyCategoryChanged(string oldCategory, string newCategory, bool isTag = false);
 
-    Task NotifySearchTriggered(string instanceName, int itemCount, IEnumerable<string> items);
+    Task NotifySearchTriggered(string itemTitle);
 }

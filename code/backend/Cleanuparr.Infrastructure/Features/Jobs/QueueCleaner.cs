@@ -93,6 +93,7 @@ public sealed class QueueCleaner : GenericHandler
         // push to context
         ContextProvider.Set(ContextProvider.Keys.ArrInstanceUrl, instance.ExternalUrl ?? instance.Url);
         ContextProvider.Set(nameof(InstanceType), instance.ArrConfig.Type);
+        ContextProvider.Set(ContextProvider.Keys.ArrInstanceId, instance.Id);
         ContextProvider.Set(ContextProvider.Keys.Version, instance.Version);
 
         IReadOnlyList<IDownloadService> downloadServices = await GetInitializedDownloadServicesAsync();

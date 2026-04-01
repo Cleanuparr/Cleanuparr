@@ -276,16 +276,6 @@
     margin-left: var(--space-1);
   }
 
-  &__meta {
-    font-size: var(--font-size-xs);
-    color: var(--text-tertiary);
-    flex-shrink: 0;
-    max-width: 150px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
   &__cycle {
     font-family: var(--font-mono);
     font-size: var(--font-size-xs);
@@ -329,7 +319,7 @@
     flex-wrap: wrap;
   }
 
-  .list-row__meta {
+  .list-row__instance {
     display: none;
   }
 }
@@ -350,7 +340,7 @@
     padding: var(--space-2) var(--space-3);
   }
 
-  .list-row__meta {
+  .list-row__instance {
     display: none;
   }
 

@@ -27,17 +27,24 @@ export enum SeekerSearchType {
   Replacement = 'Replacement',
 }
 
+export enum SeekerSearchReason {
+  Missing = 'Missing',
+  QualityCutoffNotMet = 'QualityCutoffNotMet',
+  CustomFormatScoreBelowCutoff = 'CustomFormatScoreBelowCutoff',
+  Replacement = 'Replacement',
+}
+
 export interface SearchEvent {
   id: string;
   timestamp: string;
-  instanceName: string;
+  arrInstanceId: string | null;
   instanceType: string | null;
-  itemCount: number;
-  items: string[];
+  itemTitle: string;
   searchType: SeekerSearchType;
+  searchReason: string | null;
   searchStatus: string | null;
   completedAt: string | null;
-  grabbedItems: unknown[] | null;
+  grabbedItems: string[] | null;
   cycleId: string | null;
   isDryRun: boolean;
 }

@@ -11,6 +11,8 @@ using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Cleanuparr.Persistence.Models.Events;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging;
 
 namespace Cleanuparr.Infrastructure.Events;
@@ -57,6 +59,8 @@ public class EventPublisher : IEventPublisher
             TrackingId = trackingId,
             StrikeId = strikeId,
             JobRunId = ContextProvider.TryGetJobRunId(),
+            ArrInstanceId = ContextProvider.Get(ContextProvider.Keys.ArrInstanceId) as Guid?,
+            DownloadClientId = ContextProvider.Get(ContextProvider.Keys.DownloadClientId) as Guid?,
             InstanceType = ContextProvider.Get(nameof(InstanceType)) is InstanceType it ? it : null,
             InstanceUrl = (ContextProvider.Get(ContextProvider.Keys.ArrInstanceUrl) as Uri)?.ToString(),
             DownloadClientType = ContextProvider.Get(ContextProvider.Keys.DownloadClientType) is DownloadClientTypeName dct ? dct : null,
@@ -64,7 +68,9 @@ public class EventPublisher : IEventPublisher
         };
 
         eventEntity.IsDryRun = isDryRun ?? await _dryRunInterceptor.IsDryRunEnabled();
-        await SaveEventToDatabase(eventEntity);
+
+        _context.Events.Add(eventEntity);
+        await _context.SaveChangesAsync();
 
         await NotifyClientsAsync(eventEntity);
 
@@ -89,7 +95,9 @@ public class EventPublisher : IEventPublisher
         };
 
         eventEntity.IsDryRun = isDryRun ?? await _dryRunInterceptor.IsDryRunEnabled();
-        await SaveManualEventToDatabase(eventEntity);
+
+        _context.ManualEvents.Add(eventEntity);
+        await _context.SaveChangesAsync();
 
         await NotifyClientsAsync(eventEntity);
 
@@ -231,21 +239,17 @@ public class EventPublisher : IEventPublisher
     /// Publishes a search triggered event with context data and notifications.
     /// Returns the event ID so the SeekerCommandMonitor can update it on completion.
     /// </summary>
-    public async Task<Guid> PublishSearchTriggered(string instanceName, int itemCount, IEnumerable<string> items, SeekerSearchType searchType, Guid? cycleId = null)
+    public async Task<Guid> PublishSearchTriggered(string itemTitle, SeekerSearchType searchType, SeekerSearchReason searchReason, Guid? cycleId = null)
     {
-        var itemList = items as string[] ?? items.ToArray();
-        var itemsDisplay = string.Join(", ", itemList.Take(5)) + (itemList.Length > 5 ? $" (+{itemList.Length - 5} more)" : "");
-
         AppEvent eventEntity = new()
         {
             EventType = EventType.SearchTriggered,
-            Message = $"Searched {itemCount} items on {instanceName}: {itemsDisplay}",
+            Message = $"Search triggered for {itemTitle}",
             Severity = EventSeverity.Information,
-            Data = JsonSerializer.Serialize(
-                new { InstanceName = instanceName, ItemCount = itemCount, Items = itemList, SearchType = searchType.ToString(), CycleId = cycleId },
-                new JsonSerializerOptions { Converters = { new JsonStringEnumConverter() } }),
             SearchStatus = SearchCommandStatus.Pending,
             JobRunId = ContextProvider.TryGetJobRunId(),
+            ArrInstanceId = ContextProvider.Get(ContextProvider.Keys.ArrInstanceId) as Guid?,
+            DownloadClientId = ContextProvider.Get(ContextProvider.Keys.DownloadClientId) as Guid?,
             InstanceType = ContextProvider.Get(nameof(InstanceType)) is InstanceType it ? it : null,
             InstanceUrl = (ContextProvider.Get(ContextProvider.Keys.ArrInstanceUrl) as Uri)?.ToString(),
             DownloadClientType = ContextProvider.Get(ContextProvider.Keys.DownloadClientType) is DownloadClientTypeName dct ? dct : null,
@@ -254,17 +258,39 @@ public class EventPublisher : IEventPublisher
         };
 
         eventEntity.IsDryRun = await _dryRunInterceptor.IsDryRunEnabled();
-        await SaveEventToDatabase(eventEntity);
+
+        await using IDbContextTransaction transaction = await _context.Database.BeginTransactionAsync();
+
+        try
+        {
+            _context.Events.Add(eventEntity);
+            _context.SearchEventData.Add(new SearchEventData
+            {
+                AppEventId = eventEntity.Id,
+                ItemTitle = itemTitle,
+                SearchType = searchType,
+                SearchReason = searchReason,
+            });
+
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+
         await NotifyClientsAsync(eventEntity);
-        await _notificationPublisher.NotifySearchTriggered(instanceName, itemCount, itemList);
+        await _notificationPublisher.NotifySearchTriggered(itemTitle);
 
         return eventEntity.Id;
     }
 
     /// <summary>
-    /// Updates an existing search event with completion status and optional result data
+    /// Updates an existing search event with completion status and optional grabbed item titles
     /// </summary>
-    public async Task PublishSearchCompleted(Guid eventId, SearchCommandStatus status, object? resultData = null)
+    public async Task PublishSearchCompleted(Guid eventId, SearchCommandStatus status, List<string>? grabbedItems = null)
     {
         var existingEvent = await _context.Events.FindAsync(eventId);
         if (existingEvent is null)
@@ -276,30 +302,14 @@ public class EventPublisher : IEventPublisher
         existingEvent.SearchStatus = status;
         existingEvent.CompletedAt = DateTime.UtcNow;
 
-        if (resultData is not null)
+        if (grabbedItems is { Count: > 0 })
         {
-            // Merge result data into existing Data JSON
-            var existingData = existingEvent.Data is not null
-                ? JsonSerializer.Deserialize<Dictionary<string, object>>(existingEvent.Data)
-                : new Dictionary<string, object>();
+            var searchData = await _context.SearchEventData
+                .FirstOrDefaultAsync(s => s.AppEventId == eventId);
 
-            var resultJson = JsonSerializer.Serialize(resultData, new JsonSerializerOptions
+            if (searchData is not null)
             {
-                Converters = { new JsonStringEnumConverter() }
-            });
-            var resultDict = JsonSerializer.Deserialize<Dictionary<string, object>>(resultJson);
-
-            if (existingData is not null && resultDict is not null)
-            {
-                foreach (var kvp in resultDict)
-                {
-                    existingData[kvp.Key] = kvp.Value;
-                }
-
-                existingEvent.Data = JsonSerializer.Serialize(existingData, new JsonSerializerOptions
-                {
-                    Converters = { new JsonStringEnumConverter() }
-                });
+                searchData.GrabbedItems = grabbedItems;
             }
         }
 
@@ -317,18 +327,6 @@ public class EventPublisher : IEventPublisher
             EventSeverity.Warning,
             data: new { itemName, hash }
         );
-    }
-
-    private async Task SaveEventToDatabase(AppEvent eventEntity)
-    {
-        _context.Events.Add(eventEntity);
-        await _context.SaveChangesAsync();
-    }
-    
-    private async Task SaveManualEventToDatabase(ManualEvent eventEntity)
-    {
-        _context.ManualEvents.Add(eventEntity);
-        await _context.SaveChangesAsync();
     }
 
     private async Task NotifyClientsAsync(AppEvent appEventEntity)

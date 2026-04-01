@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json.Serialization;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Persistence.Models.State;
@@ -15,8 +16,8 @@ namespace Cleanuparr.Persistence.Models.Events;
 [Index(nameof(Message))]
 [Index(nameof(StrikeId))]
 [Index(nameof(JobRunId))]
-[Index(nameof(InstanceType))]
-[Index(nameof(DownloadClientType))]
+[Index(nameof(ArrInstanceId))]
+[Index(nameof(DownloadClientId))]
 [Index(nameof(CycleId))]
 public class AppEvent : IEvent
 {
@@ -54,26 +55,14 @@ public class AppEvent : IEvent
     public JobRun? JobRun { get; set; }
 
     /// <summary>
-    /// The type of arr instance that generated this event (e.g., Sonarr, Radarr)
+    /// The ID of the arr instance that generated this event
     /// </summary>
-    public InstanceType? InstanceType { get; set; }
+    public Guid? ArrInstanceId { get; set; }
 
     /// <summary>
-    /// The URL of the arr instance that generated this event
+    /// The ID of the download client involved in this event
     /// </summary>
-    [MaxLength(500)]
-    public string? InstanceUrl { get; set; }
-
-    /// <summary>
-    /// The type of download client involved in this event
-    /// </summary>
-    public DownloadClientTypeName? DownloadClientType { get; set; }
-
-    /// <summary>
-    /// The name of the download client involved in this event
-    /// </summary>
-    [MaxLength(200)]
-    public string? DownloadClientName { get; set; }
+    public Guid? DownloadClientId { get; set; }
 
     /// <summary>
     /// Status of the search command (only set for SearchTriggered events)
@@ -91,4 +80,22 @@ public class AppEvent : IEvent
     public Guid? CycleId { get; set; }
 
     public bool IsDryRun { get; set; }
+
+    public SearchEventData? SearchEventData { get; set; }
+
+    // Used only for notifications
+
+    [NotMapped]
+    public InstanceType? InstanceType { get; set; }
+
+    [NotMapped]
+    [MaxLength(500)]
+    public string? InstanceUrl { get; set; }
+
+    [NotMapped]
+    public DownloadClientTypeName? DownloadClientType { get; set; }
+
+    [NotMapped]
+    [MaxLength(200)]
+    public string? DownloadClientName { get; set; }
 }

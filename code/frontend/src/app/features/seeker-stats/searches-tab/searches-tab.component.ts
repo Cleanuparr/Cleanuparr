@@ -141,8 +141,28 @@ export class SearchesTabComponent implements OnInit {
     }
   }
 
-  formatGrabbedItems(items: unknown[]): string {
-    return items.map((i: any) => i.Title || i.title || 'Unknown').join(', ');
+  formatGrabbedItems(items: string[]): string {
+    return items.join(', ');
+  }
+
+  formatSearchReason(reason: string): string {
+    switch (reason) {
+      case 'Missing': return 'Missing';
+      case 'QualityCutoffNotMet': return 'Cutoff Unmet';
+      case 'CustomFormatScoreBelowCutoff': return 'CF Below Cutoff';
+      case 'Replacement': return 'Replacement';
+      default: return reason;
+    }
+  }
+
+  searchReasonSeverity(reason: string): BadgeSeverity {
+    switch (reason) {
+      case 'Missing': return 'error';
+      case 'QualityCutoffNotMet': return 'warning';
+      case 'CustomFormatScoreBelowCutoff': return 'warning';
+      case 'Replacement': return 'info';
+      default: return 'default';
+    }
   }
 
   cycleProgress(inst: InstanceSearchStat): number {

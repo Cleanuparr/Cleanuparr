@@ -20,7 +20,7 @@ public interface IEventPublisher
 
     Task PublishSearchNotTriggered(string hash, string itemName);
 
-    Task<Guid> PublishSearchTriggered(string instanceName, int itemCount, IEnumerable<string> items, SeekerSearchType searchType, Guid? cycleId = null);
+    Task<Guid> PublishSearchTriggered(string itemTitle, SeekerSearchType searchType, SeekerSearchReason searchReason, Guid? cycleId = null);
 
-    Task PublishSearchCompleted(Guid eventId, SearchCommandStatus status, object? resultData = null);
+    Task PublishSearchCompleted(Guid eventId, SearchCommandStatus status, List<string>? grabbedItems = null);
 }
