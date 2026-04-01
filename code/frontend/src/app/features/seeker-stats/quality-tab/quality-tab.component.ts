@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, inject, signal, computed, effect, OnInit } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, signal, computed, effect, untracked, OnInit } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { NgIcon } from '@ng-icons/core';
 import {
@@ -80,8 +80,10 @@ export class QualityTabComponent implements OnInit {
         this.initialLoad = false;
         return;
       }
-      this.loadScores();
-      this.loadStats();
+      untracked(() => {
+        this.loadScores();
+        this.loadStats();
+      });
     });
   }
 

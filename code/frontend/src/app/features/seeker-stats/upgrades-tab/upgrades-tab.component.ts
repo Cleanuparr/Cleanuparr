@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, inject, signal, effect, OnInit } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, signal, effect, untracked, OnInit } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { NgIcon } from '@ng-icons/core';
 import {
@@ -59,7 +59,9 @@ export class UpgradesTabComponent implements OnInit {
         this.initialLoad = false;
         return;
       }
-      this.loadUpgrades();
+      untracked(() => {
+        this.loadUpgrades();
+      });
     });
   }
 
