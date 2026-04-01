@@ -99,12 +99,13 @@ export class CfScoreApi {
     return this.http.get<CfScoreUpgradesResponse>('/api/seeker/cf-scores/upgrades', { params });
   }
 
-  getScores(page = 1, pageSize = 50, search?: string, instanceId?: string, sortBy?: string, hideMet?: boolean): Observable<CfScoreEntriesResponse> {
+  getScores(page = 1, pageSize = 50, search?: string, instanceId?: string, sortBy?: string, hideMet?: boolean, hideUnmonitored?: boolean): Observable<CfScoreEntriesResponse> {
     const params: Record<string, string | number | boolean> = { page, pageSize };
     if (search) params['search'] = search;
     if (instanceId) params['instanceId'] = instanceId;
     if (sortBy) params['sortBy'] = sortBy;
     if (hideMet) params['hideMet'] = true;
+    if (hideUnmonitored) params['hideUnmonitored'] = true;
     return this.http.get<CfScoreEntriesResponse>('/api/seeker/cf-scores', { params });
   }
 

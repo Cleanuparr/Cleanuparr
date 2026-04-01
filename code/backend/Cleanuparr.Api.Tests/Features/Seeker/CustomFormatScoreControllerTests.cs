@@ -78,6 +78,24 @@ public class CustomFormatScoreControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task GetCustomFormatScores_WithHideUnmonitoredTrue_ExcludesUnmonitoredItems()
+    {
+        var radarr = SeekerTestDataFactory.AddRadarrInstance(_dataContext);
+        AddScoreEntry(radarr.Id, 1, "Monitored Movie", currentScore: 100, cutoffScore: 500, isMonitored: true);
+        AddScoreEntry(radarr.Id, 2, "Unmonitored Movie", currentScore: 200, cutoffScore: 500, isMonitored: false);
+        AddScoreEntry(radarr.Id, 3, "Another Monitored", currentScore: 300, cutoffScore: 500, isMonitored: true);
+
+        var result = await _controller.GetCustomFormatScores(hideUnmonitored: true);
+        var body = GetResponseBody(result);
+
+        body.GetProperty("TotalCount").GetInt32().ShouldBe(2);
+        var items = body.GetProperty("Items");
+        items.GetArrayLength().ShouldBe(2);
+        items[0].GetProperty("Title").GetString().ShouldBe("Another Monitored");
+        items[1].GetProperty("Title").GetString().ShouldBe("Monitored Movie");
+    }
+
+    [Fact]
     public async Task GetCustomFormatScores_WithSearchFilter_ReturnsMatchingTitlesOnly()
     {
         var radarr = SeekerTestDataFactory.AddRadarrInstance(_dataContext);
@@ -314,7 +332,8 @@ public class CustomFormatScoreControllerTests : IDisposable
         int currentScore,
         int cutoffScore,
         InstanceType itemType = InstanceType.Radarr,
-        DateTime? lastSynced = null)
+        DateTime? lastSynced = null,
+        bool isMonitored = true)
     {
         _dataContext.CustomFormatScoreEntries.Add(new CustomFormatScoreEntry
         {
@@ -327,6 +346,7 @@ public class CustomFormatScoreControllerTests : IDisposable
             CurrentScore = currentScore,
             CutoffScore = cutoffScore,
             QualityProfileName = "HD",
+            IsMonitored = isMonitored,
             LastSyncedAt = lastSynced ?? DateTime.UtcNow
         });
         _dataContext.SaveChanges();

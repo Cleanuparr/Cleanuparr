@@ -23,6 +23,11 @@
       [checked]="hideMet()"
       (checkedChange)="onHideMetChange($event)"
     />
+    <app-toggle
+      label="Hide unmonitored"
+      [checked]="hideUnmonitored()"
+      (checkedChange)="onHideUnmonitoredChange($event)"
+    />
   </div>
   <div class="toolbar__actions">
     <app-button variant="ghost" size="sm" (clicked)="refresh()">
