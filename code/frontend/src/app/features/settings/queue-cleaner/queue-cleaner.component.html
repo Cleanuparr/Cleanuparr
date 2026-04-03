@@ -262,7 +262,7 @@
     <app-number-input label="Min Completion %" [(value)]="stallMinCompletion" [min]="0" [max]="100" suffix="%"
       hint="Apply the rule once completion percentage exceeds this value (0 includes items at 0% and above)"
       helpKey="queue-cleaner:stallRule.completionRange" />
-    <app-number-input label="Max Completion %" [(value)]="stallMaxCompletion" [min]="0" [max]="100" suffix="%"
+    <app-number-input label="Max Completion %" [(value)]="stallMaxCompletion" [min]="1" [max]="100" suffix="%"
       hint="Apply the rule to items with a completion percentage less than or equal to this value"
       [error]="stallCompletionError()"
       helpKey="queue-cleaner:stallRule.completionRange" />
@@ -315,7 +315,7 @@
     <app-number-input label="Min Completion %" [(value)]="slowMinCompletion" [min]="0" [max]="100" suffix="%"
       hint="Apply the rule once completion percentage exceeds this value (0 still includes exactly 0%)"
       helpKey="queue-cleaner:slowRule.completionRange" />
-    <app-number-input label="Max Completion %" [(value)]="slowMaxCompletion" [min]="0" [max]="100" suffix="%"
+    <app-number-input label="Max Completion %" [(value)]="slowMaxCompletion" [min]="1" [max]="100" suffix="%"
       hint="Apply the rule up to and including this completion percentage"
       [error]="slowCompletionError()"
       helpKey="queue-cleaner:slowRule.completionRange" />
