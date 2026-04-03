@@ -224,7 +224,6 @@
 *.fba
 *.fcx
 *.fky
-*.flac
 *.flatpak
 *.flv
 *.fp8
@@ -389,7 +388,6 @@
 *.mou
 *.movpkg
 *.mozlz4
-*.mp3
 *.mpa
 *.mpk
 *.mpkg
@@ -750,7 +748,6 @@
 *.waff
 *.war
 *.wastickers
-*.wav
 *.wbk
 *.wcm
 *.wdz
