@@ -236,6 +236,7 @@ export class QueueCleanerComponent implements OnInit, HasPendingChanges {
   readonly stallCompletionError = computed(() => {
     const min = this.stallMinCompletion() ?? 0;
     const max = this.stallMaxCompletion() ?? 100;
+    if (max <= 0) return 'Max percentage must be greater than 0';
     if (max < min) return 'Max percentage must be greater than or equal to Min percentage';
     return undefined;
   });
@@ -256,6 +257,7 @@ export class QueueCleanerComponent implements OnInit, HasPendingChanges {
   readonly slowCompletionError = computed(() => {
     const min = this.slowMinCompletion() ?? 0;
     const max = this.slowMaxCompletion() ?? 100;
+    if (max <= 0) return 'Max percentage must be greater than 0';
     if (max < min) return 'Max percentage must be greater than or equal to Min percentage';
     return undefined;
   });

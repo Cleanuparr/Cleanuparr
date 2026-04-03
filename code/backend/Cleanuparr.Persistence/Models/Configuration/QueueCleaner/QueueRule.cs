@@ -24,8 +24,8 @@ public abstract record QueueRule : IConfig, IQueueRule
     public TorrentPrivacyType PrivacyType { get; init; } = TorrentPrivacyType.Public;
     
     public ushort MinCompletionPercentage { get; init; } = 0;
-    
-    public ushort MaxCompletionPercentage { get; init; }
+
+    public ushort MaxCompletionPercentage { get; init; } = 100;
     
     public bool DeletePrivateTorrentsFromClient { get; init; } = false;
     
@@ -48,9 +48,14 @@ public abstract record QueueRule : IConfig, IQueueRule
             throw new Cleanuparr.Domain.Exceptions.ValidationException("Minimum completion percentage must be between 0 and 100");
         }
 
+        if (MaxCompletionPercentage == 0)
+        {
+            throw new Cleanuparr.Domain.Exceptions.ValidationException("Maximum completion percentage must be greater than 0");
+        }
+
         if (MaxCompletionPercentage > 100)
         {
-            throw new Cleanuparr.Domain.Exceptions.ValidationException("Maximum completion percentage must be between 0 and 100");
+            throw new Cleanuparr.Domain.Exceptions.ValidationException("Maximum completion percentage must be between 1 and 100");
         }
 
         if (MaxCompletionPercentage < MinCompletionPercentage)

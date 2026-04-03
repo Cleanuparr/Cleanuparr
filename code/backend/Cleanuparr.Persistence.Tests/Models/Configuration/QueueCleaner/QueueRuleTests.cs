@@ -188,11 +188,26 @@ public sealed class QueueRuleTests
         };
 
         var exception = Should.Throw<ValidationException>(() => rule.Validate());
-        exception.Message.ShouldBe("Maximum completion percentage must be between 0 and 100");
+        exception.Message.ShouldBe("Maximum completion percentage must be between 1 and 100");
+    }
+
+    [Fact]
+    public void Validate_WithZeroMaxCompletionPercentage_ThrowsValidationException()
+    {
+        var rule = new StallRule
+        {
+            Name = "test-rule",
+            MaxStrikes = 3,
+            MinCompletionPercentage = 0,
+            MaxCompletionPercentage = 0
+        };
+
+        var exception = Should.Throw<ValidationException>(() => rule.Validate());
+        exception.Message.ShouldBe("Maximum completion percentage must be greater than 0");
     }
 
     [Theory]
-    [InlineData((ushort)0)]
+    [InlineData((ushort)1)]
     [InlineData((ushort)50)]
     [InlineData((ushort)100)]
     public void Validate_WithValidMaxCompletionPercentage_DoesNotThrow(ushort maxCompletionPercentage)
