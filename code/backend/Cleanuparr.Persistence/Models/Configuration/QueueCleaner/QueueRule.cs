@@ -24,8 +24,8 @@ public abstract record QueueRule : IConfig, IQueueRule
     public TorrentPrivacyType PrivacyType { get; init; } = TorrentPrivacyType.Public;
     
     public ushort MinCompletionPercentage { get; init; } = 0;
-    
-    public ushort MaxCompletionPercentage { get; init; }
+
+    public ushort MaxCompletionPercentage { get; init; } = 100;
     
     public bool DeletePrivateTorrentsFromClient { get; init; } = false;
     
