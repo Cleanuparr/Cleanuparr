@@ -163,7 +163,7 @@ public class SearchStatsControllerTests : IDisposable
     private void AddSearchEvent(
         string? itemTitle = null,
         SeekerSearchType searchType = SeekerSearchType.Proactive,
-        SeekerSearchReason? searchReason = null,
+        SeekerSearchReason searchReason = SeekerSearchReason.Missing,
         List<string>? grabbedItems = null,
         Guid? arrInstanceId = null,
         InstanceType? instanceType = null,
