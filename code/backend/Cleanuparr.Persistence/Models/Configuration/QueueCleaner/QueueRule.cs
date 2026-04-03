@@ -48,9 +48,14 @@ public abstract record QueueRule : IConfig, IQueueRule
             throw new Cleanuparr.Domain.Exceptions.ValidationException("Minimum completion percentage must be between 0 and 100");
         }
 
+        if (MaxCompletionPercentage == 0)
+        {
+            throw new Cleanuparr.Domain.Exceptions.ValidationException("Maximum completion percentage must be greater than 0");
+        }
+
         if (MaxCompletionPercentage > 100)
         {
-            throw new Cleanuparr.Domain.Exceptions.ValidationException("Maximum completion percentage must be between 0 and 100");
+            throw new Cleanuparr.Domain.Exceptions.ValidationException("Maximum completion percentage must be between 1 and 100");
         }
 
         if (MaxCompletionPercentage < MinCompletionPercentage)

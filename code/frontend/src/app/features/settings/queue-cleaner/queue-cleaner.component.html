@@ -261,10 +261,10 @@
       helpKey="queue-cleaner:stallRule.privacyType" />
     <app-number-input label="Min Completion %" [(value)]="stallMinCompletion" [min]="0" [max]="100" suffix="%"
       hint="Apply the rule once completion percentage exceeds this value (0 includes items at 0% and above)"
-      [error]="stallCompletionError()"
       helpKey="queue-cleaner:stallRule.completionRange" />
     <app-number-input label="Max Completion %" [(value)]="stallMaxCompletion" [min]="0" [max]="100" suffix="%"
       hint="Apply the rule to items with a completion percentage less than or equal to this value"
+      [error]="stallCompletionError()"
       helpKey="queue-cleaner:stallRule.completionRange" />
     <app-toggle label="Reset Strikes on Progress" [(checked)]="stallResetOnProgress"
       hint="Reset strike count when torrent shows progress"
@@ -314,10 +314,10 @@
       helpKey="queue-cleaner:slowRule.privacyType" />
     <app-number-input label="Min Completion %" [(value)]="slowMinCompletion" [min]="0" [max]="100" suffix="%"
       hint="Apply the rule once completion percentage exceeds this value (0 still includes exactly 0%)"
-      [error]="slowCompletionError()"
       helpKey="queue-cleaner:slowRule.completionRange" />
     <app-number-input label="Max Completion %" [(value)]="slowMaxCompletion" [min]="0" [max]="100" suffix="%"
       hint="Apply the rule up to and including this completion percentage"
+      [error]="slowCompletionError()"
       helpKey="queue-cleaner:slowRule.completionRange" />
     <app-size-input label="Ignore Above Size" [units]="sizeUnitsLarge" [(value)]="slowIgnoreAboveSize"
       placeholder="e.g. 25"
