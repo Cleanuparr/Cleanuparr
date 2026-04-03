@@ -34,7 +34,7 @@ namespace Cleanuparr.Persistence.Migrations.Events
                     app_event_id = table.Column<Guid>(type: "TEXT", nullable: false),
                     item_title = table.Column<string>(type: "TEXT", maxLength: 500, nullable: false),
                     search_type = table.Column<string>(type: "TEXT", nullable: false),
-                    search_reason = table.Column<string>(type: "TEXT", nullable: true),
+                    search_reason = table.Column<string>(type: "TEXT", nullable: false),
                     grabbed_items = table.Column<string>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
@@ -101,7 +101,7 @@ namespace Cleanuparr.Persistence.Migrations.Events
                     e.id,
                     COALESCE(json_extract(e.data, '$.Items[0]'), 'Unknown'),
                     COALESCE(LOWER(json_extract(e.data, '$.SearchType')), 'proactive'),
-                    NULL,
+                    'missing',
                     COALESCE(json_extract(e.data, '$.GrabbedItems'), '[]')
                 FROM events e
                 WHERE e.event_type = 'searchtriggered'

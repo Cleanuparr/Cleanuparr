@@ -23,7 +23,7 @@ public class SearchEventData
 
     public SeekerSearchType SearchType { get; set; }
 
-    public SeekerSearchReason? SearchReason { get; set; }
+    public SeekerSearchReason SearchReason { get; set; }
 
     /// <summary>
     /// Titles of items grabbed after search completion, populated by SeekerCommandMonitor.
