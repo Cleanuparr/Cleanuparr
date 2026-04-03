@@ -230,6 +230,7 @@ namespace Cleanuparr.Persistence.Migrations.Events
                         .HasColumnName("item_title");
 
                     b.Property<string>("SearchReason")
+                        .IsRequired()
                         .HasColumnType("TEXT")
                         .HasColumnName("search_reason");
 
