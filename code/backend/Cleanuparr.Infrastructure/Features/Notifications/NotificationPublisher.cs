@@ -82,11 +82,11 @@ public class NotificationPublisher : INotificationPublisher
         }
     }
 
-    public virtual async Task NotifySearchTriggered(string itemTitle)
+    public virtual async Task NotifySearchTriggered(string itemTitle, SeekerSearchType searchType, SeekerSearchReason searchReason)
     {
         try
         {
-            var context = BuildSearchTriggeredContext(itemTitle);
+            var context = BuildSearchTriggeredContext(itemTitle, searchType, searchReason);
             await SendNotificationAsync(NotificationEventType.SearchTriggered, context);
         }
         catch (Exception ex)
@@ -242,7 +242,7 @@ public class NotificationPublisher : INotificationPublisher
         return context;
     }
 
-    private static NotificationContext BuildSearchTriggeredContext(string itemTitle)
+    private static NotificationContext BuildSearchTriggeredContext(string itemTitle, SeekerSearchType searchType, SeekerSearchReason searchReason)
     {
         var instanceType = (InstanceType)ContextProvider.Get<object>(nameof(InstanceType));
         var instanceUrl = ContextProvider.Get<Uri>(ContextProvider.Keys.ArrInstanceUrl);
@@ -258,6 +258,8 @@ public class NotificationPublisher : INotificationPublisher
                 ["Instance type"] = instanceType.ToString(),
                 ["Url"] = instanceUrl.ToString(),
                 ["Item"] = itemTitle,
+                ["Search type"] = searchType.ToString(),
+                ["Search reason"] = searchReason.ToString(),
             }
         };
     }

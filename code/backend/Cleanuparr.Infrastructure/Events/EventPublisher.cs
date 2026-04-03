@@ -282,7 +282,7 @@ public class EventPublisher : IEventPublisher
         }
 
         await NotifyClientsAsync(eventEntity);
-        await _notificationPublisher.NotifySearchTriggered(itemTitle);
+        await _notificationPublisher.NotifySearchTriggered(itemTitle, searchType, searchReason);
 
         return eventEntity.Id;
     }

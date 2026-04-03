@@ -674,7 +674,7 @@ public class EventPublisherTests : IDisposable
 
         // Assert
         _notificationPublisherMock.Verify(
-            n => n.NotifySearchTriggered("Movie A"),
+            n => n.NotifySearchTriggered("Movie A", SeekerSearchType.Proactive, SeekerSearchReason.Missing),
             Times.Once);
     }
 
