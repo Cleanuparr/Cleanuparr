@@ -81,7 +81,6 @@
           (click)="toggleExpand(item)"
         >
           <ng-icon name="tablerChartBar" class="score-row__icon" />
-          <span class="score-row__title">{{ item.title }}</span>
           <span class="score-row__scores">
             <span class="score-row__current">{{ item.currentScore }}</span>
             <span class="score-row__separator">/</span>
@@ -102,6 +101,9 @@
             [name]="expandedId() === item.id ? 'tablerChevronUp' : 'tablerChevronDown'"
             class="score-row__chevron"
           />
+        </div>
+        <div class="score-row__title" (click)="toggleExpand(item)">
+          {{ item.title }}
         </div>
 
         @if (expandedId() === item.id) {

@@ -135,9 +135,6 @@
       <div class="list-row">
         <div class="list-row__main">
           <ng-icon name="tablerSearch" class="list-row__icon" />
-          <span class="list-row__title">
-            {{ event.itemTitle || 'Search triggered' }}
-          </span>
           <app-badge [severity]="searchTypeSeverity(event.searchType)" size="sm">
             {{ event.searchType }}
           </app-badge>
@@ -161,6 +158,9 @@
             <app-badge [severity]="instanceTypeSeverity(event.instanceType)" size="sm" class="list-row__instance">{{ event.instanceType }}</app-badge>
           }
           <span class="list-row__time">{{ event.timestamp | date:'yyyy-MM-dd HH:mm' }}</span>
+        </div>
+        <div class="list-row__title">
+          {{ event.itemTitle || 'Search triggered' }}
         </div>
         @if (event.grabbedItems && event.grabbedItems.length > 0) {
           <div class="list-row__detail">

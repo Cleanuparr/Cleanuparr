@@ -115,9 +115,9 @@
   &__title {
     font-weight: 500;
     color: var(--text-primary);
-    min-width: 0;
-    flex: 1;
+    padding: 0 var(--space-4) var(--space-2);
     word-break: break-word;
+    cursor: pointer;
   }
 
   &__scores {
@@ -276,12 +276,11 @@
     padding: var(--space-2) var(--space-3);
   }
 
-  .score-row__profile {
-    display: none;
+  .score-row__title {
+    padding: 0 var(--space-3) var(--space-2);
   }
 
-  .score-row__time {
-    order: 4;
-    flex-basis: 100%;
+  .score-row__profile {
+    display: none;
   }
 }
