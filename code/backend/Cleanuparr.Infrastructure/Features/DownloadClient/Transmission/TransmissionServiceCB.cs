@@ -38,7 +38,8 @@ public partial class TransmissionService
         bool isPrivate = download.IsPrivate ?? false;
         result.IsPrivate = isPrivate;
         result.Found = true;
-        
+        SetDownloadClientContext();
+
         var malwareBlockerConfig = ContextProvider.Get<ContentBlockerConfig>();
         
         if (malwareBlockerConfig.IgnorePrivate && isPrivate)

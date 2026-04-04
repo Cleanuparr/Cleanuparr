@@ -50,7 +50,8 @@ public sealed class QueueItemRemover : IQueueItemRemover
     {
         try
         {
-            var arrClient = _arrClientFactory.GetClient(request.InstanceType, request.Instance.Version);
+            var instanceType = request.Instance.ArrConfig.Type;
+            var arrClient = _arrClientFactory.GetClient(instanceType, request.Instance.Version);
             await arrClient.DeleteQueueItemAsync(request.Instance, request.Record, request.RemoveFromClient, request.DeleteReason);
 
             // Mark the download item as removed in the database
@@ -61,16 +62,24 @@ public sealed class QueueItemRemover : IQueueItemRemover
                     setter.SetProperty(x => x.IsRemoved, true);
                     setter.SetProperty(x => x.IsMarkedForRemoval, false);
                 });
-            
+
             // Set context for EventPublisher
             ContextProvider.SetJobRunId(request.JobRunId);
             ContextProvider.Set(ContextProvider.Keys.ItemName, request.Record.Title);
             ContextProvider.Set(ContextProvider.Keys.Hash, request.Record.DownloadId);
             ContextProvider.Set(nameof(QueueRecord), request.Record);
-            ContextProvider.Set(ContextProvider.Keys.ArrInstanceUrl, request.Instance.ExternalUrl ?? request.Instance.Url);
-            ContextProvider.Set(nameof(InstanceType), request.InstanceType);
+            ContextProvider.Set(ContextProvider.Keys.ArrInstanceUrl, request.Instance.ExternalOrInternalUrl);
+            ContextProvider.Set(nameof(InstanceType), instanceType);
             ContextProvider.Set(ContextProvider.Keys.ArrInstanceId, request.Instance.Id);
             ContextProvider.Set(ContextProvider.Keys.Version, request.Instance.Version);
+
+            if (request.DownloadClient is not null)
+            {
+                ContextProvider.Set(ContextProvider.Keys.DownloadClientUrl, request.DownloadClient.ExternalOrInternalUrl);
+                ContextProvider.Set(ContextProvider.Keys.DownloadClientId, request.DownloadClient.Id);
+                ContextProvider.Set(ContextProvider.Keys.DownloadClientType, request.DownloadClient.TypeName);
+                ContextProvider.Set(ContextProvider.Keys.DownloadClientName, request.DownloadClient.Name);
+            }
 
             await _eventPublisher.PublishQueueItemDeleted(request.RemoveFromClient, request.DeleteReason);
 
@@ -117,7 +126,7 @@ public sealed class QueueItemRemover : IQueueItemRemover
                 throw;
             }
 
-            throw new Exception($"Item might have already been deleted by your {request.InstanceType} instance", exception);
+            throw new Exception($"Item might have already been deleted by your {request.Instance.ArrConfig.Type} instance", exception);
         }
         finally
         {

@@ -29,6 +29,7 @@ public partial class DelugeService
         
         result.IsPrivate = download.Private;
         result.Found = true;
+        SetDownloadClientContext();
 
         // Create ITorrentItem wrapper for consistent interface usage
         DelugeItemWrapper torrent = new(download);

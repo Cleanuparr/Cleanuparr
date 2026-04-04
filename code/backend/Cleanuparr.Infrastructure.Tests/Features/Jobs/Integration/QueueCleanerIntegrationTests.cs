@@ -49,7 +49,7 @@ public class QueueCleanerIntegrationTests : IDisposable
     {
         // Arrange
         var instance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
-        TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
+        var downloadClient = TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
         TestDataContextFactory.AddStallRule(_fixture.DataContext);
 
         var record = CreateQueueRecord(movieId: 42);
@@ -103,7 +103,7 @@ public class QueueCleanerIntegrationTests : IDisposable
         markedEvent.Severity.ShouldBe(EventSeverity.Important);
         markedEvent.JobRunId.ShouldBe(_fixture.JobRunId);
         markedEvent.ArrInstanceId.ShouldBe(instance.Id);
-        markedEvent.DownloadClientId.ShouldBeNull();
+        markedEvent.DownloadClientId.ShouldBe(mockDownloadService.ClientConfig.Id);
         markedEvent.IsDryRun.ShouldBe(false);
         markedEvent.StrikeId.ShouldBeNull();
         markedEvent.TrackingId.ShouldBeNull();
@@ -123,7 +123,7 @@ public class QueueCleanerIntegrationTests : IDisposable
         deletedEvent.Severity.ShouldBe(EventSeverity.Important);
         deletedEvent.JobRunId.ShouldBe(_fixture.JobRunId);
         deletedEvent.ArrInstanceId.ShouldBe(instance.Id);
-        deletedEvent.DownloadClientId.ShouldBeNull();
+        deletedEvent.DownloadClientId.ShouldBe(mockDownloadService.ClientConfig.Id);
         deletedEvent.IsDryRun.ShouldBe(false);
         deletedEvent.StrikeId.ShouldBeNull();
         deletedEvent.TrackingId.ShouldBeNull();
@@ -154,7 +154,7 @@ public class QueueCleanerIntegrationTests : IDisposable
     {
         // Arrange
         var instance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
-        TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
+        var downloadClient = TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
 
         var record = CreateQueueRecord(movieId: 99);
 
@@ -197,7 +197,7 @@ public class QueueCleanerIntegrationTests : IDisposable
         deletedEvent.Severity.ShouldBe(EventSeverity.Important);
         deletedEvent.JobRunId.ShouldBe(_fixture.JobRunId);
         deletedEvent.ArrInstanceId.ShouldBe(instance.Id);
-        deletedEvent.DownloadClientId.ShouldBeNull();
+        deletedEvent.DownloadClientId.ShouldBe(mockDownloadService.ClientConfig.Id);
         deletedEvent.IsDryRun.ShouldBe(false);
         deletedEvent.StrikeId.ShouldBeNull();
         deletedEvent.SearchStatus.ShouldBeNull();

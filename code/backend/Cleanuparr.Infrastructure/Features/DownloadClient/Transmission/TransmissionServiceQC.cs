@@ -27,6 +27,7 @@ public partial class TransmissionService
         bool isPrivate = download.IsPrivate ?? false;
         result.IsPrivate = isPrivate;
         result.Found = true;
+        SetDownloadClientContext();
 
         // Create ITorrentItem wrapper for consistent interface usage
         TransmissionItemWrapper torrent = new(download);

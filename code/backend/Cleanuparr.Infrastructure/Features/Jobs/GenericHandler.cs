@@ -126,13 +126,13 @@ public abstract class GenericHandler : IHandler
 
     protected async Task PublishQueueItemRemoveRequest(
         string downloadRemovalKey,
-        InstanceType instanceType,
         ArrInstance instance,
         QueueRecord record,
         bool isPack,
         bool removeFromClient,
         DeleteReason deleteReason,
-        bool skipSearch = false
+        bool skipSearch = false,
+        DownloadClientConfig? downloadClient = null
     )
     {
         if (_cache.TryGetValue(downloadRemovalKey, out bool _))
@@ -141,18 +141,20 @@ public abstract class GenericHandler : IHandler
             return;
         }
 
+        var instanceType = instance.ArrConfig.Type;
+
         if (instanceType is InstanceType.Sonarr || (instanceType is InstanceType.Whisparr && instance.Version is 2))
         {
             QueueItemRemoveRequest<SeriesSearchItem> removeRequest = new()
             {
-                InstanceType = instanceType,
                 Instance = instance,
                 Record = record,
                 SearchItem = (SeriesSearchItem)GetRecordSearchItem(instanceType, instance.Version, record, isPack),
                 RemoveFromClient = removeFromClient,
                 DeleteReason = deleteReason,
                 JobRunId = ContextProvider.GetJobRunId(),
-                SkipSearch = skipSearch
+                SkipSearch = skipSearch,
+                DownloadClient = downloadClient,
             };
 
             await _messageBus.Publish(removeRequest);
@@ -161,17 +163,26 @@ public abstract class GenericHandler : IHandler
         {
             QueueItemRemoveRequest<SearchItem> removeRequest = new()
             {
-                InstanceType = instanceType,
                 Instance = instance,
                 Record = record,
                 SearchItem = GetRecordSearchItem(instanceType, instance.Version, record, isPack),
                 RemoveFromClient = removeFromClient,
                 DeleteReason = deleteReason,
                 JobRunId = ContextProvider.GetJobRunId(),
-                SkipSearch = skipSearch
+                SkipSearch = skipSearch,
+                DownloadClient = downloadClient,
             };
 
             await _messageBus.Publish(removeRequest);
+        }
+
+        // Set context for event
+        if (downloadClient is not null)
+        {
+            ContextProvider.Set(ContextProvider.Keys.DownloadClientUrl, downloadClient.ExternalOrInternalUrl);
+            ContextProvider.Set(ContextProvider.Keys.DownloadClientId, downloadClient.Id);
+            ContextProvider.Set(ContextProvider.Keys.DownloadClientType, downloadClient.TypeName);
+            ContextProvider.Set(ContextProvider.Keys.DownloadClientName, downloadClient.Name);
         }
 
         _logger.LogInformation("item marked for removal | {title} | {url}", record.Title, instance.Url);

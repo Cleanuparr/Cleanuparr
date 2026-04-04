@@ -151,7 +151,7 @@ public sealed class Seeker : IHandler
 
         ContextProvider.Set(nameof(InstanceType), item.ArrInstance.ArrConfig.Type);
         ContextProvider.Set(ContextProvider.Keys.ArrInstanceId, arrInstance.Id);
-        ContextProvider.Set(ContextProvider.Keys.ArrInstanceUrl, arrInstance.ExternalUrl ?? arrInstance.Url);
+        ContextProvider.Set(ContextProvider.Keys.ArrInstanceUrl, arrInstance.ExternalOrInternalUrl);
 
         try
         {
@@ -261,7 +261,7 @@ public sealed class Seeker : IHandler
         // Set context for event publishing
         ContextProvider.Set(nameof(InstanceType), instanceType);
         ContextProvider.Set(ContextProvider.Keys.ArrInstanceId, arrInstance.Id);
-        ContextProvider.Set(ContextProvider.Keys.ArrInstanceUrl, arrInstance.ExternalUrl ?? arrInstance.Url);
+        ContextProvider.Set(ContextProvider.Keys.ArrInstanceUrl, arrInstance.ExternalOrInternalUrl);
 
         // Fetch queue once for both active download limit check and queue cross-referencing
         IArrClient arrClient = _arrClientFactory.GetClient(instanceType, arrInstance.Version);

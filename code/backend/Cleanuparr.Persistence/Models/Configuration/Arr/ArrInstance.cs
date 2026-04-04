@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 using Cleanuparr.Shared.Attributes;
 
 namespace Cleanuparr.Persistence.Models.Configuration.Arr;
@@ -26,4 +27,11 @@ public sealed class ArrInstance
 
     [SensitiveData]
     public required string ApiKey { get; set; }
+    
+    /// <summary>
+    /// Returns ExternalUrl if set, otherwise falls back to computed Url
+    /// </summary>
+    [NotMapped]
+    [JsonIgnore]
+    public Uri ExternalOrInternalUrl => ExternalUrl ?? Url;
 }

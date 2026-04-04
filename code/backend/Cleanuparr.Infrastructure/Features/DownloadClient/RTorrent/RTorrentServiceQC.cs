@@ -25,6 +25,7 @@ public partial class RTorrentService
 
         result.IsPrivate = download.IsPrivate == 1;
         result.Found = true;
+        SetDownloadClientContext();
 
         // Get trackers for ignore check
         var trackers = await _client.GetTrackersAsync(hash);

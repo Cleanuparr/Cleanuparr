@@ -374,7 +374,7 @@ public class QueueItemRemoverTests : IDisposable
             () => _queueItemRemover.RemoveQueueItemAsync(request));
 
         Assert.Contains("might have already been deleted", exception.Message);
-        Assert.Contains(request.InstanceType.ToString(), exception.Message);
+        Assert.Contains(request.Instance.ArrConfig.Type.ToString(), exception.Message);
     }
 
     [Fact]
@@ -521,7 +521,6 @@ public class QueueItemRemoverTests : IDisposable
 
         return new QueueItemRemoveRequest<SearchItem>
         {
-            InstanceType = instanceType,
             Instance = instance,
             SearchItem = new SearchItem { Id = 123 },
             Record = CreateQueueRecord(),

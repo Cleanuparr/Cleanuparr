@@ -29,8 +29,9 @@ public partial class UTorrentService
         var properties = await _client.GetTorrentPropertiesAsync(hash);
         result.IsPrivate = properties.IsPrivate;
         result.Found = true;
-        
-        if (ignoredDownloads.Count > 0 && 
+        SetDownloadClientContext();
+
+        if (ignoredDownloads.Count > 0 &&
             (download.ShouldIgnore(ignoredDownloads) || properties.TrackerList.Any(x => x.ShouldIgnore(ignoredDownloads))))
         {
             _logger.LogInformation("skip | download is ignored | {name}", download.Name);
