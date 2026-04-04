@@ -292,7 +292,10 @@ public class EventPublisher : IEventPublisher
     /// </summary>
     public async Task PublishSearchCompleted(Guid eventId, SearchCommandStatus status, List<string>? grabbedItems = null)
     {
-        var existingEvent = await _context.Events.FindAsync(eventId);
+        var existingEvent = await _context.Events
+            .Include(e => e.SearchEventData)
+            .FirstOrDefaultAsync(e => e.Id == eventId);
+
         if (existingEvent is null)
         {
             _logger.LogWarning("Could not find search event {EventId} to update completion status", eventId);
@@ -302,15 +305,9 @@ public class EventPublisher : IEventPublisher
         existingEvent.SearchStatus = status;
         existingEvent.CompletedAt = DateTime.UtcNow;
 
-        if (grabbedItems is { Count: > 0 })
+        if (grabbedItems is { Count: > 0 } && existingEvent.SearchEventData is not null)
         {
-            var searchData = await _context.SearchEventData
-                .FirstOrDefaultAsync(s => s.AppEventId == eventId);
-
-            if (searchData is not null)
-            {
-                searchData.GrabbedItems = grabbedItems;
-            }
+            existingEvent.SearchEventData.GrabbedItems = grabbedItems;
         }
 
         await _context.SaveChangesAsync();
