@@ -60,10 +60,7 @@ public abstract class DownloadService : IDownloadService
 
     protected void SetDownloadClientContext()
     {
-        ContextProvider.Set(ContextProvider.Keys.DownloadClientUrl, _downloadClientConfig.ExternalOrInternalUrl);
-        ContextProvider.Set(ContextProvider.Keys.DownloadClientId, _downloadClientConfig.Id);
-        ContextProvider.Set(ContextProvider.Keys.DownloadClientType, _downloadClientConfig.TypeName);
-        ContextProvider.Set(ContextProvider.Keys.DownloadClientName, _downloadClientConfig.Name);
+        ContextProvider.SetDownloadClient(_downloadClientConfig);
     }
 
     public abstract void Dispose();

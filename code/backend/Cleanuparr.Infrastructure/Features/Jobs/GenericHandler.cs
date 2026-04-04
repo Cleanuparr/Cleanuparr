@@ -179,10 +179,7 @@ public abstract class GenericHandler : IHandler
         // Set context for event
         if (downloadClient is not null)
         {
-            ContextProvider.Set(ContextProvider.Keys.DownloadClientUrl, downloadClient.ExternalOrInternalUrl);
-            ContextProvider.Set(ContextProvider.Keys.DownloadClientId, downloadClient.Id);
-            ContextProvider.Set(ContextProvider.Keys.DownloadClientType, downloadClient.TypeName);
-            ContextProvider.Set(ContextProvider.Keys.DownloadClientName, downloadClient.Name);
+            ContextProvider.SetDownloadClient(downloadClient);
         }
 
         _logger.LogInformation("item marked for removal | {title} | {url}", record.Title, instance.Url);

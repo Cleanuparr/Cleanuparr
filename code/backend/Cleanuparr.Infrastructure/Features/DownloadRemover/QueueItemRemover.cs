@@ -75,10 +75,7 @@ public sealed class QueueItemRemover : IQueueItemRemover
 
             if (request.DownloadClient is not null)
             {
-                ContextProvider.Set(ContextProvider.Keys.DownloadClientUrl, request.DownloadClient.ExternalOrInternalUrl);
-                ContextProvider.Set(ContextProvider.Keys.DownloadClientId, request.DownloadClient.Id);
-                ContextProvider.Set(ContextProvider.Keys.DownloadClientType, request.DownloadClient.TypeName);
-                ContextProvider.Set(ContextProvider.Keys.DownloadClientName, request.DownloadClient.Name);
+                ContextProvider.SetDownloadClient(request.DownloadClient);
             }
 
             await _eventPublisher.PublishQueueItemDeleted(request.RemoveFromClient, request.DeleteReason);
