@@ -89,13 +89,11 @@ public class AppEvent : IEvent
     public InstanceType? InstanceType { get; set; }
 
     [NotMapped]
-    [MaxLength(500)]
     public string? InstanceUrl { get; set; }
 
     [NotMapped]
     public DownloadClientTypeName? DownloadClientType { get; set; }
 
     [NotMapped]
-    [MaxLength(200)]
     public string? DownloadClientName { get; set; }
 }
