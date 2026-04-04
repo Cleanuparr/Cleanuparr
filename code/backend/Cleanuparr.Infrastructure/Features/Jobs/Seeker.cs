@@ -353,7 +353,7 @@ public sealed class Seeker : IHandler
         List<long> allLibraryIds;
         List<long> historyIds;
         int seasonNumber = 0;
-        SeekerSearchReason searchReason;
+        List<SeekerSearchReason> searchReasons;
 
         if (instanceType == InstanceType.Radarr)
         {
@@ -363,7 +363,7 @@ public sealed class Seeker : IHandler
                 .ToHashSet();
 
             List<long> selectedIds;
-            (selectedIds, selectedNames, allLibraryIds, searchReason) = await ProcessRadarrAsync(config, arrInstance, instanceConfig, itemSearchHistory, isDryRun, queuedMovieIds);
+            (selectedIds, selectedNames, allLibraryIds, searchReasons) = await ProcessRadarrAsync(config, arrInstance, instanceConfig, itemSearchHistory, isDryRun, queuedMovieIds);
             searchItems = selectedIds.Select(id => new SearchItem { Id = id }).ToHashSet();
             historyIds = selectedIds;
         }
@@ -374,8 +374,10 @@ public sealed class Seeker : IHandler
                 .Select(r => (r.SeriesId, r.SeasonNumber))
                 .ToHashSet();
 
+            SeekerSearchReason searchReason;
             (searchItems, selectedNames, allLibraryIds, historyIds, seasonNumber, searchReason) =
                 await ProcessSonarrAsync(config, arrInstance, instanceConfig, itemSearchHistory, currentCycleHistory, isDryRun, queuedSeasons: queuedSeasons);
+            searchReasons = searchItems.Count > 0 ? [searchReason] : [];
         }
 
         if (searchItems.Count == 0)
@@ -397,11 +399,12 @@ public sealed class Seeker : IHandler
             SearchItem searchItem = searchItemsList[i];
             string itemName = selectedNames[i];
             long historyId = historyIds[i];
+            SeekerSearchReason itemReason = searchReasons[i];
 
             List<long> commandIds = await arrClient.SearchItemsAsync(arrInstance, [searchItem]);
 
             Guid eventId = await _eventPublisher.PublishSearchTriggered(
-                itemName, SeekerSearchType.Proactive, searchReason, instanceConfig.CurrentCycleId);
+                itemName, SeekerSearchType.Proactive, itemReason, instanceConfig.CurrentCycleId);
 
             _logger.LogInformation("Search triggered for {Item} | {InstanceUrl}", itemName, arrInstance.Url);
 
@@ -424,7 +427,7 @@ public sealed class Seeker : IHandler
         return true;
     }
 
-    private async Task<(List<long> SelectedIds, List<string> SelectedNames, List<long> AllLibraryIds, SeekerSearchReason SearchReason)> ProcessRadarrAsync(
+    private async Task<(List<long> SelectedIds, List<string> SelectedNames, List<long> AllLibraryIds, List<SeekerSearchReason> SearchReasons)> ProcessRadarrAsync(
         SeekerConfig config,
         ArrInstance arrInstance,
         SeekerInstanceConfig instanceConfig,
@@ -471,7 +474,7 @@ public sealed class Seeker : IHandler
 
         if (candidates.Count == 0)
         {
-            return ([], [], allLibraryIds, default);
+            return ([], [], allLibraryIds, []);
         }
 
         // Exclude movies already in the download queue
@@ -491,7 +494,7 @@ public sealed class Seeker : IHandler
 
             if (candidates.Count == 0)
             {
-                return ([], [], allLibraryIds, default);
+                return ([], [], allLibraryIds, []);
             }
         }
 
@@ -506,7 +509,7 @@ public sealed class Seeker : IHandler
                 _logger.LogDebug(
                     "skip | cycle complete but min time ({Days}) not elapsed (started {StartedAt}) | {InstanceName}",
                     instanceConfig.MinCycleTimeDays, cycleStartedAt, arrInstance.Name);
-                return ([], [], allLibraryIds, default);
+                return ([], [], allLibraryIds, []);
             }
 
             _logger.LogInformation("All {Count} items on {InstanceName} searched in current cycle, starting new cycle",
@@ -536,22 +539,22 @@ public sealed class Seeker : IHandler
             .Select(m => m.Title)
             .ToList();
 
-        // Determine the search reason from the first selected movie
-        SearchableMovie selectedMovie = candidates.First(m => m.Id == selectedIds[0]);
-        SeekerSearchReason searchReason = !selectedMovie.HasFile
-            ? SeekerSearchReason.Missing
-            : config.UseCutoff && (selectedMovie.MovieFile?.QualityCutoffNotMet ?? false)
-                ? SeekerSearchReason.QualityCutoffNotMet
-                : SeekerSearchReason.CustomFormatScoreBelowCutoff;
-
+        // Determine the search reason per movie
+        List<SeekerSearchReason> searchReasons = [];
         foreach (long movieId in selectedIds)
         {
             SearchableMovie movie = candidates.First(m => m.Id == movieId);
+            SeekerSearchReason reason = !movie.HasFile
+                ? SeekerSearchReason.Missing
+                : config.UseCutoff && (movie.MovieFile?.QualityCutoffNotMet ?? false)
+                    ? SeekerSearchReason.QualityCutoffNotMet
+                    : SeekerSearchReason.CustomFormatScoreBelowCutoff;
+            searchReasons.Add(reason);
             _logger.LogDebug("Selected '{Title}' for search on {InstanceName}: {Reason}",
-                movie.Title, arrInstance.Name, searchReason);
+                movie.Title, arrInstance.Name, reason);
         }
 
-        return (selectedIds, selectedNames, allLibraryIds, searchReason);
+        return (selectedIds, selectedNames, allLibraryIds, searchReasons);
     }
 
     private async Task<(HashSet<SearchItem> SearchItems, List<string> SelectedNames, List<long> AllLibraryIds, List<long> HistoryIds, int SeasonNumber, SeekerSearchReason SearchReason)> ProcessSonarrAsync(
