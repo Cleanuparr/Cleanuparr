@@ -67,6 +67,7 @@ public class SearchStatsControllerTests : IDisposable
 
         var item = body.GetProperty("Items")[0];
         item.GetProperty("ArrInstanceId").GetString().ShouldBe(radarr.Id.ToString());
+        item.GetProperty("InstanceType").GetString().ShouldBe(nameof(InstanceType.Radarr));
         item.GetProperty("ItemTitle").GetString().ShouldBe("Movie A");
         item.GetProperty("SearchType").GetString().ShouldBe(nameof(SeekerSearchType.Proactive));
         item.GetProperty("SearchReason").GetString().ShouldBe(nameof(SeekerSearchReason.Missing));
@@ -99,10 +100,8 @@ public class SearchStatsControllerTests : IDisposable
         var radarr = SeekerTestDataFactory.AddRadarrInstance(_dataContext);
         var sonarr = SeekerTestDataFactory.AddSonarrInstance(_dataContext);
 
-        AddSearchEvent(arrInstanceId: radarr.Id, instanceType: InstanceType.Radarr,
-            itemTitle: "Radarr Movie");
-        AddSearchEvent(arrInstanceId: sonarr.Id, instanceType: InstanceType.Sonarr,
-            itemTitle: "Sonarr Series");
+        AddSearchEvent(arrInstanceId: radarr.Id, itemTitle: "Radarr Movie");
+        AddSearchEvent(arrInstanceId: sonarr.Id, itemTitle: "Sonarr Series");
 
         var result = await _controller.GetEvents(instanceId: radarr.Id);
         var body = GetResponseBody(result);
@@ -166,7 +165,6 @@ public class SearchStatsControllerTests : IDisposable
         SeekerSearchReason searchReason = SeekerSearchReason.Missing,
         List<string>? grabbedItems = null,
         Guid? arrInstanceId = null,
-        InstanceType? instanceType = null,
         Guid? cycleId = null,
         SearchCommandStatus? searchStatus = null)
     {
@@ -176,7 +174,6 @@ public class SearchStatsControllerTests : IDisposable
             Message = "Search triggered",
             Severity = EventSeverity.Information,
             ArrInstanceId = arrInstanceId,
-            InstanceType = instanceType,
             CycleId = cycleId,
             SearchStatus = searchStatus,
             Timestamp = DateTime.UtcNow

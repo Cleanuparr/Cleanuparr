@@ -164,12 +164,29 @@ public sealed class SearchStatsController : ControllerBase
             .Take(pageSize)
             .ToListAsync();
 
+        // Resolve instance types from DataContext via ArrInstanceId
+        var arrInstanceIds = rawEvents
+            .Where(e => e.ArrInstanceId.HasValue)
+            .Select(e => e.ArrInstanceId!.Value)
+            .Distinct()
+            .ToList();
+
+        var instanceTypeMap = arrInstanceIds.Count > 0
+            ? await _dataContext.ArrInstances
+                .AsNoTracking()
+                .Include(a => a.ArrConfig)
+                .Where(a => arrInstanceIds.Contains(a.Id))
+                .ToDictionaryAsync(a => a.Id, a => a.ArrConfig.Type)
+            : new Dictionary<Guid, InstanceType>();
+
         var items = rawEvents.Select(e => new SearchEventResponse
         {
             Id = e.Id,
             Timestamp = e.Timestamp,
             ArrInstanceId = e.ArrInstanceId,
-            InstanceType = e.InstanceType?.ToString(),
+            InstanceType = e.ArrInstanceId.HasValue && instanceTypeMap.TryGetValue(e.ArrInstanceId.Value, out var it)
+                ? it.ToString()
+                : null,
             ItemTitle = e.SearchEventData?.ItemTitle ?? "Unknown",
             SearchType = e.SearchEventData?.SearchType ?? SeekerSearchType.Proactive,
             SearchReason = e.SearchEventData?.SearchReason,
