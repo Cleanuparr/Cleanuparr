@@ -202,6 +202,8 @@ public class SeekerCommandMonitor : BackgroundService
                             ? r.MovieId == t.ExternalItemId
                             : r.SeriesId == t.ExternalItemId
                                 && (t.SeasonNumber == 0 || r.SeasonNumber == t.SeasonNumber))
+                        .GroupBy(r => r.DownloadId)
+                        .Select(g => g.First())
                         .Select(r => new
                         {
                             r.Title,
