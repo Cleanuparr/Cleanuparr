@@ -1,10 +1,10 @@
+using Cleanuparr.Domain.Entities.Arr;
 using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.DownloadRemover.Consumers;
 using Cleanuparr.Infrastructure.Features.DownloadRemover.Interfaces;
 using Cleanuparr.Infrastructure.Features.DownloadRemover.Models;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
-using Data.Models.Arr;
 using MassTransit;
 using Microsoft.Extensions.Logging;
 using Moq;

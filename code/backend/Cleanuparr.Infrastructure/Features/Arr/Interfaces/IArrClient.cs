@@ -2,7 +2,6 @@ using Cleanuparr.Domain.Entities.Arr;
 using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
-using Data.Models.Arr;
 
 namespace Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 

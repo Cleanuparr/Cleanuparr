@@ -1,6 +1,6 @@
-﻿using Cleanuparr.Infrastructure.Features.DownloadRemover.Interfaces;
+﻿using Cleanuparr.Domain.Entities.Arr;
+using Cleanuparr.Infrastructure.Features.DownloadRemover.Interfaces;
 using Cleanuparr.Infrastructure.Features.DownloadRemover.Models;
-using Data.Models.Arr;
 using MassTransit;
 using Microsoft.Extensions.Logging;
 

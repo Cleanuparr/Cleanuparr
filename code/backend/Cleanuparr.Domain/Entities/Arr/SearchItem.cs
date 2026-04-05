@@ -1,4 +1,4 @@
-﻿namespace Data.Models.Arr;
+﻿namespace Cleanuparr.Domain.Entities.Arr;
 
 public class SearchItem
 {
