@@ -40,14 +40,14 @@ public class SeekerCommandMonitor : BackgroundService
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         // Wait for app startup
-        await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken);
+        await Task.Delay(TimeSpan.FromSeconds(10), _timeProvider, stoppingToken);
 
         while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
                 bool hadWork = await ProcessPendingCommandsAsync(stoppingToken);
-                await Task.Delay(hadWork ? PollInterval : IdleInterval, stoppingToken);
+                await Task.Delay(hadWork ? PollInterval : IdleInterval, _timeProvider, stoppingToken);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
@@ -56,7 +56,7 @@ public class SeekerCommandMonitor : BackgroundService
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error in SeekerCommandMonitor");
-                await Task.Delay(IdleInterval, stoppingToken);
+                await Task.Delay(IdleInterval, _timeProvider, stoppingToken);
             }
         }
     }
@@ -202,6 +202,9 @@ public class SeekerCommandMonitor : BackgroundService
                             ? r.MovieId == t.ExternalItemId
                             : r.SeriesId == t.ExternalItemId
                                 && (t.SeasonNumber == 0 || r.SeasonNumber == t.SeasonNumber))
+                        .Where(r => !string.IsNullOrEmpty(r.DownloadId))
+                        .GroupBy(r => r.DownloadId)
+                        .Select(g => g.First())
                         .Select(r => new
                         {
                             r.Title,
