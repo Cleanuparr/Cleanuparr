@@ -44,18 +44,10 @@ namespace Cleanuparr.Persistence.Migrations.Events
                         .HasColumnType("TEXT")
                         .HasColumnName("download_client_id");
 
-                    b.Property<string>("DownloadClientType")
-                        .HasColumnType("TEXT")
-                        .HasColumnName("download_client_type");
-
                     b.Property<string>("EventType")
                         .IsRequired()
                         .HasColumnType("TEXT")
                         .HasColumnName("event_type");
-
-                    b.Property<string>("InstanceType")
-                        .HasColumnType("TEXT")
-                        .HasColumnName("instance_type");
 
                     b.Property<bool>("IsDryRun")
                         .HasColumnType("INTEGER")
