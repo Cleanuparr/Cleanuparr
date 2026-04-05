@@ -397,7 +397,7 @@ public sealed class Seeker : IHandler
             Guid eventId = await _eventPublisher.PublishSearchTriggered(
                 candidate.Name, SeekerSearchType.Proactive, candidate.Reason, instanceConfig.CurrentCycleId);
 
-            _logger.LogInformation("Search triggered for {Item} | {InstanceUrl}", candidate.Name, arrInstance.Url);
+            _logger.LogInformation("Search triggered for {Item} ({Reason}) | {InstanceUrl}", candidate.Name, candidate.Reason, arrInstance.Url);
 
             await UpdateSearchHistoryAsync(arrInstance.Id, instanceType, instanceConfig.CurrentCycleId,
                 [candidate.ItemId], [candidate.Name], candidate.SeasonNumber, isDryRun);
