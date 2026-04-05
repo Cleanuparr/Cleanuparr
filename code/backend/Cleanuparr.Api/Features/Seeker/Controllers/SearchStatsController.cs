@@ -151,9 +151,9 @@ public sealed class SearchStatsController : ControllerBase
         // Search by item title in SearchEventData
         if (!string.IsNullOrWhiteSpace(search))
         {
-            string searchLower = search.ToLower();
+            string pattern = EventsContext.GetLikePattern(search);
             query = query.Where(e => e.SearchEventData != null
-                && e.SearchEventData.ItemTitle.ToLower().Contains(searchLower));
+                && EF.Functions.Like(e.SearchEventData.ItemTitle, pattern));
         }
 
         int totalCount = await query.CountAsync();
