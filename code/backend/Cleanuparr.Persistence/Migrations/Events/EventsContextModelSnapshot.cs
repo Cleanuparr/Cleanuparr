@@ -24,10 +24,6 @@ namespace Cleanuparr.Persistence.Migrations.Events
                         .HasColumnType("TEXT")
                         .HasColumnName("id");
 
-                    b.Property<Guid?>("ArrInstanceId")
-                        .HasColumnType("TEXT")
-                        .HasColumnName("arr_instance_id");
-
                     b.Property<DateTime?>("CompletedAt")
                         .HasColumnType("TEXT")
                         .HasColumnName("completed_at");
@@ -40,14 +36,28 @@ namespace Cleanuparr.Persistence.Migrations.Events
                         .HasColumnType("TEXT")
                         .HasColumnName("data");
 
-                    b.Property<Guid?>("DownloadClientId")
+                    b.Property<string>("DownloadClientName")
+                        .HasMaxLength(200)
                         .HasColumnType("TEXT")
-                        .HasColumnName("download_client_id");
+                        .HasColumnName("download_client_name");
+
+                    b.Property<string>("DownloadClientType")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("download_client_type");
 
                     b.Property<string>("EventType")
                         .IsRequired()
                         .HasColumnType("TEXT")
                         .HasColumnName("event_type");
+
+                    b.Property<string>("InstanceType")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("instance_type");
+
+                    b.Property<string>("InstanceUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("instance_url");
 
                     b.Property<bool>("IsDryRun")
                         .HasColumnType("INTEGER")
@@ -87,17 +97,17 @@ namespace Cleanuparr.Persistence.Migrations.Events
                     b.HasKey("Id")
                         .HasName("pk_events");
 
-                    b.HasIndex("ArrInstanceId")
-                        .HasDatabaseName("ix_events_arr_instance_id");
-
                     b.HasIndex("CycleId")
                         .HasDatabaseName("ix_events_cycle_id");
 
-                    b.HasIndex("DownloadClientId")
-                        .HasDatabaseName("ix_events_download_client_id");
+                    b.HasIndex("DownloadClientType")
+                        .HasDatabaseName("ix_events_download_client_type");
 
                     b.HasIndex("EventType")
                         .HasDatabaseName("ix_events_event_type");
+
+                    b.HasIndex("InstanceType")
+                        .HasDatabaseName("ix_events_instance_type");
 
                     b.HasIndex("JobRunId")
                         .HasDatabaseName("ix_events_job_run_id");
@@ -197,48 +207,6 @@ namespace Cleanuparr.Persistence.Migrations.Events
                         .HasDatabaseName("ix_manual_events_timestamp");
 
                     b.ToTable("manual_events", (string)null);
-                });
-
-            modelBuilder.Entity("Cleanuparr.Persistence.Models.Events.SearchEventData", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT")
-                        .HasColumnName("id");
-
-                    b.Property<Guid>("AppEventId")
-                        .HasColumnType("TEXT")
-                        .HasColumnName("app_event_id");
-
-                    b.PrimitiveCollection<string>("GrabbedItems")
-                        .IsRequired()
-                        .HasColumnType("TEXT")
-                        .HasColumnName("grabbed_items");
-
-                    b.Property<string>("ItemTitle")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("TEXT")
-                        .HasColumnName("item_title");
-
-                    b.Property<string>("SearchReason")
-                        .IsRequired()
-                        .HasColumnType("TEXT")
-                        .HasColumnName("search_reason");
-
-                    b.Property<string>("SearchType")
-                        .IsRequired()
-                        .HasColumnType("TEXT")
-                        .HasColumnName("search_type");
-
-                    b.HasKey("Id")
-                        .HasName("pk_search_event_data");
-
-                    b.HasIndex("AppEventId")
-                        .IsUnique()
-                        .HasDatabaseName("ix_search_event_data_app_event_id");
-
-                    b.ToTable("search_event_data", (string)null);
                 });
 
             modelBuilder.Entity("Cleanuparr.Persistence.Models.State.DownloadItem", b =>
@@ -394,18 +362,6 @@ namespace Cleanuparr.Persistence.Migrations.Events
                     b.Navigation("JobRun");
                 });
 
-            modelBuilder.Entity("Cleanuparr.Persistence.Models.Events.SearchEventData", b =>
-                {
-                    b.HasOne("Cleanuparr.Persistence.Models.Events.AppEvent", "AppEvent")
-                        .WithOne("SearchEventData")
-                        .HasForeignKey("Cleanuparr.Persistence.Models.Events.SearchEventData", "AppEventId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_search_event_data_events_app_event_id");
-
-                    b.Navigation("AppEvent");
-                });
-
             modelBuilder.Entity("Cleanuparr.Persistence.Models.State.Strike", b =>
                 {
                     b.HasOne("Cleanuparr.Persistence.Models.State.DownloadItem", "DownloadItem")
@@ -425,11 +381,6 @@ namespace Cleanuparr.Persistence.Migrations.Events
                     b.Navigation("DownloadItem");
 
                     b.Navigation("JobRun");
-                });
-
-            modelBuilder.Entity("Cleanuparr.Persistence.Models.Events.AppEvent", b =>
-                {
-                    b.Navigation("SearchEventData");
                 });
 
             modelBuilder.Entity("Cleanuparr.Persistence.Models.State.DownloadItem", b =>
