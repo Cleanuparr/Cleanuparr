@@ -661,6 +661,95 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
         }
 
         [Fact]
+        public async Task UsesDirectoryOverBasePathForFilePath()
+        {
+            // Arrange
+            var sut = _fixture.CreateSut();
+
+            var unlinkedConfig = new UnlinkedConfig
+            {
+                Id = Guid.NewGuid(),
+                TargetCategory = "unlinked"
+            };
+
+            // Single-file torrent: BasePath is the full file path, Directory is the containing dir
+            var downloads = new List<ITorrentItemWrapper>
+            {
+                new RTorrentItemWrapper(new RTorrentTorrent
+                {
+                    Hash = "HASH1", Name = "movie.mkv", Label = "movies",
+                    BasePath = "/downloads/movie.mkv",
+                    Directory = "/downloads"
+                })
+            };
+
+            _fixture.ClientWrapper
+                .Setup(x => x.GetTorrentFilesAsync("HASH1"))
+                .ReturnsAsync(new List<RTorrentFile>
+                {
+                    new RTorrentFile { Index = 0, Path = "movie.mkv", Priority = 1 }
+                });
+
+            _fixture.HardLinkFileService
+                .Setup(x => x.GetHardLinkCount(It.IsAny<string>(), It.IsAny<bool>()))
+                .Returns(0);
+
+            // Act
+            await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
+
+            // Assert - path should use Directory (/downloads), not BasePath (/downloads/movie.mkv)
+            var expectedPath = string.Join(Path.DirectorySeparatorChar,
+                Path.Combine("/downloads", "movie.mkv").Split('\\', '/'));
+            _fixture.HardLinkFileService.Verify(
+                x => x.GetHardLinkCount(expectedPath, false),
+                Times.Once);
+        }
+
+        [Fact]
+        public async Task FallsBackToBasePathWhenDirectoryNull()
+        {
+            // Arrange
+            var sut = _fixture.CreateSut();
+
+            var unlinkedConfig = new UnlinkedConfig
+            {
+                Id = Guid.NewGuid(),
+                TargetCategory = "unlinked"
+            };
+
+            var downloads = new List<ITorrentItemWrapper>
+            {
+                new RTorrentItemWrapper(new RTorrentTorrent
+                {
+                    Hash = "HASH1", Name = "Test", Label = "movies",
+                    BasePath = "/downloads",
+                    Directory = null
+                })
+            };
+
+            _fixture.ClientWrapper
+                .Setup(x => x.GetTorrentFilesAsync("HASH1"))
+                .ReturnsAsync(new List<RTorrentFile>
+                {
+                    new RTorrentFile { Index = 0, Path = "file1.mkv", Priority = 1 }
+                });
+
+            _fixture.HardLinkFileService
+                .Setup(x => x.GetHardLinkCount(It.IsAny<string>(), It.IsAny<bool>()))
+                .Returns(0);
+
+            // Act
+            await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
+
+            // Assert - path should fall back to BasePath
+            var expectedPath = string.Join(Path.DirectorySeparatorChar,
+                Path.Combine("/downloads", "file1.mkv").Split('\\', '/'));
+            _fixture.HardLinkFileService.Verify(
+                x => x.GetHardLinkCount(expectedPath, false),
+                Times.Once);
+        }
+
+        [Fact]
         public async Task UpdatesCategoryOnWrapper()
         {
             // Arrange

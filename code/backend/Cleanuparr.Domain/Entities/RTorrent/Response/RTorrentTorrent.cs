@@ -61,9 +61,16 @@ public sealed record RTorrentTorrent
     public string? Label { get; init; }
 
     /// <summary>
-    /// Base path where the torrent data is stored
+    /// Base path where the torrent data is stored.
+    /// For multi-file torrents this is the torrent directory; for single-file torrents this is the full file path.
     /// </summary>
     public string? BasePath { get; init; }
+
+    /// <summary>
+    /// Directory containing the torrent data (from d.directory).
+    /// Unlike BasePath, this always points to a directory for both single-file and multi-file torrents.
+    /// </summary>
+    public string? Directory { get; init; }
 
     /// <summary>
     /// List of tracker URLs for this torrent
