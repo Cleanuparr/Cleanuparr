@@ -40,14 +40,14 @@ public class SeekerCommandMonitor : BackgroundService
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         // Wait for app startup
-        await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken);
+        await Task.Delay(TimeSpan.FromSeconds(10), _timeProvider, stoppingToken);
 
         while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
                 bool hadWork = await ProcessPendingCommandsAsync(stoppingToken);
-                await Task.Delay(hadWork ? PollInterval : IdleInterval, stoppingToken);
+                await Task.Delay(hadWork ? PollInterval : IdleInterval, _timeProvider, stoppingToken);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
@@ -56,7 +56,7 @@ public class SeekerCommandMonitor : BackgroundService
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error in SeekerCommandMonitor");
-                await Task.Delay(IdleInterval, stoppingToken);
+                await Task.Delay(IdleInterval, _timeProvider, stoppingToken);
             }
         }
     }
