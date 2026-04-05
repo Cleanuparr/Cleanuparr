@@ -96,9 +96,10 @@ public class EventsContext : DbContext
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())
         {
             var enumProperties = entityType.ClrType.GetProperties()
-                .Where(p => p.PropertyType.IsEnum || 
-                            (p.PropertyType.IsGenericType && 
-                             p.PropertyType.GetGenericTypeDefinition() == typeof(Nullable<>) && 
+                .Where(p => !p.IsDefined(typeof(System.ComponentModel.DataAnnotations.Schema.NotMappedAttribute), true))
+                .Where(p => p.PropertyType.IsEnum ||
+                            (p.PropertyType.IsGenericType &&
+                             p.PropertyType.GetGenericTypeDefinition() == typeof(Nullable<>) &&
                              p.PropertyType.GetGenericArguments()[0].IsEnum));
 
             foreach (var property in enumProperties)
