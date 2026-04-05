@@ -102,7 +102,11 @@ namespace Cleanuparr.Persistence.Migrations.Events
                     COALESCE(json_extract(e.data, '$.Items[0]'), 'Unknown'),
                     COALESCE(LOWER(json_extract(e.data, '$.SearchType')), 'proactive'),
                     'missing',
-                    COALESCE(json_extract(e.data, '$.GrabbedItems'), '[]')
+                    COALESCE(
+                        (SELECT json_group_array(json_extract(value, '$.Title'))
+                         FROM json_each(json_extract(e.data, '$.GrabbedItems'))),
+                        '[]'
+                    )
                 FROM events e
                 WHERE e.event_type = 'searchtriggered'
                   AND e.data IS NOT NULL
