@@ -1,5 +1,4 @@
 ﻿using Cleanuparr.Domain.Enums;
-using Data.Models.Arr;
 
 namespace Cleanuparr.Domain.Entities.Arr;
 

@@ -1,4 +1,5 @@
 using System.Net;
+using Cleanuparr.Domain.Entities.Arr;
 using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Events;
@@ -13,23 +14,24 @@ using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Infrastructure.Tests.Features.Jobs.TestHelpers;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
-using Data.Models.Arr;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Moq;
+using NSubstitute;
+using NSubstitute.ExceptionExtensions;
+using Shouldly;
 using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.DownloadRemover;
 
 public class QueueItemRemoverTests : IDisposable
 {
-    private readonly Mock<ILogger<QueueItemRemover>> _loggerMock;
+    private readonly ILogger<QueueItemRemover> _logger;
     private readonly MemoryCache _memoryCache;
-    private readonly Mock<IArrClientFactory> _arrClientFactoryMock;
-    private readonly Mock<IArrClient> _arrClientMock;
+    private readonly IArrClientFactory _arrClientFactory;
+    private readonly IArrClient _arrClient;
     private readonly EventPublisher _eventPublisher;
     private readonly EventsContext _eventsContext;
     private readonly DataContext _dataContext;
@@ -38,14 +40,14 @@ public class QueueItemRemoverTests : IDisposable
 
     public QueueItemRemoverTests()
     {
-        _loggerMock = new Mock<ILogger<QueueItemRemover>>();
+        _logger = Substitute.For<ILogger<QueueItemRemover>>();
         _memoryCache = new MemoryCache(Options.Create(new MemoryCacheOptions()));
-        _arrClientFactoryMock = new Mock<IArrClientFactory>();
-        _arrClientMock = new Mock<IArrClient>();
+        _arrClientFactory = Substitute.For<IArrClientFactory>();
+        _arrClient = Substitute.For<IArrClient>();
 
-        _arrClientFactoryMock
-            .Setup(f => f.GetClient(It.IsAny<InstanceType>(), It.IsAny<float>()))
-            .Returns(_arrClientMock.Object);
+        _arrClientFactory
+            .GetClient(Arg.Any<InstanceType>(), Arg.Any<float>())
+            .Returns(_arrClient);
 
         // Create real EventPublisher with mocked dependencies
         _eventsContext = TestEventsContextFactory.Create();
@@ -56,32 +58,32 @@ public class QueueItemRemoverTests : IDisposable
         _eventsContext.SaveChanges();
         ContextProvider.SetJobRunId(_jobRunId);
 
-        var hubContextMock = new Mock<IHubContext<AppHub>>();
-        var clientsMock = new Mock<IHubClients>();
-        clientsMock.Setup(c => c.All).Returns(Mock.Of<IClientProxy>());
-        hubContextMock.Setup(h => h.Clients).Returns(clientsMock.Object);
+        var hubContext = Substitute.For<IHubContext<AppHub>>();
+        var clients = Substitute.For<IHubClients>();
+        clients.All.Returns(Substitute.For<IClientProxy>());
+        hubContext.Clients.Returns(clients);
 
-        var dryRunInterceptorMock = new Mock<IDryRunInterceptor>();
-        dryRunInterceptorMock.Setup(d => d.IsDryRunEnabled()).ReturnsAsync(false);
+        var dryRunInterceptor = Substitute.For<IDryRunInterceptor>();
+        dryRunInterceptor.IsDryRunEnabled().Returns(false);
         // Setup interceptor for other uses (e.g., ArrClient deletion)
-        dryRunInterceptorMock
-            .Setup(d => d.InterceptAsync(It.IsAny<Delegate>(), It.IsAny<object[]>()))
+        dryRunInterceptor
+            .InterceptAsync(Arg.Any<Delegate>(), Arg.Any<object[]>())
             .Returns(Task.CompletedTask);
 
         _eventPublisher = new EventPublisher(
             _eventsContext,
-            hubContextMock.Object,
-            Mock.Of<ILogger<EventPublisher>>(),
-            Mock.Of<INotificationPublisher>(),
-            dryRunInterceptorMock.Object);
+            hubContext,
+            Substitute.For<ILogger<EventPublisher>>(),
+            Substitute.For<INotificationPublisher>(),
+            dryRunInterceptor);
 
         // Create in-memory DataContext with seeded SeekerConfig
         _dataContext = TestDataContextFactory.Create();
 
         _queueItemRemover = new QueueItemRemover(
-            _loggerMock.Object,
+            _logger,
             _memoryCache,
-            _arrClientFactoryMock.Object,
+            _arrClientFactory,
             _eventPublisher,
             _eventsContext,
             _dataContext
@@ -107,23 +109,15 @@ public class QueueItemRemoverTests : IDisposable
         // Arrange
         var request = CreateRemoveRequest();
 
-        _arrClientMock
-            .Setup(c => c.DeleteQueueItemAsync(
-                It.IsAny<ArrInstance>(),
-                It.IsAny<QueueRecord>(),
-                It.IsAny<bool>(),
-                It.IsAny<DeleteReason>()))
-            .Returns(Task.CompletedTask);
-
         // Act
         await _queueItemRemover.RemoveQueueItemAsync(request);
 
         // Assert
-        _arrClientMock.Verify(c => c.DeleteQueueItemAsync(
+        await _arrClient.Received(1).DeleteQueueItemAsync(
             request.Instance,
             request.Record,
             request.RemoveFromClient,
-            request.DeleteReason), Times.Once);
+            request.DeleteReason);
     }
 
     [Fact]
@@ -132,23 +126,15 @@ public class QueueItemRemoverTests : IDisposable
         // Arrange
         var request = CreateRemoveRequest();
 
-        _arrClientMock
-            .Setup(c => c.DeleteQueueItemAsync(
-                It.IsAny<ArrInstance>(),
-                It.IsAny<QueueRecord>(),
-                It.IsAny<bool>(),
-                It.IsAny<DeleteReason>()))
-            .Returns(Task.CompletedTask);
-
         // Act
         await _queueItemRemover.RemoveQueueItemAsync(request);
 
         // Assert
         var queueItems = await _dataContext.SearchQueue.ToListAsync();
-        Assert.Single(queueItems);
-        Assert.Equal(request.Instance.Id, queueItems[0].ArrInstanceId);
-        Assert.Equal(request.SearchItem.Id, queueItems[0].ItemId);
-        Assert.Equal(request.Record.Title, queueItems[0].Title);
+        queueItems.Count.ShouldBe(1);
+        queueItems[0].ArrInstanceId.ShouldBe(request.Instance.Id);
+        queueItems[0].ItemId.ShouldBe(request.SearchItem.Id);
+        queueItems[0].Title.ShouldBe(request.Record.Title);
     }
 
     [Fact]
@@ -159,19 +145,11 @@ public class QueueItemRemoverTests : IDisposable
         var cacheKey = $"remove_{request.Record.DownloadId.ToLowerInvariant()}_{request.Instance.Url}";
         _memoryCache.Set(cacheKey, true);
 
-        _arrClientMock
-            .Setup(c => c.DeleteQueueItemAsync(
-                It.IsAny<ArrInstance>(),
-                It.IsAny<QueueRecord>(),
-                It.IsAny<bool>(),
-                It.IsAny<DeleteReason>()))
-            .Returns(Task.CompletedTask);
-
         // Act
         await _queueItemRemover.RemoveQueueItemAsync(request);
 
         // Assert
-        Assert.False(_memoryCache.TryGetValue(cacheKey, out _));
+        _memoryCache.TryGetValue(cacheKey, out _).ShouldBeFalse();
     }
 
     [Theory]
@@ -185,19 +163,11 @@ public class QueueItemRemoverTests : IDisposable
         // Arrange
         var request = CreateRemoveRequest(instanceType);
 
-        _arrClientMock
-            .Setup(c => c.DeleteQueueItemAsync(
-                It.IsAny<ArrInstance>(),
-                It.IsAny<QueueRecord>(),
-                It.IsAny<bool>(),
-                It.IsAny<DeleteReason>()))
-            .Returns(Task.CompletedTask);
-
         // Act
         await _queueItemRemover.RemoveQueueItemAsync(request);
 
         // Assert
-        _arrClientFactoryMock.Verify(f => f.GetClient(instanceType, It.IsAny<float>()), Times.Once);
+        _arrClientFactory.Received(1).GetClient(instanceType, Arg.Any<float>());
     }
 
     #endregion
@@ -212,20 +182,12 @@ public class QueueItemRemoverTests : IDisposable
         var hash = request.Record.DownloadId.ToLowerInvariant();
         Striker.RecurringHashes.TryAdd(hash, null);
 
-        _arrClientMock
-            .Setup(c => c.DeleteQueueItemAsync(
-                It.IsAny<ArrInstance>(),
-                It.IsAny<QueueRecord>(),
-                It.IsAny<bool>(),
-                It.IsAny<DeleteReason>()))
-            .Returns(Task.CompletedTask);
-
         // Act
         await _queueItemRemover.RemoveQueueItemAsync(request);
 
         // Assert
         var queueItems = await _dataContext.SearchQueue.ToListAsync();
-        Assert.Empty(queueItems);
+        queueItems.ShouldBeEmpty();
     }
 
     [Fact]
@@ -236,19 +198,11 @@ public class QueueItemRemoverTests : IDisposable
         var hash = request.Record.DownloadId.ToLowerInvariant();
         Striker.RecurringHashes.TryAdd(hash, null);
 
-        _arrClientMock
-            .Setup(c => c.DeleteQueueItemAsync(
-                It.IsAny<ArrInstance>(),
-                It.IsAny<QueueRecord>(),
-                It.IsAny<bool>(),
-                It.IsAny<DeleteReason>()))
-            .Returns(Task.CompletedTask);
-
         // Act
         await _queueItemRemover.RemoveQueueItemAsync(request);
 
         // Assert
-        Assert.False(Striker.RecurringHashes.ContainsKey(hash));
+        Striker.RecurringHashes.ContainsKey(hash).ShouldBeFalse();
     }
 
     [Fact]
@@ -257,20 +211,12 @@ public class QueueItemRemoverTests : IDisposable
         // Arrange
         var request = CreateRemoveRequest();
 
-        _arrClientMock
-            .Setup(c => c.DeleteQueueItemAsync(
-                It.IsAny<ArrInstance>(),
-                It.IsAny<QueueRecord>(),
-                It.IsAny<bool>(),
-                It.IsAny<DeleteReason>()))
-            .Returns(Task.CompletedTask);
-
         // Act
         await _queueItemRemover.RemoveQueueItemAsync(request);
 
         // Assert
         var queueItems = await _dataContext.SearchQueue.ToListAsync();
-        Assert.Single(queueItems);
+        queueItems.Count.ShouldBe(1);
     }
 
     #endregion
@@ -283,20 +229,12 @@ public class QueueItemRemoverTests : IDisposable
         // Arrange
         var request = CreateRemoveRequest(skipSearch: true);
 
-        _arrClientMock
-            .Setup(c => c.DeleteQueueItemAsync(
-                It.IsAny<ArrInstance>(),
-                It.IsAny<QueueRecord>(),
-                It.IsAny<bool>(),
-                It.IsAny<DeleteReason>()))
-            .Returns(Task.CompletedTask);
-
         // Act
         await _queueItemRemover.RemoveQueueItemAsync(request);
 
         // Assert
         var queueItems = await _dataContext.SearchQueue.ToListAsync();
-        Assert.Empty(queueItems);
+        queueItems.ShouldBeEmpty();
     }
 
     [Fact]
@@ -306,19 +244,11 @@ public class QueueItemRemoverTests : IDisposable
         var request = CreateRemoveRequest(skipSearch: true);
         var hash = request.Record.DownloadId.ToLowerInvariant();
 
-        _arrClientMock
-            .Setup(c => c.DeleteQueueItemAsync(
-                It.IsAny<ArrInstance>(),
-                It.IsAny<QueueRecord>(),
-                It.IsAny<bool>(),
-                It.IsAny<DeleteReason>()))
-            .Returns(Task.CompletedTask);
-
         // Act
         await _queueItemRemover.RemoveQueueItemAsync(request);
 
         // Assert - hash was never in recurring, should still not be there
-        Assert.False(Striker.RecurringHashes.ContainsKey(hash));
+        Striker.RecurringHashes.ContainsKey(hash).ShouldBeFalse();
     }
 
     #endregion
@@ -335,20 +265,12 @@ public class QueueItemRemoverTests : IDisposable
 
         var request = CreateRemoveRequest();
 
-        _arrClientMock
-            .Setup(c => c.DeleteQueueItemAsync(
-                It.IsAny<ArrInstance>(),
-                It.IsAny<QueueRecord>(),
-                It.IsAny<bool>(),
-                It.IsAny<DeleteReason>()))
-            .Returns(Task.CompletedTask);
-
         // Act
         await _queueItemRemover.RemoveQueueItemAsync(request);
 
         // Assert
         var queueItems = await _dataContext.SearchQueue.ToListAsync();
-        Assert.Empty(queueItems);
+        queueItems.ShouldBeEmpty();
     }
 
     #endregion
@@ -361,20 +283,20 @@ public class QueueItemRemoverTests : IDisposable
         // Arrange
         var request = CreateRemoveRequest();
 
-        _arrClientMock
-            .Setup(c => c.DeleteQueueItemAsync(
-                It.IsAny<ArrInstance>(),
-                It.IsAny<QueueRecord>(),
-                It.IsAny<bool>(),
-                It.IsAny<DeleteReason>()))
+        _arrClient
+            .DeleteQueueItemAsync(
+                Arg.Any<ArrInstance>(),
+                Arg.Any<QueueRecord>(),
+                Arg.Any<bool>(),
+                Arg.Any<DeleteReason>())
             .ThrowsAsync(new HttpRequestException("Not found", null, HttpStatusCode.NotFound));
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<Exception>(
+        var exception = await Should.ThrowAsync<Exception>(
             () => _queueItemRemover.RemoveQueueItemAsync(request));
 
-        Assert.Contains("might have already been deleted", exception.Message);
-        Assert.Contains(request.InstanceType.ToString(), exception.Message);
+        exception.Message.ShouldContain("might have already been deleted");
+        exception.Message.ShouldContain(request.Instance.ArrConfig.Type.ToString());
     }
 
     [Fact]
@@ -385,20 +307,20 @@ public class QueueItemRemoverTests : IDisposable
         var cacheKey = $"remove_{request.Record.DownloadId.ToLowerInvariant()}_{request.Instance.Url}";
         _memoryCache.Set(cacheKey, true);
 
-        _arrClientMock
-            .Setup(c => c.DeleteQueueItemAsync(
-                It.IsAny<ArrInstance>(),
-                It.IsAny<QueueRecord>(),
-                It.IsAny<bool>(),
-                It.IsAny<DeleteReason>()))
+        _arrClient
+            .DeleteQueueItemAsync(
+                Arg.Any<ArrInstance>(),
+                Arg.Any<QueueRecord>(),
+                Arg.Any<bool>(),
+                Arg.Any<DeleteReason>())
             .ThrowsAsync(new HttpRequestException("Not found", null, HttpStatusCode.NotFound));
 
         // Act & Assert
-        await Assert.ThrowsAsync<Exception>(
+        await Should.ThrowAsync<Exception>(
             () => _queueItemRemover.RemoveQueueItemAsync(request));
 
         // Cache should be cleared in finally block
-        Assert.False(_memoryCache.TryGetValue(cacheKey, out _));
+        _memoryCache.TryGetValue(cacheKey, out _).ShouldBeFalse();
     }
 
     [Fact]
@@ -408,19 +330,19 @@ public class QueueItemRemoverTests : IDisposable
         var request = CreateRemoveRequest();
         var originalException = new HttpRequestException("Server error", null, HttpStatusCode.InternalServerError);
 
-        _arrClientMock
-            .Setup(c => c.DeleteQueueItemAsync(
-                It.IsAny<ArrInstance>(),
-                It.IsAny<QueueRecord>(),
-                It.IsAny<bool>(),
-                It.IsAny<DeleteReason>()))
+        _arrClient
+            .DeleteQueueItemAsync(
+                Arg.Any<ArrInstance>(),
+                Arg.Any<QueueRecord>(),
+                Arg.Any<bool>(),
+                Arg.Any<DeleteReason>())
             .ThrowsAsync(originalException);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<HttpRequestException>(
+        var exception = await Should.ThrowAsync<HttpRequestException>(
             () => _queueItemRemover.RemoveQueueItemAsync(request));
 
-        Assert.Same(originalException, exception);
+        exception.ShouldBeSameAs(originalException);
     }
 
     [Fact]
@@ -430,19 +352,19 @@ public class QueueItemRemoverTests : IDisposable
         var request = CreateRemoveRequest();
         var originalException = new InvalidOperationException("Some other error");
 
-        _arrClientMock
-            .Setup(c => c.DeleteQueueItemAsync(
-                It.IsAny<ArrInstance>(),
-                It.IsAny<QueueRecord>(),
-                It.IsAny<bool>(),
-                It.IsAny<DeleteReason>()))
+        _arrClient
+            .DeleteQueueItemAsync(
+                Arg.Any<ArrInstance>(),
+                Arg.Any<QueueRecord>(),
+                Arg.Any<bool>(),
+                Arg.Any<DeleteReason>())
             .ThrowsAsync(originalException);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+        var exception = await Should.ThrowAsync<InvalidOperationException>(
             () => _queueItemRemover.RemoveQueueItemAsync(request));
 
-        Assert.Same(originalException, exception);
+        exception.ShouldBeSameAs(originalException);
     }
 
     #endregion
@@ -460,23 +382,15 @@ public class QueueItemRemoverTests : IDisposable
         // Arrange
         var request = CreateRemoveRequest(deleteReason: deleteReason);
 
-        _arrClientMock
-            .Setup(c => c.DeleteQueueItemAsync(
-                It.IsAny<ArrInstance>(),
-                It.IsAny<QueueRecord>(),
-                It.IsAny<bool>(),
-                It.IsAny<DeleteReason>()))
-            .Returns(Task.CompletedTask);
-
         // Act
         await _queueItemRemover.RemoveQueueItemAsync(request);
 
         // Assert
-        _arrClientMock.Verify(c => c.DeleteQueueItemAsync(
-            It.IsAny<ArrInstance>(),
-            It.IsAny<QueueRecord>(),
-            It.IsAny<bool>(),
-            deleteReason), Times.Once);
+        await _arrClient.Received(1).DeleteQueueItemAsync(
+            Arg.Any<ArrInstance>(),
+            Arg.Any<QueueRecord>(),
+            Arg.Any<bool>(),
+            deleteReason);
     }
 
     [Theory]
@@ -487,23 +401,15 @@ public class QueueItemRemoverTests : IDisposable
         // Arrange
         var request = CreateRemoveRequest(removeFromClient: removeFromClient);
 
-        _arrClientMock
-            .Setup(c => c.DeleteQueueItemAsync(
-                It.IsAny<ArrInstance>(),
-                It.IsAny<QueueRecord>(),
-                It.IsAny<bool>(),
-                It.IsAny<DeleteReason>()))
-            .Returns(Task.CompletedTask);
-
         // Act
         await _queueItemRemover.RemoveQueueItemAsync(request);
 
         // Assert
-        _arrClientMock.Verify(c => c.DeleteQueueItemAsync(
-            It.IsAny<ArrInstance>(),
-            It.IsAny<QueueRecord>(),
+        await _arrClient.Received(1).DeleteQueueItemAsync(
+            Arg.Any<ArrInstance>(),
+            Arg.Any<QueueRecord>(),
             removeFromClient,
-            It.IsAny<DeleteReason>()), Times.Once);
+            Arg.Any<DeleteReason>());
     }
 
     #endregion
@@ -521,7 +427,6 @@ public class QueueItemRemoverTests : IDisposable
 
         return new QueueItemRemoveRequest<SearchItem>
         {
-            InstanceType = instanceType,
             Instance = instance,
             SearchItem = new SearchItem { Id = 123 },
             Record = CreateQueueRecord(),

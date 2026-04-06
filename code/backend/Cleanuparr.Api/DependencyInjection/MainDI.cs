@@ -6,7 +6,6 @@ using Cleanuparr.Infrastructure.Features.Notifications.Models;
 using Cleanuparr.Infrastructure.Health;
 using Cleanuparr.Infrastructure.Http;
 using Cleanuparr.Infrastructure.Http.DynamicHttpClientSystem;
-using Data.Models.Arr;
 using MassTransit;
 using Microsoft.Extensions.Caching.Memory;
 

@@ -36,90 +36,58 @@ public class SearchStatsControllerTests : IDisposable
         return JsonDocument.Parse(json).RootElement;
     }
 
-    #region ParseEventData (tested via GetEvents)
+    #region GetEvents with SearchEventData
 
     [Fact]
-    public async Task GetEvents_WithNullEventData_ReturnsUnknownDefaults()
+    public async Task GetEvents_WithNoSearchEventData_ReturnsUnknownDefaults()
     {
-        AddSearchEvent(data: null);
+        AddSearchEvent();
 
         var result = await _controller.GetEvents();
         var body = GetResponseBody(result);
 
         var item = body.GetProperty("Items")[0];
-        item.GetProperty("InstanceName").GetString().ShouldBe("Unknown");
-        item.GetProperty("ItemCount").GetInt32().ShouldBe(0);
-        item.GetProperty("Items").GetArrayLength().ShouldBe(0);
+        item.GetProperty("ItemTitle").GetString().ShouldBe("Unknown");
     }
 
     [Fact]
-    public async Task GetEvents_WithValidFullJson_ParsesAllFields()
+    public async Task GetEvents_WithSearchEventData_ReturnsAllFields()
     {
-        var data = JsonSerializer.Serialize(new
-        {
-            InstanceName = "My Radarr",
-            ItemCount = 3,
-            Items = new[] { "Movie A", "Movie B", "Movie C" },
-            SearchType = "Proactive",
-            GrabbedItems = new[] { new { Title = "Movie A", Quality = "Bluray-1080p" } }
-        });
-        AddSearchEvent(data: data);
+        var radarr = SeekerTestDataFactory.AddRadarrInstance(_dataContext);
+
+        AddSearchEvent(
+            arrInstanceId: radarr.Id,
+            itemTitle: "Movie A",
+            searchType: SeekerSearchType.Proactive,
+            searchReason: SeekerSearchReason.Missing,
+            grabbedItems: ["Movie A (2024)"]);
 
         var result = await _controller.GetEvents();
         var body = GetResponseBody(result);
 
         var item = body.GetProperty("Items")[0];
-        item.GetProperty("InstanceName").GetString().ShouldBe("My Radarr");
-        item.GetProperty("ItemCount").GetInt32().ShouldBe(3);
-        item.GetProperty("Items").GetArrayLength().ShouldBe(3);
-        item.GetProperty("Items")[0].GetString().ShouldBe("Movie A");
+        item.GetProperty("ArrInstanceId").GetString().ShouldBe(radarr.Id.ToString());
+        item.GetProperty("InstanceType").GetString().ShouldBe(nameof(InstanceType.Radarr));
+        item.GetProperty("ItemTitle").GetString().ShouldBe("Movie A");
         item.GetProperty("SearchType").GetString().ShouldBe(nameof(SeekerSearchType.Proactive));
+        item.GetProperty("SearchReason").GetString().ShouldBe(nameof(SeekerSearchReason.Missing));
+        item.GetProperty("GrabbedItems")[0].GetString().ShouldBe("Movie A (2024)");
     }
 
     [Fact]
-    public async Task GetEvents_WithPartialJson_ReturnsDefaultsForMissingFields()
+    public async Task GetEvents_WithReplacementSearchType_ParsesCorrectEnum()
     {
-        // Only InstanceName is present, other fields missing
-        var data = JsonSerializer.Serialize(new { InstanceName = "Partial Instance" });
-        AddSearchEvent(data: data);
-
-        var result = await _controller.GetEvents();
-        var body = GetResponseBody(result);
-
-        var item = body.GetProperty("Items")[0];
-        item.GetProperty("InstanceName").GetString().ShouldBe("Partial Instance");
-        item.GetProperty("ItemCount").GetInt32().ShouldBe(0);
-        item.GetProperty("Items").GetArrayLength().ShouldBe(0);
-    }
-
-    [Fact]
-    public async Task GetEvents_WithMalformedJson_ReturnsUnknownDefaults()
-    {
-        AddSearchEvent(data: "not valid json {{{");
-
-        var result = await _controller.GetEvents();
-        var body = GetResponseBody(result);
-
-        var item = body.GetProperty("Items")[0];
-        item.GetProperty("InstanceName").GetString().ShouldBe("Unknown");
-        item.GetProperty("ItemCount").GetInt32().ShouldBe(0);
-    }
-
-    [Fact]
-    public async Task GetEvents_WithSearchTypeReplacement_ParsesCorrectEnum()
-    {
-        var data = JsonSerializer.Serialize(new
-        {
-            InstanceName = "Sonarr",
-            SearchType = "Replacement"
-        });
-        AddSearchEvent(data: data);
+        AddSearchEvent(
+            itemTitle: "Series A",
+            searchType: SeekerSearchType.Replacement,
+            searchReason: SeekerSearchReason.Replacement);
 
         var result = await _controller.GetEvents();
         var body = GetResponseBody(result);
 
         var item = body.GetProperty("Items")[0];
         item.GetProperty("SearchType").GetString().ShouldBe(nameof(SeekerSearchType.Replacement));
+        item.GetProperty("SearchReason").GetString().ShouldBe(nameof(SeekerSearchReason.Replacement));
     }
 
     #endregion
@@ -127,23 +95,19 @@ public class SearchStatsControllerTests : IDisposable
     #region GetEvents Filtering
 
     [Fact]
-    public async Task GetEvents_WithInstanceIdFilter_FiltersViaInstanceUrl()
+    public async Task GetEvents_WithInstanceIdFilter_FiltersByArrInstanceId()
     {
         var radarr = SeekerTestDataFactory.AddRadarrInstance(_dataContext);
         var sonarr = SeekerTestDataFactory.AddSonarrInstance(_dataContext);
 
-        // Event matching radarr's URL
-        AddSearchEvent(instanceUrl: radarr.Url.ToString(), instanceType: InstanceType.Radarr,
-            data: JsonSerializer.Serialize(new { InstanceName = "Radarr Event" }));
-        // Event matching sonarr's URL
-        AddSearchEvent(instanceUrl: sonarr.Url.ToString(), instanceType: InstanceType.Sonarr,
-            data: JsonSerializer.Serialize(new { InstanceName = "Sonarr Event" }));
+        AddSearchEvent(arrInstanceId: radarr.Id, itemTitle: "Radarr Movie");
+        AddSearchEvent(arrInstanceId: sonarr.Id, itemTitle: "Sonarr Series");
 
         var result = await _controller.GetEvents(instanceId: radarr.Id);
         var body = GetResponseBody(result);
 
         body.GetProperty("TotalCount").GetInt32().ShouldBe(1);
-        body.GetProperty("Items")[0].GetProperty("InstanceName").GetString().ShouldBe("Radarr Event");
+        body.GetProperty("Items")[0].GetProperty("ArrInstanceId").GetString().ShouldBe(radarr.Id.ToString());
     }
 
     [Fact]
@@ -152,21 +116,21 @@ public class SearchStatsControllerTests : IDisposable
         var cycleA = Guid.NewGuid();
         var cycleB = Guid.NewGuid();
 
-        AddSearchEvent(cycleId: cycleA, data: JsonSerializer.Serialize(new { InstanceName = "Cycle A" }));
-        AddSearchEvent(cycleId: cycleB, data: JsonSerializer.Serialize(new { InstanceName = "Cycle B" }));
+        AddSearchEvent(cycleId: cycleA, itemTitle: "Cycle A Movie");
+        AddSearchEvent(cycleId: cycleB, itemTitle: "Cycle B Movie");
 
         var result = await _controller.GetEvents(cycleId: cycleA);
         var body = GetResponseBody(result);
 
         body.GetProperty("TotalCount").GetInt32().ShouldBe(1);
-        body.GetProperty("Items")[0].GetProperty("InstanceName").GetString().ShouldBe("Cycle A");
+        body.GetProperty("Items")[0].GetProperty("ItemTitle").GetString().ShouldBe("Cycle A Movie");
     }
 
     [Fact]
-    public async Task GetEvents_WithSearchFilter_FiltersOnDataField()
+    public async Task GetEvents_WithSearchFilter_FiltersOnItemTitle()
     {
-        AddSearchEvent(data: JsonSerializer.Serialize(new { InstanceName = "Radarr", Items = new[] { "The Matrix" } }));
-        AddSearchEvent(data: JsonSerializer.Serialize(new { InstanceName = "Sonarr", Items = new[] { "Breaking Bad" } }));
+        AddSearchEvent(itemTitle: "The Matrix");
+        AddSearchEvent(itemTitle: "Breaking Bad");
 
         var result = await _controller.GetEvents(search: "matrix");
         var body = GetResponseBody(result);
@@ -179,14 +143,14 @@ public class SearchStatsControllerTests : IDisposable
     {
         for (int i = 0; i < 5; i++)
         {
-            AddSearchEvent(data: JsonSerializer.Serialize(new { InstanceName = $"Event {i}" }));
+            AddSearchEvent(itemTitle: $"Event {i}");
         }
 
         var result = await _controller.GetEvents(page: 2, pageSize: 2);
         var body = GetResponseBody(result);
 
         body.GetProperty("TotalCount").GetInt32().ShouldBe(5);
-        body.GetProperty("TotalPages").GetInt32().ShouldBe(3); // ceil(5/2) = 3
+        body.GetProperty("TotalPages").GetInt32().ShouldBe(3);
         body.GetProperty("Page").GetInt32().ShouldBe(2);
         body.GetProperty("Items").GetArrayLength().ShouldBe(2);
     }
@@ -196,25 +160,40 @@ public class SearchStatsControllerTests : IDisposable
     #region Helpers
 
     private void AddSearchEvent(
-        string? data = null,
-        string? instanceUrl = null,
-        InstanceType? instanceType = null,
+        string? itemTitle = null,
+        SeekerSearchType searchType = SeekerSearchType.Proactive,
+        SeekerSearchReason searchReason = SeekerSearchReason.Missing,
+        List<string>? grabbedItems = null,
+        Guid? arrInstanceId = null,
         Guid? cycleId = null,
         SearchCommandStatus? searchStatus = null)
     {
-        _eventsContext.Events.Add(new AppEvent
+        var appEvent = new AppEvent
         {
             EventType = EventType.SearchTriggered,
             Message = "Search triggered",
             Severity = EventSeverity.Information,
-            Data = data,
-            InstanceUrl = instanceUrl,
-            InstanceType = instanceType,
+            ArrInstanceId = arrInstanceId,
             CycleId = cycleId,
             SearchStatus = searchStatus,
             Timestamp = DateTime.UtcNow
-        });
+        };
+
+        _eventsContext.Events.Add(appEvent);
         _eventsContext.SaveChanges();
+
+        if (itemTitle is not null)
+        {
+            _eventsContext.SearchEventData.Add(new SearchEventData
+            {
+                AppEventId = appEvent.Id,
+                ItemTitle = itemTitle,
+                SearchType = searchType,
+                SearchReason = searchReason,
+                GrabbedItems = grabbedItems ?? [],
+            });
+            _eventsContext.SaveChanges();
+        }
     }
 
     #endregion

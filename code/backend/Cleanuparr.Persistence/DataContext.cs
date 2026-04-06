@@ -378,6 +378,7 @@ public class DataContext : DbContext
             }
 
             var enumProperties = entityType.ClrType.GetProperties()
+                .Where(p => !p.IsDefined(typeof(System.ComponentModel.DataAnnotations.Schema.NotMappedAttribute), true))
                 .Where(p => p.PropertyType.IsEnum ||
                             (p.PropertyType.IsGenericType &&
                              p.PropertyType.GetGenericTypeDefinition() == typeof(Nullable<>) &&

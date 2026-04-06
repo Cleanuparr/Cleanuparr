@@ -35,7 +35,6 @@
       <div class="upgrade-row">
         <div class="upgrade-row__main">
           <ng-icon name="tablerTrendingUp" class="upgrade-row__icon" />
-          <span class="upgrade-row__title">{{ upgrade.title }}</span>
           <div class="upgrade-row__scores">
             <span class="upgrade-row__score upgrade-row__score--old">{{ upgrade.previousScore }}</span>
             <ng-icon name="tablerArrowRight" class="upgrade-row__arrow" />
@@ -46,6 +45,9 @@
             {{ upgrade.itemType }}
           </app-badge>
           <span class="upgrade-row__time">{{ upgrade.upgradedAt | date:'yyyy-MM-dd HH:mm' }}</span>
+        </div>
+        <div class="upgrade-row__title">
+          {{ upgrade.title }}
         </div>
       </div>
     } @empty {

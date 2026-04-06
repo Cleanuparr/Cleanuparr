@@ -10,7 +10,7 @@ import type { BadgeSeverity } from '@ui/badge/badge.component';
 import { AnimatedCounterComponent } from '@ui/animated-counter/animated-counter.component';
 import { SearchStatsApi } from '@core/api/search-stats.api';
 import type { SearchStatsSummary, SearchEvent, InstanceSearchStat } from '@core/models/search-stats.models';
-import { SeekerSearchType } from '@core/models/search-stats.models';
+import { SeekerSearchType, SeekerSearchReason } from '@core/models/search-stats.models';
 import { AppHubService } from '@core/realtime/app-hub.service';
 import { ToastService } from '@core/services/toast.service';
 
@@ -141,8 +141,28 @@ export class SearchesTabComponent implements OnInit {
     }
   }
 
-  formatGrabbedItems(items: unknown[]): string {
-    return items.map((i: any) => i.Title || i.title || 'Unknown').join(', ');
+  formatGrabbedItems(items: string[]): string {
+    return items.join(', ');
+  }
+
+  formatSearchReason(reason: string): string {
+    switch (reason) {
+      case SeekerSearchReason.Missing: return 'Missing';
+      case SeekerSearchReason.QualityCutoffNotMet: return 'Cutoff Unmet';
+      case SeekerSearchReason.CustomFormatScoreBelowCutoff: return 'CF Below Cutoff';
+      case SeekerSearchReason.Replacement: return 'Replacement';
+      default: return reason;
+    }
+  }
+
+  searchReasonSeverity(reason: string): BadgeSeverity {
+    switch (reason) {
+      case SeekerSearchReason.Missing: return 'error';
+      case SeekerSearchReason.QualityCutoffNotMet: return 'warning';
+      case SeekerSearchReason.CustomFormatScoreBelowCutoff: return 'warning';
+      case SeekerSearchReason.Replacement: return 'info';
+      default: return 'default';
+    }
   }
 
   cycleProgress(inst: InstanceSearchStat): number {

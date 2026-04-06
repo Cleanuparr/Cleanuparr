@@ -22,6 +22,8 @@ public class EventsContext : DbContext
     public DbSet<DownloadItem> DownloadItems { get; set; }
 
     public DbSet<JobRun> JobRuns { get; set; }
+
+    public DbSet<SearchEventData> SearchEventData { get; set; }
     
     public EventsContext()
     {
@@ -65,6 +67,14 @@ public class EventsContext : DbContext
                 .OnDelete(DeleteBehavior.SetNull);
         });
 
+        modelBuilder.Entity<SearchEventData>(entity =>
+        {
+            entity.HasOne(s => s.AppEvent)
+                .WithOne(e => e.SearchEventData)
+                .HasForeignKey<SearchEventData>(s => s.AppEventId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
         modelBuilder.Entity<Strike>(entity =>
         {
             entity.Property(e => e.CreatedAt)
@@ -86,9 +96,10 @@ public class EventsContext : DbContext
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())
         {
             var enumProperties = entityType.ClrType.GetProperties()
-                .Where(p => p.PropertyType.IsEnum || 
-                            (p.PropertyType.IsGenericType && 
-                             p.PropertyType.GetGenericTypeDefinition() == typeof(Nullable<>) && 
+                .Where(p => !p.IsDefined(typeof(System.ComponentModel.DataAnnotations.Schema.NotMappedAttribute), true))
+                .Where(p => p.PropertyType.IsEnum ||
+                            (p.PropertyType.IsGenericType &&
+                             p.PropertyType.GetGenericTypeDefinition() == typeof(Nullable<>) &&
                              p.PropertyType.GetGenericArguments()[0].IsEnum));
 
             foreach (var property in enumProperties)

@@ -1,5 +1,5 @@
-﻿using Cleanuparr.Infrastructure.Features.DownloadRemover.Models;
-using Data.Models.Arr;
+﻿using Cleanuparr.Domain.Entities.Arr;
+using Cleanuparr.Infrastructure.Features.DownloadRemover.Models;
 
 namespace Cleanuparr.Infrastructure.Features.DownloadRemover.Interfaces;
 

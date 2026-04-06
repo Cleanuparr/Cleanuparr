@@ -9,7 +9,6 @@ using Cleanuparr.Infrastructure.Tests.Features.Jobs.TestHelpers;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Cleanuparr.Persistence.Models.Configuration.Seeker;
 using Cleanuparr.Persistence.Models.State;
-using Data.Models.Arr;
 using Cleanuparr.Infrastructure.Hubs;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.SignalR;
@@ -68,9 +67,8 @@ public class SeekerTests : IDisposable
         _fixture.EventPublisher
             .Setup(x => x.PublishSearchTriggered(
                 It.IsAny<string>(),
-                It.IsAny<int>(),
-                It.IsAny<IEnumerable<string>>(),
                 It.IsAny<SeekerSearchType>(),
+                It.IsAny<SeekerSearchReason>(),
                 It.IsAny<Guid?>()))
             .ReturnsAsync(Guid.NewGuid());
     }
@@ -119,9 +117,8 @@ public class SeekerTests : IDisposable
         _fixture.EventPublisher.Verify(
             x => x.PublishSearchTriggered(
                 It.IsAny<string>(),
-                It.IsAny<int>(),
-                It.IsAny<IEnumerable<string>>(),
                 It.IsAny<SeekerSearchType>(),
+                It.IsAny<SeekerSearchReason>(),
                 It.IsAny<Guid?>()),
             Times.Never);
     }
@@ -147,9 +144,8 @@ public class SeekerTests : IDisposable
         _fixture.EventPublisher.Verify(
             x => x.PublishSearchTriggered(
                 It.IsAny<string>(),
-                It.IsAny<int>(),
-                It.IsAny<IEnumerable<string>>(),
                 It.IsAny<SeekerSearchType>(),
+                It.IsAny<SeekerSearchReason>(),
                 It.IsAny<Guid?>()),
             Times.Never);
     }
@@ -191,10 +187,9 @@ public class SeekerTests : IDisposable
 
         _fixture.EventPublisher.Verify(
             x => x.PublishSearchTriggered(
-                radarrInstance.Name,
-                1,
-                It.Is<IEnumerable<string>>(items => items.Contains("Test Movie")),
+                "Test Movie",
                 SeekerSearchType.Replacement,
+                SeekerSearchReason.Replacement,
                 It.IsAny<Guid?>()),
             Times.Once);
 
@@ -294,9 +289,8 @@ public class SeekerTests : IDisposable
         _fixture.EventPublisher.Verify(
             x => x.PublishSearchTriggered(
                 It.IsAny<string>(),
-                It.IsAny<int>(),
-                It.IsAny<IEnumerable<string>>(),
                 SeekerSearchType.Proactive,
+                It.IsAny<SeekerSearchReason>(),
                 It.IsAny<Guid?>()),
             Times.Never);
     }
@@ -961,9 +955,8 @@ public class SeekerTests : IDisposable
         _fixture.EventPublisher.Verify(
             x => x.PublishSearchTriggered(
                 It.IsAny<string>(),
-                It.IsAny<int>(),
-                It.IsAny<IEnumerable<string>>(),
                 It.IsAny<SeekerSearchType>(),
+                It.IsAny<SeekerSearchReason>(),
                 It.IsAny<Guid?>()),
             Times.Never);
     }

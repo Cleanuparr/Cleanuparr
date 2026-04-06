@@ -11,7 +11,6 @@ using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Cleanuparr.Persistence.Models.Configuration.Seeker;
 using Cleanuparr.Persistence.Models.State;
 using Cleanuparr.Infrastructure.Hubs;
-using Data.Models.Arr;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
@@ -150,7 +149,8 @@ public sealed class Seeker : IHandler
         }
 
         ContextProvider.Set(nameof(InstanceType), item.ArrInstance.ArrConfig.Type);
-        ContextProvider.Set(ContextProvider.Keys.ArrInstanceUrl, arrInstance.ExternalUrl ?? arrInstance.Url);
+        ContextProvider.Set(ContextProvider.Keys.ArrInstanceId, arrInstance.Id);
+        ContextProvider.Set(ContextProvider.Keys.ArrInstanceUrl, arrInstance.ExternalOrInternalUrl);
 
         try
         {
@@ -159,7 +159,7 @@ public sealed class Seeker : IHandler
 
             List<long> commandIds = await arrClient.SearchItemsAsync(arrInstance, searchItems);
 
-            Guid eventId = await _eventPublisher.PublishSearchTriggered(arrInstance.Name, 1, [item.Title], SeekerSearchType.Replacement);
+            Guid eventId = await _eventPublisher.PublishSearchTriggered(item.Title, SeekerSearchType.Replacement, SeekerSearchReason.Replacement);
 
             if (!isDryRun)
             {
@@ -259,7 +259,8 @@ public sealed class Seeker : IHandler
 
         // Set context for event publishing
         ContextProvider.Set(nameof(InstanceType), instanceType);
-        ContextProvider.Set(ContextProvider.Keys.ArrInstanceUrl, arrInstance.ExternalUrl ?? arrInstance.Url);
+        ContextProvider.Set(ContextProvider.Keys.ArrInstanceId, arrInstance.Id);
+        ContextProvider.Set(ContextProvider.Keys.ArrInstanceUrl, arrInstance.ExternalOrInternalUrl);
 
         // Fetch queue once for both active download limit check and queue cross-referencing
         IArrClient arrClient = _arrClientFactory.GetClient(instanceType, arrInstance.Version);
@@ -346,11 +347,7 @@ public sealed class Seeker : IHandler
             .Where(r => ActiveQueueStates.Contains(r.TrackedDownloadState))
             .ToList();
 
-        HashSet<SearchItem> searchItems;
-        List<string> selectedNames;
-        List<long> allLibraryIds;
-        List<long> historyIds;
-        int seasonNumber = 0;
+        SeekerProcessResult result;
 
         if (instanceType == InstanceType.Radarr)
         {
@@ -359,10 +356,7 @@ public sealed class Seeker : IHandler
                 .Select(r => r.MovieId)
                 .ToHashSet();
 
-            List<long> selectedIds;
-            (selectedIds, selectedNames, allLibraryIds) = await ProcessRadarrAsync(config, arrInstance, instanceConfig, itemSearchHistory, isDryRun, queuedMovieIds);
-            searchItems = selectedIds.Select(id => new SearchItem { Id = id }).ToHashSet();
-            historyIds = selectedIds;
+            result = await ProcessRadarrAsync(config, arrInstance, instanceConfig, itemSearchHistory, isDryRun, queuedMovieIds);
         }
         else
         {
@@ -371,49 +365,60 @@ public sealed class Seeker : IHandler
                 .Select(r => (r.SeriesId, r.SeasonNumber))
                 .ToHashSet();
 
-            (searchItems, selectedNames, allLibraryIds, historyIds, seasonNumber) =
-                await ProcessSonarrAsync(config, arrInstance, instanceConfig, itemSearchHistory, currentCycleHistory, isDryRun, queuedSeasons: queuedSeasons);
+            result = await ProcessSonarrAsync(config, arrInstance, instanceConfig, itemSearchHistory, currentCycleHistory, isDryRun, queuedSeasons: queuedSeasons);
         }
 
-        if (searchItems.Count == 0)
+        if (result.Candidates.Count == 0)
         {
             _logger.LogDebug("No items selected for search on {InstanceName}", arrInstance.Name);
             if (!isDryRun)
             {
-                await CleanupStaleHistoryAsync(arrInstance.Id, instanceType, allLibraryIds, allHistoryExternalIds);
+                await CleanupStaleHistoryAsync(arrInstance.Id, instanceType, result.AllLibraryIds, allHistoryExternalIds);
             }
             return false;
         }
 
-        // Trigger search (arr client guards the HTTP request via dry run interceptor)
+        // Search each item individually so each gets its own event and command tracker
         IArrClient arrClient = _arrClientFactory.GetClient(instanceType, arrInstance.Version);
-        List<long> commandIds = await arrClient.SearchItemsAsync(arrInstance, searchItems);
 
-        // Publish event (always saved, flagged with IsDryRun in EventPublisher)
-        Guid eventId = await _eventPublisher.PublishSearchTriggered(arrInstance.Name, searchItems.Count, selectedNames, SeekerSearchType.Proactive, instanceConfig.CurrentCycleId);
+        foreach (SeekerSearchCandidate candidate in result.Candidates)
+        {
+            SearchItem searchItem = instanceType == InstanceType.Radarr
+                ? new SearchItem { Id = candidate.ItemId }
+                : new SeriesSearchItem
+                {
+                    Id = candidate.SeasonNumber,
+                    SeriesId = candidate.ItemId,
+                    SearchType = SeriesSearchType.Season
+                };
 
-        _logger.LogInformation("Searched {Count} items on {InstanceName}: {Items}",
-            searchItems.Count, arrInstance.Name, string.Join(", ", selectedNames));
+            List<long> commandIds = await arrClient.SearchItemsAsync(arrInstance, [searchItem]);
 
-        // Update search history (always, so stats are accurate during dry run)
-        await UpdateSearchHistoryAsync(arrInstance.Id, instanceType, instanceConfig.CurrentCycleId, historyIds, selectedNames, seasonNumber, isDryRun);
+            Guid eventId = await _eventPublisher.PublishSearchTriggered(
+                candidate.Name, SeekerSearchType.Proactive, candidate.Reason, instanceConfig.CurrentCycleId);
+
+            _logger.LogInformation("Search triggered for {Item} ({Reason}) | {InstanceUrl}", candidate.Name, candidate.Reason, arrInstance.Url);
+
+            await UpdateSearchHistoryAsync(arrInstance.Id, instanceType, instanceConfig.CurrentCycleId,
+                [candidate.ItemId], [candidate.Name], candidate.SeasonNumber, isDryRun);
+
+            if (!isDryRun)
+            {
+                await SaveCommandTrackersAsync(commandIds, eventId, arrInstance.Id, instanceType,
+                    candidate.ItemId, candidate.Name, candidate.SeasonNumber);
+            }
+        }
 
         if (!isDryRun)
         {
-            // Track commands
-            long externalItemId = historyIds.FirstOrDefault();
-            string itemTitle = selectedNames.FirstOrDefault() ?? string.Empty;
-            await SaveCommandTrackersAsync(commandIds, eventId, arrInstance.Id, instanceType, externalItemId, itemTitle, seasonNumber);
-
-            // Cleanup stale history entries and old cycle history
-            await CleanupStaleHistoryAsync(arrInstance.Id, instanceType, allLibraryIds, allHistoryExternalIds);
+            await CleanupStaleHistoryAsync(arrInstance.Id, instanceType, result.AllLibraryIds, allHistoryExternalIds);
             await CleanupOldCycleHistoryAsync(arrInstance, instanceConfig.CurrentCycleId);
         }
 
         return true;
     }
 
-    private async Task<(List<long> SelectedIds, List<string> SelectedNames, List<long> AllLibraryIds)> ProcessRadarrAsync(
+    private async Task<SeekerProcessResult> ProcessRadarrAsync(
         SeekerConfig config,
         ArrInstance arrInstance,
         SeekerInstanceConfig instanceConfig,
@@ -460,7 +465,7 @@ public sealed class Seeker : IHandler
 
         if (candidates.Count == 0)
         {
-            return ([], [], allLibraryIds);
+            return new SeekerProcessResult { Candidates = [], AllLibraryIds = allLibraryIds };
         }
 
         // Exclude movies already in the download queue
@@ -480,7 +485,7 @@ public sealed class Seeker : IHandler
 
             if (candidates.Count == 0)
             {
-                return ([], [], allLibraryIds);
+                return new SeekerProcessResult { Candidates = [], AllLibraryIds = allLibraryIds };
             }
         }
 
@@ -495,7 +500,7 @@ public sealed class Seeker : IHandler
                 _logger.LogDebug(
                     "skip | cycle complete but min time ({Days}) not elapsed (started {StartedAt}) | {InstanceName}",
                     instanceConfig.MinCycleTimeDays, cycleStartedAt, arrInstance.Name);
-                return ([], [], allLibraryIds);
+                return new SeekerProcessResult { Candidates = [], AllLibraryIds = allLibraryIds };
             }
 
             _logger.LogInformation("All {Count} items on {InstanceName} searched in current cycle, starting new cycle",
@@ -520,27 +525,32 @@ public sealed class Seeker : IHandler
         IItemSelector selector = ItemSelectorFactory.Create(config.SelectionStrategy);
         List<long> selectedIds = selector.Select(selectionCandidates, 1);
 
-        List<string> selectedNames = candidates
-            .Where(m => selectedIds.Contains(m.Id))
-            .Select(m => m.Title)
-            .ToList();
-
+        List<SeekerSearchCandidate> searchCandidates = [];
         foreach (long movieId in selectedIds)
         {
             SearchableMovie movie = candidates.First(m => m.Id == movieId);
-            string reason = !movie.HasFile
-                ? "missing file"
+            SeekerSearchReason reason = !movie.HasFile
+                ? SeekerSearchReason.Missing
                 : config.UseCutoff && (movie.MovieFile?.QualityCutoffNotMet ?? false)
-                    ? "does not meet quality cutoff"
-                    : "custom format score below cutoff";
+                    ? SeekerSearchReason.QualityCutoffNotMet
+                    : SeekerSearchReason.CustomFormatScoreBelowCutoff;
+
+            searchCandidates.Add(new SeekerSearchCandidate
+            {
+                ItemId = movieId,
+                Name = movie.Title,
+                SeasonNumber = 0,
+                Reason = reason,
+            });
+
             _logger.LogDebug("Selected '{Title}' for search on {InstanceName}: {Reason}",
                 movie.Title, arrInstance.Name, reason);
         }
 
-        return (selectedIds, selectedNames, allLibraryIds);
+        return new SeekerProcessResult { Candidates = searchCandidates, AllLibraryIds = allLibraryIds };
     }
 
-    private async Task<(HashSet<SearchItem> SearchItems, List<string> SelectedNames, List<long> AllLibraryIds, List<long> HistoryIds, int SeasonNumber)> ProcessSonarrAsync(
+    private async Task<SeekerProcessResult> ProcessSonarrAsync(
         SeekerConfig config,
         ArrInstance arrInstance,
         SeekerInstanceConfig instanceConfig,
@@ -577,7 +587,7 @@ public sealed class Seeker : IHandler
 
         if (candidates.Count == 0)
         {
-            return ([], [], allLibraryIds, [], 0);
+            return new SeekerProcessResult { Candidates = [], AllLibraryIds = allLibraryIds };
         }
 
         // Pass all candidates — BuildSonarrSearchItemAsync handles season-level exclusion
@@ -594,7 +604,7 @@ public sealed class Seeker : IHandler
         foreach (long seriesId in candidateIds)
         {
             string seriesTitle = string.Empty;
-            
+
             try
             {
                 List<SeekerHistory> seriesHistory = currentCycleHistory
@@ -603,15 +613,27 @@ public sealed class Seeker : IHandler
 
                 seriesTitle = candidates.First(s => s.Id == seriesId).Title;
 
-                (SeriesSearchItem? searchItem, SearchableEpisode? selectedEpisode) =
+                (SeriesSearchItem? searchItem, SearchableEpisode? selectedEpisode, SeekerSearchReason searchReason) =
                     await BuildSonarrSearchItemAsync(config, arrInstance, seriesId, seriesHistory, seriesTitle, graceCutoff, queuedSeasons);
 
                 if (searchItem is not null)
                 {
                     string displayName = $"{seriesTitle} S{searchItem.Id:D2}";
-                    int seasonNumber = (int)searchItem.Id;
 
-                    return ([searchItem], [displayName], allLibraryIds, [seriesId], seasonNumber);
+                    return new SeekerProcessResult
+                    {
+                        Candidates =
+                        [
+                            new SeekerSearchCandidate
+                            {
+                                ItemId = seriesId,
+                                Name = displayName,
+                                SeasonNumber = (int)searchItem.Id,
+                                Reason = searchReason,
+                            }
+                        ],
+                        AllLibraryIds = allLibraryIds,
+                    };
                 }
 
                 _logger.LogDebug("Skipping '{SeriesTitle}' — no qualifying seasons found", seriesTitle);
@@ -632,7 +654,7 @@ public sealed class Seeker : IHandler
                 _logger.LogDebug(
                     "skip | cycle complete but min time ({Days}) not elapsed (started {StartedAt}) | {InstanceName}",
                     instanceConfig.MinCycleTimeDays, cycleStartedAt, arrInstance.Name);
-                return ([], [], allLibraryIds, [], 0);
+                return new SeekerProcessResult { Candidates = [], AllLibraryIds = allLibraryIds };
             }
 
             _logger.LogInformation("All {Count} series on {InstanceName} searched in current cycle, starting new cycle",
@@ -649,14 +671,14 @@ public sealed class Seeker : IHandler
                 new Dictionary<long, DateTime>(), [], isDryRun, isRetry: true, queuedSeasons: queuedSeasons);
         }
 
-        return ([], [], allLibraryIds, [], 0);
+        return new SeekerProcessResult { Candidates = [], AllLibraryIds = allLibraryIds };
     }
 
     /// <summary>
     /// Fetches episodes for a series and builds a season-level search item.
     /// Uses search history to prefer least-recently-searched seasons.
     /// </summary>
-    private async Task<(SeriesSearchItem? SearchItem, SearchableEpisode? SelectedEpisode)> BuildSonarrSearchItemAsync(
+    private async Task<(SeriesSearchItem? SearchItem, SearchableEpisode? SelectedEpisode, SeekerSearchReason SearchReason)> BuildSonarrSearchItemAsync(
         SeekerConfig config,
         ArrInstance arrInstance,
         long seriesId,
@@ -705,7 +727,7 @@ public sealed class Seeker : IHandler
 
         if (qualifying.Count == 0)
         {
-            return (null, null);
+            return (null, null, default);
         }
 
         // Select least-recently-searched season using history
@@ -742,7 +764,7 @@ public sealed class Seeker : IHandler
         if (unsearched.Count == 0)
         {
             // All unsearched seasons are either searched or in the queue
-            return (null, null);
+            return (null, null, default);
         }
 
         // Pick from unsearched seasons with some randomization
@@ -773,6 +795,13 @@ public sealed class Seeker : IHandler
             reasons.Add($"{cfCount} below CF score cutoff");
         }
 
+        // Determine the primary search reason
+        SeekerSearchReason searchReason = missingCount > 0
+            ? SeekerSearchReason.Missing
+            : cutoffCount > 0
+                ? SeekerSearchReason.QualityCutoffNotMet
+                : SeekerSearchReason.CustomFormatScoreBelowCutoff;
+
         _logger.LogDebug("Selected '{SeriesTitle}' S{Season:D2} for search on {InstanceName}: {Reasons}",
             seriesTitle, selected.SeasonNumber, arrInstance.Name, string.Join(", ", reasons));
 
@@ -783,7 +812,7 @@ public sealed class Seeker : IHandler
             SearchType = SeriesSearchType.Season
         };
 
-        return (searchItem, selected.FirstEpisode);
+        return (searchItem, selected.FirstEpisode, searchReason);
     }
 
     private async Task UpdateSearchHistoryAsync(

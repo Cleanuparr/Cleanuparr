@@ -47,6 +47,7 @@ public partial class QBitService
 
         result.IsPrivate = isPrivate;
         result.Found = true;
+        SetDownloadClientContext();
 
         var malwareBlockerConfig = ContextProvider.Get<ContentBlockerConfig>();
 

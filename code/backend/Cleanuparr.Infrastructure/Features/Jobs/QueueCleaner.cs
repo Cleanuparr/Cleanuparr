@@ -91,8 +91,9 @@ public sealed class QueueCleaner : GenericHandler
         IArrClient arrClient = _arrClientFactory.GetClient(instance.ArrConfig.Type, instance.Version);
 
         // push to context
-        ContextProvider.Set(ContextProvider.Keys.ArrInstanceUrl, instance.ExternalUrl ?? instance.Url);
+        ContextProvider.Set(ContextProvider.Keys.ArrInstanceUrl, instance.ExternalOrInternalUrl);
         ContextProvider.Set(nameof(InstanceType), instance.ArrConfig.Type);
+        ContextProvider.Set(ContextProvider.Keys.ArrInstanceId, instance.Id);
         ContextProvider.Set(ContextProvider.Keys.Version, instance.Version);
 
         IReadOnlyList<IDownloadService> downloadServices = await GetInitializedDownloadServicesAsync();
@@ -150,13 +151,14 @@ public sealed class QueueCleaner : GenericHandler
 
                 DownloadCheckResult downloadCheckResult = new();
                 bool isTorrent = record.Protocol.Contains("torrent", StringComparison.InvariantCultureIgnoreCase);
+                DownloadClientConfig? foundInClient = null;
 
                 if (isTorrent)
                 {
                     var torrentClients = downloadServices
                         .Where(x => x.ClientConfig.Type is DownloadClientType.Torrent)
                         .ToList();
-                    
+
                     if (torrentClients.Count > 0)
                     {
                         // Check each download client for the download item
@@ -167,19 +169,20 @@ public sealed class QueueCleaner : GenericHandler
                                 // Get torrent info from download service for rule evaluation
                                 downloadCheckResult = await downloadService
                                     .ShouldRemoveFromArrQueueAsync(record.DownloadId, ignoredDownloads);
-                                
+
                                 if (downloadCheckResult.Found)
                                 {
+                                    foundInClient = downloadService.ClientConfig;
                                     break;
                                 }
                             }
                             catch (Exception ex)
                             {
-                                _logger.LogError(ex, "Error checking download {dName} with download client {cName}", 
+                                _logger.LogError(ex, "Error checking download {dName} with download client {cName}",
                                     record.Title, downloadService.ClientConfig.Name);
                             }
                         }
-                    
+
                         if (!downloadCheckResult.Found)
                         {
                             _logger.LogWarning("Download not found in any torrent client | {title}", record.Title);
@@ -193,13 +196,13 @@ public sealed class QueueCleaner : GenericHandler
 
                     await PublishQueueItemRemoveRequest(
                         downloadRemovalKey,
-                        instance.ArrConfig.Type,
                         instance,
                         record,
                         group.Count() > 1,
                         removeFromClient,
                         downloadCheckResult.DeleteReason,
-                        skipSearch: !hasContentId
+                        skipSearch: !hasContentId,
+                        downloadClient: foundInClient
                     );
 
                     continue;
@@ -219,16 +222,16 @@ public sealed class QueueCleaner : GenericHandler
                 if (shouldRemoveFromArr)
                 {
                     bool removeFromClient = !downloadCheckResult.IsPrivate || queueCleanerConfig.FailedImport.DeletePrivate;
-                    
+
                     await PublishQueueItemRemoveRequest(
                         downloadRemovalKey,
-                        instance.ArrConfig.Type,
                         instance,
                         record,
                         group.Count() > 1,
                         removeFromClient,
                         DeleteReason.FailedImport,
-                        skipSearch: !hasContentId
+                        skipSearch: !hasContentId,
+                        downloadClient: foundInClient
                     );
 
                     continue;

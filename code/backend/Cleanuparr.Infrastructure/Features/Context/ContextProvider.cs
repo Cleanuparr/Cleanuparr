@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using Cleanuparr.Persistence.Models.Configuration;
 
 namespace Cleanuparr.Infrastructure.Features.Context;
 
@@ -43,14 +44,24 @@ public static class ContextProvider
 
     public static void SetJobRunId(Guid id) => Set(JobRunIdKey, id);
 
+    public static void SetDownloadClient(DownloadClientConfig config)
+    {
+        Set(Keys.DownloadClientUrl, config.ExternalOrInternalUrl);
+        Set(Keys.DownloadClientId, config.Id);
+        Set(Keys.DownloadClientType, config.TypeName);
+        Set(Keys.DownloadClientName, config.Name);
+    }
+
     public static class Keys
     {
         public const string Version = "version";
         public const string ItemName = "itemName";
         public const string Hash = "hash";
         public const string DownloadClientUrl = "downloadClientUrl";
+        public const string DownloadClientId = "downloadClientId";
         public const string DownloadClientType = "downloadClientType";
         public const string DownloadClientName = "downloadClientName";
+        public const string ArrInstanceId = "arrInstanceId";
         public const string ArrInstanceUrl = "arrInstanceUrl";
     }
 }

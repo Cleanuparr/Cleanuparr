@@ -8,7 +8,6 @@ using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
 using Cleanuparr.Shared.Helpers;
-using Data.Models.Arr;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 

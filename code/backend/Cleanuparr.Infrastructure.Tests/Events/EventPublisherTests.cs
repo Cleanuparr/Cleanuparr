@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Events;
 using Cleanuparr.Infrastructure.Features.Context;
@@ -6,12 +5,13 @@ using Cleanuparr.Infrastructure.Features.Notifications;
 using Cleanuparr.Infrastructure.Hubs;
 using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Persistence;
-using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Cleanuparr.Persistence.Models.Events;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Logging;
-using Moq;
+using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Events;
@@ -19,11 +19,10 @@ namespace Cleanuparr.Infrastructure.Tests.Events;
 public class EventPublisherTests : IDisposable
 {
     private readonly EventsContext _context;
-    private readonly Mock<IHubContext<AppHub>> _hubContextMock;
-    private readonly Mock<ILogger<EventPublisher>> _loggerMock;
-    private readonly Mock<INotificationPublisher> _notificationPublisherMock;
-    private readonly Mock<IDryRunInterceptor> _dryRunInterceptorMock;
-    private readonly Mock<IClientProxy> _clientProxyMock;
+    private readonly IHubContext<AppHub> _hubContext;
+    private readonly INotificationPublisher _notificationPublisher;
+    private readonly IDryRunInterceptor _dryRunInterceptor;
+    private readonly IClientProxy _clientProxy;
     private readonly EventPublisher _publisher;
 
     public EventPublisherTests()
@@ -31,30 +30,30 @@ public class EventPublisherTests : IDisposable
         // Setup in-memory database
         var options = new DbContextOptionsBuilder<EventsContext>()
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .ConfigureWarnings(w => w.Ignore(InMemoryEventId.TransactionIgnoredWarning))
             .Options;
         _context = new EventsContext(options);
 
         // Setup mocks
-        _hubContextMock = new Mock<IHubContext<AppHub>>();
-        _loggerMock = new Mock<ILogger<EventPublisher>>();
-        _notificationPublisherMock = new Mock<INotificationPublisher>();
-        _dryRunInterceptorMock = new Mock<IDryRunInterceptor>();
-        _clientProxyMock = new Mock<IClientProxy>();
+        _hubContext = Substitute.For<IHubContext<AppHub>>();
+        _notificationPublisher = Substitute.For<INotificationPublisher>();
+        _dryRunInterceptor = Substitute.For<IDryRunInterceptor>();
+        _clientProxy = Substitute.For<IClientProxy>();
 
         // Setup HubContext to return client proxy
-        var clientsMock = new Mock<IHubClients>();
-        clientsMock.Setup(c => c.All).Returns(_clientProxyMock.Object);
-        _hubContextMock.Setup(h => h.Clients).Returns(clientsMock.Object);
+        var clients = Substitute.For<IHubClients>();
+        clients.All.Returns(_clientProxy);
+        _hubContext.Clients.Returns(clients);
 
         // Setup dry run interceptor to report dry run as disabled by default
-        _dryRunInterceptorMock.Setup(d => d.IsDryRunEnabled()).ReturnsAsync(false);
+        _dryRunInterceptor.IsDryRunEnabled().Returns(false);
 
         _publisher = new EventPublisher(
             _context,
-            _hubContextMock.Object,
-            _loggerMock.Object,
-            _notificationPublisherMock.Object,
-            _dryRunInterceptorMock.Object);
+            _hubContext,
+            Substitute.For<ILogger<EventPublisher>>(),
+            _notificationPublisher,
+            _dryRunInterceptor);
 
         // Setup JobRunId in context for tests
         ContextProvider.SetJobRunId(Guid.NewGuid());
@@ -137,10 +136,10 @@ public class EventPublisherTests : IDisposable
         await _publisher.PublishAsync(eventType, message, severity);
 
         // Assert
-        _clientProxyMock.Verify(c => c.SendCoreAsync(
+        await _clientProxy.Received(1).SendCoreAsync(
             "EventReceived",
-            It.Is<object[]>(args => args.Length == 1 && args[0] is AppEvent),
-            It.IsAny<CancellationToken>()), Times.Once);
+            Arg.Is<object[]>(args => args.Length == 1 && args[0] is AppEvent),
+            Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -151,10 +150,10 @@ public class EventPublisherTests : IDisposable
         var message = "Test message";
         var severity = EventSeverity.Important;
 
-        _clientProxyMock.Setup(c => c.SendCoreAsync(
-                It.IsAny<string>(),
-                It.IsAny<object[]>(),
-                It.IsAny<CancellationToken>()))
+        _clientProxy.SendCoreAsync(
+                Arg.Any<string>(),
+                Arg.Any<object[]>(),
+                Arg.Any<CancellationToken>())
             .ThrowsAsync(new Exception("SignalR connection failed"));
 
         // Act - should not throw
@@ -233,10 +232,10 @@ public class EventPublisherTests : IDisposable
         await _publisher.PublishManualAsync(message, severity);
 
         // Assert
-        _clientProxyMock.Verify(c => c.SendCoreAsync(
+        await _clientProxy.Received(1).SendCoreAsync(
             "ManualEventReceived",
-            It.Is<object[]>(args => args.Length == 1 && args[0] is ManualEvent),
-            It.IsAny<CancellationToken>()), Times.Once);
+            Arg.Is<object[]>(args => args.Length == 1 && args[0] is ManualEvent),
+            Arg.Any<CancellationToken>());
     }
 
     #endregion
@@ -255,7 +254,7 @@ public class EventPublisherTests : IDisposable
         await _publisher.PublishAsync(eventType, message, severity);
 
         // Assert
-        _dryRunInterceptorMock.Verify(d => d.IsDryRunEnabled(), Times.Once);
+        await _dryRunInterceptor.Received(1).IsDryRunEnabled();
     }
 
     [Fact]
@@ -269,14 +268,14 @@ public class EventPublisherTests : IDisposable
         await _publisher.PublishManualAsync(message, severity);
 
         // Assert
-        _dryRunInterceptorMock.Verify(d => d.IsDryRunEnabled(), Times.Once);
+        await _dryRunInterceptor.Received(1).IsDryRunEnabled();
     }
 
     [Fact]
     public async Task PublishAsync_WhenDryRunEnabled_SetsIsDryRunTrue()
     {
         // Arrange
-        _dryRunInterceptorMock.Setup(d => d.IsDryRunEnabled()).ReturnsAsync(true);
+        _dryRunInterceptor.IsDryRunEnabled().Returns(true);
         var eventType = EventType.StalledStrike;
         var message = "Dry run event";
         var severity = EventSeverity.Warning;
@@ -311,7 +310,7 @@ public class EventPublisherTests : IDisposable
     public async Task PublishManualAsync_WhenDryRunEnabled_SetsIsDryRunTrue()
     {
         // Arrange
-        _dryRunInterceptorMock.Setup(d => d.IsDryRunEnabled()).ReturnsAsync(true);
+        _dryRunInterceptor.IsDryRunEnabled().Returns(true);
         var message = "Dry run manual event";
         var severity = EventSeverity.Important;
 
@@ -328,7 +327,7 @@ public class EventPublisherTests : IDisposable
     public async Task PublishAsync_WhenDryRunEnabled_StillSavesToDatabase()
     {
         // Arrange
-        _dryRunInterceptorMock.Setup(d => d.IsDryRunEnabled()).ReturnsAsync(true);
+        _dryRunInterceptor.IsDryRunEnabled().Returns(true);
         var eventType = EventType.StalledStrike;
         var message = "Should be saved";
         var severity = EventSeverity.Warning;
@@ -426,7 +425,7 @@ public class EventPublisherTests : IDisposable
         await _publisher.PublishQueueItemDeleted(removeFromClient: false, DeleteReason.FailedImport);
 
         // Assert
-        _notificationPublisherMock.Verify(n => n.NotifyQueueItemDeleted(false, DeleteReason.FailedImport), Times.Once);
+        await _notificationPublisher.Received(1).NotifyQueueItemDeleted(false, DeleteReason.FailedImport);
     }
 
     #endregion
@@ -475,7 +474,7 @@ public class EventPublisherTests : IDisposable
         await _publisher.PublishDownloadCleaned(ratio, seedingTime, categoryName, reason);
 
         // Assert
-        _notificationPublisherMock.Verify(n => n.NotifyDownloadCleaned(ratio, seedingTime, categoryName, reason), Times.Once);
+        await _notificationPublisher.Received(1).NotifyDownloadCleaned(ratio, seedingTime, categoryName, reason);
     }
 
     #endregion
@@ -575,7 +574,7 @@ public class EventPublisherTests : IDisposable
         await _publisher.PublishCategoryChanged("old", "new", isTag: true);
 
         // Assert
-        _notificationPublisherMock.Verify(n => n.NotifyCategoryChanged("old", "new", true), Times.Once);
+        await _notificationPublisher.Received(1).NotifyCategoryChanged("old", "new", true);
     }
 
     #endregion
@@ -586,7 +585,7 @@ public class EventPublisherTests : IDisposable
     public async Task PublishSearchTriggered_SavesEventWithCorrectType()
     {
         // Act
-        await _publisher.PublishSearchTriggered("Radarr-1", 2, ["Movie A", "Movie B"], SeekerSearchType.Proactive);
+        await _publisher.PublishSearchTriggered("Movie A", SeekerSearchType.Proactive, SeekerSearchReason.Missing);
 
         // Assert
         var savedEvent = await _context.Events.FirstOrDefaultAsync();
@@ -599,7 +598,7 @@ public class EventPublisherTests : IDisposable
     public async Task PublishSearchTriggered_SetsSearchStatusToPending()
     {
         // Act
-        await _publisher.PublishSearchTriggered("Radarr-1", 1, ["Movie A"], SeekerSearchType.Proactive);
+        await _publisher.PublishSearchTriggered("Movie A", SeekerSearchType.Proactive, SeekerSearchReason.Missing);
 
         // Assert
         var savedEvent = await _context.Events.FirstOrDefaultAsync();
@@ -614,7 +613,7 @@ public class EventPublisherTests : IDisposable
         var cycleId = Guid.NewGuid();
 
         // Act
-        await _publisher.PublishSearchTriggered("Radarr-1", 1, ["Movie A"], SeekerSearchType.Proactive, cycleId);
+        await _publisher.PublishSearchTriggered("Movie A", SeekerSearchType.Proactive, SeekerSearchReason.Missing, cycleId);
 
         // Assert
         var savedEvent = await _context.Events.FirstOrDefaultAsync();
@@ -626,7 +625,7 @@ public class EventPublisherTests : IDisposable
     public async Task PublishSearchTriggered_ReturnsEventId()
     {
         // Act
-        Guid eventId = await _publisher.PublishSearchTriggered("Radarr-1", 1, ["Movie A"], SeekerSearchType.Proactive);
+        Guid eventId = await _publisher.PublishSearchTriggered("Movie A", SeekerSearchType.Proactive, SeekerSearchReason.Missing);
 
         // Assert
         Assert.NotEqual(Guid.Empty, eventId);
@@ -635,59 +634,56 @@ public class EventPublisherTests : IDisposable
     }
 
     [Fact]
-    public async Task PublishSearchTriggered_SerializesItemsAndSearchTypeToData()
+    public async Task PublishSearchTriggered_CreatesSearchEventData()
     {
         // Act
-        await _publisher.PublishSearchTriggered("Sonarr-1", 2, ["Series A", "Series B"], SeekerSearchType.Replacement);
+        await _publisher.PublishSearchTriggered("Series A", SeekerSearchType.Replacement, SeekerSearchReason.Replacement);
 
         // Assert
         var savedEvent = await _context.Events.FirstOrDefaultAsync();
         Assert.NotNull(savedEvent);
-        Assert.NotNull(savedEvent.Data);
-        Assert.Contains("Series A", savedEvent.Data);
-        Assert.Contains("Series B", savedEvent.Data);
-        Assert.Contains("Replacement", savedEvent.Data);
-        Assert.Contains("Sonarr-1", savedEvent.Data);
+
+        var searchData = await _context.SearchEventData.FirstOrDefaultAsync(s => s.AppEventId == savedEvent.Id);
+        Assert.NotNull(searchData);
+        Assert.Equal("Series A", searchData.ItemTitle);
+        Assert.Equal(SeekerSearchType.Replacement, searchData.SearchType);
+        Assert.Equal(SeekerSearchReason.Replacement, searchData.SearchReason);
     }
 
     [Fact]
     public async Task PublishSearchTriggered_NotifiesSignalRClients()
     {
         // Act
-        await _publisher.PublishSearchTriggered("Radarr-1", 1, ["Movie A"], SeekerSearchType.Proactive);
+        await _publisher.PublishSearchTriggered("Movie A", SeekerSearchType.Proactive, SeekerSearchReason.Missing);
 
         // Assert
-        _clientProxyMock.Verify(c => c.SendCoreAsync(
+        await _clientProxy.Received(1).SendCoreAsync(
             "EventReceived",
-            It.Is<object[]>(args => args.Length == 1 && args[0] is AppEvent),
-            It.IsAny<CancellationToken>()), Times.Once);
+            Arg.Is<object[]>(args => args.Length == 1 && args[0] is AppEvent),
+            Arg.Any<CancellationToken>());
     }
 
     [Fact]
     public async Task PublishSearchTriggered_SendsNotification()
     {
         // Act
-        await _publisher.PublishSearchTriggered("Radarr-1", 2, ["Movie A", "Movie B"], SeekerSearchType.Proactive);
+        await _publisher.PublishSearchTriggered("Movie A", SeekerSearchType.Proactive, SeekerSearchReason.Missing);
 
         // Assert
-        _notificationPublisherMock.Verify(
-            n => n.NotifySearchTriggered("Radarr-1", 2, It.IsAny<IEnumerable<string>>()),
-            Times.Once);
+        await _notificationPublisher.Received(1).NotifySearchTriggered(
+            "Movie A", SeekerSearchType.Proactive, SeekerSearchReason.Missing);
     }
 
     [Fact]
-    public async Task PublishSearchTriggered_TruncatesDisplayForMoreThan5Items()
+    public async Task PublishSearchTriggered_IncludesItemTitleInMessage()
     {
-        // Arrange
-        var items = new[] { "Item 1", "Item 2", "Item 3", "Item 4", "Item 5", "Item 6", "Item 7" };
-
         // Act
-        await _publisher.PublishSearchTriggered("Radarr-1", 7, items, SeekerSearchType.Proactive);
+        await _publisher.PublishSearchTriggered("The Matrix", SeekerSearchType.Proactive, SeekerSearchReason.Missing);
 
         // Assert
         var savedEvent = await _context.Events.FirstOrDefaultAsync();
         Assert.NotNull(savedEvent);
-        Assert.Contains("+2 more", savedEvent.Message);
+        Assert.Contains("The Matrix", savedEvent.Message);
     }
 
     #endregion
@@ -698,7 +694,7 @@ public class EventPublisherTests : IDisposable
     public async Task PublishSearchCompleted_UpdatesEventStatus()
     {
         // Arrange — create a search event first
-        Guid eventId = await _publisher.PublishSearchTriggered("Radarr-1", 1, ["Movie A"], SeekerSearchType.Proactive);
+        Guid eventId = await _publisher.PublishSearchTriggered("Movie A", SeekerSearchType.Proactive, SeekerSearchReason.Missing);
 
         // Act
         await _publisher.PublishSearchCompleted(eventId, SearchCommandStatus.Completed);
@@ -713,7 +709,7 @@ public class EventPublisherTests : IDisposable
     public async Task PublishSearchCompleted_SetsCompletedAt()
     {
         // Arrange
-        Guid eventId = await _publisher.PublishSearchTriggered("Radarr-1", 1, ["Movie A"], SeekerSearchType.Proactive);
+        Guid eventId = await _publisher.PublishSearchTriggered("Movie A", SeekerSearchType.Proactive, SeekerSearchReason.Missing);
 
         // Act
         await _publisher.PublishSearchCompleted(eventId, SearchCommandStatus.Completed);
@@ -725,42 +721,35 @@ public class EventPublisherTests : IDisposable
     }
 
     [Fact]
-    public async Task PublishSearchCompleted_MergesResultDataIntoExistingData()
+    public async Task PublishSearchCompleted_UpdatesGrabbedItemsOnSearchEventData()
     {
         // Arrange
-        Guid eventId = await _publisher.PublishSearchTriggered("Radarr-1", 1, ["Movie A"], SeekerSearchType.Proactive);
+        Guid eventId = await _publisher.PublishSearchTriggered("Movie A", SeekerSearchType.Proactive, SeekerSearchReason.Missing);
 
-        var resultData = new { GrabbedItems = new[] { new { Title = "Movie A (2024)", Status = "downloading" } } };
+        var grabbedItems = new List<string> { "Movie A (2024)" };
 
         // Act
-        await _publisher.PublishSearchCompleted(eventId, SearchCommandStatus.Completed, resultData);
+        await _publisher.PublishSearchCompleted(eventId, SearchCommandStatus.Completed, grabbedItems);
 
         // Assert
-        var updatedEvent = await _context.Events.FindAsync(eventId);
-        Assert.NotNull(updatedEvent);
-        Assert.NotNull(updatedEvent.Data);
-        // Original data should still be present
-        Assert.Contains("Movie A", updatedEvent.Data);
-        // Merged result data should be present
-        Assert.Contains("GrabbedItems", updatedEvent.Data);
-        Assert.Contains("Movie A (2024)", updatedEvent.Data);
+        var searchData = await _context.SearchEventData.FirstOrDefaultAsync(s => s.AppEventId == eventId);
+        Assert.NotNull(searchData);
+        Assert.Contains("Movie A (2024)", searchData.GrabbedItems);
     }
 
     [Fact]
-    public async Task PublishSearchCompleted_WithNullResultData_DoesNotModifyData()
+    public async Task PublishSearchCompleted_WithNullGrabbedItems_DoesNotModifySearchEventData()
     {
         // Arrange
-        Guid eventId = await _publisher.PublishSearchTriggered("Radarr-1", 1, ["Movie A"], SeekerSearchType.Proactive);
-        var originalEvent = await _context.Events.FindAsync(eventId);
-        string? originalData = originalEvent!.Data;
+        Guid eventId = await _publisher.PublishSearchTriggered("Movie A", SeekerSearchType.Proactive, SeekerSearchReason.Missing);
 
         // Act
         await _publisher.PublishSearchCompleted(eventId, SearchCommandStatus.Completed);
 
         // Assert
-        var updatedEvent = await _context.Events.FindAsync(eventId);
-        Assert.NotNull(updatedEvent);
-        Assert.Equal(originalData, updatedEvent.Data);
+        var searchData = await _context.SearchEventData.FirstOrDefaultAsync(s => s.AppEventId == eventId);
+        Assert.NotNull(searchData);
+        Assert.Empty(searchData.GrabbedItems);
     }
 
     [Fact]
@@ -779,19 +768,19 @@ public class EventPublisherTests : IDisposable
     public async Task PublishSearchCompleted_NotifiesSignalRClients()
     {
         // Arrange
-        Guid eventId = await _publisher.PublishSearchTriggered("Radarr-1", 1, ["Movie A"], SeekerSearchType.Proactive);
+        Guid eventId = await _publisher.PublishSearchTriggered("Movie A", SeekerSearchType.Proactive, SeekerSearchReason.Missing);
 
         // Reset mock to only capture the completion call
-        _clientProxyMock.Invocations.Clear();
+        _clientProxy.ClearReceivedCalls();
 
         // Act
         await _publisher.PublishSearchCompleted(eventId, SearchCommandStatus.Completed);
 
         // Assert
-        _clientProxyMock.Verify(c => c.SendCoreAsync(
+        await _clientProxy.Received(1).SendCoreAsync(
             "EventReceived",
-            It.Is<object[]>(args => args.Length == 1 && args[0] is AppEvent),
-            It.IsAny<CancellationToken>()), Times.Once);
+            Arg.Is<object[]>(args => args.Length == 1 && args[0] is AppEvent),
+            Arg.Any<CancellationToken>());
     }
 
     #endregion

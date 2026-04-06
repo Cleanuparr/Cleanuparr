@@ -152,8 +152,8 @@ public class SeekerCommandMonitor : BackgroundService
             else
             {
                 // All completed — inspect download queue for grabbed items
-                object? resultData = await InspectDownloadQueueAsync(trackers, arrClientFactory);
-                await eventPublisher.PublishSearchCompleted(eventId, SearchCommandStatus.Completed, resultData);
+                List<string>? grabbedItems = await InspectDownloadQueueAsync(trackers, arrClientFactory);
+                await eventPublisher.PublishSearchCompleted(eventId, SearchCommandStatus.Completed, grabbedItems);
                 _logger.LogDebug("Search command(s) completed for event {EventId}", eventId);
             }
 
@@ -176,11 +176,11 @@ public class SeekerCommandMonitor : BackgroundService
         };
     }
 
-    private async Task<object?> InspectDownloadQueueAsync(
+    private async Task<List<string>?> InspectDownloadQueueAsync(
         List<SeekerCommandTracker> trackers,
         IArrClientFactory arrClientFactory)
     {
-        var allGrabbedItems = new List<object>();
+        var allGrabbedTitles = new List<string>();
 
         // Group by instance to inspect each instance's queue separately
         foreach (var instanceGroup in trackers.GroupBy(t => t.ArrInstanceId))
@@ -197,7 +197,7 @@ public class SeekerCommandMonitor : BackgroundService
                 // Find records matching any tracker in this instance group
                 foreach (var t in instanceGroup)
                 {
-                    var grabbedItems = queue.Records
+                    var grabbedTitles = queue.Records
                         .Where(r => t.ItemType == InstanceType.Radarr
                             ? r.MovieId == t.ExternalItemId
                             : r.SeriesId == t.ExternalItemId
@@ -205,21 +205,16 @@ public class SeekerCommandMonitor : BackgroundService
                         .Where(r => !string.IsNullOrEmpty(r.DownloadId))
                         .GroupBy(r => r.DownloadId)
                         .Select(g => g.First())
-                        .Select(r => new
-                        {
-                            r.Title,
-                            r.Status,
-                            r.Protocol,
-                        })
+                        .Select(r => r.Title)
                         .ToList();
 
-                    if (grabbedItems.Count > 0)
+                    if (grabbedTitles.Count > 0)
                     {
                         _logger.LogInformation("Search for '{Title}' on {Instance} grabbed {Count} items: {Items}",
-                            t.ItemTitle, arrInstance.Name, grabbedItems.Count,
-                            string.Join(", ", grabbedItems.Select(g => g.Title)));
+                            t.ItemTitle, arrInstance.Name, grabbedTitles.Count,
+                            string.Join(", ", grabbedTitles));
 
-                        allGrabbedItems.AddRange(grabbedItems);
+                        allGrabbedTitles.AddRange(grabbedTitles);
                     }
                 }
             }
@@ -229,6 +224,6 @@ public class SeekerCommandMonitor : BackgroundService
             }
         }
 
-        return allGrabbedItems.Count > 0 ? new { GrabbedItems = allGrabbedItems } : null;
+        return allGrabbedTitles.Count > 0 ? allGrabbedTitles : null;
     }
 }

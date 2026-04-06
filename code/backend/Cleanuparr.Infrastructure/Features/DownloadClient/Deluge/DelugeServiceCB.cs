@@ -27,7 +27,8 @@ public partial class DelugeService
         
         result.IsPrivate = download.Private;
         result.Found = true;
-        
+        SetDownloadClientContext();
+
         if (ignoredDownloads.Count > 0 && download.ShouldIgnore(ignoredDownloads))
         {
             _logger.LogInformation("skip | download is ignored | {name}", download.Name);

@@ -6,14 +6,14 @@ public sealed record SearchEventResponse
 {
     public Guid Id { get; init; }
     public DateTime Timestamp { get; init; }
-    public string InstanceName { get; init; } = string.Empty;
+    public Guid? ArrInstanceId { get; init; }
     public string? InstanceType { get; init; }
-    public int ItemCount { get; init; }
-    public List<string> Items { get; init; } = [];
+    public string ItemTitle { get; init; } = string.Empty;
     public SeekerSearchType SearchType { get; init; }
+    public SeekerSearchReason? SearchReason { get; init; }
     public SearchCommandStatus? SearchStatus { get; init; }
     public DateTime? CompletedAt { get; init; }
-    public object? GrabbedItems { get; init; }
+    public List<string> GrabbedItems { get; init; } = [];
     public Guid? CycleId { get; init; }
     public bool IsDryRun { get; init; }
 }

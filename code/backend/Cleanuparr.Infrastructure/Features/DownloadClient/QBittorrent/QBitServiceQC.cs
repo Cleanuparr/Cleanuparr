@@ -38,6 +38,7 @@ public partial class QBitService
                            && boolValue;
         
         result.Found = true;
+        SetDownloadClientContext();
 
         // Create ITorrentItem wrapper for consistent interface usage
         QBitItemWrapper torrent = new(download, trackers, result.IsPrivate);

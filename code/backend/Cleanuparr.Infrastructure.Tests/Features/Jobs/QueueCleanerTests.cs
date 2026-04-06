@@ -9,7 +9,6 @@ using Cleanuparr.Infrastructure.Helpers;
 using Cleanuparr.Infrastructure.Tests.Features.Jobs.TestHelpers;
 using Cleanuparr.Persistence.Models.Configuration;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
-using Data.Models.Arr;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -1049,7 +1048,7 @@ public class QueueCleanerTests : IDisposable
         _fixture.MessageBus.Verify(
             x => x.Publish(
                 It.Is<QueueItemRemoveRequest<SearchItem>>(r =>
-                    r.InstanceType == InstanceType.Radarr &&
+                    r.Instance.ArrConfig.Type == InstanceType.Radarr &&
                     r.SearchItem.Id == 42 &&
                     r.DeleteReason == DeleteReason.Stalled
                 ),
@@ -1122,7 +1121,7 @@ public class QueueCleanerTests : IDisposable
         _fixture.MessageBus.Verify(
             x => x.Publish(
                 It.Is<QueueItemRemoveRequest<SearchItem>>(r =>
-                    r.InstanceType == InstanceType.Lidarr &&
+                    r.Instance.ArrConfig.Type == InstanceType.Lidarr &&
                     r.SearchItem.Id == 123 &&
                     r.DeleteReason == DeleteReason.SlowSpeed
                 ),
@@ -1195,7 +1194,7 @@ public class QueueCleanerTests : IDisposable
         _fixture.MessageBus.Verify(
             x => x.Publish(
                 It.Is<QueueItemRemoveRequest<SearchItem>>(r =>
-                    r.InstanceType == InstanceType.Readarr &&
+                    r.Instance.ArrConfig.Type == InstanceType.Readarr &&
                     r.SearchItem.Id == 456 &&
                     r.DeleteReason == DeleteReason.Stalled
                 ),
@@ -1269,7 +1268,7 @@ public class QueueCleanerTests : IDisposable
         _fixture.MessageBus.Verify(
             x => x.Publish(
                 It.Is<QueueItemRemoveRequest<SeriesSearchItem>>(r =>
-                    r.InstanceType == InstanceType.Whisparr &&
+                    r.Instance.ArrConfig.Type == InstanceType.Whisparr &&
                     r.SearchItem.Id == 100 && // EpisodeId
                     r.SearchItem.SeriesId == 10 &&
                     r.SearchItem.SearchType == SeriesSearchType.Episode &&
@@ -1344,7 +1343,7 @@ public class QueueCleanerTests : IDisposable
         _fixture.MessageBus.Verify(
             x => x.Publish(
                 It.Is<QueueItemRemoveRequest<SearchItem>>(r =>
-                    r.InstanceType == InstanceType.Whisparr &&
+                    r.Instance.ArrConfig.Type == InstanceType.Whisparr &&
                     r.SearchItem.Id == 42 && // MovieId
                     r.DeleteReason == DeleteReason.Stalled
                 ),
@@ -1431,7 +1430,7 @@ public class QueueCleanerTests : IDisposable
         _fixture.MessageBus.Verify(
             x => x.Publish(
                 It.Is<QueueItemRemoveRequest<SeriesSearchItem>>(r =>
-                    r.InstanceType == InstanceType.Whisparr &&
+                    r.Instance.ArrConfig.Type == InstanceType.Whisparr &&
                     r.SearchItem.Id == 3 && // SeasonNumber
                     r.SearchItem.SeriesId == 10 &&
                     r.SearchItem.SearchType == SeriesSearchType.Season &&

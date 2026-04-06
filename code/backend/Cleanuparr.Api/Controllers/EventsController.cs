@@ -90,8 +90,6 @@ public class EventsController : ControllerBase
                 EF.Functions.Like(e.Message, pattern) ||
                 EF.Functions.Like(e.Data, pattern) ||
                 EF.Functions.Like(e.TrackingId.ToString(), pattern) ||
-                EF.Functions.Like(e.InstanceUrl, pattern) ||
-                EF.Functions.Like(e.DownloadClientName, pattern) ||
                 EF.Functions.Like(e.JobRunId.ToString(), pattern)
             );
         }

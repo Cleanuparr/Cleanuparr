@@ -1,10 +1,10 @@
+using Cleanuparr.Domain.Entities.Arr;
 using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.DownloadRemover.Consumers;
 using Cleanuparr.Infrastructure.Features.DownloadRemover.Interfaces;
 using Cleanuparr.Infrastructure.Features.DownloadRemover.Models;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
-using Data.Models.Arr;
 using MassTransit;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -88,7 +88,7 @@ public class DownloadRemoverConsumerTests
 
         // Assert
         Assert.NotNull(capturedRequest);
-        Assert.Equal(request.InstanceType, capturedRequest.InstanceType);
+        Assert.Equal(request.Instance.ArrConfig.Type, capturedRequest.Instance.ArrConfig.Type);
         Assert.Equal(request.SearchItem.Id, capturedRequest.SearchItem.Id);
         Assert.Equal(request.RemoveFromClient, capturedRequest.RemoveFromClient);
         Assert.Equal(request.DeleteReason, capturedRequest.DeleteReason);
@@ -100,8 +100,7 @@ public class DownloadRemoverConsumerTests
         // Arrange
         var request = new QueueItemRemoveRequest<SearchItem>
         {
-            InstanceType = InstanceType.Sonarr,
-            Instance = CreateArrInstance(),
+            Instance = CreateArrInstance(InstanceType.Sonarr),
             SearchItem = new SearchItem { Id = 456 },
             Record = CreateQueueRecord(),
             RemoveFromClient = true,
@@ -130,8 +129,7 @@ public class DownloadRemoverConsumerTests
         // Arrange
         var request = new QueueItemRemoveRequest<SearchItem>
         {
-            InstanceType = InstanceType.Radarr,
-            Instance = CreateArrInstance(),
+            Instance = CreateArrInstance(InstanceType.Radarr),
             SearchItem = new SearchItem { Id = 789 },
             Record = CreateQueueRecord(),
             RemoveFromClient = false,
@@ -159,8 +157,7 @@ public class DownloadRemoverConsumerTests
         // Arrange
         var request = new QueueItemRemoveRequest<SearchItem>
         {
-            InstanceType = InstanceType.Readarr,
-            Instance = CreateArrInstance(),
+            Instance = CreateArrInstance(InstanceType.Readarr),
             SearchItem = new SearchItem { Id = 111 },
             Record = CreateQueueRecord(),
             RemoveFromClient = true,
@@ -178,7 +175,7 @@ public class DownloadRemoverConsumerTests
 
         // Assert
         _queueItemRemoverMock.Verify(r => r.RemoveQueueItemAsync(
-            It.Is<QueueItemRemoveRequest<SearchItem>>(req => req.InstanceType == InstanceType.Readarr)), Times.Once);
+            It.Is<QueueItemRemoveRequest<SearchItem>>(req => req.Instance.ArrConfig.Type == InstanceType.Readarr)), Times.Once);
     }
 
     #endregion
@@ -189,8 +186,7 @@ public class DownloadRemoverConsumerTests
     {
         return new QueueItemRemoveRequest<SearchItem>
         {
-            InstanceType = InstanceType.Radarr,
-            Instance = CreateArrInstance(),
+            Instance = CreateArrInstance(InstanceType.Radarr),
             SearchItem = new SearchItem { Id = 123 },
             Record = CreateQueueRecord(),
             RemoveFromClient = true,
@@ -199,13 +195,14 @@ public class DownloadRemoverConsumerTests
         };
     }
 
-    private static ArrInstance CreateArrInstance()
+    private static ArrInstance CreateArrInstance(InstanceType instanceType = InstanceType.Radarr)
     {
         return new ArrInstance
         {
             Name = "Test Instance",
             Url = new Uri("http://radarr.local"),
-            ApiKey = "test-api-key"
+            ApiKey = "test-api-key",
+            ArrConfig = new ArrConfig { Type = instanceType }
         };
     }
 

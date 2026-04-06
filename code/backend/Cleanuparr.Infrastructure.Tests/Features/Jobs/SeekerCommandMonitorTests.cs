@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Cleanuparr.Domain.Entities.Arr;
 using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Enums;
@@ -102,11 +101,11 @@ public class SeekerCommandMonitorTests : IAsyncDisposable
                 ]
             });
 
-        var publishTcs = new TaskCompletionSource<object?>();
+        var publishTcs = new TaskCompletionSource<List<string>?>();
         _eventPublisher.PublishSearchCompleted(
-                Arg.Any<Guid>(), Arg.Any<SearchCommandStatus>(), Arg.Any<object?>())
+                Arg.Any<Guid>(), Arg.Any<SearchCommandStatus>(), Arg.Any<List<string>?>())
             .Returns(Task.CompletedTask)
-            .AndDoes(ci => publishTcs.TrySetResult(ci.ArgAt<object?>(2)));
+            .AndDoes(ci => publishTcs.TrySetResult(ci.ArgAt<List<string>?>(2)));
 
         // Act
         await _sut.StartAsync(_cts.Token);
@@ -115,10 +114,10 @@ public class SeekerCommandMonitorTests : IAsyncDisposable
 
         // Assert
         await _eventPublisher.Received(1).PublishSearchCompleted(
-            eventId, SearchCommandStatus.Completed, Arg.Any<object?>());
+            eventId, SearchCommandStatus.Completed, Arg.Any<List<string>?>());
 
         resultData.ShouldNotBeNull();
-        GetGrabbedItems(resultData).GetArrayLength().ShouldBe(1);
+        resultData!.Count.ShouldBe(1);
     }
 
     [Fact]
@@ -158,11 +157,11 @@ public class SeekerCommandMonitorTests : IAsyncDisposable
                 ]
             });
 
-        var publishTcs = new TaskCompletionSource<object?>();
+        var publishTcs = new TaskCompletionSource<List<string>?>();
         _eventPublisher.PublishSearchCompleted(
-                Arg.Any<Guid>(), Arg.Any<SearchCommandStatus>(), Arg.Any<object?>())
+                Arg.Any<Guid>(), Arg.Any<SearchCommandStatus>(), Arg.Any<List<string>?>())
             .Returns(Task.CompletedTask)
-            .AndDoes(ci => publishTcs.TrySetResult(ci.ArgAt<object?>(2)));
+            .AndDoes(ci => publishTcs.TrySetResult(ci.ArgAt<List<string>?>(2)));
 
         // Act
         await _sut.StartAsync(_cts.Token);
@@ -171,9 +170,8 @@ public class SeekerCommandMonitorTests : IAsyncDisposable
 
         // Assert
         resultData.ShouldNotBeNull();
-        var grabbedItems = GetGrabbedItems(resultData);
-        grabbedItems.GetArrayLength().ShouldBe(1);
-        grabbedItems[0].GetProperty("Title").GetString().ShouldBe("Valid Download");
+        resultData!.Count.ShouldBe(1);
+        resultData[0].ShouldBe("Valid Download");
     }
 
     [Fact]
@@ -212,11 +210,11 @@ public class SeekerCommandMonitorTests : IAsyncDisposable
                 ]
             });
 
-        var publishTcs = new TaskCompletionSource<object?>();
+        var publishTcs = new TaskCompletionSource<List<string>?>();
         _eventPublisher.PublishSearchCompleted(
-                Arg.Any<Guid>(), Arg.Any<SearchCommandStatus>(), Arg.Any<object?>())
+                Arg.Any<Guid>(), Arg.Any<SearchCommandStatus>(), Arg.Any<List<string>?>())
             .Returns(Task.CompletedTask)
-            .AndDoes(ci => publishTcs.TrySetResult(ci.ArgAt<object?>(2)));
+            .AndDoes(ci => publishTcs.TrySetResult(ci.ArgAt<List<string>?>(2)));
 
         // Act
         await _sut.StartAsync(_cts.Token);
@@ -225,13 +223,7 @@ public class SeekerCommandMonitorTests : IAsyncDisposable
 
         // Assert
         resultData.ShouldNotBeNull();
-        GetGrabbedItems(resultData).GetArrayLength().ShouldBe(2);
+        resultData!.Count.ShouldBe(2);
     }
 
-    private static JsonElement GetGrabbedItems(object resultData)
-    {
-        var json = JsonSerializer.Serialize(resultData);
-        using var doc = JsonDocument.Parse(json);
-        return doc.RootElement.GetProperty("GrabbedItems").Clone();
-    }
 }

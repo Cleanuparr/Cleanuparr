@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Cleanuparr.Api.Features.Seeker.Contracts.Responses;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Persistence;
@@ -118,8 +117,7 @@ public sealed class SearchStatsController : ControllerBase
     }
 
     /// <summary>
-    /// Gets paginated search-triggered events with decoded data.
-    /// Supports optional text search across item names in event data.
+    /// Gets paginated search-triggered events
     /// </summary>
     [HttpGet("events")]
     public async Task<IActionResult> GetEvents(
@@ -135,20 +133,13 @@ public sealed class SearchStatsController : ControllerBase
 
         var query = _eventsContext.Events
             .AsNoTracking()
+            .Include(e => e.SearchEventData)
             .Where(e => e.EventType == EventType.SearchTriggered);
 
-        // Filter by instance URL if instanceId provided
+        // Filter by instance ID
         if (instanceId.HasValue)
         {
-            var instance = await _dataContext.ArrInstances
-                .AsNoTracking()
-                .FirstOrDefaultAsync(a => a.Id == instanceId.Value);
-
-            if (instance is not null)
-            {
-                string url = (instance.ExternalUrl ?? instance.Url).ToString();
-                query = query.Where(e => e.InstanceUrl == url);
-            }
+            query = query.Where(e => e.ArrInstanceId == instanceId.Value);
         }
 
         // Filter by cycle ID
@@ -157,10 +148,12 @@ public sealed class SearchStatsController : ControllerBase
             query = query.Where(e => e.CycleId == cycleId.Value);
         }
 
-        // Pre-filter by search term on the JSON data field
+        // Search by item title in SearchEventData
         if (!string.IsNullOrWhiteSpace(search))
         {
-            query = query.Where(e => e.Data != null && e.Data.ToLower().Contains(search.ToLower()));
+            string pattern = EventsContext.GetLikePattern(search);
+            query = query.Where(e => e.SearchEventData != null
+                && EF.Functions.Like(e.SearchEventData.ItemTitle, pattern));
         }
 
         int totalCount = await query.CountAsync();
@@ -171,24 +164,37 @@ public sealed class SearchStatsController : ControllerBase
             .Take(pageSize)
             .ToListAsync();
 
-        var items = rawEvents.Select(e =>
+        // Resolve instance types from DataContext via ArrInstanceId
+        var arrInstanceIds = rawEvents
+            .Where(e => e.ArrInstanceId.HasValue)
+            .Select(e => e.ArrInstanceId!.Value)
+            .Distinct()
+            .ToList();
+
+        var instanceTypeMap = arrInstanceIds.Count > 0
+            ? await _dataContext.ArrInstances
+                .AsNoTracking()
+                .Include(a => a.ArrConfig)
+                .Where(a => arrInstanceIds.Contains(a.Id))
+                .ToDictionaryAsync(a => a.Id, a => a.ArrConfig.Type)
+            : new Dictionary<Guid, InstanceType>();
+
+        var items = rawEvents.Select(e => new SearchEventResponse
         {
-            var parsed = ParseEventData(e.Data);
-            return new SearchEventResponse
-            {
-                Id = e.Id,
-                Timestamp = e.Timestamp,
-                InstanceName = parsed.InstanceName,
-                InstanceType = e.InstanceType?.ToString(),
-                ItemCount = parsed.ItemCount,
-                Items = parsed.Items,
-                SearchType = parsed.SearchType,
-                SearchStatus = e.SearchStatus,
-                CompletedAt = e.CompletedAt,
-                GrabbedItems = parsed.GrabbedItems,
-                CycleId = e.CycleId,
-                IsDryRun = e.IsDryRun,
-            };
+            Id = e.Id,
+            Timestamp = e.Timestamp,
+            ArrInstanceId = e.ArrInstanceId,
+            InstanceType = e.ArrInstanceId.HasValue && instanceTypeMap.TryGetValue(e.ArrInstanceId.Value, out var it)
+                ? it.ToString()
+                : null,
+            ItemTitle = e.SearchEventData?.ItemTitle ?? "Unknown",
+            SearchType = e.SearchEventData?.SearchType ?? SeekerSearchType.Proactive,
+            SearchReason = e.SearchEventData?.SearchReason,
+            SearchStatus = e.SearchStatus,
+            CompletedAt = e.CompletedAt,
+            GrabbedItems = e.SearchEventData?.GrabbedItems ?? [],
+            CycleId = e.CycleId,
+            IsDryRun = e.IsDryRun,
         }).ToList();
 
         return Ok(new
@@ -199,52 +205,5 @@ public sealed class SearchStatsController : ControllerBase
             TotalCount = totalCount,
             TotalPages = (int)Math.Ceiling(totalCount / (double)pageSize),
         });
-    }
-
-    private static (string InstanceName, int ItemCount, List<string> Items, SeekerSearchType SearchType, object? GrabbedItems) ParseEventData(string? data)
-    {
-        if (string.IsNullOrWhiteSpace(data))
-        {
-            return ("Unknown", 0, [], SeekerSearchType.Proactive, null);
-        }
-
-        try
-        {
-            using JsonDocument doc = JsonDocument.Parse(data);
-            JsonElement root = doc.RootElement;
-
-            string instanceName = root.TryGetProperty("InstanceName", out var nameEl)
-                ? nameEl.GetString() ?? "Unknown"
-                : "Unknown";
-
-            int itemCount = root.TryGetProperty("ItemCount", out var countEl)
-                ? countEl.GetInt32()
-                : 0;
-
-            var items = new List<string>();
-            if (root.TryGetProperty("Items", out var itemsEl) && itemsEl.ValueKind == JsonValueKind.Array)
-            {
-                foreach (JsonElement item in itemsEl.EnumerateArray())
-                {
-                    string? val = item.GetString();
-                    if (val is not null) items.Add(val);
-                }
-            }
-
-            SeekerSearchType searchType = root.TryGetProperty("SearchType", out var typeEl)
-                && Enum.TryParse<SeekerSearchType>(typeEl.GetString(), out var parsed)
-                ? parsed
-                : SeekerSearchType.Proactive;
-
-            object? grabbedItems = root.TryGetProperty("GrabbedItems", out var grabbedEl)
-                ? JsonSerializer.Deserialize<object>(grabbedEl.GetRawText())
-                : null;
-
-            return (instanceName, itemCount, items, searchType, grabbedItems);
-        }
-        catch (JsonException)
-        {
-            return ("Unknown", 0, [], SeekerSearchType.Proactive, null);
-        }
     }
 }

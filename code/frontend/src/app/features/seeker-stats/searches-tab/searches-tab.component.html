@@ -135,15 +135,14 @@
       <div class="list-row">
         <div class="list-row__main">
           <ng-icon name="tablerSearch" class="list-row__icon" />
-          <span class="list-row__title">
-            {{ event.items.length > 0 ? event.items[0] : 'Search triggered' }}
-            @if (event.items.length > 1) {
-              <span class="list-row__extra">+{{ event.items.length - 1 }} more</span>
-            }
-          </span>
           <app-badge [severity]="searchTypeSeverity(event.searchType)" size="sm">
             {{ event.searchType }}
           </app-badge>
+          @if (event.searchReason) {
+            <app-badge [severity]="searchReasonSeverity(event.searchReason)" size="sm">
+              {{ formatSearchReason(event.searchReason) }}
+            </app-badge>
+          }
           @if (event.searchStatus) {
             <app-badge [severity]="searchStatusSeverity(event.searchStatus)" size="sm">
               {{ event.searchStatus }}
@@ -155,8 +154,13 @@
           @if (event.cycleId) {
             <span class="list-row__cycle">{{ event.cycleId.substring(0, 8) }}</span>
           }
-          <span class="list-row__meta">{{ event.instanceName }}</span>
+          @if (event.instanceType) {
+            <app-badge [severity]="instanceTypeSeverity(event.instanceType)" size="sm" class="list-row__instance">{{ event.instanceType }}</app-badge>
+          }
           <span class="list-row__time">{{ event.timestamp | date:'yyyy-MM-dd HH:mm' }}</span>
+        </div>
+        <div class="list-row__title">
+          {{ event.itemTitle || 'Search triggered' }}
         </div>
         @if (event.grabbedItems && event.grabbedItems.length > 0) {
           <div class="list-row__detail">

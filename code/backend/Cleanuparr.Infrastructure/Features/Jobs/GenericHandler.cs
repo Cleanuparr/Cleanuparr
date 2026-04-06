@@ -13,7 +13,6 @@ using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
 using Cleanuparr.Persistence.Models.Configuration.General;
 using Cleanuparr.Persistence.Models.Configuration.MalwareBlocker;
 using Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
-using Data.Models.Arr;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
@@ -126,13 +125,13 @@ public abstract class GenericHandler : IHandler
 
     protected async Task PublishQueueItemRemoveRequest(
         string downloadRemovalKey,
-        InstanceType instanceType,
         ArrInstance instance,
         QueueRecord record,
         bool isPack,
         bool removeFromClient,
         DeleteReason deleteReason,
-        bool skipSearch = false
+        bool skipSearch = false,
+        DownloadClientConfig? downloadClient = null
     )
     {
         if (_cache.TryGetValue(downloadRemovalKey, out bool _))
@@ -141,18 +140,20 @@ public abstract class GenericHandler : IHandler
             return;
         }
 
+        var instanceType = instance.ArrConfig.Type;
+
         if (instanceType is InstanceType.Sonarr || (instanceType is InstanceType.Whisparr && instance.Version is 2))
         {
             QueueItemRemoveRequest<SeriesSearchItem> removeRequest = new()
             {
-                InstanceType = instanceType,
                 Instance = instance,
                 Record = record,
                 SearchItem = (SeriesSearchItem)GetRecordSearchItem(instanceType, instance.Version, record, isPack),
                 RemoveFromClient = removeFromClient,
                 DeleteReason = deleteReason,
                 JobRunId = ContextProvider.GetJobRunId(),
-                SkipSearch = skipSearch
+                SkipSearch = skipSearch,
+                DownloadClient = downloadClient,
             };
 
             await _messageBus.Publish(removeRequest);
@@ -161,17 +162,23 @@ public abstract class GenericHandler : IHandler
         {
             QueueItemRemoveRequest<SearchItem> removeRequest = new()
             {
-                InstanceType = instanceType,
                 Instance = instance,
                 Record = record,
                 SearchItem = GetRecordSearchItem(instanceType, instance.Version, record, isPack),
                 RemoveFromClient = removeFromClient,
                 DeleteReason = deleteReason,
                 JobRunId = ContextProvider.GetJobRunId(),
-                SkipSearch = skipSearch
+                SkipSearch = skipSearch,
+                DownloadClient = downloadClient,
             };
 
             await _messageBus.Publish(removeRequest);
+        }
+
+        // Set context for event
+        if (downloadClient is not null)
+        {
+            ContextProvider.SetDownloadClient(downloadClient);
         }
 
         _logger.LogInformation("item marked for removal | {title} | {url}", record.Title, instance.Url);
