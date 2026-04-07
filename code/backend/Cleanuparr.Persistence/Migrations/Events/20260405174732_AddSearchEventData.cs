@@ -1,5 +1,6 @@
 using System;
 using Cleanuparr.Shared.Helpers;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -12,55 +13,84 @@ namespace Cleanuparr.Persistence.Migrations.Events
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AddColumn<Guid>(
-                name: "arr_instance_id",
-                table: "events",
-                type: "TEXT",
-                nullable: true);
+            // Introspect current schema to make migration idempotent.
+            // The ATTACH DATABASE below requires suppressTransaction: true, which causes
+            // EF Core to commit preceding schema changes before executing it. If the ATTACH
+            // or any later step fails, those schema changes are committed but the migration
+            // is not recorded — leading to "duplicate column name" on retry.
+            string eventsDbPath = Path.Combine(ConfigurationPathProvider.GetConfigPath(), "events.db");
 
-            migrationBuilder.AddColumn<Guid>(
-                name: "download_client_id",
-                table: "events",
-                type: "TEXT",
-                nullable: true);
+            var existingColumns = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            bool hasSearchEventDataTable = false;
 
-            migrationBuilder.CreateTable(
-                name: "search_event_data",
-                columns: table => new
+            if (File.Exists(eventsDbPath))
+            {
+                using var connection = new SqliteConnection($"Data Source={eventsDbPath}");
+                connection.Open();
+
+                using (var cmd = connection.CreateCommand())
                 {
-                    id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    app_event_id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    item_title = table.Column<string>(type: "TEXT", maxLength: 500, nullable: false),
-                    search_type = table.Column<string>(type: "TEXT", nullable: false),
-                    search_reason = table.Column<string>(type: "TEXT", nullable: false),
-                    grabbed_items = table.Column<string>(type: "TEXT", nullable: false)
-                },
-                constraints: table =>
+                    cmd.CommandText = "SELECT name FROM pragma_table_info('events')";
+                    using var reader = cmd.ExecuteReader();
+                    while (reader.Read())
+                    {
+                        existingColumns.Add(reader.GetString(0));
+                    }
+                }
+
+                using (var cmd = connection.CreateCommand())
                 {
-                    table.PrimaryKey("pk_search_event_data", x => x.id);
-                    table.ForeignKey(
-                        name: "fk_search_event_data_events_app_event_id",
-                        column: x => x.app_event_id,
-                        principalTable: "events",
-                        principalColumn: "id",
-                        onDelete: ReferentialAction.Cascade);
-                });
+                    cmd.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='search_event_data'";
+                    hasSearchEventDataTable = Convert.ToInt64(cmd.ExecuteScalar()) > 0;
+                }
+            }
 
-            migrationBuilder.CreateIndex(
-                name: "ix_events_arr_instance_id",
-                table: "events",
-                column: "arr_instance_id");
+            if (!existingColumns.Contains("arr_instance_id"))
+            {
+                migrationBuilder.AddColumn<Guid>(
+                    name: "arr_instance_id",
+                    table: "events",
+                    type: "TEXT",
+                    nullable: true);
+            }
 
-            migrationBuilder.CreateIndex(
-                name: "ix_events_download_client_id",
-                table: "events",
-                column: "download_client_id");
+            if (!existingColumns.Contains("download_client_id"))
+            {
+                migrationBuilder.AddColumn<Guid>(
+                    name: "download_client_id",
+                    table: "events",
+                    type: "TEXT",
+                    nullable: true);
+            }
 
-            migrationBuilder.CreateIndex(
-                name: "ix_search_event_data_app_event_id",
-                table: "search_event_data",
-                column: "app_event_id",
-                unique: true);
+            if (!hasSearchEventDataTable)
+            {
+                migrationBuilder.CreateTable(
+                    name: "search_event_data",
+                    columns: table => new
+                    {
+                        id = table.Column<Guid>(type: "TEXT", nullable: false),
+                        app_event_id = table.Column<Guid>(type: "TEXT", nullable: false),
+                        item_title = table.Column<string>(type: "TEXT", maxLength: 500, nullable: false),
+                        search_type = table.Column<string>(type: "TEXT", nullable: false),
+                        search_reason = table.Column<string>(type: "TEXT", nullable: false),
+                        grabbed_items = table.Column<string>(type: "TEXT", nullable: false)
+                    },
+                    constraints: table =>
+                    {
+                        table.PrimaryKey("pk_search_event_data", x => x.id);
+                        table.ForeignKey(
+                            name: "fk_search_event_data_events_app_event_id",
+                            column: x => x.app_event_id,
+                            principalTable: "events",
+                            principalColumn: "id",
+                            onDelete: ReferentialAction.Cascade);
+                    });
+            }
+
+            migrationBuilder.Sql("CREATE INDEX IF NOT EXISTS ix_events_arr_instance_id ON events (arr_instance_id);");
+            migrationBuilder.Sql("CREATE INDEX IF NOT EXISTS ix_events_download_client_id ON events (download_client_id);");
+            migrationBuilder.Sql("CREATE UNIQUE INDEX IF NOT EXISTS ix_search_event_data_app_event_id ON search_event_data (app_event_id);");
 
             string dataDbPath = Path.Combine(ConfigurationPathProvider.GetConfigPath(), "cleanuparr.db");
 
@@ -106,7 +136,8 @@ namespace Cleanuparr.Persistence.Migrations.Events
                 FROM events e
                 WHERE e.event_type = 'searchtriggered'
                   AND e.data IS NOT NULL
-                  AND e.data != '';
+                  AND e.data != ''
+                  AND NOT EXISTS (SELECT 1 FROM search_event_data sed WHERE sed.app_event_id = e.id);
                 """);
 
             migrationBuilder.Sql("""
@@ -115,29 +146,36 @@ namespace Cleanuparr.Persistence.Migrations.Events
                 WHERE event_type = 'searchtriggered';
                 """);
 
-            migrationBuilder.DropIndex(
-                name: "ix_events_instance_type",
-                table: "events");
+            migrationBuilder.Sql("DROP INDEX IF EXISTS ix_events_instance_type;");
+            migrationBuilder.Sql("DROP INDEX IF EXISTS ix_events_download_client_type;");
 
-            migrationBuilder.DropIndex(
-                name: "ix_events_download_client_type",
-                table: "events");
+            if (existingColumns.Contains("instance_type"))
+            {
+                migrationBuilder.DropColumn(
+                    name: "instance_type",
+                    table: "events");
+            }
 
-            migrationBuilder.DropColumn(
-                name: "instance_type",
-                table: "events");
+            if (existingColumns.Contains("instance_url"))
+            {
+                migrationBuilder.DropColumn(
+                    name: "instance_url",
+                    table: "events");
+            }
 
-            migrationBuilder.DropColumn(
-                name: "instance_url",
-                table: "events");
+            if (existingColumns.Contains("download_client_type"))
+            {
+                migrationBuilder.DropColumn(
+                    name: "download_client_type",
+                    table: "events");
+            }
 
-            migrationBuilder.DropColumn(
-                name: "download_client_type",
-                table: "events");
-
-            migrationBuilder.DropColumn(
-                name: "download_client_name",
-                table: "events");
+            if (existingColumns.Contains("download_client_name"))
+            {
+                migrationBuilder.DropColumn(
+                    name: "download_client_name",
+                    table: "events");
+            }
         }
 
         /// <inheritdoc />

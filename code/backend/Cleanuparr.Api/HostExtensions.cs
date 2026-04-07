@@ -48,18 +48,19 @@ public static class HostExtensions
 
     public static async Task<WebApplicationBuilder> InitAsync(this WebApplicationBuilder builder)
     {
+        // Apply data db migrations first — events migrations may ATTACH cleanuparr.db
+        // and reference its schema, so it must be up to date before events migrate.
+        await using var configContext = DataContext.CreateStaticInstance();
+        if ((await configContext.Database.GetPendingMigrationsAsync()).Any())
+        {
+            await configContext.Database.MigrateAsync();
+        }
+
         // Apply events db migrations
         await using var eventsContext = EventsContext.CreateStaticInstance();
         if ((await eventsContext.Database.GetPendingMigrationsAsync()).Any())
         {
             await eventsContext.Database.MigrateAsync();
-        }
-
-        // Apply data db migrations
-        await using var configContext = DataContext.CreateStaticInstance();
-        if ((await configContext.Database.GetPendingMigrationsAsync()).Any())
-        {
-            await configContext.Database.MigrateAsync();
         }
 
         // Apply users db migrations
