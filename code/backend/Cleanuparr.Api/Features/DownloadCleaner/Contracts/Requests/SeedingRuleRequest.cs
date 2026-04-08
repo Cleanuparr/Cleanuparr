@@ -35,6 +35,7 @@ public record SeedingRuleRequest
     /// <summary>
     /// Evaluation priority (lower = evaluated first). Auto-assigned if not provided.
     /// </summary>
+    [Range(1, int.MaxValue, ErrorMessage = "Priority must be a positive integer.")]
     public int? Priority { get; init; }
 
     /// <summary>
