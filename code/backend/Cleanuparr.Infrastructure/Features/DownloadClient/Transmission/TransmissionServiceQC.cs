@@ -107,7 +107,7 @@ public partial class TransmissionService
             return (false, DeleteReason.None, false);
         }
 
-        return await QueueRuleEvaluator.EvaluateSlowRulesAsync(wrapper);
+        return await _queueRuleEvaluator.EvaluateSlowRulesAsync(wrapper);
     }
 
     private async Task<(bool ShouldRemove, DeleteReason Reason, bool DeleteFromClient)> CheckIfStuck(ITorrentItemWrapper wrapper)
@@ -118,6 +118,6 @@ public partial class TransmissionService
             return (false, DeleteReason.None, false);
         }
 
-        return await QueueRuleEvaluator.EvaluateStallRulesAsync(wrapper);
+        return await _queueRuleEvaluator.EvaluateStallRulesAsync(wrapper);
     }
 }

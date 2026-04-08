@@ -26,7 +26,7 @@ public abstract class DownloadService : IDownloadService
     protected readonly IBlocklistProvider _blocklistProvider;
     protected readonly HttpClient _httpClient;
     protected readonly DownloadClientConfig _downloadClientConfig;
-    protected readonly IQueueRuleEvaluator QueueRuleEvaluator;
+    protected readonly IQueueRuleEvaluator _queueRuleEvaluator;
     private readonly ISeedingRuleEvaluator _seedingRuleEvaluator;
 
     protected DownloadService(
@@ -52,7 +52,7 @@ public abstract class DownloadService : IDownloadService
         _blocklistProvider = blocklistProvider;
         _downloadClientConfig = downloadClientConfig;
         _httpClient = httpClientProvider.CreateClient(downloadClientConfig);
-        QueueRuleEvaluator = queueRuleEvaluator;
+        _queueRuleEvaluator = queueRuleEvaluator;
         _seedingRuleEvaluator = seedingRuleEvaluator;
     }
     
