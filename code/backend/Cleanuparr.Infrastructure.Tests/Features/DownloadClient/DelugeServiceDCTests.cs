@@ -135,8 +135,8 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
 
             var categories = new List<ISeedingRule>
             {
-                new DelugeSeedingRule { Name = "movies", MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true },
-                new DelugeSeedingRule { Name = "tv", MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true }
+                new DelugeSeedingRule { Name = "movies", Categories = ["movies"], MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true },
+                new DelugeSeedingRule { Name = "tv", Categories = ["tv"], MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true }
             };
 
             // Act
@@ -162,7 +162,7 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
 
             var categories = new List<ISeedingRule>
             {
-                new DelugeSeedingRule { Name = "movies", MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true }
+                new DelugeSeedingRule { Name = "movies", Categories = ["movies"], MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true }
             };
 
             // Act
@@ -186,7 +186,7 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
 
             var categories = new List<ISeedingRule>
             {
-                new DelugeSeedingRule { Name = "movies", MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true }
+                new DelugeSeedingRule { Name = "movies", Categories = ["movies"], MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true }
             };
 
             // Act

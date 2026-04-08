@@ -46,6 +46,15 @@ public sealed class DelugeItemWrapper : ITorrentItemWrapper
 
     public string SavePath => Info.DownloadLocation ?? string.Empty;
 
+    public IReadOnlyList<string> TrackerDomains => Info.Trackers
+        .Select(t => UriService.GetDomain(t.Url))
+        .Where(d => d is not null)
+        .Select(d => d!)
+        .ToList()
+        .AsReadOnly();
+
+    public IReadOnlyList<string> Tags => Array.Empty<string>();
+
     public bool IsDownloading() => Info.State?.Equals("Downloading", StringComparison.InvariantCultureIgnoreCase) == true;
     
     public bool IsStalled() => Info.State?.Equals("Downloading", StringComparison.InvariantCultureIgnoreCase) == true && Info is { DownloadSpeed: <= 0, Eta: <= 0 };

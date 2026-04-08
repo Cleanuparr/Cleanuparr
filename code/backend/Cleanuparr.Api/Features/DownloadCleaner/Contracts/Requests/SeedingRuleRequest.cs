@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using Cleanuparr.Domain.Enums;
 
 namespace Cleanuparr.Api.Features.DownloadCleaner.Contracts.Requests;
@@ -7,6 +7,34 @@ public record SeedingRuleRequest
 {
     [Required]
     public string Name { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Categories this rule applies to. At least one must be specified.
+    /// </summary>
+    [Required]
+    public List<string> Categories { get; init; } = [];
+
+    /// <summary>
+    /// Tracker domain suffixes to match (e.g. "tracker.example.com"). Empty = any tracker.
+    /// </summary>
+    public List<string> TrackerPatterns { get; init; } = [];
+
+    /// <summary>
+    /// Torrent must have at least one of these tags/labels. Accepted for all clients;
+    /// silently ignored for Deluge, rTorrent, and µTorrent.
+    /// </summary>
+    public List<string> TagsAny { get; init; } = [];
+
+    /// <summary>
+    /// Torrent must have ALL of these tags/labels. Accepted for all clients;
+    /// silently ignored for Deluge, rTorrent, and µTorrent.
+    /// </summary>
+    public List<string> TagsAll { get; init; } = [];
+
+    /// <summary>
+    /// Evaluation priority (lower = evaluated first). Auto-assigned if not provided.
+    /// </summary>
+    public int? Priority { get; init; }
 
     /// <summary>
     /// Which torrent privacy types this rule applies to.

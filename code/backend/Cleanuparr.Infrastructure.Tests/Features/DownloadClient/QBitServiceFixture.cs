@@ -5,7 +5,9 @@ using Cleanuparr.Infrastructure.Features.ItemStriker;
 using Cleanuparr.Infrastructure.Features.MalwareBlocker;
 using Cleanuparr.Infrastructure.Http;
 using Cleanuparr.Infrastructure.Interceptors;
+using Cleanuparr.Infrastructure.Services;
 using Cleanuparr.Infrastructure.Services.Interfaces;
+using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
 using Cleanuparr.Persistence.Models.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -24,6 +26,7 @@ public class QBitServiceFixture : IDisposable
     public Mock<IBlocklistProvider> BlocklistProvider { get; }
     public Mock<IRuleEvaluator> RuleEvaluator { get; }
     public Mock<IRuleManager> RuleManager { get; }
+    public Mock<ISeedingRuleEvaluator> SeedingRuleEvaluator { get; }
     public Mock<IQBittorrentClientWrapper> ClientWrapper { get; }
 
     public QBitServiceFixture()
@@ -38,6 +41,7 @@ public class QBitServiceFixture : IDisposable
         BlocklistProvider =new Mock<IBlocklistProvider>();
         RuleEvaluator = new Mock<IRuleEvaluator>();
         RuleManager = new Mock<IRuleManager>();
+        SeedingRuleEvaluator = new Mock<ISeedingRuleEvaluator>();
         ClientWrapper = new Mock<IQBittorrentClientWrapper>();
 
         // Setup default behavior for DryRunInterceptor to execute actions directly
@@ -47,6 +51,8 @@ public class QBitServiceFixture : IDisposable
             {
                 return (Task)(action.DynamicInvoke(parameters) ?? Task.CompletedTask);
             });
+
+        SetupSeedingRuleEvaluator();
     }
 
     public QBitService CreateSut(DownloadClientConfig? config = null)
@@ -82,6 +88,7 @@ public class QBitServiceFixture : IDisposable
             config,
             RuleEvaluator.Object,
             RuleManager.Object,
+            SeedingRuleEvaluator.Object,
             ClientWrapper.Object
         );
     }
@@ -97,6 +104,7 @@ public class QBitServiceFixture : IDisposable
         EventPublisher.Reset();
         RuleEvaluator.Reset();
         RuleManager.Reset();
+        SeedingRuleEvaluator.Reset();
         ClientWrapper.Reset();
 
         // Re-setup default DryRunInterceptor behavior
@@ -106,6 +114,17 @@ public class QBitServiceFixture : IDisposable
             {
                 return (Task)(action.DynamicInvoke(parameters) ?? Task.CompletedTask);
             });
+
+        SetupSeedingRuleEvaluator();
+    }
+
+    private void SetupSeedingRuleEvaluator()
+    {
+        var realEvaluator = new SeedingRuleEvaluator();
+        SeedingRuleEvaluator
+            .Setup(x => x.GetMatchingRule(It.IsAny<Domain.Entities.ITorrentItemWrapper>(), It.IsAny<IEnumerable<ISeedingRule>>()))
+            .Returns((Domain.Entities.ITorrentItemWrapper t, IEnumerable<ISeedingRule> rules) =>
+                realEvaluator.GetMatchingRule(t, rules));
     }
 
     public void Dispose()

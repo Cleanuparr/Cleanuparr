@@ -53,6 +53,15 @@ public sealed class RTorrentItemWrapper : ITorrentItemWrapper
 
     public string SavePath => Info.BasePath ?? string.Empty;
 
+    public IReadOnlyList<string> TrackerDomains => _trackers
+        .Select(url => UriService.GetDomain(url))
+        .Where(d => d is not null)
+        .Select(d => d!)
+        .ToList()
+        .AsReadOnly();
+
+    public IReadOnlyList<string> Tags => Array.Empty<string>();
+
     /// <summary>
     /// Downloading when state is 1 (started) and complete is 0 (not finished)
     /// </summary>

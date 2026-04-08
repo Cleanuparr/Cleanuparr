@@ -72,6 +72,11 @@ public sealed class DownloadCleanerConfigController : ControllerBase
                     {
                         id = r.Id,
                         name = r.Name,
+                        categories = r.Categories,
+                        trackerPatterns = r.TrackerPatterns,
+                        tagsAny = (r as ITagFilterable)?.TagsAny,
+                        tagsAll = (r as ITagFilterable)?.TagsAll,
+                        priority = r.Priority,
                         privacyType = r.PrivacyType,
                         maxRatio = r.MaxRatio,
                         minSeedTime = r.MinSeedTime,

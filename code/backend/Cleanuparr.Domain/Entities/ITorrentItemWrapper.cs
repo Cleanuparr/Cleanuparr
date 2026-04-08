@@ -27,11 +27,23 @@ public interface ITorrentItemWrapper
     long SeedingTimeSeconds { get; }
 
     string? Category { get; set; }
-    
+
     string SavePath { get; }
 
+    /// <summary>
+    /// Tracker domains extracted from all trackers associated with this torrent.
+    /// Used for tracker-based seeding rule matching.
+    /// </summary>
+    IReadOnlyList<string> TrackerDomains { get; }
+
+    /// <summary>
+    /// Tags or labels associated with this torrent.
+    /// Populated for qBittorrent (tags) and Transmission (labels). Empty for other clients.
+    /// </summary>
+    IReadOnlyList<string> Tags { get; }
+
     bool IsDownloading();
-    
+
     bool IsStalled();
 
     /// <summary>

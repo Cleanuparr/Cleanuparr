@@ -93,36 +93,61 @@
                   description="Add a seeding rule to start cleaning downloads for this client"
                 />
               } @else {
-                @for (rule of client.seedingRules; track rule.id ?? $index) {
-                  <div class="rule-card">
-                    <div class="rule-card__header">
-                      <h4 class="rule-card__name">{{ rule.name }}</h4>
-                      <div class="rule-card__actions">
-                        <button class="rule-card__action" (click)="openRuleModal(rule)" aria-label="Edit rule">
-                          <ng-icon name="tablerPencil" size="16" />
-                        </button>
-                        <button class="rule-card__action rule-card__action--danger" (click)="deleteRule(rule)" aria-label="Delete rule">
-                          <ng-icon name="tablerTrash" size="16" />
-                        </button>
-                      </div>
-                    </div>
-                    <div class="rule-card__badges">
-                      <app-badge severity="info">{{ rule.privacyType }}</app-badge>
-                      @if (rule.maxRatio >= 0) {
-                        <app-badge>Ratio: {{ rule.maxRatio }}</app-badge>
-                      }
-                      @if (rule.maxSeedTime >= 0) {
-                        <app-badge>Max Seed: {{ rule.maxSeedTime }}h</app-badge>
-                      }
-                      @if (rule.minSeedTime > 0) {
-                        <app-badge>Min Seed: {{ rule.minSeedTime }}h</app-badge>
-                      }
-                    </div>
-                    <div class="rule-card__details">
-                      <span>Delete Files: {{ rule.deleteSourceFiles ? 'Yes' : 'No' }}</span>
-                    </div>
+                @if (client.seedingRules.length > 1) {
+                  <div class="rules-flow-hint">
+                    <ng-icon name="tablerArrowDown" size="14" />
+                    Rules are evaluated top to bottom · drag to reorder
                   </div>
                 }
+                <div
+                  cdkDropList
+                  [cdkDropListData]="client.seedingRules"
+                  (cdkDropListDropped)="onRulesReorder($event)">
+                  @for (rule of client.seedingRules; track rule.id ?? $index) {
+                    <div class="rule-card" cdkDrag>
+                      <div class="rule-card__header">
+                        <button class="rule-card__drag-handle" cdkDragHandle title="Drag to reorder" type="button" aria-label="Drag to reorder">
+                          <ng-icon name="tablerGripVertical" size="16" />
+                        </button>
+                        <span class="priority-badge">#{{ $index + 1 }}</span>
+                        <h4 class="rule-card__name">{{ rule.name }}</h4>
+                        <div class="rule-card__actions">
+                          <button class="rule-card__action" (click)="openRuleModal(rule)" aria-label="Edit rule">
+                            <ng-icon name="tablerPencil" size="16" />
+                          </button>
+                          <button class="rule-card__action rule-card__action--danger" (click)="deleteRule(rule)" aria-label="Delete rule">
+                            <ng-icon name="tablerTrash" size="16" />
+                          </button>
+                        </div>
+                      </div>
+                      @if (rule.categories.length) {
+                        <div class="rule-card__categories">
+                          @for (cat of rule.categories; track cat) {
+                            <app-badge severity="default">{{ cat }}</app-badge>
+                          }
+                        </div>
+                      }
+                      <div class="rule-card__badges">
+                        <app-badge severity="info">{{ rule.privacyType }}</app-badge>
+                        @if (rule.maxRatio >= 0) {
+                          <app-badge>Ratio: {{ rule.maxRatio }}</app-badge>
+                        }
+                        @if (rule.maxSeedTime >= 0) {
+                          <app-badge>Max Seed: {{ rule.maxSeedTime }}h</app-badge>
+                        }
+                        @if (rule.minSeedTime > 0) {
+                          <app-badge>Min Seed: {{ rule.minSeedTime }}h</app-badge>
+                        }
+                        @if (rule.trackerPatterns.length) {
+                          <app-badge severity="warning">{{ rule.trackerPatterns.length }} tracker pattern{{ rule.trackerPatterns.length !== 1 ? 's' : '' }}</app-badge>
+                        }
+                      </div>
+                      <div class="rule-card__details">
+                        <span>Delete Files: {{ rule.deleteSourceFiles ? 'Yes' : 'No' }}</span>
+                      </div>
+                    </div>
+                  }
+                </div>
               }
               <div class="rule-actions">
                 <app-button variant="secondary" size="sm" (clicked)="openRuleModal()">
@@ -200,13 +225,32 @@
 <!-- Seeding Rule Modal -->
 <app-modal [title]="editingRule() ? 'Edit Seeding Rule' : 'Add Seeding Rule'" [(visible)]="ruleModalVisible" size="lg">
   <div class="form-grid">
-    <app-input label="Category Name" placeholder="tv-sonarr" [(value)]="ruleName"
+    <app-input label="Rule Name" placeholder="My TV rule" [(value)]="ruleName"
       [error]="ruleNameError()"
-      hint="The category name from your download client (e.g. tv-sonarr, radarr)"
+      hint="A descriptive label for this rule"
       helpKey="download-cleaner:name" />
     <app-select label="Privacy Type" [options]="privacyTypeOptions" [(value)]="rulePrivacyType"
       hint="Which torrent types this rule applies to"
       helpKey="download-cleaner:privacyType" />
+    <app-chip-input class="full-width" label="Categories" placeholder="Add category..."
+      [(items)]="ruleCategories"
+      [error]="ruleCategoriesError()"
+      hint="One or more download client categories this rule applies to (e.g. tv-sonarr, radarr)"
+      helpKey="download-cleaner:categories" />
+    <app-chip-input class="full-width" label="Tracker Patterns" placeholder="Add tracker domain..."
+      [(items)]="ruleTrackerPatterns"
+      hint="Tracker domain suffixes to match (e.g. tracker.org). Empty means any tracker."
+      helpKey="download-cleaner:trackerPatterns" />
+    @if (isTagFilterableClient()) {
+      <app-chip-input class="full-width" [label]="isSelectedClientTransmission() ? 'Labels (Any)' : 'Tags (Any)'" [placeholder]="isSelectedClientTransmission() ? 'Add label...' : 'Add tag...'"
+        [(items)]="ruleTagsAny"
+        [hint]="isSelectedClientTransmission() ? 'Torrent must have at least one of these labels. Empty means any labels.' : 'Torrent must have at least one of these tags. Empty means any tags.'"
+        helpKey="download-cleaner:tagsAny" />
+      <app-chip-input class="full-width" [label]="isSelectedClientTransmission() ? 'Labels (All)' : 'Tags (All)'" [placeholder]="isSelectedClientTransmission() ? 'Add label...' : 'Add tag...'"
+        [(items)]="ruleTagsAll"
+        [hint]="isSelectedClientTransmission() ? 'Torrent must have all of these labels. Empty means any labels.' : 'Torrent must have all of these tags. Empty means any tags.'"
+        helpKey="download-cleaner:tagsAll" />
+    }
     <app-number-input label="Max Ratio" [(value)]="ruleMaxRatio" [step]="0.1" [min]="-1"
       hint="Maximum ratio to seed before removing (-1 means disabled)"
       helpKey="download-cleaner:maxRatio" />
@@ -225,7 +269,7 @@
   </div>
   <div modal-footer>
     <app-button variant="secondary" (clicked)="ruleModalVisible.set(false)">Cancel</app-button>
-    <app-button variant="primary" [disabled]="!!ruleNameError() || !!ruleDisabledError()" (clicked)="saveRule()">
+    <app-button variant="primary" [disabled]="!!ruleNameError() || !!ruleCategoriesError() || !!ruleDisabledError()" (clicked)="saveRule()">
       {{ editingRule() ? 'Update' : 'Create' }}
     </app-button>
   </div>

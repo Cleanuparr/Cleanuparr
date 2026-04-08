@@ -24,6 +24,7 @@ public class DelugeServiceFixture : IDisposable
     public Mock<IBlocklistProvider> BlocklistProvider { get; }
     public Mock<IRuleEvaluator> RuleEvaluator { get; }
     public Mock<IRuleManager> RuleManager { get; }
+    public Mock<ISeedingRuleEvaluator> SeedingRuleEvaluator { get; }
     public Mock<IDelugeClientWrapper> ClientWrapper { get; }
 
     public DelugeServiceFixture()
@@ -38,6 +39,7 @@ public class DelugeServiceFixture : IDisposable
         BlocklistProvider = new Mock<IBlocklistProvider>();
         RuleEvaluator = new Mock<IRuleEvaluator>();
         RuleManager = new Mock<IRuleManager>();
+        SeedingRuleEvaluator = new Mock<ISeedingRuleEvaluator>();
         ClientWrapper = new Mock<IDelugeClientWrapper>();
 
         DryRunInterceptor
@@ -80,6 +82,7 @@ public class DelugeServiceFixture : IDisposable
             config,
             RuleEvaluator.Object,
             RuleManager.Object,
+            SeedingRuleEvaluator.Object,
             ClientWrapper.Object
         );
     }
@@ -95,6 +98,7 @@ public class DelugeServiceFixture : IDisposable
         EventPublisher.Reset();
         RuleEvaluator.Reset();
         RuleManager.Reset();
+        SeedingRuleEvaluator.Reset();
         ClientWrapper.Reset();
 
         DryRunInterceptor

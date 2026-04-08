@@ -112,8 +112,8 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
 
             var categories = new List<ISeedingRule>
             {
-                new RTorrentSeedingRule { Name = "movies", MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true },
-                new RTorrentSeedingRule { Name = "tv", MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true }
+                new RTorrentSeedingRule { Name = "movies", Categories = ["movies"], MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true },
+                new RTorrentSeedingRule { Name = "tv", Categories = ["tv"], MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true }
             };
 
             // Act
@@ -139,7 +139,7 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
 
             var categories = new List<ISeedingRule>
             {
-                new RTorrentSeedingRule { Name = "movies", MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true }
+                new RTorrentSeedingRule { Name = "movies", Categories = ["movies"], MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true }
             };
 
             // Act
@@ -163,7 +163,7 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
 
             var categories = new List<ISeedingRule>
             {
-                new RTorrentSeedingRule { Name = "movies", MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true }
+                new RTorrentSeedingRule { Name = "movies", Categories = ["movies"], MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true }
             };
 
             // Act
@@ -182,7 +182,7 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
 
             var categories = new List<ISeedingRule>
             {
-                new RTorrentSeedingRule { Name = "movies", MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true }
+                new RTorrentSeedingRule { Name = "movies", Categories = ["movies"], MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true }
             };
 
             // Act

@@ -1,6 +1,7 @@
 using Cleanuparr.Domain.Entities;
 using Cleanuparr.Infrastructure.Extensions;
 using Cleanuparr.Infrastructure.Features.DownloadClient.UTorrent.Extensions;
+using Cleanuparr.Infrastructure.Services;
 using QBittorrent.Client;
 
 namespace Cleanuparr.Infrastructure.Features.DownloadClient.QBittorrent;
@@ -48,6 +49,13 @@ public sealed class QBitItemWrapper : ITorrentItemWrapper
     }
 
     public string SavePath => Info.SavePath ?? string.Empty;
+
+    public IReadOnlyList<string> TrackerDomains => _trackers
+        .Select(t => UriService.GetDomain(t.Url))
+        .Where(d => d is not null)
+        .Select(d => d!)
+        .ToList()
+        .AsReadOnly();
 
     public IReadOnlyList<string> Tags => Info.Tags?.ToList().AsReadOnly() ?? (IReadOnlyList<string>)Array.Empty<string>();
 

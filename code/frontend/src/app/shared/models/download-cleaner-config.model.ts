@@ -3,6 +3,11 @@ import { TorrentPrivacyType } from './enums';
 export interface SeedingRule {
   id?: string;
   name: string;
+  categories: string[];
+  trackerPatterns: string[];
+  tagsAny?: string[];
+  tagsAll?: string[];
+  priority: number;
   privacyType: TorrentPrivacyType;
   maxRatio: number;
   minSeedTime: number;
@@ -40,6 +45,11 @@ export interface DownloadCleanerConfig {
 export function createDefaultSeedingRule(): SeedingRule {
   return {
     name: '',
+    categories: [],
+    trackerPatterns: [],
+    tagsAny: [],
+    tagsAll: [],
+    priority: 0,
     privacyType: TorrentPrivacyType.Public,
     maxRatio: -1,
     minSeedTime: 0,

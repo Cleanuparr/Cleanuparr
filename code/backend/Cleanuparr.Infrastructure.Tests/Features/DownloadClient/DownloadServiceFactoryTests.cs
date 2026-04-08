@@ -62,6 +62,7 @@ public class DownloadServiceFactoryTests : IDisposable
 
         services.AddSingleton(Mock.Of<IRuleEvaluator>());
         services.AddSingleton(Mock.Of<IRuleManager>());
+        services.AddSingleton(Mock.Of<ISeedingRuleEvaluator>());
 
         // UTorrentService needs ILoggerFactory
         services.AddLogging();

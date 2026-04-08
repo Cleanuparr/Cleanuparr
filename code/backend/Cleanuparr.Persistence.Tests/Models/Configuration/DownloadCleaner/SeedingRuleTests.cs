@@ -35,6 +35,7 @@ public sealed class QBitSeedingRuleTests
         var config = new QBitSeedingRule
         {
             Name = "test-category",
+            Categories = ["test-category"],
             MaxRatio = 2.0,
             MinSeedTime = 0,
             MaxSeedTime = -1,
@@ -50,6 +51,7 @@ public sealed class QBitSeedingRuleTests
         var config = new QBitSeedingRule
         {
             Name = "test-category",
+            Categories = ["test-category"],
             MaxRatio = -1,
             MinSeedTime = 0,
             MaxSeedTime = 24,
@@ -65,6 +67,7 @@ public sealed class QBitSeedingRuleTests
         var config = new QBitSeedingRule
         {
             Name = "test-category",
+            Categories = ["test-category"],
             MaxRatio = 2.0,
             MinSeedTime = 1,
             MaxSeedTime = 48,
@@ -80,6 +83,7 @@ public sealed class QBitSeedingRuleTests
         var config = new QBitSeedingRule
         {
             Name = "test-category",
+            Categories = ["test-category"],
             MaxRatio = 0,
             MinSeedTime = 0,
             MaxSeedTime = -1,
@@ -95,6 +99,7 @@ public sealed class QBitSeedingRuleTests
         var config = new QBitSeedingRule
         {
             Name = "test-category",
+            Categories = ["test-category"],
             MaxRatio = -1,
             MinSeedTime = 0,
             MaxSeedTime = 0,
@@ -166,6 +171,7 @@ public sealed class QBitSeedingRuleTests
         var config = new QBitSeedingRule
         {
             Name = "test-category",
+            Categories = ["test-category"],
             MaxRatio = -1,
             MinSeedTime = 0,
             MaxSeedTime = -1,
@@ -185,6 +191,7 @@ public sealed class QBitSeedingRuleTests
         var config = new QBitSeedingRule
         {
             Name = "test-category",
+            Categories = ["test-category"],
             MaxRatio = maxRatio,
             MinSeedTime = 0,
             MaxSeedTime = maxSeedTime,
@@ -205,6 +212,7 @@ public sealed class QBitSeedingRuleTests
         var config = new QBitSeedingRule
         {
             Name = "test-category",
+            Categories = ["test-category"],
             MaxRatio = 2.0,
             MinSeedTime = -1,
             MaxSeedTime = -1,
@@ -224,6 +232,7 @@ public sealed class QBitSeedingRuleTests
         var config = new QBitSeedingRule
         {
             Name = "test-category",
+            Categories = ["test-category"],
             MaxRatio = 2.0,
             MinSeedTime = minSeedTime,
             MaxSeedTime = -1,
@@ -240,6 +249,7 @@ public sealed class QBitSeedingRuleTests
         var config = new QBitSeedingRule
         {
             Name = "test-category",
+            Categories = ["test-category"],
             MaxRatio = 2.0,
             MinSeedTime = 0,
             MaxSeedTime = -1,
@@ -255,6 +265,7 @@ public sealed class QBitSeedingRuleTests
         var config = new QBitSeedingRule
         {
             Name = "test-category",
+            Categories = ["test-category"],
             MaxRatio = 2.0,
             MinSeedTime = 24,
             MaxSeedTime = -1,
@@ -272,6 +283,7 @@ public sealed class QBitSeedingRuleTests
         var config = new QBitSeedingRule
         {
             Name = "test-category",
+            Categories = ["test-category"],
             MaxRatio = 2.0,
             MinSeedTime = 0,
             MaxSeedTime = -1,

@@ -47,6 +47,16 @@ public sealed class TransmissionItemWrapper : ITorrentItemWrapper
     
     public string SavePath => Info.DownloadDir ?? string.Empty;
 
+    public IReadOnlyList<string> TrackerDomains => Info.Trackers?
+        .Select(t => UriService.GetDomain(t.Announce))
+        .Where(d => d is not null)
+        .Select(d => d!)
+        .ToList()
+        .AsReadOnly() ?? (IReadOnlyList<string>)Array.Empty<string>();
+
+    public IReadOnlyList<string> Tags => Info.Labels?.ToList().AsReadOnly()
+        ?? (IReadOnlyList<string>)Array.Empty<string>();
+
     // Transmission status: 0=stopped, 1=check pending, 2=checking, 3=download pending, 4=downloading, 5=seed pending, 6=seeding
     public bool IsDownloading() => Info.Status == 4;
     public bool IsStalled() => Info is { Status: 4, RateDownload: <= 0, Eta: <= 0 };

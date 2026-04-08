@@ -127,8 +127,8 @@ public class UTorrentServiceDCTests : IClassFixture<UTorrentServiceFixture>
 
             var categories = new List<ISeedingRule>
             {
-                new UTorrentSeedingRule { Name = "movies", MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true },
-                new UTorrentSeedingRule { Name = "tv", MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true }
+                new UTorrentSeedingRule { Name = "movies", Categories = ["movies"], MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true },
+                new UTorrentSeedingRule { Name = "tv", Categories = ["tv"], MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true }
             };
 
             // Act
@@ -154,7 +154,7 @@ public class UTorrentServiceDCTests : IClassFixture<UTorrentServiceFixture>
 
             var categories = new List<ISeedingRule>
             {
-                new UTorrentSeedingRule { Name = "movies", MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true }
+                new UTorrentSeedingRule { Name = "movies", Categories = ["movies"], MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true }
             };
 
             // Act
@@ -178,7 +178,7 @@ public class UTorrentServiceDCTests : IClassFixture<UTorrentServiceFixture>
 
             var categories = new List<ISeedingRule>
             {
-                new UTorrentSeedingRule { Name = "movies", MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true }
+                new UTorrentSeedingRule { Name = "movies", Categories = ["movies"], MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true }
             };
 
             // Act

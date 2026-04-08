@@ -294,13 +294,20 @@ public class DataContext : DbContext
             entity.Property(s => s.RecordedAt).HasConversion(new UtcDateTimeConverter());
         });
 
-        // Configure per-client seeding rule relationships
+        // Configure per-client seeding rule relationships and JSON list converters
+        var jsonListConverter = new JsonStringListConverter();
+
         modelBuilder.Entity<QBitSeedingRule>(entity =>
         {
             entity.HasOne(s => s.DownloadClientConfig)
                   .WithMany()
                   .HasForeignKey(s => s.DownloadClientConfigId)
                   .OnDelete(DeleteBehavior.Cascade);
+
+            entity.Property(s => s.Categories).HasConversion(jsonListConverter);
+            entity.Property(s => s.TrackerPatterns).HasConversion(jsonListConverter);
+            entity.Property(s => s.TagsAny).HasConversion(jsonListConverter);
+            entity.Property(s => s.TagsAll).HasConversion(jsonListConverter);
         });
 
         modelBuilder.Entity<DelugeSeedingRule>(entity =>
@@ -309,6 +316,9 @@ public class DataContext : DbContext
                   .WithMany()
                   .HasForeignKey(s => s.DownloadClientConfigId)
                   .OnDelete(DeleteBehavior.Cascade);
+
+            entity.Property(s => s.Categories).HasConversion(jsonListConverter);
+            entity.Property(s => s.TrackerPatterns).HasConversion(jsonListConverter);
         });
 
         modelBuilder.Entity<TransmissionSeedingRule>(entity =>
@@ -317,6 +327,11 @@ public class DataContext : DbContext
                   .WithMany()
                   .HasForeignKey(s => s.DownloadClientConfigId)
                   .OnDelete(DeleteBehavior.Cascade);
+
+            entity.Property(s => s.Categories).HasConversion(jsonListConverter);
+            entity.Property(s => s.TrackerPatterns).HasConversion(jsonListConverter);
+            entity.Property(s => s.TagsAny).HasConversion(jsonListConverter);
+            entity.Property(s => s.TagsAll).HasConversion(jsonListConverter);
         });
 
         modelBuilder.Entity<UTorrentSeedingRule>(entity =>
@@ -325,6 +340,9 @@ public class DataContext : DbContext
                   .WithMany()
                   .HasForeignKey(s => s.DownloadClientConfigId)
                   .OnDelete(DeleteBehavior.Cascade);
+
+            entity.Property(s => s.Categories).HasConversion(jsonListConverter);
+            entity.Property(s => s.TrackerPatterns).HasConversion(jsonListConverter);
         });
 
         modelBuilder.Entity<RTorrentSeedingRule>(entity =>
@@ -333,6 +351,9 @@ public class DataContext : DbContext
                   .WithMany()
                   .HasForeignKey(s => s.DownloadClientConfigId)
                   .OnDelete(DeleteBehavior.Cascade);
+
+            entity.Property(s => s.Categories).HasConversion(jsonListConverter);
+            entity.Property(s => s.TrackerPatterns).HasConversion(jsonListConverter);
         });
 
         // Configure per-client unlinked config relationship

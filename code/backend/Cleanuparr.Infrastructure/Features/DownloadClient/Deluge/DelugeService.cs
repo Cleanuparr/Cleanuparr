@@ -8,6 +8,7 @@ using Cleanuparr.Infrastructure.Features.ItemStriker;
 using Cleanuparr.Infrastructure.Features.MalwareBlocker;
 using Cleanuparr.Infrastructure.Http;
 using Cleanuparr.Infrastructure.Interceptors;
+using Cleanuparr.Infrastructure.Services;
 using Cleanuparr.Infrastructure.Services.Interfaces;
 using Cleanuparr.Persistence.Models.Configuration;
 using Microsoft.Extensions.Caching.Memory;
@@ -30,11 +31,12 @@ public partial class DelugeService : DownloadService, IDelugeService
         IBlocklistProvider blocklistProvider,
         DownloadClientConfig downloadClientConfig,
         IRuleEvaluator ruleEvaluator,
-        IRuleManager ruleManager
+        IRuleManager ruleManager,
+        ISeedingRuleEvaluator seedingRuleEvaluator
     ) : base(
         logger,
         filenameEvaluator, striker, dryRunInterceptor, hardLinkFileService,
-        httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, ruleEvaluator, ruleManager
+        httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, ruleEvaluator, seedingRuleEvaluator
     )
     {
         var delugeClient = new DelugeClient(downloadClientConfig, _httpClient);
@@ -54,11 +56,12 @@ public partial class DelugeService : DownloadService, IDelugeService
         DownloadClientConfig downloadClientConfig,
         IRuleEvaluator ruleEvaluator,
         IRuleManager ruleManager,
+        ISeedingRuleEvaluator seedingRuleEvaluator,
         IDelugeClientWrapper clientWrapper
     ) : base(
         logger,
         filenameEvaluator, striker, dryRunInterceptor, hardLinkFileService,
-        httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, ruleEvaluator, ruleManager
+        httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, ruleEvaluator, seedingRuleEvaluator
     )
     {
         _client = clientWrapper;

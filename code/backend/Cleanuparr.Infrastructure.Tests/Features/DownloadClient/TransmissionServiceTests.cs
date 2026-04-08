@@ -45,7 +45,8 @@ public class TransmissionServiceTests : IClassFixture<TransmissionServiceFixture
                 TorrentFields.UPLOAD_RATIO,
                 TorrentFields.TRACKERS,
                 TorrentFields.RATE_DOWNLOAD,
-                TorrentFields.TOTAL_SIZE
+                TorrentFields.TOTAL_SIZE,
+                TorrentFields.LABELS
             };
 
             _fixture.ClientWrapper
@@ -96,7 +97,8 @@ public class TransmissionServiceTests : IClassFixture<TransmissionServiceFixture
                 TorrentFields.UPLOAD_RATIO,
                 TorrentFields.TRACKERS,
                 TorrentFields.RATE_DOWNLOAD,
-                TorrentFields.TOTAL_SIZE
+                TorrentFields.TOTAL_SIZE,
+                TorrentFields.LABELS
             };
 
             _fixture.ClientWrapper
@@ -154,7 +156,8 @@ public class TransmissionServiceTests : IClassFixture<TransmissionServiceFixture
                 TorrentFields.UPLOAD_RATIO,
                 TorrentFields.TRACKERS,
                 TorrentFields.RATE_DOWNLOAD,
-                TorrentFields.TOTAL_SIZE
+                TorrentFields.TOTAL_SIZE,
+                TorrentFields.LABELS
             };
 
             _fixture.ClientWrapper
@@ -223,7 +226,8 @@ public class TransmissionServiceTests : IClassFixture<TransmissionServiceFixture
                 TorrentFields.UPLOAD_RATIO,
                 TorrentFields.TRACKERS,
                 TorrentFields.RATE_DOWNLOAD,
-                TorrentFields.TOTAL_SIZE
+                TorrentFields.TOTAL_SIZE,
+                TorrentFields.LABELS
             };
 
             _fixture.ClientWrapper
@@ -279,7 +283,8 @@ public class TransmissionServiceTests : IClassFixture<TransmissionServiceFixture
                 TorrentFields.UPLOAD_RATIO,
                 TorrentFields.TRACKERS,
                 TorrentFields.RATE_DOWNLOAD,
-                TorrentFields.TOTAL_SIZE
+                TorrentFields.TOTAL_SIZE,
+                TorrentFields.LABELS
             };
 
             _fixture.ClientWrapper
@@ -343,7 +348,8 @@ public class TransmissionServiceTests : IClassFixture<TransmissionServiceFixture
                 TorrentFields.UPLOAD_RATIO,
                 TorrentFields.TRACKERS,
                 TorrentFields.RATE_DOWNLOAD,
-                TorrentFields.TOTAL_SIZE
+                TorrentFields.TOTAL_SIZE,
+                TorrentFields.LABELS
             };
 
             _fixture.ClientWrapper
@@ -395,7 +401,8 @@ public class TransmissionServiceTests : IClassFixture<TransmissionServiceFixture
                 TorrentFields.UPLOAD_RATIO,
                 TorrentFields.TRACKERS,
                 TorrentFields.RATE_DOWNLOAD,
-                TorrentFields.TOTAL_SIZE
+                TorrentFields.TOTAL_SIZE,
+                TorrentFields.LABELS
             };
 
             _fixture.ClientWrapper
@@ -458,7 +465,8 @@ public class TransmissionServiceTests : IClassFixture<TransmissionServiceFixture
                 TorrentFields.UPLOAD_RATIO,
                 TorrentFields.TRACKERS,
                 TorrentFields.RATE_DOWNLOAD,
-                TorrentFields.TOTAL_SIZE
+                TorrentFields.TOTAL_SIZE,
+                TorrentFields.LABELS
             };
 
             _fixture.ClientWrapper
@@ -523,7 +531,8 @@ public class TransmissionServiceTests : IClassFixture<TransmissionServiceFixture
                 TorrentFields.UPLOAD_RATIO,
                 TorrentFields.TRACKERS,
                 TorrentFields.RATE_DOWNLOAD,
-                TorrentFields.TOTAL_SIZE
+                TorrentFields.TOTAL_SIZE,
+                TorrentFields.LABELS
             };
 
             _fixture.ClientWrapper
@@ -578,7 +587,8 @@ public class TransmissionServiceTests : IClassFixture<TransmissionServiceFixture
                 TorrentFields.UPLOAD_RATIO,
                 TorrentFields.TRACKERS,
                 TorrentFields.RATE_DOWNLOAD,
-                TorrentFields.TOTAL_SIZE
+                TorrentFields.TOTAL_SIZE,
+                TorrentFields.LABELS
             };
 
             _fixture.ClientWrapper
@@ -640,7 +650,8 @@ public class TransmissionServiceTests : IClassFixture<TransmissionServiceFixture
                 TorrentFields.UPLOAD_RATIO,
                 TorrentFields.TRACKERS,
                 TorrentFields.RATE_DOWNLOAD,
-                TorrentFields.TOTAL_SIZE
+                TorrentFields.TOTAL_SIZE,
+                TorrentFields.LABELS
             };
 
             _fixture.ClientWrapper
@@ -697,7 +708,8 @@ public class TransmissionServiceTests : IClassFixture<TransmissionServiceFixture
                 TorrentFields.UPLOAD_RATIO,
                 TorrentFields.TRACKERS,
                 TorrentFields.RATE_DOWNLOAD,
-                TorrentFields.TOTAL_SIZE
+                TorrentFields.TOTAL_SIZE,
+                TorrentFields.LABELS
             };
 
             _fixture.ClientWrapper

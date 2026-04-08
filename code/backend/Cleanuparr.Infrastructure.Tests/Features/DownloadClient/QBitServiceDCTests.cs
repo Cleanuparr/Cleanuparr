@@ -216,8 +216,8 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
 
             var categories = new List<ISeedingRule>
             {
-                new QBitSeedingRule { Name = "movies", MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true },
-                new QBitSeedingRule { Name = "tv", MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true }
+                new QBitSeedingRule { Name = "movies", Categories = ["movies"], MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true },
+                new QBitSeedingRule { Name = "tv", Categories = ["tv"], MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true }
             };
 
             // Act
@@ -242,7 +242,7 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
 
             var categories = new List<ISeedingRule>
             {
-                new QBitSeedingRule { Name = "movies", MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true }
+                new QBitSeedingRule { Name = "movies", Categories = ["movies"], MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true }
             };
 
             // Act
@@ -266,7 +266,7 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
 
             var categories = new List<ISeedingRule>
             {
-                new QBitSeedingRule { Name = "movies", MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true }
+                new QBitSeedingRule { Name = "movies", Categories = ["movies"], MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true }
             };
 
             // Act
@@ -290,7 +290,7 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
 
             var categories = new List<ISeedingRule>
             {
-                new QBitSeedingRule { Name = "movies", MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true }
+                new QBitSeedingRule { Name = "movies", Categories = ["movies"], MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true }
             };
 
             // Act
@@ -322,6 +322,7 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
             new()
             {
                 Name = name,
+                Categories = [name],
                 PrivacyType = privacyType,
                 MaxRatio = 0,
                 MinSeedTime = 0,

@@ -1,6 +1,7 @@
 using Cleanuparr.Domain.Entities;
 using Cleanuparr.Domain.Entities.UTorrent.Response;
 using Cleanuparr.Infrastructure.Features.DownloadClient.UTorrent.Extensions;
+using Cleanuparr.Infrastructure.Services;
 
 namespace Cleanuparr.Infrastructure.Features.DownloadClient.UTorrent;
 
@@ -46,6 +47,15 @@ public sealed class UTorrentItemWrapper : ITorrentItemWrapper
     }
 
     public string SavePath => Info.SavePath ?? string.Empty;
+
+    public IReadOnlyList<string> TrackerDomains => Properties.TrackerList
+        .Select(url => UriService.GetDomain(url))
+        .Where(d => d is not null)
+        .Select(d => d!)
+        .ToList()
+        .AsReadOnly();
+
+    public IReadOnlyList<string> Tags => Array.Empty<string>();
 
     public bool IsDownloading() =>
         (Info.Status & UTorrentStatus.Started) != 0 &&

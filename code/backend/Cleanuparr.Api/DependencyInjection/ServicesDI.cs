@@ -60,6 +60,7 @@ public static class ServicesDI
             .AddScoped<FileReader>()
             .AddScoped<IRuleManager, RuleManager>()
             .AddScoped<IRuleEvaluator, RuleEvaluator>()
+            .AddScoped<ISeedingRuleEvaluator, SeedingRuleEvaluator>()
             .AddScoped<IRuleIntervalValidator, RuleIntervalValidator>()
             .AddScoped<IStatsService, StatsService>()
             .AddSingleton<IJobManagementService, JobManagementService>()

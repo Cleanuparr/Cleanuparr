@@ -138,8 +138,8 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
 
             var categories = new List<ISeedingRule>
             {
-                new TransmissionSeedingRule { Name = "movies", MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true },
-                new TransmissionSeedingRule { Name = "tv", MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true }
+                new TransmissionSeedingRule { Name = "movies", Categories = ["movies"], MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true },
+                new TransmissionSeedingRule { Name = "tv", Categories = ["tv"], MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true }
             };
 
             // Act
@@ -165,7 +165,7 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
 
             var categories = new List<ISeedingRule>
             {
-                new TransmissionSeedingRule { Name = "movies", MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true }
+                new TransmissionSeedingRule { Name = "movies", Categories = ["movies"], MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true }
             };
 
             // Act
@@ -189,7 +189,7 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
 
             var categories = new List<ISeedingRule>
             {
-                new TransmissionSeedingRule { Name = "movies", MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true }
+                new TransmissionSeedingRule { Name = "movies", Categories = ["movies"], MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true }
             };
 
             // Act
