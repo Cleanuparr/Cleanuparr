@@ -188,6 +188,16 @@ public class SeedingRulesController : ControllerBase
 
             List<ISeedingRule> rules = await SeedingRuleHelper.GetForClientTrackedAsync(_dataContext, client);
 
+            if (request.OrderedIds.Distinct().Count() != request.OrderedIds.Count)
+            {
+                return BadRequest(new { Message = "Duplicate rule IDs are not allowed" });
+            }
+
+            if (request.OrderedIds.Count != rules.Count)
+            {
+                return BadRequest(new { Message = $"Expected {rules.Count} rule IDs but received {request.OrderedIds.Count}. All rules must be included." });
+            }
+
             foreach (Guid id in request.OrderedIds.Where(id => rules.All(r => r.Id != id)))
             {
                 return BadRequest(new { Message = $"Rule with ID {id} not found for client {downloadClientId}" });
