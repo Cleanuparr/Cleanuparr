@@ -351,4 +351,46 @@ public class SeedingRuleEvaluatorTests
 
         _sut.GetMatchingRule(torrent, [rule]).ShouldBeNull();
     }
+
+    // ──────────────────────────────────────────────────────────────────────
+    // Edge cases
+    // ──────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void GetMatchingRule_NullCategory_MatchesEmptyStringCategory()
+    {
+        var torrent = CreateTorrent(category: null);
+        var rule = CreateDelugeRule(categories: [""]);
+
+        _sut.GetMatchingRule(torrent, [rule]).ShouldBe(rule);
+    }
+
+    [Fact]
+    public void GetMatchingRule_NullCategory_DoesNotMatchNamedCategory()
+    {
+        var torrent = CreateTorrent(category: null);
+        var rule = CreateDelugeRule(categories: ["movies"]);
+
+        _sut.GetMatchingRule(torrent, [rule]).ShouldBeNull();
+    }
+
+    [Fact]
+    public void GetMatchingRule_TrackerPatternExactDomainMatch()
+    {
+        var torrent = CreateTorrent(trackerDomains: ["example.com"]);
+        var rule = CreateDelugeRule(trackerPatterns: ["example.com"]);
+
+        _sut.GetMatchingRule(torrent, [rule]).ShouldBe(rule);
+    }
+
+    [Fact]
+    public void GetMatchingRule_TrackerPatternSuffixMatchesPartialDomain()
+    {
+        // "le.com" is a suffix of "example.com" — EndsWith will match this
+        var torrent = CreateTorrent(trackerDomains: ["example.com"]);
+        var rule = CreateDelugeRule(trackerPatterns: ["le.com"]);
+
+        // This matches because EndsWith is used (documenting current behavior)
+        _sut.GetMatchingRule(torrent, [rule]).ShouldBe(rule);
+    }
 }
