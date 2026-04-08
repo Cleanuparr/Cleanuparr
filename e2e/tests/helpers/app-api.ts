@@ -238,6 +238,44 @@ export async function updateUnlinkedConfig(
   });
 }
 
+export async function reorderSeedingRules(
+  accessToken: string,
+  downloadClientId: string,
+  orderedIds: string[],
+): Promise<Response> {
+  return fetch(`${API}/api/seeding-rules/${downloadClientId}/reorder`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({ orderedIds }),
+  });
+}
+
+// --- Download Client helpers ---
+
+export async function createDownloadClient(
+  accessToken: string,
+  client: Record<string, unknown>,
+): Promise<Response> {
+  return fetch(`${API}/api/configuration/download_client`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify(client),
+  });
+}
+
+export async function deleteDownloadClient(accessToken: string, clientId: string): Promise<Response> {
+  return fetch(`${API}/api/configuration/download_client/${clientId}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+}
+
 export async function configureOidc(accessToken: string): Promise<void> {
   const putRes = await fetch(`${API}/api/account/oidc`, {
     method: 'PUT',
