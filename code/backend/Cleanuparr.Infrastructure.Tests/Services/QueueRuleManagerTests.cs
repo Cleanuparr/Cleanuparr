@@ -9,14 +9,14 @@ using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Services;
 
-public class RuleManagerTests
+public class QueueRuleManagerTests
 {
     [Fact]
     public void GetMatchingStallRule_NoRules_ReturnsNull()
     {
         // Arrange
-        var loggerMock = new Mock<ILogger<RuleManager>>();
-        var ruleManager = new RuleManager(loggerMock.Object);
+        var loggerMock = new Mock<ILogger<QueueRuleManager>>();
+        var ruleManager = new QueueRuleManager(loggerMock.Object);
 
         ContextProvider.Set(nameof(StallRule), new List<StallRule>());
 
@@ -33,8 +33,8 @@ public class RuleManagerTests
     public void GetMatchingStallRule_OneMatch_ReturnsRule()
     {
         // Arrange
-        var loggerMock = new Mock<ILogger<RuleManager>>();
-        var ruleManager = new RuleManager(loggerMock.Object);
+        var loggerMock = new Mock<ILogger<QueueRuleManager>>();
+        var ruleManager = new QueueRuleManager(loggerMock.Object);
 
         var stallRule = CreateStallRule("Test Rule", enabled: true, privacyType: TorrentPrivacyType.Public, minCompletion: 0, maxCompletion: 100);
         ContextProvider.Set(nameof(StallRule), new List<StallRule> { stallRule });
@@ -54,8 +54,8 @@ public class RuleManagerTests
     public void GetMatchingStallRule_MultipleMatches_ReturnsNull_LogsWarning()
     {
         // Arrange
-        var loggerMock = new Mock<ILogger<RuleManager>>();
-        var ruleManager = new RuleManager(loggerMock.Object);
+        var loggerMock = new Mock<ILogger<QueueRuleManager>>();
+        var ruleManager = new QueueRuleManager(loggerMock.Object);
 
         var stallRule1 = CreateStallRule("Rule 1", enabled: true, privacyType: TorrentPrivacyType.Public, minCompletion: 0, maxCompletion: 100);
         var stallRule2 = CreateStallRule("Rule 2", enabled: true, privacyType: TorrentPrivacyType.Public, minCompletion: 0, maxCompletion: 100);
@@ -82,8 +82,8 @@ public class RuleManagerTests
     public void GetMatchingStallRule_DisabledRule_ReturnsNull()
     {
         // Arrange
-        var loggerMock = new Mock<ILogger<RuleManager>>();
-        var ruleManager = new RuleManager(loggerMock.Object);
+        var loggerMock = new Mock<ILogger<QueueRuleManager>>();
+        var ruleManager = new QueueRuleManager(loggerMock.Object);
 
         var stallRule = CreateStallRule("Disabled Rule", enabled: false, privacyType: TorrentPrivacyType.Public, minCompletion: 0, maxCompletion: 100);
         ContextProvider.Set(nameof(StallRule), new List<StallRule> { stallRule });
@@ -101,8 +101,8 @@ public class RuleManagerTests
     public void GetMatchingStallRule_PrivacyTypeMismatch_Public_ReturnsNull()
     {
         // Arrange
-        var loggerMock = new Mock<ILogger<RuleManager>>();
-        var ruleManager = new RuleManager(loggerMock.Object);
+        var loggerMock = new Mock<ILogger<QueueRuleManager>>();
+        var ruleManager = new QueueRuleManager(loggerMock.Object);
 
         var stallRule = CreateStallRule("Public Rule", enabled: true, privacyType: TorrentPrivacyType.Public, minCompletion: 0, maxCompletion: 100);
         ContextProvider.Set(nameof(StallRule), new List<StallRule> { stallRule });
@@ -120,8 +120,8 @@ public class RuleManagerTests
     public void GetMatchingStallRule_PrivacyTypeMismatch_Private_ReturnsNull()
     {
         // Arrange
-        var loggerMock = new Mock<ILogger<RuleManager>>();
-        var ruleManager = new RuleManager(loggerMock.Object);
+        var loggerMock = new Mock<ILogger<QueueRuleManager>>();
+        var ruleManager = new QueueRuleManager(loggerMock.Object);
 
         var stallRule = CreateStallRule("Private Rule", enabled: true, privacyType: TorrentPrivacyType.Private, minCompletion: 0, maxCompletion: 100);
         ContextProvider.Set(nameof(StallRule), new List<StallRule> { stallRule });
@@ -139,8 +139,8 @@ public class RuleManagerTests
     public void GetMatchingStallRule_PrivacyTypeBoth_MatchesPublic()
     {
         // Arrange
-        var loggerMock = new Mock<ILogger<RuleManager>>();
-        var ruleManager = new RuleManager(loggerMock.Object);
+        var loggerMock = new Mock<ILogger<QueueRuleManager>>();
+        var ruleManager = new QueueRuleManager(loggerMock.Object);
 
         var stallRule = CreateStallRule("Both Rule", enabled: true, privacyType: TorrentPrivacyType.Both, minCompletion: 0, maxCompletion: 100);
         ContextProvider.Set(nameof(StallRule), new List<StallRule> { stallRule });
@@ -159,8 +159,8 @@ public class RuleManagerTests
     public void GetMatchingStallRule_PrivacyTypeBoth_MatchesPrivate()
     {
         // Arrange
-        var loggerMock = new Mock<ILogger<RuleManager>>();
-        var ruleManager = new RuleManager(loggerMock.Object);
+        var loggerMock = new Mock<ILogger<QueueRuleManager>>();
+        var ruleManager = new QueueRuleManager(loggerMock.Object);
 
         var stallRule = CreateStallRule("Both Rule", enabled: true, privacyType: TorrentPrivacyType.Both, minCompletion: 0, maxCompletion: 100);
         ContextProvider.Set(nameof(StallRule), new List<StallRule> { stallRule });
@@ -179,8 +179,8 @@ public class RuleManagerTests
     public void GetMatchingStallRule_CompletionPercentageBelowMin_ReturnsNull()
     {
         // Arrange
-        var loggerMock = new Mock<ILogger<RuleManager>>();
-        var ruleManager = new RuleManager(loggerMock.Object);
+        var loggerMock = new Mock<ILogger<QueueRuleManager>>();
+        var ruleManager = new QueueRuleManager(loggerMock.Object);
 
         var stallRule = CreateStallRule("Rule 20-80", enabled: true, privacyType: TorrentPrivacyType.Public, minCompletion: 20, maxCompletion: 80);
         ContextProvider.Set(nameof(StallRule), new List<StallRule> { stallRule });
@@ -198,8 +198,8 @@ public class RuleManagerTests
     public void GetMatchingStallRule_CompletionPercentageAboveMax_ReturnsNull()
     {
         // Arrange
-        var loggerMock = new Mock<ILogger<RuleManager>>();
-        var ruleManager = new RuleManager(loggerMock.Object);
+        var loggerMock = new Mock<ILogger<QueueRuleManager>>();
+        var ruleManager = new QueueRuleManager(loggerMock.Object);
 
         var stallRule = CreateStallRule("Rule 20-80", enabled: true, privacyType: TorrentPrivacyType.Public, minCompletion: 20, maxCompletion: 80);
         ContextProvider.Set(nameof(StallRule), new List<StallRule> { stallRule });
@@ -217,8 +217,8 @@ public class RuleManagerTests
     public void GetMatchingStallRule_CompletionPercentageAtMinBoundary_Matches()
     {
         // Arrange
-        var loggerMock = new Mock<ILogger<RuleManager>>();
-        var ruleManager = new RuleManager(loggerMock.Object);
+        var loggerMock = new Mock<ILogger<QueueRuleManager>>();
+        var ruleManager = new QueueRuleManager(loggerMock.Object);
 
         var stallRule = CreateStallRule("Rule 20-80", enabled: true, privacyType: TorrentPrivacyType.Public, minCompletion: 20, maxCompletion: 80);
         ContextProvider.Set(nameof(StallRule), new List<StallRule> { stallRule });
@@ -237,8 +237,8 @@ public class RuleManagerTests
     public void GetMatchingStallRule_CompletionPercentageAtMaxBoundary_Matches()
     {
         // Arrange
-        var loggerMock = new Mock<ILogger<RuleManager>>();
-        var ruleManager = new RuleManager(loggerMock.Object);
+        var loggerMock = new Mock<ILogger<QueueRuleManager>>();
+        var ruleManager = new QueueRuleManager(loggerMock.Object);
 
         var stallRule = CreateStallRule("Rule 20-80", enabled: true, privacyType: TorrentPrivacyType.Public, minCompletion: 20, maxCompletion: 80);
         ContextProvider.Set(nameof(StallRule), new List<StallRule> { stallRule });
@@ -257,8 +257,8 @@ public class RuleManagerTests
     public void GetMatchingSlowRule_NoRules_ReturnsNull()
     {
         // Arrange
-        var loggerMock = new Mock<ILogger<RuleManager>>();
-        var ruleManager = new RuleManager(loggerMock.Object);
+        var loggerMock = new Mock<ILogger<QueueRuleManager>>();
+        var ruleManager = new QueueRuleManager(loggerMock.Object);
 
         ContextProvider.Set(nameof(SlowRule), new List<SlowRule>());
 
@@ -275,8 +275,8 @@ public class RuleManagerTests
     public void GetMatchingSlowRule_OneMatch_ReturnsRule()
     {
         // Arrange
-        var loggerMock = new Mock<ILogger<RuleManager>>();
-        var ruleManager = new RuleManager(loggerMock.Object);
+        var loggerMock = new Mock<ILogger<QueueRuleManager>>();
+        var ruleManager = new QueueRuleManager(loggerMock.Object);
 
         var slowRule = CreateSlowRule("Slow Rule", enabled: true, privacyType: TorrentPrivacyType.Public, minCompletion: 0, maxCompletion: 100);
         ContextProvider.Set(nameof(SlowRule), new List<SlowRule> { slowRule });
@@ -296,8 +296,8 @@ public class RuleManagerTests
     public void GetMatchingSlowRule_MultipleMatches_ReturnsNull_LogsWarning()
     {
         // Arrange
-        var loggerMock = new Mock<ILogger<RuleManager>>();
-        var ruleManager = new RuleManager(loggerMock.Object);
+        var loggerMock = new Mock<ILogger<QueueRuleManager>>();
+        var ruleManager = new QueueRuleManager(loggerMock.Object);
 
         var slowRule1 = CreateSlowRule("Slow 1", enabled: true, privacyType: TorrentPrivacyType.Public, minCompletion: 0, maxCompletion: 100);
         var slowRule2 = CreateSlowRule("Slow 2", enabled: true, privacyType: TorrentPrivacyType.Public, minCompletion: 0, maxCompletion: 100);
@@ -324,8 +324,8 @@ public class RuleManagerTests
     public void GetMatchingSlowRule_FileSizeAboveIgnoreThreshold_ReturnsNull()
     {
         // Arrange
-        var loggerMock = new Mock<ILogger<RuleManager>>();
-        var ruleManager = new RuleManager(loggerMock.Object);
+        var loggerMock = new Mock<ILogger<QueueRuleManager>>();
+        var ruleManager = new QueueRuleManager(loggerMock.Object);
 
         var slowRule = CreateSlowRule("Size Limited", enabled: true, privacyType: TorrentPrivacyType.Public, minCompletion: 0, maxCompletion: 100, ignoreAboveSize: "50 MB");
         ContextProvider.Set(nameof(SlowRule), new List<SlowRule> { slowRule });
@@ -343,8 +343,8 @@ public class RuleManagerTests
     public void GetMatchingSlowRule_FileSizeBelowIgnoreThreshold_Matches()
     {
         // Arrange
-        var loggerMock = new Mock<ILogger<RuleManager>>();
-        var ruleManager = new RuleManager(loggerMock.Object);
+        var loggerMock = new Mock<ILogger<QueueRuleManager>>();
+        var ruleManager = new QueueRuleManager(loggerMock.Object);
 
         var slowRule = CreateSlowRule("Size Limited", enabled: true, privacyType: TorrentPrivacyType.Public, minCompletion: 0, maxCompletion: 100, ignoreAboveSize: "50 MB");
         ContextProvider.Set(nameof(SlowRule), new List<SlowRule> { slowRule });
@@ -363,8 +363,8 @@ public class RuleManagerTests
     public void GetMatchingSlowRule_NoIgnoreSizeSet_Matches()
     {
         // Arrange
-        var loggerMock = new Mock<ILogger<RuleManager>>();
-        var ruleManager = new RuleManager(loggerMock.Object);
+        var loggerMock = new Mock<ILogger<QueueRuleManager>>();
+        var ruleManager = new QueueRuleManager(loggerMock.Object);
 
         var slowRule = CreateSlowRule("No Size Limit", enabled: true, privacyType: TorrentPrivacyType.Public, minCompletion: 0, maxCompletion: 100, ignoreAboveSize: string.Empty);
         ContextProvider.Set(nameof(SlowRule), new List<SlowRule> { slowRule });

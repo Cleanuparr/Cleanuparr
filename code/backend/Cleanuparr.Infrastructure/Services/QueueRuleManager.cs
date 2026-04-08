@@ -6,11 +6,11 @@ using Microsoft.Extensions.Logging;
 
 namespace Cleanuparr.Infrastructure.Services;
 
-public class RuleManager : IRuleManager
+public class QueueRuleManager : IQueueRuleManager
 {
-    private readonly ILogger<RuleManager> _logger;
+    private readonly ILogger<QueueRuleManager> _logger;
     
-    public RuleManager(ILogger<RuleManager> logger)
+    public QueueRuleManager(ILogger<QueueRuleManager> logger)
     {
         _logger = logger;
     }

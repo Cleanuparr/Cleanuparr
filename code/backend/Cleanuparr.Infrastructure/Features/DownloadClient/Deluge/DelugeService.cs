@@ -30,12 +30,12 @@ public partial class DelugeService : DownloadService, IDelugeService
         IEventPublisher eventPublisher,
         IBlocklistProvider blocklistProvider,
         DownloadClientConfig downloadClientConfig,
-        IRuleEvaluator ruleEvaluator,
+        IQueueRuleEvaluator queueRuleEvaluator,
         ISeedingRuleEvaluator seedingRuleEvaluator
     ) : base(
         logger,
         filenameEvaluator, striker, dryRunInterceptor, hardLinkFileService,
-        httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, ruleEvaluator, seedingRuleEvaluator
+        httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, queueRuleEvaluator, seedingRuleEvaluator
     )
     {
         var delugeClient = new DelugeClient(downloadClientConfig, _httpClient);
@@ -53,13 +53,13 @@ public partial class DelugeService : DownloadService, IDelugeService
         IEventPublisher eventPublisher,
         IBlocklistProvider blocklistProvider,
         DownloadClientConfig downloadClientConfig,
-        IRuleEvaluator ruleEvaluator,
+        IQueueRuleEvaluator queueRuleEvaluator,
         ISeedingRuleEvaluator seedingRuleEvaluator,
         IDelugeClientWrapper clientWrapper
     ) : base(
         logger,
         filenameEvaluator, striker, dryRunInterceptor, hardLinkFileService,
-        httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, ruleEvaluator, seedingRuleEvaluator
+        httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, queueRuleEvaluator, seedingRuleEvaluator
     )
     {
         _client = clientWrapper;

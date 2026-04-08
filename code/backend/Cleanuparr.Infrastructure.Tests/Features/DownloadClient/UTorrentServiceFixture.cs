@@ -22,8 +22,8 @@ public class UTorrentServiceFixture : IDisposable
     public Mock<IDynamicHttpClientProvider> HttpClientProvider { get; }
     public Mock<IEventPublisher> EventPublisher { get; }
     public Mock<IBlocklistProvider> BlocklistProvider { get; }
-    public Mock<IRuleEvaluator> RuleEvaluator { get; }
-    public Mock<IRuleManager> RuleManager { get; }
+    public Mock<IQueueRuleEvaluator> RuleEvaluator { get; }
+    public Mock<IQueueRuleManager> RuleManager { get; }
     public Mock<ISeedingRuleEvaluator> SeedingRuleEvaluator { get; }
     public Mock<IUTorrentClientWrapper> ClientWrapper { get; }
 
@@ -37,8 +37,8 @@ public class UTorrentServiceFixture : IDisposable
         HttpClientProvider = new Mock<IDynamicHttpClientProvider>();
         EventPublisher = new Mock<IEventPublisher>();
         BlocklistProvider = new Mock<IBlocklistProvider>();
-        RuleEvaluator = new Mock<IRuleEvaluator>();
-        RuleManager = new Mock<IRuleManager>();
+        RuleEvaluator = new Mock<IQueueRuleEvaluator>();
+        RuleManager = new Mock<IQueueRuleManager>();
         SeedingRuleEvaluator = new Mock<ISeedingRuleEvaluator>();
         ClientWrapper = new Mock<IUTorrentClientWrapper>();
 

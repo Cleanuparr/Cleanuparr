@@ -50,12 +50,12 @@ public partial class TransmissionService : DownloadService, ITransmissionService
         IEventPublisher eventPublisher,
         IBlocklistProvider blocklistProvider,
         DownloadClientConfig downloadClientConfig,
-        IRuleEvaluator ruleEvaluator,
+        IQueueRuleEvaluator queueRuleEvaluator,
         ISeedingRuleEvaluator seedingRuleEvaluator
     ) : base(
         logger,
         filenameEvaluator, striker, dryRunInterceptor, hardLinkFileService,
-        httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, ruleEvaluator, seedingRuleEvaluator
+        httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, queueRuleEvaluator, seedingRuleEvaluator
     )
     {
         UriBuilder uriBuilder = new(_downloadClientConfig.Url);
@@ -80,13 +80,13 @@ public partial class TransmissionService : DownloadService, ITransmissionService
         IEventPublisher eventPublisher,
         IBlocklistProvider blocklistProvider,
         DownloadClientConfig downloadClientConfig,
-        IRuleEvaluator ruleEvaluator,
+        IQueueRuleEvaluator queueRuleEvaluator,
         ISeedingRuleEvaluator seedingRuleEvaluator,
         ITransmissionClientWrapper clientWrapper
     ) : base(
         logger,
         filenameEvaluator, striker, dryRunInterceptor, hardLinkFileService,
-        httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, ruleEvaluator, seedingRuleEvaluator
+        httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, queueRuleEvaluator, seedingRuleEvaluator
     )
     {
         _client = clientWrapper;

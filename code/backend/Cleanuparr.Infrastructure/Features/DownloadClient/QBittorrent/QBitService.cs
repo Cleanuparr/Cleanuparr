@@ -31,11 +31,11 @@ public partial class QBitService : DownloadService, IQBitService
         IEventPublisher eventPublisher,
         IBlocklistProvider blocklistProvider,
         DownloadClientConfig downloadClientConfig,
-        IRuleEvaluator ruleEvaluator,
+        IQueueRuleEvaluator queueRuleEvaluator,
         ISeedingRuleEvaluator seedingRuleEvaluator
     ) : base(
         logger, filenameEvaluator, striker, dryRunInterceptor, hardLinkFileService,
-        httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, ruleEvaluator, seedingRuleEvaluator
+        httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, queueRuleEvaluator, seedingRuleEvaluator
     )
     {
         var qBittorrentClient = new QBittorrentClient(_httpClient, downloadClientConfig.Url);
@@ -53,12 +53,12 @@ public partial class QBitService : DownloadService, IQBitService
         IEventPublisher eventPublisher,
         IBlocklistProvider blocklistProvider,
         DownloadClientConfig downloadClientConfig,
-        IRuleEvaluator ruleEvaluator,
+        IQueueRuleEvaluator queueRuleEvaluator,
         ISeedingRuleEvaluator seedingRuleEvaluator,
         IQBittorrentClientWrapper clientWrapper
     ) : base(
         logger, filenameEvaluator, striker, dryRunInterceptor, hardLinkFileService,
-        httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, ruleEvaluator, seedingRuleEvaluator
+        httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, queueRuleEvaluator, seedingRuleEvaluator
     )
     {
         _client = clientWrapper;

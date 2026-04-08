@@ -17,11 +17,11 @@ using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Services;
 
-public class RuleEvaluatorTests : IDisposable
+public class QueueRuleEvaluatorTests : IDisposable
 {
     private readonly EventsContext _context;
 
-    public RuleEvaluatorTests()
+    public QueueRuleEvaluatorTests()
     {
         _context = CreateInMemoryEventsContext();
     }
@@ -43,12 +43,12 @@ public class RuleEvaluatorTests : IDisposable
     public async Task ResetStrikes_ShouldRespectMinimumProgressThreshold()
     {
         // Arrange
-        var ruleManagerMock = new Mock<IRuleManager>();
+        var ruleManagerMock = new Mock<IQueueRuleManager>();
         var strikerMock = new Mock<IStriker>();
-        var loggerMock = new Mock<ILogger<RuleEvaluator>>();
+        var loggerMock = new Mock<ILogger<QueueRuleEvaluator>>();
         var context = CreateInMemoryEventsContext();
 
-        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
+        var evaluator = new QueueRuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
 
         var stallRule = new StallRule
         {
@@ -110,12 +110,12 @@ public class RuleEvaluatorTests : IDisposable
     [Fact]
     public async Task EvaluateStallRulesAsync_NoMatchingRules_ShouldReturnFoundWithoutRemoval()
     {
-        var ruleManagerMock = new Mock<IRuleManager>();
+        var ruleManagerMock = new Mock<IQueueRuleManager>();
         var strikerMock = new Mock<IStriker>();
-        var loggerMock = new Mock<ILogger<RuleEvaluator>>();
+        var loggerMock = new Mock<ILogger<QueueRuleEvaluator>>();
         var context = CreateInMemoryEventsContext();
 
-        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
+        var evaluator = new QueueRuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
 
         ruleManagerMock
             .Setup(x => x.GetMatchingStallRule(It.IsAny<ITorrentItemWrapper>()))
@@ -132,12 +132,12 @@ public class RuleEvaluatorTests : IDisposable
     [Fact]
     public async Task EvaluateStallRulesAsync_WithMatchingRule_ShouldApplyStrikeWithoutRemoval()
     {
-        var ruleManagerMock = new Mock<IRuleManager>();
+        var ruleManagerMock = new Mock<IQueueRuleManager>();
         var strikerMock = new Mock<IStriker>();
-        var loggerMock = new Mock<ILogger<RuleEvaluator>>();
+        var loggerMock = new Mock<ILogger<QueueRuleEvaluator>>();
         var context = CreateInMemoryEventsContext();
 
-        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
+        var evaluator = new QueueRuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
 
         var stallRule = CreateStallRule("Stall Apply", resetOnProgress: false, maxStrikes: 5);
 
@@ -161,12 +161,12 @@ public class RuleEvaluatorTests : IDisposable
     [Fact]
     public async Task EvaluateStallRulesAsync_WhenStrikeLimitReached_ShouldMarkForRemoval()
     {
-        var ruleManagerMock = new Mock<IRuleManager>();
+        var ruleManagerMock = new Mock<IQueueRuleManager>();
         var strikerMock = new Mock<IStriker>();
-        var loggerMock = new Mock<ILogger<RuleEvaluator>>();
+        var loggerMock = new Mock<ILogger<QueueRuleEvaluator>>();
         var context = CreateInMemoryEventsContext();
 
-        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
+        var evaluator = new QueueRuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
 
         var stallRule = CreateStallRule("Stall Remove", resetOnProgress: false, maxStrikes: 6);
 
@@ -189,12 +189,12 @@ public class RuleEvaluatorTests : IDisposable
     [Fact]
     public async Task EvaluateStallRulesAsync_WhenStrikeThrows_ShouldThrowException()
     {
-        var ruleManagerMock = new Mock<IRuleManager>();
+        var ruleManagerMock = new Mock<IQueueRuleManager>();
         var strikerMock = new Mock<IStriker>();
-        var loggerMock = new Mock<ILogger<RuleEvaluator>>();
+        var loggerMock = new Mock<ILogger<QueueRuleEvaluator>>();
         var context = CreateInMemoryEventsContext();
 
-        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
+        var evaluator = new QueueRuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
 
         var failingRule = CreateStallRule("Failing", resetOnProgress: false, maxStrikes: 4);
 
@@ -216,12 +216,12 @@ public class RuleEvaluatorTests : IDisposable
     [Fact]
     public async Task EvaluateSlowRulesAsync_NoMatchingRules_ShouldReturnFoundWithoutRemoval()
     {
-        var ruleManagerMock = new Mock<IRuleManager>();
+        var ruleManagerMock = new Mock<IQueueRuleManager>();
         var strikerMock = new Mock<IStriker>();
-        var loggerMock = new Mock<ILogger<RuleEvaluator>>();
+        var loggerMock = new Mock<ILogger<QueueRuleEvaluator>>();
         var context = CreateInMemoryEventsContext();
 
-        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
+        var evaluator = new QueueRuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
 
         ruleManagerMock
             .Setup(x => x.GetMatchingSlowRule(It.IsAny<ITorrentItemWrapper>()))
@@ -238,12 +238,12 @@ public class RuleEvaluatorTests : IDisposable
     [Fact]
     public async Task EvaluateSlowRulesAsync_WithMatchingRule_ShouldApplyStrikeWithoutRemoval()
     {
-        var ruleManagerMock = new Mock<IRuleManager>();
+        var ruleManagerMock = new Mock<IQueueRuleManager>();
         var strikerMock = new Mock<IStriker>();
-        var loggerMock = new Mock<ILogger<RuleEvaluator>>();
+        var loggerMock = new Mock<ILogger<QueueRuleEvaluator>>();
         var context = CreateInMemoryEventsContext();
 
-        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
+        var evaluator = new QueueRuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
 
         var slowRule = CreateSlowRule("Slow Apply", resetOnProgress: false, maxStrikes: 3);
 
@@ -266,12 +266,12 @@ public class RuleEvaluatorTests : IDisposable
     [Fact]
     public async Task EvaluateSlowRulesAsync_WhenStrikeLimitReached_ShouldMarkForRemoval()
     {
-        var ruleManagerMock = new Mock<IRuleManager>();
+        var ruleManagerMock = new Mock<IQueueRuleManager>();
         var strikerMock = new Mock<IStriker>();
-        var loggerMock = new Mock<ILogger<RuleEvaluator>>();
+        var loggerMock = new Mock<ILogger<QueueRuleEvaluator>>();
         var context = CreateInMemoryEventsContext();
 
-        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
+        var evaluator = new QueueRuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
 
         var slowRule = CreateSlowRule("Slow Remove", resetOnProgress: false, maxStrikes: 8);
 
@@ -294,12 +294,12 @@ public class RuleEvaluatorTests : IDisposable
     [Fact]
     public async Task EvaluateSlowRulesAsync_TimeBasedRule_WhenEtaIsAcceptable_ShouldResetStrikes()
     {
-        var ruleManagerMock = new Mock<IRuleManager>();
+        var ruleManagerMock = new Mock<IQueueRuleManager>();
         var strikerMock = new Mock<IStriker>();
-        var loggerMock = new Mock<ILogger<RuleEvaluator>>();
+        var loggerMock = new Mock<ILogger<QueueRuleEvaluator>>();
         var context = CreateInMemoryEventsContext();
 
-        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
+        var evaluator = new QueueRuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
 
         var slowRule = CreateSlowRule("Slow Progress", resetOnProgress: true, maxStrikes: 4);
 
@@ -321,12 +321,12 @@ public class RuleEvaluatorTests : IDisposable
     [Fact]
     public async Task EvaluateSlowRulesAsync_WhenStrikeThrows_ShouldThrowException()
     {
-        var ruleManagerMock = new Mock<IRuleManager>();
+        var ruleManagerMock = new Mock<IQueueRuleManager>();
         var strikerMock = new Mock<IStriker>();
-        var loggerMock = new Mock<ILogger<RuleEvaluator>>();
+        var loggerMock = new Mock<ILogger<QueueRuleEvaluator>>();
         var context = CreateInMemoryEventsContext();
 
-        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
+        var evaluator = new QueueRuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
 
         var failingRule = CreateSlowRule("Failing Slow", resetOnProgress: false, maxStrikes: 4);
 
@@ -348,12 +348,12 @@ public class RuleEvaluatorTests : IDisposable
     [Fact]
     public async Task EvaluateSlowRulesAsync_WithSpeedBasedRule_ShouldUseSlowSpeedStrikeType()
     {
-        var ruleManagerMock = new Mock<IRuleManager>();
+        var ruleManagerMock = new Mock<IQueueRuleManager>();
         var strikerMock = new Mock<IStriker>();
-        var loggerMock = new Mock<ILogger<RuleEvaluator>>();
+        var loggerMock = new Mock<ILogger<QueueRuleEvaluator>>();
         var context = CreateInMemoryEventsContext();
 
-        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
+        var evaluator = new QueueRuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
 
         var slowRule = CreateSlowRule(
             name: "Speed Rule",
@@ -386,12 +386,12 @@ public class RuleEvaluatorTests : IDisposable
     [Fact]
     public async Task EvaluateSlowRulesAsync_WithBothSpeedAndTimeConfigured_ShouldTreatAsSlowSpeed()
     {
-        var ruleManagerMock = new Mock<IRuleManager>();
+        var ruleManagerMock = new Mock<IQueueRuleManager>();
         var strikerMock = new Mock<IStriker>();
-        var loggerMock = new Mock<ILogger<RuleEvaluator>>();
+        var loggerMock = new Mock<ILogger<QueueRuleEvaluator>>();
         var context = CreateInMemoryEventsContext();
 
-        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
+        var evaluator = new QueueRuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
 
         var slowRule = CreateSlowRule(
             name: "Both Rule",
@@ -419,12 +419,12 @@ public class RuleEvaluatorTests : IDisposable
     [Fact]
     public async Task EvaluateSlowRulesAsync_WithNeitherSpeedNorTimeConfigured_ShouldNotStrike()
     {
-        var ruleManagerMock = new Mock<IRuleManager>();
+        var ruleManagerMock = new Mock<IQueueRuleManager>();
         var strikerMock = new Mock<IStriker>();
-        var loggerMock = new Mock<ILogger<RuleEvaluator>>();
+        var loggerMock = new Mock<ILogger<QueueRuleEvaluator>>();
         var context = CreateInMemoryEventsContext();
 
-        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
+        var evaluator = new QueueRuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
 
         // Neither minSpeed nor maxTime set (maxTimeHours = 0, minSpeed = null)
         var slowRule = CreateSlowRule(
@@ -449,12 +449,12 @@ public class RuleEvaluatorTests : IDisposable
     [Fact]
     public async Task EvaluateSlowRulesAsync_SpeedBasedRule_WhenSpeedIsAcceptable_ShouldResetSlowSpeedStrikes()
     {
-        var ruleManagerMock = new Mock<IRuleManager>();
+        var ruleManagerMock = new Mock<IQueueRuleManager>();
         var strikerMock = new Mock<IStriker>();
-        var loggerMock = new Mock<ILogger<RuleEvaluator>>();
+        var loggerMock = new Mock<ILogger<QueueRuleEvaluator>>();
         var context = CreateInMemoryEventsContext();
 
-        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
+        var evaluator = new QueueRuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
 
         var slowRule = CreateSlowRule(
             name: "Speed Reset",
@@ -481,12 +481,12 @@ public class RuleEvaluatorTests : IDisposable
     [Fact]
     public async Task EvaluateSlowRulesAsync_SpeedBasedRule_WithResetDisabled_ShouldNotReset()
     {
-        var ruleManagerMock = new Mock<IRuleManager>();
+        var ruleManagerMock = new Mock<IQueueRuleManager>();
         var strikerMock = new Mock<IStriker>();
-        var loggerMock = new Mock<ILogger<RuleEvaluator>>();
+        var loggerMock = new Mock<ILogger<QueueRuleEvaluator>>();
         var context = CreateInMemoryEventsContext();
 
-        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
+        var evaluator = new QueueRuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
 
         var slowRule = CreateSlowRule(
             name: "Speed No Reset",
@@ -509,12 +509,12 @@ public class RuleEvaluatorTests : IDisposable
     [Fact]
     public async Task EvaluateSlowRulesAsync_TimeBasedRule_WithResetDisabled_ShouldNotReset()
     {
-        var ruleManagerMock = new Mock<IRuleManager>();
+        var ruleManagerMock = new Mock<IQueueRuleManager>();
         var strikerMock = new Mock<IStriker>();
-        var loggerMock = new Mock<ILogger<RuleEvaluator>>();
+        var loggerMock = new Mock<ILogger<QueueRuleEvaluator>>();
         var context = CreateInMemoryEventsContext();
 
-        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
+        var evaluator = new QueueRuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
 
         var slowRule = CreateSlowRule(
             name: "Time No Reset",
@@ -537,12 +537,12 @@ public class RuleEvaluatorTests : IDisposable
     [Fact]
     public async Task EvaluateSlowRulesAsync_SpeedBased_BelowThreshold_ShouldStrike()
     {
-        var ruleManagerMock = new Mock<IRuleManager>();
+        var ruleManagerMock = new Mock<IQueueRuleManager>();
         var strikerMock = new Mock<IStriker>();
-        var loggerMock = new Mock<ILogger<RuleEvaluator>>();
+        var loggerMock = new Mock<ILogger<QueueRuleEvaluator>>();
         var context = CreateInMemoryEventsContext();
 
-        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
+        var evaluator = new QueueRuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
 
         var slowRule = CreateSlowRule(
             name: "Speed Strike",
@@ -571,12 +571,12 @@ public class RuleEvaluatorTests : IDisposable
     [Fact]
     public async Task EvaluateSlowRulesAsync_TimeBased_AboveThreshold_ShouldStrike()
     {
-        var ruleManagerMock = new Mock<IRuleManager>();
+        var ruleManagerMock = new Mock<IQueueRuleManager>();
         var strikerMock = new Mock<IStriker>();
-        var loggerMock = new Mock<ILogger<RuleEvaluator>>();
+        var loggerMock = new Mock<ILogger<QueueRuleEvaluator>>();
         var context = CreateInMemoryEventsContext();
 
-        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
+        var evaluator = new QueueRuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
 
         var slowRule = CreateSlowRule(
             name: "Time Strike",
@@ -605,12 +605,12 @@ public class RuleEvaluatorTests : IDisposable
     [Fact]
     public async Task EvaluateStallRulesAsync_WithResetDisabled_ShouldNotReset()
     {
-        var ruleManagerMock = new Mock<IRuleManager>();
+        var ruleManagerMock = new Mock<IQueueRuleManager>();
         var strikerMock = new Mock<IStriker>();
-        var loggerMock = new Mock<ILogger<RuleEvaluator>>();
+        var loggerMock = new Mock<ILogger<QueueRuleEvaluator>>();
         var context = CreateInMemoryEventsContext();
 
-        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
+        var evaluator = new QueueRuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
 
         var stallRule = CreateStallRule("No Reset", resetOnProgress: false, maxStrikes: 3);
 
@@ -638,9 +638,9 @@ public class RuleEvaluatorTests : IDisposable
     public async Task EvaluateStallRulesAsync_WithProgressAndNoMinimumThreshold_ShouldReset()
     {
         // Arrange
-        var ruleManagerMock = new Mock<IRuleManager>();
+        var ruleManagerMock = new Mock<IQueueRuleManager>();
         var strikerMock = new Mock<IStriker>();
-        var loggerMock = new Mock<ILogger<RuleEvaluator>>();
+        var loggerMock = new Mock<ILogger<QueueRuleEvaluator>>();
         var context = CreateInMemoryEventsContext();
 
         // Seed database with a DownloadItem and initial strike (simulating first observation at 0 bytes)
@@ -652,7 +652,7 @@ public class RuleEvaluatorTests : IDisposable
         context.Strikes.Add(initialStrike);
         await context.SaveChangesAsync();
 
-        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
+        var evaluator = new QueueRuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
 
         var stallRule = CreateStallRule("Reset No Minimum", resetOnProgress: true, maxStrikes: 3, minimumProgress: null);
 
@@ -744,12 +744,12 @@ public class RuleEvaluatorTests : IDisposable
     [Fact]
     public async Task EvaluateStallRulesAsync_WhenNoRuleMatches_ShouldReturnDeleteFromClientFalse()
     {
-        var ruleManagerMock = new Mock<IRuleManager>();
+        var ruleManagerMock = new Mock<IQueueRuleManager>();
         var strikerMock = new Mock<IStriker>();
-        var loggerMock = new Mock<ILogger<RuleEvaluator>>();
+        var loggerMock = new Mock<ILogger<QueueRuleEvaluator>>();
         var context = CreateInMemoryEventsContext();
 
-        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
+        var evaluator = new QueueRuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
 
         ruleManagerMock
             .Setup(x => x.GetMatchingStallRule(It.IsAny<ITorrentItemWrapper>()))
@@ -767,12 +767,12 @@ public class RuleEvaluatorTests : IDisposable
     [Fact]
     public async Task EvaluateStallRulesAsync_WhenRuleMatchesButNoRemoval_ShouldReturnDeleteFromClientFalse()
     {
-        var ruleManagerMock = new Mock<IRuleManager>();
+        var ruleManagerMock = new Mock<IQueueRuleManager>();
         var strikerMock = new Mock<IStriker>();
-        var loggerMock = new Mock<ILogger<RuleEvaluator>>();
+        var loggerMock = new Mock<ILogger<QueueRuleEvaluator>>();
         var context = CreateInMemoryEventsContext();
 
-        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
+        var evaluator = new QueueRuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
 
         var stallRule = CreateStallRule("Test Rule", resetOnProgress: false, maxStrikes: 3, deletePrivateTorrentsFromClient: true);
 
@@ -796,12 +796,12 @@ public class RuleEvaluatorTests : IDisposable
     [Fact]
     public async Task EvaluateStallRulesAsync_WhenRuleMatchesAndRemovesWithDeleteFromClientTrue_ShouldReturnTrue()
     {
-        var ruleManagerMock = new Mock<IRuleManager>();
+        var ruleManagerMock = new Mock<IQueueRuleManager>();
         var strikerMock = new Mock<IStriker>();
-        var loggerMock = new Mock<ILogger<RuleEvaluator>>();
+        var loggerMock = new Mock<ILogger<QueueRuleEvaluator>>();
         var context = CreateInMemoryEventsContext();
 
-        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
+        var evaluator = new QueueRuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
 
         var stallRule = CreateStallRule("Delete True Rule", resetOnProgress: false, maxStrikes: 3, deletePrivateTorrentsFromClient: true);
 
@@ -825,12 +825,12 @@ public class RuleEvaluatorTests : IDisposable
     [Fact]
     public async Task EvaluateStallRulesAsync_WhenRuleMatchesAndRemovesWithDeleteFromClientFalse_ShouldReturnFalse()
     {
-        var ruleManagerMock = new Mock<IRuleManager>();
+        var ruleManagerMock = new Mock<IQueueRuleManager>();
         var strikerMock = new Mock<IStriker>();
-        var loggerMock = new Mock<ILogger<RuleEvaluator>>();
+        var loggerMock = new Mock<ILogger<QueueRuleEvaluator>>();
         var context = CreateInMemoryEventsContext();
 
-        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
+        var evaluator = new QueueRuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
 
         var stallRule = CreateStallRule("Delete False Rule", resetOnProgress: false, maxStrikes: 3, deletePrivateTorrentsFromClient: false);
 
@@ -854,12 +854,12 @@ public class RuleEvaluatorTests : IDisposable
     [Fact]
     public async Task EvaluateSlowRulesAsync_WhenNoRuleMatches_ShouldReturnDeleteFromClientFalse()
     {
-        var ruleManagerMock = new Mock<IRuleManager>();
+        var ruleManagerMock = new Mock<IQueueRuleManager>();
         var strikerMock = new Mock<IStriker>();
-        var loggerMock = new Mock<ILogger<RuleEvaluator>>();
+        var loggerMock = new Mock<ILogger<QueueRuleEvaluator>>();
         var context = CreateInMemoryEventsContext();
 
-        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
+        var evaluator = new QueueRuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
 
         ruleManagerMock
             .Setup(x => x.GetMatchingSlowRule(It.IsAny<ITorrentItemWrapper>()))
@@ -877,12 +877,12 @@ public class RuleEvaluatorTests : IDisposable
     [Fact]
     public async Task EvaluateSlowRulesAsync_WhenRuleMatchesAndRemovesWithDeleteFromClientTrue_ShouldReturnTrue()
     {
-        var ruleManagerMock = new Mock<IRuleManager>();
+        var ruleManagerMock = new Mock<IQueueRuleManager>();
         var strikerMock = new Mock<IStriker>();
-        var loggerMock = new Mock<ILogger<RuleEvaluator>>();
+        var loggerMock = new Mock<ILogger<QueueRuleEvaluator>>();
         var context = CreateInMemoryEventsContext();
 
-        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
+        var evaluator = new QueueRuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
 
         var slowRule = CreateSlowRule("Slow Delete True", resetOnProgress: false, maxStrikes: 3, maxTimeHours: 1, deletePrivateTorrentsFromClient: true);
 
@@ -906,12 +906,12 @@ public class RuleEvaluatorTests : IDisposable
     [Fact]
     public async Task EvaluateSlowRulesAsync_WhenRuleMatchesAndRemovesWithDeleteFromClientFalse_ShouldReturnFalse()
     {
-        var ruleManagerMock = new Mock<IRuleManager>();
+        var ruleManagerMock = new Mock<IQueueRuleManager>();
         var strikerMock = new Mock<IStriker>();
-        var loggerMock = new Mock<ILogger<RuleEvaluator>>();
+        var loggerMock = new Mock<ILogger<QueueRuleEvaluator>>();
         var context = CreateInMemoryEventsContext();
 
-        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
+        var evaluator = new QueueRuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
 
         var slowRule = CreateSlowRule("Slow Delete False", resetOnProgress: false, maxStrikes: 3, maxTimeHours: 1, deletePrivateTorrentsFromClient: false);
 
@@ -935,12 +935,12 @@ public class RuleEvaluatorTests : IDisposable
     [Fact]
     public async Task EvaluateSlowRulesAsync_SpeedBasedRuleWithDeleteFromClientTrue_ShouldReturnTrue()
     {
-        var ruleManagerMock = new Mock<IRuleManager>();
+        var ruleManagerMock = new Mock<IQueueRuleManager>();
         var strikerMock = new Mock<IStriker>();
-        var loggerMock = new Mock<ILogger<RuleEvaluator>>();
+        var loggerMock = new Mock<ILogger<QueueRuleEvaluator>>();
         var context = CreateInMemoryEventsContext();
 
-        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
+        var evaluator = new QueueRuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
 
         var slowRule = CreateSlowRule(
             "Speed Delete True",
@@ -971,12 +971,12 @@ public class RuleEvaluatorTests : IDisposable
     [Fact]
     public async Task EvaluateSlowRulesAsync_WhenRuleMatchesButNoRemoval_ShouldReturnDeleteFromClientFalse()
     {
-        var ruleManagerMock = new Mock<IRuleManager>();
+        var ruleManagerMock = new Mock<IQueueRuleManager>();
         var strikerMock = new Mock<IStriker>();
-        var loggerMock = new Mock<ILogger<RuleEvaluator>>();
+        var loggerMock = new Mock<ILogger<QueueRuleEvaluator>>();
         var context = CreateInMemoryEventsContext();
 
-        var evaluator = new RuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
+        var evaluator = new QueueRuleEvaluator(ruleManagerMock.Object, strikerMock.Object, context, loggerMock.Object);
 
         var slowRule = CreateSlowRule("Test Slow Rule", resetOnProgress: false, maxStrikes: 3, maxTimeHours: 1, deletePrivateTorrentsFromClient: true);
 

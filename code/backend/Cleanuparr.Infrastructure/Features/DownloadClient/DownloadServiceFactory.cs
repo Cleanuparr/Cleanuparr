@@ -71,7 +71,7 @@ public sealed class DownloadServiceFactory : IDownloadServiceFactory
         var eventPublisher = _serviceProvider.GetRequiredService<IEventPublisher>();
         var blocklistProvider = _serviceProvider.GetRequiredService<IBlocklistProvider>();
 
-        var ruleEvaluator = _serviceProvider.GetRequiredService<IRuleEvaluator>();
+        var ruleEvaluator = _serviceProvider.GetRequiredService<IQueueRuleEvaluator>();
         var seedingRuleEvaluator = _serviceProvider.GetRequiredService<ISeedingRuleEvaluator>();
 
         // Create the QBitService instance
@@ -94,7 +94,7 @@ public sealed class DownloadServiceFactory : IDownloadServiceFactory
         var eventPublisher = _serviceProvider.GetRequiredService<IEventPublisher>();
         var blocklistProvider = _serviceProvider.GetRequiredService<IBlocklistProvider>();
 
-        var ruleEvaluator = _serviceProvider.GetRequiredService<IRuleEvaluator>();
+        var ruleEvaluator = _serviceProvider.GetRequiredService<IQueueRuleEvaluator>();
         var seedingRuleEvaluator = _serviceProvider.GetRequiredService<ISeedingRuleEvaluator>();
 
         // Create the DelugeService instance
@@ -117,7 +117,7 @@ public sealed class DownloadServiceFactory : IDownloadServiceFactory
         var eventPublisher = _serviceProvider.GetRequiredService<IEventPublisher>();
         var blocklistProvider = _serviceProvider.GetRequiredService<IBlocklistProvider>();
 
-        var ruleEvaluator = _serviceProvider.GetRequiredService<IRuleEvaluator>();
+        var ruleEvaluator = _serviceProvider.GetRequiredService<IQueueRuleEvaluator>();
         var seedingRuleEvaluator = _serviceProvider.GetRequiredService<ISeedingRuleEvaluator>();
 
         // Create the TransmissionService instance
@@ -142,7 +142,7 @@ public sealed class DownloadServiceFactory : IDownloadServiceFactory
         var blocklistProvider = _serviceProvider.GetRequiredService<IBlocklistProvider>();
         var loggerFactory = _serviceProvider.GetRequiredService<ILoggerFactory>();
 
-        var ruleEvaluator = _serviceProvider.GetRequiredService<IRuleEvaluator>();
+        var ruleEvaluator = _serviceProvider.GetRequiredService<IQueueRuleEvaluator>();
         var seedingRuleEvaluator = _serviceProvider.GetRequiredService<ISeedingRuleEvaluator>();
 
         // Create the UTorrentService instance
@@ -165,7 +165,7 @@ public sealed class DownloadServiceFactory : IDownloadServiceFactory
         var eventPublisher = _serviceProvider.GetRequiredService<IEventPublisher>();
         var blocklistProvider = _serviceProvider.GetRequiredService<IBlocklistProvider>();
 
-        var ruleEvaluator = _serviceProvider.GetRequiredService<IRuleEvaluator>();
+        var ruleEvaluator = _serviceProvider.GetRequiredService<IQueueRuleEvaluator>();
         var seedingRuleEvaluator = _serviceProvider.GetRequiredService<ISeedingRuleEvaluator>();
 
         // Create the RTorrentService instance

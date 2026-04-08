@@ -4,7 +4,7 @@ using Cleanuparr.Infrastructure.Features.DownloadClient;
 
 namespace Cleanuparr.Infrastructure.Services.Interfaces;
 
-public interface IRuleEvaluator
+public interface IQueueRuleEvaluator
 {
     Task<(bool ShouldRemove, DeleteReason Reason, bool DeleteFromClient)> EvaluateStallRulesAsync(ITorrentItemWrapper torrent);
     Task<(bool ShouldRemove, DeleteReason Reason, bool DeleteFromClient)> EvaluateSlowRulesAsync(ITorrentItemWrapper torrent);

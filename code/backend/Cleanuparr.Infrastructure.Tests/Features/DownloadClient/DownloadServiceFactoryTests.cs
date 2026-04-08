@@ -60,8 +60,8 @@ public class DownloadServiceFactoryTests : IDisposable
         httpClientProviderMock.Setup(p => p.CreateClient(It.IsAny<DownloadClientConfig>())).Returns(new HttpClient());
         services.AddSingleton(httpClientProviderMock.Object);
 
-        services.AddSingleton(Mock.Of<IRuleEvaluator>());
-        services.AddSingleton(Mock.Of<IRuleManager>());
+        services.AddSingleton(Mock.Of<IQueueRuleEvaluator>());
+        services.AddSingleton(Mock.Of<IQueueRuleManager>());
         services.AddSingleton(Mock.Of<ISeedingRuleEvaluator>());
 
         // UTorrentService needs ILoggerFactory
