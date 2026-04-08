@@ -12,6 +12,7 @@ namespace Cleanuparr.Infrastructure.Features.DownloadClient.QBittorrent;
 public sealed class QBitItemWrapper : ITorrentItemWrapper
 {
     private readonly IReadOnlyList<TorrentTracker> _trackers;
+    private readonly Lazy<IReadOnlyList<string>> _trackerDomains;
 
     public TorrentInfo Info { get; }
 
@@ -20,6 +21,12 @@ public sealed class QBitItemWrapper : ITorrentItemWrapper
         Info = torrentInfo ?? throw new ArgumentNullException(nameof(torrentInfo));
         _trackers = trackers ?? throw new ArgumentNullException(nameof(trackers));
         IsPrivate = isPrivate;
+        _trackerDomains = new Lazy<IReadOnlyList<string>>(() => _trackers
+            .Select(t => UriService.GetDomain(t.Url))
+            .Where(d => d is not null)
+            .Select(d => d!)
+            .ToList()
+            .AsReadOnly());
     }
 
     public string Hash => Info.Hash ?? string.Empty;
@@ -50,12 +57,7 @@ public sealed class QBitItemWrapper : ITorrentItemWrapper
 
     public string SavePath => Info.SavePath ?? string.Empty;
 
-    public IReadOnlyList<string> TrackerDomains => _trackers
-        .Select(t => UriService.GetDomain(t.Url))
-        .Where(d => d is not null)
-        .Select(d => d!)
-        .ToList()
-        .AsReadOnly();
+    public IReadOnlyList<string> TrackerDomains => _trackerDomains.Value;
 
     public IReadOnlyList<string> Tags => Info.Tags?.ToList().AsReadOnly() ?? (IReadOnlyList<string>)Array.Empty<string>();
 

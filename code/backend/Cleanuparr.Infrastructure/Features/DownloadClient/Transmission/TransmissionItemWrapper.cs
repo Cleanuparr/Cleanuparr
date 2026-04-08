@@ -10,11 +10,19 @@ namespace Cleanuparr.Infrastructure.Features.DownloadClient.Transmission;
 /// </summary>
 public sealed class TransmissionItemWrapper : ITorrentItemWrapper
 {
+    private readonly Lazy<IReadOnlyList<string>> _trackerDomains;
+
     public TorrentInfo Info { get; }
 
     public TransmissionItemWrapper(TorrentInfo torrentInfo)
     {
         Info = torrentInfo ?? throw new ArgumentNullException(nameof(torrentInfo));
+        _trackerDomains = new Lazy<IReadOnlyList<string>>(() => Info.Trackers?
+            .Select(t => UriService.GetDomain(t.Announce))
+            .Where(d => d is not null)
+            .Select(d => d!)
+            .ToList()
+            .AsReadOnly() ?? (IReadOnlyList<string>)Array.Empty<string>());
     }
 
     public string Hash => Info.HashString ?? string.Empty;
@@ -47,12 +55,7 @@ public sealed class TransmissionItemWrapper : ITorrentItemWrapper
     
     public string SavePath => Info.DownloadDir ?? string.Empty;
 
-    public IReadOnlyList<string> TrackerDomains => Info.Trackers?
-        .Select(t => UriService.GetDomain(t.Announce))
-        .Where(d => d is not null)
-        .Select(d => d!)
-        .ToList()
-        .AsReadOnly() ?? (IReadOnlyList<string>)Array.Empty<string>();
+    public IReadOnlyList<string> TrackerDomains => _trackerDomains.Value;
 
     public IReadOnlyList<string> Tags => Info.Labels?.ToList().AsReadOnly()
         ?? (IReadOnlyList<string>)Array.Empty<string>();

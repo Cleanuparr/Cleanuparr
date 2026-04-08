@@ -9,11 +9,19 @@ namespace Cleanuparr.Infrastructure.Features.DownloadClient.Deluge;
 /// </summary>
 public sealed class DelugeItemWrapper : ITorrentItemWrapper
 {
+    private readonly Lazy<IReadOnlyList<string>> _trackerDomains;
+
     public DownloadStatus Info { get; }
 
     public DelugeItemWrapper(DownloadStatus downloadStatus)
     {
         Info = downloadStatus ?? throw new ArgumentNullException(nameof(downloadStatus));
+        _trackerDomains = new Lazy<IReadOnlyList<string>>(() => Info.Trackers
+            .Select(t => UriService.GetDomain(t.Url))
+            .Where(d => d is not null)
+            .Select(d => d!)
+            .ToList()
+            .AsReadOnly());
     }
 
     public string Hash => Info.Hash ?? string.Empty;
@@ -46,12 +54,7 @@ public sealed class DelugeItemWrapper : ITorrentItemWrapper
 
     public string SavePath => Info.DownloadLocation ?? string.Empty;
 
-    public IReadOnlyList<string> TrackerDomains => Info.Trackers
-        .Select(t => UriService.GetDomain(t.Url))
-        .Where(d => d is not null)
-        .Select(d => d!)
-        .ToList()
-        .AsReadOnly();
+    public IReadOnlyList<string> TrackerDomains => _trackerDomains.Value;
 
     public IReadOnlyList<string> Tags => Array.Empty<string>();
 
