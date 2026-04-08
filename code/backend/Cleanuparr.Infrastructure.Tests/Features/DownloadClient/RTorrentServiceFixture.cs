@@ -81,7 +81,6 @@ public class RTorrentServiceFixture : IDisposable
             BlocklistProvider.Object,
             config,
             RuleEvaluator.Object,
-            RuleManager.Object,
             SeedingRuleEvaluator.Object,
             ClientWrapper.Object
         );

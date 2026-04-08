@@ -31,7 +31,6 @@ public partial class DelugeService : DownloadService, IDelugeService
         IBlocklistProvider blocklistProvider,
         DownloadClientConfig downloadClientConfig,
         IRuleEvaluator ruleEvaluator,
-        IRuleManager ruleManager,
         ISeedingRuleEvaluator seedingRuleEvaluator
     ) : base(
         logger,
@@ -55,7 +54,6 @@ public partial class DelugeService : DownloadService, IDelugeService
         IBlocklistProvider blocklistProvider,
         DownloadClientConfig downloadClientConfig,
         IRuleEvaluator ruleEvaluator,
-        IRuleManager ruleManager,
         ISeedingRuleEvaluator seedingRuleEvaluator,
         IDelugeClientWrapper clientWrapper
     ) : base(

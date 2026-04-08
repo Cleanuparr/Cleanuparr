@@ -51,7 +51,6 @@ public partial class TransmissionService : DownloadService, ITransmissionService
         IBlocklistProvider blocklistProvider,
         DownloadClientConfig downloadClientConfig,
         IRuleEvaluator ruleEvaluator,
-        IRuleManager ruleManager,
         ISeedingRuleEvaluator seedingRuleEvaluator
     ) : base(
         logger,
@@ -82,7 +81,6 @@ public partial class TransmissionService : DownloadService, ITransmissionService
         IBlocklistProvider blocklistProvider,
         DownloadClientConfig downloadClientConfig,
         IRuleEvaluator ruleEvaluator,
-        IRuleManager ruleManager,
         ISeedingRuleEvaluator seedingRuleEvaluator,
         ITransmissionClientWrapper clientWrapper
     ) : base(

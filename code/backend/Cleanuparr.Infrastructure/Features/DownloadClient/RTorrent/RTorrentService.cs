@@ -26,7 +26,6 @@ public partial class RTorrentService : DownloadService, IRTorrentService
         IBlocklistProvider blocklistProvider,
         DownloadClientConfig downloadClientConfig,
         IRuleEvaluator ruleEvaluator,
-        IRuleManager ruleManager,
         ISeedingRuleEvaluator seedingRuleEvaluator
     ) : base(
         logger, filenameEvaluator, striker, dryRunInterceptor, hardLinkFileService,
@@ -49,7 +48,6 @@ public partial class RTorrentService : DownloadService, IRTorrentService
         IBlocklistProvider blocklistProvider,
         DownloadClientConfig downloadClientConfig,
         IRuleEvaluator ruleEvaluator,
-        IRuleManager ruleManager,
         ISeedingRuleEvaluator seedingRuleEvaluator,
         IRTorrentClientWrapper clientWrapper
     ) : base(

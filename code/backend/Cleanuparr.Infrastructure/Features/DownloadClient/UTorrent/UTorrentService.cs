@@ -33,7 +33,6 @@ public partial class UTorrentService : DownloadService, IUTorrentService
         DownloadClientConfig downloadClientConfig,
         ILoggerFactory loggerFactory,
         IRuleEvaluator ruleEvaluator,
-        IRuleManager ruleManager,
         ISeedingRuleEvaluator seedingRuleEvaluator
     ) : base(
         logger,
@@ -73,7 +72,6 @@ public partial class UTorrentService : DownloadService, IUTorrentService
         IBlocklistProvider blocklistProvider,
         DownloadClientConfig downloadClientConfig,
         IRuleEvaluator ruleEvaluator,
-        IRuleManager ruleManager,
         ISeedingRuleEvaluator seedingRuleEvaluator,
         IUTorrentClientWrapper clientWrapper
     ) : base(

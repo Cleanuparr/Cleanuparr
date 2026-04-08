@@ -87,7 +87,6 @@ public class QBitServiceFixture : IDisposable
             BlocklistProvider.Object,
             config,
             RuleEvaluator.Object,
-            RuleManager.Object,
             SeedingRuleEvaluator.Object,
             ClientWrapper.Object
         );
