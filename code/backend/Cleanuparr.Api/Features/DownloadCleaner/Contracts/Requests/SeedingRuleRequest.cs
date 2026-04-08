@@ -12,6 +12,7 @@ public record SeedingRuleRequest
     /// Categories this rule applies to. At least one must be specified.
     /// </summary>
     [Required]
+    [MinLength(1, ErrorMessage = "At least one category must be specified.")]
     public List<string> Categories { get; init; } = [];
 
     /// <summary>
