@@ -109,7 +109,9 @@
                         <button class="rule-card__drag-handle" cdkDragHandle title="Drag to reorder" type="button" aria-label="Drag to reorder">
                           <ng-icon name="tablerGripVertical" size="16" />
                         </button>
-                        <span class="priority-badge">#{{ $index + 1 }}</span>
+                        <app-tooltip text="Evaluation priority. Rules are matched top to bottom, first match wins.">
+                          <span class="priority-badge">#{{ $index + 1 }}</span>
+                        </app-tooltip>
                         <h4 class="rule-card__name">{{ rule.name }}</h4>
                         <div class="rule-card__actions">
                           <button class="rule-card__action" (click)="openRuleModal(rule)" aria-label="Edit rule">

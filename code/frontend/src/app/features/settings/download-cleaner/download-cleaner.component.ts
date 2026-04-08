@@ -6,6 +6,7 @@ import {
   CardComponent, ButtonComponent, InputComponent, ToggleComponent,
   NumberInputComponent, SelectComponent, ChipInputComponent, AccordionComponent,
   EmptyStateComponent, LoadingStateComponent, ModalComponent, BadgeComponent, SpinnerComponent,
+  TooltipComponent,
   type SelectOption,
 } from '@ui';
 import { DownloadCleanerApi } from '@core/api/download-cleaner.api';
@@ -43,6 +44,7 @@ const PRIVACY_TYPE_OPTIONS: SelectOption[] = [
     PageHeaderComponent, CardComponent, ButtonComponent, InputComponent,
     ToggleComponent, NumberInputComponent, SelectComponent, ChipInputComponent, AccordionComponent,
     EmptyStateComponent, LoadingStateComponent, ModalComponent, BadgeComponent, SpinnerComponent,
+    TooltipComponent,
   ],
   templateUrl: './download-cleaner.component.html',
   styleUrl: './download-cleaner.component.scss',
