@@ -128,7 +128,7 @@ public class SeedingRulesController : ControllerBase
 
             existingRule.Name = ruleDto.Name.Trim();
             existingRule.Categories = ruleDto.Categories;
-            existingRule.TrackerPatterns = ruleDto.TrackerPatterns;
+            existingRule.TrackerPatterns = SanitizeStringList(ruleDto.TrackerPatterns);
             existingRule.PrivacyType = ruleDto.PrivacyType;
             existingRule.MaxRatio = ruleDto.MaxRatio;
             existingRule.MinSeedTime = ruleDto.MinSeedTime;
@@ -138,8 +138,8 @@ public class SeedingRulesController : ControllerBase
 
             if (existingRule is ITagFilterable tagFilterable)
             {
-                tagFilterable.TagsAny = ruleDto.TagsAny;
-                tagFilterable.TagsAll = ruleDto.TagsAll;
+                tagFilterable.TagsAny = SanitizeStringList(ruleDto.TagsAny);
+                tagFilterable.TagsAll = SanitizeStringList(ruleDto.TagsAll);
             }
 
             existingRule.Validate();
@@ -258,8 +258,15 @@ public class SeedingRulesController : ControllerBase
         }
     }
 
+    private static List<string> SanitizeStringList(List<string> list)
+        => list.Where(s => !string.IsNullOrWhiteSpace(s)).Select(s => s.Trim()).ToList();
+
     private static ISeedingRule CreateRule(DownloadClientTypeName typeName, Guid clientId, SeedingRuleRequest dto, int priority)
     {
+        var trackerPatterns = SanitizeStringList(dto.TrackerPatterns);
+        var tagsAny = SanitizeStringList(dto.TagsAny);
+        var tagsAll = SanitizeStringList(dto.TagsAll);
+
         return typeName switch
         {
             DownloadClientTypeName.qBittorrent => new QBitSeedingRule
@@ -267,9 +274,9 @@ public class SeedingRulesController : ControllerBase
                 DownloadClientConfigId = clientId,
                 Name = dto.Name.Trim(),
                 Categories = dto.Categories,
-                TrackerPatterns = dto.TrackerPatterns,
-                TagsAny = dto.TagsAny,
-                TagsAll = dto.TagsAll,
+                TrackerPatterns = trackerPatterns,
+                TagsAny = tagsAny,
+                TagsAll = tagsAll,
                 Priority = priority,
                 PrivacyType = dto.PrivacyType,
                 MaxRatio = dto.MaxRatio,
@@ -282,7 +289,7 @@ public class SeedingRulesController : ControllerBase
                 DownloadClientConfigId = clientId,
                 Name = dto.Name.Trim(),
                 Categories = dto.Categories,
-                TrackerPatterns = dto.TrackerPatterns,
+                TrackerPatterns = trackerPatterns,
                 Priority = priority,
                 PrivacyType = dto.PrivacyType,
                 MaxRatio = dto.MaxRatio,
@@ -295,9 +302,9 @@ public class SeedingRulesController : ControllerBase
                 DownloadClientConfigId = clientId,
                 Name = dto.Name.Trim(),
                 Categories = dto.Categories,
-                TrackerPatterns = dto.TrackerPatterns,
-                TagsAny = dto.TagsAny,
-                TagsAll = dto.TagsAll,
+                TrackerPatterns = trackerPatterns,
+                TagsAny = tagsAny,
+                TagsAll = tagsAll,
                 Priority = priority,
                 PrivacyType = dto.PrivacyType,
                 MaxRatio = dto.MaxRatio,
@@ -310,7 +317,7 @@ public class SeedingRulesController : ControllerBase
                 DownloadClientConfigId = clientId,
                 Name = dto.Name.Trim(),
                 Categories = dto.Categories,
-                TrackerPatterns = dto.TrackerPatterns,
+                TrackerPatterns = trackerPatterns,
                 Priority = priority,
                 PrivacyType = dto.PrivacyType,
                 MaxRatio = dto.MaxRatio,
@@ -323,7 +330,7 @@ public class SeedingRulesController : ControllerBase
                 DownloadClientConfigId = clientId,
                 Name = dto.Name.Trim(),
                 Categories = dto.Categories,
-                TrackerPatterns = dto.TrackerPatterns,
+                TrackerPatterns = trackerPatterns,
                 Priority = priority,
                 PrivacyType = dto.PrivacyType,
                 MaxRatio = dto.MaxRatio,
