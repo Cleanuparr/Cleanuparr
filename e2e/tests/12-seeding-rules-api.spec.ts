@@ -212,7 +212,7 @@ test.describe.serial('Seeding Rules API', () => {
       categories: ['test'],
       trackerPatterns: ['', '  ', 'valid.com'],
       privacyType: 'Both',
-      maxRatio: -1,
+      maxRatio: 2.0,
       minSeedTime: 0,
       maxSeedTime: -1,
       deleteSourceFiles: true,
