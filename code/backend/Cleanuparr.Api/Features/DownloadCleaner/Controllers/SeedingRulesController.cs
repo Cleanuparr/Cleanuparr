@@ -210,10 +210,11 @@ public class SeedingRulesController : ControllerBase
             }
 
             int priority = 1;
-            
+            var lookup = rules.ToDictionary(r => r.Id);
+
             foreach (var id in request.OrderedIds)
             {
-                rules.First(r => r.Id == id).Priority = priority++;
+                lookup[id].Priority = priority++;
             }
 
             await _dataContext.SaveChangesAsync();
