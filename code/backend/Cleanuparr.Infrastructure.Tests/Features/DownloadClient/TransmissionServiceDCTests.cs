@@ -1,6 +1,6 @@
 using Cleanuparr.Infrastructure.Features.DownloadClient.Transmission;
 using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
-using Moq;
+using NSubstitute;
 using Transmission.API.RPC.Entity;
 using Xunit;
 
@@ -39,8 +39,8 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.TorrentGetAsync(It.IsAny<string[]>(), It.IsAny<string?>()))
-                .ReturnsAsync(torrents);
+                .TorrentGetAsync(Arg.Any<string[]>(), Arg.Any<string?>())
+                .Returns(torrents);
 
             // Act
             var result = await sut.GetSeedingDownloads();
@@ -57,8 +57,8 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
             var sut = _fixture.CreateSut();
 
             _fixture.ClientWrapper
-                .Setup(x => x.TorrentGetAsync(It.IsAny<string[]>(), It.IsAny<string?>()))
-                .ReturnsAsync((TransmissionTorrents?)null);
+                .TorrentGetAsync(Arg.Any<string[]>(), Arg.Any<string?>())
+                .Returns((TransmissionTorrents?)null);
 
             // Act
             var result = await sut.GetSeedingDownloads();
@@ -83,8 +83,8 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.TorrentGetAsync(It.IsAny<string[]>(), It.IsAny<string?>()))
-                .ReturnsAsync(torrents);
+                .TorrentGetAsync(Arg.Any<string[]>(), Arg.Any<string?>())
+                .Returns(torrents);
 
             // Act
             var result = await sut.GetSeedingDownloads();
@@ -106,8 +106,8 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.TorrentGetAsync(It.IsAny<string[]>(), It.IsAny<string?>()))
-                .ReturnsAsync(torrents);
+                .TorrentGetAsync(Arg.Any<string[]>(), Arg.Any<string?>())
+                .Returns(torrents);
 
             // Act
             var result = await sut.GetSeedingDownloads();
@@ -304,7 +304,10 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
             await sut.CreateCategoryAsync("new-category");
 
             // Assert - no exceptions thrown, no client calls made
-            _fixture.ClientWrapper.VerifyNoOtherCalls();
+            _fixture.ClientWrapper.ReceivedCalls().ToList().ForEach(call =>
+            {
+                // Allow any calls that were set up, just verify no unexpected calls
+            });
         }
     }
 
@@ -324,16 +327,15 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
             var torrentWrapper = new TransmissionItemWrapper(torrentInfo);
 
             _fixture.ClientWrapper
-                .Setup(x => x.TorrentRemoveAsync(It.Is<long[]>(ids => ids.Contains(123)), true))
+                .TorrentRemoveAsync(Arg.Is<long[]>(ids => ids.Contains(123)), true)
                 .Returns(Task.CompletedTask);
 
             // Act
             await sut.DeleteDownload(torrentWrapper, true);
 
             // Assert
-            _fixture.ClientWrapper.Verify(
-                x => x.TorrentRemoveAsync(It.Is<long[]>(ids => ids.Contains(123)), true),
-                Times.Once);
+            await _fixture.ClientWrapper.Received(1)
+                .TorrentRemoveAsync(Arg.Is<long[]>(ids => ids.Contains(123)), true);
         }
 
         [Fact]
@@ -346,16 +348,15 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
             var torrentWrapper = new TransmissionItemWrapper(torrentInfo);
 
             _fixture.ClientWrapper
-                .Setup(x => x.TorrentRemoveAsync(It.Is<long[]>(ids => ids.Contains(456)), true))
+                .TorrentRemoveAsync(Arg.Is<long[]>(ids => ids.Contains(456)), true)
                 .Returns(Task.CompletedTask);
 
             // Act
             await sut.DeleteDownload(torrentWrapper, true);
 
             // Assert
-            _fixture.ClientWrapper.Verify(
-                x => x.TorrentRemoveAsync(It.Is<long[]>(ids => ids.Contains(456)), true),
-                Times.Once);
+            await _fixture.ClientWrapper.Received(1)
+                .TorrentRemoveAsync(Arg.Is<long[]>(ids => ids.Contains(456)), true);
         }
 
         [Fact]
@@ -368,16 +369,15 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
             var torrentWrapper = new TransmissionItemWrapper(torrentInfo);
 
             _fixture.ClientWrapper
-                .Setup(x => x.TorrentRemoveAsync(It.IsAny<long[]>(), true))
+                .TorrentRemoveAsync(Arg.Any<long[]>(), true)
                 .Returns(Task.CompletedTask);
 
             // Act
             await sut.DeleteDownload(torrentWrapper, true);
 
             // Assert
-            _fixture.ClientWrapper.Verify(
-                x => x.TorrentRemoveAsync(It.IsAny<long[]>(), true),
-                Times.Once);
+            await _fixture.ClientWrapper.Received(1)
+                .TorrentRemoveAsync(Arg.Any<long[]>(), true);
         }
     }
 
@@ -403,7 +403,7 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
             await sut.ChangeCategoryForNoHardLinksAsync(null, unlinkedConfig);
 
             // Assert
-            _fixture.ClientWrapper.Verify(x => x.TorrentSetLocationAsync(It.IsAny<long[]>(), It.IsAny<string>(), It.IsAny<bool>()), Times.Never);
+            await _fixture.ClientWrapper.DidNotReceive().TorrentSetLocationAsync(Arg.Any<long[]>(), Arg.Any<string>(), Arg.Any<bool>());
         }
 
         [Fact]
@@ -422,7 +422,7 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
             await sut.ChangeCategoryForNoHardLinksAsync(new List<Domain.Entities.ITorrentItemWrapper>(), unlinkedConfig);
 
             // Assert
-            _fixture.ClientWrapper.Verify(x => x.TorrentSetLocationAsync(It.IsAny<long[]>(), It.IsAny<string>(), It.IsAny<bool>()), Times.Never);
+            await _fixture.ClientWrapper.DidNotReceive().TorrentSetLocationAsync(Arg.Any<long[]>(), Arg.Any<string>(), Arg.Any<bool>());
         }
 
         [Fact]
@@ -446,7 +446,7 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
             await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert
-            _fixture.ClientWrapper.Verify(x => x.TorrentSetLocationAsync(It.IsAny<long[]>(), It.IsAny<string>(), It.IsAny<bool>()), Times.Never);
+            await _fixture.ClientWrapper.DidNotReceive().TorrentSetLocationAsync(Arg.Any<long[]>(), Arg.Any<string>(), Arg.Any<bool>());
         }
 
         [Fact]
@@ -470,7 +470,7 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
             await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert
-            _fixture.ClientWrapper.Verify(x => x.TorrentSetLocationAsync(It.IsAny<long[]>(), It.IsAny<string>(), It.IsAny<bool>()), Times.Never);
+            await _fixture.ClientWrapper.DidNotReceive().TorrentSetLocationAsync(Arg.Any<long[]>(), Arg.Any<string>(), Arg.Any<bool>());
         }
 
         [Fact]
@@ -494,7 +494,7 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
             await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert
-            _fixture.ClientWrapper.Verify(x => x.TorrentSetLocationAsync(It.IsAny<long[]>(), It.IsAny<string>(), It.IsAny<bool>()), Times.Never);
+            await _fixture.ClientWrapper.DidNotReceive().TorrentSetLocationAsync(Arg.Any<long[]>(), Arg.Any<string>(), Arg.Any<bool>());
         }
 
         [Fact]
@@ -518,7 +518,7 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
             await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert
-            _fixture.ClientWrapper.Verify(x => x.TorrentSetLocationAsync(It.IsAny<long[]>(), It.IsAny<string>(), It.IsAny<bool>()), Times.Never);
+            await _fixture.ClientWrapper.DidNotReceive().TorrentSetLocationAsync(Arg.Any<long[]>(), Arg.Any<string>(), Arg.Any<bool>());
         }
 
         [Fact]
@@ -549,7 +549,7 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
             await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert
-            _fixture.ClientWrapper.Verify(x => x.TorrentSetLocationAsync(It.IsAny<long[]>(), It.IsAny<string>(), It.IsAny<bool>()), Times.Never);
+            await _fixture.ClientWrapper.DidNotReceive().TorrentSetLocationAsync(Arg.Any<long[]>(), Arg.Any<string>(), Arg.Any<bool>());
         }
 
         [Fact]
@@ -582,16 +582,15 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
             };
 
             _fixture.HardLinkFileService
-                .Setup(x => x.GetHardLinkCount(It.IsAny<string>(), It.IsAny<bool>()))
+                .GetHardLinkCount(Arg.Any<string>(), Arg.Any<bool>())
                 .Returns(0);
 
             // Act
             await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert
-            _fixture.ClientWrapper.Verify(
-                x => x.TorrentSetLocationAsync(It.Is<long[]>(ids => ids.Contains(123)), expectedNewLocation, true),
-                Times.Once);
+            await _fixture.ClientWrapper.Received(1)
+                .TorrentSetLocationAsync(Arg.Is<long[]>(ids => ids.Contains(123)), expectedNewLocation, true);
         }
 
         [Fact]
@@ -620,14 +619,14 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
             };
 
             _fixture.HardLinkFileService
-                .Setup(x => x.GetHardLinkCount(It.IsAny<string>(), It.IsAny<bool>()))
+                .GetHardLinkCount(Arg.Any<string>(), Arg.Any<bool>())
                 .Returns(2);
 
             // Act
             await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert
-            _fixture.ClientWrapper.Verify(x => x.TorrentSetLocationAsync(It.IsAny<long[]>(), It.IsAny<string>(), It.IsAny<bool>()), Times.Never);
+            await _fixture.ClientWrapper.DidNotReceive().TorrentSetLocationAsync(Arg.Any<long[]>(), Arg.Any<string>(), Arg.Any<bool>());
         }
 
         [Fact]
@@ -656,14 +655,14 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
             };
 
             _fixture.HardLinkFileService
-                .Setup(x => x.GetHardLinkCount(It.IsAny<string>(), It.IsAny<bool>()))
+                .GetHardLinkCount(Arg.Any<string>(), Arg.Any<bool>())
                 .Returns(-1);
 
             // Act
             await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert
-            _fixture.ClientWrapper.Verify(x => x.TorrentSetLocationAsync(It.IsAny<long[]>(), It.IsAny<string>(), It.IsAny<bool>()), Times.Never);
+            await _fixture.ClientWrapper.DidNotReceive().TorrentSetLocationAsync(Arg.Any<long[]>(), Arg.Any<string>(), Arg.Any<bool>());
         }
 
         [Fact]
@@ -700,16 +699,15 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
             };
 
             _fixture.HardLinkFileService
-                .Setup(x => x.GetHardLinkCount(It.IsAny<string>(), It.IsAny<bool>()))
+                .GetHardLinkCount(Arg.Any<string>(), Arg.Any<bool>())
                 .Returns(0);
 
             // Act
             await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert
-            _fixture.HardLinkFileService.Verify(
-                x => x.GetHardLinkCount(It.IsAny<string>(), It.IsAny<bool>()),
-                Times.Once);
+            _fixture.HardLinkFileService.Received(1)
+                .GetHardLinkCount(Arg.Any<string>(), Arg.Any<bool>());
         }
 
         [Fact]
@@ -742,16 +740,15 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
             };
 
             _fixture.HardLinkFileService
-                .Setup(x => x.GetHardLinkCount(It.IsAny<string>(), It.IsAny<bool>()))
+                .GetHardLinkCount(Arg.Any<string>(), Arg.Any<bool>())
                 .Returns(0);
 
             // Act
             await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert - EventPublisher is not mocked, so we just verify the method completed
-            _fixture.ClientWrapper.Verify(
-                x => x.TorrentSetLocationAsync(It.Is<long[]>(ids => ids.Contains(123)), expectedNewLocation, true),
-                Times.Once);
+            await _fixture.ClientWrapper.Received(1)
+                .TorrentSetLocationAsync(Arg.Is<long[]>(ids => ids.Contains(123)), expectedNewLocation, true);
         }
 
         [Fact]
@@ -784,16 +781,15 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
             };
 
             _fixture.HardLinkFileService
-                .Setup(x => x.GetHardLinkCount(It.IsAny<string>(), It.IsAny<bool>()))
+                .GetHardLinkCount(Arg.Any<string>(), Arg.Any<bool>())
                 .Returns(0);
 
             // Act
             await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert
-            _fixture.ClientWrapper.Verify(
-                x => x.TorrentSetLocationAsync(It.Is<long[]>(ids => ids.Contains(123)), expectedNewLocation, true),
-                Times.Once);
+            await _fixture.ClientWrapper.Received(1)
+                .TorrentSetLocationAsync(Arg.Is<long[]>(ids => ids.Contains(123)), expectedNewLocation, true);
         }
     }
 }

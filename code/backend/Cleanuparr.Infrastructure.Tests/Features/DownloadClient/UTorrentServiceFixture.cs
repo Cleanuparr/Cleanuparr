@@ -8,45 +8,46 @@ using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Infrastructure.Services.Interfaces;
 using Cleanuparr.Persistence.Models.Configuration;
 using Microsoft.Extensions.Logging;
-using Moq;
 using NSubstitute;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.DownloadClient;
 
 public class UTorrentServiceFixture : IDisposable
 {
-    public Mock<ILogger<UTorrentService>> Logger { get; }
-    public Mock<IFilenameEvaluator> FilenameEvaluator { get; }
-    public Mock<IStriker> Striker { get; }
-    public Mock<IDryRunInterceptor> DryRunInterceptor { get; }
-    public Mock<IHardLinkFileService> HardLinkFileService { get; }
-    public Mock<IDynamicHttpClientProvider> HttpClientProvider { get; }
-    public Mock<IEventPublisher> EventPublisher { get; }
-    public Mock<IBlocklistProvider> BlocklistProvider { get; }
-    public Mock<IQueueRuleEvaluator> RuleEvaluator { get; }
-    public Mock<IQueueRuleManager> RuleManager { get; }
+    public ILogger<UTorrentService> Logger { get; private set; }
+    public IFilenameEvaluator FilenameEvaluator { get; private set; }
+    public IStriker Striker { get; private set; }
+    public IDryRunInterceptor DryRunInterceptor { get; private set; }
+    public IHardLinkFileService HardLinkFileService { get; private set; }
+    public IDynamicHttpClientProvider HttpClientProvider { get; private set; }
+    public IEventPublisher EventPublisher { get; private set; }
+    public IBlocklistProvider BlocklistProvider { get; private set; }
+    public IQueueRuleEvaluator RuleEvaluator { get; private set; }
+    public IQueueRuleManager RuleManager { get; private set; }
     public ISeedingRuleEvaluator SeedingRuleEvaluator { get; private set; }
-    public Mock<IUTorrentClientWrapper> ClientWrapper { get; }
+    public IUTorrentClientWrapper ClientWrapper { get; private set; }
 
     public UTorrentServiceFixture()
     {
-        Logger = new Mock<ILogger<UTorrentService>>();
-        FilenameEvaluator = new Mock<IFilenameEvaluator>();
-        Striker = new Mock<IStriker>();
-        DryRunInterceptor = new Mock<IDryRunInterceptor>();
-        HardLinkFileService = new Mock<IHardLinkFileService>();
-        HttpClientProvider = new Mock<IDynamicHttpClientProvider>();
-        EventPublisher = new Mock<IEventPublisher>();
-        BlocklistProvider = new Mock<IBlocklistProvider>();
-        RuleEvaluator = new Mock<IQueueRuleEvaluator>();
-        RuleManager = new Mock<IQueueRuleManager>();
+        Logger = Substitute.For<ILogger<UTorrentService>>();
+        FilenameEvaluator = Substitute.For<IFilenameEvaluator>();
+        Striker = Substitute.For<IStriker>();
+        DryRunInterceptor = Substitute.For<IDryRunInterceptor>();
+        HardLinkFileService = Substitute.For<IHardLinkFileService>();
+        HttpClientProvider = Substitute.For<IDynamicHttpClientProvider>();
+        EventPublisher = Substitute.For<IEventPublisher>();
+        BlocklistProvider = Substitute.For<IBlocklistProvider>();
+        RuleEvaluator = Substitute.For<IQueueRuleEvaluator>();
+        RuleManager = Substitute.For<IQueueRuleManager>();
         SeedingRuleEvaluator = Substitute.For<ISeedingRuleEvaluator>();
-        ClientWrapper = new Mock<IUTorrentClientWrapper>();
+        ClientWrapper = Substitute.For<IUTorrentClientWrapper>();
 
         DryRunInterceptor
-            .Setup(x => x.InterceptAsync(It.IsAny<Delegate>(), It.IsAny<object[]>()))
-            .Returns((Delegate action, object[] parameters) =>
+            .InterceptAsync(Arg.Any<Delegate>(), Arg.Any<object[]>())
+            .Returns(callInfo =>
             {
+                var action = callInfo.ArgAt<Delegate>(0);
+                var parameters = callInfo.ArgAt<object[]>(1);
                 return (Task)(action.DynamicInvoke(parameters) ?? Task.CompletedTask);
             });
     }
@@ -68,43 +69,45 @@ public class UTorrentServiceFixture : IDisposable
 
         var httpClient = new HttpClient();
         HttpClientProvider
-            .Setup(x => x.CreateClient(It.IsAny<DownloadClientConfig>()))
+            .CreateClient(Arg.Any<DownloadClientConfig>())
             .Returns(httpClient);
 
         return new UTorrentService(
-            Logger.Object,
-            FilenameEvaluator.Object,
-            Striker.Object,
-            DryRunInterceptor.Object,
-            HardLinkFileService.Object,
-            HttpClientProvider.Object,
-            EventPublisher.Object,
-            BlocklistProvider.Object,
+            Logger,
+            FilenameEvaluator,
+            Striker,
+            DryRunInterceptor,
+            HardLinkFileService,
+            HttpClientProvider,
+            EventPublisher,
+            BlocklistProvider,
             config,
-            RuleEvaluator.Object,
+            RuleEvaluator,
             SeedingRuleEvaluator,
-            ClientWrapper.Object
+            ClientWrapper
         );
     }
 
     public void ResetMocks()
     {
-        Logger.Reset();
-        FilenameEvaluator.Reset();
-        Striker.Reset();
-        DryRunInterceptor.Reset();
-        HardLinkFileService.Reset();
-        HttpClientProvider.Reset();
-        EventPublisher.Reset();
-        RuleEvaluator.Reset();
-        RuleManager.Reset();
+        Logger = Substitute.For<ILogger<UTorrentService>>();
+        FilenameEvaluator = Substitute.For<IFilenameEvaluator>();
+        Striker = Substitute.For<IStriker>();
+        DryRunInterceptor = Substitute.For<IDryRunInterceptor>();
+        HardLinkFileService = Substitute.For<IHardLinkFileService>();
+        HttpClientProvider = Substitute.For<IDynamicHttpClientProvider>();
+        EventPublisher = Substitute.For<IEventPublisher>();
+        RuleEvaluator = Substitute.For<IQueueRuleEvaluator>();
+        RuleManager = Substitute.For<IQueueRuleManager>();
         SeedingRuleEvaluator = Substitute.For<ISeedingRuleEvaluator>();
-        ClientWrapper.Reset();
+        ClientWrapper = Substitute.For<IUTorrentClientWrapper>();
 
         DryRunInterceptor
-            .Setup(x => x.InterceptAsync(It.IsAny<Delegate>(), It.IsAny<object[]>()))
-            .Returns((Delegate action, object[] parameters) =>
+            .InterceptAsync(Arg.Any<Delegate>(), Arg.Any<object[]>())
+            .Returns(callInfo =>
             {
+                var action = callInfo.ArgAt<Delegate>(0);
+                var parameters = callInfo.ArgAt<object[]>(1);
                 return (Task)(action.DynamicInvoke(parameters) ?? Task.CompletedTask);
             });
     }

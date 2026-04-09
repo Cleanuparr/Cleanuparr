@@ -3,7 +3,7 @@ using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
 using Cleanuparr.Infrastructure.Features.DownloadClient.QBittorrent;
 using Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
-using Moq;
+using NSubstitute;
 using Newtonsoft.Json.Linq;
 using QBittorrent.Client;
 using Xunit;
@@ -34,8 +34,8 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
             var sut = _fixture.CreateSut();
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentListAsync(It.Is<TorrentListQuery>(q => q.Hashes != null && q.Hashes.Contains(hash))))
-                .ReturnsAsync(Array.Empty<TorrentInfo>());
+                .GetTorrentListAsync(Arg.Is<TorrentListQuery>(q => q.Hashes != null && q.Hashes.Contains(hash)))
+                .Returns(Array.Empty<TorrentInfo>());
 
             // Act
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
@@ -63,12 +63,12 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentListAsync(It.Is<TorrentListQuery>(q => q.Hashes != null && q.Hashes.Contains(hash))))
-                .ReturnsAsync(new[] { torrentInfo });
+                .GetTorrentListAsync(Arg.Is<TorrentListQuery>(q => q.Hashes != null && q.Hashes.Contains(hash)))
+                .Returns(new[] { torrentInfo });
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentTrackersAsync(hash))
-                .ReturnsAsync(Array.Empty<TorrentTracker>());
+                .GetTorrentTrackersAsync(hash)
+                .Returns(Array.Empty<TorrentTracker>());
 
             var properties = new TorrentProperties
             {
@@ -79,8 +79,8 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentPropertiesAsync(hash))
-                .ReturnsAsync(properties);
+                .GetTorrentPropertiesAsync(hash)
+                .Returns(properties);
 
             // Act
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, new[] { ignoredCategory });
@@ -106,12 +106,12 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentListAsync(It.Is<TorrentListQuery>(q => q.Hashes != null && q.Hashes.Contains(hash))))
-                .ReturnsAsync(new[] { torrentInfo });
+                .GetTorrentListAsync(Arg.Is<TorrentListQuery>(q => q.Hashes != null && q.Hashes.Contains(hash)))
+                .Returns(new[] { torrentInfo });
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentTrackersAsync(hash))
-                .ReturnsAsync(Array.Empty<TorrentTracker>());
+                .GetTorrentTrackersAsync(hash)
+                .Returns(Array.Empty<TorrentTracker>());
 
             var properties = new TorrentProperties
             {
@@ -122,23 +122,23 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentPropertiesAsync(hash))
-                .ReturnsAsync(properties);
+                .GetTorrentPropertiesAsync(hash)
+                .Returns(properties);
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentContentsAsync(hash))
-                .ReturnsAsync(new[]
+                .GetTorrentContentsAsync(hash)
+                .Returns(new[]
                 {
                     new TorrentContent { Index = 0, Priority = TorrentContentPriority.Normal }
                 });
 
             _fixture.RuleEvaluator
-                .Setup(x => x.EvaluateSlowRulesAsync(It.IsAny<QBitItemWrapper>()))
-                .ReturnsAsync((false, DeleteReason.None, false));
+                .EvaluateSlowRulesAsync(Arg.Any<QBitItemWrapper>())
+                .Returns((false, DeleteReason.None, false));
 
             _fixture.RuleEvaluator
-                .Setup(x => x.EvaluateStallRulesAsync(It.IsAny<QBitItemWrapper>()))
-                .ReturnsAsync((false, DeleteReason.None, false));
+                .EvaluateStallRulesAsync(Arg.Any<QBitItemWrapper>())
+                .Returns((false, DeleteReason.None, false));
 
             // Act
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
@@ -164,12 +164,12 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentListAsync(It.Is<TorrentListQuery>(q => q.Hashes != null && q.Hashes.Contains(hash))))
-                .ReturnsAsync(new[] { torrentInfo });
+                .GetTorrentListAsync(Arg.Is<TorrentListQuery>(q => q.Hashes != null && q.Hashes.Contains(hash)))
+                .Returns(new[] { torrentInfo });
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentTrackersAsync(hash))
-                .ReturnsAsync(Array.Empty<TorrentTracker>());
+                .GetTorrentTrackersAsync(hash)
+                .Returns(Array.Empty<TorrentTracker>());
 
             var properties = new TorrentProperties
             {
@@ -180,23 +180,23 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentPropertiesAsync(hash))
-                .ReturnsAsync(properties);
+                .GetTorrentPropertiesAsync(hash)
+                .Returns(properties);
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentContentsAsync(hash))
-                .ReturnsAsync(new[]
+                .GetTorrentContentsAsync(hash)
+                .Returns(new[]
                 {
                     new TorrentContent { Index = 0, Priority = TorrentContentPriority.Normal }
                 });
 
             _fixture.RuleEvaluator
-                .Setup(x => x.EvaluateSlowRulesAsync(It.IsAny<QBitItemWrapper>()))
-                .ReturnsAsync((false, DeleteReason.None, false));
+                .EvaluateSlowRulesAsync(Arg.Any<QBitItemWrapper>())
+                .Returns((false, DeleteReason.None, false));
 
             _fixture.RuleEvaluator
-                .Setup(x => x.EvaluateStallRulesAsync(It.IsAny<QBitItemWrapper>()))
-                .ReturnsAsync((false, DeleteReason.None, false));
+                .EvaluateStallRulesAsync(Arg.Any<QBitItemWrapper>())
+                .Returns((false, DeleteReason.None, false));
 
             // Act
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
@@ -221,16 +221,16 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentListAsync(It.Is<TorrentListQuery>(q => q.Hashes != null && q.Hashes.Contains(hash))))
-                .ReturnsAsync(new[] { torrentInfo });
+                .GetTorrentListAsync(Arg.Is<TorrentListQuery>(q => q.Hashes != null && q.Hashes.Contains(hash)))
+                .Returns(new[] { torrentInfo });
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentTrackersAsync(hash))
-                .ReturnsAsync(Array.Empty<TorrentTracker>());
+                .GetTorrentTrackersAsync(hash)
+                .Returns(Array.Empty<TorrentTracker>());
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentPropertiesAsync(hash))
-                .ReturnsAsync((TorrentProperties?)null); // Properties not found
+                .GetTorrentPropertiesAsync(hash)
+                .Returns((TorrentProperties?)null); // Properties not found
 
             // Act
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
@@ -267,12 +267,12 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentListAsync(It.Is<TorrentListQuery>(q => q.Hashes != null && q.Hashes.Contains(hash))))
-                .ReturnsAsync(new[] { torrentInfo });
+                .GetTorrentListAsync(Arg.Is<TorrentListQuery>(q => q.Hashes != null && q.Hashes.Contains(hash)))
+                .Returns(new[] { torrentInfo });
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentTrackersAsync(hash))
-                .ReturnsAsync(Array.Empty<TorrentTracker>());
+                .GetTorrentTrackersAsync(hash)
+                .Returns(Array.Empty<TorrentTracker>());
 
             var properties = new TorrentProperties
             {
@@ -283,12 +283,12 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentPropertiesAsync(hash))
-                .ReturnsAsync(properties);
+                .GetTorrentPropertiesAsync(hash)
+                .Returns(properties);
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentContentsAsync(hash))
-                .ReturnsAsync(new[]
+                .GetTorrentContentsAsync(hash)
+                .Returns(new[]
                 {
                     new TorrentContent { Index = 0, Priority = TorrentContentPriority.Skip },
                     new TorrentContent { Index = 1, Priority = TorrentContentPriority.Skip }
@@ -319,12 +319,12 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentListAsync(It.Is<TorrentListQuery>(q => q.Hashes != null && q.Hashes.Contains(hash))))
-                .ReturnsAsync(new[] { torrentInfo });
+                .GetTorrentListAsync(Arg.Is<TorrentListQuery>(q => q.Hashes != null && q.Hashes.Contains(hash)))
+                .Returns(new[] { torrentInfo });
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentTrackersAsync(hash))
-                .ReturnsAsync(Array.Empty<TorrentTracker>());
+                .GetTorrentTrackersAsync(hash)
+                .Returns(Array.Empty<TorrentTracker>());
 
             var properties = new TorrentProperties
             {
@@ -335,12 +335,12 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentPropertiesAsync(hash))
-                .ReturnsAsync(properties);
+                .GetTorrentPropertiesAsync(hash)
+                .Returns(properties);
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentContentsAsync(hash))
-                .ReturnsAsync(new[]
+                .GetTorrentContentsAsync(hash)
+                .Returns(new[]
                 {
                     new TorrentContent { Index = 0, Priority = TorrentContentPriority.Skip },
                     new TorrentContent { Index = 1, Priority = TorrentContentPriority.Skip }
@@ -371,12 +371,12 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentListAsync(It.Is<TorrentListQuery>(q => q.Hashes != null && q.Hashes.Contains(hash))))
-                .ReturnsAsync(new[] { torrentInfo });
+                .GetTorrentListAsync(Arg.Is<TorrentListQuery>(q => q.Hashes != null && q.Hashes.Contains(hash)))
+                .Returns(new[] { torrentInfo });
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentTrackersAsync(hash))
-                .ReturnsAsync(Array.Empty<TorrentTracker>());
+                .GetTorrentTrackersAsync(hash)
+                .Returns(Array.Empty<TorrentTracker>());
 
             var properties = new TorrentProperties
             {
@@ -387,24 +387,24 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentPropertiesAsync(hash))
-                .ReturnsAsync(properties);
+                .GetTorrentPropertiesAsync(hash)
+                .Returns(properties);
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentContentsAsync(hash))
-                .ReturnsAsync(new[]
+                .GetTorrentContentsAsync(hash)
+                .Returns(new[]
                 {
                     new TorrentContent { Index = 0, Priority = TorrentContentPriority.Skip },
                     new TorrentContent { Index = 1, Priority = TorrentContentPriority.Normal } // At least one wanted
                 });
 
             _fixture.RuleEvaluator
-                .Setup(x => x.EvaluateSlowRulesAsync(It.IsAny<QBitItemWrapper>()))
-                .ReturnsAsync((false, DeleteReason.None, false));
+                .EvaluateSlowRulesAsync(Arg.Any<QBitItemWrapper>())
+                .Returns((false, DeleteReason.None, false));
 
             _fixture.RuleEvaluator
-                .Setup(x => x.EvaluateStallRulesAsync(It.IsAny<QBitItemWrapper>()))
-                .ReturnsAsync((false, DeleteReason.None, false));
+                .EvaluateStallRulesAsync(Arg.Any<QBitItemWrapper>())
+                .Returns((false, DeleteReason.None, false));
 
             // Act
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
@@ -443,12 +443,12 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentListAsync(It.Is<TorrentListQuery>(q => q.Hashes != null && q.Hashes.Contains(hash))))
-                .ReturnsAsync(new[] { torrentInfo });
+                .GetTorrentListAsync(Arg.Is<TorrentListQuery>(q => q.Hashes != null && q.Hashes.Contains(hash)))
+                .Returns(new[] { torrentInfo });
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentTrackersAsync(hash))
-                .ReturnsAsync(Array.Empty<TorrentTracker>());
+                .GetTorrentTrackersAsync(hash)
+                .Returns(Array.Empty<TorrentTracker>());
 
             var properties = new TorrentProperties
             {
@@ -459,28 +459,27 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentPropertiesAsync(hash))
-                .ReturnsAsync(properties);
+                .GetTorrentPropertiesAsync(hash)
+                .Returns(properties);
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentContentsAsync(hash))
-                .ReturnsAsync(new[]
+                .GetTorrentContentsAsync(hash)
+                .Returns(new[]
                 {
                     new TorrentContent { Index = 0, Priority = TorrentContentPriority.Normal }
                 });
 
             _fixture.Striker
-                .Setup(x => x.StrikeAndCheckLimit(hash, It.IsAny<string>(), (ushort)3, StrikeType.DownloadingMetadata, It.IsAny<long?>()))
-                .ReturnsAsync(false);
+                .StrikeAndCheckLimit(hash, Arg.Any<string>(), (ushort)3, StrikeType.DownloadingMetadata, Arg.Any<long?>())
+                .Returns(false);
 
             // Act
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 
             // Assert
             Assert.False(result.ShouldRemove);
-            _fixture.Striker.Verify(
-                x => x.StrikeAndCheckLimit(hash, It.IsAny<string>(), (ushort)3, StrikeType.DownloadingMetadata, It.IsAny<long?>()),
-                Times.Once);
+            await _fixture.Striker.Received(1)
+                .StrikeAndCheckLimit(hash, Arg.Any<string>(), (ushort)3, StrikeType.DownloadingMetadata, Arg.Any<long?>());
         }
 
         [Fact]
@@ -506,12 +505,12 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentListAsync(It.Is<TorrentListQuery>(q => q.Hashes != null && q.Hashes.Contains(hash))))
-                .ReturnsAsync(new[] { torrentInfo });
+                .GetTorrentListAsync(Arg.Is<TorrentListQuery>(q => q.Hashes != null && q.Hashes.Contains(hash)))
+                .Returns(new[] { torrentInfo });
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentTrackersAsync(hash))
-                .ReturnsAsync(Array.Empty<TorrentTracker>());
+                .GetTorrentTrackersAsync(hash)
+                .Returns(Array.Empty<TorrentTracker>());
 
             var properties = new TorrentProperties
             {
@@ -522,19 +521,19 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentPropertiesAsync(hash))
-                .ReturnsAsync(properties);
+                .GetTorrentPropertiesAsync(hash)
+                .Returns(properties);
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentContentsAsync(hash))
-                .ReturnsAsync(new[]
+                .GetTorrentContentsAsync(hash)
+                .Returns(new[]
                 {
                     new TorrentContent { Index = 0, Priority = TorrentContentPriority.Normal }
                 });
 
             _fixture.Striker
-                .Setup(x => x.StrikeAndCheckLimit(hash, It.IsAny<string>(), (ushort)3, StrikeType.DownloadingMetadata, It.IsAny<long?>()))
-                .ReturnsAsync(true); // Strike limit exceeded
+                .StrikeAndCheckLimit(hash, Arg.Any<string>(), (ushort)3, StrikeType.DownloadingMetadata, Arg.Any<long?>())
+                .Returns(true); // Strike limit exceeded
 
             // Act
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
@@ -568,12 +567,12 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentListAsync(It.Is<TorrentListQuery>(q => q.Hashes != null && q.Hashes.Contains(hash))))
-                .ReturnsAsync(new[] { torrentInfo });
+                .GetTorrentListAsync(Arg.Is<TorrentListQuery>(q => q.Hashes != null && q.Hashes.Contains(hash)))
+                .Returns(new[] { torrentInfo });
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentTrackersAsync(hash))
-                .ReturnsAsync(Array.Empty<TorrentTracker>());
+                .GetTorrentTrackersAsync(hash)
+                .Returns(Array.Empty<TorrentTracker>());
 
             var properties = new TorrentProperties
             {
@@ -584,12 +583,12 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentPropertiesAsync(hash))
-                .ReturnsAsync(properties);
+                .GetTorrentPropertiesAsync(hash)
+                .Returns(properties);
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentContentsAsync(hash))
-                .ReturnsAsync(new[]
+                .GetTorrentContentsAsync(hash)
+                .Returns(new[]
                 {
                     new TorrentContent { Index = 0, Priority = TorrentContentPriority.Normal }
                 });
@@ -599,9 +598,8 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
 
             // Assert
             Assert.False(result.ShouldRemove);
-            _fixture.Striker.Verify(
-                x => x.StrikeAndCheckLimit(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ushort>(), It.IsAny<StrikeType>(), It.IsAny<long?>()),
-                Times.Never);
+            await _fixture.Striker.DidNotReceive()
+                .StrikeAndCheckLimit(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<ushort>(), Arg.Any<StrikeType>(), Arg.Any<long?>());
         }
     }
 
@@ -627,12 +625,12 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentListAsync(It.Is<TorrentListQuery>(q => q.Hashes != null && q.Hashes.Contains(hash))))
-                .ReturnsAsync(new[] { torrentInfo });
+                .GetTorrentListAsync(Arg.Is<TorrentListQuery>(q => q.Hashes != null && q.Hashes.Contains(hash)))
+                .Returns(new[] { torrentInfo });
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentTrackersAsync(hash))
-                .ReturnsAsync(Array.Empty<TorrentTracker>());
+                .GetTorrentTrackersAsync(hash)
+                .Returns(Array.Empty<TorrentTracker>());
 
             var properties = new TorrentProperties
             {
@@ -643,28 +641,27 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentPropertiesAsync(hash))
-                .ReturnsAsync(properties);
+                .GetTorrentPropertiesAsync(hash)
+                .Returns(properties);
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentContentsAsync(hash))
-                .ReturnsAsync(new[]
+                .GetTorrentContentsAsync(hash)
+                .Returns(new[]
                 {
                     new TorrentContent { Index = 0, Priority = TorrentContentPriority.Normal }
                 });
 
             _fixture.RuleEvaluator
-                .Setup(x => x.EvaluateStallRulesAsync(It.IsAny<QBitItemWrapper>()))
-                .ReturnsAsync((false, DeleteReason.None, false));
+                .EvaluateStallRulesAsync(Arg.Any<QBitItemWrapper>())
+                .Returns((false, DeleteReason.None, false));
 
             // Act
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 
             // Assert
             Assert.False(result.ShouldRemove);
-            _fixture.RuleEvaluator.Verify(
-                x => x.EvaluateSlowRulesAsync(It.IsAny<QBitItemWrapper>()),
-                Times.Never);
+            await _fixture.RuleEvaluator.DidNotReceive()
+                .EvaluateSlowRulesAsync(Arg.Any<QBitItemWrapper>());
         }
 
         [Fact]
@@ -683,12 +680,12 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentListAsync(It.Is<TorrentListQuery>(q => q.Hashes != null && q.Hashes.Contains(hash))))
-                .ReturnsAsync(new[] { torrentInfo });
+                .GetTorrentListAsync(Arg.Is<TorrentListQuery>(q => q.Hashes != null && q.Hashes.Contains(hash)))
+                .Returns(new[] { torrentInfo });
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentTrackersAsync(hash))
-                .ReturnsAsync(Array.Empty<TorrentTracker>());
+                .GetTorrentTrackersAsync(hash)
+                .Returns(Array.Empty<TorrentTracker>());
 
             var properties = new TorrentProperties
             {
@@ -699,28 +696,27 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentPropertiesAsync(hash))
-                .ReturnsAsync(properties);
+                .GetTorrentPropertiesAsync(hash)
+                .Returns(properties);
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentContentsAsync(hash))
-                .ReturnsAsync(new[]
+                .GetTorrentContentsAsync(hash)
+                .Returns(new[]
                 {
                     new TorrentContent { Index = 0, Priority = TorrentContentPriority.Normal }
                 });
 
             _fixture.RuleEvaluator
-                .Setup(x => x.EvaluateStallRulesAsync(It.IsAny<QBitItemWrapper>()))
-                .ReturnsAsync((false, DeleteReason.None, false));
+                .EvaluateStallRulesAsync(Arg.Any<QBitItemWrapper>())
+                .Returns((false, DeleteReason.None, false));
 
             // Act
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 
             // Assert
             Assert.False(result.ShouldRemove);
-            _fixture.RuleEvaluator.Verify(
-                x => x.EvaluateSlowRulesAsync(It.IsAny<QBitItemWrapper>()),
-                Times.Never);
+            await _fixture.RuleEvaluator.DidNotReceive()
+                .EvaluateSlowRulesAsync(Arg.Any<QBitItemWrapper>());
         }
 
         [Fact]
@@ -739,12 +735,12 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentListAsync(It.Is<TorrentListQuery>(q => q.Hashes != null && q.Hashes.Contains(hash))))
-                .ReturnsAsync(new[] { torrentInfo });
+                .GetTorrentListAsync(Arg.Is<TorrentListQuery>(q => q.Hashes != null && q.Hashes.Contains(hash)))
+                .Returns(new[] { torrentInfo });
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentTrackersAsync(hash))
-                .ReturnsAsync(Array.Empty<TorrentTracker>());
+                .GetTorrentTrackersAsync(hash)
+                .Returns(Array.Empty<TorrentTracker>());
 
             var properties = new TorrentProperties
             {
@@ -755,19 +751,19 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentPropertiesAsync(hash))
-                .ReturnsAsync(properties);
+                .GetTorrentPropertiesAsync(hash)
+                .Returns(properties);
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentContentsAsync(hash))
-                .ReturnsAsync(new[]
+                .GetTorrentContentsAsync(hash)
+                .Returns(new[]
                 {
                     new TorrentContent { Index = 0, Priority = TorrentContentPriority.Normal }
                 });
 
             _fixture.RuleEvaluator
-                .Setup(x => x.EvaluateSlowRulesAsync(It.IsAny<QBitItemWrapper>()))
-                .ReturnsAsync((true, DeleteReason.SlowSpeed, true)); // Rule matched
+                .EvaluateSlowRulesAsync(Arg.Any<QBitItemWrapper>())
+                .Returns((true, DeleteReason.SlowSpeed, true)); // Rule matched
 
             // Act
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
@@ -801,12 +797,12 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentListAsync(It.Is<TorrentListQuery>(q => q.Hashes != null && q.Hashes.Contains(hash))))
-                .ReturnsAsync(new[] { torrentInfo });
+                .GetTorrentListAsync(Arg.Is<TorrentListQuery>(q => q.Hashes != null && q.Hashes.Contains(hash)))
+                .Returns(new[] { torrentInfo });
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentTrackersAsync(hash))
-                .ReturnsAsync(Array.Empty<TorrentTracker>());
+                .GetTorrentTrackersAsync(hash)
+                .Returns(Array.Empty<TorrentTracker>());
 
             var properties = new TorrentProperties
             {
@@ -817,28 +813,27 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentPropertiesAsync(hash))
-                .ReturnsAsync(properties);
+                .GetTorrentPropertiesAsync(hash)
+                .Returns(properties);
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentContentsAsync(hash))
-                .ReturnsAsync(new[]
+                .GetTorrentContentsAsync(hash)
+                .Returns(new[]
                 {
                     new TorrentContent { Index = 0, Priority = TorrentContentPriority.Normal }
                 });
 
             _fixture.RuleEvaluator
-                .Setup(x => x.EvaluateSlowRulesAsync(It.IsAny<QBitItemWrapper>()))
-                .ReturnsAsync((false, DeleteReason.None, false));
+                .EvaluateSlowRulesAsync(Arg.Any<QBitItemWrapper>())
+                .Returns((false, DeleteReason.None, false));
 
             // Act
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 
             // Assert
             Assert.False(result.ShouldRemove);
-            _fixture.RuleEvaluator.Verify(
-                x => x.EvaluateStallRulesAsync(It.IsAny<QBitItemWrapper>()),
-                Times.Never);
+            await _fixture.RuleEvaluator.DidNotReceive()
+                .EvaluateStallRulesAsync(Arg.Any<QBitItemWrapper>());
         }
 
         [Fact]
@@ -856,12 +851,12 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentListAsync(It.Is<TorrentListQuery>(q => q.Hashes != null && q.Hashes.Contains(hash))))
-                .ReturnsAsync(new[] { torrentInfo });
+                .GetTorrentListAsync(Arg.Is<TorrentListQuery>(q => q.Hashes != null && q.Hashes.Contains(hash)))
+                .Returns(new[] { torrentInfo });
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentTrackersAsync(hash))
-                .ReturnsAsync(Array.Empty<TorrentTracker>());
+                .GetTorrentTrackersAsync(hash)
+                .Returns(Array.Empty<TorrentTracker>());
 
             var properties = new TorrentProperties
             {
@@ -872,19 +867,19 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentPropertiesAsync(hash))
-                .ReturnsAsync(properties);
+                .GetTorrentPropertiesAsync(hash)
+                .Returns(properties);
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentContentsAsync(hash))
-                .ReturnsAsync(new[]
+                .GetTorrentContentsAsync(hash)
+                .Returns(new[]
                 {
                     new TorrentContent { Index = 0, Priority = TorrentContentPriority.Normal }
                 });
 
             _fixture.RuleEvaluator
-                .Setup(x => x.EvaluateStallRulesAsync(It.IsAny<QBitItemWrapper>()))
-                .ReturnsAsync((true, DeleteReason.Stalled, true)); // Rule matched
+                .EvaluateStallRulesAsync(Arg.Any<QBitItemWrapper>())
+                .Returns((true, DeleteReason.Stalled, true)); // Rule matched
 
             // Act
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
@@ -918,12 +913,12 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentListAsync(It.Is<TorrentListQuery>(q => q.Hashes != null && q.Hashes.Contains(hash))))
-                .ReturnsAsync(new[] { torrentInfo });
+                .GetTorrentListAsync(Arg.Is<TorrentListQuery>(q => q.Hashes != null && q.Hashes.Contains(hash)))
+                .Returns(new[] { torrentInfo });
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentTrackersAsync(hash))
-                .ReturnsAsync(Array.Empty<TorrentTracker>());
+                .GetTorrentTrackersAsync(hash)
+                .Returns(Array.Empty<TorrentTracker>());
 
             var properties = new TorrentProperties
             {
@@ -934,20 +929,20 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentPropertiesAsync(hash))
-                .ReturnsAsync(properties);
+                .GetTorrentPropertiesAsync(hash)
+                .Returns(properties);
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentContentsAsync(hash))
-                .ReturnsAsync(new[]
+                .GetTorrentContentsAsync(hash)
+                .Returns(new[]
                 {
                     new TorrentContent { Index = 0, Priority = TorrentContentPriority.Normal }
                 });
 
             // Slow check is skipped because not in downloading state
             _fixture.RuleEvaluator
-                .Setup(x => x.EvaluateStallRulesAsync(It.IsAny<QBitItemWrapper>()))
-                .ReturnsAsync((true, DeleteReason.Stalled, true));
+                .EvaluateStallRulesAsync(Arg.Any<QBitItemWrapper>())
+                .Returns((true, DeleteReason.Stalled, true));
 
             // Act
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
@@ -955,12 +950,10 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
             // Assert
             Assert.True(result.ShouldRemove);
             Assert.Equal(DeleteReason.Stalled, result.DeleteReason);
-            _fixture.RuleEvaluator.Verify(
-                x => x.EvaluateSlowRulesAsync(It.IsAny<QBitItemWrapper>()),
-                Times.Never); // Skipped
-            _fixture.RuleEvaluator.Verify(
-                x => x.EvaluateStallRulesAsync(It.IsAny<QBitItemWrapper>()),
-                Times.Once);
+            await _fixture.RuleEvaluator.DidNotReceive()
+                .EvaluateSlowRulesAsync(Arg.Any<QBitItemWrapper>()); // Skipped
+            await _fixture.RuleEvaluator.Received(1)
+                .EvaluateStallRulesAsync(Arg.Any<QBitItemWrapper>());
         }
 
         [Fact]
@@ -979,12 +972,12 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentListAsync(It.Is<TorrentListQuery>(q => q.Hashes != null && q.Hashes.Contains(hash))))
-                .ReturnsAsync(new[] { torrentInfo });
+                .GetTorrentListAsync(Arg.Is<TorrentListQuery>(q => q.Hashes != null && q.Hashes.Contains(hash)))
+                .Returns(new[] { torrentInfo });
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentTrackersAsync(hash))
-                .ReturnsAsync(Array.Empty<TorrentTracker>());
+                .GetTorrentTrackersAsync(hash)
+                .Returns(Array.Empty<TorrentTracker>());
 
             var properties = new TorrentProperties
             {
@@ -995,23 +988,23 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentPropertiesAsync(hash))
-                .ReturnsAsync(properties);
+                .GetTorrentPropertiesAsync(hash)
+                .Returns(properties);
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentContentsAsync(hash))
-                .ReturnsAsync(new[]
+                .GetTorrentContentsAsync(hash)
+                .Returns(new[]
                 {
                     new TorrentContent { Index = 0, Priority = TorrentContentPriority.Normal }
                 });
 
             _fixture.RuleEvaluator
-                .Setup(x => x.EvaluateSlowRulesAsync(It.IsAny<QBitItemWrapper>()))
-                .ReturnsAsync((false, DeleteReason.None, false));
+                .EvaluateSlowRulesAsync(Arg.Any<QBitItemWrapper>())
+                .Returns((false, DeleteReason.None, false));
 
             _fixture.RuleEvaluator
-                .Setup(x => x.EvaluateStallRulesAsync(It.IsAny<QBitItemWrapper>()))
-                .ReturnsAsync((false, DeleteReason.None, false));
+                .EvaluateStallRulesAsync(Arg.Any<QBitItemWrapper>())
+                .Returns((false, DeleteReason.None, false));
 
             // Act
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());

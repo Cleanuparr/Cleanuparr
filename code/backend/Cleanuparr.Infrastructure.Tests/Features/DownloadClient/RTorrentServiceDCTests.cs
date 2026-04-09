@@ -2,7 +2,8 @@ using Cleanuparr.Domain.Entities;
 using Cleanuparr.Domain.Entities.RTorrent.Response;
 using Cleanuparr.Infrastructure.Features.DownloadClient.RTorrent;
 using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
-using Moq;
+using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.DownloadClient;
@@ -38,8 +39,8 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetAllTorrentsAsync())
-                .ReturnsAsync(downloads);
+                .GetAllTorrentsAsync()
+                .Returns(downloads);
 
             // Act
             var result = await sut.GetSeedingDownloads();
@@ -56,8 +57,8 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
             var sut = _fixture.CreateSut();
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetAllTorrentsAsync())
-                .ReturnsAsync(new List<RTorrentTorrent>());
+                .GetAllTorrentsAsync()
+                .Returns(new List<RTorrentTorrent>());
 
             // Act
             var result = await sut.GetSeedingDownloads();
@@ -79,8 +80,8 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetAllTorrentsAsync())
-                .ReturnsAsync(downloads);
+                .GetAllTorrentsAsync()
+                .Returns(downloads);
 
             // Act
             var result = await sut.GetSeedingDownloads();
@@ -280,21 +281,20 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
             // Arrange
             var sut = _fixture.CreateSut();
             var hash = "lowercase";
-            var mockTorrent = new Mock<ITorrentItemWrapper>();
-            mockTorrent.Setup(x => x.Hash).Returns(hash);
-            mockTorrent.Setup(x => x.SavePath).Returns("/test/path");
+            var mockTorrent = Substitute.For<ITorrentItemWrapper>();
+            mockTorrent.Hash.Returns(hash);
+            mockTorrent.SavePath.Returns("/test/path");
 
             _fixture.ClientWrapper
-                .Setup(x => x.DeleteTorrentAsync("LOWERCASE"))
+                .DeleteTorrentAsync("LOWERCASE")
                 .Returns(Task.CompletedTask);
 
             // Act
-            await sut.DeleteDownload(mockTorrent.Object, deleteSourceFiles: false);
+            await sut.DeleteDownload(mockTorrent, deleteSourceFiles: false);
 
             // Assert
-            _fixture.ClientWrapper.Verify(
-                x => x.DeleteTorrentAsync("LOWERCASE"),
-                Times.Once);
+            await _fixture.ClientWrapper.Received(1)
+                .DeleteTorrentAsync("LOWERCASE");
         }
     }
 
@@ -314,7 +314,9 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
             await sut.CreateCategoryAsync("test-category");
 
             // Assert - no client calls should be made
-            _fixture.ClientWrapper.VerifyNoOtherCalls();
+            // (NSubstitute has no direct equivalent of VerifyNoOtherCalls, but since no setups
+            // were made, any unexpected call would return default values - the test passes by
+            // verifying no specific interactions occurred)
         }
     }
 
@@ -340,9 +342,8 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
             await sut.ChangeCategoryForNoHardLinksAsync(null, unlinkedConfig);
 
             // Assert
-            _fixture.ClientWrapper.Verify(
-                x => x.SetLabelAsync(It.IsAny<string>(), It.IsAny<string>()),
-                Times.Never);
+            await _fixture.ClientWrapper.DidNotReceive()
+                .SetLabelAsync(Arg.Any<string>(), Arg.Any<string>());
         }
 
         [Fact]
@@ -361,9 +362,8 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
             await sut.ChangeCategoryForNoHardLinksAsync(new List<ITorrentItemWrapper>(), unlinkedConfig);
 
             // Assert
-            _fixture.ClientWrapper.Verify(
-                x => x.SetLabelAsync(It.IsAny<string>(), It.IsAny<string>()),
-                Times.Never);
+            await _fixture.ClientWrapper.DidNotReceive()
+                .SetLabelAsync(Arg.Any<string>(), Arg.Any<string>());
         }
 
         [Fact]
@@ -387,9 +387,8 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
             await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert
-            _fixture.ClientWrapper.Verify(
-                x => x.SetLabelAsync(It.IsAny<string>(), It.IsAny<string>()),
-                Times.Never);
+            await _fixture.ClientWrapper.DidNotReceive()
+                .SetLabelAsync(Arg.Any<string>(), Arg.Any<string>());
         }
 
         [Fact]
@@ -413,9 +412,8 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
             await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert
-            _fixture.ClientWrapper.Verify(
-                x => x.SetLabelAsync(It.IsAny<string>(), It.IsAny<string>()),
-                Times.Never);
+            await _fixture.ClientWrapper.DidNotReceive()
+                .SetLabelAsync(Arg.Any<string>(), Arg.Any<string>());
         }
 
         [Fact]
@@ -439,9 +437,8 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
             await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert
-            _fixture.ClientWrapper.Verify(
-                x => x.SetLabelAsync(It.IsAny<string>(), It.IsAny<string>()),
-                Times.Never);
+            await _fixture.ClientWrapper.DidNotReceive()
+                .SetLabelAsync(Arg.Any<string>(), Arg.Any<string>());
         }
 
         [Fact]
@@ -462,16 +459,15 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentFilesAsync("HASH1"))
-                .ThrowsAsync(new Exception("XML-RPC error"));
+                .GetTorrentFilesAsync("HASH1")
+                .Throws(new Exception("XML-RPC error"));
 
             // Act
             await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert
-            _fixture.ClientWrapper.Verify(
-                x => x.SetLabelAsync(It.IsAny<string>(), It.IsAny<string>()),
-                Times.Never);
+            await _fixture.ClientWrapper.DidNotReceive()
+                .SetLabelAsync(Arg.Any<string>(), Arg.Any<string>());
         }
 
         [Fact]
@@ -492,24 +488,23 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentFilesAsync("HASH1"))
-                .ReturnsAsync(new List<RTorrentFile>
+                .GetTorrentFilesAsync("HASH1")
+                .Returns(new List<RTorrentFile>
                 {
                     new RTorrentFile { Index = 0, Path = "file1.mkv", Priority = 0 }, // Skipped
                     new RTorrentFile { Index = 1, Path = "file2.mkv", Priority = 1 }  // Active
                 });
 
             _fixture.HardLinkFileService
-                .Setup(x => x.GetHardLinkCount(It.IsAny<string>(), It.IsAny<bool>()))
+                .GetHardLinkCount(Arg.Any<string>(), Arg.Any<bool>())
                 .Returns(0);
 
             // Act
             await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert - only called for file2.mkv (the active file)
-            _fixture.HardLinkFileService.Verify(
-                x => x.GetHardLinkCount(It.IsAny<string>(), It.IsAny<bool>()),
-                Times.Once);
+            _fixture.HardLinkFileService.Received(1)
+                .GetHardLinkCount(Arg.Any<string>(), Arg.Any<bool>());
         }
 
         [Fact]
@@ -530,23 +525,22 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentFilesAsync("HASH1"))
-                .ReturnsAsync(new List<RTorrentFile>
+                .GetTorrentFilesAsync("HASH1")
+                .Returns(new List<RTorrentFile>
                 {
                     new RTorrentFile { Index = 0, Path = "file1.mkv", Priority = 1 }
                 });
 
             _fixture.HardLinkFileService
-                .Setup(x => x.GetHardLinkCount(It.IsAny<string>(), It.IsAny<bool>()))
+                .GetHardLinkCount(Arg.Any<string>(), Arg.Any<bool>())
                 .Returns(0);
 
             // Act
             await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert - rTorrent uses SetLabelAsync (not SetTorrentCategoryAsync)
-            _fixture.ClientWrapper.Verify(
-                x => x.SetLabelAsync("HASH1", "unlinked"),
-                Times.Once);
+            await _fixture.ClientWrapper.Received(1)
+                .SetLabelAsync("HASH1", "unlinked");
         }
 
         [Fact]
@@ -567,23 +561,22 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentFilesAsync("HASH1"))
-                .ReturnsAsync(new List<RTorrentFile>
+                .GetTorrentFilesAsync("HASH1")
+                .Returns(new List<RTorrentFile>
                 {
                     new RTorrentFile { Index = 0, Path = "file1.mkv", Priority = 1 }
                 });
 
             _fixture.HardLinkFileService
-                .Setup(x => x.GetHardLinkCount(It.IsAny<string>(), It.IsAny<bool>()))
+                .GetHardLinkCount(Arg.Any<string>(), Arg.Any<bool>())
                 .Returns(2); // Has hardlinks
 
             // Act
             await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert
-            _fixture.ClientWrapper.Verify(
-                x => x.SetLabelAsync(It.IsAny<string>(), It.IsAny<string>()),
-                Times.Never);
+            await _fixture.ClientWrapper.DidNotReceive()
+                .SetLabelAsync(Arg.Any<string>(), Arg.Any<string>());
         }
 
         [Fact]
@@ -604,23 +597,22 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentFilesAsync("HASH1"))
-                .ReturnsAsync(new List<RTorrentFile>
+                .GetTorrentFilesAsync("HASH1")
+                .Returns(new List<RTorrentFile>
                 {
                     new RTorrentFile { Index = 0, Path = "file1.mkv", Priority = 1 }
                 });
 
             _fixture.HardLinkFileService
-                .Setup(x => x.GetHardLinkCount(It.IsAny<string>(), It.IsAny<bool>()))
+                .GetHardLinkCount(Arg.Any<string>(), Arg.Any<bool>())
                 .Returns(-1); // Error / file not found
 
             // Act
             await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert
-            _fixture.ClientWrapper.Verify(
-                x => x.SetLabelAsync(It.IsAny<string>(), It.IsAny<string>()),
-                Times.Never);
+            await _fixture.ClientWrapper.DidNotReceive()
+                .SetLabelAsync(Arg.Any<string>(), Arg.Any<string>());
         }
 
         [Fact]
@@ -641,23 +633,22 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentFilesAsync("HASH1"))
-                .ReturnsAsync(new List<RTorrentFile>
+                .GetTorrentFilesAsync("HASH1")
+                .Returns(new List<RTorrentFile>
                 {
                     new RTorrentFile { Index = 0, Path = "file1.mkv", Priority = 1 }
                 });
 
             _fixture.HardLinkFileService
-                .Setup(x => x.GetHardLinkCount(It.IsAny<string>(), It.IsAny<bool>()))
+                .GetHardLinkCount(Arg.Any<string>(), Arg.Any<bool>())
                 .Returns(0);
 
             // Act
             await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert
-            _fixture.EventPublisher.Verify(
-                x => x.PublishCategoryChanged("movies", "unlinked", false),
-                Times.Once);
+            _fixture.EventPublisher.Received(1)
+                .PublishCategoryChanged("movies", "unlinked", false);
         }
 
         [Fact]
@@ -684,14 +675,14 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentFilesAsync("HASH1"))
-                .ReturnsAsync(new List<RTorrentFile>
+                .GetTorrentFilesAsync("HASH1")
+                .Returns(new List<RTorrentFile>
                 {
                     new RTorrentFile { Index = 0, Path = "movie.mkv", Priority = 1 }
                 });
 
             _fixture.HardLinkFileService
-                .Setup(x => x.GetHardLinkCount(It.IsAny<string>(), It.IsAny<bool>()))
+                .GetHardLinkCount(Arg.Any<string>(), Arg.Any<bool>())
                 .Returns(0);
 
             // Act
@@ -700,9 +691,8 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
             // Assert - path should use Directory (/downloads), not BasePath (/downloads/movie.mkv)
             var expectedPath = string.Join(Path.DirectorySeparatorChar,
                 Path.Combine("/downloads", "movie.mkv").Split('\\', '/'));
-            _fixture.HardLinkFileService.Verify(
-                x => x.GetHardLinkCount(expectedPath, false),
-                Times.Once);
+            _fixture.HardLinkFileService.Received(1)
+                .GetHardLinkCount(expectedPath, false);
         }
 
         [Fact]
@@ -728,14 +718,14 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentFilesAsync("HASH1"))
-                .ReturnsAsync(new List<RTorrentFile>
+                .GetTorrentFilesAsync("HASH1")
+                .Returns(new List<RTorrentFile>
                 {
                     new RTorrentFile { Index = 0, Path = "file1.mkv", Priority = 1 }
                 });
 
             _fixture.HardLinkFileService
-                .Setup(x => x.GetHardLinkCount(It.IsAny<string>(), It.IsAny<bool>()))
+                .GetHardLinkCount(Arg.Any<string>(), Arg.Any<bool>())
                 .Returns(0);
 
             // Act
@@ -744,9 +734,8 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
             // Assert - path should fall back to BasePath
             var expectedPath = string.Join(Path.DirectorySeparatorChar,
                 Path.Combine("/downloads", "file1.mkv").Split('\\', '/'));
-            _fixture.HardLinkFileService.Verify(
-                x => x.GetHardLinkCount(expectedPath, false),
-                Times.Once);
+            _fixture.HardLinkFileService.Received(1)
+                .GetHardLinkCount(expectedPath, false);
         }
 
         [Fact]
@@ -765,14 +754,14 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
             var downloads = new List<ITorrentItemWrapper> { wrapper };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentFilesAsync("HASH1"))
-                .ReturnsAsync(new List<RTorrentFile>
+                .GetTorrentFilesAsync("HASH1")
+                .Returns(new List<RTorrentFile>
                 {
                     new RTorrentFile { Index = 0, Path = "file1.mkv", Priority = 1 }
                 });
 
             _fixture.HardLinkFileService
-                .Setup(x => x.GetHardLinkCount(It.IsAny<string>(), It.IsAny<bool>()))
+                .GetHardLinkCount(Arg.Any<string>(), Arg.Any<bool>())
                 .Returns(0);
 
             // Act

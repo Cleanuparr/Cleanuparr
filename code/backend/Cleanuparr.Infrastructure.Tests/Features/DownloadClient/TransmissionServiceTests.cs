@@ -1,7 +1,7 @@
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
 using Cleanuparr.Infrastructure.Features.DownloadClient.Transmission;
-using Moq;
+using NSubstitute;
 using Transmission.API.RPC.Entity;
 using Xunit;
 
@@ -50,8 +50,8 @@ public class TransmissionServiceTests : IClassFixture<TransmissionServiceFixture
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.TorrentGetAsync(fields, hash))
-                .ReturnsAsync((TransmissionTorrents?)null);
+                .TorrentGetAsync(Arg.Any<string[]>(), hash)
+                .Returns((TransmissionTorrents?)null);
 
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 
@@ -102,16 +102,16 @@ public class TransmissionServiceTests : IClassFixture<TransmissionServiceFixture
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.TorrentGetAsync(fields, hash))
-                .ReturnsAsync(torrents);
+                .TorrentGetAsync(Arg.Any<string[]>(), hash)
+                .Returns(torrents);
 
             _fixture.RuleEvaluator
-                .Setup(x => x.EvaluateSlowRulesAsync(It.IsAny<TransmissionItemWrapper>()))
-                .ReturnsAsync((false, DeleteReason.None, false));
+                .EvaluateSlowRulesAsync(Arg.Any<TransmissionItemWrapper>())
+                .Returns((false, DeleteReason.None, false));
 
             _fixture.RuleEvaluator
-                .Setup(x => x.EvaluateStallRulesAsync(It.IsAny<TransmissionItemWrapper>()))
-                .ReturnsAsync((false, DeleteReason.None, false));
+                .EvaluateStallRulesAsync(Arg.Any<TransmissionItemWrapper>())
+                .Returns((false, DeleteReason.None, false));
 
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 
@@ -161,16 +161,16 @@ public class TransmissionServiceTests : IClassFixture<TransmissionServiceFixture
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.TorrentGetAsync(fields, hash))
-                .ReturnsAsync(torrents);
+                .TorrentGetAsync(Arg.Any<string[]>(), hash)
+                .Returns(torrents);
 
             _fixture.RuleEvaluator
-                .Setup(x => x.EvaluateSlowRulesAsync(It.IsAny<TransmissionItemWrapper>()))
-                .ReturnsAsync((false, DeleteReason.None, false));
+                .EvaluateSlowRulesAsync(Arg.Any<TransmissionItemWrapper>())
+                .Returns((false, DeleteReason.None, false));
 
             _fixture.RuleEvaluator
-                .Setup(x => x.EvaluateStallRulesAsync(It.IsAny<TransmissionItemWrapper>()))
-                .ReturnsAsync((false, DeleteReason.None, false));
+                .EvaluateStallRulesAsync(Arg.Any<TransmissionItemWrapper>())
+                .Returns((false, DeleteReason.None, false));
 
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 
@@ -231,8 +231,8 @@ public class TransmissionServiceTests : IClassFixture<TransmissionServiceFixture
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.TorrentGetAsync(fields, hash))
-                .ReturnsAsync(torrents);
+                .TorrentGetAsync(Arg.Any<string[]>(), hash)
+                .Returns(torrents);
 
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 
@@ -288,16 +288,16 @@ public class TransmissionServiceTests : IClassFixture<TransmissionServiceFixture
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.TorrentGetAsync(fields, hash))
-                .ReturnsAsync(torrents);
+                .TorrentGetAsync(Arg.Any<string[]>(), hash)
+                .Returns(torrents);
 
             _fixture.RuleEvaluator
-                .Setup(x => x.EvaluateSlowRulesAsync(It.IsAny<TransmissionItemWrapper>()))
-                .ReturnsAsync((false, DeleteReason.None, false));
+                .EvaluateSlowRulesAsync(Arg.Any<TransmissionItemWrapper>())
+                .Returns((false, DeleteReason.None, false));
 
             _fixture.RuleEvaluator
-                .Setup(x => x.EvaluateStallRulesAsync(It.IsAny<TransmissionItemWrapper>()))
-                .ReturnsAsync((false, DeleteReason.None, false));
+                .EvaluateStallRulesAsync(Arg.Any<TransmissionItemWrapper>())
+                .Returns((false, DeleteReason.None, false));
 
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 
@@ -353,8 +353,8 @@ public class TransmissionServiceTests : IClassFixture<TransmissionServiceFixture
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.TorrentGetAsync(fields, hash))
-                .ReturnsAsync(torrents);
+                .TorrentGetAsync(Arg.Any<string[]>(), hash)
+                .Returns(torrents);
 
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, new[] { hash });
 
@@ -406,8 +406,8 @@ public class TransmissionServiceTests : IClassFixture<TransmissionServiceFixture
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.TorrentGetAsync(fields, hash))
-                .ReturnsAsync(torrents);
+                .TorrentGetAsync(Arg.Any<string[]>(), hash)
+                .Returns(torrents);
 
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, new[] { category });
 
@@ -470,16 +470,16 @@ public class TransmissionServiceTests : IClassFixture<TransmissionServiceFixture
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.TorrentGetAsync(fields, hash))
-                .ReturnsAsync(torrents);
+                .TorrentGetAsync(Arg.Any<string[]>(), hash)
+                .Returns(torrents);
 
             _fixture.RuleEvaluator
-                .Setup(x => x.EvaluateSlowRulesAsync(It.IsAny<TransmissionItemWrapper>()))
-                .ReturnsAsync((false, DeleteReason.None, false));
+                .EvaluateSlowRulesAsync(Arg.Any<TransmissionItemWrapper>())
+                .Returns((false, DeleteReason.None, false));
 
             _fixture.RuleEvaluator
-                .Setup(x => x.EvaluateStallRulesAsync(It.IsAny<TransmissionItemWrapper>()))
-                .ReturnsAsync((false, DeleteReason.None, false));
+                .EvaluateStallRulesAsync(Arg.Any<TransmissionItemWrapper>())
+                .Returns((false, DeleteReason.None, false));
 
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 
@@ -536,17 +536,17 @@ public class TransmissionServiceTests : IClassFixture<TransmissionServiceFixture
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.TorrentGetAsync(fields, hash))
-                .ReturnsAsync(torrents);
+                .TorrentGetAsync(Arg.Any<string[]>(), hash)
+                .Returns(torrents);
 
             _fixture.RuleEvaluator
-                .Setup(x => x.EvaluateStallRulesAsync(It.IsAny<TransmissionItemWrapper>()))
-                .ReturnsAsync((false, DeleteReason.None, false));
+                .EvaluateStallRulesAsync(Arg.Any<TransmissionItemWrapper>())
+                .Returns((false, DeleteReason.None, false));
 
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 
             Assert.False(result.ShouldRemove);
-            _fixture.RuleEvaluator.Verify(x => x.EvaluateSlowRulesAsync(It.IsAny<TransmissionItemWrapper>()), Times.Never);
+            await _fixture.RuleEvaluator.DidNotReceive().EvaluateSlowRulesAsync(Arg.Any<TransmissionItemWrapper>());
         }
 
         [Fact]
@@ -592,17 +592,17 @@ public class TransmissionServiceTests : IClassFixture<TransmissionServiceFixture
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.TorrentGetAsync(fields, hash))
-                .ReturnsAsync(torrents);
+                .TorrentGetAsync(Arg.Any<string[]>(), hash)
+                .Returns(torrents);
 
             _fixture.RuleEvaluator
-                .Setup(x => x.EvaluateStallRulesAsync(It.IsAny<TransmissionItemWrapper>()))
-                .ReturnsAsync((false, DeleteReason.None, false));
+                .EvaluateStallRulesAsync(Arg.Any<TransmissionItemWrapper>())
+                .Returns((false, DeleteReason.None, false));
 
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 
             Assert.False(result.ShouldRemove);
-            _fixture.RuleEvaluator.Verify(x => x.EvaluateSlowRulesAsync(It.IsAny<TransmissionItemWrapper>()), Times.Never);
+            await _fixture.RuleEvaluator.DidNotReceive().EvaluateSlowRulesAsync(Arg.Any<TransmissionItemWrapper>());
         }
     }
 
@@ -655,12 +655,12 @@ public class TransmissionServiceTests : IClassFixture<TransmissionServiceFixture
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.TorrentGetAsync(fields, hash))
-                .ReturnsAsync(torrents);
+                .TorrentGetAsync(Arg.Any<string[]>(), hash)
+                .Returns(torrents);
 
             _fixture.RuleEvaluator
-                .Setup(x => x.EvaluateSlowRulesAsync(It.IsAny<TransmissionItemWrapper>()))
-                .ReturnsAsync((true, DeleteReason.SlowSpeed, true));
+                .EvaluateSlowRulesAsync(Arg.Any<TransmissionItemWrapper>())
+                .Returns((true, DeleteReason.SlowSpeed, true));
 
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 
@@ -713,12 +713,12 @@ public class TransmissionServiceTests : IClassFixture<TransmissionServiceFixture
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.TorrentGetAsync(fields, hash))
-                .ReturnsAsync(torrents);
+                .TorrentGetAsync(Arg.Any<string[]>(), hash)
+                .Returns(torrents);
 
             _fixture.RuleEvaluator
-                .Setup(x => x.EvaluateStallRulesAsync(It.IsAny<TransmissionItemWrapper>()))
-                .ReturnsAsync((true, DeleteReason.Stalled, true));
+                .EvaluateStallRulesAsync(Arg.Any<TransmissionItemWrapper>())
+                .Returns((true, DeleteReason.Stalled, true));
 
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 

@@ -2,7 +2,7 @@ using Cleanuparr.Domain.Entities;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.DownloadClient.QBittorrent;
 using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
-using Moq;
+using NSubstitute;
 using QBittorrent.Client;
 using Xunit;
 
@@ -37,20 +37,20 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentListAsync(It.Is<TorrentListQuery>(q => q.Filter == TorrentListFilter.Completed)))
-                .ReturnsAsync(torrentList);
+                .GetTorrentListAsync(Arg.Is<TorrentListQuery>(q => q.Filter == TorrentListFilter.Completed))
+                .Returns(torrentList);
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentTrackersAsync("hash1"))
-                .ReturnsAsync(Array.Empty<TorrentTracker>());
+                .GetTorrentTrackersAsync("hash1")
+                .Returns(Array.Empty<TorrentTracker>());
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentTrackersAsync("hash2"))
-                .ReturnsAsync(Array.Empty<TorrentTracker>());
+                .GetTorrentTrackersAsync("hash2")
+                .Returns(Array.Empty<TorrentTracker>());
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentPropertiesAsync(It.IsAny<string>()))
-                .ReturnsAsync(new TorrentProperties
+                .GetTorrentPropertiesAsync(Arg.Any<string>())
+                .Returns(new TorrentProperties
                 {
                     AdditionalData = new Dictionary<string, Newtonsoft.Json.Linq.JToken>
                     {
@@ -78,16 +78,16 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentListAsync(It.Is<TorrentListQuery>(q => q.Filter == TorrentListFilter.Completed)))
-                .ReturnsAsync(torrentList);
+                .GetTorrentListAsync(Arg.Is<TorrentListQuery>(q => q.Filter == TorrentListFilter.Completed))
+                .Returns(torrentList);
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentTrackersAsync("hash1"))
-                .ReturnsAsync(Array.Empty<TorrentTracker>());
+                .GetTorrentTrackersAsync("hash1")
+                .Returns(Array.Empty<TorrentTracker>());
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentPropertiesAsync("hash1"))
-                .ReturnsAsync(new TorrentProperties
+                .GetTorrentPropertiesAsync("hash1")
+                .Returns(new TorrentProperties
                 {
                     AdditionalData = new Dictionary<string, Newtonsoft.Json.Linq.JToken>
                     {
@@ -115,16 +115,16 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentListAsync(It.Is<TorrentListQuery>(q => q.Filter == TorrentListFilter.Completed)))
-                .ReturnsAsync(torrentList);
+                .GetTorrentListAsync(Arg.Is<TorrentListQuery>(q => q.Filter == TorrentListFilter.Completed))
+                .Returns(torrentList);
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentTrackersAsync("hash1"))
-                .ReturnsAsync(Array.Empty<TorrentTracker>());
+                .GetTorrentTrackersAsync("hash1")
+                .Returns(Array.Empty<TorrentTracker>());
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentPropertiesAsync("hash1"))
-                .ReturnsAsync(new TorrentProperties
+                .GetTorrentPropertiesAsync("hash1")
+                .Returns(new TorrentProperties
                 {
                     AdditionalData = new Dictionary<string, Newtonsoft.Json.Linq.JToken>
                     {
@@ -147,8 +147,8 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
             var sut = _fixture.CreateSut();
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentListAsync(It.Is<TorrentListQuery>(q => q.Filter == TorrentListFilter.Completed)))
-                .ReturnsAsync((TorrentInfo[]?)null);
+                .GetTorrentListAsync(Arg.Is<TorrentListQuery>(q => q.Filter == TorrentListFilter.Completed))
+                .Returns((TorrentInfo[]?)null);
 
             // Act
             var result = await sut.GetSeedingDownloads();
@@ -170,16 +170,16 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentListAsync(It.Is<TorrentListQuery>(q => q.Filter == TorrentListFilter.Completed)))
-                .ReturnsAsync(torrentList);
+                .GetTorrentListAsync(Arg.Is<TorrentListQuery>(q => q.Filter == TorrentListFilter.Completed))
+                .Returns(torrentList);
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentTrackersAsync("hash1"))
-                .ReturnsAsync(Array.Empty<TorrentTracker>());
+                .GetTorrentTrackersAsync("hash1")
+                .Returns(Array.Empty<TorrentTracker>());
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentPropertiesAsync("hash1"))
-                .ReturnsAsync(new TorrentProperties
+                .GetTorrentPropertiesAsync("hash1")
+                .Returns(new TorrentProperties
                 {
                     AdditionalData = new Dictionary<string, Newtonsoft.Json.Linq.JToken>
                     {
@@ -333,7 +333,7 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
         private void SetupDeleteMock()
         {
             _fixture.ClientWrapper
-                .Setup(x => x.DeleteAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<bool>()))
+                .DeleteAsync(Arg.Any<IEnumerable<string>>(), Arg.Any<bool>())
                 .Returns(Task.CompletedTask);
         }
 
@@ -354,9 +354,8 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
             await sut.CleanDownloadsAsync(downloads, rules);
 
             // Assert
-            _fixture.ClientWrapper.Verify(
-                x => x.DeleteAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<bool>()),
-                Times.Never);
+            await _fixture.ClientWrapper.DidNotReceive()
+                .DeleteAsync(Arg.Any<IEnumerable<string>>(), Arg.Any<bool>());
         }
 
         [Fact]
@@ -376,9 +375,8 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
             await sut.CleanDownloadsAsync(downloads, rules);
 
             // Assert
-            _fixture.ClientWrapper.Verify(
-                x => x.DeleteAsync(It.Is<IEnumerable<string>>(h => h.Contains("hash1")), false),
-                Times.Once);
+            await _fixture.ClientWrapper.Received(1)
+                .DeleteAsync(Arg.Is<IEnumerable<string>>(h => h.Contains("hash1")), false);
         }
 
         [Fact]
@@ -398,9 +396,8 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
             await sut.CleanDownloadsAsync(downloads, rules);
 
             // Assert
-            _fixture.ClientWrapper.Verify(
-                x => x.DeleteAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<bool>()),
-                Times.Never);
+            await _fixture.ClientWrapper.DidNotReceive()
+                .DeleteAsync(Arg.Any<IEnumerable<string>>(), Arg.Any<bool>());
         }
 
         [Fact]
@@ -420,9 +417,8 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
             await sut.CleanDownloadsAsync(downloads, rules);
 
             // Assert
-            _fixture.ClientWrapper.Verify(
-                x => x.DeleteAsync(It.Is<IEnumerable<string>>(h => h.Contains("hash1")), false),
-                Times.Once);
+            await _fixture.ClientWrapper.Received(1)
+                .DeleteAsync(Arg.Is<IEnumerable<string>>(h => h.Contains("hash1")), false);
         }
 
         [Fact]
@@ -442,9 +438,8 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
             await sut.CleanDownloadsAsync(downloads, rules);
 
             // Assert
-            _fixture.ClientWrapper.Verify(
-                x => x.DeleteAsync(It.Is<IEnumerable<string>>(h => h.Contains("hash1")), false),
-                Times.Once);
+            await _fixture.ClientWrapper.Received(1)
+                .DeleteAsync(Arg.Is<IEnumerable<string>>(h => h.Contains("hash1")), false);
         }
 
         [Fact]
@@ -464,9 +459,8 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
             await sut.CleanDownloadsAsync(downloads, rules);
 
             // Assert
-            _fixture.ClientWrapper.Verify(
-                x => x.DeleteAsync(It.Is<IEnumerable<string>>(h => h.Contains("hash1")), false),
-                Times.Once);
+            await _fixture.ClientWrapper.Received(1)
+                .DeleteAsync(Arg.Is<IEnumerable<string>>(h => h.Contains("hash1")), false);
         }
 
         [Fact]
@@ -491,12 +485,10 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
             await sut.CleanDownloadsAsync(downloads, rules);
 
             // Assert - both torrents should be cleaned, each matching their respective rule
-            _fixture.ClientWrapper.Verify(
-                x => x.DeleteAsync(It.Is<IEnumerable<string>>(h => h.Contains("public-hash")), false),
-                Times.Once);
-            _fixture.ClientWrapper.Verify(
-                x => x.DeleteAsync(It.Is<IEnumerable<string>>(h => h.Contains("private-hash")), false),
-                Times.Once);
+            await _fixture.ClientWrapper.Received(1)
+                .DeleteAsync(Arg.Is<IEnumerable<string>>(h => h.Contains("public-hash")), false);
+            await _fixture.ClientWrapper.Received(1)
+                .DeleteAsync(Arg.Is<IEnumerable<string>>(h => h.Contains("private-hash")), false);
         }
     }
 
@@ -653,18 +645,18 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
             var sut = _fixture.CreateSut();
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetCategoriesAsync())
-                .ReturnsAsync(new Dictionary<string, Category>());
+                .GetCategoriesAsync()
+                .Returns(new Dictionary<string, Category>());
 
             _fixture.ClientWrapper
-                .Setup(x => x.AddCategoryAsync("new-category"))
+                .AddCategoryAsync("new-category")
                 .Returns(Task.CompletedTask);
 
             // Act
             await sut.CreateCategoryAsync("new-category");
 
             // Assert
-            _fixture.ClientWrapper.Verify(x => x.AddCategoryAsync("new-category"), Times.Once);
+            await _fixture.ClientWrapper.Received(1).AddCategoryAsync("new-category");
         }
 
         [Fact]
@@ -674,8 +666,8 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
             var sut = _fixture.CreateSut();
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetCategoriesAsync())
-                .ReturnsAsync(new Dictionary<string, Category>
+                .GetCategoriesAsync()
+                .Returns(new Dictionary<string, Category>
                 {
                     { "existing", new Category { Name = "existing" } }
                 });
@@ -684,7 +676,7 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
             await sut.CreateCategoryAsync("existing");
 
             // Assert
-            _fixture.ClientWrapper.Verify(x => x.AddCategoryAsync(It.IsAny<string>()), Times.Never);
+            await _fixture.ClientWrapper.DidNotReceive().AddCategoryAsync(Arg.Any<string>());
         }
 
         [Fact]
@@ -694,8 +686,8 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
             var sut = _fixture.CreateSut();
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetCategoriesAsync())
-                .ReturnsAsync(new Dictionary<string, Category>
+                .GetCategoriesAsync()
+                .Returns(new Dictionary<string, Category>
                 {
                     { "existing", new Category { Name = "Existing" } }
                 });
@@ -704,7 +696,7 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
             await sut.CreateCategoryAsync("existing");
 
             // Assert
-            _fixture.ClientWrapper.Verify(x => x.AddCategoryAsync(It.IsAny<string>()), Times.Never);
+            await _fixture.ClientWrapper.DidNotReceive().AddCategoryAsync(Arg.Any<string>());
         }
     }
 
@@ -720,20 +712,19 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
             // Arrange
             var sut = _fixture.CreateSut();
             const string hash = "test-hash";
-            var mockTorrent = new Mock<ITorrentItemWrapper>();
-            mockTorrent.Setup(x => x.Hash).Returns(hash);
+            var mockTorrent = Substitute.For<ITorrentItemWrapper>();
+            mockTorrent.Hash.Returns(hash);
 
             _fixture.ClientWrapper
-                .Setup(x => x.DeleteAsync(It.Is<IEnumerable<string>>(h => h.Contains(hash)), true))
+                .DeleteAsync(Arg.Is<IEnumerable<string>>(h => h.Contains(hash)), true)
                 .Returns(Task.CompletedTask);
 
             // Act
-            await sut.DeleteDownload(mockTorrent.Object, true);
+            await sut.DeleteDownload(mockTorrent, true);
 
             // Assert
-            _fixture.ClientWrapper.Verify(
-                x => x.DeleteAsync(It.Is<IEnumerable<string>>(h => h.Contains(hash)), true),
-                Times.Once);
+            await _fixture.ClientWrapper.Received(1)
+                .DeleteAsync(Arg.Is<IEnumerable<string>>(h => h.Contains(hash)), true);
         }
 
         [Fact]
@@ -742,20 +733,19 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
             // Arrange
             var sut = _fixture.CreateSut();
             const string hash = "test-hash";
-            var mockTorrent = new Mock<ITorrentItemWrapper>();
-            mockTorrent.Setup(x => x.Hash).Returns(hash);
+            var mockTorrent = Substitute.For<ITorrentItemWrapper>();
+            mockTorrent.Hash.Returns(hash);
 
             _fixture.ClientWrapper
-                .Setup(x => x.DeleteAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<bool>()))
+                .DeleteAsync(Arg.Any<IEnumerable<string>>(), Arg.Any<bool>())
                 .Returns(Task.CompletedTask);
 
             // Act
-            await sut.DeleteDownload(mockTorrent.Object, true);
+            await sut.DeleteDownload(mockTorrent, true);
 
             // Assert
-            _fixture.ClientWrapper.Verify(
-                x => x.DeleteAsync(It.IsAny<IEnumerable<string>>(), true),
-                Times.Once);
+            await _fixture.ClientWrapper.Received(1)
+                .DeleteAsync(Arg.Any<IEnumerable<string>>(), true);
         }
     }
 
@@ -782,7 +772,7 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
             await sut.ChangeCategoryForNoHardLinksAsync(null, unlinkedConfig);
 
             // Assert - no exceptions thrown
-            _fixture.ClientWrapper.Verify(x => x.SetTorrentCategoryAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<string>()), Times.Never);
+            await _fixture.ClientWrapper.DidNotReceive().SetTorrentCategoryAsync(Arg.Any<IEnumerable<string>>(), Arg.Any<string>());
         }
 
         [Fact]
@@ -802,7 +792,7 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
             await sut.ChangeCategoryForNoHardLinksAsync(new List<Domain.Entities.ITorrentItemWrapper>(), unlinkedConfig);
 
             // Assert
-            _fixture.ClientWrapper.Verify(x => x.SetTorrentCategoryAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<string>()), Times.Never);
+            await _fixture.ClientWrapper.DidNotReceive().SetTorrentCategoryAsync(Arg.Any<IEnumerable<string>>(), Arg.Any<string>());
         }
 
         [Fact]
@@ -827,7 +817,7 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
             await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert
-            _fixture.ClientWrapper.Verify(x => x.SetTorrentCategoryAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<string>()), Times.Never);
+            await _fixture.ClientWrapper.DidNotReceive().SetTorrentCategoryAsync(Arg.Any<IEnumerable<string>>(), Arg.Any<string>());
         }
 
         [Fact]
@@ -852,7 +842,7 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
             await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert
-            _fixture.ClientWrapper.Verify(x => x.SetTorrentCategoryAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<string>()), Times.Never);
+            await _fixture.ClientWrapper.DidNotReceive().SetTorrentCategoryAsync(Arg.Any<IEnumerable<string>>(), Arg.Any<string>());
         }
 
         [Fact]
@@ -877,7 +867,7 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
             await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert
-            _fixture.ClientWrapper.Verify(x => x.SetTorrentCategoryAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<string>()), Times.Never);
+            await _fixture.ClientWrapper.DidNotReceive().SetTorrentCategoryAsync(Arg.Any<IEnumerable<string>>(), Arg.Any<string>());
         }
 
         [Fact]
@@ -899,14 +889,14 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentContentsAsync("hash1"))
-                .ReturnsAsync((IReadOnlyList<TorrentContent>?)null);
+                .GetTorrentContentsAsync("hash1")
+                .Returns((IReadOnlyList<TorrentContent>?)null);
 
             // Act
             await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert
-            _fixture.ClientWrapper.Verify(x => x.SetTorrentCategoryAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<string>()), Times.Never);
+            await _fixture.ClientWrapper.DidNotReceive().SetTorrentCategoryAsync(Arg.Any<IEnumerable<string>>(), Arg.Any<string>());
         }
 
         [Fact]
@@ -928,23 +918,22 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentContentsAsync("hash1"))
-                .ReturnsAsync(new[]
+                .GetTorrentContentsAsync("hash1")
+                .Returns(new[]
                 {
                     new TorrentContent { Index = 0, Name = "file1.mkv", Priority = TorrentContentPriority.Normal }
                 });
 
             _fixture.HardLinkFileService
-                .Setup(x => x.GetHardLinkCount(It.IsAny<string>(), It.IsAny<bool>()))
+                .GetHardLinkCount(Arg.Any<string>(), Arg.Any<bool>())
                 .Returns(0);
 
             // Act
             await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert
-            _fixture.ClientWrapper.Verify(
-                x => x.SetTorrentCategoryAsync(It.Is<IEnumerable<string>>(h => h.Contains("hash1")), "unlinked"),
-                Times.Once);
+            await _fixture.ClientWrapper.Received(1)
+                .SetTorrentCategoryAsync(Arg.Is<IEnumerable<string>>(h => h.Contains("hash1")), "unlinked");
         }
 
         [Fact]
@@ -966,26 +955,24 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentContentsAsync("hash1"))
-                .ReturnsAsync(new[]
+                .GetTorrentContentsAsync("hash1")
+                .Returns(new[]
                 {
                     new TorrentContent { Index = 0, Name = "file1.mkv", Priority = TorrentContentPriority.Normal }
                 });
 
             _fixture.HardLinkFileService
-                .Setup(x => x.GetHardLinkCount(It.IsAny<string>(), It.IsAny<bool>()))
+                .GetHardLinkCount(Arg.Any<string>(), Arg.Any<bool>())
                 .Returns(0);
 
             // Act
             await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert
-            _fixture.ClientWrapper.Verify(
-                x => x.AddTorrentTagAsync(It.Is<IEnumerable<string>>(h => h.Contains("hash1")), "unlinked"),
-                Times.Once);
-            _fixture.ClientWrapper.Verify(
-                x => x.SetTorrentCategoryAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<string>()),
-                Times.Never);
+            await _fixture.ClientWrapper.Received(1)
+                .AddTorrentTagAsync(Arg.Is<IEnumerable<string>>(h => h.Contains("hash1")), "unlinked");
+            await _fixture.ClientWrapper.DidNotReceive()
+                .SetTorrentCategoryAsync(Arg.Any<IEnumerable<string>>(), Arg.Any<string>());
         }
 
         [Fact]
@@ -1007,21 +994,21 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentContentsAsync("hash1"))
-                .ReturnsAsync(new[]
+                .GetTorrentContentsAsync("hash1")
+                .Returns(new[]
                 {
                     new TorrentContent { Index = 0, Name = "file1.mkv", Priority = TorrentContentPriority.Normal }
                 });
 
             _fixture.HardLinkFileService
-                .Setup(x => x.GetHardLinkCount(It.IsAny<string>(), It.IsAny<bool>()))
+                .GetHardLinkCount(Arg.Any<string>(), Arg.Any<bool>())
                 .Returns(2); // Has hardlinks
 
             // Act
             await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert
-            _fixture.ClientWrapper.Verify(x => x.SetTorrentCategoryAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<string>()), Times.Never);
+            await _fixture.ClientWrapper.DidNotReceive().SetTorrentCategoryAsync(Arg.Any<IEnumerable<string>>(), Arg.Any<string>());
         }
 
         [Fact]
@@ -1043,21 +1030,21 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentContentsAsync("hash1"))
-                .ReturnsAsync(new[]
+                .GetTorrentContentsAsync("hash1")
+                .Returns(new[]
                 {
                     new TorrentContent { Index = 0, Name = "file1.mkv", Priority = TorrentContentPriority.Normal }
                 });
 
             _fixture.HardLinkFileService
-                .Setup(x => x.GetHardLinkCount(It.IsAny<string>(), It.IsAny<bool>()))
+                .GetHardLinkCount(Arg.Any<string>(), Arg.Any<bool>())
                 .Returns(-1); // Error
 
             // Act
             await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert
-            _fixture.ClientWrapper.Verify(x => x.SetTorrentCategoryAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<string>()), Times.Never);
+            await _fixture.ClientWrapper.DidNotReceive().SetTorrentCategoryAsync(Arg.Any<IEnumerable<string>>(), Arg.Any<string>());
         }
 
         [Fact]
@@ -1079,24 +1066,23 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentContentsAsync("hash1"))
-                .ReturnsAsync(new[]
+                .GetTorrentContentsAsync("hash1")
+                .Returns(new[]
                 {
                     new TorrentContent { Index = 0, Name = "file1.mkv", Priority = TorrentContentPriority.Skip },
                     new TorrentContent { Index = 1, Name = "file2.mkv", Priority = TorrentContentPriority.Normal }
                 });
 
             _fixture.HardLinkFileService
-                .Setup(x => x.GetHardLinkCount(It.IsAny<string>(), It.IsAny<bool>()))
+                .GetHardLinkCount(Arg.Any<string>(), Arg.Any<bool>())
                 .Returns(0);
 
             // Act
             await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert
-            _fixture.HardLinkFileService.Verify(
-                x => x.GetHardLinkCount(It.IsAny<string>(), It.IsAny<bool>()),
-                Times.Once); // Only called for file2.mkv
+            _fixture.HardLinkFileService.Received(1)
+                .GetHardLinkCount(Arg.Any<string>(), Arg.Any<bool>()); // Only called for file2.mkv
         }
 
         [Fact]
@@ -1118,8 +1104,8 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentContentsAsync("hash1"))
-                .ReturnsAsync(new[]
+                .GetTorrentContentsAsync("hash1")
+                .Returns(new[]
                 {
                     new TorrentContent { Index = null, Name = "file1.mkv", Priority = TorrentContentPriority.Normal }
                 });
@@ -1128,7 +1114,7 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
             await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert
-            _fixture.ClientWrapper.Verify(x => x.SetTorrentCategoryAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<string>()), Times.Never);
+            await _fixture.ClientWrapper.DidNotReceive().SetTorrentCategoryAsync(Arg.Any<IEnumerable<string>>(), Arg.Any<string>());
         }
 
         [Fact]
@@ -1150,23 +1136,22 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentContentsAsync("hash1"))
-                .ReturnsAsync(new[]
+                .GetTorrentContentsAsync("hash1")
+                .Returns(new[]
                 {
                     new TorrentContent { Index = 0, Name = "file1.mkv", Priority = TorrentContentPriority.Normal }
                 });
 
             _fixture.HardLinkFileService
-                .Setup(x => x.GetHardLinkCount(It.IsAny<string>(), It.IsAny<bool>()))
+                .GetHardLinkCount(Arg.Any<string>(), Arg.Any<bool>())
                 .Returns(0);
 
             // Act
             await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert - EventPublisher is not mocked, so we just verify the method completed
-            _fixture.ClientWrapper.Verify(
-                x => x.SetTorrentCategoryAsync(It.Is<IEnumerable<string>>(h => h.Contains("hash1")), "unlinked"),
-                Times.Once);
+            await _fixture.ClientWrapper.Received(1)
+                .SetTorrentCategoryAsync(Arg.Is<IEnumerable<string>>(h => h.Contains("hash1")), "unlinked");
         }
 
         [Fact]
@@ -1188,23 +1173,22 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentContentsAsync("hash1"))
-                .ReturnsAsync(new[]
+                .GetTorrentContentsAsync("hash1")
+                .Returns(new[]
                 {
                     new TorrentContent { Index = 0, Name = "file1.mkv", Priority = TorrentContentPriority.Normal }
                 });
 
             _fixture.HardLinkFileService
-                .Setup(x => x.GetHardLinkCount(It.IsAny<string>(), It.IsAny<bool>()))
+                .GetHardLinkCount(Arg.Any<string>(), Arg.Any<bool>())
                 .Returns(0);
 
             // Act
             await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert - EventPublisher is not mocked, so we just verify the method completed
-            _fixture.ClientWrapper.Verify(
-                x => x.AddTorrentTagAsync(It.Is<IEnumerable<string>>(h => h.Contains("hash1")), "unlinked"),
-                Times.Once);
+            await _fixture.ClientWrapper.Received(1)
+                .AddTorrentTagAsync(Arg.Is<IEnumerable<string>>(h => h.Contains("hash1")), "unlinked");
         }
     }
 }

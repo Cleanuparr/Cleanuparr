@@ -22,7 +22,6 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Moq;
 using NSubstitute;
 using Xunit;
 
@@ -30,14 +29,14 @@ namespace Cleanuparr.Infrastructure.Tests.Features.DownloadClient;
 
 public class DownloadServiceFactoryTests : IDisposable
 {
-    private readonly Mock<ILogger<DownloadServiceFactory>> _loggerMock;
+    private readonly ILogger<DownloadServiceFactory> _logger;
     private readonly IServiceProvider _serviceProvider;
     private readonly DownloadServiceFactory _factory;
     private readonly MemoryCache _memoryCache;
 
     public DownloadServiceFactoryTests()
     {
-        _loggerMock = new Mock<ILogger<DownloadServiceFactory>>();
+        _logger = Substitute.For<ILogger<DownloadServiceFactory>>();
 
         var services = new ServiceCollection();
 
@@ -46,23 +45,23 @@ public class DownloadServiceFactoryTests : IDisposable
         services.AddSingleton<IMemoryCache>(_memoryCache);
 
         // Register loggers
-        services.AddSingleton(Mock.Of<ILogger<QBitService>>());
-        services.AddSingleton(Mock.Of<ILogger<DelugeService>>());
-        services.AddSingleton(Mock.Of<ILogger<TransmissionService>>());
-        services.AddSingleton(Mock.Of<ILogger<UTorrentService>>());
+        services.AddSingleton(Substitute.For<ILogger<QBitService>>());
+        services.AddSingleton(Substitute.For<ILogger<DelugeService>>());
+        services.AddSingleton(Substitute.For<ILogger<TransmissionService>>());
+        services.AddSingleton(Substitute.For<ILogger<UTorrentService>>());
 
-        services.AddSingleton(Mock.Of<IFilenameEvaluator>());
-        services.AddSingleton(Mock.Of<IStriker>());
-        services.AddSingleton(Mock.Of<IDryRunInterceptor>());
-        services.AddSingleton(Mock.Of<IHardLinkFileService>());
+        services.AddSingleton(Substitute.For<IFilenameEvaluator>());
+        services.AddSingleton(Substitute.For<IStriker>());
+        services.AddSingleton(Substitute.For<IDryRunInterceptor>());
+        services.AddSingleton(Substitute.For<IHardLinkFileService>());
 
         // IDynamicHttpClientProvider must return a real HttpClient for download services
-        var httpClientProviderMock = new Mock<IDynamicHttpClientProvider>();
-        httpClientProviderMock.Setup(p => p.CreateClient(It.IsAny<DownloadClientConfig>())).Returns(new HttpClient());
-        services.AddSingleton(httpClientProviderMock.Object);
+        var httpClientProvider = Substitute.For<IDynamicHttpClientProvider>();
+        httpClientProvider.CreateClient(Arg.Any<DownloadClientConfig>()).Returns(new HttpClient());
+        services.AddSingleton(httpClientProvider);
 
-        services.AddSingleton(Mock.Of<IQueueRuleEvaluator>());
-        services.AddSingleton(Mock.Of<IQueueRuleManager>());
+        services.AddSingleton(Substitute.For<IQueueRuleEvaluator>());
+        services.AddSingleton(Substitute.For<IQueueRuleManager>());
         services.AddSingleton(Substitute.For<ISeedingRuleEvaluator>());
 
         // UTorrentService needs ILoggerFactory
@@ -73,28 +72,28 @@ public class DownloadServiceFactoryTests : IDisposable
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
             .Options;
         var eventsContext = new EventsContext(eventsContextOptions);
-        var hubContextMock = new Mock<IHubContext<AppHub>>();
-        var clientsMock = new Mock<IHubClients>();
-        clientsMock.Setup(c => c.All).Returns(Mock.Of<IClientProxy>());
-        hubContextMock.Setup(h => h.Clients).Returns(clientsMock.Object);
+        var hubContext = Substitute.For<IHubContext<AppHub>>();
+        var clients = Substitute.For<IHubClients>();
+        clients.All.Returns(Substitute.For<IClientProxy>());
+        hubContext.Clients.Returns(clients);
 
         services.AddSingleton<IEventPublisher>(new EventPublisher(
             eventsContext,
-            hubContextMock.Object,
-            Mock.Of<ILogger<EventPublisher>>(),
-            Mock.Of<INotificationPublisher>(),
-            Mock.Of<IDryRunInterceptor>()));
+            hubContext,
+            Substitute.For<ILogger<EventPublisher>>(),
+            Substitute.For<INotificationPublisher>(),
+            Substitute.For<IDryRunInterceptor>()));
 
         // BlocklistProvider requires specific constructor arguments
-        var scopeFactoryMock = new Mock<IServiceScopeFactory>();
+        var scopeFactory = Substitute.For<IServiceScopeFactory>();
 
         services.AddSingleton<IBlocklistProvider>(new BlocklistProvider(
-            Mock.Of<ILogger<BlocklistProvider>>(),
-            scopeFactoryMock.Object,
+            Substitute.For<ILogger<BlocklistProvider>>(),
+            scopeFactory,
             _memoryCache));
 
         _serviceProvider = services.BuildServiceProvider();
-        _factory = new DownloadServiceFactory(_loggerMock.Object, _serviceProvider);
+        _factory = new DownloadServiceFactory(_logger, _serviceProvider);
     }
 
     public void Dispose()
@@ -198,14 +197,12 @@ public class DownloadServiceFactoryTests : IDisposable
 
         // Assert
         Assert.NotNull(service);
-        _loggerMock.Verify(
-            x => x.Log(
-                LogLevel.Warning,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("disabled")),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+        _logger.Received(1).Log(
+            LogLevel.Warning,
+            Arg.Any<EventId>(),
+            Arg.Any<object>(),
+            Arg.Any<Exception?>(),
+            Arg.Any<Func<object, Exception?, string>>());
     }
 
     [Fact]
@@ -219,14 +216,12 @@ public class DownloadServiceFactoryTests : IDisposable
 
         // Assert
         Assert.NotNull(service);
-        _loggerMock.Verify(
-            x => x.Log(
-                LogLevel.Warning,
-                It.IsAny<EventId>(),
-                It.IsAny<It.IsAnyType>(),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Never);
+        _logger.DidNotReceive().Log(
+            LogLevel.Warning,
+            Arg.Any<EventId>(),
+            Arg.Any<object>(),
+            Arg.Any<Exception?>(),
+            Arg.Any<Func<object, Exception?, string>>());
     }
 
     [Theory]

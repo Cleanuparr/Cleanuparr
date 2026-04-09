@@ -1,7 +1,8 @@
 using Cleanuparr.Domain.Entities.UTorrent.Response;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.DownloadClient.UTorrent;
-using Moq;
+using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.DownloadClient;
@@ -29,8 +30,8 @@ public class UTorrentServiceTests : IClassFixture<UTorrentServiceFixture>
             var sut = _fixture.CreateSut();
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentAsync(hash))
-                .ReturnsAsync((UTorrentItem?)null);
+                .GetTorrentAsync(hash)
+                .Returns((UTorrentItem?)null);
 
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 
@@ -61,27 +62,27 @@ public class UTorrentServiceTests : IClassFixture<UTorrentServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentAsync(hash))
-                .ReturnsAsync(torrentItem);
+                .GetTorrentAsync(hash)
+                .Returns(torrentItem);
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentPropertiesAsync(hash))
-                .ReturnsAsync(torrentProperties);
+                .GetTorrentPropertiesAsync(hash)
+                .Returns(torrentProperties);
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentFilesAsync(hash))
-                .ReturnsAsync(new List<UTorrentFile>
+                .GetTorrentFilesAsync(hash)
+                .Returns(new List<UTorrentFile>
                 {
                     new UTorrentFile { Name = "file1.mkv", Priority = 1, Index = 0, Size = 1000, Downloaded = 500 }
                 });
 
             _fixture.RuleEvaluator
-                .Setup(x => x.EvaluateSlowRulesAsync(It.IsAny<UTorrentItemWrapper>()))
-                .ReturnsAsync((false, DeleteReason.None, false));
+                .EvaluateSlowRulesAsync(Arg.Any<UTorrentItemWrapper>())
+                .Returns((false, DeleteReason.None, false));
 
             _fixture.RuleEvaluator
-                .Setup(x => x.EvaluateStallRulesAsync(It.IsAny<UTorrentItemWrapper>()))
-                .ReturnsAsync((false, DeleteReason.None, false));
+                .EvaluateStallRulesAsync(Arg.Any<UTorrentItemWrapper>())
+                .Returns((false, DeleteReason.None, false));
 
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 
@@ -111,27 +112,27 @@ public class UTorrentServiceTests : IClassFixture<UTorrentServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentAsync(hash))
-                .ReturnsAsync(torrentItem);
+                .GetTorrentAsync(hash)
+                .Returns(torrentItem);
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentPropertiesAsync(hash))
-                .ReturnsAsync(torrentProperties);
+                .GetTorrentPropertiesAsync(hash)
+                .Returns(torrentProperties);
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentFilesAsync(hash))
-                .ReturnsAsync(new List<UTorrentFile>
+                .GetTorrentFilesAsync(hash)
+                .Returns(new List<UTorrentFile>
                 {
                     new UTorrentFile { Name = "file1.mkv", Priority = 1, Index = 0, Size = 1000, Downloaded = 500 }
                 });
 
             _fixture.RuleEvaluator
-                .Setup(x => x.EvaluateSlowRulesAsync(It.IsAny<UTorrentItemWrapper>()))
-                .ReturnsAsync((false, DeleteReason.None, false));
+                .EvaluateSlowRulesAsync(Arg.Any<UTorrentItemWrapper>())
+                .Returns((false, DeleteReason.None, false));
 
             _fixture.RuleEvaluator
-                .Setup(x => x.EvaluateStallRulesAsync(It.IsAny<UTorrentItemWrapper>()))
-                .ReturnsAsync((false, DeleteReason.None, false));
+                .EvaluateStallRulesAsync(Arg.Any<UTorrentItemWrapper>())
+                .Returns((false, DeleteReason.None, false));
 
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 
@@ -168,16 +169,16 @@ public class UTorrentServiceTests : IClassFixture<UTorrentServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentAsync(hash))
-                .ReturnsAsync(torrentItem);
+                .GetTorrentAsync(hash)
+                .Returns(torrentItem);
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentPropertiesAsync(hash))
-                .ReturnsAsync(torrentProperties);
+                .GetTorrentPropertiesAsync(hash)
+                .Returns(torrentProperties);
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentFilesAsync(hash))
-                .ReturnsAsync(new List<UTorrentFile>
+                .GetTorrentFilesAsync(hash)
+                .Returns(new List<UTorrentFile>
                 {
                     new UTorrentFile { Name = "file1.mkv", Priority = 0, Index = 0, Size = 1000, Downloaded = 0 },
                     new UTorrentFile { Name = "file2.mkv", Priority = 0, Index = 1, Size = 2000, Downloaded = 0 }
@@ -212,28 +213,28 @@ public class UTorrentServiceTests : IClassFixture<UTorrentServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentAsync(hash))
-                .ReturnsAsync(torrentItem);
+                .GetTorrentAsync(hash)
+                .Returns(torrentItem);
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentPropertiesAsync(hash))
-                .ReturnsAsync(torrentProperties);
+                .GetTorrentPropertiesAsync(hash)
+                .Returns(torrentProperties);
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentFilesAsync(hash))
-                .ReturnsAsync(new List<UTorrentFile>
+                .GetTorrentFilesAsync(hash)
+                .Returns(new List<UTorrentFile>
                 {
                     new UTorrentFile { Name = "file1.mkv", Priority = 0, Index = 0, Size = 1000, Downloaded = 0 },
                     new UTorrentFile { Name = "file2.mkv", Priority = 1, Index = 1, Size = 2000, Downloaded = 1000 }
                 });
 
             _fixture.RuleEvaluator
-                .Setup(x => x.EvaluateSlowRulesAsync(It.IsAny<UTorrentItemWrapper>()))
-                .ReturnsAsync((false, DeleteReason.None, false));
+                .EvaluateSlowRulesAsync(Arg.Any<UTorrentItemWrapper>())
+                .Returns((false, DeleteReason.None, false));
 
             _fixture.RuleEvaluator
-                .Setup(x => x.EvaluateStallRulesAsync(It.IsAny<UTorrentItemWrapper>()))
-                .ReturnsAsync((false, DeleteReason.None, false));
+                .EvaluateStallRulesAsync(Arg.Any<UTorrentItemWrapper>())
+                .Returns((false, DeleteReason.None, false));
 
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 
@@ -269,12 +270,12 @@ public class UTorrentServiceTests : IClassFixture<UTorrentServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentAsync(hash))
-                .ReturnsAsync(torrentItem);
+                .GetTorrentAsync(hash)
+                .Returns(torrentItem);
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentPropertiesAsync(hash))
-                .ReturnsAsync(torrentProperties);
+                .GetTorrentPropertiesAsync(hash)
+                .Returns(torrentProperties);
 
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, new[] { hash });
 
@@ -306,12 +307,12 @@ public class UTorrentServiceTests : IClassFixture<UTorrentServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentAsync(hash))
-                .ReturnsAsync(torrentItem);
+                .GetTorrentAsync(hash)
+                .Returns(torrentItem);
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentPropertiesAsync(hash))
-                .ReturnsAsync(torrentProperties);
+                .GetTorrentPropertiesAsync(hash)
+                .Returns(torrentProperties);
 
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, new[] { category });
 
@@ -342,12 +343,12 @@ public class UTorrentServiceTests : IClassFixture<UTorrentServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentAsync(hash))
-                .ReturnsAsync(torrentItem);
+                .GetTorrentAsync(hash)
+                .Returns(torrentItem);
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentPropertiesAsync(hash))
-                .ReturnsAsync(torrentProperties);
+                .GetTorrentPropertiesAsync(hash)
+                .Returns(torrentProperties);
 
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, new[] { trackerDomain });
 
@@ -384,24 +385,24 @@ public class UTorrentServiceTests : IClassFixture<UTorrentServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentAsync(hash))
-                .ReturnsAsync(torrentItem);
+                .GetTorrentAsync(hash)
+                .Returns(torrentItem);
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentPropertiesAsync(hash))
-                .ReturnsAsync(torrentProperties);
+                .GetTorrentPropertiesAsync(hash)
+                .Returns(torrentProperties);
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentFilesAsync(hash))
-                .ThrowsAsync(new InvalidOperationException("Failed to get files"));
+                .GetTorrentFilesAsync(hash)
+                .Throws(new InvalidOperationException("Failed to get files"));
 
             _fixture.RuleEvaluator
-                .Setup(x => x.EvaluateSlowRulesAsync(It.IsAny<UTorrentItemWrapper>()))
-                .ReturnsAsync((false, DeleteReason.None, false));
+                .EvaluateSlowRulesAsync(Arg.Any<UTorrentItemWrapper>())
+                .Returns((false, DeleteReason.None, false));
 
             _fixture.RuleEvaluator
-                .Setup(x => x.EvaluateStallRulesAsync(It.IsAny<UTorrentItemWrapper>()))
-                .ReturnsAsync((false, DeleteReason.None, false));
+                .EvaluateStallRulesAsync(Arg.Any<UTorrentItemWrapper>())
+                .Returns((false, DeleteReason.None, false));
 
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 
@@ -438,28 +439,28 @@ public class UTorrentServiceTests : IClassFixture<UTorrentServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentAsync(hash))
-                .ReturnsAsync(torrentItem);
+                .GetTorrentAsync(hash)
+                .Returns(torrentItem);
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentPropertiesAsync(hash))
-                .ReturnsAsync(torrentProperties);
+                .GetTorrentPropertiesAsync(hash)
+                .Returns(torrentProperties);
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentFilesAsync(hash))
-                .ReturnsAsync(new List<UTorrentFile>
+                .GetTorrentFilesAsync(hash)
+                .Returns(new List<UTorrentFile>
                 {
                     new UTorrentFile { Name = "file1.mkv", Priority = 1, Index = 0, Size = 1000, Downloaded = 500 }
                 });
 
             _fixture.RuleEvaluator
-                .Setup(x => x.EvaluateStallRulesAsync(It.IsAny<UTorrentItemWrapper>()))
-                .ReturnsAsync((false, DeleteReason.None, false));
+                .EvaluateStallRulesAsync(Arg.Any<UTorrentItemWrapper>())
+                .Returns((false, DeleteReason.None, false));
 
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 
             Assert.False(result.ShouldRemove);
-            _fixture.RuleEvaluator.Verify(x => x.EvaluateSlowRulesAsync(It.IsAny<UTorrentItemWrapper>()), Times.Never);
+            await _fixture.RuleEvaluator.DidNotReceive().EvaluateSlowRulesAsync(Arg.Any<UTorrentItemWrapper>());
         }
 
         [Fact]
@@ -484,28 +485,28 @@ public class UTorrentServiceTests : IClassFixture<UTorrentServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentAsync(hash))
-                .ReturnsAsync(torrentItem);
+                .GetTorrentAsync(hash)
+                .Returns(torrentItem);
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentPropertiesAsync(hash))
-                .ReturnsAsync(torrentProperties);
+                .GetTorrentPropertiesAsync(hash)
+                .Returns(torrentProperties);
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentFilesAsync(hash))
-                .ReturnsAsync(new List<UTorrentFile>
+                .GetTorrentFilesAsync(hash)
+                .Returns(new List<UTorrentFile>
                 {
                     new UTorrentFile { Name = "file1.mkv", Priority = 1, Index = 0, Size = 1000, Downloaded = 500 }
                 });
 
             _fixture.RuleEvaluator
-                .Setup(x => x.EvaluateStallRulesAsync(It.IsAny<UTorrentItemWrapper>()))
-                .ReturnsAsync((false, DeleteReason.None, false));
+                .EvaluateStallRulesAsync(Arg.Any<UTorrentItemWrapper>())
+                .Returns((false, DeleteReason.None, false));
 
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 
             Assert.False(result.ShouldRemove);
-            _fixture.RuleEvaluator.Verify(x => x.EvaluateSlowRulesAsync(It.IsAny<UTorrentItemWrapper>()), Times.Never);
+            await _fixture.RuleEvaluator.DidNotReceive().EvaluateSlowRulesAsync(Arg.Any<UTorrentItemWrapper>());
         }
     }
 
@@ -537,23 +538,23 @@ public class UTorrentServiceTests : IClassFixture<UTorrentServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentAsync(hash))
-                .ReturnsAsync(torrentItem);
+                .GetTorrentAsync(hash)
+                .Returns(torrentItem);
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentPropertiesAsync(hash))
-                .ReturnsAsync(torrentProperties);
+                .GetTorrentPropertiesAsync(hash)
+                .Returns(torrentProperties);
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentFilesAsync(hash))
-                .ReturnsAsync(new List<UTorrentFile>
+                .GetTorrentFilesAsync(hash)
+                .Returns(new List<UTorrentFile>
                 {
                     new UTorrentFile { Name = "file1.mkv", Priority = 1, Index = 0, Size = 1000, Downloaded = 500 }
                 });
 
             _fixture.RuleEvaluator
-                .Setup(x => x.EvaluateSlowRulesAsync(It.IsAny<UTorrentItemWrapper>()))
-                .ReturnsAsync((true, DeleteReason.SlowSpeed, true));
+                .EvaluateSlowRulesAsync(Arg.Any<UTorrentItemWrapper>())
+                .Returns((true, DeleteReason.SlowSpeed, true));
 
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 
@@ -585,23 +586,23 @@ public class UTorrentServiceTests : IClassFixture<UTorrentServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentAsync(hash))
-                .ReturnsAsync(torrentItem);
+                .GetTorrentAsync(hash)
+                .Returns(torrentItem);
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentPropertiesAsync(hash))
-                .ReturnsAsync(torrentProperties);
+                .GetTorrentPropertiesAsync(hash)
+                .Returns(torrentProperties);
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentFilesAsync(hash))
-                .ReturnsAsync(new List<UTorrentFile>
+                .GetTorrentFilesAsync(hash)
+                .Returns(new List<UTorrentFile>
                 {
                     new UTorrentFile { Name = "file1.mkv", Priority = 1, Index = 0, Size = 1000, Downloaded = 500 }
                 });
 
             _fixture.RuleEvaluator
-                .Setup(x => x.EvaluateStallRulesAsync(It.IsAny<UTorrentItemWrapper>()))
-                .ReturnsAsync((true, DeleteReason.Stalled, true));
+                .EvaluateStallRulesAsync(Arg.Any<UTorrentItemWrapper>())
+                .Returns((true, DeleteReason.Stalled, true));
 
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 
