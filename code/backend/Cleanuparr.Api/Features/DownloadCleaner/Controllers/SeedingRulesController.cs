@@ -78,6 +78,12 @@ public class SeedingRulesController : ControllerBase
             }
 
             var existingRules = await SeedingRuleHelper.GetForClientAsync(_dataContext, client);
+
+            if (ruleDto.Priority.HasValue && existingRules.Any(r => r.Priority == ruleDto.Priority.Value))
+            {
+                return BadRequest(new { Message = $"A seeding rule with priority {ruleDto.Priority.Value} already exists for this client" });
+            }
+
             int priority = ruleDto.Priority ?? (existingRules.Count == 0 ? 1 : existingRules.Max(r => r.Priority) + 1);
 
             var rule = CreateRule(client.TypeName, client.Id, ruleDto, priority);
