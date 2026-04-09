@@ -283,12 +283,14 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
     const clientId = this.selectedClientId();
     if (!clientId) return;
 
+    const sanitize = (list: string[]) => list.map(s => s.trim()).filter(s => s.length > 0);
+
     const dto: Partial<SeedingRule> = {
       name: this.ruleName().trim(),
-      categories: this.ruleCategories(),
-      trackerPatterns: this.ruleTrackerPatterns(),
-      tagsAny: this.ruleTagsAny(),
-      tagsAll: this.ruleTagsAll(),
+      categories: sanitize(this.ruleCategories()),
+      trackerPatterns: sanitize(this.ruleTrackerPatterns()),
+      tagsAny: sanitize(this.ruleTagsAny()),
+      tagsAll: sanitize(this.ruleTagsAll()),
       privacyType: this.rulePrivacyType() as TorrentPrivacyType,
       maxRatio: this.ruleMaxRatio() ?? -1,
       minSeedTime: this.ruleMinSeedTime() ?? 0,
