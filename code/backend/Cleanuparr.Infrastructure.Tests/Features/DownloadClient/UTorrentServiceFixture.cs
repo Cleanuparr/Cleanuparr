@@ -9,6 +9,7 @@ using Cleanuparr.Infrastructure.Services.Interfaces;
 using Cleanuparr.Persistence.Models.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
+using NSubstitute;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.DownloadClient;
 
@@ -24,7 +25,7 @@ public class UTorrentServiceFixture : IDisposable
     public Mock<IBlocklistProvider> BlocklistProvider { get; }
     public Mock<IQueueRuleEvaluator> RuleEvaluator { get; }
     public Mock<IQueueRuleManager> RuleManager { get; }
-    public Mock<ISeedingRuleEvaluator> SeedingRuleEvaluator { get; }
+    public ISeedingRuleEvaluator SeedingRuleEvaluator { get; private set; }
     public Mock<IUTorrentClientWrapper> ClientWrapper { get; }
 
     public UTorrentServiceFixture()
@@ -39,7 +40,7 @@ public class UTorrentServiceFixture : IDisposable
         BlocklistProvider = new Mock<IBlocklistProvider>();
         RuleEvaluator = new Mock<IQueueRuleEvaluator>();
         RuleManager = new Mock<IQueueRuleManager>();
-        SeedingRuleEvaluator = new Mock<ISeedingRuleEvaluator>();
+        SeedingRuleEvaluator = Substitute.For<ISeedingRuleEvaluator>();
         ClientWrapper = new Mock<IUTorrentClientWrapper>();
 
         DryRunInterceptor
@@ -81,7 +82,7 @@ public class UTorrentServiceFixture : IDisposable
             BlocklistProvider.Object,
             config,
             RuleEvaluator.Object,
-            SeedingRuleEvaluator.Object,
+            SeedingRuleEvaluator,
             ClientWrapper.Object
         );
     }
@@ -97,7 +98,7 @@ public class UTorrentServiceFixture : IDisposable
         EventPublisher.Reset();
         RuleEvaluator.Reset();
         RuleManager.Reset();
-        SeedingRuleEvaluator.Reset();
+        SeedingRuleEvaluator = Substitute.For<ISeedingRuleEvaluator>();
         ClientWrapper.Reset();
 
         DryRunInterceptor

@@ -23,6 +23,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
+using NSubstitute;
 using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.DownloadClient;
@@ -62,7 +63,7 @@ public class DownloadServiceFactoryTests : IDisposable
 
         services.AddSingleton(Mock.Of<IQueueRuleEvaluator>());
         services.AddSingleton(Mock.Of<IQueueRuleManager>());
-        services.AddSingleton(Mock.Of<ISeedingRuleEvaluator>());
+        services.AddSingleton(Substitute.For<ISeedingRuleEvaluator>());
 
         // UTorrentService needs ILoggerFactory
         services.AddLogging();

@@ -11,6 +11,7 @@ using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
 using Cleanuparr.Persistence.Models.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
+using NSubstitute;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.DownloadClient;
 
@@ -26,7 +27,7 @@ public class QBitServiceFixture : IDisposable
     public Mock<IBlocklistProvider> BlocklistProvider { get; }
     public Mock<IQueueRuleEvaluator> RuleEvaluator { get; }
     public Mock<IQueueRuleManager> RuleManager { get; }
-    public Mock<ISeedingRuleEvaluator> SeedingRuleEvaluator { get; }
+    public ISeedingRuleEvaluator SeedingRuleEvaluator { get; private set; }
     public Mock<IQBittorrentClientWrapper> ClientWrapper { get; }
 
     public QBitServiceFixture()
@@ -41,7 +42,7 @@ public class QBitServiceFixture : IDisposable
         BlocklistProvider =new Mock<IBlocklistProvider>();
         RuleEvaluator = new Mock<IQueueRuleEvaluator>();
         RuleManager = new Mock<IQueueRuleManager>();
-        SeedingRuleEvaluator = new Mock<ISeedingRuleEvaluator>();
+        SeedingRuleEvaluator = Substitute.For<ISeedingRuleEvaluator>();
         ClientWrapper = new Mock<IQBittorrentClientWrapper>();
 
         // Setup default behavior for DryRunInterceptor to execute actions directly
@@ -87,7 +88,7 @@ public class QBitServiceFixture : IDisposable
             BlocklistProvider.Object,
             config,
             RuleEvaluator.Object,
-            SeedingRuleEvaluator.Object,
+            SeedingRuleEvaluator,
             ClientWrapper.Object
         );
     }
@@ -103,7 +104,7 @@ public class QBitServiceFixture : IDisposable
         EventPublisher.Reset();
         RuleEvaluator.Reset();
         RuleManager.Reset();
-        SeedingRuleEvaluator.Reset();
+        SeedingRuleEvaluator = Substitute.For<ISeedingRuleEvaluator>();
         ClientWrapper.Reset();
 
         // Re-setup default DryRunInterceptor behavior
@@ -121,9 +122,9 @@ public class QBitServiceFixture : IDisposable
     {
         var realEvaluator = new SeedingRuleEvaluator();
         SeedingRuleEvaluator
-            .Setup(x => x.GetMatchingRule(It.IsAny<Domain.Entities.ITorrentItemWrapper>(), It.IsAny<IEnumerable<ISeedingRule>>()))
-            .Returns((Domain.Entities.ITorrentItemWrapper t, IEnumerable<ISeedingRule> rules) =>
-                realEvaluator.GetMatchingRule(t, rules));
+            .GetMatchingRule(Arg.Any<Domain.Entities.ITorrentItemWrapper>(), Arg.Any<IEnumerable<ISeedingRule>>())
+            .Returns(callInfo =>
+                realEvaluator.GetMatchingRule(callInfo.Arg<Domain.Entities.ITorrentItemWrapper>(), callInfo.Arg<IEnumerable<ISeedingRule>>()));
     }
 
     public void Dispose()
