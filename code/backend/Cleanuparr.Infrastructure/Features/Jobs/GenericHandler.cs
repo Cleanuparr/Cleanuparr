@@ -105,7 +105,7 @@ public abstract class GenericHandler : IHandler
             return;
         }
 
-        foreach (ArrInstance arrInstance in config.Instances)
+        foreach (ArrInstance arrInstance in enabledInstances)
         {
             try
             {
