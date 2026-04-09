@@ -127,7 +127,7 @@ public class SeedingRulesController : ControllerBase
             }
 
             existingRule.Name = ruleDto.Name.Trim();
-            existingRule.Categories = ruleDto.Categories;
+            existingRule.Categories = SanitizeStringList(ruleDto.Categories);
             existingRule.TrackerPatterns = SanitizeStringList(ruleDto.TrackerPatterns);
             existingRule.PrivacyType = ruleDto.PrivacyType;
             existingRule.MaxRatio = ruleDto.MaxRatio;
@@ -263,6 +263,7 @@ public class SeedingRulesController : ControllerBase
 
     private static ISeedingRule CreateRule(DownloadClientTypeName typeName, Guid clientId, SeedingRuleRequest dto, int priority)
     {
+        var categories = SanitizeStringList(dto.Categories);
         var trackerPatterns = SanitizeStringList(dto.TrackerPatterns);
         var tagsAny = SanitizeStringList(dto.TagsAny);
         var tagsAll = SanitizeStringList(dto.TagsAll);
@@ -273,7 +274,7 @@ public class SeedingRulesController : ControllerBase
             {
                 DownloadClientConfigId = clientId,
                 Name = dto.Name.Trim(),
-                Categories = dto.Categories,
+                Categories = categories,
                 TrackerPatterns = trackerPatterns,
                 TagsAny = tagsAny,
                 TagsAll = tagsAll,
@@ -288,7 +289,7 @@ public class SeedingRulesController : ControllerBase
             {
                 DownloadClientConfigId = clientId,
                 Name = dto.Name.Trim(),
-                Categories = dto.Categories,
+                Categories = categories,
                 TrackerPatterns = trackerPatterns,
                 Priority = priority,
                 PrivacyType = dto.PrivacyType,
@@ -301,7 +302,7 @@ public class SeedingRulesController : ControllerBase
             {
                 DownloadClientConfigId = clientId,
                 Name = dto.Name.Trim(),
-                Categories = dto.Categories,
+                Categories = categories,
                 TrackerPatterns = trackerPatterns,
                 TagsAny = tagsAny,
                 TagsAll = tagsAll,
@@ -316,7 +317,7 @@ public class SeedingRulesController : ControllerBase
             {
                 DownloadClientConfigId = clientId,
                 Name = dto.Name.Trim(),
-                Categories = dto.Categories,
+                Categories = categories,
                 TrackerPatterns = trackerPatterns,
                 Priority = priority,
                 PrivacyType = dto.PrivacyType,
@@ -329,7 +330,7 @@ public class SeedingRulesController : ControllerBase
             {
                 DownloadClientConfigId = clientId,
                 Name = dto.Name.Trim(),
-                Categories = dto.Categories,
+                Categories = categories,
                 TrackerPatterns = trackerPatterns,
                 Priority = priority,
                 PrivacyType = dto.PrivacyType,
