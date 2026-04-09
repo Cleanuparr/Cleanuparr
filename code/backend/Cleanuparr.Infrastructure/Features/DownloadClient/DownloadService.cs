@@ -126,7 +126,7 @@ public abstract class DownloadService : IDownloadService
                 torrent.Name
             );
 
-            await _eventPublisher.PublishDownloadCleaned(torrent.Ratio, seedingTime, seedingRule.Name, result.Reason);
+            await _eventPublisher.PublishDownloadCleaned(torrent.Ratio, seedingTime, torrent.Category ?? string.Empty, result.Reason);
         }
     }
 
