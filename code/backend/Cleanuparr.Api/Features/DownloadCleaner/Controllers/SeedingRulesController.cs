@@ -44,7 +44,21 @@ public class SeedingRulesController : ControllerBase
 
             var rules = await SeedingRuleHelper.GetForClientAsync(_dataContext, client);
 
-            return Ok(rules);
+            return Ok(rules.Select(r => new
+            {
+                id = r.Id,
+                name = r.Name,
+                categories = r.Categories,
+                trackerPatterns = r.TrackerPatterns,
+                tagsAny = (r as ITagFilterable)?.TagsAny ?? new List<string>(),
+                tagsAll = (r as ITagFilterable)?.TagsAll ?? new List<string>(),
+                priority = r.Priority,
+                privacyType = r.PrivacyType,
+                maxRatio = r.MaxRatio,
+                minSeedTime = r.MinSeedTime,
+                maxSeedTime = r.MaxSeedTime,
+                deleteSourceFiles = r.DeleteSourceFiles,
+            }));
         }
         catch (Exception ex)
         {
