@@ -4,6 +4,7 @@ using Cleanuparr.Infrastructure.Events.Interfaces;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
 using Cleanuparr.Infrastructure.Features.DownloadClient.Deluge;
 using Cleanuparr.Infrastructure.Features.DownloadClient.QBittorrent;
+using Cleanuparr.Infrastructure.Features.DownloadClient.RTorrent;
 using Cleanuparr.Infrastructure.Features.DownloadClient.Transmission;
 using Cleanuparr.Infrastructure.Features.DownloadClient.UTorrent;
 using Cleanuparr.Infrastructure.Features.Files;
@@ -158,6 +159,20 @@ public class DownloadServiceFactoryTests : IDisposable
         Assert.NotNull(service);
         Assert.IsType<UTorrentService>(service);
     }
+    
+    [Fact]
+    public void GetDownloadService_RTorrent_ReturnsRTorrentService()
+    {
+        // Arrange
+        var config = CreateClientConfig(DownloadClientTypeName.rTorrent);
+
+        // Act
+        var service = _factory.GetDownloadService(config);
+
+        // Assert
+        Assert.NotNull(service);
+        Assert.IsType<RTorrentService>(service);
+    }
 
     [Fact]
     public void GetDownloadService_UnsupportedType_ThrowsNotSupportedException()
@@ -229,6 +244,7 @@ public class DownloadServiceFactoryTests : IDisposable
     [InlineData(DownloadClientTypeName.Deluge, typeof(DelugeService))]
     [InlineData(DownloadClientTypeName.Transmission, typeof(TransmissionService))]
     [InlineData(DownloadClientTypeName.uTorrent, typeof(UTorrentService))]
+    [InlineData(DownloadClientTypeName.rTorrent, typeof(RTorrentService))]
     public void GetDownloadService_AllSupportedTypes_ReturnCorrectServiceType(
         DownloadClientTypeName typeName, Type expectedServiceType)
     {
