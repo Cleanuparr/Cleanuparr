@@ -102,6 +102,8 @@ public abstract class DownloadService : IDownloadService
                 _logger.LogTrace("No seeding rules matched | {name}", torrent.Name);
                 continue;
             }
+            
+            _logger.LogTrace("Seeding rule matched | {seedingRule} | {name}", seedingRule.Name, torrent.Name);
 
             ContextProvider.Set(ContextProvider.Keys.ItemName, torrent.Name);
             ContextProvider.Set(ContextProvider.Keys.Hash, torrent.Hash);
