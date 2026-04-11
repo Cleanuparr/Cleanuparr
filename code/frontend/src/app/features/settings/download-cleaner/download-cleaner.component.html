@@ -238,20 +238,20 @@
       [(items)]="ruleCategories"
       [error]="ruleCategoriesError()"
       hint="One or more download client categories this rule applies to (e.g. tv-sonarr, radarr)"
-      helpKey="download-cleaner:categories" />
+      helpKey="download-cleaner:categories" #ruleChipInput />
     <app-chip-input class="full-width" label="Tracker Patterns" placeholder="Add tracker domain..."
       [(items)]="ruleTrackerPatterns"
       hint="Tracker domain suffixes to match (e.g. tracker.org). Empty means any tracker."
-      helpKey="download-cleaner:trackerPatterns" />
+      helpKey="download-cleaner:trackerPatterns" #ruleChipInput />
     @if (isTagFilterableClient()) {
       <app-chip-input class="full-width" [label]="isSelectedClientTransmission() ? 'Labels (Any)' : 'Tags (Any)'" [placeholder]="isSelectedClientTransmission() ? 'Add label...' : 'Add tag...'"
         [(items)]="ruleTagsAny"
         [hint]="isSelectedClientTransmission() ? 'Torrent must have at least one of these labels. Empty means any labels.' : 'Torrent must have at least one of these tags. Empty means any tags.'"
-        helpKey="download-cleaner:tagsAny" />
+        helpKey="download-cleaner:tagsAny" #ruleChipInput />
       <app-chip-input class="full-width" [label]="isSelectedClientTransmission() ? 'Labels (All)' : 'Tags (All)'" [placeholder]="isSelectedClientTransmission() ? 'Add label...' : 'Add tag...'"
         [(items)]="ruleTagsAll"
         [hint]="isSelectedClientTransmission() ? 'Torrent must have all of these labels. Empty means any labels.' : 'Torrent must have all of these tags. Empty means any tags.'"
-        helpKey="download-cleaner:tagsAll" />
+        helpKey="download-cleaner:tagsAll" #ruleChipInput />
     }
     <app-number-input label="Max Ratio" [(value)]="ruleMaxRatio" [step]="0.1" [min]="-1"
       hint="Maximum ratio to seed before removing (-1 means disabled)"
@@ -271,7 +271,7 @@
   </div>
   <div modal-footer>
     <app-button variant="secondary" (clicked)="ruleModalVisible.set(false)">Cancel</app-button>
-    <app-button variant="primary" [disabled]="!!ruleNameError() || !!ruleCategoriesError() || !!ruleDisabledError()" (clicked)="saveRule()">
+    <app-button variant="primary" [disabled]="!!ruleNameError() || !!ruleCategoriesError() || !!ruleDisabledError() || ruleHasUncommittedInputs()" (clicked)="saveRule()">
       {{ editingRule() ? 'Update' : 'Create' }}
     </app-button>
   </div>

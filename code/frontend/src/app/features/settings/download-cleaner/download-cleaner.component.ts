@@ -55,6 +55,11 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
   private readonly toast = inject(ToastService);
   private readonly confirm = inject(ConfirmService);
   private readonly chipInputs = viewChildren(ChipInputComponent);
+  private readonly ruleChipInputs = viewChildren<ChipInputComponent>('ruleChipInput');
+
+  readonly ruleHasUncommittedInputs = computed(() =>
+    this.ruleChipInputs().some(c => c.hasUncommittedInput())
+  );
 
   private readonly savedSnapshot = signal('');
 
@@ -279,7 +284,7 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
   }
 
   saveRule(): void {
-    if (this.ruleNameError() || this.ruleCategoriesError() || this.ruleDisabledError()) return;
+    if (this.ruleNameError() || this.ruleCategoriesError() || this.ruleDisabledError() || this.ruleHasUncommittedInputs()) return;
     const clientId = this.selectedClientId();
     if (!clientId) return;
 
