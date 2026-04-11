@@ -179,6 +179,33 @@ test.describe.serial('Seeding Rules API', () => {
     expect(updated.priority).toBe(rule.priority);
   });
 
+  test('should update tags and persist them', async () => {
+    const getRes = await getSeedingRules(token, downloadClientId);
+    const rules = await getRes.json();
+    const rule = rules[0];
+
+    const updateRes = await updateSeedingRule(token, rule.id, {
+      name: rule.name,
+      categories: rule.categories,
+      trackerPatterns: rule.trackerPatterns,
+      tagsAny: ['updated-tag-1', 'updated-tag-2'],
+      tagsAll: ['required-tag'],
+      privacyType: rule.privacyType,
+      maxRatio: rule.maxRatio,
+      minSeedTime: rule.minSeedTime,
+      maxSeedTime: rule.maxSeedTime,
+      deleteSourceFiles: rule.deleteSourceFiles,
+    });
+    expect(updateRes.status).toBe(200);
+
+    // Verify tags persisted via GET
+    const verifyRes = await getSeedingRules(token, downloadClientId);
+    const updated = await verifyRes.json();
+    const updatedRule = updated.find((r: { id: string }) => r.id === rule.id);
+    expect(updatedRule.tagsAny).toEqual(['updated-tag-1', 'updated-tag-2']);
+    expect(updatedRule.tagsAll).toEqual(['required-tag']);
+  });
+
   test('should reject empty categories', async () => {
     const res = await createSeedingRule(token, downloadClientId, {
       name: 'Bad Rule',

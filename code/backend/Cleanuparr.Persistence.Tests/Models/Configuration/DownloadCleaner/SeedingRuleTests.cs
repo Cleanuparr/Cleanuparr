@@ -111,6 +111,27 @@ public sealed class QBitSeedingRuleTests
 
     #endregion
 
+    #region Validate - Categories Validation
+
+    [Fact]
+    public void Validate_WithEmptyCategories_ThrowsValidationException()
+    {
+        var config = new QBitSeedingRule
+        {
+            Name = "test-category",
+            Categories = [],
+            MaxRatio = 2.0,
+            MinSeedTime = 0,
+            MaxSeedTime = -1,
+            DeleteSourceFiles = true
+        };
+
+        var exception = Should.Throw<ValidationException>(() => config.Validate());
+        exception.Message.ShouldBe("At least one category must be specified");
+    }
+
+    #endregion
+
     #region Validate - Name Validation
 
     [Fact]
