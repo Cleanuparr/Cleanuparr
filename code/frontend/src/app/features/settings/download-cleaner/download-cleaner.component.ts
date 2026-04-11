@@ -1,10 +1,12 @@
 import { Component, ChangeDetectionStrategy, inject, signal, computed, OnInit, viewChildren, effect, untracked } from '@angular/core';
 import { NgIconComponent } from '@ng-icons/core';
+import { CdkDragDrop, CdkDropList, CdkDrag, CdkDragHandle, moveItemInArray } from '@angular/cdk/drag-drop';
 import { PageHeaderComponent } from '@layout/page-header/page-header.component';
 import {
   CardComponent, ButtonComponent, InputComponent, ToggleComponent,
   NumberInputComponent, SelectComponent, ChipInputComponent, AccordionComponent,
   EmptyStateComponent, LoadingStateComponent, ModalComponent, BadgeComponent, SpinnerComponent,
+  TooltipComponent,
   type SelectOption,
 } from '@ui';
 import { DownloadCleanerApi } from '@core/api/download-cleaner.api';
@@ -38,9 +40,11 @@ const PRIVACY_TYPE_OPTIONS: SelectOption[] = [
   standalone: true,
   imports: [
     NgIconComponent,
+    CdkDropList, CdkDrag, CdkDragHandle,
     PageHeaderComponent, CardComponent, ButtonComponent, InputComponent,
     ToggleComponent, NumberInputComponent, SelectComponent, ChipInputComponent, AccordionComponent,
     EmptyStateComponent, LoadingStateComponent, ModalComponent, BadgeComponent, SpinnerComponent,
+    TooltipComponent,
   ],
   templateUrl: './download-cleaner.component.html',
   styleUrl: './download-cleaner.component.scss',
@@ -51,6 +55,11 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
   private readonly toast = inject(ToastService);
   private readonly confirm = inject(ConfirmService);
   private readonly chipInputs = viewChildren(ChipInputComponent);
+  private readonly ruleChipInputs = viewChildren<ChipInputComponent>('ruleChipInput');
+
+  readonly ruleHasUncommittedInputs = computed(() =>
+    this.ruleChipInputs().some(c => c.hasUncommittedInput())
+  );
 
   private readonly savedSnapshot = signal('');
 
@@ -95,6 +104,15 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
     this.selectedClient()?.downloadClientTypeName === DownloadClientTypeName.qBittorrent
   );
 
+  readonly isSelectedClientTransmission = computed(() =>
+    this.selectedClient()?.downloadClientTypeName === DownloadClientTypeName.Transmission
+  );
+
+  readonly isTagFilterableClient = computed(() => {
+    const typeName = this.selectedClient()?.downloadClientTypeName;
+    return typeName === DownloadClientTypeName.qBittorrent || typeName === DownloadClientTypeName.Transmission;
+  });
+
   readonly seedingRulesExpanded = signal(false);
   readonly unlinkedExpanded = signal(false);
 
@@ -102,6 +120,10 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
   readonly ruleModalVisible = signal(false);
   readonly editingRule = signal<SeedingRule | null>(null);
   readonly ruleName = signal('');
+  readonly ruleCategories = signal<string[]>([]);
+  readonly ruleTrackerPatterns = signal<string[]>([]);
+  readonly ruleTagsAny = signal<string[]>([]);
+  readonly ruleTagsAll = signal<string[]>([]);
   readonly rulePrivacyType = signal<unknown>(TorrentPrivacyType.Public);
   readonly ruleMaxRatio = signal<number | null>(-1);
   readonly ruleMinSeedTime = signal<number | null>(0);
@@ -140,6 +162,11 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
 
   readonly ruleNameError = computed(() => {
     if (!this.ruleName().trim()) return 'Name is required';
+    return undefined;
+  });
+
+  readonly ruleCategoriesError = computed(() => {
+    if (this.ruleCategories().length === 0) return 'At least one category is required';
     return undefined;
   });
 
@@ -232,6 +259,10 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
     this.editingRule.set(rule ?? null);
     if (rule) {
       this.ruleName.set(rule.name);
+      this.ruleCategories.set([...(rule.categories ?? [])]);
+      this.ruleTrackerPatterns.set([...(rule.trackerPatterns ?? [])]);
+      this.ruleTagsAny.set([...(rule.tagsAny ?? [])]);
+      this.ruleTagsAll.set([...(rule.tagsAll ?? [])]);
       this.rulePrivacyType.set(rule.privacyType);
       this.ruleMaxRatio.set(rule.maxRatio);
       this.ruleMinSeedTime.set(rule.minSeedTime);
@@ -239,6 +270,10 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
       this.ruleDeleteSourceFiles.set(rule.deleteSourceFiles);
     } else {
       this.ruleName.set('');
+      this.ruleCategories.set([]);
+      this.ruleTrackerPatterns.set([]);
+      this.ruleTagsAny.set([]);
+      this.ruleTagsAll.set([]);
       this.rulePrivacyType.set(TorrentPrivacyType.Public);
       this.ruleMaxRatio.set(-1);
       this.ruleMinSeedTime.set(0);
@@ -249,12 +284,18 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
   }
 
   saveRule(): void {
-    if (this.ruleNameError() || this.ruleDisabledError()) return;
+    if (this.ruleNameError() || this.ruleCategoriesError() || this.ruleDisabledError() || this.ruleHasUncommittedInputs()) return;
     const clientId = this.selectedClientId();
     if (!clientId) return;
 
+    const sanitize = (list: string[]) => list.map(s => s.trim()).filter(s => s.length > 0);
+
     const dto: Partial<SeedingRule> = {
       name: this.ruleName().trim(),
+      categories: sanitize(this.ruleCategories()),
+      trackerPatterns: sanitize(this.ruleTrackerPatterns()),
+      tagsAny: sanitize(this.ruleTagsAny()),
+      tagsAll: sanitize(this.ruleTagsAll()),
       privacyType: this.rulePrivacyType() as TorrentPrivacyType,
       maxRatio: this.ruleMaxRatio() ?? -1,
       minSeedTime: this.ruleMinSeedTime() ?? 0,
@@ -294,6 +335,26 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
         this.reloadSeedingRules(clientId);
       },
       error: () => this.toast.error('Failed to delete seeding rule'),
+    });
+  }
+
+  onRulesReorder(event: CdkDragDrop<SeedingRule[]>): void {
+    const clientId = this.selectedClientId();
+    if (!clientId) return;
+
+    const rules = [...(this.selectedClient()?.seedingRules ?? [])];
+    moveItemInArray(rules, event.previousIndex, event.currentIndex);
+
+    this.clientConfigs.update(configs =>
+      configs.map(c => c.downloadClientId === clientId ? { ...c, seedingRules: rules } : c)
+    );
+
+    const orderedIds = rules.map(r => r.id!).filter(Boolean);
+    this.api.reorderSeedingRules(clientId, orderedIds).subscribe({
+      error: () => {
+        this.toast.error('Failed to reorder seeding rules');
+        this.reloadSeedingRules(clientId);
+      },
     });
   }
 

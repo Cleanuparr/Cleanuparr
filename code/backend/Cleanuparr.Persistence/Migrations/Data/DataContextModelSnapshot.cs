@@ -120,6 +120,11 @@ namespace Cleanuparr.Persistence.Migrations.Data
                         .HasColumnType("TEXT")
                         .HasColumnName("id");
 
+                    b.Property<string>("Categories")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("categories");
+
                     b.Property<bool>("DeleteSourceFiles")
                         .HasColumnType("INTEGER")
                         .HasColumnName("delete_source_files");
@@ -145,10 +150,19 @@ namespace Cleanuparr.Persistence.Migrations.Data
                         .HasColumnType("TEXT")
                         .HasColumnName("name");
 
+                    b.Property<int>("Priority")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("priority");
+
                     b.Property<string>("PrivacyType")
                         .IsRequired()
                         .HasColumnType("TEXT")
                         .HasColumnName("privacy_type");
+
+                    b.Property<string>("TrackerPatterns")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("tracker_patterns");
 
                     b.HasKey("Id")
                         .HasName("pk_deluge_seeding_rules");
@@ -197,6 +211,11 @@ namespace Cleanuparr.Persistence.Migrations.Data
                         .HasColumnType("TEXT")
                         .HasColumnName("id");
 
+                    b.Property<string>("Categories")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("categories");
+
                     b.Property<bool>("DeleteSourceFiles")
                         .HasColumnType("INTEGER")
                         .HasColumnName("delete_source_files");
@@ -222,10 +241,29 @@ namespace Cleanuparr.Persistence.Migrations.Data
                         .HasColumnType("TEXT")
                         .HasColumnName("name");
 
+                    b.Property<int>("Priority")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("priority");
+
                     b.Property<string>("PrivacyType")
                         .IsRequired()
                         .HasColumnType("TEXT")
                         .HasColumnName("privacy_type");
+
+                    b.Property<string>("TagsAll")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("tags_all");
+
+                    b.Property<string>("TagsAny")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("tags_any");
+
+                    b.Property<string>("TrackerPatterns")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("tracker_patterns");
 
                     b.HasKey("Id")
                         .HasName("pk_q_bit_seeding_rules");
@@ -243,6 +281,11 @@ namespace Cleanuparr.Persistence.Migrations.Data
                         .HasColumnType("TEXT")
                         .HasColumnName("id");
 
+                    b.Property<string>("Categories")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("categories");
+
                     b.Property<bool>("DeleteSourceFiles")
                         .HasColumnType("INTEGER")
                         .HasColumnName("delete_source_files");
@@ -268,10 +311,19 @@ namespace Cleanuparr.Persistence.Migrations.Data
                         .HasColumnType("TEXT")
                         .HasColumnName("name");
 
+                    b.Property<int>("Priority")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("priority");
+
                     b.Property<string>("PrivacyType")
                         .IsRequired()
                         .HasColumnType("TEXT")
                         .HasColumnName("privacy_type");
+
+                    b.Property<string>("TrackerPatterns")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("tracker_patterns");
 
                     b.HasKey("Id")
                         .HasName("pk_r_torrent_seeding_rules");
@@ -289,6 +341,11 @@ namespace Cleanuparr.Persistence.Migrations.Data
                         .HasColumnType("TEXT")
                         .HasColumnName("id");
 
+                    b.Property<string>("Categories")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("categories");
+
                     b.Property<bool>("DeleteSourceFiles")
                         .HasColumnType("INTEGER")
                         .HasColumnName("delete_source_files");
@@ -314,10 +371,29 @@ namespace Cleanuparr.Persistence.Migrations.Data
                         .HasColumnType("TEXT")
                         .HasColumnName("name");
 
+                    b.Property<int>("Priority")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("priority");
+
                     b.Property<string>("PrivacyType")
                         .IsRequired()
                         .HasColumnType("TEXT")
                         .HasColumnName("privacy_type");
+
+                    b.Property<string>("TagsAll")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("tags_all");
+
+                    b.Property<string>("TagsAny")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("tags_any");
+
+                    b.Property<string>("TrackerPatterns")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("tracker_patterns");
 
                     b.HasKey("Id")
                         .HasName("pk_transmission_seeding_rules");
@@ -335,6 +411,11 @@ namespace Cleanuparr.Persistence.Migrations.Data
                         .HasColumnType("TEXT")
                         .HasColumnName("id");
 
+                    b.Property<string>("Categories")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("categories");
+
                     b.Property<bool>("DeleteSourceFiles")
                         .HasColumnType("INTEGER")
                         .HasColumnName("delete_source_files");
@@ -360,10 +441,19 @@ namespace Cleanuparr.Persistence.Migrations.Data
                         .HasColumnType("TEXT")
                         .HasColumnName("name");
 
+                    b.Property<int>("Priority")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("priority");
+
                     b.Property<string>("PrivacyType")
                         .IsRequired()
                         .HasColumnType("TEXT")
                         .HasColumnName("privacy_type");
+
+                    b.Property<string>("TrackerPatterns")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("tracker_patterns");
 
                     b.HasKey("Id")
                         .HasName("pk_u_torrent_seeding_rules");

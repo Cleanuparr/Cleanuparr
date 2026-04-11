@@ -319,13 +319,15 @@ public static class TestDataContextFactory
         double maxRatio = 1.0,
         double minSeedTime = 1.0,
         double maxSeedTime = -1,
-        TorrentPrivacyType privacyType = TorrentPrivacyType.Both)
+        TorrentPrivacyType privacyType = TorrentPrivacyType.Both,
+        List<string>? categories = null)
     {
         var downloadClient = context.DownloadClients.First();
         var rule = new QBitSeedingRule
         {
             Id = Guid.NewGuid(),
             Name = name,
+            Categories = categories ?? ["completed"],
             MaxRatio = maxRatio,
             MinSeedTime = minSeedTime,
             MaxSeedTime = maxSeedTime,

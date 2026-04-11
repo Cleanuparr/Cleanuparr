@@ -26,8 +26,8 @@ public abstract class DownloadService : IDownloadService
     protected readonly IBlocklistProvider _blocklistProvider;
     protected readonly HttpClient _httpClient;
     protected readonly DownloadClientConfig _downloadClientConfig;
-    protected readonly IRuleEvaluator _ruleEvaluator;
-    protected readonly IRuleManager _ruleManager;
+    protected readonly IQueueRuleEvaluator _queueRuleEvaluator;
+    private readonly ISeedingRuleEvaluator _seedingRuleEvaluator;
 
     protected DownloadService(
         ILogger<DownloadService> logger,
@@ -39,8 +39,8 @@ public abstract class DownloadService : IDownloadService
         IEventPublisher eventPublisher,
         IBlocklistProvider blocklistProvider,
         DownloadClientConfig downloadClientConfig,
-        IRuleEvaluator ruleEvaluator,
-        IRuleManager ruleManager
+        IQueueRuleEvaluator queueRuleEvaluator,
+        ISeedingRuleEvaluator seedingRuleEvaluator
     )
     {
         _logger = logger;
@@ -52,8 +52,8 @@ public abstract class DownloadService : IDownloadService
         _blocklistProvider = blocklistProvider;
         _downloadClientConfig = downloadClientConfig;
         _httpClient = httpClientProvider.CreateClient(downloadClientConfig);
-        _ruleEvaluator = ruleEvaluator;
-        _ruleManager = ruleManager;
+        _queueRuleEvaluator = queueRuleEvaluator;
+        _seedingRuleEvaluator = seedingRuleEvaluator;
     }
     
     public DownloadClientConfig ClientConfig => _downloadClientConfig;
@@ -95,45 +95,40 @@ public abstract class DownloadService : IDownloadService
                 continue;
             }
 
-            ISeedingRule? category = seedingRules
-                .FirstOrDefault(x =>
-                    (torrent.Category ?? string.Empty).Equals(x.Name, StringComparison.InvariantCultureIgnoreCase) &&
-                    x.PrivacyType switch
-                    {
-                        TorrentPrivacyType.Public => !torrent.IsPrivate,
-                        TorrentPrivacyType.Private => torrent.IsPrivate,
-                        _ => true
-                    });
+            ISeedingRule? seedingRule = _seedingRuleEvaluator.GetMatchingRule(torrent, seedingRules);
 
-            if (category is null)
+            if (seedingRule is null)
             {
+                _logger.LogTrace("No seeding rules matched | {name}", torrent.Name);
                 continue;
             }
+            
+            _logger.LogTrace("Seeding rule matched | {seedingRule} | {name}", seedingRule.Name, torrent.Name);
 
             ContextProvider.Set(ContextProvider.Keys.ItemName, torrent.Name);
             ContextProvider.Set(ContextProvider.Keys.Hash, torrent.Hash);
             SetDownloadClientContext();
 
             TimeSpan seedingTime = TimeSpan.FromSeconds(torrent.SeedingTimeSeconds);
-            SeedingCheckResult result = ShouldCleanDownload(torrent.Ratio, seedingTime, category);
+            SeedingCheckResult result = ShouldCleanDownload(torrent.Ratio, seedingTime, seedingRule);
 
             if (!result.ShouldClean)
             {
                 continue;
             }
 
-            await _dryRunInterceptor.InterceptAsync(() => DeleteDownload(torrent, category.DeleteSourceFiles));
+            await _dryRunInterceptor.InterceptAsync(() => DeleteDownload(torrent, seedingRule.DeleteSourceFiles));
 
             _logger.LogInformation(
                 "download cleaned | {reason} reached | delete files: {deleteFiles} | {name}",
                 result.Reason is CleanReason.MaxRatioReached
                     ? "MAX_RATIO & MIN_SEED_TIME"
                     : "MAX_SEED_TIME",
-                category.DeleteSourceFiles,
+                seedingRule.DeleteSourceFiles,
                 torrent.Name
             );
 
-            await _eventPublisher.PublishDownloadCleaned(torrent.Ratio, seedingTime, category.Name, result.Reason);
+            await _eventPublisher.PublishDownloadCleaned(torrent.Ratio, seedingTime, torrent.Category ?? string.Empty, result.Reason);
         }
     }
 

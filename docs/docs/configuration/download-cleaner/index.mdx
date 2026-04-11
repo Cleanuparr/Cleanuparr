@@ -86,7 +86,7 @@ mytracker.com
 <SectionTitle>Seeding Rules</SectionTitle>
 
 <p className={styles.sectionDescription}>
-  Categories define the cleanup rules for different types of downloads. Each category specifies when downloads should be removed based on ratio and time limits.
+  Seeding rules define the cleanup criteria for downloads in your download client. Each rule specifies which downloads it applies to (by category, tracker, tags, and privacy type) and when they should be removed based on ratio and time limits. Rules are evaluated in priority order — the first matching rule wins.
 </p>
 
 <Note>
@@ -98,15 +98,60 @@ Both Max Ratio and Max Seed Time cannot be disabled (-1) at the same time. At le
 </Important>
 
 <ConfigSection
-  title="Category Name"
+  title="Rule Name"
 >
 
-The name of the download client category to apply these rules to. Must match the category name exactly as configured in your download client.
+A human-readable label for this seeding rule. This is a display name only and does not affect rule matching.
+
+**Examples:**
+- `TV shows`
+- `Movies - private trackers`
+- `Music long seed`
+
+</ConfigSection>
+
+<ConfigSection
+  title="Categories"
+>
+
+One or more download client categories this rule applies to. A torrent matches if its category matches **any** entry in the list (case-insensitive). At least one category must be specified.
 
 **Examples:**
 - `tv-sonarr`
 - `radarr`
 - `lidarr`
+
+</ConfigSection>
+
+<ConfigSection
+  title="Tracker Patterns"
+>
+
+Tracker domain suffixes used to filter which torrents this rule applies to. A torrent matches if **any** of its tracker domains end with one of these patterns (case-insensitive). Leave empty to match torrents from any tracker.
+
+**Examples:**
+- `tracker.example.com` — matches `https://tracker.example.com/announce`
+- `private.org` — matches any tracker whose domain ends with `private.org`
+
+</ConfigSection>
+
+<ConfigSection
+  title="Tags (Any)"
+>
+
+Torrent must have **at least one** of these tags or labels. Leave empty to skip tag filtering.
+
+Supported by **qBittorrent** tags and **Transmission** labels.
+
+</ConfigSection>
+
+<ConfigSection
+  title="Tags (All)"
+>
+
+Torrent must have **all** of these tags or labels. Leave empty to skip tag filtering.
+
+Supported by **qBittorrent** tags and **Transmission** labels.
 
 </ConfigSection>
 

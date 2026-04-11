@@ -328,6 +328,83 @@ public class QBitItemWrapperTests
         result.ShouldBeEmpty();
     }
 
+    // TrackerDomains property tests
+    [Fact]
+    public void TrackerDomains_WithMultipleTrackers_ReturnsExtractedDomains()
+    {
+        // Arrange
+        var torrentInfo = new TorrentInfo();
+        var trackers = new List<TorrentTracker>
+        {
+            new() { Url = "http://tracker.example.com/announce" },
+            new() { Url = "udp://open.stealth.si:80/announce" }
+        };
+        var wrapper = new QBitItemWrapper(torrentInfo, trackers, false);
+
+        // Act
+        var result = wrapper.TrackerDomains;
+
+        // Assert
+        result.Count.ShouldBe(2);
+        result.ShouldContain("tracker.example.com");
+        result.ShouldContain("open.stealth.si");
+    }
+
+    [Fact]
+    public void TrackerDomains_WithEmptyTrackers_ReturnsEmptyList()
+    {
+        // Arrange
+        var torrentInfo = new TorrentInfo();
+        var trackers = new List<TorrentTracker>();
+        var wrapper = new QBitItemWrapper(torrentInfo, trackers, false);
+
+        // Act
+        var result = wrapper.TrackerDomains;
+
+        // Assert
+        result.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void TrackerDomains_WithNullUrls_FiltersThemOut()
+    {
+        // Arrange
+        var torrentInfo = new TorrentInfo();
+        var trackers = new List<TorrentTracker>
+        {
+            new() { Url = "http://tracker.example.com/announce" },
+            new() { Url = null },
+            new() { Url = "" }
+        };
+        var wrapper = new QBitItemWrapper(torrentInfo, trackers, false);
+
+        // Act
+        var result = wrapper.TrackerDomains;
+
+        // Assert
+        result.Count.ShouldBe(1);
+        result.ShouldContain("tracker.example.com");
+    }
+
+    [Fact]
+    public void TrackerDomains_IsStableAcrossMultipleAccesses()
+    {
+        // Arrange
+        var torrentInfo = new TorrentInfo();
+        var trackers = new List<TorrentTracker>
+        {
+            new() { Url = "http://tracker.example.com/announce" }
+        };
+        var wrapper = new QBitItemWrapper(torrentInfo, trackers, false);
+
+        // Act
+        var first = wrapper.TrackerDomains;
+        var second = wrapper.TrackerDomains;
+
+        // Assert
+        ReferenceEquals(first, second).ShouldBeTrue();
+    }
+
     [Fact]
     public void Category_ReturnsCorrectValue()
     {

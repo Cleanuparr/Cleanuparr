@@ -35,6 +35,7 @@ public sealed class QBitSeedingRuleTests
         var config = new QBitSeedingRule
         {
             Name = "test-category",
+            Categories = ["test-category"],
             MaxRatio = 2.0,
             MinSeedTime = 0,
             MaxSeedTime = -1,
@@ -50,6 +51,7 @@ public sealed class QBitSeedingRuleTests
         var config = new QBitSeedingRule
         {
             Name = "test-category",
+            Categories = ["test-category"],
             MaxRatio = -1,
             MinSeedTime = 0,
             MaxSeedTime = 24,
@@ -65,6 +67,7 @@ public sealed class QBitSeedingRuleTests
         var config = new QBitSeedingRule
         {
             Name = "test-category",
+            Categories = ["test-category"],
             MaxRatio = 2.0,
             MinSeedTime = 1,
             MaxSeedTime = 48,
@@ -80,6 +83,7 @@ public sealed class QBitSeedingRuleTests
         var config = new QBitSeedingRule
         {
             Name = "test-category",
+            Categories = ["test-category"],
             MaxRatio = 0,
             MinSeedTime = 0,
             MaxSeedTime = -1,
@@ -95,6 +99,7 @@ public sealed class QBitSeedingRuleTests
         var config = new QBitSeedingRule
         {
             Name = "test-category",
+            Categories = ["test-category"],
             MaxRatio = -1,
             MinSeedTime = 0,
             MaxSeedTime = 0,
@@ -102,6 +107,27 @@ public sealed class QBitSeedingRuleTests
         };
 
         Should.NotThrow(() => config.Validate());
+    }
+
+    #endregion
+
+    #region Validate - Categories Validation
+
+    [Fact]
+    public void Validate_WithEmptyCategories_ThrowsValidationException()
+    {
+        var config = new QBitSeedingRule
+        {
+            Name = "test-category",
+            Categories = [],
+            MaxRatio = 2.0,
+            MinSeedTime = 0,
+            MaxSeedTime = -1,
+            DeleteSourceFiles = true
+        };
+
+        var exception = Should.Throw<ValidationException>(() => config.Validate());
+        exception.Message.ShouldBe("At least one category must be specified");
     }
 
     #endregion
@@ -166,6 +192,7 @@ public sealed class QBitSeedingRuleTests
         var config = new QBitSeedingRule
         {
             Name = "test-category",
+            Categories = ["test-category"],
             MaxRatio = -1,
             MinSeedTime = 0,
             MaxSeedTime = -1,
@@ -185,6 +212,7 @@ public sealed class QBitSeedingRuleTests
         var config = new QBitSeedingRule
         {
             Name = "test-category",
+            Categories = ["test-category"],
             MaxRatio = maxRatio,
             MinSeedTime = 0,
             MaxSeedTime = maxSeedTime,
@@ -205,6 +233,7 @@ public sealed class QBitSeedingRuleTests
         var config = new QBitSeedingRule
         {
             Name = "test-category",
+            Categories = ["test-category"],
             MaxRatio = 2.0,
             MinSeedTime = -1,
             MaxSeedTime = -1,
@@ -224,6 +253,7 @@ public sealed class QBitSeedingRuleTests
         var config = new QBitSeedingRule
         {
             Name = "test-category",
+            Categories = ["test-category"],
             MaxRatio = 2.0,
             MinSeedTime = minSeedTime,
             MaxSeedTime = -1,
@@ -240,6 +270,7 @@ public sealed class QBitSeedingRuleTests
         var config = new QBitSeedingRule
         {
             Name = "test-category",
+            Categories = ["test-category"],
             MaxRatio = 2.0,
             MinSeedTime = 0,
             MaxSeedTime = -1,
@@ -255,6 +286,7 @@ public sealed class QBitSeedingRuleTests
         var config = new QBitSeedingRule
         {
             Name = "test-category",
+            Categories = ["test-category"],
             MaxRatio = 2.0,
             MinSeedTime = 24,
             MaxSeedTime = -1,
@@ -272,6 +304,7 @@ public sealed class QBitSeedingRuleTests
         var config = new QBitSeedingRule
         {
             Name = "test-category",
+            Categories = ["test-category"],
             MaxRatio = 2.0,
             MinSeedTime = 0,
             MaxSeedTime = -1,

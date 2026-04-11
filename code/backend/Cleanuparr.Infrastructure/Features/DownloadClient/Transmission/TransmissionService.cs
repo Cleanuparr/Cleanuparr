@@ -6,6 +6,7 @@ using Cleanuparr.Infrastructure.Features.ItemStriker;
 using Cleanuparr.Infrastructure.Features.MalwareBlocker;
 using Cleanuparr.Infrastructure.Http;
 using Cleanuparr.Infrastructure.Interceptors;
+using Cleanuparr.Infrastructure.Services;
 using Cleanuparr.Infrastructure.Services.Interfaces;
 using Cleanuparr.Persistence.Models.Configuration;
 using Microsoft.Extensions.Caching.Memory;
@@ -36,6 +37,7 @@ public partial class TransmissionService : DownloadService, ITransmissionService
         TorrentFields.TRACKERS,
         TorrentFields.RATE_DOWNLOAD,
         TorrentFields.TOTAL_SIZE,
+        TorrentFields.LABELS,
     ];
 
     public TransmissionService(
@@ -48,12 +50,12 @@ public partial class TransmissionService : DownloadService, ITransmissionService
         IEventPublisher eventPublisher,
         IBlocklistProvider blocklistProvider,
         DownloadClientConfig downloadClientConfig,
-        IRuleEvaluator ruleEvaluator,
-        IRuleManager ruleManager
+        IQueueRuleEvaluator queueRuleEvaluator,
+        ISeedingRuleEvaluator seedingRuleEvaluator
     ) : base(
         logger,
         filenameEvaluator, striker, dryRunInterceptor, hardLinkFileService,
-        httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, ruleEvaluator, ruleManager
+        httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, queueRuleEvaluator, seedingRuleEvaluator
     )
     {
         UriBuilder uriBuilder = new(_downloadClientConfig.Url);
@@ -78,13 +80,13 @@ public partial class TransmissionService : DownloadService, ITransmissionService
         IEventPublisher eventPublisher,
         IBlocklistProvider blocklistProvider,
         DownloadClientConfig downloadClientConfig,
-        IRuleEvaluator ruleEvaluator,
-        IRuleManager ruleManager,
+        IQueueRuleEvaluator queueRuleEvaluator,
+        ISeedingRuleEvaluator seedingRuleEvaluator,
         ITransmissionClientWrapper clientWrapper
     ) : base(
         logger,
         filenameEvaluator, striker, dryRunInterceptor, hardLinkFileService,
-        httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, ruleEvaluator, ruleManager
+        httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, queueRuleEvaluator, seedingRuleEvaluator
     )
     {
         _client = clientWrapper;

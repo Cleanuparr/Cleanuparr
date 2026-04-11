@@ -2,7 +2,7 @@ using Cleanuparr.Domain.Entities.Deluge.Response;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
 using Cleanuparr.Infrastructure.Features.DownloadClient.Deluge;
-using Moq;
+using NSubstitute;
 using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.DownloadClient;
@@ -30,8 +30,8 @@ public class DelugeServiceTests : IClassFixture<DelugeServiceFixture>
             var sut = _fixture.CreateSut();
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentStatus(hash))
-                .ReturnsAsync((DownloadStatus?)null);
+                .GetTorrentStatus(hash)
+                .Returns((DownloadStatus?)null);
 
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 
@@ -58,12 +58,12 @@ public class DelugeServiceTests : IClassFixture<DelugeServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentStatus(hash))
-                .ReturnsAsync(downloadStatus);
+                .GetTorrentStatus(hash)
+                .Returns(downloadStatus);
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentFiles(hash))
-                .ReturnsAsync(new DelugeContents
+                .GetTorrentFiles(hash)
+                .Returns(new DelugeContents
                 {
                     Contents = new Dictionary<string, DelugeFileOrDirectory>
                     {
@@ -72,12 +72,12 @@ public class DelugeServiceTests : IClassFixture<DelugeServiceFixture>
                 });
 
             _fixture.RuleEvaluator
-                .Setup(x => x.EvaluateSlowRulesAsync(It.IsAny<DelugeItemWrapper>()))
-                .ReturnsAsync((false, DeleteReason.None, false));
+                .EvaluateSlowRulesAsync(Arg.Any<DelugeItemWrapper>())
+                .Returns((false, DeleteReason.None, false));
 
             _fixture.RuleEvaluator
-                .Setup(x => x.EvaluateStallRulesAsync(It.IsAny<DelugeItemWrapper>()))
-                .ReturnsAsync((false, DeleteReason.None, false));
+                .EvaluateStallRulesAsync(Arg.Any<DelugeItemWrapper>())
+                .Returns((false, DeleteReason.None, false));
 
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 
@@ -103,12 +103,12 @@ public class DelugeServiceTests : IClassFixture<DelugeServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentStatus(hash))
-                .ReturnsAsync(downloadStatus);
+                .GetTorrentStatus(hash)
+                .Returns(downloadStatus);
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentFiles(hash))
-                .ReturnsAsync(new DelugeContents
+                .GetTorrentFiles(hash)
+                .Returns(new DelugeContents
                 {
                     Contents = new Dictionary<string, DelugeFileOrDirectory>
                     {
@@ -117,12 +117,12 @@ public class DelugeServiceTests : IClassFixture<DelugeServiceFixture>
                 });
 
             _fixture.RuleEvaluator
-                .Setup(x => x.EvaluateSlowRulesAsync(It.IsAny<DelugeItemWrapper>()))
-                .ReturnsAsync((false, DeleteReason.None, false));
+                .EvaluateSlowRulesAsync(Arg.Any<DelugeItemWrapper>())
+                .Returns((false, DeleteReason.None, false));
 
             _fixture.RuleEvaluator
-                .Setup(x => x.EvaluateStallRulesAsync(It.IsAny<DelugeItemWrapper>()))
-                .ReturnsAsync((false, DeleteReason.None, false));
+                .EvaluateStallRulesAsync(Arg.Any<DelugeItemWrapper>())
+                .Returns((false, DeleteReason.None, false));
 
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 
@@ -155,12 +155,12 @@ public class DelugeServiceTests : IClassFixture<DelugeServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentStatus(hash))
-                .ReturnsAsync(downloadStatus);
+                .GetTorrentStatus(hash)
+                .Returns(downloadStatus);
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentFiles(hash))
-                .ReturnsAsync(new DelugeContents
+                .GetTorrentFiles(hash)
+                .Returns(new DelugeContents
                 {
                     Contents = new Dictionary<string, DelugeFileOrDirectory>
                     {
@@ -194,12 +194,12 @@ public class DelugeServiceTests : IClassFixture<DelugeServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentStatus(hash))
-                .ReturnsAsync(downloadStatus);
+                .GetTorrentStatus(hash)
+                .Returns(downloadStatus);
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentFiles(hash))
-                .ReturnsAsync(new DelugeContents
+                .GetTorrentFiles(hash)
+                .Returns(new DelugeContents
                 {
                     Contents = new Dictionary<string, DelugeFileOrDirectory>
                     {
@@ -209,12 +209,12 @@ public class DelugeServiceTests : IClassFixture<DelugeServiceFixture>
                 });
 
             _fixture.RuleEvaluator
-                .Setup(x => x.EvaluateSlowRulesAsync(It.IsAny<DelugeItemWrapper>()))
-                .ReturnsAsync((false, DeleteReason.None, false));
+                .EvaluateSlowRulesAsync(Arg.Any<DelugeItemWrapper>())
+                .Returns((false, DeleteReason.None, false));
 
             _fixture.RuleEvaluator
-                .Setup(x => x.EvaluateStallRulesAsync(It.IsAny<DelugeItemWrapper>()))
-                .ReturnsAsync((false, DeleteReason.None, false));
+                .EvaluateStallRulesAsync(Arg.Any<DelugeItemWrapper>())
+                .Returns((false, DeleteReason.None, false));
 
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 
@@ -246,8 +246,8 @@ public class DelugeServiceTests : IClassFixture<DelugeServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentStatus(hash))
-                .ReturnsAsync(downloadStatus);
+                .GetTorrentStatus(hash)
+                .Returns(downloadStatus);
 
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, new[] { hash });
 
@@ -275,8 +275,8 @@ public class DelugeServiceTests : IClassFixture<DelugeServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentStatus(hash))
-                .ReturnsAsync(downloadStatus);
+                .GetTorrentStatus(hash)
+                .Returns(downloadStatus);
 
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, new[] { category });
 
@@ -306,8 +306,8 @@ public class DelugeServiceTests : IClassFixture<DelugeServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentStatus(hash))
-                .ReturnsAsync(downloadStatus);
+                .GetTorrentStatus(hash)
+                .Returns(downloadStatus);
 
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, new[] { trackerDomain });
 
@@ -340,12 +340,12 @@ public class DelugeServiceTests : IClassFixture<DelugeServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentStatus(hash))
-                .ReturnsAsync(downloadStatus);
+                .GetTorrentStatus(hash)
+                .Returns(downloadStatus);
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentFiles(hash))
-                .ReturnsAsync(new DelugeContents
+                .GetTorrentFiles(hash)
+                .Returns(new DelugeContents
                 {
                     Contents = new Dictionary<string, DelugeFileOrDirectory>
                     {
@@ -354,13 +354,13 @@ public class DelugeServiceTests : IClassFixture<DelugeServiceFixture>
                 });
 
             _fixture.RuleEvaluator
-                .Setup(x => x.EvaluateStallRulesAsync(It.IsAny<DelugeItemWrapper>()))
-                .ReturnsAsync((false, DeleteReason.None, false));
+                .EvaluateStallRulesAsync(Arg.Any<DelugeItemWrapper>())
+                .Returns((false, DeleteReason.None, false));
 
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 
             Assert.False(result.ShouldRemove);
-            _fixture.RuleEvaluator.Verify(x => x.EvaluateSlowRulesAsync(It.IsAny<DelugeItemWrapper>()), Times.Never);
+            await _fixture.RuleEvaluator.DidNotReceive().EvaluateSlowRulesAsync(Arg.Any<DelugeItemWrapper>());
         }
 
         [Fact]
@@ -381,12 +381,12 @@ public class DelugeServiceTests : IClassFixture<DelugeServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentStatus(hash))
-                .ReturnsAsync(downloadStatus);
+                .GetTorrentStatus(hash)
+                .Returns(downloadStatus);
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentFiles(hash))
-                .ReturnsAsync(new DelugeContents
+                .GetTorrentFiles(hash)
+                .Returns(new DelugeContents
                 {
                     Contents = new Dictionary<string, DelugeFileOrDirectory>
                     {
@@ -395,13 +395,13 @@ public class DelugeServiceTests : IClassFixture<DelugeServiceFixture>
                 });
 
             _fixture.RuleEvaluator
-                .Setup(x => x.EvaluateStallRulesAsync(It.IsAny<DelugeItemWrapper>()))
-                .ReturnsAsync((false, DeleteReason.None, false));
+                .EvaluateStallRulesAsync(Arg.Any<DelugeItemWrapper>())
+                .Returns((false, DeleteReason.None, false));
 
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 
             Assert.False(result.ShouldRemove);
-            _fixture.RuleEvaluator.Verify(x => x.EvaluateSlowRulesAsync(It.IsAny<DelugeItemWrapper>()), Times.Never);
+            await _fixture.RuleEvaluator.DidNotReceive().EvaluateSlowRulesAsync(Arg.Any<DelugeItemWrapper>());
         }
     }
 
@@ -429,12 +429,12 @@ public class DelugeServiceTests : IClassFixture<DelugeServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentStatus(hash))
-                .ReturnsAsync(downloadStatus);
+                .GetTorrentStatus(hash)
+                .Returns(downloadStatus);
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentFiles(hash))
-                .ReturnsAsync(new DelugeContents
+                .GetTorrentFiles(hash)
+                .Returns(new DelugeContents
                 {
                     Contents = new Dictionary<string, DelugeFileOrDirectory>
                     {
@@ -443,8 +443,8 @@ public class DelugeServiceTests : IClassFixture<DelugeServiceFixture>
                 });
 
             _fixture.RuleEvaluator
-                .Setup(x => x.EvaluateSlowRulesAsync(It.IsAny<DelugeItemWrapper>()))
-                .ReturnsAsync((true, DeleteReason.SlowSpeed, true));
+                .EvaluateSlowRulesAsync(Arg.Any<DelugeItemWrapper>())
+                .Returns((true, DeleteReason.SlowSpeed, true));
 
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 
@@ -472,12 +472,12 @@ public class DelugeServiceTests : IClassFixture<DelugeServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentStatus(hash))
-                .ReturnsAsync(downloadStatus);
+                .GetTorrentStatus(hash)
+                .Returns(downloadStatus);
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentFiles(hash))
-                .ReturnsAsync(new DelugeContents
+                .GetTorrentFiles(hash)
+                .Returns(new DelugeContents
                 {
                     Contents = new Dictionary<string, DelugeFileOrDirectory>
                     {
@@ -486,8 +486,8 @@ public class DelugeServiceTests : IClassFixture<DelugeServiceFixture>
                 });
 
             _fixture.RuleEvaluator
-                .Setup(x => x.EvaluateStallRulesAsync(It.IsAny<DelugeItemWrapper>()))
-                .ReturnsAsync((true, DeleteReason.Stalled, true));
+                .EvaluateStallRulesAsync(Arg.Any<DelugeItemWrapper>())
+                .Returns((true, DeleteReason.Stalled, true));
 
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 

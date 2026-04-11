@@ -5,7 +5,7 @@ using ValidationException = Cleanuparr.Domain.Exceptions.ValidationException;
 
 namespace Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
 
-public sealed record TransmissionSeedingRule : ISeedingRule
+public sealed record TransmissionSeedingRule : ISeedingRule, ITagFilterable
 {
     [Key]
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
@@ -16,6 +16,22 @@ public sealed record TransmissionSeedingRule : ISeedingRule
     public DownloadClientConfig DownloadClientConfig { get; set; } = null!;
 
     public string Name { get; set; } = string.Empty;
+
+    public List<string> Categories { get; set; } = [];
+
+    public List<string> TrackerPatterns { get; set; } = [];
+
+    /// <summary>
+    /// The torrent must have at least one of these Transmission labels. Empty = no label filter.
+    /// </summary>
+    public List<string> TagsAny { get; set; } = [];
+
+    /// <summary>
+    /// The torrent must have ALL of these Transmission labels. Empty = no label filter.
+    /// </summary>
+    public List<string> TagsAll { get; set; } = [];
+
+    public int Priority { get; set; }
 
     /// <summary>
     /// Which torrent privacy types this rule applies to.
@@ -47,6 +63,11 @@ public sealed record TransmissionSeedingRule : ISeedingRule
         if (string.IsNullOrEmpty(Name.Trim()))
         {
             throw new ValidationException("Rule name can not be empty");
+        }
+
+        if (Categories.Count == 0)
+        {
+            throw new ValidationException("At least one category must be specified");
         }
 
         if (MaxRatio < 0 && MaxSeedTime < 0)

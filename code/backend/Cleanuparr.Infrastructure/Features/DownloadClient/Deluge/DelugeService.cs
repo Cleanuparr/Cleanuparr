@@ -8,6 +8,7 @@ using Cleanuparr.Infrastructure.Features.ItemStriker;
 using Cleanuparr.Infrastructure.Features.MalwareBlocker;
 using Cleanuparr.Infrastructure.Http;
 using Cleanuparr.Infrastructure.Interceptors;
+using Cleanuparr.Infrastructure.Services;
 using Cleanuparr.Infrastructure.Services.Interfaces;
 using Cleanuparr.Persistence.Models.Configuration;
 using Microsoft.Extensions.Caching.Memory;
@@ -29,12 +30,12 @@ public partial class DelugeService : DownloadService, IDelugeService
         IEventPublisher eventPublisher,
         IBlocklistProvider blocklistProvider,
         DownloadClientConfig downloadClientConfig,
-        IRuleEvaluator ruleEvaluator,
-        IRuleManager ruleManager
+        IQueueRuleEvaluator queueRuleEvaluator,
+        ISeedingRuleEvaluator seedingRuleEvaluator
     ) : base(
         logger,
         filenameEvaluator, striker, dryRunInterceptor, hardLinkFileService,
-        httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, ruleEvaluator, ruleManager
+        httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, queueRuleEvaluator, seedingRuleEvaluator
     )
     {
         var delugeClient = new DelugeClient(downloadClientConfig, _httpClient);
@@ -52,13 +53,13 @@ public partial class DelugeService : DownloadService, IDelugeService
         IEventPublisher eventPublisher,
         IBlocklistProvider blocklistProvider,
         DownloadClientConfig downloadClientConfig,
-        IRuleEvaluator ruleEvaluator,
-        IRuleManager ruleManager,
+        IQueueRuleEvaluator queueRuleEvaluator,
+        ISeedingRuleEvaluator seedingRuleEvaluator,
         IDelugeClientWrapper clientWrapper
     ) : base(
         logger,
         filenameEvaluator, striker, dryRunInterceptor, hardLinkFileService,
-        httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, ruleEvaluator, ruleManager
+        httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, queueRuleEvaluator, seedingRuleEvaluator
     )
     {
         _client = clientWrapper;

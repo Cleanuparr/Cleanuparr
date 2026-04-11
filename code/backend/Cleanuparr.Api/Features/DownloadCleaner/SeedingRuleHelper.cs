@@ -16,15 +16,57 @@ internal static class SeedingRuleHelper
         return client.TypeName switch
         {
             DownloadClientTypeName.qBittorrent => (await ctx.QBitSeedingRules
-                .Where(r => r.DownloadClientConfigId == client.Id).AsNoTracking().ToListAsync()).Cast<ISeedingRule>().ToList(),
+                .Where(r => r.DownloadClientConfigId == client.Id)
+                .OrderBy(r => r.Priority).ThenBy(r => r.Id)
+                .AsNoTracking().ToListAsync()).Cast<ISeedingRule>().ToList(),
             DownloadClientTypeName.Deluge => (await ctx.DelugeSeedingRules
-                .Where(r => r.DownloadClientConfigId == client.Id).AsNoTracking().ToListAsync()).Cast<ISeedingRule>().ToList(),
+                .Where(r => r.DownloadClientConfigId == client.Id)
+                .OrderBy(r => r.Priority).ThenBy(r => r.Id)
+                .AsNoTracking().ToListAsync()).Cast<ISeedingRule>().ToList(),
             DownloadClientTypeName.Transmission => (await ctx.TransmissionSeedingRules
-                .Where(r => r.DownloadClientConfigId == client.Id).AsNoTracking().ToListAsync()).Cast<ISeedingRule>().ToList(),
+                .Where(r => r.DownloadClientConfigId == client.Id)
+                .OrderBy(r => r.Priority).ThenBy(r => r.Id)
+                .AsNoTracking().ToListAsync()).Cast<ISeedingRule>().ToList(),
             DownloadClientTypeName.uTorrent => (await ctx.UTorrentSeedingRules
-                .Where(r => r.DownloadClientConfigId == client.Id).AsNoTracking().ToListAsync()).Cast<ISeedingRule>().ToList(),
+                .Where(r => r.DownloadClientConfigId == client.Id)
+                .OrderBy(r => r.Priority).ThenBy(r => r.Id)
+                .AsNoTracking().ToListAsync()).Cast<ISeedingRule>().ToList(),
             DownloadClientTypeName.rTorrent => (await ctx.RTorrentSeedingRules
-                .Where(r => r.DownloadClientConfigId == client.Id).AsNoTracking().ToListAsync()).Cast<ISeedingRule>().ToList(),
+                .Where(r => r.DownloadClientConfigId == client.Id)
+                .OrderBy(r => r.Priority).ThenBy(r => r.Id)
+                .AsNoTracking().ToListAsync()).Cast<ISeedingRule>().ToList(),
+            _ => [],
+        };
+    }
+
+    /// <summary>
+    /// Queries the appropriate per-type seeding rules table for a single client with change tracking enabled.
+    /// Use this when you need to modify and save the returned entities.
+    /// </summary>
+    public static async Task<List<ISeedingRule>> GetForClientTrackedAsync(DataContext ctx, DownloadClientConfig client)
+    {
+        return client.TypeName switch
+        {
+            DownloadClientTypeName.qBittorrent => (await ctx.QBitSeedingRules
+                .Where(r => r.DownloadClientConfigId == client.Id)
+                .OrderBy(r => r.Priority).ThenBy(r => r.Id)
+                .ToListAsync()).Cast<ISeedingRule>().ToList(),
+            DownloadClientTypeName.Deluge => (await ctx.DelugeSeedingRules
+                .Where(r => r.DownloadClientConfigId == client.Id)
+                .OrderBy(r => r.Priority).ThenBy(r => r.Id)
+                .ToListAsync()).Cast<ISeedingRule>().ToList(),
+            DownloadClientTypeName.Transmission => (await ctx.TransmissionSeedingRules
+                .Where(r => r.DownloadClientConfigId == client.Id)
+                .OrderBy(r => r.Priority).ThenBy(r => r.Id)
+                .ToListAsync()).Cast<ISeedingRule>().ToList(),
+            DownloadClientTypeName.uTorrent => (await ctx.UTorrentSeedingRules
+                .Where(r => r.DownloadClientConfigId == client.Id)
+                .OrderBy(r => r.Priority).ThenBy(r => r.Id)
+                .ToListAsync()).Cast<ISeedingRule>().ToList(),
+            DownloadClientTypeName.rTorrent => (await ctx.RTorrentSeedingRules
+                .Where(r => r.DownloadClientConfigId == client.Id)
+                .OrderBy(r => r.Priority).ThenBy(r => r.Id)
+                .ToListAsync()).Cast<ISeedingRule>().ToList(),
             _ => [],
         };
     }
@@ -55,11 +97,26 @@ internal static class SeedingRuleHelper
     {
         return client.TypeName switch
         {
-            DownloadClientTypeName.qBittorrent => qbitRules.Where(r => r.DownloadClientConfigId == client.Id).Cast<ISeedingRule>().ToList(),
-            DownloadClientTypeName.Deluge => delugeRules.Where(r => r.DownloadClientConfigId == client.Id).Cast<ISeedingRule>().ToList(),
-            DownloadClientTypeName.Transmission => transmissionRules.Where(r => r.DownloadClientConfigId == client.Id).Cast<ISeedingRule>().ToList(),
-            DownloadClientTypeName.uTorrent => utorrentRules.Where(r => r.DownloadClientConfigId == client.Id).Cast<ISeedingRule>().ToList(),
-            DownloadClientTypeName.rTorrent => rtorrentRules.Where(r => r.DownloadClientConfigId == client.Id).Cast<ISeedingRule>().ToList(),
+            DownloadClientTypeName.qBittorrent => qbitRules
+                .Where(r => r.DownloadClientConfigId == client.Id)
+                .OrderBy(r => r.Priority).ThenBy(r => r.Id)
+                .Cast<ISeedingRule>().ToList(),
+            DownloadClientTypeName.Deluge => delugeRules
+                .Where(r => r.DownloadClientConfigId == client.Id)
+                .OrderBy(r => r.Priority).ThenBy(r => r.Id)
+                .Cast<ISeedingRule>().ToList(),
+            DownloadClientTypeName.Transmission => transmissionRules
+                .Where(r => r.DownloadClientConfigId == client.Id)
+                .OrderBy(r => r.Priority).ThenBy(r => r.Id)
+                .Cast<ISeedingRule>().ToList(),
+            DownloadClientTypeName.uTorrent => utorrentRules
+                .Where(r => r.DownloadClientConfigId == client.Id)
+                .OrderBy(r => r.Priority).ThenBy(r => r.Id)
+                .Cast<ISeedingRule>().ToList(),
+            DownloadClientTypeName.rTorrent => rtorrentRules
+                .Where(r => r.DownloadClientConfigId == client.Id)
+                .OrderBy(r => r.Priority).ThenBy(r => r.Id)
+                .Cast<ISeedingRule>().ToList(),
             _ => [],
         };
     }

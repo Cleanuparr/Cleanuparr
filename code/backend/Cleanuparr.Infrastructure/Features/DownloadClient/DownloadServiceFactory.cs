@@ -71,13 +71,13 @@ public sealed class DownloadServiceFactory : IDownloadServiceFactory
         var eventPublisher = _serviceProvider.GetRequiredService<IEventPublisher>();
         var blocklistProvider = _serviceProvider.GetRequiredService<IBlocklistProvider>();
 
-        var ruleEvaluator = _serviceProvider.GetRequiredService<IRuleEvaluator>();
-        var ruleManager = _serviceProvider.GetRequiredService<IRuleManager>();
+        var ruleEvaluator = _serviceProvider.GetRequiredService<IQueueRuleEvaluator>();
+        var seedingRuleEvaluator = _serviceProvider.GetRequiredService<ISeedingRuleEvaluator>();
 
         // Create the QBitService instance
         QBitService service = new(
             logger, filenameEvaluator, striker, dryRunInterceptor,
-            hardLinkFileService, httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, ruleEvaluator, ruleManager
+            hardLinkFileService, httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, ruleEvaluator, seedingRuleEvaluator
         );
 
         return service;
@@ -94,13 +94,13 @@ public sealed class DownloadServiceFactory : IDownloadServiceFactory
         var eventPublisher = _serviceProvider.GetRequiredService<IEventPublisher>();
         var blocklistProvider = _serviceProvider.GetRequiredService<IBlocklistProvider>();
 
-        var ruleEvaluator = _serviceProvider.GetRequiredService<IRuleEvaluator>();
-        var ruleManager = _serviceProvider.GetRequiredService<IRuleManager>();
+        var ruleEvaluator = _serviceProvider.GetRequiredService<IQueueRuleEvaluator>();
+        var seedingRuleEvaluator = _serviceProvider.GetRequiredService<ISeedingRuleEvaluator>();
 
         // Create the DelugeService instance
         DelugeService service = new(
             logger, filenameEvaluator, striker, dryRunInterceptor,
-            hardLinkFileService, httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, ruleEvaluator, ruleManager
+            hardLinkFileService, httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, ruleEvaluator, seedingRuleEvaluator
         );
 
         return service;
@@ -117,13 +117,13 @@ public sealed class DownloadServiceFactory : IDownloadServiceFactory
         var eventPublisher = _serviceProvider.GetRequiredService<IEventPublisher>();
         var blocklistProvider = _serviceProvider.GetRequiredService<IBlocklistProvider>();
 
-        var ruleEvaluator = _serviceProvider.GetRequiredService<IRuleEvaluator>();
-        var ruleManager = _serviceProvider.GetRequiredService<IRuleManager>();
+        var ruleEvaluator = _serviceProvider.GetRequiredService<IQueueRuleEvaluator>();
+        var seedingRuleEvaluator = _serviceProvider.GetRequiredService<ISeedingRuleEvaluator>();
 
         // Create the TransmissionService instance
         TransmissionService service = new(
             logger, filenameEvaluator, striker, dryRunInterceptor,
-            hardLinkFileService, httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, ruleEvaluator, ruleManager
+            hardLinkFileService, httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, ruleEvaluator, seedingRuleEvaluator
         );
 
         return service;
@@ -142,13 +142,13 @@ public sealed class DownloadServiceFactory : IDownloadServiceFactory
         var blocklistProvider = _serviceProvider.GetRequiredService<IBlocklistProvider>();
         var loggerFactory = _serviceProvider.GetRequiredService<ILoggerFactory>();
 
-        var ruleEvaluator = _serviceProvider.GetRequiredService<IRuleEvaluator>();
-        var ruleManager = _serviceProvider.GetRequiredService<IRuleManager>();
+        var ruleEvaluator = _serviceProvider.GetRequiredService<IQueueRuleEvaluator>();
+        var seedingRuleEvaluator = _serviceProvider.GetRequiredService<ISeedingRuleEvaluator>();
 
         // Create the UTorrentService instance
         UTorrentService service = new(
             logger, cache, filenameEvaluator, striker, dryRunInterceptor,
-            hardLinkFileService, httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, loggerFactory, ruleEvaluator, ruleManager
+            hardLinkFileService, httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, loggerFactory, ruleEvaluator, seedingRuleEvaluator
         );
 
         return service;
@@ -165,13 +165,13 @@ public sealed class DownloadServiceFactory : IDownloadServiceFactory
         var eventPublisher = _serviceProvider.GetRequiredService<IEventPublisher>();
         var blocklistProvider = _serviceProvider.GetRequiredService<IBlocklistProvider>();
 
-        var ruleEvaluator = _serviceProvider.GetRequiredService<IRuleEvaluator>();
-        var ruleManager = _serviceProvider.GetRequiredService<IRuleManager>();
+        var ruleEvaluator = _serviceProvider.GetRequiredService<IQueueRuleEvaluator>();
+        var seedingRuleEvaluator = _serviceProvider.GetRequiredService<ISeedingRuleEvaluator>();
 
         // Create the RTorrentService instance
         RTorrentService service = new(
             logger, filenameEvaluator, striker, dryRunInterceptor,
-            hardLinkFileService, httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, ruleEvaluator, ruleManager
+            hardLinkFileService, httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, ruleEvaluator, seedingRuleEvaluator
         );
 
         return service;

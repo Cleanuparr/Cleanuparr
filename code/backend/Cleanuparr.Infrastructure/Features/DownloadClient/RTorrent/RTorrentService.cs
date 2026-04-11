@@ -25,11 +25,11 @@ public partial class RTorrentService : DownloadService, IRTorrentService
         IEventPublisher eventPublisher,
         IBlocklistProvider blocklistProvider,
         DownloadClientConfig downloadClientConfig,
-        IRuleEvaluator ruleEvaluator,
-        IRuleManager ruleManager
+        IQueueRuleEvaluator queueRuleEvaluator,
+        ISeedingRuleEvaluator seedingRuleEvaluator
     ) : base(
         logger, filenameEvaluator, striker, dryRunInterceptor, hardLinkFileService,
-        httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, ruleEvaluator, ruleManager
+        httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, queueRuleEvaluator, seedingRuleEvaluator
     )
     {
         var rtorrentClient = new RTorrentClient(downloadClientConfig, _httpClient);
@@ -47,12 +47,12 @@ public partial class RTorrentService : DownloadService, IRTorrentService
         IEventPublisher eventPublisher,
         IBlocklistProvider blocklistProvider,
         DownloadClientConfig downloadClientConfig,
-        IRuleEvaluator ruleEvaluator,
-        IRuleManager ruleManager,
+        IQueueRuleEvaluator queueRuleEvaluator,
+        ISeedingRuleEvaluator seedingRuleEvaluator,
         IRTorrentClientWrapper clientWrapper
     ) : base(
         logger, filenameEvaluator, striker, dryRunInterceptor, hardLinkFileService,
-        httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, ruleEvaluator, ruleManager
+        httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, queueRuleEvaluator, seedingRuleEvaluator
     )
     {
         _client = clientWrapper;

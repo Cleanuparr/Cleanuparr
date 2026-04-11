@@ -1,32 +1,29 @@
 using Cleanuparr.Domain.Entities;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Context;
-using Cleanuparr.Infrastructure.Features.DownloadClient;
 using Cleanuparr.Infrastructure.Features.ItemStriker;
 using Cleanuparr.Infrastructure.Services.Interfaces;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
-using Cleanuparr.Persistence.Models.State;
-using Cleanuparr.Shared.Helpers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace Cleanuparr.Infrastructure.Services;
 
-public class RuleEvaluator : IRuleEvaluator
+public class QueueRuleEvaluator : IQueueRuleEvaluator
 {
-    private readonly IRuleManager _ruleManager;
+    private readonly IQueueRuleManager _queueRuleManager;
     private readonly IStriker _striker;
     private readonly EventsContext _context;
-    private readonly ILogger<RuleEvaluator> _logger;
+    private readonly ILogger<QueueRuleEvaluator> _logger;
 
-    public RuleEvaluator(
-        IRuleManager ruleManager,
+    public QueueRuleEvaluator(
+        IQueueRuleManager queueRuleManager,
         IStriker striker,
         EventsContext context,
-        ILogger<RuleEvaluator> logger)
+        ILogger<QueueRuleEvaluator> logger)
     {
-        _ruleManager = ruleManager;
+        _queueRuleManager = queueRuleManager;
         _striker = striker;
         _context = context;
         _logger = logger;
@@ -36,7 +33,7 @@ public class RuleEvaluator : IRuleEvaluator
     {
         _logger.LogTrace("Evaluating stall rules | {name}", torrent.Name);
 
-        var rule = _ruleManager.GetMatchingStallRule(torrent);
+        var rule = _queueRuleManager.GetMatchingStallRule(torrent);
 
         if (rule is null)
         {
@@ -74,7 +71,7 @@ public class RuleEvaluator : IRuleEvaluator
     {
         _logger.LogTrace("Evaluating slow rules | {name}", torrent.Name);
 
-        SlowRule? rule = _ruleManager.GetMatchingSlowRule(torrent);
+        SlowRule? rule = _queueRuleManager.GetMatchingSlowRule(torrent);
 
         if (rule is null)
         {

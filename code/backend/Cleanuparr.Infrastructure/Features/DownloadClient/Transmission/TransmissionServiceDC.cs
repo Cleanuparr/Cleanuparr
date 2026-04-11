@@ -24,9 +24,7 @@ public partial class TransmissionService
     public override List<ITorrentItemWrapper>? FilterDownloadsToBeCleanedAsync(List<ITorrentItemWrapper>? downloads, List<ISeedingRule> seedingRules)
     {
         return downloads
-            ?.Where(x => seedingRules
-                .Any(cat => cat.Name.Equals(x.Category, StringComparison.InvariantCultureIgnoreCase))
-            )
+            ?.Where(x => seedingRules.Any(rule => rule.Categories.Any(cat => cat.Equals(x.Category, StringComparison.OrdinalIgnoreCase))))
             .ToList();
     }
 

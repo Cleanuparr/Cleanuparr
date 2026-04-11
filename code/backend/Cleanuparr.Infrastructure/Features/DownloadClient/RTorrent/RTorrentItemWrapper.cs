@@ -11,6 +11,7 @@ public sealed class RTorrentItemWrapper : ITorrentItemWrapper
 {
     public RTorrentTorrent Info { get; }
     private readonly IReadOnlyList<string> _trackers;
+    private readonly Lazy<IReadOnlyList<string>> _trackerDomains;
     private string? _category;
 
     public RTorrentItemWrapper(RTorrentTorrent torrent, IReadOnlyList<string>? trackers = null)
@@ -18,6 +19,12 @@ public sealed class RTorrentItemWrapper : ITorrentItemWrapper
         Info = torrent ?? throw new ArgumentNullException(nameof(torrent));
         _trackers = trackers ?? torrent.Trackers ?? [];
         _category = torrent.Label;
+        _trackerDomains = new Lazy<IReadOnlyList<string>>(() => _trackers
+            .Select(url => UriService.GetDomain(url))
+            .Where(d => d is not null)
+            .Select(d => d!)
+            .ToList()
+            .AsReadOnly());
     }
 
     public string Hash => Info.Hash;
@@ -52,6 +59,10 @@ public sealed class RTorrentItemWrapper : ITorrentItemWrapper
     }
 
     public string SavePath => Info.BasePath ?? string.Empty;
+
+    public IReadOnlyList<string> TrackerDomains => _trackerDomains.Value;
+
+    public IReadOnlyList<string> Tags => Array.Empty<string>();
 
     /// <summary>
     /// Downloading when state is 1 (started) and complete is 0 (not finished)

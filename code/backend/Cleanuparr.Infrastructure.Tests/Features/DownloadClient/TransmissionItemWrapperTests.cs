@@ -205,6 +205,127 @@ public class TransmissionItemWrapperTests
         result.ShouldBe(expected);
     }
 
+    // TrackerDomains property tests
+    [Fact]
+    public void TrackerDomains_WithMultipleTrackers_ReturnsExtractedDomains()
+    {
+        // Arrange
+        var torrentInfo = new TorrentInfo
+        {
+            Trackers = new TransmissionTorrentTrackers[]
+            {
+                new() { Announce = "http://tracker.example.com/announce" },
+                new() { Announce = "udp://open.stealth.si:80/announce" }
+            }
+        };
+        var wrapper = new TransmissionItemWrapper(torrentInfo);
+
+        // Act
+        var result = wrapper.TrackerDomains;
+
+        // Assert
+        result.Count.ShouldBe(2);
+        result.ShouldContain("tracker.example.com");
+        result.ShouldContain("open.stealth.si");
+    }
+
+    [Fact]
+    public void TrackerDomains_WithNullTrackers_ReturnsEmptyList()
+    {
+        // Arrange
+        var torrentInfo = new TorrentInfo { Trackers = null };
+        var wrapper = new TransmissionItemWrapper(torrentInfo);
+
+        // Act
+        var result = wrapper.TrackerDomains;
+
+        // Assert
+        result.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void TrackerDomains_WithEmptyTrackers_ReturnsEmptyList()
+    {
+        // Arrange
+        var torrentInfo = new TorrentInfo { Trackers = Array.Empty<TransmissionTorrentTrackers>() };
+        var wrapper = new TransmissionItemWrapper(torrentInfo);
+
+        // Act
+        var result = wrapper.TrackerDomains;
+
+        // Assert
+        result.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void TrackerDomains_WithNullAnnounceUrls_FiltersThemOut()
+    {
+        // Arrange
+        var torrentInfo = new TorrentInfo
+        {
+            Trackers = new TransmissionTorrentTrackers[]
+            {
+                new() { Announce = "http://tracker.example.com/announce" },
+                new() { Announce = null },
+                new() { Announce = "" }
+            }
+        };
+        var wrapper = new TransmissionItemWrapper(torrentInfo);
+
+        // Act
+        var result = wrapper.TrackerDomains;
+
+        // Assert
+        result.Count.ShouldBe(1);
+        result.ShouldContain("tracker.example.com");
+    }
+
+    // Tags property tests
+    [Fact]
+    public void Tags_ReturnsLabels()
+    {
+        // Arrange
+        var torrentInfo = new TorrentInfo { Labels = new[] { "tag1", "tag2", "tag3" } };
+        var wrapper = new TransmissionItemWrapper(torrentInfo);
+
+        // Act
+        var result = wrapper.Tags;
+
+        // Assert
+        result.Count.ShouldBe(3);
+        result.ShouldContain("tag1");
+        result.ShouldContain("tag2");
+        result.ShouldContain("tag3");
+    }
+
+    [Fact]
+    public void Tags_WithNullLabels_ReturnsEmptyList()
+    {
+        // Arrange
+        var torrentInfo = new TorrentInfo { Labels = null };
+        var wrapper = new TransmissionItemWrapper(torrentInfo);
+
+        // Act
+        var result = wrapper.Tags;
+
+        // Assert
+        result.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void Tags_WithEmptyLabels_ReturnsEmptyList()
+    {
+        // Arrange
+        var torrentInfo = new TorrentInfo { Labels = Array.Empty<string>() };
+        var wrapper = new TransmissionItemWrapper(torrentInfo);
+
+        // Act
+        var result = wrapper.Tags;
+
+        // Assert
+        result.ShouldBeEmpty();
+    }
+
     [Fact]
     public void IsIgnored_WithEmptyList_ReturnsFalse()
     {

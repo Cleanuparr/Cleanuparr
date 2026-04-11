@@ -3,7 +3,8 @@ using Cleanuparr.Domain.Entities.Deluge.Response;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.DownloadClient.Deluge;
 using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
-using Moq;
+using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.DownloadClient;
@@ -38,8 +39,8 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetStatusForAllTorrents())
-                .ReturnsAsync(downloads);
+                .GetStatusForAllTorrents()
+                .Returns(downloads);
 
             // Act
             var result = await sut.GetSeedingDownloads();
@@ -62,8 +63,8 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetStatusForAllTorrents())
-                .ReturnsAsync(downloads);
+                .GetStatusForAllTorrents()
+                .Returns(downloads);
 
             // Act
             var result = await sut.GetSeedingDownloads();
@@ -79,8 +80,8 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
             var sut = _fixture.CreateSut();
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetStatusForAllTorrents())
-                .ReturnsAsync((List<DownloadStatus>?)null);
+                .GetStatusForAllTorrents()
+                .Returns((List<DownloadStatus>?)null);
 
             // Act
             var result = await sut.GetSeedingDownloads();
@@ -102,8 +103,8 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetStatusForAllTorrents())
-                .ReturnsAsync(downloads);
+                .GetStatusForAllTorrents()
+                .Returns(downloads);
 
             // Act
             var result = await sut.GetSeedingDownloads();
@@ -135,8 +136,8 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
 
             var categories = new List<ISeedingRule>
             {
-                new DelugeSeedingRule { Name = "movies", MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true },
-                new DelugeSeedingRule { Name = "tv", MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true }
+                new DelugeSeedingRule { Name = "movies", Categories = ["movies"], MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true },
+                new DelugeSeedingRule { Name = "tv", Categories = ["tv"], MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true }
             };
 
             // Act
@@ -162,7 +163,7 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
 
             var categories = new List<ISeedingRule>
             {
-                new DelugeSeedingRule { Name = "movies", MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true }
+                new DelugeSeedingRule { Name = "movies", Categories = ["movies"], MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true }
             };
 
             // Act
@@ -186,7 +187,7 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
 
             var categories = new List<ISeedingRule>
             {
-                new DelugeSeedingRule { Name = "movies", MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true }
+                new DelugeSeedingRule { Name = "movies", Categories = ["movies"], MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true }
             };
 
             // Act
@@ -298,18 +299,18 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
             var sut = _fixture.CreateSut();
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetLabels())
-                .ReturnsAsync(new List<string>());
+                .GetLabels()
+                .Returns(new List<string>());
 
             _fixture.ClientWrapper
-                .Setup(x => x.CreateLabel("new-label"))
+                .CreateLabel("new-label")
                 .Returns(Task.CompletedTask);
 
             // Act
             await sut.CreateCategoryAsync("new-label");
 
             // Assert
-            _fixture.ClientWrapper.Verify(x => x.CreateLabel("new-label"), Times.Once);
+            await _fixture.ClientWrapper.Received(1).CreateLabel("new-label");
         }
 
         [Fact]
@@ -319,14 +320,14 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
             var sut = _fixture.CreateSut();
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetLabels())
-                .ReturnsAsync(new List<string> { "existing" });
+                .GetLabels()
+                .Returns(new List<string> { "existing" });
 
             // Act
             await sut.CreateCategoryAsync("existing");
 
             // Assert
-            _fixture.ClientWrapper.Verify(x => x.CreateLabel(It.IsAny<string>()), Times.Never);
+            await _fixture.ClientWrapper.DidNotReceive().CreateLabel(Arg.Any<string>());
         }
 
         [Fact]
@@ -336,14 +337,14 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
             var sut = _fixture.CreateSut();
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetLabels())
-                .ReturnsAsync(new List<string> { "Existing" });
+                .GetLabels()
+                .Returns(new List<string> { "Existing" });
 
             // Act
             await sut.CreateCategoryAsync("existing");
 
             // Assert
-            _fixture.ClientWrapper.Verify(x => x.CreateLabel(It.IsAny<string>()), Times.Never);
+            await _fixture.ClientWrapper.DidNotReceive().CreateLabel(Arg.Any<string>());
         }
     }
 
@@ -359,20 +360,19 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
             // Arrange
             var sut = _fixture.CreateSut();
             const string hash = "TEST-HASH";
-            var mockTorrent = new Mock<ITorrentItemWrapper>();
-            mockTorrent.Setup(x => x.Hash).Returns(hash);
+            var mockTorrent = Substitute.For<ITorrentItemWrapper>();
+            mockTorrent.Hash.Returns(hash);
 
             _fixture.ClientWrapper
-                .Setup(x => x.DeleteTorrents(It.Is<List<string>>(h => h.Contains("test-hash")), true))
+                .DeleteTorrents(Arg.Is<List<string>>(h => h.Contains("test-hash")), true)
                 .Returns(Task.CompletedTask);
 
             // Act
-            await sut.DeleteDownload(mockTorrent.Object, true);
+            await sut.DeleteDownload(mockTorrent, true);
 
             // Assert
-            _fixture.ClientWrapper.Verify(
-                x => x.DeleteTorrents(It.Is<List<string>>(h => h.Contains("test-hash")), true),
-                Times.Once);
+            await _fixture.ClientWrapper.Received(1)
+                .DeleteTorrents(Arg.Is<List<string>>(h => h.Contains("test-hash")), true);
         }
 
         [Fact]
@@ -381,20 +381,19 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
             // Arrange
             var sut = _fixture.CreateSut();
             const string hash = "UPPERCASE-HASH";
-            var mockTorrent = new Mock<ITorrentItemWrapper>();
-            mockTorrent.Setup(x => x.Hash).Returns(hash);
+            var mockTorrent = Substitute.For<ITorrentItemWrapper>();
+            mockTorrent.Hash.Returns(hash);
 
             _fixture.ClientWrapper
-                .Setup(x => x.DeleteTorrents(It.IsAny<List<string>>(), true))
+                .DeleteTorrents(Arg.Any<List<string>>(), true)
                 .Returns(Task.CompletedTask);
 
             // Act
-            await sut.DeleteDownload(mockTorrent.Object, true);
+            await sut.DeleteDownload(mockTorrent, true);
 
             // Assert
-            _fixture.ClientWrapper.Verify(
-                x => x.DeleteTorrents(It.Is<List<string>>(h => h.Contains("uppercase-hash")), true),
-                Times.Once);
+            await _fixture.ClientWrapper.Received(1)
+                .DeleteTorrents(Arg.Is<List<string>>(h => h.Contains("uppercase-hash")), true);
         }
 
         [Fact]
@@ -403,20 +402,19 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
             // Arrange
             var sut = _fixture.CreateSut();
             const string hash = "TEST-HASH";
-            var mockTorrent = new Mock<ITorrentItemWrapper>();
-            mockTorrent.Setup(x => x.Hash).Returns(hash);
+            var mockTorrent = Substitute.For<ITorrentItemWrapper>();
+            mockTorrent.Hash.Returns(hash);
 
             _fixture.ClientWrapper
-                .Setup(x => x.DeleteTorrents(It.Is<List<string>>(h => h.Contains("test-hash")), false))
+                .DeleteTorrents(Arg.Is<List<string>>(h => h.Contains("test-hash")), false)
                 .Returns(Task.CompletedTask);
 
             // Act
-            await sut.DeleteDownload(mockTorrent.Object, false);
+            await sut.DeleteDownload(mockTorrent, false);
 
             // Assert
-            _fixture.ClientWrapper.Verify(
-                x => x.DeleteTorrents(It.Is<List<string>>(h => h.Contains("test-hash")), false),
-                Times.Once);
+            await _fixture.ClientWrapper.Received(1)
+                .DeleteTorrents(Arg.Is<List<string>>(h => h.Contains("test-hash")), false);
         }
     }
 
@@ -442,7 +440,7 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
             await sut.ChangeCategoryForNoHardLinksAsync(null, unlinkedConfig);
 
             // Assert
-            _fixture.ClientWrapper.Verify(x => x.SetTorrentLabel(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+            await _fixture.ClientWrapper.DidNotReceive().SetTorrentLabel(Arg.Any<string>(), Arg.Any<string>());
         }
 
         [Fact]
@@ -461,7 +459,7 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
             await sut.ChangeCategoryForNoHardLinksAsync(new List<Domain.Entities.ITorrentItemWrapper>(), unlinkedConfig);
 
             // Assert
-            _fixture.ClientWrapper.Verify(x => x.SetTorrentLabel(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+            await _fixture.ClientWrapper.DidNotReceive().SetTorrentLabel(Arg.Any<string>(), Arg.Any<string>());
         }
 
         [Fact]
@@ -485,7 +483,7 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
             await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert
-            _fixture.ClientWrapper.Verify(x => x.SetTorrentLabel(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+            await _fixture.ClientWrapper.DidNotReceive().SetTorrentLabel(Arg.Any<string>(), Arg.Any<string>());
         }
 
         [Fact]
@@ -509,7 +507,7 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
             await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert
-            _fixture.ClientWrapper.Verify(x => x.SetTorrentLabel(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+            await _fixture.ClientWrapper.DidNotReceive().SetTorrentLabel(Arg.Any<string>(), Arg.Any<string>());
         }
 
         [Fact]
@@ -533,7 +531,7 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
             await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert
-            _fixture.ClientWrapper.Verify(x => x.SetTorrentLabel(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+            await _fixture.ClientWrapper.DidNotReceive().SetTorrentLabel(Arg.Any<string>(), Arg.Any<string>());
         }
 
         [Fact]
@@ -554,14 +552,14 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentFiles("hash1"))
-                .ThrowsAsync(new InvalidOperationException("Failed to get files"));
+                .GetTorrentFiles("hash1")
+                .Throws(new InvalidOperationException("Failed to get files"));
 
             // Act
             await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert
-            _fixture.ClientWrapper.Verify(x => x.SetTorrentLabel(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+            await _fixture.ClientWrapper.DidNotReceive().SetTorrentLabel(Arg.Any<string>(), Arg.Any<string>());
         }
 
         [Fact]
@@ -582,8 +580,8 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentFiles("hash1"))
-                .ReturnsAsync(new DelugeContents
+                .GetTorrentFiles("hash1")
+                .Returns(new DelugeContents
                 {
                     Contents = new Dictionary<string, DelugeFileOrDirectory>
                     {
@@ -592,16 +590,15 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
                 });
 
             _fixture.HardLinkFileService
-                .Setup(x => x.GetHardLinkCount(It.IsAny<string>(), It.IsAny<bool>()))
+                .GetHardLinkCount(Arg.Any<string>(), Arg.Any<bool>())
                 .Returns(0);
 
             // Act
             await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert
-            _fixture.ClientWrapper.Verify(
-                x => x.SetTorrentLabel("hash1", "unlinked"),
-                Times.Once);
+            await _fixture.ClientWrapper.Received(1)
+                .SetTorrentLabel("hash1", "unlinked");
         }
 
         [Fact]
@@ -622,8 +619,8 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentFiles("hash1"))
-                .ReturnsAsync(new DelugeContents
+                .GetTorrentFiles("hash1")
+                .Returns(new DelugeContents
                 {
                     Contents = new Dictionary<string, DelugeFileOrDirectory>
                     {
@@ -632,14 +629,14 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
                 });
 
             _fixture.HardLinkFileService
-                .Setup(x => x.GetHardLinkCount(It.IsAny<string>(), It.IsAny<bool>()))
+                .GetHardLinkCount(Arg.Any<string>(), Arg.Any<bool>())
                 .Returns(2);
 
             // Act
             await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert
-            _fixture.ClientWrapper.Verify(x => x.SetTorrentLabel(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+            await _fixture.ClientWrapper.DidNotReceive().SetTorrentLabel(Arg.Any<string>(), Arg.Any<string>());
         }
 
         [Fact]
@@ -660,8 +657,8 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentFiles("hash1"))
-                .ReturnsAsync(new DelugeContents
+                .GetTorrentFiles("hash1")
+                .Returns(new DelugeContents
                 {
                     Contents = new Dictionary<string, DelugeFileOrDirectory>
                     {
@@ -670,14 +667,14 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
                 });
 
             _fixture.HardLinkFileService
-                .Setup(x => x.GetHardLinkCount(It.IsAny<string>(), It.IsAny<bool>()))
+                .GetHardLinkCount(Arg.Any<string>(), Arg.Any<bool>())
                 .Returns(-1);
 
             // Act
             await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert
-            _fixture.ClientWrapper.Verify(x => x.SetTorrentLabel(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+            await _fixture.ClientWrapper.DidNotReceive().SetTorrentLabel(Arg.Any<string>(), Arg.Any<string>());
         }
 
         [Fact]
@@ -698,8 +695,8 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentFiles("hash1"))
-                .ReturnsAsync(new DelugeContents
+                .GetTorrentFiles("hash1")
+                .Returns(new DelugeContents
                 {
                     Contents = new Dictionary<string, DelugeFileOrDirectory>
                     {
@@ -709,16 +706,15 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
                 });
 
             _fixture.HardLinkFileService
-                .Setup(x => x.GetHardLinkCount(It.IsAny<string>(), It.IsAny<bool>()))
+                .GetHardLinkCount(Arg.Any<string>(), Arg.Any<bool>())
                 .Returns(0);
 
             // Act
             await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert
-            _fixture.HardLinkFileService.Verify(
-                x => x.GetHardLinkCount(It.IsAny<string>(), It.IsAny<bool>()),
-                Times.Once);
+            _fixture.HardLinkFileService.Received(1)
+                .GetHardLinkCount(Arg.Any<string>(), Arg.Any<bool>());
         }
 
         [Fact]
@@ -739,8 +735,8 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentFiles("hash1"))
-                .ReturnsAsync(new DelugeContents
+                .GetTorrentFiles("hash1")
+                .Returns(new DelugeContents
                 {
                     Contents = new Dictionary<string, DelugeFileOrDirectory>
                     {
@@ -749,16 +745,15 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
                 });
 
             _fixture.HardLinkFileService
-                .Setup(x => x.GetHardLinkCount(It.IsAny<string>(), It.IsAny<bool>()))
+                .GetHardLinkCount(Arg.Any<string>(), Arg.Any<bool>())
                 .Returns(0);
 
             // Act
             await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert - EventPublisher is not mocked, so we just verify the method completed
-            _fixture.ClientWrapper.Verify(
-                x => x.SetTorrentLabel("hash1", "unlinked"),
-                Times.Once);
+            await _fixture.ClientWrapper.Received(1)
+                .SetTorrentLabel("hash1", "unlinked");
         }
     }
 }

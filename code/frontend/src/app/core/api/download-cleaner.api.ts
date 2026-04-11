@@ -32,6 +32,10 @@ export class DownloadCleanerApi {
     return this.http.delete<void>(`/api/seeding-rules/${id}`);
   }
 
+  reorderSeedingRules(clientId: string, orderedIds: string[]): Observable<void> {
+    return this.http.put<void>(`/api/seeding-rules/${clientId}/reorder`, { orderedIds });
+  }
+
   // Unlinked config
   getUnlinkedConfig(clientId: string): Observable<UnlinkedConfigModel | null> {
     return this.http.get<UnlinkedConfigModel | null>(`/api/unlinked-config/${clientId}`);

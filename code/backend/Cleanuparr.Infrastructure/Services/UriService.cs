@@ -2,8 +2,11 @@
 
 namespace Cleanuparr.Infrastructure.Services;
 
-public static class UriService
+public static partial class UriService
 {
+    [GeneratedRegex(@"^(?:\w+:\/\/)?([^\/\?:]+)", RegexOptions.IgnoreCase)]
+    private static partial Regex DomainFallbackRegex();
+
     public static string? GetDomain(string? input)
     {
         if (string.IsNullOrWhiteSpace(input))
@@ -12,7 +15,7 @@ public static class UriService
         }
 
         // add "http://" if scheme is missing to help Uri.TryCreate
-        if (!input.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+        if (!input.Contains("://"))
         {
             input = "http://" + input;
         }
@@ -23,9 +26,8 @@ public static class UriService
         }
 
         // url might be malformed
-        var regex = new Regex(@"^(?:https?:\/\/)?([^\/\?:]+)", RegexOptions.IgnoreCase);
-        var match = regex.Match(input);
-        
+        var match = DomainFallbackRegex().Match(input);
+
         if (match.Success)
         {
             return match.Groups[1].Value;

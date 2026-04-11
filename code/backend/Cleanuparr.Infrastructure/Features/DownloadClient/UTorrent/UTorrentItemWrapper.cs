@@ -1,6 +1,7 @@
 using Cleanuparr.Domain.Entities;
 using Cleanuparr.Domain.Entities.UTorrent.Response;
 using Cleanuparr.Infrastructure.Features.DownloadClient.UTorrent.Extensions;
+using Cleanuparr.Infrastructure.Services;
 
 namespace Cleanuparr.Infrastructure.Features.DownloadClient.UTorrent;
 
@@ -9,6 +10,8 @@ namespace Cleanuparr.Infrastructure.Features.DownloadClient.UTorrent;
 /// </summary>
 public sealed class UTorrentItemWrapper : ITorrentItemWrapper
 {
+    private readonly Lazy<IReadOnlyList<string>> _trackerDomains;
+
     public UTorrentItem Info { get; }
 
     public UTorrentProperties Properties { get; }
@@ -17,6 +20,12 @@ public sealed class UTorrentItemWrapper : ITorrentItemWrapper
     {
         Info = torrentItem ?? throw new ArgumentNullException(nameof(torrentItem));
         Properties = torrentProperties ?? throw new ArgumentNullException(nameof(torrentProperties));
+        _trackerDomains = new Lazy<IReadOnlyList<string>>(() => Properties.TrackerList
+            .Select(url => UriService.GetDomain(url))
+            .Where(d => d is not null)
+            .Select(d => d!)
+            .ToList()
+            .AsReadOnly());
     }
 
     public string Hash => Info.Hash;
@@ -46,6 +55,10 @@ public sealed class UTorrentItemWrapper : ITorrentItemWrapper
     }
 
     public string SavePath => Info.SavePath ?? string.Empty;
+
+    public IReadOnlyList<string> TrackerDomains => _trackerDomains.Value;
+
+    public IReadOnlyList<string> Tags => Array.Empty<string>();
 
     public bool IsDownloading() =>
         (Info.Status & UTorrentStatus.Started) != 0 &&

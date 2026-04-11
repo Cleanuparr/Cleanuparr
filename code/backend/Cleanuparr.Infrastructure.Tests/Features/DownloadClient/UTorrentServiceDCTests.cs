@@ -2,7 +2,7 @@ using Cleanuparr.Domain.Entities;
 using Cleanuparr.Domain.Entities.UTorrent.Response;
 using Cleanuparr.Infrastructure.Features.DownloadClient.UTorrent;
 using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
-using Moq;
+using NSubstitute;
 using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.DownloadClient;
@@ -37,16 +37,16 @@ public class UTorrentServiceDCTests : IClassFixture<UTorrentServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentsAsync())
-                .ReturnsAsync(torrents);
+                .GetTorrentsAsync()
+                .Returns(torrents);
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentPropertiesAsync("hash1"))
-                .ReturnsAsync(new UTorrentProperties { Hash = "hash1", Pex = 1, Trackers = "" });
+                .GetTorrentPropertiesAsync("hash1")
+                .Returns(new UTorrentProperties { Hash = "hash1", Pex = 1, Trackers = "" });
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentPropertiesAsync("hash3"))
-                .ReturnsAsync(new UTorrentProperties { Hash = "hash3", Pex = 1, Trackers = "" });
+                .GetTorrentPropertiesAsync("hash3")
+                .Returns(new UTorrentProperties { Hash = "hash3", Pex = 1, Trackers = "" });
 
             // Act
             var result = await sut.GetSeedingDownloads();
@@ -67,8 +67,8 @@ public class UTorrentServiceDCTests : IClassFixture<UTorrentServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentsAsync())
-                .ReturnsAsync(torrents);
+                .GetTorrentsAsync()
+                .Returns(torrents);
 
             // Act
             var result = await sut.GetSeedingDownloads();
@@ -90,12 +90,12 @@ public class UTorrentServiceDCTests : IClassFixture<UTorrentServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentsAsync())
-                .ReturnsAsync(torrents);
+                .GetTorrentsAsync()
+                .Returns(torrents);
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentPropertiesAsync("hash1"))
-                .ReturnsAsync(new UTorrentProperties { Hash = "hash1", Pex = 1, Trackers = "" });
+                .GetTorrentPropertiesAsync("hash1")
+                .Returns(new UTorrentProperties { Hash = "hash1", Pex = 1, Trackers = "" });
 
             // Act
             var result = await sut.GetSeedingDownloads();
@@ -127,8 +127,8 @@ public class UTorrentServiceDCTests : IClassFixture<UTorrentServiceFixture>
 
             var categories = new List<ISeedingRule>
             {
-                new UTorrentSeedingRule { Name = "movies", MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true },
-                new UTorrentSeedingRule { Name = "tv", MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true }
+                new UTorrentSeedingRule { Name = "movies", Categories = ["movies"], MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true },
+                new UTorrentSeedingRule { Name = "tv", Categories = ["tv"], MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true }
             };
 
             // Act
@@ -154,7 +154,7 @@ public class UTorrentServiceDCTests : IClassFixture<UTorrentServiceFixture>
 
             var categories = new List<ISeedingRule>
             {
-                new UTorrentSeedingRule { Name = "movies", MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true }
+                new UTorrentSeedingRule { Name = "movies", Categories = ["movies"], MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true }
             };
 
             // Act
@@ -178,7 +178,7 @@ public class UTorrentServiceDCTests : IClassFixture<UTorrentServiceFixture>
 
             var categories = new List<ISeedingRule>
             {
-                new UTorrentSeedingRule { Name = "movies", MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true }
+                new UTorrentSeedingRule { Name = "movies", Categories = ["movies"], MaxRatio = -1, MinSeedTime = 0, MaxSeedTime = -1, DeleteSourceFiles = true }
             };
 
             // Act
@@ -308,20 +308,19 @@ public class UTorrentServiceDCTests : IClassFixture<UTorrentServiceFixture>
             // Arrange
             var sut = _fixture.CreateSut();
             const string hash = "TEST-HASH";
-            var mockTorrent = new Mock<ITorrentItemWrapper>();
-            mockTorrent.Setup(x => x.Hash).Returns(hash);
+            var mockTorrent = Substitute.For<ITorrentItemWrapper>();
+            mockTorrent.Hash.Returns(hash);
 
             _fixture.ClientWrapper
-                .Setup(x => x.RemoveTorrentsAsync(It.Is<List<string>>(h => h.Contains("test-hash")), true))
+                .RemoveTorrentsAsync(Arg.Is<List<string>>(h => h.Contains("test-hash")), true)
                 .Returns(Task.CompletedTask);
 
             // Act
-            await sut.DeleteDownload(mockTorrent.Object, true);
+            await sut.DeleteDownload(mockTorrent, true);
 
             // Assert
-            _fixture.ClientWrapper.Verify(
-                x => x.RemoveTorrentsAsync(It.Is<List<string>>(h => h.Contains("test-hash")), true),
-                Times.Once);
+            await _fixture.ClientWrapper.Received(1)
+                .RemoveTorrentsAsync(Arg.Is<List<string>>(h => h.Contains("test-hash")), true);
         }
 
         [Fact]
@@ -330,20 +329,19 @@ public class UTorrentServiceDCTests : IClassFixture<UTorrentServiceFixture>
             // Arrange
             var sut = _fixture.CreateSut();
             const string hash = "UPPERCASE-HASH";
-            var mockTorrent = new Mock<ITorrentItemWrapper>();
-            mockTorrent.Setup(x => x.Hash).Returns(hash);
+            var mockTorrent = Substitute.For<ITorrentItemWrapper>();
+            mockTorrent.Hash.Returns(hash);
 
             _fixture.ClientWrapper
-                .Setup(x => x.RemoveTorrentsAsync(It.IsAny<List<string>>(), true))
+                .RemoveTorrentsAsync(Arg.Any<List<string>>(), true)
                 .Returns(Task.CompletedTask);
 
             // Act
-            await sut.DeleteDownload(mockTorrent.Object, true);
+            await sut.DeleteDownload(mockTorrent, true);
 
             // Assert
-            _fixture.ClientWrapper.Verify(
-                x => x.RemoveTorrentsAsync(It.Is<List<string>>(h => h.Contains("uppercase-hash")), true),
-                Times.Once);
+            await _fixture.ClientWrapper.Received(1)
+                .RemoveTorrentsAsync(Arg.Is<List<string>>(h => h.Contains("uppercase-hash")), true);
         }
 
         [Fact]
@@ -352,20 +350,19 @@ public class UTorrentServiceDCTests : IClassFixture<UTorrentServiceFixture>
             // Arrange
             var sut = _fixture.CreateSut();
             const string hash = "TEST-HASH";
-            var mockTorrent = new Mock<ITorrentItemWrapper>();
-            mockTorrent.Setup(x => x.Hash).Returns(hash);
+            var mockTorrent = Substitute.For<ITorrentItemWrapper>();
+            mockTorrent.Hash.Returns(hash);
 
             _fixture.ClientWrapper
-                .Setup(x => x.RemoveTorrentsAsync(It.Is<List<string>>(h => h.Contains("test-hash")), false))
+                .RemoveTorrentsAsync(Arg.Is<List<string>>(h => h.Contains("test-hash")), false)
                 .Returns(Task.CompletedTask);
 
             // Act
-            await sut.DeleteDownload(mockTorrent.Object, false);
+            await sut.DeleteDownload(mockTorrent, false);
 
             // Assert
-            _fixture.ClientWrapper.Verify(
-                x => x.RemoveTorrentsAsync(It.Is<List<string>>(h => h.Contains("test-hash")), false),
-                Times.Once);
+            await _fixture.ClientWrapper.Received(1)
+                .RemoveTorrentsAsync(Arg.Is<List<string>>(h => h.Contains("test-hash")), false);
         }
     }
 
@@ -391,7 +388,7 @@ public class UTorrentServiceDCTests : IClassFixture<UTorrentServiceFixture>
             await sut.ChangeCategoryForNoHardLinksAsync(null, unlinkedConfig);
 
             // Assert
-            _fixture.ClientWrapper.Verify(x => x.SetTorrentLabelAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+            await _fixture.ClientWrapper.DidNotReceive().SetTorrentLabelAsync(Arg.Any<string>(), Arg.Any<string>());
         }
 
         [Fact]
@@ -410,7 +407,7 @@ public class UTorrentServiceDCTests : IClassFixture<UTorrentServiceFixture>
             await sut.ChangeCategoryForNoHardLinksAsync(new List<Domain.Entities.ITorrentItemWrapper>(), unlinkedConfig);
 
             // Assert
-            _fixture.ClientWrapper.Verify(x => x.SetTorrentLabelAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+            await _fixture.ClientWrapper.DidNotReceive().SetTorrentLabelAsync(Arg.Any<string>(), Arg.Any<string>());
         }
 
         [Fact]
@@ -436,7 +433,7 @@ public class UTorrentServiceDCTests : IClassFixture<UTorrentServiceFixture>
             await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert
-            _fixture.ClientWrapper.Verify(x => x.SetTorrentLabelAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+            await _fixture.ClientWrapper.DidNotReceive().SetTorrentLabelAsync(Arg.Any<string>(), Arg.Any<string>());
         }
 
         [Fact]
@@ -462,7 +459,7 @@ public class UTorrentServiceDCTests : IClassFixture<UTorrentServiceFixture>
             await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert
-            _fixture.ClientWrapper.Verify(x => x.SetTorrentLabelAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+            await _fixture.ClientWrapper.DidNotReceive().SetTorrentLabelAsync(Arg.Any<string>(), Arg.Any<string>());
         }
 
         [Fact]
@@ -488,7 +485,7 @@ public class UTorrentServiceDCTests : IClassFixture<UTorrentServiceFixture>
             await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert
-            _fixture.ClientWrapper.Verify(x => x.SetTorrentLabelAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+            await _fixture.ClientWrapper.DidNotReceive().SetTorrentLabelAsync(Arg.Any<string>(), Arg.Any<string>());
         }
 
         [Fact]
@@ -511,23 +508,22 @@ public class UTorrentServiceDCTests : IClassFixture<UTorrentServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentFilesAsync("hash1"))
-                .ReturnsAsync(new List<UTorrentFile>
+                .GetTorrentFilesAsync("hash1")
+                .Returns(new List<UTorrentFile>
                 {
                     new UTorrentFile { Name = "file1.mkv", Priority = 1, Index = 0, Size = 1000, Downloaded = 500 }
                 });
 
             _fixture.HardLinkFileService
-                .Setup(x => x.GetHardLinkCount(It.IsAny<string>(), It.IsAny<bool>()))
+                .GetHardLinkCount(Arg.Any<string>(), Arg.Any<bool>())
                 .Returns(0);
 
             // Act
             await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert
-            _fixture.ClientWrapper.Verify(
-                x => x.SetTorrentLabelAsync("hash1", "unlinked"),
-                Times.Once);
+            await _fixture.ClientWrapper.Received(1)
+                .SetTorrentLabelAsync("hash1", "unlinked");
         }
 
         [Fact]
@@ -550,21 +546,21 @@ public class UTorrentServiceDCTests : IClassFixture<UTorrentServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentFilesAsync("hash1"))
-                .ReturnsAsync(new List<UTorrentFile>
+                .GetTorrentFilesAsync("hash1")
+                .Returns(new List<UTorrentFile>
                 {
                     new UTorrentFile { Name = "file1.mkv", Priority = 1, Index = 0, Size = 1000, Downloaded = 500 }
                 });
 
             _fixture.HardLinkFileService
-                .Setup(x => x.GetHardLinkCount(It.IsAny<string>(), It.IsAny<bool>()))
+                .GetHardLinkCount(Arg.Any<string>(), Arg.Any<bool>())
                 .Returns(2);
 
             // Act
             await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert
-            _fixture.ClientWrapper.Verify(x => x.SetTorrentLabelAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+            await _fixture.ClientWrapper.DidNotReceive().SetTorrentLabelAsync(Arg.Any<string>(), Arg.Any<string>());
         }
 
         [Fact]
@@ -587,21 +583,21 @@ public class UTorrentServiceDCTests : IClassFixture<UTorrentServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentFilesAsync("hash1"))
-                .ReturnsAsync(new List<UTorrentFile>
+                .GetTorrentFilesAsync("hash1")
+                .Returns(new List<UTorrentFile>
                 {
                     new UTorrentFile { Name = "file1.mkv", Priority = 1, Index = 0, Size = 1000, Downloaded = 500 }
                 });
 
             _fixture.HardLinkFileService
-                .Setup(x => x.GetHardLinkCount(It.IsAny<string>(), It.IsAny<bool>()))
+                .GetHardLinkCount(Arg.Any<string>(), Arg.Any<bool>())
                 .Returns(-1);
 
             // Act
             await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert
-            _fixture.ClientWrapper.Verify(x => x.SetTorrentLabelAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+            await _fixture.ClientWrapper.DidNotReceive().SetTorrentLabelAsync(Arg.Any<string>(), Arg.Any<string>());
         }
 
         [Fact]
@@ -624,24 +620,23 @@ public class UTorrentServiceDCTests : IClassFixture<UTorrentServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentFilesAsync("hash1"))
-                .ReturnsAsync(new List<UTorrentFile>
+                .GetTorrentFilesAsync("hash1")
+                .Returns(new List<UTorrentFile>
                 {
                     new UTorrentFile { Name = "file1.mkv", Priority = 0, Index = 0, Size = 1000, Downloaded = 0 },
                     new UTorrentFile { Name = "file2.mkv", Priority = 1, Index = 1, Size = 2000, Downloaded = 1000 }
                 });
 
             _fixture.HardLinkFileService
-                .Setup(x => x.GetHardLinkCount(It.IsAny<string>(), It.IsAny<bool>()))
+                .GetHardLinkCount(Arg.Any<string>(), Arg.Any<bool>())
                 .Returns(0);
 
             // Act
             await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert
-            _fixture.HardLinkFileService.Verify(
-                x => x.GetHardLinkCount(It.IsAny<string>(), It.IsAny<bool>()),
-                Times.Once);
+            _fixture.HardLinkFileService.Received(1)
+                .GetHardLinkCount(Arg.Any<string>(), Arg.Any<bool>());
         }
 
         [Fact]
@@ -664,23 +659,22 @@ public class UTorrentServiceDCTests : IClassFixture<UTorrentServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentFilesAsync("hash1"))
-                .ReturnsAsync(new List<UTorrentFile>
+                .GetTorrentFilesAsync("hash1")
+                .Returns(new List<UTorrentFile>
                 {
                     new UTorrentFile { Name = "file1.mkv", Priority = 1, Index = 0, Size = 1000, Downloaded = 500 }
                 });
 
             _fixture.HardLinkFileService
-                .Setup(x => x.GetHardLinkCount(It.IsAny<string>(), It.IsAny<bool>()))
+                .GetHardLinkCount(Arg.Any<string>(), Arg.Any<bool>())
                 .Returns(0);
 
             // Act
             await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert - EventPublisher is not mocked, so we just verify the method completed
-            _fixture.ClientWrapper.Verify(
-                x => x.SetTorrentLabelAsync("hash1", "unlinked"),
-                Times.Once);
+            await _fixture.ClientWrapper.Received(1)
+                .SetTorrentLabelAsync("hash1", "unlinked");
         }
 
         [Fact]
@@ -703,14 +697,14 @@ public class UTorrentServiceDCTests : IClassFixture<UTorrentServiceFixture>
             };
 
             _fixture.ClientWrapper
-                .Setup(x => x.GetTorrentFilesAsync("hash1"))
-                .ReturnsAsync((List<UTorrentFile>?)null);
+                .GetTorrentFilesAsync("hash1")
+                .Returns((List<UTorrentFile>?)null);
 
             // Act
             await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert - When files is null, it uses empty collection and proceeds to change label
-            _fixture.ClientWrapper.Verify(x => x.SetTorrentLabelAsync("hash1", "unlinked"), Times.Once);
+            await _fixture.ClientWrapper.Received(1).SetTorrentLabelAsync("hash1", "unlinked");
         }
     }
 }

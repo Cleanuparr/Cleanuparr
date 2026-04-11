@@ -93,7 +93,7 @@ public partial class RTorrentService
             return (false, DeleteReason.None, false);
         }
 
-        return await _ruleEvaluator.EvaluateSlowRulesAsync(wrapper);
+        return await _queueRuleEvaluator.EvaluateSlowRulesAsync(wrapper);
     }
 
     private async Task<(bool ShouldRemove, DeleteReason Reason, bool DeleteFromClient)> CheckIfStuck(ITorrentItemWrapper wrapper)
@@ -104,6 +104,6 @@ public partial class RTorrentService
             return (false, DeleteReason.None, false);
         }
 
-        return await _ruleEvaluator.EvaluateStallRulesAsync(wrapper);
+        return await _queueRuleEvaluator.EvaluateStallRulesAsync(wrapper);
     }
 }
