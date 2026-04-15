@@ -166,19 +166,27 @@ public class NotificationConfigurationServiceTests : IDisposable
     }
 
     [Theory]
-    [InlineData(NotificationEventType.FailedImportStrike, true, false, false, false, false, false)]
-    [InlineData(NotificationEventType.StalledStrike, false, true, false, false, false, false)]
-    [InlineData(NotificationEventType.SlowSpeedStrike, false, false, true, false, false, false)]
-    [InlineData(NotificationEventType.SlowTimeStrike, false, false, true, false, false, false)]
-    [InlineData(NotificationEventType.QueueItemDeleted, false, false, false, true, false, false)]
-    [InlineData(NotificationEventType.DownloadCleaned, false, false, false, false, true, false)]
-    [InlineData(NotificationEventType.CategoryChanged, false, false, false, false, false, true)]
-    public async Task GetProvidersForEventAsync_ReturnsProviderForCorrectEvents(
-        NotificationEventType eventType,
-        bool onFailedImport, bool onStalled, bool onSlow,
-        bool onDeleted, bool onCleaned, bool onCategory)
+    [InlineData(NotificationEventType.FailedImportStrike)]
+    [InlineData(NotificationEventType.StalledStrike)]
+    [InlineData(NotificationEventType.SlowSpeedStrike)]
+    [InlineData(NotificationEventType.SlowTimeStrike)]
+    [InlineData(NotificationEventType.QueueItemDeleted)]
+    [InlineData(NotificationEventType.DownloadCleaned)]
+    [InlineData(NotificationEventType.CategoryChanged)]
+    [InlineData(NotificationEventType.SearchTriggered)]
+    [InlineData(NotificationEventType.SearchItemGrabbed)]
+    public async Task GetProvidersForEventAsync_ReturnsProviderForCorrectEvents(NotificationEventType eventType)
     {
         // Arrange
+        bool onFailedImport = eventType == NotificationEventType.FailedImportStrike;
+        bool onStalled = eventType == NotificationEventType.StalledStrike;
+        bool onSlow = eventType is NotificationEventType.SlowSpeedStrike or NotificationEventType.SlowTimeStrike;
+        bool onDeleted = eventType == NotificationEventType.QueueItemDeleted;
+        bool onCleaned = eventType == NotificationEventType.DownloadCleaned;
+        bool onCategory = eventType == NotificationEventType.CategoryChanged;
+        bool onSearchTriggered = eventType == NotificationEventType.SearchTriggered;
+        bool onSearchItemGrabbed = eventType == NotificationEventType.SearchItemGrabbed;
+
         var config = new NotificationConfig
         {
             Id = Guid.NewGuid(),
@@ -191,6 +199,8 @@ public class NotificationConfigurationServiceTests : IDisposable
             OnQueueItemDeleted = onDeleted,
             OnDownloadCleaned = onCleaned,
             OnCategoryChanged = onCategory,
+            OnSearchTriggered = onSearchTriggered,
+            OnSearchItemGrabbed = onSearchItemGrabbed,
             NotifiarrConfiguration = new NotifiarrConfig
             {
                 Id = Guid.NewGuid(),

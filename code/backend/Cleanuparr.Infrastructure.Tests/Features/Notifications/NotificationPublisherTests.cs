@@ -618,6 +618,72 @@ public class NotificationPublisherTests
 
     #endregion
 
+    #region NotifySearchItemGrabbed Tests
+
+    [Fact]
+    public async Task NotifySearchItemGrabbed_SendsNotificationWithCorrectContext()
+    {
+        // Arrange
+        var providerDto = CreateProviderDto();
+        var providerMock = new Mock<INotificationProvider>();
+
+        _configServiceMock.Setup(c => c.GetProvidersForEventAsync(NotificationEventType.SearchItemGrabbed))
+            .ReturnsAsync(new List<NotificationProviderDto> { providerDto });
+        _providerFactoryMock.Setup(f => f.CreateProvider(providerDto))
+            .Returns(providerMock.Object);
+
+        var grabbedItems = new List<string> { "Movie.A.2024.1080p", "Movie.A.2024.720p" };
+
+        // Act
+        await _publisher.NotifySearchItemGrabbed("Movie A", grabbedItems, InstanceType.Radarr, "http://radarr.local:7878");
+
+        // Assert
+        providerMock.Verify(p => p.SendNotificationAsync(It.Is<NotificationContext>(
+            c => c.EventType == NotificationEventType.SearchItemGrabbed &&
+                 c.Title == "Download grabbed" &&
+                 c.Description == "Movie A" &&
+                 c.Severity == EventSeverity.Information &&
+                 c.Data["Item"] == "Movie A" &&
+                 c.Data["Grabbed"] == "Movie.A.2024.1080p, Movie.A.2024.720p" &&
+                 c.Data["Instance type"] == "Radarr" &&
+                 c.Data["Url"] == "http://radarr.local:7878")), Times.Once);
+    }
+
+    [Fact]
+    public async Task NotifySearchItemGrabbed_WhenNoProviders_DoesNotThrow()
+    {
+        // Arrange
+        _configServiceMock.Setup(c => c.GetProvidersForEventAsync(NotificationEventType.SearchItemGrabbed))
+            .ReturnsAsync(new List<NotificationProviderDto>());
+
+        // Act & Assert - Should not throw
+        await _publisher.NotifySearchItemGrabbed("Movie A", ["Movie.A.2024"], InstanceType.Radarr, "http://localhost:7878");
+    }
+
+    [Fact]
+    public async Task NotifySearchItemGrabbed_WhenExceptionOccurs_LogsError()
+    {
+        // Arrange
+        _dryRunInterceptorMock
+            .Setup(d => d.InterceptAsync(It.IsAny<Delegate>(), It.IsAny<object[]>()))
+            .ThrowsAsync(new Exception("Error"));
+
+        // Act
+        await _publisher.NotifySearchItemGrabbed("Movie A", ["Movie.A.2024"], InstanceType.Radarr, "http://localhost:7878");
+
+        // Assert
+        _loggerMock.Verify(
+            x => x.Log(
+                LogLevel.Error,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Failed to notify search item grabbed")),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+    }
+
+    #endregion
+
     #region Helper Methods
 
     private static NotificationProviderDto CreateProviderDto(string name = "TestProvider")
@@ -635,7 +701,9 @@ public class NotificationPublisherTests
                 OnSlowStrike = true,
                 OnQueueItemDeleted = true,
                 OnDownloadCleaned = true,
-                OnCategoryChanged = true
+                OnCategoryChanged = true,
+                OnSearchTriggered = true,
+                OnSearchItemGrabbed = true
             },
             Configuration = new { ApiKey = "test", ChannelId = "123" }
         };
