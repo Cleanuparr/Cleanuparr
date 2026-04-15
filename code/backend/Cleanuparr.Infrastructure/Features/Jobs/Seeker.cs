@@ -155,15 +155,15 @@ public sealed class Seeker : IHandler
         try
         {
             IArrClient arrClient = _arrClientFactory.GetClient(item.ArrInstance.ArrConfig.Type, arrInstance.Version);
-            HashSet<SearchItem> searchItems = BuildSearchItems(item);
+            SearchItem searchItem = BuildSearchItem(item);
 
-            List<long> commandIds = await arrClient.SearchItemsAsync(arrInstance, searchItems);
+            long commandId = await arrClient.SearchItemAsync(arrInstance, searchItem);
 
             Guid eventId = await _eventPublisher.PublishSearchTriggered(item.Title, SeekerSearchType.Replacement, SeekerSearchReason.Replacement);
 
             if (!isDryRun)
             {
-                await SaveCommandTrackersAsync(commandIds, eventId, arrInstance.Id, item.ArrInstance.ArrConfig.Type, item.ItemId, item.Title);
+                await SaveCommandTrackerAsync(commandId, eventId, arrInstance.Id, item.ArrInstance.ArrConfig.Type, item.ItemId, item.Title);
             }
 
             _logger.LogInformation("Replacement search triggered for '{Title}' on {InstanceName}",
@@ -184,22 +184,19 @@ public sealed class Seeker : IHandler
         }
     }
 
-    private static HashSet<SearchItem> BuildSearchItems(SearchQueueItem item)
+    private static SearchItem BuildSearchItem(SearchQueueItem item)
     {
         if (item.SeriesId.HasValue && Enum.TryParse<SeriesSearchType>(item.SearchType, out var searchType))
         {
-            return
-            [
-                new SeriesSearchItem
-                {
-                    Id = item.ItemId,
-                    SeriesId = item.SeriesId.Value,
-                    SearchType = searchType
-                }
-            ];
+            return new SeriesSearchItem
+            {
+                Id = item.ItemId,
+                SeriesId = item.SeriesId.Value,
+                SearchType = searchType
+            };
         }
 
-        return [new SearchItem { Id = item.ItemId }];
+        return new SearchItem { Id = item.ItemId };
     }
 
     private async Task ProcessProactiveSearchAsync(SeekerConfig config, bool isDryRun)
@@ -392,7 +389,7 @@ public sealed class Seeker : IHandler
                     SearchType = SeriesSearchType.Season
                 };
 
-            List<long> commandIds = await arrClient.SearchItemsAsync(arrInstance, [searchItem]);
+            long commandId = await arrClient.SearchItemAsync(arrInstance, searchItem);
 
             Guid eventId = await _eventPublisher.PublishSearchTriggered(
                 candidate.Name, SeekerSearchType.Proactive, candidate.Reason, instanceConfig.CurrentCycleId);
@@ -404,7 +401,7 @@ public sealed class Seeker : IHandler
 
             if (!isDryRun)
             {
-                await SaveCommandTrackersAsync(commandIds, eventId, arrInstance.Id, instanceType,
+                await SaveCommandTrackerAsync(commandId, eventId, arrInstance.Id, instanceType,
                     candidate.ItemId, candidate.Name, candidate.SeasonNumber);
             }
         }
@@ -867,8 +864,8 @@ public sealed class Seeker : IHandler
         await _dataContext.SaveChangesAsync();
     }
 
-    private async Task SaveCommandTrackersAsync(
-        List<long> commandIds,
+    private async Task SaveCommandTrackerAsync(
+        long commandId,
         Guid eventId,
         Guid arrInstanceId,
         InstanceType instanceType,
@@ -876,24 +873,15 @@ public sealed class Seeker : IHandler
         string itemTitle,
         int seasonNumber = 0)
     {
-        if (commandIds.Count == 0)
+        _dataContext.SeekerCommandTrackers.Add(new SeekerCommandTracker
         {
-            return;
-        }
-
-        foreach (long commandId in commandIds)
-        {
-            _dataContext.SeekerCommandTrackers.Add(new SeekerCommandTracker
-            {
-                ArrInstanceId = arrInstanceId,
-                CommandId = commandId,
-                EventId = eventId,
-                ExternalItemId = externalItemId,
-                ItemTitle = itemTitle,
-                ItemType = instanceType,
-                SeasonNumber = seasonNumber,
-            });
-        }
+            ArrInstanceId = arrInstanceId,
+            CommandId = commandId,
+            EventId = eventId,
+            ExternalItemId = externalItemId,
+            ItemTitle = itemTitle,
+            SeasonNumber = seasonNumber,
+        });
 
         await _dataContext.SaveChangesAsync();
     }

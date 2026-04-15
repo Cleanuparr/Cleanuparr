@@ -78,7 +78,6 @@ public class SeekerCommandMonitorTests : IAsyncDisposable
             EventId = eventId,
             ExternalItemId = 100,
             ItemTitle = "Test Series - Season 1",
-            ItemType = InstanceType.Sonarr,
             SeasonNumber = 1,
             Status = SearchCommandStatus.Pending,
             CreatedAt = _timeProvider.GetUtcNow().UtcDateTime
@@ -134,7 +133,6 @@ public class SeekerCommandMonitorTests : IAsyncDisposable
             EventId = eventId,
             ExternalItemId = 100,
             ItemTitle = "Test Series - Season 1",
-            ItemType = InstanceType.Sonarr,
             SeasonNumber = 1,
             Status = SearchCommandStatus.Pending,
             CreatedAt = _timeProvider.GetUtcNow().UtcDateTime
@@ -188,7 +186,6 @@ public class SeekerCommandMonitorTests : IAsyncDisposable
             EventId = eventId,
             ExternalItemId = 200,
             ItemTitle = "Test Movie",
-            ItemType = InstanceType.Radarr,
             SeasonNumber = 0,
             Status = SearchCommandStatus.Pending,
             CreatedAt = _timeProvider.GetUtcNow().UtcDateTime

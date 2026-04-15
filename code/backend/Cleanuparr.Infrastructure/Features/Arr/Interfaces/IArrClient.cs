@@ -19,6 +19,11 @@ public interface IArrClient
     Task<List<long>> SearchItemsAsync(ArrInstance arrInstance, HashSet<SearchItem>? items);
 
     /// <summary>
+    /// Triggers a search for a single item and returns the arr command ID
+    /// </summary>
+    Task<long> SearchItemAsync(ArrInstance arrInstance, SearchItem item);
+
+    /// <summary>
     /// Gets the status of an arr command by its ID
     /// </summary>
     Task<ArrCommandStatus> GetCommandStatusAsync(ArrInstance arrInstance, long commandId);

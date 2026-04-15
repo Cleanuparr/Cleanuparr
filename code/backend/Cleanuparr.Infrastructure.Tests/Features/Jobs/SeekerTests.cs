@@ -168,8 +168,8 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = new Mock<IArrClient>();
         mockArrClient
-            .Setup(x => x.SearchItemsAsync(It.IsAny<ArrInstance>(), It.IsAny<HashSet<SearchItem>>()))
-            .ReturnsAsync([100L]);
+            .Setup(x => x.SearchItemAsync(It.IsAny<ArrInstance>(), It.IsAny<SearchItem>()))
+            .ReturnsAsync(100L);
 
         _fixture.ArrClientFactory
             .Setup(x => x.GetClient(InstanceType.Radarr, It.IsAny<float>()))
@@ -182,7 +182,7 @@ public class SeekerTests : IDisposable
 
         // Assert — search was triggered for the replacement item
         mockArrClient.Verify(
-            x => x.SearchItemsAsync(radarrInstance, It.IsAny<HashSet<SearchItem>>()),
+            x => x.SearchItemAsync(radarrInstance, It.IsAny<SearchItem>()),
             Times.Once);
 
         _fixture.EventPublisher.Verify(
@@ -218,8 +218,8 @@ public class SeekerTests : IDisposable
 
         var mockArrClient = new Mock<IArrClient>();
         mockArrClient
-            .Setup(x => x.SearchItemsAsync(It.IsAny<ArrInstance>(), It.IsAny<HashSet<SearchItem>>()))
-            .ReturnsAsync([100L]);
+            .Setup(x => x.SearchItemAsync(It.IsAny<ArrInstance>(), It.IsAny<SearchItem>()))
+            .ReturnsAsync(100L);
 
         _fixture.ArrClientFactory
             .Setup(x => x.GetClient(InstanceType.Radarr, It.IsAny<float>()))
@@ -232,7 +232,7 @@ public class SeekerTests : IDisposable
 
         // Assert — search was triggered but item stays in queue
         mockArrClient.Verify(
-            x => x.SearchItemsAsync(radarrInstance, It.IsAny<HashSet<SearchItem>>()),
+            x => x.SearchItemAsync(radarrInstance, It.IsAny<SearchItem>()),
             Times.Once);
 
         var remaining = await _fixture.DataContext.SearchQueue.CountAsync();
@@ -283,7 +283,7 @@ public class SeekerTests : IDisposable
 
         // Assert — no search triggered because active downloads >= limit
         mockArrClient.Verify(
-            x => x.SearchItemsAsync(It.IsAny<ArrInstance>(), It.IsAny<HashSet<SearchItem>>()),
+            x => x.SearchItemAsync(It.IsAny<ArrInstance>(), It.IsAny<SearchItem>()),
             Times.Never);
 
         _fixture.EventPublisher.Verify(
@@ -383,9 +383,9 @@ public class SeekerTests : IDisposable
 
         HashSet<SearchItem>? capturedSearchItems = null;
         mockArrClient
-            .Setup(x => x.SearchItemsAsync(radarrInstance, It.IsAny<HashSet<SearchItem>>()))
-            .Callback<ArrInstance, HashSet<SearchItem>>((_, items) => capturedSearchItems = items)
-            .ReturnsAsync([100L]);
+            .Setup(x => x.SearchItemAsync(radarrInstance, It.IsAny<SearchItem>()))
+            .Callback<ArrInstance, SearchItem>((_, item) => capturedSearchItems = [item])
+            .ReturnsAsync(100L);
 
         _fixture.ArrClientFactory
             .Setup(x => x.GetClient(InstanceType.Radarr, It.IsAny<float>()))
@@ -398,7 +398,7 @@ public class SeekerTests : IDisposable
 
         // Assert — search was triggered, but NOT for movie 2
         mockArrClient.Verify(
-            x => x.SearchItemsAsync(radarrInstance, It.IsAny<HashSet<SearchItem>>()),
+            x => x.SearchItemAsync(radarrInstance, It.IsAny<SearchItem>()),
             Times.Once);
 
         Assert.NotNull(capturedSearchItems);
@@ -443,8 +443,8 @@ public class SeekerTests : IDisposable
             ]);
 
         mockArrClient
-            .Setup(x => x.SearchItemsAsync(radarrInstance, It.IsAny<HashSet<SearchItem>>()))
-            .ReturnsAsync([100L]);
+            .Setup(x => x.SearchItemAsync(radarrInstance, It.IsAny<SearchItem>()))
+            .ReturnsAsync(100L);
 
         _fixture.ArrClientFactory
             .Setup(x => x.GetClient(InstanceType.Radarr, It.IsAny<float>()))
@@ -457,7 +457,7 @@ public class SeekerTests : IDisposable
 
         // Assert — search was triggered for movie 1 (importFailed does not exclude)
         mockArrClient.Verify(
-            x => x.SearchItemsAsync(radarrInstance, It.IsAny<HashSet<SearchItem>>()),
+            x => x.SearchItemAsync(radarrInstance, It.IsAny<SearchItem>()),
             Times.Once);
     }
 
@@ -510,9 +510,9 @@ public class SeekerTests : IDisposable
 
         SeriesSearchItem? capturedSearchItem = null;
         mockArrClient
-            .Setup(x => x.SearchItemsAsync(It.IsAny<ArrInstance>(), It.IsAny<HashSet<SearchItem>>()))
-            .Callback<ArrInstance, HashSet<SearchItem>>((_, items) => capturedSearchItem = items.OfType<SeriesSearchItem>().FirstOrDefault())
-            .ReturnsAsync([100L]);
+            .Setup(x => x.SearchItemAsync(It.IsAny<ArrInstance>(), It.IsAny<SearchItem>()))
+            .Callback<ArrInstance, SearchItem>((_, item) => capturedSearchItem = item as SeriesSearchItem)
+            .ReturnsAsync(100L);
 
         _fixture.ArrClientFactory
             .Setup(x => x.GetClient(InstanceType.Sonarr, It.IsAny<float>()))
@@ -525,7 +525,7 @@ public class SeekerTests : IDisposable
 
         // Assert — season 2 was searched (season 1 excluded because it's in queue)
         mockArrClient.Verify(
-            x => x.SearchItemsAsync(It.IsAny<ArrInstance>(), It.IsAny<HashSet<SearchItem>>()),
+            x => x.SearchItemAsync(It.IsAny<ArrInstance>(), It.IsAny<SearchItem>()),
             Times.Once);
 
         Assert.NotNull(capturedSearchItem);
@@ -567,8 +567,8 @@ public class SeekerTests : IDisposable
             ]);
 
         mockArrClient
-            .Setup(x => x.SearchItemsAsync(radarrInstance, It.IsAny<HashSet<SearchItem>>()))
-            .ReturnsAsync([100L]);
+            .Setup(x => x.SearchItemAsync(radarrInstance, It.IsAny<SearchItem>()))
+            .ReturnsAsync(100L);
 
         _fixture.ArrClientFactory
             .Setup(x => x.GetClient(InstanceType.Radarr, It.IsAny<float>()))
@@ -581,7 +581,7 @@ public class SeekerTests : IDisposable
 
         // Assert — search still proceeded despite queue fetch failure
         mockArrClient.Verify(
-            x => x.SearchItemsAsync(radarrInstance, It.IsAny<HashSet<SearchItem>>()),
+            x => x.SearchItemAsync(radarrInstance, It.IsAny<SearchItem>()),
             Times.Once);
     }
 
@@ -625,9 +625,9 @@ public class SeekerTests : IDisposable
 
         HashSet<SearchItem>? capturedSearchItems = null;
         mockArrClient
-            .Setup(x => x.SearchItemsAsync(radarrInstance, It.IsAny<HashSet<SearchItem>>()))
-            .Callback<ArrInstance, HashSet<SearchItem>>((_, items) => capturedSearchItems = items)
-            .ReturnsAsync([100L]);
+            .Setup(x => x.SearchItemAsync(radarrInstance, It.IsAny<SearchItem>()))
+            .Callback<ArrInstance, SearchItem>((_, item) => capturedSearchItems = [item])
+            .ReturnsAsync(100L);
 
         _fixture.ArrClientFactory
             .Setup(x => x.GetClient(InstanceType.Radarr, It.IsAny<float>()))
@@ -688,9 +688,9 @@ public class SeekerTests : IDisposable
 
         HashSet<SearchItem>? capturedSearchItems = null;
         mockArrClient
-            .Setup(x => x.SearchItemsAsync(radarrInstance, It.IsAny<HashSet<SearchItem>>()))
-            .Callback<ArrInstance, HashSet<SearchItem>>((_, items) => capturedSearchItems = items)
-            .ReturnsAsync([100L]);
+            .Setup(x => x.SearchItemAsync(radarrInstance, It.IsAny<SearchItem>()))
+            .Callback<ArrInstance, SearchItem>((_, item) => capturedSearchItems = [item])
+            .ReturnsAsync(100L);
 
         _fixture.ArrClientFactory
             .Setup(x => x.GetClient(InstanceType.Radarr, It.IsAny<float>()))
@@ -745,9 +745,9 @@ public class SeekerTests : IDisposable
 
         HashSet<SearchItem>? capturedSearchItems = null;
         mockArrClient
-            .Setup(x => x.SearchItemsAsync(radarrInstance, It.IsAny<HashSet<SearchItem>>()))
-            .Callback<ArrInstance, HashSet<SearchItem>>((_, items) => capturedSearchItems = items)
-            .ReturnsAsync([100L]);
+            .Setup(x => x.SearchItemAsync(radarrInstance, It.IsAny<SearchItem>()))
+            .Callback<ArrInstance, SearchItem>((_, item) => capturedSearchItems = [item])
+            .ReturnsAsync(100L);
 
         _fixture.ArrClientFactory
             .Setup(x => x.GetClient(InstanceType.Radarr, It.IsAny<float>()))
@@ -822,8 +822,8 @@ public class SeekerTests : IDisposable
             ]);
 
         mockArrClient
-            .Setup(x => x.SearchItemsAsync(radarrInstance, It.IsAny<HashSet<SearchItem>>()))
-            .ReturnsAsync([100L]);
+            .Setup(x => x.SearchItemAsync(radarrInstance, It.IsAny<SearchItem>()))
+            .ReturnsAsync(100L);
 
         _fixture.ArrClientFactory
             .Setup(x => x.GetClient(InstanceType.Radarr, It.IsAny<float>()))
@@ -836,7 +836,7 @@ public class SeekerTests : IDisposable
 
         // Assert — search was triggered (new cycle started) and the CycleId changed
         mockArrClient.Verify(
-            x => x.SearchItemsAsync(radarrInstance, It.IsAny<HashSet<SearchItem>>()),
+            x => x.SearchItemAsync(radarrInstance, It.IsAny<SearchItem>()),
             Times.Once);
 
         var instanceConfig = await _fixture.DataContext.SeekerInstanceConfigs
@@ -891,8 +891,8 @@ public class SeekerTests : IDisposable
             .ReturnsAsync([new SearchableMovie { Id = 1, Title = "Movie 1", Status = "released", Monitored = true, Tags = [] }]);
 
         mockArrClient
-            .Setup(x => x.SearchItemsAsync(It.IsAny<ArrInstance>(), It.IsAny<HashSet<SearchItem>>()))
-            .ReturnsAsync([100L]);
+            .Setup(x => x.SearchItemAsync(It.IsAny<ArrInstance>(), It.IsAny<SearchItem>()))
+            .ReturnsAsync(100L);
 
         _fixture.ArrClientFactory
             .Setup(x => x.GetClient(InstanceType.Radarr, It.IsAny<float>()))
@@ -1035,7 +1035,7 @@ public class SeekerTests : IDisposable
 
         // Assert — no search triggered, cycle not reset
         mockArrClient.Verify(
-            x => x.SearchItemsAsync(radarrInstance, It.IsAny<HashSet<SearchItem>>()),
+            x => x.SearchItemAsync(radarrInstance, It.IsAny<SearchItem>()),
             Times.Never);
 
         var instanceConfig = await _fixture.DataContext.SeekerInstanceConfigs
@@ -1103,8 +1103,8 @@ public class SeekerTests : IDisposable
             ]);
 
         mockArrClient
-            .Setup(x => x.SearchItemsAsync(radarrInstance, It.IsAny<HashSet<SearchItem>>()))
-            .ReturnsAsync([100L]);
+            .Setup(x => x.SearchItemAsync(radarrInstance, It.IsAny<SearchItem>()))
+            .ReturnsAsync(100L);
 
         _fixture.ArrClientFactory
             .Setup(x => x.GetClient(InstanceType.Radarr, It.IsAny<float>()))
@@ -1117,7 +1117,7 @@ public class SeekerTests : IDisposable
 
         // Assert — search was triggered, cycle was reset
         mockArrClient.Verify(
-            x => x.SearchItemsAsync(radarrInstance, It.IsAny<HashSet<SearchItem>>()),
+            x => x.SearchItemAsync(radarrInstance, It.IsAny<SearchItem>()),
             Times.Once);
 
         var instanceConfig = await _fixture.DataContext.SeekerInstanceConfigs
@@ -1174,8 +1174,8 @@ public class SeekerTests : IDisposable
             ]);
 
         mockArrClient
-            .Setup(x => x.SearchItemsAsync(radarrInstance, It.IsAny<HashSet<SearchItem>>()))
-            .ReturnsAsync([100L]);
+            .Setup(x => x.SearchItemAsync(radarrInstance, It.IsAny<SearchItem>()))
+            .ReturnsAsync(100L);
 
         _fixture.ArrClientFactory
             .Setup(x => x.GetClient(InstanceType.Radarr, It.IsAny<float>()))
@@ -1188,7 +1188,7 @@ public class SeekerTests : IDisposable
 
         // Assert — search was triggered (item not in current cycle, so it's selected directly)
         mockArrClient.Verify(
-            x => x.SearchItemsAsync(radarrInstance, It.IsAny<HashSet<SearchItem>>()),
+            x => x.SearchItemAsync(radarrInstance, It.IsAny<SearchItem>()),
             Times.Once);
     }
 
@@ -1261,7 +1261,7 @@ public class SeekerTests : IDisposable
 
         // Assert — no search triggered, cycle not reset
         mockArrClient.Verify(
-            x => x.SearchItemsAsync(sonarrInstance, It.IsAny<HashSet<SearchItem>>()),
+            x => x.SearchItemAsync(sonarrInstance, It.IsAny<SearchItem>()),
             Times.Never);
 
         var instanceConfig = await _fixture.DataContext.SeekerInstanceConfigs
@@ -1328,8 +1328,8 @@ public class SeekerTests : IDisposable
             ]);
 
         mockArrClient
-            .Setup(x => x.SearchItemsAsync(sonarrInstance, It.IsAny<HashSet<SearchItem>>()))
-            .ReturnsAsync([100L]);
+            .Setup(x => x.SearchItemAsync(sonarrInstance, It.IsAny<SearchItem>()))
+            .ReturnsAsync(100L);
 
         _fixture.ArrClientFactory
             .Setup(x => x.GetClient(InstanceType.Sonarr, It.IsAny<float>()))
@@ -1342,7 +1342,7 @@ public class SeekerTests : IDisposable
 
         // Assert — search was triggered, cycle was reset
         mockArrClient.Verify(
-            x => x.SearchItemsAsync(sonarrInstance, It.IsAny<HashSet<SearchItem>>()),
+            x => x.SearchItemAsync(sonarrInstance, It.IsAny<SearchItem>()),
             Times.Once);
 
         var instanceConfig = await _fixture.DataContext.SeekerInstanceConfigs
@@ -1427,8 +1427,8 @@ public class SeekerTests : IDisposable
             ]);
 
         mockArrClient
-            .Setup(x => x.SearchItemsAsync(It.IsAny<ArrInstance>(), It.IsAny<HashSet<SearchItem>>()))
-            .ReturnsAsync([100L]);
+            .Setup(x => x.SearchItemAsync(It.IsAny<ArrInstance>(), It.IsAny<SearchItem>()))
+            .ReturnsAsync(100L);
 
         _fixture.ArrClientFactory
             .Setup(x => x.GetClient(InstanceType.Radarr, It.IsAny<float>()))
@@ -1449,10 +1449,10 @@ public class SeekerTests : IDisposable
             Times.Once);
         // Search was only triggered for instance B, not instance A
         mockArrClient.Verify(
-            x => x.SearchItemsAsync(instanceA, It.IsAny<HashSet<SearchItem>>()),
+            x => x.SearchItemAsync(instanceA, It.IsAny<SearchItem>()),
             Times.Never);
         mockArrClient.Verify(
-            x => x.SearchItemsAsync(instanceB, It.IsAny<HashSet<SearchItem>>()),
+            x => x.SearchItemAsync(instanceB, It.IsAny<SearchItem>()),
             Times.Once);
     }
 
@@ -1519,8 +1519,8 @@ public class SeekerTests : IDisposable
             ]);
 
         mockArrClient
-            .Setup(x => x.SearchItemsAsync(radarrInstance, It.IsAny<HashSet<SearchItem>>()))
-            .ReturnsAsync([100L]);
+            .Setup(x => x.SearchItemAsync(radarrInstance, It.IsAny<SearchItem>()))
+            .ReturnsAsync(100L);
 
         _fixture.ArrClientFactory
             .Setup(x => x.GetClient(InstanceType.Radarr, It.IsAny<float>()))
@@ -1533,7 +1533,7 @@ public class SeekerTests : IDisposable
 
         // Assert — search was triggered for the new item (cycle is NOT considered complete)
         mockArrClient.Verify(
-            x => x.SearchItemsAsync(radarrInstance, It.IsAny<HashSet<SearchItem>>()),
+            x => x.SearchItemAsync(radarrInstance, It.IsAny<SearchItem>()),
             Times.Once);
 
         // Cycle ID should NOT have changed (cycle is not complete — there's still a new item)
@@ -1604,8 +1604,8 @@ public class SeekerTests : IDisposable
             ]);
 
         mockArrClient
-            .Setup(x => x.SearchItemsAsync(radarrInstance, It.IsAny<HashSet<SearchItem>>()))
-            .ReturnsAsync([100L]);
+            .Setup(x => x.SearchItemAsync(radarrInstance, It.IsAny<SearchItem>()))
+            .ReturnsAsync(100L);
 
         _fixture.ArrClientFactory
             .Setup(x => x.GetClient(InstanceType.Radarr, It.IsAny<float>()))
@@ -1618,7 +1618,7 @@ public class SeekerTests : IDisposable
 
         // Assert — search was triggered for the new item
         mockArrClient.Verify(
-            x => x.SearchItemsAsync(radarrInstance, It.IsAny<HashSet<SearchItem>>()),
+            x => x.SearchItemAsync(radarrInstance, It.IsAny<SearchItem>()),
             Times.Once);
 
         // Cycle ID should NOT have changed (the new item hasn't been searched yet)
@@ -1668,9 +1668,9 @@ public class SeekerTests : IDisposable
 
         HashSet<SearchItem>? capturedSearchItems = null;
         mockArrClient
-            .Setup(x => x.SearchItemsAsync(radarrInstance, It.IsAny<HashSet<SearchItem>>()))
-            .Callback<ArrInstance, HashSet<SearchItem>>((_, items) => capturedSearchItems = items)
-            .ReturnsAsync([100L]);
+            .Setup(x => x.SearchItemAsync(radarrInstance, It.IsAny<SearchItem>()))
+            .Callback<ArrInstance, SearchItem>((_, item) => capturedSearchItems = [item])
+            .ReturnsAsync(100L);
 
         _fixture.ArrClientFactory
             .Setup(x => x.GetClient(InstanceType.Radarr, It.IsAny<float>()))
@@ -1683,7 +1683,7 @@ public class SeekerTests : IDisposable
 
         // Assert — only movie 2 (past grace) should be searched
         mockArrClient.Verify(
-            x => x.SearchItemsAsync(radarrInstance, It.IsAny<HashSet<SearchItem>>()),
+            x => x.SearchItemAsync(radarrInstance, It.IsAny<SearchItem>()),
             Times.Once);
 
         Assert.NotNull(capturedSearchItems);
@@ -1727,8 +1727,8 @@ public class SeekerTests : IDisposable
             ]);
 
         mockArrClient
-            .Setup(x => x.SearchItemsAsync(radarrInstance, It.IsAny<HashSet<SearchItem>>()))
-            .ReturnsAsync([100L]);
+            .Setup(x => x.SearchItemAsync(radarrInstance, It.IsAny<SearchItem>()))
+            .ReturnsAsync(100L);
 
         _fixture.ArrClientFactory
             .Setup(x => x.GetClient(InstanceType.Radarr, It.IsAny<float>()))
@@ -1741,7 +1741,7 @@ public class SeekerTests : IDisposable
 
         // Assert — movie should be searched (grace period disabled)
         mockArrClient.Verify(
-            x => x.SearchItemsAsync(radarrInstance, It.IsAny<HashSet<SearchItem>>()),
+            x => x.SearchItemAsync(radarrInstance, It.IsAny<SearchItem>()),
             Times.Once);
     }
 
@@ -1779,8 +1779,8 @@ public class SeekerTests : IDisposable
             ]);
 
         mockArrClient
-            .Setup(x => x.SearchItemsAsync(radarrInstance, It.IsAny<HashSet<SearchItem>>()))
-            .ReturnsAsync([100L]);
+            .Setup(x => x.SearchItemAsync(radarrInstance, It.IsAny<SearchItem>()))
+            .ReturnsAsync(100L);
 
         _fixture.ArrClientFactory
             .Setup(x => x.GetClient(InstanceType.Radarr, It.IsAny<float>()))
@@ -1793,7 +1793,7 @@ public class SeekerTests : IDisposable
 
         // Assert — movie should be searched (no dates = treated as released)
         mockArrClient.Verify(
-            x => x.SearchItemsAsync(radarrInstance, It.IsAny<HashSet<SearchItem>>()),
+            x => x.SearchItemAsync(radarrInstance, It.IsAny<SearchItem>()),
             Times.Once);
     }
 
@@ -1841,9 +1841,9 @@ public class SeekerTests : IDisposable
 
         SeriesSearchItem? capturedSearchItem = null;
         mockArrClient
-            .Setup(x => x.SearchItemsAsync(It.IsAny<ArrInstance>(), It.IsAny<HashSet<SearchItem>>()))
-            .Callback<ArrInstance, HashSet<SearchItem>>((_, items) => capturedSearchItem = items.OfType<SeriesSearchItem>().FirstOrDefault())
-            .ReturnsAsync([100L]);
+            .Setup(x => x.SearchItemAsync(It.IsAny<ArrInstance>(), It.IsAny<SearchItem>()))
+            .Callback<ArrInstance, SearchItem>((_, item) => capturedSearchItem = item as SeriesSearchItem)
+            .ReturnsAsync(100L);
 
         _fixture.ArrClientFactory
             .Setup(x => x.GetClient(InstanceType.Sonarr, It.IsAny<float>()))
@@ -1856,7 +1856,7 @@ public class SeekerTests : IDisposable
 
         // Assert — only season 2 should be searched (season 1's episode is within grace period)
         mockArrClient.Verify(
-            x => x.SearchItemsAsync(It.IsAny<ArrInstance>(), It.IsAny<HashSet<SearchItem>>()),
+            x => x.SearchItemAsync(It.IsAny<ArrInstance>(), It.IsAny<SearchItem>()),
             Times.Once);
 
         Assert.NotNull(capturedSearchItem);
@@ -1902,9 +1902,9 @@ public class SeekerTests : IDisposable
 
         HashSet<SearchItem>? capturedSearchItems = null;
         mockArrClient
-            .Setup(x => x.SearchItemsAsync(radarrInstance, It.IsAny<HashSet<SearchItem>>()))
-            .Callback<ArrInstance, HashSet<SearchItem>>((_, items) => capturedSearchItems = items)
-            .ReturnsAsync([100L]);
+            .Setup(x => x.SearchItemAsync(radarrInstance, It.IsAny<SearchItem>()))
+            .Callback<ArrInstance, SearchItem>((_, item) => capturedSearchItems = [item])
+            .ReturnsAsync(100L);
 
         _fixture.ArrClientFactory
             .Setup(x => x.GetClient(InstanceType.Radarr, It.IsAny<float>()))
@@ -1917,7 +1917,7 @@ public class SeekerTests : IDisposable
 
         // Assert — movie 1 excluded (PhysicalRelease within grace), movie 2 included (DigitalRelease past grace)
         mockArrClient.Verify(
-            x => x.SearchItemsAsync(radarrInstance, It.IsAny<HashSet<SearchItem>>()),
+            x => x.SearchItemAsync(radarrInstance, It.IsAny<SearchItem>()),
             Times.Once);
 
         Assert.NotNull(capturedSearchItems);
