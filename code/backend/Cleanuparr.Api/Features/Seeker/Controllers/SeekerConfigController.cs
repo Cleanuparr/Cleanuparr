@@ -110,8 +110,10 @@ public sealed class SeekerConfigController : ControllerBase
             }
 
             // Sync instance configs
-            var existingInstanceConfigs = await _dataContext.SeekerInstanceConfigs.ToListAsync();
-            bool previousAnyUseCustomFormatScore = existingInstanceConfigs.Any(e => e.UseCustomFormatScore);
+            var existingInstanceConfigs = await _dataContext.SeekerInstanceConfigs
+                .Include(e => e.ArrInstance)
+                .ToListAsync();
+            bool previousAnyUseCustomFormatScore = existingInstanceConfigs.Any(e => e.Enabled && e.ArrInstance.Enabled && e.UseCustomFormatScore);
 
             foreach (var instanceReq in request.Instances)
             {
@@ -146,7 +148,8 @@ public sealed class SeekerConfigController : ControllerBase
 
             await _dataContext.SaveChangesAsync();
 
-            bool anyUseCustomFormatScore = request.Instances.Any(i => i.Enabled && i.UseCustomFormatScore);
+            bool anyUseCustomFormatScore = await _dataContext.SeekerInstanceConfigs
+                .AnyAsync(s => s.Enabled && s.ArrInstance.Enabled && s.UseCustomFormatScore);
 
             // Start/stop Seeker based on SearchEnabled toggle
             if (config.SearchEnabled != previousSearchEnabled)

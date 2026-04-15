@@ -200,7 +200,7 @@ public class BackgroundJobManager : IHostedService
         await AddJobWithoutTrigger<CustomFormatScoreSyncer>(cancellationToken);
 
         bool anyUseCustomFormatScore = await dataContext.SeekerInstanceConfigs
-            .AnyAsync(s => s.UseCustomFormatScore, cancellationToken);
+            .AnyAsync(s => s.Enabled && s.ArrInstance.Enabled && s.UseCustomFormatScore, cancellationToken);
         
         if (anyUseCustomFormatScore)
         {
