@@ -15,4 +15,6 @@ public sealed record NotificationEventFlags
     public bool OnCategoryChanged { get; init; }
 
     public bool OnSearchTriggered { get; init; }
+
+    public bool OnSearchItemGrabbed { get; init; }
 }

@@ -65,8 +65,8 @@ public class SeekerIntegrationTests : IDisposable
         await _fixture.DataContext.SaveChangesAsync();
 
         // Mock arr client to return command IDs on search
-        _fixture.ArrClient.SearchItemsAsync(Arg.Any<Cleanuparr.Persistence.Models.Configuration.Arr.ArrInstance>(), Arg.Any<HashSet<SearchItem>>())
-            .Returns([100L]);
+        _fixture.ArrClient.SearchItemAsync(Arg.Any<Cleanuparr.Persistence.Models.Configuration.Arr.ArrInstance>(), Arg.Any<SearchItem>())
+            .Returns(100L);
 
         var sut = CreateSut();
 
@@ -142,9 +142,9 @@ public class SeekerIntegrationTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert: No search triggered, no events, no notifications
-        await _fixture.ArrClient.DidNotReceive().SearchItemsAsync(
+        await _fixture.ArrClient.DidNotReceive().SearchItemAsync(
             Arg.Any<Cleanuparr.Persistence.Models.Configuration.Arr.ArrInstance>(),
-            Arg.Any<HashSet<SearchItem>>());
+            Arg.Any<SearchItem>());
 
         var events = await _fixture.EventsContext.Events.ToListAsync();
         events.ShouldBeEmpty();
@@ -176,10 +176,10 @@ public class SeekerIntegrationTests : IDisposable
         });
         await _fixture.DataContext.SaveChangesAsync();
 
-        _fixture.ArrClient.SearchItemsAsync(
+        _fixture.ArrClient.SearchItemAsync(
             Arg.Any<Cleanuparr.Persistence.Models.Configuration.Arr.ArrInstance>(),
-            Arg.Any<HashSet<SearchItem>>())
-            .Returns([200L]);
+            Arg.Any<SearchItem>())
+            .Returns(200L);
 
         var sut = CreateSut();
 

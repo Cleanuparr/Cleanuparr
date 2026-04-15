@@ -697,7 +697,7 @@ public class EventPublisherTests : IDisposable
         Guid eventId = await _publisher.PublishSearchTriggered("Movie A", SeekerSearchType.Proactive, SeekerSearchReason.Missing);
 
         // Act
-        await _publisher.PublishSearchCompleted(eventId, SearchCommandStatus.Completed);
+        await _publisher.PublishSearchCompleted(eventId, SearchCommandStatus.Completed, InstanceType.Radarr, "http://localhost:7878");
 
         // Assert
         var updatedEvent = await _context.Events.FindAsync(eventId);
@@ -712,7 +712,7 @@ public class EventPublisherTests : IDisposable
         Guid eventId = await _publisher.PublishSearchTriggered("Movie A", SeekerSearchType.Proactive, SeekerSearchReason.Missing);
 
         // Act
-        await _publisher.PublishSearchCompleted(eventId, SearchCommandStatus.Completed);
+        await _publisher.PublishSearchCompleted(eventId, SearchCommandStatus.Completed, InstanceType.Radarr, "http://localhost:7878");
 
         // Assert
         var updatedEvent = await _context.Events.FindAsync(eventId);
@@ -729,7 +729,7 @@ public class EventPublisherTests : IDisposable
         var grabbedItems = new List<string> { "Movie A (2024)" };
 
         // Act
-        await _publisher.PublishSearchCompleted(eventId, SearchCommandStatus.Completed, grabbedItems);
+        await _publisher.PublishSearchCompleted(eventId, SearchCommandStatus.Completed, InstanceType.Radarr, "http://localhost:7878", grabbedItems);
 
         // Assert
         var searchData = await _context.SearchEventData.FirstOrDefaultAsync(s => s.AppEventId == eventId);
@@ -744,7 +744,7 @@ public class EventPublisherTests : IDisposable
         Guid eventId = await _publisher.PublishSearchTriggered("Movie A", SeekerSearchType.Proactive, SeekerSearchReason.Missing);
 
         // Act
-        await _publisher.PublishSearchCompleted(eventId, SearchCommandStatus.Completed);
+        await _publisher.PublishSearchCompleted(eventId, SearchCommandStatus.Completed, InstanceType.Radarr, "http://localhost:7878");
 
         // Assert
         var searchData = await _context.SearchEventData.FirstOrDefaultAsync(s => s.AppEventId == eventId);
@@ -756,7 +756,7 @@ public class EventPublisherTests : IDisposable
     public async Task PublishSearchCompleted_EventNotFound_LogsWarningAndReturns()
     {
         // Act — use a non-existent event ID
-        await _publisher.PublishSearchCompleted(Guid.NewGuid(), SearchCommandStatus.Completed);
+        await _publisher.PublishSearchCompleted(Guid.NewGuid(), SearchCommandStatus.Completed, InstanceType.Radarr, "http://localhost:7878");
 
         // Assert — should not throw, and the log warning is the important behavior
         // (no exception thrown is the assertion)
@@ -774,13 +774,42 @@ public class EventPublisherTests : IDisposable
         _clientProxy.ClearReceivedCalls();
 
         // Act
-        await _publisher.PublishSearchCompleted(eventId, SearchCommandStatus.Completed);
+        await _publisher.PublishSearchCompleted(eventId, SearchCommandStatus.Completed, InstanceType.Radarr, "http://localhost:7878");
 
         // Assert
         await _clientProxy.Received(1).SendCoreAsync(
             "EventReceived",
             Arg.Is<object[]>(args => args.Length == 1 && args[0] is AppEvent),
             Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task PublishSearchCompleted_WithGrabbedItems_SendsSearchItemGrabbedNotification()
+    {
+        // Arrange
+        Guid eventId = await _publisher.PublishSearchTriggered("Movie A", SeekerSearchType.Proactive, SeekerSearchReason.Missing);
+        var grabbedItems = new List<string> { "Movie A (2024)" };
+
+        // Act
+        await _publisher.PublishSearchCompleted(eventId, SearchCommandStatus.Completed, InstanceType.Radarr, "http://localhost:7878", grabbedItems);
+
+        // Assert
+        await _notificationPublisher.Received(1).NotifySearchItemGrabbed(
+            "Movie A", grabbedItems, InstanceType.Radarr, "http://localhost:7878");
+    }
+
+    [Fact]
+    public async Task PublishSearchCompleted_WithoutGrabbedItems_DoesNotSendSearchItemGrabbedNotification()
+    {
+        // Arrange
+        Guid eventId = await _publisher.PublishSearchTriggered("Movie A", SeekerSearchType.Proactive, SeekerSearchReason.Missing);
+
+        // Act
+        await _publisher.PublishSearchCompleted(eventId, SearchCommandStatus.Completed, InstanceType.Radarr, "http://localhost:7878");
+
+        // Assert
+        await _notificationPublisher.DidNotReceive().NotifySearchItemGrabbed(
+            Arg.Any<string>(), Arg.Any<List<string>>(), Arg.Any<InstanceType>(), Arg.Any<string>());
     }
 
     #endregion

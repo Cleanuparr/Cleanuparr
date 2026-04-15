@@ -129,6 +129,8 @@ export class DocumentationService {
       'onQueueItemDeleted': 'event-configuration',
       'onDownloadCleaned': 'event-configuration',
       'onCategoryChanged': 'event-configuration',
+      'onSearchTriggered': 'event-configuration',
+      'onSearchItemGrabbed': 'event-configuration',
     },
     'notifications/notifiarr': {
       'apiKey': 'api-key',

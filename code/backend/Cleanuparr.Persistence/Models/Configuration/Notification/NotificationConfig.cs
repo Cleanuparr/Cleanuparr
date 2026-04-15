@@ -33,6 +33,8 @@ public sealed record NotificationConfig
 
     public bool OnSearchTriggered { get; init; }
 
+    public bool OnSearchItemGrabbed { get; init; }
+
     public DateTime CreatedAt { get; init; } = DateTime.UtcNow;
     
     public DateTime UpdatedAt { get; init; } = DateTime.UtcNow;
@@ -72,5 +74,6 @@ public sealed record NotificationConfig
         OnQueueItemDeleted ||
         OnDownloadCleaned ||
         OnCategoryChanged ||
-        OnSearchTriggered;
+        OnSearchTriggered ||
+        OnSearchItemGrabbed;
 }

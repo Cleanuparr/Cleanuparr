@@ -46,11 +46,6 @@ public sealed record SeekerCommandTracker
     public string ItemTitle { get; set; } = string.Empty;
 
     /// <summary>
-    /// The type of arr instance (Radarr, Sonarr, etc.)
-    /// </summary>
-    public InstanceType ItemType { get; set; }
-
-    /// <summary>
     /// For Sonarr season-level searches, the season number that was searched.
     /// 0 for Radarr or when not applicable.
     /// </summary>

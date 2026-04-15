@@ -290,7 +290,7 @@ public class EventPublisher : IEventPublisher
     /// <summary>
     /// Updates an existing search event with completion status and optional grabbed item titles
     /// </summary>
-    public async Task PublishSearchCompleted(Guid eventId, SearchCommandStatus status, List<string>? grabbedItems = null)
+    public async Task PublishSearchCompleted(Guid eventId, SearchCommandStatus status, InstanceType instanceType, string instanceUrl, List<string>? grabbedItems = null)
     {
         var existingEvent = await _context.Events
             .Include(e => e.SearchEventData)
@@ -312,6 +312,11 @@ public class EventPublisher : IEventPublisher
 
         await _context.SaveChangesAsync();
         await NotifyClientsAsync(existingEvent);
+
+        if (status is SearchCommandStatus.Completed && grabbedItems is { Count: > 0 } && existingEvent.SearchEventData is not null)
+        {
+            await _notificationPublisher.NotifySearchItemGrabbed(existingEvent.SearchEventData.ItemTitle, grabbedItems, instanceType, instanceUrl);
+        }
     }
 
     /// <summary>

@@ -196,6 +196,12 @@ public abstract class ArrClient : IArrClient
 
     public abstract Task<List<long>> SearchItemsAsync(ArrInstance arrInstance, HashSet<SearchItem>? items);
 
+    public virtual async Task<long> SearchItemAsync(ArrInstance arrInstance, SearchItem item)
+    {
+        List<long> ids = await SearchItemsAsync(arrInstance, [item]);
+        return ids.First();
+    }
+
     public bool IsRecordValid(QueueRecord record)
     {
         if (string.IsNullOrEmpty(record.DownloadId))

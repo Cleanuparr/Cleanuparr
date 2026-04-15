@@ -78,7 +78,6 @@ public class SeekerCommandMonitorTests : IAsyncDisposable
             EventId = eventId,
             ExternalItemId = 100,
             ItemTitle = "Test Series - Season 1",
-            ItemType = InstanceType.Sonarr,
             SeasonNumber = 1,
             Status = SearchCommandStatus.Pending,
             CreatedAt = _timeProvider.GetUtcNow().UtcDateTime
@@ -103,9 +102,9 @@ public class SeekerCommandMonitorTests : IAsyncDisposable
 
         var publishTcs = new TaskCompletionSource<List<string>?>();
         _eventPublisher.PublishSearchCompleted(
-                Arg.Any<Guid>(), Arg.Any<SearchCommandStatus>(), Arg.Any<List<string>?>())
+                Arg.Any<Guid>(), Arg.Any<SearchCommandStatus>(), Arg.Any<InstanceType>(), Arg.Any<string>(), Arg.Any<List<string>?>())
             .Returns(Task.CompletedTask)
-            .AndDoes(ci => publishTcs.TrySetResult(ci.ArgAt<List<string>?>(2)));
+            .AndDoes(ci => publishTcs.TrySetResult(ci.ArgAt<List<string>?>(4)));
 
         // Act
         await _sut.StartAsync(_cts.Token);
@@ -114,7 +113,7 @@ public class SeekerCommandMonitorTests : IAsyncDisposable
 
         // Assert
         await _eventPublisher.Received(1).PublishSearchCompleted(
-            eventId, SearchCommandStatus.Completed, Arg.Any<List<string>?>());
+            eventId, SearchCommandStatus.Completed, Arg.Any<InstanceType>(), Arg.Any<string>(), Arg.Any<List<string>?>());
 
         resultData.ShouldNotBeNull();
         resultData!.Count.ShouldBe(1);
@@ -134,7 +133,6 @@ public class SeekerCommandMonitorTests : IAsyncDisposable
             EventId = eventId,
             ExternalItemId = 100,
             ItemTitle = "Test Series - Season 1",
-            ItemType = InstanceType.Sonarr,
             SeasonNumber = 1,
             Status = SearchCommandStatus.Pending,
             CreatedAt = _timeProvider.GetUtcNow().UtcDateTime
@@ -159,9 +157,9 @@ public class SeekerCommandMonitorTests : IAsyncDisposable
 
         var publishTcs = new TaskCompletionSource<List<string>?>();
         _eventPublisher.PublishSearchCompleted(
-                Arg.Any<Guid>(), Arg.Any<SearchCommandStatus>(), Arg.Any<List<string>?>())
+                Arg.Any<Guid>(), Arg.Any<SearchCommandStatus>(), Arg.Any<InstanceType>(), Arg.Any<string>(), Arg.Any<List<string>?>())
             .Returns(Task.CompletedTask)
-            .AndDoes(ci => publishTcs.TrySetResult(ci.ArgAt<List<string>?>(2)));
+            .AndDoes(ci => publishTcs.TrySetResult(ci.ArgAt<List<string>?>(4)));
 
         // Act
         await _sut.StartAsync(_cts.Token);
@@ -188,7 +186,6 @@ public class SeekerCommandMonitorTests : IAsyncDisposable
             EventId = eventId,
             ExternalItemId = 200,
             ItemTitle = "Test Movie",
-            ItemType = InstanceType.Radarr,
             SeasonNumber = 0,
             Status = SearchCommandStatus.Pending,
             CreatedAt = _timeProvider.GetUtcNow().UtcDateTime
@@ -212,9 +209,9 @@ public class SeekerCommandMonitorTests : IAsyncDisposable
 
         var publishTcs = new TaskCompletionSource<List<string>?>();
         _eventPublisher.PublishSearchCompleted(
-                Arg.Any<Guid>(), Arg.Any<SearchCommandStatus>(), Arg.Any<List<string>?>())
+                Arg.Any<Guid>(), Arg.Any<SearchCommandStatus>(), Arg.Any<InstanceType>(), Arg.Any<string>(), Arg.Any<List<string>?>())
             .Returns(Task.CompletedTask)
-            .AndDoes(ci => publishTcs.TrySetResult(ci.ArgAt<List<string>?>(2)));
+            .AndDoes(ci => publishTcs.TrySetResult(ci.ArgAt<List<string>?>(4)));
 
         // Act
         await _sut.StartAsync(_cts.Token);

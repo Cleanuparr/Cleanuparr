@@ -95,6 +95,19 @@ public class NotificationPublisher : INotificationPublisher
         }
     }
 
+    public virtual async Task NotifySearchItemGrabbed(string itemTitle, List<string> grabbedItems, InstanceType instanceType, string instanceUrl)
+    {
+        try
+        {
+            var context = BuildSearchItemGrabbedContext(itemTitle, grabbedItems, instanceType, instanceUrl);
+            await SendNotificationAsync(NotificationEventType.SearchItemGrabbed, context);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to notify search item grabbed");
+        }
+    }
+
     private async Task SendNotificationAsync(NotificationEventType eventType, NotificationContext context)
     {
         await _dryRunInterceptor.InterceptAsync(SendNotificationInternalAsync, (eventType, context));
@@ -260,6 +273,24 @@ public class NotificationPublisher : INotificationPublisher
                 ["Item"] = itemTitle,
                 ["Search type"] = searchType.ToString(),
                 ["Search reason"] = searchReason.ToString(),
+            }
+        };
+    }
+
+    private static NotificationContext BuildSearchItemGrabbedContext(string itemTitle, List<string> grabbedItems, InstanceType instanceType, string instanceUrl)
+    {
+        return new NotificationContext
+        {
+            EventType = NotificationEventType.SearchItemGrabbed,
+            Title = "Download grabbed",
+            Description = itemTitle,
+            Severity = EventSeverity.Information,
+            Data = new Dictionary<string, string>
+            {
+                ["Item"] = itemTitle,
+                ["Grabbed"] = string.Join(", ", grabbedItems),
+                ["Instance type"] = instanceType.ToString(),
+                ["Url"] = instanceUrl,
             }
         };
     }

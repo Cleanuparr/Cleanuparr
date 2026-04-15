@@ -14,6 +14,7 @@ export interface NotificationEventFlags {
   onDownloadCleaned: boolean;
   onCategoryChanged: boolean;
   onSearchTriggered: boolean;
+  onSearchItemGrabbed: boolean;
 }
 
 export interface NotificationProviderDto {
@@ -36,39 +37,25 @@ export interface AppriseCliStatus {
 
 // Provider-specific create/update request types
 
-export interface CreateNotifiarrProviderRequest {
+interface CreateProviderRequestBase extends NotificationEventFlags {
   name: string;
-  apiKey: string;
-  channelId: string;
   isEnabled: boolean;
-  onFailedImportStrike: boolean;
-  onStalledStrike: boolean;
-  onSlowStrike: boolean;
-  onQueueItemDeleted: boolean;
-  onDownloadCleaned: boolean;
-  onCategoryChanged: boolean;
-  onSearchTriggered: boolean;
 }
 
-export interface CreateAppriseProviderRequest {
-  name: string;
+export interface CreateNotifiarrProviderRequest extends CreateProviderRequestBase {
+  apiKey: string;
+  channelId: string;
+}
+
+export interface CreateAppriseProviderRequest extends CreateProviderRequestBase {
   mode: AppriseMode;
   url?: string;
   key?: string;
   tags?: string;
   serviceUrls?: string;
-  isEnabled: boolean;
-  onFailedImportStrike: boolean;
-  onStalledStrike: boolean;
-  onSlowStrike: boolean;
-  onQueueItemDeleted: boolean;
-  onDownloadCleaned: boolean;
-  onCategoryChanged: boolean;
-  onSearchTriggered: boolean;
 }
 
-export interface CreateNtfyProviderRequest {
-  name: string;
+export interface CreateNtfyProviderRequest extends CreateProviderRequestBase {
   serverUrl: string;
   topics: string[];
   authenticationType: NtfyAuthenticationType;
@@ -77,49 +64,22 @@ export interface CreateNtfyProviderRequest {
   accessToken?: string;
   priority: NtfyPriority;
   tags?: string[];
-  isEnabled: boolean;
-  onFailedImportStrike: boolean;
-  onStalledStrike: boolean;
-  onSlowStrike: boolean;
-  onQueueItemDeleted: boolean;
-  onDownloadCleaned: boolean;
-  onCategoryChanged: boolean;
-  onSearchTriggered: boolean;
 }
 
-export interface CreateTelegramProviderRequest {
-  name: string;
+export interface CreateTelegramProviderRequest extends CreateProviderRequestBase {
   botToken: string;
   chatId: string;
   topicId?: string;
   sendSilently: boolean;
-  isEnabled: boolean;
-  onFailedImportStrike: boolean;
-  onStalledStrike: boolean;
-  onSlowStrike: boolean;
-  onQueueItemDeleted: boolean;
-  onDownloadCleaned: boolean;
-  onCategoryChanged: boolean;
-  onSearchTriggered: boolean;
 }
 
-export interface CreateDiscordProviderRequest {
-  name: string;
+export interface CreateDiscordProviderRequest extends CreateProviderRequestBase {
   webhookUrl: string;
   username?: string;
   avatarUrl?: string;
-  isEnabled: boolean;
-  onFailedImportStrike: boolean;
-  onStalledStrike: boolean;
-  onSlowStrike: boolean;
-  onQueueItemDeleted: boolean;
-  onDownloadCleaned: boolean;
-  onCategoryChanged: boolean;
-  onSearchTriggered: boolean;
 }
 
-export interface CreatePushoverProviderRequest {
-  name: string;
+export interface CreatePushoverProviderRequest extends CreateProviderRequestBase {
   apiToken: string;
   userKey: string;
   devices?: string[];
@@ -128,29 +88,12 @@ export interface CreatePushoverProviderRequest {
   retry?: number;
   expire?: number;
   tags?: string[];
-  isEnabled: boolean;
-  onFailedImportStrike: boolean;
-  onStalledStrike: boolean;
-  onSlowStrike: boolean;
-  onQueueItemDeleted: boolean;
-  onDownloadCleaned: boolean;
-  onCategoryChanged: boolean;
-  onSearchTriggered: boolean;
 }
 
-export interface CreateGotifyProviderRequest {
-  name: string;
+export interface CreateGotifyProviderRequest extends CreateProviderRequestBase {
   serverUrl: string;
   applicationToken: string;
   priority: number;
-  isEnabled: boolean;
-  onFailedImportStrike: boolean;
-  onStalledStrike: boolean;
-  onSlowStrike: boolean;
-  onQueueItemDeleted: boolean;
-  onDownloadCleaned: boolean;
-  onCategoryChanged: boolean;
-  onSearchTriggered: boolean;
 }
 
 // Test request types (minimal, no event flags needed)
