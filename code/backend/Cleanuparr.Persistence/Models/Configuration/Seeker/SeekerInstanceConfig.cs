@@ -62,4 +62,19 @@ public sealed record SeekerInstanceConfig
     /// If a cycle completes faster, no searches are triggered until this time has elapsed.
     /// </summary>
     public int MinCycleTimeDays { get; set; } = 7;
+
+    /// <summary>
+    /// Only search monitored items during proactive searches
+    /// </summary>
+    public bool MonitoredOnly { get; set; } = true;
+
+    /// <summary>
+    /// Skip items that already meet their quality cutoff during proactive searches
+    /// </summary>
+    public bool UseCutoff { get; set; }
+
+    /// <summary>
+    /// Search items whose custom format score is below the quality profile's cutoff format score
+    /// </summary>
+    public bool UseCustomFormatScore { get; set; }
 }

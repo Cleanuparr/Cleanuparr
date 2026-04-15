@@ -592,11 +592,10 @@ public class SeekerTests : IDisposable
     [Fact]
     public async Task ExecuteAsync_Radarr_MonitoredOnlyTrue_ExcludesUnmonitoredMovies()
     {
-        // Arrange — MonitoredOnly is true by default in seed data
+        // Arrange — MonitoredOnly is true by default
         var config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
         config.SearchEnabled = true;
         config.ProactiveSearchEnabled = true;
-        config.MonitoredOnly = true;
         await _fixture.DataContext.SaveChangesAsync();
 
         var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
@@ -605,7 +604,8 @@ public class SeekerTests : IDisposable
         {
             ArrInstanceId = radarrInstance.Id,
             ArrInstance = radarrInstance,
-            Enabled = true
+            Enabled = true,
+            MonitoredOnly = true
         });
         await _fixture.DataContext.SaveChangesAsync();
 
@@ -650,7 +650,6 @@ public class SeekerTests : IDisposable
         var config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
         config.SearchEnabled = true;
         config.ProactiveSearchEnabled = true;
-        config.MonitoredOnly = false;
         await _fixture.DataContext.SaveChangesAsync();
 
         var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
@@ -660,6 +659,7 @@ public class SeekerTests : IDisposable
             ArrInstanceId = radarrInstance.Id,
             ArrInstance = radarrInstance,
             Enabled = true,
+            MonitoredOnly = false,
             SkipTags = ["no-search"]
         });
         await _fixture.DataContext.SaveChangesAsync();
@@ -714,8 +714,6 @@ public class SeekerTests : IDisposable
         var config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
         config.SearchEnabled = true;
         config.ProactiveSearchEnabled = true;
-        config.MonitoredOnly = false;
-        config.UseCutoff = true;
         await _fixture.DataContext.SaveChangesAsync();
 
         var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
@@ -724,7 +722,9 @@ public class SeekerTests : IDisposable
         {
             ArrInstanceId = radarrInstance.Id,
             ArrInstance = radarrInstance,
-            Enabled = true
+            Enabled = true,
+            MonitoredOnly = false,
+            UseCutoff = true
         });
         await _fixture.DataContext.SaveChangesAsync();
 
@@ -770,7 +770,6 @@ public class SeekerTests : IDisposable
         var config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
         config.SearchEnabled = true;
         config.ProactiveSearchEnabled = true;
-        config.MonitoredOnly = false;
         await _fixture.DataContext.SaveChangesAsync();
 
         var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
@@ -782,6 +781,7 @@ public class SeekerTests : IDisposable
             ArrInstanceId = radarrInstance.Id,
             ArrInstance = radarrInstance,
             Enabled = true,
+            MonitoredOnly = false,
             CurrentCycleId = currentCycleId
         });
 
@@ -856,7 +856,6 @@ public class SeekerTests : IDisposable
         config.SearchEnabled = true;
         config.ProactiveSearchEnabled = true;
         config.UseRoundRobin = true;
-        config.MonitoredOnly = false;
         await _fixture.DataContext.SaveChangesAsync();
 
         var radarrInstance1 = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext, "http://radarr1:7878");
@@ -868,6 +867,7 @@ public class SeekerTests : IDisposable
             ArrInstanceId = radarrInstance1.Id,
             ArrInstance = radarrInstance1,
             Enabled = true,
+            MonitoredOnly = false,
             LastProcessedAt = DateTime.UtcNow
         });
         _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
@@ -875,6 +875,7 @@ public class SeekerTests : IDisposable
             ArrInstanceId = radarrInstance2.Id,
             ArrInstance = radarrInstance2,
             Enabled = true,
+            MonitoredOnly = false,
             LastProcessedAt = DateTime.UtcNow.AddHours(-24)
         });
         await _fixture.DataContext.SaveChangesAsync();
@@ -972,7 +973,6 @@ public class SeekerTests : IDisposable
         var config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
         config.SearchEnabled = true;
         config.ProactiveSearchEnabled = true;
-        config.MonitoredOnly = false;
         await _fixture.DataContext.SaveChangesAsync();
 
         var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
@@ -984,6 +984,7 @@ public class SeekerTests : IDisposable
             ArrInstanceId = radarrInstance.Id,
             ArrInstance = radarrInstance,
             Enabled = true,
+            MonitoredOnly = false,
             CurrentCycleId = currentCycleId,
             MinCycleTimeDays = 7,
             TotalEligibleItems = 2
@@ -1050,7 +1051,6 @@ public class SeekerTests : IDisposable
         var config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
         config.SearchEnabled = true;
         config.ProactiveSearchEnabled = true;
-        config.MonitoredOnly = false;
         await _fixture.DataContext.SaveChangesAsync();
 
         var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
@@ -1062,6 +1062,7 @@ public class SeekerTests : IDisposable
             ArrInstanceId = radarrInstance.Id,
             ArrInstance = radarrInstance,
             Enabled = true,
+            MonitoredOnly = false,
             CurrentCycleId = currentCycleId,
             MinCycleTimeDays = 7,
             TotalEligibleItems = 2
@@ -1132,7 +1133,6 @@ public class SeekerTests : IDisposable
         var config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
         config.SearchEnabled = true;
         config.ProactiveSearchEnabled = true;
-        config.MonitoredOnly = false;
         await _fixture.DataContext.SaveChangesAsync();
 
         var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
@@ -1143,6 +1143,7 @@ public class SeekerTests : IDisposable
             ArrInstanceId = radarrInstance.Id,
             ArrInstance = radarrInstance,
             Enabled = true,
+            MonitoredOnly = false,
             CurrentCycleId = currentCycleId,
             MinCycleTimeDays = 30
         });
@@ -1199,7 +1200,6 @@ public class SeekerTests : IDisposable
         var config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
         config.SearchEnabled = true;
         config.ProactiveSearchEnabled = true;
-        config.MonitoredOnly = false;
         await _fixture.DataContext.SaveChangesAsync();
 
         var sonarrInstance = TestDataContextFactory.AddSonarrInstance(_fixture.DataContext);
@@ -1211,6 +1211,7 @@ public class SeekerTests : IDisposable
             ArrInstanceId = sonarrInstance.Id,
             ArrInstance = sonarrInstance,
             Enabled = true,
+            MonitoredOnly = false,
             CurrentCycleId = currentCycleId,
             MinCycleTimeDays = 7,
             TotalEligibleItems = 1
@@ -1276,7 +1277,6 @@ public class SeekerTests : IDisposable
         var config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
         config.SearchEnabled = true;
         config.ProactiveSearchEnabled = true;
-        config.MonitoredOnly = false;
         await _fixture.DataContext.SaveChangesAsync();
 
         var sonarrInstance = TestDataContextFactory.AddSonarrInstance(_fixture.DataContext);
@@ -1288,6 +1288,7 @@ public class SeekerTests : IDisposable
             ArrInstanceId = sonarrInstance.Id,
             ArrInstance = sonarrInstance,
             Enabled = true,
+            MonitoredOnly = false,
             CurrentCycleId = currentCycleId,
             MinCycleTimeDays = 7,
             TotalEligibleItems = 1
@@ -1360,7 +1361,6 @@ public class SeekerTests : IDisposable
         config.SearchEnabled = true;
         config.ProactiveSearchEnabled = true;
         config.UseRoundRobin = true;
-        config.MonitoredOnly = false;
         await _fixture.DataContext.SaveChangesAsync();
 
         var now = _fixture.TimeProvider.GetUtcNow().UtcDateTime;
@@ -1373,6 +1373,7 @@ public class SeekerTests : IDisposable
             ArrInstanceId = instanceA.Id,
             ArrInstance = instanceA,
             Enabled = true,
+            MonitoredOnly = false,
             CurrentCycleId = cycleIdA,
             MinCycleTimeDays = 30,
             TotalEligibleItems = 1,
@@ -1396,6 +1397,7 @@ public class SeekerTests : IDisposable
             ArrInstanceId = instanceB.Id,
             ArrInstance = instanceB,
             Enabled = true,
+            MonitoredOnly = false,
             CurrentCycleId = cycleIdB,
             MinCycleTimeDays = 5,
             TotalEligibleItems = 1,
@@ -1464,7 +1466,6 @@ public class SeekerTests : IDisposable
         var config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
         config.SearchEnabled = true;
         config.ProactiveSearchEnabled = true;
-        config.MonitoredOnly = false;
         await _fixture.DataContext.SaveChangesAsync();
 
         var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
@@ -1476,6 +1477,7 @@ public class SeekerTests : IDisposable
             ArrInstanceId = radarrInstance.Id,
             ArrInstance = radarrInstance,
             Enabled = true,
+            MonitoredOnly = false,
             CurrentCycleId = currentCycleId,
             MinCycleTimeDays = 30,
             TotalEligibleItems = 2 // Stale value from previous run
@@ -1550,7 +1552,6 @@ public class SeekerTests : IDisposable
         var config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
         config.SearchEnabled = true;
         config.ProactiveSearchEnabled = true;
-        config.MonitoredOnly = false;
         await _fixture.DataContext.SaveChangesAsync();
 
         var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
@@ -1562,6 +1563,7 @@ public class SeekerTests : IDisposable
             ArrInstanceId = radarrInstance.Id,
             ArrInstance = radarrInstance,
             Enabled = true,
+            MonitoredOnly = false,
             CurrentCycleId = currentCycleId,
             MinCycleTimeDays = 30,
             TotalEligibleItems = 2 // Stale value from previous run

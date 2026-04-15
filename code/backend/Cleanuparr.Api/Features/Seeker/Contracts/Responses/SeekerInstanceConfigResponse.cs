@@ -21,4 +21,10 @@ public sealed record SeekerInstanceConfigResponse
     public int ActiveDownloadLimit { get; init; }
 
     public int MinCycleTimeDays { get; init; }
+
+    public bool MonitoredOnly { get; init; }
+
+    public bool UseCutoff { get; init; }
+
+    public bool UseCustomFormatScore { get; init; }
 }

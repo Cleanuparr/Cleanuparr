@@ -5,9 +5,6 @@ export interface SeekerConfig {
   searchInterval: number;
   proactiveSearchEnabled: boolean;
   selectionStrategy: SelectionStrategy;
-  monitoredOnly: boolean;
-  useCutoff: boolean;
-  useCustomFormatScore: boolean;
   useRoundRobin: boolean;
   postReleaseGraceHours: number;
   instances: SeekerInstanceConfig[];
@@ -23,6 +20,9 @@ export interface SeekerInstanceConfig {
   arrInstanceEnabled: boolean;
   activeDownloadLimit: number;
   minCycleTimeDays: number;
+  monitoredOnly: boolean;
+  useCutoff: boolean;
+  useCustomFormatScore: boolean;
 }
 
 export interface UpdateSeekerConfig {
@@ -30,9 +30,6 @@ export interface UpdateSeekerConfig {
   searchInterval: number;
   proactiveSearchEnabled: boolean;
   selectionStrategy: SelectionStrategy;
-  monitoredOnly: boolean;
-  useCutoff: boolean;
-  useCustomFormatScore: boolean;
   useRoundRobin: boolean;
   postReleaseGraceHours: number;
   instances: UpdateSeekerInstanceConfig[];
@@ -44,4 +41,7 @@ export interface UpdateSeekerInstanceConfig {
   skipTags: string[];
   activeDownloadLimit: number;
   minCycleTimeDays: number;
+  monitoredOnly: boolean;
+  useCutoff: boolean;
+  useCustomFormatScore: boolean;
 }

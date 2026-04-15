@@ -432,7 +432,7 @@ public sealed class Seeker : IHandler
 
         // Load cached CF scores when custom format score filtering is enabled
         Dictionary<long, CustomFormatScoreEntry>? cfScores = null;
-        if (config.UseCustomFormatScore)
+        if (instanceConfig.UseCustomFormatScore)
         {
             cfScores = await _dataContext.CustomFormatScoreEntries
                 .AsNoTracking()
@@ -446,16 +446,16 @@ public sealed class Seeker : IHandler
         var candidates = movies
             .Where(m => m.Status is "released")
             .Where(m => IsMoviePastGracePeriod(m, graceCutoff))
-            .Where(m => !config.MonitoredOnly || m.Monitored)
+            .Where(m => !instanceConfig.MonitoredOnly || m.Monitored)
             .Where(m => instanceConfig.SkipTags.Count == 0 ||
                 !m.Tags
                     .Select(id => tagsById.TryGetValue(id, out var label) ? label : null)
                     .Any(label => label is not null && skipTagSet.Contains(label))
             )
             .Where(m => !m.HasFile
-                || (!config.UseCutoff && !config.UseCustomFormatScore)
-                || (config.UseCutoff && (m.MovieFile?.QualityCutoffNotMet ?? false))
-                || (config.UseCustomFormatScore && cfScores != null && cfScores.TryGetValue(m.Id, out var entry) && entry.CurrentScore < entry.CutoffScore))
+                || (!instanceConfig.UseCutoff && !instanceConfig.UseCustomFormatScore)
+                || (instanceConfig.UseCutoff && (m.MovieFile?.QualityCutoffNotMet ?? false))
+                || (instanceConfig.UseCustomFormatScore && cfScores != null && cfScores.TryGetValue(m.Id, out var entry) && entry.CurrentScore < entry.CutoffScore))
             .ToList();
 
         instanceConfig.TotalEligibleItems = candidates.Count;
@@ -528,7 +528,7 @@ public sealed class Seeker : IHandler
             SearchableMovie movie = candidates.First(m => m.Id == movieId);
             SeekerSearchReason reason = !movie.HasFile
                 ? SeekerSearchReason.Missing
-                : config.UseCutoff && (movie.MovieFile?.QualityCutoffNotMet ?? false)
+                : instanceConfig.UseCutoff && (movie.MovieFile?.QualityCutoffNotMet ?? false)
                     ? SeekerSearchReason.QualityCutoffNotMet
                     : SeekerSearchReason.CustomFormatScoreBelowCutoff;
 
@@ -568,14 +568,14 @@ public sealed class Seeker : IHandler
         // Apply filters
         var candidates = series
             .Where(s => s.Status is "continuing" or "ended" or "released")
-            .Where(s => !config.MonitoredOnly || s.Monitored)
+            .Where(s => !instanceConfig.MonitoredOnly || s.Monitored)
             .Where(s => instanceConfig.SkipTags.Count == 0 ||
                 !s.Tags
                     .Select(id => tagsById.TryGetValue(id, out var label) ? label : null)
                     .Any(label => label is not null && skipTagSet.Contains(label))
             )
             // Skip fully-downloaded series (unless quality upgrade filters active)
-            .Where(s => config.UseCutoff || config.UseCustomFormatScore
+            .Where(s => instanceConfig.UseCutoff || instanceConfig.UseCustomFormatScore
                 || s.Statistics == null || s.Statistics.EpisodeCount == 0
                 || s.Statistics.EpisodeFileCount < s.Statistics.EpisodeCount)
             .ToList();
@@ -611,7 +611,7 @@ public sealed class Seeker : IHandler
                 seriesTitle = candidates.First(s => s.Id == seriesId).Title;
 
                 (SeriesSearchItem? searchItem, SearchableEpisode? selectedEpisode, SeekerSearchReason searchReason) =
-                    await BuildSonarrSearchItemAsync(config, arrInstance, seriesId, seriesHistory, seriesTitle, graceCutoff, queuedSeasons);
+                    await BuildSonarrSearchItemAsync(instanceConfig, arrInstance, seriesId, seriesHistory, seriesTitle, graceCutoff, queuedSeasons);
 
                 if (searchItem is not null)
                 {
@@ -676,7 +676,7 @@ public sealed class Seeker : IHandler
     /// Uses search history to prefer least-recently-searched seasons.
     /// </summary>
     private async Task<(SeriesSearchItem? SearchItem, SearchableEpisode? SelectedEpisode, SeekerSearchReason SearchReason)> BuildSonarrSearchItemAsync(
-        SeekerConfig config,
+        SeekerInstanceConfig instanceConfig,
         ArrInstance arrInstance,
         long seriesId,
         List<SeekerHistory> seriesHistory,
@@ -688,7 +688,7 @@ public sealed class Seeker : IHandler
 
         // Fetch episode file metadata to determine cutoff status from the dedicated episodefile endpoint
         HashSet<long> cutoffNotMetFileIds = [];
-        if (config.UseCutoff)
+        if (instanceConfig.UseCutoff)
         {
             List<ArrEpisodeFile> episodeFiles = await _sonarrClient.GetEpisodeFilesAsync(arrInstance, seriesId);
             cutoffNotMetFileIds = episodeFiles
@@ -699,7 +699,7 @@ public sealed class Seeker : IHandler
 
         // Load cached CF scores for this series when custom format score filtering is enabled
         Dictionary<long, CustomFormatScoreEntry>? cfScores = null;
-        if (config.UseCustomFormatScore)
+        if (instanceConfig.UseCustomFormatScore)
         {
             cfScores = await _dataContext.CustomFormatScoreEntries
                 .AsNoTracking()
@@ -713,11 +713,11 @@ public sealed class Seeker : IHandler
         // Cutoff status comes from the episodefile endpoint; items without a cached CF score are excluded.
         var qualifying = episodes
             .Where(e => e.AirDateUtc.HasValue && e.AirDateUtc.Value <= graceCutoff)
-            .Where(e => !config.MonitoredOnly || e.Monitored)
+            .Where(e => !instanceConfig.MonitoredOnly || e.Monitored)
             .Where(e => !e.HasFile
-                || (!config.UseCutoff && !config.UseCustomFormatScore)
-                || (config.UseCutoff && cutoffNotMetFileIds.Contains(e.EpisodeFileId))
-                || (config.UseCustomFormatScore && cfScores != null && cfScores.TryGetValue(e.Id, out var entry) && entry.CurrentScore < entry.CutoffScore))
+                || (!instanceConfig.UseCutoff && !instanceConfig.UseCustomFormatScore)
+                || (instanceConfig.UseCutoff && cutoffNotMetFileIds.Contains(e.EpisodeFileId))
+                || (instanceConfig.UseCustomFormatScore && cfScores != null && cfScores.TryGetValue(e.Id, out var entry) && entry.CurrentScore < entry.CutoffScore))
             .OrderBy(e => e.SeasonNumber)
             .ThenBy(e => e.EpisodeNumber)
             .ToList();

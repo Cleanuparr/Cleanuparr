@@ -64,6 +64,9 @@ public sealed class SeekerConfigController : ControllerBase
                 ArrInstanceEnabled = instance.Enabled,
                 ActiveDownloadLimit = seekerConfig?.ActiveDownloadLimit ?? 3,
                 MinCycleTimeDays = seekerConfig?.MinCycleTimeDays ?? 7,
+                MonitoredOnly = seekerConfig?.MonitoredOnly ?? true,
+                UseCutoff = seekerConfig?.UseCutoff ?? false,
+                UseCustomFormatScore = seekerConfig?.UseCustomFormatScore ?? false,
             };
         }).ToList();
 
@@ -73,9 +76,6 @@ public sealed class SeekerConfigController : ControllerBase
             SearchInterval = config.SearchInterval,
             ProactiveSearchEnabled = config.ProactiveSearchEnabled,
             SelectionStrategy = config.SelectionStrategy,
-            MonitoredOnly = config.MonitoredOnly,
-            UseCutoff = config.UseCutoff,
-            UseCustomFormatScore = config.UseCustomFormatScore,
             UseRoundRobin = config.UseRoundRobin,
             PostReleaseGraceHours = config.PostReleaseGraceHours,
             Instances = instanceResponses,
@@ -97,7 +97,6 @@ public sealed class SeekerConfigController : ControllerBase
             var config = await _dataContext.SeekerConfigs.FirstAsync();
 
             ushort previousInterval = config.SearchInterval;
-            bool previousUseCustomFormatScore = config.UseCustomFormatScore;
             bool previousSearchEnabled = config.SearchEnabled;
             bool previousProactiveSearchEnabled = config.ProactiveSearchEnabled;
 
@@ -111,7 +110,10 @@ public sealed class SeekerConfigController : ControllerBase
             }
 
             // Sync instance configs
-            var existingInstanceConfigs = await _dataContext.SeekerInstanceConfigs.ToListAsync();
+            var existingInstanceConfigs = await _dataContext.SeekerInstanceConfigs
+                .Include(e => e.ArrInstance)
+                .ToListAsync();
+            bool previousAnyUseCustomFormatScore = existingInstanceConfigs.Any(e => e.Enabled && e.ArrInstance.Enabled && e.UseCustomFormatScore);
 
             foreach (var instanceReq in request.Instances)
             {
@@ -124,6 +126,9 @@ public sealed class SeekerConfigController : ControllerBase
                     existing.SkipTags = instanceReq.SkipTags;
                     existing.ActiveDownloadLimit = instanceReq.ActiveDownloadLimit;
                     existing.MinCycleTimeDays = instanceReq.MinCycleTimeDays;
+                    existing.MonitoredOnly = instanceReq.MonitoredOnly;
+                    existing.UseCutoff = instanceReq.UseCutoff;
+                    existing.UseCustomFormatScore = instanceReq.UseCustomFormatScore;
                 }
                 else
                 {
@@ -134,11 +139,17 @@ public sealed class SeekerConfigController : ControllerBase
                         SkipTags = instanceReq.SkipTags,
                         ActiveDownloadLimit = instanceReq.ActiveDownloadLimit,
                         MinCycleTimeDays = instanceReq.MinCycleTimeDays,
+                        MonitoredOnly = instanceReq.MonitoredOnly,
+                        UseCutoff = instanceReq.UseCutoff,
+                        UseCustomFormatScore = instanceReq.UseCustomFormatScore,
                     });
                 }
             }
 
             await _dataContext.SaveChangesAsync();
+
+            bool anyUseCustomFormatScore = await _dataContext.SeekerInstanceConfigs
+                .AnyAsync(s => s.Enabled && s.ArrInstance.Enabled && s.UseCustomFormatScore);
 
             // Start/stop Seeker based on SearchEnabled toggle
             if (config.SearchEnabled != previousSearchEnabled)
@@ -162,24 +173,24 @@ public sealed class SeekerConfigController : ControllerBase
                 await _jobManagementService.StartJob(JobType.Seeker, null, config.ToCronExpression());
             }
 
-            // Toggle CustomFormatScoreSyncer job when UseCustomFormatScore changes
-            if (config.UseCustomFormatScore != previousUseCustomFormatScore)
+            // Toggle CustomFormatScoreSyncer job when any instance's UseCustomFormatScore changes
+            if (anyUseCustomFormatScore != previousAnyUseCustomFormatScore)
             {
-                if (config.UseCustomFormatScore)
+                if (anyUseCustomFormatScore)
                 {
-                    _logger.LogInformation("UseCustomFormatScore enabled, starting CustomFormatScoreSyncer job");
+                    _logger.LogInformation("UseCustomFormatScore enabled on an instance, starting CustomFormatScoreSyncer job");
                     await _jobManagementService.StartJob(JobType.CustomFormatScoreSyncer, null, Constants.CustomFormatScoreSyncerCron);
                     await _jobManagementService.TriggerJobOnce(JobType.CustomFormatScoreSyncer);
                 }
                 else
                 {
-                    _logger.LogInformation("UseCustomFormatScore disabled, stopping CustomFormatScoreSyncer job");
+                    _logger.LogInformation("UseCustomFormatScore disabled on all instances, stopping CustomFormatScoreSyncer job");
                     await _jobManagementService.StopJob(JobType.CustomFormatScoreSyncer);
                 }
             }
 
             // Trigger CustomFormatScoreSyncer once when search or proactive search is re-enabled with custom format scores active
-            if (previousUseCustomFormatScore && config.UseCustomFormatScore)
+            if (previousAnyUseCustomFormatScore && anyUseCustomFormatScore)
             {
                 bool searchJustEnabled = !previousSearchEnabled && config.SearchEnabled;
                 bool proactiveJustEnabled = !previousProactiveSearchEnabled && config.ProactiveSearchEnabled;
