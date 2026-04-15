@@ -12,12 +12,6 @@ public sealed record SeekerConfigResponse
 
     public SelectionStrategy SelectionStrategy { get; init; }
 
-    public bool MonitoredOnly { get; init; }
-
-    public bool UseCutoff { get; init; }
-
-    public bool UseCustomFormatScore { get; init; }
-
     public bool UseRoundRobin { get; init; }
 
     public int PostReleaseGraceHours { get; init; }

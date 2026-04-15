@@ -46,21 +46,11 @@ public sealed class CustomFormatScoreSyncer : IHandler
 
     public async Task ExecuteAsync(CancellationToken cancellationToken = default)
     {
-        SeekerConfig config = await _dataContext.SeekerConfigs
-            .AsNoTracking()
-            .FirstAsync();
-
-        if (!config.UseCustomFormatScore)
-        {
-            _logger.LogTrace("Custom format score tracking is disabled");
-            return;
-        }
-
         List<SeekerInstanceConfig> instanceConfigs = await _dataContext.SeekerInstanceConfigs
             .Include(s => s.ArrInstance)
                 .ThenInclude(a => a.ArrConfig)
-            .Where(s => s.Enabled && s.ArrInstance.Enabled)
-            .ToListAsync();
+            .Where(s => s.Enabled && s.ArrInstance.Enabled && s.UseCustomFormatScore)
+            .ToListAsync(cancellationToken: cancellationToken);
 
         instanceConfigs = instanceConfigs
             .Where(s => s.ArrInstance.ArrConfig.Type is InstanceType.Sonarr or InstanceType.Radarr)
@@ -91,7 +81,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
 
         await CleanupOldHistoryAsync();
 
-        await _hubContext.Clients.All.SendAsync("CfScoresUpdated");
+        await _hubContext.Clients.All.SendAsync("CfScoresUpdated", cancellationToken: cancellationToken);
     }
 
     private async Task SyncInstanceAsync(ArrInstance arrInstance, CancellationToken cancellationToken)

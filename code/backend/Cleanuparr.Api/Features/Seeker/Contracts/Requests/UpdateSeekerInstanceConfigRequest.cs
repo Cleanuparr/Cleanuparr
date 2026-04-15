@@ -11,4 +11,10 @@ public sealed record UpdateSeekerInstanceConfigRequest
     public int ActiveDownloadLimit { get; init; } = 3;
 
     public int MinCycleTimeDays { get; init; } = 7;
+
+    public bool MonitoredOnly { get; init; } = true;
+
+    public bool UseCutoff { get; init; }
+
+    public bool UseCustomFormatScore { get; init; }
 }

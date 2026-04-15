@@ -13,12 +13,6 @@ public sealed record UpdateSeekerConfigRequest
 
     public SelectionStrategy SelectionStrategy { get; init; } = SelectionStrategy.BalancedWeighted;
 
-    public bool MonitoredOnly { get; init; } = true;
-
-    public bool UseCutoff { get; init; }
-
-    public bool UseCustomFormatScore { get; init; }
-
     public bool UseRoundRobin { get; init; } = true;
 
     public int PostReleaseGraceHours { get; init; } = 6;
@@ -31,9 +25,6 @@ public sealed record UpdateSeekerConfigRequest
         config.SearchInterval = SearchInterval;
         config.ProactiveSearchEnabled = ProactiveSearchEnabled;
         config.SelectionStrategy = SelectionStrategy;
-        config.MonitoredOnly = MonitoredOnly;
-        config.UseCutoff = UseCutoff;
-        config.UseCustomFormatScore = UseCustomFormatScore;
         config.UseRoundRobin = UseRoundRobin;
         config.PostReleaseGraceHours = PostReleaseGraceHours;
 

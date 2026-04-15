@@ -62,11 +62,7 @@ public class CustomFormatScoreSyncerTests : IDisposable
     [Fact]
     public async Task ExecuteAsync_WhenCustomFormatScoreDisabled_ReturnsEarly()
     {
-        // Arrange — UseCustomFormatScore is false by default in seed data
-        var config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
-        config.UseCustomFormatScore = false;
-        await _fixture.DataContext.SaveChangesAsync();
-
+        // Arrange
         var sut = CreateSut();
 
         // Act
@@ -84,11 +80,7 @@ public class CustomFormatScoreSyncerTests : IDisposable
     [Fact]
     public async Task ExecuteAsync_WhenNoEnabledInstances_ReturnsEarly()
     {
-        // Arrange — enable CF scoring but add no SeekerInstanceConfigs
-        var config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
-        config.UseCustomFormatScore = true;
-        await _fixture.DataContext.SaveChangesAsync();
-
+        // Arrange
         var sut = CreateSut();
 
         // Act
@@ -107,17 +99,14 @@ public class CustomFormatScoreSyncerTests : IDisposable
     public async Task ExecuteAsync_SyncsRadarrMovieScores()
     {
         // Arrange
-        var config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
-        config.UseCustomFormatScore = true;
-        await _fixture.DataContext.SaveChangesAsync();
-
         var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
 
         _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
         {
             ArrInstanceId = radarrInstance.Id,
             ArrInstance = radarrInstance,
-            Enabled = true
+            Enabled = true,
+            UseCustomFormatScore = true
         });
         await _fixture.DataContext.SaveChangesAsync();
 
@@ -175,17 +164,14 @@ public class CustomFormatScoreSyncerTests : IDisposable
     public async Task ExecuteAsync_RecordsHistoryOnScoreChange()
     {
         // Arrange
-        var config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
-        config.UseCustomFormatScore = true;
-        await _fixture.DataContext.SaveChangesAsync();
-
         var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
 
         _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
         {
             ArrInstanceId = radarrInstance.Id,
             ArrInstance = radarrInstance,
-            Enabled = true
+            Enabled = true,
+            UseCustomFormatScore = true
         });
 
         // Pre-existing CF score entry with a different score
@@ -250,17 +236,14 @@ public class CustomFormatScoreSyncerTests : IDisposable
     public async Task ExecuteAsync_TracksUnmonitoredMovie()
     {
         // Arrange
-        var config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
-        config.UseCustomFormatScore = true;
-        await _fixture.DataContext.SaveChangesAsync();
-
         var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
 
         _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
         {
             ArrInstanceId = radarrInstance.Id,
             ArrInstance = radarrInstance,
-            Enabled = true
+            Enabled = true,
+            UseCustomFormatScore = true
         });
         await _fixture.DataContext.SaveChangesAsync();
 
@@ -302,17 +285,14 @@ public class CustomFormatScoreSyncerTests : IDisposable
     public async Task ExecuteAsync_UpdatesMonitoredStatusOnSync()
     {
         // Arrange
-        var config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
-        config.UseCustomFormatScore = true;
-        await _fixture.DataContext.SaveChangesAsync();
-
         var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
 
         _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
         {
             ArrInstanceId = radarrInstance.Id,
             ArrInstance = radarrInstance,
-            Enabled = true
+            Enabled = true,
+            UseCustomFormatScore = true
         });
 
         // Pre-existing entry that was monitored
@@ -371,17 +351,14 @@ public class CustomFormatScoreSyncerTests : IDisposable
     public async Task ExecuteAsync_SyncsSonarrEpisodeScores()
     {
         // Arrange
-        var config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
-        config.UseCustomFormatScore = true;
-        await _fixture.DataContext.SaveChangesAsync();
-
         var sonarrInstance = TestDataContextFactory.AddSonarrInstance(_fixture.DataContext);
 
         _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
         {
             ArrInstanceId = sonarrInstance.Id,
             ArrInstance = sonarrInstance,
-            Enabled = true
+            Enabled = true,
+            UseCustomFormatScore = true
         });
         await _fixture.DataContext.SaveChangesAsync();
 
@@ -441,17 +418,14 @@ public class CustomFormatScoreSyncerTests : IDisposable
     public async Task ExecuteAsync_SonarrSync_SkipsEpisodesWithoutFiles()
     {
         // Arrange
-        var config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
-        config.UseCustomFormatScore = true;
-        await _fixture.DataContext.SaveChangesAsync();
-
         var sonarrInstance = TestDataContextFactory.AddSonarrInstance(_fixture.DataContext);
 
         _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
         {
             ArrInstanceId = sonarrInstance.Id,
             ArrInstance = sonarrInstance,
-            Enabled = true
+            Enabled = true,
+            UseCustomFormatScore = true
         });
         await _fixture.DataContext.SaveChangesAsync();
 
@@ -494,17 +468,14 @@ public class CustomFormatScoreSyncerTests : IDisposable
     public async Task ExecuteAsync_ScoreUnchanged_DoesNotRecordHistory()
     {
         // Arrange
-        var config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
-        config.UseCustomFormatScore = true;
-        await _fixture.DataContext.SaveChangesAsync();
-
         var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
 
         _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
         {
             ArrInstanceId = radarrInstance.Id,
             ArrInstance = radarrInstance,
-            Enabled = true
+            Enabled = true,
+            UseCustomFormatScore = true
         });
 
         // Pre-existing entry with score = 250 (same as what will be returned)
@@ -566,17 +537,14 @@ public class CustomFormatScoreSyncerTests : IDisposable
     public async Task ExecuteAsync_CleansUpEntriesForRemovedMovies()
     {
         // Arrange
-        var config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
-        config.UseCustomFormatScore = true;
-        await _fixture.DataContext.SaveChangesAsync();
-
         var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
 
         _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
         {
             ArrInstanceId = radarrInstance.Id,
             ArrInstance = radarrInstance,
-            Enabled = true
+            Enabled = true,
+            UseCustomFormatScore = true
         });
 
         // Pre-existing entry for a movie that no longer exists in library
@@ -629,19 +597,15 @@ public class CustomFormatScoreSyncerTests : IDisposable
     [Fact]
     public async Task ExecuteAsync_PreservesEntryWhenMovieExistsButHasNoFile()
     {
-        // Arrange — simulates an RSS upgrade where the old file was removed
-        // but the new file hasn't been imported yet
-        var config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
-        config.UseCustomFormatScore = true;
-        await _fixture.DataContext.SaveChangesAsync();
-
+        // Arrange
         var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
 
         _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
         {
             ArrInstanceId = radarrInstance.Id,
             ArrInstance = radarrInstance,
-            Enabled = true
+            Enabled = true,
+            UseCustomFormatScore = true
         });
 
         // Pre-existing entry with score history
@@ -706,18 +670,15 @@ public class CustomFormatScoreSyncerTests : IDisposable
     [Fact]
     public async Task ExecuteAsync_PreservesEntryWhenMovieFileScoreNotReturned()
     {
-        // Arrange — simulates a newly imported file that doesn't have CF scores calculated yet
-        var config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
-        config.UseCustomFormatScore = true;
-        await _fixture.DataContext.SaveChangesAsync();
-
+        // Arrange
         var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
 
         _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
         {
             ArrInstanceId = radarrInstance.Id,
             ArrInstance = radarrInstance,
-            Enabled = true
+            Enabled = true,
+            UseCustomFormatScore = true
         });
 
         // Pre-existing entry with history
@@ -786,18 +747,15 @@ public class CustomFormatScoreSyncerTests : IDisposable
     [Fact]
     public async Task ExecuteAsync_Sonarr_PreservesEntryWhenEpisodeTemporarilyWithoutFile()
     {
-        // Arrange — simulates a Sonarr episode whose file was replaced via RSS
-        var config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
-        config.UseCustomFormatScore = true;
-        await _fixture.DataContext.SaveChangesAsync();
-
+        // Arrange
         var sonarrInstance = TestDataContextFactory.AddSonarrInstance(_fixture.DataContext);
 
         _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
         {
             ArrInstanceId = sonarrInstance.Id,
             ArrInstance = sonarrInstance,
-            Enabled = true
+            Enabled = true,
+            UseCustomFormatScore = true
         });
 
         // Pre-existing CF score entry for an episode

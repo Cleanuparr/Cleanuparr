@@ -52,15 +52,6 @@
         <app-toggle label="Enable Missing Search" [checked]="true" [disabled]="true"
           hint="Always searches for items with no file. This cannot be disabled."
           helpKey="seeker:missingSearchEnabled" />
-        <app-toggle label="Monitored Only" [(checked)]="monitoredOnly"
-          hint="Only search for items that are monitored in the arr app"
-          helpKey="seeker:monitoredOnly" />
-        <app-toggle label="Use Cutoff" [(checked)]="useCutoff"
-          hint="Skip items that have already met their quality cutoff"
-          helpKey="seeker:useCutoff" />
-        <app-toggle label="Use Custom Format Score" [(checked)]="useCustomFormatScore"
-          hint="Search for upgrades when a file's custom format score is below the quality profile's cutoff format score"
-          helpKey="seeker:useCustomFormatScore" />
         <app-toggle label="Round Robin" [(checked)]="useRoundRobin"
           [beforeChange]="confirmRoundRobin"
           hint="Process one instance per run to spread indexer load"
@@ -102,6 +93,18 @@
             }
             @if (instance.enabled) {
               <div class="instance-row__details">
+                <app-toggle label="Monitored Only" [checked]="instance.monitoredOnly"
+                  hint="Only search for items that are monitored in the arr app"
+                  (checkedChange)="updateInstanceMonitoredOnly($index, $event)"
+                  helpKey="seeker:monitoredOnly" />
+                <app-toggle label="Use Cutoff" [checked]="instance.useCutoff"
+                  hint="Skip items that have already met their quality cutoff"
+                  (checkedChange)="updateInstanceUseCutoff($index, $event)"
+                  helpKey="seeker:useCutoff" />
+                <app-toggle label="Use Custom Format Score" [checked]="instance.useCustomFormatScore"
+                  hint="Search for upgrades when a file's custom format score is below the quality profile's cutoff format score"
+                  (checkedChange)="updateInstanceUseCustomFormatScore($index, $event)"
+                  helpKey="seeker:useCustomFormatScore" />
                 <app-chip-input
                   label="Skip Tags"
                   placeholder="Add tag..."

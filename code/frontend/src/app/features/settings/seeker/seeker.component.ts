@@ -57,6 +57,9 @@ interface InstanceState {
   arrInstanceEnabled: boolean;
   activeDownloadLimit: number;
   minCycleTimeDays: number;
+  monitoredOnly: boolean;
+  useCutoff: boolean;
+  useCustomFormatScore: boolean;
 }
 
 @Component({
@@ -89,9 +92,6 @@ export class SeekerComponent implements OnInit, HasPendingChanges {
   readonly searchInterval = signal<unknown>(2);
   readonly proactiveSearchEnabled = signal(false);
   readonly selectionStrategy = signal<unknown>(SelectionStrategy.BalancedWeighted);
-  readonly monitoredOnly = signal(true);
-  readonly useCutoff = signal(false);
-  readonly useCustomFormatScore = signal(false);
   readonly useRoundRobin = signal(true);
   readonly postReleaseGraceHours = signal<number>(6);
 
@@ -120,9 +120,6 @@ export class SeekerComponent implements OnInit, HasPendingChanges {
         this.searchInterval.set(config.searchInterval);
         this.proactiveSearchEnabled.set(config.proactiveSearchEnabled);
         this.selectionStrategy.set(config.selectionStrategy);
-        this.monitoredOnly.set(config.monitoredOnly);
-        this.useCutoff.set(config.useCutoff);
-        this.useCustomFormatScore.set(config.useCustomFormatScore);
         this.useRoundRobin.set(config.useRoundRobin);
         this.postReleaseGraceHours.set(config.postReleaseGraceHours);
         this.instances.set(config.instances.map(i => ({
@@ -135,6 +132,9 @@ export class SeekerComponent implements OnInit, HasPendingChanges {
           arrInstanceEnabled: i.arrInstanceEnabled,
           activeDownloadLimit: i.activeDownloadLimit,
           minCycleTimeDays: i.minCycleTimeDays,
+          monitoredOnly: i.monitoredOnly,
+          useCutoff: i.useCutoff,
+          useCustomFormatScore: i.useCustomFormatScore,
         })));
         this.loader.stop();
         this.savedSnapshot.set(this.buildSnapshot());
@@ -196,6 +196,30 @@ export class SeekerComponent implements OnInit, HasPendingChanges {
     });
   }
 
+  updateInstanceMonitoredOnly(index: number, value: boolean): void {
+    this.instances.update(instances => {
+      const updated = [...instances];
+      updated[index] = { ...updated[index], monitoredOnly: value };
+      return updated;
+    });
+  }
+
+  updateInstanceUseCutoff(index: number, value: boolean): void {
+    this.instances.update(instances => {
+      const updated = [...instances];
+      updated[index] = { ...updated[index], useCutoff: value };
+      return updated;
+    });
+  }
+
+  updateInstanceUseCustomFormatScore(index: number, value: boolean): void {
+    this.instances.update(instances => {
+      const updated = [...instances];
+      updated[index] = { ...updated[index], useCustomFormatScore: value };
+      return updated;
+    });
+  }
+
   getInstanceIcon(instanceType: string): string {
     return `icons/ext/${instanceType.toLowerCase()}-light.svg`;
   }
@@ -212,9 +236,6 @@ export class SeekerComponent implements OnInit, HasPendingChanges {
       searchInterval: (this.searchInterval() as number) ?? 2,
       proactiveSearchEnabled: this.proactiveSearchEnabled(),
       selectionStrategy: this.selectionStrategy() as SelectionStrategy,
-      monitoredOnly: this.monitoredOnly(),
-      useCutoff: this.useCutoff(),
-      useCustomFormatScore: this.useCustomFormatScore(),
       useRoundRobin: this.useRoundRobin(),
       postReleaseGraceHours: this.postReleaseGraceHours(),
       instances: this.instances().map(i => ({
@@ -223,6 +244,9 @@ export class SeekerComponent implements OnInit, HasPendingChanges {
         skipTags: i.skipTags,
         activeDownloadLimit: i.activeDownloadLimit,
         minCycleTimeDays: i.minCycleTimeDays,
+        monitoredOnly: i.monitoredOnly,
+        useCutoff: i.useCutoff,
+        useCustomFormatScore: i.useCustomFormatScore,
       })),
     };
 
@@ -250,9 +274,6 @@ export class SeekerComponent implements OnInit, HasPendingChanges {
       searchInterval: this.searchInterval(),
       proactiveSearchEnabled: this.proactiveSearchEnabled(),
       selectionStrategy: this.selectionStrategy(),
-      monitoredOnly: this.monitoredOnly(),
-      useCutoff: this.useCutoff(),
-      useCustomFormatScore: this.useCustomFormatScore(),
       useRoundRobin: this.useRoundRobin(),
       postReleaseGraceHours: this.postReleaseGraceHours(),
       instances: [...this.instances()].sort((a, b) => a.arrInstanceId.localeCompare(b.arrInstanceId)),

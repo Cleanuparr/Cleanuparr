@@ -167,16 +167,15 @@ public class SeekerConfigControllerTests : IDisposable
         });
         await _dataContext.SaveChangesAsync();
 
-        // UseCustomFormatScore was false (default), now enable it
+        // UseCustomFormatScore was false (default), now enable it on the instance
         var request = new UpdateSeekerConfigRequest
         {
             SearchEnabled = true,
             SearchInterval = 3,
             ProactiveSearchEnabled = true,
-            UseCustomFormatScore = true,
             Instances =
             [
-                new UpdateSeekerInstanceConfigRequest { ArrInstanceId = radarr.Id, Enabled = true }
+                new UpdateSeekerInstanceConfigRequest { ArrInstanceId = radarr.Id, Enabled = true, UseCustomFormatScore = true }
             ]
         };
 
@@ -199,9 +198,10 @@ public class SeekerConfigControllerTests : IDisposable
         });
         await _dataContext.SaveChangesAsync();
 
-        // First enable CF score
-        var config = await _dataContext.SeekerConfigs.FirstAsync();
-        config.UseCustomFormatScore = true;
+        // First enable CF score on the instance
+        var instanceConfig = await _dataContext.SeekerInstanceConfigs
+            .FirstAsync(s => s.ArrInstanceId == radarr.Id);
+        instanceConfig.UseCustomFormatScore = true;
         await _dataContext.SaveChangesAsync();
 
         // Now disable it
@@ -210,10 +210,9 @@ public class SeekerConfigControllerTests : IDisposable
             SearchEnabled = true,
             SearchInterval = 3,
             ProactiveSearchEnabled = true,
-            UseCustomFormatScore = false,
             Instances =
             [
-                new UpdateSeekerInstanceConfigRequest { ArrInstanceId = radarr.Id, Enabled = true }
+                new UpdateSeekerInstanceConfigRequest { ArrInstanceId = radarr.Id, Enabled = true, UseCustomFormatScore = false }
             ]
         };
 
@@ -234,9 +233,11 @@ public class SeekerConfigControllerTests : IDisposable
         });
         await _dataContext.SaveChangesAsync();
 
-        // Set up state: CF score already enabled, search currently disabled
+        // Set up state: CF score already enabled on instance, search currently disabled
+        var instanceConfig = await _dataContext.SeekerInstanceConfigs
+            .FirstAsync(s => s.ArrInstanceId == radarr.Id);
+        instanceConfig.UseCustomFormatScore = true;
         var config = await _dataContext.SeekerConfigs.FirstAsync();
-        config.UseCustomFormatScore = true;
         config.SearchEnabled = false;
         await _dataContext.SaveChangesAsync();
 
@@ -246,10 +247,9 @@ public class SeekerConfigControllerTests : IDisposable
             SearchEnabled = true,
             SearchInterval = 3,
             ProactiveSearchEnabled = false,
-            UseCustomFormatScore = true,
             Instances =
             [
-                new UpdateSeekerInstanceConfigRequest { ArrInstanceId = radarr.Id, Enabled = true }
+                new UpdateSeekerInstanceConfigRequest { ArrInstanceId = radarr.Id, Enabled = true, UseCustomFormatScore = true }
             ]
         };
 

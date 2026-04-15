@@ -39,21 +39,6 @@ public sealed record SeekerConfig : IConfig
     public SelectionStrategy SelectionStrategy { get; set; } = SelectionStrategy.BalancedWeighted;
 
     /// <summary>
-    /// Only search monitored items during proactive searches
-    /// </summary>
-    public bool MonitoredOnly { get; set; } = true;
-
-    /// <summary>
-    /// Skip items that already meet their quality cutoff during proactive searches
-    /// </summary>
-    public bool UseCutoff { get; set; }
-
-    /// <summary>
-    /// Search items whose custom format score is below the quality profile's cutoff format score
-    /// </summary>
-    public bool UseCustomFormatScore { get; set; }
-
-    /// <summary>
     /// Process one instance per run to spread indexer load during proactive searches
     /// </summary>
     public bool UseRoundRobin { get; set; } = true;
