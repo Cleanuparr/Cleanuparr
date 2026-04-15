@@ -287,10 +287,10 @@ public class NotificationPublisher : INotificationPublisher
             Severity = EventSeverity.Information,
             Data = new Dictionary<string, string>
             {
-                ["Instance type"] = instanceType.ToString(),
-                ["Url"] = instanceUrl,
                 ["Item"] = itemTitle,
                 ["Grabbed"] = string.Join(", ", grabbedItems),
+                ["Instance type"] = instanceType.ToString(),
+                ["Url"] = instanceUrl,
             }
         };
     }
