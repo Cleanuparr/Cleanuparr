@@ -152,6 +152,34 @@ export async function getCfScoreStats(accessToken: string): Promise<Response> {
   });
 }
 
+// --- Arr Instance helpers ---
+
+export async function createArrInstance(
+  accessToken: string,
+  type: 'sonarr' | 'radarr',
+  instance: { name: string; url: string; apiKey: string; version: number },
+): Promise<Response> {
+  return fetch(`${API}/api/configuration/${type}/instances`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify(instance),
+  });
+}
+
+export async function deleteArrInstance(
+  accessToken: string,
+  type: 'sonarr' | 'radarr',
+  instanceId: string,
+): Promise<Response> {
+  return fetch(`${API}/api/configuration/${type}/instances/${instanceId}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+}
+
 // --- Download Cleaner API helpers ---
 
 export async function getDownloadCleanerConfig(accessToken: string): Promise<Response> {
