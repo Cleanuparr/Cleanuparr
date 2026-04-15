@@ -75,7 +75,8 @@ public sealed class NotificationProvidersController : ControllerBase
                         OnQueueItemDeleted = p.OnQueueItemDeleted,
                         OnDownloadCleaned = p.OnDownloadCleaned,
                         OnCategoryChanged = p.OnCategoryChanged,
-                        OnSearchTriggered = p.OnSearchTriggered
+                        OnSearchTriggered = p.OnSearchTriggered,
+                        OnSearchItemGrabbed = p.OnSearchItemGrabbed
                     },
                     Configuration = p.Type switch
                     {
@@ -155,6 +156,7 @@ public sealed class NotificationProvidersController : ControllerBase
                 OnDownloadCleaned = newProvider.OnDownloadCleaned,
                 OnCategoryChanged = newProvider.OnCategoryChanged,
                 OnSearchTriggered = newProvider.OnSearchTriggered,
+                OnSearchItemGrabbed = newProvider.OnSearchItemGrabbed,
                 NotifiarrConfiguration = notifiarrConfig
             };
 
@@ -226,6 +228,7 @@ public sealed class NotificationProvidersController : ControllerBase
                 OnDownloadCleaned = newProvider.OnDownloadCleaned,
                 OnCategoryChanged = newProvider.OnCategoryChanged,
                 OnSearchTriggered = newProvider.OnSearchTriggered,
+                OnSearchItemGrabbed = newProvider.OnSearchItemGrabbed,
                 AppriseConfiguration = appriseConfig
             };
 
@@ -304,6 +307,7 @@ public sealed class NotificationProvidersController : ControllerBase
                 OnDownloadCleaned = newProvider.OnDownloadCleaned,
                 OnCategoryChanged = newProvider.OnCategoryChanged,
                 OnSearchTriggered = newProvider.OnSearchTriggered,
+                OnSearchItemGrabbed = newProvider.OnSearchItemGrabbed,
                 NtfyConfiguration = ntfyConfig
             };
 
@@ -373,6 +377,7 @@ public sealed class NotificationProvidersController : ControllerBase
                 OnDownloadCleaned = newProvider.OnDownloadCleaned,
                 OnCategoryChanged = newProvider.OnCategoryChanged,
                 OnSearchTriggered = newProvider.OnSearchTriggered,
+                OnSearchItemGrabbed = newProvider.OnSearchItemGrabbed,
                 TelegramConfiguration = telegramConfig
             };
 
@@ -453,6 +458,7 @@ public sealed class NotificationProvidersController : ControllerBase
                 OnDownloadCleaned = updatedProvider.OnDownloadCleaned,
                 OnCategoryChanged = updatedProvider.OnCategoryChanged,
                 OnSearchTriggered = updatedProvider.OnSearchTriggered,
+                OnSearchItemGrabbed = updatedProvider.OnSearchItemGrabbed,
                 NotifiarrConfiguration = notifiarrConfig,
                 UpdatedAt = DateTime.UtcNow
             };
@@ -540,6 +546,7 @@ public sealed class NotificationProvidersController : ControllerBase
                 OnDownloadCleaned = updatedProvider.OnDownloadCleaned,
                 OnCategoryChanged = updatedProvider.OnCategoryChanged,
                 OnSearchTriggered = updatedProvider.OnSearchTriggered,
+                OnSearchItemGrabbed = updatedProvider.OnSearchItemGrabbed,
                 AppriseConfiguration = appriseConfig,
                 UpdatedAt = DateTime.UtcNow
             };
@@ -630,6 +637,7 @@ public sealed class NotificationProvidersController : ControllerBase
                 OnDownloadCleaned = updatedProvider.OnDownloadCleaned,
                 OnCategoryChanged = updatedProvider.OnCategoryChanged,
                 OnSearchTriggered = updatedProvider.OnSearchTriggered,
+                OnSearchItemGrabbed = updatedProvider.OnSearchItemGrabbed,
                 NtfyConfiguration = ntfyConfig,
                 UpdatedAt = DateTime.UtcNow
             };
@@ -714,6 +722,7 @@ public sealed class NotificationProvidersController : ControllerBase
                 OnDownloadCleaned = updatedProvider.OnDownloadCleaned,
                 OnCategoryChanged = updatedProvider.OnCategoryChanged,
                 OnSearchTriggered = updatedProvider.OnSearchTriggered,
+                OnSearchItemGrabbed = updatedProvider.OnSearchItemGrabbed,
                 TelegramConfiguration = telegramConfig,
                 UpdatedAt = DateTime.UtcNow
             };
@@ -825,7 +834,8 @@ public sealed class NotificationProvidersController : ControllerBase
                     OnQueueItemDeleted = false,
                     OnDownloadCleaned = false,
                     OnCategoryChanged = false,
-                    OnSearchTriggered = false
+                    OnSearchTriggered = false,
+                    OnSearchItemGrabbed = false
                 },
                 Configuration = notifiarrConfig
             };
@@ -893,7 +903,8 @@ public sealed class NotificationProvidersController : ControllerBase
                     OnQueueItemDeleted = false,
                     OnDownloadCleaned = false,
                     OnCategoryChanged = false,
-                    OnSearchTriggered = false
+                    OnSearchTriggered = false,
+                    OnSearchItemGrabbed = false
                 },
                 Configuration = appriseConfig
             };
@@ -968,7 +979,8 @@ public sealed class NotificationProvidersController : ControllerBase
                     OnQueueItemDeleted = false,
                     OnDownloadCleaned = false,
                     OnCategoryChanged = false,
-                    OnSearchTriggered = false
+                    OnSearchTriggered = false,
+                    OnSearchItemGrabbed = false
                 },
                 Configuration = ntfyConfig
             };
@@ -1026,7 +1038,8 @@ public sealed class NotificationProvidersController : ControllerBase
                     OnQueueItemDeleted = false,
                     OnDownloadCleaned = false,
                     OnCategoryChanged = false,
-                    OnSearchTriggered = false
+                    OnSearchTriggered = false,
+                    OnSearchItemGrabbed = false
                 },
                 Configuration = telegramConfig
             };
@@ -1062,7 +1075,8 @@ public sealed class NotificationProvidersController : ControllerBase
                 OnQueueItemDeleted = provider.OnQueueItemDeleted,
                 OnDownloadCleaned = provider.OnDownloadCleaned,
                 OnCategoryChanged = provider.OnCategoryChanged,
-                OnSearchTriggered = provider.OnSearchTriggered
+                OnSearchTriggered = provider.OnSearchTriggered,
+                OnSearchItemGrabbed = provider.OnSearchItemGrabbed
             },
             Configuration = provider.Type switch
             {
@@ -1120,6 +1134,7 @@ public sealed class NotificationProvidersController : ControllerBase
                 OnDownloadCleaned = newProvider.OnDownloadCleaned,
                 OnCategoryChanged = newProvider.OnCategoryChanged,
                 OnSearchTriggered = newProvider.OnSearchTriggered,
+                OnSearchItemGrabbed = newProvider.OnSearchItemGrabbed,
                 DiscordConfiguration = discordConfig
             };
 
@@ -1201,6 +1216,7 @@ public sealed class NotificationProvidersController : ControllerBase
                 OnDownloadCleaned = updatedProvider.OnDownloadCleaned,
                 OnCategoryChanged = updatedProvider.OnCategoryChanged,
                 OnSearchTriggered = updatedProvider.OnSearchTriggered,
+                OnSearchItemGrabbed = updatedProvider.OnSearchItemGrabbed,
                 DiscordConfiguration = discordConfig,
                 UpdatedAt = DateTime.UtcNow
             };
@@ -1271,7 +1287,8 @@ public sealed class NotificationProvidersController : ControllerBase
                     OnQueueItemDeleted = false,
                     OnDownloadCleaned = false,
                     OnCategoryChanged = false,
-                    OnSearchTriggered = false
+                    OnSearchTriggered = false,
+                    OnSearchItemGrabbed = false
                 },
                 Configuration = discordConfig
             };
@@ -1343,6 +1360,7 @@ public sealed class NotificationProvidersController : ControllerBase
                 OnDownloadCleaned = newProvider.OnDownloadCleaned,
                 OnCategoryChanged = newProvider.OnCategoryChanged,
                 OnSearchTriggered = newProvider.OnSearchTriggered,
+                OnSearchItemGrabbed = newProvider.OnSearchItemGrabbed,
                 PushoverConfiguration = pushoverConfig
             };
 
@@ -1431,6 +1449,7 @@ public sealed class NotificationProvidersController : ControllerBase
                 OnDownloadCleaned = updatedProvider.OnDownloadCleaned,
                 OnCategoryChanged = updatedProvider.OnCategoryChanged,
                 OnSearchTriggered = updatedProvider.OnSearchTriggered,
+                OnSearchItemGrabbed = updatedProvider.OnSearchItemGrabbed,
                 PushoverConfiguration = pushoverConfig,
                 UpdatedAt = DateTime.UtcNow
             };
@@ -1515,7 +1534,8 @@ public sealed class NotificationProvidersController : ControllerBase
                     OnQueueItemDeleted = false,
                     OnDownloadCleaned = false,
                     OnCategoryChanged = false,
-                    OnSearchTriggered = false
+                    OnSearchTriggered = false,
+                    OnSearchItemGrabbed = false
                 },
                 Configuration = pushoverConfig
             };
@@ -1572,6 +1592,7 @@ public sealed class NotificationProvidersController : ControllerBase
                 OnDownloadCleaned = newProvider.OnDownloadCleaned,
                 OnCategoryChanged = newProvider.OnCategoryChanged,
                 OnSearchTriggered = newProvider.OnSearchTriggered,
+                OnSearchItemGrabbed = newProvider.OnSearchItemGrabbed,
                 GotifyConfiguration = gotifyConfig
             };
 
@@ -1653,6 +1674,7 @@ public sealed class NotificationProvidersController : ControllerBase
                 OnDownloadCleaned = updatedProvider.OnDownloadCleaned,
                 OnCategoryChanged = updatedProvider.OnCategoryChanged,
                 OnSearchTriggered = updatedProvider.OnSearchTriggered,
+                OnSearchItemGrabbed = updatedProvider.OnSearchItemGrabbed,
                 GotifyConfiguration = gotifyConfig,
                 UpdatedAt = DateTime.UtcNow
             };
@@ -1721,7 +1743,8 @@ public sealed class NotificationProvidersController : ControllerBase
                     OnQueueItemDeleted = false,
                     OnDownloadCleaned = false,
                     OnCategoryChanged = false,
-                    OnSearchTriggered = false
+                    OnSearchTriggered = false,
+                    OnSearchItemGrabbed = false
                 },
                 Configuration = gotifyConfig
             };

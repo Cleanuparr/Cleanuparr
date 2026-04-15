@@ -130,7 +130,7 @@ public class SeekerCommandMonitor : BackgroundService
         foreach (var eventGroup in trackersByEvent)
         {
             Guid eventId = eventGroup.Key;
-            var trackers = eventGroup.ToList();
+            List<SeekerCommandTracker> trackers = eventGroup.ToList();
 
             bool allTerminal = trackers.All(t =>
                 t.Status is SearchCommandStatus.Completed
@@ -143,17 +143,20 @@ public class SeekerCommandMonitor : BackgroundService
             }
 
             bool anyFailed = trackers.Any(t => t.Status is SearchCommandStatus.Failed or SearchCommandStatus.TimedOut);
+            var firstTracker = trackers.First();
+            var instanceType = firstTracker.ItemType;
+            var instanceUrl = firstTracker.ArrInstance.Url.ToString();
 
             if (anyFailed)
             {
-                await eventPublisher.PublishSearchCompleted(eventId, SearchCommandStatus.Failed);
+                await eventPublisher.PublishSearchCompleted(eventId, SearchCommandStatus.Failed, instanceType, instanceUrl);
                 _logger.LogWarning("Search command(s) failed for event {EventId}", eventId);
             }
             else
             {
                 // All completed — inspect download queue for grabbed items
                 List<string>? grabbedItems = await InspectDownloadQueueAsync(trackers, arrClientFactory);
-                await eventPublisher.PublishSearchCompleted(eventId, SearchCommandStatus.Completed, grabbedItems);
+                await eventPublisher.PublishSearchCompleted(eventId, SearchCommandStatus.Completed, instanceType, instanceUrl, grabbedItems);
                 _logger.LogDebug("Search command(s) completed for event {EventId}", eventId);
             }
 

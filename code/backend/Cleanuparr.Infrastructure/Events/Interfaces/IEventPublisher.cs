@@ -22,5 +22,5 @@ public interface IEventPublisher
 
     Task<Guid> PublishSearchTriggered(string itemTitle, SeekerSearchType searchType, SeekerSearchReason searchReason, Guid? cycleId = null);
 
-    Task PublishSearchCompleted(Guid eventId, SearchCommandStatus status, List<string>? grabbedItems = null);
+    Task PublishSearchCompleted(Guid eventId, SearchCommandStatus status, InstanceType instanceType, string instanceUrl, List<string>? grabbedItems = null);
 }

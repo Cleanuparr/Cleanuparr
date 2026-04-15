@@ -19,4 +19,6 @@ public abstract record CreateNotificationProviderRequestBase
     public bool OnCategoryChanged { get; init; }
 
     public bool OnSearchTriggered { get; init; }
+
+    public bool OnSearchItemGrabbed { get; init; }
 }

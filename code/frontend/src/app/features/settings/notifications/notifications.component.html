@@ -62,6 +62,9 @@
           @if (provider.events.onSearchTriggered) {
             <span class="event-tag">Search Triggered</span>
           }
+          @if (provider.events.onSearchItemGrabbed) {
+            <span class="event-tag">Search Item Grabbed</span>
+          }
         </div>
       </div>
     } @empty {
@@ -283,6 +286,9 @@
         <app-toggle label="Search Triggered" [(checked)]="onSearchTriggered"
           hint="Notify when a search is triggered by the Seeker"
           helpKey="notifications:onSearchTriggered" />
+        <app-toggle label="Search Item Grabbed" [(checked)]="onSearchItemGrabbed"
+          hint="Notify when a search results in downloads being grabbed"
+          helpKey="notifications:onSearchItemGrabbed" />
       </div>
     </div>
   </div>

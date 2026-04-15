@@ -10,5 +10,6 @@ public enum NotificationEventType
     QueueItemDeleted,
     DownloadCleaned,
     CategoryChanged,
-    SearchTriggered
+    SearchTriggered,
+    SearchItemGrabbed
 }
