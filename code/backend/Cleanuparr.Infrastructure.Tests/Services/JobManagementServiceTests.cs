@@ -2,34 +2,37 @@ using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Hubs;
 using Cleanuparr.Infrastructure.Models;
 using Cleanuparr.Infrastructure.Services;
+using Cleanuparr.Infrastructure.Tests.TestHelpers;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
-using Moq;
+using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 using Quartz;
 using Quartz.Impl.Matchers;
+using Shouldly;
 using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Services;
 
 public class JobManagementServiceTests
 {
-    private readonly Mock<ILogger<JobManagementService>> _loggerMock;
-    private readonly Mock<ISchedulerFactory> _schedulerFactoryMock;
-    private readonly Mock<IScheduler> _schedulerMock;
-    private readonly Mock<IHubContext<AppHub>> _hubContextMock;
+    private readonly ILogger<JobManagementService> _logger;
+    private readonly ISchedulerFactory _schedulerFactory;
+    private readonly IScheduler _scheduler;
+    private readonly IHubContext<AppHub> _hubContext;
     private readonly JobManagementService _service;
 
     public JobManagementServiceTests()
     {
-        _loggerMock = new Mock<ILogger<JobManagementService>>();
-        _schedulerFactoryMock = new Mock<ISchedulerFactory>();
-        _schedulerMock = new Mock<IScheduler>();
-        _hubContextMock = new Mock<IHubContext<AppHub>>();
+        _logger = Substitute.For<ILogger<JobManagementService>>();
+        _schedulerFactory = Substitute.For<ISchedulerFactory>();
+        _scheduler = Substitute.For<IScheduler>();
+        _hubContext = Substitute.For<IHubContext<AppHub>>();
 
-        _schedulerFactoryMock.Setup(f => f.GetScheduler(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(_schedulerMock.Object);
+        _schedulerFactory.GetScheduler(Arg.Any<CancellationToken>())
+            .Returns(_scheduler);
 
-        _service = new JobManagementService(_loggerMock.Object, _schedulerFactoryMock.Object, _hubContextMock.Object);
+        _service = new JobManagementService(_logger, _schedulerFactory, _hubContext);
     }
 
     #region StartJob Tests
@@ -45,7 +48,7 @@ public class JobManagementServiceTests
         var result = await _service.StartJob(jobType, directCronExpression: invalidCron);
 
         // Assert
-        Assert.False(result);
+        result.ShouldBeFalse();
     }
 
     [Fact]
@@ -55,22 +58,15 @@ public class JobManagementServiceTests
         var jobType = JobType.QueueCleaner;
         var cronExpression = "0 0/5 * * * ?"; // Every 5 minutes
 
-        _schedulerMock.Setup(s => s.CheckExists(It.IsAny<JobKey>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(false);
+        _scheduler.CheckExists(Arg.Any<JobKey>(), Arg.Any<CancellationToken>())
+            .Returns(false);
 
         // Act
         var result = await _service.StartJob(jobType, directCronExpression: cronExpression);
 
         // Assert
-        Assert.False(result);
-        _loggerMock.Verify(
-            x => x.Log(
-                LogLevel.Error,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("does not exist")),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+        result.ShouldBeFalse();
+        _logger.ReceivedLogContaining(LogLevel.Error, "does not exist");
     }
 
     [Fact]
@@ -80,20 +76,20 @@ public class JobManagementServiceTests
         var jobType = JobType.QueueCleaner;
         var cronExpression = "0 0/5 * * * ?"; // Every 5 minutes
 
-        _schedulerMock.Setup(s => s.CheckExists(It.IsAny<JobKey>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
-        _schedulerMock.Setup(s => s.GetTriggersOfJob(It.IsAny<JobKey>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<ITrigger>());
-        _schedulerMock.Setup(s => s.ScheduleJob(It.IsAny<ITrigger>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(DateTimeOffset.Now);
+        _scheduler.CheckExists(Arg.Any<JobKey>(), Arg.Any<CancellationToken>())
+            .Returns(true);
+        _scheduler.GetTriggersOfJob(Arg.Any<JobKey>(), Arg.Any<CancellationToken>())
+            .Returns(new List<ITrigger>());
+        _scheduler.ScheduleJob(Arg.Any<ITrigger>(), Arg.Any<CancellationToken>())
+            .Returns(DateTimeOffset.Now);
 
         // Act
         var result = await _service.StartJob(jobType, directCronExpression: cronExpression);
 
         // Assert
-        Assert.True(result);
-        _schedulerMock.Verify(s => s.ScheduleJob(It.IsAny<ITrigger>(), It.IsAny<CancellationToken>()), Times.Once);
-        _schedulerMock.Verify(s => s.ResumeJob(It.IsAny<JobKey>(), It.IsAny<CancellationToken>()), Times.Once);
+        result.ShouldBeTrue();
+        await _scheduler.Received(1).ScheduleJob(Arg.Any<ITrigger>(), Arg.Any<CancellationToken>());
+        await _scheduler.Received(1).ResumeJob(Arg.Any<JobKey>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -103,19 +99,19 @@ public class JobManagementServiceTests
         var jobType = JobType.MalwareBlocker;
         var schedule = new JobSchedule { Every = 5, Type = ScheduleUnit.Minutes };
 
-        _schedulerMock.Setup(s => s.CheckExists(It.IsAny<JobKey>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
-        _schedulerMock.Setup(s => s.GetTriggersOfJob(It.IsAny<JobKey>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<ITrigger>());
-        _schedulerMock.Setup(s => s.ScheduleJob(It.IsAny<ITrigger>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(DateTimeOffset.Now);
+        _scheduler.CheckExists(Arg.Any<JobKey>(), Arg.Any<CancellationToken>())
+            .Returns(true);
+        _scheduler.GetTriggersOfJob(Arg.Any<JobKey>(), Arg.Any<CancellationToken>())
+            .Returns(new List<ITrigger>());
+        _scheduler.ScheduleJob(Arg.Any<ITrigger>(), Arg.Any<CancellationToken>())
+            .Returns(DateTimeOffset.Now);
 
         // Act
         var result = await _service.StartJob(jobType, schedule: schedule);
 
         // Assert
-        Assert.True(result);
-        _schedulerMock.Verify(s => s.ScheduleJob(It.IsAny<ITrigger>(), It.IsAny<CancellationToken>()), Times.Once);
+        result.ShouldBeTrue();
+        await _scheduler.Received(1).ScheduleJob(Arg.Any<ITrigger>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -124,21 +120,21 @@ public class JobManagementServiceTests
         // Arrange
         var jobType = JobType.DownloadCleaner;
 
-        _schedulerMock.Setup(s => s.CheckExists(It.IsAny<JobKey>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
-        _schedulerMock.Setup(s => s.GetTriggersOfJob(It.IsAny<JobKey>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<ITrigger>());
-        _schedulerMock.Setup(s => s.ScheduleJob(It.IsAny<ITrigger>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(DateTimeOffset.Now);
+        _scheduler.CheckExists(Arg.Any<JobKey>(), Arg.Any<CancellationToken>())
+            .Returns(true);
+        _scheduler.GetTriggersOfJob(Arg.Any<JobKey>(), Arg.Any<CancellationToken>())
+            .Returns(new List<ITrigger>());
+        _scheduler.ScheduleJob(Arg.Any<ITrigger>(), Arg.Any<CancellationToken>())
+            .Returns(DateTimeOffset.Now);
 
         // Act
         var result = await _service.StartJob(jobType);
 
         // Assert
-        Assert.True(result);
-        _schedulerMock.Verify(s => s.ScheduleJob(
-            It.Is<ITrigger>(t => t.Key.Name.Contains("onetime")),
-            It.IsAny<CancellationToken>()), Times.Once);
+        result.ShouldBeTrue();
+        await _scheduler.Received(1).ScheduleJob(
+            Arg.Is<ITrigger>(t => t.Key.Name.Contains("onetime")),
+            Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -148,24 +144,24 @@ public class JobManagementServiceTests
         var jobType = JobType.QueueCleaner;
         var cronExpression = "0 0/5 * * * ?";
 
-        var existingTriggerMock = new Mock<ITrigger>();
-        existingTriggerMock.Setup(t => t.Key).Returns(new TriggerKey("existing-trigger"));
+        var existingTrigger = Substitute.For<ITrigger>();
+        existingTrigger.Key.Returns(new TriggerKey("existing-trigger"));
 
-        _schedulerMock.Setup(s => s.CheckExists(It.IsAny<JobKey>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
-        _schedulerMock.Setup(s => s.GetTriggersOfJob(It.IsAny<JobKey>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<ITrigger> { existingTriggerMock.Object });
-        _schedulerMock.Setup(s => s.ScheduleJob(It.IsAny<ITrigger>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(DateTimeOffset.Now);
+        _scheduler.CheckExists(Arg.Any<JobKey>(), Arg.Any<CancellationToken>())
+            .Returns(true);
+        _scheduler.GetTriggersOfJob(Arg.Any<JobKey>(), Arg.Any<CancellationToken>())
+            .Returns(new List<ITrigger> { existingTrigger });
+        _scheduler.ScheduleJob(Arg.Any<ITrigger>(), Arg.Any<CancellationToken>())
+            .Returns(DateTimeOffset.Now);
 
         // Act
         var result = await _service.StartJob(jobType, directCronExpression: cronExpression);
 
         // Assert
-        Assert.True(result);
-        _schedulerMock.Verify(s => s.UnscheduleJob(
-            It.Is<TriggerKey>(k => k.Name == "existing-trigger"),
-            It.IsAny<CancellationToken>()), Times.Once);
+        result.ShouldBeTrue();
+        await _scheduler.Received(1).UnscheduleJob(
+            Arg.Is<TriggerKey>(k => k.Name == "existing-trigger"),
+            Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -175,14 +171,14 @@ public class JobManagementServiceTests
         var jobType = JobType.QueueCleaner;
         var cronExpression = "0 0/5 * * * ?";
 
-        _schedulerMock.Setup(s => s.CheckExists(It.IsAny<JobKey>(), It.IsAny<CancellationToken>()))
+        _scheduler.CheckExists(Arg.Any<JobKey>(), Arg.Any<CancellationToken>())
             .ThrowsAsync(new Exception("Scheduler error"));
 
         // Act
         var result = await _service.StartJob(jobType, directCronExpression: cronExpression);
 
         // Assert
-        Assert.False(result);
+        result.ShouldBeFalse();
     }
 
     #endregion
@@ -195,14 +191,14 @@ public class JobManagementServiceTests
         // Arrange
         var jobType = JobType.QueueCleaner;
 
-        _schedulerMock.Setup(s => s.CheckExists(It.IsAny<JobKey>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(false);
+        _scheduler.CheckExists(Arg.Any<JobKey>(), Arg.Any<CancellationToken>())
+            .Returns(false);
 
         // Act
         var result = await _service.StopJob(jobType);
 
         // Assert
-        Assert.False(result);
+        result.ShouldBeFalse();
     }
 
     [Fact]
@@ -211,20 +207,20 @@ public class JobManagementServiceTests
         // Arrange
         var jobType = JobType.MalwareBlocker;
 
-        var triggerMock = new Mock<ITrigger>();
-        triggerMock.Setup(t => t.Key).Returns(new TriggerKey("test-trigger"));
+        var trigger = Substitute.For<ITrigger>();
+        trigger.Key.Returns(new TriggerKey("test-trigger"));
 
-        _schedulerMock.Setup(s => s.CheckExists(It.IsAny<JobKey>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
-        _schedulerMock.Setup(s => s.GetTriggersOfJob(It.IsAny<JobKey>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<ITrigger> { triggerMock.Object });
+        _scheduler.CheckExists(Arg.Any<JobKey>(), Arg.Any<CancellationToken>())
+            .Returns(true);
+        _scheduler.GetTriggersOfJob(Arg.Any<JobKey>(), Arg.Any<CancellationToken>())
+            .Returns(new List<ITrigger> { trigger });
 
         // Act
         var result = await _service.StopJob(jobType);
 
         // Assert
-        Assert.True(result);
-        _schedulerMock.Verify(s => s.UnscheduleJob(It.IsAny<TriggerKey>(), It.IsAny<CancellationToken>()), Times.Once);
+        result.ShouldBeTrue();
+        await _scheduler.Received(1).UnscheduleJob(Arg.Any<TriggerKey>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -233,14 +229,14 @@ public class JobManagementServiceTests
         // Arrange
         var jobType = JobType.QueueCleaner;
 
-        _schedulerMock.Setup(s => s.CheckExists(It.IsAny<JobKey>(), It.IsAny<CancellationToken>()))
+        _scheduler.CheckExists(Arg.Any<JobKey>(), Arg.Any<CancellationToken>())
             .ThrowsAsync(new Exception("Scheduler error"));
 
         // Act
         var result = await _service.StopJob(jobType);
 
         // Assert
-        Assert.False(result);
+        result.ShouldBeFalse();
     }
 
     #endregion
@@ -253,15 +249,15 @@ public class JobManagementServiceTests
         // Arrange
         var jobType = JobType.QueueCleaner;
 
-        _schedulerMock.Setup(s => s.CheckExists(It.IsAny<JobKey>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(false);
+        _scheduler.CheckExists(Arg.Any<JobKey>(), Arg.Any<CancellationToken>())
+            .Returns(false);
 
         // Act
         var result = await _service.GetJob(jobType);
 
         // Assert
-        Assert.Equal("Not Found", result.Status);
-        Assert.Equal("QueueCleaner", result.Name);
+        result.Status.ShouldBe("Not Found");
+        result.Name.ShouldBe("QueueCleaner");
     }
 
     [Fact]
@@ -270,16 +266,16 @@ public class JobManagementServiceTests
         // Arrange
         var jobType = JobType.QueueCleaner;
 
-        _schedulerMock.Setup(s => s.CheckExists(It.IsAny<JobKey>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
-        _schedulerMock.Setup(s => s.GetTriggersOfJob(It.IsAny<JobKey>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<ITrigger>());
+        _scheduler.CheckExists(Arg.Any<JobKey>(), Arg.Any<CancellationToken>())
+            .Returns(true);
+        _scheduler.GetTriggersOfJob(Arg.Any<JobKey>(), Arg.Any<CancellationToken>())
+            .Returns(new List<ITrigger>());
 
         // Act
         var result = await _service.GetJob(jobType);
 
         // Assert
-        Assert.Equal("Not Scheduled", result.Status);
+        result.Status.ShouldBe("Not Scheduled");
     }
 
     [Theory]
@@ -294,23 +290,23 @@ public class JobManagementServiceTests
         // Arrange
         var jobType = JobType.QueueCleaner;
 
-        var triggerMock = new Mock<ITrigger>();
-        triggerMock.Setup(t => t.Key).Returns(new TriggerKey("test-trigger"));
-        triggerMock.Setup(t => t.GetNextFireTimeUtc()).Returns(DateTimeOffset.UtcNow.AddMinutes(5));
-        triggerMock.Setup(t => t.GetPreviousFireTimeUtc()).Returns(DateTimeOffset.UtcNow.AddMinutes(-5));
+        var trigger = Substitute.For<ITrigger>();
+        trigger.Key.Returns(new TriggerKey("test-trigger"));
+        trigger.GetNextFireTimeUtc().Returns(DateTimeOffset.UtcNow.AddMinutes(5));
+        trigger.GetPreviousFireTimeUtc().Returns(DateTimeOffset.UtcNow.AddMinutes(-5));
 
-        _schedulerMock.Setup(s => s.CheckExists(It.IsAny<JobKey>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
-        _schedulerMock.Setup(s => s.GetTriggersOfJob(It.IsAny<JobKey>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<ITrigger> { triggerMock.Object });
-        _schedulerMock.Setup(s => s.GetTriggerState(It.IsAny<TriggerKey>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(triggerState);
+        _scheduler.CheckExists(Arg.Any<JobKey>(), Arg.Any<CancellationToken>())
+            .Returns(true);
+        _scheduler.GetTriggersOfJob(Arg.Any<JobKey>(), Arg.Any<CancellationToken>())
+            .Returns(new List<ITrigger> { trigger });
+        _scheduler.GetTriggerState(Arg.Any<TriggerKey>(), Arg.Any<CancellationToken>())
+            .Returns(triggerState);
 
         // Act
         var result = await _service.GetJob(jobType);
 
         // Assert
-        Assert.Equal(expectedStatus, result.Status);
+        result.Status.ShouldBe(expectedStatus);
     }
 
     [Fact]
@@ -319,14 +315,14 @@ public class JobManagementServiceTests
         // Arrange
         var jobType = JobType.QueueCleaner;
 
-        _schedulerMock.Setup(s => s.CheckExists(It.IsAny<JobKey>(), It.IsAny<CancellationToken>()))
+        _scheduler.CheckExists(Arg.Any<JobKey>(), Arg.Any<CancellationToken>())
             .ThrowsAsync(new Exception("Scheduler error"));
 
         // Act
         var result = await _service.GetJob(jobType);
 
         // Assert
-        Assert.Equal("Error", result.Status);
+        result.Status.ShouldBe("Error");
     }
 
     #endregion
@@ -337,14 +333,14 @@ public class JobManagementServiceTests
     public async Task GetAllJobs_NoJobs_ReturnsEmptyList()
     {
         // Arrange
-        _schedulerMock.Setup(s => s.GetJobGroupNames(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<string>());
+        _scheduler.GetJobGroupNames(Arg.Any<CancellationToken>())
+            .Returns(new List<string>());
 
         // Act
         var result = await _service.GetAllJobs();
 
         // Assert
-        Assert.Empty(result);
+        result.ShouldBeEmpty();
     }
 
     [Fact]
@@ -352,40 +348,40 @@ public class JobManagementServiceTests
     {
         // Arrange
         var jobKey = new JobKey("QueueCleaner");
-        var triggerMock = new Mock<ITrigger>();
-        triggerMock.Setup(t => t.Key).Returns(new TriggerKey("test-trigger"));
-        triggerMock.Setup(t => t.GetNextFireTimeUtc()).Returns(DateTimeOffset.UtcNow.AddMinutes(5));
+        var trigger = Substitute.For<ITrigger>();
+        trigger.Key.Returns(new TriggerKey("test-trigger"));
+        trigger.GetNextFireTimeUtc().Returns(DateTimeOffset.UtcNow.AddMinutes(5));
 
-        _schedulerMock.Setup(s => s.GetJobGroupNames(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<string> { "DEFAULT" });
-        _schedulerMock.Setup(s => s.GetJobKeys(It.IsAny<GroupMatcher<JobKey>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new HashSet<JobKey> { jobKey });
-        _schedulerMock.Setup(s => s.GetTriggersOfJob(It.IsAny<JobKey>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<ITrigger> { triggerMock.Object });
-        _schedulerMock.Setup(s => s.GetTriggerState(It.IsAny<TriggerKey>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(TriggerState.Normal);
+        _scheduler.GetJobGroupNames(Arg.Any<CancellationToken>())
+            .Returns(new List<string> { "DEFAULT" });
+        _scheduler.GetJobKeys(Arg.Any<GroupMatcher<JobKey>>(), Arg.Any<CancellationToken>())
+            .Returns(new HashSet<JobKey> { jobKey });
+        _scheduler.GetTriggersOfJob(Arg.Any<JobKey>(), Arg.Any<CancellationToken>())
+            .Returns(new List<ITrigger> { trigger });
+        _scheduler.GetTriggerState(Arg.Any<TriggerKey>(), Arg.Any<CancellationToken>())
+            .Returns(TriggerState.Normal);
 
         // Act
         var result = await _service.GetAllJobs();
 
         // Assert
-        Assert.Single(result);
-        Assert.Equal("QueueCleaner", result[0].Name);
-        Assert.Equal("Scheduled", result[0].Status);
+        result.ShouldHaveSingleItem();
+        result[0].Name.ShouldBe("QueueCleaner");
+        result[0].Status.ShouldBe("Scheduled");
     }
 
     [Fact]
     public async Task GetAllJobs_WhenSchedulerThrows_ReturnsEmptyList()
     {
         // Arrange
-        _schedulerMock.Setup(s => s.GetJobGroupNames(It.IsAny<CancellationToken>()))
+        _scheduler.GetJobGroupNames(Arg.Any<CancellationToken>())
             .ThrowsAsync(new Exception("Scheduler error"));
 
         // Act
         var result = await _service.GetAllJobs();
 
         // Assert
-        Assert.Empty(result);
+        result.ShouldBeEmpty();
     }
 
     #endregion
@@ -398,14 +394,14 @@ public class JobManagementServiceTests
         // Arrange
         var jobType = JobType.QueueCleaner;
 
-        _schedulerMock.Setup(s => s.CheckExists(It.IsAny<JobKey>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(false);
+        _scheduler.CheckExists(Arg.Any<JobKey>(), Arg.Any<CancellationToken>())
+            .Returns(false);
 
         // Act
         var result = await _service.TriggerJobOnce(jobType);
 
         // Assert
-        Assert.False(result);
+        result.ShouldBeFalse();
     }
 
     [Fact]
@@ -414,19 +410,19 @@ public class JobManagementServiceTests
         // Arrange
         var jobType = JobType.MalwareBlocker;
 
-        _schedulerMock.Setup(s => s.CheckExists(It.IsAny<JobKey>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
-        _schedulerMock.Setup(s => s.ScheduleJob(It.IsAny<ITrigger>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(DateTimeOffset.Now);
+        _scheduler.CheckExists(Arg.Any<JobKey>(), Arg.Any<CancellationToken>())
+            .Returns(true);
+        _scheduler.ScheduleJob(Arg.Any<ITrigger>(), Arg.Any<CancellationToken>())
+            .Returns(DateTimeOffset.Now);
 
         // Act
         var result = await _service.TriggerJobOnce(jobType);
 
         // Assert
-        Assert.True(result);
-        _schedulerMock.Verify(s => s.ScheduleJob(
-            It.Is<ITrigger>(t => t.Key.Name.Contains("immediate") && t.Key.Name.Contains("manual")),
-            It.IsAny<CancellationToken>()), Times.Once);
+        result.ShouldBeTrue();
+        await _scheduler.Received(1).ScheduleJob(
+            Arg.Is<ITrigger>(t => t.Key.Name.Contains("immediate") && t.Key.Name.Contains("manual")),
+            Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -435,14 +431,14 @@ public class JobManagementServiceTests
         // Arrange
         var jobType = JobType.QueueCleaner;
 
-        _schedulerMock.Setup(s => s.CheckExists(It.IsAny<JobKey>(), It.IsAny<CancellationToken>()))
+        _scheduler.CheckExists(Arg.Any<JobKey>(), Arg.Any<CancellationToken>())
             .ThrowsAsync(new Exception("Scheduler error"));
 
         // Act
         var result = await _service.TriggerJobOnce(jobType);
 
         // Assert
-        Assert.False(result);
+        result.ShouldBeFalse();
     }
 
     #endregion
@@ -456,7 +452,7 @@ public class JobManagementServiceTests
         var jobType = JobType.QueueCleaner;
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(() => _service.UpdateJobSchedule(jobType, null!));
+        await Should.ThrowAsync<ArgumentNullException>(() => _service.UpdateJobSchedule(jobType, null!));
     }
 
     [Fact]
@@ -466,14 +462,14 @@ public class JobManagementServiceTests
         var jobType = JobType.QueueCleaner;
         var schedule = new JobSchedule { Every = 5, Type = ScheduleUnit.Minutes };
 
-        _schedulerMock.Setup(s => s.CheckExists(It.IsAny<JobKey>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(false);
+        _scheduler.CheckExists(Arg.Any<JobKey>(), Arg.Any<CancellationToken>())
+            .Returns(false);
 
         // Act
         var result = await _service.UpdateJobSchedule(jobType, schedule);
 
         // Assert
-        Assert.False(result);
+        result.ShouldBeFalse();
     }
 
     [Fact]
@@ -483,19 +479,19 @@ public class JobManagementServiceTests
         var jobType = JobType.DownloadCleaner;
         var schedule = new JobSchedule { Every = 10, Type = ScheduleUnit.Minutes };
 
-        _schedulerMock.Setup(s => s.CheckExists(It.IsAny<JobKey>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
-        _schedulerMock.Setup(s => s.GetTriggersOfJob(It.IsAny<JobKey>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<ITrigger>());
-        _schedulerMock.Setup(s => s.ScheduleJob(It.IsAny<ITrigger>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(DateTimeOffset.Now);
+        _scheduler.CheckExists(Arg.Any<JobKey>(), Arg.Any<CancellationToken>())
+            .Returns(true);
+        _scheduler.GetTriggersOfJob(Arg.Any<JobKey>(), Arg.Any<CancellationToken>())
+            .Returns(new List<ITrigger>());
+        _scheduler.ScheduleJob(Arg.Any<ITrigger>(), Arg.Any<CancellationToken>())
+            .Returns(DateTimeOffset.Now);
 
         // Act
         var result = await _service.UpdateJobSchedule(jobType, schedule);
 
         // Assert
-        Assert.True(result);
-        _schedulerMock.Verify(s => s.ScheduleJob(It.IsAny<ITrigger>(), It.IsAny<CancellationToken>()), Times.Once);
+        result.ShouldBeTrue();
+        await _scheduler.Received(1).ScheduleJob(Arg.Any<ITrigger>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -505,14 +501,14 @@ public class JobManagementServiceTests
         var jobType = JobType.QueueCleaner;
         var schedule = new JobSchedule { Every = 5, Type = ScheduleUnit.Minutes };
 
-        _schedulerMock.Setup(s => s.CheckExists(It.IsAny<JobKey>(), It.IsAny<CancellationToken>()))
+        _scheduler.CheckExists(Arg.Any<JobKey>(), Arg.Any<CancellationToken>())
             .ThrowsAsync(new Exception("Scheduler error"));
 
         // Act
         var result = await _service.UpdateJobSchedule(jobType, schedule);
 
         // Assert
-        Assert.False(result);
+        result.ShouldBeFalse();
     }
 
     #endregion
@@ -525,14 +521,14 @@ public class JobManagementServiceTests
         // Arrange
         var jobType = JobType.QueueCleaner;
 
-        _schedulerMock.Setup(s => s.CheckExists(It.IsAny<JobKey>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(false);
+        _scheduler.CheckExists(Arg.Any<JobKey>(), Arg.Any<CancellationToken>())
+            .Returns(false);
 
         // Act
         var result = await _service.GetMainTrigger(jobType);
 
         // Assert
-        Assert.Null(result);
+        result.ShouldBeNull();
     }
 
     [Fact]
@@ -542,20 +538,20 @@ public class JobManagementServiceTests
         var jobType = JobType.MalwareBlocker;
         var expectedTriggerKey = new TriggerKey("MalwareBlocker-trigger");
 
-        var triggerMock = new Mock<ITrigger>();
-        triggerMock.Setup(t => t.Key).Returns(expectedTriggerKey);
+        var trigger = Substitute.For<ITrigger>();
+        trigger.Key.Returns(expectedTriggerKey);
 
-        _schedulerMock.Setup(s => s.CheckExists(It.IsAny<JobKey>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
-        _schedulerMock.Setup(s => s.GetTrigger(expectedTriggerKey, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(triggerMock.Object);
+        _scheduler.CheckExists(Arg.Any<JobKey>(), Arg.Any<CancellationToken>())
+            .Returns(true);
+        _scheduler.GetTrigger(expectedTriggerKey, Arg.Any<CancellationToken>())
+            .Returns(trigger);
 
         // Act
         var result = await _service.GetMainTrigger(jobType);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(expectedTriggerKey, result.Key);
+        result.ShouldNotBeNull();
+        result.Key.ShouldBe(expectedTriggerKey);
     }
 
     [Fact]
@@ -564,14 +560,14 @@ public class JobManagementServiceTests
         // Arrange
         var jobType = JobType.QueueCleaner;
 
-        _schedulerMock.Setup(s => s.CheckExists(It.IsAny<JobKey>(), It.IsAny<CancellationToken>()))
+        _scheduler.CheckExists(Arg.Any<JobKey>(), Arg.Any<CancellationToken>())
             .ThrowsAsync(new Exception("Scheduler error"));
 
         // Act
         var result = await _service.GetMainTrigger(jobType);
 
         // Assert
-        Assert.Null(result);
+        result.ShouldBeNull();
     }
 
     #endregion

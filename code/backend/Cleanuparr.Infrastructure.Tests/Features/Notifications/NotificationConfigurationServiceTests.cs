@@ -1,10 +1,12 @@
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Notifications;
+using Cleanuparr.Infrastructure.Tests.TestHelpers;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.Notification;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using Moq;
+using NSubstitute;
+using Shouldly;
 using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.Notifications;
@@ -12,7 +14,7 @@ namespace Cleanuparr.Infrastructure.Tests.Features.Notifications;
 public class NotificationConfigurationServiceTests : IDisposable
 {
     private readonly DataContext _context;
-    private readonly Mock<ILogger<NotificationConfigurationService>> _loggerMock;
+    private readonly ILogger<NotificationConfigurationService> _logger;
     private readonly NotificationConfigurationService _service;
 
     public NotificationConfigurationServiceTests()
@@ -21,8 +23,8 @@ public class NotificationConfigurationServiceTests : IDisposable
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
             .Options;
         _context = new DataContext(options);
-        _loggerMock = new Mock<ILogger<NotificationConfigurationService>>();
-        _service = new NotificationConfigurationService(_context, _loggerMock.Object);
+        _logger = Substitute.For<ILogger<NotificationConfigurationService>>();
+        _service = new NotificationConfigurationService(_context, _logger);
     }
 
     public void Dispose()
@@ -40,7 +42,7 @@ public class NotificationConfigurationServiceTests : IDisposable
         var result = await _service.GetActiveProvidersAsync();
 
         // Assert
-        Assert.Empty(result);
+        result.ShouldBeEmpty();
     }
 
     [Fact]
@@ -56,8 +58,8 @@ public class NotificationConfigurationServiceTests : IDisposable
         var result = await _service.GetActiveProvidersAsync();
 
         // Assert
-        Assert.Single(result);
-        Assert.Equal("Test Provider", result[0].Name);
+        result.ShouldHaveSingleItem();
+        result[0].Name.ShouldBe("Test Provider");
     }
 
     [Fact]
@@ -73,7 +75,7 @@ public class NotificationConfigurationServiceTests : IDisposable
         var result = await _service.GetActiveProvidersAsync();
 
         // Assert
-        Assert.Empty(result);
+        result.ShouldBeEmpty();
     }
 
     [Fact]
@@ -90,9 +92,9 @@ public class NotificationConfigurationServiceTests : IDisposable
         var result2 = await _service.GetActiveProvidersAsync();
 
         // Assert - Both calls should return same data
-        Assert.Single(result1);
-        Assert.Single(result2);
-        Assert.Equal(result1[0].Id, result2[0].Id);
+        result1.ShouldHaveSingleItem();
+        result2.ShouldHaveSingleItem();
+        result1[0].Id.ShouldBe(result2[0].Id);
     }
 
     [Fact]
@@ -109,8 +111,8 @@ public class NotificationConfigurationServiceTests : IDisposable
         var result = await _service.GetActiveProvidersAsync();
 
         // Assert
-        Assert.Single(result);
-        Assert.Equal("Enabled", result[0].Name);
+        result.ShouldHaveSingleItem();
+        result[0].Name.ShouldBe("Enabled");
     }
 
     #endregion
@@ -130,7 +132,7 @@ public class NotificationConfigurationServiceTests : IDisposable
         var result = await _service.GetProvidersForEventAsync(NotificationEventType.StalledStrike);
 
         // Assert
-        Assert.Empty(result);
+        result.ShouldBeEmpty();
     }
 
     [Fact]
@@ -146,7 +148,7 @@ public class NotificationConfigurationServiceTests : IDisposable
         var result = await _service.GetProvidersForEventAsync(NotificationEventType.StalledStrike);
 
         // Assert
-        Assert.Single(result);
+        result.ShouldHaveSingleItem();
     }
 
     [Fact]
@@ -162,7 +164,7 @@ public class NotificationConfigurationServiceTests : IDisposable
         var result = await _service.GetProvidersForEventAsync(NotificationEventType.Test);
 
         // Assert
-        Assert.Single(result);
+        result.ShouldHaveSingleItem();
     }
 
     [Theory]
@@ -216,7 +218,7 @@ public class NotificationConfigurationServiceTests : IDisposable
         var result = await _service.GetProvidersForEventAsync(eventType);
 
         // Assert
-        Assert.Single(result);
+        result.ShouldHaveSingleItem();
     }
 
     #endregion
@@ -236,9 +238,9 @@ public class NotificationConfigurationServiceTests : IDisposable
         var result = await _service.GetProviderByIdAsync(config.Id);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(config.Id, result.Id);
-        Assert.Equal("Test", result.Name);
+        result.ShouldNotBeNull();
+        result.Id.ShouldBe(config.Id);
+        result.Name.ShouldBe("Test");
     }
 
     [Fact]
@@ -248,7 +250,7 @@ public class NotificationConfigurationServiceTests : IDisposable
         var result = await _service.GetProviderByIdAsync(Guid.NewGuid());
 
         // Assert
-        Assert.Null(result);
+        result.ShouldBeNull();
     }
 
     [Fact]
@@ -264,7 +266,7 @@ public class NotificationConfigurationServiceTests : IDisposable
         var result = await _service.GetProviderByIdAsync(config.Id);
 
         // Assert
-        Assert.Null(result);
+        result.ShouldBeNull();
     }
 
     #endregion
@@ -282,7 +284,7 @@ public class NotificationConfigurationServiceTests : IDisposable
 
         // First call to populate cache
         var result1 = await _service.GetActiveProvidersAsync();
-        Assert.Single(result1);
+        result1.ShouldHaveSingleItem();
 
         // Add another provider
         var config2 = CreateNotifiarrConfig("Provider 2", isEnabled: true);
@@ -291,12 +293,12 @@ public class NotificationConfigurationServiceTests : IDisposable
 
         // Without invalidation, should return cached result
         var result2 = await _service.GetActiveProvidersAsync();
-        Assert.Single(result2);
+        result2.ShouldHaveSingleItem();
 
         // After invalidation, should return updated result
         await _service.InvalidateCacheAsync();
         var result3 = await _service.GetActiveProvidersAsync();
-        Assert.Equal(2, result3.Count);
+        result3.Count.ShouldBe(2);
     }
 
     [Fact]
@@ -306,14 +308,7 @@ public class NotificationConfigurationServiceTests : IDisposable
         await _service.InvalidateCacheAsync();
 
         // Assert
-        _loggerMock.Verify(
-            x => x.Log(
-                LogLevel.Debug,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("cache invalidated")),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+        _logger.ReceivedLogContaining(LogLevel.Debug, "cache invalidated");
     }
 
     #endregion
@@ -332,7 +327,7 @@ public class NotificationConfigurationServiceTests : IDisposable
         var unknownEventType = (NotificationEventType)999;
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(
+        await Should.ThrowAsync<ArgumentOutOfRangeException>(
             () => _service.GetProvidersForEventAsync(unknownEventType));
     }
 
@@ -344,8 +339,8 @@ public class NotificationConfigurationServiceTests : IDisposable
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
             .Options;
         var disposedContext = new DataContext(options);
-        var loggerMock = new Mock<ILogger<NotificationConfigurationService>>();
-        var service = new NotificationConfigurationService(disposedContext, loggerMock.Object);
+        var logger = Substitute.For<ILogger<NotificationConfigurationService>>();
+        var service = new NotificationConfigurationService(disposedContext, logger);
 
         await disposedContext.DisposeAsync();
 
@@ -353,15 +348,8 @@ public class NotificationConfigurationServiceTests : IDisposable
         var result = await service.GetActiveProvidersAsync();
 
         // Assert
-        Assert.Empty(result);
-        loggerMock.Verify(
-            x => x.Log(
-                LogLevel.Error,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Failed to load notification providers")),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+        result.ShouldBeEmpty();
+        logger.ReceivedLogContaining(LogLevel.Error, "Failed to load notification providers");
     }
 
     #endregion
@@ -383,10 +371,10 @@ public class NotificationConfigurationServiceTests : IDisposable
         var result = await _service.GetActiveProvidersAsync();
 
         // Assert
-        Assert.Single(result);
-        Assert.Equal(providerType, result[0].Type);
-        Assert.Equal("Test Provider", result[0].Name);
-        Assert.NotNull(result[0].Configuration);
+        result.ShouldHaveSingleItem();
+        result[0].Type.ShouldBe(providerType);
+        result[0].Name.ShouldBe("Test Provider");
+        result[0].Configuration.ShouldNotBeNull();
     }
 
     [Theory]
@@ -403,8 +391,8 @@ public class NotificationConfigurationServiceTests : IDisposable
         var result = await _service.GetProvidersForEventAsync(NotificationEventType.StalledStrike);
 
         // Assert
-        Assert.Single(result);
-        Assert.Equal(providerType, result[0].Type);
+        result.ShouldHaveSingleItem();
+        result[0].Type.ShouldBe(providerType);
     }
 
     #endregion
@@ -528,7 +516,7 @@ public class NotificationConfigurationServiceTests : IDisposable
             }
         };
     }
-    
+
     private static NotificationConfig CreateTelegramConfig(string name, bool isEnabled)
     {
         return new NotificationConfig

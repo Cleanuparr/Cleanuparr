@@ -2,20 +2,22 @@ using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Notifications.Models;
 using Cleanuparr.Infrastructure.Features.Notifications.Ntfy;
 using Cleanuparr.Persistence.Models.Configuration.Notification;
-using Moq;
+using NSubstitute;
+using NSubstitute.ExceptionExtensions;
+using Shouldly;
 using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.Notifications;
 
 public class NtfyProviderTests
 {
-    private readonly Mock<INtfyProxy> _proxyMock;
+    private readonly INtfyProxy _proxy;
     private readonly NtfyConfig _config;
     private readonly NtfyProvider _provider;
 
     public NtfyProviderTests()
     {
-        _proxyMock = new Mock<INtfyProxy>();
+        _proxy = Substitute.For<INtfyProxy>();
         _config = new NtfyConfig
         {
             Id = Guid.NewGuid(),
@@ -30,7 +32,7 @@ public class NtfyProviderTests
             "TestNtfy",
             NotificationProviderType.Ntfy,
             _config,
-            _proxyMock.Object);
+            _proxy);
     }
 
     #region Constructor Tests
@@ -39,14 +41,14 @@ public class NtfyProviderTests
     public void Constructor_SetsNameCorrectly()
     {
         // Assert
-        Assert.Equal("TestNtfy", _provider.Name);
+        _provider.Name.ShouldBe("TestNtfy");
     }
 
     [Fact]
     public void Constructor_SetsTypeCorrectly()
     {
         // Assert
-        Assert.Equal(NotificationProviderType.Ntfy, _provider.Type);
+        _provider.Type.ShouldBe(NotificationProviderType.Ntfy);
     }
 
     #endregion
@@ -60,18 +62,18 @@ public class NtfyProviderTests
         var context = CreateTestContext();
         NtfyPayload? capturedPayload = null;
 
-        _proxyMock.Setup(p => p.SendNotification(It.IsAny<NtfyPayload>(), _config))
-            .Callback<NtfyPayload, NtfyConfig>((payload, config) => capturedPayload = payload)
-            .Returns(Task.CompletedTask);
+        _proxy.SendNotification(Arg.Any<NtfyPayload>(), _config)
+            .Returns(Task.CompletedTask)
+            .AndDoes(ci => capturedPayload = ci.ArgAt<NtfyPayload>(0));
 
         // Act
         await _provider.SendNotificationAsync(context);
 
         // Assert
-        Assert.NotNull(capturedPayload);
-        Assert.Equal("test-topic", capturedPayload.Topic);
-        Assert.Equal(context.Title, capturedPayload.Title);
-        Assert.Contains(context.Description, capturedPayload.Message);
+        capturedPayload.ShouldNotBeNull();
+        capturedPayload.Topic.ShouldBe("test-topic");
+        capturedPayload.Title.ShouldBe(context.Title);
+        capturedPayload.Message.ShouldContain(context.Description);
     }
 
     [Fact]
@@ -88,22 +90,22 @@ public class NtfyProviderTests
             Tags = new List<string>()
         };
 
-        var provider = new NtfyProvider("TestNtfy", NotificationProviderType.Ntfy, config, _proxyMock.Object);
+        var provider = new NtfyProvider("TestNtfy", NotificationProviderType.Ntfy, config, _proxy);
         var context = CreateTestContext();
 
         var capturedPayloads = new List<NtfyPayload>();
-        _proxyMock.Setup(p => p.SendNotification(It.IsAny<NtfyPayload>(), config))
-            .Callback<NtfyPayload, NtfyConfig>((payload, cfg) => capturedPayloads.Add(payload))
-            .Returns(Task.CompletedTask);
+        _proxy.SendNotification(Arg.Any<NtfyPayload>(), config)
+            .Returns(Task.CompletedTask)
+            .AndDoes(ci => capturedPayloads.Add(ci.ArgAt<NtfyPayload>(0)));
 
         // Act
         await provider.SendNotificationAsync(context);
 
         // Assert
-        Assert.Equal(3, capturedPayloads.Count);
-        Assert.Contains(capturedPayloads, p => p.Topic == "topic1");
-        Assert.Contains(capturedPayloads, p => p.Topic == "topic2");
-        Assert.Contains(capturedPayloads, p => p.Topic == "topic3");
+        capturedPayloads.Count.ShouldBe(3);
+        capturedPayloads.ShouldContain(p => p.Topic == "topic1");
+        capturedPayloads.ShouldContain(p => p.Topic == "topic2");
+        capturedPayloads.ShouldContain(p => p.Topic == "topic3");
     }
 
     [Fact]
@@ -116,17 +118,17 @@ public class NtfyProviderTests
 
         NtfyPayload? capturedPayload = null;
 
-        _proxyMock.Setup(p => p.SendNotification(It.IsAny<NtfyPayload>(), _config))
-            .Callback<NtfyPayload, NtfyConfig>((payload, config) => capturedPayload = payload)
-            .Returns(Task.CompletedTask);
+        _proxy.SendNotification(Arg.Any<NtfyPayload>(), _config)
+            .Returns(Task.CompletedTask)
+            .AndDoes(ci => capturedPayload = ci.ArgAt<NtfyPayload>(0));
 
         // Act
         await _provider.SendNotificationAsync(context);
 
         // Assert
-        Assert.NotNull(capturedPayload);
-        Assert.Contains("TestKey: TestValue", capturedPayload.Message);
-        Assert.Contains("AnotherKey: AnotherValue", capturedPayload.Message);
+        capturedPayload.ShouldNotBeNull();
+        capturedPayload.Message.ShouldContain("TestKey: TestValue");
+        capturedPayload.Message.ShouldContain("AnotherKey: AnotherValue");
     }
 
     [Fact]
@@ -143,20 +145,20 @@ public class NtfyProviderTests
             Tags = new List<string>()
         };
 
-        var provider = new NtfyProvider("TestNtfy", NotificationProviderType.Ntfy, config, _proxyMock.Object);
+        var provider = new NtfyProvider("TestNtfy", NotificationProviderType.Ntfy, config, _proxy);
         var context = CreateTestContext();
 
         NtfyPayload? capturedPayload = null;
-        _proxyMock.Setup(p => p.SendNotification(It.IsAny<NtfyPayload>(), config))
-            .Callback<NtfyPayload, NtfyConfig>((payload, cfg) => capturedPayload = payload)
-            .Returns(Task.CompletedTask);
+        _proxy.SendNotification(Arg.Any<NtfyPayload>(), config)
+            .Returns(Task.CompletedTask)
+            .AndDoes(ci => capturedPayload = ci.ArgAt<NtfyPayload>(0));
 
         // Act
         await provider.SendNotificationAsync(context);
 
         // Assert
-        Assert.NotNull(capturedPayload);
-        Assert.Equal((int)NtfyPriority.High, capturedPayload.Priority);
+        capturedPayload.ShouldNotBeNull();
+        capturedPayload.Priority.ShouldBe((int)NtfyPriority.High);
     }
 
     [Fact]
@@ -166,18 +168,18 @@ public class NtfyProviderTests
         var context = CreateTestContext();
         NtfyPayload? capturedPayload = null;
 
-        _proxyMock.Setup(p => p.SendNotification(It.IsAny<NtfyPayload>(), _config))
-            .Callback<NtfyPayload, NtfyConfig>((payload, config) => capturedPayload = payload)
-            .Returns(Task.CompletedTask);
+        _proxy.SendNotification(Arg.Any<NtfyPayload>(), _config)
+            .Returns(Task.CompletedTask)
+            .AndDoes(ci => capturedPayload = ci.ArgAt<NtfyPayload>(0));
 
         // Act
         await _provider.SendNotificationAsync(context);
 
         // Assert
-        Assert.NotNull(capturedPayload);
-        Assert.NotNull(capturedPayload.Tags);
-        Assert.Contains("tag1", capturedPayload.Tags);
-        Assert.Contains("tag2", capturedPayload.Tags);
+        capturedPayload.ShouldNotBeNull();
+        capturedPayload.Tags.ShouldNotBeNull();
+        capturedPayload.Tags.ShouldContain("tag1");
+        capturedPayload.Tags.ShouldContain("tag2");
     }
 
     [Fact]
@@ -194,20 +196,20 @@ public class NtfyProviderTests
             Tags = new List<string>()
         };
 
-        var provider = new NtfyProvider("TestNtfy", NotificationProviderType.Ntfy, config, _proxyMock.Object);
+        var provider = new NtfyProvider("TestNtfy", NotificationProviderType.Ntfy, config, _proxy);
         var context = CreateTestContext();
 
         NtfyPayload? capturedPayload = null;
-        _proxyMock.Setup(p => p.SendNotification(It.IsAny<NtfyPayload>(), config))
-            .Callback<NtfyPayload, NtfyConfig>((payload, cfg) => capturedPayload = payload)
-            .Returns(Task.CompletedTask);
+        _proxy.SendNotification(Arg.Any<NtfyPayload>(), config)
+            .Returns(Task.CompletedTask)
+            .AndDoes(ci => capturedPayload = ci.ArgAt<NtfyPayload>(0));
 
         // Act
         await provider.SendNotificationAsync(context);
 
         // Assert
-        Assert.NotNull(capturedPayload);
-        Assert.Equal("topic-with-spaces", capturedPayload.Topic);
+        capturedPayload.ShouldNotBeNull();
+        capturedPayload.Topic.ShouldBe("topic-with-spaces");
     }
 
     [Fact]
@@ -224,21 +226,21 @@ public class NtfyProviderTests
             Tags = new List<string>()
         };
 
-        var provider = new NtfyProvider("TestNtfy", NotificationProviderType.Ntfy, config, _proxyMock.Object);
+        var provider = new NtfyProvider("TestNtfy", NotificationProviderType.Ntfy, config, _proxy);
         var context = CreateTestContext();
 
         var capturedPayloads = new List<NtfyPayload>();
-        _proxyMock.Setup(p => p.SendNotification(It.IsAny<NtfyPayload>(), config))
-            .Callback<NtfyPayload, NtfyConfig>((payload, cfg) => capturedPayloads.Add(payload))
-            .Returns(Task.CompletedTask);
+        _proxy.SendNotification(Arg.Any<NtfyPayload>(), config)
+            .Returns(Task.CompletedTask)
+            .AndDoes(ci => capturedPayloads.Add(ci.ArgAt<NtfyPayload>(0)));
 
         // Act
         await provider.SendNotificationAsync(context);
 
         // Assert
-        Assert.Equal(2, capturedPayloads.Count);
-        Assert.Contains(capturedPayloads, p => p.Topic == "valid-topic");
-        Assert.Contains(capturedPayloads, p => p.Topic == "another-valid");
+        capturedPayloads.Count.ShouldBe(2);
+        capturedPayloads.ShouldContain(p => p.Topic == "valid-topic");
+        capturedPayloads.ShouldContain(p => p.Topic == "another-valid");
     }
 
     [Fact]
@@ -247,11 +249,11 @@ public class NtfyProviderTests
         // Arrange
         var context = CreateTestContext();
 
-        _proxyMock.Setup(p => p.SendNotification(It.IsAny<NtfyPayload>(), _config))
+        _proxy.SendNotification(Arg.Any<NtfyPayload>(), _config)
             .ThrowsAsync(new Exception("Proxy error"));
 
         // Act & Assert
-        await Assert.ThrowsAsync<Exception>(() => _provider.SendNotificationAsync(context));
+        await Should.ThrowAsync<Exception>(() => _provider.SendNotificationAsync(context));
     }
 
     [Fact]
@@ -269,16 +271,16 @@ public class NtfyProviderTests
 
         NtfyPayload? capturedPayload = null;
 
-        _proxyMock.Setup(p => p.SendNotification(It.IsAny<NtfyPayload>(), _config))
-            .Callback<NtfyPayload, NtfyConfig>((payload, config) => capturedPayload = payload)
-            .Returns(Task.CompletedTask);
+        _proxy.SendNotification(Arg.Any<NtfyPayload>(), _config)
+            .Returns(Task.CompletedTask)
+            .AndDoes(ci => capturedPayload = ci.ArgAt<NtfyPayload>(0));
 
         // Act
         await _provider.SendNotificationAsync(context);
 
         // Assert
-        Assert.NotNull(capturedPayload);
-        Assert.Equal("Test Description Only", capturedPayload.Message);
+        capturedPayload.ShouldNotBeNull();
+        capturedPayload.Message.ShouldBe("Test Description Only");
     }
 
     #endregion

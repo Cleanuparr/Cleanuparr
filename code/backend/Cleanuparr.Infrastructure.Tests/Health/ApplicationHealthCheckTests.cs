@@ -1,5 +1,6 @@
 using Cleanuparr.Infrastructure.Health;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Shouldly;
 using Xunit;
 using HealthCheckStatus = Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus;
 
@@ -16,7 +17,7 @@ public class ApplicationHealthCheckTests
         var healthCheck = new ApplicationHealthCheck();
 
         // Assert
-        Assert.NotNull(healthCheck);
+        healthCheck.ShouldNotBeNull();
     }
 
     #endregion
@@ -33,7 +34,7 @@ public class ApplicationHealthCheckTests
         var result = await healthCheck.CheckHealthAsync(null!);
 
         // Assert
-        Assert.Equal(HealthCheckStatus.Healthy, result.Status);
+        result.Status.ShouldBe(HealthCheckStatus.Healthy);
     }
 
     [Fact]
@@ -46,7 +47,7 @@ public class ApplicationHealthCheckTests
         var result = await healthCheck.CheckHealthAsync(null!);
 
         // Assert
-        Assert.Contains("running", result.Description, StringComparison.OrdinalIgnoreCase);
+        result.Description.ShouldContain("running", Case.Insensitive);
     }
 
     [Fact]
@@ -60,7 +61,7 @@ public class ApplicationHealthCheckTests
         var result = await healthCheck.CheckHealthAsync(null!, cts.Token);
 
         // Assert
-        Assert.Equal(HealthCheckStatus.Healthy, result.Status);
+        result.Status.ShouldBe(HealthCheckStatus.Healthy);
     }
 
     [Fact]
@@ -74,7 +75,7 @@ public class ApplicationHealthCheckTests
         var result = await healthCheck.CheckHealthAsync(context);
 
         // Assert
-        Assert.Equal(HealthCheckStatus.Healthy, result.Status);
+        result.Status.ShouldBe(HealthCheckStatus.Healthy);
     }
 
     [Fact]
@@ -89,9 +90,9 @@ public class ApplicationHealthCheckTests
         var result3 = await healthCheck.CheckHealthAsync(null!);
 
         // Assert
-        Assert.Equal(HealthCheckStatus.Healthy, result1.Status);
-        Assert.Equal(HealthCheckStatus.Healthy, result2.Status);
-        Assert.Equal(HealthCheckStatus.Healthy, result3.Status);
+        result1.Status.ShouldBe(HealthCheckStatus.Healthy);
+        result2.Status.ShouldBe(HealthCheckStatus.Healthy);
+        result3.Status.ShouldBe(HealthCheckStatus.Healthy);
     }
 
     #endregion

@@ -13,6 +13,7 @@ using Cleanuparr.Persistence.Models.State;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
+using Shouldly;
 using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Services;
@@ -124,7 +125,7 @@ public class QueueRuleEvaluatorTests : IDisposable
         var torrent = CreateTorrentMock();
 
         var result = await evaluator.EvaluateStallRulesAsync(torrent);
-        Assert.False(result.ShouldRemove);
+        result.ShouldRemove.ShouldBeFalse();
 
         await striker.DidNotReceive().StrikeAndCheckLimit(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<ushort>(), StrikeType.Stalled, Arg.Any<long?>());
     }
@@ -152,7 +153,7 @@ public class QueueRuleEvaluatorTests : IDisposable
         var torrent = CreateTorrentMock();
 
         var result = await evaluator.EvaluateStallRulesAsync(torrent);
-        Assert.False(result.ShouldRemove);
+        result.ShouldRemove.ShouldBeFalse();
 
         await striker.Received(1).StrikeAndCheckLimit("hash", "Example Torrent", (ushort)stallRule.MaxStrikes, StrikeType.Stalled, Arg.Any<long?>());
         await striker.DidNotReceive().ResetStrikeAsync(Arg.Any<string>(), Arg.Any<string>(), StrikeType.Stalled);
@@ -181,7 +182,7 @@ public class QueueRuleEvaluatorTests : IDisposable
         var torrent = CreateTorrentMock();
 
         var result = await evaluator.EvaluateStallRulesAsync(torrent);
-        Assert.True(result.ShouldRemove);
+        result.ShouldRemove.ShouldBeTrue();
 
         await striker.Received(1).StrikeAndCheckLimit("hash", "Example Torrent", (ushort)stallRule.MaxStrikes, StrikeType.Stalled, Arg.Any<long?>());
     }
@@ -208,7 +209,7 @@ public class QueueRuleEvaluatorTests : IDisposable
 
         var torrent = CreateTorrentMock();
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() => evaluator.EvaluateStallRulesAsync(torrent));
+        await Should.ThrowAsync<InvalidOperationException>(() => evaluator.EvaluateStallRulesAsync(torrent));
 
         await striker.Received(1).StrikeAndCheckLimit(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<ushort>(), StrikeType.Stalled, Arg.Any<long?>());
     }
@@ -230,7 +231,7 @@ public class QueueRuleEvaluatorTests : IDisposable
         var torrent = CreateTorrentMock();
 
         var result = await evaluator.EvaluateSlowRulesAsync(torrent);
-        Assert.False(result.ShouldRemove);
+        result.ShouldRemove.ShouldBeFalse();
 
         await striker.DidNotReceive().StrikeAndCheckLimit(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<ushort>(), StrikeType.SlowTime, Arg.Any<long?>());
     }
@@ -258,7 +259,7 @@ public class QueueRuleEvaluatorTests : IDisposable
         var torrent = CreateTorrentMock();
 
         var result = await evaluator.EvaluateSlowRulesAsync(torrent);
-        Assert.False(result.ShouldRemove);
+        result.ShouldRemove.ShouldBeFalse();
 
         await striker.Received(1).StrikeAndCheckLimit("hash", "Example Torrent", (ushort)slowRule.MaxStrikes, StrikeType.SlowTime, Arg.Any<long?>());
     }
@@ -286,7 +287,7 @@ public class QueueRuleEvaluatorTests : IDisposable
         var torrent = CreateTorrentMock();
 
         var result = await evaluator.EvaluateSlowRulesAsync(torrent);
-        Assert.True(result.ShouldRemove);
+        result.ShouldRemove.ShouldBeTrue();
 
         await striker.Received(1).StrikeAndCheckLimit("hash", "Example Torrent", (ushort)slowRule.MaxStrikes, StrikeType.SlowTime, Arg.Any<long?>());
     }
@@ -340,7 +341,7 @@ public class QueueRuleEvaluatorTests : IDisposable
 
         var torrent = CreateTorrentMock();
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() => evaluator.EvaluateSlowRulesAsync(torrent));
+        await Should.ThrowAsync<InvalidOperationException>(() => evaluator.EvaluateSlowRulesAsync(torrent));
 
         await striker.Received(1).StrikeAndCheckLimit(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<ushort>(), StrikeType.SlowTime, Arg.Any<long?>());
     }
@@ -373,7 +374,7 @@ public class QueueRuleEvaluatorTests : IDisposable
         var torrent = CreateTorrentMock();
 
         var result = await evaluator.EvaluateSlowRulesAsync(torrent);
-        Assert.True(result.ShouldRemove);
+        result.ShouldRemove.ShouldBeTrue();
 
         await striker.Received(1).StrikeAndCheckLimit("hash", "Example Torrent", (ushort)slowRule.MaxStrikes, StrikeType.SlowSpeed, Arg.Any<long?>());
         await striker.DidNotReceive().ResetStrikeAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<StrikeType>());
@@ -407,7 +408,7 @@ public class QueueRuleEvaluatorTests : IDisposable
         var torrent = CreateTorrentMock();
 
         var result = await evaluator.EvaluateSlowRulesAsync(torrent);
-        Assert.True(result.ShouldRemove);
+        result.ShouldRemove.ShouldBeTrue();
 
         await striker.Received(1).StrikeAndCheckLimit("hash", "Example Torrent", (ushort)slowRule.MaxStrikes, StrikeType.SlowSpeed, Arg.Any<long?>());
     }
@@ -437,7 +438,7 @@ public class QueueRuleEvaluatorTests : IDisposable
         var torrent = CreateTorrentMock();
 
         var result = await evaluator.EvaluateSlowRulesAsync(torrent);
-        Assert.False(result.ShouldRemove);
+        result.ShouldRemove.ShouldBeFalse();
 
         await striker.DidNotReceive().StrikeAndCheckLimit(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<ushort>(), Arg.Any<StrikeType>(), Arg.Any<long?>());
     }
@@ -559,7 +560,7 @@ public class QueueRuleEvaluatorTests : IDisposable
         torrent.DownloadSpeed.Returns(ByteSize.Parse("1 MB").Bytes); // Speed below 5 MB threshold
 
         var result = await evaluator.EvaluateSlowRulesAsync(torrent);
-        Assert.False(result.ShouldRemove);
+        result.ShouldRemove.ShouldBeFalse();
 
         await striker.Received(1).StrikeAndCheckLimit("hash", "Example Torrent", 3, StrikeType.SlowSpeed, Arg.Any<long?>());
     }
@@ -593,7 +594,7 @@ public class QueueRuleEvaluatorTests : IDisposable
         torrent.Eta.Returns(7200); // 2 hours, above 1 hour threshold
 
         var result = await evaluator.EvaluateSlowRulesAsync(torrent);
-        Assert.False(result.ShouldRemove);
+        result.ShouldRemove.ShouldBeFalse();
 
         await striker.Received(1).StrikeAndCheckLimit("hash", "Example Torrent", 5, StrikeType.SlowTime, Arg.Any<long?>());
     }
@@ -755,9 +756,9 @@ public class QueueRuleEvaluatorTests : IDisposable
 
         var result = await evaluator.EvaluateStallRulesAsync(torrent);
 
-        Assert.False(result.ShouldRemove);
-        Assert.Equal(DeleteReason.None, result.Reason);
-        Assert.False(result.DeleteFromClient);
+        result.ShouldRemove.ShouldBeFalse();
+        result.Reason.ShouldBe(DeleteReason.None);
+        result.DeleteFromClient.ShouldBeFalse();
     }
 
     [Fact]
@@ -784,9 +785,9 @@ public class QueueRuleEvaluatorTests : IDisposable
 
         var result = await evaluator.EvaluateStallRulesAsync(torrent);
 
-        Assert.False(result.ShouldRemove);
-        Assert.Equal(DeleteReason.None, result.Reason);
-        Assert.False(result.DeleteFromClient);
+        result.ShouldRemove.ShouldBeFalse();
+        result.Reason.ShouldBe(DeleteReason.None);
+        result.DeleteFromClient.ShouldBeFalse();
     }
 
     [Fact]
@@ -813,9 +814,9 @@ public class QueueRuleEvaluatorTests : IDisposable
 
         var result = await evaluator.EvaluateStallRulesAsync(torrent);
 
-        Assert.True(result.ShouldRemove);
-        Assert.Equal(DeleteReason.Stalled, result.Reason);
-        Assert.True(result.DeleteFromClient);
+        result.ShouldRemove.ShouldBeTrue();
+        result.Reason.ShouldBe(DeleteReason.Stalled);
+        result.DeleteFromClient.ShouldBeTrue();
     }
 
     [Fact]
@@ -842,9 +843,9 @@ public class QueueRuleEvaluatorTests : IDisposable
 
         var result = await evaluator.EvaluateStallRulesAsync(torrent);
 
-        Assert.True(result.ShouldRemove);
-        Assert.Equal(DeleteReason.Stalled, result.Reason);
-        Assert.False(result.DeleteFromClient);
+        result.ShouldRemove.ShouldBeTrue();
+        result.Reason.ShouldBe(DeleteReason.Stalled);
+        result.DeleteFromClient.ShouldBeFalse();
     }
 
     [Fact]
@@ -865,9 +866,9 @@ public class QueueRuleEvaluatorTests : IDisposable
 
         var result = await evaluator.EvaluateSlowRulesAsync(torrent);
 
-        Assert.False(result.ShouldRemove);
-        Assert.Equal(DeleteReason.None, result.Reason);
-        Assert.False(result.DeleteFromClient);
+        result.ShouldRemove.ShouldBeFalse();
+        result.Reason.ShouldBe(DeleteReason.None);
+        result.DeleteFromClient.ShouldBeFalse();
     }
 
     [Fact]
@@ -894,9 +895,9 @@ public class QueueRuleEvaluatorTests : IDisposable
 
         var result = await evaluator.EvaluateSlowRulesAsync(torrent);
 
-        Assert.True(result.ShouldRemove);
-        Assert.Equal(DeleteReason.SlowTime, result.Reason);
-        Assert.True(result.DeleteFromClient);
+        result.ShouldRemove.ShouldBeTrue();
+        result.Reason.ShouldBe(DeleteReason.SlowTime);
+        result.DeleteFromClient.ShouldBeTrue();
     }
 
     [Fact]
@@ -923,9 +924,9 @@ public class QueueRuleEvaluatorTests : IDisposable
 
         var result = await evaluator.EvaluateSlowRulesAsync(torrent);
 
-        Assert.True(result.ShouldRemove);
-        Assert.Equal(DeleteReason.SlowTime, result.Reason);
-        Assert.False(result.DeleteFromClient);
+        result.ShouldRemove.ShouldBeTrue();
+        result.Reason.ShouldBe(DeleteReason.SlowTime);
+        result.DeleteFromClient.ShouldBeFalse();
     }
 
     [Fact]
@@ -959,9 +960,9 @@ public class QueueRuleEvaluatorTests : IDisposable
 
         var result = await evaluator.EvaluateSlowRulesAsync(torrent);
 
-        Assert.True(result.ShouldRemove);
-        Assert.Equal(DeleteReason.SlowSpeed, result.Reason);
-        Assert.True(result.DeleteFromClient);
+        result.ShouldRemove.ShouldBeTrue();
+        result.Reason.ShouldBe(DeleteReason.SlowSpeed);
+        result.DeleteFromClient.ShouldBeTrue();
     }
 
     [Fact]
@@ -988,8 +989,8 @@ public class QueueRuleEvaluatorTests : IDisposable
 
         var result = await evaluator.EvaluateSlowRulesAsync(torrent);
 
-        Assert.False(result.ShouldRemove);
-        Assert.Equal(DeleteReason.None, result.Reason);
-        Assert.False(result.DeleteFromClient);
+        result.ShouldRemove.ShouldBeFalse();
+        result.Reason.ShouldBe(DeleteReason.None);
+        result.DeleteFromClient.ShouldBeFalse();
     }
 }

@@ -1,7 +1,9 @@
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Health;
 using Microsoft.Extensions.Logging;
-using Moq;
+using NSubstitute;
+using NSubstitute.ExceptionExtensions;
+using Shouldly;
 using Xunit;
 using HealthCheckStatus = Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus;
 using HealthStatus = Cleanuparr.Infrastructure.Health.HealthStatus;
@@ -10,15 +12,15 @@ namespace Cleanuparr.Infrastructure.Tests.Health;
 
 public class DownloadClientsHealthCheckTests
 {
-    private readonly Mock<IHealthCheckService> _healthCheckServiceMock;
-    private readonly Mock<ILogger<DownloadClientsHealthCheck>> _loggerMock;
+    private readonly IHealthCheckService _healthCheckService;
+    private readonly ILogger<DownloadClientsHealthCheck> _logger;
     private readonly DownloadClientsHealthCheck _healthCheck;
 
     public DownloadClientsHealthCheckTests()
     {
-        _healthCheckServiceMock = new Mock<IHealthCheckService>();
-        _loggerMock = new Mock<ILogger<DownloadClientsHealthCheck>>();
-        _healthCheck = new DownloadClientsHealthCheck(_healthCheckServiceMock.Object, _loggerMock.Object);
+        _healthCheckService = Substitute.For<IHealthCheckService>();
+        _logger = Substitute.For<ILogger<DownloadClientsHealthCheck>>();
+        _healthCheck = new DownloadClientsHealthCheck(_healthCheckService, _logger);
     }
 
     #region CheckHealthAsync Tests
@@ -27,16 +29,16 @@ public class DownloadClientsHealthCheckTests
     public async Task CheckHealthAsync_WhenNoClientsConfigured_ReturnsHealthy()
     {
         // Arrange
-        _healthCheckServiceMock
-            .Setup(s => s.GetAllClientHealth())
+        _healthCheckService
+            .GetAllClientHealth()
             .Returns(new Dictionary<Guid, HealthStatus>());
 
         // Act
         var result = await _healthCheck.CheckHealthAsync(null!);
 
         // Assert
-        Assert.Equal(HealthCheckStatus.Healthy, result.Status);
-        Assert.Contains("No download clients configured", result.Description);
+        result.Status.ShouldBe(HealthCheckStatus.Healthy);
+        result.Description.ShouldContain("No download clients configured");
     }
 
     [Fact]
@@ -50,16 +52,16 @@ public class DownloadClientsHealthCheckTests
             { Guid.NewGuid(), CreateHealthyStatus("Client3") }
         };
 
-        _healthCheckServiceMock
-            .Setup(s => s.GetAllClientHealth())
+        _healthCheckService
+            .GetAllClientHealth()
             .Returns(clients);
 
         // Act
         var result = await _healthCheck.CheckHealthAsync(null!);
 
         // Assert
-        Assert.Equal(HealthCheckStatus.Healthy, result.Status);
-        Assert.Contains("All 3 download clients are healthy", result.Description);
+        result.Status.ShouldBe(HealthCheckStatus.Healthy);
+        result.Description.ShouldContain("All 3 download clients are healthy");
     }
 
     [Fact]
@@ -73,17 +75,17 @@ public class DownloadClientsHealthCheckTests
             { Guid.NewGuid(), CreateUnhealthyStatus("Client3") }
         };
 
-        _healthCheckServiceMock
-            .Setup(s => s.GetAllClientHealth())
+        _healthCheckService
+            .GetAllClientHealth()
             .Returns(clients);
 
         // Act
         var result = await _healthCheck.CheckHealthAsync(null!);
 
         // Assert
-        Assert.Equal(HealthCheckStatus.Degraded, result.Status);
-        Assert.Contains("1/3", result.Description);
-        Assert.Contains("Client3", result.Description);
+        result.Status.ShouldBe(HealthCheckStatus.Degraded);
+        result.Description.ShouldContain("1/3");
+        result.Description.ShouldContain("Client3");
     }
 
     [Fact]
@@ -97,16 +99,16 @@ public class DownloadClientsHealthCheckTests
             { Guid.NewGuid(), CreateUnhealthyStatus("Client3") }
         };
 
-        _healthCheckServiceMock
-            .Setup(s => s.GetAllClientHealth())
+        _healthCheckService
+            .GetAllClientHealth()
             .Returns(clients);
 
         // Act
         var result = await _healthCheck.CheckHealthAsync(null!);
 
         // Assert
-        Assert.Equal(HealthCheckStatus.Unhealthy, result.Status);
-        Assert.Contains("2/3", result.Description);
+        result.Status.ShouldBe(HealthCheckStatus.Unhealthy);
+        result.Description.ShouldContain("2/3");
     }
 
     [Fact]
@@ -119,31 +121,31 @@ public class DownloadClientsHealthCheckTests
             { Guid.NewGuid(), CreateUnhealthyStatus("Client2") }
         };
 
-        _healthCheckServiceMock
-            .Setup(s => s.GetAllClientHealth())
+        _healthCheckService
+            .GetAllClientHealth()
             .Returns(clients);
 
         // Act
         var result = await _healthCheck.CheckHealthAsync(null!);
 
         // Assert
-        Assert.Equal(HealthCheckStatus.Unhealthy, result.Status);
+        result.Status.ShouldBe(HealthCheckStatus.Unhealthy);
     }
 
     [Fact]
     public async Task CheckHealthAsync_WhenServiceThrows_ReturnsUnhealthy()
     {
         // Arrange
-        _healthCheckServiceMock
-            .Setup(s => s.GetAllClientHealth())
+        _healthCheckService
+            .GetAllClientHealth()
             .Throws(new Exception("Service error"));
 
         // Act
         var result = await _healthCheck.CheckHealthAsync(null!);
 
         // Assert
-        Assert.Equal(HealthCheckStatus.Unhealthy, result.Status);
-        Assert.Contains("Download clients health check failed", result.Description);
+        result.Status.ShouldBe(HealthCheckStatus.Unhealthy);
+        result.Description.ShouldContain("Download clients health check failed");
     }
 
     [Fact]
@@ -157,16 +159,16 @@ public class DownloadClientsHealthCheckTests
             { Guid.NewGuid(), CreateUnhealthyStatus("BrokenClient2") }
         };
 
-        _healthCheckServiceMock
-            .Setup(s => s.GetAllClientHealth())
+        _healthCheckService
+            .GetAllClientHealth()
             .Returns(clients);
 
         // Act
         var result = await _healthCheck.CheckHealthAsync(null!);
 
         // Assert
-        Assert.Contains("BrokenClient1", result.Description);
-        Assert.Contains("BrokenClient2", result.Description);
+        result.Description.ShouldContain("BrokenClient1");
+        result.Description.ShouldContain("BrokenClient2");
     }
 
     [Fact]
@@ -178,15 +180,15 @@ public class DownloadClientsHealthCheckTests
             { Guid.NewGuid(), CreateHealthyStatus("OnlyClient") }
         };
 
-        _healthCheckServiceMock
-            .Setup(s => s.GetAllClientHealth())
+        _healthCheckService
+            .GetAllClientHealth()
             .Returns(clients);
 
         // Act
         var result = await _healthCheck.CheckHealthAsync(null!);
 
         // Assert
-        Assert.Equal(HealthCheckStatus.Healthy, result.Status);
+        result.Status.ShouldBe(HealthCheckStatus.Healthy);
     }
 
     [Fact]
@@ -198,15 +200,15 @@ public class DownloadClientsHealthCheckTests
             { Guid.NewGuid(), CreateUnhealthyStatus("BrokenClient") }
         };
 
-        _healthCheckServiceMock
-            .Setup(s => s.GetAllClientHealth())
+        _healthCheckService
+            .GetAllClientHealth()
             .Returns(clients);
 
         // Act
         var result = await _healthCheck.CheckHealthAsync(null!);
 
         // Assert
-        Assert.Equal(HealthCheckStatus.Unhealthy, result.Status);
+        result.Status.ShouldBe(HealthCheckStatus.Unhealthy);
     }
 
     #endregion

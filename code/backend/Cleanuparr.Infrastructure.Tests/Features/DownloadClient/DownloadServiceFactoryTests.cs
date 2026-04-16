@@ -24,6 +24,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NSubstitute;
+using Shouldly;
 using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.DownloadClient;
@@ -114,8 +115,8 @@ public class DownloadServiceFactoryTests : IDisposable
         var service = _factory.GetDownloadService(config);
 
         // Assert
-        Assert.NotNull(service);
-        Assert.IsType<QBitService>(service);
+        service.ShouldNotBeNull();
+        service.ShouldBeOfType<QBitService>();
     }
 
     [Fact]
@@ -128,8 +129,8 @@ public class DownloadServiceFactoryTests : IDisposable
         var service = _factory.GetDownloadService(config);
 
         // Assert
-        Assert.NotNull(service);
-        Assert.IsType<DelugeService>(service);
+        service.ShouldNotBeNull();
+        service.ShouldBeOfType<DelugeService>();
     }
 
     [Fact]
@@ -142,8 +143,8 @@ public class DownloadServiceFactoryTests : IDisposable
         var service = _factory.GetDownloadService(config);
 
         // Assert
-        Assert.NotNull(service);
-        Assert.IsType<TransmissionService>(service);
+        service.ShouldNotBeNull();
+        service.ShouldBeOfType<TransmissionService>();
     }
 
     [Fact]
@@ -156,10 +157,10 @@ public class DownloadServiceFactoryTests : IDisposable
         var service = _factory.GetDownloadService(config);
 
         // Assert
-        Assert.NotNull(service);
-        Assert.IsType<UTorrentService>(service);
+        service.ShouldNotBeNull();
+        service.ShouldBeOfType<UTorrentService>();
     }
-    
+
     [Fact]
     public void GetDownloadService_RTorrent_ReturnsRTorrentService()
     {
@@ -170,8 +171,8 @@ public class DownloadServiceFactoryTests : IDisposable
         var service = _factory.GetDownloadService(config);
 
         // Assert
-        Assert.NotNull(service);
-        Assert.IsType<RTorrentService>(service);
+        service.ShouldNotBeNull();
+        service.ShouldBeOfType<RTorrentService>();
     }
 
     [Fact]
@@ -189,8 +190,8 @@ public class DownloadServiceFactoryTests : IDisposable
         };
 
         // Act & Assert
-        var exception = Assert.Throws<NotSupportedException>(() => _factory.GetDownloadService(config));
-        Assert.Contains("not supported", exception.Message);
+        var exception = Should.Throw<NotSupportedException>(() => _factory.GetDownloadService(config));
+        exception.Message.ShouldContain("not supported");
     }
 
     [Fact]
@@ -211,7 +212,7 @@ public class DownloadServiceFactoryTests : IDisposable
         var service = _factory.GetDownloadService(config);
 
         // Assert
-        Assert.NotNull(service);
+        service.ShouldNotBeNull();
         _logger.Received(1).Log(
             LogLevel.Warning,
             Arg.Any<EventId>(),
@@ -230,7 +231,7 @@ public class DownloadServiceFactoryTests : IDisposable
         var service = _factory.GetDownloadService(config);
 
         // Assert
-        Assert.NotNull(service);
+        service.ShouldNotBeNull();
         _logger.DidNotReceive().Log(
             LogLevel.Warning,
             Arg.Any<EventId>(),
@@ -255,8 +256,8 @@ public class DownloadServiceFactoryTests : IDisposable
         var service = _factory.GetDownloadService(config);
 
         // Assert
-        Assert.NotNull(service);
-        Assert.IsType(expectedServiceType, service);
+        service.ShouldNotBeNull();
+        service.ShouldBeOfType(expectedServiceType);
     }
 
     [Fact]
@@ -270,7 +271,7 @@ public class DownloadServiceFactoryTests : IDisposable
         var service2 = _factory.GetDownloadService(config);
 
         // Assert
-        Assert.NotSame(service1, service2);
+        service1.ShouldNotBeSameAs(service2);
     }
 
     #endregion

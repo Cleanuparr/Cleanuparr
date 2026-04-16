@@ -1,5 +1,6 @@
 using Cleanuparr.Domain.Entities.RTorrent.Response;
 using Cleanuparr.Infrastructure.Features.DownloadClient.RTorrent;
+using Shouldly;
 using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.DownloadClient;
@@ -18,7 +19,7 @@ public class RTorrentItemWrapperTests
             var wrapper = new RTorrentItemWrapper(torrent);
 
             // Assert
-            Assert.Equal("ABC123DEF456", wrapper.Hash);
+            wrapper.Hash.ShouldBe("ABC123DEF456");
         }
 
         [Fact]
@@ -31,7 +32,7 @@ public class RTorrentItemWrapperTests
             var wrapper = new RTorrentItemWrapper(torrent);
 
             // Assert
-            Assert.Equal("Test Torrent Name", wrapper.Name);
+            wrapper.Name.ShouldBe("Test Torrent Name");
         }
 
         [Fact]
@@ -44,7 +45,7 @@ public class RTorrentItemWrapperTests
             var wrapper = new RTorrentItemWrapper(torrent);
 
             // Assert
-            Assert.True(wrapper.IsPrivate);
+            wrapper.IsPrivate.ShouldBeTrue();
         }
 
         [Fact]
@@ -57,7 +58,7 @@ public class RTorrentItemWrapperTests
             var wrapper = new RTorrentItemWrapper(torrent);
 
             // Assert
-            Assert.False(wrapper.IsPrivate);
+            wrapper.IsPrivate.ShouldBeFalse();
         }
 
         [Fact]
@@ -70,7 +71,7 @@ public class RTorrentItemWrapperTests
             var wrapper = new RTorrentItemWrapper(torrent);
 
             // Assert
-            Assert.Equal(1024000, wrapper.Size);
+            wrapper.Size.ShouldBe(1024000);
         }
 
         [Fact]
@@ -83,7 +84,7 @@ public class RTorrentItemWrapperTests
             var wrapper = new RTorrentItemWrapper(torrent);
 
             // Assert
-            Assert.Equal(500000, wrapper.DownloadSpeed);
+            wrapper.DownloadSpeed.ShouldBe(500000);
         }
 
         [Fact]
@@ -96,7 +97,7 @@ public class RTorrentItemWrapperTests
             var wrapper = new RTorrentItemWrapper(torrent);
 
             // Assert
-            Assert.Equal(750000, wrapper.DownloadedBytes);
+            wrapper.DownloadedBytes.ShouldBe(750000);
         }
 
         [Fact]
@@ -109,7 +110,7 @@ public class RTorrentItemWrapperTests
             var wrapper = new RTorrentItemWrapper(torrent);
 
             // Assert
-            Assert.Equal("movies", wrapper.Category);
+            wrapper.Category.ShouldBe("movies");
         }
 
         [Fact]
@@ -123,7 +124,7 @@ public class RTorrentItemWrapperTests
             wrapper.Category = "tv";
 
             // Assert
-            Assert.Equal("tv", wrapper.Category);
+            wrapper.Category.ShouldBe("tv");
         }
     }
 
@@ -140,7 +141,7 @@ public class RTorrentItemWrapperTests
             var wrapper = new RTorrentItemWrapper(torrent);
 
             // Assert
-            Assert.Equal(1.5, wrapper.Ratio);
+            wrapper.Ratio.ShouldBe(1.5);
         }
 
         [Fact]
@@ -153,7 +154,7 @@ public class RTorrentItemWrapperTests
             var wrapper = new RTorrentItemWrapper(torrent);
 
             // Assert
-            Assert.Equal(0, wrapper.Ratio);
+            wrapper.Ratio.ShouldBe(0);
         }
 
         [Fact]
@@ -166,7 +167,7 @@ public class RTorrentItemWrapperTests
             var wrapper = new RTorrentItemWrapper(torrent);
 
             // Assert
-            Assert.Equal(10.0, wrapper.Ratio);
+            wrapper.Ratio.ShouldBe(10.0);
         }
     }
 
@@ -188,7 +189,7 @@ public class RTorrentItemWrapperTests
             var wrapper = new RTorrentItemWrapper(torrent);
 
             // Assert
-            Assert.Equal(50.0, wrapper.CompletionPercentage);
+            wrapper.CompletionPercentage.ShouldBe(50.0);
         }
 
         [Fact]
@@ -207,7 +208,7 @@ public class RTorrentItemWrapperTests
             var wrapper = new RTorrentItemWrapper(torrent);
 
             // Assert
-            Assert.Equal(0.0, wrapper.CompletionPercentage);
+            wrapper.CompletionPercentage.ShouldBe(0.0);
         }
 
         [Fact]
@@ -226,7 +227,7 @@ public class RTorrentItemWrapperTests
             var wrapper = new RTorrentItemWrapper(torrent);
 
             // Assert
-            Assert.Equal(100.0, wrapper.CompletionPercentage);
+            wrapper.CompletionPercentage.ShouldBe(100.0);
         }
     }
 
@@ -248,7 +249,7 @@ public class RTorrentItemWrapperTests
             var wrapper = new RTorrentItemWrapper(torrent);
 
             // Assert
-            Assert.True(wrapper.IsDownloading());
+            wrapper.IsDownloading().ShouldBeTrue();
         }
 
         [Fact]
@@ -267,7 +268,7 @@ public class RTorrentItemWrapperTests
             var wrapper = new RTorrentItemWrapper(torrent);
 
             // Assert
-            Assert.False(wrapper.IsDownloading());
+            wrapper.IsDownloading().ShouldBeFalse();
         }
 
         [Fact]
@@ -286,7 +287,7 @@ public class RTorrentItemWrapperTests
             var wrapper = new RTorrentItemWrapper(torrent);
 
             // Assert
-            Assert.False(wrapper.IsDownloading());
+            wrapper.IsDownloading().ShouldBeFalse();
         }
     }
 
@@ -311,7 +312,7 @@ public class RTorrentItemWrapperTests
             var wrapper = new RTorrentItemWrapper(torrent);
 
             // Assert
-            Assert.True(wrapper.IsStalled());
+            wrapper.IsStalled().ShouldBeTrue();
         }
 
         [Fact]
@@ -333,7 +334,7 @@ public class RTorrentItemWrapperTests
             var wrapper = new RTorrentItemWrapper(torrent);
 
             // Assert
-            Assert.False(wrapper.IsStalled());
+            wrapper.IsStalled().ShouldBeFalse();
         }
 
         [Fact]
@@ -353,7 +354,7 @@ public class RTorrentItemWrapperTests
             var wrapper = new RTorrentItemWrapper(torrent);
 
             // Assert
-            Assert.False(wrapper.IsStalled());
+            wrapper.IsStalled().ShouldBeFalse();
         }
     }
 
@@ -375,7 +376,7 @@ public class RTorrentItemWrapperTests
             var wrapper = new RTorrentItemWrapper(torrent);
 
             // Assert
-            Assert.Equal(0, wrapper.SeedingTimeSeconds);
+            wrapper.SeedingTimeSeconds.ShouldBe(0);
         }
 
         [Fact]
@@ -394,7 +395,7 @@ public class RTorrentItemWrapperTests
             var wrapper = new RTorrentItemWrapper(torrent);
 
             // Assert
-            Assert.Equal(0, wrapper.SeedingTimeSeconds);
+            wrapper.SeedingTimeSeconds.ShouldBe(0);
         }
 
         [Fact]
@@ -414,7 +415,7 @@ public class RTorrentItemWrapperTests
             var wrapper = new RTorrentItemWrapper(torrent);
 
             // Assert - should be approximately 2 hours (7200 seconds)
-            Assert.True(wrapper.SeedingTimeSeconds >= 7190 && wrapper.SeedingTimeSeconds <= 7210);
+            (wrapper.SeedingTimeSeconds >= 7190 && wrapper.SeedingTimeSeconds <= 7210).ShouldBeTrue();
         }
     }
 
@@ -437,7 +438,7 @@ public class RTorrentItemWrapperTests
             var wrapper = new RTorrentItemWrapper(torrent);
 
             // Assert
-            Assert.Equal(0, wrapper.Eta);
+            wrapper.Eta.ShouldBe(0);
         }
 
         [Fact]
@@ -457,7 +458,7 @@ public class RTorrentItemWrapperTests
             var wrapper = new RTorrentItemWrapper(torrent);
 
             // Assert
-            Assert.Equal(5, wrapper.Eta);
+            wrapper.Eta.ShouldBe(5);
         }
 
         [Fact]
@@ -477,7 +478,7 @@ public class RTorrentItemWrapperTests
             var wrapper = new RTorrentItemWrapper(torrent);
 
             // Assert
-            Assert.Equal(0, wrapper.Eta);
+            wrapper.Eta.ShouldBe(0);
         }
     }
 
@@ -494,7 +495,7 @@ public class RTorrentItemWrapperTests
             var result = wrapper.IsIgnored(new List<string>());
 
             // Assert
-            Assert.False(result);
+            result.ShouldBeFalse();
         }
 
         [Fact]
@@ -508,7 +509,7 @@ public class RTorrentItemWrapperTests
             var result = wrapper.IsIgnored(new List<string> { "ABC123" });
 
             // Assert
-            Assert.True(result);
+            result.ShouldBeTrue();
         }
 
         [Fact]
@@ -522,7 +523,7 @@ public class RTorrentItemWrapperTests
             var result = wrapper.IsIgnored(new List<string> { "abc123" });
 
             // Assert
-            Assert.True(result);
+            result.ShouldBeTrue();
         }
 
         [Fact]
@@ -536,7 +537,7 @@ public class RTorrentItemWrapperTests
             var result = wrapper.IsIgnored(new List<string> { "movies" });
 
             // Assert
-            Assert.True(result);
+            result.ShouldBeTrue();
         }
 
         [Fact]
@@ -556,7 +557,7 @@ public class RTorrentItemWrapperTests
             var result = wrapper.IsIgnored(new List<string> { "example.com" });
 
             // Assert
-            Assert.True(result);
+            result.ShouldBeTrue();
         }
 
         [Fact]
@@ -576,7 +577,7 @@ public class RTorrentItemWrapperTests
             var result = wrapper.IsIgnored(new List<string> { "other.com", "tv", "HASH2" });
 
             // Assert
-            Assert.False(result);
+            result.ShouldBeFalse();
         }
     }
 }

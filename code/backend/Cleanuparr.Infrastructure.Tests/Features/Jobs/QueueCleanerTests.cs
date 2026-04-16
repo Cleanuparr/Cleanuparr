@@ -7,11 +7,13 @@ using Cleanuparr.Infrastructure.Features.DownloadClient;
 using Cleanuparr.Infrastructure.Features.DownloadRemover.Models;
 using Cleanuparr.Infrastructure.Helpers;
 using Cleanuparr.Infrastructure.Tests.Features.Jobs.TestHelpers;
+using Cleanuparr.Infrastructure.Tests.TestHelpers;
 using Cleanuparr.Persistence.Models.Configuration;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
-using Moq;
+using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 using Xunit;
 using QueueCleanerJob = Cleanuparr.Infrastructure.Features.Jobs.QueueCleaner;
 
@@ -21,7 +23,7 @@ namespace Cleanuparr.Infrastructure.Tests.Features.Jobs;
 public class QueueCleanerTests : IDisposable
 {
     private readonly JobHandlerFixture _fixture;
-    private readonly Mock<ILogger<QueueCleanerJob>> _logger;
+    private readonly ILogger<QueueCleanerJob> _logger;
 
     public QueueCleanerTests(JobHandlerFixture fixture)
     {
@@ -39,14 +41,14 @@ public class QueueCleanerTests : IDisposable
     private QueueCleanerJob CreateSut()
     {
         return new QueueCleanerJob(
-            _logger.Object,
+            _logger,
             _fixture.DataContext,
             _fixture.Cache,
-            _fixture.MessageBus.Object,
-            _fixture.ArrClientFactory.Object,
-            _fixture.ArrQueueIterator.Object,
-            _fixture.DownloadServiceFactory.Object,
-            _fixture.EventPublisher.Object
+            _fixture.MessageBus,
+            _fixture.ArrClientFactory,
+            _fixture.ArrQueueIterator,
+            _fixture.DownloadServiceFactory,
+            _fixture.EventPublisher
         );
     }
 
@@ -59,17 +61,17 @@ public class QueueCleanerTests : IDisposable
         TestDataContextFactory.AddStallRule(_fixture.DataContext, enabled: true);
         TestDataContextFactory.AddSonarrInstance(_fixture.DataContext);
 
-        var mockArrClient = new Mock<IArrClient>();
+        var mockArrClient = Substitute.For<IArrClient>();
         _fixture.ArrClientFactory
-            .Setup(x => x.GetClient(It.IsAny<InstanceType>(), It.IsAny<float>()))
-            .Returns(mockArrClient.Object);
+            .GetClient(Arg.Any<InstanceType>(), Arg.Any<float>())
+            .Returns(mockArrClient);
 
         _fixture.ArrQueueIterator
-            .Setup(x => x.Iterate(
-                It.IsAny<IArrClient>(),
-                It.IsAny<ArrInstance>(),
-                It.IsAny<Func<IReadOnlyList<QueueRecord>, Task>>()
-            ))
+            .Iterate(
+                Arg.Any<IArrClient>(),
+                Arg.Any<ArrInstance>(),
+                Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>()
+            )
             .Returns(Task.CompletedTask);
 
         var sut = CreateSut();
@@ -78,16 +80,7 @@ public class QueueCleanerTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert - no debug message about no active stall rules
-        _logger.Verify(
-            x => x.Log(
-                LogLevel.Debug,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("No active stall rules found")),
-                It.IsAny<Exception?>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()
-            ),
-            Times.Never
-        );
+        _logger.DidNotReceiveLogContaining(LogLevel.Debug, "No active stall rules found");
     }
 
     [Fact]
@@ -100,16 +93,7 @@ public class QueueCleanerTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert
-        _logger.Verify(
-            x => x.Log(
-                LogLevel.Debug,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("No active stall rules found")),
-                It.IsAny<Exception?>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()
-            ),
-            Times.Once
-        );
+        _logger.ReceivedLogContaining(LogLevel.Debug, "No active stall rules found");
     }
 
     [Fact]
@@ -119,17 +103,17 @@ public class QueueCleanerTests : IDisposable
         TestDataContextFactory.AddSlowRule(_fixture.DataContext, enabled: true);
         TestDataContextFactory.AddSonarrInstance(_fixture.DataContext);
 
-        var mockArrClient = new Mock<IArrClient>();
+        var mockArrClient = Substitute.For<IArrClient>();
         _fixture.ArrClientFactory
-            .Setup(x => x.GetClient(It.IsAny<InstanceType>(), It.IsAny<float>()))
-            .Returns(mockArrClient.Object);
+            .GetClient(Arg.Any<InstanceType>(), Arg.Any<float>())
+            .Returns(mockArrClient);
 
         _fixture.ArrQueueIterator
-            .Setup(x => x.Iterate(
-                It.IsAny<IArrClient>(),
-                It.IsAny<ArrInstance>(),
-                It.IsAny<Func<IReadOnlyList<QueueRecord>, Task>>()
-            ))
+            .Iterate(
+                Arg.Any<IArrClient>(),
+                Arg.Any<ArrInstance>(),
+                Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>()
+            )
             .Returns(Task.CompletedTask);
 
         var sut = CreateSut();
@@ -138,16 +122,7 @@ public class QueueCleanerTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert - no debug message about no active slow rules
-        _logger.Verify(
-            x => x.Log(
-                LogLevel.Debug,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("No active slow rules found")),
-                It.IsAny<Exception?>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()
-            ),
-            Times.Never
-        );
+        _logger.DidNotReceiveLogContaining(LogLevel.Debug, "No active slow rules found");
     }
 
     [Fact]
@@ -160,16 +135,7 @@ public class QueueCleanerTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert
-        _logger.Verify(
-            x => x.Log(
-                LogLevel.Debug,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("No active slow rules found")),
-                It.IsAny<Exception?>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()
-            ),
-            Times.Once
-        );
+        _logger.ReceivedLogContaining(LogLevel.Debug, "No active slow rules found");
     }
 
     [Fact]
@@ -179,17 +145,17 @@ public class QueueCleanerTests : IDisposable
         TestDataContextFactory.AddSonarrInstance(_fixture.DataContext);
         TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
 
-        var mockArrClient = new Mock<IArrClient>();
+        var mockArrClient = Substitute.For<IArrClient>();
         _fixture.ArrClientFactory
-            .Setup(x => x.GetClient(It.IsAny<InstanceType>(), It.IsAny<float>()))
-            .Returns(mockArrClient.Object);
+            .GetClient(Arg.Any<InstanceType>(), Arg.Any<float>())
+            .Returns(mockArrClient);
 
         _fixture.ArrQueueIterator
-            .Setup(x => x.Iterate(
-                It.IsAny<IArrClient>(),
-                It.IsAny<ArrInstance>(),
-                It.IsAny<Func<IReadOnlyList<QueueRecord>, Task>>()
-            ))
+            .Iterate(
+                Arg.Any<IArrClient>(),
+                Arg.Any<ArrInstance>(),
+                Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>()
+            )
             .Returns(Task.CompletedTask);
 
         var sut = CreateSut();
@@ -198,8 +164,8 @@ public class QueueCleanerTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert
-        _fixture.ArrClientFactory.Verify(x => x.GetClient(InstanceType.Sonarr, It.IsAny<float>()), Times.Once);
-        _fixture.ArrClientFactory.Verify(x => x.GetClient(InstanceType.Radarr, It.IsAny<float>()), Times.Once);
+        _fixture.ArrClientFactory.Received(1).GetClient(InstanceType.Sonarr, Arg.Any<float>());
+        _fixture.ArrClientFactory.Received(1).GetClient(InstanceType.Radarr, Arg.Any<float>());
     }
 
     #endregion
@@ -217,13 +183,13 @@ public class QueueCleanerTests : IDisposable
         TestDataContextFactory.AddSonarrInstance(_fixture.DataContext);
         TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
 
-        var mockArrClient = new Mock<IArrClient>();
-        mockArrClient.Setup(x => x.IsRecordValid(It.IsAny<QueueRecord>())).Returns(true);
-        mockArrClient.Setup(x => x.HasContentId(It.IsAny<QueueRecord>())).Returns(true);
+        var mockArrClient = Substitute.For<IArrClient>();
+        mockArrClient.IsRecordValid(Arg.Any<QueueRecord>()).Returns(true);
+        mockArrClient.HasContentId(Arg.Any<QueueRecord>()).Returns(true);
 
         _fixture.ArrClientFactory
-            .Setup(x => x.GetClient(InstanceType.Sonarr, It.IsAny<float>()))
-            .Returns(mockArrClient.Object);
+            .GetClient(InstanceType.Sonarr, Arg.Any<float>())
+            .Returns(mockArrClient);
 
         var queueRecord = new QueueRecord
         {
@@ -236,13 +202,14 @@ public class QueueCleanerTests : IDisposable
         };
 
         _fixture.ArrQueueIterator
-            .Setup(x => x.Iterate(
-                It.IsAny<IArrClient>(),
-                It.IsAny<ArrInstance>(),
-                It.IsAny<Func<IReadOnlyList<QueueRecord>, Task>>()
-            ))
-            .Returns(async (IArrClient client, ArrInstance instance, Func<IReadOnlyList<QueueRecord>, Task> callback) =>
+            .Iterate(
+                Arg.Any<IArrClient>(),
+                Arg.Any<ArrInstance>(),
+                Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>()
+            )
+            .Returns(async ci =>
             {
+                var callback = ci.ArgAt<Func<IReadOnlyList<QueueRecord>, Task>>(2);
                 await callback([queueRecord]);
             });
 
@@ -252,16 +219,7 @@ public class QueueCleanerTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert
-        _logger.Verify(
-            x => x.Log(
-                LogLevel.Information,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("download is ignored")),
-                It.IsAny<Exception?>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()
-            ),
-            Times.Once
-        );
+        _logger.ReceivedLogContaining(LogLevel.Information, "download is ignored");
     }
 
     [Fact]
@@ -275,13 +233,13 @@ public class QueueCleanerTests : IDisposable
         var cacheKey = CacheKeys.DownloadMarkedForRemoval("cached-download-id", sonarrInstance.Url);
         _fixture.Cache.Set(cacheKey, true);
 
-        var mockArrClient = new Mock<IArrClient>();
-        mockArrClient.Setup(x => x.IsRecordValid(It.IsAny<QueueRecord>())).Returns(true);
-        mockArrClient.Setup(x => x.HasContentId(It.IsAny<QueueRecord>())).Returns(true);
+        var mockArrClient = Substitute.For<IArrClient>();
+        mockArrClient.IsRecordValid(Arg.Any<QueueRecord>()).Returns(true);
+        mockArrClient.HasContentId(Arg.Any<QueueRecord>()).Returns(true);
 
         _fixture.ArrClientFactory
-            .Setup(x => x.GetClient(InstanceType.Sonarr, It.IsAny<float>()))
-            .Returns(mockArrClient.Object);
+            .GetClient(InstanceType.Sonarr, Arg.Any<float>())
+            .Returns(mockArrClient);
 
         var queueRecord = new QueueRecord
         {
@@ -294,13 +252,14 @@ public class QueueCleanerTests : IDisposable
         };
 
         _fixture.ArrQueueIterator
-            .Setup(x => x.Iterate(
-                It.IsAny<IArrClient>(),
-                It.IsAny<ArrInstance>(),
-                It.IsAny<Func<IReadOnlyList<QueueRecord>, Task>>()
-            ))
-            .Returns(async (IArrClient client, ArrInstance instance, Func<IReadOnlyList<QueueRecord>, Task> callback) =>
+            .Iterate(
+                Arg.Any<IArrClient>(),
+                Arg.Any<ArrInstance>(),
+                Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>()
+            )
+            .Returns(async ci =>
             {
+                var callback = ci.ArgAt<Func<IReadOnlyList<QueueRecord>, Task>>(2);
                 await callback([queueRecord]);
             });
 
@@ -310,16 +269,7 @@ public class QueueCleanerTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert
-        _logger.Verify(
-            x => x.Log(
-                LogLevel.Debug,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("already marked for removal")),
-                It.IsAny<Exception?>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()
-            ),
-            Times.Once
-        );
+        _logger.ReceivedLogContaining(LogLevel.Debug, "already marked for removal");
     }
 
     [Fact]
@@ -329,19 +279,19 @@ public class QueueCleanerTests : IDisposable
         var sonarrInstance = TestDataContextFactory.AddSonarrInstance(_fixture.DataContext);
         TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
 
-        var mockArrClient = new Mock<IArrClient>();
-        mockArrClient.Setup(x => x.IsRecordValid(It.IsAny<QueueRecord>())).Returns(true);
-        mockArrClient.Setup(x => x.HasContentId(It.IsAny<QueueRecord>())).Returns(true);
-        mockArrClient.Setup(x => x.ShouldRemoveFromQueue(
-            It.IsAny<InstanceType>(),
-            It.IsAny<QueueRecord>(),
-            It.IsAny<bool>(),
-            It.IsAny<short>()
-        )).ReturnsAsync(false);
+        var mockArrClient = Substitute.For<IArrClient>();
+        mockArrClient.IsRecordValid(Arg.Any<QueueRecord>()).Returns(true);
+        mockArrClient.HasContentId(Arg.Any<QueueRecord>()).Returns(true);
+        mockArrClient.ShouldRemoveFromQueue(
+            Arg.Any<InstanceType>(),
+            Arg.Any<QueueRecord>(),
+            Arg.Any<bool>(),
+            Arg.Any<short>()
+        ).Returns(false);
 
         _fixture.ArrClientFactory
-            .Setup(x => x.GetClient(InstanceType.Sonarr, It.IsAny<float>()))
-            .Returns(mockArrClient.Object);
+            .GetClient(InstanceType.Sonarr, Arg.Any<float>())
+            .Returns(mockArrClient);
 
         var queueRecord = new QueueRecord
         {
@@ -354,27 +304,28 @@ public class QueueCleanerTests : IDisposable
         };
 
         _fixture.ArrQueueIterator
-            .Setup(x => x.Iterate(
-                It.IsAny<IArrClient>(),
-                It.IsAny<ArrInstance>(),
-                It.IsAny<Func<IReadOnlyList<QueueRecord>, Task>>()
-            ))
-            .Returns(async (IArrClient client, ArrInstance instance, Func<IReadOnlyList<QueueRecord>, Task> callback) =>
+            .Iterate(
+                Arg.Any<IArrClient>(),
+                Arg.Any<ArrInstance>(),
+                Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>()
+            )
+            .Returns(async ci =>
             {
+                var callback = ci.ArgAt<Func<IReadOnlyList<QueueRecord>, Task>>(2);
                 await callback([queueRecord]);
             });
 
         var mockDownloadService = _fixture.CreateMockDownloadService();
         mockDownloadService
-            .Setup(x => x.ShouldRemoveFromArrQueueAsync(
-                It.IsAny<string>(),
-                It.IsAny<List<string>>()
-            ))
-            .ReturnsAsync(new DownloadCheckResult { Found = true, ShouldRemove = false });
+            .ShouldRemoveFromArrQueueAsync(
+                Arg.Any<string>(),
+                Arg.Any<List<string>>()
+            )
+            .Returns(new DownloadCheckResult { Found = true, ShouldRemove = false });
 
         _fixture.DownloadServiceFactory
-            .Setup(x => x.GetDownloadService(It.IsAny<DownloadClientConfig>()))
-            .Returns(mockDownloadService.Object);
+            .GetDownloadService(Arg.Any<DownloadClientConfig>())
+            .Returns(mockDownloadService);
 
         var sut = CreateSut();
 
@@ -382,10 +333,8 @@ public class QueueCleanerTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert
-        mockDownloadService.Verify(
-            x => x.ShouldRemoveFromArrQueueAsync("torrent-download-id", It.IsAny<List<string>>()),
-            Times.Once
-        );
+        await mockDownloadService.Received(1)
+            .ShouldRemoveFromArrQueueAsync("torrent-download-id", Arg.Any<List<string>>());
     }
 
     [Fact]
@@ -395,13 +344,13 @@ public class QueueCleanerTests : IDisposable
         var sonarrInstance = TestDataContextFactory.AddSonarrInstance(_fixture.DataContext);
         TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
 
-        var mockArrClient = new Mock<IArrClient>();
-        mockArrClient.Setup(x => x.IsRecordValid(It.IsAny<QueueRecord>())).Returns(true);
-        mockArrClient.Setup(x => x.HasContentId(It.IsAny<QueueRecord>())).Returns(true);
+        var mockArrClient = Substitute.For<IArrClient>();
+        mockArrClient.IsRecordValid(Arg.Any<QueueRecord>()).Returns(true);
+        mockArrClient.HasContentId(Arg.Any<QueueRecord>()).Returns(true);
 
         _fixture.ArrClientFactory
-            .Setup(x => x.GetClient(InstanceType.Sonarr, It.IsAny<float>()))
-            .Returns(mockArrClient.Object);
+            .GetClient(InstanceType.Sonarr, Arg.Any<float>())
+            .Returns(mockArrClient);
 
         var queueRecord = new QueueRecord
         {
@@ -414,23 +363,24 @@ public class QueueCleanerTests : IDisposable
         };
 
         _fixture.ArrQueueIterator
-            .Setup(x => x.Iterate(
-                It.IsAny<IArrClient>(),
-                It.IsAny<ArrInstance>(),
-                It.IsAny<Func<IReadOnlyList<QueueRecord>, Task>>()
-            ))
-            .Returns(async (IArrClient client, ArrInstance instance, Func<IReadOnlyList<QueueRecord>, Task> callback) =>
+            .Iterate(
+                Arg.Any<IArrClient>(),
+                Arg.Any<ArrInstance>(),
+                Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>()
+            )
+            .Returns(async ci =>
             {
+                var callback = ci.ArgAt<Func<IReadOnlyList<QueueRecord>, Task>>(2);
                 await callback([queueRecord]);
             });
 
         var mockDownloadService = _fixture.CreateMockDownloadService();
         mockDownloadService
-            .Setup(x => x.ShouldRemoveFromArrQueueAsync(
-                It.IsAny<string>(),
-                It.IsAny<List<string>>()
-            ))
-            .ReturnsAsync(new DownloadCheckResult
+            .ShouldRemoveFromArrQueueAsync(
+                Arg.Any<string>(),
+                Arg.Any<List<string>>()
+            )
+            .Returns(new DownloadCheckResult
             {
                 Found = true,
                 ShouldRemove = true,
@@ -440,8 +390,8 @@ public class QueueCleanerTests : IDisposable
             });
 
         _fixture.DownloadServiceFactory
-            .Setup(x => x.GetDownloadService(It.IsAny<DownloadClientConfig>()))
-            .Returns(mockDownloadService.Object);
+            .GetDownloadService(Arg.Any<DownloadClientConfig>())
+            .Returns(mockDownloadService);
 
         var sut = CreateSut();
 
@@ -449,12 +399,9 @@ public class QueueCleanerTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert
-        _fixture.MessageBus.Verify(
-            x => x.Publish(
-                It.IsAny<QueueItemRemoveRequest<SeriesSearchItem>>(),
-                It.IsAny<CancellationToken>()
-            ),
-            Times.Once
+        await _fixture.MessageBus.Received(1).Publish(
+            Arg.Any<QueueItemRemoveRequest<SeriesSearchItem>>(),
+            Arg.Any<CancellationToken>()
         );
     }
 
@@ -465,19 +412,19 @@ public class QueueCleanerTests : IDisposable
         var sonarrInstance = TestDataContextFactory.AddSonarrInstance(_fixture.DataContext);
         TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
 
-        var mockArrClient = new Mock<IArrClient>();
-        mockArrClient.Setup(x => x.IsRecordValid(It.IsAny<QueueRecord>())).Returns(true);
-        mockArrClient.Setup(x => x.HasContentId(It.IsAny<QueueRecord>())).Returns(true);
-        mockArrClient.Setup(x => x.ShouldRemoveFromQueue(
-            It.IsAny<InstanceType>(),
-            It.IsAny<QueueRecord>(),
-            It.IsAny<bool>(),
-            It.IsAny<short>()
-        )).ReturnsAsync(false);
+        var mockArrClient = Substitute.For<IArrClient>();
+        mockArrClient.IsRecordValid(Arg.Any<QueueRecord>()).Returns(true);
+        mockArrClient.HasContentId(Arg.Any<QueueRecord>()).Returns(true);
+        mockArrClient.ShouldRemoveFromQueue(
+            Arg.Any<InstanceType>(),
+            Arg.Any<QueueRecord>(),
+            Arg.Any<bool>(),
+            Arg.Any<short>()
+        ).Returns(false);
 
         _fixture.ArrClientFactory
-            .Setup(x => x.GetClient(InstanceType.Sonarr, It.IsAny<float>()))
-            .Returns(mockArrClient.Object);
+            .GetClient(InstanceType.Sonarr, Arg.Any<float>())
+            .Returns(mockArrClient);
 
         var queueRecord = new QueueRecord
         {
@@ -490,27 +437,28 @@ public class QueueCleanerTests : IDisposable
         };
 
         _fixture.ArrQueueIterator
-            .Setup(x => x.Iterate(
-                It.IsAny<IArrClient>(),
-                It.IsAny<ArrInstance>(),
-                It.IsAny<Func<IReadOnlyList<QueueRecord>, Task>>()
-            ))
-            .Returns(async (IArrClient client, ArrInstance instance, Func<IReadOnlyList<QueueRecord>, Task> callback) =>
+            .Iterate(
+                Arg.Any<IArrClient>(),
+                Arg.Any<ArrInstance>(),
+                Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>()
+            )
+            .Returns(async ci =>
             {
+                var callback = ci.ArgAt<Func<IReadOnlyList<QueueRecord>, Task>>(2);
                 await callback([queueRecord]);
             });
 
         var mockDownloadService = _fixture.CreateMockDownloadService();
         mockDownloadService
-            .Setup(x => x.ShouldRemoveFromArrQueueAsync(
-                It.IsAny<string>(),
-                It.IsAny<List<string>>()
-            ))
-            .ReturnsAsync(new DownloadCheckResult { Found = false });
+            .ShouldRemoveFromArrQueueAsync(
+                Arg.Any<string>(),
+                Arg.Any<List<string>>()
+            )
+            .Returns(new DownloadCheckResult { Found = false });
 
         _fixture.DownloadServiceFactory
-            .Setup(x => x.GetDownloadService(It.IsAny<DownloadClientConfig>()))
-            .Returns(mockDownloadService.Object);
+            .GetDownloadService(Arg.Any<DownloadClientConfig>())
+            .Returns(mockDownloadService);
 
         var sut = CreateSut();
 
@@ -518,16 +466,7 @@ public class QueueCleanerTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert
-        _logger.Verify(
-            x => x.Log(
-                LogLevel.Warning,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Download not found in any torrent client")),
-                It.IsAny<Exception?>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()
-            ),
-            Times.Once
-        );
+        _logger.ReceivedLogContaining(LogLevel.Warning, "Download not found in any torrent client");
     }
 
     [Fact]
@@ -537,19 +476,19 @@ public class QueueCleanerTests : IDisposable
         var sonarrInstance = TestDataContextFactory.AddSonarrInstance(_fixture.DataContext);
         TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
 
-        var mockArrClient = new Mock<IArrClient>();
-        mockArrClient.Setup(x => x.IsRecordValid(It.IsAny<QueueRecord>())).Returns(true);
-        mockArrClient.Setup(x => x.HasContentId(It.IsAny<QueueRecord>())).Returns(true);
-        mockArrClient.Setup(x => x.ShouldRemoveFromQueue(
-            It.IsAny<InstanceType>(),
-            It.IsAny<QueueRecord>(),
-            It.IsAny<bool>(),
-            It.IsAny<short>()
-        )).ReturnsAsync(false);
+        var mockArrClient = Substitute.For<IArrClient>();
+        mockArrClient.IsRecordValid(Arg.Any<QueueRecord>()).Returns(true);
+        mockArrClient.HasContentId(Arg.Any<QueueRecord>()).Returns(true);
+        mockArrClient.ShouldRemoveFromQueue(
+            Arg.Any<InstanceType>(),
+            Arg.Any<QueueRecord>(),
+            Arg.Any<bool>(),
+            Arg.Any<short>()
+        ).Returns(false);
 
         _fixture.ArrClientFactory
-            .Setup(x => x.GetClient(InstanceType.Sonarr, It.IsAny<float>()))
-            .Returns(mockArrClient.Object);
+            .GetClient(InstanceType.Sonarr, Arg.Any<float>())
+            .Returns(mockArrClient);
 
         var queueRecord = new QueueRecord
         {
@@ -562,27 +501,28 @@ public class QueueCleanerTests : IDisposable
         };
 
         _fixture.ArrQueueIterator
-            .Setup(x => x.Iterate(
-                It.IsAny<IArrClient>(),
-                It.IsAny<ArrInstance>(),
-                It.IsAny<Func<IReadOnlyList<QueueRecord>, Task>>()
-            ))
-            .Returns(async (IArrClient client, ArrInstance instance, Func<IReadOnlyList<QueueRecord>, Task> callback) =>
+            .Iterate(
+                Arg.Any<IArrClient>(),
+                Arg.Any<ArrInstance>(),
+                Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>()
+            )
+            .Returns(async ci =>
             {
+                var callback = ci.ArgAt<Func<IReadOnlyList<QueueRecord>, Task>>(2);
                 await callback([queueRecord]);
             });
 
         var mockDownloadService = _fixture.CreateMockDownloadService();
         mockDownloadService
-            .Setup(x => x.ShouldRemoveFromArrQueueAsync(
-                It.IsAny<string>(),
-                It.IsAny<List<string>>()
-            ))
-            .ReturnsAsync(new DownloadCheckResult { Found = true, ShouldRemove = false });
+            .ShouldRemoveFromArrQueueAsync(
+                Arg.Any<string>(),
+                Arg.Any<List<string>>()
+            )
+            .Returns(new DownloadCheckResult { Found = true, ShouldRemove = false });
 
         _fixture.DownloadServiceFactory
-            .Setup(x => x.GetDownloadService(It.IsAny<DownloadClientConfig>()))
-            .Returns(mockDownloadService.Object);
+            .GetDownloadService(Arg.Any<DownloadClientConfig>())
+            .Returns(mockDownloadService);
 
         var sut = CreateSut();
 
@@ -590,14 +530,11 @@ public class QueueCleanerTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert - verify failed import check was called
-        mockArrClient.Verify(
-            x => x.ShouldRemoveFromQueue(
-                InstanceType.Sonarr,
-                queueRecord,
-                false,
-                It.IsAny<short>()
-            ),
-            Times.Once
+        await mockArrClient.Received(1).ShouldRemoveFromQueue(
+            InstanceType.Sonarr,
+            queueRecord,
+            false,
+            Arg.Any<short>()
         );
     }
 
@@ -608,19 +545,19 @@ public class QueueCleanerTests : IDisposable
         var sonarrInstance = TestDataContextFactory.AddSonarrInstance(_fixture.DataContext);
         TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
 
-        var mockArrClient = new Mock<IArrClient>();
-        mockArrClient.Setup(x => x.IsRecordValid(It.IsAny<QueueRecord>())).Returns(true);
-        mockArrClient.Setup(x => x.HasContentId(It.IsAny<QueueRecord>())).Returns(true);
-        mockArrClient.Setup(x => x.ShouldRemoveFromQueue(
-            It.IsAny<InstanceType>(),
-            It.IsAny<QueueRecord>(),
-            It.IsAny<bool>(),
-            It.IsAny<short>()
-        )).ReturnsAsync(true);
+        var mockArrClient = Substitute.For<IArrClient>();
+        mockArrClient.IsRecordValid(Arg.Any<QueueRecord>()).Returns(true);
+        mockArrClient.HasContentId(Arg.Any<QueueRecord>()).Returns(true);
+        mockArrClient.ShouldRemoveFromQueue(
+            Arg.Any<InstanceType>(),
+            Arg.Any<QueueRecord>(),
+            Arg.Any<bool>(),
+            Arg.Any<short>()
+        ).Returns(true);
 
         _fixture.ArrClientFactory
-            .Setup(x => x.GetClient(InstanceType.Sonarr, It.IsAny<float>()))
-            .Returns(mockArrClient.Object);
+            .GetClient(InstanceType.Sonarr, Arg.Any<float>())
+            .Returns(mockArrClient);
 
         var queueRecord = new QueueRecord
         {
@@ -633,27 +570,28 @@ public class QueueCleanerTests : IDisposable
         };
 
         _fixture.ArrQueueIterator
-            .Setup(x => x.Iterate(
-                It.IsAny<IArrClient>(),
-                It.IsAny<ArrInstance>(),
-                It.IsAny<Func<IReadOnlyList<QueueRecord>, Task>>()
-            ))
-            .Returns(async (IArrClient client, ArrInstance instance, Func<IReadOnlyList<QueueRecord>, Task> callback) =>
+            .Iterate(
+                Arg.Any<IArrClient>(),
+                Arg.Any<ArrInstance>(),
+                Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>()
+            )
+            .Returns(async ci =>
             {
+                var callback = ci.ArgAt<Func<IReadOnlyList<QueueRecord>, Task>>(2);
                 await callback([queueRecord]);
             });
 
         var mockDownloadService = _fixture.CreateMockDownloadService();
         mockDownloadService
-            .Setup(x => x.ShouldRemoveFromArrQueueAsync(
-                It.IsAny<string>(),
-                It.IsAny<List<string>>()
-            ))
-            .ReturnsAsync(new DownloadCheckResult { Found = true, ShouldRemove = false });
+            .ShouldRemoveFromArrQueueAsync(
+                Arg.Any<string>(),
+                Arg.Any<List<string>>()
+            )
+            .Returns(new DownloadCheckResult { Found = true, ShouldRemove = false });
 
         _fixture.DownloadServiceFactory
-            .Setup(x => x.GetDownloadService(It.IsAny<DownloadClientConfig>()))
-            .Returns(mockDownloadService.Object);
+            .GetDownloadService(Arg.Any<DownloadClientConfig>())
+            .Returns(mockDownloadService);
 
         var sut = CreateSut();
 
@@ -661,14 +599,11 @@ public class QueueCleanerTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert
-        _fixture.MessageBus.Verify(
-            x => x.Publish(
-                It.Is<QueueItemRemoveRequest<SeriesSearchItem>>(r =>
-                    r.DeleteReason == DeleteReason.FailedImport
-                ),
-                It.IsAny<CancellationToken>()
+        await _fixture.MessageBus.Received(1).Publish(
+            Arg.Is<QueueItemRemoveRequest<SeriesSearchItem>>(r =>
+                r.DeleteReason == DeleteReason.FailedImport
             ),
-            Times.Once
+            Arg.Any<CancellationToken>()
         );
     }
 
@@ -679,13 +614,13 @@ public class QueueCleanerTests : IDisposable
         TestDataContextFactory.AddSonarrInstance(_fixture.DataContext);
         TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
 
-        var mockArrClient = new Mock<IArrClient>();
-        mockArrClient.Setup(x => x.IsRecordValid(It.IsAny<QueueRecord>())).Returns(true);
-        mockArrClient.Setup(x => x.HasContentId(It.IsAny<QueueRecord>())).Returns(false);
+        var mockArrClient = Substitute.For<IArrClient>();
+        mockArrClient.IsRecordValid(Arg.Any<QueueRecord>()).Returns(true);
+        mockArrClient.HasContentId(Arg.Any<QueueRecord>()).Returns(false);
 
         _fixture.ArrClientFactory
-            .Setup(x => x.GetClient(InstanceType.Sonarr, It.IsAny<float>()))
-            .Returns(mockArrClient.Object);
+            .GetClient(InstanceType.Sonarr, Arg.Any<float>())
+            .Returns(mockArrClient);
 
         var queueRecord = new QueueRecord
         {
@@ -696,13 +631,14 @@ public class QueueCleanerTests : IDisposable
         };
 
         _fixture.ArrQueueIterator
-            .Setup(x => x.Iterate(
-                It.IsAny<IArrClient>(),
-                It.IsAny<ArrInstance>(),
-                It.IsAny<Func<IReadOnlyList<QueueRecord>, Task>>()
-            ))
-            .Returns(async (IArrClient client, ArrInstance instance, Func<IReadOnlyList<QueueRecord>, Task> callback) =>
+            .Iterate(
+                Arg.Any<IArrClient>(),
+                Arg.Any<ArrInstance>(),
+                Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>()
+            )
+            .Returns(async ci =>
             {
+                var callback = ci.ArgAt<Func<IReadOnlyList<QueueRecord>, Task>>(2);
                 await callback([queueRecord]);
             });
 
@@ -712,23 +648,11 @@ public class QueueCleanerTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert
-        _logger.Verify(
-            x => x.Log(
-                LogLevel.Information,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("skip | item is missing the content id")),
-                It.IsAny<Exception?>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()
-            ),
-            Times.Once
-        );
+        _logger.ReceivedLogContaining(LogLevel.Information, "skip | item is missing the content id");
 
-        _fixture.MessageBus.Verify(
-            x => x.Publish(
-                It.IsAny<QueueItemRemoveRequest<SeriesSearchItem>>(),
-                It.IsAny<CancellationToken>()
-            ),
-            Times.Never
+        await _fixture.MessageBus.DidNotReceive().Publish(
+            Arg.Any<QueueItemRemoveRequest<SeriesSearchItem>>(),
+            Arg.Any<CancellationToken>()
         );
     }
 
@@ -743,19 +667,19 @@ public class QueueCleanerTests : IDisposable
         queueCleanerConfig.ProcessNoContentId = true;
         _fixture.DataContext.SaveChanges();
 
-        var mockArrClient = new Mock<IArrClient>();
-        mockArrClient.Setup(x => x.IsRecordValid(It.IsAny<QueueRecord>())).Returns(true);
-        mockArrClient.Setup(x => x.HasContentId(It.IsAny<QueueRecord>())).Returns(false);
-        mockArrClient.Setup(x => x.ShouldRemoveFromQueue(
-            It.IsAny<InstanceType>(),
-            It.IsAny<QueueRecord>(),
-            It.IsAny<bool>(),
-            It.IsAny<short>()
-        )).ReturnsAsync(false);
+        var mockArrClient = Substitute.For<IArrClient>();
+        mockArrClient.IsRecordValid(Arg.Any<QueueRecord>()).Returns(true);
+        mockArrClient.HasContentId(Arg.Any<QueueRecord>()).Returns(false);
+        mockArrClient.ShouldRemoveFromQueue(
+            Arg.Any<InstanceType>(),
+            Arg.Any<QueueRecord>(),
+            Arg.Any<bool>(),
+            Arg.Any<short>()
+        ).Returns(false);
 
         _fixture.ArrClientFactory
-            .Setup(x => x.GetClient(InstanceType.Sonarr, It.IsAny<float>()))
-            .Returns(mockArrClient.Object);
+            .GetClient(InstanceType.Sonarr, Arg.Any<float>())
+            .Returns(mockArrClient);
 
         var queueRecord = new QueueRecord
         {
@@ -766,23 +690,24 @@ public class QueueCleanerTests : IDisposable
         };
 
         _fixture.ArrQueueIterator
-            .Setup(x => x.Iterate(
-                It.IsAny<IArrClient>(),
-                It.IsAny<ArrInstance>(),
-                It.IsAny<Func<IReadOnlyList<QueueRecord>, Task>>()
-            ))
-            .Returns(async (IArrClient client, ArrInstance instance, Func<IReadOnlyList<QueueRecord>, Task> callback) =>
+            .Iterate(
+                Arg.Any<IArrClient>(),
+                Arg.Any<ArrInstance>(),
+                Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>()
+            )
+            .Returns(async ci =>
             {
+                var callback = ci.ArgAt<Func<IReadOnlyList<QueueRecord>, Task>>(2);
                 await callback([queueRecord]);
             });
 
         var mockDownloadService = _fixture.CreateMockDownloadService();
         mockDownloadService
-            .Setup(x => x.ShouldRemoveFromArrQueueAsync(
-                It.IsAny<string>(),
-                It.IsAny<List<string>>()
-            ))
-            .ReturnsAsync(new DownloadCheckResult
+            .ShouldRemoveFromArrQueueAsync(
+                Arg.Any<string>(),
+                Arg.Any<List<string>>()
+            )
+            .Returns(new DownloadCheckResult
             {
                 Found = true,
                 ShouldRemove = true,
@@ -792,8 +717,8 @@ public class QueueCleanerTests : IDisposable
             });
 
         _fixture.DownloadServiceFactory
-            .Setup(x => x.GetDownloadService(It.IsAny<DownloadClientConfig>()))
-            .Returns(mockDownloadService.Object);
+            .GetDownloadService(Arg.Any<DownloadClientConfig>())
+            .Returns(mockDownloadService);
 
         var sut = CreateSut();
 
@@ -801,15 +726,12 @@ public class QueueCleanerTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert - SkipSearch must be true because the item has no content ID
-        _fixture.MessageBus.Verify(
-            x => x.Publish(
-                It.Is<QueueItemRemoveRequest<SeriesSearchItem>>(r =>
-                    r.SkipSearch == true &&
-                    r.DeleteReason == DeleteReason.Stalled
-                ),
-                It.IsAny<CancellationToken>()
+        await _fixture.MessageBus.Received(1).Publish(
+            Arg.Is<QueueItemRemoveRequest<SeriesSearchItem>>(r =>
+                r.SkipSearch == true &&
+                r.DeleteReason == DeleteReason.Stalled
             ),
-            Times.Once
+            Arg.Any<CancellationToken>()
         );
     }
 
@@ -824,19 +746,19 @@ public class QueueCleanerTests : IDisposable
         var sonarrInstance = TestDataContextFactory.AddSonarrInstance(_fixture.DataContext);
         TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
 
-        var mockArrClient = new Mock<IArrClient>();
-        mockArrClient.Setup(x => x.IsRecordValid(It.IsAny<QueueRecord>())).Returns(true);
-        mockArrClient.Setup(x => x.HasContentId(It.IsAny<QueueRecord>())).Returns(true);
-        mockArrClient.Setup(x => x.ShouldRemoveFromQueue(
-            It.IsAny<InstanceType>(),
-            It.IsAny<QueueRecord>(),
-            It.IsAny<bool>(),
-            It.IsAny<short>()
-        )).ReturnsAsync(false);
+        var mockArrClient = Substitute.For<IArrClient>();
+        mockArrClient.IsRecordValid(Arg.Any<QueueRecord>()).Returns(true);
+        mockArrClient.HasContentId(Arg.Any<QueueRecord>()).Returns(true);
+        mockArrClient.ShouldRemoveFromQueue(
+            Arg.Any<InstanceType>(),
+            Arg.Any<QueueRecord>(),
+            Arg.Any<bool>(),
+            Arg.Any<short>()
+        ).Returns(false);
 
         _fixture.ArrClientFactory
-            .Setup(x => x.GetClient(InstanceType.Sonarr, It.IsAny<float>()))
-            .Returns(mockArrClient.Object);
+            .GetClient(InstanceType.Sonarr, Arg.Any<float>())
+            .Returns(mockArrClient);
 
         var queueRecord = new QueueRecord
         {
@@ -849,27 +771,28 @@ public class QueueCleanerTests : IDisposable
         };
 
         _fixture.ArrQueueIterator
-            .Setup(x => x.Iterate(
-                It.IsAny<IArrClient>(),
-                It.IsAny<ArrInstance>(),
-                It.IsAny<Func<IReadOnlyList<QueueRecord>, Task>>()
-            ))
-            .Returns(async (IArrClient client, ArrInstance instance, Func<IReadOnlyList<QueueRecord>, Task> callback) =>
+            .Iterate(
+                Arg.Any<IArrClient>(),
+                Arg.Any<ArrInstance>(),
+                Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>()
+            )
+            .Returns(async ci =>
             {
+                var callback = ci.ArgAt<Func<IReadOnlyList<QueueRecord>, Task>>(2);
                 await callback([queueRecord]);
             });
 
         var mockDownloadService = _fixture.CreateMockDownloadService();
         mockDownloadService
-            .Setup(x => x.ShouldRemoveFromArrQueueAsync(
-                It.IsAny<string>(),
-                It.IsAny<List<string>>()
-            ))
+            .ShouldRemoveFromArrQueueAsync(
+                Arg.Any<string>(),
+                Arg.Any<List<string>>()
+            )
             .ThrowsAsync(new Exception("Connection failed"));
 
         _fixture.DownloadServiceFactory
-            .Setup(x => x.GetDownloadService(It.IsAny<DownloadClientConfig>()))
-            .Returns(mockDownloadService.Object);
+            .GetDownloadService(Arg.Any<DownloadClientConfig>())
+            .Returns(mockDownloadService);
 
         var sut = CreateSut();
 
@@ -877,16 +800,7 @@ public class QueueCleanerTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert
-        _logger.Verify(
-            x => x.Log(
-                LogLevel.Error,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Error checking download")),
-                It.IsAny<Exception?>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()
-            ),
-            Times.Once
-        );
+        _logger.ReceivedLogContaining(LogLevel.Error, "Error checking download");
     }
 
     #endregion
@@ -902,13 +816,13 @@ public class QueueCleanerTests : IDisposable
         var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
         TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
 
-        var mockArrClient = new Mock<IArrClient>();
-        mockArrClient.Setup(x => x.IsRecordValid(It.IsAny<QueueRecord>())).Returns(true);
-        mockArrClient.Setup(x => x.HasContentId(It.IsAny<QueueRecord>())).Returns(true);
+        var mockArrClient = Substitute.For<IArrClient>();
+        mockArrClient.IsRecordValid(Arg.Any<QueueRecord>()).Returns(true);
+        mockArrClient.HasContentId(Arg.Any<QueueRecord>()).Returns(true);
 
         _fixture.ArrClientFactory
-            .Setup(x => x.GetClient(InstanceType.Radarr, It.IsAny<float>()))
-            .Returns(mockArrClient.Object);
+            .GetClient(InstanceType.Radarr, Arg.Any<float>())
+            .Returns(mockArrClient);
 
         var queueRecord = new QueueRecord
         {
@@ -923,11 +837,11 @@ public class QueueCleanerTests : IDisposable
         // (after QueueCleaner's cache check but before PublishQueueItemRemoveRequest)
         var mockDownloadService = _fixture.CreateMockDownloadService();
         mockDownloadService
-            .Setup(x => x.ShouldRemoveFromArrQueueAsync(
-                It.IsAny<string>(),
-                It.IsAny<List<string>>()
-            ))
-            .ReturnsAsync(() =>
+            .ShouldRemoveFromArrQueueAsync(
+                Arg.Any<string>(),
+                Arg.Any<List<string>>()
+            )
+            .Returns(ci =>
             {
                 // Add to cache here - simulating another thread/process adding this
                 var cacheKey = CacheKeys.DownloadMarkedForRemoval(queueRecord.DownloadId, radarrInstance.Url);
@@ -944,17 +858,18 @@ public class QueueCleanerTests : IDisposable
             });
 
         _fixture.DownloadServiceFactory
-            .Setup(x => x.GetDownloadService(It.IsAny<DownloadClientConfig>()))
-            .Returns(mockDownloadService.Object);
+            .GetDownloadService(Arg.Any<DownloadClientConfig>())
+            .Returns(mockDownloadService);
 
         _fixture.ArrQueueIterator
-            .Setup(x => x.Iterate(
-                It.IsAny<IArrClient>(),
-                It.IsAny<ArrInstance>(),
-                It.IsAny<Func<IReadOnlyList<QueueRecord>, Task>>()
-            ))
-            .Returns(async (IArrClient client, ArrInstance instance, Func<IReadOnlyList<QueueRecord>, Task> callback) =>
+            .Iterate(
+                Arg.Any<IArrClient>(),
+                Arg.Any<ArrInstance>(),
+                Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>()
+            )
+            .Returns(async ci =>
             {
+                var callback = ci.ArgAt<Func<IReadOnlyList<QueueRecord>, Task>>(2);
                 await callback([queueRecord]);
             });
 
@@ -964,24 +879,12 @@ public class QueueCleanerTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert - should log "skip removal request | already marked for removal" from GenericHandler
-        _logger.Verify(
-            x => x.Log(
-                LogLevel.Debug,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("skip removal request") && v.ToString()!.Contains("already marked for removal")),
-                It.IsAny<Exception?>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()
-            ),
-            Times.Once
-        );
+        _logger.ReceivedLogContaining(LogLevel.Debug, "skip removal request");
 
         // Verify no publish was made
-        _fixture.MessageBus.Verify(
-            x => x.Publish(
-                It.IsAny<QueueItemRemoveRequest<SearchItem>>(),
-                It.IsAny<CancellationToken>()
-            ),
-            Times.Never
+        await _fixture.MessageBus.DidNotReceive().Publish(
+            Arg.Any<QueueItemRemoveRequest<SearchItem>>(),
+            Arg.Any<CancellationToken>()
         );
     }
 
@@ -992,13 +895,13 @@ public class QueueCleanerTests : IDisposable
         var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
         TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
 
-        var mockArrClient = new Mock<IArrClient>();
-        mockArrClient.Setup(x => x.IsRecordValid(It.IsAny<QueueRecord>())).Returns(true);
-        mockArrClient.Setup(x => x.HasContentId(It.IsAny<QueueRecord>())).Returns(true);
+        var mockArrClient = Substitute.For<IArrClient>();
+        mockArrClient.IsRecordValid(Arg.Any<QueueRecord>()).Returns(true);
+        mockArrClient.HasContentId(Arg.Any<QueueRecord>()).Returns(true);
 
         _fixture.ArrClientFactory
-            .Setup(x => x.GetClient(InstanceType.Radarr, It.IsAny<float>()))
-            .Returns(mockArrClient.Object);
+            .GetClient(InstanceType.Radarr, Arg.Any<float>())
+            .Returns(mockArrClient);
 
         var queueRecord = new QueueRecord
         {
@@ -1010,23 +913,24 @@ public class QueueCleanerTests : IDisposable
         };
 
         _fixture.ArrQueueIterator
-            .Setup(x => x.Iterate(
-                It.IsAny<IArrClient>(),
-                It.IsAny<ArrInstance>(),
-                It.IsAny<Func<IReadOnlyList<QueueRecord>, Task>>()
-            ))
-            .Returns(async (IArrClient client, ArrInstance instance, Func<IReadOnlyList<QueueRecord>, Task> callback) =>
+            .Iterate(
+                Arg.Any<IArrClient>(),
+                Arg.Any<ArrInstance>(),
+                Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>()
+            )
+            .Returns(async ci =>
             {
+                var callback = ci.ArgAt<Func<IReadOnlyList<QueueRecord>, Task>>(2);
                 await callback([queueRecord]);
             });
 
         var mockDownloadService = _fixture.CreateMockDownloadService();
         mockDownloadService
-            .Setup(x => x.ShouldRemoveFromArrQueueAsync(
-                It.IsAny<string>(),
-                It.IsAny<List<string>>()
-            ))
-            .ReturnsAsync(new DownloadCheckResult
+            .ShouldRemoveFromArrQueueAsync(
+                Arg.Any<string>(),
+                Arg.Any<List<string>>()
+            )
+            .Returns(new DownloadCheckResult
             {
                 Found = true,
                 ShouldRemove = true,
@@ -1036,8 +940,8 @@ public class QueueCleanerTests : IDisposable
             });
 
         _fixture.DownloadServiceFactory
-            .Setup(x => x.GetDownloadService(It.IsAny<DownloadClientConfig>()))
-            .Returns(mockDownloadService.Object);
+            .GetDownloadService(Arg.Any<DownloadClientConfig>())
+            .Returns(mockDownloadService);
 
         var sut = CreateSut();
 
@@ -1045,16 +949,13 @@ public class QueueCleanerTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert - should publish QueueItemRemoveRequest<SearchItem> (not SeriesSearchItem)
-        _fixture.MessageBus.Verify(
-            x => x.Publish(
-                It.Is<QueueItemRemoveRequest<SearchItem>>(r =>
-                    r.Instance.ArrConfig.Type == InstanceType.Radarr &&
-                    r.SearchItem.Id == 42 &&
-                    r.DeleteReason == DeleteReason.Stalled
-                ),
-                It.IsAny<CancellationToken>()
+        await _fixture.MessageBus.Received(1).Publish(
+            Arg.Is<QueueItemRemoveRequest<SearchItem>>(r =>
+                r.Instance.ArrConfig.Type == InstanceType.Radarr &&
+                r.SearchItem.Id == 42 &&
+                r.DeleteReason == DeleteReason.Stalled
             ),
-            Times.Once
+            Arg.Any<CancellationToken>()
         );
     }
 
@@ -1065,13 +966,13 @@ public class QueueCleanerTests : IDisposable
         var lidarrInstance = TestDataContextFactory.AddLidarrInstance(_fixture.DataContext);
         TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
 
-        var mockArrClient = new Mock<IArrClient>();
-        mockArrClient.Setup(x => x.IsRecordValid(It.IsAny<QueueRecord>())).Returns(true);
-        mockArrClient.Setup(x => x.HasContentId(It.IsAny<QueueRecord>())).Returns(true);
+        var mockArrClient = Substitute.For<IArrClient>();
+        mockArrClient.IsRecordValid(Arg.Any<QueueRecord>()).Returns(true);
+        mockArrClient.HasContentId(Arg.Any<QueueRecord>()).Returns(true);
 
         _fixture.ArrClientFactory
-            .Setup(x => x.GetClient(InstanceType.Lidarr, It.IsAny<float>()))
-            .Returns(mockArrClient.Object);
+            .GetClient(InstanceType.Lidarr, Arg.Any<float>())
+            .Returns(mockArrClient);
 
         var queueRecord = new QueueRecord
         {
@@ -1083,23 +984,24 @@ public class QueueCleanerTests : IDisposable
         };
 
         _fixture.ArrQueueIterator
-            .Setup(x => x.Iterate(
-                It.IsAny<IArrClient>(),
-                It.IsAny<ArrInstance>(),
-                It.IsAny<Func<IReadOnlyList<QueueRecord>, Task>>()
-            ))
-            .Returns(async (IArrClient client, ArrInstance instance, Func<IReadOnlyList<QueueRecord>, Task> callback) =>
+            .Iterate(
+                Arg.Any<IArrClient>(),
+                Arg.Any<ArrInstance>(),
+                Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>()
+            )
+            .Returns(async ci =>
             {
+                var callback = ci.ArgAt<Func<IReadOnlyList<QueueRecord>, Task>>(2);
                 await callback([queueRecord]);
             });
 
         var mockDownloadService = _fixture.CreateMockDownloadService();
         mockDownloadService
-            .Setup(x => x.ShouldRemoveFromArrQueueAsync(
-                It.IsAny<string>(),
-                It.IsAny<List<string>>()
-            ))
-            .ReturnsAsync(new DownloadCheckResult
+            .ShouldRemoveFromArrQueueAsync(
+                Arg.Any<string>(),
+                Arg.Any<List<string>>()
+            )
+            .Returns(new DownloadCheckResult
             {
                 Found = true,
                 ShouldRemove = true,
@@ -1109,8 +1011,8 @@ public class QueueCleanerTests : IDisposable
             });
 
         _fixture.DownloadServiceFactory
-            .Setup(x => x.GetDownloadService(It.IsAny<DownloadClientConfig>()))
-            .Returns(mockDownloadService.Object);
+            .GetDownloadService(Arg.Any<DownloadClientConfig>())
+            .Returns(mockDownloadService);
 
         var sut = CreateSut();
 
@@ -1118,16 +1020,13 @@ public class QueueCleanerTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert - should publish QueueItemRemoveRequest<SearchItem> with AlbumId
-        _fixture.MessageBus.Verify(
-            x => x.Publish(
-                It.Is<QueueItemRemoveRequest<SearchItem>>(r =>
-                    r.Instance.ArrConfig.Type == InstanceType.Lidarr &&
-                    r.SearchItem.Id == 123 &&
-                    r.DeleteReason == DeleteReason.SlowSpeed
-                ),
-                It.IsAny<CancellationToken>()
+        await _fixture.MessageBus.Received(1).Publish(
+            Arg.Is<QueueItemRemoveRequest<SearchItem>>(r =>
+                r.Instance.ArrConfig.Type == InstanceType.Lidarr &&
+                r.SearchItem.Id == 123 &&
+                r.DeleteReason == DeleteReason.SlowSpeed
             ),
-            Times.Once
+            Arg.Any<CancellationToken>()
         );
     }
 
@@ -1138,13 +1037,13 @@ public class QueueCleanerTests : IDisposable
         var readarrInstance = TestDataContextFactory.AddReadarrInstance(_fixture.DataContext);
         TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
 
-        var mockArrClient = new Mock<IArrClient>();
-        mockArrClient.Setup(x => x.IsRecordValid(It.IsAny<QueueRecord>())).Returns(true);
-        mockArrClient.Setup(x => x.HasContentId(It.IsAny<QueueRecord>())).Returns(true);
+        var mockArrClient = Substitute.For<IArrClient>();
+        mockArrClient.IsRecordValid(Arg.Any<QueueRecord>()).Returns(true);
+        mockArrClient.HasContentId(Arg.Any<QueueRecord>()).Returns(true);
 
         _fixture.ArrClientFactory
-            .Setup(x => x.GetClient(InstanceType.Readarr, It.IsAny<float>()))
-            .Returns(mockArrClient.Object);
+            .GetClient(InstanceType.Readarr, Arg.Any<float>())
+            .Returns(mockArrClient);
 
         var queueRecord = new QueueRecord
         {
@@ -1156,23 +1055,24 @@ public class QueueCleanerTests : IDisposable
         };
 
         _fixture.ArrQueueIterator
-            .Setup(x => x.Iterate(
-                It.IsAny<IArrClient>(),
-                It.IsAny<ArrInstance>(),
-                It.IsAny<Func<IReadOnlyList<QueueRecord>, Task>>()
-            ))
-            .Returns(async (IArrClient client, ArrInstance instance, Func<IReadOnlyList<QueueRecord>, Task> callback) =>
+            .Iterate(
+                Arg.Any<IArrClient>(),
+                Arg.Any<ArrInstance>(),
+                Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>()
+            )
+            .Returns(async ci =>
             {
+                var callback = ci.ArgAt<Func<IReadOnlyList<QueueRecord>, Task>>(2);
                 await callback([queueRecord]);
             });
 
         var mockDownloadService = _fixture.CreateMockDownloadService();
         mockDownloadService
-            .Setup(x => x.ShouldRemoveFromArrQueueAsync(
-                It.IsAny<string>(),
-                It.IsAny<List<string>>()
-            ))
-            .ReturnsAsync(new DownloadCheckResult
+            .ShouldRemoveFromArrQueueAsync(
+                Arg.Any<string>(),
+                Arg.Any<List<string>>()
+            )
+            .Returns(new DownloadCheckResult
             {
                 Found = true,
                 ShouldRemove = true,
@@ -1182,8 +1082,8 @@ public class QueueCleanerTests : IDisposable
             });
 
         _fixture.DownloadServiceFactory
-            .Setup(x => x.GetDownloadService(It.IsAny<DownloadClientConfig>()))
-            .Returns(mockDownloadService.Object);
+            .GetDownloadService(Arg.Any<DownloadClientConfig>())
+            .Returns(mockDownloadService);
 
         var sut = CreateSut();
 
@@ -1191,16 +1091,13 @@ public class QueueCleanerTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert - should publish QueueItemRemoveRequest<SearchItem> with BookId
-        _fixture.MessageBus.Verify(
-            x => x.Publish(
-                It.Is<QueueItemRemoveRequest<SearchItem>>(r =>
-                    r.Instance.ArrConfig.Type == InstanceType.Readarr &&
-                    r.SearchItem.Id == 456 &&
-                    r.DeleteReason == DeleteReason.Stalled
-                ),
-                It.IsAny<CancellationToken>()
+        await _fixture.MessageBus.Received(1).Publish(
+            Arg.Is<QueueItemRemoveRequest<SearchItem>>(r =>
+                r.Instance.ArrConfig.Type == InstanceType.Readarr &&
+                r.SearchItem.Id == 456 &&
+                r.DeleteReason == DeleteReason.Stalled
             ),
-            Times.Once
+            Arg.Any<CancellationToken>()
         );
     }
 
@@ -1211,13 +1108,13 @@ public class QueueCleanerTests : IDisposable
         var whisparrInstance = TestDataContextFactory.AddWhisparrInstance(_fixture.DataContext, version: 2);
         TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
 
-        var mockArrClient = new Mock<IArrClient>();
-        mockArrClient.Setup(x => x.IsRecordValid(It.IsAny<QueueRecord>())).Returns(true);
-        mockArrClient.Setup(x => x.HasContentId(It.IsAny<QueueRecord>())).Returns(true);
+        var mockArrClient = Substitute.For<IArrClient>();
+        mockArrClient.IsRecordValid(Arg.Any<QueueRecord>()).Returns(true);
+        mockArrClient.HasContentId(Arg.Any<QueueRecord>()).Returns(true);
 
         _fixture.ArrClientFactory
-            .Setup(x => x.GetClient(InstanceType.Whisparr, 2f))
-            .Returns(mockArrClient.Object);
+            .GetClient(InstanceType.Whisparr, 2f)
+            .Returns(mockArrClient);
 
         var queueRecord = new QueueRecord
         {
@@ -1230,23 +1127,24 @@ public class QueueCleanerTests : IDisposable
         };
 
         _fixture.ArrQueueIterator
-            .Setup(x => x.Iterate(
-                It.IsAny<IArrClient>(),
-                It.IsAny<ArrInstance>(),
-                It.IsAny<Func<IReadOnlyList<QueueRecord>, Task>>()
-            ))
-            .Returns(async (IArrClient client, ArrInstance instance, Func<IReadOnlyList<QueueRecord>, Task> callback) =>
+            .Iterate(
+                Arg.Any<IArrClient>(),
+                Arg.Any<ArrInstance>(),
+                Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>()
+            )
+            .Returns(async ci =>
             {
+                var callback = ci.ArgAt<Func<IReadOnlyList<QueueRecord>, Task>>(2);
                 await callback([queueRecord]);
             });
 
         var mockDownloadService = _fixture.CreateMockDownloadService();
         mockDownloadService
-            .Setup(x => x.ShouldRemoveFromArrQueueAsync(
-                It.IsAny<string>(),
-                It.IsAny<List<string>>()
-            ))
-            .ReturnsAsync(new DownloadCheckResult
+            .ShouldRemoveFromArrQueueAsync(
+                Arg.Any<string>(),
+                Arg.Any<List<string>>()
+            )
+            .Returns(new DownloadCheckResult
             {
                 Found = true,
                 ShouldRemove = true,
@@ -1256,8 +1154,8 @@ public class QueueCleanerTests : IDisposable
             });
 
         _fixture.DownloadServiceFactory
-            .Setup(x => x.GetDownloadService(It.IsAny<DownloadClientConfig>()))
-            .Returns(mockDownloadService.Object);
+            .GetDownloadService(Arg.Any<DownloadClientConfig>())
+            .Returns(mockDownloadService);
 
         var sut = CreateSut();
 
@@ -1265,18 +1163,15 @@ public class QueueCleanerTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert - should publish QueueItemRemoveRequest<SeriesSearchItem>
-        _fixture.MessageBus.Verify(
-            x => x.Publish(
-                It.Is<QueueItemRemoveRequest<SeriesSearchItem>>(r =>
-                    r.Instance.ArrConfig.Type == InstanceType.Whisparr &&
-                    r.SearchItem.Id == 100 && // EpisodeId
-                    r.SearchItem.SeriesId == 10 &&
-                    r.SearchItem.SearchType == SeriesSearchType.Episode &&
-                    r.DeleteReason == DeleteReason.Stalled
-                ),
-                It.IsAny<CancellationToken>()
+        await _fixture.MessageBus.Received(1).Publish(
+            Arg.Is<QueueItemRemoveRequest<SeriesSearchItem>>(r =>
+                r.Instance.ArrConfig.Type == InstanceType.Whisparr &&
+                r.SearchItem.Id == 100 && // EpisodeId
+                r.SearchItem.SeriesId == 10 &&
+                r.SearchItem.SearchType == SeriesSearchType.Episode &&
+                r.DeleteReason == DeleteReason.Stalled
             ),
-            Times.Once
+            Arg.Any<CancellationToken>()
         );
     }
 
@@ -1287,13 +1182,13 @@ public class QueueCleanerTests : IDisposable
         var whisparrInstance = TestDataContextFactory.AddWhisparrInstance(_fixture.DataContext, version: 3);
         TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
 
-        var mockArrClient = new Mock<IArrClient>();
-        mockArrClient.Setup(x => x.IsRecordValid(It.IsAny<QueueRecord>())).Returns(true);
-        mockArrClient.Setup(x => x.HasContentId(It.IsAny<QueueRecord>())).Returns(true);
+        var mockArrClient = Substitute.For<IArrClient>();
+        mockArrClient.IsRecordValid(Arg.Any<QueueRecord>()).Returns(true);
+        mockArrClient.HasContentId(Arg.Any<QueueRecord>()).Returns(true);
 
         _fixture.ArrClientFactory
-            .Setup(x => x.GetClient(InstanceType.Whisparr, 3f))
-            .Returns(mockArrClient.Object);
+            .GetClient(InstanceType.Whisparr, 3f)
+            .Returns(mockArrClient);
 
         var queueRecord = new QueueRecord
         {
@@ -1305,23 +1200,24 @@ public class QueueCleanerTests : IDisposable
         };
 
         _fixture.ArrQueueIterator
-            .Setup(x => x.Iterate(
-                It.IsAny<IArrClient>(),
-                It.IsAny<ArrInstance>(),
-                It.IsAny<Func<IReadOnlyList<QueueRecord>, Task>>()
-            ))
-            .Returns(async (IArrClient client, ArrInstance instance, Func<IReadOnlyList<QueueRecord>, Task> callback) =>
+            .Iterate(
+                Arg.Any<IArrClient>(),
+                Arg.Any<ArrInstance>(),
+                Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>()
+            )
+            .Returns(async ci =>
             {
+                var callback = ci.ArgAt<Func<IReadOnlyList<QueueRecord>, Task>>(2);
                 await callback([queueRecord]);
             });
 
         var mockDownloadService = _fixture.CreateMockDownloadService();
         mockDownloadService
-            .Setup(x => x.ShouldRemoveFromArrQueueAsync(
-                It.IsAny<string>(),
-                It.IsAny<List<string>>()
-            ))
-            .ReturnsAsync(new DownloadCheckResult
+            .ShouldRemoveFromArrQueueAsync(
+                Arg.Any<string>(),
+                Arg.Any<List<string>>()
+            )
+            .Returns(new DownloadCheckResult
             {
                 Found = true,
                 ShouldRemove = true,
@@ -1331,8 +1227,8 @@ public class QueueCleanerTests : IDisposable
             });
 
         _fixture.DownloadServiceFactory
-            .Setup(x => x.GetDownloadService(It.IsAny<DownloadClientConfig>()))
-            .Returns(mockDownloadService.Object);
+            .GetDownloadService(Arg.Any<DownloadClientConfig>())
+            .Returns(mockDownloadService);
 
         var sut = CreateSut();
 
@@ -1340,16 +1236,13 @@ public class QueueCleanerTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert - should publish QueueItemRemoveRequest<SearchItem> with MovieId
-        _fixture.MessageBus.Verify(
-            x => x.Publish(
-                It.Is<QueueItemRemoveRequest<SearchItem>>(r =>
-                    r.Instance.ArrConfig.Type == InstanceType.Whisparr &&
-                    r.SearchItem.Id == 42 && // MovieId
-                    r.DeleteReason == DeleteReason.Stalled
-                ),
-                It.IsAny<CancellationToken>()
+        await _fixture.MessageBus.Received(1).Publish(
+            Arg.Is<QueueItemRemoveRequest<SearchItem>>(r =>
+                r.Instance.ArrConfig.Type == InstanceType.Whisparr &&
+                r.SearchItem.Id == 42 && // MovieId
+                r.DeleteReason == DeleteReason.Stalled
             ),
-            Times.Once
+            Arg.Any<CancellationToken>()
         );
     }
 
@@ -1360,13 +1253,13 @@ public class QueueCleanerTests : IDisposable
         var whisparrInstance = TestDataContextFactory.AddWhisparrInstance(_fixture.DataContext, version: 2);
         TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
 
-        var mockArrClient = new Mock<IArrClient>();
-        mockArrClient.Setup(x => x.IsRecordValid(It.IsAny<QueueRecord>())).Returns(true);
-        mockArrClient.Setup(x => x.HasContentId(It.IsAny<QueueRecord>())).Returns(true);
+        var mockArrClient = Substitute.For<IArrClient>();
+        mockArrClient.IsRecordValid(Arg.Any<QueueRecord>()).Returns(true);
+        mockArrClient.HasContentId(Arg.Any<QueueRecord>()).Returns(true);
 
         _fixture.ArrClientFactory
-            .Setup(x => x.GetClient(InstanceType.Whisparr, 2f))
-            .Returns(mockArrClient.Object);
+            .GetClient(InstanceType.Whisparr, 2f)
+            .Returns(mockArrClient);
 
         // Create multiple records with same download ID to simulate a pack (season pack)
         var record1 = new QueueRecord
@@ -1391,23 +1284,24 @@ public class QueueCleanerTests : IDisposable
         };
 
         _fixture.ArrQueueIterator
-            .Setup(x => x.Iterate(
-                It.IsAny<IArrClient>(),
-                It.IsAny<ArrInstance>(),
-                It.IsAny<Func<IReadOnlyList<QueueRecord>, Task>>()
-            ))
-            .Returns(async (IArrClient client, ArrInstance instance, Func<IReadOnlyList<QueueRecord>, Task> callback) =>
+            .Iterate(
+                Arg.Any<IArrClient>(),
+                Arg.Any<ArrInstance>(),
+                Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>()
+            )
+            .Returns(async ci =>
             {
+                var callback = ci.ArgAt<Func<IReadOnlyList<QueueRecord>, Task>>(2);
                 await callback([record1, record2]);
             });
 
         var mockDownloadService = _fixture.CreateMockDownloadService();
         mockDownloadService
-            .Setup(x => x.ShouldRemoveFromArrQueueAsync(
-                It.IsAny<string>(),
-                It.IsAny<List<string>>()
-            ))
-            .ReturnsAsync(new DownloadCheckResult
+            .ShouldRemoveFromArrQueueAsync(
+                Arg.Any<string>(),
+                Arg.Any<List<string>>()
+            )
+            .Returns(new DownloadCheckResult
             {
                 Found = true,
                 ShouldRemove = true,
@@ -1417,8 +1311,8 @@ public class QueueCleanerTests : IDisposable
             });
 
         _fixture.DownloadServiceFactory
-            .Setup(x => x.GetDownloadService(It.IsAny<DownloadClientConfig>()))
-            .Returns(mockDownloadService.Object);
+            .GetDownloadService(Arg.Any<DownloadClientConfig>())
+            .Returns(mockDownloadService);
 
         var sut = CreateSut();
 
@@ -1427,18 +1321,15 @@ public class QueueCleanerTests : IDisposable
 
         // Assert - should publish QueueItemRemoveRequest<SeriesSearchItem> with Season search type
         // because multiple records with the same download ID indicate a pack
-        _fixture.MessageBus.Verify(
-            x => x.Publish(
-                It.Is<QueueItemRemoveRequest<SeriesSearchItem>>(r =>
-                    r.Instance.ArrConfig.Type == InstanceType.Whisparr &&
-                    r.SearchItem.Id == 3 && // SeasonNumber
-                    r.SearchItem.SeriesId == 10 &&
-                    r.SearchItem.SearchType == SeriesSearchType.Season &&
-                    r.DeleteReason == DeleteReason.Stalled
-                ),
-                It.IsAny<CancellationToken>()
+        await _fixture.MessageBus.Received(1).Publish(
+            Arg.Is<QueueItemRemoveRequest<SeriesSearchItem>>(r =>
+                r.Instance.ArrConfig.Type == InstanceType.Whisparr &&
+                r.SearchItem.Id == 3 && // SeasonNumber
+                r.SearchItem.SeriesId == 10 &&
+                r.SearchItem.SearchType == SeriesSearchType.Season &&
+                r.DeleteReason == DeleteReason.Stalled
             ),
-            Times.Once
+            Arg.Any<CancellationToken>()
         );
     }
 

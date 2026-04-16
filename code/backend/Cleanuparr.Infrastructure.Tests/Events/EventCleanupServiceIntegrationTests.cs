@@ -1,11 +1,13 @@
-﻿using Cleanuparr.Domain.Enums;
+using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Events;
+using Cleanuparr.Infrastructure.Tests.TestHelpers;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Events;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Moq;
+using NSubstitute;
+using Shouldly;
 using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Events;
@@ -16,7 +18,7 @@ namespace Cleanuparr.Infrastructure.Tests.Events;
 public class EventCleanupServiceIntegrationTests : IDisposable
 {
     private readonly EventsContext _context;
-    private readonly Mock<ILogger<EventCleanupService>> _loggerMock;
+    private readonly ILogger<EventCleanupService> _logger;
     private readonly IServiceProvider _serviceProvider;
     private readonly string _dbName;
 
@@ -30,7 +32,7 @@ public class EventCleanupServiceIntegrationTests : IDisposable
             options.UseInMemoryDatabase(databaseName: _dbName));
 
         _serviceProvider = services.BuildServiceProvider();
-        _loggerMock = new Mock<ILogger<EventCleanupService>>();
+        _logger = Substitute.For<ILogger<EventCleanupService>>();
 
         using var scope = _serviceProvider.CreateScope();
         _context = scope.ServiceProvider.GetRequiredService<EventsContext>();
@@ -76,7 +78,7 @@ public class EventCleanupServiceIntegrationTests : IDisposable
         {
             var context = scope.ServiceProvider.GetRequiredService<EventsContext>();
             var count = await context.Events.CountAsync();
-            Assert.Equal(2, count);
+            count.ShouldBe(2);
         }
     }
 
@@ -85,7 +87,7 @@ public class EventCleanupServiceIntegrationTests : IDisposable
     {
         // Arrange
         var scopeFactory = _serviceProvider.GetRequiredService<IServiceScopeFactory>();
-        var service = new EventCleanupService(_loggerMock.Object, scopeFactory);
+        var service = new EventCleanupService(_logger, scopeFactory);
         var cts = new CancellationTokenSource();
 
         // Act
@@ -98,7 +100,7 @@ public class EventCleanupServiceIntegrationTests : IDisposable
         await service.StopAsync(CancellationToken.None);
 
         // Assert - the service should complete without throwing
-        Assert.True(true);
+        true.ShouldBeTrue();
     }
 
     [Fact]
@@ -108,7 +110,7 @@ public class EventCleanupServiceIntegrationTests : IDisposable
         // Note: In-memory provider doesn't support ExecuteDeleteAsync,
         // so the cleanup will fail. This test verifies the service handles errors gracefully.
         var scopeFactory = _serviceProvider.GetRequiredService<IServiceScopeFactory>();
-        var service = new EventCleanupService(_loggerMock.Object, scopeFactory);
+        var service = new EventCleanupService(_logger, scopeFactory);
         var cts = new CancellationTokenSource();
 
         // Act
@@ -118,13 +120,6 @@ public class EventCleanupServiceIntegrationTests : IDisposable
         await service.StopAsync(CancellationToken.None);
 
         // Assert - the service should handle the error and continue (log it but not crash)
-        _loggerMock.Verify(
-            x => x.Log(
-                LogLevel.Error,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Failed to perform event cleanup")),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.AtLeastOnce);
+        _logger.ReceivedLogContainingAtLeastOnce(LogLevel.Error, "Failed to perform event cleanup");
     }
 }

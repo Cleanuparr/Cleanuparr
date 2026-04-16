@@ -4,46 +4,46 @@ using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.Notifications;
 using Cleanuparr.Infrastructure.Features.Notifications.Models;
 using Cleanuparr.Infrastructure.Interceptors;
+using Cleanuparr.Infrastructure.Tests.TestHelpers;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
 using Microsoft.Extensions.Logging;
-using Moq;
+using NSubstitute;
+using NSubstitute.ExceptionExtensions;
+using Shouldly;
 using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.Notifications;
 
 public class NotificationPublisherTests
 {
-    private readonly Mock<ILogger<NotificationPublisher>> _loggerMock;
-    private readonly Mock<IDryRunInterceptor> _dryRunInterceptorMock;
-    private readonly Mock<INotificationConfigurationService> _configServiceMock;
-    private readonly Mock<INotificationProviderFactory> _providerFactoryMock;
+    private readonly ILogger<NotificationPublisher> _logger;
+    private readonly IDryRunInterceptor _dryRunInterceptor;
+    private readonly INotificationConfigurationService _configService;
+    private readonly INotificationProviderFactory _providerFactory;
     private readonly NotificationPublisher _publisher;
 
     public NotificationPublisherTests()
     {
-        _loggerMock = new Mock<ILogger<NotificationPublisher>>();
-        _dryRunInterceptorMock = new Mock<IDryRunInterceptor>();
-        _configServiceMock = new Mock<INotificationConfigurationService>();
-        _providerFactoryMock = new Mock<INotificationProviderFactory>();
+        _logger = Substitute.For<ILogger<NotificationPublisher>>();
+        _dryRunInterceptor = Substitute.For<IDryRunInterceptor>();
+        _configService = Substitute.For<INotificationConfigurationService>();
+        _providerFactory = Substitute.For<INotificationProviderFactory>();
 
         // Setup dry run interceptor to call through
-        _dryRunInterceptorMock
-            .Setup(d => d.InterceptAsync(It.IsAny<Delegate>(), It.IsAny<object[]>()))
-            .Returns<Delegate, object[]>(async (action, parameters) =>
+        _dryRunInterceptor.InterceptAsync(default!, default!)
+            .ReturnsForAnyArgs(ci =>
             {
-                if (action is Func<(NotificationEventType, NotificationContext), Task> func && parameters.Length > 0)
-                {
-                    var param = ((NotificationEventType, NotificationContext))parameters[0];
-                    await func(param);
-                }
+                var action = ci.ArgAt<Delegate>(0);
+                var parameters = ci.ArgAt<object[]>(1);
+                return action.DynamicInvoke(parameters) as Task ?? Task.CompletedTask;
             });
 
         _publisher = new NotificationPublisher(
-            _loggerMock.Object,
-            _dryRunInterceptorMock.Object,
-            _configServiceMock.Object,
-            _providerFactoryMock.Object);
+            _logger,
+            _dryRunInterceptor,
+            _configService,
+            _providerFactory);
     }
 
     private void SetupContext(InstanceType instanceType = InstanceType.Sonarr)
@@ -76,7 +76,7 @@ public class NotificationPublisherTests
     public void Constructor_SetsAllDependencies()
     {
         // Assert
-        Assert.NotNull(_publisher);
+        _publisher.ShouldNotBeNull();
     }
 
     #endregion
@@ -92,21 +92,21 @@ public class NotificationPublisherTests
         ContextProvider.Set<QueueRule>(rule);
 
         var providerDto = CreateProviderDto();
-        var providerMock = new Mock<INotificationProvider>();
+        var provider = Substitute.For<INotificationProvider>();
 
-        _configServiceMock.Setup(c => c.GetProvidersForEventAsync(NotificationEventType.StalledStrike))
-            .ReturnsAsync(new List<NotificationProviderDto> { providerDto });
-        _providerFactoryMock.Setup(f => f.CreateProvider(providerDto))
-            .Returns(providerMock.Object);
+        _configService.GetProvidersForEventAsync(NotificationEventType.StalledStrike)
+            .Returns(new List<NotificationProviderDto> { providerDto });
+        _providerFactory.CreateProvider(providerDto)
+            .Returns(provider);
 
         // Act
         await _publisher.NotifyStrike(StrikeType.Stalled, 1);
 
         // Assert
-        providerMock.Verify(p => p.SendNotificationAsync(It.Is<NotificationContext>(
+        await provider.Received(1).SendNotificationAsync(Arg.Is<NotificationContext>(
             c => c.EventType == NotificationEventType.StalledStrike &&
                  c.Data.ContainsKey("Strike type") &&
-                 c.Data["Strike type"] == "Stalled")), Times.Once);
+                 c.Data["Strike type"] == "Stalled"));
     }
 
     [Fact]
@@ -116,20 +116,20 @@ public class NotificationPublisherTests
         SetupContext();
 
         var providerDto = CreateProviderDto();
-        var providerMock = new Mock<INotificationProvider>();
+        var provider = Substitute.For<INotificationProvider>();
 
-        _configServiceMock.Setup(c => c.GetProvidersForEventAsync(NotificationEventType.FailedImportStrike))
-            .ReturnsAsync(new List<NotificationProviderDto> { providerDto });
-        _providerFactoryMock.Setup(f => f.CreateProvider(providerDto))
-            .Returns(providerMock.Object);
+        _configService.GetProvidersForEventAsync(NotificationEventType.FailedImportStrike)
+            .Returns(new List<NotificationProviderDto> { providerDto });
+        _providerFactory.CreateProvider(providerDto)
+            .Returns(provider);
 
         // Act
         await _publisher.NotifyStrike(StrikeType.FailedImport, 2);
 
         // Assert
-        providerMock.Verify(p => p.SendNotificationAsync(It.Is<NotificationContext>(
+        await provider.Received(1).SendNotificationAsync(Arg.Is<NotificationContext>(
             c => c.EventType == NotificationEventType.FailedImportStrike &&
-                 c.Data["Strike count"] == "2")), Times.Once);
+                 c.Data["Strike count"] == "2"));
     }
 
     [Theory]
@@ -149,18 +149,18 @@ public class NotificationPublisherTests
         }
 
         var providerDto = CreateProviderDto();
-        var providerMock = new Mock<INotificationProvider>();
+        var provider = Substitute.For<INotificationProvider>();
 
-        _configServiceMock.Setup(c => c.GetProvidersForEventAsync(expectedEventType))
-            .ReturnsAsync(new List<NotificationProviderDto> { providerDto });
-        _providerFactoryMock.Setup(f => f.CreateProvider(providerDto))
-            .Returns(providerMock.Object);
+        _configService.GetProvidersForEventAsync(expectedEventType)
+            .Returns(new List<NotificationProviderDto> { providerDto });
+        _providerFactory.CreateProvider(providerDto)
+            .Returns(provider);
 
         // Act
         await _publisher.NotifyStrike(strikeType, 1);
 
         // Assert
-        _configServiceMock.Verify(c => c.GetProvidersForEventAsync(expectedEventType), Times.Once);
+        await _configService.Received(1).GetProvidersForEventAsync(expectedEventType);
     }
 
     [Fact]
@@ -168,8 +168,8 @@ public class NotificationPublisherTests
     {
         // Arrange
         SetupContext();
-        _configServiceMock.Setup(c => c.GetProvidersForEventAsync(It.IsAny<NotificationEventType>()))
-            .ReturnsAsync(new List<NotificationProviderDto>());
+        _configService.GetProvidersForEventAsync(Arg.Any<NotificationEventType>())
+            .Returns(new List<NotificationProviderDto>());
 
         // Act & Assert - Should not throw
         await _publisher.NotifyStrike(StrikeType.FailedImport, 1);
@@ -182,27 +182,20 @@ public class NotificationPublisherTests
         SetupContext();
 
         var providerDto = CreateProviderDto();
-        var providerMock = new Mock<INotificationProvider>();
-        providerMock.Setup(p => p.SendNotificationAsync(It.IsAny<NotificationContext>()))
+        var provider = Substitute.For<INotificationProvider>();
+        provider.SendNotificationAsync(Arg.Any<NotificationContext>())
             .ThrowsAsync(new Exception("Provider failed"));
 
-        _configServiceMock.Setup(c => c.GetProvidersForEventAsync(It.IsAny<NotificationEventType>()))
-            .ReturnsAsync(new List<NotificationProviderDto> { providerDto });
-        _providerFactoryMock.Setup(f => f.CreateProvider(providerDto))
-            .Returns(providerMock.Object);
+        _configService.GetProvidersForEventAsync(Arg.Any<NotificationEventType>())
+            .Returns(new List<NotificationProviderDto> { providerDto });
+        _providerFactory.CreateProvider(providerDto)
+            .Returns(provider);
 
         // Act - Should not throw
         await _publisher.NotifyStrike(StrikeType.FailedImport, 1);
 
         // Assert
-        _loggerMock.Verify(
-            x => x.Log(
-                LogLevel.Warning,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Failed to send notification")),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+        _logger.ReceivedLogContaining(LogLevel.Warning, "Failed to send notification");
     }
 
     [Fact]
@@ -212,19 +205,19 @@ public class NotificationPublisherTests
         SetupContext();
 
         var providerDto = CreateProviderDto();
-        var providerMock = new Mock<INotificationProvider>();
+        var provider = Substitute.For<INotificationProvider>();
 
-        _configServiceMock.Setup(c => c.GetProvidersForEventAsync(NotificationEventType.FailedImportStrike))
-            .ReturnsAsync(new List<NotificationProviderDto> { providerDto });
-        _providerFactoryMock.Setup(f => f.CreateProvider(providerDto))
-            .Returns(providerMock.Object);
+        _configService.GetProvidersForEventAsync(NotificationEventType.FailedImportStrike)
+            .Returns(new List<NotificationProviderDto> { providerDto });
+        _providerFactory.CreateProvider(providerDto)
+            .Returns(provider);
 
         // Act
         await _publisher.NotifyStrike(StrikeType.FailedImport, 1);
 
         // Assert
-        providerMock.Verify(p => p.SendNotificationAsync(It.Is<NotificationContext>(
-            c => c.Data["Url"] == "http://sonarr.local/")), Times.Once);
+        await provider.Received(1).SendNotificationAsync(Arg.Is<NotificationContext>(
+            c => c.Data["Url"] == "http://sonarr.local/"));
     }
 
     #endregion
@@ -238,22 +231,22 @@ public class NotificationPublisherTests
         SetupContext();
 
         var providerDto = CreateProviderDto();
-        var providerMock = new Mock<INotificationProvider>();
+        var provider = Substitute.For<INotificationProvider>();
 
-        _configServiceMock.Setup(c => c.GetProvidersForEventAsync(NotificationEventType.QueueItemDeleted))
-            .ReturnsAsync(new List<NotificationProviderDto> { providerDto });
-        _providerFactoryMock.Setup(f => f.CreateProvider(providerDto))
-            .Returns(providerMock.Object);
+        _configService.GetProvidersForEventAsync(NotificationEventType.QueueItemDeleted)
+            .Returns(new List<NotificationProviderDto> { providerDto });
+        _providerFactory.CreateProvider(providerDto)
+            .Returns(provider);
 
         // Act
         await _publisher.NotifyQueueItemDeleted(true, DeleteReason.Stalled);
 
         // Assert
-        providerMock.Verify(p => p.SendNotificationAsync(It.Is<NotificationContext>(
+        await provider.Received(1).SendNotificationAsync(Arg.Is<NotificationContext>(
             c => c.EventType == NotificationEventType.QueueItemDeleted &&
                  c.Data["Reason"] == "Stalled" &&
                  c.Data["Removed from client?"] == "True" &&
-                 c.Severity == EventSeverity.Important)), Times.Once);
+                 c.Severity == EventSeverity.Important));
     }
 
     [Fact]
@@ -263,20 +256,20 @@ public class NotificationPublisherTests
         SetupContext();
 
         var providerDto = CreateProviderDto();
-        var providerMock = new Mock<INotificationProvider>();
+        var provider = Substitute.For<INotificationProvider>();
 
-        _configServiceMock.Setup(c => c.GetProvidersForEventAsync(NotificationEventType.QueueItemDeleted))
-            .ReturnsAsync(new List<NotificationProviderDto> { providerDto });
-        _providerFactoryMock.Setup(f => f.CreateProvider(providerDto))
-            .Returns(providerMock.Object);
+        _configService.GetProvidersForEventAsync(NotificationEventType.QueueItemDeleted)
+            .Returns(new List<NotificationProviderDto> { providerDto });
+        _providerFactory.CreateProvider(providerDto)
+            .Returns(provider);
 
         // Act
         await _publisher.NotifyQueueItemDeleted(false, DeleteReason.AllFilesBlocked);
 
         // Assert
-        providerMock.Verify(p => p.SendNotificationAsync(It.Is<NotificationContext>(
+        await provider.Received(1).SendNotificationAsync(Arg.Is<NotificationContext>(
             c => c.Data["Removed from client?"] == "False" &&
-                 c.Data["Reason"] == "AllFilesBlocked")), Times.Once);
+                 c.Data["Reason"] == "AllFilesBlocked"));
     }
 
     #endregion
@@ -290,23 +283,23 @@ public class NotificationPublisherTests
         SetupDownloadCleanerContext();
 
         var providerDto = CreateProviderDto();
-        var providerMock = new Mock<INotificationProvider>();
+        var provider = Substitute.For<INotificationProvider>();
 
-        _configServiceMock.Setup(c => c.GetProvidersForEventAsync(NotificationEventType.DownloadCleaned))
-            .ReturnsAsync(new List<NotificationProviderDto> { providerDto });
-        _providerFactoryMock.Setup(f => f.CreateProvider(providerDto))
-            .Returns(providerMock.Object);
+        _configService.GetProvidersForEventAsync(NotificationEventType.DownloadCleaned)
+            .Returns(new List<NotificationProviderDto> { providerDto });
+        _providerFactory.CreateProvider(providerDto)
+            .Returns(provider);
 
         // Act
         await _publisher.NotifyDownloadCleaned(2.5, TimeSpan.FromHours(48), "movies", CleanReason.MaxRatioReached);
 
         // Assert
-        providerMock.Verify(p => p.SendNotificationAsync(It.Is<NotificationContext>(
+        await provider.Received(1).SendNotificationAsync(Arg.Is<NotificationContext>(
             c => c.EventType == NotificationEventType.DownloadCleaned &&
                  c.Description == "Test Download" &&
                  c.Data["Category"] == "movies" &&
                  c.Data["Ratio"] == "2.5" &&
-                 c.Data["Seeding hours"] == "48")), Times.Once);
+                 c.Data["Seeding hours"] == "48"));
     }
 
     [Fact]
@@ -316,23 +309,23 @@ public class NotificationPublisherTests
         SetupDownloadCleanerContext();
 
         var providerDto = CreateProviderDto();
-        var providerMock = new Mock<INotificationProvider>();
+        var provider = Substitute.For<INotificationProvider>();
         NotificationContext? capturedContext = null;
 
-        _configServiceMock.Setup(c => c.GetProvidersForEventAsync(NotificationEventType.DownloadCleaned))
-            .ReturnsAsync(new List<NotificationProviderDto> { providerDto });
-        _providerFactoryMock.Setup(f => f.CreateProvider(providerDto))
-            .Returns(providerMock.Object);
-        providerMock.Setup(p => p.SendNotificationAsync(It.IsAny<NotificationContext>()))
-            .Callback<NotificationContext>(c => capturedContext = c)
-            .Returns(Task.CompletedTask);
+        _configService.GetProvidersForEventAsync(NotificationEventType.DownloadCleaned)
+            .Returns(new List<NotificationProviderDto> { providerDto });
+        _providerFactory.CreateProvider(providerDto)
+            .Returns(provider);
+        provider.SendNotificationAsync(Arg.Any<NotificationContext>())
+            .Returns(Task.CompletedTask)
+            .AndDoes(ci => capturedContext = ci.ArgAt<NotificationContext>(0));
 
         // Act
         await _publisher.NotifyDownloadCleaned(1.0, TimeSpan.FromHours(24.7), "tv", CleanReason.MaxSeedTimeReached);
 
         // Assert
-        Assert.NotNull(capturedContext);
-        Assert.Equal("25", capturedContext.Data["Seeding hours"]); // Rounds to 25
+        capturedContext.ShouldNotBeNull();
+        capturedContext.Data["Seeding hours"].ShouldBe("25"); // Rounds to 25
     }
 
     [Fact]
@@ -343,20 +336,20 @@ public class NotificationPublisherTests
         ContextProvider.Set(ContextProvider.Keys.DownloadClientUrl, new Uri("https://qbit.external.com"));
 
         var providerDto = CreateProviderDto();
-        var providerMock = new Mock<INotificationProvider>();
+        var provider = Substitute.For<INotificationProvider>();
 
-        _configServiceMock.Setup(c => c.GetProvidersForEventAsync(NotificationEventType.DownloadCleaned))
-            .ReturnsAsync(new List<NotificationProviderDto> { providerDto });
-        _providerFactoryMock.Setup(f => f.CreateProvider(providerDto))
-            .Returns(providerMock.Object);
+        _configService.GetProvidersForEventAsync(NotificationEventType.DownloadCleaned)
+            .Returns(new List<NotificationProviderDto> { providerDto });
+        _providerFactory.CreateProvider(providerDto)
+            .Returns(provider);
 
         // Act
         await _publisher.NotifyDownloadCleaned(2.5, TimeSpan.FromHours(48), "movies", CleanReason.MaxRatioReached);
 
         // Assert
-        providerMock.Verify(p => p.SendNotificationAsync(It.Is<NotificationContext>(
+        await provider.Received(1).SendNotificationAsync(Arg.Is<NotificationContext>(
             c => c.Data.ContainsKey("Url") &&
-                 c.Data["Url"] == "https://qbit.external.com/")), Times.Once);
+                 c.Data["Url"] == "https://qbit.external.com/"));
     }
 
     #endregion
@@ -370,22 +363,22 @@ public class NotificationPublisherTests
         SetupDownloadCleanerContext();
 
         var providerDto = CreateProviderDto();
-        var providerMock = new Mock<INotificationProvider>();
+        var provider = Substitute.For<INotificationProvider>();
 
-        _configServiceMock.Setup(c => c.GetProvidersForEventAsync(NotificationEventType.CategoryChanged))
-            .ReturnsAsync(new List<NotificationProviderDto> { providerDto });
-        _providerFactoryMock.Setup(f => f.CreateProvider(providerDto))
-            .Returns(providerMock.Object);
+        _configService.GetProvidersForEventAsync(NotificationEventType.CategoryChanged)
+            .Returns(new List<NotificationProviderDto> { providerDto });
+        _providerFactory.CreateProvider(providerDto)
+            .Returns(provider);
 
         // Act
         await _publisher.NotifyCategoryChanged("tv-sonarr", "seeding", false);
 
         // Assert
-        providerMock.Verify(p => p.SendNotificationAsync(It.Is<NotificationContext>(
+        await provider.Received(1).SendNotificationAsync(Arg.Is<NotificationContext>(
             c => c.EventType == NotificationEventType.CategoryChanged &&
                  c.Title == "Category changed" &&
                  c.Data["Old category"] == "tv-sonarr" &&
-                 c.Data["New category"] == "seeding")), Times.Once);
+                 c.Data["New category"] == "seeding"));
     }
 
     [Fact]
@@ -395,27 +388,27 @@ public class NotificationPublisherTests
         SetupDownloadCleanerContext();
 
         var providerDto = CreateProviderDto();
-        var providerMock = new Mock<INotificationProvider>();
+        var provider = Substitute.For<INotificationProvider>();
         NotificationContext? capturedContext = null;
 
-        _configServiceMock.Setup(c => c.GetProvidersForEventAsync(NotificationEventType.CategoryChanged))
-            .ReturnsAsync(new List<NotificationProviderDto> { providerDto });
-        _providerFactoryMock.Setup(f => f.CreateProvider(providerDto))
-            .Returns(providerMock.Object);
-        providerMock.Setup(p => p.SendNotificationAsync(It.IsAny<NotificationContext>()))
-            .Callback<NotificationContext>(c => capturedContext = c)
-            .Returns(Task.CompletedTask);
+        _configService.GetProvidersForEventAsync(NotificationEventType.CategoryChanged)
+            .Returns(new List<NotificationProviderDto> { providerDto });
+        _providerFactory.CreateProvider(providerDto)
+            .Returns(provider);
+        provider.SendNotificationAsync(Arg.Any<NotificationContext>())
+            .Returns(Task.CompletedTask)
+            .AndDoes(ci => capturedContext = ci.ArgAt<NotificationContext>(0));
 
         // Act
         await _publisher.NotifyCategoryChanged("", "seeded", true);
 
         // Assert
-        Assert.NotNull(capturedContext);
-        Assert.Equal("Tag added", capturedContext.Title);
-        Assert.True(capturedContext.Data.ContainsKey("Tag"));
-        Assert.Equal("seeded", capturedContext.Data["Tag"]);
-        Assert.False(capturedContext.Data.ContainsKey("Old category"));
-        Assert.False(capturedContext.Data.ContainsKey("New category"));
+        capturedContext.ShouldNotBeNull();
+        capturedContext.Title.ShouldBe("Tag added");
+        capturedContext.Data.ContainsKey("Tag").ShouldBeTrue();
+        capturedContext.Data["Tag"].ShouldBe("seeded");
+        capturedContext.Data.ContainsKey("Old category").ShouldBeFalse();
+        capturedContext.Data.ContainsKey("New category").ShouldBeFalse();
     }
 
     [Fact]
@@ -425,19 +418,19 @@ public class NotificationPublisherTests
         SetupDownloadCleanerContext();
 
         var providerDto = CreateProviderDto();
-        var providerMock = new Mock<INotificationProvider>();
+        var provider = Substitute.For<INotificationProvider>();
 
-        _configServiceMock.Setup(c => c.GetProvidersForEventAsync(NotificationEventType.CategoryChanged))
-            .ReturnsAsync(new List<NotificationProviderDto> { providerDto });
-        _providerFactoryMock.Setup(f => f.CreateProvider(providerDto))
-            .Returns(providerMock.Object);
+        _configService.GetProvidersForEventAsync(NotificationEventType.CategoryChanged)
+            .Returns(new List<NotificationProviderDto> { providerDto });
+        _providerFactory.CreateProvider(providerDto)
+            .Returns(provider);
 
         // Act
         await _publisher.NotifyCategoryChanged("old", "new", false);
 
         // Assert
-        providerMock.Verify(p => p.SendNotificationAsync(It.Is<NotificationContext>(
-            c => c.Severity == EventSeverity.Information)), Times.Once);
+        await provider.Received(1).SendNotificationAsync(Arg.Is<NotificationContext>(
+            c => c.Severity == EventSeverity.Information));
     }
 
     #endregion
@@ -452,22 +445,22 @@ public class NotificationPublisherTests
 
         var providerDto1 = CreateProviderDto("Provider1");
         var providerDto2 = CreateProviderDto("Provider2");
-        var providerMock1 = new Mock<INotificationProvider>();
-        var providerMock2 = new Mock<INotificationProvider>();
+        var provider1 = Substitute.For<INotificationProvider>();
+        var provider2 = Substitute.For<INotificationProvider>();
 
-        _configServiceMock.Setup(c => c.GetProvidersForEventAsync(NotificationEventType.FailedImportStrike))
-            .ReturnsAsync(new List<NotificationProviderDto> { providerDto1, providerDto2 });
-        _providerFactoryMock.Setup(f => f.CreateProvider(providerDto1))
-            .Returns(providerMock1.Object);
-        _providerFactoryMock.Setup(f => f.CreateProvider(providerDto2))
-            .Returns(providerMock2.Object);
+        _configService.GetProvidersForEventAsync(NotificationEventType.FailedImportStrike)
+            .Returns(new List<NotificationProviderDto> { providerDto1, providerDto2 });
+        _providerFactory.CreateProvider(providerDto1)
+            .Returns(provider1);
+        _providerFactory.CreateProvider(providerDto2)
+            .Returns(provider2);
 
         // Act
         await _publisher.NotifyStrike(StrikeType.FailedImport, 1);
 
         // Assert
-        providerMock1.Verify(p => p.SendNotificationAsync(It.IsAny<NotificationContext>()), Times.Once);
-        providerMock2.Verify(p => p.SendNotificationAsync(It.IsAny<NotificationContext>()), Times.Once);
+        await provider1.Received(1).SendNotificationAsync(Arg.Any<NotificationContext>());
+        await provider2.Received(1).SendNotificationAsync(Arg.Any<NotificationContext>());
     }
 
     [Fact]
@@ -478,24 +471,24 @@ public class NotificationPublisherTests
 
         var providerDto1 = CreateProviderDto("Provider1");
         var providerDto2 = CreateProviderDto("Provider2");
-        var providerMock1 = new Mock<INotificationProvider>();
-        var providerMock2 = new Mock<INotificationProvider>();
+        var provider1 = Substitute.For<INotificationProvider>();
+        var provider2 = Substitute.For<INotificationProvider>();
 
-        providerMock1.Setup(p => p.SendNotificationAsync(It.IsAny<NotificationContext>()))
+        provider1.SendNotificationAsync(Arg.Any<NotificationContext>())
             .ThrowsAsync(new Exception("Failed"));
 
-        _configServiceMock.Setup(c => c.GetProvidersForEventAsync(NotificationEventType.FailedImportStrike))
-            .ReturnsAsync(new List<NotificationProviderDto> { providerDto1, providerDto2 });
-        _providerFactoryMock.Setup(f => f.CreateProvider(providerDto1))
-            .Returns(providerMock1.Object);
-        _providerFactoryMock.Setup(f => f.CreateProvider(providerDto2))
-            .Returns(providerMock2.Object);
+        _configService.GetProvidersForEventAsync(NotificationEventType.FailedImportStrike)
+            .Returns(new List<NotificationProviderDto> { providerDto1, providerDto2 });
+        _providerFactory.CreateProvider(providerDto1)
+            .Returns(provider1);
+        _providerFactory.CreateProvider(providerDto2)
+            .Returns(provider2);
 
         // Act
         await _publisher.NotifyStrike(StrikeType.FailedImport, 1);
 
         // Assert - Provider2 should still be called
-        providerMock2.Verify(p => p.SendNotificationAsync(It.IsAny<NotificationContext>()), Times.Once);
+        await provider2.Received(1).SendNotificationAsync(Arg.Any<NotificationContext>());
     }
 
     [Fact]
@@ -503,16 +496,16 @@ public class NotificationPublisherTests
     {
         // Arrange
         SetupContext();
-        _configServiceMock.Setup(c => c.GetProvidersForEventAsync(It.IsAny<NotificationEventType>()))
-            .ReturnsAsync(new List<NotificationProviderDto>());
+        _configService.GetProvidersForEventAsync(Arg.Any<NotificationEventType>())
+            .Returns(new List<NotificationProviderDto>());
 
         // Act
         await _publisher.NotifyStrike(StrikeType.FailedImport, 1);
 
         // Assert
-        _dryRunInterceptorMock.Verify(d => d.InterceptAsync(
-            It.IsAny<Func<(NotificationEventType, NotificationContext), Task>>(),
-            It.IsAny<(NotificationEventType, NotificationContext)>()), Times.Once);
+        await _dryRunInterceptor.Received(1).InterceptAsync(
+            Arg.Any<Func<(NotificationEventType, NotificationContext), Task>>(),
+            Arg.Any<(NotificationEventType, NotificationContext)>());
     }
 
     #endregion
@@ -524,8 +517,7 @@ public class NotificationPublisherTests
     {
         // Arrange
         // Setup dry run interceptor to throw when called
-        _dryRunInterceptorMock
-            .Setup(d => d.InterceptAsync(It.IsAny<Delegate>(), It.IsAny<object[]>()))
+        _dryRunInterceptor.InterceptAsync(Arg.Any<Delegate>(), Arg.Any<object[]>())
             .ThrowsAsync(new Exception("Interceptor failed"));
 
         SetupContext();
@@ -534,22 +526,14 @@ public class NotificationPublisherTests
         await _publisher.NotifyStrike(StrikeType.FailedImport, 1);
 
         // Assert
-        _loggerMock.Verify(
-            x => x.Log(
-                LogLevel.Error,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("failed to notify strike")),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+        _logger.ReceivedLogContaining(LogLevel.Error, "failed to notify strike");
     }
 
     [Fact]
     public async Task NotifyQueueItemDeleted_WhenExceptionOccurs_LogsError()
     {
         // Arrange
-        _dryRunInterceptorMock
-            .Setup(d => d.InterceptAsync(It.IsAny<Delegate>(), It.IsAny<object[]>()))
+        _dryRunInterceptor.InterceptAsync(Arg.Any<Delegate>(), Arg.Any<object[]>())
             .ThrowsAsync(new Exception("Error"));
 
         SetupContext();
@@ -558,22 +542,14 @@ public class NotificationPublisherTests
         await _publisher.NotifyQueueItemDeleted(true, DeleteReason.Stalled);
 
         // Assert
-        _loggerMock.Verify(
-            x => x.Log(
-                LogLevel.Error,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Failed to notify queue item deleted")),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+        _logger.ReceivedLogContaining(LogLevel.Error, "Failed to notify queue item deleted");
     }
 
     [Fact]
     public async Task NotifyDownloadCleaned_WhenExceptionOccurs_LogsError()
     {
         // Arrange
-        _dryRunInterceptorMock
-            .Setup(d => d.InterceptAsync(It.IsAny<Delegate>(), It.IsAny<object[]>()))
+        _dryRunInterceptor.InterceptAsync(Arg.Any<Delegate>(), Arg.Any<object[]>())
             .ThrowsAsync(new Exception("Error"));
 
         SetupDownloadCleanerContext();
@@ -582,22 +558,14 @@ public class NotificationPublisherTests
         await _publisher.NotifyDownloadCleaned(1.0, TimeSpan.FromHours(1), "test", CleanReason.MaxRatioReached);
 
         // Assert
-        _loggerMock.Verify(
-            x => x.Log(
-                LogLevel.Error,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Failed to notify download cleaned")),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+        _logger.ReceivedLogContaining(LogLevel.Error, "Failed to notify download cleaned");
     }
 
     [Fact]
     public async Task NotifyCategoryChanged_WhenExceptionOccurs_LogsError()
     {
         // Arrange
-        _dryRunInterceptorMock
-            .Setup(d => d.InterceptAsync(It.IsAny<Delegate>(), It.IsAny<object[]>()))
+        _dryRunInterceptor.InterceptAsync(Arg.Any<Delegate>(), Arg.Any<object[]>())
             .ThrowsAsync(new Exception("Error"));
 
         SetupDownloadCleanerContext();
@@ -606,14 +574,7 @@ public class NotificationPublisherTests
         await _publisher.NotifyCategoryChanged("old", "new", false);
 
         // Assert
-        _loggerMock.Verify(
-            x => x.Log(
-                LogLevel.Error,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Failed to notify category changed")),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+        _logger.ReceivedLogContaining(LogLevel.Error, "Failed to notify category changed");
     }
 
     #endregion
@@ -625,12 +586,12 @@ public class NotificationPublisherTests
     {
         // Arrange
         var providerDto = CreateProviderDto();
-        var providerMock = new Mock<INotificationProvider>();
+        var provider = Substitute.For<INotificationProvider>();
 
-        _configServiceMock.Setup(c => c.GetProvidersForEventAsync(NotificationEventType.SearchItemGrabbed))
-            .ReturnsAsync(new List<NotificationProviderDto> { providerDto });
-        _providerFactoryMock.Setup(f => f.CreateProvider(providerDto))
-            .Returns(providerMock.Object);
+        _configService.GetProvidersForEventAsync(NotificationEventType.SearchItemGrabbed)
+            .Returns(new List<NotificationProviderDto> { providerDto });
+        _providerFactory.CreateProvider(providerDto)
+            .Returns(provider);
 
         var grabbedItems = new List<string> { "Movie.A.2024.1080p", "Movie.A.2024.720p" };
 
@@ -638,7 +599,7 @@ public class NotificationPublisherTests
         await _publisher.NotifySearchItemGrabbed("Movie A", grabbedItems, InstanceType.Radarr, "http://radarr.local:7878");
 
         // Assert
-        providerMock.Verify(p => p.SendNotificationAsync(It.Is<NotificationContext>(
+        await provider.Received(1).SendNotificationAsync(Arg.Is<NotificationContext>(
             c => c.EventType == NotificationEventType.SearchItemGrabbed &&
                  c.Title == "Download grabbed" &&
                  c.Description == "Movie A" &&
@@ -646,15 +607,15 @@ public class NotificationPublisherTests
                  c.Data["Item"] == "Movie A" &&
                  c.Data["Grabbed"] == "Movie.A.2024.1080p, Movie.A.2024.720p" &&
                  c.Data["Instance type"] == "Radarr" &&
-                 c.Data["Url"] == "http://radarr.local:7878")), Times.Once);
+                 c.Data["Url"] == "http://radarr.local:7878"));
     }
 
     [Fact]
     public async Task NotifySearchItemGrabbed_WhenNoProviders_DoesNotThrow()
     {
         // Arrange
-        _configServiceMock.Setup(c => c.GetProvidersForEventAsync(NotificationEventType.SearchItemGrabbed))
-            .ReturnsAsync(new List<NotificationProviderDto>());
+        _configService.GetProvidersForEventAsync(NotificationEventType.SearchItemGrabbed)
+            .Returns(new List<NotificationProviderDto>());
 
         // Act & Assert - Should not throw
         await _publisher.NotifySearchItemGrabbed("Movie A", ["Movie.A.2024"], InstanceType.Radarr, "http://localhost:7878");
@@ -664,22 +625,14 @@ public class NotificationPublisherTests
     public async Task NotifySearchItemGrabbed_WhenExceptionOccurs_LogsError()
     {
         // Arrange
-        _dryRunInterceptorMock
-            .Setup(d => d.InterceptAsync(It.IsAny<Delegate>(), It.IsAny<object[]>()))
+        _dryRunInterceptor.InterceptAsync(Arg.Any<Delegate>(), Arg.Any<object[]>())
             .ThrowsAsync(new Exception("Error"));
 
         // Act
         await _publisher.NotifySearchItemGrabbed("Movie A", ["Movie.A.2024"], InstanceType.Radarr, "http://localhost:7878");
 
         // Assert
-        _loggerMock.Verify(
-            x => x.Log(
-                LogLevel.Error,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Failed to notify search item grabbed")),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+        _logger.ReceivedLogContaining(LogLevel.Error, "Failed to notify search item grabbed");
     }
 
     #endregion

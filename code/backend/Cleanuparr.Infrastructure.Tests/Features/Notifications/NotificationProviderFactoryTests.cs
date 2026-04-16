@@ -10,44 +10,45 @@ using Cleanuparr.Infrastructure.Features.Notifications.Pushover;
 using Cleanuparr.Infrastructure.Features.Notifications.Telegram;
 using Cleanuparr.Persistence.Models.Configuration.Notification;
 using Microsoft.Extensions.DependencyInjection;
-using Moq;
+using NSubstitute;
+using Shouldly;
 using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.Notifications;
 
 public class NotificationProviderFactoryTests
 {
-    private readonly Mock<IAppriseProxy> _appriseProxyMock;
-    private readonly Mock<IAppriseCliProxy> _appriseCliProxyMock;
-    private readonly Mock<INtfyProxy> _ntfyProxyMock;
-    private readonly Mock<INotifiarrProxy> _notifiarrProxyMock;
-    private readonly Mock<IPushoverProxy> _pushoverProxyMock;
-    private readonly Mock<ITelegramProxy> _telegramProxyMock;
-    private readonly Mock<IDiscordProxy> _discordProxyMock;
-    private readonly Mock<IGotifyProxy> _gotifyProxyMock;
+    private readonly IAppriseProxy _appriseProxy;
+    private readonly IAppriseCliProxy _appriseCliProxy;
+    private readonly INtfyProxy _ntfyProxy;
+    private readonly INotifiarrProxy _notifiarrProxy;
+    private readonly IPushoverProxy _pushoverProxy;
+    private readonly ITelegramProxy _telegramProxy;
+    private readonly IDiscordProxy _discordProxy;
+    private readonly IGotifyProxy _gotifyProxy;
     private readonly IServiceProvider _serviceProvider;
     private readonly NotificationProviderFactory _factory;
 
     public NotificationProviderFactoryTests()
     {
-        _appriseProxyMock = new Mock<IAppriseProxy>();
-        _appriseCliProxyMock = new Mock<IAppriseCliProxy>();
-        _ntfyProxyMock = new Mock<INtfyProxy>();
-        _notifiarrProxyMock = new Mock<INotifiarrProxy>();
-        _pushoverProxyMock = new Mock<IPushoverProxy>();
-        _telegramProxyMock = new Mock<ITelegramProxy>();
-        _discordProxyMock = new Mock<IDiscordProxy>();
-        _gotifyProxyMock = new Mock<IGotifyProxy>();
+        _appriseProxy = Substitute.For<IAppriseProxy>();
+        _appriseCliProxy = Substitute.For<IAppriseCliProxy>();
+        _ntfyProxy = Substitute.For<INtfyProxy>();
+        _notifiarrProxy = Substitute.For<INotifiarrProxy>();
+        _pushoverProxy = Substitute.For<IPushoverProxy>();
+        _telegramProxy = Substitute.For<ITelegramProxy>();
+        _discordProxy = Substitute.For<IDiscordProxy>();
+        _gotifyProxy = Substitute.For<IGotifyProxy>();
 
         var services = new ServiceCollection();
-        services.AddSingleton(_appriseProxyMock.Object);
-        services.AddSingleton(_appriseCliProxyMock.Object);
-        services.AddSingleton(_ntfyProxyMock.Object);
-        services.AddSingleton(_notifiarrProxyMock.Object);
-        services.AddSingleton(_pushoverProxyMock.Object);
-        services.AddSingleton(_telegramProxyMock.Object);
-        services.AddSingleton(_discordProxyMock.Object);
-        services.AddSingleton(_gotifyProxyMock.Object);
+        services.AddSingleton(_appriseProxy);
+        services.AddSingleton(_appriseCliProxy);
+        services.AddSingleton(_ntfyProxy);
+        services.AddSingleton(_notifiarrProxy);
+        services.AddSingleton(_pushoverProxy);
+        services.AddSingleton(_telegramProxy);
+        services.AddSingleton(_discordProxy);
+        services.AddSingleton(_gotifyProxy);
 
         _serviceProvider = services.BuildServiceProvider();
         _factory = new NotificationProviderFactory(_serviceProvider);
@@ -77,10 +78,10 @@ public class NotificationProviderFactoryTests
         var provider = _factory.CreateProvider(config);
 
         // Assert
-        Assert.NotNull(provider);
-        Assert.IsType<AppriseProvider>(provider);
-        Assert.Equal("TestApprise", provider.Name);
-        Assert.Equal(NotificationProviderType.Apprise, provider.Type);
+        provider.ShouldNotBeNull();
+        provider.ShouldBeOfType<AppriseProvider>();
+        provider.Name.ShouldBe("TestApprise");
+        provider.Type.ShouldBe(NotificationProviderType.Apprise);
     }
 
     [Fact]
@@ -107,10 +108,10 @@ public class NotificationProviderFactoryTests
         var provider = _factory.CreateProvider(config);
 
         // Assert
-        Assert.NotNull(provider);
-        Assert.IsType<NtfyProvider>(provider);
-        Assert.Equal("TestNtfy", provider.Name);
-        Assert.Equal(NotificationProviderType.Ntfy, provider.Type);
+        provider.ShouldNotBeNull();
+        provider.ShouldBeOfType<NtfyProvider>();
+        provider.Name.ShouldBe("TestNtfy");
+        provider.Type.ShouldBe(NotificationProviderType.Ntfy);
     }
 
     [Fact]
@@ -135,10 +136,10 @@ public class NotificationProviderFactoryTests
         var provider = _factory.CreateProvider(config);
 
         // Assert
-        Assert.NotNull(provider);
-        Assert.IsType<NotifiarrProvider>(provider);
-        Assert.Equal("TestNotifiarr", provider.Name);
-        Assert.Equal(NotificationProviderType.Notifiarr, provider.Type);
+        provider.ShouldNotBeNull();
+        provider.ShouldBeOfType<NotifiarrProvider>();
+        provider.Name.ShouldBe("TestNotifiarr");
+        provider.Type.ShouldBe(NotificationProviderType.Notifiarr);
     }
 
     [Fact]
@@ -167,10 +168,10 @@ public class NotificationProviderFactoryTests
         var provider = _factory.CreateProvider(config);
 
         // Assert
-        Assert.NotNull(provider);
-        Assert.IsType<PushoverProvider>(provider);
-        Assert.Equal("TestPushover", provider.Name);
-        Assert.Equal(NotificationProviderType.Pushover, provider.Type);
+        provider.ShouldNotBeNull();
+        provider.ShouldBeOfType<PushoverProvider>();
+        provider.Name.ShouldBe("TestPushover");
+        provider.Type.ShouldBe(NotificationProviderType.Pushover);
     }
 
     [Fact]
@@ -196,10 +197,10 @@ public class NotificationProviderFactoryTests
         var provider = _factory.CreateProvider(config);
 
         // Assert
-        Assert.NotNull(provider);
-        Assert.IsType<TelegramProvider>(provider);
-        Assert.Equal("TestTelegram", provider.Name);
-        Assert.Equal(NotificationProviderType.Telegram, provider.Type);
+        provider.ShouldNotBeNull();
+        provider.ShouldBeOfType<TelegramProvider>();
+        provider.Name.ShouldBe("TestTelegram");
+        provider.Type.ShouldBe(NotificationProviderType.Telegram);
     }
 
     [Fact]
@@ -220,15 +221,15 @@ public class NotificationProviderFactoryTests
                 Username = "test-username",
             }
         };
-        
+
         // Act
         var provider = _factory.CreateProvider(config);
 
         // Assert
-        Assert.NotNull(provider);
-        Assert.IsType<DiscordProvider>(provider);
-        Assert.Equal("TestDiscord", provider.Name);
-        Assert.Equal(NotificationProviderType.Discord, provider.Type);
+        provider.ShouldNotBeNull();
+        provider.ShouldBeOfType<DiscordProvider>();
+        provider.Name.ShouldBe("TestDiscord");
+        provider.Type.ShouldBe(NotificationProviderType.Discord);
     }
 
     [Fact]
@@ -248,13 +249,13 @@ public class NotificationProviderFactoryTests
                 ApplicationToken = "test-application-token",
             }
         };
-        
+
         var provider = _factory.CreateProvider(config);
-        
-        Assert.NotNull(provider);
-        Assert.IsType<GotifyProvider>(provider);
-        Assert.Equal("TestGotify", provider.Name);
-        Assert.Equal(NotificationProviderType.Gotify, provider.Type);
+
+        provider.ShouldNotBeNull();
+        provider.ShouldBeOfType<GotifyProvider>();
+        provider.Name.ShouldBe("TestGotify");
+        provider.Type.ShouldBe(NotificationProviderType.Gotify);
     }
 
     [Fact]
@@ -271,8 +272,8 @@ public class NotificationProviderFactoryTests
         };
 
         // Act & Assert
-        var exception = Assert.Throws<NotSupportedException>(() => _factory.CreateProvider(config));
-        Assert.Contains("not supported", exception.Message);
+        var exception = Should.Throw<NotSupportedException>(() => _factory.CreateProvider(config));
+        exception.Message.ShouldContain("not supported");
     }
 
     [Fact]
@@ -297,7 +298,7 @@ public class NotificationProviderFactoryTests
         var provider = _factory.CreateProvider(config);
 
         // Assert - provider was created with the injected proxy
-        Assert.NotNull(provider);
+        provider.ShouldNotBeNull();
         // The proxy would be used when SendNotificationAsync is called
     }
 
@@ -325,7 +326,7 @@ public class NotificationProviderFactoryTests
         var provider = _factory.CreateProvider(config);
 
         // Assert
-        Assert.Equal("My Custom Provider Name", provider.Name);
+        provider.Name.ShouldBe("My Custom Provider Name");
     }
 
     [Fact]
@@ -356,7 +357,7 @@ public class NotificationProviderFactoryTests
             var provider = _factory.CreateProvider(dto);
 
             // Assert
-            Assert.Equal(type, provider.Type);
+            provider.Type.ShouldBe(type);
         }
     }
 
@@ -387,7 +388,7 @@ public class NotificationProviderFactoryTests
         };
 
         // Act & Assert
-        Assert.Throws<InvalidOperationException>(() => factoryWithNoServices.CreateProvider(config));
+        Should.Throw<InvalidOperationException>(() => factoryWithNoServices.CreateProvider(config));
     }
 
     #endregion

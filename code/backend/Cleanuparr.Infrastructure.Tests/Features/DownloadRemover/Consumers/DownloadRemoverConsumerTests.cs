@@ -4,25 +4,28 @@ using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.DownloadRemover.Consumers;
 using Cleanuparr.Infrastructure.Features.DownloadRemover.Interfaces;
 using Cleanuparr.Infrastructure.Features.DownloadRemover.Models;
+using Cleanuparr.Infrastructure.Tests.TestHelpers;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
 using MassTransit;
 using Microsoft.Extensions.Logging;
-using Moq;
+using NSubstitute;
+using NSubstitute.ExceptionExtensions;
+using Shouldly;
 using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.DownloadRemover.Consumers;
 
 public class DownloadRemoverConsumerTests
 {
-    private readonly Mock<ILogger<DownloadRemoverConsumer<SearchItem>>> _loggerMock;
-    private readonly Mock<IQueueItemRemover> _queueItemRemoverMock;
+    private readonly ILogger<DownloadRemoverConsumer<SearchItem>> _logger;
+    private readonly IQueueItemRemover _queueItemRemover;
     private readonly DownloadRemoverConsumer<SearchItem> _consumer;
 
     public DownloadRemoverConsumerTests()
     {
-        _loggerMock = new Mock<ILogger<DownloadRemoverConsumer<SearchItem>>>();
-        _queueItemRemoverMock = new Mock<IQueueItemRemover>();
-        _consumer = new DownloadRemoverConsumer<SearchItem>(_loggerMock.Object, _queueItemRemoverMock.Object);
+        _logger = Substitute.For<ILogger<DownloadRemoverConsumer<SearchItem>>>();
+        _queueItemRemover = Substitute.For<IQueueItemRemover>();
+        _consumer = new DownloadRemoverConsumer<SearchItem>(_logger, _queueItemRemover);
     }
 
     #region Consume Tests
@@ -32,17 +35,17 @@ public class DownloadRemoverConsumerTests
     {
         // Arrange
         var request = CreateRemoveRequest();
-        var contextMock = CreateConsumeContextMock(request);
+        var context = CreateConsumeContext(request);
 
-        _queueItemRemoverMock
-            .Setup(r => r.RemoveQueueItemAsync(It.IsAny<QueueItemRemoveRequest<SearchItem>>()))
+        _queueItemRemover
+            .RemoveQueueItemAsync(Arg.Any<QueueItemRemoveRequest<SearchItem>>())
             .Returns(Task.CompletedTask);
 
         // Act
-        await _consumer.Consume(contextMock.Object);
+        await _consumer.Consume(context);
 
         // Assert
-        _queueItemRemoverMock.Verify(r => r.RemoveQueueItemAsync(request), Times.Once);
+        await _queueItemRemover.Received(1).RemoveQueueItemAsync(request);
     }
 
     [Fact]
@@ -50,24 +53,17 @@ public class DownloadRemoverConsumerTests
     {
         // Arrange
         var request = CreateRemoveRequest();
-        var contextMock = CreateConsumeContextMock(request);
+        var context = CreateConsumeContext(request);
 
-        _queueItemRemoverMock
-            .Setup(r => r.RemoveQueueItemAsync(It.IsAny<QueueItemRemoveRequest<SearchItem>>()))
+        _queueItemRemover
+            .RemoveQueueItemAsync(Arg.Any<QueueItemRemoveRequest<SearchItem>>())
             .ThrowsAsync(new Exception("Remove failed"));
 
         // Act - Should not throw
-        await _consumer.Consume(contextMock.Object);
+        await _consumer.Consume(context);
 
         // Assert
-        _loggerMock.Verify(
-            x => x.Log(
-                LogLevel.Error,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("failed to remove queue item")),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+        _logger.ReceivedLogContaining(LogLevel.Error, "failed to remove queue item");
     }
 
     [Fact]
@@ -75,23 +71,23 @@ public class DownloadRemoverConsumerTests
     {
         // Arrange
         var request = CreateRemoveRequest();
-        var contextMock = CreateConsumeContextMock(request);
+        var context = CreateConsumeContext(request);
         QueueItemRemoveRequest<SearchItem>? capturedRequest = null;
 
-        _queueItemRemoverMock
-            .Setup(r => r.RemoveQueueItemAsync(It.IsAny<QueueItemRemoveRequest<SearchItem>>()))
-            .Callback<QueueItemRemoveRequest<SearchItem>>(r => capturedRequest = r)
-            .Returns(Task.CompletedTask);
+        _queueItemRemover
+            .RemoveQueueItemAsync(Arg.Any<QueueItemRemoveRequest<SearchItem>>())
+            .Returns(Task.CompletedTask)
+            .AndDoes(ci => capturedRequest = ci.Arg<QueueItemRemoveRequest<SearchItem>>());
 
         // Act
-        await _consumer.Consume(contextMock.Object);
+        await _consumer.Consume(context);
 
         // Assert
-        Assert.NotNull(capturedRequest);
-        Assert.Equal(request.Instance.ArrConfig.Type, capturedRequest.Instance.ArrConfig.Type);
-        Assert.Equal(request.SearchItem.Id, capturedRequest.SearchItem.Id);
-        Assert.Equal(request.RemoveFromClient, capturedRequest.RemoveFromClient);
-        Assert.Equal(request.DeleteReason, capturedRequest.DeleteReason);
+        capturedRequest.ShouldNotBeNull();
+        capturedRequest.Instance.ArrConfig.Type.ShouldBe(request.Instance.ArrConfig.Type);
+        capturedRequest.SearchItem.Id.ShouldBe(request.SearchItem.Id);
+        capturedRequest.RemoveFromClient.ShouldBe(request.RemoveFromClient);
+        capturedRequest.DeleteReason.ShouldBe(request.DeleteReason);
     }
 
     [Fact]
@@ -107,20 +103,20 @@ public class DownloadRemoverConsumerTests
             DeleteReason = DeleteReason.Stalled,
             JobRunId = Guid.NewGuid()
         };
-        var contextMock = CreateConsumeContextMock(request);
+        var context = CreateConsumeContext(request);
 
-        _queueItemRemoverMock
-            .Setup(r => r.RemoveQueueItemAsync(It.IsAny<QueueItemRemoveRequest<SearchItem>>()))
+        _queueItemRemover
+            .RemoveQueueItemAsync(Arg.Any<QueueItemRemoveRequest<SearchItem>>())
             .Returns(Task.CompletedTask);
 
         // Act
-        await _consumer.Consume(contextMock.Object);
+        await _consumer.Consume(context);
 
         // Assert
-        _queueItemRemoverMock.Verify(r => r.RemoveQueueItemAsync(
-            It.Is<QueueItemRemoveRequest<SearchItem>>(req =>
+        await _queueItemRemover.Received(1).RemoveQueueItemAsync(
+            Arg.Is<QueueItemRemoveRequest<SearchItem>>(req =>
                 req.RemoveFromClient == true &&
-                req.DeleteReason == DeleteReason.Stalled)), Times.Once);
+                req.DeleteReason == DeleteReason.Stalled));
     }
 
     [Fact]
@@ -136,19 +132,19 @@ public class DownloadRemoverConsumerTests
             DeleteReason = DeleteReason.FailedImport,
             JobRunId = Guid.NewGuid()
         };
-        var contextMock = CreateConsumeContextMock(request);
+        var context = CreateConsumeContext(request);
 
-        _queueItemRemoverMock
-            .Setup(r => r.RemoveQueueItemAsync(It.IsAny<QueueItemRemoveRequest<SearchItem>>()))
+        _queueItemRemover
+            .RemoveQueueItemAsync(Arg.Any<QueueItemRemoveRequest<SearchItem>>())
             .Returns(Task.CompletedTask);
 
         // Act
-        await _consumer.Consume(contextMock.Object);
+        await _consumer.Consume(context);
 
         // Assert
-        _queueItemRemoverMock.Verify(r => r.RemoveQueueItemAsync(
-            It.Is<QueueItemRemoveRequest<SearchItem>>(req =>
-                req.DeleteReason == DeleteReason.FailedImport)), Times.Once);
+        await _queueItemRemover.Received(1).RemoveQueueItemAsync(
+            Arg.Is<QueueItemRemoveRequest<SearchItem>>(req =>
+                req.DeleteReason == DeleteReason.FailedImport));
     }
 
     [Fact]
@@ -164,18 +160,18 @@ public class DownloadRemoverConsumerTests
             DeleteReason = DeleteReason.SlowSpeed,
             JobRunId = Guid.NewGuid()
         };
-        var contextMock = CreateConsumeContextMock(request);
+        var context = CreateConsumeContext(request);
 
-        _queueItemRemoverMock
-            .Setup(r => r.RemoveQueueItemAsync(It.IsAny<QueueItemRemoveRequest<SearchItem>>()))
+        _queueItemRemover
+            .RemoveQueueItemAsync(Arg.Any<QueueItemRemoveRequest<SearchItem>>())
             .Returns(Task.CompletedTask);
 
         // Act
-        await _consumer.Consume(contextMock.Object);
+        await _consumer.Consume(context);
 
         // Assert
-        _queueItemRemoverMock.Verify(r => r.RemoveQueueItemAsync(
-            It.Is<QueueItemRemoveRequest<SearchItem>>(req => req.Instance.ArrConfig.Type == InstanceType.Readarr)), Times.Once);
+        await _queueItemRemover.Received(1).RemoveQueueItemAsync(
+            Arg.Is<QueueItemRemoveRequest<SearchItem>>(req => req.Instance.ArrConfig.Type == InstanceType.Readarr));
     }
 
     #endregion
@@ -217,11 +213,11 @@ public class DownloadRemoverConsumerTests
         };
     }
 
-    private static Mock<ConsumeContext<QueueItemRemoveRequest<SearchItem>>> CreateConsumeContextMock(QueueItemRemoveRequest<SearchItem> message)
+    private static ConsumeContext<QueueItemRemoveRequest<SearchItem>> CreateConsumeContext(QueueItemRemoveRequest<SearchItem> message)
     {
-        var mock = new Mock<ConsumeContext<QueueItemRemoveRequest<SearchItem>>>();
-        mock.Setup(c => c.Message).Returns(message);
-        return mock;
+        var context = Substitute.For<ConsumeContext<QueueItemRemoveRequest<SearchItem>>>();
+        context.Message.Returns(message);
+        return context;
     }
 
     #endregion

@@ -1,33 +1,34 @@
 using System.Net;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Notifications.Ntfy;
+using Cleanuparr.Infrastructure.Tests.TestHelpers;
 using Cleanuparr.Persistence.Models.Configuration.Notification;
 using Cleanuparr.Shared.Helpers;
-using Moq;
-using Moq.Protected;
+using NSubstitute;
+using Shouldly;
 using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.Notifications.Ntfy;
 
 public class NtfyProxyTests
 {
-    private readonly Mock<IHttpClientFactory> _httpClientFactoryMock;
-    private readonly Mock<HttpMessageHandler> _httpMessageHandlerMock;
+    private readonly IHttpClientFactory _httpClientFactory;
+    private readonly FakeHttpMessageHandler _httpMessageHandler;
 
     public NtfyProxyTests()
     {
-        _httpMessageHandlerMock = new Mock<HttpMessageHandler>();
-        _httpClientFactoryMock = new Mock<IHttpClientFactory>();
+        _httpMessageHandler = new FakeHttpMessageHandler();
+        _httpClientFactory = Substitute.For<IHttpClientFactory>();
 
-        var httpClient = new HttpClient(_httpMessageHandlerMock.Object);
-        _httpClientFactoryMock
-            .Setup(f => f.CreateClient(Constants.HttpClientWithRetryName))
+        var httpClient = new HttpClient(_httpMessageHandler);
+        _httpClientFactory
+            .CreateClient(Constants.HttpClientWithRetryName)
             .Returns(httpClient);
     }
 
     private NtfyProxy CreateProxy()
     {
-        return new NtfyProxy(_httpClientFactoryMock.Object);
+        return new NtfyProxy(_httpClientFactory);
     }
 
     private static NtfyPayload CreatePayload()
@@ -62,7 +63,7 @@ public class NtfyProxyTests
         var proxy = CreateProxy();
 
         // Assert
-        Assert.NotNull(proxy);
+        proxy.ShouldNotBeNull();
     }
 
     [Fact]
@@ -72,7 +73,7 @@ public class NtfyProxyTests
         _ = CreateProxy();
 
         // Assert
-        _httpClientFactoryMock.Verify(f => f.CreateClient(Constants.HttpClientWithRetryName), Times.Once);
+        _httpClientFactory.Received(1).CreateClient(Constants.HttpClientWithRetryName);
     }
 
     #endregion
@@ -84,7 +85,7 @@ public class NtfyProxyTests
     {
         // Arrange
         var proxy = CreateProxy();
-        SetupSuccessResponse();
+        _httpMessageHandler.SetupResponse(HttpStatusCode.OK);
 
         // Act & Assert - Should not throw
         await proxy.SendNotification(CreatePayload(), CreateConfig());
@@ -95,22 +96,13 @@ public class NtfyProxyTests
     {
         // Arrange
         var proxy = CreateProxy();
-        HttpMethod? capturedMethod = null;
-
-        _httpMessageHandlerMock
-            .Protected()
-            .Setup<Task<HttpResponseMessage>>(
-                "SendAsync",
-                ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>())
-            .Callback<HttpRequestMessage, CancellationToken>((req, _) => capturedMethod = req.Method)
-            .ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK));
+        _httpMessageHandler.SetupResponse(HttpStatusCode.OK);
 
         // Act
         await proxy.SendNotification(CreatePayload(), CreateConfig());
 
         // Assert
-        Assert.Equal(HttpMethod.Post, capturedMethod);
+        _httpMessageHandler.CapturedRequests[0].Method.ShouldBe(HttpMethod.Post);
     }
 
     [Fact]
@@ -118,23 +110,13 @@ public class NtfyProxyTests
     {
         // Arrange
         var proxy = CreateProxy();
-        string? capturedContentType = null;
-
-        _httpMessageHandlerMock
-            .Protected()
-            .Setup<Task<HttpResponseMessage>>(
-                "SendAsync",
-                ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>())
-            .Callback<HttpRequestMessage, CancellationToken>((req, _) =>
-                capturedContentType = req.Content?.Headers.ContentType?.MediaType)
-            .ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK));
+        _httpMessageHandler.SetupResponse(HttpStatusCode.OK);
 
         // Act
         await proxy.SendNotification(CreatePayload(), CreateConfig());
 
         // Assert
-        Assert.Equal("application/json", capturedContentType);
+        _httpMessageHandler.CapturedRequests[0].Content?.Headers.ContentType?.MediaType.ShouldBe("application/json");
     }
 
     #endregion
@@ -146,23 +128,13 @@ public class NtfyProxyTests
     {
         // Arrange
         var proxy = CreateProxy();
-        bool hasAuthHeader = false;
-
-        _httpMessageHandlerMock
-            .Protected()
-            .Setup<Task<HttpResponseMessage>>(
-                "SendAsync",
-                ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>())
-            .Callback<HttpRequestMessage, CancellationToken>((req, _) =>
-                hasAuthHeader = req.Headers.Authorization != null)
-            .ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK));
+        _httpMessageHandler.SetupResponse(HttpStatusCode.OK);
 
         // Act
         await proxy.SendNotification(CreatePayload(), CreateConfig(NtfyAuthenticationType.None));
 
         // Assert
-        Assert.False(hasAuthHeader);
+        _httpMessageHandler.CapturedRequests[0].Headers.Authorization.ShouldBeNull();
     }
 
     [Fact]
@@ -170,23 +142,13 @@ public class NtfyProxyTests
     {
         // Arrange
         var proxy = CreateProxy();
-        string? capturedAuthScheme = null;
-
-        _httpMessageHandlerMock
-            .Protected()
-            .Setup<Task<HttpResponseMessage>>(
-                "SendAsync",
-                ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>())
-            .Callback<HttpRequestMessage, CancellationToken>((req, _) =>
-                capturedAuthScheme = req.Headers.Authorization?.Scheme)
-            .ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK));
+        _httpMessageHandler.SetupResponse(HttpStatusCode.OK);
 
         // Act
         await proxy.SendNotification(CreatePayload(), CreateConfig(NtfyAuthenticationType.BasicAuth));
 
         // Assert
-        Assert.Equal("Basic", capturedAuthScheme);
+        _httpMessageHandler.CapturedRequests[0].Headers.Authorization?.Scheme.ShouldBe("Basic");
     }
 
     [Fact]
@@ -194,23 +156,13 @@ public class NtfyProxyTests
     {
         // Arrange
         var proxy = CreateProxy();
-        string? capturedAuthScheme = null;
-
-        _httpMessageHandlerMock
-            .Protected()
-            .Setup<Task<HttpResponseMessage>>(
-                "SendAsync",
-                ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>())
-            .Callback<HttpRequestMessage, CancellationToken>((req, _) =>
-                capturedAuthScheme = req.Headers.Authorization?.Scheme)
-            .ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK));
+        _httpMessageHandler.SetupResponse(HttpStatusCode.OK);
 
         // Act
         await proxy.SendNotification(CreatePayload(), CreateConfig(NtfyAuthenticationType.AccessToken));
 
         // Assert
-        Assert.Equal("Bearer", capturedAuthScheme);
+        _httpMessageHandler.CapturedRequests[0].Headers.Authorization?.Scheme.ShouldBe("Bearer");
     }
 
     #endregion
@@ -222,12 +174,12 @@ public class NtfyProxyTests
     {
         // Arrange
         var proxy = CreateProxy();
-        SetupErrorResponse(HttpStatusCode.BadRequest);
+        _httpMessageHandler.SetupThrow(new HttpRequestException("Error", null, HttpStatusCode.BadRequest));
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<NtfyException>(() =>
+        var ex = await Should.ThrowAsync<NtfyException>(() =>
             proxy.SendNotification(CreatePayload(), CreateConfig()));
-        Assert.Contains("Bad request", ex.Message);
+        ex.Message.ShouldContain("Bad request");
     }
 
     [Fact]
@@ -235,12 +187,12 @@ public class NtfyProxyTests
     {
         // Arrange
         var proxy = CreateProxy();
-        SetupErrorResponse(HttpStatusCode.Unauthorized);
+        _httpMessageHandler.SetupThrow(new HttpRequestException("Error", null, HttpStatusCode.Unauthorized));
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<NtfyException>(() =>
+        var ex = await Should.ThrowAsync<NtfyException>(() =>
             proxy.SendNotification(CreatePayload(), CreateConfig()));
-        Assert.Contains("Unauthorized", ex.Message);
+        ex.Message.ShouldContain("Unauthorized");
     }
 
     [Fact]
@@ -248,12 +200,12 @@ public class NtfyProxyTests
     {
         // Arrange
         var proxy = CreateProxy();
-        SetupErrorResponse(HttpStatusCode.RequestEntityTooLarge);
+        _httpMessageHandler.SetupThrow(new HttpRequestException("Error", null, HttpStatusCode.RequestEntityTooLarge));
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<NtfyException>(() =>
+        var ex = await Should.ThrowAsync<NtfyException>(() =>
             proxy.SendNotification(CreatePayload(), CreateConfig()));
-        Assert.Contains("Payload too large", ex.Message);
+        ex.Message.ShouldContain("Payload too large");
     }
 
     [Fact]
@@ -261,12 +213,12 @@ public class NtfyProxyTests
     {
         // Arrange
         var proxy = CreateProxy();
-        SetupErrorResponse(HttpStatusCode.TooManyRequests);
+        _httpMessageHandler.SetupThrow(new HttpRequestException("Error", null, HttpStatusCode.TooManyRequests));
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<NtfyException>(() =>
+        var ex = await Should.ThrowAsync<NtfyException>(() =>
             proxy.SendNotification(CreatePayload(), CreateConfig()));
-        Assert.Contains("Rate limited", ex.Message);
+        ex.Message.ShouldContain("Rate limited");
     }
 
     [Fact]
@@ -274,12 +226,12 @@ public class NtfyProxyTests
     {
         // Arrange
         var proxy = CreateProxy();
-        SetupErrorResponse(HttpStatusCode.InsufficientStorage);
+        _httpMessageHandler.SetupThrow(new HttpRequestException("Error", null, HttpStatusCode.InsufficientStorage));
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<NtfyException>(() =>
+        var ex = await Should.ThrowAsync<NtfyException>(() =>
             proxy.SendNotification(CreatePayload(), CreateConfig()));
-        Assert.Contains("Insufficient storage", ex.Message);
+        ex.Message.ShouldContain("Insufficient storage");
     }
 
     [Fact]
@@ -287,12 +239,12 @@ public class NtfyProxyTests
     {
         // Arrange
         var proxy = CreateProxy();
-        SetupErrorResponse(HttpStatusCode.InternalServerError);
+        _httpMessageHandler.SetupThrow(new HttpRequestException("Error", null, HttpStatusCode.InternalServerError));
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<NtfyException>(() =>
+        var ex = await Should.ThrowAsync<NtfyException>(() =>
             proxy.SendNotification(CreatePayload(), CreateConfig()));
-        Assert.Contains("Unable to send notification", ex.Message);
+        ex.Message.ShouldContain("Unable to send notification");
     }
 
     [Fact]
@@ -300,44 +252,12 @@ public class NtfyProxyTests
     {
         // Arrange
         var proxy = CreateProxy();
-        _httpMessageHandlerMock
-            .Protected()
-            .Setup<Task<HttpResponseMessage>>(
-                "SendAsync",
-                ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>())
-            .ThrowsAsync(new HttpRequestException("Network error"));
+        _httpMessageHandler.SetupThrow(new HttpRequestException("Network error"));
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<NtfyException>(() =>
+        var ex = await Should.ThrowAsync<NtfyException>(() =>
             proxy.SendNotification(CreatePayload(), CreateConfig()));
-        Assert.Contains("Unable to send notification", ex.Message);
-    }
-
-    #endregion
-
-    #region Helper Methods
-
-    private void SetupSuccessResponse()
-    {
-        _httpMessageHandlerMock
-            .Protected()
-            .Setup<Task<HttpResponseMessage>>(
-                "SendAsync",
-                ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>())
-            .ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK));
-    }
-
-    private void SetupErrorResponse(HttpStatusCode statusCode)
-    {
-        _httpMessageHandlerMock
-            .Protected()
-            .Setup<Task<HttpResponseMessage>>(
-                "SendAsync",
-                ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>())
-            .ThrowsAsync(new HttpRequestException("Error", null, statusCode));
+        ex.Message.ShouldContain("Unable to send notification");
     }
 
     #endregion

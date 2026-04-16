@@ -1,35 +1,36 @@
 using System.Net;
 using Cleanuparr.Infrastructure.Features.Notifications.Discord;
+using Cleanuparr.Infrastructure.Tests.TestHelpers;
 using Cleanuparr.Persistence.Models.Configuration.Notification;
 using Cleanuparr.Shared.Helpers;
 using Microsoft.Extensions.Logging;
-using Moq;
-using Moq.Protected;
+using NSubstitute;
+using Shouldly;
 using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.Notifications.Discord;
 
 public class DiscordProxyTests
 {
-    private readonly Mock<ILogger<DiscordProxy>> _loggerMock;
-    private readonly Mock<IHttpClientFactory> _httpClientFactoryMock;
-    private readonly Mock<HttpMessageHandler> _httpMessageHandlerMock;
+    private readonly ILogger<DiscordProxy> _logger;
+    private readonly IHttpClientFactory _httpClientFactory;
+    private readonly FakeHttpMessageHandler _httpMessageHandler;
 
     public DiscordProxyTests()
     {
-        _loggerMock = new Mock<ILogger<DiscordProxy>>();
-        _httpMessageHandlerMock = new Mock<HttpMessageHandler>();
-        _httpClientFactoryMock = new Mock<IHttpClientFactory>();
+        _logger = Substitute.For<ILogger<DiscordProxy>>();
+        _httpMessageHandler = new FakeHttpMessageHandler();
+        _httpClientFactory = Substitute.For<IHttpClientFactory>();
 
-        var httpClient = new HttpClient(_httpMessageHandlerMock.Object);
-        _httpClientFactoryMock
-            .Setup(f => f.CreateClient(Constants.HttpClientWithRetryName))
+        var httpClient = new HttpClient(_httpMessageHandler);
+        _httpClientFactory
+            .CreateClient(Constants.HttpClientWithRetryName)
             .Returns(httpClient);
     }
 
     private DiscordProxy CreateProxy()
     {
-        return new DiscordProxy(_loggerMock.Object, _httpClientFactoryMock.Object);
+        return new DiscordProxy(_logger, _httpClientFactory);
     }
 
     private static DiscordPayload CreatePayload()
@@ -67,7 +68,7 @@ public class DiscordProxyTests
         var proxy = CreateProxy();
 
         // Assert
-        Assert.NotNull(proxy);
+        proxy.ShouldNotBeNull();
     }
 
     [Fact]
@@ -77,7 +78,7 @@ public class DiscordProxyTests
         _ = CreateProxy();
 
         // Assert
-        _httpClientFactoryMock.Verify(f => f.CreateClient(Constants.HttpClientWithRetryName), Times.Once);
+        _httpClientFactory.Received(1).CreateClient(Constants.HttpClientWithRetryName);
     }
 
     #endregion
@@ -89,7 +90,7 @@ public class DiscordProxyTests
     {
         // Arrange
         var proxy = CreateProxy();
-        SetupSuccessResponse();
+        _httpMessageHandler.SetupResponse(HttpStatusCode.OK);
 
         // Act & Assert - Should not throw
         await proxy.SendNotification(CreatePayload(), CreateConfig());
@@ -100,22 +101,13 @@ public class DiscordProxyTests
     {
         // Arrange
         var proxy = CreateProxy();
-        HttpMethod? capturedMethod = null;
-
-        _httpMessageHandlerMock
-            .Protected()
-            .Setup<Task<HttpResponseMessage>>(
-                "SendAsync",
-                ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>())
-            .Callback<HttpRequestMessage, CancellationToken>((req, _) => capturedMethod = req.Method)
-            .ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK));
+        _httpMessageHandler.SetupResponse(HttpStatusCode.OK);
 
         // Act
         await proxy.SendNotification(CreatePayload(), CreateConfig());
 
         // Assert
-        Assert.Equal(HttpMethod.Post, capturedMethod);
+        _httpMessageHandler.CapturedRequests[0].Method.ShouldBe(HttpMethod.Post);
     }
 
     [Fact]
@@ -123,16 +115,7 @@ public class DiscordProxyTests
     {
         // Arrange
         var proxy = CreateProxy();
-        Uri? capturedUri = null;
-
-        _httpMessageHandlerMock
-            .Protected()
-            .Setup<Task<HttpResponseMessage>>(
-                "SendAsync",
-                ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>())
-            .Callback<HttpRequestMessage, CancellationToken>((req, _) => capturedUri = req.RequestUri)
-            .ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK));
+        _httpMessageHandler.SetupResponse(HttpStatusCode.OK);
 
         var config = new DiscordConfig
         {
@@ -143,8 +126,7 @@ public class DiscordProxyTests
         await proxy.SendNotification(CreatePayload(), config);
 
         // Assert
-        Assert.NotNull(capturedUri);
-        Assert.Equal("https://discord.com/api/webhooks/123/abc", capturedUri.ToString());
+        _httpMessageHandler.CapturedRequests[0].RequestUri?.ToString().ShouldBe("https://discord.com/api/webhooks/123/abc");
     }
 
     [Fact]
@@ -152,23 +134,13 @@ public class DiscordProxyTests
     {
         // Arrange
         var proxy = CreateProxy();
-        string? capturedContentType = null;
-
-        _httpMessageHandlerMock
-            .Protected()
-            .Setup<Task<HttpResponseMessage>>(
-                "SendAsync",
-                ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>())
-            .Callback<HttpRequestMessage, CancellationToken>((req, _) =>
-                capturedContentType = req.Content?.Headers.ContentType?.MediaType)
-            .ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK));
+        _httpMessageHandler.SetupResponse(HttpStatusCode.OK);
 
         // Act
         await proxy.SendNotification(CreatePayload(), CreateConfig());
 
         // Assert
-        Assert.Equal("application/json", capturedContentType);
+        _httpMessageHandler.CapturedRequests[0].Content?.Headers.ContentType?.MediaType.ShouldBe("application/json");
     }
 
     [Fact]
@@ -176,20 +148,13 @@ public class DiscordProxyTests
     {
         // Arrange
         var proxy = CreateProxy();
-        SetupSuccessResponse();
+        _httpMessageHandler.SetupResponse(HttpStatusCode.OK);
 
         // Act
         await proxy.SendNotification(CreatePayload(), CreateConfig());
 
         // Assert
-        _loggerMock.Verify(
-            x => x.Log(
-                LogLevel.Trace,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("sending notification")),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+        _logger.ReceivedLogContaining(LogLevel.Trace, "sending notification");
     }
 
     #endregion
@@ -203,12 +168,12 @@ public class DiscordProxyTests
     {
         // Arrange
         var proxy = CreateProxy();
-        SetupErrorResponse(statusCode);
+        _httpMessageHandler.SetupThrow(new HttpRequestException("Error", null, statusCode));
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<DiscordException>(() =>
+        var ex = await Should.ThrowAsync<DiscordException>(() =>
             proxy.SendNotification(CreatePayload(), CreateConfig()));
-        Assert.Contains("invalid or unauthorized", ex.Message);
+        ex.Message.ShouldContain("invalid or unauthorized");
     }
 
     [Fact]
@@ -216,12 +181,12 @@ public class DiscordProxyTests
     {
         // Arrange
         var proxy = CreateProxy();
-        SetupErrorResponse(HttpStatusCode.NotFound);
+        _httpMessageHandler.SetupThrow(new HttpRequestException("Error", null, HttpStatusCode.NotFound));
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<DiscordException>(() =>
+        var ex = await Should.ThrowAsync<DiscordException>(() =>
             proxy.SendNotification(CreatePayload(), CreateConfig()));
-        Assert.Contains("not found", ex.Message);
+        ex.Message.ShouldContain("not found");
     }
 
     [Fact]
@@ -229,12 +194,12 @@ public class DiscordProxyTests
     {
         // Arrange
         var proxy = CreateProxy();
-        SetupErrorResponse((HttpStatusCode)429);
+        _httpMessageHandler.SetupThrow(new HttpRequestException("Error", null, (HttpStatusCode)429));
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<DiscordException>(() =>
+        var ex = await Should.ThrowAsync<DiscordException>(() =>
             proxy.SendNotification(CreatePayload(), CreateConfig()));
-        Assert.Contains("rate limited", ex.Message, StringComparison.OrdinalIgnoreCase);
+        ex.Message.ShouldContain("rate limited", Case.Insensitive);
     }
 
     [Theory]
@@ -245,12 +210,12 @@ public class DiscordProxyTests
     {
         // Arrange
         var proxy = CreateProxy();
-        SetupErrorResponse(statusCode);
+        _httpMessageHandler.SetupThrow(new HttpRequestException("Error", null, statusCode));
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<DiscordException>(() =>
+        var ex = await Should.ThrowAsync<DiscordException>(() =>
             proxy.SendNotification(CreatePayload(), CreateConfig()));
-        Assert.Contains("service unavailable", ex.Message, StringComparison.OrdinalIgnoreCase);
+        ex.Message.ShouldContain("service unavailable", Case.Insensitive);
     }
 
     [Fact]
@@ -258,12 +223,12 @@ public class DiscordProxyTests
     {
         // Arrange
         var proxy = CreateProxy();
-        SetupErrorResponse(HttpStatusCode.InternalServerError);
+        _httpMessageHandler.SetupThrow(new HttpRequestException("Error", null, HttpStatusCode.InternalServerError));
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<DiscordException>(() =>
+        var ex = await Should.ThrowAsync<DiscordException>(() =>
             proxy.SendNotification(CreatePayload(), CreateConfig()));
-        Assert.Contains("unable to send notification", ex.Message, StringComparison.OrdinalIgnoreCase);
+        ex.Message.ShouldContain("unable to send notification", Case.Insensitive);
     }
 
     [Fact]
@@ -271,44 +236,12 @@ public class DiscordProxyTests
     {
         // Arrange
         var proxy = CreateProxy();
-        _httpMessageHandlerMock
-            .Protected()
-            .Setup<Task<HttpResponseMessage>>(
-                "SendAsync",
-                ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>())
-            .ThrowsAsync(new HttpRequestException("Network error"));
+        _httpMessageHandler.SetupThrow(new HttpRequestException("Network error"));
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<DiscordException>(() =>
+        var ex = await Should.ThrowAsync<DiscordException>(() =>
             proxy.SendNotification(CreatePayload(), CreateConfig()));
-        Assert.Contains("unable to send notification", ex.Message, StringComparison.OrdinalIgnoreCase);
-    }
-
-    #endregion
-
-    #region Helper Methods
-
-    private void SetupSuccessResponse()
-    {
-        _httpMessageHandlerMock
-            .Protected()
-            .Setup<Task<HttpResponseMessage>>(
-                "SendAsync",
-                ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>())
-            .ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK));
-    }
-
-    private void SetupErrorResponse(HttpStatusCode statusCode)
-    {
-        _httpMessageHandlerMock
-            .Protected()
-            .Setup<Task<HttpResponseMessage>>(
-                "SendAsync",
-                ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>())
-            .ThrowsAsync(new HttpRequestException("Error", null, statusCode));
+        ex.Message.ShouldContain("unable to send notification", Case.Insensitive);
     }
 
     #endregion

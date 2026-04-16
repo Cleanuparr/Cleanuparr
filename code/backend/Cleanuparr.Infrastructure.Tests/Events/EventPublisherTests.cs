@@ -12,6 +12,7 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
+using Shouldly;
 using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Events;
@@ -80,10 +81,10 @@ public class EventPublisherTests : IDisposable
 
         // Assert
         var savedEvent = await _context.Events.FirstOrDefaultAsync();
-        Assert.NotNull(savedEvent);
-        Assert.Equal(eventType, savedEvent.EventType);
-        Assert.Equal(message, savedEvent.Message);
-        Assert.Equal(severity, savedEvent.Severity);
+        savedEvent.ShouldNotBeNull();
+        savedEvent.EventType.ShouldBe(eventType);
+        savedEvent.Message.ShouldBe(message);
+        savedEvent.Severity.ShouldBe(severity);
     }
 
     [Fact]
@@ -100,10 +101,10 @@ public class EventPublisherTests : IDisposable
 
         // Assert
         var savedEvent = await _context.Events.FirstOrDefaultAsync();
-        Assert.NotNull(savedEvent);
-        Assert.NotNull(savedEvent.Data);
-        Assert.Contains("TestDownload", savedEvent.Data);
-        Assert.Contains("abc123", savedEvent.Data);
+        savedEvent.ShouldNotBeNull();
+        savedEvent.Data.ShouldNotBeNull();
+        savedEvent.Data.ShouldContain("TestDownload");
+        savedEvent.Data.ShouldContain("abc123");
     }
 
     [Fact]
@@ -120,8 +121,8 @@ public class EventPublisherTests : IDisposable
 
         // Assert
         var savedEvent = await _context.Events.FirstOrDefaultAsync();
-        Assert.NotNull(savedEvent);
-        Assert.Equal(trackingId, savedEvent.TrackingId);
+        savedEvent.ShouldNotBeNull();
+        savedEvent.TrackingId.ShouldBe(trackingId);
     }
 
     [Fact]
@@ -161,7 +162,7 @@ public class EventPublisherTests : IDisposable
 
         // Assert - verify event was still saved
         var savedEvent = await _context.Events.FirstOrDefaultAsync();
-        Assert.NotNull(savedEvent);
+        savedEvent.ShouldNotBeNull();
     }
 
     [Fact]
@@ -177,8 +178,8 @@ public class EventPublisherTests : IDisposable
 
         // Assert
         var savedEvent = await _context.Events.FirstOrDefaultAsync();
-        Assert.NotNull(savedEvent);
-        Assert.Null(savedEvent.Data);
+        savedEvent.ShouldNotBeNull();
+        savedEvent.Data.ShouldBeNull();
     }
 
     #endregion
@@ -197,9 +198,9 @@ public class EventPublisherTests : IDisposable
 
         // Assert
         var savedEvent = await _context.ManualEvents.FirstOrDefaultAsync();
-        Assert.NotNull(savedEvent);
-        Assert.Equal(message, savedEvent.Message);
-        Assert.Equal(severity, savedEvent.Severity);
+        savedEvent.ShouldNotBeNull();
+        savedEvent.Message.ShouldBe(message);
+        savedEvent.Severity.ShouldBe(severity);
     }
 
     [Fact]
@@ -215,10 +216,10 @@ public class EventPublisherTests : IDisposable
 
         // Assert
         var savedEvent = await _context.ManualEvents.FirstOrDefaultAsync();
-        Assert.NotNull(savedEvent);
-        Assert.NotNull(savedEvent.Data);
-        Assert.Contains("TestItem", savedEvent.Data);
-        Assert.Contains("5", savedEvent.Data);
+        savedEvent.ShouldNotBeNull();
+        savedEvent.Data.ShouldNotBeNull();
+        savedEvent.Data.ShouldContain("TestItem");
+        savedEvent.Data.ShouldContain("5");
     }
 
     [Fact]
@@ -285,8 +286,8 @@ public class EventPublisherTests : IDisposable
 
         // Assert
         var savedEvent = await _context.Events.FirstOrDefaultAsync();
-        Assert.NotNull(savedEvent);
-        Assert.True(savedEvent.IsDryRun);
+        savedEvent.ShouldNotBeNull();
+        savedEvent.IsDryRun.ShouldBeTrue();
     }
 
     [Fact]
@@ -302,8 +303,8 @@ public class EventPublisherTests : IDisposable
 
         // Assert
         var savedEvent = await _context.Events.FirstOrDefaultAsync();
-        Assert.NotNull(savedEvent);
-        Assert.False(savedEvent.IsDryRun);
+        savedEvent.ShouldNotBeNull();
+        savedEvent.IsDryRun.ShouldBeFalse();
     }
 
     [Fact]
@@ -319,8 +320,8 @@ public class EventPublisherTests : IDisposable
 
         // Assert
         var savedEvent = await _context.ManualEvents.FirstOrDefaultAsync();
-        Assert.NotNull(savedEvent);
-        Assert.True(savedEvent.IsDryRun);
+        savedEvent.ShouldNotBeNull();
+        savedEvent.IsDryRun.ShouldBeTrue();
     }
 
     [Fact]
@@ -337,8 +338,8 @@ public class EventPublisherTests : IDisposable
 
         // Assert
         var savedEvent = await _context.Events.FirstOrDefaultAsync();
-        Assert.NotNull(savedEvent);
-        Assert.Equal(message, savedEvent.Message);
+        savedEvent.ShouldNotBeNull();
+        savedEvent.Message.ShouldBe(message);
     }
 
     #endregion
@@ -359,9 +360,9 @@ public class EventPublisherTests : IDisposable
 
         // Assert
         var savedEvent = await _context.Events.FirstOrDefaultAsync();
-        Assert.NotNull(savedEvent);
-        Assert.NotNull(savedEvent.Data);
-        Assert.Contains("Stalled", savedEvent.Data);
+        savedEvent.ShouldNotBeNull();
+        savedEvent.Data.ShouldNotBeNull();
+        savedEvent.Data.ShouldContain("Stalled");
     }
 
     [Fact]
@@ -383,10 +384,10 @@ public class EventPublisherTests : IDisposable
 
         // Assert
         var savedEvent = await _context.Events.FirstOrDefaultAsync();
-        Assert.NotNull(savedEvent);
-        Assert.NotNull(savedEvent.Data);
-        Assert.Contains("item1", savedEvent.Data);
-        Assert.Contains("123", savedEvent.Data);
+        savedEvent.ShouldNotBeNull();
+        savedEvent.Data.ShouldNotBeNull();
+        savedEvent.Data.ShouldContain("item1");
+        savedEvent.Data.ShouldContain("123");
     }
 
     #endregion
@@ -405,13 +406,13 @@ public class EventPublisherTests : IDisposable
 
         // Assert
         var savedEvent = await _context.Events.FirstOrDefaultAsync();
-        Assert.NotNull(savedEvent);
-        Assert.Equal(EventType.QueueItemDeleted, savedEvent.EventType);
-        Assert.Equal(EventSeverity.Important, savedEvent.Severity);
-        Assert.NotNull(savedEvent.Data);
-        Assert.Contains("Test Download", savedEvent.Data);
-        Assert.Contains("abc123", savedEvent.Data);
-        Assert.Contains("Stalled", savedEvent.Data);
+        savedEvent.ShouldNotBeNull();
+        savedEvent.EventType.ShouldBe(EventType.QueueItemDeleted);
+        savedEvent.Severity.ShouldBe(EventSeverity.Important);
+        savedEvent.Data.ShouldNotBeNull();
+        savedEvent.Data.ShouldContain("Test Download");
+        savedEvent.Data.ShouldContain("abc123");
+        savedEvent.Data.ShouldContain("Stalled");
     }
 
     [Fact]
@@ -448,14 +449,14 @@ public class EventPublisherTests : IDisposable
 
         // Assert
         var savedEvent = await _context.Events.FirstOrDefaultAsync();
-        Assert.NotNull(savedEvent);
-        Assert.Equal(EventType.DownloadCleaned, savedEvent.EventType);
-        Assert.Equal(EventSeverity.Important, savedEvent.Severity);
-        Assert.NotNull(savedEvent.Data);
-        Assert.Contains("Cleaned Download", savedEvent.Data);
-        Assert.Contains("def456", savedEvent.Data);
-        Assert.Contains("movies", savedEvent.Data);
-        Assert.Contains("MaxSeedTimeReached", savedEvent.Data);
+        savedEvent.ShouldNotBeNull();
+        savedEvent.EventType.ShouldBe(EventType.DownloadCleaned);
+        savedEvent.Severity.ShouldBe(EventSeverity.Important);
+        savedEvent.Data.ShouldNotBeNull();
+        savedEvent.Data.ShouldContain("Cleaned Download");
+        savedEvent.Data.ShouldContain("def456");
+        savedEvent.Data.ShouldContain("movies");
+        savedEvent.Data.ShouldContain("MaxSeedTimeReached");
     }
 
     [Fact]
@@ -493,12 +494,12 @@ public class EventPublisherTests : IDisposable
 
         // Assert
         var savedEvent = await _context.ManualEvents.FirstOrDefaultAsync();
-        Assert.NotNull(savedEvent);
-        Assert.Equal(EventSeverity.Warning, savedEvent.Severity);
-        Assert.Contains("Replacement search was not triggered", savedEvent.Message);
-        Assert.NotNull(savedEvent.Data);
-        Assert.Contains("Test Item", savedEvent.Data);
-        Assert.Contains("abc123", savedEvent.Data);
+        savedEvent.ShouldNotBeNull();
+        savedEvent.Severity.ShouldBe(EventSeverity.Warning);
+        savedEvent.Message.ShouldContain("Replacement search was not triggered");
+        savedEvent.Data.ShouldNotBeNull();
+        savedEvent.Data.ShouldContain("Test Item");
+        savedEvent.Data.ShouldContain("abc123");
     }
 
     #endregion
@@ -517,12 +518,12 @@ public class EventPublisherTests : IDisposable
 
         // Assert
         var savedEvent = await _context.ManualEvents.FirstOrDefaultAsync();
-        Assert.NotNull(savedEvent);
-        Assert.Equal(EventSeverity.Important, savedEvent.Severity);
-        Assert.Contains("keeps coming back", savedEvent.Message);
-        Assert.NotNull(savedEvent.Data);
-        Assert.Contains("Recurring Item", savedEvent.Data);
-        Assert.Contains("hash123", savedEvent.Data);
+        savedEvent.ShouldNotBeNull();
+        savedEvent.Severity.ShouldBe(EventSeverity.Important);
+        savedEvent.Message.ShouldContain("keeps coming back");
+        savedEvent.Data.ShouldNotBeNull();
+        savedEvent.Data.ShouldContain("Recurring Item");
+        savedEvent.Data.ShouldContain("hash123");
     }
 
     #endregion
@@ -541,10 +542,10 @@ public class EventPublisherTests : IDisposable
 
         // Assert
         var savedEvent = await _context.Events.FirstOrDefaultAsync();
-        Assert.NotNull(savedEvent);
-        Assert.Equal(EventType.CategoryChanged, savedEvent.EventType);
-        Assert.Equal(EventSeverity.Information, savedEvent.Severity);
-        Assert.Contains("Category changed from 'oldCat' to 'newCat'", savedEvent.Message);
+        savedEvent.ShouldNotBeNull();
+        savedEvent.EventType.ShouldBe(EventType.CategoryChanged);
+        savedEvent.Severity.ShouldBe(EventSeverity.Information);
+        savedEvent.Message.ShouldContain("Category changed from 'oldCat' to 'newCat'");
     }
 
     [Fact]
@@ -559,8 +560,8 @@ public class EventPublisherTests : IDisposable
 
         // Assert
         var savedEvent = await _context.Events.FirstOrDefaultAsync();
-        Assert.NotNull(savedEvent);
-        Assert.Contains("Tag 'cleanuperr-done' added", savedEvent.Message);
+        savedEvent.ShouldNotBeNull();
+        savedEvent.Message.ShouldContain("Tag 'cleanuperr-done' added");
     }
 
     [Fact]
@@ -589,9 +590,9 @@ public class EventPublisherTests : IDisposable
 
         // Assert
         var savedEvent = await _context.Events.FirstOrDefaultAsync();
-        Assert.NotNull(savedEvent);
-        Assert.Equal(EventType.SearchTriggered, savedEvent.EventType);
-        Assert.Equal(EventSeverity.Information, savedEvent.Severity);
+        savedEvent.ShouldNotBeNull();
+        savedEvent.EventType.ShouldBe(EventType.SearchTriggered);
+        savedEvent.Severity.ShouldBe(EventSeverity.Information);
     }
 
     [Fact]
@@ -602,8 +603,8 @@ public class EventPublisherTests : IDisposable
 
         // Assert
         var savedEvent = await _context.Events.FirstOrDefaultAsync();
-        Assert.NotNull(savedEvent);
-        Assert.Equal(SearchCommandStatus.Pending, savedEvent.SearchStatus);
+        savedEvent.ShouldNotBeNull();
+        savedEvent.SearchStatus.ShouldBe(SearchCommandStatus.Pending);
     }
 
     [Fact]
@@ -617,8 +618,8 @@ public class EventPublisherTests : IDisposable
 
         // Assert
         var savedEvent = await _context.Events.FirstOrDefaultAsync();
-        Assert.NotNull(savedEvent);
-        Assert.Equal(cycleId, savedEvent.CycleId);
+        savedEvent.ShouldNotBeNull();
+        savedEvent.CycleId.ShouldBe(cycleId);
     }
 
     [Fact]
@@ -628,9 +629,9 @@ public class EventPublisherTests : IDisposable
         Guid eventId = await _publisher.PublishSearchTriggered("Movie A", SeekerSearchType.Proactive, SeekerSearchReason.Missing);
 
         // Assert
-        Assert.NotEqual(Guid.Empty, eventId);
+        eventId.ShouldNotBe(Guid.Empty);
         var savedEvent = await _context.Events.FindAsync(eventId);
-        Assert.NotNull(savedEvent);
+        savedEvent.ShouldNotBeNull();
     }
 
     [Fact]
@@ -641,13 +642,13 @@ public class EventPublisherTests : IDisposable
 
         // Assert
         var savedEvent = await _context.Events.FirstOrDefaultAsync();
-        Assert.NotNull(savedEvent);
+        savedEvent.ShouldNotBeNull();
 
         var searchData = await _context.SearchEventData.FirstOrDefaultAsync(s => s.AppEventId == savedEvent.Id);
-        Assert.NotNull(searchData);
-        Assert.Equal("Series A", searchData.ItemTitle);
-        Assert.Equal(SeekerSearchType.Replacement, searchData.SearchType);
-        Assert.Equal(SeekerSearchReason.Replacement, searchData.SearchReason);
+        searchData.ShouldNotBeNull();
+        searchData.ItemTitle.ShouldBe("Series A");
+        searchData.SearchType.ShouldBe(SeekerSearchType.Replacement);
+        searchData.SearchReason.ShouldBe(SeekerSearchReason.Replacement);
     }
 
     [Fact]
@@ -682,8 +683,8 @@ public class EventPublisherTests : IDisposable
 
         // Assert
         var savedEvent = await _context.Events.FirstOrDefaultAsync();
-        Assert.NotNull(savedEvent);
-        Assert.Contains("The Matrix", savedEvent.Message);
+        savedEvent.ShouldNotBeNull();
+        savedEvent.Message.ShouldContain("The Matrix");
     }
 
     #endregion
@@ -701,8 +702,8 @@ public class EventPublisherTests : IDisposable
 
         // Assert
         var updatedEvent = await _context.Events.FindAsync(eventId);
-        Assert.NotNull(updatedEvent);
-        Assert.Equal(SearchCommandStatus.Completed, updatedEvent.SearchStatus);
+        updatedEvent.ShouldNotBeNull();
+        updatedEvent.SearchStatus.ShouldBe(SearchCommandStatus.Completed);
     }
 
     [Fact]
@@ -716,8 +717,8 @@ public class EventPublisherTests : IDisposable
 
         // Assert
         var updatedEvent = await _context.Events.FindAsync(eventId);
-        Assert.NotNull(updatedEvent);
-        Assert.NotNull(updatedEvent.CompletedAt);
+        updatedEvent.ShouldNotBeNull();
+        updatedEvent.CompletedAt.ShouldNotBeNull();
     }
 
     [Fact]
@@ -733,8 +734,8 @@ public class EventPublisherTests : IDisposable
 
         // Assert
         var searchData = await _context.SearchEventData.FirstOrDefaultAsync(s => s.AppEventId == eventId);
-        Assert.NotNull(searchData);
-        Assert.Contains("Movie A (2024)", searchData.GrabbedItems);
+        searchData.ShouldNotBeNull();
+        searchData.GrabbedItems.ShouldContain("Movie A (2024)");
     }
 
     [Fact]
@@ -748,8 +749,8 @@ public class EventPublisherTests : IDisposable
 
         // Assert
         var searchData = await _context.SearchEventData.FirstOrDefaultAsync(s => s.AppEventId == eventId);
-        Assert.NotNull(searchData);
-        Assert.Empty(searchData.GrabbedItems);
+        searchData.ShouldNotBeNull();
+        searchData.GrabbedItems.ShouldBeEmpty();
     }
 
     [Fact]
@@ -761,7 +762,7 @@ public class EventPublisherTests : IDisposable
         // Assert — should not throw, and the log warning is the important behavior
         // (no exception thrown is the assertion)
         var eventCount = await _context.Events.CountAsync();
-        Assert.Equal(0, eventCount);
+        eventCount.ShouldBe(0);
     }
 
     [Fact]

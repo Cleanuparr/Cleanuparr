@@ -10,6 +10,7 @@ using Cleanuparr.Infrastructure.Services.Interfaces;
 using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
 using Cleanuparr.Persistence.Models.Configuration;
 using Microsoft.Extensions.Logging;
+using Cleanuparr.Infrastructure.Tests.TestHelpers;
 using NSubstitute;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.DownloadClient;
@@ -31,6 +32,7 @@ public class QBitServiceFixture : IDisposable
 
     public QBitServiceFixture()
     {
+        SubstituteHelper.ClearPendingArgSpecs();
         Logger = Substitute.For<ILogger<QBitService>>();
         FilenameEvaluator = Substitute.For<IFilenameEvaluator>();
         Striker = Substitute.For<IStriker>();
@@ -46,8 +48,8 @@ public class QBitServiceFixture : IDisposable
 
         // Setup default behavior for DryRunInterceptor to execute actions directly
         DryRunInterceptor
-            .InterceptAsync(Arg.Any<Delegate>(), Arg.Any<object[]>())
-            .Returns(callInfo =>
+            .InterceptAsync(default!, default!)
+            .ReturnsForAnyArgs(callInfo =>
             {
                 var action = callInfo.ArgAt<Delegate>(0);
                 var parameters = callInfo.ArgAt<object[]>(1);
@@ -96,6 +98,7 @@ public class QBitServiceFixture : IDisposable
 
     public void ResetMocks()
     {
+        SubstituteHelper.ClearPendingArgSpecs();
         Logger = Substitute.For<ILogger<QBitService>>();
         FilenameEvaluator = Substitute.For<IFilenameEvaluator>();
         Striker = Substitute.For<IStriker>();
@@ -103,6 +106,7 @@ public class QBitServiceFixture : IDisposable
         HardLinkFileService = Substitute.For<IHardLinkFileService>();
         HttpClientProvider = Substitute.For<IDynamicHttpClientProvider>();
         EventPublisher = Substitute.For<IEventPublisher>();
+        BlocklistProvider = Substitute.For<IBlocklistProvider>();
         RuleEvaluator = Substitute.For<IQueueRuleEvaluator>();
         RuleManager = Substitute.For<IQueueRuleManager>();
         SeedingRuleEvaluator = Substitute.For<ISeedingRuleEvaluator>();
@@ -110,8 +114,8 @@ public class QBitServiceFixture : IDisposable
 
         // Re-setup default DryRunInterceptor behavior
         DryRunInterceptor
-            .InterceptAsync(Arg.Any<Delegate>(), Arg.Any<object[]>())
-            .Returns(callInfo =>
+            .InterceptAsync(default!, default!)
+            .ReturnsForAnyArgs(callInfo =>
             {
                 var action = callInfo.ArgAt<Delegate>(0);
                 var parameters = callInfo.ArgAt<object[]>(1);
@@ -125,8 +129,8 @@ public class QBitServiceFixture : IDisposable
     {
         var realEvaluator = new SeedingRuleEvaluator();
         SeedingRuleEvaluator
-            .GetMatchingRule(Arg.Any<Domain.Entities.ITorrentItemWrapper>(), Arg.Any<IEnumerable<ISeedingRule>>())
-            .Returns(callInfo =>
+            .GetMatchingRule(default!, default!)
+            .ReturnsForAnyArgs(callInfo =>
                 realEvaluator.GetMatchingRule(callInfo.Arg<Domain.Entities.ITorrentItemWrapper>(), callInfo.Arg<IEnumerable<ISeedingRule>>()));
     }
 

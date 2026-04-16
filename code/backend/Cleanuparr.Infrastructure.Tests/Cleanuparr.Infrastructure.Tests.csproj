@@ -23,7 +23,6 @@
         <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="10.0.1" />
         <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" Version="10.0.1" />
         <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
-        <PackageReference Include="Moq" Version="4.20.72" />
         <PackageReference Include="NSubstitute" Version="5.3.0" />
         <PackageReference Include="Serilog" Version="4.3.0" />
         <PackageReference Include="Serilog.Expressions" Version="5.0.0" />

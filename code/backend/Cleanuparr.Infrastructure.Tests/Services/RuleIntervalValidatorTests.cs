@@ -5,7 +5,7 @@ using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Services;
 using Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
 using Microsoft.Extensions.Logging;
-using Moq;
+using NSubstitute;
 using Shouldly;
 using Xunit;
 
@@ -17,7 +17,7 @@ public class RuleIntervalValidatorTests
 
     public RuleIntervalValidatorTests()
     {
-        var logger = Mock.Of<ILogger<RuleIntervalValidator>>();
+        var logger = Substitute.For<ILogger<RuleIntervalValidator>>();
         _validator = new RuleIntervalValidator(logger);
     }
 

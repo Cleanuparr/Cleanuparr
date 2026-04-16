@@ -5,30 +5,32 @@ using Cleanuparr.Infrastructure.Features.Notifications.Models;
 using MassTransit;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
-using Moq;
+using NSubstitute;
+using NSubstitute.ExceptionExtensions;
+using Shouldly;
 using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.Notifications;
 
 public class NotificationConsumerTests
 {
-    private readonly Mock<ILogger<NotificationService>> _serviceLoggerMock;
-    private readonly Mock<INotificationConfigurationService> _configurationServiceMock;
-    private readonly Mock<INotificationProviderFactory> _providerFactoryMock;
+    private readonly ILogger<NotificationService> _serviceLogger;
+    private readonly INotificationConfigurationService _configurationService;
+    private readonly INotificationProviderFactory _providerFactory;
     private readonly NotificationService _notificationService;
     private readonly FakeTimeProvider _timeProvider;
 
     public NotificationConsumerTests()
     {
-        _serviceLoggerMock = new Mock<ILogger<NotificationService>>();
-        _configurationServiceMock = new Mock<INotificationConfigurationService>();
-        _providerFactoryMock = new Mock<INotificationProviderFactory>();
+        _serviceLogger = Substitute.For<ILogger<NotificationService>>();
+        _configurationService = Substitute.For<INotificationConfigurationService>();
+        _providerFactory = Substitute.For<INotificationProviderFactory>();
         _timeProvider = new FakeTimeProvider();
 
         _notificationService = new NotificationService(
-            _serviceLoggerMock.Object,
-            _configurationServiceMock.Object,
-            _providerFactoryMock.Object);
+            _serviceLogger,
+            _configurationService,
+            _providerFactory);
     }
 
     #region Consume Tests - FailedImportStrikeNotification
@@ -47,28 +49,28 @@ public class NotificationConsumerTests
             InstanceUrl = new Uri("http://radarr.local"),
             Hash = "TEST123"
         };
-        var contextMock = CreateConsumeContextMock(notification);
+        var context = CreateConsumeContext(notification);
         NotificationEventType? capturedEventType = null;
 
-        var providerMock = new Mock<INotificationProvider>();
+        var provider = Substitute.For<INotificationProvider>();
         var providerDto = new NotificationProviderDto { Id = Guid.NewGuid(), Name = "Test Provider", Type = NotificationProviderType.Apprise };
 
-        _configurationServiceMock
-            .Setup(s => s.GetProvidersForEventAsync(It.IsAny<NotificationEventType>()))
-            .Callback<NotificationEventType>(e => capturedEventType = e)
-            .ReturnsAsync(new List<NotificationProviderDto> { providerDto });
+        _configurationService
+            .GetProvidersForEventAsync(Arg.Any<NotificationEventType>())
+            .Returns(new List<NotificationProviderDto> { providerDto })
+            .AndDoes(ci => capturedEventType = ci.ArgAt<NotificationEventType>(0));
 
-        _providerFactoryMock
-            .Setup(f => f.CreateProvider(It.IsAny<NotificationProviderDto>()))
-            .Returns(providerMock.Object);
+        _providerFactory
+            .CreateProvider(Arg.Any<NotificationProviderDto>())
+            .Returns(provider);
 
-        providerMock.Setup(p => p.SendNotificationAsync(It.IsAny<NotificationContext>())).Returns(Task.CompletedTask);
+        provider.SendNotificationAsync(Arg.Any<NotificationContext>()).Returns(Task.CompletedTask);
 
         // Act
-        await ConsumeWithTimeAdvance(consumer, contextMock);
+        await ConsumeWithTimeAdvance(consumer, context);
 
         // Assert
-        Assert.Equal(NotificationEventType.FailedImportStrike, capturedEventType);
+        capturedEventType.ShouldBe(NotificationEventType.FailedImportStrike);
     }
 
     #endregion
@@ -89,28 +91,28 @@ public class NotificationConsumerTests
             InstanceUrl = new Uri("http://sonarr.local"),
             Hash = "STALL123"
         };
-        var contextMock = CreateConsumeContextMock(notification);
+        var context = CreateConsumeContext(notification);
         NotificationEventType? capturedEventType = null;
 
-        var providerMock = new Mock<INotificationProvider>();
+        var provider = Substitute.For<INotificationProvider>();
         var providerDto = new NotificationProviderDto { Id = Guid.NewGuid(), Name = "Test Provider", Type = NotificationProviderType.Apprise };
 
-        _configurationServiceMock
-            .Setup(s => s.GetProvidersForEventAsync(It.IsAny<NotificationEventType>()))
-            .Callback<NotificationEventType>(e => capturedEventType = e)
-            .ReturnsAsync(new List<NotificationProviderDto> { providerDto });
+        _configurationService
+            .GetProvidersForEventAsync(Arg.Any<NotificationEventType>())
+            .Returns(new List<NotificationProviderDto> { providerDto })
+            .AndDoes(ci => capturedEventType = ci.ArgAt<NotificationEventType>(0));
 
-        _providerFactoryMock
-            .Setup(f => f.CreateProvider(It.IsAny<NotificationProviderDto>()))
-            .Returns(providerMock.Object);
+        _providerFactory
+            .CreateProvider(Arg.Any<NotificationProviderDto>())
+            .Returns(provider);
 
-        providerMock.Setup(p => p.SendNotificationAsync(It.IsAny<NotificationContext>())).Returns(Task.CompletedTask);
+        provider.SendNotificationAsync(Arg.Any<NotificationContext>()).Returns(Task.CompletedTask);
 
         // Act
-        await ConsumeWithTimeAdvance(consumer, contextMock);
+        await ConsumeWithTimeAdvance(consumer, context);
 
         // Assert
-        Assert.Equal(NotificationEventType.StalledStrike, capturedEventType);
+        capturedEventType.ShouldBe(NotificationEventType.StalledStrike);
     }
 
     #endregion
@@ -131,28 +133,28 @@ public class NotificationConsumerTests
             InstanceUrl = new Uri("http://radarr.local"),
             Hash = "SLOW123"
         };
-        var contextMock = CreateConsumeContextMock(notification);
+        var context = CreateConsumeContext(notification);
         NotificationEventType? capturedEventType = null;
 
-        var providerMock = new Mock<INotificationProvider>();
+        var provider = Substitute.For<INotificationProvider>();
         var providerDto = new NotificationProviderDto { Id = Guid.NewGuid(), Name = "Test Provider", Type = NotificationProviderType.Apprise };
 
-        _configurationServiceMock
-            .Setup(s => s.GetProvidersForEventAsync(It.IsAny<NotificationEventType>()))
-            .Callback<NotificationEventType>(e => capturedEventType = e)
-            .ReturnsAsync(new List<NotificationProviderDto> { providerDto });
+        _configurationService
+            .GetProvidersForEventAsync(Arg.Any<NotificationEventType>())
+            .Returns(new List<NotificationProviderDto> { providerDto })
+            .AndDoes(ci => capturedEventType = ci.ArgAt<NotificationEventType>(0));
 
-        _providerFactoryMock
-            .Setup(f => f.CreateProvider(It.IsAny<NotificationProviderDto>()))
-            .Returns(providerMock.Object);
+        _providerFactory
+            .CreateProvider(Arg.Any<NotificationProviderDto>())
+            .Returns(provider);
 
-        providerMock.Setup(p => p.SendNotificationAsync(It.IsAny<NotificationContext>())).Returns(Task.CompletedTask);
+        provider.SendNotificationAsync(Arg.Any<NotificationContext>()).Returns(Task.CompletedTask);
 
         // Act
-        await ConsumeWithTimeAdvance(consumer, contextMock);
+        await ConsumeWithTimeAdvance(consumer, context);
 
         // Assert
-        Assert.Equal(NotificationEventType.SlowSpeedStrike, capturedEventType);
+        capturedEventType.ShouldBe(NotificationEventType.SlowSpeedStrike);
     }
 
     #endregion
@@ -173,28 +175,28 @@ public class NotificationConsumerTests
             InstanceUrl = new Uri("http://radarr.local"),
             Hash = "TIME123"
         };
-        var contextMock = CreateConsumeContextMock(notification);
+        var context = CreateConsumeContext(notification);
         NotificationEventType? capturedEventType = null;
 
-        var providerMock = new Mock<INotificationProvider>();
+        var provider = Substitute.For<INotificationProvider>();
         var providerDto = new NotificationProviderDto { Id = Guid.NewGuid(), Name = "Test Provider", Type = NotificationProviderType.Apprise };
 
-        _configurationServiceMock
-            .Setup(s => s.GetProvidersForEventAsync(It.IsAny<NotificationEventType>()))
-            .Callback<NotificationEventType>(e => capturedEventType = e)
-            .ReturnsAsync(new List<NotificationProviderDto> { providerDto });
+        _configurationService
+            .GetProvidersForEventAsync(Arg.Any<NotificationEventType>())
+            .Returns(new List<NotificationProviderDto> { providerDto })
+            .AndDoes(ci => capturedEventType = ci.ArgAt<NotificationEventType>(0));
 
-        _providerFactoryMock
-            .Setup(f => f.CreateProvider(It.IsAny<NotificationProviderDto>()))
-            .Returns(providerMock.Object);
+        _providerFactory
+            .CreateProvider(Arg.Any<NotificationProviderDto>())
+            .Returns(provider);
 
-        providerMock.Setup(p => p.SendNotificationAsync(It.IsAny<NotificationContext>())).Returns(Task.CompletedTask);
+        provider.SendNotificationAsync(Arg.Any<NotificationContext>()).Returns(Task.CompletedTask);
 
         // Act
-        await ConsumeWithTimeAdvance(consumer, contextMock);
+        await ConsumeWithTimeAdvance(consumer, context);
 
         // Assert
-        Assert.Equal(NotificationEventType.SlowTimeStrike, capturedEventType);
+        capturedEventType.ShouldBe(NotificationEventType.SlowTimeStrike);
     }
 
     #endregion
@@ -215,28 +217,28 @@ public class NotificationConsumerTests
             InstanceUrl = new Uri("http://lidarr.local"),
             Hash = "DEL123"
         };
-        var contextMock = CreateConsumeContextMock(notification);
+        var context = CreateConsumeContext(notification);
         NotificationEventType? capturedEventType = null;
 
-        var providerMock = new Mock<INotificationProvider>();
+        var provider = Substitute.For<INotificationProvider>();
         var providerDto = new NotificationProviderDto { Id = Guid.NewGuid(), Name = "Test Provider", Type = NotificationProviderType.Apprise };
 
-        _configurationServiceMock
-            .Setup(s => s.GetProvidersForEventAsync(It.IsAny<NotificationEventType>()))
-            .Callback<NotificationEventType>(e => capturedEventType = e)
-            .ReturnsAsync(new List<NotificationProviderDto> { providerDto });
+        _configurationService
+            .GetProvidersForEventAsync(Arg.Any<NotificationEventType>())
+            .Returns(new List<NotificationProviderDto> { providerDto })
+            .AndDoes(ci => capturedEventType = ci.ArgAt<NotificationEventType>(0));
 
-        _providerFactoryMock
-            .Setup(f => f.CreateProvider(It.IsAny<NotificationProviderDto>()))
-            .Returns(providerMock.Object);
+        _providerFactory
+            .CreateProvider(Arg.Any<NotificationProviderDto>())
+            .Returns(provider);
 
-        providerMock.Setup(p => p.SendNotificationAsync(It.IsAny<NotificationContext>())).Returns(Task.CompletedTask);
+        provider.SendNotificationAsync(Arg.Any<NotificationContext>()).Returns(Task.CompletedTask);
 
         // Act
-        await ConsumeWithTimeAdvance(consumer, contextMock);
+        await ConsumeWithTimeAdvance(consumer, context);
 
         // Assert
-        Assert.Equal(NotificationEventType.QueueItemDeleted, capturedEventType);
+        capturedEventType.ShouldBe(NotificationEventType.QueueItemDeleted);
     }
 
     #endregion
@@ -254,28 +256,28 @@ public class NotificationConsumerTests
             Description = "Old download removed",
             Level = NotificationLevel.Information
         };
-        var contextMock = CreateConsumeContextMock(notification);
+        var context = CreateConsumeContext(notification);
         NotificationEventType? capturedEventType = null;
 
-        var providerMock = new Mock<INotificationProvider>();
+        var provider = Substitute.For<INotificationProvider>();
         var providerDto = new NotificationProviderDto { Id = Guid.NewGuid(), Name = "Test Provider", Type = NotificationProviderType.Apprise };
 
-        _configurationServiceMock
-            .Setup(s => s.GetProvidersForEventAsync(It.IsAny<NotificationEventType>()))
-            .Callback<NotificationEventType>(e => capturedEventType = e)
-            .ReturnsAsync(new List<NotificationProviderDto> { providerDto });
+        _configurationService
+            .GetProvidersForEventAsync(Arg.Any<NotificationEventType>())
+            .Returns(new List<NotificationProviderDto> { providerDto })
+            .AndDoes(ci => capturedEventType = ci.ArgAt<NotificationEventType>(0));
 
-        _providerFactoryMock
-            .Setup(f => f.CreateProvider(It.IsAny<NotificationProviderDto>()))
-            .Returns(providerMock.Object);
+        _providerFactory
+            .CreateProvider(Arg.Any<NotificationProviderDto>())
+            .Returns(provider);
 
-        providerMock.Setup(p => p.SendNotificationAsync(It.IsAny<NotificationContext>())).Returns(Task.CompletedTask);
+        provider.SendNotificationAsync(Arg.Any<NotificationContext>()).Returns(Task.CompletedTask);
 
         // Act
-        await ConsumeWithTimeAdvance(consumer, contextMock);
+        await ConsumeWithTimeAdvance(consumer, context);
 
         // Assert
-        Assert.Equal(NotificationEventType.DownloadCleaned, capturedEventType);
+        capturedEventType.ShouldBe(NotificationEventType.DownloadCleaned);
     }
 
     #endregion
@@ -293,28 +295,28 @@ public class NotificationConsumerTests
             Description = "Category updated",
             Level = NotificationLevel.Information
         };
-        var contextMock = CreateConsumeContextMock(notification);
+        var context = CreateConsumeContext(notification);
         NotificationEventType? capturedEventType = null;
 
-        var providerMock = new Mock<INotificationProvider>();
+        var provider = Substitute.For<INotificationProvider>();
         var providerDto = new NotificationProviderDto { Id = Guid.NewGuid(), Name = "Test Provider", Type = NotificationProviderType.Apprise };
 
-        _configurationServiceMock
-            .Setup(s => s.GetProvidersForEventAsync(It.IsAny<NotificationEventType>()))
-            .Callback<NotificationEventType>(e => capturedEventType = e)
-            .ReturnsAsync(new List<NotificationProviderDto> { providerDto });
+        _configurationService
+            .GetProvidersForEventAsync(Arg.Any<NotificationEventType>())
+            .Returns(new List<NotificationProviderDto> { providerDto })
+            .AndDoes(ci => capturedEventType = ci.ArgAt<NotificationEventType>(0));
 
-        _providerFactoryMock
-            .Setup(f => f.CreateProvider(It.IsAny<NotificationProviderDto>()))
-            .Returns(providerMock.Object);
+        _providerFactory
+            .CreateProvider(Arg.Any<NotificationProviderDto>())
+            .Returns(provider);
 
-        providerMock.Setup(p => p.SendNotificationAsync(It.IsAny<NotificationContext>())).Returns(Task.CompletedTask);
+        provider.SendNotificationAsync(Arg.Any<NotificationContext>()).Returns(Task.CompletedTask);
 
         // Act
-        await ConsumeWithTimeAdvance(consumer, contextMock);
+        await ConsumeWithTimeAdvance(consumer, context);
 
         // Assert
-        Assert.Equal(NotificationEventType.CategoryChanged, capturedEventType);
+        capturedEventType.ShouldBe(NotificationEventType.CategoryChanged);
     }
 
     #endregion
@@ -338,31 +340,31 @@ public class NotificationConsumerTests
             InstanceUrl = new Uri("http://radarr.local"),
             Hash = "LEVEL123"
         };
-        var contextMock = CreateConsumeContextMock(notification);
+        var context = CreateConsumeContext(notification);
         NotificationContext? capturedContext = null;
 
-        var providerMock = new Mock<INotificationProvider>();
+        var provider = Substitute.For<INotificationProvider>();
         var providerDto = new NotificationProviderDto { Id = Guid.NewGuid(), Name = "Test Provider", Type = NotificationProviderType.Apprise };
 
-        _configurationServiceMock
-            .Setup(s => s.GetProvidersForEventAsync(It.IsAny<NotificationEventType>()))
-            .ReturnsAsync(new List<NotificationProviderDto> { providerDto });
+        _configurationService
+            .GetProvidersForEventAsync(Arg.Any<NotificationEventType>())
+            .Returns(new List<NotificationProviderDto> { providerDto });
 
-        _providerFactoryMock
-            .Setup(f => f.CreateProvider(It.IsAny<NotificationProviderDto>()))
-            .Returns(providerMock.Object);
+        _providerFactory
+            .CreateProvider(Arg.Any<NotificationProviderDto>())
+            .Returns(provider);
 
-        providerMock
-            .Setup(p => p.SendNotificationAsync(It.IsAny<NotificationContext>()))
-            .Callback<NotificationContext>(c => capturedContext = c)
-            .Returns(Task.CompletedTask);
+        provider
+            .SendNotificationAsync(Arg.Any<NotificationContext>())
+            .Returns(Task.CompletedTask)
+            .AndDoes(ci => capturedContext = ci.ArgAt<NotificationContext>(0));
 
         // Act
-        await ConsumeWithTimeAdvance(consumer, contextMock);
+        await ConsumeWithTimeAdvance(consumer, context);
 
         // Assert
-        Assert.NotNull(capturedContext);
-        Assert.Equal(expectedSeverity, capturedContext.Severity);
+        capturedContext.ShouldNotBeNull();
+        capturedContext.Severity.ShouldBe(expectedSeverity);
     }
 
     [Fact]
@@ -380,34 +382,34 @@ public class NotificationConsumerTests
             Hash = "ABC123",
             Image = new Uri("http://example.com/image.jpg")
         };
-        var contextMock = CreateConsumeContextMock(notification);
+        var context = CreateConsumeContext(notification);
         NotificationContext? capturedContext = null;
 
-        var providerMock = new Mock<INotificationProvider>();
+        var provider = Substitute.For<INotificationProvider>();
         var providerDto = new NotificationProviderDto { Id = Guid.NewGuid(), Name = "Test Provider", Type = NotificationProviderType.Apprise };
 
-        _configurationServiceMock
-            .Setup(s => s.GetProvidersForEventAsync(It.IsAny<NotificationEventType>()))
-            .ReturnsAsync(new List<NotificationProviderDto> { providerDto });
+        _configurationService
+            .GetProvidersForEventAsync(Arg.Any<NotificationEventType>())
+            .Returns(new List<NotificationProviderDto> { providerDto });
 
-        _providerFactoryMock
-            .Setup(f => f.CreateProvider(It.IsAny<NotificationProviderDto>()))
-            .Returns(providerMock.Object);
+        _providerFactory
+            .CreateProvider(Arg.Any<NotificationProviderDto>())
+            .Returns(provider);
 
-        providerMock
-            .Setup(p => p.SendNotificationAsync(It.IsAny<NotificationContext>()))
-            .Callback<NotificationContext>(c => capturedContext = c)
-            .Returns(Task.CompletedTask);
+        provider
+            .SendNotificationAsync(Arg.Any<NotificationContext>())
+            .Returns(Task.CompletedTask)
+            .AndDoes(ci => capturedContext = ci.ArgAt<NotificationContext>(0));
 
         // Act
-        await ConsumeWithTimeAdvance(consumer, contextMock);
+        await ConsumeWithTimeAdvance(consumer, context);
 
         // Assert
-        Assert.NotNull(capturedContext);
-        Assert.Equal("Sonarr", capturedContext.Data["Instance type"]);
-        Assert.Equal("http://sonarr.local/", capturedContext.Data["Url"]);
-        Assert.Equal("ABC123", capturedContext.Data["Hash"]);
-        Assert.Equal(new Uri("http://example.com/image.jpg"), capturedContext.Image);
+        capturedContext.ShouldNotBeNull();
+        capturedContext.Data["Instance type"].ShouldBe("Sonarr");
+        capturedContext.Data["Url"].ShouldBe("http://sonarr.local/");
+        capturedContext.Data["Hash"].ShouldBe("ABC123");
+        capturedContext.Image.ShouldBe(new Uri("http://example.com/image.jpg"));
     }
 
     [Fact]
@@ -429,32 +431,32 @@ public class NotificationConsumerTests
                 new() { Key = "CustomKey2", Value = "CustomValue2" }
             }
         };
-        var contextMock = CreateConsumeContextMock(notification);
+        var context = CreateConsumeContext(notification);
         NotificationContext? capturedContext = null;
 
-        var providerMock = new Mock<INotificationProvider>();
+        var provider = Substitute.For<INotificationProvider>();
         var providerDto = new NotificationProviderDto { Id = Guid.NewGuid(), Name = "Test Provider", Type = NotificationProviderType.Apprise };
 
-        _configurationServiceMock
-            .Setup(s => s.GetProvidersForEventAsync(It.IsAny<NotificationEventType>()))
-            .ReturnsAsync(new List<NotificationProviderDto> { providerDto });
+        _configurationService
+            .GetProvidersForEventAsync(Arg.Any<NotificationEventType>())
+            .Returns(new List<NotificationProviderDto> { providerDto });
 
-        _providerFactoryMock
-            .Setup(f => f.CreateProvider(It.IsAny<NotificationProviderDto>()))
-            .Returns(providerMock.Object);
+        _providerFactory
+            .CreateProvider(Arg.Any<NotificationProviderDto>())
+            .Returns(provider);
 
-        providerMock
-            .Setup(p => p.SendNotificationAsync(It.IsAny<NotificationContext>()))
-            .Callback<NotificationContext>(c => capturedContext = c)
-            .Returns(Task.CompletedTask);
+        provider
+            .SendNotificationAsync(Arg.Any<NotificationContext>())
+            .Returns(Task.CompletedTask)
+            .AndDoes(ci => capturedContext = ci.ArgAt<NotificationContext>(0));
 
         // Act
-        await ConsumeWithTimeAdvance(consumer, contextMock);
+        await ConsumeWithTimeAdvance(consumer, context);
 
         // Assert
-        Assert.NotNull(capturedContext);
-        Assert.Equal("CustomValue1", capturedContext.Data["CustomKey1"]);
-        Assert.Equal("CustomValue2", capturedContext.Data["CustomKey2"]);
+        capturedContext.ShouldNotBeNull();
+        capturedContext.Data["CustomKey1"].ShouldBe("CustomValue1");
+        capturedContext.Data["CustomKey2"].ShouldBe("CustomValue2");
     }
 
     [Fact]
@@ -468,33 +470,33 @@ public class NotificationConsumerTests
             Description = "Test",
             Level = NotificationLevel.Information
         };
-        var contextMock = CreateConsumeContextMock(notification);
+        var context = CreateConsumeContext(notification);
         NotificationContext? capturedContext = null;
 
-        var providerMock = new Mock<INotificationProvider>();
+        var provider = Substitute.For<INotificationProvider>();
         var providerDto = new NotificationProviderDto { Id = Guid.NewGuid(), Name = "Test Provider", Type = NotificationProviderType.Apprise };
 
-        _configurationServiceMock
-            .Setup(s => s.GetProvidersForEventAsync(It.IsAny<NotificationEventType>()))
-            .ReturnsAsync(new List<NotificationProviderDto> { providerDto });
+        _configurationService
+            .GetProvidersForEventAsync(Arg.Any<NotificationEventType>())
+            .Returns(new List<NotificationProviderDto> { providerDto });
 
-        _providerFactoryMock
-            .Setup(f => f.CreateProvider(It.IsAny<NotificationProviderDto>()))
-            .Returns(providerMock.Object);
+        _providerFactory
+            .CreateProvider(Arg.Any<NotificationProviderDto>())
+            .Returns(provider);
 
-        providerMock
-            .Setup(p => p.SendNotificationAsync(It.IsAny<NotificationContext>()))
-            .Callback<NotificationContext>(c => capturedContext = c)
-            .Returns(Task.CompletedTask);
+        provider
+            .SendNotificationAsync(Arg.Any<NotificationContext>())
+            .Returns(Task.CompletedTask)
+            .AndDoes(ci => capturedContext = ci.ArgAt<NotificationContext>(0));
 
         // Act
-        await ConsumeWithTimeAdvance(consumer, contextMock);
+        await ConsumeWithTimeAdvance(consumer, context);
 
         // Assert
-        Assert.NotNull(capturedContext);
-        Assert.False(capturedContext.Data.ContainsKey("Instance type"));
-        Assert.False(capturedContext.Data.ContainsKey("Url"));
-        Assert.False(capturedContext.Data.ContainsKey("Hash"));
+        capturedContext.ShouldNotBeNull();
+        capturedContext.Data.ContainsKey("Instance type").ShouldBeFalse();
+        capturedContext.Data.ContainsKey("Url").ShouldBeFalse();
+        capturedContext.Data.ContainsKey("Hash").ShouldBeFalse();
     }
 
     #endregion
@@ -515,17 +517,17 @@ public class NotificationConsumerTests
             InstanceUrl = new Uri("http://radarr.local"),
             Hash = "NOPROV123"
         };
-        var contextMock = CreateConsumeContextMock(notification);
+        var context = CreateConsumeContext(notification);
 
-        _configurationServiceMock
-            .Setup(s => s.GetProvidersForEventAsync(It.IsAny<NotificationEventType>()))
-            .ReturnsAsync(new List<NotificationProviderDto>());
+        _configurationService
+            .GetProvidersForEventAsync(Arg.Any<NotificationEventType>())
+            .Returns(new List<NotificationProviderDto>());
 
         // Act
-        await ConsumeWithTimeAdvance(consumer, contextMock);
+        await ConsumeWithTimeAdvance(consumer, context);
 
         // Assert
-        _providerFactoryMock.Verify(f => f.CreateProvider(It.IsAny<NotificationProviderDto>()), Times.Never);
+        _providerFactory.DidNotReceive().CreateProvider(Arg.Any<NotificationProviderDto>());
     }
 
     #endregion
@@ -534,23 +536,23 @@ public class NotificationConsumerTests
 
     private NotificationConsumer<T> CreateConsumer<T>() where T : Notification
     {
-        var loggerMock = new Mock<ILogger<NotificationConsumer<T>>>();
-        return new NotificationConsumer<T>(loggerMock.Object, _notificationService, _timeProvider);
+        var logger = Substitute.For<ILogger<NotificationConsumer<T>>>();
+        return new NotificationConsumer<T>(logger, _notificationService, _timeProvider);
     }
 
-    private static Mock<ConsumeContext<T>> CreateConsumeContextMock<T>(T message) where T : class
+    private static ConsumeContext<T> CreateConsumeContext<T>(T message) where T : class
     {
-        var mock = new Mock<ConsumeContext<T>>();
-        mock.Setup(c => c.Message).Returns(message);
-        return mock;
+        var context = Substitute.For<ConsumeContext<T>>();
+        context.Message.Returns(message);
+        return context;
     }
 
     /// <summary>
     /// Executes the consumer and advances time past the 1-second spam prevention delay
     /// </summary>
-    private async Task ConsumeWithTimeAdvance<T>(NotificationConsumer<T> consumer, Mock<ConsumeContext<T>> contextMock) where T : Notification
+    private async Task ConsumeWithTimeAdvance<T>(NotificationConsumer<T> consumer, ConsumeContext<T> context) where T : Notification
     {
-        var task = consumer.Consume(contextMock.Object);
+        var task = consumer.Consume(context);
         _timeProvider.Advance(TimeSpan.FromSeconds(1));
         await task;
     }

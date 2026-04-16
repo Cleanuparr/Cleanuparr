@@ -3,7 +3,8 @@ using Cleanuparr.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Logging;
-using Moq;
+using NSubstitute;
+using Shouldly;
 using Xunit;
 using HealthCheckStatus = Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus;
 
@@ -16,12 +17,12 @@ namespace Cleanuparr.Infrastructure.Tests.Health;
 /// </summary>
 public class DatabaseHealthCheckTests : IDisposable
 {
-    private readonly Mock<ILogger<DatabaseHealthCheck>> _loggerMock;
+    private readonly ILogger<DatabaseHealthCheck> _logger;
     private DataContext? _dataContext;
 
     public DatabaseHealthCheckTests()
     {
-        _loggerMock = new Mock<ILogger<DatabaseHealthCheck>>();
+        _logger = Substitute.For<ILogger<DatabaseHealthCheck>>();
     }
 
     public void Dispose()
@@ -41,10 +42,10 @@ public class DatabaseHealthCheckTests : IDisposable
         _dataContext = new DataContext(options);
 
         // Act
-        var healthCheck = new DatabaseHealthCheck(_dataContext, _loggerMock.Object);
+        var healthCheck = new DatabaseHealthCheck(_dataContext, _logger);
 
         // Assert
-        Assert.NotNull(healthCheck);
+        healthCheck.ShouldNotBeNull();
     }
 
     #endregion
@@ -62,13 +63,13 @@ public class DatabaseHealthCheckTests : IDisposable
         var disposedContext = new DataContext(options);
         disposedContext.Dispose();
 
-        var healthCheck = new DatabaseHealthCheck(disposedContext, _loggerMock.Object);
+        var healthCheck = new DatabaseHealthCheck(disposedContext, _logger);
 
         // Act
         var result = await healthCheck.CheckHealthAsync(null!);
 
         // Assert
-        Assert.Equal(HealthCheckStatus.Unhealthy, result.Status);
+        result.Status.ShouldBe(HealthCheckStatus.Unhealthy);
     }
 
     [Fact]
@@ -82,20 +83,17 @@ public class DatabaseHealthCheckTests : IDisposable
         var disposedContext = new DataContext(options);
         disposedContext.Dispose();
 
-        var healthCheck = new DatabaseHealthCheck(disposedContext, _loggerMock.Object);
+        var healthCheck = new DatabaseHealthCheck(disposedContext, _logger);
 
         // Act
         await healthCheck.CheckHealthAsync(null!);
 
         // Assert
-        _loggerMock.Verify(
-            x => x.Log(
-                LogLevel.Error,
-                It.IsAny<EventId>(),
-                It.IsAny<It.IsAnyType>(),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.AtLeastOnce);
+        var errorCalls = _logger.ReceivedCalls()
+            .Where(c => c.GetMethodInfo().Name == "Log")
+            .Where(c => c.GetArguments().Length > 0 && c.GetArguments()[0] is LogLevel l && l == LogLevel.Error)
+            .ToList();
+        errorCalls.ShouldNotBeEmpty();
     }
 
     [Fact]
@@ -109,13 +107,13 @@ public class DatabaseHealthCheckTests : IDisposable
         var disposedContext = new DataContext(options);
         disposedContext.Dispose();
 
-        var healthCheck = new DatabaseHealthCheck(disposedContext, _loggerMock.Object);
+        var healthCheck = new DatabaseHealthCheck(disposedContext, _logger);
 
         // Act
         var result = await healthCheck.CheckHealthAsync(null!);
 
         // Assert
-        Assert.Contains("failed", result.Description, StringComparison.OrdinalIgnoreCase);
+        result.Description.ShouldContain("failed", Case.Insensitive);
     }
 
     #endregion

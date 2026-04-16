@@ -1,6 +1,7 @@
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Seeker;
 using Cleanuparr.Infrastructure.Features.Seeker.Selectors;
+using Shouldly;
 using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.Seeker;
@@ -29,13 +30,13 @@ public sealed class ItemSelectorTests
     {
         var selector = ItemSelectorFactory.Create(strategy);
 
-        Assert.IsType(expectedType, selector);
+        selector.ShouldBeOfType(expectedType);
     }
 
     [Fact]
     public void Factory_Create_InvalidStrategy_ThrowsArgumentOutOfRangeException()
     {
-        Assert.Throws<ArgumentOutOfRangeException>(() => ItemSelectorFactory.Create((SelectionStrategy)999));
+        Should.Throw<ArgumentOutOfRangeException>(() => ItemSelectorFactory.Create((SelectionStrategy)999));
     }
 
     #endregion
@@ -50,7 +51,7 @@ public sealed class ItemSelectorTests
         var result = selector.Select(SampleCandidates, 3);
 
         // Newest added: 3 (May), 2 (Mar), 4 (Feb)
-        Assert.Equal([3, 2, 4], result);
+        result.ShouldBe([3, 2, 4]);
     }
 
     [Fact]
@@ -61,7 +62,7 @@ public sealed class ItemSelectorTests
         // Select all — item 5 (null Added) should be last
         var result = selector.Select(SampleCandidates, 5);
 
-        Assert.Equal(5, result.Last());
+        result.Last().ShouldBe(5);
     }
 
     [Fact]
@@ -71,7 +72,7 @@ public sealed class ItemSelectorTests
 
         var result = selector.Select(SampleCandidates, 2);
 
-        Assert.Equal(2, result.Count);
+        result.Count.ShouldBe(2);
     }
 
     [Fact]
@@ -81,7 +82,7 @@ public sealed class ItemSelectorTests
 
         var result = selector.Select([], 5);
 
-        Assert.Empty(result);
+        result.ShouldBeEmpty();
     }
 
     [Fact]
@@ -91,7 +92,7 @@ public sealed class ItemSelectorTests
 
         var result = selector.Select(SampleCandidates, 100);
 
-        Assert.Equal(5, result.Count);
+        result.Count.ShouldBe(5);
     }
 
     #endregion
@@ -106,7 +107,7 @@ public sealed class ItemSelectorTests
         var result = selector.Select(SampleCandidates, 3);
 
         // Never searched first (null → MinValue), then oldest: 3 (null), 5 (Apr), 2 (May)
-        Assert.Equal([3, 5, 2], result);
+        result.ShouldBe([3, 5, 2]);
     }
 
     [Fact]
@@ -117,7 +118,7 @@ public sealed class ItemSelectorTests
         var result = selector.Select(SampleCandidates, 1);
 
         // Item 3 has LastSearched = null, should be first
-        Assert.Equal(3, result[0]);
+        result[0].ShouldBe(3);
     }
 
     [Fact]
@@ -127,7 +128,7 @@ public sealed class ItemSelectorTests
 
         var result = selector.Select(SampleCandidates, 2);
 
-        Assert.Equal(2, result.Count);
+        result.Count.ShouldBe(2);
     }
 
     [Fact]
@@ -137,7 +138,7 @@ public sealed class ItemSelectorTests
 
         var result = selector.Select([], 5);
 
-        Assert.Empty(result);
+        result.ShouldBeEmpty();
     }
 
     #endregion
@@ -151,7 +152,7 @@ public sealed class ItemSelectorTests
 
         var result = selector.Select(SampleCandidates, 3);
 
-        Assert.Equal(3, result.Count);
+        result.Count.ShouldBe(3);
     }
 
     [Fact]
@@ -161,7 +162,7 @@ public sealed class ItemSelectorTests
 
         var result = selector.Select(SampleCandidates, 100);
 
-        Assert.Equal(5, result.Count);
+        result.Count.ShouldBe(5);
     }
 
     [Fact]
@@ -171,7 +172,7 @@ public sealed class ItemSelectorTests
 
         var result = selector.Select([], 5);
 
-        Assert.Empty(result);
+        result.ShouldBeEmpty();
     }
 
     [Fact]
@@ -181,7 +182,7 @@ public sealed class ItemSelectorTests
 
         var result = selector.Select(SampleCandidates, 5);
 
-        Assert.Equal(result.Count, result.Distinct().Count());
+        result.Distinct().Count().ShouldBe(result.Count);
     }
 
     [Fact]
@@ -192,7 +193,7 @@ public sealed class ItemSelectorTests
 
         var result = selector.Select(SampleCandidates, 3);
 
-        Assert.All(result, id => Assert.Contains(id, inputIds));
+        foreach (var id in result) { inputIds.ShouldContain(id); }
     }
 
     #endregion
@@ -206,7 +207,7 @@ public sealed class ItemSelectorTests
 
         var result = selector.Select(SampleCandidates, 3);
 
-        Assert.Equal(3, result.Count);
+        result.Count.ShouldBe(3);
     }
 
     [Fact]
@@ -216,7 +217,7 @@ public sealed class ItemSelectorTests
 
         var result = selector.Select([], 5);
 
-        Assert.Empty(result);
+        result.ShouldBeEmpty();
     }
 
     [Fact]
@@ -226,7 +227,7 @@ public sealed class ItemSelectorTests
 
         var result = selector.Select(SampleCandidates, 100);
 
-        Assert.Equal(5, result.Count);
+        result.Count.ShouldBe(5);
     }
 
     [Fact]
@@ -236,7 +237,7 @@ public sealed class ItemSelectorTests
 
         var result = selector.Select(SampleCandidates, 5);
 
-        Assert.Equal(result.Count, result.Distinct().Count());
+        result.Distinct().Count().ShouldBe(result.Count);
     }
 
     [Fact]
@@ -247,8 +248,8 @@ public sealed class ItemSelectorTests
 
         var result = selector.Select(single, 1);
 
-        Assert.Single(result);
-        Assert.Equal(42, result[0]);
+        result.ShouldHaveSingleItem();
+        result[0].ShouldBe(42);
     }
 
     #endregion
@@ -262,7 +263,7 @@ public sealed class ItemSelectorTests
 
         var result = selector.Select(SampleCandidates, 3);
 
-        Assert.Equal(3, result.Count);
+        result.Count.ShouldBe(3);
     }
 
     [Fact]
@@ -272,7 +273,7 @@ public sealed class ItemSelectorTests
 
         var result = selector.Select([], 5);
 
-        Assert.Empty(result);
+        result.ShouldBeEmpty();
     }
 
     [Fact]
@@ -282,7 +283,7 @@ public sealed class ItemSelectorTests
 
         var result = selector.Select(SampleCandidates, 100);
 
-        Assert.Equal(5, result.Count);
+        result.Count.ShouldBe(5);
     }
 
     [Fact]
@@ -292,7 +293,7 @@ public sealed class ItemSelectorTests
 
         var result = selector.Select(SampleCandidates, 5);
 
-        Assert.Equal(result.Count, result.Distinct().Count());
+        result.Distinct().Count().ShouldBe(result.Count);
     }
 
     [Fact]
@@ -303,8 +304,8 @@ public sealed class ItemSelectorTests
 
         var result = selector.Select(single, 1);
 
-        Assert.Single(result);
-        Assert.Equal(42, result[0]);
+        result.ShouldHaveSingleItem();
+        result[0].ShouldBe(42);
     }
 
     #endregion
@@ -318,7 +319,7 @@ public sealed class ItemSelectorTests
 
         var result = selector.Select(SampleCandidates, 3);
 
-        Assert.Equal(3, result.Count);
+        result.Count.ShouldBe(3);
     }
 
     [Fact]
@@ -328,7 +329,7 @@ public sealed class ItemSelectorTests
 
         var result = selector.Select([], 5);
 
-        Assert.Empty(result);
+        result.ShouldBeEmpty();
     }
 
     [Fact]
@@ -338,7 +339,7 @@ public sealed class ItemSelectorTests
 
         var result = selector.Select(SampleCandidates, 100);
 
-        Assert.Equal(5, result.Count);
+        result.Count.ShouldBe(5);
     }
 
     [Fact]
@@ -348,7 +349,7 @@ public sealed class ItemSelectorTests
 
         var result = selector.Select(SampleCandidates, 5);
 
-        Assert.Equal(result.Count, result.Distinct().Count());
+        result.Distinct().Count().ShouldBe(result.Count);
     }
 
     [Fact]
@@ -359,8 +360,8 @@ public sealed class ItemSelectorTests
 
         var result = selector.Select(single, 1);
 
-        Assert.Single(result);
-        Assert.Equal(42, result[0]);
+        result.ShouldHaveSingleItem();
+        result[0].ShouldBe(42);
     }
 
     [Fact]
@@ -371,7 +372,7 @@ public sealed class ItemSelectorTests
 
         var result = selector.Select(SampleCandidates, 3);
 
-        Assert.All(result, id => Assert.Contains(id, inputIds));
+        foreach (var id in result) { inputIds.ShouldContain(id); }
     }
 
     #endregion
@@ -385,7 +386,7 @@ public sealed class ItemSelectorTests
 
         var result = OldestSearchWeightedSelector.WeightedRandomByRank(ranked, 3);
 
-        Assert.Equal(3, result.Count);
+        result.Count.ShouldBe(3);
     }
 
     [Fact]
@@ -395,7 +396,7 @@ public sealed class ItemSelectorTests
 
         var result = OldestSearchWeightedSelector.WeightedRandomByRank(ranked, 100);
 
-        Assert.Equal(5, result.Count);
+        result.Count.ShouldBe(5);
     }
 
     [Fact]
@@ -405,7 +406,7 @@ public sealed class ItemSelectorTests
 
         var result = OldestSearchWeightedSelector.WeightedRandomByRank(ranked, 5);
 
-        Assert.Equal(result.Count, result.Distinct().Count());
+        result.Distinct().Count().ShouldBe(result.Count);
     }
 
     [Fact]
@@ -413,7 +414,7 @@ public sealed class ItemSelectorTests
     {
         var result = OldestSearchWeightedSelector.WeightedRandomByRank([], 5);
 
-        Assert.Empty(result);
+        result.ShouldBeEmpty();
     }
 
     #endregion

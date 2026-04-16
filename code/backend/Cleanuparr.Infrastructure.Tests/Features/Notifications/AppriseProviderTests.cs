@@ -2,22 +2,24 @@ using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Notifications.Apprise;
 using Cleanuparr.Infrastructure.Features.Notifications.Models;
 using Cleanuparr.Persistence.Models.Configuration.Notification;
-using Moq;
+using NSubstitute;
+using NSubstitute.ExceptionExtensions;
+using Shouldly;
 using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.Notifications;
 
 public class AppriseProviderTests
 {
-    private readonly Mock<IAppriseProxy> _apiProxyMock;
-    private readonly Mock<IAppriseCliProxy> _cliProxyMock;
+    private readonly IAppriseProxy _apiProxy;
+    private readonly IAppriseCliProxy _cliProxy;
     private readonly AppriseConfig _config;
     private readonly AppriseProvider _provider;
 
     public AppriseProviderTests()
     {
-        _apiProxyMock = new Mock<IAppriseProxy>();
-        _cliProxyMock = new Mock<IAppriseCliProxy>();
+        _apiProxy = Substitute.For<IAppriseProxy>();
+        _cliProxy = Substitute.For<IAppriseCliProxy>();
         _config = new AppriseConfig
         {
             Id = Guid.NewGuid(),
@@ -31,8 +33,8 @@ public class AppriseProviderTests
             "TestApprise",
             NotificationProviderType.Apprise,
             _config,
-            _apiProxyMock.Object,
-            _cliProxyMock.Object);
+            _apiProxy,
+            _cliProxy);
     }
 
     #region Constructor Tests
@@ -41,14 +43,14 @@ public class AppriseProviderTests
     public void Constructor_SetsNameCorrectly()
     {
         // Assert
-        Assert.Equal("TestApprise", _provider.Name);
+        _provider.Name.ShouldBe("TestApprise");
     }
 
     [Fact]
     public void Constructor_SetsTypeCorrectly()
     {
         // Assert
-        Assert.Equal(NotificationProviderType.Apprise, _provider.Type);
+        _provider.Type.ShouldBe(NotificationProviderType.Apprise);
     }
 
     #endregion
@@ -62,17 +64,17 @@ public class AppriseProviderTests
         var context = CreateTestContext();
         ApprisePayload? capturedPayload = null;
 
-        _apiProxyMock.Setup(p => p.SendNotification(It.IsAny<ApprisePayload>(), _config))
-            .Callback<ApprisePayload, AppriseConfig>((payload, config) => capturedPayload = payload)
-            .Returns(Task.CompletedTask);
+        _apiProxy.SendNotification(Arg.Any<ApprisePayload>(), _config)
+            .Returns(Task.CompletedTask)
+            .AndDoes(ci => capturedPayload = ci.ArgAt<ApprisePayload>(0));
 
         // Act
         await _provider.SendNotificationAsync(context);
 
         // Assert
-        Assert.NotNull(capturedPayload);
-        Assert.Equal(context.Title, capturedPayload.Title);
-        Assert.Contains(context.Description, capturedPayload.Body);
+        capturedPayload.ShouldNotBeNull();
+        capturedPayload.Title.ShouldBe(context.Title);
+        capturedPayload.Body.ShouldContain(context.Description);
     }
 
     [Fact]
@@ -85,17 +87,17 @@ public class AppriseProviderTests
 
         ApprisePayload? capturedPayload = null;
 
-        _apiProxyMock.Setup(p => p.SendNotification(It.IsAny<ApprisePayload>(), _config))
-            .Callback<ApprisePayload, AppriseConfig>((payload, config) => capturedPayload = payload)
-            .Returns(Task.CompletedTask);
+        _apiProxy.SendNotification(Arg.Any<ApprisePayload>(), _config)
+            .Returns(Task.CompletedTask)
+            .AndDoes(ci => capturedPayload = ci.ArgAt<ApprisePayload>(0));
 
         // Act
         await _provider.SendNotificationAsync(context);
 
         // Assert
-        Assert.NotNull(capturedPayload);
-        Assert.Contains("TestKey: TestValue", capturedPayload.Body);
-        Assert.Contains("AnotherKey: AnotherValue", capturedPayload.Body);
+        capturedPayload.ShouldNotBeNull();
+        capturedPayload.Body.ShouldContain("TestKey: TestValue");
+        capturedPayload.Body.ShouldContain("AnotherKey: AnotherValue");
     }
 
     [Theory]
@@ -116,16 +118,16 @@ public class AppriseProviderTests
 
         ApprisePayload? capturedPayload = null;
 
-        _apiProxyMock.Setup(p => p.SendNotification(It.IsAny<ApprisePayload>(), _config))
-            .Callback<ApprisePayload, AppriseConfig>((payload, config) => capturedPayload = payload)
-            .Returns(Task.CompletedTask);
+        _apiProxy.SendNotification(Arg.Any<ApprisePayload>(), _config)
+            .Returns(Task.CompletedTask)
+            .AndDoes(ci => capturedPayload = ci.ArgAt<ApprisePayload>(0));
 
         // Act
         await _provider.SendNotificationAsync(context);
 
         // Assert
-        Assert.NotNull(capturedPayload);
-        Assert.Equal(expectedType, capturedPayload.Type);
+        capturedPayload.ShouldNotBeNull();
+        capturedPayload.Type.ShouldBe(expectedType);
     }
 
     [Fact]
@@ -135,16 +137,16 @@ public class AppriseProviderTests
         var context = CreateTestContext();
         ApprisePayload? capturedPayload = null;
 
-        _apiProxyMock.Setup(p => p.SendNotification(It.IsAny<ApprisePayload>(), _config))
-            .Callback<ApprisePayload, AppriseConfig>((payload, config) => capturedPayload = payload)
-            .Returns(Task.CompletedTask);
+        _apiProxy.SendNotification(Arg.Any<ApprisePayload>(), _config)
+            .Returns(Task.CompletedTask)
+            .AndDoes(ci => capturedPayload = ci.ArgAt<ApprisePayload>(0));
 
         // Act
         await _provider.SendNotificationAsync(context);
 
         // Assert
-        Assert.NotNull(capturedPayload);
-        Assert.Equal("tag1,tag2", capturedPayload.Tags);
+        capturedPayload.ShouldNotBeNull();
+        capturedPayload.Tags.ShouldBe("tag1,tag2");
     }
 
     [Fact]
@@ -153,11 +155,11 @@ public class AppriseProviderTests
         // Arrange
         var context = CreateTestContext();
 
-        _apiProxyMock.Setup(p => p.SendNotification(It.IsAny<ApprisePayload>(), _config))
+        _apiProxy.SendNotification(Arg.Any<ApprisePayload>(), _config)
             .ThrowsAsync(new Exception("Proxy error"));
 
         // Act & Assert
-        await Assert.ThrowsAsync<Exception>(() => _provider.SendNotificationAsync(context));
+        await Should.ThrowAsync<Exception>(() => _provider.SendNotificationAsync(context));
     }
 
     [Fact]
@@ -175,16 +177,16 @@ public class AppriseProviderTests
 
         ApprisePayload? capturedPayload = null;
 
-        _apiProxyMock.Setup(p => p.SendNotification(It.IsAny<ApprisePayload>(), _config))
-            .Callback<ApprisePayload, AppriseConfig>((payload, config) => capturedPayload = payload)
-            .Returns(Task.CompletedTask);
+        _apiProxy.SendNotification(Arg.Any<ApprisePayload>(), _config)
+            .Returns(Task.CompletedTask)
+            .AndDoes(ci => capturedPayload = ci.ArgAt<ApprisePayload>(0));
 
         // Act
         await _provider.SendNotificationAsync(context);
 
         // Assert
-        Assert.NotNull(capturedPayload);
-        Assert.Contains("Test Description", capturedPayload.Body);
+        capturedPayload.ShouldNotBeNull();
+        capturedPayload.Body.ShouldContain("Test Description");
     }
 
     [Fact]
@@ -198,27 +200,27 @@ public class AppriseProviderTests
             ServiceUrls = "discord://webhook_id/token"
         };
 
-        var apiProxyMock = new Mock<IAppriseProxy>();
-        var cliProxyMock = new Mock<IAppriseCliProxy>();
+        var apiProxy = Substitute.For<IAppriseProxy>();
+        var cliProxy = Substitute.For<IAppriseCliProxy>();
 
         var provider = new AppriseProvider(
             "TestAppriseCli",
             NotificationProviderType.Apprise,
             cliConfig,
-            apiProxyMock.Object,
-            cliProxyMock.Object);
+            apiProxy,
+            cliProxy);
 
         var context = CreateTestContext();
 
-        cliProxyMock.Setup(p => p.SendNotification(It.IsAny<ApprisePayload>(), cliConfig))
+        cliProxy.SendNotification(Arg.Any<ApprisePayload>(), cliConfig)
             .Returns(Task.CompletedTask);
 
         // Act
         await provider.SendNotificationAsync(context);
 
         // Assert
-        cliProxyMock.Verify(p => p.SendNotification(It.IsAny<ApprisePayload>(), cliConfig), Times.Once);
-        apiProxyMock.Verify(p => p.SendNotification(It.IsAny<ApprisePayload>(), It.IsAny<AppriseConfig>()), Times.Never);
+        await cliProxy.Received(1).SendNotification(Arg.Any<ApprisePayload>(), cliConfig);
+        await apiProxy.DidNotReceive().SendNotification(Arg.Any<ApprisePayload>(), Arg.Any<AppriseConfig>());
     }
 
     #endregion

@@ -1,7 +1,8 @@
 using Cleanuparr.Domain.Entities;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
-using Moq;
+using NSubstitute;
+using Shouldly;
 using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.QueueCleaner;
@@ -24,8 +25,8 @@ public class QueueRuleMatchTests
         var torrentAtBoundary = CreateTorrent(isPrivate: false, completionPercentage: 20);
         var torrentAboveBoundary = CreateTorrent(isPrivate: false, completionPercentage: 20.1);
 
-        Assert.False(rule.MatchesTorrent(torrentAtBoundary.Object));
-        Assert.True(rule.MatchesTorrent(torrentAboveBoundary.Object));
+        rule.MatchesTorrent(torrentAtBoundary).ShouldBeFalse();
+        rule.MatchesTorrent(torrentAboveBoundary).ShouldBeTrue();
     }
 
     [Fact]
@@ -44,8 +45,8 @@ public class QueueRuleMatchTests
         var zeroTorrent = CreateTorrent(isPrivate: false, completionPercentage: 0);
         var midTorrent = CreateTorrent(isPrivate: false, completionPercentage: 10);
 
-        Assert.True(rule.MatchesTorrent(zeroTorrent.Object));
-        Assert.True(rule.MatchesTorrent(midTorrent.Object));
+        rule.MatchesTorrent(zeroTorrent).ShouldBeTrue();
+        rule.MatchesTorrent(midTorrent).ShouldBeTrue();
     }
 
     [Fact]
@@ -66,8 +67,8 @@ public class QueueRuleMatchTests
         var torrentAtBoundary = CreateTorrent(isPrivate: false, completionPercentage: 40);
         var torrentAboveBoundary = CreateTorrent(isPrivate: false, completionPercentage: 40.5);
 
-        Assert.False(rule.MatchesTorrent(torrentAtBoundary.Object));
-        Assert.True(rule.MatchesTorrent(torrentAboveBoundary.Object));
+        rule.MatchesTorrent(torrentAtBoundary).ShouldBeFalse();
+        rule.MatchesTorrent(torrentAboveBoundary).ShouldBeTrue();
     }
 
     [Fact]
@@ -85,7 +86,7 @@ public class QueueRuleMatchTests
 
         var publicTorrent = CreateTorrent(isPrivate: false, completionPercentage: 50);
 
-        Assert.True(rule.MatchesTorrent(publicTorrent.Object));
+        rule.MatchesTorrent(publicTorrent).ShouldBeTrue();
     }
 
     [Fact]
@@ -103,7 +104,7 @@ public class QueueRuleMatchTests
 
         var privateTorrent = CreateTorrent(isPrivate: true, completionPercentage: 50);
 
-        Assert.True(rule.MatchesTorrent(privateTorrent.Object));
+        rule.MatchesTorrent(privateTorrent).ShouldBeTrue();
     }
 
     [Fact]
@@ -123,7 +124,7 @@ public class QueueRuleMatchTests
 
         var publicTorrent = CreateTorrent(isPrivate: false, completionPercentage: 50);
 
-        Assert.True(rule.MatchesTorrent(publicTorrent.Object));
+        rule.MatchesTorrent(publicTorrent).ShouldBeTrue();
     }
 
     [Fact]
@@ -143,7 +144,7 @@ public class QueueRuleMatchTests
 
         var privateTorrent = CreateTorrent(isPrivate: true, completionPercentage: 50);
 
-        Assert.True(rule.MatchesTorrent(privateTorrent.Object));
+        rule.MatchesTorrent(privateTorrent).ShouldBeTrue();
     }
 
     [Fact]
@@ -161,7 +162,7 @@ public class QueueRuleMatchTests
 
         var torrentAtMax = CreateTorrent(isPrivate: false, completionPercentage: 80);
 
-        Assert.True(rule.MatchesTorrent(torrentAtMax.Object));
+        rule.MatchesTorrent(torrentAtMax).ShouldBeTrue();
     }
 
     [Fact]
@@ -179,7 +180,7 @@ public class QueueRuleMatchTests
 
         var torrentBelowMin = CreateTorrent(isPrivate: false, completionPercentage: 15);
 
-        Assert.False(rule.MatchesTorrent(torrentBelowMin.Object));
+        rule.MatchesTorrent(torrentBelowMin).ShouldBeFalse();
     }
 
     [Fact]
@@ -197,7 +198,7 @@ public class QueueRuleMatchTests
 
         var torrentAboveMax = CreateTorrent(isPrivate: false, completionPercentage: 85);
 
-        Assert.False(rule.MatchesTorrent(torrentAboveMax.Object));
+        rule.MatchesTorrent(torrentAboveMax).ShouldBeFalse();
     }
 
     [Fact]
@@ -217,7 +218,7 @@ public class QueueRuleMatchTests
 
         var torrentAtMax = CreateTorrent(isPrivate: false, completionPercentage: 70);
 
-        Assert.True(rule.MatchesTorrent(torrentAtMax.Object));
+        rule.MatchesTorrent(torrentAtMax).ShouldBeTrue();
     }
 
     [Fact]
@@ -237,7 +238,7 @@ public class QueueRuleMatchTests
 
         var torrentBelowMin = CreateTorrent(isPrivate: false, completionPercentage: 25);
 
-        Assert.False(rule.MatchesTorrent(torrentBelowMin.Object));
+        rule.MatchesTorrent(torrentBelowMin).ShouldBeFalse();
     }
 
     [Fact]
@@ -257,7 +258,7 @@ public class QueueRuleMatchTests
 
         var torrentAboveMax = CreateTorrent(isPrivate: false, completionPercentage: 75);
 
-        Assert.False(rule.MatchesTorrent(torrentAboveMax.Object));
+        rule.MatchesTorrent(torrentAboveMax).ShouldBeFalse();
     }
 
     [Fact]
@@ -278,7 +279,7 @@ public class QueueRuleMatchTests
 
         var largeTorrent = CreateTorrent(isPrivate: false, completionPercentage: 50, size: "100 GB");
 
-        Assert.False(rule.MatchesTorrent(largeTorrent.Object));
+        rule.MatchesTorrent(largeTorrent).ShouldBeFalse();
     }
 
     [Fact]
@@ -299,7 +300,7 @@ public class QueueRuleMatchTests
 
         var smallTorrent = CreateTorrent(isPrivate: false, completionPercentage: 50, size: "30 GB");
 
-        Assert.True(rule.MatchesTorrent(smallTorrent.Object));
+        rule.MatchesTorrent(smallTorrent).ShouldBeTrue();
     }
 
     [Fact]
@@ -320,7 +321,7 @@ public class QueueRuleMatchTests
 
         var hugeTorrent = CreateTorrent(isPrivate: false, completionPercentage: 50, size: "500 GB");
 
-        Assert.True(rule.MatchesTorrent(hugeTorrent.Object));
+        rule.MatchesTorrent(hugeTorrent).ShouldBeTrue();
     }
 
     [Fact]
@@ -338,7 +339,7 @@ public class QueueRuleMatchTests
 
         var privateTorrent = CreateTorrent(isPrivate: true, completionPercentage: 50);
 
-        Assert.False(rule.MatchesTorrent(privateTorrent.Object));
+        rule.MatchesTorrent(privateTorrent).ShouldBeFalse();
     }
 
     [Fact]
@@ -356,7 +357,7 @@ public class QueueRuleMatchTests
 
         var publicTorrent = CreateTorrent(isPrivate: false, completionPercentage: 50);
 
-        Assert.False(rule.MatchesTorrent(publicTorrent.Object));
+        rule.MatchesTorrent(publicTorrent).ShouldBeFalse();
     }
 
     [Fact]
@@ -376,7 +377,7 @@ public class QueueRuleMatchTests
 
         var privateTorrent = CreateTorrent(isPrivate: true, completionPercentage: 50);
 
-        Assert.False(rule.MatchesTorrent(privateTorrent.Object));
+        rule.MatchesTorrent(privateTorrent).ShouldBeFalse();
     }
 
     [Fact]
@@ -396,15 +397,15 @@ public class QueueRuleMatchTests
 
         var publicTorrent = CreateTorrent(isPrivate: false, completionPercentage: 50);
 
-        Assert.False(rule.MatchesTorrent(publicTorrent.Object));
+        rule.MatchesTorrent(publicTorrent).ShouldBeFalse();
     }
 
-    private static Mock<ITorrentItemWrapper> CreateTorrent(bool isPrivate, double completionPercentage, string size = "10 GB")
+    private static ITorrentItemWrapper CreateTorrent(bool isPrivate, double completionPercentage, string size = "10 GB")
     {
-        var torrent = new Mock<ITorrentItemWrapper>();
-        torrent.SetupGet(t => t.IsPrivate).Returns(isPrivate);
-        torrent.SetupGet(t => t.CompletionPercentage).Returns(completionPercentage);
-        torrent.SetupGet(t => t.Size).Returns(ByteSize.Parse(size).Bytes);
+        var torrent = Substitute.For<ITorrentItemWrapper>();
+        torrent.IsPrivate.Returns(isPrivate);
+        torrent.CompletionPercentage.Returns(completionPercentage);
+        torrent.Size.Returns(ByteSize.Parse(size).Bytes);
         return torrent;
     }
 }

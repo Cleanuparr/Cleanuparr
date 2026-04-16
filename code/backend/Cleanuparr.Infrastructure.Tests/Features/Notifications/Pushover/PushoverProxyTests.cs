@@ -1,31 +1,32 @@
 using System.Net;
 using Cleanuparr.Infrastructure.Features.Notifications.Pushover;
+using Cleanuparr.Infrastructure.Tests.TestHelpers;
 using Cleanuparr.Shared.Helpers;
-using Moq;
-using Moq.Protected;
+using NSubstitute;
+using Shouldly;
 using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.Notifications.Pushover;
 
 public class PushoverProxyTests
 {
-    private readonly Mock<IHttpClientFactory> _httpClientFactoryMock;
-    private readonly Mock<HttpMessageHandler> _httpMessageHandlerMock;
+    private readonly IHttpClientFactory _httpClientFactory;
+    private readonly FakeHttpMessageHandler _httpMessageHandler;
 
     public PushoverProxyTests()
     {
-        _httpMessageHandlerMock = new Mock<HttpMessageHandler>();
-        _httpClientFactoryMock = new Mock<IHttpClientFactory>();
+        _httpMessageHandler = new FakeHttpMessageHandler();
+        _httpClientFactory = Substitute.For<IHttpClientFactory>();
 
-        var httpClient = new HttpClient(_httpMessageHandlerMock.Object);
-        _httpClientFactoryMock
-            .Setup(f => f.CreateClient(Constants.HttpClientWithRetryName))
+        var httpClient = new HttpClient(_httpMessageHandler);
+        _httpClientFactory
+            .CreateClient(Constants.HttpClientWithRetryName)
             .Returns(httpClient);
     }
 
     private PushoverProxy CreateProxy()
     {
-        return new PushoverProxy(_httpClientFactoryMock.Object);
+        return new PushoverProxy(_httpClientFactory);
     }
 
     private static PushoverPayload CreatePayload(int priority = 0)
@@ -51,7 +52,7 @@ public class PushoverProxyTests
         var proxy = CreateProxy();
 
         // Assert
-        Assert.NotNull(proxy);
+        proxy.ShouldNotBeNull();
     }
 
     [Fact]
@@ -61,7 +62,7 @@ public class PushoverProxyTests
         _ = CreateProxy();
 
         // Assert
-        _httpClientFactoryMock.Verify(f => f.CreateClient(Constants.HttpClientWithRetryName), Times.Once);
+        _httpClientFactory.Received(1).CreateClient(Constants.HttpClientWithRetryName);
     }
 
     #endregion
@@ -84,22 +85,13 @@ public class PushoverProxyTests
     {
         // Arrange
         var proxy = CreateProxy();
-        HttpMethod? capturedMethod = null;
-
-        _httpMessageHandlerMock
-            .Protected()
-            .Setup<Task<HttpResponseMessage>>(
-                "SendAsync",
-                ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>())
-            .Callback<HttpRequestMessage, CancellationToken>((req, _) => capturedMethod = req.Method)
-            .ReturnsAsync(CreateSuccessResponse());
+        SetupSuccessResponse();
 
         // Act
         await proxy.SendNotification(CreatePayload());
 
         // Assert
-        Assert.Equal(HttpMethod.Post, capturedMethod);
+        _httpMessageHandler.CapturedRequests[0].Method.ShouldBe(HttpMethod.Post);
     }
 
     [Fact]
@@ -107,23 +99,13 @@ public class PushoverProxyTests
     {
         // Arrange
         var proxy = CreateProxy();
-        Uri? capturedUri = null;
-
-        _httpMessageHandlerMock
-            .Protected()
-            .Setup<Task<HttpResponseMessage>>(
-                "SendAsync",
-                ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>())
-            .Callback<HttpRequestMessage, CancellationToken>((req, _) => capturedUri = req.RequestUri)
-            .ReturnsAsync(CreateSuccessResponse());
+        SetupSuccessResponse();
 
         // Act
         await proxy.SendNotification(CreatePayload());
 
         // Assert
-        Assert.NotNull(capturedUri);
-        Assert.Equal("https://api.pushover.net/1/messages.json", capturedUri.ToString());
+        _httpMessageHandler.CapturedRequests[0].RequestUri?.ToString().ShouldBe("https://api.pushover.net/1/messages.json");
     }
 
     [Fact]
@@ -131,23 +113,13 @@ public class PushoverProxyTests
     {
         // Arrange
         var proxy = CreateProxy();
-        string? capturedContentType = null;
-
-        _httpMessageHandlerMock
-            .Protected()
-            .Setup<Task<HttpResponseMessage>>(
-                "SendAsync",
-                ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>())
-            .Callback<HttpRequestMessage, CancellationToken>((req, _) =>
-                capturedContentType = req.Content?.Headers.ContentType?.MediaType)
-            .ReturnsAsync(CreateSuccessResponse());
+        SetupSuccessResponse();
 
         // Act
         await proxy.SendNotification(CreatePayload());
 
         // Assert
-        Assert.Equal("application/x-www-form-urlencoded", capturedContentType);
+        _httpMessageHandler.CapturedRequests[0].Content?.Headers.ContentType?.MediaType.ShouldBe("application/x-www-form-urlencoded");
     }
 
     [Fact]
@@ -155,17 +127,7 @@ public class PushoverProxyTests
     {
         // Arrange
         var proxy = CreateProxy();
-        string? capturedContent = null;
-
-        _httpMessageHandlerMock
-            .Protected()
-            .Setup<Task<HttpResponseMessage>>(
-                "SendAsync",
-                ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>())
-            .Callback<HttpRequestMessage, CancellationToken>(async (req, _) =>
-                capturedContent = await req.Content!.ReadAsStringAsync())
-            .ReturnsAsync(CreateSuccessResponse());
+        SetupSuccessResponse();
 
         var payload = CreatePayload();
 
@@ -173,11 +135,11 @@ public class PushoverProxyTests
         await proxy.SendNotification(payload);
 
         // Assert
-        Assert.NotNull(capturedContent);
-        Assert.Contains("token=test-token", capturedContent);
-        Assert.Contains("user=test-user", capturedContent);
-        Assert.Contains("message=Test+message", capturedContent);
-        Assert.Contains("priority=0", capturedContent);
+        var capturedContent = _httpMessageHandler.CapturedRequestBodies[0]!;
+        capturedContent.ShouldContain("token=test-token");
+        capturedContent.ShouldContain("user=test-user");
+        capturedContent.ShouldContain("message=Test+message");
+        capturedContent.ShouldContain("priority=0");
     }
 
     [Fact]
@@ -185,17 +147,7 @@ public class PushoverProxyTests
     {
         // Arrange
         var proxy = CreateProxy();
-        string? capturedContent = null;
-
-        _httpMessageHandlerMock
-            .Protected()
-            .Setup<Task<HttpResponseMessage>>(
-                "SendAsync",
-                ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>())
-            .Callback<HttpRequestMessage, CancellationToken>(async (req, _) =>
-                capturedContent = await req.Content!.ReadAsStringAsync())
-            .ReturnsAsync(CreateSuccessResponse());
+        SetupSuccessResponse();
 
         var payload = CreatePayload(priority: 2); // Emergency
 
@@ -203,9 +155,9 @@ public class PushoverProxyTests
         await proxy.SendNotification(payload);
 
         // Assert
-        Assert.NotNull(capturedContent);
-        Assert.Contains("retry=60", capturedContent);
-        Assert.Contains("expire=3600", capturedContent);
+        var capturedContent = _httpMessageHandler.CapturedRequestBodies[0]!;
+        capturedContent.ShouldContain("retry=60");
+        capturedContent.ShouldContain("expire=3600");
     }
 
     [Fact]
@@ -213,17 +165,7 @@ public class PushoverProxyTests
     {
         // Arrange
         var proxy = CreateProxy();
-        string? capturedContent = null;
-
-        _httpMessageHandlerMock
-            .Protected()
-            .Setup<Task<HttpResponseMessage>>(
-                "SendAsync",
-                ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>())
-            .Callback<HttpRequestMessage, CancellationToken>(async (req, _) =>
-                capturedContent = await req.Content!.ReadAsStringAsync())
-            .ReturnsAsync(CreateSuccessResponse());
+        SetupSuccessResponse();
 
         var payload = CreatePayload(priority: 1); // High, not Emergency
 
@@ -231,9 +173,9 @@ public class PushoverProxyTests
         await proxy.SendNotification(payload);
 
         // Assert
-        Assert.NotNull(capturedContent);
-        Assert.DoesNotContain("retry=", capturedContent);
-        Assert.DoesNotContain("expire=", capturedContent);
+        var capturedContent = _httpMessageHandler.CapturedRequestBodies[0]!;
+        capturedContent.ShouldNotContain("retry=");
+        capturedContent.ShouldNotContain("expire=");
     }
 
     [Fact]
@@ -241,17 +183,7 @@ public class PushoverProxyTests
     {
         // Arrange
         var proxy = CreateProxy();
-        string? capturedContent = null;
-
-        _httpMessageHandlerMock
-            .Protected()
-            .Setup<Task<HttpResponseMessage>>(
-                "SendAsync",
-                ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>())
-            .Callback<HttpRequestMessage, CancellationToken>(async (req, _) =>
-                capturedContent = await req.Content!.ReadAsStringAsync())
-            .ReturnsAsync(CreateSuccessResponse());
+        SetupSuccessResponse();
 
         var payload = new PushoverPayload
         {
@@ -267,8 +199,8 @@ public class PushoverProxyTests
         await proxy.SendNotification(payload);
 
         // Assert
-        Assert.NotNull(capturedContent);
-        Assert.Contains("sound=cosmic", capturedContent);
+        var capturedContent = _httpMessageHandler.CapturedRequestBodies[0]!;
+        capturedContent.ShouldContain("sound=cosmic");
     }
 
     [Fact]
@@ -276,17 +208,7 @@ public class PushoverProxyTests
     {
         // Arrange
         var proxy = CreateProxy();
-        string? capturedContent = null;
-
-        _httpMessageHandlerMock
-            .Protected()
-            .Setup<Task<HttpResponseMessage>>(
-                "SendAsync",
-                ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>())
-            .Callback<HttpRequestMessage, CancellationToken>(async (req, _) =>
-                capturedContent = await req.Content!.ReadAsStringAsync())
-            .ReturnsAsync(CreateSuccessResponse());
+        SetupSuccessResponse();
 
         var payload = new PushoverPayload
         {
@@ -302,8 +224,8 @@ public class PushoverProxyTests
         await proxy.SendNotification(payload);
 
         // Assert
-        Assert.NotNull(capturedContent);
-        Assert.Contains("device=my-phone", capturedContent);
+        var capturedContent = _httpMessageHandler.CapturedRequestBodies[0]!;
+        capturedContent.ShouldContain("device=my-phone");
     }
 
     [Fact]
@@ -311,17 +233,7 @@ public class PushoverProxyTests
     {
         // Arrange
         var proxy = CreateProxy();
-        string? capturedContent = null;
-
-        _httpMessageHandlerMock
-            .Protected()
-            .Setup<Task<HttpResponseMessage>>(
-                "SendAsync",
-                ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>())
-            .Callback<HttpRequestMessage, CancellationToken>(async (req, _) =>
-                capturedContent = await req.Content!.ReadAsStringAsync())
-            .ReturnsAsync(CreateSuccessResponse());
+        SetupSuccessResponse();
 
         var payload = new PushoverPayload
         {
@@ -337,8 +249,8 @@ public class PushoverProxyTests
         await proxy.SendNotification(payload);
 
         // Assert
-        Assert.NotNull(capturedContent);
-        Assert.Contains("tags=tag1%2Ctag2", capturedContent); // URL-encoded comma
+        var capturedContent = _httpMessageHandler.CapturedRequestBodies[0]!;
+        capturedContent.ShouldContain("tags=tag1%2Ctag2"); // URL-encoded comma
     }
 
     #endregion
@@ -353,9 +265,9 @@ public class PushoverProxyTests
         SetupErrorResponse(HttpStatusCode.BadRequest, "{\"status\":0,\"errors\":[\"invalid token\"]}");
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<PushoverException>(() =>
+        var ex = await Should.ThrowAsync<PushoverException>(() =>
             proxy.SendNotification(CreatePayload()));
-        Assert.Contains("Bad request", ex.Message);
+        ex.Message.ShouldContain("Bad request");
     }
 
     [Fact]
@@ -366,9 +278,9 @@ public class PushoverProxyTests
         SetupErrorResponse(HttpStatusCode.Unauthorized, "{\"status\":0,\"errors\":[\"invalid api key\"]}");
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<PushoverException>(() =>
+        var ex = await Should.ThrowAsync<PushoverException>(() =>
             proxy.SendNotification(CreatePayload()));
-        Assert.Contains("Invalid API token or user key", ex.Message);
+        ex.Message.ShouldContain("Invalid API token or user key");
     }
 
     [Fact]
@@ -379,9 +291,9 @@ public class PushoverProxyTests
         SetupErrorResponse((HttpStatusCode)429, "{\"status\":0,\"errors\":[\"rate limit exceeded\"]}");
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<PushoverException>(() =>
+        var ex = await Should.ThrowAsync<PushoverException>(() =>
             proxy.SendNotification(CreatePayload()));
-        Assert.Contains("Rate limit exceeded", ex.Message);
+        ex.Message.ShouldContain("Rate limit exceeded");
     }
 
     [Fact]
@@ -389,21 +301,15 @@ public class PushoverProxyTests
     {
         // Arrange
         var proxy = CreateProxy();
-        _httpMessageHandlerMock
-            .Protected()
-            .Setup<Task<HttpResponseMessage>>(
-                "SendAsync",
-                ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>())
-            .ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK)
-            {
-                Content = new StringContent("{\"status\":0,\"errors\":[\"user key is invalid\"]}")
-            });
+        _httpMessageHandler.SetupResponse((_, _) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent("{\"status\":0,\"errors\":[\"user key is invalid\"]}")
+        }));
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<PushoverException>(() =>
+        var ex = await Should.ThrowAsync<PushoverException>(() =>
             proxy.SendNotification(CreatePayload()));
-        Assert.Contains("user key is invalid", ex.Message);
+        ex.Message.ShouldContain("user key is invalid");
     }
 
     [Fact]
@@ -411,18 +317,12 @@ public class PushoverProxyTests
     {
         // Arrange
         var proxy = CreateProxy();
-        _httpMessageHandlerMock
-            .Protected()
-            .Setup<Task<HttpResponseMessage>>(
-                "SendAsync",
-                ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>())
-            .ThrowsAsync(new HttpRequestException("Network error"));
+        _httpMessageHandler.SetupThrow(new HttpRequestException("Network error"));
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<PushoverException>(() =>
+        var ex = await Should.ThrowAsync<PushoverException>(() =>
             proxy.SendNotification(CreatePayload()));
-        Assert.Contains("Unable to connect to Pushover API", ex.Message);
+        ex.Message.ShouldContain("Unable to connect to Pushover API");
     }
 
     #endregion
@@ -431,35 +331,18 @@ public class PushoverProxyTests
 
     private void SetupSuccessResponse()
     {
-        _httpMessageHandlerMock
-            .Protected()
-            .Setup<Task<HttpResponseMessage>>(
-                "SendAsync",
-                ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>())
-            .ReturnsAsync(CreateSuccessResponse());
-    }
-
-    private static HttpResponseMessage CreateSuccessResponse()
-    {
-        return new HttpResponseMessage(HttpStatusCode.OK)
+        _httpMessageHandler.SetupResponse((_, _) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
         {
             Content = new StringContent("{\"status\":1,\"request\":\"abc123\"}")
-        };
+        }));
     }
 
     private void SetupErrorResponse(HttpStatusCode statusCode, string responseBody)
     {
-        _httpMessageHandlerMock
-            .Protected()
-            .Setup<Task<HttpResponseMessage>>(
-                "SendAsync",
-                ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>())
-            .ReturnsAsync(new HttpResponseMessage(statusCode)
-            {
-                Content = new StringContent(responseBody)
-            });
+        _httpMessageHandler.SetupResponse((_, _) => Task.FromResult(new HttpResponseMessage(statusCode)
+        {
+            Content = new StringContent(responseBody)
+        }));
     }
 
     #endregion
