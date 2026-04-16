@@ -2033,21 +2033,21 @@ public class SeekerTests : IDisposable
             .Iterate(mockArrClient, Arg.Any<ArrInstance>(), Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>())
             .Returns(Task.CompletedTask);
 
+        // No missing movies — only movies with files, to isolate CF score filtering
         _radarrClient
             .GetAllMoviesAsync(radarrInstance)
             .Returns(
             [
-                new SearchableMovie { Id = 1, Title = "Missing Movie", Status = "released", Monitored = true, HasFile = false, Tags = [] },
                 new SearchableMovie { Id = 2, Title = "Below Cutoff", Status = "released", Monitored = true, HasFile = true, MovieFile = new MovieFileInfo { Id = 200, QualityCutoffNotMet = false }, Tags = [] },
                 new SearchableMovie { Id = 3, Title = "Above Cutoff", Status = "released", Monitored = true, HasFile = true, MovieFile = new MovieFileInfo { Id = 300, QualityCutoffNotMet = false }, Tags = [] }
             ]);
 
-        List<SearchItem> capturedSearchItems = [];
+        SearchItem? capturedSearchItem = null;
         mockArrClient
             .SearchItemAsync(radarrInstance, Arg.Any<SearchItem>())
             .Returns(ci =>
             {
-                capturedSearchItems.Add(ci.ArgAt<SearchItem>(1));
+                capturedSearchItem = ci.ArgAt<SearchItem>(1);
                 return 100L;
             });
 
@@ -2060,9 +2060,9 @@ public class SeekerTests : IDisposable
         // Act
         await sut.ExecuteAsync();
 
-        // Assert — movie 3 (above cutoff) should be excluded; missing + below cutoff eligible
-        capturedSearchItems.ShouldNotBeEmpty();
-        capturedSearchItems.ShouldNotContain(item => item.Id == 3);
+        // Assert — only movie 2 (below CF cutoff) should be searched; movie 3 (above cutoff) excluded
+        capturedSearchItem.ShouldNotBeNull();
+        capturedSearchItem.Id.ShouldBe(2);
     }
 
     [Fact]
@@ -2148,10 +2148,13 @@ public class SeekerTests : IDisposable
 
         var sut = CreateSut();
 
-        // Act — run twice to pick both eligible candidates (selector picks one per run)
+        // Act — run twice: selector picks one per run, second run picks the other from the remaining unsearched
         await sut.ExecuteAsync();
-        _fixture.RecreateDataContext();
-        // Re-check: at least the first search did not pick movie 4
+        await sut.ExecuteAsync();
+
+        // Assert — both OR branches produced a search, and the excluded candidate was never selected
+        capturedSearchItems.ShouldContain(item => item.Id == 2);
+        capturedSearchItems.ShouldContain(item => item.Id == 3);
         capturedSearchItems.ShouldNotContain(item => item.Id == 4);
     }
 
