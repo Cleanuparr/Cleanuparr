@@ -453,7 +453,6 @@ public sealed class Seeker : IHandler
                     .Any(label => label is not null && skipTagSet.Contains(label))
             )
             .Where(m => !m.HasFile
-                || (!instanceConfig.UseCutoff && !instanceConfig.UseCustomFormatScore)
                 || (instanceConfig.UseCutoff && (m.MovieFile?.QualityCutoffNotMet ?? false))
                 || (instanceConfig.UseCustomFormatScore && cfScores != null && cfScores.TryGetValue(m.Id, out var entry) && entry.CurrentScore < entry.CutoffScore))
             .ToList();
@@ -715,7 +714,6 @@ public sealed class Seeker : IHandler
             .Where(e => e.AirDateUtc.HasValue && e.AirDateUtc.Value <= graceCutoff)
             .Where(e => !instanceConfig.MonitoredOnly || e.Monitored)
             .Where(e => !e.HasFile
-                || (!instanceConfig.UseCutoff && !instanceConfig.UseCustomFormatScore)
                 || (instanceConfig.UseCutoff && cutoffNotMetFileIds.Contains(e.EpisodeFileId))
                 || (instanceConfig.UseCustomFormatScore && cfScores != null && cfScores.TryGetValue(e.Id, out var entry) && entry.CurrentScore < entry.CutoffScore))
             .OrderBy(e => e.SeasonNumber)
