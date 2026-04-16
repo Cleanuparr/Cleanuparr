@@ -709,6 +709,66 @@ public class SeekerTests : IDisposable
     }
 
     [Fact]
+    public async Task ExecuteAsync_Radarr_MissingOnly_ExcludesMoviesWithFiles()
+    {
+        // Arrange — both UseCutoff and UseCustomFormatScore disabled: only missing movies should be searched
+        var config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
+        config.SearchEnabled = true;
+        config.ProactiveSearchEnabled = true;
+        await _fixture.DataContext.SaveChangesAsync();
+
+        var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
+
+        _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = radarrInstance.Id,
+            ArrInstance = radarrInstance,
+            Enabled = true,
+            MonitoredOnly = false,
+            UseCutoff = false,
+            UseCustomFormatScore = false
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+
+        var mockArrClient = Substitute.For<IArrClient>();
+
+        _fixture.ArrQueueIterator
+            .Iterate(mockArrClient, Arg.Any<ArrInstance>(), Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>())
+            .Returns(Task.CompletedTask);
+
+        _radarrClient
+            .GetAllMoviesAsync(radarrInstance)
+            .Returns(
+            [
+                new SearchableMovie { Id = 1, Title = "Missing Movie", Status = "released", Monitored = true, HasFile = false, Tags = [] },
+                new SearchableMovie { Id = 2, Title = "Has File", Status = "released", Monitored = true, HasFile = true, MovieFile = new MovieFileInfo { Id = 200, QualityCutoffNotMet = false }, Tags = [] },
+                new SearchableMovie { Id = 3, Title = "Also Has File", Status = "released", Monitored = true, HasFile = true, MovieFile = new MovieFileInfo { Id = 300, QualityCutoffNotMet = true }, Tags = [] }
+            ]);
+
+        SearchItem? capturedSearchItem = null;
+        mockArrClient
+            .SearchItemAsync(radarrInstance, Arg.Any<SearchItem>())
+            .Returns(ci =>
+            {
+                capturedSearchItem = ci.ArgAt<SearchItem>(1);
+                return 100L;
+            });
+
+        _fixture.ArrClientFactory
+            .GetClient(InstanceType.Radarr, Arg.Any<float>())
+            .Returns(mockArrClient);
+
+        var sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert — only the missing movie should be searched; movies with files must be excluded
+        capturedSearchItem.ShouldNotBeNull();
+        capturedSearchItem.Id.ShouldBe(1);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_Radarr_UseCutoff_SkipsCutoffMetMovies()
     {
         // Arrange — enable cutoff filtering: only movies with QualityCutoffNotMet should be searched
