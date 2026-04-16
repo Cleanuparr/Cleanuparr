@@ -6,6 +6,7 @@ using Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
 using NSubstitute;
 using Newtonsoft.Json.Linq;
 using QBittorrent.Client;
+using Shouldly;
 using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.DownloadClient;
@@ -41,9 +42,9 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 
             // Assert
-            Assert.False(result.Found);
-            Assert.False(result.ShouldRemove);
-            Assert.Equal(DeleteReason.None, result.DeleteReason);
+            result.Found.ShouldBeFalse();
+            result.ShouldRemove.ShouldBeFalse();
+            result.DeleteReason.ShouldBe(DeleteReason.None);
         }
 
         [Fact]
@@ -86,8 +87,8 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, new[] { ignoredCategory });
 
             // Assert
-            Assert.True(result.Found);
-            Assert.False(result.ShouldRemove);
+            result.Found.ShouldBeTrue();
+            result.ShouldRemove.ShouldBeFalse();
         }
 
         [Fact]
@@ -144,8 +145,8 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 
             // Assert
-            Assert.True(result.Found);
-            Assert.True(result.IsPrivate);
+            result.Found.ShouldBeTrue();
+            result.IsPrivate.ShouldBeTrue();
         }
 
         [Fact]
@@ -202,8 +203,8 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 
             // Assert
-            Assert.True(result.Found);
-            Assert.False(result.IsPrivate);
+            result.Found.ShouldBeTrue();
+            result.IsPrivate.ShouldBeFalse();
         }
 
         [Fact]
@@ -236,11 +237,11 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 
             // Assert
-            Assert.False(result.Found);
-            Assert.False(result.ShouldRemove);
-            Assert.False(result.IsPrivate);
-            Assert.Equal(DeleteReason.None, result.DeleteReason);
-            Assert.False(result.DeleteFromClient);
+            result.Found.ShouldBeFalse();
+            result.ShouldRemove.ShouldBeFalse();
+            result.IsPrivate.ShouldBeFalse();
+            result.DeleteReason.ShouldBe(DeleteReason.None);
+            result.DeleteFromClient.ShouldBeFalse();
         }
     }
 
@@ -298,9 +299,9 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 
             // Assert
-            Assert.True(result.ShouldRemove);
-            Assert.Equal(DeleteReason.AllFilesSkippedByQBit, result.DeleteReason);
-            Assert.True(result.DeleteFromClient);
+            result.ShouldRemove.ShouldBeTrue();
+            result.DeleteReason.ShouldBe(DeleteReason.AllFilesSkippedByQBit);
+            result.DeleteFromClient.ShouldBeTrue();
         }
 
         [Fact]
@@ -350,9 +351,9 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 
             // Assert
-            Assert.True(result.ShouldRemove);
-            Assert.Equal(DeleteReason.AllFilesSkipped, result.DeleteReason);
-            Assert.True(result.DeleteFromClient);
+            result.ShouldRemove.ShouldBeTrue();
+            result.DeleteReason.ShouldBe(DeleteReason.AllFilesSkipped);
+            result.DeleteFromClient.ShouldBeTrue();
         }
 
         [Fact]
@@ -410,7 +411,7 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 
             // Assert
-            Assert.False(result.ShouldRemove);
+            result.ShouldRemove.ShouldBeFalse();
         }
     }
 
@@ -477,7 +478,7 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 
             // Assert
-            Assert.False(result.ShouldRemove);
+            result.ShouldRemove.ShouldBeFalse();
             await _fixture.Striker.Received(1)
                 .StrikeAndCheckLimit(hash, Arg.Any<string>(), (ushort)3, StrikeType.DownloadingMetadata, Arg.Any<long?>());
         }
@@ -539,9 +540,9 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 
             // Assert
-            Assert.True(result.ShouldRemove);
-            Assert.Equal(DeleteReason.DownloadingMetadata, result.DeleteReason);
-            Assert.True(result.DeleteFromClient);
+            result.ShouldRemove.ShouldBeTrue();
+            result.DeleteReason.ShouldBe(DeleteReason.DownloadingMetadata);
+            result.DeleteFromClient.ShouldBeTrue();
         }
 
         [Fact]
@@ -597,7 +598,7 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 
             // Assert
-            Assert.False(result.ShouldRemove);
+            result.ShouldRemove.ShouldBeFalse();
             await _fixture.Striker.DidNotReceive()
                 .StrikeAndCheckLimit(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<ushort>(), Arg.Any<StrikeType>(), Arg.Any<long?>());
         }
@@ -659,7 +660,7 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 
             // Assert
-            Assert.False(result.ShouldRemove);
+            result.ShouldRemove.ShouldBeFalse();
             await _fixture.RuleEvaluator.DidNotReceive()
                 .EvaluateSlowRulesAsync(Arg.Any<QBitItemWrapper>());
         }
@@ -714,7 +715,7 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 
             // Assert
-            Assert.False(result.ShouldRemove);
+            result.ShouldRemove.ShouldBeFalse();
             await _fixture.RuleEvaluator.DidNotReceive()
                 .EvaluateSlowRulesAsync(Arg.Any<QBitItemWrapper>());
         }
@@ -769,9 +770,9 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 
             // Assert
-            Assert.True(result.ShouldRemove);
-            Assert.Equal(DeleteReason.SlowSpeed, result.DeleteReason);
-            Assert.True(result.DeleteFromClient);
+            result.ShouldRemove.ShouldBeTrue();
+            result.DeleteReason.ShouldBe(DeleteReason.SlowSpeed);
+            result.DeleteFromClient.ShouldBeTrue();
         }
     }
 
@@ -831,7 +832,7 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 
             // Assert
-            Assert.False(result.ShouldRemove);
+            result.ShouldRemove.ShouldBeFalse();
             await _fixture.RuleEvaluator.DidNotReceive()
                 .EvaluateStallRulesAsync(Arg.Any<QBitItemWrapper>());
         }
@@ -885,9 +886,9 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 
             // Assert
-            Assert.True(result.ShouldRemove);
-            Assert.Equal(DeleteReason.Stalled, result.DeleteReason);
-            Assert.True(result.DeleteFromClient);
+            result.ShouldRemove.ShouldBeTrue();
+            result.DeleteReason.ShouldBe(DeleteReason.Stalled);
+            result.DeleteFromClient.ShouldBeTrue();
         }
     }
 
@@ -948,8 +949,8 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 
             // Assert
-            Assert.True(result.ShouldRemove);
-            Assert.Equal(DeleteReason.Stalled, result.DeleteReason);
+            result.ShouldRemove.ShouldBeTrue();
+            result.DeleteReason.ShouldBe(DeleteReason.Stalled);
             await _fixture.RuleEvaluator.DidNotReceive()
                 .EvaluateSlowRulesAsync(Arg.Any<QBitItemWrapper>()); // Skipped
             await _fixture.RuleEvaluator.Received(1)
@@ -1010,8 +1011,8 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 
             // Assert
-            Assert.False(result.ShouldRemove);
-            Assert.Equal(DeleteReason.None, result.DeleteReason);
+            result.ShouldRemove.ShouldBeFalse();
+            result.DeleteReason.ShouldBe(DeleteReason.None);
         }
     }
 }

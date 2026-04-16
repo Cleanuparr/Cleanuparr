@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
+using Shouldly;
 using Xunit;
 using HealthCheckStatus = Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus;
 
@@ -44,7 +45,7 @@ public class DatabaseHealthCheckTests : IDisposable
         var healthCheck = new DatabaseHealthCheck(_dataContext, _logger);
 
         // Assert
-        Assert.NotNull(healthCheck);
+        healthCheck.ShouldNotBeNull();
     }
 
     #endregion
@@ -68,7 +69,7 @@ public class DatabaseHealthCheckTests : IDisposable
         var result = await healthCheck.CheckHealthAsync(null!);
 
         // Assert
-        Assert.Equal(HealthCheckStatus.Unhealthy, result.Status);
+        result.Status.ShouldBe(HealthCheckStatus.Unhealthy);
     }
 
     [Fact]
@@ -92,7 +93,7 @@ public class DatabaseHealthCheckTests : IDisposable
             .Where(c => c.GetMethodInfo().Name == "Log")
             .Where(c => c.GetArguments().Length > 0 && c.GetArguments()[0] is LogLevel l && l == LogLevel.Error)
             .ToList();
-        Assert.NotEmpty(errorCalls);
+        errorCalls.ShouldNotBeEmpty();
     }
 
     [Fact]
@@ -112,7 +113,7 @@ public class DatabaseHealthCheckTests : IDisposable
         var result = await healthCheck.CheckHealthAsync(null!);
 
         // Assert
-        Assert.Contains("failed", result.Description, StringComparison.OrdinalIgnoreCase);
+        result.Description.ShouldContain("failed", Case.Insensitive);
     }
 
     #endregion

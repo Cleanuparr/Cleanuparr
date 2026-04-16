@@ -2,6 +2,7 @@ using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Arr;
 using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 using NSubstitute;
+using Shouldly;
 using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.Arr;
@@ -44,7 +45,7 @@ public class ArrClientFactoryTests
         var result = _factory.GetClient(InstanceType.Sonarr, 0);
 
         // Assert
-        Assert.Same(_sonarrClient, result);
+        result.ShouldBeSameAs(_sonarrClient);
     }
 
     [Fact]
@@ -54,7 +55,7 @@ public class ArrClientFactoryTests
         var result = _factory.GetClient(InstanceType.Radarr, 0);
 
         // Assert
-        Assert.Same(_radarrClient, result);
+        result.ShouldBeSameAs(_radarrClient);
     }
 
     [Fact]
@@ -64,7 +65,7 @@ public class ArrClientFactoryTests
         var result = _factory.GetClient(InstanceType.Lidarr, 0);
 
         // Assert
-        Assert.Same(_lidarrClient, result);
+        result.ShouldBeSameAs(_lidarrClient);
     }
 
     [Fact]
@@ -74,7 +75,7 @@ public class ArrClientFactoryTests
         var result = _factory.GetClient(InstanceType.Readarr, 0);
 
         // Assert
-        Assert.Same(_readarrClient, result);
+        result.ShouldBeSameAs(_readarrClient);
     }
 
     [Fact]
@@ -84,7 +85,7 @@ public class ArrClientFactoryTests
         var result = _factory.GetClient(InstanceType.Whisparr, 2);
 
         // Assert
-        Assert.Same(_whisparrClient, result);
+        result.ShouldBeSameAs(_whisparrClient);
     }
 
     [Fact]
@@ -94,7 +95,7 @@ public class ArrClientFactoryTests
         var result = _factory.GetClient(InstanceType.Whisparr, 3);
 
         // Assert
-        Assert.Same(_whisparrV3Client, result);
+        result.ShouldBeSameAs(_whisparrV3Client);
     }
 
     [Fact]
@@ -104,9 +105,9 @@ public class ArrClientFactoryTests
         var unsupportedType = (InstanceType)999;
 
         // Act & Assert
-        var exception = Assert.Throws<NotImplementedException>(() => _factory.GetClient(unsupportedType, Arg.Any<float>()));
-        Assert.Contains("not yet supported", exception.Message);
-        Assert.Contains("999", exception.Message);
+        var exception = Should.Throw<NotImplementedException>(() => _factory.GetClient(unsupportedType, 0f));
+        exception.Message.ShouldContain("not yet supported");
+        exception.Message.ShouldContain("999");
     }
 
     [Theory]
@@ -117,8 +118,8 @@ public class ArrClientFactoryTests
         var result = _factory.GetClient(instanceType, version ?? 0f);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.IsAssignableFrom<IArrClient>(result);
+        result.ShouldNotBeNull();
+        result.ShouldBeAssignableTo<IArrClient>();
     }
 
     [Theory]
@@ -130,7 +131,7 @@ public class ArrClientFactoryTests
         var result2 = _factory.GetClient(instanceType, version ?? 0f);
 
         // Assert
-        Assert.Same(result1, result2);
+        result1.ShouldBeSameAs(result2);
     }
 
     public static IEnumerable<object?[]> InstancesData =>

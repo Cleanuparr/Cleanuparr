@@ -4,6 +4,7 @@ using Cleanuparr.Infrastructure.Features.Notifications.Telegram;
 using Cleanuparr.Persistence.Models.Configuration.Notification;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
+using Shouldly;
 using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.Notifications.Telegram;
@@ -39,14 +40,14 @@ public class TelegramProviderTests
     public void Constructor_SetsNameCorrectly()
     {
         // Assert
-        Assert.Equal("TestTelegram", _provider.Name);
+        _provider.Name.ShouldBe("TestTelegram");
     }
 
     [Fact]
     public void Constructor_SetsTypeCorrectly()
     {
         // Assert
-        Assert.Equal(NotificationProviderType.Telegram, _provider.Type);
+        _provider.Type.ShouldBe(NotificationProviderType.Telegram);
     }
 
     #endregion
@@ -68,7 +69,7 @@ public class TelegramProviderTests
         await _provider.SendNotificationAsync(context);
 
         // Assert
-        Assert.Equal("test-bot-token", capturedBotToken);
+        capturedBotToken.ShouldBe("test-bot-token");
     }
 
     [Fact]
@@ -86,8 +87,8 @@ public class TelegramProviderTests
         await _provider.SendNotificationAsync(context);
 
         // Assert
-        Assert.NotNull(capturedPayload);
-        Assert.Equal("123456789", capturedPayload.ChatId);
+        capturedPayload.ShouldNotBeNull();
+        capturedPayload.ChatId.ShouldBe("123456789");
     }
 
     [Fact]
@@ -114,8 +115,8 @@ public class TelegramProviderTests
         await provider.SendNotificationAsync(context);
 
         // Assert
-        Assert.NotNull(capturedPayload);
-        Assert.Equal("123456789", capturedPayload.ChatId);
+        capturedPayload.ShouldNotBeNull();
+        capturedPayload.ChatId.ShouldBe("123456789");
     }
 
     [Fact]
@@ -133,8 +134,8 @@ public class TelegramProviderTests
         await _provider.SendNotificationAsync(context);
 
         // Assert
-        Assert.NotNull(capturedPayload);
-        Assert.Contains("Test Notification", capturedPayload.Text);
+        capturedPayload.ShouldNotBeNull();
+        capturedPayload.Text.ShouldContain("Test Notification");
     }
 
     [Fact]
@@ -152,8 +153,8 @@ public class TelegramProviderTests
         await _provider.SendNotificationAsync(context);
 
         // Assert
-        Assert.NotNull(capturedPayload);
-        Assert.Contains("Test Description", capturedPayload.Text);
+        capturedPayload.ShouldNotBeNull();
+        capturedPayload.Text.ShouldContain("Test Description");
     }
 
     [Fact]
@@ -174,9 +175,9 @@ public class TelegramProviderTests
         await _provider.SendNotificationAsync(context);
 
         // Assert
-        Assert.NotNull(capturedPayload);
-        Assert.Contains("TestKey: TestValue", capturedPayload.Text);
-        Assert.Contains("AnotherKey: AnotherValue", capturedPayload.Text);
+        capturedPayload.ShouldNotBeNull();
+        capturedPayload.Text.ShouldContain("TestKey: TestValue");
+        capturedPayload.Text.ShouldContain("AnotherKey: AnotherValue");
     }
 
     [Fact]
@@ -202,9 +203,9 @@ public class TelegramProviderTests
         await _provider.SendNotificationAsync(context);
 
         // Assert
-        Assert.NotNull(capturedPayload);
-        Assert.Contains("&lt;script&gt;", capturedPayload.Text);
-        Assert.Contains("&amp;", capturedPayload.Text);
+        capturedPayload.ShouldNotBeNull();
+        capturedPayload.Text.ShouldContain("&lt;script&gt;");
+        capturedPayload.Text.ShouldContain("&amp;");
     }
 
     [Fact]
@@ -232,8 +233,8 @@ public class TelegramProviderTests
         await provider.SendNotificationAsync(context);
 
         // Assert
-        Assert.NotNull(capturedPayload);
-        Assert.Equal(42, capturedPayload.MessageThreadId);
+        capturedPayload.ShouldNotBeNull();
+        capturedPayload.MessageThreadId.ShouldBe(42);
     }
 
     [Theory]
@@ -265,8 +266,8 @@ public class TelegramProviderTests
         await provider.SendNotificationAsync(context);
 
         // Assert
-        Assert.NotNull(capturedPayload);
-        Assert.Null(capturedPayload.MessageThreadId);
+        capturedPayload.ShouldNotBeNull();
+        capturedPayload.MessageThreadId.ShouldBeNull();
     }
 
     [Fact]
@@ -293,8 +294,8 @@ public class TelegramProviderTests
         await provider.SendNotificationAsync(context);
 
         // Assert
-        Assert.NotNull(capturedPayload);
-        Assert.True(capturedPayload.DisableNotification);
+        capturedPayload.ShouldNotBeNull();
+        capturedPayload.DisableNotification.ShouldBeTrue();
     }
 
     [Fact]
@@ -321,8 +322,8 @@ public class TelegramProviderTests
         await _provider.SendNotificationAsync(context);
 
         // Assert
-        Assert.NotNull(capturedPayload);
-        Assert.Equal("https://example.com/image.jpg", capturedPayload.PhotoUrl);
+        capturedPayload.ShouldNotBeNull();
+        capturedPayload.PhotoUrl.ShouldBe("https://example.com/image.jpg");
     }
 
     [Fact]
@@ -340,8 +341,8 @@ public class TelegramProviderTests
         await _provider.SendNotificationAsync(context);
 
         // Assert
-        Assert.NotNull(capturedPayload);
-        Assert.Null(capturedPayload.PhotoUrl);
+        capturedPayload.ShouldNotBeNull();
+        capturedPayload.PhotoUrl.ShouldBeNull();
     }
 
     [Fact]
@@ -367,10 +368,10 @@ public class TelegramProviderTests
         await _provider.SendNotificationAsync(context);
 
         // Assert
-        Assert.NotNull(capturedPayload);
-        Assert.Contains("Test Title", capturedPayload.Text);
-        Assert.Contains("Test Description Only", capturedPayload.Text);
-        Assert.DoesNotContain(":", capturedPayload.Text.Replace("Test Title", "").Replace("Test Description Only", "").Trim());
+        capturedPayload.ShouldNotBeNull();
+        capturedPayload.Text.ShouldContain("Test Title");
+        capturedPayload.Text.ShouldContain("Test Description Only");
+        capturedPayload.Text.Replace("Test Title", "").Replace("Test Description Only", "").Trim().ShouldNotContain(":");
     }
 
     [Fact]
@@ -396,9 +397,9 @@ public class TelegramProviderTests
         await _provider.SendNotificationAsync(context);
 
         // Assert
-        Assert.NotNull(capturedPayload);
-        Assert.DoesNotContain("  Trimmed", capturedPayload.Text);
-        Assert.Contains("Trimmed Title", capturedPayload.Text);
+        capturedPayload.ShouldNotBeNull();
+        capturedPayload.Text.ShouldNotContain("  Trimmed");
+        capturedPayload.Text.ShouldContain("Trimmed Title");
     }
 
     [Fact]
@@ -411,7 +412,7 @@ public class TelegramProviderTests
             .ThrowsAsync(new TelegramException("Proxy error"));
 
         // Act & Assert
-        await Assert.ThrowsAsync<TelegramException>(() => _provider.SendNotificationAsync(context));
+        await Should.ThrowAsync<TelegramException>(() => _provider.SendNotificationAsync(context));
     }
 
     [Fact]
@@ -437,8 +438,8 @@ public class TelegramProviderTests
         await _provider.SendNotificationAsync(context);
 
         // Assert
-        Assert.NotNull(capturedPayload);
-        Assert.Equal("Description without title", capturedPayload.Text);
+        capturedPayload.ShouldNotBeNull();
+        capturedPayload.Text.ShouldBe("Description without title");
     }
 
     #endregion

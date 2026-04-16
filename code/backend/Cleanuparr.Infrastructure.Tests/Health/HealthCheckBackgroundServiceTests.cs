@@ -3,6 +3,7 @@ using Cleanuparr.Infrastructure.Health;
 using Cleanuparr.Infrastructure.Tests.TestHelpers;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
+using Shouldly;
 using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Health;
@@ -41,7 +42,7 @@ public class HealthCheckBackgroundServiceTests : IDisposable
         var service = CreateService();
 
         // Assert
-        Assert.NotNull(service);
+        service.ShouldNotBeNull();
     }
 
     #endregion
@@ -232,7 +233,7 @@ public class HealthCheckBackgroundServiceTests : IDisposable
                         (c.GetArguments()[2]?.ToString()?.Contains("UnhealthyClient") == true ||
                          c.GetArguments()[2]?.ToString()?.Contains("Connection timeout") == true))
             .ToList();
-        Assert.NotEmpty(matchingCalls);
+        matchingCalls.ShouldNotBeEmpty();
     }
 
     #endregion
@@ -254,7 +255,7 @@ public class HealthCheckBackgroundServiceTests : IDisposable
         await service.StartAsync(cts.Token);
 
         // Assert
-        Assert.NotNull(service);
+        service.ShouldNotBeNull();
 
         // Cleanup
         cts.Cancel();

@@ -1,5 +1,6 @@
 using Cleanuparr.Infrastructure.Features.Notifications.Apprise;
 using Cleanuparr.Persistence.Models.Configuration.Notification;
+using Shouldly;
 using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.Notifications.Apprise;
@@ -40,9 +41,9 @@ public class AppriseCliProxyTests
         var config = CreateConfig(null);
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<AppriseException>(() =>
+        var ex = await Should.ThrowAsync<AppriseException>(() =>
             _proxy.SendNotification(CreatePayload(), config));
-        Assert.Contains("No service URLs configured", ex.Message);
+        ex.Message.ShouldContain("No service URLs configured");
     }
 
     [Fact]
@@ -52,9 +53,9 @@ public class AppriseCliProxyTests
         var config = CreateConfig("");
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<AppriseException>(() =>
+        var ex = await Should.ThrowAsync<AppriseException>(() =>
             _proxy.SendNotification(CreatePayload(), config));
-        Assert.Contains("No service URLs configured", ex.Message);
+        ex.Message.ShouldContain("No service URLs configured");
     }
 
     [Fact]
@@ -64,9 +65,9 @@ public class AppriseCliProxyTests
         var config = CreateConfig("   \n   \n   ");
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<AppriseException>(() =>
+        var ex = await Should.ThrowAsync<AppriseException>(() =>
             _proxy.SendNotification(CreatePayload(), config));
-        Assert.Contains("No service URLs configured", ex.Message);
+        ex.Message.ShouldContain("No service URLs configured");
     }
 
     #endregion

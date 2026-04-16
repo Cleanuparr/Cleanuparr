@@ -3,6 +3,7 @@ using Cleanuparr.Infrastructure.Features.Notifications.Pushover;
 using Cleanuparr.Infrastructure.Tests.TestHelpers;
 using Cleanuparr.Shared.Helpers;
 using NSubstitute;
+using Shouldly;
 using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.Notifications.Pushover;
@@ -51,7 +52,7 @@ public class PushoverProxyTests
         var proxy = CreateProxy();
 
         // Assert
-        Assert.NotNull(proxy);
+        proxy.ShouldNotBeNull();
     }
 
     [Fact]
@@ -90,7 +91,7 @@ public class PushoverProxyTests
         await proxy.SendNotification(CreatePayload());
 
         // Assert
-        Assert.Equal(HttpMethod.Post, _httpMessageHandler.CapturedRequests[0].Method);
+        _httpMessageHandler.CapturedRequests[0].Method.ShouldBe(HttpMethod.Post);
     }
 
     [Fact]
@@ -104,7 +105,7 @@ public class PushoverProxyTests
         await proxy.SendNotification(CreatePayload());
 
         // Assert
-        Assert.Equal("https://api.pushover.net/1/messages.json", _httpMessageHandler.CapturedRequests[0].RequestUri?.ToString());
+        _httpMessageHandler.CapturedRequests[0].RequestUri?.ToString().ShouldBe("https://api.pushover.net/1/messages.json");
     }
 
     [Fact]
@@ -118,7 +119,7 @@ public class PushoverProxyTests
         await proxy.SendNotification(CreatePayload());
 
         // Assert
-        Assert.Equal("application/x-www-form-urlencoded", _httpMessageHandler.CapturedRequests[0].Content?.Headers.ContentType?.MediaType);
+        _httpMessageHandler.CapturedRequests[0].Content?.Headers.ContentType?.MediaType.ShouldBe("application/x-www-form-urlencoded");
     }
 
     [Fact]
@@ -135,10 +136,10 @@ public class PushoverProxyTests
 
         // Assert
         var capturedContent = _httpMessageHandler.CapturedRequestBodies[0]!;
-        Assert.Contains("token=test-token", capturedContent);
-        Assert.Contains("user=test-user", capturedContent);
-        Assert.Contains("message=Test+message", capturedContent);
-        Assert.Contains("priority=0", capturedContent);
+        capturedContent.ShouldContain("token=test-token");
+        capturedContent.ShouldContain("user=test-user");
+        capturedContent.ShouldContain("message=Test+message");
+        capturedContent.ShouldContain("priority=0");
     }
 
     [Fact]
@@ -155,8 +156,8 @@ public class PushoverProxyTests
 
         // Assert
         var capturedContent = _httpMessageHandler.CapturedRequestBodies[0]!;
-        Assert.Contains("retry=60", capturedContent);
-        Assert.Contains("expire=3600", capturedContent);
+        capturedContent.ShouldContain("retry=60");
+        capturedContent.ShouldContain("expire=3600");
     }
 
     [Fact]
@@ -173,8 +174,8 @@ public class PushoverProxyTests
 
         // Assert
         var capturedContent = _httpMessageHandler.CapturedRequestBodies[0]!;
-        Assert.DoesNotContain("retry=", capturedContent);
-        Assert.DoesNotContain("expire=", capturedContent);
+        capturedContent.ShouldNotContain("retry=");
+        capturedContent.ShouldNotContain("expire=");
     }
 
     [Fact]
@@ -199,7 +200,7 @@ public class PushoverProxyTests
 
         // Assert
         var capturedContent = _httpMessageHandler.CapturedRequestBodies[0]!;
-        Assert.Contains("sound=cosmic", capturedContent);
+        capturedContent.ShouldContain("sound=cosmic");
     }
 
     [Fact]
@@ -224,7 +225,7 @@ public class PushoverProxyTests
 
         // Assert
         var capturedContent = _httpMessageHandler.CapturedRequestBodies[0]!;
-        Assert.Contains("device=my-phone", capturedContent);
+        capturedContent.ShouldContain("device=my-phone");
     }
 
     [Fact]
@@ -249,7 +250,7 @@ public class PushoverProxyTests
 
         // Assert
         var capturedContent = _httpMessageHandler.CapturedRequestBodies[0]!;
-        Assert.Contains("tags=tag1%2Ctag2", capturedContent); // URL-encoded comma
+        capturedContent.ShouldContain("tags=tag1%2Ctag2"); // URL-encoded comma
     }
 
     #endregion
@@ -264,9 +265,9 @@ public class PushoverProxyTests
         SetupErrorResponse(HttpStatusCode.BadRequest, "{\"status\":0,\"errors\":[\"invalid token\"]}");
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<PushoverException>(() =>
+        var ex = await Should.ThrowAsync<PushoverException>(() =>
             proxy.SendNotification(CreatePayload()));
-        Assert.Contains("Bad request", ex.Message);
+        ex.Message.ShouldContain("Bad request");
     }
 
     [Fact]
@@ -277,9 +278,9 @@ public class PushoverProxyTests
         SetupErrorResponse(HttpStatusCode.Unauthorized, "{\"status\":0,\"errors\":[\"invalid api key\"]}");
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<PushoverException>(() =>
+        var ex = await Should.ThrowAsync<PushoverException>(() =>
             proxy.SendNotification(CreatePayload()));
-        Assert.Contains("Invalid API token or user key", ex.Message);
+        ex.Message.ShouldContain("Invalid API token or user key");
     }
 
     [Fact]
@@ -290,9 +291,9 @@ public class PushoverProxyTests
         SetupErrorResponse((HttpStatusCode)429, "{\"status\":0,\"errors\":[\"rate limit exceeded\"]}");
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<PushoverException>(() =>
+        var ex = await Should.ThrowAsync<PushoverException>(() =>
             proxy.SendNotification(CreatePayload()));
-        Assert.Contains("Rate limit exceeded", ex.Message);
+        ex.Message.ShouldContain("Rate limit exceeded");
     }
 
     [Fact]
@@ -306,9 +307,9 @@ public class PushoverProxyTests
         }));
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<PushoverException>(() =>
+        var ex = await Should.ThrowAsync<PushoverException>(() =>
             proxy.SendNotification(CreatePayload()));
-        Assert.Contains("user key is invalid", ex.Message);
+        ex.Message.ShouldContain("user key is invalid");
     }
 
     [Fact]
@@ -319,9 +320,9 @@ public class PushoverProxyTests
         _httpMessageHandler.SetupThrow(new HttpRequestException("Network error"));
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<PushoverException>(() =>
+        var ex = await Should.ThrowAsync<PushoverException>(() =>
             proxy.SendNotification(CreatePayload()));
-        Assert.Contains("Unable to connect to Pushover API", ex.Message);
+        ex.Message.ShouldContain("Unable to connect to Pushover API");
     }
 
     #endregion

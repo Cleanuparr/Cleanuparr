@@ -10,6 +10,7 @@ using MassTransit;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
+using Shouldly;
 using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.DownloadRemover.Consumers;
@@ -82,11 +83,11 @@ public class DownloadRemoverConsumerTests
         await _consumer.Consume(context);
 
         // Assert
-        Assert.NotNull(capturedRequest);
-        Assert.Equal(request.Instance.ArrConfig.Type, capturedRequest.Instance.ArrConfig.Type);
-        Assert.Equal(request.SearchItem.Id, capturedRequest.SearchItem.Id);
-        Assert.Equal(request.RemoveFromClient, capturedRequest.RemoveFromClient);
-        Assert.Equal(request.DeleteReason, capturedRequest.DeleteReason);
+        capturedRequest.ShouldNotBeNull();
+        capturedRequest.Instance.ArrConfig.Type.ShouldBe(request.Instance.ArrConfig.Type);
+        capturedRequest.SearchItem.Id.ShouldBe(request.SearchItem.Id);
+        capturedRequest.RemoveFromClient.ShouldBe(request.RemoveFromClient);
+        capturedRequest.DeleteReason.ShouldBe(request.DeleteReason);
     }
 
     [Fact]

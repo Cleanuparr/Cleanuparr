@@ -15,6 +15,7 @@ using Cleanuparr.Persistence.Models.Configuration.General;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
+using Shouldly;
 using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.Jobs;
@@ -119,7 +120,7 @@ public class DownloadCleanerTests : IDisposable
 
         // Assert - should warn about no seeding downloads or no features enabled
         // The exact message depends on the order of checks
-        Assert.NotEmpty(_logger.ReceivedCalls());
+        _logger.ReceivedCalls().ShouldNotBeEmpty();
     }
 
     [Fact]
@@ -950,8 +951,8 @@ public class DownloadCleanerTests : IDisposable
         // Need to advance time for the delay to pass before the exception is thrown
         var task = sut.ExecuteAsync();
         _fixture.TimeProvider.Advance(TimeSpan.FromSeconds(10));
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => task);
-        Assert.Equal("Arr connection failed", exception.Message);
+        var exception = await Should.ThrowAsync<InvalidOperationException>(() => task);
+        exception.Message.ShouldBe("Arr connection failed");
 
         // Verify error was logged
         _logger.ReceivedLogContaining(LogLevel.Error, "failed to process");

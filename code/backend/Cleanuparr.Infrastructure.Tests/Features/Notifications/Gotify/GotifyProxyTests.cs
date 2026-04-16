@@ -5,6 +5,7 @@ using Cleanuparr.Persistence.Models.Configuration.Notification;
 using Cleanuparr.Shared.Helpers;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
+using Shouldly;
 using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.Notifications.Gotify;
@@ -61,7 +62,7 @@ public class GotifyProxyTests
         var proxy = CreateProxy();
 
         // Assert
-        Assert.NotNull(proxy);
+        proxy.ShouldNotBeNull();
     }
 
     [Fact]
@@ -100,7 +101,7 @@ public class GotifyProxyTests
         await proxy.SendNotification(CreatePayload(), CreateConfig());
 
         // Assert
-        Assert.Equal(HttpMethod.Post, _httpMessageHandler.CapturedRequests[0].Method);
+        _httpMessageHandler.CapturedRequests[0].Method.ShouldBe(HttpMethod.Post);
     }
 
     [Fact]
@@ -121,7 +122,7 @@ public class GotifyProxyTests
         await proxy.SendNotification(CreatePayload(), config);
 
         // Assert
-        Assert.Equal("https://gotify.example.com/message?token=my-token", _httpMessageHandler.CapturedRequests[0].RequestUri?.ToString());
+        _httpMessageHandler.CapturedRequests[0].RequestUri?.ToString().ShouldBe("https://gotify.example.com/message?token=my-token");
     }
 
     [Fact]
@@ -142,7 +143,7 @@ public class GotifyProxyTests
         await proxy.SendNotification(CreatePayload(), config);
 
         // Assert
-        Assert.Equal("https://gotify.example.com/message?token=my-token", _httpMessageHandler.CapturedRequests[0].RequestUri?.ToString());
+        _httpMessageHandler.CapturedRequests[0].RequestUri?.ToString().ShouldBe("https://gotify.example.com/message?token=my-token");
     }
 
     [Fact]
@@ -156,7 +157,7 @@ public class GotifyProxyTests
         await proxy.SendNotification(CreatePayload(), CreateConfig());
 
         // Assert
-        Assert.Equal("application/json", _httpMessageHandler.CapturedRequests[0].Content?.Headers.ContentType?.MediaType);
+        _httpMessageHandler.CapturedRequests[0].Content?.Headers.ContentType?.MediaType.ShouldBe("application/json");
     }
 
     [Fact]
@@ -187,9 +188,9 @@ public class GotifyProxyTests
         _httpMessageHandler.SetupThrow(new HttpRequestException("Error", null, statusCode));
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<GotifyException>(() =>
+        var ex = await Should.ThrowAsync<GotifyException>(() =>
             proxy.SendNotification(CreatePayload(), CreateConfig()));
-        Assert.Contains("invalid or unauthorized", ex.Message);
+        ex.Message.ShouldContain("invalid or unauthorized");
     }
 
     [Fact]
@@ -200,9 +201,9 @@ public class GotifyProxyTests
         _httpMessageHandler.SetupThrow(new HttpRequestException("Error", null, HttpStatusCode.NotFound));
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<GotifyException>(() =>
+        var ex = await Should.ThrowAsync<GotifyException>(() =>
             proxy.SendNotification(CreatePayload(), CreateConfig()));
-        Assert.Contains("not found", ex.Message);
+        ex.Message.ShouldContain("not found");
     }
 
     [Theory]
@@ -216,9 +217,9 @@ public class GotifyProxyTests
         _httpMessageHandler.SetupThrow(new HttpRequestException("Error", null, statusCode));
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<GotifyException>(() =>
+        var ex = await Should.ThrowAsync<GotifyException>(() =>
             proxy.SendNotification(CreatePayload(), CreateConfig()));
-        Assert.Contains("service unavailable", ex.Message, StringComparison.OrdinalIgnoreCase);
+        ex.Message.ShouldContain("service unavailable", Case.Insensitive);
     }
 
     [Fact]
@@ -229,9 +230,9 @@ public class GotifyProxyTests
         _httpMessageHandler.SetupThrow(new HttpRequestException("Error", null, HttpStatusCode.InternalServerError));
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<GotifyException>(() =>
+        var ex = await Should.ThrowAsync<GotifyException>(() =>
             proxy.SendNotification(CreatePayload(), CreateConfig()));
-        Assert.Contains("unable to send notification", ex.Message, StringComparison.OrdinalIgnoreCase);
+        ex.Message.ShouldContain("unable to send notification", Case.Insensitive);
     }
 
     [Fact]
@@ -242,9 +243,9 @@ public class GotifyProxyTests
         _httpMessageHandler.SetupThrow(new HttpRequestException("Network error"));
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<GotifyException>(() =>
+        var ex = await Should.ThrowAsync<GotifyException>(() =>
             proxy.SendNotification(CreatePayload(), CreateConfig()));
-        Assert.Contains("unable to send notification", ex.Message, StringComparison.OrdinalIgnoreCase);
+        ex.Message.ShouldContain("unable to send notification", Case.Insensitive);
     }
 
     #endregion

@@ -5,6 +5,7 @@ using Cleanuparr.Persistence.Models.Configuration.Notification;
 using Cleanuparr.Shared.Helpers;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
+using Shouldly;
 using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.Notifications.Notifiarr;
@@ -64,7 +65,7 @@ public class NotifiarrProxyTests
         var proxy = CreateProxy();
 
         // Assert
-        Assert.NotNull(proxy);
+        proxy.ShouldNotBeNull();
     }
 
     [Fact]
@@ -103,7 +104,7 @@ public class NotifiarrProxyTests
         await proxy.SendNotification(CreatePayload(), CreateConfig());
 
         // Assert
-        Assert.Equal(HttpMethod.Post, _httpMessageHandler.CapturedRequests[0].Method);
+        _httpMessageHandler.CapturedRequests[0].Method.ShouldBe(HttpMethod.Post);
     }
 
     [Fact]
@@ -120,10 +121,10 @@ public class NotifiarrProxyTests
 
         // Assert
         var capturedUri = _httpMessageHandler.CapturedRequests[0].RequestUri?.ToString();
-        Assert.NotNull(capturedUri);
-        Assert.Contains("notifiarr.com", capturedUri);
-        Assert.Contains("passthrough", capturedUri);
-        Assert.Contains("my-api-key", capturedUri);
+        capturedUri.ShouldNotBeNull();
+        capturedUri.ShouldContain("notifiarr.com");
+        capturedUri.ShouldContain("passthrough");
+        capturedUri.ShouldContain("my-api-key");
     }
 
     [Fact]
@@ -137,7 +138,7 @@ public class NotifiarrProxyTests
         await proxy.SendNotification(CreatePayload(), CreateConfig());
 
         // Assert
-        Assert.Equal("application/json", _httpMessageHandler.CapturedRequests[0].Content?.Headers.ContentType?.MediaType);
+        _httpMessageHandler.CapturedRequests[0].Content?.Headers.ContentType?.MediaType.ShouldBe("application/json");
     }
 
     [Fact]
@@ -166,9 +167,9 @@ public class NotifiarrProxyTests
         _httpMessageHandler.SetupThrow(new HttpRequestException("Error", null, HttpStatusCode.Unauthorized));
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<NotifiarrException>(() =>
+        var ex = await Should.ThrowAsync<NotifiarrException>(() =>
             proxy.SendNotification(CreatePayload(), CreateConfig()));
-        Assert.Contains("API key is invalid", ex.Message);
+        ex.Message.ShouldContain("API key is invalid");
     }
 
     [Theory]
@@ -182,9 +183,9 @@ public class NotifiarrProxyTests
         _httpMessageHandler.SetupThrow(new HttpRequestException("Error", null, statusCode));
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<NotifiarrException>(() =>
+        var ex = await Should.ThrowAsync<NotifiarrException>(() =>
             proxy.SendNotification(CreatePayload(), CreateConfig()));
-        Assert.Contains("service unavailable", ex.Message, StringComparison.OrdinalIgnoreCase);
+        ex.Message.ShouldContain("service unavailable", Case.Insensitive);
     }
 
     [Fact]
@@ -195,9 +196,9 @@ public class NotifiarrProxyTests
         _httpMessageHandler.SetupThrow(new HttpRequestException("Error", null, HttpStatusCode.InternalServerError));
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<NotifiarrException>(() =>
+        var ex = await Should.ThrowAsync<NotifiarrException>(() =>
             proxy.SendNotification(CreatePayload(), CreateConfig()));
-        Assert.Contains("unable to send notification", ex.Message, StringComparison.OrdinalIgnoreCase);
+        ex.Message.ShouldContain("unable to send notification", Case.Insensitive);
     }
 
     [Fact]
@@ -208,9 +209,9 @@ public class NotifiarrProxyTests
         _httpMessageHandler.SetupThrow(new HttpRequestException("Network error"));
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<NotifiarrException>(() =>
+        var ex = await Should.ThrowAsync<NotifiarrException>(() =>
             proxy.SendNotification(CreatePayload(), CreateConfig()));
-        Assert.Contains("unable to send notification", ex.Message, StringComparison.OrdinalIgnoreCase);
+        ex.Message.ShouldContain("unable to send notification", Case.Insensitive);
     }
 
     #endregion

@@ -1,6 +1,7 @@
 using Cleanuparr.Infrastructure.Features.Notifications.Apprise;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
+using Shouldly;
 using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.Notifications.Apprise;
@@ -21,7 +22,7 @@ public class AppriseCliDetectorTests
         var detector = new AppriseCliDetector(Substitute.For<ILogger<AppriseCliDetector>>());
 
         // Assert
-        Assert.NotNull(detector);
+        detector.ShouldNotBeNull();
     }
 
     [Fact]
@@ -29,6 +30,6 @@ public class AppriseCliDetectorTests
     {
         // Act & Assert - should handle missing CLI gracefully without throwing
         var exception = await Record.ExceptionAsync(() => _detector.GetAppriseVersionAsync());
-        Assert.Null(exception);
+        exception.ShouldBeNull();
     }
 }

@@ -6,6 +6,7 @@ using Cleanuparr.Infrastructure.Tests.TestHelpers;
 using Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
+using Shouldly;
 using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Services;
@@ -27,7 +28,7 @@ public class QueueRuleManagerTests
         var result = ruleManager.GetMatchingStallRule(torrent);
 
         // Assert
-        Assert.Null(result);
+        result.ShouldBeNull();
     }
 
     [Fact]
@@ -46,9 +47,9 @@ public class QueueRuleManagerTests
         var result = ruleManager.GetMatchingStallRule(torrent);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(stallRule.Id, result.Id);
-        Assert.Equal("Test Rule", result.Name);
+        result.ShouldNotBeNull();
+        result.Id.ShouldBe(stallRule.Id);
+        result.Name.ShouldBe("Test Rule");
     }
 
     [Fact]
@@ -68,7 +69,7 @@ public class QueueRuleManagerTests
         var result = ruleManager.GetMatchingStallRule(torrent);
 
         // Assert
-        Assert.Null(result);
+        result.ShouldBeNull();
         logger.ReceivedLogContaining(LogLevel.Warning, "multiple");
     }
 
@@ -88,7 +89,7 @@ public class QueueRuleManagerTests
         var result = ruleManager.GetMatchingStallRule(torrent);
 
         // Assert
-        Assert.Null(result);
+        result.ShouldBeNull();
     }
 
     [Fact]
@@ -107,7 +108,7 @@ public class QueueRuleManagerTests
         var result = ruleManager.GetMatchingStallRule(torrent);
 
         // Assert
-        Assert.Null(result);
+        result.ShouldBeNull();
     }
 
     [Fact]
@@ -126,7 +127,7 @@ public class QueueRuleManagerTests
         var result = ruleManager.GetMatchingStallRule(torrent);
 
         // Assert
-        Assert.Null(result);
+        result.ShouldBeNull();
     }
 
     [Fact]
@@ -145,8 +146,8 @@ public class QueueRuleManagerTests
         var result = ruleManager.GetMatchingStallRule(torrent);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(stallRule.Id, result.Id);
+        result.ShouldNotBeNull();
+        result.Id.ShouldBe(stallRule.Id);
     }
 
     [Fact]
@@ -165,8 +166,8 @@ public class QueueRuleManagerTests
         var result = ruleManager.GetMatchingStallRule(torrent);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(stallRule.Id, result.Id);
+        result.ShouldNotBeNull();
+        result.Id.ShouldBe(stallRule.Id);
     }
 
     [Fact]
@@ -185,7 +186,7 @@ public class QueueRuleManagerTests
         var result = ruleManager.GetMatchingStallRule(torrent);
 
         // Assert
-        Assert.Null(result);
+        result.ShouldBeNull();
     }
 
     [Fact]
@@ -204,7 +205,7 @@ public class QueueRuleManagerTests
         var result = ruleManager.GetMatchingStallRule(torrent);
 
         // Assert
-        Assert.Null(result);
+        result.ShouldBeNull();
     }
 
     [Fact]
@@ -223,8 +224,8 @@ public class QueueRuleManagerTests
         var result = ruleManager.GetMatchingStallRule(torrent);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(stallRule.Id, result.Id);
+        result.ShouldNotBeNull();
+        result.Id.ShouldBe(stallRule.Id);
     }
 
     [Fact]
@@ -243,8 +244,8 @@ public class QueueRuleManagerTests
         var result = ruleManager.GetMatchingStallRule(torrent);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(stallRule.Id, result.Id);
+        result.ShouldNotBeNull();
+        result.Id.ShouldBe(stallRule.Id);
     }
 
     [Fact]
@@ -262,7 +263,7 @@ public class QueueRuleManagerTests
         var result = ruleManager.GetMatchingSlowRule(torrent);
 
         // Assert
-        Assert.Null(result);
+        result.ShouldBeNull();
     }
 
     [Fact]
@@ -281,9 +282,9 @@ public class QueueRuleManagerTests
         var result = ruleManager.GetMatchingSlowRule(torrent);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(slowRule.Id, result.Id);
-        Assert.Equal("Slow Rule", result.Name);
+        result.ShouldNotBeNull();
+        result.Id.ShouldBe(slowRule.Id);
+        result.Name.ShouldBe("Slow Rule");
     }
 
     [Fact]
@@ -303,7 +304,7 @@ public class QueueRuleManagerTests
         var result = ruleManager.GetMatchingSlowRule(torrent);
 
         // Assert
-        Assert.Null(result);
+        result.ShouldBeNull();
         logger.ReceivedLogContaining(LogLevel.Warning, "multiple");
     }
 
@@ -323,7 +324,7 @@ public class QueueRuleManagerTests
         var result = ruleManager.GetMatchingSlowRule(torrent);
 
         // Assert
-        Assert.Null(result);
+        result.ShouldBeNull();
     }
 
     [Fact]
@@ -342,8 +343,8 @@ public class QueueRuleManagerTests
         var result = ruleManager.GetMatchingSlowRule(torrent);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(slowRule.Id, result.Id);
+        result.ShouldNotBeNull();
+        result.Id.ShouldBe(slowRule.Id);
     }
 
     [Fact]
@@ -362,8 +363,8 @@ public class QueueRuleManagerTests
         var result = ruleManager.GetMatchingSlowRule(torrent);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(slowRule.Id, result.Id);
+        result.ShouldNotBeNull();
+        result.Id.ShouldBe(slowRule.Id);
     }
 
     private static ITorrentItemWrapper CreateTorrentMock(

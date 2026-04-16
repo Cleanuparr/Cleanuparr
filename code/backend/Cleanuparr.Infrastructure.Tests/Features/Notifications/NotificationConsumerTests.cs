@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
+using Shouldly;
 using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.Notifications;
@@ -69,7 +70,7 @@ public class NotificationConsumerTests
         await ConsumeWithTimeAdvance(consumer, context);
 
         // Assert
-        Assert.Equal(NotificationEventType.FailedImportStrike, capturedEventType);
+        capturedEventType.ShouldBe(NotificationEventType.FailedImportStrike);
     }
 
     #endregion
@@ -111,7 +112,7 @@ public class NotificationConsumerTests
         await ConsumeWithTimeAdvance(consumer, context);
 
         // Assert
-        Assert.Equal(NotificationEventType.StalledStrike, capturedEventType);
+        capturedEventType.ShouldBe(NotificationEventType.StalledStrike);
     }
 
     #endregion
@@ -153,7 +154,7 @@ public class NotificationConsumerTests
         await ConsumeWithTimeAdvance(consumer, context);
 
         // Assert
-        Assert.Equal(NotificationEventType.SlowSpeedStrike, capturedEventType);
+        capturedEventType.ShouldBe(NotificationEventType.SlowSpeedStrike);
     }
 
     #endregion
@@ -195,7 +196,7 @@ public class NotificationConsumerTests
         await ConsumeWithTimeAdvance(consumer, context);
 
         // Assert
-        Assert.Equal(NotificationEventType.SlowTimeStrike, capturedEventType);
+        capturedEventType.ShouldBe(NotificationEventType.SlowTimeStrike);
     }
 
     #endregion
@@ -237,7 +238,7 @@ public class NotificationConsumerTests
         await ConsumeWithTimeAdvance(consumer, context);
 
         // Assert
-        Assert.Equal(NotificationEventType.QueueItemDeleted, capturedEventType);
+        capturedEventType.ShouldBe(NotificationEventType.QueueItemDeleted);
     }
 
     #endregion
@@ -276,7 +277,7 @@ public class NotificationConsumerTests
         await ConsumeWithTimeAdvance(consumer, context);
 
         // Assert
-        Assert.Equal(NotificationEventType.DownloadCleaned, capturedEventType);
+        capturedEventType.ShouldBe(NotificationEventType.DownloadCleaned);
     }
 
     #endregion
@@ -315,7 +316,7 @@ public class NotificationConsumerTests
         await ConsumeWithTimeAdvance(consumer, context);
 
         // Assert
-        Assert.Equal(NotificationEventType.CategoryChanged, capturedEventType);
+        capturedEventType.ShouldBe(NotificationEventType.CategoryChanged);
     }
 
     #endregion
@@ -362,8 +363,8 @@ public class NotificationConsumerTests
         await ConsumeWithTimeAdvance(consumer, context);
 
         // Assert
-        Assert.NotNull(capturedContext);
-        Assert.Equal(expectedSeverity, capturedContext.Severity);
+        capturedContext.ShouldNotBeNull();
+        capturedContext.Severity.ShouldBe(expectedSeverity);
     }
 
     [Fact]
@@ -404,11 +405,11 @@ public class NotificationConsumerTests
         await ConsumeWithTimeAdvance(consumer, context);
 
         // Assert
-        Assert.NotNull(capturedContext);
-        Assert.Equal("Sonarr", capturedContext.Data["Instance type"]);
-        Assert.Equal("http://sonarr.local/", capturedContext.Data["Url"]);
-        Assert.Equal("ABC123", capturedContext.Data["Hash"]);
-        Assert.Equal(new Uri("http://example.com/image.jpg"), capturedContext.Image);
+        capturedContext.ShouldNotBeNull();
+        capturedContext.Data["Instance type"].ShouldBe("Sonarr");
+        capturedContext.Data["Url"].ShouldBe("http://sonarr.local/");
+        capturedContext.Data["Hash"].ShouldBe("ABC123");
+        capturedContext.Image.ShouldBe(new Uri("http://example.com/image.jpg"));
     }
 
     [Fact]
@@ -453,9 +454,9 @@ public class NotificationConsumerTests
         await ConsumeWithTimeAdvance(consumer, context);
 
         // Assert
-        Assert.NotNull(capturedContext);
-        Assert.Equal("CustomValue1", capturedContext.Data["CustomKey1"]);
-        Assert.Equal("CustomValue2", capturedContext.Data["CustomKey2"]);
+        capturedContext.ShouldNotBeNull();
+        capturedContext.Data["CustomKey1"].ShouldBe("CustomValue1");
+        capturedContext.Data["CustomKey2"].ShouldBe("CustomValue2");
     }
 
     [Fact]
@@ -492,10 +493,10 @@ public class NotificationConsumerTests
         await ConsumeWithTimeAdvance(consumer, context);
 
         // Assert
-        Assert.NotNull(capturedContext);
-        Assert.False(capturedContext.Data.ContainsKey("Instance type"));
-        Assert.False(capturedContext.Data.ContainsKey("Url"));
-        Assert.False(capturedContext.Data.ContainsKey("Hash"));
+        capturedContext.ShouldNotBeNull();
+        capturedContext.Data.ContainsKey("Instance type").ShouldBeFalse();
+        capturedContext.Data.ContainsKey("Url").ShouldBeFalse();
+        capturedContext.Data.ContainsKey("Hash").ShouldBeFalse();
     }
 
     #endregion

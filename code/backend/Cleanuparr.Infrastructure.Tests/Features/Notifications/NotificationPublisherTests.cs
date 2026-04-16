@@ -10,6 +10,7 @@ using Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
+using Shouldly;
 using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.Notifications;
@@ -75,7 +76,7 @@ public class NotificationPublisherTests
     public void Constructor_SetsAllDependencies()
     {
         // Assert
-        Assert.NotNull(_publisher);
+        _publisher.ShouldNotBeNull();
     }
 
     #endregion
@@ -323,8 +324,8 @@ public class NotificationPublisherTests
         await _publisher.NotifyDownloadCleaned(1.0, TimeSpan.FromHours(24.7), "tv", CleanReason.MaxSeedTimeReached);
 
         // Assert
-        Assert.NotNull(capturedContext);
-        Assert.Equal("25", capturedContext.Data["Seeding hours"]); // Rounds to 25
+        capturedContext.ShouldNotBeNull();
+        capturedContext.Data["Seeding hours"].ShouldBe("25"); // Rounds to 25
     }
 
     [Fact]
@@ -402,12 +403,12 @@ public class NotificationPublisherTests
         await _publisher.NotifyCategoryChanged("", "seeded", true);
 
         // Assert
-        Assert.NotNull(capturedContext);
-        Assert.Equal("Tag added", capturedContext.Title);
-        Assert.True(capturedContext.Data.ContainsKey("Tag"));
-        Assert.Equal("seeded", capturedContext.Data["Tag"]);
-        Assert.False(capturedContext.Data.ContainsKey("Old category"));
-        Assert.False(capturedContext.Data.ContainsKey("New category"));
+        capturedContext.ShouldNotBeNull();
+        capturedContext.Title.ShouldBe("Tag added");
+        capturedContext.Data.ContainsKey("Tag").ShouldBeTrue();
+        capturedContext.Data["Tag"].ShouldBe("seeded");
+        capturedContext.Data.ContainsKey("Old category").ShouldBeFalse();
+        capturedContext.Data.ContainsKey("New category").ShouldBeFalse();
     }
 
     [Fact]

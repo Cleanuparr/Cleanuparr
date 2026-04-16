@@ -9,6 +9,7 @@ using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using Quartz;
 using Quartz.Impl.Matchers;
+using Shouldly;
 using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Services;
@@ -47,7 +48,7 @@ public class JobManagementServiceTests
         var result = await _service.StartJob(jobType, directCronExpression: invalidCron);
 
         // Assert
-        Assert.False(result);
+        result.ShouldBeFalse();
     }
 
     [Fact]
@@ -64,7 +65,7 @@ public class JobManagementServiceTests
         var result = await _service.StartJob(jobType, directCronExpression: cronExpression);
 
         // Assert
-        Assert.False(result);
+        result.ShouldBeFalse();
         _logger.ReceivedLogContaining(LogLevel.Error, "does not exist");
     }
 
@@ -86,7 +87,7 @@ public class JobManagementServiceTests
         var result = await _service.StartJob(jobType, directCronExpression: cronExpression);
 
         // Assert
-        Assert.True(result);
+        result.ShouldBeTrue();
         await _scheduler.Received(1).ScheduleJob(Arg.Any<ITrigger>(), Arg.Any<CancellationToken>());
         await _scheduler.Received(1).ResumeJob(Arg.Any<JobKey>(), Arg.Any<CancellationToken>());
     }
@@ -109,7 +110,7 @@ public class JobManagementServiceTests
         var result = await _service.StartJob(jobType, schedule: schedule);
 
         // Assert
-        Assert.True(result);
+        result.ShouldBeTrue();
         await _scheduler.Received(1).ScheduleJob(Arg.Any<ITrigger>(), Arg.Any<CancellationToken>());
     }
 
@@ -130,7 +131,7 @@ public class JobManagementServiceTests
         var result = await _service.StartJob(jobType);
 
         // Assert
-        Assert.True(result);
+        result.ShouldBeTrue();
         await _scheduler.Received(1).ScheduleJob(
             Arg.Is<ITrigger>(t => t.Key.Name.Contains("onetime")),
             Arg.Any<CancellationToken>());
@@ -157,7 +158,7 @@ public class JobManagementServiceTests
         var result = await _service.StartJob(jobType, directCronExpression: cronExpression);
 
         // Assert
-        Assert.True(result);
+        result.ShouldBeTrue();
         await _scheduler.Received(1).UnscheduleJob(
             Arg.Is<TriggerKey>(k => k.Name == "existing-trigger"),
             Arg.Any<CancellationToken>());
@@ -177,7 +178,7 @@ public class JobManagementServiceTests
         var result = await _service.StartJob(jobType, directCronExpression: cronExpression);
 
         // Assert
-        Assert.False(result);
+        result.ShouldBeFalse();
     }
 
     #endregion
@@ -197,7 +198,7 @@ public class JobManagementServiceTests
         var result = await _service.StopJob(jobType);
 
         // Assert
-        Assert.False(result);
+        result.ShouldBeFalse();
     }
 
     [Fact]
@@ -218,7 +219,7 @@ public class JobManagementServiceTests
         var result = await _service.StopJob(jobType);
 
         // Assert
-        Assert.True(result);
+        result.ShouldBeTrue();
         await _scheduler.Received(1).UnscheduleJob(Arg.Any<TriggerKey>(), Arg.Any<CancellationToken>());
     }
 
@@ -235,7 +236,7 @@ public class JobManagementServiceTests
         var result = await _service.StopJob(jobType);
 
         // Assert
-        Assert.False(result);
+        result.ShouldBeFalse();
     }
 
     #endregion
@@ -255,8 +256,8 @@ public class JobManagementServiceTests
         var result = await _service.GetJob(jobType);
 
         // Assert
-        Assert.Equal("Not Found", result.Status);
-        Assert.Equal("QueueCleaner", result.Name);
+        result.Status.ShouldBe("Not Found");
+        result.Name.ShouldBe("QueueCleaner");
     }
 
     [Fact]
@@ -274,7 +275,7 @@ public class JobManagementServiceTests
         var result = await _service.GetJob(jobType);
 
         // Assert
-        Assert.Equal("Not Scheduled", result.Status);
+        result.Status.ShouldBe("Not Scheduled");
     }
 
     [Theory]
@@ -305,7 +306,7 @@ public class JobManagementServiceTests
         var result = await _service.GetJob(jobType);
 
         // Assert
-        Assert.Equal(expectedStatus, result.Status);
+        result.Status.ShouldBe(expectedStatus);
     }
 
     [Fact]
@@ -321,7 +322,7 @@ public class JobManagementServiceTests
         var result = await _service.GetJob(jobType);
 
         // Assert
-        Assert.Equal("Error", result.Status);
+        result.Status.ShouldBe("Error");
     }
 
     #endregion
@@ -339,7 +340,7 @@ public class JobManagementServiceTests
         var result = await _service.GetAllJobs();
 
         // Assert
-        Assert.Empty(result);
+        result.ShouldBeEmpty();
     }
 
     [Fact]
@@ -364,9 +365,9 @@ public class JobManagementServiceTests
         var result = await _service.GetAllJobs();
 
         // Assert
-        Assert.Single(result);
-        Assert.Equal("QueueCleaner", result[0].Name);
-        Assert.Equal("Scheduled", result[0].Status);
+        result.ShouldHaveSingleItem();
+        result[0].Name.ShouldBe("QueueCleaner");
+        result[0].Status.ShouldBe("Scheduled");
     }
 
     [Fact]
@@ -380,7 +381,7 @@ public class JobManagementServiceTests
         var result = await _service.GetAllJobs();
 
         // Assert
-        Assert.Empty(result);
+        result.ShouldBeEmpty();
     }
 
     #endregion
@@ -400,7 +401,7 @@ public class JobManagementServiceTests
         var result = await _service.TriggerJobOnce(jobType);
 
         // Assert
-        Assert.False(result);
+        result.ShouldBeFalse();
     }
 
     [Fact]
@@ -418,7 +419,7 @@ public class JobManagementServiceTests
         var result = await _service.TriggerJobOnce(jobType);
 
         // Assert
-        Assert.True(result);
+        result.ShouldBeTrue();
         await _scheduler.Received(1).ScheduleJob(
             Arg.Is<ITrigger>(t => t.Key.Name.Contains("immediate") && t.Key.Name.Contains("manual")),
             Arg.Any<CancellationToken>());
@@ -437,7 +438,7 @@ public class JobManagementServiceTests
         var result = await _service.TriggerJobOnce(jobType);
 
         // Assert
-        Assert.False(result);
+        result.ShouldBeFalse();
     }
 
     #endregion
@@ -451,7 +452,7 @@ public class JobManagementServiceTests
         var jobType = JobType.QueueCleaner;
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(() => _service.UpdateJobSchedule(jobType, null!));
+        await Should.ThrowAsync<ArgumentNullException>(() => _service.UpdateJobSchedule(jobType, null!));
     }
 
     [Fact]
@@ -468,7 +469,7 @@ public class JobManagementServiceTests
         var result = await _service.UpdateJobSchedule(jobType, schedule);
 
         // Assert
-        Assert.False(result);
+        result.ShouldBeFalse();
     }
 
     [Fact]
@@ -489,7 +490,7 @@ public class JobManagementServiceTests
         var result = await _service.UpdateJobSchedule(jobType, schedule);
 
         // Assert
-        Assert.True(result);
+        result.ShouldBeTrue();
         await _scheduler.Received(1).ScheduleJob(Arg.Any<ITrigger>(), Arg.Any<CancellationToken>());
     }
 
@@ -507,7 +508,7 @@ public class JobManagementServiceTests
         var result = await _service.UpdateJobSchedule(jobType, schedule);
 
         // Assert
-        Assert.False(result);
+        result.ShouldBeFalse();
     }
 
     #endregion
@@ -527,7 +528,7 @@ public class JobManagementServiceTests
         var result = await _service.GetMainTrigger(jobType);
 
         // Assert
-        Assert.Null(result);
+        result.ShouldBeNull();
     }
 
     [Fact]
@@ -549,8 +550,8 @@ public class JobManagementServiceTests
         var result = await _service.GetMainTrigger(jobType);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(expectedTriggerKey, result.Key);
+        result.ShouldNotBeNull();
+        result.Key.ShouldBe(expectedTriggerKey);
     }
 
     [Fact]
@@ -566,7 +567,7 @@ public class JobManagementServiceTests
         var result = await _service.GetMainTrigger(jobType);
 
         // Assert
-        Assert.Null(result);
+        result.ShouldBeNull();
     }
 
     #endregion

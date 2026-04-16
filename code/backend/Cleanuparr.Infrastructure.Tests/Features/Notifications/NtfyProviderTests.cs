@@ -4,6 +4,7 @@ using Cleanuparr.Infrastructure.Features.Notifications.Ntfy;
 using Cleanuparr.Persistence.Models.Configuration.Notification;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
+using Shouldly;
 using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.Notifications;
@@ -40,14 +41,14 @@ public class NtfyProviderTests
     public void Constructor_SetsNameCorrectly()
     {
         // Assert
-        Assert.Equal("TestNtfy", _provider.Name);
+        _provider.Name.ShouldBe("TestNtfy");
     }
 
     [Fact]
     public void Constructor_SetsTypeCorrectly()
     {
         // Assert
-        Assert.Equal(NotificationProviderType.Ntfy, _provider.Type);
+        _provider.Type.ShouldBe(NotificationProviderType.Ntfy);
     }
 
     #endregion
@@ -69,10 +70,10 @@ public class NtfyProviderTests
         await _provider.SendNotificationAsync(context);
 
         // Assert
-        Assert.NotNull(capturedPayload);
-        Assert.Equal("test-topic", capturedPayload.Topic);
-        Assert.Equal(context.Title, capturedPayload.Title);
-        Assert.Contains(context.Description, capturedPayload.Message);
+        capturedPayload.ShouldNotBeNull();
+        capturedPayload.Topic.ShouldBe("test-topic");
+        capturedPayload.Title.ShouldBe(context.Title);
+        capturedPayload.Message.ShouldContain(context.Description);
     }
 
     [Fact]
@@ -101,10 +102,10 @@ public class NtfyProviderTests
         await provider.SendNotificationAsync(context);
 
         // Assert
-        Assert.Equal(3, capturedPayloads.Count);
-        Assert.Contains(capturedPayloads, p => p.Topic == "topic1");
-        Assert.Contains(capturedPayloads, p => p.Topic == "topic2");
-        Assert.Contains(capturedPayloads, p => p.Topic == "topic3");
+        capturedPayloads.Count.ShouldBe(3);
+        capturedPayloads.ShouldContain(p => p.Topic == "topic1");
+        capturedPayloads.ShouldContain(p => p.Topic == "topic2");
+        capturedPayloads.ShouldContain(p => p.Topic == "topic3");
     }
 
     [Fact]
@@ -125,9 +126,9 @@ public class NtfyProviderTests
         await _provider.SendNotificationAsync(context);
 
         // Assert
-        Assert.NotNull(capturedPayload);
-        Assert.Contains("TestKey: TestValue", capturedPayload.Message);
-        Assert.Contains("AnotherKey: AnotherValue", capturedPayload.Message);
+        capturedPayload.ShouldNotBeNull();
+        capturedPayload.Message.ShouldContain("TestKey: TestValue");
+        capturedPayload.Message.ShouldContain("AnotherKey: AnotherValue");
     }
 
     [Fact]
@@ -156,8 +157,8 @@ public class NtfyProviderTests
         await provider.SendNotificationAsync(context);
 
         // Assert
-        Assert.NotNull(capturedPayload);
-        Assert.Equal((int)NtfyPriority.High, capturedPayload.Priority);
+        capturedPayload.ShouldNotBeNull();
+        capturedPayload.Priority.ShouldBe((int)NtfyPriority.High);
     }
 
     [Fact]
@@ -175,10 +176,10 @@ public class NtfyProviderTests
         await _provider.SendNotificationAsync(context);
 
         // Assert
-        Assert.NotNull(capturedPayload);
-        Assert.NotNull(capturedPayload.Tags);
-        Assert.Contains("tag1", capturedPayload.Tags);
-        Assert.Contains("tag2", capturedPayload.Tags);
+        capturedPayload.ShouldNotBeNull();
+        capturedPayload.Tags.ShouldNotBeNull();
+        capturedPayload.Tags.ShouldContain("tag1");
+        capturedPayload.Tags.ShouldContain("tag2");
     }
 
     [Fact]
@@ -207,8 +208,8 @@ public class NtfyProviderTests
         await provider.SendNotificationAsync(context);
 
         // Assert
-        Assert.NotNull(capturedPayload);
-        Assert.Equal("topic-with-spaces", capturedPayload.Topic);
+        capturedPayload.ShouldNotBeNull();
+        capturedPayload.Topic.ShouldBe("topic-with-spaces");
     }
 
     [Fact]
@@ -237,9 +238,9 @@ public class NtfyProviderTests
         await provider.SendNotificationAsync(context);
 
         // Assert
-        Assert.Equal(2, capturedPayloads.Count);
-        Assert.Contains(capturedPayloads, p => p.Topic == "valid-topic");
-        Assert.Contains(capturedPayloads, p => p.Topic == "another-valid");
+        capturedPayloads.Count.ShouldBe(2);
+        capturedPayloads.ShouldContain(p => p.Topic == "valid-topic");
+        capturedPayloads.ShouldContain(p => p.Topic == "another-valid");
     }
 
     [Fact]
@@ -252,7 +253,7 @@ public class NtfyProviderTests
             .ThrowsAsync(new Exception("Proxy error"));
 
         // Act & Assert
-        await Assert.ThrowsAsync<Exception>(() => _provider.SendNotificationAsync(context));
+        await Should.ThrowAsync<Exception>(() => _provider.SendNotificationAsync(context));
     }
 
     [Fact]
@@ -278,8 +279,8 @@ public class NtfyProviderTests
         await _provider.SendNotificationAsync(context);
 
         // Assert
-        Assert.NotNull(capturedPayload);
-        Assert.Equal("Test Description Only", capturedPayload.Message);
+        capturedPayload.ShouldNotBeNull();
+        capturedPayload.Message.ShouldBe("Test Description Only");
     }
 
     #endregion

@@ -5,6 +5,7 @@ using Cleanuparr.Persistence.Models.Configuration.Notification;
 using Cleanuparr.Shared.Helpers;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
+using Shouldly;
 using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.Notifications.Discord;
@@ -67,7 +68,7 @@ public class DiscordProxyTests
         var proxy = CreateProxy();
 
         // Assert
-        Assert.NotNull(proxy);
+        proxy.ShouldNotBeNull();
     }
 
     [Fact]
@@ -106,7 +107,7 @@ public class DiscordProxyTests
         await proxy.SendNotification(CreatePayload(), CreateConfig());
 
         // Assert
-        Assert.Equal(HttpMethod.Post, _httpMessageHandler.CapturedRequests[0].Method);
+        _httpMessageHandler.CapturedRequests[0].Method.ShouldBe(HttpMethod.Post);
     }
 
     [Fact]
@@ -125,7 +126,7 @@ public class DiscordProxyTests
         await proxy.SendNotification(CreatePayload(), config);
 
         // Assert
-        Assert.Equal("https://discord.com/api/webhooks/123/abc", _httpMessageHandler.CapturedRequests[0].RequestUri?.ToString());
+        _httpMessageHandler.CapturedRequests[0].RequestUri?.ToString().ShouldBe("https://discord.com/api/webhooks/123/abc");
     }
 
     [Fact]
@@ -139,7 +140,7 @@ public class DiscordProxyTests
         await proxy.SendNotification(CreatePayload(), CreateConfig());
 
         // Assert
-        Assert.Equal("application/json", _httpMessageHandler.CapturedRequests[0].Content?.Headers.ContentType?.MediaType);
+        _httpMessageHandler.CapturedRequests[0].Content?.Headers.ContentType?.MediaType.ShouldBe("application/json");
     }
 
     [Fact]
@@ -170,9 +171,9 @@ public class DiscordProxyTests
         _httpMessageHandler.SetupThrow(new HttpRequestException("Error", null, statusCode));
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<DiscordException>(() =>
+        var ex = await Should.ThrowAsync<DiscordException>(() =>
             proxy.SendNotification(CreatePayload(), CreateConfig()));
-        Assert.Contains("invalid or unauthorized", ex.Message);
+        ex.Message.ShouldContain("invalid or unauthorized");
     }
 
     [Fact]
@@ -183,9 +184,9 @@ public class DiscordProxyTests
         _httpMessageHandler.SetupThrow(new HttpRequestException("Error", null, HttpStatusCode.NotFound));
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<DiscordException>(() =>
+        var ex = await Should.ThrowAsync<DiscordException>(() =>
             proxy.SendNotification(CreatePayload(), CreateConfig()));
-        Assert.Contains("not found", ex.Message);
+        ex.Message.ShouldContain("not found");
     }
 
     [Fact]
@@ -196,9 +197,9 @@ public class DiscordProxyTests
         _httpMessageHandler.SetupThrow(new HttpRequestException("Error", null, (HttpStatusCode)429));
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<DiscordException>(() =>
+        var ex = await Should.ThrowAsync<DiscordException>(() =>
             proxy.SendNotification(CreatePayload(), CreateConfig()));
-        Assert.Contains("rate limited", ex.Message, StringComparison.OrdinalIgnoreCase);
+        ex.Message.ShouldContain("rate limited", Case.Insensitive);
     }
 
     [Theory]
@@ -212,9 +213,9 @@ public class DiscordProxyTests
         _httpMessageHandler.SetupThrow(new HttpRequestException("Error", null, statusCode));
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<DiscordException>(() =>
+        var ex = await Should.ThrowAsync<DiscordException>(() =>
             proxy.SendNotification(CreatePayload(), CreateConfig()));
-        Assert.Contains("service unavailable", ex.Message, StringComparison.OrdinalIgnoreCase);
+        ex.Message.ShouldContain("service unavailable", Case.Insensitive);
     }
 
     [Fact]
@@ -225,9 +226,9 @@ public class DiscordProxyTests
         _httpMessageHandler.SetupThrow(new HttpRequestException("Error", null, HttpStatusCode.InternalServerError));
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<DiscordException>(() =>
+        var ex = await Should.ThrowAsync<DiscordException>(() =>
             proxy.SendNotification(CreatePayload(), CreateConfig()));
-        Assert.Contains("unable to send notification", ex.Message, StringComparison.OrdinalIgnoreCase);
+        ex.Message.ShouldContain("unable to send notification", Case.Insensitive);
     }
 
     [Fact]
@@ -238,9 +239,9 @@ public class DiscordProxyTests
         _httpMessageHandler.SetupThrow(new HttpRequestException("Network error"));
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<DiscordException>(() =>
+        var ex = await Should.ThrowAsync<DiscordException>(() =>
             proxy.SendNotification(CreatePayload(), CreateConfig()));
-        Assert.Contains("unable to send notification", ex.Message, StringComparison.OrdinalIgnoreCase);
+        ex.Message.ShouldContain("unable to send notification", Case.Insensitive);
     }
 
     #endregion

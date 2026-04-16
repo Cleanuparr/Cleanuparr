@@ -5,6 +5,7 @@ using Cleanuparr.Infrastructure.Tests.TestHelpers;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
+using Shouldly;
 using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.Notifications;
@@ -236,7 +237,7 @@ public class NotificationServiceTests
             .Returns(provider);
 
         // Act & Assert
-        await Assert.ThrowsAsync<Exception>(() => _service.SendTestNotificationAsync(providerConfig));
+        await Should.ThrowAsync<Exception>(() => _service.SendTestNotificationAsync(providerConfig));
     }
 
     [Fact]

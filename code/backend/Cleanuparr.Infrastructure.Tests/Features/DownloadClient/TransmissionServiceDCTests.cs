@@ -2,6 +2,7 @@ using Cleanuparr.Infrastructure.Features.DownloadClient.Transmission;
 using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
 using NSubstitute;
 using Transmission.API.RPC.Entity;
+using Shouldly;
 using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.DownloadClient;
@@ -46,8 +47,8 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
             var result = await sut.GetSeedingDownloads();
 
             // Assert
-            Assert.Equal(2, result.Count);
-            Assert.All(result, item => Assert.NotNull(item.Hash));
+            result.Count.ShouldBe(2);
+            foreach (var item in result) { item.Hash.ShouldNotBeNull(); }
         }
 
         [Fact]
@@ -64,7 +65,7 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
             var result = await sut.GetSeedingDownloads();
 
             // Assert
-            Assert.Empty(result);
+            result.ShouldBeEmpty();
         }
 
         [Fact]
@@ -90,8 +91,8 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
             var result = await sut.GetSeedingDownloads();
 
             // Assert
-            Assert.Single(result);
-            Assert.Equal("hash1", result[0].Hash);
+            result.ShouldHaveSingleItem();
+            result[0].Hash.ShouldBe("hash1");
         }
 
         [Fact]
@@ -113,7 +114,7 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
             var result = await sut.GetSeedingDownloads();
 
             // Assert
-            Assert.Empty(result);
+            result.ShouldBeEmpty();
         }
     }
 
@@ -146,10 +147,10 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
             var result = sut.FilterDownloadsToBeCleanedAsync(downloads, categories);
 
             // Assert
-            Assert.NotNull(result);
-            Assert.Equal(2, result.Count);
-            Assert.Contains(result, x => x.Category == "movies");
-            Assert.Contains(result, x => x.Category == "tv");
+            result.ShouldNotBeNull();
+            result.Count.ShouldBe(2);
+            result.ShouldContain(x => x.Category == "movies");
+            result.ShouldContain(x => x.Category == "tv");
         }
 
         [Fact]
@@ -172,8 +173,8 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
             var result = sut.FilterDownloadsToBeCleanedAsync(downloads, categories);
 
             // Assert
-            Assert.NotNull(result);
-            Assert.Single(result);
+            result.ShouldNotBeNull();
+            result.ShouldHaveSingleItem();
         }
 
         [Fact]
@@ -196,8 +197,8 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
             var result = sut.FilterDownloadsToBeCleanedAsync(downloads, categories);
 
             // Assert
-            Assert.NotNull(result);
-            Assert.Empty(result);
+            result.ShouldNotBeNull();
+            result.ShouldBeEmpty();
         }
     }
 
@@ -223,9 +224,9 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
             var result = sut.FilterDownloadsToChangeCategoryAsync(downloads, new UnlinkedConfig { Categories = ["movies"] });
 
             // Assert
-            Assert.NotNull(result);
-            Assert.Single(result);
-            Assert.Equal("hash1", result[0].Hash);
+            result.ShouldNotBeNull();
+            result.ShouldHaveSingleItem();
+            result[0].Hash.ShouldBe("hash1");
         }
 
         [Fact]
@@ -243,8 +244,8 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
             var result = sut.FilterDownloadsToChangeCategoryAsync(downloads, new UnlinkedConfig { Categories = ["movies"] });
 
             // Assert
-            Assert.NotNull(result);
-            Assert.Single(result);
+            result.ShouldNotBeNull();
+            result.ShouldHaveSingleItem();
         }
 
         [Fact]
@@ -263,9 +264,9 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
             var result = sut.FilterDownloadsToChangeCategoryAsync(downloads, new UnlinkedConfig { Categories = ["movies"] });
 
             // Assert
-            Assert.NotNull(result);
-            Assert.Single(result);
-            Assert.Equal("hash1", result[0].Hash);
+            result.ShouldNotBeNull();
+            result.ShouldHaveSingleItem();
+            result[0].Hash.ShouldBe("hash1");
         }
 
         [Fact]
@@ -283,8 +284,8 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
             var result = sut.FilterDownloadsToChangeCategoryAsync(downloads, new UnlinkedConfig { Categories = ["movies"] });
 
             // Assert
-            Assert.NotNull(result);
-            Assert.Empty(result);
+            result.ShouldNotBeNull();
+            result.ShouldBeEmpty();
         }
     }
 

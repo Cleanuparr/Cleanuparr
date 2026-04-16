@@ -4,6 +4,7 @@ using Cleanuparr.Infrastructure.Features.Notifications.Notifiarr;
 using Cleanuparr.Persistence.Models.Configuration.Notification;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
+using Shouldly;
 using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.Notifications;
@@ -37,14 +38,14 @@ public class NotifiarrProviderTests
     public void Constructor_SetsNameCorrectly()
     {
         // Assert
-        Assert.Equal("TestNotifiarr", _provider.Name);
+        _provider.Name.ShouldBe("TestNotifiarr");
     }
 
     [Fact]
     public void Constructor_SetsTypeCorrectly()
     {
         // Assert
-        Assert.Equal(NotificationProviderType.Notifiarr, _provider.Type);
+        _provider.Type.ShouldBe(NotificationProviderType.Notifiarr);
     }
 
     #endregion
@@ -66,10 +67,10 @@ public class NotifiarrProviderTests
         await _provider.SendNotificationAsync(context);
 
         // Assert
-        Assert.NotNull(capturedPayload);
-        Assert.NotNull(capturedPayload.Discord);
-        Assert.Equal(context.Title, capturedPayload.Discord.Text.Title);
-        Assert.Equal(context.Description, capturedPayload.Discord.Text.Description);
+        capturedPayload.ShouldNotBeNull();
+        capturedPayload.Discord.ShouldNotBeNull();
+        capturedPayload.Discord.Text.Title.ShouldBe(context.Title);
+        capturedPayload.Discord.Text.Description.ShouldBe(context.Description);
     }
 
     [Fact]
@@ -87,8 +88,8 @@ public class NotifiarrProviderTests
         await _provider.SendNotificationAsync(context);
 
         // Assert
-        Assert.NotNull(capturedPayload);
-        Assert.Equal("123456789012345678", capturedPayload.Discord.Ids.Channel);
+        capturedPayload.ShouldNotBeNull();
+        capturedPayload.Discord.Ids.Channel.ShouldBe("123456789012345678");
     }
 
     [Fact]
@@ -109,10 +110,10 @@ public class NotifiarrProviderTests
         await _provider.SendNotificationAsync(context);
 
         // Assert
-        Assert.NotNull(capturedPayload);
-        Assert.Equal(2, capturedPayload.Discord.Text.Fields.Count);
-        Assert.Contains(capturedPayload.Discord.Text.Fields, f => f.Title == "TestKey" && f.Text == "TestValue");
-        Assert.Contains(capturedPayload.Discord.Text.Fields, f => f.Title == "AnotherKey" && f.Text == "AnotherValue");
+        capturedPayload.ShouldNotBeNull();
+        capturedPayload.Discord.Text.Fields.Count.ShouldBe(2);
+        capturedPayload.Discord.Text.Fields.ShouldContain(f => f.Title == "TestKey" && f.Text == "TestValue");
+        capturedPayload.Discord.Text.Fields.ShouldContain(f => f.Title == "AnotherKey" && f.Text == "AnotherValue");
     }
 
     [Theory]
@@ -141,8 +142,8 @@ public class NotifiarrProviderTests
         await _provider.SendNotificationAsync(context);
 
         // Assert
-        Assert.NotNull(capturedPayload);
-        Assert.Equal(expectedColor, capturedPayload.Discord.Color);
+        capturedPayload.ShouldNotBeNull();
+        capturedPayload.Discord.Color.ShouldBe(expectedColor);
     }
 
     [Fact]
@@ -160,10 +161,10 @@ public class NotifiarrProviderTests
         await _provider.SendNotificationAsync(context);
 
         // Assert
-        Assert.NotNull(capturedPayload);
-        Assert.Contains("Cleanuparr", capturedPayload.Discord.Text.Icon);
-        Assert.NotNull(capturedPayload.Discord.Images.Thumbnail);
-        Assert.Contains("Cleanuparr", capturedPayload.Discord.Images.Thumbnail.ToString());
+        capturedPayload.ShouldNotBeNull();
+        capturedPayload.Discord.Text.Icon.ShouldContain("Cleanuparr");
+        capturedPayload.Discord.Images.Thumbnail.ShouldNotBeNull();
+        capturedPayload.Discord.Images.Thumbnail.ToString().ShouldContain("Cleanuparr");
     }
 
     [Fact]
@@ -183,8 +184,8 @@ public class NotifiarrProviderTests
         await _provider.SendNotificationAsync(context);
 
         // Assert
-        Assert.NotNull(capturedPayload);
-        Assert.Equal(new Uri("https://example.com/image.jpg"), capturedPayload.Discord.Images.Image);
+        capturedPayload.ShouldNotBeNull();
+        capturedPayload.Discord.Images.Image.ShouldBe(new Uri("https://example.com/image.jpg"));
     }
 
     [Fact]
@@ -204,8 +205,8 @@ public class NotifiarrProviderTests
         await _provider.SendNotificationAsync(context);
 
         // Assert
-        Assert.NotNull(capturedPayload);
-        Assert.Null(capturedPayload.Discord.Images.Image);
+        capturedPayload.ShouldNotBeNull();
+        capturedPayload.Discord.Images.Image.ShouldBeNull();
     }
 
     [Fact]
@@ -218,7 +219,7 @@ public class NotifiarrProviderTests
             .ThrowsAsync(new Exception("Proxy error"));
 
         // Act & Assert
-        await Assert.ThrowsAsync<Exception>(() => _provider.SendNotificationAsync(context));
+        await Should.ThrowAsync<Exception>(() => _provider.SendNotificationAsync(context));
     }
 
     [Fact]
@@ -244,8 +245,8 @@ public class NotifiarrProviderTests
         await _provider.SendNotificationAsync(context);
 
         // Assert
-        Assert.NotNull(capturedPayload);
-        Assert.Empty(capturedPayload.Discord.Text.Fields);
+        capturedPayload.ShouldNotBeNull();
+        capturedPayload.Discord.Text.Fields.ShouldBeEmpty();
     }
 
     #endregion

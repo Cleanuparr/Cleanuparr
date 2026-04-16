@@ -4,6 +4,7 @@ using Cleanuparr.Infrastructure.Tests.TestHelpers;
 using Cleanuparr.Persistence.Models.Configuration.Notification;
 using Cleanuparr.Shared.Helpers;
 using NSubstitute;
+using Shouldly;
 using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.Notifications.Apprise;
@@ -56,7 +57,7 @@ public class AppriseProxyTests
         var proxy = CreateProxy();
 
         // Assert
-        Assert.NotNull(proxy);
+        proxy.ShouldNotBeNull();
     }
 
     [Fact]
@@ -95,7 +96,7 @@ public class AppriseProxyTests
         await proxy.SendNotification(CreatePayload(), CreateConfig());
 
         // Assert
-        Assert.Equal(HttpMethod.Post, _httpMessageHandler.CapturedRequests[0].Method);
+        _httpMessageHandler.CapturedRequests[0].Method.ShouldBe(HttpMethod.Post);
     }
 
     [Fact]
@@ -111,7 +112,7 @@ public class AppriseProxyTests
         await proxy.SendNotification(CreatePayload(), config);
 
         // Assert
-        Assert.Contains("/notify/my-key", _httpMessageHandler.CapturedRequests[0].RequestUri?.ToString());
+        _httpMessageHandler.CapturedRequests[0].RequestUri?.ToString().ShouldContain("/notify/my-key");
     }
 
     [Fact]
@@ -125,7 +126,7 @@ public class AppriseProxyTests
         await proxy.SendNotification(CreatePayload(), CreateConfig());
 
         // Assert
-        Assert.Equal("application/json", _httpMessageHandler.CapturedRequests[0].Content?.Headers.ContentType?.MediaType);
+        _httpMessageHandler.CapturedRequests[0].Content?.Headers.ContentType?.MediaType.ShouldBe("application/json");
     }
 
     [Fact]
@@ -141,7 +142,7 @@ public class AppriseProxyTests
         await proxy.SendNotification(CreatePayload(), config);
 
         // Assert
-        Assert.Equal("Basic", _httpMessageHandler.CapturedRequests[0].Headers.Authorization?.Scheme);
+        _httpMessageHandler.CapturedRequests[0].Headers.Authorization?.Scheme.ShouldBe("Basic");
     }
 
     #endregion
@@ -156,9 +157,9 @@ public class AppriseProxyTests
         _httpMessageHandler.SetupThrow(new HttpRequestException("Error", null, HttpStatusCode.Unauthorized));
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<AppriseException>(() =>
+        var ex = await Should.ThrowAsync<AppriseException>(() =>
             proxy.SendNotification(CreatePayload(), CreateConfig()));
-        Assert.Contains("API key is invalid", ex.Message);
+        ex.Message.ShouldContain("API key is invalid");
     }
 
     [Fact]
@@ -169,9 +170,9 @@ public class AppriseProxyTests
         _httpMessageHandler.SetupThrow(new HttpRequestException("Error", null, (HttpStatusCode)424));
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<AppriseException>(() =>
+        var ex = await Should.ThrowAsync<AppriseException>(() =>
             proxy.SendNotification(CreatePayload(), CreateConfig()));
-        Assert.Contains("tags", ex.Message, StringComparison.OrdinalIgnoreCase);
+        ex.Message.ShouldContain("tags", Case.Insensitive);
     }
 
     [Theory]
@@ -185,9 +186,9 @@ public class AppriseProxyTests
         _httpMessageHandler.SetupThrow(new HttpRequestException("Error", null, statusCode));
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<AppriseException>(() =>
+        var ex = await Should.ThrowAsync<AppriseException>(() =>
             proxy.SendNotification(CreatePayload(), CreateConfig()));
-        Assert.Contains("service unavailable", ex.Message, StringComparison.OrdinalIgnoreCase);
+        ex.Message.ShouldContain("service unavailable", Case.Insensitive);
     }
 
     [Fact]
@@ -198,9 +199,9 @@ public class AppriseProxyTests
         _httpMessageHandler.SetupThrow(new HttpRequestException("Error", null, HttpStatusCode.InternalServerError));
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<AppriseException>(() =>
+        var ex = await Should.ThrowAsync<AppriseException>(() =>
             proxy.SendNotification(CreatePayload(), CreateConfig()));
-        Assert.Contains("Unable to send notification", ex.Message);
+        ex.Message.ShouldContain("Unable to send notification");
     }
 
     [Fact]
@@ -211,9 +212,9 @@ public class AppriseProxyTests
         _httpMessageHandler.SetupThrow(new HttpRequestException("Network error"));
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<AppriseException>(() =>
+        var ex = await Should.ThrowAsync<AppriseException>(() =>
             proxy.SendNotification(CreatePayload(), CreateConfig()));
-        Assert.Contains("Unable to send notification", ex.Message);
+        ex.Message.ShouldContain("Unable to send notification");
     }
 
     #endregion

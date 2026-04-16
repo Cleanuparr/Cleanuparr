@@ -3,6 +3,7 @@ using Cleanuparr.Infrastructure.Health;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
+using Shouldly;
 using Xunit;
 using HealthCheckStatus = Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus;
 using HealthStatus = Cleanuparr.Infrastructure.Health.HealthStatus;
@@ -36,8 +37,8 @@ public class DownloadClientsHealthCheckTests
         var result = await _healthCheck.CheckHealthAsync(null!);
 
         // Assert
-        Assert.Equal(HealthCheckStatus.Healthy, result.Status);
-        Assert.Contains("No download clients configured", result.Description);
+        result.Status.ShouldBe(HealthCheckStatus.Healthy);
+        result.Description.ShouldContain("No download clients configured");
     }
 
     [Fact]
@@ -59,8 +60,8 @@ public class DownloadClientsHealthCheckTests
         var result = await _healthCheck.CheckHealthAsync(null!);
 
         // Assert
-        Assert.Equal(HealthCheckStatus.Healthy, result.Status);
-        Assert.Contains("All 3 download clients are healthy", result.Description);
+        result.Status.ShouldBe(HealthCheckStatus.Healthy);
+        result.Description.ShouldContain("All 3 download clients are healthy");
     }
 
     [Fact]
@@ -82,9 +83,9 @@ public class DownloadClientsHealthCheckTests
         var result = await _healthCheck.CheckHealthAsync(null!);
 
         // Assert
-        Assert.Equal(HealthCheckStatus.Degraded, result.Status);
-        Assert.Contains("1/3", result.Description);
-        Assert.Contains("Client3", result.Description);
+        result.Status.ShouldBe(HealthCheckStatus.Degraded);
+        result.Description.ShouldContain("1/3");
+        result.Description.ShouldContain("Client3");
     }
 
     [Fact]
@@ -106,8 +107,8 @@ public class DownloadClientsHealthCheckTests
         var result = await _healthCheck.CheckHealthAsync(null!);
 
         // Assert
-        Assert.Equal(HealthCheckStatus.Unhealthy, result.Status);
-        Assert.Contains("2/3", result.Description);
+        result.Status.ShouldBe(HealthCheckStatus.Unhealthy);
+        result.Description.ShouldContain("2/3");
     }
 
     [Fact]
@@ -128,7 +129,7 @@ public class DownloadClientsHealthCheckTests
         var result = await _healthCheck.CheckHealthAsync(null!);
 
         // Assert
-        Assert.Equal(HealthCheckStatus.Unhealthy, result.Status);
+        result.Status.ShouldBe(HealthCheckStatus.Unhealthy);
     }
 
     [Fact]
@@ -143,8 +144,8 @@ public class DownloadClientsHealthCheckTests
         var result = await _healthCheck.CheckHealthAsync(null!);
 
         // Assert
-        Assert.Equal(HealthCheckStatus.Unhealthy, result.Status);
-        Assert.Contains("Download clients health check failed", result.Description);
+        result.Status.ShouldBe(HealthCheckStatus.Unhealthy);
+        result.Description.ShouldContain("Download clients health check failed");
     }
 
     [Fact]
@@ -166,8 +167,8 @@ public class DownloadClientsHealthCheckTests
         var result = await _healthCheck.CheckHealthAsync(null!);
 
         // Assert
-        Assert.Contains("BrokenClient1", result.Description);
-        Assert.Contains("BrokenClient2", result.Description);
+        result.Description.ShouldContain("BrokenClient1");
+        result.Description.ShouldContain("BrokenClient2");
     }
 
     [Fact]
@@ -187,7 +188,7 @@ public class DownloadClientsHealthCheckTests
         var result = await _healthCheck.CheckHealthAsync(null!);
 
         // Assert
-        Assert.Equal(HealthCheckStatus.Healthy, result.Status);
+        result.Status.ShouldBe(HealthCheckStatus.Healthy);
     }
 
     [Fact]
@@ -207,7 +208,7 @@ public class DownloadClientsHealthCheckTests
         var result = await _healthCheck.CheckHealthAsync(null!);
 
         // Assert
-        Assert.Equal(HealthCheckStatus.Unhealthy, result.Status);
+        result.Status.ShouldBe(HealthCheckStatus.Unhealthy);
     }
 
     #endregion

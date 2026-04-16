@@ -106,6 +106,7 @@ public class QBitServiceFixture : IDisposable
         HardLinkFileService = Substitute.For<IHardLinkFileService>();
         HttpClientProvider = Substitute.For<IDynamicHttpClientProvider>();
         EventPublisher = Substitute.For<IEventPublisher>();
+        BlocklistProvider = Substitute.For<IBlocklistProvider>();
         RuleEvaluator = Substitute.For<IQueueRuleEvaluator>();
         RuleManager = Substitute.For<IQueueRuleManager>();
         SeedingRuleEvaluator = Substitute.For<ISeedingRuleEvaluator>();

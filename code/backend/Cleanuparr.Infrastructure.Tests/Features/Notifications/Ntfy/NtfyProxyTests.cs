@@ -5,6 +5,7 @@ using Cleanuparr.Infrastructure.Tests.TestHelpers;
 using Cleanuparr.Persistence.Models.Configuration.Notification;
 using Cleanuparr.Shared.Helpers;
 using NSubstitute;
+using Shouldly;
 using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.Notifications.Ntfy;
@@ -62,7 +63,7 @@ public class NtfyProxyTests
         var proxy = CreateProxy();
 
         // Assert
-        Assert.NotNull(proxy);
+        proxy.ShouldNotBeNull();
     }
 
     [Fact]
@@ -101,7 +102,7 @@ public class NtfyProxyTests
         await proxy.SendNotification(CreatePayload(), CreateConfig());
 
         // Assert
-        Assert.Equal(HttpMethod.Post, _httpMessageHandler.CapturedRequests[0].Method);
+        _httpMessageHandler.CapturedRequests[0].Method.ShouldBe(HttpMethod.Post);
     }
 
     [Fact]
@@ -115,7 +116,7 @@ public class NtfyProxyTests
         await proxy.SendNotification(CreatePayload(), CreateConfig());
 
         // Assert
-        Assert.Equal("application/json", _httpMessageHandler.CapturedRequests[0].Content?.Headers.ContentType?.MediaType);
+        _httpMessageHandler.CapturedRequests[0].Content?.Headers.ContentType?.MediaType.ShouldBe("application/json");
     }
 
     #endregion
@@ -133,7 +134,7 @@ public class NtfyProxyTests
         await proxy.SendNotification(CreatePayload(), CreateConfig(NtfyAuthenticationType.None));
 
         // Assert
-        Assert.Null(_httpMessageHandler.CapturedRequests[0].Headers.Authorization);
+        _httpMessageHandler.CapturedRequests[0].Headers.Authorization.ShouldBeNull();
     }
 
     [Fact]
@@ -147,7 +148,7 @@ public class NtfyProxyTests
         await proxy.SendNotification(CreatePayload(), CreateConfig(NtfyAuthenticationType.BasicAuth));
 
         // Assert
-        Assert.Equal("Basic", _httpMessageHandler.CapturedRequests[0].Headers.Authorization?.Scheme);
+        _httpMessageHandler.CapturedRequests[0].Headers.Authorization?.Scheme.ShouldBe("Basic");
     }
 
     [Fact]
@@ -161,7 +162,7 @@ public class NtfyProxyTests
         await proxy.SendNotification(CreatePayload(), CreateConfig(NtfyAuthenticationType.AccessToken));
 
         // Assert
-        Assert.Equal("Bearer", _httpMessageHandler.CapturedRequests[0].Headers.Authorization?.Scheme);
+        _httpMessageHandler.CapturedRequests[0].Headers.Authorization?.Scheme.ShouldBe("Bearer");
     }
 
     #endregion
@@ -176,9 +177,9 @@ public class NtfyProxyTests
         _httpMessageHandler.SetupThrow(new HttpRequestException("Error", null, HttpStatusCode.BadRequest));
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<NtfyException>(() =>
+        var ex = await Should.ThrowAsync<NtfyException>(() =>
             proxy.SendNotification(CreatePayload(), CreateConfig()));
-        Assert.Contains("Bad request", ex.Message);
+        ex.Message.ShouldContain("Bad request");
     }
 
     [Fact]
@@ -189,9 +190,9 @@ public class NtfyProxyTests
         _httpMessageHandler.SetupThrow(new HttpRequestException("Error", null, HttpStatusCode.Unauthorized));
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<NtfyException>(() =>
+        var ex = await Should.ThrowAsync<NtfyException>(() =>
             proxy.SendNotification(CreatePayload(), CreateConfig()));
-        Assert.Contains("Unauthorized", ex.Message);
+        ex.Message.ShouldContain("Unauthorized");
     }
 
     [Fact]
@@ -202,9 +203,9 @@ public class NtfyProxyTests
         _httpMessageHandler.SetupThrow(new HttpRequestException("Error", null, HttpStatusCode.RequestEntityTooLarge));
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<NtfyException>(() =>
+        var ex = await Should.ThrowAsync<NtfyException>(() =>
             proxy.SendNotification(CreatePayload(), CreateConfig()));
-        Assert.Contains("Payload too large", ex.Message);
+        ex.Message.ShouldContain("Payload too large");
     }
 
     [Fact]
@@ -215,9 +216,9 @@ public class NtfyProxyTests
         _httpMessageHandler.SetupThrow(new HttpRequestException("Error", null, HttpStatusCode.TooManyRequests));
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<NtfyException>(() =>
+        var ex = await Should.ThrowAsync<NtfyException>(() =>
             proxy.SendNotification(CreatePayload(), CreateConfig()));
-        Assert.Contains("Rate limited", ex.Message);
+        ex.Message.ShouldContain("Rate limited");
     }
 
     [Fact]
@@ -228,9 +229,9 @@ public class NtfyProxyTests
         _httpMessageHandler.SetupThrow(new HttpRequestException("Error", null, HttpStatusCode.InsufficientStorage));
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<NtfyException>(() =>
+        var ex = await Should.ThrowAsync<NtfyException>(() =>
             proxy.SendNotification(CreatePayload(), CreateConfig()));
-        Assert.Contains("Insufficient storage", ex.Message);
+        ex.Message.ShouldContain("Insufficient storage");
     }
 
     [Fact]
@@ -241,9 +242,9 @@ public class NtfyProxyTests
         _httpMessageHandler.SetupThrow(new HttpRequestException("Error", null, HttpStatusCode.InternalServerError));
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<NtfyException>(() =>
+        var ex = await Should.ThrowAsync<NtfyException>(() =>
             proxy.SendNotification(CreatePayload(), CreateConfig()));
-        Assert.Contains("Unable to send notification", ex.Message);
+        ex.Message.ShouldContain("Unable to send notification");
     }
 
     [Fact]
@@ -254,9 +255,9 @@ public class NtfyProxyTests
         _httpMessageHandler.SetupThrow(new HttpRequestException("Network error"));
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<NtfyException>(() =>
+        var ex = await Should.ThrowAsync<NtfyException>(() =>
             proxy.SendNotification(CreatePayload(), CreateConfig()));
-        Assert.Contains("Unable to send notification", ex.Message);
+        ex.Message.ShouldContain("Unable to send notification");
     }
 
     #endregion

@@ -4,6 +4,7 @@ using Cleanuparr.Infrastructure.Features.DownloadClient.RTorrent;
 using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
+using Shouldly;
 using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.DownloadClient;
@@ -46,8 +47,8 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
             var result = await sut.GetSeedingDownloads();
 
             // Assert - only torrents with State=1 AND Complete=1 should be returned
-            Assert.Equal(2, result.Count);
-            Assert.All(result, item => Assert.NotNull(item.Hash));
+            result.Count.ShouldBe(2);
+            foreach (var item in result) { item.Hash.ShouldNotBeNull(); }
         }
 
         [Fact]
@@ -64,7 +65,7 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
             var result = await sut.GetSeedingDownloads();
 
             // Assert
-            Assert.Empty(result);
+            result.ShouldBeEmpty();
         }
 
         [Fact]
@@ -87,8 +88,8 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
             var result = await sut.GetSeedingDownloads();
 
             // Assert
-            Assert.Single(result);
-            Assert.Equal("HASH1", result[0].Hash);
+            result.ShouldHaveSingleItem();
+            result[0].Hash.ShouldBe("HASH1");
         }
     }
 
@@ -121,10 +122,10 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
             var result = sut.FilterDownloadsToBeCleanedAsync(downloads, categories);
 
             // Assert
-            Assert.NotNull(result);
-            Assert.Equal(2, result.Count);
-            Assert.Contains(result, x => x.Category == "movies");
-            Assert.Contains(result, x => x.Category == "tv");
+            result.ShouldNotBeNull();
+            result.Count.ShouldBe(2);
+            result.ShouldContain(x => x.Category == "movies");
+            result.ShouldContain(x => x.Category == "tv");
         }
 
         [Fact]
@@ -147,8 +148,8 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
             var result = sut.FilterDownloadsToBeCleanedAsync(downloads, categories);
 
             // Assert
-            Assert.NotNull(result);
-            Assert.Single(result);
+            result.ShouldNotBeNull();
+            result.ShouldHaveSingleItem();
         }
 
         [Fact]
@@ -171,8 +172,8 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
             var result = sut.FilterDownloadsToBeCleanedAsync(downloads, categories);
 
             // Assert
-            Assert.NotNull(result);
-            Assert.Empty(result);
+            result.ShouldNotBeNull();
+            result.ShouldBeEmpty();
         }
 
         [Fact]
@@ -190,7 +191,7 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
             var result = sut.FilterDownloadsToBeCleanedAsync(null, categories);
 
             // Assert
-            Assert.Null(result);
+            result.ShouldBeNull();
         }
     }
 
@@ -219,8 +220,8 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
             var result = sut.FilterDownloadsToChangeCategoryAsync(downloads, unlinkedConfig);
 
             // Assert
-            Assert.NotNull(result);
-            Assert.Equal(2, result.Count);
+            result.ShouldNotBeNull();
+            result.Count.ShouldBe(2);
         }
 
         [Fact]
@@ -241,9 +242,9 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
             var result = sut.FilterDownloadsToChangeCategoryAsync(downloads, unlinkedConfig);
 
             // Assert
-            Assert.NotNull(result);
-            Assert.Single(result);
-            Assert.Equal("HASH1", result[0].Hash);
+            result.ShouldNotBeNull();
+            result.ShouldHaveSingleItem();
+            result[0].Hash.ShouldBe("HASH1");
         }
 
         [Fact]
@@ -263,8 +264,8 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
             var result = sut.FilterDownloadsToChangeCategoryAsync(downloads, unlinkedConfig);
 
             // Assert
-            Assert.NotNull(result);
-            Assert.Empty(result);
+            result.ShouldNotBeNull();
+            result.ShouldBeEmpty();
         }
     }
 
@@ -768,7 +769,7 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
             await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
 
             // Assert
-            Assert.Equal("unlinked", wrapper.Category);
+            wrapper.Category.ShouldBe("unlinked");
         }
     }
 }

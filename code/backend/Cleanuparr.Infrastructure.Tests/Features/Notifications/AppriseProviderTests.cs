@@ -4,6 +4,7 @@ using Cleanuparr.Infrastructure.Features.Notifications.Models;
 using Cleanuparr.Persistence.Models.Configuration.Notification;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
+using Shouldly;
 using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.Notifications;
@@ -42,14 +43,14 @@ public class AppriseProviderTests
     public void Constructor_SetsNameCorrectly()
     {
         // Assert
-        Assert.Equal("TestApprise", _provider.Name);
+        _provider.Name.ShouldBe("TestApprise");
     }
 
     [Fact]
     public void Constructor_SetsTypeCorrectly()
     {
         // Assert
-        Assert.Equal(NotificationProviderType.Apprise, _provider.Type);
+        _provider.Type.ShouldBe(NotificationProviderType.Apprise);
     }
 
     #endregion
@@ -71,9 +72,9 @@ public class AppriseProviderTests
         await _provider.SendNotificationAsync(context);
 
         // Assert
-        Assert.NotNull(capturedPayload);
-        Assert.Equal(context.Title, capturedPayload.Title);
-        Assert.Contains(context.Description, capturedPayload.Body);
+        capturedPayload.ShouldNotBeNull();
+        capturedPayload.Title.ShouldBe(context.Title);
+        capturedPayload.Body.ShouldContain(context.Description);
     }
 
     [Fact]
@@ -94,9 +95,9 @@ public class AppriseProviderTests
         await _provider.SendNotificationAsync(context);
 
         // Assert
-        Assert.NotNull(capturedPayload);
-        Assert.Contains("TestKey: TestValue", capturedPayload.Body);
-        Assert.Contains("AnotherKey: AnotherValue", capturedPayload.Body);
+        capturedPayload.ShouldNotBeNull();
+        capturedPayload.Body.ShouldContain("TestKey: TestValue");
+        capturedPayload.Body.ShouldContain("AnotherKey: AnotherValue");
     }
 
     [Theory]
@@ -125,8 +126,8 @@ public class AppriseProviderTests
         await _provider.SendNotificationAsync(context);
 
         // Assert
-        Assert.NotNull(capturedPayload);
-        Assert.Equal(expectedType, capturedPayload.Type);
+        capturedPayload.ShouldNotBeNull();
+        capturedPayload.Type.ShouldBe(expectedType);
     }
 
     [Fact]
@@ -144,8 +145,8 @@ public class AppriseProviderTests
         await _provider.SendNotificationAsync(context);
 
         // Assert
-        Assert.NotNull(capturedPayload);
-        Assert.Equal("tag1,tag2", capturedPayload.Tags);
+        capturedPayload.ShouldNotBeNull();
+        capturedPayload.Tags.ShouldBe("tag1,tag2");
     }
 
     [Fact]
@@ -158,7 +159,7 @@ public class AppriseProviderTests
             .ThrowsAsync(new Exception("Proxy error"));
 
         // Act & Assert
-        await Assert.ThrowsAsync<Exception>(() => _provider.SendNotificationAsync(context));
+        await Should.ThrowAsync<Exception>(() => _provider.SendNotificationAsync(context));
     }
 
     [Fact]
@@ -184,8 +185,8 @@ public class AppriseProviderTests
         await _provider.SendNotificationAsync(context);
 
         // Assert
-        Assert.NotNull(capturedPayload);
-        Assert.Contains("Test Description", capturedPayload.Body);
+        capturedPayload.ShouldNotBeNull();
+        capturedPayload.Body.ShouldContain("Test Description");
     }
 
     [Fact]

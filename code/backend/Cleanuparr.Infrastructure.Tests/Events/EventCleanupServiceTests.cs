@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
+using Shouldly;
 using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Events;
@@ -85,7 +86,7 @@ public class EventCleanupServiceTests : IDisposable
         var service = new EventCleanupService(_logger, scopeFactory);
 
         // Assert - service should be created without exception
-        Assert.NotNull(service);
+        service.ShouldNotBeNull();
     }
 
     [Fact]

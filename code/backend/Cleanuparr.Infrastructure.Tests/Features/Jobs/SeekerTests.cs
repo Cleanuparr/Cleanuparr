@@ -16,6 +16,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
+using Shouldly;
 using Xunit;
 using SeekerJob = Cleanuparr.Infrastructure.Features.Jobs.Seeker;
 
@@ -190,7 +191,7 @@ public class SeekerTests : IDisposable
 
         // Replacement item should be removed from the queue
         var remaining = await _fixture.DataContext.SearchQueue.CountAsync();
-        Assert.Equal(0, remaining);
+        remaining.ShouldBe(0);
     }
 
     [Fact]
@@ -230,7 +231,7 @@ public class SeekerTests : IDisposable
             .SearchItemAsync(radarrInstance, Arg.Any<SearchItem>());
 
         var remaining = await _fixture.DataContext.SearchQueue.CountAsync();
-        Assert.Equal(1, remaining);
+        remaining.ShouldBe(1);
     }
 
     [Fact]
@@ -331,7 +332,7 @@ public class SeekerTests : IDisposable
         // Assert — search should NOT be skipped because only 1 unique download (< limit of 2)
         // The cycle completes (no eligible items) but the point is it wasn't blocked by the limit
         var instanceConfig = await _fixture.DataContext.SeekerInstanceConfigs.FirstAsync();
-        Assert.NotNull(instanceConfig.LastProcessedAt);
+        instanceConfig.LastProcessedAt.ShouldNotBeNull();
     }
 
     [Fact]
@@ -395,8 +396,8 @@ public class SeekerTests : IDisposable
         await mockArrClient.Received(1)
             .SearchItemAsync(radarrInstance, Arg.Any<SearchItem>());
 
-        Assert.NotNull(capturedSearchItems);
-        Assert.DoesNotContain(capturedSearchItems, item => item.Id == 2);
+        capturedSearchItems.ShouldNotBeNull();
+        capturedSearchItems.ShouldNotContain(item => item.Id == 2);
     }
 
     [Fact]
@@ -523,9 +524,9 @@ public class SeekerTests : IDisposable
         await mockArrClient.Received(1)
             .SearchItemAsync(Arg.Any<ArrInstance>(), Arg.Any<SearchItem>());
 
-        Assert.NotNull(capturedSearchItem);
-        Assert.Equal(2, capturedSearchItem.Id); // Season 2
-        Assert.Equal(10, capturedSearchItem.SeriesId);
+        capturedSearchItem.ShouldNotBeNull();
+        capturedSearchItem.Id.ShouldBe(2); // Season 2
+        capturedSearchItem.SeriesId.ShouldBe(10);
     }
 
     [Fact]
@@ -636,8 +637,8 @@ public class SeekerTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert — only monitored movie searched
-        Assert.NotNull(capturedSearchItems);
-        Assert.DoesNotContain(capturedSearchItems, item => item.Id == 2);
+        capturedSearchItems.ShouldNotBeNull();
+        capturedSearchItems.ShouldNotContain(item => item.Id == 2);
     }
 
     [Fact]
@@ -702,9 +703,9 @@ public class SeekerTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert — movie with skip tag excluded
-        Assert.NotNull(capturedSearchItems);
-        Assert.DoesNotContain(capturedSearchItems, item => item.Id == 2);
-        Assert.Contains(capturedSearchItems, item => item.Id == 1);
+        capturedSearchItems.ShouldNotBeNull();
+        capturedSearchItems.ShouldNotContain(item => item.Id == 2);
+        capturedSearchItems.ShouldContain(item => item.Id == 1);
     }
 
     [Fact]
@@ -762,8 +763,8 @@ public class SeekerTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert — movie with cutoff met should be excluded; missing + cutoff not met should be eligible
-        Assert.NotNull(capturedSearchItems);
-        Assert.DoesNotContain(capturedSearchItems, item => item.Id == 2);
+        capturedSearchItems.ShouldNotBeNull();
+        capturedSearchItems.ShouldNotContain(item => item.Id == 2);
     }
 
     [Fact]
@@ -843,7 +844,7 @@ public class SeekerTests : IDisposable
 
         var instanceConfig = await _fixture.DataContext.SeekerInstanceConfigs
             .FirstAsync(s => s.ArrInstanceId == radarrInstance.Id);
-        Assert.NotEqual(currentCycleId, instanceConfig.CurrentCycleId);
+        instanceConfig.CurrentCycleId.ShouldNotBe(currentCycleId);
     }
 
     #endregion
@@ -950,7 +951,7 @@ public class SeekerTests : IDisposable
 
         // Assert — queue item should be cleaned up
         var remaining = await _fixture.DataContext.SearchQueue.CountAsync();
-        Assert.Equal(0, remaining);
+        remaining.ShouldBe(0);
 
         // No search should have been triggered
         await _fixture.EventPublisher.DidNotReceive()
@@ -1039,7 +1040,7 @@ public class SeekerTests : IDisposable
 
         var instanceConfig = await _fixture.DataContext.SeekerInstanceConfigs
             .FirstAsync(s => s.ArrInstanceId == radarrInstance.Id);
-        Assert.Equal(currentCycleId, instanceConfig.CurrentCycleId);
+        instanceConfig.CurrentCycleId.ShouldBe(currentCycleId);
     }
 
     [Fact]
@@ -1120,7 +1121,7 @@ public class SeekerTests : IDisposable
 
         var instanceConfig = await _fixture.DataContext.SeekerInstanceConfigs
             .FirstAsync(s => s.ArrInstanceId == radarrInstance.Id);
-        Assert.NotEqual(currentCycleId, instanceConfig.CurrentCycleId);
+        instanceConfig.CurrentCycleId.ShouldNotBe(currentCycleId);
     }
 
     [Fact]
@@ -1262,7 +1263,7 @@ public class SeekerTests : IDisposable
 
         var instanceConfig = await _fixture.DataContext.SeekerInstanceConfigs
             .FirstAsync(s => s.ArrInstanceId == sonarrInstance.Id);
-        Assert.Equal(currentCycleId, instanceConfig.CurrentCycleId);
+        instanceConfig.CurrentCycleId.ShouldBe(currentCycleId);
     }
 
     [Fact]
@@ -1342,7 +1343,7 @@ public class SeekerTests : IDisposable
 
         var instanceConfig = await _fixture.DataContext.SeekerInstanceConfigs
             .FirstAsync(s => s.ArrInstanceId == sonarrInstance.Id);
-        Assert.NotEqual(currentCycleId, instanceConfig.CurrentCycleId);
+        instanceConfig.CurrentCycleId.ShouldNotBe(currentCycleId);
     }
 
     [Fact]
@@ -1530,7 +1531,7 @@ public class SeekerTests : IDisposable
         // Cycle ID should NOT have changed (cycle is not complete — there's still a new item)
         var instanceConfig = await _fixture.DataContext.SeekerInstanceConfigs
             .FirstAsync(s => s.ArrInstanceId == radarrInstance.Id);
-        Assert.Equal(currentCycleId, instanceConfig.CurrentCycleId);
+        instanceConfig.CurrentCycleId.ShouldBe(currentCycleId);
     }
 
     [Fact]
@@ -1614,7 +1615,7 @@ public class SeekerTests : IDisposable
         // Cycle ID should NOT have changed (the new item hasn't been searched yet)
         var instanceConfig = await _fixture.DataContext.SeekerInstanceConfigs
             .FirstAsync(s => s.ArrInstanceId == radarrInstance.Id);
-        Assert.Equal(currentCycleId, instanceConfig.CurrentCycleId);
+        instanceConfig.CurrentCycleId.ShouldBe(currentCycleId);
     }
 
     #endregion
@@ -1678,10 +1679,10 @@ public class SeekerTests : IDisposable
         await mockArrClient.Received(1)
             .SearchItemAsync(radarrInstance, Arg.Any<SearchItem>());
 
-        Assert.NotNull(capturedSearchItems);
-        Assert.Single(capturedSearchItems);
-        Assert.Contains(capturedSearchItems, item => item.Id == 2);
-        Assert.DoesNotContain(capturedSearchItems, item => item.Id == 1);
+        capturedSearchItems.ShouldNotBeNull();
+        capturedSearchItems.ShouldHaveSingleItem();
+        capturedSearchItems.ShouldContain(item => item.Id == 2);
+        capturedSearchItems.ShouldNotContain(item => item.Id == 1);
     }
 
     [Fact]
@@ -1851,8 +1852,8 @@ public class SeekerTests : IDisposable
         await mockArrClient.Received(1)
             .SearchItemAsync(Arg.Any<ArrInstance>(), Arg.Any<SearchItem>());
 
-        Assert.NotNull(capturedSearchItem);
-        Assert.Equal(2, capturedSearchItem.Id); // Season 2
+        capturedSearchItem.ShouldNotBeNull();
+        capturedSearchItem.Id.ShouldBe(2); // Season 2
     }
 
     [Fact]
@@ -1914,10 +1915,10 @@ public class SeekerTests : IDisposable
         await mockArrClient.Received(1)
             .SearchItemAsync(radarrInstance, Arg.Any<SearchItem>());
 
-        Assert.NotNull(capturedSearchItems);
-        Assert.Single(capturedSearchItems);
-        Assert.Contains(capturedSearchItems, item => item.Id == 2);
-        Assert.DoesNotContain(capturedSearchItems, item => item.Id == 1);
+        capturedSearchItems.ShouldNotBeNull();
+        capturedSearchItems.ShouldHaveSingleItem();
+        capturedSearchItems.ShouldContain(item => item.Id == 2);
+        capturedSearchItems.ShouldNotContain(item => item.Id == 1);
     }
 
     #endregion

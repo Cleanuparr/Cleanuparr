@@ -3,6 +3,7 @@ using Cleanuparr.Infrastructure.Features.Notifications.Telegram;
 using Cleanuparr.Infrastructure.Tests.TestHelpers;
 using Cleanuparr.Shared.Helpers;
 using NSubstitute;
+using Shouldly;
 using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.Notifications.Telegram;
@@ -49,7 +50,7 @@ public class TelegramProxyTests
         var proxy = CreateProxy();
 
         // Assert
-        Assert.NotNull(proxy);
+        proxy.ShouldNotBeNull();
     }
 
     [Fact]
@@ -88,7 +89,7 @@ public class TelegramProxyTests
         await proxy.SendNotification(CreatePayload(), "test-bot-token");
 
         // Assert
-        Assert.Equal(HttpMethod.Post, _httpMessageHandler.CapturedRequests[0].Method);
+        _httpMessageHandler.CapturedRequests[0].Method.ShouldBe(HttpMethod.Post);
     }
 
     [Fact]
@@ -102,7 +103,7 @@ public class TelegramProxyTests
         await proxy.SendNotification(CreatePayload(), "my-bot-token");
 
         // Assert
-        Assert.Contains("/botmy-bot-token/sendMessage", _httpMessageHandler.CapturedRequests[0].RequestUri?.ToString());
+        _httpMessageHandler.CapturedRequests[0].RequestUri?.ToString().ShouldContain("/botmy-bot-token/sendMessage");
     }
 
     [Fact]
@@ -118,7 +119,7 @@ public class TelegramProxyTests
         await proxy.SendNotification(payload, "my-bot-token");
 
         // Assert
-        Assert.Contains("/botmy-bot-token/sendPhoto", _httpMessageHandler.CapturedRequests[0].RequestUri?.ToString());
+        _httpMessageHandler.CapturedRequests[0].RequestUri?.ToString().ShouldContain("/botmy-bot-token/sendPhoto");
     }
 
     [Fact]
@@ -135,7 +136,7 @@ public class TelegramProxyTests
         await proxy.SendNotification(payload, "my-bot-token");
 
         // Assert
-        Assert.Contains("/botmy-bot-token/sendMessage", _httpMessageHandler.CapturedRequests[0].RequestUri?.ToString());
+        _httpMessageHandler.CapturedRequests[0].RequestUri?.ToString().ShouldContain("/botmy-bot-token/sendMessage");
     }
 
     [Fact]
@@ -149,7 +150,7 @@ public class TelegramProxyTests
         await proxy.SendNotification(CreatePayload(), "test-bot-token");
 
         // Assert
-        Assert.Equal("application/json", _httpMessageHandler.CapturedRequests[0].Content?.Headers.ContentType?.MediaType);
+        _httpMessageHandler.CapturedRequests[0].Content?.Headers.ContentType?.MediaType.ShouldBe("application/json");
     }
 
     [Fact]
@@ -167,8 +168,8 @@ public class TelegramProxyTests
 
         // Assert
         var capturedContent = _httpMessageHandler.CapturedRequestBodies[0]!;
-        Assert.Contains("&#8203;", capturedContent); // Zero-width space
-        Assert.Contains("example.com/image.jpg", capturedContent);
+        capturedContent.ShouldContain("&#8203;"); // Zero-width space
+        capturedContent.ShouldContain("example.com/image.jpg");
     }
 
     [Fact]
@@ -183,8 +184,8 @@ public class TelegramProxyTests
 
         // Assert
         var capturedContent = _httpMessageHandler.CapturedRequestBodies[0]!;
-        Assert.Contains("disable_web_page_preview", capturedContent);
-        Assert.Contains("true", capturedContent);
+        capturedContent.ShouldContain("disable_web_page_preview");
+        capturedContent.ShouldContain("true");
     }
 
     [Fact]
@@ -206,8 +207,8 @@ public class TelegramProxyTests
 
         // Assert
         var capturedContent = _httpMessageHandler.CapturedRequestBodies[0]!;
-        Assert.Contains("message_thread_id", capturedContent);
-        Assert.Contains("42", capturedContent);
+        capturedContent.ShouldContain("message_thread_id");
+        capturedContent.ShouldContain("42");
     }
 
     [Fact]
@@ -229,7 +230,7 @@ public class TelegramProxyTests
 
         // Assert
         var capturedContent = _httpMessageHandler.CapturedRequestBodies[0]!;
-        Assert.Contains("disable_notification", capturedContent);
+        capturedContent.ShouldContain("disable_notification");
     }
 
     #endregion
@@ -247,9 +248,9 @@ public class TelegramProxyTests
         }));
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<TelegramException>(() =>
+        var ex = await Should.ThrowAsync<TelegramException>(() =>
             proxy.SendNotification(CreatePayload(), "test-bot-token"));
-        Assert.Contains("rejected the request", ex.Message);
+        ex.Message.ShouldContain("rejected the request");
     }
 
     [Fact]
@@ -263,9 +264,9 @@ public class TelegramProxyTests
         }));
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<TelegramException>(() =>
+        var ex = await Should.ThrowAsync<TelegramException>(() =>
             proxy.SendNotification(CreatePayload(), "test-bot-token"));
-        Assert.Contains("bot token is invalid", ex.Message);
+        ex.Message.ShouldContain("bot token is invalid");
     }
 
     [Fact]
@@ -279,9 +280,9 @@ public class TelegramProxyTests
         }));
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<TelegramException>(() =>
+        var ex = await Should.ThrowAsync<TelegramException>(() =>
             proxy.SendNotification(CreatePayload(), "test-bot-token"));
-        Assert.Contains("permission", ex.Message);
+        ex.Message.ShouldContain("permission");
     }
 
     [Fact]
@@ -295,9 +296,9 @@ public class TelegramProxyTests
         }));
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<TelegramException>(() =>
+        var ex = await Should.ThrowAsync<TelegramException>(() =>
             proxy.SendNotification(CreatePayload(), "test-bot-token"));
-        Assert.Contains("Rate limited", ex.Message);
+        ex.Message.ShouldContain("Rate limited");
     }
 
     [Fact]
@@ -311,9 +312,9 @@ public class TelegramProxyTests
         }));
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<TelegramException>(() =>
+        var ex = await Should.ThrowAsync<TelegramException>(() =>
             proxy.SendNotification(CreatePayload(), "test-bot-token"));
-        Assert.Contains("500", ex.Message);
+        ex.Message.ShouldContain("500");
     }
 
     [Fact]
@@ -324,9 +325,9 @@ public class TelegramProxyTests
         _httpMessageHandler.SetupThrow(new HttpRequestException("Network error"));
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<TelegramException>(() =>
+        var ex = await Should.ThrowAsync<TelegramException>(() =>
             proxy.SendNotification(CreatePayload(), "test-bot-token"));
-        Assert.Contains("Unable to reach Telegram API", ex.Message);
+        ex.Message.ShouldContain("Unable to reach Telegram API");
     }
 
     [Fact]
@@ -341,9 +342,9 @@ public class TelegramProxyTests
         }));
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<TelegramException>(() =>
+        var ex = await Should.ThrowAsync<TelegramException>(() =>
             proxy.SendNotification(CreatePayload(), "test-bot-token"));
-        Assert.True(ex.Message.Length < 600);
+        (ex.Message.Length < 600).ShouldBeTrue();
     }
 
     #endregion

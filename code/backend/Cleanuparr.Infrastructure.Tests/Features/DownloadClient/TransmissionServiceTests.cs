@@ -3,6 +3,7 @@ using Cleanuparr.Infrastructure.Features.DownloadClient;
 using Cleanuparr.Infrastructure.Features.DownloadClient.Transmission;
 using NSubstitute;
 using Transmission.API.RPC.Entity;
+using Shouldly;
 using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.DownloadClient;
@@ -55,9 +56,9 @@ public class TransmissionServiceTests : IClassFixture<TransmissionServiceFixture
 
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 
-            Assert.False(result.Found);
-            Assert.False(result.ShouldRemove);
-            Assert.Equal(DeleteReason.None, result.DeleteReason);
+            result.Found.ShouldBeFalse();
+            result.ShouldRemove.ShouldBeFalse();
+            result.DeleteReason.ShouldBe(DeleteReason.None);
         }
 
         [Fact]
@@ -115,8 +116,8 @@ public class TransmissionServiceTests : IClassFixture<TransmissionServiceFixture
 
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 
-            Assert.True(result.Found);
-            Assert.True(result.IsPrivate);
+            result.Found.ShouldBeTrue();
+            result.IsPrivate.ShouldBeTrue();
         }
 
         [Fact]
@@ -174,8 +175,8 @@ public class TransmissionServiceTests : IClassFixture<TransmissionServiceFixture
 
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 
-            Assert.True(result.Found);
-            Assert.False(result.IsPrivate);
+            result.Found.ShouldBeTrue();
+            result.IsPrivate.ShouldBeFalse();
         }
     }
 
@@ -236,9 +237,9 @@ public class TransmissionServiceTests : IClassFixture<TransmissionServiceFixture
 
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 
-            Assert.True(result.ShouldRemove);
-            Assert.Equal(DeleteReason.AllFilesSkipped, result.DeleteReason);
-            Assert.True(result.DeleteFromClient);
+            result.ShouldRemove.ShouldBeTrue();
+            result.DeleteReason.ShouldBe(DeleteReason.AllFilesSkipped);
+            result.DeleteFromClient.ShouldBeTrue();
         }
 
         [Fact]
@@ -301,7 +302,7 @@ public class TransmissionServiceTests : IClassFixture<TransmissionServiceFixture
 
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 
-            Assert.False(result.ShouldRemove);
+            result.ShouldRemove.ShouldBeFalse();
         }
     }
 
@@ -358,8 +359,8 @@ public class TransmissionServiceTests : IClassFixture<TransmissionServiceFixture
 
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, new[] { hash });
 
-            Assert.True(result.Found);
-            Assert.False(result.ShouldRemove);
+            result.Found.ShouldBeTrue();
+            result.ShouldRemove.ShouldBeFalse();
         }
 
         [Fact]
@@ -411,8 +412,8 @@ public class TransmissionServiceTests : IClassFixture<TransmissionServiceFixture
 
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, new[] { category });
 
-            Assert.True(result.Found);
-            Assert.False(result.ShouldRemove);
+            result.Found.ShouldBeTrue();
+            result.ShouldRemove.ShouldBeFalse();
         }
 
     }
@@ -483,7 +484,7 @@ public class TransmissionServiceTests : IClassFixture<TransmissionServiceFixture
 
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 
-            Assert.False(result.ShouldRemove);
+            result.ShouldRemove.ShouldBeFalse();
         }
     }
 
@@ -545,7 +546,7 @@ public class TransmissionServiceTests : IClassFixture<TransmissionServiceFixture
 
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 
-            Assert.False(result.ShouldRemove);
+            result.ShouldRemove.ShouldBeFalse();
             await _fixture.RuleEvaluator.DidNotReceive().EvaluateSlowRulesAsync(Arg.Any<TransmissionItemWrapper>());
         }
 
@@ -601,7 +602,7 @@ public class TransmissionServiceTests : IClassFixture<TransmissionServiceFixture
 
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 
-            Assert.False(result.ShouldRemove);
+            result.ShouldRemove.ShouldBeFalse();
             await _fixture.RuleEvaluator.DidNotReceive().EvaluateSlowRulesAsync(Arg.Any<TransmissionItemWrapper>());
         }
     }
@@ -664,9 +665,9 @@ public class TransmissionServiceTests : IClassFixture<TransmissionServiceFixture
 
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 
-            Assert.True(result.ShouldRemove);
-            Assert.Equal(DeleteReason.SlowSpeed, result.DeleteReason);
-            Assert.True(result.DeleteFromClient);
+            result.ShouldRemove.ShouldBeTrue();
+            result.DeleteReason.ShouldBe(DeleteReason.SlowSpeed);
+            result.DeleteFromClient.ShouldBeTrue();
         }
 
         [Fact]
@@ -722,9 +723,9 @@ public class TransmissionServiceTests : IClassFixture<TransmissionServiceFixture
 
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 
-            Assert.True(result.ShouldRemove);
-            Assert.Equal(DeleteReason.Stalled, result.DeleteReason);
-            Assert.True(result.DeleteFromClient);
+            result.ShouldRemove.ShouldBeTrue();
+            result.DeleteReason.ShouldBe(DeleteReason.Stalled);
+            result.DeleteFromClient.ShouldBeTrue();
         }
     }
 }

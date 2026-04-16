@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
+using Shouldly;
 using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Services;
@@ -79,7 +80,7 @@ public class AppStatusRefreshServiceTests : IDisposable
         var service = CreateService();
 
         // Assert
-        Assert.NotNull(service);
+        service.ShouldNotBeNull();
     }
 
     #endregion
@@ -96,8 +97,8 @@ public class AppStatusRefreshServiceTests : IDisposable
         var result = snapshot.UpdateLatestVersion("1.0.0", out var status);
 
         // Assert
-        Assert.True(result);
-        Assert.Equal("1.0.0", status.LatestVersion);
+        result.ShouldBeTrue();
+        status.LatestVersion.ShouldBe("1.0.0");
     }
 
     [Fact]
@@ -111,8 +112,8 @@ public class AppStatusRefreshServiceTests : IDisposable
         var result = snapshot.UpdateLatestVersion("1.0.0", out var status);
 
         // Assert
-        Assert.False(result);
-        Assert.Equal("1.0.0", status.LatestVersion);
+        result.ShouldBeFalse();
+        status.LatestVersion.ShouldBe("1.0.0");
     }
 
     [Fact]
@@ -125,8 +126,8 @@ public class AppStatusRefreshServiceTests : IDisposable
         var result = snapshot.UpdateCurrentVersion("2.0.0", out var status);
 
         // Assert
-        Assert.True(result);
-        Assert.Equal("2.0.0", status.CurrentVersion);
+        result.ShouldBeTrue();
+        status.CurrentVersion.ShouldBe("2.0.0");
     }
 
     [Fact]
@@ -141,8 +142,8 @@ public class AppStatusRefreshServiceTests : IDisposable
         var current = snapshot.Current;
 
         // Assert
-        Assert.Equal("1.0.0", current.CurrentVersion);
-        Assert.Equal("2.0.0", current.LatestVersion);
+        current.CurrentVersion.ShouldBe("1.0.0");
+        current.LatestVersion.ShouldBe("2.0.0");
     }
 
     [Fact]
@@ -156,8 +157,8 @@ public class AppStatusRefreshServiceTests : IDisposable
         var result = snapshot.UpdateLatestVersion(null, out var status);
 
         // Assert
-        Assert.True(result);
-        Assert.Null(status.LatestVersion);
+        result.ShouldBeTrue();
+        status.LatestVersion.ShouldBeNull();
     }
 
     [Fact]
@@ -170,7 +171,7 @@ public class AppStatusRefreshServiceTests : IDisposable
         var result = snapshot.UpdateLatestVersion(null, out _);
 
         // Assert
-        Assert.False(result);
+        result.ShouldBeFalse();
     }
 
     #endregion

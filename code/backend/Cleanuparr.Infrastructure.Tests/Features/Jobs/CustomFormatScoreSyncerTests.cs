@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
+using Shouldly;
 using Xunit;
 using CustomFormatScoreSyncer = Cleanuparr.Infrastructure.Features.Jobs.CustomFormatScoreSyncer;
 
@@ -135,21 +136,21 @@ public class CustomFormatScoreSyncerTests : IDisposable
 
         // Assert — CF score entry was saved
         var entries = await _fixture.DataContext.CustomFormatScoreEntries.ToListAsync();
-        Assert.Single(entries);
+        entries.ShouldHaveSingleItem();
 
         var entry = entries[0];
-        Assert.Equal(radarrInstance.Id, entry.ArrInstanceId);
-        Assert.Equal(10, entry.ExternalItemId);
-        Assert.Equal(250, entry.CurrentScore);
-        Assert.Equal(500, entry.CutoffScore);
-        Assert.Equal("HD", entry.QualityProfileName);
-        Assert.Equal(InstanceType.Radarr, entry.ItemType);
-        Assert.True(entry.IsMonitored);
+        entry.ArrInstanceId.ShouldBe(radarrInstance.Id);
+        entry.ExternalItemId.ShouldBe(10);
+        entry.CurrentScore.ShouldBe(250);
+        entry.CutoffScore.ShouldBe(500);
+        entry.QualityProfileName.ShouldBe("HD");
+        entry.ItemType.ShouldBe(InstanceType.Radarr);
+        entry.IsMonitored.ShouldBeTrue();
 
         // Initial history entry should also be created
         var history = await _fixture.DataContext.CustomFormatScoreHistory.ToListAsync();
-        Assert.Single(history);
-        Assert.Equal(250, history[0].Score);
+        history.ShouldHaveSingleItem();
+        history[0].Score.ShouldBe(250);
     }
 
     [Fact]
@@ -214,14 +215,14 @@ public class CustomFormatScoreSyncerTests : IDisposable
 
         // Assert — existing entry should be updated
         var entries = await _fixture.DataContext.CustomFormatScoreEntries.ToListAsync();
-        Assert.Single(entries);
-        Assert.Equal(350, entries[0].CurrentScore);
+        entries.ShouldHaveSingleItem();
+        entries[0].CurrentScore.ShouldBe(350);
 
         // History entry should be created because score changed (200 -> 350)
         var history = await _fixture.DataContext.CustomFormatScoreHistory.ToListAsync();
-        Assert.Single(history);
-        Assert.Equal(350, history[0].Score);
-        Assert.Equal(InstanceType.Radarr, history[0].ItemType);
+        history.ShouldHaveSingleItem();
+        history[0].Score.ShouldBe(350);
+        history[0].ItemType.ShouldBe(InstanceType.Radarr);
     }
 
     [Fact]
@@ -269,8 +270,8 @@ public class CustomFormatScoreSyncerTests : IDisposable
 
         // Assert — entry should be saved with IsMonitored = false
         var entries = await _fixture.DataContext.CustomFormatScoreEntries.ToListAsync();
-        Assert.Single(entries);
-        Assert.False(entries[0].IsMonitored);
+        entries.ShouldHaveSingleItem();
+        entries[0].IsMonitored.ShouldBeFalse();
     }
 
     [Fact]
@@ -331,8 +332,8 @@ public class CustomFormatScoreSyncerTests : IDisposable
 
         // Assert — IsMonitored should be updated to false
         var entries = await _fixture.DataContext.CustomFormatScoreEntries.ToListAsync();
-        Assert.Single(entries);
-        Assert.False(entries[0].IsMonitored);
+        entries.ShouldHaveSingleItem();
+        entries[0].IsMonitored.ShouldBeFalse();
     }
 
     #endregion
@@ -388,22 +389,22 @@ public class CustomFormatScoreSyncerTests : IDisposable
 
         // Assert — only the episode with a file should have an entry
         var entries = await _fixture.DataContext.CustomFormatScoreEntries.ToListAsync();
-        Assert.Single(entries);
+        entries.ShouldHaveSingleItem();
 
         var entry = entries[0];
-        Assert.Equal(sonarrInstance.Id, entry.ArrInstanceId);
-        Assert.Equal(10, entry.ExternalItemId);
-        Assert.Equal(100, entry.EpisodeId);
-        Assert.Equal(300, entry.CurrentScore);
-        Assert.Equal(500, entry.CutoffScore);
-        Assert.Equal(InstanceType.Sonarr, entry.ItemType);
-        Assert.True(entry.IsMonitored);
-        Assert.Contains("S01E01", entry.Title);
+        entry.ArrInstanceId.ShouldBe(sonarrInstance.Id);
+        entry.ExternalItemId.ShouldBe(10);
+        entry.EpisodeId.ShouldBe(100);
+        entry.CurrentScore.ShouldBe(300);
+        entry.CutoffScore.ShouldBe(500);
+        entry.ItemType.ShouldBe(InstanceType.Sonarr);
+        entry.IsMonitored.ShouldBeTrue();
+        entry.Title.ShouldContain("S01E01");
 
         // Initial history should be created
         var history = await _fixture.DataContext.CustomFormatScoreHistory.ToListAsync();
-        Assert.Single(history);
-        Assert.Equal(300, history[0].Score);
+        history.ShouldHaveSingleItem();
+        history[0].Score.ShouldBe(300);
     }
 
     [Fact]
@@ -449,7 +450,7 @@ public class CustomFormatScoreSyncerTests : IDisposable
 
         // Assert — no entries created
         var entries = await _fixture.DataContext.CustomFormatScoreEntries.ToListAsync();
-        Assert.Empty(entries);
+        entries.ShouldBeEmpty();
     }
 
     #endregion
@@ -513,12 +514,12 @@ public class CustomFormatScoreSyncerTests : IDisposable
 
         // Assert — no history entries (score didn't change)
         var history = await _fixture.DataContext.CustomFormatScoreHistory.ToListAsync();
-        Assert.Empty(history);
+        history.ShouldBeEmpty();
 
         // Entry should still be updated (LastSyncedAt changes)
         var entries = await _fixture.DataContext.CustomFormatScoreEntries.ToListAsync();
-        Assert.Single(entries);
-        Assert.Equal(250, entries[0].CurrentScore);
+        entries.ShouldHaveSingleItem();
+        entries[0].CurrentScore.ShouldBe(250);
     }
 
     #endregion
@@ -582,8 +583,8 @@ public class CustomFormatScoreSyncerTests : IDisposable
 
         // Assert — entry for removed movie 999 should be deleted
         var entries = await _fixture.DataContext.CustomFormatScoreEntries.ToListAsync();
-        Assert.Single(entries);
-        Assert.Equal(10, entries[0].ExternalItemId);
+        entries.ShouldHaveSingleItem();
+        entries[0].ExternalItemId.ShouldBe(10);
     }
 
     [Fact]
@@ -650,13 +651,13 @@ public class CustomFormatScoreSyncerTests : IDisposable
 
         // Assert — entry and history should be preserved since the movie still exists
         var entries = await _fixture.DataContext.CustomFormatScoreEntries.ToListAsync();
-        Assert.Single(entries);
-        Assert.Equal(10, entries[0].ExternalItemId);
-        Assert.Equal(250, entries[0].CurrentScore);
+        entries.ShouldHaveSingleItem();
+        entries[0].ExternalItemId.ShouldBe(10);
+        entries[0].CurrentScore.ShouldBe(250);
 
         var history = await _fixture.DataContext.CustomFormatScoreHistory.ToListAsync();
-        Assert.Single(history);
-        Assert.Equal(250, history[0].Score);
+        history.ShouldHaveSingleItem();
+        history[0].Score.ShouldBe(250);
     }
 
     [Fact]
@@ -728,12 +729,12 @@ public class CustomFormatScoreSyncerTests : IDisposable
 
         // Assert — entry and history should be preserved since the movie still exists
         var entries = await _fixture.DataContext.CustomFormatScoreEntries.ToListAsync();
-        Assert.Single(entries);
-        Assert.Equal(10, entries[0].ExternalItemId);
-        Assert.Equal(250, entries[0].CurrentScore);
+        entries.ShouldHaveSingleItem();
+        entries[0].ExternalItemId.ShouldBe(10);
+        entries[0].CurrentScore.ShouldBe(250);
 
         var history = await _fixture.DataContext.CustomFormatScoreHistory.ToListAsync();
-        Assert.Single(history);
+        history.ShouldHaveSingleItem();
     }
 
     [Fact]
@@ -805,13 +806,13 @@ public class CustomFormatScoreSyncerTests : IDisposable
 
         // Assert — entry and history should be preserved
         var entries = await _fixture.DataContext.CustomFormatScoreEntries.ToListAsync();
-        Assert.Single(entries);
-        Assert.Equal(10, entries[0].ExternalItemId);
-        Assert.Equal(100, entries[0].EpisodeId);
-        Assert.Equal(300, entries[0].CurrentScore);
+        entries.ShouldHaveSingleItem();
+        entries[0].ExternalItemId.ShouldBe(10);
+        entries[0].EpisodeId.ShouldBe(100);
+        entries[0].CurrentScore.ShouldBe(300);
 
         var history = await _fixture.DataContext.CustomFormatScoreHistory.ToListAsync();
-        Assert.Single(history);
+        history.ShouldHaveSingleItem();
     }
 
     #endregion
