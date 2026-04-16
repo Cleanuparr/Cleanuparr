@@ -1,37 +1,37 @@
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Arr;
 using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
-using Moq;
+using NSubstitute;
 using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.Arr;
 
 public class ArrClientFactoryTests
 {
-    private readonly Mock<ISonarrClient> _sonarrClientMock;
-    private readonly Mock<IRadarrClient> _radarrClientMock;
-    private readonly Mock<ILidarrClient> _lidarrClientMock;
-    private readonly Mock<IReadarrClient> _readarrClientMock;
-    private readonly Mock<IWhisparrV2Client> _whisparrClientMock;
-    private readonly Mock<IWhisparrV3Client> _whisparrV3ClientMock;
+    private readonly ISonarrClient _sonarrClient;
+    private readonly IRadarrClient _radarrClient;
+    private readonly ILidarrClient _lidarrClient;
+    private readonly IReadarrClient _readarrClient;
+    private readonly IWhisparrV2Client _whisparrClient;
+    private readonly IWhisparrV3Client _whisparrV3Client;
     private readonly ArrClientFactory _factory;
 
     public ArrClientFactoryTests()
     {
-        _sonarrClientMock = new Mock<ISonarrClient>();
-        _radarrClientMock = new Mock<IRadarrClient>();
-        _lidarrClientMock = new Mock<ILidarrClient>();
-        _readarrClientMock = new Mock<IReadarrClient>();
-        _whisparrClientMock = new Mock<IWhisparrV2Client>();
-        _whisparrV3ClientMock = new Mock<IWhisparrV3Client>();
+        _sonarrClient = Substitute.For<ISonarrClient>();
+        _radarrClient = Substitute.For<IRadarrClient>();
+        _lidarrClient = Substitute.For<ILidarrClient>();
+        _readarrClient = Substitute.For<IReadarrClient>();
+        _whisparrClient = Substitute.For<IWhisparrV2Client>();
+        _whisparrV3Client = Substitute.For<IWhisparrV3Client>();
 
         _factory = new ArrClientFactory(
-            _sonarrClientMock.Object,
-            _radarrClientMock.Object,
-            _lidarrClientMock.Object,
-            _readarrClientMock.Object,
-            _whisparrClientMock.Object,
-            _whisparrV3ClientMock.Object
+            _sonarrClient,
+            _radarrClient,
+            _lidarrClient,
+            _readarrClient,
+            _whisparrClient,
+            _whisparrV3Client
         );
     }
 
@@ -44,7 +44,7 @@ public class ArrClientFactoryTests
         var result = _factory.GetClient(InstanceType.Sonarr, 0);
 
         // Assert
-        Assert.Same(_sonarrClientMock.Object, result);
+        Assert.Same(_sonarrClient, result);
     }
 
     [Fact]
@@ -54,7 +54,7 @@ public class ArrClientFactoryTests
         var result = _factory.GetClient(InstanceType.Radarr, 0);
 
         // Assert
-        Assert.Same(_radarrClientMock.Object, result);
+        Assert.Same(_radarrClient, result);
     }
 
     [Fact]
@@ -64,7 +64,7 @@ public class ArrClientFactoryTests
         var result = _factory.GetClient(InstanceType.Lidarr, 0);
 
         // Assert
-        Assert.Same(_lidarrClientMock.Object, result);
+        Assert.Same(_lidarrClient, result);
     }
 
     [Fact]
@@ -74,7 +74,7 @@ public class ArrClientFactoryTests
         var result = _factory.GetClient(InstanceType.Readarr, 0);
 
         // Assert
-        Assert.Same(_readarrClientMock.Object, result);
+        Assert.Same(_readarrClient, result);
     }
 
     [Fact]
@@ -84,7 +84,7 @@ public class ArrClientFactoryTests
         var result = _factory.GetClient(InstanceType.Whisparr, 2);
 
         // Assert
-        Assert.Same(_whisparrClientMock.Object, result);
+        Assert.Same(_whisparrClient, result);
     }
 
     [Fact]
@@ -92,9 +92,9 @@ public class ArrClientFactoryTests
     {
         // Act
         var result = _factory.GetClient(InstanceType.Whisparr, 3);
-        
+
         // Assert
-        Assert.Same(_whisparrV3ClientMock.Object, result);
+        Assert.Same(_whisparrV3Client, result);
     }
 
     [Fact]
@@ -104,7 +104,7 @@ public class ArrClientFactoryTests
         var unsupportedType = (InstanceType)999;
 
         // Act & Assert
-        var exception = Assert.Throws<NotImplementedException>(() => _factory.GetClient(unsupportedType, It.IsAny<float>()));
+        var exception = Assert.Throws<NotImplementedException>(() => _factory.GetClient(unsupportedType, Arg.Any<float>()));
         Assert.Contains("not yet supported", exception.Message);
         Assert.Contains("999", exception.Message);
     }
@@ -132,7 +132,7 @@ public class ArrClientFactoryTests
         // Assert
         Assert.Same(result1, result2);
     }
-    
+
     public static IEnumerable<object?[]> InstancesData =>
     [
         [InstanceType.Sonarr, null],

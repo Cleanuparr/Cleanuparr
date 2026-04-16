@@ -1,35 +1,35 @@
 using System.Net;
 using Cleanuparr.Infrastructure.Features.Notifications.Gotify;
+using Cleanuparr.Infrastructure.Tests.TestHelpers;
 using Cleanuparr.Persistence.Models.Configuration.Notification;
 using Cleanuparr.Shared.Helpers;
 using Microsoft.Extensions.Logging;
-using Moq;
-using Moq.Protected;
+using NSubstitute;
 using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.Notifications.Gotify;
 
 public class GotifyProxyTests
 {
-    private readonly Mock<ILogger<GotifyProxy>> _loggerMock;
-    private readonly Mock<IHttpClientFactory> _httpClientFactoryMock;
-    private readonly Mock<HttpMessageHandler> _httpMessageHandlerMock;
+    private readonly ILogger<GotifyProxy> _logger;
+    private readonly IHttpClientFactory _httpClientFactory;
+    private readonly FakeHttpMessageHandler _httpMessageHandler;
 
     public GotifyProxyTests()
     {
-        _loggerMock = new Mock<ILogger<GotifyProxy>>();
-        _httpMessageHandlerMock = new Mock<HttpMessageHandler>();
-        _httpClientFactoryMock = new Mock<IHttpClientFactory>();
+        _logger = Substitute.For<ILogger<GotifyProxy>>();
+        _httpMessageHandler = new FakeHttpMessageHandler();
+        _httpClientFactory = Substitute.For<IHttpClientFactory>();
 
-        var httpClient = new HttpClient(_httpMessageHandlerMock.Object);
-        _httpClientFactoryMock
-            .Setup(f => f.CreateClient(Constants.HttpClientWithRetryName))
+        var httpClient = new HttpClient(_httpMessageHandler);
+        _httpClientFactory
+            .CreateClient(Constants.HttpClientWithRetryName)
             .Returns(httpClient);
     }
 
     private GotifyProxy CreateProxy()
     {
-        return new GotifyProxy(_loggerMock.Object, _httpClientFactoryMock.Object);
+        return new GotifyProxy(_logger, _httpClientFactory);
     }
 
     private static GotifyPayload CreatePayload()
@@ -71,7 +71,7 @@ public class GotifyProxyTests
         _ = CreateProxy();
 
         // Assert
-        _httpClientFactoryMock.Verify(f => f.CreateClient(Constants.HttpClientWithRetryName), Times.Once);
+        _httpClientFactory.Received(1).CreateClient(Constants.HttpClientWithRetryName);
     }
 
     #endregion
@@ -83,7 +83,7 @@ public class GotifyProxyTests
     {
         // Arrange
         var proxy = CreateProxy();
-        SetupSuccessResponse();
+        _httpMessageHandler.SetupResponse(HttpStatusCode.OK);
 
         // Act & Assert - Should not throw
         await proxy.SendNotification(CreatePayload(), CreateConfig());
@@ -94,22 +94,13 @@ public class GotifyProxyTests
     {
         // Arrange
         var proxy = CreateProxy();
-        HttpMethod? capturedMethod = null;
-
-        _httpMessageHandlerMock
-            .Protected()
-            .Setup<Task<HttpResponseMessage>>(
-                "SendAsync",
-                ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>())
-            .Callback<HttpRequestMessage, CancellationToken>((req, _) => capturedMethod = req.Method)
-            .ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK));
+        _httpMessageHandler.SetupResponse(HttpStatusCode.OK);
 
         // Act
         await proxy.SendNotification(CreatePayload(), CreateConfig());
 
         // Assert
-        Assert.Equal(HttpMethod.Post, capturedMethod);
+        Assert.Equal(HttpMethod.Post, _httpMessageHandler.CapturedRequests[0].Method);
     }
 
     [Fact]
@@ -117,16 +108,7 @@ public class GotifyProxyTests
     {
         // Arrange
         var proxy = CreateProxy();
-        Uri? capturedUri = null;
-
-        _httpMessageHandlerMock
-            .Protected()
-            .Setup<Task<HttpResponseMessage>>(
-                "SendAsync",
-                ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>())
-            .Callback<HttpRequestMessage, CancellationToken>((req, _) => capturedUri = req.RequestUri)
-            .ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK));
+        _httpMessageHandler.SetupResponse(HttpStatusCode.OK);
 
         var config = new GotifyConfig
         {
@@ -139,8 +121,7 @@ public class GotifyProxyTests
         await proxy.SendNotification(CreatePayload(), config);
 
         // Assert
-        Assert.NotNull(capturedUri);
-        Assert.Equal("https://gotify.example.com/message?token=my-token", capturedUri.ToString());
+        Assert.Equal("https://gotify.example.com/message?token=my-token", _httpMessageHandler.CapturedRequests[0].RequestUri?.ToString());
     }
 
     [Fact]
@@ -148,16 +129,7 @@ public class GotifyProxyTests
     {
         // Arrange
         var proxy = CreateProxy();
-        Uri? capturedUri = null;
-
-        _httpMessageHandlerMock
-            .Protected()
-            .Setup<Task<HttpResponseMessage>>(
-                "SendAsync",
-                ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>())
-            .Callback<HttpRequestMessage, CancellationToken>((req, _) => capturedUri = req.RequestUri)
-            .ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK));
+        _httpMessageHandler.SetupResponse(HttpStatusCode.OK);
 
         var config = new GotifyConfig
         {
@@ -170,8 +142,7 @@ public class GotifyProxyTests
         await proxy.SendNotification(CreatePayload(), config);
 
         // Assert
-        Assert.NotNull(capturedUri);
-        Assert.Equal("https://gotify.example.com/message?token=my-token", capturedUri.ToString());
+        Assert.Equal("https://gotify.example.com/message?token=my-token", _httpMessageHandler.CapturedRequests[0].RequestUri?.ToString());
     }
 
     [Fact]
@@ -179,23 +150,13 @@ public class GotifyProxyTests
     {
         // Arrange
         var proxy = CreateProxy();
-        string? capturedContentType = null;
-
-        _httpMessageHandlerMock
-            .Protected()
-            .Setup<Task<HttpResponseMessage>>(
-                "SendAsync",
-                ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>())
-            .Callback<HttpRequestMessage, CancellationToken>((req, _) =>
-                capturedContentType = req.Content?.Headers.ContentType?.MediaType)
-            .ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK));
+        _httpMessageHandler.SetupResponse(HttpStatusCode.OK);
 
         // Act
         await proxy.SendNotification(CreatePayload(), CreateConfig());
 
         // Assert
-        Assert.Equal("application/json", capturedContentType);
+        Assert.Equal("application/json", _httpMessageHandler.CapturedRequests[0].Content?.Headers.ContentType?.MediaType);
     }
 
     [Fact]
@@ -203,20 +164,13 @@ public class GotifyProxyTests
     {
         // Arrange
         var proxy = CreateProxy();
-        SetupSuccessResponse();
+        _httpMessageHandler.SetupResponse(HttpStatusCode.OK);
 
         // Act
         await proxy.SendNotification(CreatePayload(), CreateConfig());
 
         // Assert
-        _loggerMock.Verify(
-            x => x.Log(
-                LogLevel.Trace,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("sending notification")),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+        _logger.ReceivedLogContaining(LogLevel.Trace, "sending notification");
     }
 
     #endregion
@@ -230,7 +184,7 @@ public class GotifyProxyTests
     {
         // Arrange
         var proxy = CreateProxy();
-        SetupErrorResponse(statusCode);
+        _httpMessageHandler.SetupThrow(new HttpRequestException("Error", null, statusCode));
 
         // Act & Assert
         var ex = await Assert.ThrowsAsync<GotifyException>(() =>
@@ -243,7 +197,7 @@ public class GotifyProxyTests
     {
         // Arrange
         var proxy = CreateProxy();
-        SetupErrorResponse(HttpStatusCode.NotFound);
+        _httpMessageHandler.SetupThrow(new HttpRequestException("Error", null, HttpStatusCode.NotFound));
 
         // Act & Assert
         var ex = await Assert.ThrowsAsync<GotifyException>(() =>
@@ -259,7 +213,7 @@ public class GotifyProxyTests
     {
         // Arrange
         var proxy = CreateProxy();
-        SetupErrorResponse(statusCode);
+        _httpMessageHandler.SetupThrow(new HttpRequestException("Error", null, statusCode));
 
         // Act & Assert
         var ex = await Assert.ThrowsAsync<GotifyException>(() =>
@@ -272,7 +226,7 @@ public class GotifyProxyTests
     {
         // Arrange
         var proxy = CreateProxy();
-        SetupErrorResponse(HttpStatusCode.InternalServerError);
+        _httpMessageHandler.SetupThrow(new HttpRequestException("Error", null, HttpStatusCode.InternalServerError));
 
         // Act & Assert
         var ex = await Assert.ThrowsAsync<GotifyException>(() =>
@@ -285,44 +239,12 @@ public class GotifyProxyTests
     {
         // Arrange
         var proxy = CreateProxy();
-        _httpMessageHandlerMock
-            .Protected()
-            .Setup<Task<HttpResponseMessage>>(
-                "SendAsync",
-                ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>())
-            .ThrowsAsync(new HttpRequestException("Network error"));
+        _httpMessageHandler.SetupThrow(new HttpRequestException("Network error"));
 
         // Act & Assert
         var ex = await Assert.ThrowsAsync<GotifyException>(() =>
             proxy.SendNotification(CreatePayload(), CreateConfig()));
         Assert.Contains("unable to send notification", ex.Message, StringComparison.OrdinalIgnoreCase);
-    }
-
-    #endregion
-
-    #region Helper Methods
-
-    private void SetupSuccessResponse()
-    {
-        _httpMessageHandlerMock
-            .Protected()
-            .Setup<Task<HttpResponseMessage>>(
-                "SendAsync",
-                ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>())
-            .ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK));
-    }
-
-    private void SetupErrorResponse(HttpStatusCode statusCode)
-    {
-        _httpMessageHandlerMock
-            .Protected()
-            .Setup<Task<HttpResponseMessage>>(
-                "SendAsync",
-                ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>())
-            .ThrowsAsync(new HttpRequestException("Error", null, statusCode));
     }
 
     #endregion

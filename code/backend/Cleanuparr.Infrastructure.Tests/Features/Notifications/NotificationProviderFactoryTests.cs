@@ -10,44 +10,44 @@ using Cleanuparr.Infrastructure.Features.Notifications.Pushover;
 using Cleanuparr.Infrastructure.Features.Notifications.Telegram;
 using Cleanuparr.Persistence.Models.Configuration.Notification;
 using Microsoft.Extensions.DependencyInjection;
-using Moq;
+using NSubstitute;
 using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.Notifications;
 
 public class NotificationProviderFactoryTests
 {
-    private readonly Mock<IAppriseProxy> _appriseProxyMock;
-    private readonly Mock<IAppriseCliProxy> _appriseCliProxyMock;
-    private readonly Mock<INtfyProxy> _ntfyProxyMock;
-    private readonly Mock<INotifiarrProxy> _notifiarrProxyMock;
-    private readonly Mock<IPushoverProxy> _pushoverProxyMock;
-    private readonly Mock<ITelegramProxy> _telegramProxyMock;
-    private readonly Mock<IDiscordProxy> _discordProxyMock;
-    private readonly Mock<IGotifyProxy> _gotifyProxyMock;
+    private readonly IAppriseProxy _appriseProxy;
+    private readonly IAppriseCliProxy _appriseCliProxy;
+    private readonly INtfyProxy _ntfyProxy;
+    private readonly INotifiarrProxy _notifiarrProxy;
+    private readonly IPushoverProxy _pushoverProxy;
+    private readonly ITelegramProxy _telegramProxy;
+    private readonly IDiscordProxy _discordProxy;
+    private readonly IGotifyProxy _gotifyProxy;
     private readonly IServiceProvider _serviceProvider;
     private readonly NotificationProviderFactory _factory;
 
     public NotificationProviderFactoryTests()
     {
-        _appriseProxyMock = new Mock<IAppriseProxy>();
-        _appriseCliProxyMock = new Mock<IAppriseCliProxy>();
-        _ntfyProxyMock = new Mock<INtfyProxy>();
-        _notifiarrProxyMock = new Mock<INotifiarrProxy>();
-        _pushoverProxyMock = new Mock<IPushoverProxy>();
-        _telegramProxyMock = new Mock<ITelegramProxy>();
-        _discordProxyMock = new Mock<IDiscordProxy>();
-        _gotifyProxyMock = new Mock<IGotifyProxy>();
+        _appriseProxy = Substitute.For<IAppriseProxy>();
+        _appriseCliProxy = Substitute.For<IAppriseCliProxy>();
+        _ntfyProxy = Substitute.For<INtfyProxy>();
+        _notifiarrProxy = Substitute.For<INotifiarrProxy>();
+        _pushoverProxy = Substitute.For<IPushoverProxy>();
+        _telegramProxy = Substitute.For<ITelegramProxy>();
+        _discordProxy = Substitute.For<IDiscordProxy>();
+        _gotifyProxy = Substitute.For<IGotifyProxy>();
 
         var services = new ServiceCollection();
-        services.AddSingleton(_appriseProxyMock.Object);
-        services.AddSingleton(_appriseCliProxyMock.Object);
-        services.AddSingleton(_ntfyProxyMock.Object);
-        services.AddSingleton(_notifiarrProxyMock.Object);
-        services.AddSingleton(_pushoverProxyMock.Object);
-        services.AddSingleton(_telegramProxyMock.Object);
-        services.AddSingleton(_discordProxyMock.Object);
-        services.AddSingleton(_gotifyProxyMock.Object);
+        services.AddSingleton(_appriseProxy);
+        services.AddSingleton(_appriseCliProxy);
+        services.AddSingleton(_ntfyProxy);
+        services.AddSingleton(_notifiarrProxy);
+        services.AddSingleton(_pushoverProxy);
+        services.AddSingleton(_telegramProxy);
+        services.AddSingleton(_discordProxy);
+        services.AddSingleton(_gotifyProxy);
 
         _serviceProvider = services.BuildServiceProvider();
         _factory = new NotificationProviderFactory(_serviceProvider);
@@ -220,7 +220,7 @@ public class NotificationProviderFactoryTests
                 Username = "test-username",
             }
         };
-        
+
         // Act
         var provider = _factory.CreateProvider(config);
 
@@ -248,9 +248,9 @@ public class NotificationProviderFactoryTests
                 ApplicationToken = "test-application-token",
             }
         };
-        
+
         var provider = _factory.CreateProvider(config);
-        
+
         Assert.NotNull(provider);
         Assert.IsType<GotifyProvider>(provider);
         Assert.Equal("TestGotify", provider.Name);

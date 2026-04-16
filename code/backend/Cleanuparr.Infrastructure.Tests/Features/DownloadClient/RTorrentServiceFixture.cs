@@ -8,6 +8,7 @@ using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Infrastructure.Services.Interfaces;
 using Cleanuparr.Persistence.Models.Configuration;
 using Microsoft.Extensions.Logging;
+using Cleanuparr.Infrastructure.Tests.TestHelpers;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 
@@ -30,6 +31,7 @@ public class RTorrentServiceFixture : IDisposable
 
     public RTorrentServiceFixture()
     {
+        SubstituteHelper.ClearPendingArgSpecs();
         Logger = Substitute.For<ILogger<RTorrentService>>();
         FilenameEvaluator = Substitute.For<IFilenameEvaluator>();
         Striker = Substitute.For<IStriker>();
@@ -44,8 +46,8 @@ public class RTorrentServiceFixture : IDisposable
         ClientWrapper = Substitute.For<IRTorrentClientWrapper>();
 
         DryRunInterceptor
-            .InterceptAsync(Arg.Any<Delegate>(), Arg.Any<object[]>())
-            .Returns(callInfo =>
+            .InterceptAsync(default!, default!)
+            .ReturnsForAnyArgs(callInfo =>
             {
                 var action = callInfo.ArgAt<Delegate>(0);
                 var parameters = callInfo.ArgAt<object[]>(1);
@@ -91,6 +93,7 @@ public class RTorrentServiceFixture : IDisposable
 
     public void ResetMocks()
     {
+        SubstituteHelper.ClearPendingArgSpecs();
         Logger = Substitute.For<ILogger<RTorrentService>>();
         FilenameEvaluator = Substitute.For<IFilenameEvaluator>();
         Striker = Substitute.For<IStriker>();
@@ -104,8 +107,8 @@ public class RTorrentServiceFixture : IDisposable
         ClientWrapper = Substitute.For<IRTorrentClientWrapper>();
 
         DryRunInterceptor
-            .InterceptAsync(Arg.Any<Delegate>(), Arg.Any<object[]>())
-            .Returns(callInfo =>
+            .InterceptAsync(default!, default!)
+            .ReturnsForAnyArgs(callInfo =>
             {
                 var action = callInfo.ArgAt<Delegate>(0);
                 var parameters = callInfo.ArgAt<object[]>(1);

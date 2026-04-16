@@ -8,6 +8,7 @@ using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Infrastructure.Services.Interfaces;
 using Cleanuparr.Persistence.Models.Configuration;
 using Microsoft.Extensions.Logging;
+using Cleanuparr.Infrastructure.Tests.TestHelpers;
 using NSubstitute;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.DownloadClient;
@@ -29,6 +30,7 @@ public class DelugeServiceFixture : IDisposable
 
     public DelugeServiceFixture()
     {
+        SubstituteHelper.ClearPendingArgSpecs();
         Logger = Substitute.For<ILogger<DelugeService>>();
         FilenameEvaluator = Substitute.For<IFilenameEvaluator>();
         Striker = Substitute.For<IStriker>();
@@ -43,8 +45,8 @@ public class DelugeServiceFixture : IDisposable
         ClientWrapper = Substitute.For<IDelugeClientWrapper>();
 
         DryRunInterceptor
-            .InterceptAsync(Arg.Any<Delegate>(), Arg.Any<object[]>())
-            .Returns(callInfo =>
+            .InterceptAsync(default!, default!)
+            .ReturnsForAnyArgs(callInfo =>
             {
                 var action = callInfo.ArgAt<Delegate>(0);
                 var parameters = callInfo.ArgAt<object[]>(1);
@@ -90,6 +92,7 @@ public class DelugeServiceFixture : IDisposable
 
     public void ResetMocks()
     {
+        SubstituteHelper.ClearPendingArgSpecs();
         Logger = Substitute.For<ILogger<DelugeService>>();
         FilenameEvaluator = Substitute.For<IFilenameEvaluator>();
         Striker = Substitute.For<IStriker>();
@@ -103,8 +106,8 @@ public class DelugeServiceFixture : IDisposable
         ClientWrapper = Substitute.For<IDelugeClientWrapper>();
 
         DryRunInterceptor
-            .InterceptAsync(Arg.Any<Delegate>(), Arg.Any<object[]>())
-            .Returns(callInfo =>
+            .InterceptAsync(default!, default!)
+            .ReturnsForAnyArgs(callInfo =>
             {
                 var action = callInfo.ArgAt<Delegate>(0);
                 var parameters = callInfo.ArgAt<object[]>(1);

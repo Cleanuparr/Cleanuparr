@@ -9,7 +9,7 @@ using Cleanuparr.Persistence.Models.State;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using Moq;
+using NSubstitute;
 using Xunit;
 using CustomFormatScoreSyncer = Cleanuparr.Infrastructure.Features.Jobs.CustomFormatScoreSyncer;
 
@@ -19,25 +19,25 @@ namespace Cleanuparr.Infrastructure.Tests.Features.Jobs;
 public class CustomFormatScoreSyncerTests : IDisposable
 {
     private readonly JobHandlerFixture _fixture;
-    private readonly Mock<ILogger<CustomFormatScoreSyncer>> _logger;
-    private readonly Mock<IRadarrClient> _radarrClient;
-    private readonly Mock<ISonarrClient> _sonarrClient;
-    private readonly Mock<IHubContext<AppHub>> _hubContext;
+    private readonly ILogger<CustomFormatScoreSyncer> _logger;
+    private readonly IRadarrClient _radarrClient;
+    private readonly ISonarrClient _sonarrClient;
+    private readonly IHubContext<AppHub> _hubContext;
 
     public CustomFormatScoreSyncerTests(JobHandlerFixture fixture)
     {
         _fixture = fixture;
         _fixture.RecreateDataContext();
         _fixture.ResetMocks();
-        _logger = new Mock<ILogger<CustomFormatScoreSyncer>>();
-        _radarrClient = new Mock<IRadarrClient>();
-        _sonarrClient = new Mock<ISonarrClient>();
-        _hubContext = new Mock<IHubContext<AppHub>>();
+        _logger = Substitute.For<ILogger<CustomFormatScoreSyncer>>();
+        _radarrClient = Substitute.For<IRadarrClient>();
+        _sonarrClient = Substitute.For<ISonarrClient>();
+        _hubContext = Substitute.For<IHubContext<AppHub>>();
 
-        var mockClients = new Mock<IHubClients>();
-        var mockClientProxy = new Mock<IClientProxy>();
-        mockClients.Setup(c => c.All).Returns(mockClientProxy.Object);
-        _hubContext.Setup(h => h.Clients).Returns(mockClients.Object);
+        var mockClients = Substitute.For<IHubClients>();
+        var mockClientProxy = Substitute.For<IClientProxy>();
+        mockClients.All.Returns(mockClientProxy);
+        _hubContext.Clients.Returns(mockClients);
     }
 
     public void Dispose()
@@ -48,12 +48,12 @@ public class CustomFormatScoreSyncerTests : IDisposable
     private CustomFormatScoreSyncer CreateSut()
     {
         return new CustomFormatScoreSyncer(
-            _logger.Object,
+            _logger,
             _fixture.DataContext,
-            _radarrClient.Object,
-            _sonarrClient.Object,
+            _radarrClient,
+            _sonarrClient,
             _fixture.TimeProvider,
-            _hubContext.Object
+            _hubContext
         );
     }
 
@@ -69,12 +69,8 @@ public class CustomFormatScoreSyncerTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert — no API calls made
-        _radarrClient.Verify(
-            x => x.GetAllMoviesAsync(It.IsAny<ArrInstance>()),
-            Times.Never);
-        _sonarrClient.Verify(
-            x => x.GetAllSeriesAsync(It.IsAny<ArrInstance>()),
-            Times.Never);
+        await _radarrClient.DidNotReceive().GetAllMoviesAsync(Arg.Any<ArrInstance>());
+        await _sonarrClient.DidNotReceive().GetAllSeriesAsync(Arg.Any<ArrInstance>());
     }
 
     [Fact]
@@ -87,12 +83,8 @@ public class CustomFormatScoreSyncerTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert — no API calls
-        _radarrClient.Verify(
-            x => x.GetAllMoviesAsync(It.IsAny<ArrInstance>()),
-            Times.Never);
-        _sonarrClient.Verify(
-            x => x.GetAllSeriesAsync(It.IsAny<ArrInstance>()),
-            Times.Never);
+        await _radarrClient.DidNotReceive().GetAllMoviesAsync(Arg.Any<ArrInstance>());
+        await _sonarrClient.DidNotReceive().GetAllSeriesAsync(Arg.Any<ArrInstance>());
     }
 
     [Fact]
@@ -112,13 +104,13 @@ public class CustomFormatScoreSyncerTests : IDisposable
 
         // Mock quality profiles
         _radarrClient
-            .Setup(x => x.GetQualityProfilesAsync(radarrInstance))
-            .ReturnsAsync([new ArrQualityProfile { Id = 1, Name = "HD", CutoffFormatScore = 500 }]);
+            .GetQualityProfilesAsync(radarrInstance)
+            .Returns([new ArrQualityProfile { Id = 1, Name = "HD", CutoffFormatScore = 500 }]);
 
         // Mock movies with files
         _radarrClient
-            .Setup(x => x.GetAllMoviesAsync(radarrInstance))
-            .ReturnsAsync([
+            .GetAllMoviesAsync(radarrInstance)
+            .Returns([
                 new SearchableMovie
                 {
                     Id = 10,
@@ -133,8 +125,8 @@ public class CustomFormatScoreSyncerTests : IDisposable
 
         // Mock file scores
         _radarrClient
-            .Setup(x => x.GetMovieFileScoresAsync(radarrInstance, It.Is<List<long>>(ids => ids.Contains(100))))
-            .ReturnsAsync(new Dictionary<long, int> { { 100, 250 } });
+            .GetMovieFileScoresAsync(radarrInstance, Arg.Is<List<long>>(ids => ids.Contains(100)))
+            .Returns(new Dictionary<long, int> { { 100, 250 } });
 
         var sut = CreateSut();
 
@@ -192,13 +184,13 @@ public class CustomFormatScoreSyncerTests : IDisposable
 
         // Mock quality profiles
         _radarrClient
-            .Setup(x => x.GetQualityProfilesAsync(radarrInstance))
-            .ReturnsAsync([new ArrQualityProfile { Id = 1, Name = "HD", CutoffFormatScore = 500 }]);
+            .GetQualityProfilesAsync(radarrInstance)
+            .Returns([new ArrQualityProfile { Id = 1, Name = "HD", CutoffFormatScore = 500 }]);
 
         // Mock movies — same movie but score changed from 200 to 350
         _radarrClient
-            .Setup(x => x.GetAllMoviesAsync(radarrInstance))
-            .ReturnsAsync([
+            .GetAllMoviesAsync(radarrInstance)
+            .Returns([
                 new SearchableMovie
                 {
                     Id = 10,
@@ -212,8 +204,8 @@ public class CustomFormatScoreSyncerTests : IDisposable
             ]);
 
         _radarrClient
-            .Setup(x => x.GetMovieFileScoresAsync(radarrInstance, It.Is<List<long>>(ids => ids.Contains(100))))
-            .ReturnsAsync(new Dictionary<long, int> { { 100, 350 } });
+            .GetMovieFileScoresAsync(radarrInstance, Arg.Is<List<long>>(ids => ids.Contains(100)))
+            .Returns(new Dictionary<long, int> { { 100, 350 } });
 
         var sut = CreateSut();
 
@@ -248,12 +240,12 @@ public class CustomFormatScoreSyncerTests : IDisposable
         await _fixture.DataContext.SaveChangesAsync();
 
         _radarrClient
-            .Setup(x => x.GetQualityProfilesAsync(radarrInstance))
-            .ReturnsAsync([new ArrQualityProfile { Id = 1, Name = "HD", CutoffFormatScore = 500 }]);
+            .GetQualityProfilesAsync(radarrInstance)
+            .Returns([new ArrQualityProfile { Id = 1, Name = "HD", CutoffFormatScore = 500 }]);
 
         _radarrClient
-            .Setup(x => x.GetAllMoviesAsync(radarrInstance))
-            .ReturnsAsync([
+            .GetAllMoviesAsync(radarrInstance)
+            .Returns([
                 new SearchableMovie
                 {
                     Id = 10,
@@ -267,8 +259,8 @@ public class CustomFormatScoreSyncerTests : IDisposable
             ]);
 
         _radarrClient
-            .Setup(x => x.GetMovieFileScoresAsync(radarrInstance, It.Is<List<long>>(ids => ids.Contains(100))))
-            .ReturnsAsync(new Dictionary<long, int> { { 100, 250 } });
+            .GetMovieFileScoresAsync(radarrInstance, Arg.Is<List<long>>(ids => ids.Contains(100)))
+            .Returns(new Dictionary<long, int> { { 100, 250 } });
 
         var sut = CreateSut();
 
@@ -313,13 +305,13 @@ public class CustomFormatScoreSyncerTests : IDisposable
         await _fixture.DataContext.SaveChangesAsync();
 
         _radarrClient
-            .Setup(x => x.GetQualityProfilesAsync(radarrInstance))
-            .ReturnsAsync([new ArrQualityProfile { Id = 1, Name = "HD", CutoffFormatScore = 500 }]);
+            .GetQualityProfilesAsync(radarrInstance)
+            .Returns([new ArrQualityProfile { Id = 1, Name = "HD", CutoffFormatScore = 500 }]);
 
         // Movie is now unmonitored
         _radarrClient
-            .Setup(x => x.GetAllMoviesAsync(radarrInstance))
-            .ReturnsAsync([
+            .GetAllMoviesAsync(radarrInstance)
+            .Returns([
                 new SearchableMovie
                 {
                     Id = 10, Title = "Test Movie", HasFile = true,
@@ -329,8 +321,8 @@ public class CustomFormatScoreSyncerTests : IDisposable
             ]);
 
         _radarrClient
-            .Setup(x => x.GetMovieFileScoresAsync(radarrInstance, It.IsAny<List<long>>()))
-            .ReturnsAsync(new Dictionary<long, int> { { 100, 250 } });
+            .GetMovieFileScoresAsync(radarrInstance, Arg.Any<List<long>>())
+            .Returns(new Dictionary<long, int> { { 100, 250 } });
 
         var sut = CreateSut();
 
@@ -364,28 +356,28 @@ public class CustomFormatScoreSyncerTests : IDisposable
 
         // Mock quality profiles
         _sonarrClient
-            .Setup(x => x.GetQualityProfilesAsync(sonarrInstance))
-            .ReturnsAsync([new ArrQualityProfile { Id = 1, Name = "HD", CutoffFormatScore = 500 }]);
+            .GetQualityProfilesAsync(sonarrInstance)
+            .Returns([new ArrQualityProfile { Id = 1, Name = "HD", CutoffFormatScore = 500 }]);
 
         // Mock series
         _sonarrClient
-            .Setup(x => x.GetAllSeriesAsync(sonarrInstance))
-            .ReturnsAsync([
+            .GetAllSeriesAsync(sonarrInstance)
+            .Returns([
                 new SearchableSeries { Id = 10, Title = "Test Series", QualityProfileId = 1, Monitored = true }
             ]);
 
         // Mock episodes — one with a file, one without
         _sonarrClient
-            .Setup(x => x.GetEpisodesAsync(sonarrInstance, 10))
-            .ReturnsAsync([
+            .GetEpisodesAsync(sonarrInstance, 10)
+            .Returns([
                 new SearchableEpisode { Id = 100, SeasonNumber = 1, EpisodeNumber = 1, EpisodeFileId = 500, HasFile = true, Monitored = true },
                 new SearchableEpisode { Id = 101, SeasonNumber = 1, EpisodeNumber = 2, EpisodeFileId = 0, HasFile = false }
             ]);
 
         // Mock episode files with CF scores
         _sonarrClient
-            .Setup(x => x.GetEpisodeFilesAsync(sonarrInstance, 10))
-            .ReturnsAsync([
+            .GetEpisodeFilesAsync(sonarrInstance, 10)
+            .Returns([
                 new ArrEpisodeFile { Id = 500, CustomFormatScore = 300, QualityCutoffNotMet = false }
             ]);
 
@@ -430,25 +422,25 @@ public class CustomFormatScoreSyncerTests : IDisposable
         await _fixture.DataContext.SaveChangesAsync();
 
         _sonarrClient
-            .Setup(x => x.GetQualityProfilesAsync(sonarrInstance))
-            .ReturnsAsync([new ArrQualityProfile { Id = 1, Name = "HD", CutoffFormatScore = 500 }]);
+            .GetQualityProfilesAsync(sonarrInstance)
+            .Returns([new ArrQualityProfile { Id = 1, Name = "HD", CutoffFormatScore = 500 }]);
 
         _sonarrClient
-            .Setup(x => x.GetAllSeriesAsync(sonarrInstance))
-            .ReturnsAsync([
+            .GetAllSeriesAsync(sonarrInstance)
+            .Returns([
                 new SearchableSeries { Id = 10, Title = "Test Series", QualityProfileId = 1, Monitored = true }
             ]);
 
         // All episodes have EpisodeFileId = 0 (no file)
         _sonarrClient
-            .Setup(x => x.GetEpisodesAsync(sonarrInstance, 10))
-            .ReturnsAsync([
+            .GetEpisodesAsync(sonarrInstance, 10)
+            .Returns([
                 new SearchableEpisode { Id = 100, SeasonNumber = 1, EpisodeNumber = 1, EpisodeFileId = 0, HasFile = false }
             ]);
 
         _sonarrClient
-            .Setup(x => x.GetEpisodeFilesAsync(sonarrInstance, 10))
-            .ReturnsAsync([]);
+            .GetEpisodeFilesAsync(sonarrInstance, 10)
+            .Returns([]);
 
         var sut = CreateSut();
 
@@ -495,12 +487,12 @@ public class CustomFormatScoreSyncerTests : IDisposable
         await _fixture.DataContext.SaveChangesAsync();
 
         _radarrClient
-            .Setup(x => x.GetQualityProfilesAsync(radarrInstance))
-            .ReturnsAsync([new ArrQualityProfile { Id = 1, Name = "HD", CutoffFormatScore = 500 }]);
+            .GetQualityProfilesAsync(radarrInstance)
+            .Returns([new ArrQualityProfile { Id = 1, Name = "HD", CutoffFormatScore = 500 }]);
 
         _radarrClient
-            .Setup(x => x.GetAllMoviesAsync(radarrInstance))
-            .ReturnsAsync([
+            .GetAllMoviesAsync(radarrInstance)
+            .Returns([
                 new SearchableMovie
                 {
                     Id = 10, Title = "Test Movie", HasFile = true,
@@ -511,8 +503,8 @@ public class CustomFormatScoreSyncerTests : IDisposable
 
         // Score unchanged: still 250
         _radarrClient
-            .Setup(x => x.GetMovieFileScoresAsync(radarrInstance, It.Is<List<long>>(ids => ids.Contains(100))))
-            .ReturnsAsync(new Dictionary<long, int> { { 100, 250 } });
+            .GetMovieFileScoresAsync(radarrInstance, Arg.Is<List<long>>(ids => ids.Contains(100)))
+            .Returns(new Dictionary<long, int> { { 100, 250 } });
 
         var sut = CreateSut();
 
@@ -564,13 +556,13 @@ public class CustomFormatScoreSyncerTests : IDisposable
         await _fixture.DataContext.SaveChangesAsync();
 
         _radarrClient
-            .Setup(x => x.GetQualityProfilesAsync(radarrInstance))
-            .ReturnsAsync([new ArrQualityProfile { Id = 1, Name = "HD", CutoffFormatScore = 500 }]);
+            .GetQualityProfilesAsync(radarrInstance)
+            .Returns([new ArrQualityProfile { Id = 1, Name = "HD", CutoffFormatScore = 500 }]);
 
         // Library now only has movie 10 (not 999)
         _radarrClient
-            .Setup(x => x.GetAllMoviesAsync(radarrInstance))
-            .ReturnsAsync([
+            .GetAllMoviesAsync(radarrInstance)
+            .Returns([
                 new SearchableMovie
                 {
                     Id = 10, Title = "Current Movie", HasFile = true,
@@ -580,8 +572,8 @@ public class CustomFormatScoreSyncerTests : IDisposable
             ]);
 
         _radarrClient
-            .Setup(x => x.GetMovieFileScoresAsync(radarrInstance, It.IsAny<List<long>>()))
-            .ReturnsAsync(new Dictionary<long, int> { { 100, 250 } });
+            .GetMovieFileScoresAsync(radarrInstance, Arg.Any<List<long>>())
+            .Returns(new Dictionary<long, int> { { 100, 250 } });
 
         var sut = CreateSut();
 
@@ -636,13 +628,13 @@ public class CustomFormatScoreSyncerTests : IDisposable
         await _fixture.DataContext.SaveChangesAsync();
 
         _radarrClient
-            .Setup(x => x.GetQualityProfilesAsync(radarrInstance))
-            .ReturnsAsync([new ArrQualityProfile { Id = 1, Name = "HD", CutoffFormatScore = 500 }]);
+            .GetQualityProfilesAsync(radarrInstance)
+            .Returns([new ArrQualityProfile { Id = 1, Name = "HD", CutoffFormatScore = 500 }]);
 
         // Movie still exists in Radarr but HasFile is false (RSS upgrade in progress)
         _radarrClient
-            .Setup(x => x.GetAllMoviesAsync(radarrInstance))
-            .ReturnsAsync([
+            .GetAllMoviesAsync(radarrInstance)
+            .Returns([
                 new SearchableMovie
                 {
                     Id = 10, Title = "Mario Bros", HasFile = false,
@@ -709,13 +701,13 @@ public class CustomFormatScoreSyncerTests : IDisposable
         await _fixture.DataContext.SaveChangesAsync();
 
         _radarrClient
-            .Setup(x => x.GetQualityProfilesAsync(radarrInstance))
-            .ReturnsAsync([new ArrQualityProfile { Id = 1, Name = "HD", CutoffFormatScore = 500 }]);
+            .GetQualityProfilesAsync(radarrInstance)
+            .Returns([new ArrQualityProfile { Id = 1, Name = "HD", CutoffFormatScore = 500 }]);
 
         // Movie has a new file (different FileId) after RSS upgrade
         _radarrClient
-            .Setup(x => x.GetAllMoviesAsync(radarrInstance))
-            .ReturnsAsync([
+            .GetAllMoviesAsync(radarrInstance)
+            .Returns([
                 new SearchableMovie
                 {
                     Id = 10, Title = "Mario Bros", HasFile = true,
@@ -726,8 +718,8 @@ public class CustomFormatScoreSyncerTests : IDisposable
 
         // New file returns no score (not yet calculated by Radarr)
         _radarrClient
-            .Setup(x => x.GetMovieFileScoresAsync(radarrInstance, It.IsAny<List<long>>()))
-            .ReturnsAsync(new Dictionary<long, int>());
+            .GetMovieFileScoresAsync(radarrInstance, Arg.Any<List<long>>())
+            .Returns(new Dictionary<long, int>());
 
         var sut = CreateSut();
 
@@ -786,25 +778,25 @@ public class CustomFormatScoreSyncerTests : IDisposable
         await _fixture.DataContext.SaveChangesAsync();
 
         _sonarrClient
-            .Setup(x => x.GetQualityProfilesAsync(sonarrInstance))
-            .ReturnsAsync([new ArrQualityProfile { Id = 1, Name = "HD", CutoffFormatScore = 500 }]);
+            .GetQualityProfilesAsync(sonarrInstance)
+            .Returns([new ArrQualityProfile { Id = 1, Name = "HD", CutoffFormatScore = 500 }]);
 
         _sonarrClient
-            .Setup(x => x.GetAllSeriesAsync(sonarrInstance))
-            .ReturnsAsync([
+            .GetAllSeriesAsync(sonarrInstance)
+            .Returns([
                 new SearchableSeries { Id = 10, Title = "Test Series", QualityProfileId = 1, Monitored = true }
             ]);
 
         // Episode exists but has no file currently (RSS upgrade in progress)
         _sonarrClient
-            .Setup(x => x.GetEpisodesAsync(sonarrInstance, 10))
-            .ReturnsAsync([
+            .GetEpisodesAsync(sonarrInstance, 10)
+            .Returns([
                 new SearchableEpisode { Id = 100, SeasonNumber = 1, EpisodeNumber = 1, EpisodeFileId = 0, HasFile = false, Monitored = true }
             ]);
 
         _sonarrClient
-            .Setup(x => x.GetEpisodeFilesAsync(sonarrInstance, 10))
-            .ReturnsAsync([]);
+            .GetEpisodeFilesAsync(sonarrInstance, 10)
+            .Returns([]);
 
         var sut = CreateSut();
 

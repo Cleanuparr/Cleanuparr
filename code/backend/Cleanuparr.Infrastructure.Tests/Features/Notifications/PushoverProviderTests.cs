@@ -2,20 +2,21 @@ using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Notifications.Models;
 using Cleanuparr.Infrastructure.Features.Notifications.Pushover;
 using Cleanuparr.Persistence.Models.Configuration.Notification;
-using Moq;
+using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.Notifications;
 
 public class PushoverProviderTests
 {
-    private readonly Mock<IPushoverProxy> _proxyMock;
+    private readonly IPushoverProxy _proxy;
     private readonly PushoverConfig _config;
     private readonly PushoverProvider _provider;
 
     public PushoverProviderTests()
     {
-        _proxyMock = new Mock<IPushoverProxy>();
+        _proxy = Substitute.For<IPushoverProxy>();
         _config = new PushoverConfig
         {
             Id = Guid.NewGuid(),
@@ -33,7 +34,7 @@ public class PushoverProviderTests
             "TestPushover",
             NotificationProviderType.Pushover,
             _config,
-            _proxyMock.Object);
+            _proxy);
     }
 
     #region Constructor Tests
@@ -63,9 +64,9 @@ public class PushoverProviderTests
         var context = CreateTestContext();
         PushoverPayload? capturedPayload = null;
 
-        _proxyMock.Setup(p => p.SendNotification(It.IsAny<PushoverPayload>()))
-            .Callback<PushoverPayload>(payload => capturedPayload = payload)
-            .Returns(Task.CompletedTask);
+        _proxy.SendNotification(Arg.Any<PushoverPayload>())
+            .Returns(Task.CompletedTask)
+            .AndDoes(ci => capturedPayload = ci.ArgAt<PushoverPayload>(0));
 
         // Act
         await _provider.SendNotificationAsync(context);
@@ -88,9 +89,9 @@ public class PushoverProviderTests
 
         PushoverPayload? capturedPayload = null;
 
-        _proxyMock.Setup(p => p.SendNotification(It.IsAny<PushoverPayload>()))
-            .Callback<PushoverPayload>(payload => capturedPayload = payload)
-            .Returns(Task.CompletedTask);
+        _proxy.SendNotification(Arg.Any<PushoverPayload>())
+            .Returns(Task.CompletedTask)
+            .AndDoes(ci => capturedPayload = ci.ArgAt<PushoverPayload>(0));
 
         // Act
         await _provider.SendNotificationAsync(context);
@@ -116,13 +117,13 @@ public class PushoverProviderTests
             Tags = new List<string>()
         };
 
-        var provider = new PushoverProvider("TestPushover", NotificationProviderType.Pushover, config, _proxyMock.Object);
+        var provider = new PushoverProvider("TestPushover", NotificationProviderType.Pushover, config, _proxy);
         var context = CreateTestContext();
 
         PushoverPayload? capturedPayload = null;
-        _proxyMock.Setup(p => p.SendNotification(It.IsAny<PushoverPayload>()))
-            .Callback<PushoverPayload>(payload => capturedPayload = payload)
-            .Returns(Task.CompletedTask);
+        _proxy.SendNotification(Arg.Any<PushoverPayload>())
+            .Returns(Task.CompletedTask)
+            .AndDoes(ci => capturedPayload = ci.ArgAt<PushoverPayload>(0));
 
         // Act
         await provider.SendNotificationAsync(context);
@@ -149,13 +150,13 @@ public class PushoverProviderTests
             Tags = new List<string>()
         };
 
-        var provider = new PushoverProvider("TestPushover", NotificationProviderType.Pushover, config, _proxyMock.Object);
+        var provider = new PushoverProvider("TestPushover", NotificationProviderType.Pushover, config, _proxy);
         var context = CreateTestContext();
 
         PushoverPayload? capturedPayload = null;
-        _proxyMock.Setup(p => p.SendNotification(It.IsAny<PushoverPayload>()))
-            .Callback<PushoverPayload>(payload => capturedPayload = payload)
-            .Returns(Task.CompletedTask);
+        _proxy.SendNotification(Arg.Any<PushoverPayload>())
+            .Returns(Task.CompletedTask)
+            .AndDoes(ci => capturedPayload = ci.ArgAt<PushoverPayload>(0));
 
         // Act
         await provider.SendNotificationAsync(context);
@@ -184,13 +185,13 @@ public class PushoverProviderTests
             Tags = new List<string>()
         };
 
-        var provider = new PushoverProvider("TestPushover", NotificationProviderType.Pushover, config, _proxyMock.Object);
+        var provider = new PushoverProvider("TestPushover", NotificationProviderType.Pushover, config, _proxy);
         var context = CreateTestContext();
 
         PushoverPayload? capturedPayload = null;
-        _proxyMock.Setup(p => p.SendNotification(It.IsAny<PushoverPayload>()))
-            .Callback<PushoverPayload>(payload => capturedPayload = payload)
-            .Returns(Task.CompletedTask);
+        _proxy.SendNotification(Arg.Any<PushoverPayload>())
+            .Returns(Task.CompletedTask)
+            .AndDoes(ci => capturedPayload = ci.ArgAt<PushoverPayload>(0));
 
         // Act
         await provider.SendNotificationAsync(context);
@@ -216,13 +217,13 @@ public class PushoverProviderTests
             Tags = new List<string>()
         };
 
-        var provider = new PushoverProvider("TestPushover", NotificationProviderType.Pushover, config, _proxyMock.Object);
+        var provider = new PushoverProvider("TestPushover", NotificationProviderType.Pushover, config, _proxy);
         var context = CreateTestContext();
 
         PushoverPayload? capturedPayload = null;
-        _proxyMock.Setup(p => p.SendNotification(It.IsAny<PushoverPayload>()))
-            .Callback<PushoverPayload>(payload => capturedPayload = payload)
-            .Returns(Task.CompletedTask);
+        _proxy.SendNotification(Arg.Any<PushoverPayload>())
+            .Returns(Task.CompletedTask)
+            .AndDoes(ci => capturedPayload = ci.ArgAt<PushoverPayload>(0));
 
         // Act
         await provider.SendNotificationAsync(context);
@@ -239,9 +240,9 @@ public class PushoverProviderTests
         var context = CreateTestContext();
 
         PushoverPayload? capturedPayload = null;
-        _proxyMock.Setup(p => p.SendNotification(It.IsAny<PushoverPayload>()))
-            .Callback<PushoverPayload>(payload => capturedPayload = payload)
-            .Returns(Task.CompletedTask);
+        _proxy.SendNotification(Arg.Any<PushoverPayload>())
+            .Returns(Task.CompletedTask)
+            .AndDoes(ci => capturedPayload = ci.ArgAt<PushoverPayload>(0));
 
         // Act
         await _provider.SendNotificationAsync(context);
@@ -266,13 +267,13 @@ public class PushoverProviderTests
             Tags = new List<string> { "tag1", "tag2" }
         };
 
-        var provider = new PushoverProvider("TestPushover", NotificationProviderType.Pushover, config, _proxyMock.Object);
+        var provider = new PushoverProvider("TestPushover", NotificationProviderType.Pushover, config, _proxy);
         var context = CreateTestContext();
 
         PushoverPayload? capturedPayload = null;
-        _proxyMock.Setup(p => p.SendNotification(It.IsAny<PushoverPayload>()))
-            .Callback<PushoverPayload>(payload => capturedPayload = payload)
-            .Returns(Task.CompletedTask);
+        _proxy.SendNotification(Arg.Any<PushoverPayload>())
+            .Returns(Task.CompletedTask)
+            .AndDoes(ci => capturedPayload = ci.ArgAt<PushoverPayload>(0));
 
         // Act
         await provider.SendNotificationAsync(context);
@@ -297,13 +298,13 @@ public class PushoverProviderTests
             Tags = new List<string>()
         };
 
-        var provider = new PushoverProvider("TestPushover", NotificationProviderType.Pushover, config, _proxyMock.Object);
+        var provider = new PushoverProvider("TestPushover", NotificationProviderType.Pushover, config, _proxy);
         var context = CreateTestContext();
 
         PushoverPayload? capturedPayload = null;
-        _proxyMock.Setup(p => p.SendNotification(It.IsAny<PushoverPayload>()))
-            .Callback<PushoverPayload>(payload => capturedPayload = payload)
-            .Returns(Task.CompletedTask);
+        _proxy.SendNotification(Arg.Any<PushoverPayload>())
+            .Returns(Task.CompletedTask)
+            .AndDoes(ci => capturedPayload = ci.ArgAt<PushoverPayload>(0));
 
         // Act
         await provider.SendNotificationAsync(context);
@@ -327,9 +328,9 @@ public class PushoverProviderTests
         };
 
         PushoverPayload? capturedPayload = null;
-        _proxyMock.Setup(p => p.SendNotification(It.IsAny<PushoverPayload>()))
-            .Callback<PushoverPayload>(payload => capturedPayload = payload)
-            .Returns(Task.CompletedTask);
+        _proxy.SendNotification(Arg.Any<PushoverPayload>())
+            .Returns(Task.CompletedTask)
+            .AndDoes(ci => capturedPayload = ci.ArgAt<PushoverPayload>(0));
 
         // Act
         await _provider.SendNotificationAsync(context);
@@ -354,9 +355,9 @@ public class PushoverProviderTests
         };
 
         PushoverPayload? capturedPayload = null;
-        _proxyMock.Setup(p => p.SendNotification(It.IsAny<PushoverPayload>()))
-            .Callback<PushoverPayload>(payload => capturedPayload = payload)
-            .Returns(Task.CompletedTask);
+        _proxy.SendNotification(Arg.Any<PushoverPayload>())
+            .Returns(Task.CompletedTask)
+            .AndDoes(ci => capturedPayload = ci.ArgAt<PushoverPayload>(0));
 
         // Act
         await _provider.SendNotificationAsync(context);
@@ -382,13 +383,13 @@ public class PushoverProviderTests
             Tags = new List<string>()
         };
 
-        var provider = new PushoverProvider("TestPushover", NotificationProviderType.Pushover, config, _proxyMock.Object);
+        var provider = new PushoverProvider("TestPushover", NotificationProviderType.Pushover, config, _proxy);
         var context = CreateTestContext();
 
         PushoverPayload? capturedPayload = null;
-        _proxyMock.Setup(p => p.SendNotification(It.IsAny<PushoverPayload>()))
-            .Callback<PushoverPayload>(payload => capturedPayload = payload)
-            .Returns(Task.CompletedTask);
+        _proxy.SendNotification(Arg.Any<PushoverPayload>())
+            .Returns(Task.CompletedTask)
+            .AndDoes(ci => capturedPayload = ci.ArgAt<PushoverPayload>(0));
 
         // Act
         await provider.SendNotificationAsync(context);
@@ -413,13 +414,13 @@ public class PushoverProviderTests
             Tags = new List<string>()
         };
 
-        var provider = new PushoverProvider("TestPushover", NotificationProviderType.Pushover, config, _proxyMock.Object);
+        var provider = new PushoverProvider("TestPushover", NotificationProviderType.Pushover, config, _proxy);
         var context = CreateTestContext();
 
         PushoverPayload? capturedPayload = null;
-        _proxyMock.Setup(p => p.SendNotification(It.IsAny<PushoverPayload>()))
-            .Callback<PushoverPayload>(payload => capturedPayload = payload)
-            .Returns(Task.CompletedTask);
+        _proxy.SendNotification(Arg.Any<PushoverPayload>())
+            .Returns(Task.CompletedTask)
+            .AndDoes(ci => capturedPayload = ci.ArgAt<PushoverPayload>(0));
 
         // Act
         await provider.SendNotificationAsync(context);
@@ -435,7 +436,7 @@ public class PushoverProviderTests
         // Arrange
         var context = CreateTestContext();
 
-        _proxyMock.Setup(p => p.SendNotification(It.IsAny<PushoverPayload>()))
+        _proxy.SendNotification(Arg.Any<PushoverPayload>())
             .ThrowsAsync(new PushoverException("Proxy error"));
 
         // Act & Assert
@@ -457,9 +458,9 @@ public class PushoverProviderTests
 
         PushoverPayload? capturedPayload = null;
 
-        _proxyMock.Setup(p => p.SendNotification(It.IsAny<PushoverPayload>()))
-            .Callback<PushoverPayload>(payload => capturedPayload = payload)
-            .Returns(Task.CompletedTask);
+        _proxy.SendNotification(Arg.Any<PushoverPayload>())
+            .Returns(Task.CompletedTask)
+            .AndDoes(ci => capturedPayload = ci.ArgAt<PushoverPayload>(0));
 
         // Act
         await _provider.SendNotificationAsync(context);

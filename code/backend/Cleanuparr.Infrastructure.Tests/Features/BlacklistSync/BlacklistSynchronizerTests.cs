@@ -4,6 +4,7 @@ using Cleanuparr.Infrastructure.Features.DownloadClient;
 using Cleanuparr.Infrastructure.Features.DownloadClient.QBittorrent;
 using Cleanuparr.Infrastructure.Helpers;
 using Cleanuparr.Infrastructure.Interceptors;
+using Cleanuparr.Infrastructure.Tests.TestHelpers;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration;
 using Cleanuparr.Persistence.Models.Configuration.BlacklistSync;
@@ -11,8 +12,7 @@ using Cleanuparr.Persistence.Models.State;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using Moq;
-using Moq.Protected;
+using NSubstitute;
 using System.Net;
 using Xunit;
 
@@ -20,18 +20,18 @@ namespace Cleanuparr.Infrastructure.Tests.Features.BlacklistSync;
 
 public class BlacklistSynchronizerTests : IDisposable
 {
-    private readonly Mock<ILogger<BlacklistSynchronizer>> _loggerMock;
+    private readonly ILogger<BlacklistSynchronizer> _logger;
     private readonly DataContext _dataContext;
-    private readonly Mock<IDownloadServiceFactory> _downloadServiceFactoryMock;
-    private readonly Mock<IDryRunInterceptor> _dryRunInterceptorMock;
+    private readonly IDownloadServiceFactory _downloadServiceFactory;
+    private readonly IDryRunInterceptor _dryRunInterceptor;
     private readonly FileReader _fileReader;
     private readonly BlacklistSynchronizer _synchronizer;
-    private readonly Mock<HttpMessageHandler> _httpMessageHandlerMock;
+    private readonly FakeHttpMessageHandler _httpMessageHandler;
     private readonly SqliteConnection _connection;
 
     public BlacklistSynchronizerTests()
     {
-        _loggerMock = new Mock<ILogger<BlacklistSynchronizer>>();
+        _logger = Substitute.For<ILogger<BlacklistSynchronizer>>();
 
         // Use SQLite in-memory with shared connection to support complex types
         _connection = new SqliteConnection("DataSource=:memory:");
@@ -44,14 +44,15 @@ public class BlacklistSynchronizerTests : IDisposable
         _dataContext = new DataContext(options);
         _dataContext.Database.EnsureCreated();
 
-        _downloadServiceFactoryMock = new Mock<IDownloadServiceFactory>();
+        _downloadServiceFactory = Substitute.For<IDownloadServiceFactory>();
 
-        _dryRunInterceptorMock = new Mock<IDryRunInterceptor>();
+        _dryRunInterceptor = Substitute.For<IDryRunInterceptor>();
         // Setup interceptor to execute the action with params using DynamicInvoke
-        _dryRunInterceptorMock
-            .Setup(d => d.InterceptAsync(It.IsAny<Delegate>(), It.IsAny<object[]>()))
-            .Returns((Delegate action, object[] parameters) =>
+        _dryRunInterceptor.InterceptAsync(default!, default!)
+            .ReturnsForAnyArgs(ci =>
             {
+                var action = ci.ArgAt<Delegate>(0);
+                var parameters = ci.ArgAt<object[]>(1);
                 var result = action.DynamicInvoke(parameters);
                 if (result is Task task)
                 {
@@ -60,23 +61,21 @@ public class BlacklistSynchronizerTests : IDisposable
                 return Task.CompletedTask;
             });
 
-        // Setup mock HTTP handler for FileReader
-        _httpMessageHandlerMock = new Mock<HttpMessageHandler>();
-        var httpClient = new HttpClient(_httpMessageHandlerMock.Object);
+        // Setup FakeHttpMessageHandler for FileReader
+        _httpMessageHandler = new FakeHttpMessageHandler();
+        var httpClient = new HttpClient(_httpMessageHandler);
 
-        var httpClientFactoryMock = new Mock<IHttpClientFactory>();
-        httpClientFactoryMock
-            .Setup(f => f.CreateClient(It.IsAny<string>()))
-            .Returns(httpClient);
+        var httpClientFactory = Substitute.For<IHttpClientFactory>();
+        httpClientFactory.CreateClient(Arg.Any<string>()).Returns(httpClient);
 
-        _fileReader = new FileReader(httpClientFactoryMock.Object);
+        _fileReader = new FileReader(httpClientFactory);
 
         _synchronizer = new BlacklistSynchronizer(
-            _loggerMock.Object,
+            _logger,
             _dataContext,
-            _downloadServiceFactoryMock.Object,
+            _downloadServiceFactory,
             _fileReader,
-            _dryRunInterceptorMock.Object
+            _dryRunInterceptor
         );
     }
 
@@ -98,18 +97,9 @@ public class BlacklistSynchronizerTests : IDisposable
         await _synchronizer.ExecuteAsync();
 
         // Assert
-        _downloadServiceFactoryMock.Verify(
-            f => f.GetDownloadService(It.IsAny<DownloadClientConfig>()),
-            Times.Never);
+        _downloadServiceFactory.DidNotReceive().GetDownloadService(Arg.Any<DownloadClientConfig>());
 
-        _loggerMock.Verify(
-            x => x.Log(
-                LogLevel.Debug,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("disabled")),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+        _logger.ReceivedLogContaining(LogLevel.Debug, "disabled");
     }
 
     #endregion
@@ -126,18 +116,9 @@ public class BlacklistSynchronizerTests : IDisposable
         await _synchronizer.ExecuteAsync();
 
         // Assert
-        _downloadServiceFactoryMock.Verify(
-            f => f.GetDownloadService(It.IsAny<DownloadClientConfig>()),
-            Times.Never);
+        _downloadServiceFactory.DidNotReceive().GetDownloadService(Arg.Any<DownloadClientConfig>());
 
-        _loggerMock.Verify(
-            x => x.Log(
-                LogLevel.Warning,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("path is not configured")),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+        _logger.ReceivedLogContaining(LogLevel.Warning, "path is not configured");
     }
 
     [Fact]
@@ -150,18 +131,9 @@ public class BlacklistSynchronizerTests : IDisposable
         await _synchronizer.ExecuteAsync();
 
         // Assert
-        _downloadServiceFactoryMock.Verify(
-            f => f.GetDownloadService(It.IsAny<DownloadClientConfig>()),
-            Times.Never);
+        _downloadServiceFactory.DidNotReceive().GetDownloadService(Arg.Any<DownloadClientConfig>());
 
-        _loggerMock.Verify(
-            x => x.Log(
-                LogLevel.Warning,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("path is not configured")),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+        _logger.ReceivedLogContaining(LogLevel.Warning, "path is not configured");
     }
 
     #endregion
@@ -181,14 +153,7 @@ public class BlacklistSynchronizerTests : IDisposable
         await _synchronizer.ExecuteAsync();
 
         // Assert
-        _loggerMock.Verify(
-            x => x.Log(
-                LogLevel.Debug,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("No enabled qBittorrent clients")),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+        _logger.ReceivedLogContaining(LogLevel.Debug, "No enabled qBittorrent clients");
     }
 
     [Fact]
@@ -205,14 +170,7 @@ public class BlacklistSynchronizerTests : IDisposable
         await _synchronizer.ExecuteAsync();
 
         // Assert
-        _loggerMock.Verify(
-            x => x.Log(
-                LogLevel.Debug,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("No enabled qBittorrent clients")),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+        _logger.ReceivedLogContaining(LogLevel.Debug, "No enabled qBittorrent clients");
     }
 
     [Fact]
@@ -229,14 +187,7 @@ public class BlacklistSynchronizerTests : IDisposable
         await _synchronizer.ExecuteAsync();
 
         // Assert
-        _loggerMock.Verify(
-            x => x.Log(
-                LogLevel.Debug,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("No enabled qBittorrent clients")),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+        _logger.ReceivedLogContaining(LogLevel.Debug, "No enabled qBittorrent clients");
     }
 
     #endregion
@@ -270,18 +221,9 @@ public class BlacklistSynchronizerTests : IDisposable
         await _synchronizer.ExecuteAsync();
 
         // Assert
-        _downloadServiceFactoryMock.Verify(
-            f => f.GetDownloadService(It.IsAny<DownloadClientConfig>()),
-            Times.Never);
+        _downloadServiceFactory.DidNotReceive().GetDownloadService(Arg.Any<DownloadClientConfig>());
 
-        _loggerMock.Verify(
-            x => x.Log(
-                LogLevel.Debug,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("already synced")),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+        _logger.ReceivedLogContaining(LogLevel.Debug, "already synced");
     }
 
     #endregion
@@ -299,9 +241,8 @@ public class BlacklistSynchronizerTests : IDisposable
         await _synchronizer.ExecuteAsync();
 
         // Assert - Verify interceptor was called (with Delegate, not Func<object, object, Task>)
-        _dryRunInterceptorMock.Verify(
-            d => d.InterceptAsync(It.IsAny<Delegate>(), It.IsAny<object[]>()),
-            Times.AtLeastOnce);
+        await _dryRunInterceptor.Received()
+            .InterceptAsync(Arg.Any<Delegate>(), Arg.Any<object[]>());
     }
 
     #endregion
@@ -340,17 +281,11 @@ public class BlacklistSynchronizerTests : IDisposable
 
     private void SetupHttpResponse(string content)
     {
-        _httpMessageHandlerMock
-            .Protected()
-            .Setup<Task<HttpResponseMessage>>(
-                "SendAsync",
-                ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>())
-            .ReturnsAsync(new HttpResponseMessage
-            {
-                StatusCode = HttpStatusCode.OK,
-                Content = new StringContent(content)
-            });
+        _httpMessageHandler.SetupResponse((req, ct) => Task.FromResult(new HttpResponseMessage
+        {
+            StatusCode = HttpStatusCode.OK,
+            Content = new StringContent(content)
+        }));
     }
 
     private static string ComputeHash(string content)

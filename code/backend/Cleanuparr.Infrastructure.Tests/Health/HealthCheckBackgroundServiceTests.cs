@@ -1,21 +1,22 @@
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Health;
+using Cleanuparr.Infrastructure.Tests.TestHelpers;
 using Microsoft.Extensions.Logging;
-using Moq;
+using NSubstitute;
 using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Health;
 
 public class HealthCheckBackgroundServiceTests : IDisposable
 {
-    private readonly Mock<ILogger<HealthCheckBackgroundService>> _loggerMock;
-    private readonly Mock<IHealthCheckService> _healthCheckServiceMock;
+    private readonly ILogger<HealthCheckBackgroundService> _logger;
+    private readonly IHealthCheckService _healthCheckService;
     private HealthCheckBackgroundService? _service;
 
     public HealthCheckBackgroundServiceTests()
     {
-        _loggerMock = new Mock<ILogger<HealthCheckBackgroundService>>();
-        _healthCheckServiceMock = new Mock<IHealthCheckService>();
+        _logger = Substitute.For<ILogger<HealthCheckBackgroundService>>();
+        _healthCheckService = Substitute.For<IHealthCheckService>();
     }
 
     public void Dispose()
@@ -26,8 +27,8 @@ public class HealthCheckBackgroundServiceTests : IDisposable
     private HealthCheckBackgroundService CreateService()
     {
         _service = new HealthCheckBackgroundService(
-            _loggerMock.Object,
-            _healthCheckServiceMock.Object);
+            _logger,
+            _healthCheckService);
         return _service;
     }
 
@@ -72,9 +73,9 @@ public class HealthCheckBackgroundServiceTests : IDisposable
             { Guid.NewGuid(), CreateHealthyStatus("Client1") }
         };
 
-        _healthCheckServiceMock
-            .Setup(s => s.CheckAllClientsHealthAsync())
-            .ReturnsAsync(healthResults);
+        _healthCheckService
+            .CheckAllClientsHealthAsync()
+            .Returns(healthResults);
 
         using var cts = new CancellationTokenSource();
 
@@ -86,7 +87,7 @@ public class HealthCheckBackgroundServiceTests : IDisposable
         await service.StopAsync(CancellationToken.None);
 
         // Assert
-        _healthCheckServiceMock.Verify(s => s.CheckAllClientsHealthAsync(), Times.AtLeastOnce);
+        await _healthCheckService.Received().CheckAllClientsHealthAsync();
     }
 
     [Fact]
@@ -100,9 +101,9 @@ public class HealthCheckBackgroundServiceTests : IDisposable
             { Guid.NewGuid(), CreateHealthyStatus("Client2") }
         };
 
-        _healthCheckServiceMock
-            .Setup(s => s.CheckAllClientsHealthAsync())
-            .ReturnsAsync(healthResults);
+        _healthCheckService
+            .CheckAllClientsHealthAsync()
+            .Returns(healthResults);
 
         using var cts = new CancellationTokenSource();
 
@@ -113,14 +114,7 @@ public class HealthCheckBackgroundServiceTests : IDisposable
         await service.StopAsync(CancellationToken.None);
 
         // Assert - Check that debug log was called (all healthy)
-        _loggerMock.Verify(
-            x => x.Log(
-                LogLevel.Debug,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("healthy")),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.AtLeastOnce);
+        _logger.ReceivedLogContainingAtLeastOnce(LogLevel.Debug, "healthy");
     }
 
     [Fact]
@@ -134,9 +128,9 @@ public class HealthCheckBackgroundServiceTests : IDisposable
             { Guid.NewGuid(), CreateUnhealthyStatus("Client2", "Connection failed") }
         };
 
-        _healthCheckServiceMock
-            .Setup(s => s.CheckAllClientsHealthAsync())
-            .ReturnsAsync(healthResults);
+        _healthCheckService
+            .CheckAllClientsHealthAsync()
+            .Returns(healthResults);
 
         using var cts = new CancellationTokenSource();
 
@@ -147,14 +141,7 @@ public class HealthCheckBackgroundServiceTests : IDisposable
         await service.StopAsync(CancellationToken.None);
 
         // Assert - Check that warning log was called for unhealthy clients
-        _loggerMock.Verify(
-            x => x.Log(
-                LogLevel.Warning,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("unhealthy")),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.AtLeastOnce);
+        _logger.ReceivedLogContainingAtLeastOnce(LogLevel.Warning, "unhealthy");
     }
 
     [Fact]
@@ -164,9 +151,9 @@ public class HealthCheckBackgroundServiceTests : IDisposable
         var service = CreateService();
         var callCount = 0;
 
-        _healthCheckServiceMock
-            .Setup(s => s.CheckAllClientsHealthAsync())
-            .ReturnsAsync(() =>
+        _healthCheckService
+            .CheckAllClientsHealthAsync()
+            .Returns(ci =>
             {
                 callCount++;
                 if (callCount == 1)
@@ -188,14 +175,7 @@ public class HealthCheckBackgroundServiceTests : IDisposable
         await service.StopAsync(CancellationToken.None);
 
         // Assert - Error should be logged
-        _loggerMock.Verify(
-            x => x.Log(
-                LogLevel.Error,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Error performing periodic health check")),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.AtLeastOnce);
+        _logger.ReceivedLogContainingAtLeastOnce(LogLevel.Error, "Error performing periodic health check");
     }
 
     [Fact]
@@ -205,9 +185,9 @@ public class HealthCheckBackgroundServiceTests : IDisposable
         var service = CreateService();
         var healthResults = new Dictionary<Guid, HealthStatus>();
 
-        _healthCheckServiceMock
-            .Setup(s => s.CheckAllClientsHealthAsync())
-            .ReturnsAsync(healthResults);
+        _healthCheckService
+            .CheckAllClientsHealthAsync()
+            .Returns(healthResults);
 
         using var cts = new CancellationTokenSource();
 
@@ -218,7 +198,7 @@ public class HealthCheckBackgroundServiceTests : IDisposable
         await service.StopAsync(CancellationToken.None);
 
         // Assert - Should handle gracefully
-        _healthCheckServiceMock.Verify(s => s.CheckAllClientsHealthAsync(), Times.AtLeastOnce);
+        await _healthCheckService.Received().CheckAllClientsHealthAsync();
     }
 
     [Fact]
@@ -232,9 +212,9 @@ public class HealthCheckBackgroundServiceTests : IDisposable
             { unhealthyClientId, CreateUnhealthyStatus("UnhealthyClient", "Connection timeout") }
         };
 
-        _healthCheckServiceMock
-            .Setup(s => s.CheckAllClientsHealthAsync())
-            .ReturnsAsync(healthResults);
+        _healthCheckService
+            .CheckAllClientsHealthAsync()
+            .Returns(healthResults);
 
         using var cts = new CancellationTokenSource();
 
@@ -245,15 +225,14 @@ public class HealthCheckBackgroundServiceTests : IDisposable
         await service.StopAsync(CancellationToken.None);
 
         // Assert - Should log details about the unhealthy client
-        _loggerMock.Verify(
-            x => x.Log(
-                LogLevel.Warning,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("UnhealthyClient") ||
-                                              v.ToString()!.Contains("Connection timeout")),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.AtLeastOnce);
+        var matchingCalls = _logger.ReceivedCalls()
+            .Where(c => c.GetMethodInfo().Name == "Log")
+            .Where(c => c.GetArguments().Length > 0 && c.GetArguments()[0] is LogLevel l && l == LogLevel.Warning)
+            .Where(c => c.GetArguments().Length > 2 &&
+                        (c.GetArguments()[2]?.ToString()?.Contains("UnhealthyClient") == true ||
+                         c.GetArguments()[2]?.ToString()?.Contains("Connection timeout") == true))
+            .ToList();
+        Assert.NotEmpty(matchingCalls);
     }
 
     #endregion
@@ -264,9 +243,9 @@ public class HealthCheckBackgroundServiceTests : IDisposable
     public async Task StartAsync_StartsBackgroundService()
     {
         // Arrange
-        _healthCheckServiceMock
-            .Setup(s => s.CheckAllClientsHealthAsync())
-            .ReturnsAsync(new Dictionary<Guid, HealthStatus>());
+        _healthCheckService
+            .CheckAllClientsHealthAsync()
+            .Returns(new Dictionary<Guid, HealthStatus>());
 
         var service = CreateService();
         using var cts = new CancellationTokenSource();
@@ -286,9 +265,9 @@ public class HealthCheckBackgroundServiceTests : IDisposable
     public async Task StopAsync_StopsGracefully()
     {
         // Arrange
-        _healthCheckServiceMock
-            .Setup(s => s.CheckAllClientsHealthAsync())
-            .ReturnsAsync(new Dictionary<Guid, HealthStatus>());
+        _healthCheckService
+            .CheckAllClientsHealthAsync()
+            .Returns(new Dictionary<Guid, HealthStatus>());
 
         var service = CreateService();
         using var cts = new CancellationTokenSource();
@@ -300,14 +279,7 @@ public class HealthCheckBackgroundServiceTests : IDisposable
         await service.StopAsync(CancellationToken.None);
 
         // Assert - Should log stop message
-        _loggerMock.Verify(
-            x => x.Log(
-                LogLevel.Information,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("stopped")),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.AtLeastOnce);
+        _logger.ReceivedLogContainingAtLeastOnce(LogLevel.Information, "stopped");
     }
 
     #endregion

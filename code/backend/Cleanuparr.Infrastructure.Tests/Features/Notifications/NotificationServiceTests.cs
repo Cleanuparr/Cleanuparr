@@ -1,29 +1,31 @@
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Notifications;
 using Cleanuparr.Infrastructure.Features.Notifications.Models;
+using Cleanuparr.Infrastructure.Tests.TestHelpers;
 using Microsoft.Extensions.Logging;
-using Moq;
+using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.Notifications;
 
 public class NotificationServiceTests
 {
-    private readonly Mock<ILogger<NotificationService>> _loggerMock;
-    private readonly Mock<INotificationConfigurationService> _configServiceMock;
-    private readonly Mock<INotificationProviderFactory> _providerFactoryMock;
+    private readonly ILogger<NotificationService> _logger;
+    private readonly INotificationConfigurationService _configService;
+    private readonly INotificationProviderFactory _providerFactory;
     private readonly NotificationService _service;
 
     public NotificationServiceTests()
     {
-        _loggerMock = new Mock<ILogger<NotificationService>>();
-        _configServiceMock = new Mock<INotificationConfigurationService>();
-        _providerFactoryMock = new Mock<INotificationProviderFactory>();
+        _logger = Substitute.For<ILogger<NotificationService>>();
+        _configService = Substitute.For<INotificationConfigurationService>();
+        _providerFactory = Substitute.For<INotificationProviderFactory>();
 
         _service = new NotificationService(
-            _loggerMock.Object,
-            _configServiceMock.Object,
-            _providerFactoryMock.Object);
+            _logger,
+            _configService,
+            _providerFactory);
     }
 
     #region SendNotificationAsync Tests
@@ -35,14 +37,14 @@ public class NotificationServiceTests
         var eventType = NotificationEventType.QueueItemDeleted;
         var context = CreateTestContext();
 
-        _configServiceMock.Setup(c => c.GetProvidersForEventAsync(eventType))
-            .ReturnsAsync(new List<NotificationProviderDto>());
+        _configService.GetProvidersForEventAsync(eventType)
+            .Returns(new List<NotificationProviderDto>());
 
         // Act
         await _service.SendNotificationAsync(eventType, context);
 
         // Assert
-        _providerFactoryMock.Verify(f => f.CreateProvider(It.IsAny<NotificationProviderDto>()), Times.Never);
+        _providerFactory.DidNotReceive().CreateProvider(Arg.Any<NotificationProviderDto>());
     }
 
     [Fact]
@@ -53,19 +55,19 @@ public class NotificationServiceTests
         var context = CreateTestContext();
         var providerConfig = CreateProviderConfig("TestProvider");
 
-        var providerMock = new Mock<INotificationProvider>();
-        providerMock.SetupGet(p => p.Name).Returns("TestProvider");
+        var provider = Substitute.For<INotificationProvider>();
+        provider.Name.Returns("TestProvider");
 
-        _configServiceMock.Setup(c => c.GetProvidersForEventAsync(eventType))
-            .ReturnsAsync(new List<NotificationProviderDto> { providerConfig });
-        _providerFactoryMock.Setup(f => f.CreateProvider(providerConfig))
-            .Returns(providerMock.Object);
+        _configService.GetProvidersForEventAsync(eventType)
+            .Returns(new List<NotificationProviderDto> { providerConfig });
+        _providerFactory.CreateProvider(providerConfig)
+            .Returns(provider);
 
         // Act
         await _service.SendNotificationAsync(eventType, context);
 
         // Assert
-        providerMock.Verify(p => p.SendNotificationAsync(context), Times.Once);
+        await provider.Received(1).SendNotificationAsync(context);
     }
 
     [Fact]
@@ -77,25 +79,25 @@ public class NotificationServiceTests
         var provider1Config = CreateProviderConfig("Provider1");
         var provider2Config = CreateProviderConfig("Provider2");
 
-        var provider1Mock = new Mock<INotificationProvider>();
-        provider1Mock.SetupGet(p => p.Name).Returns("Provider1");
+        var provider1 = Substitute.For<INotificationProvider>();
+        provider1.Name.Returns("Provider1");
 
-        var provider2Mock = new Mock<INotificationProvider>();
-        provider2Mock.SetupGet(p => p.Name).Returns("Provider2");
+        var provider2 = Substitute.For<INotificationProvider>();
+        provider2.Name.Returns("Provider2");
 
-        _configServiceMock.Setup(c => c.GetProvidersForEventAsync(eventType))
-            .ReturnsAsync(new List<NotificationProviderDto> { provider1Config, provider2Config });
-        _providerFactoryMock.Setup(f => f.CreateProvider(provider1Config))
-            .Returns(provider1Mock.Object);
-        _providerFactoryMock.Setup(f => f.CreateProvider(provider2Config))
-            .Returns(provider2Mock.Object);
+        _configService.GetProvidersForEventAsync(eventType)
+            .Returns(new List<NotificationProviderDto> { provider1Config, provider2Config });
+        _providerFactory.CreateProvider(provider1Config)
+            .Returns(provider1);
+        _providerFactory.CreateProvider(provider2Config)
+            .Returns(provider2);
 
         // Act
         await _service.SendNotificationAsync(eventType, context);
 
         // Assert
-        provider1Mock.Verify(p => p.SendNotificationAsync(context), Times.Once);
-        provider2Mock.Verify(p => p.SendNotificationAsync(context), Times.Once);
+        await provider1.Received(1).SendNotificationAsync(context);
+        await provider2.Received(1).SendNotificationAsync(context);
     }
 
     [Fact]
@@ -107,27 +109,27 @@ public class NotificationServiceTests
         var failingProviderConfig = CreateProviderConfig("FailingProvider");
         var successProviderConfig = CreateProviderConfig("SuccessProvider");
 
-        var failingProviderMock = new Mock<INotificationProvider>();
-        failingProviderMock.SetupGet(p => p.Name).Returns("FailingProvider");
-        failingProviderMock.Setup(p => p.SendNotificationAsync(It.IsAny<NotificationContext>()))
+        var failingProvider = Substitute.For<INotificationProvider>();
+        failingProvider.Name.Returns("FailingProvider");
+        failingProvider.SendNotificationAsync(Arg.Any<NotificationContext>())
             .ThrowsAsync(new Exception("Provider failed"));
 
-        var successProviderMock = new Mock<INotificationProvider>();
-        successProviderMock.SetupGet(p => p.Name).Returns("SuccessProvider");
+        var successProvider = Substitute.For<INotificationProvider>();
+        successProvider.Name.Returns("SuccessProvider");
 
-        _configServiceMock.Setup(c => c.GetProvidersForEventAsync(eventType))
-            .ReturnsAsync(new List<NotificationProviderDto> { failingProviderConfig, successProviderConfig });
-        _providerFactoryMock.Setup(f => f.CreateProvider(failingProviderConfig))
-            .Returns(failingProviderMock.Object);
-        _providerFactoryMock.Setup(f => f.CreateProvider(successProviderConfig))
-            .Returns(successProviderMock.Object);
+        _configService.GetProvidersForEventAsync(eventType)
+            .Returns(new List<NotificationProviderDto> { failingProviderConfig, successProviderConfig });
+        _providerFactory.CreateProvider(failingProviderConfig)
+            .Returns(failingProvider);
+        _providerFactory.CreateProvider(successProviderConfig)
+            .Returns(successProvider);
 
         // Act
         await _service.SendNotificationAsync(eventType, context);
 
         // Assert - both providers should have been called
-        failingProviderMock.Verify(p => p.SendNotificationAsync(context), Times.Once);
-        successProviderMock.Verify(p => p.SendNotificationAsync(context), Times.Once);
+        await failingProvider.Received(1).SendNotificationAsync(context);
+        await successProvider.Received(1).SendNotificationAsync(context);
     }
 
     [Fact]
@@ -138,28 +140,21 @@ public class NotificationServiceTests
         var context = CreateTestContext();
         var providerConfig = CreateProviderConfig("FailingProvider");
 
-        var providerMock = new Mock<INotificationProvider>();
-        providerMock.SetupGet(p => p.Name).Returns("FailingProvider");
-        providerMock.Setup(p => p.SendNotificationAsync(It.IsAny<NotificationContext>()))
+        var provider = Substitute.For<INotificationProvider>();
+        provider.Name.Returns("FailingProvider");
+        provider.SendNotificationAsync(Arg.Any<NotificationContext>())
             .ThrowsAsync(new Exception("Provider failed"));
 
-        _configServiceMock.Setup(c => c.GetProvidersForEventAsync(eventType))
-            .ReturnsAsync(new List<NotificationProviderDto> { providerConfig });
-        _providerFactoryMock.Setup(f => f.CreateProvider(providerConfig))
-            .Returns(providerMock.Object);
+        _configService.GetProvidersForEventAsync(eventType)
+            .Returns(new List<NotificationProviderDto> { providerConfig });
+        _providerFactory.CreateProvider(providerConfig)
+            .Returns(provider);
 
         // Act
         await _service.SendNotificationAsync(eventType, context);
 
         // Assert
-        _loggerMock.Verify(
-            x => x.Log(
-                LogLevel.Warning,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Failed to send notification")),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+        _logger.ReceivedLogContaining(LogLevel.Warning, "Failed to send notification");
     }
 
     [Fact]
@@ -169,21 +164,14 @@ public class NotificationServiceTests
         var eventType = NotificationEventType.SlowSpeedStrike;
         var context = CreateTestContext();
 
-        _configServiceMock.Setup(c => c.GetProvidersForEventAsync(eventType))
+        _configService.GetProvidersForEventAsync(eventType)
             .ThrowsAsync(new Exception("Config service failed"));
 
         // Act
         await _service.SendNotificationAsync(eventType, context);
 
         // Assert
-        _loggerMock.Verify(
-            x => x.Log(
-                LogLevel.Error,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Failed to send notifications")),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+        _logger.ReceivedLogContaining(LogLevel.Error, "Failed to send notifications");
     }
 
     #endregion
@@ -195,17 +183,17 @@ public class NotificationServiceTests
     {
         // Arrange
         var providerConfig = CreateProviderConfig("TestProvider");
-        var providerMock = new Mock<INotificationProvider>();
-        providerMock.SetupGet(p => p.Name).Returns("TestProvider");
+        var provider = Substitute.For<INotificationProvider>();
+        provider.Name.Returns("TestProvider");
 
-        _providerFactoryMock.Setup(f => f.CreateProvider(providerConfig))
-            .Returns(providerMock.Object);
+        _providerFactory.CreateProvider(providerConfig)
+            .Returns(provider);
 
         // Act
         await _service.SendTestNotificationAsync(providerConfig);
 
         // Assert
-        providerMock.Verify(p => p.SendNotificationAsync(It.Is<NotificationContext>(c =>
+        await provider.Received(1).SendNotificationAsync(Arg.Is<NotificationContext>(c =>
             c.EventType == NotificationEventType.Test &&
             c.Title == "Test Notification from Cleanuparr" &&
             c.Description.Contains("test notification") &&
@@ -213,7 +201,7 @@ public class NotificationServiceTests
             c.Data != null &&
             c.Data.ContainsKey("Test time") &&
             c.Data.ContainsKey("Provider type")
-        )), Times.Once);
+        ));
     }
 
     [Fact]
@@ -221,24 +209,17 @@ public class NotificationServiceTests
     {
         // Arrange
         var providerConfig = CreateProviderConfig("TestProvider");
-        var providerMock = new Mock<INotificationProvider>();
-        providerMock.SetupGet(p => p.Name).Returns("TestProvider");
+        var provider = Substitute.For<INotificationProvider>();
+        provider.Name.Returns("TestProvider");
 
-        _providerFactoryMock.Setup(f => f.CreateProvider(providerConfig))
-            .Returns(providerMock.Object);
+        _providerFactory.CreateProvider(providerConfig)
+            .Returns(provider);
 
         // Act
         await _service.SendTestNotificationAsync(providerConfig);
 
         // Assert
-        _loggerMock.Verify(
-            x => x.Log(
-                LogLevel.Information,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Test notification sent successfully")),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+        _logger.ReceivedLogContaining(LogLevel.Information, "Test notification sent successfully");
     }
 
     [Fact]
@@ -246,13 +227,13 @@ public class NotificationServiceTests
     {
         // Arrange
         var providerConfig = CreateProviderConfig("FailingProvider");
-        var providerMock = new Mock<INotificationProvider>();
-        providerMock.SetupGet(p => p.Name).Returns("FailingProvider");
-        providerMock.Setup(p => p.SendNotificationAsync(It.IsAny<NotificationContext>()))
+        var provider = Substitute.For<INotificationProvider>();
+        provider.Name.Returns("FailingProvider");
+        provider.SendNotificationAsync(Arg.Any<NotificationContext>())
             .ThrowsAsync(new Exception("Test notification failed"));
 
-        _providerFactoryMock.Setup(f => f.CreateProvider(providerConfig))
-            .Returns(providerMock.Object);
+        _providerFactory.CreateProvider(providerConfig)
+            .Returns(provider);
 
         // Act & Assert
         await Assert.ThrowsAsync<Exception>(() => _service.SendTestNotificationAsync(providerConfig));
@@ -263,13 +244,13 @@ public class NotificationServiceTests
     {
         // Arrange
         var providerConfig = CreateProviderConfig("FailingProvider");
-        var providerMock = new Mock<INotificationProvider>();
-        providerMock.SetupGet(p => p.Name).Returns("FailingProvider");
-        providerMock.Setup(p => p.SendNotificationAsync(It.IsAny<NotificationContext>()))
+        var provider = Substitute.For<INotificationProvider>();
+        provider.Name.Returns("FailingProvider");
+        provider.SendNotificationAsync(Arg.Any<NotificationContext>())
             .ThrowsAsync(new Exception("Test notification failed"));
 
-        _providerFactoryMock.Setup(f => f.CreateProvider(providerConfig))
-            .Returns(providerMock.Object);
+        _providerFactory.CreateProvider(providerConfig)
+            .Returns(provider);
 
         // Act
         try
@@ -282,14 +263,7 @@ public class NotificationServiceTests
         }
 
         // Assert
-        _loggerMock.Verify(
-            x => x.Log(
-                LogLevel.Error,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Failed to send test notification")),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+        _logger.ReceivedLogContaining(LogLevel.Error, "Failed to send test notification");
     }
 
     [Fact]
@@ -304,19 +278,19 @@ public class NotificationServiceTests
             IsEnabled = true
         };
 
-        var providerMock = new Mock<INotificationProvider>();
-        providerMock.SetupGet(p => p.Name).Returns("TestNtfyProvider");
+        var provider = Substitute.For<INotificationProvider>();
+        provider.Name.Returns("TestNtfyProvider");
 
-        _providerFactoryMock.Setup(f => f.CreateProvider(providerConfig))
-            .Returns(providerMock.Object);
+        _providerFactory.CreateProvider(providerConfig)
+            .Returns(provider);
 
         // Act
         await _service.SendTestNotificationAsync(providerConfig);
 
         // Assert
-        providerMock.Verify(p => p.SendNotificationAsync(It.Is<NotificationContext>(c =>
+        await provider.Received(1).SendNotificationAsync(Arg.Is<NotificationContext>(c =>
             c.Data["Provider type"] == "Ntfy"
-        )), Times.Once);
+        ));
     }
 
     #endregion

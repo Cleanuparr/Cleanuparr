@@ -2,20 +2,21 @@ using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Notifications.Models;
 using Cleanuparr.Infrastructure.Features.Notifications.Telegram;
 using Cleanuparr.Persistence.Models.Configuration.Notification;
-using Moq;
+using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.Notifications.Telegram;
 
 public class TelegramProviderTests
 {
-    private readonly Mock<ITelegramProxy> _proxyMock;
+    private readonly ITelegramProxy _proxy;
     private readonly TelegramConfig _config;
     private readonly TelegramProvider _provider;
 
     public TelegramProviderTests()
     {
-        _proxyMock = new Mock<ITelegramProxy>();
+        _proxy = Substitute.For<ITelegramProxy>();
         _config = new TelegramConfig
         {
             Id = Guid.NewGuid(),
@@ -29,7 +30,7 @@ public class TelegramProviderTests
             "TestTelegram",
             NotificationProviderType.Telegram,
             _config,
-            _proxyMock.Object);
+            _proxy);
     }
 
     #region Constructor Tests
@@ -59,9 +60,9 @@ public class TelegramProviderTests
         var context = CreateTestContext();
         string? capturedBotToken = null;
 
-        _proxyMock.Setup(p => p.SendNotification(It.IsAny<TelegramPayload>(), It.IsAny<string>()))
-            .Callback<TelegramPayload, string>((_, token) => capturedBotToken = token)
-            .Returns(Task.CompletedTask);
+        _proxy.SendNotification(Arg.Any<TelegramPayload>(), Arg.Any<string>())
+            .Returns(Task.CompletedTask)
+            .AndDoes(ci => capturedBotToken = ci.ArgAt<string>(1));
 
         // Act
         await _provider.SendNotificationAsync(context);
@@ -77,9 +78,9 @@ public class TelegramProviderTests
         var context = CreateTestContext();
         TelegramPayload? capturedPayload = null;
 
-        _proxyMock.Setup(p => p.SendNotification(It.IsAny<TelegramPayload>(), It.IsAny<string>()))
-            .Callback<TelegramPayload, string>((payload, _) => capturedPayload = payload)
-            .Returns(Task.CompletedTask);
+        _proxy.SendNotification(Arg.Any<TelegramPayload>(), Arg.Any<string>())
+            .Returns(Task.CompletedTask)
+            .AndDoes(ci => capturedPayload = ci.ArgAt<TelegramPayload>(0));
 
         // Act
         await _provider.SendNotificationAsync(context);
@@ -101,13 +102,13 @@ public class TelegramProviderTests
             SendSilently = false
         };
 
-        var provider = new TelegramProvider("Test", NotificationProviderType.Telegram, config, _proxyMock.Object);
+        var provider = new TelegramProvider("Test", NotificationProviderType.Telegram, config, _proxy);
         var context = CreateTestContext();
         TelegramPayload? capturedPayload = null;
 
-        _proxyMock.Setup(p => p.SendNotification(It.IsAny<TelegramPayload>(), It.IsAny<string>()))
-            .Callback<TelegramPayload, string>((payload, _) => capturedPayload = payload)
-            .Returns(Task.CompletedTask);
+        _proxy.SendNotification(Arg.Any<TelegramPayload>(), Arg.Any<string>())
+            .Returns(Task.CompletedTask)
+            .AndDoes(ci => capturedPayload = ci.ArgAt<TelegramPayload>(0));
 
         // Act
         await provider.SendNotificationAsync(context);
@@ -124,9 +125,9 @@ public class TelegramProviderTests
         var context = CreateTestContext();
         TelegramPayload? capturedPayload = null;
 
-        _proxyMock.Setup(p => p.SendNotification(It.IsAny<TelegramPayload>(), It.IsAny<string>()))
-            .Callback<TelegramPayload, string>((payload, _) => capturedPayload = payload)
-            .Returns(Task.CompletedTask);
+        _proxy.SendNotification(Arg.Any<TelegramPayload>(), Arg.Any<string>())
+            .Returns(Task.CompletedTask)
+            .AndDoes(ci => capturedPayload = ci.ArgAt<TelegramPayload>(0));
 
         // Act
         await _provider.SendNotificationAsync(context);
@@ -143,9 +144,9 @@ public class TelegramProviderTests
         var context = CreateTestContext();
         TelegramPayload? capturedPayload = null;
 
-        _proxyMock.Setup(p => p.SendNotification(It.IsAny<TelegramPayload>(), It.IsAny<string>()))
-            .Callback<TelegramPayload, string>((payload, _) => capturedPayload = payload)
-            .Returns(Task.CompletedTask);
+        _proxy.SendNotification(Arg.Any<TelegramPayload>(), Arg.Any<string>())
+            .Returns(Task.CompletedTask)
+            .AndDoes(ci => capturedPayload = ci.ArgAt<TelegramPayload>(0));
 
         // Act
         await _provider.SendNotificationAsync(context);
@@ -165,9 +166,9 @@ public class TelegramProviderTests
 
         TelegramPayload? capturedPayload = null;
 
-        _proxyMock.Setup(p => p.SendNotification(It.IsAny<TelegramPayload>(), It.IsAny<string>()))
-            .Callback<TelegramPayload, string>((payload, _) => capturedPayload = payload)
-            .Returns(Task.CompletedTask);
+        _proxy.SendNotification(Arg.Any<TelegramPayload>(), Arg.Any<string>())
+            .Returns(Task.CompletedTask)
+            .AndDoes(ci => capturedPayload = ci.ArgAt<TelegramPayload>(0));
 
         // Act
         await _provider.SendNotificationAsync(context);
@@ -193,9 +194,9 @@ public class TelegramProviderTests
 
         TelegramPayload? capturedPayload = null;
 
-        _proxyMock.Setup(p => p.SendNotification(It.IsAny<TelegramPayload>(), It.IsAny<string>()))
-            .Callback<TelegramPayload, string>((payload, _) => capturedPayload = payload)
-            .Returns(Task.CompletedTask);
+        _proxy.SendNotification(Arg.Any<TelegramPayload>(), Arg.Any<string>())
+            .Returns(Task.CompletedTask)
+            .AndDoes(ci => capturedPayload = ci.ArgAt<TelegramPayload>(0));
 
         // Act
         await _provider.SendNotificationAsync(context);
@@ -219,13 +220,13 @@ public class TelegramProviderTests
             SendSilently = false
         };
 
-        var provider = new TelegramProvider("Test", NotificationProviderType.Telegram, config, _proxyMock.Object);
+        var provider = new TelegramProvider("Test", NotificationProviderType.Telegram, config, _proxy);
         var context = CreateTestContext();
         TelegramPayload? capturedPayload = null;
 
-        _proxyMock.Setup(p => p.SendNotification(It.IsAny<TelegramPayload>(), It.IsAny<string>()))
-            .Callback<TelegramPayload, string>((payload, _) => capturedPayload = payload)
-            .Returns(Task.CompletedTask);
+        _proxy.SendNotification(Arg.Any<TelegramPayload>(), Arg.Any<string>())
+            .Returns(Task.CompletedTask)
+            .AndDoes(ci => capturedPayload = ci.ArgAt<TelegramPayload>(0));
 
         // Act
         await provider.SendNotificationAsync(context);
@@ -252,13 +253,13 @@ public class TelegramProviderTests
             SendSilently = false
         };
 
-        var provider = new TelegramProvider("Test", NotificationProviderType.Telegram, config, _proxyMock.Object);
+        var provider = new TelegramProvider("Test", NotificationProviderType.Telegram, config, _proxy);
         var context = CreateTestContext();
         TelegramPayload? capturedPayload = null;
 
-        _proxyMock.Setup(p => p.SendNotification(It.IsAny<TelegramPayload>(), It.IsAny<string>()))
-            .Callback<TelegramPayload, string>((payload, _) => capturedPayload = payload)
-            .Returns(Task.CompletedTask);
+        _proxy.SendNotification(Arg.Any<TelegramPayload>(), Arg.Any<string>())
+            .Returns(Task.CompletedTask)
+            .AndDoes(ci => capturedPayload = ci.ArgAt<TelegramPayload>(0));
 
         // Act
         await provider.SendNotificationAsync(context);
@@ -280,13 +281,13 @@ public class TelegramProviderTests
             SendSilently = true
         };
 
-        var provider = new TelegramProvider("Test", NotificationProviderType.Telegram, config, _proxyMock.Object);
+        var provider = new TelegramProvider("Test", NotificationProviderType.Telegram, config, _proxy);
         var context = CreateTestContext();
         TelegramPayload? capturedPayload = null;
 
-        _proxyMock.Setup(p => p.SendNotification(It.IsAny<TelegramPayload>(), It.IsAny<string>()))
-            .Callback<TelegramPayload, string>((payload, _) => capturedPayload = payload)
-            .Returns(Task.CompletedTask);
+        _proxy.SendNotification(Arg.Any<TelegramPayload>(), Arg.Any<string>())
+            .Returns(Task.CompletedTask)
+            .AndDoes(ci => capturedPayload = ci.ArgAt<TelegramPayload>(0));
 
         // Act
         await provider.SendNotificationAsync(context);
@@ -312,9 +313,9 @@ public class TelegramProviderTests
 
         TelegramPayload? capturedPayload = null;
 
-        _proxyMock.Setup(p => p.SendNotification(It.IsAny<TelegramPayload>(), It.IsAny<string>()))
-            .Callback<TelegramPayload, string>((payload, _) => capturedPayload = payload)
-            .Returns(Task.CompletedTask);
+        _proxy.SendNotification(Arg.Any<TelegramPayload>(), Arg.Any<string>())
+            .Returns(Task.CompletedTask)
+            .AndDoes(ci => capturedPayload = ci.ArgAt<TelegramPayload>(0));
 
         // Act
         await _provider.SendNotificationAsync(context);
@@ -331,9 +332,9 @@ public class TelegramProviderTests
         var context = CreateTestContext();
         TelegramPayload? capturedPayload = null;
 
-        _proxyMock.Setup(p => p.SendNotification(It.IsAny<TelegramPayload>(), It.IsAny<string>()))
-            .Callback<TelegramPayload, string>((payload, _) => capturedPayload = payload)
-            .Returns(Task.CompletedTask);
+        _proxy.SendNotification(Arg.Any<TelegramPayload>(), Arg.Any<string>())
+            .Returns(Task.CompletedTask)
+            .AndDoes(ci => capturedPayload = ci.ArgAt<TelegramPayload>(0));
 
         // Act
         await _provider.SendNotificationAsync(context);
@@ -358,9 +359,9 @@ public class TelegramProviderTests
 
         TelegramPayload? capturedPayload = null;
 
-        _proxyMock.Setup(p => p.SendNotification(It.IsAny<TelegramPayload>(), It.IsAny<string>()))
-            .Callback<TelegramPayload, string>((payload, _) => capturedPayload = payload)
-            .Returns(Task.CompletedTask);
+        _proxy.SendNotification(Arg.Any<TelegramPayload>(), Arg.Any<string>())
+            .Returns(Task.CompletedTask)
+            .AndDoes(ci => capturedPayload = ci.ArgAt<TelegramPayload>(0));
 
         // Act
         await _provider.SendNotificationAsync(context);
@@ -387,9 +388,9 @@ public class TelegramProviderTests
 
         TelegramPayload? capturedPayload = null;
 
-        _proxyMock.Setup(p => p.SendNotification(It.IsAny<TelegramPayload>(), It.IsAny<string>()))
-            .Callback<TelegramPayload, string>((payload, _) => capturedPayload = payload)
-            .Returns(Task.CompletedTask);
+        _proxy.SendNotification(Arg.Any<TelegramPayload>(), Arg.Any<string>())
+            .Returns(Task.CompletedTask)
+            .AndDoes(ci => capturedPayload = ci.ArgAt<TelegramPayload>(0));
 
         // Act
         await _provider.SendNotificationAsync(context);
@@ -406,7 +407,7 @@ public class TelegramProviderTests
         // Arrange
         var context = CreateTestContext();
 
-        _proxyMock.Setup(p => p.SendNotification(It.IsAny<TelegramPayload>(), It.IsAny<string>()))
+        _proxy.SendNotification(Arg.Any<TelegramPayload>(), Arg.Any<string>())
             .ThrowsAsync(new TelegramException("Proxy error"));
 
         // Act & Assert
@@ -428,9 +429,9 @@ public class TelegramProviderTests
 
         TelegramPayload? capturedPayload = null;
 
-        _proxyMock.Setup(p => p.SendNotification(It.IsAny<TelegramPayload>(), It.IsAny<string>()))
-            .Callback<TelegramPayload, string>((payload, _) => capturedPayload = payload)
-            .Returns(Task.CompletedTask);
+        _proxy.SendNotification(Arg.Any<TelegramPayload>(), Arg.Any<string>())
+            .Returns(Task.CompletedTask)
+            .AndDoes(ci => capturedPayload = ci.ArgAt<TelegramPayload>(0));
 
         // Act
         await _provider.SendNotificationAsync(context);

@@ -1,10 +1,11 @@
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Notifications;
+using Cleanuparr.Infrastructure.Tests.TestHelpers;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.Notification;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using Moq;
+using NSubstitute;
 using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.Notifications;
@@ -12,7 +13,7 @@ namespace Cleanuparr.Infrastructure.Tests.Features.Notifications;
 public class NotificationConfigurationServiceTests : IDisposable
 {
     private readonly DataContext _context;
-    private readonly Mock<ILogger<NotificationConfigurationService>> _loggerMock;
+    private readonly ILogger<NotificationConfigurationService> _logger;
     private readonly NotificationConfigurationService _service;
 
     public NotificationConfigurationServiceTests()
@@ -21,8 +22,8 @@ public class NotificationConfigurationServiceTests : IDisposable
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
             .Options;
         _context = new DataContext(options);
-        _loggerMock = new Mock<ILogger<NotificationConfigurationService>>();
-        _service = new NotificationConfigurationService(_context, _loggerMock.Object);
+        _logger = Substitute.For<ILogger<NotificationConfigurationService>>();
+        _service = new NotificationConfigurationService(_context, _logger);
     }
 
     public void Dispose()
@@ -306,14 +307,7 @@ public class NotificationConfigurationServiceTests : IDisposable
         await _service.InvalidateCacheAsync();
 
         // Assert
-        _loggerMock.Verify(
-            x => x.Log(
-                LogLevel.Debug,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("cache invalidated")),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+        _logger.ReceivedLogContaining(LogLevel.Debug, "cache invalidated");
     }
 
     #endregion
@@ -344,8 +338,8 @@ public class NotificationConfigurationServiceTests : IDisposable
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
             .Options;
         var disposedContext = new DataContext(options);
-        var loggerMock = new Mock<ILogger<NotificationConfigurationService>>();
-        var service = new NotificationConfigurationService(disposedContext, loggerMock.Object);
+        var logger = Substitute.For<ILogger<NotificationConfigurationService>>();
+        var service = new NotificationConfigurationService(disposedContext, logger);
 
         await disposedContext.DisposeAsync();
 
@@ -354,14 +348,7 @@ public class NotificationConfigurationServiceTests : IDisposable
 
         // Assert
         Assert.Empty(result);
-        loggerMock.Verify(
-            x => x.Log(
-                LogLevel.Error,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Failed to load notification providers")),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+        logger.ReceivedLogContaining(LogLevel.Error, "Failed to load notification providers");
     }
 
     #endregion
@@ -528,7 +515,7 @@ public class NotificationConfigurationServiceTests : IDisposable
             }
         };
     }
-    
+
     private static NotificationConfig CreateTelegramConfig(string name, bool isEnabled)
     {
         return new NotificationConfig

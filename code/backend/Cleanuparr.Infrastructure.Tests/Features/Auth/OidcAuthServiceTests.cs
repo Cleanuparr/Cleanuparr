@@ -12,7 +12,7 @@ using Cleanuparr.Persistence.Models.Auth;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using Moq;
+using NSubstitute;
 using Shouldly;
 using Xunit;
 
@@ -22,8 +22,8 @@ public sealed class OidcAuthServiceTests : IDisposable
 {
     private readonly SqliteConnection _connection;
     private readonly UsersContext _usersContext;
-    private readonly Mock<IHttpClientFactory> _httpClientFactory;
-    private readonly Mock<ILogger<OidcAuthService>> _logger;
+    private readonly IHttpClientFactory _httpClientFactory;
+    private readonly ILogger<OidcAuthService> _logger;
 
     public OidcAuthServiceTests()
     {
@@ -51,18 +51,18 @@ public sealed class OidcAuthServiceTests : IDisposable
         });
         _usersContext.SaveChanges();
 
-        _httpClientFactory = new Mock<IHttpClientFactory>();
-        _logger = new Mock<ILogger<OidcAuthService>>();
+        _httpClientFactory = Substitute.For<IHttpClientFactory>();
+        _logger = Substitute.For<ILogger<OidcAuthService>>();
 
         // Set up a default HttpClient for the factory
         _httpClientFactory
-            .Setup(f => f.CreateClient("OidcAuth"))
+            .CreateClient("OidcAuth")
             .Returns(new HttpClient());
     }
 
     private OidcAuthService CreateService()
     {
-        return new OidcAuthService(_httpClientFactory.Object, _usersContext, _logger.Object);
+        return new OidcAuthService(_httpClientFactory, _usersContext, _logger);
     }
 
     #region StoreOneTimeCode Tests
@@ -273,13 +273,13 @@ public sealed class OidcAuthServiceTests : IDisposable
     }
 
     /// <summary>
-    /// Creates an OidcAuthService using the given HttpMessageHandler instead of the default mock.
+    /// Creates an OidcAuthService using the given HttpMessageHandler instead of the default substitute.
     /// </summary>
     private OidcAuthService CreateServiceWithHandler(HttpMessageHandler handler)
     {
-        var factory = new Mock<IHttpClientFactory>();
-        factory.Setup(f => f.CreateClient("OidcAuth")).Returns(new HttpClient(handler));
-        return new OidcAuthService(factory.Object, _usersContext, _logger.Object);
+        var factory = Substitute.For<IHttpClientFactory>();
+        factory.CreateClient("OidcAuth").Returns(new HttpClient(handler));
+        return new OidcAuthService(factory, _usersContext, _logger);
     }
 
     /// <summary>

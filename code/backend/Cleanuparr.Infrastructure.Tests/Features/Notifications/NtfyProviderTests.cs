@@ -2,20 +2,21 @@ using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Notifications.Models;
 using Cleanuparr.Infrastructure.Features.Notifications.Ntfy;
 using Cleanuparr.Persistence.Models.Configuration.Notification;
-using Moq;
+using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.Notifications;
 
 public class NtfyProviderTests
 {
-    private readonly Mock<INtfyProxy> _proxyMock;
+    private readonly INtfyProxy _proxy;
     private readonly NtfyConfig _config;
     private readonly NtfyProvider _provider;
 
     public NtfyProviderTests()
     {
-        _proxyMock = new Mock<INtfyProxy>();
+        _proxy = Substitute.For<INtfyProxy>();
         _config = new NtfyConfig
         {
             Id = Guid.NewGuid(),
@@ -30,7 +31,7 @@ public class NtfyProviderTests
             "TestNtfy",
             NotificationProviderType.Ntfy,
             _config,
-            _proxyMock.Object);
+            _proxy);
     }
 
     #region Constructor Tests
@@ -60,9 +61,9 @@ public class NtfyProviderTests
         var context = CreateTestContext();
         NtfyPayload? capturedPayload = null;
 
-        _proxyMock.Setup(p => p.SendNotification(It.IsAny<NtfyPayload>(), _config))
-            .Callback<NtfyPayload, NtfyConfig>((payload, config) => capturedPayload = payload)
-            .Returns(Task.CompletedTask);
+        _proxy.SendNotification(Arg.Any<NtfyPayload>(), _config)
+            .Returns(Task.CompletedTask)
+            .AndDoes(ci => capturedPayload = ci.ArgAt<NtfyPayload>(0));
 
         // Act
         await _provider.SendNotificationAsync(context);
@@ -88,13 +89,13 @@ public class NtfyProviderTests
             Tags = new List<string>()
         };
 
-        var provider = new NtfyProvider("TestNtfy", NotificationProviderType.Ntfy, config, _proxyMock.Object);
+        var provider = new NtfyProvider("TestNtfy", NotificationProviderType.Ntfy, config, _proxy);
         var context = CreateTestContext();
 
         var capturedPayloads = new List<NtfyPayload>();
-        _proxyMock.Setup(p => p.SendNotification(It.IsAny<NtfyPayload>(), config))
-            .Callback<NtfyPayload, NtfyConfig>((payload, cfg) => capturedPayloads.Add(payload))
-            .Returns(Task.CompletedTask);
+        _proxy.SendNotification(Arg.Any<NtfyPayload>(), config)
+            .Returns(Task.CompletedTask)
+            .AndDoes(ci => capturedPayloads.Add(ci.ArgAt<NtfyPayload>(0)));
 
         // Act
         await provider.SendNotificationAsync(context);
@@ -116,9 +117,9 @@ public class NtfyProviderTests
 
         NtfyPayload? capturedPayload = null;
 
-        _proxyMock.Setup(p => p.SendNotification(It.IsAny<NtfyPayload>(), _config))
-            .Callback<NtfyPayload, NtfyConfig>((payload, config) => capturedPayload = payload)
-            .Returns(Task.CompletedTask);
+        _proxy.SendNotification(Arg.Any<NtfyPayload>(), _config)
+            .Returns(Task.CompletedTask)
+            .AndDoes(ci => capturedPayload = ci.ArgAt<NtfyPayload>(0));
 
         // Act
         await _provider.SendNotificationAsync(context);
@@ -143,13 +144,13 @@ public class NtfyProviderTests
             Tags = new List<string>()
         };
 
-        var provider = new NtfyProvider("TestNtfy", NotificationProviderType.Ntfy, config, _proxyMock.Object);
+        var provider = new NtfyProvider("TestNtfy", NotificationProviderType.Ntfy, config, _proxy);
         var context = CreateTestContext();
 
         NtfyPayload? capturedPayload = null;
-        _proxyMock.Setup(p => p.SendNotification(It.IsAny<NtfyPayload>(), config))
-            .Callback<NtfyPayload, NtfyConfig>((payload, cfg) => capturedPayload = payload)
-            .Returns(Task.CompletedTask);
+        _proxy.SendNotification(Arg.Any<NtfyPayload>(), config)
+            .Returns(Task.CompletedTask)
+            .AndDoes(ci => capturedPayload = ci.ArgAt<NtfyPayload>(0));
 
         // Act
         await provider.SendNotificationAsync(context);
@@ -166,9 +167,9 @@ public class NtfyProviderTests
         var context = CreateTestContext();
         NtfyPayload? capturedPayload = null;
 
-        _proxyMock.Setup(p => p.SendNotification(It.IsAny<NtfyPayload>(), _config))
-            .Callback<NtfyPayload, NtfyConfig>((payload, config) => capturedPayload = payload)
-            .Returns(Task.CompletedTask);
+        _proxy.SendNotification(Arg.Any<NtfyPayload>(), _config)
+            .Returns(Task.CompletedTask)
+            .AndDoes(ci => capturedPayload = ci.ArgAt<NtfyPayload>(0));
 
         // Act
         await _provider.SendNotificationAsync(context);
@@ -194,13 +195,13 @@ public class NtfyProviderTests
             Tags = new List<string>()
         };
 
-        var provider = new NtfyProvider("TestNtfy", NotificationProviderType.Ntfy, config, _proxyMock.Object);
+        var provider = new NtfyProvider("TestNtfy", NotificationProviderType.Ntfy, config, _proxy);
         var context = CreateTestContext();
 
         NtfyPayload? capturedPayload = null;
-        _proxyMock.Setup(p => p.SendNotification(It.IsAny<NtfyPayload>(), config))
-            .Callback<NtfyPayload, NtfyConfig>((payload, cfg) => capturedPayload = payload)
-            .Returns(Task.CompletedTask);
+        _proxy.SendNotification(Arg.Any<NtfyPayload>(), config)
+            .Returns(Task.CompletedTask)
+            .AndDoes(ci => capturedPayload = ci.ArgAt<NtfyPayload>(0));
 
         // Act
         await provider.SendNotificationAsync(context);
@@ -224,13 +225,13 @@ public class NtfyProviderTests
             Tags = new List<string>()
         };
 
-        var provider = new NtfyProvider("TestNtfy", NotificationProviderType.Ntfy, config, _proxyMock.Object);
+        var provider = new NtfyProvider("TestNtfy", NotificationProviderType.Ntfy, config, _proxy);
         var context = CreateTestContext();
 
         var capturedPayloads = new List<NtfyPayload>();
-        _proxyMock.Setup(p => p.SendNotification(It.IsAny<NtfyPayload>(), config))
-            .Callback<NtfyPayload, NtfyConfig>((payload, cfg) => capturedPayloads.Add(payload))
-            .Returns(Task.CompletedTask);
+        _proxy.SendNotification(Arg.Any<NtfyPayload>(), config)
+            .Returns(Task.CompletedTask)
+            .AndDoes(ci => capturedPayloads.Add(ci.ArgAt<NtfyPayload>(0)));
 
         // Act
         await provider.SendNotificationAsync(context);
@@ -247,7 +248,7 @@ public class NtfyProviderTests
         // Arrange
         var context = CreateTestContext();
 
-        _proxyMock.Setup(p => p.SendNotification(It.IsAny<NtfyPayload>(), _config))
+        _proxy.SendNotification(Arg.Any<NtfyPayload>(), _config)
             .ThrowsAsync(new Exception("Proxy error"));
 
         // Act & Assert
@@ -269,9 +270,9 @@ public class NtfyProviderTests
 
         NtfyPayload? capturedPayload = null;
 
-        _proxyMock.Setup(p => p.SendNotification(It.IsAny<NtfyPayload>(), _config))
-            .Callback<NtfyPayload, NtfyConfig>((payload, config) => capturedPayload = payload)
-            .Returns(Task.CompletedTask);
+        _proxy.SendNotification(Arg.Any<NtfyPayload>(), _config)
+            .Returns(Task.CompletedTask)
+            .AndDoes(ci => capturedPayload = ci.ArgAt<NtfyPayload>(0));
 
         // Act
         await _provider.SendNotificationAsync(context);

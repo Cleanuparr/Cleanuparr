@@ -1,7 +1,8 @@
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Health;
 using Microsoft.Extensions.Logging;
-using Moq;
+using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 using Xunit;
 using HealthCheckStatus = Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus;
 using HealthStatus = Cleanuparr.Infrastructure.Health.HealthStatus;
@@ -10,15 +11,15 @@ namespace Cleanuparr.Infrastructure.Tests.Health;
 
 public class DownloadClientsHealthCheckTests
 {
-    private readonly Mock<IHealthCheckService> _healthCheckServiceMock;
-    private readonly Mock<ILogger<DownloadClientsHealthCheck>> _loggerMock;
+    private readonly IHealthCheckService _healthCheckService;
+    private readonly ILogger<DownloadClientsHealthCheck> _logger;
     private readonly DownloadClientsHealthCheck _healthCheck;
 
     public DownloadClientsHealthCheckTests()
     {
-        _healthCheckServiceMock = new Mock<IHealthCheckService>();
-        _loggerMock = new Mock<ILogger<DownloadClientsHealthCheck>>();
-        _healthCheck = new DownloadClientsHealthCheck(_healthCheckServiceMock.Object, _loggerMock.Object);
+        _healthCheckService = Substitute.For<IHealthCheckService>();
+        _logger = Substitute.For<ILogger<DownloadClientsHealthCheck>>();
+        _healthCheck = new DownloadClientsHealthCheck(_healthCheckService, _logger);
     }
 
     #region CheckHealthAsync Tests
@@ -27,8 +28,8 @@ public class DownloadClientsHealthCheckTests
     public async Task CheckHealthAsync_WhenNoClientsConfigured_ReturnsHealthy()
     {
         // Arrange
-        _healthCheckServiceMock
-            .Setup(s => s.GetAllClientHealth())
+        _healthCheckService
+            .GetAllClientHealth()
             .Returns(new Dictionary<Guid, HealthStatus>());
 
         // Act
@@ -50,8 +51,8 @@ public class DownloadClientsHealthCheckTests
             { Guid.NewGuid(), CreateHealthyStatus("Client3") }
         };
 
-        _healthCheckServiceMock
-            .Setup(s => s.GetAllClientHealth())
+        _healthCheckService
+            .GetAllClientHealth()
             .Returns(clients);
 
         // Act
@@ -73,8 +74,8 @@ public class DownloadClientsHealthCheckTests
             { Guid.NewGuid(), CreateUnhealthyStatus("Client3") }
         };
 
-        _healthCheckServiceMock
-            .Setup(s => s.GetAllClientHealth())
+        _healthCheckService
+            .GetAllClientHealth()
             .Returns(clients);
 
         // Act
@@ -97,8 +98,8 @@ public class DownloadClientsHealthCheckTests
             { Guid.NewGuid(), CreateUnhealthyStatus("Client3") }
         };
 
-        _healthCheckServiceMock
-            .Setup(s => s.GetAllClientHealth())
+        _healthCheckService
+            .GetAllClientHealth()
             .Returns(clients);
 
         // Act
@@ -119,8 +120,8 @@ public class DownloadClientsHealthCheckTests
             { Guid.NewGuid(), CreateUnhealthyStatus("Client2") }
         };
 
-        _healthCheckServiceMock
-            .Setup(s => s.GetAllClientHealth())
+        _healthCheckService
+            .GetAllClientHealth()
             .Returns(clients);
 
         // Act
@@ -134,8 +135,8 @@ public class DownloadClientsHealthCheckTests
     public async Task CheckHealthAsync_WhenServiceThrows_ReturnsUnhealthy()
     {
         // Arrange
-        _healthCheckServiceMock
-            .Setup(s => s.GetAllClientHealth())
+        _healthCheckService
+            .GetAllClientHealth()
             .Throws(new Exception("Service error"));
 
         // Act
@@ -157,8 +158,8 @@ public class DownloadClientsHealthCheckTests
             { Guid.NewGuid(), CreateUnhealthyStatus("BrokenClient2") }
         };
 
-        _healthCheckServiceMock
-            .Setup(s => s.GetAllClientHealth())
+        _healthCheckService
+            .GetAllClientHealth()
             .Returns(clients);
 
         // Act
@@ -178,8 +179,8 @@ public class DownloadClientsHealthCheckTests
             { Guid.NewGuid(), CreateHealthyStatus("OnlyClient") }
         };
 
-        _healthCheckServiceMock
-            .Setup(s => s.GetAllClientHealth())
+        _healthCheckService
+            .GetAllClientHealth()
             .Returns(clients);
 
         // Act
@@ -198,8 +199,8 @@ public class DownloadClientsHealthCheckTests
             { Guid.NewGuid(), CreateUnhealthyStatus("BrokenClient") }
         };
 
-        _healthCheckServiceMock
-            .Setup(s => s.GetAllClientHealth())
+        _healthCheckService
+            .GetAllClientHealth()
             .Returns(clients);
 
         // Act

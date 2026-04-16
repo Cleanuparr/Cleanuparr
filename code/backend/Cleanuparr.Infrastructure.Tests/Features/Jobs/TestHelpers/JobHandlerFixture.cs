@@ -10,7 +10,8 @@ using MassTransit;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
-using Moq;
+using Cleanuparr.Infrastructure.Tests.TestHelpers;
+using NSubstitute;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.Jobs.TestHelpers;
 
@@ -20,27 +21,28 @@ namespace Cleanuparr.Infrastructure.Tests.Features.Jobs.TestHelpers;
 public class JobHandlerFixture : IDisposable
 {
     public DataContext DataContext { get; private set; }
-    public MemoryCache Cache { get; }
-    public Mock<IBus> MessageBus { get; }
-    public Mock<IArrClientFactory> ArrClientFactory { get; }
-    public Mock<IArrQueueIterator> ArrQueueIterator { get; }
-    public Mock<IDownloadServiceFactory> DownloadServiceFactory { get; }
-    public Mock<IEventPublisher> EventPublisher { get; }
-    public Mock<IBlocklistProvider> BlocklistProvider { get; }
-    public Mock<IHardLinkFileService> HardLinkFileService { get; }
+    public MemoryCache Cache { get; private set; }
+    public IBus MessageBus { get; private set; }
+    public IArrClientFactory ArrClientFactory { get; private set; }
+    public IArrQueueIterator ArrQueueIterator { get; private set; }
+    public IDownloadServiceFactory DownloadServiceFactory { get; private set; }
+    public IEventPublisher EventPublisher { get; private set; }
+    public IBlocklistProvider BlocklistProvider { get; private set; }
+    public IHardLinkFileService HardLinkFileService { get; private set; }
     public FakeTimeProvider TimeProvider { get; private set; }
 
     public JobHandlerFixture()
     {
+        SubstituteHelper.ClearPendingArgSpecs();
         DataContext = TestDataContextFactory.Create();
         Cache = new MemoryCache(new MemoryCacheOptions());
-        MessageBus = new Mock<IBus>();
-        ArrClientFactory = new Mock<IArrClientFactory>();
-        ArrQueueIterator = new Mock<IArrQueueIterator>();
-        DownloadServiceFactory = new Mock<IDownloadServiceFactory>();
-        EventPublisher = new Mock<IEventPublisher>();
-        BlocklistProvider = new Mock<IBlocklistProvider>();
-        HardLinkFileService = new Mock<IHardLinkFileService>();
+        MessageBus = Substitute.For<IBus>();
+        ArrClientFactory = Substitute.For<IArrClientFactory>();
+        ArrQueueIterator = Substitute.For<IArrQueueIterator>();
+        DownloadServiceFactory = Substitute.For<IDownloadServiceFactory>();
+        EventPublisher = Substitute.For<IEventPublisher>();
+        BlocklistProvider = Substitute.For<IBlocklistProvider>();
+        HardLinkFileService = Substitute.For<IHardLinkFileService>();
         TimeProvider = new FakeTimeProvider();
 
         // Setup default behaviors
@@ -53,32 +55,26 @@ public class JobHandlerFixture : IDisposable
     private void SetupDefaultBehaviors()
     {
         // EventPublisher methods return completed task by default
-        EventPublisher
-            .Setup(x => x.PublishAsync(
-                It.IsAny<Domain.Enums.EventType>(),
-                It.IsAny<string>(),
-                It.IsAny<Domain.Enums.EventSeverity>(),
-                It.IsAny<object?>(),
-                It.IsAny<Guid?>(),
-                It.IsAny<Guid?>()))
-            .Returns(Task.CompletedTask);
+        EventPublisher.PublishAsync(
+                default, default!, default, default, default, default)
+            .ReturnsForAnyArgs(Task.CompletedTask);
     }
 
     /// <summary>
     /// Creates a mock logger for a specific handler type
     /// </summary>
-    public Mock<ILogger<T>> CreateLogger<T>() where T : GenericHandler
+    public ILogger<T> CreateLogger<T>() where T : GenericHandler
     {
-        return new Mock<ILogger<T>>();
+        return Substitute.For<ILogger<T>>();
     }
 
     /// <summary>
     /// Creates a mock download service
     /// </summary>
-    public Mock<IDownloadService> CreateMockDownloadService(string clientName = "Test Client")
+    public IDownloadService CreateMockDownloadService(string clientName = "Test Client")
     {
-        var mock = new Mock<IDownloadService>();
-        mock.Setup(x => x.ClientConfig).Returns(new Persistence.Models.Configuration.DownloadClientConfig
+        var mock = Substitute.For<IDownloadService>();
+        mock.ClientConfig.Returns(new Persistence.Models.Configuration.DownloadClientConfig
         {
             Id = Guid.NewGuid(),
             Name = clientName,
@@ -87,20 +83,18 @@ public class JobHandlerFixture : IDisposable
             Enabled = true,
             Host = new Uri("http://localhost:8080")
         });
-        mock.Setup(x => x.LoginAsync()).Returns(Task.CompletedTask);
+        mock.LoginAsync().Returns(Task.CompletedTask);
         return mock;
     }
 
     /// <summary>
     /// Sets up the DownloadServiceFactory to return the specified mock services
     /// </summary>
-    public void SetupDownloadServices(params Mock<IDownloadService>[] services)
+    public void SetupDownloadServices(params IDownloadService[] services)
     {
         foreach (var service in services)
         {
-            DownloadServiceFactory
-                .Setup(x => x.GetDownloadService(service.Object.ClientConfig))
-                .Returns(service.Object);
+            DownloadServiceFactory.GetDownloadService(service.ClientConfig).Returns(service);
         }
     }
 
@@ -116,13 +110,15 @@ public class JobHandlerFixture : IDisposable
 
     public void ResetMocks()
     {
-        MessageBus.Reset();
-        ArrClientFactory.Reset();
-        ArrQueueIterator.Reset();
-        DownloadServiceFactory.Reset();
-        EventPublisher.Reset();
-        BlocklistProvider.Reset();
-        HardLinkFileService.Reset();
+        SubstituteHelper.ClearPendingArgSpecs();
+        // Recreate all substitutes to clear received call state
+        MessageBus = Substitute.For<IBus>();
+        ArrClientFactory = Substitute.For<IArrClientFactory>();
+        ArrQueueIterator = Substitute.For<IArrQueueIterator>();
+        DownloadServiceFactory = Substitute.For<IDownloadServiceFactory>();
+        EventPublisher = Substitute.For<IEventPublisher>();
+        BlocklistProvider = Substitute.For<IBlocklistProvider>();
+        HardLinkFileService = Substitute.For<IHardLinkFileService>();
         Cache.Clear();
         TimeProvider = new FakeTimeProvider();
 

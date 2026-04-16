@@ -15,6 +15,7 @@ using Cleanuparr.Infrastructure.Features.Notifications;
 using Cleanuparr.Infrastructure.Hubs;
 using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Infrastructure.Tests.Features.Jobs.TestHelpers;
+using Cleanuparr.Infrastructure.Tests.TestHelpers;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
@@ -62,6 +63,7 @@ public class IntegrationTestFixture : IDisposable
 
     public IntegrationTestFixture()
     {
+        SubstituteHelper.ClearPendingArgSpecs();
         DataContext = TestDataContextFactory.Create();
         EventsContext = TestEventsContextFactory.Create();
         Cache = new MemoryCache(new MemoryCacheOptions());
@@ -85,18 +87,18 @@ public class IntegrationTestFixture : IDisposable
     private void SetupDefaults()
     {
         // ArrClientFactory returns the shared ArrClient mock by default
-        ArrClientFactory.GetClient(Arg.Any<InstanceType>(), Arg.Any<float>()).Returns(ArrClient);
+        ArrClientFactory.GetClient(default, default).ReturnsForAnyArgs(ArrClient);
 
         // DryRunInterceptor returns false (not dry run) by default
         DryRunInterceptor.IsDryRunEnabled().Returns(false);
-        DryRunInterceptor.InterceptAsync(Arg.Any<Delegate>(), Arg.Any<object[]>()).Returns(Task.CompletedTask);
+        DryRunInterceptor.InterceptAsync(default!, default!).ReturnsForAnyArgs(Task.CompletedTask);
 
         // Capture messages published to IBus (generic Publish<T> overloads)
-        MessageBus.Publish(Arg.Any<QueueItemRemoveRequest<SearchItem>>(), Arg.Any<CancellationToken>())
-            .Returns(Task.CompletedTask)
+        MessageBus.Publish(default(QueueItemRemoveRequest<SearchItem>)!, default)
+            .ReturnsForAnyArgs(Task.CompletedTask)
             .AndDoes(ci => CapturedMessages.Add(ci[0]));
-        MessageBus.Publish(Arg.Any<QueueItemRemoveRequest<SeriesSearchItem>>(), Arg.Any<CancellationToken>())
-            .Returns(Task.CompletedTask)
+        MessageBus.Publish(default(QueueItemRemoveRequest<SeriesSearchItem>)!, default)
+            .ReturnsForAnyArgs(Task.CompletedTask)
             .AndDoes(ci => CapturedMessages.Add(ci[0]));
 
         // Seed a JobRun so EventPublisher FK constraints are satisfied
@@ -228,6 +230,7 @@ public class IntegrationTestFixture : IDisposable
     /// </summary>
     public void Reset()
     {
+        SubstituteHelper.ClearPendingArgSpecs();
         DataContext?.Dispose();
         EventsContext?.Dispose();
         Cache?.Dispose();

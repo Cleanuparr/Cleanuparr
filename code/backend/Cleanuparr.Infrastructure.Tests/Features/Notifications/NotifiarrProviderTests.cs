@@ -2,20 +2,21 @@ using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Notifications.Models;
 using Cleanuparr.Infrastructure.Features.Notifications.Notifiarr;
 using Cleanuparr.Persistence.Models.Configuration.Notification;
-using Moq;
+using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.Notifications;
 
 public class NotifiarrProviderTests
 {
-    private readonly Mock<INotifiarrProxy> _proxyMock;
+    private readonly INotifiarrProxy _proxy;
     private readonly NotifiarrConfig _config;
     private readonly NotifiarrProvider _provider;
 
     public NotifiarrProviderTests()
     {
-        _proxyMock = new Mock<INotifiarrProxy>();
+        _proxy = Substitute.For<INotifiarrProxy>();
         _config = new NotifiarrConfig
         {
             Id = Guid.NewGuid(),
@@ -27,7 +28,7 @@ public class NotifiarrProviderTests
             "TestNotifiarr",
             NotificationProviderType.Notifiarr,
             _config,
-            _proxyMock.Object);
+            _proxy);
     }
 
     #region Constructor Tests
@@ -57,9 +58,9 @@ public class NotifiarrProviderTests
         var context = CreateTestContext();
         NotifiarrPayload? capturedPayload = null;
 
-        _proxyMock.Setup(p => p.SendNotification(It.IsAny<NotifiarrPayload>(), _config))
-            .Callback<NotifiarrPayload, NotifiarrConfig>((payload, config) => capturedPayload = payload)
-            .Returns(Task.CompletedTask);
+        _proxy.SendNotification(Arg.Any<NotifiarrPayload>(), _config)
+            .Returns(Task.CompletedTask)
+            .AndDoes(ci => capturedPayload = ci.ArgAt<NotifiarrPayload>(0));
 
         // Act
         await _provider.SendNotificationAsync(context);
@@ -78,9 +79,9 @@ public class NotifiarrProviderTests
         var context = CreateTestContext();
         NotifiarrPayload? capturedPayload = null;
 
-        _proxyMock.Setup(p => p.SendNotification(It.IsAny<NotifiarrPayload>(), _config))
-            .Callback<NotifiarrPayload, NotifiarrConfig>((payload, config) => capturedPayload = payload)
-            .Returns(Task.CompletedTask);
+        _proxy.SendNotification(Arg.Any<NotifiarrPayload>(), _config)
+            .Returns(Task.CompletedTask)
+            .AndDoes(ci => capturedPayload = ci.ArgAt<NotifiarrPayload>(0));
 
         // Act
         await _provider.SendNotificationAsync(context);
@@ -100,9 +101,9 @@ public class NotifiarrProviderTests
 
         NotifiarrPayload? capturedPayload = null;
 
-        _proxyMock.Setup(p => p.SendNotification(It.IsAny<NotifiarrPayload>(), _config))
-            .Callback<NotifiarrPayload, NotifiarrConfig>((payload, config) => capturedPayload = payload)
-            .Returns(Task.CompletedTask);
+        _proxy.SendNotification(Arg.Any<NotifiarrPayload>(), _config)
+            .Returns(Task.CompletedTask)
+            .AndDoes(ci => capturedPayload = ci.ArgAt<NotifiarrPayload>(0));
 
         // Act
         await _provider.SendNotificationAsync(context);
@@ -132,9 +133,9 @@ public class NotifiarrProviderTests
 
         NotifiarrPayload? capturedPayload = null;
 
-        _proxyMock.Setup(p => p.SendNotification(It.IsAny<NotifiarrPayload>(), _config))
-            .Callback<NotifiarrPayload, NotifiarrConfig>((payload, config) => capturedPayload = payload)
-            .Returns(Task.CompletedTask);
+        _proxy.SendNotification(Arg.Any<NotifiarrPayload>(), _config)
+            .Returns(Task.CompletedTask)
+            .AndDoes(ci => capturedPayload = ci.ArgAt<NotifiarrPayload>(0));
 
         // Act
         await _provider.SendNotificationAsync(context);
@@ -151,9 +152,9 @@ public class NotifiarrProviderTests
         var context = CreateTestContext();
         NotifiarrPayload? capturedPayload = null;
 
-        _proxyMock.Setup(p => p.SendNotification(It.IsAny<NotifiarrPayload>(), _config))
-            .Callback<NotifiarrPayload, NotifiarrConfig>((payload, config) => capturedPayload = payload)
-            .Returns(Task.CompletedTask);
+        _proxy.SendNotification(Arg.Any<NotifiarrPayload>(), _config)
+            .Returns(Task.CompletedTask)
+            .AndDoes(ci => capturedPayload = ci.ArgAt<NotifiarrPayload>(0));
 
         // Act
         await _provider.SendNotificationAsync(context);
@@ -174,9 +175,9 @@ public class NotifiarrProviderTests
 
         NotifiarrPayload? capturedPayload = null;
 
-        _proxyMock.Setup(p => p.SendNotification(It.IsAny<NotifiarrPayload>(), _config))
-            .Callback<NotifiarrPayload, NotifiarrConfig>((payload, config) => capturedPayload = payload)
-            .Returns(Task.CompletedTask);
+        _proxy.SendNotification(Arg.Any<NotifiarrPayload>(), _config)
+            .Returns(Task.CompletedTask)
+            .AndDoes(ci => capturedPayload = ci.ArgAt<NotifiarrPayload>(0));
 
         // Act
         await _provider.SendNotificationAsync(context);
@@ -195,9 +196,9 @@ public class NotifiarrProviderTests
 
         NotifiarrPayload? capturedPayload = null;
 
-        _proxyMock.Setup(p => p.SendNotification(It.IsAny<NotifiarrPayload>(), _config))
-            .Callback<NotifiarrPayload, NotifiarrConfig>((payload, config) => capturedPayload = payload)
-            .Returns(Task.CompletedTask);
+        _proxy.SendNotification(Arg.Any<NotifiarrPayload>(), _config)
+            .Returns(Task.CompletedTask)
+            .AndDoes(ci => capturedPayload = ci.ArgAt<NotifiarrPayload>(0));
 
         // Act
         await _provider.SendNotificationAsync(context);
@@ -213,7 +214,7 @@ public class NotifiarrProviderTests
         // Arrange
         var context = CreateTestContext();
 
-        _proxyMock.Setup(p => p.SendNotification(It.IsAny<NotifiarrPayload>(), _config))
+        _proxy.SendNotification(Arg.Any<NotifiarrPayload>(), _config)
             .ThrowsAsync(new Exception("Proxy error"));
 
         // Act & Assert
@@ -235,9 +236,9 @@ public class NotifiarrProviderTests
 
         NotifiarrPayload? capturedPayload = null;
 
-        _proxyMock.Setup(p => p.SendNotification(It.IsAny<NotifiarrPayload>(), _config))
-            .Callback<NotifiarrPayload, NotifiarrConfig>((payload, config) => capturedPayload = payload)
-            .Returns(Task.CompletedTask);
+        _proxy.SendNotification(Arg.Any<NotifiarrPayload>(), _config)
+            .Returns(Task.CompletedTask)
+            .AndDoes(ci => capturedPayload = ci.ArgAt<NotifiarrPayload>(0));
 
         // Act
         await _provider.SendNotificationAsync(context);

@@ -1,25 +1,26 @@
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Events;
+using Cleanuparr.Infrastructure.Tests.TestHelpers;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Events;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Moq;
+using NSubstitute;
 using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Events;
 
 public class EventCleanupServiceTests : IDisposable
 {
-    private readonly Mock<ILogger<EventCleanupService>> _loggerMock;
+    private readonly ILogger<EventCleanupService> _logger;
     private readonly ServiceCollection _services;
     private readonly IServiceProvider _serviceProvider;
     private readonly string _dbName;
 
     public EventCleanupServiceTests()
     {
-        _loggerMock = new Mock<ILogger<EventCleanupService>>();
+        _logger = Substitute.For<ILogger<EventCleanupService>>();
         _services = new ServiceCollection();
         _dbName = Guid.NewGuid().ToString();
 
@@ -43,7 +44,7 @@ public class EventCleanupServiceTests : IDisposable
     {
         // Arrange
         var scopeFactory = _serviceProvider.GetRequiredService<IServiceScopeFactory>();
-        var service = new EventCleanupService(_loggerMock.Object, scopeFactory);
+        var service = new EventCleanupService(_logger, scopeFactory);
         var cts = new CancellationTokenSource();
 
         // Act - start and immediately cancel
@@ -53,14 +54,7 @@ public class EventCleanupServiceTests : IDisposable
         await service.StopAsync(CancellationToken.None);
 
         // Assert
-        _loggerMock.Verify(
-            x => x.Log(
-                LogLevel.Information,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("started")),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+        _logger.ReceivedLogContaining(LogLevel.Information, "started");
     }
 
     [Fact]
@@ -68,7 +62,7 @@ public class EventCleanupServiceTests : IDisposable
     {
         // Arrange
         var scopeFactory = _serviceProvider.GetRequiredService<IServiceScopeFactory>();
-        var service = new EventCleanupService(_loggerMock.Object, scopeFactory);
+        var service = new EventCleanupService(_logger, scopeFactory);
         var cts = new CancellationTokenSource();
 
         // Act
@@ -78,14 +72,7 @@ public class EventCleanupServiceTests : IDisposable
         await service.StopAsync(CancellationToken.None);
 
         // Assert
-        _loggerMock.Verify(
-            x => x.Log(
-                LogLevel.Information,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("stopping")),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+        _logger.ReceivedLogContaining(LogLevel.Information, "stopping");
     }
 
     [Fact]
@@ -95,7 +82,7 @@ public class EventCleanupServiceTests : IDisposable
         var scopeFactory = _serviceProvider.GetRequiredService<IServiceScopeFactory>();
 
         // Act
-        var service = new EventCleanupService(_loggerMock.Object, scopeFactory);
+        var service = new EventCleanupService(_logger, scopeFactory);
 
         // Assert - service should be created without exception
         Assert.NotNull(service);
@@ -106,7 +93,7 @@ public class EventCleanupServiceTests : IDisposable
     {
         // Arrange
         var scopeFactory = _serviceProvider.GetRequiredService<IServiceScopeFactory>();
-        var service = new EventCleanupService(_loggerMock.Object, scopeFactory);
+        var service = new EventCleanupService(_logger, scopeFactory);
         var cts = new CancellationTokenSource();
 
         // Act - cancel immediately
@@ -118,13 +105,6 @@ public class EventCleanupServiceTests : IDisposable
         await service.StopAsync(CancellationToken.None);
 
         // Assert - should have logged stopped message
-        _loggerMock.Verify(
-            x => x.Log(
-                LogLevel.Information,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("stopped")),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+        _logger.ReceivedLogContaining(LogLevel.Information, "stopped");
     }
 }

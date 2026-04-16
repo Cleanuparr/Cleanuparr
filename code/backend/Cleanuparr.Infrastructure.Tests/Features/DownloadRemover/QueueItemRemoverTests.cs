@@ -67,8 +67,8 @@ public class QueueItemRemoverTests : IDisposable
         dryRunInterceptor.IsDryRunEnabled().Returns(false);
         // Setup interceptor for other uses (e.g., ArrClient deletion)
         dryRunInterceptor
-            .InterceptAsync(Arg.Any<Delegate>(), Arg.Any<object[]>())
-            .Returns(Task.CompletedTask);
+            .InterceptAsync(default!, default!)
+            .ReturnsForAnyArgs(Task.CompletedTask);
 
         _eventPublisher = new EventPublisher(
             _eventsContext,

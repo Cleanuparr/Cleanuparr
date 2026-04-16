@@ -4,41 +4,41 @@ using System.Text.Json;
 using Cleanuparr.Domain.Entities.AppStatus;
 using Cleanuparr.Infrastructure.Hubs;
 using Cleanuparr.Infrastructure.Services;
+using Cleanuparr.Infrastructure.Tests.TestHelpers;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Moq;
-using Moq.Protected;
+using NSubstitute;
 using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Services;
 
 public class AppStatusRefreshServiceTests : IDisposable
 {
-    private readonly Mock<ILogger<AppStatusRefreshService>> _loggerMock;
-    private readonly Mock<IHubContext<AppHub>> _hubContextMock;
-    private readonly Mock<IHttpClientFactory> _httpClientFactoryMock;
+    private readonly ILogger<AppStatusRefreshService> _logger;
+    private readonly IHubContext<AppHub> _hubContext;
+    private readonly IHttpClientFactory _httpClientFactory;
     private readonly AppStatusSnapshot _snapshot;
     private readonly JsonSerializerOptions _jsonOptions;
-    private readonly Mock<HttpMessageHandler> _httpHandlerMock;
-    private readonly Mock<IServiceScopeFactory> _scopeFactoryMock;
+    private readonly FakeHttpMessageHandler _httpHandler;
+    private readonly IServiceScopeFactory _scopeFactory;
     private AppStatusRefreshService? _service;
 
     public AppStatusRefreshServiceTests()
     {
-        _loggerMock = new Mock<ILogger<AppStatusRefreshService>>();
-        _hubContextMock = new Mock<IHubContext<AppHub>>();
-        _httpClientFactoryMock = new Mock<IHttpClientFactory>();
+        _logger = Substitute.For<ILogger<AppStatusRefreshService>>();
+        _hubContext = Substitute.For<IHubContext<AppHub>>();
+        _httpClientFactory = Substitute.For<IHttpClientFactory>();
         _snapshot = new AppStatusSnapshot();
         _jsonOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-        _httpHandlerMock = new Mock<HttpMessageHandler>();
-        _scopeFactoryMock = new Mock<IServiceScopeFactory>();
+        _httpHandler = new FakeHttpMessageHandler();
+        _scopeFactory = Substitute.For<IServiceScopeFactory>();
 
         // Setup hub context
-        var clientsMock = new Mock<IHubClients>();
-        var clientProxyMock = new Mock<IClientProxy>();
-        clientsMock.Setup(c => c.All).Returns(clientProxyMock.Object);
-        _hubContextMock.Setup(h => h.Clients).Returns(clientsMock.Object);
+        var clients = Substitute.For<IHubClients>();
+        var clientProxy = Substitute.For<IClientProxy>();
+        clients.All.Returns(clientProxy);
+        _hubContext.Clients.Returns(clients);
     }
 
     public void Dispose()
@@ -49,30 +49,25 @@ public class AppStatusRefreshServiceTests : IDisposable
     private AppStatusRefreshService CreateService()
     {
         _service = new AppStatusRefreshService(
-            _loggerMock.Object,
-            _hubContextMock.Object,
-            _httpClientFactoryMock.Object,
+            _logger,
+            _hubContext,
+            _httpClientFactory,
             _snapshot,
             _jsonOptions,
-            _scopeFactoryMock.Object);
+            _scopeFactory);
         return _service;
     }
 
     private void SetupHttpResponse(HttpStatusCode statusCode, string content)
     {
-        _httpHandlerMock.Protected()
-            .Setup<Task<HttpResponseMessage>>(
-                "SendAsync",
-                ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>())
-            .ReturnsAsync(new HttpResponseMessage
-            {
-                StatusCode = statusCode,
-                Content = new StringContent(content, Encoding.UTF8, "application/json")
-            });
+        _httpHandler.SetupResponse((_, _) => Task.FromResult(new HttpResponseMessage
+        {
+            StatusCode = statusCode,
+            Content = new StringContent(content, Encoding.UTF8, "application/json")
+        }));
 
-        var httpClient = new HttpClient(_httpHandlerMock.Object);
-        _httpClientFactoryMock.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(httpClient);
+        var httpClient = new HttpClient(_httpHandler);
+        _httpClientFactory.CreateClient(Arg.Any<string>()).Returns(httpClient);
     }
 
     #region Constructor Tests

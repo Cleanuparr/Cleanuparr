@@ -1,31 +1,31 @@
 using System.Net;
 using Cleanuparr.Infrastructure.Features.Notifications.Telegram;
+using Cleanuparr.Infrastructure.Tests.TestHelpers;
 using Cleanuparr.Shared.Helpers;
-using Moq;
-using Moq.Protected;
+using NSubstitute;
 using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.Notifications.Telegram;
 
 public class TelegramProxyTests
 {
-    private readonly Mock<IHttpClientFactory> _httpClientFactoryMock;
-    private readonly Mock<HttpMessageHandler> _httpMessageHandlerMock;
+    private readonly IHttpClientFactory _httpClientFactory;
+    private readonly FakeHttpMessageHandler _httpMessageHandler;
 
     public TelegramProxyTests()
     {
-        _httpMessageHandlerMock = new Mock<HttpMessageHandler>();
-        _httpClientFactoryMock = new Mock<IHttpClientFactory>();
+        _httpMessageHandler = new FakeHttpMessageHandler();
+        _httpClientFactory = Substitute.For<IHttpClientFactory>();
 
-        var httpClient = new HttpClient(_httpMessageHandlerMock.Object);
-        _httpClientFactoryMock
-            .Setup(f => f.CreateClient(Constants.HttpClientWithRetryName))
+        var httpClient = new HttpClient(_httpMessageHandler);
+        _httpClientFactory
+            .CreateClient(Constants.HttpClientWithRetryName)
             .Returns(httpClient);
     }
 
     private TelegramProxy CreateProxy()
     {
-        return new TelegramProxy(_httpClientFactoryMock.Object);
+        return new TelegramProxy(_httpClientFactory);
     }
 
     private static TelegramPayload CreatePayload(string text = "Test message", string? photoUrl = null)
@@ -59,7 +59,7 @@ public class TelegramProxyTests
         _ = CreateProxy();
 
         // Assert
-        _httpClientFactoryMock.Verify(f => f.CreateClient(Constants.HttpClientWithRetryName), Times.Once);
+        _httpClientFactory.Received(1).CreateClient(Constants.HttpClientWithRetryName);
     }
 
     #endregion
@@ -71,7 +71,7 @@ public class TelegramProxyTests
     {
         // Arrange
         var proxy = CreateProxy();
-        SetupSuccessResponse();
+        _httpMessageHandler.SetupResponse(HttpStatusCode.OK);
 
         // Act & Assert - Should not throw
         await proxy.SendNotification(CreatePayload(), "test-bot-token");
@@ -82,22 +82,13 @@ public class TelegramProxyTests
     {
         // Arrange
         var proxy = CreateProxy();
-        HttpMethod? capturedMethod = null;
-
-        _httpMessageHandlerMock
-            .Protected()
-            .Setup<Task<HttpResponseMessage>>(
-                "SendAsync",
-                ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>())
-            .Callback<HttpRequestMessage, CancellationToken>((req, _) => capturedMethod = req.Method)
-            .ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK));
+        _httpMessageHandler.SetupResponse(HttpStatusCode.OK);
 
         // Act
         await proxy.SendNotification(CreatePayload(), "test-bot-token");
 
         // Assert
-        Assert.Equal(HttpMethod.Post, capturedMethod);
+        Assert.Equal(HttpMethod.Post, _httpMessageHandler.CapturedRequests[0].Method);
     }
 
     [Fact]
@@ -105,23 +96,13 @@ public class TelegramProxyTests
     {
         // Arrange
         var proxy = CreateProxy();
-        Uri? capturedUri = null;
-
-        _httpMessageHandlerMock
-            .Protected()
-            .Setup<Task<HttpResponseMessage>>(
-                "SendAsync",
-                ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>())
-            .Callback<HttpRequestMessage, CancellationToken>((req, _) => capturedUri = req.RequestUri)
-            .ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK));
+        _httpMessageHandler.SetupResponse(HttpStatusCode.OK);
 
         // Act
         await proxy.SendNotification(CreatePayload(), "my-bot-token");
 
         // Assert
-        Assert.NotNull(capturedUri);
-        Assert.Contains("/botmy-bot-token/sendMessage", capturedUri.ToString());
+        Assert.Contains("/botmy-bot-token/sendMessage", _httpMessageHandler.CapturedRequests[0].RequestUri?.ToString());
     }
 
     [Fact]
@@ -129,16 +110,7 @@ public class TelegramProxyTests
     {
         // Arrange
         var proxy = CreateProxy();
-        Uri? capturedUri = null;
-
-        _httpMessageHandlerMock
-            .Protected()
-            .Setup<Task<HttpResponseMessage>>(
-                "SendAsync",
-                ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>())
-            .Callback<HttpRequestMessage, CancellationToken>((req, _) => capturedUri = req.RequestUri)
-            .ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK));
+        _httpMessageHandler.SetupResponse(HttpStatusCode.OK);
 
         var payload = CreatePayload(text: "Short caption", photoUrl: "https://example.com/image.jpg");
 
@@ -146,8 +118,7 @@ public class TelegramProxyTests
         await proxy.SendNotification(payload, "my-bot-token");
 
         // Assert
-        Assert.NotNull(capturedUri);
-        Assert.Contains("/botmy-bot-token/sendPhoto", capturedUri.ToString());
+        Assert.Contains("/botmy-bot-token/sendPhoto", _httpMessageHandler.CapturedRequests[0].RequestUri?.ToString());
     }
 
     [Fact]
@@ -155,16 +126,7 @@ public class TelegramProxyTests
     {
         // Arrange
         var proxy = CreateProxy();
-        Uri? capturedUri = null;
-
-        _httpMessageHandlerMock
-            .Protected()
-            .Setup<Task<HttpResponseMessage>>(
-                "SendAsync",
-                ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>())
-            .Callback<HttpRequestMessage, CancellationToken>((req, _) => capturedUri = req.RequestUri)
-            .ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK));
+        _httpMessageHandler.SetupResponse(HttpStatusCode.OK);
 
         // Caption longer than 1024 characters
         var payload = CreatePayload(text: new string('A', 1025), photoUrl: "https://example.com/image.jpg");
@@ -173,8 +135,7 @@ public class TelegramProxyTests
         await proxy.SendNotification(payload, "my-bot-token");
 
         // Assert
-        Assert.NotNull(capturedUri);
-        Assert.Contains("/botmy-bot-token/sendMessage", capturedUri.ToString());
+        Assert.Contains("/botmy-bot-token/sendMessage", _httpMessageHandler.CapturedRequests[0].RequestUri?.ToString());
     }
 
     [Fact]
@@ -182,23 +143,13 @@ public class TelegramProxyTests
     {
         // Arrange
         var proxy = CreateProxy();
-        string? capturedContentType = null;
-
-        _httpMessageHandlerMock
-            .Protected()
-            .Setup<Task<HttpResponseMessage>>(
-                "SendAsync",
-                ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>())
-            .Callback<HttpRequestMessage, CancellationToken>((req, _) =>
-                capturedContentType = req.Content?.Headers.ContentType?.MediaType)
-            .ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK));
+        _httpMessageHandler.SetupResponse(HttpStatusCode.OK);
 
         // Act
         await proxy.SendNotification(CreatePayload(), "test-bot-token");
 
         // Assert
-        Assert.Equal("application/json", capturedContentType);
+        Assert.Equal("application/json", _httpMessageHandler.CapturedRequests[0].Content?.Headers.ContentType?.MediaType);
     }
 
     [Fact]
@@ -206,17 +157,7 @@ public class TelegramProxyTests
     {
         // Arrange
         var proxy = CreateProxy();
-        string? capturedContent = null;
-
-        _httpMessageHandlerMock
-            .Protected()
-            .Setup<Task<HttpResponseMessage>>(
-                "SendAsync",
-                ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>())
-            .Callback<HttpRequestMessage, CancellationToken>(async (req, _) =>
-                capturedContent = await req.Content!.ReadAsStringAsync())
-            .ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK));
+        _httpMessageHandler.SetupResponse(HttpStatusCode.OK);
 
         // Caption longer than 1024 characters
         var payload = CreatePayload(text: new string('A', 1025), photoUrl: "https://example.com/image.jpg");
@@ -225,7 +166,7 @@ public class TelegramProxyTests
         await proxy.SendNotification(payload, "test-bot-token");
 
         // Assert
-        Assert.NotNull(capturedContent);
+        var capturedContent = _httpMessageHandler.CapturedRequestBodies[0]!;
         Assert.Contains("&#8203;", capturedContent); // Zero-width space
         Assert.Contains("example.com/image.jpg", capturedContent);
     }
@@ -235,23 +176,13 @@ public class TelegramProxyTests
     {
         // Arrange
         var proxy = CreateProxy();
-        string? capturedContent = null;
-
-        _httpMessageHandlerMock
-            .Protected()
-            .Setup<Task<HttpResponseMessage>>(
-                "SendAsync",
-                ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>())
-            .Callback<HttpRequestMessage, CancellationToken>(async (req, _) =>
-                capturedContent = await req.Content!.ReadAsStringAsync())
-            .ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK));
+        _httpMessageHandler.SetupResponse(HttpStatusCode.OK);
 
         // Act
         await proxy.SendNotification(CreatePayload(), "test-bot-token");
 
         // Assert
-        Assert.NotNull(capturedContent);
+        var capturedContent = _httpMessageHandler.CapturedRequestBodies[0]!;
         Assert.Contains("disable_web_page_preview", capturedContent);
         Assert.Contains("true", capturedContent);
     }
@@ -261,17 +192,7 @@ public class TelegramProxyTests
     {
         // Arrange
         var proxy = CreateProxy();
-        string? capturedContent = null;
-
-        _httpMessageHandlerMock
-            .Protected()
-            .Setup<Task<HttpResponseMessage>>(
-                "SendAsync",
-                ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>())
-            .Callback<HttpRequestMessage, CancellationToken>(async (req, _) =>
-                capturedContent = await req.Content!.ReadAsStringAsync())
-            .ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK));
+        _httpMessageHandler.SetupResponse(HttpStatusCode.OK);
 
         var payload = new TelegramPayload
         {
@@ -284,7 +205,7 @@ public class TelegramProxyTests
         await proxy.SendNotification(payload, "test-bot-token");
 
         // Assert
-        Assert.NotNull(capturedContent);
+        var capturedContent = _httpMessageHandler.CapturedRequestBodies[0]!;
         Assert.Contains("message_thread_id", capturedContent);
         Assert.Contains("42", capturedContent);
     }
@@ -294,17 +215,7 @@ public class TelegramProxyTests
     {
         // Arrange
         var proxy = CreateProxy();
-        string? capturedContent = null;
-
-        _httpMessageHandlerMock
-            .Protected()
-            .Setup<Task<HttpResponseMessage>>(
-                "SendAsync",
-                ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>())
-            .Callback<HttpRequestMessage, CancellationToken>(async (req, _) =>
-                capturedContent = await req.Content!.ReadAsStringAsync())
-            .ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK));
+        _httpMessageHandler.SetupResponse(HttpStatusCode.OK);
 
         var payload = new TelegramPayload
         {
@@ -317,7 +228,7 @@ public class TelegramProxyTests
         await proxy.SendNotification(payload, "test-bot-token");
 
         // Assert
-        Assert.NotNull(capturedContent);
+        var capturedContent = _httpMessageHandler.CapturedRequestBodies[0]!;
         Assert.Contains("disable_notification", capturedContent);
     }
 
@@ -330,7 +241,10 @@ public class TelegramProxyTests
     {
         // Arrange
         var proxy = CreateProxy();
-        SetupErrorResponse(HttpStatusCode.BadRequest, "Bad Request: chat not found");
+        _httpMessageHandler.SetupResponse((_, _) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.BadRequest)
+        {
+            Content = new StringContent("Bad Request: chat not found")
+        }));
 
         // Act & Assert
         var ex = await Assert.ThrowsAsync<TelegramException>(() =>
@@ -343,7 +257,10 @@ public class TelegramProxyTests
     {
         // Arrange
         var proxy = CreateProxy();
-        SetupErrorResponse(HttpStatusCode.Unauthorized, "Unauthorized");
+        _httpMessageHandler.SetupResponse((_, _) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.Unauthorized)
+        {
+            Content = new StringContent("Unauthorized")
+        }));
 
         // Act & Assert
         var ex = await Assert.ThrowsAsync<TelegramException>(() =>
@@ -356,7 +273,10 @@ public class TelegramProxyTests
     {
         // Arrange
         var proxy = CreateProxy();
-        SetupErrorResponse(HttpStatusCode.Forbidden, "Forbidden: bot was blocked by the user");
+        _httpMessageHandler.SetupResponse((_, _) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.Forbidden)
+        {
+            Content = new StringContent("Forbidden: bot was blocked by the user")
+        }));
 
         // Act & Assert
         var ex = await Assert.ThrowsAsync<TelegramException>(() =>
@@ -369,7 +289,10 @@ public class TelegramProxyTests
     {
         // Arrange
         var proxy = CreateProxy();
-        SetupErrorResponse((HttpStatusCode)429, "Too Many Requests");
+        _httpMessageHandler.SetupResponse((_, _) => Task.FromResult(new HttpResponseMessage((HttpStatusCode)429)
+        {
+            Content = new StringContent("Too Many Requests")
+        }));
 
         // Act & Assert
         var ex = await Assert.ThrowsAsync<TelegramException>(() =>
@@ -382,7 +305,10 @@ public class TelegramProxyTests
     {
         // Arrange
         var proxy = CreateProxy();
-        SetupErrorResponse(HttpStatusCode.InternalServerError, "Internal Server Error");
+        _httpMessageHandler.SetupResponse((_, _) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.InternalServerError)
+        {
+            Content = new StringContent("Internal Server Error")
+        }));
 
         // Act & Assert
         var ex = await Assert.ThrowsAsync<TelegramException>(() =>
@@ -395,13 +321,7 @@ public class TelegramProxyTests
     {
         // Arrange
         var proxy = CreateProxy();
-        _httpMessageHandlerMock
-            .Protected()
-            .Setup<Task<HttpResponseMessage>>(
-                "SendAsync",
-                ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>())
-            .ThrowsAsync(new HttpRequestException("Network error"));
+        _httpMessageHandler.SetupThrow(new HttpRequestException("Network error"));
 
         // Act & Assert
         var ex = await Assert.ThrowsAsync<TelegramException>(() =>
@@ -415,41 +335,15 @@ public class TelegramProxyTests
         // Arrange
         var proxy = CreateProxy();
         var longErrorBody = new string('X', 600);
-        SetupErrorResponse(HttpStatusCode.BadRequest, longErrorBody);
+        _httpMessageHandler.SetupResponse((_, _) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.BadRequest)
+        {
+            Content = new StringContent(longErrorBody)
+        }));
 
         // Act & Assert
         var ex = await Assert.ThrowsAsync<TelegramException>(() =>
             proxy.SendNotification(CreatePayload(), "test-bot-token"));
         Assert.True(ex.Message.Length < 600);
-    }
-
-    #endregion
-
-    #region Helper Methods
-
-    private void SetupSuccessResponse()
-    {
-        _httpMessageHandlerMock
-            .Protected()
-            .Setup<Task<HttpResponseMessage>>(
-                "SendAsync",
-                ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>())
-            .ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK));
-    }
-
-    private void SetupErrorResponse(HttpStatusCode statusCode, string body = "")
-    {
-        _httpMessageHandlerMock
-            .Protected()
-            .Setup<Task<HttpResponseMessage>>(
-                "SendAsync",
-                ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>())
-            .ReturnsAsync(new HttpResponseMessage(statusCode)
-            {
-                Content = new StringContent(body)
-            });
     }
 
     #endregion
