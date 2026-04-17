@@ -46,6 +46,7 @@ https://cleanuparr.github.io/Cleanuparr/docs/screenshots
 - **Lidarr**
 - **Readarr**
 - **Whisparr v2**
+- **Whisparr v3**
 
 ### Download Clients (latest version)
 - **qBittorrent**

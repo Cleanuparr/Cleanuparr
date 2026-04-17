@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { IconCurrencyBitcoin, IconCheck, IconCopy } from '@tabler/icons-react';
 import styles from './support.module.css';
 import { cryptoCurrencies, CryptoCurrency } from './config/donationConfig';
 import { useClipboard } from './hooks/useClipboard';
@@ -65,7 +66,7 @@ export default function CryptoModal({ isOpen, onClose }: CryptoModalProps) {
         {step === 'selection' && (
           <>
             <h2 className={styles.modalTitle}>
-              <span role="img" aria-label="Cryptocurrency">₿</span>
+              <IconCurrencyBitcoin size={24} stroke={1.5} />
               Choose Cryptocurrency
             </h2>
             <p style={{ textAlign: 'center', marginBottom: '2rem', opacity: 0.8 }}>
@@ -133,12 +134,12 @@ export default function CryptoModal({ isOpen, onClose }: CryptoModalProps) {
               >
                 {copied ? (
                   <>
-                    <span role="img" aria-label="Copied">✅</span>
+                    <IconCheck size={16} stroke={2} />
                     Copied!
                   </>
                 ) : (
                   <>
-                    <span role="img" aria-label="Copy">📋</span>
+                    <IconCopy size={16} stroke={1.5} />
                     Copy Address
                   </>
                 )}

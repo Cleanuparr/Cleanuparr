@@ -19,11 +19,10 @@ Configure notification services to receive alerts about Cleanuparr operations.
 
 <div className={styles.section}>
 
-<SectionTitle icon="⚙️">General Settings</SectionTitle>
+<SectionTitle>General Settings</SectionTitle>
 
 <ConfigSection
   title="Enabled"
-  icon="✅"
 >
 
 Enable or disable this notification provider. If enabled, notifications will be sent according to the configured event triggers.
@@ -32,7 +31,6 @@ Enable or disable this notification provider. If enabled, notifications will be 
 
 <ConfigSection
   title="Provider Name"
-  icon="🆔"
 >
 
 A unique name to identify this provider. This name will be displayed in the user interface and logs.
@@ -43,11 +41,11 @@ A unique name to identify this provider. This name will be displayed in the user
 
 <div className={styles.section}>
 
-<SectionTitle icon="⚡">Event Configuration</SectionTitle>
+<SectionTitle>Event Configuration</SectionTitle>
 
 <ConfigSection
   title="Failed Import Strike"
-  icon="❌"
+  icon="x"
 >
 
 **Triggered When**: A download receives a strike for failed import.
@@ -56,7 +54,7 @@ A unique name to identify this provider. This name will be displayed in the user
 
 <ConfigSection
   title="Stalled Strike"
-  icon="⏸️"
+  icon="player-pause"
 >
 
 **Triggered When**: A download receives a strike for being stalled.
@@ -65,7 +63,7 @@ A unique name to identify this provider. This name will be displayed in the user
 
 <ConfigSection
   title="Slow Strike"
-  icon="🐌"
+  icon="gauge"
 >
 
 **Triggered When**: A download receives a strike for slow speed.
@@ -74,7 +72,7 @@ A unique name to identify this provider. This name will be displayed in the user
 
 <ConfigSection
   title="Queue Item Deleted"
-  icon="🗑️"
+  icon="trash"
 >
 
 **Triggered When**: A download is removed from an arr queue.
@@ -83,7 +81,7 @@ A unique name to identify this provider. This name will be displayed in the user
 
 <ConfigSection
   title="Download Cleaned"
-  icon="🧽"
+  icon="sparkles"
 >
 
 **Triggered When**: Download Cleaner removes completed downloads.
@@ -92,7 +90,7 @@ A unique name to identify this provider. This name will be displayed in the user
 
 <ConfigSection
   title="Category Changed"
-  icon="🏷️"
+  icon="tag"
 >
 
 **Triggered When**: Download Cleaner changes a download's category.
@@ -101,7 +99,7 @@ A unique name to identify this provider. This name will be displayed in the user
 
 <ConfigSection
   title="Search Triggered"
-  icon="🔍"
+  icon="search"
 >
 
 **Triggered When**: The Seeker triggers a search for a missing or removed item.
@@ -110,7 +108,7 @@ A unique name to identify this provider. This name will be displayed in the user
 
 <ConfigSection
   title="Search Item Grabbed"
-  icon="📥"
+  icon="inbox"
 >
 
 **Triggered When**: A search results in downloads being grabbed and queued.
