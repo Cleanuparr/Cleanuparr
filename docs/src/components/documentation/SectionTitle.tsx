@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { IconLink, IconCheck } from '@tabler/icons-react';
 import styles from './documentation.module.css';
 import { generateIdFromTitle } from './utils';
 
@@ -59,7 +60,7 @@ export default function SectionTitle({
         title="Copy link to this section"
         aria-label="Copy link to this section"
       >
-        {copied ? '✓' : '🔗'}
+        {copied ? <IconCheck size={14} stroke={2} /> : <IconLink size={14} stroke={1.5} />}
       </button>
     </div>
   );
