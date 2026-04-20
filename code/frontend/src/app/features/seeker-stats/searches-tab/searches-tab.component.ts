@@ -4,8 +4,9 @@ import { NgIcon } from '@ng-icons/core';
 import {
   CardComponent, BadgeComponent, ButtonComponent, SelectComponent,
   InputComponent, PaginatorComponent, EmptyStateComponent, TooltipComponent,
+  DrawerComponent, TableComponent, ThComponent, TdComponent,
 } from '@ui';
-import type { SelectOption } from '@ui';
+import type { SelectOption, SortState } from '@ui';
 import type { BadgeSeverity } from '@ui/badge/badge.component';
 import { AnimatedCounterComponent } from '@ui/animated-counter/animated-counter.component';
 import { SearchStatsApi } from '@core/api/search-stats.api';
@@ -16,6 +17,35 @@ import { ToastService } from '@core/services/toast.service';
 import { PaginationService } from '@core/services/pagination.service';
 
 type CycleFilter = 'current' | 'all';
+type TriState = 'any' | 'true' | 'false';
+
+const DEFAULT_SORT_BY = 'timestamp';
+const DEFAULT_SORT_DIRECTION: 'asc' | 'desc' = 'desc';
+
+interface AdvancedFilters {
+  cycleFilter: CycleFilter;
+  statuses: string[];
+  searchType: string;
+  searchReason: string;
+  grabbed: TriState;
+  dryRun: TriState;
+}
+
+const EMPTY_FILTERS: AdvancedFilters = {
+  cycleFilter: 'current',
+  statuses: [],
+  searchType: '',
+  searchReason: '',
+  grabbed: 'any',
+  dryRun: 'any',
+};
+
+const STATUS_OPTIONS: ReadonlyArray<{ value: string; label: string }> = [
+  { value: 'Started', label: 'Started' },
+  { value: 'Completed', label: 'Completed' },
+  { value: 'Failed', label: 'Failed' },
+  { value: 'TimedOut', label: 'Timed Out' },
+];
 
 @Component({
   selector: 'app-searches-tab',
@@ -32,6 +62,10 @@ type CycleFilter = 'current' | 'all';
     EmptyStateComponent,
     AnimatedCounterComponent,
     TooltipComponent,
+    DrawerComponent,
+    TableComponent,
+    ThComponent,
+    TdComponent,
   ],
   templateUrl: './searches-tab.component.html',
   styleUrl: './searches-tab.component.scss',
@@ -56,25 +90,63 @@ export class SearchesTabComponent implements OnInit {
     })
   );
 
-  // Instance filter
   readonly selectedInstanceId = signal<string>('');
   readonly instanceOptions = signal<SelectOption[]>([]);
 
-  // Cycle filter
-  readonly cycleFilter = signal<CycleFilter>('current');
+  readonly searchQuery = signal('');
+
+  readonly sortBy = signal<string>(DEFAULT_SORT_BY);
+  readonly sortDirection = signal<'asc' | 'desc'>(DEFAULT_SORT_DIRECTION);
+
+  // Applied filters drive the query; draft lives inside the open drawer.
+  readonly applied = signal<AdvancedFilters>({ ...EMPTY_FILTERS });
+  readonly draft = signal<AdvancedFilters>({ ...EMPTY_FILTERS });
+  readonly drawerOpen = signal(false);
+
+  readonly events = signal<SearchEvent[]>([]);
+  readonly eventsTotalRecords = signal(0);
+  readonly eventsPage = signal(1);
+  readonly pageSize = signal(this.pagination.getPageSize(SearchesTabComponent.PAGE_SIZE_KEY, 50));
+  readonly expandedId = signal<string | null>(null);
+
   readonly cycleFilterOptions: SelectOption[] = [
     { label: 'Current Cycle', value: 'current' },
     { label: 'All Time', value: 'all' },
   ];
 
-  // Search filter
-  readonly searchQuery = signal('');
+  readonly searchTypeOptions: SelectOption[] = [
+    { label: 'Any', value: '' },
+    { label: 'Proactive', value: SeekerSearchType.Proactive },
+    { label: 'Replacement', value: SeekerSearchType.Replacement },
+  ];
 
-  // Events
-  readonly events = signal<SearchEvent[]>([]);
-  readonly eventsTotalRecords = signal(0);
-  readonly eventsPage = signal(1);
-  readonly pageSize = signal(this.pagination.getPageSize(SearchesTabComponent.PAGE_SIZE_KEY, 50));
+  readonly searchReasonOptions: SelectOption[] = [
+    { label: 'Any', value: '' },
+    { label: 'Missing', value: SeekerSearchReason.Missing },
+    { label: 'Cutoff Unmet', value: SeekerSearchReason.QualityCutoffNotMet },
+    { label: 'CF Below Cutoff', value: SeekerSearchReason.CustomFormatScoreBelowCutoff },
+    { label: 'Replacement', value: SeekerSearchReason.Replacement },
+  ];
+
+  readonly triStateOptions: SelectOption[] = [
+    { label: 'Any', value: 'any' },
+    { label: 'Yes', value: 'true' },
+    { label: 'No', value: 'false' },
+  ];
+
+  readonly statusOptions = STATUS_OPTIONS;
+
+  readonly activeFilterCount = computed(() => {
+    const a = this.applied();
+    let n = 0;
+    if (a.cycleFilter !== 'current') n++;
+    if (a.statuses.length) n++;
+    if (a.searchType) n++;
+    if (a.searchReason) n++;
+    if (a.grabbed !== 'any') n++;
+    if (a.dryRun !== 'any') n++;
+    return n;
+  });
 
   constructor() {
     effect(() => {
@@ -97,15 +169,9 @@ export class SearchesTabComponent implements OnInit {
 
   onInstanceFilterChange(value: string): void {
     this.selectedInstanceId.set(value);
-    if (!value) {
-      this.cycleFilter.set('all');
+    if (!value && this.applied().cycleFilter === 'current') {
+      this.applied.update(a => ({ ...a, cycleFilter: 'all' }));
     }
-    this.eventsPage.set(1);
-    this.loadEvents();
-  }
-
-  onCycleFilterChange(value: string): void {
-    this.cycleFilter.set(value as CycleFilter);
     this.eventsPage.set(1);
     this.loadEvents();
   }
@@ -120,12 +186,54 @@ export class SearchesTabComponent implements OnInit {
     this.loadEvents();
   }
 
+  onSortChange(state: SortState): void {
+    this.sortBy.set(state.sortKey ?? DEFAULT_SORT_BY);
+    this.sortDirection.set(state.sortKey ? state.sortDirection : DEFAULT_SORT_DIRECTION);
+    this.eventsPage.set(1);
+    this.loadEvents();
+  }
+
   readonly onPageSizeChange = this.pagination.createPageSizeHandler(
     SearchesTabComponent.PAGE_SIZE_KEY,
     this.pageSize,
     this.eventsPage,
     () => this.loadEvents(),
   );
+
+  openFilters(): void {
+    this.draft.set({ ...this.applied() });
+    this.drawerOpen.set(true);
+  }
+
+  resetFilters(): void {
+    this.draft.set({ ...EMPTY_FILTERS, cycleFilter: this.selectedInstanceId() ? 'current' : 'all' });
+  }
+
+  applyFilters(): void {
+    this.applied.set({ ...this.draft() });
+    this.drawerOpen.set(false);
+    this.eventsPage.set(1);
+    this.loadEvents();
+  }
+
+  toggleStatus(value: string): void {
+    this.draft.update(d => {
+      const has = d.statuses.includes(value);
+      return { ...d, statuses: has ? d.statuses.filter(s => s !== value) : [...d.statuses, value] };
+    });
+  }
+
+  isStatusDrafted(value: string): boolean {
+    return this.draft().statuses.includes(value);
+  }
+
+  updateDraft<K extends keyof AdvancedFilters>(key: K, value: AdvancedFilters[K]): void {
+    this.draft.update(d => ({ ...d, [key]: value }));
+  }
+
+  toggleExpand(id: string): void {
+    this.expandedId.update(current => (current === id ? null : id));
+  }
 
   refresh(): void {
     this.loadSummary();
@@ -225,14 +333,30 @@ export class SearchesTabComponent implements OnInit {
     this.loading.set(true);
     const instanceId = this.selectedInstanceId() || undefined;
     const search = this.searchQuery() || undefined;
-    let cycleId: string | undefined;
+    const a = this.applied();
 
-    if (this.cycleFilter() === 'current' && instanceId) {
+    let cycleId: string | undefined;
+    if (a.cycleFilter === 'current' && instanceId) {
       const instance = this.summary()?.perInstanceStats.find(s => s.instanceId === instanceId);
       cycleId = instance?.currentCycleId ?? undefined;
     }
 
-    this.api.getEvents({ page: this.eventsPage(), pageSize: this.pageSize(), instanceId, cycleId, search }).subscribe({
+    const triToBool = (v: TriState): boolean | undefined => v === 'any' ? undefined : v === 'true';
+
+    this.api.getEvents({
+      page: this.eventsPage(),
+      pageSize: this.pageSize(),
+      instanceId,
+      cycleId,
+      search,
+      sortBy: this.sortBy(),
+      sortDirection: this.sortDirection(),
+      searchStatus: a.statuses.length ? a.statuses : undefined,
+      searchType: a.searchType || undefined,
+      searchReason: a.searchReason || undefined,
+      grabbed: triToBool(a.grabbed),
+      dryRun: triToBool(a.dryRun),
+    }).subscribe({
       next: (result) => {
         this.events.set(result.items);
         this.eventsTotalRecords.set(result.totalCount);

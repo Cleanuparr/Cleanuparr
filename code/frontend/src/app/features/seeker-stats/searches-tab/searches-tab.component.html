@@ -108,12 +108,6 @@
       [options]="instanceOptions()"
       (valueChange)="onInstanceFilterChange($any($event))"
     />
-    <app-select
-      [value]="cycleFilter()"
-      [options]="cycleFilterOptions"
-      [disabled]="!selectedInstanceId()"
-      (valueChange)="onCycleFilterChange($any($event))"
-    />
     <app-input
       placeholder="Search by title..."
       type="search"
@@ -122,63 +116,99 @@
     />
   </div>
   <div class="toolbar__actions">
-    <app-button variant="ghost" size="sm" (clicked)="refresh()">
-      Refresh
+    <app-button variant="ghost" size="sm" (clicked)="openFilters()">
+      Filters
+      @if (activeFilterCount() > 0) {
+        <app-badge severity="accent" size="sm">{{ activeFilterCount() }}</app-badge>
+      }
     </app-button>
+    <app-button variant="ghost" size="sm" (clicked)="refresh()">Refresh</app-button>
   </div>
 </div>
 
-<!-- Events List -->
+<!-- Events Table -->
 <app-card [noPadding]="true">
-  <div class="list">
-    @for (event of events(); track event.id) {
-      <div class="list-row">
-        <div class="list-row__main">
-          <ng-icon name="tablerSearch" class="list-row__icon" />
-          <app-badge [severity]="searchTypeSeverity(event.searchType)" size="sm">
-            {{ event.searchType }}
-          </app-badge>
-          @if (event.searchReason) {
-            <app-badge [severity]="searchReasonSeverity(event.searchReason)" size="sm">
-              {{ formatSearchReason(event.searchReason) }}
-            </app-badge>
-          }
-          @if (event.searchStatus) {
-            <app-badge [severity]="searchStatusSeverity(event.searchStatus)" size="sm">
-              {{ event.searchStatus }}
-            </app-badge>
-          }
-          @if (event.isDryRun) {
-            <app-badge severity="accent" size="sm">Dry Run</app-badge>
-          }
-          @if (event.cycleId) {
-            <span class="list-row__cycle">{{ event.cycleId.substring(0, 8) }}</span>
-          }
-          @if (event.instanceType) {
-            <app-badge [severity]="instanceTypeSeverity(event.instanceType)" size="sm" class="list-row__instance">{{ event.instanceType }}</app-badge>
-          }
-          <span class="list-row__time">{{ event.timestamp | date:'yyyy-MM-dd HH:mm' }}</span>
-        </div>
-        <div class="list-row__title">
-          {{ event.itemTitle || 'Search triggered' }}
-        </div>
-        @if (event.grabbedItems && event.grabbedItems.length > 0) {
-          <div class="list-row__detail">
-            <ng-icon name="tablerDownload" class="list-row__detail-icon" />
-            <span class="list-row__detail-text">
-              Grabbed: {{ formatGrabbedItems(event.grabbedItems) }}
-            </span>
-          </div>
+  <app-table
+    [sortKey]="sortBy()"
+    [sortDirection]="sortDirection()"
+    [loading]="loading()"
+    [empty]="events().length === 0"
+    (sortChange)="onSortChange($event)"
+  >
+    <thead>
+      <tr>
+        <th app-th sortKey="timestamp" priority="primary">Timestamp</th>
+        <th app-th sortKey="title" priority="primary">Title</th>
+        <th app-th sortKey="status" priority="secondary">Status</th>
+        <th app-th sortKey="type" priority="tertiary">Type</th>
+        <th app-th sortKey="grabbedCount" priority="tertiary" align="right">Grabbed</th>
+        <th app-th priority="primary" align="right"></th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (event of events(); track event.id) {
+        <tr
+          class="table-row--clickable"
+          [class.table-row--expanded]="expandedId() === event.id"
+          (click)="toggleExpand(event.id)"
+        >
+          <td app-td priority="primary">{{ event.timestamp | date:'yyyy-MM-dd HH:mm' }}</td>
+          <td app-td priority="primary">{{ event.itemTitle || 'Search triggered' }}</td>
+          <td app-td priority="secondary">
+            @if (event.searchStatus) {
+              <app-badge [severity]="searchStatusSeverity(event.searchStatus)" size="sm">{{ event.searchStatus }}</app-badge>
+            } @else {
+              —
+            }
+          </td>
+          <td app-td priority="tertiary">
+            <app-badge [severity]="searchTypeSeverity(event.searchType)" size="sm">{{ event.searchType }}</app-badge>
+          </td>
+          <td app-td priority="tertiary" align="right">{{ event.grabbedItems?.length ?? 0 }}</td>
+          <td app-td priority="primary" align="right">
+            <ng-icon [name]="expandedId() === event.id ? 'tablerChevronUp' : 'tablerChevronDown'" />
+          </td>
+        </tr>
+        @if (expandedId() === event.id) {
+          <tr class="table-detail-row">
+            <td colspan="6">
+              <div class="event-detail">
+                <div class="event-detail__chips">
+                  @if (event.searchReason) {
+                    <app-badge [severity]="searchReasonSeverity(event.searchReason)" size="sm">
+                      {{ formatSearchReason(event.searchReason) }}
+                    </app-badge>
+                  }
+                  @if (event.isDryRun) {
+                    <app-badge severity="accent" size="sm">Dry Run</app-badge>
+                  }
+                  @if (event.instanceType) {
+                    <app-badge [severity]="instanceTypeSeverity(event.instanceType)" size="sm">{{ event.instanceType }}</app-badge>
+                  }
+                  @if (event.cycleId) {
+                    <span class="event-detail__cycle">cycle {{ event.cycleId.substring(0, 8) }}</span>
+                  }
+                </div>
+                @if (event.grabbedItems && event.grabbedItems.length > 0) {
+                  <div class="event-detail__section">
+                    <span class="event-detail__label">Grabbed items</span>
+                    <span class="event-detail__value">{{ formatGrabbedItems(event.grabbedItems) }}</span>
+                  </div>
+                }
+              </div>
+            </td>
+          </tr>
         }
-      </div>
-    } @empty {
+      }
+    </tbody>
+    <div table-empty>
       <app-empty-state
         icon="tablerSearch"
         heading="No search events"
         description="Search events will appear here once the Seeker runs."
       />
-    }
-  </div>
+    </div>
+  </app-table>
 </app-card>
 
 @if (eventsTotalRecords() > 0) {
@@ -190,3 +220,74 @@
     (pageSizeChange)="onPageSizeChange($event)"
   />
 }
+
+<!-- Filter drawer -->
+<app-drawer title="Filter searches" [(visible)]="drawerOpen">
+  <div class="filter-group">
+    <label class="filter-group__label">Cycle</label>
+    <app-select
+      [value]="draft().cycleFilter"
+      [options]="cycleFilterOptions"
+      [disabled]="!selectedInstanceId()"
+      (valueChange)="updateDraft('cycleFilter', $any($event))"
+    />
+    @if (!selectedInstanceId()) {
+      <span class="filter-group__hint">Select an instance to filter by cycle.</span>
+    }
+  </div>
+
+  <div class="filter-group">
+    <label class="filter-group__label">Status</label>
+    <div class="chip-group">
+      @for (opt of statusOptions; track opt.value) {
+        <button
+          type="button"
+          class="chip"
+          [class.chip--active]="isStatusDrafted(opt.value)"
+          (click)="toggleStatus(opt.value)"
+        >{{ opt.label }}</button>
+      }
+    </div>
+  </div>
+
+  <div class="filter-group">
+    <label class="filter-group__label">Search type</label>
+    <app-select
+      [value]="draft().searchType"
+      [options]="searchTypeOptions"
+      (valueChange)="updateDraft('searchType', $any($event))"
+    />
+  </div>
+
+  <div class="filter-group">
+    <label class="filter-group__label">Search reason</label>
+    <app-select
+      [value]="draft().searchReason"
+      [options]="searchReasonOptions"
+      (valueChange)="updateDraft('searchReason', $any($event))"
+    />
+  </div>
+
+  <div class="filter-group">
+    <label class="filter-group__label">Grabbed</label>
+    <app-select
+      [value]="draft().grabbed"
+      [options]="triStateOptions"
+      (valueChange)="updateDraft('grabbed', $any($event))"
+    />
+  </div>
+
+  <div class="filter-group">
+    <label class="filter-group__label">Dry run</label>
+    <app-select
+      [value]="draft().dryRun"
+      [options]="triStateOptions"
+      (valueChange)="updateDraft('dryRun', $any($event))"
+    />
+  </div>
+
+  <div drawer-footer>
+    <app-button variant="ghost" (clicked)="resetFilters()">Reset</app-button>
+    <app-button variant="primary" (clicked)="applyFilters()">Apply</app-button>
+  </div>
+</app-drawer>
