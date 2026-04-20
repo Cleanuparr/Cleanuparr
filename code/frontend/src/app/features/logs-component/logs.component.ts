@@ -7,6 +7,7 @@ import { PageHeaderComponent } from '@layout/page-header/page-header.component';
 import { CardComponent, BadgeComponent, ButtonComponent, SelectComponent, InputComponent, EmptyStateComponent, type SelectOption } from '@ui';
 import { AppHubService } from '@core/realtime/app-hub.service';
 import { ToastService } from '@core/services/toast.service';
+import { StickyAwareDirective } from '@core/directives/sticky-aware.directive';
 import { AnimatedCounterComponent } from '@ui/animated-counter/animated-counter.component';
 import { LogEntry } from '@core/models/signalr.models';
 
@@ -33,7 +34,8 @@ const LOG_LEVELS: SelectOption[] = [
     SelectComponent,
     InputComponent,
     EmptyStateComponent,
-    AnimatedCounterComponent
+    AnimatedCounterComponent,
+    StickyAwareDirective,
   ],
   templateUrl: './logs.component.html',
   styleUrl: './logs.component.scss',

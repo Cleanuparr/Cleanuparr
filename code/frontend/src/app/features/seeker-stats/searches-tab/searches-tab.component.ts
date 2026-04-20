@@ -15,6 +15,7 @@ import { SeekerSearchType, SeekerSearchReason } from '@core/models/search-stats.
 import { AppHubService } from '@core/realtime/app-hub.service';
 import { ToastService } from '@core/services/toast.service';
 import { PaginationService } from '@core/services/pagination.service';
+import { StickyAwareDirective } from '@core/directives/sticky-aware.directive';
 
 type CycleFilter = 'current' | 'all';
 type TriState = 'any' | 'true' | 'false';
@@ -61,6 +62,7 @@ const STATUS_OPTIONS: ReadonlyArray<{ value: string; label: string }> = [
     AnimatedCounterComponent,
     TooltipComponent,
     DrawerComponent,
+    StickyAwareDirective,
   ],
   templateUrl: './searches-tab.component.html',
   styleUrl: './searches-tab.component.scss',

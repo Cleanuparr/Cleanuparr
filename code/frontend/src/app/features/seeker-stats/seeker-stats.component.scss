@@ -9,5 +9,9 @@
 
   > .tab-content {
     margin-top: var(--space-6);
+    // Chromium retains the compositor layer from slide-up's compositing properties,
+    // which persists as a backdrop root and clips the descendant toolbar's
+    // backdrop-filter. No animated ancestor = no backdrop root = correct frosting.
+    animation: none;
   }
 }

@@ -15,6 +15,7 @@ import {
 import { AppHubService } from '@core/realtime/app-hub.service';
 import { ToastService } from '@core/services/toast.service';
 import { PaginationService } from '@core/services/pagination.service';
+import { StickyAwareDirective } from '@core/directives/sticky-aware.directive';
 
 const DEFAULT_SORT_BY = CfScoresSortBy.Title;
 const DEFAULT_SORT_DIRECTION = SortDirection.Asc;
@@ -47,6 +48,7 @@ const EMPTY_FILTERS: AdvancedFilters = {
     AnimatedCounterComponent,
     TooltipComponent,
     DrawerComponent,
+    StickyAwareDirective,
   ],
   templateUrl: './quality-tab.component.html',
   styleUrl: './quality-tab.component.scss',

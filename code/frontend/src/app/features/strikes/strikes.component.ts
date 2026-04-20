@@ -11,6 +11,7 @@ import { StrikesApi } from '@core/api/strikes.api';
 import { ToastService } from '@core/services/toast.service';
 import { ConfirmService } from '@core/services/confirm.service';
 import { PaginationService } from '@core/services/pagination.service';
+import { StickyAwareDirective } from '@core/directives/sticky-aware.directive';
 import { DownloadItemStrikes, StrikeFilter } from '@core/models/strike.models';
 
 @Component({
@@ -28,6 +29,7 @@ import { DownloadItemStrikes, StrikeFilter } from '@core/models/strike.models';
     PaginatorComponent,
     EmptyStateComponent,
     AnimatedCounterComponent,
+    StickyAwareDirective,
   ],
   templateUrl: './strikes.component.html',
   styleUrl: './strikes.component.scss',

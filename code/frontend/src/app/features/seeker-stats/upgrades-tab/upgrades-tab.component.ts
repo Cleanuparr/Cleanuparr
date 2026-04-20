@@ -12,6 +12,7 @@ import { CfScoreApi, CfScoreUpgrade, CfUpgradesSortBy, SortDirection } from '@co
 import { AppHubService } from '@core/realtime/app-hub.service';
 import { ToastService } from '@core/services/toast.service';
 import { PaginationService } from '@core/services/pagination.service';
+import { StickyAwareDirective } from '@core/directives/sticky-aware.directive';
 
 const DEFAULT_SORT_BY = CfUpgradesSortBy.UpgradedAt;
 const DEFAULT_SORT_DIRECTION = SortDirection.Desc;
@@ -39,6 +40,7 @@ const EMPTY_FILTERS: AdvancedFilters = {
     EmptyStateComponent,
     AnimatedCounterComponent,
     DrawerComponent,
+    StickyAwareDirective,
   ],
   templateUrl: './upgrades-tab.component.html',
   styleUrl: './upgrades-tab.component.scss',
