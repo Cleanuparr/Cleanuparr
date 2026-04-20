@@ -321,10 +321,8 @@ public sealed class CustomFormatScoreController : ControllerBase
     [HttpGet("instances")]
     public async Task<IActionResult> GetInstances()
     {
-        var instances = await _dataContext.CustomFormatScoreEntries
+        var raw = await _dataContext.CustomFormatScoreEntries
             .AsNoTracking()
-            .Select(e => new { e.ArrInstanceId, e.ItemType })
-            .Distinct()
             .Join(
                 _dataContext.ArrInstances.AsNoTracking(),
                 e => e.ArrInstanceId,
@@ -334,9 +332,26 @@ public sealed class CustomFormatScoreController : ControllerBase
                     Id = e.ArrInstanceId,
                     a.Name,
                     e.ItemType,
+                    e.QualityProfileName,
                 })
-            .OrderBy(x => x.Name)
             .ToListAsync();
+
+        var instances = raw
+            .GroupBy(x => new { x.Id, x.Name, x.ItemType })
+            .Select(g => new
+            {
+                g.Key.Id,
+                g.Key.Name,
+                ItemType = g.Key.ItemType,
+                QualityProfiles = g
+                    .Select(x => x.QualityProfileName)
+                    .Where(n => !string.IsNullOrWhiteSpace(n))
+                    .Distinct()
+                    .OrderBy(n => n, StringComparer.OrdinalIgnoreCase)
+                    .ToList(),
+            })
+            .OrderBy(x => x.Name)
+            .ToList();
 
         return Ok(new { Instances = instances });
     }
