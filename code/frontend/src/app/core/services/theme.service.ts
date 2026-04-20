@@ -4,14 +4,17 @@ export type Theme = 'dark' | 'light';
 
 const THEME_KEY = 'cleanuparr-theme';
 const PERFORMANCE_MODE_KEY = 'cleanuparr-performance-mode';
+const FULL_WIDTH_KEY = 'cleanuparr-full-width';
 
 @Injectable({ providedIn: 'root' })
 export class ThemeService {
   private readonly _theme = signal<Theme>('dark');
   private readonly _performanceMode = signal(false);
+  private readonly _fullWidth = signal(false);
 
   readonly theme = this._theme.asReadonly();
   readonly performanceMode = this._performanceMode.asReadonly();
+  readonly fullWidth = this._fullWidth.asReadonly();
 
   constructor() {
     this.restoreFromStorage();
@@ -41,6 +44,17 @@ export class ThemeService {
     localStorage.setItem(PERFORMANCE_MODE_KEY, String(value));
   }
 
+  toggleFullWidth(): void {
+    const next = !this._fullWidth();
+    this._fullWidth.set(next);
+    localStorage.setItem(FULL_WIDTH_KEY, String(next));
+  }
+
+  setFullWidth(value: boolean): void {
+    this._fullWidth.set(value);
+    localStorage.setItem(FULL_WIDTH_KEY, String(value));
+  }
+
   private restoreFromStorage(): void {
     const savedTheme = localStorage.getItem(THEME_KEY);
     if (savedTheme === 'light' || savedTheme === 'dark') {
@@ -50,6 +64,11 @@ export class ThemeService {
     const saved = localStorage.getItem(PERFORMANCE_MODE_KEY);
     if (saved === 'true') {
       this._performanceMode.set(true);
+    }
+
+    const savedFullWidth = localStorage.getItem(FULL_WIDTH_KEY);
+    if (savedFullWidth === 'true') {
+      this._fullWidth.set(true);
     }
   }
 
@@ -67,6 +86,10 @@ export class ThemeService {
 
     effect(() => {
       document.documentElement.setAttribute('data-performance-mode', String(this._performanceMode()));
+    });
+
+    effect(() => {
+      document.documentElement.setAttribute('data-full-width', String(this._fullWidth()));
     });
   }
 }

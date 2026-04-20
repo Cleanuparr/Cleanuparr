@@ -71,8 +71,9 @@
   }
 
   &__content {
+    --content-padding: var(--space-6);
     flex: 1;
-    padding: var(--space-6);
+    padding: var(--content-padding);
     overflow-y: auto;
     scroll-behavior: smooth;
     max-width: var(--content-max-width);
@@ -97,7 +98,7 @@
 
   // Tablet layout
   &--collapsed &__content {
-    padding: var(--space-5);
+    --content-padding: var(--space-5);
   }
 
   // Mobile layout
@@ -106,7 +107,7 @@
   }
 
   &--mobile &__content {
-    padding: var(--space-4);
+    --content-padding: var(--space-4);
     overflow-x: hidden;
   }
 }

@@ -7,6 +7,11 @@
 @use 'styles/scrollbar';
 @use 'styles/animations';
 
+// Full-width toggle
+:root[data-full-width="true"] .shell__content {
+  max-width: none;
+}
+
 // Skeleton loading utility - add class="skeleton" to any element
 .skeleton {
   background: linear-gradient(
