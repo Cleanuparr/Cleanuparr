@@ -5,8 +5,7 @@
   > .toolbar {
     animation: slide-up var(--duration-normal) var(--ease-default) both;
     animation-delay: 0ms;
-    position: relative;
-    z-index: 1;
+    @include sticky-page-header;
   }
   > .log-count {
     animation: slide-up var(--duration-normal) var(--ease-default) both;
@@ -38,8 +37,6 @@
 
 // Log console
 .log-console {
-  max-height: 70vh;
-  overflow-y: auto;
   font-family: var(--font-mono);
   font-size: var(--font-size-xs);
 }
