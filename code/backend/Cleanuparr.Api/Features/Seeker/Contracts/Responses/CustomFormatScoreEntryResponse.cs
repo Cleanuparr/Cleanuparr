@@ -17,4 +17,5 @@ public sealed record CustomFormatScoreEntryResponse
     public bool IsBelowCutoff { get; init; }
     public bool IsMonitored { get; init; }
     public DateTime LastSyncedAt { get; init; }
+    public DateTime? LastUpgradedAt { get; init; }
 }

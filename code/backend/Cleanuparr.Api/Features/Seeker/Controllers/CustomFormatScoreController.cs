@@ -1,5 +1,7 @@
 using Cleanuparr.Api.Features.Seeker.Contracts.Responses;
+using Cleanuparr.Domain.Enums;
 using Cleanuparr.Persistence;
+using Cleanuparr.Persistence.Models.State;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -28,8 +30,13 @@ public sealed class CustomFormatScoreController : ControllerBase
         [FromQuery] Guid? instanceId = null,
         [FromQuery] string? search = null,
         [FromQuery] string sortBy = "title",
-        [FromQuery] bool hideMet = false,
-        [FromQuery] bool hideUnmonitored = false)
+        [FromQuery] string? sortDirection = null,
+        [FromQuery] string? qualityProfile = null,
+        [FromQuery] string? itemType = null,
+        [FromQuery] string? cutoffFilter = null,
+        [FromQuery] string? monitoredFilter = null,
+        [FromQuery] bool? hideMet = null,
+        [FromQuery] bool? hideUnmonitored = null)
     {
         if (page < 1)
         {
@@ -46,6 +53,17 @@ public sealed class CustomFormatScoreController : ControllerBase
             pageSize = 500;
         }
 
+        // Back-compat: translate deprecated inverted booleans into the new positive-logic params
+        // when the caller did not provide an explicit new param.
+        if (string.IsNullOrWhiteSpace(cutoffFilter) && hideMet == true)
+        {
+            cutoffFilter = "below";
+        }
+        if (string.IsNullOrWhiteSpace(monitoredFilter) && hideUnmonitored == true)
+        {
+            monitoredFilter = "monitored";
+        }
+
         var query = _dataContext.CustomFormatScoreEntries
             .AsNoTracking()
             .AsQueryable();
@@ -60,21 +78,67 @@ public sealed class CustomFormatScoreController : ControllerBase
             query = query.Where(e => e.Title.ToLower().Contains(search.ToLower()));
         }
 
-        if (hideMet)
+        if (!string.IsNullOrWhiteSpace(qualityProfile))
         {
-            query = query.Where(e => e.CurrentScore < e.CutoffScore);
+            query = query.Where(e => e.QualityProfileName == qualityProfile);
         }
 
-        if (hideUnmonitored)
+        if (!string.IsNullOrWhiteSpace(itemType)
+            && Enum.TryParse<InstanceType>(itemType, ignoreCase: true, out var parsedType))
         {
-            query = query.Where(e => e.IsMonitored);
+            query = query.Where(e => e.ItemType == parsedType);
+        }
+
+        switch ((cutoffFilter ?? "all").ToLowerInvariant())
+        {
+            case "below":
+                query = query.Where(e => e.CurrentScore < e.CutoffScore);
+                break;
+            case "met":
+                query = query.Where(e => e.CurrentScore >= e.CutoffScore);
+                break;
+        }
+
+        switch ((monitoredFilter ?? "all").ToLowerInvariant())
+        {
+            case "monitored":
+                query = query.Where(e => e.IsMonitored);
+                break;
+            case "unmonitored":
+                query = query.Where(e => !e.IsMonitored);
+                break;
         }
 
         int totalCount = await query.CountAsync();
 
-        var items = await (sortBy == "date"
-                ? query.OrderByDescending(e => e.LastSyncedAt)
-                : query.OrderBy(e => e.Title))
+        bool ascending = string.IsNullOrWhiteSpace(sortDirection)
+            ? DefaultAscendingForScoreSortBy(sortBy)
+            : string.Equals(sortDirection, "asc", StringComparison.OrdinalIgnoreCase);
+
+        IOrderedQueryable<CustomFormatScoreEntry> ordered = (sortBy ?? "title").ToLowerInvariant() switch
+        {
+            "currentscore" => ascending
+                ? query.OrderBy(e => e.CurrentScore)
+                : query.OrderByDescending(e => e.CurrentScore),
+            "cutoffscore" => ascending
+                ? query.OrderBy(e => e.CutoffScore)
+                : query.OrderByDescending(e => e.CutoffScore),
+            "qualityprofile" => ascending
+                ? query.OrderBy(e => e.QualityProfileName)
+                : query.OrderByDescending(e => e.QualityProfileName),
+            "lastsyncedat" or "date" => ascending
+                ? query.OrderBy(e => e.LastSyncedAt)
+                : query.OrderByDescending(e => e.LastSyncedAt),
+            "lastupgradedat" => ascending
+                ? query.OrderBy(e => e.LastUpgradedAt)
+                : query.OrderByDescending(e => e.LastUpgradedAt),
+            _ => ascending
+                ? query.OrderBy(e => e.Title)
+                : query.OrderByDescending(e => e.Title),
+        };
+
+        var items = await ordered
+            .ThenBy(e => e.Id)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .Select(e => new CustomFormatScoreEntryResponse
@@ -92,6 +156,7 @@ public sealed class CustomFormatScoreController : ControllerBase
                 IsBelowCutoff = e.CurrentScore < e.CutoffScore,
                 IsMonitored = e.IsMonitored,
                 LastSyncedAt = e.LastSyncedAt,
+                LastUpgradedAt = e.LastUpgradedAt,
             })
             .ToListAsync();
 
@@ -103,6 +168,18 @@ public sealed class CustomFormatScoreController : ControllerBase
             TotalCount = totalCount,
             TotalPages = (int)Math.Ceiling(totalCount / (double)pageSize),
         });
+    }
+
+    private static bool DefaultAscendingForScoreSortBy(string? sortBy)
+    {
+        // Default directions match user expectations:
+        // - textual fields sort ascending (A→Z)
+        // - numeric/date fields sort descending (most recent / highest first)
+        return (sortBy ?? "title").ToLowerInvariant() switch
+        {
+            "currentscore" or "cutoffscore" or "lastsyncedat" or "date" or "lastupgradedat" => false,
+            _ => true,
+        };
     }
 
     /// <summary>
