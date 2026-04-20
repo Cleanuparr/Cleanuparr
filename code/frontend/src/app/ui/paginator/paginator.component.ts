@@ -13,7 +13,7 @@ import { SelectComponent, type SelectOption } from '../select/select.component';
 })
 export class PaginatorComponent {
   totalRecords = input(0);
-  pageSize = input(25);
+  pageSize = input(50);
   currentPage = input(1);
   pageSizeOptions = input<number[]>([50, 100, 200, 500]);
 
