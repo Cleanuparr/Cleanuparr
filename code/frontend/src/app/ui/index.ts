@@ -16,6 +16,7 @@ export { TextareaComponent } from './textarea/textarea.component';
 export { ChipInputComponent } from './chip-input/chip-input.component';
 export { AccordionComponent } from './accordion/accordion.component';
 export { ModalComponent } from './modal/modal.component';
+export { DrawerComponent } from './drawer/drawer.component';
 export { PaginatorComponent } from './paginator/paginator.component';
 export { TabsComponent } from './tabs/tabs.component';
 export type { Tab } from './tabs/tabs.component';
