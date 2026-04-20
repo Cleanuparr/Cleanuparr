@@ -108,21 +108,14 @@ public class EventsController : ControllerBase
             .Take(pageSize)
             .ToListAsync();
 
-        List<AppEvent> newevents = [];
-
-        for (int i = 0; i < pageSize; i++)
-        {
-            newevents.Add(events[i % 3]);
-        }
-
         // Return paginated result
         var result = new PaginatedResult<AppEvent>
         {
-            Items = newevents,
+            Items = events,
             Page = page,
             PageSize = pageSize,
-            TotalCount = 2000,
-            TotalPages = 2000 / pageSize
+            TotalCount = totalCount,
+            TotalPages = totalPages
         };
         
         return Ok(result);
