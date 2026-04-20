@@ -7,9 +7,8 @@
 // Pins a page header bar to the top of the shell scroll container
 @mixin sticky-page-header {
   position: sticky;
-  top: calc(-1 * var(--content-padding, var(--space-6)));
+  top: 0;
   z-index: var(--z-sticky);
-  background: var(--surface-overlay);
   backdrop-filter: blur(20px) saturate(1.4);
   -webkit-backdrop-filter: blur(20px) saturate(1.4);
   padding-top: var(--content-padding, var(--space-6));
@@ -24,7 +23,7 @@
 
 @mixin data-toolbar {
   display: flex;
-  align-items: center;
+  align-items: end;
   justify-content: space-between;
   gap: var(--space-4);
   margin-bottom: var(--space-4);
