@@ -181,11 +181,12 @@
   </div>
 </app-card>
 
-@if (eventsTotalRecords() > pageSize()) {
+@if (eventsTotalRecords() > 0) {
   <app-paginator
     [totalRecords]="eventsTotalRecords()"
     [pageSize]="pageSize()"
     [currentPage]="eventsPage()"
     (pageChange)="onEventsPageChange($event)"
+    (pageSizeChange)="onPageSizeChange($event)"
   />
 }

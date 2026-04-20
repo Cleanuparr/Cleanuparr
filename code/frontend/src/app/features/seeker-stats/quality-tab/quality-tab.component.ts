@@ -13,6 +13,7 @@ import {
 } from '@core/api/cf-score.api';
 import { AppHubService } from '@core/realtime/app-hub.service';
 import { ToastService } from '@core/services/toast.service';
+import { PaginationService } from '@core/services/pagination.service';
 
 @Component({
   selector: 'app-quality-tab',
@@ -36,9 +37,12 @@ import { ToastService } from '@core/services/toast.service';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class QualityTabComponent implements OnInit {
+  private static readonly PAGE_SIZE_KEY = 'cleanuparr-page-size-seeker-quality';
+
   private readonly api = inject(CfScoreApi);
   private readonly hub = inject(AppHubService);
   private readonly toast = inject(ToastService);
+  private readonly pagination = inject(PaginationService);
   private initialLoad = true;
 
   readonly items = signal<CfScoreEntry[]>([]);
@@ -47,7 +51,7 @@ export class QualityTabComponent implements OnInit {
   readonly loading = signal(false);
 
   readonly currentPage = signal(1);
-  readonly pageSize = signal(50);
+  readonly pageSize = signal(this.pagination.getPageSize(QualityTabComponent.PAGE_SIZE_KEY, 50));
   readonly searchQuery = signal('');
   readonly selectedInstanceId = signal<string>('');
   readonly instanceOptions = signal<SelectOption[]>([]);
@@ -162,6 +166,13 @@ export class QualityTabComponent implements OnInit {
     this.currentPage.set(page);
     this.loadScores();
   }
+
+  readonly onPageSizeChange = this.pagination.createPageSizeHandler(
+    QualityTabComponent.PAGE_SIZE_KEY,
+    this.pageSize,
+    this.currentPage,
+    () => this.loadScores(),
+  );
 
   refresh(): void {
     this.loadScores();

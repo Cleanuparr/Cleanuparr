@@ -10,6 +10,7 @@ import { AnimatedCounterComponent } from '@ui/animated-counter/animated-counter.
 import { CfScoreApi, CfScoreUpgrade } from '@core/api/cf-score.api';
 import { AppHubService } from '@core/realtime/app-hub.service';
 import { ToastService } from '@core/services/toast.service';
+import { PaginationService } from '@core/services/pagination.service';
 
 @Component({
   selector: 'app-upgrades-tab',
@@ -30,15 +31,18 @@ import { ToastService } from '@core/services/toast.service';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class UpgradesTabComponent implements OnInit {
+  private static readonly PAGE_SIZE_KEY = 'cleanuparr-page-size-seeker-upgrades';
+
   private readonly api = inject(CfScoreApi);
   private readonly hub = inject(AppHubService);
   private readonly toast = inject(ToastService);
+  private readonly pagination = inject(PaginationService);
   private initialLoad = true;
 
   readonly upgrades = signal<CfScoreUpgrade[]>([]);
   readonly totalRecords = signal(0);
   readonly currentPage = signal(1);
-  readonly pageSize = signal(50);
+  readonly pageSize = signal(this.pagination.getPageSize(UpgradesTabComponent.PAGE_SIZE_KEY, 50));
   readonly loading = signal(false);
 
   readonly timeRange = signal<string>('30');
@@ -86,6 +90,13 @@ export class UpgradesTabComponent implements OnInit {
     this.currentPage.set(page);
     this.loadUpgrades();
   }
+
+  readonly onPageSizeChange = this.pagination.createPageSizeHandler(
+    UpgradesTabComponent.PAGE_SIZE_KEY,
+    this.pageSize,
+    this.currentPage,
+    () => this.loadUpgrades(),
+  );
 
   refresh(): void {
     this.loadUpgrades();

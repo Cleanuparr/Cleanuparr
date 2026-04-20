@@ -10,6 +10,7 @@ import { AnimatedCounterComponent } from '@ui/animated-counter/animated-counter.
 import { StrikesApi } from '@core/api/strikes.api';
 import { ToastService } from '@core/services/toast.service';
 import { ConfirmService } from '@core/services/confirm.service';
+import { PaginationService } from '@core/services/pagination.service';
 import { DownloadItemStrikes, StrikeFilter } from '@core/models/strike.models';
 
 @Component({
@@ -33,9 +34,12 @@ import { DownloadItemStrikes, StrikeFilter } from '@core/models/strike.models';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class StrikesComponent implements OnInit, OnDestroy {
+  private static readonly PAGE_SIZE_KEY = 'cleanuparr-page-size-strikes';
+
   private readonly strikesApi = inject(StrikesApi);
   private readonly toast = inject(ToastService);
   private readonly confirm = inject(ConfirmService);
+  private readonly pagination = inject(PaginationService);
   private pollTimer: ReturnType<typeof setInterval> | null = null;
 
   readonly items = signal<DownloadItemStrikes[]>([]);
@@ -44,7 +48,7 @@ export class StrikesComponent implements OnInit, OnDestroy {
   readonly expandedId = signal<string | null>(null);
 
   readonly currentPage = signal(1);
-  readonly pageSize = signal(50);
+  readonly pageSize = signal(this.pagination.getPageSize(StrikesComponent.PAGE_SIZE_KEY, 50));
   readonly selectedType = signal<unknown>('');
   readonly searchQuery = signal('');
 
@@ -107,6 +111,13 @@ export class StrikesComponent implements OnInit, OnDestroy {
     this.currentPage.set(page);
     this.loadStrikes();
   }
+
+  readonly onPageSizeChange = this.pagination.createPageSizeHandler(
+    StrikesComponent.PAGE_SIZE_KEY,
+    this.pageSize,
+    this.currentPage,
+    () => this.loadStrikes(),
+  );
 
   toggleExpand(itemId: string): void {
     this.expandedId.update((current) => (current === itemId ? null : itemId));
