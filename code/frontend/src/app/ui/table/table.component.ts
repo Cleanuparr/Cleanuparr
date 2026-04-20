@@ -24,10 +24,6 @@ export class TableComponent {
       this.sortChange.emit({ sortKey: key, sortDirection: 'asc' });
       return;
     }
-    if (currentDir === 'asc') {
-      this.sortChange.emit({ sortKey: key, sortDirection: 'desc' });
-      return;
-    }
-    this.sortChange.emit({ sortKey: null, sortDirection: 'desc' });
+    this.sortChange.emit({ sortKey: key, sortDirection: currentDir === 'asc' ? 'desc' : 'asc' });
   }
 }

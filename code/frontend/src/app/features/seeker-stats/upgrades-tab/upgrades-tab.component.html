@@ -143,25 +143,6 @@
     />
   </div>
 
-  <div class="filter-group">
-    <label class="filter-group__label">Item type</label>
-    <app-select
-      [value]="draft().itemType"
-      [options]="itemTypeOptions"
-      (valueChange)="updateDraft('itemType', $any($event))"
-    />
-  </div>
-
-  <div class="filter-group">
-    <label class="filter-group__label">Minimum score increase</label>
-    <app-number-input
-      placeholder="Any"
-      [min]="0"
-      [value]="draft().minScoreDelta"
-      (valueChange)="updateDraft('minScoreDelta', $any($event))"
-    />
-  </div>
-
   <div drawer-footer>
     <app-button variant="ghost" (clicked)="resetFilters()">Reset</app-button>
     <app-button variant="primary" (clicked)="applyFilters()">Apply</app-button>

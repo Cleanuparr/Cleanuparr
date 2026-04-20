@@ -4,7 +4,7 @@ import { NgIcon } from '@ng-icons/core';
 import {
   CardComponent, BadgeComponent, ButtonComponent, SelectComponent,
   InputComponent, PaginatorComponent, EmptyStateComponent,
-  NumberInputComponent, DrawerComponent, TableComponent, ThComponent, TdComponent,
+  DrawerComponent, TableComponent, ThComponent, TdComponent,
 } from '@ui';
 import type { SelectOption, SortState } from '@ui';
 import { AnimatedCounterComponent } from '@ui/animated-counter/animated-counter.component';
@@ -18,14 +18,10 @@ const DEFAULT_SORT_DIRECTION: 'asc' | 'desc' = 'desc';
 
 interface AdvancedFilters {
   timeRange: string;
-  itemType: string;
-  minScoreDelta: number | null;
 }
 
 const EMPTY_FILTERS: AdvancedFilters = {
   timeRange: '30',
-  itemType: '',
-  minScoreDelta: null,
 };
 
 @Component({
@@ -39,7 +35,6 @@ const EMPTY_FILTERS: AdvancedFilters = {
     ButtonComponent,
     SelectComponent,
     InputComponent,
-    NumberInputComponent,
     PaginatorComponent,
     EmptyStateComponent,
     AnimatedCounterComponent,
@@ -86,21 +81,10 @@ export class UpgradesTabComponent implements OnInit {
     { label: 'All Time', value: '0' },
   ];
 
-  readonly itemTypeOptions: SelectOption[] = [
-    { label: 'Any', value: '' },
-    { label: 'Radarr', value: 'Radarr' },
-    { label: 'Sonarr', value: 'Sonarr' },
-    { label: 'Lidarr', value: 'Lidarr' },
-    { label: 'Readarr', value: 'Readarr' },
-    { label: 'Whisparr', value: 'Whisparr' },
-  ];
-
   readonly activeFilterCount = computed(() => {
     const a = this.applied();
     let n = 0;
-    if (a.timeRange !== '30') n++;
-    if (a.itemType) n++;
-    if (a.minScoreDelta !== null && a.minScoreDelta > 0) n++;
+    if (a.timeRange !== EMPTY_FILTERS.timeRange) n++;
     return n;
   });
 
@@ -220,8 +204,6 @@ export class UpgradesTabComponent implements OnInit {
       instanceId,
       days: Number.isFinite(days) ? days : undefined,
       search: this.searchQuery() || undefined,
-      itemType: a.itemType || undefined,
-      minScoreDelta: a.minScoreDelta ?? undefined,
       sortBy: this.sortBy(),
       sortDirection: this.sortDirection(),
     }).subscribe({

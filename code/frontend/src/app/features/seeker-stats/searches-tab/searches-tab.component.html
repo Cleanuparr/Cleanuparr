@@ -141,7 +141,6 @@
         <th app-th sortKey="title" priority="primary">Title</th>
         <th app-th sortKey="status" priority="secondary">Status</th>
         <th app-th sortKey="type" priority="tertiary">Type</th>
-        <th app-th sortKey="grabbedCount" priority="tertiary" align="right">Grabbed</th>
         <th app-th priority="primary" align="right"></th>
       </tr>
     </thead>
@@ -164,14 +163,13 @@
           <td app-td priority="tertiary">
             <app-badge [severity]="searchTypeSeverity(event.searchType)" size="sm">{{ event.searchType }}</app-badge>
           </td>
-          <td app-td priority="tertiary" align="right">{{ event.grabbedItems?.length ?? 0 }}</td>
           <td app-td priority="primary" align="right">
             <ng-icon [name]="expandedId() === event.id ? 'tablerChevronUp' : 'tablerChevronDown'" />
           </td>
         </tr>
         @if (expandedId() === event.id) {
           <tr class="table-detail-row">
-            <td colspan="6">
+            <td colspan="5">
               <div class="event-detail">
                 <div class="event-detail__chips">
                   @if (event.searchReason) {
