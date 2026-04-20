@@ -190,14 +190,17 @@ public sealed class CustomFormatScoreController : ControllerBase
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 50,
         [FromQuery] Guid? instanceId = null,
-        [FromQuery] int days = 30)
+        [FromQuery] int days = 30,
+        [FromQuery] string? search = null,
+        [FromQuery] string? itemType = null,
+        [FromQuery] int? minScoreDelta = null,
+        [FromQuery] string? sortBy = null,
+        [FromQuery] string? sortDirection = null)
     {
         if (page < 1) page = 1;
         if (pageSize < 1) pageSize = 50;
         if (pageSize > 500) pageSize = 500;
 
-        // Find history entries where a newer entry has a higher score than an older one
-        // We group by item and look for score increases between consecutive records
         var query = _dataContext.CustomFormatScoreHistory
             .AsNoTracking()
             .AsQueryable();
@@ -207,8 +210,23 @@ public sealed class CustomFormatScoreController : ControllerBase
             query = query.Where(h => h.ArrInstanceId == instanceId.Value);
         }
 
+        if (!string.IsNullOrWhiteSpace(itemType)
+            && Enum.TryParse<InstanceType>(itemType, ignoreCase: true, out var parsedType))
+        {
+            query = query.Where(h => h.ItemType == parsedType);
+        }
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            query = query.Where(h => h.Title.ToLower().Contains(search.ToLower()));
+        }
+
+        if (days > 0)
+        {
+            query = query.Where(h => h.RecordedAt >= DateTime.UtcNow.AddDays(-days));
+        }
+
         var allHistory = await query
-            .Where(h => h.RecordedAt >= DateTime.UtcNow.AddDays(-days))
             .OrderByDescending(h => h.RecordedAt)
             .ToListAsync();
 
@@ -241,11 +259,42 @@ public sealed class CustomFormatScoreController : ControllerBase
             }
         }
 
-        // Sort by most recent upgrade first
-        upgrades = upgrades.OrderByDescending(u => u.UpgradedAt).ToList();
+        if (minScoreDelta.HasValue)
+        {
+            upgrades = upgrades
+                .Where(u => u.NewScore - u.PreviousScore >= minScoreDelta.Value)
+                .ToList();
+        }
 
-        int totalCount = upgrades.Count;
-        var paged = upgrades
+        bool ascending = string.IsNullOrWhiteSpace(sortDirection)
+            ? DefaultAscendingForUpgradeSortBy(sortBy)
+            : string.Equals(sortDirection, "asc", StringComparison.OrdinalIgnoreCase);
+
+        IEnumerable<CustomFormatScoreUpgradeResponse> sorted = (sortBy ?? "upgradedat").ToLowerInvariant() switch
+        {
+            "title" => ascending
+                ? upgrades.OrderBy(u => u.Title, StringComparer.OrdinalIgnoreCase)
+                : upgrades.OrderByDescending(u => u.Title, StringComparer.OrdinalIgnoreCase),
+            "newscore" => ascending
+                ? upgrades.OrderBy(u => u.NewScore)
+                : upgrades.OrderByDescending(u => u.NewScore),
+            "cutoffscore" => ascending
+                ? upgrades.OrderBy(u => u.CutoffScore)
+                : upgrades.OrderByDescending(u => u.CutoffScore),
+            "previousscore" => ascending
+                ? upgrades.OrderBy(u => u.PreviousScore)
+                : upgrades.OrderByDescending(u => u.PreviousScore),
+            "scoredelta" => ascending
+                ? upgrades.OrderBy(u => u.NewScore - u.PreviousScore)
+                : upgrades.OrderByDescending(u => u.NewScore - u.PreviousScore),
+            _ => ascending
+                ? upgrades.OrderBy(u => u.UpgradedAt)
+                : upgrades.OrderByDescending(u => u.UpgradedAt),
+        };
+
+        var sortedList = sorted.ToList();
+        int totalCount = sortedList.Count;
+        var paged = sortedList
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToList();
@@ -258,6 +307,15 @@ public sealed class CustomFormatScoreController : ControllerBase
             TotalCount = totalCount,
             TotalPages = (int)Math.Ceiling(totalCount / (double)pageSize),
         });
+    }
+
+    private static bool DefaultAscendingForUpgradeSortBy(string? sortBy)
+    {
+        return (sortBy ?? "upgradedat").ToLowerInvariant() switch
+        {
+            "title" => true,
+            _ => false,
+        };
     }
 
     [HttpGet("instances")]
