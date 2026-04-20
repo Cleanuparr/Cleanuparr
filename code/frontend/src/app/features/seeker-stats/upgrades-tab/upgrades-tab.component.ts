@@ -1,16 +1,32 @@
-import { Component, ChangeDetectionStrategy, inject, signal, effect, untracked, OnInit } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, signal, computed, effect, untracked, OnInit } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { NgIcon } from '@ng-icons/core';
 import {
   CardComponent, BadgeComponent, ButtonComponent, SelectComponent,
-  PaginatorComponent, EmptyStateComponent,
+  InputComponent, PaginatorComponent, EmptyStateComponent,
+  NumberInputComponent, DrawerComponent, TableComponent, ThComponent, TdComponent,
 } from '@ui';
-import type { SelectOption } from '@ui';
+import type { SelectOption, SortState } from '@ui';
 import { AnimatedCounterComponent } from '@ui/animated-counter/animated-counter.component';
 import { CfScoreApi, CfScoreUpgrade } from '@core/api/cf-score.api';
 import { AppHubService } from '@core/realtime/app-hub.service';
 import { ToastService } from '@core/services/toast.service';
 import { PaginationService } from '@core/services/pagination.service';
+
+const DEFAULT_SORT_BY = 'upgradedAt';
+const DEFAULT_SORT_DIRECTION: 'asc' | 'desc' = 'desc';
+
+interface AdvancedFilters {
+  timeRange: string;
+  itemType: string;
+  minScoreDelta: number | null;
+}
+
+const EMPTY_FILTERS: AdvancedFilters = {
+  timeRange: '30',
+  itemType: '',
+  minScoreDelta: null,
+};
 
 @Component({
   selector: 'app-upgrades-tab',
@@ -22,9 +38,15 @@ import { PaginationService } from '@core/services/pagination.service';
     BadgeComponent,
     ButtonComponent,
     SelectComponent,
+    InputComponent,
+    NumberInputComponent,
     PaginatorComponent,
     EmptyStateComponent,
     AnimatedCounterComponent,
+    DrawerComponent,
+    TableComponent,
+    ThComponent,
+    TdComponent,
   ],
   templateUrl: './upgrades-tab.component.html',
   styleUrl: './upgrades-tab.component.scss',
@@ -45,9 +67,17 @@ export class UpgradesTabComponent implements OnInit {
   readonly pageSize = signal(this.pagination.getPageSize(UpgradesTabComponent.PAGE_SIZE_KEY, 50));
   readonly loading = signal(false);
 
-  readonly timeRange = signal<string>('30');
+  readonly searchQuery = signal('');
   readonly selectedInstanceId = signal<string>('');
   readonly instanceOptions = signal<SelectOption[]>([]);
+
+  readonly sortBy = signal<string>(DEFAULT_SORT_BY);
+  readonly sortDirection = signal<'asc' | 'desc'>(DEFAULT_SORT_DIRECTION);
+
+  readonly applied = signal<AdvancedFilters>({ ...EMPTY_FILTERS });
+  readonly draft = signal<AdvancedFilters>({ ...EMPTY_FILTERS });
+  readonly drawerOpen = signal(false);
+  readonly expandedKey = signal<string | null>(null);
 
   readonly timeRangeOptions: SelectOption[] = [
     { label: 'Last 7 Days', value: '7' },
@@ -55,6 +85,24 @@ export class UpgradesTabComponent implements OnInit {
     { label: 'Last 90 Days', value: '90' },
     { label: 'All Time', value: '0' },
   ];
+
+  readonly itemTypeOptions: SelectOption[] = [
+    { label: 'Any', value: '' },
+    { label: 'Radarr', value: 'Radarr' },
+    { label: 'Sonarr', value: 'Sonarr' },
+    { label: 'Lidarr', value: 'Lidarr' },
+    { label: 'Readarr', value: 'Readarr' },
+    { label: 'Whisparr', value: 'Whisparr' },
+  ];
+
+  readonly activeFilterCount = computed(() => {
+    const a = this.applied();
+    let n = 0;
+    if (a.timeRange !== '30') n++;
+    if (a.itemType) n++;
+    if (a.minScoreDelta !== null && a.minScoreDelta > 0) n++;
+    return n;
+  });
 
   constructor() {
     effect(() => {
@@ -74,14 +122,20 @@ export class UpgradesTabComponent implements OnInit {
     this.loadUpgrades();
   }
 
-  onTimeRangeChange(value: string): void {
-    this.timeRange.set(value);
+  onInstanceFilterChange(value: string): void {
+    this.selectedInstanceId.set(value);
     this.currentPage.set(1);
     this.loadUpgrades();
   }
 
-  onInstanceFilterChange(value: string): void {
-    this.selectedInstanceId.set(value);
+  onSearchFilterChange(): void {
+    this.currentPage.set(1);
+    this.loadUpgrades();
+  }
+
+  onSortChange(state: SortState): void {
+    this.sortBy.set(state.sortKey ?? DEFAULT_SORT_BY);
+    this.sortDirection.set(state.sortKey ? state.sortDirection : DEFAULT_SORT_DIRECTION);
     this.currentPage.set(1);
     this.loadUpgrades();
   }
@@ -98,12 +152,45 @@ export class UpgradesTabComponent implements OnInit {
     () => this.loadUpgrades(),
   );
 
+  openFilters(): void {
+    this.draft.set({ ...this.applied() });
+    this.drawerOpen.set(true);
+  }
+
+  resetFilters(): void {
+    this.draft.set({ ...EMPTY_FILTERS });
+  }
+
+  applyFilters(): void {
+    this.applied.set({ ...this.draft() });
+    this.drawerOpen.set(false);
+    this.currentPage.set(1);
+    this.loadUpgrades();
+  }
+
+  updateDraft<K extends keyof AdvancedFilters>(key: K, value: AdvancedFilters[K]): void {
+    this.draft.update(d => ({ ...d, [key]: value }));
+  }
+
+  toggleExpand(upgrade: CfScoreUpgrade): void {
+    const key = this.upgradeKey(upgrade);
+    this.expandedKey.update(current => (current === key ? null : key));
+  }
+
+  upgradeKey(upgrade: CfScoreUpgrade): string {
+    return `${upgrade.arrInstanceId}-${upgrade.externalItemId}-${upgrade.episodeId}-${upgrade.upgradedAt}`;
+  }
+
   refresh(): void {
     this.loadUpgrades();
   }
 
   itemTypeSeverity(itemType: string): 'info' | 'default' {
     return itemType === 'Radarr' || itemType === 'Sonarr' ? 'info' : 'default';
+  }
+
+  scoreDelta(upgrade: CfScoreUpgrade): number {
+    return upgrade.newScore - upgrade.previousScore;
   }
 
   private loadInstances(): void {
@@ -123,10 +210,21 @@ export class UpgradesTabComponent implements OnInit {
 
   private loadUpgrades(): void {
     this.loading.set(true);
-    const days = parseInt(this.timeRange(), 10) || undefined;
+    const a = this.applied();
+    const days = parseInt(a.timeRange, 10);
     const instanceId = this.selectedInstanceId() || undefined;
 
-    this.api.getRecentUpgrades({ page: this.currentPage(), pageSize: this.pageSize(), instanceId, days }).subscribe({
+    this.api.getRecentUpgrades({
+      page: this.currentPage(),
+      pageSize: this.pageSize(),
+      instanceId,
+      days: Number.isFinite(days) ? days : undefined,
+      search: this.searchQuery() || undefined,
+      itemType: a.itemType || undefined,
+      minScoreDelta: a.minScoreDelta ?? undefined,
+      sortBy: this.sortBy(),
+      sortDirection: this.sortDirection(),
+    }).subscribe({
       next: (result) => {
         this.upgrades.set(result.items);
         this.totalRecords.set(result.totalCount);

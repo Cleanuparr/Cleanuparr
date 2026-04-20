@@ -2,21 +2,26 @@
 <div class="toolbar">
   <div class="toolbar__filters">
     <app-select
-      [value]="timeRange()"
-      [options]="timeRangeOptions"
-      (valueChange)="onTimeRangeChange($any($event))"
-    />
-    <app-select
       placeholder="All Instances"
       [options]="instanceOptions()"
       [value]="selectedInstanceId()"
       (valueChange)="onInstanceFilterChange($any($event))"
     />
+    <app-input
+      placeholder="Search by title..."
+      type="search"
+      [(value)]="searchQuery"
+      (entered)="onSearchFilterChange()"
+    />
   </div>
   <div class="toolbar__actions">
-    <app-button variant="ghost" size="sm" (clicked)="refresh()">
-      Refresh
+    <app-button variant="ghost" size="sm" (clicked)="openFilters()">
+      Filters
+      @if (activeFilterCount() > 0) {
+        <app-badge severity="accent" size="sm">{{ activeFilterCount() }}</app-badge>
+      }
     </app-button>
+    <app-button variant="ghost" size="sm" (clicked)="refresh()">Refresh</app-button>
   </div>
 </div>
 
@@ -28,36 +33,92 @@
   </div>
 </div>
 
-<!-- Upgrades List -->
+<!-- Upgrades Table -->
 <app-card [noPadding]="true">
-  <div class="upgrades-list">
-    @for (upgrade of upgrades(); track $index) {
-      <div class="upgrade-row">
-        <div class="upgrade-row__main">
-          <ng-icon name="tablerTrendingUp" class="upgrade-row__icon" />
-          <div class="upgrade-row__scores">
-            <span class="upgrade-row__score upgrade-row__score--old">{{ upgrade.previousScore }}</span>
-            <ng-icon name="tablerArrowRight" class="upgrade-row__arrow" />
-            <span class="upgrade-row__score upgrade-row__score--new">{{ upgrade.newScore }}</span>
-            <span class="upgrade-row__cutoff">(cutoff: {{ upgrade.cutoffScore }})</span>
-          </div>
-          <app-badge [severity]="itemTypeSeverity(upgrade.itemType)" size="sm">
-            {{ upgrade.itemType }}
-          </app-badge>
-          <span class="upgrade-row__time">{{ upgrade.upgradedAt | date:'yyyy-MM-dd HH:mm' }}</span>
-        </div>
-        <div class="upgrade-row__title">
-          {{ upgrade.title }}
-        </div>
-      </div>
-    } @empty {
+  <app-table
+    [sortKey]="sortBy()"
+    [sortDirection]="sortDirection()"
+    [loading]="loading()"
+    [empty]="upgrades().length === 0"
+    (sortChange)="onSortChange($event)"
+  >
+    <thead>
+      <tr>
+        <th app-th sortKey="upgradedAt" priority="primary">Upgraded</th>
+        <th app-th sortKey="title" priority="primary">Title</th>
+        <th app-th sortKey="newScore" priority="secondary" align="right">New</th>
+        <th app-th sortKey="previousScore" priority="tertiary" align="right">Previous</th>
+        <th app-th sortKey="scoreDelta" priority="tertiary" align="right">Δ</th>
+        <th app-th sortKey="cutoffScore" priority="tertiary" align="right">Cutoff</th>
+        <th app-th priority="primary" align="right"></th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (upgrade of upgrades(); track upgradeKey(upgrade)) {
+        <tr
+          class="table-row--clickable"
+          [class.table-row--expanded]="expandedKey() === upgradeKey(upgrade)"
+          (click)="toggleExpand(upgrade)"
+        >
+          <td app-td priority="primary">{{ upgrade.upgradedAt | date:'yyyy-MM-dd HH:mm' }}</td>
+          <td app-td priority="primary">
+            <div class="cell-title">
+              <span class="cell-title__text">{{ upgrade.title }}</span>
+              <app-badge [severity]="itemTypeSeverity(upgrade.itemType)" size="sm">{{ upgrade.itemType }}</app-badge>
+            </div>
+          </td>
+          <td app-td priority="secondary" align="right">
+            <span class="score-value score-value--new">{{ upgrade.newScore }}</span>
+          </td>
+          <td app-td priority="tertiary" align="right">
+            <span class="score-value score-value--old">{{ upgrade.previousScore }}</span>
+          </td>
+          <td app-td priority="tertiary" align="right">
+            <span class="score-delta">+{{ scoreDelta(upgrade) }}</span>
+          </td>
+          <td app-td priority="tertiary" align="right">{{ upgrade.cutoffScore }}</td>
+          <td app-td priority="primary" align="right">
+            <ng-icon [name]="expandedKey() === upgradeKey(upgrade) ? 'tablerChevronUp' : 'tablerChevronDown'" />
+          </td>
+        </tr>
+        @if (expandedKey() === upgradeKey(upgrade)) {
+          <tr class="table-detail-row">
+            <td colspan="7">
+              <div class="upgrade-detail">
+                <div class="upgrade-detail__item">
+                  <span class="upgrade-detail__label">Previous score</span>
+                  <span class="upgrade-detail__value">{{ upgrade.previousScore }}</span>
+                </div>
+                <div class="upgrade-detail__item">
+                  <span class="upgrade-detail__label">New score</span>
+                  <span class="upgrade-detail__value">{{ upgrade.newScore }}</span>
+                </div>
+                <div class="upgrade-detail__item">
+                  <span class="upgrade-detail__label">Delta</span>
+                  <span class="upgrade-detail__value">+{{ scoreDelta(upgrade) }}</span>
+                </div>
+                <div class="upgrade-detail__item">
+                  <span class="upgrade-detail__label">Cutoff</span>
+                  <span class="upgrade-detail__value">{{ upgrade.cutoffScore }}</span>
+                </div>
+                <div class="upgrade-detail__item">
+                  <span class="upgrade-detail__label">Upgraded at</span>
+                  <span class="upgrade-detail__value">{{ upgrade.upgradedAt | date:'yyyy-MM-dd HH:mm:ss' }}</span>
+                </div>
+              </div>
+            </td>
+          </tr>
+        }
+      }
+    </tbody>
+    <div table-empty>
       <app-empty-state
         icon="tablerTrendingUp"
         heading="No upgrades found"
         description="Score upgrades will appear here when items improve their custom format scores."
       />
-    }
-  </div>
+    </div>
+  </app-table>
 </app-card>
 
 <!-- Pagination -->
@@ -70,3 +131,39 @@
     (pageSizeChange)="onPageSizeChange($event)"
   />
 }
+
+<!-- Filter drawer -->
+<app-drawer title="Filter upgrades" [(visible)]="drawerOpen">
+  <div class="filter-group">
+    <label class="filter-group__label">Time range</label>
+    <app-select
+      [value]="draft().timeRange"
+      [options]="timeRangeOptions"
+      (valueChange)="updateDraft('timeRange', $any($event))"
+    />
+  </div>
+
+  <div class="filter-group">
+    <label class="filter-group__label">Item type</label>
+    <app-select
+      [value]="draft().itemType"
+      [options]="itemTypeOptions"
+      (valueChange)="updateDraft('itemType', $any($event))"
+    />
+  </div>
+
+  <div class="filter-group">
+    <label class="filter-group__label">Minimum score increase</label>
+    <app-number-input
+      placeholder="Any"
+      [min]="0"
+      [value]="draft().minScoreDelta"
+      (valueChange)="updateDraft('minScoreDelta', $any($event))"
+    />
+  </div>
+
+  <div drawer-footer>
+    <app-button variant="ghost" (clicked)="resetFilters()">Reset</app-button>
+    <app-button variant="primary" (clicked)="applyFilters()">Apply</app-button>
+  </div>
+</app-drawer>
