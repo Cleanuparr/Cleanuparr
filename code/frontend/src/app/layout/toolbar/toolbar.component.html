@@ -14,6 +14,14 @@
       <ng-icon [name]="theme() === 'dark' ? 'tablerSun' : 'tablerMoon'" />
     </button>
 
+    <app-tooltip text="Expands page content edge-to-edge on wide monitors, removing the default width cap.">
+      <app-toggle
+        [label]="'Full width'"
+        [checked]="fullWidth()"
+        (checkedChange)="onToggleFullWidth()"
+      />
+    </app-tooltip>
+
     <app-tooltip text="Disables animations and visual effects for better UI performance. Auto-enabled when your system prefers reduced motion.">
       <app-toggle
         [label]="'Performance mode'"
