@@ -277,15 +277,6 @@
     />
   </div>
 
-  <div class="filter-group">
-    <label class="filter-group__label">Dry run</label>
-    <app-select
-      [value]="draft().dryRun"
-      [options]="triStateOptions"
-      (valueChange)="updateDraft('dryRun', $any($event))"
-    />
-  </div>
-
   <div drawer-footer>
     <app-button variant="ghost" (clicked)="resetFilters()">Reset</app-button>
     <app-button variant="primary" (clicked)="applyFilters()">Apply</app-button>

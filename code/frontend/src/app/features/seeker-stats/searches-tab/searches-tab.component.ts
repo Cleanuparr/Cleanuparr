@@ -28,7 +28,6 @@ interface AdvancedFilters {
   searchType: string;
   searchReason: string;
   grabbed: TriState;
-  dryRun: TriState;
 }
 
 const EMPTY_FILTERS: AdvancedFilters = {
@@ -37,7 +36,6 @@ const EMPTY_FILTERS: AdvancedFilters = {
   searchType: '',
   searchReason: '',
   grabbed: 'any',
-  dryRun: 'any',
 };
 
 const STATUS_OPTIONS: ReadonlyArray<{ value: string; label: string }> = [
@@ -139,12 +137,13 @@ export class SearchesTabComponent implements OnInit {
   readonly activeFilterCount = computed(() => {
     const a = this.applied();
     let n = 0;
-    if (a.cycleFilter !== 'current') n++;
+    // Cycle filter only meaningful when an instance is selected; skip otherwise
+    // (default 'all' with no instance would otherwise incorrectly register as active).
+    if (this.selectedInstanceId() && a.cycleFilter !== 'current') n++;
     if (a.statuses.length) n++;
     if (a.searchType) n++;
     if (a.searchReason) n++;
     if (a.grabbed !== 'any') n++;
-    if (a.dryRun !== 'any') n++;
     return n;
   });
 
@@ -355,7 +354,6 @@ export class SearchesTabComponent implements OnInit {
       searchType: a.searchType || undefined,
       searchReason: a.searchReason || undefined,
       grabbed: triToBool(a.grabbed),
-      dryRun: triToBool(a.dryRun),
     }).subscribe({
       next: (result) => {
         this.events.set(result.items);
