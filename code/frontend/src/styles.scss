@@ -8,7 +8,7 @@
 @use 'styles/animations';
 
 // Full-width toggle
-:root[data-full-width="true"] .shell__content {
+:root[data-full-width="true"] .shell__content-inner {
   max-width: none;
 }
 

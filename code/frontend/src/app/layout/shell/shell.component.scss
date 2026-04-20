@@ -71,16 +71,19 @@
   }
 
   &__content {
-    --content-padding: var(--space-6);
     flex: 1;
-    padding: var(--content-padding);
     overflow-y: auto;
     scroll-behavior: smooth;
+    position: relative;
+    z-index: 1;
+  }
+
+  &__content-inner {
+    --content-padding: var(--space-6);
+    padding: var(--content-padding);
     max-width: var(--content-max-width);
     width: 100%;
     margin: 0 auto;
-    position: relative;
-    z-index: 1;
 
     // Route transition: animate routed component on mount
     > :not(router-outlet) {
@@ -97,7 +100,7 @@
   }
 
   // Tablet layout
-  &--collapsed &__content {
+  &--collapsed &__content-inner {
     --content-padding: var(--space-5);
   }
 
@@ -107,7 +110,10 @@
   }
 
   &--mobile &__content {
-    --content-padding: var(--space-4);
     overflow-x: hidden;
+  }
+
+  &--mobile &__content-inner {
+    --content-padding: var(--space-4);
   }
 }
