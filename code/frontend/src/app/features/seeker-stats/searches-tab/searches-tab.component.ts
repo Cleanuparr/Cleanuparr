@@ -13,6 +13,7 @@ import type { SearchStatsSummary, SearchEvent, InstanceSearchStat } from '@core/
 import { SeekerSearchType, SeekerSearchReason } from '@core/models/search-stats.models';
 import { AppHubService } from '@core/realtime/app-hub.service';
 import { ToastService } from '@core/services/toast.service';
+import { PaginationService } from '@core/services/pagination.service';
 
 type CycleFilter = 'current' | 'all';
 
@@ -37,9 +38,12 @@ type CycleFilter = 'current' | 'all';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SearchesTabComponent implements OnInit {
+  private static readonly PAGE_SIZE_KEY = 'cleanuparr-page-size-seeker-searches';
+
   private readonly api = inject(SearchStatsApi);
   private readonly hub = inject(AppHubService);
   private readonly toast = inject(ToastService);
+  private readonly pagination = inject(PaginationService);
   private initialLoad = true;
 
   readonly summary = signal<SearchStatsSummary | null>(null);
@@ -70,7 +74,7 @@ export class SearchesTabComponent implements OnInit {
   readonly events = signal<SearchEvent[]>([]);
   readonly eventsTotalRecords = signal(0);
   readonly eventsPage = signal(1);
-  readonly pageSize = signal(50);
+  readonly pageSize = signal(this.pagination.getPageSize(SearchesTabComponent.PAGE_SIZE_KEY, 50));
 
   constructor() {
     effect(() => {
@@ -115,6 +119,13 @@ export class SearchesTabComponent implements OnInit {
     this.eventsPage.set(page);
     this.loadEvents();
   }
+
+  readonly onPageSizeChange = this.pagination.createPageSizeHandler(
+    SearchesTabComponent.PAGE_SIZE_KEY,
+    this.pageSize,
+    this.eventsPage,
+    () => this.loadEvents(),
+  );
 
   refresh(): void {
     this.loadSummary();

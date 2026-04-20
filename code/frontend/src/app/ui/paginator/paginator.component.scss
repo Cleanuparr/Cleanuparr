@@ -6,7 +6,30 @@
   flex-wrap: wrap;
   gap: var(--space-3);
 
+  &__left {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+  }
+
   &__info {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+  }
+
+  &__page-size {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+
+    app-select {
+      width: auto;
+      min-width: 90px;
+    }
+  }
+
+  &__page-size-label {
     font-size: var(--font-size-sm);
     color: var(--text-secondary);
   }

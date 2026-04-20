@@ -10,6 +10,7 @@ import {
 } from '@ui';
 import { EventsApi } from '@core/api/events.api';
 import { ToastService } from '@core/services/toast.service';
+import { PaginationService } from '@core/services/pagination.service';
 import { AnimatedCounterComponent } from '@ui/animated-counter/animated-counter.component';
 import { AppEvent, EventFilter } from '@core/models/event.models';
 
@@ -36,9 +37,12 @@ import { AppEvent, EventFilter } from '@core/models/event.models';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class EventsComponent implements OnInit, OnDestroy {
+  private static readonly PAGE_SIZE_KEY = 'cleanuparr-page-size-events';
+
   private readonly eventsApi = inject(EventsApi);
   private readonly toast = inject(ToastService);
   private readonly router = inject(Router);
+  private readonly pagination = inject(PaginationService);
   private pollTimer: ReturnType<typeof setInterval> | null = null;
 
   readonly events = signal<AppEvent[]>([]);
@@ -49,7 +53,7 @@ export class EventsComponent implements OnInit, OnDestroy {
   readonly selectedJobRunId = signal<string | null>(null);
 
   readonly currentPage = signal(1);
-  readonly pageSize = signal(50);
+  readonly pageSize = signal(this.pagination.getPageSize(EventsComponent.PAGE_SIZE_KEY, 50));
   readonly selectedSeverity = signal<unknown>('');
   readonly selectedType = signal<unknown>('');
   readonly searchQuery = signal('');
@@ -133,6 +137,13 @@ export class EventsComponent implements OnInit, OnDestroy {
     this.currentPage.set(page);
     this.loadEvents();
   }
+
+  readonly onPageSizeChange = this.pagination.createPageSizeHandler(
+    EventsComponent.PAGE_SIZE_KEY,
+    this.pageSize,
+    this.currentPage,
+    () => this.loadEvents(),
+  );
 
   isExpandable(event: AppEvent): boolean {
     return !!(event.data || event.trackingId || event.instanceType || event.downloadClientType || event.jobRunId);

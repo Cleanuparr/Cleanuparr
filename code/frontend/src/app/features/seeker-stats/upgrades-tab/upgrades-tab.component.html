@@ -61,11 +61,12 @@
 </app-card>
 
 <!-- Pagination -->
-@if (totalRecords() > pageSize()) {
+@if (totalRecords() > 0) {
   <app-paginator
     [totalRecords]="totalRecords()"
     [pageSize]="pageSize()"
     [currentPage]="currentPage()"
     (pageChange)="onPageChange($event)"
+    (pageSizeChange)="onPageSizeChange($event)"
   />
 }
