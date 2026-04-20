@@ -5,12 +5,18 @@
 // =============================================================================
 
 // Pins a page header bar to the top of the shell scroll container
+@keyframes sticky-page-header-stuck {
+  to {
+    backdrop-filter: blur(20px) saturate(1.4);
+    -webkit-backdrop-filter: blur(20px) saturate(1.4);
+    box-shadow: 0 10px 18px -14px rgba(0, 0, 0, 0.35);
+  }
+}
+
 @mixin sticky-page-header {
   position: sticky;
   top: 0;
   z-index: var(--z-sticky);
-  backdrop-filter: blur(20px) saturate(1.4);
-  -webkit-backdrop-filter: blur(20px) saturate(1.4);
   padding-top: var(--content-padding, var(--space-6));
   padding-bottom: var(--space-3);
   padding-left: var(--content-padding, var(--space-6));
@@ -18,7 +24,10 @@
   margin-top: calc(-1 * var(--content-padding, var(--space-6)));
   margin-left: calc(-1 * var(--content-padding, var(--space-6)));
   margin-right: calc(-1 * var(--content-padding, var(--space-6)));
-  box-shadow: 0 10px 18px -14px rgba(0, 0, 0, 0.35);
+
+  animation: sticky-page-header-stuck linear both;
+  animation-timeline: scroll(nearest);
+  animation-range: 0 1px;
 }
 
 @mixin data-toolbar {
