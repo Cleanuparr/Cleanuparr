@@ -277,8 +277,10 @@ public class DataContext : DbContext
                   .OnDelete(DeleteBehavior.Cascade);
 
             entity.HasIndex(s => new { s.ArrInstanceId, s.ExternalItemId, s.EpisodeId }).IsUnique();
+            entity.HasIndex(s => s.LastUpgradedAt);
 
             entity.Property(s => s.LastSyncedAt).HasConversion(new UtcDateTimeConverter());
+            entity.Property(s => s.LastUpgradedAt).HasConversion(new UtcDateTimeConverter());
         });
 
         modelBuilder.Entity<CustomFormatScoreHistory>(entity =>

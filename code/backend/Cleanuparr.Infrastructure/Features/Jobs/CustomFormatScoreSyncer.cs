@@ -344,6 +344,11 @@ public sealed class CustomFormatScoreSyncer : IHandler
                     CutoffScore = cutoffScore,
                     RecordedAt = now,
                 });
+
+                if (cfScore > existing.CurrentScore)
+                {
+                    existing.LastUpgradedAt = now;
+                }
             }
 
             existing.CurrentScore = cfScore;
