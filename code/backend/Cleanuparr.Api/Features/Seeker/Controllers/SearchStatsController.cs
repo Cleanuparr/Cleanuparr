@@ -3,6 +3,7 @@ using Cleanuparr.Domain.Enums;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.Seeker;
 using Cleanuparr.Persistence.Models.State;
+using AppEvent = Cleanuparr.Persistence.Models.Events.AppEvent;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -125,7 +126,14 @@ public sealed class SearchStatsController : ControllerBase
         [FromQuery] int pageSize = 50,
         [FromQuery] Guid? instanceId = null,
         [FromQuery] Guid? cycleId = null,
-        [FromQuery] string? search = null)
+        [FromQuery] string? search = null,
+        [FromQuery] string? sortBy = null,
+        [FromQuery] string? sortDirection = null,
+        [FromQuery] string[]? searchStatus = null,
+        [FromQuery] string? searchType = null,
+        [FromQuery] string? searchReason = null,
+        [FromQuery] bool? grabbed = null,
+        [FromQuery] bool? dryRun = null)
     {
         if (page < 1)
         {
@@ -167,10 +175,86 @@ public sealed class SearchStatsController : ControllerBase
                 && EF.Functions.Like(e.SearchEventData.ItemTitle, pattern));
         }
 
+        // Filter by search status (multi-valued)
+        if (searchStatus is { Length: > 0 })
+        {
+            List<SearchCommandStatus> statuses = searchStatus
+                .Select(s => Enum.TryParse<SearchCommandStatus>(s, ignoreCase: true, out var parsed) ? (SearchCommandStatus?)parsed : null)
+                .Where(v => v.HasValue)
+                .Select(v => v!.Value)
+                .Distinct()
+                .ToList();
+
+            if (statuses.Count > 0)
+            {
+                query = query.Where(e => e.SearchStatus.HasValue && statuses.Contains(e.SearchStatus.Value));
+            }
+        }
+
+        // Filter by search type
+        if (!string.IsNullOrWhiteSpace(searchType)
+            && Enum.TryParse<SeekerSearchType>(searchType, ignoreCase: true, out var parsedType))
+        {
+            query = query.Where(e => e.SearchEventData != null && e.SearchEventData.SearchType == parsedType);
+        }
+
+        // Filter by search reason
+        if (!string.IsNullOrWhiteSpace(searchReason)
+            && Enum.TryParse<SeekerSearchReason>(searchReason, ignoreCase: true, out var parsedReason))
+        {
+            query = query.Where(e => e.SearchEventData != null && e.SearchEventData.SearchReason == parsedReason);
+        }
+
+        // Filter by grabbed-result presence
+        if (grabbed.HasValue)
+        {
+            if (grabbed.Value)
+            {
+                query = query.Where(e => e.SearchEventData != null && e.SearchEventData.GrabbedItems.Count > 0);
+            }
+            else
+            {
+                query = query.Where(e => e.SearchEventData == null || e.SearchEventData.GrabbedItems.Count == 0);
+            }
+        }
+
+        // Filter by dry-run flag
+        if (dryRun.HasValue)
+        {
+            query = query.Where(e => e.IsDryRun == dryRun.Value);
+        }
+
         int totalCount = await query.CountAsync();
 
-        var rawEvents = await query
-            .OrderByDescending(e => e.Timestamp)
+        bool ascending = string.Equals(sortDirection, "asc", StringComparison.OrdinalIgnoreCase);
+        string normalizedSortBy = (sortBy ?? "timestamp").ToLowerInvariant();
+
+        IOrderedQueryable<AppEvent> ordered = normalizedSortBy switch
+        {
+            "title" => ascending
+                ? query.OrderBy(e => e.SearchEventData != null ? e.SearchEventData.ItemTitle : string.Empty)
+                : query.OrderByDescending(e => e.SearchEventData != null ? e.SearchEventData.ItemTitle : string.Empty),
+            "status" => ascending
+                ? query.OrderBy(e => e.SearchStatus)
+                : query.OrderByDescending(e => e.SearchStatus),
+            "type" => ascending
+                ? query.OrderBy(e => e.SearchEventData != null ? (int)e.SearchEventData.SearchType : 0)
+                : query.OrderByDescending(e => e.SearchEventData != null ? (int)e.SearchEventData.SearchType : 0),
+            "grabbedcount" => ascending
+                ? query.OrderBy(e => e.SearchEventData != null ? e.SearchEventData.GrabbedItems.Count : 0)
+                : query.OrderByDescending(e => e.SearchEventData != null ? e.SearchEventData.GrabbedItems.Count : 0),
+            _ => ascending
+                ? query.OrderBy(e => e.Timestamp)
+                : query.OrderByDescending(e => e.Timestamp),
+        };
+
+        // Secondary sort by timestamp desc for stable ordering when primary ties
+        if (normalizedSortBy != "timestamp")
+        {
+            ordered = ordered.ThenByDescending(e => e.Timestamp);
+        }
+
+        var rawEvents = await ordered
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync();
