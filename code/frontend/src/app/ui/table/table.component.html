@@ -1,0 +1,10 @@
+<div class="table-wrapper">
+  <table class="table" [attr.data-loading]="loading() ? 'true' : null">
+    <ng-content />
+  </table>
+  @if (empty()) {
+    <div class="table-empty">
+      <ng-content select="[table-empty]" />
+    </div>
+  }
+</div>

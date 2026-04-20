@@ -1,0 +1,19 @@
+:host {
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  text-align: left;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--divider);
+}
+
+:host([data-align='right']) { text-align: right; }
+:host([data-align='center']) { text-align: center; }
+
+@media (max-width: 1024px) {
+  :host([data-priority='secondary']) { display: none; }
+}
+
+@media (max-width: 768px) {
+  :host([data-priority='tertiary']) { display: none; }
+}
