@@ -1,0 +1,19 @@
+// =============================================================================
+// Page-level animation utilities
+// Usage: @use 'page-animations' as *;
+// =============================================================================
+
+// Staggered entry for direct children of a page container.
+// Default 40ms increments up to 10 children; pages that need wider spacing can
+// override $increment (e.g. dashboard uses 80ms).
+@mixin page-section-stagger($increment: 40ms, $start: 0ms, $count: 10) {
+  > * {
+    animation: slide-up var(--duration-normal) var(--ease-default) both;
+  }
+
+  @for $i from 1 through $count {
+    > :nth-child(#{$i}) {
+      animation-delay: #{$start + ($i - 1) * $increment};
+    }
+  }
+}

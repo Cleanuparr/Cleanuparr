@@ -13,6 +13,8 @@
   }
 }
 
+// Drives the stuck visual from a pseudo-element so the host element's own
+// `animation` property stays free for entry animations (e.g. slide-up).
 @mixin sticky-page-header {
   position: sticky;
   top: 0;
@@ -25,9 +27,16 @@
   margin-left: calc(-1 * var(--content-padding, var(--space-6)));
   margin-right: calc(-1 * var(--content-padding, var(--space-6)));
 
-  animation: sticky-page-header-stuck linear both;
-  animation-timeline: scroll(nearest);
-  animation-range: 0 1px;
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    animation: sticky-page-header-stuck linear both;
+    animation-timeline: scroll(nearest);
+    animation-range: 0 1px;
+  }
 }
 
 @mixin data-toolbar {

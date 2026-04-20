@@ -1,7 +1,9 @@
+@use 'page-animations' as *;
+
 .page-content {
+  @include page-section-stagger;
+
   > app-tabs {
-    animation: slide-up var(--duration-normal) var(--ease-default) both;
-    animation-delay: 0ms;
     display: block;
   }
 
