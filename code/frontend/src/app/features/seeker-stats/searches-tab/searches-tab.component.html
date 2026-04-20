@@ -115,11 +115,13 @@
       (entered)="onSearchFilterChange()"
     />
     <app-select
+      label="Sort by"
       [value]="sortBy()"
       [options]="sortOptions"
       (valueChange)="onSortByChange($any($event))"
     />
     <app-select
+      label="Sort order"
       [value]="sortDirection()"
       [options]="sortOrderOptions"
       (valueChange)="onSortOrderChange($any($event))"
