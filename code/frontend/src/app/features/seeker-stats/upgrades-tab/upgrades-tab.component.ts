@@ -4,9 +4,9 @@ import { NgIcon } from '@ng-icons/core';
 import {
   CardComponent, BadgeComponent, ButtonComponent, SelectComponent,
   InputComponent, PaginatorComponent, EmptyStateComponent,
-  DrawerComponent, TableComponent, ThComponent, TdComponent,
+  DrawerComponent,
 } from '@ui';
-import type { SelectOption, SortState } from '@ui';
+import type { SelectOption } from '@ui';
 import { AnimatedCounterComponent } from '@ui/animated-counter/animated-counter.component';
 import { CfScoreApi, CfScoreUpgrade, CfUpgradesSortBy, SortDirection } from '@core/api/cf-score.api';
 import { AppHubService } from '@core/realtime/app-hub.service';
@@ -39,9 +39,6 @@ const EMPTY_FILTERS: AdvancedFilters = {
     EmptyStateComponent,
     AnimatedCounterComponent,
     DrawerComponent,
-    TableComponent,
-    ThComponent,
-    TdComponent,
   ],
   templateUrl: './upgrades-tab.component.html',
   styleUrl: './upgrades-tab.component.scss',
@@ -68,12 +65,24 @@ export class UpgradesTabComponent implements OnInit {
 
   readonly sortBy = signal<CfUpgradesSortBy>(DEFAULT_SORT_BY);
   readonly sortDirection = signal<SortDirection>(DEFAULT_SORT_DIRECTION);
-  readonly Sort = CfUpgradesSortBy;
 
   readonly applied = signal<AdvancedFilters>({ ...EMPTY_FILTERS });
   readonly draft = signal<AdvancedFilters>({ ...EMPTY_FILTERS });
   readonly drawerOpen = signal(false);
-  readonly expandedKey = signal<string | null>(null);
+
+  readonly sortOptions: SelectOption[] = [
+    { label: 'Upgraded At', value: CfUpgradesSortBy.UpgradedAt },
+    { label: 'Title', value: CfUpgradesSortBy.Title },
+    { label: 'New Score', value: CfUpgradesSortBy.NewScore },
+    { label: 'Previous Score', value: CfUpgradesSortBy.PreviousScore },
+    { label: 'Score Delta', value: CfUpgradesSortBy.ScoreDelta },
+    { label: 'Cutoff', value: CfUpgradesSortBy.CutoffScore },
+  ];
+
+  readonly sortOrderOptions: SelectOption[] = [
+    { label: 'Descending', value: SortDirection.Desc },
+    { label: 'Ascending', value: SortDirection.Asc },
+  ];
 
   readonly timeRangeOptions: SelectOption[] = [
     { label: 'Last 7 Days', value: '7' },
@@ -118,9 +127,14 @@ export class UpgradesTabComponent implements OnInit {
     this.loadUpgrades();
   }
 
-  onSortChange(state: SortState): void {
-    this.sortBy.set((state.sortKey as CfUpgradesSortBy | null) ?? DEFAULT_SORT_BY);
-    this.sortDirection.set(state.sortKey ? state.sortDirection : DEFAULT_SORT_DIRECTION);
+  onSortByChange(value: CfUpgradesSortBy): void {
+    this.sortBy.set(value);
+    this.currentPage.set(1);
+    this.loadUpgrades();
+  }
+
+  onSortOrderChange(value: SortDirection): void {
+    this.sortDirection.set(value);
     this.currentPage.set(1);
     this.loadUpgrades();
   }
@@ -157,25 +171,12 @@ export class UpgradesTabComponent implements OnInit {
     this.draft.update(d => ({ ...d, [key]: value }));
   }
 
-  toggleExpand(upgrade: CfScoreUpgrade): void {
-    const key = this.upgradeKey(upgrade);
-    this.expandedKey.update(current => (current === key ? null : key));
-  }
-
-  upgradeKey(upgrade: CfScoreUpgrade): string {
-    return `${upgrade.arrInstanceId}-${upgrade.externalItemId}-${upgrade.episodeId}-${upgrade.upgradedAt}`;
-  }
-
   refresh(): void {
     this.loadUpgrades();
   }
 
   itemTypeSeverity(itemType: string): 'info' | 'default' {
     return itemType === 'Radarr' || itemType === 'Sonarr' ? 'info' : 'default';
-  }
-
-  scoreDelta(upgrade: CfScoreUpgrade): number {
-    return upgrade.newScore - upgrade.previousScore;
   }
 
   private loadInstances(): void {

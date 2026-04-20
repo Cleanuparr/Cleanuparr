@@ -13,6 +13,16 @@
       [(value)]="searchQuery"
       (entered)="onFilterChange()"
     />
+    <app-select
+      [value]="sortBy()"
+      [options]="sortOptions"
+      (valueChange)="onSortByChange($any($event))"
+    />
+    <app-select
+      [value]="sortDirection()"
+      [options]="sortOrderOptions"
+      (valueChange)="onSortOrderChange($any($event))"
+    />
   </div>
   <div class="toolbar__actions">
     <app-button variant="ghost" size="sm" (clicked)="openFilters()">
@@ -57,125 +67,102 @@
   </div>
 }
 
-<!-- Scores Table -->
+<!-- Scores List -->
 <app-card [noPadding]="true">
-  <app-table
-    [sortKey]="sortBy()"
-    [sortDirection]="sortDirection()"
-    [loading]="loading()"
-    [empty]="items().length === 0"
-    (sortChange)="onSortChange($event)"
-  >
-    <thead>
-      <tr>
-        <th app-th [sortKey]="Sort.Title" priority="primary">Title</th>
-        <th app-th [sortKey]="Sort.CurrentScore" priority="primary" align="right">Score</th>
-        <th app-th [sortKey]="Sort.CutoffScore" priority="secondary" align="right">Cutoff</th>
-        <th app-th [sortKey]="Sort.QualityProfile" priority="secondary">Profile</th>
-        <th app-th priority="secondary">Status</th>
-        <th app-th [sortKey]="Sort.LastSyncedAt" priority="tertiary">Last Synced</th>
-        <th app-th [sortKey]="Sort.LastUpgradedAt" priority="tertiary">Last Upgraded</th>
-        <th app-th priority="primary" align="right"></th>
-      </tr>
-    </thead>
-    <tbody>
-      @for (item of items(); track item.id) {
-        <tr
-          class="table-row--clickable"
-          [class.table-row--expanded]="expandedId() === item.id"
+  <div class="scores-list">
+    @for (item of items(); track item.id) {
+      <div
+        class="score-row"
+        [class.score-row--expanded]="expandedId() === item.id"
+      >
+        <div
+          class="score-row__main"
           (click)="toggleExpand(item)"
         >
-          <td app-td priority="primary">
-            <div class="cell-title">
-              <span class="cell-title__text">{{ item.title }}</span>
-              <div class="cell-title__chips">
-                <app-badge [severity]="itemTypeSeverity(item.itemType)" size="sm">{{ item.itemType }}</app-badge>
-                @if (!item.isMonitored) {
-                  <app-badge severity="default" size="sm">Unmonitored</app-badge>
-                }
-              </div>
-            </div>
-          </td>
-          <td app-td priority="primary" align="right">
-            <span class="score-value" [class.score-value--below]="item.isBelowCutoff">{{ item.currentScore }}</span>
-          </td>
-          <td app-td priority="secondary" align="right">{{ item.cutoffScore }}</td>
-          <td app-td priority="secondary">{{ item.qualityProfileName }}</td>
-          <td app-td priority="secondary">
-            <app-badge [severity]="statusSeverity(item.isBelowCutoff)" size="sm">
-              {{ statusLabel(item.isBelowCutoff) }}
-            </app-badge>
-          </td>
-          <td app-td priority="tertiary">{{ item.lastSyncedAt | date:'yyyy-MM-dd HH:mm' }}</td>
-          <td app-td priority="tertiary">{{ item.lastUpgradedAt ? (item.lastUpgradedAt | date:'yyyy-MM-dd HH:mm') : '—' }}</td>
-          <td app-td priority="primary" align="right">
-            <ng-icon [name]="expandedId() === item.id ? 'tablerChevronUp' : 'tablerChevronDown'" />
-          </td>
-        </tr>
-        @if (expandedId() === item.id) {
-          <tr class="table-detail-row">
-            <td colspan="8">
-              <div class="score-detail">
-                <div class="score-detail__grid">
-                  <div class="score-detail__item">
-                    <span class="score-detail__label">Quality profile</span>
-                    <span class="score-detail__value">{{ item.qualityProfileName || '—' }}</span>
-                  </div>
-                  <div class="score-detail__item">
-                    <span class="score-detail__label">Current score</span>
-                    <span class="score-detail__value">{{ item.currentScore }}</span>
-                  </div>
-                  <div class="score-detail__item">
-                    <span class="score-detail__label">Cutoff</span>
-                    <span class="score-detail__value">{{ item.cutoffScore }}</span>
-                  </div>
-                  <div class="score-detail__item">
-                    <span class="score-detail__label">Last synced</span>
-                    <span class="score-detail__value">{{ item.lastSyncedAt | date:'yyyy-MM-dd HH:mm:ss' }}</span>
-                  </div>
-                  <div class="score-detail__item">
-                    <span class="score-detail__label">Last upgraded</span>
-                    <span class="score-detail__value">{{ item.lastUpgradedAt ? (item.lastUpgradedAt | date:'yyyy-MM-dd HH:mm:ss') : 'Never' }}</span>
-                  </div>
-                </div>
+          <ng-icon name="tablerChartBar" class="score-row__icon" />
+          <span class="score-row__scores">
+            <span class="score-row__current">{{ item.currentScore }}</span>
+            <span class="score-row__separator">/</span>
+            <span class="score-row__cutoff">{{ item.cutoffScore }}</span>
+          </span>
+          <span class="score-row__profile">{{ item.qualityProfileName }}</span>
+          <app-badge [severity]="statusSeverity(item.isBelowCutoff)" size="sm">
+            {{ statusLabel(item.isBelowCutoff) }}
+          </app-badge>
+          <app-badge [severity]="item.isMonitored ? 'success' : 'default'" size="sm">
+            {{ item.isMonitored ? 'Monitored' : 'Unmonitored' }}
+          </app-badge>
+          <app-badge [severity]="itemTypeSeverity(item.itemType)" size="sm">
+            {{ item.itemType }}
+          </app-badge>
+          <span class="score-row__time">{{ item.lastSyncedAt | date:'yyyy-MM-dd HH:mm' }}</span>
+          <ng-icon
+            [name]="expandedId() === item.id ? 'tablerChevronUp' : 'tablerChevronDown'"
+            class="score-row__chevron"
+          />
+        </div>
+        <div class="score-row__title" (click)="toggleExpand(item)">
+          {{ item.title }}
+        </div>
 
-                <div class="score-detail__history">
-                  <span class="score-detail__label">Score history</span>
-                  @if (historyLoading()) {
-                    <span class="score-detail__value">Loading…</span>
-                  } @else if (historyEntries().length === 0) {
-                    <span class="score-detail__value">No history available</span>
-                  } @else {
-                    <div class="history-table">
-                      <div class="history-table__header">
-                        <span>Score</span>
-                        <span>Cutoff</span>
-                        <span>Recorded at</span>
-                      </div>
-                      @for (entry of historyEntries(); track entry.recordedAt) {
-                        <div class="history-table__row">
-                          <span class="history-table__score">{{ entry.score }}</span>
-                          <span class="history-table__cutoff">{{ entry.cutoffScore }}</span>
-                          <span class="history-table__time">{{ entry.recordedAt | date:'yyyy-MM-dd HH:mm:ss' }}</span>
-                        </div>
-                      }
+        @if (expandedId() === item.id) {
+          <div class="score-row__details">
+            <div class="score-row__detail">
+              <span class="score-row__detail-label">Quality Profile</span>
+              <span class="score-row__detail-value">{{ item.qualityProfileName }}</span>
+            </div>
+            <div class="score-row__detail">
+              <span class="score-row__detail-label">Current Score</span>
+              <span class="score-row__detail-value">{{ item.currentScore }}</span>
+            </div>
+            <div class="score-row__detail">
+              <span class="score-row__detail-label">Cutoff Score</span>
+              <span class="score-row__detail-value">{{ item.cutoffScore }}</span>
+            </div>
+            <div class="score-row__detail">
+              <span class="score-row__detail-label">Last Synced</span>
+              <span class="score-row__detail-value">{{ item.lastSyncedAt | date:'yyyy-MM-dd HH:mm:ss' }}</span>
+            </div>
+            <div class="score-row__detail">
+              <span class="score-row__detail-label">Last Upgraded</span>
+              <span class="score-row__detail-value">{{ item.lastUpgradedAt ? (item.lastUpgradedAt | date:'yyyy-MM-dd HH:mm:ss') : 'Never' }}</span>
+            </div>
+
+            <!-- Score History -->
+            <div class="score-row__detail">
+              <span class="score-row__detail-label">Score History</span>
+              @if (historyLoading()) {
+                <span class="score-row__detail-value">Loading...</span>
+              } @else if (historyEntries().length === 0) {
+                <span class="score-row__detail-value">No history available</span>
+              } @else {
+                <div class="history-table">
+                  <div class="history-table__header">
+                    <span>Score</span>
+                    <span>Cutoff</span>
+                    <span>Recorded At</span>
+                  </div>
+                  @for (entry of historyEntries(); track entry.recordedAt) {
+                    <div class="history-table__row">
+                      <span class="history-table__score">{{ entry.score }}</span>
+                      <span class="history-table__cutoff">{{ entry.cutoffScore }}</span>
+                      <span class="history-table__time">{{ entry.recordedAt | date:'yyyy-MM-dd HH:mm:ss' }}</span>
                     </div>
                   }
                 </div>
-              </div>
-            </td>
-          </tr>
+              }
+            </div>
+          </div>
         }
-      }
-    </tbody>
-    <div table-empty>
+      </div>
+    } @empty {
       <app-empty-state
         icon="tablerChartBar"
         heading="No scores tracked"
         description="Enable 'Use Custom Format Score' in Seeker settings to start tracking."
       />
-    </div>
-  </app-table>
+    }
+  </div>
 </app-card>
 
 <!-- Pagination -->
@@ -197,15 +184,6 @@
       [value]="draft().qualityProfile"
       [options]="qualityProfileOptions()"
       (valueChange)="updateDraft('qualityProfile', $any($event))"
-    />
-  </div>
-
-  <div class="filter-group">
-    <label class="filter-group__label">Item type</label>
-    <app-select
-      [value]="draft().itemType"
-      [options]="itemTypeOptions"
-      (valueChange)="updateDraft('itemType', $any($event))"
     />
   </div>
 

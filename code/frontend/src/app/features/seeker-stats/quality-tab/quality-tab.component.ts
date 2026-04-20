@@ -4,9 +4,9 @@ import { NgIcon } from '@ng-icons/core';
 import {
   CardComponent, BadgeComponent, ButtonComponent, InputComponent,
   PaginatorComponent, EmptyStateComponent, SelectComponent,
-  TooltipComponent, DrawerComponent, TableComponent, ThComponent, TdComponent,
+  TooltipComponent, DrawerComponent,
 } from '@ui';
-import type { SelectOption, SortState } from '@ui';
+import type { SelectOption } from '@ui';
 import { AnimatedCounterComponent } from '@ui/animated-counter/animated-counter.component';
 import {
   CfScoreApi, CfScoreEntry, CfScoreStats, CfScoreHistoryEntry, CfScoreInstance,
@@ -21,14 +21,12 @@ const DEFAULT_SORT_DIRECTION = SortDirection.Asc;
 
 interface AdvancedFilters {
   qualityProfile: string;
-  itemType: string;
   cutoffFilter: CutoffFilter;
   monitoredFilter: MonitoredFilter;
 }
 
 const EMPTY_FILTERS: AdvancedFilters = {
   qualityProfile: '',
-  itemType: '',
   cutoffFilter: CutoffFilter.All,
   monitoredFilter: MonitoredFilter.All,
 };
@@ -49,9 +47,6 @@ const EMPTY_FILTERS: AdvancedFilters = {
     AnimatedCounterComponent,
     TooltipComponent,
     DrawerComponent,
-    TableComponent,
-    ThComponent,
-    TdComponent,
   ],
   templateUrl: './quality-tab.component.html',
   styleUrl: './quality-tab.component.scss',
@@ -80,7 +75,20 @@ export class QualityTabComponent implements OnInit {
 
   readonly sortBy = signal<CfScoresSortBy>(DEFAULT_SORT_BY);
   readonly sortDirection = signal<SortDirection>(DEFAULT_SORT_DIRECTION);
-  readonly Sort = CfScoresSortBy;
+
+  readonly sortOptions: SelectOption[] = [
+    { label: 'Title', value: CfScoresSortBy.Title },
+    { label: 'Current Score', value: CfScoresSortBy.CurrentScore },
+    { label: 'Cutoff', value: CfScoresSortBy.CutoffScore },
+    { label: 'Quality Profile', value: CfScoresSortBy.QualityProfile },
+    { label: 'Last Synced', value: CfScoresSortBy.LastSyncedAt },
+    { label: 'Last Upgraded', value: CfScoresSortBy.LastUpgradedAt },
+  ];
+
+  readonly sortOrderOptions: SelectOption[] = [
+    { label: 'Ascending', value: SortDirection.Asc },
+    { label: 'Descending', value: SortDirection.Desc },
+  ];
 
   readonly applied = signal<AdvancedFilters>({ ...EMPTY_FILTERS });
   readonly draft = signal<AdvancedFilters>({ ...EMPTY_FILTERS });
@@ -112,15 +120,6 @@ export class QualityTabComponent implements OnInit {
     { label: 'Unmonitored only', value: MonitoredFilter.Unmonitored },
   ];
 
-  readonly itemTypeOptions: SelectOption[] = [
-    { label: 'Any', value: '' },
-    { label: 'Radarr', value: 'Radarr' },
-    { label: 'Sonarr', value: 'Sonarr' },
-    { label: 'Lidarr', value: 'Lidarr' },
-    { label: 'Readarr', value: 'Readarr' },
-    { label: 'Whisparr', value: 'Whisparr' },
-  ];
-
   readonly qualityProfileOptions = computed<SelectOption[]>(() => {
     const instanceId = this.selectedInstanceId();
     const profiles = new Set<string>();
@@ -141,7 +140,6 @@ export class QualityTabComponent implements OnInit {
     const a = this.applied();
     let n = 0;
     if (a.qualityProfile) n++;
-    if (a.itemType) n++;
     if (a.cutoffFilter !== CutoffFilter.All) n++;
     if (a.monitoredFilter !== MonitoredFilter.All) n++;
     return n;
@@ -178,7 +176,6 @@ export class QualityTabComponent implements OnInit {
       sortBy: this.sortBy(),
       sortDirection: this.sortDirection(),
       qualityProfile: a.qualityProfile || undefined,
-      itemType: a.itemType || undefined,
       cutoffFilter: a.cutoffFilter,
       monitoredFilter: a.monitoredFilter,
     }).subscribe({
@@ -235,9 +232,14 @@ export class QualityTabComponent implements OnInit {
     this.loadScores();
   }
 
-  onSortChange(state: SortState): void {
-    this.sortBy.set((state.sortKey as CfScoresSortBy | null) ?? DEFAULT_SORT_BY);
-    this.sortDirection.set(state.sortKey ? state.sortDirection : DEFAULT_SORT_DIRECTION);
+  onSortByChange(value: CfScoresSortBy): void {
+    this.sortBy.set(value);
+    this.currentPage.set(1);
+    this.loadScores();
+  }
+
+  onSortOrderChange(value: SortDirection): void {
+    this.sortDirection.set(value);
     this.currentPage.set(1);
     this.loadScores();
   }

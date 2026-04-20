@@ -70,7 +70,7 @@ public class CustomFormatScoreControllerTests : IDisposable
         AddScoreEntry(radarr.Id, 2, "At Cutoff", currentScore: 500, cutoffScore: 500);
         AddScoreEntry(radarr.Id, 3, "Above Cutoff", currentScore: 600, cutoffScore: 500);
 
-        var result = await _controller.GetCustomFormatScores(hideMet: true);
+        var result = await _controller.GetCustomFormatScores(cutoffFilter: CutoffFilter.Below);
         var body = GetResponseBody(result);
 
         body.GetProperty("TotalCount").GetInt32().ShouldBe(1);
@@ -85,7 +85,7 @@ public class CustomFormatScoreControllerTests : IDisposable
         AddScoreEntry(radarr.Id, 2, "Unmonitored Movie", currentScore: 200, cutoffScore: 500, isMonitored: false);
         AddScoreEntry(radarr.Id, 3, "Another Monitored", currentScore: 300, cutoffScore: 500, isMonitored: true);
 
-        var result = await _controller.GetCustomFormatScores(hideUnmonitored: true);
+        var result = await _controller.GetCustomFormatScores(monitoredFilter: MonitoredFilter.Monitored);
         var body = GetResponseBody(result);
 
         body.GetProperty("TotalCount").GetInt32().ShouldBe(2);
@@ -118,7 +118,7 @@ public class CustomFormatScoreControllerTests : IDisposable
         AddScoreEntry(radarr.Id, 2, "Newer", currentScore: 200, cutoffScore: 500,
             lastSynced: DateTime.UtcNow.AddHours(-1));
 
-        var result = await _controller.GetCustomFormatScores(sortBy: "date");
+        var result = await _controller.GetCustomFormatScores(sortBy: CfScoresSortBy.LastSyncedAt);
         var body = GetResponseBody(result);
 
         body.GetProperty("Items")[0].GetProperty("Title").GetString().ShouldBe("Newer");

@@ -4,9 +4,9 @@ import { NgIcon } from '@ng-icons/core';
 import {
   CardComponent, BadgeComponent, ButtonComponent, SelectComponent,
   InputComponent, PaginatorComponent, EmptyStateComponent, TooltipComponent,
-  DrawerComponent, TableComponent, ThComponent, TdComponent,
+  DrawerComponent,
 } from '@ui';
-import type { SelectOption, SortState } from '@ui';
+import type { SelectOption } from '@ui';
 import type { BadgeSeverity } from '@ui/badge/badge.component';
 import { AnimatedCounterComponent } from '@ui/animated-counter/animated-counter.component';
 import { SearchStatsApi, SearchEventsSortBy, SortDirection } from '@core/api/search-stats.api';
@@ -61,9 +61,6 @@ const STATUS_OPTIONS: ReadonlyArray<{ value: string; label: string }> = [
     AnimatedCounterComponent,
     TooltipComponent,
     DrawerComponent,
-    TableComponent,
-    ThComponent,
-    TdComponent,
   ],
   templateUrl: './searches-tab.component.html',
   styleUrl: './searches-tab.component.scss',
@@ -95,7 +92,6 @@ export class SearchesTabComponent implements OnInit {
 
   readonly sortBy = signal<SearchEventsSortBy>(DEFAULT_SORT_BY);
   readonly sortDirection = signal<SortDirection>(DEFAULT_SORT_DIRECTION);
-  readonly Sort = SearchEventsSortBy;
 
   // Applied filters drive the query; draft lives inside the open drawer.
   readonly applied = signal<AdvancedFilters>({ ...EMPTY_FILTERS });
@@ -106,7 +102,18 @@ export class SearchesTabComponent implements OnInit {
   readonly eventsTotalRecords = signal(0);
   readonly eventsPage = signal(1);
   readonly pageSize = signal(this.pagination.getPageSize(SearchesTabComponent.PAGE_SIZE_KEY, 50));
-  readonly expandedId = signal<string | null>(null);
+
+  readonly sortOptions: SelectOption[] = [
+    { label: 'Timestamp', value: SearchEventsSortBy.Timestamp },
+    { label: 'Title', value: SearchEventsSortBy.Title },
+    { label: 'Status', value: SearchEventsSortBy.Status },
+    { label: 'Type', value: SearchEventsSortBy.Type },
+  ];
+
+  readonly sortOrderOptions: SelectOption[] = [
+    { label: 'Descending', value: SortDirection.Desc },
+    { label: 'Ascending', value: SortDirection.Asc },
+  ];
 
   readonly cycleFilterOptions: SelectOption[] = [
     { label: 'Current Cycle', value: 'current' },
@@ -181,9 +188,14 @@ export class SearchesTabComponent implements OnInit {
     this.loadEvents();
   }
 
-  onSortChange(state: SortState): void {
-    this.sortBy.set((state.sortKey as SearchEventsSortBy | null) ?? DEFAULT_SORT_BY);
-    this.sortDirection.set(state.sortKey ? state.sortDirection : DEFAULT_SORT_DIRECTION);
+  onSortByChange(value: SearchEventsSortBy): void {
+    this.sortBy.set(value);
+    this.eventsPage.set(1);
+    this.loadEvents();
+  }
+
+  onSortOrderChange(value: SortDirection): void {
+    this.sortDirection.set(value);
     this.eventsPage.set(1);
     this.loadEvents();
   }
@@ -224,10 +236,6 @@ export class SearchesTabComponent implements OnInit {
 
   updateDraft<K extends keyof AdvancedFilters>(key: K, value: AdvancedFilters[K]): void {
     this.draft.update(d => ({ ...d, [key]: value }));
-  }
-
-  toggleExpand(id: string): void {
-    this.expandedId.update(current => (current === id ? null : id));
   }
 
   refresh(): void {

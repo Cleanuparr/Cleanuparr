@@ -114,6 +114,16 @@
       [(value)]="searchQuery"
       (entered)="onSearchFilterChange()"
     />
+    <app-select
+      [value]="sortBy()"
+      [options]="sortOptions"
+      (valueChange)="onSortByChange($any($event))"
+    />
+    <app-select
+      [value]="sortDirection()"
+      [options]="sortOrderOptions"
+      (valueChange)="onSortOrderChange($any($event))"
+    />
   </div>
   <div class="toolbar__actions">
     <app-button variant="ghost" size="sm" (clicked)="openFilters()">
@@ -126,87 +136,57 @@
   </div>
 </div>
 
-<!-- Events Table -->
+<!-- Events List -->
 <app-card [noPadding]="true">
-  <app-table
-    [sortKey]="sortBy()"
-    [sortDirection]="sortDirection()"
-    [loading]="loading()"
-    [empty]="events().length === 0"
-    (sortChange)="onSortChange($event)"
-  >
-    <thead>
-      <tr>
-        <th app-th [sortKey]="Sort.Timestamp" priority="primary">Timestamp</th>
-        <th app-th [sortKey]="Sort.Title" priority="primary">Title</th>
-        <th app-th [sortKey]="Sort.Status" priority="secondary">Status</th>
-        <th app-th [sortKey]="Sort.Type" priority="tertiary">Type</th>
-        <th app-th priority="primary" align="right"></th>
-      </tr>
-    </thead>
-    <tbody>
-      @for (event of events(); track event.id) {
-        <tr
-          class="table-row--clickable"
-          [class.table-row--expanded]="expandedId() === event.id"
-          (click)="toggleExpand(event.id)"
-        >
-          <td app-td priority="primary">{{ event.timestamp | date:'yyyy-MM-dd HH:mm' }}</td>
-          <td app-td priority="primary">{{ event.itemTitle || 'Search triggered' }}</td>
-          <td app-td priority="secondary">
-            @if (event.searchStatus) {
-              <app-badge [severity]="searchStatusSeverity(event.searchStatus)" size="sm">{{ event.searchStatus }}</app-badge>
-            } @else {
-              —
-            }
-          </td>
-          <td app-td priority="tertiary">
-            <app-badge [severity]="searchTypeSeverity(event.searchType)" size="sm">{{ event.searchType }}</app-badge>
-          </td>
-          <td app-td priority="primary" align="right">
-            <ng-icon [name]="expandedId() === event.id ? 'tablerChevronUp' : 'tablerChevronDown'" />
-          </td>
-        </tr>
-        @if (expandedId() === event.id) {
-          <tr class="table-detail-row">
-            <td colspan="5">
-              <div class="event-detail">
-                <div class="event-detail__chips">
-                  @if (event.searchReason) {
-                    <app-badge [severity]="searchReasonSeverity(event.searchReason)" size="sm">
-                      {{ formatSearchReason(event.searchReason) }}
-                    </app-badge>
-                  }
-                  @if (event.isDryRun) {
-                    <app-badge severity="accent" size="sm">Dry Run</app-badge>
-                  }
-                  @if (event.instanceType) {
-                    <app-badge [severity]="instanceTypeSeverity(event.instanceType)" size="sm">{{ event.instanceType }}</app-badge>
-                  }
-                  @if (event.cycleId) {
-                    <span class="event-detail__cycle">cycle {{ event.cycleId.substring(0, 8) }}</span>
-                  }
-                </div>
-                @if (event.grabbedItems && event.grabbedItems.length > 0) {
-                  <div class="event-detail__section">
-                    <span class="event-detail__label">Grabbed items</span>
-                    <span class="event-detail__value">{{ formatGrabbedItems(event.grabbedItems) }}</span>
-                  </div>
-                }
-              </div>
-            </td>
-          </tr>
+  <div class="list">
+    @for (event of events(); track event.id) {
+      <div class="list-row">
+        <div class="list-row__main">
+          <ng-icon name="tablerSearch" class="list-row__icon" />
+          <app-badge [severity]="searchTypeSeverity(event.searchType)" size="sm">
+            {{ event.searchType }}
+          </app-badge>
+          @if (event.searchReason) {
+            <app-badge [severity]="searchReasonSeverity(event.searchReason)" size="sm">
+              {{ formatSearchReason(event.searchReason) }}
+            </app-badge>
+          }
+          @if (event.searchStatus) {
+            <app-badge [severity]="searchStatusSeverity(event.searchStatus)" size="sm">
+              {{ event.searchStatus }}
+            </app-badge>
+          }
+          @if (event.isDryRun) {
+            <app-badge severity="accent" size="sm">Dry Run</app-badge>
+          }
+          @if (event.cycleId) {
+            <span class="list-row__cycle">{{ event.cycleId.substring(0, 8) }}</span>
+          }
+          @if (event.instanceType) {
+            <app-badge [severity]="instanceTypeSeverity(event.instanceType)" size="sm" class="list-row__instance">{{ event.instanceType }}</app-badge>
+          }
+          <span class="list-row__time">{{ event.timestamp | date:'yyyy-MM-dd HH:mm' }}</span>
+        </div>
+        <div class="list-row__title">
+          {{ event.itemTitle || 'Search triggered' }}
+        </div>
+        @if (event.grabbedItems && event.grabbedItems.length > 0) {
+          <div class="list-row__detail">
+            <ng-icon name="tablerDownload" class="list-row__detail-icon" />
+            <span class="list-row__detail-text">
+              Grabbed: {{ formatGrabbedItems(event.grabbedItems) }}
+            </span>
+          </div>
         }
-      }
-    </tbody>
-    <div table-empty>
+      </div>
+    } @empty {
       <app-empty-state
         icon="tablerSearch"
         heading="No search events"
         description="Search events will appear here once the Seeker runs."
       />
-    </div>
-  </app-table>
+    }
+  </div>
 </app-card>
 
 @if (eventsTotalRecords() > 0) {

@@ -1,11 +1,13 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { SortDirection } from '@ui';
 import type { SearchStatsSummary, SearchEvent } from '@core/models/search-stats.models';
 import type { PaginatedResult } from '@core/models/pagination.model';
 
-export { SortDirection };
+export enum SortDirection {
+  Asc = 'Asc',
+  Desc = 'Desc',
+}
 
 export enum SearchEventsSortBy {
   Timestamp = 'Timestamp',
