@@ -20,8 +20,11 @@
 ::-webkit-scrollbar-thumb {
   background: var(--scrollbar-thumb);
   border-radius: var(--radius-full);
+  border: 3px solid transparent;
+  background-clip: padding-box;
 
   &:hover {
     background: var(--scrollbar-thumb-hover);
+    background-clip: padding-box;
   }
 }
