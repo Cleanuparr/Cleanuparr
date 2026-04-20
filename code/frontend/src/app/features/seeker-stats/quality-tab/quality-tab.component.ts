@@ -100,7 +100,15 @@ export class QualityTabComponent implements OnInit {
 
   loadScores(): void {
     this.loading.set(true);
-    this.api.getScores(this.currentPage(), this.pageSize(), this.searchQuery() || undefined, this.selectedInstanceId() || undefined, this.sortBy(), this.hideMet(), this.hideUnmonitored()).subscribe({
+    this.api.getScores({
+      page: this.currentPage(),
+      pageSize: this.pageSize(),
+      search: this.searchQuery() || undefined,
+      instanceId: this.selectedInstanceId() || undefined,
+      sortBy: this.sortBy(),
+      cutoffFilter: this.hideMet() ? 'below' : 'all',
+      monitoredFilter: this.hideUnmonitored() ? 'monitored' : 'all',
+    }).subscribe({
       next: (result) => {
         this.items.set(result.items);
         this.totalRecords.set(result.totalCount);

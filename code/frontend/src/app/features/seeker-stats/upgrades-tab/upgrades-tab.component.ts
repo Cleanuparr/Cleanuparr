@@ -126,7 +126,7 @@ export class UpgradesTabComponent implements OnInit {
     const days = parseInt(this.timeRange(), 10) || undefined;
     const instanceId = this.selectedInstanceId() || undefined;
 
-    this.api.getRecentUpgrades(this.currentPage(), this.pageSize(), instanceId, days).subscribe({
+    this.api.getRecentUpgrades({ page: this.currentPage(), pageSize: this.pageSize(), instanceId, days }).subscribe({
       next: (result) => {
         this.upgrades.set(result.items);
         this.totalRecords.set(result.totalCount);

@@ -1,8 +1,23 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import type { SearchStatsSummary, SearchEvent } from '@core/models/search-stats.models';
 import type { PaginatedResult } from '@core/models/pagination.model';
+
+export interface SearchEventsQuery {
+  page?: number;
+  pageSize?: number;
+  instanceId?: string;
+  cycleId?: string;
+  search?: string;
+  sortBy?: string;
+  sortDirection?: 'asc' | 'desc';
+  searchStatus?: string[];
+  searchType?: string;
+  searchReason?: string;
+  grabbed?: boolean;
+  dryRun?: boolean;
+}
 
 @Injectable({ providedIn: 'root' })
 export class SearchStatsApi {
@@ -12,11 +27,27 @@ export class SearchStatsApi {
     return this.http.get<SearchStatsSummary>('/api/seeker/search-stats/summary');
   }
 
-  getEvents(page = 1, pageSize = 50, instanceId?: string, cycleId?: string, search?: string): Observable<PaginatedResult<SearchEvent>> {
-    const params: Record<string, string | number> = { page, pageSize };
-    if (instanceId) params['instanceId'] = instanceId;
-    if (cycleId) params['cycleId'] = cycleId;
-    if (search) params['search'] = search;
+  getEvents(query: SearchEventsQuery = {}): Observable<PaginatedResult<SearchEvent>> {
+    let params = new HttpParams()
+      .set('page', String(query.page ?? 1))
+      .set('pageSize', String(query.pageSize ?? 50));
+
+    if (query.instanceId) params = params.set('instanceId', query.instanceId);
+    if (query.cycleId) params = params.set('cycleId', query.cycleId);
+    if (query.search) params = params.set('search', query.search);
+    if (query.sortBy) params = params.set('sortBy', query.sortBy);
+    if (query.sortDirection) params = params.set('sortDirection', query.sortDirection);
+    if (query.searchType) params = params.set('searchType', query.searchType);
+    if (query.searchReason) params = params.set('searchReason', query.searchReason);
+    if (query.grabbed !== undefined) params = params.set('grabbed', String(query.grabbed));
+    if (query.dryRun !== undefined) params = params.set('dryRun', String(query.dryRun));
+
+    if (query.searchStatus?.length) {
+      for (const status of query.searchStatus) {
+        params = params.append('searchStatus', status);
+      }
+    }
+
     return this.http.get<PaginatedResult<SearchEvent>>('/api/seeker/search-stats/events', { params });
   }
 }

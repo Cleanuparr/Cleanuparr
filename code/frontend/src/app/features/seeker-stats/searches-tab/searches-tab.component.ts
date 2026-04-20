@@ -232,7 +232,7 @@ export class SearchesTabComponent implements OnInit {
       cycleId = instance?.currentCycleId ?? undefined;
     }
 
-    this.api.getEvents(this.eventsPage(), this.pageSize(), instanceId, cycleId, search).subscribe({
+    this.api.getEvents({ page: this.eventsPage(), pageSize: this.pageSize(), instanceId, cycleId, search }).subscribe({
       next: (result) => {
         this.events.set(result.items);
         this.eventsTotalRecords.set(result.totalCount);
