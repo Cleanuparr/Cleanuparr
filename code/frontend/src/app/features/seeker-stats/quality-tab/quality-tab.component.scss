@@ -5,8 +5,6 @@
   > .toolbar {
     animation: slide-up var(--duration-normal) var(--ease-default) both;
     animation-delay: 40ms;
-    position: relative;
-    z-index: 1;
   }
   > .stats-bar {
     animation: slide-up var(--duration-normal) var(--ease-default) both;
@@ -24,6 +22,7 @@
 
 .toolbar {
   @include data-toolbar;
+  @include sticky-page-header;
 
   &__filters {
     app-input {
