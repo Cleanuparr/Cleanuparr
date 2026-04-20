@@ -29,14 +29,12 @@ public sealed class CustomFormatScoreController : ControllerBase
         [FromQuery] int pageSize = 50,
         [FromQuery] Guid? instanceId = null,
         [FromQuery] string? search = null,
-        [FromQuery] string sortBy = "title",
-        [FromQuery] string? sortDirection = null,
+        [FromQuery] CfScoresSortBy sortBy = CfScoresSortBy.Title,
+        [FromQuery] SortDirection? sortDirection = null,
         [FromQuery] string? qualityProfile = null,
-        [FromQuery] string? itemType = null,
-        [FromQuery] string? cutoffFilter = null,
-        [FromQuery] string? monitoredFilter = null,
-        [FromQuery] bool? hideMet = null,
-        [FromQuery] bool? hideUnmonitored = null)
+        [FromQuery] InstanceType? itemType = null,
+        [FromQuery] CutoffFilter cutoffFilter = CutoffFilter.All,
+        [FromQuery] MonitoredFilter monitoredFilter = MonitoredFilter.All)
     {
         if (page < 1)
         {
@@ -51,17 +49,6 @@ public sealed class CustomFormatScoreController : ControllerBase
         if (pageSize > 500)
         {
             pageSize = 500;
-        }
-
-        // Back-compat: translate deprecated inverted booleans into the new positive-logic params
-        // when the caller did not provide an explicit new param.
-        if (string.IsNullOrWhiteSpace(cutoffFilter) && hideMet == true)
-        {
-            cutoffFilter = "below";
-        }
-        if (string.IsNullOrWhiteSpace(monitoredFilter) && hideUnmonitored == true)
-        {
-            monitoredFilter = "monitored";
         }
 
         var query = _dataContext.CustomFormatScoreEntries
@@ -83,53 +70,53 @@ public sealed class CustomFormatScoreController : ControllerBase
             query = query.Where(e => e.QualityProfileName == qualityProfile);
         }
 
-        if (!string.IsNullOrWhiteSpace(itemType)
-            && Enum.TryParse<InstanceType>(itemType, ignoreCase: true, out var parsedType))
+        if (itemType.HasValue)
         {
-            query = query.Where(e => e.ItemType == parsedType);
+            InstanceType typeValue = itemType.Value;
+            query = query.Where(e => e.ItemType == typeValue);
         }
 
-        switch ((cutoffFilter ?? "all").ToLowerInvariant())
+        switch (cutoffFilter)
         {
-            case "below":
+            case CutoffFilter.Below:
                 query = query.Where(e => e.CurrentScore < e.CutoffScore);
                 break;
-            case "met":
+            case CutoffFilter.Met:
                 query = query.Where(e => e.CurrentScore >= e.CutoffScore);
                 break;
         }
 
-        switch ((monitoredFilter ?? "all").ToLowerInvariant())
+        switch (monitoredFilter)
         {
-            case "monitored":
+            case MonitoredFilter.Monitored:
                 query = query.Where(e => e.IsMonitored);
                 break;
-            case "unmonitored":
+            case MonitoredFilter.Unmonitored:
                 query = query.Where(e => !e.IsMonitored);
                 break;
         }
 
         int totalCount = await query.CountAsync();
 
-        bool ascending = string.IsNullOrWhiteSpace(sortDirection)
-            ? DefaultAscendingForScoreSortBy(sortBy)
-            : string.Equals(sortDirection, "asc", StringComparison.OrdinalIgnoreCase);
+        bool ascending = sortDirection.HasValue
+            ? sortDirection.Value == SortDirection.Asc
+            : DefaultAscendingForScoreSortBy(sortBy);
 
-        IOrderedQueryable<CustomFormatScoreEntry> ordered = (sortBy ?? "title").ToLowerInvariant() switch
+        IOrderedQueryable<CustomFormatScoreEntry> ordered = sortBy switch
         {
-            "currentscore" => ascending
+            CfScoresSortBy.CurrentScore => ascending
                 ? query.OrderBy(e => e.CurrentScore)
                 : query.OrderByDescending(e => e.CurrentScore),
-            "cutoffscore" => ascending
+            CfScoresSortBy.CutoffScore => ascending
                 ? query.OrderBy(e => e.CutoffScore)
                 : query.OrderByDescending(e => e.CutoffScore),
-            "qualityprofile" => ascending
+            CfScoresSortBy.QualityProfile => ascending
                 ? query.OrderBy(e => e.QualityProfileName)
                 : query.OrderByDescending(e => e.QualityProfileName),
-            "lastsyncedat" or "date" => ascending
+            CfScoresSortBy.LastSyncedAt => ascending
                 ? query.OrderBy(e => e.LastSyncedAt)
                 : query.OrderByDescending(e => e.LastSyncedAt),
-            "lastupgradedat" => ascending
+            CfScoresSortBy.LastUpgradedAt => ascending
                 ? query.OrderBy(e => e.LastUpgradedAt)
                 : query.OrderByDescending(e => e.LastUpgradedAt),
             _ => ascending
@@ -170,14 +157,17 @@ public sealed class CustomFormatScoreController : ControllerBase
         });
     }
 
-    private static bool DefaultAscendingForScoreSortBy(string? sortBy)
+    private static bool DefaultAscendingForScoreSortBy(CfScoresSortBy sortBy)
     {
         // Default directions match user expectations:
         // - textual fields sort ascending (A→Z)
         // - numeric/date fields sort descending (most recent / highest first)
-        return (sortBy ?? "title").ToLowerInvariant() switch
+        return sortBy switch
         {
-            "currentscore" or "cutoffscore" or "lastsyncedat" or "date" or "lastupgradedat" => false,
+            CfScoresSortBy.CurrentScore => false,
+            CfScoresSortBy.CutoffScore => false,
+            CfScoresSortBy.LastSyncedAt => false,
+            CfScoresSortBy.LastUpgradedAt => false,
             _ => true,
         };
     }
@@ -192,10 +182,8 @@ public sealed class CustomFormatScoreController : ControllerBase
         [FromQuery] Guid? instanceId = null,
         [FromQuery] int days = 30,
         [FromQuery] string? search = null,
-        [FromQuery] string? itemType = null,
-        [FromQuery] int? minScoreDelta = null,
-        [FromQuery] string? sortBy = null,
-        [FromQuery] string? sortDirection = null)
+        [FromQuery] CfUpgradesSortBy sortBy = CfUpgradesSortBy.UpgradedAt,
+        [FromQuery] SortDirection? sortDirection = null)
     {
         if (page < 1) page = 1;
         if (pageSize < 1) pageSize = 50;
@@ -208,12 +196,6 @@ public sealed class CustomFormatScoreController : ControllerBase
         if (instanceId.HasValue)
         {
             query = query.Where(h => h.ArrInstanceId == instanceId.Value);
-        }
-
-        if (!string.IsNullOrWhiteSpace(itemType)
-            && Enum.TryParse<InstanceType>(itemType, ignoreCase: true, out var parsedType))
-        {
-            query = query.Where(h => h.ItemType == parsedType);
         }
 
         if (!string.IsNullOrWhiteSpace(search))
@@ -259,32 +241,25 @@ public sealed class CustomFormatScoreController : ControllerBase
             }
         }
 
-        if (minScoreDelta.HasValue)
-        {
-            upgrades = upgrades
-                .Where(u => u.NewScore - u.PreviousScore >= minScoreDelta.Value)
-                .ToList();
-        }
+        bool ascending = sortDirection.HasValue
+            ? sortDirection.Value == SortDirection.Asc
+            : DefaultAscendingForUpgradeSortBy(sortBy);
 
-        bool ascending = string.IsNullOrWhiteSpace(sortDirection)
-            ? DefaultAscendingForUpgradeSortBy(sortBy)
-            : string.Equals(sortDirection, "asc", StringComparison.OrdinalIgnoreCase);
-
-        IEnumerable<CustomFormatScoreUpgradeResponse> sorted = (sortBy ?? "upgradedat").ToLowerInvariant() switch
+        IEnumerable<CustomFormatScoreUpgradeResponse> sorted = sortBy switch
         {
-            "title" => ascending
+            CfUpgradesSortBy.Title => ascending
                 ? upgrades.OrderBy(u => u.Title, StringComparer.OrdinalIgnoreCase)
                 : upgrades.OrderByDescending(u => u.Title, StringComparer.OrdinalIgnoreCase),
-            "newscore" => ascending
+            CfUpgradesSortBy.NewScore => ascending
                 ? upgrades.OrderBy(u => u.NewScore)
                 : upgrades.OrderByDescending(u => u.NewScore),
-            "cutoffscore" => ascending
+            CfUpgradesSortBy.CutoffScore => ascending
                 ? upgrades.OrderBy(u => u.CutoffScore)
                 : upgrades.OrderByDescending(u => u.CutoffScore),
-            "previousscore" => ascending
+            CfUpgradesSortBy.PreviousScore => ascending
                 ? upgrades.OrderBy(u => u.PreviousScore)
                 : upgrades.OrderByDescending(u => u.PreviousScore),
-            "scoredelta" => ascending
+            CfUpgradesSortBy.ScoreDelta => ascending
                 ? upgrades.OrderBy(u => u.NewScore - u.PreviousScore)
                 : upgrades.OrderByDescending(u => u.NewScore - u.PreviousScore),
             _ => ascending
@@ -309,11 +284,11 @@ public sealed class CustomFormatScoreController : ControllerBase
         });
     }
 
-    private static bool DefaultAscendingForUpgradeSortBy(string? sortBy)
+    private static bool DefaultAscendingForUpgradeSortBy(CfUpgradesSortBy sortBy)
     {
-        return (sortBy ?? "upgradedat").ToLowerInvariant() switch
+        return sortBy switch
         {
-            "title" => true,
+            CfUpgradesSortBy.Title => true,
             _ => false,
         };
     }

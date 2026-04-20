@@ -1,8 +1,18 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { SortDirection } from '@ui';
 import type { SearchStatsSummary, SearchEvent } from '@core/models/search-stats.models';
 import type { PaginatedResult } from '@core/models/pagination.model';
+
+export { SortDirection };
+
+export enum SearchEventsSortBy {
+  Timestamp = 'Timestamp',
+  Title = 'Title',
+  Status = 'Status',
+  Type = 'Type',
+}
 
 export interface SearchEventsQuery {
   page?: number;
@@ -10,13 +20,12 @@ export interface SearchEventsQuery {
   instanceId?: string;
   cycleId?: string;
   search?: string;
-  sortBy?: string;
-  sortDirection?: 'asc' | 'desc';
+  sortBy?: SearchEventsSortBy;
+  sortDirection?: SortDirection;
   searchStatus?: string[];
   searchType?: string;
   searchReason?: string;
   grabbed?: boolean;
-  dryRun?: boolean;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -40,7 +49,6 @@ export class SearchStatsApi {
     if (query.searchType) params = params.set('searchType', query.searchType);
     if (query.searchReason) params = params.set('searchReason', query.searchReason);
     if (query.grabbed !== undefined) params = params.set('grabbed', String(query.grabbed));
-    if (query.dryRun !== undefined) params = params.set('dryRun', String(query.dryRun));
 
     if (query.searchStatus?.length) {
       for (const status of query.searchStatus) {

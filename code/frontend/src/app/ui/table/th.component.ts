@@ -1,6 +1,6 @@
 import { Component, ChangeDetectionStrategy, input, inject, computed, HostBinding } from '@angular/core';
 import { TableComponent } from './table.component';
-import type { ColumnAlign, ColumnPriority } from './table.types';
+import { SortDirection, type ColumnAlign, type ColumnPriority } from './table.types';
 
 @Component({
   selector: 'th[app-th]',
@@ -36,7 +36,7 @@ export class ThComponent {
     const key = this.sortKey();
     if (!key || !this.table) return '↕';
     if (this.table.sortKey() !== key) return '↕';
-    return this.table.sortDirection() === 'asc' ? '↑' : '↓';
+    return this.table.sortDirection() === SortDirection.Asc ? '↑' : '↓';
   });
 
   onClick(): void {

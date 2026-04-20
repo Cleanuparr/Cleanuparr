@@ -1,4 +1,7 @@
-export type SortDirection = 'asc' | 'desc';
+export enum SortDirection {
+  Asc = 'Asc',
+  Desc = 'Desc',
+}
 
 export type ColumnPriority = 'primary' | 'secondary' | 'tertiary';
 

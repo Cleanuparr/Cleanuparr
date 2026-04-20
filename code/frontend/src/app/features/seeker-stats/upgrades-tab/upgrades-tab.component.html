@@ -44,12 +44,12 @@
   >
     <thead>
       <tr>
-        <th app-th sortKey="upgradedAt" priority="primary">Upgraded</th>
-        <th app-th sortKey="title" priority="primary">Title</th>
-        <th app-th sortKey="newScore" priority="secondary" align="right">New</th>
-        <th app-th sortKey="previousScore" priority="tertiary" align="right">Previous</th>
-        <th app-th sortKey="scoreDelta" priority="tertiary" align="right">Δ</th>
-        <th app-th sortKey="cutoffScore" priority="tertiary" align="right">Cutoff</th>
+        <th app-th [sortKey]="Sort.UpgradedAt" priority="primary">Upgraded</th>
+        <th app-th [sortKey]="Sort.Title" priority="primary">Title</th>
+        <th app-th [sortKey]="Sort.NewScore" priority="secondary" align="right">New</th>
+        <th app-th [sortKey]="Sort.PreviousScore" priority="tertiary" align="right">Previous</th>
+        <th app-th [sortKey]="Sort.ScoreDelta" priority="tertiary" align="right">Δ</th>
+        <th app-th [sortKey]="Sort.CutoffScore" priority="tertiary" align="right">Cutoff</th>
         <th app-th priority="primary" align="right"></th>
       </tr>
     </thead>

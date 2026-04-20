@@ -137,10 +137,10 @@
   >
     <thead>
       <tr>
-        <th app-th sortKey="timestamp" priority="primary">Timestamp</th>
-        <th app-th sortKey="title" priority="primary">Title</th>
-        <th app-th sortKey="status" priority="secondary">Status</th>
-        <th app-th sortKey="type" priority="tertiary">Type</th>
+        <th app-th [sortKey]="Sort.Timestamp" priority="primary">Timestamp</th>
+        <th app-th [sortKey]="Sort.Title" priority="primary">Title</th>
+        <th app-th [sortKey]="Sort.Status" priority="secondary">Status</th>
+        <th app-th [sortKey]="Sort.Type" priority="tertiary">Type</th>
         <th app-th priority="primary" align="right"></th>
       </tr>
     </thead>

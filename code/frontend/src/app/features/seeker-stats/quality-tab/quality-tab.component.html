@@ -68,13 +68,13 @@
   >
     <thead>
       <tr>
-        <th app-th sortKey="title" priority="primary">Title</th>
-        <th app-th sortKey="currentScore" priority="primary" align="right">Score</th>
-        <th app-th sortKey="cutoffScore" priority="secondary" align="right">Cutoff</th>
-        <th app-th sortKey="qualityProfile" priority="secondary">Profile</th>
+        <th app-th [sortKey]="Sort.Title" priority="primary">Title</th>
+        <th app-th [sortKey]="Sort.CurrentScore" priority="primary" align="right">Score</th>
+        <th app-th [sortKey]="Sort.CutoffScore" priority="secondary" align="right">Cutoff</th>
+        <th app-th [sortKey]="Sort.QualityProfile" priority="secondary">Profile</th>
         <th app-th priority="secondary">Status</th>
-        <th app-th sortKey="lastSyncedAt" priority="tertiary">Last Synced</th>
-        <th app-th sortKey="lastUpgradedAt" priority="tertiary">Last Upgraded</th>
+        <th app-th [sortKey]="Sort.LastSyncedAt" priority="tertiary">Last Synced</th>
+        <th app-th [sortKey]="Sort.LastUpgradedAt" priority="tertiary">Last Upgraded</th>
         <th app-th priority="primary" align="right"></th>
       </tr>
     </thead>

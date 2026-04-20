@@ -10,14 +10,14 @@ import type { SelectOption, SortState } from '@ui';
 import { AnimatedCounterComponent } from '@ui/animated-counter/animated-counter.component';
 import {
   CfScoreApi, CfScoreEntry, CfScoreStats, CfScoreHistoryEntry, CfScoreInstance,
-  CutoffFilter, MonitoredFilter,
+  CutoffFilter, MonitoredFilter, CfScoresSortBy, SortDirection,
 } from '@core/api/cf-score.api';
 import { AppHubService } from '@core/realtime/app-hub.service';
 import { ToastService } from '@core/services/toast.service';
 import { PaginationService } from '@core/services/pagination.service';
 
-const DEFAULT_SORT_BY = 'title';
-const DEFAULT_SORT_DIRECTION: 'asc' | 'desc' = 'asc';
+const DEFAULT_SORT_BY = CfScoresSortBy.Title;
+const DEFAULT_SORT_DIRECTION = SortDirection.Asc;
 
 interface AdvancedFilters {
   qualityProfile: string;
@@ -29,8 +29,8 @@ interface AdvancedFilters {
 const EMPTY_FILTERS: AdvancedFilters = {
   qualityProfile: '',
   itemType: '',
-  cutoffFilter: 'all',
-  monitoredFilter: 'all',
+  cutoffFilter: CutoffFilter.All,
+  monitoredFilter: MonitoredFilter.All,
 };
 
 @Component({
@@ -78,8 +78,9 @@ export class QualityTabComponent implements OnInit {
   readonly instances = signal<CfScoreInstance[]>([]);
   readonly instanceOptions = signal<SelectOption[]>([]);
 
-  readonly sortBy = signal<string>(DEFAULT_SORT_BY);
-  readonly sortDirection = signal<'asc' | 'desc'>(DEFAULT_SORT_DIRECTION);
+  readonly sortBy = signal<CfScoresSortBy>(DEFAULT_SORT_BY);
+  readonly sortDirection = signal<SortDirection>(DEFAULT_SORT_DIRECTION);
+  readonly Sort = CfScoresSortBy;
 
   readonly applied = signal<AdvancedFilters>({ ...EMPTY_FILTERS });
   readonly draft = signal<AdvancedFilters>({ ...EMPTY_FILTERS });
@@ -100,15 +101,15 @@ export class QualityTabComponent implements OnInit {
   readonly historyLoading = signal(false);
 
   readonly cutoffOptions: SelectOption[] = [
-    { label: 'Any', value: 'all' },
-    { label: 'Below cutoff', value: 'below' },
-    { label: 'Met cutoff', value: 'met' },
+    { label: 'Any', value: CutoffFilter.All },
+    { label: 'Below cutoff', value: CutoffFilter.Below },
+    { label: 'Met cutoff', value: CutoffFilter.Met },
   ];
 
   readonly monitoredOptions: SelectOption[] = [
-    { label: 'Any', value: 'all' },
-    { label: 'Monitored only', value: 'monitored' },
-    { label: 'Unmonitored only', value: 'unmonitored' },
+    { label: 'Any', value: MonitoredFilter.All },
+    { label: 'Monitored only', value: MonitoredFilter.Monitored },
+    { label: 'Unmonitored only', value: MonitoredFilter.Unmonitored },
   ];
 
   readonly itemTypeOptions: SelectOption[] = [
@@ -141,8 +142,8 @@ export class QualityTabComponent implements OnInit {
     let n = 0;
     if (a.qualityProfile) n++;
     if (a.itemType) n++;
-    if (a.cutoffFilter !== 'all') n++;
-    if (a.monitoredFilter !== 'all') n++;
+    if (a.cutoffFilter !== CutoffFilter.All) n++;
+    if (a.monitoredFilter !== MonitoredFilter.All) n++;
     return n;
   });
 
@@ -235,7 +236,7 @@ export class QualityTabComponent implements OnInit {
   }
 
   onSortChange(state: SortState): void {
-    this.sortBy.set(state.sortKey ?? DEFAULT_SORT_BY);
+    this.sortBy.set((state.sortKey as CfScoresSortBy | null) ?? DEFAULT_SORT_BY);
     this.sortDirection.set(state.sortKey ? state.sortDirection : DEFAULT_SORT_DIRECTION);
     this.currentPage.set(1);
     this.loadScores();

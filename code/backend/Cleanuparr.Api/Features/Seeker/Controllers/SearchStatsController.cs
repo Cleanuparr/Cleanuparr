@@ -127,13 +127,12 @@ public sealed class SearchStatsController : ControllerBase
         [FromQuery] Guid? instanceId = null,
         [FromQuery] Guid? cycleId = null,
         [FromQuery] string? search = null,
-        [FromQuery] string? sortBy = null,
-        [FromQuery] string? sortDirection = null,
-        [FromQuery] string[]? searchStatus = null,
-        [FromQuery] string? searchType = null,
-        [FromQuery] string? searchReason = null,
-        [FromQuery] bool? grabbed = null,
-        [FromQuery] bool? dryRun = null)
+        [FromQuery] SearchEventsSortBy sortBy = SearchEventsSortBy.Timestamp,
+        [FromQuery] SortDirection sortDirection = SortDirection.Desc,
+        [FromQuery] SearchCommandStatus[]? searchStatus = null,
+        [FromQuery] SeekerSearchType? searchType = null,
+        [FromQuery] SeekerSearchReason? searchReason = null,
+        [FromQuery] bool? grabbed = null)
     {
         if (page < 1)
         {
@@ -178,31 +177,20 @@ public sealed class SearchStatsController : ControllerBase
         // Filter by search status (multi-valued)
         if (searchStatus is { Length: > 0 })
         {
-            List<SearchCommandStatus> statuses = searchStatus
-                .Select(s => Enum.TryParse<SearchCommandStatus>(s, ignoreCase: true, out var parsed) ? (SearchCommandStatus?)parsed : null)
-                .Where(v => v.HasValue)
-                .Select(v => v!.Value)
-                .Distinct()
-                .ToList();
-
-            if (statuses.Count > 0)
-            {
-                query = query.Where(e => e.SearchStatus.HasValue && statuses.Contains(e.SearchStatus.Value));
-            }
+            SearchCommandStatus[] statuses = searchStatus.Distinct().ToArray();
+            query = query.Where(e => e.SearchStatus.HasValue && statuses.Contains(e.SearchStatus.Value));
         }
 
-        // Filter by search type
-        if (!string.IsNullOrWhiteSpace(searchType)
-            && Enum.TryParse<SeekerSearchType>(searchType, ignoreCase: true, out var parsedType))
+        if (searchType.HasValue)
         {
-            query = query.Where(e => e.SearchEventData != null && e.SearchEventData.SearchType == parsedType);
+            SeekerSearchType typeValue = searchType.Value;
+            query = query.Where(e => e.SearchEventData != null && e.SearchEventData.SearchType == typeValue);
         }
 
-        // Filter by search reason
-        if (!string.IsNullOrWhiteSpace(searchReason)
-            && Enum.TryParse<SeekerSearchReason>(searchReason, ignoreCase: true, out var parsedReason))
+        if (searchReason.HasValue)
         {
-            query = query.Where(e => e.SearchEventData != null && e.SearchEventData.SearchReason == parsedReason);
+            SeekerSearchReason reasonValue = searchReason.Value;
+            query = query.Where(e => e.SearchEventData != null && e.SearchEventData.SearchReason == reasonValue);
         }
 
         // Filter by grabbed-result presence
@@ -218,38 +206,28 @@ public sealed class SearchStatsController : ControllerBase
             }
         }
 
-        // Filter by dry-run flag
-        if (dryRun.HasValue)
-        {
-            query = query.Where(e => e.IsDryRun == dryRun.Value);
-        }
-
         int totalCount = await query.CountAsync();
 
-        bool ascending = string.Equals(sortDirection, "asc", StringComparison.OrdinalIgnoreCase);
-        string normalizedSortBy = (sortBy ?? "timestamp").ToLowerInvariant();
+        bool ascending = sortDirection == SortDirection.Asc;
 
-        IOrderedQueryable<AppEvent> ordered = normalizedSortBy switch
+        IOrderedQueryable<AppEvent> ordered = sortBy switch
         {
-            "title" => ascending
+            SearchEventsSortBy.Title => ascending
                 ? query.OrderBy(e => e.SearchEventData != null ? e.SearchEventData.ItemTitle : string.Empty)
                 : query.OrderByDescending(e => e.SearchEventData != null ? e.SearchEventData.ItemTitle : string.Empty),
-            "status" => ascending
+            SearchEventsSortBy.Status => ascending
                 ? query.OrderBy(e => e.SearchStatus)
                 : query.OrderByDescending(e => e.SearchStatus),
-            "type" => ascending
+            SearchEventsSortBy.Type => ascending
                 ? query.OrderBy(e => e.SearchEventData != null ? (int)e.SearchEventData.SearchType : 0)
                 : query.OrderByDescending(e => e.SearchEventData != null ? (int)e.SearchEventData.SearchType : 0),
-            "grabbedcount" => ascending
-                ? query.OrderBy(e => e.SearchEventData != null ? e.SearchEventData.GrabbedItems.Count : 0)
-                : query.OrderByDescending(e => e.SearchEventData != null ? e.SearchEventData.GrabbedItems.Count : 0),
             _ => ascending
                 ? query.OrderBy(e => e.Timestamp)
                 : query.OrderByDescending(e => e.Timestamp),
         };
 
         // Secondary sort by timestamp desc for stable ordering when primary ties
-        if (normalizedSortBy != "timestamp")
+        if (sortBy != SearchEventsSortBy.Timestamp)
         {
             ordered = ordered.ThenByDescending(e => e.Timestamp);
         }

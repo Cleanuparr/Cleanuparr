@@ -1,5 +1,5 @@
 import { Component, ChangeDetectionStrategy, input, output } from '@angular/core';
-import type { SortDirection, SortState } from './table.types';
+import { SortDirection, type SortState } from './table.types';
 
 @Component({
   selector: 'app-table',
@@ -10,7 +10,7 @@ import type { SortDirection, SortState } from './table.types';
 })
 export class TableComponent {
   sortKey = input<string | null>(null);
-  sortDirection = input<SortDirection>('desc');
+  sortDirection = input<SortDirection>(SortDirection.Desc);
   loading = input(false);
   empty = input(false);
 
@@ -21,9 +21,10 @@ export class TableComponent {
     const currentKey = this.sortKey();
     const currentDir = this.sortDirection();
     if (currentKey !== key) {
-      this.sortChange.emit({ sortKey: key, sortDirection: 'asc' });
+      this.sortChange.emit({ sortKey: key, sortDirection: SortDirection.Asc });
       return;
     }
-    this.sortChange.emit({ sortKey: key, sortDirection: currentDir === 'asc' ? 'desc' : 'asc' });
+    const next = currentDir === SortDirection.Asc ? SortDirection.Desc : SortDirection.Asc;
+    this.sortChange.emit({ sortKey: key, sortDirection: next });
   }
 }

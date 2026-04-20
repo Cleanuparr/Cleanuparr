@@ -8,13 +8,13 @@ import {
 } from '@ui';
 import type { SelectOption, SortState } from '@ui';
 import { AnimatedCounterComponent } from '@ui/animated-counter/animated-counter.component';
-import { CfScoreApi, CfScoreUpgrade } from '@core/api/cf-score.api';
+import { CfScoreApi, CfScoreUpgrade, CfUpgradesSortBy, SortDirection } from '@core/api/cf-score.api';
 import { AppHubService } from '@core/realtime/app-hub.service';
 import { ToastService } from '@core/services/toast.service';
 import { PaginationService } from '@core/services/pagination.service';
 
-const DEFAULT_SORT_BY = 'upgradedAt';
-const DEFAULT_SORT_DIRECTION: 'asc' | 'desc' = 'desc';
+const DEFAULT_SORT_BY = CfUpgradesSortBy.UpgradedAt;
+const DEFAULT_SORT_DIRECTION = SortDirection.Desc;
 
 interface AdvancedFilters {
   timeRange: string;
@@ -66,8 +66,9 @@ export class UpgradesTabComponent implements OnInit {
   readonly selectedInstanceId = signal<string>('');
   readonly instanceOptions = signal<SelectOption[]>([]);
 
-  readonly sortBy = signal<string>(DEFAULT_SORT_BY);
-  readonly sortDirection = signal<'asc' | 'desc'>(DEFAULT_SORT_DIRECTION);
+  readonly sortBy = signal<CfUpgradesSortBy>(DEFAULT_SORT_BY);
+  readonly sortDirection = signal<SortDirection>(DEFAULT_SORT_DIRECTION);
+  readonly Sort = CfUpgradesSortBy;
 
   readonly applied = signal<AdvancedFilters>({ ...EMPTY_FILTERS });
   readonly draft = signal<AdvancedFilters>({ ...EMPTY_FILTERS });
@@ -118,7 +119,7 @@ export class UpgradesTabComponent implements OnInit {
   }
 
   onSortChange(state: SortState): void {
-    this.sortBy.set(state.sortKey ?? DEFAULT_SORT_BY);
+    this.sortBy.set((state.sortKey as CfUpgradesSortBy | null) ?? DEFAULT_SORT_BY);
     this.sortDirection.set(state.sortKey ? state.sortDirection : DEFAULT_SORT_DIRECTION);
     this.currentPage.set(1);
     this.loadUpgrades();

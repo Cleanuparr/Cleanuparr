@@ -1,6 +1,9 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { SortDirection } from '@ui';
+
+export { SortDirection };
 
 export interface CfScoreStats {
   totalTracked: number;
@@ -86,16 +89,42 @@ export interface CfScoreInstance {
   qualityProfiles?: string[];
 }
 
-export type CutoffFilter = 'all' | 'below' | 'met';
-export type MonitoredFilter = 'all' | 'monitored' | 'unmonitored';
-export type SortDirection = 'asc' | 'desc';
+export enum CutoffFilter {
+  All = 'All',
+  Below = 'Below',
+  Met = 'Met',
+}
+
+export enum MonitoredFilter {
+  All = 'All',
+  Monitored = 'Monitored',
+  Unmonitored = 'Unmonitored',
+}
+
+export enum CfScoresSortBy {
+  Title = 'Title',
+  CurrentScore = 'CurrentScore',
+  CutoffScore = 'CutoffScore',
+  QualityProfile = 'QualityProfile',
+  LastSyncedAt = 'LastSyncedAt',
+  LastUpgradedAt = 'LastUpgradedAt',
+}
+
+export enum CfUpgradesSortBy {
+  UpgradedAt = 'UpgradedAt',
+  Title = 'Title',
+  NewScore = 'NewScore',
+  PreviousScore = 'PreviousScore',
+  ScoreDelta = 'ScoreDelta',
+  CutoffScore = 'CutoffScore',
+}
 
 export interface CfScoresQuery {
   page?: number;
   pageSize?: number;
   instanceId?: string;
   search?: string;
-  sortBy?: string;
+  sortBy?: CfScoresSortBy;
   sortDirection?: SortDirection;
   qualityProfile?: string;
   itemType?: string;
@@ -109,9 +138,7 @@ export interface CfScoreUpgradesQuery {
   instanceId?: string;
   days?: number;
   search?: string;
-  itemType?: string;
-  minScoreDelta?: number;
-  sortBy?: string;
+  sortBy?: CfUpgradesSortBy;
   sortDirection?: SortDirection;
 }
 
@@ -131,8 +158,6 @@ export class CfScoreApi {
     if (query.instanceId) params = params.set('instanceId', query.instanceId);
     if (query.days !== undefined) params = params.set('days', String(query.days));
     if (query.search) params = params.set('search', query.search);
-    if (query.itemType) params = params.set('itemType', query.itemType);
-    if (query.minScoreDelta !== undefined) params = params.set('minScoreDelta', String(query.minScoreDelta));
     if (query.sortBy) params = params.set('sortBy', query.sortBy);
     if (query.sortDirection) params = params.set('sortDirection', query.sortDirection);
 
@@ -150,8 +175,8 @@ export class CfScoreApi {
     if (query.sortDirection) params = params.set('sortDirection', query.sortDirection);
     if (query.qualityProfile) params = params.set('qualityProfile', query.qualityProfile);
     if (query.itemType) params = params.set('itemType', query.itemType);
-    if (query.cutoffFilter && query.cutoffFilter !== 'all') params = params.set('cutoffFilter', query.cutoffFilter);
-    if (query.monitoredFilter && query.monitoredFilter !== 'all') params = params.set('monitoredFilter', query.monitoredFilter);
+    if (query.cutoffFilter && query.cutoffFilter !== CutoffFilter.All) params = params.set('cutoffFilter', query.cutoffFilter);
+    if (query.monitoredFilter && query.monitoredFilter !== MonitoredFilter.All) params = params.set('monitoredFilter', query.monitoredFilter);
 
     return this.http.get<CfScoreEntriesResponse>('/api/seeker/cf-scores', { params });
   }

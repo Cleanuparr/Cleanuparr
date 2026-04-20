@@ -9,7 +9,7 @@ import {
 import type { SelectOption, SortState } from '@ui';
 import type { BadgeSeverity } from '@ui/badge/badge.component';
 import { AnimatedCounterComponent } from '@ui/animated-counter/animated-counter.component';
-import { SearchStatsApi } from '@core/api/search-stats.api';
+import { SearchStatsApi, SearchEventsSortBy, SortDirection } from '@core/api/search-stats.api';
 import type { SearchStatsSummary, SearchEvent, InstanceSearchStat } from '@core/models/search-stats.models';
 import { SeekerSearchType, SeekerSearchReason } from '@core/models/search-stats.models';
 import { AppHubService } from '@core/realtime/app-hub.service';
@@ -19,8 +19,8 @@ import { PaginationService } from '@core/services/pagination.service';
 type CycleFilter = 'current' | 'all';
 type TriState = 'any' | 'true' | 'false';
 
-const DEFAULT_SORT_BY = 'timestamp';
-const DEFAULT_SORT_DIRECTION: 'asc' | 'desc' = 'desc';
+const DEFAULT_SORT_BY = SearchEventsSortBy.Timestamp;
+const DEFAULT_SORT_DIRECTION = SortDirection.Desc;
 
 interface AdvancedFilters {
   cycleFilter: CycleFilter;
@@ -93,8 +93,9 @@ export class SearchesTabComponent implements OnInit {
 
   readonly searchQuery = signal('');
 
-  readonly sortBy = signal<string>(DEFAULT_SORT_BY);
-  readonly sortDirection = signal<'asc' | 'desc'>(DEFAULT_SORT_DIRECTION);
+  readonly sortBy = signal<SearchEventsSortBy>(DEFAULT_SORT_BY);
+  readonly sortDirection = signal<SortDirection>(DEFAULT_SORT_DIRECTION);
+  readonly Sort = SearchEventsSortBy;
 
   // Applied filters drive the query; draft lives inside the open drawer.
   readonly applied = signal<AdvancedFilters>({ ...EMPTY_FILTERS });
@@ -181,7 +182,7 @@ export class SearchesTabComponent implements OnInit {
   }
 
   onSortChange(state: SortState): void {
-    this.sortBy.set(state.sortKey ?? DEFAULT_SORT_BY);
+    this.sortBy.set((state.sortKey as SearchEventsSortBy | null) ?? DEFAULT_SORT_BY);
     this.sortDirection.set(state.sortKey ? state.sortDirection : DEFAULT_SORT_DIRECTION);
     this.eventsPage.set(1);
     this.loadEvents();
