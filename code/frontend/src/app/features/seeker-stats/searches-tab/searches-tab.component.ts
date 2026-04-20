@@ -137,9 +137,7 @@ export class SearchesTabComponent implements OnInit {
   readonly activeFilterCount = computed(() => {
     const a = this.applied();
     let n = 0;
-    // Cycle filter only meaningful when an instance is selected; skip otherwise
-    // (default 'all' with no instance would otherwise incorrectly register as active).
-    if (this.selectedInstanceId() && a.cycleFilter !== 'current') n++;
+    if (a.cycleFilter !== EMPTY_FILTERS.cycleFilter) n++;
     if (a.statuses.length) n++;
     if (a.searchType) n++;
     if (a.searchReason) n++;
@@ -168,9 +166,6 @@ export class SearchesTabComponent implements OnInit {
 
   onInstanceFilterChange(value: string): void {
     this.selectedInstanceId.set(value);
-    if (!value && this.applied().cycleFilter === 'current') {
-      this.applied.update(a => ({ ...a, cycleFilter: 'all' }));
-    }
     this.eventsPage.set(1);
     this.loadEvents();
   }
@@ -205,7 +200,7 @@ export class SearchesTabComponent implements OnInit {
   }
 
   resetFilters(): void {
-    this.draft.set({ ...EMPTY_FILTERS, cycleFilter: this.selectedInstanceId() ? 'current' : 'all' });
+    this.draft.set({ ...EMPTY_FILTERS });
   }
 
   applyFilters(): void {
