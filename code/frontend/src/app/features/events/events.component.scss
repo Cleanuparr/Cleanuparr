@@ -5,8 +5,7 @@
   > .toolbar {
     animation: slide-up var(--duration-normal) var(--ease-default) both;
     animation-delay: 0ms;
-    position: relative;
-    z-index: 1;
+    @include sticky-page-header;
   }
   > .event-count {
     animation: slide-up var(--duration-normal) var(--ease-default) both;
@@ -41,10 +40,6 @@
 }
 
 // Events list
-.events-list {
-  max-height: 70vh;
-  overflow-y: auto;
-}
 
 .event-row {
   border-bottom: 1px solid var(--divider);
