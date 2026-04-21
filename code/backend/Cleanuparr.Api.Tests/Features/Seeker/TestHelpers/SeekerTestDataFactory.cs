@@ -24,6 +24,8 @@ public static class SeekerTestDataFactory
 
         var options = new DbContextOptionsBuilder<DataContext>()
             .UseSqlite(connection)
+            .UseLowerCaseNamingConvention()
+            .UseSnakeCaseNamingConvention()
             .Options;
 
         var context = new DataContext(options);
@@ -40,6 +42,8 @@ public static class SeekerTestDataFactory
 
         var options = new DbContextOptionsBuilder<EventsContext>()
             .UseSqlite(connection)
+            .UseLowerCaseNamingConvention()
+            .UseSnakeCaseNamingConvention()
             .Options;
 
         var context = new EventsContext(options);
