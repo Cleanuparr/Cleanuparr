@@ -59,7 +59,7 @@ public class CustomFormatScoreControllerTests : IDisposable
         var result = await _controller.GetCustomFormatScores(page: 1, pageSize: 999);
         var body = GetResponseBody(result);
 
-        body.GetProperty("PageSize").GetInt32().ShouldBe(100);
+        body.GetProperty("PageSize").GetInt32().ShouldBe(500);
     }
 
     [Fact]
