@@ -118,8 +118,21 @@ public sealed class SearchStatsController : ControllerBase
     }
 
     /// <summary>
-    /// Gets paginated search-triggered events
+    /// Gets paginated search-triggered events with optional filtering and sorting.
+    /// Results default to newest-first by timestamp. Ties on non-timestamp sort keys
+    /// fall back to <c>Timestamp</c> descending for stable ordering.
     /// </summary>
+    /// <param name="page">1-based page number. Clamped to at least 1.</param>
+    /// <param name="pageSize">Rows per page. Clamped to the inclusive range [1, 100]; defaults to 50.</param>
+    /// <param name="instanceId">When set, restricts results to events produced by this *arr instance.</param>
+    /// <param name="cycleId">When set, restricts results to events from this seeker cycle.</param>
+    /// <param name="search">Case-insensitive substring match against the stored item title.</param>
+    /// <param name="sortBy">Primary sort column. Defaults to <see cref="SearchEventsSortBy.Timestamp"/>.</param>
+    /// <param name="sortDirection">Sort direction for the primary column. Defaults to descending.</param>
+    /// <param name="searchStatus">When supplied, keeps only events whose <see cref="SearchCommandStatus"/> appears in this list.</param>
+    /// <param name="searchType">When supplied, keeps only events matching this <see cref="SeekerSearchType"/>.</param>
+    /// <param name="searchReason">When supplied, keeps only events matching this <see cref="SeekerSearchReason"/>.</param>
+    /// <param name="grabbed">When <c>true</c>, keeps only events that recorded at least one grabbed item; when <c>false</c>, keeps only events with none.</param>
     [HttpGet("events")]
     public async Task<IActionResult> GetEvents(
         [FromQuery] int page = 1,

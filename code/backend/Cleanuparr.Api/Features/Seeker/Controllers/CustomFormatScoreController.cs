@@ -293,6 +293,11 @@ public sealed class CustomFormatScoreController : ControllerBase
         };
     }
 
+    /// <summary>
+    /// Gets the *arr instances that currently have tracked CF scores, along with
+    /// the set of quality profile names observed for each instance. Used to
+    /// populate instance and profile filter controls.
+    /// </summary>
     [HttpGet("instances")]
     public async Task<IActionResult> GetInstances()
     {
