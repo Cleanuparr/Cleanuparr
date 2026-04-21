@@ -63,7 +63,7 @@ public sealed record SeekerConfig : IConfig
                 $"{nameof(SearchInterval)} must be at most {Constants.MaxSearchIntervalMinutes} minutes");
         }
 
-        if (!new List<int> { 2, 3, 4, 5, 6, 10, 12, 15, 20, 30 }.Contains(SearchInterval))
+        if (!new List<int> { 2, 3, 4, 5, 6, 10, 12, 15, 20, 30, 60, 120, 180, 240, 360 }.Contains(SearchInterval))
         {
             throw new ValidationException($"Invalid search interval {SearchInterval}");
         }
@@ -77,5 +77,18 @@ public sealed record SeekerConfig : IConfig
     /// <summary>
     /// Generates the internal cron expression from the SearchInterval.
     /// </summary>
-    public string ToCronExpression() => $"0 */{SearchInterval} * * * ?";
+    public string ToCronExpression()
+    {
+        if (SearchInterval < 60)
+        {
+            return $"0 */{SearchInterval} * * * ?";
+        }
+
+        if (SearchInterval == 60)
+        {
+            return "0 0 * * * ?";
+        }
+
+        return $"0 0 */{SearchInterval / 60} * * ?";
+    }
 }
