@@ -316,6 +316,7 @@ public sealed class CustomFormatScoreController : ControllerBase
                     e.ItemType,
                     e.QualityProfileName,
                 })
+            .Distinct()
             .ToListAsync();
 
         var instances = raw
@@ -328,7 +329,7 @@ public sealed class CustomFormatScoreController : ControllerBase
                 QualityProfiles = g
                     .Select(x => x.QualityProfileName)
                     .Where(n => !string.IsNullOrWhiteSpace(n))
-                    .Distinct()
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
                     .OrderBy(n => n, StringComparer.OrdinalIgnoreCase)
                     .ToList(),
             })
