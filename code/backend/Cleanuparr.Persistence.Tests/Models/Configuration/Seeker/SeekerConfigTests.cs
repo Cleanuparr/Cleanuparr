@@ -28,6 +28,11 @@ public sealed class SeekerConfigTests
     [InlineData((ushort)15)]
     [InlineData((ushort)20)]
     [InlineData((ushort)30)]
+    [InlineData((ushort)60)]
+    [InlineData((ushort)120)]
+    [InlineData((ushort)180)]
+    [InlineData((ushort)240)]
+    [InlineData((ushort)360)]
     public void Validate_WithValidIntervals_DoesNotThrow(ushort interval)
     {
         var config = new SeekerConfig { SearchInterval = interval };
@@ -51,7 +56,7 @@ public sealed class SeekerConfigTests
     [Fact]
     public void Validate_WithIntervalAboveMaximum_ThrowsValidationException()
     {
-        var config = new SeekerConfig { SearchInterval = 31 };
+        var config = new SeekerConfig { SearchInterval = 361 };
 
         var exception = Should.Throw<ValidationException>(() => config.Validate());
         exception.Message.ShouldContain("at most");
@@ -81,6 +86,11 @@ public sealed class SeekerConfigTests
     [InlineData((ushort)5, "0 */5 * * * ?")]
     [InlineData((ushort)10, "0 */10 * * * ?")]
     [InlineData((ushort)30, "0 */30 * * * ?")]
+    [InlineData((ushort)60, "0 0 * * * ?")]
+    [InlineData((ushort)120, "0 0 */2 * * ?")]
+    [InlineData((ushort)180, "0 0 */3 * * ?")]
+    [InlineData((ushort)240, "0 0 */4 * * ?")]
+    [InlineData((ushort)360, "0 0 */6 * * ?")]
     public void ToCronExpression_ReturnsCorrectCron(ushort interval, string expectedCron)
     {
         var config = new SeekerConfig { SearchInterval = interval };

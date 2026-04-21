@@ -17,7 +17,7 @@ public static class Constants
 
     public const ushort DefaultSearchIntervalMinutes = 3;
     public const ushort MinSearchIntervalMinutes = 2;
-    public const ushort MaxSearchIntervalMinutes = 30;
+    public const ushort MaxSearchIntervalMinutes = 360;
 
     public const string LogoUrl = "https://cdn.jsdelivr.net/gh/Cleanuparr/Cleanuparr@main/Logo/48.png";
 
