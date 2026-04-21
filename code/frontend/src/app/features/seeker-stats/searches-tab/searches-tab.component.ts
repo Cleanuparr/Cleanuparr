@@ -11,7 +11,7 @@ import type { BadgeSeverity } from '@ui/badge/badge.component';
 import { AnimatedCounterComponent } from '@ui/animated-counter/animated-counter.component';
 import { SearchStatsApi, SearchEventsSortBy, SortDirection } from '@core/api/search-stats.api';
 import type { SearchStatsSummary, SearchEvent, InstanceSearchStat } from '@core/models/search-stats.models';
-import { SeekerSearchType, SeekerSearchReason } from '@core/models/search-stats.models';
+import { SeekerSearchType, SeekerSearchReason, SearchCommandStatus } from '@core/models/search-stats.models';
 import { AppHubService } from '@core/realtime/app-hub.service';
 import { ToastService } from '@core/services/toast.service';
 import { PaginationService } from '@core/services/pagination.service';
@@ -25,9 +25,9 @@ const DEFAULT_SORT_DIRECTION = SortDirection.Desc;
 
 interface AdvancedFilters {
   cycleFilter: CycleFilter;
-  statuses: string[];
-  searchType: string;
-  searchReason: string;
+  statuses: SearchCommandStatus[];
+  searchType: SeekerSearchType | '';
+  searchReason: SeekerSearchReason | '';
   grabbed: TriState;
 }
 
@@ -39,11 +39,11 @@ const EMPTY_FILTERS: AdvancedFilters = {
   grabbed: 'any',
 };
 
-const STATUS_OPTIONS: ReadonlyArray<{ value: string; label: string }> = [
-  { value: 'Started', label: 'Started' },
-  { value: 'Completed', label: 'Completed' },
-  { value: 'Failed', label: 'Failed' },
-  { value: 'TimedOut', label: 'Timed Out' },
+const STATUS_OPTIONS: ReadonlyArray<{ value: SearchCommandStatus; label: string }> = [
+  { value: SearchCommandStatus.Started, label: 'Started' },
+  { value: SearchCommandStatus.Completed, label: 'Completed' },
+  { value: SearchCommandStatus.Failed, label: 'Failed' },
+  { value: SearchCommandStatus.TimedOut, label: 'Timed Out' },
 ];
 
 @Component({
@@ -236,14 +236,14 @@ export class SearchesTabComponent implements OnInit {
     this.loadEvents();
   }
 
-  toggleStatus(value: string): void {
+  toggleStatus(value: SearchCommandStatus): void {
     this.draft.update(d => {
       const has = d.statuses.includes(value);
       return { ...d, statuses: has ? d.statuses.filter(s => s !== value) : [...d.statuses, value] };
     });
   }
 
-  isStatusDrafted(value: string): boolean {
+  isStatusDrafted(value: SearchCommandStatus): boolean {
     return this.draft().statuses.includes(value);
   }
 

@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import type { SearchStatsSummary, SearchEvent } from '@core/models/search-stats.models';
+import { SeekerSearchType, SeekerSearchReason, SearchCommandStatus } from '@core/models/search-stats.models';
 import type { PaginatedResult } from '@core/models/pagination.model';
 
 export enum SortDirection {
@@ -24,9 +25,9 @@ export interface SearchEventsQuery {
   search?: string;
   sortBy?: SearchEventsSortBy;
   sortDirection?: SortDirection;
-  searchStatus?: string[];
-  searchType?: string;
-  searchReason?: string;
+  searchStatus?: SearchCommandStatus[];
+  searchType?: SeekerSearchType;
+  searchReason?: SeekerSearchReason;
   grabbed?: boolean;
 }
 
