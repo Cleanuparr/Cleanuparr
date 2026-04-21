@@ -62,7 +62,8 @@ public sealed class CustomFormatScoreController : ControllerBase
 
         if (!string.IsNullOrWhiteSpace(search))
         {
-            query = query.Where(e => e.Title.ToLower().Contains(search.ToLower()));
+            string pattern = EventsContext.GetLikePattern(search);
+            query = query.Where(e => EF.Functions.Like(e.Title, pattern));
         }
 
         if (!string.IsNullOrWhiteSpace(qualityProfile))
@@ -200,7 +201,8 @@ public sealed class CustomFormatScoreController : ControllerBase
 
         if (!string.IsNullOrWhiteSpace(search))
         {
-            query = query.Where(h => h.Title.ToLower().Contains(search.ToLower()));
+            string pattern = EventsContext.GetLikePattern(search);
+            query = query.Where(h => EF.Functions.Like(h.Title, pattern));
         }
 
         if (days > 0)
