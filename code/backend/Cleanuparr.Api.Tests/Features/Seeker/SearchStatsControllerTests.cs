@@ -155,6 +155,105 @@ public class SearchStatsControllerTests : IDisposable
         body.GetProperty("Items").GetArrayLength().ShouldBe(2);
     }
 
+    [Fact]
+    public async Task GetEvents_WithSortByTitleAscending_OrdersAlphabetically()
+    {
+        AddSearchEvent(itemTitle: "Charlie");
+        AddSearchEvent(itemTitle: "Alpha");
+        AddSearchEvent(itemTitle: "Bravo");
+
+        var result = await _controller.GetEvents(
+            sortBy: SearchEventsSortBy.Title,
+            sortDirection: Cleanuparr.Domain.Enums.SortDirection.Asc);
+        var body = GetResponseBody(result);
+
+        var items = body.GetProperty("Items");
+        items[0].GetProperty("ItemTitle").GetString().ShouldBe("Alpha");
+        items[1].GetProperty("ItemTitle").GetString().ShouldBe("Bravo");
+        items[2].GetProperty("ItemTitle").GetString().ShouldBe("Charlie");
+    }
+
+    [Fact]
+    public async Task GetEvents_WithSortByTimestampAscending_OldestFirst()
+    {
+        AddSearchEvent(itemTitle: "Newest", timestamp: DateTime.UtcNow);
+        AddSearchEvent(itemTitle: "Oldest", timestamp: DateTime.UtcNow.AddHours(-2));
+        AddSearchEvent(itemTitle: "Middle", timestamp: DateTime.UtcNow.AddHours(-1));
+
+        var result = await _controller.GetEvents(sortDirection: Cleanuparr.Domain.Enums.SortDirection.Asc);
+        var body = GetResponseBody(result);
+
+        var items = body.GetProperty("Items");
+        items[0].GetProperty("ItemTitle").GetString().ShouldBe("Oldest");
+        items[2].GetProperty("ItemTitle").GetString().ShouldBe("Newest");
+    }
+
+    [Fact]
+    public async Task GetEvents_WithSearchStatusFilter_ReturnsOnlyMatchingStatuses()
+    {
+        AddSearchEvent(itemTitle: "A", searchStatus: SearchCommandStatus.Completed);
+        AddSearchEvent(itemTitle: "B", searchStatus: SearchCommandStatus.Failed);
+        AddSearchEvent(itemTitle: "C", searchStatus: SearchCommandStatus.TimedOut);
+
+        var result = await _controller.GetEvents(
+            searchStatus: [SearchCommandStatus.Completed, SearchCommandStatus.Failed]);
+        var body = GetResponseBody(result);
+
+        body.GetProperty("TotalCount").GetInt32().ShouldBe(2);
+    }
+
+    [Fact]
+    public async Task GetEvents_WithSearchTypeFilter_ReturnsOnlyMatchingType()
+    {
+        AddSearchEvent(itemTitle: "Proactive Movie", searchType: SeekerSearchType.Proactive);
+        AddSearchEvent(itemTitle: "Replacement Movie", searchType: SeekerSearchType.Replacement);
+
+        var result = await _controller.GetEvents(searchType: SeekerSearchType.Replacement);
+        var body = GetResponseBody(result);
+
+        body.GetProperty("TotalCount").GetInt32().ShouldBe(1);
+        body.GetProperty("Items")[0].GetProperty("ItemTitle").GetString().ShouldBe("Replacement Movie");
+    }
+
+    [Fact]
+    public async Task GetEvents_WithSearchReasonFilter_ReturnsOnlyMatchingReason()
+    {
+        AddSearchEvent(itemTitle: "Missing", searchReason: SeekerSearchReason.Missing);
+        AddSearchEvent(itemTitle: "Cutoff", searchReason: SeekerSearchReason.QualityCutoffNotMet);
+
+        var result = await _controller.GetEvents(searchReason: SeekerSearchReason.QualityCutoffNotMet);
+        var body = GetResponseBody(result);
+
+        body.GetProperty("TotalCount").GetInt32().ShouldBe(1);
+        body.GetProperty("Items")[0].GetProperty("ItemTitle").GetString().ShouldBe("Cutoff");
+    }
+
+    [Fact]
+    public async Task GetEvents_WithGrabbedTrue_KeepsOnlyEventsWithGrabbedItems()
+    {
+        AddSearchEvent(itemTitle: "With Grabs", grabbedItems: ["movie (2024)"]);
+        AddSearchEvent(itemTitle: "No Grabs", grabbedItems: []);
+
+        var result = await _controller.GetEvents(grabbed: true);
+        var body = GetResponseBody(result);
+
+        body.GetProperty("TotalCount").GetInt32().ShouldBe(1);
+        body.GetProperty("Items")[0].GetProperty("ItemTitle").GetString().ShouldBe("With Grabs");
+    }
+
+    [Fact]
+    public async Task GetEvents_WithGrabbedFalse_KeepsOnlyEventsWithoutGrabbedItems()
+    {
+        AddSearchEvent(itemTitle: "With Grabs", grabbedItems: ["movie (2024)"]);
+        AddSearchEvent(itemTitle: "No Grabs", grabbedItems: []);
+
+        var result = await _controller.GetEvents(grabbed: false);
+        var body = GetResponseBody(result);
+
+        body.GetProperty("TotalCount").GetInt32().ShouldBe(1);
+        body.GetProperty("Items")[0].GetProperty("ItemTitle").GetString().ShouldBe("No Grabs");
+    }
+
     #endregion
 
     #region Helpers
@@ -166,7 +265,8 @@ public class SearchStatsControllerTests : IDisposable
         List<string>? grabbedItems = null,
         Guid? arrInstanceId = null,
         Guid? cycleId = null,
-        SearchCommandStatus? searchStatus = null)
+        SearchCommandStatus? searchStatus = null,
+        DateTime? timestamp = null)
     {
         var appEvent = new AppEvent
         {
@@ -176,7 +276,7 @@ public class SearchStatsControllerTests : IDisposable
             ArrInstanceId = arrInstanceId,
             CycleId = cycleId,
             SearchStatus = searchStatus,
-            Timestamp = DateTime.UtcNow
+            Timestamp = timestamp ?? DateTime.UtcNow
         };
 
         _eventsContext.Events.Add(appEvent);
