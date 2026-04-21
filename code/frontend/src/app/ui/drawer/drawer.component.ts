@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, input, output, model, HostListener, effect, ElementRef, inject } from '@angular/core';
+import { Component, ChangeDetectionStrategy, input, output, model, HostListener, effect, ElementRef, inject, OnInit, OnDestroy } from '@angular/core';
 
 @Component({
   selector: 'app-drawer',
@@ -7,7 +7,7 @@ import { Component, ChangeDetectionStrategy, input, output, model, HostListener,
   styleUrl: './drawer.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class DrawerComponent {
+export class DrawerComponent implements OnInit, OnDestroy {
   private readonly host: ElementRef<HTMLElement> = inject(ElementRef);
 
   title = input<string>();
@@ -22,6 +22,14 @@ export class DrawerComponent {
         queueMicrotask(() => this.focusFirstControl());
       }
     });
+  }
+
+  ngOnInit(): void {
+    document.body.appendChild(this.host.nativeElement);
+  }
+
+  ngOnDestroy(): void {
+    this.host.nativeElement.remove();
   }
 
   @HostListener('document:keydown.escape')
