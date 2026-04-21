@@ -16,4 +16,11 @@
       animation-delay: #{$start + ($i - 1) * $increment};
     }
   }
+
+  @media (prefers-reduced-motion: reduce) {
+    > * {
+      animation: none;
+      animation-delay: 0s;
+    }
+  }
 }
