@@ -168,7 +168,8 @@
   &__text {
     font-weight: 500;
     color: var(--text-primary);
-    word-break: break-word;
+    overflow-wrap: anywhere;
+    word-break: normal;
   }
 }
 

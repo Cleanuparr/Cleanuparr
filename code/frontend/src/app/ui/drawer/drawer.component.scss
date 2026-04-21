@@ -18,6 +18,7 @@
 
 .drawer {
   @include glass('elevated');
+
   position: relative;
   width: 420px;
   max-width: 100vw;

@@ -280,7 +280,8 @@
   &__value {
     font-size: var(--font-size-sm);
     color: var(--text-primary);
-    word-break: break-word;
+    overflow-wrap: anywhere;
+    word-break: normal;
   }
 
   &__cycle {
