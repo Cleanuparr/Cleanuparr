@@ -224,6 +224,7 @@
           type="button"
           class="chip"
           [class.chip--active]="isStatusDrafted(opt.value)"
+          [attr.aria-pressed]="isStatusDrafted(opt.value)"
           (click)="toggleStatus(opt.value)"
         >{{ opt.label }}</button>
       }
