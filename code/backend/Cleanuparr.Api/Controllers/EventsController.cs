@@ -26,7 +26,7 @@ public class EventsController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<PaginatedResult<AppEvent>>> GetEvents(
         [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 100,
+        [FromQuery] int pageSize = 50,
         [FromQuery] string? severity = null,
         [FromQuery] string? eventType = null,
         [FromQuery] DateTime? fromDate = null,
@@ -42,12 +42,12 @@ public class EventsController : ControllerBase
 
         if (pageSize < 1)
         {
-            pageSize = 100;
+            pageSize = 50;
         }
-        
-        if (pageSize > 1000)
+
+        if (pageSize > 500)
         {
-            pageSize = 1000; // Cap at 1000 for performance
+            pageSize = 500;
         }
         
         var query = _context.Events.AsQueryable();

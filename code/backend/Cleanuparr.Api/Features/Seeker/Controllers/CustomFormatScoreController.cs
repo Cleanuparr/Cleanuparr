@@ -31,9 +31,20 @@ public sealed class CustomFormatScoreController : ControllerBase
         [FromQuery] bool hideMet = false,
         [FromQuery] bool hideUnmonitored = false)
     {
-        if (page < 1) page = 1;
-        if (pageSize < 1) pageSize = 50;
-        if (pageSize > 100) pageSize = 100;
+        if (page < 1)
+        {
+            page = 1;
+        }
+
+        if (pageSize < 1)
+        {
+            pageSize = 50;
+        }
+
+        if (pageSize > 500)
+        {
+            pageSize = 500;
+        }
 
         var query = _dataContext.CustomFormatScoreEntries
             .AsNoTracking()
@@ -100,13 +111,13 @@ public sealed class CustomFormatScoreController : ControllerBase
     [HttpGet("upgrades")]
     public async Task<IActionResult> GetRecentUpgrades(
         [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 20,
+        [FromQuery] int pageSize = 50,
         [FromQuery] Guid? instanceId = null,
         [FromQuery] int days = 30)
     {
         if (page < 1) page = 1;
-        if (pageSize < 1) pageSize = 20;
-        if (pageSize > 100) pageSize = 100;
+        if (pageSize < 1) pageSize = 50;
+        if (pageSize > 500) pageSize = 500;
 
         // Find history entries where a newer entry has a higher score than an older one
         // We group by item and look for score increases between consecutive records

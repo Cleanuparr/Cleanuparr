@@ -25,7 +25,7 @@ public class ManualEventsController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<PaginatedResult<ManualEvent>>> GetManualEvents(
         [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 100,
+        [FromQuery] int pageSize = 50,
         [FromQuery] bool? isResolved = null,
         [FromQuery] string? severity = null,
         [FromQuery] DateTime? fromDate = null,
@@ -33,9 +33,20 @@ public class ManualEventsController : ControllerBase
         [FromQuery] string? search = null)
     {
         // Validate pagination parameters
-        if (page < 1) page = 1;
-        if (pageSize < 1) pageSize = 100;
-        if (pageSize > 1000) pageSize = 1000; // Cap at 1000 for performance
+        if (page < 1)
+        {
+            page = 1;
+        }
+        
+        if (pageSize < 1)
+        {
+            pageSize = 50;
+        }
+        
+        if (pageSize > 500)
+        {
+            pageSize = 500;
+        }
 
         var query = _context.ManualEvents.AsQueryable();
 
