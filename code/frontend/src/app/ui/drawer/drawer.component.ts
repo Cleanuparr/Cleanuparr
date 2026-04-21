@@ -1,8 +1,10 @@
 import { Component, ChangeDetectionStrategy, input, output, model, HostListener, effect, ElementRef, inject, OnInit, OnDestroy } from '@angular/core';
+import { A11yModule } from '@angular/cdk/a11y';
 
 @Component({
   selector: 'app-drawer',
   standalone: true,
+  imports: [A11yModule],
   templateUrl: './drawer.component.html',
   styleUrl: './drawer.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -11,6 +13,7 @@ export class DrawerComponent implements OnInit, OnDestroy {
   private static nextId = 0;
 
   private readonly host: ElementRef<HTMLElement> = inject(ElementRef);
+  private previousFocus: HTMLElement | null = null;
 
   readonly titleId = `drawer-title-${++DrawerComponent.nextId}`;
 
@@ -23,6 +26,9 @@ export class DrawerComponent implements OnInit, OnDestroy {
   constructor() {
     effect(() => {
       if (this.visible()) {
+        this.previousFocus = document.activeElement instanceof HTMLElement
+          ? document.activeElement
+          : null;
         queueMicrotask(() => this.focusFirstControl());
       }
     });
@@ -33,6 +39,7 @@ export class DrawerComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.restoreFocus();
     this.host.nativeElement.remove();
   }
 
@@ -45,6 +52,7 @@ export class DrawerComponent implements OnInit, OnDestroy {
 
   close(): void {
     this.visible.set(false);
+    this.restoreFocus();
     this.closed.emit();
   }
 
@@ -61,5 +69,13 @@ export class DrawerComponent implements OnInit, OnDestroy {
       'input, select, textarea, button, [tabindex]:not([tabindex="-1"])'
     ) as HTMLElement | null;
     focusable?.focus();
+  }
+
+  private restoreFocus(): void {
+    const target = this.previousFocus;
+    this.previousFocus = null;
+    if (target && document.body.contains(target)) {
+      target.focus();
+    }
   }
 }
