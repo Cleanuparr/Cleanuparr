@@ -205,11 +205,9 @@ public sealed class CustomFormatScoreController : ControllerBase
             query = query.Where(h => EF.Functions.Like(h.Title, pattern));
         }
 
-        if (days > 0)
-        {
-            query = query.Where(h => h.RecordedAt >= DateTime.UtcNow.AddDays(-days));
-        }
-
+        // Upgrade detection needs the full per-item time series so the row preceding
+        // the window still participates as a baseline. The `days` window is applied
+        // after detection, against the computed UpgradedAt timestamp.
         var allHistory = await query
             .OrderByDescending(h => h.RecordedAt)
             .ToListAsync();
@@ -241,6 +239,12 @@ public sealed class CustomFormatScoreController : ControllerBase
                     });
                 }
             }
+        }
+
+        if (days > 0)
+        {
+            DateTime cutoff = DateTime.UtcNow.AddDays(-days);
+            upgrades = upgrades.Where(u => u.UpgradedAt >= cutoff).ToList();
         }
 
         bool ascending = sortDirection.HasValue
