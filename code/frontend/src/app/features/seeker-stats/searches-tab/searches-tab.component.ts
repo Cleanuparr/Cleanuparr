@@ -176,6 +176,11 @@ export class SearchesTabComponent implements OnInit {
 
   onInstanceFilterChange(value: string): void {
     this.selectedInstanceId.set(value);
+    // 'Current Cycle' only makes sense against a specific instance; clearing
+    // the instance would otherwise silently turn it into an all-time query.
+    if (!value && this.applied().cycleFilter === 'current') {
+      this.applied.update(a => ({ ...a, cycleFilter: 'all' }));
+    }
     this.eventsPage.set(1);
     this.loadEvents();
   }
@@ -219,7 +224,12 @@ export class SearchesTabComponent implements OnInit {
   }
 
   applyFilters(): void {
-    this.applied.set({ ...this.draft() });
+    const draft = { ...this.draft() };
+    if (draft.cycleFilter === 'current' && !this.selectedInstanceId()) {
+      draft.cycleFilter = 'all';
+    }
+    this.applied.set(draft);
+    this.draft.set(draft);
     this.drawerOpen.set(false);
     this.eventsPage.set(1);
     this.loadEvents();
