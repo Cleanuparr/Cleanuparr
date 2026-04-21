@@ -62,6 +62,7 @@ export class QualityTabComponent implements OnInit {
   private readonly toast = inject(ToastService);
   private readonly pagination = inject(PaginationService);
   private initialLoad = true;
+  private latestLoadToken = 0;
 
   readonly items = signal<CfScoreEntry[]>([]);
   readonly stats = signal<CfScoreStats | null>(null);
@@ -169,6 +170,7 @@ export class QualityTabComponent implements OnInit {
 
   loadScores(): void {
     this.loading.set(true);
+    const loadToken = ++this.latestLoadToken;
     const a = this.applied();
     this.api.getScores({
       page: this.currentPage(),
@@ -182,11 +184,13 @@ export class QualityTabComponent implements OnInit {
       monitoredFilter: a.monitoredFilter,
     }).subscribe({
       next: (result) => {
+        if (loadToken !== this.latestLoadToken) return;
         this.items.set(result.items);
         this.totalRecords.set(result.totalCount);
         this.loading.set(false);
       },
       error: () => {
+        if (loadToken !== this.latestLoadToken) return;
         this.loading.set(false);
         this.toast.error('Failed to load CF scores');
       },

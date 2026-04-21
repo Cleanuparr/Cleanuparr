@@ -76,6 +76,7 @@ export class SearchesTabComponent implements OnInit {
   private readonly toast = inject(ToastService);
   private readonly pagination = inject(PaginationService);
   private initialLoad = true;
+  private latestLoadToken = 0;
 
   readonly summary = signal<SearchStatsSummary | null>(null);
   readonly loading = signal(false);
@@ -346,6 +347,7 @@ export class SearchesTabComponent implements OnInit {
 
   private loadEvents(): void {
     this.loading.set(true);
+    const loadToken = ++this.latestLoadToken;
     const instanceId = this.selectedInstanceId() || undefined;
     const search = this.searchQuery() || undefined;
     const a = this.applied();
@@ -372,11 +374,13 @@ export class SearchesTabComponent implements OnInit {
       grabbed: triToBool(a.grabbed),
     }).subscribe({
       next: (result) => {
+        if (loadToken !== this.latestLoadToken) return;
         this.events.set(result.items);
         this.eventsTotalRecords.set(result.totalCount);
         this.loading.set(false);
       },
       error: () => {
+        if (loadToken !== this.latestLoadToken) return;
         this.loading.set(false);
         this.toast.error('Failed to load search events');
       },

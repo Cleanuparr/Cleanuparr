@@ -54,6 +54,7 @@ export class UpgradesTabComponent implements OnInit {
   private readonly toast = inject(ToastService);
   private readonly pagination = inject(PaginationService);
   private initialLoad = true;
+  private latestLoadToken = 0;
 
   readonly upgrades = signal<CfScoreUpgrade[]>([]);
   readonly totalRecords = signal(0);
@@ -198,6 +199,7 @@ export class UpgradesTabComponent implements OnInit {
 
   private loadUpgrades(): void {
     this.loading.set(true);
+    const loadToken = ++this.latestLoadToken;
     const a = this.applied();
     const days = parseInt(a.timeRange, 10);
     const instanceId = this.selectedInstanceId() || undefined;
@@ -212,11 +214,13 @@ export class UpgradesTabComponent implements OnInit {
       sortDirection: this.sortDirection(),
     }).subscribe({
       next: (result) => {
+        if (loadToken !== this.latestLoadToken) return;
         this.upgrades.set(result.items);
         this.totalRecords.set(result.totalCount);
         this.loading.set(false);
       },
       error: () => {
+        if (loadToken !== this.latestLoadToken) return;
         this.loading.set(false);
         this.toast.error('Failed to load upgrades');
       },
