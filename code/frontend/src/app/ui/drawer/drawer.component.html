@@ -5,11 +5,12 @@
       (click)="$event.stopPropagation()"
       role="dialog"
       aria-modal="true"
-      aria-labelledby="drawer-title"
+      [attr.aria-labelledby]="title() ? titleId : null"
+      [attr.aria-label]="title() ? null : 'Drawer'"
     >
       @if (title()) {
         <header class="drawer__header">
-          <h2 id="drawer-title" class="drawer__title">{{ title() }}</h2>
+          <h2 [id]="titleId" class="drawer__title">{{ title() }}</h2>
           <button class="drawer__close" type="button" (click)="close()" aria-label="Close">&times;</button>
         </header>
       }

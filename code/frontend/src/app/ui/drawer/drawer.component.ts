@@ -8,7 +8,11 @@ import { Component, ChangeDetectionStrategy, input, output, model, HostListener,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DrawerComponent implements OnInit, OnDestroy {
+  private static nextId = 0;
+
   private readonly host: ElementRef<HTMLElement> = inject(ElementRef);
+
+  readonly titleId = `drawer-title-${++DrawerComponent.nextId}`;
 
   title = input<string>();
   visible = model(false);
