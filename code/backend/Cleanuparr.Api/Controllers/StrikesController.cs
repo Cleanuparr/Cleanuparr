@@ -29,9 +29,20 @@ public class StrikesController : ControllerBase
         [FromQuery] string? search = null,
         [FromQuery] string? type = null)
     {
-        if (page < 1) page = 1;
-        if (pageSize < 1) pageSize = 50;
-        if (pageSize > 100) pageSize = 100;
+        if (page < 1)
+        {
+            page = 1;
+        }
+
+        if (pageSize < 1)
+        {
+            pageSize = 50;
+        }
+
+        if (pageSize > 500)
+        {
+            pageSize = 500;
+        }
 
         var query = _context.DownloadItems
             .Include(d => d.Strikes)

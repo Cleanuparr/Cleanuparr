@@ -127,9 +127,20 @@ public sealed class SearchStatsController : ControllerBase
         [FromQuery] Guid? cycleId = null,
         [FromQuery] string? search = null)
     {
-        if (page < 1) page = 1;
-        if (pageSize < 1) pageSize = 50;
-        if (pageSize > 100) pageSize = 100;
+        if (page < 1)
+        {
+            page = 1;
+        }
+
+        if (pageSize < 1)
+        {
+            pageSize = 50;
+        }
+
+        if (pageSize > 500)
+        {
+            pageSize = 500;
+        }
 
         var query = _eventsContext.Events
             .AsNoTracking()
