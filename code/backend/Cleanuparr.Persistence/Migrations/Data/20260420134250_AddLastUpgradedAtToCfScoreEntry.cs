@@ -17,11 +17,6 @@ namespace Cleanuparr.Persistence.Migrations.Data
                 type: "TEXT",
                 nullable: true);
 
-            migrationBuilder.CreateIndex(
-                name: "ix_custom_format_score_entries_last_upgraded_at",
-                table: "custom_format_score_entries",
-                column: "last_upgraded_at");
-
             // Backfill last_upgraded_at from existing history: per item, the most recent
             // recorded_at at which the score strictly exceeded the preceding score.
             migrationBuilder.Sql(@"
@@ -56,6 +51,11 @@ SET last_upgraded_at = (
       AND u.episode_id = custom_format_score_entries.episode_id
 );
 ");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_custom_format_score_entries_last_upgraded_at",
+                table: "custom_format_score_entries",
+                column: "last_upgraded_at");
         }
 
         /// <inheritdoc />
