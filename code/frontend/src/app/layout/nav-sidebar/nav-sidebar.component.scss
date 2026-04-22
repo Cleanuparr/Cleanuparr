@@ -28,8 +28,8 @@
   }
 
   &__logo-img {
-    width: 32px;
-    height: 32px;
+    width: 40px;
+    height: 40px;
     flex-shrink: 0;
     filter: drop-shadow(0 0 8px rgba(var(--accent-rgb), 0.4));
     transition: filter var(--duration-fast) var(--ease-default);
