@@ -9,6 +9,7 @@ import {
 import { NotificationApi } from '@core/api/notification.api';
 import { ToastService } from '@core/services/toast.service';
 import { ConfirmService } from '@core/services/confirm.service';
+import { ThemeService } from '@core/services/theme.service';
 import {
   NotificationProviderDto,
   CreateDiscordProviderRequest,
@@ -114,6 +115,9 @@ export class NotificationsComponent implements OnInit, HasPendingChanges {
   private readonly api = inject(NotificationApi);
   private readonly toast = inject(ToastService);
   private readonly confirmService = inject(ConfirmService);
+  private readonly themeService = inject(ThemeService);
+
+  readonly theme = this.themeService.theme;
 
   readonly loader = new DeferredLoader();
   readonly loadError = signal(false);
@@ -730,5 +734,9 @@ export class NotificationsComponent implements OnInit, HasPendingChanges {
 
   hasPendingChanges(): boolean {
     return false;
+  }
+
+  themedIconSrc(src: string): string {
+    return this.theme() === 'dark' ? src : src.replace('-light.svg', '-dark.svg');
   }
 }
