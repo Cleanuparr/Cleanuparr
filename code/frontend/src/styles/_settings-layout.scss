@@ -77,15 +77,24 @@
   bottom: 0;
   z-index: var(--z-sticky);
 
-  // Transparent — button floats over content without blocking it
-  background: transparent;
-  pointer-events: none;
+  // Subtle blurred bar so the save button reads as its own action zone and
+  // doesn't visually collide with destructive controls in the last card.
+  // Gradient fades content behind into the bar rather than hitting a hard line.
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    var(--glass-bg) 45%
+  );
+  backdrop-filter: blur(var(--glass-blur-sm, 8px));
+  -webkit-backdrop-filter: blur(var(--glass-blur-sm, 8px));
+  mask-image: linear-gradient(to bottom, transparent, black 35%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent, black 35%);
 
-  // Re-enable pointer events on the button itself
+  // Buttons render fully opaque on top of the masked bar.
   > * {
-    pointer-events: auto;
+    mask-image: none;
+    -webkit-mask-image: none;
   }
-
 }
 
 @mixin form-section {
