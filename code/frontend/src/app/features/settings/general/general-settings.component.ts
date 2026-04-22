@@ -101,7 +101,7 @@ export class GeneralSettingsComponent implements OnInit, HasPendingChanges {
   readonly logRollingSizeError = computed(() => {
     const v = this.logRollingSizeMB();
     if (v == null) return 'This field is required';
-    if (v < 1) return 'Minimum value is 1';
+    if (v < 0) return 'Minimum value is 0';
     if (v > 100) return 'Maximum value is 100 MB';
     return undefined;
   });
@@ -117,7 +117,7 @@ export class GeneralSettingsComponent implements OnInit, HasPendingChanges {
   readonly logTimeLimitError = computed(() => {
     const v = this.logTimeLimitHours();
     if (v == null) return 'This field is required';
-    if (v < 1) return 'Minimum value is 1';
+    if (v < 0) return 'Minimum value is 0';
     if (v > 1440) return 'Maximum value is 1440 hours (60 days)';
     return undefined;
   });
@@ -127,14 +127,20 @@ export class GeneralSettingsComponent implements OnInit, HasPendingChanges {
     if (v == null) return 'This field is required';
     if (v < 0) return 'Minimum value is 0';
     if (v > 100) return 'Maximum value is 100';
+    if (this.logArchiveEnabled() && v === 0 && this.logArchiveTimeLimitHours() === 0) {
+      return 'Retained count and time limit cannot both be 0 when archiving is enabled';
+    }
     return undefined;
   });
 
   readonly logArchiveTimeLimitError = computed(() => {
     const v = this.logArchiveTimeLimitHours();
     if (v == null) return 'This field is required';
-    if (v < 1) return 'Minimum value is 1';
+    if (v < 0) return 'Minimum value is 0';
     if (v > 1440) return 'Maximum value is 1440 hours (60 days)';
+    if (this.logArchiveEnabled() && v === 0 && this.logArchiveRetainedCount() === 0) {
+      return 'Retained count and time limit cannot both be 0 when archiving is enabled';
+    }
     return undefined;
   });
 
