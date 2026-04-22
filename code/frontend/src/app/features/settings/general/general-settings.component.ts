@@ -122,15 +122,18 @@ export class GeneralSettingsComponent implements OnInit, HasPendingChanges {
     return undefined;
   });
 
+  readonly logArchiveRetentionBothZeroError = computed(() =>
+    this.logArchiveEnabled() && this.logArchiveRetainedCount() === 0 && this.logArchiveTimeLimitHours() === 0
+      ? 'Retained count and time limit cannot both be 0 when archiving is enabled'
+      : undefined
+  );
+
   readonly logArchiveRetainedError = computed(() => {
     const v = this.logArchiveRetainedCount();
     if (v == null) return 'This field is required';
     if (v < 0) return 'Minimum value is 0';
     if (v > 100) return 'Maximum value is 100';
-    if (this.logArchiveEnabled() && v === 0 && this.logArchiveTimeLimitHours() === 0) {
-      return 'Retained count and time limit cannot both be 0 when archiving is enabled';
-    }
-    return undefined;
+    return this.logArchiveRetentionBothZeroError();
   });
 
   readonly logArchiveTimeLimitError = computed(() => {
@@ -138,10 +141,7 @@ export class GeneralSettingsComponent implements OnInit, HasPendingChanges {
     if (v == null) return 'This field is required';
     if (v < 0) return 'Minimum value is 0';
     if (v > 1440) return 'Maximum value is 1440 hours (60 days)';
-    if (this.logArchiveEnabled() && v === 0 && this.logArchiveRetainedCount() === 0) {
-      return 'Retained count and time limit cannot both be 0 when archiving is enabled';
-    }
-    return undefined;
+    return this.logArchiveRetentionBothZeroError();
   });
 
   readonly strikeInactivityWindowHoursError = computed(() => {
