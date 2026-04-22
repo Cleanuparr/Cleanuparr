@@ -109,15 +109,15 @@
       <div class="form-divider"></div>
 
       <div class="form-row">
-        <app-number-input label="Rolling Size" [(value)]="logRollingSizeMB" [min]="1" [max]="100" suffix="MB"
+        <app-number-input label="Rolling Size" [(value)]="logRollingSizeMB" [min]="0" [max]="100" suffix="MB"
           hint="Maximum size of each log file in megabytes (0 = disabled)"
           [error]="logRollingSizeError()"
           helpKey="general:log.rollingSizeMB" />
-        <app-number-input label="Retained Files" [(value)]="logRetainedFileCount" [min]="1" [max]="50"
+        <app-number-input label="Retained Files" [(value)]="logRetainedFileCount" [min]="0" [max]="50"
           hint="Number of old log files to retain (0 = unlimited)"
           [error]="logRetainedFileCountError()"
           helpKey="general:log.retainedFileCount" />
-        <app-number-input label="Time Limit" [(value)]="logTimeLimitHours" [min]="1" [max]="1440" suffix="hours"
+        <app-number-input label="Time Limit" [(value)]="logTimeLimitHours" [min]="0" [max]="1440" suffix="hours"
           hint="Maximum age of old log files in hours (0 = unlimited)"
           [error]="logTimeLimitError()"
           helpKey="general:log.timeLimitHours" />
@@ -130,11 +130,11 @@
         helpKey="general:log.archiveEnabled" />
       @if (logArchiveEnabled()) {
         <div class="form-row">
-          <app-number-input label="Archive Retained Count" [(value)]="logArchiveRetainedCount" [min]="1" [max]="100"
+          <app-number-input label="Archive Retained Count" [(value)]="logArchiveRetainedCount" [min]="0" [max]="100"
             hint="Number of archive files to retain (0 = unlimited)"
             [error]="logArchiveRetainedError()"
             helpKey="general:log.archiveRetainedCount" />
-          <app-number-input label="Archive Time Limit" [(value)]="logArchiveTimeLimitHours" [min]="1" [max]="1440" suffix="hours"
+          <app-number-input label="Archive Time Limit" [(value)]="logArchiveTimeLimitHours" [min]="0" [max]="1440" suffix="hours"
             hint="Maximum age of archive files in hours (0 = unlimited)"
             [error]="logArchiveTimeLimitError()"
             helpKey="general:log.archiveTimeLimitHours" />
