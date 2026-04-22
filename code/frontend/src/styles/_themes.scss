@@ -8,8 +8,8 @@
 :root,
 [data-theme='dark'] {
   // Surfaces
-  --surface-ground:   #0c0614;
-  --surface-section:  #140b22;
+  --surface-ground:   color-mix(in srgb, var(--brand-500) 8%, #000000);
+  --surface-section:  color-mix(in srgb, var(--brand-500) 14%, #000000);
   --surface-card:     rgba(20, 11, 34, 0.75);
   --surface-overlay:  rgba(12, 6, 20, 0.92);
   --surface-elevated: rgba(30, 18, 50, 0.65);
@@ -96,8 +96,8 @@
 // Light theme
 [data-theme='light'] {
   // Surfaces
-  --surface-ground:   #f5f0fa;
-  --surface-section:  #ede5f7;
+  --surface-ground:   color-mix(in srgb, var(--brand-500) 3%, #ffffff);
+  --surface-section:  color-mix(in srgb, var(--brand-500) 6%, #ffffff);
   --surface-card:     rgba(255, 255, 255, 0.70);
   --surface-overlay:  rgba(245, 240, 250, 0.94);
   --surface-elevated: rgba(255, 255, 255, 0.80);
