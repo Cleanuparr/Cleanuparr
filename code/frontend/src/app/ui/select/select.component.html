@@ -28,7 +28,11 @@
   </button>
 
   @if (isOpen()) {
-    <div class="select-dropdown" role="listbox">
+    <div
+      class="select-dropdown"
+      [class.select-dropdown--top]="placement() === 'top'"
+      role="listbox"
+    >
       @for (option of options(); track option.value) {
         <button
           class="select-option"

@@ -82,6 +82,11 @@
   overflow-y: auto;
   padding: var(--space-1);
   animation: scale-in var(--duration-fast) var(--ease-default);
+
+  &--top {
+    top: auto;
+    bottom: calc(100% + var(--space-1));
+  }
 }
 
 .select-option {

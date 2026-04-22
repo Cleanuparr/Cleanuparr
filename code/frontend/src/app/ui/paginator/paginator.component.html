@@ -6,6 +6,7 @@
         <app-select
           [options]="pageSizeSelectOptions()"
           [value]="pageSize()"
+          placement="top"
           (valueChange)="onPageSizeChange($event)"
         />
       </div>
