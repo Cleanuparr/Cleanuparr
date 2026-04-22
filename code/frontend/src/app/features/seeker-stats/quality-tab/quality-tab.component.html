@@ -21,7 +21,8 @@
     />
   </div>
   <div class="toolbar__actions">
-    <app-button variant="ghost" size="sm" (clicked)="openFilters()">
+    <app-button variant="secondary" size="sm" (clicked)="openFilters()">
+      <ng-icon name="tablerFilter" />
       Filters
       @if (activeFilterCount() > 0) {
         <app-badge severity="accent" size="sm">{{ activeFilterCount() }}</app-badge>
