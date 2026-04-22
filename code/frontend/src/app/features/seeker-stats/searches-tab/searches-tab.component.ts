@@ -24,6 +24,7 @@ const DEFAULT_SORT_BY = SearchEventsSortBy.Timestamp;
 const DEFAULT_SORT_DIRECTION = SortDirection.Desc;
 
 interface AdvancedFilters {
+  instanceId: string;
   cycleFilter: CycleFilter;
   statuses: SearchCommandStatus[];
   searchType: SeekerSearchType | '';
@@ -32,6 +33,7 @@ interface AdvancedFilters {
 }
 
 const EMPTY_FILTERS: AdvancedFilters = {
+  instanceId: '',
   cycleFilter: 'current',
   statuses: [],
   searchType: '',
@@ -148,6 +150,7 @@ export class SearchesTabComponent implements OnInit {
   readonly activeFilterCount = computed(() => {
     const a = this.applied();
     let n = 0;
+    if (a.instanceId) n++;
     if (a.cycleFilter !== EMPTY_FILTERS.cycleFilter) n++;
     if (a.statuses.length) n++;
     if (a.searchType) n++;
@@ -172,17 +175,6 @@ export class SearchesTabComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadSummary();
-    this.loadEvents();
-  }
-
-  onInstanceFilterChange(value: string): void {
-    this.selectedInstanceId.set(value);
-    // 'Current Cycle' only makes sense against a specific instance; clearing
-    // the instance would otherwise silently turn it into an all-time query.
-    if (!value && this.applied().cycleFilter === 'current') {
-      this.applied.update(a => ({ ...a, cycleFilter: 'all' }));
-    }
-    this.eventsPage.set(1);
     this.loadEvents();
   }
 
@@ -216,7 +208,7 @@ export class SearchesTabComponent implements OnInit {
   );
 
   openFilters(): void {
-    this.draft.set({ ...this.applied() });
+    this.draft.set({ ...this.applied(), instanceId: this.selectedInstanceId() });
     this.drawerOpen.set(true);
   }
 
@@ -226,11 +218,14 @@ export class SearchesTabComponent implements OnInit {
 
   applyFilters(): void {
     const draft = { ...this.draft() };
-    if (draft.cycleFilter === 'current' && !this.selectedInstanceId()) {
+    // 'Current Cycle' only makes sense against a specific instance; without one
+    // it would silently turn into an all-time query.
+    if (draft.cycleFilter === 'current' && !draft.instanceId) {
       draft.cycleFilter = 'all';
     }
     this.applied.set(draft);
     this.draft.set(draft);
+    this.selectedInstanceId.set(draft.instanceId);
     this.drawerOpen.set(false);
     this.eventsPage.set(1);
     this.loadEvents();

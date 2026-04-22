@@ -18,10 +18,12 @@ const DEFAULT_SORT_BY = CfUpgradesSortBy.UpgradedAt;
 const DEFAULT_SORT_DIRECTION = SortDirection.Desc;
 
 interface AdvancedFilters {
+  instanceId: string;
   timeRange: string;
 }
 
 const EMPTY_FILTERS: AdvancedFilters = {
+  instanceId: '',
   timeRange: '30',
 };
 
@@ -97,6 +99,7 @@ export class UpgradesTabComponent implements OnInit {
   readonly activeFilterCount = computed(() => {
     const a = this.applied();
     let n = 0;
+    if (a.instanceId) n++;
     if (a.timeRange !== EMPTY_FILTERS.timeRange) n++;
     return n;
   });
@@ -116,12 +119,6 @@ export class UpgradesTabComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadInstances();
-    this.loadUpgrades();
-  }
-
-  onInstanceFilterChange(value: string): void {
-    this.selectedInstanceId.set(value);
-    this.currentPage.set(1);
     this.loadUpgrades();
   }
 
@@ -155,7 +152,7 @@ export class UpgradesTabComponent implements OnInit {
   );
 
   openFilters(): void {
-    this.draft.set({ ...this.applied() });
+    this.draft.set({ ...this.applied(), instanceId: this.selectedInstanceId() });
     this.drawerOpen.set(true);
   }
 
@@ -164,7 +161,9 @@ export class UpgradesTabComponent implements OnInit {
   }
 
   applyFilters(): void {
-    this.applied.set({ ...this.draft() });
+    const draft = { ...this.draft() };
+    this.applied.set(draft);
+    this.selectedInstanceId.set(draft.instanceId);
     this.drawerOpen.set(false);
     this.currentPage.set(1);
     this.loadUpgrades();

@@ -103,11 +103,6 @@
 <!-- Toolbar -->
 <div class="toolbar" stickyAware>
   <div class="toolbar__filters">
-    <app-select
-      [value]="selectedInstanceId()"
-      [options]="instanceOptions()"
-      (valueChange)="onInstanceFilterChange($any($event))"
-    />
     <app-input
       placeholder="Search by title..."
       type="search"
@@ -204,14 +199,23 @@
 <!-- Filter drawer -->
 <app-drawer title="Filter searches" [(visible)]="drawerOpen">
   <div class="filter-group">
+    <label class="filter-group__label">Instance</label>
+    <app-select
+      [value]="draft().instanceId"
+      [options]="instanceOptions()"
+      (valueChange)="updateDraft('instanceId', $any($event))"
+    />
+  </div>
+
+  <div class="filter-group">
     <label class="filter-group__label">Cycle</label>
     <app-select
       [value]="draft().cycleFilter"
       [options]="cycleFilterOptions"
-      [disabled]="!selectedInstanceId()"
+      [disabled]="!draft().instanceId"
       (valueChange)="updateDraft('cycleFilter', $any($event))"
     />
-    @if (!selectedInstanceId()) {
+    @if (!draft().instanceId) {
       <span class="filter-group__hint">Select an instance to filter by cycle.</span>
     }
   </div>

@@ -1,12 +1,6 @@
 <!-- Toolbar -->
 <div class="toolbar" stickyAware>
   <div class="toolbar__filters">
-    <app-select
-      placeholder="All Instances"
-      [options]="instanceOptions()"
-      [value]="selectedInstanceId()"
-      (valueChange)="onInstanceFilterChange($any($event))"
-    />
     <app-input
       placeholder="Search by title..."
       type="search"
@@ -180,6 +174,15 @@
 
 <!-- Filter drawer -->
 <app-drawer title="Filter quality scores" [(visible)]="drawerOpen">
+  <div class="filter-group">
+    <label class="filter-group__label">Instance</label>
+    <app-select
+      [value]="draft().instanceId"
+      [options]="instanceOptions()"
+      (valueChange)="updateDraft('instanceId', $any($event))"
+    />
+  </div>
+
   <div class="filter-group">
     <label class="filter-group__label">Quality profile</label>
     <app-select

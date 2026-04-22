@@ -21,12 +21,14 @@ const DEFAULT_SORT_BY = CfScoresSortBy.Title;
 const DEFAULT_SORT_DIRECTION = SortDirection.Asc;
 
 interface AdvancedFilters {
+  instanceId: string;
   qualityProfile: string;
   cutoffFilter: CutoffFilter;
   monitoredFilter: MonitoredFilter;
 }
 
 const EMPTY_FILTERS: AdvancedFilters = {
+  instanceId: '',
   qualityProfile: '',
   cutoffFilter: CutoffFilter.All,
   monitoredFilter: MonitoredFilter.All,
@@ -124,7 +126,9 @@ export class QualityTabComponent implements OnInit {
   ];
 
   readonly qualityProfileOptions = computed<SelectOption[]>(() => {
-    const instanceId = this.selectedInstanceId();
+    // Narrow to the drafted instance while the drawer is open so the profile
+    // list stays consistent with the instance the user is composing.
+    const instanceId = this.drawerOpen() ? this.draft().instanceId : this.selectedInstanceId();
     const profiles = new Set<string>();
     for (const inst of this.instances()) {
       if (instanceId && inst.id !== instanceId) continue;
@@ -142,6 +146,7 @@ export class QualityTabComponent implements OnInit {
   readonly activeFilterCount = computed(() => {
     const a = this.applied();
     let n = 0;
+    if (a.instanceId) n++;
     if (a.qualityProfile) n++;
     if (a.cutoffFilter !== CutoffFilter.All) n++;
     if (a.monitoredFilter !== MonitoredFilter.All) n++;
@@ -213,19 +218,6 @@ export class QualityTabComponent implements OnInit {
     });
   }
 
-  onInstanceFilterChange(value: string): void {
-    this.selectedInstanceId.set(value);
-    // Quality profile options narrow to the chosen instance — clear any stale selection.
-    if (this.applied().qualityProfile) {
-      const stillValid = this.qualityProfileOptions().some(o => o.value === this.applied().qualityProfile);
-      if (!stillValid) {
-        this.applied.update(a => ({ ...a, qualityProfile: '' }));
-      }
-    }
-    this.currentPage.set(1);
-    this.loadScores();
-  }
-
   private loadStats(): void {
     this.api.getStats().subscribe({
       next: (stats) => this.stats.set(stats),
@@ -263,7 +255,7 @@ export class QualityTabComponent implements OnInit {
   );
 
   openFilters(): void {
-    this.draft.set({ ...this.applied() });
+    this.draft.set({ ...this.applied(), instanceId: this.selectedInstanceId() });
     this.drawerOpen.set(true);
   }
 
@@ -272,10 +264,31 @@ export class QualityTabComponent implements OnInit {
   }
 
   applyFilters(): void {
-    this.applied.set({ ...this.draft() });
+    const draft = { ...this.draft() };
+    // Quality profile options narrow to the chosen instance — clear any stale
+    // selection that no longer belongs to the drafted instance's profiles.
+    if (draft.qualityProfile) {
+      const profiles = this.collectProfilesFor(draft.instanceId);
+      if (!profiles.has(draft.qualityProfile)) {
+        draft.qualityProfile = '';
+      }
+    }
+    this.applied.set(draft);
+    this.selectedInstanceId.set(draft.instanceId);
     this.drawerOpen.set(false);
     this.currentPage.set(1);
     this.loadScores();
+  }
+
+  private collectProfilesFor(instanceId: string): Set<string> {
+    const profiles = new Set<string>();
+    for (const inst of this.instances()) {
+      if (instanceId && inst.id !== instanceId) continue;
+      for (const p of inst.qualityProfiles ?? []) {
+        profiles.add(p);
+      }
+    }
+    return profiles;
   }
 
   updateDraft<K extends keyof AdvancedFilters>(key: K, value: AdvancedFilters[K]): void {
