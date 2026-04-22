@@ -70,30 +70,33 @@
   display: flex;
   justify-content: flex-end;
   gap: var(--space-3);
-  padding: var(--space-4) var(--space-2);
+  padding: var(--space-4);
 
   // Sticky at bottom of scroll container (shell__content)
   position: sticky;
   bottom: 0;
   z-index: var(--z-sticky);
 
-  // Subtle blurred bar so the save button reads as its own action zone and
-  // doesn't visually collide with destructive controls in the last card.
-  // Gradient fades content behind into the bar rather than hitting a hard line.
-  background: linear-gradient(
-    to bottom,
-    transparent,
-    var(--glass-bg) 45%
-  );
-  backdrop-filter: blur(var(--glass-blur-sm, 8px));
-  -webkit-backdrop-filter: blur(var(--glass-blur-sm, 8px));
-  mask-image: linear-gradient(to bottom, transparent, black 35%);
-  -webkit-mask-image: linear-gradient(to bottom, transparent, black 35%);
+  // Row stays transparent; each action gets its own glass pedestal so the
+  // backdrop hugs the save button instead of spanning the full row.
+  background: transparent;
+  pointer-events: none;
 
-  // Buttons render fully opaque on top of the masked bar.
   > * {
-    mask-image: none;
-    -webkit-mask-image: none;
+    pointer-events: auto;
+    position: relative;
+    isolation: isolate;
+
+    &::before {
+      content: '';
+      position: absolute;
+      inset: calc(-1 * var(--space-3));
+      border-radius: var(--radius-2xl);
+      background: var(--glass-bg);
+      backdrop-filter: blur(var(--glass-blur-sm, 8px));
+      -webkit-backdrop-filter: blur(var(--glass-blur-sm, 8px));
+      z-index: -1;
+    }
   }
 }
 
