@@ -34,7 +34,7 @@ interface AdvancedFilters {
 
 const EMPTY_FILTERS: AdvancedFilters = {
   instanceId: '',
-  cycleFilter: 'current',
+  cycleFilter: 'all',
   statuses: [],
   searchType: '',
   searchReason: '',
@@ -218,13 +218,7 @@ export class SearchesTabComponent implements OnInit {
 
   applyFilters(): void {
     const draft = { ...this.draft() };
-    // 'Current Cycle' only makes sense against a specific instance; without one
-    // it would silently turn into an all-time query.
-    if (draft.cycleFilter === 'current' && !draft.instanceId) {
-      draft.cycleFilter = 'all';
-    }
     this.applied.set(draft);
-    this.draft.set(draft);
     this.selectedInstanceId.set(draft.instanceId);
     this.drawerOpen.set(false);
     this.eventsPage.set(1);
@@ -243,7 +237,15 @@ export class SearchesTabComponent implements OnInit {
   }
 
   updateDraft<K extends keyof AdvancedFilters>(key: K, value: AdvancedFilters[K]): void {
-    this.draft.update(d => ({ ...d, [key]: value }));
+    this.draft.update(d => {
+      const next = { ...d, [key]: value };
+      // 'Current Cycle' only makes sense against a specific instance — clearing
+      // the instance must fall the cycle filter back to 'All Time'.
+      if (key === 'instanceId' && !value && next.cycleFilter === 'current') {
+        next.cycleFilter = 'all';
+      }
+      return next;
+    });
   }
 
   refresh(): void {
