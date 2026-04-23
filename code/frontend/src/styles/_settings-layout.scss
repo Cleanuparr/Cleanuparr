@@ -90,11 +90,12 @@
     &::before {
       content: '';
       position: absolute;
-      inset: calc(-1 * var(--space-3));
-      border-radius: var(--radius-2xl);
+      inset: calc(-1 * var(--space-10));
       background: var(--glass-bg);
       backdrop-filter: blur(var(--glass-blur-sm, 8px));
       -webkit-backdrop-filter: blur(var(--glass-blur-sm, 8px));
+      mask-image: radial-gradient(ellipse at center, black 40%, transparent 85%);
+      -webkit-mask-image: radial-gradient(ellipse at center, black 40%, transparent 85%);
       z-index: -1;
     }
   }
