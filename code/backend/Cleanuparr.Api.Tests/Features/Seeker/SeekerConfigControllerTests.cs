@@ -194,17 +194,16 @@ public class SeekerConfigControllerTests : IDisposable
         _dataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
         {
             ArrInstanceId = radarr.Id,
-            Enabled = true
+            Enabled = true,
+            UseCustomFormatScore = true
         });
+
+        // Syncer was running: both proactive and CF score were enabled
+        var config = await _dataContext.SeekerConfigs.FirstAsync();
+        config.ProactiveSearchEnabled = true;
         await _dataContext.SaveChangesAsync();
 
-        // First enable CF score on the instance
-        var instanceConfig = await _dataContext.SeekerInstanceConfigs
-            .FirstAsync(s => s.ArrInstanceId == radarr.Id);
-        instanceConfig.UseCustomFormatScore = true;
-        await _dataContext.SaveChangesAsync();
-
-        // Now disable it
+        // Disable CF score — syncer conditions no longer met
         var request = new UpdateSeekerConfigRequest
         {
             SearchEnabled = true,
@@ -223,25 +222,22 @@ public class SeekerConfigControllerTests : IDisposable
     }
 
     [Fact]
-    public async Task UpdateSeekerConfig_WhenSearchReenabledWithCustomFormatActive_TriggersSyncerOnce()
+    public async Task UpdateSeekerConfig_WhenProactiveSearchDisabled_StopsSyncerJob()
     {
         var radarr = SeekerTestDataFactory.AddRadarrInstance(_dataContext);
         _dataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
         {
             ArrInstanceId = radarr.Id,
-            Enabled = true
+            Enabled = true,
+            UseCustomFormatScore = true
         });
-        await _dataContext.SaveChangesAsync();
 
-        // Set up state: CF score already enabled on instance, search currently disabled
-        var instanceConfig = await _dataContext.SeekerInstanceConfigs
-            .FirstAsync(s => s.ArrInstanceId == radarr.Id);
-        instanceConfig.UseCustomFormatScore = true;
+        // Syncer was running: both proactive and CF score were enabled
         var config = await _dataContext.SeekerConfigs.FirstAsync();
-        config.SearchEnabled = false;
+        config.ProactiveSearchEnabled = true;
         await _dataContext.SaveChangesAsync();
 
-        // Re-enable search
+        // Disable proactive search — syncer should stop even though CF score is still enabled
         var request = new UpdateSeekerConfigRequest
         {
             SearchEnabled = true,
@@ -256,6 +252,74 @@ public class SeekerConfigControllerTests : IDisposable
         await _controller.UpdateSeekerConfig(request);
 
         await _jobManagementService.Received(1)
+            .StopJob(JobType.CustomFormatScoreSyncer);
+    }
+
+    [Fact]
+    public async Task UpdateSeekerConfig_WhenProactiveSearchEnabled_WithCfScoreActive_StartsAndTriggersSyncer()
+    {
+        var radarr = SeekerTestDataFactory.AddRadarrInstance(_dataContext);
+        _dataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = radarr.Id,
+            Enabled = true,
+            UseCustomFormatScore = true
+        });
+
+        // Syncer was NOT running: CF score enabled but proactive was off (default)
+        await _dataContext.SaveChangesAsync();
+
+        // Enable proactive search — syncer should start
+        var request = new UpdateSeekerConfigRequest
+        {
+            SearchEnabled = true,
+            SearchInterval = 3,
+            ProactiveSearchEnabled = true,
+            Instances =
+            [
+                new UpdateSeekerInstanceConfigRequest { ArrInstanceId = radarr.Id, Enabled = true, UseCustomFormatScore = true }
+            ]
+        };
+
+        await _controller.UpdateSeekerConfig(request);
+
+        await _jobManagementService.Received(1)
+            .StartJob(JobType.CustomFormatScoreSyncer, null, Arg.Any<string>());
+        await _jobManagementService.Received(1)
+            .TriggerJobOnce(JobType.CustomFormatScoreSyncer);
+    }
+
+    [Fact]
+    public async Task UpdateSeekerConfig_WhenCustomFormatScoreEnabledButProactiveDisabled_DoesNotStartSyncer()
+    {
+        var radarr = SeekerTestDataFactory.AddRadarrInstance(_dataContext);
+        _dataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = radarr.Id,
+            Enabled = true,
+            UseCustomFormatScore = false
+        });
+
+        // ProactiveSearchEnabled stays false (default)
+        await _dataContext.SaveChangesAsync();
+
+        // Enable CF score but keep proactive disabled — syncer should NOT start
+        var request = new UpdateSeekerConfigRequest
+        {
+            SearchEnabled = true,
+            SearchInterval = 3,
+            ProactiveSearchEnabled = false,
+            Instances =
+            [
+                new UpdateSeekerInstanceConfigRequest { ArrInstanceId = radarr.Id, Enabled = true, UseCustomFormatScore = true }
+            ]
+        };
+
+        await _controller.UpdateSeekerConfig(request);
+
+        await _jobManagementService.DidNotReceive()
+            .StartJob(JobType.CustomFormatScoreSyncer, null, Arg.Any<string>());
+        await _jobManagementService.DidNotReceive()
             .TriggerJobOnce(JobType.CustomFormatScoreSyncer);
     }
 
