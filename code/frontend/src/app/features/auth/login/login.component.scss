@@ -130,16 +130,16 @@
   font-family: var(--font-family);
   font-size: var(--font-size-sm);
   font-weight: 500;
-  color: #ffffff;
-  background: #7E57C2;
+  color: var(--color-primary-text);
+  background: var(--color-primary);
   border: 1px solid transparent;
   border-radius: var(--radius-lg);
   cursor: pointer;
   transition: all var(--duration-fast) var(--ease-default);
 
   &:hover:not(:disabled) {
-    background: #6D28D9;
-    box-shadow: 0 0 20px rgba(126, 87, 194, 0.4);
+    background: var(--color-primary-hover);
+    box-shadow: 0 0 20px rgba(var(--accent-rgb), 0.4);
   }
 
   &:active:not(:disabled) {

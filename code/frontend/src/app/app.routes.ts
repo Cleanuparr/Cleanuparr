@@ -128,6 +128,13 @@ export const routes: Routes = [
                 '@features/settings/account/account-settings.component'
               ).then((m) => m.AccountSettingsComponent),
           },
+          {
+            path: 'appearance',
+            loadComponent: () =>
+              import(
+                '@features/settings/appearance/appearance-settings.component'
+              ).then((m) => m.AppearanceSettingsComponent),
+          },
         ],
       },
     ],

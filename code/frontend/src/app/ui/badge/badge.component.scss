@@ -30,9 +30,9 @@
   }
 
   &--primary {
-    background: linear-gradient(135deg, rgba(126, 87, 194, 0.2), rgba(126, 87, 194, 0.1));
+    background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.2), rgba(var(--accent-rgb), 0.1));
     color: var(--color-primary);
-    border: 1px solid rgba(126, 87, 194, 0.2);
+    border: 1px solid rgba(var(--accent-rgb), 0.2);
   }
 
   &--success {

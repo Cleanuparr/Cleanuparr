@@ -15,8 +15,8 @@
   // Hover lift effect with inner glow
   &:hover {
     transform: translateY(-2px);
-    box-shadow: var(--glass-shadow), 0 8px 24px rgba(126, 87, 194, 0.08),
-                inset 0 0 30px rgba(126, 87, 194, 0.03);
+    box-shadow: var(--glass-shadow), 0 8px 24px rgba(var(--accent-rgb), 0.08),
+                inset 0 0 30px rgba(var(--accent-rgb), 0.03);
 
     &::before {
       opacity: 0.7;

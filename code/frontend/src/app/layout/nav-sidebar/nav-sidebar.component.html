@@ -5,7 +5,7 @@
   [class.sidebar--mobile-open]="mobileOpen()"
 >
   <div class="sidebar__brand">
-    <img src="icons/128.png" alt="Cleanuparr" class="sidebar__logo-img" />
+    <app-logo class="sidebar__logo-img" />
     <span class="sidebar__logo-text">Cleanuparr</span>
   </div>
 
@@ -69,7 +69,7 @@
             (click)="onNavItemClick()"
           >
             @if (item.iconSrc) {
-              <img [src]="item.iconSrc" [alt]="item.label" class="sidebar__item-img" />
+              <img [src]="themeService.themedIconSrc(item.iconSrc)" alt="" aria-hidden="true" class="sidebar__item-img" />
             } @else if (item.icon) {
               <ng-icon [name]="item.icon" class="sidebar__item-icon" />
             }

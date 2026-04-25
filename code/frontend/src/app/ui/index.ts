@@ -27,3 +27,4 @@ export { ConfirmDialogComponent } from './confirm-dialog/confirm-dialog.componen
 export { SizeInputComponent } from './size-input/size-input.component';
 export type { SizeUnit } from './size-input/size-input.component';
 export { TooltipComponent } from './tooltip/tooltip.component';
+export { LogoComponent } from './logo/logo.component';

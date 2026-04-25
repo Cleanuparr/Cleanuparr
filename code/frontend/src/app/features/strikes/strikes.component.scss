@@ -41,7 +41,7 @@
     content: '';
     position: absolute;
     inset: 0;
-    background: linear-gradient(90deg, transparent, rgba(126, 87, 194, 0.06), transparent);
+    background: linear-gradient(90deg, transparent, rgba(var(--accent-rgb), 0.06), transparent);
     transform: translateX(-100%);
     transition: transform var(--duration-normal) var(--ease-default);
     pointer-events: none;

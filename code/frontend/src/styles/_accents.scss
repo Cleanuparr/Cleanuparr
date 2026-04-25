@@ -1,0 +1,94 @@
+// =============================================================================
+// Accent Presets
+// Each preset overrides the --brand-* scale and --accent-rgb triple.
+// The 'default' preset keeps the UI brand palette (from _tokens.scss) unchanged
+// and restores the logo's original hexes. Scales follow the same perceptual ramp
+// (Tailwind-style 50..950 lightness).
+//
+// NOTE: The --brand-500 stop of each preset is mirrored as a TS constant in
+// app/core/services/theme.service.ts (`ACCENT_PRESET_HEX`) so the appearance
+// settings page can render preview swatches without inspecting the DOM. Keep
+// the two in sync when changing a preset's mid-tone.
+// =============================================================================
+
+// Default: UI stays on brand-purple defaults; logo uses the original darker
+// purple for accent parts, and the body flips with the theme (black on dark,
+// white on light) so it blends into the sidebar.
+[data-accent='default'] {
+  --logo-accent: #420077;
+}
+
+[data-accent='blue'] {
+  --brand-50:  #eff6ff;
+  --brand-100: #dbeafe;
+  --brand-200: #bfdbfe;
+  --brand-300: #93c5fd;
+  --brand-400: #60a5fa;
+  --brand-500: #3b82f6;
+  --brand-600: #2563eb;
+  --brand-700: #1d4ed8;
+  --brand-800: #1e40af;
+  --brand-900: #1e3a8a;
+  --brand-950: #172554;
+  --accent-rgb: 59, 130, 246;
+}
+
+[data-accent='green'] {
+  --brand-50:  #ecfdf5;
+  --brand-100: #d1fae5;
+  --brand-200: #a7f3d0;
+  --brand-300: #6ee7b7;
+  --brand-400: #34d399;
+  --brand-500: #10b981;
+  --brand-600: #059669;
+  --brand-700: #047857;
+  --brand-800: #065f46;
+  --brand-900: #064e3b;
+  --brand-950: #022c22;
+  --accent-rgb: 16, 185, 129;
+}
+
+[data-accent='rose'] {
+  --brand-50:  #fff1f2;
+  --brand-100: #ffe4e6;
+  --brand-200: #fecdd3;
+  --brand-300: #fda4af;
+  --brand-400: #fb7185;
+  --brand-500: #f43f5e;
+  --brand-600: #e11d48;
+  --brand-700: #be123c;
+  --brand-800: #9f1239;
+  --brand-900: #881337;
+  --brand-950: #4c0519;
+  --accent-rgb: 244, 63, 94;
+}
+
+[data-accent='amber'] {
+  --brand-50:  #fffbeb;
+  --brand-100: #fef3c7;
+  --brand-200: #fde68a;
+  --brand-300: #fcd34d;
+  --brand-400: #fbbf24;
+  --brand-500: #f59e0b;
+  --brand-600: #d97706;
+  --brand-700: #b45309;
+  --brand-800: #92400e;
+  --brand-900: #78350f;
+  --brand-950: #451a03;
+  --accent-rgb: 245, 158, 11;
+}
+
+[data-accent='teal'] {
+  --brand-50:  #f0fdfa;
+  --brand-100: #ccfbf1;
+  --brand-200: #99f6e4;
+  --brand-300: #5eead4;
+  --brand-400: #2dd4bf;
+  --brand-500: #14b8a6;
+  --brand-600: #0d9488;
+  --brand-700: #0f766e;
+  --brand-800: #115e59;
+  --brand-900: #134e4a;
+  --brand-950: #042f2e;
+  --accent-rgb: 20, 184, 166;
+}

@@ -42,7 +42,7 @@
     content: '';
     position: absolute;
     inset: 0;
-    background: linear-gradient(90deg, transparent, rgba(126, 87, 194, 0.06), transparent);
+    background: linear-gradient(90deg, transparent, rgba(var(--accent-rgb), 0.06), transparent);
     transform: translateX(-100%);
     transition: transform var(--duration-normal) var(--ease-default);
     pointer-events: none;
@@ -233,8 +233,8 @@
   gap: var(--space-2);
   padding: var(--space-2) var(--space-3);
   margin-bottom: var(--space-3);
-  background: rgba(126, 87, 194, 0.1);
-  border: 1px solid rgba(126, 87, 194, 0.2);
+  background: rgba(var(--accent-rgb), 0.1);
+  border: 1px solid rgba(var(--accent-rgb), 0.2);
   border-radius: var(--radius-md);
   font-size: var(--font-size-sm);
   color: var(--color-primary);

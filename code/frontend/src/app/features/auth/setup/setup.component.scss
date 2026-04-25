@@ -47,15 +47,15 @@
   transition: all var(--duration-normal) var(--ease-default);
 
   .step-group.active & {
-    background: rgba(126, 87, 194, 0.15);
+    background: rgba(var(--accent-rgb), 0.15);
     color: var(--color-primary);
-    box-shadow: 0 0 8px rgba(126, 87, 194, 0.25);
+    box-shadow: 0 0 8px rgba(var(--accent-rgb), 0.25);
   }
 
   .step-group.completed & {
     background: var(--color-primary);
     color: #ffffff;
-    box-shadow: 0 0 12px rgba(126, 87, 194, 0.35);
+    box-shadow: 0 0 12px rgba(var(--accent-rgb), 0.35);
   }
 }
 

@@ -23,7 +23,7 @@
   &:focus-within {
     border-color: var(--input-border-focus);
     box-shadow: 0 0 0 3px var(--color-primary-subtle),
-                0 0 12px rgba(126, 87, 194, 0.15);
+                0 0 12px rgba(var(--accent-rgb), 0.15);
   }
 }
 

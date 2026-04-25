@@ -28,21 +28,21 @@
   }
 
   &__logo-img {
-    width: 32px;
-    height: 32px;
+    width: 40px;
+    height: 40px;
     flex-shrink: 0;
-    filter: drop-shadow(0 0 8px rgba(126, 87, 194, 0.4));
+    filter: drop-shadow(0 0 8px rgba(var(--accent-rgb), 0.4));
     transition: filter var(--duration-fast) var(--ease-default);
 
     .sidebar__brand:hover & {
-      filter: drop-shadow(0 0 12px rgba(126, 87, 194, 0.6));
+      filter: drop-shadow(0 0 12px rgba(var(--accent-rgb), 0.6));
     }
   }
 
   &__logo-text {
     font-size: var(--font-size-xl);
     font-weight: 700;
-    color: #ffffff;
+    color: var(--sidebar-item-active-text);
     letter-spacing: -0.02em;
     white-space: nowrap;
     overflow: hidden;
@@ -73,7 +73,7 @@
       left: 0;
       right: 0;
       height: 60px;
-      background: linear-gradient(to bottom, transparent, rgba(12, 6, 20, 0.9));
+      background: linear-gradient(to bottom, transparent, var(--sidebar-fade));
       pointer-events: none;
       z-index: 1;
     }
@@ -95,14 +95,14 @@
 
     &:hover {
       background: var(--sidebar-item-hover);
-      color: #ffffff;
+      color: var(--sidebar-item-active-text);
     }
 
     &--active {
-      background: linear-gradient(90deg, rgba(126, 87, 194, 0.3), rgba(126, 87, 194, 0.08));
+      background: linear-gradient(90deg, rgba(var(--accent-rgb), 0.3), rgba(var(--accent-rgb), 0.08));
       color: var(--sidebar-item-active-text);
       font-weight: 500;
-      box-shadow: 0 0 20px rgba(126, 87, 194, 0.15);
+      box-shadow: 0 0 20px rgba(var(--accent-rgb), 0.15);
       position: relative;
 
       // Active indicator bar
@@ -206,7 +206,7 @@
 
     &:hover {
       background: var(--sidebar-item-hover);
-      color: #ffffff;
+      color: var(--sidebar-item-active-text);
     }
   }
 
@@ -229,7 +229,7 @@
 
     &:hover {
       background: rgba(239, 68, 68, 0.08);
-      color: #ffffff;
+      color: var(--color-error);
     }
   }
 
@@ -260,7 +260,7 @@
     font-family: var(--font-mono);
 
     &:hover {
-      color: #ffffff;
+      color: var(--sidebar-section-label-hover);
     }
   }
 
