@@ -173,32 +173,22 @@ public sealed class SeekerConfigController : ControllerBase
                 await _jobManagementService.StartJob(JobType.Seeker, null, config.ToCronExpression());
             }
 
-            // Toggle CustomFormatScoreSyncer job when any instance's UseCustomFormatScore changes
-            if (anyUseCustomFormatScore != previousAnyUseCustomFormatScore)
+            // Start/stop CustomFormatScoreSyncer
+            bool syncerShouldBeRunning = anyUseCustomFormatScore && config.ProactiveSearchEnabled;
+            bool syncerWasRunning = previousAnyUseCustomFormatScore && previousProactiveSearchEnabled;
+
+            if (syncerShouldBeRunning != syncerWasRunning)
             {
-                if (anyUseCustomFormatScore)
+                if (syncerShouldBeRunning)
                 {
-                    _logger.LogInformation("UseCustomFormatScore enabled on an instance, starting CustomFormatScoreSyncer job");
+                    _logger.LogInformation("CustomFormatScoreSyncer conditions met, starting job");
                     await _jobManagementService.StartJob(JobType.CustomFormatScoreSyncer, null, Constants.CustomFormatScoreSyncerCron);
                     await _jobManagementService.TriggerJobOnce(JobType.CustomFormatScoreSyncer);
                 }
                 else
                 {
-                    _logger.LogInformation("UseCustomFormatScore disabled on all instances, stopping CustomFormatScoreSyncer job");
+                    _logger.LogInformation("CustomFormatScoreSyncer conditions no longer met, stopping job");
                     await _jobManagementService.StopJob(JobType.CustomFormatScoreSyncer);
-                }
-            }
-
-            // Trigger CustomFormatScoreSyncer once when search or proactive search is re-enabled with custom format scores active
-            if (previousAnyUseCustomFormatScore && anyUseCustomFormatScore)
-            {
-                bool searchJustEnabled = !previousSearchEnabled && config.SearchEnabled;
-                bool proactiveJustEnabled = !previousProactiveSearchEnabled && config.ProactiveSearchEnabled;
-
-                if (searchJustEnabled || proactiveJustEnabled)
-                {
-                    _logger.LogInformation("Search re-enabled with UseCustomFormatScore active, triggering CustomFormatScoreSyncer");
-                    await _jobManagementService.TriggerJobOnce(JobType.CustomFormatScoreSyncer);
                 }
             }
 
