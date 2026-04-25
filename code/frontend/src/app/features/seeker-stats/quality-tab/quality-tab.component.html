@@ -1,12 +1,6 @@
 <!-- Toolbar -->
-<div class="toolbar">
+<div class="toolbar" stickyAware>
   <div class="toolbar__filters">
-    <app-select
-      placeholder="All Instances"
-      [options]="instanceOptions()"
-      [value]="selectedInstanceId()"
-      (valueChange)="onInstanceFilterChange($any($event))"
-    />
     <app-input
       placeholder="Search by title..."
       type="search"
@@ -14,25 +8,27 @@
       (entered)="onFilterChange()"
     />
     <app-select
+      label="Sort by"
       [value]="sortBy()"
       [options]="sortOptions"
-      (valueChange)="onSortChange($any($event))"
+      (valueChange)="onSortByChange($any($event))"
     />
-    <app-toggle
-      label="Hide met"
-      [checked]="hideMet()"
-      (checkedChange)="onHideMetChange($event)"
-    />
-    <app-toggle
-      label="Hide unmonitored"
-      [checked]="hideUnmonitored()"
-      (checkedChange)="onHideUnmonitoredChange($event)"
+    <app-select
+      label="Sort order"
+      [value]="sortDirection()"
+      [options]="sortOrderOptions"
+      (valueChange)="onSortOrderChange($any($event))"
     />
   </div>
   <div class="toolbar__actions">
-    <app-button variant="ghost" size="sm" (clicked)="refresh()">
-      Refresh
+    <app-button variant="secondary" size="sm" (clicked)="openFilters()">
+      <ng-icon name="tablerFilter" />
+      Filters
+      @if (activeFilterCount() > 0) {
+        <app-badge severity="accent" size="sm">{{ activeFilterCount() }}</app-badge>
+      }
     </app-button>
+    <app-button variant="ghost" size="sm" (clicked)="refresh()">Refresh</app-button>
   </div>
 </div>
 
@@ -124,6 +120,10 @@
               <span class="score-row__detail-label">Last Synced</span>
               <span class="score-row__detail-value">{{ item.lastSyncedAt | date:'yyyy-MM-dd HH:mm:ss' }}</span>
             </div>
+            <div class="score-row__detail">
+              <span class="score-row__detail-label">Last Upgraded</span>
+              <span class="score-row__detail-value">{{ item.lastUpgradedAt ? (item.lastUpgradedAt | date:'yyyy-MM-dd HH:mm:ss') : 'Never' }}</span>
+            </div>
 
             <!-- Score History -->
             <div class="score-row__detail">
@@ -172,3 +172,47 @@
     (pageSizeChange)="onPageSizeChange($event)"
   />
 }
+
+<!-- Filter drawer -->
+<app-drawer title="Filter quality scores" [(visible)]="drawerOpen">
+  <div class="filter-group">
+    <label class="filter-group__label">Instance</label>
+    <app-select
+      [value]="draft().instanceId"
+      [options]="instanceOptions()"
+      (valueChange)="updateDraft('instanceId', $any($event))"
+    />
+  </div>
+
+  <div class="filter-group">
+    <label class="filter-group__label">Quality profile</label>
+    <app-select
+      [value]="draft().qualityProfile"
+      [options]="qualityProfileOptions()"
+      (valueChange)="updateDraft('qualityProfile', $any($event))"
+    />
+  </div>
+
+  <div class="filter-group">
+    <label class="filter-group__label">Cutoff status</label>
+    <app-select
+      [value]="draft().cutoffFilter"
+      [options]="cutoffOptions"
+      (valueChange)="updateDraft('cutoffFilter', $any($event))"
+    />
+  </div>
+
+  <div class="filter-group">
+    <label class="filter-group__label">Monitored</label>
+    <app-select
+      [value]="draft().monitoredFilter"
+      [options]="monitoredOptions"
+      (valueChange)="updateDraft('monitoredFilter', $any($event))"
+    />
+  </div>
+
+  <div drawer-footer>
+    <app-button variant="ghost" (clicked)="resetFilters()">Reset</app-button>
+    <app-button variant="primary" (clicked)="applyFilters()">Apply</app-button>
+  </div>
+</app-drawer>

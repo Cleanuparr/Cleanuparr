@@ -1,14 +1,18 @@
-@use 'data-toolbar' as *;
+@use 'page-animations' as *;
 
 .page-content {
+  @include page-section-stagger;
+
   > app-tabs {
-    animation: slide-up var(--duration-normal) var(--ease-default) both;
-    animation-delay: 0ms;
     display: block;
-    @include sticky-page-header;
   }
 
   > .tab-content {
     margin-top: var(--space-6);
+
+    // Chromium retains the compositor layer from slide-up's compositing properties,
+    // which persists as a backdrop root and clips the descendant toolbar's
+    // backdrop-filter. No animated ancestor = no backdrop root = correct frosting.
+    animation: none;
   }
 }

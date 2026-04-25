@@ -95,7 +95,7 @@ export class DashboardComponent implements OnInit {
     this.cfScoreApi.getStats().subscribe({
       next: (stats) => this.cfScoreStats.set(stats),
     });
-    this.cfScoreApi.getRecentUpgrades(1, 5).subscribe({
+    this.cfScoreApi.getRecentUpgrades({ page: 1, pageSize: 5 }).subscribe({
       next: (res) => this.cfScoreUpgrades.set(res.items),
     });
   }

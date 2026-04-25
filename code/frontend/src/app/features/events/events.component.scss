@@ -1,23 +1,11 @@
 @use 'data-toolbar' as *;
+@use 'page-animations' as *;
 
-// Staggered page content animations
 .page-content {
+  @include page-section-stagger;
+
   > .toolbar {
-    animation: slide-up var(--duration-normal) var(--ease-default) both;
-    animation-delay: 0ms;
     @include sticky-page-header;
-  }
-  > .event-count {
-    animation: slide-up var(--duration-normal) var(--ease-default) both;
-    animation-delay: 40ms;
-  }
-  > app-card {
-    animation: slide-up var(--duration-normal) var(--ease-default) both;
-    animation-delay: 80ms;
-  }
-  > app-paginator {
-    animation: slide-up var(--duration-normal) var(--ease-default) both;
-    animation-delay: 120ms;
   }
 }
 

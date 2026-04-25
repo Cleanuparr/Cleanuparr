@@ -74,4 +74,10 @@ public sealed record CustomFormatScoreEntry
     /// When this entry was last synced from the arr API
     /// </summary>
     public DateTime LastSyncedAt { get; set; }
+
+    /// <summary>
+    /// When this item last saw a score upgrade (current score strictly exceeded the prior recorded score).
+    /// Null when the item has no recorded upgrades.
+    /// </summary>
+    public DateTime? LastUpgradedAt { get; set; }
 }

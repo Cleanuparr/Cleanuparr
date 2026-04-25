@@ -1,7 +1,10 @@
 using Cleanuparr.Api.Features.Seeker.Contracts.Responses;
+using Cleanuparr.Domain.Enums;
 using Cleanuparr.Persistence;
+using Cleanuparr.Persistence.Models.State;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cleanuparr.Api.Features.Seeker.Controllers;
@@ -27,9 +30,12 @@ public sealed class CustomFormatScoreController : ControllerBase
         [FromQuery] int pageSize = 50,
         [FromQuery] Guid? instanceId = null,
         [FromQuery] string? search = null,
-        [FromQuery] string sortBy = "title",
-        [FromQuery] bool hideMet = false,
-        [FromQuery] bool hideUnmonitored = false)
+        [FromQuery] CfScoresSortBy sortBy = CfScoresSortBy.Title,
+        [FromQuery] SortDirection? sortDirection = null,
+        [FromQuery] string? qualityProfile = null,
+        [FromQuery] InstanceType? itemType = null,
+        [FromQuery] CutoffFilter cutoffFilter = CutoffFilter.All,
+        [FromQuery] MonitoredFilter monitoredFilter = MonitoredFilter.All)
     {
         if (page < 1)
         {
@@ -57,24 +63,71 @@ public sealed class CustomFormatScoreController : ControllerBase
 
         if (!string.IsNullOrWhiteSpace(search))
         {
-            query = query.Where(e => e.Title.ToLower().Contains(search.ToLower()));
+            string pattern = EventsContext.GetLikePattern(search);
+            query = query.Where(e => EF.Functions.Like(e.Title, pattern));
         }
 
-        if (hideMet)
+        if (!string.IsNullOrWhiteSpace(qualityProfile))
         {
-            query = query.Where(e => e.CurrentScore < e.CutoffScore);
+            query = query.Where(e => e.QualityProfileName == qualityProfile);
         }
 
-        if (hideUnmonitored)
+        if (itemType.HasValue)
         {
-            query = query.Where(e => e.IsMonitored);
+            InstanceType typeValue = itemType.Value;
+            query = query.Where(e => e.ItemType == typeValue);
+        }
+
+        switch (cutoffFilter)
+        {
+            case CutoffFilter.Below:
+                query = query.Where(e => e.CurrentScore < e.CutoffScore);
+                break;
+            case CutoffFilter.Met:
+                query = query.Where(e => e.CurrentScore >= e.CutoffScore);
+                break;
+        }
+
+        switch (monitoredFilter)
+        {
+            case MonitoredFilter.Monitored:
+                query = query.Where(e => e.IsMonitored);
+                break;
+            case MonitoredFilter.Unmonitored:
+                query = query.Where(e => !e.IsMonitored);
+                break;
         }
 
         int totalCount = await query.CountAsync();
 
-        var items = await (sortBy == "date"
-                ? query.OrderByDescending(e => e.LastSyncedAt)
-                : query.OrderBy(e => e.Title))
+        bool ascending = sortDirection.HasValue
+            ? sortDirection.Value == SortDirection.Asc
+            : DefaultAscendingForScoreSortBy(sortBy);
+
+        IOrderedQueryable<CustomFormatScoreEntry> ordered = sortBy switch
+        {
+            CfScoresSortBy.CurrentScore => ascending
+                ? query.OrderBy(e => e.CurrentScore)
+                : query.OrderByDescending(e => e.CurrentScore),
+            CfScoresSortBy.CutoffScore => ascending
+                ? query.OrderBy(e => e.CutoffScore)
+                : query.OrderByDescending(e => e.CutoffScore),
+            CfScoresSortBy.QualityProfile => ascending
+                ? query.OrderBy(e => e.QualityProfileName)
+                : query.OrderByDescending(e => e.QualityProfileName),
+            CfScoresSortBy.LastSyncedAt => ascending
+                ? query.OrderBy(e => e.LastSyncedAt)
+                : query.OrderByDescending(e => e.LastSyncedAt),
+            CfScoresSortBy.LastUpgradedAt => ascending
+                ? query.OrderBy(e => e.LastUpgradedAt)
+                : query.OrderByDescending(e => e.LastUpgradedAt),
+            _ => ascending
+                ? query.OrderBy(e => e.Title)
+                : query.OrderByDescending(e => e.Title),
+        };
+
+        var items = await ordered
+            .ThenBy(e => e.Id)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .Select(e => new CustomFormatScoreEntryResponse
@@ -92,6 +145,7 @@ public sealed class CustomFormatScoreController : ControllerBase
                 IsBelowCutoff = e.CurrentScore < e.CutoffScore,
                 IsMonitored = e.IsMonitored,
                 LastSyncedAt = e.LastSyncedAt,
+                LastUpgradedAt = e.LastUpgradedAt,
             })
             .ToListAsync();
 
@@ -105,73 +159,139 @@ public sealed class CustomFormatScoreController : ControllerBase
         });
     }
 
+    private static bool DefaultAscendingForScoreSortBy(CfScoresSortBy sortBy)
+    {
+        // Default directions match user expectations:
+        // - textual fields sort ascending (A→Z)
+        // - numeric/date fields sort descending (most recent / highest first)
+        return sortBy switch
+        {
+            CfScoresSortBy.CurrentScore => false,
+            CfScoresSortBy.CutoffScore => false,
+            CfScoresSortBy.LastSyncedAt => false,
+            CfScoresSortBy.LastUpgradedAt => false,
+            _ => true,
+        };
+    }
+
     /// <summary>
-    /// Gets recent CF score upgrades (where score improved in history).
+    /// Gets recent CF score upgrades (where score strictly exceeded the prior recorded score).
     /// </summary>
+    /// <remarks>
+    /// Upgrade detection runs in SQL via <c>LAG()</c> over the full per-item history so
+    /// an improvement crossing the <paramref name="days"/> window boundary is still
+    /// detected. Sorting and pagination happen at the database level.
+    /// </remarks>
     [HttpGet("upgrades")]
     public async Task<IActionResult> GetRecentUpgrades(
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 50,
         [FromQuery] Guid? instanceId = null,
-        [FromQuery] int days = 30)
+        [FromQuery] int days = 30,
+        [FromQuery] string? search = null,
+        [FromQuery] CfUpgradesSortBy sortBy = CfUpgradesSortBy.UpgradedAt,
+        [FromQuery] SortDirection? sortDirection = null)
     {
         if (page < 1) page = 1;
         if (pageSize < 1) pageSize = 50;
         if (pageSize > 500) pageSize = 500;
 
-        // Find history entries where a newer entry has a higher score than an older one
-        // We group by item and look for score increases between consecutive records
-        var query = _dataContext.CustomFormatScoreHistory
-            .AsNoTracking()
-            .AsQueryable();
+        bool ascending = sortDirection.HasValue
+            ? sortDirection.Value == SortDirection.Asc
+            : DefaultAscendingForUpgradeSortBy(sortBy);
 
-        if (instanceId.HasValue)
+        string orderByClause = BuildUpgradeOrderByClause(sortBy, ascending);
+
+        DateTime? cutoff = days > 0 ? DateTime.UtcNow.AddDays(-days) : null;
+        string? searchPattern = string.IsNullOrWhiteSpace(search)
+            ? null
+            : EventsContext.GetLikePattern(search);
+
+        const string upgradesCte = 
+            """
+            WITH scored AS (
+               SELECT
+                   arr_instance_id,
+                   external_item_id,
+                   episode_id,
+                   item_type,
+                   title,
+                   score,
+                   cutoff_score,
+                   recorded_at,
+                   LAG(score) OVER (
+                       PARTITION BY arr_instance_id, external_item_id, episode_id
+                       ORDER BY recorded_at
+                   ) AS prev_score
+               FROM custom_format_score_history
+            ),
+            upgrades AS (
+               SELECT
+                   arr_instance_id  AS arr_instance_id,
+                   external_item_id AS external_item_id,
+                   episode_id       AS episode_id,
+                   item_type        AS item_type,
+                   title            AS title,
+                   prev_score       AS previous_score,
+                   score            AS new_score,
+                   cutoff_score     AS cutoff_score,
+                   recorded_at      AS upgraded_at
+               FROM scored
+               WHERE prev_score IS NOT NULL AND score > prev_score
+            )
+            """;
+        
+        const string filterClause = 
+            """
+            WHERE (@instanceId IS NULL OR arr_instance_id = @instanceId)
+                AND (@search IS NULL OR title LIKE @search ESCAPE '\')
+                AND (@cutoff IS NULL OR upgraded_at >= @cutoff)
+            """;
+
+        SqliteParameter[] BuildCommonParameters() => new[]
         {
-            query = query.Where(h => h.ArrInstanceId == instanceId.Value);
-        }
+            new SqliteParameter("@instanceId", instanceId.HasValue ? instanceId.Value : DBNull.Value),
+            new SqliteParameter("@search", (object?)searchPattern ?? DBNull.Value),
+            new SqliteParameter("@cutoff", (object?)cutoff ?? DBNull.Value),
+        };
 
-        var allHistory = await query
-            .Where(h => h.RecordedAt >= DateTime.UtcNow.AddDays(-days))
-            .OrderByDescending(h => h.RecordedAt)
+        string listSql =
+            $"""
+             {upgradesCte}
+             SELECT * FROM upgrades
+             {filterClause}
+             ORDER BY {orderByClause}, upgraded_at DESC
+             LIMIT @take OFFSET @skip
+             """;
+
+        SqliteParameter[] listParams =
+        [
+            ..BuildCommonParameters(),
+            new("@take", pageSize),
+            new("@skip", (page - 1) * pageSize),
+        ];
+
+        var rows = await _dataContext.Database
+            .SqlQueryRaw<UpgradeSqlRow>(listSql, listParams)
             .ToListAsync();
 
-        var upgrades = new List<CustomFormatScoreUpgradeResponse>();
+        string countSql = $"{upgradesCte} SELECT COUNT(*) AS value FROM upgrades {filterClause}";
+        int totalCount = await _dataContext.Database
+            .SqlQueryRaw<int>(countSql, BuildCommonParameters())
+            .FirstAsync();
 
-        // Group by (ArrInstanceId, ExternalItemId, EpisodeId) and find score increases
-        var grouped = allHistory
-            .GroupBy(h => new { h.ArrInstanceId, h.ExternalItemId, h.EpisodeId });
-
-        foreach (var group in grouped)
+        var paged = rows.Select(r => new CustomFormatScoreUpgradeResponse
         {
-            var entries = group.OrderBy(h => h.RecordedAt).ToList();
-            for (int i = 1; i < entries.Count; i++)
-            {
-                if (entries[i].Score > entries[i - 1].Score)
-                {
-                    upgrades.Add(new CustomFormatScoreUpgradeResponse
-                    {
-                        ArrInstanceId = entries[i].ArrInstanceId,
-                        ExternalItemId = entries[i].ExternalItemId,
-                        EpisodeId = entries[i].EpisodeId,
-                        ItemType = entries[i].ItemType,
-                        Title = entries[i].Title,
-                        PreviousScore = entries[i - 1].Score,
-                        NewScore = entries[i].Score,
-                        CutoffScore = entries[i].CutoffScore,
-                        UpgradedAt = entries[i].RecordedAt,
-                    });
-                }
-            }
-        }
-
-        // Sort by most recent upgrade first
-        upgrades = upgrades.OrderByDescending(u => u.UpgradedAt).ToList();
-
-        int totalCount = upgrades.Count;
-        var paged = upgrades
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .ToList();
+            ArrInstanceId = r.ArrInstanceId,
+            ExternalItemId = r.ExternalItemId,
+            EpisodeId = r.EpisodeId,
+            ItemType = Enum.Parse<InstanceType>(r.ItemType, ignoreCase: true),
+            Title = r.Title,
+            PreviousScore = r.PreviousScore,
+            NewScore = r.NewScore,
+            CutoffScore = r.CutoffScore,
+            UpgradedAt = DateTime.SpecifyKind(r.UpgradedAt, DateTimeKind.Utc),
+        }).ToList();
 
         return Ok(new
         {
@@ -183,13 +303,52 @@ public sealed class CustomFormatScoreController : ControllerBase
         });
     }
 
+    private static bool DefaultAscendingForUpgradeSortBy(CfUpgradesSortBy sortBy)
+    {
+        return sortBy switch
+        {
+            CfUpgradesSortBy.Title => true,
+            _ => false,
+        };
+    }
+
+    private static string BuildUpgradeOrderByClause(CfUpgradesSortBy sortBy, bool ascending)
+    {
+        string column = sortBy switch
+        {
+            CfUpgradesSortBy.Title => "LOWER(title)",
+            CfUpgradesSortBy.NewScore => "new_score",
+            CfUpgradesSortBy.PreviousScore => "previous_score",
+            CfUpgradesSortBy.ScoreDelta => "(new_score - previous_score)",
+            CfUpgradesSortBy.CutoffScore => "cutoff_score",
+            _ => "upgraded_at",
+        };
+        return $"{column} {(ascending ? "ASC" : "DESC")}";
+    }
+
+    private sealed class UpgradeSqlRow
+    {
+        public Guid ArrInstanceId { get; set; }
+        public long ExternalItemId { get; set; }
+        public long EpisodeId { get; set; }
+        public string ItemType { get; set; } = string.Empty;
+        public string Title { get; set; } = string.Empty;
+        public int PreviousScore { get; set; }
+        public int NewScore { get; set; }
+        public int CutoffScore { get; set; }
+        public DateTime UpgradedAt { get; set; }
+    }
+
+    /// <summary>
+    /// Gets the *arr instances that currently have tracked CF scores, along with
+    /// the set of quality profile names observed for each instance. Used to
+    /// populate instance and profile filter controls.
+    /// </summary>
     [HttpGet("instances")]
     public async Task<IActionResult> GetInstances()
     {
-        var instances = await _dataContext.CustomFormatScoreEntries
+        var raw = await _dataContext.CustomFormatScoreEntries
             .AsNoTracking()
-            .Select(e => new { e.ArrInstanceId, e.ItemType })
-            .Distinct()
             .Join(
                 _dataContext.ArrInstances.AsNoTracking(),
                 e => e.ArrInstanceId,
@@ -199,9 +358,27 @@ public sealed class CustomFormatScoreController : ControllerBase
                     Id = e.ArrInstanceId,
                     a.Name,
                     e.ItemType,
+                    e.QualityProfileName,
                 })
-            .OrderBy(x => x.Name)
+            .Distinct()
             .ToListAsync();
+
+        var instances = raw
+            .GroupBy(x => new { x.Id, x.Name, x.ItemType })
+            .Select(g => new
+            {
+                g.Key.Id,
+                g.Key.Name,
+                ItemType = g.Key.ItemType,
+                QualityProfiles = g
+                    .Select(x => x.QualityProfileName)
+                    .Where(n => !string.IsNullOrWhiteSpace(n))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .OrderBy(n => n, StringComparer.OrdinalIgnoreCase)
+                    .ToList(),
+            })
+            .OrderBy(x => x.Name)
+            .ToList();
 
         return Ok(new { Instances = instances });
     }

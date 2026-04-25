@@ -4,18 +4,49 @@ import { NgIcon } from '@ng-icons/core';
 import {
   CardComponent, BadgeComponent, ButtonComponent, SelectComponent,
   InputComponent, PaginatorComponent, EmptyStateComponent, TooltipComponent,
+  DrawerComponent,
 } from '@ui';
 import type { SelectOption } from '@ui';
 import type { BadgeSeverity } from '@ui/badge/badge.component';
 import { AnimatedCounterComponent } from '@ui/animated-counter/animated-counter.component';
-import { SearchStatsApi } from '@core/api/search-stats.api';
+import { SearchStatsApi, SearchEventsSortBy, SortDirection } from '@core/api/search-stats.api';
 import type { SearchStatsSummary, SearchEvent, InstanceSearchStat } from '@core/models/search-stats.models';
-import { SeekerSearchType, SeekerSearchReason } from '@core/models/search-stats.models';
+import { SeekerSearchType, SeekerSearchReason, SearchCommandStatus } from '@core/models/search-stats.models';
 import { AppHubService } from '@core/realtime/app-hub.service';
 import { ToastService } from '@core/services/toast.service';
 import { PaginationService } from '@core/services/pagination.service';
+import { StickyAwareDirective } from '@core/directives/sticky-aware.directive';
 
 type CycleFilter = 'current' | 'all';
+type TriState = 'any' | 'true' | 'false';
+
+const DEFAULT_SORT_BY = SearchEventsSortBy.Timestamp;
+const DEFAULT_SORT_DIRECTION = SortDirection.Desc;
+
+interface AdvancedFilters {
+  instanceId: string;
+  cycleFilter: CycleFilter;
+  statuses: SearchCommandStatus[];
+  searchType: SeekerSearchType | '';
+  searchReason: SeekerSearchReason | '';
+  grabbed: TriState;
+}
+
+const EMPTY_FILTERS: AdvancedFilters = {
+  instanceId: '',
+  cycleFilter: 'all',
+  statuses: [],
+  searchType: '',
+  searchReason: '',
+  grabbed: 'any',
+};
+
+const STATUS_OPTIONS: ReadonlyArray<{ value: SearchCommandStatus; label: string }> = [
+  { value: SearchCommandStatus.Started, label: 'Started' },
+  { value: SearchCommandStatus.Completed, label: 'Completed' },
+  { value: SearchCommandStatus.Failed, label: 'Failed' },
+  { value: SearchCommandStatus.TimedOut, label: 'Timed Out' },
+];
 
 @Component({
   selector: 'app-searches-tab',
@@ -32,6 +63,8 @@ type CycleFilter = 'current' | 'all';
     EmptyStateComponent,
     AnimatedCounterComponent,
     TooltipComponent,
+    DrawerComponent,
+    StickyAwareDirective,
   ],
   templateUrl: './searches-tab.component.html',
   styleUrl: './searches-tab.component.scss',
@@ -45,6 +78,7 @@ export class SearchesTabComponent implements OnInit {
   private readonly toast = inject(ToastService);
   private readonly pagination = inject(PaginationService);
   private initialLoad = true;
+  private latestLoadToken = 0;
 
   readonly summary = signal<SearchStatsSummary | null>(null);
   readonly loading = signal(false);
@@ -56,25 +90,74 @@ export class SearchesTabComponent implements OnInit {
     })
   );
 
-  // Instance filter
   readonly selectedInstanceId = signal<string>('');
   readonly instanceOptions = signal<SelectOption[]>([]);
 
-  // Cycle filter
-  readonly cycleFilter = signal<CycleFilter>('current');
+  readonly searchQuery = signal('');
+
+  readonly sortBy = signal<SearchEventsSortBy>(DEFAULT_SORT_BY);
+  readonly sortDirection = signal<SortDirection>(DEFAULT_SORT_DIRECTION);
+
+  // Applied filters drive the query; draft lives inside the open drawer.
+  readonly applied = signal<AdvancedFilters>({ ...EMPTY_FILTERS });
+  readonly draft = signal<AdvancedFilters>({ ...EMPTY_FILTERS });
+  readonly drawerOpen = signal(false);
+
+  readonly events = signal<SearchEvent[]>([]);
+  readonly eventsTotalRecords = signal(0);
+  readonly eventsPage = signal(1);
+  readonly pageSize = signal(this.pagination.getPageSize(SearchesTabComponent.PAGE_SIZE_KEY, 50));
+
+  readonly sortOptions: SelectOption[] = [
+    { label: 'Timestamp', value: SearchEventsSortBy.Timestamp },
+    { label: 'Title', value: SearchEventsSortBy.Title },
+    { label: 'Status', value: SearchEventsSortBy.Status },
+    { label: 'Type', value: SearchEventsSortBy.Type },
+  ];
+
+  readonly sortOrderOptions: SelectOption[] = [
+    { label: 'Descending', value: SortDirection.Desc },
+    { label: 'Ascending', value: SortDirection.Asc },
+  ];
+
   readonly cycleFilterOptions: SelectOption[] = [
     { label: 'Current Cycle', value: 'current' },
     { label: 'All Time', value: 'all' },
   ];
 
-  // Search filter
-  readonly searchQuery = signal('');
+  readonly searchTypeOptions: SelectOption[] = [
+    { label: 'Any', value: '' },
+    { label: 'Proactive', value: SeekerSearchType.Proactive },
+    { label: 'Replacement', value: SeekerSearchType.Replacement },
+  ];
 
-  // Events
-  readonly events = signal<SearchEvent[]>([]);
-  readonly eventsTotalRecords = signal(0);
-  readonly eventsPage = signal(1);
-  readonly pageSize = signal(this.pagination.getPageSize(SearchesTabComponent.PAGE_SIZE_KEY, 50));
+  readonly searchReasonOptions: SelectOption[] = [
+    { label: 'Any', value: '' },
+    { label: 'Missing', value: SeekerSearchReason.Missing },
+    { label: 'Cutoff Unmet', value: SeekerSearchReason.QualityCutoffNotMet },
+    { label: 'CF Below Cutoff', value: SeekerSearchReason.CustomFormatScoreBelowCutoff },
+    { label: 'Replacement', value: SeekerSearchReason.Replacement },
+  ];
+
+  readonly triStateOptions: SelectOption[] = [
+    { label: 'Any', value: 'any' },
+    { label: 'Yes', value: 'true' },
+    { label: 'No', value: 'false' },
+  ];
+
+  readonly statusOptions = STATUS_OPTIONS;
+
+  readonly activeFilterCount = computed(() => {
+    const a = this.applied();
+    let n = 0;
+    if (a.instanceId) n++;
+    if (a.cycleFilter !== EMPTY_FILTERS.cycleFilter) n++;
+    if (a.statuses.length) n++;
+    if (a.searchType) n++;
+    if (a.searchReason) n++;
+    if (a.grabbed !== 'any') n++;
+    return n;
+  });
 
   constructor() {
     effect(() => {
@@ -95,21 +178,6 @@ export class SearchesTabComponent implements OnInit {
     this.loadEvents();
   }
 
-  onInstanceFilterChange(value: string): void {
-    this.selectedInstanceId.set(value);
-    if (!value) {
-      this.cycleFilter.set('all');
-    }
-    this.eventsPage.set(1);
-    this.loadEvents();
-  }
-
-  onCycleFilterChange(value: string): void {
-    this.cycleFilter.set(value as CycleFilter);
-    this.eventsPage.set(1);
-    this.loadEvents();
-  }
-
   onSearchFilterChange(): void {
     this.eventsPage.set(1);
     this.loadEvents();
@@ -120,12 +188,65 @@ export class SearchesTabComponent implements OnInit {
     this.loadEvents();
   }
 
+  onSortByChange(value: SearchEventsSortBy): void {
+    this.sortBy.set(value);
+    this.eventsPage.set(1);
+    this.loadEvents();
+  }
+
+  onSortOrderChange(value: SortDirection): void {
+    this.sortDirection.set(value);
+    this.eventsPage.set(1);
+    this.loadEvents();
+  }
+
   readonly onPageSizeChange = this.pagination.createPageSizeHandler(
     SearchesTabComponent.PAGE_SIZE_KEY,
     this.pageSize,
     this.eventsPage,
     () => this.loadEvents(),
   );
+
+  openFilters(): void {
+    this.draft.set({ ...this.applied(), instanceId: this.selectedInstanceId() });
+    this.drawerOpen.set(true);
+  }
+
+  resetFilters(): void {
+    this.draft.set({ ...EMPTY_FILTERS });
+  }
+
+  applyFilters(): void {
+    const draft = { ...this.draft() };
+    this.applied.set(draft);
+    this.selectedInstanceId.set(draft.instanceId);
+    this.drawerOpen.set(false);
+    this.eventsPage.set(1);
+    this.loadEvents();
+  }
+
+  toggleStatus(value: SearchCommandStatus): void {
+    this.draft.update(d => {
+      const has = d.statuses.includes(value);
+      return { ...d, statuses: has ? d.statuses.filter(s => s !== value) : [...d.statuses, value] };
+    });
+  }
+
+  isStatusDrafted(value: SearchCommandStatus): boolean {
+    return this.draft().statuses.includes(value);
+  }
+
+  updateDraft<K extends keyof AdvancedFilters>(key: K, value: AdvancedFilters[K]): void {
+    this.draft.update(d => {
+      const next = { ...d, [key]: value };
+      // 'Current Cycle' only makes sense against a specific instance — clearing
+      // the instance must fall the cycle filter back to 'All Time'.
+      if (key === 'instanceId' && !value && next.cycleFilter === 'current') {
+        next.cycleFilter = 'all';
+      }
+      return next;
+    });
+  }
 
   refresh(): void {
     this.loadSummary();
@@ -223,22 +344,40 @@ export class SearchesTabComponent implements OnInit {
 
   private loadEvents(): void {
     this.loading.set(true);
+    const loadToken = ++this.latestLoadToken;
     const instanceId = this.selectedInstanceId() || undefined;
     const search = this.searchQuery() || undefined;
-    let cycleId: string | undefined;
+    const a = this.applied();
 
-    if (this.cycleFilter() === 'current' && instanceId) {
+    let cycleId: string | undefined;
+    if (a.cycleFilter === 'current' && instanceId) {
       const instance = this.summary()?.perInstanceStats.find(s => s.instanceId === instanceId);
       cycleId = instance?.currentCycleId ?? undefined;
     }
 
-    this.api.getEvents(this.eventsPage(), this.pageSize(), instanceId, cycleId, search).subscribe({
+    const triToBool = (v: TriState): boolean | undefined => v === 'any' ? undefined : v === 'true';
+
+    this.api.getEvents({
+      page: this.eventsPage(),
+      pageSize: this.pageSize(),
+      instanceId,
+      cycleId,
+      search,
+      sortBy: this.sortBy(),
+      sortDirection: this.sortDirection(),
+      searchStatus: a.statuses.length ? a.statuses : undefined,
+      searchType: a.searchType || undefined,
+      searchReason: a.searchReason || undefined,
+      grabbed: triToBool(a.grabbed),
+    }).subscribe({
       next: (result) => {
+        if (loadToken !== this.latestLoadToken) return;
         this.events.set(result.items);
         this.eventsTotalRecords.set(result.totalCount);
         this.loading.set(false);
       },
       error: () => {
+        if (loadToken !== this.latestLoadToken) return;
         this.loading.set(false);
         this.toast.error('Failed to load search events');
       },

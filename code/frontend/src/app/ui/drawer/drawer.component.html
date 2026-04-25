@@ -1,0 +1,27 @@
+@if (visible()) {
+  <div class="drawer-backdrop" (click)="onBackdropClick()">
+    <aside
+      class="drawer"
+      (click)="$event.stopPropagation()"
+      role="dialog"
+      aria-modal="true"
+      [attr.aria-labelledby]="title() ? titleId : null"
+      [attr.aria-label]="title() ? null : 'Drawer'"
+      cdkTrapFocus
+      [cdkTrapFocusAutoCapture]="false"
+    >
+      @if (title()) {
+        <header class="drawer__header">
+          <h2 [id]="titleId" class="drawer__title">{{ title() }}</h2>
+          <button class="drawer__close" type="button" (click)="close()" aria-label="Close">&times;</button>
+        </header>
+      }
+      <div class="drawer__body">
+        <ng-content />
+      </div>
+      <footer class="drawer__footer">
+        <ng-content select="[drawer-footer]" />
+      </footer>
+    </aside>
+  </div>
+}

@@ -34,6 +34,14 @@ export enum SeekerSearchReason {
   Replacement = 'Replacement',
 }
 
+export enum SearchCommandStatus {
+  Pending = 'Pending',
+  Started = 'Started',
+  Completed = 'Completed',
+  Failed = 'Failed',
+  TimedOut = 'TimedOut',
+}
+
 export interface SearchEvent {
   id: string;
   timestamp: string;

@@ -70,22 +70,35 @@
   display: flex;
   justify-content: flex-end;
   gap: var(--space-3);
-  padding: var(--space-4) var(--space-2);
+  padding: var(--space-4);
 
   // Sticky at bottom of scroll container (shell__content)
   position: sticky;
   bottom: 0;
   z-index: var(--z-sticky);
 
-  // Transparent — button floats over content without blocking it
+  // Row stays transparent; each action gets its own glass pedestal so the
+  // backdrop hugs the save button instead of spanning the full row.
   background: transparent;
   pointer-events: none;
 
-  // Re-enable pointer events on the button itself
   > * {
     pointer-events: auto;
-  }
+    position: relative;
+    isolation: isolate;
 
+    &::before {
+      content: '';
+      position: absolute;
+      inset: calc(-1 * var(--space-10));
+      background: var(--glass-bg);
+      backdrop-filter: blur(var(--glass-blur-sm, 8px));
+      -webkit-backdrop-filter: blur(var(--glass-blur-sm, 8px));
+      mask-image: radial-gradient(ellipse at center, black 40%, transparent 85%);
+      -webkit-mask-image: radial-gradient(ellipse at center, black 40%, transparent 85%);
+      z-index: -1;
+    }
+  }
 }
 
 @mixin form-section {

@@ -17,4 +17,10 @@ public sealed record CustomFormatScoreEntryResponse
     public bool IsBelowCutoff { get; init; }
     public bool IsMonitored { get; init; }
     public DateTime LastSyncedAt { get; init; }
+    
+    /// <summary>
+    /// Timestamp at which this item last saw its custom format score strictly
+    /// exceed the prior recorded score. Null when no upgrade has been recorded.
+    /// </summary>
+    public DateTime? LastUpgradedAt { get; init; }
 }

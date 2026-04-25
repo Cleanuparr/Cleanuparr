@@ -1,6 +1,9 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { SortDirection } from '@core/api/search-stats.api';
+
+export { SortDirection };
 
 export interface CfScoreStats {
   totalTracked: number;
@@ -58,6 +61,7 @@ export interface CfScoreEntry {
   isBelowCutoff: boolean;
   isMonitored: boolean;
   lastSyncedAt: string;
+  lastUpgradedAt: string | null;
 }
 
 export interface CfScoreEntriesResponse {
@@ -82,6 +86,60 @@ export interface CfScoreInstance {
   id: string;
   name: string;
   itemType: string;
+  qualityProfiles?: string[];
+}
+
+export enum CutoffFilter {
+  All = 'All',
+  Below = 'Below',
+  Met = 'Met',
+}
+
+export enum MonitoredFilter {
+  All = 'All',
+  Monitored = 'Monitored',
+  Unmonitored = 'Unmonitored',
+}
+
+export enum CfScoresSortBy {
+  Title = 'Title',
+  CurrentScore = 'CurrentScore',
+  CutoffScore = 'CutoffScore',
+  QualityProfile = 'QualityProfile',
+  LastSyncedAt = 'LastSyncedAt',
+  LastUpgradedAt = 'LastUpgradedAt',
+}
+
+export enum CfUpgradesSortBy {
+  UpgradedAt = 'UpgradedAt',
+  Title = 'Title',
+  NewScore = 'NewScore',
+  PreviousScore = 'PreviousScore',
+  ScoreDelta = 'ScoreDelta',
+  CutoffScore = 'CutoffScore',
+}
+
+export interface CfScoresQuery {
+  page?: number;
+  pageSize?: number;
+  instanceId?: string;
+  search?: string;
+  sortBy?: CfScoresSortBy;
+  sortDirection?: SortDirection;
+  qualityProfile?: string;
+  itemType?: string;
+  cutoffFilter?: CutoffFilter;
+  monitoredFilter?: MonitoredFilter;
+}
+
+export interface CfScoreUpgradesQuery {
+  page?: number;
+  pageSize?: number;
+  instanceId?: string;
+  days?: number;
+  search?: string;
+  sortBy?: CfUpgradesSortBy;
+  sortDirection?: SortDirection;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -92,20 +150,34 @@ export class CfScoreApi {
     return this.http.get<CfScoreStats>('/api/seeker/cf-scores/stats');
   }
 
-  getRecentUpgrades(page = 1, pageSize = 5, instanceId?: string, days?: number): Observable<CfScoreUpgradesResponse> {
-    const params: Record<string, string | number> = { page, pageSize };
-    if (instanceId) params['instanceId'] = instanceId;
-    if (days !== undefined) params['days'] = days;
+  getRecentUpgrades(query: CfScoreUpgradesQuery = {}): Observable<CfScoreUpgradesResponse> {
+    let params = new HttpParams()
+      .set('page', String(query.page ?? 1))
+      .set('pageSize', String(query.pageSize ?? 20));
+
+    if (query.instanceId) params = params.set('instanceId', query.instanceId);
+    if (query.days !== undefined) params = params.set('days', String(query.days));
+    if (query.search) params = params.set('search', query.search);
+    if (query.sortBy) params = params.set('sortBy', query.sortBy);
+    if (query.sortDirection) params = params.set('sortDirection', query.sortDirection);
+
     return this.http.get<CfScoreUpgradesResponse>('/api/seeker/cf-scores/upgrades', { params });
   }
 
-  getScores(page = 1, pageSize = 50, search?: string, instanceId?: string, sortBy?: string, hideMet?: boolean, hideUnmonitored?: boolean): Observable<CfScoreEntriesResponse> {
-    const params: Record<string, string | number | boolean> = { page, pageSize };
-    if (search) params['search'] = search;
-    if (instanceId) params['instanceId'] = instanceId;
-    if (sortBy) params['sortBy'] = sortBy;
-    if (hideMet) params['hideMet'] = true;
-    if (hideUnmonitored) params['hideUnmonitored'] = true;
+  getScores(query: CfScoresQuery = {}): Observable<CfScoreEntriesResponse> {
+    let params = new HttpParams()
+      .set('page', String(query.page ?? 1))
+      .set('pageSize', String(query.pageSize ?? 50));
+
+    if (query.search) params = params.set('search', query.search);
+    if (query.instanceId) params = params.set('instanceId', query.instanceId);
+    if (query.sortBy) params = params.set('sortBy', query.sortBy);
+    if (query.sortDirection) params = params.set('sortDirection', query.sortDirection);
+    if (query.qualityProfile) params = params.set('qualityProfile', query.qualityProfile);
+    if (query.itemType) params = params.set('itemType', query.itemType);
+    if (query.cutoffFilter && query.cutoffFilter !== CutoffFilter.All) params = params.set('cutoffFilter', query.cutoffFilter);
+    if (query.monitoredFilter && query.monitoredFilter !== MonitoredFilter.All) params = params.set('monitoredFilter', query.monitoredFilter);
+
     return this.http.get<CfScoreEntriesResponse>('/api/seeker/cf-scores', { params });
   }
 

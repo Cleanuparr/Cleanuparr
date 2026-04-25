@@ -11,6 +11,7 @@ import {
 import { EventsApi } from '@core/api/events.api';
 import { ToastService } from '@core/services/toast.service';
 import { PaginationService } from '@core/services/pagination.service';
+import { StickyAwareDirective } from '@core/directives/sticky-aware.directive';
 import { AnimatedCounterComponent } from '@ui/animated-counter/animated-counter.component';
 import { AppEvent, EventFilter } from '@core/models/event.models';
 
@@ -31,6 +32,7 @@ import { AppEvent, EventFilter } from '@core/models/event.models';
     PaginatorComponent,
     EmptyStateComponent,
     AnimatedCounterComponent,
+    StickyAwareDirective,
   ],
   templateUrl: './events.component.html',
   styleUrl: './events.component.scss',

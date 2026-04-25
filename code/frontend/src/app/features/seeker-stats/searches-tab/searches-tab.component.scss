@@ -1,33 +1,13 @@
 @use 'data-toolbar' as *;
+@use 'page-animations' as *;
 
-// Staggered animations
 :host {
-  > .stats-bar {
-    animation: slide-up var(--duration-normal) var(--ease-default) both;
-    animation-delay: 40ms;
-  }
-  > .instance-cards {
-    animation: slide-up var(--duration-normal) var(--ease-default) both;
-    animation-delay: 80ms;
-  }
-  > .toolbar {
-    animation: slide-up var(--duration-normal) var(--ease-default) both;
-    animation-delay: 120ms;
-    position: relative;
-    z-index: 1;
-  }
-  > app-card {
-    animation: slide-up var(--duration-normal) var(--ease-default) both;
-    animation-delay: 160ms;
-  }
-  > app-paginator {
-    animation: slide-up var(--duration-normal) var(--ease-default) both;
-    animation-delay: 200ms;
-  }
+  @include page-section-stagger;
 }
 
 .toolbar {
   @include data-toolbar;
+  @include sticky-page-header;
 
   &__filters {
     app-input {
@@ -215,7 +195,106 @@
   }
 }
 
-// List rows
+// Filter drawer
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+
+  &__label {
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  &__hint {
+    font-size: var(--font-size-xs);
+    color: var(--text-tertiary);
+  }
+}
+
+.chip-group {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 4px 10px;
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-default),
+              border-color var(--duration-fast) var(--ease-default),
+              color var(--duration-fast) var(--ease-default);
+
+  &:hover {
+    color: var(--text-primary);
+    border-color: var(--color-primary);
+  }
+
+  &--active {
+    color: var(--color-primary);
+    background: var(--color-primary-subtle);
+    border-color: var(--color-primary);
+  }
+}
+
+// Expanded row detail
+
+.event-detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+
+  &__chips {
+    display: flex;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  &__section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+
+  &__label {
+    font-size: var(--font-size-xs);
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  &__value {
+    font-size: var(--font-size-sm);
+    color: var(--text-primary);
+    overflow-wrap: anywhere;
+    word-break: normal;
+  }
+
+  &__cycle {
+    font-family: var(--font-mono);
+    font-size: var(--font-size-xs);
+    color: var(--text-tertiary);
+    background: var(--glass-bg);
+    padding: 2px 8px;
+    border-radius: var(--radius-sm);
+  }
+}
+
+// List rows (legacy styles — kept for potential reuse)
 
 .list-row {
   border-bottom: 1px solid var(--divider);

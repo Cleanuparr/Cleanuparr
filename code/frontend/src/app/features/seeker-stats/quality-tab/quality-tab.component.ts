@@ -3,17 +3,36 @@ import { DatePipe } from '@angular/common';
 import { NgIcon } from '@ng-icons/core';
 import {
   CardComponent, BadgeComponent, ButtonComponent, InputComponent,
-  PaginatorComponent, EmptyStateComponent, SelectComponent, ToggleComponent,
-  TooltipComponent,
+  PaginatorComponent, EmptyStateComponent, SelectComponent,
+  TooltipComponent, DrawerComponent,
 } from '@ui';
 import type { SelectOption } from '@ui';
 import { AnimatedCounterComponent } from '@ui/animated-counter/animated-counter.component';
 import {
-  CfScoreApi, CfScoreEntry, CfScoreStats, CfScoreHistoryEntry,
+  CfScoreApi, CfScoreEntry, CfScoreStats, CfScoreHistoryEntry, CfScoreInstance,
+  CutoffFilter, MonitoredFilter, CfScoresSortBy, SortDirection,
 } from '@core/api/cf-score.api';
 import { AppHubService } from '@core/realtime/app-hub.service';
 import { ToastService } from '@core/services/toast.service';
 import { PaginationService } from '@core/services/pagination.service';
+import { StickyAwareDirective } from '@core/directives/sticky-aware.directive';
+
+const DEFAULT_SORT_BY = CfScoresSortBy.Title;
+const DEFAULT_SORT_DIRECTION = SortDirection.Asc;
+
+interface AdvancedFilters {
+  instanceId: string;
+  qualityProfile: string;
+  cutoffFilter: CutoffFilter;
+  monitoredFilter: MonitoredFilter;
+}
+
+const EMPTY_FILTERS: AdvancedFilters = {
+  instanceId: '',
+  qualityProfile: '',
+  cutoffFilter: CutoffFilter.All,
+  monitoredFilter: MonitoredFilter.All,
+};
 
 @Component({
   selector: 'app-quality-tab',
@@ -26,11 +45,12 @@ import { PaginationService } from '@core/services/pagination.service';
     ButtonComponent,
     InputComponent,
     SelectComponent,
-    ToggleComponent,
     PaginatorComponent,
     EmptyStateComponent,
     AnimatedCounterComponent,
     TooltipComponent,
+    DrawerComponent,
+    StickyAwareDirective,
   ],
   templateUrl: './quality-tab.component.html',
   styleUrl: './quality-tab.component.scss',
@@ -44,6 +64,7 @@ export class QualityTabComponent implements OnInit {
   private readonly toast = inject(ToastService);
   private readonly pagination = inject(PaginationService);
   private initialLoad = true;
+  private latestLoadToken = 0;
 
   readonly items = signal<CfScoreEntry[]>([]);
   readonly stats = signal<CfScoreStats | null>(null);
@@ -54,15 +75,29 @@ export class QualityTabComponent implements OnInit {
   readonly pageSize = signal(this.pagination.getPageSize(QualityTabComponent.PAGE_SIZE_KEY, 50));
   readonly searchQuery = signal('');
   readonly selectedInstanceId = signal<string>('');
+  readonly instances = signal<CfScoreInstance[]>([]);
   readonly instanceOptions = signal<SelectOption[]>([]);
 
-  readonly sortBy = signal<string>('title');
-  readonly hideMet = signal(false);
-  readonly hideUnmonitored = signal(false);
+  readonly sortBy = signal<CfScoresSortBy>(DEFAULT_SORT_BY);
+  readonly sortDirection = signal<SortDirection>(DEFAULT_SORT_DIRECTION);
+
   readonly sortOptions: SelectOption[] = [
-    { label: 'Title', value: 'title' },
-    { label: 'Last Synced', value: 'date' },
+    { label: 'Title', value: CfScoresSortBy.Title },
+    { label: 'Current Score', value: CfScoresSortBy.CurrentScore },
+    { label: 'Cutoff', value: CfScoresSortBy.CutoffScore },
+    { label: 'Quality Profile', value: CfScoresSortBy.QualityProfile },
+    { label: 'Last Synced', value: CfScoresSortBy.LastSyncedAt },
+    { label: 'Last Upgraded', value: CfScoresSortBy.LastUpgradedAt },
   ];
+
+  readonly sortOrderOptions: SelectOption[] = [
+    { label: 'Ascending', value: SortDirection.Asc },
+    { label: 'Descending', value: SortDirection.Desc },
+  ];
+
+  readonly applied = signal<AdvancedFilters>({ ...EMPTY_FILTERS });
+  readonly draft = signal<AdvancedFilters>({ ...EMPTY_FILTERS });
+  readonly drawerOpen = signal(false);
 
   readonly displayStats = computed(() => {
     const s = this.stats();
@@ -77,6 +112,46 @@ export class QualityTabComponent implements OnInit {
   readonly expandedId = signal<string | null>(null);
   readonly historyEntries = signal<CfScoreHistoryEntry[]>([]);
   readonly historyLoading = signal(false);
+
+  readonly cutoffOptions: SelectOption[] = [
+    { label: 'Any', value: CutoffFilter.All },
+    { label: 'Below cutoff', value: CutoffFilter.Below },
+    { label: 'Met cutoff', value: CutoffFilter.Met },
+  ];
+
+  readonly monitoredOptions: SelectOption[] = [
+    { label: 'Any', value: MonitoredFilter.All },
+    { label: 'Monitored only', value: MonitoredFilter.Monitored },
+    { label: 'Unmonitored only', value: MonitoredFilter.Unmonitored },
+  ];
+
+  readonly qualityProfileOptions = computed<SelectOption[]>(() => {
+    // Narrow to the drafted instance while the drawer is open so the profile
+    // list stays consistent with the instance the user is composing.
+    const instanceId = this.drawerOpen() ? this.draft().instanceId : this.selectedInstanceId();
+    const profiles = new Set<string>();
+    for (const inst of this.instances()) {
+      if (instanceId && inst.id !== instanceId) continue;
+      for (const p of inst.qualityProfiles ?? []) {
+        profiles.add(p);
+      }
+    }
+    const sorted = [...profiles].sort((a, b) => a.localeCompare(b));
+    return [
+      { label: 'Any', value: '' },
+      ...sorted.map(p => ({ label: p, value: p })),
+    ];
+  });
+
+  readonly activeFilterCount = computed(() => {
+    const a = this.applied();
+    let n = 0;
+    if (a.instanceId) n++;
+    if (a.qualityProfile) n++;
+    if (a.cutoffFilter !== CutoffFilter.All) n++;
+    if (a.monitoredFilter !== MonitoredFilter.All) n++;
+    return n;
+  });
 
   constructor() {
     effect(() => {
@@ -100,13 +175,27 @@ export class QualityTabComponent implements OnInit {
 
   loadScores(): void {
     this.loading.set(true);
-    this.api.getScores(this.currentPage(), this.pageSize(), this.searchQuery() || undefined, this.selectedInstanceId() || undefined, this.sortBy(), this.hideMet(), this.hideUnmonitored()).subscribe({
+    const loadToken = ++this.latestLoadToken;
+    const a = this.applied();
+    this.api.getScores({
+      page: this.currentPage(),
+      pageSize: this.pageSize(),
+      search: this.searchQuery() || undefined,
+      instanceId: this.selectedInstanceId() || undefined,
+      sortBy: this.sortBy(),
+      sortDirection: this.sortDirection(),
+      qualityProfile: a.qualityProfile || undefined,
+      cutoffFilter: a.cutoffFilter,
+      monitoredFilter: a.monitoredFilter,
+    }).subscribe({
       next: (result) => {
+        if (loadToken !== this.latestLoadToken) return;
         this.items.set(result.items);
         this.totalRecords.set(result.totalCount);
         this.loading.set(false);
       },
       error: () => {
+        if (loadToken !== this.latestLoadToken) return;
         this.loading.set(false);
         this.toast.error('Failed to load CF scores');
       },
@@ -116,6 +205,7 @@ export class QualityTabComponent implements OnInit {
   private loadInstances(): void {
     this.api.getInstances().subscribe({
       next: (result) => {
+        this.instances.set(result.instances);
         this.instanceOptions.set([
           { label: 'All Instances', value: '' },
           ...result.instances.map(i => ({
@@ -126,10 +216,6 @@ export class QualityTabComponent implements OnInit {
       },
       error: () => this.toast.error('Failed to load instances'),
     });
-  }
-
-  onInstanceFilterChange(value: string): void {
-    this.applyFilterChange(this.selectedInstanceId, value);
   }
 
   private loadStats(): void {
@@ -144,20 +230,14 @@ export class QualityTabComponent implements OnInit {
     this.loadScores();
   }
 
-  onSortChange(value: string): void {
-    this.applyFilterChange(this.sortBy, value);
+  onSortByChange(value: CfScoresSortBy): void {
+    this.sortBy.set(value);
+    this.currentPage.set(1);
+    this.loadScores();
   }
 
-  onHideMetChange(value: boolean): void {
-    this.applyFilterChange(this.hideMet, value);
-  }
-
-  onHideUnmonitoredChange(value: boolean): void {
-    this.applyFilterChange(this.hideUnmonitored, value);
-  }
-
-  private applyFilterChange<T>(setter: { set: (v: T) => void }, value: T): void {
-    setter.set(value);
+  onSortOrderChange(value: SortDirection): void {
+    this.sortDirection.set(value);
     this.currentPage.set(1);
     this.loadScores();
   }
@@ -173,6 +253,47 @@ export class QualityTabComponent implements OnInit {
     this.currentPage,
     () => this.loadScores(),
   );
+
+  openFilters(): void {
+    this.draft.set({ ...this.applied(), instanceId: this.selectedInstanceId() });
+    this.drawerOpen.set(true);
+  }
+
+  resetFilters(): void {
+    this.draft.set({ ...EMPTY_FILTERS });
+  }
+
+  applyFilters(): void {
+    const draft = { ...this.draft() };
+    // Quality profile options narrow to the chosen instance — clear any stale
+    // selection that no longer belongs to the drafted instance's profiles.
+    if (draft.qualityProfile) {
+      const profiles = this.collectProfilesFor(draft.instanceId);
+      if (!profiles.has(draft.qualityProfile)) {
+        draft.qualityProfile = '';
+      }
+    }
+    this.applied.set(draft);
+    this.selectedInstanceId.set(draft.instanceId);
+    this.drawerOpen.set(false);
+    this.currentPage.set(1);
+    this.loadScores();
+  }
+
+  private collectProfilesFor(instanceId: string): Set<string> {
+    const profiles = new Set<string>();
+    for (const inst of this.instances()) {
+      if (instanceId && inst.id !== instanceId) continue;
+      for (const p of inst.qualityProfiles ?? []) {
+        profiles.add(p);
+      }
+    }
+    return profiles;
+  }
+
+  updateDraft<K extends keyof AdvancedFilters>(key: K, value: AdvancedFilters[K]): void {
+    this.draft.update(d => ({ ...d, [key]: value }));
+  }
 
   refresh(): void {
     this.loadScores();

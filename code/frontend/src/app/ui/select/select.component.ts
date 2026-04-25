@@ -27,6 +27,7 @@ export class SelectComponent {
   error = input<string>();
   hint = input<string>();
   helpKey = input<string>();
+  placement = input<'bottom' | 'top'>('bottom');
   value = model<unknown>(null);
 
   readonly isOpen = signal(false);

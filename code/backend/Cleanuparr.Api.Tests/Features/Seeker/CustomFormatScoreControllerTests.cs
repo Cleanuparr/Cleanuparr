@@ -70,7 +70,7 @@ public class CustomFormatScoreControllerTests : IDisposable
         AddScoreEntry(radarr.Id, 2, "At Cutoff", currentScore: 500, cutoffScore: 500);
         AddScoreEntry(radarr.Id, 3, "Above Cutoff", currentScore: 600, cutoffScore: 500);
 
-        var result = await _controller.GetCustomFormatScores(hideMet: true);
+        var result = await _controller.GetCustomFormatScores(cutoffFilter: CutoffFilter.Below);
         var body = GetResponseBody(result);
 
         body.GetProperty("TotalCount").GetInt32().ShouldBe(1);
@@ -85,7 +85,7 @@ public class CustomFormatScoreControllerTests : IDisposable
         AddScoreEntry(radarr.Id, 2, "Unmonitored Movie", currentScore: 200, cutoffScore: 500, isMonitored: false);
         AddScoreEntry(radarr.Id, 3, "Another Monitored", currentScore: 300, cutoffScore: 500, isMonitored: true);
 
-        var result = await _controller.GetCustomFormatScores(hideUnmonitored: true);
+        var result = await _controller.GetCustomFormatScores(monitoredFilter: MonitoredFilter.Monitored);
         var body = GetResponseBody(result);
 
         body.GetProperty("TotalCount").GetInt32().ShouldBe(2);
@@ -118,7 +118,7 @@ public class CustomFormatScoreControllerTests : IDisposable
         AddScoreEntry(radarr.Id, 2, "Newer", currentScore: 200, cutoffScore: 500,
             lastSynced: DateTime.UtcNow.AddHours(-1));
 
-        var result = await _controller.GetCustomFormatScores(sortBy: "date");
+        var result = await _controller.GetCustomFormatScores(sortBy: CfScoresSortBy.LastSyncedAt);
         var body = GetResponseBody(result);
 
         body.GetProperty("Items")[0].GetProperty("Title").GetString().ShouldBe("Newer");
@@ -156,6 +156,94 @@ public class CustomFormatScoreControllerTests : IDisposable
         body.GetProperty("TotalCount").GetInt32().ShouldBe(7);
         body.GetProperty("TotalPages").GetInt32().ShouldBe(3); // ceil(7/3) = 3
         body.GetProperty("Items").GetArrayLength().ShouldBe(3);
+    }
+
+    [Fact]
+    public async Task GetCustomFormatScores_WithCutoffFilterMet_ExcludesBelowCutoff()
+    {
+        var radarr = SeekerTestDataFactory.AddRadarrInstance(_dataContext);
+        AddScoreEntry(radarr.Id, 1, "Below", currentScore: 100, cutoffScore: 500);
+        AddScoreEntry(radarr.Id, 2, "At", currentScore: 500, cutoffScore: 500);
+        AddScoreEntry(radarr.Id, 3, "Above", currentScore: 600, cutoffScore: 500);
+
+        var result = await _controller.GetCustomFormatScores(cutoffFilter: CutoffFilter.Met);
+        var body = GetResponseBody(result);
+
+        body.GetProperty("TotalCount").GetInt32().ShouldBe(2);
+    }
+
+    [Fact]
+    public async Task GetCustomFormatScores_WithCutoffFilterAll_IncludesEverything()
+    {
+        var radarr = SeekerTestDataFactory.AddRadarrInstance(_dataContext);
+        AddScoreEntry(radarr.Id, 1, "Below", currentScore: 100, cutoffScore: 500);
+        AddScoreEntry(radarr.Id, 2, "Above", currentScore: 600, cutoffScore: 500);
+
+        var result = await _controller.GetCustomFormatScores(cutoffFilter: CutoffFilter.All);
+        var body = GetResponseBody(result);
+
+        body.GetProperty("TotalCount").GetInt32().ShouldBe(2);
+    }
+
+    [Fact]
+    public async Task GetCustomFormatScores_WithMonitoredFilterUnmonitored_ReturnsOnlyUnmonitored()
+    {
+        var radarr = SeekerTestDataFactory.AddRadarrInstance(_dataContext);
+        AddScoreEntry(radarr.Id, 1, "A", currentScore: 100, cutoffScore: 500, isMonitored: true);
+        AddScoreEntry(radarr.Id, 2, "B", currentScore: 100, cutoffScore: 500, isMonitored: false);
+
+        var result = await _controller.GetCustomFormatScores(monitoredFilter: MonitoredFilter.Unmonitored);
+        var body = GetResponseBody(result);
+
+        body.GetProperty("TotalCount").GetInt32().ShouldBe(1);
+        body.GetProperty("Items")[0].GetProperty("Title").GetString().ShouldBe("B");
+    }
+
+    [Fact]
+    public async Task GetCustomFormatScores_WithQualityProfileFilter_ReturnsOnlyMatchingProfile()
+    {
+        var radarr = SeekerTestDataFactory.AddRadarrInstance(_dataContext);
+        AddScoreEntry(radarr.Id, 1, "HD Movie", currentScore: 100, cutoffScore: 500, qualityProfileName: "HD");
+        AddScoreEntry(radarr.Id, 2, "UHD Movie", currentScore: 200, cutoffScore: 500, qualityProfileName: "UHD");
+
+        var result = await _controller.GetCustomFormatScores(qualityProfile: "UHD");
+        var body = GetResponseBody(result);
+
+        body.GetProperty("TotalCount").GetInt32().ShouldBe(1);
+        body.GetProperty("Items")[0].GetProperty("Title").GetString().ShouldBe("UHD Movie");
+    }
+
+    [Fact]
+    public async Task GetCustomFormatScores_WithExplicitSortDirectionAsc_OverridesDefault()
+    {
+        var radarr = SeekerTestDataFactory.AddRadarrInstance(_dataContext);
+        AddScoreEntry(radarr.Id, 1, "A", currentScore: 100, cutoffScore: 500);
+        AddScoreEntry(radarr.Id, 2, "B", currentScore: 300, cutoffScore: 500);
+
+        // CurrentScore default is descending; overriding with Asc should flip it.
+        var result = await _controller.GetCustomFormatScores(
+            sortBy: CfScoresSortBy.CurrentScore,
+            sortDirection: Cleanuparr.Domain.Enums.SortDirection.Asc);
+        var body = GetResponseBody(result);
+
+        var items = body.GetProperty("Items");
+        items[0].GetProperty("CurrentScore").GetInt32().ShouldBe(100);
+        items[1].GetProperty("CurrentScore").GetInt32().ShouldBe(300);
+    }
+
+    [Fact]
+    public async Task GetCustomFormatScores_WithSortByTitleDescending_OrdersReverseAlphabetically()
+    {
+        var radarr = SeekerTestDataFactory.AddRadarrInstance(_dataContext);
+        AddScoreEntry(radarr.Id, 1, "Apple", currentScore: 100, cutoffScore: 500);
+        AddScoreEntry(radarr.Id, 2, "Banana", currentScore: 200, cutoffScore: 500);
+
+        var result = await _controller.GetCustomFormatScores(
+            sortBy: CfScoresSortBy.Title,
+            sortDirection: Cleanuparr.Domain.Enums.SortDirection.Desc);
+        var body = GetResponseBody(result);
+
+        body.GetProperty("Items")[0].GetProperty("Title").GetString().ShouldBe("Banana");
     }
 
     #endregion
@@ -246,6 +334,77 @@ public class CustomFormatScoreControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task GetRecentUpgrades_WithUpgradeCrossingWindowBoundary_IsDetected()
+    {
+        // CR2: pre-window baseline must still participate so the first in-window
+        // row can be recognised as an upgrade.
+        var radarr = SeekerTestDataFactory.AddRadarrInstance(_dataContext);
+        AddHistoryEntry(radarr.Id, externalItemId: 1, score: 100, recordedAt: DateTime.UtcNow.AddDays(-10));
+        AddHistoryEntry(radarr.Id, externalItemId: 1, score: 200, recordedAt: DateTime.UtcNow.AddDays(-3));
+
+        var result = await _controller.GetRecentUpgrades(days: 7);
+        var body = GetResponseBody(result);
+
+        body.GetProperty("TotalCount").GetInt32().ShouldBe(1);
+        var upgrade = body.GetProperty("Items")[0];
+        upgrade.GetProperty("PreviousScore").GetInt32().ShouldBe(100);
+        upgrade.GetProperty("NewScore").GetInt32().ShouldBe(200);
+    }
+
+    [Fact]
+    public async Task GetRecentUpgrades_WithSortByScoreDeltaDescending_OrdersByLargestDelta()
+    {
+        var radarr = SeekerTestDataFactory.AddRadarrInstance(_dataContext);
+        // Item 1: +50
+        AddHistoryEntry(radarr.Id, externalItemId: 1, score: 100, recordedAt: DateTime.UtcNow.AddDays(-3));
+        AddHistoryEntry(radarr.Id, externalItemId: 1, score: 150, recordedAt: DateTime.UtcNow.AddDays(-2));
+        // Item 2: +400
+        AddHistoryEntry(radarr.Id, externalItemId: 2, score: 100, recordedAt: DateTime.UtcNow.AddDays(-3));
+        AddHistoryEntry(radarr.Id, externalItemId: 2, score: 500, recordedAt: DateTime.UtcNow.AddDays(-2));
+
+        var result = await _controller.GetRecentUpgrades(sortBy: CfUpgradesSortBy.ScoreDelta);
+        var body = GetResponseBody(result);
+
+        var items = body.GetProperty("Items");
+        items[0].GetProperty("NewScore").GetInt32().ShouldBe(500);
+        items[1].GetProperty("NewScore").GetInt32().ShouldBe(150);
+    }
+
+    [Fact]
+    public async Task GetRecentUpgrades_WithSortByTitleAscending_OrdersAlphabetically()
+    {
+        var radarr = SeekerTestDataFactory.AddRadarrInstance(_dataContext);
+        AddHistoryEntry(radarr.Id, externalItemId: 2, score: 100, recordedAt: DateTime.UtcNow.AddDays(-3));
+        AddHistoryEntry(radarr.Id, externalItemId: 2, score: 200, recordedAt: DateTime.UtcNow.AddDays(-2));
+        AddHistoryEntry(radarr.Id, externalItemId: 1, score: 100, recordedAt: DateTime.UtcNow.AddDays(-3));
+        AddHistoryEntry(radarr.Id, externalItemId: 1, score: 200, recordedAt: DateTime.UtcNow.AddDays(-2));
+
+        var result = await _controller.GetRecentUpgrades(sortBy: CfUpgradesSortBy.Title);
+        var body = GetResponseBody(result);
+
+        var items = body.GetProperty("Items");
+        items[0].GetProperty("Title").GetString().ShouldBe("Item 1");
+        items[1].GetProperty("Title").GetString().ShouldBe("Item 2");
+    }
+
+    [Fact]
+    public async Task GetRecentUpgrades_WithSearchFilter_ReturnsMatchingTitlesOnly()
+    {
+        var radarr = SeekerTestDataFactory.AddRadarrInstance(_dataContext);
+        // AddHistoryEntry titles as "Item {externalItemId}".
+        AddHistoryEntry(radarr.Id, externalItemId: 42, score: 100, recordedAt: DateTime.UtcNow.AddDays(-3));
+        AddHistoryEntry(radarr.Id, externalItemId: 42, score: 200, recordedAt: DateTime.UtcNow.AddDays(-2));
+        AddHistoryEntry(radarr.Id, externalItemId: 99, score: 100, recordedAt: DateTime.UtcNow.AddDays(-3));
+        AddHistoryEntry(radarr.Id, externalItemId: 99, score: 200, recordedAt: DateTime.UtcNow.AddDays(-2));
+
+        var result = await _controller.GetRecentUpgrades(search: "42");
+        var body = GetResponseBody(result);
+
+        body.GetProperty("TotalCount").GetInt32().ShouldBe(1);
+        body.GetProperty("Items")[0].GetProperty("Title").GetString().ShouldBe("Item 42");
+    }
+
+    [Fact]
     public async Task GetRecentUpgrades_ReturnsSortedByMostRecentFirst()
     {
         var radarr = SeekerTestDataFactory.AddRadarrInstance(_dataContext);
@@ -333,7 +492,8 @@ public class CustomFormatScoreControllerTests : IDisposable
         int cutoffScore,
         InstanceType itemType = InstanceType.Radarr,
         DateTime? lastSynced = null,
-        bool isMonitored = true)
+        bool isMonitored = true,
+        string qualityProfileName = "HD")
     {
         _dataContext.CustomFormatScoreEntries.Add(new CustomFormatScoreEntry
         {
@@ -345,7 +505,7 @@ public class CustomFormatScoreControllerTests : IDisposable
             FileId = externalItemId * 10,
             CurrentScore = currentScore,
             CutoffScore = cutoffScore,
-            QualityProfileName = "HD",
+            QualityProfileName = qualityProfileName,
             IsMonitored = isMonitored,
             LastSyncedAt = lastSynced ?? DateTime.UtcNow
         });

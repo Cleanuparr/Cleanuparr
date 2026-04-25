@@ -101,30 +101,36 @@
 }
 
 <!-- Toolbar -->
-<div class="toolbar">
+<div class="toolbar" stickyAware>
   <div class="toolbar__filters">
-    <app-select
-      [value]="selectedInstanceId()"
-      [options]="instanceOptions()"
-      (valueChange)="onInstanceFilterChange($any($event))"
-    />
-    <app-select
-      [value]="cycleFilter()"
-      [options]="cycleFilterOptions"
-      [disabled]="!selectedInstanceId()"
-      (valueChange)="onCycleFilterChange($any($event))"
-    />
     <app-input
       placeholder="Search by title..."
       type="search"
       [(value)]="searchQuery"
       (entered)="onSearchFilterChange()"
     />
+    <app-select
+      label="Sort by"
+      [value]="sortBy()"
+      [options]="sortOptions"
+      (valueChange)="onSortByChange($any($event))"
+    />
+    <app-select
+      label="Sort order"
+      [value]="sortDirection()"
+      [options]="sortOrderOptions"
+      (valueChange)="onSortOrderChange($any($event))"
+    />
   </div>
   <div class="toolbar__actions">
-    <app-button variant="ghost" size="sm" (clicked)="refresh()">
-      Refresh
+    <app-button variant="secondary" size="sm" (clicked)="openFilters()">
+      <ng-icon name="tablerFilter" />
+      Filters
+      @if (activeFilterCount() > 0) {
+        <app-badge severity="accent" size="sm">{{ activeFilterCount() }}</app-badge>
+      }
     </app-button>
+    <app-button variant="ghost" size="sm" (clicked)="refresh()">Refresh</app-button>
   </div>
 </div>
 
@@ -190,3 +196,75 @@
     (pageSizeChange)="onPageSizeChange($event)"
   />
 }
+
+<!-- Filter drawer -->
+<app-drawer title="Filter searches" [(visible)]="drawerOpen">
+  <div class="filter-group">
+    <label class="filter-group__label">Instance</label>
+    <app-select
+      [value]="draft().instanceId"
+      [options]="instanceOptions()"
+      (valueChange)="updateDraft('instanceId', $any($event))"
+    />
+  </div>
+
+  <div class="filter-group">
+    <label class="filter-group__label">Cycle</label>
+    <app-select
+      [value]="draft().cycleFilter"
+      [options]="cycleFilterOptions"
+      [disabled]="!draft().instanceId"
+      (valueChange)="updateDraft('cycleFilter', $any($event))"
+    />
+    @if (!draft().instanceId) {
+      <span class="filter-group__hint">Select an instance to filter by cycle.</span>
+    }
+  </div>
+
+  <div class="filter-group">
+    <label class="filter-group__label">Status</label>
+    <div class="chip-group">
+      @for (opt of statusOptions; track opt.value) {
+        <button
+          type="button"
+          class="chip"
+          [class.chip--active]="isStatusDrafted(opt.value)"
+          [attr.aria-pressed]="isStatusDrafted(opt.value)"
+          (click)="toggleStatus(opt.value)"
+        >{{ opt.label }}</button>
+      }
+    </div>
+  </div>
+
+  <div class="filter-group">
+    <label class="filter-group__label">Search type</label>
+    <app-select
+      [value]="draft().searchType"
+      [options]="searchTypeOptions"
+      (valueChange)="updateDraft('searchType', $any($event))"
+    />
+  </div>
+
+  <div class="filter-group">
+    <label class="filter-group__label">Search reason</label>
+    <app-select
+      [value]="draft().searchReason"
+      [options]="searchReasonOptions"
+      (valueChange)="updateDraft('searchReason', $any($event))"
+    />
+  </div>
+
+  <div class="filter-group">
+    <label class="filter-group__label">Grabbed</label>
+    <app-select
+      [value]="draft().grabbed"
+      [options]="triStateOptions"
+      (valueChange)="updateDraft('grabbed', $any($event))"
+    />
+  </div>
+
+  <div drawer-footer>
+    <app-button variant="ghost" (clicked)="resetFilters()">Reset</app-button>
+    <app-button variant="primary" (clicked)="applyFilters()">Apply</app-button>
+  </div>
+</app-drawer>
