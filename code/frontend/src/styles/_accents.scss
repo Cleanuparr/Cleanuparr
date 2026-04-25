@@ -4,6 +4,11 @@
 // The 'default' preset keeps the UI brand palette (from _tokens.scss) unchanged
 // and restores the logo's original hexes. Scales follow the same perceptual ramp
 // (Tailwind-style 50..950 lightness).
+//
+// NOTE: The --brand-500 stop of each preset is mirrored as a TS constant in
+// app/core/services/theme.service.ts (`ACCENT_PRESET_HEX`) so the appearance
+// settings page can render preview swatches without inspecting the DOM. Keep
+// the two in sync when changing a preset's mid-tone.
 // =============================================================================
 
 // Default: UI stays on brand-purple defaults; logo uses the original darker

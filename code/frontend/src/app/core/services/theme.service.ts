@@ -13,6 +13,18 @@ export const ACCENT_PRESETS = [
 export type AccentPreset = (typeof ACCENT_PRESETS)[number];
 export type Accent = AccentPreset | 'custom';
 
+// Preview swatch colors for each preset. These mirror the --brand-500 stop
+// declared in styles/_accents.scss (and styles/_tokens.scss for 'default').
+// Keep the two in sync — there is no SCSS-from-TS import path.
+export const ACCENT_PRESET_HEX: Record<AccentPreset, string> = {
+  default: '#8b5cf6',
+  blue:    '#3b82f6',
+  green:   '#10b981',
+  rose:    '#f43f5e',
+  amber:   '#f59e0b',
+  teal:    '#14b8a6',
+};
+
 const THEME_KEY = 'cleanuparr-theme';
 const PERFORMANCE_MODE_KEY = 'cleanuparr-performance-mode';
 const FULL_WIDTH_KEY = 'cleanuparr-full-width';

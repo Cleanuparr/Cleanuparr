@@ -3,8 +3,8 @@ import { PageHeaderComponent } from '@layout/page-header/page-header.component';
 import { CardComponent } from '@ui';
 import {
   ACCENT_PRESETS,
+  ACCENT_PRESET_HEX,
   Accent,
-  AccentPreset,
   Theme,
   ThemeService,
 } from '@core/services/theme.service';
@@ -14,15 +14,6 @@ interface AccentSwatch {
   readonly label: string;
   readonly color: string;
 }
-
-const PRESET_SWATCHES: Record<AccentPreset, string> = {
-  default: '#8b5cf6',
-  blue: '#3b82f6',
-  green: '#10b981',
-  rose: '#f43f5e',
-  amber: '#f59e0b',
-  teal: '#14b8a6',
-};
 
 @Component({
   selector: 'app-appearance-settings',
@@ -42,7 +33,7 @@ export class AppearanceSettingsComponent {
   readonly presetSwatches: AccentSwatch[] = ACCENT_PRESETS.map((value) => ({
     value,
     label: value.charAt(0).toUpperCase() + value.slice(1),
-    color: PRESET_SWATCHES[value],
+    color: ACCENT_PRESET_HEX[value],
   }));
 
   selectTheme(theme: Theme): void {
