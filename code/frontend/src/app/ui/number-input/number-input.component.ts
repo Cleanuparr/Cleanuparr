@@ -34,21 +34,23 @@ export class NumberInputComponent {
       this.value.set(null);
       return;
     }
+    this.value.set(Number(target.value));
+  }
 
-    let num = Number(target.value);
-    const minVal = this.min();
-    const maxVal = this.max();
-
-    if (minVal != null) {
-      num = Math.max(num, minVal);
+  onBlur(event: FocusEvent): void {
+    const current = this.value();
+    if (current != null) {
+      let clamped = current;
+      const minVal = this.min();
+      const maxVal = this.max();
+      if (minVal != null) clamped = Math.max(clamped, minVal);
+      if (maxVal != null) clamped = Math.min(clamped, maxVal);
+      if (clamped !== current) {
+        this.value.set(clamped);
+        (event.target as HTMLInputElement).value = String(clamped);
+      }
     }
-
-    if (maxVal != null) {
-      num = Math.min(num, maxVal);
-    }
-    
-    target.value = String(num);
-    this.value.set(num);
+    this.blurred.emit(event);
   }
 
   increment(): void {

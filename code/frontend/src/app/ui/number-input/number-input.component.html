@@ -27,7 +27,7 @@
     [step]="step()"
     [value]="value()"
     (input)="onInput($event)"
-    (blur)="blurred.emit($event)"
+    (blur)="onBlur($event)"
   />
   @if (suffix()) {
     <span class="number-suffix">{{ suffix() }}</span>
