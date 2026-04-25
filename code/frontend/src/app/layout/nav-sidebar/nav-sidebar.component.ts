@@ -30,7 +30,7 @@ interface ExternalLink {
 export class NavSidebarComponent {
   private readonly hub = inject(AppHubService);
   private readonly auth = inject(AuthService);
-  private readonly themeService = inject(ThemeService);
+  protected readonly themeService = inject(ThemeService);
 
   readonly theme = this.themeService.theme;
 
@@ -98,9 +98,5 @@ export class NavSidebarComponent {
 
   logout(): void {
     this.auth.logout();
-  }
-
-  themedIconSrc(src: string): string {
-    return this.theme() === 'dark' ? src : src.replace('-light.svg', '-dark.svg');
   }
 }

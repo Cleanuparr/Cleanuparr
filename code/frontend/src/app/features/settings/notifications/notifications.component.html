@@ -84,7 +84,7 @@
     @for (provider of availableProviders; track provider.type) {
       <button class="provider-card" (click)="onProviderTypeSelected(provider.type)">
         <span class="provider-card__icon-wrapper">
-          <img [src]="themedIconSrc(provider.iconLightUrl)" alt="" aria-hidden="true" class="provider-card__icon provider-card__icon--light" />
+          <img [src]="themeService.themedIconSrc(provider.iconLightUrl)" alt="" aria-hidden="true" class="provider-card__icon provider-card__icon--light" />
           <img [src]="provider.iconUrl" alt="" aria-hidden="true" class="provider-card__icon provider-card__icon--normal" />
         </span>
         <span class="provider-card__name">{{ provider.name }}</span>

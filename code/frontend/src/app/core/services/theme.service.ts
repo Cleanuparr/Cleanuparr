@@ -109,6 +109,19 @@ export class ThemeService {
     localStorage.setItem(ACCENT_KEY, accent);
   }
 
+  /**
+   * Picks the right icon variant for the active theme. Asset filenames must
+   * follow the `*-light.svg` (designed for dark backgrounds) /
+   * `*-dark.svg` (designed for light backgrounds) convention.
+   */
+  themedIconSrc(src: string): string {
+    if (this._theme() === 'dark')
+    {
+      return src;
+    }
+    return src.replace('-light.svg', '-dark.svg');
+  }
+
   setCustomAccent(hex: string): void {
     const normalized = hex.trim().toLowerCase();
     if (!HEX_COLOR_REGEX.test(normalized))

@@ -69,7 +69,7 @@
             (click)="onNavItemClick()"
           >
             @if (item.iconSrc) {
-              <img [src]="themedIconSrc(item.iconSrc)" alt="" aria-hidden="true" class="sidebar__item-img" />
+              <img [src]="themeService.themedIconSrc(item.iconSrc)" alt="" aria-hidden="true" class="sidebar__item-img" />
             } @else if (item.icon) {
               <ng-icon [name]="item.icon" class="sidebar__item-icon" />
             }

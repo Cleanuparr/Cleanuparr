@@ -115,7 +115,7 @@ export class NotificationsComponent implements OnInit, HasPendingChanges {
   private readonly api = inject(NotificationApi);
   private readonly toast = inject(ToastService);
   private readonly confirmService = inject(ConfirmService);
-  private readonly themeService = inject(ThemeService);
+  protected readonly themeService = inject(ThemeService);
 
   readonly theme = this.themeService.theme;
 
@@ -734,9 +734,5 @@ export class NotificationsComponent implements OnInit, HasPendingChanges {
 
   hasPendingChanges(): boolean {
     return false;
-  }
-
-  themedIconSrc(src: string): string {
-    return this.theme() === 'dark' ? src : src.replace('-light.svg', '-dark.svg');
   }
 }
