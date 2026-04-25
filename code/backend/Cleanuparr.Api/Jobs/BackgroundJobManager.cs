@@ -105,6 +105,9 @@ public class BackgroundJobManager : IHostedService
         SeekerConfig seekerConfig = await dataContext.SeekerConfigs
             .AsNoTracking()
             .FirstAsync(cancellationToken);
+        bool anyUseCustomFormatScore = await dataContext.SeekerInstanceConfigs
+            .AsNoTracking()
+            .AnyAsync(s => s.Enabled && s.ArrInstance.Enabled && s.UseCustomFormatScore, cancellationToken);
 
         // Always register jobs, regardless of enabled status
         await RegisterQueueCleanerJob(queueCleanerConfig, cancellationToken);
@@ -112,7 +115,7 @@ public class BackgroundJobManager : IHostedService
         await RegisterDownloadCleanerJob(downloadCleanerConfig, cancellationToken);
         await RegisterBlacklistSyncJob(blacklistSyncConfig, cancellationToken);
         await RegisterSeekerJob(seekerConfig, cancellationToken);
-        await RegisterCustomFormatScoreSyncJob(dataContext, cancellationToken);
+        await RegisterCustomFormatScoreSyncJob(seekerConfig, anyUseCustomFormatScore, cancellationToken);
     }
     
     /// <summary>
@@ -195,14 +198,11 @@ public class BackgroundJobManager : IHostedService
     /// Registers the CustomFormatScoreSyncer job. Only adds triggers when at least one instance has UseCustomFormatScore enabled.
     /// Runs every 30 minutes to sync custom format scores from arr instances.
     /// </summary>
-    public async Task RegisterCustomFormatScoreSyncJob(DataContext dataContext, CancellationToken cancellationToken = default)
+    public async Task RegisterCustomFormatScoreSyncJob(SeekerConfig seekerConfig, bool anyUseCustomFormatScore, CancellationToken cancellationToken = default)
     {
         await AddJobWithoutTrigger<CustomFormatScoreSyncer>(cancellationToken);
 
-        bool anyUseCustomFormatScore = await dataContext.SeekerInstanceConfigs
-            .AnyAsync(s => s.Enabled && s.ArrInstance.Enabled && s.UseCustomFormatScore, cancellationToken);
-        
-        if (anyUseCustomFormatScore)
+        if (seekerConfig.ProactiveSearchEnabled && anyUseCustomFormatScore)
         {
             await AddTriggersForJob<CustomFormatScoreSyncer>(Constants.CustomFormatScoreSyncerCron, cancellationToken);
         }
