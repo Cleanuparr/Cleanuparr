@@ -35,7 +35,7 @@ $_glass-noise: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http:
     -webkit-backdrop-filter: blur(var(--glass-blur-lg));
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-xl);
-    box-shadow: var(--glass-shadow), 0 0 80px rgba(126, 87, 194, 0.04);
+    box-shadow: var(--glass-shadow), 0 0 80px rgba(var(--accent-rgb), 0.04);
 
     // Frost noise overlay for realism
     background-image: #{$_glass-noise};
@@ -100,7 +100,7 @@ $_glass-noise: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http:
     outline: none;
     border-color: var(--input-border-focus);
     box-shadow: 0 0 0 3px var(--color-primary-subtle),
-                0 0 12px rgba(126, 87, 194, 0.15);
+                0 0 12px rgba(var(--accent-rgb), 0.15);
     animation: glow-breathe 3s ease-in-out infinite;
   }
 

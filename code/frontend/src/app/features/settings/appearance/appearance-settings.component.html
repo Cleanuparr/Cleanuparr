@@ -1,0 +1,65 @@
+<app-page-header
+  title="Appearance"
+  subtitle="Customize the look and feel of the interface"
+/>
+
+<div class="settings-form">
+  <app-card header="Theme">
+    <p class="section-hint">Choose between dark and light color modes.</p>
+    <div class="theme-options">
+      <button
+        type="button"
+        class="theme-option"
+        [class.theme-option--active]="theme() === 'dark'"
+        (click)="selectTheme('dark')"
+      >
+        <span class="theme-option__preview theme-option__preview--dark"></span>
+        <span class="theme-option__label">Dark</span>
+      </button>
+      <button
+        type="button"
+        class="theme-option"
+        [class.theme-option--active]="theme() === 'light'"
+        (click)="selectTheme('light')"
+      >
+        <span class="theme-option__preview theme-option__preview--light"></span>
+        <span class="theme-option__label">Light</span>
+      </button>
+    </div>
+  </app-card>
+
+  <app-card header="Accent color">
+    <p class="section-hint">Pick a preset or choose a custom color. Changes apply instantly and persist across sessions.</p>
+    <div class="swatch-grid">
+      @for (swatch of presetSwatches; track swatch.value) {
+        <button
+          type="button"
+          class="swatch"
+          [class.swatch--active]="accent() === swatch.value"
+          [attr.aria-label]="swatch.label"
+          [attr.title]="swatch.label"
+          (click)="selectAccent(swatch.value)"
+        >
+          <span class="swatch__dot" [style.background]="swatch.color"></span>
+          <span class="swatch__label">{{ swatch.label }}</span>
+        </button>
+      }
+
+      <label
+        class="swatch swatch--custom"
+        [class.swatch--active]="accent() === 'custom'"
+        title="Custom color"
+      >
+        <span class="swatch__dot swatch__dot--custom"></span>
+        <span class="swatch__label">Custom</span>
+        <input
+          type="color"
+          class="swatch__input"
+          [value]="customAccent()"
+          (input)="onCustomColorChange($event)"
+          aria-label="Pick a custom accent color"
+        />
+      </label>
+    </div>
+  </app-card>
+</div>

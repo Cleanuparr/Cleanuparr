@@ -20,6 +20,11 @@
   --brand-900: #{$brand-900};
   --brand-950: #{$brand-950};
 
+  // Accent RGB triple - used by translucent surfaces (rgba(var(--accent-rgb), X)).
+  // Must match $brand-500 in _variables.scss.
+  // Overridden per preset in _accents.scss and at runtime by ThemeService for custom colors.
+  --accent-rgb: 139, 92, 246;
+
   // Semantic colors
   --color-success:     #{$color-success};
   --color-success-dim: #{$color-success-dim};

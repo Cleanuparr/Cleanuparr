@@ -21,7 +21,7 @@
     left: 0;
     right: 0;
     height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(126, 87, 194, 0.3), transparent);
+    background: linear-gradient(90deg, transparent, rgba(var(--accent-rgb), 0.3), transparent);
     pointer-events: none;
   }
 
@@ -54,7 +54,7 @@
     &:hover {
       background: var(--glass-bg);
       color: var(--text-primary);
-      box-shadow: 0 0 12px rgba(126, 87, 194, 0.15);
+      box-shadow: 0 0 12px rgba(var(--accent-rgb), 0.15);
     }
 
     &:focus-visible {

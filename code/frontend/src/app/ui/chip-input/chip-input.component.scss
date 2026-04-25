@@ -48,7 +48,7 @@
   min-height: 26px;
   padding: var(--space-1) var(--space-2);
   background: var(--color-primary-subtle);
-  border: 1px solid rgba(126, 87, 194, 0.2);
+  border: 1px solid rgba(var(--accent-rgb), 0.2);
   border-radius: var(--radius-lg);
   font-size: var(--font-size-xs);
   color: var(--text-primary);
@@ -83,7 +83,7 @@
   height: 26px;
   padding: 0;
   background: var(--color-primary-subtle);
-  border: 1px solid rgba(126, 87, 194, 0.2);
+  border: 1px solid rgba(var(--accent-rgb), 0.2);
   border-radius: var(--radius-full);
   color: var(--text-primary);
   font-size: var(--font-size-sm);

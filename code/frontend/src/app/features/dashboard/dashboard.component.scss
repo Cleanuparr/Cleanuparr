@@ -30,7 +30,7 @@
     &:hover {
       background: var(--glass-bg-hover);
       transform: translateY(-2px);
-      box-shadow: 0 8px 24px rgba(126, 87, 194, 0.12);
+      box-shadow: 0 8px 24px rgba(var(--accent-rgb), 0.12);
     }
 
     // GitHub — monochrome grey/white
@@ -278,8 +278,8 @@
   }
 
   &--important {
-    background: rgba(126, 87, 194, 0.08);
-    border-color: rgba(126, 87, 194, 0.25);
+    background: rgba(var(--accent-rgb), 0.08);
+    border-color: rgba(var(--accent-rgb), 0.25);
     animation: slide-up var(--duration-normal) var(--ease-default), glow-pulse-important 3s ease-in-out infinite;
     animation-delay: 0s, var(--duration-normal);
   }
@@ -533,9 +533,9 @@
       box-shadow: 0 0 8px rgba(34, 197, 94, 0.25);
     }
     &--primary {
-      background: rgba(126, 87, 194, 0.15);
+      background: rgba(var(--accent-rgb), 0.15);
       color: var(--color-primary);
-      box-shadow: 0 0 8px rgba(126, 87, 194, 0.25);
+      box-shadow: 0 0 8px rgba(var(--accent-rgb), 0.25);
     }
     &--default {
       background: rgba(148, 163, 184, 0.15);
@@ -726,10 +726,10 @@
 
 @keyframes glow-pulse-important {
   0%, 100% {
-    box-shadow: 0 0 12px rgba(126, 87, 194, 0.1), 0 0 24px rgba(126, 87, 194, 0.05);
+    box-shadow: 0 0 12px rgba(var(--accent-rgb), 0.1), 0 0 24px rgba(var(--accent-rgb), 0.05);
   }
   50% {
-    box-shadow: 0 0 20px rgba(126, 87, 194, 0.25), 0 0 40px rgba(126, 87, 194, 0.1);
+    box-shadow: 0 0 20px rgba(var(--accent-rgb), 0.25), 0 0 40px rgba(var(--accent-rgb), 0.1);
   }
 }
 

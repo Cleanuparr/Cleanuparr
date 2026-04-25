@@ -2,6 +2,7 @@
 
 @use 'styles/tokens';
 @use 'styles/themes';
+@use 'styles/accents';
 @use 'styles/reset';
 @use 'styles/typography';
 @use 'styles/scrollbar';
@@ -17,7 +18,7 @@
   background: linear-gradient(
     90deg,
     var(--glass-bg) 0px,
-    rgba(126, 87, 194, 0.08) 30px,
+    rgba(var(--accent-rgb), 0.08) 30px,
     rgba(59, 130, 246, 0.06) 50px,
     var(--glass-bg-hover) 70px,
     var(--glass-bg) 100px

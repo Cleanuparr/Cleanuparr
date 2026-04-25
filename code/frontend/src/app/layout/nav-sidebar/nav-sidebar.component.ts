@@ -1,6 +1,7 @@
 import { Component, ChangeDetectionStrategy, input, output, signal, inject, computed } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { NgIcon } from '@ng-icons/core';
+import { LogoComponent } from '@ui';
 import { AppHubService } from '@core/realtime/app-hub.service';
 import { AuthService } from '@core/auth/auth.service';
 
@@ -20,7 +21,7 @@ interface ExternalLink {
 @Component({
   selector: 'app-nav-sidebar',
   standalone: true,
-  imports: [RouterLink, RouterLinkActive, NgIcon],
+  imports: [RouterLink, RouterLinkActive, NgIcon, LogoComponent],
   templateUrl: './nav-sidebar.component.html',
   styleUrl: './nav-sidebar.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -74,6 +75,7 @@ export class NavSidebarComponent {
   otherSettingsItems: NavItem[] = [
     { label: 'Notifications', icon: 'tablerBellRinging', route: '/settings/notifications' },
     { label: 'Account', icon: 'tablerUser', route: '/settings/account' },
+    { label: 'Appearance', icon: 'tablerPalette', route: '/settings/appearance' },
   ];
 
   onNavItemClick(): void {

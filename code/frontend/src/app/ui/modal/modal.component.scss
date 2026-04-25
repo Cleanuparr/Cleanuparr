@@ -28,7 +28,7 @@
     position: absolute;
     inset: -1px;
     border-radius: inherit;
-    background: linear-gradient(135deg, rgba(126, 87, 194, 0.3), transparent 50%, rgba(59, 130, 246, 0.2));
+    background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.3), transparent 50%, rgba(59, 130, 246, 0.2));
     z-index: -1;
     mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
     mask-composite: exclude;
