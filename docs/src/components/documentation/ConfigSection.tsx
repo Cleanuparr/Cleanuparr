@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
+import { IconLink, IconCheck } from '@tabler/icons-react';
 import styles from './documentation.module.css';
 import { generateIdFromTitle } from './utils';
 import { useIdPrefix } from './IdPrefixContext';
+import { renderIcon } from './iconMap';
 
 interface ConfigSectionProps {
   id?: string;
@@ -48,7 +50,7 @@ export default function ConfigSection({
     >
       <div className={styles.configHeader}>
         <h3 className={styles.configTitle}>
-          {icon && <span className={styles.configIcon}>{icon}</span>}
+          {icon && <span className={styles.configIcon}>{renderIcon(icon)}</span>}
           {title}
         </h3>
         <div className={styles.configHeaderActions}>
@@ -63,7 +65,7 @@ export default function ConfigSection({
             title="Copy link to this section"
             aria-label="Copy link to this section"
           >
-            {copied ? '✓' : '🔗'}
+            {copied ? <IconCheck size={14} stroke={2} /> : <IconLink size={14} stroke={1.5} />}
           </button>
         </div>
       </div>

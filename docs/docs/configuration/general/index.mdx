@@ -21,11 +21,10 @@ General configuration settings that apply to the entire Cleanuparr application.
 
 <div className={styles.section}>
 
-<SectionTitle icon="⚙️">System Settings</SectionTitle>
+<SectionTitle>System Settings</SectionTitle>
 
 <ConfigSection
   title="Display Support Banner"
-  icon="🎗️"
 >
 
 Shows the support section on the dashboard with links to GitHub and sponsors.
@@ -34,7 +33,6 @@ Shows the support section on the dashboard with links to GitHub and sponsors.
 
 <ConfigSection
   title="Dry Run"
-  icon="🧪"
 >
 
 Logs all operations without making changes. Test your configuration safely before enabling live deletions and notifications.
@@ -43,7 +41,6 @@ Logs all operations without making changes. Test your configuration safely befor
 
 <ConfigSection
   title="Status Check"
-  icon="📡"
 >
 
 Periodically checks for new Cleanuparr versions. Disable this if your environment has restricted outbound network access.
@@ -58,11 +55,10 @@ When disabled, the version check and "update available" notification in the side
 
 <div className={styles.section}>
 
-<SectionTitle icon="🔐">Authentication</SectionTitle>
+<SectionTitle>Authentication</SectionTitle>
 
 <ConfigSection
   title="Disable Auth for Local Addresses"
-  icon="🏠"
 >
 
 Bypass authentication for requests originating from local network addresses. When enabled, users on the local network can access Cleanuparr without logging in.
@@ -82,7 +78,6 @@ Only enable this if your Cleanuparr instance is not exposed to the internet. Any
 
 <ConfigSection
   title="Trust Forwarded Headers"
-  icon="🔀"
 >
 
 When running behind a reverse proxy (e.g. Nginx, Caddy, Traefik), enable this to use `X-Forwarded-For` and `X-Real-IP` headers to determine the client's real IP address instead of the proxy's address.
@@ -95,7 +90,6 @@ Only enable this if you are using a reverse proxy. Forwarded headers are only tr
 
 <ConfigSection
   title="Additional Trusted Networks"
-  icon="🌐"
 >
 
 Add custom IP addresses or CIDR ranges that should bypass authentication, in addition to the built-in local address ranges.
@@ -113,11 +107,10 @@ Add custom IP addresses or CIDR ranges that should bypass authentication, in add
 
 <div className={styles.section}>
 
-<SectionTitle icon="🌐">HTTP Configuration</SectionTitle>
+<SectionTitle>HTTP Configuration</SectionTitle>
 
 <ConfigSection
   title="HTTP Max Retries"
-  icon="🔄"
 >
 
 Number of retry attempts for failed HTTP requests to *arrs, download clients, and other services.
@@ -126,7 +119,6 @@ Number of retry attempts for failed HTTP requests to *arrs, download clients, an
 
 <ConfigSection
   title="HTTP Timeout"
-  icon="⏱️"
 >
 
 Seconds to wait before timing out HTTP requests to *arrs, download clients, and other services.
@@ -135,7 +127,6 @@ Seconds to wait before timing out HTTP requests to *arrs, download clients, and 
 
 <ConfigSection
   title="HTTP Certificate Validation"
-  icon="🔒"
 >
 
 SSL certificate validation for HTTPS connections.
@@ -151,11 +142,10 @@ SSL certificate validation for HTTPS connections.
 
 <div className={styles.section}>
 
-<SectionTitle icon="📦">Download Management</SectionTitle>
+<SectionTitle>Download Management</SectionTitle>
 
 <ConfigSection
   title="Ignored Downloads"
-  icon="🚯"
 >
 
 Downloads matching these patterns are skipped during all cleaning operations. Match by:
@@ -181,11 +171,10 @@ mytracker.com
 
 <div className={styles.section}>
 
-<SectionTitle icon="🗃️">State Management</SectionTitle>
+<SectionTitle>State Management</SectionTitle>
 
 <ConfigSection
   title="Strike Inactivity Window"
-  icon="⏳"
 >
 
 Controls how long strike data is retained using a **sliding window**. Strikes for a download are automatically cleaned up after the download goes this many hours without receiving a new strike.
@@ -209,7 +198,6 @@ Lower values clean up strikes faster, but may cause Cleanuparr to re-strike down
 
 <ConfigSection
   title="Purge All Strikes"
-  icon="🧹"
 >
 
 Immediately and permanently deletes all strike data for all downloads. This resets all strike counters to zero.
@@ -224,11 +212,10 @@ This action cannot be undone. All downloads will start with zero strikes after a
 
 <div className={styles.section}>
 
-<SectionTitle icon="📝">Logging Settings</SectionTitle>
+<SectionTitle>Logging Settings</SectionTitle>
 
 <ConfigSection
   title="Log Level"
-  icon="📊"
 >
 
 Controls log detail level. Lower levels include all higher-level messages.
@@ -237,7 +224,6 @@ Controls log detail level. Lower levels include all higher-level messages.
 
 <ConfigSection
   title="Rolling Size (MB)"
-  icon="📐"
 >
 
 Maximum log file size before creating a new file. Larger values mean fewer files but bigger individual file sizes.
@@ -246,7 +232,6 @@ Maximum log file size before creating a new file. Larger values mean fewer files
 
 <ConfigSection
   title="Retained File Count"
-  icon="🗂️"
 >
 
 Number of non-archived log files to keep. Older files are removed or archived based on your settings.
@@ -255,7 +240,6 @@ Number of non-archived log files to keep. Older files are removed or archived ba
 
 <ConfigSection
   title="Time Limit"
-  icon="⏳"
 >
 
 Maximum age for non-archived logs. Older files are removed or archived based on your settings.
@@ -264,7 +248,6 @@ Maximum age for non-archived logs. Older files are removed or archived based on 
 
 <ConfigSection
   title="Archive Enabled"
-  icon="🗄️"
 >
 
 Archive old log files instead of deleting them. Preserves history while reducing disk usage through compression.
@@ -277,7 +260,6 @@ Recommended if Cleanuparr generates many logs on your setup.
 
 <ConfigSection
   title="Archive Retained Count"
-  icon="🧾"
 >
 
 Number of archived log files to keep. Older archives are deleted.
@@ -286,7 +268,6 @@ Number of archived log files to keep. Older archives are deleted.
 
 <ConfigSection
   title="Archive Time Limit"
-  icon="🕒"
 >
 
 Maximum age for archived logs before deletion.

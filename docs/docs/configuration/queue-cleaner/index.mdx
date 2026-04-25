@@ -27,7 +27,6 @@ The Queue Cleaner monitors your *arr's queues and automatically removes download
 
 <ConfigSection
   title="Enable Queue Cleaner"
-  icon="🔄"
 >
 
 When enabled, the Queue Cleaner will run according to the configured schedule to automatically clean downloads from your download client queue.
@@ -36,7 +35,6 @@ When enabled, the Queue Cleaner will run according to the configured schedule to
 
 <ConfigSection
   title="Scheduling Mode"
-  icon="📅"
 >
 
 Choose how to configure the Queue Cleaner schedule:
@@ -47,7 +45,6 @@ Choose how to configure the Queue Cleaner schedule:
 
 <ConfigSection
   title="Cron Expression"
-  icon="⏲️"
 >
 
 Enter a valid Quartz cron expression to control when the Queue Cleaner runs.
@@ -61,7 +58,6 @@ Enter a valid Quartz cron expression to control when the Queue Cleaner runs.
 
 <ConfigSection
   title="Ignored Downloads"
-  icon="🚫"
 >
 
 Downloads matching these patterns will be ignored by Queue Cleaner. Patterns can match any of these:
@@ -85,7 +81,6 @@ mytracker.com
 
 <ConfigSection
   title="Process downloads with no content ID"
-  icon="🔍"
 >
 
 When enabled, downloads that are not linked to any content in the *arr app will be processed normally. If such a download is removed, Cleanuparr will **not** be able to trigger a search for a replacement, since the content ID is unknown.
@@ -103,11 +98,10 @@ This setting will enable the processing of items that appear in the logs with th
 <PrefixedSection prefix="failed-import">
 <div className={styles.section}>
 
-<SectionTitle icon="❌">Failed Import Settings</SectionTitle>
+<SectionTitle>Failed Import Settings</SectionTitle>
 
 <ConfigSection
   title="Max Strikes"
-  icon="⚡"
 >
 
 Number of strikes before a failed import download is removed from the queue. Set to 0 to disable failed import cleaning, minimum 3 to enable.
@@ -116,7 +110,6 @@ Number of strikes before a failed import download is removed from the queue. Set
 
 <ConfigSection
   title="Ignore Private"
-  icon="🔒"
 >
 
 When enabled, private torrents will be skipped during failed import cleaning. This is useful if you want to preserve private tracker content even when imports fail.
@@ -129,7 +122,6 @@ This setting needs a download client to be configured.
 
 <ConfigSection
   title="Delete Private"
-  icon="🗑️"
 >
 
 When enabled, private torrents that reach the maximum strikes will be deleted from the download client. Use with caution as this will permanently remove the download.
@@ -146,7 +138,6 @@ This setting needs a download client to be configured.
 
 <ConfigSection
   title="Skip If Not Found In Client"
-  icon="🔍"
 >
 
 When enabled, torrents that are not found in any enabled torrent client will skip the failed import check. This is useful when the connection between Cleanuparr and your download client is temporarily broken or when the download client is down, preventing accidental removal of private torrents when their privacy status cannot be determined.
@@ -159,7 +150,6 @@ This setting needs a download client to be configured.
 
 <ConfigSection
   title="Pattern Mode"
-  icon="🎭"
 >
 
 Choose how to handle failed imports based on their patterns:
@@ -170,7 +160,6 @@ Choose how to handle failed imports based on their patterns:
 
 <ConfigSection
   title="Patterns"
-  icon="📝"
 >
 
 **Examples:**
@@ -197,7 +186,7 @@ These patterns can be any substring of the failed import messages. These messsag
 <PrefixedSection prefix="stalled">
 <div className={styles.section}>
 
-<SectionTitle icon="⏸️">Stalled Download Rules</SectionTitle>
+<SectionTitle>Stalled Download Rules</SectionTitle>
 
 <p className={styles.sectionDescription}>
   Stalled downloads are those that have stopped downloading and show no progress. You can create multiple rules to handle different scenarios based on completion percentage and torrent privacy.
@@ -209,7 +198,6 @@ These settings need a download client to be configured.
 
 <ConfigSection
   title="Rule Name"
-  icon="📝"
 >
 
 A descriptive name for this stall rule. This helps you identify the purpose of each rule when managing multiple rules.
@@ -218,7 +206,6 @@ A descriptive name for this stall rule. This helps you identify the purpose of e
 
 <ConfigSection
   title="Enabled"
-  icon="✅"
 >
 
 Toggle to enable or disable this rule. Disabled rules won't be applied during queue cleaning.
@@ -227,7 +214,6 @@ Toggle to enable or disable this rule. Disabled rules won't be applied during qu
 
 <ConfigSection
   title="Max Strikes"
-  icon="⚡"
 >
 
 Number of consecutive times a download must be stalled before action is taken. Minimum value is 3.
@@ -236,7 +222,6 @@ Number of consecutive times a download must be stalled before action is taken. M
 
 <ConfigSection
   title="Privacy Type"
-  icon="🔒"
 >
 
 Determines which torrents this rule applies to:
@@ -248,7 +233,6 @@ Determines which torrents this rule applies to:
 
 <ConfigSection
   title="Completion Percentage Range"
-  icon="📊"
 >
 
 Define the completion percentage range where this rule applies:
@@ -261,7 +245,6 @@ This allows you to create different rules for different stages of a download. Fo
 
 <ConfigSection
   title="Reset Strikes on Progress"
-  icon="🔄"
 >
 
 When enabled, the strike count resets to zero if the download shows progress again. This prevents removal of downloads that temporarily stall but resume downloading.
@@ -270,7 +253,6 @@ When enabled, the strike count resets to zero if the download shows progress aga
 
 <ConfigSection
   title="Minimum Progress to Reset"
-  icon="📏"
 >
 
 Only reset strikes after the torrent downloads at least this amount of data. Leave blank to reset on any progress. This prevents strikes from being reset by minimal progress that doesn't actually indicate the download is healthy.
@@ -279,7 +261,6 @@ Only reset strikes after the torrent downloads at least this amount of data. Lea
 
 <ConfigSection
   title="Delete Private from Client"
-  icon="🗑️"
 >
 
 When enabled, private torrents that reach the maximum strikes will be deleted from the download client. When disabled, they'll only be removed from the *arr queue but remain in your download client.
@@ -292,7 +273,6 @@ Setting this to true means private torrents will be permanently deleted, potenti
 
 <ConfigSection
   title="Downloading Metadata Max Strikes"
-  icon="📊"
 >
 
 Number of strikes before a download stuck in "Downloading Metadata" state is removed (qBittorrent only). This is separate from the rule system and applies globally.
@@ -305,7 +285,7 @@ Number of strikes before a download stuck in "Downloading Metadata" state is rem
 <PrefixedSection prefix="slow">
 <div className={styles.section}>
 
-<SectionTitle icon="🐌">Slow Download Rules</SectionTitle>
+<SectionTitle>Slow Download Rules</SectionTitle>
 
 <p className={styles.sectionDescription}>
   Slow downloads are those downloading below a specified speed threshold. You can create multiple rules to handle different scenarios based on speed, time limits, file size, completion percentage, and torrent privacy.
@@ -317,7 +297,6 @@ These settings need a download client to be configured.
 
 <ConfigSection
   title="Rule Name"
-  icon="📝"
 >
 
 A descriptive name for this slow rule. This helps you identify the purpose of each rule when managing multiple rules.
@@ -326,7 +305,6 @@ A descriptive name for this slow rule. This helps you identify the purpose of ea
 
 <ConfigSection
   title="Enabled"
-  icon="✅"
 >
 
 Toggle to enable or disable this rule. Disabled rules won't be applied during queue cleaning.
@@ -335,7 +313,6 @@ Toggle to enable or disable this rule. Disabled rules won't be applied during qu
 
 <ConfigSection
   title="Max Strikes"
-  icon="⚡"
 >
 
 Number of consecutive times a download must be slow before action is taken. Minimum value is 3.
@@ -344,7 +321,6 @@ Number of consecutive times a download must be slow before action is taken. Mini
 
 <ConfigSection
   title="Min Speed"
-  icon="🚀"
 >
 
 Minimum download speed threshold (e.g., 100KB/s). Downloads consistently below this speed will accumulate strikes. Either minimum speed or maximum time must be specified.
@@ -353,7 +329,6 @@ Minimum download speed threshold (e.g., 100KB/s). Downloads consistently below t
 
 <ConfigSection
   title="Maximum Time (Hours)"
-  icon="⏰"
 >
 
 Maximum time allowed for downloads in hours. Set to 0 to disable time-based checking. When enabled, downloads that exceed this time limit will accumulate strikes regardless of speed. Either minimum speed or maximum time must be specified.
@@ -362,7 +337,6 @@ Maximum time allowed for downloads in hours. Set to 0 to disable time-based chec
 
 <ConfigSection
   title="Privacy Type"
-  icon="🔒"
 >
 
 Determines which torrents this rule applies to:
@@ -374,7 +348,6 @@ Determines which torrents this rule applies to:
 
 <ConfigSection
   title="Completion Percentage Range"
-  icon="📊"
 >
 
 Define the completion percentage range where this rule applies:
@@ -387,7 +360,6 @@ This allows you to create different rules for different stages of a download. Fo
 
 <ConfigSection
   title="Ignore Above Size"
-  icon="📦"
 >
 
 Downloads larger than this size will be ignored by this rule (e.g., 25 GB). Large files often download slower and may need more time to complete, so you might want to exclude them from aggressive slow download rules.
@@ -396,7 +368,6 @@ Downloads larger than this size will be ignored by this rule (e.g., 25 GB). Larg
 
 <ConfigSection
   title="Reset Strikes on Progress"
-  icon="🔄"
 >
 
 When enabled, the strike count resets to zero if the download speed improves above the minimum threshold. This prevents removal of downloads that temporarily slow down but recover.
@@ -405,7 +376,6 @@ When enabled, the strike count resets to zero if the download speed improves abo
 
 <ConfigSection
   title="Delete Private from Client"
-  icon="🗑️"
 >
 
 When enabled, private torrents that reach the maximum strikes will be deleted from the download client. When disabled, they'll only be removed from the *arr queue but remain in your download client.

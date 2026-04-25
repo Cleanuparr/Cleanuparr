@@ -21,11 +21,10 @@ Cleanuparr provides health check endpoints that are compatible with Docker healt
 
 <div className={styles.section}>
 
-<SectionTitle icon="🏥">Health Check Endpoints</SectionTitle>
+<SectionTitle>Health Check Endpoints</SectionTitle>
 
 <ConfigSection
   title="/health - Liveness Probe"
-  icon="💓"
 >
 
 **Purpose**: Basic liveness check to verify the application is running  
@@ -41,7 +40,6 @@ curl http://localhost:11011/health
 
 <ConfigSection
   title="/health/ready - Readiness Probe"
-  icon="✅"
 >
 
 **Purpose**: Verify the application is ready to serve traffic  
@@ -57,7 +55,6 @@ curl http://localhost:11011/health/ready
 
 <ConfigSection
   title="/health/detailed - Detailed Status"
-  icon="📊"
 >
 
 **Purpose**: Health status for monitoring and debugging  
@@ -75,11 +72,10 @@ curl http://localhost:11011/health/detailed
 
 <div className={styles.section}>
 
-<SectionTitle icon="🔍">Health Check Components</SectionTitle>
+<SectionTitle>Health Check Components</SectionTitle>
 
 <ConfigSection
   title="Application Health"
-  icon="🚀"
 >
 
 - Verifies the application is running and responsive
@@ -90,7 +86,6 @@ curl http://localhost:11011/health/detailed
 
 <ConfigSection
   title="Database Health"
-  icon="🗄️"
 >
 
 - Tests database connectivity
@@ -102,7 +97,6 @@ curl http://localhost:11011/health/detailed
 
 <ConfigSection
   title="File System Health"
-  icon="📁"
 >
 
 - Verifies access to configuration directories
@@ -117,7 +111,6 @@ File write tests are not performed during health checks to avoid creating tempor
 
 <ConfigSection
   title="Download Client Health"
-  icon="⬇️"
 >
 
 - Integrates with existing download client monitoring
@@ -131,11 +124,10 @@ File write tests are not performed during health checks to avoid creating tempor
 
 <div className={styles.section}>
 
-<SectionTitle icon="🐳">Environment Variables</SectionTitle>
+<SectionTitle icon="brand-docker">Environment Variables</SectionTitle>
 
 <ConfigSection
   title="Environment Variables"
-  icon="🌍"
 >
 
 Health check endpoints are affected by these environment variables:
@@ -154,11 +146,10 @@ If you set `BASE_PATH=/cleanuparr`, health checks will be available at:
 
 <div className={styles.section}>
 
-<SectionTitle icon="🔧">Troubleshooting</SectionTitle>
+<SectionTitle>Troubleshooting</SectionTitle>
 
 <ConfigSection
   title="Common Issues"
-  icon="⚠️"
 >
 
 **Health check timeout**  
