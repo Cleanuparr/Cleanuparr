@@ -43,11 +43,10 @@ export class NumberInputComponent {
       let clamped = current;
       const minVal = this.min();
       const maxVal = this.max();
-      if (minVal != null) clamped = Math.max(clamped, minVal);
-      if (maxVal != null) clamped = Math.min(clamped, maxVal);
+      if (minVal != null) { clamped = Math.max(clamped, minVal); }
+      if (maxVal != null) { clamped = Math.min(clamped, maxVal); }
       if (clamped !== current) {
         this.value.set(clamped);
-        (event.target as HTMLInputElement).value = String(clamped);
       }
     }
     this.blurred.emit(event);
