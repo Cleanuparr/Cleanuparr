@@ -20,6 +20,7 @@ const ACCENT_KEY = 'cleanuparr-accent';
 const CUSTOM_ACCENT_KEY = 'cleanuparr-custom-accent';
 
 const DEFAULT_CUSTOM_ACCENT = '#8b5cf6';
+const HEX_COLOR_REGEX = /^#[0-9a-f]{6}$/i;
 const BRAND_SHADES = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950] as const;
 
 // Lightness stops per shade, tuned to match the visual weight of the default purple scale.
@@ -96,9 +97,15 @@ export class ThemeService {
   }
 
   setCustomAccent(hex: string): void {
-    this._customAccent.set(hex);
-    localStorage.setItem(CUSTOM_ACCENT_KEY, hex);
-    if (this._accent() !== 'custom') {
+    const normalized = hex.trim().toLowerCase();
+    if (!HEX_COLOR_REGEX.test(normalized))
+    {
+      return;
+    }
+    this._customAccent.set(normalized);
+    localStorage.setItem(CUSTOM_ACCENT_KEY, normalized);
+    if (this._accent() !== 'custom')
+    {
       this.setAccent('custom');
     }
   }
@@ -126,7 +133,8 @@ export class ThemeService {
     }
 
     const savedCustom = localStorage.getItem(CUSTOM_ACCENT_KEY);
-    if (savedCustom && /^#[0-9a-f]{6}$/i.test(savedCustom)) {
+    if (savedCustom && HEX_COLOR_REGEX.test(savedCustom))
+    {
       this._customAccent.set(savedCustom);
     }
   }
