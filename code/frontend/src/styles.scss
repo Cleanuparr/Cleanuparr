@@ -19,7 +19,7 @@
     90deg,
     var(--glass-bg) 0px,
     rgba(var(--accent-rgb), 0.08) 30px,
-    rgba(59, 130, 246, 0.06) 50px,
+    rgba(var(--accent-rgb), 0.06) 50px,
     var(--glass-bg-hover) 70px,
     var(--glass-bg) 100px
   );
