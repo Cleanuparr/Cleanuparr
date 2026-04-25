@@ -40,6 +40,7 @@ const LIGHTNESS_STOPS: Record<(typeof BRAND_SHADES)[number], number> = {
 
 @Injectable({ providedIn: 'root' })
 export class ThemeService {
+  private readonly root = document.documentElement;
   private readonly _theme = signal<Theme>('dark');
   private readonly _performanceMode = signal(false);
   private readonly _fullWidth = signal(false);
@@ -147,27 +148,28 @@ export class ThemeService {
   }
 
   private bindToDom(): void {
-    const root = document.documentElement;
-
     effect(() => {
-      root.setAttribute('data-theme', this._theme());
+      this.root.setAttribute('data-theme', this._theme());
     });
 
     effect(() => {
-      root.setAttribute('data-performance-mode', String(this._performanceMode()));
+      this.root.setAttribute('data-performance-mode', String(this._performanceMode()));
     });
 
     effect(() => {
-      root.setAttribute('data-full-width', String(this._fullWidth()));
+      this.root.setAttribute('data-full-width', String(this._fullWidth()));
     });
 
     effect(() => {
       const accent = this._accent();
-      root.setAttribute('data-accent', accent);
+      this.root.setAttribute('data-accent', accent);
 
-      if (accent === 'custom') {
+      if (accent === 'custom')
+      {
         this.applyCustomAccent(this._customAccent());
-      } else {
+      }
+      else
+      {
         this.clearInlineAccent();
       }
     });
@@ -178,7 +180,6 @@ export class ThemeService {
   }
 
   private applyCustomAccent(hex: string): void {
-    const root = document.documentElement;
     const rgb = hexToRgb(hex);
     if (!rgb)
     {
@@ -194,18 +195,18 @@ export class ThemeService {
     {
       const l = shade === 500 ? hsl.l : LIGHTNESS_STOPS[shade];
       const { r, g, b } = hslToRgb(hsl.h, s, l);
-      root.style.setProperty(`--brand-${shade}`, rgbToHex(r, g, b));
+      this.root.style.setProperty(`--brand-${shade}`, rgbToHex(r, g, b));
     }
 
-    root.style.setProperty('--accent-rgb', `${rgb.r}, ${rgb.g}, ${rgb.b}`);
+    this.root.style.setProperty('--accent-rgb', `${rgb.r}, ${rgb.g}, ${rgb.b}`);
   }
 
   private clearInlineAccent(): void {
-    const root = document.documentElement;
-    for (const shade of BRAND_SHADES) {
-      root.style.removeProperty(`--brand-${shade}`);
+    for (const shade of BRAND_SHADES)
+    {
+      this.root.style.removeProperty(`--brand-${shade}`);
     }
-    root.style.removeProperty('--accent-rgb');
+    this.root.style.removeProperty('--accent-rgb');
   }
 }
 
