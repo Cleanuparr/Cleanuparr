@@ -7,8 +7,10 @@
 // Dark theme (default)
 :root,
 [data-theme='dark'] {
-  // Surfaces
+  // Surfaces with fallbacks for browsers that can't parse color-mix()
+  --surface-ground:   #0c0614;
   --surface-ground:   color-mix(in srgb, var(--brand-500) 8%, #000000);
+  --surface-section:  #14091e;
   --surface-section:  color-mix(in srgb, var(--brand-500) 14%, #000000);
   --surface-card:     rgba(20, 11, 34, 0.75);
   --surface-overlay:  rgba(12, 6, 20, 0.92);
@@ -36,7 +38,7 @@
   --color-primary-text:   #ffffff;
   --color-primary-subtle: rgba(var(--accent-rgb), 0.15);
 
-  // Sidebar (stays dark; retints via --brand-950 so accent swaps carry through)
+  // Sidebar
   --sidebar-bg:          linear-gradient(180deg, var(--brand-950) 0%, var(--surface-ground) 100%);
   --sidebar-border:      rgba(255, 255, 255, 0.06);
   --sidebar-item-text:   rgba(255, 255, 255, 0.65);
@@ -83,6 +85,7 @@
   --logo-accent: var(--color-primary);
 
   // Sidebar fade gradient (bottom of nav scroll area)
+  --sidebar-fade: rgba(12, 6, 20, 0.90);
   --sidebar-fade: color-mix(in srgb, var(--surface-ground) 90%, transparent);
 
   // Ambient orbs
@@ -95,8 +98,10 @@
 
 // Light theme
 [data-theme='light'] {
-  // Surfaces
+  // Surfaces with fallbacks for browsers that can't parse color-mix()
+  --surface-ground:   #faf7fd;
   --surface-ground:   color-mix(in srgb, var(--brand-500) 3%, #ffffff);
+  --surface-section:  #f3edf9;
   --surface-section:  color-mix(in srgb, var(--brand-500) 6%, #ffffff);
   --surface-card:     rgba(255, 255, 255, 0.70);
   --surface-overlay:  rgba(245, 240, 250, 0.94);
@@ -171,6 +176,7 @@
   --logo-accent: var(--color-primary);
 
   // Sidebar fade gradient (bottom of nav scroll area)
+  --sidebar-fade: rgba(237, 233, 254, 0.90);
   --sidebar-fade: color-mix(in srgb, var(--brand-100) 90%, transparent);
 
   // Ambient orbs (stronger for light backgrounds; retint with accent)
