@@ -180,13 +180,20 @@ export class ThemeService {
   private applyCustomAccent(hex: string): void {
     const root = document.documentElement;
     const rgb = hexToRgb(hex);
-    if (!rgb) return;
+    if (!rgb)
+    {
+      return;
+    }
 
     const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
+    // Keep some chroma even when the user picks a near-gray, otherwise the whole
+    // brand scale collapses to shades of gray and active states become invisible.
+    const s = Math.max(hsl.s, 15);
 
-    for (const shade of BRAND_SHADES) {
+    for (const shade of BRAND_SHADES)
+    {
       const l = shade === 500 ? hsl.l : LIGHTNESS_STOPS[shade];
-      const { r, g, b } = hslToRgb(hsl.h, hsl.s, l);
+      const { r, g, b } = hslToRgb(hsl.h, s, l);
       root.style.setProperty(`--brand-${shade}`, rgbToHex(r, g, b));
     }
 
