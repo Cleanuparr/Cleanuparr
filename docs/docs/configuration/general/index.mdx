@@ -88,7 +88,7 @@ Only enable this if your Cleanuparr instance is not exposed to the internet. Any
 When running behind a reverse proxy (e.g. Nginx, Caddy, Traefik), enable this to use `X-Forwarded-For` and `X-Real-IP` headers to determine the client's real IP address instead of the proxy's address.
 
 <Warning>
-Only enable this if you are using a reverse proxy. Forwarded headers are only trusted when the direct connection comes from a local address, preventing spoofing from remote attackers.
+Only enable this if you are using a reverse proxy that you control. Enabling this without a proxy in front, or with a proxy that doesn't overwrite/append `X-Forwarded-For`, allows remote clients to spoof their IP and bypass authentication when *Disable Auth for Local Addresses* is also enabled.
 </Warning>
 
 </ConfigSection>
