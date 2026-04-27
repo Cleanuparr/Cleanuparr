@@ -80,7 +80,10 @@ public static class ApiDI
         // Block non-auth requests until setup is complete
         app.UseMiddleware<SetupGuardMiddleware>();
 
-        app.UseCors("Any");
+        if (app.Environment.IsDevelopment())
+        {
+            app.UseCors("DevSpa");
+        }
         app.UseRouting();
 
         app.UseAuthentication();
