@@ -74,6 +74,9 @@ public static class ApiDI
         // Add the global exception handling middleware first
         app.UseMiddleware<ExceptionMiddleware>();
 
+        // Resolve the real client IP / scheme / host from X-Forwarded-* headers
+        app.UseMiddleware<TrustedForwardedHeadersMiddleware>();
+
         // Block non-auth requests until setup is complete
         app.UseMiddleware<SetupGuardMiddleware>();
 

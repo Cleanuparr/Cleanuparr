@@ -1,5 +1,3 @@
-using Cleanuparr.Infrastructure.Extensions;
-
 namespace Cleanuparr.Api.Extensions;
 
 public static class HttpRequestExtensions
@@ -19,26 +17,13 @@ public static class HttpRequestExtensions
     }
 
     /// <summary>
-    /// Returns the external base URL (scheme + host + basePath), respecting
-    /// X-Forwarded-Proto and X-Forwarded-Host headers when the connection
-    /// originates from a local address.
+    /// Returns the external base URL (scheme + host + basePath).
+    /// TrustedForwardedHeadersMiddleware has already applied X-Forwarded-Proto and X-Forwarded-Host to <see cref="HttpRequest.Scheme"/> / <see cref="HttpRequest.Host"/>.
     /// </summary>
     public static string GetExternalBaseUrl(this HttpContext context)
     {
         var request = context.Request;
-        var scheme = request.Scheme;
-        var host = request.Host.ToString();
-        var remoteIp = context.Connection.RemoteIpAddress;
-
-        // Trust forwarded headers only from local connections
-        // (consistent with TrustedNetworkAuthenticationHandler)
-        if (remoteIp is not null && remoteIp.IsLocalAddress())
-        {
-            scheme = request.Headers["X-Forwarded-Proto"].FirstOrDefault() ?? scheme;
-            host = request.Headers["X-Forwarded-Host"].FirstOrDefault() ?? host;
-        }
-
         var basePath = request.GetSafeBasePath();
-        return $"{scheme}://{host}{basePath}";
+        return $"{request.Scheme}://{request.Host}{basePath}";
     }
 }

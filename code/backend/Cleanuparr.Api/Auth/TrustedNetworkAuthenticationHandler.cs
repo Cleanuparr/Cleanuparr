@@ -16,19 +16,22 @@ public static class TrustedNetworkAuthenticationDefaults
 
 public class TrustedNetworkAuthenticationHandler : AuthenticationHandler<AuthenticationSchemeOptions>
 {
+    private readonly DataContext _dataContext;
+    
     public TrustedNetworkAuthenticationHandler(
         IOptionsMonitor<AuthenticationSchemeOptions> options,
         ILoggerFactory logger,
-        UrlEncoder encoder)
+        UrlEncoder encoder,
+        DataContext dataContext)
         : base(options, logger, encoder)
     {
+        _dataContext = dataContext;
     }
 
     protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
     {
         // Load auth config from database
-        await using var dataContext = DataContext.CreateStaticInstance();
-        var config = await dataContext.GeneralConfigs.AsNoTracking().FirstOrDefaultAsync();
+        var config = await _dataContext.GeneralConfigs.AsNoTracking().FirstOrDefaultAsync();
 
         if (config is null || !config.Auth.DisableAuthForLocalAddresses)
         {
@@ -36,7 +39,7 @@ public class TrustedNetworkAuthenticationHandler : AuthenticationHandler<Authent
         }
 
         // Determine client IP
-        var clientIp = GetClientIp(config.Auth.TrustForwardedHeaders);
+        var clientIp = ResolveClientIp(Context);
         if (clientIp is null)
         {
             return AuthenticateResult.NoResult();
@@ -73,42 +76,8 @@ public class TrustedNetworkAuthenticationHandler : AuthenticationHandler<Authent
         return AuthenticateResult.Success(ticket);
     }
 
-    private IPAddress? GetClientIp(bool trustForwardedHeaders) =>
-        ResolveClientIp(Context, trustForwardedHeaders);
-
-    public static IPAddress? ResolveClientIp(HttpContext httpContext, bool trustForwardedHeaders)
-    {
-        var remoteIp = httpContext.Connection.RemoteIpAddress;
-        if (remoteIp is null)
-        {
-            return null;
-        }
-
-        // Only trust forwarded headers if the direct connection is from a local address
-        if (trustForwardedHeaders && remoteIp.IsLocalAddress())
-        {
-            // Check X-Forwarded-For first, then X-Real-IP
-            var forwardedFor = httpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault();
-            if (!string.IsNullOrEmpty(forwardedFor))
-            {
-                // X-Forwarded-For can contain multiple IPs: client, proxy1, proxy2
-                // The first one is the original client
-                var firstIp = forwardedFor.Split(',')[0].Trim();
-                if (IPAddress.TryParse(firstIp, out var parsedIp))
-                {
-                    return parsedIp;
-                }
-            }
-
-            var realIp = httpContext.Request.Headers["X-Real-IP"].FirstOrDefault();
-            if (!string.IsNullOrEmpty(realIp) && IPAddress.TryParse(realIp, out var realParsedIp))
-            {
-                return realParsedIp;
-            }
-        }
-
-        return remoteIp;
-    }
+    public static IPAddress? ResolveClientIp(HttpContext httpContext) =>
+        httpContext.Connection.RemoteIpAddress;
 
     public static bool IsTrustedAddress(IPAddress clientIp, List<string> trustedNetworks)
     {

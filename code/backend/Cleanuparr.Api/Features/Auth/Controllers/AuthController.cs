@@ -57,8 +57,7 @@ public sealed class AuthController : ControllerBase
         var generalConfig = await _dataContext.GeneralConfigs.AsNoTracking().FirstOrDefaultAsync();
         if (generalConfig is { Auth.DisableAuthForLocalAddresses: true })
         {
-            var clientIp = TrustedNetworkAuthenticationHandler.ResolveClientIp(
-                HttpContext, generalConfig.Auth.TrustForwardedHeaders);
+            var clientIp = TrustedNetworkAuthenticationHandler.ResolveClientIp(HttpContext);
             if (clientIp is not null)
             {
                 authBypass = TrustedNetworkAuthenticationHandler.IsTrustedAddress(
