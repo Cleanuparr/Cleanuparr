@@ -13,7 +13,7 @@ test.describe.serial('OIDC Save without Link Warning', () => {
   test.beforeAll(async () => {
     adminToken = await loginAndGetToken();
     // Ensure OIDC is enabled (idempotent — no-op if already enabled).
-    await fetch(`${API}/api/account/oidc`, {
+    const oidcConfigResponse = await fetch(`${API}/api/account/oidc`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -30,11 +30,24 @@ test.describe.serial('OIDC Save without Link Warning', () => {
         exclusiveMode: false,
       }),
     });
+    if (!oidcConfigResponse.ok) {
+      const body = await oidcConfigResponse.text().catch(() => '<failed to read response body>');
+      throw new Error(
+        `Failed to configure OIDC in beforeAll (PUT /api/account/oidc): status=${oidcConfigResponse.status} ${oidcConfigResponse.statusText}, body=${body}`,
+      );
+    }
+
     // Clear any linked subject so the dangerous-state save warning is reachable.
-    await fetch(`${API}/api/account/oidc/link`, {
+    const clearLinkResponse = await fetch(`${API}/api/account/oidc/link`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${adminToken}` },
     });
+    if (!clearLinkResponse.ok) {
+      const body = await clearLinkResponse.text().catch(() => '<failed to read response body>');
+      throw new Error(
+        `Failed to clear linked OIDC subject in beforeAll (DELETE /api/account/oidc/link): status=${clearLinkResponse.status} ${clearLinkResponse.statusText}, body=${body}`,
+      );
+    }
   });
 
   async function loginUI(page: Page) {
@@ -71,7 +84,7 @@ test.describe.serial('OIDC Save without Link Warning', () => {
 
     await page.getByRole('button', { name: 'Save OIDC Settings' }).click();
 
-    const dialog = page.getByRole('alertdialog');
+    const dialog = page.getByRole('alertdialog', { name: 'Enable OIDC without a linked account' });
     await expect(dialog).toBeVisible({ timeout: 5_000 });
     await expect(dialog).toContainText('Enable OIDC without a linked account');
     await expect(dialog).toContainText('UNSAFE');
@@ -96,13 +109,11 @@ test.describe.serial('OIDC Save without Link Warning', () => {
     await openOidcSettings(page);
 
     await page.getByRole('button', { name: 'Save OIDC Settings' }).click();
-    const dialog = page.getByRole('alertdialog');
+    const dialog = page.getByRole('alertdialog', { name: 'Enable OIDC without a linked account' });
     await expect(dialog).toBeVisible({ timeout: 5_000 });
     await dialog.getByRole('button', { name: 'Cancel' }).click();
     await expect(dialog).not.toBeVisible({ timeout: 5_000 });
 
-    // Allow any pending request to flush.
-    await page.waitForTimeout(500);
     expect(putRequested).toBe(false);
 
     // No success toast either.
@@ -114,7 +125,7 @@ test.describe.serial('OIDC Save without Link Warning', () => {
     await openOidcSettings(page);
 
     await page.getByRole('button', { name: 'Save OIDC Settings' }).click();
-    const dialog = page.getByRole('alertdialog');
+    const dialog = page.getByRole('alertdialog', { name: 'Enable OIDC without a linked account' });
     await expect(dialog).toBeVisible({ timeout: 5_000 });
     await dialog.getByRole('button', { name: 'Enable anyway' }).click();
     await expect(dialog).not.toBeVisible({ timeout: 5_000 });
@@ -134,7 +145,7 @@ test.describe.serial('OIDC Save without Link Warning', () => {
     await page.getByRole('button', { name: 'Save OIDC Settings' }).click();
 
     // No dialog should appear.
-    await expect(page.getByRole('alertdialog')).not.toBeVisible({ timeout: 1_000 });
+    await expect(page.getByRole('alertdialog', { name: 'Enable OIDC without a linked account' })).not.toBeVisible({ timeout: 1_000 });
 
     // Save toast should appear (no confirmation needed).
     await expect(page.getByText('OIDC settings saved')).toBeVisible({
@@ -188,7 +199,7 @@ test.describe.serial('OIDC Save without Link Warning', () => {
 
     // Now save — no dialog should appear.
     await page.getByRole('button', { name: 'Save OIDC Settings' }).click();
-    await expect(page.getByRole('alertdialog')).not.toBeVisible({ timeout: 1_000 });
+    await expect(page.getByRole('alertdialog', { name: 'Enable OIDC without a linked account' })).not.toBeVisible({ timeout: 1_000 });
     await expect(page.getByText('OIDC settings saved')).toBeVisible({
       timeout: 5_000,
     });
