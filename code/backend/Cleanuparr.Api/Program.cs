@@ -80,19 +80,21 @@ builder.Services
     .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(ConfigurationPathProvider.GetConfigPath(), "DataProtection-Keys")))
     .SetApplicationName("Cleanuparr");
 
-// Add CORS before SignalR
-builder.Services.AddCors(options =>
+// CORS is needed only for development
+if (builder.Environment.IsDevelopment())
 {
-    options.AddPolicy("Any", policy =>
+    builder.Services.AddCors(options =>
     {
-        policy
-            // https://github.com/dotnet/aspnetcore/issues/4457#issuecomment-465669576
-            .SetIsOriginAllowed(_ => true)
-            .AllowAnyHeader()
-            .AllowAnyMethod()
-            .AllowCredentials(); // Required for SignalR auth
+        options.AddPolicy("DevSpa", policy =>
+        {
+            policy
+                .WithOrigins("http://localhost:4200", "http://127.0.0.1:4200")
+                .AllowAnyHeader()
+                .AllowAnyMethod()
+                .AllowCredentials();
+        });
     });
-});
+}
 
 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
 {
