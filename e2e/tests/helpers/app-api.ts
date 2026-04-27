@@ -304,6 +304,57 @@ export async function deleteDownloadClient(accessToken: string, clientId: string
   });
 }
 
+// --- General config / auth-bypass helpers ---
+
+export async function getGeneralConfig(accessToken: string): Promise<Record<string, unknown>> {
+  const res = await fetch(`${API}/api/configuration/general`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to GET general config: ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function updateGeneralConfig(
+  accessToken: string,
+  config: Record<string, unknown>,
+): Promise<void> {
+  const res = await fetch(`${API}/api/configuration/general`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify(config),
+  });
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`Failed to PUT general config: ${res.status} ${body}`);
+  }
+}
+
+interface AuthBypassOptions {
+  disableAuthForLocalAddresses: boolean;
+  trustForwardedHeaders: boolean;
+  trustedNetworks: string[];
+}
+
+export async function setAuthBypass(
+  accessToken: string,
+  opts: AuthBypassOptions,
+): Promise<void> {
+  const current = await getGeneralConfig(accessToken);
+  await updateGeneralConfig(accessToken, {
+    ...current,
+    auth: {
+      disableAuthForLocalAddresses: opts.disableAuthForLocalAddresses,
+      trustForwardedHeaders: opts.trustForwardedHeaders,
+      trustedNetworks: opts.trustedNetworks,
+    },
+  });
+}
+
 export async function configureOidc(accessToken: string): Promise<void> {
   const putRes = await fetch(`${API}/api/account/oidc`, {
     method: 'PUT',
