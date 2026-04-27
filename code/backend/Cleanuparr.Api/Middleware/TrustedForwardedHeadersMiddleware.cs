@@ -66,8 +66,9 @@ public class TrustedForwardedHeadersMiddleware
             return;
         }
 
-        // Walk right-to-left: each iteration consumes the rightmost remaining XFF entry and treats it as the new peer. 
-        // Stop on the first entry that did not come from a trusted hop.
+        // Walk right-to-left, staging the resolved IP locally
+        // A malformed entry mid-chain leaves the original peer in place rather than landing on a partial mutation
+        var resolvedRemoteIp = peer;
         var consumedAtLeastOne = false;
         for (var i = entries.Length - 1; i >= 0; i--)
         {
@@ -77,7 +78,7 @@ public class TrustedForwardedHeadersMiddleware
                 return;
             }
 
-            context.Connection.RemoteIpAddress = entryIp;
+            resolvedRemoteIp = entryIp;
             consumedAtLeastOne = true;
 
             if (!IsTrustedHop(entryIp, trustedNetworks))
@@ -91,16 +92,28 @@ public class TrustedForwardedHeadersMiddleware
             return;
         }
 
+        context.Connection.RemoteIpAddress = resolvedRemoteIp;
+
+        // X-Forwarded-Proto / X-Forwarded-Host are also comma-separated lists in multi-hop chains
         var forwardedProto = context.Request.Headers["X-Forwarded-Proto"].FirstOrDefault();
         if (!string.IsNullOrEmpty(forwardedProto))
         {
-            context.Request.Scheme = forwardedProto;
+            var scheme = forwardedProto.Split(',')[0].Trim();
+            if (scheme.Equals("https", StringComparison.OrdinalIgnoreCase) ||
+                scheme.Equals("http", StringComparison.OrdinalIgnoreCase))
+            {
+                context.Request.Scheme = scheme;
+            }
         }
 
         var forwardedHost = context.Request.Headers["X-Forwarded-Host"].FirstOrDefault();
         if (!string.IsNullOrEmpty(forwardedHost))
         {
-            context.Request.Host = new HostString(forwardedHost);
+            var host = forwardedHost.Split(',')[0].Trim();
+            if (!string.IsNullOrEmpty(host))
+            {
+                context.Request.Host = new HostString(host);
+            }
         }
     }
 

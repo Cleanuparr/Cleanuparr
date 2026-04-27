@@ -159,4 +159,68 @@ public class TrustedForwardedHeadersMiddlewareTests
 
         ctx.Connection.RemoteIpAddress.ShouldBe(IPAddress.Parse("203.0.113.45"));
     }
+
+    [Fact]
+    public void Forwarded_proto_with_multiple_values_uses_only_first_token()
+    {
+        // Chained proxies that append (rather than overwrite) X-Forwarded-Proto
+        // produce comma-separated values like "https, http". Only the leftmost
+        // hop's value should be applied — matching how XFF is handled.
+        var ctx = NewContext(IPAddress.Loopback, c =>
+        {
+            c.Request.Headers["X-Forwarded-For"] = "203.0.113.45";
+            c.Request.Headers["X-Forwarded-Proto"] = "https, http";
+        });
+
+        TrustedForwardedHeadersMiddleware.ApplyForwardedHeaders(ctx, new List<string>());
+
+        ctx.Request.Scheme.ShouldBe("https");
+    }
+
+    [Fact]
+    public void Forwarded_proto_with_unknown_scheme_is_ignored()
+    {
+        // Anything outside the http/https allowlist is dropped to keep
+        // arbitrary values (e.g. "javascript:") from flowing into URLs.
+        var ctx = NewContext(IPAddress.Loopback, c =>
+        {
+            c.Request.Headers["X-Forwarded-For"] = "203.0.113.45";
+            c.Request.Headers["X-Forwarded-Proto"] = "javascript:";
+        });
+
+        TrustedForwardedHeadersMiddleware.ApplyForwardedHeaders(ctx, new List<string>());
+
+        ctx.Request.Scheme.ShouldBe("http");
+    }
+
+    [Fact]
+    public void Forwarded_host_with_multiple_values_uses_only_first_token()
+    {
+        // Same multi-hop concern as X-Forwarded-Proto — the host string must
+        // not end up as "a.example, b.example".
+        var ctx = NewContext(IPAddress.Loopback, c =>
+        {
+            c.Request.Headers["X-Forwarded-For"] = "203.0.113.45";
+            c.Request.Headers["X-Forwarded-Host"] = "cleanuparr.example.com, attacker.example.com";
+        });
+
+        TrustedForwardedHeadersMiddleware.ApplyForwardedHeaders(ctx, new List<string>());
+
+        ctx.Request.Host.Value.ShouldBe("cleanuparr.example.com");
+    }
+
+    [Fact]
+    public void Malformed_entry_mid_chain_does_not_partially_mutate_remote_ip()
+    {
+        // Walk right-to-left: 10.0.0.5 (trusted) is popped first, then
+        // "not-an-ip" fails. The pre-fix middleware committed mutation eagerly,
+        // leaving RemoteIpAddress = 10.0.0.5. Fix: validate-then-commit, so the
+        // original peer is preserved when any chain entry is malformed.
+        var ctx = NewContext(IPAddress.Loopback, c =>
+            c.Request.Headers["X-Forwarded-For"] = "not-an-ip, 10.0.0.5");
+
+        TrustedForwardedHeadersMiddleware.ApplyForwardedHeaders(ctx, new List<string>());
+
+        ctx.Connection.RemoteIpAddress.ShouldBe(IPAddress.Loopback);
+    }
 }

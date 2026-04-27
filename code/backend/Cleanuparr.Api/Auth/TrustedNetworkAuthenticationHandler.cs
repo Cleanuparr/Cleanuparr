@@ -76,8 +76,13 @@ public class TrustedNetworkAuthenticationHandler : AuthenticationHandler<Authent
         return AuthenticateResult.Success(ticket);
     }
 
-    public static IPAddress? ResolveClientIp(HttpContext httpContext) =>
-        httpContext.Connection.RemoteIpAddress;
+    /// <summary>
+    /// Returns the connection's remote IP address. Callers must run <see cref="Cleanuparr.Api.Middleware.TrustedForwardedHeadersMiddleware"/>
+    /// earlier in the pipeline so that <c>X-Forwarded-*</c> headers from trusted proxy chains have already been resolved into <c>Connection.RemoteIpAddress</c>.
+    /// </summary>
+    /// <param name="httpContext">The current HTTP context.</param>
+    /// <returns>The resolved client IP, or <c>null</c> when unavailable.</returns>
+    public static IPAddress? ResolveClientIp(HttpContext httpContext) => httpContext.Connection.RemoteIpAddress;
 
     public static bool IsTrustedAddress(IPAddress clientIp, List<string> trustedNetworks)
     {
