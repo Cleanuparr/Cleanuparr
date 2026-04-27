@@ -13,8 +13,7 @@ test.describe.serial('GHSA-rwpc-36mg-fpvf regression', () => {
     expect(res.status()).toBe(200);
 
     const acao = res.headers()['access-control-allow-origin'];
-    expect(acao).not.toBe(ATTACKER_ORIGIN);
-    expect(acao).not.toBe('*');
+    expect(acao).toBeUndefined();
   });
 
   test('does not reflect on CORS preflight either', async ({ request }) => {
@@ -27,7 +26,6 @@ test.describe.serial('GHSA-rwpc-36mg-fpvf regression', () => {
     });
 
     const acao = res.headers()['access-control-allow-origin'];
-    expect(acao).not.toBe(ATTACKER_ORIGIN);
-    expect(acao).not.toBe('*');
+    expect(acao).toBeUndefined();
   });
 });
