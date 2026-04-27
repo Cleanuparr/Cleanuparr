@@ -413,7 +413,25 @@ export class AccountSettingsComponent implements OnInit, OnDestroy {
   }
 
   // OIDC
-  saveOidcConfig(): void {
+  async saveOidcConfig(): Promise<void> {
+    if (this.oidcEnabled() && !this.oidcAuthorizedSubject()) {
+      const confirmed = await this.confirmService.confirm({
+        title: 'Enable OIDC without a linked account',
+        message:
+          'No OIDC account is linked. Anyone who can authenticate with your identity provider ' +
+          'and has access to this application will be able to sign in as the administrator. ' +
+          'This is intended for self-hosted providers (Authentik, Keycloak, Authelia) where ' +
+          'you control every account. It is UNSAFE with public providers such as Google, ' +
+          'Microsoft personal accounts, or Auth0 tenants with open registration. ' +
+          'Click "Link Account" after saving to restrict access to a single identity.',
+        confirmLabel: 'Enable anyway',
+        destructive: true,
+      });
+      if (!confirmed) {
+        return;
+      }
+    }
+
     this.oidcSaving.set(true);
     this.api.updateOidcConfig({
       enabled: this.oidcEnabled(),

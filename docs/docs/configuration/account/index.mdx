@@ -149,6 +149,10 @@ Replace `https://cleanuparr.example.com` with your actual base URL.
 
 Linking an account is **optional**. By default, when no account is linked, **any user who can authenticate with your identity provider and has access to this app** is allowed to sign in. Your provider controls who has access — if a user can log in to the configured OIDC client, they are permitted into Cleanuparr.
 
+<Warning>
+The unlinked mode delegates **all** access decisions to your identity provider. This is appropriate for self-hosted providers where you control every account. It is **dangerous** when using public providers with open registration. Anyone who can sign up at that provider would be able to sign in to Cleanuparr as the administrator. If you use a public provider, link a specific account.
+</Warning>
+
 If you want to **restrict access to a single identity**, click the **Link Account** button to connect your Cleanuparr account to a specific user from your provider. This opens your provider's login page, where you authenticate and authorize Cleanuparr. Once linked, **only that specific identity** can sign in via OIDC — all other users from your provider will be rejected.
 
 **Steps to link:**
