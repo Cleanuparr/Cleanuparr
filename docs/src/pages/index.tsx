@@ -4,12 +4,22 @@ import Link from "@docusaurus/Link";
 import useDocusaurusContext from "@docusaurus/useDocusaurusContext";
 import Layout from "@theme/Layout";
 import Heading from "@theme/Heading";
+import {
+  IconShieldLock,
+  IconBolt,
+  IconSearch,
+  IconSeedling,
+  IconLinkOff,
+  IconBell,
+  IconBrush,
+  IconShield,
+} from "@tabler/icons-react";
 import SupportBanner from "../components/support/SupportBanner";
 
 import styles from "./index.module.css";
 
 interface FeatureCardProps {
-  icon: string;
+  icon: ReactNode;
   title: string;
   description: string;
   color: string;
@@ -66,7 +76,7 @@ function HomepageHeader() {
               <span className={styles.heroTitleSub}>Automated Download Management</span>
             </Heading>
             <p className={styles.heroSubtitle}>
-              Automatically clean up unwanted, stalled, and malicious downloads from your *arr applications and download clients. 
+              Automatically clean up unwanted, stalled, and malicious downloads from your *arr applications and download clients.
               Keep your queues clean and your media library safe.
             </p>
             <div className={styles.heroButtons}>
@@ -74,7 +84,7 @@ function HomepageHeader() {
                 className="button button--secondary button--outline button--md"
                 to="/docs/installation"
               >
-                🚀 Get Started
+                Get Started
               </Link>
               <Link
                 className="button button--secondary button--outline button--md"
@@ -93,15 +103,15 @@ function HomepageHeader() {
           <div className={styles.heroVisual}>
             <div className={styles.heroStats}>
               <div className={styles.statItem}>
-                <div className={styles.statNumber}>🧹</div>
+                <div className={styles.statNumber}><IconBrush size={28} stroke={1.5} /></div>
                 <div className={styles.statLabel}>Auto Cleanup</div>
               </div>
               <div className={styles.statItem}>
-                <div className={styles.statNumber}>⚡</div>
+                <div className={styles.statNumber}><IconBolt size={28} stroke={1.5} /></div>
                 <div className={styles.statLabel}>Strike System</div>
               </div>
               <div className={styles.statItem}>
-                <div className={styles.statNumber}>🛡️</div>
+                <div className={styles.statNumber}><IconShield size={28} stroke={1.5} /></div>
                 <div className={styles.statLabel}>Malware Protection</div>
               </div>
             </div>
@@ -115,37 +125,37 @@ function HomepageHeader() {
 function FeaturesSection() {
   const features: FeatureCardProps[] = [
     {
-      icon: "🚫",
+      icon: <IconShieldLock size={28} stroke={1.5} />,
       title: "Malware Blocking",
       description: "Automatically block and remove malicious files using customizable blocklists.",
       color: "#dc3545"
     },
     {
-      icon: "⚡",
+      icon: <IconBolt size={28} stroke={1.5} />,
       title: "Strike System",
       description: "Intelligent strike-based removal for failed imports, stalled downloads, and slow transfers.",
       color: "#ffc107"
     },
     {
-      icon: "🔍",
+      icon: <IconSearch size={28} stroke={1.5} />,
       title: "Auto Search",
       description: "Automatically trigger replacement searches when problematic downloads are removed.",
       color: "#28a745"
     },
     {
-      icon: "🌱",
+      icon: <IconSeedling size={28} stroke={1.5} />,
       title: "Seeding Management",
       description: "Clean up completed downloads based on seeding time and ratio requirements.",
       color: "#17a2b8"
     },
     {
-      icon: "🔗",
+      icon: <IconLinkOff size={28} stroke={1.5} />,
       title: "Orphaned Detection",
       description: "Remove downloads no longer referenced by your *arr applications with hardlink checking.",
       color: "#6f42c1"
     },
     {
-      icon: "🔔",
+      icon: <IconBell size={28} stroke={1.5} />,
       title: "Smart Notifications",
       description: "Get alerted about strikes, removals and cleanup operations.",
       color: "#fd7e14"

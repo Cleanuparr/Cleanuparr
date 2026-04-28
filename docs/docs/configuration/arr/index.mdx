@@ -19,13 +19,12 @@ Configure connections to your *arr applications (Sonarr, Radarr, Lidarr, Readarr
 
 <div className={styles.section}>
 
-<SectionTitle icon="📡">
+<SectionTitle>
   Instance Settings
 </SectionTitle>
 
 <ConfigSection
   title="Enabled"
-  icon="✅"
 >
 
 Controls whether this *arr instance is active and will be monitored by Cleanuparr.
@@ -41,7 +40,6 @@ Controls whether this *arr instance is active and will be monitored by Cleanupar
 
 <ConfigSection
   title="Instance Name"
-  icon="🏷️"
 >
 
 A descriptive name to identify this *arr instance in the Cleanuparr interface.
@@ -50,7 +48,6 @@ A descriptive name to identify this *arr instance in the Cleanuparr interface.
 
 <ConfigSection
   title="URL"
-  icon="🌐"
 >
 
 The internal URL to access your *arr application's API.
@@ -66,7 +63,6 @@ The internal URL to access your *arr application's API.
 
 <ConfigSection
   title="External URL"
-  icon="🔗"
 >
 
 Optional external URL used in notification messages instead of the internal URL. This is useful for Docker users where internal container URLs (e.g., `http://sonarr:8989`) are not reachable from outside the Docker network.
@@ -86,7 +82,6 @@ If not set, the internal URL will be used in notifications.
 
 <ConfigSection
   title="API Key"
-  icon="🔑"
 >
 
 The API key for authenticating with your *arr application. You can find this in your *arr application under **Settings > General > Security > API Key**.
@@ -95,7 +90,6 @@ The API key for authenticating with your *arr application. You can find this in 
 
 <ConfigSection
   title="API Version"
-  icon="📋"
 >
 
 The API version for this *arr application. Select the version that matches your installed version:

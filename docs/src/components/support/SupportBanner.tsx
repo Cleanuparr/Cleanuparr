@@ -1,5 +1,6 @@
 import React from 'react';
 import Link from '@docusaurus/Link';
+import { IconHeart } from '@tabler/icons-react';
 
 interface SupportBannerProps {
   compact?: boolean;
@@ -75,19 +76,19 @@ export default function SupportBanner({ compact = false, showDismiss = false, on
           ×
         </button>
       )}
-      
+
       <h3 style={titleStyle}>
-        <span role="img" aria-label="Heart">❤️</span>
+        <IconHeart size={20} stroke={1.5} />
         {compact ? 'Support Cleanuparr' : 'Love Cleanuparr?'}
       </h3>
-      
+
       <p style={descriptionStyle}>
-        {compact 
+        {compact
           ? 'Help us keep improving Cleanuparr for everyone!'
           : 'Help us maintain and improve Cleanuparr by supporting our development efforts.'
         }
       </p>
-      
+
       <Link
         to="/support"
         style={buttonStyle}
@@ -100,9 +101,8 @@ export default function SupportBanner({ compact = false, showDismiss = false, on
           e.currentTarget.style.transform = 'translateY(0)';
         }}
       >
-        <span role="img" aria-label="Support">🚀</span>
         {compact ? 'Support Us' : 'Support the Project'}
       </Link>
     </div>
   );
-} 
+}

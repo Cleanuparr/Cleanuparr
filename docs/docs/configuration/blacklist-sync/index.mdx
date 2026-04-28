@@ -21,11 +21,10 @@ The Blacklist Synchronizer automatically synchronizes blacklist entries to all e
 
 <div className={styles.section}>
 
-<SectionTitle icon="⛔">Blacklist Sync</SectionTitle>
+<SectionTitle>Blacklist Sync</SectionTitle>
 
 <ConfigSection
   title="Enable Blacklist Sync"
-  icon="✅"
 >
 
 When enabled, Cleanuparr will automatically synchronize blacklist entries to all enabled qBittorrent clients every hour. The sync happens when the blacklist path or content changes.
@@ -38,7 +37,6 @@ This feature updates the qBittorrent "Excluded file names" setting, but does not
 
 <ConfigSection
   title="Blacklist Path"
-  icon="🗂️"
 >
 
 Path to the blacklist content. This can be a local file path or an HTTP/HTTPS URL. The application computes a content hash and only pushes updates when the content changes.

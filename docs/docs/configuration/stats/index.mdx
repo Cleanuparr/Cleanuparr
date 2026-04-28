@@ -22,11 +22,10 @@ Cleanuparr provides a stats endpoint that exposes aggregated application statist
 
 <div className={styles.section}>
 
-<SectionTitle icon="🔐">Authentication</SectionTitle>
+<SectionTitle>Authentication</SectionTitle>
 
 <ConfigSection
   title="API Key"
-  icon="🔑"
 >
 
 This endpoint requires authentication. You can authenticate using your API key in one of two ways:
@@ -53,11 +52,10 @@ JWT Bearer tokens are also supported for browser-based access.
 
 <div className={styles.section}>
 
-<SectionTitle icon="📊">Endpoint</SectionTitle>
+<SectionTitle>Endpoint</SectionTitle>
 
 <ConfigSection
   title="GET /api/stats"
-  icon="🔗"
 >
 
 Returns aggregated statistics including events, strikes, job runs, and health status.
@@ -96,11 +94,10 @@ If `BASE_PATH` is set, include it in the URL: `http://localhost:11011/cleanuparr
 
 <div className={styles.section}>
 
-<SectionTitle icon="📋">Response Reference</SectionTitle>
+<SectionTitle>Response Reference</SectionTitle>
 
 <ConfigSection
   title="events"
-  icon="📝"
 >
 
 Event statistics within the specified timeframe.
@@ -143,7 +140,6 @@ Event statistics within the specified timeframe.
 
 <ConfigSection
   title="strikes"
-  icon="⚡"
 >
 
 Strike statistics within the specified timeframe.
@@ -181,7 +177,6 @@ Strike statistics within the specified timeframe.
 
 <ConfigSection
   title="jobs"
-  icon="⏱️"
 >
 
 Job run statistics within the specified timeframe.
@@ -218,7 +213,6 @@ Job run statistics within the specified timeframe.
 
 <ConfigSection
   title="health"
-  icon="🏥"
 >
 
 Current health status of all configured download clients and arr instances. Health data is cached and updated every ~5 minutes by a background service.
@@ -262,11 +256,10 @@ Health data reflects the last background check (~5 minute interval). It does not
 
 <div className={styles.section}>
 
-<SectionTitle icon="🖥️">Dashboard Integration</SectionTitle>
+<SectionTitle>Dashboard Integration</SectionTitle>
 
 <ConfigSection
   title="Homepage Example"
-  icon="🏠"
 >
 
 [Homepage](https://gethomepage.dev) can use the `customapi` widget to display Cleanuparr stats:
@@ -301,7 +294,6 @@ To change the timeframe, add a query parameter to the URL: `http://localhost:110
 
 <ConfigSection
   title="Other Dashboard Tools"
-  icon="🔧"
 >
 
 Any tool that can fetch and parse JSON can use this endpoint. The response is a flat, predictable JSON structure designed for easy field mapping.

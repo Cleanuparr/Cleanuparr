@@ -26,7 +26,6 @@ Configure download client connections for torrents. Cleanuparr supports the late
 
 <ConfigSection
   title="Enable Download Client"
-  icon="🔄"
 >
 
 Controls whether this download client instance is active and will be used by Cleanuparr for operations.
@@ -43,7 +42,6 @@ Controls whether this download client instance is active and will be used by Cle
 
 <ConfigSection
   title="Client Name"
-  icon="🏷️"
 >
 
 A descriptive name to identify this download client instance in the Cleanuparr interface.
@@ -52,7 +50,6 @@ A descriptive name to identify this download client instance in the Cleanuparr i
 
 <ConfigSection
   title="Client Type"
-  icon="📱"
 >
 
 Specifies which download client software this configuration connects to.
@@ -63,13 +60,12 @@ Specifies which download client software this configuration connects to.
 
 <div className={styles.section}>
 
-<SectionTitle icon="🌐">
+<SectionTitle>
   Connection Settings
 </SectionTitle>
 
 <ConfigSection
   title="Client Host"
-  icon="🖥️"
 >
 
 The complete URL to access your download client's web interface.
@@ -87,7 +83,6 @@ The complete URL to access your download client's web interface.
 
 <ConfigSection
   title="URL Base Path"
-  icon="📂"
 >
 
 URL path prefix if your download client runs behind a reverse proxy with a subpath.
@@ -106,7 +101,6 @@ URL path prefix if your download client runs behind a reverse proxy with a subpa
 
 <ConfigSection
   title="External URL"
-  icon="🔗"
 >
 
 Optional external URL used in notification messages instead of the internal host URL. This is useful for Docker users where internal container URLs (e.g., `http://qbittorrent:8080`) are not reachable from outside the Docker network.
@@ -128,13 +122,12 @@ If not set, the internal host URL will be used in notifications.
 
 <div className={styles.section}>
 
-<SectionTitle icon="🔐">
+<SectionTitle>
   Authentication
 </SectionTitle>
 
 <ConfigSection
   title="Username"
-  icon="👤"
 >
 
 Username for download client authentication if required.
@@ -143,7 +136,6 @@ Username for download client authentication if required.
 
 <ConfigSection
   title="Password"
-  icon="🔑"
 >
 
 Password for download client authentication.

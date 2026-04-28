@@ -17,7 +17,7 @@ export default function DonationCard({ method, onOpenModal }: DonationCardProps)
   };
 
   const cardClass = `${styles.donationCard} ${method.featured ? styles.featured : ''}`;
-  
+
   // Set CSS custom property for accent color
   const cardStyle = {
     '--card-accent-color': method.accentColor
@@ -39,20 +39,18 @@ export default function DonationCard({ method, onOpenModal }: DonationCardProps)
 
   return (
     <div className={cardClass} style={cardStyle}>
-      <span className={styles.donationIcon} role="img" aria-label={method.title}>
+      <span className={styles.donationIcon} aria-label={method.title}>
         {method.icon}
       </span>
       <h3 className={styles.donationTitle}>{method.title}</h3>
       <p className={styles.donationDescription}>{method.description}</p>
-      <button 
+      <button
         className={getButtonClass()}
         onClick={handleClick}
         aria-label={`${method.buttonText} - ${method.title}`}
       >
-        {method.type === 'link' && '🔗 '}
-        {method.type === 'modal' && '👆 '}
         {method.buttonText}
       </button>
     </div>
   );
-} 
+}

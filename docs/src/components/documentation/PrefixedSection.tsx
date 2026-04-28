@@ -16,8 +16,8 @@ interface PrefixedSectionProps {
  * Usage in MDX:
  * ```mdx
  * <PrefixedSection prefix="stalled">
- *   <SectionTitle icon="⏸️">Stalled Download Rules</SectionTitle>
- *   <ConfigSection title="Max Strikes" icon="⚡">
+ *   <SectionTitle icon="player-pause">Stalled Download Rules</SectionTitle>
+ *   <ConfigSection title="Max Strikes" icon="bolt">
  *     ... (will have ID: stalled-max-strikes)
  *   </ConfigSection>
  * </PrefixedSection>

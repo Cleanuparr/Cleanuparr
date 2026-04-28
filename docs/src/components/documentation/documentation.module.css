@@ -1,8 +1,8 @@
 /* Documentation Components Styles */
 
 .documentationPage {
-  --doc-primary: #3e0d60;
-  --doc-primary-light: #6b3fa0;
+  --doc-primary: #7E57C2;
+  --doc-primary-light: #a855f7;
   --doc-secondary: #f8f9fa;
   --doc-accent: #007bff;
   --doc-success: #28a745;
@@ -256,8 +256,11 @@
 }
 
 .configIcon {
-  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
+  color: var(--doc-primary);
 }
 
 .copyAnchorButton {
@@ -776,7 +779,10 @@
 }
 
 .admonitionIcon {
-  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 .enhancedAdmonition p {

@@ -9,7 +9,7 @@
   padding: 2rem 0;
   text-align: left;
   overflow: hidden;
-  background: linear-gradient(135deg, #3e0d60 0%, #6b3fa0 50%, #9d5cb7 100%);
+  background: linear-gradient(135deg, #1a0e2e 0%, #3B0764 50%, #5B21B6 100%);
   color: white;
 }
 
@@ -106,7 +106,9 @@
 }
 
 .statNumber {
-  font-size: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   margin-bottom: 0.2rem;
 }
 
@@ -149,12 +151,14 @@
 }
 
 .featureCard {
-  background: var(--ifm-card-background-color);
-  border: 1px solid var(--ifm-color-emphasis-200);
-  border-radius: 9px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
   padding: 0.95rem;
   text-align: center;
-  transition: all 0.3s ease;
+  transition: all 350ms cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   overflow: hidden;
 }
@@ -172,9 +176,10 @@
 }
 
 .featureCard:hover {
-  transform: translateY(-8px);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-  border-color: var(--accent-color);
+  transform: translateY(-4px);
+  background: var(--glass-bg-hover);
+  border-color: var(--glass-border-hover);
+  box-shadow: var(--glass-shadow);
 }
 
 .featureCard:hover::before {
@@ -182,9 +187,11 @@
 }
 
 .featureIcon {
-  font-size: 1.75rem;
   margin-bottom: 0.55rem;
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent-color);
 }
 
 .featureTitle {
@@ -213,17 +220,20 @@
 }
 
 .quickStartCard {
-  background: var(--ifm-card-background-color);
-  border: 1px solid var(--ifm-color-emphasis-200);
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border);
   border-radius: 12px;
   padding: 1.25rem;
-  transition: all 0.3s ease;
+  transition: all 350ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .quickStartCard:hover {
   transform: translateY(-4px);
-  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
-  border-color: var(--ifm-color-primary);
+  background: var(--glass-bg-hover);
+  border-color: var(--glass-border-hover);
+  box-shadow: var(--glass-shadow);
 }
 
 .quickStartHeader {
