@@ -77,6 +77,8 @@ docker run -d --name cleanuparr \
 
 For Docker Compose, health checks, and other installation methods, see the [Complete Installation Guide](https://cleanuparr.github.io/Cleanuparr/docs/installation/detailed), but not before reading the [Prerequisites](https://cleanuparr.github.io/Cleanuparr/docs/installation/).
 
+> Prefer not to self-host? A managed Cleanuparr instance is available via [ElfHosted](https://store.elfhosted.com/product-category/personal-stacks/?utm_source=github&utm_medium=readme&utm_campaign=cleanuparr-readme), bundled alongside Sonarr/Radarr to keep your queues tidy (7-day trial).
+
 ### 🌐 Access the Web Interface
 
 After installation, open your browser and navigate to:
