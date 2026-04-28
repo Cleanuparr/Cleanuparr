@@ -4,6 +4,13 @@ Thanks for your interest in contributing to Cleanuparr! This guide will help you
 
 ## Before You Start
 
+### AI usage
+
+In this ever-evolving field of work, AI is now the shiny new tool to help programmers work faster and there's nothing wrong with that.
+But it is **very** wrong to rely solely on AI tools to write, review and test your code.
+
+**If you do not have a background in programming and you do not intend to test your code properly, please do not submit AI-generated code.** If you still want to help in other ways such as testing features, that would also help a lot!
+
 ### Announce Your Intent
 
 Before starting any work, please let us know what you want to contribute:
