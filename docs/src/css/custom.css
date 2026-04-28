@@ -20,6 +20,7 @@
   --ifm-color-primary-light: #7E57C2;
   --ifm-color-primary-lighter: #a855f7;
   --ifm-color-primary-lightest: #c084fc;
+  --accent-color: var(--ifm-color-primary);
 
   /* Surfaces */
   --ifm-background-color: #f5f0fa;
@@ -54,6 +55,7 @@
   --ifm-color-primary-light: #a855f7;
   --ifm-color-primary-lighter: #c084fc;
   --ifm-color-primary-lightest: #d8b4fe;
+  --accent-color: var(--ifm-color-primary-light);
 
   /* Surfaces */
   --ifm-background-color: #0c0614;
@@ -234,6 +236,10 @@ body {
 
 /* ===== Reduced Motion ===== */
 @media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
   [data-theme='dark'] main::before,
   [data-theme='dark'] main::after {
     animation: none;

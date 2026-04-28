@@ -57,6 +57,11 @@ const iconMap: Record<string, React.ComponentType<{ size?: number; stroke?: numb
 
 export function renderIcon(key: string, size: number = 18): React.ReactNode {
   const Icon = iconMap[key];
-  if (!Icon) return null;
+  if (!Icon) {
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn(`[iconMap] Unknown icon key: "${key}"`);
+    }
+    return null;
+  }
   return <Icon size={size} stroke={1.5} />;
 }

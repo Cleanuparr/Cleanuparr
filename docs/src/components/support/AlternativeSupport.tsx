@@ -20,7 +20,7 @@ export default function AlternativeSupport() {
           <div key={index} className={styles.alternativeItem}>
             <span
               className={styles.alternativeIcon}
-              aria-label={item.title}
+              aria-hidden="true"
             >
               {item.icon}
             </span>
