@@ -73,11 +73,11 @@ function HomepageHeader() {
           <div className={styles.heroText}>
             <Heading as="h1" className={styles.heroTitle}>
               <span className={styles.heroTitleMain}>{siteConfig.title}</span>
-              <span className={styles.heroTitleSub}>Automated Download Management</span>
+              <span className={styles.heroTitleSub}>Advanced Download Management for the Servarr Ecosystem</span>
             </Heading>
             <p className={styles.heroSubtitle}>
-              Automatically clean up unwanted, stalled, and malicious downloads from your *arr applications and download clients.
-              Keep your queues clean and your media library safe.
+              Advanced download management for your Servarr applications and download clients.
+              Keep your queues clean, protect against malware, and proactively search for missing content and quality upgrades.
             </p>
             <div className={styles.heroButtons}>
               <Link
