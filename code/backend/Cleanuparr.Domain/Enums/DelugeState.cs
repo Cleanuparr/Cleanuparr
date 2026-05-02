@@ -1,12 +1,11 @@
 using Newtonsoft.Json;
-using Newtonsoft.Json.Converters;
 
 namespace Cleanuparr.Domain.Enums;
 
 /// <summary>
 /// Torrent state values reported by Deluge
 /// </summary>
-[JsonConverter(typeof(StringEnumConverter))]
+[JsonConverter(typeof(DelugeStateConverter))]
 public enum DelugeState
 {
     Unknown = 0,
