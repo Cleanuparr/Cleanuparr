@@ -1,6 +1,10 @@
+<div align="center">
+
 _Love this project? Give it a ⭐️ and let others know!_
 
 # <img width="24px" src="./Logo/256.png" alt="Cleanuparr"></img> Cleanuparr
+
+_/kliː.nʌp.ər/ — like "cleanuper", someone who does the cleanup. Not "CleanupArr" or "CleanUpArr"._
 
 ![Version](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fcleanuparr-status.pages.dev%2Fstatus.json&query=%24.version&logo=git&label=version&color=blue)
 ![Total Downloads](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fghcr-badge.elias.eu.org%2Fapi%2FCleanuparr%2FCleanuparr%2Fcleanuparr&query=%24.downloadCount&style=flat&logo=docker&label=Total%20Downloads&color=blue)
@@ -8,6 +12,8 @@ _Love this project? Give it a ⭐️ and let others know!_
 
 
 [![Discord](https://img.shields.io/discord/1306721212587573389?color=7289DA&label=Discord&style=for-the-badge&logo=discord)](https://discord.gg/SCtMCgtsc4)
+
+</div>
 
 Cleanuparr is an advanced download manager for the Servarr ecosystem. It works with Sonarr, Radarr, Lidarr, Readarr, and Whisparr alongside download clients like qBittorrent, Transmission, and Deluge. Beyond cleaning up stalled, blocked, and malicious downloads, it searches for missing content and quality upgrades, manages seeding, and removes orphaned files.
 
