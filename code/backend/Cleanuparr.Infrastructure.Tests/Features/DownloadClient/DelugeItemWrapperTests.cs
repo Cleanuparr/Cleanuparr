@@ -1,4 +1,5 @@
 using Cleanuparr.Domain.Entities.Deluge.Response;
+using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.DownloadClient.Deluge;
 using Shouldly;
 using Xunit;
@@ -399,13 +400,11 @@ public class DelugeItemWrapperTests
     }
 
     [Theory]
-    [InlineData("Downloading", true)]
-    [InlineData("downloading", true)]
-    [InlineData("DOWNLOADING", true)]
-    [InlineData("Seeding", false)]
-    [InlineData("Paused", false)]
-    [InlineData(null, false)]
-    public void IsDownloading_ReturnsCorrectValue(string? state, bool expected)
+    [InlineData(DelugeState.Downloading, true)]
+    [InlineData(DelugeState.Seeding, false)]
+    [InlineData(DelugeState.Paused, false)]
+    [InlineData(DelugeState.Unknown, false)]
+    public void IsDownloading_ReturnsCorrectValue(DelugeState state, bool expected)
     {
         // Arrange
         var downloadStatus = new DownloadStatus
@@ -424,14 +423,14 @@ public class DelugeItemWrapperTests
     }
 
     [Theory]
-    [InlineData("Downloading", 0, 0UL, true)] // Downloading with no speed and no ETA = stalled
-    [InlineData("Downloading", 1000, 0UL, false)] // Has download speed = not stalled
-    [InlineData("Downloading", 0, 100UL, false)] // Has ETA = not stalled
-    [InlineData("Downloading", 1000, 100UL, false)] // Has both = not stalled
-    [InlineData("Seeding", 0, 0UL, false)] // Not downloading state = not stalled
-    [InlineData("Paused", 0, 0UL, false)] // Not downloading state = not stalled
-    [InlineData(null, 0, 0UL, false)] // Null state = not stalled
-    public void IsStalled_ReturnsCorrectValue(string? state, long downloadSpeed, ulong eta, bool expected)
+    [InlineData(DelugeState.Downloading, 0, 0UL, true)]
+    [InlineData(DelugeState.Downloading, 1000, 0UL, false)]
+    [InlineData(DelugeState.Downloading, 0, 100UL, false)]
+    [InlineData(DelugeState.Downloading, 1000, 100UL, false)]
+    [InlineData(DelugeState.Seeding, 0, 0UL, false)]
+    [InlineData(DelugeState.Paused, 0, 0UL, false)]
+    [InlineData(DelugeState.Unknown, 0, 0UL, false)]
+    public void IsStalled_ReturnsCorrectValue(DelugeState state, long downloadSpeed, ulong eta, bool expected)
     {
         // Arrange
         var downloadStatus = new DownloadStatus

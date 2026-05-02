@@ -1,5 +1,6 @@
 using Cleanuparr.Domain.Entities;
 using Cleanuparr.Domain.Entities.Deluge.Response;
+using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Services;
 
 namespace Cleanuparr.Infrastructure.Features.DownloadClient.Deluge;
@@ -58,9 +59,9 @@ public sealed class DelugeItemWrapper : ITorrentItemWrapper
 
     public IReadOnlyList<string> Tags => Array.Empty<string>();
 
-    public bool IsDownloading() => Info.State?.Equals("Downloading", StringComparison.InvariantCultureIgnoreCase) == true;
-    
-    public bool IsStalled() => Info.State?.Equals("Downloading", StringComparison.InvariantCultureIgnoreCase) == true && Info is { DownloadSpeed: <= 0, Eta: <= 0 };
+    public bool IsDownloading() => Info is { State: DelugeState.Downloading };
+
+    public bool IsStalled() => Info is { State: DelugeState.Downloading, DownloadSpeed: <= 0, Eta: <= 0 };
 
     public bool IsIgnored(IReadOnlyList<string> ignoredDownloads)
     {

@@ -21,6 +21,7 @@ public sealed class DelugeClient
         "eta",
         "private",
         "total_done",
+        "is_finished",
         "label",
         "seeding_time",
         "ratio",
