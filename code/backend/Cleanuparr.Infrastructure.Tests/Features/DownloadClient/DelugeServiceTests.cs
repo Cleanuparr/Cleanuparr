@@ -51,7 +51,7 @@ public class DelugeServiceTests : IClassFixture<DelugeServiceFixture>
             {
                 Hash = hash,
                 Name = "Test Torrent",
-                State = "Downloading",
+                State = DelugeState.Downloading,
                 Private = true,
                 DownloadSpeed = 1000,
                 Trackers = new List<Tracker>(),
@@ -96,7 +96,7 @@ public class DelugeServiceTests : IClassFixture<DelugeServiceFixture>
             {
                 Hash = hash,
                 Name = "Test Torrent",
-                State = "Downloading",
+                State = DelugeState.Downloading,
                 Private = false,
                 DownloadSpeed = 1000,
                 Trackers = new List<Tracker>(),
@@ -148,7 +148,7 @@ public class DelugeServiceTests : IClassFixture<DelugeServiceFixture>
             {
                 Hash = hash,
                 Name = "Test Torrent",
-                State = "Downloading",
+                State = DelugeState.Downloading,
                 Private = false,
                 DownloadSpeed = 1000,
                 Trackers = new List<Tracker>(),
@@ -187,7 +187,7 @@ public class DelugeServiceTests : IClassFixture<DelugeServiceFixture>
             {
                 Hash = hash,
                 Name = "Test Torrent",
-                State = "Downloading",
+                State = DelugeState.Downloading,
                 Private = false,
                 DownloadSpeed = 1000,
                 Trackers = new List<Tracker>(),
@@ -239,7 +239,7 @@ public class DelugeServiceTests : IClassFixture<DelugeServiceFixture>
             {
                 Hash = hash,
                 Name = "Test Torrent",
-                State = "Downloading",
+                State = DelugeState.Downloading,
                 Private = false,
                 DownloadSpeed = 1000,
                 Trackers = new List<Tracker>(),
@@ -267,7 +267,7 @@ public class DelugeServiceTests : IClassFixture<DelugeServiceFixture>
             {
                 Hash = hash,
                 Name = "Test Torrent",
-                State = "Downloading",
+                State = DelugeState.Downloading,
                 Private = false,
                 DownloadSpeed = 1000,
                 Label = category,
@@ -296,7 +296,7 @@ public class DelugeServiceTests : IClassFixture<DelugeServiceFixture>
             {
                 Hash = hash,
                 Name = "Test Torrent",
-                State = "Downloading",
+                State = DelugeState.Downloading,
                 Private = false,
                 DownloadSpeed = 1000,
                 Trackers = new List<Tracker>
@@ -333,7 +333,7 @@ public class DelugeServiceTests : IClassFixture<DelugeServiceFixture>
             {
                 Hash = hash,
                 Name = "Test Torrent",
-                State = "Seeding",
+                State = DelugeState.Seeding,
                 Private = false,
                 DownloadSpeed = 0,
                 Trackers = new List<Tracker>(),
@@ -374,7 +374,7 @@ public class DelugeServiceTests : IClassFixture<DelugeServiceFixture>
             {
                 Hash = hash,
                 Name = "Test Torrent",
-                State = "Downloading",
+                State = DelugeState.Downloading,
                 Private = false,
                 DownloadSpeed = 0,
                 Trackers = new List<Tracker>(),
@@ -422,7 +422,7 @@ public class DelugeServiceTests : IClassFixture<DelugeServiceFixture>
             {
                 Hash = hash,
                 Name = "Test Torrent",
-                State = "Downloading",
+                State = DelugeState.Downloading,
                 Private = false,
                 DownloadSpeed = 1000,
                 Trackers = new List<Tracker>(),
@@ -464,7 +464,7 @@ public class DelugeServiceTests : IClassFixture<DelugeServiceFixture>
             {
                 Hash = hash,
                 Name = "Test Torrent",
-                State = "Downloading",
+                State = DelugeState.Downloading,
                 DownloadSpeed = 0,
                 Eta = 0,
                 Private = false,
