@@ -43,8 +43,12 @@ export class NumberInputComponent {
       let clamped = current;
       const minVal = this.min();
       const maxVal = this.max();
-      if (minVal != null) { clamped = Math.max(clamped, minVal); }
-      if (maxVal != null) { clamped = Math.min(clamped, maxVal); }
+      if (minVal != null) {
+        clamped = Math.max(clamped, minVal);
+      }
+      if (maxVal != null) {
+        clamped = Math.min(clamped, maxVal);
+      }
       if (clamped !== current) {
         this.value.set(clamped);
       }
@@ -52,20 +56,33 @@ export class NumberInputComponent {
     this.blurred.emit(event);
   }
 
-  increment(): void {
-    if (this.disabled()) return;
-    const current = this.value() ?? 0;
-    const maxVal = this.max();
-    const next = current + this.step();
-    this.value.set(maxVal != null ? Math.min(next, maxVal) : next);
+  private stepDecimals(): number {
+    let n = this.step();
+    let decimals = 0;
+    while (Math.round(n) !== n && decimals < 10) {
+      n *= 10;
+      decimals++;
+    }
+    return decimals;
   }
 
-  decrement(): void {
+  increment(): void { this.applyStep(1); }
+  decrement(): void { this.applyStep(-1); }
+
+  private applyStep(direction: 1 | -1): void {
     if (this.disabled()) return;
     const current = this.value() ?? 0;
+    const next = parseFloat((current + direction * this.step()).toFixed(this.stepDecimals()));
     const minVal = this.min();
-    const next = current - this.step();
-    this.value.set(minVal != null ? Math.max(next, minVal) : next);
+    const maxVal = this.max();
+    let clamped = next;
+    if (minVal != null) {
+      clamped = Math.max(clamped, minVal);
+    }
+    if (maxVal != null) {
+      clamped = Math.min(clamped, maxVal);
+    }
+    this.value.set(clamped);
   }
 
   onHelpClick(event: Event): void {
