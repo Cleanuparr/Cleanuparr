@@ -52,11 +52,17 @@ export class NumberInputComponent {
     this.blurred.emit(event);
   }
 
+  private stepDecimals(): number {
+    const s = this.step().toString();
+    const dot = s.indexOf('.');
+    return dot === -1 ? 0 : s.length - dot - 1;
+  }
+
   increment(): void {
     if (this.disabled()) return;
     const current = this.value() ?? 0;
     const maxVal = this.max();
-    const next = current + this.step();
+    const next = parseFloat((current + this.step()).toFixed(this.stepDecimals()));
     this.value.set(maxVal != null ? Math.min(next, maxVal) : next);
   }
 
@@ -64,7 +70,7 @@ export class NumberInputComponent {
     if (this.disabled()) return;
     const current = this.value() ?? 0;
     const minVal = this.min();
-    const next = current - this.step();
+    const next = parseFloat((current - this.step()).toFixed(this.stepDecimals()));
     this.value.set(minVal != null ? Math.max(next, minVal) : next);
   }
 
