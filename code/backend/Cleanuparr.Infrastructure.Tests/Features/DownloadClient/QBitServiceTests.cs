@@ -135,11 +135,11 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
 
             _fixture.RuleEvaluator
                 .EvaluateSlowRulesAsync(Arg.Any<QBitItemWrapper>())
-                .Returns((false, DeleteReason.None, false));
+                .Returns((false, DeleteReason.None, false, false));
 
             _fixture.RuleEvaluator
                 .EvaluateStallRulesAsync(Arg.Any<QBitItemWrapper>())
-                .Returns((false, DeleteReason.None, false));
+                .Returns((false, DeleteReason.None, false, false));
 
             // Act
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
@@ -193,11 +193,11 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
 
             _fixture.RuleEvaluator
                 .EvaluateSlowRulesAsync(Arg.Any<QBitItemWrapper>())
-                .Returns((false, DeleteReason.None, false));
+                .Returns((false, DeleteReason.None, false, false));
 
             _fixture.RuleEvaluator
                 .EvaluateStallRulesAsync(Arg.Any<QBitItemWrapper>())
-                .Returns((false, DeleteReason.None, false));
+                .Returns((false, DeleteReason.None, false, false));
 
             // Act
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
@@ -401,11 +401,11 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
 
             _fixture.RuleEvaluator
                 .EvaluateSlowRulesAsync(Arg.Any<QBitItemWrapper>())
-                .Returns((false, DeleteReason.None, false));
+                .Returns((false, DeleteReason.None, false, false));
 
             _fixture.RuleEvaluator
                 .EvaluateStallRulesAsync(Arg.Any<QBitItemWrapper>())
-                .Returns((false, DeleteReason.None, false));
+                .Returns((false, DeleteReason.None, false, false));
 
             // Act
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
@@ -654,7 +654,7 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
 
             _fixture.RuleEvaluator
                 .EvaluateStallRulesAsync(Arg.Any<QBitItemWrapper>())
-                .Returns((false, DeleteReason.None, false));
+                .Returns((false, DeleteReason.None, false, false));
 
             // Act
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
@@ -709,7 +709,7 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
 
             _fixture.RuleEvaluator
                 .EvaluateStallRulesAsync(Arg.Any<QBitItemWrapper>())
-                .Returns((false, DeleteReason.None, false));
+                .Returns((false, DeleteReason.None, false, false));
 
             // Act
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
@@ -764,7 +764,7 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
 
             _fixture.RuleEvaluator
                 .EvaluateSlowRulesAsync(Arg.Any<QBitItemWrapper>())
-                .Returns((true, DeleteReason.SlowSpeed, true)); // Rule matched
+                .Returns((true, DeleteReason.SlowSpeed, true, false)); // Rule matched
 
             // Act
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
@@ -826,7 +826,7 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
 
             _fixture.RuleEvaluator
                 .EvaluateSlowRulesAsync(Arg.Any<QBitItemWrapper>())
-                .Returns((false, DeleteReason.None, false));
+                .Returns((false, DeleteReason.None, false, false));
 
             // Act
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
@@ -880,7 +880,7 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
 
             _fixture.RuleEvaluator
                 .EvaluateStallRulesAsync(Arg.Any<QBitItemWrapper>())
-                .Returns((true, DeleteReason.Stalled, true)); // Rule matched
+                .Returns((true, DeleteReason.Stalled, true, false)); // Rule matched
 
             // Act
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
@@ -943,7 +943,7 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
             // Slow check is skipped because not in downloading state
             _fixture.RuleEvaluator
                 .EvaluateStallRulesAsync(Arg.Any<QBitItemWrapper>())
-                .Returns((true, DeleteReason.Stalled, true));
+                .Returns((true, DeleteReason.Stalled, true, false));
 
             // Act
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
@@ -1001,11 +1001,11 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
 
             _fixture.RuleEvaluator
                 .EvaluateSlowRulesAsync(Arg.Any<QBitItemWrapper>())
-                .Returns((false, DeleteReason.None, false));
+                .Returns((false, DeleteReason.None, false, false));
 
             _fixture.RuleEvaluator
                 .EvaluateStallRulesAsync(Arg.Any<QBitItemWrapper>())
-                .Returns((false, DeleteReason.None, false));
+                .Returns((false, DeleteReason.None, false, false));
 
             // Act
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());

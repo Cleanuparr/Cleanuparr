@@ -74,11 +74,11 @@ public class DelugeServiceTests : IClassFixture<DelugeServiceFixture>
 
             _fixture.RuleEvaluator
                 .EvaluateSlowRulesAsync(Arg.Any<DelugeItemWrapper>())
-                .Returns((false, DeleteReason.None, false));
+                .Returns((false, DeleteReason.None, false, false));
 
             _fixture.RuleEvaluator
                 .EvaluateStallRulesAsync(Arg.Any<DelugeItemWrapper>())
-                .Returns((false, DeleteReason.None, false));
+                .Returns((false, DeleteReason.None, false, false));
 
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 
@@ -119,11 +119,11 @@ public class DelugeServiceTests : IClassFixture<DelugeServiceFixture>
 
             _fixture.RuleEvaluator
                 .EvaluateSlowRulesAsync(Arg.Any<DelugeItemWrapper>())
-                .Returns((false, DeleteReason.None, false));
+                .Returns((false, DeleteReason.None, false, false));
 
             _fixture.RuleEvaluator
                 .EvaluateStallRulesAsync(Arg.Any<DelugeItemWrapper>())
-                .Returns((false, DeleteReason.None, false));
+                .Returns((false, DeleteReason.None, false, false));
 
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 
@@ -211,11 +211,11 @@ public class DelugeServiceTests : IClassFixture<DelugeServiceFixture>
 
             _fixture.RuleEvaluator
                 .EvaluateSlowRulesAsync(Arg.Any<DelugeItemWrapper>())
-                .Returns((false, DeleteReason.None, false));
+                .Returns((false, DeleteReason.None, false, false));
 
             _fixture.RuleEvaluator
                 .EvaluateStallRulesAsync(Arg.Any<DelugeItemWrapper>())
-                .Returns((false, DeleteReason.None, false));
+                .Returns((false, DeleteReason.None, false, false));
 
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 
@@ -356,7 +356,7 @@ public class DelugeServiceTests : IClassFixture<DelugeServiceFixture>
 
             _fixture.RuleEvaluator
                 .EvaluateStallRulesAsync(Arg.Any<DelugeItemWrapper>())
-                .Returns((false, DeleteReason.None, false));
+                .Returns((false, DeleteReason.None, false, false));
 
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 
@@ -397,7 +397,7 @@ public class DelugeServiceTests : IClassFixture<DelugeServiceFixture>
 
             _fixture.RuleEvaluator
                 .EvaluateStallRulesAsync(Arg.Any<DelugeItemWrapper>())
-                .Returns((false, DeleteReason.None, false));
+                .Returns((false, DeleteReason.None, false, false));
 
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 
@@ -445,7 +445,7 @@ public class DelugeServiceTests : IClassFixture<DelugeServiceFixture>
 
             _fixture.RuleEvaluator
                 .EvaluateSlowRulesAsync(Arg.Any<DelugeItemWrapper>())
-                .Returns((true, DeleteReason.SlowSpeed, true));
+                .Returns((true, DeleteReason.SlowSpeed, true, false));
 
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 
@@ -488,7 +488,7 @@ public class DelugeServiceTests : IClassFixture<DelugeServiceFixture>
 
             _fixture.RuleEvaluator
                 .EvaluateStallRulesAsync(Arg.Any<DelugeItemWrapper>())
-                .Returns((true, DeleteReason.Stalled, true));
+                .Returns((true, DeleteReason.Stalled, true, false));
 
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 

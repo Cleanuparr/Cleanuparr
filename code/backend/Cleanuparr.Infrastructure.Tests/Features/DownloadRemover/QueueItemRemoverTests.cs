@@ -117,6 +117,7 @@ public class QueueItemRemoverTests : IDisposable
             request.Instance,
             request.Record,
             request.RemoveFromClient,
+            request.ChangeCategory,
             request.DeleteReason);
     }
 
@@ -288,6 +289,7 @@ public class QueueItemRemoverTests : IDisposable
                 Arg.Any<ArrInstance>(),
                 Arg.Any<QueueRecord>(),
                 Arg.Any<bool>(),
+                Arg.Any<bool>(),
                 Arg.Any<DeleteReason>())
             .ThrowsAsync(new HttpRequestException("Not found", null, HttpStatusCode.NotFound));
 
@@ -312,6 +314,7 @@ public class QueueItemRemoverTests : IDisposable
                 Arg.Any<ArrInstance>(),
                 Arg.Any<QueueRecord>(),
                 Arg.Any<bool>(),
+                Arg.Any<bool>(),
                 Arg.Any<DeleteReason>())
             .ThrowsAsync(new HttpRequestException("Not found", null, HttpStatusCode.NotFound));
 
@@ -335,6 +338,7 @@ public class QueueItemRemoverTests : IDisposable
                 Arg.Any<ArrInstance>(),
                 Arg.Any<QueueRecord>(),
                 Arg.Any<bool>(),
+                Arg.Any<bool>(),
                 Arg.Any<DeleteReason>())
             .ThrowsAsync(originalException);
 
@@ -356,6 +360,7 @@ public class QueueItemRemoverTests : IDisposable
             .DeleteQueueItemAsync(
                 Arg.Any<ArrInstance>(),
                 Arg.Any<QueueRecord>(),
+                Arg.Any<bool>(),
                 Arg.Any<bool>(),
                 Arg.Any<DeleteReason>())
             .ThrowsAsync(originalException);
@@ -390,6 +395,7 @@ public class QueueItemRemoverTests : IDisposable
             Arg.Any<ArrInstance>(),
             Arg.Any<QueueRecord>(),
             Arg.Any<bool>(),
+            Arg.Any<bool>(),
             deleteReason);
     }
 
@@ -408,7 +414,8 @@ public class QueueItemRemoverTests : IDisposable
         await _arrClient.Received(1).DeleteQueueItemAsync(
             Arg.Any<ArrInstance>(),
             Arg.Any<QueueRecord>(),
-            removeFromClient,
+            Arg.Is<bool>(x => x == removeFromClient),
+            Arg.Any<bool>(),
             Arg.Any<DeleteReason>());
     }
 

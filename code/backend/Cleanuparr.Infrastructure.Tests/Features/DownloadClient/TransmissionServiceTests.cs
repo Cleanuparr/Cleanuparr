@@ -108,11 +108,11 @@ public class TransmissionServiceTests : IClassFixture<TransmissionServiceFixture
 
             _fixture.RuleEvaluator
                 .EvaluateSlowRulesAsync(Arg.Any<TransmissionItemWrapper>())
-                .Returns((false, DeleteReason.None, false));
+                .Returns((false, DeleteReason.None, false, false));
 
             _fixture.RuleEvaluator
                 .EvaluateStallRulesAsync(Arg.Any<TransmissionItemWrapper>())
-                .Returns((false, DeleteReason.None, false));
+                .Returns((false, DeleteReason.None, false, false));
 
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 
@@ -167,11 +167,11 @@ public class TransmissionServiceTests : IClassFixture<TransmissionServiceFixture
 
             _fixture.RuleEvaluator
                 .EvaluateSlowRulesAsync(Arg.Any<TransmissionItemWrapper>())
-                .Returns((false, DeleteReason.None, false));
+                .Returns((false, DeleteReason.None, false, false));
 
             _fixture.RuleEvaluator
                 .EvaluateStallRulesAsync(Arg.Any<TransmissionItemWrapper>())
-                .Returns((false, DeleteReason.None, false));
+                .Returns((false, DeleteReason.None, false, false));
 
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 
@@ -294,11 +294,11 @@ public class TransmissionServiceTests : IClassFixture<TransmissionServiceFixture
 
             _fixture.RuleEvaluator
                 .EvaluateSlowRulesAsync(Arg.Any<TransmissionItemWrapper>())
-                .Returns((false, DeleteReason.None, false));
+                .Returns((false, DeleteReason.None, false, false));
 
             _fixture.RuleEvaluator
                 .EvaluateStallRulesAsync(Arg.Any<TransmissionItemWrapper>())
-                .Returns((false, DeleteReason.None, false));
+                .Returns((false, DeleteReason.None, false, false));
 
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 
@@ -476,11 +476,11 @@ public class TransmissionServiceTests : IClassFixture<TransmissionServiceFixture
 
             _fixture.RuleEvaluator
                 .EvaluateSlowRulesAsync(Arg.Any<TransmissionItemWrapper>())
-                .Returns((false, DeleteReason.None, false));
+                .Returns((false, DeleteReason.None, false, false));
 
             _fixture.RuleEvaluator
                 .EvaluateStallRulesAsync(Arg.Any<TransmissionItemWrapper>())
-                .Returns((false, DeleteReason.None, false));
+                .Returns((false, DeleteReason.None, false, false));
 
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 
@@ -542,7 +542,7 @@ public class TransmissionServiceTests : IClassFixture<TransmissionServiceFixture
 
             _fixture.RuleEvaluator
                 .EvaluateStallRulesAsync(Arg.Any<TransmissionItemWrapper>())
-                .Returns((false, DeleteReason.None, false));
+                .Returns((false, DeleteReason.None, false, false));
 
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 
@@ -598,7 +598,7 @@ public class TransmissionServiceTests : IClassFixture<TransmissionServiceFixture
 
             _fixture.RuleEvaluator
                 .EvaluateStallRulesAsync(Arg.Any<TransmissionItemWrapper>())
-                .Returns((false, DeleteReason.None, false));
+                .Returns((false, DeleteReason.None, false, false));
 
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 
@@ -661,7 +661,7 @@ public class TransmissionServiceTests : IClassFixture<TransmissionServiceFixture
 
             _fixture.RuleEvaluator
                 .EvaluateSlowRulesAsync(Arg.Any<TransmissionItemWrapper>())
-                .Returns((true, DeleteReason.SlowSpeed, true));
+                .Returns((true, DeleteReason.SlowSpeed, true, false));
 
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 
@@ -719,7 +719,7 @@ public class TransmissionServiceTests : IClassFixture<TransmissionServiceFixture
 
             _fixture.RuleEvaluator
                 .EvaluateStallRulesAsync(Arg.Any<TransmissionItemWrapper>())
-                .Returns((true, DeleteReason.Stalled, true));
+                .Returns((true, DeleteReason.Stalled, true, false));
 
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 

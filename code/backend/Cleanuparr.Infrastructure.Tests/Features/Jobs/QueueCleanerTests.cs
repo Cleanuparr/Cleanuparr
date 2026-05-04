@@ -1334,4 +1334,156 @@ public class QueueCleanerTests : IDisposable
     }
 
     #endregion
+
+    #region ChangeCategory Tests
+
+    [Fact]
+    public async Task ProcessInstanceAsync_WhenFailedImportWithChangeCategory_PublishesRequestWithChangeCategoryAndRemoveFromClientFalse()
+    {
+        // Arrange
+        TestDataContextFactory.AddSonarrInstance(_fixture.DataContext);
+        TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
+
+        var queueCleanerConfig = _fixture.DataContext.QueueCleanerConfigs.First();
+        queueCleanerConfig.FailedImport = queueCleanerConfig.FailedImport with { ChangeCategory = true };
+        _fixture.DataContext.SaveChanges();
+
+        var mockArrClient = Substitute.For<IArrClient>();
+        mockArrClient.IsRecordValid(Arg.Any<QueueRecord>()).Returns(true);
+        mockArrClient.HasContentId(Arg.Any<QueueRecord>()).Returns(true);
+        mockArrClient.ShouldRemoveFromQueue(
+            Arg.Any<InstanceType>(),
+            Arg.Any<QueueRecord>(),
+            Arg.Any<bool>(),
+            Arg.Any<short>()
+        ).Returns(true);
+
+        _fixture.ArrClientFactory
+            .GetClient(InstanceType.Sonarr, Arg.Any<float>())
+            .Returns(mockArrClient);
+
+        var queueRecord = new QueueRecord
+        {
+            Id = 1,
+            DownloadId = "failed-import-change-category",
+            Title = "Failed Import Change Category",
+            Protocol = "torrent",
+            SeriesId = 1,
+            EpisodeId = 1
+        };
+
+        _fixture.ArrQueueIterator
+            .Iterate(
+                Arg.Any<IArrClient>(),
+                Arg.Any<ArrInstance>(),
+                Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>()
+            )
+            .Returns(async ci =>
+            {
+                var callback = ci.ArgAt<Func<IReadOnlyList<QueueRecord>, Task>>(2);
+                await callback([queueRecord]);
+            });
+
+        var mockDownloadService = _fixture.CreateMockDownloadService();
+        mockDownloadService
+            .ShouldRemoveFromArrQueueAsync(
+                Arg.Any<string>(),
+                Arg.Any<List<string>>()
+            )
+            .Returns(new DownloadCheckResult { Found = true, ShouldRemove = false, IsPrivate = true });
+
+        _fixture.DownloadServiceFactory
+            .GetDownloadService(Arg.Any<DownloadClientConfig>())
+            .Returns(mockDownloadService);
+
+        var sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert
+        await _fixture.MessageBus.Received(1).Publish(
+            Arg.Is<QueueItemRemoveRequest<SeriesSearchItem>>(r =>
+                r.DeleteReason == DeleteReason.FailedImport &&
+                r.ChangeCategory == true &&
+                r.RemoveFromClient == false
+            ),
+            Arg.Any<CancellationToken>()
+        );
+    }
+
+    [Fact]
+    public async Task ProcessInstanceAsync_WhenStallRuleHasChangeCategory_PublishesRequestWithChangeCategoryAndRemoveFromClientFalse()
+    {
+        // Arrange
+        TestDataContextFactory.AddSonarrInstance(_fixture.DataContext);
+        TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
+
+        var mockArrClient = Substitute.For<IArrClient>();
+        mockArrClient.IsRecordValid(Arg.Any<QueueRecord>()).Returns(true);
+        mockArrClient.HasContentId(Arg.Any<QueueRecord>()).Returns(true);
+
+        _fixture.ArrClientFactory
+            .GetClient(InstanceType.Sonarr, Arg.Any<float>())
+            .Returns(mockArrClient);
+
+        var queueRecord = new QueueRecord
+        {
+            Id = 1,
+            DownloadId = "stall-change-category",
+            Title = "Stall Change Category",
+            Protocol = "torrent",
+            SeriesId = 1,
+            EpisodeId = 1
+        };
+
+        _fixture.ArrQueueIterator
+            .Iterate(
+                Arg.Any<IArrClient>(),
+                Arg.Any<ArrInstance>(),
+                Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>()
+            )
+            .Returns(async ci =>
+            {
+                var callback = ci.ArgAt<Func<IReadOnlyList<QueueRecord>, Task>>(2);
+                await callback([queueRecord]);
+            });
+
+        var mockDownloadService = _fixture.CreateMockDownloadService();
+        mockDownloadService
+            .ShouldRemoveFromArrQueueAsync(
+                Arg.Any<string>(),
+                Arg.Any<List<string>>()
+            )
+            .Returns(new DownloadCheckResult
+            {
+                Found = true,
+                ShouldRemove = true,
+                IsPrivate = true,
+                DeleteFromClient = true,
+                ChangeCategory = true,
+                DeleteReason = DeleteReason.Stalled,
+            });
+
+        _fixture.DownloadServiceFactory
+            .GetDownloadService(Arg.Any<DownloadClientConfig>())
+            .Returns(mockDownloadService);
+
+        var sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert
+        await _fixture.MessageBus.Received(1).Publish(
+            Arg.Is<QueueItemRemoveRequest<SeriesSearchItem>>(r =>
+                r.DeleteReason == DeleteReason.Stalled &&
+                r.ChangeCategory == true &&
+                r.RemoveFromClient == false
+            ),
+            Arg.Any<CancellationToken>()
+        );
+    }
+
+    #endregion
 }

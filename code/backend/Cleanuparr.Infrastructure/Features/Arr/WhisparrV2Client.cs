@@ -44,11 +44,19 @@ public class WhisparrV2Client : ArrClient, IWhisparrV2Client
         return $"/api/v3/queue/{recordId}";
     }
 
-    protected override string GetQueueDeleteUrlQuery(bool removeFromClient)
+    protected override string GetQueueDeleteUrlQuery(bool removeFromClient, bool changeCategory)
     {
-        string query = "blocklist=true&skipRedownload=true&changeCategory=false";
+        string query = "blocklist=true&skipRedownload=true&";
+
+        if (changeCategory)
+        {
+            query += "changeCategory=true&removeFromClient=false";
+            return query;
+        }
+
+        query += "changeCategory=false";
         query += removeFromClient ? "&removeFromClient=true" : "&removeFromClient=false";
-        
+
         return query;
     }
 

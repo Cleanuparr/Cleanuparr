@@ -167,4 +167,77 @@ public sealed class FailedImportConfigTests
     }
 
     #endregion
+
+    #region Validate - ChangeCategory Validation
+
+    [Fact]
+    public void Validate_WithChangeCategoryDefault_DoesNotThrow()
+    {
+        var config = new FailedImportConfig
+        {
+            MaxStrikes = 3,
+            PatternMode = PatternMode.Exclude,
+        };
+
+        Should.NotThrow(() => config.Validate());
+    }
+
+    [Fact]
+    public void Validate_WithChangeCategoryAndDeletePrivateBothFalse_DoesNotThrow()
+    {
+        var config = new FailedImportConfig
+        {
+            MaxStrikes = 3,
+            PatternMode = PatternMode.Exclude,
+            ChangeCategory = false,
+            DeletePrivate = false,
+        };
+
+        Should.NotThrow(() => config.Validate());
+    }
+
+    [Fact]
+    public void Validate_WithChangeCategoryTrueAndDeletePrivateFalse_DoesNotThrow()
+    {
+        var config = new FailedImportConfig
+        {
+            MaxStrikes = 3,
+            PatternMode = PatternMode.Exclude,
+            ChangeCategory = true,
+            DeletePrivate = false,
+        };
+
+        Should.NotThrow(() => config.Validate());
+    }
+
+    [Fact]
+    public void Validate_WithChangeCategoryFalseAndDeletePrivateTrue_DoesNotThrow()
+    {
+        var config = new FailedImportConfig
+        {
+            MaxStrikes = 3,
+            PatternMode = PatternMode.Exclude,
+            ChangeCategory = false,
+            DeletePrivate = true,
+        };
+
+        Should.NotThrow(() => config.Validate());
+    }
+
+    [Fact]
+    public void Validate_WithChangeCategoryAndDeletePrivateBothTrue_ThrowsValidationException()
+    {
+        var config = new FailedImportConfig
+        {
+            MaxStrikes = 3,
+            PatternMode = PatternMode.Exclude,
+            ChangeCategory = true,
+            DeletePrivate = true,
+        };
+
+        var exception = Should.Throw<ValidationException>(() => config.Validate());
+        exception.Message.ShouldBe("Cannot enable both deletion and category changing");
+    }
+
+    #endregion
 }

@@ -163,12 +163,13 @@ public abstract class ArrClient : IArrClient
         ArrInstance arrInstance,
         QueueRecord record,
         bool removeFromClient,
+        bool changeCategory,
         DeleteReason deleteReason
     )
     {
         UriBuilder uriBuilder = new(arrInstance.Url);
         uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/{GetQueueDeleteUrlPath(record.Id).TrimStart('/')}";
-        uriBuilder.Query = GetQueueDeleteUrlQuery(removeFromClient);
+        uriBuilder.Query = GetQueueDeleteUrlQuery(removeFromClient, changeCategory);
 
         try
         {
@@ -177,11 +178,23 @@ public abstract class ArrClient : IArrClient
 
             HttpResponseMessage? response = await _dryRunInterceptor.InterceptAsync<HttpResponseMessage>(SendRequestAsync, request);
             response?.Dispose();
-            
+
+            string logMessage;
+            if (changeCategory)
+            {
+                logMessage = "queue item category changed in arr with reason {reason} | {url} | {title}";
+            }
+            else if (removeFromClient)
+            {
+                logMessage = "queue item deleted with reason {reason} | {url} | {title}";
+            }
+            else
+            {
+                logMessage = "queue item removed from arr with reason {reason} | {url} | {title}";
+            }
+
             _logger.LogInformation(
-                removeFromClient
-                    ? "queue item deleted with reason {reason} | {url} | {title}"
-                    : "queue item removed from arr with reason {reason} | {url} | {title}",
+                logMessage,
                 deleteReason.ToString(),
                 arrInstance.Url,
                 record.Title
@@ -262,7 +275,7 @@ public abstract class ArrClient : IArrClient
 
     protected abstract string GetQueueDeleteUrlPath(long recordId);
     
-    protected abstract string GetQueueDeleteUrlQuery(bool removeFromClient);
+    protected abstract string GetQueueDeleteUrlQuery(bool removeFromClient, bool changeCategory);
     
     protected virtual void SetApiKey(HttpRequestMessage request, string apiKey)
     {

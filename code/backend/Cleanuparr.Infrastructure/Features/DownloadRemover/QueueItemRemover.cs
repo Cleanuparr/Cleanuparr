@@ -51,7 +51,7 @@ public sealed class QueueItemRemover : IQueueItemRemover
         {
             var instanceType = request.Instance.ArrConfig.Type;
             var arrClient = _arrClientFactory.GetClient(instanceType, request.Instance.Version);
-            await arrClient.DeleteQueueItemAsync(request.Instance, request.Record, request.RemoveFromClient, request.DeleteReason);
+            await arrClient.DeleteQueueItemAsync(request.Instance, request.Record, request.RemoveFromClient, request.ChangeCategory, request.DeleteReason);
 
             // Mark the download item as removed in the database
             await _eventsContext.DownloadItems

@@ -29,7 +29,7 @@ public class QueueRuleEvaluator : IQueueRuleEvaluator
         _logger = logger;
     }
 
-    public async Task<(bool ShouldRemove, DeleteReason Reason, bool DeleteFromClient)> EvaluateStallRulesAsync(ITorrentItemWrapper torrent)
+    public async Task<(bool ShouldRemove, DeleteReason Reason, bool DeleteFromClient, bool ChangeCategory)> EvaluateStallRulesAsync(ITorrentItemWrapper torrent)
     {
         _logger.LogTrace("Evaluating stall rules | {name}", torrent.Name);
 
@@ -38,7 +38,7 @@ public class QueueRuleEvaluator : IQueueRuleEvaluator
         if (rule is null)
         {
             _logger.LogTrace("skip | no stall rules matched | {name}", torrent.Name);
-            return (false, DeleteReason.None, false);
+            return (false, DeleteReason.None, false, false);
         }
 
         _logger.LogTrace("Applying stall rule {rule} | {name}", rule.Name, torrent.Name);
@@ -61,13 +61,14 @@ public class QueueRuleEvaluator : IQueueRuleEvaluator
 
         if (shouldRemove)
         {
-            return (true, DeleteReason.Stalled, rule.DeletePrivateTorrentsFromClient);
+            bool deleteFromClient = rule is { ChangeCategory: false, DeletePrivateTorrentsFromClient: true };
+            return (true, DeleteReason.Stalled, deleteFromClient, rule.ChangeCategory);
         }
 
-        return (false, DeleteReason.None, false);
+        return (false, DeleteReason.None, false, false);
     }
 
-    public async Task<(bool ShouldRemove, DeleteReason Reason, bool DeleteFromClient)> EvaluateSlowRulesAsync(ITorrentItemWrapper torrent)
+    public async Task<(bool ShouldRemove, DeleteReason Reason, bool DeleteFromClient, bool ChangeCategory)> EvaluateSlowRulesAsync(ITorrentItemWrapper torrent)
     {
         _logger.LogTrace("Evaluating slow rules | {name}", torrent.Name);
 
@@ -76,7 +77,7 @@ public class QueueRuleEvaluator : IQueueRuleEvaluator
         if (rule is null)
         {
             _logger.LogDebug("skip | no slow rules matched | {name}", torrent.Name);
-            return (false, DeleteReason.None, false);
+            return (false, DeleteReason.None, false, false);
         }
 
         _logger.LogTrace("Applying slow rule {rule} | {name}", rule.Name, torrent.Name);
@@ -97,7 +98,8 @@ public class QueueRuleEvaluator : IQueueRuleEvaluator
 
                 if (shouldRemove)
                 {
-                    return (true, DeleteReason.SlowSpeed, rule.DeletePrivateTorrentsFromClient);
+                    bool deleteFromClient = rule is { ChangeCategory: false, DeletePrivateTorrentsFromClient: true };
+                    return (true, DeleteReason.SlowSpeed, deleteFromClient, rule.ChangeCategory);
                 }
             }
             else
@@ -121,7 +123,8 @@ public class QueueRuleEvaluator : IQueueRuleEvaluator
 
                 if (shouldRemove)
                 {
-                    return (true, DeleteReason.SlowTime, rule.DeletePrivateTorrentsFromClient);
+                    bool deleteFromClient = rule is { ChangeCategory: false, DeletePrivateTorrentsFromClient: true };
+                    return (true, DeleteReason.SlowTime, deleteFromClient, rule.ChangeCategory);
                 }
             }
             else
@@ -130,7 +133,7 @@ public class QueueRuleEvaluator : IQueueRuleEvaluator
             }
         }
 
-        return (false, DeleteReason.None, false);
+        return (false, DeleteReason.None, false, false);
     }
 
     private async Task ResetStalledStrikesAsync(

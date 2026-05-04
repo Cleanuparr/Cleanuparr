@@ -88,6 +88,7 @@ public class QueueRulesController : ControllerBase
                 MaxCompletionPercentage = ruleDto.MaxCompletionPercentage,
                 ResetStrikesOnProgress = ruleDto.ResetStrikesOnProgress,
                 DeletePrivateTorrentsFromClient = ruleDto.DeletePrivateTorrentsFromClient,
+                ChangeCategory = ruleDto.ChangeCategory,
                 MinimumProgress = ruleDto.MinimumProgress?.Trim(),
             };
 
@@ -161,6 +162,7 @@ public class QueueRulesController : ControllerBase
                 MaxCompletionPercentage = ruleDto.MaxCompletionPercentage,
                 ResetStrikesOnProgress = ruleDto.ResetStrikesOnProgress,
                 DeletePrivateTorrentsFromClient = ruleDto.DeletePrivateTorrentsFromClient,
+                ChangeCategory = ruleDto.ChangeCategory,
                 MinimumProgress = ruleDto.MinimumProgress?.Trim(),
             };
 
@@ -293,6 +295,7 @@ public class QueueRulesController : ControllerBase
                 MaxTimeHours = ruleDto.MaxTimeHours,
                 IgnoreAboveSize = ruleDto.IgnoreAboveSize,
                 DeletePrivateTorrentsFromClient = ruleDto.DeletePrivateTorrentsFromClient,
+                ChangeCategory = ruleDto.ChangeCategory,
             };
 
             var existingRules = await _dataContext.SlowRules.ToListAsync();
@@ -368,6 +371,7 @@ public class QueueRulesController : ControllerBase
                 MaxTimeHours = ruleDto.MaxTimeHours,
                 IgnoreAboveSize = ruleDto.IgnoreAboveSize,
                 DeletePrivateTorrentsFromClient = ruleDto.DeletePrivateTorrentsFromClient,
+                ChangeCategory = ruleDto.ChangeCategory,
             };
 
             var existingRules = await _dataContext.SlowRules

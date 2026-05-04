@@ -22,4 +22,9 @@ public sealed record DownloadCheckResult
     /// True if the download should be deleted from the client; otherwise false.
     /// </summary>
     public bool DeleteFromClient { get; set; }
+
+    /// <summary>
+    /// True if the matching queue rule asked to change the category in the *arr instead of deleting; otherwise false.
+    /// </summary>
+    public bool ChangeCategory { get; set; }
 }

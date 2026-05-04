@@ -694,7 +694,13 @@ public class QueueRuleEvaluatorTests : IDisposable
         return torrent;
     }
 
-    private static StallRule CreateStallRule(string name, bool resetOnProgress, int maxStrikes, string? minimumProgress = null, bool deletePrivateTorrentsFromClient = false)
+    private static StallRule CreateStallRule(
+        string name,
+        bool resetOnProgress,
+        int maxStrikes,
+        string? minimumProgress = null,
+        bool deletePrivateTorrentsFromClient = false,
+        bool changeCategory = false)
     {
         return new StallRule
         {
@@ -709,6 +715,7 @@ public class QueueRuleEvaluatorTests : IDisposable
             ResetStrikesOnProgress = resetOnProgress,
             MinimumProgress = minimumProgress,
             DeletePrivateTorrentsFromClient = deletePrivateTorrentsFromClient,
+            ChangeCategory = changeCategory,
         };
     }
 
@@ -718,7 +725,8 @@ public class QueueRuleEvaluatorTests : IDisposable
         int maxStrikes,
         string? minSpeed = null,
         double maxTimeHours = 1,
-        bool deletePrivateTorrentsFromClient = false)
+        bool deletePrivateTorrentsFromClient = false,
+        bool changeCategory = false)
     {
         return new SlowRule
         {
@@ -735,6 +743,7 @@ public class QueueRuleEvaluatorTests : IDisposable
             MinSpeed = minSpeed ?? string.Empty,
             IgnoreAboveSize = string.Empty,
             DeletePrivateTorrentsFromClient = deletePrivateTorrentsFromClient,
+            ChangeCategory = changeCategory,
         };
     }
 
@@ -993,4 +1002,140 @@ public class QueueRuleEvaluatorTests : IDisposable
         result.Reason.ShouldBe(DeleteReason.None);
         result.DeleteFromClient.ShouldBeFalse();
     }
+
+    #region ChangeCategory Tests
+
+    [Fact]
+    public async Task EvaluateStallRulesAsync_WhenRuleMatchesWithChangeCategory_ShouldReturnChangeCategoryTrueAndDeleteFromClientFalse()
+    {
+        var ruleManager = Substitute.For<IQueueRuleManager>();
+        var striker = Substitute.For<IStriker>();
+        var logger = Substitute.For<ILogger<QueueRuleEvaluator>>();
+        var context = CreateInMemoryEventsContext();
+
+        var evaluator = new QueueRuleEvaluator(ruleManager, striker, context, logger);
+
+        var stallRule = CreateStallRule("Stall Change Category", resetOnProgress: false, maxStrikes: 3, deletePrivateTorrentsFromClient: true, changeCategory: true);
+
+        ruleManager
+            .GetMatchingStallRule(Arg.Any<ITorrentItemWrapper>())
+            .Returns(stallRule);
+
+        striker
+            .StrikeAndCheckLimit(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<ushort>(), StrikeType.Stalled, Arg.Any<long?>())
+            .Returns(true);
+
+        var torrent = CreateTorrentMock();
+
+        var result = await evaluator.EvaluateStallRulesAsync(torrent);
+
+        result.ShouldRemove.ShouldBeTrue();
+        result.Reason.ShouldBe(DeleteReason.Stalled);
+        result.ChangeCategory.ShouldBeTrue();
+        result.DeleteFromClient.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task EvaluateStallRulesAsync_WhenRuleMatchesWithoutChangeCategory_ShouldReturnChangeCategoryFalse()
+    {
+        var ruleManager = Substitute.For<IQueueRuleManager>();
+        var striker = Substitute.For<IStriker>();
+        var logger = Substitute.For<ILogger<QueueRuleEvaluator>>();
+        var context = CreateInMemoryEventsContext();
+
+        var evaluator = new QueueRuleEvaluator(ruleManager, striker, context, logger);
+
+        var stallRule = CreateStallRule("Stall Default", resetOnProgress: false, maxStrikes: 3, deletePrivateTorrentsFromClient: false, changeCategory: false);
+
+        ruleManager
+            .GetMatchingStallRule(Arg.Any<ITorrentItemWrapper>())
+            .Returns(stallRule);
+
+        striker
+            .StrikeAndCheckLimit(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<ushort>(), StrikeType.Stalled, Arg.Any<long?>())
+            .Returns(true);
+
+        var torrent = CreateTorrentMock();
+
+        var result = await evaluator.EvaluateStallRulesAsync(torrent);
+
+        result.ShouldRemove.ShouldBeTrue();
+        result.ChangeCategory.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task EvaluateSlowRulesAsync_WhenSpeedRuleMatchesWithChangeCategory_ShouldReturnChangeCategoryTrueAndDeleteFromClientFalse()
+    {
+        var ruleManager = Substitute.For<IQueueRuleManager>();
+        var striker = Substitute.For<IStriker>();
+        var logger = Substitute.For<ILogger<QueueRuleEvaluator>>();
+        var context = CreateInMemoryEventsContext();
+
+        var evaluator = new QueueRuleEvaluator(ruleManager, striker, context, logger);
+
+        var slowRule = CreateSlowRule(
+            "Slow Speed Change Category",
+            resetOnProgress: false,
+            maxStrikes: 3,
+            minSpeed: "5 MB",
+            maxTimeHours: 0,
+            deletePrivateTorrentsFromClient: true,
+            changeCategory: true);
+
+        ruleManager
+            .GetMatchingSlowRule(Arg.Any<ITorrentItemWrapper>())
+            .Returns(slowRule);
+
+        striker
+            .StrikeAndCheckLimit(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<ushort>(), StrikeType.SlowSpeed, Arg.Any<long?>())
+            .Returns(true);
+
+        var torrent = CreateTorrentMock();
+        torrent.DownloadSpeed.Returns(ByteSize.Parse("1 MB").Bytes);
+
+        var result = await evaluator.EvaluateSlowRulesAsync(torrent);
+
+        result.ShouldRemove.ShouldBeTrue();
+        result.Reason.ShouldBe(DeleteReason.SlowSpeed);
+        result.ChangeCategory.ShouldBeTrue();
+        result.DeleteFromClient.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task EvaluateSlowRulesAsync_WhenTimeRuleMatchesWithChangeCategory_ShouldReturnChangeCategoryTrueAndDeleteFromClientFalse()
+    {
+        var ruleManager = Substitute.For<IQueueRuleManager>();
+        var striker = Substitute.For<IStriker>();
+        var logger = Substitute.For<ILogger<QueueRuleEvaluator>>();
+        var context = CreateInMemoryEventsContext();
+
+        var evaluator = new QueueRuleEvaluator(ruleManager, striker, context, logger);
+
+        var slowRule = CreateSlowRule(
+            "Slow Time Change Category",
+            resetOnProgress: false,
+            maxStrikes: 3,
+            maxTimeHours: 1,
+            deletePrivateTorrentsFromClient: true,
+            changeCategory: true);
+
+        ruleManager
+            .GetMatchingSlowRule(Arg.Any<ITorrentItemWrapper>())
+            .Returns(slowRule);
+
+        striker
+            .StrikeAndCheckLimit(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<ushort>(), StrikeType.SlowTime, Arg.Any<long?>())
+            .Returns(true);
+
+        var torrent = CreateTorrentMock();
+
+        var result = await evaluator.EvaluateSlowRulesAsync(torrent);
+
+        result.ShouldRemove.ShouldBeTrue();
+        result.Reason.ShouldBe(DeleteReason.SlowTime);
+        result.ChangeCategory.ShouldBeTrue();
+        result.DeleteFromClient.ShouldBeFalse();
+    }
+
+    #endregion
 }

@@ -11,7 +11,7 @@ public interface IArrClient
 
     Task<bool> ShouldRemoveFromQueue(InstanceType instanceType, QueueRecord record, bool isPrivateDownload, short arrMaxStrikes);
 
-    Task DeleteQueueItemAsync(ArrInstance arrInstance, QueueRecord record, bool removeFromClient, DeleteReason deleteReason);
+    Task DeleteQueueItemAsync(ArrInstance arrInstance, QueueRecord record, bool removeFromClient, bool changeCategory, DeleteReason deleteReason);
 
     /// <summary>
     /// Triggers a search for the specified items and returns the arr command IDs

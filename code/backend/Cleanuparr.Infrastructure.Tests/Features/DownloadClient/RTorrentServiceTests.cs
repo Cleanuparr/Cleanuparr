@@ -132,11 +132,11 @@ public class RTorrentServiceTests : IClassFixture<RTorrentServiceFixture>
 
             _fixture.RuleEvaluator
                 .EvaluateSlowRulesAsync(Arg.Any<RTorrentItemWrapper>())
-                .Returns((false, DeleteReason.None, false));
+                .Returns((false, DeleteReason.None, false, false));
 
             _fixture.RuleEvaluator
                 .EvaluateStallRulesAsync(Arg.Any<RTorrentItemWrapper>())
-                .Returns((false, DeleteReason.None, false));
+                .Returns((false, DeleteReason.None, false, false));
 
             // Act
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
@@ -182,11 +182,11 @@ public class RTorrentServiceTests : IClassFixture<RTorrentServiceFixture>
 
             _fixture.RuleEvaluator
                 .EvaluateSlowRulesAsync(Arg.Any<RTorrentItemWrapper>())
-                .Returns((false, DeleteReason.None, false));
+                .Returns((false, DeleteReason.None, false, false));
 
             _fixture.RuleEvaluator
                 .EvaluateStallRulesAsync(Arg.Any<RTorrentItemWrapper>())
-                .Returns((false, DeleteReason.None, false));
+                .Returns((false, DeleteReason.None, false, false));
 
             // Act
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
@@ -300,11 +300,11 @@ public class RTorrentServiceTests : IClassFixture<RTorrentServiceFixture>
 
             _fixture.RuleEvaluator
                 .EvaluateSlowRulesAsync(Arg.Any<RTorrentItemWrapper>())
-                .Returns((false, DeleteReason.None, false));
+                .Returns((false, DeleteReason.None, false, false));
 
             _fixture.RuleEvaluator
                 .EvaluateStallRulesAsync(Arg.Any<RTorrentItemWrapper>())
-                .Returns((false, DeleteReason.None, false));
+                .Returns((false, DeleteReason.None, false, false));
 
             // Act
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
@@ -399,7 +399,7 @@ public class RTorrentServiceTests : IClassFixture<RTorrentServiceFixture>
 
             _fixture.RuleEvaluator
                 .EvaluateStallRulesAsync(Arg.Any<RTorrentItemWrapper>())
-                .Returns((false, DeleteReason.None, false));
+                .Returns((false, DeleteReason.None, false, false));
 
             // Act
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
@@ -447,7 +447,7 @@ public class RTorrentServiceTests : IClassFixture<RTorrentServiceFixture>
 
             _fixture.RuleEvaluator
                 .EvaluateStallRulesAsync(Arg.Any<RTorrentItemWrapper>())
-                .Returns((false, DeleteReason.None, false));
+                .Returns((false, DeleteReason.None, false, false));
 
             // Act
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
@@ -495,7 +495,7 @@ public class RTorrentServiceTests : IClassFixture<RTorrentServiceFixture>
 
             _fixture.RuleEvaluator
                 .EvaluateSlowRulesAsync(Arg.Any<RTorrentItemWrapper>())
-                .Returns((true, DeleteReason.SlowSpeed, true));
+                .Returns((true, DeleteReason.SlowSpeed, true, false));
 
             // Act
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
@@ -550,7 +550,7 @@ public class RTorrentServiceTests : IClassFixture<RTorrentServiceFixture>
 
             _fixture.RuleEvaluator
                 .EvaluateSlowRulesAsync(Arg.Any<RTorrentItemWrapper>())
-                .Returns((false, DeleteReason.None, false));
+                .Returns((false, DeleteReason.None, false, false));
 
             // Act
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
@@ -598,7 +598,7 @@ public class RTorrentServiceTests : IClassFixture<RTorrentServiceFixture>
 
             _fixture.RuleEvaluator
                 .EvaluateStallRulesAsync(Arg.Any<RTorrentItemWrapper>())
-                .Returns((true, DeleteReason.Stalled, true));
+                .Returns((true, DeleteReason.Stalled, true, false));
 
             // Act
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
@@ -654,7 +654,7 @@ public class RTorrentServiceTests : IClassFixture<RTorrentServiceFixture>
             // Slow check is skipped because speed is 0
             _fixture.RuleEvaluator
                 .EvaluateStallRulesAsync(Arg.Any<RTorrentItemWrapper>())
-                .Returns((true, DeleteReason.Stalled, true));
+                .Returns((true, DeleteReason.Stalled, true, false));
 
             // Act
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
@@ -704,11 +704,11 @@ public class RTorrentServiceTests : IClassFixture<RTorrentServiceFixture>
 
             _fixture.RuleEvaluator
                 .EvaluateSlowRulesAsync(Arg.Any<RTorrentItemWrapper>())
-                .Returns((false, DeleteReason.None, false));
+                .Returns((false, DeleteReason.None, false, false));
 
             _fixture.RuleEvaluator
                 .EvaluateStallRulesAsync(Arg.Any<RTorrentItemWrapper>())
-                .Returns((false, DeleteReason.None, false));
+                .Returns((false, DeleteReason.None, false, false));
 
             // Act
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());

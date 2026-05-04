@@ -71,14 +71,14 @@ public partial class QBitService
             return result;
         }
 
-        (result.ShouldRemove, result.DeleteReason, result.DeleteFromClient) = await EvaluateDownloadRemoval(torrent);
+        (result.ShouldRemove, result.DeleteReason, result.DeleteFromClient, result.ChangeCategory) = await EvaluateDownloadRemoval(torrent);
 
         return result;
     }
 
-    private async Task<(bool ShouldRemove, DeleteReason Reason, bool DeleteFromClient)> EvaluateDownloadRemoval(ITorrentItemWrapper wrapper)
+    private async Task<(bool ShouldRemove, DeleteReason Reason, bool DeleteFromClient, bool ChangeCategory)> EvaluateDownloadRemoval(ITorrentItemWrapper wrapper)
     {
-        (bool ShouldRemove, DeleteReason Reason, bool DeleteFromClient) slowResult = await CheckIfSlow(wrapper);
+        (bool ShouldRemove, DeleteReason Reason, bool DeleteFromClient, bool ChangeCategory) slowResult = await CheckIfSlow(wrapper);
 
         if (slowResult.ShouldRemove)
         {
@@ -88,24 +88,24 @@ public partial class QBitService
         return await CheckIfStuck(wrapper);
     }
 
-    private async Task<(bool ShouldRemove, DeleteReason Reason, bool DeleteFromClient)> CheckIfSlow(ITorrentItemWrapper wrapper)
+    private async Task<(bool ShouldRemove, DeleteReason Reason, bool DeleteFromClient, bool ChangeCategory)> CheckIfSlow(ITorrentItemWrapper wrapper)
     {
         if (!wrapper.IsDownloading())
         {
             _logger.LogTrace("skip slow check | download is not in downloading state | {name}", wrapper.Name);
-            return (false, DeleteReason.None, false);
+            return (false, DeleteReason.None, false, false);
         }
 
         if (wrapper.DownloadSpeed <= 0)
         {
             _logger.LogTrace("skip slow check | download speed is 0 | {name}", wrapper.Name);
-            return (false, DeleteReason.None, false);
+            return (false, DeleteReason.None, false, false);
         }
 
         return await _queueRuleEvaluator.EvaluateSlowRulesAsync(wrapper);
     }
 
-    private async Task<(bool ShouldRemove, DeleteReason Reason, bool DeleteFromClient)> CheckIfStuck(ITorrentItemWrapper wrapper)
+    private async Task<(bool ShouldRemove, DeleteReason Reason, bool DeleteFromClient, bool ChangeCategory)> CheckIfStuck(ITorrentItemWrapper wrapper)
     {
         if (((QBitItemWrapper)wrapper).IsMetadataDownloading())
         {
@@ -119,17 +119,17 @@ public partial class QBitService
                     queueCleanerConfig.DownloadingMetadataMaxStrikes,
                     StrikeType.DownloadingMetadata
                 );
-                
-                return (shouldRemove, DeleteReason.DownloadingMetadata, shouldRemove);
+
+                return (shouldRemove, DeleteReason.DownloadingMetadata, shouldRemove, false);
             }
 
-            return (false, DeleteReason.None, false);
+            return (false, DeleteReason.None, false, false);
         }
 
         if (!wrapper.IsStalled())
         {
             _logger.LogTrace("skip stalled check | download is not in stalled state | {name}", wrapper.Name);
-            return (false, DeleteReason.None, false);
+            return (false, DeleteReason.None, false, false);
         }
 
         return await _queueRuleEvaluator.EvaluateStallRulesAsync(wrapper);

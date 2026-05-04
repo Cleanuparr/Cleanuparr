@@ -9,6 +9,7 @@ export interface QueueRule {
   minCompletionPercentage: number;
   maxCompletionPercentage: number;
   deletePrivateTorrentsFromClient: boolean;
+  changeCategory: boolean;
 }
 
 export interface StallRule extends QueueRule {
@@ -32,6 +33,7 @@ export interface CreateStallRuleDto {
   maxCompletionPercentage: number;
   resetStrikesOnProgress: boolean;
   deletePrivateTorrentsFromClient: boolean;
+  changeCategory: boolean;
   minimumProgress?: string | null;
 }
 
@@ -47,4 +49,5 @@ export interface CreateSlowRuleDto {
   maxTimeHours: number;
   ignoreAboveSize?: string;
   deletePrivateTorrentsFromClient: boolean;
+  changeCategory: boolean;
 }

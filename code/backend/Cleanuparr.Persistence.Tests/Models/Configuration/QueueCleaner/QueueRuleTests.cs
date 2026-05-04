@@ -291,4 +291,63 @@ public sealed class QueueRuleTests
     }
 
     #endregion
+
+    #region Validate - ChangeCategory Validation
+
+    [Fact]
+    public void Validate_WithChangeCategoryDefault_DoesNotThrow()
+    {
+        var rule = new StallRule
+        {
+            Name = "test-rule",
+            MaxStrikes = 3,
+        };
+
+        Should.NotThrow(() => rule.Validate());
+    }
+
+    [Fact]
+    public void Validate_WithChangeCategoryTrueAndDeletePrivateFromClientFalse_DoesNotThrow()
+    {
+        var rule = new StallRule
+        {
+            Name = "test-rule",
+            MaxStrikes = 3,
+            ChangeCategory = true,
+            DeletePrivateTorrentsFromClient = false,
+        };
+
+        Should.NotThrow(() => rule.Validate());
+    }
+
+    [Fact]
+    public void Validate_WithChangeCategoryFalseAndDeletePrivateFromClientTrue_DoesNotThrow()
+    {
+        var rule = new StallRule
+        {
+            Name = "test-rule",
+            MaxStrikes = 3,
+            ChangeCategory = false,
+            DeletePrivateTorrentsFromClient = true,
+        };
+
+        Should.NotThrow(() => rule.Validate());
+    }
+
+    [Fact]
+    public void Validate_WithChangeCategoryAndDeletePrivateFromClientBothTrue_ThrowsValidationException()
+    {
+        var rule = new StallRule
+        {
+            Name = "test-rule",
+            MaxStrikes = 3,
+            ChangeCategory = true,
+            DeletePrivateTorrentsFromClient = true,
+        };
+
+        var exception = Should.Throw<ValidationException>(() => rule.Validate());
+        exception.Message.ShouldBe("Cannot enable both deletion and category changing");
+    }
+
+    #endregion
 }
