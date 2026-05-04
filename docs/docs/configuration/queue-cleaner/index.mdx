@@ -121,6 +121,18 @@ This setting needs a download client to be configured.
 </ConfigSection>
 
 <ConfigSection
+  title="Change Category"
+>
+
+When enabled, instead of deleting the item from the download client, Cleanuparr asks the *arr to change the torrent's category to the post-import category.
+
+<Important>
+The post-import category is configured per download client in your *arr application's settings, not in Cleanuparr. Cleanuparr only signals the *arr to perform the category change.
+</Important>
+
+</ConfigSection>
+
+<ConfigSection
   title="Delete Private"
 >
 
@@ -260,6 +272,18 @@ Only reset strikes after the torrent downloads at least this amount of data. Lea
 </ConfigSection>
 
 <ConfigSection
+  title="Change Category"
+>
+
+When enabled, instead of deleting the item from the download client, Cleanuparr asks the *arr to change the torrent's category to the post-import category.
+
+<Important>
+The post-import category is configured per download client in your *arr application's settings, not in Cleanuparr. Cleanuparr only signals the *arr to perform the category change.
+</Important>
+
+</ConfigSection>
+
+<ConfigSection
   title="Delete Private from Client"
 >
 
@@ -371,6 +395,18 @@ Downloads larger than this size will be ignored by this rule (e.g., 25 GB). Larg
 >
 
 When enabled, the strike count resets to zero if the download speed improves above the minimum threshold. This prevents removal of downloads that temporarily slow down but recover.
+
+</ConfigSection>
+
+<ConfigSection
+  title="Change Category"
+>
+
+When enabled, instead of deleting the item from the download client, Cleanuparr asks the *arr to change the torrent's category to the post-import category.
+
+<Important>
+The post-import category is configured per download client in your *arr application's settings, not in Cleanuparr. Cleanuparr only signals the *arr to perform the category change.
+</Important>
 
 </ConfigSection>
 
