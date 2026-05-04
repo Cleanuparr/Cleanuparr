@@ -199,6 +199,12 @@ public abstract class ArrClient : IArrClient
     public virtual async Task<long> SearchItemAsync(ArrInstance arrInstance, SearchItem item)
     {
         List<long> ids = await SearchItemsAsync(arrInstance, [item]);
+
+        if (await _dryRunInterceptor.IsDryRunEnabled())
+        {
+            return ids.FirstOrDefault();
+        }
+
         return ids.First();
     }
 
