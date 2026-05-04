@@ -21,7 +21,7 @@ public partial class DelugeService
 
         return downloads
             .Where(x => !string.IsNullOrEmpty(x.Hash))
-            .Where(x => x.State?.Equals("seeding", StringComparison.InvariantCultureIgnoreCase) is true)
+            .Where(x => x.State is DelugeState.Seeding || x is { IsFinished: true, State: DelugeState.Paused or DelugeState.Queued })
             .Select(ITorrentItemWrapper (x) => new DelugeItemWrapper(x))
             .ToList();
     }

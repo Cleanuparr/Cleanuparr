@@ -34,9 +34,9 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
 
             var downloads = new List<DownloadStatus>
             {
-                new DownloadStatus { Hash = "hash1", Name = "Torrent 1", State = "Seeding", Private = false, Trackers = new List<Tracker>(), DownloadLocation = "/downloads" },
-                new DownloadStatus { Hash = "hash2", Name = "Torrent 2", State = "Downloading", Private = false, Trackers = new List<Tracker>(), DownloadLocation = "/downloads" },
-                new DownloadStatus { Hash = "hash3", Name = "Torrent 3", State = "Seeding", Private = false, Trackers = new List<Tracker>(), DownloadLocation = "/downloads" }
+                new DownloadStatus { Hash = "hash1", Name = "Torrent 1", State = DelugeState.Seeding, Private = false, Trackers = new List<Tracker>(), DownloadLocation = "/downloads" },
+                new DownloadStatus { Hash = "hash2", Name = "Torrent 2", State = DelugeState.Downloading, Private = false, Trackers = new List<Tracker>(), DownloadLocation = "/downloads" },
+                new DownloadStatus { Hash = "hash3", Name = "Torrent 3", State = DelugeState.Seeding, Private = false, Trackers = new List<Tracker>(), DownloadLocation = "/downloads" }
             };
 
             _fixture.ClientWrapper
@@ -49,29 +49,6 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
             // Assert
             result.Count.ShouldBe(2);
             foreach (var item in result) { item.Hash.ShouldNotBeNull(); }
-        }
-
-        [Fact]
-        public async Task IsCaseInsensitive()
-        {
-            // Arrange
-            var sut = _fixture.CreateSut();
-
-            var downloads = new List<DownloadStatus>
-            {
-                new DownloadStatus { Hash = "hash1", Name = "Torrent 1", State = "SEEDING", Private = false, Trackers = new List<Tracker>(), DownloadLocation = "/downloads" },
-                new DownloadStatus { Hash = "hash2", Name = "Torrent 2", State = "seeding", Private = false, Trackers = new List<Tracker>(), DownloadLocation = "/downloads" }
-            };
-
-            _fixture.ClientWrapper
-                .GetStatusForAllTorrents()
-                .Returns(downloads);
-
-            // Act
-            var result = await sut.GetSeedingDownloads();
-
-            // Assert
-            result.Count.ShouldBe(2);
         }
 
         [Fact]
@@ -99,8 +76,121 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
 
             var downloads = new List<DownloadStatus>
             {
-                new DownloadStatus { Hash = "", Name = "No Hash", State = "Seeding", Private = false, Trackers = new List<Tracker>(), DownloadLocation = "/downloads" },
-                new DownloadStatus { Hash = "hash1", Name = "Valid Hash", State = "Seeding", Private = false, Trackers = new List<Tracker>(), DownloadLocation = "/downloads" }
+                new DownloadStatus { Hash = "", Name = "No Hash", State = DelugeState.Seeding, Private = false, Trackers = new List<Tracker>(), DownloadLocation = "/downloads" },
+                new DownloadStatus { Hash = "hash1", Name = "Valid Hash", State = DelugeState.Seeding, Private = false, Trackers = new List<Tracker>(), DownloadLocation = "/downloads" }
+            };
+
+            _fixture.ClientWrapper
+                .GetStatusForAllTorrents()
+                .Returns(downloads);
+
+            // Act
+            var result = await sut.GetSeedingDownloads();
+
+            // Assert
+            result.ShouldHaveSingleItem();
+            result[0].Hash.ShouldBe("hash1");
+        }
+
+        [Fact]
+        public async Task IncludesPausedFinishedTorrents()
+        {
+            // Arrange
+            var sut = _fixture.CreateSut();
+
+            var downloads = new List<DownloadStatus>
+            {
+                new DownloadStatus { Hash = "hash1", Name = "Paused finished", State = DelugeState.Paused, IsFinished = true, Private = false, Trackers = new List<Tracker>(), DownloadLocation = "/downloads" }
+            };
+
+            _fixture.ClientWrapper
+                .GetStatusForAllTorrents()
+                .Returns(downloads);
+
+            // Act
+            var result = await sut.GetSeedingDownloads();
+
+            // Assert
+            result.ShouldHaveSingleItem();
+            result[0].Hash.ShouldBe("hash1");
+        }
+
+        [Fact]
+        public async Task IncludesQueuedFinishedTorrents()
+        {
+            // Arrange
+            var sut = _fixture.CreateSut();
+
+            var downloads = new List<DownloadStatus>
+            {
+                new DownloadStatus { Hash = "hash1", Name = "Queued finished", State = DelugeState.Queued, IsFinished = true, Private = false, Trackers = new List<Tracker>(), DownloadLocation = "/downloads" }
+            };
+
+            _fixture.ClientWrapper
+                .GetStatusForAllTorrents()
+                .Returns(downloads);
+
+            // Act
+            var result = await sut.GetSeedingDownloads();
+
+            // Assert
+            result.ShouldHaveSingleItem();
+            result[0].Hash.ShouldBe("hash1");
+        }
+
+        [Fact]
+        public async Task ExcludesPausedNotFinished()
+        {
+            // Arrange
+            var sut = _fixture.CreateSut();
+
+            var downloads = new List<DownloadStatus>
+            {
+                new DownloadStatus { Hash = "hash1", Name = "Paused mid-download", State = DelugeState.Paused, IsFinished = false, Private = false, Trackers = new List<Tracker>(), DownloadLocation = "/downloads" }
+            };
+
+            _fixture.ClientWrapper
+                .GetStatusForAllTorrents()
+                .Returns(downloads);
+
+            // Act
+            var result = await sut.GetSeedingDownloads();
+
+            // Assert
+            result.ShouldBeEmpty();
+        }
+
+        [Fact]
+        public async Task ExcludesQueuedNotFinished()
+        {
+            // Arrange
+            var sut = _fixture.CreateSut();
+
+            var downloads = new List<DownloadStatus>
+            {
+                new DownloadStatus { Hash = "hash1", Name = "Queued mid-download", State = DelugeState.Queued, IsFinished = false, Private = false, Trackers = new List<Tracker>(), DownloadLocation = "/downloads" }
+            };
+
+            _fixture.ClientWrapper
+                .GetStatusForAllTorrents()
+                .Returns(downloads);
+
+            // Act
+            var result = await sut.GetSeedingDownloads();
+
+            // Assert
+            result.ShouldBeEmpty();
+        }
+
+        [Fact]
+        public async Task IncludesSeedingRegardlessOfIsFinished()
+        {
+            // Arrange
+            var sut = _fixture.CreateSut();
+
+            var downloads = new List<DownloadStatus>
+            {
+                new DownloadStatus { Hash = "hash1", Name = "Seeding without IsFinished flag", State = DelugeState.Seeding, IsFinished = false, Private = false, Trackers = new List<Tracker>(), DownloadLocation = "/downloads" }
             };
 
             _fixture.ClientWrapper
