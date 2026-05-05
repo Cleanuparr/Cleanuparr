@@ -452,6 +452,7 @@ public class DelugeServiceTests : IClassFixture<DelugeServiceFixture>
             result.ShouldRemove.ShouldBeTrue();
             result.DeleteReason.ShouldBe(DeleteReason.SlowSpeed);
             result.DeleteFromClient.ShouldBeTrue();
+            result.ChangeCategory.ShouldBeFalse();
         }
 
         [Fact]
@@ -495,6 +496,50 @@ public class DelugeServiceTests : IClassFixture<DelugeServiceFixture>
             result.ShouldRemove.ShouldBeTrue();
             result.DeleteReason.ShouldBe(DeleteReason.Stalled);
             result.DeleteFromClient.ShouldBeTrue();
+            result.ChangeCategory.ShouldBeFalse();
+        }
+
+        [Fact]
+        public async Task SlowDownload_RuleWithChangeCategory_PropagatesChangeCategoryFlag()
+        {
+            const string hash = "test-hash";
+            var sut = _fixture.CreateSut();
+
+            var downloadStatus = new DownloadStatus
+            {
+                Hash = hash,
+                Name = "Test Torrent",
+                State = DelugeState.Downloading,
+                Private = false,
+                DownloadSpeed = 1000,
+                Trackers = new List<Tracker>(),
+                DownloadLocation = "/downloads"
+            };
+
+            _fixture.ClientWrapper
+                .GetTorrentStatus(hash)
+                .Returns(downloadStatus);
+
+            _fixture.ClientWrapper
+                .GetTorrentFiles(hash)
+                .Returns(new DelugeContents
+                {
+                    Contents = new Dictionary<string, DelugeFileOrDirectory>
+                    {
+                        { "file1.mkv", new DelugeFileOrDirectory { Type = "file", Priority = 1, Index = 0 } }
+                    }
+                });
+
+            _fixture.RuleEvaluator
+                .EvaluateSlowRulesAsync(Arg.Any<DelugeItemWrapper>())
+                .Returns((true, DeleteReason.SlowSpeed, false, true));
+
+            var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
+
+            result.ShouldRemove.ShouldBeTrue();
+            result.DeleteReason.ShouldBe(DeleteReason.SlowSpeed);
+            result.DeleteFromClient.ShouldBeFalse();
+            result.ChangeCategory.ShouldBeTrue();
         }
     }
 }

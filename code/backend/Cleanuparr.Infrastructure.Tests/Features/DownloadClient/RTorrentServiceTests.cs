@@ -504,6 +504,55 @@ public class RTorrentServiceTests : IClassFixture<RTorrentServiceFixture>
             result.ShouldRemove.ShouldBeTrue();
             result.DeleteReason.ShouldBe(DeleteReason.SlowSpeed);
             result.DeleteFromClient.ShouldBeTrue();
+            result.ChangeCategory.ShouldBeFalse();
+        }
+
+        [Fact]
+        public async Task SlowDownload_RuleWithChangeCategory_PropagatesChangeCategoryFlag()
+        {
+            // Arrange
+            const string hash = "TEST-HASH";
+            var sut = _fixture.CreateSut();
+
+            var download = new RTorrentTorrent
+            {
+                Hash = hash,
+                Name = "Test Torrent",
+                IsPrivate = 0,
+                State = 1,
+                Complete = 0,
+                DownRate = 1000,
+                SizeBytes = 1000,
+                CompletedBytes = 500
+            };
+
+            _fixture.ClientWrapper
+                .GetTorrentAsync(hash)
+                .Returns(download);
+
+            _fixture.ClientWrapper
+                .GetTrackersAsync(hash)
+                .Returns(new List<string>());
+
+            _fixture.ClientWrapper
+                .GetTorrentFilesAsync(hash)
+                .Returns(new List<RTorrentFile>
+                {
+                    new RTorrentFile { Index = 0, Path = "file.mkv", Priority = 1 }
+                });
+
+            _fixture.RuleEvaluator
+                .EvaluateSlowRulesAsync(Arg.Any<RTorrentItemWrapper>())
+                .Returns((true, DeleteReason.SlowSpeed, false, true));
+
+            // Act
+            var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
+
+            // Assert
+            result.ShouldRemove.ShouldBeTrue();
+            result.DeleteReason.ShouldBe(DeleteReason.SlowSpeed);
+            result.DeleteFromClient.ShouldBeFalse();
+            result.ChangeCategory.ShouldBeTrue();
         }
     }
 
@@ -607,6 +656,7 @@ public class RTorrentServiceTests : IClassFixture<RTorrentServiceFixture>
             result.ShouldRemove.ShouldBeTrue();
             result.DeleteReason.ShouldBe(DeleteReason.Stalled);
             result.DeleteFromClient.ShouldBeTrue();
+            result.ChangeCategory.ShouldBeFalse();
         }
     }
 

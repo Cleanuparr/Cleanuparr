@@ -419,6 +419,26 @@ public class QueueItemRemoverTests : IDisposable
             Arg.Any<DeleteReason>());
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task RemoveQueueItemAsync_PassesCorrectChangeCategoryFlag(bool changeCategory)
+    {
+        // Arrange
+        var request = CreateRemoveRequest(changeCategory: changeCategory);
+
+        // Act
+        await _queueItemRemover.RemoveQueueItemAsync(request);
+
+        // Assert
+        await _arrClient.Received(1).DeleteQueueItemAsync(
+            Arg.Any<ArrInstance>(),
+            Arg.Any<QueueRecord>(),
+            Arg.Any<bool>(),
+            Arg.Is<bool>(x => x == changeCategory),
+            Arg.Any<DeleteReason>());
+    }
+
     #endregion
 
     #region Helper Methods
@@ -427,7 +447,8 @@ public class QueueItemRemoverTests : IDisposable
         InstanceType instanceType = InstanceType.Sonarr,
         bool removeFromClient = true,
         DeleteReason deleteReason = DeleteReason.Stalled,
-        bool skipSearch = false)
+        bool skipSearch = false,
+        bool changeCategory = false)
     {
         // Use an ArrInstance that exists in the DB to satisfy FK constraint on SearchQueueItem
         var instance = GetOrCreateArrInstance(instanceType);
@@ -438,6 +459,7 @@ public class QueueItemRemoverTests : IDisposable
             SearchItem = new SearchItem { Id = 123 },
             Record = CreateQueueRecord(),
             RemoveFromClient = removeFromClient,
+            ChangeCategory = changeCategory,
             DeleteReason = deleteReason,
             SkipSearch = skipSearch,
             JobRunId = _jobRunId

@@ -668,6 +668,7 @@ public class TransmissionServiceTests : IClassFixture<TransmissionServiceFixture
             result.ShouldRemove.ShouldBeTrue();
             result.DeleteReason.ShouldBe(DeleteReason.SlowSpeed);
             result.DeleteFromClient.ShouldBeTrue();
+            result.ChangeCategory.ShouldBeFalse();
         }
 
         [Fact]
@@ -726,6 +727,45 @@ public class TransmissionServiceTests : IClassFixture<TransmissionServiceFixture
             result.ShouldRemove.ShouldBeTrue();
             result.DeleteReason.ShouldBe(DeleteReason.Stalled);
             result.DeleteFromClient.ShouldBeTrue();
+            result.ChangeCategory.ShouldBeFalse();
+        }
+
+        [Fact]
+        public async Task SlowDownload_RuleWithChangeCategory_PropagatesChangeCategoryFlag()
+        {
+            const string hash = "test-hash";
+            var sut = _fixture.CreateSut();
+
+            var torrentInfo = new TorrentInfo
+            {
+                Id = 1,
+                HashString = hash,
+                Name = "Test Torrent",
+                Status = 4,
+                IsPrivate = false,
+                RateDownload = 1000,
+                FileStats = new[] { new TransmissionTorrentFileStats { Wanted = true } }
+            };
+
+            var torrents = new TransmissionTorrents
+            {
+                Torrents = new[] { torrentInfo }
+            };
+
+            _fixture.ClientWrapper
+                .TorrentGetAsync(Arg.Any<string[]>(), hash)
+                .Returns(torrents);
+
+            _fixture.RuleEvaluator
+                .EvaluateSlowRulesAsync(Arg.Any<TransmissionItemWrapper>())
+                .Returns((true, DeleteReason.SlowSpeed, false, true));
+
+            var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
+
+            result.ShouldRemove.ShouldBeTrue();
+            result.DeleteReason.ShouldBe(DeleteReason.SlowSpeed);
+            result.DeleteFromClient.ShouldBeFalse();
+            result.ChangeCategory.ShouldBeTrue();
         }
     }
 }
