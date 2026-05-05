@@ -17,6 +17,10 @@ public sealed record QueueItemRemoveRequest<T>
 
     public required bool RemoveFromClient { get; init; }
 
+    /// <summary>
+    /// When true, the *arr is asked to change the download's category to its post-import category
+    /// instead of removing it from the download client. Mutually exclusive with <see cref="RemoveFromClient"/>.
+    /// </summary>
     public bool ChangeCategory { get; init; }
 
     public required DeleteReason DeleteReason { get; init; }

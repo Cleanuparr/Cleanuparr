@@ -11,6 +11,14 @@ public interface IArrClient
 
     Task<bool> ShouldRemoveFromQueue(InstanceType instanceType, QueueRecord record, bool isPrivateDownload, short arrMaxStrikes);
 
+    /// <summary>
+    /// Removes a queue item from the *arr instance.
+    /// </summary>
+    /// <param name="arrInstance">The *arr instance hosting the queue item.</param>
+    /// <param name="record">The queue record to remove.</param>
+    /// <param name="removeFromClient">When true, also delete the download from the download client. Ignored when <paramref name="changeCategory"/> is true.</param>
+    /// <param name="changeCategory">When true, instructs the *arr to change the download's category to the post-import category instead of removing it from the download client. Mutually exclusive with <paramref name="removeFromClient"/>.</param>
+    /// <param name="deleteReason">Reason for removal, used for logging and event publishing.</param>
     Task DeleteQueueItemAsync(ArrInstance arrInstance, QueueRecord record, bool removeFromClient, bool changeCategory, DeleteReason deleteReason);
 
     /// <summary>
