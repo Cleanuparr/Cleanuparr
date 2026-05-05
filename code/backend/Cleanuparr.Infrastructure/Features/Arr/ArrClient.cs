@@ -275,7 +275,21 @@ public abstract class ArrClient : IArrClient
 
     protected abstract string GetQueueDeleteUrlPath(long recordId);
     
-    protected abstract string GetQueueDeleteUrlQuery(bool removeFromClient, bool changeCategory);
+    protected virtual string GetQueueDeleteUrlQuery(bool removeFromClient, bool changeCategory)
+    {
+        string query = "blocklist=true&skipRedownload=true&";
+
+        if (changeCategory)
+        {
+            query += "changeCategory=true&removeFromClient=false";
+            return query;
+        }
+
+        query += "changeCategory=false";
+        query += removeFromClient ? "&removeFromClient=true" : "&removeFromClient=false";
+
+        return query;
+    }
     
     protected virtual void SetApiKey(HttpRequestMessage request, string apiKey)
     {
