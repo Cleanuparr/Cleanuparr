@@ -116,6 +116,83 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
             // Assert
             result.ShouldBeEmpty();
         }
+
+        [Fact]
+        public async Task IncludesStoppedFinishedTorrents()
+        {
+            // Arrange
+            var sut = _fixture.CreateSut();
+
+            var torrents = new TransmissionTorrents
+            {
+                Torrents = new[]
+                {
+                    new TorrentInfo { HashString = "hash1", Name = "Stopped finished", Status = 0, IsFinished = true }
+                }
+            };
+
+            _fixture.ClientWrapper
+                .TorrentGetAsync(Arg.Any<string[]>(), Arg.Any<string?>())
+                .Returns(torrents);
+
+            // Act
+            var result = await sut.GetSeedingDownloads();
+
+            // Assert
+            result.ShouldHaveSingleItem();
+            result[0].Hash.ShouldBe("hash1");
+        }
+
+        [Fact]
+        public async Task ExcludesStoppedNotFinished()
+        {
+            // Arrange
+            var sut = _fixture.CreateSut();
+
+            var torrents = new TransmissionTorrents
+            {
+                Torrents = new[]
+                {
+                    new TorrentInfo { HashString = "hash1", Name = "Stopped mid-download", Status = 0, IsFinished = false }
+                }
+            };
+
+            _fixture.ClientWrapper
+                .TorrentGetAsync(Arg.Any<string[]>(), Arg.Any<string?>())
+                .Returns(torrents);
+
+            // Act
+            var result = await sut.GetSeedingDownloads();
+
+            // Assert
+            result.ShouldBeEmpty();
+        }
+
+        [Fact]
+        public async Task IncludesSeedingRegardlessOfIsFinished()
+        {
+            // Arrange
+            var sut = _fixture.CreateSut();
+
+            var torrents = new TransmissionTorrents
+            {
+                Torrents = new[]
+                {
+                    new TorrentInfo { HashString = "hash1", Name = "Seeding without IsFinished flag", Status = 6, IsFinished = false }
+                }
+            };
+
+            _fixture.ClientWrapper
+                .TorrentGetAsync(Arg.Any<string[]>(), Arg.Any<string?>())
+                .Returns(torrents);
+
+            // Act
+            var result = await sut.GetSeedingDownloads();
+
+            // Assert
+            result.ShouldHaveSingleItem();
+            result[0].Hash.ShouldBe("hash1");
+        }
     }
 
     public class FilterDownloadsToBeCleanedAsync_Tests : TransmissionServiceDCTests
