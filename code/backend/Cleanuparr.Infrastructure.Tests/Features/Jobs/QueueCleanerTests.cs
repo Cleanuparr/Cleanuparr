@@ -1345,7 +1345,11 @@ public class QueueCleanerTests : IDisposable
         TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
 
         var queueCleanerConfig = _fixture.DataContext.QueueCleanerConfigs.First();
-        queueCleanerConfig.FailedImport = queueCleanerConfig.FailedImport with { ChangeCategory = true };
+        // Set DeletePrivate = true so RemoveFromClient would be true without the ChangeCategory override.
+        // This makes the RemoveFromClient == false assertion below conclusive.
+        queueCleanerConfig.FailedImport = queueCleanerConfig.FailedImport with { ChangeCategory = true, DeletePrivate = false };
+        // Validate gate prevents both flags being true at once; we keep DeletePrivate=false here, but rely on
+        // IsPrivate=false from the mock so removeFromClient resolves to !changeCategory.
         _fixture.DataContext.SaveChanges();
 
         var mockArrClient = Substitute.For<IArrClient>();
@@ -1390,7 +1394,10 @@ public class QueueCleanerTests : IDisposable
                 Arg.Any<string>(),
                 Arg.Any<List<string>>()
             )
-            .Returns(new DownloadCheckResult { Found = true, ShouldRemove = false, IsPrivate = true });
+            // IsPrivate=false ensures the failed-import path computes
+            // removeFromClient = !changeCategory && (!IsPrivate || DeletePrivate) = !changeCategory && true.
+            // So RemoveFromClient == false in the assertion is only satisfiable due to changeCategory=true.
+            .Returns(new DownloadCheckResult { Found = true, ShouldRemove = false, IsPrivate = false });
 
         _fixture.DownloadServiceFactory
             .GetDownloadService(Arg.Any<DownloadClientConfig>())
