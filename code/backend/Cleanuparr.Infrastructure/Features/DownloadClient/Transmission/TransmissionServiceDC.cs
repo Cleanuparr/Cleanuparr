@@ -15,7 +15,7 @@ public partial class TransmissionService
         var result = await _client.TorrentGetAsync(Fields);
         return result?.Torrents
             ?.Where(x => !string.IsNullOrEmpty(x.HashString))
-            .Where(x => x.Status is 5 or 6)
+            .Where(x => x.Status is 5 or 6 || x is { IsFinished: true, Status: 0 })
             .Select(ITorrentItemWrapper (x) => new TransmissionItemWrapper(x))
             .ToList() ?? [];
     }
