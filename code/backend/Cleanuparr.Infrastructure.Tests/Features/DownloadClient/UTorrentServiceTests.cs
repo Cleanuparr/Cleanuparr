@@ -79,11 +79,11 @@ public class UTorrentServiceTests : IClassFixture<UTorrentServiceFixture>
 
             _fixture.RuleEvaluator
                 .EvaluateSlowRulesAsync(Arg.Any<UTorrentItemWrapper>())
-                .Returns((false, DeleteReason.None, false));
+                .Returns((false, DeleteReason.None, false, false));
 
             _fixture.RuleEvaluator
                 .EvaluateStallRulesAsync(Arg.Any<UTorrentItemWrapper>())
-                .Returns((false, DeleteReason.None, false));
+                .Returns((false, DeleteReason.None, false, false));
 
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 
@@ -129,11 +129,11 @@ public class UTorrentServiceTests : IClassFixture<UTorrentServiceFixture>
 
             _fixture.RuleEvaluator
                 .EvaluateSlowRulesAsync(Arg.Any<UTorrentItemWrapper>())
-                .Returns((false, DeleteReason.None, false));
+                .Returns((false, DeleteReason.None, false, false));
 
             _fixture.RuleEvaluator
                 .EvaluateStallRulesAsync(Arg.Any<UTorrentItemWrapper>())
-                .Returns((false, DeleteReason.None, false));
+                .Returns((false, DeleteReason.None, false, false));
 
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 
@@ -231,11 +231,11 @@ public class UTorrentServiceTests : IClassFixture<UTorrentServiceFixture>
 
             _fixture.RuleEvaluator
                 .EvaluateSlowRulesAsync(Arg.Any<UTorrentItemWrapper>())
-                .Returns((false, DeleteReason.None, false));
+                .Returns((false, DeleteReason.None, false, false));
 
             _fixture.RuleEvaluator
                 .EvaluateStallRulesAsync(Arg.Any<UTorrentItemWrapper>())
-                .Returns((false, DeleteReason.None, false));
+                .Returns((false, DeleteReason.None, false, false));
 
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 
@@ -399,11 +399,11 @@ public class UTorrentServiceTests : IClassFixture<UTorrentServiceFixture>
 
             _fixture.RuleEvaluator
                 .EvaluateSlowRulesAsync(Arg.Any<UTorrentItemWrapper>())
-                .Returns((false, DeleteReason.None, false));
+                .Returns((false, DeleteReason.None, false, false));
 
             _fixture.RuleEvaluator
                 .EvaluateStallRulesAsync(Arg.Any<UTorrentItemWrapper>())
-                .Returns((false, DeleteReason.None, false));
+                .Returns((false, DeleteReason.None, false, false));
 
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 
@@ -456,7 +456,7 @@ public class UTorrentServiceTests : IClassFixture<UTorrentServiceFixture>
 
             _fixture.RuleEvaluator
                 .EvaluateStallRulesAsync(Arg.Any<UTorrentItemWrapper>())
-                .Returns((false, DeleteReason.None, false));
+                .Returns((false, DeleteReason.None, false, false));
 
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 
@@ -502,7 +502,7 @@ public class UTorrentServiceTests : IClassFixture<UTorrentServiceFixture>
 
             _fixture.RuleEvaluator
                 .EvaluateStallRulesAsync(Arg.Any<UTorrentItemWrapper>())
-                .Returns((false, DeleteReason.None, false));
+                .Returns((false, DeleteReason.None, false, false));
 
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 
@@ -555,13 +555,14 @@ public class UTorrentServiceTests : IClassFixture<UTorrentServiceFixture>
 
             _fixture.RuleEvaluator
                 .EvaluateSlowRulesAsync(Arg.Any<UTorrentItemWrapper>())
-                .Returns((true, DeleteReason.SlowSpeed, true));
+                .Returns((true, DeleteReason.SlowSpeed, true, false));
 
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 
             result.ShouldRemove.ShouldBeTrue();
             result.DeleteReason.ShouldBe(DeleteReason.SlowSpeed);
             result.DeleteFromClient.ShouldBeTrue();
+            result.ChangeCategory.ShouldBeFalse();
         }
 
         [Fact]
@@ -603,13 +604,111 @@ public class UTorrentServiceTests : IClassFixture<UTorrentServiceFixture>
 
             _fixture.RuleEvaluator
                 .EvaluateStallRulesAsync(Arg.Any<UTorrentItemWrapper>())
-                .Returns((true, DeleteReason.Stalled, true));
+                .Returns((true, DeleteReason.Stalled, true, false));
 
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 
             result.ShouldRemove.ShouldBeTrue();
             result.DeleteReason.ShouldBe(DeleteReason.Stalled);
             result.DeleteFromClient.ShouldBeTrue();
+            result.ChangeCategory.ShouldBeFalse();
+        }
+
+        [Fact]
+        public async Task SlowDownload_RuleWithChangeCategory_PropagatesChangeCategoryFlag()
+        {
+            const string hash = "test-hash";
+            var sut = _fixture.CreateSut();
+
+            var torrentItem = new UTorrentItem
+            {
+                Hash = hash,
+                Name = "Test Torrent",
+                Status = 9,
+                DownloadSpeed = 1000
+            };
+
+            var torrentProperties = new UTorrentProperties
+            {
+                Hash = hash,
+                Pex = 1,
+                Trackers = ""
+            };
+
+            _fixture.ClientWrapper
+                .GetTorrentAsync(hash)
+                .Returns(torrentItem);
+
+            _fixture.ClientWrapper
+                .GetTorrentPropertiesAsync(hash)
+                .Returns(torrentProperties);
+
+            _fixture.ClientWrapper
+                .GetTorrentFilesAsync(hash)
+                .Returns(new List<UTorrentFile>
+                {
+                    new UTorrentFile { Name = "file1.mkv", Priority = 1, Index = 0, Size = 1000, Downloaded = 500 }
+                });
+
+            _fixture.RuleEvaluator
+                .EvaluateSlowRulesAsync(Arg.Any<UTorrentItemWrapper>())
+                .Returns((true, DeleteReason.SlowSpeed, false, true));
+
+            var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
+
+            result.ShouldRemove.ShouldBeTrue();
+            result.DeleteReason.ShouldBe(DeleteReason.SlowSpeed);
+            result.DeleteFromClient.ShouldBeFalse();
+            result.ChangeCategory.ShouldBeTrue();
+        }
+
+        [Fact]
+        public async Task StalledDownload_RuleWithChangeCategory_PropagatesChangeCategoryFlag()
+        {
+            const string hash = "test-hash";
+            var sut = _fixture.CreateSut();
+
+            var torrentItem = new UTorrentItem
+            {
+                Hash = hash,
+                Name = "Test Torrent",
+                Status = 9,
+                DownloadSpeed = 0,
+                ETA = 0
+            };
+
+            var torrentProperties = new UTorrentProperties
+            {
+                Hash = hash,
+                Pex = 1,
+                Trackers = ""
+            };
+
+            _fixture.ClientWrapper
+                .GetTorrentAsync(hash)
+                .Returns(torrentItem);
+
+            _fixture.ClientWrapper
+                .GetTorrentPropertiesAsync(hash)
+                .Returns(torrentProperties);
+
+            _fixture.ClientWrapper
+                .GetTorrentFilesAsync(hash)
+                .Returns(new List<UTorrentFile>
+                {
+                    new UTorrentFile { Name = "file1.mkv", Priority = 1, Index = 0, Size = 1000, Downloaded = 500 }
+                });
+
+            _fixture.RuleEvaluator
+                .EvaluateStallRulesAsync(Arg.Any<UTorrentItemWrapper>())
+                .Returns((true, DeleteReason.Stalled, true, true));
+
+            var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
+
+            result.ShouldRemove.ShouldBeTrue();
+            result.DeleteReason.ShouldBe(DeleteReason.Stalled);
+            result.DeleteFromClient.ShouldBeTrue();
+            result.ChangeCategory.ShouldBeTrue();
         }
     }
 }

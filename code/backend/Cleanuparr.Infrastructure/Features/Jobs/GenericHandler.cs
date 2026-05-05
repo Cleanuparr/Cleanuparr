@@ -131,7 +131,8 @@ public abstract class GenericHandler : IHandler
         bool removeFromClient,
         DeleteReason deleteReason,
         bool skipSearch = false,
-        DownloadClientConfig? downloadClient = null
+        DownloadClientConfig? downloadClient = null,
+        bool changeCategory = false
     )
     {
         if (_cache.TryGetValue(downloadRemovalKey, out bool _))
@@ -150,6 +151,7 @@ public abstract class GenericHandler : IHandler
                 Record = record,
                 SearchItem = (SeriesSearchItem)GetRecordSearchItem(instanceType, instance.Version, record, isPack),
                 RemoveFromClient = removeFromClient,
+                ChangeCategory = changeCategory,
                 DeleteReason = deleteReason,
                 JobRunId = ContextProvider.GetJobRunId(),
                 SkipSearch = skipSearch,
@@ -166,6 +168,7 @@ public abstract class GenericHandler : IHandler
                 Record = record,
                 SearchItem = GetRecordSearchItem(instanceType, instance.Version, record, isPack),
                 RemoveFromClient = removeFromClient,
+                ChangeCategory = changeCategory,
                 DeleteReason = deleteReason,
                 JobRunId = ContextProvider.GetJobRunId(),
                 SkipSearch = skipSearch,

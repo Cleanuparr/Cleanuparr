@@ -24,4 +24,6 @@ public abstract record QueueRuleDto
     public ushort MaxCompletionPercentage { get; set; }
     
     public bool DeletePrivateTorrentsFromClient { get; set; } = false;
+
+    public bool ChangeCategory { get; set; } = false;
 }

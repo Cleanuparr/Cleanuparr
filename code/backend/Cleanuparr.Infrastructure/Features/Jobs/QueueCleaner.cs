@@ -192,7 +192,8 @@ public sealed class QueueCleaner : GenericHandler
 
                 if (downloadCheckResult.ShouldRemove)
                 {
-                    bool removeFromClient = !downloadCheckResult.IsPrivate || downloadCheckResult.DeleteFromClient;
+                    bool changeCategory = downloadCheckResult.ChangeCategory;
+                    bool removeFromClient = !changeCategory && (!downloadCheckResult.IsPrivate || downloadCheckResult.DeleteFromClient);
 
                     await PublishQueueItemRemoveRequest(
                         downloadRemovalKey,
@@ -202,7 +203,8 @@ public sealed class QueueCleaner : GenericHandler
                         removeFromClient,
                         downloadCheckResult.DeleteReason,
                         skipSearch: !hasContentId,
-                        downloadClient: foundInClient
+                        downloadClient: foundInClient,
+                        changeCategory: changeCategory
                     );
 
                     continue;
@@ -221,7 +223,8 @@ public sealed class QueueCleaner : GenericHandler
 
                 if (shouldRemoveFromArr)
                 {
-                    bool removeFromClient = !downloadCheckResult.IsPrivate || queueCleanerConfig.FailedImport.DeletePrivate;
+                    bool changeCategory = queueCleanerConfig.FailedImport.ChangeCategory;
+                    bool removeFromClient = !changeCategory && (!downloadCheckResult.IsPrivate || queueCleanerConfig.FailedImport.DeletePrivate);
 
                     await PublishQueueItemRemoveRequest(
                         downloadRemovalKey,
@@ -231,7 +234,8 @@ public sealed class QueueCleaner : GenericHandler
                         removeFromClient,
                         DeleteReason.FailedImport,
                         skipSearch: !hasContentId,
-                        downloadClient: foundInClient
+                        downloadClient: foundInClient,
+                        changeCategory: changeCategory
                     );
 
                     continue;

@@ -19,7 +19,9 @@ public sealed record FailedImportConfig
     public IReadOnlyList<string> Patterns { get; init; } = [];
 
     public PatternMode PatternMode { get; init; } = PatternMode.Include;
-    
+
+    public bool ChangeCategory { get; init; }
+
     public void Validate()
     {
         if (MaxStrikes is > 0 and < 3)
@@ -30,6 +32,11 @@ public sealed record FailedImportConfig
         if (MaxStrikes >= 3 && PatternMode is PatternMode.Include && Patterns.Count is 0)
         {
             throw new ValidationException("At least one pattern must be specified when using the Include pattern mode");
+        }
+
+        if (ChangeCategory && DeletePrivate)
+        {
+            throw new ValidationException("Cannot enable both deletion and category changing");
         }
     }
 }

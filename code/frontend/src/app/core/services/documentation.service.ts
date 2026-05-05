@@ -19,6 +19,7 @@ export class DocumentationService {
       'failedImport.maxStrikes': 'failed-import-max-strikes',
       'failedImport.ignorePrivate': 'failed-import-ignore-private',
       'failedImport.deletePrivate': 'failed-import-delete-private',
+      'failedImport.changeCategory': 'failed-import-change-category',
       'failedImport.skipIfNotFoundInClient': 'failed-import-skip-if-not-found-in-client',
       'failedImport.pattern-mode': 'failed-import-pattern-mode',
       'failedImport.patterns': 'failed-import-patterns',
@@ -31,6 +32,7 @@ export class DocumentationService {
       'stallRule.resetStrikesOnProgress': 'stalled-reset-strikes-on-progress',
       'stallRule.minimumProgress': 'stalled-minimum-progress-to-reset',
       'stallRule.deletePrivateTorrentsFromClient': 'stalled-delete-private-from-client',
+      'stallRule.changeCategory': 'stalled-change-category',
       'slowRule.name': 'slow-rule-name',
       'slowRule.enabled': 'slow-enabled',
       'slowRule.maxStrikes': 'slow-max-strikes',
@@ -41,6 +43,7 @@ export class DocumentationService {
       'slowRule.ignoreAboveSize': 'slow-ignore-above-size',
       'slowRule.resetStrikesOnProgress': 'slow-reset-strikes-on-progress',
       'slowRule.deletePrivateTorrentsFromClient': 'slow-delete-private-from-client',
+      'slowRule.changeCategory': 'slow-change-category',
     },
     'general': {
       'displaySupportBanner': 'display-support-banner',

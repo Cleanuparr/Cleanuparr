@@ -28,7 +28,9 @@ public abstract record QueueRule : IConfig, IQueueRule
     public ushort MaxCompletionPercentage { get; init; } = 100;
     
     public bool DeletePrivateTorrentsFromClient { get; init; } = false;
-    
+
+    public bool ChangeCategory { get; init; } = false;
+
     public abstract bool MatchesTorrent(ITorrentItemWrapper torrent);
     
     public virtual void Validate()
@@ -61,6 +63,11 @@ public abstract record QueueRule : IConfig, IQueueRule
         if (MaxCompletionPercentage < MinCompletionPercentage)
         {
             throw new Cleanuparr.Domain.Exceptions.ValidationException("Maximum completion percentage must be greater than or equal to the minimum completion percentage");
+        }
+
+        if (ChangeCategory && DeletePrivateTorrentsFromClient)
+        {
+            throw new Cleanuparr.Domain.Exceptions.ValidationException("Cannot enable both deletion and category changing");
         }
     }
     

@@ -1334,4 +1334,163 @@ public class QueueCleanerTests : IDisposable
     }
 
     #endregion
+
+    #region ChangeCategory Tests
+
+    [Fact]
+    public async Task ProcessInstanceAsync_WhenFailedImportWithChangeCategory_PublishesRequestWithChangeCategoryAndRemoveFromClientFalse()
+    {
+        // Arrange
+        TestDataContextFactory.AddSonarrInstance(_fixture.DataContext);
+        TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
+
+        var queueCleanerConfig = _fixture.DataContext.QueueCleanerConfigs.First();
+        // Set DeletePrivate = true so RemoveFromClient would be true without the ChangeCategory override.
+        // This makes the RemoveFromClient == false assertion below conclusive.
+        queueCleanerConfig.FailedImport = queueCleanerConfig.FailedImport with { ChangeCategory = true, DeletePrivate = false };
+        // Validate gate prevents both flags being true at once; we keep DeletePrivate=false here, but rely on
+        // IsPrivate=false from the mock so removeFromClient resolves to !changeCategory.
+        _fixture.DataContext.SaveChanges();
+
+        var mockArrClient = Substitute.For<IArrClient>();
+        mockArrClient.IsRecordValid(Arg.Any<QueueRecord>()).Returns(true);
+        mockArrClient.HasContentId(Arg.Any<QueueRecord>()).Returns(true);
+        mockArrClient.ShouldRemoveFromQueue(
+            Arg.Any<InstanceType>(),
+            Arg.Any<QueueRecord>(),
+            Arg.Any<bool>(),
+            Arg.Any<short>()
+        ).Returns(true);
+
+        _fixture.ArrClientFactory
+            .GetClient(InstanceType.Sonarr, Arg.Any<float>())
+            .Returns(mockArrClient);
+
+        var queueRecord = new QueueRecord
+        {
+            Id = 1,
+            DownloadId = "failed-import-change-category",
+            Title = "Failed Import Change Category",
+            Protocol = "torrent",
+            SeriesId = 1,
+            EpisodeId = 1
+        };
+
+        _fixture.ArrQueueIterator
+            .Iterate(
+                Arg.Any<IArrClient>(),
+                Arg.Any<ArrInstance>(),
+                Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>()
+            )
+            .Returns(async ci =>
+            {
+                var callback = ci.ArgAt<Func<IReadOnlyList<QueueRecord>, Task>>(2);
+                await callback([queueRecord]);
+            });
+
+        var mockDownloadService = _fixture.CreateMockDownloadService();
+        mockDownloadService
+            .ShouldRemoveFromArrQueueAsync(
+                Arg.Any<string>(),
+                Arg.Any<List<string>>()
+            )
+            // IsPrivate=false ensures the failed-import path computes
+            // removeFromClient = !changeCategory && (!IsPrivate || DeletePrivate) = !changeCategory && true.
+            // So RemoveFromClient == false in the assertion is only satisfiable due to changeCategory=true.
+            .Returns(new DownloadCheckResult { Found = true, ShouldRemove = false, IsPrivate = false });
+
+        _fixture.DownloadServiceFactory
+            .GetDownloadService(Arg.Any<DownloadClientConfig>())
+            .Returns(mockDownloadService);
+
+        var sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert
+        await _fixture.MessageBus.Received(1).Publish(
+            Arg.Is<QueueItemRemoveRequest<SeriesSearchItem>>(r =>
+                r.DeleteReason == DeleteReason.FailedImport &&
+                r.ChangeCategory == true &&
+                r.RemoveFromClient == false
+            ),
+            Arg.Any<CancellationToken>()
+        );
+    }
+
+    [Fact]
+    public async Task ProcessInstanceAsync_WhenStallRuleHasChangeCategory_PublishesRequestWithChangeCategoryAndRemoveFromClientFalse()
+    {
+        // Arrange
+        TestDataContextFactory.AddSonarrInstance(_fixture.DataContext);
+        TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
+
+        var mockArrClient = Substitute.For<IArrClient>();
+        mockArrClient.IsRecordValid(Arg.Any<QueueRecord>()).Returns(true);
+        mockArrClient.HasContentId(Arg.Any<QueueRecord>()).Returns(true);
+
+        _fixture.ArrClientFactory
+            .GetClient(InstanceType.Sonarr, Arg.Any<float>())
+            .Returns(mockArrClient);
+
+        var queueRecord = new QueueRecord
+        {
+            Id = 1,
+            DownloadId = "stall-change-category",
+            Title = "Stall Change Category",
+            Protocol = "torrent",
+            SeriesId = 1,
+            EpisodeId = 1
+        };
+
+        _fixture.ArrQueueIterator
+            .Iterate(
+                Arg.Any<IArrClient>(),
+                Arg.Any<ArrInstance>(),
+                Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>()
+            )
+            .Returns(async ci =>
+            {
+                var callback = ci.ArgAt<Func<IReadOnlyList<QueueRecord>, Task>>(2);
+                await callback([queueRecord]);
+            });
+
+        var mockDownloadService = _fixture.CreateMockDownloadService();
+        mockDownloadService
+            .ShouldRemoveFromArrQueueAsync(
+                Arg.Any<string>(),
+                Arg.Any<List<string>>()
+            )
+            .Returns(new DownloadCheckResult
+            {
+                Found = true,
+                ShouldRemove = true,
+                IsPrivate = true,
+                DeleteFromClient = true,
+                ChangeCategory = true,
+                DeleteReason = DeleteReason.Stalled,
+            });
+
+        _fixture.DownloadServiceFactory
+            .GetDownloadService(Arg.Any<DownloadClientConfig>())
+            .Returns(mockDownloadService);
+
+        var sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert
+        await _fixture.MessageBus.Received(1).Publish(
+            Arg.Is<QueueItemRemoveRequest<SeriesSearchItem>>(r =>
+                r.DeleteReason == DeleteReason.Stalled &&
+                r.ChangeCategory == true &&
+                r.RemoveFromClient == false
+            ),
+            Arg.Any<CancellationToken>()
+        );
+    }
+
+    #endregion
 }

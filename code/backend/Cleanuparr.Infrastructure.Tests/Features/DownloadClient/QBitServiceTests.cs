@@ -135,11 +135,11 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
 
             _fixture.RuleEvaluator
                 .EvaluateSlowRulesAsync(Arg.Any<QBitItemWrapper>())
-                .Returns((false, DeleteReason.None, false));
+                .Returns((false, DeleteReason.None, false, false));
 
             _fixture.RuleEvaluator
                 .EvaluateStallRulesAsync(Arg.Any<QBitItemWrapper>())
-                .Returns((false, DeleteReason.None, false));
+                .Returns((false, DeleteReason.None, false, false));
 
             // Act
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
@@ -193,11 +193,11 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
 
             _fixture.RuleEvaluator
                 .EvaluateSlowRulesAsync(Arg.Any<QBitItemWrapper>())
-                .Returns((false, DeleteReason.None, false));
+                .Returns((false, DeleteReason.None, false, false));
 
             _fixture.RuleEvaluator
                 .EvaluateStallRulesAsync(Arg.Any<QBitItemWrapper>())
-                .Returns((false, DeleteReason.None, false));
+                .Returns((false, DeleteReason.None, false, false));
 
             // Act
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
@@ -401,11 +401,11 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
 
             _fixture.RuleEvaluator
                 .EvaluateSlowRulesAsync(Arg.Any<QBitItemWrapper>())
-                .Returns((false, DeleteReason.None, false));
+                .Returns((false, DeleteReason.None, false, false));
 
             _fixture.RuleEvaluator
                 .EvaluateStallRulesAsync(Arg.Any<QBitItemWrapper>())
-                .Returns((false, DeleteReason.None, false));
+                .Returns((false, DeleteReason.None, false, false));
 
             // Act
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
@@ -654,7 +654,7 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
 
             _fixture.RuleEvaluator
                 .EvaluateStallRulesAsync(Arg.Any<QBitItemWrapper>())
-                .Returns((false, DeleteReason.None, false));
+                .Returns((false, DeleteReason.None, false, false));
 
             // Act
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
@@ -709,7 +709,7 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
 
             _fixture.RuleEvaluator
                 .EvaluateStallRulesAsync(Arg.Any<QBitItemWrapper>())
-                .Returns((false, DeleteReason.None, false));
+                .Returns((false, DeleteReason.None, false, false));
 
             // Act
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
@@ -764,7 +764,7 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
 
             _fixture.RuleEvaluator
                 .EvaluateSlowRulesAsync(Arg.Any<QBitItemWrapper>())
-                .Returns((true, DeleteReason.SlowSpeed, true)); // Rule matched
+                .Returns((true, DeleteReason.SlowSpeed, true, false)); // Rule matched
 
             // Act
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
@@ -773,6 +773,63 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
             result.ShouldRemove.ShouldBeTrue();
             result.DeleteReason.ShouldBe(DeleteReason.SlowSpeed);
             result.DeleteFromClient.ShouldBeTrue();
+            result.ChangeCategory.ShouldBeFalse();
+        }
+
+        [Fact]
+        public async Task SlowDownload_RuleWithChangeCategory_PropagatesChangeCategoryFlag()
+        {
+            // Arrange
+            const string hash = "test-hash";
+            var sut = _fixture.CreateSut();
+
+            var torrentInfo = new TorrentInfo
+            {
+                Hash = hash,
+                Name = "Test Torrent",
+                State = TorrentState.Downloading,
+                DownloadSpeed = 1000
+            };
+
+            _fixture.ClientWrapper
+                .GetTorrentListAsync(Arg.Is<TorrentListQuery>(q => q.Hashes != null && q.Hashes.Contains(hash)))
+                .Returns(new[] { torrentInfo });
+
+            _fixture.ClientWrapper
+                .GetTorrentTrackersAsync(hash)
+                .Returns(Array.Empty<TorrentTracker>());
+
+            var properties = new TorrentProperties
+            {
+                AdditionalData = new Dictionary<string, JToken>
+                {
+                    { "is_private", JToken.FromObject(false) }
+                }
+            };
+
+            _fixture.ClientWrapper
+                .GetTorrentPropertiesAsync(hash)
+                .Returns(properties);
+
+            _fixture.ClientWrapper
+                .GetTorrentContentsAsync(hash)
+                .Returns(new[]
+                {
+                    new TorrentContent { Index = 0, Priority = TorrentContentPriority.Normal }
+                });
+
+            _fixture.RuleEvaluator
+                .EvaluateSlowRulesAsync(Arg.Any<QBitItemWrapper>())
+                .Returns((true, DeleteReason.SlowSpeed, false, true));
+
+            // Act
+            var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
+
+            // Assert
+            result.ShouldRemove.ShouldBeTrue();
+            result.DeleteReason.ShouldBe(DeleteReason.SlowSpeed);
+            result.DeleteFromClient.ShouldBeFalse();
+            result.ChangeCategory.ShouldBeTrue();
         }
     }
 
@@ -826,7 +883,7 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
 
             _fixture.RuleEvaluator
                 .EvaluateSlowRulesAsync(Arg.Any<QBitItemWrapper>())
-                .Returns((false, DeleteReason.None, false));
+                .Returns((false, DeleteReason.None, false, false));
 
             // Act
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
@@ -880,7 +937,7 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
 
             _fixture.RuleEvaluator
                 .EvaluateStallRulesAsync(Arg.Any<QBitItemWrapper>())
-                .Returns((true, DeleteReason.Stalled, true)); // Rule matched
+                .Returns((true, DeleteReason.Stalled, true, false)); // Rule matched
 
             // Act
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
@@ -889,6 +946,62 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
             result.ShouldRemove.ShouldBeTrue();
             result.DeleteReason.ShouldBe(DeleteReason.Stalled);
             result.DeleteFromClient.ShouldBeTrue();
+            result.ChangeCategory.ShouldBeFalse();
+        }
+
+        [Fact]
+        public async Task StalledDownload_RuleWithChangeCategory_PropagatesChangeCategoryFlag()
+        {
+            // Arrange
+            const string hash = "test-hash";
+            var sut = _fixture.CreateSut();
+
+            var torrentInfo = new TorrentInfo
+            {
+                Hash = hash,
+                Name = "Test Torrent",
+                State = TorrentState.StalledDownload
+            };
+
+            _fixture.ClientWrapper
+                .GetTorrentListAsync(Arg.Is<TorrentListQuery>(q => q.Hashes != null && q.Hashes.Contains(hash)))
+                .Returns(new[] { torrentInfo });
+
+            _fixture.ClientWrapper
+                .GetTorrentTrackersAsync(hash)
+                .Returns(Array.Empty<TorrentTracker>());
+
+            var properties = new TorrentProperties
+            {
+                AdditionalData = new Dictionary<string, JToken>
+                {
+                    { "is_private", JToken.FromObject(false) }
+                }
+            };
+
+            _fixture.ClientWrapper
+                .GetTorrentPropertiesAsync(hash)
+                .Returns(properties);
+
+            _fixture.ClientWrapper
+                .GetTorrentContentsAsync(hash)
+                .Returns(new[]
+                {
+                    new TorrentContent { Index = 0, Priority = TorrentContentPriority.Normal }
+                });
+
+            _fixture.RuleEvaluator
+                .EvaluateStallRulesAsync(Arg.Any<QBitItemWrapper>())
+                .Returns((true, DeleteReason.Stalled, true, true));
+
+            // Act
+            var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
+
+            // Assert
+            result.ShouldRemove.ShouldBeTrue();
+            result.DeleteReason.ShouldBe(DeleteReason.Stalled);
+            result.DeleteFromClient.ShouldBeTrue();
+            result.ChangeCategory.ShouldBeTrue();
         }
     }
 
@@ -943,7 +1056,7 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
             // Slow check is skipped because not in downloading state
             _fixture.RuleEvaluator
                 .EvaluateStallRulesAsync(Arg.Any<QBitItemWrapper>())
-                .Returns((true, DeleteReason.Stalled, true));
+                .Returns((true, DeleteReason.Stalled, true, false));
 
             // Act
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
@@ -1001,11 +1114,11 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
 
             _fixture.RuleEvaluator
                 .EvaluateSlowRulesAsync(Arg.Any<QBitItemWrapper>())
-                .Returns((false, DeleteReason.None, false));
+                .Returns((false, DeleteReason.None, false, false));
 
             _fixture.RuleEvaluator
                 .EvaluateStallRulesAsync(Arg.Any<QBitItemWrapper>())
-                .Returns((false, DeleteReason.None, false));
+                .Returns((false, DeleteReason.None, false, false));
 
             // Act
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());

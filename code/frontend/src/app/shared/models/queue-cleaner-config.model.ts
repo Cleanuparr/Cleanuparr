@@ -13,6 +13,7 @@ export interface FailedImportConfig {
   skipIfNotFoundInClient: boolean;
   patterns: string[];
   patternMode?: PatternMode;
+  changeCategory: boolean;
 }
 
 export interface QueueCleanerConfig {

@@ -117,6 +117,7 @@ public class QueueItemRemoverTests : IDisposable
             request.Instance,
             request.Record,
             request.RemoveFromClient,
+            request.ChangeCategory,
             request.DeleteReason);
     }
 
@@ -288,6 +289,7 @@ public class QueueItemRemoverTests : IDisposable
                 Arg.Any<ArrInstance>(),
                 Arg.Any<QueueRecord>(),
                 Arg.Any<bool>(),
+                Arg.Any<bool>(),
                 Arg.Any<DeleteReason>())
             .ThrowsAsync(new HttpRequestException("Not found", null, HttpStatusCode.NotFound));
 
@@ -312,6 +314,7 @@ public class QueueItemRemoverTests : IDisposable
                 Arg.Any<ArrInstance>(),
                 Arg.Any<QueueRecord>(),
                 Arg.Any<bool>(),
+                Arg.Any<bool>(),
                 Arg.Any<DeleteReason>())
             .ThrowsAsync(new HttpRequestException("Not found", null, HttpStatusCode.NotFound));
 
@@ -335,6 +338,7 @@ public class QueueItemRemoverTests : IDisposable
                 Arg.Any<ArrInstance>(),
                 Arg.Any<QueueRecord>(),
                 Arg.Any<bool>(),
+                Arg.Any<bool>(),
                 Arg.Any<DeleteReason>())
             .ThrowsAsync(originalException);
 
@@ -356,6 +360,7 @@ public class QueueItemRemoverTests : IDisposable
             .DeleteQueueItemAsync(
                 Arg.Any<ArrInstance>(),
                 Arg.Any<QueueRecord>(),
+                Arg.Any<bool>(),
                 Arg.Any<bool>(),
                 Arg.Any<DeleteReason>())
             .ThrowsAsync(originalException);
@@ -390,6 +395,7 @@ public class QueueItemRemoverTests : IDisposable
             Arg.Any<ArrInstance>(),
             Arg.Any<QueueRecord>(),
             Arg.Any<bool>(),
+            Arg.Any<bool>(),
             deleteReason);
     }
 
@@ -408,7 +414,28 @@ public class QueueItemRemoverTests : IDisposable
         await _arrClient.Received(1).DeleteQueueItemAsync(
             Arg.Any<ArrInstance>(),
             Arg.Any<QueueRecord>(),
-            removeFromClient,
+            Arg.Is<bool>(x => x == removeFromClient),
+            Arg.Any<bool>(),
+            Arg.Any<DeleteReason>());
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task RemoveQueueItemAsync_PassesCorrectChangeCategoryFlag(bool changeCategory)
+    {
+        // Arrange
+        var request = CreateRemoveRequest(changeCategory: changeCategory);
+
+        // Act
+        await _queueItemRemover.RemoveQueueItemAsync(request);
+
+        // Assert
+        await _arrClient.Received(1).DeleteQueueItemAsync(
+            Arg.Any<ArrInstance>(),
+            Arg.Any<QueueRecord>(),
+            Arg.Any<bool>(),
+            Arg.Is<bool>(x => x == changeCategory),
             Arg.Any<DeleteReason>());
     }
 
@@ -420,7 +447,8 @@ public class QueueItemRemoverTests : IDisposable
         InstanceType instanceType = InstanceType.Sonarr,
         bool removeFromClient = true,
         DeleteReason deleteReason = DeleteReason.Stalled,
-        bool skipSearch = false)
+        bool skipSearch = false,
+        bool changeCategory = false)
     {
         // Use an ArrInstance that exists in the DB to satisfy FK constraint on SearchQueueItem
         var instance = GetOrCreateArrInstance(instanceType);
@@ -431,6 +459,7 @@ public class QueueItemRemoverTests : IDisposable
             SearchItem = new SearchItem { Id = 123 },
             Record = CreateQueueRecord(),
             RemoveFromClient = removeFromClient,
+            ChangeCategory = changeCategory,
             DeleteReason = deleteReason,
             SkipSearch = skipSearch,
             JobRunId = _jobRunId

@@ -81,7 +81,7 @@ public class QueueCleanerIntegrationTests : IDisposable
 
         // Process the captured messages through the real QueueItemRemover pipeline
         _fixture.ArrClient.DeleteQueueItemAsync(
-            Arg.Any<ArrInstance>(), Arg.Any<QueueRecord>(), Arg.Any<bool>(), Arg.Any<DeleteReason>())
+            Arg.Any<ArrInstance>(), Arg.Any<QueueRecord>(), Arg.Any<bool>(), Arg.Any<bool>(), Arg.Any<DeleteReason>())
             .Returns(Task.CompletedTask);
 
         await _fixture.ProcessCapturedRemoveRequestsAsync();
@@ -91,6 +91,7 @@ public class QueueCleanerIntegrationTests : IDisposable
             Arg.Is<ArrInstance>(i => i.Id == instance.Id),
             Arg.Is<QueueRecord>(r => r.DownloadId == record.DownloadId),
             true,
+            false,
             DeleteReason.Stalled);
 
         // Assert Phase 3: Events persisted with full property verification
@@ -185,7 +186,7 @@ public class QueueCleanerIntegrationTests : IDisposable
         _fixture.GetCapturedRemoveRequests().Count.ShouldBe(1);
 
         _fixture.ArrClient.DeleteQueueItemAsync(
-            Arg.Any<ArrInstance>(), Arg.Any<QueueRecord>(), Arg.Any<bool>(), Arg.Any<DeleteReason>())
+            Arg.Any<ArrInstance>(), Arg.Any<QueueRecord>(), Arg.Any<bool>(), Arg.Any<bool>(), Arg.Any<DeleteReason>())
             .Returns(Task.CompletedTask);
 
         await _fixture.ProcessCapturedRemoveRequestsAsync();
@@ -280,7 +281,7 @@ public class QueueCleanerIntegrationTests : IDisposable
         _fixture.GetCapturedRemoveRequests().Count.ShouldBe(1);
 
         _fixture.ArrClient.DeleteQueueItemAsync(
-            Arg.Any<ArrInstance>(), Arg.Any<QueueRecord>(), Arg.Any<bool>(), Arg.Any<DeleteReason>())
+            Arg.Any<ArrInstance>(), Arg.Any<QueueRecord>(), Arg.Any<bool>(), Arg.Any<bool>(), Arg.Any<DeleteReason>())
             .Returns(Task.CompletedTask);
 
         await _fixture.ProcessCapturedRemoveRequestsAsync();
@@ -289,6 +290,7 @@ public class QueueCleanerIntegrationTests : IDisposable
         await _fixture.ArrClient.Received(1).DeleteQueueItemAsync(
             Arg.Any<ArrInstance>(),
             Arg.Any<QueueRecord>(),
+            false,
             false,
             DeleteReason.Stalled);
 

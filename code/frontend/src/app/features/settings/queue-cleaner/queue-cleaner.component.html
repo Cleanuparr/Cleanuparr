@@ -72,10 +72,16 @@
           [disabled]="failedSubFieldsDisabled()"
           hint="When enabled, private torrents will not be checked for being failed imports"
           helpKey="queue-cleaner:failedImport.ignorePrivate" />
-        <app-toggle label="Delete Private from Client" [(checked)]="failedDeletePrivate"
-          [disabled]="failedDeletePrivateDisabled()"
-          hint="Disable this if you want to keep private torrents in the download client even if they are removed from the arrs"
-          helpKey="queue-cleaner:failedImport.deletePrivate" />
+        <app-toggle label="Change category instead of delete" [(checked)]="failedChangeCategory"
+          [disabled]="failedSubFieldsDisabled()"
+          hint="Changes the category to the post-import category set in your arr"
+          helpKey="queue-cleaner:failedImport.changeCategory" />
+        @if (!failedChangeCategory()) {
+          <app-toggle label="Delete Private from Client" [(checked)]="failedDeletePrivate"
+            [disabled]="failedDeletePrivateDisabled()"
+            hint="Disable this if you want to keep private torrents in the download client even if they are removed from the arrs"
+            helpKey="queue-cleaner:failedImport.deletePrivate" />
+        }
         <app-toggle label="Skip if Not Found in Client" [(checked)]="failedSkipNotFound"
           [disabled]="failedSubFieldsDisabled()"
           hint="Skip failed import check for torrents not found in any enabled torrent client"
@@ -275,10 +281,15 @@
         hint="Only reset strikes after the torrent downloads at least this amount. Leave blank to reset on any progress."
         helpKey="queue-cleaner:stallRule.minimumProgress" />
     }
-    <app-toggle label="Delete Private from Client" [(checked)]="stallDeletePrivate"
-      [disabled]="stallPrivacyType() === 'Public'"
-      hint="Disable this if you want to keep private torrents in the download client even if they are removed from the arrs"
-      helpKey="queue-cleaner:stallRule.deletePrivateTorrentsFromClient" />
+    <app-toggle label="Change category instead of delete" [(checked)]="stallChangeCategory"
+      hint="Changes the category to the post-import category set in your arr"
+      helpKey="queue-cleaner:stallRule.changeCategory" />
+    @if (!stallChangeCategory()) {
+      <app-toggle label="Delete Private from Client" [(checked)]="stallDeletePrivate"
+        [disabled]="stallPrivacyType() === 'Public'"
+        hint="Disable this if you want to keep private torrents in the download client even if they are removed from the arrs"
+        helpKey="queue-cleaner:stallRule.deletePrivateTorrentsFromClient" />
+    }
   </div>
   <div modal-footer>
     <app-button variant="secondary" (clicked)="stallModalVisible.set(false)">Cancel</app-button>
@@ -326,10 +337,15 @@
     <app-toggle label="Reset Strikes on Progress" [(checked)]="slowResetOnProgress"
       hint="Reset strike count when torrent shows progress"
       helpKey="queue-cleaner:slowRule.resetStrikesOnProgress" />
-    <app-toggle label="Delete Private from Client" [(checked)]="slowDeletePrivate"
-      [disabled]="slowPrivacyType() === 'Public'"
-      hint="Disable this if you want to keep private torrents in the download client even if they are removed from the arrs"
-      helpKey="queue-cleaner:slowRule.deletePrivateTorrentsFromClient" />
+    <app-toggle label="Change category instead of delete" [(checked)]="slowChangeCategory"
+      hint="Changes the category to the post-import category set in your arr"
+      helpKey="queue-cleaner:slowRule.changeCategory" />
+    @if (!slowChangeCategory()) {
+      <app-toggle label="Delete Private from Client" [(checked)]="slowDeletePrivate"
+        [disabled]="slowPrivacyType() === 'Public'"
+        hint="Disable this if you want to keep private torrents in the download client even if they are removed from the arrs"
+        helpKey="queue-cleaner:slowRule.deletePrivateTorrentsFromClient" />
+    }
   </div>
   <div modal-footer>
     <app-button variant="secondary" (clicked)="slowModalVisible.set(false)">Cancel</app-button>

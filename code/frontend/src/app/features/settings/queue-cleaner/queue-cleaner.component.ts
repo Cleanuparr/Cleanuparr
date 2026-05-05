@@ -98,6 +98,7 @@ export class QueueCleanerComponent implements OnInit, HasPendingChanges {
   readonly failedSkipNotFound = signal(false);
   readonly failedPatterns = signal<string[]>([]);
   readonly failedPatternMode = signal<unknown>(PatternMode.Exclude);
+  readonly failedChangeCategory = signal(false);
   readonly failedExpanded = signal(true);
 
   // Metadata
@@ -121,6 +122,7 @@ export class QueueCleanerComponent implements OnInit, HasPendingChanges {
   readonly stallResetOnProgress = signal(false);
   readonly stallMinProgress = signal('');
   readonly stallDeletePrivate = signal(false);
+  readonly stallChangeCategory = signal(false);
 
   // Slow rules
   readonly slowRules = signal<SlowRule[]>([]);
@@ -141,6 +143,7 @@ export class QueueCleanerComponent implements OnInit, HasPendingChanges {
   readonly slowIgnoreAboveSize = signal('');
   readonly slowResetOnProgress = signal(false);
   readonly slowDeletePrivate = signal(false);
+  readonly slowChangeCategory = signal(false);
 
   constructor() {
     effect(() => {
@@ -156,6 +159,24 @@ export class QueueCleanerComponent implements OnInit, HasPendingChanges {
       const ignorePrivate = this.failedIgnorePrivate();
       if (ignorePrivate) {
         untracked(() => this.failedDeletePrivate.set(false));
+      }
+    });
+
+    effect(() => {
+      if (this.failedChangeCategory()) {
+        untracked(() => this.failedDeletePrivate.set(false));
+      }
+    });
+
+    effect(() => {
+      if (this.stallChangeCategory()) {
+        untracked(() => this.stallDeletePrivate.set(false));
+      }
+    });
+
+    effect(() => {
+      if (this.slowChangeCategory()) {
+        untracked(() => this.slowDeletePrivate.set(false));
       }
     });
   }
@@ -300,6 +321,7 @@ export class QueueCleanerComponent implements OnInit, HasPendingChanges {
         this.failedSkipNotFound.set(config.failedImport.skipIfNotFoundInClient);
         this.failedPatterns.set(config.failedImport.patterns ?? []);
         this.failedPatternMode.set(config.failedImport.patternMode ?? PatternMode.Exclude);
+        this.failedChangeCategory.set(config.failedImport.changeCategory ?? false);
         this.metadataMaxStrikes.set(config.downloadingMetadataMaxStrikes);
         this.loader.stop();
         this.savedSnapshot.set(this.buildSnapshot());
@@ -360,6 +382,7 @@ export class QueueCleanerComponent implements OnInit, HasPendingChanges {
       this.stallResetOnProgress.set(rule.resetStrikesOnProgress);
       this.stallMinProgress.set(rule.minimumProgress ?? '');
       this.stallDeletePrivate.set(rule.deletePrivateTorrentsFromClient);
+      this.stallChangeCategory.set(rule.changeCategory ?? false);
     } else {
       this.stallName.set('');
       this.stallEnabled.set(true);
@@ -370,6 +393,7 @@ export class QueueCleanerComponent implements OnInit, HasPendingChanges {
       this.stallResetOnProgress.set(false);
       this.stallMinProgress.set('');
       this.stallDeletePrivate.set(false);
+      this.stallChangeCategory.set(false);
     }
     this.stallModalVisible.set(true);
   }
@@ -377,6 +401,7 @@ export class QueueCleanerComponent implements OnInit, HasPendingChanges {
   saveStallRule(): void {
     if (this.stallNameError() || this.stallMaxStrikesError() || this.stallCompletionError()) return;
 
+    const changeCategory = this.stallChangeCategory();
     const dto: CreateStallRuleDto = {
       name: this.stallName().trim(),
       enabled: this.stallEnabled(),
@@ -386,7 +411,8 @@ export class QueueCleanerComponent implements OnInit, HasPendingChanges {
       maxCompletionPercentage: this.stallMaxCompletion() ?? 100,
       resetStrikesOnProgress: this.stallResetOnProgress(),
       minimumProgress: this.stallMinProgress().trim() || null,
-      deletePrivateTorrentsFromClient: this.stallDeletePrivate(),
+      deletePrivateTorrentsFromClient: changeCategory ? false : this.stallDeletePrivate(),
+      changeCategory,
     };
 
     const editing = this.editingStallRule();
@@ -436,6 +462,7 @@ export class QueueCleanerComponent implements OnInit, HasPendingChanges {
       this.slowIgnoreAboveSize.set(rule.ignoreAboveSize ?? '');
       this.slowResetOnProgress.set(rule.resetStrikesOnProgress);
       this.slowDeletePrivate.set(rule.deletePrivateTorrentsFromClient);
+      this.slowChangeCategory.set(rule.changeCategory ?? false);
     } else {
       this.slowName.set('');
       this.slowEnabled.set(true);
@@ -448,6 +475,7 @@ export class QueueCleanerComponent implements OnInit, HasPendingChanges {
       this.slowIgnoreAboveSize.set('');
       this.slowResetOnProgress.set(false);
       this.slowDeletePrivate.set(false);
+      this.slowChangeCategory.set(false);
     }
     this.slowModalVisible.set(true);
   }
@@ -455,6 +483,7 @@ export class QueueCleanerComponent implements OnInit, HasPendingChanges {
   saveSlowRule(): void {
     if (this.slowNameError() || this.slowMaxStrikesError() || this.slowCompletionError()) return;
 
+    const changeCategory = this.slowChangeCategory();
     const dto: CreateSlowRuleDto = {
       name: this.slowName().trim(),
       enabled: this.slowEnabled(),
@@ -466,7 +495,8 @@ export class QueueCleanerComponent implements OnInit, HasPendingChanges {
       minSpeed: this.slowMinSpeed().trim(),
       maxTimeHours: this.slowMaxTimeHours() ?? 0,
       ignoreAboveSize: this.slowIgnoreAboveSize().trim() || undefined,
-      deletePrivateTorrentsFromClient: this.slowDeletePrivate(),
+      deletePrivateTorrentsFromClient: changeCategory ? false : this.slowDeletePrivate(),
+      changeCategory,
     };
 
     const editing = this.editingSlowRule();
@@ -519,10 +549,11 @@ export class QueueCleanerComponent implements OnInit, HasPendingChanges {
       failedImport: {
         maxStrikes: this.failedMaxStrikes() ?? 3,
         ignorePrivate: this.failedIgnorePrivate(),
-        deletePrivate: this.failedDeletePrivate(),
+        deletePrivate: this.failedChangeCategory() ? false : this.failedDeletePrivate(),
         skipIfNotFoundInClient: this.failedSkipNotFound(),
         patterns: this.failedPatterns(),
         patternMode: this.failedPatternMode() as PatternMode,
+        changeCategory: this.failedChangeCategory(),
       },
       downloadingMetadataMaxStrikes: this.metadataMaxStrikes() ?? 3,
     };
@@ -558,6 +589,7 @@ export class QueueCleanerComponent implements OnInit, HasPendingChanges {
       failedSkipNotFound: this.failedSkipNotFound(),
       failedPatterns: this.failedPatterns(),
       failedPatternMode: this.failedPatternMode(),
+      failedChangeCategory: this.failedChangeCategory(),
       metadataMaxStrikes: this.metadataMaxStrikes(),
     });
   }

@@ -6,6 +6,6 @@ namespace Cleanuparr.Infrastructure.Services.Interfaces;
 
 public interface IQueueRuleEvaluator
 {
-    Task<(bool ShouldRemove, DeleteReason Reason, bool DeleteFromClient)> EvaluateStallRulesAsync(ITorrentItemWrapper torrent);
-    Task<(bool ShouldRemove, DeleteReason Reason, bool DeleteFromClient)> EvaluateSlowRulesAsync(ITorrentItemWrapper torrent);
+    Task<(bool ShouldRemove, DeleteReason Reason, bool DeleteFromClient, bool ChangeCategory)> EvaluateStallRulesAsync(ITorrentItemWrapper torrent);
+    Task<(bool ShouldRemove, DeleteReason Reason, bool DeleteFromClient, bool ChangeCategory)> EvaluateSlowRulesAsync(ITorrentItemWrapper torrent);
 }

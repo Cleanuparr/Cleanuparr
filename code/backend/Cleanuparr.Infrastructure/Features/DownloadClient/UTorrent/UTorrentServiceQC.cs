@@ -70,14 +70,14 @@ public partial class UTorrentService
         }
 
         // remove if download is stuck
-        (result.ShouldRemove, result.DeleteReason, result.DeleteFromClient) = await EvaluateDownloadRemoval(torrent);
+        (result.ShouldRemove, result.DeleteReason, result.DeleteFromClient, result.ChangeCategory) = await EvaluateDownloadRemoval(torrent);
 
         return result;
     }
 
-    private async Task<(bool, DeleteReason, bool)> EvaluateDownloadRemoval(ITorrentItemWrapper wrapper)
+    private async Task<(bool, DeleteReason, bool, bool)> EvaluateDownloadRemoval(ITorrentItemWrapper wrapper)
     {
-        (bool ShouldRemove, DeleteReason Reason, bool DeleteFromClient) result = await CheckIfSlow(wrapper);
+        (bool ShouldRemove, DeleteReason Reason, bool DeleteFromClient, bool ChangeCategory) result = await CheckIfSlow(wrapper);
 
         if (result.ShouldRemove)
         {
@@ -88,29 +88,29 @@ public partial class UTorrentService
     }
 
 
-    private async Task<(bool ShouldRemove, DeleteReason Reason, bool DeleteFromClient)> CheckIfSlow(ITorrentItemWrapper wrapper)
+    private async Task<(bool ShouldRemove, DeleteReason Reason, bool DeleteFromClient, bool ChangeCategory)> CheckIfSlow(ITorrentItemWrapper wrapper)
     {
         if (!wrapper.IsDownloading())
         {
             _logger.LogTrace("skip slow check | download is not in downloading state | {name}", wrapper.Name);
-            return (false, DeleteReason.None, false);
+            return (false, DeleteReason.None, false, false);
         }
 
         if (wrapper.DownloadSpeed <= 0)
         {
             _logger.LogTrace("skip slow check | download speed is 0 | {name}", wrapper.Name);
-            return (false, DeleteReason.None, false);
+            return (false, DeleteReason.None, false, false);
         }
 
         return await _queueRuleEvaluator.EvaluateSlowRulesAsync(wrapper);
     }
 
-    private async Task<(bool ShouldRemove, DeleteReason Reason, bool DeleteFromClient)> CheckIfStuck(ITorrentItemWrapper wrapper)
+    private async Task<(bool ShouldRemove, DeleteReason Reason, bool DeleteFromClient, bool ChangeCategory)> CheckIfStuck(ITorrentItemWrapper wrapper)
     {
         if (!wrapper.IsStalled())
         {
             _logger.LogTrace("skip stalled check | download is not in stalled state | {name}", wrapper.Name);
-            return (false, DeleteReason.None, false);
+            return (false, DeleteReason.None, false, false);
         }
 
         return await _queueRuleEvaluator.EvaluateStallRulesAsync(wrapper);

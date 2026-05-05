@@ -42,14 +42,6 @@ public class RadarrClient : ArrClient, IRadarrClient
         return $"/api/v3/queue/{recordId}";
     }
 
-    protected override string GetQueueDeleteUrlQuery(bool removeFromClient)
-    {
-        string query = "blocklist=true&skipRedownload=true&changeCategory=false";
-        query += removeFromClient ? "&removeFromClient=true" : "&removeFromClient=false";
-
-        return query;
-    }
-
     public override async Task<List<long>> SearchItemsAsync(ArrInstance arrInstance, HashSet<SearchItem>? items)
     {
         if (items?.Count is null or 0)
