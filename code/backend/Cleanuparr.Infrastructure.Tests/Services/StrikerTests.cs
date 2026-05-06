@@ -14,8 +14,11 @@ using NSubstitute;
 using Shouldly;
 using Xunit;
 
+using Cleanuparr.Infrastructure.Tests.Features.Jobs.Integration;
+
 namespace Cleanuparr.Infrastructure.Tests.Services;
 
+[Collection(IntegrationTestCollection.Name)]
 public class StrikerTests : IDisposable
 {
     private readonly EventsContext _strikerContext;

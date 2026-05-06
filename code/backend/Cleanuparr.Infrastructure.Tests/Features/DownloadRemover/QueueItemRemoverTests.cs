@@ -22,10 +22,12 @@ using Microsoft.Extensions.Options;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using Shouldly;
+using Cleanuparr.Infrastructure.Tests.Features.Jobs.Integration;
 using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Features.DownloadRemover;
 
+[Collection(IntegrationTestCollection.Name)]
 public class QueueItemRemoverTests : IDisposable
 {
     private readonly ILogger<QueueItemRemover> _logger;
