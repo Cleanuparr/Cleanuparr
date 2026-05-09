@@ -10,7 +10,7 @@
       <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
       <PackageReference Include="CliWrap" Version="3.10.0" />
       <PackageReference Include="Otp.NET" Version="1.4.0" />
-      <PackageReference Include="FLM.QBittorrent" Version="1.0.2" />
+      <PackageReference Include="FLM.QBittorrent" Version="1.0.3" />
       <PackageReference Include="FLM.Transmission" Version="1.0.3" />
       <PackageReference Include="Mapster" Version="7.4.0" />
       <PackageReference Include="MassTransit.Abstractions" Version="8.5.7" />
