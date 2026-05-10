@@ -1,3 +1,4 @@
+<<<<<<<< HEAD:e2e/tests/oidc-unlink-allows-any-user.spec.ts
 import { test, expect } from '@playwright/test';
 import { TEST_CONFIG } from './helpers/test-config';
 import {
@@ -13,11 +14,16 @@ import {
   createKeycloakUser,
   deleteKeycloakUser,
 } from './helpers/keycloak';
+========
+import { test, expect, TEST_CONFIG } from '../fixtures/base';
+import { createKeycloakUser, deleteKeycloakUser } from '../helpers/keycloak';
+>>>>>>>> e131fe85 (migrated OIDC specs (00-09, 15) to tests/oidc/):e2e/tests/oidc/10-unlink-allows-any-user.ui.spec.ts
 
 const ANOTHER_USER = 'anotheruser';
 const ANOTHER_PASS = 'anotherpass';
 const ANOTHER_EMAIL = 'anotheruser@example.com';
 
+<<<<<<<< HEAD:e2e/tests/oidc-unlink-allows-any-user.spec.ts
 test.describe.serial('OIDC Unlink Allows Any User', () => {
   let adminToken: string;
   let snapshot: OidcConfigSnapshot;
@@ -35,6 +41,10 @@ test.describe.serial('OIDC Unlink Allows Any User', () => {
       await setupPage.close();
     }
 
+========
+test.describe.serial('OIDC — unlink allows any user', () => {
+  test.beforeAll(async () => {
+>>>>>>>> e131fe85 (migrated OIDC specs (00-09, 15) to tests/oidc/):e2e/tests/oidc/10-unlink-allows-any-user.ui.spec.ts
     await createKeycloakUser(ANOTHER_USER, ANOTHER_PASS, ANOTHER_EMAIL);
   });
 
@@ -46,15 +56,9 @@ test.describe.serial('OIDC Unlink Allows Any User', () => {
 
   test('unlinking OIDC subject via UI succeeds', async ({ page }) => {
     await page.goto(`${TEST_CONFIG.appUrl}/auth/login`);
-    await page
-      .getByRole('textbox', { name: 'Username' })
-      .fill(TEST_CONFIG.adminUsername);
-    await page
-      .getByRole('textbox', { name: 'Password' })
-      .fill(TEST_CONFIG.adminPassword);
-    await page
-      .getByRole('button', { name: 'Sign In', exact: true })
-      .click();
+    await page.getByRole('textbox', { name: 'Username' }).fill(TEST_CONFIG.adminUsername);
+    await page.getByRole('textbox', { name: 'Password' }).fill(TEST_CONFIG.adminPassword);
+    await page.getByRole('button', { name: 'Sign In', exact: true }).click();
     await expect(page).toHaveURL(/\/dashboard/, { timeout: 10_000 });
 
     await page.goto(`${TEST_CONFIG.appUrl}/settings/account`);
@@ -71,10 +75,14 @@ test.describe.serial('OIDC Unlink Allows Any User', () => {
     await expect(confirmButton).toBeVisible({ timeout: 5_000 });
     await confirmButton.click();
 
+<<<<<<<< HEAD:e2e/tests/oidc-unlink-allows-any-user.spec.ts
     await expect(page.getByText('OIDC account unlinked')).toBeVisible({
       timeout: 5_000,
     });
 
+========
+    await expect(page.getByText('OIDC account unlinked')).toBeVisible({ timeout: 5_000 });
+>>>>>>>> e131fe85 (migrated OIDC specs (00-09, 15) to tests/oidc/):e2e/tests/oidc/10-unlink-allows-any-user.ui.spec.ts
     await expect(subjectEl).not.toBeVisible({ timeout: 5_000 });
 
     const linkButton = page.getByRole('button', { name: 'Link Account' });
@@ -83,9 +91,11 @@ test.describe.serial('OIDC Unlink Allows Any User', () => {
 
   test('OIDC login still works after unlinking', async ({ page }) => {
     await page.goto(`${TEST_CONFIG.appUrl}/auth/login`);
+<<<<<<<< HEAD:e2e/tests/oidc-unlink-allows-any-user.spec.ts
 
+========
+>>>>>>>> e131fe85 (migrated OIDC specs (00-09, 15) to tests/oidc/):e2e/tests/oidc/10-unlink-allows-any-user.ui.spec.ts
     await page.getByRole('button', { name: /sign in with/i }).click();
-
     await expect(page).toHaveURL(/localhost:8080/, { timeout: 10_000 });
 
     await page.locator('#username').waitFor({ state: 'visible', timeout: 5_000 });
@@ -96,13 +106,9 @@ test.describe.serial('OIDC Unlink Allows Any User', () => {
     await expect(page).toHaveURL(/\/dashboard/, { timeout: 15_000 });
   });
 
-  test('a different Keycloak user can also log in after unlinking', async ({
-    page,
-  }) => {
+  test('a different Keycloak user can also log in after unlinking', async ({ page }) => {
     await page.goto(`${TEST_CONFIG.appUrl}/auth/login`);
-
     await page.getByRole('button', { name: /sign in with/i }).click();
-
     await expect(page).toHaveURL(/localhost:8080/, { timeout: 10_000 });
 
     await page.locator('#username').waitFor({ state: 'visible', timeout: 5_000 });
@@ -111,9 +117,6 @@ test.describe.serial('OIDC Unlink Allows Any User', () => {
     await page.locator('#kc-login').click();
 
     await expect(page).toHaveURL(/\/dashboard/, { timeout: 15_000 });
-
-    await expect(page.locator('body')).not.toContainText('Sign In', {
-      timeout: 5_000,
-    });
+    await expect(page.locator('body')).not.toContainText('Sign In', { timeout: 5_000 });
   });
 });

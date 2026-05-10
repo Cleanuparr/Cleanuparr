@@ -1,3 +1,4 @@
+<<<<<<<< HEAD:e2e/tests/oidc-login-persists.spec.ts
 import { test, expect } from '@playwright/test';
 import { TEST_CONFIG } from './helpers/test-config';
 import {
@@ -36,6 +37,12 @@ test.describe('OIDC Login Persistence', () => {
   test('OIDC login still works after configuration changes', async ({
     page,
   }) => {
+========
+import { test, expect, TEST_CONFIG } from '../fixtures/base';
+
+test.describe.serial('OIDC — login persistence after config changes', () => {
+  test('OIDC login still works after configuration changes', async ({ page }) => {
+>>>>>>>> e131fe85 (migrated OIDC specs (00-09, 15) to tests/oidc/):e2e/tests/oidc/08-login-persists.ui.spec.ts
     await page.goto(`${TEST_CONFIG.appUrl}/auth/login`);
 
     const oidcButton = page.getByRole('button', { name: /sign in with/i });
@@ -43,7 +50,10 @@ test.describe('OIDC Login Persistence', () => {
     await expect(oidcButton).toContainText(TEST_CONFIG.oidcProviderName);
 
     await oidcButton.click();
+<<<<<<<< HEAD:e2e/tests/oidc-login-persists.spec.ts
 
+========
+>>>>>>>> e131fe85 (migrated OIDC specs (00-09, 15) to tests/oidc/):e2e/tests/oidc/08-login-persists.ui.spec.ts
     await expect(page).toHaveURL(/localhost:8080/, { timeout: 10_000 });
 
     await page.locator('#username').waitFor({ state: 'visible', timeout: 5_000 });
@@ -52,9 +62,13 @@ test.describe('OIDC Login Persistence', () => {
     await page.locator('#kc-login').click();
 
     await expect(page).toHaveURL(/\/dashboard/, { timeout: 15_000 });
+<<<<<<<< HEAD:e2e/tests/oidc-login-persists.spec.ts
 
     await expect(page.locator('body')).not.toContainText('Sign In', {
       timeout: 5_000,
     });
+========
+    await expect(page.locator('body')).not.toContainText('Sign In', { timeout: 5_000 });
+>>>>>>>> e131fe85 (migrated OIDC specs (00-09, 15) to tests/oidc/):e2e/tests/oidc/08-login-persists.ui.spec.ts
   });
 });
