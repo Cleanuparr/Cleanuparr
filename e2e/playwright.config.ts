@@ -15,7 +15,23 @@ export default defineConfig({
   projects: [
     {
       name: 'api',
-      testIgnore: /(?:^|[\\/])(?:orphaned-files-cleanup|orphaned-files-behaviors|orphaned-files-unreachable-client|malware-blocker|dead-torrent-cleanup)\.spec\.ts$/,
+      testMatch: ['**/*.api.spec.ts'],
+      use: { browserName: 'chromium' },
+    },
+    {
+      name: 'ui',
+      testMatch: ['**/*.ui.spec.ts'],
+      use: { browserName: 'chromium' },
+    },
+    {
+      name: 'regression',
+      testDir: './tests/regression',
+      testMatch: ['**/*.spec.ts'],
+      use: { browserName: 'chromium' },
+    },
+    {
+      name: 'legacy',
+      testMatch: ['[0-9][0-9]-*.spec.ts'],
       use: { browserName: 'chromium' },
     },
     {
