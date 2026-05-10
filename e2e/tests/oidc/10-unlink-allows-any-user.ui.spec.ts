@@ -1,57 +1,17 @@
-<<<<<<<< HEAD:e2e/tests/oidc-unlink-allows-any-user.spec.ts
-import { test, expect } from '@playwright/test';
-import { TEST_CONFIG } from './helpers/test-config';
-import {
-  clearOidcLink,
-  configureOidc,
-  getOidcConfig,
-  loginAndGetToken,
-  OidcConfigSnapshot,
-  setOidcConfig,
-} from './helpers/app-api';
-import { linkOidcViaBrowser } from './helpers/oidc';
-import {
-  createKeycloakUser,
-  deleteKeycloakUser,
-} from './helpers/keycloak';
-========
 import { test, expect, TEST_CONFIG } from '../fixtures/base';
 import { createKeycloakUser, deleteKeycloakUser } from '../helpers/keycloak';
->>>>>>>> e131fe85 (migrated OIDC specs (00-09, 15) to tests/oidc/):e2e/tests/oidc/10-unlink-allows-any-user.ui.spec.ts
 
 const ANOTHER_USER = 'anotheruser';
 const ANOTHER_PASS = 'anotherpass';
 const ANOTHER_EMAIL = 'anotheruser@example.com';
 
-<<<<<<<< HEAD:e2e/tests/oidc-unlink-allows-any-user.spec.ts
-test.describe.serial('OIDC Unlink Allows Any User', () => {
-  let adminToken: string;
-  let snapshot: OidcConfigSnapshot;
-
-  test.beforeAll(async ({ browser }) => {
-    adminToken = await loginAndGetToken();
-    snapshot = await getOidcConfig(adminToken);
-    await configureOidc(adminToken);
-    await clearOidcLink(adminToken);
-
-    const setupPage = await browser.newPage();
-    try {
-      await linkOidcViaBrowser(setupPage);
-    } finally {
-      await setupPage.close();
-    }
-
-========
 test.describe.serial('OIDC — unlink allows any user', () => {
   test.beforeAll(async () => {
->>>>>>>> e131fe85 (migrated OIDC specs (00-09, 15) to tests/oidc/):e2e/tests/oidc/10-unlink-allows-any-user.ui.spec.ts
     await createKeycloakUser(ANOTHER_USER, ANOTHER_PASS, ANOTHER_EMAIL);
   });
 
   test.afterAll(async () => {
     await deleteKeycloakUser(ANOTHER_USER);
-    await clearOidcLink(adminToken);
-    await setOidcConfig(adminToken, snapshot);
   });
 
   test('unlinking OIDC subject via UI succeeds', async ({ page }) => {
@@ -75,14 +35,7 @@ test.describe.serial('OIDC — unlink allows any user', () => {
     await expect(confirmButton).toBeVisible({ timeout: 5_000 });
     await confirmButton.click();
 
-<<<<<<<< HEAD:e2e/tests/oidc-unlink-allows-any-user.spec.ts
-    await expect(page.getByText('OIDC account unlinked')).toBeVisible({
-      timeout: 5_000,
-    });
-
-========
     await expect(page.getByText('OIDC account unlinked')).toBeVisible({ timeout: 5_000 });
->>>>>>>> e131fe85 (migrated OIDC specs (00-09, 15) to tests/oidc/):e2e/tests/oidc/10-unlink-allows-any-user.ui.spec.ts
     await expect(subjectEl).not.toBeVisible({ timeout: 5_000 });
 
     const linkButton = page.getByRole('button', { name: 'Link Account' });
@@ -91,10 +44,6 @@ test.describe.serial('OIDC — unlink allows any user', () => {
 
   test('OIDC login still works after unlinking', async ({ page }) => {
     await page.goto(`${TEST_CONFIG.appUrl}/auth/login`);
-<<<<<<<< HEAD:e2e/tests/oidc-unlink-allows-any-user.spec.ts
-
-========
->>>>>>>> e131fe85 (migrated OIDC specs (00-09, 15) to tests/oidc/):e2e/tests/oidc/10-unlink-allows-any-user.ui.spec.ts
     await page.getByRole('button', { name: /sign in with/i }).click();
     await expect(page).toHaveURL(/localhost:8080/, { timeout: 10_000 });
 

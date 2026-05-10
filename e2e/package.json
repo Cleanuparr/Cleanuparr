@@ -7,8 +7,7 @@
     "test:debug": "playwright test --debug",
     "test:api": "playwright test --project=api",
     "test:ui": "playwright test --project=ui",
-    "test:regression": "playwright test --project=regression",
-    "test:legacy": "playwright test --project=legacy"
+    "test:regression": "playwright test --project=regression"
   },
   "dependencies": {
     "@microsoft/signalr": "^8.0.0"

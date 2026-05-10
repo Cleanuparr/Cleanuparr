@@ -30,11 +30,6 @@ export default defineConfig({
       use: { browserName: 'chromium' },
     },
     {
-      name: 'legacy',
-      testMatch: ['[0-9][0-9]-*.spec.ts'],
-      use: { browserName: 'chromium' },
-    },
-    {
       name: 'download-clients',
       testMatch: /(?:^|[\\/])(?:orphaned-files-cleanup|orphaned-files-behaviors|orphaned-files-unreachable-client|malware-blocker|dead-torrent-cleanup)\.spec\.ts$/,
       use: { browserName: 'chromium' },
