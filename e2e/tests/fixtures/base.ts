@@ -8,6 +8,7 @@ interface WorkerFixtures {
 }
 
 interface TestFixtures {
+  autoReset: void;
   api: CleanuparrApi;
   anonymousApi: CleanuparrApi;
   mocks: MockServers;
@@ -43,18 +44,29 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
     { scope: 'worker' },
   ],
 
-  api: async ({ workerAdminTokens, mocks }, use) => {
+  // Runs before every test (auto). Clears events context, dynamic data and
+  // user lockout state so each test starts from a known baseline regardless
+  // of which other fixtures it consumes.
+  autoReset: [
+    async ({ workerAdminTokens, mocks }, use) => {
+      const resetClient = new CleanuparrApi({ token: workerAdminTokens.accessToken });
+      const reset = await resetClient.testReset.reset();
+      if (reset.status === 404) {
+        throw new Error(
+          'Backend test reset endpoint returned 404. Set Cleanuparr:E2eMode=true (or CLEANUPARR_E2E_MODE=true) on the app container.',
+        );
+      }
+      if (!reset.ok) {
+        throw new Error(`Test reset failed: ${reset.status} ${await reset.text()}`);
+      }
+      await mocks.resetAll();
+      await use();
+    },
+    { auto: true },
+  ],
+
+  api: async ({ workerAdminTokens }, use) => {
     const api = new CleanuparrApi({ token: workerAdminTokens.accessToken });
-    const reset = await api.testReset.reset();
-    if (!reset.ok && reset.status !== 404) {
-      throw new Error(`Test reset failed: ${reset.status}. Run backend with Cleanuparr:E2eMode=true.`);
-    }
-    if (reset.status === 404) {
-      throw new Error(
-        'Backend test reset endpoint returned 404. Set Cleanuparr:E2eMode=true (or CLEANUPARR_E2E_MODE=true) on the app container.',
-      );
-    }
-    await mocks.resetAll();
     await use(api);
   },
 
