@@ -7,16 +7,41 @@ export type DownloadClientType =
   | 'utorrent'
   | 'rtorrent';
 
+export type DownloadClientCategory = 'Torrent' | 'Usenet';
+
 export interface DownloadClientPayload {
   name: string;
-  type: DownloadClientType;
+  /** Backend enum value (Torrent / Usenet). */
+  type?: DownloadClientCategory;
+  /** Backend type-name enum value (qBittorrent / Deluge / Transmission / uTorrent / rTorrent). */
+  typeName?: string;
+  /** Full URL including scheme + port. */
   host: string;
-  port?: number;
   username?: string;
   password?: string;
-  useSsl?: boolean;
   urlBase?: string;
+  externalUrl?: string;
   enabled?: boolean;
+}
+
+const TYPE_NAME_MAP: Record<DownloadClientType, string> = {
+  qbittorrent: 'qBittorrent',
+  transmission: 'Transmission',
+  deluge: 'Deluge',
+  utorrent: 'uTorrent',
+  rtorrent: 'rTorrent',
+};
+
+export function buildDownloadClientPayload(
+  type: DownloadClientType,
+  overrides: Partial<DownloadClientPayload> & { host: string; name: string },
+): DownloadClientPayload {
+  return {
+    type: 'Torrent',
+    typeName: TYPE_NAME_MAP[type],
+    enabled: true,
+    ...overrides,
+  };
 }
 
 export class DownloadClientApi {

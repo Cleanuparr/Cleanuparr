@@ -1,5 +1,5 @@
 import { test, expect } from '../fixtures/base';
-import { buildHubConnection } from '../helpers/api/signalr';
+import { buildHubConnection, waitForEvent } from '../helpers/api/signalr';
 
 test.describe('SignalR — app hub', () => {
   test('client can connect with bearer token and receive initial state', async ({ workerAdminTokens }) => {
@@ -8,18 +8,18 @@ test.describe('SignalR — app hub', () => {
       hubUrl: '/api/hubs/app',
     });
     await connection.start();
-
     expect(connection.state).toBe('Connected');
 
     try {
-      const recentLogs = await connection.invoke('GetRecentLogs');
-      expect(Array.isArray(recentLogs) || typeof recentLogs === 'object').toBe(true);
+      const eventsPromise = waitForEvent<unknown[]>(connection, 'EventsReceived');
+      await connection.invoke('GetRecentEvents', 5);
+      const events = await eventsPromise;
+      expect(Array.isArray(events)).toBe(true);
 
-      const recentEvents = await connection.invoke('GetRecentEvents', 5);
-      expect(Array.isArray(recentEvents)).toBe(true);
-
-      const recentStrikes = await connection.invoke('GetRecentStrikes', 5);
-      expect(Array.isArray(recentStrikes)).toBe(true);
+      const strikesPromise = waitForEvent<unknown[]>(connection, 'RecentStrikesReceived');
+      await connection.invoke('GetRecentStrikes', 5);
+      const strikes = await strikesPromise;
+      expect(Array.isArray(strikes)).toBe(true);
     } finally {
       await connection.stop();
     }

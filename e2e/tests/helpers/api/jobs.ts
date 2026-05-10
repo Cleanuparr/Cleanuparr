@@ -8,6 +8,13 @@ export type JobType =
   | 'Seeker'
   | 'CustomFormatScoreSyncer';
 
+export type ScheduleUnit = 'Seconds' | 'Minutes' | 'Hours';
+
+export interface JobSchedulePayload {
+  every: number;
+  type: ScheduleUnit;
+}
+
 export class JobsApi {
   constructor(private readonly client: ApiClient) {}
 
@@ -19,7 +26,7 @@ export class JobsApi {
     return this.client.get(`/api/jobs/${jobType}`);
   }
 
-  start(jobType: JobType | string, schedule?: string): Promise<Response> {
+  start(jobType: JobType | string, schedule?: JobSchedulePayload): Promise<Response> {
     return this.client.post(`/api/jobs/${jobType}/start`, schedule ? { schedule } : undefined);
   }
 
@@ -27,7 +34,7 @@ export class JobsApi {
     return this.client.post(`/api/jobs/${jobType}/trigger`);
   }
 
-  updateSchedule(jobType: JobType | string, schedule: string): Promise<Response> {
+  updateSchedule(jobType: JobType | string, schedule: JobSchedulePayload): Promise<Response> {
     return this.client.put(`/api/jobs/${jobType}/schedule`, { schedule });
   }
 }

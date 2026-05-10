@@ -1,16 +1,17 @@
 import { test, expect } from '../fixtures/base';
+import { buildDownloadClientPayload } from '../helpers/api/download-client';
 
 test.describe.serial('DownloadCleaner — seeding rules CRUD', () => {
   let downloadClientId: string;
 
   test.beforeAll(async ({ api }) => {
-    const res = await api.downloadClient.create({
-      name: 'e2e-test-qbit',
-      type: 'qbittorrent',
-      host: 'localhost',
-      port: 9999,
-      enabled: false,
-    });
+    const res = await api.downloadClient.create(
+      buildDownloadClientPayload('qbittorrent', {
+        name: 'e2e-test-qbit',
+        host: 'http://127.0.0.1:9999',
+        enabled: false,
+      }),
+    );
     expect(res.status).toBe(201);
     const client = await res.json();
     downloadClientId = client.id;

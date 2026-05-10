@@ -1,37 +1,37 @@
 import { test, expect, TEST_CONFIG } from '../fixtures/base';
+import { buildDownloadClientPayload } from '../helpers/api/download-client';
 
 test.describe('DownloadCleaner — unlinked config', () => {
   test('GET + PUT round-trip for a download client', async ({ api }) => {
     const created = await (
-      await api.downloadClient.create({
-        name: 'qb-unlinked',
-        type: 'qbittorrent',
-        host: 'localhost',
-        port: 9200,
-        username: 'admin',
-        password: 'admin',
-        useSsl: false,
-        enabled: true,
-      })
+      await api.downloadClient.create(
+        buildDownloadClientPayload('qbittorrent', {
+          name: 'qb-unlinked',
+          host: TEST_CONFIG.mocks.downloadClientUrl,
+          username: 'admin',
+          password: 'admin',
+        }),
+      )
     ).json();
     expect(created.id).toBeTruthy();
 
     const initial = await api.downloadCleaner.getUnlinkedConfig(created.id);
-    expect(initial.status).toBe(200);
+    // Backend returns 204 when no unlinked config row exists for the client.
+    expect([200, 204]).toContain(initial.status);
 
     const update = await api.downloadCleaner.updateUnlinkedConfig(created.id, {
       enabled: true,
       categories: ['radarr', 'sonarr'],
-      ignoredRootDirectories: ['/downloads/manual'],
+      ignoredRootDirs: ['/downloads/manual'],
       useTag: true,
-      tag: 'cleanuparr-unlinked',
+      targetCategory: 'cleanuparr-unlinked',
     });
     expect(update.ok).toBe(true);
 
     const after = await (await api.downloadCleaner.getUnlinkedConfig(created.id)).json();
     expect(after.enabled).toBe(true);
     expect(after.categories).toEqual(expect.arrayContaining(['radarr', 'sonarr']));
-    expect(after.tag).toBe('cleanuparr-unlinked');
+    expect(after.targetCategory).toBe('cleanuparr-unlinked');
   });
 
   test('GET returns 404 for unknown client', async ({ api }) => {

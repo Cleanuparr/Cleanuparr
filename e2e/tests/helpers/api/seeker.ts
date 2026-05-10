@@ -13,31 +13,31 @@ export class SeekerApi {
 
   listCustomFormatScores(query?: Record<string, string>): Promise<Response> {
     const qs = query ? '?' + new URLSearchParams(query).toString() : '';
-    return this.client.get(`/api/custom-format-scores${qs}`);
+    return this.client.get(`/api/seeker/cf-scores${qs}`);
   }
 
   listCustomFormatScoreUpgrades(): Promise<Response> {
-    return this.client.get('/api/custom-format-scores/upgrades');
+    return this.client.get('/api/seeker/cf-scores/upgrades');
   }
 
   listCustomFormatScoreInstances(): Promise<Response> {
-    return this.client.get('/api/custom-format-scores/instances');
+    return this.client.get('/api/seeker/cf-scores/instances');
   }
 
   getCustomFormatScoreStats(): Promise<Response> {
-    return this.client.get('/api/custom-format-scores/stats');
+    return this.client.get('/api/seeker/cf-scores/stats');
   }
 
   getCustomFormatScoreHistory(instanceId: string, itemId: string): Promise<Response> {
-    return this.client.get(`/api/custom-format-scores/${instanceId}/${itemId}/history`);
+    return this.client.get(`/api/seeker/cf-scores/${instanceId}/${itemId}/history`);
   }
 
   getSearchStatsSummary(): Promise<Response> {
-    return this.client.get('/api/search-stats/summary');
+    return this.client.get('/api/seeker/search-stats/summary');
   }
 
   getSearchEvents(query?: Record<string, string>): Promise<Response> {
     const qs = query ? '?' + new URLSearchParams(query).toString() : '';
-    return this.client.get(`/api/search-stats/events${qs}`);
+    return this.client.get(`/api/seeker/search-stats/events${qs}`);
   }
 }

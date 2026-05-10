@@ -9,36 +9,51 @@ interface ProviderCase {
 const CASES: ProviderCase[] = [
   {
     type: 'notifiarr',
-    payload: { name: 'notifiarr-e2e', apiKey: 'test-key', channel: '12345', events: {} },
+    payload: { name: 'notifiarr-e2e', apiKey: 'notifiarr-test-apikey-12345', channelId: '12345' },
   },
   {
     type: 'apprise',
-    payload: { name: 'apprise-e2e', url: `${TEST_CONFIG.mocks.notifyUrl}/notify/test`, events: {} },
+    payload: {
+      name: 'apprise-e2e',
+      mode: 'Api',
+      url: TEST_CONFIG.mocks.notifyUrl,
+      key: 'apprise-cfg-e2e',
+      tags: '',
+    },
   },
   {
     type: 'ntfy',
     payload: {
       name: 'ntfy-e2e',
       serverUrl: TEST_CONFIG.mocks.notifyUrl,
-      topic: 'cleanuparr-e2e',
-      events: {},
+      topics: ['cleanuparr-e2e'],
+      authenticationType: 'None',
+      priority: 'Default',
     },
   },
   {
     type: 'telegram',
-    payload: { name: 'telegram-e2e', botToken: 'BOT:TOKEN', chatId: '12345', events: {} },
+    payload: { name: 'telegram-e2e', botToken: 'BOT-TOKEN-12345', chatId: '12345' },
   },
   {
     type: 'discord',
-    payload: { name: 'discord-e2e', webhookUrl: `${TEST_CONFIG.mocks.notifyUrl}/webhooks/1/abc`, events: {} },
+    payload: {
+      name: 'discord-e2e',
+      webhookUrl: 'https://discord.com/api/webhooks/123456789/abcdefghij',
+    },
   },
   {
     type: 'pushover',
-    payload: { name: 'pushover-e2e', token: 't', userKey: 'u', devices: [], events: {} },
+    payload: {
+      name: 'pushover-e2e',
+      apiToken: 'pushover-api-token',
+      userKey: 'pushover-user-key',
+      devices: [],
+    },
   },
   {
     type: 'gotify',
-    payload: { name: 'gotify-e2e', serverUrl: TEST_CONFIG.mocks.notifyUrl, appToken: 'token', events: {} },
+    payload: { name: 'gotify-e2e', serverUrl: TEST_CONFIG.mocks.notifyUrl, applicationToken: 'gotify-app-token' },
   },
 ];
 
@@ -46,6 +61,9 @@ test.describe('Notifications — CRUD', () => {
   for (const { type, payload } of CASES) {
     test(`${type}: create + list + update + delete`, async ({ api }) => {
       const create = await api.notifications.create(type, payload);
+      if (!create.ok) {
+        console.error(`${type} create failed:`, create.status, await create.text());
+      }
       expect(create.status).toBeLessThan(300);
       const created = await create.json();
       expect(created.id).toBeTruthy();

@@ -17,14 +17,16 @@ test.describe('Core — stats', () => {
     const res = await api.stats.get({ includeEvents: 1 });
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body).toHaveProperty('recentEvents');
+    expect(body.events).toHaveProperty('recentItems');
+    expect(Array.isArray(body.events.recentItems)).toBe(true);
   });
 
   test('GET with includeStrikes=1 includes recent strikes', async ({ api }) => {
     const res = await api.stats.get({ includeStrikes: 1 });
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body).toHaveProperty('recentStrikes');
+    expect(body.strikes).toHaveProperty('recentItems');
+    expect(Array.isArray(body.strikes.recentItems)).toBe(true);
   });
 
   test('GET requires auth', async ({ anonymousApi }) => {

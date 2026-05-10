@@ -32,14 +32,14 @@ test.describe('Core — jobs', () => {
     expect(res.status).toBeLessThan(500);
   });
 
-  test('PUT /schedule rejects invalid cron', async ({ api }) => {
-    const res = await api.jobs.updateSchedule('QueueCleaner', 'not-a-cron');
+  test('PUT /schedule rejects invalid interval', async ({ api }) => {
+    const res = await api.jobs.updateSchedule('QueueCleaner', { every: 7, type: 'Minutes' });
     expect(res.status).toBeGreaterThanOrEqual(400);
     expect(res.status).toBeLessThan(500);
   });
 
-  test('PUT /schedule accepts valid cron', async ({ api }) => {
-    const res = await api.jobs.updateSchedule('QueueCleaner', '0 0/30 * * * ?');
+  test('PUT /schedule accepts valid interval', async ({ api }) => {
+    const res = await api.jobs.updateSchedule('QueueCleaner', { every: 30, type: 'Minutes' });
     expect(res.ok).toBe(true);
   });
 

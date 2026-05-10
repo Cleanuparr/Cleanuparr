@@ -15,7 +15,7 @@ export function arrHealthStub(opts: ArrHealthStubOptions = {}): Mapping {
   return {
     request: {
       method: 'GET',
-      urlPath: '/api/v3/system/status',
+      urlPathPattern: '/api/v[0-9]+/system/status',
       ...(opts.apiKey
         ? { headers: { 'X-Api-Key': { equalTo: opts.apiKey } } }
         : {}),

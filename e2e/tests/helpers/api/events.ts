@@ -56,27 +56,27 @@ export class ManualEventsApi {
   constructor(private readonly client: ApiClient) {}
 
   list(query?: Record<string, unknown>): Promise<Response> {
-    return this.client.get(`/api/manual-events${toQs(query)}`);
+    return this.client.get(`/api/ManualEvents${toQs(query)}`);
   }
 
   get(id: string): Promise<Response> {
-    return this.client.get(`/api/manual-events/${id}`);
+    return this.client.get(`/api/ManualEvents/${id}`);
   }
 
   resolve(id: string): Promise<Response> {
-    return this.client.post(`/api/manual-events/${id}/resolve`);
+    return this.client.post(`/api/ManualEvents/${id}/resolve`);
   }
 
   stats(): Promise<Response> {
-    return this.client.get('/api/manual-events/stats');
+    return this.client.get('/api/ManualEvents/stats');
   }
 
   severities(): Promise<Response> {
-    return this.client.get('/api/manual-events/severities');
+    return this.client.get('/api/ManualEvents/severities');
   }
 
   cleanup(retentionDays = 30): Promise<Response> {
-    return this.client.post(`/api/manual-events/cleanup?retentionDays=${retentionDays}`);
+    return this.client.post(`/api/ManualEvents/cleanup?retentionDays=${retentionDays}`);
   }
 }
 

@@ -9,12 +9,13 @@ test.describe('BlacklistSync — config', () => {
     expect(body).toHaveProperty('cronExpression');
   });
 
-  test('PUT toggles enabled + cron', async ({ api }) => {
+  test('PUT toggles enabled + cron (requires blacklistPath when enabled)', async ({ api }) => {
     const before = await (await api.blacklistSync.getConfig()).json();
     const res = await api.blacklistSync.updateConfig({
       ...before,
       enabled: true,
       cronExpression: '0 0 0/6 * * ?',
+      blacklistPath: 'https://example.com/blacklist.txt',
     });
     expect(res.ok).toBe(true);
 
@@ -25,11 +26,12 @@ test.describe('BlacklistSync — config', () => {
     await api.blacklistSync.updateConfig(before);
   });
 
-  test('PUT rejects invalid cron', async ({ api }) => {
+  test('PUT rejects enabling without a blacklist path', async ({ api }) => {
     const before = await (await api.blacklistSync.getConfig()).json();
     const res = await api.blacklistSync.updateConfig({
       ...before,
-      cronExpression: 'not-a-cron',
+      enabled: true,
+      blacklistPath: null,
     });
     expect(res.status).toBeGreaterThanOrEqual(400);
     expect(res.status).toBeLessThan(500);

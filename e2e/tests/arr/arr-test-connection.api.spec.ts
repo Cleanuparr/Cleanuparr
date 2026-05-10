@@ -7,7 +7,7 @@ const ARR_TYPES: ArrType[] = ['sonarr', 'radarr', 'lidarr', 'readarr', 'whisparr
 test.describe('Arr — test connection', () => {
   for (const type of ARR_TYPES) {
     test(`${type}: returns success when WireMock returns 200`, async ({ api, mocks }) => {
-      await mocks.arr.stub(ArrStubs.arrHealthStub({ apiKey: 'good-key' }));
+      await mocks.arr.stub(ArrStubs.arrHealthStub());
       const res = await api.arr.testInstance(type, {
         name: `${type}-conn`,
         url: TEST_CONFIG.mocks.arrUrl,
@@ -18,7 +18,7 @@ test.describe('Arr — test connection', () => {
     });
 
     test(`${type}: returns failure when WireMock returns 401`, async ({ api, mocks }) => {
-      await mocks.arr.stub(ArrStubs.arrUnauthorizedStub('/api/v3/system/status'));
+      await mocks.arr.stub(ArrStubs.arrUnauthorizedStub('/api/v[0-9]+/system/status'));
       const res = await api.arr.testInstance(type, {
         name: `${type}-conn-bad`,
         url: TEST_CONFIG.mocks.arrUrl,

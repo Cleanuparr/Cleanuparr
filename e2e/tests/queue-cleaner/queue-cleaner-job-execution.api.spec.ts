@@ -66,8 +66,13 @@ test.describe('QueueCleaner — job execution end-to-end', () => {
       name: 'stall-rule-job',
       enabled: true,
       maxStrikes: 3,
-      applyTo: 'all',
-      stalledDuration: '00:00:00',
+      privacyType: 'Public',
+      minCompletionPercentage: 0,
+      maxCompletionPercentage: 100,
+      deletePrivateTorrentsFromClient: false,
+      changeCategory: false,
+      resetStrikesOnProgress: true,
+      minimumProgress: null,
     });
 
     await api.jobs.trigger('QueueCleaner');

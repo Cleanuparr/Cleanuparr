@@ -3,18 +3,37 @@ import type { QueueRuleKind } from '../helpers/api/queue-cleaner';
 
 const KINDS: QueueRuleKind[] = ['stall', 'slow'];
 
+function buildPayload(kind: QueueRuleKind, name: string, overrides: Record<string, unknown> = {}) {
+  const base = {
+    name,
+    enabled: true,
+    maxStrikes: 3,
+    privacyType: 'Public',
+    minCompletionPercentage: 0,
+    maxCompletionPercentage: 100,
+    deletePrivateTorrentsFromClient: false,
+    changeCategory: false,
+  };
+  if (kind === 'stall') {
+    return { ...base, resetStrikesOnProgress: true, minimumProgress: null, ...overrides };
+  }
+  return {
+    ...base,
+    resetStrikesOnProgress: true,
+    minSpeed: '100KB',
+    maxTimeHours: 0,
+    ignoreAboveSize: null,
+    ...overrides,
+  };
+}
+
 test.describe('QueueCleaner — rules CRUD', () => {
   for (const kind of KINDS) {
     test(`${kind}: create + list + update + delete`, async ({ api }) => {
-      const create = await api.queueCleaner.createRule(kind, {
-        name: `${kind}-e2e`,
-        enabled: true,
-        maxStrikes: 3,
-        applyTo: 'all',
-        ...(kind === 'stall'
-          ? { stalledDuration: '00:30:00' }
-          : { speedThresholdKbps: 100, slowDuration: '00:30:00' }),
-      });
+      const create = await api.queueCleaner.createRule(kind, buildPayload(kind, `${kind}-e2e`));
+      if (!create.ok) {
+        console.error(`${kind} create failed:`, create.status, await create.text());
+      }
       expect(create.status).toBeLessThan(300);
       const created = await create.json();
       expect(created.id).toBeTruthy();
@@ -33,16 +52,11 @@ test.describe('QueueCleaner — rules CRUD', () => {
       expect(del.status).toBe(204);
     });
 
-    test(`${kind}: rejects negative maxStrikes`, async ({ api }) => {
-      const res = await api.queueCleaner.createRule(kind, {
-        name: `${kind}-bad`,
-        enabled: true,
-        maxStrikes: -1,
-        applyTo: 'all',
-        ...(kind === 'stall'
-          ? { stalledDuration: '00:30:00' }
-          : { speedThresholdKbps: 100, slowDuration: '00:30:00' }),
-      });
+    test(`${kind}: rejects maxStrikes below the minimum`, async ({ api }) => {
+      const res = await api.queueCleaner.createRule(
+        kind,
+        buildPayload(kind, `${kind}-bad`, { maxStrikes: 1 }),
+      );
       expect(res.status).toBeGreaterThanOrEqual(400);
       expect(res.status).toBeLessThan(500);
     });

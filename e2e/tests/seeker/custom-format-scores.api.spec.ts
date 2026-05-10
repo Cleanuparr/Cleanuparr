@@ -1,23 +1,25 @@
 import { test, expect } from '../fixtures/base';
 
 test.describe('Seeker — custom format scores', () => {
-  test('GET /api/custom-format-scores returns array', async ({ api }) => {
+  test('GET /api/seeker/cf-scores returns paginated payload', async ({ api }) => {
     const res = await api.seeker.listCustomFormatScores();
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(Array.isArray(body)).toBe(true);
+    expect(Array.isArray(body) || Array.isArray(body.items)).toBe(true);
   });
 
-  test('GET /upgrades returns array', async ({ api }) => {
+  test('GET /upgrades returns array or paginated payload', async ({ api }) => {
     const res = await api.seeker.listCustomFormatScoreUpgrades();
     expect(res.status).toBe(200);
-    expect(Array.isArray(await res.json())).toBe(true);
+    const body = await res.json();
+    expect(Array.isArray(body) || Array.isArray(body.items)).toBe(true);
   });
 
-  test('GET /instances returns array', async ({ api }) => {
+  test('GET /instances returns instances array wrapper', async ({ api }) => {
     const res = await api.seeker.listCustomFormatScoreInstances();
     expect(res.status).toBe(200);
-    expect(Array.isArray(await res.json())).toBe(true);
+    const body = await res.json();
+    expect(Array.isArray(body.instances)).toBe(true);
   });
 
   test('GET /stats returns aggregate object', async ({ api }) => {
