@@ -1,7 +1,7 @@
-import { test, expect } from '@playwright/test';
-import { TEST_CONFIG } from './helpers/test-config';
+import { test, expect, TEST_CONFIG } from '../fixtures/base';
 
-// Regression for GHSA-rwpc-36mg-fpvf
+// Regression for GHSA-rwpc-36mg-fpvf — the API must not reflect arbitrary Origin
+// headers in Access-Control-Allow-Origin (no wildcard CORS).
 
 test.describe.serial('GHSA-rwpc-36mg-fpvf regression', () => {
   const ATTACKER_ORIGIN = 'https://attacker.example';
@@ -11,7 +11,6 @@ test.describe.serial('GHSA-rwpc-36mg-fpvf regression', () => {
       headers: { Origin: ATTACKER_ORIGIN },
     });
     expect(res.status()).toBe(200);
-
     const acao = res.headers()['access-control-allow-origin'];
     expect(acao).toBeUndefined();
   });
@@ -24,7 +23,6 @@ test.describe.serial('GHSA-rwpc-36mg-fpvf regression', () => {
         'Access-Control-Request-Method': 'GET',
       },
     });
-
     const acao = res.headers()['access-control-allow-origin'];
     expect(acao).toBeUndefined();
   });
