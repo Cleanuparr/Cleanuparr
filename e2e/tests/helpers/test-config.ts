@@ -12,4 +12,15 @@ export const TEST_CONFIG = {
   oidcUsername: 'testuser',
   oidcPassword: 'testpass',
   oidcProviderName: 'Keycloak',
+
+  mocks: {
+    arrUrl: 'http://localhost:9100',
+    downloadClientUrl: 'http://localhost:9200',
+    notifyUrl: 'http://localhost:9300',
+    blocklistUrl: 'http://localhost:9400',
+    arrAdminUrl: 'http://localhost:9100/__admin',
+    downloadClientAdminUrl: 'http://localhost:9200/__admin',
+    notifyAdminUrl: 'http://localhost:9300/__admin',
+    blocklistAdminUrl: 'http://localhost:9400/__admin',
+  },
 } as const;
