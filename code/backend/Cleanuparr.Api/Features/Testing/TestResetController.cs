@@ -49,18 +49,42 @@ public sealed class TestResetController : ControllerBase
         {
             var eventsCounts = await ClearEventsAsync();
             var dataCounts = await ClearDynamicDataAsync();
+            var authReset = await ResetAuthLockoutsAsync();
 
             _logger.LogWarning(
-                "[E2E reset] cleared events context ({Events} events, {Strikes} strikes, {DownloadItems} items, {ManualEvents} manual events, {JobRuns} job runs) and dynamic data ({ArrInstances} arr instances, {DownloadClients} download clients, {NotificationConfigs} notification configs, {StallRules} stall rules, {SlowRules} slow rules, {SeedingRules} seeding rules)",
+                "[E2E reset] cleared events context ({Events} events, {Strikes} strikes, {DownloadItems} items, {ManualEvents} manual events, {JobRuns} job runs), dynamic data ({ArrInstances} arr instances, {DownloadClients} download clients, {NotificationConfigs} notification configs, {StallRules} stall rules, {SlowRules} slow rules, {SeedingRules} seeding rules), and {RefreshTokens} refresh tokens / lockouts on {Users} users",
                 eventsCounts.Events, eventsCounts.Strikes, eventsCounts.DownloadItems, eventsCounts.ManualEvents, eventsCounts.JobRuns,
                 dataCounts.ArrInstances, dataCounts.DownloadClients, dataCounts.NotificationConfigs,
-                dataCounts.StallRules, dataCounts.SlowRules, dataCounts.SeedingRules);
+                dataCounts.StallRules, dataCounts.SlowRules, dataCounts.SeedingRules,
+                authReset.RefreshTokens, authReset.UsersUnlocked);
 
-            return Ok(new { events = eventsCounts, data = dataCounts });
+            return Ok(new { events = eventsCounts, data = dataCounts, auth = authReset });
         }
         finally
         {
             DataContext.Lock.Release();
+        }
+    }
+
+    private async Task<AuthResetCounts> ResetAuthLockoutsAsync()
+    {
+        await UsersContext.Lock.WaitAsync();
+        try
+        {
+            var refreshTokens = await _usersContext.RefreshTokens.ExecuteDeleteAsync();
+            var usersUnlocked = await _usersContext.Users.ExecuteUpdateAsync(s => s
+                .SetProperty(u => u.FailedLoginAttempts, 0)
+                .SetProperty(u => u.LockoutEnd, (DateTime?)null));
+
+            return new AuthResetCounts
+            {
+                RefreshTokens = refreshTokens,
+                UsersUnlocked = usersUnlocked,
+            };
+        }
+        finally
+        {
+            UsersContext.Lock.Release();
         }
     }
 
@@ -190,6 +214,12 @@ public sealed class TestResetController : ControllerBase
         public int DownloadItems { get; init; }
         public int JobRuns { get; init; }
         public int SearchEventData { get; init; }
+    }
+
+    private sealed record AuthResetCounts
+    {
+        public int RefreshTokens { get; init; }
+        public int UsersUnlocked { get; init; }
     }
 
     private sealed record DataResetCounts
