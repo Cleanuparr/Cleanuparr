@@ -19,10 +19,13 @@ test.describe('DownloadCleaner — unlinked config', () => {
     // Backend returns 204 when no unlinked config row exists for the client.
     expect([200, 204]).toContain(initial.status);
 
+    // Note: when ignoredRootDirs contains paths the backend validates they
+    // exist on the filesystem and rejects if any are missing. Use [] to keep
+    // the test environment-agnostic.
     const update = await api.downloadCleaner.updateUnlinkedConfig(created.id, {
       enabled: true,
       categories: ['radarr', 'sonarr'],
-      ignoredRootDirs: ['/downloads/manual'],
+      ignoredRootDirs: [],
       useTag: true,
       targetCategory: 'cleanuparr-unlinked',
     });

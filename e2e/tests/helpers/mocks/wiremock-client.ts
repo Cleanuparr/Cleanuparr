@@ -9,7 +9,10 @@ export interface MappingRequest {
   urlPathPattern?: string;
   urlPattern?: string;
   bodyPatterns?: Array<Record<string, unknown>>;
-  headers?: Record<string, { equalTo?: string; matches?: string; contains?: string }>;
+  headers?: Record<
+    string,
+    { equalTo?: string; matches?: string; contains?: string; absent?: boolean }
+  >;
   queryParameters?: Record<string, { equalTo?: string; matches?: string }>;
 }
 

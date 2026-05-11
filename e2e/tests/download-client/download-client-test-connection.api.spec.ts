@@ -18,6 +18,9 @@ test.describe('DownloadClient — test connection', () => {
   });
 
   test('qbittorrent: failure when login returns Fails.', async ({ api, mocks }) => {
+    // qBit version is probed before login; without it the wrapper fails early
+    // and we'd never get to exercise the login response we care about.
+    await mocks.downloadClient.stub(DownloadClientStubs.qbitVersionStub());
     await mocks.downloadClient.stub(DownloadClientStubs.qbitLoginFailStub());
     const res = await api.downloadClient.test(
       buildDownloadClientPayload('qbittorrent', {
@@ -31,7 +34,7 @@ test.describe('DownloadClient — test connection', () => {
   });
 
   test('transmission: success on RPC handshake', async ({ api, mocks }) => {
-    await mocks.downloadClient.stub(DownloadClientStubs.transmissionSessionStub());
+    await mocks.downloadClient.stubMany(DownloadClientStubs.transmissionSessionStub());
     const res = await api.downloadClient.test(
       buildDownloadClientPayload('transmission', {
         name: 'tr-conn',
@@ -55,8 +58,8 @@ test.describe('DownloadClient — test connection', () => {
     expect(res.ok).toBe(true);
   });
 
-  test('utorrent: success on token.html', async ({ api, mocks }) => {
-    await mocks.downloadClient.stub(DownloadClientStubs.utorrentTokenStub());
+  test('utorrent: success on token.html + list', async ({ api, mocks }) => {
+    await mocks.downloadClient.stubMany(DownloadClientStubs.utorrentStubs());
     const res = await api.downloadClient.test(
       buildDownloadClientPayload('utorrent', {
         name: 'ut-conn',

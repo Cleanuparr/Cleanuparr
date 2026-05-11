@@ -20,15 +20,25 @@ export function buildHubConnection(opts: SignalRConnectOptions): HubConnection {
     .build();
 }
 
+/**
+ * Subscribes to a SignalR client method. The .NET hub publishes events with
+ * PascalCase names (`EventsReceived`), but the @microsoft/signalr Node client
+ * matches them after lowercasing on the wire — so we register both casings
+ * defensively so neither side has to know which is being used.
+ */
 export async function waitForEvent<T = unknown>(
   connection: HubConnection,
   eventName: string,
   predicate: (payload: T) => boolean = () => true,
   timeoutMs = 30_000,
 ): Promise<T> {
+  const lowered = eventName.toLowerCase();
   return new Promise<T>((resolve, reject) => {
     const timeout = setTimeout(() => {
       connection.off(eventName, handler);
+      if (lowered !== eventName) {
+        connection.off(lowered, handler);
+      }
       reject(new Error(`Timed out waiting for SignalR event "${eventName}"`));
     }, timeoutMs);
 
@@ -36,10 +46,16 @@ export async function waitForEvent<T = unknown>(
       if (predicate(payload)) {
         clearTimeout(timeout);
         connection.off(eventName, handler);
+        if (lowered !== eventName) {
+          connection.off(lowered, handler);
+        }
         resolve(payload);
       }
     };
 
     connection.on(eventName, handler);
+    if (lowered !== eventName) {
+      connection.on(lowered, handler);
+    }
   });
 }

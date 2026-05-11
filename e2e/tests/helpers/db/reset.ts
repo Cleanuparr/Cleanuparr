@@ -89,11 +89,30 @@ function deleteFromTables(db: Database.Database, tables: readonly string[]): num
   return total;
 }
 
+/**
+ * Force WAL frames to the main DB file so the backend's open connections see
+ * the DELETEs we just performed. Without this, a concurrent reader can keep
+ * observing pre-reset snapshots until the next checkpoint — which causes
+ * spurious "already exists" / "overlapping" rejections on the test's next
+ * write.
+ */
+function checkpoint(db: Database.Database): void {
+  // PASSIVE is the safe checkpoint mode that never blocks and never races
+  // with the backend's pooled connections. It flushes whatever WAL frames it
+  // can without disturbing readers.
+  try {
+    db.pragma('wal_checkpoint(PASSIVE)');
+  } catch {
+    // best effort
+  }
+}
+
 export function resetDatabases(): ResetCounts {
   const eventsDb = openDb(EVENTS_DB);
   let events = 0;
   try {
     events = deleteFromTables(eventsDb, EVENTS_TABLES);
+    checkpoint(eventsDb);
   } finally {
     eventsDb.close();
   }
@@ -102,6 +121,7 @@ export function resetDatabases(): ResetCounts {
   let data = 0;
   try {
     data = deleteFromTables(dataDb, DATA_TABLES_DYNAMIC);
+    checkpoint(dataDb);
   } finally {
     dataDb.close();
   }
@@ -117,6 +137,7 @@ export function resetDatabases(): ResetCounts {
         .run().changes;
     });
     tx();
+    checkpoint(usersDb);
   } finally {
     usersDb.close();
   }

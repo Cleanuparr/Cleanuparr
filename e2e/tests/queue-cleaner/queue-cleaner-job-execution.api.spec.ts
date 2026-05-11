@@ -58,18 +58,20 @@ test.describe('QueueCleaner — job execution end-to-end', () => {
     ).json();
     expect(sonarr.id).toBeTruthy();
 
-    await api.queueCleaner.createRule('stall', {
-      name: 'stall-rule-job',
-      enabled: true,
-      maxStrikes: 3,
-      privacyType: 'Public',
-      minCompletionPercentage: 0,
-      maxCompletionPercentage: 100,
-      deletePrivateTorrentsFromClient: false,
-      changeCategory: false,
-      resetStrikesOnProgress: true,
-      minimumProgress: null,
-    });
+    const created = await (
+      await api.queueCleaner.createRule('stall', {
+        name: 'stall-rule-job',
+        enabled: true,
+        maxStrikes: 3,
+        privacyType: 'Public',
+        minCompletionPercentage: 0,
+        maxCompletionPercentage: 100,
+        deletePrivateTorrentsFromClient: false,
+        changeCategory: false,
+        resetStrikesOnProgress: true,
+        minimumProgress: null,
+      })
+    ).json();
 
     const trigger = await api.jobs.trigger('QueueCleaner');
     expect(trigger.status).toBeLessThan(300);
@@ -88,5 +90,13 @@ test.describe('QueueCleaner — job execution end-to-end', () => {
       await new Promise((r) => setTimeout(r, 500));
     }
     expect(lastRunSeen).toBe(true);
+
+    // Explicit cleanup of the created rule — autoReset wipes stall_rules, but
+    // EF Core's pooled connection sometimes retains a pre-DELETE snapshot for
+    // a moment, which makes the very next test see a phantom overlap. Calling
+    // the DELETE endpoint forces the backend itself to clear the row.
+    if (created?.id) {
+      await api.queueCleaner.deleteRule('stall', created.id);
+    }
   });
 });

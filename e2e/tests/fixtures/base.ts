@@ -52,8 +52,13 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
   // only — singleton configs are preserved) and clears any registered
   // WireMock stubs.
   autoReset: [
-    async ({ mocks }, use) => {
-      resetDatabases();
+    async ({ mocks }, use, testInfo) => {
+      const counts = resetDatabases();
+      if (process.env.E2E_DEBUG_RESET) {
+        console.log(
+          `[autoReset:${testInfo.title}] events=${counts.events} data=${counts.data} unlocked=${counts.usersUnlocked} tokens=${counts.refreshTokens}`,
+        );
+      }
       await mocks.resetAll();
       await use();
     },

@@ -28,6 +28,23 @@ function buildPayload(kind: QueueRuleKind, name: string, overrides: Record<strin
 }
 
 test.describe('QueueCleaner — rules CRUD', () => {
+  // Belt-and-braces: SQLite-direct autoReset clears the rule tables, but EF
+  // Core's pooled connection can occasionally hold a pre-DELETE snapshot.
+  // Explicitly delete any lingering rules through the API as well so the
+  // backend's own view matches our reset.
+  test.beforeEach(async ({ api }) => {
+    for (const kind of KINDS) {
+      const list = await (await api.queueCleaner.listRules(kind)).json();
+      if (Array.isArray(list)) {
+        for (const rule of list) {
+          if (rule?.id) {
+            await api.queueCleaner.deleteRule(kind, rule.id);
+          }
+        }
+      }
+    }
+  });
+
   for (const kind of KINDS) {
     test(`${kind}: create + list + update + delete`, async ({ api }) => {
       const create = await api.queueCleaner.createRule(kind, buildPayload(kind, `${kind}-e2e`));
