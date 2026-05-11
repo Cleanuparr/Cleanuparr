@@ -1,43 +1,36 @@
 import { test, expect, TEST_CONFIG } from '../fixtures/base';
 
-test.describe.serial('Seeker — per-instance config', () => {
-  let radarrId: string;
-  let sonarrId: string;
+// These tests create arr instances inline rather than in beforeAll because the
+// auto-reset fixture wipes them between tests.
 
-  test.beforeAll(async ({ api, mocks }) => {
-    await mocks.arr.resetAll();
+async function createTwoArrInstances(
+  api: import('../helpers/api').CleanuparrApi,
+): Promise<{ radarrId: string; sonarrId: string }> {
+  const radarr = await (
+    await api.arr.createInstance('radarr', {
+      name: 'E2E Radarr',
+      url: TEST_CONFIG.mocks.arrUrl,
+      apiKey: 'e2e-test-key-radarr',
+      version: 5,
+    })
+  ).json();
 
-    const radarr = await (
-      await api.arr.createInstance('radarr', {
-        name: 'E2E Radarr',
-        url: TEST_CONFIG.mocks.arrUrl,
-        apiKey: 'e2e-test-key-radarr',
-        version: 5,
-      })
-    ).json();
-    radarrId = radarr.id;
+  const sonarr = await (
+    await api.arr.createInstance('sonarr', {
+      name: 'E2E Sonarr',
+      url: TEST_CONFIG.mocks.arrUrl,
+      apiKey: 'e2e-test-key-sonarr',
+      version: 4,
+    })
+  ).json();
 
-    const sonarr = await (
-      await api.arr.createInstance('sonarr', {
-        name: 'E2E Sonarr',
-        url: TEST_CONFIG.mocks.arrUrl,
-        apiKey: 'e2e-test-key-sonarr',
-        version: 4,
-      })
-    ).json();
-    sonarrId = sonarr.id;
-  });
+  return { radarrId: radarr.id, sonarrId: sonarr.id };
+}
 
-  test.afterAll(async ({ api }) => {
-    if (radarrId) {
-      await api.arr.deleteInstance('radarr', radarrId);
-    }
-    if (sonarrId) {
-      await api.arr.deleteInstance('sonarr', sonarrId);
-    }
-  });
-
+test.describe('Seeker — per-instance config', () => {
   test('config includes arr instances with per-instance settings', async ({ api }) => {
+    const { radarrId, sonarrId } = await createTwoArrInstances(api);
+
     const body = await (await api.seeker.getConfig()).json();
     expect(body.instances.length).toBeGreaterThanOrEqual(2);
 
@@ -65,6 +58,7 @@ test.describe.serial('Seeker — per-instance config', () => {
   });
 
   test('updates per-instance settings independently', async ({ api }) => {
+    const { radarrId, sonarrId } = await createTwoArrInstances(api);
     const current = await (await api.seeker.getConfig()).json();
 
     const instances = current.instances.map((i: { arrInstanceId: string }) => {
@@ -93,7 +87,17 @@ test.describe.serial('Seeker — per-instance config', () => {
   });
 
   test('persists per-instance settings across global updates', async ({ api }) => {
-    const current = await (await api.seeker.getConfig()).json();
+    const { radarrId } = await createTwoArrInstances(api);
+    let current = await (await api.seeker.getConfig()).json();
+
+    const seeded = current.instances.map((i: { arrInstanceId: string }) =>
+      i.arrInstanceId === radarrId
+        ? { ...i, enabled: true, useCutoff: true, useCustomFormatScore: true }
+        : i,
+    );
+    await api.seeker.updateConfig({ ...current, instances: seeded });
+
+    current = await (await api.seeker.getConfig()).json();
     const update = await api.seeker.updateConfig({ ...current, postReleaseGraceHours: 12 });
     expect(update.status).toBe(200);
 
@@ -102,7 +106,5 @@ test.describe.serial('Seeker — per-instance config', () => {
     expect(radarr.useCutoff).toBe(true);
     expect(radarr.useCustomFormatScore).toBe(true);
     expect(updated.postReleaseGraceHours).toBe(12);
-
-    await api.seeker.updateConfig({ ...updated, postReleaseGraceHours: current.postReleaseGraceHours });
   });
 });
