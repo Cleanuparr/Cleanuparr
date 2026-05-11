@@ -10,9 +10,11 @@
     "test:regression": "playwright test --project=regression"
   },
   "dependencies": {
-    "@microsoft/signalr": "^8.0.0"
+    "@microsoft/signalr": "^8.0.0",
+    "better-sqlite3": "^11.7.0"
   },
   "devDependencies": {
-    "@playwright/test": "^1.50.0"
+    "@playwright/test": "^1.50.0",
+    "@types/better-sqlite3": "^7.6.12"
   }
 }

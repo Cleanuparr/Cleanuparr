@@ -14,7 +14,6 @@ import { MalwareBlockerApi } from './malware-blocker';
 import { NotificationsApi } from './notifications';
 import { QueueCleanerApi } from './queue-cleaner';
 import { SeekerApi } from './seeker';
-import { TestResetApi } from './test-reset';
 
 /**
  * One-stop API surface for e2e tests. Use the Playwright fixtures
@@ -40,7 +39,6 @@ export class CleanuparrApi {
   readonly stats: StatsApi;
   readonly status: StatusApi;
   readonly health: HealthApi;
-  readonly testReset: TestResetApi;
 
   constructor(opts: ApiClientOptions = {}) {
     this.client = new ApiClient(opts);
@@ -62,7 +60,6 @@ export class CleanuparrApi {
     this.stats = new StatsApi(this.client);
     this.status = new StatusApi(this.client);
     this.health = new HealthApi(this.client);
-    this.testReset = new TestResetApi(this.client);
   }
 
   setToken(token: string | undefined): void {
@@ -105,4 +102,3 @@ export * from './seeker';
 export * from './jobs';
 export * from './events';
 export * from './status';
-export * from './test-reset';

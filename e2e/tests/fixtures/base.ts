@@ -1,5 +1,6 @@
 import { test as base, Page } from '@playwright/test';
-import { adminLogin, ApiClient, CleanuparrApi, ensureAdminAccount, waitForApp } from '../helpers/api';
+import { ApiClient, CleanuparrApi, ensureAdminAccount, waitForApp } from '../helpers/api';
+import { resetDatabases, waitForDatabases } from '../helpers/db/reset';
 import { MockServers } from '../helpers/mocks/wiremock-client';
 import { TEST_CONFIG } from '../helpers/test-config';
 
@@ -23,17 +24,19 @@ interface TestFixtures {
  *  - `api`            — a {@link CleanuparrApi} authenticated as the admin
  *  - `anonymousApi`   — a {@link CleanuparrApi} with no token (for 401 / anonymous flows)
  *  - `mocks`          — {@link MockServers} for stubbing external integrations
- *  - `resetDb`        — manual reset trigger (also called automatically before each test)
+ *  - `resetDb`        — manual reset trigger (also runs automatically before each test)
  *  - `authenticatedPage` — Playwright page with the admin's tokens injected into localStorage
  *
- * The DB is reset and mocks are cleared before each test. Admin account is created
- * once per worker.
+ * Reset strategy: the test harness opens the app's SQLite database files
+ * directly (mounted at ./.e2e-config) and deletes dynamic data + unlocks the
+ * admin between tests. The production app stays unmodified.
  */
 export const test = base.extend<TestFixtures, WorkerFixtures>({
   workerAdminTokens: [
     async ({}, use) => {
       const bootstrap = new CleanuparrApi();
       await waitForApp(bootstrap.client);
+      await waitForDatabases();
       await ensureAdminAccount(bootstrap);
       const tokens = await bootstrap.auth.loginAndCaptureTokens(
         TEST_CONFIG.adminUsername,
@@ -44,21 +47,13 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
     { scope: 'worker' },
   ],
 
-  // Runs before every test (auto). Clears events context, dynamic data and
-  // user lockout state so each test starts from a known baseline regardless
-  // of which other fixtures it consumes.
+  // Auto-fixture: runs before every test, regardless of which other fixtures
+  // the test consumes. Resets the on-disk SQLite databases (dynamic data
+  // only — singleton configs are preserved) and clears any registered
+  // WireMock stubs.
   autoReset: [
-    async ({ workerAdminTokens, mocks }, use) => {
-      const resetClient = new CleanuparrApi({ token: workerAdminTokens.accessToken });
-      const reset = await resetClient.testReset.reset();
-      if (reset.status === 404) {
-        throw new Error(
-          'Backend test reset endpoint returned 404. Set Cleanuparr:E2eMode=true (or CLEANUPARR_E2E_MODE=true) on the app container.',
-        );
-      }
-      if (!reset.ok) {
-        throw new Error(`Test reset failed: ${reset.status} ${await reset.text()}`);
-      }
+    async ({ mocks }, use) => {
+      resetDatabases();
       await mocks.resetAll();
       await use();
     },
@@ -79,9 +74,9 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
     await use(servers);
   },
 
-  resetDb: async ({ api }, use) => {
+  resetDb: async ({}, use) => {
     await use(async () => {
-      await api.testReset.resetOrThrow();
+      resetDatabases();
     });
   },
 

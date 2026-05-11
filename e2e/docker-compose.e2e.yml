@@ -63,11 +63,10 @@ services:
     environment:
       PORT: "5000"
       HTTP_PORTS: "5000"
-      Cleanuparr__E2eMode: "true"
-      CLEANUPARR_E2E_MODE: "true"
-    tmpfs:
-      - /config
+    # Mount /config to a host directory so the e2e test process can reset the
+    # SQLite databases directly (no test-only backend code path required).
     volumes:
+      - ./.e2e-config:/config
       - ./test-data/downloads:/e2e-downloads
 
   nginx:
