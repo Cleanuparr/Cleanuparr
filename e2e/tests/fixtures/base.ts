@@ -59,6 +59,16 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
           `[autoReset:${testInfo.title}] events=${counts.events} data=${counts.data} unlocked=${counts.usersUnlocked} tokens=${counts.refreshTokens}`,
         );
       }
+      // Force the backend's EF Core connection pool to drop any stale snapshot
+      // of the users row (failed_login_attempts / lockout_end). A successful
+      // login both re-reads the user and writes ResetFailedAttempts, so the
+      // backend's next read sees the cleared state our SQLite reset wrote.
+      const settle = new CleanuparrApi();
+      try {
+        await settle.auth.login(TEST_CONFIG.adminUsername, TEST_CONFIG.adminPassword);
+      } catch {
+        // First-ever boot — no admin yet. workerAdminTokens fixture handles setup.
+      }
       await mocks.resetAll();
       await use();
     },

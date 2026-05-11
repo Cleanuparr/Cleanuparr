@@ -16,7 +16,7 @@ test.describe('SignalR — app hub', () => {
       const events = await eventsPromise;
       expect(Array.isArray(events)).toBe(true);
 
-      const strikesPromise = waitForEvent<unknown[]>(connection, 'RecentStrikesReceived');
+      const strikesPromise = waitForEvent<unknown[]>(connection, 'StrikesReceived');
       await connection.invoke('GetRecentStrikes', 5);
       const strikes = await strikesPromise;
       expect(Array.isArray(strikes)).toBe(true);
