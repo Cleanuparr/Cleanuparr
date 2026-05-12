@@ -1,19 +1,14 @@
 import { test as base, Page } from '@playwright/test';
-import { ApiClient, CleanuparrApi, ensureAdminAccount, waitForApp } from '../helpers/api';
-import { resetDatabases, waitForDatabases } from '../helpers/db/reset';
+import { ApiClient, CleanuparrApi } from '../helpers/api';
+import { adminTokens } from '../helpers/test-lifecycle';
 import { MockServers } from '../helpers/mocks/wiremock-client';
 import { TEST_CONFIG } from '../helpers/test-config';
-
-interface WorkerFixtures {
-  workerAdminTokens: { accessToken: string; refreshToken: string; expiresIn: number };
-}
 
 interface TestFixtures {
   autoReset: void;
   api: CleanuparrApi;
   anonymousApi: CleanuparrApi;
   mocks: MockServers;
-  resetDb: () => Promise<void>;
   authenticatedPage: Page;
 }
 
@@ -24,60 +19,29 @@ interface TestFixtures {
  *  - `api`            — a {@link CleanuparrApi} authenticated as the admin
  *  - `anonymousApi`   — a {@link CleanuparrApi} with no token (for 401 / anonymous flows)
  *  - `mocks`          — {@link MockServers} for stubbing external integrations
- *  - `resetDb`        — manual reset trigger (also runs automatically before each test)
  *  - `authenticatedPage` — Playwright page with the admin's tokens injected into localStorage
  *
- * Reset strategy: the test harness opens the app's SQLite database files
- * directly (mounted at ./.e2e-config) and deletes dynamic data + unlocks the
- * admin between tests. The production app stays unmodified.
+ * Isolation model: each spec folder gets a dedicated Playwright "setup"
+ * project (`tests/_setup/<folder>.setup.ts`) that restarts the app
+ * container, re-creates the admin account on the now-empty tmpfs `/config`,
+ * and writes fresh bearer tokens to `playwright/.auth/admin.json`. Tests
+ * within a folder cooperate (unique entity names + restore-after-modify);
+ * the folder boundary is the hard reset.
  */
-export const test = base.extend<TestFixtures, WorkerFixtures>({
-  workerAdminTokens: [
-    async ({}, use) => {
-      const bootstrap = new CleanuparrApi();
-      await waitForApp(bootstrap.client);
-      await waitForDatabases();
-      await ensureAdminAccount(bootstrap);
-      const tokens = await bootstrap.auth.loginAndCaptureTokens(
-        TEST_CONFIG.adminUsername,
-        TEST_CONFIG.adminPassword,
-      );
-      await use(tokens);
-    },
-    { scope: 'worker' },
-  ],
-
-  // Auto-fixture: runs before every test, regardless of which other fixtures
-  // the test consumes. Resets the on-disk SQLite databases (dynamic data
-  // only — singleton configs are preserved) and clears any registered
-  // WireMock stubs.
+export const test = base.extend<TestFixtures>({
+  // Auto-fixture: clear WireMock stubs before every test. The app's own
+  // state is reset only between spec folders by the matching setup project.
   autoReset: [
-    async ({ mocks }, use, testInfo) => {
-      const counts = resetDatabases();
-      if (process.env.E2E_DEBUG_RESET) {
-        console.log(
-          `[autoReset:${testInfo.title}] events=${counts.events} data=${counts.data} unlocked=${counts.usersUnlocked} tokens=${counts.refreshTokens}`,
-        );
-      }
-      // Force the backend's EF Core connection pool to drop any stale snapshot
-      // of the users row (failed_login_attempts / lockout_end). A successful
-      // login both re-reads the user and writes ResetFailedAttempts, so the
-      // backend's next read sees the cleared state our SQLite reset wrote.
-      const settle = new CleanuparrApi();
-      try {
-        await settle.auth.login(TEST_CONFIG.adminUsername, TEST_CONFIG.adminPassword);
-      } catch {
-        // First-ever boot — no admin yet. workerAdminTokens fixture handles setup.
-      }
+    async ({ mocks }, use) => {
       await mocks.resetAll();
       await use();
     },
     { auto: true },
   ],
 
-  api: async ({ workerAdminTokens }, use) => {
-    const api = new CleanuparrApi({ token: workerAdminTokens.accessToken });
-    await use(api);
+  api: async ({}, use) => {
+    const tokens = adminTokens();
+    await use(new CleanuparrApi({ token: tokens.accessToken }));
   },
 
   anonymousApi: async ({}, use) => {
@@ -89,20 +53,15 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
     await use(servers);
   },
 
-  resetDb: async ({}, use) => {
-    await use(async () => {
-      resetDatabases();
-    });
-  },
-
-  authenticatedPage: async ({ workerAdminTokens, page }, use) => {
-    await page.addInitScript((tokens) => {
+  authenticatedPage: async ({ page }, use) => {
+    const tokens = adminTokens();
+    await page.addInitScript((t) => {
       try {
-        window.localStorage.setItem('cleanuparr.auth.tokens', JSON.stringify(tokens));
+        window.localStorage.setItem('cleanuparr.auth.tokens', JSON.stringify(t));
       } catch {
         // localStorage unavailable; ignore
       }
-    }, workerAdminTokens);
+    }, tokens);
     await page.goto('/');
     await use(page);
   },

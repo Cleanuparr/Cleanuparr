@@ -63,10 +63,11 @@ services:
     environment:
       PORT: "5000"
       HTTP_PORTS: "5000"
-    # Mount /config to a host directory so the e2e test process can reset the
-    # SQLite databases directly (no test-only backend code path required).
+    # Ephemeral /config — wiped on every container restart. The e2e harness
+    # restarts the app container between spec folders for a clean baseline.
+    tmpfs:
+      - /config
     volumes:
-      - ./.e2e-config:/config
       - ./test-data/downloads:/e2e-downloads
 
   nginx:

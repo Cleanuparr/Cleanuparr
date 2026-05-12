@@ -5,16 +5,13 @@
     "test": "playwright test",
     "test:headed": "playwright test --headed",
     "test:debug": "playwright test --debug",
-    "test:api": "playwright test --project=api",
-    "test:ui": "playwright test --project=ui",
-    "test:regression": "playwright test --project=regression"
+    "test:regression": "playwright test --project=setup:regression --project=regression"
   },
   "dependencies": {
-    "@microsoft/signalr": "^8.0.0",
-    "better-sqlite3": "^11.7.0"
+    "@microsoft/signalr": "^8.0.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.50.0",
-    "@types/better-sqlite3": "^7.6.12"
+    "@types/node": "^22.10.0"
   }
 }
