@@ -1,25 +1,29 @@
 import { test, expect, TEST_CONFIG, CleanuparrApi } from '../fixtures/base';
 
-async function adminApi(): Promise<CleanuparrApi> {
-  const api = new CleanuparrApi();
-  const tokens = await api.auth.loginAndCaptureTokens(
-    TEST_CONFIG.adminUsername,
-    TEST_CONFIG.adminPassword,
-  );
-  api.setToken(tokens.accessToken);
-  return api;
+// Token captured BEFORE exclusive mode is enabled — re-logging in afterwards
+// is blocked (the whole point of exclusive mode), so all admin-API actions
+// inside the describe reuse this access token.
+let adminToken: string;
+
+function adminApi(): CleanuparrApi {
+  return new CleanuparrApi({ token: adminToken });
 }
 
 test.describe.serial('OIDC — exclusive mode', () => {
   test.beforeAll(async () => {
-    const api = await adminApi();
-    await api.account.patchOidcConfig({ exclusiveMode: true });
+    const bootstrap = new CleanuparrApi();
+    const tokens = await bootstrap.auth.loginAndCaptureTokens(
+      TEST_CONFIG.adminUsername,
+      TEST_CONFIG.adminPassword,
+    );
+    adminToken = tokens.accessToken;
+
+    await adminApi().account.patchOidcConfig({ exclusiveMode: true });
   });
 
   test.afterAll(async () => {
     try {
-      const api = await adminApi();
-      await api.account.patchOidcConfig({ exclusiveMode: false });
+      await adminApi().account.patchOidcConfig({ exclusiveMode: false });
     } catch {
       // best-effort cleanup
     }
@@ -87,8 +91,7 @@ test.describe.serial('OIDC — exclusive mode', () => {
   });
 
   test('disabling exclusive mode restores credential form on login page', async ({ page }) => {
-    const api = await adminApi();
-    await api.account.patchOidcConfig({ exclusiveMode: false });
+    await adminApi().account.patchOidcConfig({ exclusiveMode: false });
 
     await page.goto(`${TEST_CONFIG.appUrl}/auth/login`);
 

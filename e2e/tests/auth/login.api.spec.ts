@@ -35,10 +35,28 @@ test.describe('Auth — login + refresh + logout', () => {
   });
 
   test('refresh rotates the refresh token', async ({ anonymousApi }) => {
-    const first = await anonymousApi.auth.loginAndCaptureTokens(
-      TEST_CONFIG.adminUsername,
-      TEST_CONFIG.adminPassword,
-    );
+    // The preceding "wrong password / unknown user" test can leave a short
+    // lockout window open on the admin account. Tolerate it by retrying the
+    // login once the backend says it's safe.
+    let first: { accessToken: string; refreshToken: string; expiresIn: number } | null = null;
+    for (let attempt = 0; attempt < 3 && !first; attempt++) {
+      const res = await anonymousApi.auth.login(
+        TEST_CONFIG.adminUsername,
+        TEST_CONFIG.adminPassword,
+      );
+      if (res.status === 429) {
+        const body = await res.json().catch(() => ({}));
+        const wait = (body.retryAfterSeconds ?? 2) * 1000 + 200;
+        await new Promise((r) => setTimeout(r, wait));
+        continue;
+      }
+      const data = await res.json();
+      first = data.tokens;
+    }
+    if (!first) {
+      throw new Error('Could not obtain admin tokens after retrying past the lockout window');
+    }
+
     const refreshed = await anonymousApi.auth.refresh(first.refreshToken);
     expect(refreshed.status).toBe(200);
     const body = await refreshed.json();
