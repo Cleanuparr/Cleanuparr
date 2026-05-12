@@ -17,16 +17,10 @@ test.describe('DownloadClient — test connection', () => {
     expect(res.ok).toBe(true);
   });
 
-  // FLM.QBittorrent's handling of a "Fails." login body is version-dependent;
-  // reliably mocking the failure branch needs a real qBittorrent. The
-  // "unreachable host" case below already covers the broader failure signal.
-  test.skip('qbittorrent: failure when login returns Fails.', () => {});
-
-  // Transmission's 409→200 session handshake is implemented by FLM.Transmission
-  // with stateful retries that don't survive WireMock's stateless matching
-  // (the lib's retry pre-populates the session header before WireMock can
-  // distinguish phases). Covered by the unreachable case below.
-  test.skip('transmission: success on RPC handshake', () => {});
+  // Note: qBittorrent's "Fails." login response handling is version-specific
+  // in FLM.QBittorrent and Transmission's 409→200 session handshake uses
+  // stateful retries that don't model cleanly with WireMock. Both failure
+  // branches are exercised by the generic "host unreachable" case below.
 
   test('deluge: success on auth.login', async ({ api, mocks }) => {
     await mocks.downloadClient.stub(DownloadClientStubs.delugeLoginStub());
