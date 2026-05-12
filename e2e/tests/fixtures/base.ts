@@ -55,9 +55,12 @@ export const test = base.extend<TestFixtures>({
 
   authenticatedPage: async ({ page }, use) => {
     const tokens = adminTokens();
+    // Match the keys the frontend's AuthService reads from localStorage —
+    // see code/frontend/src/app/core/auth/auth.service.ts.
     await page.addInitScript((t) => {
       try {
-        window.localStorage.setItem('cleanuparr.auth.tokens', JSON.stringify(t));
+        window.localStorage.setItem('access_token', t.accessToken);
+        window.localStorage.setItem('refresh_token', t.refreshToken);
       } catch {
         // localStorage unavailable; ignore
       }
