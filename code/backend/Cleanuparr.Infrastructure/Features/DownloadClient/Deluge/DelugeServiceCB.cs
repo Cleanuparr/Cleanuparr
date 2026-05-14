@@ -120,8 +120,9 @@ public partial class DelugeService
             _logger.LogDebug("All files are blocked for {name}", download.Name);
             result.ShouldRemove = true;
             result.DeleteReason = DeleteReason.AllFilesBlocked;
+            return result;
         }
-        
+
         _logger.LogDebug("Marking {count} unwanted files as skipped for {name}", totalUnwantedFiles, download.Name);
 
         await _dryRunInterceptor.InterceptAsync(ChangeFilesPriority, hash, sortedPriorities);
