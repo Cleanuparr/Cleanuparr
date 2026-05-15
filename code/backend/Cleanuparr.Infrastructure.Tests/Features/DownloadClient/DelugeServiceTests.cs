@@ -1,7 +1,11 @@
+using System.Collections.Concurrent;
+using System.Text.RegularExpressions;
 using Cleanuparr.Domain.Entities.Deluge.Response;
 using Cleanuparr.Domain.Enums;
+using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
 using Cleanuparr.Infrastructure.Features.DownloadClient.Deluge;
+using Cleanuparr.Persistence.Models.Configuration.MalwareBlocker;
 using NSubstitute;
 using Shouldly;
 using Xunit;
@@ -540,6 +544,116 @@ public class DelugeServiceTests : IClassFixture<DelugeServiceFixture>
             result.DeleteReason.ShouldBe(DeleteReason.SlowSpeed);
             result.DeleteFromClient.ShouldBeFalse();
             result.ChangeCategory.ShouldBeTrue();
+        }
+    }
+
+    public class BlockUnwantedFilesAsyncScenarios : DelugeServiceTests
+    {
+        public BlockUnwantedFilesAsyncScenarios(DelugeServiceFixture fixture) : base(fixture)
+        {
+        }
+
+        private void SetMalwareBlockerContext()
+        {
+            ContextProvider.Set(new ContentBlockerConfig());
+            ContextProvider.Set(nameof(InstanceType), (object)InstanceType.Sonarr);
+
+            _fixture.BlocklistProvider
+                .GetBlocklistType(Arg.Any<InstanceType>())
+                .Returns(BlocklistType.Blacklist);
+            _fixture.BlocklistProvider
+                .GetPatterns(Arg.Any<InstanceType>())
+                .Returns(new ConcurrentBag<string>());
+            _fixture.BlocklistProvider
+                .GetRegexes(Arg.Any<InstanceType>())
+                .Returns(new ConcurrentBag<Regex>());
+        }
+
+        private static DownloadStatus MakeDownloadStatus(string hash) => new()
+        {
+            Hash = hash,
+            Name = "Malware Torrent",
+            State = DelugeState.Downloading,
+            Private = false,
+            DownloadSpeed = 1000,
+            Trackers = new List<Tracker>(),
+            DownloadLocation = "/downloads",
+        };
+
+        [Fact]
+        public async Task AllFilesAreMalware_DoesNotCallChangeFilesPriority_AndMarksForRemoval()
+        {
+            const string hash = "all-malware-hash";
+            var sut = _fixture.CreateSut();
+            SetMalwareBlockerContext();
+
+            _fixture.ClientWrapper
+                .GetTorrentStatus(hash)
+                .Returns(MakeDownloadStatus(hash));
+
+            _fixture.ClientWrapper
+                .GetTorrentFiles(hash)
+                .Returns(new DelugeContents
+                {
+                    Contents = new Dictionary<string, DelugeFileOrDirectory>
+                    {
+                        { "malware.exe", new DelugeFileOrDirectory { Type = "file", Priority = 1, Index = 0, Path = "malware.exe" } },
+                    },
+                });
+
+            _fixture.FilenameEvaluator
+                .IsValid(Arg.Any<string>(), Arg.Any<BlocklistType>(), Arg.Any<ConcurrentBag<string>>(), Arg.Any<ConcurrentBag<Regex>>())
+                .Returns(false);
+
+            var result = await sut.BlockUnwantedFilesAsync(hash, Array.Empty<string>());
+
+            result.Found.ShouldBeTrue();
+            result.ShouldRemove.ShouldBeTrue();
+            result.DeleteReason.ShouldBe(DeleteReason.AllFilesBlocked);
+
+            await _fixture.ClientWrapper
+                .DidNotReceive()
+                .ChangeFilesPriority(Arg.Any<string>(), Arg.Any<List<int>>());
+        }
+
+        [Fact]
+        public async Task PartialMalware_CallsChangeFilesPriority_AndDoesNotMarkForRemoval()
+        {
+            const string hash = "partial-malware-hash";
+            var sut = _fixture.CreateSut();
+            SetMalwareBlockerContext();
+
+            _fixture.ClientWrapper
+                .GetTorrentStatus(hash)
+                .Returns(MakeDownloadStatus(hash));
+
+            _fixture.ClientWrapper
+                .GetTorrentFiles(hash)
+                .Returns(new DelugeContents
+                {
+                    Contents = new Dictionary<string, DelugeFileOrDirectory>
+                    {
+                        { "movie.mkv", new DelugeFileOrDirectory { Type = "file", Priority = 1, Index = 0, Path = "movie.mkv" } },
+                        { "malware.exe", new DelugeFileOrDirectory { Type = "file", Priority = 1, Index = 1, Path = "malware.exe" } },
+                    },
+                });
+
+            _fixture.FilenameEvaluator
+                .IsValid(Arg.Is<string>(name => name.EndsWith("malware.exe")), Arg.Any<BlocklistType>(), Arg.Any<ConcurrentBag<string>>(), Arg.Any<ConcurrentBag<Regex>>())
+                .Returns(false);
+            _fixture.FilenameEvaluator
+                .IsValid(Arg.Is<string>(name => name.EndsWith("movie.mkv")), Arg.Any<BlocklistType>(), Arg.Any<ConcurrentBag<string>>(), Arg.Any<ConcurrentBag<Regex>>())
+                .Returns(true);
+
+            var result = await sut.BlockUnwantedFilesAsync(hash, Array.Empty<string>());
+
+            result.Found.ShouldBeTrue();
+            result.ShouldRemove.ShouldBeFalse();
+            result.DeleteReason.ShouldBe(DeleteReason.None);
+
+            await _fixture.ClientWrapper
+                .Received(1)
+                .ChangeFilesPriority(hash, Arg.Is<List<int>>(p => p.Count == 2 && p[0] == 1 && p[1] == 0));
         }
     }
 }
