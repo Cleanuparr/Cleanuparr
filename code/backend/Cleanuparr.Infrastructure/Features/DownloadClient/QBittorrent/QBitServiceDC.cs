@@ -42,18 +42,11 @@ public partial class QBitService
             return [];
         }
 
-        var result = new List<ITorrentItemWrapper>();
-        foreach (var torrent in torrentList.Where(x => !string.IsNullOrEmpty(x.Hash)))
-        {
-            var trackers = await GetTrackersAsync(torrent.Hash!);
-            var properties = await _client.GetTorrentPropertiesAsync(torrent.Hash!);
-            bool isPrivate = properties?.AdditionalData.TryGetValue("is_private", out var dictValue) == true &&
-                           bool.TryParse(dictValue?.ToString(), out bool boolValue) && boolValue;
-
-            result.Add(new QBitItemWrapper(torrent, trackers, isPrivate));
-        }
-
-        return result;
+        // Only SavePath and Name are needed — skip per-torrent tracker/properties calls
+        return torrentList
+            .Where(x => !string.IsNullOrEmpty(x.Hash))
+            .Select(t => (ITorrentItemWrapper)new QBitItemWrapper(t, [], false))
+            .ToList();
     }
 
     /// <inheritdoc/>

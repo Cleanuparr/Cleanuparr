@@ -193,6 +193,10 @@ public sealed class OrphanedFilesCleaner : IHandler
     {
         int moved = 0;
 
+        string? normalizedOrphanedDir = string.IsNullOrWhiteSpace(config.OrphanedDirectory)
+            ? null
+            : Path.GetFullPath(config.OrphanedDirectory).TrimEnd(Path.DirectorySeparatorChar);
+
         foreach (var entry in Directory.EnumerateFileSystemEntries(directory))
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -202,7 +206,14 @@ public sealed class OrphanedFilesCleaner : IHandler
                 break;
             }
 
-            string normalizedEntry = entry.TrimEnd(Path.DirectorySeparatorChar);
+            string normalizedEntry = Path.GetFullPath(entry).TrimEnd(Path.DirectorySeparatorChar);
+
+            if (normalizedOrphanedDir is not null &&
+                normalizedEntry.Equals(normalizedOrphanedDir, StringComparison.OrdinalIgnoreCase))
+            {
+                _logger.LogDebug("[OrphanedFilesCleaner] skip | orphaned directory itself | {path}", normalizedEntry);
+                continue;
+            }
 
             if (claimedPaths.Contains(normalizedEntry))
             {
