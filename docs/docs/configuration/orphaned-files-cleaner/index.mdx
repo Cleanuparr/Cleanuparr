@@ -65,51 +65,10 @@ Enter a valid Quartz.NET cron expression to control when the Orphaned Files Clea
 
 <div className={styles.section}>
 
-<SectionTitle>Directories</SectionTitle>
-
-<ConfigSection
-  title="Scan Directories"
->
-
-A list of absolute paths to scan for orphaned files. Each top-level entry inside these directories is checked against your active torrents' save paths. If no active torrent claims an entry, it is considered orphaned.
-
-**Examples:**
-```
-/data/downloads/completed
-/data/downloads/cross-seed
-```
-
-<Important>
-Each path must be accessible by Cleanuparr. If running in Docker, make sure to mount the directories accordingly.
-</Important>
-
-</ConfigSection>
-
-<ConfigSection
-  title="Orphaned Directory"
->
-
-The directory where orphaned files and folders are moved. Leave empty to log orphaned entries without moving them (dry-run mode).
-
-**Example:**
-```
-/data/downloads/orphaned
-```
-
-<Note>
-The orphaned directory itself is never scanned for orphans.
-</Note>
-
-</ConfigSection>
-
-</div>
-
-<div className={styles.section}>
-
 <SectionTitle>Filters & Safety</SectionTitle>
 
 <p className={styles.sectionDescription}>
-  These settings help prevent accidental moves by adding age checks, glob-based exclusions, and a per-run cap.
+  These global settings apply to all download clients and help prevent accidental moves.
 </p>
 
 <ConfigSection
@@ -172,17 +131,60 @@ Files deleted by this option are permanently removed from disk. Make sure you ha
 
 <div className={styles.section}>
 
-<SectionTitle>Path Remapping</SectionTitle>
+<SectionTitle>Per Download Client</SectionTitle>
 
 <p className={styles.sectionDescription}>
-  Use these settings when Cleanuparr and your download client see different paths for the same files — common in Docker environments.
+  Each download client has its own scan directories, orphaned directory, and path remapping. Select a download client to configure its orphaned files settings.
 </p>
+
+<ConfigSection
+  title="Enabled (per client)"
+>
+
+Enable orphaned files scanning for this specific download client. The client must also be enabled globally in Download Client settings.
+
+</ConfigSection>
+
+<ConfigSection
+  title="Scan Directories"
+>
+
+A list of absolute paths to scan for orphaned files on this download client. Each top-level entry inside these directories is checked against your active torrents' save paths. If no active torrent claims an entry, it is considered orphaned.
+
+**Examples:**
+```
+/data/downloads/completed
+/data/downloads/cross-seed
+```
+
+<Important>
+Each path must be accessible by Cleanuparr. If running in Docker, make sure to mount the directories accordingly.
+</Important>
+
+</ConfigSection>
+
+<ConfigSection
+  title="Orphaned Directory"
+>
+
+The directory where orphaned files and folders are moved for this download client. Leave empty to log orphaned entries without moving them.
+
+**Example:**
+```
+/data/downloads/orphaned
+```
+
+<Note>
+The orphaned directory itself is never scanned for orphans.
+</Note>
+
+</ConfigSection>
 
 <ConfigSection
   title="Download Directory Source and Download Directory Target"
 >
 
-The path prefix as reported by the download client (`Source`) and the corresponding path accessible to Cleanuparr (`Target`). Used to translate torrent save paths so Cleanuparr can correctly determine which files are claimed.
+The path prefix as reported by this download client (`Source`) and the corresponding path accessible to Cleanuparr (`Target`). Used to translate torrent save paths so Cleanuparr can correctly determine which files are claimed.
 
 Leave both fields empty if no path translation is needed.
 

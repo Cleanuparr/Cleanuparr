@@ -7,8 +7,12 @@ import {
   type SelectOption,
 } from '@ui';
 import { OrphanedFilesCleanerApi } from '@core/api/orphaned-files-cleaner.api';
+import { ApiError } from '@core/interceptors/error.interceptor';
 import { ToastService } from '@core/services/toast.service';
-import { OrphanedFilesCleanerConfig } from '@shared/models/orphaned-files-cleaner-config.model';
+import {
+  OrphanedFilesCleanerConfig, OrphanedFilesClientConfig,
+  ClientOrphanedFilesConfig, createDefaultClientConfig,
+} from '@shared/models/orphaned-files-cleaner-config.model';
 import { HasPendingChanges } from '@core/guards/pending-changes.guard';
 import { DeferredLoader } from '@shared/utils/loading.util';
 import { ScheduleUnit } from '@shared/models/enums';
@@ -36,26 +40,44 @@ export class OrphanedFilesCleanerComponent implements OnInit, HasPendingChanges 
   private readonly toast = inject(ToastService);
 
   private readonly savedSnapshot = signal('');
+  private readonly clientSnapshots = signal<Record<string, string>>({});
 
   readonly scheduleUnitOptions = SCHEDULE_UNIT_OPTIONS;
   readonly loader = new DeferredLoader();
   readonly loadError = signal(false);
   readonly saving = signal(false);
   readonly saved = signal(false);
+  readonly clientSaving = signal(false);
+  readonly clientSaved = signal(false);
 
+  // Global settings
   readonly enabled = signal(false);
   readonly useAdvancedScheduling = signal(false);
   readonly cronExpression = signal('0 0 * * * ?');
   readonly scheduleEvery = signal<unknown>(1);
   readonly scheduleUnit = signal<unknown>(ScheduleUnit.Hours);
-  readonly scanDirectories = signal<string[]>([]);
-  readonly orphanedDirectory = signal('');
-  readonly downloadDirectorySource = signal('');
-  readonly downloadDirectoryTarget = signal('');
   readonly excludePatterns = signal<string[]>([]);
   readonly minFileAgeMinutes = signal<number | null>(0);
   readonly maxOrphanedFilesToProcess = signal<number | null>(50);
   readonly emptyAfterXDays = signal<number | null>(null);
+
+  // Per-client settings
+  readonly clientConfigs = signal<ClientOrphanedFilesConfig[]>([]);
+  readonly selectedClientId = signal<string | null>(null);
+
+  readonly selectedClient = computed(() =>
+    this.clientConfigs().find(c => c.downloadClientId === this.selectedClientId()) ?? null
+  );
+
+  readonly clientOptions = computed<SelectOption[]>(() =>
+    this.clientConfigs()
+      .map(c => ({ label: c.downloadClientName, value: c.downloadClientId }))
+      .sort((a, b) => a.label.localeCompare(b.label))
+  );
+
+  readonly isSelectedClientDisabled = computed(() =>
+    this.selectedClient()?.downloadClientEnabled === false
+  );
 
   constructor() {
     effect(() => {
@@ -81,14 +103,15 @@ export class OrphanedFilesCleanerComponent implements OnInit, HasPendingChanges 
     return undefined;
   });
 
-  readonly scanDirError = computed(() => {
-    if (this.enabled() && this.scanDirectories().length === 0) {
-      return 'At least one scan directory is required';
-    }
-    return undefined;
-  });
+  readonly hasErrors = computed(() => !!this.cronError());
 
-  readonly hasErrors = computed(() => !!this.cronError() || !!this.scanDirError());
+  readonly clientDirty = computed(() => {
+    const client = this.selectedClient();
+    if (!client) return false;
+    const saved = this.clientSnapshots()[client.downloadClientId];
+    if (!saved) return false;
+    return saved !== JSON.stringify(client.clientConfig);
+  });
 
   ngOnInit(): void {
     this.loadConfig();
@@ -106,14 +129,27 @@ export class OrphanedFilesCleanerComponent implements OnInit, HasPendingChanges 
           this.scheduleEvery.set(parsed.every);
           this.scheduleUnit.set(parsed.type);
         }
-        this.scanDirectories.set(config.scanDirectories ?? []);
-        this.orphanedDirectory.set(config.orphanedDirectory ?? '');
-        this.downloadDirectorySource.set(config.downloadDirectorySource ?? '');
-        this.downloadDirectoryTarget.set(config.downloadDirectoryTarget ?? '');
         this.excludePatterns.set(config.excludePatterns ?? []);
         this.minFileAgeMinutes.set(config.minFileAgeMinutes ?? 0);
         this.maxOrphanedFilesToProcess.set(config.maxOrphanedFilesToProcess ?? 50);
         this.emptyAfterXDays.set(config.emptyAfterXDays ?? null);
+
+        const clients = (config.clients ?? []).map(c => ({
+          ...c,
+          clientConfig: c.clientConfig ?? createDefaultClientConfig(),
+        }));
+        this.clientConfigs.set(clients);
+
+        if (clients.length > 0) {
+          this.selectedClientId.set(clients[0].downloadClientId);
+        }
+
+        const snapshots: Record<string, string> = {};
+        for (const c of clients) {
+          snapshots[c.downloadClientId] = JSON.stringify(c.clientConfig ?? createDefaultClientConfig());
+        }
+        this.clientSnapshots.set(snapshots);
+
         this.loader.stop();
         queueMicrotask(() => this.savedSnapshot.set(this.buildSnapshot()));
       },
@@ -130,20 +166,54 @@ export class OrphanedFilesCleanerComponent implements OnInit, HasPendingChanges 
     this.loadConfig();
   }
 
+  onClientChange(newClientId: unknown): void {
+    this.selectedClientId.set(newClientId as string | null);
+  }
+
+  updateClientField<K extends keyof OrphanedFilesClientConfig>(field: K, value: OrphanedFilesClientConfig[K]): void {
+    const id = this.selectedClientId();
+    if (!id) return;
+    this.clientConfigs.update(configs =>
+      configs.map(c => c.downloadClientId === id
+        ? { ...c, clientConfig: { ...(c.clientConfig ?? createDefaultClientConfig()), [field]: value } }
+        : c)
+    );
+  }
+
+  saveClientConfig(): void {
+    const clientId = this.selectedClientId();
+    const client = this.selectedClient();
+    if (!clientId || !client?.clientConfig) return;
+
+    this.clientSaving.set(true);
+    this.api.updateClientConfig(clientId, client.clientConfig).subscribe({
+      next: () => {
+        this.toast.success('Client settings saved');
+        this.clientSaving.set(false);
+        this.clientSaved.set(true);
+        setTimeout(() => this.clientSaved.set(false), 1500);
+        this.clientSnapshots.update(s => ({
+          ...s,
+          [clientId]: JSON.stringify(client.clientConfig),
+        }));
+      },
+      error: (err: ApiError) => {
+        this.toast.error(err.statusCode === 400 ? err.message : 'Failed to save client settings');
+        this.clientSaving.set(false);
+      },
+    });
+  }
+
   save(): void {
     const jobSchedule = { every: (this.scheduleEvery() as number) ?? 1, type: this.scheduleUnit() as ScheduleUnit };
     const cronExpression = this.useAdvancedScheduling()
       ? this.cronExpression()
       : generateCronExpression(jobSchedule);
 
-    const config: OrphanedFilesCleanerConfig = {
+    const config: Omit<OrphanedFilesCleanerConfig, 'clients'> = {
       enabled: this.enabled(),
       cronExpression,
       useAdvancedScheduling: this.useAdvancedScheduling(),
-      scanDirectories: this.scanDirectories(),
-      orphanedDirectory: this.orphanedDirectory() || undefined,
-      downloadDirectorySource: this.downloadDirectorySource() || undefined,
-      downloadDirectoryTarget: this.downloadDirectoryTarget() || undefined,
       excludePatterns: this.excludePatterns(),
       minFileAgeMinutes: this.minFileAgeMinutes() ?? 0,
       maxOrphanedFilesToProcess: this.maxOrphanedFilesToProcess() ?? 50,
@@ -159,8 +229,8 @@ export class OrphanedFilesCleanerComponent implements OnInit, HasPendingChanges 
         setTimeout(() => this.saved.set(false), 1500);
         this.savedSnapshot.set(this.buildSnapshot());
       },
-      error: () => {
-        this.toast.error('Failed to save orphaned files cleaner settings');
+      error: (err: ApiError) => {
+        this.toast.error(err.statusCode === 400 ? err.message : 'Failed to save orphaned files cleaner settings');
         this.saving.set(false);
       },
     });
@@ -173,10 +243,6 @@ export class OrphanedFilesCleanerComponent implements OnInit, HasPendingChanges 
       cronExpression: this.cronExpression(),
       scheduleEvery: this.scheduleEvery(),
       scheduleUnit: this.scheduleUnit(),
-      scanDirectories: this.scanDirectories(),
-      orphanedDirectory: this.orphanedDirectory(),
-      downloadDirectorySource: this.downloadDirectorySource(),
-      downloadDirectoryTarget: this.downloadDirectoryTarget(),
       excludePatterns: this.excludePatterns(),
       minFileAgeMinutes: this.minFileAgeMinutes(),
       maxOrphanedFilesToProcess: this.maxOrphanedFilesToProcess(),
@@ -190,6 +256,6 @@ export class OrphanedFilesCleanerComponent implements OnInit, HasPendingChanges 
   });
 
   hasPendingChanges(): boolean {
-    return this.dirty();
+    return this.dirty() || this.clientDirty();
   }
 }

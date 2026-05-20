@@ -41,19 +41,43 @@ public sealed class OrphanedFilesCleanerConfigController : ControllerBase
                 .AsNoTracking()
                 .FirstAsync();
 
+            var downloadClients = await _dataContext.DownloadClients
+                .AsNoTracking()
+                .ToListAsync();
+
+            var allClientConfigs = await _dataContext.OrphanedFilesClientConfigs
+                .AsNoTracking()
+                .ToListAsync();
+
+            var clients = downloadClients.Select(client =>
+            {
+                var clientConfig = allClientConfigs.FirstOrDefault(c => c.DownloadClientConfigId == client.Id);
+                return new
+                {
+                    downloadClientId = client.Id,
+                    downloadClientName = client.Name,
+                    downloadClientEnabled = client.Enabled,
+                    clientConfig = clientConfig is null ? null : new
+                    {
+                        clientConfig.Enabled,
+                        clientConfig.ScanDirectories,
+                        clientConfig.OrphanedDirectory,
+                        clientConfig.DownloadDirectorySource,
+                        clientConfig.DownloadDirectoryTarget,
+                    },
+                };
+            }).ToList();
+
             return Ok(new
             {
                 config.Enabled,
                 config.CronExpression,
                 config.UseAdvancedScheduling,
-                config.ScanDirectories,
-                config.OrphanedDirectory,
-                config.DownloadDirectorySource,
-                config.DownloadDirectoryTarget,
                 config.ExcludePatterns,
                 config.MinFileAgeMinutes,
                 config.MaxOrphanedFilesToProcess,
                 config.EmptyAfterXDays,
+                clients,
             });
         }
         finally
@@ -83,10 +107,6 @@ public sealed class OrphanedFilesCleanerConfigController : ControllerBase
             oldConfig.Enabled = newConfigDto.Enabled;
             oldConfig.CronExpression = newConfigDto.CronExpression;
             oldConfig.UseAdvancedScheduling = newConfigDto.UseAdvancedScheduling;
-            oldConfig.ScanDirectories = newConfigDto.ScanDirectories;
-            oldConfig.OrphanedDirectory = newConfigDto.OrphanedDirectory;
-            oldConfig.DownloadDirectorySource = newConfigDto.DownloadDirectorySource;
-            oldConfig.DownloadDirectoryTarget = newConfigDto.DownloadDirectoryTarget;
             oldConfig.ExcludePatterns = newConfigDto.ExcludePatterns;
             oldConfig.MinFileAgeMinutes = newConfigDto.MinFileAgeMinutes;
             oldConfig.MaxOrphanedFilesToProcess = newConfigDto.MaxOrphanedFilesToProcess;

@@ -4,6 +4,7 @@ using Cleanuparr.Infrastructure.Events.Interfaces;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
 using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Persistence;
+using Cleanuparr.Persistence.Models.Configuration;
 using Cleanuparr.Persistence.Models.Configuration.OrphanedFilesCleaner;
 using Cleanuparr.Shared.Helpers;
 using Microsoft.EntityFrameworkCore;
@@ -38,11 +39,16 @@ public sealed class OrphanedFilesCleaner : IHandler
     {
         await DataContext.Lock.WaitAsync(cancellationToken);
         OrphanedFilesCleanerConfig config;
-        List<Cleanuparr.Persistence.Models.Configuration.DownloadClientConfig> downloadClientConfigs;
+        List<OrphanedFilesClientConfig> clientConfigs;
+        List<DownloadClientConfig> downloadClientConfigs;
 
         try
         {
             config = await _dataContext.OrphanedFilesCleanerConfigs.AsNoTracking().FirstAsync(cancellationToken);
+            clientConfigs = await _dataContext.OrphanedFilesClientConfigs
+                .AsNoTracking()
+                .Where(x => x.Enabled)
+                .ToListAsync(cancellationToken);
             downloadClientConfigs = await _dataContext.DownloadClients
                 .AsNoTracking()
                 .Where(x => x.Enabled)
@@ -59,24 +65,39 @@ public sealed class OrphanedFilesCleaner : IHandler
             return;
         }
 
-        if (config.ScanDirectories.Count == 0)
+        if (clientConfigs.Count == 0)
         {
-            _logger.LogWarning("[OrphanedFilesCleaner] No scan directories configured");
+            _logger.LogWarning("No enabled per-client configurations found, skipping");
             return;
         }
 
-        bool isDryRun = await _dryRunInterceptor.IsDryRunEnabled();
-
-        // Build set of all content paths claimed by active torrents
+        // Build set of all content paths claimed by active torrents across ALL download clients
+        // (regardless of per-client orphaned config) to avoid false positives
         var claimedPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         bool hasAtLeastOneSupportedClient = false;
 
-        foreach (var clientConfig in downloadClientConfigs)
+        // Load ALL per-client configs (including disabled) for path remapping lookup
+        await DataContext.Lock.WaitAsync(cancellationToken);
+        List<OrphanedFilesClientConfig> allClientConfigs;
+        try
         {
+            allClientConfigs = await _dataContext.OrphanedFilesClientConfigs
+                .AsNoTracking()
+                .ToListAsync(cancellationToken);
+        }
+        finally
+        {
+            DataContext.Lock.Release();
+        }
+
+        foreach (DownloadClientConfig downloadClient in downloadClientConfigs)
+        {
+            var perClientConfig = allClientConfigs.FirstOrDefault(c => c.DownloadClientConfigId == downloadClient.Id);
+
             IDownloadService? downloadService = null;
             try
             {
-                downloadService = _downloadServiceFactory.GetDownloadService(clientConfig);
+                downloadService = _downloadServiceFactory.GetDownloadService(downloadClient);
                 await downloadService.LoginAsync();
 
                 var torrents = await downloadService.GetAllTorrents();
@@ -96,8 +117,8 @@ public sealed class OrphanedFilesCleaner : IHandler
 
                     string remappedSavePath = PathHelper.RemapPath(
                         normalizedSavePath,
-                        config.DownloadDirectorySource,
-                        config.DownloadDirectoryTarget
+                        perClientConfig?.DownloadDirectorySource,
+                        perClientConfig?.DownloadDirectoryTarget
                     ).TrimEnd(Path.DirectorySeparatorChar);
 
                     // Claim the save_path itself — covers torrents where save_path IS the content directory
@@ -113,25 +134,23 @@ public sealed class OrphanedFilesCleaner : IHandler
 
                         string contentPath = PathHelper.RemapPath(
                             rawPathWithName,
-                            config.DownloadDirectorySource,
-                            config.DownloadDirectoryTarget
+                            perClientConfig?.DownloadDirectorySource,
+                            perClientConfig?.DownloadDirectoryTarget
                         );
 
                         claimedPaths.Add(contentPath.TrimEnd(Path.DirectorySeparatorChar));
                     }
                 }
 
-                _logger.LogDebug("[OrphanedFilesCleaner] Loaded {count} torrent paths from {name}",
-                    torrents.Count, clientConfig.Name);
+                _logger.LogDebug("Loaded {count} torrent paths from {name}", torrents.Count, downloadClient.Name);
             }
             catch (NotSupportedException)
             {
-                _logger.LogDebug("[OrphanedFilesCleaner] Client {name} does not support orphan detection, skipping",
-                    clientConfig.Name);
+                _logger.LogDebug("Client {name} does not support orphan detection, skipping", downloadClient.Name);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "[OrphanedFilesCleaner] Failed to get torrents from client {name}", clientConfig.Name);
+                _logger.LogError(ex, "Failed to get torrents from client {name}", downloadClient.Name);
             }
             finally
             {
@@ -141,61 +160,85 @@ public sealed class OrphanedFilesCleaner : IHandler
 
         if (!hasAtLeastOneSupportedClient)
         {
-            _logger.LogWarning("[OrphanedFilesCleaner] No configured download client supports orphan detection — aborting scan to avoid false positives");
+            _logger.LogWarning("No configured download client supports orphan detection — aborting scan to avoid false positives");
             return;
         }
 
-        _logger.LogDebug("[OrphanedFilesCleaner] {count} claimed paths across all clients", claimedPaths.Count);
+        _logger.LogDebug("{count} claimed paths across all clients", claimedPaths.Count);
 
-        // Scan configured directories for orphaned entries
         int processedCount = 0;
-        foreach (var scanDir in config.ScanDirectories)
+
+        foreach (var clientConfig in clientConfigs)
         {
             if (processedCount >= config.MaxOrphanedFilesToProcess)
             {
-                _logger.LogWarning("[OrphanedFilesCleaner] Reached the limit of {max} orphaned entries per run, stopping scan",
+                _logger.LogWarning("Reached the limit of {max} orphaned entries per run, stopping scan",
                     config.MaxOrphanedFilesToProcess);
                 break;
             }
 
-            if (!Directory.Exists(scanDir))
+            if (clientConfig.ScanDirectories.Count == 0)
             {
-                _logger.LogWarning("[OrphanedFilesCleaner] Scan directory does not exist: {dir}", scanDir);
+                _logger.LogWarning("No scan directories configured for client {id}, skipping",
+                    clientConfig.DownloadClientConfigId);
                 continue;
             }
 
-            _logger.LogDebug("[OrphanedFilesCleaner] Scanning {dir}", scanDir);
+            // Resolve and validate the orphaned directory up front for this client
+            string? normalizedOrphanedDir = string.IsNullOrWhiteSpace(clientConfig.OrphanedDirectory)
+                ? null
+                : Path.GetFullPath(clientConfig.OrphanedDirectory).TrimEnd(Path.DirectorySeparatorChar);
 
-            try
+            if (normalizedOrphanedDir is null)
             {
-                processedCount += await ScanDirectoryAsync(
-                    scanDir, claimedPaths, config,
-                    config.MaxOrphanedFilesToProcess - processedCount,
-                    isDryRun, cancellationToken);
+                _logger.LogInformation(
+                    "No orphaned directory configured for client {id} — orphaned entries will be logged but not moved",
+                    clientConfig.DownloadClientConfigId);
             }
-            catch (Exception ex)
+
+            foreach (var scanDir in clientConfig.ScanDirectories)
             {
-                _logger.LogError(ex, "[OrphanedFilesCleaner] Error scanning {dir}", scanDir);
+                if (processedCount >= config.MaxOrphanedFilesToProcess)
+                {
+                    break;
+                }
+
+                if (!Directory.Exists(scanDir))
+                {
+                    _logger.LogWarning("Scan directory does not exist: {dir}", scanDir);
+                    continue;
+                }
+
+                _logger.LogDebug("Scanning {dir}", scanDir);
+
+                try
+                {
+                    processedCount += await ScanDirectoryAsync(
+                        scanDir, claimedPaths, config, clientConfig, normalizedOrphanedDir,
+                        config.MaxOrphanedFilesToProcess - processedCount,
+                        cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error scanning {dir}", scanDir);
+                }
             }
+
+            // Purge old entries from this client's orphaned directory
+            PurgeOrphanedDirectory(clientConfig, config, cancellationToken);
         }
-
-        // Purge old entries from the orphaned directory
-        await PurgeOrphanedDirectoryAsync(config, isDryRun, cancellationToken);
     }
 
     private async Task<int> ScanDirectoryAsync(
         string directory,
         HashSet<string> claimedPaths,
         OrphanedFilesCleanerConfig config,
+        OrphanedFilesClientConfig clientConfig,
+        string? normalizedOrphanedDir,
         int remainingSlots,
-        bool isDryRun,
         CancellationToken cancellationToken)
     {
         int moved = 0;
-
-        string? normalizedOrphanedDir = string.IsNullOrWhiteSpace(config.OrphanedDirectory)
-            ? null
-            : Path.GetFullPath(config.OrphanedDirectory).TrimEnd(Path.DirectorySeparatorChar);
 
         foreach (var entry in Directory.EnumerateFileSystemEntries(directory))
         {
@@ -211,13 +254,13 @@ public sealed class OrphanedFilesCleaner : IHandler
             if (normalizedOrphanedDir is not null &&
                 normalizedEntry.Equals(normalizedOrphanedDir, StringComparison.OrdinalIgnoreCase))
             {
-                _logger.LogDebug("[OrphanedFilesCleaner] skip | orphaned directory itself | {path}", normalizedEntry);
+                _logger.LogDebug("skip | orphaned directory itself | {path}", normalizedEntry);
                 continue;
             }
 
             if (claimedPaths.Contains(normalizedEntry))
             {
-                _logger.LogDebug("[OrphanedFilesCleaner] skip | claimed by torrent | {path}", normalizedEntry);
+                _logger.LogDebug("skip | claimed by torrent | {path}", normalizedEntry);
                 continue;
             }
 
@@ -226,7 +269,7 @@ public sealed class OrphanedFilesCleaner : IHandler
             if (config.ExcludePatterns.Any(pattern =>
                     FileSystemName.MatchesSimpleExpression(pattern, entryName, ignoreCase: true)))
             {
-                _logger.LogDebug("[OrphanedFilesCleaner] skip | excluded by pattern | {path}", normalizedEntry);
+                _logger.LogDebug("skip | excluded by pattern | {path}", normalizedEntry);
                 continue;
             }
 
@@ -241,81 +284,83 @@ public sealed class OrphanedFilesCleaner : IHandler
                 if (ageMinutes < config.MinFileAgeMinutes)
                 {
                     _logger.LogDebug(
-                        "[OrphanedFilesCleaner] skip | too recent ({age:F1} min < {min} min) | {path}",
+                        "skip | too recent ({age:F1} min < {min} min) | {path}",
                         ageMinutes, config.MinFileAgeMinutes, normalizedEntry);
                     continue;
                 }
             }
 
-            _logger.LogInformation("[OrphanedFilesCleaner] orphaned entry found | {path}", normalizedEntry);
+            _logger.LogInformation("orphaned entry found | {path}", normalizedEntry);
+
+            if (normalizedOrphanedDir is null)
+            {
+                continue;
+            }
 
             try
             {
-                await MoveToOrphanedDirectoryAsync(normalizedEntry, config, isDryRun);
+                MoveToOrphanedDirectory(normalizedEntry, clientConfig.OrphanedDirectory!);
                 moved++;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "[OrphanedFilesCleaner] Failed to handle orphaned entry: {path}", normalizedEntry);
+                _logger.LogError(ex, "Failed to handle orphaned entry: {path}", normalizedEntry);
             }
         }
 
         return moved;
     }
 
-    private Task MoveToOrphanedDirectoryAsync(string path, OrphanedFilesCleanerConfig config, bool isDryRun)
+    private void MoveToOrphanedDirectory(string path, string orphanedDirectory)
     {
-        if (string.IsNullOrWhiteSpace(config.OrphanedDirectory))
-        {
-            _logger.LogWarning("[OrphanedFilesCleaner] No orphaned directory configured — {path} was not moved", path);
-            return Task.CompletedTask;
-        }
-
         string entryName = Path.GetFileName(path);
-        string destination = Path.Combine(config.OrphanedDirectory, entryName);
+        string destination = Path.Combine(orphanedDirectory, entryName);
 
         if (Path.Exists(destination))
         {
             string timestamp = DateTime.UtcNow.ToString("yyyyMMddHHmmss");
-            destination = Path.Combine(config.OrphanedDirectory, $"{entryName}_{timestamp}");
+            destination = Path.Combine(orphanedDirectory, $"{entryName}_{timestamp}");
         }
 
-        if (isDryRun)
+        string capturedDestination = destination;
+
+        void DoMove()
         {
-            _logger.LogInformation("[DRY RUN] [OrphanedFilesCleaner] would move | {source} -> {dest}", path, destination);
-            return Task.CompletedTask;
+            Directory.CreateDirectory(orphanedDirectory);
+
+            if (Directory.Exists(path))
+            {
+                Directory.Move(path, capturedDestination);
+            }
+            else
+            {
+                File.Move(path, capturedDestination);
+            }
+
+            _logger.LogInformation("orphaned entry moved | {source} -> {dest}", path, capturedDestination);
         }
 
-        Directory.CreateDirectory(config.OrphanedDirectory);
-
-        if (Directory.Exists(path))
-        {
-            Directory.Move(path, destination);
-        }
-        else
-        {
-            File.Move(path, destination);
-        }
-
-        _logger.LogInformation("[OrphanedFilesCleaner] orphaned entry moved | {source} -> {dest}", path, destination);
-        return Task.CompletedTask;
+        _dryRunInterceptor.Intercept(DoMove);
     }
 
-    private Task PurgeOrphanedDirectoryAsync(OrphanedFilesCleanerConfig config, bool isDryRun, CancellationToken cancellationToken)
+    private void PurgeOrphanedDirectory(
+        OrphanedFilesClientConfig clientConfig,
+        OrphanedFilesCleanerConfig config,
+        CancellationToken cancellationToken)
     {
         if (!config.EmptyAfterXDays.HasValue)
         {
-            return Task.CompletedTask;
+            return;
         }
 
-        if (string.IsNullOrWhiteSpace(config.OrphanedDirectory) || !Directory.Exists(config.OrphanedDirectory))
+        if (string.IsNullOrWhiteSpace(clientConfig.OrphanedDirectory) || !Directory.Exists(clientConfig.OrphanedDirectory))
         {
-            return Task.CompletedTask;
+            return;
         }
 
         DateTime cutoff = DateTime.UtcNow.AddDays(-config.EmptyAfterXDays.Value);
 
-        foreach (var entry in Directory.EnumerateFileSystemEntries(config.OrphanedDirectory))
+        foreach (var entry in Directory.EnumerateFileSystemEntries(clientConfig.OrphanedDirectory))
         {
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -325,33 +370,31 @@ public sealed class OrphanedFilesCleaner : IHandler
                 continue;
             }
 
-            if (isDryRun)
-            {
-                _logger.LogInformation("[DRY RUN] [OrphanedFilesCleaner] would purge old orphaned entry ({days}d+) | {path}",
-                    config.EmptyAfterXDays.Value, entry);
-                continue;
-            }
-
             try
             {
-                if (Directory.Exists(entry))
+                int days = config.EmptyAfterXDays.Value;
+                string capturedEntry = entry;
+
+                void DoPurge()
                 {
-                    Directory.Delete(entry, recursive: true);
-                }
-                else
-                {
-                    File.Delete(entry);
+                    if (Directory.Exists(capturedEntry))
+                    {
+                        Directory.Delete(capturedEntry, recursive: true);
+                    }
+                    else
+                    {
+                        File.Delete(capturedEntry);
+                    }
+
+                    _logger.LogInformation("purged old orphaned entry ({days}d+) | {path}", days, capturedEntry);
                 }
 
-                _logger.LogInformation("[OrphanedFilesCleaner] purged old orphaned entry ({days}d+) | {path}",
-                    config.EmptyAfterXDays.Value, entry);
+                _dryRunInterceptor.Intercept(DoPurge);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "[OrphanedFilesCleaner] Failed to purge orphaned entry: {path}", entry);
+                _logger.LogError(ex, "Failed to purge orphaned entry: {path}", entry);
             }
         }
-
-        return Task.CompletedTask;
     }
 }

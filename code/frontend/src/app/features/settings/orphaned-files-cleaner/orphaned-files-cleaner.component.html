@@ -60,24 +60,6 @@
   </app-card>
 
   @if (enabled()) {
-    <app-card header="Directories">
-      <div class="form-stack">
-        <app-chip-input
-          label="Scan Directories"
-          placeholder="Add directory path..."
-          hint="Absolute paths to scan for orphaned files. Each top-level entry is checked against your active torrents."
-          [(items)]="scanDirectories"
-          [error]="scanDirError()"
-        />
-        <app-input
-          label="Orphaned Directory"
-          placeholder="/mnt/data/orphaned"
-          hint="Where orphaned files are moved. Leave empty to log only without moving."
-          [(value)]="orphanedDirectory"
-        />
-      </div>
-    </app-card>
-
     <app-card header="Filters &amp; Safety">
       <div class="form-stack">
         <app-chip-input
@@ -111,35 +93,105 @@
       </div>
     </app-card>
 
-    <app-card header="Path Remapping">
-      <div class="form-stack">
-        <app-input
-          label="Download Directory Source"
-          placeholder="/downloads"
-          hint="Path prefix reported by the download client (useful when paths differ between Docker container and host)"
-          [(value)]="downloadDirectorySource"
-        />
-        <app-input
-          label="Download Directory Target"
-          placeholder="/mnt/data/downloads"
-          hint="Corresponding path prefix on the local filesystem"
-          [(value)]="downloadDirectoryTarget"
-        />
-      </div>
-    </app-card>
-  }
+    <div class="form-actions">
+      <app-button
+        variant="primary"
+        [glowing]="dirty()"
+        [loading]="saving()"
+        [disabled]="saving() || saved() || hasErrors() || !dirty()"
+        (clicked)="save()"
+      >
+        {{ saved() ? 'Saved!' : 'Save Settings' }}
+      </app-button>
+    </div>
 
-  <div class="form-actions">
-    <app-button
-      variant="primary"
-      [glowing]="dirty()"
-      [loading]="saving()"
-      [disabled]="saving() || saved() || hasErrors() || !dirty()"
-      (clicked)="save()"
-    >
-      {{ saved() ? 'Saved!' : 'Save Settings' }}
-    </app-button>
-  </div>
+    @if (clientOptions().length > 0) {
+      <app-card [header]="selectedClient()?.downloadClientName ?? 'Download Client'">
+        <div class="form-stack">
+          <app-select
+            label="Download Client"
+            [options]="clientOptions()"
+            [value]="selectedClientId()"
+            (valueChange)="onClientChange($event)"
+            hint="Select which download client to configure"
+          />
+
+          @if (isSelectedClientDisabled()) {
+            <div class="disabled-client-notice">
+              This download client is disabled. Enable it in Download Client settings before configuring orphaned files.
+            </div>
+          }
+
+          @if (selectedClient(); as client) {
+            @if (!isSelectedClientDisabled()) {
+              <div class="form-divider"></div>
+
+              <app-toggle
+                label="Enabled"
+                [checked]="client.clientConfig?.enabled ?? false"
+                (checkedChange)="updateClientField('enabled', $event)"
+                hint="Enable orphaned files scanning for this download client"
+              />
+
+              @if (client.clientConfig?.enabled) {
+                <div class="form-divider"></div>
+
+                <app-chip-input
+                  label="Scan Directories"
+                  placeholder="Add directory path..."
+                  hint="Absolute paths to scan for orphaned files. Each top-level entry is checked against your active torrents."
+                  [items]="client.clientConfig?.scanDirectories ?? []"
+                  (itemsChange)="updateClientField('scanDirectories', $event)"
+                />
+                <app-input
+                  label="Orphaned Directory"
+                  placeholder="/mnt/data/orphaned"
+                  hint="Where orphaned files are moved. Leave empty to log only without moving."
+                  [value]="client.clientConfig?.orphanedDirectory ?? ''"
+                  (valueChange)="updateClientField('orphanedDirectory', $event || null)"
+                />
+
+                <div class="form-divider"></div>
+
+                <app-input
+                  label="Download Directory Source"
+                  placeholder="/downloads"
+                  hint="Path prefix reported by the download client (useful when paths differ between Docker container and host)"
+                  [value]="client.clientConfig?.downloadDirectorySource ?? ''"
+                  (valueChange)="updateClientField('downloadDirectorySource', $event || null)"
+                />
+                <app-input
+                  label="Download Directory Target"
+                  placeholder="/mnt/data/downloads"
+                  hint="Corresponding path prefix on the local filesystem"
+                  [value]="client.clientConfig?.downloadDirectoryTarget ?? ''"
+                  (valueChange)="updateClientField('downloadDirectoryTarget', $event || null)"
+                />
+              }
+
+              <div class="form-actions">
+                <app-button
+                  variant="primary"
+                  [glowing]="clientDirty()"
+                  [loading]="clientSaving()"
+                  [disabled]="clientSaving() || clientSaved() || !clientDirty()"
+                  (clicked)="saveClientConfig()"
+                >
+                  {{ clientSaved() ? 'Saved!' : 'Save Client Settings' }}
+                </app-button>
+              </div>
+            }
+          }
+        </div>
+      </app-card>
+    } @else {
+      <app-empty-state
+        icon="tablerDownload"
+        heading="No download clients"
+        description="Add a download client to configure per-client orphaned files settings"
+      />
+    }
+  }
 
 </div>
 }

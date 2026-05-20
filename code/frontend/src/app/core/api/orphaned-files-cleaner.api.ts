@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { OrphanedFilesCleanerConfig } from '@shared/models/orphaned-files-cleaner-config.model';
+import { OrphanedFilesCleanerConfig, OrphanedFilesClientConfig } from '@shared/models/orphaned-files-cleaner-config.model';
 
 @Injectable({ providedIn: 'root' })
 export class OrphanedFilesCleanerApi {
@@ -11,7 +11,15 @@ export class OrphanedFilesCleanerApi {
     return this.http.get<OrphanedFilesCleanerConfig>('/api/configuration/orphaned_files_cleaner');
   }
 
-  updateConfig(config: OrphanedFilesCleanerConfig): Observable<void> {
+  updateConfig(config: Omit<OrphanedFilesCleanerConfig, 'clients'>): Observable<void> {
     return this.http.put<void>('/api/configuration/orphaned_files_cleaner', config);
+  }
+
+  getClientConfig(clientId: string): Observable<OrphanedFilesClientConfig | null> {
+    return this.http.get<OrphanedFilesClientConfig | null>(`/api/configuration/orphaned_files_cleaner/clients/${clientId}`);
+  }
+
+  updateClientConfig(clientId: string, config: Partial<OrphanedFilesClientConfig>): Observable<OrphanedFilesClientConfig> {
+    return this.http.put<OrphanedFilesClientConfig>(`/api/configuration/orphaned_files_cleaner/clients/${clientId}`, config);
   }
 }
