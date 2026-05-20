@@ -9,6 +9,7 @@ using Cleanuparr.Persistence.Models.Configuration.MalwareBlocker;
 using Cleanuparr.Persistence.Models.Configuration.Notification;
 using Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
 using Cleanuparr.Persistence.Models.Configuration.BlacklistSync;
+using Cleanuparr.Persistence.Models.Configuration.OrphanedFilesCleaner;
 using Cleanuparr.Persistence.Models.Configuration.Seeker;
 using Cleanuparr.Persistence.Models.State;
 using Cleanuparr.Shared.Helpers;
@@ -75,6 +76,8 @@ public class DataContext : DbContext
     public DbSet<BlacklistSyncHistory> BlacklistSyncHistory { get; set; }
 
     public DbSet<BlacklistSyncConfig> BlacklistSyncConfigs { get; set; }
+
+    public DbSet<OrphanedFilesCleanerConfig> OrphanedFilesCleanerConfigs { get; set; }
 
     public DbSet<SeekerConfig> SeekerConfigs { get; set; }
 
@@ -356,6 +359,12 @@ public class DataContext : DbContext
 
             entity.Property(s => s.Categories).HasConversion(jsonListConverter);
             entity.Property(s => s.TrackerPatterns).HasConversion(jsonListConverter);
+        });
+
+        modelBuilder.Entity<OrphanedFilesCleanerConfig>(entity =>
+        {
+            entity.Property(o => o.ScanDirectories).HasConversion(jsonListConverter);
+            entity.Property(o => o.ExcludePatterns).HasConversion(jsonListConverter);
         });
 
         // Configure per-client unlinked config relationship

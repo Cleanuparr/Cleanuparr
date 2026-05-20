@@ -34,6 +34,29 @@ public partial class QBitService
     }
 
     /// <inheritdoc/>
+    public override async Task<List<ITorrentItemWrapper>> GetAllTorrents()
+    {
+        var torrentList = await _client.GetTorrentListAsync(new TorrentListQuery());
+        if (torrentList is null)
+        {
+            return [];
+        }
+
+        var result = new List<ITorrentItemWrapper>();
+        foreach (var torrent in torrentList.Where(x => !string.IsNullOrEmpty(x.Hash)))
+        {
+            var trackers = await GetTrackersAsync(torrent.Hash!);
+            var properties = await _client.GetTorrentPropertiesAsync(torrent.Hash!);
+            bool isPrivate = properties?.AdditionalData.TryGetValue("is_private", out var dictValue) == true &&
+                           bool.TryParse(dictValue?.ToString(), out bool boolValue) && boolValue;
+
+            result.Add(new QBitItemWrapper(torrent, trackers, isPrivate));
+        }
+
+        return result;
+    }
+
+    /// <inheritdoc/>
     public override List<ITorrentItemWrapper>? FilterDownloadsToBeCleanedAsync(List<ITorrentItemWrapper>? downloads, List<ISeedingRule> seedingRules) =>
         downloads
             ?.Where(x => !string.IsNullOrEmpty(x.Hash))

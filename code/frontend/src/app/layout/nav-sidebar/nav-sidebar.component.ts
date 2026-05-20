@@ -64,6 +64,7 @@ export class NavSidebarComponent {
     { label: 'Malware Blocker', icon: 'tablerShieldLock', route: '/settings/malware-blocker' },
     { label: 'Download Cleaner', icon: 'tablerTrash', route: '/settings/download-cleaner' },
     { label: 'Blacklist Sync', icon: 'tablerBan', route: '/settings/blacklist-sync' },
+    { label: 'Orphaned Files', icon: 'tablerFolderQuestion', route: '/settings/orphaned-files-cleaner' },
     { label: 'Seeker', icon: 'tablerSearch', route: '/settings/seeker' },
   ];
 

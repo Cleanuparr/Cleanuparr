@@ -31,6 +31,14 @@ public interface IDownloadService : IDisposable
     Task<List<ITorrentItemWrapper>> GetSeedingDownloads();
 
     /// <summary>
+    /// Fetches all torrents regardless of their state.
+    /// Used by the orphaned files cleaner to identify which paths are claimed by active torrents.
+    /// Returns an empty list for clients that do not support this operation.
+    /// </summary>
+    /// <returns>A list of all torrents.</returns>
+    Task<List<ITorrentItemWrapper>> GetAllTorrents();
+
+    /// <summary>
     /// Filters downloads that should be cleaned.
     /// </summary>
     /// <param name="downloads">The downloads to filter.</param>
