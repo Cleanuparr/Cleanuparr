@@ -2,6 +2,7 @@ using System.IO.Enumeration;
 
 using Cleanuparr.Infrastructure.Events.Interfaces;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
+using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.OrphanedFilesCleaner;
 using Cleanuparr.Shared.Helpers;
@@ -16,18 +17,21 @@ public sealed class OrphanedFilesCleaner : IHandler
     private readonly DataContext _dataContext;
     private readonly IDownloadServiceFactory _downloadServiceFactory;
     private readonly IEventPublisher _eventPublisher;
+    private readonly IDryRunInterceptor _dryRunInterceptor;
 
     public OrphanedFilesCleaner(
         ILogger<OrphanedFilesCleaner> logger,
         DataContext dataContext,
         IDownloadServiceFactory downloadServiceFactory,
-        IEventPublisher eventPublisher
+        IEventPublisher eventPublisher,
+        IDryRunInterceptor dryRunInterceptor
     )
     {
         _logger = logger;
         _dataContext = dataContext;
         _downloadServiceFactory = downloadServiceFactory;
         _eventPublisher = eventPublisher;
+        _dryRunInterceptor = dryRunInterceptor;
     }
 
     public async Task ExecuteAsync(CancellationToken cancellationToken = default)
@@ -61,8 +65,11 @@ public sealed class OrphanedFilesCleaner : IHandler
             return;
         }
 
+        bool isDryRun = await _dryRunInterceptor.IsDryRunEnabled();
+
         // Build set of all content paths claimed by active torrents
         var claimedPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        bool hasAtLeastOneSupportedClient = false;
 
         foreach (var clientConfig in downloadClientConfigs)
         {
@@ -73,31 +80,54 @@ public sealed class OrphanedFilesCleaner : IHandler
                 await downloadService.LoginAsync();
 
                 var torrents = await downloadService.GetAllTorrents();
+                hasAtLeastOneSupportedClient = true;
 
                 foreach (var torrent in torrents)
                 {
-                    if (string.IsNullOrEmpty(torrent.SavePath) || string.IsNullOrEmpty(torrent.Name))
+                    if (string.IsNullOrEmpty(torrent.SavePath))
                     {
                         continue;
                     }
 
-                    // Compute content path: save_path + torrent name, normalised to host separators
-                    string rawPath = string.Join(
+                    string normalizedSavePath = string.Join(
                         Path.DirectorySeparatorChar,
-                        Path.Combine(torrent.SavePath, torrent.Name).Split(['\\', '/'])
+                        torrent.SavePath.Split(['\\', '/'])
                     );
 
-                    string contentPath = PathHelper.RemapPath(
-                        rawPath,
+                    string remappedSavePath = PathHelper.RemapPath(
+                        normalizedSavePath,
                         config.DownloadDirectorySource,
                         config.DownloadDirectoryTarget
-                    );
+                    ).TrimEnd(Path.DirectorySeparatorChar);
 
-                    claimedPaths.Add(contentPath.TrimEnd(Path.DirectorySeparatorChar));
+                    // Claim the save_path itself — covers torrents where save_path IS the content directory
+                    claimedPaths.Add(remappedSavePath);
+
+                    // Also claim save_path + name — covers torrents that create a named subfolder
+                    if (!string.IsNullOrEmpty(torrent.Name))
+                    {
+                        string rawPathWithName = string.Join(
+                            Path.DirectorySeparatorChar,
+                            Path.Combine(torrent.SavePath, torrent.Name).Split(['\\', '/'])
+                        );
+
+                        string contentPath = PathHelper.RemapPath(
+                            rawPathWithName,
+                            config.DownloadDirectorySource,
+                            config.DownloadDirectoryTarget
+                        );
+
+                        claimedPaths.Add(contentPath.TrimEnd(Path.DirectorySeparatorChar));
+                    }
                 }
 
                 _logger.LogDebug("[OrphanedFilesCleaner] Loaded {count} torrent paths from {name}",
                     torrents.Count, clientConfig.Name);
+            }
+            catch (NotSupportedException)
+            {
+                _logger.LogDebug("[OrphanedFilesCleaner] Client {name} does not support orphan detection, skipping",
+                    clientConfig.Name);
             }
             catch (Exception ex)
             {
@@ -107,6 +137,12 @@ public sealed class OrphanedFilesCleaner : IHandler
             {
                 downloadService?.Dispose();
             }
+        }
+
+        if (!hasAtLeastOneSupportedClient)
+        {
+            _logger.LogWarning("[OrphanedFilesCleaner] No configured download client supports orphan detection — aborting scan to avoid false positives");
+            return;
         }
 
         _logger.LogDebug("[OrphanedFilesCleaner] {count} claimed paths across all clients", claimedPaths.Count);
@@ -135,7 +171,7 @@ public sealed class OrphanedFilesCleaner : IHandler
                 processedCount += await ScanDirectoryAsync(
                     scanDir, claimedPaths, config,
                     config.MaxOrphanedFilesToProcess - processedCount,
-                    cancellationToken);
+                    isDryRun, cancellationToken);
             }
             catch (Exception ex)
             {
@@ -144,7 +180,7 @@ public sealed class OrphanedFilesCleaner : IHandler
         }
 
         // Purge old entries from the orphaned directory
-        await PurgeOrphanedDirectoryAsync(config, cancellationToken);
+        await PurgeOrphanedDirectoryAsync(config, isDryRun, cancellationToken);
     }
 
     private async Task<int> ScanDirectoryAsync(
@@ -152,6 +188,7 @@ public sealed class OrphanedFilesCleaner : IHandler
         HashSet<string> claimedPaths,
         OrphanedFilesCleanerConfig config,
         int remainingSlots,
+        bool isDryRun,
         CancellationToken cancellationToken)
     {
         int moved = 0;
@@ -203,7 +240,7 @@ public sealed class OrphanedFilesCleaner : IHandler
 
             try
             {
-                await MoveToOrphanedDirectoryAsync(normalizedEntry, config);
+                await MoveToOrphanedDirectoryAsync(normalizedEntry, config, isDryRun);
                 moved++;
             }
             catch (Exception ex)
@@ -215,15 +252,13 @@ public sealed class OrphanedFilesCleaner : IHandler
         return moved;
     }
 
-    private Task MoveToOrphanedDirectoryAsync(string path, OrphanedFilesCleanerConfig config)
+    private Task MoveToOrphanedDirectoryAsync(string path, OrphanedFilesCleanerConfig config, bool isDryRun)
     {
         if (string.IsNullOrWhiteSpace(config.OrphanedDirectory))
         {
             _logger.LogWarning("[OrphanedFilesCleaner] No orphaned directory configured — {path} was not moved", path);
             return Task.CompletedTask;
         }
-
-        Directory.CreateDirectory(config.OrphanedDirectory);
 
         string entryName = Path.GetFileName(path);
         string destination = Path.Combine(config.OrphanedDirectory, entryName);
@@ -233,6 +268,14 @@ public sealed class OrphanedFilesCleaner : IHandler
             string timestamp = DateTime.UtcNow.ToString("yyyyMMddHHmmss");
             destination = Path.Combine(config.OrphanedDirectory, $"{entryName}_{timestamp}");
         }
+
+        if (isDryRun)
+        {
+            _logger.LogInformation("[DRY RUN] [OrphanedFilesCleaner] would move | {source} -> {dest}", path, destination);
+            return Task.CompletedTask;
+        }
+
+        Directory.CreateDirectory(config.OrphanedDirectory);
 
         if (Directory.Exists(path))
         {
@@ -247,7 +290,7 @@ public sealed class OrphanedFilesCleaner : IHandler
         return Task.CompletedTask;
     }
 
-    private Task PurgeOrphanedDirectoryAsync(OrphanedFilesCleanerConfig config, CancellationToken cancellationToken)
+    private Task PurgeOrphanedDirectoryAsync(OrphanedFilesCleanerConfig config, bool isDryRun, CancellationToken cancellationToken)
     {
         if (!config.EmptyAfterXDays.HasValue)
         {
@@ -268,6 +311,13 @@ public sealed class OrphanedFilesCleaner : IHandler
             DateTime lastWrite = File.GetLastWriteTimeUtc(entry);
             if (lastWrite > cutoff)
             {
+                continue;
+            }
+
+            if (isDryRun)
+            {
+                _logger.LogInformation("[DRY RUN] [OrphanedFilesCleaner] would purge old orphaned entry ({days}d+) | {path}",
+                    config.EmptyAfterXDays.Value, entry);
                 continue;
             }
 
