@@ -16,6 +16,10 @@ import {
 
 The Orphaned Files Cleaner scans configured directories for files and folders that are no longer tracked by any active torrent in your download client, and moves them to a dedicated orphaned directory. Optionally, it can purge entries from that directory after a configurable number of days.
 
+<Important>
+Currently only supported with **qBittorrent**. If you use other download clients (Transmission, Deluge, etc.), they will be skipped and the scan will only run if at least one qBittorrent instance is configured and enabled.
+</Important>
+
 <ElementNavigator />
 
 <div className={styles.documentationPage}>
