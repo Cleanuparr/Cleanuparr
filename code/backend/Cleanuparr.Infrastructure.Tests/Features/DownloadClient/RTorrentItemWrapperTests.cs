@@ -580,4 +580,18 @@ public class RTorrentItemWrapperTests
             result.ShouldBeFalse();
         }
     }
+
+    [Fact]
+    public void SeederCount_ReturnsNull()
+    {
+        // Arrange
+        var torrent = new RTorrentTorrent { Hash = "HASH1", Name = "Test" };
+        var wrapper = new RTorrentItemWrapper(torrent);
+
+        // Act
+        var result = wrapper.SeederCount;
+
+        // Assert
+        result.ShouldBeNull();
+    }
 }
