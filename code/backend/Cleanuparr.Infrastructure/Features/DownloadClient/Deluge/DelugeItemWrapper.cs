@@ -43,6 +43,8 @@ public sealed class DelugeItemWrapper : ITorrentItemWrapper
     
     public double Ratio => Info.Ratio;
 
+    public int? SeederCount => Info.TotalSeeds;
+
     public long Eta => (long)Info.Eta;
     
     public long SeedingTimeSeconds => Info.SeedingTime;

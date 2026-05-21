@@ -33,6 +33,9 @@ public sealed record DownloadStatus
     public long SeedingTime { get; init; }
     
     public float Ratio { get; init; }
+
+    [JsonProperty("total_seeds")]
+    public int TotalSeeds { get; init; }
     
     public required IReadOnlyList<Tracker> Trackers { get; init; }
     

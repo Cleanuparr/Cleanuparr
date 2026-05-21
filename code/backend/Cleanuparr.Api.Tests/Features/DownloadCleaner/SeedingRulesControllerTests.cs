@@ -40,6 +40,7 @@ public class SeedingRulesControllerTests : IDisposable
         double maxRatio = 2.0,
         double minSeedTime = 0,
         double maxSeedTime = -1,
+        int minSeeders = -1,
         bool deleteSourceFiles = true)
     {
         return new SeedingRuleRequest
@@ -54,6 +55,7 @@ public class SeedingRulesControllerTests : IDisposable
             MaxRatio = maxRatio,
             MinSeedTime = minSeedTime,
             MaxSeedTime = maxSeedTime,
+            MinSeeders = minSeeders,
             DeleteSourceFiles = deleteSourceFiles,
         };
     }
@@ -133,6 +135,20 @@ public class SeedingRulesControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task GetSeedingRules_ReturnsMinSeeders()
+    {
+        var client = SeedingRulesTestDataFactory.AddDownloadClient(_dataContext);
+        SeedingRulesTestDataFactory.AddQBitSeedingRule(_dataContext, client.Id, minSeeders: 5);
+
+        var result = await _controller.GetSeedingRules(client.Id);
+
+        var okResult = result.ShouldBeOfType<OkObjectResult>();
+        var json = JsonSerializer.Serialize(okResult.Value);
+        var rule = JsonDocument.Parse(json).RootElement[0];
+        rule.GetProperty("minSeeders").GetInt32().ShouldBe(5);
+    }
+
+    [Fact]
     public async Task GetSeedingRules_DelugeClient_ReturnsEmptyTagFields()
     {
         var client = SeedingRulesTestDataFactory.AddDownloadClient(_dataContext, DownloadClientTypeName.Deluge, "Test Deluge");
@@ -177,6 +193,18 @@ public class SeedingRulesControllerTests : IDisposable
 
         var body = GetCreatedJsonBody(result);
         body.GetProperty("Priority").GetInt32().ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task CreateSeedingRule_SetsMinSeeders()
+    {
+        var client = SeedingRulesTestDataFactory.AddDownloadClient(_dataContext);
+        var request = CreateValidRequest(minSeeders: 5);
+
+        var result = await _controller.CreateSeedingRule(client.Id, request);
+
+        var body = GetCreatedJsonBody(result);
+        body.GetProperty("MinSeeders").GetInt32().ShouldBe(5);
     }
 
     [Fact]
@@ -304,6 +332,21 @@ public class SeedingRulesControllerTests : IDisposable
         var updated = okResult.Value.ShouldBeOfType<QBitSeedingRule>();
         updated.TagsAny.ShouldBe(new List<string> { "new-tag" });
         updated.TagsAll.ShouldBe(new List<string> { "must-have" });
+    }
+
+    [Fact]
+    public async Task UpdateSeedingRule_UpdatesMinSeeders()
+    {
+        var client = SeedingRulesTestDataFactory.AddDownloadClient(_dataContext);
+        var rule = SeedingRulesTestDataFactory.AddQBitSeedingRule(_dataContext, client.Id);
+
+        var request = CreateValidRequest(minSeeders: 5);
+
+        var result = await _controller.UpdateSeedingRule(rule.Id, request);
+
+        var okResult = result.ShouldBeOfType<OkObjectResult>();
+        var updated = okResult.Value.ShouldBeOfType<QBitSeedingRule>();
+        updated.MinSeeders.ShouldBe(5);
     }
 
     [Fact]

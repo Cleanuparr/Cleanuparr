@@ -140,6 +140,9 @@
                         @if (rule.minSeedTime > 0) {
                           <app-badge>Min Seed: {{ rule.minSeedTime }}h</app-badge>
                         }
+                        @if ((rule.minSeeders ?? -1) > 0) {
+                          <app-badge>Min Seeders: {{ rule.minSeeders }}</app-badge>
+                        }
                         @if (rule.trackerPatterns.length) {
                           <app-badge severity="warning">{{ rule.trackerPatterns.length }} tracker pattern{{ rule.trackerPatterns.length !== 1 ? 's' : '' }}</app-badge>
                         }
@@ -262,6 +265,9 @@
     <app-number-input label="Max Seed Time" [(value)]="ruleMaxSeedTime" suffix="hours" [min]="-1"
       hint="Maximum time to seed before removing (-1 means disabled)"
       helpKey="download-cleaner:maxSeedTime" />
+    <app-number-input label="Min Seeders" [(value)]="ruleMinSeeders" [min]="-1" [step]="1"
+      hint="Minimum swarm seeders required before removing (-1 means disabled; unavailable counts keep the download)"
+      helpKey="download-cleaner:minSeeders" />
     @if (ruleDisabledError()) {
       <div class="category-error">{{ ruleDisabledError() }}</div>
     }

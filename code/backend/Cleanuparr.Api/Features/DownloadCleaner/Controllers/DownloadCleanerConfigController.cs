@@ -81,6 +81,7 @@ public sealed class DownloadCleanerConfigController : ControllerBase
                         maxRatio = r.MaxRatio,
                         minSeedTime = r.MinSeedTime,
                         maxSeedTime = r.MaxSeedTime,
+                        minSeeders = r.MinSeeders,
                         deleteSourceFiles = r.DeleteSourceFiles,
                     }),
                     unlinkedConfig = unlinkedConfig is not null

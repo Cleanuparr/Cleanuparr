@@ -45,6 +45,7 @@ public class TransmissionServiceTests : IClassFixture<TransmissionServiceFixture
                 TorrentFields.SECONDS_SEEDING,
                 TorrentFields.UPLOAD_RATIO,
                 TorrentFields.TRACKERS,
+                TorrentFields.TRACKER_STATS,
                 TorrentFields.RATE_DOWNLOAD,
                 TorrentFields.TOTAL_SIZE,
                 TorrentFields.LABELS
@@ -97,6 +98,7 @@ public class TransmissionServiceTests : IClassFixture<TransmissionServiceFixture
                 TorrentFields.SECONDS_SEEDING,
                 TorrentFields.UPLOAD_RATIO,
                 TorrentFields.TRACKERS,
+                TorrentFields.TRACKER_STATS,
                 TorrentFields.RATE_DOWNLOAD,
                 TorrentFields.TOTAL_SIZE,
                 TorrentFields.LABELS
@@ -156,6 +158,7 @@ public class TransmissionServiceTests : IClassFixture<TransmissionServiceFixture
                 TorrentFields.SECONDS_SEEDING,
                 TorrentFields.UPLOAD_RATIO,
                 TorrentFields.TRACKERS,
+                TorrentFields.TRACKER_STATS,
                 TorrentFields.RATE_DOWNLOAD,
                 TorrentFields.TOTAL_SIZE,
                 TorrentFields.LABELS
@@ -226,6 +229,7 @@ public class TransmissionServiceTests : IClassFixture<TransmissionServiceFixture
                 TorrentFields.SECONDS_SEEDING,
                 TorrentFields.UPLOAD_RATIO,
                 TorrentFields.TRACKERS,
+                TorrentFields.TRACKER_STATS,
                 TorrentFields.RATE_DOWNLOAD,
                 TorrentFields.TOTAL_SIZE,
                 TorrentFields.LABELS
@@ -283,6 +287,7 @@ public class TransmissionServiceTests : IClassFixture<TransmissionServiceFixture
                 TorrentFields.SECONDS_SEEDING,
                 TorrentFields.UPLOAD_RATIO,
                 TorrentFields.TRACKERS,
+                TorrentFields.TRACKER_STATS,
                 TorrentFields.RATE_DOWNLOAD,
                 TorrentFields.TOTAL_SIZE,
                 TorrentFields.LABELS
@@ -348,6 +353,7 @@ public class TransmissionServiceTests : IClassFixture<TransmissionServiceFixture
                 TorrentFields.SECONDS_SEEDING,
                 TorrentFields.UPLOAD_RATIO,
                 TorrentFields.TRACKERS,
+                TorrentFields.TRACKER_STATS,
                 TorrentFields.RATE_DOWNLOAD,
                 TorrentFields.TOTAL_SIZE,
                 TorrentFields.LABELS
@@ -401,6 +407,7 @@ public class TransmissionServiceTests : IClassFixture<TransmissionServiceFixture
                 TorrentFields.SECONDS_SEEDING,
                 TorrentFields.UPLOAD_RATIO,
                 TorrentFields.TRACKERS,
+                TorrentFields.TRACKER_STATS,
                 TorrentFields.RATE_DOWNLOAD,
                 TorrentFields.TOTAL_SIZE,
                 TorrentFields.LABELS
@@ -465,6 +472,7 @@ public class TransmissionServiceTests : IClassFixture<TransmissionServiceFixture
                 TorrentFields.SECONDS_SEEDING,
                 TorrentFields.UPLOAD_RATIO,
                 TorrentFields.TRACKERS,
+                TorrentFields.TRACKER_STATS,
                 TorrentFields.RATE_DOWNLOAD,
                 TorrentFields.TOTAL_SIZE,
                 TorrentFields.LABELS
@@ -531,6 +539,7 @@ public class TransmissionServiceTests : IClassFixture<TransmissionServiceFixture
                 TorrentFields.SECONDS_SEEDING,
                 TorrentFields.UPLOAD_RATIO,
                 TorrentFields.TRACKERS,
+                TorrentFields.TRACKER_STATS,
                 TorrentFields.RATE_DOWNLOAD,
                 TorrentFields.TOTAL_SIZE,
                 TorrentFields.LABELS
@@ -587,6 +596,7 @@ public class TransmissionServiceTests : IClassFixture<TransmissionServiceFixture
                 TorrentFields.SECONDS_SEEDING,
                 TorrentFields.UPLOAD_RATIO,
                 TorrentFields.TRACKERS,
+                TorrentFields.TRACKER_STATS,
                 TorrentFields.RATE_DOWNLOAD,
                 TorrentFields.TOTAL_SIZE,
                 TorrentFields.LABELS
@@ -650,6 +660,7 @@ public class TransmissionServiceTests : IClassFixture<TransmissionServiceFixture
                 TorrentFields.SECONDS_SEEDING,
                 TorrentFields.UPLOAD_RATIO,
                 TorrentFields.TRACKERS,
+                TorrentFields.TRACKER_STATS,
                 TorrentFields.RATE_DOWNLOAD,
                 TorrentFields.TOTAL_SIZE,
                 TorrentFields.LABELS
@@ -709,6 +720,7 @@ public class TransmissionServiceTests : IClassFixture<TransmissionServiceFixture
                 TorrentFields.SECONDS_SEEDING,
                 TorrentFields.UPLOAD_RATIO,
                 TorrentFields.TRACKERS,
+                TorrentFields.TRACKER_STATS,
                 TorrentFields.RATE_DOWNLOAD,
                 TorrentFields.TOTAL_SIZE,
                 TorrentFields.LABELS

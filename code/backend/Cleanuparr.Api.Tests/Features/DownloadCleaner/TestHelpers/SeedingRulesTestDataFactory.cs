@@ -119,7 +119,8 @@ public static class SeedingRulesTestDataFactory
         List<string>? tagsAll = null,
         double maxRatio = 2.0,
         double minSeedTime = 0,
-        double maxSeedTime = -1)
+        double maxSeedTime = -1,
+        int minSeeders = -1)
     {
         var rule = new QBitSeedingRule
         {
@@ -135,6 +136,7 @@ public static class SeedingRulesTestDataFactory
             MaxRatio = maxRatio,
             MinSeedTime = minSeedTime,
             MaxSeedTime = maxSeedTime,
+            MinSeeders = minSeeders,
             DeleteSourceFiles = true,
         };
 
@@ -150,7 +152,8 @@ public static class SeedingRulesTestDataFactory
         int priority = 1,
         List<string>? categories = null,
         double maxRatio = 2.0,
-        double maxSeedTime = -1)
+        double maxSeedTime = -1,
+        int minSeeders = -1)
     {
         var rule = new DelugeSeedingRule
         {
@@ -164,6 +167,7 @@ public static class SeedingRulesTestDataFactory
             MaxRatio = maxRatio,
             MinSeedTime = 0,
             MaxSeedTime = maxSeedTime,
+            MinSeeders = minSeeders,
             DeleteSourceFiles = true,
         };
 
@@ -179,7 +183,8 @@ public static class SeedingRulesTestDataFactory
         int priority = 1,
         List<string>? categories = null,
         double maxRatio = 2.0,
-        double maxSeedTime = -1)
+        double maxSeedTime = -1,
+        int minSeeders = -1)
     {
         var rule = new TransmissionSeedingRule
         {
@@ -195,6 +200,7 @@ public static class SeedingRulesTestDataFactory
             MaxRatio = maxRatio,
             MinSeedTime = 0,
             MaxSeedTime = maxSeedTime,
+            MinSeeders = minSeeders,
             DeleteSourceFiles = true,
         };
 

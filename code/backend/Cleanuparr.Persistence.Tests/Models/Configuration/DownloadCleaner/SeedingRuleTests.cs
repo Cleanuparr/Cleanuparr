@@ -25,6 +25,21 @@ public sealed class QBitSeedingRuleTests
         rule.PrivacyType.ShouldBe(TorrentPrivacyType.Public);
     }
 
+    [Fact]
+    public void MinSeeders_DefaultsToDisabled()
+    {
+        var rule = new QBitSeedingRule
+        {
+            Name = "test",
+            MaxRatio = -1,
+            MinSeedTime = 0,
+            MaxSeedTime = 24,
+            DeleteSourceFiles = false
+        };
+
+        rule.MinSeeders.ShouldBe(-1);
+    }
+
     #endregion
 
     #region Validate - Valid Configurations
@@ -294,6 +309,48 @@ public sealed class QBitSeedingRuleTests
         };
 
         Should.NotThrow(() => config.Validate());
+    }
+
+    #endregion
+
+    #region Validate - MinSeeders Validation
+
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(0)]
+    [InlineData(5)]
+    public void Validate_WithValidMinSeeders_DoesNotThrow(int minSeeders)
+    {
+        var config = new QBitSeedingRule
+        {
+            Name = "test-category",
+            Categories = ["test-category"],
+            MaxRatio = 2.0,
+            MinSeedTime = 0,
+            MaxSeedTime = -1,
+            MinSeeders = minSeeders,
+            DeleteSourceFiles = true
+        };
+
+        Should.NotThrow(() => config.Validate());
+    }
+
+    [Fact]
+    public void Validate_WithMinSeedersLessThanDisabled_ThrowsValidationException()
+    {
+        var config = new QBitSeedingRule
+        {
+            Name = "test-category",
+            Categories = ["test-category"],
+            MaxRatio = 2.0,
+            MinSeedTime = 0,
+            MaxSeedTime = -1,
+            MinSeeders = -2,
+            DeleteSourceFiles = true
+        };
+
+        var exception = Should.Throw<ValidationException>(() => config.Validate());
+        exception.Message.ShouldBe("Min seeders can not be less than -1");
     }
 
     #endregion

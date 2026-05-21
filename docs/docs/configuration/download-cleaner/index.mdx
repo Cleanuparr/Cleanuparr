@@ -90,7 +90,7 @@ mytracker.com
 </p>
 
 <Note>
-A download is cleaned when both `Max Ratio` and `Min Seed Time` are reached, OR when `Max Seed Time` is reached regardless of ratio.
+A download is cleaned when both `Max Ratio` and `Min Seed Time` are reached, OR when `Max Seed Time` is reached regardless of ratio. If `Min Seeders` is configured, the download is kept until that minimum seeder count is also met.
 </Note>
 
 <Important>
@@ -193,6 +193,18 @@ Minimum time in hours to seed before removing a download that has reached the ma
 >
 
 Maximum time in hours to seed before removing a download regardless of ratio. Set to `-1` to disable time-based cleanup.
+
+</ConfigSection>
+
+<ConfigSection
+  title="Min Seeders"
+>
+
+Minimum number of seeders required before removing a download. Set to `-1` to disable seeder-count protection.
+
+When enabled, this acts as a deletion guard: downloads that have reached their ratio or seed-time cleanup condition are still kept if the reported seeder count is below this value.
+
+If the selected download client cannot report a seeder count for a download, Cleanuparr keeps the download instead of deleting it.
 
 </ConfigSection>
 

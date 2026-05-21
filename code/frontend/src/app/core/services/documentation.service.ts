@@ -81,6 +81,7 @@ export class DocumentationService {
       'maxRatio': 'max-ratio',
       'minSeedTime': 'min-seed-time',
       'maxSeedTime': 'max-seed-time',
+      'minSeeders': 'min-seeders',
       'deleteSourceFiles': 'delete-source-files',
       'unlinkedEnabled': 'enable-unlinked-download-handling',
       'unlinkedTargetCategory': 'target-category',

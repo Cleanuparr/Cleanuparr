@@ -22,6 +22,11 @@ public interface ITorrentItemWrapper
     
     double Ratio { get; }
 
+    /// <summary>
+    /// Total seeders reported by the download client when available.
+    /// </summary>
+    int? SeederCount { get; }
+
     long Eta { get; }
     
     long SeedingTimeSeconds { get; }

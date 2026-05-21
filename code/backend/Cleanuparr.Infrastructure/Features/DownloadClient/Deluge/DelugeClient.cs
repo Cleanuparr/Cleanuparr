@@ -25,6 +25,7 @@ public sealed class DelugeClient
         "label",
         "seeding_time",
         "ratio",
+        "total_seeds",
         "trackers",
         "download_payload_rate",
         "total_size",
