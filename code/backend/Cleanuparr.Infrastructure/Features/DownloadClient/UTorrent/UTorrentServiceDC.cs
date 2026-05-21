@@ -25,6 +25,17 @@ public partial class UTorrentService
         return result;
     }
 
+    /// <inheritdoc/>
+    public override async Task<List<ITorrentItemWrapper>> GetAllTorrents()
+    {
+        var torrents = await _client.GetTorrentsAsync();
+
+        return torrents
+            .Where(x => !string.IsNullOrEmpty(x.Hash))
+            .Select(ITorrentItemWrapper (x) => new UTorrentItemWrapper(x, new UTorrentProperties()))
+            .ToList();
+    }
+
     public override List<ITorrentItemWrapper>? FilterDownloadsToBeCleanedAsync(List<ITorrentItemWrapper>? downloads, List<ISeedingRule> seedingRules) =>
         downloads
             ?.Where(x => seedingRules.Any(rule => rule.Categories.Any(cat => cat.Equals(x.Category, StringComparison.OrdinalIgnoreCase))))

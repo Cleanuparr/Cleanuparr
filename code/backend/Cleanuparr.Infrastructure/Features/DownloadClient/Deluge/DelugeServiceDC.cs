@@ -26,6 +26,21 @@ public partial class DelugeService
             .ToList();
     }
 
+    /// <inheritdoc/>
+    public override async Task<List<ITorrentItemWrapper>> GetAllTorrents()
+    {
+        var downloads = await _client.GetStatusForAllTorrents();
+        if (downloads is null)
+        {
+            return [];
+        }
+
+        return downloads
+            .Where(x => !string.IsNullOrEmpty(x.Hash))
+            .Select(ITorrentItemWrapper (x) => new DelugeItemWrapper(x))
+            .ToList();
+    }
+
     public override List<ITorrentItemWrapper>? FilterDownloadsToBeCleanedAsync(List<ITorrentItemWrapper>? downloads, List<ISeedingRule> seedingRules) =>
         downloads
             ?.Where(x => seedingRules.Any(rule => rule.Categories.Any(cat => cat.Equals(x.Category, StringComparison.OrdinalIgnoreCase))))

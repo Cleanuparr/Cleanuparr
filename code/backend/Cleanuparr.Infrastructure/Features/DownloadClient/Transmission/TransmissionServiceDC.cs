@@ -21,6 +21,16 @@ public partial class TransmissionService
     }
 
     /// <inheritdoc/>
+    public override async Task<List<ITorrentItemWrapper>> GetAllTorrents()
+    {
+        var result = await _client.TorrentGetAsync(Fields);
+        return result?.Torrents
+            ?.Where(x => !string.IsNullOrEmpty(x.HashString))
+            .Select(ITorrentItemWrapper (x) => new TransmissionItemWrapper(x))
+            .ToList() ?? [];
+    }
+
+    /// <inheritdoc/>
     public override List<ITorrentItemWrapper>? FilterDownloadsToBeCleanedAsync(List<ITorrentItemWrapper>? downloads, List<ISeedingRule> seedingRules)
     {
         return downloads
