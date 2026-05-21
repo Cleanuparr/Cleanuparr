@@ -316,6 +316,9 @@ public sealed class OrphanedFilesCleaner : IHandler
                 File.Move(path, capturedDestination);
             }
 
+            // Reset the timestamp so PurgeOrphanedDirectory ages from the move date, not the original file date
+            File.SetLastWriteTimeUtc(capturedDestination, DateTime.UtcNow);
+
             _logger.LogInformation("orphaned entry moved | {source} -> {dest}", path, capturedDestination);
         }
 
