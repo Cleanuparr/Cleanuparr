@@ -91,8 +91,6 @@ public sealed class OrphanedFilesClientConfigController : ControllerBase
             existing.Enabled = dto.Enabled;
             existing.ScanDirectories = dto.ScanDirectories;
             existing.OrphanedDirectory = dto.OrphanedDirectory;
-            existing.DownloadDirectorySource = dto.DownloadDirectorySource;
-            existing.DownloadDirectoryTarget = dto.DownloadDirectoryTarget;
 
             existing.Validate();
 

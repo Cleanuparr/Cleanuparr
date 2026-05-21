@@ -91,8 +91,6 @@ public sealed class DownloadCleanerConfigController : ControllerBase
                             useTag = unlinkedConfig.UseTag,
                             ignoredRootDirs = unlinkedConfig.IgnoredRootDirs,
                             categories = unlinkedConfig.Categories,
-                            downloadDirectorySource = unlinkedConfig.DownloadDirectorySource,
-                            downloadDirectoryTarget = unlinkedConfig.DownloadDirectoryTarget,
                         }
                         : null,
                 });

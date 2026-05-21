@@ -24,18 +24,6 @@ public sealed record UnlinkedConfig : IConfig
 
     public List<string> Categories { get; set; } = [];
 
-    /// <summary>
-    /// The path prefix reported by the download client (e.g., "/downloads").
-    /// When set, this prefix is replaced with <see cref="DownloadDirectoryTarget"/> when resolving file paths.
-    /// </summary>
-    public string? DownloadDirectorySource { get; set; }
-
-    /// <summary>
-    /// The actual local mount path (e.g., "/downloads-other").
-    /// Replaces <see cref="DownloadDirectorySource"/> in file paths for hardlink checking.
-    /// </summary>
-    public string? DownloadDirectoryTarget { get; set; }
-
     public void Validate()
     {
         if (!Enabled)
@@ -61,11 +49,6 @@ public sealed record UnlinkedConfig : IConfig
         if (Categories.Any(string.IsNullOrWhiteSpace))
         {
             throw new ValidationException("Empty unlinked category filter found");
-        }
-
-        if (!string.IsNullOrEmpty(DownloadDirectorySource) != !string.IsNullOrEmpty(DownloadDirectoryTarget))
-        {
-            throw new ValidationException("Both download directory source and target must be set, or both must be empty");
         }
 
         foreach (var dir in IgnoredRootDirs.Where(d => !string.IsNullOrEmpty(d)))

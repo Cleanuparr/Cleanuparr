@@ -27,18 +27,6 @@ public sealed record OrphanedFilesClientConfig : IConfig
     /// </summary>
     public string? OrphanedDirectory { get; set; }
 
-    /// <summary>
-    /// Source path prefix reported by this download client (e.g. /downloads).
-    /// Used for path remapping when paths differ between the container and the host.
-    /// </summary>
-    public string? DownloadDirectorySource { get; set; }
-
-    /// <summary>
-    /// Target path prefix on the local filesystem (e.g. /mnt/data).
-    /// Used for path remapping when paths differ between the container and the host.
-    /// </summary>
-    public string? DownloadDirectoryTarget { get; set; }
-
     public void Validate()
     {
         if (!Enabled)
@@ -51,9 +39,5 @@ public sealed record OrphanedFilesClientConfig : IConfig
             throw new ValidationException("At least one scan directory is required when orphaned files cleaner is enabled for this client");
         }
 
-        if (!string.IsNullOrEmpty(DownloadDirectorySource) != !string.IsNullOrEmpty(DownloadDirectoryTarget))
-        {
-            throw new ValidationException("Both download directory source and target must be set, or both must be empty");
-        }
     }
 }

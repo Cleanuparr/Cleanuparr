@@ -21,8 +21,6 @@ export interface UnlinkedConfigModel {
   useTag: boolean;
   ignoredRootDirs: string[];
   categories: string[];
-  downloadDirectorySource: string | null;
-  downloadDirectoryTarget: string | null;
 }
 
 export interface ClientCleanerConfig {
@@ -65,7 +63,5 @@ export function createDefaultUnlinkedConfig(): UnlinkedConfigModel {
     useTag: false,
     ignoredRootDirs: [],
     categories: [],
-    downloadDirectorySource: null,
-    downloadDirectoryTarget: null,
   };
 }

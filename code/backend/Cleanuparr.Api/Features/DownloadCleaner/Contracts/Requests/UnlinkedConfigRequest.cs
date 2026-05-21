@@ -11,8 +11,4 @@ public sealed record UnlinkedConfigRequest
     public List<string> IgnoredRootDirs { get; init; } = [];
 
     public List<string> Categories { get; init; } = [];
-
-    public string? DownloadDirectorySource { get; init; }
-
-    public string? DownloadDirectoryTarget { get; init; }
 }

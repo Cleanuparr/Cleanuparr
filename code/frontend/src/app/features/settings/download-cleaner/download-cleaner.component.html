@@ -178,19 +178,6 @@
 
                   <div class="form-divider"></div>
 
-                  <app-input label="Download Directory (Source)" placeholder="/downloads"
-                    [value]="client.unlinkedConfig?.downloadDirectorySource ?? ''"
-                    (valueChange)="updateUnlinkedField('downloadDirectorySource', $event)"
-                    hint="The path prefix as reported by the download client (e.g. /downloads)"
-                    helpKey="download-cleaner:downloadDirectorySource" />
-                  <app-input label="Local Directory (Target)" placeholder="/downloads-other"
-                    [value]="client.unlinkedConfig?.downloadDirectoryTarget ?? ''"
-                    (valueChange)="updateUnlinkedField('downloadDirectoryTarget', $event)"
-                    hint="The actual local mount path that replaces the source prefix (e.g. /downloads-other)"
-                    helpKey="download-cleaner:downloadDirectoryTarget" />
-
-                  <div class="form-divider"></div>
-
                   <app-chip-input label="Ignored Root Directories" placeholder="Add directory path..."
                     [items]="client.unlinkedConfig?.ignoredRootDirs ?? []"
                     (itemsChange)="updateUnlinkedField('ignoredRootDirs', $event)"

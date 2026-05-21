@@ -2,8 +2,6 @@ export interface OrphanedFilesClientConfig {
   enabled: boolean;
   scanDirectories: string[];
   orphanedDirectory?: string | null;
-  downloadDirectorySource?: string | null;
-  downloadDirectoryTarget?: string | null;
 }
 
 export interface ClientOrphanedFilesConfig {
@@ -29,7 +27,5 @@ export function createDefaultClientConfig(): OrphanedFilesClientConfig {
     enabled: false,
     scanDirectories: [],
     orphanedDirectory: null,
-    downloadDirectorySource: null,
-    downloadDirectoryTarget: null,
   };
 }

@@ -57,6 +57,8 @@ export class DownloadClientsComponent implements OnInit, HasPendingChanges {
   readonly modalPassword = signal('');
   readonly modalUrlBase = signal('');
   readonly modalExternalUrl = signal('');
+  readonly modalDownloadDirectorySource = signal('');
+  readonly modalDownloadDirectoryTarget = signal('');
   readonly testing = signal(false);
 
   // Modal validation
@@ -146,6 +148,8 @@ export class DownloadClientsComponent implements OnInit, HasPendingChanges {
     this.modalPassword.set('');
     this.modalUrlBase.set('');
     this.modalExternalUrl.set('');
+    this.modalDownloadDirectorySource.set('');
+    this.modalDownloadDirectoryTarget.set('');
     this.modalVisible.set(true);
   }
 
@@ -159,6 +163,8 @@ export class DownloadClientsComponent implements OnInit, HasPendingChanges {
     this.modalPassword.set(client.password ?? '');
     this.modalUrlBase.set(client.urlBase);
     this.modalExternalUrl.set(client.externalUrl ?? '');
+    this.modalDownloadDirectorySource.set(client.downloadDirectorySource ?? '');
+    this.modalDownloadDirectoryTarget.set(client.downloadDirectoryTarget ?? '');
     this.modalVisible.set(true);
   }
 
@@ -201,6 +207,8 @@ export class DownloadClientsComponent implements OnInit, HasPendingChanges {
         password: this.modalPassword() || undefined,
         urlBase: this.modalUrlBase(),
         externalUrl: this.modalExternalUrl() || undefined,
+        downloadDirectorySource: this.modalDownloadDirectorySource() || null,
+        downloadDirectoryTarget: this.modalDownloadDirectoryTarget() || null,
       };
       this.api.update(editing.id, client).subscribe({
         next: () => {
@@ -225,6 +233,8 @@ export class DownloadClientsComponent implements OnInit, HasPendingChanges {
         password: this.modalPassword(),
         urlBase: this.modalUrlBase(),
         externalUrl: this.modalExternalUrl() || undefined,
+        downloadDirectorySource: this.modalDownloadDirectorySource() || null,
+        downloadDirectoryTarget: this.modalDownloadDirectoryTarget() || null,
       };
       this.api.create(dto).subscribe({
         next: () => {

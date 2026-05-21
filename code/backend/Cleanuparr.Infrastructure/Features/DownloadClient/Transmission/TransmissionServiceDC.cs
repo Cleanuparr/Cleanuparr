@@ -97,7 +97,7 @@ public partial class TransmissionService
 
                 string filePath = string.Join(Path.DirectorySeparatorChar, Path.Combine(torrent.Info.DownloadDir, file.Name).Split(['\\', '/']));
 
-                filePath = PathHelper.RemapPath(filePath, unlinkedConfig.DownloadDirectorySource, unlinkedConfig.DownloadDirectoryTarget);
+                filePath = PathHelper.RemapPath(filePath, _downloadClientConfig.DownloadDirectorySource, _downloadClientConfig.DownloadDirectoryTarget);
 
                 long hardlinkCount = _hardLinkFileService.GetHardLinkCount(filePath, unlinkedConfig.IgnoredRootDirs.Count > 0);
 

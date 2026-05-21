@@ -104,7 +104,7 @@ public partial class RTorrentService
                 string filePath = string.Join(Path.DirectorySeparatorChar,
                     Path.Combine(torrent.Info.Directory ?? torrent.Info.BasePath ?? "", file.Path).Split(['\\', '/']));
 
-                filePath = PathHelper.RemapPath(filePath, unlinkedConfig.DownloadDirectorySource, unlinkedConfig.DownloadDirectoryTarget);
+                filePath = PathHelper.RemapPath(filePath, _downloadClientConfig.DownloadDirectorySource, _downloadClientConfig.DownloadDirectoryTarget);
 
                 if (file.Priority <= 0)
                 {

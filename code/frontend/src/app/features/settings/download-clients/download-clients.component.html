@@ -87,6 +87,12 @@
     <app-input label="External URL" placeholder="https://qbit.example.com" type="url" [(value)]="modalExternalUrl"
       hint="Optional URL used in notifications for clickable links (e.g., when internal Docker URLs are not reachable externally)"
       helpKey="download-client:externalUrl" />
+    <app-input label="Download Directory Source" placeholder="/downloads" [(value)]="modalDownloadDirectorySource"
+      hint="Path prefix reported by the download client. Set when paths differ between the client's container and Cleanuparr (e.g. /downloads)"
+      helpKey="download-client:downloadDirectorySource" />
+    <app-input label="Download Directory Target" placeholder="/mnt/data/downloads" [(value)]="modalDownloadDirectoryTarget"
+      hint="Actual path on the filesystem seen by Cleanuparr, replacing the source prefix (e.g. /mnt/data/downloads)"
+      helpKey="download-client:downloadDirectoryTarget" />
   </div>
   <div modal-footer>
     <app-button variant="secondary" size="sm" [loading]="testing()" (clicked)="testConnection()">

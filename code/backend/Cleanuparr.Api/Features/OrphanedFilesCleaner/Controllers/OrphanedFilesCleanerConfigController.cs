@@ -62,8 +62,6 @@ public sealed class OrphanedFilesCleanerConfigController : ControllerBase
                         clientConfig.Enabled,
                         clientConfig.ScanDirectories,
                         clientConfig.OrphanedDirectory,
-                        clientConfig.DownloadDirectorySource,
-                        clientConfig.DownloadDirectoryTarget,
                     },
                 };
             }).ToList();

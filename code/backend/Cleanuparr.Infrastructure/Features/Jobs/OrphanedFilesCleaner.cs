@@ -117,8 +117,8 @@ public sealed class OrphanedFilesCleaner : IHandler
 
                     string remappedSavePath = PathHelper.RemapPath(
                         normalizedSavePath,
-                        perClientConfig?.DownloadDirectorySource,
-                        perClientConfig?.DownloadDirectoryTarget
+                        downloadClient.DownloadDirectorySource,
+                        downloadClient.DownloadDirectoryTarget
                     ).TrimEnd(Path.DirectorySeparatorChar);
 
                     // Claim the save_path itself — covers torrents where save_path IS the content directory
@@ -134,8 +134,8 @@ public sealed class OrphanedFilesCleaner : IHandler
 
                         string contentPath = PathHelper.RemapPath(
                             rawPathWithName,
-                            perClientConfig?.DownloadDirectorySource,
-                            perClientConfig?.DownloadDirectoryTarget
+                            downloadClient.DownloadDirectorySource,
+                            downloadClient.DownloadDirectoryTarget
                         );
 
                         claimedPaths.Add(contentPath.TrimEnd(Path.DirectorySeparatorChar));

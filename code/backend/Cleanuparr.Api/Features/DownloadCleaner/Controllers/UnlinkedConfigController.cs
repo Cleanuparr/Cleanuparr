@@ -94,8 +94,6 @@ public class UnlinkedConfigController : ControllerBase
             existing.UseTag = dto.UseTag;
             existing.IgnoredRootDirs = dto.IgnoredRootDirs;
             existing.Categories = dto.Categories;
-            existing.DownloadDirectorySource = dto.DownloadDirectorySource;
-            existing.DownloadDirectoryTarget = dto.DownloadDirectoryTarget;
 
             existing.Validate();
 

@@ -27,6 +27,10 @@ public sealed record UpdateDownloadClientRequest
 
     public string? ExternalUrl { get; init; }
 
+    public string? DownloadDirectorySource { get; init; }
+
+    public string? DownloadDirectoryTarget { get; init; }
+
     public void Validate()
     {
         if (string.IsNullOrWhiteSpace(Name))
@@ -48,6 +52,11 @@ public sealed record UpdateDownloadClientRequest
         {
             throw new ValidationException("External URL is not a valid URL");
         }
+
+        if (!string.IsNullOrEmpty(DownloadDirectorySource) != !string.IsNullOrEmpty(DownloadDirectoryTarget))
+        {
+            throw new ValidationException("Both download directory source and target must be set, or both must be empty");
+        }
     }
 
     public DownloadClientConfig ApplyTo(DownloadClientConfig existing) => existing with
@@ -61,5 +70,7 @@ public sealed record UpdateDownloadClientRequest
         Password = Password.IsPlaceholder() ? existing.Password : Password,
         UrlBase = UrlBase,
         ExternalUrl = !string.IsNullOrWhiteSpace(ExternalUrl) ? new Uri(ExternalUrl, UriKind.RelativeOrAbsolute) : null,
+        DownloadDirectorySource = DownloadDirectorySource,
+        DownloadDirectoryTarget = DownloadDirectoryTarget,
     };
 }

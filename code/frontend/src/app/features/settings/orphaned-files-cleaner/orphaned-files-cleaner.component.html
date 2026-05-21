@@ -151,22 +151,6 @@
                   (valueChange)="updateClientField('orphanedDirectory', $event || null)"
                 />
 
-                <div class="form-divider"></div>
-
-                <app-input
-                  label="Download Directory Source"
-                  placeholder="/downloads"
-                  hint="Path prefix reported by the download client (useful when paths differ between Docker container and host)"
-                  [value]="client.clientConfig?.downloadDirectorySource ?? ''"
-                  (valueChange)="updateClientField('downloadDirectorySource', $event || null)"
-                />
-                <app-input
-                  label="Download Directory Target"
-                  placeholder="/mnt/data/downloads"
-                  hint="Corresponding path prefix on the local filesystem"
-                  [value]="client.clientConfig?.downloadDirectoryTarget ?? ''"
-                  (valueChange)="updateClientField('downloadDirectoryTarget', $event || null)"
-                />
               }
 
               <div class="form-actions">

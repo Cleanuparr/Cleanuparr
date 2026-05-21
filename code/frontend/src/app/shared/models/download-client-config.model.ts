@@ -11,6 +11,8 @@ export interface ClientConfig {
   password?: string;
   urlBase: string;
   externalUrl?: string;
+  downloadDirectorySource?: string | null;
+  downloadDirectoryTarget?: string | null;
 }
 
 export interface DownloadClientConfig {
@@ -27,6 +29,8 @@ export interface CreateDownloadClientDto {
   password?: string;
   urlBase?: string;
   externalUrl?: string;
+  downloadDirectorySource?: string | null;
+  downloadDirectoryTarget?: string | null;
 }
 
 export interface TestDownloadClientRequest {
