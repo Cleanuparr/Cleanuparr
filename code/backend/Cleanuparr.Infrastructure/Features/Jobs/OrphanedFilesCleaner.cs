@@ -72,8 +72,11 @@ public sealed class OrphanedFilesCleaner : IHandler
         }
 
         // Build set of all content paths claimed by active torrents across ALL download clients
-        // (regardless of per-client orphaned config) to avoid false positives
+        // (regardless of per-client orphaned config) to avoid false positives across cross-seeded clients.
+        // Clients that fail to load are tracked so their scan directories are skipped — preventing false positives
+        // when their claimed paths are unknown.
         var claimedPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var failedClientIds = new HashSet<Guid>();
 
         foreach (DownloadClientConfig downloadClient in downloadClientConfigs)
         {
@@ -129,6 +132,7 @@ public sealed class OrphanedFilesCleaner : IHandler
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to get torrents from client {name}", downloadClient.Name);
+                failedClientIds.Add(downloadClient.Id);
             }
             finally
             {
@@ -147,6 +151,13 @@ public sealed class OrphanedFilesCleaner : IHandler
                 _logger.LogWarning("Reached the limit of {max} orphaned entries per run, stopping scan",
                     config.MaxOrphanedFilesToProcess);
                 break;
+            }
+
+            if (failedClientIds.Contains(clientConfig.DownloadClientConfigId))
+            {
+                _logger.LogWarning("Skipping scan for client {id} — claimed paths could not be loaded, scan would produce false positives",
+                    clientConfig.DownloadClientConfigId);
+                continue;
             }
 
             if (clientConfig.ScanDirectories.Count == 0)
