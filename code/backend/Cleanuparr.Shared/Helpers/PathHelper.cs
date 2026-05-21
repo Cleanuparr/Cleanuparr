@@ -21,7 +21,8 @@ public static class PathHelper
             return filePath;
         }
 
-        var normSource = source.TrimEnd('/', '\\') + Path.DirectorySeparatorChar;
+        // Normalize separators so Windows source paths (backslashes) match Linux-normalized filePaths
+        var normSource = source.Replace('\\', Path.DirectorySeparatorChar).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
         var normTarget = target.TrimEnd('/', '\\');
 
         // Exact match: filePath is exactly the source directory (no trailing separator)
