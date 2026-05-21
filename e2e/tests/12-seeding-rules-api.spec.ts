@@ -55,6 +55,7 @@ test.describe.serial('Seeding Rules API', () => {
       maxRatio: 2.0,
       minSeedTime: 0,
       maxSeedTime: -1,
+      minSeeders: 5,
       deleteSourceFiles: true,
     });
     expect(res.status).toBe(201);
@@ -106,6 +107,7 @@ test.describe.serial('Seeding Rules API', () => {
     expect(moviesRule).toBeDefined();
     expect(moviesRule.categories).toEqual(['movies', 'films']);
     expect(moviesRule.trackerPatterns).toEqual(['tracker.example.com']);
+    expect(moviesRule.minSeeders).toBe(5);
     expect(moviesRule.priority).toBe(1);
   });
 
@@ -172,6 +174,7 @@ test.describe.serial('Seeding Rules API', () => {
       maxRatio: rule.maxRatio,
       minSeedTime: rule.minSeedTime,
       maxSeedTime: rule.maxSeedTime,
+      minSeeders: rule.minSeeders,
       deleteSourceFiles: rule.deleteSourceFiles,
     });
     expect(updateRes.status).toBe(200);
@@ -194,6 +197,7 @@ test.describe.serial('Seeding Rules API', () => {
       maxRatio: rule.maxRatio,
       minSeedTime: rule.minSeedTime,
       maxSeedTime: rule.maxSeedTime,
+      minSeeders: rule.minSeeders,
       deleteSourceFiles: rule.deleteSourceFiles,
     });
     expect(updateRes.status).toBe(200);

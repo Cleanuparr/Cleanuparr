@@ -331,6 +331,21 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
                 DeleteSourceFiles = false
             };
 
+        private static ITorrentItemWrapper CreateTorrentWithSeederCount(string hash, int? seederCount)
+        {
+            var torrent = Substitute.For<ITorrentItemWrapper>();
+            torrent.Hash.Returns(hash);
+            torrent.Name.Returns($"Test {hash}");
+            torrent.Category.Returns("movies");
+            torrent.IsPrivate.Returns(false);
+            torrent.Ratio.Returns(2.0);
+            torrent.SeedingTimeSeconds.Returns((long)TimeSpan.FromHours(10).TotalSeconds);
+            torrent.SeederCount.Returns(seederCount);
+            torrent.TrackerDomains.Returns(Array.Empty<string>());
+            torrent.Tags.Returns(Array.Empty<string>());
+            return torrent;
+        }
+
         private void SetupDeleteMock()
         {
             _fixture.ClientWrapper
@@ -378,6 +393,75 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
             // Assert
             await _fixture.ClientWrapper.Received(1)
                 .DeleteAsync(Arg.Is<IEnumerable<string>>(h => h.Contains("hash1")), false);
+        }
+
+        [Fact]
+        public async Task SkipsTorrent_WhenMinimumSeedersNotReached()
+        {
+            // Arrange
+            var sut = _fixture.CreateSut();
+            SetupDeleteMock();
+
+            var downloads = new List<ITorrentItemWrapper>
+            {
+                CreateTorrentWithSeederCount("hash1", 4)
+            };
+            var rule = CreateRule("movies", TorrentPrivacyType.Public);
+            rule.MinSeeders = 5;
+            var rules = new List<ISeedingRule> { rule };
+
+            // Act
+            await sut.CleanDownloadsAsync(downloads, rules);
+
+            // Assert
+            await _fixture.ClientWrapper.DidNotReceive()
+                .DeleteAsync(Arg.Any<IEnumerable<string>>(), Arg.Any<bool>());
+        }
+
+        [Fact]
+        public async Task CleansTorrent_WhenMinimumSeedersReached()
+        {
+            // Arrange
+            var sut = _fixture.CreateSut();
+            SetupDeleteMock();
+
+            var downloads = new List<ITorrentItemWrapper>
+            {
+                CreateTorrentWithSeederCount("hash1", 5)
+            };
+            var rule = CreateRule("movies", TorrentPrivacyType.Public);
+            rule.MinSeeders = 5;
+            var rules = new List<ISeedingRule> { rule };
+
+            // Act
+            await sut.CleanDownloadsAsync(downloads, rules);
+
+            // Assert
+            await _fixture.ClientWrapper.Received(1)
+                .DeleteAsync(Arg.Is<IEnumerable<string>>(h => h.Contains("hash1")), false);
+        }
+
+        [Fact]
+        public async Task SkipsTorrent_WhenMinimumSeedersConfiguredAndSeederCountUnavailable()
+        {
+            // Arrange
+            var sut = _fixture.CreateSut();
+            SetupDeleteMock();
+
+            var downloads = new List<ITorrentItemWrapper>
+            {
+                CreateTorrentWithSeederCount("hash1", null)
+            };
+            var rule = CreateRule("movies", TorrentPrivacyType.Public);
+            rule.MinSeeders = 5;
+            var rules = new List<ISeedingRule> { rule };
+
+            // Act
+            await sut.CleanDownloadsAsync(downloads, rules);
+
+            // Assert
+            await _fixture.ClientWrapper.DidNotReceive()
+                .DeleteAsync(Arg.Any<IEnumerable<string>>(), Arg.Any<bool>());
         }
 
         [Fact]

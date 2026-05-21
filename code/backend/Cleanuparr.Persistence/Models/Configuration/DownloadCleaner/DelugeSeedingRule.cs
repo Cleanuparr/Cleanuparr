@@ -44,6 +44,11 @@ public sealed record DelugeSeedingRule : ISeedingRule
     public double MaxSeedTime { get; set; } = -1;
 
     /// <summary>
+    /// Minimum number of seeders required before removing a download.
+    /// </summary>
+    public int MinSeeders { get; set; } = -1;
+
+    /// <summary>
     /// Whether to delete the source files when cleaning the download.
     /// </summary>
     public bool DeleteSourceFiles { get; set; }
@@ -68,6 +73,11 @@ public sealed record DelugeSeedingRule : ISeedingRule
         if (MinSeedTime < 0)
         {
             throw new ValidationException("Min seed time can not be negative");
+        }
+
+        if (MinSeeders < -1)
+        {
+            throw new ValidationException("Min seeders can not be less than -1");
         }
     }
 }

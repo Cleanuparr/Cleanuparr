@@ -33,6 +33,7 @@ public partial class TransmissionService : DownloadService, ITransmissionService
         TorrentFields.DOWNLOADED_EVER,
         TorrentFields.DOWNLOAD_DIR,
         TorrentFields.SECONDS_SEEDING,
+        TorrentFields.TRACKER_STATS,
         TorrentFields.UPLOAD_RATIO,
         TorrentFields.TRACKERS,
         TorrentFields.RATE_DOWNLOAD,

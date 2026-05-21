@@ -59,6 +59,12 @@ public record SeedingRuleRequest
     public double MaxSeedTime { get; init; } = -1;
 
     /// <summary>
+    /// Minimum number of seeders required before removing a download. Set to -1 to disable.
+    /// </summary>
+    [Range(-1, int.MaxValue, ErrorMessage = "Min seeders must be -1 or greater.")]
+    public int MinSeeders { get; init; } = -1;
+
+    /// <summary>
     /// Whether to delete the source files when cleaning the download.
     /// </summary>
     public bool DeleteSourceFiles { get; init; } = true;

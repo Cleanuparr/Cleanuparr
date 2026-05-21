@@ -113,7 +113,7 @@ public abstract class DownloadService : IDownloadService
             SetDownloadClientContext();
 
             TimeSpan seedingTime = TimeSpan.FromSeconds(torrent.SeedingTimeSeconds);
-            SeedingCheckResult result = ShouldCleanDownload(torrent.Ratio, seedingTime, seedingRule);
+            SeedingCheckResult result = ShouldCleanDownload(torrent.Ratio, seedingTime, torrent.SeederCount, seedingRule);
 
             if (!result.ShouldClean)
             {
@@ -152,8 +152,13 @@ public abstract class DownloadService : IDownloadService
     /// <param name="deleteSourceFiles">Whether to delete the source files along with the torrent</param>
     public abstract Task DeleteDownload(ITorrentItemWrapper torrent, bool deleteSourceFiles);
     
-    protected SeedingCheckResult ShouldCleanDownload(double ratio, TimeSpan seedingTime, ISeedingRule category)
+    protected SeedingCheckResult ShouldCleanDownload(double ratio, TimeSpan seedingTime, int? seederCount, ISeedingRule category)
     {
+        if (BelowMinimumSeeders(seederCount, category))
+        {
+            return new();
+        }
+
         // check ratio
         if (DownloadReachedRatio(ratio, seedingTime, category))
         {
@@ -221,6 +226,34 @@ public abstract class DownloadService : IDownloadService
         
         // max ratio is 0 or reached
         return true;
+    }
+
+    private bool BelowMinimumSeeders(int? seederCount, ISeedingRule category)
+    {
+        if (category.MinSeeders <= 0)
+        {
+            return false;
+        }
+
+        string downloadName = ContextProvider.Get<string>(ContextProvider.Keys.ItemName);
+
+        if (!seederCount.HasValue)
+        {
+            _logger.LogDebug("skip | download seeder count is unavailable | {name}", downloadName);
+            return true;
+        }
+
+        if (seederCount.Value < category.MinSeeders)
+        {
+            _logger.LogDebug(
+                "skip | download has fewer seeders than minimum | {seeders}/{minSeeders} | {name}",
+                seederCount.Value,
+                category.MinSeeders,
+                downloadName);
+            return true;
+        }
+
+        return false;
     }
     
     private bool DownloadReachedMaxSeedTime(TimeSpan seedingTime, ISeedingRule category)

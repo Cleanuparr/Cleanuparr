@@ -57,6 +57,7 @@ public class SeedingRulesController : ControllerBase
                 maxRatio = r.MaxRatio,
                 minSeedTime = r.MinSeedTime,
                 maxSeedTime = r.MaxSeedTime,
+                minSeeders = r.MinSeeders,
                 deleteSourceFiles = r.DeleteSourceFiles,
             }));
         }
@@ -153,6 +154,7 @@ public class SeedingRulesController : ControllerBase
             existingRule.MaxRatio = ruleDto.MaxRatio;
             existingRule.MinSeedTime = ruleDto.MinSeedTime;
             existingRule.MaxSeedTime = ruleDto.MaxSeedTime;
+            existingRule.MinSeeders = ruleDto.MinSeeders;
             existingRule.DeleteSourceFiles = ruleDto.DeleteSourceFiles;
             // Priority is intentionally NOT updated here — use the reorder endpoint
 
@@ -304,6 +306,7 @@ public class SeedingRulesController : ControllerBase
                 MaxRatio = dto.MaxRatio,
                 MinSeedTime = dto.MinSeedTime,
                 MaxSeedTime = dto.MaxSeedTime,
+                MinSeeders = dto.MinSeeders,
                 DeleteSourceFiles = dto.DeleteSourceFiles,
             },
             DownloadClientTypeName.Deluge => new DelugeSeedingRule
@@ -317,6 +320,7 @@ public class SeedingRulesController : ControllerBase
                 MaxRatio = dto.MaxRatio,
                 MinSeedTime = dto.MinSeedTime,
                 MaxSeedTime = dto.MaxSeedTime,
+                MinSeeders = dto.MinSeeders,
                 DeleteSourceFiles = dto.DeleteSourceFiles,
             },
             DownloadClientTypeName.Transmission => new TransmissionSeedingRule
@@ -332,6 +336,7 @@ public class SeedingRulesController : ControllerBase
                 MaxRatio = dto.MaxRatio,
                 MinSeedTime = dto.MinSeedTime,
                 MaxSeedTime = dto.MaxSeedTime,
+                MinSeeders = dto.MinSeeders,
                 DeleteSourceFiles = dto.DeleteSourceFiles,
             },
             DownloadClientTypeName.uTorrent => new UTorrentSeedingRule
@@ -345,6 +350,7 @@ public class SeedingRulesController : ControllerBase
                 MaxRatio = dto.MaxRatio,
                 MinSeedTime = dto.MinSeedTime,
                 MaxSeedTime = dto.MaxSeedTime,
+                MinSeeders = dto.MinSeeders,
                 DeleteSourceFiles = dto.DeleteSourceFiles,
             },
             DownloadClientTypeName.rTorrent => new RTorrentSeedingRule
@@ -358,6 +364,7 @@ public class SeedingRulesController : ControllerBase
                 MaxRatio = dto.MaxRatio,
                 MinSeedTime = dto.MinSeedTime,
                 MaxSeedTime = dto.MaxSeedTime,
+                MinSeeders = dto.MinSeeders,
                 DeleteSourceFiles = dto.DeleteSourceFiles,
             },
             _ => throw new ArgumentOutOfRangeException(nameof(typeName), typeName, "Unsupported download client type")

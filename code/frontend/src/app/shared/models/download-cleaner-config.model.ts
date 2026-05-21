@@ -12,6 +12,7 @@ export interface SeedingRule {
   maxRatio: number;
   minSeedTime: number;
   maxSeedTime: number;
+  minSeeders?: number;
   deleteSourceFiles: boolean;
 }
 
@@ -62,6 +63,7 @@ export function createDefaultSeedingRule(): SeedingRule {
     maxRatio: -1,
     minSeedTime: 0,
     maxSeedTime: -1,
+    minSeeders: -1,
     deleteSourceFiles: true,
   };
 }

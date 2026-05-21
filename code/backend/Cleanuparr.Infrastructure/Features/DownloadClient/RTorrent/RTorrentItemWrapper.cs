@@ -48,6 +48,8 @@ public sealed class RTorrentItemWrapper : ITorrentItemWrapper
     /// </summary>
     public double Ratio => Info.Ratio / 1000.0;
 
+    public int? SeederCount => null;
+
     public long Eta => CalculateEta();
 
     public long SeedingTimeSeconds => CalculateSeedingTime();

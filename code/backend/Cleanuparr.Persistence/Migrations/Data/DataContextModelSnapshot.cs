@@ -145,6 +145,10 @@ namespace Cleanuparr.Persistence.Migrations.Data
                         .HasColumnType("REAL")
                         .HasColumnName("min_seed_time");
 
+                    b.Property<int>("MinSeeders")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("min_seeders");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("TEXT")
@@ -284,6 +288,10 @@ namespace Cleanuparr.Persistence.Migrations.Data
                         .HasColumnType("REAL")
                         .HasColumnName("min_seed_time");
 
+                    b.Property<int>("MinSeeders")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("min_seeders");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("TEXT")
@@ -354,6 +362,10 @@ namespace Cleanuparr.Persistence.Migrations.Data
                         .HasColumnType("REAL")
                         .HasColumnName("min_seed_time");
 
+                    b.Property<int>("MinSeeders")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("min_seeders");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("TEXT")
@@ -413,6 +425,10 @@ namespace Cleanuparr.Persistence.Migrations.Data
                     b.Property<double>("MinSeedTime")
                         .HasColumnType("REAL")
                         .HasColumnName("min_seed_time");
+
+                    b.Property<int>("MinSeeders")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("min_seeders");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -483,6 +499,10 @@ namespace Cleanuparr.Persistence.Migrations.Data
                     b.Property<double>("MinSeedTime")
                         .HasColumnType("REAL")
                         .HasColumnName("min_seed_time");
+
+                    b.Property<int>("MinSeeders")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("min_seeders");
 
                     b.Property<string>("Name")
                         .IsRequired()
