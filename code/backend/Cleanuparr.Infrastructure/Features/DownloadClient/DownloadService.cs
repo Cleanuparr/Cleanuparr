@@ -75,11 +75,7 @@ public abstract class DownloadService : IDownloadService
     public abstract Task<List<ITorrentItemWrapper>> GetSeedingDownloads();
 
     /// <inheritdoc/>
-    public virtual Task<List<ITorrentItemWrapper>> GetAllTorrents()
-    {
-        throw new NotSupportedException(
-            $"GetAllTorrents is not supported by download client {_downloadClientConfig.Name} ({_downloadClientConfig.TypeName})");
-    }
+    public abstract Task<List<ITorrentItemWrapper>> GetAllTorrents();
 
     /// <inheritdoc/>
     public abstract List<ITorrentItemWrapper>? FilterDownloadsToBeCleanedAsync(List<ITorrentItemWrapper>? downloads, List<ISeedingRule> seedingRules);

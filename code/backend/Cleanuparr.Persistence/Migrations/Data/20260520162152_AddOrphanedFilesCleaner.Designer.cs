@@ -483,14 +483,6 @@ namespace Cleanuparr.Persistence.Migrations.Data
                         .HasColumnType("TEXT")
                         .HasColumnName("download_client_config_id");
 
-                    b.Property<string>("DownloadDirectorySource")
-                        .HasColumnType("TEXT")
-                        .HasColumnName("download_directory_source");
-
-                    b.Property<string>("DownloadDirectoryTarget")
-                        .HasColumnType("TEXT")
-                        .HasColumnName("download_directory_target");
-
                     b.Property<bool>("Enabled")
                         .HasColumnType("INTEGER")
                         .HasColumnName("enabled");
@@ -564,6 +556,14 @@ namespace Cleanuparr.Persistence.Migrations.Data
                     b.Property<string>("Username")
                         .HasColumnType("TEXT")
                         .HasColumnName("username");
+
+                    b.Property<string>("DownloadDirectorySource")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("download_directory_source");
+
+                    b.Property<string>("DownloadDirectoryTarget")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("download_directory_target");
 
                     b.HasKey("Id")
                         .HasName("pk_download_clients");
@@ -1254,14 +1254,6 @@ namespace Cleanuparr.Persistence.Migrations.Data
                     b.Property<Guid>("DownloadClientConfigId")
                         .HasColumnType("TEXT")
                         .HasColumnName("download_client_config_id");
-
-                    b.Property<string>("DownloadDirectorySource")
-                        .HasColumnType("TEXT")
-                        .HasColumnName("download_directory_source");
-
-                    b.Property<string>("DownloadDirectoryTarget")
-                        .HasColumnType("TEXT")
-                        .HasColumnName("download_directory_target");
 
                     b.Property<bool>("Enabled")
                         .HasColumnType("INTEGER")

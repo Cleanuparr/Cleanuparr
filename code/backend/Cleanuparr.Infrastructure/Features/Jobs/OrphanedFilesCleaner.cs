@@ -47,7 +47,7 @@ public sealed class OrphanedFilesCleaner : IHandler
             config = await _dataContext.OrphanedFilesCleanerConfigs.AsNoTracking().FirstAsync(cancellationToken);
             clientConfigs = await _dataContext.OrphanedFilesClientConfigs
                 .AsNoTracking()
-                .Where(x => x.Enabled)
+                .Where(x => x.Enabled && x.DownloadClientConfig.Enabled)
                 .ToListAsync(cancellationToken);
             downloadClientConfigs = await _dataContext.DownloadClients
                 .AsNoTracking()
@@ -74,26 +74,9 @@ public sealed class OrphanedFilesCleaner : IHandler
         // Build set of all content paths claimed by active torrents across ALL download clients
         // (regardless of per-client orphaned config) to avoid false positives
         var claimedPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        bool hasAtLeastOneSupportedClient = false;
-
-        // Load ALL per-client configs (including disabled) for path remapping lookup
-        await DataContext.Lock.WaitAsync(cancellationToken);
-        List<OrphanedFilesClientConfig> allClientConfigs;
-        try
-        {
-            allClientConfigs = await _dataContext.OrphanedFilesClientConfigs
-                .AsNoTracking()
-                .ToListAsync(cancellationToken);
-        }
-        finally
-        {
-            DataContext.Lock.Release();
-        }
 
         foreach (DownloadClientConfig downloadClient in downloadClientConfigs)
         {
-            var perClientConfig = allClientConfigs.FirstOrDefault(c => c.DownloadClientConfigId == downloadClient.Id);
-
             IDownloadService? downloadService = null;
             try
             {
@@ -101,7 +84,6 @@ public sealed class OrphanedFilesCleaner : IHandler
                 await downloadService.LoginAsync();
 
                 var torrents = await downloadService.GetAllTorrents();
-                hasAtLeastOneSupportedClient = true;
 
                 foreach (var torrent in torrents)
                 {
@@ -144,10 +126,6 @@ public sealed class OrphanedFilesCleaner : IHandler
 
                 _logger.LogDebug("Loaded {count} torrent paths from {name}", torrents.Count, downloadClient.Name);
             }
-            catch (NotSupportedException)
-            {
-                _logger.LogDebug("Client {name} does not support orphan detection, skipping", downloadClient.Name);
-            }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to get torrents from client {name}", downloadClient.Name);
@@ -156,12 +134,6 @@ public sealed class OrphanedFilesCleaner : IHandler
             {
                 downloadService?.Dispose();
             }
-        }
-
-        if (!hasAtLeastOneSupportedClient)
-        {
-            _logger.LogWarning("No configured download client supports orphan detection — aborting scan to avoid false positives");
-            return;
         }
 
         _logger.LogDebug("{count} claimed paths across all clients", claimedPaths.Count);

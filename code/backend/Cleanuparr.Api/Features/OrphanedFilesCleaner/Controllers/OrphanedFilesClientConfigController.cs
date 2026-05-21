@@ -45,11 +45,6 @@ public sealed class OrphanedFilesClientConfigController : ControllerBase
 
             return Ok(config);
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to retrieve orphaned files client config for client {ClientId}", downloadClientId);
-            return StatusCode(500, new { Message = "Failed to retrieve orphaned files client config", Error = ex.Message });
-        }
         finally
         {
             DataContext.Lock.Release();
@@ -104,11 +99,6 @@ public sealed class OrphanedFilesClientConfigController : ControllerBase
         {
             _logger.LogWarning("Validation failed for orphaned files client config: {Message}", ex.Message);
             return BadRequest(new { Message = ex.Message });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to update orphaned files client config for client {ClientId}", downloadClientId);
-            return StatusCode(500, new { Message = "Failed to update orphaned files client config", Error = ex.Message });
         }
         finally
         {

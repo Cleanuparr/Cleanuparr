@@ -136,7 +136,9 @@ export class OrphanedFilesCleanerComponent implements OnInit, HasPendingChanges 
 
         const clients = (config.clients ?? []).map(c => ({
           ...c,
-          clientConfig: c.clientConfig ?? createDefaultClientConfig(),
+          clientConfig: c.clientConfig
+            ? { ...c.clientConfig, orphanedDirectory: c.clientConfig.orphanedDirectory ?? null }
+            : createDefaultClientConfig(),
         }));
         this.clientConfigs.set(clients);
 
