@@ -320,6 +320,13 @@ public sealed class OrphanedFilesCleaner : IHandler
         {
             string timestamp = DateTime.UtcNow.ToString("yyyyMMddHHmmss");
             destination = Path.Combine(orphanedDirectory, $"{entryName}_{timestamp}");
+
+            int counter = 1;
+            while (Path.Exists(destination))
+            {
+                destination = Path.Combine(orphanedDirectory, $"{entryName}_{timestamp}_{counter}");
+                counter++;
+            }
         }
 
         string capturedDestination = destination;
