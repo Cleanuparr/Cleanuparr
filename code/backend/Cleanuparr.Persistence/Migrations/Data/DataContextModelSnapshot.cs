@@ -515,6 +515,14 @@ namespace Cleanuparr.Persistence.Migrations.Data
                         .HasColumnType("TEXT")
                         .HasColumnName("id");
 
+                    b.Property<string>("DownloadDirectorySource")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("download_directory_source");
+
+                    b.Property<string>("DownloadDirectoryTarget")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("download_directory_target");
+
                     b.Property<bool>("Enabled")
                         .HasColumnType("INTEGER")
                         .HasColumnName("enabled");
@@ -553,14 +561,6 @@ namespace Cleanuparr.Persistence.Migrations.Data
                     b.Property<string>("Username")
                         .HasColumnType("TEXT")
                         .HasColumnName("username");
-
-                    b.Property<string>("DownloadDirectorySource")
-                        .HasColumnType("TEXT")
-                        .HasColumnName("download_directory_source");
-
-                    b.Property<string>("DownloadDirectoryTarget")
-                        .HasColumnType("TEXT")
-                        .HasColumnName("download_directory_target");
 
                     b.HasKey("Id")
                         .HasName("pk_download_clients");
@@ -1205,23 +1205,14 @@ namespace Cleanuparr.Persistence.Migrations.Data
                         .HasColumnType("TEXT")
                         .HasColumnName("id");
 
-                    b.Property<string>("CronExpression")
-                        .IsRequired()
-                        .HasColumnType("TEXT")
-                        .HasColumnName("cron_expression");
-
-                    b.Property<bool>("Enabled")
+                    b.Property<int?>("EmptyAfterXDays")
                         .HasColumnType("INTEGER")
-                        .HasColumnName("enabled");
+                        .HasColumnName("empty_after_x_days");
 
                     b.Property<string>("ExcludePatterns")
                         .IsRequired()
                         .HasColumnType("TEXT")
                         .HasColumnName("exclude_patterns");
-
-                    b.Property<int?>("EmptyAfterXDays")
-                        .HasColumnType("INTEGER")
-                        .HasColumnName("empty_after_x_days");
 
                     b.Property<int>("MaxOrphanedFilesToProcess")
                         .HasColumnType("INTEGER")
@@ -1230,10 +1221,6 @@ namespace Cleanuparr.Persistence.Migrations.Data
                     b.Property<int>("MinFileAgeMinutes")
                         .HasColumnType("INTEGER")
                         .HasColumnName("min_file_age_minutes");
-
-                    b.Property<bool>("UseAdvancedScheduling")
-                        .HasColumnType("INTEGER")
-                        .HasColumnName("use_advanced_scheduling");
 
                     b.HasKey("Id")
                         .HasName("pk_orphaned_files_cleaner_configs");
@@ -1968,18 +1955,6 @@ namespace Cleanuparr.Persistence.Migrations.Data
                     b.Navigation("DownloadClientConfig");
                 });
 
-            modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.OrphanedFilesCleaner.OrphanedFilesClientConfig", b =>
-                {
-                    b.HasOne("Cleanuparr.Persistence.Models.Configuration.DownloadClientConfig", "DownloadClientConfig")
-                        .WithMany()
-                        .HasForeignKey("DownloadClientConfigId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_orphaned_files_client_configs_download_clients_download_client_config_id");
-
-                    b.Navigation("DownloadClientConfig");
-                });
-
             modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.Notification.AppriseConfig", b =>
                 {
                     b.HasOne("Cleanuparr.Persistence.Models.Configuration.Notification.NotificationConfig", "NotificationConfig")
@@ -2062,6 +2037,18 @@ namespace Cleanuparr.Persistence.Migrations.Data
                         .HasConstraintName("fk_telegram_configs_notification_configs_notification_config_id");
 
                     b.Navigation("NotificationConfig");
+                });
+
+            modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.OrphanedFilesCleaner.OrphanedFilesClientConfig", b =>
+                {
+                    b.HasOne("Cleanuparr.Persistence.Models.Configuration.DownloadClientConfig", "DownloadClientConfig")
+                        .WithMany()
+                        .HasForeignKey("DownloadClientConfigId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_orphaned_files_client_configs_download_clients_download_client_config_id");
+
+                    b.Navigation("DownloadClientConfig");
                 });
 
             modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.QueueCleaner.SlowRule", b =>

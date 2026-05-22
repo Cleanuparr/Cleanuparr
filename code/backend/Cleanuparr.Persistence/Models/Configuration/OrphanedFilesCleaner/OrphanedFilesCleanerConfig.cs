@@ -3,17 +3,11 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Cleanuparr.Persistence.Models.Configuration.OrphanedFilesCleaner;
 
-public sealed record OrphanedFilesCleanerConfig : IJobConfig
+public sealed record OrphanedFilesCleanerConfig
 {
     [Key]
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     public Guid Id { get; set; } = Guid.NewGuid();
-
-    public bool Enabled { get; set; }
-
-    public string CronExpression { get; set; } = "0 0 * * * ?";
-
-    public bool UseAdvancedScheduling { get; set; }
 
     /// <summary>
     /// Glob patterns for file/folder names to skip (e.g. "*.nfo", ".DS_Store").
@@ -37,8 +31,4 @@ public sealed record OrphanedFilesCleanerConfig : IJobConfig
     /// When null, orphaned entries are kept indefinitely.
     /// </summary>
     public int? EmptyAfterXDays { get; set; }
-
-    public void Validate()
-    {
-    }
 }

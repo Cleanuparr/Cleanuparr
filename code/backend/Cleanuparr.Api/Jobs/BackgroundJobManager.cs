@@ -6,7 +6,6 @@ using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
 using Cleanuparr.Persistence.Models.Configuration.MalwareBlocker;
 using Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
 using Cleanuparr.Persistence.Models.Configuration.BlacklistSync;
-using Cleanuparr.Persistence.Models.Configuration.OrphanedFilesCleaner;
 using Cleanuparr.Persistence.Models.Configuration.Seeker;
 using SeekerJob = Cleanuparr.Infrastructure.Features.Jobs.Seeker;
 using Cleanuparr.Shared.Helpers;
@@ -103,9 +102,6 @@ public class BackgroundJobManager : IHostedService
         BlacklistSyncConfig blacklistSyncConfig = await dataContext.BlacklistSyncConfigs
             .AsNoTracking()
             .FirstAsync(cancellationToken);
-        OrphanedFilesCleanerConfig orphanedFilesCleanerConfig = await dataContext.OrphanedFilesCleanerConfigs
-            .AsNoTracking()
-            .FirstAsync(cancellationToken);
         SeekerConfig seekerConfig = await dataContext.SeekerConfigs
             .AsNoTracking()
             .FirstAsync(cancellationToken);
@@ -118,7 +114,6 @@ public class BackgroundJobManager : IHostedService
         await RegisterMalwareBlockerJob(malwareBlockerConfig, cancellationToken);
         await RegisterDownloadCleanerJob(downloadCleanerConfig, cancellationToken);
         await RegisterBlacklistSyncJob(blacklistSyncConfig, cancellationToken);
-        await RegisterOrphanedFilesCleanerJob(orphanedFilesCleanerConfig, cancellationToken);
         await RegisterSeekerJob(seekerConfig, cancellationToken);
         await RegisterCustomFormatScoreSyncJob(seekerConfig, anyUseCustomFormatScore, cancellationToken);
     }
@@ -186,19 +181,6 @@ public class BackgroundJobManager : IHostedService
         }
     }
     
-    /// <summary>
-    /// Registers the OrphanedFilesCleaner job and optionally adds triggers based on configuration.
-    /// </summary>
-    public async Task RegisterOrphanedFilesCleanerJob(OrphanedFilesCleanerConfig config, CancellationToken cancellationToken = default)
-    {
-        await AddJobWithoutTrigger<OrphanedFilesCleaner>(cancellationToken);
-
-        if (config.Enabled)
-        {
-            await AddTriggersForJob<OrphanedFilesCleaner>(config.CronExpression, cancellationToken);
-        }
-    }
-
     /// <summary>
     /// Registers the Seeker job with a trigger based on SearchInterval.
     /// The Seeker is always running.

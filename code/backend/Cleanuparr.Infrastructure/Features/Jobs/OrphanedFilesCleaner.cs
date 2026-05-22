@@ -1,10 +1,9 @@
 using System.IO.Enumeration;
 
-using Cleanuparr.Infrastructure.Events.Interfaces;
+using Cleanuparr.Domain.Entities;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
 using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Persistence;
-using Cleanuparr.Persistence.Models.Configuration;
 using Cleanuparr.Persistence.Models.Configuration.OrphanedFilesCleaner;
 using Cleanuparr.Shared.Helpers;
 using Microsoft.EntityFrameworkCore;
@@ -12,46 +11,55 @@ using Microsoft.Extensions.Logging;
 
 namespace Cleanuparr.Infrastructure.Features.Jobs;
 
-public sealed class OrphanedFilesCleaner : IHandler
+/// <summary>
+/// Scans configured directories for orphaned files (files no longer claimed by any
+/// torrent in any active download client) and moves them aside. Invoked from
+/// <see cref="DownloadCleaner"/> rather than running on its own schedule.
+/// </summary>
+public sealed class OrphanedFilesCleaner
 {
     private readonly ILogger<OrphanedFilesCleaner> _logger;
     private readonly DataContext _dataContext;
-    private readonly IDownloadServiceFactory _downloadServiceFactory;
-    private readonly IEventPublisher _eventPublisher;
     private readonly IDryRunInterceptor _dryRunInterceptor;
 
     public OrphanedFilesCleaner(
         ILogger<OrphanedFilesCleaner> logger,
         DataContext dataContext,
-        IDownloadServiceFactory downloadServiceFactory,
-        IEventPublisher eventPublisher,
         IDryRunInterceptor dryRunInterceptor
     )
     {
         _logger = logger;
         _dataContext = dataContext;
-        _downloadServiceFactory = downloadServiceFactory;
-        _eventPublisher = eventPublisher;
         _dryRunInterceptor = dryRunInterceptor;
     }
 
-    public async Task ExecuteAsync(CancellationToken cancellationToken = default)
+    /// <summary>
+    /// Runs an orphaned-files pass for every download client whose per-client config is enabled.
+    /// </summary>
+    /// <param name="downloadServices">
+    /// Download services that successfully logged in earlier in the run. Used to enumerate
+    /// claimed torrent paths across all clients.
+    /// </param>
+    /// <param name="failedClientIds">
+    /// Download client IDs that failed to login. Their scan directories are skipped to avoid
+    /// false positives caused by missing claimed paths.
+    /// </param>
+    public async Task ProcessAsync(
+        IReadOnlyList<IDownloadService> downloadServices,
+        HashSet<Guid> failedClientIds,
+        CancellationToken cancellationToken = default)
     {
-        await DataContext.Lock.WaitAsync(cancellationToken);
         OrphanedFilesCleanerConfig config;
         List<OrphanedFilesClientConfig> clientConfigs;
-        List<DownloadClientConfig> downloadClientConfigs;
 
+        await DataContext.Lock.WaitAsync(cancellationToken);
         try
         {
             config = await _dataContext.OrphanedFilesCleanerConfigs.AsNoTracking().FirstAsync(cancellationToken);
             clientConfigs = await _dataContext.OrphanedFilesClientConfigs
                 .AsNoTracking()
+                .Include(x => x.DownloadClientConfig)
                 .Where(x => x.Enabled && x.DownloadClientConfig.Enabled)
-                .ToListAsync(cancellationToken);
-            downloadClientConfigs = await _dataContext.DownloadClients
-                .AsNoTracking()
-                .Where(x => x.Enabled)
                 .ToListAsync(cancellationToken);
         }
         finally
@@ -59,33 +67,21 @@ public sealed class OrphanedFilesCleaner : IHandler
             DataContext.Lock.Release();
         }
 
-        if (!config.Enabled)
-        {
-            _logger.LogDebug("OrphanedFilesCleaner is disabled, skipping");
-            return;
-        }
-
         if (clientConfigs.Count == 0)
         {
-            _logger.LogWarning("No enabled per-client configurations found, skipping");
+            _logger.LogDebug("No enabled per-client orphaned-files configurations, skipping");
             return;
         }
 
         // Build set of all content paths claimed by active torrents across ALL download clients
         // (regardless of per-client orphaned config) to avoid false positives across cross-seeded clients.
-        // Clients that fail to load are tracked so their scan directories are skipped — preventing false positives
-        // when their claimed paths are unknown.
         var claimedPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var failedClientIds = new HashSet<Guid>();
 
-        foreach (DownloadClientConfig downloadClient in downloadClientConfigs)
+        foreach (IDownloadService downloadService in downloadServices)
         {
-            IDownloadService? downloadService = null;
+            var downloadClient = downloadService.ClientConfig;
             try
             {
-                downloadService = _downloadServiceFactory.GetDownloadService(downloadClient);
-                await downloadService.LoginAsync();
-
                 var torrents = await downloadService.GetAllTorrents();
 
                 foreach (var torrent in torrents)
@@ -134,10 +130,6 @@ public sealed class OrphanedFilesCleaner : IHandler
                 _logger.LogError(ex, "Failed to get torrents from client {name}", downloadClient.Name);
                 failedClientIds.Add(downloadClient.Id);
             }
-            finally
-            {
-                downloadService?.Dispose();
-            }
         }
 
         _logger.LogDebug("{count} claimed paths across all clients", claimedPaths.Count);
@@ -155,15 +147,15 @@ public sealed class OrphanedFilesCleaner : IHandler
 
             if (failedClientIds.Contains(clientConfig.DownloadClientConfigId))
             {
-                _logger.LogWarning("Skipping scan for client {id} — claimed paths could not be loaded, scan would produce false positives",
-                    clientConfig.DownloadClientConfigId);
+                _logger.LogWarning("Skipping scan for client {name} — claimed paths could not be loaded, scan would produce false positives",
+                    clientConfig.DownloadClientConfig.Name);
                 continue;
             }
 
             if (clientConfig.ScanDirectories.Count == 0)
             {
-                _logger.LogWarning("No scan directories configured for client {id}, skipping",
-                    clientConfig.DownloadClientConfigId);
+                _logger.LogWarning("No scan directories configured for client {name}, skipping",
+                    clientConfig.DownloadClientConfig.Name);
                 continue;
             }
 
@@ -175,8 +167,8 @@ public sealed class OrphanedFilesCleaner : IHandler
             if (normalizedOrphanedDir is null)
             {
                 _logger.LogInformation(
-                    "No orphaned directory configured for client {id} — orphaned entries will be logged but not moved",
-                    clientConfig.DownloadClientConfigId);
+                    "No orphaned directory configured for client {name} — orphaned entries will be logged but not moved",
+                    clientConfig.DownloadClientConfig.Name);
             }
 
             foreach (var scanDir in clientConfig.ScanDirectories)
@@ -203,7 +195,7 @@ public sealed class OrphanedFilesCleaner : IHandler
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Error scanning {dir}", scanDir);
+                    _logger.LogError(ex, "Error scanning {dir} for client {name}", scanDir, clientConfig.DownloadClientConfig.Name);
                 }
             }
 
@@ -223,7 +215,7 @@ public sealed class OrphanedFilesCleaner : IHandler
     {
         int moved = 0;
 
-        foreach (var entry in Directory.EnumerateFileSystemEntries(directory))
+        foreach (var entry in Directory.EnumerateFileSystemEntries(directory, "*", new EnumerationOptions { RecurseSubdirectories = false }))
         {
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -233,6 +225,14 @@ public sealed class OrphanedFilesCleaner : IHandler
             }
 
             string normalizedEntry = Path.GetFullPath(entry).TrimEnd(Path.DirectorySeparatorChar);
+
+            // Skip reparse points (symlinks/junctions) — moving across link boundaries is unpredictable
+            // and following them risks moving files outside the scan tree.
+            if ((File.GetAttributes(normalizedEntry) & FileAttributes.ReparsePoint) != 0)
+            {
+                _logger.LogWarning("skip | reparse point | {path}", normalizedEntry);
+                continue;
+            }
 
             if (normalizedOrphanedDir is not null &&
                 normalizedEntry.Equals(normalizedOrphanedDir, StringComparison.OrdinalIgnoreCase))
@@ -282,7 +282,7 @@ public sealed class OrphanedFilesCleaner : IHandler
 
             try
             {
-                MoveToOrphanedDirectory(normalizedEntry, clientConfig.OrphanedDirectory!);
+                MoveToOrphanedDirectory(normalizedEntry, normalizedOrphanedDir);
                 moved++;
             }
             catch (Exception ex)

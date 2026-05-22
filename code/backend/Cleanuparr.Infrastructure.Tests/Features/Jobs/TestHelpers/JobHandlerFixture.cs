@@ -5,6 +5,7 @@ using Cleanuparr.Infrastructure.Features.DownloadClient;
 using Cleanuparr.Infrastructure.Features.Files;
 using Cleanuparr.Infrastructure.Features.Jobs;
 using Cleanuparr.Infrastructure.Features.MalwareBlocker;
+using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Persistence;
 using MassTransit;
 using Microsoft.Extensions.Caching.Memory;
@@ -29,6 +30,7 @@ public class JobHandlerFixture : IDisposable
     public IEventPublisher EventPublisher { get; private set; }
     public IBlocklistProvider BlocklistProvider { get; private set; }
     public IHardLinkFileService HardLinkFileService { get; private set; }
+    public OrphanedFilesCleaner OrphanedFilesCleaner { get; private set; }
     public FakeTimeProvider TimeProvider { get; private set; }
 
     public JobHandlerFixture()
@@ -43,6 +45,10 @@ public class JobHandlerFixture : IDisposable
         EventPublisher = Substitute.For<IEventPublisher>();
         BlocklistProvider = Substitute.For<IBlocklistProvider>();
         HardLinkFileService = Substitute.For<IHardLinkFileService>();
+        OrphanedFilesCleaner = new OrphanedFilesCleaner(
+            Substitute.For<ILogger<OrphanedFilesCleaner>>(),
+            DataContext,
+            Substitute.For<IDryRunInterceptor>());
         TimeProvider = new FakeTimeProvider();
 
         // Setup default behaviors
@@ -119,6 +125,10 @@ public class JobHandlerFixture : IDisposable
         EventPublisher = Substitute.For<IEventPublisher>();
         BlocklistProvider = Substitute.For<IBlocklistProvider>();
         HardLinkFileService = Substitute.For<IHardLinkFileService>();
+        OrphanedFilesCleaner = new OrphanedFilesCleaner(
+            Substitute.For<ILogger<OrphanedFilesCleaner>>(),
+            DataContext,
+            Substitute.For<IDryRunInterceptor>());
         Cache.Clear();
         TimeProvider = new FakeTimeProvider();
 

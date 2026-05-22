@@ -24,6 +24,7 @@ public sealed class DownloadCleaner : GenericHandler
     private readonly HashSet<string> _downloadsProcessedByArrs = [];
     private readonly TimeProvider _timeProvider;
     private readonly IHardLinkFileService _hardLinkFileService;
+    private readonly OrphanedFilesCleaner _orphanedFilesCleaner;
 
     public DownloadCleaner(
         ILogger<DownloadCleaner> logger,
@@ -35,7 +36,8 @@ public sealed class DownloadCleaner : GenericHandler
         IDownloadServiceFactory downloadServiceFactory,
         IEventPublisher eventPublisher,
         TimeProvider timeProvider,
-        IHardLinkFileService hardLinkFileService
+        IHardLinkFileService hardLinkFileService,
+        OrphanedFilesCleaner orphanedFilesCleaner
     ) : base(
         logger, dataContext, cache, messageBus,
         arrClientFactory, arrArrQueueIterator, downloadServiceFactory, eventPublisher
@@ -43,6 +45,7 @@ public sealed class DownloadCleaner : GenericHandler
     {
         _timeProvider = timeProvider;
         _hardLinkFileService = hardLinkFileService;
+        _orphanedFilesCleaner = orphanedFilesCleaner;
     }
 
     protected override async Task ExecuteInternalAsync(CancellationToken cancellationToken = default)
@@ -61,6 +64,8 @@ public sealed class DownloadCleaner : GenericHandler
         ignoredDownloads.AddRange(config.IgnoredDownloads);
 
         var downloadServiceToDownloadsMap = new Dictionary<IDownloadService, List<ITorrentItemWrapper>>();
+        var loggedInServices = new List<IDownloadService>();
+        var failedClientIds = new HashSet<Guid>();
 
         foreach (var downloadService in downloadServices)
         {
@@ -70,6 +75,7 @@ public sealed class DownloadCleaner : GenericHandler
             try
             {
                 await downloadService.LoginAsync();
+                loggedInServices.Add(downloadService);
                 List<ITorrentItemWrapper> clientDownloads = await downloadService.GetSeedingDownloads();
 
                 if (clientDownloads.Count > 0)
@@ -80,76 +86,87 @@ public sealed class DownloadCleaner : GenericHandler
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to get seeding downloads from download client {clientName}", downloadService.ClientConfig.Name);
+                failedClientIds.Add(downloadService.ClientConfig.Id);
             }
-        }
-
-        if (downloadServiceToDownloadsMap.Count is 0)
-        {
-            _logger.LogInformation("No seeding downloads found");
-            return;
         }
 
         int totalDownloads = downloadServiceToDownloadsMap.Values.Sum(x => x.Count);
         _logger.LogTrace("Found {count} seeding downloads across {clientCount} clients", totalDownloads, downloadServiceToDownloadsMap.Count);
 
-        // wait for the downloads to appear in the arr queue
-        await Task.Delay(TimeSpan.FromSeconds(10), _timeProvider, cancellationToken);
-
-        await ProcessArrConfigAsync(ContextProvider.Get<ArrConfig>(nameof(InstanceType.Sonarr)), true);
-        await ProcessArrConfigAsync(ContextProvider.Get<ArrConfig>(nameof(InstanceType.Radarr)), true);
-        await ProcessArrConfigAsync(ContextProvider.Get<ArrConfig>(nameof(InstanceType.Lidarr)), true);
-        await ProcessArrConfigAsync(ContextProvider.Get<ArrConfig>(nameof(InstanceType.Readarr)), true);
-        await ProcessArrConfigAsync(ContextProvider.Get<ArrConfig>(nameof(InstanceType.Whisparr)), true);
-
-        foreach (var pair in downloadServiceToDownloadsMap)
+        if (downloadServiceToDownloadsMap.Count > 0)
         {
-            List<ITorrentItemWrapper> filteredDownloads = [];
+            // wait for the downloads to appear in the arr queue
+            await Task.Delay(TimeSpan.FromSeconds(10), _timeProvider, cancellationToken);
 
-            foreach (ITorrentItemWrapper download in pair.Value)
+            await ProcessArrConfigAsync(ContextProvider.Get<ArrConfig>(nameof(InstanceType.Sonarr)), true);
+            await ProcessArrConfigAsync(ContextProvider.Get<ArrConfig>(nameof(InstanceType.Radarr)), true);
+            await ProcessArrConfigAsync(ContextProvider.Get<ArrConfig>(nameof(InstanceType.Lidarr)), true);
+            await ProcessArrConfigAsync(ContextProvider.Get<ArrConfig>(nameof(InstanceType.Readarr)), true);
+            await ProcessArrConfigAsync(ContextProvider.Get<ArrConfig>(nameof(InstanceType.Whisparr)), true);
+
+            foreach (var pair in downloadServiceToDownloadsMap)
             {
-                if (download.IsIgnored(ignoredDownloads))
+                List<ITorrentItemWrapper> filteredDownloads = [];
+
+                foreach (ITorrentItemWrapper download in pair.Value)
                 {
-                    _logger.LogDebug("skip | download is ignored | {name}", download.Name);
-                    continue;
+                    if (download.IsIgnored(ignoredDownloads))
+                    {
+                        _logger.LogDebug("skip | download is ignored | {name}", download.Name);
+                        continue;
+                    }
+
+                    if (_downloadsProcessedByArrs.Any(x => x.Equals(download.Hash, StringComparison.InvariantCultureIgnoreCase)))
+                    {
+                        _logger.LogDebug("skip | download is used by an arr | {name}", download.Name);
+                        continue;
+                    }
+
+                    filteredDownloads.Add(download);
                 }
 
-                if (_downloadsProcessedByArrs.Any(x => x.Equals(download.Hash, StringComparison.InvariantCultureIgnoreCase)))
-                {
-                    _logger.LogDebug("skip | download is used by an arr | {name}", download.Name);
-                    continue;
-                }
-
-                filteredDownloads.Add(download);
+                downloadServiceToDownloadsMap[pair.Key] = filteredDownloads;
             }
 
-            downloadServiceToDownloadsMap[pair.Key] = filteredDownloads;
+            // Process each client with its own per-client config
+            foreach (var (downloadService, clientDownloads) in downloadServiceToDownloadsMap)
+            {
+                using var dcType = LogContext.PushProperty(LogProperties.DownloadClientType, downloadService.ClientConfig.Type.ToString());
+                using var dcName = LogContext.PushProperty(LogProperties.DownloadClientName, downloadService.ClientConfig.Name);
+
+                var seedingRules = await LoadSeedingRulesForClient(downloadService.ClientConfig);
+                var unlinkedConfig = await LoadUnlinkedConfigForClient(downloadService.ClientConfig.Id);
+
+                if (unlinkedConfig is { Enabled: true })
+                {
+                    if (unlinkedConfig.Categories.Count > 0)
+                    {
+                        await ChangeUnlinkedCategoriesForClientAsync(downloadService, clientDownloads, unlinkedConfig);
+                    }
+                    else
+                    {
+                        _logger.LogWarning("Unlinked config is enabled but no categories are configured for {name}, skipping", downloadService.ClientConfig.Name);
+                    }
+                }
+
+                if (seedingRules.Count > 0)
+                {
+                    await CleanDownloadsForClientAsync(downloadService, clientDownloads, seedingRules);
+                }
+            }
+        }
+        else
+        {
+            _logger.LogInformation("No seeding downloads found, skipping seeding-rule and unlinked-category processing");
         }
 
-        // Process each client with its own per-client config
-        foreach (var (downloadService, clientDownloads) in downloadServiceToDownloadsMap)
+        try
         {
-            using var dcType = LogContext.PushProperty(LogProperties.DownloadClientType, downloadService.ClientConfig.Type.ToString());
-            using var dcName = LogContext.PushProperty(LogProperties.DownloadClientName, downloadService.ClientConfig.Name);
-
-            var seedingRules = await LoadSeedingRulesForClient(downloadService.ClientConfig);
-            var unlinkedConfig = await LoadUnlinkedConfigForClient(downloadService.ClientConfig.Id);
-
-            if (unlinkedConfig is { Enabled: true })
-            {
-                if (unlinkedConfig.Categories.Count > 0)
-                {
-                    await ChangeUnlinkedCategoriesForClientAsync(downloadService, clientDownloads, unlinkedConfig);
-                }
-                else
-                {
-                    _logger.LogWarning("Unlinked config is enabled but no categories are configured for {name}, skipping", downloadService.ClientConfig.Name);
-                }
-            }
-
-            if (seedingRules.Count > 0)
-            {
-                await CleanDownloadsForClientAsync(downloadService, clientDownloads, seedingRules);
-            }
+            await _orphanedFilesCleaner.ProcessAsync(loggedInServices, failedClientIds, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to process orphaned files");
         }
 
         foreach (var downloadService in downloadServices)

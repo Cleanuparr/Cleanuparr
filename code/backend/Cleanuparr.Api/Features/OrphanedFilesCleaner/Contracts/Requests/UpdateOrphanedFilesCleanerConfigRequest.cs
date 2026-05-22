@@ -2,15 +2,6 @@ namespace Cleanuparr.Api.Features.OrphanedFilesCleaner.Contracts.Requests;
 
 public sealed record UpdateOrphanedFilesCleanerConfigRequest
 {
-    public bool Enabled { get; init; }
-
-    public string CronExpression { get; init; } = "0 0 * * * ?";
-
-    /// <summary>
-    /// Indicates whether to use the CronExpression directly or convert from a user-friendly schedule.
-    /// </summary>
-    public bool UseAdvancedScheduling { get; init; }
-
     /// <summary>
     /// Glob patterns for file/folder names to skip (e.g. "*.nfo", ".DS_Store").
     /// </summary>

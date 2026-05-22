@@ -10,6 +10,7 @@ using Cleanuparr.Infrastructure.Features.DownloadRemover;
 using Cleanuparr.Infrastructure.Features.DownloadRemover.Models;
 using Cleanuparr.Infrastructure.Features.Files;
 using Cleanuparr.Infrastructure.Features.ItemStriker;
+using Cleanuparr.Infrastructure.Features.Jobs;
 using Cleanuparr.Infrastructure.Features.MalwareBlocker;
 using Cleanuparr.Infrastructure.Features.Notifications;
 using Cleanuparr.Infrastructure.Hubs;
@@ -52,6 +53,7 @@ public class IntegrationTestFixture : IDisposable
     public IDownloadServiceFactory DownloadServiceFactory { get; private set; }
     public IBlocklistProvider BlocklistProvider { get; private set; }
     public IHardLinkFileService HardLinkFileService { get; private set; }
+    public OrphanedFilesCleaner OrphanedFilesCleaner { get; private set; } = null!;
     public INotificationPublisher NotificationPublisher { get; private set; }
     public IDryRunInterceptor DryRunInterceptor { get; private set; }
     public IEventPublisher EventPublisherInterface { get; private set; } = null!;
@@ -133,6 +135,11 @@ public class IntegrationTestFixture : IDisposable
             EventPublisher,
             EventsContext,
             DataContext);
+
+        OrphanedFilesCleaner = new OrphanedFilesCleaner(
+            Substitute.For<ILogger<OrphanedFilesCleaner>>(),
+            DataContext,
+            DryRunInterceptor);
     }
 
     /// <summary>
