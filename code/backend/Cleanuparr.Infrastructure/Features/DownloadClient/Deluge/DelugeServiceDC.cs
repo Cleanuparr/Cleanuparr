@@ -27,7 +27,7 @@ public partial class DelugeService
     }
 
     /// <inheritdoc/>
-    public override async Task<List<ITorrentItemWrapper>> GetAllTorrents()
+    public override async Task<List<ITorrentItemWrapper>> GetAllTorrentsLite()
     {
         var downloads = await _client.GetStatusForAllTorrents();
         if (downloads is null)

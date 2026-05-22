@@ -26,7 +26,7 @@ public partial class UTorrentService
     }
 
     /// <inheritdoc/>
-    public override async Task<List<ITorrentItemWrapper>> GetAllTorrents()
+    public override async Task<List<ITorrentItemWrapper>> GetAllTorrentsLite()
     {
         var torrents = await _client.GetTorrentsAsync();
 

@@ -82,7 +82,7 @@ public sealed class OrphanedFilesCleaner
             var downloadClient = downloadService.ClientConfig;
             try
             {
-                var torrents = await downloadService.GetAllTorrents();
+                var torrents = await downloadService.GetAllTorrentsLite();
 
                 foreach (var torrent in torrents)
                 {

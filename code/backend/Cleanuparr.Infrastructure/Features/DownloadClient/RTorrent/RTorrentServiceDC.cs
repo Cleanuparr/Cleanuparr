@@ -22,7 +22,7 @@ public partial class RTorrentService
     }
 
     /// <inheritdoc/>
-    public override async Task<List<ITorrentItemWrapper>> GetAllTorrents()
+    public override async Task<List<ITorrentItemWrapper>> GetAllTorrentsLite()
     {
         var downloads = await _client.GetAllTorrentsAsync();
 

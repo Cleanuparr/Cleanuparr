@@ -21,7 +21,7 @@ public partial class TransmissionService
     }
 
     /// <inheritdoc/>
-    public override async Task<List<ITorrentItemWrapper>> GetAllTorrents()
+    public override async Task<List<ITorrentItemWrapper>> GetAllTorrentsLite()
     {
         var result = await _client.TorrentGetAsync(Fields);
         return result?.Torrents

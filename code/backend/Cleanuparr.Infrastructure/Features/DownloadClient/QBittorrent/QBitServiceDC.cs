@@ -34,7 +34,7 @@ public partial class QBitService
     }
 
     /// <inheritdoc/>
-    public override async Task<List<ITorrentItemWrapper>> GetAllTorrents()
+    public override async Task<List<ITorrentItemWrapper>> GetAllTorrentsLite()
     {
         var torrentList = await _client.GetTorrentListAsync(new TorrentListQuery());
         if (torrentList is null)
@@ -42,7 +42,6 @@ public partial class QBitService
             return [];
         }
 
-        // Only SavePath and Name are needed — skip per-torrent tracker/properties calls
         return torrentList
             .Where(x => !string.IsNullOrEmpty(x.Hash))
             .Select(t => (ITorrentItemWrapper)new QBitItemWrapper(t, [], false))
