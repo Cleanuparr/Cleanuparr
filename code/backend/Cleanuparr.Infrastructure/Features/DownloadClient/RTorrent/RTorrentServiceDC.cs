@@ -101,10 +101,10 @@ public partial class RTorrentService
 
             foreach (var file in files)
             {
-                string filePath = string.Join(Path.DirectorySeparatorChar,
-                    Path.Combine(torrent.Info.Directory ?? torrent.Info.BasePath ?? "", file.Path).Split(['\\', '/']));
-
-                filePath = PathHelper.RemapPath(filePath, _downloadClientConfig.DownloadDirectorySource, _downloadClientConfig.DownloadDirectoryTarget);
+                string filePath = PathHelper.NormalizeAndRemap(
+                    Path.Combine(torrent.Info.Directory ?? torrent.Info.BasePath ?? "", file.Path),
+                    _downloadClientConfig.DownloadDirectorySource,
+                    _downloadClientConfig.DownloadDirectoryTarget);
 
                 if (file.Priority <= 0)
                 {

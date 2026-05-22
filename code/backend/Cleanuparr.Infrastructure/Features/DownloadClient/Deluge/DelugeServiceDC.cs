@@ -108,9 +108,10 @@ public partial class DelugeService
 
             ProcessFiles(contents?.Contents, (_, file) =>
             {
-                string filePath = string.Join(Path.DirectorySeparatorChar, Path.Combine(torrent.Info.DownloadLocation, file.Path).Split(['\\', '/']));
-
-                filePath = PathHelper.RemapPath(filePath, _downloadClientConfig.DownloadDirectorySource, _downloadClientConfig.DownloadDirectoryTarget);
+                string filePath = PathHelper.NormalizeAndRemap(
+                    Path.Combine(torrent.Info.DownloadLocation, file.Path),
+                    _downloadClientConfig.DownloadDirectorySource,
+                    _downloadClientConfig.DownloadDirectoryTarget);
 
                 if (file.Priority <= 0)
                 {

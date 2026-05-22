@@ -131,9 +131,10 @@ public partial class QBitService
                     break;
                 }
 
-                string filePath = string.Join(Path.DirectorySeparatorChar, Path.Combine(torrent.Info.SavePath, file.Name).Split(['\\', '/']));
-
-                filePath = PathHelper.RemapPath(filePath, _downloadClientConfig.DownloadDirectorySource, _downloadClientConfig.DownloadDirectoryTarget);
+                string filePath = PathHelper.NormalizeAndRemap(
+                    Path.Combine(torrent.Info.SavePath, file.Name),
+                    _downloadClientConfig.DownloadDirectorySource,
+                    _downloadClientConfig.DownloadDirectoryTarget);
 
                 if (file.Priority is TorrentContentPriority.Skip)
                 {

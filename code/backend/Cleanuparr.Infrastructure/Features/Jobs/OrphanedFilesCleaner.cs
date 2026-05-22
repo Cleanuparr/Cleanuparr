@@ -91,30 +91,18 @@ public sealed class OrphanedFilesCleaner
                         continue;
                     }
 
-                    string normalizedSavePath = string.Join(
-                        Path.DirectorySeparatorChar,
-                        torrent.SavePath.Split(['\\', '/'])
-                    );
-
-                    string remappedSavePath = PathHelper.RemapPath(
-                        normalizedSavePath,
+                    string remappedSavePath = PathHelper.NormalizeAndRemap(
+                        torrent.SavePath,
                         downloadClient.DownloadDirectorySource,
                         downloadClient.DownloadDirectoryTarget
                     ).TrimEnd(Path.DirectorySeparatorChar);
 
-                    // Claim the save_path itself — covers torrents where save_path IS the content directory
                     claimedPaths.Add(remappedSavePath);
 
-                    // Also claim save_path + name — covers torrents that create a named subfolder
                     if (!string.IsNullOrEmpty(torrent.Name))
                     {
-                        string rawPathWithName = string.Join(
-                            Path.DirectorySeparatorChar,
-                            Path.Combine(torrent.SavePath, torrent.Name).Split(['\\', '/'])
-                        );
-
-                        string contentPath = PathHelper.RemapPath(
-                            rawPathWithName,
+                        string contentPath = PathHelper.NormalizeAndRemap(
+                            Path.Combine(torrent.SavePath, torrent.Name),
                             downloadClient.DownloadDirectorySource,
                             downloadClient.DownloadDirectoryTarget
                         );

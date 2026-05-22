@@ -39,4 +39,14 @@ public static class PathHelper
 
         return filePath;
     }
+
+    /// <summary>
+    /// Normalizes path separators to the host's <see cref="Path.DirectorySeparatorChar"/> and then
+    /// applies <see cref="RemapPath"/>.
+    /// </summary>
+    public static string NormalizeAndRemap(string path, string? source, string? target)
+    {
+        string normalized = string.Join(Path.DirectorySeparatorChar, path.Split(['\\', '/']));
+        return RemapPath(normalized, source, target);
+    }
 }
