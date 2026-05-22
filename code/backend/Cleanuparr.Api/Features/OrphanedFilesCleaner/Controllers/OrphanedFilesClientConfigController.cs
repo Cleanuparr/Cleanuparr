@@ -87,7 +87,12 @@ public sealed class OrphanedFilesClientConfigController : ControllerBase
             existing.ScanDirectories = dto.ScanDirectories;
             existing.OrphanedDirectory = dto.OrphanedDirectory;
 
-            existing.Validate();
+            var siblings = await _dataContext.OrphanedFilesClientConfigs
+                .AsNoTracking()
+                .Where(c => c.DownloadClientConfigId != downloadClientId)
+                .ToListAsync();
+
+            existing.Validate(siblings);
 
             await _dataContext.SaveChangesAsync();
 
