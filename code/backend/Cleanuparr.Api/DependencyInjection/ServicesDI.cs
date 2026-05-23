@@ -47,7 +47,6 @@ public static class ServicesDI
             .AddScoped<BlacklistSynchronizer>()
             .AddScoped<MalwareBlocker>()
             .AddScoped<DownloadCleaner>()
-            .AddScoped<OrphanedFilesCleaner>()
             .AddScoped<Seeker>()
             .AddScoped<CustomFormatScoreSyncer>()
             .AddScoped<IQueueItemRemover, QueueItemRemover>()

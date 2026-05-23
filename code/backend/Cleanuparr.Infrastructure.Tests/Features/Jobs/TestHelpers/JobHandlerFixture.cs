@@ -30,7 +30,7 @@ public class JobHandlerFixture : IDisposable
     public IEventPublisher EventPublisher { get; private set; }
     public IBlocklistProvider BlocklistProvider { get; private set; }
     public IHardLinkFileService HardLinkFileService { get; private set; }
-    public OrphanedFilesCleaner OrphanedFilesCleaner { get; private set; }
+    public IDryRunInterceptor DryRunInterceptor { get; private set; }
     public FakeTimeProvider TimeProvider { get; private set; }
 
     public JobHandlerFixture()
@@ -45,10 +45,7 @@ public class JobHandlerFixture : IDisposable
         EventPublisher = Substitute.For<IEventPublisher>();
         BlocklistProvider = Substitute.For<IBlocklistProvider>();
         HardLinkFileService = Substitute.For<IHardLinkFileService>();
-        OrphanedFilesCleaner = new OrphanedFilesCleaner(
-            Substitute.For<ILogger<OrphanedFilesCleaner>>(),
-            DataContext,
-            Substitute.For<IDryRunInterceptor>());
+        DryRunInterceptor = Substitute.For<IDryRunInterceptor>();
         TimeProvider = new FakeTimeProvider();
 
         // Setup default behaviors
@@ -125,10 +122,7 @@ public class JobHandlerFixture : IDisposable
         EventPublisher = Substitute.For<IEventPublisher>();
         BlocklistProvider = Substitute.For<IBlocklistProvider>();
         HardLinkFileService = Substitute.For<IHardLinkFileService>();
-        OrphanedFilesCleaner = new OrphanedFilesCleaner(
-            Substitute.For<ILogger<OrphanedFilesCleaner>>(),
-            DataContext,
-            Substitute.For<IDryRunInterceptor>());
+        DryRunInterceptor = Substitute.For<IDryRunInterceptor>();
         Cache.Clear();
         TimeProvider = new FakeTimeProvider();
 
