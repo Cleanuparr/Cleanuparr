@@ -1,4 +1,5 @@
 import { TorrentPrivacyType } from './enums';
+import { OrphanedFilesClientConfig } from './orphaned-files-cleaner-config.model';
 
 export interface SeedingRule {
   id?: string;
@@ -30,6 +31,7 @@ export interface ClientCleanerConfig {
   downloadClientTypeName: string;
   seedingRules: SeedingRule[];
   unlinkedConfig: UnlinkedConfigModel | null;
+  orphanedFilesConfig: OrphanedFilesClientConfig | null;
 }
 
 export interface DownloadCleanerConfig {

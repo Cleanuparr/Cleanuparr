@@ -90,14 +90,6 @@ export const routes: Routes = [
             canDeactivate: [pendingChangesGuard],
           },
           {
-            path: 'orphaned-files-cleaner',
-            loadComponent: () =>
-              import(
-                '@features/settings/orphaned-files-cleaner/orphaned-files-cleaner.component'
-              ).then((m) => m.OrphanedFilesCleanerComponent),
-            canDeactivate: [pendingChangesGuard],
-          },
-          {
             path: 'seeker',
             loadComponent: () =>
               import(

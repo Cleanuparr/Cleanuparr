@@ -10,6 +10,7 @@ import {
   type SelectOption,
 } from '@ui';
 import { DownloadCleanerApi } from '@core/api/download-cleaner.api';
+import { OrphanedFilesCleanerApi } from '@core/api/orphaned-files-cleaner.api';
 import { ApiError } from '@core/interceptors/error.interceptor';
 import { ToastService } from '@core/services/toast.service';
 import { ConfirmService } from '@core/services/confirm.service';
@@ -17,11 +18,15 @@ import {
   DownloadCleanerConfig, SeedingRule, ClientCleanerConfig, UnlinkedConfigModel,
   createDefaultUnlinkedConfig,
 } from '@shared/models/download-cleaner-config.model';
+import {
+  OrphanedFilesCleanerConfig, OrphanedFilesClientConfig, createDefaultClientConfig,
+} from '@shared/models/orphaned-files-cleaner-config.model';
 import { ScheduleOptions } from '@shared/models/queue-cleaner-config.model';
 import { ScheduleUnit, TorrentPrivacyType, DownloadClientTypeName } from '@shared/models/enums';
 import { HasPendingChanges } from '@core/guards/pending-changes.guard';
 import { DeferredLoader } from '@shared/utils/loading.util';
 import { generateCronExpression, parseCronToJobSchedule } from '@shared/utils/schedule.util';
+import { forkJoin } from 'rxjs';
 
 const SCHEDULE_UNIT_OPTIONS: SelectOption[] = [
   { label: 'Seconds', value: ScheduleUnit.Seconds },
@@ -52,6 +57,7 @@ const PRIVACY_TYPE_OPTIONS: SelectOption[] = [
 })
 export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
   private readonly api = inject(DownloadCleanerApi);
+  private readonly ofcApi = inject(OrphanedFilesCleanerApi);
   private readonly toast = inject(ToastService);
   private readonly confirm = inject(ConfirmService);
   private readonly chipInputs = viewChildren(ChipInputComponent);
@@ -62,6 +68,8 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
   );
 
   private readonly savedSnapshot = signal('');
+  private readonly ofcSavedSnapshot = signal('');
+  private readonly ofcClientSnapshots = signal<Record<string, string>>({});
 
   readonly scheduleUnitOptions = SCHEDULE_UNIT_OPTIONS;
   readonly privacyTypeOptions = PRIVACY_TYPE_OPTIONS;
@@ -71,6 +79,10 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
   readonly saved = signal(false);
   readonly unlinkedSaving = signal(false);
   readonly unlinkedSaved = signal(false);
+  readonly ofcSaving = signal(false);
+  readonly ofcSaved = signal(false);
+  readonly ofcClientSaving = signal(false);
+  readonly ofcClientSaved = signal(false);
   readonly rulesReloading = signal(false);
   private readonly unlinkedSnapshots = signal<Record<string, string>>({});
 
@@ -113,8 +125,15 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
     return typeName === DownloadClientTypeName.qBittorrent || typeName === DownloadClientTypeName.Transmission;
   });
 
+  // Orphaned files global settings
+  readonly ofcExcludePatterns = signal<string[]>([]);
+  readonly ofcMinFileAgeMinutes = signal<number | null>(0);
+  readonly ofcMaxOrphanedFilesToProcess = signal<number | null>(50);
+  readonly ofcEmptyAfterXDays = signal<number | null>(null);
+
   readonly seedingRulesExpanded = signal(false);
   readonly unlinkedExpanded = signal(false);
+  readonly ofcExpanded = signal(false);
 
   // Seeding rule modal
   readonly ruleModalVisible = signal(false);
@@ -194,6 +213,19 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
     return saved !== JSON.stringify(client.unlinkedConfig);
   });
 
+  readonly ofcDirty = computed(() => {
+    const saved = this.ofcSavedSnapshot();
+    return saved !== '' && saved !== this.buildOfcSnapshot();
+  });
+
+  readonly ofcClientDirty = computed(() => {
+    const client = this.selectedClient();
+    if (!client) return false;
+    const saved = this.ofcClientSnapshots()[client.downloadClientId];
+    if (!saved) return false;
+    return saved !== JSON.stringify(client.orphanedFilesConfig);
+  });
+
   readonly hasGlobalErrors = computed(() => {
     if (this.scheduleEveryError()) return true;
     if (this.cronError()) return true;
@@ -209,36 +241,57 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
 
   private loadConfig(): void {
     this.loader.start();
-    this.api.getConfig().subscribe({
-      next: (config) => {
-        this.config = config;
-        this.enabled.set(config.enabled);
-        this.useAdvancedScheduling.set(config.useAdvancedScheduling);
-        this.cronExpression.set(config.cronExpression);
-        const parsed = parseCronToJobSchedule(config.cronExpression);
+    forkJoin({ dc: this.api.getConfig(), ofc: this.ofcApi.getConfig() }).subscribe({
+      next: ({ dc, ofc }) => {
+        this.config = dc;
+        this.enabled.set(dc.enabled);
+        this.useAdvancedScheduling.set(dc.useAdvancedScheduling);
+        this.cronExpression.set(dc.cronExpression);
+        const parsed = parseCronToJobSchedule(dc.cronExpression);
         if (parsed) {
           this.scheduleEvery.set(parsed.every);
           this.scheduleUnit.set(parsed.type);
         }
-        this.ignoredDownloads.set(config.ignoredDownloads ?? []);
-        this.clientConfigs.set((config.clients ?? []).map(c => ({
+        this.ignoredDownloads.set(dc.ignoredDownloads ?? []);
+
+        const ofcClientMap = new Map(
+          (ofc.clients ?? []).map(c => [c.downloadClientId, c.clientConfig ?? createDefaultClientConfig()])
+        );
+
+        this.clientConfigs.set((dc.clients ?? []).map(c => ({
           ...c,
           seedingRules: c.seedingRules ?? [],
           unlinkedConfig: c.unlinkedConfig ?? createDefaultUnlinkedConfig(),
+          orphanedFilesConfig: ofcClientMap.get(c.downloadClientId) ?? createDefaultClientConfig(),
         })));
-        if (config.clients?.length > 0) {
-          this.selectedClientId.set(config.clients[0].downloadClientId);
+
+        if (dc.clients?.length > 0) {
+          this.selectedClientId.set(dc.clients[0].downloadClientId);
         }
-        // Save unlinked config snapshots per client
-        const snapshots: Record<string, string> = {};
-        for (const c of config.clients ?? []) {
-          snapshots[c.downloadClientId] = JSON.stringify(c.unlinkedConfig ?? createDefaultUnlinkedConfig());
+
+        const unlinkedSnapshots: Record<string, string> = {};
+        for (const c of dc.clients ?? []) {
+          unlinkedSnapshots[c.downloadClientId] = JSON.stringify(c.unlinkedConfig ?? createDefaultUnlinkedConfig());
         }
-        this.unlinkedSnapshots.set(snapshots);
+        this.unlinkedSnapshots.set(unlinkedSnapshots);
+
+        const ofcSnapshots: Record<string, string> = {};
+        for (const c of dc.clients ?? []) {
+          ofcSnapshots[c.downloadClientId] = JSON.stringify(ofcClientMap.get(c.downloadClientId) ?? createDefaultClientConfig());
+        }
+        this.ofcClientSnapshots.set(ofcSnapshots);
+
+        this.ofcExcludePatterns.set(ofc.excludePatterns ?? []);
+        this.ofcMinFileAgeMinutes.set(ofc.minFileAgeMinutes ?? 0);
+        this.ofcMaxOrphanedFilesToProcess.set(ofc.maxOrphanedFilesToProcess ?? 50);
+        this.ofcEmptyAfterXDays.set(ofc.emptyAfterXDays ?? null);
 
         this.loader.stop();
         // Defer snapshot so constructor effects (e.g. schedule unit clamping) settle first
-        queueMicrotask(() => this.savedSnapshot.set(this.buildSnapshot()));
+        queueMicrotask(() => {
+          this.savedSnapshot.set(this.buildSnapshot());
+          this.ofcSavedSnapshot.set(this.buildOfcSnapshot());
+        });
       },
       error: () => {
         this.toast.error('Failed to load download cleaner settings');
@@ -375,10 +428,10 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
   }
 
   async onClientChange(newClientId: unknown): Promise<void> {
-    if (this.unlinkedDirty()) {
+    if (this.unlinkedDirty() || this.ofcClientDirty()) {
       const confirmed = await this.confirm.confirm({
         title: 'Unsaved Changes',
-        message: 'You have unsaved unlinked config changes. Discard them?',
+        message: 'You have unsaved changes for this client. Discard them?',
         confirmLabel: 'Discard',
         destructive: true,
       });
@@ -467,6 +520,73 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
     });
   }
 
+  // --- Orphaned files config ---
+
+  saveOfcConfig(): void {
+    const config: Partial<OrphanedFilesCleanerConfig> = {
+      excludePatterns: this.ofcExcludePatterns(),
+      minFileAgeMinutes: this.ofcMinFileAgeMinutes() ?? 0,
+      maxOrphanedFilesToProcess: this.ofcMaxOrphanedFilesToProcess() ?? 50,
+      emptyAfterXDays: this.ofcEmptyAfterXDays() ?? undefined,
+    };
+    this.ofcSaving.set(true);
+    this.ofcApi.updateConfig(config).subscribe({
+      next: () => {
+        this.toast.success('Orphaned files settings saved');
+        this.ofcSaving.set(false);
+        this.ofcSaved.set(true);
+        setTimeout(() => this.ofcSaved.set(false), 1500);
+        this.ofcSavedSnapshot.set(this.buildOfcSnapshot());
+      },
+      error: (err: ApiError) => {
+        this.toast.error(err.statusCode === 400 ? err.message : 'Failed to save orphaned files settings');
+        this.ofcSaving.set(false);
+      },
+    });
+  }
+
+  updateOfcClientField<K extends keyof OrphanedFilesClientConfig>(field: K, value: OrphanedFilesClientConfig[K]): void {
+    const id = this.selectedClientId();
+    if (!id) return;
+    this.clientConfigs.update(configs =>
+      configs.map(c => c.downloadClientId === id
+        ? { ...c, orphanedFilesConfig: { ...(c.orphanedFilesConfig ?? createDefaultClientConfig()), [field]: value } }
+        : c)
+    );
+  }
+
+  saveOfcClientConfig(): void {
+    const clientId = this.selectedClientId();
+    const client = this.selectedClient();
+    if (!clientId || !client?.orphanedFilesConfig) return;
+    this.ofcClientSaving.set(true);
+    this.ofcApi.updateClientConfig(clientId, client.orphanedFilesConfig).subscribe({
+      next: () => {
+        this.toast.success('Orphaned files client settings saved');
+        this.ofcClientSaving.set(false);
+        this.ofcClientSaved.set(true);
+        setTimeout(() => this.ofcClientSaved.set(false), 1500);
+        this.ofcClientSnapshots.update(s => ({
+          ...s,
+          [clientId]: JSON.stringify(client.orphanedFilesConfig),
+        }));
+      },
+      error: (err: ApiError) => {
+        this.toast.error(err.statusCode === 400 ? err.message : 'Failed to save orphaned files client settings');
+        this.ofcClientSaving.set(false);
+      },
+    });
+  }
+
+  private buildOfcSnapshot(): string {
+    return JSON.stringify({
+      excludePatterns: this.ofcExcludePatterns(),
+      minFileAgeMinutes: this.ofcMinFileAgeMinutes(),
+      maxOrphanedFilesToProcess: this.ofcMaxOrphanedFilesToProcess(),
+      emptyAfterXDays: this.ofcEmptyAfterXDays(),
+    });
+  }
+
   private buildSnapshot(): string {
     return JSON.stringify({
       enabled: this.enabled(),
@@ -484,6 +604,6 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
   });
 
   hasPendingChanges(): boolean {
-    return this.dirty() || this.unlinkedDirty();
+    return this.dirty() || this.unlinkedDirty() || this.ofcDirty() || this.ofcClientDirty();
   }
 }
