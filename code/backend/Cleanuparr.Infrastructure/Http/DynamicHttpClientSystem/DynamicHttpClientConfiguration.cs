@@ -74,6 +74,17 @@ public class DynamicHttpClientConfiguration : IConfigureNamedOptions<HttpClientF
                 };
                 break;
 
+            case HttpClientType.UTorrent:
+                // uTorrent's WebUI requires the GUID cookie+token pair set manually by UTorrentHttpService
+                // UseCookies=false prevents .NET's CookieContainer from injecting a competing Cookie header.
+                builder.PrimaryHandler = new HttpClientHandler
+                {
+                    UseCookies = false,
+                    ServerCertificateCustomValidationCallback = (sender, certificate, chain, policy) =>
+                        certValidationService.ShouldByPassValidationError(config.CertificateValidationType, sender, certificate, chain, policy),
+                };
+                break;
+
             case HttpClientType.Default:
             default:
                 // Use default handler with certificate validation

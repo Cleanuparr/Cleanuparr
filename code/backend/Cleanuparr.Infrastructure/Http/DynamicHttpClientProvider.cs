@@ -58,6 +58,7 @@ public class DynamicHttpClientProvider : IDynamicHttpClientProvider
         var clientType = downloadClientConfig.TypeName switch
         {
             DownloadClientTypeName.Deluge => HttpClientType.Deluge,
+            DownloadClientTypeName.uTorrent => HttpClientType.UTorrent,
             _ => HttpClientType.WithRetry
         };
 

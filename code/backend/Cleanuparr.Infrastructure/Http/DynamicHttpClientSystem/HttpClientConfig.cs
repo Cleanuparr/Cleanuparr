@@ -36,5 +36,6 @@ public enum HttpClientType
 {
     Default,
     WithRetry,
-    Deluge
+    Deluge,
+    UTorrent,
 } 
