@@ -1,7 +1,13 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { DownloadCleanerConfig, SeedingRule, UnlinkedConfigModel } from '@shared/models/download-cleaner-config.model';
+import {
+  DownloadCleanerConfig,
+  SeedingRule,
+  UnlinkedConfigModel,
+  OrphanedFilesCleanerConfig,
+  OrphanedFilesClientConfig,
+} from '@shared/models/download-cleaner-config.model';
 
 @Injectable({ providedIn: 'root' })
 export class DownloadCleanerApi {
@@ -43,5 +49,22 @@ export class DownloadCleanerApi {
 
   updateUnlinkedConfig(clientId: string, config: Partial<UnlinkedConfigModel>): Observable<void> {
     return this.http.put<void>(`/api/unlinked-config/${clientId}`, config);
+  }
+
+  // Orphaned files config
+  getOrphanedFilesConfig(): Observable<OrphanedFilesCleanerConfig> {
+    return this.http.get<OrphanedFilesCleanerConfig>('/api/configuration/orphaned_files_cleaner');
+  }
+
+  updateOrphanedFilesConfig(config: Partial<OrphanedFilesCleanerConfig>): Observable<void> {
+    return this.http.put<void>('/api/configuration/orphaned_files_cleaner', config);
+  }
+
+  getOrphanedFilesClientConfig(clientId: string): Observable<OrphanedFilesClientConfig | null> {
+    return this.http.get<OrphanedFilesClientConfig | null>(`/api/configuration/orphaned_files_cleaner/clients/${clientId}`);
+  }
+
+  updateOrphanedFilesClientConfig(clientId: string, config: Partial<OrphanedFilesClientConfig>): Observable<OrphanedFilesClientConfig> {
+    return this.http.put<OrphanedFilesClientConfig>(`/api/configuration/orphaned_files_cleaner/clients/${clientId}`, config);
   }
 }

@@ -1,5 +1,4 @@
 import { TorrentPrivacyType } from './enums';
-import { OrphanedFilesClientConfig } from './orphaned-files-cleaner-config.model';
 
 export interface SeedingRule {
   id?: string;
@@ -22,6 +21,26 @@ export interface UnlinkedConfigModel {
   useTag: boolean;
   ignoredRootDirs: string[];
   categories: string[];
+}
+
+export interface OrphanedFilesClientConfig {
+  enabled: boolean;
+  scanDirectories: string[];
+  orphanedDirectory?: string;
+}
+
+export interface ClientOrphanedFilesConfig {
+  downloadClientId: string;
+  downloadClientName: string;
+  downloadClientEnabled: boolean;
+  clientConfig: OrphanedFilesClientConfig | null;
+}
+
+export interface OrphanedFilesCleanerConfig {
+  excludePatterns: string[];
+  minFileAgeMinutes: number;
+  emptyAfterXDays?: number;
+  clients: ClientOrphanedFilesConfig[];
 }
 
 export interface ClientCleanerConfig {
@@ -65,5 +84,12 @@ export function createDefaultUnlinkedConfig(): UnlinkedConfigModel {
     useTag: false,
     ignoredRootDirs: [],
     categories: [],
+  };
+}
+
+export function createDefaultOrphanedFilesClientConfig(): OrphanedFilesClientConfig {
+  return {
+    enabled: false,
+    scanDirectories: [],
   };
 }

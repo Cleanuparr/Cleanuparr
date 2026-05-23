@@ -10,17 +10,14 @@ import {
   type SelectOption,
 } from '@ui';
 import { DownloadCleanerApi } from '@core/api/download-cleaner.api';
-import { OrphanedFilesCleanerApi } from '@core/api/orphaned-files-cleaner.api';
 import { ApiError } from '@core/interceptors/error.interceptor';
 import { ToastService } from '@core/services/toast.service';
 import { ConfirmService } from '@core/services/confirm.service';
 import {
   DownloadCleanerConfig, SeedingRule, ClientCleanerConfig, UnlinkedConfigModel,
-  createDefaultUnlinkedConfig,
+  OrphanedFilesCleanerConfig, OrphanedFilesClientConfig,
+  createDefaultUnlinkedConfig, createDefaultOrphanedFilesClientConfig,
 } from '@shared/models/download-cleaner-config.model';
-import {
-  OrphanedFilesCleanerConfig, OrphanedFilesClientConfig, createDefaultClientConfig,
-} from '@shared/models/orphaned-files-cleaner-config.model';
 import { ScheduleOptions } from '@shared/models/queue-cleaner-config.model';
 import { ScheduleUnit, TorrentPrivacyType, DownloadClientTypeName } from '@shared/models/enums';
 import { HasPendingChanges } from '@core/guards/pending-changes.guard';
@@ -57,7 +54,6 @@ const PRIVACY_TYPE_OPTIONS: SelectOption[] = [
 })
 export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
   private readonly api = inject(DownloadCleanerApi);
-  private readonly ofcApi = inject(OrphanedFilesCleanerApi);
   private readonly toast = inject(ToastService);
   private readonly confirm = inject(ConfirmService);
   private readonly chipInputs = viewChildren(ChipInputComponent);
@@ -240,7 +236,7 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
 
   private loadConfig(): void {
     this.loader.start();
-    forkJoin({ dc: this.api.getConfig(), ofc: this.ofcApi.getConfig() }).subscribe({
+    forkJoin({ dc: this.api.getConfig(), ofc: this.api.getOrphanedFilesConfig() }).subscribe({
       next: ({ dc, ofc }) => {
         this.config = dc;
         this.enabled.set(dc.enabled);
@@ -254,14 +250,14 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
         this.ignoredDownloads.set(dc.ignoredDownloads ?? []);
 
         const ofcClientMap = new Map(
-          (ofc.clients ?? []).map(c => [c.downloadClientId, c.clientConfig ?? createDefaultClientConfig()])
+          (ofc.clients ?? []).map(c => [c.downloadClientId, c.clientConfig ?? createDefaultOrphanedFilesClientConfig()])
         );
 
         this.clientConfigs.set((dc.clients ?? []).map(c => ({
           ...c,
           seedingRules: c.seedingRules ?? [],
           unlinkedConfig: c.unlinkedConfig ?? createDefaultUnlinkedConfig(),
-          orphanedFilesConfig: ofcClientMap.get(c.downloadClientId) ?? createDefaultClientConfig(),
+          orphanedFilesConfig: ofcClientMap.get(c.downloadClientId) ?? createDefaultOrphanedFilesClientConfig(),
         })));
 
         if (dc.clients?.length > 0) {
@@ -276,7 +272,7 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
 
         const ofcSnapshots: Record<string, string> = {};
         for (const c of dc.clients ?? []) {
-          ofcSnapshots[c.downloadClientId] = JSON.stringify(ofcClientMap.get(c.downloadClientId) ?? createDefaultClientConfig());
+          ofcSnapshots[c.downloadClientId] = JSON.stringify(ofcClientMap.get(c.downloadClientId) ?? createDefaultOrphanedFilesClientConfig());
         }
         this.ofcClientSnapshots.set(ofcSnapshots);
 
@@ -527,7 +523,7 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
       emptyAfterXDays: this.ofcEmptyAfterXDays() ?? undefined,
     };
     this.ofcSaving.set(true);
-    this.ofcApi.updateConfig(config).subscribe({
+    this.api.updateOrphanedFilesConfig(config).subscribe({
       next: () => {
         this.toast.success('Orphaned files settings saved');
         this.ofcSaving.set(false);
@@ -547,7 +543,7 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
     if (!id) return;
     this.clientConfigs.update(configs =>
       configs.map(c => c.downloadClientId === id
-        ? { ...c, orphanedFilesConfig: { ...(c.orphanedFilesConfig ?? createDefaultClientConfig()), [field]: value } }
+        ? { ...c, orphanedFilesConfig: { ...(c.orphanedFilesConfig ?? createDefaultOrphanedFilesClientConfig()), [field]: value } }
         : c)
     );
   }
@@ -557,7 +553,7 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
     const client = this.selectedClient();
     if (!clientId || !client?.orphanedFilesConfig) return;
     this.ofcClientSaving.set(true);
-    this.ofcApi.updateClientConfig(clientId, client.orphanedFilesConfig).subscribe({
+    this.api.updateOrphanedFilesClientConfig(clientId, client.orphanedFilesConfig).subscribe({
       next: () => {
         this.toast.success('Orphaned files client settings saved');
         this.ofcClientSaving.set(false);
