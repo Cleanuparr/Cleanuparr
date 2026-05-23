@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Cleanuparr.Persistence.Migrations.Data
 {
     [DbContext(typeof(DataContext))]
-    [Migration("20260523003309_AddOrphanedFilesCleanup")]
+    [Migration("20260523153147_AddOrphanedFilesCleanup")]
     partial class AddOrphanedFilesCleanup
     {
         /// <inheritdoc />
