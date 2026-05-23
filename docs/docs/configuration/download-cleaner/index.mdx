@@ -208,24 +208,33 @@ When enabled, the source files will be deleted from disk when the download is re
 
 <div className={styles.section}>
 
-<SectionTitle>Orphaned Files Settings</SectionTitle>
+<SectionTitle>Orphaned Files</SectionTitle>
 
 <p className={styles.sectionDescription}>
-  Orphaned files scanning runs as part of the Download Cleaner job. Global settings apply to all clients; per-client settings are configured in the <strong>Orphaned Files</strong> accordion under each download client.
+  The Orphaned Files feature scans configured directories for files and folders no longer tracked by any active torrent and moves them to a dedicated orphaned directory. It runs as part of the Download Cleaner job and shares its schedule. Supported for all download clients: qBittorrent, Transmission, Deluge, rTorrent, and uTorrent.
+</p>
+
+<p className={styles.sectionDescription}>
+  Global settings (filters and purge policy) apply across all clients. Per-client settings (scan paths and orphaned directory) are configured in the <strong>Orphaned Files</strong> accordion inside the per-client section.
 </p>
 
 <ConfigSection
   title="Exclude Patterns"
 >
 
-Glob patterns for file or folder names that should never be considered orphaned. Matching is case-insensitive and applies to the entry name only (not the full path).
+Glob patterns for file or folder names that should never be considered orphaned, even if no active torrent claims them. Matching is case-insensitive and applied to the entry name only — not the full path.
 
 **Examples:**
 ```
 *.nfo
 *.txt
 .DS_Store
+Thumbs.db
 ```
+
+<Note>
+Use `*` as a wildcard for any characters. For example, `*.nfo` matches any file ending in `.nfo` regardless of its location inside the scan directory.
+</Note>
 
 </ConfigSection>
 
@@ -233,7 +242,11 @@ Glob patterns for file or folder names that should never be considered orphaned.
   title="Min File Age"
 >
 
-Minimum age in minutes a file or folder must have before it can be considered orphaned. Protects files that are actively being downloaded or just finished. Set to `0` to disable (default).
+Minimum age in minutes a file or folder must have before it can be considered orphaned. This protects files that are actively being downloaded or have just finished — they may not yet be registered as a torrent save path.
+
+Set to `0` to disable age filtering (default).
+
+**Example:** Set to `60` to skip any entry modified less than an hour ago.
 
 </ConfigSection>
 
@@ -243,8 +256,10 @@ Minimum age in minutes a file or folder must have before it can be considered or
 
 Number of days after which entries in the Orphaned Directory are permanently deleted. Leave empty to keep orphaned files indefinitely.
 
+**Example:** Set to `30` to automatically purge orphaned files older than 30 days.
+
 <Warning>
-Files deleted by this option are permanently removed from disk.
+Files deleted by this option are permanently removed from disk. Review the contents of your Orphaned Directory before enabling this setting.
 </Warning>
 
 </ConfigSection>
@@ -253,7 +268,7 @@ Files deleted by this option are permanently removed from disk.
   title="Enabled (per client)"
 >
 
-Enable orphaned files scanning for a specific download client. Configure under the **Orphaned Files** accordion in the per-client section.
+Enable orphaned files scanning for this specific download client. The download client must also be enabled in Download Client settings.
 
 </ConfigSection>
 
@@ -261,7 +276,21 @@ Enable orphaned files scanning for a specific download client. Configure under t
   title="Scan Directories"
 >
 
-Absolute paths to scan for orphaned files on this download client. Each top-level entry is checked against active torrent save paths. Scan directories must not overlap with those of other clients.
+Absolute paths to scan for orphaned files for this download client. Each top-level entry inside these directories is checked against the save paths of all active torrents across all enabled clients. If no active torrent claims an entry, it is considered orphaned.
+
+**Examples:**
+```
+/data/downloads/completed
+/data/downloads/cross-seed
+```
+
+<Important>
+Each path must be accessible by Cleanuparr. If running in Docker, make sure to mount the directories accordingly.
+</Important>
+
+<Important>
+Scan directories must not overlap (be equal to, a parent of, or a subdirectory of) the scan directories or orphaned directory of any other download client. Cleanuparr enforces this at save time to prevent cross-client false positives.
+</Important>
 
 </ConfigSection>
 
@@ -269,7 +298,16 @@ Absolute paths to scan for orphaned files on this download client. Each top-leve
   title="Orphaned Directory"
 >
 
-Where orphaned files are moved for this download client. Leave empty to log orphaned entries without moving them.
+The directory where orphaned files and folders are moved for this download client. Leave empty to log orphaned entries without moving them — useful for a dry-run style audit before committing to actual moves.
+
+**Example:**
+```
+/data/downloads/orphaned
+```
+
+<Note>
+The orphaned directory itself is never scanned for orphans. If the destination already contains an entry with the same name, a timestamp suffix is appended automatically to avoid collisions.
+</Note>
 
 </ConfigSection>
 
