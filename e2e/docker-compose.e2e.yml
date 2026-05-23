@@ -57,7 +57,7 @@ services:
       TORRENTING_PORT: "6881"
     volumes:
       - ./test-data/qbittorrent-config:/config
-      - ./test-data/downloads:/e2e-downloads
+      - ./test-data/downloads/qbittorrent:/downloads
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O- http://localhost:8090/api/v2/app/version > /dev/null 2>&1 || exit 1"]
       interval: 5s
@@ -77,7 +77,7 @@ services:
       PEERPORT: "51413"
     volumes:
       - ./test-data/transmission-config:/config
-      - ./test-data/downloads:/e2e-downloads
+      - ./test-data/downloads/transmission:/downloads
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O- http://localhost:9091/transmission/rpc > /dev/null 2>&1 ; [ $$? -eq 8 ] || [ $$? -eq 0 ]"]
       interval: 5s
@@ -95,7 +95,7 @@ services:
       DELUGE_LOGLEVEL: "info"
     volumes:
       - ./test-data/deluge-config:/config
-      - ./test-data/downloads:/e2e-downloads
+      - ./test-data/downloads/deluge:/downloads
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O- http://localhost:8112 > /dev/null 2>&1 || exit 1"]
       interval: 5s
@@ -111,13 +111,13 @@ services:
     environment:
       UID: "1000"
       GID: "1000"
-      dir_root: "/e2e-downloads/utorrent"
-      dir_active: "/e2e-downloads/utorrent"
-      dir_completed: "/e2e-downloads/utorrent"
-      dir_download: "/e2e-downloads/utorrent"
+      dir_root: "/downloads"
+      dir_active: "/downloads"
+      dir_completed: "/downloads"
+      dir_download: "/downloads"
     volumes:
       - ./test-data/utorrent-config:/data
-      - ./test-data/downloads:/e2e-downloads
+      - ./test-data/downloads/utorrent:/downloads
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O- http://localhost:8080/gui/ > /dev/null 2>&1 || exit 1"]
       interval: 5s
@@ -135,7 +135,7 @@ services:
       TZ: "UTC"
     volumes:
       - ./test-data/rutorrent-config:/config
-      - ./test-data/downloads:/e2e-downloads
+      - ./test-data/downloads/rtorrent:/downloads
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O- http://localhost > /dev/null 2>&1 || exit 1"]
       interval: 5s

@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { existsSync, mkdirSync, readdirSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import {
   loginAndGetToken,
@@ -66,17 +66,17 @@ async function waitForOrphanMove(dir: string, expectedName: string, timeoutMs = 
  * DownloadDirectorySource/Target remapping.
  */
 
-// Host-side path corresponding to `/e2e-downloads` inside containers.
 const HOST_DOWNLOADS = resolve(__dirname, '..', 'test-data', 'downloads');
-// In-container path used by Cleanuparr scans and by clients' savePath.
-const CONTAINER_DOWNLOADS = '/e2e-downloads';
+const CLIENT_DOWNLOADS = '/downloads';
+const APP_DOWNLOADS = '/e2e-downloads';
 
 function clientDirs(slug: string) {
   return {
     hostScanDir: join(HOST_DOWNLOADS, slug),
     hostOrphanedDir: join(HOST_DOWNLOADS, slug, 'orphaned'),
-    containerScanDir: `${CONTAINER_DOWNLOADS}/${slug}`,
-    containerOrphanedDir: `${CONTAINER_DOWNLOADS}/${slug}/orphaned`,
+    clientSavePath: CLIENT_DOWNLOADS,
+    appScanDir: `${APP_DOWNLOADS}/${slug}`,
+    appOrphanedDir: `${APP_DOWNLOADS}/${slug}/orphaned`,
   };
 }
 
@@ -141,10 +141,8 @@ function runClientScenario(fixture: TorrentClientFixture, getToken: () => string
       // Fresh per-client scan dir so a previous failed run doesn't bleed in.
       resetDirectory(dirs.hostScanDir);
       mkdirSync(dirs.hostOrphanedDir, { recursive: true });
+      chmodSync(dirs.hostOrphanedDir, 0o777);
 
-      // Pre-create two folder-torrents on disk. Both clients will be told
-      // their savePath is `dirs.containerScanDir` and the folder names
-      // become `keep-<client>` and `orphan-<client>`.
       const keepName = `keep-${slug}`;
       const orphanName = `orphan-${slug}`;
       const keepFx = buildFolderTorrent(dirs.hostScanDir, keepName);
@@ -161,7 +159,6 @@ function runClientScenario(fixture: TorrentClientFixture, getToken: () => string
       // `make test` and would otherwise reject re-adding the same infohash.
       await driver.clearAllTorrents();
 
-      // Register the client with Cleanuparr.
       const createRes = await createDownloadClient(getToken(), {
         enabled: true,
         name: `${driver.typeName} e2e`,
@@ -170,32 +167,30 @@ function runClientScenario(fixture: TorrentClientFixture, getToken: () => string
         host: driver.cleanuparrHost,
         username: driver.username ?? '',
         password: driver.password ?? '',
-        downloadDirectorySource: null,
-        downloadDirectoryTarget: null,
+        downloadDirectorySource: dirs.clientSavePath,
+        downloadDirectoryTarget: dirs.appScanDir,
       });
       expect(createRes.status).toBeGreaterThanOrEqual(200);
       expect(createRes.status).toBeLessThan(300);
       const createdClient = await createRes.json();
       clientId = createdClient.id;
 
-      // Enable orphan scanning for this client.
       const ofcRes = await updateOrphanedFilesClientConfig(getToken(), clientId, {
         enabled: true,
-        scanDirectories: [dirs.containerScanDir],
-        orphanedDirectory: dirs.containerOrphanedDir,
+        scanDirectories: [dirs.appScanDir],
+        orphanedDirectory: dirs.appOrphanedDir,
       });
       expect(ofcRes.status).toBe(200);
 
-      // Add both torrents to the client.
       await driver.addTorrent({
         metainfo: keepFx.metainfo,
-        savePath: dirs.containerScanDir,
+        savePath: dirs.clientSavePath,
         name: keepName,
         infoHash: keepFx.infoHash,
       });
       await driver.addTorrent({
         metainfo: orphanFx.metainfo,
-        savePath: dirs.containerScanDir,
+        savePath: dirs.clientSavePath,
         name: orphanName,
         infoHash: orphanFx.infoHash,
       });

@@ -48,20 +48,6 @@ export class UTorrentDriver implements TorrentClientDriver {
       },
       { label: 'uTorrent WebUI' },
     );
-    // The ekho/utorrent image's confd template writes `dir_active:` /
-    // `dir_completed:` to utserver.conf, but the running uTorrent process
-    // reads `dir_active_download` / `dir_completed_download`. Override at
-    // runtime via setsetting so new torrents land in our shared volume.
-    await this.setSetting('dir_active_download', '/e2e-downloads/utorrent');
-    await this.setSetting('dir_completed_download', '/e2e-downloads/utorrent');
-  }
-
-  private async setSetting(name: string, value: string): Promise<void> {
-    const url = `${this.directHost}/gui/?token=${encodeURIComponent(this.token)}&action=setsetting&s=${encodeURIComponent(name)}&v=${encodeURIComponent(value)}`;
-    const res = await fetch(url, { headers: this.requestHeaders() });
-    if (!res.ok) {
-      throw new Error(`uTorrent setsetting ${name}: ${res.status}`);
-    }
   }
 
   private async refreshToken(): Promise<void> {

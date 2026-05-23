@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from 'node:crypto';
-import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 /**
@@ -63,6 +63,7 @@ export interface GeneratedTorrent {
 export function buildFolderTorrent(savePath: string, name: string, sizeBytes = 32_768): GeneratedTorrent {
   const contentPath = join(savePath, name);
   mkdirSync(contentPath, { recursive: true });
+  chmodSync(contentPath, 0o777);
 
   // Deterministic content: HMAC-like expansion from the name so two runs
   // produce identical bytes (and thus identical pieces / infohash).
@@ -111,8 +112,11 @@ export function buildFolderTorrent(savePath: string, name: string, sizeBytes = 3
  * Wipe and recreate a directory. Used at test setup to reset client data.
  */
 export function resetDirectory(path: string): void {
-  rmSync(path, { recursive: true, force: true });
   mkdirSync(path, { recursive: true });
+  for (const entry of readdirSync(path)) {
+    rmSync(join(path, entry), { recursive: true, force: true });
+  }
+  chmodSync(path, 0o777);
 }
 
 /**

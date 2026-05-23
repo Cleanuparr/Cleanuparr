@@ -10,7 +10,11 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TEST_DATA="$HERE/test-data"
 
 mkdir -p \
-  "$TEST_DATA/downloads" \
+  "$TEST_DATA/downloads/qbittorrent" \
+  "$TEST_DATA/downloads/transmission" \
+  "$TEST_DATA/downloads/deluge" \
+  "$TEST_DATA/downloads/utorrent" \
+  "$TEST_DATA/downloads/rtorrent" \
   "$TEST_DATA/qbittorrent-config/qBittorrent" \
   "$TEST_DATA/transmission-config" \
   "$TEST_DATA/deluge-config" \
@@ -34,7 +38,7 @@ WebUI\AuthSubnetWhitelistEnabled=true
 WebUI\AuthSubnetWhitelist=127.0.0.0/8, ::1/128
 WebUI\Username=admin
 WebUI\Password_PBKDF2="@ByteArray(ARQ77eY1NUZ366igo9pHIQ==:Bn3qWLqOY3qE6Z+sCx2NoO5q4nhgxhUL3eRD4Zw3+5p9C7+RmrI20bzAjcwHKqcWa+5z6QBQGckCB8sFCnVTGw==)"
-Downloads\SavePath=/e2e-downloads/qbittorrent
+Downloads\SavePath=/downloads
 EOF
 
 echo "test-data ready under $TEST_DATA"
