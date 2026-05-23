@@ -1,7 +1,7 @@
 export interface OrphanedFilesClientConfig {
   enabled: boolean;
   scanDirectories: string[];
-  orphanedDirectory?: string | null;
+  orphanedDirectory?: string;
 }
 
 export interface ClientOrphanedFilesConfig {
@@ -12,13 +12,10 @@ export interface ClientOrphanedFilesConfig {
 }
 
 export interface OrphanedFilesCleanerConfig {
-  enabled: boolean;
-  cronExpression: string;
-  useAdvancedScheduling: boolean;
   excludePatterns: string[];
   minFileAgeMinutes: number;
   maxOrphanedFilesToProcess: number;
-  emptyAfterXDays?: number | null;
+  emptyAfterXDays?: number;
   clients: ClientOrphanedFilesConfig[];
 }
 
@@ -26,6 +23,5 @@ export function createDefaultClientConfig(): OrphanedFilesClientConfig {
   return {
     enabled: false,
     scanDirectories: [],
-    orphanedDirectory: null,
   };
 }

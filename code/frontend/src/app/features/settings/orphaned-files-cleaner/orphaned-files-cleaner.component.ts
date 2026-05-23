@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, inject, signal, computed, OnInit, effect, untracked } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, signal, computed, OnInit } from '@angular/core';
 import { PageHeaderComponent } from '@layout/page-header/page-header.component';
 import {
   CardComponent, ButtonComponent, InputComponent, ToggleComponent,
@@ -15,13 +15,6 @@ import {
 } from '@shared/models/orphaned-files-cleaner-config.model';
 import { HasPendingChanges } from '@core/guards/pending-changes.guard';
 import { DeferredLoader } from '@shared/utils/loading.util';
-import { ScheduleUnit } from '@shared/models/enums';
-import { generateCronExpression, parseCronToJobSchedule, ScheduleOptions } from '@shared/utils/schedule.util';
-
-const SCHEDULE_UNIT_OPTIONS: SelectOption[] = [
-  { label: 'Minutes', value: ScheduleUnit.Minutes },
-  { label: 'Hours', value: ScheduleUnit.Hours },
-];
 
 @Component({
   selector: 'app-orphaned-files-cleaner',
@@ -42,7 +35,6 @@ export class OrphanedFilesCleanerComponent implements OnInit, HasPendingChanges 
   private readonly savedSnapshot = signal('');
   private readonly clientSnapshots = signal<Record<string, string>>({});
 
-  readonly scheduleUnitOptions = SCHEDULE_UNIT_OPTIONS;
   readonly loader = new DeferredLoader();
   readonly loadError = signal(false);
   readonly saving = signal(false);
@@ -51,11 +43,6 @@ export class OrphanedFilesCleanerComponent implements OnInit, HasPendingChanges 
   readonly clientSaved = signal(false);
 
   // Global settings
-  readonly enabled = signal(false);
-  readonly useAdvancedScheduling = signal(false);
-  readonly cronExpression = signal('0 0 * * * ?');
-  readonly scheduleEvery = signal<unknown>(1);
-  readonly scheduleUnit = signal<unknown>(ScheduleUnit.Hours);
   readonly excludePatterns = signal<string[]>([]);
   readonly minFileAgeMinutes = signal<number | null>(0);
   readonly maxOrphanedFilesToProcess = signal<number | null>(50);
@@ -79,37 +66,15 @@ export class OrphanedFilesCleanerComponent implements OnInit, HasPendingChanges 
     this.selectedClient()?.downloadClientEnabled === false
   );
 
-  constructor() {
-    effect(() => {
-      const unit = this.scheduleUnit();
-      const options = ScheduleOptions[unit as ScheduleUnit] ?? [];
-      const current = this.scheduleEvery();
-      if (options.length > 0 && !options.includes(current as number)) {
-        untracked(() => this.scheduleEvery.set(options[0]));
-      }
-    });
-  }
-
-  readonly scheduleIntervalOptions = computed(() => {
-    const unit = this.scheduleUnit() as ScheduleUnit;
-    const values = ScheduleOptions[unit] ?? [];
-    return values.map(v => ({ label: `${v}`, value: v }));
-  });
-
-  readonly cronError = computed(() => {
-    if (this.useAdvancedScheduling() && !this.cronExpression().trim()) {
-      return 'Cron expression is required';
-    }
-    return undefined;
-  });
-
-  readonly hasErrors = computed(() => !!this.cronError());
-
   readonly clientDirty = computed(() => {
     const client = this.selectedClient();
-    if (!client) return false;
+    if (!client) {
+      return false;
+    }
     const saved = this.clientSnapshots()[client.downloadClientId];
-    if (!saved) return false;
+    if (!saved) {
+      return false;
+    }
     return saved !== JSON.stringify(client.clientConfig);
   });
 
@@ -121,14 +86,6 @@ export class OrphanedFilesCleanerComponent implements OnInit, HasPendingChanges 
     this.loader.start();
     this.api.getConfig().subscribe({
       next: (config) => {
-        this.enabled.set(config.enabled);
-        this.useAdvancedScheduling.set(config.useAdvancedScheduling);
-        this.cronExpression.set(config.cronExpression ?? '0 0 * * * ?');
-        const parsed = parseCronToJobSchedule(config.cronExpression);
-        if (parsed) {
-          this.scheduleEvery.set(parsed.every);
-          this.scheduleUnit.set(parsed.type);
-        }
         this.excludePatterns.set(config.excludePatterns ?? []);
         this.minFileAgeMinutes.set(config.minFileAgeMinutes ?? 0);
         this.maxOrphanedFilesToProcess.set(config.maxOrphanedFilesToProcess ?? 50);
@@ -136,9 +93,7 @@ export class OrphanedFilesCleanerComponent implements OnInit, HasPendingChanges 
 
         const clients = (config.clients ?? []).map(c => ({
           ...c,
-          clientConfig: c.clientConfig
-            ? { ...c.clientConfig, orphanedDirectory: c.clientConfig.orphanedDirectory ?? null }
-            : createDefaultClientConfig(),
+          clientConfig: c.clientConfig ?? createDefaultClientConfig(),
         }));
         this.clientConfigs.set(clients);
 
@@ -153,7 +108,7 @@ export class OrphanedFilesCleanerComponent implements OnInit, HasPendingChanges 
         this.clientSnapshots.set(snapshots);
 
         this.loader.stop();
-        queueMicrotask(() => this.savedSnapshot.set(this.buildSnapshot()));
+        this.savedSnapshot.set(this.buildSnapshot());
       },
       error: () => {
         this.toast.error('Failed to load orphaned files cleaner settings');
@@ -174,7 +129,9 @@ export class OrphanedFilesCleanerComponent implements OnInit, HasPendingChanges 
 
   updateClientField<K extends keyof OrphanedFilesClientConfig>(field: K, value: OrphanedFilesClientConfig[K]): void {
     const id = this.selectedClientId();
-    if (!id) return;
+    if (!id) {
+      return;
+    }
     this.clientConfigs.update(configs =>
       configs.map(c => c.downloadClientId === id
         ? { ...c, clientConfig: { ...(c.clientConfig ?? createDefaultClientConfig()), [field]: value } }
@@ -185,7 +142,9 @@ export class OrphanedFilesCleanerComponent implements OnInit, HasPendingChanges 
   saveClientConfig(): void {
     const clientId = this.selectedClientId();
     const client = this.selectedClient();
-    if (!clientId || !client?.clientConfig) return;
+    if (!clientId || !client?.clientConfig) {
+      return;
+    }
 
     this.clientSaving.set(true);
     this.api.updateClientConfig(clientId, client.clientConfig).subscribe({
@@ -207,19 +166,11 @@ export class OrphanedFilesCleanerComponent implements OnInit, HasPendingChanges 
   }
 
   save(): void {
-    const jobSchedule = { every: (this.scheduleEvery() as number) ?? 1, type: this.scheduleUnit() as ScheduleUnit };
-    const cronExpression = this.useAdvancedScheduling()
-      ? this.cronExpression()
-      : generateCronExpression(jobSchedule);
-
-    const config: Omit<OrphanedFilesCleanerConfig, 'clients'> = {
-      enabled: this.enabled(),
-      cronExpression,
-      useAdvancedScheduling: this.useAdvancedScheduling(),
+    const config: Partial<OrphanedFilesCleanerConfig> = {
       excludePatterns: this.excludePatterns(),
       minFileAgeMinutes: this.minFileAgeMinutes() ?? 0,
       maxOrphanedFilesToProcess: this.maxOrphanedFilesToProcess() ?? 50,
-      emptyAfterXDays: this.emptyAfterXDays() ?? null,
+      emptyAfterXDays: this.emptyAfterXDays() ?? undefined,
     };
 
     this.saving.set(true);
@@ -240,11 +191,6 @@ export class OrphanedFilesCleanerComponent implements OnInit, HasPendingChanges 
 
   private buildSnapshot(): string {
     return JSON.stringify({
-      enabled: this.enabled(),
-      useAdvancedScheduling: this.useAdvancedScheduling(),
-      cronExpression: this.cronExpression(),
-      scheduleEvery: this.scheduleEvery(),
-      scheduleUnit: this.scheduleUnit(),
       excludePatterns: this.excludePatterns(),
       minFileAgeMinutes: this.minFileAgeMinutes(),
       maxOrphanedFilesToProcess: this.maxOrphanedFilesToProcess(),

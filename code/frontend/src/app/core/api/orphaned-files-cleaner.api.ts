@@ -11,7 +11,7 @@ export class OrphanedFilesCleanerApi {
     return this.http.get<OrphanedFilesCleanerConfig>('/api/configuration/orphaned_files_cleaner');
   }
 
-  updateConfig(config: Omit<OrphanedFilesCleanerConfig, 'clients'>): Observable<void> {
+  updateConfig(config: Partial<OrphanedFilesCleanerConfig>): Observable<void> {
     return this.http.put<void>('/api/configuration/orphaned_files_cleaner', config);
   }
 

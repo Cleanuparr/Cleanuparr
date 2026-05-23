@@ -192,7 +192,9 @@ export class DownloadClientsComponent implements OnInit, HasPendingChanges {
   }
 
   saveClient(): void {
-    if (this.hasModalErrors()) return;
+    if (this.hasModalErrors()) {
+      return;
+    }
     const editing = this.editingClient();
     this.saving.set(true);
 
@@ -258,7 +260,9 @@ export class DownloadClientsComponent implements OnInit, HasPendingChanges {
       confirmLabel: 'Delete',
       destructive: true,
     });
-    if (!confirmed) return;
+    if (!confirmed) {
+      return;
+    }
 
     this.api.delete(client.id).subscribe({
       next: () => {
