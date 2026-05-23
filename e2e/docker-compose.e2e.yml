@@ -35,6 +35,8 @@ services:
       HTTP_PORTS: "5000"
     tmpfs:
       - /config
+    volumes:
+      - ./test-data/downloads:/e2e-downloads
 
   nginx:
     image: nginx:1.27-alpine
@@ -43,3 +45,100 @@ services:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
       - app
+
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:4.6.7
+    network_mode: host
+    environment:
+      PUID: "1000"
+      PGID: "1000"
+      TZ: "UTC"
+      WEBUI_PORT: "8090"
+      TORRENTING_PORT: "6881"
+    volumes:
+      - ./test-data/qbittorrent-config:/config
+      - ./test-data/downloads:/e2e-downloads
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://localhost:8090/api/v2/app/version > /dev/null 2>&1 || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 60
+      start_period: 30s
+
+  transmission:
+    image: lscr.io/linuxserver/transmission:4.0.6
+    network_mode: host
+    environment:
+      PUID: "1000"
+      PGID: "1000"
+      TZ: "UTC"
+      USER: "transmission"
+      PASS: "transmission"
+      PEERPORT: "51413"
+    volumes:
+      - ./test-data/transmission-config:/config
+      - ./test-data/downloads:/e2e-downloads
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://localhost:9091/transmission/rpc > /dev/null 2>&1 ; [ $$? -eq 8 ] || [ $$? -eq 0 ]"]
+      interval: 5s
+      timeout: 3s
+      retries: 60
+      start_period: 30s
+
+  deluge:
+    image: lscr.io/linuxserver/deluge:2.1.1
+    network_mode: host
+    environment:
+      PUID: "1000"
+      PGID: "1000"
+      TZ: "UTC"
+      DELUGE_LOGLEVEL: "info"
+    volumes:
+      - ./test-data/deluge-config:/config
+      - ./test-data/downloads:/e2e-downloads
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://localhost:8112 > /dev/null 2>&1 || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 60
+      start_period: 30s
+
+  utorrent:
+    image: ekho/utorrent:latest
+    platform: linux/amd64
+    ports:
+      - "8083:8080"
+    environment:
+      UID: "1000"
+      GID: "1000"
+      dir_root: "/e2e-downloads/utorrent"
+      dir_active: "/e2e-downloads/utorrent"
+      dir_completed: "/e2e-downloads/utorrent"
+      dir_download: "/e2e-downloads/utorrent"
+    volumes:
+      - ./test-data/utorrent-config:/data
+      - ./test-data/downloads:/e2e-downloads
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://localhost:8080/gui/ > /dev/null 2>&1 || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 60
+      start_period: 30s
+
+  rutorrent:
+    image: lscr.io/linuxserver/rutorrent:latest
+    ports:
+      - "8088:80"
+    environment:
+      PUID: "1000"
+      PGID: "1000"
+      TZ: "UTC"
+    volumes:
+      - ./test-data/rutorrent-config:/config
+      - ./test-data/downloads:/e2e-downloads
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://localhost > /dev/null 2>&1 || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 60
+      start_period: 60s

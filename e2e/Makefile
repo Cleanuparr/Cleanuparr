@@ -1,10 +1,13 @@
-.PHONY: up down test install
+.PHONY: up down test install setup
 
-up:
-	docker compose -f docker-compose.e2e.yml up -d --build
+setup:
+	./scripts/setup-test-data.sh
+
+up: setup
+	docker compose -f docker-compose.e2e.yml up -d --build --remove-orphans
 
 down:
-	docker compose -f docker-compose.e2e.yml down
+	docker compose -f docker-compose.e2e.yml down -v
 
 install:
 	npm install
