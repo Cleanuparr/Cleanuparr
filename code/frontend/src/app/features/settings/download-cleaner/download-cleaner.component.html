@@ -62,42 +62,6 @@
   </app-card>
 
   @if (enabled()) {
-    <app-card header="Orphaned Files">
-      <div class="form-stack">
-        <app-chip-input
-          label="Exclude Patterns"
-          placeholder="Add glob pattern (e.g. *.nfo)..."
-          hint="File or folder names matching these patterns are never considered orphaned (e.g. *.nfo, .DS_Store)"
-          [(items)]="ofcExcludePatterns"
-        />
-        <app-number-input
-          label="Min File Age"
-          suffix="min"
-          [min]="0"
-          hint="Skip files or folders modified less than this many minutes ago. Protects active downloads."
-          [(value)]="ofcMinFileAgeMinutes"
-        />
-        <app-number-input
-          label="Purge Orphaned After"
-          suffix="days"
-          [min]="1"
-          hint="Permanently delete entries from the Orphaned Directory after this many days. Leave empty to keep them indefinitely."
-          [(value)]="ofcEmptyAfterXDays"
-        />
-        <div class="form-actions">
-          <app-button
-            variant="primary"
-            [glowing]="ofcDirty()"
-            [loading]="ofcSaving()"
-            [disabled]="ofcSaving() || ofcSaved() || !ofcDirty()"
-            (clicked)="saveOfcConfig()"
-          >
-            {{ ofcSaved() ? 'Saved!' : 'Save Orphaned Files Settings' }}
-          </app-button>
-        </div>
-      </div>
-    </app-card>
-
     @if (clientOptions().length > 0) {
       <app-card [header]="selectedClient()?.downloadClientName ?? 'Download Client'">
         <div class="form-stack">
@@ -234,13 +198,14 @@
               </div>
             </app-accordion>
 
-            <app-accordion header="Orphaned Files" subtitle="Move files not associated with any active torrent" [(expanded)]="ofcExpanded">
+            <app-accordion header="Orphaned Files" subtitle="Move files not associated with any active torrent" [(expanded)]="orphanedFilesExpanded">
               <div class="form-stack">
                 <app-toggle
                   label="Enabled"
                   [checked]="client.orphanedFilesConfig?.enabled ?? false"
-                  (checkedChange)="updateOfcClientField('enabled', $event)"
+                  (checkedChange)="updateOrphanedFilesField('enabled', $event)"
                   hint="Enable orphaned files scanning for this download client"
+                  helpKey="download-cleaner:orphanedFilesEnabled"
                 />
                 @if (client.orphanedFilesConfig?.enabled) {
                   <div class="form-divider"></div>
@@ -249,25 +214,54 @@
                     placeholder="Add directory path..."
                     hint="Absolute paths to scan for orphaned files. Each top-level entry is checked against your active torrents."
                     [items]="client.orphanedFilesConfig?.scanDirectories ?? []"
-                    (itemsChange)="updateOfcClientField('scanDirectories', $event)"
+                    (itemsChange)="updateOrphanedFilesField('scanDirectories', $event)"
+                    [error]="orphanedFilesScanDirsError()"
+                    helpKey="download-cleaner:orphanedFilesScanDirectories"
                   />
                   <app-input
                     label="Orphaned Directory"
                     placeholder="/mnt/data/orphaned"
                     hint="Where orphaned files are moved. Leave empty to log only without moving."
                     [value]="client.orphanedFilesConfig?.orphanedDirectory ?? ''"
-                    (valueChange)="updateOfcClientField('orphanedDirectory', $event || undefined)"
+                    (valueChange)="updateOrphanedFilesField('orphanedDirectory', $event || undefined)"
+                    helpKey="download-cleaner:orphanedFilesOrphanedDirectory"
+                  />
+                  <app-chip-input
+                    label="Exclude Patterns"
+                    placeholder="Add glob pattern (e.g. *.nfo)..."
+                    hint="File or folder names matching these patterns are never considered orphaned (e.g. *.nfo, .DS_Store)"
+                    [items]="client.orphanedFilesConfig?.excludePatterns ?? []"
+                    (itemsChange)="updateOrphanedFilesField('excludePatterns', $event)"
+                    helpKey="download-cleaner:orphanedFilesExcludePatterns"
+                  />
+                  <app-number-input
+                    label="Min File Age"
+                    suffix="min"
+                    [min]="0"
+                    hint="Skip files or folders modified less than this many minutes ago. Protects active downloads."
+                    [value]="client.orphanedFilesConfig?.minFileAgeMinutes ?? 0"
+                    (valueChange)="updateOrphanedFilesField('minFileAgeMinutes', $event ?? 0)"
+                    helpKey="download-cleaner:orphanedFilesMinFileAgeMinutes"
+                  />
+                  <app-number-input
+                    label="Purge Orphaned After"
+                    suffix="days"
+                    [min]="1"
+                    hint="Permanently delete entries from the Orphaned Directory after this many days. Leave empty to keep them indefinitely."
+                    [value]="client.orphanedFilesConfig?.emptyAfterXDays ?? null"
+                    (valueChange)="updateOrphanedFilesField('emptyAfterXDays', $event ?? undefined)"
+                    helpKey="download-cleaner:orphanedFilesEmptyAfterXDays"
                   />
                 }
                 <div class="form-actions">
                   <app-button
                     variant="primary"
-                    [glowing]="ofcClientDirty()"
-                    [loading]="ofcClientSaving()"
-                    [disabled]="ofcClientSaving() || ofcClientSaved() || !ofcClientDirty()"
-                    (clicked)="saveOfcClientConfig()"
+                    [glowing]="orphanedFilesDirty()"
+                    [loading]="orphanedFilesSaving()"
+                    [disabled]="orphanedFilesSaving() || orphanedFilesSaved() || !orphanedFilesDirty() || !!orphanedFilesScanDirsError()"
+                    (clicked)="saveOrphanedFilesConfig()"
                   >
-                    {{ ofcClientSaved() ? 'Saved!' : 'Save Orphaned Files Settings' }}
+                    {{ orphanedFilesSaved() ? 'Saved!' : 'Save Orphaned Files Settings' }}
                   </app-button>
                 </div>
               </div>

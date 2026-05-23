@@ -86,6 +86,9 @@ public sealed class OrphanedFilesClientConfigController : ControllerBase
             existing.Enabled = dto.Enabled;
             existing.ScanDirectories = dto.ScanDirectories;
             existing.OrphanedDirectory = dto.OrphanedDirectory;
+            existing.ExcludePatterns = dto.ExcludePatterns;
+            existing.MinFileAgeMinutes = dto.MinFileAgeMinutes;
+            existing.EmptyAfterXDays = dto.EmptyAfterXDays;
 
             var siblings = await _dataContext.OrphanedFilesClientConfigs
                 .AsNoTracking()

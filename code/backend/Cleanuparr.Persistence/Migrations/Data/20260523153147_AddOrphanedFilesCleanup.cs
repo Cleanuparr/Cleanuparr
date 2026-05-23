@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -22,7 +22,7 @@ namespace Cleanuparr.Persistence.Migrations.Data
                 table: "download_clients",
                 type: "TEXT",
                 nullable: true);
-            
+
             // Migrate existing path remapping values from unlinked_configs to download_clients
             migrationBuilder.Sql(@"
                 UPDATE download_clients
@@ -49,20 +49,6 @@ namespace Cleanuparr.Persistence.Migrations.Data
             ");
 
             migrationBuilder.CreateTable(
-                name: "orphaned_files_cleanup_configs",
-                columns: table => new
-                {
-                    id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    exclude_patterns = table.Column<string>(type: "TEXT", nullable: false),
-                    min_file_age_minutes = table.Column<int>(type: "INTEGER", nullable: false),
-                    empty_after_x_days = table.Column<int>(type: "INTEGER", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("pk_orphaned_files_cleanup_configs", x => x.id);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "orphaned_files_client_configs",
                 columns: table => new
                 {
@@ -70,7 +56,10 @@ namespace Cleanuparr.Persistence.Migrations.Data
                     download_client_config_id = table.Column<Guid>(type: "TEXT", nullable: false),
                     enabled = table.Column<bool>(type: "INTEGER", nullable: false),
                     scan_directories = table.Column<string>(type: "TEXT", nullable: false),
-                    orphaned_directory = table.Column<string>(type: "TEXT", nullable: true)
+                    orphaned_directory = table.Column<string>(type: "TEXT", nullable: true),
+                    exclude_patterns = table.Column<string>(type: "TEXT", nullable: false),
+                    min_file_age_minutes = table.Column<int>(type: "INTEGER", nullable: false),
+                    empty_after_x_days = table.Column<int>(type: "INTEGER", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -101,9 +90,6 @@ namespace Cleanuparr.Persistence.Migrations.Data
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropTable(
-                name: "orphaned_files_cleanup_configs");
-
             migrationBuilder.DropTable(
                 name: "orphaned_files_client_configs");
 

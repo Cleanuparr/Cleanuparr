@@ -1198,32 +1198,6 @@ namespace Cleanuparr.Persistence.Migrations.Data
                     b.ToTable("telegram_configs", (string)null);
                 });
 
-            modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.OrphanedFilesCleanup.OrphanedFilesCleanupConfig", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT")
-                        .HasColumnName("id");
-
-                    b.Property<int?>("EmptyAfterXDays")
-                        .HasColumnType("INTEGER")
-                        .HasColumnName("empty_after_x_days");
-
-                    b.Property<string>("ExcludePatterns")
-                        .IsRequired()
-                        .HasColumnType("TEXT")
-                        .HasColumnName("exclude_patterns");
-
-                    b.Property<int>("MinFileAgeMinutes")
-                        .HasColumnType("INTEGER")
-                        .HasColumnName("min_file_age_minutes");
-
-                    b.HasKey("Id")
-                        .HasName("pk_orphaned_files_cleanup_configs");
-
-                    b.ToTable("orphaned_files_cleanup_configs", (string)null);
-                });
-
             modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.OrphanedFilesCleanup.OrphanedFilesClientConfig", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1238,6 +1212,19 @@ namespace Cleanuparr.Persistence.Migrations.Data
                     b.Property<bool>("Enabled")
                         .HasColumnType("INTEGER")
                         .HasColumnName("enabled");
+
+                    b.Property<int?>("EmptyAfterXDays")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("empty_after_x_days");
+
+                    b.Property<string>("ExcludePatterns")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("exclude_patterns");
+
+                    b.Property<int>("MinFileAgeMinutes")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("min_file_age_minutes");
 
                     b.Property<string>("OrphanedDirectory")
                         .HasColumnType("TEXT")

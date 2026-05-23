@@ -27,20 +27,9 @@ export interface OrphanedFilesClientConfig {
   enabled: boolean;
   scanDirectories: string[];
   orphanedDirectory?: string;
-}
-
-export interface ClientOrphanedFilesConfig {
-  downloadClientId: string;
-  downloadClientName: string;
-  downloadClientEnabled: boolean;
-  clientConfig: OrphanedFilesClientConfig | null;
-}
-
-export interface OrphanedFilesCleanupConfig {
   excludePatterns: string[];
   minFileAgeMinutes: number;
   emptyAfterXDays?: number;
-  clients: ClientOrphanedFilesConfig[];
 }
 
 export interface ClientCleanerConfig {
@@ -91,5 +80,7 @@ export function createDefaultOrphanedFilesClientConfig(): OrphanedFilesClientCon
   return {
     enabled: false,
     scanDirectories: [],
+    excludePatterns: [],
+    minFileAgeMinutes: 0,
   };
 }

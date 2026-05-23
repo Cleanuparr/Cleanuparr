@@ -315,16 +315,11 @@ public sealed class DownloadCleaner : GenericHandler
         HashSet<Guid> failedClientIds,
         CancellationToken cancellationToken)
     {
-        OrphanedFilesCleanupConfig config;
         List<OrphanedFilesClientConfig> clientConfigs;
 
         await DataContext.Lock.WaitAsync(cancellationToken);
         try
         {
-            config = await _dataContext.OrphanedFilesCleanupConfigs
-                .AsNoTracking()
-                .FirstOrDefaultAsync(cancellationToken)
-                ?? new OrphanedFilesCleanupConfig();
             clientConfigs = await _dataContext.OrphanedFilesClientConfigs
                 .AsNoTracking()
                 .Include(x => x.DownloadClientConfig)
@@ -431,7 +426,7 @@ public sealed class DownloadCleaner : GenericHandler
                 try
                 {
                     await ScanOrphanedDirectoryAsync(
-                        scanDir, claimedPaths, config, clientConfig, normalizedOrphanedDir,
+                        scanDir, claimedPaths, clientConfig, normalizedOrphanedDir,
                         cancellationToken);
                 }
                 catch (Exception ex)
@@ -440,14 +435,13 @@ public sealed class DownloadCleaner : GenericHandler
                 }
             }
 
-            PurgeOrphanedDirectory(clientConfig, config, cancellationToken);
+            PurgeOrphanedDirectory(clientConfig, cancellationToken);
         }
     }
 
     private async Task ScanOrphanedDirectoryAsync(
         string directory,
         HashSet<string> claimedPaths,
-        OrphanedFilesCleanupConfig config,
         OrphanedFilesClientConfig clientConfig,
         string? normalizedOrphanedDir,
         CancellationToken cancellationToken)
@@ -479,25 +473,25 @@ public sealed class DownloadCleaner : GenericHandler
             }
 
             string entryName = Path.GetFileName(normalizedEntry);
-            if (config.ExcludePatterns.Any(pattern =>
+            if (clientConfig.ExcludePatterns.Any(pattern =>
                     FileSystemName.MatchesSimpleExpression(pattern, entryName, ignoreCase: true)))
             {
                 _logger.LogDebug("skip | excluded by pattern | {path}", normalizedEntry);
                 continue;
             }
 
-            if (config.MinFileAgeMinutes > 0)
+            if (clientConfig.MinFileAgeMinutes > 0)
             {
                 DateTime lastWrite = File.GetLastWriteTimeUtc(normalizedEntry);
                 DateTime created = File.GetCreationTimeUtc(normalizedEntry);
                 DateTime mostRecent = lastWrite > created ? lastWrite : created;
                 double ageMinutes = (DateTime.UtcNow - mostRecent).TotalMinutes;
 
-                if (ageMinutes < config.MinFileAgeMinutes)
+                if (ageMinutes < clientConfig.MinFileAgeMinutes)
                 {
                     _logger.LogDebug(
                         "skip | too recent ({age:F1} min < {min} min) | {path}",
-                        ageMinutes, config.MinFileAgeMinutes, normalizedEntry);
+                        ageMinutes, clientConfig.MinFileAgeMinutes, normalizedEntry);
                     continue;
                 }
             }
@@ -563,10 +557,9 @@ public sealed class DownloadCleaner : GenericHandler
 
     private void PurgeOrphanedDirectory(
         OrphanedFilesClientConfig clientConfig,
-        OrphanedFilesCleanupConfig config,
         CancellationToken cancellationToken)
     {
-        if (!config.EmptyAfterXDays.HasValue)
+        if (!clientConfig.EmptyAfterXDays.HasValue)
         {
             return;
         }
@@ -576,7 +569,7 @@ public sealed class DownloadCleaner : GenericHandler
             return;
         }
 
-        DateTime cutoff = DateTime.UtcNow.AddDays(-config.EmptyAfterXDays.Value);
+        DateTime cutoff = DateTime.UtcNow.AddDays(-clientConfig.EmptyAfterXDays.Value);
 
         foreach (var entry in Directory.EnumerateFileSystemEntries(clientConfig.OrphanedDirectory))
         {
@@ -590,7 +583,7 @@ public sealed class DownloadCleaner : GenericHandler
 
             try
             {
-                int days = config.EmptyAfterXDays.Value;
+                int days = clientConfig.EmptyAfterXDays.Value;
                 string capturedEntry = entry;
 
                 void DoPurge()

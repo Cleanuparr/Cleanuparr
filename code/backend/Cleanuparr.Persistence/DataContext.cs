@@ -11,6 +11,7 @@ using Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
 using Cleanuparr.Persistence.Models.Configuration.BlacklistSync;
 using Cleanuparr.Persistence.Models.Configuration.OrphanedFilesCleanup;
 using Cleanuparr.Persistence.Models.Configuration.Seeker;
+
 using Cleanuparr.Persistence.Models.State;
 using Cleanuparr.Shared.Helpers;
 using Microsoft.EntityFrameworkCore;
@@ -76,8 +77,6 @@ public class DataContext : DbContext
     public DbSet<BlacklistSyncHistory> BlacklistSyncHistory { get; set; }
 
     public DbSet<BlacklistSyncConfig> BlacklistSyncConfigs { get; set; }
-
-    public DbSet<OrphanedFilesCleanupConfig> OrphanedFilesCleanupConfigs { get; set; }
 
     public DbSet<OrphanedFilesClientConfig> OrphanedFilesClientConfigs { get; set; }
 
@@ -363,11 +362,6 @@ public class DataContext : DbContext
             entity.Property(s => s.TrackerPatterns).HasConversion(jsonListConverter);
         });
 
-        modelBuilder.Entity<OrphanedFilesCleanupConfig>(entity =>
-        {
-            entity.Property(o => o.ExcludePatterns).HasConversion(jsonListConverter);
-        });
-
         // Configure per-client unlinked config relationship
         modelBuilder.Entity<UnlinkedConfig>(entity =>
         {
@@ -390,6 +384,7 @@ public class DataContext : DbContext
             entity.HasIndex(c => c.DownloadClientConfigId).IsUnique();
 
             entity.Property(c => c.ScanDirectories).HasConversion(jsonListConverter);
+            entity.Property(c => c.ExcludePatterns).HasConversion(jsonListConverter);
         });
 
         // Configure BlacklistSyncState relationships and indexes
