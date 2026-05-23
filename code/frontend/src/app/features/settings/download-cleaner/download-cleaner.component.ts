@@ -15,7 +15,7 @@ import { ToastService } from '@core/services/toast.service';
 import { ConfirmService } from '@core/services/confirm.service';
 import {
   DownloadCleanerConfig, SeedingRule, ClientCleanerConfig, UnlinkedConfigModel,
-  OrphanedFilesCleanerConfig, OrphanedFilesClientConfig,
+  OrphanedFilesCleanupConfig, OrphanedFilesClientConfig,
   createDefaultUnlinkedConfig, createDefaultOrphanedFilesClientConfig,
 } from '@shared/models/download-cleaner-config.model';
 import { ScheduleOptions } from '@shared/models/queue-cleaner-config.model';
@@ -517,7 +517,7 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
   // --- Orphaned files config ---
 
   saveOfcConfig(): void {
-    const config: Partial<OrphanedFilesCleanerConfig> = {
+    const config: Partial<OrphanedFilesCleanupConfig> = {
       excludePatterns: this.ofcExcludePatterns(),
       minFileAgeMinutes: this.ofcMinFileAgeMinutes() ?? 0,
       emptyAfterXDays: this.ofcEmptyAfterXDays() ?? undefined,

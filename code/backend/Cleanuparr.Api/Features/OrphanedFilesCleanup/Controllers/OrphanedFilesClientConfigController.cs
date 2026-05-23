@@ -1,15 +1,15 @@
-using Cleanuparr.Api.Features.OrphanedFilesCleaner.Contracts.Requests;
+using Cleanuparr.Api.Features.OrphanedFilesCleanup.Contracts.Requests;
 using Cleanuparr.Persistence;
-using Cleanuparr.Persistence.Models.Configuration.OrphanedFilesCleaner;
+using Cleanuparr.Persistence.Models.Configuration.OrphanedFilesCleanup;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ValidationException = Cleanuparr.Domain.Exceptions.ValidationException;
 
-namespace Cleanuparr.Api.Features.OrphanedFilesCleaner.Controllers;
+namespace Cleanuparr.Api.Features.OrphanedFilesCleanup.Controllers;
 
 [ApiController]
-[Route("api/configuration/orphaned_files_cleaner/clients")]
+[Route("api/configuration/orphaned_files_cleanup/clients")]
 [Authorize]
 public sealed class OrphanedFilesClientConfigController : ControllerBase
 {

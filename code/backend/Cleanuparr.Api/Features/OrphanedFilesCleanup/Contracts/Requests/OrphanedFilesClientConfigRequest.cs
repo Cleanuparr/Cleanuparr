@@ -1,4 +1,4 @@
-namespace Cleanuparr.Api.Features.OrphanedFilesCleaner.Contracts.Requests;
+namespace Cleanuparr.Api.Features.OrphanedFilesCleanup.Contracts.Requests;
 
 public sealed record OrphanedFilesClientConfigRequest
 {

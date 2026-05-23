@@ -1,6 +1,6 @@
-namespace Cleanuparr.Api.Features.OrphanedFilesCleaner.Contracts.Requests;
+namespace Cleanuparr.Api.Features.OrphanedFilesCleanup.Contracts.Requests;
 
-public sealed record UpdateOrphanedFilesCleanerConfigRequest
+public sealed record UpdateOrphanedFilesCleanupConfigRequest
 {
     /// <summary>
     /// Glob patterns for file/folder names to skip (e.g. "*.nfo", ".DS_Store").

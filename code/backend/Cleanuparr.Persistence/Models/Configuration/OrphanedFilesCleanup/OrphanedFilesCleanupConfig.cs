@@ -1,9 +1,9 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace Cleanuparr.Persistence.Models.Configuration.OrphanedFilesCleaner;
+namespace Cleanuparr.Persistence.Models.Configuration.OrphanedFilesCleanup;
 
-public sealed record OrphanedFilesCleanerConfig
+public sealed record OrphanedFilesCleanupConfig
 {
     [Key]
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]

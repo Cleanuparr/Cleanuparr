@@ -1198,7 +1198,7 @@ namespace Cleanuparr.Persistence.Migrations.Data
                     b.ToTable("telegram_configs", (string)null);
                 });
 
-            modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.OrphanedFilesCleaner.OrphanedFilesCleanerConfig", b =>
+            modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.OrphanedFilesCleanup.OrphanedFilesCleanupConfig", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -1219,12 +1219,12 @@ namespace Cleanuparr.Persistence.Migrations.Data
                         .HasColumnName("min_file_age_minutes");
 
                     b.HasKey("Id")
-                        .HasName("pk_orphaned_files_cleaner_configs");
+                        .HasName("pk_orphaned_files_cleanup_configs");
 
-                    b.ToTable("orphaned_files_cleaner_configs", (string)null);
+                    b.ToTable("orphaned_files_cleanup_configs", (string)null);
                 });
 
-            modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.OrphanedFilesCleaner.OrphanedFilesClientConfig", b =>
+            modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.OrphanedFilesCleanup.OrphanedFilesClientConfig", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -2035,7 +2035,7 @@ namespace Cleanuparr.Persistence.Migrations.Data
                     b.Navigation("NotificationConfig");
                 });
 
-            modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.OrphanedFilesCleaner.OrphanedFilesClientConfig", b =>
+            modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.OrphanedFilesCleanup.OrphanedFilesClientConfig", b =>
                 {
                     b.HasOne("Cleanuparr.Persistence.Models.Configuration.DownloadClientConfig", "DownloadClientConfig")
                         .WithMany()

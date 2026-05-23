@@ -14,7 +14,7 @@ using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
 using Cleanuparr.Persistence.Models.Configuration.General;
-using Cleanuparr.Persistence.Models.Configuration.OrphanedFilesCleaner;
+using Cleanuparr.Persistence.Models.Configuration.OrphanedFilesCleanup;
 using Cleanuparr.Shared.Helpers;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
@@ -310,20 +310,21 @@ public sealed class DownloadCleaner : GenericHandler
         }
     }
 
-    // --- Orphaned files ---
-
     private async Task ProcessOrphanedFilesAsync(
         IReadOnlyList<IDownloadService> downloadServices,
         HashSet<Guid> failedClientIds,
         CancellationToken cancellationToken)
     {
-        OrphanedFilesCleanerConfig config;
+        OrphanedFilesCleanupConfig config;
         List<OrphanedFilesClientConfig> clientConfigs;
 
         await DataContext.Lock.WaitAsync(cancellationToken);
         try
         {
-            config = await _dataContext.OrphanedFilesCleanerConfigs.AsNoTracking().FirstAsync(cancellationToken);
+            config = await _dataContext.OrphanedFilesCleanupConfigs
+                .AsNoTracking()
+                .FirstOrDefaultAsync(cancellationToken)
+                ?? new OrphanedFilesCleanupConfig();
             clientConfigs = await _dataContext.OrphanedFilesClientConfigs
                 .AsNoTracking()
                 .Include(x => x.DownloadClientConfig)
@@ -446,7 +447,7 @@ public sealed class DownloadCleaner : GenericHandler
     private async Task ScanOrphanedDirectoryAsync(
         string directory,
         HashSet<string> claimedPaths,
-        OrphanedFilesCleanerConfig config,
+        OrphanedFilesCleanupConfig config,
         OrphanedFilesClientConfig clientConfig,
         string? normalizedOrphanedDir,
         CancellationToken cancellationToken)
@@ -562,7 +563,7 @@ public sealed class DownloadCleaner : GenericHandler
 
     private void PurgeOrphanedDirectory(
         OrphanedFilesClientConfig clientConfig,
-        OrphanedFilesCleanerConfig config,
+        OrphanedFilesCleanupConfig config,
         CancellationToken cancellationToken)
     {
         if (!config.EmptyAfterXDays.HasValue)

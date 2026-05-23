@@ -1,38 +1,40 @@
 using System.ComponentModel.DataAnnotations;
 
-using Cleanuparr.Api.Features.OrphanedFilesCleaner.Contracts.Requests;
+using Cleanuparr.Api.Features.OrphanedFilesCleanup.Contracts.Requests;
 using Cleanuparr.Persistence;
+using Cleanuparr.Persistence.Models.Configuration.OrphanedFilesCleanup;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
-namespace Cleanuparr.Api.Features.OrphanedFilesCleaner.Controllers;
+namespace Cleanuparr.Api.Features.OrphanedFilesCleanup.Controllers;
 
 [ApiController]
 [Route("api/configuration")]
 [Authorize]
-public sealed class OrphanedFilesCleanerConfigController : ControllerBase
+public sealed class OrphanedFilesCleanupConfigController : ControllerBase
 {
-    private readonly ILogger<OrphanedFilesCleanerConfigController> _logger;
+    private readonly ILogger<OrphanedFilesCleanupConfigController> _logger;
     private readonly DataContext _dataContext;
 
-    public OrphanedFilesCleanerConfigController(
-        ILogger<OrphanedFilesCleanerConfigController> logger,
+    public OrphanedFilesCleanupConfigController(
+        ILogger<OrphanedFilesCleanupConfigController> logger,
         DataContext dataContext)
     {
         _logger = logger;
         _dataContext = dataContext;
     }
 
-    [HttpGet("orphaned_files_cleaner")]
-    public async Task<IActionResult> GetOrphanedFilesCleanerConfig()
+    [HttpGet("orphaned_files_cleanup")]
+    public async Task<IActionResult> GetOrphanedFilesCleanupConfig()
     {
         await DataContext.Lock.WaitAsync();
         try
         {
-            var config = await _dataContext.OrphanedFilesCleanerConfigs
+            var config = await _dataContext.OrphanedFilesCleanupConfigs
                 .AsNoTracking()
-                .FirstAsync();
+                .FirstOrDefaultAsync()
+                ?? new OrphanedFilesCleanupConfig();
 
             var downloadClients = await _dataContext.DownloadClients
                 .AsNoTracking()
@@ -73,8 +75,8 @@ public sealed class OrphanedFilesCleanerConfigController : ControllerBase
         }
     }
 
-    [HttpPut("orphaned_files_cleaner")]
-    public async Task<IActionResult> UpdateOrphanedFilesCleanerConfig([FromBody] UpdateOrphanedFilesCleanerConfigRequest newConfigDto)
+    [HttpPut("orphaned_files_cleanup")]
+    public async Task<IActionResult> UpdateOrphanedFilesCleanupConfig([FromBody] UpdateOrphanedFilesCleanupConfigRequest newConfigDto)
     {
         await DataContext.Lock.WaitAsync();
         try
@@ -84,15 +86,21 @@ public sealed class OrphanedFilesCleanerConfigController : ControllerBase
                 throw new ValidationException("Request body cannot be null");
             }
 
-            var oldConfig = await _dataContext.OrphanedFilesCleanerConfigs.FirstAsync();
+            var existing = await _dataContext.OrphanedFilesCleanupConfigs.FirstOrDefaultAsync();
 
-            oldConfig.ExcludePatterns = newConfigDto.ExcludePatterns;
-            oldConfig.MinFileAgeMinutes = newConfigDto.MinFileAgeMinutes;
-            oldConfig.EmptyAfterXDays = newConfigDto.EmptyAfterXDays;
+            if (existing is null)
+            {
+                existing = new OrphanedFilesCleanupConfig();
+                _dataContext.OrphanedFilesCleanupConfigs.Add(existing);
+            }
+
+            existing.ExcludePatterns = newConfigDto.ExcludePatterns;
+            existing.MinFileAgeMinutes = newConfigDto.MinFileAgeMinutes;
+            existing.EmptyAfterXDays = newConfigDto.EmptyAfterXDays;
 
             await _dataContext.SaveChangesAsync();
 
-            return Ok(new { Message = "OrphanedFilesCleaner configuration updated successfully" });
+            return Ok(new { Message = "OrphanedFilesCleanup configuration updated successfully" });
         }
         catch (ValidationException ex)
         {
@@ -100,7 +108,7 @@ public sealed class OrphanedFilesCleanerConfigController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to save OrphanedFilesCleaner configuration");
+            _logger.LogError(ex, "Failed to save OrphanedFilesCleanup configuration");
             throw;
         }
         finally

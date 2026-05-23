@@ -36,7 +36,7 @@ export interface ClientOrphanedFilesConfig {
   clientConfig: OrphanedFilesClientConfig | null;
 }
 
-export interface OrphanedFilesCleanerConfig {
+export interface OrphanedFilesCleanupConfig {
   excludePatterns: string[];
   minFileAgeMinutes: number;
   emptyAfterXDays?: number;

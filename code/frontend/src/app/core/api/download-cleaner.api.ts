@@ -5,7 +5,7 @@ import {
   DownloadCleanerConfig,
   SeedingRule,
   UnlinkedConfigModel,
-  OrphanedFilesCleanerConfig,
+  OrphanedFilesCleanupConfig,
   OrphanedFilesClientConfig,
 } from '@shared/models/download-cleaner-config.model';
 
@@ -52,19 +52,19 @@ export class DownloadCleanerApi {
   }
 
   // Orphaned files config
-  getOrphanedFilesConfig(): Observable<OrphanedFilesCleanerConfig> {
-    return this.http.get<OrphanedFilesCleanerConfig>('/api/configuration/orphaned_files_cleaner');
+  getOrphanedFilesConfig(): Observable<OrphanedFilesCleanupConfig> {
+    return this.http.get<OrphanedFilesCleanupConfig>('/api/configuration/orphaned_files_cleanup');
   }
 
-  updateOrphanedFilesConfig(config: Partial<OrphanedFilesCleanerConfig>): Observable<void> {
-    return this.http.put<void>('/api/configuration/orphaned_files_cleaner', config);
+  updateOrphanedFilesConfig(config: Partial<OrphanedFilesCleanupConfig>): Observable<void> {
+    return this.http.put<void>('/api/configuration/orphaned_files_cleanup', config);
   }
 
   getOrphanedFilesClientConfig(clientId: string): Observable<OrphanedFilesClientConfig | null> {
-    return this.http.get<OrphanedFilesClientConfig | null>(`/api/configuration/orphaned_files_cleaner/clients/${clientId}`);
+    return this.http.get<OrphanedFilesClientConfig | null>(`/api/configuration/orphaned_files_cleanup/clients/${clientId}`);
   }
 
   updateOrphanedFilesClientConfig(clientId: string, config: Partial<OrphanedFilesClientConfig>): Observable<OrphanedFilesClientConfig> {
-    return this.http.put<OrphanedFilesClientConfig>(`/api/configuration/orphaned_files_cleaner/clients/${clientId}`, config);
+    return this.http.put<OrphanedFilesClientConfig>(`/api/configuration/orphaned_files_cleanup/clients/${clientId}`, config);
   }
 }

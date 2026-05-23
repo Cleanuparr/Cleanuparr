@@ -9,7 +9,7 @@ using Cleanuparr.Persistence.Models.Configuration.MalwareBlocker;
 using Cleanuparr.Persistence.Models.Configuration.Notification;
 using Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
 using Cleanuparr.Persistence.Models.Configuration.BlacklistSync;
-using Cleanuparr.Persistence.Models.Configuration.OrphanedFilesCleaner;
+using Cleanuparr.Persistence.Models.Configuration.OrphanedFilesCleanup;
 using Cleanuparr.Persistence.Models.Configuration.Seeker;
 using Cleanuparr.Persistence.Models.State;
 using Cleanuparr.Shared.Helpers;
@@ -77,7 +77,7 @@ public class DataContext : DbContext
 
     public DbSet<BlacklistSyncConfig> BlacklistSyncConfigs { get; set; }
 
-    public DbSet<OrphanedFilesCleanerConfig> OrphanedFilesCleanerConfigs { get; set; }
+    public DbSet<OrphanedFilesCleanupConfig> OrphanedFilesCleanupConfigs { get; set; }
 
     public DbSet<OrphanedFilesClientConfig> OrphanedFilesClientConfigs { get; set; }
 
@@ -363,7 +363,7 @@ public class DataContext : DbContext
             entity.Property(s => s.TrackerPatterns).HasConversion(jsonListConverter);
         });
 
-        modelBuilder.Entity<OrphanedFilesCleanerConfig>(entity =>
+        modelBuilder.Entity<OrphanedFilesCleanupConfig>(entity =>
         {
             entity.Property(o => o.ExcludePatterns).HasConversion(jsonListConverter);
         });
