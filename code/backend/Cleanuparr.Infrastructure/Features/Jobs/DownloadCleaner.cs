@@ -390,17 +390,8 @@ public sealed class DownloadCleaner : GenericHandler
 
         _logger.LogDebug("{count} claimed paths across all clients", claimedPaths.Count);
 
-        int processedCount = 0;
-
         foreach (var clientConfig in clientConfigs)
         {
-            if (processedCount >= config.MaxOrphanedFilesToProcess)
-            {
-                _logger.LogWarning("Reached the limit of {max} orphaned entries per run, stopping scan",
-                    config.MaxOrphanedFilesToProcess);
-                break;
-            }
-
             if (failedClientIds.Contains(clientConfig.DownloadClientConfigId))
             {
                 _logger.LogWarning("Skipping scan for client {name} — claimed paths could not be loaded, scan would produce false positives",
@@ -428,11 +419,6 @@ public sealed class DownloadCleaner : GenericHandler
 
             foreach (var scanDir in clientConfig.ScanDirectories)
             {
-                if (processedCount >= config.MaxOrphanedFilesToProcess)
-                {
-                    break;
-                }
-
                 if (!Directory.Exists(scanDir))
                 {
                     _logger.LogWarning("Scan directory does not exist: {dir}", scanDir);
@@ -443,9 +429,8 @@ public sealed class DownloadCleaner : GenericHandler
 
                 try
                 {
-                    processedCount += await ScanOrphanedDirectoryAsync(
+                    await ScanOrphanedDirectoryAsync(
                         scanDir, claimedPaths, config, clientConfig, normalizedOrphanedDir,
-                        config.MaxOrphanedFilesToProcess - processedCount,
                         cancellationToken);
                 }
                 catch (Exception ex)
@@ -458,25 +443,17 @@ public sealed class DownloadCleaner : GenericHandler
         }
     }
 
-    private async Task<int> ScanOrphanedDirectoryAsync(
+    private async Task ScanOrphanedDirectoryAsync(
         string directory,
         HashSet<string> claimedPaths,
         OrphanedFilesCleanerConfig config,
         OrphanedFilesClientConfig clientConfig,
         string? normalizedOrphanedDir,
-        int remainingSlots,
         CancellationToken cancellationToken)
     {
-        int moved = 0;
-
         foreach (var entry in Directory.EnumerateFileSystemEntries(directory, "*", new EnumerationOptions { RecurseSubdirectories = false }))
         {
             cancellationToken.ThrowIfCancellationRequested();
-
-            if (moved >= remainingSlots)
-            {
-                break;
-            }
 
             string normalizedEntry = Path.GetFullPath(entry).TrimEnd(Path.DirectorySeparatorChar);
 
@@ -534,15 +511,12 @@ public sealed class DownloadCleaner : GenericHandler
             try
             {
                 MoveToOrphanedDirectory(normalizedEntry, normalizedOrphanedDir);
-                moved++;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to handle orphaned entry: {path}", normalizedEntry);
             }
         }
-
-        return moved;
     }
 
     private void MoveToOrphanedDirectory(string path, string orphanedDirectory)

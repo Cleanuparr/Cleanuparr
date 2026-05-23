@@ -128,7 +128,6 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
   // Orphaned files global settings
   readonly ofcExcludePatterns = signal<string[]>([]);
   readonly ofcMinFileAgeMinutes = signal<number | null>(0);
-  readonly ofcMaxOrphanedFilesToProcess = signal<number | null>(50);
   readonly ofcEmptyAfterXDays = signal<number | null>(null);
 
   readonly seedingRulesExpanded = signal(false);
@@ -283,7 +282,6 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
 
         this.ofcExcludePatterns.set(ofc.excludePatterns ?? []);
         this.ofcMinFileAgeMinutes.set(ofc.minFileAgeMinutes ?? 0);
-        this.ofcMaxOrphanedFilesToProcess.set(ofc.maxOrphanedFilesToProcess ?? 50);
         this.ofcEmptyAfterXDays.set(ofc.emptyAfterXDays ?? null);
 
         this.loader.stop();
@@ -526,7 +524,6 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
     const config: Partial<OrphanedFilesCleanerConfig> = {
       excludePatterns: this.ofcExcludePatterns(),
       minFileAgeMinutes: this.ofcMinFileAgeMinutes() ?? 0,
-      maxOrphanedFilesToProcess: this.ofcMaxOrphanedFilesToProcess() ?? 50,
       emptyAfterXDays: this.ofcEmptyAfterXDays() ?? undefined,
     };
     this.ofcSaving.set(true);
@@ -582,7 +579,6 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
     return JSON.stringify({
       excludePatterns: this.ofcExcludePatterns(),
       minFileAgeMinutes: this.ofcMinFileAgeMinutes(),
-      maxOrphanedFilesToProcess: this.ofcMaxOrphanedFilesToProcess(),
       emptyAfterXDays: this.ofcEmptyAfterXDays(),
     });
   }

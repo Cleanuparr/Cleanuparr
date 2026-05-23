@@ -63,7 +63,6 @@ public sealed class OrphanedFilesCleanerConfigController : ControllerBase
             {
                 config.ExcludePatterns,
                 config.MinFileAgeMinutes,
-                config.MaxOrphanedFilesToProcess,
                 config.EmptyAfterXDays,
                 clients,
             });
@@ -89,7 +88,6 @@ public sealed class OrphanedFilesCleanerConfigController : ControllerBase
 
             oldConfig.ExcludePatterns = newConfigDto.ExcludePatterns;
             oldConfig.MinFileAgeMinutes = newConfigDto.MinFileAgeMinutes;
-            oldConfig.MaxOrphanedFilesToProcess = newConfigDto.MaxOrphanedFilesToProcess;
             oldConfig.EmptyAfterXDays = newConfigDto.EmptyAfterXDays;
 
             await _dataContext.SaveChangesAsync();

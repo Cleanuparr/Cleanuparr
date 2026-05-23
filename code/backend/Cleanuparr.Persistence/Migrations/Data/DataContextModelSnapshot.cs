@@ -1214,10 +1214,6 @@ namespace Cleanuparr.Persistence.Migrations.Data
                         .HasColumnType("TEXT")
                         .HasColumnName("exclude_patterns");
 
-                    b.Property<int>("MaxOrphanedFilesToProcess")
-                        .HasColumnType("INTEGER")
-                        .HasColumnName("max_orphaned_files_to_process");
-
                     b.Property<int>("MinFileAgeMinutes")
                         .HasColumnType("INTEGER")
                         .HasColumnName("min_file_age_minutes");

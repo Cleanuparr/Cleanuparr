@@ -70,21 +70,13 @@
           hint="File or folder names matching these patterns are never considered orphaned (e.g. *.nfo, .DS_Store)"
           [(items)]="ofcExcludePatterns"
         />
-        <div class="form-row">
-          <app-number-input
-            label="Min File Age"
-            suffix="min"
-            [min]="0"
-            hint="Skip files or folders modified less than this many minutes ago. Protects active downloads."
-            [(value)]="ofcMinFileAgeMinutes"
-          />
-          <app-number-input
-            label="Max Moves per Run"
-            [min]="1"
-            hint="Safety cap: stop after moving this many entries per run to prevent accidental mass moves."
-            [(value)]="ofcMaxOrphanedFilesToProcess"
-          />
-        </div>
+        <app-number-input
+          label="Min File Age"
+          suffix="min"
+          [min]="0"
+          hint="Skip files or folders modified less than this many minutes ago. Protects active downloads."
+          [(value)]="ofcMinFileAgeMinutes"
+        />
         <app-number-input
           label="Purge Orphaned After"
           suffix="days"

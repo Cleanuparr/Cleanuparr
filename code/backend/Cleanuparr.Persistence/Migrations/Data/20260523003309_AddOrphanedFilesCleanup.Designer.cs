@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Cleanuparr.Persistence.Migrations.Data
 {
     [DbContext(typeof(DataContext))]
-    [Migration("20260522230627_AddOrphanedFilesCleaner")]
-    partial class AddOrphanedFilesCleaner
+    [Migration("20260523003309_AddOrphanedFilesCleanup")]
+    partial class AddOrphanedFilesCleanup
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -1216,10 +1216,6 @@ namespace Cleanuparr.Persistence.Migrations.Data
                         .IsRequired()
                         .HasColumnType("TEXT")
                         .HasColumnName("exclude_patterns");
-
-                    b.Property<int>("MaxOrphanedFilesToProcess")
-                        .HasColumnType("INTEGER")
-                        .HasColumnName("max_orphaned_files_to_process");
 
                     b.Property<int>("MinFileAgeMinutes")
                         .HasColumnType("INTEGER")

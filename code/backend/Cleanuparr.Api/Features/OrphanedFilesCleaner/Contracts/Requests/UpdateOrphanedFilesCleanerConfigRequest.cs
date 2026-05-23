@@ -13,11 +13,6 @@ public sealed record UpdateOrphanedFilesCleanerConfigRequest
     public int MinFileAgeMinutes { get; init; } = 0;
 
     /// <summary>
-    /// Maximum number of orphaned entries to move per run.
-    /// </summary>
-    public int MaxOrphanedFilesToProcess { get; init; } = 50;
-
-    /// <summary>
     /// If set, entries in OrphanedDirectory older than this many days are permanently deleted.
     /// </summary>
     public int? EmptyAfterXDays { get; init; }

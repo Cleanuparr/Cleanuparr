@@ -45,7 +45,6 @@ export class OrphanedFilesCleanerComponent implements OnInit, HasPendingChanges 
   // Global settings
   readonly excludePatterns = signal<string[]>([]);
   readonly minFileAgeMinutes = signal<number | null>(0);
-  readonly maxOrphanedFilesToProcess = signal<number | null>(50);
   readonly emptyAfterXDays = signal<number | null>(null);
 
   // Per-client settings
@@ -88,7 +87,6 @@ export class OrphanedFilesCleanerComponent implements OnInit, HasPendingChanges 
       next: (config) => {
         this.excludePatterns.set(config.excludePatterns ?? []);
         this.minFileAgeMinutes.set(config.minFileAgeMinutes ?? 0);
-        this.maxOrphanedFilesToProcess.set(config.maxOrphanedFilesToProcess ?? 50);
         this.emptyAfterXDays.set(config.emptyAfterXDays ?? null);
 
         const clients = (config.clients ?? []).map(c => ({
@@ -169,7 +167,6 @@ export class OrphanedFilesCleanerComponent implements OnInit, HasPendingChanges 
     const config: Partial<OrphanedFilesCleanerConfig> = {
       excludePatterns: this.excludePatterns(),
       minFileAgeMinutes: this.minFileAgeMinutes() ?? 0,
-      maxOrphanedFilesToProcess: this.maxOrphanedFilesToProcess() ?? 50,
       emptyAfterXDays: this.emptyAfterXDays() ?? undefined,
     };
 
@@ -193,7 +190,6 @@ export class OrphanedFilesCleanerComponent implements OnInit, HasPendingChanges 
     return JSON.stringify({
       excludePatterns: this.excludePatterns(),
       minFileAgeMinutes: this.minFileAgeMinutes(),
-      maxOrphanedFilesToProcess: this.maxOrphanedFilesToProcess(),
       emptyAfterXDays: this.emptyAfterXDays(),
     });
   }

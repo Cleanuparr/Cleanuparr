@@ -208,6 +208,75 @@ When enabled, the source files will be deleted from disk when the download is re
 
 <div className={styles.section}>
 
+<SectionTitle>Orphaned Files Settings</SectionTitle>
+
+<p className={styles.sectionDescription}>
+  Orphaned files scanning runs as part of the Download Cleaner job. Global settings apply to all clients; per-client settings are configured in the <strong>Orphaned Files</strong> accordion under each download client.
+</p>
+
+<ConfigSection
+  title="Exclude Patterns"
+>
+
+Glob patterns for file or folder names that should never be considered orphaned. Matching is case-insensitive and applies to the entry name only (not the full path).
+
+**Examples:**
+```
+*.nfo
+*.txt
+.DS_Store
+```
+
+</ConfigSection>
+
+<ConfigSection
+  title="Min File Age"
+>
+
+Minimum age in minutes a file or folder must have before it can be considered orphaned. Protects files that are actively being downloaded or just finished. Set to `0` to disable (default).
+
+</ConfigSection>
+
+<ConfigSection
+  title="Purge Orphaned After"
+>
+
+Number of days after which entries in the Orphaned Directory are permanently deleted. Leave empty to keep orphaned files indefinitely.
+
+<Warning>
+Files deleted by this option are permanently removed from disk.
+</Warning>
+
+</ConfigSection>
+
+<ConfigSection
+  title="Enabled (per client)"
+>
+
+Enable orphaned files scanning for a specific download client. Configure under the **Orphaned Files** accordion in the per-client section.
+
+</ConfigSection>
+
+<ConfigSection
+  title="Scan Directories"
+>
+
+Absolute paths to scan for orphaned files on this download client. Each top-level entry is checked against active torrent save paths. Scan directories must not overlap with those of other clients.
+
+</ConfigSection>
+
+<ConfigSection
+  title="Orphaned Directory"
+>
+
+Where orphaned files are moved for this download client. Leave empty to log orphaned entries without moving them.
+
+</ConfigSection>
+
+</div>
+
+<div className={styles.section}>
+
 <SectionTitle>Unlinked Download Settings</SectionTitle>
 
 <p className={styles.sectionDescription}>
