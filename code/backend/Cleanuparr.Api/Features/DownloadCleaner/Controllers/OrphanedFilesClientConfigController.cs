@@ -94,7 +94,12 @@ public sealed class OrphanedFilesClientConfigController : ControllerBase
                 .Where(c => c.DownloadClientConfigId != downloadClientId)
                 .ToListAsync();
 
-            existing.Validate(siblings);
+            var otherDownloadClients = await _dataContext.DownloadClients
+                .AsNoTracking()
+                .Where(c => c.Id != downloadClientId)
+                .ToListAsync();
+
+            existing.Validate(siblings, otherDownloadClients);
 
             await _dataContext.SaveChangesAsync();
 
