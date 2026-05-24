@@ -484,7 +484,7 @@ public sealed class DownloadCleaner : GenericHandler
                 DateTime lastWrite = File.GetLastWriteTimeUtc(normalizedEntry);
                 DateTime created = File.GetCreationTimeUtc(normalizedEntry);
                 DateTime mostRecent = lastWrite > created ? lastWrite : created;
-                double ageMinutes = (DateTime.UtcNow - mostRecent).TotalMinutes;
+                double ageMinutes = (_timeProvider.GetUtcNow().UtcDateTime - mostRecent).TotalMinutes;
 
                 if (ageMinutes < clientConfig.MinFileAgeMinutes)
                 {
@@ -520,7 +520,7 @@ public sealed class DownloadCleaner : GenericHandler
 
         if (Path.Exists(destination))
         {
-            string timestamp = DateTime.UtcNow.ToString("yyyyMMddHHmmss");
+            string timestamp = _timeProvider.GetUtcNow().UtcDateTime.ToString("yyyyMMddHHmmss");
             destination = Path.Combine(orphanedDirectory, $"{entryName}_{timestamp}");
 
             int counter = 1;
@@ -546,7 +546,7 @@ public sealed class DownloadCleaner : GenericHandler
                 File.Move(path, capturedDestination);
             }
 
-            File.SetLastWriteTimeUtc(capturedDestination, DateTime.UtcNow);
+            File.SetLastWriteTimeUtc(capturedDestination, _timeProvider.GetUtcNow().UtcDateTime);
 
             _logger.LogInformation("orphaned entry moved | {source} -> {dest}", path, capturedDestination);
         }
@@ -568,7 +568,7 @@ public sealed class DownloadCleaner : GenericHandler
             return;
         }
 
-        DateTime cutoff = DateTime.UtcNow.AddDays(-clientConfig.EmptyAfterXDays.Value);
+        DateTime cutoff = _timeProvider.GetUtcNow().UtcDateTime.AddDays(-clientConfig.EmptyAfterXDays.Value);
 
         foreach (var entry in Directory.EnumerateFileSystemEntries(clientConfig.OrphanedDirectory))
         {
