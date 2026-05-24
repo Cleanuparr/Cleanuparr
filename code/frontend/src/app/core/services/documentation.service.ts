@@ -89,6 +89,12 @@ export class DocumentationService {
       'downloadDirectoryTarget': 'download-directory-source-and-local-directory-target',
       'unlinkedIgnoredRootDir': 'ignored-root-directory',
       'unlinkedCategories': 'unlinked-categories',
+      'orphanedFilesEnabled': 'enable-orphaned-files-cleaner',
+      'orphanedFilesScanDirectories': 'scan-directories',
+      'orphanedFilesOrphanedDirectory': 'orphaned-directory',
+      'orphanedFilesExcludePatterns': 'exclude-patterns',
+      'orphanedFilesMinFileAgeMinutes': 'min-file-age',
+      'orphanedFilesEmptyAfterXDays': 'purge-orphaned-after',
     },
     'malware-blocker': {
       'enabled': 'enable-malware-blocker',
