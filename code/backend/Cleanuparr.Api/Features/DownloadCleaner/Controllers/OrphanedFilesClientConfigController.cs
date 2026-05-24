@@ -4,7 +4,6 @@ using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using ValidationException = Cleanuparr.Domain.Exceptions.ValidationException;
 
 namespace Cleanuparr.Api.Features.DownloadCleaner.Controllers;
 
@@ -102,11 +101,6 @@ public sealed class OrphanedFilesClientConfigController : ControllerBase
             _logger.LogInformation("Updated orphaned files client config for client {ClientId}", downloadClientId);
 
             return Ok(existing);
-        }
-        catch (ValidationException ex)
-        {
-            _logger.LogWarning("Validation failed for orphaned files client config: {Message}", ex.Message);
-            return BadRequest(new { Message = ex.Message });
         }
         finally
         {
