@@ -1,3 +1,5 @@
+using Cleanuparr.Domain.Enums;
+using Cleanuparr.Persistence.Models.Configuration;
 using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
 using Shouldly;
 using Xunit;
@@ -7,6 +9,46 @@ namespace Cleanuparr.Persistence.Tests.Models.Configuration.DownloadCleaner;
 
 public sealed class OrphanedFilesClientConfigTests
 {
+    #region Defaults
+
+    [Fact]
+    public void Defaults_EnabledIsFalse()
+    {
+        new OrphanedFilesClientConfig().Enabled.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void Defaults_ScanDirectoriesIsEmpty()
+    {
+        new OrphanedFilesClientConfig().ScanDirectories.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void Defaults_OrphanedDirectoryIsNull()
+    {
+        new OrphanedFilesClientConfig().OrphanedDirectory.ShouldBeNull();
+    }
+
+    [Fact]
+    public void Defaults_ExcludePatternsIsEmpty()
+    {
+        new OrphanedFilesClientConfig().ExcludePatterns.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void Defaults_MinFileAgeMinutesIsZero()
+    {
+        new OrphanedFilesClientConfig().MinFileAgeMinutes.ShouldBe(0);
+    }
+
+    [Fact]
+    public void Defaults_EmptyAfterXDaysIsNull()
+    {
+        new OrphanedFilesClientConfig().EmptyAfterXDays.ShouldBeNull();
+    }
+
+    #endregion
+
     #region Validate - Self-validation
 
     [Fact]
@@ -188,6 +230,77 @@ public sealed class OrphanedFilesClientConfigTests
 
         Should.NotThrow(() => config.Validate([]));
     }
+
+    #endregion
+
+    #region Validate - Cross-client download directory
+
+    [Fact]
+    public void Validate_ScanDirOverlapsOtherClientDownloadTarget_ThrowsValidationException()
+    {
+        var config = new OrphanedFilesClientConfig
+        {
+            Enabled = true,
+            ScanDirectories = ["/data/downloads"],
+        };
+
+        var otherClient = MakeDownloadClient("Other", "/data/downloads/movies");
+
+        Should.Throw<ValidationException>(() => config.Validate([], [otherClient]))
+            .Message.ShouldContain("overlap");
+    }
+
+    [Fact]
+    public void Validate_OrphanedDirOverlapsOtherClientDownloadTarget_ThrowsValidationException()
+    {
+        var config = new OrphanedFilesClientConfig
+        {
+            Enabled = true,
+            ScanDirectories = ["/data/downloads"],
+            OrphanedDirectory = "/data/other-downloads",
+        };
+
+        var otherClient = MakeDownloadClient("Other", "/data/other-downloads/movies");
+
+        Should.Throw<ValidationException>(() => config.Validate([], [otherClient]))
+            .Message.ShouldContain("overlap");
+    }
+
+    [Fact]
+    public void Validate_NoOverlapWithOtherClientDownloadTarget_DoesNotThrow()
+    {
+        var config = new OrphanedFilesClientConfig
+        {
+            Enabled = true,
+            ScanDirectories = ["/data/downloads-a"],
+        };
+
+        var otherClient = MakeDownloadClient("Other", "/data/downloads-b");
+
+        Should.NotThrow(() => config.Validate([], [otherClient]));
+    }
+
+    [Fact]
+    public void Validate_OtherClientWithoutDownloadTarget_IsIgnored()
+    {
+        var config = new OrphanedFilesClientConfig
+        {
+            Enabled = true,
+            ScanDirectories = ["/data/downloads"],
+        };
+
+        var otherClient = MakeDownloadClient("Other", null);
+
+        Should.NotThrow(() => config.Validate([], [otherClient]));
+    }
+
+    private static DownloadClientConfig MakeDownloadClient(string name, string? downloadDirectoryTarget) => new()
+    {
+        Name = name,
+        TypeName = DownloadClientTypeName.qBittorrent,
+        Type = DownloadClientType.Torrent,
+        DownloadDirectoryTarget = downloadDirectoryTarget,
+    };
 
     #endregion
 }
