@@ -89,7 +89,7 @@ export class DocumentationService {
       'downloadDirectoryTarget': 'download-directory-source-and-local-directory-target',
       'unlinkedIgnoredRootDir': 'ignored-root-directory',
       'unlinkedCategories': 'unlinked-categories',
-      'orphanedFilesEnabled': 'enable-orphaned-files-cleaner',
+      'orphanedFilesEnabled': 'enabled-per-client',
       'orphanedFilesScanDirectories': 'scan-directories',
       'orphanedFilesOrphanedDirectory': 'orphaned-directory',
       'orphanedFilesExcludePatterns': 'exclude-patterns',
