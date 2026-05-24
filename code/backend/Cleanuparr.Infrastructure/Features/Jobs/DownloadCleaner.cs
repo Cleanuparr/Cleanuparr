@@ -166,7 +166,7 @@ public sealed class DownloadCleaner : GenericHandler
 
         try
         {
-            await ProcessOrphanedFilesAsync(loggedInServices, failedClientIds, cancellationToken);
+            await ProcessOrphanedFilesAsync(loggedInServices, cancellationToken);
         }
         catch (Exception ex)
         {
@@ -311,7 +311,6 @@ public sealed class DownloadCleaner : GenericHandler
 
     private async Task ProcessOrphanedFilesAsync(
         IReadOnlyList<IDownloadService> downloadServices,
-        HashSet<Guid> failedClientIds,
         CancellationToken cancellationToken)
     {
         List<OrphanedFilesClientConfig> clientConfigs;
@@ -379,7 +378,6 @@ public sealed class DownloadCleaner : GenericHandler
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to get torrents from client {name}", downloadClient.Name);
-                failedClientIds.Add(downloadClient.Id);
             }
         }
 
@@ -387,13 +385,6 @@ public sealed class DownloadCleaner : GenericHandler
 
         foreach (var clientConfig in clientConfigs)
         {
-            if (failedClientIds.Contains(clientConfig.DownloadClientConfigId))
-            {
-                _logger.LogWarning("Skipping scan for client {name} — claimed paths could not be loaded, scan would produce false positives",
-                    clientConfig.DownloadClientConfig.Name);
-                continue;
-            }
-
             if (clientConfig.ScanDirectories.Count == 0)
             {
                 _logger.LogWarning("No scan directories configured for client {name}, skipping",
