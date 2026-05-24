@@ -7,8 +7,6 @@ namespace Cleanuparr.Persistence.Tests.Models.Configuration.DownloadCleaner;
 
 public sealed class UnlinkedConfigTests
 {
-    #region Default Values
-
     [Fact]
     public void Defaults_EnabledIsFalse()
     {
@@ -30,10 +28,6 @@ public sealed class UnlinkedConfigTests
         config.Categories.ShouldBeEmpty();
     }
 
-    #endregion
-
-    #region Validate - Disabled
-
     [Fact]
     public void Validate_WhenDisabled_DoesNotThrow()
     {
@@ -46,10 +40,6 @@ public sealed class UnlinkedConfigTests
 
         Should.NotThrow(() => config.Validate());
     }
-
-    #endregion
-
-    #region Validate - Enabled
 
     [Fact]
     public void Validate_WhenEnabled_WithValidConfig_DoesNotThrow()
@@ -120,10 +110,6 @@ public sealed class UnlinkedConfigTests
         exception.Message.ShouldBe("Empty unlinked category filter found");
     }
 
-    #endregion
-
-    #region Validate - Ignored Root Dirs
-
     [Fact]
     public void Validate_WhenEnabled_WithNonExistentIgnoredRootDir_ThrowsValidationException()
     {
@@ -164,9 +150,6 @@ public sealed class UnlinkedConfigTests
             IgnoredRootDirs = [""]
         };
 
-        // Empty strings are filtered out, so this should not throw
         Should.NotThrow(() => config.Validate());
     }
-
-    #endregion
 }
