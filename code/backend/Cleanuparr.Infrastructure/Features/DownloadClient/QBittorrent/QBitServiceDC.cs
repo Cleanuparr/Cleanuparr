@@ -44,7 +44,7 @@ public partial class QBitService
 
         return torrentList
             .Where(x => !string.IsNullOrEmpty(x.Hash))
-            .Select(t => (ITorrentItemWrapper)new QBitItemWrapper(t, [], false))
+            .Select(ITorrentItemWrapper (t) => new QBitItemWrapper(t, [], false))
             .ToList();
     }
 
