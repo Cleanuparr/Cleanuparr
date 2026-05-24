@@ -104,7 +104,7 @@ public sealed class DownloadCleanerOrphanFlowTests : IDisposable
 
         TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
         var dbClient = _fixture.DataContext.DownloadClients.First();
-        TestDataContextFactory.AddOrphanedFilesClientConfig(
+        TestDataContextFactory.AddOrphanedFilesConfig(
             _fixture.DataContext, dbClient,
             scanDirectories: [scanDir],
             orphanedDirectory: orphanedDir);
@@ -128,7 +128,7 @@ public sealed class DownloadCleanerOrphanFlowTests : IDisposable
 
         TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
         var dbClient = _fixture.DataContext.DownloadClients.First();
-        TestDataContextFactory.AddOrphanedFilesClientConfig(
+        TestDataContextFactory.AddOrphanedFilesConfig(
             _fixture.DataContext, dbClient,
             scanDirectories: [scanDir],
             orphanedDirectory: Path.Combine(_tempRoot, "orphaned"));
@@ -152,7 +152,7 @@ public sealed class DownloadCleanerOrphanFlowTests : IDisposable
 
         TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
         var dbClient = _fixture.DataContext.DownloadClients.First();
-        TestDataContextFactory.AddOrphanedFilesClientConfig(
+        TestDataContextFactory.AddOrphanedFilesConfig(
             _fixture.DataContext, dbClient,
             scanDirectories: [scanDir],
             orphanedDirectory: Path.Combine(_tempRoot, "orphaned"),
@@ -176,7 +176,7 @@ public sealed class DownloadCleanerOrphanFlowTests : IDisposable
 
         TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
         var dbClient = _fixture.DataContext.DownloadClients.First();
-        TestDataContextFactory.AddOrphanedFilesClientConfig(
+        TestDataContextFactory.AddOrphanedFilesConfig(
             _fixture.DataContext, dbClient,
             scanDirectories: [scanDir],
             orphanedDirectory: Path.Combine(_tempRoot, "orphaned"),
@@ -200,7 +200,7 @@ public sealed class DownloadCleanerOrphanFlowTests : IDisposable
 
         TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
         var dbClient = _fixture.DataContext.DownloadClients.First();
-        TestDataContextFactory.AddOrphanedFilesClientConfig(
+        TestDataContextFactory.AddOrphanedFilesConfig(
             _fixture.DataContext, dbClient,
             scanDirectories: [scanDir],
             orphanedDirectory: null);
@@ -226,7 +226,7 @@ public sealed class DownloadCleanerOrphanFlowTests : IDisposable
 
         TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
         var dbClient = _fixture.DataContext.DownloadClients.First();
-        TestDataContextFactory.AddOrphanedFilesClientConfig(
+        TestDataContextFactory.AddOrphanedFilesConfig(
             _fixture.DataContext, dbClient,
             scanDirectories: [scanDir],
             orphanedDirectory: orphanedDir);
@@ -250,7 +250,7 @@ public sealed class DownloadCleanerOrphanFlowTests : IDisposable
 
         TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
         var dbClient = _fixture.DataContext.DownloadClients.First();
-        TestDataContextFactory.AddOrphanedFilesClientConfig(
+        TestDataContextFactory.AddOrphanedFilesConfig(
             _fixture.DataContext, dbClient,
             scanDirectories: [scanDir],
             orphanedDirectory: orphanedDir);

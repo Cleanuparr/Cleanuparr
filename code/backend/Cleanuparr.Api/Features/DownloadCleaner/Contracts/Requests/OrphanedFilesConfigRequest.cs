@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Cleanuparr.Api.Features.DownloadCleaner.Contracts.Requests;
 
-public sealed record OrphanedFilesClientConfigRequest
+public sealed record OrphanedFilesConfigRequest
 {
     public bool Enabled { get; init; }
 

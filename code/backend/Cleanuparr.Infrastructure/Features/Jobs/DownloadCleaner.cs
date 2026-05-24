@@ -313,12 +313,12 @@ public sealed class DownloadCleaner : GenericHandler
         IReadOnlyList<IDownloadService> downloadServices,
         CancellationToken cancellationToken)
     {
-        List<OrphanedFilesClientConfig> clientConfigs;
+        List<OrphanedFilesConfig> clientConfigs;
 
         await DataContext.Lock.WaitAsync(cancellationToken);
         try
         {
-            clientConfigs = await _dataContext.OrphanedFilesClientConfigs
+            clientConfigs = await _dataContext.OrphanedFilesConfigs
                 .AsNoTracking()
                 .Include(x => x.DownloadClientConfig)
                 .Where(x => x.Enabled && x.DownloadClientConfig.Enabled)
@@ -432,7 +432,7 @@ public sealed class DownloadCleaner : GenericHandler
     private async Task ScanOrphanedDirectoryAsync(
         string directory,
         HashSet<string> claimedPaths,
-        OrphanedFilesClientConfig clientConfig,
+        OrphanedFilesConfig clientConfig,
         string? normalizedOrphanedDir,
         CancellationToken cancellationToken)
     {
@@ -546,7 +546,7 @@ public sealed class DownloadCleaner : GenericHandler
     }
 
     private void PurgeOrphanedDirectory(
-        OrphanedFilesClientConfig clientConfig,
+        OrphanedFilesConfig clientConfig,
         CancellationToken cancellationToken)
     {
         if (!clientConfig.EmptyAfterXDays.HasValue)

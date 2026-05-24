@@ -77,7 +77,7 @@ public class DataContext : DbContext
 
     public DbSet<BlacklistSyncConfig> BlacklistSyncConfigs { get; set; }
 
-    public DbSet<OrphanedFilesClientConfig> OrphanedFilesClientConfigs { get; set; }
+    public DbSet<OrphanedFilesConfig> OrphanedFilesConfigs { get; set; }
 
     public DbSet<SeekerConfig> SeekerConfigs { get; set; }
 
@@ -373,7 +373,7 @@ public class DataContext : DbContext
         });
 
         // Configure per-client orphaned files config relationship
-        modelBuilder.Entity<OrphanedFilesClientConfig>(entity =>
+        modelBuilder.Entity<OrphanedFilesConfig>(entity =>
         {
             entity.HasOne(c => c.DownloadClientConfig)
                   .WithMany()

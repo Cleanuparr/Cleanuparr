@@ -49,7 +49,7 @@ namespace Cleanuparr.Persistence.Migrations.Data
             ");
 
             migrationBuilder.CreateTable(
-                name: "orphaned_files_client_configs",
+                name: "orphaned_files_configs",
                 columns: table => new
                 {
                     id = table.Column<Guid>(type: "TEXT", nullable: false),
@@ -63,9 +63,9 @@ namespace Cleanuparr.Persistence.Migrations.Data
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("pk_orphaned_files_client_configs", x => x.id);
+                    table.PrimaryKey("pk_orphaned_files_configs", x => x.id);
                     table.ForeignKey(
-                        name: "fk_orphaned_files_client_configs_download_clients_download_client_config_id",
+                        name: "fk_orphaned_files_configs_download_clients_download_client_config_id",
                         column: x => x.download_client_config_id,
                         principalTable: "download_clients",
                         principalColumn: "id",
@@ -73,8 +73,8 @@ namespace Cleanuparr.Persistence.Migrations.Data
                 });
 
             migrationBuilder.CreateIndex(
-                name: "ix_orphaned_files_client_configs_download_client_config_id",
-                table: "orphaned_files_client_configs",
+                name: "ix_orphaned_files_configs_download_client_config_id",
+                table: "orphaned_files_configs",
                 column: "download_client_config_id",
                 unique: true);
 
@@ -91,7 +91,7 @@ namespace Cleanuparr.Persistence.Migrations.Data
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
-                name: "orphaned_files_client_configs");
+                name: "orphaned_files_configs");
 
             migrationBuilder.DropColumn(
                 name: "download_directory_source",

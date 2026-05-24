@@ -15,8 +15,8 @@ import { ToastService } from '@core/services/toast.service';
 import { ConfirmService } from '@core/services/confirm.service';
 import {
   DownloadCleanerConfig, SeedingRule, ClientCleanerConfig, UnlinkedConfigModel,
-  OrphanedFilesClientConfig,
-  createDefaultUnlinkedConfig, createDefaultOrphanedFilesClientConfig,
+  OrphanedFilesConfig,
+  createDefaultUnlinkedConfig, createDefaultOrphanedFilesConfig,
 } from '@shared/models/download-cleaner-config.model';
 import { ScheduleOptions } from '@shared/models/queue-cleaner-config.model';
 import { ScheduleUnit, TorrentPrivacyType, DownloadClientTypeName } from '@shared/models/enums';
@@ -276,7 +276,7 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
           ...c,
           seedingRules: c.seedingRules ?? [],
           unlinkedConfig: c.unlinkedConfig ?? createDefaultUnlinkedConfig(),
-          orphanedFilesConfig: c.orphanedFilesConfig ?? createDefaultOrphanedFilesClientConfig(),
+          orphanedFilesConfig: c.orphanedFilesConfig ?? createDefaultOrphanedFilesConfig(),
         })));
 
         if (dc.clients?.length > 0) {
@@ -287,7 +287,7 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
         const orphanedFilesSnapshots: Record<string, string> = {};
         for (const c of dc.clients ?? []) {
           unlinkedSnapshots[c.downloadClientId] = JSON.stringify(c.unlinkedConfig ?? createDefaultUnlinkedConfig());
-          orphanedFilesSnapshots[c.downloadClientId] = JSON.stringify(c.orphanedFilesConfig ?? createDefaultOrphanedFilesClientConfig());
+          orphanedFilesSnapshots[c.downloadClientId] = JSON.stringify(c.orphanedFilesConfig ?? createDefaultOrphanedFilesConfig());
         }
         this.unlinkedSnapshots.set(unlinkedSnapshots);
         this.orphanedFilesSnapshots.set(orphanedFilesSnapshots);
@@ -497,11 +497,11 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
 
   // --- Orphaned files per-client config ---
 
-  updateOrphanedFilesField<K extends keyof OrphanedFilesClientConfig>(field: K, value: OrphanedFilesClientConfig[K]): void {
+  updateOrphanedFilesField<K extends keyof OrphanedFilesConfig>(field: K, value: OrphanedFilesConfig[K]): void {
     this.updateSelectedClient(client => ({
       ...client,
       orphanedFilesConfig: {
-        ...(client.orphanedFilesConfig ?? createDefaultOrphanedFilesClientConfig()),
+        ...(client.orphanedFilesConfig ?? createDefaultOrphanedFilesConfig()),
         [field]: value,
       },
     }));
@@ -514,7 +514,7 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
       return;
     }
     this.orphanedFilesSaving.set(true);
-    this.api.updateOrphanedFilesClientConfig(clientId, client.orphanedFilesConfig).subscribe({
+    this.api.updateOrphanedFilesConfig(clientId, client.orphanedFilesConfig).subscribe({
       next: () => {
         this.toast.success('Orphaned files settings saved');
         this.orphanedFilesSaving.set(false);

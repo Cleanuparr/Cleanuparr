@@ -4,7 +4,7 @@ using ValidationException = Cleanuparr.Domain.Exceptions.ValidationException;
 
 namespace Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
 
-public sealed record OrphanedFilesClientConfig : IConfig
+public sealed record OrphanedFilesConfig : IConfig
 {
     [Key]
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
@@ -31,7 +31,7 @@ public sealed record OrphanedFilesClientConfig : IConfig
     public void Validate() => Validate([], []);
 
     public void Validate(
-        IReadOnlyList<OrphanedFilesClientConfig> siblings,
+        IReadOnlyList<OrphanedFilesConfig> siblings,
         IReadOnlyList<DownloadClientConfig>? otherDownloadClients = null)
     {
         otherDownloadClients ??= [];

@@ -1201,7 +1201,7 @@ namespace Cleanuparr.Persistence.Migrations.Data
                     b.ToTable("telegram_configs", (string)null);
                 });
 
-            modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.DownloadCleaner.OrphanedFilesClientConfig", b =>
+            modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.DownloadCleaner.OrphanedFilesConfig", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -1239,13 +1239,13 @@ namespace Cleanuparr.Persistence.Migrations.Data
                         .HasColumnName("scan_directories");
 
                     b.HasKey("Id")
-                        .HasName("pk_orphaned_files_client_configs");
+                        .HasName("pk_orphaned_files_configs");
 
                     b.HasIndex("DownloadClientConfigId")
                         .IsUnique()
-                        .HasDatabaseName("ix_orphaned_files_client_configs_download_client_config_id");
+                        .HasDatabaseName("ix_orphaned_files_configs_download_client_config_id");
 
-                    b.ToTable("orphaned_files_client_configs", (string)null);
+                    b.ToTable("orphaned_files_configs", (string)null);
                 });
 
             modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.QueueCleaner.QueueCleanerConfig", b =>
@@ -2025,14 +2025,14 @@ namespace Cleanuparr.Persistence.Migrations.Data
                     b.Navigation("NotificationConfig");
                 });
 
-            modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.DownloadCleaner.OrphanedFilesClientConfig", b =>
+            modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.DownloadCleaner.OrphanedFilesConfig", b =>
                 {
                     b.HasOne("Cleanuparr.Persistence.Models.Configuration.DownloadClientConfig", "DownloadClientConfig")
                         .WithMany()
                         .HasForeignKey("DownloadClientConfigId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
-                        .HasConstraintName("fk_orphaned_files_client_configs_download_clients_download_client_config_id");
+                        .HasConstraintName("fk_orphaned_files_configs_download_clients_download_client_config_id");
 
                     b.Navigation("DownloadClientConfig");
                 });

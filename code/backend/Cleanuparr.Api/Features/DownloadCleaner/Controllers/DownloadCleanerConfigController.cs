@@ -53,7 +53,7 @@ public sealed class DownloadCleanerConfigController : ControllerBase
             var allUTorrentRules = await _dataContext.UTorrentSeedingRules.AsNoTracking().ToListAsync();
             var allRTorrentRules = await _dataContext.RTorrentSeedingRules.AsNoTracking().ToListAsync();
             var allUnlinkedConfigs = await _dataContext.UnlinkedConfigs.AsNoTracking().ToListAsync();
-            var allOrphanedFilesConfigs = await _dataContext.OrphanedFilesClientConfigs.AsNoTracking().ToListAsync();
+            var allOrphanedFilesConfigs = await _dataContext.OrphanedFilesConfigs.AsNoTracking().ToListAsync();
 
             var clients = new List<object>();
 

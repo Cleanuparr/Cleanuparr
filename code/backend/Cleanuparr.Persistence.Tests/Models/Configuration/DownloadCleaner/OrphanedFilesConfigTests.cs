@@ -7,44 +7,44 @@ using ValidationException = Cleanuparr.Domain.Exceptions.ValidationException;
 
 namespace Cleanuparr.Persistence.Tests.Models.Configuration.DownloadCleaner;
 
-public sealed class OrphanedFilesClientConfigTests
+public sealed class OrphanedFilesConfigTests
 {
     #region Defaults
 
     [Fact]
     public void Defaults_EnabledIsFalse()
     {
-        new OrphanedFilesClientConfig().Enabled.ShouldBeFalse();
+        new OrphanedFilesConfig().Enabled.ShouldBeFalse();
     }
 
     [Fact]
     public void Defaults_ScanDirectoriesIsEmpty()
     {
-        new OrphanedFilesClientConfig().ScanDirectories.ShouldBeEmpty();
+        new OrphanedFilesConfig().ScanDirectories.ShouldBeEmpty();
     }
 
     [Fact]
     public void Defaults_OrphanedDirectoryIsNull()
     {
-        new OrphanedFilesClientConfig().OrphanedDirectory.ShouldBeNull();
+        new OrphanedFilesConfig().OrphanedDirectory.ShouldBeNull();
     }
 
     [Fact]
     public void Defaults_ExcludePatternsIsEmpty()
     {
-        new OrphanedFilesClientConfig().ExcludePatterns.ShouldBeEmpty();
+        new OrphanedFilesConfig().ExcludePatterns.ShouldBeEmpty();
     }
 
     [Fact]
     public void Defaults_MinFileAgeMinutesIsZero()
     {
-        new OrphanedFilesClientConfig().MinFileAgeMinutes.ShouldBe(0);
+        new OrphanedFilesConfig().MinFileAgeMinutes.ShouldBe(0);
     }
 
     [Fact]
     public void Defaults_EmptyAfterXDaysIsNull()
     {
-        new OrphanedFilesClientConfig().EmptyAfterXDays.ShouldBeNull();
+        new OrphanedFilesConfig().EmptyAfterXDays.ShouldBeNull();
     }
 
     #endregion
@@ -54,7 +54,7 @@ public sealed class OrphanedFilesClientConfigTests
     [Fact]
     public void Validate_WhenDisabled_DoesNotThrow()
     {
-        var config = new OrphanedFilesClientConfig { Enabled = false, ScanDirectories = [] };
+        var config = new OrphanedFilesConfig { Enabled = false, ScanDirectories = [] };
 
         Should.NotThrow(() => config.Validate());
     }
@@ -62,7 +62,7 @@ public sealed class OrphanedFilesClientConfigTests
     [Fact]
     public void Validate_WhenEnabledWithNoScanDirs_ThrowsValidationException()
     {
-        var config = new OrphanedFilesClientConfig { Enabled = true, ScanDirectories = [] };
+        var config = new OrphanedFilesConfig { Enabled = true, ScanDirectories = [] };
 
         Should.Throw<ValidationException>(() => config.Validate())
             .Message.ShouldContain("scan directory");
@@ -71,7 +71,7 @@ public sealed class OrphanedFilesClientConfigTests
     [Fact]
     public void Validate_WhenEnabledWithScanDirs_DoesNotThrow()
     {
-        var config = new OrphanedFilesClientConfig
+        var config = new OrphanedFilesConfig
         {
             Enabled = true,
             ScanDirectories = ["/downloads"],
@@ -87,13 +87,13 @@ public sealed class OrphanedFilesClientConfigTests
     [Fact]
     public void Validate_ScanDirMatchesSiblingScanDir_ThrowsValidationException()
     {
-        var config = new OrphanedFilesClientConfig
+        var config = new OrphanedFilesConfig
         {
             Enabled = true,
             ScanDirectories = ["/downloads/complete"],
         };
 
-        var sibling = new OrphanedFilesClientConfig
+        var sibling = new OrphanedFilesConfig
         {
             Enabled = true,
             ScanDirectories = ["/downloads/complete"],
@@ -106,13 +106,13 @@ public sealed class OrphanedFilesClientConfigTests
     [Fact]
     public void Validate_ScanDirIsSubpathOfSiblingScanDir_ThrowsValidationException()
     {
-        var config = new OrphanedFilesClientConfig
+        var config = new OrphanedFilesConfig
         {
             Enabled = true,
             ScanDirectories = ["/downloads/complete/movies"],
         };
 
-        var sibling = new OrphanedFilesClientConfig
+        var sibling = new OrphanedFilesConfig
         {
             Enabled = true,
             ScanDirectories = ["/downloads/complete"],
@@ -125,13 +125,13 @@ public sealed class OrphanedFilesClientConfigTests
     [Fact]
     public void Validate_SiblingScanDirIsSubpathOfScanDir_ThrowsValidationException()
     {
-        var config = new OrphanedFilesClientConfig
+        var config = new OrphanedFilesConfig
         {
             Enabled = true,
             ScanDirectories = ["/downloads"],
         };
 
-        var sibling = new OrphanedFilesClientConfig
+        var sibling = new OrphanedFilesConfig
         {
             Enabled = true,
             ScanDirectories = ["/downloads/complete"],
@@ -144,13 +144,13 @@ public sealed class OrphanedFilesClientConfigTests
     [Fact]
     public void Validate_ScanDirMatchesSiblingOrphanedDir_ThrowsValidationException()
     {
-        var config = new OrphanedFilesClientConfig
+        var config = new OrphanedFilesConfig
         {
             Enabled = true,
             ScanDirectories = ["/downloads/orphaned"],
         };
 
-        var sibling = new OrphanedFilesClientConfig
+        var sibling = new OrphanedFilesConfig
         {
             Enabled = true,
             ScanDirectories = ["/downloads/other"],
@@ -164,14 +164,14 @@ public sealed class OrphanedFilesClientConfigTests
     [Fact]
     public void Validate_OrphanedDirMatchesSiblingScanDir_ThrowsValidationException()
     {
-        var config = new OrphanedFilesClientConfig
+        var config = new OrphanedFilesConfig
         {
             Enabled = true,
             ScanDirectories = ["/downloads/client1"],
             OrphanedDirectory = "/downloads/shared",
         };
 
-        var sibling = new OrphanedFilesClientConfig
+        var sibling = new OrphanedFilesConfig
         {
             Enabled = true,
             ScanDirectories = ["/downloads/shared"],
@@ -184,14 +184,14 @@ public sealed class OrphanedFilesClientConfigTests
     [Fact]
     public void Validate_NonOverlappingPaths_DoesNotThrow()
     {
-        var config = new OrphanedFilesClientConfig
+        var config = new OrphanedFilesConfig
         {
             Enabled = true,
             ScanDirectories = ["/downloads/client1"],
             OrphanedDirectory = "/downloads/orphaned1",
         };
 
-        var sibling = new OrphanedFilesClientConfig
+        var sibling = new OrphanedFilesConfig
         {
             Enabled = true,
             ScanDirectories = ["/downloads/client2"],
@@ -204,13 +204,13 @@ public sealed class OrphanedFilesClientConfigTests
     [Fact]
     public void Validate_PathsWithMixedSeparators_DetectsOverlap()
     {
-        var config = new OrphanedFilesClientConfig
+        var config = new OrphanedFilesConfig
         {
             Enabled = true,
             ScanDirectories = ["/downloads/complete"],
         };
 
-        var sibling = new OrphanedFilesClientConfig
+        var sibling = new OrphanedFilesConfig
         {
             Enabled = true,
             ScanDirectories = ["\\downloads\\complete"],
@@ -222,7 +222,7 @@ public sealed class OrphanedFilesClientConfigTests
     [Fact]
     public void Validate_EmptySiblingsList_DoesNotThrow()
     {
-        var config = new OrphanedFilesClientConfig
+        var config = new OrphanedFilesConfig
         {
             Enabled = true,
             ScanDirectories = ["/downloads/complete"],
@@ -238,7 +238,7 @@ public sealed class OrphanedFilesClientConfigTests
     [Fact]
     public void Validate_ScanDirOverlapsOtherClientDownloadTarget_ThrowsValidationException()
     {
-        var config = new OrphanedFilesClientConfig
+        var config = new OrphanedFilesConfig
         {
             Enabled = true,
             ScanDirectories = ["/data/downloads"],
@@ -253,7 +253,7 @@ public sealed class OrphanedFilesClientConfigTests
     [Fact]
     public void Validate_OrphanedDirOverlapsOtherClientDownloadTarget_ThrowsValidationException()
     {
-        var config = new OrphanedFilesClientConfig
+        var config = new OrphanedFilesConfig
         {
             Enabled = true,
             ScanDirectories = ["/data/downloads"],
@@ -269,7 +269,7 @@ public sealed class OrphanedFilesClientConfigTests
     [Fact]
     public void Validate_NoOverlapWithOtherClientDownloadTarget_DoesNotThrow()
     {
-        var config = new OrphanedFilesClientConfig
+        var config = new OrphanedFilesConfig
         {
             Enabled = true,
             ScanDirectories = ["/data/downloads-a"],
@@ -283,7 +283,7 @@ public sealed class OrphanedFilesClientConfigTests
     [Fact]
     public void Validate_OtherClientWithoutDownloadTarget_IsIgnored()
     {
-        var config = new OrphanedFilesClientConfig
+        var config = new OrphanedFilesConfig
         {
             Enabled = true,
             ScanDirectories = ["/data/downloads"],

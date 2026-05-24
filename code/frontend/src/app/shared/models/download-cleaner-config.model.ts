@@ -23,7 +23,7 @@ export interface UnlinkedConfigModel {
   categories: string[];
 }
 
-export interface OrphanedFilesClientConfig {
+export interface OrphanedFilesConfig {
   enabled: boolean;
   scanDirectories: string[];
   orphanedDirectory?: string;
@@ -39,7 +39,7 @@ export interface ClientCleanerConfig {
   downloadClientTypeName: string;
   seedingRules: SeedingRule[];
   unlinkedConfig: UnlinkedConfigModel | null;
-  orphanedFilesConfig: OrphanedFilesClientConfig | null;
+  orphanedFilesConfig: OrphanedFilesConfig | null;
 }
 
 export interface DownloadCleanerConfig {
@@ -76,7 +76,7 @@ export function createDefaultUnlinkedConfig(): UnlinkedConfigModel {
   };
 }
 
-export function createDefaultOrphanedFilesClientConfig(): OrphanedFilesClientConfig {
+export function createDefaultOrphanedFilesConfig(): OrphanedFilesConfig {
   return {
     enabled: false,
     scanDirectories: [],

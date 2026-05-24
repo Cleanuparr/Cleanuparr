@@ -331,7 +331,7 @@ export async function updateOrphanedFilesConfig(
   });
 }
 
-export async function updateOrphanedFilesClientConfig(
+export async function updateOrphanedFilesConfig(
   accessToken: string,
   downloadClientId: string,
   config: { enabled: boolean; scanDirectories: string[]; orphanedDirectory?: string },

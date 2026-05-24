@@ -10,13 +10,13 @@ namespace Cleanuparr.Api.Features.DownloadCleaner.Controllers;
 [ApiController]
 [Route("api/orphaned-files-config")]
 [Authorize]
-public sealed class OrphanedFilesClientConfigController : ControllerBase
+public sealed class OrphanedFilesConfigController : ControllerBase
 {
-    private readonly ILogger<OrphanedFilesClientConfigController> _logger;
+    private readonly ILogger<OrphanedFilesConfigController> _logger;
     private readonly DataContext _dataContext;
 
-    public OrphanedFilesClientConfigController(
-        ILogger<OrphanedFilesClientConfigController> logger,
+    public OrphanedFilesConfigController(
+        ILogger<OrphanedFilesConfigController> logger,
         DataContext dataContext)
     {
         _logger = logger;
@@ -38,7 +38,7 @@ public sealed class OrphanedFilesClientConfigController : ControllerBase
                 return NotFound(new { Message = $"Download client with ID {downloadClientId} not found" });
             }
 
-            var config = await _dataContext.OrphanedFilesClientConfigs
+            var config = await _dataContext.OrphanedFilesConfigs
                 .AsNoTracking()
                 .FirstOrDefaultAsync(c => c.DownloadClientConfigId == downloadClientId);
 
@@ -51,7 +51,7 @@ public sealed class OrphanedFilesClientConfigController : ControllerBase
     }
 
     [HttpPut("{downloadClientId}")]
-    public async Task<IActionResult> UpdateClientConfig(Guid downloadClientId, [FromBody] OrphanedFilesClientConfigRequest dto)
+    public async Task<IActionResult> UpdateClientConfig(Guid downloadClientId, [FromBody] OrphanedFilesConfigRequest dto)
     {
         if (!ModelState.IsValid)
         {
@@ -70,16 +70,16 @@ public sealed class OrphanedFilesClientConfigController : ControllerBase
                 return NotFound(new { Message = $"Download client with ID {downloadClientId} not found" });
             }
 
-            var existing = await _dataContext.OrphanedFilesClientConfigs
+            var existing = await _dataContext.OrphanedFilesConfigs
                 .FirstOrDefaultAsync(c => c.DownloadClientConfigId == downloadClientId);
 
             if (existing is null)
             {
-                existing = new OrphanedFilesClientConfig
+                existing = new OrphanedFilesConfig
                 {
                     DownloadClientConfigId = downloadClientId,
                 };
-                _dataContext.OrphanedFilesClientConfigs.Add(existing);
+                _dataContext.OrphanedFilesConfigs.Add(existing);
             }
 
             existing.Enabled = dto.Enabled;
@@ -89,7 +89,7 @@ public sealed class OrphanedFilesClientConfigController : ControllerBase
             existing.MinFileAgeMinutes = dto.MinFileAgeMinutes;
             existing.EmptyAfterXDays = dto.EmptyAfterXDays;
 
-            var siblings = await _dataContext.OrphanedFilesClientConfigs
+            var siblings = await _dataContext.OrphanedFilesConfigs
                 .AsNoTracking()
                 .Where(c => c.DownloadClientConfigId != downloadClientId)
                 .ToListAsync();

@@ -9,7 +9,7 @@ import {
   updateDownloadCleanerConfig,
   getDownloadCleanerConfig,
   updateOrphanedFilesConfig,
-  updateOrphanedFilesClientConfig,
+  updateOrphanedFilesConfig,
   triggerJob,
 } from './helpers/app-api';
 import { ALL_CLIENTS, TorrentClientFixture } from './helpers/torrent-clients';
@@ -175,7 +175,7 @@ function runClientScenario(fixture: TorrentClientFixture, getToken: () => string
       const createdClient = await createRes.json();
       clientId = createdClient.id;
 
-      const ofcRes = await updateOrphanedFilesClientConfig(getToken(), clientId, {
+      const ofcRes = await updateOrphanedFilesConfig(getToken(), clientId, {
         enabled: true,
         scanDirectories: [dirs.appScanDir],
         orphanedDirectory: dirs.appOrphanedDir,

@@ -5,7 +5,7 @@ import {
   DownloadCleanerConfig,
   SeedingRule,
   UnlinkedConfigModel,
-  OrphanedFilesClientConfig,
+  OrphanedFilesConfig,
 } from '@shared/models/download-cleaner-config.model';
 
 @Injectable({ providedIn: 'root' })
@@ -47,7 +47,7 @@ export class DownloadCleanerApi {
   }
 
   // Per-client orphaned files config
-  updateOrphanedFilesClientConfig(clientId: string, config: Partial<OrphanedFilesClientConfig>): Observable<OrphanedFilesClientConfig> {
-    return this.http.put<OrphanedFilesClientConfig>(`/api/orphaned-files-config/${clientId}`, config);
+  updateOrphanedFilesConfig(clientId: string, config: Partial<OrphanedFilesConfig>): Observable<OrphanedFilesConfig> {
+    return this.http.put<OrphanedFilesConfig>(`/api/orphaned-files-config/${clientId}`, config);
   }
 }

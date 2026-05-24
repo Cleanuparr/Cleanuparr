@@ -369,7 +369,7 @@ public static class TestDataContextFactory
         return config;
     }
 
-    public static OrphanedFilesClientConfig AddOrphanedFilesClientConfig(
+    public static OrphanedFilesConfig AddOrphanedFilesConfig(
         DataContext context,
         DownloadClientConfig downloadClient,
         bool enabled = true,
@@ -379,7 +379,7 @@ public static class TestDataContextFactory
         int minFileAgeMinutes = 0,
         int? emptyAfterXDays = null)
     {
-        var config = new OrphanedFilesClientConfig
+        var config = new OrphanedFilesConfig
         {
             Id = Guid.NewGuid(),
             DownloadClientConfigId = downloadClient.Id,
@@ -391,7 +391,7 @@ public static class TestDataContextFactory
             EmptyAfterXDays = emptyAfterXDays,
         };
 
-        context.OrphanedFilesClientConfigs.Add(config);
+        context.OrphanedFilesConfigs.Add(config);
         context.SaveChanges();
 
         return config;
