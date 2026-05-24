@@ -1,9 +1,9 @@
-using Cleanuparr.Persistence.Models.Configuration.OrphanedFilesCleanup;
+using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
 using Shouldly;
 using Xunit;
 using ValidationException = Cleanuparr.Domain.Exceptions.ValidationException;
 
-namespace Cleanuparr.Persistence.Tests.Models.Configuration.OrphanedFilesCleanup;
+namespace Cleanuparr.Persistence.Tests.Models.Configuration.DownloadCleaner;
 
 public sealed class OrphanedFilesClientConfigTests
 {

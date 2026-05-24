@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace Cleanuparr.Api.Features.OrphanedFilesCleanup.Contracts.Requests;
+namespace Cleanuparr.Api.Features.DownloadCleaner.Contracts.Requests;
 
 public sealed record OrphanedFilesClientConfigRequest
 {

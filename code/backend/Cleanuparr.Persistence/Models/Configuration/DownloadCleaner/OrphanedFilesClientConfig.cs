@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using ValidationException = Cleanuparr.Domain.Exceptions.ValidationException;
 
-namespace Cleanuparr.Persistence.Models.Configuration.OrphanedFilesCleanup;
+namespace Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
 
 public sealed record OrphanedFilesClientConfig : IConfig
 {

@@ -14,7 +14,6 @@ using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
 using Cleanuparr.Persistence.Models.Configuration.General;
-using Cleanuparr.Persistence.Models.Configuration.OrphanedFilesCleanup;
 using Cleanuparr.Shared.Helpers;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;

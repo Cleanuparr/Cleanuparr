@@ -1198,7 +1198,7 @@ namespace Cleanuparr.Persistence.Migrations.Data
                     b.ToTable("telegram_configs", (string)null);
                 });
 
-            modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.OrphanedFilesCleanup.OrphanedFilesClientConfig", b =>
+            modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.DownloadCleaner.OrphanedFilesClientConfig", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -2022,7 +2022,7 @@ namespace Cleanuparr.Persistence.Migrations.Data
                     b.Navigation("NotificationConfig");
                 });
 
-            modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.OrphanedFilesCleanup.OrphanedFilesClientConfig", b =>
+            modelBuilder.Entity("Cleanuparr.Persistence.Models.Configuration.DownloadCleaner.OrphanedFilesClientConfig", b =>
                 {
                     b.HasOne("Cleanuparr.Persistence.Models.Configuration.DownloadClientConfig", "DownloadClientConfig")
                         .WithMany()
