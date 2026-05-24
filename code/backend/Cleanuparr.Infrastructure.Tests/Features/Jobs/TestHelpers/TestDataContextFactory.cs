@@ -368,4 +368,32 @@ public static class TestDataContextFactory
 
         return config;
     }
+
+    public static OrphanedFilesClientConfig AddOrphanedFilesClientConfig(
+        DataContext context,
+        DownloadClientConfig downloadClient,
+        bool enabled = true,
+        List<string>? scanDirectories = null,
+        string? orphanedDirectory = null,
+        List<string>? excludePatterns = null,
+        int minFileAgeMinutes = 0,
+        int? emptyAfterXDays = null)
+    {
+        var config = new OrphanedFilesClientConfig
+        {
+            Id = Guid.NewGuid(),
+            DownloadClientConfigId = downloadClient.Id,
+            Enabled = enabled,
+            ScanDirectories = scanDirectories ?? [],
+            OrphanedDirectory = orphanedDirectory,
+            ExcludePatterns = excludePatterns ?? [],
+            MinFileAgeMinutes = minFileAgeMinutes,
+            EmptyAfterXDays = emptyAfterXDays,
+        };
+
+        context.OrphanedFilesClientConfigs.Add(config);
+        context.SaveChanges();
+
+        return config;
+    }
 }
