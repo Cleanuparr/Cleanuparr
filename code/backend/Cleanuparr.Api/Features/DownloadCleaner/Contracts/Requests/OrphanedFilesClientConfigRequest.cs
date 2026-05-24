@@ -8,9 +8,6 @@ public sealed record OrphanedFilesClientConfigRequest
 
     public List<string> ScanDirectories { get; init; } = [];
 
-    /// <summary>
-    /// If null or empty, orphaned files are logged but not moved.
-    /// </summary>
     public string? OrphanedDirectory { get; init; }
 
     public List<string> ExcludePatterns { get; init; } = [];
