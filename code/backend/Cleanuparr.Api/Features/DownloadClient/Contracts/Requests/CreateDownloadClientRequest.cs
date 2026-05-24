@@ -57,11 +57,6 @@ public sealed record CreateDownloadClientRequest
         {
             throw new ValidationException("Password cannot be a placeholder value");
         }
-
-        if (!string.IsNullOrEmpty(DownloadDirectorySource) != !string.IsNullOrEmpty(DownloadDirectoryTarget))
-        {
-            throw new ValidationException("Both download directory source and target must be set, or both must be empty");
-        }
     }
 
     public DownloadClientConfig ToEntity() => new()

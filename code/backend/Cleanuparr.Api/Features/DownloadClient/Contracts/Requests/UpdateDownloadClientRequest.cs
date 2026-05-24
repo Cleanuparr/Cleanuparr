@@ -52,11 +52,6 @@ public sealed record UpdateDownloadClientRequest
         {
             throw new ValidationException("External URL is not a valid URL");
         }
-
-        if (!string.IsNullOrEmpty(DownloadDirectorySource) != !string.IsNullOrEmpty(DownloadDirectoryTarget))
-        {
-            throw new ValidationException("Both download directory source and target must be set, or both must be empty");
-        }
     }
 
     public DownloadClientConfig ApplyTo(DownloadClientConfig existing) => existing with
