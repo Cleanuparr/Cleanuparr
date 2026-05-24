@@ -63,11 +63,15 @@ export class DownloadClientsComponent implements OnInit, HasPendingChanges {
 
   // Modal validation
   readonly modalNameError = computed(() => {
-    if (!this.modalName().trim()) return 'Name is required';
+    if (!this.modalName().trim()) {
+      return 'Name is required';
+    }
     return undefined;
   });
   readonly modalHostError = computed(() => {
-    if (!this.modalHost().trim()) return 'Host is required';
+    if (!this.modalHost().trim()) {
+      return 'Host is required';
+    }
     return undefined;
   });
   readonly hasModalErrors = computed(() => !!(
@@ -209,8 +213,8 @@ export class DownloadClientsComponent implements OnInit, HasPendingChanges {
         password: this.modalPassword() || undefined,
         urlBase: this.modalUrlBase(),
         externalUrl: this.modalExternalUrl() || undefined,
-        downloadDirectorySource: this.modalDownloadDirectorySource() || null,
-        downloadDirectoryTarget: this.modalDownloadDirectoryTarget() || null,
+        downloadDirectorySource: this.modalDownloadDirectorySource() || undefined,
+        downloadDirectoryTarget: this.modalDownloadDirectoryTarget() || undefined,
       };
       this.api.update(editing.id, client).subscribe({
         next: () => {
@@ -235,8 +239,8 @@ export class DownloadClientsComponent implements OnInit, HasPendingChanges {
         password: this.modalPassword(),
         urlBase: this.modalUrlBase(),
         externalUrl: this.modalExternalUrl() || undefined,
-        downloadDirectorySource: this.modalDownloadDirectorySource() || null,
-        downloadDirectoryTarget: this.modalDownloadDirectoryTarget() || null,
+        downloadDirectorySource: this.modalDownloadDirectorySource() || undefined,
+        downloadDirectoryTarget: this.modalDownloadDirectoryTarget() || undefined,
       };
       this.api.create(dto).subscribe({
         next: () => {
