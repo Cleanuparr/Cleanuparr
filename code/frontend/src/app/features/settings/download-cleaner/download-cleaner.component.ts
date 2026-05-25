@@ -214,6 +214,17 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
     return undefined;
   });
 
+  readonly orphanedFilesOrphanedDirError = computed(() => {
+    const client = this.selectedClient();
+    if (!client?.orphanedFilesConfig?.enabled) {
+      return undefined;
+    }
+    if (!client.orphanedFilesConfig.orphanedDirectory?.trim()) {
+      return 'Orphaned directory is required';
+    }
+    return undefined;
+  });
+
   readonly unlinkedDirty = computed(() => {
     const client = this.selectedClient();
     if (!client) {

@@ -47,11 +47,11 @@ async function waitForOrphanMove(dir: string, expectedName: string, timeoutMs = 
 }
 
 /**
- * Orphaned files cleaner e2e — exercises the full pipeline for every
+ * Orphaned files cleanup e2e — exercises the full pipeline for every
  * supported download client:
  *
  *   1. configure the download cleaner globally (enabled, generous schedule)
- *   2. configure the orphaned files cleaner globally (no min age, no purge)
+ *   2. configure the orphaned files cleanup globally (no min age, no purge)
  *   3. spin up the client and pre-create two torrents whose data lives in
  *      /e2e-downloads/<client>/
  *   4. delete one of those torrents through the client's API while keeping
@@ -88,7 +88,7 @@ const SLUG_BY_TYPE: Record<string, string> = {
   rTorrent: 'rtorrent',
 };
 
-test.describe.serial('Orphaned files cleaner', () => {
+test.describe.serial('Orphaned files cleanup', () => {
   let token: string;
 
   test.beforeAll(async () => {

@@ -1230,6 +1230,7 @@ namespace Cleanuparr.Persistence.Migrations.Data
                         .HasColumnName("min_file_age_minutes");
 
                     b.Property<string>("OrphanedDirectory")
+                        .IsRequired()
                         .HasColumnType("TEXT")
                         .HasColumnName("orphaned_directory");
 

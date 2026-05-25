@@ -374,7 +374,7 @@ public static class TestDataContextFactory
         DownloadClientConfig downloadClient,
         bool enabled = true,
         List<string>? scanDirectories = null,
-        string? orphanedDirectory = null,
+        string orphanedDirectory = "",
         List<string>? excludePatterns = null,
         int minFileAgeMinutes = 0,
         int? emptyAfterXDays = null)

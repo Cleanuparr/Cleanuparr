@@ -399,16 +399,7 @@ public sealed class DownloadCleaner : GenericHandler
                 continue;
             }
 
-            string? normalizedOrphanedDir = string.IsNullOrWhiteSpace(clientConfig.OrphanedDirectory)
-                ? null
-                : Path.GetFullPath(clientConfig.OrphanedDirectory).TrimEnd(Path.DirectorySeparatorChar);
-
-            if (normalizedOrphanedDir is null)
-            {
-                _logger.LogInformation(
-                    "No orphaned directory configured for client {name} — orphaned entries will be logged but not moved",
-                    clientConfig.DownloadClientConfig.Name  );
-            }
+            string normalizedOrphanedDir = Path.GetFullPath(clientConfig.OrphanedDirectory).TrimEnd(Path.DirectorySeparatorChar);
 
             foreach (var scanDir in clientConfig.ScanDirectories)
             {
@@ -438,7 +429,7 @@ public sealed class DownloadCleaner : GenericHandler
         string directory,
         HashSet<string> claimedPaths,
         OrphanedFilesConfig clientConfig,
-        string? normalizedOrphanedDir,
+        string normalizedOrphanedDir,
         CancellationToken cancellationToken)
     {
         foreach (string entry in Directory.EnumerateFileSystemEntries(directory, "*", new EnumerationOptions { RecurseSubdirectories = false }))
@@ -454,8 +445,7 @@ public sealed class DownloadCleaner : GenericHandler
                 continue;
             }
 
-            if (normalizedOrphanedDir is not null &&
-                normalizedEntry.Equals(normalizedOrphanedDir, StringComparison.OrdinalIgnoreCase))
+            if (normalizedEntry.Equals(normalizedOrphanedDir, StringComparison.OrdinalIgnoreCase))
             {
                 _logger.LogDebug("skip | orphaned directory itself | {path}", normalizedEntry);
                 continue;
@@ -491,11 +481,6 @@ public sealed class DownloadCleaner : GenericHandler
             }
 
             _logger.LogInformation("orphaned entry found | {path}", normalizedEntry);
-
-            if (normalizedOrphanedDir is null)
-            {
-                continue;
-            }
 
             try
             {
@@ -549,7 +534,7 @@ public sealed class DownloadCleaner : GenericHandler
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(clientConfig.OrphanedDirectory) || !Directory.Exists(clientConfig.OrphanedDirectory))
+        if (!Directory.Exists(clientConfig.OrphanedDirectory))
         {
             return;
         }

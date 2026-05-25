@@ -18,7 +18,8 @@ public sealed record OrphanedFilesConfig : IConfig
 
     public List<string> ScanDirectories { get; set; } = [];
 
-    public string? OrphanedDirectory { get; set; }
+    [Required]
+    public string OrphanedDirectory { get; set; } = string.Empty;
 
     public List<string> ExcludePatterns { get; set; } = [];
 
@@ -44,12 +45,12 @@ public sealed record OrphanedFilesConfig : IConfig
 
         if (ScanDirectories.Count == 0)
         {
-            throw new ValidationException("At least one scan directory is required when orphaned files cleaner is enabled for this client");
+            throw new ValidationException("At least one scan directory is required when orphaned files cleanup is enabled for this client");
         }
 
         if (string.IsNullOrWhiteSpace(OrphanedDirectory))
         {
-            throw new ValidationException("Orphaned directory is required when orphaned files cleaner is enabled for this client");
+            throw new ValidationException("Orphaned directory is required when orphaned files cleanup is enabled for this client");
         }
 
         foreach (var scanDir in ScanDirectories)

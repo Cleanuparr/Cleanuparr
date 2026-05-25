@@ -24,9 +24,9 @@ public sealed class OrphanedFilesConfigTests
     }
 
     [Fact]
-    public void Defaults_OrphanedDirectoryIsNull()
+    public void Defaults_OrphanedDirectoryIsEmpty()
     {
-        new OrphanedFilesConfig().OrphanedDirectory.ShouldBeNull();
+        new OrphanedFilesConfig().OrphanedDirectory.ShouldBe(string.Empty);
     }
 
     [Fact]
@@ -62,19 +62,34 @@ public sealed class OrphanedFilesConfigTests
     [Fact]
     public void Validate_WhenEnabledWithNoScanDirs_ThrowsValidationException()
     {
-        var config = new OrphanedFilesConfig { Enabled = true, ScanDirectories = [] };
+        var config = new OrphanedFilesConfig { Enabled = true, ScanDirectories = [], OrphanedDirectory = "/downloads/orphaned" };
 
         Should.Throw<ValidationException>(() => config.Validate())
             .Message.ShouldContain("scan directory");
     }
 
     [Fact]
-    public void Validate_WhenEnabledWithScanDirs_DoesNotThrow()
+    public void Validate_WhenEnabledWithoutOrphanedDirectory_ThrowsValidationException()
     {
         var config = new OrphanedFilesConfig
         {
             Enabled = true,
             ScanDirectories = ["/downloads"],
+            OrphanedDirectory = string.Empty,
+        };
+
+        Should.Throw<ValidationException>(() => config.Validate())
+            .Message.ShouldContain("Orphaned directory");
+    }
+
+    [Fact]
+    public void Validate_WhenEnabledWithScanDirsAndOrphanedDir_DoesNotThrow()
+    {
+        var config = new OrphanedFilesConfig
+        {
+            Enabled = true,
+            ScanDirectories = ["/downloads"],
+            OrphanedDirectory = "/downloads-orphaned",
         };
 
         Should.NotThrow(() => config.Validate());
@@ -91,12 +106,14 @@ public sealed class OrphanedFilesConfigTests
         {
             Enabled = true,
             ScanDirectories = ["/downloads/complete"],
+            OrphanedDirectory = "/downloads/orphaned-a",
         };
 
         var sibling = new OrphanedFilesConfig
         {
             Enabled = true,
             ScanDirectories = ["/downloads/complete"],
+            OrphanedDirectory = "/downloads/orphaned-b",
         };
 
         Should.Throw<ValidationException>(() => config.Validate([sibling]))
@@ -110,12 +127,14 @@ public sealed class OrphanedFilesConfigTests
         {
             Enabled = true,
             ScanDirectories = ["/downloads/complete/movies"],
+            OrphanedDirectory = "/downloads/orphaned-a",
         };
 
         var sibling = new OrphanedFilesConfig
         {
             Enabled = true,
             ScanDirectories = ["/downloads/complete"],
+            OrphanedDirectory = "/downloads/orphaned-b",
         };
 
         Should.Throw<ValidationException>(() => config.Validate([sibling]))
@@ -129,12 +148,14 @@ public sealed class OrphanedFilesConfigTests
         {
             Enabled = true,
             ScanDirectories = ["/downloads"],
+            OrphanedDirectory = "/orphaned-a",
         };
 
         var sibling = new OrphanedFilesConfig
         {
             Enabled = true,
             ScanDirectories = ["/downloads/complete"],
+            OrphanedDirectory = "/orphaned-b",
         };
 
         Should.Throw<ValidationException>(() => config.Validate([sibling]))
@@ -148,6 +169,7 @@ public sealed class OrphanedFilesConfigTests
         {
             Enabled = true,
             ScanDirectories = ["/downloads/orphaned"],
+            OrphanedDirectory = "/downloads/orphaned-a",
         };
 
         var sibling = new OrphanedFilesConfig
@@ -175,6 +197,7 @@ public sealed class OrphanedFilesConfigTests
         {
             Enabled = true,
             ScanDirectories = ["/downloads/shared"],
+            OrphanedDirectory = "/orphaned-b",
         };
 
         Should.Throw<ValidationException>(() => config.Validate([sibling]))
@@ -208,12 +231,14 @@ public sealed class OrphanedFilesConfigTests
         {
             Enabled = true,
             ScanDirectories = ["/downloads/complete"],
+            OrphanedDirectory = "/orphaned-a",
         };
 
         var sibling = new OrphanedFilesConfig
         {
             Enabled = true,
             ScanDirectories = ["\\downloads\\complete"],
+            OrphanedDirectory = "/orphaned-b",
         };
 
         Should.Throw<ValidationException>(() => config.Validate([sibling]));
@@ -226,6 +251,7 @@ public sealed class OrphanedFilesConfigTests
         {
             Enabled = true,
             ScanDirectories = ["/downloads/complete"],
+            OrphanedDirectory = "/orphaned",
         };
 
         Should.NotThrow(() => config.Validate([]));
@@ -242,6 +268,7 @@ public sealed class OrphanedFilesConfigTests
         {
             Enabled = true,
             ScanDirectories = ["/data/downloads"],
+            OrphanedDirectory = "/data/orphaned",
         };
 
         var otherClient = MakeDownloadClient("Other", "/data/downloads/movies");
@@ -273,6 +300,7 @@ public sealed class OrphanedFilesConfigTests
         {
             Enabled = true,
             ScanDirectories = ["/data/downloads-a"],
+            OrphanedDirectory = "/data/orphaned",
         };
 
         var otherClient = MakeDownloadClient("Other", "/data/downloads-b");
@@ -287,6 +315,7 @@ public sealed class OrphanedFilesConfigTests
         {
             Enabled = true,
             ScanDirectories = ["/data/downloads"],
+            OrphanedDirectory = "/data/orphaned",
         };
 
         var otherClient = MakeDownloadClient("Other", null);

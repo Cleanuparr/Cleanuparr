@@ -28,8 +28,8 @@ public sealed class DownloadCleanerOrphanFlowTests : IDisposable
         _tempRoot = Path.Combine(Path.GetTempPath(), "cleanuparr-tests", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(_tempRoot);
         // Make the substituted DryRunInterceptor actually invoke captured actions
-        _fixture.DryRunInterceptor.When(x => x.Intercept(Arg.Any<Action>()))
-            .Do(ci => ci.Arg<Action>().Invoke());
+        _fixture.DryRunInterceptor.When(x => x.Intercept(Arg.Any<Delegate>(), Arg.Any<object[]>()))
+            .Do(ci => ((Delegate)ci.Args()[0]).DynamicInvoke((object[])ci.Args()[1]));
     }
 
     public void Dispose()
@@ -90,7 +90,7 @@ public sealed class DownloadCleanerOrphanFlowTests : IDisposable
         var sut = CreateSut();
         await ExecuteWithTimeAdvance(sut);
 
-        _logger.ReceivedLogContaining(LogLevel.Debug, "No enabled per-client orphaned-files configurations");
+        _logger.ReceivedLogContaining(LogLevel.Debug, "No orphaned files settings have been configured");
     }
 
     [Fact]
@@ -188,30 +188,6 @@ public sealed class DownloadCleanerOrphanFlowTests : IDisposable
         await ExecuteWithTimeAdvance(sut);
 
         File.Exists(fresh).ShouldBeTrue();
-    }
-
-    [Fact]
-    public async Task OrphanFlow_NoOrphanedDirectoryConfigured_LogsOrphansWithoutMoving()
-    {
-        var scanDir = Path.Combine(_tempRoot, "downloads");
-        Directory.CreateDirectory(scanDir);
-        var orphan = Path.Combine(scanDir, "orphan.mkv");
-        File.WriteAllText(orphan, "x");
-
-        TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
-        var dbClient = _fixture.DataContext.DownloadClients.First();
-        TestDataContextFactory.AddOrphanedFilesConfig(
-            _fixture.DataContext, dbClient,
-            scanDirectories: [scanDir],
-            orphanedDirectory: null);
-
-        SetupDownloadService(dbClient, []);
-
-        var sut = CreateSut();
-        await ExecuteWithTimeAdvance(sut);
-
-        File.Exists(orphan).ShouldBeTrue();
-        _logger.ReceivedLogContaining(LogLevel.Information, "orphaned entry found");
     }
 
     [Fact]

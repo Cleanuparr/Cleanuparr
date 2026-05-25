@@ -16,21 +16,21 @@ public class DryRunInterceptor : IDryRunInterceptor
         _dataContext = dataContext;
     }
     
-    public void Intercept(Action action)
+    public void Intercept(Delegate action, params object[] parameters)
     {
         MethodInfo methodInfo = action.Method;
-        
+
         var config = _dataContext.GeneralConfigs
             .AsNoTracking()
             .First();
-        
+
         if (config.DryRun)
         {
             _logger.LogInformation("[DRY RUN] skipping method: {name}", methodInfo.Name);
             return;
         }
 
-        action();
+        action.DynamicInvoke(parameters);
     }
     
     public async Task InterceptAsync(Delegate action, params object[] parameters)

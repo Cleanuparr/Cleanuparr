@@ -221,9 +221,10 @@
                   <app-input
                     label="Orphaned Directory"
                     placeholder="/mnt/data/orphaned"
-                    hint="Where orphaned files are moved. Leave empty to log only without moving."
+                    hint="Where orphaned files are moved."
                     [value]="client.orphanedFilesConfig?.orphanedDirectory ?? ''"
-                    (valueChange)="updateOrphanedFilesField('orphanedDirectory', $event || undefined)"
+                    (valueChange)="updateOrphanedFilesField('orphanedDirectory', $event)"
+                    [error]="orphanedFilesOrphanedDirError()"
                     helpKey="download-cleaner:orphanedFilesOrphanedDirectory"
                   />
                   <app-chip-input

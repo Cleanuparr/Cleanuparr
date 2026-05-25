@@ -32,7 +32,7 @@ public interface IDownloadService : IDisposable
 
     /// <summary>
     /// Fetches all torrents regardless of their state, without per-torrent tracker or properties calls.
-    /// Used by the orphaned files cleaner to identify which paths are claimed by active torrents.
+    /// Used by the orphaned files cleanup to identify which paths are claimed by active torrents.
     /// </summary>
     /// <returns>A list of all torrents.</returns>
     Task<List<ITorrentItemWrapper>> GetAllTorrentsLite();

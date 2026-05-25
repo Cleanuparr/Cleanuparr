@@ -56,7 +56,7 @@ namespace Cleanuparr.Persistence.Migrations.Data
                     download_client_config_id = table.Column<Guid>(type: "TEXT", nullable: false),
                     enabled = table.Column<bool>(type: "INTEGER", nullable: false),
                     scan_directories = table.Column<string>(type: "TEXT", nullable: false),
-                    orphaned_directory = table.Column<string>(type: "TEXT", nullable: true),
+                    orphaned_directory = table.Column<string>(type: "TEXT", nullable: false),
                     exclude_patterns = table.Column<string>(type: "TEXT", nullable: false),
                     min_file_age_minutes = table.Column<int>(type: "INTEGER", nullable: false),
                     empty_after_x_days = table.Column<int>(type: "INTEGER", nullable: true)

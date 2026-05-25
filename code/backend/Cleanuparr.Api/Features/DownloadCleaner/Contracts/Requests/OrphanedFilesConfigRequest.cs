@@ -8,7 +8,8 @@ public sealed record OrphanedFilesConfigRequest
 
     public List<string> ScanDirectories { get; init; } = [];
 
-    public string? OrphanedDirectory { get; init; }
+    [Required]
+    public string OrphanedDirectory { get; init; } = string.Empty;
 
     public List<string> ExcludePatterns { get; init; } = [];
 

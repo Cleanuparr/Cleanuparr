@@ -315,7 +315,7 @@ export async function listDownloadClients(accessToken: string): Promise<Array<{ 
   return body.clients ?? [];
 }
 
-// --- Orphaned files cleaner helpers ---
+// --- Orphaned files cleanup helpers ---
 
 export async function updateOrphanedFilesConfig(
   accessToken: string,

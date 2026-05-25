@@ -26,7 +26,7 @@ export interface UnlinkedConfigModel {
 export interface OrphanedFilesConfig {
   enabled: boolean;
   scanDirectories: string[];
-  orphanedDirectory?: string;
+  orphanedDirectory: string;
   excludePatterns: string[];
   minFileAgeMinutes: number;
   emptyAfterXDays?: number;
@@ -80,6 +80,7 @@ export function createDefaultOrphanedFilesConfig(): OrphanedFilesConfig {
   return {
     enabled: false,
     scanDirectories: [],
+    orphanedDirectory: '',
     excludePatterns: [],
     minFileAgeMinutes: 0,
   };
