@@ -47,6 +47,11 @@ public sealed record OrphanedFilesConfig : IConfig
             throw new ValidationException("At least one scan directory is required when orphaned files cleaner is enabled for this client");
         }
 
+        if (string.IsNullOrWhiteSpace(OrphanedDirectory))
+        {
+            throw new ValidationException("Orphaned directory is required when orphaned files cleaner is enabled for this client");
+        }
+
         foreach (var scanDir in ScanDirectories)
         {
             var normalized = NormalizePath(scanDir);
@@ -73,29 +78,26 @@ public sealed record OrphanedFilesConfig : IConfig
             }
         }
 
-        if (!string.IsNullOrWhiteSpace(OrphanedDirectory))
+        var normalizedOrphaned = NormalizePath(OrphanedDirectory);
+
+        foreach (var sibling in siblings)
         {
-            var normalizedOrphaned = NormalizePath(OrphanedDirectory);
-
-            foreach (var sibling in siblings)
+            foreach (var otherScanDir in sibling.ScanDirectories)
             {
-                foreach (var otherScanDir in sibling.ScanDirectories)
-                {
-                    CheckOverlap(normalizedOrphaned, NormalizePath(otherScanDir), "orphaned directory", "another client's scan directory");
-                }
-
-                if (!string.IsNullOrWhiteSpace(sibling.OrphanedDirectory))
-                {
-                    CheckOverlap(normalizedOrphaned, NormalizePath(sibling.OrphanedDirectory), "orphaned directory", "another client's orphaned directory");
-                }
+                CheckOverlap(normalizedOrphaned, NormalizePath(otherScanDir), "orphaned directory", "another client's scan directory");
             }
 
-            foreach (var otherClient in otherDownloadClients)
+            if (!string.IsNullOrWhiteSpace(sibling.OrphanedDirectory))
             {
-                if (!string.IsNullOrWhiteSpace(otherClient.DownloadDirectoryTarget))
-                {
-                    CheckOverlap(normalizedOrphaned, NormalizePath(otherClient.DownloadDirectoryTarget), "orphaned directory", $"another client's download directory ({otherClient.Name})");
-                }
+                CheckOverlap(normalizedOrphaned, NormalizePath(sibling.OrphanedDirectory), "orphaned directory", "another client's orphaned directory");
+            }
+        }
+
+        foreach (var otherClient in otherDownloadClients)
+        {
+            if (!string.IsNullOrWhiteSpace(otherClient.DownloadDirectoryTarget))
+            {
+                CheckOverlap(normalizedOrphaned, NormalizePath(otherClient.DownloadDirectoryTarget), "orphaned directory", $"another client's download directory ({otherClient.Name})");
             }
         }
     }

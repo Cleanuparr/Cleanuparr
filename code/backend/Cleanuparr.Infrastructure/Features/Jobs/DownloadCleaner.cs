@@ -11,6 +11,7 @@ using Cleanuparr.Infrastructure.Features.Files;
 using Cleanuparr.Infrastructure.Helpers;
 using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Persistence;
+using Cleanuparr.Persistence.Models.Configuration;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
 using Cleanuparr.Persistence.Models.Configuration.General;
@@ -181,12 +182,12 @@ public sealed class DownloadCleaner : GenericHandler
 
     protected override async Task ProcessInstanceAsync(ArrInstance instance)
     {
-        using var _ = LogContext.PushProperty(LogProperties.Category, instance.ArrConfig.Type.ToString());
-        using var _2 = LogContext.PushProperty(LogProperties.InstanceName, instance.Name);
+        using IDisposable _ = LogContext.PushProperty(LogProperties.Category, instance.ArrConfig.Type.ToString());
+        using IDisposable _2 = LogContext.PushProperty(LogProperties.InstanceName, instance.Name);
 
         IArrClient arrClient = _arrClientFactory.GetClient(instance.ArrConfig.Type, instance.Version);
 
-        await _arrArrQueueIterator.Iterate(arrClient, instance, async items =>
+        await _arrArrQueueIterator.Iterate(arrClient, instance, items =>
         {
             var groups = items
                 .Where(x => !string.IsNullOrEmpty(x.DownloadId))
@@ -197,6 +198,8 @@ public sealed class DownloadCleaner : GenericHandler
             {
                 _downloadsProcessedByArrs.Add(record.DownloadId.ToLowerInvariant());
             }
+
+            return Task.CompletedTask;
         });
     }
 
@@ -268,7 +271,7 @@ public sealed class DownloadCleaner : GenericHandler
         _logger.LogInformation("Finished cleanup evaluation");
     }
 
-    private async Task<List<ISeedingRule>> LoadSeedingRulesForClient(Persistence.Models.Configuration.DownloadClientConfig clientConfig)
+    private async Task<List<ISeedingRule>> LoadSeedingRulesForClient(DownloadClientConfig clientConfig)
     {
         await DataContext.Lock.WaitAsync();
         try
@@ -309,16 +312,12 @@ public sealed class DownloadCleaner : GenericHandler
         }
     }
 
-    private async Task ProcessOrphanedFilesAsync(
-        IReadOnlyList<IDownloadService> downloadServices,
-        CancellationToken cancellationToken)
+    private async Task<List<OrphanedFilesConfig>> LoadOrphanedFilesConfigs(CancellationToken cancellationToken)
     {
-        List<OrphanedFilesConfig> clientConfigs;
-
         await DataContext.Lock.WaitAsync(cancellationToken);
         try
         {
-            clientConfigs = await _dataContext.OrphanedFilesConfigs
+            return await _dataContext.OrphanedFilesConfigs
                 .AsNoTracking()
                 .Include(x => x.DownloadClientConfig)
                 .Where(x => x.Enabled && x.DownloadClientConfig.Enabled)
@@ -328,16 +327,21 @@ public sealed class DownloadCleaner : GenericHandler
         {
             DataContext.Lock.Release();
         }
+    }
 
-        if (clientConfigs.Count == 0)
+    private async Task ProcessOrphanedFilesAsync(IReadOnlyList<IDownloadService> downloadServices, CancellationToken cancellationToken)
+    {
+        List<OrphanedFilesConfig> orphanedFilesConfigs = await LoadOrphanedFilesConfigs(cancellationToken);
+
+        if (orphanedFilesConfigs.Count is 0)
         {
-            _logger.LogDebug("No enabled per-client orphaned-files configurations, skipping");
+            _logger.LogDebug("No orphaned files settings have been configured");
             return;
         }
 
         // Build set of all content paths claimed by active torrents across ALL download clients
         // to avoid false positives from cross-seeded clients.
-        var claimedPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        HashSet<string> claimedPaths = new(StringComparer.OrdinalIgnoreCase);
 
         foreach (IDownloadService downloadService in downloadServices)
         {
@@ -361,16 +365,18 @@ public sealed class DownloadCleaner : GenericHandler
 
                     claimedPaths.Add(remappedSavePath);
 
-                    if (!string.IsNullOrEmpty(torrent.Name))
+                    if (string.IsNullOrEmpty(torrent.Name))
                     {
-                        string contentPath = PathHelper.NormalizeAndRemap(
-                            Path.Combine(torrent.SavePath, torrent.Name),
-                            downloadClient.DownloadDirectorySource,
-                            downloadClient.DownloadDirectoryTarget
-                        );
-
-                        claimedPaths.Add(contentPath.TrimEnd(Path.DirectorySeparatorChar));
+                        continue;
                     }
+                    
+                    string contentPath = PathHelper.NormalizeAndRemap(
+                        Path.Combine(torrent.SavePath, torrent.Name),
+                        downloadClient.DownloadDirectorySource,
+                        downloadClient.DownloadDirectoryTarget
+                    );
+
+                    claimedPaths.Add(contentPath.TrimEnd(Path.DirectorySeparatorChar));
                 }
 
                 _logger.LogDebug("Loaded {count} torrent paths from {name}", torrents.Count, downloadClient.Name);
@@ -383,11 +389,12 @@ public sealed class DownloadCleaner : GenericHandler
 
         _logger.LogDebug("{count} claimed paths across all clients", claimedPaths.Count);
 
-        foreach (var clientConfig in clientConfigs)
+        foreach (OrphanedFilesConfig clientConfig in orphanedFilesConfigs)
         {
-            if (clientConfig.ScanDirectories.Count == 0)
+            if (clientConfig.ScanDirectories.Count is 0)
             {
-                _logger.LogWarning("No scan directories configured for client {name}, skipping",
+                _logger.LogWarning(
+                    "Skip | No scan directories configured for client {name}",
                     clientConfig.DownloadClientConfig.Name);
                 continue;
             }
@@ -400,7 +407,7 @@ public sealed class DownloadCleaner : GenericHandler
             {
                 _logger.LogInformation(
                     "No orphaned directory configured for client {name} — orphaned entries will be logged but not moved",
-                    clientConfig.DownloadClientConfig.Name);
+                    clientConfig.DownloadClientConfig.Name  );
             }
 
             foreach (var scanDir in clientConfig.ScanDirectories)
@@ -415,9 +422,7 @@ public sealed class DownloadCleaner : GenericHandler
 
                 try
                 {
-                    await ScanOrphanedDirectoryAsync(
-                        scanDir, claimedPaths, clientConfig, normalizedOrphanedDir,
-                        cancellationToken);
+                    ProcessDirectory(scanDir, claimedPaths, clientConfig, normalizedOrphanedDir, cancellationToken);
                 }
                 catch (Exception ex)
                 {
@@ -429,20 +434,20 @@ public sealed class DownloadCleaner : GenericHandler
         }
     }
 
-    private async Task ScanOrphanedDirectoryAsync(
+    private void ProcessDirectory(
         string directory,
         HashSet<string> claimedPaths,
         OrphanedFilesConfig clientConfig,
         string? normalizedOrphanedDir,
         CancellationToken cancellationToken)
     {
-        foreach (var entry in Directory.EnumerateFileSystemEntries(directory, "*", new EnumerationOptions { RecurseSubdirectories = false }))
+        foreach (string entry in Directory.EnumerateFileSystemEntries(directory, "*", new EnumerationOptions { RecurseSubdirectories = false }))
         {
             cancellationToken.ThrowIfCancellationRequested();
 
             string normalizedEntry = Path.GetFullPath(entry).TrimEnd(Path.DirectorySeparatorChar);
 
-            // Skip reparse points (symlinks/junctions) — moving across link boundaries is unpredictable
+            // Skip reparse points (symlinks/junctions)
             if ((File.GetAttributes(normalizedEntry) & FileAttributes.ReparsePoint) != 0)
             {
                 _logger.LogWarning("skip | reparse point | {path}", normalizedEntry);
@@ -463,8 +468,7 @@ public sealed class DownloadCleaner : GenericHandler
             }
 
             string entryName = Path.GetFileName(normalizedEntry);
-            if (clientConfig.ExcludePatterns.Any(pattern =>
-                    FileSystemName.MatchesSimpleExpression(pattern, entryName, ignoreCase: true)))
+            if (clientConfig.ExcludePatterns.Any(pattern => FileSystemName.MatchesSimpleExpression(pattern, entryName, ignoreCase: true)))
             {
                 _logger.LogDebug("skip | excluded by pattern | {path}", normalizedEntry);
                 continue;
@@ -495,7 +499,7 @@ public sealed class DownloadCleaner : GenericHandler
 
             try
             {
-                MoveToOrphanedDirectory(normalizedEntry, normalizedOrphanedDir);
+                _dryRunInterceptor.Intercept(MoveToOrphanedDirectory, normalizedEntry, normalizedOrphanedDir);
             }
             catch (Exception ex)
             {
@@ -522,32 +526,23 @@ public sealed class DownloadCleaner : GenericHandler
             }
         }
 
-        string capturedDestination = destination;
+        Directory.CreateDirectory(orphanedDirectory);
 
-        void DoMove()
+        if (Directory.Exists(path))
         {
-            Directory.CreateDirectory(orphanedDirectory);
-
-            if (Directory.Exists(path))
-            {
-                Directory.Move(path, capturedDestination);
-            }
-            else
-            {
-                File.Move(path, capturedDestination);
-            }
-
-            File.SetLastWriteTimeUtc(capturedDestination, _timeProvider.GetUtcNow().UtcDateTime);
-
-            _logger.LogInformation("orphaned entry moved | {source} -> {dest}", path, capturedDestination);
+            Directory.Move(path, destination);
+        }
+        else
+        {
+            File.Move(path, destination);
         }
 
-        _dryRunInterceptor.Intercept(DoMove);
+        File.SetLastWriteTimeUtc(destination, _timeProvider.GetUtcNow().UtcDateTime);
+
+        _logger.LogInformation("orphaned entry moved | {source} -> {dest}", path, destination);
     }
 
-    private void PurgeOrphanedDirectory(
-        OrphanedFilesConfig clientConfig,
-        CancellationToken cancellationToken)
+    private void PurgeOrphanedDirectory(OrphanedFilesConfig clientConfig, CancellationToken cancellationToken)
     {
         if (!clientConfig.EmptyAfterXDays.HasValue)
         {

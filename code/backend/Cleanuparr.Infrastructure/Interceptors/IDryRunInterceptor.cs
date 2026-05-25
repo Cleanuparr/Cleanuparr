@@ -2,7 +2,7 @@
 
 public interface IDryRunInterceptor
 {
-    void Intercept(Action action);
+    void Intercept(Delegate action, params object[] parameters);
     
     Task InterceptAsync(Delegate action, params object[] parameters);
 
