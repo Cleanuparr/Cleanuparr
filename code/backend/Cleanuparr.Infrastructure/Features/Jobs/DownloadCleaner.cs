@@ -436,61 +436,65 @@ public sealed class DownloadCleaner : GenericHandler
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            string normalizedEntry = Path.GetFullPath(entry).TrimEnd(Path.DirectorySeparatorChar);
-
-            // Skip reparse points (symlinks/junctions)
-            if ((File.GetAttributes(normalizedEntry) & FileAttributes.ReparsePoint) != 0)
-            {
-                _logger.LogWarning("skip | reparse point | {path}", normalizedEntry);
-                continue;
-            }
-
-            if (normalizedEntry.Equals(normalizedOrphanedDir, StringComparison.OrdinalIgnoreCase))
-            {
-                _logger.LogDebug("skip | orphaned directory itself | {path}", normalizedEntry);
-                continue;
-            }
-
-            if (claimedPaths.Contains(normalizedEntry))
-            {
-                _logger.LogDebug("skip | claimed by torrent | {path}", normalizedEntry);
-                continue;
-            }
-
-            string entryName = Path.GetFileName(normalizedEntry);
-            if (clientConfig.ExcludePatterns.Any(pattern => FileSystemName.MatchesSimpleExpression(pattern, entryName, ignoreCase: true)))
-            {
-                _logger.LogDebug("skip | excluded by pattern | {path}", normalizedEntry);
-                continue;
-            }
-
-            if (clientConfig.MinFileAgeHours > 0)
-            {
-                DateTime lastWrite = File.GetLastWriteTimeUtc(normalizedEntry);
-                DateTime created = File.GetCreationTimeUtc(normalizedEntry);
-                DateTime mostRecent = lastWrite > created ? lastWrite : created;
-                double ageHours = (_timeProvider.GetUtcNow().UtcDateTime - mostRecent).TotalHours;
-
-                if (ageHours < clientConfig.MinFileAgeHours)
-                {
-                    _logger.LogDebug(
-                        "skip | too recent ({age:F1}h < {min}h) | {path}",
-                        ageHours, clientConfig.MinFileAgeHours, normalizedEntry);
-                    continue;
-                }
-            }
-
-            _logger.LogInformation("orphaned entry found | {path}", normalizedEntry);
-
             try
             {
+                string normalizedEntry = Path.GetFullPath(entry).TrimEnd(Path.DirectorySeparatorChar);
+
+                // Skip reparse points (symlinks/junctions)
+                if ((File.GetAttributes(normalizedEntry) & FileAttributes.ReparsePoint) != 0)
+                {
+                    _logger.LogWarning("skip | reparse point | {path}", normalizedEntry);
+                    continue;
+                }
+
+                if (normalizedEntry.Equals(normalizedOrphanedDir, StringComparison.OrdinalIgnoreCase))
+                {
+                    _logger.LogDebug("skip | orphaned directory itself | {path}", normalizedEntry);
+                    continue;
+                }
+
+                if (claimedPaths.Contains(normalizedEntry))
+                {
+                    _logger.LogDebug("skip | claimed by torrent | {path}", normalizedEntry);
+                    continue;
+                }
+
+                string entryName = Path.GetFileName(normalizedEntry);
+                if (clientConfig.ExcludePatterns.Any(pattern => FileSystemName.MatchesSimpleExpression(pattern, entryName, ignoreCase: true)))
+                {
+                    _logger.LogDebug("skip | excluded by pattern | {path}", normalizedEntry);
+                    continue;
+                }
+
+                if (clientConfig.MinFileAgeHours > 0)
+                {
+                    DateTime lastWrite = File.GetLastWriteTimeUtc(normalizedEntry);
+                    DateTime created = File.GetCreationTimeUtc(normalizedEntry);
+                    DateTime mostRecent = lastWrite > created ? lastWrite : created;
+                    double ageHours = (_timeProvider.GetUtcNow().UtcDateTime - mostRecent).TotalHours;
+
+                    if (ageHours < clientConfig.MinFileAgeHours)
+                    {
+                        _logger.LogDebug(
+                            "skip | too recent ({age:F1}h < {min}h) | {path}",
+                            ageHours, clientConfig.MinFileAgeHours, normalizedEntry);
+                        continue;
+                    }
+                }
+
+                _logger.LogInformation("orphaned entry found | {path}", normalizedEntry);
+
                 string capturedEntry = normalizedEntry;
                 string capturedOrphanedDir = normalizedOrphanedDir;
                 _dryRunInterceptor.Intercept(() => MoveToOrphanedDirectory(capturedEntry, capturedOrphanedDir));
             }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to handle orphaned entry: {path}", normalizedEntry);
+                _logger.LogError(ex, "Failed to handle orphaned entry: {path}", entry);
             }
         }
     }
