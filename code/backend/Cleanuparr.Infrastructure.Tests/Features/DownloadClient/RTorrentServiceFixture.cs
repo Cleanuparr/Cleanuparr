@@ -53,6 +53,9 @@ public class RTorrentServiceFixture : IDisposable
                 var parameters = callInfo.ArgAt<object[]>(1);
                 return (Task)(action.DynamicInvoke(parameters) ?? Task.CompletedTask);
             });
+        DryRunInterceptor
+            .InterceptAsync(default(Func<Task>)!)
+            .ReturnsForAnyArgs(callInfo => callInfo.ArgAt<Func<Task>>(0)());
     }
 
     public RTorrentService CreateSut(DownloadClientConfig? config = null)
@@ -115,6 +118,9 @@ public class RTorrentServiceFixture : IDisposable
                 var parameters = callInfo.ArgAt<object[]>(1);
                 return (Task)(action.DynamicInvoke(parameters) ?? Task.CompletedTask);
             });
+        DryRunInterceptor
+            .InterceptAsync(default(Func<Task>)!)
+            .ReturnsForAnyArgs(callInfo => callInfo.ArgAt<Func<Task>>(0)());
     }
 
     public void Dispose()

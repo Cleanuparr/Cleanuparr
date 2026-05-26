@@ -52,6 +52,9 @@ public class UTorrentServiceFixture : IDisposable
                 var parameters = callInfo.ArgAt<object[]>(1);
                 return (Task)(action.DynamicInvoke(parameters) ?? Task.CompletedTask);
             });
+        DryRunInterceptor
+            .InterceptAsync(default(Func<Task>)!)
+            .ReturnsForAnyArgs(callInfo => callInfo.ArgAt<Func<Task>>(0)());
     }
 
     public UTorrentService CreateSut(DownloadClientConfig? config = null)
@@ -114,6 +117,9 @@ public class UTorrentServiceFixture : IDisposable
                 var parameters = callInfo.ArgAt<object[]>(1);
                 return (Task)(action.DynamicInvoke(parameters) ?? Task.CompletedTask);
             });
+        DryRunInterceptor
+            .InterceptAsync(default(Func<Task>)!)
+            .ReturnsForAnyArgs(callInfo => callInfo.ArgAt<Func<Task>>(0)());
     }
 
     public void Dispose()

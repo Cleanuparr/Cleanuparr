@@ -9,13 +9,28 @@ public class DryRunInterceptor : IDryRunInterceptor
 {
     private readonly ILogger<DryRunInterceptor> _logger;
     private readonly DataContext _dataContext;
-    
+
     public DryRunInterceptor(ILogger<DryRunInterceptor> logger, DataContext dataContext)
     {
         _logger = logger;
         _dataContext = dataContext;
     }
-    
+
+    public void Intercept(Action action)
+    {
+        var config = _dataContext.GeneralConfigs
+            .AsNoTracking()
+            .First();
+
+        if (config.DryRun)
+        {
+            _logger.LogInformation("[DRY RUN] skipping method: {name}", action.Method.Name);
+            return;
+        }
+
+        action();
+    }
+
     public void Intercept(Delegate action, params object[] parameters)
     {
         MethodInfo methodInfo = action.Method;
@@ -32,15 +47,30 @@ public class DryRunInterceptor : IDryRunInterceptor
 
         action.DynamicInvoke(parameters);
     }
-    
-    public async Task InterceptAsync(Delegate action, params object[] parameters)
+
+    public async Task InterceptAsync(Func<Task> action)
     {
-        MethodInfo methodInfo = action.Method;
-        
         var config = await _dataContext.GeneralConfigs
             .AsNoTracking()
             .FirstAsync();
-        
+
+        if (config.DryRun)
+        {
+            _logger.LogInformation("[DRY RUN] skipping method: {name}", action.Method.Name);
+            return;
+        }
+
+        await action();
+    }
+
+    public async Task InterceptAsync(Delegate action, params object[] parameters)
+    {
+        MethodInfo methodInfo = action.Method;
+
+        var config = await _dataContext.GeneralConfigs
+            .AsNoTracking()
+            .FirstAsync();
+
         if (config.DryRun)
         {
             _logger.LogInformation("[DRY RUN] skipping method: {name}", methodInfo.Name);
@@ -54,15 +84,30 @@ public class DryRunInterceptor : IDryRunInterceptor
             await task;
         }
     }
-    
-    public async Task<T?> InterceptAsync<T>(Delegate action, params object[] parameters)
+
+    public async Task<T?> InterceptAsync<T>(Func<Task<T?>> action)
     {
-        MethodInfo methodInfo = action.Method;
-        
         var config = await _dataContext.GeneralConfigs
             .AsNoTracking()
             .FirstAsync();
-        
+
+        if (config.DryRun)
+        {
+            _logger.LogInformation("[DRY RUN] skipping method: {name}", action.Method.Name);
+            return default;
+        }
+
+        return await action();
+    }
+
+    public async Task<T?> InterceptAsync<T>(Delegate action, params object[] parameters)
+    {
+        MethodInfo methodInfo = action.Method;
+
+        var config = await _dataContext.GeneralConfigs
+            .AsNoTracking()
+            .FirstAsync();
+
         if (config.DryRun)
         {
             _logger.LogInformation("[DRY RUN] skipping method: {name}", methodInfo.Name);

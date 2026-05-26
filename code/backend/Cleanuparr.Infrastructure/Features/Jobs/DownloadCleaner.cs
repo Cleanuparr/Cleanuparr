@@ -484,7 +484,9 @@ public sealed class DownloadCleaner : GenericHandler
 
             try
             {
-                _dryRunInterceptor.Intercept(MoveToOrphanedDirectory, normalizedEntry, normalizedOrphanedDir);
+                string capturedEntry = normalizedEntry;
+                string capturedOrphanedDir = normalizedOrphanedDir;
+                _dryRunInterceptor.Intercept(() => MoveToOrphanedDirectory(capturedEntry, capturedOrphanedDir));
             }
             catch (Exception ex)
             {
