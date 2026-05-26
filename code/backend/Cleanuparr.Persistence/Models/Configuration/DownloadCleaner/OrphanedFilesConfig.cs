@@ -23,8 +23,8 @@ public sealed record OrphanedFilesConfig : IConfig
 
     public List<string> ExcludePatterns { get; set; } = [];
 
-    [Range(0, int.MaxValue)]
-    public int MinFileAgeHours { get; set; }
+    [Range(1, int.MaxValue)]
+    public int MinFileAgeHours { get; set; } = 24;
 
     [Range(1, int.MaxValue)]
     public int? EmptyAfterXDays { get; set; }

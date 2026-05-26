@@ -93,7 +93,7 @@ export class DocumentationService {
       'orphanedFilesScanDirectories': 'scan-directories',
       'orphanedFilesOrphanedDirectory': 'orphaned-directory',
       'orphanedFilesExcludePatterns': 'exclude-patterns',
-      'orphanedFilesMinFileAgeMinutes': 'min-file-age',
+      'orphanedFilesMinFileAgeHours': 'min-file-age',
       'orphanedFilesEmptyAfterXDays': 'purge-orphaned-after',
     },
     'malware-blocker': {

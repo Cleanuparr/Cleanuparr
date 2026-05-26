@@ -167,7 +167,7 @@ public sealed class DownloadCleanerOrphanFlowTests : IDisposable
     }
 
     [Fact]
-    public async Task OrphanFlow_EntryYoungerThanMinFileAgeMinutes_IsNotMoved()
+    public async Task OrphanFlow_EntryYoungerThanMinFileAgeHours_IsNotMoved()
     {
         var scanDir = Path.Combine(_tempRoot, "downloads");
         Directory.CreateDirectory(scanDir);
@@ -180,7 +180,7 @@ public sealed class DownloadCleanerOrphanFlowTests : IDisposable
             _fixture.DataContext, dbClient,
             scanDirectories: [scanDir],
             orphanedDirectory: Path.Combine(_tempRoot, "orphaned"),
-            minFileAgeMinutes: 60);
+            minFileAgeHours: 1);
 
         SetupDownloadService(dbClient, []);
 

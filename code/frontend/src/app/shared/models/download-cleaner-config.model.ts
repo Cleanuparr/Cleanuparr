@@ -28,7 +28,7 @@ export interface OrphanedFilesConfig {
   scanDirectories: string[];
   orphanedDirectory: string;
   excludePatterns: string[];
-  minFileAgeMinutes: number;
+  minFileAgeHours: number;
   emptyAfterXDays?: number;
 }
 
@@ -82,6 +82,6 @@ export function createDefaultOrphanedFilesConfig(): OrphanedFilesConfig {
     scanDirectories: [],
     orphanedDirectory: '',
     excludePatterns: [],
-    minFileAgeMinutes: 0,
+    minFileAgeHours: 24,
   };
 }

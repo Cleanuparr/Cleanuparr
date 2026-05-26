@@ -469,13 +469,13 @@ public sealed class DownloadCleaner : GenericHandler
                 DateTime lastWrite = File.GetLastWriteTimeUtc(normalizedEntry);
                 DateTime created = File.GetCreationTimeUtc(normalizedEntry);
                 DateTime mostRecent = lastWrite > created ? lastWrite : created;
-                double ageMinutes = (_timeProvider.GetUtcNow().UtcDateTime - mostRecent).TotalMinutes;
+                double ageHours = (_timeProvider.GetUtcNow().UtcDateTime - mostRecent).TotalHours;
 
-                if (ageMinutes < clientConfig.MinFileAgeHours)
+                if (ageHours < clientConfig.MinFileAgeHours)
                 {
                     _logger.LogDebug(
-                        "skip | too recent ({age:F1} min < {min} min) | {path}",
-                        ageMinutes, clientConfig.MinFileAgeHours, normalizedEntry);
+                        "skip | too recent ({age:F1}h < {min}h) | {path}",
+                        ageHours, clientConfig.MinFileAgeHours, normalizedEntry);
                     continue;
                 }
             }

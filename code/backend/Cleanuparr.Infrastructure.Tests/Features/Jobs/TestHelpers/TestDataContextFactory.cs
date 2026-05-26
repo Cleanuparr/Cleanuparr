@@ -376,7 +376,7 @@ public static class TestDataContextFactory
         List<string>? scanDirectories = null,
         string orphanedDirectory = "",
         List<string>? excludePatterns = null,
-        int minFileAgeMinutes = 0,
+        int minFileAgeHours = 0,
         int? emptyAfterXDays = null)
     {
         var config = new OrphanedFilesConfig
@@ -387,7 +387,7 @@ public static class TestDataContextFactory
             ScanDirectories = scanDirectories ?? [],
             OrphanedDirectory = orphanedDirectory,
             ExcludePatterns = excludePatterns ?? [],
-            MinFileAgeHours = minFileAgeMinutes,
+            MinFileAgeHours = minFileAgeHours,
             EmptyAfterXDays = emptyAfterXDays,
         };
 

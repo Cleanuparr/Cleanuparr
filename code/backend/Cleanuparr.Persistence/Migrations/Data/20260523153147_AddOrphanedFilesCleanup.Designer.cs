@@ -1225,9 +1225,9 @@ namespace Cleanuparr.Persistence.Migrations.Data
                         .HasColumnType("TEXT")
                         .HasColumnName("exclude_patterns");
 
-                    b.Property<int>("MinFileAgeMinutes")
+                    b.Property<int>("MinFileAgeHours")
                         .HasColumnType("INTEGER")
-                        .HasColumnName("min_file_age_minutes");
+                        .HasColumnName("min_file_age_hours");
 
                     b.Property<string>("OrphanedDirectory")
                         .IsRequired()

@@ -237,12 +237,12 @@
                   />
                   <app-number-input
                     label="Min File Age"
-                    suffix="min"
-                    [min]="0"
-                    hint="Skip files or folders modified less than this many minutes ago. Protects active downloads."
-                    [value]="client.orphanedFilesConfig?.minFileAgeMinutes ?? 0"
-                    (valueChange)="updateOrphanedFilesField('minFileAgeMinutes', $event ?? 0)"
-                    helpKey="download-cleaner:orphanedFilesMinFileAgeMinutes"
+                    suffix="hours"
+                    [min]="1"
+                    hint="Skip files or folders modified less than this many hours ago. Protects active downloads."
+                    [value]="client.orphanedFilesConfig?.minFileAgeHours ?? 24"
+                    (valueChange)="updateOrphanedFilesField('minFileAgeHours', $event ?? 24)"
+                    helpKey="download-cleaner:orphanedFilesMinFileAgeHours"
                   />
                   <app-number-input
                     label="Purge Orphaned After"

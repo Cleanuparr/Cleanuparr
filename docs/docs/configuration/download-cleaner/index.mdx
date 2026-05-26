@@ -242,11 +242,11 @@ Use `*` as a wildcard for any characters. For example, `*.nfo` matches any file 
   title="Min File Age"
 >
 
-Minimum age in minutes a file or folder must have before it can be considered orphaned. This protects files that are actively being downloaded or have just finished — they may not yet be registered as a torrent save path.
+Minimum age in hours a file or folder must have before it can be considered orphaned. This protects files that are actively being downloaded or have just finished — they may not yet be registered as a torrent save path.
 
-Set to `0` to disable age filtering (default).
+Defaults to `24` hours.
 
-**Example:** Set to `60` to skip any entry modified less than an hour ago.
+**Example:** Set to `1` to skip any entry modified less than an hour ago.
 
 </ConfigSection>
 

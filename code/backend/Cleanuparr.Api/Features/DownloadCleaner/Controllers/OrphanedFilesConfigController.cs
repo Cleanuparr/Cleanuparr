@@ -79,7 +79,7 @@ public sealed class OrphanedFilesConfigController : ControllerBase
                 ScanDirectories = dto.ScanDirectories,
                 OrphanedDirectory = dto.OrphanedDirectory,
                 ExcludePatterns = dto.ExcludePatterns,
-                MinFileAgeHours = dto.MinFileAgeMinutes,
+                MinFileAgeHours = dto.MinFileAgeHours,
                 EmptyAfterXDays = dto.EmptyAfterXDays,
             };
 
