@@ -394,7 +394,7 @@ public sealed class DownloadCleaner : GenericHandler
             if (clientConfig.ScanDirectories.Count is 0)
             {
                 _logger.LogWarning(
-                    "Skip | No scan directories configured for client {name}",
+                    "skip | no scan directories configured for client {name}",
                     clientConfig.DownloadClientConfig.Name);
                 continue;
             }
