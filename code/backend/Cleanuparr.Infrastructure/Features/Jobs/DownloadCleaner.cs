@@ -139,8 +139,8 @@ public sealed class DownloadCleaner : GenericHandler
                 using var dcType = LogContext.PushProperty(LogProperties.DownloadClientType, downloadService.ClientConfig.Type.ToString());
                 using var dcName = LogContext.PushProperty(LogProperties.DownloadClientName, downloadService.ClientConfig.Name);
 
-                var seedingRules = await LoadSeedingRulesForClient(downloadService.ClientConfig);
-                var unlinkedConfig = await LoadUnlinkedConfigForClient(downloadService.ClientConfig.Id);
+                var seedingRules = await LoadSeedingRulesForClientAsync(downloadService.ClientConfig);
+                var unlinkedConfig = await LoadUnlinkedConfigForClientAsync(downloadService.ClientConfig.Id);
 
                 if (unlinkedConfig is { Enabled: true })
                 {
@@ -271,7 +271,7 @@ public sealed class DownloadCleaner : GenericHandler
         _logger.LogInformation("Finished cleanup evaluation");
     }
 
-    private async Task<List<ISeedingRule>> LoadSeedingRulesForClient(DownloadClientConfig clientConfig)
+    private async Task<List<ISeedingRule>> LoadSeedingRulesForClientAsync(DownloadClientConfig clientConfig)
     {
         await DataContext.Lock.WaitAsync();
         try
@@ -297,7 +297,7 @@ public sealed class DownloadCleaner : GenericHandler
         }
     }
 
-    private async Task<UnlinkedConfig?> LoadUnlinkedConfigForClient(Guid clientId)
+    private async Task<UnlinkedConfig?> LoadUnlinkedConfigForClientAsync(Guid clientId)
     {
         await DataContext.Lock.WaitAsync();
         try
@@ -312,7 +312,7 @@ public sealed class DownloadCleaner : GenericHandler
         }
     }
 
-    private async Task<List<OrphanedFilesConfig>> LoadOrphanedFilesConfigs(CancellationToken cancellationToken)
+    private async Task<List<OrphanedFilesConfig>> LoadOrphanedFilesConfigsAsync(CancellationToken cancellationToken)
     {
         await DataContext.Lock.WaitAsync(cancellationToken);
         try
@@ -331,7 +331,7 @@ public sealed class DownloadCleaner : GenericHandler
 
     private async Task ProcessOrphanedFilesAsync(IReadOnlyList<IDownloadService> downloadServices, CancellationToken cancellationToken)
     {
-        List<OrphanedFilesConfig> orphanedFilesConfigs = await LoadOrphanedFilesConfigs(cancellationToken);
+        List<OrphanedFilesConfig> orphanedFilesConfigs = await LoadOrphanedFilesConfigsAsync(cancellationToken);
 
         if (orphanedFilesConfigs.Count is 0)
         {
