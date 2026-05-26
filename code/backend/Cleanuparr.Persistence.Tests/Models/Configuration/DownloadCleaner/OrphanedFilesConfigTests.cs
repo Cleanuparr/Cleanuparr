@@ -38,7 +38,7 @@ public sealed class OrphanedFilesConfigTests
     [Fact]
     public void Defaults_MinFileAgeMinutesIsZero()
     {
-        new OrphanedFilesConfig().MinFileAgeMinutes.ShouldBe(0);
+        new OrphanedFilesConfig().MinFileAgeHours.ShouldBe(0);
     }
 
     [Fact]

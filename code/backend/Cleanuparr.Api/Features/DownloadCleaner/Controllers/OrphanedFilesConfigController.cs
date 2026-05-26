@@ -86,7 +86,7 @@ public sealed class OrphanedFilesConfigController : ControllerBase
             existing.ScanDirectories = dto.ScanDirectories;
             existing.OrphanedDirectory = dto.OrphanedDirectory;
             existing.ExcludePatterns = dto.ExcludePatterns;
-            existing.MinFileAgeMinutes = dto.MinFileAgeMinutes;
+            existing.MinFileAgeHours = dto.MinFileAgeMinutes;
             existing.EmptyAfterXDays = dto.EmptyAfterXDays;
 
             var siblings = await _dataContext.OrphanedFilesConfigs

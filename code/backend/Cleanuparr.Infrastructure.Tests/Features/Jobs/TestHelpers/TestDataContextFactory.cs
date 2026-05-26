@@ -387,7 +387,7 @@ public static class TestDataContextFactory
             ScanDirectories = scanDirectories ?? [],
             OrphanedDirectory = orphanedDirectory,
             ExcludePatterns = excludePatterns ?? [],
-            MinFileAgeMinutes = minFileAgeMinutes,
+            MinFileAgeHours = minFileAgeMinutes,
             EmptyAfterXDays = emptyAfterXDays,
         };
 

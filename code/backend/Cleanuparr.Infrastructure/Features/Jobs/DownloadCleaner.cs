@@ -369,7 +369,7 @@ public sealed class DownloadCleaner : GenericHandler
                     {
                         continue;
                     }
-                    
+
                     string contentPath = PathHelper.NormalizeAndRemap(
                         Path.Combine(torrent.SavePath, torrent.Name),
                         downloadClient.DownloadDirectorySource,
@@ -464,18 +464,18 @@ public sealed class DownloadCleaner : GenericHandler
                 continue;
             }
 
-            if (clientConfig.MinFileAgeMinutes > 0)
+            if (clientConfig.MinFileAgeHours > 0)
             {
                 DateTime lastWrite = File.GetLastWriteTimeUtc(normalizedEntry);
                 DateTime created = File.GetCreationTimeUtc(normalizedEntry);
                 DateTime mostRecent = lastWrite > created ? lastWrite : created;
                 double ageMinutes = (_timeProvider.GetUtcNow().UtcDateTime - mostRecent).TotalMinutes;
 
-                if (ageMinutes < clientConfig.MinFileAgeMinutes)
+                if (ageMinutes < clientConfig.MinFileAgeHours)
                 {
                     _logger.LogDebug(
                         "skip | too recent ({age:F1} min < {min} min) | {path}",
-                        ageMinutes, clientConfig.MinFileAgeMinutes, normalizedEntry);
+                        ageMinutes, clientConfig.MinFileAgeHours, normalizedEntry);
                     continue;
                 }
             }
@@ -554,23 +554,17 @@ public sealed class DownloadCleaner : GenericHandler
             try
             {
                 int days = clientConfig.EmptyAfterXDays.Value;
-                string capturedEntry = entry;
 
-                void DoPurge()
+                if (Directory.Exists(entry))
                 {
-                    if (Directory.Exists(capturedEntry))
-                    {
-                        Directory.Delete(capturedEntry, recursive: true);
-                    }
-                    else
-                    {
-                        File.Delete(capturedEntry);
-                    }
-
-                    _logger.LogInformation("purged old orphaned entry ({days}d+) | {path}", days, capturedEntry);
+                    Directory.Delete(entry, recursive: true);
+                }
+                else
+                {
+                    File.Delete(entry);
                 }
 
-                _dryRunInterceptor.Intercept(DoPurge);
+                _logger.LogInformation("Purged old orphaned entry ({days}d+) | {path}", days, entry);
             }
             catch (Exception ex)
             {

@@ -24,7 +24,7 @@ public sealed record OrphanedFilesConfig : IConfig
     public List<string> ExcludePatterns { get; set; } = [];
 
     [Range(0, int.MaxValue)]
-    public int MinFileAgeMinutes { get; set; }
+    public int MinFileAgeHours { get; set; }
 
     [Range(1, int.MaxValue)]
     public int? EmptyAfterXDays { get; set; }
@@ -36,7 +36,6 @@ public sealed record OrphanedFilesConfig : IConfig
         IReadOnlyList<DownloadClientConfig>? otherDownloadClients = null)
     {
         otherDownloadClients ??= [];
-
 
         if (!Enabled)
         {
