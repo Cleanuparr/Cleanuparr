@@ -230,10 +230,8 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
     if (!client) {
       return false;
     }
-    const saved = this.unlinkedSnapshots()[client.downloadClientId];
-    if (!saved) {
-      return false;
-    }
+    const saved = this.unlinkedSnapshots()[client.downloadClientId]
+      ?? JSON.stringify(createDefaultUnlinkedConfig());
     return saved !== JSON.stringify(client.unlinkedConfig);
   });
 
@@ -242,10 +240,8 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
     if (!client) {
       return false;
     }
-    const saved = this.orphanedFilesSnapshots()[client.downloadClientId];
-    if (!saved) {
-      return false;
-    }
+    const saved = this.orphanedFilesSnapshots()[client.downloadClientId]
+      ?? JSON.stringify(createDefaultOrphanedFilesConfig());
     return saved !== JSON.stringify(client.orphanedFilesConfig);
   });
 
