@@ -73,21 +73,15 @@ public sealed class OrphanedFilesConfigController : ControllerBase
             var existing = await _dataContext.OrphanedFilesConfigs
                 .FirstOrDefaultAsync(c => c.DownloadClientConfigId == downloadClientId);
 
-            if (existing is null)
+            var candidate = (existing ?? new OrphanedFilesConfig { DownloadClientConfigId = downloadClientId }) with
             {
-                existing = new OrphanedFilesConfig
-                {
-                    DownloadClientConfigId = downloadClientId,
-                };
-                _dataContext.OrphanedFilesConfigs.Add(existing);
-            }
-
-            existing.Enabled = dto.Enabled;
-            existing.ScanDirectories = dto.ScanDirectories;
-            existing.OrphanedDirectory = dto.OrphanedDirectory;
-            existing.ExcludePatterns = dto.ExcludePatterns;
-            existing.MinFileAgeHours = dto.MinFileAgeMinutes;
-            existing.EmptyAfterXDays = dto.EmptyAfterXDays;
+                Enabled = dto.Enabled,
+                ScanDirectories = dto.ScanDirectories,
+                OrphanedDirectory = dto.OrphanedDirectory,
+                ExcludePatterns = dto.ExcludePatterns,
+                MinFileAgeHours = dto.MinFileAgeMinutes,
+                EmptyAfterXDays = dto.EmptyAfterXDays,
+            };
 
             var siblings = await _dataContext.OrphanedFilesConfigs
                 .AsNoTracking()
@@ -99,13 +93,27 @@ public sealed class OrphanedFilesConfigController : ControllerBase
                 .Where(c => c.Id != downloadClientId)
                 .ToListAsync();
 
-            existing.Validate(siblings, otherDownloadClients);
+            candidate.Validate(siblings, otherDownloadClients);
+
+            if (existing is null)
+            {
+                _dataContext.OrphanedFilesConfigs.Add(candidate);
+            }
+            else
+            {
+                existing.Enabled = candidate.Enabled;
+                existing.ScanDirectories = candidate.ScanDirectories;
+                existing.OrphanedDirectory = candidate.OrphanedDirectory;
+                existing.ExcludePatterns = candidate.ExcludePatterns;
+                existing.MinFileAgeHours = candidate.MinFileAgeHours;
+                existing.EmptyAfterXDays = candidate.EmptyAfterXDays;
+            }
 
             await _dataContext.SaveChangesAsync();
 
             _logger.LogInformation("Updated orphaned files client config for client {ClientId}", downloadClientId);
 
-            return Ok(existing);
+            return Ok(existing ?? candidate);
         }
         finally
         {
