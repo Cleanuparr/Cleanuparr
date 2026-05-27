@@ -49,8 +49,13 @@ export class DelugeDriver implements TorrentClientDriver {
     if (!connected) {
       const hosts = await this.call<Array<Array<string>>>('web.get_hosts', []);
       const firstHost = hosts?.[0]?.[0];
-      if (firstHost) {
-        await this.call('web.connect', [firstHost]);
+      if (!firstHost) {
+        throw new Error('Deluge Web UI has no daemon to connect to (web.get_hosts returned empty)');
+      }
+      await this.call('web.connect', [firstHost]);
+      const connectedAfter = await this.call<boolean>('web.connected', []);
+      if (!connectedAfter) {
+        throw new Error('Deluge Web UI is not connected to a daemon after web.connect');
       }
     }
   }
