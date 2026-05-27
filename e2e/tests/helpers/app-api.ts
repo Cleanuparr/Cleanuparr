@@ -317,26 +317,21 @@ export async function listDownloadClients(accessToken: string): Promise<Array<{ 
 
 // --- Orphaned files cleanup helpers ---
 
-export async function updateOrphanedFilesConfig(
-  accessToken: string,
-  config: { excludePatterns?: string[]; minFileAgeHours?: number; purgeAfterHours?: number | null },
-): Promise<Response> {
-  return fetch(`${API}/api/configuration/orphaned_files_cleanup`, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${accessToken}`,
-    },
-    body: JSON.stringify(config),
-  });
+export interface OrphanedFilesConfigRequest {
+  enabled: boolean;
+  scanDirectories: string[];
+  orphanedDirectory: string;
+  excludePatterns?: string[];
+  minFileAgeHours?: number;
+  purgeAfterHours?: number | null;
 }
 
 export async function updateOrphanedFilesConfig(
   accessToken: string,
   downloadClientId: string,
-  config: { enabled: boolean; scanDirectories: string[]; orphanedDirectory?: string },
+  config: OrphanedFilesConfigRequest,
 ): Promise<Response> {
-  return fetch(`${API}/api/configuration/orphaned_files_cleanup/clients/${downloadClientId}`, {
+  return fetch(`${API}/api/orphaned-files-config/${downloadClientId}`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',

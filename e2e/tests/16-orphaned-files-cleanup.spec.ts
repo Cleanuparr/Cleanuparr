@@ -9,7 +9,6 @@ import {
   updateDownloadCleanerConfig,
   getDownloadCleanerConfig,
   updateOrphanedFilesConfig,
-  updateOrphanedFilesConfig,
   triggerJob,
 } from './helpers/app-api';
 import { ALL_CLIENTS, TorrentClientFixture } from './helpers/torrent-clients';
@@ -108,12 +107,6 @@ test.describe.serial('Orphaned files cleanup', () => {
       cronExpression: dcCurrent.cronExpression || '0 0 * * * ?',
       useAdvancedScheduling: dcCurrent.useAdvancedScheduling ?? false,
       ignoredDownloads: [],
-    });
-
-    await updateOrphanedFilesConfig(token, {
-      excludePatterns: [],
-      minFileAgeHours: 0,
-      purgeAfterHours: null,
     });
 
     mkdirSync(HOST_DOWNLOADS, { recursive: true });
