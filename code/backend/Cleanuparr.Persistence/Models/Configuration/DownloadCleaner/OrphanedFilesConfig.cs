@@ -123,6 +123,11 @@ public sealed record OrphanedFilesConfig : IConfig
 
         var normalizedOrphaned = NormalizePath(OrphanedDirectory);
 
+        foreach (var scanDir in ScanDirectories)
+        {
+            CheckOverlap(NormalizePath(scanDir), normalizedOrphaned, "scan directory", "its own orphaned directory");
+        }
+
         foreach (var sibling in siblings)
         {
             foreach (var otherScanDir in sibling.ScanDirectories)
