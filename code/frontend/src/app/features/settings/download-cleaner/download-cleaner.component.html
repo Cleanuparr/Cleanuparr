@@ -55,7 +55,7 @@
       }
       <div class="form-actions">
         <app-button variant="primary" [glowing]="dirty()" [loading]="saving()" [disabled]="saving() || saved() || hasGlobalErrors() || !dirty()" (clicked)="save()">
-          {{ saved() ? 'Saved!' : 'Save Settings' }}
+          {{ saved() ? 'Saved!' : 'Save' }}
         </app-button>
       </div>
     </div>
@@ -192,7 +192,7 @@
                 }
                 <div class="form-actions">
                   <app-button variant="primary" [glowing]="unlinkedDirty()" [loading]="unlinkedSaving()" [disabled]="unlinkedSaving() || unlinkedSaved() || !unlinkedDirty() || !!unlinkedCategoriesError()" (clicked)="saveUnlinkedConfig()">
-                    {{ unlinkedSaved() ? 'Saved!' : 'Save Unlinked Config' }}
+                    {{ unlinkedSaved() ? 'Saved!' : 'Save' }}
                   </app-button>
                 </div>
               </div>
@@ -262,7 +262,7 @@
                     [disabled]="orphanedFilesSaving() || orphanedFilesSaved() || !orphanedFilesDirty() || !!orphanedFilesScanDirsError()"
                     (clicked)="saveOrphanedFilesConfig()"
                   >
-                    {{ orphanedFilesSaved() ? 'Saved!' : 'Save Orphaned Files Settings' }}
+                    {{ orphanedFilesSaved() ? 'Saved!' : 'Save' }}
                   </app-button>
                 </div>
               </div>
