@@ -247,16 +247,18 @@ public sealed class OrphanedFilesCleanupService : IOrphanedFilesCleanupService
 
         Directory.CreateDirectory(orphanedDirectory);
 
+        DateTime now = _timeProvider.GetUtcNow().UtcDateTime;
+
         if (Directory.Exists(path))
         {
             Directory.Move(path, destination);
+            Directory.SetLastWriteTimeUtc(destination, now);
         }
         else
         {
             File.Move(path, destination);
+            File.SetLastWriteTimeUtc(destination, now);
         }
-
-        File.SetLastWriteTimeUtc(destination, _timeProvider.GetUtcNow().UtcDateTime);
 
         _logger.LogInformation("orphaned entry moved | {source} -> {dest}", path, destination);
     }
