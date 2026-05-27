@@ -432,44 +432,44 @@ public sealed class DownloadCleaner : GenericHandler
         string normalizedOrphanedDir,
         CancellationToken cancellationToken)
     {
-        foreach (string entry in Directory.EnumerateFileSystemEntries(directory, "*", new EnumerationOptions { RecurseSubdirectories = false }))
+        foreach (string filePath in Directory.EnumerateFileSystemEntries(directory, "*", new EnumerationOptions { RecurseSubdirectories = false }))
         {
             cancellationToken.ThrowIfCancellationRequested();
 
             try
             {
-                string normalizedEntry = Path.GetFullPath(entry).TrimEnd(Path.DirectorySeparatorChar);
+                string normalizedPath = Path.GetFullPath(filePath).TrimEnd(Path.DirectorySeparatorChar);
 
                 // Skip reparse points (symlinks/junctions)
-                if ((File.GetAttributes(normalizedEntry) & FileAttributes.ReparsePoint) != 0)
+                if ((File.GetAttributes(normalizedPath) & FileAttributes.ReparsePoint) != 0)
                 {
-                    _logger.LogWarning("skip | reparse point | {path}", normalizedEntry);
+                    _logger.LogWarning("skip | reparse point | {path}", normalizedPath);
                     continue;
                 }
 
-                if (normalizedEntry.Equals(normalizedOrphanedDir, StringComparison.OrdinalIgnoreCase))
+                if (normalizedPath.Equals(normalizedOrphanedDir, StringComparison.OrdinalIgnoreCase))
                 {
-                    _logger.LogDebug("skip | orphaned directory itself | {path}", normalizedEntry);
+                    _logger.LogDebug("skip | orphaned directory itself | {path}", normalizedPath);
                     continue;
                 }
 
-                if (claimedPaths.Contains(normalizedEntry))
+                if (claimedPaths.Contains(normalizedPath))
                 {
-                    _logger.LogDebug("skip | claimed by torrent | {path}", normalizedEntry);
+                    _logger.LogDebug("skip | claimed by torrent | {path}", normalizedPath);
                     continue;
                 }
 
-                string entryName = Path.GetFileName(normalizedEntry);
+                string entryName = Path.GetFileName(normalizedPath);
                 if (clientConfig.ExcludePatterns.Any(pattern => FileSystemName.MatchesSimpleExpression(pattern, entryName, ignoreCase: true)))
                 {
-                    _logger.LogDebug("skip | excluded by pattern | {path}", normalizedEntry);
+                    _logger.LogDebug("skip | excluded by pattern | {path}", normalizedPath);
                     continue;
                 }
 
                 if (clientConfig.MinFileAgeHours > 0)
                 {
-                    DateTime lastWrite = File.GetLastWriteTimeUtc(normalizedEntry);
-                    DateTime created = File.GetCreationTimeUtc(normalizedEntry);
+                    DateTime lastWrite = File.GetLastWriteTimeUtc(normalizedPath);
+                    DateTime created = File.GetCreationTimeUtc(normalizedPath);
                     DateTime mostRecent = lastWrite > created ? lastWrite : created;
                     double ageHours = (_timeProvider.GetUtcNow().UtcDateTime - mostRecent).TotalHours;
 
@@ -477,14 +477,14 @@ public sealed class DownloadCleaner : GenericHandler
                     {
                         _logger.LogDebug(
                             "skip | too recent ({age:F1}h < {min}h) | {path}",
-                            ageHours, clientConfig.MinFileAgeHours, normalizedEntry);
+                            ageHours, clientConfig.MinFileAgeHours, normalizedPath);
                         continue;
                     }
                 }
 
-                _logger.LogInformation("orphaned entry found | {path}", normalizedEntry);
+                _logger.LogInformation("orphaned entry found | {path}", normalizedPath);
 
-                string capturedEntry = normalizedEntry;
+                string capturedEntry = normalizedPath;
                 string capturedOrphanedDir = normalizedOrphanedDir;
                 _dryRunInterceptor.Intercept(() => MoveToOrphanedDirectory(capturedEntry, capturedOrphanedDir));
             }
@@ -494,7 +494,7 @@ public sealed class DownloadCleaner : GenericHandler
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to handle orphaned entry: {path}", entry);
+                _logger.LogError(ex, "Failed to handle orphaned entry: {path}", filePath);
             }
         }
     }
@@ -553,11 +553,11 @@ public sealed class DownloadCleaner : GenericHandler
 
         DateTime cutoff = _timeProvider.GetUtcNow().UtcDateTime.AddDays(-clientConfig.EmptyAfterXDays.Value);
 
-        foreach (var entry in Directory.EnumerateFileSystemEntries(clientConfig.OrphanedDirectory))
+        foreach (var filePath in Directory.EnumerateFileSystemEntries(clientConfig.OrphanedDirectory))
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            DateTime lastWrite = File.GetLastWriteTimeUtc(entry);
+            DateTime lastWrite = File.GetLastWriteTimeUtc(filePath);
             if (lastWrite > cutoff)
             {
                 continue;
@@ -567,20 +567,20 @@ public sealed class DownloadCleaner : GenericHandler
             {
                 int days = clientConfig.EmptyAfterXDays.Value;
 
-                if (Directory.Exists(entry))
+                if (Directory.Exists(filePath))
                 {
-                    Directory.Delete(entry, recursive: true);
+                    Directory.Delete(filePath, recursive: true);
                 }
                 else
                 {
-                    File.Delete(entry);
+                    File.Delete(filePath);
                 }
 
-                _logger.LogInformation("Purged old orphaned entry ({days}d+) | {path}", days, entry);
+                _logger.LogInformation("Purged old orphaned entry ({days}d+) | {path}", days, filePath);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to purge orphaned entry: {path}", entry);
+                _logger.LogError(ex, "Failed to purge orphaned entry: {path}", filePath);
             }
         }
     }
