@@ -506,12 +506,18 @@ public sealed class DownloadCleaner : GenericHandler
 
         if (Path.Exists(destination))
         {
+            const int maxAttempts = 100;
             string timestamp = _timeProvider.GetUtcNow().UtcDateTime.ToString("yyyyMMddHHmmss");
             destination = Path.Combine(orphanedDirectory, $"{entryName}_{timestamp}");
 
             int counter = 1;
             while (Path.Exists(destination))
             {
+                if (counter > maxAttempts)
+                {
+                    throw new InvalidOperationException($"Could not find a free destination name for orphaned entry after {maxAttempts} attempts: {path}");
+                }
+                
                 destination = Path.Combine(orphanedDirectory, $"{entryName}_{timestamp}_{counter}");
                 counter++;
             }

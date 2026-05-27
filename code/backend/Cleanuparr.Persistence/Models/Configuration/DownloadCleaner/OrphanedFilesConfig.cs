@@ -61,6 +61,7 @@ public sealed record OrphanedFilesConfig : IConfig
     /// If set, entries in <see cref="OrphanedDirectory"/> older than this many
     /// days are permanently deleted. Null leaves them indefinitely.
     /// </summary>
+    ///  TODO change to int hours, min 1
     [Range(1, int.MaxValue)]
     public int? EmptyAfterXDays { get; set; }
 
