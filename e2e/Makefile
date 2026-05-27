@@ -1,7 +1,7 @@
 .PHONY: up down test install setup
 
 setup:
-	./scripts/setup-test-data.sh
+	bash ./scripts/setup-test-data.sh
 
 up: setup
 	docker compose -f docker-compose.e2e.yml up -d --build --remove-orphans
