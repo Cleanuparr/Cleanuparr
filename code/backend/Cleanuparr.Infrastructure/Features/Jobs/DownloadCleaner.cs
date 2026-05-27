@@ -273,60 +273,36 @@ public sealed class DownloadCleaner : GenericHandler
 
     private async Task<List<ISeedingRule>> LoadSeedingRulesForClientAsync(DownloadClientConfig clientConfig)
     {
-        await DataContext.Lock.WaitAsync();
-        try
+        return clientConfig.TypeName switch
         {
-            return clientConfig.TypeName switch
-            {
-                DownloadClientTypeName.qBittorrent => (await _dataContext.QBitSeedingRules
-                    .Where(r => r.DownloadClientConfigId == clientConfig.Id).AsNoTracking().ToListAsync()).Cast<ISeedingRule>().ToList(),
-                DownloadClientTypeName.Deluge => (await _dataContext.DelugeSeedingRules
-                    .Where(r => r.DownloadClientConfigId == clientConfig.Id).AsNoTracking().ToListAsync()).Cast<ISeedingRule>().ToList(),
-                DownloadClientTypeName.Transmission => (await _dataContext.TransmissionSeedingRules
-                    .Where(r => r.DownloadClientConfigId == clientConfig.Id).AsNoTracking().ToListAsync()).Cast<ISeedingRule>().ToList(),
-                DownloadClientTypeName.uTorrent => (await _dataContext.UTorrentSeedingRules
-                    .Where(r => r.DownloadClientConfigId == clientConfig.Id).AsNoTracking().ToListAsync()).Cast<ISeedingRule>().ToList(),
-                DownloadClientTypeName.rTorrent => (await _dataContext.RTorrentSeedingRules
-                    .Where(r => r.DownloadClientConfigId == clientConfig.Id).AsNoTracking().ToListAsync()).Cast<ISeedingRule>().ToList(),
-                _ => []
-            };
-        }
-        finally
-        {
-            DataContext.Lock.Release();
-        }
+            DownloadClientTypeName.qBittorrent => (await _dataContext.QBitSeedingRules
+                .Where(r => r.DownloadClientConfigId == clientConfig.Id).AsNoTracking().ToListAsync()).Cast<ISeedingRule>().ToList(),
+            DownloadClientTypeName.Deluge => (await _dataContext.DelugeSeedingRules
+                .Where(r => r.DownloadClientConfigId == clientConfig.Id).AsNoTracking().ToListAsync()).Cast<ISeedingRule>().ToList(),
+            DownloadClientTypeName.Transmission => (await _dataContext.TransmissionSeedingRules
+                .Where(r => r.DownloadClientConfigId == clientConfig.Id).AsNoTracking().ToListAsync()).Cast<ISeedingRule>().ToList(),
+            DownloadClientTypeName.uTorrent => (await _dataContext.UTorrentSeedingRules
+                .Where(r => r.DownloadClientConfigId == clientConfig.Id).AsNoTracking().ToListAsync()).Cast<ISeedingRule>().ToList(),
+            DownloadClientTypeName.rTorrent => (await _dataContext.RTorrentSeedingRules
+                .Where(r => r.DownloadClientConfigId == clientConfig.Id).AsNoTracking().ToListAsync()).Cast<ISeedingRule>().ToList(),
+            _ => []
+        };
     }
 
     private async Task<UnlinkedConfig?> LoadUnlinkedConfigForClientAsync(Guid clientId)
     {
-        await DataContext.Lock.WaitAsync();
-        try
-        {
-            return await _dataContext.UnlinkedConfigs
-                .AsNoTracking()
-                .FirstOrDefaultAsync(u => u.DownloadClientConfigId == clientId);
-        }
-        finally
-        {
-            DataContext.Lock.Release();
-        }
+        return await _dataContext.UnlinkedConfigs
+            .AsNoTracking()
+            .FirstOrDefaultAsync(u => u.DownloadClientConfigId == clientId);
     }
 
     private async Task<List<OrphanedFilesConfig>> LoadOrphanedFilesConfigsAsync(CancellationToken cancellationToken)
     {
-        await DataContext.Lock.WaitAsync(cancellationToken);
-        try
-        {
-            return await _dataContext.OrphanedFilesConfigs
-                .AsNoTracking()
-                .Include(x => x.DownloadClientConfig)
-                .Where(x => x.Enabled && x.DownloadClientConfig.Enabled)
-                .ToListAsync(cancellationToken);
-        }
-        finally
-        {
-            DataContext.Lock.Release();
-        }
+        return await _dataContext.OrphanedFilesConfigs
+            .AsNoTracking()
+            .Include(x => x.DownloadClientConfig)
+            .Where(x => x.Enabled && x.DownloadClientConfig.Enabled)
+            .ToListAsync(cancellationToken);
     }
 
     private async Task ProcessOrphanedFilesAsync(IReadOnlyList<IDownloadService> downloadServices, CancellationToken cancellationToken)
