@@ -55,7 +55,7 @@ public sealed class DownloadCleaner : GenericHandler
 
     protected override async Task ExecuteInternalAsync(CancellationToken cancellationToken = default)
     {
-        var downloadServices = await GetInitializedDownloadServicesAsync();
+        IReadOnlyList<IDownloadService> downloadServices = await GetInitializedDownloadServicesAsync();
 
         if (downloadServices.Count is 0)
         {
@@ -63,7 +63,29 @@ public sealed class DownloadCleaner : GenericHandler
             return;
         }
 
-        var config = ContextProvider.Get<DownloadCleanerConfig>();
+        try
+        {
+            await RunCleanupAsync(downloadServices, cancellationToken);
+        }
+        finally
+        {
+            foreach (IDownloadService downloadService in downloadServices)
+            {
+                try
+                {
+                    downloadService.Dispose();
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to dispose download service {name}", downloadService.ClientConfig.Name);
+                }
+            }
+        }
+    }
+
+    private async Task RunCleanupAsync(IReadOnlyList<IDownloadService> downloadServices, CancellationToken cancellationToken)
+    {
+        DownloadCleanerConfig config = ContextProvider.Get<DownloadCleanerConfig>();
 
         List<string> ignoredDownloads = ContextProvider.Get<GeneralConfig>(nameof(GeneralConfig)).IgnoredDownloads;
         ignoredDownloads.AddRange(config.IgnoredDownloads);
@@ -170,11 +192,6 @@ public sealed class DownloadCleaner : GenericHandler
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to process orphaned files");
-        }
-
-        foreach (var downloadService in downloadServices)
-        {
-            downloadService.Dispose();
         }
     }
 
