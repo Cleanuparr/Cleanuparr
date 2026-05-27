@@ -230,7 +230,7 @@
                   <app-chip-input
                     label="Exclude Patterns"
                     placeholder="Add glob pattern (e.g. *.nfo)..."
-                    hint="File or folder names matching these patterns are never considered orphaned (e.g. *.nfo, .DS_Store)"
+                    hint="File or directory names matching these patterns are never considered orphaned (e.g. *.nfo, .DS_Store)"
                     [items]="client.orphanedFilesConfig?.excludePatterns ?? []"
                     (itemsChange)="updateOrphanedFilesField('excludePatterns', $event)"
                     helpKey="download-cleaner:orphanedFilesExcludePatterns"
