@@ -120,7 +120,7 @@ public partial class QBitService
 
         foreach (int fileIndex in unwantedFiles)
         {
-            await _dryRunInterceptor.InterceptAsync(MarkFileAsSkipped, hash, fileIndex);
+            await _dryRunInterceptor.InterceptAsync(() => MarkFileAsSkipped(hash, fileIndex));
         }
         
         return result;

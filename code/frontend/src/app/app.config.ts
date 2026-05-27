@@ -53,6 +53,7 @@ import {
   tablerGripVertical,
   tablerFilter,
   tablerPalette,
+  tablerFileOff,
 } from '@ng-icons/tabler-icons';
 
 import { routes } from './app.routes';
@@ -116,6 +117,7 @@ export const appConfig: ApplicationConfig = {
       tablerGripVertical,
       tablerFilter,
       tablerPalette,
+      tablerFileOff,
     }),
   ],
 };

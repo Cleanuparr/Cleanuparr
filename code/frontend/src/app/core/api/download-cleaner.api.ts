@@ -1,7 +1,12 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { DownloadCleanerConfig, SeedingRule, UnlinkedConfigModel } from '@shared/models/download-cleaner-config.model';
+import {
+  DownloadCleanerConfig,
+  SeedingRule,
+  UnlinkedConfigModel,
+  OrphanedFilesConfig,
+} from '@shared/models/download-cleaner-config.model';
 
 @Injectable({ providedIn: 'root' })
 export class DownloadCleanerApi {
@@ -37,11 +42,12 @@ export class DownloadCleanerApi {
   }
 
   // Unlinked config
-  getUnlinkedConfig(clientId: string): Observable<UnlinkedConfigModel | null> {
-    return this.http.get<UnlinkedConfigModel | null>(`/api/unlinked-config/${clientId}`);
-  }
-
   updateUnlinkedConfig(clientId: string, config: Partial<UnlinkedConfigModel>): Observable<void> {
     return this.http.put<void>(`/api/unlinked-config/${clientId}`, config);
+  }
+
+  // Per-client orphaned files config
+  updateOrphanedFilesConfig(clientId: string, config: Partial<OrphanedFilesConfig>): Observable<OrphanedFilesConfig> {
+    return this.http.put<OrphanedFilesConfig>(`/api/orphaned-files-config/${clientId}`, config);
   }
 }

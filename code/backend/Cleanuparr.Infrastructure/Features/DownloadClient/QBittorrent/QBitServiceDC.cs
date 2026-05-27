@@ -34,6 +34,21 @@ public partial class QBitService
     }
 
     /// <inheritdoc/>
+    public override async Task<List<ITorrentItemWrapper>> GetAllTorrentsLite()
+    {
+        var torrentList = await _client.GetTorrentListAsync(new TorrentListQuery());
+        if (torrentList is null)
+        {
+            return [];
+        }
+
+        return torrentList
+            .Where(x => !string.IsNullOrEmpty(x.Hash))
+            .Select(ITorrentItemWrapper (t) => new QBitItemWrapper(t, [], false))
+            .ToList();
+    }
+
+    /// <inheritdoc/>
     public override List<ITorrentItemWrapper>? FilterDownloadsToBeCleanedAsync(List<ITorrentItemWrapper>? downloads, List<ISeedingRule> seedingRules) =>
         downloads
             ?.Where(x => !string.IsNullOrEmpty(x.Hash))
@@ -76,7 +91,7 @@ public partial class QBitService
 
         _logger.LogDebug("Creating category {name}", name);
 
-        await _dryRunInterceptor.InterceptAsync(CreateCategory, name);
+        await _dryRunInterceptor.InterceptAsync(() => CreateCategory(name));
     }
 
     public override async Task ChangeCategoryForNoHardLinksAsync(List<ITorrentItemWrapper>? downloads, UnlinkedConfig unlinkedConfig)
@@ -116,9 +131,10 @@ public partial class QBitService
                     break;
                 }
 
-                string filePath = string.Join(Path.DirectorySeparatorChar, Path.Combine(torrent.Info.SavePath, file.Name).Split(['\\', '/']));
-
-                filePath = PathHelper.RemapPath(filePath, unlinkedConfig.DownloadDirectorySource, unlinkedConfig.DownloadDirectoryTarget);
+                string filePath = PathHelper.NormalizeAndRemap(
+                    Path.Combine(torrent.Info.SavePath, file.Name),
+                    _downloadClientConfig.DownloadDirectorySource,
+                    _downloadClientConfig.DownloadDirectoryTarget);
 
                 if (file.Priority is TorrentContentPriority.Skip)
                 {
@@ -153,7 +169,7 @@ public partial class QBitService
                 continue;
             }
 
-            await _dryRunInterceptor.InterceptAsync(ChangeCategory, torrent.Hash, unlinkedConfig.TargetCategory, unlinkedConfig.UseTag);
+            await _dryRunInterceptor.InterceptAsync(() => ChangeCategory(torrent.Hash, unlinkedConfig.TargetCategory, unlinkedConfig.UseTag));
 
             await _eventPublisher.PublishCategoryChanged(torrent.Category, unlinkedConfig.TargetCategory, unlinkedConfig.UseTag);
 

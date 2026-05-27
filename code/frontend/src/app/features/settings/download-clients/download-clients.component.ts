@@ -57,15 +57,21 @@ export class DownloadClientsComponent implements OnInit, HasPendingChanges {
   readonly modalPassword = signal('');
   readonly modalUrlBase = signal('');
   readonly modalExternalUrl = signal('');
+  readonly modalDownloadDirectorySource = signal('');
+  readonly modalDownloadDirectoryTarget = signal('');
   readonly testing = signal(false);
 
   // Modal validation
   readonly modalNameError = computed(() => {
-    if (!this.modalName().trim()) return 'Name is required';
+    if (!this.modalName().trim()) {
+      return 'Name is required';
+    }
     return undefined;
   });
   readonly modalHostError = computed(() => {
-    if (!this.modalHost().trim()) return 'Host is required';
+    if (!this.modalHost().trim()) {
+      return 'Host is required';
+    }
     return undefined;
   });
   readonly hasModalErrors = computed(() => !!(
@@ -146,6 +152,8 @@ export class DownloadClientsComponent implements OnInit, HasPendingChanges {
     this.modalPassword.set('');
     this.modalUrlBase.set('');
     this.modalExternalUrl.set('');
+    this.modalDownloadDirectorySource.set('');
+    this.modalDownloadDirectoryTarget.set('');
     this.modalVisible.set(true);
   }
 
@@ -159,6 +167,8 @@ export class DownloadClientsComponent implements OnInit, HasPendingChanges {
     this.modalPassword.set(client.password ?? '');
     this.modalUrlBase.set(client.urlBase);
     this.modalExternalUrl.set(client.externalUrl ?? '');
+    this.modalDownloadDirectorySource.set(client.downloadDirectorySource ?? '');
+    this.modalDownloadDirectoryTarget.set(client.downloadDirectoryTarget ?? '');
     this.modalVisible.set(true);
   }
 
@@ -186,7 +196,9 @@ export class DownloadClientsComponent implements OnInit, HasPendingChanges {
   }
 
   saveClient(): void {
-    if (this.hasModalErrors()) return;
+    if (this.hasModalErrors()) {
+      return;
+    }
     const editing = this.editingClient();
     this.saving.set(true);
 
@@ -201,6 +213,8 @@ export class DownloadClientsComponent implements OnInit, HasPendingChanges {
         password: this.modalPassword() || undefined,
         urlBase: this.modalUrlBase(),
         externalUrl: this.modalExternalUrl() || undefined,
+        downloadDirectorySource: this.modalDownloadDirectorySource() || null,
+        downloadDirectoryTarget: this.modalDownloadDirectoryTarget() || null,
       };
       this.api.update(editing.id, client).subscribe({
         next: () => {
@@ -225,6 +239,8 @@ export class DownloadClientsComponent implements OnInit, HasPendingChanges {
         password: this.modalPassword(),
         urlBase: this.modalUrlBase(),
         externalUrl: this.modalExternalUrl() || undefined,
+        downloadDirectorySource: this.modalDownloadDirectorySource() || null,
+        downloadDirectoryTarget: this.modalDownloadDirectoryTarget() || null,
       };
       this.api.create(dto).subscribe({
         next: () => {
@@ -248,7 +264,9 @@ export class DownloadClientsComponent implements OnInit, HasPendingChanges {
       confirmLabel: 'Delete',
       destructive: true,
     });
-    if (!confirmed) return;
+    if (!confirmed) {
+      return;
+    }
 
     this.api.delete(client.id).subscribe({
       next: () => {

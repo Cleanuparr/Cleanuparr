@@ -21,6 +21,17 @@ public partial class RTorrentService
             .ToList();
     }
 
+    /// <inheritdoc/>
+    public override async Task<List<ITorrentItemWrapper>> GetAllTorrentsLite()
+    {
+        var downloads = await _client.GetAllTorrentsAsync();
+
+        return downloads
+            .Where(x => !string.IsNullOrEmpty(x.Hash))
+            .Select(ITorrentItemWrapper (x) => new RTorrentItemWrapper(x))
+            .ToList();
+    }
+
     public override List<ITorrentItemWrapper>? FilterDownloadsToBeCleanedAsync(List<ITorrentItemWrapper>? downloads, List<ISeedingRule> seedingRules) =>
         downloads
             ?.Where(x => seedingRules.Any(rule => rule.Categories.Any(cat => cat.Equals(x.Category, StringComparison.OrdinalIgnoreCase))))
@@ -90,10 +101,10 @@ public partial class RTorrentService
 
             foreach (var file in files)
             {
-                string filePath = string.Join(Path.DirectorySeparatorChar,
-                    Path.Combine(torrent.Info.Directory ?? torrent.Info.BasePath ?? "", file.Path).Split(['\\', '/']));
-
-                filePath = PathHelper.RemapPath(filePath, unlinkedConfig.DownloadDirectorySource, unlinkedConfig.DownloadDirectoryTarget);
+                string filePath = PathHelper.NormalizeAndRemap(
+                    Path.Combine(torrent.Info.Directory ?? torrent.Info.BasePath ?? "", file.Path),
+                    _downloadClientConfig.DownloadDirectorySource,
+                    _downloadClientConfig.DownloadDirectoryTarget);
 
                 if (file.Priority <= 0)
                 {
@@ -129,7 +140,7 @@ public partial class RTorrentService
                 continue;
             }
 
-            await _dryRunInterceptor.InterceptAsync(ChangeLabel, torrent.Hash, unlinkedConfig.TargetCategory);
+            await _dryRunInterceptor.InterceptAsync(() => ChangeLabel(torrent.Hash, unlinkedConfig.TargetCategory));
 
             _logger.LogInformation("category changed for {name}", torrent.Name);
 

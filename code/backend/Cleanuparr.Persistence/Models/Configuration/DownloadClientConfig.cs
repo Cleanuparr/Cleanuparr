@@ -79,6 +79,18 @@ public sealed record DownloadClientConfig
     public Uri ExternalOrInternalUrl => ExternalUrl ?? Url;
 
     /// <summary>
+    /// The path prefix reported by the download client (e.g., "/downloads").
+    /// Replaced with <see cref="DownloadDirectoryTarget"/> when resolving file paths across all features.
+    /// </summary>
+    public string? DownloadDirectorySource { get; set; }
+
+    /// <summary>
+    /// The actual local mount path (e.g., "/data/downloads").
+    /// Replaces <see cref="DownloadDirectorySource"/> in file paths for hardlink checking and orphan detection.
+    /// </summary>
+    public string? DownloadDirectoryTarget { get; set; }
+
+    /// <summary>
     /// Validates the configuration
     /// </summary>
     public void Validate()
@@ -87,10 +99,15 @@ public sealed record DownloadClientConfig
         {
             throw new ValidationException($"Client name cannot be empty");
         }
-        
+
         if (Host is null)
         {
             throw new ValidationException($"Host cannot be empty");
+        }
+
+        if (!string.IsNullOrWhiteSpace(DownloadDirectorySource) != !string.IsNullOrWhiteSpace(DownloadDirectoryTarget))
+        {
+            throw new ValidationException("Both download directory source and target must be set, or both must be empty");
         }
     }
 }

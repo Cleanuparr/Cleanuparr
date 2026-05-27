@@ -75,6 +75,9 @@ public abstract class DownloadService : IDownloadService
     public abstract Task<List<ITorrentItemWrapper>> GetSeedingDownloads();
 
     /// <inheritdoc/>
+    public abstract Task<List<ITorrentItemWrapper>> GetAllTorrentsLite();
+
+    /// <inheritdoc/>
     public abstract List<ITorrentItemWrapper>? FilterDownloadsToBeCleanedAsync(List<ITorrentItemWrapper>? downloads, List<ISeedingRule> seedingRules);
 
     /// <inheritdoc/>

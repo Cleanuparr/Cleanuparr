@@ -61,8 +61,8 @@ public sealed class BlacklistSynchronizer : IHandler
 
         string currentHash = ComputeHash(excludedFileNames);
         
-    await _dryRunInterceptor.InterceptAsync(SyncBlacklist, currentHash, excludedFileNames);
-        await _dryRunInterceptor.InterceptAsync(RemoveOldSyncDataAsync, currentHash);
+        await _dryRunInterceptor.InterceptAsync(() => SyncBlacklist(currentHash, excludedFileNames));
+        await _dryRunInterceptor.InterceptAsync(() => RemoveOldSyncDataAsync(currentHash));
 
         _logger.LogDebug("Blacklist synchronization completed");
     }

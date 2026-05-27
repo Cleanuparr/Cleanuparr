@@ -304,6 +304,55 @@ export async function deleteDownloadClient(accessToken: string, clientId: string
   });
 }
 
+export async function listDownloadClients(accessToken: string): Promise<Array<{ id: string; name: string; typeName: string }>> {
+  const res = await fetch(`${API}/api/configuration/download_client`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to list download clients: ${res.status}`);
+  }
+  const body = await res.json();
+  return body.clients ?? [];
+}
+
+// --- Orphaned files cleanup helpers ---
+
+export interface OrphanedFilesConfigRequest {
+  enabled: boolean;
+  scanDirectories: string[];
+  orphanedDirectory: string;
+  excludePatterns?: string[];
+  minFileAgeHours?: number;
+  purgeAfterHours?: number | null;
+}
+
+export async function updateOrphanedFilesConfig(
+  accessToken: string,
+  downloadClientId: string,
+  config: OrphanedFilesConfigRequest,
+): Promise<Response> {
+  return fetch(`${API}/api/orphaned-files-config/${downloadClientId}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify(config),
+  });
+}
+
+// --- Job triggering ---
+
+export async function triggerJob(
+  accessToken: string,
+  jobType: 'QueueCleaner' | 'MalwareBlocker' | 'DownloadCleaner' | 'BlacklistSynchronizer' | 'CustomFormatScoreSyncer',
+): Promise<Response> {
+  return fetch(`${API}/api/jobs/${jobType}/trigger`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+}
+
 // --- General config / auth-bypass helpers ---
 
 export async function getGeneralConfig(accessToken: string): Promise<Record<string, unknown>> {

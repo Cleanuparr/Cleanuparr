@@ -7,8 +7,6 @@ namespace Cleanuparr.Persistence.Tests.Models.Configuration.DownloadCleaner;
 
 public sealed class UnlinkedConfigTests
 {
-    #region Default Values
-
     [Fact]
     public void Defaults_EnabledIsFalse()
     {
@@ -31,24 +29,6 @@ public sealed class UnlinkedConfigTests
     }
 
     [Fact]
-    public void Defaults_DownloadDirectorySourceIsNull()
-    {
-        var config = new UnlinkedConfig();
-        config.DownloadDirectorySource.ShouldBeNull();
-    }
-
-    [Fact]
-    public void Defaults_DownloadDirectoryTargetIsNull()
-    {
-        var config = new UnlinkedConfig();
-        config.DownloadDirectoryTarget.ShouldBeNull();
-    }
-
-    #endregion
-
-    #region Validate - Disabled
-
-    [Fact]
     public void Validate_WhenDisabled_DoesNotThrow()
     {
         var config = new UnlinkedConfig
@@ -60,10 +40,6 @@ public sealed class UnlinkedConfigTests
 
         Should.NotThrow(() => config.Validate());
     }
-
-    #endregion
-
-    #region Validate - Enabled
 
     [Fact]
     public void Validate_WhenEnabled_WithValidConfig_DoesNotThrow()
@@ -134,76 +110,6 @@ public sealed class UnlinkedConfigTests
         exception.Message.ShouldBe("Empty unlinked category filter found");
     }
 
-    #endregion
-
-    #region Validate - Directory Mapping
-
-    [Fact]
-    public void Validate_WhenEnabled_WithOnlySourceSet_ThrowsValidationException()
-    {
-        var config = new UnlinkedConfig
-        {
-            Enabled = true,
-            TargetCategory = "cleanuparr-unlinked",
-            Categories = ["movies"],
-            DownloadDirectorySource = "/downloads",
-            DownloadDirectoryTarget = null
-        };
-
-        var exception = Should.Throw<ValidationException>(() => config.Validate());
-        exception.Message.ShouldBe("Both download directory source and target must be set, or both must be empty");
-    }
-
-    [Fact]
-    public void Validate_WhenEnabled_WithOnlyTargetSet_ThrowsValidationException()
-    {
-        var config = new UnlinkedConfig
-        {
-            Enabled = true,
-            TargetCategory = "cleanuparr-unlinked",
-            Categories = ["movies"],
-            DownloadDirectorySource = null,
-            DownloadDirectoryTarget = "/data/downloads"
-        };
-
-        var exception = Should.Throw<ValidationException>(() => config.Validate());
-        exception.Message.ShouldBe("Both download directory source and target must be set, or both must be empty");
-    }
-
-    [Fact]
-    public void Validate_WhenEnabled_WithBothDirsSet_DoesNotThrow()
-    {
-        var config = new UnlinkedConfig
-        {
-            Enabled = true,
-            TargetCategory = "cleanuparr-unlinked",
-            Categories = ["movies"],
-            DownloadDirectorySource = "/downloads",
-            DownloadDirectoryTarget = "/data/downloads"
-        };
-
-        Should.NotThrow(() => config.Validate());
-    }
-
-    [Fact]
-    public void Validate_WhenEnabled_WithBothDirsEmpty_DoesNotThrow()
-    {
-        var config = new UnlinkedConfig
-        {
-            Enabled = true,
-            TargetCategory = "cleanuparr-unlinked",
-            Categories = ["movies"],
-            DownloadDirectorySource = null,
-            DownloadDirectoryTarget = null
-        };
-
-        Should.NotThrow(() => config.Validate());
-    }
-
-    #endregion
-
-    #region Validate - Ignored Root Dirs
-
     [Fact]
     public void Validate_WhenEnabled_WithNonExistentIgnoredRootDir_ThrowsValidationException()
     {
@@ -244,9 +150,6 @@ public sealed class UnlinkedConfigTests
             IgnoredRootDirs = [""]
         };
 
-        // Empty strings are filtered out, so this should not throw
         Should.NotThrow(() => config.Validate());
     }
-
-    #endregion
 }

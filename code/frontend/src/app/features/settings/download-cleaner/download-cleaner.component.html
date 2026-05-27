@@ -55,7 +55,7 @@
       }
       <div class="form-actions">
         <app-button variant="primary" [glowing]="dirty()" [loading]="saving()" [disabled]="saving() || saved() || hasGlobalErrors() || !dirty()" (clicked)="save()">
-          {{ saved() ? 'Saved!' : 'Save Settings' }}
+          {{ saved() ? 'Saved!' : 'Save' }}
         </app-button>
       </div>
     </div>
@@ -178,19 +178,6 @@
 
                   <div class="form-divider"></div>
 
-                  <app-input label="Download Directory (Source)" placeholder="/downloads"
-                    [value]="client.unlinkedConfig?.downloadDirectorySource ?? ''"
-                    (valueChange)="updateUnlinkedField('downloadDirectorySource', $event)"
-                    hint="The path prefix as reported by the download client (e.g. /downloads)"
-                    helpKey="download-cleaner:downloadDirectorySource" />
-                  <app-input label="Local Directory (Target)" placeholder="/downloads-other"
-                    [value]="client.unlinkedConfig?.downloadDirectoryTarget ?? ''"
-                    (valueChange)="updateUnlinkedField('downloadDirectoryTarget', $event)"
-                    hint="The actual local mount path that replaces the source prefix (e.g. /downloads-other)"
-                    helpKey="download-cleaner:downloadDirectoryTarget" />
-
-                  <div class="form-divider"></div>
-
                   <app-chip-input label="Ignored Root Directories" placeholder="Add directory path..."
                     [items]="client.unlinkedConfig?.ignoredRootDirs ?? []"
                     (itemsChange)="updateUnlinkedField('ignoredRootDirs', $event)"
@@ -205,7 +192,77 @@
                 }
                 <div class="form-actions">
                   <app-button variant="primary" [glowing]="unlinkedDirty()" [loading]="unlinkedSaving()" [disabled]="unlinkedSaving() || unlinkedSaved() || !unlinkedDirty() || !!unlinkedCategoriesError()" (clicked)="saveUnlinkedConfig()">
-                    {{ unlinkedSaved() ? 'Saved!' : 'Save Unlinked Config' }}
+                    {{ unlinkedSaved() ? 'Saved!' : 'Save' }}
+                  </app-button>
+                </div>
+              </div>
+            </app-accordion>
+
+            <app-accordion header="Orphaned Files" subtitle="Move files not associated with any active torrent" [(expanded)]="orphanedFilesExpanded">
+              <div class="form-stack">
+                <app-toggle
+                  label="Enabled"
+                  [checked]="client.orphanedFilesConfig?.enabled ?? false"
+                  (checkedChange)="updateOrphanedFilesField('enabled', $event)"
+                  hint="Enable orphaned files scanning for this download client"
+                  helpKey="download-cleaner:orphanedFilesEnabled"
+                />
+                @if (client.orphanedFilesConfig?.enabled) {
+                  <div class="form-divider"></div>
+                  <app-chip-input
+                    label="Scan Directories"
+                    placeholder="Add directory path..."
+                    hint="Absolute paths to scan for orphaned files. Each top-level entry is checked against your active torrents."
+                    [items]="client.orphanedFilesConfig?.scanDirectories ?? []"
+                    (itemsChange)="updateOrphanedFilesField('scanDirectories', $event)"
+                    [error]="orphanedFilesScanDirsError()"
+                    helpKey="download-cleaner:orphanedFilesScanDirectories"
+                  />
+                  <app-input
+                    label="Orphaned Directory"
+                    placeholder="/mnt/data/orphaned"
+                    hint="Where orphaned files are moved."
+                    [value]="client.orphanedFilesConfig?.orphanedDirectory ?? ''"
+                    (valueChange)="updateOrphanedFilesField('orphanedDirectory', $event)"
+                    [error]="orphanedFilesOrphanedDirError()"
+                    helpKey="download-cleaner:orphanedFilesOrphanedDirectory"
+                  />
+                  <app-chip-input
+                    label="Exclude Patterns"
+                    placeholder="Add glob pattern (e.g. *.nfo)..."
+                    hint="File or directory names matching these patterns are never considered orphaned (e.g. *.nfo, .DS_Store)"
+                    [items]="client.orphanedFilesConfig?.excludePatterns ?? []"
+                    (itemsChange)="updateOrphanedFilesField('excludePatterns', $event)"
+                    helpKey="download-cleaner:orphanedFilesExcludePatterns"
+                  />
+                  <app-number-input
+                    label="Min File Age"
+                    suffix="hours"
+                    [min]="0"
+                    hint="Skip files or folders modified less than this many hours ago. Protects active downloads. Set to 0 to disable the age check."
+                    [value]="client.orphanedFilesConfig?.minFileAgeHours ?? 24"
+                    (valueChange)="updateOrphanedFilesField('minFileAgeHours', $event ?? 24)"
+                    helpKey="download-cleaner:orphanedFilesMinFileAgeHours"
+                  />
+                  <app-number-input
+                    label="Purge Orphaned After"
+                    suffix="hours"
+                    [min]="1"
+                    hint="Permanently delete entries from the Orphaned Directory after this many hours. Leave empty to keep them indefinitely."
+                    [value]="client.orphanedFilesConfig?.purgeAfterHours ?? null"
+                    (valueChange)="updateOrphanedFilesField('purgeAfterHours', $event ?? undefined)"
+                    helpKey="download-cleaner:orphanedFilesPurgeAfterHours"
+                  />
+                }
+                <div class="form-actions">
+                  <app-button
+                    variant="primary"
+                    [glowing]="orphanedFilesDirty()"
+                    [loading]="orphanedFilesSaving()"
+                    [disabled]="orphanedFilesSaving() || orphanedFilesSaved() || !orphanedFilesDirty() || !!orphanedFilesScanDirsError() || !!orphanedFilesOrphanedDirError()"
+                    (clicked)="saveOrphanedFilesConfig()"
+                  >
+                    {{ orphanedFilesSaved() ? 'Saved!' : 'Save' }}
                   </app-button>
                 </div>
               </div>

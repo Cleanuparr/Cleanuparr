@@ -51,7 +51,9 @@ public class DownloadCleanerTests : IDisposable
             _fixture.DownloadServiceFactory,
             _fixture.EventPublisher,
             _fixture.TimeProvider,
-            _fixture.HardLinkFileService
+            _fixture.SeedingRulesService,
+            _fixture.UnlinkedService,
+            _fixture.OrphanedFilesService
         );
     }
 
@@ -530,7 +532,7 @@ public class DownloadCleanerTests : IDisposable
         await ExecuteWithTimeAdvance(sut);
 
         // Assert
-        _logger.ReceivedLogContaining(LogLevel.Information, "Evaluating");
+        _fixture.UnlinkedLogger.ReceivedLogContaining(LogLevel.Information, "Evaluating");
     }
 
     #endregion
@@ -579,7 +581,7 @@ public class DownloadCleanerTests : IDisposable
         await ExecuteWithTimeAdvance(sut);
 
         // Assert
-        _logger.ReceivedLogContaining(LogLevel.Information, "Evaluating");
+        _fixture.SeedingRulesLogger.ReceivedLogContaining(LogLevel.Information, "Evaluating");
     }
 
     #endregion
@@ -728,7 +730,7 @@ public class DownloadCleanerTests : IDisposable
         await ExecuteWithTimeAdvance(sut);
 
         // Assert
-        _logger.ReceivedLogContaining(LogLevel.Error, "Failed to process unlinked downloads for");
+        _fixture.UnlinkedLogger.ReceivedLogContaining(LogLevel.Error, "Failed to process unlinked downloads for");
     }
 
     [Fact]
@@ -770,7 +772,7 @@ public class DownloadCleanerTests : IDisposable
         await ExecuteWithTimeAdvance(sut);
 
         // Assert
-        _logger.ReceivedLogContaining(LogLevel.Error, "Failed to create category");
+        _fixture.UnlinkedLogger.ReceivedLogContaining(LogLevel.Error, "Failed to create category");
     }
 
     [Fact]
@@ -815,7 +817,7 @@ public class DownloadCleanerTests : IDisposable
         await ExecuteWithTimeAdvance(sut);
 
         // Assert
-        _logger.ReceivedLogContaining(LogLevel.Error, "Failed to process unlinked downloads for");
+        _fixture.UnlinkedLogger.ReceivedLogContaining(LogLevel.Error, "Failed to process unlinked downloads for");
     }
 
     [Fact]
@@ -854,7 +856,7 @@ public class DownloadCleanerTests : IDisposable
         await ExecuteWithTimeAdvance(sut);
 
         // Assert
-        _logger.ReceivedLogContaining(LogLevel.Error, "Failed to clean downloads for");
+        _fixture.SeedingRulesLogger.ReceivedLogContaining(LogLevel.Error, "Failed to clean downloads for");
     }
 
     [Fact]
@@ -899,7 +901,7 @@ public class DownloadCleanerTests : IDisposable
         await ExecuteWithTimeAdvance(sut);
 
         // Assert
-        _logger.ReceivedLogContaining(LogLevel.Error, "Failed to clean downloads for");
+        _fixture.SeedingRulesLogger.ReceivedLogContaining(LogLevel.Error, "Failed to clean downloads for");
     }
 
     [Fact]
@@ -1064,7 +1066,7 @@ public class DownloadCleanerTests : IDisposable
         await ExecuteWithTimeAdvance(sut);
 
         // Assert - should log warning about no categories
-        _logger.ReceivedLogContaining(LogLevel.Warning, "no categories are configured");
+        _fixture.UnlinkedLogger.ReceivedLogContaining(LogLevel.Warning, "no categories are configured");
     }
 
     #endregion

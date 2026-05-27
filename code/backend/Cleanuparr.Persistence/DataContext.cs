@@ -76,6 +76,8 @@ public class DataContext : DbContext
 
     public DbSet<BlacklistSyncConfig> BlacklistSyncConfigs { get; set; }
 
+    public DbSet<OrphanedFilesConfig> OrphanedFilesConfigs { get; set; }
+
     public DbSet<SeekerConfig> SeekerConfigs { get; set; }
 
     public DbSet<SeekerInstanceConfig> SeekerInstanceConfigs { get; set; }
@@ -367,6 +369,20 @@ public class DataContext : DbContext
                   .OnDelete(DeleteBehavior.Cascade);
 
             entity.HasIndex(u => u.DownloadClientConfigId).IsUnique();
+        });
+
+        // Configure per-client orphaned files config relationship
+        modelBuilder.Entity<OrphanedFilesConfig>(entity =>
+        {
+            entity.HasOne(c => c.DownloadClientConfig)
+                  .WithMany()
+                  .HasForeignKey(c => c.DownloadClientConfigId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(c => c.DownloadClientConfigId).IsUnique();
+
+            entity.Property(c => c.ScanDirectories).HasConversion(jsonListConverter);
+            entity.Property(c => c.ExcludePatterns).HasConversion(jsonListConverter);
         });
 
         // Configure BlacklistSyncState relationships and indexes

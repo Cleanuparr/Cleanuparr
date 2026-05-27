@@ -101,7 +101,7 @@ public partial class TransmissionService
         
         _logger.LogDebug("Marking {count} unwanted files as skipped for {name}", totalUnwantedFiles, download.Name);
 
-        await _dryRunInterceptor.InterceptAsync(SetUnwantedFiles, download.Id, unwantedFiles.ToArray());
+        await _dryRunInterceptor.InterceptAsync(() => SetUnwantedFiles(download.Id, unwantedFiles.ToArray()));
 
         return result;
     }

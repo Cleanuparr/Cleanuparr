@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using ValidationException = Cleanuparr.Domain.Exceptions.ValidationException;
 
 namespace Cleanuparr.Api.Features.DownloadCleaner.Controllers;
 
@@ -45,11 +44,6 @@ public class UnlinkedConfigController : ControllerBase
                 .FirstOrDefaultAsync(u => u.DownloadClientConfigId == downloadClientId);
 
             return Ok(config);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to retrieve unlinked config for client {ClientId}", downloadClientId);
-            return StatusCode(500, new { Message = "Failed to retrieve unlinked config", Error = ex.Message });
         }
         finally
         {
@@ -94,8 +88,6 @@ public class UnlinkedConfigController : ControllerBase
             existing.UseTag = dto.UseTag;
             existing.IgnoredRootDirs = dto.IgnoredRootDirs;
             existing.Categories = dto.Categories;
-            existing.DownloadDirectorySource = dto.DownloadDirectorySource;
-            existing.DownloadDirectoryTarget = dto.DownloadDirectoryTarget;
 
             existing.Validate();
 
@@ -104,16 +96,6 @@ public class UnlinkedConfigController : ControllerBase
             _logger.LogInformation("Updated unlinked config for client {ClientId}", downloadClientId);
 
             return Ok(existing);
-        }
-        catch (ValidationException ex)
-        {
-            _logger.LogWarning("Validation failed for unlinked config update: {Message}", ex.Message);
-            return BadRequest(new { Message = ex.Message });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to update unlinked config for client {ClientId}", downloadClientId);
-            return StatusCode(500, new { Message = "Failed to update unlinked config", Error = ex.Message });
         }
         finally
         {

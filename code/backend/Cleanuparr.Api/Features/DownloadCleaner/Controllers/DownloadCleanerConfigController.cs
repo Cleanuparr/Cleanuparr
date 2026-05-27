@@ -53,6 +53,7 @@ public sealed class DownloadCleanerConfigController : ControllerBase
             var allUTorrentRules = await _dataContext.UTorrentSeedingRules.AsNoTracking().ToListAsync();
             var allRTorrentRules = await _dataContext.RTorrentSeedingRules.AsNoTracking().ToListAsync();
             var allUnlinkedConfigs = await _dataContext.UnlinkedConfigs.AsNoTracking().ToListAsync();
+            var allOrphanedFilesConfigs = await _dataContext.OrphanedFilesConfigs.AsNoTracking().ToListAsync();
 
             var clients = new List<object>();
 
@@ -61,6 +62,7 @@ public sealed class DownloadCleanerConfigController : ControllerBase
                 var seedingRules = SeedingRuleHelper.FilterForClient(
                     client, allQBitRules, allDelugeRules, allTransmissionRules, allUTorrentRules, allRTorrentRules);
                 var unlinkedConfig = allUnlinkedConfigs.FirstOrDefault(u => u.DownloadClientConfigId == client.Id);
+                var orphanedFilesConfig = allOrphanedFilesConfigs.FirstOrDefault(o => o.DownloadClientConfigId == client.Id);
 
                 clients.Add(new
                 {
@@ -91,8 +93,17 @@ public sealed class DownloadCleanerConfigController : ControllerBase
                             useTag = unlinkedConfig.UseTag,
                             ignoredRootDirs = unlinkedConfig.IgnoredRootDirs,
                             categories = unlinkedConfig.Categories,
-                            downloadDirectorySource = unlinkedConfig.DownloadDirectorySource,
-                            downloadDirectoryTarget = unlinkedConfig.DownloadDirectoryTarget,
+                        }
+                        : null,
+                    orphanedFilesConfig = orphanedFilesConfig is not null
+                        ? new
+                        {
+                            enabled = orphanedFilesConfig.Enabled,
+                            scanDirectories = orphanedFilesConfig.ScanDirectories,
+                            orphanedDirectory = orphanedFilesConfig.OrphanedDirectory,
+                            excludePatterns = orphanedFilesConfig.ExcludePatterns,
+                            minFileAgeHours = orphanedFilesConfig.MinFileAgeHours,
+                            purgeAfterHours = orphanedFilesConfig.PurgeAfterHours,
                         }
                         : null,
                 });

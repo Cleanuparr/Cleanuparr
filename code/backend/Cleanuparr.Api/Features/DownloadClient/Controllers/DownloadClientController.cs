@@ -66,6 +66,7 @@ public sealed class DownloadClientController : ControllerBase
             newClient.Validate();
 
             var clientConfig = newClient.ToEntity();
+            clientConfig.Validate();
 
             _dataContext.DownloadClients.Add(clientConfig);
             await _dataContext.SaveChangesAsync();
@@ -100,6 +101,7 @@ public sealed class DownloadClientController : ControllerBase
             }
 
             var clientToPersist = updatedClient.ApplyTo(existingClient);
+            clientToPersist.Validate();
 
             _dataContext.Entry(existingClient).CurrentValues.SetValues(clientToPersist);
             await _dataContext.SaveChangesAsync();

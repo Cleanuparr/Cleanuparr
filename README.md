@@ -34,6 +34,7 @@ Cleanuparr was created primarily to address malicious files, such as `*.lnk` or 
 > - Search for **custom format score upgrades** with automatic score tracking.
 > - Clean up downloads that have been **seeding** for a certain amount of time.
 > - Remove downloads that are **orphaned**/have no **hardlinks**/are not referenced by the arrs anymore (with [cross-seed](https://www.cross-seed.org/) support).
+> - Scan configured directories for **files not claimed by any active torrent**, move them to a dedicated orphaned directory, and optionally auto-purge.
 > - Notify on strike or download removal.
 > - Ignore certain torrent hashes, categories, tags or trackers from being processed by Cleanuparr.
 

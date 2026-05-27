@@ -15,7 +15,8 @@ import { ToastService } from '@core/services/toast.service';
 import { ConfirmService } from '@core/services/confirm.service';
 import {
   DownloadCleanerConfig, SeedingRule, ClientCleanerConfig, UnlinkedConfigModel,
-  createDefaultUnlinkedConfig,
+  OrphanedFilesConfig,
+  createDefaultUnlinkedConfig, createDefaultOrphanedFilesConfig,
 } from '@shared/models/download-cleaner-config.model';
 import { ScheduleOptions } from '@shared/models/queue-cleaner-config.model';
 import { ScheduleUnit, TorrentPrivacyType, DownloadClientTypeName } from '@shared/models/enums';
@@ -62,6 +63,7 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
   );
 
   private readonly savedSnapshot = signal('');
+  private readonly orphanedFilesSnapshots = signal<Record<string, string>>({});
 
   readonly scheduleUnitOptions = SCHEDULE_UNIT_OPTIONS;
   readonly privacyTypeOptions = PRIVACY_TYPE_OPTIONS;
@@ -71,6 +73,8 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
   readonly saved = signal(false);
   readonly unlinkedSaving = signal(false);
   readonly unlinkedSaved = signal(false);
+  readonly orphanedFilesSaving = signal(false);
+  readonly orphanedFilesSaved = signal(false);
   readonly rulesReloading = signal(false);
   private readonly unlinkedSnapshots = signal<Record<string, string>>({});
 
@@ -115,6 +119,7 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
 
   readonly seedingRulesExpanded = signal(false);
   readonly unlinkedExpanded = signal(false);
+  readonly orphanedFilesExpanded = signal(false);
 
   // Seeding rule modal
   readonly ruleModalVisible = signal(false);
@@ -148,25 +153,35 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
   }
 
   readonly scheduleEveryError = computed(() => {
-    if (this.useAdvancedScheduling()) return undefined;
+    if (this.useAdvancedScheduling()) {
+      return undefined;
+    }
     const unit = this.scheduleUnit() as ScheduleUnit;
     const options = ScheduleOptions[unit] ?? [];
-    if (!options.includes(this.scheduleEvery() as number)) return 'Please select a value';
+    if (!options.includes(this.scheduleEvery() as number)) {
+      return 'Please select a value';
+    }
     return undefined;
   });
 
   readonly cronError = computed(() => {
-    if (this.useAdvancedScheduling() && !this.cronExpression().trim()) return 'Cron expression is required';
+    if (this.useAdvancedScheduling() && !this.cronExpression().trim()) {
+      return 'Cron expression is required';
+    }
     return undefined;
   });
 
   readonly ruleNameError = computed(() => {
-    if (!this.ruleName().trim()) return 'Name is required';
+    if (!this.ruleName().trim()) {
+      return 'Name is required';
+    }
     return undefined;
   });
 
   readonly ruleCategoriesError = computed(() => {
-    if (this.ruleCategories().length === 0) return 'At least one category is required';
+    if (this.ruleCategories().length === 0) {
+      return 'At least one category is required';
+    }
     return undefined;
   });
 
@@ -179,25 +194,67 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
 
   readonly unlinkedCategoriesError = computed(() => {
     const client = this.selectedClient();
-    if (!client?.unlinkedConfig?.enabled) return undefined;
+    if (!client?.unlinkedConfig?.enabled) {
+      return undefined;
+    }
     if ((client.unlinkedConfig.categories ?? []).length === 0) {
       return 'At least one category is required';
     }
     return undefined;
   });
 
+  readonly orphanedFilesScanDirsError = computed(() => {
+    const client = this.selectedClient();
+    if (!client?.orphanedFilesConfig?.enabled) {
+      return undefined;
+    }
+    if ((client.orphanedFilesConfig.scanDirectories ?? []).length === 0) {
+      return 'At least one scan directory is required';
+    }
+    return undefined;
+  });
+
+  readonly orphanedFilesOrphanedDirError = computed(() => {
+    const client = this.selectedClient();
+    if (!client?.orphanedFilesConfig?.enabled) {
+      return undefined;
+    }
+    if (!client.orphanedFilesConfig.orphanedDirectory?.trim()) {
+      return 'Orphaned directory is required';
+    }
+    return undefined;
+  });
+
   readonly unlinkedDirty = computed(() => {
     const client = this.selectedClient();
-    if (!client) return false;
-    const saved = this.unlinkedSnapshots()[client.downloadClientId];
-    if (!saved) return false;
+    if (!client) {
+      return false;
+    }
+    const saved = this.unlinkedSnapshots()[client.downloadClientId]
+      ?? JSON.stringify(createDefaultUnlinkedConfig());
     return saved !== JSON.stringify(client.unlinkedConfig);
   });
 
+  readonly orphanedFilesDirty = computed(() => {
+    const client = this.selectedClient();
+    if (!client) {
+      return false;
+    }
+    const saved = this.orphanedFilesSnapshots()[client.downloadClientId]
+      ?? JSON.stringify(createDefaultOrphanedFilesConfig());
+    return saved !== JSON.stringify(client.orphanedFilesConfig);
+  });
+
   readonly hasGlobalErrors = computed(() => {
-    if (this.scheduleEveryError()) return true;
-    if (this.cronError()) return true;
-    if (this.chipInputs().some(c => c.hasUncommittedInput())) return true;
+    if (this.scheduleEveryError()) {
+      return true;
+    }
+    if (this.cronError()) {
+      return true;
+    }
+    if (this.chipInputs().some(c => c.hasUncommittedInput())) {
+      return true;
+    }
     return false;
   });
 
@@ -210,35 +267,43 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
   private loadConfig(): void {
     this.loader.start();
     this.api.getConfig().subscribe({
-      next: (config) => {
-        this.config = config;
-        this.enabled.set(config.enabled);
-        this.useAdvancedScheduling.set(config.useAdvancedScheduling);
-        this.cronExpression.set(config.cronExpression);
-        const parsed = parseCronToJobSchedule(config.cronExpression);
+      next: (dc) => {
+        this.config = dc;
+        this.enabled.set(dc.enabled);
+        this.useAdvancedScheduling.set(dc.useAdvancedScheduling);
+        this.cronExpression.set(dc.cronExpression);
+        const parsed = parseCronToJobSchedule(dc.cronExpression);
         if (parsed) {
           this.scheduleEvery.set(parsed.every);
           this.scheduleUnit.set(parsed.type);
         }
-        this.ignoredDownloads.set(config.ignoredDownloads ?? []);
-        this.clientConfigs.set((config.clients ?? []).map(c => ({
+        this.ignoredDownloads.set(dc.ignoredDownloads ?? []);
+
+        this.clientConfigs.set((dc.clients ?? []).map(c => ({
           ...c,
           seedingRules: c.seedingRules ?? [],
           unlinkedConfig: c.unlinkedConfig ?? createDefaultUnlinkedConfig(),
+          orphanedFilesConfig: c.orphanedFilesConfig ?? createDefaultOrphanedFilesConfig(),
         })));
-        if (config.clients?.length > 0) {
-          this.selectedClientId.set(config.clients[0].downloadClientId);
+
+        if (dc.clients?.length > 0) {
+          this.selectedClientId.set(dc.clients[0].downloadClientId);
         }
-        // Save unlinked config snapshots per client
-        const snapshots: Record<string, string> = {};
-        for (const c of config.clients ?? []) {
-          snapshots[c.downloadClientId] = JSON.stringify(c.unlinkedConfig ?? createDefaultUnlinkedConfig());
+
+        const unlinkedSnapshots: Record<string, string> = {};
+        const orphanedFilesSnapshots: Record<string, string> = {};
+        for (const c of dc.clients ?? []) {
+          unlinkedSnapshots[c.downloadClientId] = JSON.stringify(c.unlinkedConfig ?? createDefaultUnlinkedConfig());
+          orphanedFilesSnapshots[c.downloadClientId] = JSON.stringify(c.orphanedFilesConfig ?? createDefaultOrphanedFilesConfig());
         }
-        this.unlinkedSnapshots.set(snapshots);
+        this.unlinkedSnapshots.set(unlinkedSnapshots);
+        this.orphanedFilesSnapshots.set(orphanedFilesSnapshots);
 
         this.loader.stop();
         // Defer snapshot so constructor effects (e.g. schedule unit clamping) settle first
-        queueMicrotask(() => this.savedSnapshot.set(this.buildSnapshot()));
+        queueMicrotask(() => {
+          this.savedSnapshot.set(this.buildSnapshot());
+        });
       },
       error: () => {
         this.toast.error('Failed to load download cleaner settings');
@@ -284,9 +349,13 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
   }
 
   saveRule(): void {
-    if (this.ruleNameError() || this.ruleCategoriesError() || this.ruleDisabledError() || this.ruleHasUncommittedInputs()) return;
+    if (this.ruleNameError() || this.ruleCategoriesError() || this.ruleDisabledError() || this.ruleHasUncommittedInputs()) {
+      return;
+    }
     const clientId = this.selectedClientId();
-    if (!clientId) return;
+    if (!clientId) {
+      return;
+    }
 
     const sanitize = (list: string[]) => list.map(s => s.trim()).filter(s => s.length > 0);
 
@@ -325,9 +394,13 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
       confirmLabel: 'Delete',
       destructive: true,
     });
-    if (!confirmed || !rule.id) return;
+    if (!confirmed || !rule.id) {
+      return;
+    }
     const clientId = this.selectedClientId();
-    if (!clientId) return;
+    if (!clientId) {
+      return;
+    }
 
     this.api.deleteSeedingRule(rule.id).subscribe({
       next: () => {
@@ -340,7 +413,9 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
 
   onRulesReorder(event: CdkDragDrop<SeedingRule[]>): void {
     const clientId = this.selectedClientId();
-    if (!clientId) return;
+    if (!clientId) {
+      return;
+    }
 
     const rules = [...(this.selectedClient()?.seedingRules ?? [])];
     moveItemInArray(rules, event.previousIndex, event.currentIndex);
@@ -375,14 +450,16 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
   }
 
   async onClientChange(newClientId: unknown): Promise<void> {
-    if (this.unlinkedDirty()) {
+    if (this.unlinkedDirty() || this.orphanedFilesDirty()) {
       const confirmed = await this.confirm.confirm({
         title: 'Unsaved Changes',
-        message: 'You have unsaved unlinked config changes. Discard them?',
+        message: 'You have unsaved changes for this client. Discard them?',
         confirmLabel: 'Discard',
         destructive: true,
       });
-      if (!confirmed) return;
+      if (!confirmed) {
+        return;
+      }
     }
     this.selectedClientId.set(newClientId as string | null);
   }
@@ -402,7 +479,9 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
   saveUnlinkedConfig(): void {
     const clientId = this.selectedClientId();
     const client = this.selectedClient();
-    if (!clientId || !client?.unlinkedConfig) return;
+    if (!clientId || !client?.unlinkedConfig) {
+      return;
+    }
 
     this.unlinkedSaving.set(true);
     this.api.updateUnlinkedConfig(clientId, client.unlinkedConfig).subscribe({
@@ -411,7 +490,6 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
         this.unlinkedSaving.set(false);
         this.unlinkedSaved.set(true);
         setTimeout(() => this.unlinkedSaved.set(false), 1500);
-        // Update snapshot for this client
         this.unlinkedSnapshots.update(s => ({
           ...s,
           [clientId]: JSON.stringify(client.unlinkedConfig),
@@ -424,9 +502,48 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
     });
   }
 
+  // --- Orphaned files per-client config ---
+
+  updateOrphanedFilesField<K extends keyof OrphanedFilesConfig>(field: K, value: OrphanedFilesConfig[K]): void {
+    this.updateSelectedClient(client => ({
+      ...client,
+      orphanedFilesConfig: {
+        ...(client.orphanedFilesConfig ?? createDefaultOrphanedFilesConfig()),
+        [field]: value,
+      },
+    }));
+  }
+
+  saveOrphanedFilesConfig(): void {
+    const clientId = this.selectedClientId();
+    const client = this.selectedClient();
+    if (!clientId || !client?.orphanedFilesConfig) {
+      return;
+    }
+    this.orphanedFilesSaving.set(true);
+    this.api.updateOrphanedFilesConfig(clientId, client.orphanedFilesConfig).subscribe({
+      next: () => {
+        this.toast.success('Orphaned files settings saved');
+        this.orphanedFilesSaving.set(false);
+        this.orphanedFilesSaved.set(true);
+        setTimeout(() => this.orphanedFilesSaved.set(false), 1500);
+        this.orphanedFilesSnapshots.update(s => ({
+          ...s,
+          [clientId]: JSON.stringify(client.orphanedFilesConfig),
+        }));
+      },
+      error: (err: ApiError) => {
+        this.toast.error(err.statusCode === 400 ? err.message : 'Failed to save orphaned files settings');
+        this.orphanedFilesSaving.set(false);
+      },
+    });
+  }
+
   private updateSelectedClient(updater: (client: ClientCleanerConfig) => ClientCleanerConfig): void {
     const id = this.selectedClientId();
-    if (!id) return;
+    if (!id) {
+      return;
+    }
     this.clientConfigs.update(configs =>
       configs.map(c => c.downloadClientId === id ? updater(c) : c)
     );
@@ -435,7 +552,9 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
   // --- Global config save ---
 
   save(): void {
-    if (!this.config) return;
+    if (!this.config) {
+      return;
+    }
 
     const jobSchedule = { every: (this.scheduleEvery() as number) ?? 5, type: this.scheduleUnit() as ScheduleUnit };
     const cronExpression = this.useAdvancedScheduling()
@@ -484,6 +603,6 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
   });
 
   hasPendingChanges(): boolean {
-    return this.dirty() || this.unlinkedDirty();
+    return this.dirty() || this.unlinkedDirty() || this.orphanedFilesDirty();
   }
 }

@@ -21,8 +21,15 @@ export interface UnlinkedConfigModel {
   useTag: boolean;
   ignoredRootDirs: string[];
   categories: string[];
-  downloadDirectorySource: string | null;
-  downloadDirectoryTarget: string | null;
+}
+
+export interface OrphanedFilesConfig {
+  enabled: boolean;
+  scanDirectories: string[];
+  orphanedDirectory: string;
+  excludePatterns: string[];
+  minFileAgeHours: number;
+  purgeAfterHours?: number;
 }
 
 export interface ClientCleanerConfig {
@@ -32,6 +39,7 @@ export interface ClientCleanerConfig {
   downloadClientTypeName: string;
   seedingRules: SeedingRule[];
   unlinkedConfig: UnlinkedConfigModel | null;
+  orphanedFilesConfig: OrphanedFilesConfig | null;
 }
 
 export interface DownloadCleanerConfig {
@@ -65,7 +73,15 @@ export function createDefaultUnlinkedConfig(): UnlinkedConfigModel {
     useTag: false,
     ignoredRootDirs: [],
     categories: [],
-    downloadDirectorySource: null,
-    downloadDirectoryTarget: null,
+  };
+}
+
+export function createDefaultOrphanedFilesConfig(): OrphanedFilesConfig {
+  return {
+    enabled: false,
+    scanDirectories: [],
+    orphanedDirectory: '',
+    excludePatterns: [],
+    minFileAgeHours: 24,
   };
 }

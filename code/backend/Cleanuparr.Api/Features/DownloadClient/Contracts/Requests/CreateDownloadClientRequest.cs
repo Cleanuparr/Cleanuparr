@@ -27,6 +27,10 @@ public sealed record CreateDownloadClientRequest
 
     public string? ExternalUrl { get; init; }
 
+    public string? DownloadDirectorySource { get; init; }
+
+    public string? DownloadDirectoryTarget { get; init; }
+
     public void Validate()
     {
         if (string.IsNullOrWhiteSpace(Name))
@@ -66,5 +70,7 @@ public sealed record CreateDownloadClientRequest
         Password = Password,
         UrlBase = UrlBase,
         ExternalUrl = !string.IsNullOrWhiteSpace(ExternalUrl) ? new Uri(ExternalUrl, UriKind.RelativeOrAbsolute) : null,
+        DownloadDirectorySource = DownloadDirectorySource,
+        DownloadDirectoryTarget = DownloadDirectoryTarget,
     };
 }

@@ -108,6 +108,76 @@ public sealed class DownloadClientConfigTests
 
     #endregion
 
+    #region Validate - Directory Mapping
+
+    [Fact]
+    public void Validate_WithOnlyDownloadDirectorySourceSet_ThrowsValidationException()
+    {
+        var config = new DownloadClientConfig
+        {
+            Name = "My Client",
+            TypeName = DownloadClientTypeName.qBittorrent,
+            Type = DownloadClientType.Torrent,
+            Host = new Uri("http://localhost:8080"),
+            DownloadDirectorySource = "/downloads",
+            DownloadDirectoryTarget = null
+        };
+
+        var exception = Should.Throw<ValidationException>(() => config.Validate());
+        exception.Message.ShouldBe("Both download directory source and target must be set, or both must be empty");
+    }
+
+    [Fact]
+    public void Validate_WithOnlyDownloadDirectoryTargetSet_ThrowsValidationException()
+    {
+        var config = new DownloadClientConfig
+        {
+            Name = "My Client",
+            TypeName = DownloadClientTypeName.qBittorrent,
+            Type = DownloadClientType.Torrent,
+            Host = new Uri("http://localhost:8080"),
+            DownloadDirectorySource = null,
+            DownloadDirectoryTarget = "/data/downloads"
+        };
+
+        var exception = Should.Throw<ValidationException>(() => config.Validate());
+        exception.Message.ShouldBe("Both download directory source and target must be set, or both must be empty");
+    }
+
+    [Fact]
+    public void Validate_WithBothDownloadDirectoriesSet_DoesNotThrow()
+    {
+        var config = new DownloadClientConfig
+        {
+            Name = "My Client",
+            TypeName = DownloadClientTypeName.qBittorrent,
+            Type = DownloadClientType.Torrent,
+            Host = new Uri("http://localhost:8080"),
+            DownloadDirectorySource = "/downloads",
+            DownloadDirectoryTarget = "/data/downloads"
+        };
+
+        Should.NotThrow(() => config.Validate());
+    }
+
+    [Fact]
+    public void Validate_WithBothDownloadDirectoriesEmpty_DoesNotThrow()
+    {
+        var config = new DownloadClientConfig
+        {
+            Name = "My Client",
+            TypeName = DownloadClientTypeName.qBittorrent,
+            Type = DownloadClientType.Torrent,
+            Host = new Uri("http://localhost:8080"),
+            DownloadDirectorySource = null,
+            DownloadDirectoryTarget = null
+        };
+
+        Should.NotThrow(() => config.Validate());
+    }
+
+    #endregion
+
     #region Url Property Tests
 
     [Fact]

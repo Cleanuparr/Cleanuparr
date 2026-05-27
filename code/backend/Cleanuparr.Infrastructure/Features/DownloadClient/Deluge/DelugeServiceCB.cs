@@ -125,7 +125,7 @@ public partial class DelugeService
 
         _logger.LogDebug("Marking {count} unwanted files as skipped for {name}", totalUnwantedFiles, download.Name);
 
-        await _dryRunInterceptor.InterceptAsync(ChangeFilesPriority, hash, sortedPriorities);
+        await _dryRunInterceptor.InterceptAsync(() => ChangeFilesPriority(hash, sortedPriorities));
 
         return result;
     }

@@ -1,10 +1,12 @@
 using Cleanuparr.Infrastructure.Events.Interfaces;
 using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 using Cleanuparr.Infrastructure.Features.Context;
+using Cleanuparr.Infrastructure.Features.DownloadCleaner.Services;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
 using Cleanuparr.Infrastructure.Features.Files;
 using Cleanuparr.Infrastructure.Features.Jobs;
 using Cleanuparr.Infrastructure.Features.MalwareBlocker;
+using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Persistence;
 using MassTransit;
 using Microsoft.Extensions.Caching.Memory;
@@ -29,7 +31,14 @@ public class JobHandlerFixture : IDisposable
     public IEventPublisher EventPublisher { get; private set; }
     public IBlocklistProvider BlocklistProvider { get; private set; }
     public IHardLinkFileService HardLinkFileService { get; private set; }
+    public IDryRunInterceptor DryRunInterceptor { get; private set; }
     public FakeTimeProvider TimeProvider { get; private set; }
+    public ISeedingRulesCleanupService SeedingRulesService { get; private set; }
+    public IUnlinkedDownloadsService UnlinkedService { get; private set; }
+    public IOrphanedFilesCleanupService OrphanedFilesService { get; private set; }
+    public ILogger<SeedingRulesCleanupService> SeedingRulesLogger { get; private set; }
+    public ILogger<UnlinkedDownloadsService> UnlinkedLogger { get; private set; }
+    public ILogger<OrphanedFilesCleanupService> OrphanedFilesLogger { get; private set; }
 
     public JobHandlerFixture()
     {
@@ -43,13 +52,34 @@ public class JobHandlerFixture : IDisposable
         EventPublisher = Substitute.For<IEventPublisher>();
         BlocklistProvider = Substitute.For<IBlocklistProvider>();
         HardLinkFileService = Substitute.For<IHardLinkFileService>();
+        DryRunInterceptor = Substitute.For<IDryRunInterceptor>();
         TimeProvider = new FakeTimeProvider();
+        RecreateCleanupServices();
 
         // Setup default behaviors
         SetupDefaultBehaviors();
 
         // Setup JobRunId in context for tests
         ContextProvider.SetJobRunId(Guid.NewGuid());
+    }
+
+    /// <summary>
+    /// Builds real cleanup services bound to the current DataContext/mocks.
+    /// Tests can replace any of them with substitutes before constructing
+    /// the SUT.
+    /// </summary>
+    private void RecreateCleanupServices()
+    {
+        SeedingRulesLogger = Substitute.For<ILogger<SeedingRulesCleanupService>>();
+        UnlinkedLogger = Substitute.For<ILogger<UnlinkedDownloadsService>>();
+        OrphanedFilesLogger = Substitute.For<ILogger<OrphanedFilesCleanupService>>();
+        SeedingRulesService = new SeedingRulesCleanupService(SeedingRulesLogger, DataContext);
+        UnlinkedService = new UnlinkedDownloadsService(UnlinkedLogger, DataContext, HardLinkFileService);
+        OrphanedFilesService = new OrphanedFilesCleanupService(
+            OrphanedFilesLogger,
+            DataContext,
+            TimeProvider,
+            DryRunInterceptor);
     }
 
     private void SetupDefaultBehaviors()
@@ -105,6 +135,7 @@ public class JobHandlerFixture : IDisposable
     {
         DataContext?.Dispose();
         DataContext = TestDataContextFactory.Create(seedData);
+        RecreateCleanupServices();
         return DataContext;
     }
 
@@ -119,8 +150,10 @@ public class JobHandlerFixture : IDisposable
         EventPublisher = Substitute.For<IEventPublisher>();
         BlocklistProvider = Substitute.For<IBlocklistProvider>();
         HardLinkFileService = Substitute.For<IHardLinkFileService>();
+        DryRunInterceptor = Substitute.For<IDryRunInterceptor>();
         Cache.Clear();
         TimeProvider = new FakeTimeProvider();
+        RecreateCleanupServices();
 
         SetupDefaultBehaviors();
 

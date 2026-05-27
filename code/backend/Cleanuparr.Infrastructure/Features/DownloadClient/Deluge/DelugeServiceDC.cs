@@ -26,6 +26,21 @@ public partial class DelugeService
             .ToList();
     }
 
+    /// <inheritdoc/>
+    public override async Task<List<ITorrentItemWrapper>> GetAllTorrentsLite()
+    {
+        var downloads = await _client.GetStatusForAllTorrents();
+        if (downloads is null)
+        {
+            return [];
+        }
+
+        return downloads
+            .Where(x => !string.IsNullOrEmpty(x.Hash))
+            .Select(ITorrentItemWrapper (x) => new DelugeItemWrapper(x))
+            .ToList();
+    }
+
     public override List<ITorrentItemWrapper>? FilterDownloadsToBeCleanedAsync(List<ITorrentItemWrapper>? downloads, List<ISeedingRule> seedingRules) =>
         downloads
             ?.Where(x => seedingRules.Any(rule => rule.Categories.Any(cat => cat.Equals(x.Category, StringComparison.OrdinalIgnoreCase))))
@@ -56,7 +71,7 @@ public partial class DelugeService
 
         _logger.LogDebug("Creating category {name}", name);
 
-        await _dryRunInterceptor.InterceptAsync(CreateLabel, name);
+        await _dryRunInterceptor.InterceptAsync(() => CreateLabel(name));
     }
 
     public override async Task ChangeCategoryForNoHardLinksAsync(List<ITorrentItemWrapper>? downloads, UnlinkedConfig unlinkedConfig)
@@ -93,9 +108,10 @@ public partial class DelugeService
 
             ProcessFiles(contents?.Contents, (_, file) =>
             {
-                string filePath = string.Join(Path.DirectorySeparatorChar, Path.Combine(torrent.Info.DownloadLocation, file.Path).Split(['\\', '/']));
-
-                filePath = PathHelper.RemapPath(filePath, unlinkedConfig.DownloadDirectorySource, unlinkedConfig.DownloadDirectoryTarget);
+                string filePath = PathHelper.NormalizeAndRemap(
+                    Path.Combine(torrent.Info.DownloadLocation, file.Path),
+                    _downloadClientConfig.DownloadDirectorySource,
+                    _downloadClientConfig.DownloadDirectoryTarget);
 
                 if (file.Priority <= 0)
                 {
@@ -130,7 +146,7 @@ public partial class DelugeService
                 continue;
             }
 
-            await _dryRunInterceptor.InterceptAsync(ChangeLabel, torrent.Hash, unlinkedConfig.TargetCategory);
+            await _dryRunInterceptor.InterceptAsync(() => ChangeLabel(torrent.Hash, unlinkedConfig.TargetCategory));
 
             _logger.LogInformation("category changed for {name}", torrent.Name);
 

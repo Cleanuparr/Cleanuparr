@@ -243,22 +243,24 @@ public sealed class UTorrentClient
             // Get valid token and cookie from cache-aware authenticator
             var token = await _authenticator.GetValidTokenAsync();
             var guidCookie = await _authenticator.GetValidGuidCookieAsync();
-            
+
             request.Token = token;
-            
+
             return await _httpService.SendRawRequestAsync(request, guidCookie);
         }
-        catch (UTorrentAuthenticationException)
+        catch (Exception firstAttemptError) when (
+            firstAttemptError is UTorrentAuthenticationException ||
+            (firstAttemptError is UTorrentException && firstAttemptError.Message.Contains("BadRequest", StringComparison.OrdinalIgnoreCase)))
         {
-            // On authentication failure, invalidate cache and retry once
+            // µTorrent returns BadRequest when the token or GUID cookie no longer matches the running server
             try
             {
                 await _authenticator.InvalidateSessionAsync();
                 var token = await _authenticator.GetValidTokenAsync();
                 var guidCookie = await _authenticator.GetValidGuidCookieAsync();
-                
+
                 request.Token = token;
-                
+
                 return await _httpService.SendRawRequestAsync(request, guidCookie);
             }
             catch (Exception ex)

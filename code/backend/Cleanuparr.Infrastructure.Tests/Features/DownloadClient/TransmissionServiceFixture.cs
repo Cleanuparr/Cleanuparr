@@ -45,13 +45,8 @@ public class TransmissionServiceFixture : IDisposable
         ClientWrapper = Substitute.For<ITransmissionClientWrapper>();
 
         DryRunInterceptor
-            .InterceptAsync(default!, default!)
-            .ReturnsForAnyArgs(callInfo =>
-            {
-                var action = callInfo.ArgAt<Delegate>(0);
-                var parameters = callInfo.ArgAt<object[]>(1);
-                return (Task)(action.DynamicInvoke(parameters) ?? Task.CompletedTask);
-            });
+            .InterceptAsync(Arg.Any<Func<Task>>(), Arg.Any<string?>())
+            .ReturnsForAnyArgs(callInfo => callInfo.ArgAt<Func<Task>>(0).Invoke());
     }
 
     public TransmissionService CreateSut(DownloadClientConfig? config = null)
@@ -107,13 +102,8 @@ public class TransmissionServiceFixture : IDisposable
         ClientWrapper = Substitute.For<ITransmissionClientWrapper>();
 
         DryRunInterceptor
-            .InterceptAsync(default!, default!)
-            .ReturnsForAnyArgs(callInfo =>
-            {
-                var action = callInfo.ArgAt<Delegate>(0);
-                var parameters = callInfo.ArgAt<object[]>(1);
-                return (Task)(action.DynamicInvoke(parameters) ?? Task.CompletedTask);
-            });
+            .InterceptAsync(Arg.Any<Func<Task>>(), Arg.Any<string?>())
+            .ReturnsForAnyArgs(callInfo => callInfo.ArgAt<Func<Task>>(0).Invoke());
     }
 
     public void Dispose()
