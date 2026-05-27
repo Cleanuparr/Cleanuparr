@@ -70,7 +70,6 @@ public sealed class DownloadCleaner : GenericHandler
 
         var downloadServiceToDownloadsMap = new Dictionary<IDownloadService, List<ITorrentItemWrapper>>();
         var loggedInServices = new List<IDownloadService>();
-        var failedClientIds = new HashSet<Guid>();
 
         foreach (var downloadService in downloadServices)
         {
@@ -91,7 +90,6 @@ public sealed class DownloadCleaner : GenericHandler
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to get seeding downloads from download client {clientName}", downloadService.ClientConfig.Name);
-                failedClientIds.Add(downloadService.ClientConfig.Id);
             }
         }
 
