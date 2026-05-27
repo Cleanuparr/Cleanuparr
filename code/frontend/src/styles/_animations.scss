@@ -132,6 +132,7 @@
   --glass-blur-lg: 0px;
   --glass-shadow: none;
   --surface-elevated: #1e1232;
+  --surface-elevated: color-mix(in srgb, var(--brand-500) 22%, #000000);
   --duration-fast: 0ms;
   --duration-normal: 0ms;
   --duration-slow: 0ms;
@@ -161,6 +162,7 @@
     --glass-blur-lg: 0px;
     --glass-shadow: none;
     --surface-elevated: #1e1232;
+    --surface-elevated: color-mix(in srgb, var(--brand-500) 22%, #000000);
     --duration-fast: 0ms;
     --duration-normal: 0ms;
     --duration-slow: 0ms;
