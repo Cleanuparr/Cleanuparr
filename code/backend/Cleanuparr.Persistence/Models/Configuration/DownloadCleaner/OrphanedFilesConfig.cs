@@ -52,9 +52,9 @@ public sealed record OrphanedFilesConfig : IConfig
     /// <summary>
     /// Minimum age in hours an entry must have before it can be considered
     /// orphaned. Protects in-flight downloads that the client has not yet
-    /// registered as a torrent.
+    /// registered as a torrent. Set to 0 to disable the age check.
     /// </summary>
-    [Range(1, int.MaxValue)]
+    [Range(0, int.MaxValue)]
     public int MinFileAgeHours { get; set; } = 24;
 
     /// <summary>

@@ -238,8 +238,8 @@
                   <app-number-input
                     label="Min File Age"
                     suffix="hours"
-                    [min]="1"
-                    hint="Skip files or folders modified less than this many hours ago. Protects active downloads."
+                    [min]="0"
+                    hint="Skip files or folders modified less than this many hours ago. Protects active downloads. Set to 0 to disable the age check."
                     [value]="client.orphanedFilesConfig?.minFileAgeHours ?? 24"
                     (valueChange)="updateOrphanedFilesField('minFileAgeHours', $event ?? 24)"
                     helpKey="download-cleaner:orphanedFilesMinFileAgeHours"

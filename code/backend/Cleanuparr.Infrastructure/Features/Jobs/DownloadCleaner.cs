@@ -74,8 +74,8 @@ public sealed class DownloadCleaner : GenericHandler
 
         foreach (var downloadService in downloadServices)
         {
-            using var dcType = LogContext.PushProperty(LogProperties.DownloadClientType, downloadService.ClientConfig.Type.ToString());
-            using var dcName = LogContext.PushProperty(LogProperties.DownloadClientName, downloadService.ClientConfig.Name);
+            using IDisposable _ = LogContext.PushProperty(LogProperties.DownloadClientType, downloadService.ClientConfig.Type.ToString());
+            using IDisposable _2 = LogContext.PushProperty(LogProperties.DownloadClientName, downloadService.ClientConfig.Name);
 
             try
             {

@@ -13,7 +13,7 @@ public sealed record OrphanedFilesConfigRequest
 
     public List<string> ExcludePatterns { get; init; } = [];
 
-    [Range(1, int.MaxValue)]
+    [Range(0, int.MaxValue)]
     public int MinFileAgeHours { get; init; } = 24;
 
     [Range(1, int.MaxValue)]

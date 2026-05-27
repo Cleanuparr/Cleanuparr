@@ -172,6 +172,7 @@ function runClientScenario(fixture: TorrentClientFixture, getToken: () => string
         enabled: true,
         scanDirectories: [dirs.appScanDir],
         orphanedDirectory: dirs.appOrphanedDir,
+        minFileAgeHours: 0,
       });
       expect(ofcRes.status).toBe(200);
 
