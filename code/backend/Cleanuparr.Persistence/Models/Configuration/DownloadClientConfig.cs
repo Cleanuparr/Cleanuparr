@@ -105,7 +105,7 @@ public sealed record DownloadClientConfig
             throw new ValidationException($"Host cannot be empty");
         }
 
-        if (!string.IsNullOrEmpty(DownloadDirectorySource) != !string.IsNullOrEmpty(DownloadDirectoryTarget))
+        if (!string.IsNullOrWhiteSpace(DownloadDirectorySource) != !string.IsNullOrWhiteSpace(DownloadDirectoryTarget))
         {
             throw new ValidationException("Both download directory source and target must be set, or both must be empty");
         }
