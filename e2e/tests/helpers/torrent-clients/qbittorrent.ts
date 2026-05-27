@@ -46,8 +46,11 @@ export class QBittorrentDriver implements TorrentClientDriver {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: body.toString(),
     });
-    if (!res.ok) {
-      throw new Error(`qBittorrent login failed: ${res.status} ${await res.text()}`);
+    // qBittorrent returns HTTP 200 with body "Ok." on success and "Fails." on
+    // bad credentials, so we cannot rely on res.ok alone.
+    const responseBody = (await res.text()).trim();
+    if (!res.ok || responseBody !== 'Ok.') {
+      throw new Error(`qBittorrent login failed: ${res.status} ${responseBody}`);
     }
     const cookie = res.headers.get('set-cookie');
     if (cookie) {
