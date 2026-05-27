@@ -94,14 +94,6 @@ namespace Cleanuparr.Persistence.Migrations.Data
             migrationBuilder.DropTable(
                 name: "orphaned_files_configs");
 
-            migrationBuilder.DropColumn(
-                name: "download_directory_source",
-                table: "download_clients");
-
-            migrationBuilder.DropColumn(
-                name: "download_directory_target",
-                table: "download_clients");
-
             migrationBuilder.AddColumn<string>(
                 name: "download_directory_source",
                 table: "unlinked_configs",
@@ -113,6 +105,38 @@ namespace Cleanuparr.Persistence.Migrations.Data
                 table: "unlinked_configs",
                 type: "TEXT",
                 nullable: true);
+
+            migrationBuilder.Sql(@"
+                UPDATE unlinked_configs
+                SET
+                    download_directory_source = (
+                        SELECT download_directory_source
+                        FROM download_clients
+                        WHERE download_clients.id = unlinked_configs.download_client_config_id
+                          AND download_directory_source IS NOT NULL
+                        LIMIT 1
+                    ),
+                    download_directory_target = (
+                        SELECT download_directory_target
+                        FROM download_clients
+                        WHERE download_clients.id = unlinked_configs.download_client_config_id
+                          AND download_directory_target IS NOT NULL
+                        LIMIT 1
+                    )
+                WHERE EXISTS (
+                    SELECT 1 FROM download_clients
+                    WHERE download_clients.id = unlinked_configs.download_client_config_id
+                      AND download_directory_source IS NOT NULL
+                )
+            ");
+
+            migrationBuilder.DropColumn(
+                name: "download_directory_source",
+                table: "download_clients");
+
+            migrationBuilder.DropColumn(
+                name: "download_directory_target",
+                table: "download_clients");
         }
     }
 }
