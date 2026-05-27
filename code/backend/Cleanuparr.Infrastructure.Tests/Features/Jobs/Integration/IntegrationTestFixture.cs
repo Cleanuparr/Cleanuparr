@@ -5,6 +5,7 @@ using Cleanuparr.Infrastructure.Events;
 using Cleanuparr.Infrastructure.Events.Interfaces;
 using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 using Cleanuparr.Infrastructure.Features.Context;
+using Cleanuparr.Infrastructure.Features.DownloadCleaner.Services;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
 using Cleanuparr.Infrastructure.Features.DownloadRemover;
 using Cleanuparr.Infrastructure.Features.DownloadRemover.Models;
@@ -57,6 +58,9 @@ public class IntegrationTestFixture : IDisposable
     public IDryRunInterceptor DryRunInterceptor { get; private set; }
     public IEventPublisher EventPublisherInterface { get; private set; } = null!;
     public IHubContext<AppHub> HubContext { get; private set; }
+    public ISeedingRulesCleanupService SeedingRulesService { get; private set; } = null!;
+    public IUnlinkedDownloadsService UnlinkedService { get; private set; } = null!;
+    public IOrphanedFilesCleanupService OrphanedFilesService { get; private set; } = null!;
 
     // State
     public Guid JobRunId { get; private set; }
@@ -134,6 +138,19 @@ public class IntegrationTestFixture : IDisposable
             EventPublisher,
             EventsContext,
             DataContext);
+
+        SeedingRulesService = new SeedingRulesCleanupService(
+            Substitute.For<ILogger<SeedingRulesCleanupService>>(),
+            DataContext);
+        UnlinkedService = new UnlinkedDownloadsService(
+            Substitute.For<ILogger<UnlinkedDownloadsService>>(),
+            DataContext,
+            HardLinkFileService);
+        OrphanedFilesService = new OrphanedFilesCleanupService(
+            Substitute.For<ILogger<OrphanedFilesCleanupService>>(),
+            DataContext,
+            TimeProvider,
+            DryRunInterceptor);
     }
 
     /// <summary>

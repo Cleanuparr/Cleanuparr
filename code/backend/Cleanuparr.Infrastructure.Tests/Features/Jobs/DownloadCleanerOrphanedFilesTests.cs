@@ -13,13 +13,13 @@ using Xunit;
 namespace Cleanuparr.Infrastructure.Tests.Features.Jobs;
 
 [Collection(JobHandlerCollection.Name)]
-public sealed class DownloadCleanerOrphanFlowTests : IDisposable
+public sealed class DownloadCleanerOrphanedFilesTests : IDisposable
 {
     private readonly JobHandlerFixture _fixture;
     private readonly ILogger<DownloadCleaner> _logger;
     private readonly string _tempRoot;
 
-    public DownloadCleanerOrphanFlowTests(JobHandlerFixture fixture)
+    public DownloadCleanerOrphanedFilesTests(JobHandlerFixture fixture)
     {
         _fixture = fixture;
         _fixture.RecreateDataContext();
@@ -51,8 +51,9 @@ public sealed class DownloadCleanerOrphanFlowTests : IDisposable
         _fixture.DownloadServiceFactory,
         _fixture.EventPublisher,
         _fixture.TimeProvider,
-        _fixture.HardLinkFileService,
-        _fixture.DryRunInterceptor);
+        _fixture.SeedingRulesService,
+        _fixture.UnlinkedService,
+        _fixture.OrphanedFilesService);
 
     private async Task ExecuteWithTimeAdvance(DownloadCleaner sut)
     {
@@ -81,7 +82,7 @@ public sealed class DownloadCleanerOrphanFlowTests : IDisposable
     }
 
     [Fact]
-    public async Task OrphanFlow_NoEnabledClientConfigs_SkipsScan()
+    public async Task OrphanedFiles_NoEnabledClientConfigs_SkipsScan()
     {
         TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
         var dbClient = _fixture.DataContext.DownloadClients.First();
@@ -90,11 +91,11 @@ public sealed class DownloadCleanerOrphanFlowTests : IDisposable
         var sut = CreateSut();
         await ExecuteWithTimeAdvance(sut);
 
-        _logger.ReceivedLogContaining(LogLevel.Debug, "No orphaned files settings have been configured");
+        _fixture.OrphanedFilesLogger.ReceivedLogContaining(LogLevel.Debug, "No orphaned files settings have been configured");
     }
 
     [Fact]
-    public async Task OrphanFlow_OrphanedEntry_IsMovedWhenOrphanedDirectorySet()
+    public async Task OrphanedFiles_OrphanedEntry_IsMovedWhenOrphanedDirectorySet()
     {
         var scanDir = Path.Combine(_tempRoot, "downloads");
         var orphanedDir = Path.Combine(_tempRoot, "orphaned");
@@ -119,7 +120,7 @@ public sealed class DownloadCleanerOrphanFlowTests : IDisposable
     }
 
     [Fact]
-    public async Task OrphanFlow_TorrentClaimedEntry_IsNotMoved()
+    public async Task OrphanedFiles_TorrentClaimedEntry_IsNotMoved()
     {
         var scanDir = Path.Combine(_tempRoot, "downloads");
         Directory.CreateDirectory(scanDir);
@@ -143,7 +144,7 @@ public sealed class DownloadCleanerOrphanFlowTests : IDisposable
     }
 
     [Fact]
-    public async Task OrphanFlow_EntryMatchingExcludePattern_IsNotMoved()
+    public async Task OrphanedFiles_EntryMatchingExcludePattern_IsNotMoved()
     {
         var scanDir = Path.Combine(_tempRoot, "downloads");
         Directory.CreateDirectory(scanDir);
@@ -167,7 +168,7 @@ public sealed class DownloadCleanerOrphanFlowTests : IDisposable
     }
 
     [Fact]
-    public async Task OrphanFlow_EntryYoungerThanMinFileAgeHours_IsNotMoved()
+    public async Task OrphanedFiles_EntryYoungerThanMinFileAgeHours_IsNotMoved()
     {
         var scanDir = Path.Combine(_tempRoot, "downloads");
         Directory.CreateDirectory(scanDir);
@@ -191,7 +192,7 @@ public sealed class DownloadCleanerOrphanFlowTests : IDisposable
     }
 
     [Fact]
-    public async Task OrphanFlow_NameCollisionInOrphanedDirectory_AppendsTimestampSuffix()
+    public async Task OrphanedFiles_NameCollisionInOrphanedDirectory_AppendsTimestampSuffix()
     {
         var scanDir = Path.Combine(_tempRoot, "downloads");
         var orphanedDir = Path.Combine(_tempRoot, "orphaned");
@@ -218,7 +219,7 @@ public sealed class DownloadCleanerOrphanFlowTests : IDisposable
     }
 
     [Fact]
-    public async Task OrphanFlow_OrphanedDirectorySelfReference_IsNeverFlagged()
+    public async Task OrphanedFiles_OrphanedDirectorySelfReference_IsNeverFlagged()
     {
         var scanDir = Path.Combine(_tempRoot, "downloads");
         var orphanedDir = Path.Combine(scanDir, "orphaned");

@@ -47,8 +47,9 @@ public class DownloadCleanerIntegrationTests : IDisposable
             _fixture.DownloadServiceFactory,
             _fixture.EventPublisher,
             _fixture.TimeProvider,
-            _fixture.HardLinkFileService,
-            _fixture.DryRunInterceptor);
+            _fixture.SeedingRulesService,
+            _fixture.UnlinkedService,
+            _fixture.OrphanedFilesService);
     }
 
     /// <summary>

@@ -4,6 +4,7 @@ using Cleanuparr.Infrastructure.Features.Arr;
 using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 using Cleanuparr.Infrastructure.Features.Auth;
 using Cleanuparr.Infrastructure.Features.BlacklistSync;
+using Cleanuparr.Infrastructure.Features.DownloadCleaner.Services;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
 using Cleanuparr.Infrastructure.Features.DownloadRemover;
 using Cleanuparr.Infrastructure.Features.DownloadRemover.Interfaces;
@@ -47,6 +48,9 @@ public static class ServicesDI
             .AddScoped<BlacklistSynchronizer>()
             .AddScoped<MalwareBlocker>()
             .AddScoped<DownloadCleaner>()
+            .AddScoped<ISeedingRulesCleanupService, SeedingRulesCleanupService>()
+            .AddScoped<IUnlinkedDownloadsService, UnlinkedDownloadsService>()
+            .AddScoped<IOrphanedFilesCleanupService, OrphanedFilesCleanupService>()
             .AddScoped<Seeker>()
             .AddScoped<CustomFormatScoreSyncer>()
             .AddScoped<IQueueItemRemover, QueueItemRemover>()
