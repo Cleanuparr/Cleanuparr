@@ -13,8 +13,11 @@
   --surface-section:  #14091e;
   --surface-section:  color-mix(in srgb, var(--brand-500) 14%, #000000);
   --surface-card:     rgba(20, 11, 34, 0.75);
+  --surface-card:     color-mix(in srgb, var(--brand-500) 12%, rgba(0, 0, 0, 0.75));
   --surface-overlay:  rgba(12, 6, 20, 0.92);
+  --surface-overlay:  color-mix(in srgb, var(--brand-500) 6%, rgba(0, 0, 0, 0.92));
   --surface-elevated: rgba(30, 18, 50, 0.65);
+  --surface-elevated: color-mix(in srgb, var(--brand-500) 16%, rgba(0, 0, 0, 0.65));
 
   // Glass
   --glass-bg:           rgba(255, 255, 255, 0.04);
@@ -50,6 +53,7 @@
 
   // Toolbar
   --toolbar-bg:     rgba(12, 6, 20, 0.80);
+  --toolbar-bg:     color-mix(in srgb, var(--brand-500) 6%, rgba(0, 0, 0, 0.80));
   --toolbar-border: rgba(255, 255, 255, 0.06);
 
   // Input
@@ -68,6 +72,7 @@
 
   // Dropdown
   --dropdown-bg: rgba(20, 11, 34, 0.97);
+  --dropdown-bg: color-mix(in srgb, var(--brand-500) 10%, rgba(0, 0, 0, 0.97));
 
   // Divider
   --divider: rgba(255, 255, 255, 0.08);
@@ -92,8 +97,8 @@
   --orb-opacity: 0.15;
   --orb-blur: 120px;
   --orb-primary: radial-gradient(circle, var(--brand-500), var(--brand-800));
-  --orb-secondary: radial-gradient(circle, var(--brand-400), var(--color-info));
-  --orb-tertiary: radial-gradient(circle, #06b6d4, #3b82f6);
+  --orb-secondary: radial-gradient(circle, var(--brand-400), var(--brand-600));
+  --orb-tertiary: radial-gradient(circle, var(--brand-400), var(--brand-700));
 }
 
 // Light theme
@@ -105,6 +110,7 @@
   --surface-section:  color-mix(in srgb, var(--brand-500) 6%, #ffffff);
   --surface-card:     rgba(255, 255, 255, 0.70);
   --surface-overlay:  rgba(245, 240, 250, 0.94);
+  --surface-overlay:  color-mix(in srgb, var(--brand-500) 6%, rgba(255, 255, 255, 0.94));
   --surface-elevated: rgba(255, 255, 255, 0.80);
 
   // Glass
@@ -183,6 +189,6 @@
   --orb-opacity: 0.35;
   --orb-blur: 150px;
   --orb-primary: radial-gradient(circle, var(--brand-500), var(--brand-700));
-  --orb-secondary: radial-gradient(circle, var(--brand-400), var(--color-info));
-  --orb-tertiary: radial-gradient(circle, #0891b2, #6366f1);
+  --orb-secondary: radial-gradient(circle, var(--brand-400), var(--brand-600));
+  --orb-tertiary: radial-gradient(circle, var(--brand-500), var(--brand-800));
 }
