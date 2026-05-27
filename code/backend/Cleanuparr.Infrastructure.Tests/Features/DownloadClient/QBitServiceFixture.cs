@@ -55,9 +55,6 @@ public class QBitServiceFixture : IDisposable
                 var parameters = callInfo.ArgAt<object[]>(1);
                 return (Task)(action.DynamicInvoke(parameters) ?? Task.CompletedTask);
             });
-        DryRunInterceptor
-            .InterceptAsync(default(Func<Task>)!)
-            .ReturnsForAnyArgs(callInfo => callInfo.ArgAt<Func<Task>>(0)());
 
         SetupSeedingRuleEvaluator();
     }
@@ -124,9 +121,6 @@ public class QBitServiceFixture : IDisposable
                 var parameters = callInfo.ArgAt<object[]>(1);
                 return (Task)(action.DynamicInvoke(parameters) ?? Task.CompletedTask);
             });
-        DryRunInterceptor
-            .InterceptAsync(default(Func<Task>)!)
-            .ReturnsForAnyArgs(callInfo => callInfo.ArgAt<Func<Task>>(0)());
 
         SetupSeedingRuleEvaluator();
     }
