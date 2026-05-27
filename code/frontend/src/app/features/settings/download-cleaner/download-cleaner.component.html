@@ -259,7 +259,7 @@
                     variant="primary"
                     [glowing]="orphanedFilesDirty()"
                     [loading]="orphanedFilesSaving()"
-                    [disabled]="orphanedFilesSaving() || orphanedFilesSaved() || !orphanedFilesDirty() || !!orphanedFilesScanDirsError()"
+                    [disabled]="orphanedFilesSaving() || orphanedFilesSaved() || !orphanedFilesDirty() || !!orphanedFilesScanDirsError() || !!orphanedFilesOrphanedDirError()"
                     (clicked)="saveOrphanedFilesConfig()"
                   >
                     {{ orphanedFilesSaved() ? 'Saved!' : 'Save' }}
