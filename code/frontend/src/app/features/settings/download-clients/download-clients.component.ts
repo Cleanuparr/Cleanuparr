@@ -213,8 +213,8 @@ export class DownloadClientsComponent implements OnInit, HasPendingChanges {
         password: this.modalPassword() || undefined,
         urlBase: this.modalUrlBase(),
         externalUrl: this.modalExternalUrl() || undefined,
-        downloadDirectorySource: this.modalDownloadDirectorySource() || undefined,
-        downloadDirectoryTarget: this.modalDownloadDirectoryTarget() || undefined,
+        downloadDirectorySource: this.modalDownloadDirectorySource() || null,
+        downloadDirectoryTarget: this.modalDownloadDirectoryTarget() || null,
       };
       this.api.update(editing.id, client).subscribe({
         next: () => {
@@ -239,8 +239,8 @@ export class DownloadClientsComponent implements OnInit, HasPendingChanges {
         password: this.modalPassword(),
         urlBase: this.modalUrlBase(),
         externalUrl: this.modalExternalUrl() || undefined,
-        downloadDirectorySource: this.modalDownloadDirectorySource() || undefined,
-        downloadDirectoryTarget: this.modalDownloadDirectoryTarget() || undefined,
+        downloadDirectorySource: this.modalDownloadDirectorySource() || null,
+        downloadDirectoryTarget: this.modalDownloadDirectoryTarget() || null,
       };
       this.api.create(dto).subscribe({
         next: () => {
