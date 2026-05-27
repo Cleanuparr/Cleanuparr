@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { chmodSync, existsSync, mkdirSync, readdirSync, statSync, utimesSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, statSync, utimesSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import {
   loginAndGetToken,
@@ -15,7 +15,7 @@ import {
   OrphanedFilesConfigRequest,
 } from './helpers/app-api';
 import { QBittorrentDriver } from './helpers/torrent-clients/qbittorrent';
-import { resetDirectory } from './helpers/torrent-fixtures';
+import { chmodIgnoringEPERM, resetDirectory } from './helpers/torrent-fixtures';
 
 /**
  * Behavior-level coverage for the orphaned files cleaner that isn't
@@ -57,7 +57,7 @@ function backdateRecursive(path: string, hoursAgo: number): void {
 
 function writeOrphanFile(dir: string, name: string, content = 'orphan'): string {
   mkdirSync(dir, { recursive: true });
-  chmodSync(dir, 0o777);
+  chmodIgnoringEPERM(dir, 0o777);
   const path = join(dir, name);
   writeFileSync(path, content);
   return path;
@@ -137,7 +137,7 @@ test.describe.serial('Orphaned files cleanup — behaviors', () => {
     // Reset filesystem state before each scenario.
     resetDirectory(HOST_SCAN_DIR);
     mkdirSync(HOST_ORPHANED_DIR, { recursive: true });
-    chmodSync(HOST_ORPHANED_DIR, 0o777);
+    chmodIgnoringEPERM(HOST_ORPHANED_DIR, 0o777);
     // No torrents in the client → claimedPaths is empty → every entry in
     // scan dir is treated as orphan.
     await driver.clearAllTorrents();

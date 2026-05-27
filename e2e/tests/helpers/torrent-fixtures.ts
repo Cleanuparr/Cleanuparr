@@ -63,7 +63,7 @@ export interface GeneratedTorrent {
 export function buildFolderTorrent(savePath: string, name: string, sizeBytes = 32_768): GeneratedTorrent {
   const contentPath = join(savePath, name);
   mkdirSync(contentPath, { recursive: true });
-  chmodSync(contentPath, 0o777);
+  chmodIgnoringEPERM(contentPath, 0o777);
 
   // Deterministic content: HMAC-like expansion from the name so two runs
   // produce identical bytes (and thus identical pieces / infohash).
@@ -109,6 +109,23 @@ export function buildFolderTorrent(savePath: string, name: string, sizeBytes = 3
 }
 
 /**
+ * `chmodSync` that tolerates EPERM. The torrent-client bind mounts
+ * (`test-data/downloads/<client>`) are chowned to PUID=1000 by
+ * linuxserver.io entrypoints, while CI's Playwright runner is uid 1001
+ * and cannot chmod paths it doesn't own. Mode bits are already 0o777
+ * from setup-test-data.sh's `chmod -R a+rwX`, so the chmod is best-effort.
+ */
+export function chmodIgnoringEPERM(path: string, mode: number): void {
+  try {
+    chmodSync(path, mode);
+  } catch (err) {
+    if ((err as { code?: string }).code !== 'EPERM') {
+      throw err;
+    }
+  }
+}
+
+/**
  * Wipe and recreate a directory. Used at test setup to reset client data.
  */
 export function resetDirectory(path: string): void {
@@ -116,7 +133,7 @@ export function resetDirectory(path: string): void {
   for (const entry of readdirSync(path)) {
     rmSync(join(path, entry), { recursive: true, force: true });
   }
-  chmodSync(path, 0o777);
+  chmodIgnoringEPERM(path, 0o777);
 }
 
 /**

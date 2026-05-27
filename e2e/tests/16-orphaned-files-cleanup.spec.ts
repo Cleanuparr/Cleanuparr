@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { chmodSync, existsSync, mkdirSync, readdirSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import {
   loginAndGetToken,
@@ -12,7 +12,7 @@ import {
   triggerJob,
 } from './helpers/app-api';
 import { ALL_CLIENTS, TorrentClientFixture } from './helpers/torrent-clients';
-import { buildFolderTorrent, resetDirectory } from './helpers/torrent-fixtures';
+import { buildFolderTorrent, chmodIgnoringEPERM, resetDirectory } from './helpers/torrent-fixtures';
 
 async function waitForTorrents(
   driver: { listTorrents(): Promise<Array<{ hash: string }>> },
@@ -134,7 +134,7 @@ function runClientScenario(fixture: TorrentClientFixture, getToken: () => string
       // Fresh per-client scan dir so a previous failed run doesn't bleed in.
       resetDirectory(dirs.hostScanDir);
       mkdirSync(dirs.hostOrphanedDir, { recursive: true });
-      chmodSync(dirs.hostOrphanedDir, 0o777);
+      chmodIgnoringEPERM(dirs.hostOrphanedDir, 0o777);
 
       const keepName = `keep-${slug}`;
       const orphanName = `orphan-${slug}`;
