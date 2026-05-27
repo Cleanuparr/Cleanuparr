@@ -122,10 +122,23 @@ public sealed record OrphanedFilesConfig : IConfig
         }
 
         var normalizedOrphaned = NormalizePath(OrphanedDirectory);
+        var sep = Path.DirectorySeparatorChar.ToString();
 
         foreach (var scanDir in ScanDirectories)
         {
-            CheckOverlap(NormalizePath(scanDir), normalizedOrphaned, "scan directory", "its own orphaned directory");
+            var normalizedScan = NormalizePath(scanDir);
+
+            if (string.Equals(normalizedScan, normalizedOrphaned, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new ValidationException(
+                    $"Orphaned directory '{normalizedOrphaned}' cannot equal scan directory '{normalizedScan}'.");
+            }
+
+            if (normalizedScan.StartsWith(normalizedOrphaned + sep, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new ValidationException(
+                    $"Orphaned directory '{normalizedOrphaned}' cannot be an ancestor of scan directory '{normalizedScan}'.");
+            }
         }
 
         foreach (var sibling in siblings)
