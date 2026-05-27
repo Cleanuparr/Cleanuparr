@@ -94,7 +94,7 @@ export class DocumentationService {
       'orphanedFilesOrphanedDirectory': 'orphaned-directory',
       'orphanedFilesExcludePatterns': 'exclude-patterns',
       'orphanedFilesMinFileAgeHours': 'min-file-age',
-      'orphanedFilesEmptyAfterXDays': 'purge-orphaned-after',
+      'orphanedFilesPurgeAfterHours': 'purge-orphaned-after',
     },
     'malware-blocker': {
       'enabled': 'enable-malware-blocker',

@@ -103,7 +103,7 @@ public sealed class DownloadCleanerConfigController : ControllerBase
                             orphanedDirectory = orphanedFilesConfig.OrphanedDirectory,
                             excludePatterns = orphanedFilesConfig.ExcludePatterns,
                             minFileAgeHours = orphanedFilesConfig.MinFileAgeHours,
-                            emptyAfterXDays = orphanedFilesConfig.EmptyAfterXDays,
+                            purgeAfterHours = orphanedFilesConfig.PurgeAfterHours,
                         }
                         : null,
                 });

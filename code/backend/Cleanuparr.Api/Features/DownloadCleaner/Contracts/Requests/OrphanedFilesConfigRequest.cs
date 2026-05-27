@@ -17,5 +17,5 @@ public sealed record OrphanedFilesConfigRequest
     public int MinFileAgeHours { get; init; } = 24;
 
     [Range(1, int.MaxValue)]
-    public int? EmptyAfterXDays { get; init; }
+    public int? PurgeAfterHours { get; init; }
 }

@@ -29,7 +29,7 @@ export interface OrphanedFilesConfig {
   orphanedDirectory: string;
   excludePatterns: string[];
   minFileAgeHours: number;
-  emptyAfterXDays?: number;
+  purgeAfterHours?: number;
 }
 
 export interface ClientCleanerConfig {

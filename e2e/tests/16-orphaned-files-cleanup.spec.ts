@@ -112,8 +112,8 @@ test.describe.serial('Orphaned files cleanup', () => {
 
     await updateOrphanedFilesConfig(token, {
       excludePatterns: [],
-      minFileAgeMinutes: 0,
-      emptyAfterXDays: null,
+      minFileAgeHours: 0,
+      purgeAfterHours: null,
     });
 
     mkdirSync(HOST_DOWNLOADS, { recursive: true });

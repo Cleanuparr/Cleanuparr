@@ -319,7 +319,7 @@ export async function listDownloadClients(accessToken: string): Promise<Array<{ 
 
 export async function updateOrphanedFilesConfig(
   accessToken: string,
-  config: { excludePatterns?: string[]; minFileAgeMinutes?: number; emptyAfterXDays?: number | null },
+  config: { excludePatterns?: string[]; minFileAgeHours?: number; purgeAfterHours?: number | null },
 ): Promise<Response> {
   return fetch(`${API}/api/configuration/orphaned_files_cleanup`, {
     method: 'PUT',

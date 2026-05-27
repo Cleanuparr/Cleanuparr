@@ -541,7 +541,7 @@ public sealed class DownloadCleaner : GenericHandler
 
     private void PurgeOrphanedDirectory(OrphanedFilesConfig clientConfig, CancellationToken cancellationToken)
     {
-        if (!clientConfig.EmptyAfterXDays.HasValue)
+        if (!clientConfig.PurgeAfterHours.HasValue)
         {
             return;
         }
@@ -551,7 +551,7 @@ public sealed class DownloadCleaner : GenericHandler
             return;
         }
 
-        DateTime cutoff = _timeProvider.GetUtcNow().UtcDateTime.AddDays(-clientConfig.EmptyAfterXDays.Value);
+        DateTime cutoff = _timeProvider.GetUtcNow().UtcDateTime.AddHours(-clientConfig.PurgeAfterHours.Value);
 
         foreach (var filePath in Directory.EnumerateFileSystemEntries(clientConfig.OrphanedDirectory))
         {
@@ -565,7 +565,7 @@ public sealed class DownloadCleaner : GenericHandler
 
             try
             {
-                int days = clientConfig.EmptyAfterXDays.Value;
+                int hours = clientConfig.PurgeAfterHours.Value;
 
                 if (Directory.Exists(filePath))
                 {
@@ -576,7 +576,7 @@ public sealed class DownloadCleaner : GenericHandler
                     File.Delete(filePath);
                 }
 
-                _logger.LogInformation("Purged old orphaned entry ({days}d+) | {path}", days, filePath);
+                _logger.LogInformation("Purged old orphaned entry ({hours}h+) | {path}", hours, filePath);
             }
             catch (Exception ex)
             {

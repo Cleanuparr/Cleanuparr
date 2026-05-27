@@ -377,7 +377,7 @@ public static class TestDataContextFactory
         string orphanedDirectory = "",
         List<string>? excludePatterns = null,
         int minFileAgeHours = 0,
-        int? emptyAfterXDays = null)
+        int? purgeAfterHours = null)
     {
         var config = new OrphanedFilesConfig
         {
@@ -388,7 +388,7 @@ public static class TestDataContextFactory
             OrphanedDirectory = orphanedDirectory,
             ExcludePatterns = excludePatterns ?? [],
             MinFileAgeHours = minFileAgeHours,
-            EmptyAfterXDays = emptyAfterXDays,
+            PurgeAfterHours = purgeAfterHours,
         };
 
         context.OrphanedFilesConfigs.Add(config);

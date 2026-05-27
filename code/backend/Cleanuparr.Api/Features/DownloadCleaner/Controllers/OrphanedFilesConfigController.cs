@@ -80,7 +80,7 @@ public sealed class OrphanedFilesConfigController : ControllerBase
                 OrphanedDirectory = dto.OrphanedDirectory,
                 ExcludePatterns = dto.ExcludePatterns,
                 MinFileAgeHours = dto.MinFileAgeHours,
-                EmptyAfterXDays = dto.EmptyAfterXDays,
+                PurgeAfterHours = dto.PurgeAfterHours,
             };
 
             var siblings = await _dataContext.OrphanedFilesConfigs
@@ -106,7 +106,7 @@ public sealed class OrphanedFilesConfigController : ControllerBase
                 existing.OrphanedDirectory = candidate.OrphanedDirectory;
                 existing.ExcludePatterns = candidate.ExcludePatterns;
                 existing.MinFileAgeHours = candidate.MinFileAgeHours;
-                existing.EmptyAfterXDays = candidate.EmptyAfterXDays;
+                existing.PurgeAfterHours = candidate.PurgeAfterHours;
             }
 
             await _dataContext.SaveChangesAsync();

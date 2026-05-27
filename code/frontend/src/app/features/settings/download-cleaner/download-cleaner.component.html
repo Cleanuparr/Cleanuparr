@@ -246,12 +246,12 @@
                   />
                   <app-number-input
                     label="Purge Orphaned After"
-                    suffix="days"
+                    suffix="hours"
                     [min]="1"
-                    hint="Permanently delete entries from the Orphaned Directory after this many days. Leave empty to keep them indefinitely."
-                    [value]="client.orphanedFilesConfig?.emptyAfterXDays ?? null"
-                    (valueChange)="updateOrphanedFilesField('emptyAfterXDays', $event ?? undefined)"
-                    helpKey="download-cleaner:orphanedFilesEmptyAfterXDays"
+                    hint="Permanently delete entries from the Orphaned Directory after this many hours. Leave empty to keep them indefinitely."
+                    [value]="client.orphanedFilesConfig?.purgeAfterHours ?? null"
+                    (valueChange)="updateOrphanedFilesField('purgeAfterHours', $event ?? undefined)"
+                    helpKey="download-cleaner:orphanedFilesPurgeAfterHours"
                   />
                 }
                 <div class="form-actions">

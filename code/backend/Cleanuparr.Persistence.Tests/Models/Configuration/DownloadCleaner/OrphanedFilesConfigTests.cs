@@ -42,9 +42,9 @@ public sealed class OrphanedFilesConfigTests
     }
 
     [Fact]
-    public void Defaults_EmptyAfterXDaysIsNull()
+    public void Defaults_PurgeAfterHoursIsNull()
     {
-        new OrphanedFilesConfig().EmptyAfterXDays.ShouldBeNull();
+        new OrphanedFilesConfig().PurgeAfterHours.ShouldBeNull();
     }
 
     #endregion
