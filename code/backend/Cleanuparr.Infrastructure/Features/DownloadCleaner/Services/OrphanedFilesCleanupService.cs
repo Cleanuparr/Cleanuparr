@@ -31,10 +31,20 @@ public sealed class OrphanedFilesCleanupService : IOrphanedFilesCleanupService
 
     public async Task ProcessAsync(IReadOnlyList<IDownloadService> downloadServices, CancellationToken cancellationToken)
     {
+        HashSet<Guid> activeClientIds = downloadServices.Select(s => s.ClientConfig.Id).ToHashSet();
+
+        if (activeClientIds.Count is 0)
+        {
+            _logger.LogWarning("Skipping orphaned-files scan because no download services are available");
+            return;
+        }
+
         List<OrphanedFilesConfig> orphanedFilesConfigs = await _dataContext.OrphanedFilesConfigs
             .AsNoTracking()
             .Include(x => x.DownloadClientConfig)
-            .Where(x => x.Enabled && x.DownloadClientConfig.Enabled)
+            .Where(x => x.Enabled
+                        && x.DownloadClientConfig.Enabled
+                        && activeClientIds.Contains(x.DownloadClientConfigId))
             .ToListAsync(cancellationToken);
 
         if (orphanedFilesConfigs.Count is 0)
