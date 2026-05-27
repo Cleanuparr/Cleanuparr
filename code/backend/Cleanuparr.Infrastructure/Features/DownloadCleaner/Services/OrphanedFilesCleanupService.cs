@@ -89,6 +89,10 @@ public sealed class OrphanedFilesCleanupService : IOrphanedFilesCleanupService
                 {
                     ProcessDirectory(scanDir, claimedPaths, clientConfig, normalizedOrphanedDir, cancellationToken);
                 }
+                catch (OperationCanceledException)
+                {
+                    throw;
+                }
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Error scanning {dir} for client {name}", scanDir, clientConfig.DownloadClientConfig.Name);
