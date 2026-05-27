@@ -20,7 +20,7 @@ namespace Cleanuparr.Infrastructure.Features.Jobs;
 
 public sealed class DownloadCleaner : GenericHandler
 {
-    private readonly HashSet<string> _downloadsProcessedByArrs = [];
+    private readonly HashSet<string> _downloadsProcessedByArrs = new(StringComparer.OrdinalIgnoreCase);
     private readonly TimeProvider _timeProvider;
     private readonly ISeedingRulesCleanupService _seedingRulesService;
     private readonly IUnlinkedDownloadsService _unlinkedService;
@@ -138,7 +138,7 @@ public sealed class DownloadCleaner : GenericHandler
                         continue;
                     }
 
-                    if (_downloadsProcessedByArrs.Any(x => x.Equals(download.Hash, StringComparison.InvariantCultureIgnoreCase)))
+                    if (_downloadsProcessedByArrs.Contains(download.Hash))
                     {
                         _logger.LogDebug("skip | download is used by an arr | {name}", download.Name);
                         continue;
@@ -190,7 +190,7 @@ public sealed class DownloadCleaner : GenericHandler
 
             foreach (QueueRecord record in groups.Select(group => group.First()))
             {
-                _downloadsProcessedByArrs.Add(record.DownloadId.ToLowerInvariant());
+                _downloadsProcessedByArrs.Add(record.DownloadId);
             }
 
             return Task.CompletedTask;
