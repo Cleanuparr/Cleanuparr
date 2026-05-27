@@ -42,13 +42,13 @@ public sealed class UnlinkedDownloadsService : IUnlinkedDownloadsService
             return;
         }
 
-        if (unlinkedConfig.IgnoredRootDirs.Count > 0)
-        {
-            _hardLinkFileService.PopulateFileCounts(unlinkedConfig.IgnoredRootDirs);
-        }
-
         try
         {
+            if (unlinkedConfig.IgnoredRootDirs.Count > 0)
+            {
+                _hardLinkFileService.PopulateFileCounts(unlinkedConfig.IgnoredRootDirs);
+            }
+
             List<ITorrentItemWrapper>? downloadsToChangeCategory = downloadService
                 .FilterDownloadsToChangeCategoryAsync(clientDownloads, unlinkedConfig);
 
