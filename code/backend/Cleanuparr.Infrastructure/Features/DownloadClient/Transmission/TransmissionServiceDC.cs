@@ -130,7 +130,7 @@ public partial class TransmissionService
             string currentCategory = torrent.Category ?? string.Empty;
             string newLocation = torrent.Info.GetNewLocationByAppend(unlinkedConfig.TargetCategory);
 
-            await _dryRunInterceptor.InterceptAsync(ChangeDownloadLocation, torrent.Info.Id, newLocation);
+            await _dryRunInterceptor.InterceptAsync(() => ChangeDownloadLocation(torrent.Info.Id, newLocation));
 
             _logger.LogInformation("category changed for {name}", torrent.Name);
 

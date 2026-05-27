@@ -120,7 +120,7 @@ public abstract class DownloadService : IDownloadService
                 continue;
             }
 
-            await _dryRunInterceptor.InterceptAsync(DeleteDownload, torrent, seedingRule.DeleteSourceFiles);
+            await _dryRunInterceptor.InterceptAsync(() => DeleteDownload(torrent, seedingRule.DeleteSourceFiles));
 
             _logger.LogInformation(
                 "download cleaned | {reason} reached | delete files: {deleteFiles} | {name}",

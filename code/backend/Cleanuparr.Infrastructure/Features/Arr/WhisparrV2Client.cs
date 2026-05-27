@@ -68,7 +68,7 @@ public class WhisparrV2Client : ArrClient, IWhisparrV2Client
 
             try
             {
-                HttpResponseMessage? response = await _dryRunInterceptor.InterceptAsync<HttpResponseMessage>(SendRequestAsync, request);
+                HttpResponseMessage? response = await _dryRunInterceptor.InterceptAsync(() => SendRequestAsync(request));
                 response?.Dispose();
                 
                 _logger.LogInformation("{log}", GetSearchLog(command.SearchType, arrInstance.Url, command, true, logContext));

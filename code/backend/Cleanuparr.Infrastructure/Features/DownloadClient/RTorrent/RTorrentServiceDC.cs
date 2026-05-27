@@ -140,7 +140,7 @@ public partial class RTorrentService
                 continue;
             }
 
-            await _dryRunInterceptor.InterceptAsync(ChangeLabel, torrent.Hash, unlinkedConfig.TargetCategory);
+            await _dryRunInterceptor.InterceptAsync(() => ChangeLabel(torrent.Hash, unlinkedConfig.TargetCategory));
 
             _logger.LogInformation("category changed for {name}", torrent.Name);
 

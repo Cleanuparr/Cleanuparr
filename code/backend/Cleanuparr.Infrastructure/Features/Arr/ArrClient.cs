@@ -176,7 +176,7 @@ public abstract class ArrClient : IArrClient
             using HttpRequestMessage request = new(HttpMethod.Delete, uriBuilder.Uri);
             SetApiKey(request, arrInstance.ApiKey);
 
-            HttpResponseMessage? response = await _dryRunInterceptor.InterceptAsync<HttpResponseMessage>(SendRequestAsync, request);
+            HttpResponseMessage? response = await _dryRunInterceptor.InterceptAsync(() => SendRequestAsync(request));
             response?.Dispose();
 
             string logMessage;

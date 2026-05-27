@@ -123,7 +123,7 @@ public partial class UTorrentService
                 continue;
             }
 
-            await _dryRunInterceptor.InterceptAsync(ChangeLabel, torrent.Hash, unlinkedConfig.TargetCategory);
+            await _dryRunInterceptor.InterceptAsync(() => ChangeLabel(torrent.Hash, unlinkedConfig.TargetCategory));
 
             await _eventPublisher.PublishCategoryChanged(torrent.Category, unlinkedConfig.TargetCategory);
 

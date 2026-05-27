@@ -30,14 +30,8 @@ public class NotificationPublisherTests
         _configService = Substitute.For<INotificationConfigurationService>();
         _providerFactory = Substitute.For<INotificationProviderFactory>();
 
-        // Setup dry run interceptor to call through
-        _dryRunInterceptor.InterceptAsync(default!, default!)
-            .ReturnsForAnyArgs(ci =>
-            {
-                var action = ci.ArgAt<Delegate>(0);
-                var parameters = ci.ArgAt<object[]>(1);
-                return action.DynamicInvoke(parameters) as Task ?? Task.CompletedTask;
-            });
+        _dryRunInterceptor.InterceptAsync(Arg.Any<Func<Task>>(), Arg.Any<string?>())
+            .ReturnsForAnyArgs(ci => ci.ArgAt<Func<Task>>(0).Invoke());
 
         _publisher = new NotificationPublisher(
             _logger,
@@ -504,8 +498,8 @@ public class NotificationPublisherTests
 
         // Assert
         await _dryRunInterceptor.Received(1).InterceptAsync(
-            Arg.Any<Func<(NotificationEventType, NotificationContext), Task>>(),
-            Arg.Any<(NotificationEventType, NotificationContext)>());
+            Arg.Any<Func<Task>>(),
+            Arg.Any<string?>());
     }
 
     #endregion
@@ -517,7 +511,7 @@ public class NotificationPublisherTests
     {
         // Arrange
         // Setup dry run interceptor to throw when called
-        _dryRunInterceptor.InterceptAsync(Arg.Any<Delegate>(), Arg.Any<object[]>())
+        _dryRunInterceptor.InterceptAsync(Arg.Any<Func<Task>>(), Arg.Any<string?>())
             .ThrowsAsync(new Exception("Interceptor failed"));
 
         SetupContext();
@@ -533,7 +527,7 @@ public class NotificationPublisherTests
     public async Task NotifyQueueItemDeleted_WhenExceptionOccurs_LogsError()
     {
         // Arrange
-        _dryRunInterceptor.InterceptAsync(Arg.Any<Delegate>(), Arg.Any<object[]>())
+        _dryRunInterceptor.InterceptAsync(Arg.Any<Func<Task>>(), Arg.Any<string?>())
             .ThrowsAsync(new Exception("Error"));
 
         SetupContext();
@@ -549,7 +543,7 @@ public class NotificationPublisherTests
     public async Task NotifyDownloadCleaned_WhenExceptionOccurs_LogsError()
     {
         // Arrange
-        _dryRunInterceptor.InterceptAsync(Arg.Any<Delegate>(), Arg.Any<object[]>())
+        _dryRunInterceptor.InterceptAsync(Arg.Any<Func<Task>>(), Arg.Any<string?>())
             .ThrowsAsync(new Exception("Error"));
 
         SetupDownloadCleanerContext();
@@ -565,7 +559,7 @@ public class NotificationPublisherTests
     public async Task NotifyCategoryChanged_WhenExceptionOccurs_LogsError()
     {
         // Arrange
-        _dryRunInterceptor.InterceptAsync(Arg.Any<Delegate>(), Arg.Any<object[]>())
+        _dryRunInterceptor.InterceptAsync(Arg.Any<Func<Task>>(), Arg.Any<string?>())
             .ThrowsAsync(new Exception("Error"));
 
         SetupDownloadCleanerContext();
@@ -625,7 +619,7 @@ public class NotificationPublisherTests
     public async Task NotifySearchItemGrabbed_WhenExceptionOccurs_LogsError()
     {
         // Arrange
-        _dryRunInterceptor.InterceptAsync(Arg.Any<Delegate>(), Arg.Any<object[]>())
+        _dryRunInterceptor.InterceptAsync(Arg.Any<Func<Task>>(), Arg.Any<string?>())
             .ThrowsAsync(new Exception("Error"));
 
         // Act

@@ -95,7 +95,7 @@ public partial class UTorrentService
             result.DeleteReason = DeleteReason.AllFilesBlocked;
         }
 
-        await _dryRunInterceptor.InterceptAsync(ChangeFilesPriority, hash, fileIndexes);
+        await _dryRunInterceptor.InterceptAsync(() => ChangeFilesPriority(hash, fileIndexes));
 
         return result;
     }

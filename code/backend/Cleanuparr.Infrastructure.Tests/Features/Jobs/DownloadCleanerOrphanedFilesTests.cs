@@ -27,9 +27,8 @@ public sealed class DownloadCleanerOrphanedFilesTests : IDisposable
         _logger = _fixture.CreateLogger<DownloadCleaner>();
         _tempRoot = Path.Combine(Path.GetTempPath(), "cleanuparr-tests", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(_tempRoot);
-        // Make the substituted DryRunInterceptor actually invoke captured actions
-        _fixture.DryRunInterceptor.When(x => x.Intercept(Arg.Any<Delegate>(), Arg.Any<object[]>()))
-            .Do(ci => ((Delegate)ci.Args()[0]).DynamicInvoke((object[])ci.Args()[1]));
+        _fixture.DryRunInterceptor.When(x => x.Intercept(Arg.Any<Action>(), Arg.Any<string?>()))
+            .Do(ci => ((Action)ci.Args()[0]).Invoke());
     }
 
     public void Dispose()

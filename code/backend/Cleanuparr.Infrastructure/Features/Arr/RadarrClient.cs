@@ -72,7 +72,7 @@ public class RadarrClient : ArrClient, IRadarrClient
 
         try
         {
-            HttpResponseMessage? response = await _dryRunInterceptor.InterceptAsync<HttpResponseMessage>(SendRequestAsync, request);
+            HttpResponseMessage? response = await _dryRunInterceptor.InterceptAsync(() => SendRequestAsync(request));
 
             if (response is null)
             {

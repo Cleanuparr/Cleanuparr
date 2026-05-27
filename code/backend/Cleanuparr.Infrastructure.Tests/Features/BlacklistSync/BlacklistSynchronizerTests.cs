@@ -47,19 +47,8 @@ public class BlacklistSynchronizerTests : IDisposable
         _downloadServiceFactory = Substitute.For<IDownloadServiceFactory>();
 
         _dryRunInterceptor = Substitute.For<IDryRunInterceptor>();
-        // Setup interceptor to execute the action with params using DynamicInvoke
-        _dryRunInterceptor.InterceptAsync(default!, default!)
-            .ReturnsForAnyArgs(ci =>
-            {
-                var action = ci.ArgAt<Delegate>(0);
-                var parameters = ci.ArgAt<object[]>(1);
-                var result = action.DynamicInvoke(parameters);
-                if (result is Task task)
-                {
-                    return task;
-                }
-                return Task.CompletedTask;
-            });
+        _dryRunInterceptor.InterceptAsync(Arg.Any<Func<Task>>(), Arg.Any<string?>())
+            .ReturnsForAnyArgs(ci => ci.ArgAt<Func<Task>>(0).Invoke());
 
         // Setup FakeHttpMessageHandler for FileReader
         _httpMessageHandler = new FakeHttpMessageHandler();
@@ -240,9 +229,8 @@ public class BlacklistSynchronizerTests : IDisposable
         // Act
         await _synchronizer.ExecuteAsync();
 
-        // Assert - Verify interceptor was called (with Delegate, not Func<object, object, Task>)
         await _dryRunInterceptor.Received()
-            .InterceptAsync(Arg.Any<Delegate>(), Arg.Any<object[]>());
+            .InterceptAsync(Arg.Any<Func<Task>>(), Arg.Any<string?>());
     }
 
     #endregion

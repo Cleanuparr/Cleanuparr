@@ -96,7 +96,7 @@ public class IntegrationTestFixture : IDisposable
 
         // DryRunInterceptor returns false (not dry run) by default
         DryRunInterceptor.IsDryRunEnabled().Returns(false);
-        DryRunInterceptor.InterceptAsync(default!, default!).ReturnsForAnyArgs(Task.CompletedTask);
+        DryRunInterceptor.InterceptAsync(Arg.Any<Func<Task>>(), Arg.Any<string?>()).ReturnsForAnyArgs(Task.CompletedTask);
 
         // Capture messages published to IBus (generic Publish<T> overloads)
         MessageBus.Publish(default(QueueItemRemoveRequest<SearchItem>)!, default)

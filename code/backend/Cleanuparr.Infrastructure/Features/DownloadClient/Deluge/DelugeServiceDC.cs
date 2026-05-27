@@ -71,7 +71,7 @@ public partial class DelugeService
 
         _logger.LogDebug("Creating category {name}", name);
 
-        await _dryRunInterceptor.InterceptAsync(CreateLabel, name);
+        await _dryRunInterceptor.InterceptAsync(() => CreateLabel(name));
     }
 
     public override async Task ChangeCategoryForNoHardLinksAsync(List<ITorrentItemWrapper>? downloads, UnlinkedConfig unlinkedConfig)
@@ -146,7 +146,7 @@ public partial class DelugeService
                 continue;
             }
 
-            await _dryRunInterceptor.InterceptAsync(ChangeLabel, torrent.Hash, unlinkedConfig.TargetCategory);
+            await _dryRunInterceptor.InterceptAsync(() => ChangeLabel(torrent.Hash, unlinkedConfig.TargetCategory));
 
             _logger.LogInformation("category changed for {name}", torrent.Name);
 

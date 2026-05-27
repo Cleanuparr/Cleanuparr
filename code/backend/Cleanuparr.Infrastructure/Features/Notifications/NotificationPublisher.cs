@@ -110,7 +110,7 @@ public class NotificationPublisher : INotificationPublisher
 
     private async Task SendNotificationAsync(NotificationEventType eventType, NotificationContext context)
     {
-        await _dryRunInterceptor.InterceptAsync(SendNotificationInternalAsync, (eventType, context));
+        await _dryRunInterceptor.InterceptAsync(() => SendNotificationInternalAsync((eventType, context)));
     }
 
     private async Task SendNotificationInternalAsync((NotificationEventType eventType, NotificationContext context) parameters)

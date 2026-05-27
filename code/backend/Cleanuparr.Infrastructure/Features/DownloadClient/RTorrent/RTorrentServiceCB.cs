@@ -125,7 +125,7 @@ public partial class RTorrentService
 
         foreach (var (index, priority) in priorityUpdates)
         {
-            await _dryRunInterceptor.InterceptAsync(SetFilePriority, hash, index, priority);
+            await _dryRunInterceptor.InterceptAsync(() => SetFilePriority(hash, index, priority));
         }
 
         return result;

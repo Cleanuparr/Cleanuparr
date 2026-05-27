@@ -91,7 +91,7 @@ public partial class QBitService
 
         _logger.LogDebug("Creating category {name}", name);
 
-        await _dryRunInterceptor.InterceptAsync(CreateCategory, name);
+        await _dryRunInterceptor.InterceptAsync(() => CreateCategory(name));
     }
 
     public override async Task ChangeCategoryForNoHardLinksAsync(List<ITorrentItemWrapper>? downloads, UnlinkedConfig unlinkedConfig)
@@ -169,7 +169,7 @@ public partial class QBitService
                 continue;
             }
 
-            await _dryRunInterceptor.InterceptAsync(ChangeCategory, torrent.Hash, unlinkedConfig.TargetCategory, unlinkedConfig.UseTag);
+            await _dryRunInterceptor.InterceptAsync(() => ChangeCategory(torrent.Hash, unlinkedConfig.TargetCategory, unlinkedConfig.UseTag));
 
             await _eventPublisher.PublishCategoryChanged(torrent.Category, unlinkedConfig.TargetCategory, unlinkedConfig.UseTag);
 
