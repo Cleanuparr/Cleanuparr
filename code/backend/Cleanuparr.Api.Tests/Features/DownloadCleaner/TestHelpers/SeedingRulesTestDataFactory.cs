@@ -120,7 +120,7 @@ public static class SeedingRulesTestDataFactory
         double maxRatio = 2.0,
         double minSeedTime = 0,
         double maxSeedTime = -1,
-        int minSeeders = -1)
+        int minSeeders = 0)
     {
         var rule = new QBitSeedingRule
         {
@@ -153,7 +153,7 @@ public static class SeedingRulesTestDataFactory
         List<string>? categories = null,
         double maxRatio = 2.0,
         double maxSeedTime = -1,
-        int minSeeders = -1)
+        int minSeeders = 0)
     {
         var rule = new DelugeSeedingRule
         {
@@ -184,7 +184,7 @@ public static class SeedingRulesTestDataFactory
         List<string>? categories = null,
         double maxRatio = 2.0,
         double maxSeedTime = -1,
-        int minSeeders = -1)
+        int minSeeders = 0)
     {
         var rule = new TransmissionSeedingRule
         {

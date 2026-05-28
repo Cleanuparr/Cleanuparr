@@ -40,7 +40,7 @@ public class SeedingRulesControllerTests : IDisposable
         double maxRatio = 2.0,
         double minSeedTime = 0,
         double maxSeedTime = -1,
-        int minSeeders = -1,
+        int minSeeders = 0,
         bool deleteSourceFiles = true)
     {
         return new SeedingRuleRequest
