@@ -59,11 +59,13 @@ public sealed class DownloadCleanerConfigController : ControllerBase
 
             foreach (var client in downloadClients)
             {
-                var seedingRules = SeedingRuleHelper.FilterForClient(
-                    client, allQBitRules, allDelugeRules, allTransmissionRules, allUTorrentRules, allRTorrentRules);
-                var unlinkedConfig = allUnlinkedConfigs.FirstOrDefault(u => u.DownloadClientConfigId == client.Id);
+                List<ISeedingRule> seedingRules = SeedingRuleHelper
+                    .FilterForClient(client, allQBitRules, allDelugeRules, allTransmissionRules, allUTorrentRules, allRTorrentRules);
+                UnlinkedConfig? unlinkedConfig = allUnlinkedConfigs
+                    .FirstOrDefault(u => u.DownloadClientConfigId == client.Id);
                 var orphanedFilesConfig = allOrphanedFilesConfigs.FirstOrDefault(o => o.DownloadClientConfigId == client.Id);
 
+                // TODO strongly type
                 clients.Add(new
                 {
                     downloadClientId = client.Id,
@@ -76,14 +78,14 @@ public sealed class DownloadCleanerConfigController : ControllerBase
                         name = r.Name,
                         categories = r.Categories,
                         trackerPatterns = r.TrackerPatterns,
-                        tagsAny = (r as ITagFilterable)?.TagsAny ?? new List<string>(),
-                        tagsAll = (r as ITagFilterable)?.TagsAll ?? new List<string>(),
+                        tagsAny = (r as ITagFilterable)?.TagsAny ?? [],
+                        tagsAll = (r as ITagFilterable)?.TagsAll ?? [],
                         priority = r.Priority,
                         privacyType = r.PrivacyType,
                         maxRatio = r.MaxRatio,
                         minSeedTime = r.MinSeedTime,
                         maxSeedTime = r.MaxSeedTime,
-                        minSeeders = r.MinSeeders,
+                        minSeeders = (r as ISeedersFilterable)?.MinSeeders,
                         deleteSourceFiles = r.DeleteSourceFiles,
                     }),
                     unlinkedConfig = unlinkedConfig is not null

@@ -117,6 +117,14 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
     return typeName === DownloadClientTypeName.qBittorrent || typeName === DownloadClientTypeName.Transmission;
   });
 
+  readonly isSeedersFilterableClient = computed(() => {
+    const typeName = this.selectedClient()?.downloadClientTypeName;
+    return typeName === DownloadClientTypeName.qBittorrent
+      || typeName === DownloadClientTypeName.Deluge
+      || typeName === DownloadClientTypeName.Transmission
+      || typeName === DownloadClientTypeName.uTorrent;
+  });
+
   readonly seedingRulesExpanded = signal(false);
   readonly unlinkedExpanded = signal(false);
   readonly orphanedFilesExpanded = signal(false);

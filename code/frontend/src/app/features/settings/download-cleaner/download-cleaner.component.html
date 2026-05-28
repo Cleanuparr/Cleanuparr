@@ -322,9 +322,11 @@
     <app-number-input label="Max Seed Time" [(value)]="ruleMaxSeedTime" suffix="hours" [min]="-1"
       hint="Maximum time to seed before removing (-1 means disabled)"
       helpKey="download-cleaner:maxSeedTime" />
-    <app-number-input label="Min Seeders" [(value)]="ruleMinSeeders" [min]="0" [step]="1"
-      hint="Minimum number of seeders required before removing (0 means disabled; unavailable counts keep the download)"
-      helpKey="download-cleaner:minSeeders" />
+    @if (isSeedersFilterableClient()) {
+      <app-number-input label="Min Seeders" [(value)]="ruleMinSeeders" [min]="0" [step]="1"
+        hint="Minimum number of seeders required before removing (0 means disabled; unavailable counts keep the download)"
+        helpKey="download-cleaner:minSeeders" />
+    }
     @if (ruleDisabledError()) {
       <div class="category-error">{{ ruleDisabledError() }}</div>
     }

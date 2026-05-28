@@ -5,7 +5,7 @@ using ValidationException = Cleanuparr.Domain.Exceptions.ValidationException;
 
 namespace Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
 
-public sealed record TransmissionSeedingRule : ISeedingRule, ITagFilterable
+public sealed record TransmissionSeedingRule : ISeedingRule, ITagFilterable, ISeedersFilterable
 {
     [Key]
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
@@ -53,9 +53,7 @@ public sealed record TransmissionSeedingRule : ISeedingRule, ITagFilterable
     /// </summary>
     public double MaxSeedTime { get; set; } = -1;
 
-    /// <summary>
-    /// Minimum number of seeders required before removing a download.
-    /// </summary>
+    /// <inheritdoc/>
     public int MinSeeders { get; set; }
 
     /// <summary>

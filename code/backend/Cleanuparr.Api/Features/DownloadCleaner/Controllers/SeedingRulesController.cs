@@ -44,6 +44,7 @@ public class SeedingRulesController : ControllerBase
 
             var rules = await SeedingRuleHelper.GetForClientAsync(_dataContext, client);
 
+            // TODO strongly type
             return Ok(rules.Select(r => new
             {
                 id = r.Id,
@@ -57,7 +58,7 @@ public class SeedingRulesController : ControllerBase
                 maxRatio = r.MaxRatio,
                 minSeedTime = r.MinSeedTime,
                 maxSeedTime = r.MaxSeedTime,
-                minSeeders = r.MinSeeders,
+                minSeeders = (r as ISeedersFilterable)?.MinSeeders,
                 deleteSourceFiles = r.DeleteSourceFiles,
             }));
         }
@@ -154,7 +155,6 @@ public class SeedingRulesController : ControllerBase
             existingRule.MaxRatio = ruleDto.MaxRatio;
             existingRule.MinSeedTime = ruleDto.MinSeedTime;
             existingRule.MaxSeedTime = ruleDto.MaxSeedTime;
-            existingRule.MinSeeders = ruleDto.MinSeeders;
             existingRule.DeleteSourceFiles = ruleDto.DeleteSourceFiles;
             // Priority is intentionally NOT updated here — use the reorder endpoint
 
@@ -162,6 +162,11 @@ public class SeedingRulesController : ControllerBase
             {
                 tagFilterable.TagsAny = SanitizeStringList(ruleDto.TagsAny);
                 tagFilterable.TagsAll = SanitizeStringList(ruleDto.TagsAll);
+            }
+
+            if (existingRule is ISeedersFilterable seedersFilterable)
+            {
+                seedersFilterable.MinSeeders = ruleDto.MinSeeders;
             }
 
             existingRule.Validate();
@@ -364,7 +369,6 @@ public class SeedingRulesController : ControllerBase
                 MaxRatio = dto.MaxRatio,
                 MinSeedTime = dto.MinSeedTime,
                 MaxSeedTime = dto.MaxSeedTime,
-                MinSeeders = dto.MinSeeders,
                 DeleteSourceFiles = dto.DeleteSourceFiles,
             },
             _ => throw new ArgumentOutOfRangeException(nameof(typeName), typeName, "Unsupported download client type")

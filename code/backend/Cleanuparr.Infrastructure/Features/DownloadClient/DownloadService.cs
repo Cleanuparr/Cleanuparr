@@ -152,15 +152,15 @@ public abstract class DownloadService : IDownloadService
     /// <param name="deleteSourceFiles">Whether to delete the source files along with the torrent</param>
     public abstract Task DeleteDownload(ITorrentItemWrapper torrent, bool deleteSourceFiles);
     
-    protected SeedingCheckResult ShouldCleanDownload(double ratio, TimeSpan seedingTime, int? seederCount, ISeedingRule category)
+    private SeedingCheckResult ShouldCleanDownload(double ratio, TimeSpan seedingTime, int? seederCount, ISeedingRule seedingRule)
     {
-        if (BelowMinimumSeeders(seederCount, category))
+        if (BelowMinimumSeeders(seederCount, seedingRule))
         {
             return new();
         }
 
         // check ratio
-        if (DownloadReachedRatio(ratio, seedingTime, category))
+        if (DownloadReachedRatio(ratio, seedingTime, seedingRule))
         {
             return new()
             {
@@ -170,7 +170,7 @@ public abstract class DownloadService : IDownloadService
         }
             
         // check max seed time
-        if (DownloadReachedMaxSeedTime(seedingTime, category))
+        if (DownloadReachedMaxSeedTime(seedingTime, seedingRule))
         {
             return new()
             {
@@ -202,23 +202,23 @@ public abstract class DownloadService : IDownloadService
         return parts.Length > 0 ? Path.Combine(root, parts[0]) : root;
     }
     
-    private bool DownloadReachedRatio(double ratio, TimeSpan seedingTime, ISeedingRule category)
+    private bool DownloadReachedRatio(double ratio, TimeSpan seedingTime, ISeedingRule seedingRule)
     {
-        if (category.MaxRatio < 0)
+        if (seedingRule.MaxRatio < 0)
         {
             return false;
         }
         
         string downloadName = ContextProvider.Get<string>(ContextProvider.Keys.ItemName);
-        TimeSpan minSeedingTime = TimeSpan.FromHours(category.MinSeedTime);
+        TimeSpan minSeedingTime = TimeSpan.FromHours(seedingRule.MinSeedTime);
         
-        if (category.MinSeedTime > 0 && seedingTime < minSeedingTime)
+        if (seedingRule.MinSeedTime > 0 && seedingTime < minSeedingTime)
         {
             _logger.LogDebug("skip | download has not reached MIN_SEED_TIME | {name}", downloadName);
             return false;
         }
 
-        if (ratio < category.MaxRatio)
+        if (ratio < seedingRule.MaxRatio)
         {
             _logger.LogDebug("skip | download has not reached MAX_RATIO | {name}", downloadName);
             return false;
@@ -228,13 +228,13 @@ public abstract class DownloadService : IDownloadService
         return true;
     }
 
-    private bool BelowMinimumSeeders(int? seederCount, ISeedingRule category)
+    private bool BelowMinimumSeeders(int? seederCount, ISeedingRule seedingRule)
     {
-        if (category.MinSeeders <= 0)
+        if (seedingRule is not ISeedersFilterable { MinSeeders: > 0 } seedersFilterable)
         {
             return false;
         }
-
+        
         string downloadName = ContextProvider.Get<string>(ContextProvider.Keys.ItemName);
 
         if (!seederCount.HasValue)
@@ -243,30 +243,31 @@ public abstract class DownloadService : IDownloadService
             return true;
         }
 
-        if (seederCount.Value < category.MinSeeders)
+        if (seederCount.Value >= seedersFilterable.MinSeeders)
         {
-            _logger.LogDebug(
-                "skip | download has fewer seeders than minimum | {seeders}/{minSeeders} | {name}",
-                seederCount.Value,
-                category.MinSeeders,
-                downloadName);
-            return true;
+            return false;
         }
+        
+        _logger.LogDebug(
+            "skip | download has fewer seeders than minimum | {seeders}/{minSeeders} | {name}",
+            seederCount.Value,
+            seedersFilterable.MinSeeders,
+            downloadName);
+        return true;
 
-        return false;
     }
     
-    private bool DownloadReachedMaxSeedTime(TimeSpan seedingTime, ISeedingRule category)
+    private bool DownloadReachedMaxSeedTime(TimeSpan seedingTime, ISeedingRule seedingRule)
     {
-        if (category.MaxSeedTime < 0)
+        if (seedingRule.MaxSeedTime < 0)
         {
             return false;
         }
         
         string downloadName = ContextProvider.Get<string>(ContextProvider.Keys.ItemName);
-        TimeSpan maxSeedingTime = TimeSpan.FromHours(category.MaxSeedTime);
+        TimeSpan maxSeedingTime = TimeSpan.FromHours(seedingRule.MaxSeedTime);
         
-        if (category.MaxSeedTime > 0 && seedingTime < maxSeedingTime)
+        if (seedingRule.MaxSeedTime > 0 && seedingTime < maxSeedingTime)
         {
             _logger.LogDebug("skip | download has not reached MAX_SEED_TIME | {name}", downloadName);
             return false;

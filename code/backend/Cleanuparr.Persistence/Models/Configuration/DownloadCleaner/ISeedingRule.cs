@@ -39,10 +39,5 @@ public interface ISeedingRule : IConfig
 
     double MaxSeedTime { get; set; }
 
-    /// <summary>
-    /// Minimum number of seeders required before cleanup. Negative values disable the check.
-    /// </summary>
-    int MinSeeders { get; set; }
-
     bool DeleteSourceFiles { get; set; }
 }
