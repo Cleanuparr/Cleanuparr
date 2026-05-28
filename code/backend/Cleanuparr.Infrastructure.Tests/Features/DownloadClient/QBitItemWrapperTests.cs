@@ -221,6 +221,21 @@ public class QBitItemWrapperTests
     }
 
     [Fact]
+    public void SeederCount_ReturnsTotalSeeds()
+    {
+        // Arrange
+        var torrentInfo = new TorrentInfo { TotalSeeds = 5 };
+        var trackers = new List<TorrentTracker>();
+        var wrapper = new QBitItemWrapper(torrentInfo, trackers, false);
+
+        // Act
+        var result = wrapper.SeederCount;
+
+        // Assert
+        result.ShouldBe(5);
+    }
+
+    [Fact]
     public void Eta_ReturnsCorrectValue()
     {
         // Arrange

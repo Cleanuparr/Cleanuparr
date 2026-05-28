@@ -5,7 +5,7 @@ using ValidationException = Cleanuparr.Domain.Exceptions.ValidationException;
 
 namespace Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
 
-public sealed record TransmissionSeedingRule : ISeedingRule, ITagFilterable
+public sealed record TransmissionSeedingRule : ISeedingRule, ITagFilterable, ISeedersFilterable
 {
     [Key]
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
@@ -53,6 +53,9 @@ public sealed record TransmissionSeedingRule : ISeedingRule, ITagFilterable
     /// </summary>
     public double MaxSeedTime { get; set; } = -1;
 
+    /// <inheritdoc/>
+    public int MinSeeders { get; set; }
+
     /// <summary>
     /// Whether to delete the source files when cleaning the download.
     /// </summary>
@@ -79,5 +82,7 @@ public sealed record TransmissionSeedingRule : ISeedingRule, ITagFilterable
         {
             throw new ValidationException("Min seed time can not be negative");
         }
+
+        ((ISeedersFilterable)this).ValidateMinSeeders();
     }
 }

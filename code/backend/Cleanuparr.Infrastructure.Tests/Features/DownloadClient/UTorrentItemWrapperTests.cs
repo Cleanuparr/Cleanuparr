@@ -278,4 +278,18 @@ public class UTorrentItemWrapperTests
         // Assert
         result.ShouldBeFalse();
     }
+
+    [Fact]
+    public void SeederCount_ReturnsSeedsInSwarm()
+    {
+        // Arrange
+        var torrentItem = new UTorrentItem { SeedsInSwarm = 15 };
+        var wrapper = new UTorrentItemWrapper(torrentItem, new UTorrentProperties());
+
+        // Act
+        var result = wrapper.SeederCount;
+
+        // Assert
+        result.ShouldBe(15);
+    }
 }

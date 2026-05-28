@@ -449,4 +449,23 @@ public class DelugeItemWrapperTests
         // Assert
         result.ShouldBe(expected);
     }
+
+    [Fact]
+    public void SeederCount_ReturnsTotalSeeds()
+    {
+        // Arrange
+        var downloadStatus = new DownloadStatus
+        {
+            TotalSeeds = 42,
+            Trackers = new List<Tracker>(),
+            DownloadLocation = "/test/path"
+        };
+        var wrapper = new DelugeItemWrapper(downloadStatus);
+
+        // Act
+        var result = wrapper.SeederCount;
+
+        // Assert
+        result.ShouldBe(42);
+    }
 }

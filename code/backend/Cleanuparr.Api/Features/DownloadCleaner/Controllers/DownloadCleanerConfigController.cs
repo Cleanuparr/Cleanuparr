@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 
 using Cleanuparr.Api.Features.DownloadCleaner.Contracts.Requests;
+using Cleanuparr.Api.Features.DownloadCleaner.Contracts.Responses;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Services.Interfaces;
 using Cleanuparr.Infrastructure.Utilities;
@@ -52,60 +53,34 @@ public sealed class DownloadCleanerConfigController : ControllerBase
             var allTransmissionRules = await _dataContext.TransmissionSeedingRules.AsNoTracking().ToListAsync();
             var allUTorrentRules = await _dataContext.UTorrentSeedingRules.AsNoTracking().ToListAsync();
             var allRTorrentRules = await _dataContext.RTorrentSeedingRules.AsNoTracking().ToListAsync();
-            var allUnlinkedConfigs = await _dataContext.UnlinkedConfigs.AsNoTracking().ToListAsync();
-            var allOrphanedFilesConfigs = await _dataContext.OrphanedFilesConfigs.AsNoTracking().ToListAsync();
+            List<UnlinkedConfig> allUnlinkedConfigs = await _dataContext.UnlinkedConfigs.AsNoTracking().ToListAsync();
+            List<OrphanedFilesConfig> allOrphanedFilesConfigs = await _dataContext.OrphanedFilesConfigs.AsNoTracking().ToListAsync();
 
-            var clients = new List<object>();
+            Dictionary<Guid, UnlinkedConfig> unlinkedConfigsByClientId = allUnlinkedConfigs
+                .GroupBy(u => u.DownloadClientConfigId)
+                .ToDictionary(g => g.Key, g => g.First());
+            Dictionary<Guid, OrphanedFilesConfig> orphanedFilesConfigsByClientId = allOrphanedFilesConfigs
+                .GroupBy(o => o.DownloadClientConfigId)
+                .ToDictionary(g => g.Key, g => g.First());
+
+            var clients = new List<DownloadCleanerClientResponse>();
 
             foreach (var client in downloadClients)
             {
-                var seedingRules = SeedingRuleHelper.FilterForClient(
-                    client, allQBitRules, allDelugeRules, allTransmissionRules, allUTorrentRules, allRTorrentRules);
-                var unlinkedConfig = allUnlinkedConfigs.FirstOrDefault(u => u.DownloadClientConfigId == client.Id);
-                var orphanedFilesConfig = allOrphanedFilesConfigs.FirstOrDefault(o => o.DownloadClientConfigId == client.Id);
+                List<ISeedingRule> seedingRules = SeedingRuleHelper
+                    .FilterForClient(client, allQBitRules, allDelugeRules, allTransmissionRules, allUTorrentRules, allRTorrentRules);
+                unlinkedConfigsByClientId.TryGetValue(client.Id, out UnlinkedConfig? unlinkedConfig);
+                orphanedFilesConfigsByClientId.TryGetValue(client.Id, out OrphanedFilesConfig? orphanedFilesConfig);
 
-                clients.Add(new
+                clients.Add(new DownloadCleanerClientResponse
                 {
-                    downloadClientId = client.Id,
-                    downloadClientName = client.Name,
-                    downloadClientEnabled = client.Enabled,
-                    downloadClientTypeName = client.TypeName,
-                    seedingRules = seedingRules.Select(r => new
-                    {
-                        id = r.Id,
-                        name = r.Name,
-                        categories = r.Categories,
-                        trackerPatterns = r.TrackerPatterns,
-                        tagsAny = (r as ITagFilterable)?.TagsAny ?? new List<string>(),
-                        tagsAll = (r as ITagFilterable)?.TagsAll ?? new List<string>(),
-                        priority = r.Priority,
-                        privacyType = r.PrivacyType,
-                        maxRatio = r.MaxRatio,
-                        minSeedTime = r.MinSeedTime,
-                        maxSeedTime = r.MaxSeedTime,
-                        deleteSourceFiles = r.DeleteSourceFiles,
-                    }),
-                    unlinkedConfig = unlinkedConfig is not null
-                        ? new
-                        {
-                            enabled = unlinkedConfig.Enabled,
-                            targetCategory = unlinkedConfig.TargetCategory,
-                            useTag = unlinkedConfig.UseTag,
-                            ignoredRootDirs = unlinkedConfig.IgnoredRootDirs,
-                            categories = unlinkedConfig.Categories,
-                        }
-                        : null,
-                    orphanedFilesConfig = orphanedFilesConfig is not null
-                        ? new
-                        {
-                            enabled = orphanedFilesConfig.Enabled,
-                            scanDirectories = orphanedFilesConfig.ScanDirectories,
-                            orphanedDirectory = orphanedFilesConfig.OrphanedDirectory,
-                            excludePatterns = orphanedFilesConfig.ExcludePatterns,
-                            minFileAgeHours = orphanedFilesConfig.MinFileAgeHours,
-                            purgeAfterHours = orphanedFilesConfig.PurgeAfterHours,
-                        }
-                        : null,
+                    DownloadClientId = client.Id,
+                    DownloadClientName = client.Name,
+                    DownloadClientEnabled = client.Enabled,
+                    DownloadClientTypeName = client.TypeName,
+                    SeedingRules = seedingRules.Select(SeedingRuleResponse.From).ToList(),
+                    UnlinkedConfig = unlinkedConfig is not null ? UnlinkedConfigResponse.From(unlinkedConfig) : null,
+                    OrphanedFilesConfig = orphanedFilesConfig is not null ? OrphanedFilesConfigResponse.From(orphanedFilesConfig) : null,
                 });
             }
 

@@ -48,6 +48,10 @@ public sealed class RTorrentItemWrapper : ITorrentItemWrapper
     /// </summary>
     public double Ratio => Info.Ratio / 1000.0;
 
+    /// <inheritdoc/>
+    /// <remarks>rTorrent does not expose seeder counts; always returns <see langword="null"/>.</remarks>
+    public int? SeederCount => null;
+
     public long Eta => CalculateEta();
 
     public long SeedingTimeSeconds => CalculateSeedingTime();

@@ -44,6 +44,9 @@ public sealed class UTorrentItemWrapper : ITorrentItemWrapper
     
     public double Ratio => Info.Ratio;
 
+    /// <inheritdoc/>
+    public int? SeederCount => Info.SeedsInSwarm;
+
     public long Eta => Info.ETA;
     
     public long SeedingTimeSeconds => (long?)Info.SeedingTime?.TotalSeconds ?? 0;

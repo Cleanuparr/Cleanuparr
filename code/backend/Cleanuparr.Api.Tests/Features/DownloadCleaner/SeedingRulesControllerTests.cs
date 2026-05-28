@@ -1,5 +1,5 @@
-using System.Text.Json;
 using Cleanuparr.Api.Features.DownloadCleaner.Contracts.Requests;
+using Cleanuparr.Api.Features.DownloadCleaner.Contracts.Responses;
 using Cleanuparr.Api.Features.DownloadCleaner.Controllers;
 using Cleanuparr.Api.Tests.Features.DownloadCleaner.TestHelpers;
 using Cleanuparr.Domain.Enums;
@@ -40,6 +40,7 @@ public class SeedingRulesControllerTests : IDisposable
         double maxRatio = 2.0,
         double minSeedTime = 0,
         double maxSeedTime = -1,
+        int minSeeders = 0,
         bool deleteSourceFiles = true)
     {
         return new SeedingRuleRequest
@@ -54,22 +55,22 @@ public class SeedingRulesControllerTests : IDisposable
             MaxRatio = maxRatio,
             MinSeedTime = minSeedTime,
             MaxSeedTime = maxSeedTime,
+            MinSeeders = minSeeders,
             DeleteSourceFiles = deleteSourceFiles,
         };
     }
 
-    private static JsonElement GetJsonBody(IActionResult result)
+    private static List<SeedingRuleResponse> GetRulesFromOk(IActionResult result)
     {
         var okResult = result.ShouldBeOfType<OkObjectResult>();
-        var json = JsonSerializer.Serialize(okResult.Value);
-        return JsonDocument.Parse(json).RootElement;
+        IEnumerable<SeedingRuleResponse> rules = okResult.Value.ShouldBeAssignableTo<IEnumerable<SeedingRuleResponse>>()!;
+        return rules.ToList();
     }
 
-    private static JsonElement GetCreatedJsonBody(IActionResult result)
+    private static T GetCreatedRule<T>(IActionResult result) where T : ISeedingRule
     {
         var createdResult = result.ShouldBeOfType<CreatedAtActionResult>();
-        var json = JsonSerializer.Serialize(createdResult.Value);
-        return JsonDocument.Parse(json).RootElement;
+        return createdResult.Value.ShouldBeOfType<T>();
     }
 
     // ──────────────────────────────────────────────────────────────────────
@@ -83,10 +84,7 @@ public class SeedingRulesControllerTests : IDisposable
 
         var result = await _controller.GetSeedingRules(client.Id);
 
-        var okResult = result.ShouldBeOfType<OkObjectResult>();
-        var json = JsonSerializer.Serialize(okResult.Value);
-        var array = JsonDocument.Parse(json).RootElement;
-        array.GetArrayLength().ShouldBe(0);
+        GetRulesFromOk(result).ShouldBeEmpty();
     }
 
     [Fact]
@@ -99,13 +97,11 @@ public class SeedingRulesControllerTests : IDisposable
 
         var result = await _controller.GetSeedingRules(client.Id);
 
-        var okResult = result.ShouldBeOfType<OkObjectResult>();
-        var json = JsonSerializer.Serialize(okResult.Value);
-        var array = JsonDocument.Parse(json).RootElement;
-        array.GetArrayLength().ShouldBe(3);
-        array[0].GetProperty("name").GetString().ShouldBe("Rule A");
-        array[1].GetProperty("name").GetString().ShouldBe("Rule B");
-        array[2].GetProperty("name").GetString().ShouldBe("Rule C");
+        List<SeedingRuleResponse> rules = GetRulesFromOk(result);
+        rules.Count.ShouldBe(3);
+        rules[0].Name.ShouldBe("Rule A");
+        rules[1].Name.ShouldBe("Rule B");
+        rules[2].Name.ShouldBe("Rule C");
     }
 
     [Fact]
@@ -124,12 +120,21 @@ public class SeedingRulesControllerTests : IDisposable
 
         var result = await _controller.GetSeedingRules(client.Id);
 
-        var okResult = result.ShouldBeOfType<OkObjectResult>();
-        var json = JsonSerializer.Serialize(okResult.Value);
-        var rule = JsonDocument.Parse(json).RootElement[0];
-        rule.GetProperty("tagsAny").GetArrayLength().ShouldBe(2);
-        rule.GetProperty("tagsAll").GetArrayLength().ShouldBe(1);
-        rule.GetProperty("tagsAll")[0].GetString().ShouldBe("required");
+        SeedingRuleResponse rule = GetRulesFromOk(result).Single();
+        rule.TagsAny.ShouldBe(new List<string> { "hd", "private" });
+        rule.TagsAll.ShouldBe(new List<string> { "required" });
+    }
+
+    [Fact]
+    public async Task GetSeedingRules_ReturnsMinSeeders()
+    {
+        var client = SeedingRulesTestDataFactory.AddDownloadClient(_dataContext);
+        SeedingRulesTestDataFactory.AddQBitSeedingRule(_dataContext, client.Id, minSeeders: 5);
+
+        var result = await _controller.GetSeedingRules(client.Id);
+
+        SeedingRuleResponse rule = GetRulesFromOk(result).Single();
+        rule.MinSeeders.ShouldBe(5);
     }
 
     [Fact]
@@ -140,11 +145,9 @@ public class SeedingRulesControllerTests : IDisposable
 
         var result = await _controller.GetSeedingRules(client.Id);
 
-        var okResult = result.ShouldBeOfType<OkObjectResult>();
-        var json = JsonSerializer.Serialize(okResult.Value);
-        var rule = JsonDocument.Parse(json).RootElement[0];
-        rule.GetProperty("tagsAny").GetArrayLength().ShouldBe(0);
-        rule.GetProperty("tagsAll").GetArrayLength().ShouldBe(0);
+        SeedingRuleResponse rule = GetRulesFromOk(result).Single();
+        rule.TagsAny.ShouldBeEmpty();
+        rule.TagsAll.ShouldBeEmpty();
     }
 
     // ──────────────────────────────────────────────────────────────────────
@@ -162,9 +165,9 @@ public class SeedingRulesControllerTests : IDisposable
         var createdResult = result.ShouldBeOfType<CreatedAtActionResult>();
         createdResult.StatusCode.ShouldBe(201);
 
-        var body = GetCreatedJsonBody(result);
-        body.GetProperty("Name").GetString().ShouldBe("Movies Rule");
-        body.GetProperty("Categories").GetArrayLength().ShouldBe(2);
+        QBitSeedingRule rule = GetCreatedRule<QBitSeedingRule>(result);
+        rule.Name.ShouldBe("Movies Rule");
+        rule.Categories.ShouldBe(new List<string> { "movies", "films" });
     }
 
     [Fact]
@@ -175,8 +178,18 @@ public class SeedingRulesControllerTests : IDisposable
 
         var result = await _controller.CreateSeedingRule(client.Id, request);
 
-        var body = GetCreatedJsonBody(result);
-        body.GetProperty("Priority").GetInt32().ShouldBe(1);
+        GetCreatedRule<QBitSeedingRule>(result).Priority.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task CreateSeedingRule_SetsMinSeeders()
+    {
+        var client = SeedingRulesTestDataFactory.AddDownloadClient(_dataContext);
+        var request = CreateValidRequest(minSeeders: 5);
+
+        var result = await _controller.CreateSeedingRule(client.Id, request);
+
+        GetCreatedRule<QBitSeedingRule>(result).MinSeeders.ShouldBe(5);
     }
 
     [Fact]
@@ -189,8 +202,7 @@ public class SeedingRulesControllerTests : IDisposable
 
         var result = await _controller.CreateSeedingRule(client.Id, request);
 
-        var body = GetCreatedJsonBody(result);
-        body.GetProperty("Priority").GetInt32().ShouldBe(2);
+        GetCreatedRule<QBitSeedingRule>(result).Priority.ShouldBe(2);
     }
 
     [Fact]
@@ -235,11 +247,8 @@ public class SeedingRulesControllerTests : IDisposable
 
         var result = await _controller.CreateSeedingRule(client.Id, request);
 
-        var body = GetCreatedJsonBody(result);
-        var patterns = body.GetProperty("TrackerPatterns");
-        patterns.GetArrayLength().ShouldBe(2);
-        patterns[0].GetString().ShouldBe("valid.com");
-        patterns[1].GetString().ShouldBe("trimmed.com");
+        QBitSeedingRule rule = GetCreatedRule<QBitSeedingRule>(result);
+        rule.TrackerPatterns.ShouldBe(new List<string> { "valid.com", "trimmed.com" });
     }
 
     [Fact]
@@ -251,8 +260,7 @@ public class SeedingRulesControllerTests : IDisposable
 
         var result = await _controller.CreateSeedingRule(client.Id, request);
 
-        var createdResult = result.ShouldBeOfType<CreatedAtActionResult>();
-        createdResult.Value.ShouldBeOfType<TransmissionSeedingRule>();
+        GetCreatedRule<TransmissionSeedingRule>(result).TagsAny.ShouldBe(new List<string> { "tag1" });
     }
 
     // ──────────────────────────────────────────────────────────────────────
@@ -307,6 +315,21 @@ public class SeedingRulesControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task UpdateSeedingRule_UpdatesMinSeeders()
+    {
+        var client = SeedingRulesTestDataFactory.AddDownloadClient(_dataContext);
+        var rule = SeedingRulesTestDataFactory.AddQBitSeedingRule(_dataContext, client.Id);
+
+        var request = CreateValidRequest(minSeeders: 5);
+
+        var result = await _controller.UpdateSeedingRule(rule.Id, request);
+
+        var okResult = result.ShouldBeOfType<OkObjectResult>();
+        var updated = okResult.Value.ShouldBeOfType<QBitSeedingRule>();
+        updated.MinSeeders.ShouldBe(5);
+    }
+
+    [Fact]
     public async Task UpdateSeedingRule_NonExistentRule_ReturnsNotFound()
     {
         var request = CreateValidRequest();
@@ -357,18 +380,14 @@ public class SeedingRulesControllerTests : IDisposable
         var request = new ReorderSeedingRulesRequest { OrderedIds = [rule3.Id, rule2.Id, rule1.Id] };
         await _controller.ReorderSeedingRules(client.Id, request);
 
-        // Verify via GET
-        var getResult = await _controller.GetSeedingRules(client.Id);
-        var okResult = getResult.ShouldBeOfType<OkObjectResult>();
-        var json = JsonSerializer.Serialize(okResult.Value);
-        var array = JsonDocument.Parse(json).RootElement;
+        List<SeedingRuleResponse> rules = GetRulesFromOk(await _controller.GetSeedingRules(client.Id));
 
-        array[0].GetProperty("name").GetString().ShouldBe("C");
-        array[0].GetProperty("priority").GetInt32().ShouldBe(1);
-        array[1].GetProperty("name").GetString().ShouldBe("B");
-        array[1].GetProperty("priority").GetInt32().ShouldBe(2);
-        array[2].GetProperty("name").GetString().ShouldBe("A");
-        array[2].GetProperty("priority").GetInt32().ShouldBe(3);
+        rules[0].Name.ShouldBe("C");
+        rules[0].Priority.ShouldBe(1);
+        rules[1].Name.ShouldBe("B");
+        rules[1].Priority.ShouldBe(2);
+        rules[2].Name.ShouldBe("A");
+        rules[2].Priority.ShouldBe(3);
     }
 
     [Fact]
@@ -442,12 +461,7 @@ public class SeedingRulesControllerTests : IDisposable
 
         await _controller.DeleteSeedingRule(rule.Id);
 
-        // Verify rule no longer exists
-        var getResult = await _controller.GetSeedingRules(client.Id);
-        var okResult = getResult.ShouldBeOfType<OkObjectResult>();
-        var json = JsonSerializer.Serialize(okResult.Value);
-        var array = JsonDocument.Parse(json).RootElement;
-        array.GetArrayLength().ShouldBe(0);
+        GetRulesFromOk(await _controller.GetSeedingRules(client.Id)).ShouldBeEmpty();
     }
 
     [Fact]

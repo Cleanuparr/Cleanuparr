@@ -205,6 +205,94 @@ public class TransmissionItemWrapperTests
         result.ShouldBe(expected);
     }
 
+    [Fact]
+    public void SeederCount_WithTrackerStats_ReturnsMaxSeederCount()
+    {
+        // Arrange
+        var torrentInfo = new TorrentInfo
+        {
+            TrackerStats = new TransmissionTorrentTrackerStats[]
+            {
+                new() { SeederCount = 3L },
+                new() { SeederCount = 7L },
+                new() { SeederCount = 5L },
+            }
+        };
+        var wrapper = new TransmissionItemWrapper(torrentInfo);
+
+        // Act
+        var result = wrapper.SeederCount;
+
+        // Assert
+        result.ShouldBe(7);
+    }
+
+    [Fact]
+    public void SeederCount_WithNullTrackerStats_ReturnsNull()
+    {
+        // Arrange
+        var torrentInfo = new TorrentInfo { TrackerStats = null };
+        var wrapper = new TransmissionItemWrapper(torrentInfo);
+
+        // Act
+        var result = wrapper.SeederCount;
+
+        // Assert
+        result.ShouldBeNull();
+    }
+
+    [Fact]
+    public void SeederCount_WithEmptyTrackerStats_ReturnsNull()
+    {
+        // Arrange
+        var torrentInfo = new TorrentInfo { TrackerStats = Array.Empty<TransmissionTorrentTrackerStats>() };
+        var wrapper = new TransmissionItemWrapper(torrentInfo);
+
+        // Act
+        var result = wrapper.SeederCount;
+
+        // Assert
+        result.ShouldBeNull();
+    }
+
+    [Fact]
+    public void SeederCount_WhenAllTrackerStatsAreUnscraped_ReturnsNull()
+    {
+        // Transmission RPC reports seederCount = -1 for trackers that have not been scraped yet
+        // (libtransmission/announcer.cc: view.seederCount = tracker.seeder_count().value_or(-1)).
+        var torrentInfo = new TorrentInfo
+        {
+            TrackerStats = new TransmissionTorrentTrackerStats[]
+            {
+                new() { SeederCount = -1L },
+                new() { SeederCount = -1L },
+            }
+        };
+        var wrapper = new TransmissionItemWrapper(torrentInfo);
+
+        var result = wrapper.SeederCount;
+
+        result.ShouldBeNull();
+    }
+
+    [Fact]
+    public void SeederCount_WithMixedScrapedAndUnscrapedTrackerStats_ReturnsMaxScrapedValue()
+    {
+        var torrentInfo = new TorrentInfo
+        {
+            TrackerStats = new TransmissionTorrentTrackerStats[]
+            {
+                new() { SeederCount = -1L },
+                new() { SeederCount = 4L },
+            }
+        };
+        var wrapper = new TransmissionItemWrapper(torrentInfo);
+
+        var result = wrapper.SeederCount;
+
+        result.ShouldBe(4);
+    }
+
     // TrackerDomains property tests
     [Fact]
     public void TrackerDomains_WithMultipleTrackers_ReturnsExtractedDomains()

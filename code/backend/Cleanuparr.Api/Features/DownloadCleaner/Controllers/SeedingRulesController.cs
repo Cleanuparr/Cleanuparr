@@ -1,4 +1,5 @@
 using Cleanuparr.Api.Features.DownloadCleaner.Contracts.Requests;
+using Cleanuparr.Api.Features.DownloadCleaner.Contracts.Responses;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration;
@@ -44,21 +45,7 @@ public class SeedingRulesController : ControllerBase
 
             var rules = await SeedingRuleHelper.GetForClientAsync(_dataContext, client);
 
-            return Ok(rules.Select(r => new
-            {
-                id = r.Id,
-                name = r.Name,
-                categories = r.Categories,
-                trackerPatterns = r.TrackerPatterns,
-                tagsAny = (r as ITagFilterable)?.TagsAny ?? new List<string>(),
-                tagsAll = (r as ITagFilterable)?.TagsAll ?? new List<string>(),
-                priority = r.Priority,
-                privacyType = r.PrivacyType,
-                maxRatio = r.MaxRatio,
-                minSeedTime = r.MinSeedTime,
-                maxSeedTime = r.MaxSeedTime,
-                deleteSourceFiles = r.DeleteSourceFiles,
-            }));
+            return Ok(rules.Select(SeedingRuleResponse.From));
         }
         catch (Exception ex)
         {
@@ -160,6 +147,11 @@ public class SeedingRulesController : ControllerBase
             {
                 tagFilterable.TagsAny = SanitizeStringList(ruleDto.TagsAny);
                 tagFilterable.TagsAll = SanitizeStringList(ruleDto.TagsAll);
+            }
+
+            if (existingRule is ISeedersFilterable seedersFilterable)
+            {
+                seedersFilterable.MinSeeders = ruleDto.MinSeeders;
             }
 
             existingRule.Validate();
@@ -304,6 +296,7 @@ public class SeedingRulesController : ControllerBase
                 MaxRatio = dto.MaxRatio,
                 MinSeedTime = dto.MinSeedTime,
                 MaxSeedTime = dto.MaxSeedTime,
+                MinSeeders = dto.MinSeeders,
                 DeleteSourceFiles = dto.DeleteSourceFiles,
             },
             DownloadClientTypeName.Deluge => new DelugeSeedingRule
@@ -317,6 +310,7 @@ public class SeedingRulesController : ControllerBase
                 MaxRatio = dto.MaxRatio,
                 MinSeedTime = dto.MinSeedTime,
                 MaxSeedTime = dto.MaxSeedTime,
+                MinSeeders = dto.MinSeeders,
                 DeleteSourceFiles = dto.DeleteSourceFiles,
             },
             DownloadClientTypeName.Transmission => new TransmissionSeedingRule
@@ -332,6 +326,7 @@ public class SeedingRulesController : ControllerBase
                 MaxRatio = dto.MaxRatio,
                 MinSeedTime = dto.MinSeedTime,
                 MaxSeedTime = dto.MaxSeedTime,
+                MinSeeders = dto.MinSeeders,
                 DeleteSourceFiles = dto.DeleteSourceFiles,
             },
             DownloadClientTypeName.uTorrent => new UTorrentSeedingRule
@@ -345,6 +340,7 @@ public class SeedingRulesController : ControllerBase
                 MaxRatio = dto.MaxRatio,
                 MinSeedTime = dto.MinSeedTime,
                 MaxSeedTime = dto.MaxSeedTime,
+                MinSeeders = dto.MinSeeders,
                 DeleteSourceFiles = dto.DeleteSourceFiles,
             },
             DownloadClientTypeName.rTorrent => new RTorrentSeedingRule
