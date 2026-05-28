@@ -45,6 +45,7 @@ public sealed class QBitItemWrapper : ITorrentItemWrapper
     
     public double Ratio => Info.Ratio;
 
+    /// <inheritdoc/>
     public int? SeederCount => Info.TotalSeeds;
 
     public long Eta => Info.EstimatedTime?.TotalSeconds is { } eta ? (long)eta : 0;

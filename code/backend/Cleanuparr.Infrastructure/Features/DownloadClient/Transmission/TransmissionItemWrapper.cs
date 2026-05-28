@@ -43,6 +43,8 @@ public sealed class TransmissionItemWrapper : ITorrentItemWrapper
     
     public double Ratio => Info.uploadRatio ?? 0.0;
 
+    /// <inheritdoc/>
+    /// <remarks>Returns the maximum <c>SeederCount</c> across all tracker stats, or <see langword="null"/> when tracker stats are missing/unscraped.</remarks>
     public int? SeederCount
     {
         get
