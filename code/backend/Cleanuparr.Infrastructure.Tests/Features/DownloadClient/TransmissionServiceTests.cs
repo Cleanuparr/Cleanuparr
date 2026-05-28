@@ -30,27 +30,6 @@ public class TransmissionServiceTests : IClassFixture<TransmissionServiceFixture
             const string hash = "nonexistent";
             var sut = _fixture.CreateSut();
 
-            var fields = new[]
-            {
-                TorrentFields.FILES,
-                TorrentFields.FILE_STATS,
-                TorrentFields.HASH_STRING,
-                TorrentFields.ID,
-                TorrentFields.ETA,
-                TorrentFields.NAME,
-                TorrentFields.STATUS,
-                TorrentFields.IS_PRIVATE,
-                TorrentFields.DOWNLOADED_EVER,
-                TorrentFields.DOWNLOAD_DIR,
-                TorrentFields.SECONDS_SEEDING,
-                TorrentFields.UPLOAD_RATIO,
-                TorrentFields.TRACKERS,
-                TorrentFields.TRACKER_STATS,
-                TorrentFields.RATE_DOWNLOAD,
-                TorrentFields.TOTAL_SIZE,
-                TorrentFields.LABELS
-            };
-
             _fixture.ClientWrapper
                 .TorrentGetAsync(Arg.Any<string[]>(), hash)
                 .Returns((TransmissionTorrents?)null);
@@ -81,27 +60,6 @@ public class TransmissionServiceTests : IClassFixture<TransmissionServiceFixture
             var torrents = new TransmissionTorrents
             {
                 Torrents = new[] { torrentInfo }
-            };
-
-            var fields = new[]
-            {
-                TorrentFields.FILES,
-                TorrentFields.FILE_STATS,
-                TorrentFields.HASH_STRING,
-                TorrentFields.ID,
-                TorrentFields.ETA,
-                TorrentFields.NAME,
-                TorrentFields.STATUS,
-                TorrentFields.IS_PRIVATE,
-                TorrentFields.DOWNLOADED_EVER,
-                TorrentFields.DOWNLOAD_DIR,
-                TorrentFields.SECONDS_SEEDING,
-                TorrentFields.UPLOAD_RATIO,
-                TorrentFields.TRACKERS,
-                TorrentFields.TRACKER_STATS,
-                TorrentFields.RATE_DOWNLOAD,
-                TorrentFields.TOTAL_SIZE,
-                TorrentFields.LABELS
             };
 
             _fixture.ClientWrapper
@@ -141,27 +99,6 @@ public class TransmissionServiceTests : IClassFixture<TransmissionServiceFixture
             var torrents = new TransmissionTorrents
             {
                 Torrents = new[] { torrentInfo }
-            };
-
-            var fields = new[]
-            {
-                TorrentFields.FILES,
-                TorrentFields.FILE_STATS,
-                TorrentFields.HASH_STRING,
-                TorrentFields.ID,
-                TorrentFields.ETA,
-                TorrentFields.NAME,
-                TorrentFields.STATUS,
-                TorrentFields.IS_PRIVATE,
-                TorrentFields.DOWNLOADED_EVER,
-                TorrentFields.DOWNLOAD_DIR,
-                TorrentFields.SECONDS_SEEDING,
-                TorrentFields.UPLOAD_RATIO,
-                TorrentFields.TRACKERS,
-                TorrentFields.TRACKER_STATS,
-                TorrentFields.RATE_DOWNLOAD,
-                TorrentFields.TOTAL_SIZE,
-                TorrentFields.LABELS
             };
 
             _fixture.ClientWrapper
@@ -214,27 +151,6 @@ public class TransmissionServiceTests : IClassFixture<TransmissionServiceFixture
                 Torrents = new[] { torrentInfo }
             };
 
-            var fields = new[]
-            {
-                TorrentFields.FILES,
-                TorrentFields.FILE_STATS,
-                TorrentFields.HASH_STRING,
-                TorrentFields.ID,
-                TorrentFields.ETA,
-                TorrentFields.NAME,
-                TorrentFields.STATUS,
-                TorrentFields.IS_PRIVATE,
-                TorrentFields.DOWNLOADED_EVER,
-                TorrentFields.DOWNLOAD_DIR,
-                TorrentFields.SECONDS_SEEDING,
-                TorrentFields.UPLOAD_RATIO,
-                TorrentFields.TRACKERS,
-                TorrentFields.TRACKER_STATS,
-                TorrentFields.RATE_DOWNLOAD,
-                TorrentFields.TOTAL_SIZE,
-                TorrentFields.LABELS
-            };
-
             _fixture.ClientWrapper
                 .TorrentGetAsync(Arg.Any<string[]>(), hash)
                 .Returns(torrents);
@@ -270,27 +186,6 @@ public class TransmissionServiceTests : IClassFixture<TransmissionServiceFixture
             var torrents = new TransmissionTorrents
             {
                 Torrents = new[] { torrentInfo }
-            };
-
-            var fields = new[]
-            {
-                TorrentFields.FILES,
-                TorrentFields.FILE_STATS,
-                TorrentFields.HASH_STRING,
-                TorrentFields.ID,
-                TorrentFields.ETA,
-                TorrentFields.NAME,
-                TorrentFields.STATUS,
-                TorrentFields.IS_PRIVATE,
-                TorrentFields.DOWNLOADED_EVER,
-                TorrentFields.DOWNLOAD_DIR,
-                TorrentFields.SECONDS_SEEDING,
-                TorrentFields.UPLOAD_RATIO,
-                TorrentFields.TRACKERS,
-                TorrentFields.TRACKER_STATS,
-                TorrentFields.RATE_DOWNLOAD,
-                TorrentFields.TOTAL_SIZE,
-                TorrentFields.LABELS
             };
 
             _fixture.ClientWrapper
@@ -338,27 +233,6 @@ public class TransmissionServiceTests : IClassFixture<TransmissionServiceFixture
                 Torrents = new[] { torrentInfo }
             };
 
-            var fields = new[]
-            {
-                TorrentFields.FILES,
-                TorrentFields.FILE_STATS,
-                TorrentFields.HASH_STRING,
-                TorrentFields.ID,
-                TorrentFields.ETA,
-                TorrentFields.NAME,
-                TorrentFields.STATUS,
-                TorrentFields.IS_PRIVATE,
-                TorrentFields.DOWNLOADED_EVER,
-                TorrentFields.DOWNLOAD_DIR,
-                TorrentFields.SECONDS_SEEDING,
-                TorrentFields.UPLOAD_RATIO,
-                TorrentFields.TRACKERS,
-                TorrentFields.TRACKER_STATS,
-                TorrentFields.RATE_DOWNLOAD,
-                TorrentFields.TOTAL_SIZE,
-                TorrentFields.LABELS
-            };
-
             _fixture.ClientWrapper
                 .TorrentGetAsync(Arg.Any<string[]>(), hash)
                 .Returns(torrents);
@@ -390,27 +264,6 @@ public class TransmissionServiceTests : IClassFixture<TransmissionServiceFixture
             var torrents = new TransmissionTorrents
             {
                 Torrents = new[] { torrentInfo }
-            };
-
-            var fields = new[]
-            {
-                TorrentFields.FILES,
-                TorrentFields.FILE_STATS,
-                TorrentFields.HASH_STRING,
-                TorrentFields.ID,
-                TorrentFields.ETA,
-                TorrentFields.NAME,
-                TorrentFields.STATUS,
-                TorrentFields.IS_PRIVATE,
-                TorrentFields.DOWNLOADED_EVER,
-                TorrentFields.DOWNLOAD_DIR,
-                TorrentFields.SECONDS_SEEDING,
-                TorrentFields.UPLOAD_RATIO,
-                TorrentFields.TRACKERS,
-                TorrentFields.TRACKER_STATS,
-                TorrentFields.RATE_DOWNLOAD,
-                TorrentFields.TOTAL_SIZE,
-                TorrentFields.LABELS
             };
 
             _fixture.ClientWrapper
@@ -455,27 +308,6 @@ public class TransmissionServiceTests : IClassFixture<TransmissionServiceFixture
             var torrents = new TransmissionTorrents
             {
                 Torrents = new[] { torrentInfo }
-            };
-
-            var fields = new[]
-            {
-                TorrentFields.FILES,
-                TorrentFields.FILE_STATS,
-                TorrentFields.HASH_STRING,
-                TorrentFields.ID,
-                TorrentFields.ETA,
-                TorrentFields.NAME,
-                TorrentFields.STATUS,
-                TorrentFields.IS_PRIVATE,
-                TorrentFields.DOWNLOADED_EVER,
-                TorrentFields.DOWNLOAD_DIR,
-                TorrentFields.SECONDS_SEEDING,
-                TorrentFields.UPLOAD_RATIO,
-                TorrentFields.TRACKERS,
-                TorrentFields.TRACKER_STATS,
-                TorrentFields.RATE_DOWNLOAD,
-                TorrentFields.TOTAL_SIZE,
-                TorrentFields.LABELS
             };
 
             _fixture.ClientWrapper
@@ -524,27 +356,6 @@ public class TransmissionServiceTests : IClassFixture<TransmissionServiceFixture
                 Torrents = new[] { torrentInfo }
             };
 
-            var fields = new[]
-            {
-                TorrentFields.FILES,
-                TorrentFields.FILE_STATS,
-                TorrentFields.HASH_STRING,
-                TorrentFields.ID,
-                TorrentFields.ETA,
-                TorrentFields.NAME,
-                TorrentFields.STATUS,
-                TorrentFields.IS_PRIVATE,
-                TorrentFields.DOWNLOADED_EVER,
-                TorrentFields.DOWNLOAD_DIR,
-                TorrentFields.SECONDS_SEEDING,
-                TorrentFields.UPLOAD_RATIO,
-                TorrentFields.TRACKERS,
-                TorrentFields.TRACKER_STATS,
-                TorrentFields.RATE_DOWNLOAD,
-                TorrentFields.TOTAL_SIZE,
-                TorrentFields.LABELS
-            };
-
             _fixture.ClientWrapper
                 .TorrentGetAsync(Arg.Any<string[]>(), hash)
                 .Returns(torrents);
@@ -579,27 +390,6 @@ public class TransmissionServiceTests : IClassFixture<TransmissionServiceFixture
             var torrents = new TransmissionTorrents
             {
                 Torrents = new[] { torrentInfo }
-            };
-
-            var fields = new[]
-            {
-                TorrentFields.FILES,
-                TorrentFields.FILE_STATS,
-                TorrentFields.HASH_STRING,
-                TorrentFields.ID,
-                TorrentFields.ETA,
-                TorrentFields.NAME,
-                TorrentFields.STATUS,
-                TorrentFields.IS_PRIVATE,
-                TorrentFields.DOWNLOADED_EVER,
-                TorrentFields.DOWNLOAD_DIR,
-                TorrentFields.SECONDS_SEEDING,
-                TorrentFields.UPLOAD_RATIO,
-                TorrentFields.TRACKERS,
-                TorrentFields.TRACKER_STATS,
-                TorrentFields.RATE_DOWNLOAD,
-                TorrentFields.TOTAL_SIZE,
-                TorrentFields.LABELS
             };
 
             _fixture.ClientWrapper
@@ -645,27 +435,6 @@ public class TransmissionServiceTests : IClassFixture<TransmissionServiceFixture
                 Torrents = new[] { torrentInfo }
             };
 
-            var fields = new[]
-            {
-                TorrentFields.FILES,
-                TorrentFields.FILE_STATS,
-                TorrentFields.HASH_STRING,
-                TorrentFields.ID,
-                TorrentFields.ETA,
-                TorrentFields.NAME,
-                TorrentFields.STATUS,
-                TorrentFields.IS_PRIVATE,
-                TorrentFields.DOWNLOADED_EVER,
-                TorrentFields.DOWNLOAD_DIR,
-                TorrentFields.SECONDS_SEEDING,
-                TorrentFields.UPLOAD_RATIO,
-                TorrentFields.TRACKERS,
-                TorrentFields.TRACKER_STATS,
-                TorrentFields.RATE_DOWNLOAD,
-                TorrentFields.TOTAL_SIZE,
-                TorrentFields.LABELS
-            };
-
             _fixture.ClientWrapper
                 .TorrentGetAsync(Arg.Any<string[]>(), hash)
                 .Returns(torrents);
@@ -703,27 +472,6 @@ public class TransmissionServiceTests : IClassFixture<TransmissionServiceFixture
             var torrents = new TransmissionTorrents
             {
                 Torrents = new[] { torrentInfo }
-            };
-
-            var fields = new[]
-            {
-                TorrentFields.FILES,
-                TorrentFields.FILE_STATS,
-                TorrentFields.HASH_STRING,
-                TorrentFields.ID,
-                TorrentFields.ETA,
-                TorrentFields.NAME,
-                TorrentFields.STATUS,
-                TorrentFields.IS_PRIVATE,
-                TorrentFields.DOWNLOADED_EVER,
-                TorrentFields.DOWNLOAD_DIR,
-                TorrentFields.SECONDS_SEEDING,
-                TorrentFields.UPLOAD_RATIO,
-                TorrentFields.TRACKERS,
-                TorrentFields.TRACKER_STATS,
-                TorrentFields.RATE_DOWNLOAD,
-                TorrentFields.TOTAL_SIZE,
-                TorrentFields.LABELS
             };
 
             _fixture.ClientWrapper
