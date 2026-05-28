@@ -56,7 +56,7 @@ public sealed record TransmissionSeedingRule : ISeedingRule, ITagFilterable
     /// <summary>
     /// Minimum number of seeders required before removing a download.
     /// </summary>
-    public int MinSeeders { get; set; } = -1;
+    public int MinSeeders { get; set; }
 
     /// <summary>
     /// Whether to delete the source files when cleaning the download.
@@ -85,9 +85,9 @@ public sealed record TransmissionSeedingRule : ISeedingRule, ITagFilterable
             throw new ValidationException("Min seed time can not be negative");
         }
 
-        if (MinSeeders < -1)
+        if (MinSeeders < 0)
         {
-            throw new ValidationException("Min seeders can not be less than -1");
+            throw new ValidationException("Min seeders can not be less than 0");
         }
     }
 }

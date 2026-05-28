@@ -133,7 +133,7 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
   readonly ruleMaxRatio = signal<number | null>(-1);
   readonly ruleMinSeedTime = signal<number | null>(0);
   readonly ruleMaxSeedTime = signal<number | null>(-1);
-  readonly ruleMinSeeders = signal<number | null>(-1);
+  readonly ruleMinSeeders = signal<number | null>(0);
   readonly ruleDeleteSourceFiles = signal(true);
 
   readonly scheduleIntervalOptions = computed(() => {
@@ -333,7 +333,7 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
       this.ruleMaxRatio.set(rule.maxRatio);
       this.ruleMinSeedTime.set(rule.minSeedTime);
       this.ruleMaxSeedTime.set(rule.maxSeedTime);
-      this.ruleMinSeeders.set(rule.minSeeders ?? -1);
+      this.ruleMinSeeders.set(rule.minSeeders ?? 0);
       this.ruleDeleteSourceFiles.set(rule.deleteSourceFiles);
     } else {
       this.ruleName.set('');
@@ -345,7 +345,7 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
       this.ruleMaxRatio.set(-1);
       this.ruleMinSeedTime.set(0);
       this.ruleMaxSeedTime.set(-1);
-      this.ruleMinSeeders.set(-1);
+      this.ruleMinSeeders.set(0);
       this.ruleDeleteSourceFiles.set(true);
     }
     this.ruleModalVisible.set(true);
@@ -372,7 +372,7 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
       maxRatio: this.ruleMaxRatio() ?? -1,
       minSeedTime: this.ruleMinSeedTime() ?? 0,
       maxSeedTime: this.ruleMaxSeedTime() ?? -1,
-      minSeeders: this.ruleMinSeeders() ?? -1,
+      minSeeders: this.ruleMinSeeders() ?? 0,
       deleteSourceFiles: this.ruleDeleteSourceFiles(),
     };
 

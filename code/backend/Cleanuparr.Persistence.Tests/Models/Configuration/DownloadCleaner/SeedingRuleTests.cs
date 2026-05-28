@@ -37,7 +37,7 @@ public sealed class QBitSeedingRuleTests
             DeleteSourceFiles = false
         };
 
-        rule.MinSeeders.ShouldBe(-1);
+        rule.MinSeeders.ShouldBe(0);
     }
 
     #endregion
@@ -316,7 +316,6 @@ public sealed class QBitSeedingRuleTests
     #region Validate - MinSeeders Validation
 
     [Theory]
-    [InlineData(-1)]
     [InlineData(0)]
     [InlineData(5)]
     public void Validate_WithValidMinSeeders_DoesNotThrow(int minSeeders)
@@ -345,12 +344,12 @@ public sealed class QBitSeedingRuleTests
             MaxRatio = 2.0,
             MinSeedTime = 0,
             MaxSeedTime = -1,
-            MinSeeders = -2,
+            MinSeeders = -1,
             DeleteSourceFiles = true
         };
 
         var exception = Should.Throw<ValidationException>(() => config.Validate());
-        exception.Message.ShouldBe("Min seeders can not be less than -1");
+        exception.Message.ShouldBe("Min seeders can not be less than 0");
     }
 
     #endregion

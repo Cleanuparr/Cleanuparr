@@ -63,7 +63,7 @@ export function createDefaultSeedingRule(): SeedingRule {
     maxRatio: -1,
     minSeedTime: 0,
     maxSeedTime: -1,
-    minSeeders: -1,
+    minSeeders: 0,
     deleteSourceFiles: true,
   };
 }
