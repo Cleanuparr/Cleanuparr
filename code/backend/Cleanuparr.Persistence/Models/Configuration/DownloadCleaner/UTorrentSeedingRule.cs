@@ -73,9 +73,6 @@ public sealed record UTorrentSeedingRule : ISeedingRule, ISeedersFilterable
             throw new ValidationException("Min seed time can not be negative");
         }
 
-        if (MinSeeders < 0)
-        {
-            throw new ValidationException("Min seeders can not be less than 0");
-        }
+        ((ISeedersFilterable)this).ValidateMinSeeders();
     }
 }
