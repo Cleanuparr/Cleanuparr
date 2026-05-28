@@ -341,6 +341,28 @@ export async function updateOrphanedFilesConfig(
   });
 }
 
+// --- Malware Blocker helpers ---
+
+export async function getMalwareBlockerConfig(accessToken: string): Promise<Response> {
+  return fetch(`${API}/api/configuration/malware_blocker`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+}
+
+export async function updateMalwareBlockerConfig(
+  accessToken: string,
+  config: Record<string, unknown>,
+): Promise<Response> {
+  return fetch(`${API}/api/configuration/malware_blocker`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify(config),
+  });
+}
+
 // --- Job triggering ---
 
 export async function triggerJob(

@@ -109,6 +109,72 @@ export function buildFolderTorrent(savePath: string, name: string, sizeBytes = 3
 }
 
 /**
+ * Build a multi-file torrent (BEP-3 multi-file mode). Each entry in `files`
+ * is written as `<savePath>/<name>/<filename>` with deterministic content
+ * derived from the torrent name + filename. The pieces are SHA-1 hashes of
+ * the concatenated file bytes in declared order, which is how clients verify
+ * multi-file torrents.
+ */
+export function buildMultiFileTorrent(
+  savePath: string,
+  name: string,
+  files: ReadonlyArray<{ filename: string; sizeBytes?: number }>,
+): GeneratedTorrent {
+  if (files.length === 0) {
+    throw new Error('buildMultiFileTorrent: files must be non-empty');
+  }
+
+  const contentPath = join(savePath, name);
+  mkdirSync(contentPath, { recursive: true });
+  chmodIgnoringEPERM(contentPath, 0o777);
+
+  const fileBuffers: Buffer[] = [];
+  const fileEntries: Array<{ length: number; path: string[] }> = [];
+
+  for (const { filename, sizeBytes = 16384 } of files) {
+    const seed = createHash('sha256').update(`cleanuparr-e2e:${name}:${filename}`).digest();
+    const buf = Buffer.alloc(sizeBytes);
+    let offset = 0;
+    let counter = 0;
+    while (offset < sizeBytes) {
+      const block = createHash('sha256').update(seed).update(Buffer.from([counter & 0xff, (counter >> 8) & 0xff])).digest();
+      block.copy(buf, offset, 0, Math.min(block.length, sizeBytes - offset));
+      offset += block.length;
+      counter++;
+    }
+    writeFileSync(join(contentPath, filename), buf);
+    fileBuffers.push(buf);
+    fileEntries.push({ length: buf.length, path: [filename] });
+  }
+
+  const concatenated = Buffer.concat(fileBuffers);
+  const pieceLength = 16384;
+  const pieces: Buffer[] = [];
+  for (let i = 0; i < concatenated.length; i += pieceLength) {
+    const piece = concatenated.subarray(i, Math.min(i + pieceLength, concatenated.length));
+    pieces.push(createHash('sha1').update(piece).digest());
+  }
+  const piecesConcat = Buffer.concat(pieces);
+
+  const info = {
+    name,
+    'piece length': pieceLength,
+    pieces: piecesConcat,
+    files: fileEntries,
+    private: 1,
+  };
+  const metainfo = bencode({
+    announce: 'http://tracker.invalid/announce',
+    'created by': 'cleanuparr-e2e',
+    'creation date': 0,
+    info,
+  });
+  const infoHash = createHash('sha1').update(bencode(info)).digest('hex');
+
+  return { metainfo, infoHash, name, contentPath };
+}
+
+/**
  * `chmodSync` that tolerates EPERM. The torrent-client bind mounts
  * (`test-data/downloads/<client>`) are chowned to PUID=1000 by
  * linuxserver.io entrypoints, while CI's Playwright runner is uid 1001
