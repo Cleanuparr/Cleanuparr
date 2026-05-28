@@ -1,4 +1,3 @@
-using System.Text.Json.Serialization;
 using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
 
 namespace Cleanuparr.Api.Features.DownloadCleaner.Contracts.Responses;

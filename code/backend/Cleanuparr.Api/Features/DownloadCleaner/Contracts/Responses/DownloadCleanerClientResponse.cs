@@ -1,4 +1,3 @@
-using System.Text.Json.Serialization;
 using Cleanuparr.Domain.Enums;
 
 namespace Cleanuparr.Api.Features.DownloadCleaner.Contracts.Responses;
