@@ -1,4 +1,5 @@
 using Cleanuparr.Api.Features.DownloadCleaner.Contracts.Requests;
+using Cleanuparr.Api.Features.DownloadCleaner.Contracts.Responses;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration;
@@ -44,23 +45,7 @@ public class SeedingRulesController : ControllerBase
 
             var rules = await SeedingRuleHelper.GetForClientAsync(_dataContext, client);
 
-            // TODO strongly type
-            return Ok(rules.Select(r => new
-            {
-                id = r.Id,
-                name = r.Name,
-                categories = r.Categories,
-                trackerPatterns = r.TrackerPatterns,
-                tagsAny = (r as ITagFilterable)?.TagsAny ?? new List<string>(),
-                tagsAll = (r as ITagFilterable)?.TagsAll ?? new List<string>(),
-                priority = r.Priority,
-                privacyType = r.PrivacyType,
-                maxRatio = r.MaxRatio,
-                minSeedTime = r.MinSeedTime,
-                maxSeedTime = r.MaxSeedTime,
-                minSeeders = (r as ISeedersFilterable)?.MinSeeders,
-                deleteSourceFiles = r.DeleteSourceFiles,
-            }));
+            return Ok(rules.Select(SeedingRuleResponse.From));
         }
         catch (Exception ex)
         {
