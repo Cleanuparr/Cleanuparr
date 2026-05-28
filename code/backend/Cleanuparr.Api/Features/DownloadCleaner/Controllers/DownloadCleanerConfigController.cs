@@ -53,8 +53,15 @@ public sealed class DownloadCleanerConfigController : ControllerBase
             var allTransmissionRules = await _dataContext.TransmissionSeedingRules.AsNoTracking().ToListAsync();
             var allUTorrentRules = await _dataContext.UTorrentSeedingRules.AsNoTracking().ToListAsync();
             var allRTorrentRules = await _dataContext.RTorrentSeedingRules.AsNoTracking().ToListAsync();
-            var allUnlinkedConfigs = await _dataContext.UnlinkedConfigs.AsNoTracking().ToListAsync();
-            var allOrphanedFilesConfigs = await _dataContext.OrphanedFilesConfigs.AsNoTracking().ToListAsync();
+            List<UnlinkedConfig> allUnlinkedConfigs = await _dataContext.UnlinkedConfigs.AsNoTracking().ToListAsync();
+            List<OrphanedFilesConfig> allOrphanedFilesConfigs = await _dataContext.OrphanedFilesConfigs.AsNoTracking().ToListAsync();
+
+            Dictionary<Guid, UnlinkedConfig> unlinkedConfigsByClientId = allUnlinkedConfigs
+                .GroupBy(u => u.DownloadClientConfigId)
+                .ToDictionary(g => g.Key, g => g.First());
+            Dictionary<Guid, OrphanedFilesConfig> orphanedFilesConfigsByClientId = allOrphanedFilesConfigs
+                .GroupBy(o => o.DownloadClientConfigId)
+                .ToDictionary(g => g.Key, g => g.First());
 
             var clients = new List<DownloadCleanerClientResponse>();
 
@@ -62,10 +69,8 @@ public sealed class DownloadCleanerConfigController : ControllerBase
             {
                 List<ISeedingRule> seedingRules = SeedingRuleHelper
                     .FilterForClient(client, allQBitRules, allDelugeRules, allTransmissionRules, allUTorrentRules, allRTorrentRules);
-                UnlinkedConfig? unlinkedConfig = allUnlinkedConfigs
-                    .FirstOrDefault(u => u.DownloadClientConfigId == client.Id);
-                OrphanedFilesConfig? orphanedFilesConfig = allOrphanedFilesConfigs
-                    .FirstOrDefault(o => o.DownloadClientConfigId == client.Id);
+                unlinkedConfigsByClientId.TryGetValue(client.Id, out UnlinkedConfig? unlinkedConfig);
+                orphanedFilesConfigsByClientId.TryGetValue(client.Id, out OrphanedFilesConfig? orphanedFilesConfig);
 
                 clients.Add(new DownloadCleanerClientResponse
                 {
