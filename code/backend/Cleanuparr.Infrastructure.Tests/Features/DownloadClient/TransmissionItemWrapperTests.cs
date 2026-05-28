@@ -255,6 +255,44 @@ public class TransmissionItemWrapperTests
         result.ShouldBeNull();
     }
 
+    [Fact]
+    public void SeederCount_WhenAllTrackerStatsAreUnscraped_ReturnsNull()
+    {
+        // Transmission RPC reports seederCount = -1 for trackers that have not been scraped yet
+        // (libtransmission/announcer.cc: view.seederCount = tracker.seeder_count().value_or(-1)).
+        var torrentInfo = new TorrentInfo
+        {
+            TrackerStats = new TransmissionTorrentTrackerStats[]
+            {
+                new() { SeederCount = -1L },
+                new() { SeederCount = -1L },
+            }
+        };
+        var wrapper = new TransmissionItemWrapper(torrentInfo);
+
+        var result = wrapper.SeederCount;
+
+        result.ShouldBeNull();
+    }
+
+    [Fact]
+    public void SeederCount_WithMixedScrapedAndUnscrapedTrackerStats_ReturnsMaxScrapedValue()
+    {
+        var torrentInfo = new TorrentInfo
+        {
+            TrackerStats = new TransmissionTorrentTrackerStats[]
+            {
+                new() { SeederCount = -1L },
+                new() { SeederCount = 4L },
+            }
+        };
+        var wrapper = new TransmissionItemWrapper(torrentInfo);
+
+        var result = wrapper.SeederCount;
+
+        result.ShouldBe(4);
+    }
+
     // TrackerDomains property tests
     [Fact]
     public void TrackerDomains_WithMultipleTrackers_ReturnsExtractedDomains()

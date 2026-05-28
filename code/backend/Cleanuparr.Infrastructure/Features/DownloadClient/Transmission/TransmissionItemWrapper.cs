@@ -43,9 +43,19 @@ public sealed class TransmissionItemWrapper : ITorrentItemWrapper
     
     public double Ratio => Info.uploadRatio ?? 0.0;
 
-    public int? SeederCount => Info.TrackerStats is { Length: > 0 } trackerStats
-        ? (int?)trackerStats.Max(t => t.SeederCount)
-        : null;
+    public int? SeederCount
+    {
+        get
+        {
+            if (Info.TrackerStats is not { Length: > 0 } trackerStats)
+            {
+                return null;
+            }
+
+            long? max = trackerStats.Max(t => t.SeederCount);
+            return max is >= 0 ? (int)max.Value : null;
+        }
+    }
 
     public long Eta => Info.Eta ?? 0;
     
