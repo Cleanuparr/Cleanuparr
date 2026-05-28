@@ -53,7 +53,7 @@ public sealed class TransmissionItemWrapper : ITorrentItemWrapper
             }
 
             long? max = trackerStats.Max(t => t.SeederCount);
-            return max is >= 0 ? (int)max.Value : null;
+            return max is >= 0 ? checked((int)max.Value) : null;
         }
     }
 
