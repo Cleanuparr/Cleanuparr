@@ -82,6 +82,15 @@ public partial class TransmissionService
             }
             
             _logger.LogInformation("unwanted file found | {file}", download.Files[i].Name);
+
+            if (malwareBlockerConfig.DeleteIfAnyFileBlocked)
+            {
+                _logger.LogDebug("at least one file is blocked for {name}", download.Name);
+                result.ShouldRemove = true;
+                result.DeleteReason = DeleteReason.AtLeastOneFileBlocked;
+                return result;
+            }
+
             unwantedFiles.Add(i);
             totalUnwantedFiles++;
         }

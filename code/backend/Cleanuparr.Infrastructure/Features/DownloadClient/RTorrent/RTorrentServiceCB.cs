@@ -98,6 +98,15 @@ public partial class RTorrentService
                 hasPriorityUpdates = true;
                 priorityUpdates.Add((file.Index, 0));
                 _logger.LogInformation("unwanted file found | {file}", file.Path);
+
+                if (malwareBlockerConfig.DeleteIfAnyFileBlocked)
+                {
+                    _logger.LogDebug("at least one file is blocked for {name}", download.Name);
+                    result.ShouldRemove = true;
+                    result.DeleteReason = DeleteReason.AtLeastOneFileBlocked;
+                    return result;
+                }
+
                 continue;
             }
 
