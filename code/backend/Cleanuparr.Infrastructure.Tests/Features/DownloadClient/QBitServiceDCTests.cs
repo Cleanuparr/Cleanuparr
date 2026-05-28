@@ -465,6 +465,28 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
         }
 
         [Fact]
+        public async Task CleansTorrent_WhenMinSeedersIsDisabled_AndSeederCountUnavailable()
+        {
+            // Arrange
+            var sut = _fixture.CreateSut();
+            SetupDeleteMock();
+
+            var downloads = new List<ITorrentItemWrapper>
+            {
+                CreateTorrentWithSeederCount("hash1", null)
+            };
+            var rule = CreateRule("movies", TorrentPrivacyType.Public);
+            var rules = new List<ISeedingRule> { rule };
+
+            // Act
+            await sut.CleanDownloadsAsync(downloads, rules);
+
+            // Assert
+            await _fixture.ClientWrapper.Received(1)
+                .DeleteAsync(Arg.Is<IEnumerable<string>>(h => h.Contains("hash1")), false);
+        }
+
+        [Fact]
         public async Task SkipsPublicTorrent_WhenRuleIsPrivateOnly()
         {
             // Arrange
