@@ -1,7 +1,30 @@
 import { test, expect } from '@playwright/test';
 import { TEST_CONFIG } from './helpers/test-config';
+import {
+  clearOidcLink,
+  configureOidc,
+  getOidcConfig,
+  loginAndGetToken,
+  OidcConfigSnapshot,
+  setOidcConfig,
+} from './helpers/app-api';
 
-test.describe.serial('OIDC Error Display', () => {
+test.describe('OIDC Error Display', () => {
+  let token: string;
+  let snapshot: OidcConfigSnapshot;
+
+  test.beforeAll(async () => {
+    token = await loginAndGetToken();
+    snapshot = await getOidcConfig(token);
+    await configureOidc(token);
+    await clearOidcLink(token);
+  });
+
+  test.afterAll(async () => {
+    await clearOidcLink(token);
+    await setOidcConfig(token, snapshot);
+  });
+
   test('callback page shows error for missing code and redirects to login', async ({
     page,
   }) => {

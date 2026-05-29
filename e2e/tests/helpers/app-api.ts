@@ -447,3 +447,53 @@ export async function configureOidc(accessToken: string): Promise<void> {
     throw new Error(`Failed to configure OIDC: ${putRes.status} ${body}`);
   }
 }
+
+export interface OidcConfigSnapshot {
+  enabled: boolean;
+  issuerUrl: string;
+  clientId: string;
+  clientSecret: string;
+  scopes: string;
+  providerName: string;
+  redirectUrl: string;
+  exclusiveMode: boolean;
+}
+
+export async function getOidcConfig(accessToken: string): Promise<OidcConfigSnapshot> {
+  const res = await fetch(`${API}/api/account/oidc`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to GET OIDC config: ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function setOidcConfig(
+  accessToken: string,
+  config: OidcConfigSnapshot,
+): Promise<void> {
+  const res = await fetch(`${API}/api/account/oidc`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify(config),
+  });
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`Failed to PUT OIDC config: ${res.status} ${body}`);
+  }
+}
+
+export async function clearOidcLink(accessToken: string): Promise<void> {
+  const res = await fetch(`${API}/api/account/oidc/link`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!res.ok && res.status !== 404) {
+    const body = await res.text();
+    throw new Error(`Failed to clear OIDC link: ${res.status} ${body}`);
+  }
+}

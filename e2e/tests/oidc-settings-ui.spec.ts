@@ -1,8 +1,39 @@
 import { test, expect } from '@playwright/test';
 import { TEST_CONFIG } from './helpers/test-config';
+import {
+  clearOidcLink,
+  configureOidc,
+  getOidcConfig,
+  loginAndGetToken,
+  OidcConfigSnapshot,
+  setOidcConfig,
+} from './helpers/app-api';
+import { linkOidcViaBrowser } from './helpers/oidc';
 import { getSubjectForUser } from './helpers/keycloak';
 
-test.describe.serial('OIDC Settings UI', () => {
+test.describe('OIDC Settings UI', () => {
+  let token: string;
+  let snapshot: OidcConfigSnapshot;
+
+  test.beforeAll(async ({ browser }) => {
+    token = await loginAndGetToken();
+    snapshot = await getOidcConfig(token);
+    await configureOidc(token);
+    await clearOidcLink(token);
+
+    const setupPage = await browser.newPage();
+    try {
+      await linkOidcViaBrowser(setupPage);
+    } finally {
+      await setupPage.close();
+    }
+  });
+
+  test.afterAll(async () => {
+    await clearOidcLink(token);
+    await setOidcConfig(token, snapshot);
+  });
+
   async function loginAndGoToSettings(page: import('@playwright/test').Page) {
     await page.goto(`${TEST_CONFIG.appUrl}/auth/login`);
     await page
@@ -21,13 +52,11 @@ test.describe.serial('OIDC Settings UI', () => {
     await loginAndGoToSettings(page);
     await page.goto(`${TEST_CONFIG.appUrl}/settings/account`);
 
-    // Expand OIDC accordion
     await page.getByText('OIDC / SSO').click();
 
     const subjectEl = page.locator('.oidc-link-section__subject');
     await expect(subjectEl).toBeVisible({ timeout: 5_000 });
 
-    // Verify the displayed subject matches the actual Keycloak user ID
     const expectedSubject = await getSubjectForUser(TEST_CONFIG.oidcUsername);
     await expect(subjectEl).toHaveText(expectedSubject);
   });
@@ -52,12 +81,10 @@ test.describe.serial('OIDC Settings UI', () => {
       `${TEST_CONFIG.appUrl}/settings/account?oidc_link=success`,
     );
 
-    // Toast should appear with success message
     await expect(page.getByText('OIDC account linked successfully')).toBeVisible({
       timeout: 5_000,
     });
 
-    // OIDC accordion should be auto-expanded — the linked subject should be visible
     const subjectEl = page.locator('.oidc-link-section__subject');
     await expect(subjectEl).toBeVisible({ timeout: 5_000 });
   });
@@ -70,12 +97,10 @@ test.describe.serial('OIDC Settings UI', () => {
       `${TEST_CONFIG.appUrl}/settings/account?oidc_link_error=failed`,
     );
 
-    // Toast should appear with error message
     await expect(page.getByText('Failed to link OIDC account')).toBeVisible({
       timeout: 5_000,
     });
 
-    // OIDC accordion should be auto-expanded
     const subjectEl = page.locator('.oidc-link-section__subject');
     await expect(subjectEl).toBeVisible({ timeout: 5_000 });
   });

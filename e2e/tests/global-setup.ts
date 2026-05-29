@@ -2,8 +2,6 @@ import { waitForKeycloak } from './helpers/keycloak';
 import {
   waitForApp,
   createAccountAndSetup,
-  loginAndGetToken,
-  configureOidc,
 } from './helpers/app-api';
 
 async function globalSetup() {
@@ -18,9 +16,6 @@ async function globalSetup() {
   console.log('Creating admin account and completing setup...');
   await createAccountAndSetup();
 
-  console.log('Configuring OIDC...');
-  const token = await loginAndGetToken();
-  await configureOidc(token);
   console.log('Global setup complete.');
 }
 

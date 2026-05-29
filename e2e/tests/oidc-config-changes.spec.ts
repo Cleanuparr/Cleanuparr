@@ -1,10 +1,32 @@
 import { test, expect } from '@playwright/test';
 import { TEST_CONFIG } from './helpers/test-config';
-import { loginAndGetToken, updateOidcConfig } from './helpers/app-api';
+import {
+  clearOidcLink,
+  configureOidc,
+  getOidcConfig,
+  loginAndGetToken,
+  OidcConfigSnapshot,
+  setOidcConfig,
+  updateOidcConfig,
+} from './helpers/app-api';
 
 test.describe.serial('OIDC Configuration Changes', () => {
+  let token: string;
+  let snapshot: OidcConfigSnapshot;
+
+  test.beforeAll(async () => {
+    token = await loginAndGetToken();
+    snapshot = await getOidcConfig(token);
+    await configureOidc(token);
+    await clearOidcLink(token);
+  });
+
+  test.afterAll(async () => {
+    await clearOidcLink(token);
+    await setOidcConfig(token, snapshot);
+  });
+
   test('disabling OIDC hides the login button', async ({ page }) => {
-    const token = await loginAndGetToken();
     await updateOidcConfig(token, { enabled: false });
 
     await page.goto(`${TEST_CONFIG.appUrl}/auth/login`);
@@ -12,7 +34,6 @@ test.describe.serial('OIDC Configuration Changes', () => {
     const oidcButton = page.locator('.oidc-login-btn');
     await expect(oidcButton).not.toBeVisible({ timeout: 5_000 });
 
-    // The "or" divider should also be hidden when no external logins are available
     const divider = page.locator('.divider');
     await expect(divider).not.toBeVisible();
   });
@@ -20,7 +41,6 @@ test.describe.serial('OIDC Configuration Changes', () => {
   test('changing provider name updates the login button text', async ({
     page,
   }) => {
-    const token = await loginAndGetToken();
     await updateOidcConfig(token, {
       enabled: true,
       providerName: 'MyCustomIdP',
@@ -36,7 +56,6 @@ test.describe.serial('OIDC Configuration Changes', () => {
   test('re-enabling with original provider name restores the button', async ({
     page,
   }) => {
-    const token = await loginAndGetToken();
     await updateOidcConfig(token, {
       enabled: true,
       providerName: TEST_CONFIG.oidcProviderName,

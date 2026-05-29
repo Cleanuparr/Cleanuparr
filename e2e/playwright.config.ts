@@ -14,7 +14,13 @@ export default defineConfig({
   },
   projects: [
     {
-      name: 'chromium',
+      name: 'api',
+      testIgnore: /(?:^|[\\/])(?:orphaned-files-cleanup|orphaned-files-behaviors|malware-blocker)\.spec\.ts$/,
+      use: { browserName: 'chromium' },
+    },
+    {
+      name: 'download-clients',
+      testMatch: /(?:^|[\\/])(?:orphaned-files-cleanup|orphaned-files-behaviors|malware-blocker)\.spec\.ts$/,
       use: { browserName: 'chromium' },
     },
   ],
