@@ -172,6 +172,12 @@ public class NotificationPublisher : INotificationPublisher
             context.Data.Add("Rule name", rule.Name);
         }
 
+        var reasonDetails = FormatReasonDetails(record.StatusMessages);
+        if (!string.IsNullOrEmpty(reasonDetails))
+        {
+            context.Data.Add("Reason details", reasonDetails);
+        }
+
         return context;
     }
 
@@ -183,7 +189,7 @@ public class NotificationPublisher : INotificationPublisher
         var instanceUrl = ContextProvider.Get<Uri>(ContextProvider.Keys.ArrInstanceUrl);
         var imageUrl = GetImageFromContext(record, instanceType, instanceVersion);
 
-        return new NotificationContext
+        var context = new NotificationContext
         {
             EventType = NotificationEventType.QueueItemDeleted,
             Title = $"Deleting item from queue with reason: {reason}",
@@ -199,6 +205,57 @@ public class NotificationPublisher : INotificationPublisher
                 ["Url"] = instanceUrl.ToString(),
             }
         };
+
+        var reasonDetails = FormatReasonDetails(record.StatusMessages);
+        if (!string.IsNullOrEmpty(reasonDetails))
+        {
+            context.Data.Add("Reason details", reasonDetails);
+        }
+
+        return context;
+    }
+
+    /// <summary>
+    /// Formats the *arr StatusMessages into a short, human-readable string suitable for inclusion in a
+    /// notification. Takes the first message line from each of up to two status entries, joins them with
+    /// "; ", and truncates the result to roughly 300 characters so notification providers with size
+    /// limits (Telegram, Discord, etc.) don't reject the payload. Returns null when there is nothing
+    /// useful to surface.
+    /// </summary>
+    private static string? FormatReasonDetails(List<TrackedDownloadStatusMessage>? statusMessages)
+    {
+        if (statusMessages is null || statusMessages.Count == 0)
+        {
+            return null;
+        }
+
+        const int maxLength = 300;
+        const int maxEntries = 2;
+
+        var parts = new List<string>(maxEntries);
+        foreach (var entry in statusMessages.Take(maxEntries))
+        {
+            var text = entry?.Messages?.FirstOrDefault(static m => !string.IsNullOrWhiteSpace(m))
+                       ?? entry?.Title;
+
+            if (!string.IsNullOrWhiteSpace(text))
+            {
+                parts.Add(text.Trim());
+            }
+        }
+
+        if (parts.Count == 0)
+        {
+            return null;
+        }
+
+        var joined = string.Join("; ", parts);
+        if (joined.Length > maxLength)
+        {
+            joined = joined.Substring(0, maxLength - 3) + "...";
+        }
+
+        return joined;
     }
 
     private static NotificationContext BuildDownloadCleanedContext(double ratio, TimeSpan seedingTime, string categoryName, CleanReason reason)
