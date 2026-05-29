@@ -553,9 +553,9 @@ public class DelugeServiceTests : IClassFixture<DelugeServiceFixture>
         {
         }
 
-        private void SetMalwareBlockerContext()
+        private void SetMalwareBlockerContext(ContentBlockerConfig? config = null)
         {
-            ContextProvider.Set(new ContentBlockerConfig());
+            ContextProvider.Set(config ?? new ContentBlockerConfig());
             ContextProvider.Set(nameof(InstanceType), (object)InstanceType.Sonarr);
 
             _fixture.BlocklistProvider
@@ -654,6 +654,46 @@ public class DelugeServiceTests : IClassFixture<DelugeServiceFixture>
             await _fixture.ClientWrapper
                 .Received(1)
                 .ChangeFilesPriority(hash, Arg.Is<List<int>>(p => p.Count == 2 && p[0] == 1 && p[1] == 0));
+        }
+
+        [Fact]
+        public async Task PartialMalware_WithDeleteIfAnyFileBlocked_MarksForRemoval_AndSkipsChangeFilesPriority()
+        {
+            const string hash = "partial-malware-any-hash";
+            DelugeService sut = _fixture.CreateSut();
+            SetMalwareBlockerContext(new ContentBlockerConfig { DeleteIfAnyFileBlocked = true });
+
+            _fixture.ClientWrapper
+                .GetTorrentStatus(hash)
+                .Returns(MakeDownloadStatus(hash));
+
+            _fixture.ClientWrapper
+                .GetTorrentFiles(hash)
+                .Returns(new DelugeContents
+                {
+                    Contents = new Dictionary<string, DelugeFileOrDirectory>
+                    {
+                        { "movie.mkv", new DelugeFileOrDirectory { Type = "file", Priority = 1, Index = 0, Path = "movie.mkv" } },
+                        { "malware.exe", new DelugeFileOrDirectory { Type = "file", Priority = 1, Index = 1, Path = "malware.exe" } },
+                    },
+                });
+
+            _fixture.FilenameEvaluator
+                .IsValid(Arg.Is<string>(name => name.EndsWith("malware.exe")), Arg.Any<BlocklistType>(), Arg.Any<ConcurrentBag<string>>(), Arg.Any<ConcurrentBag<Regex>>())
+                .Returns(false);
+            _fixture.FilenameEvaluator
+                .IsValid(Arg.Is<string>(name => name.EndsWith("movie.mkv")), Arg.Any<BlocklistType>(), Arg.Any<ConcurrentBag<string>>(), Arg.Any<ConcurrentBag<Regex>>())
+                .Returns(true);
+
+            BlockFilesResult result = await sut.BlockUnwantedFilesAsync(hash, Array.Empty<string>());
+
+            result.Found.ShouldBeTrue();
+            result.ShouldRemove.ShouldBeTrue();
+            result.DeleteReason.ShouldBe(DeleteReason.AtLeastOneFileBlocked);
+
+            await _fixture.ClientWrapper
+                .DidNotReceive()
+                .ChangeFilesPriority(Arg.Any<string>(), Arg.Any<List<int>>());
         }
     }
 }
