@@ -112,9 +112,19 @@ export class ArrStubServer {
    * iteration has actually run against this stub.
    */
   async waitForQueueRequest(timeoutMs = 15_000): Promise<boolean> {
+    return this.waitForQueueRequestCount(1, timeoutMs);
+  }
+
+  /**
+   * Resolves once the stub has received at least `n` queue requests since the
+   * last {@link resetCounters}. Useful for negative assertions: waiting for
+   * the second iteration to start proves the first one finished end-to-end
+   * (Quartz won't fire the next cron tick until the previous run completes).
+   */
+  async waitForQueueRequestCount(n: number, timeoutMs = 30_000): Promise<boolean> {
     const start = Date.now();
     while (Date.now() - start < timeoutMs) {
-      if (this.queueRequestCount > 0) {
+      if (this.queueRequestCount >= n) {
         return true;
       }
       await new Promise((r) => setTimeout(r, 200));
