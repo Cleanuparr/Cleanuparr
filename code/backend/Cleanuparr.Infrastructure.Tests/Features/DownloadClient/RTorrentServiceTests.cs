@@ -1,6 +1,11 @@
+using System.Collections.Concurrent;
+using System.Text.RegularExpressions;
 using Cleanuparr.Domain.Entities.RTorrent.Response;
 using Cleanuparr.Domain.Enums;
+using Cleanuparr.Infrastructure.Features.Context;
+using Cleanuparr.Infrastructure.Features.DownloadClient;
 using Cleanuparr.Infrastructure.Features.DownloadClient.RTorrent;
+using Cleanuparr.Persistence.Models.Configuration.MalwareBlocker;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using Shouldly;
@@ -764,6 +769,178 @@ public class RTorrentServiceTests : IClassFixture<RTorrentServiceFixture>
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 
             // Assert
+            result.ShouldRemove.ShouldBeFalse();
+            result.DeleteReason.ShouldBe(DeleteReason.None);
+        }
+    }
+
+    public class BlockUnwantedFilesAsyncScenarios : RTorrentServiceTests
+    {
+        public BlockUnwantedFilesAsyncScenarios(RTorrentServiceFixture fixture) : base(fixture)
+        {
+        }
+
+        private void SetMalwareBlockerContext(ContentBlockerConfig? config = null)
+        {
+            ContextProvider.Set(config ?? new ContentBlockerConfig());
+            ContextProvider.Set(nameof(InstanceType), (object)InstanceType.Sonarr);
+
+            _fixture.BlocklistProvider
+                .GetBlocklistType(Arg.Any<InstanceType>())
+                .Returns(BlocklistType.Blacklist);
+            _fixture.BlocklistProvider
+                .GetPatterns(Arg.Any<InstanceType>())
+                .Returns(new ConcurrentBag<string>());
+            _fixture.BlocklistProvider
+                .GetRegexes(Arg.Any<InstanceType>())
+                .Returns(new ConcurrentBag<Regex>());
+        }
+
+        private static RTorrentTorrent MakeDownload(string hash, bool isPrivate = false) => new()
+        {
+            Hash = hash,
+            Name = "Malware Torrent",
+            IsPrivate = isPrivate ? 1 : 0,
+            State = 1,
+            Complete = 0,
+            DownRate = 1000,
+            SizeBytes = 1000,
+            CompletedBytes = 500,
+        };
+
+        private void StubClient(string hash, IReadOnlyList<RTorrentFile> files, bool isPrivate = false)
+        {
+            _fixture.ClientWrapper.GetTorrentAsync(hash).Returns(MakeDownload(hash, isPrivate));
+            _fixture.ClientWrapper.GetTrackersAsync(hash).Returns(new List<string>());
+            _fixture.ClientWrapper.GetTorrentFilesAsync(hash).Returns(files.ToList());
+        }
+
+        [Fact]
+        public async Task AllFilesAreMalware_MarksForRemoval_WithAllFilesBlockedReason()
+        {
+            const string hash = "ALL-MALWARE-HASH";
+            RTorrentService sut = _fixture.CreateSut();
+            SetMalwareBlockerContext();
+
+            StubClient(hash, [new RTorrentFile { Index = 0, Path = "malware.exe", Priority = 1 }]);
+
+            _fixture.FilenameEvaluator
+                .IsValid(Arg.Any<string>(), Arg.Any<BlocklistType>(), Arg.Any<ConcurrentBag<string>>(), Arg.Any<ConcurrentBag<Regex>>())
+                .Returns(false);
+
+            BlockFilesResult result = await sut.BlockUnwantedFilesAsync(hash, Array.Empty<string>());
+
+            result.Found.ShouldBeTrue();
+            result.ShouldRemove.ShouldBeTrue();
+            result.DeleteReason.ShouldBe(DeleteReason.AllFilesBlocked);
+        }
+
+        [Fact]
+        public async Task PartialMalware_CallsSetFilePriority_AndDoesNotMarkForRemoval()
+        {
+            const string hash = "PARTIAL-MALWARE-HASH";
+            RTorrentService sut = _fixture.CreateSut();
+            SetMalwareBlockerContext();
+
+            StubClient(hash,
+            [
+                new RTorrentFile { Index = 0, Path = "movie.mkv", Priority = 1 },
+                new RTorrentFile { Index = 1, Path = "installer.exe", Priority = 1 },
+            ]);
+
+            _fixture.FilenameEvaluator
+                .IsValid(Arg.Is<string>(name => name.EndsWith("installer.exe")), Arg.Any<BlocklistType>(), Arg.Any<ConcurrentBag<string>>(), Arg.Any<ConcurrentBag<Regex>>())
+                .Returns(false);
+            _fixture.FilenameEvaluator
+                .IsValid(Arg.Is<string>(name => name.EndsWith("movie.mkv")), Arg.Any<BlocklistType>(), Arg.Any<ConcurrentBag<string>>(), Arg.Any<ConcurrentBag<Regex>>())
+                .Returns(true);
+
+            BlockFilesResult result = await sut.BlockUnwantedFilesAsync(hash, Array.Empty<string>());
+
+            result.Found.ShouldBeTrue();
+            result.ShouldRemove.ShouldBeFalse();
+            result.DeleteReason.ShouldBe(DeleteReason.None);
+
+            await _fixture.ClientWrapper
+                .Received(1)
+                .SetFilePriorityAsync(hash, 1, 0);
+        }
+
+        [Fact]
+        public async Task PartialMalware_WithDeleteIfAnyFileBlocked_MarksForRemoval_AndSkipsSetFilePriority()
+        {
+            const string hash = "PARTIAL-MALWARE-ANY-HASH";
+            RTorrentService sut = _fixture.CreateSut();
+            SetMalwareBlockerContext(new ContentBlockerConfig { DeleteIfAnyFileBlocked = true });
+
+            StubClient(hash,
+            [
+                new RTorrentFile { Index = 0, Path = "movie.mkv", Priority = 1 },
+                new RTorrentFile { Index = 1, Path = "installer.exe", Priority = 1 },
+            ]);
+
+            _fixture.FilenameEvaluator
+                .IsValid(Arg.Is<string>(name => name.EndsWith("installer.exe")), Arg.Any<BlocklistType>(), Arg.Any<ConcurrentBag<string>>(), Arg.Any<ConcurrentBag<Regex>>())
+                .Returns(false);
+            _fixture.FilenameEvaluator
+                .IsValid(Arg.Is<string>(name => name.EndsWith("movie.mkv")), Arg.Any<BlocklistType>(), Arg.Any<ConcurrentBag<string>>(), Arg.Any<ConcurrentBag<Regex>>())
+                .Returns(true);
+
+            BlockFilesResult result = await sut.BlockUnwantedFilesAsync(hash, Array.Empty<string>());
+
+            result.Found.ShouldBeTrue();
+            result.ShouldRemove.ShouldBeTrue();
+            result.DeleteReason.ShouldBe(DeleteReason.AtLeastOneFileBlocked);
+
+            await _fixture.ClientWrapper
+                .DidNotReceive()
+                .SetFilePriorityAsync(Arg.Any<string>(), Arg.Any<int>(), Arg.Any<int>());
+        }
+
+        [Fact]
+        public async Task NoUnwantedFiles_DoesNotMarkForRemoval()
+        {
+            const string hash = "CLEAN-HASH";
+            RTorrentService sut = _fixture.CreateSut();
+            SetMalwareBlockerContext();
+
+            StubClient(hash, [new RTorrentFile { Index = 0, Path = "movie.mkv", Priority = 1 }]);
+
+            _fixture.FilenameEvaluator
+                .IsValid(Arg.Any<string>(), Arg.Any<BlocklistType>(), Arg.Any<ConcurrentBag<string>>(), Arg.Any<ConcurrentBag<Regex>>())
+                .Returns(true);
+
+            BlockFilesResult result = await sut.BlockUnwantedFilesAsync(hash, Array.Empty<string>());
+
+            result.Found.ShouldBeTrue();
+            result.ShouldRemove.ShouldBeFalse();
+            result.DeleteReason.ShouldBe(DeleteReason.None);
+
+            await _fixture.ClientWrapper
+                .DidNotReceive()
+                .SetFilePriorityAsync(Arg.Any<string>(), Arg.Any<int>(), Arg.Any<int>());
+        }
+
+        [Fact]
+        public async Task AlreadySkippedFile_DoesNotTriggerEarlyReturn_WhenDeleteIfAnyFileBlocked()
+        {
+            const string hash = "ALREADY-SKIPPED-HASH";
+            RTorrentService sut = _fixture.CreateSut();
+            SetMalwareBlockerContext(new ContentBlockerConfig { DeleteIfAnyFileBlocked = true });
+
+            StubClient(hash,
+            [
+                new RTorrentFile { Index = 0, Path = "movie.mkv", Priority = 1 },
+                new RTorrentFile { Index = 1, Path = "installer.exe", Priority = 0 },
+            ]);
+
+            _fixture.FilenameEvaluator
+                .IsValid(Arg.Is<string>(name => name.EndsWith("movie.mkv")), Arg.Any<BlocklistType>(), Arg.Any<ConcurrentBag<string>>(), Arg.Any<ConcurrentBag<Regex>>())
+                .Returns(true);
+
+            BlockFilesResult result = await sut.BlockUnwantedFilesAsync(hash, Array.Empty<string>());
+
+            result.Found.ShouldBeTrue();
             result.ShouldRemove.ShouldBeFalse();
             result.DeleteReason.ShouldBe(DeleteReason.None);
         }
