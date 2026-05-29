@@ -3,7 +3,7 @@
 setup:
 	bash ./scripts/setup-test-data.sh
 
-up: setup
+up: down setup
 	docker compose -f docker-compose.e2e.yml up -d --build --remove-orphans
 
 down:
