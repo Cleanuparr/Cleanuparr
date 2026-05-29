@@ -20,7 +20,7 @@ import { chmodIgnoringEPERM, resetDirectory } from './helpers/torrent-fixtures';
 /**
  * Behavior-level coverage for the orphaned files cleaner that isn't
  * client-specific. The per-client integration matrix lives in
- * `16-orphaned-files-cleanup.spec.ts`; this file picks qBittorrent as the
+ * `orphaned-files-cleanup.spec.ts`; this file picks qBittorrent as the
  * single backing client and exercises configuration knobs:
  *
  *   - PurgeAfterHours (deletes aged, leaves recent, null = never purge)

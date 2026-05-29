@@ -1,25 +1,47 @@
 import { test, expect } from '@playwright/test';
 import { TEST_CONFIG } from './helpers/test-config';
-import { loginAndGetToken, updateOidcConfig } from './helpers/app-api';
+import {
+  clearOidcLink,
+  configureOidc,
+  getOidcConfig,
+  loginAndGetToken,
+  OidcConfigSnapshot,
+  setOidcConfig,
+  updateOidcConfig,
+} from './helpers/app-api';
+import { linkOidcViaBrowser } from './helpers/oidc';
 
 const API = TEST_CONFIG.appUrl;
 
 test.describe.serial('OIDC Exclusive Mode', () => {
   // Token obtained BEFORE enabling exclusive mode (password login will be blocked)
   let adminToken: string;
+  let snapshot: OidcConfigSnapshot;
 
-  test.beforeAll(async () => {
+  test.beforeAll(async ({ browser }) => {
     adminToken = await loginAndGetToken();
+    snapshot = await getOidcConfig(adminToken);
+    await configureOidc(adminToken);
+    await clearOidcLink(adminToken);
+
+    const setupPage = await browser.newPage();
+    try {
+      await linkOidcViaBrowser(setupPage);
+    } finally {
+      await setupPage.close();
+    }
+
     await updateOidcConfig(adminToken, { exclusiveMode: true });
   });
 
   test.afterAll(async () => {
-    // Ensure exclusive mode is disabled for any subsequent test reruns
     try {
       await updateOidcConfig(adminToken, { exclusiveMode: false });
     } catch {
-      // best effort cleanup
+      // best effort — snapshot restore below will fix it anyway
     }
+    await clearOidcLink(adminToken);
+    await setOidcConfig(adminToken, snapshot);
   });
 
   test('login page shows only OIDC button when exclusive mode is active', async ({
@@ -27,12 +49,10 @@ test.describe.serial('OIDC Exclusive Mode', () => {
   }) => {
     await page.goto(`${TEST_CONFIG.appUrl}/auth/login`);
 
-    // OIDC button should be visible
     const oidcButton = page.locator('.oidc-login-btn');
     await expect(oidcButton).toBeVisible({ timeout: 10_000 });
     await expect(oidcButton).toContainText(TEST_CONFIG.oidcProviderName);
 
-    // Credentials form, divider, and Plex button should NOT be visible
     const loginForm = page.locator('.login-form');
     await expect(loginForm).not.toBeVisible();
 
@@ -48,19 +68,15 @@ test.describe.serial('OIDC Exclusive Mode', () => {
 
     await page.locator('.oidc-login-btn').click();
 
-    // Should redirect to Keycloak
     await expect(page).toHaveURL(/localhost:8080/, { timeout: 10_000 });
 
-    // Fill Keycloak login form
     await page.locator('#username').waitFor({ state: 'visible', timeout: 5_000 });
     await page.locator('#username').fill(TEST_CONFIG.oidcUsername);
     await page.locator('#password').fill(TEST_CONFIG.oidcPassword);
     await page.locator('#kc-login').click();
 
-    // Full flow: Keycloak → /api/auth/oidc/callback → /auth/oidc/callback?code=... → /dashboard
     await expect(page).toHaveURL(/\/dashboard/, { timeout: 15_000 });
 
-    // Verify authenticated
     await expect(page.locator('body')).not.toContainText('Sign In', {
       timeout: 5_000,
     });
@@ -90,7 +106,6 @@ test.describe.serial('OIDC Exclusive Mode', () => {
   test('settings page shows warning notices and disabled controls', async ({
     page,
   }) => {
-    // Login via OIDC since password login is blocked
     await page.goto(`${TEST_CONFIG.appUrl}/auth/login`);
     await page.locator('.oidc-login-btn').click();
     await expect(page).toHaveURL(/localhost:8080/, { timeout: 10_000 });
@@ -100,10 +115,8 @@ test.describe.serial('OIDC Exclusive Mode', () => {
     await page.locator('#kc-login').click();
     await expect(page).toHaveURL(/\/dashboard/, { timeout: 15_000 });
 
-    // Navigate to account settings
     await page.goto(`${TEST_CONFIG.appUrl}/settings/account`);
 
-    // Warning notices should be visible on Password and Plex cards
     await expect(
       page.getByText('Password login is disabled while OIDC exclusive mode is active.'),
     ).toBeVisible({ timeout: 5_000 });
@@ -111,7 +124,6 @@ test.describe.serial('OIDC Exclusive Mode', () => {
       page.getByText('Plex login is disabled while OIDC exclusive mode is active.'),
     ).toBeVisible({ timeout: 5_000 });
 
-    // Expand OIDC accordion and verify exclusive mode toggle is visible
     await page.getByText('OIDC / SSO').click();
     const exclusiveToggle = page.getByText('Exclusive Mode', { exact: true });
     await expect(exclusiveToggle).toBeVisible({ timeout: 5_000 });
@@ -124,15 +136,12 @@ test.describe.serial('OIDC Exclusive Mode', () => {
 
     await page.goto(`${TEST_CONFIG.appUrl}/auth/login`);
 
-    // Credentials form should be visible again
     const loginForm = page.locator('.login-form');
     await expect(loginForm).toBeVisible({ timeout: 10_000 });
 
-    // OIDC button should still be visible
     const oidcButton = page.locator('.oidc-login-btn');
     await expect(oidcButton).toBeVisible();
 
-    // Divider should be visible
     const divider = page.locator('.divider');
     await expect(divider).toBeVisible();
   });

@@ -1,7 +1,10 @@
+using System.Collections.Concurrent;
+using System.Text.RegularExpressions;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
 using Cleanuparr.Infrastructure.Features.DownloadClient.QBittorrent;
+using Cleanuparr.Persistence.Models.Configuration.MalwareBlocker;
 using Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
 using NSubstitute;
 using Newtonsoft.Json.Linq;
@@ -1124,6 +1127,220 @@ public class QBitServiceTests : IClassFixture<QBitServiceFixture>
             var result = await sut.ShouldRemoveFromArrQueueAsync(hash, Array.Empty<string>());
 
             // Assert
+            result.ShouldRemove.ShouldBeFalse();
+            result.DeleteReason.ShouldBe(DeleteReason.None);
+        }
+    }
+
+    public class BlockUnwantedFilesAsyncScenarios : QBitServiceTests
+    {
+        public BlockUnwantedFilesAsyncScenarios(QBitServiceFixture fixture) : base(fixture)
+        {
+        }
+
+        private void SetMalwareBlockerContext(ContentBlockerConfig? config = null)
+        {
+            ContextProvider.Set(config ?? new ContentBlockerConfig());
+            ContextProvider.Set(nameof(InstanceType), (object)InstanceType.Sonarr);
+
+            _fixture.BlocklistProvider
+                .GetBlocklistType(Arg.Any<InstanceType>())
+                .Returns(BlocklistType.Blacklist);
+            _fixture.BlocklistProvider
+                .GetPatterns(Arg.Any<InstanceType>())
+                .Returns(new ConcurrentBag<string>());
+            _fixture.BlocklistProvider
+                .GetRegexes(Arg.Any<InstanceType>())
+                .Returns(new ConcurrentBag<Regex>());
+        }
+
+        private static TorrentInfo MakeTorrentInfo(string hash) => new()
+        {
+            Hash = hash,
+            Name = "Malware Torrent",
+            State = TorrentState.Downloading,
+            DownloadSpeed = 1000,
+        };
+
+        private static TorrentProperties MakeTorrentProperties(bool isPrivate = false) => new()
+        {
+            AdditionalData = new Dictionary<string, JToken>
+            {
+                { "is_private", JToken.FromObject(isPrivate) },
+            },
+        };
+
+        private void StubClient(string hash, IReadOnlyList<TorrentContent> files, bool isPrivate = false)
+        {
+            _fixture.ClientWrapper
+                .GetTorrentListAsync(Arg.Is<TorrentListQuery>(q => q.Hashes != null && q.Hashes.Contains(hash)))
+                .Returns(new[] { MakeTorrentInfo(hash) });
+
+            _fixture.ClientWrapper
+                .GetTorrentTrackersAsync(hash)
+                .Returns(Array.Empty<TorrentTracker>());
+
+            _fixture.ClientWrapper
+                .GetTorrentPropertiesAsync(hash)
+                .Returns(MakeTorrentProperties(isPrivate));
+
+            _fixture.ClientWrapper
+                .GetTorrentContentsAsync(hash)
+                .Returns(files);
+        }
+
+        [Fact]
+        public async Task AllFilesAreMalware_MarksForRemoval_WithAllFilesBlockedReason()
+        {
+            const string hash = "all-malware-hash";
+            QBitService sut = _fixture.CreateSut();
+            SetMalwareBlockerContext();
+
+            StubClient(hash,
+            [
+                new TorrentContent { Name = "malware.exe", Index = 0, Priority = TorrentContentPriority.Normal },
+            ]);
+
+            _fixture.FilenameEvaluator
+                .IsValid(Arg.Any<string>(), Arg.Any<BlocklistType>(), Arg.Any<ConcurrentBag<string>>(), Arg.Any<ConcurrentBag<Regex>>())
+                .Returns(false);
+
+            BlockFilesResult result = await sut.BlockUnwantedFilesAsync(hash, Array.Empty<string>());
+
+            result.Found.ShouldBeTrue();
+            result.ShouldRemove.ShouldBeTrue();
+            result.DeleteReason.ShouldBe(DeleteReason.AllFilesBlocked);
+        }
+
+        [Fact]
+        public async Task PartialMalware_CallsSetFilePriority_AndDoesNotMarkForRemoval()
+        {
+            const string hash = "partial-malware-hash";
+            QBitService sut = _fixture.CreateSut();
+            SetMalwareBlockerContext();
+
+            StubClient(hash,
+            [
+                new TorrentContent { Name = "movie.mkv", Index = 0, Priority = TorrentContentPriority.Normal },
+                new TorrentContent { Name = "installer.exe", Index = 1, Priority = TorrentContentPriority.Normal },
+            ]);
+
+            _fixture.FilenameEvaluator
+                .IsValid(Arg.Is<string>(name => name.EndsWith("installer.exe")), Arg.Any<BlocklistType>(), Arg.Any<ConcurrentBag<string>>(), Arg.Any<ConcurrentBag<Regex>>())
+                .Returns(false);
+            _fixture.FilenameEvaluator
+                .IsValid(Arg.Is<string>(name => name.EndsWith("movie.mkv")), Arg.Any<BlocklistType>(), Arg.Any<ConcurrentBag<string>>(), Arg.Any<ConcurrentBag<Regex>>())
+                .Returns(true);
+
+            BlockFilesResult result = await sut.BlockUnwantedFilesAsync(hash, Array.Empty<string>());
+
+            result.Found.ShouldBeTrue();
+            result.ShouldRemove.ShouldBeFalse();
+            result.DeleteReason.ShouldBe(DeleteReason.None);
+
+            await _fixture.ClientWrapper
+                .Received(1)
+                .SetFilePriorityAsync(hash, 1, TorrentContentPriority.Skip);
+        }
+
+        [Fact]
+        public async Task PartialMalware_WithDeleteIfAnyFileBlocked_MarksForRemoval_AndSkipsSetFilePriority()
+        {
+            const string hash = "partial-malware-any-hash";
+            QBitService sut = _fixture.CreateSut();
+            SetMalwareBlockerContext(new ContentBlockerConfig { DeleteIfAnyFileBlocked = true });
+
+            StubClient(hash,
+            [
+                new TorrentContent { Name = "movie.mkv", Index = 0, Priority = TorrentContentPriority.Normal },
+                new TorrentContent { Name = "installer.exe", Index = 1, Priority = TorrentContentPriority.Normal },
+            ]);
+
+            _fixture.FilenameEvaluator
+                .IsValid(Arg.Is<string>(name => name.EndsWith("installer.exe")), Arg.Any<BlocklistType>(), Arg.Any<ConcurrentBag<string>>(), Arg.Any<ConcurrentBag<Regex>>())
+                .Returns(false);
+            _fixture.FilenameEvaluator
+                .IsValid(Arg.Is<string>(name => name.EndsWith("movie.mkv")), Arg.Any<BlocklistType>(), Arg.Any<ConcurrentBag<string>>(), Arg.Any<ConcurrentBag<Regex>>())
+                .Returns(true);
+
+            BlockFilesResult result = await sut.BlockUnwantedFilesAsync(hash, Array.Empty<string>());
+
+            result.Found.ShouldBeTrue();
+            result.ShouldRemove.ShouldBeTrue();
+            result.DeleteReason.ShouldBe(DeleteReason.AtLeastOneFileBlocked);
+
+            await _fixture.ClientWrapper
+                .DidNotReceive()
+                .SetFilePriorityAsync(Arg.Any<string>(), Arg.Any<int>(), Arg.Any<TorrentContentPriority>());
+        }
+
+        [Fact]
+        public async Task NoUnwantedFiles_DoesNotMarkForRemoval()
+        {
+            const string hash = "clean-hash";
+            QBitService sut = _fixture.CreateSut();
+            SetMalwareBlockerContext();
+
+            StubClient(hash,
+            [
+                new TorrentContent { Name = "movie.mkv", Index = 0, Priority = TorrentContentPriority.Normal },
+            ]);
+
+            _fixture.FilenameEvaluator
+                .IsValid(Arg.Any<string>(), Arg.Any<BlocklistType>(), Arg.Any<ConcurrentBag<string>>(), Arg.Any<ConcurrentBag<Regex>>())
+                .Returns(true);
+
+            BlockFilesResult result = await sut.BlockUnwantedFilesAsync(hash, Array.Empty<string>());
+
+            result.Found.ShouldBeTrue();
+            result.ShouldRemove.ShouldBeFalse();
+            result.DeleteReason.ShouldBe(DeleteReason.None);
+
+            await _fixture.ClientWrapper
+                .DidNotReceive()
+                .SetFilePriorityAsync(Arg.Any<string>(), Arg.Any<int>(), Arg.Any<TorrentContentPriority>());
+        }
+
+        [Fact]
+        public async Task AlreadySkippedFile_DoesNotTriggerEarlyReturn_WhenDeleteIfAnyFileBlocked()
+        {
+            const string hash = "already-skipped-hash";
+            QBitService sut = _fixture.CreateSut();
+            SetMalwareBlockerContext(new ContentBlockerConfig { DeleteIfAnyFileBlocked = true });
+
+            StubClient(hash,
+            [
+                new TorrentContent { Name = "movie.mkv", Index = 0, Priority = TorrentContentPriority.Normal },
+                new TorrentContent { Name = "installer.exe", Index = 1, Priority = TorrentContentPriority.Skip },
+            ]);
+
+            _fixture.FilenameEvaluator
+                .IsValid(Arg.Is<string>(name => name.EndsWith("movie.mkv")), Arg.Any<BlocklistType>(), Arg.Any<ConcurrentBag<string>>(), Arg.Any<ConcurrentBag<Regex>>())
+                .Returns(true);
+
+            BlockFilesResult result = await sut.BlockUnwantedFilesAsync(hash, Array.Empty<string>());
+
+            result.Found.ShouldBeTrue();
+            result.ShouldRemove.ShouldBeFalse();
+            result.DeleteReason.ShouldBe(DeleteReason.None);
+        }
+
+        [Fact]
+        public async Task AllFilesAlreadySkipped_NoNewMalware_DoesNotMarkForRemoval()
+        {
+            const string hash = "all-skipped-hash";
+            QBitService sut = _fixture.CreateSut();
+            SetMalwareBlockerContext();
+
+            StubClient(hash,
+            [
+                new TorrentContent { Name = "movie.mkv", Index = 0, Priority = TorrentContentPriority.Skip },
+                new TorrentContent { Name = "installer.exe", Index = 1, Priority = TorrentContentPriority.Skip },
+            ]);
+
+            BlockFilesResult result = await sut.BlockUnwantedFilesAsync(hash, Array.Empty<string>());
+
+            result.Found.ShouldBeTrue();
             result.ShouldRemove.ShouldBeFalse();
             result.DeleteReason.ShouldBe(DeleteReason.None);
         }

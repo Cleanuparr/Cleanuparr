@@ -27,6 +27,17 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
+    strategy:
+      fail-fast: false
+      matrix:
+        suite:
+          - name: api
+            make-target: up-api
+          - name: download-clients
+            make-target: up-dc
+
+    name: e2e (${{ matrix.suite.name }})
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -44,7 +55,7 @@ jobs:
 
       - name: Start services
         working-directory: e2e
-        run: make up
+        run: make ${{ matrix.suite.make-target }}
         env:
           PACKAGES_USERNAME: ${{ github.repository_owner }}
           PACKAGES_PAT: ${{ env.PACKAGES_PAT }}
@@ -76,13 +87,13 @@ jobs:
 
       - name: Run E2E tests
         working-directory: e2e
-        run: npx playwright test
+        run: npx playwright test --project=${{ matrix.suite.name }}
 
       - name: Upload test results
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: e2e-test-results
+          name: e2e-test-results-${{ matrix.suite.name }}
           path: |
             e2e/playwright-report/
             e2e/test-results/

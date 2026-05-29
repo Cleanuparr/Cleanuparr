@@ -78,6 +78,14 @@ public partial class UTorrentService
                 totalUnwantedFiles++;
                 fileIndexes.Add(i);
                 _logger.LogInformation("unwanted file found | {file}", file.Name);
+
+                if (malwareBlockerConfig.DeleteIfAnyFileBlocked)
+                {
+                    _logger.LogDebug("at least one file is blocked for {name}", download.Name);
+                    result.ShouldRemove = true;
+                    result.DeleteReason = DeleteReason.AtLeastOneFileBlocked;
+                    return result;
+                }
             }
         }
 

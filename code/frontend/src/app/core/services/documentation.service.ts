@@ -105,6 +105,7 @@ export class DocumentationService {
       'ignorePrivate': 'ignore-private',
       'deletePrivate': 'delete-private',
       'processNoContentId': 'process-downloads-with-no-content-id',
+      'deleteIfAnyFileBlocked': 'delete-if-any-file-is-blocked',
       'sonarr.enabled': 'enable-blocklist',
       'sonarr.blocklistPath': 'blocklist-path',
       'sonarr.blocklistType': 'blocklist-type',

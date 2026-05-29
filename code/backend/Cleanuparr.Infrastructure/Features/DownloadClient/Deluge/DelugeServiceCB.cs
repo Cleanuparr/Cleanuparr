@@ -92,6 +92,14 @@ public partial class DelugeService
                 priority = 0;
                 hasPriorityUpdates = true;
                 _logger.LogInformation("unwanted file found | {file}", file.Path);
+
+                if (malwareBlockerConfig.DeleteIfAnyFileBlocked)
+                {
+                    _logger.LogDebug("at least one file is blocked for {name}", download.Name);
+                    result.ShouldRemove = true;
+                    result.DeleteReason = DeleteReason.AtLeastOneFileBlocked;
+                    return;
+                }
             }
             
             _logger.LogTrace("File is valid | {file}", file.Path);
