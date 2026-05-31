@@ -76,8 +76,7 @@ public sealed class OrphanedFilesCleanupService : IOrphanedFilesCleanupService
             .Select(x => x.DownloadClientConfigId)
             .ToHashSet();
 
-        // Build set of all content paths claimed by active torrents across ALL download clients
-        // to avoid false positives from cross-seeded clients.
+        // Build set of content paths claimed by active torrents across clients that have ScanDirectories configured.
         HashSet<string> claimedPaths = new(StringComparer.OrdinalIgnoreCase);
         HashSet<Guid> skippedClientIds = new();
 
@@ -185,7 +184,7 @@ public sealed class OrphanedFilesCleanupService : IOrphanedFilesCleanupService
             claimedPaths.Add(contentPath.TrimEnd(Path.DirectorySeparatorChar));
         }
 
-        _logger.LogDebug("Loaded {count} torrent paths | {name}", torrents.Count, downloadClient.Name);
+        _logger.LogDebug("Loaded {count} torrents | {name}", torrents.Count, downloadClient.Name);
         return true;
     }
 
