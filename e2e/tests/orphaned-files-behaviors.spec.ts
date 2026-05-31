@@ -15,7 +15,7 @@ import {
   OrphanedFilesConfigRequest,
 } from './helpers/app-api';
 import { QBittorrentDriver } from './helpers/torrent-clients/qbittorrent';
-import { chmodIgnoringEPERM, resetDirectory } from './helpers/torrent-fixtures';
+import { buildFolderTorrent, chmodIgnoringEPERM, resetDirectory } from './helpers/torrent-fixtures';
 
 /**
  * Behavior-level coverage for the orphaned files cleaner that isn't
@@ -43,6 +43,14 @@ const HOST_SCAN_DIR = join(HOST_DOWNLOADS, SLUG);
 const HOST_ORPHANED_DIR = join(HOST_DOWNLOADS, SLUG, 'orphaned');
 const APP_SCAN_DIR = `${APP_DOWNLOADS}/${SLUG}`;
 const APP_ORPHANED_DIR = `${APP_DOWNLOADS}/${SLUG}/orphaned`;
+
+// The cleaner refuses to scan if a download client reports 0 torrents (to
+// avoid moving real downloads when the client is empty or unreachable). The
+// suite needs at least one torrent registered in qBit; we park a decoy
+// outside the scan dir so it never claims a test file.
+const HOST_DECOY_PARENT = join(HOST_DOWNLOADS, 'qbittorrent');
+const CLIENT_DECOY_PARENT = '/downloads';
+const DECOY_NAME = '__cleanuparr_decoy__';
 
 function backdateRecursive(path: string, hoursAgo: number): void {
   const t = (Date.now() - hoursAgo * 3600_000) / 1000;
@@ -117,6 +125,26 @@ test.describe.serial('Orphaned files cleanup — behaviors', () => {
     await driver.ready();
     await driver.clearAllTorrents();
 
+    // Seed the decoy torrent. After the orphaned-files fix, an empty client
+    // makes the cleaner bail; the decoy gives it something to consider.
+    mkdirSync(HOST_DECOY_PARENT, { recursive: true });
+    chmodIgnoringEPERM(HOST_DECOY_PARENT, 0o777);
+    const decoy = buildFolderTorrent(HOST_DECOY_PARENT, DECOY_NAME);
+    await driver.addTorrent({
+      metainfo: decoy.metainfo,
+      savePath: CLIENT_DECOY_PARENT,
+      name: DECOY_NAME,
+      infoHash: decoy.infoHash,
+    });
+    await waitForCondition(
+      async () => {
+        const list = await driver.listTorrents();
+        return list.some((t) => t.hash.toLowerCase() === decoy.infoHash.toLowerCase());
+      },
+      15_000,
+      'decoy torrent registered in qBittorrent',
+    );
+
     const createRes = await createDownloadClient(token, {
       enabled: true,
       name: 'qBittorrent behaviors',
@@ -138,9 +166,9 @@ test.describe.serial('Orphaned files cleanup — behaviors', () => {
     resetDirectory(HOST_SCAN_DIR);
     mkdirSync(HOST_ORPHANED_DIR, { recursive: true });
     chmodIgnoringEPERM(HOST_ORPHANED_DIR, 0o777);
-    // No torrents in the client → claimedPaths is empty → every entry in
-    // scan dir is treated as orphan.
-    await driver.clearAllTorrents();
+    // The decoy torrent stays registered between tests so the cleaner has at
+    // least one torrent visible; its save path is outside HOST_SCAN_DIR, so
+    // every entry created here is unclaimed and treated as orphan.
   });
 
   const configureOrphanedFiles = async (

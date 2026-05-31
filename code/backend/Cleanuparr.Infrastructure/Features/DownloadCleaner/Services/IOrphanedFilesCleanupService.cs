@@ -11,8 +11,7 @@ public interface IOrphanedFilesCleanupService
 {
     /// <summary>
     /// Processes orphaned files for every enabled per-client configuration.
-    /// Claims are computed across all download clients to stay safe with
-    /// cross-seeded torrents.
+    /// Claims are computed only for clients that have ScanDirectories configured.
     /// </summary>
     Task ProcessAsync(IReadOnlyList<IDownloadService> downloadServices, CancellationToken cancellationToken);
 }
