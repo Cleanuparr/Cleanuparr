@@ -344,4 +344,81 @@ public sealed class DownloadCleanerOrphanedFilesTests : IDisposable
         File.Exists(fileInB).ShouldBeFalse();
         Directory.GetFiles(orphanedDirB).ShouldContain(f => Path.GetFileName(f) == "b-orphan.mkv");
     }
+
+    [Fact]
+    public async Task OrphanedFiles_ConfigWithEmptyScanDirectories_IsDroppedWithoutTouchingClient()
+    {
+        TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
+        DownloadClientConfig dbClient = _fixture.DataContext.DownloadClients.First();
+        TestDataContextFactory.AddOrphanedFilesConfig(
+            _fixture.DataContext, dbClient,
+            scanDirectories: [],
+            orphanedDirectory: Path.Combine(_tempRoot, "orphaned"));
+
+        IDownloadService svc = SetupDownloadService(dbClient, [DecoyTorrent()]);
+
+        DownloadCleaner sut = CreateSut();
+        await ExecuteWithTimeAdvance(sut);
+
+        await svc.DidNotReceive().GetAllTorrentsLite();
+        _fixture.OrphanedFilesLogger.ReceivedLogContainingAtLeastOnce(LogLevel.Warning, "no scan directories configured");
+    }
+
+    [Fact]
+    public async Task OrphanedFiles_AllConfigsHaveEmptyScanDirectories_NoServicesAreCalled()
+    {
+        DownloadClientConfig clientA = TestDataContextFactory.AddDownloadClient(_fixture.DataContext, name: "Client A");
+        DownloadClientConfig clientB = TestDataContextFactory.AddDownloadClient(_fixture.DataContext, name: "Client B");
+        TestDataContextFactory.AddOrphanedFilesConfig(_fixture.DataContext, clientA, scanDirectories: []);
+        TestDataContextFactory.AddOrphanedFilesConfig(_fixture.DataContext, clientB, scanDirectories: []);
+
+        IDownloadService svcA = SetupDownloadService(clientA, [DecoyTorrent()]);
+        IDownloadService svcB = SetupDownloadService(clientB, [DecoyTorrent()]);
+
+        DownloadCleaner sut = CreateSut();
+        await ExecuteWithTimeAdvance(sut);
+
+        await svcA.DidNotReceive().GetAllTorrentsLite();
+        await svcB.DidNotReceive().GetAllTorrentsLite();
+        _fixture.OrphanedFilesLogger.ReceivedLogContaining(LogLevel.Warning, "no scan directories configured", count: 2);
+        _fixture.OrphanedFilesLogger.DidNotReceiveLogContaining(LogLevel.Debug, "claimed paths across all clients");
+    }
+
+    [Fact]
+    public async Task OrphanedFiles_ClientFails_PurgeIsAlsoSkipped()
+    {
+        // Anchor the fake clock somewhere sensible so we can backdate a file
+        // by a known amount and rely on the purge cutoff being well-defined.
+        _fixture.TimeProvider.SetUtcNow(new DateTimeOffset(2026, 1, 1, 12, 0, 0, TimeSpan.Zero));
+
+        string scanDir = Path.Combine(_tempRoot, "downloads");
+        string orphanedDir = Path.Combine(_tempRoot, "orphaned");
+        Directory.CreateDirectory(scanDir);
+        Directory.CreateDirectory(orphanedDir);
+
+        // Aged orphan: with a 24h purge cutoff, this file would be deleted on a healthy run.
+        string agedOrphan = Path.Combine(orphanedDir, "aged.bin");
+        File.WriteAllText(agedOrphan, "old");
+        File.SetLastWriteTimeUtc(agedOrphan, new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+
+        TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
+        DownloadClientConfig dbClient = _fixture.DataContext.DownloadClients.First();
+        TestDataContextFactory.AddOrphanedFilesConfig(
+            _fixture.DataContext, dbClient,
+            scanDirectories: [scanDir],
+            orphanedDirectory: orphanedDir,
+            purgeAfterHours: 24);
+
+        IDownloadService svc = Substitute.For<IDownloadService>();
+        svc.ClientConfig.Returns(dbClient);
+        svc.LoginAsync().Returns(Task.CompletedTask);
+        svc.GetSeedingDownloads().Returns([]);
+        svc.GetAllTorrentsLite().ThrowsAsync(new HttpRequestException("connection refused"));
+        _fixture.DownloadServiceFactory.GetDownloadService(dbClient).Returns(svc);
+
+        DownloadCleaner sut = CreateSut();
+        await ExecuteWithTimeAdvance(sut);
+
+        File.Exists(agedOrphan).ShouldBeTrue();
+    }
 }

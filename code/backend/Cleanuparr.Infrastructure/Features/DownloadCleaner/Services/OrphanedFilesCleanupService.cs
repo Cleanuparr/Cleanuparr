@@ -55,6 +55,27 @@ public sealed class OrphanedFilesCleanupService : IOrphanedFilesCleanupService
             return;
         }
 
+        List<OrphanedFilesConfig> scannableConfigs = new();
+        foreach (OrphanedFilesConfig config in orphanedFilesConfigs)
+        {
+            if (config.ScanDirectories.Count is 0)
+            {
+                _logger.LogWarning("skip | no scan directories configured for client {name}", config.DownloadClientConfig.Name);
+                continue;
+            }
+
+            scannableConfigs.Add(config);
+        }
+
+        if (scannableConfigs.Count is 0)
+        {
+            return;
+        }
+
+        HashSet<Guid> clientIdsNeedingScan = scannableConfigs
+            .Select(x => x.DownloadClientConfigId)
+            .ToHashSet();
+
         // Build set of all content paths claimed by active torrents across ALL download clients
         // to avoid false positives from cross-seeded clients.
         HashSet<string> claimedPaths = new(StringComparer.OrdinalIgnoreCase);
@@ -62,6 +83,11 @@ public sealed class OrphanedFilesCleanupService : IOrphanedFilesCleanupService
 
         foreach (IDownloadService downloadService in downloadServices)
         {
+            if (!clientIdsNeedingScan.Contains(downloadService.ClientConfig.Id))
+            {
+                continue;
+            }
+
             bool success = await TryAddClaimedPathsAsync(downloadService, claimedPaths);
             if (!success)
             {
@@ -71,17 +97,11 @@ public sealed class OrphanedFilesCleanupService : IOrphanedFilesCleanupService
 
         _logger.LogDebug("{count} claimed paths across all clients", claimedPaths.Count);
 
-        foreach (OrphanedFilesConfig clientConfig in orphanedFilesConfigs)
+        foreach (OrphanedFilesConfig clientConfig in scannableConfigs)
         {
             if (skippedClientIds.Contains(clientConfig.DownloadClientConfigId))
             {
                 _logger.LogWarning("skip | torrents are unavailable or empty | {name}", clientConfig.DownloadClientConfig.Name);
-                continue;
-            }
-
-            if (clientConfig.ScanDirectories.Count is 0)
-            {
-                _logger.LogWarning("skip | no scan directories configured for client {name}", clientConfig.DownloadClientConfig.Name);
                 continue;
             }
 
