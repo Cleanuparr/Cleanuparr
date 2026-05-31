@@ -1,7 +1,9 @@
 using System.IO.Enumeration;
+using Cleanuparr.Domain.Entities;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
 using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Persistence;
+using Cleanuparr.Persistence.Models.Configuration;
 using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
 using Cleanuparr.Shared.Helpers;
 using Microsoft.EntityFrameworkCore;
@@ -56,16 +58,27 @@ public sealed class OrphanedFilesCleanupService : IOrphanedFilesCleanupService
         // Build set of all content paths claimed by active torrents across ALL download clients
         // to avoid false positives from cross-seeded clients.
         HashSet<string> claimedPaths = new(StringComparer.OrdinalIgnoreCase);
+        HashSet<Guid> skippedClientIds = new();
 
         foreach (IDownloadService downloadService in downloadServices)
         {
-            await AddClaimedPathsAsync(downloadService, claimedPaths);
+            bool success = await TryAddClaimedPathsAsync(downloadService, claimedPaths);
+            if (!success)
+            {
+                skippedClientIds.Add(downloadService.ClientConfig.Id);
+            }
         }
 
         _logger.LogDebug("{count} claimed paths across all clients", claimedPaths.Count);
 
         foreach (OrphanedFilesConfig clientConfig in orphanedFilesConfigs)
         {
+            if (skippedClientIds.Contains(clientConfig.DownloadClientConfigId))
+            {
+                _logger.LogWarning("skip | torrents are unavailable or empty | {name}", clientConfig.DownloadClientConfig.Name);
+                continue;
+            }
+
             if (clientConfig.ScanDirectories.Count is 0)
             {
                 _logger.LogWarning("skip | no scan directories configured for client {name}", clientConfig.DownloadClientConfig.Name);
@@ -103,48 +116,57 @@ public sealed class OrphanedFilesCleanupService : IOrphanedFilesCleanupService
         }
     }
 
-    private async Task AddClaimedPathsAsync(IDownloadService downloadService, HashSet<string> claimedPaths)
+    private async Task<bool> TryAddClaimedPathsAsync(IDownloadService downloadService, HashSet<string> claimedPaths)
     {
-        var downloadClient = downloadService.ClientConfig;
+        DownloadClientConfig downloadClient = downloadService.ClientConfig;
+        List<ITorrentItemWrapper> torrents;
         try
         {
-            var torrents = await downloadService.GetAllTorrentsLite();
-
-            foreach (var torrent in torrents)
-            {
-                if (string.IsNullOrEmpty(torrent.SavePath))
-                {
-                    continue;
-                }
-
-                string remappedSavePath = PathHelper.NormalizeAndRemap(
-                    torrent.SavePath,
-                    downloadClient.DownloadDirectorySource,
-                    downloadClient.DownloadDirectoryTarget
-                ).TrimEnd(Path.DirectorySeparatorChar);
-
-                claimedPaths.Add(remappedSavePath);
-
-                if (string.IsNullOrEmpty(torrent.Name))
-                {
-                    continue;
-                }
-
-                string contentPath = PathHelper.NormalizeAndRemap(
-                    Path.Combine(torrent.SavePath, torrent.Name),
-                    downloadClient.DownloadDirectorySource,
-                    downloadClient.DownloadDirectoryTarget
-                );
-
-                claimedPaths.Add(contentPath.TrimEnd(Path.DirectorySeparatorChar));
-            }
-
-            _logger.LogDebug("Loaded {count} torrent paths from {name}", torrents.Count, downloadClient.Name);
+            torrents = await downloadService.GetAllTorrentsLite();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to get torrents from client {name}", downloadClient.Name);
+            _logger.LogError(ex, "Failed to get torrents | {name}", downloadClient.Name);
+            return false;
         }
+
+        if (torrents.Count is 0)
+        {
+            _logger.LogDebug("No torrents found | {name}", downloadClient.Name);
+            return false;
+        }
+
+        foreach (ITorrentItemWrapper torrent in torrents)
+        {
+            if (string.IsNullOrEmpty(torrent.SavePath))
+            {
+                continue;
+            }
+
+            string remappedSavePath = PathHelper.NormalizeAndRemap(
+                torrent.SavePath,
+                downloadClient.DownloadDirectorySource,
+                downloadClient.DownloadDirectoryTarget
+            ).TrimEnd(Path.DirectorySeparatorChar);
+
+            claimedPaths.Add(remappedSavePath);
+
+            if (string.IsNullOrEmpty(torrent.Name))
+            {
+                continue;
+            }
+
+            string contentPath = PathHelper.NormalizeAndRemap(
+                Path.Combine(torrent.SavePath, torrent.Name),
+                downloadClient.DownloadDirectorySource,
+                downloadClient.DownloadDirectoryTarget
+            );
+
+            claimedPaths.Add(contentPath.TrimEnd(Path.DirectorySeparatorChar));
+        }
+
+        _logger.LogDebug("Loaded {count} torrent paths | {name}", torrents.Count, downloadClient.Name);
+        return true;
     }
 
     private void ProcessDirectory(

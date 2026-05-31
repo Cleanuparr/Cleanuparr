@@ -15,12 +15,12 @@ export default defineConfig({
   projects: [
     {
       name: 'api',
-      testIgnore: /(?:^|[\\/])(?:orphaned-files-cleanup|orphaned-files-behaviors|malware-blocker)\.spec\.ts$/,
+      testIgnore: /(?:^|[\\/])(?:orphaned-files-cleanup|orphaned-files-behaviors|orphaned-files-unreachable-client|malware-blocker)\.spec\.ts$/,
       use: { browserName: 'chromium' },
     },
     {
       name: 'download-clients',
-      testMatch: /(?:^|[\\/])(?:orphaned-files-cleanup|orphaned-files-behaviors|malware-blocker)\.spec\.ts$/,
+      testMatch: /(?:^|[\\/])(?:orphaned-files-cleanup|orphaned-files-behaviors|orphaned-files-unreachable-client|malware-blocker)\.spec\.ts$/,
       use: { browserName: 'chromium' },
     },
   ],
