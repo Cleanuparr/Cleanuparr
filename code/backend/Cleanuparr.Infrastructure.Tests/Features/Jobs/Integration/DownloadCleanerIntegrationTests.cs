@@ -49,7 +49,8 @@ public class DownloadCleanerIntegrationTests : IDisposable
             _fixture.SeedingRulesService,
             _fixture.UnlinkedService,
             _fixture.DeadTorrentService,
-            _fixture.OrphanedFilesService);
+            _fixture.OrphanedFilesService,
+            _fixture.DryRunInterceptor);
     }
 
     /// <summary>
