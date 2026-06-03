@@ -32,6 +32,7 @@ public partial class UTorrentService
 
         // Create ITorrentItem wrapper for consistent interface usage
         UTorrentItemWrapper torrent = new(download, properties);
+        result.Torrent = torrent;
 
         if (torrent.IsIgnored(ignoredDownloads))
         {

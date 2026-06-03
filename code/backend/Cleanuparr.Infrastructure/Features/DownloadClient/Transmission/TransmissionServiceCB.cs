@@ -38,6 +38,7 @@ public partial class TransmissionService
         bool isPrivate = download.IsPrivate ?? false;
         result.IsPrivate = isPrivate;
         result.Found = true;
+        result.Torrent = new TransmissionItemWrapper(download);
         SetDownloadClientContext();
 
         var malwareBlockerConfig = ContextProvider.Get<ContentBlockerConfig>();

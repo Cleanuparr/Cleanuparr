@@ -226,6 +226,30 @@ public static class TestDataContextFactory
     }
 
     /// <summary>
+    /// Adds an enabled LazyLibrarian instance to the context
+    /// </summary>
+    public static ArrInstance AddLazyLibrarianInstance(DataContext context, string url = "http://lazylibrarian:5299", bool enabled = true)
+    {
+        var arrConfig = context.ArrConfigs.First(x => x.Type == InstanceType.LazyLibrarian);
+        var instance = new ArrInstance
+        {
+            Id = Guid.NewGuid(),
+            Name = "Test LazyLibrarian",
+            Url = new Uri(url),
+            ApiKey = "test-api-key",
+            Enabled = enabled,
+            ArrConfigId = arrConfig.Id,
+            ArrConfig = arrConfig
+        };
+
+        arrConfig.Instances.Add(instance);
+        context.ArrInstances.Add(instance);
+        context.SaveChanges();
+
+        return instance;
+    }
+
+    /// <summary>
     /// Adds an enabled download client to the context
     /// </summary>
     public static DownloadClientConfig AddDownloadClient(

@@ -1,19 +1,15 @@
 using System.Net;
-using Cleanuparr.Domain.Entities;
 using Cleanuparr.Domain.Entities.Arr;
 using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Events.Interfaces;
 using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 using Cleanuparr.Infrastructure.Features.Context;
-using Cleanuparr.Infrastructure.Features.DownloadClient;
 using Cleanuparr.Infrastructure.Features.DownloadRemover.Interfaces;
 using Cleanuparr.Infrastructure.Features.DownloadRemover.Models;
 using Cleanuparr.Infrastructure.Features.ItemStriker;
 using Cleanuparr.Infrastructure.Helpers;
-using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Persistence;
-using Cleanuparr.Persistence.Models.Configuration;
 using Cleanuparr.Persistence.Models.Configuration.Seeker;
 using Cleanuparr.Persistence.Models.State;
 using Microsoft.EntityFrameworkCore;
@@ -30,8 +26,6 @@ public sealed class QueueItemRemover : IQueueItemRemover
     private readonly IEventPublisher _eventPublisher;
     private readonly EventsContext _eventsContext;
     private readonly DataContext _dataContext;
-    private readonly IDownloadServiceFactory _downloadServiceFactory;
-    private readonly IDryRunInterceptor _dryRunInterceptor;
 
     public QueueItemRemover(
         ILogger<QueueItemRemover> logger,
@@ -39,9 +33,7 @@ public sealed class QueueItemRemover : IQueueItemRemover
         IArrClientFactory arrClientFactory,
         IEventPublisher eventPublisher,
         EventsContext eventsContext,
-        DataContext dataContext,
-        IDownloadServiceFactory downloadServiceFactory,
-        IDryRunInterceptor dryRunInterceptor
+        DataContext dataContext
     )
     {
         _logger = logger;
@@ -50,8 +42,6 @@ public sealed class QueueItemRemover : IQueueItemRemover
         _eventPublisher = eventPublisher;
         _eventsContext = eventsContext;
         _dataContext = dataContext;
-        _downloadServiceFactory = downloadServiceFactory;
-        _dryRunInterceptor = dryRunInterceptor;
     }
 
     public async Task RemoveQueueItemAsync<T>(QueueItemRemoveRequest<T> request)
@@ -62,12 +52,6 @@ public sealed class QueueItemRemover : IQueueItemRemover
             var instanceType = request.Instance.ArrConfig.Type;
             var arrClient = _arrClientFactory.GetClient(instanceType, request.Instance.Version);
             await arrClient.DeleteQueueItemAsync(request.Instance, request.Record, request.RemoveFromClient, request.ChangeCategory, request.DeleteReason);
-
-            // LazyLibrarian does not remove the torrent from the download client itself.
-            if (instanceType is InstanceType.LazyLibrarian && request.RemoveFromClient && request.DownloadClient is not null)
-            {
-                await RemoveFromDownloadClientAsync(request.DownloadClient, request.Record);
-            }
 
             // Mark the download item as removed in the database
             await _eventsContext.DownloadItems
@@ -97,11 +81,11 @@ public sealed class QueueItemRemover : IQueueItemRemover
 
             string hash = request.Record.DownloadId.ToLowerInvariant();
             var isRecurring = Striker.RecurringHashes.ContainsKey(hash);
-            
+
             if (isRecurring || request.SkipSearch)
             {
                 await _eventPublisher.PublishSearchNotTriggered(request.Record.DownloadId, request.Record.Title);
-                
+
                 if (isRecurring)
                 {
                     Striker.RecurringHashes.Remove(hash, out _);
@@ -128,7 +112,7 @@ public sealed class QueueItemRemover : IQueueItemRemover
                 SearchType = (request.SearchItem as SeriesSearchItem)?.SearchType.ToString(),
                 Title = request.Record.Title,
             });
-            
+
             await _dataContext.SaveChangesAsync();
         }
         catch (HttpRequestException exception)
@@ -143,49 +127,6 @@ public sealed class QueueItemRemover : IQueueItemRemover
         finally
         {
             _cache.Remove(CacheKeys.DownloadMarkedForRemoval(request.Record.DownloadId, request.Instance.Url));
-        }
-    }
-
-    private async Task RemoveFromDownloadClientAsync(DownloadClientConfig downloadClient, QueueRecord record)
-    {
-        IDownloadService? downloadService = null;
-
-        try
-        {
-            downloadService = _downloadServiceFactory.GetDownloadService(downloadClient);
-            await downloadService.LoginAsync();
-
-            List<ITorrentItemWrapper> torrents = await downloadService.GetAllTorrentsLite();
-            ITorrentItemWrapper? torrent = torrents.FirstOrDefault(t =>
-                string.Equals(t.Hash, record.DownloadId, StringComparison.OrdinalIgnoreCase));
-
-            if (torrent is null)
-            {
-                _logger.LogWarning(
-                    "torrent not found in download client {client} | {hash} | {title}",
-                    downloadClient.Name, record.DownloadId, record.Title
-                );
-                return;
-            }
-
-            await _dryRunInterceptor.InterceptAsync(() => downloadService.DeleteDownload(torrent!, true));
-
-            _logger.LogInformation(
-                "torrent removed from download client {client} | {title}",
-                downloadClient.Name, record.Title
-            );
-        }
-        catch (Exception exception)
-        {
-            _logger.LogError(
-                exception,
-                "failed to remove torrent from download client {client} | {hash} | {title}",
-                downloadClient.Name, record.DownloadId, record.Title
-            );
-        }
-        finally
-        {
-            downloadService?.Dispose();
         }
     }
 }

@@ -5,7 +5,6 @@ using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Events;
 using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 using Cleanuparr.Infrastructure.Features.Context;
-using Cleanuparr.Infrastructure.Features.DownloadClient;
 using Cleanuparr.Infrastructure.Features.DownloadRemover;
 using Cleanuparr.Infrastructure.Features.DownloadRemover.Models;
 using Cleanuparr.Infrastructure.Features.ItemStriker;
@@ -88,9 +87,7 @@ public class QueueItemRemoverTests : IDisposable
             _arrClientFactory,
             _eventPublisher,
             _eventsContext,
-            _dataContext,
-            Substitute.For<IDownloadServiceFactory>(),
-            dryRunInterceptor
+            _dataContext
         );
 
         // Clear static RecurringHashes before each test
@@ -163,6 +160,7 @@ public class QueueItemRemoverTests : IDisposable
     [InlineData(InstanceType.Lidarr)]
     [InlineData(InstanceType.Readarr)]
     [InlineData(InstanceType.Whisparr)]
+    [InlineData(InstanceType.LazyLibrarian)]
     public async Task RemoveQueueItemAsync_UsesCorrectClientForInstanceType(InstanceType instanceType)
     {
         // Arrange
@@ -479,6 +477,7 @@ public class QueueItemRemoverTests : IDisposable
             InstanceType.Lidarr => TestDataContextFactory.AddLidarrInstance(_dataContext),
             InstanceType.Readarr => TestDataContextFactory.AddReadarrInstance(_dataContext),
             InstanceType.Whisparr => TestDataContextFactory.AddWhisparrInstance(_dataContext),
+            InstanceType.LazyLibrarian => TestDataContextFactory.AddLazyLibrarianInstance(_dataContext),
             _ => TestDataContextFactory.AddSonarrInstance(_dataContext),
         };
     }
