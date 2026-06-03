@@ -171,10 +171,9 @@ public sealed class LazyLibrarianClient : ArrClient, ILazyLibrarianClient
 
     public override bool HasContentId(QueueRecord record) => record.BookId is not 0;
 
-    public override async Task<List<Tag>> GetAllTagsAsync(ArrInstance arrInstance)
+    public override Task<List<Tag>> GetAllTagsAsync(ArrInstance arrInstance)
     {
-        await Task.CompletedTask;
-        return [];
+        return Task.FromResult(new List<Tag>());
     }
 
     public override async Task HealthCheckAsync(ArrInstance arrInstance)
