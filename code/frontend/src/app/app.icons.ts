@@ -49,6 +49,7 @@ import {
   tablerFilter,
   tablerPalette,
   tablerFileOff,
+  tablerBook,
 } from '@ng-icons/tabler-icons';
 
 export const APP_ICONS = {
@@ -102,4 +103,5 @@ export const APP_ICONS = {
   tablerFilter,
   tablerPalette,
   tablerFileOff,
+  tablerBook,
 };

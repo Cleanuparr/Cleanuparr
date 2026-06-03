@@ -46,6 +46,10 @@ public class StatusController : ControllerBase
             .Include(x => x.Instances)
             .AsNoTracking()
             .FirstAsync(x => x.Type == InstanceType.Readarr);
+        var lazyLibrarianConfig = await _dataContext.ArrConfigs
+            .Include(x => x.Instances)
+            .AsNoTracking()
+            .FirstAsync(x => x.Type == InstanceType.LazyLibrarian);
 
         var status = new
         {
@@ -78,6 +82,10 @@ public class StatusController : ControllerBase
                 Readarr = new
                 {
                     InstanceCount = readarrConfig.Instances.Count
+                },
+                LazyLibrarian = new
+                {
+                    InstanceCount = lazyLibrarianConfig.Instances.Count
                 }
             }
         };

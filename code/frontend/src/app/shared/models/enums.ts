@@ -134,4 +134,4 @@ export enum CleanReason {
   MaxSeedTimeReached = 'MaxSeedTimeReached',
 }
 
-export type ArrType = 'sonarr' | 'radarr' | 'lidarr' | 'readarr' | 'whisparr';
+export type ArrType = 'sonarr' | 'radarr' | 'lidarr' | 'readarr' | 'whisparr' | 'lazylibrarian';

@@ -21,6 +21,7 @@ const ARR_VERSION_OPTIONS: Record<string, SelectOption[]> = {
   lidarr:  [{ label: 'v3', value: 3 }],
   readarr: [{ label: 'v0.4', value: 0.4 }],
   whisparr: [{ label: 'v2', value: 2 }, { label: 'v3', value: 3 }],
+  lazylibrarian: [{ label: 'latest', value: 1 }],
 };
 
 interface ArrInstanceFormModel {
@@ -52,6 +53,9 @@ export class ArrSettingsComponent implements HasPendingChanges {
   readonly type = input.required<string>();
   readonly displayName = computed(() => {
     const t = this.type();
+    if (t === 'lazylibrarian') {
+      return 'LazyLibrarian';
+    }
     return t.charAt(0).toUpperCase() + t.slice(1);
   });
   readonly versionOptions = computed(() => ARR_VERSION_OPTIONS[this.type()] ?? []);
