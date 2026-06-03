@@ -302,7 +302,7 @@ public abstract class GenericHandler : IHandler
                 "skip lazylibrarian delete | torrent reference unavailable | {title} | {hash}",
                 record.Title, record.DownloadId
             );
-            return true;
+            return false;
         }
 
         try
