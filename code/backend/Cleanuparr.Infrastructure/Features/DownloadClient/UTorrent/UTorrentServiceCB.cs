@@ -29,6 +29,7 @@ public partial class UTorrentService
         var properties = await _client.GetTorrentPropertiesAsync(hash);
         result.IsPrivate = properties.IsPrivate;
         result.Found = true;
+        result.Torrent = new UTorrentItemWrapper(download, properties);
         SetDownloadClientContext();
 
         if (ignoredDownloads.Count > 0 &&

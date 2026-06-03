@@ -33,6 +33,7 @@ public partial class DelugeService
 
         // Create ITorrentItem wrapper for consistent interface usage
         DelugeItemWrapper torrent = new(download);
+        result.Torrent = torrent;
 
         if (torrent.IsIgnored(ignoredDownloads))
         {
