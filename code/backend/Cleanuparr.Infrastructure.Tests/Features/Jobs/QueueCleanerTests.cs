@@ -1549,13 +1549,19 @@ public class QueueCleanerTests : IDisposable
             .GetDownloadService(Arg.Any<DownloadClientConfig>())
             .Returns(mockDownloadService);
 
+        // Have the dry-run interceptor actually invoke the captured delegate so the
+        // underlying DeleteDownload runs (matching real "not dry run" behavior).
+        _fixture.DryRunInterceptor
+            .InterceptAsync(Arg.Any<Func<Task>>(), Arg.Any<string?>())
+            .Returns(ci => ((Func<Task>)ci[0])());
+
         var sut = CreateSut();
 
         // Act
         await sut.ExecuteAsync();
 
-        // Assert: deletion happens inline via the dry-run interceptor, and the removal request is then published.
-        await _fixture.DryRunInterceptor.Received(1).InterceptAsync(Arg.Any<Func<Task>>(), Arg.Any<string?>());
+        // Assert: the inline DeleteDownload actually ran and the removal request is published.
+        await mockDownloadService.Received(1).DeleteDownload(torrent, true);
         await _fixture.MessageBus.Received(1).Publish(
             Arg.Is<QueueItemRemoveRequest<SearchItem>>(r => r.RemoveFromClient && r.DeleteReason == DeleteReason.Stalled),
             Arg.Any<CancellationToken>()
@@ -1614,16 +1620,21 @@ public class QueueCleanerTests : IDisposable
             .GetDownloadService(Arg.Any<DownloadClientConfig>())
             .Returns(mockDownloadService);
 
+        // Have DeleteDownload throw, with the interceptor passing the failure through.
+        mockDownloadService
+            .DeleteDownload(Arg.Any<Cleanuparr.Domain.Entities.ITorrentItemWrapper>(), Arg.Any<bool>())
+            .Returns(_ => Task.FromException(new InvalidOperationException("delete failed")));
         _fixture.DryRunInterceptor
             .InterceptAsync(Arg.Any<Func<Task>>(), Arg.Any<string?>())
-            .Returns<Task>(_ => throw new InvalidOperationException("delete failed"));
+            .Returns(ci => ((Func<Task>)ci[0])());
 
         var sut = CreateSut();
 
         // Act
         await sut.ExecuteAsync();
 
-        // Assert: no removal request is published when the inline deletion fails.
+        // Assert: when the underlying DeleteDownload throws, no removal request is published.
+        await mockDownloadService.Received(1).DeleteDownload(torrent, true);
         await _fixture.MessageBus.DidNotReceive().Publish(
             Arg.Any<QueueItemRemoveRequest<SearchItem>>(),
             Arg.Any<CancellationToken>()
