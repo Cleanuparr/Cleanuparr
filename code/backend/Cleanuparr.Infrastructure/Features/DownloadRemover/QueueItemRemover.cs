@@ -11,6 +11,7 @@ using Cleanuparr.Infrastructure.Features.DownloadRemover.Interfaces;
 using Cleanuparr.Infrastructure.Features.DownloadRemover.Models;
 using Cleanuparr.Infrastructure.Features.ItemStriker;
 using Cleanuparr.Infrastructure.Helpers;
+using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration;
 using Cleanuparr.Persistence.Models.Configuration.Seeker;
@@ -30,6 +31,7 @@ public sealed class QueueItemRemover : IQueueItemRemover
     private readonly EventsContext _eventsContext;
     private readonly DataContext _dataContext;
     private readonly IDownloadServiceFactory _downloadServiceFactory;
+    private readonly IDryRunInterceptor _dryRunInterceptor;
 
     public QueueItemRemover(
         ILogger<QueueItemRemover> logger,
@@ -38,7 +40,8 @@ public sealed class QueueItemRemover : IQueueItemRemover
         IEventPublisher eventPublisher,
         EventsContext eventsContext,
         DataContext dataContext,
-        IDownloadServiceFactory downloadServiceFactory
+        IDownloadServiceFactory downloadServiceFactory,
+        IDryRunInterceptor dryRunInterceptor
     )
     {
         _logger = logger;
@@ -48,6 +51,7 @@ public sealed class QueueItemRemover : IQueueItemRemover
         _eventsContext = eventsContext;
         _dataContext = dataContext;
         _downloadServiceFactory = downloadServiceFactory;
+        _dryRunInterceptor = dryRunInterceptor;
     }
 
     public async Task RemoveQueueItemAsync<T>(QueueItemRemoveRequest<T> request)
@@ -164,7 +168,7 @@ public sealed class QueueItemRemover : IQueueItemRemover
                 return;
             }
 
-            await downloadService.DeleteDownload(torrent!, true);
+            await _dryRunInterceptor.InterceptAsync(() => downloadService.DeleteDownload(torrent!, true));
 
             _logger.LogInformation(
                 "torrent removed from download client {client} | {title}",

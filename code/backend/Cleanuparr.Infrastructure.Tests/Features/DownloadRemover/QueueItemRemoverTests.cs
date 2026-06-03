@@ -89,7 +89,8 @@ public class QueueItemRemoverTests : IDisposable
             _eventPublisher,
             _eventsContext,
             _dataContext,
-            Substitute.For<IDownloadServiceFactory>()
+            Substitute.For<IDownloadServiceFactory>(),
+            dryRunInterceptor
         );
 
         // Clear static RecurringHashes before each test
