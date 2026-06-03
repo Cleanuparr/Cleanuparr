@@ -239,11 +239,9 @@ public sealed class LazyLibrarianClient : ArrClient, ILazyLibrarianClient
             return false;
         }
 
-        if (!string.IsNullOrEmpty(record.NzbMode) && !string.Equals(record.NzbMode, "torrent", StringComparison.OrdinalIgnoreCase))
-        {
-            return false;
-        }
-
-        return true;
+        // Require an explicit torrent NzbMode. A null/empty value would otherwise let NZB rows
+        // through on older LazyLibrarian builds, and the DownloadID would be a job id rather
+        // than a torrent hash — useless to Cleanuparr and dangerous if logged or matched.
+        return string.Equals(record.NzbMode, "torrent", StringComparison.OrdinalIgnoreCase);
     }
 }
