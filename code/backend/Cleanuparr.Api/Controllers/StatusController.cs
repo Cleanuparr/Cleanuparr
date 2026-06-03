@@ -14,6 +14,7 @@ namespace Cleanuparr.Api.Controllers;
 [Authorize]
 public class StatusController : ControllerBase
 {
+    private readonly ILogger<StatusController> _logger;
     private readonly DataContext _dataContext;
     private readonly IArrClientFactory _arrClientFactory;
 
@@ -28,9 +29,11 @@ public class StatusController : ControllerBase
     ];
 
     public StatusController(
+        ILogger<StatusController> logger,
         DataContext dataContext,
         IArrClientFactory arrClientFactory)
     {
+        _logger = logger;
         _dataContext = dataContext;
         _arrClientFactory = arrClientFactory;
     }
@@ -142,12 +145,13 @@ public class StatusController : ControllerBase
             }
             catch (Exception ex)
             {
+                _logger.LogWarning(ex, "health check failed for {type} instance | {url}", type, instance.Url);
                 results.Add(new
                 {
                     instance.Name,
                     instance.Url,
                     IsConnected = false,
-                    Message = $"Connection failed: {ex.Message}"
+                    Message = "Connection failed"
                 });
             }
         }
