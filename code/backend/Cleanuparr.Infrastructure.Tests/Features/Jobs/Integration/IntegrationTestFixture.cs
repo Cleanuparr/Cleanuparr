@@ -137,7 +137,8 @@ public class IntegrationTestFixture : IDisposable
             ArrClientFactory,
             EventPublisher,
             EventsContext,
-            DataContext);
+            DataContext,
+            DownloadServiceFactory);
 
         SeedingRulesService = new SeedingRulesCleanupService(
             Substitute.For<ILogger<SeedingRulesCleanupService>>(),

@@ -15,6 +15,7 @@ public class ArrClientFactoryTests
     private readonly IReadarrClient _readarrClient;
     private readonly IWhisparrV2Client _whisparrClient;
     private readonly IWhisparrV3Client _whisparrV3Client;
+    private readonly ILazyLibrarianClient _lazyLibrarianClient;
     private readonly ArrClientFactory _factory;
 
     public ArrClientFactoryTests()
@@ -25,6 +26,7 @@ public class ArrClientFactoryTests
         _readarrClient = Substitute.For<IReadarrClient>();
         _whisparrClient = Substitute.For<IWhisparrV2Client>();
         _whisparrV3Client = Substitute.For<IWhisparrV3Client>();
+        _lazyLibrarianClient = Substitute.For<ILazyLibrarianClient>();
 
         _factory = new ArrClientFactory(
             _sonarrClient,
@@ -32,7 +34,8 @@ public class ArrClientFactoryTests
             _lidarrClient,
             _readarrClient,
             _whisparrClient,
-            _whisparrV3Client
+            _whisparrV3Client,
+            _lazyLibrarianClient
         );
     }
 
@@ -99,6 +102,16 @@ public class ArrClientFactoryTests
     }
 
     [Fact]
+    public void GetClient_LazyLibrarian_ReturnsLazyLibrarianClient()
+    {
+        // Act
+        var result = _factory.GetClient(InstanceType.LazyLibrarian, 0);
+
+        // Assert
+        result.ShouldBeSameAs(_lazyLibrarianClient);
+    }
+
+    [Fact]
     public void GetClient_UnsupportedType_ThrowsNotImplementedException()
     {
         // Arrange
@@ -141,7 +154,8 @@ public class ArrClientFactoryTests
         [InstanceType.Lidarr, null],
         [InstanceType.Readarr, null],
         [InstanceType.Whisparr, 2f],
-        [InstanceType.Whisparr, 3f]
+        [InstanceType.Whisparr, 3f],
+        [InstanceType.LazyLibrarian, null]
     ];
 
     #endregion

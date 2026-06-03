@@ -73,6 +73,7 @@ export class NavSidebarComponent {
     { label: 'Lidarr', iconSrc: 'icons/ext/lidarr-light.svg', route: '/settings/arr/lidarr' },
     { label: 'Readarr', iconSrc: 'icons/ext/readarr-light.svg', route: '/settings/arr/readarr' },
     { label: 'Whisparr', iconSrc: 'icons/ext/whisparr-light.svg', route: '/settings/arr/whisparr' },
+    { label: 'LazyLibrarian', icon: 'tablerBook', route: '/settings/arr/lazylibrarian' },
     { label: 'Download Clients', icon: 'tablerDownload', route: '/settings/download-clients' },
   ];
 

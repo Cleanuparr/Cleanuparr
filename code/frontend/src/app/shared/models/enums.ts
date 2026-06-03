@@ -115,4 +115,4 @@ export enum SearchCommandStatus {
   TimedOut = 'TimedOut',
 }
 
-export type ArrType = 'sonarr' | 'radarr' | 'lidarr' | 'readarr' | 'whisparr';
+export type ArrType = 'sonarr' | 'radarr' | 'lidarr' | 'readarr' | 'whisparr' | 'lazylibrarian';

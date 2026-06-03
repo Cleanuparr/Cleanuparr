@@ -16,6 +16,7 @@ export interface SystemStatus {
     radarr: { instanceCount: number };
     lidarr: { instanceCount: number };
     readarr: { instanceCount: number };
+    lazyLibrarian: { instanceCount: number };
   };
 }
 

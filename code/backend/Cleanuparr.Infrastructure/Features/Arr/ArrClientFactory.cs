@@ -11,6 +11,7 @@ public sealed class ArrClientFactory : IArrClientFactory
     private readonly IReadarrClient _readarrClient;
     private readonly IWhisparrV2Client _whisparrV2Client;
     private readonly IWhisparrV3Client _whisparrV3Client;
+    private readonly ILazyLibrarianClient _lazyLibrarianClient;
 
     public ArrClientFactory(
         ISonarrClient sonarrClient,
@@ -18,7 +19,8 @@ public sealed class ArrClientFactory : IArrClientFactory
         ILidarrClient lidarrClient,
         IReadarrClient readarrClient,
         IWhisparrV2Client whisparrV2Client,
-        IWhisparrV3Client whisparrV3Client
+        IWhisparrV3Client whisparrV3Client,
+        ILazyLibrarianClient lazyLibrarianClient
     )
     {
         _sonarrClient = sonarrClient;
@@ -27,8 +29,9 @@ public sealed class ArrClientFactory : IArrClientFactory
         _readarrClient = readarrClient;
         _whisparrV2Client = whisparrV2Client;
         _whisparrV3Client = whisparrV3Client;
+        _lazyLibrarianClient = lazyLibrarianClient;
     }
-    
+
     public IArrClient GetClient(InstanceType type, float instanceVersion) =>
         type switch
         {
@@ -38,6 +41,7 @@ public sealed class ArrClientFactory : IArrClientFactory
             InstanceType.Readarr => _readarrClient,
             InstanceType.Whisparr when instanceVersion is 2 => _whisparrV2Client,
             InstanceType.Whisparr when instanceVersion is 3 => _whisparrV3Client,
+            InstanceType.LazyLibrarian => _lazyLibrarianClient,
             _ => throw new NotImplementedException($"instance type {type} is not yet supported")
         };
 }

@@ -5,6 +5,7 @@ using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Events;
 using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 using Cleanuparr.Infrastructure.Features.Context;
+using Cleanuparr.Infrastructure.Features.DownloadClient;
 using Cleanuparr.Infrastructure.Features.DownloadRemover;
 using Cleanuparr.Infrastructure.Features.DownloadRemover.Models;
 using Cleanuparr.Infrastructure.Features.ItemStriker;
@@ -87,7 +88,8 @@ public class QueueItemRemoverTests : IDisposable
             _arrClientFactory,
             _eventPublisher,
             _eventsContext,
-            _dataContext
+            _dataContext,
+            Substitute.For<IDownloadServiceFactory>()
         );
 
         // Clear static RecurringHashes before each test

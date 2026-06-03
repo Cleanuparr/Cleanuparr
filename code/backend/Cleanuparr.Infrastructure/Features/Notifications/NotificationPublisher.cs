@@ -318,6 +318,7 @@ public class NotificationPublisher : INotificationPublisher
             InstanceType.Readarr => record.Book?.Images?.FirstOrDefault(x => x.CoverType == "cover")?.Url,
             InstanceType.Whisparr when version is 2 => record.Series?.Images?.FirstOrDefault(x => x.CoverType == "poster")?.RemoteUrl,
             InstanceType.Whisparr when version is 3 => record.Movie?.Images?.FirstOrDefault(x => x.CoverType == "poster")?.RemoteUrl ?? record.Movie?.Images?.FirstOrDefault(x => x.CoverType == "screenshot")?.RemoteUrl,
+            InstanceType.LazyLibrarian => null,
             _ => throw new ArgumentOutOfRangeException(nameof(instanceType))
         };
 

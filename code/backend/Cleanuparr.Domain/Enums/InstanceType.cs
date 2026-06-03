@@ -7,4 +7,5 @@ public enum InstanceType
     Lidarr,
     Readarr,
     Whisparr,
+    LazyLibrarian,
 }
