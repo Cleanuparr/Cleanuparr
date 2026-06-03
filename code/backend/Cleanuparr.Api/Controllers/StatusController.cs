@@ -145,12 +145,13 @@ public class StatusController : ControllerBase
             }
             catch (Exception ex)
             {
+                _logger.LogWarning(ex, "health check failed for {type} instance | {url}", type, instance.Url);
                 results.Add(new
                 {
                     instance.Name,
                     instance.Url,
                     IsConnected = false,
-                    Message = $"Connection failed: {ex.Message}"
+                    Message = "Connection failed"
                 });
             }
         }
