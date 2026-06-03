@@ -45,7 +45,7 @@ public sealed class LazyLibrarianClient : ArrClient, ILazyLibrarianClient
         }
         catch
         {
-            _logger.LogError("queue list failed | {uri}", uri);
+            _logger.LogError("queue list failed | {url}", arrInstance.Url);
             throw;
         }
 
@@ -53,7 +53,7 @@ public sealed class LazyLibrarianClient : ArrClient, ILazyLibrarianClient
 
         if (rows is null)
         {
-            throw new Exception($"unrecognized queue list response | {uri}");
+            throw new Exception($"unrecognized queue list response | {arrInstance.Url}");
         }
 
         List<QueueRecord> records = new();
@@ -134,7 +134,7 @@ public sealed class LazyLibrarianClient : ArrClient, ILazyLibrarianClient
         }
         catch
         {
-            _logger.LogError("queue delete failed | {uri} | {title}", uri, record.Title);
+            _logger.LogError("queue delete failed | {url} | {title}", arrInstance.Url, record.Title);
             throw;
         }
     }
