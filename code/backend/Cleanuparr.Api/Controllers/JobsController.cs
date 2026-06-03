@@ -24,36 +24,20 @@ public class JobsController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAllJobs()
     {
-        try
-        {
-            var result = await _jobManagementService.GetAllJobs();
-            return Ok(result);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error getting all jobs");
-            return StatusCode(500, "An error occurred while retrieving jobs");
-        }
+        var result = await _jobManagementService.GetAllJobs();
+        return Ok(result);
     }
 
     [HttpGet("{jobType}")]
     public async Task<IActionResult> GetJob(JobType jobType)
     {
-        try
+        var jobInfo = await _jobManagementService.GetJob(jobType);
+
+        if (jobInfo.Status == "Not Found")
         {
-            var jobInfo = await _jobManagementService.GetJob(jobType);
-            
-            if (jobInfo.Status == "Not Found")
-            {
-                return NotFound($"Job '{jobType}' not found");
-            }
-            return Ok(jobInfo);
+            return NotFound($"Job '{jobType}' not found");
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error getting job {jobType}", jobType);
-            return StatusCode(500, $"An error occurred while retrieving job '{jobType}'");
-        }
+        return Ok(jobInfo);
     }
 
     [HttpPost("{jobType}/start")]
@@ -64,24 +48,15 @@ public class JobsController : ControllerBase
             return BadRequest("The Seeker job cannot be manually controlled");
         }
 
-        try
+        JobSchedule jobSchedule = scheduleRequest.Schedule;
+
+        var result = await _jobManagementService.StartJob(jobType, jobSchedule);
+
+        if (!result)
         {
-            // Get the schedule from the request body if provided
-            JobSchedule jobSchedule = scheduleRequest.Schedule;
-            
-            var result = await _jobManagementService.StartJob(jobType, jobSchedule);
-            
-            if (!result)
-            {
-                return BadRequest($"Failed to start job '{jobType}'");
-            }
-            return Ok(new { Message = $"Job '{jobType}' started successfully" });
+            return BadRequest($"Failed to start job '{jobType}'");
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error starting job {jobType}", jobType);
-            return StatusCode(500, $"An error occurred while starting job '{jobType}'");
-        }
+        return Ok(new { Message = $"Job '{jobType}' started successfully" });
     }
 
     [HttpPost("{jobType}/trigger")]
@@ -92,21 +67,13 @@ public class JobsController : ControllerBase
             return BadRequest("The Seeker job cannot be manually triggered");
         }
 
-        try
+        var result = await _jobManagementService.TriggerJobOnce(jobType);
+
+        if (!result)
         {
-            var result = await _jobManagementService.TriggerJobOnce(jobType);
-            
-            if (!result)
-            {
-                return BadRequest($"Failed to trigger job '{jobType}' - job may not exist or be configured");
-            }
-            return Ok(new { Message = $"Job '{jobType}' triggered successfully for one-time execution" });
+            return BadRequest($"Failed to trigger job '{jobType}' - job may not exist or be configured");
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error triggering job {jobType}", jobType);
-            return StatusCode(500, $"An error occurred while triggering job '{jobType}'");
-        }
+        return Ok(new { Message = $"Job '{jobType}' triggered successfully for one-time execution" });
     }
 
     [HttpPut("{jobType}/schedule")]
@@ -122,20 +89,12 @@ public class JobsController : ControllerBase
             return BadRequest("Schedule is required");
         }
 
-        try
+        var result = await _jobManagementService.UpdateJobSchedule(jobType, scheduleRequest.Schedule);
+
+        if (!result)
         {
-            var result = await _jobManagementService.UpdateJobSchedule(jobType, scheduleRequest.Schedule);
-            
-            if (!result)
-            {
-                return BadRequest($"Failed to update schedule for job '{jobType}'");
-            }
-            return Ok(new { Message = $"Job '{jobType}' schedule updated successfully" });
+            return BadRequest($"Failed to update schedule for job '{jobType}'");
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error updating job {jobType} schedule", jobType);
-            return StatusCode(500, $"An error occurred while updating schedule for job '{jobType}'");
-        }
+        return Ok(new { Message = $"Job '{jobType}' schedule updated successfully" });
     }
 }

@@ -73,11 +73,6 @@ public sealed class DownloadClientController : ControllerBase
 
             return CreatedAtAction(nameof(GetDownloadClientConfig), new { id = clientConfig.Id }, clientConfig);
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to create download client");
-            throw;
-        }
         finally
         {
             DataContext.Lock.Release();
@@ -108,11 +103,6 @@ public sealed class DownloadClientController : ControllerBase
 
             return Ok(clientToPersist);
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to update download client with ID {Id}", id);
-            throw;
-        }
         finally
         {
             DataContext.Lock.Release();
@@ -142,11 +132,6 @@ public sealed class DownloadClientController : ControllerBase
             _logger.LogInformation("Removed HTTP client configuration for deleted download client {ClientName}", clientName);
 
             return NoContent();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to delete download client with ID {Id}", id);
-            throw;
         }
         finally
         {

@@ -194,11 +194,6 @@ public sealed class SeekerConfigController : ControllerBase
 
             return Ok(new { Message = "Seeker configuration updated successfully" });
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to save Seeker configuration");
-            throw;
-        }
         finally
         {
             DataContext.Lock.Release();

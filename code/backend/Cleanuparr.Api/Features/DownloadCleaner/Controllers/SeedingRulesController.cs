@@ -47,11 +47,6 @@ public class SeedingRulesController : ControllerBase
 
             return Ok(rules.Select(SeedingRuleResponse.From));
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to retrieve seeding rules for client {ClientId}", downloadClientId);
-            return StatusCode(500, new { Message = "Failed to retrieve seeding rules", Error = ex.Message });
-        }
         finally
         {
             DataContext.Lock.Release();
@@ -102,12 +97,6 @@ public class SeedingRulesController : ControllerBase
         {
             _logger.LogWarning("Validation failed for seeding rule creation: {Message}", ex.Message);
             return BadRequest(new { Message = ex.Message });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to create seeding rule: {RuleName} for client {ClientId}",
-                ruleDto.Name, downloadClientId);
-            return StatusCode(500, new { Message = "Failed to create seeding rule", Error = ex.Message });
         }
         finally
         {
@@ -167,11 +156,6 @@ public class SeedingRulesController : ControllerBase
             _logger.LogWarning("Validation failed for seeding rule update: {Message}", ex.Message);
             return BadRequest(new { Message = ex.Message });
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to update seeding rule with ID: {RuleId}", id);
-            return StatusCode(500, new { Message = "Failed to update seeding rule", Error = ex.Message });
-        }
         finally
         {
             DataContext.Lock.Release();
@@ -229,11 +213,6 @@ public class SeedingRulesController : ControllerBase
 
             return NoContent();
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to reorder seeding rules for client {ClientId}", downloadClientId);
-            return StatusCode(500, new { Message = "Failed to reorder seeding rules", Error = ex.Message });
-        }
         finally
         {
             DataContext.Lock.Release();
@@ -259,11 +238,6 @@ public class SeedingRulesController : ControllerBase
             _logger.LogInformation("Deleted seeding rule: {RuleName} with ID: {RuleId}", existingRule.Name, id);
 
             return NoContent();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to delete seeding rule with ID: {RuleId}", id);
-            return StatusCode(500, new { Message = "Failed to delete seeding rule", Error = ex.Message });
         }
         finally
         {

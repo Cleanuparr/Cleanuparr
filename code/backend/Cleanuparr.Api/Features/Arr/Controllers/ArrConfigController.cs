@@ -205,11 +205,6 @@ public sealed class ArrConfigController : ControllerBase
 
             return Ok(new { Message = $"{type} configuration updated successfully" });
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to save {Type} configuration", type);
-            throw;
-        }
         finally
         {
             DataContext.Lock.Release();
@@ -229,11 +224,6 @@ public sealed class ArrConfigController : ControllerBase
             await _dataContext.SaveChangesAsync();
 
             return CreatedAtAction(GetConfigActionName(type), new { id = instance.Id }, instance.Adapt<ArrInstanceDto>());
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to create {Type} instance", type);
-            throw;
         }
         finally
         {
@@ -262,11 +252,6 @@ public sealed class ArrConfigController : ControllerBase
 
             return Ok(instance.Adapt<ArrInstanceDto>());
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to update {Type} instance with ID {Id}", type, id);
-            throw;
-        }
         finally
         {
             DataContext.Lock.Release();
@@ -292,11 +277,6 @@ public sealed class ArrConfigController : ControllerBase
             await _dataContext.SaveChangesAsync();
 
             return NoContent();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to delete {Type} instance with ID {Id}", type, id);
-            throw;
         }
         finally
         {

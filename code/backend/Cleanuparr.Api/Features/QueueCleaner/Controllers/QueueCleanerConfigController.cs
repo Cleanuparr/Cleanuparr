@@ -84,11 +84,6 @@ public sealed class QueueCleanerConfigController : ControllerBase
         {
             return BadRequest(ex.Message);
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to save QueueCleaner configuration");
-            throw;
-        }
         finally
         {
             DataContext.Lock.Release();
