@@ -48,9 +48,12 @@ public class JobsController : ControllerBase
             return BadRequest("The Seeker job cannot be manually controlled");
         }
 
-        JobSchedule jobSchedule = scheduleRequest.Schedule;
+        if (scheduleRequest?.Schedule is null)
+        {
+            return BadRequest("Schedule is required");
+        }
 
-        var result = await _jobManagementService.StartJob(jobType, jobSchedule);
+        var result = await _jobManagementService.StartJob(jobType, scheduleRequest.Schedule);
 
         if (!result)
         {
