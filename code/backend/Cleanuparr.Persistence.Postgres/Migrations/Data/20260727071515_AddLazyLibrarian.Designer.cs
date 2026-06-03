@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Cleanuparr.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -12,9 +13,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Cleanuparr.Persistence.Postgres.Migrations.Data
 {
     [DbContext(typeof(DataContext))]
-    partial class DataContextModelSnapshot : ModelSnapshot
+    [Migration("20260727071515_AddLazyLibrarian")]
+    partial class AddLazyLibrarian
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -931,24 +934,6 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                             b1.Property<bool>("Enabled")
                                 .HasColumnType("boolean")
                                 .HasColumnName("sonarr_enabled");
-                        });
-
-                    b.ComplexProperty(typeof(Dictionary<string, object>), "Sportarr", "Cleanuparr.Persistence.Models.Configuration.MalwareBlocker.ContentBlockerConfig.Sportarr#BlocklistSettings", b1 =>
-                        {
-                            b1.IsRequired();
-
-                            b1.Property<string>("BlocklistPath")
-                                .HasColumnType("text")
-                                .HasColumnName("sportarr_blocklist_path");
-
-                            b1.Property<string>("BlocklistType")
-                                .IsRequired()
-                                .HasColumnType("text")
-                                .HasColumnName("sportarr_blocklist_type");
-
-                            b1.Property<bool>("Enabled")
-                                .HasColumnType("boolean")
-                                .HasColumnName("sportarr_enabled");
                         });
 
                     b.ComplexProperty(typeof(Dictionary<string, object>), "Whisparr", "Cleanuparr.Persistence.Models.Configuration.MalwareBlocker.ContentBlockerConfig.Whisparr#BlocklistSettings", b1 =>

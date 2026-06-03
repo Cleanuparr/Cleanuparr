@@ -85,6 +85,7 @@ public sealed class QueueCleaner : GenericHandler
         var readarrConfig = ContextProvider.Get<ArrConfig>(nameof(InstanceType.Readarr));
         var whisparrConfig = ContextProvider.Get<ArrConfig>(nameof(InstanceType.Whisparr));
         var sportarrConfig = ContextProvider.Get<ArrConfig>(nameof(InstanceType.Sportarr));
+        var lazyLibrarianConfig = ContextProvider.Get<ArrConfig>(nameof(InstanceType.LazyLibrarian));
 
         await ProcessArrConfigAsync(sonarrConfig);
         await ProcessArrConfigAsync(radarrConfig);
@@ -92,6 +93,7 @@ public sealed class QueueCleaner : GenericHandler
         await ProcessArrConfigAsync(readarrConfig);
         await ProcessArrConfigAsync(whisparrConfig);
         await ProcessArrConfigAsync(sportarrConfig);
+        await ProcessArrConfigAsync(lazyLibrarianConfig);
     }
 
     protected override async Task ProcessInstanceAsync(ArrInstance instance)

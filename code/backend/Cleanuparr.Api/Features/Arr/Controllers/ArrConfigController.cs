@@ -59,6 +59,8 @@ public sealed class ArrConfigController : ControllerBase
 
     [HttpGet("sportarr")]
     public Task<IActionResult> GetSportarrConfig() => GetArrConfig(InstanceType.Sportarr);
+    [HttpGet("lazylibrarian")]
+    public Task<IActionResult> GetLazyLibrarianConfig() => GetArrConfig(InstanceType.LazyLibrarian);
 
     [HttpPut("sonarr")]
     public Task<IActionResult> UpdateSonarrConfig([FromBody] UpdateArrConfigRequest request)
@@ -83,6 +85,9 @@ public sealed class ArrConfigController : ControllerBase
     [HttpPut("sportarr")]
     public Task<IActionResult> UpdateSportarrConfig([FromBody] UpdateArrConfigRequest request)
         => UpdateArrConfig(InstanceType.Sportarr, request);
+    [HttpPut("lazylibrarian")]
+    public Task<IActionResult> UpdateLazyLibrarianConfig([FromBody] UpdateArrConfigRequest request)
+        => UpdateArrConfig(InstanceType.LazyLibrarian, request);
 
     [HttpPost("sonarr/instances")]
     public Task<IActionResult> CreateSonarrInstance([FromBody] ArrInstanceRequest request)
@@ -155,6 +160,17 @@ public sealed class ArrConfigController : ControllerBase
     [HttpDelete("sportarr/instances/{id}")]
     public Task<IActionResult> DeleteSportarrInstance(Guid id)
         => DeleteArrInstance(InstanceType.Sportarr, id);
+    [HttpPost("lazylibrarian/instances")]
+    public Task<IActionResult> CreateLazyLibrarianInstance([FromBody] ArrInstanceRequest request)
+        => CreateArrInstance(InstanceType.LazyLibrarian, request);
+
+    [HttpPut("lazylibrarian/instances/{id}")]
+    public Task<IActionResult> UpdateLazyLibrarianInstance(Guid id, [FromBody] ArrInstanceRequest request)
+        => UpdateArrInstance(InstanceType.LazyLibrarian, id, request);
+
+    [HttpDelete("lazylibrarian/instances/{id}")]
+    public Task<IActionResult> DeleteLazyLibrarianInstance(Guid id)
+        => DeleteArrInstance(InstanceType.LazyLibrarian, id);
 
     [HttpPost("sonarr/instances/test")]
     public Task<IActionResult> TestSonarrInstance([FromBody] TestArrInstanceRequest request)
@@ -179,6 +195,9 @@ public sealed class ArrConfigController : ControllerBase
     [HttpPost("sportarr/instances/test")]
     public Task<IActionResult> TestSportarrInstance([FromBody] TestArrInstanceRequest request)
         => TestArrInstance(InstanceType.Sportarr, request);
+    [HttpPost("lazylibrarian/instances/test")]
+    public Task<IActionResult> TestLazyLibrarianInstance([FromBody] TestArrInstanceRequest request)
+        => TestArrInstance(InstanceType.LazyLibrarian, request);
 
     private async Task<IActionResult> GetArrConfig(InstanceType type)
     {
@@ -422,6 +441,7 @@ public sealed class ArrConfigController : ControllerBase
         InstanceType.Readarr => nameof(GetReadarrConfig),
         InstanceType.Whisparr => nameof(GetWhisparrConfig),
         InstanceType.Sportarr => nameof(GetSportarrConfig),
+        InstanceType.LazyLibrarian => nameof(GetLazyLibrarianConfig),
         _ => nameof(GetSonarrConfig),
     };
 }

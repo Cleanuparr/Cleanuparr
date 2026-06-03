@@ -77,6 +77,9 @@ public abstract class GenericHandler : IHandler
             ContextProvider.Set(nameof(InstanceType.Sportarr), await _dataContext.ArrConfigs.AsNoTracking()
                 .Include(x => x.Instances)
                 .FirstAsync(x => x.Type == InstanceType.Sportarr, cancellationToken));
+            ContextProvider.Set(nameof(InstanceType.LazyLibrarian), await _dataContext.ArrConfigs.AsNoTracking()
+                .Include(x => x.Instances)
+                .FirstAsync(x => x.Type == InstanceType.LazyLibrarian, cancellationToken));
             ContextProvider.Set(nameof(QueueCleanerConfig), await _dataContext.QueueCleanerConfigs.AsNoTracking().FirstAsync());
             ContextProvider.Set(nameof(ContentBlockerConfig), await _dataContext.ContentBlockerConfigs.AsNoTracking().FirstAsync());
             ContextProvider.Set(nameof(DownloadCleanerConfig), await _dataContext.DownloadCleanerConfigs.AsNoTracking().FirstAsync());
@@ -251,6 +254,10 @@ public abstract class GenericHandler : IHandler
             InstanceType.Whisparr when version is 3 => new SearchItem
             {
                 Id = record.MovieId
+            },
+            InstanceType.LazyLibrarian => new SearchItem
+            {
+                Id = record.BookId
             },
             _ => throw new NotImplementedException($"instance type {type} is not yet supported")
         };

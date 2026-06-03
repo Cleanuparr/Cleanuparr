@@ -52,6 +52,7 @@ public static class LoggingConfigManager
             InstanceType.Readarr.ToString(),
             InstanceType.Whisparr.ToString(),
             InstanceType.Sportarr.ToString(),
+            InstanceType.LazyLibrarian.ToString(),
             "SYSTEM"
         ];
         int catPadding = categoryNames.Max(x => x.Length) + 2;
