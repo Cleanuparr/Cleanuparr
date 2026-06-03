@@ -141,7 +141,8 @@ public class IntegrationTestFixture : IDisposable
             EventPublisher,
             EventsContext,
             DataContext,
-            DownloadServiceFactory);
+            DownloadServiceFactory,
+            DryRunInterceptor);
 
         SeedingRulesService = new SeedingRulesCleanupService(
             Substitute.For<ILogger<SeedingRulesCleanupService>>(),
