@@ -72,15 +72,10 @@ public sealed class DeadTorrentService : IDeadTorrentService
             ContextProvider.Set(ContextProvider.Keys.ItemName, torrent.Name);
             ContextProvider.Set(ContextProvider.Keys.Hash, torrent.Hash);
 
-            int? seederCount = torrent.SeederCount;
-
-            if (!seederCount.HasValue)
-            {
-                _logger.LogDebug("skip dead torrent check | seeder count is unavailable | {name}", torrent.Name);
-                continue;
-            }
-
-            if (seederCount.Value > 0)
+            // A torrent is dead when the client reports no positive seeder count: 0, a negative
+            // "unknown" value (e.g. qBittorrent's -1), or no value at all (unreachable/removed tracker).
+            // Only a positive count counts as alive and resets the accrued strikes.
+            if (torrent.SeederCount > 0)
             {
                 await _striker.ResetStrikeAsync(torrent.Hash, torrent.Name, StrikeType.DeadTorrent);
                 continue;

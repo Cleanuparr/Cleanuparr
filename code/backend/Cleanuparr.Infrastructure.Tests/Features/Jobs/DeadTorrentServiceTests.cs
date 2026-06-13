@@ -140,14 +140,30 @@ public sealed class DeadTorrentServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task UnavailableSeederCount_DoesNotStrikeOrReset()
+    public async Task UnavailableSeederCount_IsDead_Strikes()
     {
         AddConfig();
+        _striker.StrikeAndCheckLimit(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<ushort>(), StrikeType.DeadTorrent)
+            .Returns(false);
         var downloads = new List<ITorrentItemWrapper> { CreateTorrent("hash1", "movies", null) };
 
         await _sut.ProcessAsync(_downloadService, downloads);
 
-        await _striker.DidNotReceiveWithAnyArgs().StrikeAndCheckLimit(default!, default!, default, default);
+        await _striker.Received(1).StrikeAndCheckLimit("hash1", Arg.Any<string>(), (ushort)3, StrikeType.DeadTorrent);
+        await _striker.DidNotReceiveWithAnyArgs().ResetStrikeAsync(default!, default!, default);
+    }
+
+    [Fact]
+    public async Task NegativeSeederCount_IsDead_Strikes()
+    {
+        AddConfig();
+        _striker.StrikeAndCheckLimit(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<ushort>(), StrikeType.DeadTorrent)
+            .Returns(false);
+        var downloads = new List<ITorrentItemWrapper> { CreateTorrent("hash1", "movies", -1) };
+
+        await _sut.ProcessAsync(_downloadService, downloads);
+
+        await _striker.Received(1).StrikeAndCheckLimit("hash1", Arg.Any<string>(), (ushort)3, StrikeType.DeadTorrent);
         await _striker.DidNotReceiveWithAnyArgs().ResetStrikeAsync(default!, default!, default);
     }
 

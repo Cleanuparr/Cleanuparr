@@ -206,7 +206,7 @@
               <div class="form-stack">
                 <app-toggle label="Enabled" [checked]="client.deadTorrentConfig?.enabled ?? false"
                   (checkedChange)="updateDeadTorrentField('enabled', $event)"
-                  hint="When enabled, torrents with zero seeders for a number of consecutive runs are moved to a target category/tag"
+                  hint="When enabled, torrents reporting no seeders (or whose tracker is unreachable) for a number of consecutive runs are moved to a target category/tag"
                   helpKey="download-cleaner:deadTorrentEnabled" />
                 @if (client.deadTorrentConfig?.enabled) {
                   <app-input label="Target Category" placeholder="cleanuparr-dead" [value]="client.deadTorrentConfig?.targetCategory ?? ''"
@@ -222,7 +222,7 @@
                   <app-number-input label="Strikes" [value]="client.deadTorrentConfig?.maxStrikes ?? null" [min]="3" [step]="1"
                     (valueChange)="updateDeadTorrentField('maxStrikes', $event ?? 0)"
                     [error]="deadTorrentStrikesError()"
-                    hint="Number of consecutive runs with zero seeders before moving the torrent (minimum 3)"
+                    hint="Consecutive runs with no seeders before moving the torrent (minimum 3). Set this high enough to ride out tracker downtime — e.g. with an hourly cleaner, 168 ≈ 1 week. Strikes reset once seeders are found again."
                     helpKey="download-cleaner:deadTorrentStrikes" />
 
                   <div class="form-divider"></div>
