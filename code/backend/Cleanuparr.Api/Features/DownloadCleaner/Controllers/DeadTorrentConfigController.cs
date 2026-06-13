@@ -104,11 +104,6 @@ public class DeadTorrentConfigController : ControllerBase
 
             return Ok(DeadTorrentConfigResponse.From(existing));
         }
-        catch (Cleanuparr.Domain.Exceptions.ValidationException ex)
-        {
-            _logger.LogWarning("Validation failed for dead torrent config update: {Message}", ex.Message);
-            return BadRequest(new { Message = ex.Message });
-        }
         finally
         {
             DataContext.Lock.Release();
