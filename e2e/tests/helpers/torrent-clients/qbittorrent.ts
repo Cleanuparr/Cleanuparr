@@ -76,6 +76,51 @@ export class QBittorrentDriver implements TorrentClientDriver {
     }
   }
 
+  /**
+   * Add a torrent that is immediately seeding (started, hash-check skipped, data present)
+   * and assigned to a category. Used by the dead-torrent spec.
+   */
+  async addSeedingTorrent({ metainfo, savePath, category }: { metainfo: Buffer; savePath: string; category: string; infoHash: string }): Promise<void> {
+    const form = new FormData();
+    form.append('torrents', new Blob([new Uint8Array(metainfo)]), 'torrent.torrent');
+    form.append('savepath', savePath);
+    form.append('paused', 'false');
+    form.append('skip_checking', 'true');
+    form.append('autoTMM', 'false');
+    form.append('category', category);
+    const res = await fetch(`${this.directHost}/api/v2/torrents/add`, {
+      method: 'POST',
+      headers: this.cookie ? { Cookie: this.cookie } : undefined,
+      body: form,
+    });
+    if (!res.ok) {
+      throw new Error(`qBittorrent add (seeding) failed: ${res.status} ${await res.text()}`);
+    }
+  }
+
+  /** Returns the torrent's category, or undefined if not found. */
+  async getTorrentCategory(infoHash: string): Promise<string | undefined> {
+    const t = await this.getTorrent(infoHash);
+    return t?.category;
+  }
+
+  /** Returns the torrent's tags (comma-separated in qBit). */
+  async getTorrentTags(infoHash: string): Promise<string[]> {
+    const t = await this.getTorrent(infoHash);
+    return (t?.tags ?? '').split(',').map((s) => s.trim()).filter((s) => s.length > 0);
+  }
+
+  private async getTorrent(infoHash: string): Promise<{ category?: string; tags?: string; state?: string } | undefined> {
+    const res = await fetch(`${this.directHost}/api/v2/torrents/info?hashes=${infoHash.toLowerCase()}`, {
+      headers: this.cookie ? { Cookie: this.cookie } : undefined,
+    });
+    if (!res.ok) {
+      throw new Error(`qBittorrent info failed: ${res.status}`);
+    }
+    const items: Array<{ hash: string; category?: string; tags?: string; state?: string }> = await res.json();
+    return items.find((t) => t.hash.toLowerCase() === infoHash.toLowerCase());
+  }
+
   async deleteTorrent(infoHash: string): Promise<void> {
     const body = new URLSearchParams({ hashes: infoHash, deleteFiles: 'false' });
     const res = await fetch(`${this.directHost}/api/v2/torrents/delete`, {
