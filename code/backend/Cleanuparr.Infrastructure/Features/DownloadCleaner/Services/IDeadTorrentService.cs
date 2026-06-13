@@ -9,5 +9,11 @@ namespace Cleanuparr.Infrastructure.Features.DownloadCleaner.Services;
 /// </summary>
 public interface IDeadTorrentService
 {
+    /// <summary>
+    /// Strikes torrents reporting zero seeders and moves those that reach the configured limit
+    /// to the target category/tag for the given client run.
+    /// </summary>
+    /// <param name="downloadService">Download-client service for the current client.</param>
+    /// <param name="clientDownloads">The client's torrent items to evaluate.</param>
     Task ProcessAsync(IDownloadService downloadService, List<ITorrentItemWrapper> clientDownloads);
 }
