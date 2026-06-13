@@ -175,7 +175,7 @@
                   @if (isTagFilterableClient()) {
                     <app-toggle [label]="isSelectedClientTransmission() ? 'Use Label Instead' : 'Use Tag Instead'" [checked]="client.unlinkedConfig?.useTag ?? false"
                       (checkedChange)="updateUnlinkedField('useTag', $event)"
-                      [hint]="isSelectedClientTransmission() ? 'When enabled, adds a label instead of changing the category' : 'When enabled, uses a tag instead of category'"
+                      [hint]="isSelectedClientTransmission() ? 'When enabled, adds a label instead of changing the category' : 'When enabled, adds a tag instead of changing the category'"
                       helpKey="download-cleaner:unlinkedUseTag" />
                   }
 
