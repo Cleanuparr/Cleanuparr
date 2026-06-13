@@ -59,6 +59,15 @@ interface Scenario {
   source: string;
   useTag: boolean;
   aliveAnnounce: string;
+  /**
+   * Whether a torrent the client is the sole seeder of can be told apart from a
+   * dead one. qBittorrent/Transmission/Deluge derive SeederCount from the tracker
+   * scrape, which counts the local seed, so a reachable-tracker solo seed reports
+   * >= 1 and is spared. uTorrent derives it from connectable seeders discovered in
+   * the swarm (the local instance is excluded and there are no other peers), so a
+   * solo self-seed reports 0 — indistinguishable from dead — and gets moved.
+   */
+  soloSeedSparable: boolean;
   /** Builds + adds a seeding torrent in this scenario's source category. */
   addSeeding(name: string, announce: string): Promise<string>;
   /** True once the torrent has been moved to the target category / tagged. */
@@ -76,7 +85,7 @@ function buildTorrent(physicalSlug: string, name: string, announce: string, subd
 const scenarios: Scenario[] = [
   // qBittorrent — category mode (changes the torrent's category to the target).
   {
-    key: 'qBittorrent (category)', driver: qbit, physicalSlug: 'qbittorrent', source: 'qb-cat', useTag: false, aliveAnnounce: ALIVE_ANNOUNCE_HOST,
+    key: 'qBittorrent (category)', driver: qbit, physicalSlug: 'qbittorrent', source: 'qb-cat', useTag: false, aliveAnnounce: ALIVE_ANNOUNCE_HOST, soloSeedSparable: true,
     async addSeeding(name, announce) {
       const d = buildTorrent('qbittorrent', name, announce);
       await qbit.addSeedingTorrent({ metainfo: d.metainfo, savePath: CLIENT_DOWNLOADS, category: 'qb-cat', infoHash: d.infoHash });
@@ -88,7 +97,7 @@ const scenarios: Scenario[] = [
   },
   // qBittorrent — tag mode (adds the target as a tag, category preserved).
   {
-    key: 'qBittorrent (tag)', driver: qbit, physicalSlug: 'qbittorrent', source: 'qb-tag', useTag: true, aliveAnnounce: ALIVE_ANNOUNCE_HOST,
+    key: 'qBittorrent (tag)', driver: qbit, physicalSlug: 'qbittorrent', source: 'qb-tag', useTag: true, aliveAnnounce: ALIVE_ANNOUNCE_HOST, soloSeedSparable: true,
     async addSeeding(name, announce) {
       const d = buildTorrent('qbittorrent', name, announce);
       await qbit.addSeedingTorrent({ metainfo: d.metainfo, savePath: CLIENT_DOWNLOADS, category: 'qb-tag', infoHash: d.infoHash });
@@ -100,7 +109,7 @@ const scenarios: Scenario[] = [
   },
   // Transmission — label/tag mode (adds the target as a label).
   {
-    key: 'Transmission (label)', driver: transmission, physicalSlug: 'transmission', source: 't-label', useTag: true, aliveAnnounce: ALIVE_ANNOUNCE_HOST,
+    key: 'Transmission (label)', driver: transmission, physicalSlug: 'transmission', source: 't-label', useTag: true, aliveAnnounce: ALIVE_ANNOUNCE_HOST, soloSeedSparable: true,
     async addSeeding(name, announce) {
       const d = buildTorrent('transmission', name, announce, 't-label');
       await transmission.addSeedingTorrent({ metainfo: d.metainfo, savePath: `${CLIENT_DOWNLOADS}/t-label`, category: 't-label', infoHash: d.infoHash });
@@ -112,7 +121,7 @@ const scenarios: Scenario[] = [
   },
   // Transmission — category mode (relocates files; new dir ends with the target).
   {
-    key: 'Transmission (category)', driver: transmission, physicalSlug: 'transmission', source: 't-loc', useTag: false, aliveAnnounce: ALIVE_ANNOUNCE_HOST,
+    key: 'Transmission (category)', driver: transmission, physicalSlug: 'transmission', source: 't-loc', useTag: false, aliveAnnounce: ALIVE_ANNOUNCE_HOST, soloSeedSparable: true,
     async addSeeding(name, announce) {
       const d = buildTorrent('transmission', name, announce, 't-loc');
       await transmission.addSeedingTorrent({ metainfo: d.metainfo, savePath: `${CLIENT_DOWNLOADS}/t-loc`, category: 't-loc', infoHash: d.infoHash });
@@ -125,7 +134,7 @@ const scenarios: Scenario[] = [
   },
   // Deluge — label.
   {
-    key: 'Deluge', driver: deluge, physicalSlug: 'deluge', source: 'dl-src', useTag: false, aliveAnnounce: ALIVE_ANNOUNCE_HOST,
+    key: 'Deluge', driver: deluge, physicalSlug: 'deluge', source: 'dl-src', useTag: false, aliveAnnounce: ALIVE_ANNOUNCE_HOST, soloSeedSparable: true,
     async addSeeding(name, announce) {
       const d = buildTorrent('deluge', name, announce);
       await deluge.addSeedingTorrent({ metainfo: d.metainfo, savePath: CLIENT_DOWNLOADS, category: 'dl-src', name: d.name, infoHash: d.infoHash });
@@ -137,7 +146,7 @@ const scenarios: Scenario[] = [
   },
   // µTorrent — label (bridge-networked → reaches opentracker via host.docker.internal).
   {
-    key: 'uTorrent', driver: utorrent, physicalSlug: 'utorrent', source: 'ut-src', useTag: false, aliveAnnounce: ALIVE_ANNOUNCE_BRIDGE,
+    key: 'uTorrent', driver: utorrent, physicalSlug: 'utorrent', source: 'ut-src', useTag: false, aliveAnnounce: ALIVE_ANNOUNCE_BRIDGE, soloSeedSparable: false,
     async addSeeding(name, announce) {
       const d = buildTorrent('utorrent', name, announce);
       await utorrent.addSeedingTorrent({ metainfo: d.metainfo, savePath: CLIENT_DOWNLOADS, category: 'ut-src', name: d.name, infoHash: d.infoHash });
@@ -251,7 +260,9 @@ test.describe.serial('Dead torrent cleanup', () => {
 
     for (const s of active()) {
       expect(moved.get(s.key), `${s.key}: dead torrent was not moved/tagged`).toBe(true);
-      expect(await s.isMoved(alive.get(s.key)!), `${s.key}: seeded torrent was wrongly moved`).toBe(false);
+      if (s.soloSeedSparable) {
+        expect(await s.isMoved(alive.get(s.key)!), `${s.key}: seeded torrent was wrongly moved`).toBe(false);
+      }
     }
   });
 });
