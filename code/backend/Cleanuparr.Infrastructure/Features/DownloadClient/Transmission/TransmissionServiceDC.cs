@@ -4,6 +4,7 @@ using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
 using Cleanuparr.Shared.Helpers;
 using Microsoft.Extensions.Logging;
+using Transmission.API.RPC.Arguments;
 using Transmission.API.RPC.Entity;
 
 namespace Cleanuparr.Infrastructure.Features.DownloadClient.Transmission;
@@ -43,6 +44,16 @@ public partial class TransmissionService
         return downloads
             ?.Where(x => !string.IsNullOrEmpty(x.Hash))
             .Where(x => unlinkedConfig.Categories.Any(cat => cat.Equals(x.Category, StringComparison.InvariantCultureIgnoreCase)))
+            .Where(x =>
+            {
+                if (unlinkedConfig.UseTag)
+                {
+                    return !x.Tags.Any(tag =>
+                        tag.Equals(unlinkedConfig.TargetCategory, StringComparison.InvariantCultureIgnoreCase));
+                }
+
+                return true;
+            })
             .ToList();
     }
 
@@ -128,6 +139,23 @@ public partial class TransmissionService
             }
 
             string currentCategory = torrent.Category ?? string.Empty;
+
+            if (unlinkedConfig.UseTag)
+            {
+                string[] newLabels = torrent.Tags
+                    .Append(unlinkedConfig.TargetCategory)
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToArray();
+
+                await _dryRunInterceptor.InterceptAsync(() => ChangeLabels(torrent.Info.Id, newLabels));
+
+                _logger.LogInformation("label added for {name}", torrent.Name);
+
+                await _eventPublisher.PublishCategoryChanged(currentCategory, unlinkedConfig.TargetCategory, isTag: true);
+
+                continue;
+            }
+
             string newLocation = torrent.Info.GetNewLocationByAppend(unlinkedConfig.TargetCategory);
 
             await _dryRunInterceptor.InterceptAsync(() => ChangeDownloadLocation(torrent.Info.Id, newLocation));
@@ -143,5 +171,14 @@ public partial class TransmissionService
     protected virtual async Task ChangeDownloadLocation(long downloadId, string newLocation)
     {
         await _client.TorrentSetLocationAsync([downloadId], newLocation, true);
+    }
+
+    protected virtual async Task ChangeLabels(long downloadId, string[] labels)
+    {
+        await _client.TorrentSetAsync(new TorrentSettings
+        {
+            Ids = [downloadId],
+            Labels = labels,
+        });
     }
 }
