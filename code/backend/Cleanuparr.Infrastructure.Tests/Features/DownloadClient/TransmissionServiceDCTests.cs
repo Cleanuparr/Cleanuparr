@@ -387,6 +387,28 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
             result.ShouldHaveSingleItem();
             result[0].Hash.ShouldBe("hash2");
         }
+
+        [Fact]
+        public void ExcludesAlreadyLabeled_WhenUseTag_CaseInsensitive()
+        {
+            // Arrange
+            var sut = _fixture.CreateSut();
+
+            var downloads = new List<Domain.Entities.ITorrentItemWrapper>
+            {
+                new TransmissionItemWrapper(new TorrentInfo { HashString = "hash1", DownloadDir = "/downloads/movies", Labels = ["UNLINKED"] }),
+                new TransmissionItemWrapper(new TorrentInfo { HashString = "hash2", DownloadDir = "/downloads/movies", Labels = [] })
+            };
+
+            // Act
+            var result = sut.FilterDownloadsToChangeCategoryAsync(downloads,
+                new UnlinkedConfig { Categories = ["movies"], TargetCategory = "unlinked", UseTag = true });
+
+            // Assert
+            result.ShouldNotBeNull();
+            result.ShouldHaveSingleItem();
+            result[0].Hash.ShouldBe("hash2");
+        }
     }
 
     public class CreateCategoryAsync_Tests : TransmissionServiceDCTests
@@ -736,6 +758,48 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
                     && s.Labels.Contains("unlinked")));
             await _fixture.ClientWrapper.DidNotReceive()
                 .TorrentSetLocationAsync(Arg.Any<long[]>(), Arg.Any<string>(), Arg.Any<bool>());
+        }
+
+        [Fact]
+        public async Task UseTag_DoesNotDuplicateLabel_WhenAlreadyPresentWithDifferentCase()
+        {
+            // Arrange
+            var sut = _fixture.CreateSut();
+
+            var unlinkedConfig = new UnlinkedConfig
+            {
+                Id = Guid.NewGuid(),
+                TargetCategory = "unlinked",
+                UseTag = true
+            };
+
+            var downloads = new List<Domain.Entities.ITorrentItemWrapper>
+            {
+                new TransmissionItemWrapper(new TorrentInfo
+                {
+                    Id = 123,
+                    HashString = "hash1",
+                    Name = "Test",
+                    DownloadDir = Path.Combine("downloads", "movies"),
+                    Labels = ["UNLINKED"],
+                    Files = new[] { new TransmissionTorrentFiles { Name = "file1.mkv" } },
+                    FileStats = new[] { new TransmissionTorrentFileStats { Wanted = true } }
+                })
+            };
+
+            _fixture.HardLinkFileService
+                .GetHardLinkCount(Arg.Any<string>(), Arg.Any<bool>())
+                .Returns(0);
+
+            // Act
+            await sut.ChangeCategoryForNoHardLinksAsync(downloads, unlinkedConfig);
+
+            // Assert
+            await _fixture.ClientWrapper.Received(1)
+                .TorrentSetAsync(Arg.Is<TorrentSettings>(s =>
+                    s.Ids.Contains(123L)
+                    && s.Labels.Length == 1
+                    && s.Labels.Contains("UNLINKED")));
         }
 
         [Fact]
