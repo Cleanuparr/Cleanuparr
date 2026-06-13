@@ -1,3 +1,4 @@
+using Cleanuparr.Domain.Entities;
 using Cleanuparr.Domain.Entities.Arr;
 using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Enums;
@@ -6,6 +7,7 @@ using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 using Cleanuparr.Infrastructure.Features.Context;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
 using Cleanuparr.Infrastructure.Features.DownloadRemover.Models;
+using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
@@ -29,6 +31,7 @@ public abstract class GenericHandler : IHandler
     protected readonly IArrClientFactory _arrClientFactory;
     protected readonly IArrQueueIterator _arrArrQueueIterator;
     protected readonly IDownloadServiceFactory _downloadServiceFactory;
+    protected readonly IDryRunInterceptor _dryRunInterceptor;
     private readonly IEventPublisher _eventPublisher;
 
     protected GenericHandler(
@@ -39,7 +42,8 @@ public abstract class GenericHandler : IHandler
         IArrClientFactory arrClientFactory,
         IArrQueueIterator arrArrQueueIterator,
         IDownloadServiceFactory downloadServiceFactory,
-        IEventPublisher eventPublisher
+        IEventPublisher eventPublisher,
+        IDryRunInterceptor dryRunInterceptor
     )
     {
         _logger = logger;
@@ -50,6 +54,7 @@ public abstract class GenericHandler : IHandler
         _downloadServiceFactory = downloadServiceFactory;
         _eventPublisher = eventPublisher;
         _dataContext = dataContext;
+        _dryRunInterceptor = dryRunInterceptor;
     }
 
     public async Task ExecuteAsync(CancellationToken cancellationToken = default)
@@ -74,6 +79,9 @@ public abstract class GenericHandler : IHandler
             ContextProvider.Set(nameof(InstanceType.Whisparr), await _dataContext.ArrConfigs.AsNoTracking()
                 .Include(x => x.Instances)
                 .FirstAsync(x => x.Type == InstanceType.Whisparr));
+            ContextProvider.Set(nameof(InstanceType.LazyLibrarian), await _dataContext.ArrConfigs.AsNoTracking()
+                .Include(x => x.Instances)
+                .FirstAsync(x => x.Type == InstanceType.LazyLibrarian));
             ContextProvider.Set(nameof(QueueCleanerConfig), await _dataContext.QueueCleanerConfigs.AsNoTracking().FirstAsync());
             ContextProvider.Set(nameof(ContentBlockerConfig), await _dataContext.ContentBlockerConfigs.AsNoTracking().FirstAsync());
             ContextProvider.Set(nameof(DownloadCleanerConfig), await _dataContext.DownloadCleanerConfigs.AsNoTracking().FirstAsync());
@@ -233,8 +241,69 @@ public abstract class GenericHandler : IHandler
             {
                 Id = record.MovieId
             },
+            InstanceType.LazyLibrarian => new SearchItem
+            {
+                Id = record.BookId
+            },
             _ => throw new NotImplementedException($"instance type {type} is not yet supported")
         };
+    }
+
+    /// <summary>
+    /// LazyLibrarian has no arr-driven <c>removeFromClient</c> equivalent. When we're about
+    /// to publish a removal request for a LazyLibrarian item that should also be deleted
+    /// from the download client, do that deletion inline using the already-authenticated
+    /// download service and the torrent reference we just collected during rule evaluation.
+    /// </summary>
+    /// <returns>
+    /// True if the removal request should proceed; false if the inline deletion failed and
+    /// the caller must skip publishing.
+    /// </returns>
+    protected async Task<bool> TryDeleteForLazyLibrarianAsync(
+        InstanceType instanceType,
+        bool removeFromClient,
+        IDownloadService? downloadService,
+        ITorrentItemWrapper? torrent,
+        QueueRecord record
+    )
+    {
+        if (instanceType is not InstanceType.LazyLibrarian)
+        {
+            return true;
+        }
+
+        if (!removeFromClient)
+        {
+            return true;
+        }
+
+        if (downloadService is null || torrent is null)
+        {
+            _logger.LogWarning(
+                "skip lazylibrarian delete | torrent reference unavailable | {title} | {hash}",
+                record.Title, record.DownloadId
+            );
+            return false;
+        }
+
+        try
+        {
+            await _dryRunInterceptor.InterceptAsync(() => downloadService.DeleteDownload(torrent, true));
+            _logger.LogInformation(
+                "torrent removed from download client {client} | {title}",
+                downloadService.ClientConfig.Name, record.Title
+            );
+            return true;
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(
+                exception,
+                "failed to remove torrent from download client {client} | {hash} | {title}",
+                downloadService.ClientConfig.Name, record.DownloadId, record.Title
+            );
+            return false;
+        }
     }
 
     protected async Task<IReadOnlyList<IDownloadService>> GetInitializedDownloadServicesAsync()

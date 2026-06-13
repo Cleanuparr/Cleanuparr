@@ -43,11 +43,6 @@ public class QueueRulesController : ControllerBase
 
             return Ok(rules);
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to retrieve stall rules");
-            return StatusCode(500, new { Message = "Failed to retrieve stall rules", Error = ex.Message });
-        }
         finally
         {
             DataContext.Lock.Release();
@@ -113,11 +108,6 @@ public class QueueRulesController : ControllerBase
         {
             _logger.LogWarning("Validation failed for stall rule creation: {Message}", ex.Message);
             return BadRequest(new { Message = ex.Message });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to create stall rule: {RuleName}", ruleDto.Name);
-            return StatusCode(500, new { Message = "Failed to create stall rule", Error = ex.Message });
         }
         finally
         {
@@ -190,11 +180,6 @@ public class QueueRulesController : ControllerBase
             _logger.LogWarning("Validation failed for stall rule update: {Message}", ex.Message);
             return BadRequest(new { Message = ex.Message });
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to update stall rule with ID: {RuleId}", id);
-            return StatusCode(500, new { Message = "Failed to update stall rule", Error = ex.Message });
-        }
         finally
         {
             DataContext.Lock.Release();
@@ -222,11 +207,6 @@ public class QueueRulesController : ControllerBase
 
             return NoContent();
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to delete stall rule with ID: {RuleId}", id);
-            return StatusCode(500, new { Message = "Failed to delete stall rule", Error = ex.Message });
-        }
         finally
         {
             DataContext.Lock.Release();
@@ -246,11 +226,6 @@ public class QueueRulesController : ControllerBase
                 .ToListAsync();
 
             return Ok(rules);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to retrieve slow rules");
-            return StatusCode(500, new { Message = "Failed to retrieve slow rules", Error = ex.Message });
         }
         finally
         {
@@ -319,11 +294,6 @@ public class QueueRulesController : ControllerBase
         {
             _logger.LogWarning("Validation failed for slow rule creation: {Message}", ex.Message);
             return BadRequest(new { Message = ex.Message });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to create slow rule: {RuleName}", ruleDto.Name);
-            return StatusCode(500, new { Message = "Failed to create slow rule", Error = ex.Message });
         }
         finally
         {
@@ -398,11 +368,6 @@ public class QueueRulesController : ControllerBase
             _logger.LogWarning("Validation failed for slow rule update: {Message}", ex.Message);
             return BadRequest(new { Message = ex.Message });
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to update slow rule with ID: {RuleId}", id);
-            return StatusCode(500, new { Message = "Failed to update slow rule", Error = ex.Message });
-        }
         finally
         {
             DataContext.Lock.Release();
@@ -429,11 +394,6 @@ public class QueueRulesController : ControllerBase
             _logger.LogInformation("Deleted slow rule: {RuleName} with ID: {RuleId}", existingRule.Name, id);
 
             return NoContent();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to delete slow rule with ID: {RuleId}", id);
-            return StatusCode(500, new { Message = "Failed to delete slow rule", Error = ex.Message });
         }
         finally
         {

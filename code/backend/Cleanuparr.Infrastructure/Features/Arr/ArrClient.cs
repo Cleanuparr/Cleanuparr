@@ -235,7 +235,7 @@ public abstract class ArrClient : IArrClient
     public abstract bool HasContentId(QueueRecord record);
 
     /// <inheritdoc/>
-    public async Task HealthCheckAsync(ArrInstance arrInstance)
+    public virtual async Task HealthCheckAsync(ArrInstance arrInstance)
     {
         UriBuilder uriBuilder = new(arrInstance.Url);
         uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}{GetSystemStatusUrlPath()}";
@@ -251,7 +251,7 @@ public abstract class ArrClient : IArrClient
     }
 
     /// <inheritdoc/>
-    public async Task<ArrCommandStatus> GetCommandStatusAsync(ArrInstance arrInstance, long commandId)
+    public virtual async Task<ArrCommandStatus> GetCommandStatusAsync(ArrInstance arrInstance, long commandId)
     {
         UriBuilder uriBuilder = new(arrInstance.Url);
         uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/v3/command/{commandId}";

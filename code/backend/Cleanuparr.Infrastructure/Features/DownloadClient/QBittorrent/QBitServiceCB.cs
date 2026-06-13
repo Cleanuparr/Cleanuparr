@@ -47,6 +47,7 @@ public partial class QBitService
 
         result.IsPrivate = isPrivate;
         result.Found = true;
+        result.Torrent = new QBitItemWrapper(download, trackers, isPrivate);
         SetDownloadClientContext();
 
         var malwareBlockerConfig = ContextProvider.Get<ContentBlockerConfig>();

@@ -41,7 +41,8 @@ public class QueueCleanerIntegrationTests : IDisposable
             _fixture.ArrClientFactory,
             _fixture.ArrQueueIterator,
             _fixture.DownloadServiceFactory,
-            _fixture.EventPublisher);
+            _fixture.EventPublisher,
+            _fixture.DryRunInterceptor);
     }
 
     [Fact]

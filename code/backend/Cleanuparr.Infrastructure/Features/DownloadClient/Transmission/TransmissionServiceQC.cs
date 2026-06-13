@@ -31,6 +31,7 @@ public partial class TransmissionService
 
         // Create ITorrentItem wrapper for consistent interface usage
         TransmissionItemWrapper torrent = new(download);
+        result.Torrent = torrent;
 
         if (torrent.IsIgnored(ignoredDownloads))
         {

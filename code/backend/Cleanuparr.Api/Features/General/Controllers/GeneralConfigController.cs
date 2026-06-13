@@ -99,11 +99,6 @@ public sealed class GeneralConfigController : ControllerBase
 
             return Ok(new { Message = "General configuration updated successfully" });
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to save General configuration");
-            throw;
-        }
         finally
         {
             DataContext.Lock.Release();

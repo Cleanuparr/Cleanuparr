@@ -134,11 +134,6 @@ public sealed class DownloadCleanerConfigController : ControllerBase
         {
             return BadRequest(ex.Message);
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to save DownloadCleaner configuration");
-            throw;
-        }
         finally
         {
             DataContext.Lock.Release();

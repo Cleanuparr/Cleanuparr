@@ -45,6 +45,9 @@ public sealed class ArrConfigController : ControllerBase
     [HttpGet("whisparr")]
     public Task<IActionResult> GetWhisparrConfig() => GetArrConfig(InstanceType.Whisparr);
 
+    [HttpGet("lazylibrarian")]
+    public Task<IActionResult> GetLazyLibrarianConfig() => GetArrConfig(InstanceType.LazyLibrarian);
+
     [HttpPut("sonarr")]
     public Task<IActionResult> UpdateSonarrConfig([FromBody] UpdateArrConfigRequest request)
         => UpdateArrConfig(InstanceType.Sonarr, request);
@@ -64,6 +67,10 @@ public sealed class ArrConfigController : ControllerBase
     [HttpPut("whisparr")]
     public Task<IActionResult> UpdateWhisparrConfig([FromBody] UpdateArrConfigRequest request)
         => UpdateArrConfig(InstanceType.Whisparr, request);
+
+    [HttpPut("lazylibrarian")]
+    public Task<IActionResult> UpdateLazyLibrarianConfig([FromBody] UpdateArrConfigRequest request)
+        => UpdateArrConfig(InstanceType.LazyLibrarian, request);
 
     [HttpPost("sonarr/instances")]
     public Task<IActionResult> CreateSonarrInstance([FromBody] ArrInstanceRequest request)
@@ -125,6 +132,18 @@ public sealed class ArrConfigController : ControllerBase
     public Task<IActionResult> DeleteWhisparrInstance(Guid id)
         => DeleteArrInstance(InstanceType.Whisparr, id);
 
+    [HttpPost("lazylibrarian/instances")]
+    public Task<IActionResult> CreateLazyLibrarianInstance([FromBody] ArrInstanceRequest request)
+        => CreateArrInstance(InstanceType.LazyLibrarian, request);
+
+    [HttpPut("lazylibrarian/instances/{id}")]
+    public Task<IActionResult> UpdateLazyLibrarianInstance(Guid id, [FromBody] ArrInstanceRequest request)
+        => UpdateArrInstance(InstanceType.LazyLibrarian, id, request);
+
+    [HttpDelete("lazylibrarian/instances/{id}")]
+    public Task<IActionResult> DeleteLazyLibrarianInstance(Guid id)
+        => DeleteArrInstance(InstanceType.LazyLibrarian, id);
+
     [HttpPost("sonarr/instances/test")]
     public Task<IActionResult> TestSonarrInstance([FromBody] TestArrInstanceRequest request)
         => TestArrInstance(InstanceType.Sonarr, request);
@@ -144,6 +163,10 @@ public sealed class ArrConfigController : ControllerBase
     [HttpPost("whisparr/instances/test")]
     public Task<IActionResult> TestWhisparrInstance([FromBody] TestArrInstanceRequest request)
         => TestArrInstance(InstanceType.Whisparr, request);
+
+    [HttpPost("lazylibrarian/instances/test")]
+    public Task<IActionResult> TestLazyLibrarianInstance([FromBody] TestArrInstanceRequest request)
+        => TestArrInstance(InstanceType.LazyLibrarian, request);
 
     private async Task<IActionResult> GetArrConfig(InstanceType type)
     {
@@ -182,11 +205,6 @@ public sealed class ArrConfigController : ControllerBase
 
             return Ok(new { Message = $"{type} configuration updated successfully" });
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to save {Type} configuration", type);
-            throw;
-        }
         finally
         {
             DataContext.Lock.Release();
@@ -206,11 +224,6 @@ public sealed class ArrConfigController : ControllerBase
             await _dataContext.SaveChangesAsync();
 
             return CreatedAtAction(GetConfigActionName(type), new { id = instance.Id }, instance.Adapt<ArrInstanceDto>());
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to create {Type} instance", type);
-            throw;
         }
         finally
         {
@@ -239,11 +252,6 @@ public sealed class ArrConfigController : ControllerBase
 
             return Ok(instance.Adapt<ArrInstanceDto>());
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to update {Type} instance with ID {Id}", type, id);
-            throw;
-        }
         finally
         {
             DataContext.Lock.Release();
@@ -269,11 +277,6 @@ public sealed class ArrConfigController : ControllerBase
             await _dataContext.SaveChangesAsync();
 
             return NoContent();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to delete {Type} instance with ID {Id}", type, id);
-            throw;
         }
         finally
         {
@@ -321,6 +324,7 @@ public sealed class ArrConfigController : ControllerBase
         InstanceType.Lidarr => nameof(GetLidarrConfig),
         InstanceType.Readarr => nameof(GetReadarrConfig),
         InstanceType.Whisparr => nameof(GetWhisparrConfig),
+        InstanceType.LazyLibrarian => nameof(GetLazyLibrarianConfig),
         _ => nameof(GetSonarrConfig),
     };
 }

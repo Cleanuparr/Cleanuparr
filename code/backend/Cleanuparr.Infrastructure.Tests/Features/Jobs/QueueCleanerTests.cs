@@ -48,7 +48,8 @@ public class QueueCleanerTests : IDisposable
             _fixture.ArrClientFactory,
             _fixture.ArrQueueIterator,
             _fixture.DownloadServiceFactory,
-            _fixture.EventPublisher
+            _fixture.EventPublisher,
+            _fixture.DryRunInterceptor
         );
     }
 
@@ -1488,6 +1489,154 @@ public class QueueCleanerTests : IDisposable
                 r.ChangeCategory == true &&
                 r.RemoveFromClient == false
             ),
+            Arg.Any<CancellationToken>()
+        );
+    }
+
+    #endregion
+
+    #region LazyLibrarian
+
+    [Fact]
+    public async Task ProcessInstanceAsync_LazyLibrarian_DeletesTorrentInlineThroughDryRunInterceptor()
+    {
+        // Arrange
+        TestDataContextFactory.AddLazyLibrarianInstance(_fixture.DataContext);
+        TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
+
+        var mockArrClient = Substitute.For<IArrClient>();
+        mockArrClient.IsRecordValid(Arg.Any<QueueRecord>()).Returns(true);
+        mockArrClient.HasContentId(Arg.Any<QueueRecord>()).Returns(true);
+
+        _fixture.ArrClientFactory
+            .GetClient(InstanceType.LazyLibrarian, Arg.Any<float>())
+            .Returns(mockArrClient);
+
+        var queueRecord = new QueueRecord
+        {
+            Id = 1,
+            DownloadId = "torrent-hash",
+            Title = "Book",
+            Protocol = "torrent",
+            BookId = 1,
+        };
+
+        _fixture.ArrQueueIterator
+            .Iterate(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>(), Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>())
+            .Returns(async ci =>
+            {
+                var callback = ci.ArgAt<Func<IReadOnlyList<QueueRecord>, Task>>(2);
+                await callback([queueRecord]);
+            });
+
+        var torrent = Substitute.For<Cleanuparr.Domain.Entities.ITorrentItemWrapper>();
+        torrent.Hash.Returns("torrent-hash");
+
+        var mockDownloadService = _fixture.CreateMockDownloadService();
+        mockDownloadService
+            .ShouldRemoveFromArrQueueAsync(Arg.Any<string>(), Arg.Any<List<string>>())
+            .Returns(new DownloadCheckResult
+            {
+                Found = true,
+                ShouldRemove = true,
+                IsPrivate = false,
+                DeleteFromClient = true,
+                DeleteReason = DeleteReason.Stalled,
+                Torrent = torrent,
+            });
+
+        _fixture.DownloadServiceFactory
+            .GetDownloadService(Arg.Any<DownloadClientConfig>())
+            .Returns(mockDownloadService);
+
+        // Have the dry-run interceptor actually invoke the captured delegate so the
+        // underlying DeleteDownload runs (matching real "not dry run" behavior).
+        _fixture.DryRunInterceptor
+            .InterceptAsync(Arg.Any<Func<Task>>(), Arg.Any<string?>())
+            .Returns(ci => ((Func<Task>)ci[0])());
+
+        var sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert: the inline DeleteDownload actually ran and the removal request is published.
+        await mockDownloadService.Received(1).DeleteDownload(torrent, true);
+        await _fixture.MessageBus.Received(1).Publish(
+            Arg.Is<QueueItemRemoveRequest<SearchItem>>(r => r.RemoveFromClient && r.DeleteReason == DeleteReason.Stalled),
+            Arg.Any<CancellationToken>()
+        );
+    }
+
+    [Fact]
+    public async Task ProcessInstanceAsync_LazyLibrarian_WhenInlineDeleteThrows_DoesNotPublishRemovalRequest()
+    {
+        // Arrange
+        TestDataContextFactory.AddLazyLibrarianInstance(_fixture.DataContext);
+        TestDataContextFactory.AddDownloadClient(_fixture.DataContext);
+
+        var mockArrClient = Substitute.For<IArrClient>();
+        mockArrClient.IsRecordValid(Arg.Any<QueueRecord>()).Returns(true);
+        mockArrClient.HasContentId(Arg.Any<QueueRecord>()).Returns(true);
+
+        _fixture.ArrClientFactory
+            .GetClient(InstanceType.LazyLibrarian, Arg.Any<float>())
+            .Returns(mockArrClient);
+
+        var queueRecord = new QueueRecord
+        {
+            Id = 1,
+            DownloadId = "torrent-hash",
+            Title = "Book",
+            Protocol = "torrent",
+            BookId = 1,
+        };
+
+        _fixture.ArrQueueIterator
+            .Iterate(Arg.Any<IArrClient>(), Arg.Any<ArrInstance>(), Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>())
+            .Returns(async ci =>
+            {
+                var callback = ci.ArgAt<Func<IReadOnlyList<QueueRecord>, Task>>(2);
+                await callback([queueRecord]);
+            });
+
+        var torrent = Substitute.For<Cleanuparr.Domain.Entities.ITorrentItemWrapper>();
+        torrent.Hash.Returns("torrent-hash");
+
+        var mockDownloadService = _fixture.CreateMockDownloadService();
+        mockDownloadService
+            .ShouldRemoveFromArrQueueAsync(Arg.Any<string>(), Arg.Any<List<string>>())
+            .Returns(new DownloadCheckResult
+            {
+                Found = true,
+                ShouldRemove = true,
+                IsPrivate = false,
+                DeleteFromClient = true,
+                DeleteReason = DeleteReason.Stalled,
+                Torrent = torrent,
+            });
+
+        _fixture.DownloadServiceFactory
+            .GetDownloadService(Arg.Any<DownloadClientConfig>())
+            .Returns(mockDownloadService);
+
+        // Have DeleteDownload throw, with the interceptor passing the failure through.
+        mockDownloadService
+            .DeleteDownload(Arg.Any<Cleanuparr.Domain.Entities.ITorrentItemWrapper>(), Arg.Any<bool>())
+            .Returns(_ => Task.FromException(new InvalidOperationException("delete failed")));
+        _fixture.DryRunInterceptor
+            .InterceptAsync(Arg.Any<Func<Task>>(), Arg.Any<string?>())
+            .Returns(ci => ((Func<Task>)ci[0])());
+
+        var sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert: when the underlying DeleteDownload throws, no removal request is published.
+        await mockDownloadService.Received(1).DeleteDownload(torrent, true);
+        await _fixture.MessageBus.DidNotReceive().Publish(
+            Arg.Any<QueueItemRemoveRequest<SearchItem>>(),
             Arg.Any<CancellationToken>()
         );
     }

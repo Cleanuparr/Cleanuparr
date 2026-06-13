@@ -53,7 +53,8 @@ public class DownloadCleanerTests : IDisposable
             _fixture.TimeProvider,
             _fixture.SeedingRulesService,
             _fixture.UnlinkedService,
-            _fixture.OrphanedFilesService
+            _fixture.OrphanedFilesService,
+            _fixture.DryRunInterceptor
         );
     }
 

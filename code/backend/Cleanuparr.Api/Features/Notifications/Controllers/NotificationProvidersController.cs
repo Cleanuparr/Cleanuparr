@@ -168,11 +168,6 @@ public sealed class NotificationProvidersController : ControllerBase
             var providerDto = MapProvider(provider);
             return CreatedAtAction(nameof(GetNotificationProviders), new { id = provider.Id }, providerDto);
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to create Notifiarr provider");
-            throw;
-        }
         finally
         {
             DataContext.Lock.Release();
@@ -243,11 +238,6 @@ public sealed class NotificationProvidersController : ControllerBase
         catch (ValidationException ex)
         {
             return BadRequest(ex.Message);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to create Apprise provider");
-            throw;
         }
         finally
         {
@@ -323,11 +313,6 @@ public sealed class NotificationProvidersController : ControllerBase
         {
             return BadRequest(ex.Message);
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to create Ntfy provider");
-            throw;
-        }
         finally
         {
             DataContext.Lock.Release();
@@ -392,11 +377,6 @@ public sealed class NotificationProvidersController : ControllerBase
         catch (ValidationException ex)
         {
             return BadRequest(ex.Message);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to create Telegram provider");
-            throw;
         }
         finally
         {
@@ -475,11 +455,6 @@ public sealed class NotificationProvidersController : ControllerBase
         catch (ValidationException ex)
         {
             return BadRequest(ex.Message);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to update Notifiarr provider with ID {Id}", id);
-            throw;
         }
         finally
         {
@@ -563,11 +538,6 @@ public sealed class NotificationProvidersController : ControllerBase
         catch (ValidationException ex)
         {
             return BadRequest(ex.Message);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to update Apprise provider with ID {Id}", id);
-            throw;
         }
         finally
         {
@@ -655,11 +625,6 @@ public sealed class NotificationProvidersController : ControllerBase
         {
             return BadRequest(ex.Message);
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to update Ntfy provider with ID {Id}", id);
-            throw;
-        }
         finally
         {
             DataContext.Lock.Release();
@@ -740,11 +705,6 @@ public sealed class NotificationProvidersController : ControllerBase
         {
             return BadRequest(ex.Message);
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to update Telegram provider with ID {Id}", id);
-            throw;
-        }
         finally
         {
             DataContext.Lock.Release();
@@ -781,11 +741,6 @@ public sealed class NotificationProvidersController : ControllerBase
                 existingProvider.Name, existingProvider.Id);
 
             return NoContent();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to delete notification provider with ID {Id}", id);
-            throw;
         }
         finally
         {
@@ -1150,11 +1105,6 @@ public sealed class NotificationProvidersController : ControllerBase
         {
             return BadRequest(ex.Message);
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to create Discord provider");
-            throw;
-        }
         finally
         {
             DataContext.Lock.Release();
@@ -1233,11 +1183,6 @@ public sealed class NotificationProvidersController : ControllerBase
         catch (ValidationException ex)
         {
             return BadRequest(ex.Message);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to update Discord provider with ID {Id}", id);
-            throw;
         }
         finally
         {
@@ -1376,11 +1321,6 @@ public sealed class NotificationProvidersController : ControllerBase
         {
             return BadRequest(ex.Message);
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to create Pushover provider");
-            throw;
-        }
         finally
         {
             DataContext.Lock.Release();
@@ -1466,11 +1406,6 @@ public sealed class NotificationProvidersController : ControllerBase
         catch (ValidationException ex)
         {
             return BadRequest(ex.Message);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to update Pushover provider with ID {Id}", id);
-            throw;
         }
         finally
         {
@@ -1608,11 +1543,6 @@ public sealed class NotificationProvidersController : ControllerBase
         {
             return BadRequest(ex.Message);
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to create Gotify provider");
-            throw;
-        }
         finally
         {
             DataContext.Lock.Release();
@@ -1691,11 +1621,6 @@ public sealed class NotificationProvidersController : ControllerBase
         catch (ValidationException ex)
         {
             return BadRequest(ex.Message);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to update Gotify provider with ID {Id}", id);
-            throw;
         }
         finally
         {

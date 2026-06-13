@@ -27,6 +27,7 @@ public partial class DelugeService
         
         result.IsPrivate = download.Private;
         result.Found = true;
+        result.Torrent = new DelugeItemWrapper(download);
         SetDownloadClientContext();
 
         if (ignoredDownloads.Count > 0 && download.ShouldIgnore(ignoredDownloads))

@@ -60,7 +60,8 @@ public static class TestDataContextFactory
             new ArrConfig { Id = Guid.NewGuid(), Type = InstanceType.Radarr, Instances = [], FailedImportMaxStrikes = 3 },
             new ArrConfig { Id = Guid.NewGuid(), Type = InstanceType.Lidarr, Instances = [], FailedImportMaxStrikes = 3 },
             new ArrConfig { Id = Guid.NewGuid(), Type = InstanceType.Readarr, Instances = [], FailedImportMaxStrikes = 3 },
-            new ArrConfig { Id = Guid.NewGuid(), Type = InstanceType.Whisparr, Instances = [], FailedImportMaxStrikes = 3 }
+            new ArrConfig { Id = Guid.NewGuid(), Type = InstanceType.Whisparr, Instances = [], FailedImportMaxStrikes = 3 },
+            new ArrConfig { Id = Guid.NewGuid(), Type = InstanceType.LazyLibrarian, Instances = [], FailedImportMaxStrikes = 3 }
         );
 
         // Queue cleaner config
@@ -81,7 +82,8 @@ public static class TestDataContextFactory
             Radarr = new BlocklistSettings { Enabled = false },
             Lidarr = new BlocklistSettings { Enabled = false },
             Readarr = new BlocklistSettings { Enabled = false },
-            Whisparr = new BlocklistSettings { Enabled = false }
+            Whisparr = new BlocklistSettings { Enabled = false },
+            LazyLibrarian = new BlocklistSettings { Enabled = false }
         });
 
         // Download cleaner config
@@ -212,6 +214,30 @@ public static class TestDataContextFactory
             ApiKey = "test-api-key",
             Enabled = enabled,
             Version = version,
+            ArrConfigId = arrConfig.Id,
+            ArrConfig = arrConfig
+        };
+
+        arrConfig.Instances.Add(instance);
+        context.ArrInstances.Add(instance);
+        context.SaveChanges();
+
+        return instance;
+    }
+
+    /// <summary>
+    /// Adds an enabled LazyLibrarian instance to the context
+    /// </summary>
+    public static ArrInstance AddLazyLibrarianInstance(DataContext context, string url = "http://lazylibrarian:5299", bool enabled = true)
+    {
+        var arrConfig = context.ArrConfigs.First(x => x.Type == InstanceType.LazyLibrarian);
+        var instance = new ArrInstance
+        {
+            Id = Guid.NewGuid(),
+            Name = "Test LazyLibrarian",
+            Url = new Uri(url),
+            ApiKey = "test-api-key",
+            Enabled = enabled,
             ArrConfigId = arrConfig.Id,
             ArrConfig = arrConfig
         };

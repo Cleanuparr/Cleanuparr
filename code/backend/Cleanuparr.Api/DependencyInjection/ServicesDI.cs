@@ -43,6 +43,7 @@ public static class ServicesDI
             .AddScoped<IReadarrClient, ReadarrClient>()
             .AddScoped<IWhisparrV2Client, WhisparrV2Client>()
             .AddScoped<IWhisparrV3Client, WhisparrV3Client>()
+            .AddScoped<ILazyLibrarianClient, LazyLibrarianClient>()
             .AddScoped<IArrClientFactory, ArrClientFactory>()
             .AddScoped<QueueCleaner>()
             .AddScoped<BlacklistSynchronizer>()

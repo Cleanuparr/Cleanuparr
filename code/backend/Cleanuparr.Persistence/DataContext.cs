@@ -156,6 +156,10 @@ public class DataContext : DbContext
             {
                 cp.Property(s => s.BlocklistType).HasConversion<LowercaseEnumConverter<BlocklistType>>();
             });
+            entity.ComplexProperty(e => e.LazyLibrarian, cp =>
+            {
+                cp.Property(s => s.BlocklistType).HasConversion<LowercaseEnumConverter<BlocklistType>>();
+            });
         });
         
         // Configure ArrConfig -> ArrInstance relationship
