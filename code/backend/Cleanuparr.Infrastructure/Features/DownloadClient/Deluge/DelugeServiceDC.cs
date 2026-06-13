@@ -156,6 +156,7 @@ public partial class DelugeService
         }
     }
 
+    /// <inheritdoc/>
     public override async Task ChangeTorrentCategoryAsync(ITorrentItemWrapper torrent, string targetCategory, bool useTag)
     {
         ContextProvider.Set(ContextProvider.Keys.ItemName, torrent.Name);

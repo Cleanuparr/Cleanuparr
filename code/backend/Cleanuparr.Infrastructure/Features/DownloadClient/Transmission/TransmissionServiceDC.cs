@@ -168,6 +168,7 @@ public partial class TransmissionService
         }
     }
 
+    /// <inheritdoc/>
     public override async Task ChangeTorrentCategoryAsync(ITorrentItemWrapper torrent, string targetCategory, bool useTag)
     {
         var transmissionTorrent = (TransmissionItemWrapper)torrent;
