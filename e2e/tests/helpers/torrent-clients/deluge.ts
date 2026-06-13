@@ -93,6 +93,42 @@ export class DelugeDriver implements TorrentClientDriver {
     ]);
   }
 
+  /**
+   * Add a started, complete (seed_mode) torrent and assign it a label.
+   * Enables the Label plugin and creates the label if needed.
+   */
+  async addSeedingTorrent({ metainfo, savePath, category, name }: { metainfo: Buffer; savePath: string; category: string; name: string; infoHash: string }): Promise<void> {
+    await this.ensureLabel(category);
+    const hash = await this.call<string>('core.add_torrent_file', [
+      `${name}.torrent`,
+      metainfo.toString('base64'),
+      {
+        download_location: savePath,
+        add_paused: false,
+        seed_mode: true,
+      },
+    ]);
+    await this.call('label.set_torrent', [hash, category]);
+  }
+
+  private async ensureLabel(label: string): Promise<void> {
+    await this.call('core.enable_plugin', ['Label']);
+    try {
+      await this.call('label.add', [label]);
+    } catch {
+      // label already exists — ignore
+    }
+  }
+
+  /** Returns the torrent's Label-plugin label, or undefined. */
+  async getTorrentLabel(infoHash: string): Promise<string | undefined> {
+    const result = await this.call<Record<string, { label?: string }>>(
+      'core.get_torrents_status',
+      [{ id: [infoHash] }, ['label']],
+    );
+    return result?.[infoHash]?.label || undefined;
+  }
+
   async deleteTorrent(infoHash: string): Promise<void> {
     // remove_torrent signature: (torrent_id, remove_data: bool)
     await this.call('core.remove_torrent', [infoHash, false]);

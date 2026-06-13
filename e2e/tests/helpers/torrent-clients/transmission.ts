@@ -84,6 +84,26 @@ export class TransmissionDriver implements TorrentClientDriver {
     void infoHash;
   }
 
+  /**
+   * Add a started torrent whose complete data is already on disk under `savePath`.
+   * Transmission's "category" (as Cleanuparr sees it) is the last segment of the
+   * download dir, so `savePath` should end with the desired source category.
+   */
+  async addSeedingTorrent({ metainfo, savePath }: { metainfo: Buffer; savePath: string; category: string; infoHash: string }): Promise<void> {
+    await this.call('torrent-add', {
+      metainfo: metainfo.toString('base64'),
+      'download-dir': savePath,
+      paused: false,
+    });
+  }
+
+  /** Returns the torrent's labels (Transmission's tag equivalent). */
+  async getTorrentLabels(infoHash: string): Promise<string[]> {
+    const args = await this.call('torrent-get', { ids: [infoHash], fields: ['hashString', 'labels'] });
+    const t = (args.torrents ?? [])[0];
+    return (t?.labels ?? []) as string[];
+  }
+
   async deleteTorrent(infoHash: string): Promise<void> {
     await this.call('torrent-remove', {
       ids: [infoHash],

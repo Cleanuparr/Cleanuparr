@@ -83,6 +83,39 @@ export class UTorrentDriver implements TorrentClientDriver {
     }
   }
 
+  /**
+   * Add a torrent (data already present under the client's download dir, so it
+   * seeds immediately) and assign it a label.
+   */
+  async addSeedingTorrent({ metainfo, name, category, infoHash }: { metainfo: Buffer; savePath: string; category: string; name: string; infoHash: string }): Promise<void> {
+    const form = new FormData();
+    form.append('torrent_file', new Blob([new Uint8Array(metainfo)]), `${name}.torrent`);
+    const addUrl = `${this.directHost}/gui/?token=${encodeURIComponent(this.token)}&action=add-file`;
+    const res = await fetch(addUrl, { method: 'POST', headers: this.requestHeaders(), body: form });
+    if (!res.ok) {
+      throw new Error(`uTorrent add (seeding): ${res.status} ${await res.text()}`);
+    }
+    const labelUrl = `${this.directHost}/gui/?token=${encodeURIComponent(this.token)}&action=setprops&hash=${infoHash.toUpperCase()}&s=label&v=${encodeURIComponent(category)}`;
+    const labelRes = await fetch(labelUrl, { headers: this.requestHeaders() });
+    if (!labelRes.ok) {
+      throw new Error(`uTorrent setprops label: ${labelRes.status}`);
+    }
+  }
+
+  /** Returns the torrent's label (index 11 in the list row), or undefined. */
+  async getTorrentLabel(infoHash: string): Promise<string | undefined> {
+    const url = `${this.directHost}/gui/?token=${encodeURIComponent(this.token)}&list=1`;
+    const res = await fetch(url, { headers: this.requestHeaders() });
+    if (!res.ok) {
+      throw new Error(`uTorrent list: ${res.status}`);
+    }
+    const body: { torrents?: unknown[][] } = await res.json();
+    const want = infoHash.toLowerCase();
+    const row = (body.torrents ?? []).find((r) => String(r[0]).toLowerCase() === want);
+    const label = row ? String(row[11]) : '';
+    return label.length > 0 ? label : undefined;
+  }
+
   async deleteTorrent(infoHash: string): Promise<void> {
     // `remove` removes the torrent from the client without touching files;
     // `removedata` / `removedatatorrent` delete data and torrent file.
