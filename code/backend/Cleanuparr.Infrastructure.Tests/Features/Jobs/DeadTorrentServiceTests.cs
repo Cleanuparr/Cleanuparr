@@ -51,7 +51,7 @@ public sealed class DeadTorrentServiceTests : IDisposable
         GC.SuppressFinalize(this);
     }
 
-    private void AddConfig(bool enabled = true, int maxStrikes = 3, bool useTag = false, List<string>? categories = null)
+    private void AddConfig(bool enabled = true, ushort maxStrikes = 3, bool useTag = false, List<string>? categories = null)
     {
         _dataContext.DeadTorrentConfigs.Add(new DeadTorrentConfig
         {
@@ -65,14 +65,14 @@ public sealed class DeadTorrentServiceTests : IDisposable
         _dataContext.SaveChanges();
     }
 
-    private static ITorrentItemWrapper CreateTorrent(string hash, string category, int? seederCount)
+    private static ITorrentItemWrapper CreateTorrent(string hash, string category, int? seederCount, string[]? tags = null)
     {
         var torrent = Substitute.For<ITorrentItemWrapper>();
         torrent.Hash.Returns(hash);
         torrent.Name.Returns($"Test {hash}");
         torrent.Category.Returns(category);
         torrent.SeederCount.Returns(seederCount);
-        torrent.Tags.Returns(Array.Empty<string>());
+        torrent.Tags.Returns(tags ?? Array.Empty<string>());
         return torrent;
     }
 
@@ -187,5 +187,17 @@ public sealed class DeadTorrentServiceTests : IDisposable
         await _sut.ProcessAsync(_downloadService, downloads);
 
         await _striker.DidNotReceiveWithAnyArgs().StrikeAndCheckLimit(default!, default!, default, default);
+    }
+
+    [Fact]
+    public async Task SkipsTorrentsAlreadyTagged_WhenUseTag()
+    {
+        AddConfig(useTag: true);
+        var downloads = new List<ITorrentItemWrapper> { CreateTorrent("hash1", "movies", 0, tags: ["cleanuparr-dead"]) };
+
+        await _sut.ProcessAsync(_downloadService, downloads);
+
+        await _striker.DidNotReceiveWithAnyArgs().StrikeAndCheckLimit(default!, default!, default, default);
+        await _downloadService.DidNotReceiveWithAnyArgs().ChangeTorrentCategoryAsync(default!, default!, default);
     }
 }

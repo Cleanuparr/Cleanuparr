@@ -1,4 +1,5 @@
 using Cleanuparr.Api.Features.DownloadCleaner.Contracts.Requests;
+using Cleanuparr.Api.Features.DownloadCleaner.Contracts.Responses;
 using Cleanuparr.Api.Features.DownloadCleaner.Controllers;
 using Cleanuparr.Api.Tests.Features.DownloadCleaner.TestHelpers;
 using Cleanuparr.Domain.Enums;
@@ -34,7 +35,7 @@ public class DeadTorrentConfigControllerTests : IDisposable
         bool enabled = true,
         string targetCategory = "cleanuparr-dead",
         bool useTag = false,
-        int maxStrikes = 3,
+        ushort maxStrikes = 3,
         List<string>? categories = null)
         => new()
         {
@@ -55,7 +56,7 @@ public class DeadTorrentConfigControllerTests : IDisposable
         result.ShouldBeOfType<OkObjectResult>();
         var saved = await _dataContext.DeadTorrentConfigs.AsNoTracking().SingleAsync(d => d.DownloadClientConfigId == client.Id);
         saved.Enabled.ShouldBeTrue();
-        saved.MaxStrikes.ShouldBe(5);
+        saved.MaxStrikes.ShouldBe((ushort)5);
         saved.Categories.ShouldBe(new List<string> { "movies", "tv" });
     }
 
@@ -68,9 +69,9 @@ public class DeadTorrentConfigControllerTests : IDisposable
         var result = await _controller.GetDeadTorrentConfig(client.Id);
 
         var ok = result.ShouldBeOfType<OkObjectResult>();
-        var config = ok.Value.ShouldBeOfType<DeadTorrentConfig>();
+        var config = ok.Value.ShouldBeOfType<DeadTorrentConfigResponse>();
         config.UseTag.ShouldBeTrue();
-        config.MaxStrikes.ShouldBe(4);
+        config.MaxStrikes.ShouldBe((ushort)4);
     }
 
     [Fact]
