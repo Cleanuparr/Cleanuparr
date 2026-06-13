@@ -24,6 +24,14 @@ export interface UnlinkedConfigModel {
   categories: string[];
 }
 
+export interface DeadTorrentConfigModel {
+  enabled: boolean;
+  targetCategory: string;
+  useTag: boolean;
+  maxStrikes: number;
+  categories: string[];
+}
+
 export interface OrphanedFilesConfig {
   enabled: boolean;
   scanDirectories: string[];
@@ -40,6 +48,7 @@ export interface ClientCleanerConfig {
   downloadClientTypeName: string;
   seedingRules: SeedingRule[];
   unlinkedConfig: UnlinkedConfigModel | null;
+  deadTorrentConfig: DeadTorrentConfigModel | null;
   orphanedFilesConfig: OrphanedFilesConfig | null;
 }
 
@@ -74,6 +83,16 @@ export function createDefaultUnlinkedConfig(): UnlinkedConfigModel {
     targetCategory: 'cleanuparr-unlinked',
     useTag: false,
     ignoredRootDirs: [],
+    categories: [],
+  };
+}
+
+export function createDefaultDeadTorrentConfig(): DeadTorrentConfigModel {
+  return {
+    enabled: false,
+    targetCategory: 'cleanuparr-dead',
+    useTag: false,
+    maxStrikes: 0,
     categories: [],
   };
 }

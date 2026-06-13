@@ -7,4 +7,5 @@ public enum StrikeType
     FailedImport,
     SlowSpeed,
     SlowTime,
+    DeadTorrent,
 }

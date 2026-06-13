@@ -856,6 +856,51 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
         }
     }
 
+    public class ChangeTorrentCategoryAsync_Tests : QBitServiceDCTests
+    {
+        public ChangeTorrentCategoryAsync_Tests(QBitServiceFixture fixture) : base(fixture)
+        {
+        }
+
+        [Fact]
+        public async Task CategoryMode_SetsCategory_AndPublishes()
+        {
+            var sut = _fixture.CreateSut();
+            var torrent = Substitute.For<ITorrentItemWrapper>();
+            torrent.Hash.Returns("hash1");
+            torrent.Name.Returns("Test");
+            torrent.Category.Returns("movies");
+
+            await sut.ChangeTorrentCategoryAsync(torrent, "cleanuparr-dead", useTag: false);
+
+            await _fixture.ClientWrapper.Received(1)
+                .SetTorrentCategoryAsync(Arg.Is<IEnumerable<string>>(h => h.Contains("hash1")), "cleanuparr-dead");
+            await _fixture.ClientWrapper.DidNotReceive()
+                .AddTorrentTagAsync(Arg.Any<IEnumerable<string>>(), Arg.Any<string>());
+            await _fixture.EventPublisher.Received(1)
+                .PublishCategoryChanged("movies", "cleanuparr-dead", false);
+        }
+
+        [Fact]
+        public async Task TagMode_AddsTag_AndPublishes()
+        {
+            var sut = _fixture.CreateSut();
+            var torrent = Substitute.For<ITorrentItemWrapper>();
+            torrent.Hash.Returns("hash1");
+            torrent.Name.Returns("Test");
+            torrent.Category.Returns("movies");
+
+            await sut.ChangeTorrentCategoryAsync(torrent, "cleanuparr-dead", useTag: true);
+
+            await _fixture.ClientWrapper.Received(1)
+                .AddTorrentTagAsync(Arg.Is<IEnumerable<string>>(h => h.Contains("hash1")), "cleanuparr-dead");
+            await _fixture.ClientWrapper.DidNotReceive()
+                .SetTorrentCategoryAsync(Arg.Any<IEnumerable<string>>(), Arg.Any<string>());
+            await _fixture.EventPublisher.Received(1)
+                .PublishCategoryChanged("movies", "cleanuparr-dead", true);
+        }
+    }
+
     public class ChangeCategoryForNoHardLinksAsync_Tests : QBitServiceDCTests
     {
         public ChangeCategoryForNoHardLinksAsync_Tests(QBitServiceFixture fixture) : base(fixture)

@@ -30,6 +30,13 @@ public class NotificationPublisher : INotificationPublisher
 
     public virtual async Task NotifyStrike(StrikeType strikeType, int strikeCount)
     {
+        // Dead torrent strikes originate from the download cleaner, which has no Arr/queue context
+        // required to build a strike notification. Removal is announced via NotifyDownloadCleaned.
+        if (strikeType is StrikeType.DeadTorrent)
+        {
+            return;
+        }
+
         try
         {
             var eventType = MapStrikeTypeToEventType(strikeType);

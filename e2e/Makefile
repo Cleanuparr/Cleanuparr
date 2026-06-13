@@ -10,7 +10,7 @@ up-api: down setup
 	docker compose -f docker-compose.e2e.yml up -d --build --remove-orphans app keycloak nginx
 
 up-dc: down setup
-	docker compose -f docker-compose.e2e.yml up -d --build --remove-orphans app keycloak nginx qbittorrent transmission deluge utorrent rutorrent
+	docker compose -f docker-compose.e2e.yml up -d --build --remove-orphans app keycloak nginx tracker qbittorrent transmission deluge utorrent rutorrent
 
 down:
 	docker compose -f docker-compose.e2e.yml down -v

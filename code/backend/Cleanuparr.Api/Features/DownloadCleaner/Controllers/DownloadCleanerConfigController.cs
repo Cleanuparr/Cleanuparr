@@ -54,10 +54,14 @@ public sealed class DownloadCleanerConfigController : ControllerBase
             var allUTorrentRules = await _dataContext.UTorrentSeedingRules.AsNoTracking().ToListAsync();
             var allRTorrentRules = await _dataContext.RTorrentSeedingRules.AsNoTracking().ToListAsync();
             List<UnlinkedConfig> allUnlinkedConfigs = await _dataContext.UnlinkedConfigs.AsNoTracking().ToListAsync();
+            List<DeadTorrentConfig> allDeadTorrentConfigs = await _dataContext.DeadTorrentConfigs.AsNoTracking().ToListAsync();
             List<OrphanedFilesConfig> allOrphanedFilesConfigs = await _dataContext.OrphanedFilesConfigs.AsNoTracking().ToListAsync();
 
             Dictionary<Guid, UnlinkedConfig> unlinkedConfigsByClientId = allUnlinkedConfigs
                 .GroupBy(u => u.DownloadClientConfigId)
+                .ToDictionary(g => g.Key, g => g.First());
+            Dictionary<Guid, DeadTorrentConfig> deadTorrentConfigsByClientId = allDeadTorrentConfigs
+                .GroupBy(d => d.DownloadClientConfigId)
                 .ToDictionary(g => g.Key, g => g.First());
             Dictionary<Guid, OrphanedFilesConfig> orphanedFilesConfigsByClientId = allOrphanedFilesConfigs
                 .GroupBy(o => o.DownloadClientConfigId)
@@ -70,6 +74,7 @@ public sealed class DownloadCleanerConfigController : ControllerBase
                 List<ISeedingRule> seedingRules = SeedingRuleHelper
                     .FilterForClient(client, allQBitRules, allDelugeRules, allTransmissionRules, allUTorrentRules, allRTorrentRules);
                 unlinkedConfigsByClientId.TryGetValue(client.Id, out UnlinkedConfig? unlinkedConfig);
+                deadTorrentConfigsByClientId.TryGetValue(client.Id, out DeadTorrentConfig? deadTorrentConfig);
                 orphanedFilesConfigsByClientId.TryGetValue(client.Id, out OrphanedFilesConfig? orphanedFilesConfig);
 
                 clients.Add(new DownloadCleanerClientResponse
@@ -80,6 +85,7 @@ public sealed class DownloadCleanerConfigController : ControllerBase
                     DownloadClientTypeName = client.TypeName,
                     SeedingRules = seedingRules.Select(SeedingRuleResponse.From).ToList(),
                     UnlinkedConfig = unlinkedConfig is not null ? UnlinkedConfigResponse.From(unlinkedConfig) : null,
+                    DeadTorrentConfig = deadTorrentConfig is not null ? DeadTorrentConfigResponse.From(deadTorrentConfig) : null,
                     OrphanedFilesConfig = orphanedFilesConfig is not null ? OrphanedFilesConfigResponse.From(orphanedFilesConfig) : null,
                 });
             }

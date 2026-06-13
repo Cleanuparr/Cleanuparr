@@ -1,5 +1,6 @@
 using Cleanuparr.Api.Features.DownloadCleaner.Contracts.Requests;
 using Cleanuparr.Api.Features.DownloadCleaner.Contracts.Responses;
+using Cleanuparr.Domain.Enums;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
 using Microsoft.AspNetCore.Authorization;
@@ -10,15 +11,15 @@ using Microsoft.Extensions.Logging;
 namespace Cleanuparr.Api.Features.DownloadCleaner.Controllers;
 
 [ApiController]
-[Route("api/unlinked-config")]
+[Route("api/dead-torrent-config")]
 [Authorize]
-public class UnlinkedConfigController : ControllerBase
+public class DeadTorrentConfigController : ControllerBase
 {
-    private readonly ILogger<UnlinkedConfigController> _logger;
+    private readonly ILogger<DeadTorrentConfigController> _logger;
     private readonly DataContext _dataContext;
 
-    public UnlinkedConfigController(
-        ILogger<UnlinkedConfigController> logger,
+    public DeadTorrentConfigController(
+        ILogger<DeadTorrentConfigController> logger,
         DataContext dataContext)
     {
         _logger = logger;
@@ -26,7 +27,7 @@ public class UnlinkedConfigController : ControllerBase
     }
 
     [HttpGet("{downloadClientId}")]
-    public async Task<IActionResult> GetUnlinkedConfig(Guid downloadClientId)
+    public async Task<IActionResult> GetDeadTorrentConfig(Guid downloadClientId)
     {
         await DataContext.Lock.WaitAsync();
         try
@@ -40,11 +41,11 @@ public class UnlinkedConfigController : ControllerBase
                 return NotFound(new { Message = $"Download client with ID {downloadClientId} not found" });
             }
 
-            var config = await _dataContext.UnlinkedConfigs
+            var config = await _dataContext.DeadTorrentConfigs
                 .AsNoTracking()
-                .FirstOrDefaultAsync(u => u.DownloadClientConfigId == downloadClientId);
+                .FirstOrDefaultAsync(d => d.DownloadClientConfigId == downloadClientId);
 
-            return Ok(config is null ? null : UnlinkedConfigResponse.From(config));
+            return Ok(config is null ? null : DeadTorrentConfigResponse.From(config));
         }
         finally
         {
@@ -53,7 +54,7 @@ public class UnlinkedConfigController : ControllerBase
     }
 
     [HttpPut("{downloadClientId}")]
-    public async Task<IActionResult> UpdateUnlinkedConfig(Guid downloadClientId, [FromBody] UnlinkedConfigRequest dto)
+    public async Task<IActionResult> UpdateDeadTorrentConfig(Guid downloadClientId, [FromBody] DeadTorrentConfigRequest dto)
     {
         if (!ModelState.IsValid)
         {
@@ -72,31 +73,36 @@ public class UnlinkedConfigController : ControllerBase
                 return NotFound(new { Message = $"Download client with ID {downloadClientId} not found" });
             }
 
-            var existing = await _dataContext.UnlinkedConfigs
-                .FirstOrDefaultAsync(u => u.DownloadClientConfigId == downloadClientId);
+            if (dto.Enabled && client.TypeName is DownloadClientTypeName.rTorrent)
+            {
+                return BadRequest(new { Message = "Dead torrent handling is not supported for rTorrent (no seeder count available)" });
+            }
+
+            var existing = await _dataContext.DeadTorrentConfigs
+                .FirstOrDefaultAsync(d => d.DownloadClientConfigId == downloadClientId);
 
             if (existing is null)
             {
-                existing = new UnlinkedConfig
+                existing = new DeadTorrentConfig
                 {
                     DownloadClientConfigId = downloadClientId,
                 };
-                _dataContext.UnlinkedConfigs.Add(existing);
+                _dataContext.DeadTorrentConfigs.Add(existing);
             }
 
             existing.Enabled = dto.Enabled;
             existing.TargetCategory = dto.TargetCategory;
             existing.UseTag = dto.UseTag;
-            existing.IgnoredRootDirs = dto.IgnoredRootDirs;
+            existing.MaxStrikes = dto.MaxStrikes;
             existing.Categories = dto.Categories;
 
             existing.Validate();
 
             await _dataContext.SaveChangesAsync();
 
-            _logger.LogInformation("Updated unlinked config for client {ClientId}", downloadClientId);
+            _logger.LogInformation("Updated dead torrent config for client {ClientId}", downloadClientId);
 
-            return Ok(UnlinkedConfigResponse.From(existing));
+            return Ok(DeadTorrentConfigResponse.From(existing));
         }
         finally
         {

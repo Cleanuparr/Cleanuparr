@@ -16,5 +16,7 @@ public sealed record DownloadCleanerClientResponse
 
     public UnlinkedConfigResponse? UnlinkedConfig { get; init; }
 
+    public DeadTorrentConfigResponse? DeadTorrentConfig { get; init; }
+
     public OrphanedFilesConfigResponse? OrphanedFilesConfig { get; init; }
 }

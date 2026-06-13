@@ -7,6 +7,7 @@ public enum EventType
     DownloadingMetadataStrike,
     SlowSpeedStrike,
     SlowTimeStrike,
+    DeadTorrentStrike,
     QueueItemDeleted,
     DownloadCleaned,
     CategoryChanged,

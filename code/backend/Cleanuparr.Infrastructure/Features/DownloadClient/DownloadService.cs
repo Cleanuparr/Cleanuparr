@@ -139,6 +139,9 @@ public abstract class DownloadService : IDownloadService
     public abstract Task ChangeCategoryForNoHardLinksAsync(List<ITorrentItemWrapper>? downloads, UnlinkedConfig unlinkedConfig);
 
     /// <inheritdoc/>
+    public abstract Task ChangeTorrentCategoryAsync(ITorrentItemWrapper torrent, string targetCategory, bool useTag);
+
+    /// <inheritdoc/>
     public abstract Task CreateCategoryAsync(string name);
 
     /// <inheritdoc/>

@@ -53,6 +53,7 @@ public sealed class DownloadCleanerOrphanedFilesTests : IDisposable
         _fixture.TimeProvider,
         _fixture.SeedingRulesService,
         _fixture.UnlinkedService,
+        _fixture.DeadTorrentService,
         _fixture.OrphanedFilesService);
 
     private async Task ExecuteWithTimeAdvance(DownloadCleaner sut)

@@ -168,6 +168,40 @@ public partial class TransmissionService
         }
     }
 
+    /// <inheritdoc/>
+    public override async Task ChangeTorrentCategoryAsync(ITorrentItemWrapper torrent, string targetCategory, bool useTag)
+    {
+        var transmissionTorrent = (TransmissionItemWrapper)torrent;
+
+        ContextProvider.Set(ContextProvider.Keys.ItemName, torrent.Name);
+        ContextProvider.Set(ContextProvider.Keys.Hash, torrent.Hash);
+        SetDownloadClientContext();
+
+        string currentCategory = torrent.Category ?? string.Empty;
+
+        if (useTag)
+        {
+            string[] newLabels = torrent.Tags
+                .Append(targetCategory)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+
+            await _dryRunInterceptor.InterceptAsync(() => ChangeLabels(transmissionTorrent.Info.Id, newLabels));
+
+            await _eventPublisher.PublishCategoryChanged(currentCategory, targetCategory, isTag: true);
+
+            return;
+        }
+
+        string newLocation = transmissionTorrent.Info.GetNewLocationByAppend(targetCategory);
+
+        await _dryRunInterceptor.InterceptAsync(() => ChangeDownloadLocation(transmissionTorrent.Info.Id, newLocation));
+
+        await _eventPublisher.PublishCategoryChanged(currentCategory, targetCategory);
+
+        torrent.Category = targetCategory;
+    }
+
     protected virtual async Task ChangeDownloadLocation(long downloadId, string newLocation)
     {
         await _client.TorrentSetLocationAsync([downloadId], newLocation, true);

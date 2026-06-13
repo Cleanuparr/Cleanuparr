@@ -158,6 +158,15 @@ public class NotificationPublisherTests
     }
 
     [Fact]
+    public async Task NotifyStrike_WithDeadTorrent_SendsNoNotification_AndDoesNotThrow()
+    {
+        // Act & Assert
+        await _publisher.NotifyStrike(StrikeType.DeadTorrent, 3);
+
+        await _configService.DidNotReceive().GetProvidersForEventAsync(Arg.Any<NotificationEventType>());
+    }
+
+    [Fact]
     public async Task NotifyStrike_WhenNoProviders_DoesNotThrow()
     {
         // Arrange
