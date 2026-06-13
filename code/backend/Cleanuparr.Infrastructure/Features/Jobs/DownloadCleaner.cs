@@ -159,7 +159,16 @@ public sealed class DownloadCleaner : GenericHandler
                 using IDisposable _2 = LogContext.PushProperty(LogProperties.DownloadClientName, downloadService.ClientConfig.Name);
 
                 await _unlinkedService.ProcessAsync(downloadService, clientDownloads);
-                await _deadTorrentService.ProcessAsync(downloadService, clientDownloads);
+
+                try
+                {
+                    await _deadTorrentService.ProcessAsync(downloadService, clientDownloads);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to process dead torrents for download client {clientName}", downloadService.ClientConfig.Name);
+                }
+
                 await _seedingRulesService.CleanAsync(downloadService, clientDownloads);
             }
         }
