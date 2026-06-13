@@ -104,6 +104,13 @@ export class TransmissionDriver implements TorrentClientDriver {
     return (t?.labels ?? []) as string[];
   }
 
+  /** Returns the torrent's current download directory (changes when category mode relocates it). */
+  async getTorrentDownloadDir(infoHash: string): Promise<string | undefined> {
+    const args = await this.call('torrent-get', { ids: [infoHash], fields: ['hashString', 'downloadDir'] });
+    const t = (args.torrents ?? [])[0];
+    return t?.downloadDir as string | undefined;
+  }
+
   async deleteTorrent(infoHash: string): Promise<void> {
     await this.call('torrent-remove', {
       ids: [infoHash],
