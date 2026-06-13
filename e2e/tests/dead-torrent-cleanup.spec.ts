@@ -22,6 +22,11 @@ const CLIENT_DOWNLOADS = '/downloads';
 const TARGET = 'cleanuparr-dead';
 const SOURCE = 'dead-src';
 const MAX_STRIKES = 3;
+// Unreachable tracker → client reports no seeders → dead.
+const DEAD_ANNOUNCE = 'http://tracker.invalid/announce';
+// opentracker reachable from host-networked clients and (via host gateway) from bridged ones.
+const ALIVE_ANNOUNCE_HOST = 'http://127.0.0.1:6969/announce';
+const ALIVE_ANNOUNCE_BRIDGE = 'http://host.docker.internal:6969/announce';
 
 function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
@@ -38,17 +43,20 @@ interface DriverLike {
 }
 
 /**
- * Per-client scenario. The dead torrent is built with the default unreachable
- * tracker (`tracker.invalid`), so every client reports it as having no seeders
- * → dead. Each client's "category" model and move read-back differ, so each
- * scenario provides its own `addSeeding` and `isMoved`.
+ * Per-client scenario. Two torrents are added to the same source category:
+ *   - a DEAD torrent (unreachable tracker → no seeders) → must be moved/tagged
+ *   - an ALIVE torrent (announces to opentracker, seeded by the client → ≥1
+ *     seeder) → must be left untouched (and its strikes reset).
+ * Each client's "category" model and read-back differ, so each scenario
+ * provides its own `addSeeding` and `isMoved`.
  */
 interface Scenario {
   driver: DriverLike;
   slug: string;
   useTag: boolean;
-  /** Builds + adds the dead torrent in the source category; returns its infohash. */
-  addSeeding(): Promise<string>;
+  aliveAnnounce: string;
+  /** Builds + adds a seeding torrent in the source category; returns its infohash. */
+  addSeeding(name: string, announce: string): Promise<string>;
   /** True once the torrent has been moved to the target category / tagged. */
   isMoved(infoHash: string): Promise<boolean>;
 }
@@ -58,12 +66,11 @@ const transmission = new TransmissionDriver();
 const deluge = new DelugeDriver();
 const utorrent = new UTorrentDriver();
 
-function buildDead(slug: string, subdir = ''): { metainfo: Buffer; infoHash: string; name: string } {
+function buildTorrent(slug: string, name: string, announce: string, subdir = ''): { metainfo: Buffer; infoHash: string; name: string } {
   const dir = subdir ? join(HOST_DOWNLOADS, slug, subdir) : join(HOST_DOWNLOADS, slug);
-  resetDirectory(dir);
+  mkdirSync(dir, { recursive: true });
   chmodIgnoringEPERM(dir, 0o777);
-  const name = `dead-${slug}`;
-  const fx = buildFolderTorrent(dir, name);
+  const fx = buildFolderTorrent(dir, name, 32_768, announce);
   return { metainfo: fx.metainfo, infoHash: fx.infoHash, name };
 }
 
@@ -72,8 +79,9 @@ const scenarios: Scenario[] = [
     driver: qbit,
     slug: 'qbittorrent',
     useTag: false,
-    async addSeeding() {
-      const d = buildDead('qbittorrent');
+    aliveAnnounce: ALIVE_ANNOUNCE_HOST,
+    async addSeeding(name, announce) {
+      const d = buildTorrent('qbittorrent', name, announce);
       await qbit.addSeedingTorrent({ metainfo: d.metainfo, savePath: CLIENT_DOWNLOADS, category: SOURCE, infoHash: d.infoHash });
       return d.infoHash;
     },
@@ -84,10 +92,11 @@ const scenarios: Scenario[] = [
   {
     driver: transmission,
     slug: 'transmission',
-    useTag: true, // Transmission "category" is path-based; use a label instead
-    async addSeeding() {
+    useTag: true, // Transmission "category" is path-based; move via a label instead
+    aliveAnnounce: ALIVE_ANNOUNCE_HOST,
+    async addSeeding(name, announce) {
       // Source category is the last path segment, so save under /downloads/<SOURCE>.
-      const d = buildDead('transmission', SOURCE);
+      const d = buildTorrent('transmission', name, announce, SOURCE);
       await transmission.addSeedingTorrent({ metainfo: d.metainfo, savePath: `${CLIENT_DOWNLOADS}/${SOURCE}`, category: SOURCE, infoHash: d.infoHash });
       return d.infoHash;
     },
@@ -99,8 +108,9 @@ const scenarios: Scenario[] = [
     driver: deluge,
     slug: 'deluge',
     useTag: false,
-    async addSeeding() {
-      const d = buildDead('deluge');
+    aliveAnnounce: ALIVE_ANNOUNCE_HOST,
+    async addSeeding(name, announce) {
+      const d = buildTorrent('deluge', name, announce);
       await deluge.addSeedingTorrent({ metainfo: d.metainfo, savePath: CLIENT_DOWNLOADS, category: SOURCE, name: d.name, infoHash: d.infoHash });
       return d.infoHash;
     },
@@ -112,8 +122,9 @@ const scenarios: Scenario[] = [
     driver: utorrent,
     slug: 'utorrent',
     useTag: false,
-    async addSeeding() {
-      const d = buildDead('utorrent');
+    aliveAnnounce: ALIVE_ANNOUNCE_BRIDGE,
+    async addSeeding(name, announce) {
+      const d = buildTorrent('utorrent', name, announce);
       await utorrent.addSeedingTorrent({ metainfo: d.metainfo, savePath: CLIENT_DOWNLOADS, category: SOURCE, name: d.name, infoHash: d.infoHash });
       return d.infoHash;
     },
@@ -123,14 +134,25 @@ const scenarios: Scenario[] = [
   },
 ];
 
+async function waitForRegistered(driver: DriverLike, infoHash: string, timeoutMs = 20_000): Promise<void> {
+  const want = infoHash.toLowerCase();
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    if ((await driver.listTorrents()).some((t) => t.hash.toLowerCase() === want)) return;
+    await sleep(500);
+  }
+  throw new Error(`torrent ${infoHash} never registered with ${driver.typeName}`);
+}
+
 /**
- * Dead torrent cleanup e2e: a seeding torrent whose tracker is unreachable
- * (no seeders) is moved to the target category / tagged after MAX_STRIKES
- * consecutive Download Cleaner runs, across all four supported clients.
+ * Dead torrent cleanup e2e across all four supported clients: a seeding torrent
+ * whose tracker is unreachable (no seeders) is moved/tagged after MAX_STRIKES
+ * runs, while a torrent that has seeders (via opentracker) is left untouched.
  */
 test.describe.serial('Dead torrent cleanup', () => {
   let token: string;
-  const deadHashes = new Map<string, string>();
+  const dead = new Map<string, string>();
+  const alive = new Map<string, string>();
 
   test.beforeAll(async () => {
     token = await loginAndGetToken();
@@ -148,8 +170,9 @@ test.describe.serial('Dead torrent cleanup', () => {
   });
 
   for (const s of scenarios) {
-    test(`${s.driver.typeName}: set up a dead seeding torrent`, async () => {
+    test(`${s.driver.typeName}: set up dead + alive seeding torrents`, async () => {
       test.setTimeout(120_000);
+      resetDirectory(join(HOST_DOWNLOADS, s.slug));
       await s.driver.ready();
       await s.driver.clearAllTorrents();
 
@@ -175,42 +198,40 @@ test.describe.serial('Dead torrent cleanup', () => {
       });
       expect(cfg.status).toBe(200);
 
-      const hash = await s.addSeeding();
-      deadHashes.set(s.driver.typeName, hash);
+      const deadHash = await s.addSeeding(`dead-${s.slug}`, DEAD_ANNOUNCE);
+      const aliveHash = await s.addSeeding(`alive-${s.slug}`, s.aliveAnnounce);
+      dead.set(s.driver.typeName, deadHash);
+      alive.set(s.driver.typeName, aliveHash);
 
-      // Wait for the client to register the torrent.
-      const want = hash.toLowerCase();
-      const start = Date.now();
-      let seen = false;
-      while (Date.now() - start < 20_000 && !seen) {
-        seen = (await s.driver.listTorrents()).some((t) => t.hash.toLowerCase() === want);
-        if (!seen) await sleep(500);
-      }
-      expect(seen, `torrent ${hash} never registered with ${s.driver.typeName}`).toBe(true);
-      expect(await s.isMoved(hash)).toBe(false);
+      await waitForRegistered(s.driver, deadHash);
+      await waitForRegistered(s.driver, aliveHash);
+      expect(await s.isMoved(deadHash)).toBe(false);
+      expect(await s.isMoved(aliveHash)).toBe(false);
     });
   }
 
-  test('moves all dead torrents after reaching the strike limit', async () => {
+  test('moves dead torrents but leaves seeded torrents untouched', async () => {
     test.setTimeout(180_000);
 
-    const pending = () => scenarios.filter((s) => deadHashes.has(s.driver.typeName));
-    const movedState = new Map<string, boolean>();
+    const active = () => scenarios.filter((s) => dead.has(s.driver.typeName));
+    const moved = new Map<string, boolean>();
 
     for (let run = 0; run < MAX_STRIKES + 3; run++) {
-      if (pending().every((s) => movedState.get(s.driver.typeName))) break;
+      if (active().every((s) => moved.get(s.driver.typeName))) break;
       const trig = await triggerJob(token, 'DownloadCleaner');
       expect(trig.ok, `triggerJob: ${trig.status}`).toBe(true);
       await sleep(13_000); // ride out the job's ~10s Arr-sync delay + processing
-      for (const s of pending()) {
-        if (!movedState.get(s.driver.typeName)) {
-          movedState.set(s.driver.typeName, await s.isMoved(deadHashes.get(s.driver.typeName)!));
+      for (const s of active()) {
+        if (!moved.get(s.driver.typeName)) {
+          moved.set(s.driver.typeName, await s.isMoved(dead.get(s.driver.typeName)!));
         }
       }
     }
 
-    for (const s of pending()) {
-      expect(movedState.get(s.driver.typeName), `${s.driver.typeName}: dead torrent was not moved/tagged`).toBe(true);
+    for (const s of active()) {
+      expect(moved.get(s.driver.typeName), `${s.driver.typeName}: dead torrent was not moved/tagged`).toBe(true);
+      // The seeded torrent must NOT have been moved/tagged.
+      expect(await s.isMoved(alive.get(s.driver.typeName)!), `${s.driver.typeName}: seeded torrent was wrongly moved`).toBe(false);
     }
   });
 });

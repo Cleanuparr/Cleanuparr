@@ -60,7 +60,7 @@ export interface GeneratedTorrent {
  * @param name - top-level folder name (also the torrent's `info.name`)
  * @param sizeBytes - total size of the inner data file
  */
-export function buildFolderTorrent(savePath: string, name: string, sizeBytes = 32_768): GeneratedTorrent {
+export function buildFolderTorrent(savePath: string, name: string, sizeBytes = 32_768, announce = 'http://tracker.invalid/announce'): GeneratedTorrent {
   const contentPath = join(savePath, name);
   mkdirSync(contentPath, { recursive: true });
   chmodIgnoringEPERM(contentPath, 0o777);
@@ -98,7 +98,7 @@ export function buildFolderTorrent(savePath: string, name: string, sizeBytes = 3
     private: 1,
   };
   const metainfo = bencode({
-    announce: 'http://tracker.invalid/announce',
+    announce,
     'created by': 'cleanuparr-e2e',
     'creation date': 0,
     info,

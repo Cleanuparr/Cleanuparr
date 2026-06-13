@@ -48,6 +48,11 @@ services:
     depends_on:
       - app
 
+  tracker:
+    image: wiltonsr/opentracker:open
+    network_mode: host
+    restart: unless-stopped
+
   qbittorrent:
     image: lscr.io/linuxserver/qbittorrent:4.6.7
     network_mode: host
@@ -110,6 +115,8 @@ services:
     platform: linux/amd64
     ports:
       - "8083:8080"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       UID: "1000"
       GID: "1000"
