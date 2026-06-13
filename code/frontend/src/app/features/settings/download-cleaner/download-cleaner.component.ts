@@ -15,8 +15,8 @@ import { ToastService } from '@core/services/toast.service';
 import { ConfirmService } from '@core/services/confirm.service';
 import {
   DownloadCleanerConfig, SeedingRule, ClientCleanerConfig, UnlinkedConfigModel,
-  OrphanedFilesConfig,
-  createDefaultUnlinkedConfig, createDefaultOrphanedFilesConfig,
+  DeadTorrentConfigModel, OrphanedFilesConfig,
+  createDefaultUnlinkedConfig, createDefaultDeadTorrentConfig, createDefaultOrphanedFilesConfig,
 } from '@shared/models/download-cleaner-config.model';
 import { ScheduleOptions } from '@shared/models/queue-cleaner-config.model';
 import { ScheduleUnit, TorrentPrivacyType, DownloadClientTypeName } from '@shared/models/enums';
@@ -73,10 +73,13 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
   readonly saved = signal(false);
   readonly unlinkedSaving = signal(false);
   readonly unlinkedSaved = signal(false);
+  readonly deadTorrentSaving = signal(false);
+  readonly deadTorrentSaved = signal(false);
   readonly orphanedFilesSaving = signal(false);
   readonly orphanedFilesSaved = signal(false);
   readonly rulesReloading = signal(false);
   private readonly unlinkedSnapshots = signal<Record<string, string>>({});
+  private readonly deadTorrentSnapshots = signal<Record<string, string>>({});
 
   // Global settings
   readonly enabled = signal(false);
@@ -125,8 +128,18 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
       || typeName === DownloadClientTypeName.uTorrent;
   });
 
+  // Dead torrent detection needs a seeder count; rTorrent does not report one.
+  readonly isDeadTorrentCapableClient = computed(() => {
+    const typeName = this.selectedClient()?.downloadClientTypeName;
+    return typeName === DownloadClientTypeName.qBittorrent
+      || typeName === DownloadClientTypeName.Deluge
+      || typeName === DownloadClientTypeName.Transmission
+      || typeName === DownloadClientTypeName.uTorrent;
+  });
+
   readonly seedingRulesExpanded = signal(false);
   readonly unlinkedExpanded = signal(false);
+  readonly deadTorrentExpanded = signal(false);
   readonly orphanedFilesExpanded = signal(false);
 
   // Seeding rule modal
@@ -212,6 +225,28 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
     return undefined;
   });
 
+  readonly deadTorrentCategoriesError = computed(() => {
+    const client = this.selectedClient();
+    if (!client?.deadTorrentConfig?.enabled) {
+      return undefined;
+    }
+    if ((client.deadTorrentConfig.categories ?? []).length === 0) {
+      return 'At least one category is required';
+    }
+    return undefined;
+  });
+
+  readonly deadTorrentStrikesError = computed(() => {
+    const client = this.selectedClient();
+    if (!client?.deadTorrentConfig?.enabled) {
+      return undefined;
+    }
+    if ((client.deadTorrentConfig.maxStrikes ?? 0) < 3) {
+      return 'Strikes must be at least 3';
+    }
+    return undefined;
+  });
+
   readonly orphanedFilesScanDirsError = computed(() => {
     const client = this.selectedClient();
     if (!client?.orphanedFilesConfig?.enabled) {
@@ -242,6 +277,16 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
     const saved = this.unlinkedSnapshots()[client.downloadClientId]
       ?? JSON.stringify(createDefaultUnlinkedConfig());
     return saved !== JSON.stringify(client.unlinkedConfig);
+  });
+
+  readonly deadTorrentDirty = computed(() => {
+    const client = this.selectedClient();
+    if (!client) {
+      return false;
+    }
+    const saved = this.deadTorrentSnapshots()[client.downloadClientId]
+      ?? JSON.stringify(createDefaultDeadTorrentConfig());
+    return saved !== JSON.stringify(client.deadTorrentConfig);
   });
 
   readonly orphanedFilesDirty = computed(() => {
@@ -292,6 +337,7 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
           ...c,
           seedingRules: c.seedingRules ?? [],
           unlinkedConfig: c.unlinkedConfig ?? createDefaultUnlinkedConfig(),
+          deadTorrentConfig: c.deadTorrentConfig ?? createDefaultDeadTorrentConfig(),
           orphanedFilesConfig: c.orphanedFilesConfig ?? createDefaultOrphanedFilesConfig(),
         })));
 
@@ -300,12 +346,15 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
         }
 
         const unlinkedSnapshots: Record<string, string> = {};
+        const deadTorrentSnapshots: Record<string, string> = {};
         const orphanedFilesSnapshots: Record<string, string> = {};
         for (const c of dc.clients ?? []) {
           unlinkedSnapshots[c.downloadClientId] = JSON.stringify(c.unlinkedConfig ?? createDefaultUnlinkedConfig());
+          deadTorrentSnapshots[c.downloadClientId] = JSON.stringify(c.deadTorrentConfig ?? createDefaultDeadTorrentConfig());
           orphanedFilesSnapshots[c.downloadClientId] = JSON.stringify(c.orphanedFilesConfig ?? createDefaultOrphanedFilesConfig());
         }
         this.unlinkedSnapshots.set(unlinkedSnapshots);
+        this.deadTorrentSnapshots.set(deadTorrentSnapshots);
         this.orphanedFilesSnapshots.set(orphanedFilesSnapshots);
 
         this.loader.stop();
@@ -462,7 +511,7 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
   }
 
   async onClientChange(newClientId: unknown): Promise<void> {
-    if (this.unlinkedDirty() || this.orphanedFilesDirty()) {
+    if (this.unlinkedDirty() || this.deadTorrentDirty() || this.orphanedFilesDirty()) {
       const confirmed = await this.confirm.confirm({
         title: 'Unsaved Changes',
         message: 'You have unsaved changes for this client. Discard them?',
@@ -510,6 +559,44 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
       error: (err: ApiError) => {
         this.toast.error(err.statusCode === 400 ? err.message : 'Failed to save unlinked config');
         this.unlinkedSaving.set(false);
+      },
+    });
+  }
+
+  // --- Dead torrent per-client config ---
+
+  updateDeadTorrentField<K extends keyof DeadTorrentConfigModel>(field: K, value: DeadTorrentConfigModel[K]): void {
+    this.updateSelectedClient(client => ({
+      ...client,
+      deadTorrentConfig: {
+        ...(client.deadTorrentConfig ?? createDefaultDeadTorrentConfig()),
+        [field]: value,
+      },
+    }));
+  }
+
+  saveDeadTorrentConfig(): void {
+    const clientId = this.selectedClientId();
+    const client = this.selectedClient();
+    if (!clientId || !client?.deadTorrentConfig) {
+      return;
+    }
+
+    this.deadTorrentSaving.set(true);
+    this.api.updateDeadTorrentConfig(clientId, client.deadTorrentConfig).subscribe({
+      next: () => {
+        this.toast.success('Dead torrent config saved');
+        this.deadTorrentSaving.set(false);
+        this.deadTorrentSaved.set(true);
+        setTimeout(() => this.deadTorrentSaved.set(false), 1500);
+        this.deadTorrentSnapshots.update(s => ({
+          ...s,
+          [clientId]: JSON.stringify(client.deadTorrentConfig),
+        }));
+      },
+      error: (err: ApiError) => {
+        this.toast.error(err.statusCode === 400 ? err.message : 'Failed to save dead torrent config');
+        this.deadTorrentSaving.set(false);
       },
     });
   }
@@ -615,6 +702,6 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
   });
 
   hasPendingChanges(): boolean {
-    return this.dirty() || this.unlinkedDirty() || this.orphanedFilesDirty();
+    return this.dirty() || this.unlinkedDirty() || this.deadTorrentDirty() || this.orphanedFilesDirty();
   }
 }

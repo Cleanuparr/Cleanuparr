@@ -156,6 +156,21 @@ public partial class DelugeService
         }
     }
 
+    public override async Task ChangeTorrentCategoryAsync(ITorrentItemWrapper torrent, string targetCategory, bool useTag)
+    {
+        ContextProvider.Set(ContextProvider.Keys.ItemName, torrent.Name);
+        ContextProvider.Set(ContextProvider.Keys.Hash, torrent.Hash);
+        SetDownloadClientContext();
+
+        string currentCategory = torrent.Category ?? string.Empty;
+
+        await _dryRunInterceptor.InterceptAsync(() => ChangeLabel(torrent.Hash, targetCategory));
+
+        await _eventPublisher.PublishCategoryChanged(currentCategory, targetCategory);
+
+        torrent.Category = targetCategory;
+    }
+
     protected async Task CreateLabel(string name)
     {
         await _client.CreateLabel(name);

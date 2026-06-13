@@ -35,6 +35,7 @@ public class JobHandlerFixture : IDisposable
     public FakeTimeProvider TimeProvider { get; private set; }
     public ISeedingRulesCleanupService SeedingRulesService { get; private set; }
     public IUnlinkedDownloadsService UnlinkedService { get; private set; }
+    public IDeadTorrentService DeadTorrentService { get; private set; }
     public IOrphanedFilesCleanupService OrphanedFilesService { get; private set; }
     public ILogger<SeedingRulesCleanupService> SeedingRulesLogger { get; private set; }
     public ILogger<UnlinkedDownloadsService> UnlinkedLogger { get; private set; }
@@ -75,6 +76,7 @@ public class JobHandlerFixture : IDisposable
         OrphanedFilesLogger = Substitute.For<ILogger<OrphanedFilesCleanupService>>();
         SeedingRulesService = new SeedingRulesCleanupService(SeedingRulesLogger, DataContext);
         UnlinkedService = new UnlinkedDownloadsService(UnlinkedLogger, DataContext, HardLinkFileService);
+        DeadTorrentService = Substitute.For<IDeadTorrentService>();
         OrphanedFilesService = new OrphanedFilesCleanupService(
             OrphanedFilesLogger,
             DataContext,

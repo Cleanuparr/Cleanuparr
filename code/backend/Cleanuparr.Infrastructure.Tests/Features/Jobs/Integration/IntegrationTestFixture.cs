@@ -60,6 +60,7 @@ public class IntegrationTestFixture : IDisposable
     public IHubContext<AppHub> HubContext { get; private set; }
     public ISeedingRulesCleanupService SeedingRulesService { get; private set; } = null!;
     public IUnlinkedDownloadsService UnlinkedService { get; private set; } = null!;
+    public IDeadTorrentService DeadTorrentService { get; private set; } = null!;
     public IOrphanedFilesCleanupService OrphanedFilesService { get; private set; } = null!;
 
     // State
@@ -146,6 +147,10 @@ public class IntegrationTestFixture : IDisposable
             Substitute.For<ILogger<UnlinkedDownloadsService>>(),
             DataContext,
             HardLinkFileService);
+        DeadTorrentService = new DeadTorrentService(
+            Substitute.For<ILogger<DeadTorrentService>>(),
+            DataContext,
+            Striker);
         OrphanedFilesService = new OrphanedFilesCleanupService(
             Substitute.For<ILogger<OrphanedFilesCleanupService>>(),
             DataContext,

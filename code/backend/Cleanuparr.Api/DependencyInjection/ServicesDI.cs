@@ -50,6 +50,7 @@ public static class ServicesDI
             .AddScoped<DownloadCleaner>()
             .AddScoped<ISeedingRulesCleanupService, SeedingRulesCleanupService>()
             .AddScoped<IUnlinkedDownloadsService, UnlinkedDownloadsService>()
+            .AddScoped<IDeadTorrentService, DeadTorrentService>()
             .AddScoped<IOrphanedFilesCleanupService, OrphanedFilesCleanupService>()
             .AddScoped<Seeker>()
             .AddScoped<CustomFormatScoreSyncer>()

@@ -5,6 +5,7 @@ import {
   DownloadCleanerConfig,
   SeedingRule,
   UnlinkedConfigModel,
+  DeadTorrentConfigModel,
   OrphanedFilesConfig,
 } from '@shared/models/download-cleaner-config.model';
 
@@ -44,6 +45,11 @@ export class DownloadCleanerApi {
   // Unlinked config
   updateUnlinkedConfig(clientId: string, config: Partial<UnlinkedConfigModel>): Observable<void> {
     return this.http.put<void>(`/api/unlinked-config/${clientId}`, config);
+  }
+
+  // Dead torrent config
+  updateDeadTorrentConfig(clientId: string, config: Partial<DeadTorrentConfigModel>): Observable<void> {
+    return this.http.put<void>(`/api/dead-torrent-config/${clientId}`, config);
   }
 
   // Per-client orphaned files config

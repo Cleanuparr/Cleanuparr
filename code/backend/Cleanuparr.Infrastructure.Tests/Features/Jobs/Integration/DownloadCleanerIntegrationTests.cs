@@ -49,6 +49,7 @@ public class DownloadCleanerIntegrationTests : IDisposable
             _fixture.TimeProvider,
             _fixture.SeedingRulesService,
             _fixture.UnlinkedService,
+            _fixture.DeadTorrentService,
             _fixture.OrphanedFilesService);
     }
 

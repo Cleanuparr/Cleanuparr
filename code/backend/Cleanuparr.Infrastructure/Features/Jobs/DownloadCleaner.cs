@@ -24,6 +24,7 @@ public sealed class DownloadCleaner : GenericHandler
     private readonly TimeProvider _timeProvider;
     private readonly ISeedingRulesCleanupService _seedingRulesService;
     private readonly IUnlinkedDownloadsService _unlinkedService;
+    private readonly IDeadTorrentService _deadTorrentService;
     private readonly IOrphanedFilesCleanupService _orphanedFilesService;
 
     public DownloadCleaner(
@@ -38,6 +39,7 @@ public sealed class DownloadCleaner : GenericHandler
         TimeProvider timeProvider,
         ISeedingRulesCleanupService seedingRulesService,
         IUnlinkedDownloadsService unlinkedService,
+        IDeadTorrentService deadTorrentService,
         IOrphanedFilesCleanupService orphanedFilesService
     ) : base(
         logger, dataContext, cache, messageBus,
@@ -47,6 +49,7 @@ public sealed class DownloadCleaner : GenericHandler
         _timeProvider = timeProvider;
         _seedingRulesService = seedingRulesService;
         _unlinkedService = unlinkedService;
+        _deadTorrentService = deadTorrentService;
         _orphanedFilesService = orphanedFilesService;
     }
 
@@ -156,6 +159,7 @@ public sealed class DownloadCleaner : GenericHandler
                 using IDisposable _2 = LogContext.PushProperty(LogProperties.DownloadClientName, downloadService.ClientConfig.Name);
 
                 await _unlinkedService.ProcessAsync(downloadService, clientDownloads);
+                await _deadTorrentService.ProcessAsync(downloadService, clientDownloads);
                 await _seedingRulesService.CleanAsync(downloadService, clientDownloads);
             }
         }

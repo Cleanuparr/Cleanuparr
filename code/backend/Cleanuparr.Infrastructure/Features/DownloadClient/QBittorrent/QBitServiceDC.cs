@@ -185,6 +185,24 @@ public partial class QBitService
         }
     }
 
+    public override async Task ChangeTorrentCategoryAsync(ITorrentItemWrapper torrent, string targetCategory, bool useTag)
+    {
+        ContextProvider.Set(ContextProvider.Keys.ItemName, torrent.Name);
+        ContextProvider.Set(ContextProvider.Keys.Hash, torrent.Hash);
+        SetDownloadClientContext();
+
+        string currentCategory = torrent.Category ?? string.Empty;
+
+        await _dryRunInterceptor.InterceptAsync(() => ChangeCategory(torrent.Hash, targetCategory, useTag));
+
+        await _eventPublisher.PublishCategoryChanged(currentCategory, targetCategory, useTag);
+
+        if (!useTag)
+        {
+            torrent.Category = targetCategory;
+        }
+    }
+
     protected async Task CreateCategory(string name)
     {
         await _client.AddCategoryAsync(name);

@@ -51,7 +51,9 @@ public class DataContext : DbContext
     public DbSet<RTorrentSeedingRule> RTorrentSeedingRules { get; set; }
 
     public DbSet<UnlinkedConfig> UnlinkedConfigs { get; set; }
-    
+
+    public DbSet<DeadTorrentConfig> DeadTorrentConfigs { get; set; }
+
     public DbSet<ArrConfig> ArrConfigs { get; set; }
     
     public DbSet<ArrInstance> ArrInstances { get; set; }
@@ -369,6 +371,19 @@ public class DataContext : DbContext
                   .OnDelete(DeleteBehavior.Cascade);
 
             entity.HasIndex(u => u.DownloadClientConfigId).IsUnique();
+        });
+
+        // Configure per-client dead torrent config relationship
+        modelBuilder.Entity<DeadTorrentConfig>(entity =>
+        {
+            entity.HasOne(d => d.DownloadClientConfig)
+                  .WithMany()
+                  .HasForeignKey(d => d.DownloadClientConfigId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(d => d.DownloadClientConfigId).IsUnique();
+
+            entity.Property(d => d.Categories).HasConversion(jsonListConverter);
         });
 
         // Configure per-client orphaned files config relationship

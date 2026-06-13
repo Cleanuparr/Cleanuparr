@@ -201,6 +201,48 @@
               </div>
             </app-accordion>
 
+            @if (isDeadTorrentCapableClient()) {
+            <app-accordion header="Dead Torrents" subtitle="Triage torrents with no seeders" [(expanded)]="deadTorrentExpanded">
+              <div class="form-stack">
+                <app-toggle label="Enabled" [checked]="client.deadTorrentConfig?.enabled ?? false"
+                  (checkedChange)="updateDeadTorrentField('enabled', $event)"
+                  hint="When enabled, torrents with zero seeders for a number of consecutive runs are moved to a target category/tag"
+                  helpKey="download-cleaner:deadTorrentEnabled" />
+                @if (client.deadTorrentConfig?.enabled) {
+                  <app-input label="Target Category" placeholder="cleanuparr-dead" [value]="client.deadTorrentConfig?.targetCategory ?? ''"
+                    (valueChange)="updateDeadTorrentField('targetCategory', $event)"
+                    hint="Category/tag dead torrents are moved to. Create a seeding rule for this category to control what happens next."
+                    helpKey="download-cleaner:deadTorrentTargetCategory" />
+                  @if (isTagFilterableClient()) {
+                    <app-toggle [label]="isSelectedClientTransmission() ? 'Use Label Instead' : 'Use Tag Instead'" [checked]="client.deadTorrentConfig?.useTag ?? false"
+                      (checkedChange)="updateDeadTorrentField('useTag', $event)"
+                      [hint]="isSelectedClientTransmission() ? 'When enabled, adds a label instead of changing the category' : 'When enabled, uses a tag instead of category'"
+                      helpKey="download-cleaner:deadTorrentUseTag" />
+                  }
+                  <app-number-input label="Strikes" [value]="client.deadTorrentConfig?.maxStrikes ?? null" [min]="3" [step]="1"
+                    (valueChange)="updateDeadTorrentField('maxStrikes', $event ?? 0)"
+                    [error]="deadTorrentStrikesError()"
+                    hint="Number of consecutive runs with zero seeders before moving the torrent (minimum 3)"
+                    helpKey="download-cleaner:deadTorrentStrikes" />
+
+                  <div class="form-divider"></div>
+
+                  <app-chip-input label="Categories" placeholder="Add category..."
+                    [items]="client.deadTorrentConfig?.categories ?? []"
+                    (itemsChange)="updateDeadTorrentField('categories', $event)"
+                    hint="Categories to scan for dead torrents"
+                    [error]="deadTorrentCategoriesError()"
+                    helpKey="download-cleaner:deadTorrentCategories" />
+                }
+                <div class="form-actions">
+                  <app-button variant="primary" [glowing]="deadTorrentDirty()" [loading]="deadTorrentSaving()" [disabled]="deadTorrentSaving() || deadTorrentSaved() || !deadTorrentDirty() || !!deadTorrentCategoriesError() || !!deadTorrentStrikesError()" (clicked)="saveDeadTorrentConfig()">
+                    {{ deadTorrentSaved() ? 'Saved!' : 'Save' }}
+                  </app-button>
+                </div>
+              </div>
+            </app-accordion>
+            }
+
             <app-accordion header="Orphaned Files" subtitle="Move files not associated with any active torrent" [(expanded)]="orphanedFilesExpanded">
               <div class="form-stack">
                 <app-toggle

@@ -68,6 +68,14 @@ public interface IDownloadService : IDisposable
     Task ChangeCategoryForNoHardLinksAsync(List<ITorrentItemWrapper>? downloads, UnlinkedConfig unlinkedConfig);
 
     /// <summary>
+    /// Moves a single torrent to the target category, or adds it as a tag/label when <paramref name="useTag"/> is set.
+    /// </summary>
+    /// <param name="torrent">The torrent to move.</param>
+    /// <param name="targetCategory">The target category/tag.</param>
+    /// <param name="useTag">When true, add a tag/label instead of changing the category (qBittorrent and Transmission).</param>
+    Task ChangeTorrentCategoryAsync(ITorrentItemWrapper torrent, string targetCategory, bool useTag);
+
+    /// <summary>
     /// Deletes a download item.
     /// </summary>
     /// <param name="item">The torrent item.</param>

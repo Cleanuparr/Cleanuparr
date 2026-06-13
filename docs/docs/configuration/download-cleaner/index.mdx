@@ -438,4 +438,58 @@ Categories to check for unlinked downloads. Only downloads in these categories w
 
 </div>
 
+<div className={styles.section}>
+
+<SectionTitle>Dead Torrents</SectionTitle>
+
+<p className={styles.sectionDescription}>
+  A dead torrent is one whose tracker reports zero seeders for a prolonged period (often removed from the tracker), so it can never reach a ratio or seed-time threshold. Instead of deleting such torrents, this feature moves them to a target category (or adds a tag/label) so you can decide what to do next via a seeding rule for that category/tag. It runs as part of the Download Cleaner job. Configured per download client in the <strong>Dead Torrents</strong> accordion.
+</p>
+
+<Note>
+A torrent is considered dead on a run when the client reports zero seeders. It is only moved after it has been dead for the configured number of consecutive runs (the strike count); strikes reset to zero when seeders return. Supported for **qBittorrent**, **Transmission**, **Deluge**, and **µTorrent** — not **rTorrent**, which does not report a seeder count.
+</Note>
+
+<ConfigSection
+  title="Enable Dead Torrent Handling"
+>
+
+When enabled, torrents in the configured categories that report zero seeders for the configured number of consecutive runs are moved to the target category (or tagged). Create a seeding rule for that category/tag to control whether and when they are removed.
+
+</ConfigSection>
+
+<ConfigSection
+  title="Dead Torrent Target Category"
+>
+
+The category a dead torrent is moved to (or the tag/label added when **Use Tag** is enabled). Create a seeding rule for this category/tag to manage the moved torrents.
+
+</ConfigSection>
+
+<ConfigSection
+  title="Dead Torrent Use Tag"
+>
+
+When enabled, adds a tag/label instead of changing the category, preserving the original category. Supported by **qBittorrent** (tags) and **Transmission** (labels). For Transmission, changing the category (with this option off) moves the files on disk, whereas using a label does not.
+
+</ConfigSection>
+
+<ConfigSection
+  title="Dead Torrent Strikes"
+>
+
+The number of consecutive runs a torrent must report zero seeders before it is moved. Minimum is `3`. Choose this together with the Download Cleaner schedule — with an hourly schedule, `24` strikes is roughly one day of being continuously dead.
+
+</ConfigSection>
+
+<ConfigSection
+  title="Dead Torrent Categories"
+>
+
+Source categories to scan for dead torrents. Only downloads in these categories are checked. The target category must not be one of these.
+
+</ConfigSection>
+
+</div>
+
 </div>
