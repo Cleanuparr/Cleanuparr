@@ -43,17 +43,17 @@ export class DownloadCleanerApi {
   }
 
   // Unlinked config
-  updateUnlinkedConfig(clientId: string, config: Partial<UnlinkedConfigModel>): Observable<void> {
+  updateUnlinkedConfig(clientId: string, config: UnlinkedConfigModel): Observable<void> {
     return this.http.put<void>(`/api/unlinked-config/${clientId}`, config);
   }
 
   // Dead torrent config
-  updateDeadTorrentConfig(clientId: string, config: Partial<DeadTorrentConfigModel>): Observable<void> {
+  updateDeadTorrentConfig(clientId: string, config: DeadTorrentConfigModel): Observable<void> {
     return this.http.put<void>(`/api/dead-torrent-config/${clientId}`, config);
   }
 
   // Per-client orphaned files config
-  updateOrphanedFilesConfig(clientId: string, config: Partial<OrphanedFilesConfig>): Observable<OrphanedFilesConfig> {
+  updateOrphanedFilesConfig(clientId: string, config: OrphanedFilesConfig): Observable<OrphanedFilesConfig> {
     return this.http.put<OrphanedFilesConfig>(`/api/orphaned-files-config/${clientId}`, config);
   }
 }
