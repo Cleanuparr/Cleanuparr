@@ -112,7 +112,7 @@ public sealed class DeadTorrentConfigTests
     [Theory]
     [InlineData(0)]
     [InlineData(2)]
-    public void Validate_WhenEnabled_WithStrikesBelowMinimum_ThrowsValidationException(int strikes)
+    public void Validate_WhenEnabled_WithStrikesBelowMinimum_ThrowsValidationException(ushort strikes)
     {
         var config = new DeadTorrentConfig
         {

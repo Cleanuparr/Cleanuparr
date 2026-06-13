@@ -10,6 +10,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Shouldly;
+using ValidationException = Cleanuparr.Domain.Exceptions.ValidationException;
 
 namespace Cleanuparr.Api.Tests.Features.DownloadCleaner;
 
@@ -75,13 +76,11 @@ public class DeadTorrentConfigControllerTests : IDisposable
     }
 
     [Fact]
-    public async Task Update_StrikesBelowMinimum_ReturnsBadRequest()
+    public async Task Update_StrikesBelowMinimum_ThrowsValidationException()
     {
         var client = SeedingRulesTestDataFactory.AddDownloadClient(_dataContext);
 
-        var result = await _controller.UpdateDeadTorrentConfig(client.Id, ValidRequest(maxStrikes: 2));
-
-        result.ShouldBeOfType<BadRequestObjectResult>();
+        await Should.ThrowAsync<ValidationException>(() => _controller.UpdateDeadTorrentConfig(client.Id, ValidRequest(maxStrikes: 2)));
     }
 
     [Fact]
