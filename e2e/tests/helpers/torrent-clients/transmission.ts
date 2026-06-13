@@ -118,12 +118,12 @@ export class TransmissionDriver implements TorrentClientDriver {
     });
   }
 
-  async clearAllTorrents(): Promise<void> {
+  async clearAllTorrents(deleteData = false): Promise<void> {
     const all = await this.listTorrents();
     if (all.length === 0) return;
     await this.call('torrent-remove', {
       ids: all.map((t) => t.hash),
-      'delete-local-data': false,
+      'delete-local-data': deleteData,
     });
   }
 

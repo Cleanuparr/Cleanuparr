@@ -194,6 +194,18 @@ test.describe.serial('Dead torrent cleanup', () => {
     mkdirSync(HOST_DOWNLOADS, { recursive: true });
   });
 
+  test.afterAll(async () => {
+    // The Transmission "category" move physically relocates the struck torrent
+    // into a `cleanuparr-dead/` directory the container creates as its PUID. On
+    // CI the Playwright runner runs as a different uid and cannot rmdir those
+    // container-owned files, which breaks resetDirectory() in later specs.
+    // Delete the torrents *with* their data so the container removes the files
+    // it created, leaving only runner-owned (removable) directories behind.
+    if (prepared.has('transmission')) {
+      await transmission.clearAllTorrents(true).catch(() => {});
+    }
+  });
+
   for (const s of scenarios) {
     test(`${s.key}: set up dead + alive seeding torrents`, async () => {
       test.setTimeout(120_000);
