@@ -266,6 +266,27 @@ export async function updateUnlinkedConfig(
   });
 }
 
+export async function getDeadTorrentConfig(accessToken: string, downloadClientId: string): Promise<Response> {
+  return fetch(`${API}/api/dead-torrent-config/${downloadClientId}`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+}
+
+export async function updateDeadTorrentConfig(
+  accessToken: string,
+  downloadClientId: string,
+  config: Record<string, unknown>,
+): Promise<Response> {
+  return fetch(`${API}/api/dead-torrent-config/${downloadClientId}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify(config),
+  });
+}
+
 export async function reorderSeedingRules(
   accessToken: string,
   downloadClientId: string,
