@@ -174,7 +174,7 @@ public sealed class DownloadCleaner : GenericHandler
         }
         else
         {
-            _logger.LogInformation("No seeding downloads found, skipping seeding-rule and unlinked-category processing");
+            _logger.LogInformation("No seeding downloads found");
         }
 
         try
