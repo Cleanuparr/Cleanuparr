@@ -29,7 +29,7 @@ public sealed record DeadTorrentConfig : IConfig
     /// <summary>
     /// Number of consecutive runs a torrent must report zero seeders before being moved.
     /// </summary>
-    public int MaxStrikes { get; set; }
+    public ushort MaxStrikes { get; set; }
 
     /// <summary>
     /// Source categories to scan for dead torrents. At least one must be specified.

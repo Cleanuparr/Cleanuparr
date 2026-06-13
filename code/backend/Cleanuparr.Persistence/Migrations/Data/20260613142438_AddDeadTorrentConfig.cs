@@ -20,7 +20,7 @@ namespace Cleanuparr.Persistence.Migrations.Data
                     enabled = table.Column<bool>(type: "INTEGER", nullable: false),
                     target_category = table.Column<string>(type: "TEXT", nullable: false),
                     use_tag = table.Column<bool>(type: "INTEGER", nullable: false),
-                    max_strikes = table.Column<int>(type: "INTEGER", nullable: false),
+                    max_strikes = table.Column<ushort>(type: "INTEGER", nullable: false),
                     categories = table.Column<string>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>

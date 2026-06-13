@@ -8,7 +8,7 @@ public sealed record DeadTorrentConfigRequest
 
     public bool UseTag { get; init; }
 
-    public int MaxStrikes { get; init; }
+    public ushort MaxStrikes { get; init; }
 
     public List<string> Categories { get; init; } = [];
 }

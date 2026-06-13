@@ -81,7 +81,7 @@ public sealed class DeadTorrentService : IDeadTorrentService
             bool shouldMove = await _striker.StrikeAndCheckLimit(
                 torrent.Hash,
                 torrent.Name,
-                (ushort)config.MaxStrikes,
+                config.MaxStrikes,
                 StrikeType.DeadTorrent);
 
             if (!shouldMove)

@@ -136,7 +136,7 @@ namespace Cleanuparr.Persistence.Migrations.Data
                         .HasColumnType("INTEGER")
                         .HasColumnName("enabled");
 
-                    b.Property<int>("MaxStrikes")
+                    b.Property<ushort>("MaxStrikes")
                         .HasColumnType("INTEGER")
                         .HasColumnName("max_strikes");
 
