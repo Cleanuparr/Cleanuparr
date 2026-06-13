@@ -1,4 +1,5 @@
 using Cleanuparr.Api.Features.DownloadCleaner.Contracts.Requests;
+using Cleanuparr.Api.Features.DownloadCleaner.Contracts.Responses;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
@@ -44,7 +45,7 @@ public class DeadTorrentConfigController : ControllerBase
                 .AsNoTracking()
                 .FirstOrDefaultAsync(d => d.DownloadClientConfigId == downloadClientId);
 
-            return Ok(config);
+            return Ok(config is null ? null : DeadTorrentConfigResponse.From(config));
         }
         finally
         {
@@ -101,7 +102,7 @@ public class DeadTorrentConfigController : ControllerBase
 
             _logger.LogInformation("Updated dead torrent config for client {ClientId}", downloadClientId);
 
-            return Ok(existing);
+            return Ok(DeadTorrentConfigResponse.From(existing));
         }
         catch (Cleanuparr.Domain.Exceptions.ValidationException ex)
         {

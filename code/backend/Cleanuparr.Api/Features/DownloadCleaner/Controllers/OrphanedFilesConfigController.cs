@@ -1,4 +1,5 @@
 using Cleanuparr.Api.Features.DownloadCleaner.Contracts.Requests;
+using Cleanuparr.Api.Features.DownloadCleaner.Contracts.Responses;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
 using Microsoft.AspNetCore.Authorization;
@@ -42,7 +43,7 @@ public sealed class OrphanedFilesConfigController : ControllerBase
                 .AsNoTracking()
                 .FirstOrDefaultAsync(c => c.DownloadClientConfigId == downloadClientId);
 
-            return Ok(config);
+            return Ok(config is null ? null : OrphanedFilesConfigResponse.From(config));
         }
         finally
         {
@@ -113,7 +114,7 @@ public sealed class OrphanedFilesConfigController : ControllerBase
 
             _logger.LogInformation("Updated orphaned files client config for client {ClientId}", downloadClientId);
 
-            return Ok(existing ?? candidate);
+            return Ok(OrphanedFilesConfigResponse.From(existing ?? candidate));
         }
         finally
         {

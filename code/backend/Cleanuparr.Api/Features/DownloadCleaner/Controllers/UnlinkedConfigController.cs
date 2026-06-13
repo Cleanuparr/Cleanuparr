@@ -1,4 +1,5 @@
 using Cleanuparr.Api.Features.DownloadCleaner.Contracts.Requests;
+using Cleanuparr.Api.Features.DownloadCleaner.Contracts.Responses;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
 using Microsoft.AspNetCore.Authorization;
@@ -43,7 +44,7 @@ public class UnlinkedConfigController : ControllerBase
                 .AsNoTracking()
                 .FirstOrDefaultAsync(u => u.DownloadClientConfigId == downloadClientId);
 
-            return Ok(config);
+            return Ok(config is null ? null : UnlinkedConfigResponse.From(config));
         }
         finally
         {
@@ -95,7 +96,7 @@ public class UnlinkedConfigController : ControllerBase
 
             _logger.LogInformation("Updated unlinked config for client {ClientId}", downloadClientId);
 
-            return Ok(existing);
+            return Ok(UnlinkedConfigResponse.From(existing));
         }
         finally
         {
