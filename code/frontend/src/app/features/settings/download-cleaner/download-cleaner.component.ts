@@ -521,8 +521,30 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
       if (!confirmed) {
         return;
       }
+      const currentId = this.selectedClientId();
+      if (currentId) {
+        this.restoreClientEditsFromSnapshot(currentId);
+      }
     }
     this.selectedClientId.set(newClientId as string | null);
+  }
+
+  /** Reverts the client's unlinked/dead-torrent/orphaned edits back to their saved snapshots. */
+  private restoreClientEditsFromSnapshot(clientId: string): void {
+    this.clientConfigs.update(configs => configs.map(c => {
+      if (c.downloadClientId !== clientId) {
+        return c;
+      }
+      const unlinked = this.unlinkedSnapshots()[clientId];
+      const deadTorrent = this.deadTorrentSnapshots()[clientId];
+      const orphaned = this.orphanedFilesSnapshots()[clientId];
+      return {
+        ...c,
+        unlinkedConfig: unlinked ? JSON.parse(unlinked) : c.unlinkedConfig,
+        deadTorrentConfig: deadTorrent ? JSON.parse(deadTorrent) : c.deadTorrentConfig,
+        orphanedFilesConfig: orphaned ? JSON.parse(orphaned) : c.orphanedFilesConfig,
+      };
+    }));
   }
 
   // --- Unlinked config ---
