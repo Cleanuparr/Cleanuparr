@@ -18,6 +18,8 @@ public class UsersContext : DbContext
 
     public DbSet<RefreshToken> RefreshTokens { get; set; }
 
+    public DbSet<UserFeatureView> UserFeatureViews { get; set; }
+
     public UsersContext()
     {
     }
@@ -65,6 +67,11 @@ public class UsersContext : DbContext
                 .WithOne(r => r.User)
                 .HasForeignKey(r => r.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasMany(u => u.FeatureViews)
+                .WithOne(v => v.User)
+                .HasForeignKey(v => v.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<RecoveryCode>(entity =>
@@ -84,6 +91,14 @@ public class UsersContext : DbContext
                 .HasConversion(new UtcDateTimeConverter());
 
             entity.Property(r => r.RevokedAt)
+                .HasConversion(new UtcDateTimeConverter());
+        });
+
+        modelBuilder.Entity<UserFeatureView>(entity =>
+        {
+            entity.HasIndex(v => new { v.UserId, v.FeatureId }).IsUnique();
+
+            entity.Property(v => v.FirstSeenAt)
                 .HasConversion(new UtcDateTimeConverter());
         });
     }

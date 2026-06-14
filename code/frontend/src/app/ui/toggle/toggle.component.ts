@@ -1,11 +1,12 @@
 import { Component, ChangeDetectionStrategy, input, model, inject } from '@angular/core';
 import { NgIcon } from '@ng-icons/core';
 import { DocumentationService } from '@core/services/documentation.service';
+import { NewBadgeComponent } from '@ui/new-badge/new-badge.component';
 
 @Component({
   selector: 'app-toggle',
   standalone: true,
-  imports: [NgIcon],
+  imports: [NgIcon, NewBadgeComponent],
   templateUrl: './toggle.component.html',
   styleUrl: './toggle.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -14,6 +15,7 @@ export class ToggleComponent {
   private readonly docs = inject(DocumentationService);
 
   label = input<string>();
+  featureId = input<string>();
   disabled = input(false);
   hint = input<string>();
   helpKey = input<string>();

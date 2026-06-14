@@ -6,6 +6,9 @@
         <ng-icon name="tablerQuestionMark" size="14" />
       </button>
     }
+    @if (featureId()) {
+      <app-new-badge variant="inline" [featureId]="featureId()!" />
+    }
   </label>
 }
 <div class="select-wrapper">

@@ -2,11 +2,12 @@ import { Component, ChangeDetectionStrategy, input, model, signal, computed, inj
 import { FormsModule } from '@angular/forms';
 import { NgIcon } from '@ng-icons/core';
 import { DocumentationService } from '@core/services/documentation.service';
+import { NewBadgeComponent } from '@ui/new-badge/new-badge.component';
 
 @Component({
   selector: 'app-chip-input',
   standalone: true,
-  imports: [FormsModule, NgIcon],
+  imports: [FormsModule, NgIcon, NewBadgeComponent],
   templateUrl: './chip-input.component.html',
   styleUrl: './chip-input.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -15,6 +16,7 @@ export class ChipInputComponent {
   private readonly docs = inject(DocumentationService);
 
   label = input<string>();
+  featureId = input<string>();
   placeholder = input('Type and press Enter...');
   disabled = input(false);
   error = input<string>();

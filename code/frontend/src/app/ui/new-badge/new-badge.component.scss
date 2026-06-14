@@ -1,0 +1,81 @@
+// Host generates no box so the absolutely positioned ribbon anchors to the
+// nearest positioned ancestor (the tagged card / accordion / section).
+:host {
+  display: contents;
+}
+
+.new-ribbon-wrap {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 74px;
+  height: 74px;
+  overflow: hidden;
+  pointer-events: none;
+  border-top-right-radius: var(--radius-xl);
+  z-index: 3;
+}
+
+.new-ribbon {
+  position: absolute;
+  top: 14px;
+  right: -22px;
+  width: 100px;
+  padding: 3px 0;
+  transform: rotate(45deg);
+  text-align: center;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: #fff;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.35);
+  background: linear-gradient(135deg, #ffb020 0%, #ff6a00 45%, #f5333f 100%);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35), 0 0 12px rgba(255, 90, 0, 0.5);
+  animation: new-ribbon-glow 2.4s var(--ease-default) infinite;
+}
+
+@keyframes new-ribbon-glow {
+  0%,
+  100% {
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35), 0 0 10px rgba(255, 90, 0, 0.45);
+  }
+  50% {
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35), 0 0 18px rgba(255, 90, 0, 0.8);
+  }
+}
+
+// Inline pill variant — flows next to a field label.
+.new-pill {
+  display: inline-flex;
+  align-items: center;
+  margin-left: var(--space-1-5);
+  padding: 0 6px;
+  height: 16px;
+  border-radius: var(--radius-full);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #fff;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.25);
+  background: linear-gradient(135deg, #ffb020 0%, #ff6a00 45%, #f5333f 100%);
+  box-shadow: 0 1px 4px rgba(255, 90, 0, 0.45);
+  vertical-align: middle;
+  animation: new-pill-glow 2.4s var(--ease-default) infinite;
+}
+
+@keyframes new-pill-glow {
+  0%,
+  100% {
+    box-shadow: 0 1px 4px rgba(255, 90, 0, 0.4);
+  }
+  50% {
+    box-shadow: 0 1px 8px rgba(255, 90, 0, 0.75);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .new-ribbon,
+  .new-pill {
+    animation: none;
+  }
+}

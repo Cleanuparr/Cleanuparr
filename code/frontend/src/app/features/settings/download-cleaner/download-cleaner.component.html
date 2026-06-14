@@ -175,6 +175,7 @@
                   @if (isTagFilterableClient()) {
                     <app-toggle [label]="isSelectedClientTransmission() ? 'Use Label Instead' : 'Use Tag Instead'" [checked]="client.unlinkedConfig?.useTag ?? false"
                       (checkedChange)="updateUnlinkedField('useTag', $event)"
+                      [featureId]="isSelectedClientTransmission() ? 'unlinked-transmission-label': ''"
                       [hint]="isSelectedClientTransmission() ? 'When enabled, adds a label instead of changing the category' : 'When enabled, adds a tag instead of changing the category'"
                       helpKey="download-cleaner:unlinkedUseTag" />
                   }
@@ -202,7 +203,7 @@
             </app-accordion>
 
             @if (isDeadTorrentCapableClient()) {
-            <app-accordion header="Dead Torrents" subtitle="Triage torrents with no seeders" [(expanded)]="deadTorrentExpanded">
+            <app-accordion header="Dead Torrents" subtitle="Triage torrents with no seeders" featureId="dead-torrent" [(expanded)]="deadTorrentExpanded">
               <div class="form-stack">
                 <app-toggle label="Enabled" [checked]="client.deadTorrentConfig?.enabled ?? false"
                   (checkedChange)="updateDeadTorrentField('enabled', $event)"
@@ -243,7 +244,7 @@
             </app-accordion>
             }
 
-            <app-accordion header="Orphaned Files" subtitle="Move files not associated with any active torrent" [(expanded)]="orphanedFilesExpanded">
+            <app-accordion header="Orphaned Files" subtitle="Move files not associated with any active torrent" featureId="orphaned-files" [(expanded)]="orphanedFilesExpanded">
               <div class="form-stack">
                 <app-toggle
                   label="Enabled"
@@ -365,7 +366,7 @@
       hint="Maximum time to seed before removing (-1 means disabled)"
       helpKey="download-cleaner:maxSeedTime" />
     @if (isSeedersFilterableClient()) {
-      <app-number-input label="Min Seeders" [(value)]="ruleMinSeeders" [min]="0" [step]="1"
+      <app-number-input label="Min Seeders" [(value)]="ruleMinSeeders" [min]="0" [step]="1" featureId="min-seeders"
         hint="Minimum number of seeders required before removing (0 means disabled; unavailable counts keep the download)"
         helpKey="download-cleaner:minSeeders" />
     }

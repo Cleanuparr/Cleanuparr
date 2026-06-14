@@ -540,6 +540,61 @@ public sealed class AccountController : ControllerBase
         }
     }
 
+    [HttpPost("feature-views")]
+    public async Task<IActionResult> RecordFeatureViews([FromBody] RecordFeatureViewsRequest request)
+    {
+        await UsersContext.Lock.WaitAsync();
+        try
+        {
+            var user = await GetCurrentUser();
+            if (user is null)
+            {
+                return Unauthorized();
+            }
+
+            var existing = await _usersContext.UserFeatureViews
+                .Where(v => v.UserId == user.Id)
+                .ToListAsync();
+
+            var existingIds = existing
+                .Select(v => v.FeatureId)
+                .ToHashSet();
+
+            DateTime now = DateTime.UtcNow;
+
+            foreach (var featureId in request.FeatureIds.Distinct())
+            {
+                if (string.IsNullOrWhiteSpace(featureId) || existingIds.Contains(featureId))
+                {
+                    continue;
+                }
+
+                var view = new UserFeatureView
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = user.Id,
+                    FeatureId = featureId,
+                    FirstSeenAt = now
+                };
+
+                _usersContext.UserFeatureViews.Add(view);
+                existing.Add(view);
+            }
+
+            await _usersContext.SaveChangesAsync();
+
+            return Ok(new FeatureViewsResponse
+            {
+                CreatedAt = user.CreatedAt,
+                Views = existing.ToDictionary(v => v.FeatureId, v => v.FirstSeenAt)
+            });
+        }
+        finally
+        {
+            UsersContext.Lock.Release();
+        }
+    }
+
     private string GetOidcLinkCallbackUrl(string? redirectUrl = null)
     {
         var baseUrl = string.IsNullOrEmpty(redirectUrl)

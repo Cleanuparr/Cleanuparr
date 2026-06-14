@@ -1,4 +1,7 @@
 <div class="accordion" [class.accordion--expanded]="expanded()" [class.accordion--disabled]="disabled()">
+  @if (featureId()) {
+    <app-new-badge [featureId]="featureId()!" />
+  }
   <button class="accordion__header" (click)="toggle()" [disabled]="disabled()" type="button">
     <div class="accordion__header-text">
       <span class="accordion__title">{{ header() }}</span>

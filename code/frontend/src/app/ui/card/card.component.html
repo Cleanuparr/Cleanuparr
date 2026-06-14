@@ -4,6 +4,9 @@
   [class.card--interactive]="interactive()"
   [class.card--no-padding]="noPadding()"
 >
+  @if (featureId()) {
+    <app-new-badge [featureId]="featureId()!" />
+  }
   @if (header() || subtitle()) {
     <div class="card__header">
       @if (header()) {

@@ -52,4 +52,6 @@ public class User
     public List<RecoveryCode> RecoveryCodes { get; set; } = [];
 
     public List<RefreshToken> RefreshTokens { get; set; } = [];
+
+    public List<UserFeatureView> FeatureViews { get; set; } = [];
 }
