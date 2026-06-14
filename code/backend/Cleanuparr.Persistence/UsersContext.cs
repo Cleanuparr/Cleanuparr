@@ -43,21 +43,18 @@ public class UsersContext : DbContext
         SetDbContextOptions(optionsBuilder);
     }
 
+    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+    {
+        configurationBuilder.Properties<DateTimeOffset>()
+            .HaveConversion<UtcDateTimeOffsetConverter>();
+    }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<User>(entity =>
         {
             entity.HasIndex(u => u.Username).IsUnique();
             entity.HasIndex(u => u.ApiKey).IsUnique();
-
-            entity.Property(u => u.CreatedAt)
-                .HasConversion(new UtcDateTimeConverter());
-
-            entity.Property(u => u.UpdatedAt)
-                .HasConversion(new UtcDateTimeConverter());
-
-            entity.Property(u => u.LockoutEnd)
-                .HasConversion(new UtcDateTimeConverter());
 
             entity.ComplexProperty(u => u.Oidc);
 
@@ -77,24 +74,9 @@ public class UsersContext : DbContext
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
-        modelBuilder.Entity<RecoveryCode>(entity =>
-        {
-            entity.Property(r => r.UsedAt)
-                .HasConversion(new UtcDateTimeConverter());
-        });
-
         modelBuilder.Entity<RefreshToken>(entity =>
         {
             entity.HasIndex(r => r.TokenHash).IsUnique();
-
-            entity.Property(r => r.ExpiresAt)
-                .HasConversion(new UtcDateTimeConverter());
-
-            entity.Property(r => r.CreatedAt)
-                .HasConversion(new UtcDateTimeConverter());
-
-            entity.Property(r => r.RevokedAt)
-                .HasConversion(new UtcDateTimeConverter());
         });
 
         modelBuilder.Entity<UserFeatureView>(entity =>
@@ -103,9 +85,6 @@ public class UsersContext : DbContext
 
             entity.Property(v => v.FeatureId)
                 .HasMaxLength(64);
-
-            entity.Property(v => v.FirstSeenAt)
-                .HasConversion(new UtcDateTimeConverter());
         });
     }
 

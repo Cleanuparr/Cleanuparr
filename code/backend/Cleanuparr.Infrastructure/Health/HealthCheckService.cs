@@ -54,7 +54,7 @@ public class HealthCheckService : IHealthCheckService
                 {
                     ClientId = clientId,
                     IsHealthy = false,
-                    LastChecked = DateTime.UtcNow,
+                    LastChecked = DateTimeOffset.UtcNow,
                     ErrorMessage = "Client not found in configuration"
                 };
                 
@@ -76,7 +76,7 @@ public class HealthCheckService : IHealthCheckService
                 ClientName = downloadClientConfig.Name,
                 ClientTypeName = downloadClientConfig.TypeName,
                 IsHealthy = healthResult.IsHealthy,
-                LastChecked = DateTime.UtcNow,
+                LastChecked = DateTimeOffset.UtcNow,
                 ErrorMessage = healthResult.ErrorMessage,
                 ResponseTime = healthResult.ResponseTime
             };
@@ -92,7 +92,7 @@ public class HealthCheckService : IHealthCheckService
             {
                 ClientId = clientId,
                 IsHealthy = false,
-                LastChecked = DateTime.UtcNow,
+                LastChecked = DateTimeOffset.UtcNow,
                 ErrorMessage = $"Error: {ex.Message}"
             };
             
@@ -180,7 +180,7 @@ public class HealthCheckService : IHealthCheckService
                 {
                     InstanceId = instanceId,
                     IsHealthy = false,
-                    LastChecked = DateTime.UtcNow,
+                    LastChecked = DateTimeOffset.UtcNow,
                     ErrorMessage = "Arr instance not found in configuration"
                 };
 
@@ -199,7 +199,7 @@ public class HealthCheckService : IHealthCheckService
                 InstanceName = arrInstance.Instance.Name,
                 InstanceType = arrInstance.Config.Type,
                 IsHealthy = true,
-                LastChecked = DateTime.UtcNow
+                LastChecked = DateTimeOffset.UtcNow
             };
 
             UpdateArrHealthStatus(status);
@@ -213,7 +213,7 @@ public class HealthCheckService : IHealthCheckService
             {
                 InstanceId = instanceId,
                 IsHealthy = false,
-                LastChecked = DateTime.UtcNow,
+                LastChecked = DateTimeOffset.UtcNow,
                 ErrorMessage = $"Error: {ex.Message}"
             };
 
@@ -260,7 +260,7 @@ public class HealthCheckService : IHealthCheckService
                         InstanceName = entry.Instance.Name,
                         InstanceType = entry.Config.Type,
                         IsHealthy = true,
-                        LastChecked = DateTime.UtcNow
+                        LastChecked = DateTimeOffset.UtcNow
                     };
 
                     UpdateArrHealthStatus(status);
@@ -277,7 +277,7 @@ public class HealthCheckService : IHealthCheckService
                         InstanceName = entry.Instance.Name,
                         InstanceType = entry.Config.Type,
                         IsHealthy = false,
-                        LastChecked = DateTime.UtcNow,
+                        LastChecked = DateTimeOffset.UtcNow,
                         ErrorMessage = $"Error: {ex.Message}"
                     };
 

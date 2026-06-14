@@ -37,7 +37,7 @@ public sealed record SeekerInstanceConfig
     /// <summary>
     /// Timestamp of when this instance was last processed (for round-robin scheduling)
     /// </summary>
-    public DateTime? LastProcessedAt { get; set; }
+    public DateTimeOffset? LastProcessedAt { get; set; }
 
     /// <summary>
     /// The current cycle ID. All searches in the same cycle share this ID.

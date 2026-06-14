@@ -7,7 +7,7 @@ namespace Cleanuparr.Infrastructure.Features.Seeker.Selectors;
 /// </summary>
 public sealed class NewestWeightedSelector : IItemSelector
 {
-    public List<long> Select(List<(long Id, DateTime? Added, DateTime? LastSearched)> candidates, int count)
+    public List<long> Select(List<(long Id, DateTimeOffset? Added, DateTimeOffset? LastSearched)> candidates, int count)
     {
         if (candidates.Count == 0)
         {
@@ -18,7 +18,7 @@ public sealed class NewestWeightedSelector : IItemSelector
 
         // Sort by Added descending
         var ranked = candidates
-            .OrderByDescending(c => c.Added ?? DateTime.MinValue)
+            .OrderByDescending(c => c.Added ?? DateTimeOffset.MinValue)
             .ToList();
 
         return OldestSearchWeightedSelector.WeightedRandomByRank(ranked, count);

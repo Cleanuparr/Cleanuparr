@@ -104,8 +104,8 @@ public sealed class AuthController : ControllerBase
                 TotpEnabled = false,
                 ApiKey = GenerateApiKey(),
                 SetupCompleted = false,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
+                CreatedAt = DateTimeOffset.UtcNow,
+                UpdatedAt = DateTimeOffset.UtcNow
             };
 
             _usersContext.Users.Add(user);
@@ -150,7 +150,7 @@ public sealed class AuthController : ControllerBase
 
             // Store secret (will be finalized on verify)
             user.TotpSecret = secret;
-            user.UpdatedAt = DateTime.UtcNow;
+            user.UpdatedAt = DateTimeOffset.UtcNow;
 
             // Remove old recovery codes and add new ones
             _usersContext.RecoveryCodes.RemoveRange(user.RecoveryCodes);
@@ -209,7 +209,7 @@ public sealed class AuthController : ControllerBase
             }
 
             user.TotpEnabled = true;
-            user.UpdatedAt = DateTime.UtcNow;
+            user.UpdatedAt = DateTimeOffset.UtcNow;
             await _usersContext.SaveChangesAsync();
 
             _logger.LogInformation("2FA enabled for user {Username}", user.Username);
@@ -240,7 +240,7 @@ public sealed class AuthController : ControllerBase
             }
 
             user.SetupCompleted = true;
-            user.UpdatedAt = DateTime.UtcNow;
+            user.UpdatedAt = DateTimeOffset.UtcNow;
             await _usersContext.SaveChangesAsync();
 
             _logger.LogInformation("Setup completed for user {Username}", user.Username);
@@ -274,9 +274,9 @@ public sealed class AuthController : ControllerBase
         }
 
         // Check lockout
-        if (user.LockoutEnd.HasValue && user.LockoutEnd.Value > DateTime.UtcNow)
+        if (user.LockoutEnd.HasValue && user.LockoutEnd.Value > DateTimeOffset.UtcNow)
         {
-            var remaining = (int)Math.Ceiling((user.LockoutEnd.Value - DateTime.UtcNow).TotalSeconds);
+            var remaining = (int)Math.Ceiling((user.LockoutEnd.Value - DateTimeOffset.UtcNow).TotalSeconds);
             return StatusCode(429, new { error = "Account is locked", retryAfterSeconds = remaining });
         }
 
@@ -369,13 +369,13 @@ public sealed class AuthController : ControllerBase
                 .Include(r => r.User)
                 .FirstOrDefaultAsync(r => r.TokenHash == tokenHash && r.RevokedAt == null);
 
-            if (storedToken is null || storedToken.ExpiresAt < DateTime.UtcNow)
+            if (storedToken is null || storedToken.ExpiresAt < DateTimeOffset.UtcNow)
             {
                 return Unauthorized(new { error = "Invalid or expired refresh token" });
             }
 
             // Revoke the old token (rotation)
-            storedToken.RevokedAt = DateTime.UtcNow;
+            storedToken.RevokedAt = DateTimeOffset.UtcNow;
 
             // Generate new tokens
             var response = await GenerateTokenResponse(storedToken.User);
@@ -402,7 +402,7 @@ public sealed class AuthController : ControllerBase
 
             if (storedToken is not null)
             {
-                storedToken.RevokedAt = DateTime.UtcNow;
+                storedToken.RevokedAt = DateTimeOffset.UtcNow;
                 await _usersContext.SaveChangesAsync();
             }
 
@@ -467,7 +467,7 @@ public sealed class AuthController : ControllerBase
             user.PlexUsername = plexAccount.Username;
             user.PlexEmail = plexAccount.Email;
             user.PlexAuthToken = pinResult.AuthToken;
-            user.UpdatedAt = DateTime.UtcNow;
+            user.UpdatedAt = DateTimeOffset.UtcNow;
             await _usersContext.SaveChangesAsync();
 
             _logger.LogInformation("Plex account linked during setup for user {Username}: {PlexUsername}",
@@ -671,8 +671,8 @@ public sealed class AuthController : ControllerBase
             Id = Guid.NewGuid(),
             UserId = user.Id,
             TokenHash = HashRefreshToken(refreshToken),
-            ExpiresAt = DateTime.UtcNow.AddDays(7),
-            CreatedAt = DateTime.UtcNow
+            ExpiresAt = DateTimeOffset.UtcNow.AddDays(7),
+            CreatedAt = DateTimeOffset.UtcNow
         });
 
         await _usersContext.SaveChangesAsync();
@@ -695,7 +695,7 @@ public sealed class AuthController : ControllerBase
                 if (_totpService.VerifyRecoveryCode(code, recoveryCode.CodeHash))
                 {
                     recoveryCode.IsUsed = true;
-                    recoveryCode.UsedAt = DateTime.UtcNow;
+                    recoveryCode.UsedAt = DateTimeOffset.UtcNow;
                     await _usersContext.SaveChangesAsync();
 
                     _logger.LogWarning("Recovery code used for user {Username}", user.Username);
@@ -718,7 +718,7 @@ public sealed class AuthController : ControllerBase
         {
             var user = await _usersContext.Users.FirstAsync(u => u.Id == userId);
             user.FailedLoginAttempts++;
-            user.LockoutEnd = DateTime.UtcNow.AddSeconds(user.FailedLoginAttempts * 2);
+            user.LockoutEnd = DateTimeOffset.UtcNow.AddSeconds(user.FailedLoginAttempts * 2);
             await _usersContext.SaveChangesAsync();
 
             _logger.LogWarning("Failed login attempt {Attempts} for user {Username}, locked for {Seconds}s",

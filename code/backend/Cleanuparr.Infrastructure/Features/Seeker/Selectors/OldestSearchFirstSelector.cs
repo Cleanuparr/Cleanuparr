@@ -7,10 +7,10 @@ namespace Cleanuparr.Infrastructure.Features.Seeker.Selectors;
 /// </summary>
 public sealed class OldestSearchFirstSelector : IItemSelector
 {
-    public List<long> Select(List<(long Id, DateTime? Added, DateTime? LastSearched)> candidates, int count)
+    public List<long> Select(List<(long Id, DateTimeOffset? Added, DateTimeOffset? LastSearched)> candidates, int count)
     {
         return candidates
-            .OrderBy(c => c.LastSearched ?? DateTime.MinValue)
+            .OrderBy(c => c.LastSearched ?? DateTimeOffset.MinValue)
             .Take(count)
             .Select(c => c.Id)
             .ToList();

@@ -12,7 +12,7 @@ public sealed record SearchableSeries
 
     public List<long> Tags { get; init; } = [];
     
-    public DateTime? Added { get; init; }
+    public DateTimeOffset? Added { get; init; }
 
     public string Status { get; init; } = string.Empty;
 

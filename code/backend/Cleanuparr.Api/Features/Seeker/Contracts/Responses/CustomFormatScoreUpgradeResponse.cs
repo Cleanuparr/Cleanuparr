@@ -12,5 +12,5 @@ public sealed record CustomFormatScoreUpgradeResponse
     public int PreviousScore { get; init; }
     public int NewScore { get; init; }
     public int CutoffScore { get; init; }
-    public DateTime UpgradedAt { get; init; }
+    public DateTimeOffset UpgradedAt { get; init; }
 }

@@ -62,7 +62,7 @@ public class EventCleanupService : BackgroundService
             var eventsContext = scope.ServiceProvider.GetRequiredService<EventsContext>();
             var dataContext = scope.ServiceProvider.GetRequiredService<DataContext>();
 
-            var cutoffDate = DateTime.UtcNow.AddDays(-_eventRetentionDays);
+            var cutoffDate = DateTimeOffset.UtcNow.AddDays(-_eventRetentionDays);
             await eventsContext.Events
                 .Where(e => e.Timestamp < cutoffDate)
                 .ExecuteDeleteAsync();
@@ -86,7 +86,7 @@ public class EventCleanupService : BackgroundService
             .FirstAsync();
 
         var inactivityWindowHours = config.StrikeInactivityWindowHours;
-        var cutoffDate = DateTime.UtcNow.AddHours(-inactivityWindowHours);
+        var cutoffDate = DateTimeOffset.UtcNow.AddHours(-inactivityWindowHours);
 
         // Sliding window: find items whose most recent strike is older than the inactivity window.
         // As long as a download keeps receiving new strikes, all its strikes are preserved.

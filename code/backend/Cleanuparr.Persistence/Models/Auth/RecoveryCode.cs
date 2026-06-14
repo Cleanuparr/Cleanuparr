@@ -15,7 +15,7 @@ public class RecoveryCode
 
     public bool IsUsed { get; set; }
 
-    public DateTime? UsedAt { get; set; }
+    public DateTimeOffset? UsedAt { get; set; }
 
     public User User { get; set; } = null!;
 }

@@ -178,8 +178,8 @@ public class DownloadItemStrikesDto
     public string Title { get; set; } = string.Empty;
     public int TotalStrikes { get; set; }
     public Dictionary<string, int> StrikesByType { get; set; } = new();
-    public DateTime LatestStrikeAt { get; set; }
-    public DateTime FirstStrikeAt { get; set; }
+    public DateTimeOffset LatestStrikeAt { get; set; }
+    public DateTimeOffset FirstStrikeAt { get; set; }
     public bool IsMarkedForRemoval { get; set; }
     public bool IsRemoved { get; set; }
     public bool IsReturning { get; set; }
@@ -191,7 +191,7 @@ public class StrikeDetailDto
 {
     public Guid Id { get; set; }
     public string Type { get; set; } = string.Empty;
-    public DateTime CreatedAt { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
     public long? LastDownloadedBytes { get; set; }
     public Guid JobRunId { get; set; }
     public bool IsDryRun { get; set; }
@@ -201,7 +201,7 @@ public class RecentStrikeDto
 {
     public Guid Id { get; set; }
     public string Type { get; set; } = string.Empty;
-    public DateTime CreatedAt { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
     public string DownloadId { get; set; } = string.Empty;
     public string Title { get; set; } = string.Empty;
     public bool IsDryRun { get; set; }

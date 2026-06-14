@@ -61,7 +61,7 @@ public class StatusController : ControllerBase
                 {
                     Version = GetType().Assembly.GetName().Version?.ToString() ?? "Unknown",
                     process.StartTime,
-                    UpTime = DateTime.Now - process.StartTime,
+                    UpTime = DateTimeOffset.UtcNow - process.StartTime.ToUniversalTime(),
                     MemoryUsageMB = Math.Round(process.WorkingSet64 / 1024.0 / 1024.0, 2),
                     ProcessorTime = process.TotalProcessorTime
                 },

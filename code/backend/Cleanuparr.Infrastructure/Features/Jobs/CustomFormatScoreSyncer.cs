@@ -120,7 +120,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
         _logger.LogTrace("[Radarr] {InstanceName}: found {TotalMovies} total movies, {WithFiles} with files",
             arrInstance.Name, allMovies.Count, moviesWithFiles.Count);
 
-        DateTime now = _timeProvider.GetUtcNow().UtcDateTime;
+        DateTimeOffset now = _timeProvider.GetUtcNow().UtcDateTime;
 
         // Touch entries for movies that still exist but have no file (e.g., RSS upgrade in progress)
         HashSet<long> movieIdsWithFiles = moviesWithFiles.Select(x => x.Movie.Id).ToHashSet();
@@ -204,7 +204,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
         _logger.LogTrace("[Sonarr] {InstanceName}: found {SeriesCount} total series",
             arrInstance.Name, allSeries.Count);
 
-        DateTime now = _timeProvider.GetUtcNow().UtcDateTime;
+        DateTimeOffset now = _timeProvider.GetUtcNow().UtcDateTime;
 
         int totalSynced = 0;
         int totalSkipped = 0;
@@ -327,7 +327,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
         int cutoffScore,
         string profileName,
         bool isMonitored,
-        DateTime now)
+        DateTimeOffset now)
     {
         if (existing is not null)
         {
@@ -397,7 +397,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
     /// updated during sync, so any entry with LastSyncedAt &lt; syncStartTime is truly removed.
     /// </summary>
     private async Task CleanupStaleEntriesAsync(
-        Guid arrInstanceId, InstanceType instanceType, DateTime syncStartTime)
+        Guid arrInstanceId, InstanceType instanceType, DateTimeOffset syncStartTime)
     {
         List<long> staleItemIds = await _dataContext.CustomFormatScoreEntries
             .Where(e => e.ArrInstanceId == arrInstanceId
@@ -437,7 +437,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
     /// </summary>
     private async Task CleanupOldHistoryAsync()
     {
-        DateTime threshold = _timeProvider.GetUtcNow().UtcDateTime - HistoryRetention;
+        DateTimeOffset threshold = _timeProvider.GetUtcNow().UtcDateTime - HistoryRetention;
         int deleted = await _dataContext.CustomFormatScoreHistory
             .Where(h => h.RecordedAt < threshold)
             .ExecuteDeleteAsync();

@@ -35,9 +35,9 @@ public sealed record NotificationConfig
 
     public bool OnSearchItemGrabbed { get; init; }
 
-    public DateTime CreatedAt { get; init; } = DateTime.UtcNow;
+    public DateTimeOffset CreatedAt { get; init; } = DateTimeOffset.UtcNow;
     
-    public DateTime UpdatedAt { get; init; } = DateTime.UtcNow;
+    public DateTimeOffset UpdatedAt { get; init; } = DateTimeOffset.UtcNow;
     
     public NotifiarrConfig? NotifiarrConfiguration { get; init; }
     

@@ -6,10 +6,10 @@ namespace Cleanuparr.Infrastructure.Features.Seeker.Selectors;
 /// </summary>
 public sealed class RandomSelector : IItemSelector
 {
-    public List<long> Select(List<(long Id, DateTime? Added, DateTime? LastSearched)> candidates, int count)
+    public List<long> Select(List<(long Id, DateTimeOffset? Added, DateTimeOffset? LastSearched)> candidates, int count)
     {
         count = Math.Min(count, candidates.Count);
-        var shuffled = new List<(long Id, DateTime? Added, DateTime? LastSearched)>(candidates);
+        var shuffled = new List<(long Id, DateTimeOffset? Added, DateTimeOffset? LastSearched)>(candidates);
 
         // Fisher-Yates shuffle
         for (int i = 0; i < count; i++)

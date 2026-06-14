@@ -10,7 +10,7 @@ public sealed record SearchableEpisode
 
     public bool Monitored { get; init; }
 
-    public DateTime? AirDateUtc { get; init; }
+    public DateTimeOffset? AirDateUtc { get; init; }
 
     public bool HasFile { get; init; }
 

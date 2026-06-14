@@ -105,7 +105,7 @@ public sealed class JwtService : IJwtService
             issuer: Issuer,
             audience: Audience,
             claims: claims,
-            expires: DateTime.UtcNow.Add(lifetime),
+            expires: DateTimeOffset.UtcNow.Add(lifetime).UtcDateTime,
             signingCredentials: credentials);
 
         return new JwtSecurityTokenHandler().WriteToken(token);

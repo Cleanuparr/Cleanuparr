@@ -27,7 +27,7 @@ public class UserFeatureView
     /// <summary>
     /// UTC timestamp the user first saw the feature.
     /// </summary>
-    public DateTime FirstSeenAt { get; set; }
+    public DateTimeOffset FirstSeenAt { get; set; }
 
     /// <summary>
     /// Navigation to the owning user.

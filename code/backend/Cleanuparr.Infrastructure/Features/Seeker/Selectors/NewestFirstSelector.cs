@@ -6,10 +6,10 @@ namespace Cleanuparr.Infrastructure.Features.Seeker.Selectors;
 /// </summary>
 public sealed class NewestFirstSelector : IItemSelector
 {
-    public List<long> Select(List<(long Id, DateTime? Added, DateTime? LastSearched)> candidates, int count)
+    public List<long> Select(List<(long Id, DateTimeOffset? Added, DateTimeOffset? LastSearched)> candidates, int count)
     {
         return candidates
-            .OrderByDescending(c => c.Added ?? DateTime.MinValue)
+            .OrderByDescending(c => c.Added ?? DateTimeOffset.MinValue)
             .Take(count)
             .Select(c => c.Id)
             .ToList();

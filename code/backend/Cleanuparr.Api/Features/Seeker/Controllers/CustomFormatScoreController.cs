@@ -202,7 +202,7 @@ public sealed class CustomFormatScoreController : ControllerBase
 
         string orderByClause = BuildUpgradeOrderByClause(sortBy, ascending);
 
-        DateTime? cutoff = days > 0 ? DateTime.UtcNow.AddDays(-days) : null;
+        DateTimeOffset? cutoff = days > 0 ? DateTimeOffset.UtcNow.AddDays(-days) : null;
         string? searchPattern = string.IsNullOrWhiteSpace(search)
             ? null
             : EventsContext.GetLikePattern(search);
@@ -290,7 +290,7 @@ public sealed class CustomFormatScoreController : ControllerBase
             PreviousScore = r.PreviousScore,
             NewScore = r.NewScore,
             CutoffScore = r.CutoffScore,
-            UpgradedAt = DateTime.SpecifyKind(r.UpgradedAt, DateTimeKind.Utc),
+            UpgradedAt = r.UpgradedAt,
         }).ToList();
 
         return Ok(new
@@ -336,7 +336,7 @@ public sealed class CustomFormatScoreController : ControllerBase
         public int PreviousScore { get; set; }
         public int NewScore { get; set; }
         public int CutoffScore { get; set; }
-        public DateTime UpgradedAt { get; set; }
+        public DateTimeOffset UpgradedAt { get; set; }
     }
 
     /// <summary>
@@ -400,7 +400,7 @@ public sealed class CustomFormatScoreController : ControllerBase
         int unmonitored = totalTracked - monitored;
 
         // Count upgrades in the last 7 days
-        var sevenDaysAgo = DateTime.UtcNow.AddDays(-7);
+        var sevenDaysAgo = DateTimeOffset.UtcNow.AddDays(-7);
         var recentHistory = await _dataContext.CustomFormatScoreHistory
             .AsNoTracking()
             .Where(h => h.RecordedAt >= sevenDaysAgo)

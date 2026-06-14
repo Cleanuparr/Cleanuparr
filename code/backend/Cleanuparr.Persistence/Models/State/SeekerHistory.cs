@@ -49,7 +49,7 @@ public sealed record SeekerHistory
     /// <summary>
     /// When this item was last searched
     /// </summary>
-    public DateTime LastSearchedAt { get; set; }
+    public DateTimeOffset LastSearchedAt { get; set; }
 
     /// <summary>
     /// Display name of the item (movie title, series name, etc.)

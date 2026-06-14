@@ -72,7 +72,7 @@ public sealed class OidcAuthService : IOidcAuthService
             CodeVerifier = codeVerifier,
             RedirectUri = redirectUri,
             InitiatorUserId = initiatorUserId,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTimeOffset.UtcNow
         };
 
         if (!PendingFlows.TryAdd(state, flowState))
@@ -110,7 +110,7 @@ public sealed class OidcAuthService : IOidcAuthService
             };
         }
 
-        if (DateTime.UtcNow - flowState.CreatedAt > FlowStateExpiry)
+        if (DateTimeOffset.UtcNow - flowState.CreatedAt > FlowStateExpiry)
         {
             PendingFlows.TryRemove(state, out _);
             _logger.LogWarning("OIDC flow state expired for state: {State}", state);
@@ -224,7 +224,7 @@ public sealed class OidcAuthService : IOidcAuthService
             AccessToken = accessToken,
             RefreshToken = refreshToken,
             ExpiresIn = expiresIn,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTimeOffset.UtcNow
         };
 
         // Retry with new codes on collision
@@ -247,7 +247,7 @@ public sealed class OidcAuthService : IOidcAuthService
             return null;
         }
 
-        if (DateTime.UtcNow - entry.CreatedAt > OneTimeCodeExpiry)
+        if (DateTimeOffset.UtcNow - entry.CreatedAt > OneTimeCodeExpiry)
         {
             return null;
         }
@@ -459,7 +459,7 @@ public sealed class OidcAuthService : IOidcAuthService
 
     private static void CleanupExpiredEntries(object? state)
     {
-        var flowCutoff = DateTime.UtcNow - FlowStateExpiry;
+        var flowCutoff = DateTimeOffset.UtcNow - FlowStateExpiry;
         foreach (var kvp in PendingFlows)
         {
             if (kvp.Value.CreatedAt < flowCutoff)
@@ -473,7 +473,7 @@ public sealed class OidcAuthService : IOidcAuthService
 
     private static void CleanupExpiredOneTimeCodes()
     {
-        var codeCutoff = DateTime.UtcNow - OneTimeCodeExpiry;
+        var codeCutoff = DateTimeOffset.UtcNow - OneTimeCodeExpiry;
         foreach (var kvp in OneTimeCodes)
         {
             if (kvp.Value.CreatedAt < codeCutoff)
@@ -498,7 +498,7 @@ public sealed class OidcAuthService : IOidcAuthService
         public required string CodeVerifier { get; init; }
         public required string RedirectUri { get; init; }
         public string? InitiatorUserId { get; init; }
-        public required DateTime CreatedAt { get; init; }
+        public required DateTimeOffset CreatedAt { get; init; }
     }
 
     private sealed class OidcOneTimeCodeEntry
@@ -506,7 +506,7 @@ public sealed class OidcAuthService : IOidcAuthService
         public required string AccessToken { get; init; }
         public required string RefreshToken { get; init; }
         public required int ExpiresIn { get; init; }
-        public required DateTime CreatedAt { get; init; }
+        public required DateTimeOffset CreatedAt { get; init; }
     }
 
     private sealed class OidcTokenResponse

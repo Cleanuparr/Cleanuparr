@@ -7,7 +7,7 @@ namespace Cleanuparr.Infrastructure.Features.Seeker.Selectors;
 /// </summary>
 public sealed class BalancedWeightedSelector : IItemSelector
 {
-    public List<long> Select(List<(long Id, DateTime? Added, DateTime? LastSearched)> candidates, int count)
+    public List<long> Select(List<(long Id, DateTimeOffset? Added, DateTimeOffset? LastSearched)> candidates, int count)
     {
         if (candidates.Count == 0)
         {
@@ -19,13 +19,13 @@ public sealed class BalancedWeightedSelector : IItemSelector
 
         // Rank by search recency: never-searched / oldest-searched first (ascending)
         var searchRanks = candidates
-            .OrderBy(c => c.LastSearched ?? DateTime.MinValue)
+            .OrderBy(c => c.LastSearched ?? DateTimeOffset.MinValue)
             .Select((c, index) => (c.Id, Rank: n - index))
             .ToDictionary(x => x.Id, x => x.Rank);
 
         // Rank by add date: newest first (descending)
         var ageRanks = candidates
-            .OrderByDescending(c => c.Added ?? DateTime.MinValue)
+            .OrderByDescending(c => c.Added ?? DateTimeOffset.MinValue)
             .Select((c, index) => (c.Id, Rank: n - index))
             .ToDictionary(x => x.Id, x => x.Rank);
 

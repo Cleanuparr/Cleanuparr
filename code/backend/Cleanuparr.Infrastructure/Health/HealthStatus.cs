@@ -15,7 +15,7 @@ public class HealthStatus
     /// <summary>
     /// Gets or sets the time when the client was last checked
     /// </summary>
-    public DateTime LastChecked { get; set; }
+    public DateTimeOffset LastChecked { get; set; }
     
     /// <summary>
     /// Gets or sets the error message if the client is not healthy

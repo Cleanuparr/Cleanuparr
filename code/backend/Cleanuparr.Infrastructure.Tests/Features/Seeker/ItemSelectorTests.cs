@@ -8,13 +8,13 @@ namespace Cleanuparr.Infrastructure.Tests.Features.Seeker;
 
 public sealed class ItemSelectorTests
 {
-    private static readonly List<(long Id, DateTime? Added, DateTime? LastSearched)> SampleCandidates =
+    private static readonly List<(long Id, DateTimeOffset? Added, DateTimeOffset? LastSearched)> SampleCandidates =
     [
-        (1, new DateTime(2024, 1, 1), new DateTime(2024, 6, 1)),
-        (2, new DateTime(2024, 3, 1), new DateTime(2024, 5, 1)),
-        (3, new DateTime(2024, 5, 1), null),
-        (4, new DateTime(2024, 2, 1), new DateTime(2024, 7, 1)),
-        (5, null, new DateTime(2024, 4, 1)),
+        (1, new DateTimeOffset(2024, 1, 1, 0, 0, 0, TimeSpan.Zero), new DateTimeOffset(2024, 6, 1, 0, 0, 0, TimeSpan.Zero)),
+        (2, new DateTimeOffset(2024, 3, 1, 0, 0, 0, TimeSpan.Zero), new DateTimeOffset(2024, 5, 1, 0, 0, 0, TimeSpan.Zero)),
+        (3, new DateTimeOffset(2024, 5, 1, 0, 0, 0, TimeSpan.Zero), null),
+        (4, new DateTimeOffset(2024, 2, 1, 0, 0, 0, TimeSpan.Zero), new DateTimeOffset(2024, 7, 1, 0, 0, 0, TimeSpan.Zero)),
+        (5, null, new DateTimeOffset(2024, 4, 1, 0, 0, 0, TimeSpan.Zero)),
     ];
 
     #region ItemSelectorFactory Tests
@@ -244,7 +244,7 @@ public sealed class ItemSelectorTests
     public void NewestWeighted_Select_SingleCandidate_ReturnsThatCandidate()
     {
         var selector = new NewestWeightedSelector();
-        List<(long Id, DateTime? Added, DateTime? LastSearched)> single = [(42, DateTime.UtcNow, null)];
+        List<(long Id, DateTimeOffset? Added, DateTimeOffset? LastSearched)> single = [(42, DateTimeOffset.UtcNow, null)];
 
         var result = selector.Select(single, 1);
 
@@ -300,7 +300,7 @@ public sealed class ItemSelectorTests
     public void OldestSearchWeighted_Select_SingleCandidate_ReturnsThatCandidate()
     {
         var selector = new OldestSearchWeightedSelector();
-        List<(long Id, DateTime? Added, DateTime? LastSearched)> single = [(42, DateTime.UtcNow, null)];
+        List<(long Id, DateTimeOffset? Added, DateTimeOffset? LastSearched)> single = [(42, DateTimeOffset.UtcNow, null)];
 
         var result = selector.Select(single, 1);
 
@@ -356,7 +356,7 @@ public sealed class ItemSelectorTests
     public void BalancedWeighted_Select_SingleCandidate_ReturnsThatCandidate()
     {
         var selector = new BalancedWeightedSelector();
-        List<(long Id, DateTime? Added, DateTime? LastSearched)> single = [(42, DateTime.UtcNow, null)];
+        List<(long Id, DateTimeOffset? Added, DateTimeOffset? LastSearched)> single = [(42, DateTimeOffset.UtcNow, null)];
 
         var result = selector.Select(single, 1);
 
@@ -382,7 +382,7 @@ public sealed class ItemSelectorTests
     [Fact]
     public void WeightedRandomByRank_ReturnsRequestedCount()
     {
-        var ranked = SampleCandidates.OrderBy(c => c.LastSearched ?? DateTime.MinValue).ToList();
+        var ranked = SampleCandidates.OrderBy(c => c.LastSearched ?? DateTimeOffset.MinValue).ToList();
 
         var result = OldestSearchWeightedSelector.WeightedRandomByRank(ranked, 3);
 
@@ -392,7 +392,7 @@ public sealed class ItemSelectorTests
     [Fact]
     public void WeightedRandomByRank_CountExceedsCandidates_ReturnsAll()
     {
-        var ranked = SampleCandidates.OrderBy(c => c.LastSearched ?? DateTime.MinValue).ToList();
+        var ranked = SampleCandidates.OrderBy(c => c.LastSearched ?? DateTimeOffset.MinValue).ToList();
 
         var result = OldestSearchWeightedSelector.WeightedRandomByRank(ranked, 100);
 
@@ -402,7 +402,7 @@ public sealed class ItemSelectorTests
     [Fact]
     public void WeightedRandomByRank_NoDuplicateIds()
     {
-        var ranked = SampleCandidates.OrderBy(c => c.LastSearched ?? DateTime.MinValue).ToList();
+        var ranked = SampleCandidates.OrderBy(c => c.LastSearched ?? DateTimeOffset.MinValue).ToList();
 
         var result = OldestSearchWeightedSelector.WeightedRandomByRank(ranked, 5);
 
