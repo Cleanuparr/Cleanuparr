@@ -540,9 +540,25 @@ public sealed class AccountController : ControllerBase
         }
     }
 
+    private const int MaxFeatureIdsPerRequest = 100;
+    private const int MaxFeatureIdLength = 64;
+
+    /// <summary>
+    /// Records that the current user has seen the given features, used to drive the "NEW" feature badges in the UI.
+    /// Recording is idempotent: unknown ids are stamped with the current time, already-seen ids keep their original timestamp.
+    /// </summary>
+    /// <param name="request">The feature ids the user has been exposed to.</param>
+    /// <returns>
+    /// The user's account creation timestamp and the full map of feature id to first-seen timestamp.
+    /// </returns>
     [HttpPost("feature-views")]
     public async Task<IActionResult> RecordFeatureViews([FromBody] RecordFeatureViewsRequest request)
     {
+        if (request.FeatureIds.Count > MaxFeatureIdsPerRequest)
+        {
+            return BadRequest(new { error = $"featureIds exceeds the maximum allowed ({MaxFeatureIdsPerRequest})." });
+        }
+
         await UsersContext.Lock.WaitAsync();
         try
         {
@@ -564,7 +580,9 @@ public sealed class AccountController : ControllerBase
 
             foreach (var featureId in request.FeatureIds.Distinct())
             {
-                if (string.IsNullOrWhiteSpace(featureId) || existingIds.Contains(featureId))
+                if (string.IsNullOrWhiteSpace(featureId) ||
+                    featureId.Length > MaxFeatureIdLength ||
+                    existingIds.Contains(featureId))
                 {
                     continue;
                 }

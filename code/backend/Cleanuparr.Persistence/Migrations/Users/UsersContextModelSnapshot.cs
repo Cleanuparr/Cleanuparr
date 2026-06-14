@@ -241,6 +241,7 @@ namespace Cleanuparr.Persistence.Migrations.Users
 
                     b.Property<string>("FeatureId")
                         .IsRequired()
+                        .HasMaxLength(64)
                         .HasColumnType("TEXT")
                         .HasColumnName("feature_id");
 

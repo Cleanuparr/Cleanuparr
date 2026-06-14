@@ -18,6 +18,9 @@ public class UsersContext : DbContext
 
     public DbSet<RefreshToken> RefreshTokens { get; set; }
 
+    /// <summary>
+    /// Per-user feature-view records (first-seen timestamps) backing the "NEW" feature badges.
+    /// </summary>
     public DbSet<UserFeatureView> UserFeatureViews { get; set; }
 
     public UsersContext()
@@ -97,6 +100,9 @@ public class UsersContext : DbContext
         modelBuilder.Entity<UserFeatureView>(entity =>
         {
             entity.HasIndex(v => new { v.UserId, v.FeatureId }).IsUnique();
+
+            entity.Property(v => v.FeatureId)
+                .HasMaxLength(64);
 
             entity.Property(v => v.FirstSeenAt)
                 .HasConversion(new UtcDateTimeConverter());

@@ -110,6 +110,37 @@ public class AccountControllerFeatureViewsTests : IClassFixture<CustomWebApplica
         response.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
     }
 
+    [Fact, TestPriority(4)]
+    public async Task RecordFeatureViews_TooManyIds_ReturnsBadRequest()
+    {
+        var tooMany = Enumerable.Range(0, 101).Select(i => $"feature-{i}").ToArray();
+
+        var response = await _client.PostAsJsonAsync("/api/account/feature-views", new
+        {
+            featureIds = tooMany
+        });
+
+        response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+    }
+
+    [Fact, TestPriority(5)]
+    public async Task RecordFeatureViews_OverLengthId_IsSkipped()
+    {
+        var overLengthId = new string('x', 65);
+
+        var response = await _client.PostAsJsonAsync("/api/account/feature-views", new
+        {
+            featureIds = new[] { "feature-ok", overLengthId }
+        });
+
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        var body = await response.Content.ReadFromJsonAsync<FeatureViewsResponseDto>();
+        body.ShouldNotBeNull();
+        body.Views.ShouldContainKey("feature-ok");
+        body.Views.ShouldNotContainKey(overLengthId);
+    }
+
     private sealed record FeatureViewsResponseDto
     {
         public DateTime CreatedAt { get; init; }

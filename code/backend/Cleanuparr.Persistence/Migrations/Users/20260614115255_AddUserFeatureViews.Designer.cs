@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Cleanuparr.Persistence.Migrations.Users
 {
     [DbContext(typeof(UsersContext))]
-    [Migration("20260614081847_AddUserFeatureViews")]
+    [Migration("20260614115255_AddUserFeatureViews")]
     partial class AddUserFeatureViews
     {
         /// <inheritdoc />
@@ -244,6 +244,7 @@ namespace Cleanuparr.Persistence.Migrations.Users
 
                     b.Property<string>("FeatureId")
                         .IsRequired()
+                        .HasMaxLength(64)
                         .HasColumnType("TEXT")
                         .HasColumnName("feature_id");
 

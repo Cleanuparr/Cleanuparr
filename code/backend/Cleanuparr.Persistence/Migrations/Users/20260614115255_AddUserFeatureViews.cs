@@ -17,7 +17,7 @@ namespace Cleanuparr.Persistence.Migrations.Users
                 {
                     id = table.Column<Guid>(type: "TEXT", nullable: false),
                     user_id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    feature_id = table.Column<string>(type: "TEXT", nullable: false),
+                    feature_id = table.Column<string>(type: "TEXT", maxLength: 64, nullable: false),
                     first_seen_at = table.Column<DateTime>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
