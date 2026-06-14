@@ -35,6 +35,12 @@
   --color-info:        #{$color-info};
   --color-info-dim:    #{$color-info-dim};
 
+  // "NEW" feature badge flame palette
+  --new-badge-flame-start: #{$new-badge-flame-start};
+  --new-badge-flame-mid:   #{$new-badge-flame-mid};
+  --new-badge-flame-end:   #{$new-badge-flame-end};
+  --new-badge-glow-rgb:    #{$new-badge-glow-rgb};
+
   // Spacing
   --space-0:   #{$space-0};
   --space-px:  #{$space-px};

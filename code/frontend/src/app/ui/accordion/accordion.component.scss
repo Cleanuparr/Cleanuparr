@@ -3,6 +3,7 @@
 .accordion {
   @include glass('subtle');
   overflow: hidden;
+  position: relative;
 
   &--disabled {
     opacity: 0.6;

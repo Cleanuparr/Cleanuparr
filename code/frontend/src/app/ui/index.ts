@@ -9,6 +9,7 @@ export { ToggleComponent } from './toggle/toggle.component';
 export { IconComponent } from './icon/icon.component';
 export { BadgeComponent } from './badge/badge.component';
 export type { BadgeSeverity, BadgeSize } from './badge/badge.component';
+export { NewBadgeComponent } from './new-badge/new-badge.component';
 export { SelectComponent } from './select/select.component';
 export type { SelectOption } from './select/select.component';
 export { NumberInputComponent } from './number-input/number-input.component';

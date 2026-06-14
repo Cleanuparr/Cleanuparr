@@ -2,6 +2,7 @@ import { Component, ChangeDetectionStrategy, input, model, signal, ElementRef, i
 import { FormsModule } from '@angular/forms';
 import { NgIcon } from '@ng-icons/core';
 import { DocumentationService } from '@core/services/documentation.service';
+import { NewBadgeComponent } from '@ui/new-badge/new-badge.component';
 
 export interface SelectOption {
   label: string;
@@ -12,7 +13,7 @@ export interface SelectOption {
 @Component({
   selector: 'app-select',
   standalone: true,
-  imports: [FormsModule, NgIcon],
+  imports: [FormsModule, NgIcon, NewBadgeComponent],
   templateUrl: './select.component.html',
   styleUrl: './select.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -21,6 +22,7 @@ export class SelectComponent {
   private readonly docs = inject(DocumentationService);
 
   label = input<string>();
+  featureId = input<string>();
   placeholder = input('Select...');
   options = input<SelectOption[]>([]);
   disabled = input(false);

@@ -52,4 +52,9 @@ public class User
     public List<RecoveryCode> RecoveryCodes { get; set; } = [];
 
     public List<RefreshToken> RefreshTokens { get; set; } = [];
+
+    /// <summary>
+    /// Records of when this user first saw each feature, used to drive the "NEW" feature badges.
+    /// </summary>
+    public List<UserFeatureView> FeatureViews { get; set; } = [];
 }

@@ -1,6 +1,7 @@
 import { Component, ChangeDetectionStrategy, input, model, signal, effect, untracked, inject } from '@angular/core';
 import { NgIcon } from '@ng-icons/core';
 import { DocumentationService } from '@core/services/documentation.service';
+import { NewBadgeComponent } from '@ui/new-badge/new-badge.component';
 
 export interface SizeUnit {
   label: string;
@@ -10,7 +11,7 @@ export interface SizeUnit {
 @Component({
   selector: 'app-size-input',
   standalone: true,
-  imports: [NgIcon],
+  imports: [NgIcon, NewBadgeComponent],
   templateUrl: './size-input.component.html',
   styleUrl: './size-input.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -19,6 +20,7 @@ export class SizeInputComponent {
   private readonly docs = inject(DocumentationService);
 
   label = input<string>();
+  featureId = input<string>();
   units = input.required<SizeUnit[]>();
   placeholder = input('');
   disabled = input(false);

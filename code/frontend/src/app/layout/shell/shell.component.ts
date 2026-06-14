@@ -14,6 +14,7 @@ import { filter } from 'rxjs';
 import { NavSidebarComponent } from '../nav-sidebar/nav-sidebar.component';
 import { ToolbarComponent } from '../toolbar/toolbar.component';
 import { AppHubService } from '@core/realtime/app-hub.service';
+import { FeatureBadgeService } from '@core/feature-badges/feature-badge.service';
 
 @Component({
   selector: 'app-shell',
@@ -26,6 +27,7 @@ import { AppHubService } from '@core/realtime/app-hub.service';
 export class ShellComponent implements OnInit, OnDestroy {
   private router = inject(Router);
   private hub = inject(AppHubService);
+  private featureBadge = inject(FeatureBadgeService);
   private destroyRef = inject(DestroyRef);
 
   sidebarCollapsed = signal(false);
@@ -39,6 +41,7 @@ export class ShellComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.checkMobile();
     this.hub.start();
+    this.featureBadge.init();
 
     // Auto-close mobile menu on navigation
     this.router.events
