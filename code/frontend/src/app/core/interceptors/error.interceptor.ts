@@ -1,33 +1,36 @@
 import { HttpInterceptorFn, HttpErrorResponse } from '@angular/common/http';
 import { catchError, throwError } from 'rxjs';
 
+interface ProblemDetails {
+  type?: string;
+  title?: string;
+  status?: number;
+  detail?: string;
+  traceId?: string;
+  retryAfterSeconds?: number;
+}
+
 export class ApiError extends Error {
   retryAfterSeconds?: number;
   statusCode?: number;
+  traceId?: string;
 }
 
 export const errorInterceptor: HttpInterceptorFn = (req, next) => {
   return next(req).pipe(
     catchError((error: HttpErrorResponse) => {
-      let message = 'An unexpected error occurred';
-
       if (error.error instanceof ErrorEvent) {
-        // Client-side error
-        message = error.error.message;
-      } else if (typeof error.error === 'string') {
-        // Server-side error with plain string body
-        message = error.error;
-      } else {
-        // Server-side error with JSON body
-        message = error.error?.error
-          ?? error.error?.message
-          ?? error.message
-          ?? `Error ${error.status}`;
+        // Client-side / network error
+        const apiError = new ApiError(error.error.message);
+        apiError.statusCode = error.status;
+        return throwError(() => apiError);
       }
 
-      const apiError = new ApiError(message);
-      apiError.retryAfterSeconds = error.error?.retryAfterSeconds;
+      const problem = error.error as ProblemDetails | null;
+      const apiError = new ApiError(problem?.detail ?? problem?.title ?? `Error ${error.status}`);
       apiError.statusCode = error.status;
+      apiError.retryAfterSeconds = problem?.retryAfterSeconds;
+      apiError.traceId = problem?.traceId;
       return throwError(() => apiError);
     }),
   );
