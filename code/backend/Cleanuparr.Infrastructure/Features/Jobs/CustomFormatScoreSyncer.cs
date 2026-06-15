@@ -120,7 +120,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
         _logger.LogTrace("[Radarr] {InstanceName}: found {TotalMovies} total movies, {WithFiles} with files",
             arrInstance.Name, allMovies.Count, moviesWithFiles.Count);
 
-        DateTimeOffset now = _timeProvider.GetUtcNow().UtcDateTime;
+        DateTimeOffset now = _timeProvider.GetUtcNow();
 
         // Touch entries for movies that still exist but have no file (e.g., RSS upgrade in progress)
         HashSet<long> movieIdsWithFiles = moviesWithFiles.Select(x => x.Movie.Id).ToHashSet();
@@ -204,7 +204,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
         _logger.LogTrace("[Sonarr] {InstanceName}: found {SeriesCount} total series",
             arrInstance.Name, allSeries.Count);
 
-        DateTimeOffset now = _timeProvider.GetUtcNow().UtcDateTime;
+        DateTimeOffset now = _timeProvider.GetUtcNow();
 
         int totalSynced = 0;
         int totalSkipped = 0;
@@ -437,7 +437,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
     /// </summary>
     private async Task CleanupOldHistoryAsync()
     {
-        DateTimeOffset threshold = _timeProvider.GetUtcNow().UtcDateTime - HistoryRetention;
+        DateTimeOffset threshold = _timeProvider.GetUtcNow() - HistoryRetention;
         int deleted = await _dataContext.CustomFormatScoreHistory
             .Where(h => h.RecordedAt < threshold)
             .ExecuteDeleteAsync();

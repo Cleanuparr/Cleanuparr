@@ -306,7 +306,7 @@ public sealed class Seeker : IHandler
         }
 
         // Update LastProcessedAt so round-robin moves on
-        instanceConfig.LastProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
+        instanceConfig.LastProcessedAt = _timeProvider.GetUtcNow();
         _dataContext.SeekerInstanceConfigs.Update(instanceConfig);
         await _dataContext.SaveChangesAsync();
 
@@ -442,7 +442,7 @@ public sealed class Seeker : IHandler
 
         // Apply filters — UseCutoff and UseCustomFormatScore are OR-ed: an item qualifies if it fails the quality cutoff OR the CF score cutoff.
         // Items without cutoff data or a cached CF score are excluded from the respective filter.
-        DateTimeOffset graceCutoff = _timeProvider.GetUtcNow().UtcDateTime.AddHours(-config.PostReleaseGraceHours);
+        DateTimeOffset graceCutoff = _timeProvider.GetUtcNow().AddHours(-config.PostReleaseGraceHours);
         var candidates = movies
             .Where(m => m.Status is "released")
             .Where(m => IsMoviePastGracePeriod(m, graceCutoff))
@@ -559,7 +559,7 @@ public sealed class Seeker : IHandler
         List<SearchableSeries> series = await _sonarrClient.GetAllSeriesAsync(arrInstance);
         List<Tag> tags = await _sonarrClient.GetAllTagsAsync(arrInstance);
         List<long> allLibraryIds = series.Select(s => s.Id).ToList();
-        DateTimeOffset graceCutoff = _timeProvider.GetUtcNow().UtcDateTime.AddHours(-config.PostReleaseGraceHours);
+        DateTimeOffset graceCutoff = _timeProvider.GetUtcNow().AddHours(-config.PostReleaseGraceHours);
 
         Dictionary<long, string> tagsById = tags.ToDictionary(t => t.Id, t => t.Label);
         HashSet<string> skipTagSet = new(instanceConfig.SkipTags, StringComparer.InvariantCultureIgnoreCase);
@@ -819,7 +819,7 @@ public sealed class Seeker : IHandler
         int seasonNumber = 0,
         bool isDryRun = false)
     {
-        var now = _timeProvider.GetUtcNow().UtcDateTime;
+        var now = _timeProvider.GetUtcNow();
 
         for (int i = 0; i < searchedIds.Count; i++)
         {
@@ -920,7 +920,7 @@ public sealed class Seeker : IHandler
     /// </summary>
     private async Task CleanupOldCycleHistoryAsync(ArrInstance arrInstance, Guid currentCycleId)
     {
-        DateTimeOffset cutoff = _timeProvider.GetUtcNow().UtcDateTime.AddDays(-30);
+        DateTimeOffset cutoff = _timeProvider.GetUtcNow().AddDays(-30);
 
         int deleted = await _dataContext.SeekerHistory
             .Where(h => h.ArrInstanceId == arrInstance.Id
@@ -946,7 +946,7 @@ public sealed class Seeker : IHandler
             return false;
         }
 
-        var elapsed = _timeProvider.GetUtcNow().UtcDateTime - cycleStartedAt.Value;
+        var elapsed = _timeProvider.GetUtcNow() - cycleStartedAt.Value;
         return elapsed.TotalDays < instanceConfig.MinCycleTimeDays;
     }
 
