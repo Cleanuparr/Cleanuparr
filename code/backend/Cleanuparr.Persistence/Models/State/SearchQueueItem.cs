@@ -49,5 +49,5 @@ public sealed record SearchQueueItem
     /// <summary>
     /// When this search request was created
     /// </summary>
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
 }

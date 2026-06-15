@@ -45,7 +45,7 @@ public class SignalRLogSink : ILogEventSink
             _formatter.Format(logEvent, stringWriter);
             var logData = new
             {
-                Timestamp = logEvent.Timestamp.DateTime,
+                Timestamp = logEvent.Timestamp,
                 Level = logEvent.Level.ToString(),
                 Message = stringWriter.ToString(),
                 Exception = logEvent.Exception?.ToString(),

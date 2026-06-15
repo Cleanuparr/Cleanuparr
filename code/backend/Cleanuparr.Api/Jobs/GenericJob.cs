@@ -68,7 +68,7 @@ public sealed class GenericJob<T> : IJob
             var jobRun = await eventsContext.JobRuns.FindAsync(jobRunId);
             if (jobRun is not null)
             {
-                jobRun.CompletedAt = DateTime.UtcNow;
+                jobRun.CompletedAt = DateTimeOffset.UtcNow;
                 jobRun.Status = status;
                 await eventsContext.SaveChangesAsync();
             }

@@ -36,13 +36,13 @@ public class HealthController : ControllerBase
                 registration => registration.Tags.Contains("liveness"));
             
             return result.Status == HealthStatus.Healthy 
-                ? Ok(new { status = "healthy", timestamp = DateTime.UtcNow })
-                : StatusCode(503, new { status = "unhealthy", timestamp = DateTime.UtcNow });
+                ? Ok(new { status = "healthy", timestamp = DateTimeOffset.UtcNow })
+                : StatusCode(503, new { status = "unhealthy", timestamp = DateTimeOffset.UtcNow });
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Health check failed");
-            return StatusCode(503, new { status = "unhealthy", error = "Health check failed", timestamp = DateTime.UtcNow });
+            return StatusCode(503, new { status = "unhealthy", error = "Health check failed", timestamp = DateTimeOffset.UtcNow });
         }
     }
 
@@ -62,13 +62,13 @@ public class HealthController : ControllerBase
             
             if (result.Status == HealthStatus.Healthy)
             {
-                return Ok(new { status = "ready", timestamp = DateTime.UtcNow });
+                return Ok(new { status = "ready", timestamp = DateTimeOffset.UtcNow });
             }
             
             // For readiness, we consider degraded as not ready
             return StatusCode(503, new { 
                 status = "not_ready", 
-                timestamp = DateTime.UtcNow,
+                timestamp = DateTimeOffset.UtcNow,
                 details = result.Entries.Where(e => e.Value.Status != HealthStatus.Healthy)
                     .ToDictionary(e => e.Key, e => new { 
                         status = e.Value.Status.ToString().ToLowerInvariant(),
@@ -79,7 +79,7 @@ public class HealthController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Readiness check failed");
-            return StatusCode(503, new { status = "not_ready", error = "Readiness check failed", timestamp = DateTime.UtcNow });
+            return StatusCode(503, new { status = "not_ready", error = "Readiness check failed", timestamp = DateTimeOffset.UtcNow });
         }
     }
 
@@ -97,7 +97,7 @@ public class HealthController : ControllerBase
             var response = new
             {
                 status = result.Status.ToString().ToLowerInvariant(),
-                timestamp = DateTime.UtcNow,
+                timestamp = DateTimeOffset.UtcNow,
                 totalDuration = result.TotalDuration.TotalMilliseconds,
                 entries = result.Entries.ToDictionary(
                     e => e.Key,
@@ -122,7 +122,7 @@ public class HealthController : ControllerBase
             return StatusCode(503, new { 
                 status = "unhealthy", 
                 error = "Detailed health check failed", 
-                timestamp = DateTime.UtcNow 
+                timestamp = DateTimeOffset.UtcNow 
             });
         }
     }

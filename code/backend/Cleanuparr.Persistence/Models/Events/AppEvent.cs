@@ -24,7 +24,7 @@ public class AppEvent : IEvent
     [Key]
     public Guid Id { get; set; } = Guid.CreateVersion7();
 
-    public DateTime Timestamp { get; set; } = DateTime.UtcNow;
+    public DateTimeOffset Timestamp { get; set; } = DateTimeOffset.UtcNow;
 
     [Required]
     public EventType EventType { get; set; }
@@ -72,7 +72,7 @@ public class AppEvent : IEvent
     /// <summary>
     /// When the search command completed (only set for SearchTriggered events)
     /// </summary>
-    public DateTime? CompletedAt { get; set; }
+    public DateTimeOffset? CompletedAt { get; set; }
 
     /// <summary>
     /// The Seeker cycle ID associated with this event (only set for SearchTriggered events)

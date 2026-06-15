@@ -223,7 +223,7 @@ public sealed class Seeker : IHandler
             // stop after the first one that triggers a search.
             // This prevents cycle-complete-waiting instances from wasting a run.
             var ordered = instanceConfigs
-                .OrderBy(s => s.LastProcessedAt ?? DateTime.MinValue)
+                .OrderBy(s => s.LastProcessedAt ?? DateTimeOffset.MinValue)
                 .ToList();
 
             foreach (SeekerInstanceConfig instance in ordered)
@@ -306,7 +306,7 @@ public sealed class Seeker : IHandler
         }
 
         // Update LastProcessedAt so round-robin moves on
-        instanceConfig.LastProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
+        instanceConfig.LastProcessedAt = _timeProvider.GetUtcNow();
         _dataContext.SeekerInstanceConfigs.Update(instanceConfig);
         await _dataContext.SaveChangesAsync();
 
@@ -335,7 +335,7 @@ public sealed class Seeker : IHandler
             .ToListAsync();
 
         // Derive item-level history for selection strategies
-        Dictionary<long, DateTime> itemSearchHistory = currentCycleHistory
+        Dictionary<long, DateTimeOffset> itemSearchHistory = currentCycleHistory
             .GroupBy(h => h.ExternalItemId)
             .ToDictionary(g => g.Key, g => g.Max(h => h.LastSearchedAt));
 
@@ -419,7 +419,7 @@ public sealed class Seeker : IHandler
         SeekerConfig config,
         ArrInstance arrInstance,
         SeekerInstanceConfig instanceConfig,
-        Dictionary<long, DateTime> searchHistory,
+        Dictionary<long, DateTimeOffset> searchHistory,
         bool isDryRun,
         HashSet<long> queuedMovieIds)
     {
@@ -442,7 +442,7 @@ public sealed class Seeker : IHandler
 
         // Apply filters — UseCutoff and UseCustomFormatScore are OR-ed: an item qualifies if it fails the quality cutoff OR the CF score cutoff.
         // Items without cutoff data or a cached CF score are excluded from the respective filter.
-        DateTime graceCutoff = _timeProvider.GetUtcNow().UtcDateTime.AddHours(-config.PostReleaseGraceHours);
+        DateTimeOffset graceCutoff = _timeProvider.GetUtcNow().AddHours(-config.PostReleaseGraceHours);
         var candidates = movies
             .Where(m => m.Status is "released")
             .Where(m => IsMoviePastGracePeriod(m, graceCutoff))
@@ -490,7 +490,7 @@ public sealed class Seeker : IHandler
         if (cycleComplete)
         {
             // Respect MinCycleTimeDays even when cycle completes due to queue filtering
-            DateTime? cycleStartedAt = searchHistory.Count > 0 ? searchHistory.Values.Min() : null;
+            DateTimeOffset? cycleStartedAt = searchHistory.Count > 0 ? searchHistory.Values.Min() : null;
             if (ShouldWaitForMinCycleTime(instanceConfig, cycleStartedAt))
             {
                 _logger.LogDebug(
@@ -509,13 +509,13 @@ public sealed class Seeker : IHandler
                 await _dataContext.SaveChangesAsync();
             }
 
-            searchHistory = new Dictionary<long, DateTime>();
+            searchHistory = new Dictionary<long, DateTimeOffset>();
         }
 
         // Only pass unsearched items to the selector — already-searched items in this cycle are skipped
         var selectionCandidates = candidates
             .Where(m => !searchHistory.ContainsKey(m.Id))
-            .Select(m => (m.Id, m.Added, LastSearched: (DateTime?)null))
+            .Select(m => (m.Id, m.Added, LastSearched: (DateTimeOffset?)null))
             .ToList();
 
         IItemSelector selector = ItemSelectorFactory.Create(config.SelectionStrategy);
@@ -550,7 +550,7 @@ public sealed class Seeker : IHandler
         SeekerConfig config,
         ArrInstance arrInstance,
         SeekerInstanceConfig instanceConfig,
-        Dictionary<long, DateTime> seriesSearchHistory,
+        Dictionary<long, DateTimeOffset> seriesSearchHistory,
         List<SeekerHistory> currentCycleHistory,
         bool isDryRun,
         bool isRetry = false,
@@ -559,7 +559,7 @@ public sealed class Seeker : IHandler
         List<SearchableSeries> series = await _sonarrClient.GetAllSeriesAsync(arrInstance);
         List<Tag> tags = await _sonarrClient.GetAllTagsAsync(arrInstance);
         List<long> allLibraryIds = series.Select(s => s.Id).ToList();
-        DateTime graceCutoff = _timeProvider.GetUtcNow().UtcDateTime.AddHours(-config.PostReleaseGraceHours);
+        DateTimeOffset graceCutoff = _timeProvider.GetUtcNow().AddHours(-config.PostReleaseGraceHours);
 
         Dictionary<long, string> tagsById = tags.ToDictionary(t => t.Id, t => t.Label);
         HashSet<string> skipTagSet = new(instanceConfig.SkipTags, StringComparer.InvariantCultureIgnoreCase);
@@ -589,7 +589,7 @@ public sealed class Seeker : IHandler
         // Pass all candidates — BuildSonarrSearchItemAsync handles season-level exclusion
         // LastSearched info helps the selector deprioritize recently-searched series
         var selectionCandidates = candidates
-            .Select(s => (s.Id, s.Added, LastSearched: seriesSearchHistory.TryGetValue(s.Id, out var dt) ? (DateTime?)dt : null))
+            .Select(s => (s.Id, s.Added, LastSearched: seriesSearchHistory.TryGetValue(s.Id, out var dt) ? (DateTimeOffset?)dt : null))
             .ToList();
 
         // Select all candidates in priority order so the loop can find one with unsearched seasons
@@ -644,7 +644,7 @@ public sealed class Seeker : IHandler
         if (candidates.Count > 0 && !isRetry)
         {
             // Respect MinCycleTimeDays even when cycle completes due to queue filtering
-            DateTime? cycleStartedAt = seriesSearchHistory.Count > 0 ? seriesSearchHistory.Values.Min() : null;
+            DateTimeOffset? cycleStartedAt = seriesSearchHistory.Count > 0 ? seriesSearchHistory.Values.Min() : null;
             if (ShouldWaitForMinCycleTime(instanceConfig, cycleStartedAt))
             {
                 _logger.LogDebug(
@@ -664,7 +664,7 @@ public sealed class Seeker : IHandler
 
             // Retry with fresh cycle (only once to prevent infinite recursion)
             return await ProcessSonarrAsync(config, arrInstance, instanceConfig,
-                new Dictionary<long, DateTime>(), [], isDryRun, isRetry: true, queuedSeasons: queuedSeasons);
+                new Dictionary<long, DateTimeOffset>(), [], isDryRun, isRetry: true, queuedSeasons: queuedSeasons);
         }
 
         return new SeekerProcessResult { Candidates = [], AllLibraryIds = allLibraryIds };
@@ -680,7 +680,7 @@ public sealed class Seeker : IHandler
         long seriesId,
         List<SeekerHistory> seriesHistory,
         string seriesTitle,
-        DateTime graceCutoff,
+        DateTimeOffset graceCutoff,
         HashSet<(long SeriesId, long SeasonNumber)>? queuedSeasons = null)
     {
         List<SearchableEpisode> episodes = await _sonarrClient.GetEpisodesAsync(arrInstance, seriesId);
@@ -730,7 +730,7 @@ public sealed class Seeker : IHandler
             .GroupBy(e => e.SeasonNumber)
             .Select(g =>
             {
-                DateTime? lastSearched = seriesHistory
+                DateTimeOffset? lastSearched = seriesHistory
                     .FirstOrDefault(h => h.SeasonNumber == g.Key)
                     ?.LastSearchedAt;
                 return (SeasonNumber: g.Key, LastSearched: lastSearched, FirstEpisode: g.First());
@@ -819,7 +819,7 @@ public sealed class Seeker : IHandler
         int seasonNumber = 0,
         bool isDryRun = false)
     {
-        var now = _timeProvider.GetUtcNow().UtcDateTime;
+        var now = _timeProvider.GetUtcNow();
 
         for (int i = 0; i < searchedIds.Count; i++)
         {
@@ -920,7 +920,7 @@ public sealed class Seeker : IHandler
     /// </summary>
     private async Task CleanupOldCycleHistoryAsync(ArrInstance arrInstance, Guid currentCycleId)
     {
-        DateTime cutoff = _timeProvider.GetUtcNow().UtcDateTime.AddDays(-30);
+        DateTimeOffset cutoff = _timeProvider.GetUtcNow().AddDays(-30);
 
         int deleted = await _dataContext.SeekerHistory
             .Where(h => h.ArrInstanceId == arrInstance.Id
@@ -939,14 +939,14 @@ public sealed class Seeker : IHandler
     /// Checks whether the minimum cycle time constraint prevents starting a new cycle.
     /// Returns true if the cycle started recently and MinCycleTimeDays has not yet elapsed.
     /// </summary>
-    private bool ShouldWaitForMinCycleTime(SeekerInstanceConfig instanceConfig, DateTime? cycleStartedAt)
+    private bool ShouldWaitForMinCycleTime(SeekerInstanceConfig instanceConfig, DateTimeOffset? cycleStartedAt)
     {
         if (cycleStartedAt is null)
         {
             return false;
         }
 
-        var elapsed = _timeProvider.GetUtcNow().UtcDateTime - cycleStartedAt.Value;
+        var elapsed = _timeProvider.GetUtcNow() - cycleStartedAt.Value;
         return elapsed.TotalDays < instanceConfig.MinCycleTimeDays;
     }
 
@@ -954,9 +954,9 @@ public sealed class Seeker : IHandler
     /// Returns true when the movie's release date is past the grace period cutoff.
     /// Movies without any release date info are treated as released.
     /// </summary>
-    private static bool IsMoviePastGracePeriod(SearchableMovie movie, DateTime graceCutoff)
+    private static bool IsMoviePastGracePeriod(SearchableMovie movie, DateTimeOffset graceCutoff)
     {
-        DateTime? releaseDate = movie.DigitalRelease ?? movie.PhysicalRelease ?? movie.InCinemas;
+        DateTimeOffset? releaseDate = movie.DigitalRelease ?? movie.PhysicalRelease ?? movie.InCinemas;
         return releaseDate is null || releaseDate.Value <= graceCutoff;
     }
 

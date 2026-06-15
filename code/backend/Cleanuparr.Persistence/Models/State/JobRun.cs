@@ -16,9 +16,9 @@ public class JobRun
     [Required]
     public required JobType Type { get; set; }
 
-    public DateTime StartedAt { get; set; } = DateTime.UtcNow;
+    public DateTimeOffset StartedAt { get; set; } = DateTimeOffset.UtcNow;
 
-    public DateTime? CompletedAt { get; set; }
+    public DateTimeOffset? CompletedAt { get; set; }
 
     public JobRunStatus? Status { get; set; }
 

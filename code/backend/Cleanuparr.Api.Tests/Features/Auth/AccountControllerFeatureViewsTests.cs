@@ -73,7 +73,7 @@ public class AccountControllerFeatureViewsTests : IClassFixture<CustomWebApplica
         body.CreatedAt.ShouldNotBe(default);
         body.Views.ShouldContainKey("feature-a");
         body.Views.ShouldContainKey("feature-b");
-        body.Views["feature-a"].Kind.ShouldBe(DateTimeKind.Utc);
+        body.Views["feature-a"].Offset.ShouldBe(TimeSpan.Zero);
     }
 
     [Fact, TestPriority(2)]
@@ -143,7 +143,7 @@ public class AccountControllerFeatureViewsTests : IClassFixture<CustomWebApplica
 
     private sealed record FeatureViewsResponseDto
     {
-        public DateTime CreatedAt { get; init; }
-        public Dictionary<string, DateTime> Views { get; init; } = new();
+        public DateTimeOffset CreatedAt { get; init; }
+        public Dictionary<string, DateTimeOffset> Views { get; init; } = new();
     }
 }

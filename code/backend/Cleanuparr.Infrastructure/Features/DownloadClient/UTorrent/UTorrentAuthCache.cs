@@ -7,10 +7,10 @@ public sealed class UTorrentAuthCache
 {
     public string AuthToken { get; init; } = string.Empty;
     public string GuidCookie { get; init; } = string.Empty;
-    public DateTime CreatedAt { get; init; }
-    public DateTime ExpiresAt { get; init; }
+    public DateTimeOffset CreatedAt { get; init; }
+    public DateTimeOffset ExpiresAt { get; init; }
     
-    public bool IsValid => DateTime.UtcNow < ExpiresAt && 
+    public bool IsValid => DateTimeOffset.UtcNow < ExpiresAt && 
                           !string.IsNullOrEmpty(AuthToken) && 
                           !string.IsNullOrEmpty(GuidCookie);
 }

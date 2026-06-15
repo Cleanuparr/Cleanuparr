@@ -54,7 +54,7 @@ public sealed record SeekerCommandTracker
     /// <summary>
     /// When this tracker entry was created
     /// </summary>
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
 
     /// <summary>
     /// Current status of the arr command

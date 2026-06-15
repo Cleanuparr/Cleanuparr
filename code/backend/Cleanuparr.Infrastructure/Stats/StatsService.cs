@@ -32,7 +32,7 @@ public class StatsService : IStatsService
     /// <inheritdoc />
     public async Task<StatsResponse> GetStatsAsync(int hours = 24, int includeEvents = 0, int includeStrikes = 0)
     {
-        var cutoff = DateTime.UtcNow.AddHours(-hours);
+        var cutoff = DateTimeOffset.UtcNow.AddHours(-hours);
 
         var eventStats = await GetEventStatsAsync(cutoff, hours, includeEvents);
         var strikeStats = await GetStrikeStatsAsync(cutoff, hours, includeStrikes);
@@ -45,11 +45,11 @@ public class StatsService : IStatsService
             Strikes = strikeStats,
             Jobs = jobStats,
             Health = healthStats,
-            GeneratedAt = DateTime.UtcNow
+            GeneratedAt = DateTimeOffset.UtcNow
         };
     }
 
-    private async Task<EventStats> GetEventStatsAsync(DateTime cutoff, int hours, int includeEvents)
+    private async Task<EventStats> GetEventStatsAsync(DateTimeOffset cutoff, int hours, int includeEvents)
     {
         var eventsByType = await _eventsContext.Events
             .Where(e => e.Timestamp >= cutoff)
@@ -92,7 +92,7 @@ public class StatsService : IStatsService
         return stats;
     }
 
-    private async Task<StrikeStats> GetStrikeStatsAsync(DateTime cutoff, int hours, int includeStrikes)
+    private async Task<StrikeStats> GetStrikeStatsAsync(DateTimeOffset cutoff, int hours, int includeStrikes)
     {
         var strikesByType = await _eventsContext.Strikes
             .Where(s => s.CreatedAt >= cutoff)
@@ -133,7 +133,7 @@ public class StatsService : IStatsService
         return stats;
     }
 
-    private async Task<JobStats> GetJobStatsAsync(DateTime cutoff, int hours)
+    private async Task<JobStats> GetJobStatsAsync(DateTimeOffset cutoff, int hours)
     {
         var jobRuns = await _eventsContext.JobRuns
             .Where(j => j.StartedAt >= cutoff)

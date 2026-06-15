@@ -30,8 +30,8 @@ public sealed class SearchStatsController : ControllerBase
     [HttpGet("summary")]
     public async Task<IActionResult> GetSummary()
     {
-        DateTime sevenDaysAgo = DateTime.UtcNow.AddDays(-7);
-        DateTime thirtyDaysAgo = DateTime.UtcNow.AddDays(-30);
+        DateTimeOffset sevenDaysAgo = DateTimeOffset.UtcNow.AddDays(-7);
+        DateTimeOffset thirtyDaysAgo = DateTimeOffset.UtcNow.AddDays(-30);
 
         // Event counts from EventsContext
         var searchEvents = _eventsContext.Events
@@ -81,7 +81,7 @@ public sealed class SearchStatsController : ControllerBase
             {
                 InstanceId = g.Key,
                 CycleItemsSearched = g.Select(h => h.ExternalItemId).Distinct().Count(),
-                CycleStartedAt = (DateTime?)g.Min(h => h.LastSearchedAt),
+                CycleStartedAt = (DateTimeOffset?)g.Min(h => h.LastSearchedAt),
             })
             .ToListAsync();
 

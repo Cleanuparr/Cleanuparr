@@ -156,11 +156,11 @@ public sealed class UTorrentItem
     public double ProgressPercent => Progress / 1000.0;
 
     /// <summary>
-    /// Date completed as DateTime (or null if not completed)
+    /// Date completed as DateTimeOffset (or null if not completed)
     /// </summary>
     [JsonIgnore]
-    public DateTime? DateCompletedDateTime => 
-        DateCompleted > 0 ? DateTimeOffset.FromUnixTimeSeconds(DateCompleted).DateTime : null;
+    public DateTimeOffset? DateCompletedDateTime =>
+        DateCompleted > 0 ? DateTimeOffset.FromUnixTimeSeconds(DateCompleted) : null;
 
     /// <summary>
     /// Seeding time in seconds (calculated from DateCompleted to now)
@@ -172,7 +172,7 @@ public sealed class UTorrentItem
         {
             if (DateCompletedDateTime.HasValue)
             {
-                return DateTime.UtcNow - DateCompletedDateTime.Value;
+                return DateTimeOffset.UtcNow - DateCompletedDateTime.Value;
             }
             
             return null;

@@ -7,7 +7,7 @@ namespace Cleanuparr.Infrastructure.Features.Seeker.Selectors;
 /// </summary>
 public sealed class OldestSearchWeightedSelector : IItemSelector
 {
-    public List<long> Select(List<(long Id, DateTime? Added, DateTime? LastSearched)> candidates, int count)
+    public List<long> Select(List<(long Id, DateTimeOffset? Added, DateTimeOffset? LastSearched)> candidates, int count)
     {
         if (candidates.Count == 0)
         {
@@ -18,7 +18,7 @@ public sealed class OldestSearchWeightedSelector : IItemSelector
 
         // Sort by LastSearched ascending, then oldest searches, so rank 0 = highest priority
         var ranked = candidates
-            .OrderBy(c => c.LastSearched ?? DateTime.MinValue)
+            .OrderBy(c => c.LastSearched ?? DateTimeOffset.MinValue)
             .ToList();
 
         return WeightedRandomByRank(ranked, count);
@@ -29,7 +29,7 @@ public sealed class OldestSearchWeightedSelector : IItemSelector
     /// The item at rank 0 gets the highest weight (N), rank 1 gets (N-1), etc.
     /// </summary>
     internal static List<long> WeightedRandomByRank(
-        List<(long Id, DateTime? Added, DateTime? LastSearched)> ranked,
+        List<(long Id, DateTimeOffset? Added, DateTimeOffset? LastSearched)> ranked,
         int count)
     {
         int n = ranked.Count;

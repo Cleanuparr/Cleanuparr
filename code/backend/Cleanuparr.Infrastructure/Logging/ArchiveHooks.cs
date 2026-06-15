@@ -69,7 +69,7 @@ public class ArchiveHooks : FileLifecycleHooks
         if (_retainedFileTimeLimit is not null)
         {
             filesToDeleteQuery = filesToDeleteQuery
-                .Where(file => file.LastWriteTimeUtc < DateTime.UtcNow - _retainedFileTimeLimit);
+                .Where(file => file.LastWriteTimeUtc < DateTimeOffset.UtcNow - _retainedFileTimeLimit);
         }
         
         List<FileInfo> filesToDelete = filesToDeleteQuery.ToList();

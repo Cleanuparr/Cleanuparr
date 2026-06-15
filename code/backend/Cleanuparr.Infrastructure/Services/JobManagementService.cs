@@ -267,8 +267,8 @@ public class JobManagementService : IJobManagementService
                             jobInfo.Schedule = cronTrigger.CronExpressionString;
                         }
                         
-                        jobInfo.NextRunTime = trigger.GetNextFireTimeUtc()?.UtcDateTime;
-                        jobInfo.PreviousRunTime = trigger.GetPreviousFireTimeUtc()?.UtcDateTime;
+                        jobInfo.NextRunTime = trigger.GetNextFireTimeUtc();
+                        jobInfo.PreviousRunTime = trigger.GetPreviousFireTimeUtc();
                     }
                     
                     result.Add(jobInfo);

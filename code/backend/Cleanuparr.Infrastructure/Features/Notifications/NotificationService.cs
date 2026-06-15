@@ -65,7 +65,7 @@ public sealed class NotificationService
             Severity = EventSeverity.Information,
             Data = new Dictionary<string, string>
             {
-                ["Test time"] = DateTime.UtcNow.ToString("o"),
+                ["Test time"] = DateTimeOffset.UtcNow.ToString("o"),
                 ["Provider type"] = providerConfig.Type.ToString(),
             },
             Image = new Uri("https://cdn.jsdelivr.net/gh/Cleanuparr/Cleanuparr@main/Logo/256.png")

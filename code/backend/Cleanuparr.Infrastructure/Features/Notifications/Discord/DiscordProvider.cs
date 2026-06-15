@@ -46,7 +46,7 @@ public sealed class DiscordProvider : NotificationProviderBase<DiscordConfig>
                 Text = "Cleanuparr",
                 IconUrl = Constants.LogoUrl
             },
-            Timestamp = DateTime.UtcNow.ToString("o")
+            Timestamp = DateTimeOffset.UtcNow.ToString("o")
         };
 
         if (context.Image != null)

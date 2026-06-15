@@ -7,10 +7,10 @@ public sealed record InstanceSearchStat
     public string InstanceType { get; init; } = string.Empty;
     public int ItemsTracked { get; init; }
     public int TotalSearchCount { get; init; }
-    public DateTime? LastSearchedAt { get; init; }
-    public DateTime? LastProcessedAt { get; init; }
+    public DateTimeOffset? LastSearchedAt { get; init; }
+    public DateTimeOffset? LastProcessedAt { get; init; }
     public Guid? CurrentCycleId { get; init; }
     public int CycleItemsSearched { get; init; }
     public int CycleItemsTotal { get; init; }
-    public DateTime? CycleStartedAt { get; init; }
+    public DateTimeOffset? CycleStartedAt { get; init; }
 }

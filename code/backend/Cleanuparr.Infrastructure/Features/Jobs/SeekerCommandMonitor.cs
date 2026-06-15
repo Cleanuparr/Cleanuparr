@@ -83,7 +83,7 @@ public class SeekerCommandMonitor : BackgroundService
 
         // Handle timed-out commands
         var timedOut = pendingTrackers
-            .Where(t => _timeProvider.GetUtcNow().UtcDateTime - t.CreatedAt > CommandTimeout)
+            .Where(t => _timeProvider.GetUtcNow() - t.CreatedAt > CommandTimeout)
             .ToList();
 
         foreach (SeekerCommandTracker tracker in timedOut)

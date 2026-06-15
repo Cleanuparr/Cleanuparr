@@ -81,7 +81,7 @@ public sealed class AccountController : ControllerBase
             return BadRequest(new { error = "Current password is incorrect" });
         }
 
-        DateTime now = DateTime.UtcNow;
+        DateTimeOffset now = DateTimeOffset.UtcNow;
 
         user.PasswordHash = _passwordService.HashPassword(request.NewPassword);
         user.UpdatedAt = now;
@@ -129,7 +129,7 @@ public sealed class AccountController : ControllerBase
         var recoveryCodes = _totpService.GenerateRecoveryCodes();
 
         user.TotpSecret = secret;
-        user.UpdatedAt = DateTime.UtcNow;
+        user.UpdatedAt = DateTimeOffset.UtcNow;
 
         // Replace recovery codes
         _usersContext.RecoveryCodes.RemoveRange(user.RecoveryCodes);
@@ -182,7 +182,7 @@ public sealed class AccountController : ControllerBase
         var recoveryCodes = _totpService.GenerateRecoveryCodes();
 
         user.TotpSecret = secret;
-        user.UpdatedAt = DateTime.UtcNow;
+        user.UpdatedAt = DateTimeOffset.UtcNow;
 
         // Replace any existing recovery codes
         _usersContext.RecoveryCodes.RemoveRange(user.RecoveryCodes);
@@ -235,7 +235,7 @@ public sealed class AccountController : ControllerBase
         }
 
         user.TotpEnabled = true;
-        user.UpdatedAt = DateTime.UtcNow;
+        user.UpdatedAt = DateTimeOffset.UtcNow;
         await _usersContext.SaveChangesAsync();
 
         _logger.LogInformation("2FA enabled for user {Username}", user.Username);
@@ -269,7 +269,7 @@ public sealed class AccountController : ControllerBase
 
         user.TotpEnabled = false;
         user.TotpSecret = string.Empty;
-        user.UpdatedAt = DateTime.UtcNow;
+        user.UpdatedAt = DateTimeOffset.UtcNow;
 
         // Remove all recovery codes
         _usersContext.RecoveryCodes.RemoveRange(user.RecoveryCodes);
@@ -307,7 +307,7 @@ public sealed class AccountController : ControllerBase
         rng.GetBytes(bytes);
 
         user.ApiKey = Convert.ToHexString(bytes).ToLowerInvariant();
-        user.UpdatedAt = DateTime.UtcNow;
+        user.UpdatedAt = DateTimeOffset.UtcNow;
         await _usersContext.SaveChangesAsync();
 
         _logger.LogInformation("API key regenerated for user {Username}", user.Username);
@@ -355,7 +355,7 @@ public sealed class AccountController : ControllerBase
         user.PlexUsername = plexAccount.Username;
         user.PlexEmail = plexAccount.Email;
         user.PlexAuthToken = pinResult.AuthToken;
-        user.UpdatedAt = DateTime.UtcNow;
+        user.UpdatedAt = DateTimeOffset.UtcNow;
         await _usersContext.SaveChangesAsync();
 
         _logger.LogInformation("Plex account linked for user {Username}: {PlexUsername}",
@@ -382,7 +382,7 @@ public sealed class AccountController : ControllerBase
         user.PlexUsername = null;
         user.PlexEmail = null;
         user.PlexAuthToken = null;
-        user.UpdatedAt = DateTime.UtcNow;
+        user.UpdatedAt = DateTimeOffset.UtcNow;
         await _usersContext.SaveChangesAsync();
 
         _logger.LogInformation("Plex account unlinked for user {Username}", user.Username);
@@ -415,7 +415,7 @@ public sealed class AccountController : ControllerBase
 
             request.ApplyTo(user.Oidc);
             user.Oidc.Validate();
-            user.UpdatedAt = DateTime.UtcNow;
+            user.UpdatedAt = DateTimeOffset.UtcNow;
             await _usersContext.SaveChangesAsync();
 
             return Ok(new { message = "OIDC configuration updated" });
@@ -504,7 +504,7 @@ public sealed class AccountController : ControllerBase
         }
 
         user.Oidc.AuthorizedSubject = result.Subject;
-        user.UpdatedAt = DateTime.UtcNow;
+        user.UpdatedAt = DateTimeOffset.UtcNow;
         await _usersContext.SaveChangesAsync();
 
         _logger.LogInformation("OIDC account linked with subject: {Subject} by user: {Username}",
@@ -527,7 +527,7 @@ public sealed class AccountController : ControllerBase
 
             user.Oidc.AuthorizedSubject = string.Empty;
             user.Oidc.ExclusiveMode = false;
-            user.UpdatedAt = DateTime.UtcNow;
+            user.UpdatedAt = DateTimeOffset.UtcNow;
             await _usersContext.SaveChangesAsync();
 
             _logger.LogInformation("OIDC account unlinked for user {Username}", user.Username);
@@ -576,7 +576,7 @@ public sealed class AccountController : ControllerBase
                 .Select(v => v.FeatureId)
                 .ToHashSet();
 
-            DateTime now = DateTime.UtcNow;
+            DateTimeOffset now = DateTimeOffset.UtcNow;
 
             foreach (var featureId in request.FeatureIds.Distinct())
             {

@@ -11,5 +11,5 @@ public interface IItemSelector
     /// <param name="candidates">List of (id, dateAdded, lastSearched) tuples</param>
     /// <param name="count">Maximum number of items to select</param>
     /// <returns>Selected item IDs</returns>
-    List<long> Select(List<(long Id, DateTime? Added, DateTime? LastSearched)> candidates, int count);
+    List<long> Select(List<(long Id, DateTimeOffset? Added, DateTimeOffset? LastSearched)> candidates, int count);
 }

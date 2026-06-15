@@ -46,8 +46,8 @@ public sealed class OidcAuthServiceTests : IDisposable
             TotpSecret = "secret",
             ApiKey = "test-api-key",
             SetupCompleted = true,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow,
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow,
         });
         _usersContext.SaveChanges();
 
@@ -427,8 +427,8 @@ public sealed class OidcAuthServiceTests : IDisposable
             var nonce = GetFlowNonce(startResult.State);
             // Token expired 1 hour ago (well outside the 2-minute clock skew)
             capturedJwt = jwt.CreateIdToken(MockIssuer, MockClientId, MockSubject, nonce,
-                expiry: DateTime.UtcNow.AddHours(-1),
-                notBefore: DateTime.UtcNow.AddHours(-2));
+                expiry: DateTimeOffset.UtcNow.AddHours(-1),
+                notBefore: DateTimeOffset.UtcNow.AddHours(-2));
 
             var callbackResult = await service.HandleCallback("code", startResult.State, MockRedirectUri);
 
@@ -730,7 +730,7 @@ public sealed class OidcAuthServiceTests : IDisposable
         SetReflectionProperty(entry, "AccessToken", "test-access");
         SetReflectionProperty(entry, "RefreshToken", "test-refresh");
         SetReflectionProperty(entry, "ExpiresIn", 3600);
-        SetReflectionProperty(entry, "CreatedAt", DateTime.UtcNow - TimeSpan.FromSeconds(31));
+        SetReflectionProperty(entry, "CreatedAt", DateTimeOffset.UtcNow - TimeSpan.FromSeconds(31));
 
         var code = "expired-test-code-" + Guid.NewGuid().ToString("N");
         oneTimeCodes.GetType().GetMethod("TryAdd")!.Invoke(oneTimeCodes, new[] { code, entry });
@@ -756,7 +756,7 @@ public sealed class OidcAuthServiceTests : IDisposable
         foreach (var prop in flowType.GetProperties())
         {
             var value = prop.Name == "CreatedAt"
-                ? DateTime.UtcNow - age
+                ? DateTimeOffset.UtcNow - age
                 : prop.GetValue(existing);
             SetReflectionProperty(newEntry, prop.Name, value!);
         }
@@ -781,7 +781,7 @@ public sealed class OidcAuthServiceTests : IDisposable
         SetReflectionProperty(entry, "Nonce", "test-nonce");
         SetReflectionProperty(entry, "CodeVerifier", "test-verifier");
         SetReflectionProperty(entry, "RedirectUri", redirectUri);
-        SetReflectionProperty(entry, "CreatedAt", DateTime.UtcNow);
+        SetReflectionProperty(entry, "CreatedAt", DateTimeOffset.UtcNow);
 
         pendingFlows.GetType().GetMethod("TryAdd")!.Invoke(pendingFlows, new[] { key, entry });
         return key;
@@ -1001,23 +1001,23 @@ public sealed class OidcAuthServiceTests : IDisposable
 
         /// <summary>Creates a signed JWT. Pass subject=null to produce a token with no 'sub' claim.</summary>
         public string CreateIdToken(string issuer, string audience, string? subject, string nonce,
-            DateTime? expiry = null, DateTime? notBefore = null)
+            DateTimeOffset? expiry = null, DateTimeOffset? notBefore = null)
         {
             var claims = new List<Claim> { new("nonce", nonce) };
             if (subject is not null)
                 claims.Add(new Claim("sub", subject));
 
-            var expiresAt = expiry ?? DateTime.UtcNow.AddHours(1);
-            var notBeforeAt = notBefore ?? DateTime.UtcNow.AddMinutes(-1);
+            var expiresAt = expiry ?? DateTimeOffset.UtcNow.AddHours(1);
+            var notBeforeAt = notBefore ?? DateTimeOffset.UtcNow.AddMinutes(-1);
 
             var descriptor = new SecurityTokenDescriptor
             {
                 Issuer = issuer,
                 Audience = audience,
                 Subject = new ClaimsIdentity(claims),
-                NotBefore = notBeforeAt,
-                Expires = expiresAt,
-                IssuedAt = notBeforeAt,
+                NotBefore = notBeforeAt.UtcDateTime,
+                Expires = expiresAt.UtcDateTime,
+                IssuedAt = notBeforeAt.UtcDateTime,
                 SigningCredentials = new SigningCredentials(_key, SecurityAlgorithms.RsaSha256)
             };
 

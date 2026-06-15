@@ -149,8 +149,8 @@ public class UTorrentAuthenticator : IUTorrentAuthenticator
                 {
                     AuthToken = token,
                     GuidCookie = guidCookie,
-                    CreatedAt = DateTime.UtcNow,
-                    ExpiresAt = DateTime.UtcNow.Add(TokenExpiryDuration)
+                    CreatedAt = DateTimeOffset.UtcNow,
+                    ExpiresAt = DateTimeOffset.UtcNow.Add(TokenExpiryDuration)
                 };
                 
                 // Cache with both sliding and absolute expiration

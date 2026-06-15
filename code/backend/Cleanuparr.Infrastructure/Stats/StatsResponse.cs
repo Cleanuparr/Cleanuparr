@@ -30,7 +30,7 @@ public class StatsResponse
     /// <summary>
     /// When this response was generated
     /// </summary>
-    public DateTime GeneratedAt { get; set; } = DateTime.UtcNow;
+    public DateTimeOffset GeneratedAt { get; set; } = DateTimeOffset.UtcNow;
 }
 
 /// <summary>
@@ -136,12 +136,12 @@ public class JobTypeStats
     /// <summary>
     /// When the last job of this type ran
     /// </summary>
-    public DateTime? LastRunAt { get; set; }
+    public DateTimeOffset? LastRunAt { get; set; }
 
     /// <summary>
     /// When this job is next scheduled to run
     /// </summary>
-    public DateTime? NextRunAt { get; set; }
+    public DateTimeOffset? NextRunAt { get; set; }
 }
 
 /// <summary>
@@ -169,7 +169,7 @@ public class DownloadClientHealthDto
     public string Name { get; set; } = string.Empty;
     public string Type { get; set; } = string.Empty;
     public bool IsHealthy { get; set; }
-    public DateTime LastChecked { get; set; }
+    public DateTimeOffset LastChecked { get; set; }
     public double? ResponseTimeMs { get; set; }
     public string? ErrorMessage { get; set; }
 }
@@ -183,7 +183,7 @@ public class ArrInstanceHealthDto
     public string Name { get; set; } = string.Empty;
     public string Type { get; set; } = string.Empty;
     public bool IsHealthy { get; set; }
-    public DateTime LastChecked { get; set; }
+    public DateTimeOffset LastChecked { get; set; }
     public string? ErrorMessage { get; set; }
 }
 
@@ -193,7 +193,7 @@ public class ArrInstanceHealthDto
 public class RecentEventDto
 {
     public Guid Id { get; set; }
-    public DateTime Timestamp { get; set; }
+    public DateTimeOffset Timestamp { get; set; }
     public string EventType { get; set; } = string.Empty;
     public string Message { get; set; } = string.Empty;
     public string Severity { get; set; } = string.Empty;
@@ -207,7 +207,7 @@ public class RecentStrikeDto
 {
     public Guid Id { get; set; }
     public string Type { get; set; } = string.Empty;
-    public DateTime CreatedAt { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
     public string DownloadId { get; set; } = string.Empty;
     public string Title { get; set; } = string.Empty;
 }

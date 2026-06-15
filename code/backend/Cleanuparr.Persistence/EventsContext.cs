@@ -44,7 +44,13 @@ public class EventsContext : DbContext
     {
         SetDbContextOptions(optionsBuilder);
     }
-    
+
+    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+    {
+        configurationBuilder.Properties<DateTimeOffset>()
+            .HaveConversion<UtcDateTimeOffsetConverter>();
+    }
+
     public static string GetLikePattern(string input)
     {
         input = input.Replace("[", "[[]")
@@ -58,9 +64,6 @@ public class EventsContext : DbContext
     {
         modelBuilder.Entity<AppEvent>(entity =>
         {
-            entity.Property(e => e.Timestamp)
-                .HasConversion(new UtcDateTimeConverter());
-
             entity.HasOne(e => e.Strike)
                 .WithMany()
                 .HasForeignKey(e => e.StrikeId)
@@ -77,22 +80,10 @@ public class EventsContext : DbContext
 
         modelBuilder.Entity<Strike>(entity =>
         {
-            entity.Property(e => e.CreatedAt)
-                .HasConversion(new UtcDateTimeConverter());
-
             entity.Property(e => e.Type)
                 .HasConversion(new LowercaseEnumConverter<StrikeType>());
         });
 
-        modelBuilder.Entity<JobRun>(entity =>
-        {
-            entity.Property(e => e.StartedAt)
-                .HasConversion(new UtcDateTimeConverter());
-
-            entity.Property(e => e.CompletedAt)
-                .HasConversion(new UtcDateTimeConverter());
-        });
-        
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())
         {
             var enumProperties = entityType.ClrType.GetProperties()

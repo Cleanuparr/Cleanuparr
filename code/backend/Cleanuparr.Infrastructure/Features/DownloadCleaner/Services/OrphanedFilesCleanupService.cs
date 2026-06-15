@@ -231,10 +231,10 @@ public sealed class OrphanedFilesCleanupService : IOrphanedFilesCleanupService
 
                 if (clientConfig.MinFileAgeHours > 0)
                 {
-                    DateTime lastWrite = File.GetLastWriteTimeUtc(normalizedPath);
-                    DateTime created = File.GetCreationTimeUtc(normalizedPath);
-                    DateTime mostRecent = lastWrite > created ? lastWrite : created;
-                    double ageHours = (_timeProvider.GetUtcNow().UtcDateTime - mostRecent).TotalHours;
+                    DateTimeOffset lastWrite = File.GetLastWriteTimeUtc(normalizedPath);
+                    DateTimeOffset created = File.GetCreationTimeUtc(normalizedPath);
+                    DateTimeOffset mostRecent = lastWrite > created ? lastWrite : created;
+                    double ageHours = (_timeProvider.GetUtcNow() - mostRecent).TotalHours;
 
                     if (ageHours < clientConfig.MinFileAgeHours)
                     {
@@ -270,7 +270,7 @@ public sealed class OrphanedFilesCleanupService : IOrphanedFilesCleanupService
         if (Path.Exists(destination))
         {
             const int maxAttempts = 100;
-            string timestamp = _timeProvider.GetUtcNow().UtcDateTime.ToString("yyyyMMddHHmmss");
+            string timestamp = _timeProvider.GetUtcNow().ToString("yyyyMMddHHmmss");
             destination = Path.Combine(orphanedDirectory, $"{entryName}_{timestamp}");
 
             int counter = 1;
@@ -288,17 +288,17 @@ public sealed class OrphanedFilesCleanupService : IOrphanedFilesCleanupService
 
         Directory.CreateDirectory(orphanedDirectory);
 
-        DateTime now = _timeProvider.GetUtcNow().UtcDateTime;
+        DateTimeOffset now = _timeProvider.GetUtcNow();
 
         if (Directory.Exists(path))
         {
             Directory.Move(path, destination);
-            Directory.SetLastWriteTimeUtc(destination, now);
+            Directory.SetLastWriteTimeUtc(destination, now.UtcDateTime);
         }
         else
         {
             File.Move(path, destination);
-            File.SetLastWriteTimeUtc(destination, now);
+            File.SetLastWriteTimeUtc(destination, now.UtcDateTime);
         }
 
         _logger.LogInformation("orphaned entry moved | {source} -> {dest}", path, destination);
@@ -316,13 +316,13 @@ public sealed class OrphanedFilesCleanupService : IOrphanedFilesCleanupService
             return;
         }
 
-        DateTime cutoff = _timeProvider.GetUtcNow().UtcDateTime.AddHours(-clientConfig.PurgeAfterHours.Value);
+        DateTimeOffset cutoff = _timeProvider.GetUtcNow().AddHours(-clientConfig.PurgeAfterHours.Value);
 
         foreach (string filePath in Directory.EnumerateFileSystemEntries(clientConfig.OrphanedDirectory))
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            DateTime lastWrite = File.GetLastWriteTimeUtc(filePath);
+            DateTimeOffset lastWrite = File.GetLastWriteTimeUtc(filePath);
             if (lastWrite > cutoff)
             {
                 continue;

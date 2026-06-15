@@ -30,7 +30,7 @@ public class ArrHealthStatus
     /// <summary>
     /// Gets or sets the time when the instance was last checked
     /// </summary>
-    public DateTime LastChecked { get; set; }
+    public DateTimeOffset LastChecked { get; set; }
 
     /// <summary>
     /// Gets or sets the error message if the instance is not healthy

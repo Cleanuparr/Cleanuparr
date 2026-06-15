@@ -29,8 +29,8 @@ public class EventsController : ControllerBase
         [FromQuery] int pageSize = 50,
         [FromQuery] string? severity = null,
         [FromQuery] string? eventType = null,
-        [FromQuery] DateTime? fromDate = null,
-        [FromQuery] DateTime? toDate = null,
+        [FromQuery] DateTimeOffset? fromDate = null,
+        [FromQuery] DateTimeOffset? toDate = null,
         [FromQuery] string? search = null,
         [FromQuery] string? jobRunId = null)
     {
@@ -155,7 +155,7 @@ public class EventsController : ControllerBase
     [HttpPost("cleanup")]
     public async Task<ActionResult<object>> CleanupOldEvents([FromQuery] int retentionDays = 30)
     {
-        var cutoffDate = DateTime.UtcNow.AddDays(-retentionDays);
+        var cutoffDate = DateTimeOffset.UtcNow.AddDays(-retentionDays);
         
         await _context.Events
             .Where(e => e.Timestamp < cutoffDate)

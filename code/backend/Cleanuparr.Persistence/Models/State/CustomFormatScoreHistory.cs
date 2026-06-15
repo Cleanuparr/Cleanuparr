@@ -58,5 +58,5 @@ public sealed record CustomFormatScoreHistory
     /// <summary>
     /// When this score was recorded
     /// </summary>
-    public DateTime RecordedAt { get; set; }
+    public DateTimeOffset RecordedAt { get; set; }
 }
