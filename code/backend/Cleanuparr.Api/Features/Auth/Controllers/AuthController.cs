@@ -573,8 +573,7 @@ public sealed class AuthController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            _logger.LogWarning(ex, "Failed to start OIDC authorization");
-            return this.ProblemResult(StatusCodes.Status429TooManyRequests, ex.Message);
+            throw new RateLimitException(ex.Message);
         }
     }
 

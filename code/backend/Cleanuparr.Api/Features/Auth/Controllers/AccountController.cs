@@ -4,6 +4,7 @@ using Cleanuparr.Api.Extensions;
 using Cleanuparr.Api.Features.Auth.Contracts.Requests;
 using Cleanuparr.Api.Features.Auth.Contracts.Responses;
 using Cleanuparr.Api.Filters;
+using Cleanuparr.Domain.Exceptions;
 using Cleanuparr.Infrastructure.Features.Auth;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Auth;
@@ -442,8 +443,7 @@ public sealed class AccountController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            _logger.LogWarning(ex, "Failed to start OIDC link authorization");
-            return this.ProblemResult(StatusCodes.Status429TooManyRequests, ex.Message);
+            throw new RateLimitException(ex.Message);
         }
     }
 

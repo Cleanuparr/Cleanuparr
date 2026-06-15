@@ -48,7 +48,7 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
             Detail = detail,
         };
 
-        if (exception is RateLimitException rateLimitException)
+        if (exception is RateLimitException { RetryAfterSeconds: > 0 } rateLimitException)
         {
             problemDetails.Extensions["retryAfterSeconds"] = rateLimitException.RetryAfterSeconds;
             context.Response.Headers.RetryAfter = rateLimitException.RetryAfterSeconds.ToString();

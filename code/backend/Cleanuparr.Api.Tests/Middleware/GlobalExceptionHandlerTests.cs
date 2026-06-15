@@ -68,6 +68,17 @@ public class GlobalExceptionHandlerTests
     }
 
     [Fact]
+    public async Task RateLimitException_WithZeroRetry_MapsTo429_WithoutRetryAfter()
+    {
+        (bool handled, HttpContext context, ProblemDetails problemDetails) = await Handle(new RateLimitException("Too many pending OIDC flows", 0));
+
+        handled.ShouldBeTrue();
+        context.Response.StatusCode.ShouldBe(StatusCodes.Status429TooManyRequests);
+        problemDetails.Extensions.ShouldNotContainKey("retryAfterSeconds");
+        context.Response.Headers.RetryAfter.ToString().ShouldBeEmpty();
+    }
+
+    [Fact]
     public async Task UnknownException_MapsTo500_WithGenericDetail_AndDoesNotLeakMessage()
     {
         (bool handled, HttpContext context, ProblemDetails problemDetails) = await Handle(new InvalidOperationException("internal connection string leaked"));

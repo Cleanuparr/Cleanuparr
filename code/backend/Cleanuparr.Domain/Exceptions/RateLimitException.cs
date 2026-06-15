@@ -8,7 +8,7 @@ public sealed class RateLimitException : Exception
 {
     public int RetryAfterSeconds { get; }
 
-    public RateLimitException(string message, int retryAfterSeconds) : base(message)
+    public RateLimitException(string message, int retryAfterSeconds = 0) : base(message)
     {
         RetryAfterSeconds = retryAfterSeconds;
     }
