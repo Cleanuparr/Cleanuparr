@@ -69,7 +69,7 @@ public class OidcAuthControllerTests : IClassFixture<OidcAuthControllerTests.Oid
         response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
 
         var body = await response.Content.ReadFromJsonAsync<JsonElement>();
-        body.GetProperty("error").GetString()!.ShouldContain("OIDC is not enabled");
+        body.GetProperty("detail").GetString()!.ShouldContain("OIDC is not enabled");
     }
 
     [Fact, TestPriority(3)]
