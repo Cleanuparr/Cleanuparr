@@ -1,14 +1,11 @@
-using System.Net;
+using Cleanuparr.Api.Extensions;
 using Cleanuparr.Api.Features.Notifications.Contracts.Requests;
 using Cleanuparr.Api.Features.Notifications.Contracts.Responses;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Domain.Exceptions;
 using Cleanuparr.Infrastructure.Features.Notifications;
 using Cleanuparr.Infrastructure.Features.Notifications.Apprise;
-using Cleanuparr.Infrastructure.Features.Notifications.Discord;
 using Cleanuparr.Infrastructure.Features.Notifications.Models;
-using Cleanuparr.Infrastructure.Features.Notifications.Telegram;
-using Cleanuparr.Infrastructure.Features.Notifications.Gotify;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.Notification;
 using Cleanuparr.Shared.Helpers;
@@ -123,18 +120,18 @@ public sealed class NotificationProvidersController : ControllerBase
         {
             if (string.IsNullOrWhiteSpace(newProvider.Name))
             {
-                return BadRequest("Provider name is required");
+                return this.ProblemResult(StatusCodes.Status400BadRequest, "Provider name is required");
             }
 
             var duplicateConfig = await _dataContext.NotificationConfigs.CountAsync(x => x.Name == newProvider.Name);
             if (duplicateConfig > 0)
             {
-                return BadRequest("A provider with this name already exists");
+                return this.ProblemResult(StatusCodes.Status400BadRequest, "A provider with this name already exists");
             }
 
             if (newProvider.ApiKey.IsPlaceholder())
             {
-                return BadRequest("API key cannot be a placeholder value");
+                return this.ProblemResult(StatusCodes.Status400BadRequest, "API key cannot be a placeholder value");
             }
 
             var notifiarrConfig = new NotifiarrConfig
@@ -168,11 +165,6 @@ public sealed class NotificationProvidersController : ControllerBase
             var providerDto = MapProvider(provider);
             return CreatedAtAction(nameof(GetNotificationProviders), new { id = provider.Id }, providerDto);
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to create Notifiarr provider");
-            throw;
-        }
         finally
         {
             DataContext.Lock.Release();
@@ -187,23 +179,23 @@ public sealed class NotificationProvidersController : ControllerBase
         {
             if (string.IsNullOrWhiteSpace(newProvider.Name))
             {
-                return BadRequest("Provider name is required");
+                return this.ProblemResult(StatusCodes.Status400BadRequest, "Provider name is required");
             }
 
             var duplicateConfig = await _dataContext.NotificationConfigs.CountAsync(x => x.Name == newProvider.Name);
             if (duplicateConfig > 0)
             {
-                return BadRequest("A provider with this name already exists");
+                return this.ProblemResult(StatusCodes.Status400BadRequest, "A provider with this name already exists");
             }
 
             if (newProvider.Key.IsPlaceholder())
             {
-                return BadRequest("Key cannot be a placeholder value");
+                return this.ProblemResult(StatusCodes.Status400BadRequest, "Key cannot be a placeholder value");
             }
 
             if (newProvider.ServiceUrls.IsPlaceholder())
             {
-                return BadRequest("Service URLs cannot be a placeholder value");
+                return this.ProblemResult(StatusCodes.Status400BadRequest, "Service URLs cannot be a placeholder value");
             }
 
             var appriseConfig = new AppriseConfig
@@ -240,15 +232,6 @@ public sealed class NotificationProvidersController : ControllerBase
             var providerDto = MapProvider(provider);
             return CreatedAtAction(nameof(GetNotificationProviders), new { id = provider.Id }, providerDto);
         }
-        catch (ValidationException ex)
-        {
-            return BadRequest(ex.Message);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to create Apprise provider");
-            throw;
-        }
         finally
         {
             DataContext.Lock.Release();
@@ -263,23 +246,23 @@ public sealed class NotificationProvidersController : ControllerBase
         {
             if (string.IsNullOrWhiteSpace(newProvider.Name))
             {
-                return BadRequest("Provider name is required");
+                return this.ProblemResult(StatusCodes.Status400BadRequest, "Provider name is required");
             }
 
             var duplicateConfig = await _dataContext.NotificationConfigs.CountAsync(x => x.Name == newProvider.Name);
             if (duplicateConfig > 0)
             {
-                return BadRequest("A provider with this name already exists");
+                return this.ProblemResult(StatusCodes.Status400BadRequest, "A provider with this name already exists");
             }
 
             if (newProvider.Password.IsPlaceholder())
             {
-                return BadRequest("Password cannot be a placeholder value");
+                return this.ProblemResult(StatusCodes.Status400BadRequest, "Password cannot be a placeholder value");
             }
 
             if (newProvider.AccessToken.IsPlaceholder())
             {
-                return BadRequest("Access token cannot be a placeholder value");
+                return this.ProblemResult(StatusCodes.Status400BadRequest, "Access token cannot be a placeholder value");
             }
 
             var ntfyConfig = new NtfyConfig
@@ -319,15 +302,6 @@ public sealed class NotificationProvidersController : ControllerBase
             var providerDto = MapProvider(provider);
             return CreatedAtAction(nameof(GetNotificationProviders), new { id = provider.Id }, providerDto);
         }
-        catch (ValidationException ex)
-        {
-            return BadRequest(ex.Message);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to create Ntfy provider");
-            throw;
-        }
         finally
         {
             DataContext.Lock.Release();
@@ -342,18 +316,18 @@ public sealed class NotificationProvidersController : ControllerBase
         {
             if (string.IsNullOrWhiteSpace(newProvider.Name))
             {
-                return BadRequest("Provider name is required");
+                return this.ProblemResult(StatusCodes.Status400BadRequest, "Provider name is required");
             }
 
             var duplicateConfig = await _dataContext.NotificationConfigs.CountAsync(x => x.Name == newProvider.Name);
             if (duplicateConfig > 0)
             {
-                return BadRequest("A provider with this name already exists");
+                return this.ProblemResult(StatusCodes.Status400BadRequest, "A provider with this name already exists");
             }
 
             if (newProvider.BotToken.IsPlaceholder())
             {
-                return BadRequest("Bot token cannot be a placeholder value");
+                return this.ProblemResult(StatusCodes.Status400BadRequest, "Bot token cannot be a placeholder value");
             }
 
             var telegramConfig = new TelegramConfig
@@ -389,15 +363,6 @@ public sealed class NotificationProvidersController : ControllerBase
             var providerDto = MapProvider(provider);
             return CreatedAtAction(nameof(GetNotificationProviders), new { id = provider.Id }, providerDto);
         }
-        catch (ValidationException ex)
-        {
-            return BadRequest(ex.Message);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to create Telegram provider");
-            throw;
-        }
         finally
         {
             DataContext.Lock.Release();
@@ -416,12 +381,12 @@ public sealed class NotificationProvidersController : ControllerBase
 
             if (existingProvider == null)
             {
-                return NotFound($"Notifiarr provider with ID {id} not found");
+                return this.ProblemResult(StatusCodes.Status404NotFound, $"Notifiarr provider with ID {id} not found");
             }
 
             if (string.IsNullOrWhiteSpace(updatedProvider.Name))
             {
-                return BadRequest("Provider name is required");
+                return this.ProblemResult(StatusCodes.Status400BadRequest, "Provider name is required");
             }
 
             var duplicateConfig = await _dataContext.NotificationConfigs
@@ -430,7 +395,7 @@ public sealed class NotificationProvidersController : ControllerBase
                 .CountAsync();
             if (duplicateConfig > 0)
             {
-                return BadRequest("A provider with this name already exists");
+                return this.ProblemResult(StatusCodes.Status400BadRequest, "A provider with this name already exists");
             }
 
             var notifiarrConfig = new NotifiarrConfig
@@ -472,15 +437,6 @@ public sealed class NotificationProvidersController : ControllerBase
             var providerDto = MapProvider(newProvider);
             return Ok(providerDto);
         }
-        catch (ValidationException ex)
-        {
-            return BadRequest(ex.Message);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to update Notifiarr provider with ID {Id}", id);
-            throw;
-        }
         finally
         {
             DataContext.Lock.Release();
@@ -499,12 +455,12 @@ public sealed class NotificationProvidersController : ControllerBase
 
             if (existingProvider == null)
             {
-                return NotFound($"Apprise provider with ID {id} not found");
+                return this.ProblemResult(StatusCodes.Status404NotFound, $"Apprise provider with ID {id} not found");
             }
 
             if (string.IsNullOrWhiteSpace(updatedProvider.Name))
             {
-                return BadRequest("Provider name is required");
+                return this.ProblemResult(StatusCodes.Status400BadRequest, "Provider name is required");
             }
 
             var duplicateConfig = await _dataContext.NotificationConfigs
@@ -513,7 +469,7 @@ public sealed class NotificationProvidersController : ControllerBase
                 .CountAsync();
             if (duplicateConfig > 0)
             {
-                return BadRequest("A provider with this name already exists");
+                return this.ProblemResult(StatusCodes.Status400BadRequest, "A provider with this name already exists");
             }
 
             var appriseConfig = new AppriseConfig
@@ -560,15 +516,6 @@ public sealed class NotificationProvidersController : ControllerBase
             var providerDto = MapProvider(newProvider);
             return Ok(providerDto);
         }
-        catch (ValidationException ex)
-        {
-            return BadRequest(ex.Message);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to update Apprise provider with ID {Id}", id);
-            throw;
-        }
         finally
         {
             DataContext.Lock.Release();
@@ -587,12 +534,12 @@ public sealed class NotificationProvidersController : ControllerBase
 
             if (existingProvider == null)
             {
-                return NotFound($"Ntfy provider with ID {id} not found");
+                return this.ProblemResult(StatusCodes.Status404NotFound, $"Ntfy provider with ID {id} not found");
             }
 
             if (string.IsNullOrWhiteSpace(updatedProvider.Name))
             {
-                return BadRequest("Provider name is required");
+                return this.ProblemResult(StatusCodes.Status400BadRequest, "Provider name is required");
             }
 
             var duplicateConfig = await _dataContext.NotificationConfigs
@@ -601,7 +548,7 @@ public sealed class NotificationProvidersController : ControllerBase
                 .CountAsync();
             if (duplicateConfig > 0)
             {
-                return BadRequest("A provider with this name already exists");
+                return this.ProblemResult(StatusCodes.Status400BadRequest, "A provider with this name already exists");
             }
 
             var ntfyConfig = new NtfyConfig
@@ -651,15 +598,6 @@ public sealed class NotificationProvidersController : ControllerBase
             var providerDto = MapProvider(newProvider);
             return Ok(providerDto);
         }
-        catch (ValidationException ex)
-        {
-            return BadRequest(ex.Message);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to update Ntfy provider with ID {Id}", id);
-            throw;
-        }
         finally
         {
             DataContext.Lock.Release();
@@ -678,12 +616,12 @@ public sealed class NotificationProvidersController : ControllerBase
 
             if (existingProvider == null)
             {
-                return NotFound($"Telegram provider with ID {id} not found");
+                return this.ProblemResult(StatusCodes.Status404NotFound, $"Telegram provider with ID {id} not found");
             }
 
             if (string.IsNullOrWhiteSpace(updatedProvider.Name))
             {
-                return BadRequest("Provider name is required");
+                return this.ProblemResult(StatusCodes.Status400BadRequest, "Provider name is required");
             }
 
             var duplicateConfig = await _dataContext.NotificationConfigs
@@ -692,7 +630,7 @@ public sealed class NotificationProvidersController : ControllerBase
                 .CountAsync();
             if (duplicateConfig > 0)
             {
-                return BadRequest("A provider with this name already exists");
+                return this.ProblemResult(StatusCodes.Status400BadRequest, "A provider with this name already exists");
             }
 
             var telegramConfig = new TelegramConfig
@@ -736,15 +674,6 @@ public sealed class NotificationProvidersController : ControllerBase
             var providerDto = MapProvider(newProvider);
             return Ok(providerDto);
         }
-        catch (ValidationException ex)
-        {
-            return BadRequest(ex.Message);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to update Telegram provider with ID {Id}", id);
-            throw;
-        }
         finally
         {
             DataContext.Lock.Release();
@@ -769,7 +698,7 @@ public sealed class NotificationProvidersController : ControllerBase
 
             if (existingProvider == null)
             {
-                return NotFound($"Notification provider with ID {id} not found");
+                return this.ProblemResult(StatusCodes.Status404NotFound, $"Notification provider with ID {id} not found");
             }
 
             _dataContext.NotificationConfigs.Remove(existingProvider);
@@ -781,11 +710,6 @@ public sealed class NotificationProvidersController : ControllerBase
                 existingProvider.Name, existingProvider.Id);
 
             return NoContent();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to delete notification provider with ID {Id}", id);
-            throw;
         }
         finally
         {
@@ -807,7 +731,7 @@ public sealed class NotificationProvidersController : ControllerBase
 
                 if (existing is null)
                 {
-                    return BadRequest(new { Message = "API key cannot be a placeholder value" });
+                    return this.ProblemResult(StatusCodes.Status400BadRequest, "API key cannot be a placeholder value");
                 }
 
                 apiKey = existing.ApiKey;
@@ -845,8 +769,7 @@ public sealed class NotificationProvidersController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to test Notifiarr provider");
-            return BadRequest(new { Message = $"Test failed: {ex.Message}" });
+            throw new NotificationTestException($"Test failed: {ex.Message}", ex);
         }
     }
 
@@ -865,7 +788,7 @@ public sealed class NotificationProvidersController : ControllerBase
 
                 if (existing is null)
                 {
-                    return BadRequest(new { Message = "Sensitive fields cannot be placeholder values" });
+                    return this.ProblemResult(StatusCodes.Status400BadRequest, "Sensitive fields cannot be placeholder values");
                 }
 
                 if (key.IsPlaceholder())
@@ -912,14 +835,9 @@ public sealed class NotificationProvidersController : ControllerBase
             await _notificationService.SendTestNotificationAsync(providerDto);
             return Ok(new { Message = "Test notification sent successfully" });
         }
-        catch (AppriseException exception)
-        {
-            return StatusCode((int)HttpStatusCode.InternalServerError, exception.Message);
-        }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to test Apprise provider");
-            return BadRequest(new { Message = $"Test failed: {ex.Message}" });
+            throw new NotificationTestException($"Test failed: {ex.Message}", ex);
         }
     }
 
@@ -938,7 +856,7 @@ public sealed class NotificationProvidersController : ControllerBase
 
                 if (existing is null)
                 {
-                    return BadRequest(new { Message = "Sensitive fields cannot be placeholder values" });
+                    return this.ProblemResult(StatusCodes.Status400BadRequest, "Sensitive fields cannot be placeholder values");
                 }
 
                 if (password.IsPlaceholder())
@@ -990,8 +908,7 @@ public sealed class NotificationProvidersController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to test Ntfy provider");
-            return BadRequest(new { Message = $"Test failed: {ex.Message}" });
+            throw new NotificationTestException($"Test failed: {ex.Message}", ex);
         }
     }
 
@@ -1009,7 +926,7 @@ public sealed class NotificationProvidersController : ControllerBase
 
                 if (existing is null)
                 {
-                    return BadRequest(new { Message = "Bot token cannot be a placeholder value" });
+                    return this.ProblemResult(StatusCodes.Status400BadRequest, "Bot token cannot be a placeholder value");
                 }
 
                 botToken = existing.BotToken;
@@ -1047,15 +964,9 @@ public sealed class NotificationProvidersController : ControllerBase
             await _notificationService.SendTestNotificationAsync(providerDto);
             return Ok(new { Message = "Test notification sent successfully" });
         }
-        catch (TelegramException ex)
-        {
-            _logger.LogWarning(ex, "Failed to test Telegram provider");
-            return BadRequest(new { Message = $"Test failed: {ex.Message}" });
-        }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to test Telegram provider");
-            return BadRequest(new { Message = $"Test failed: {ex.Message}" });
+            throw new NotificationTestException($"Test failed: {ex.Message}", ex);
         }
     }
 
@@ -1100,18 +1011,18 @@ public sealed class NotificationProvidersController : ControllerBase
         {
             if (string.IsNullOrWhiteSpace(newProvider.Name))
             {
-                return BadRequest("Provider name is required");
+                return this.ProblemResult(StatusCodes.Status400BadRequest, "Provider name is required");
             }
 
             var duplicateConfig = await _dataContext.NotificationConfigs.CountAsync(x => x.Name == newProvider.Name);
             if (duplicateConfig > 0)
             {
-                return BadRequest("A provider with this name already exists");
+                return this.ProblemResult(StatusCodes.Status400BadRequest, "A provider with this name already exists");
             }
 
             if (newProvider.WebhookUrl.IsPlaceholder())
             {
-                return BadRequest("Webhook URL cannot be a placeholder value");
+                return this.ProblemResult(StatusCodes.Status400BadRequest, "Webhook URL cannot be a placeholder value");
             }
 
             var discordConfig = new DiscordConfig
@@ -1146,15 +1057,6 @@ public sealed class NotificationProvidersController : ControllerBase
             var providerDto = MapProvider(provider);
             return CreatedAtAction(nameof(GetNotificationProviders), new { id = provider.Id }, providerDto);
         }
-        catch (ValidationException ex)
-        {
-            return BadRequest(ex.Message);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to create Discord provider");
-            throw;
-        }
         finally
         {
             DataContext.Lock.Release();
@@ -1173,12 +1075,12 @@ public sealed class NotificationProvidersController : ControllerBase
 
             if (existingProvider == null)
             {
-                return NotFound($"Discord provider with ID {id} not found");
+                return this.ProblemResult(StatusCodes.Status404NotFound, $"Discord provider with ID {id} not found");
             }
 
             if (string.IsNullOrWhiteSpace(updatedProvider.Name))
             {
-                return BadRequest("Provider name is required");
+                return this.ProblemResult(StatusCodes.Status400BadRequest, "Provider name is required");
             }
 
             var duplicateConfig = await _dataContext.NotificationConfigs
@@ -1187,7 +1089,7 @@ public sealed class NotificationProvidersController : ControllerBase
                 .CountAsync();
             if (duplicateConfig > 0)
             {
-                return BadRequest("A provider with this name already exists");
+                return this.ProblemResult(StatusCodes.Status400BadRequest, "A provider with this name already exists");
             }
 
             var discordConfig = new DiscordConfig
@@ -1230,15 +1132,6 @@ public sealed class NotificationProvidersController : ControllerBase
             var providerDto = MapProvider(newProvider);
             return Ok(providerDto);
         }
-        catch (ValidationException ex)
-        {
-            return BadRequest(ex.Message);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to update Discord provider with ID {Id}", id);
-            throw;
-        }
         finally
         {
             DataContext.Lock.Release();
@@ -1259,7 +1152,7 @@ public sealed class NotificationProvidersController : ControllerBase
 
                 if (existing is null)
                 {
-                    return BadRequest(new { Message = "Webhook URL cannot be a placeholder value" });
+                    return this.ProblemResult(StatusCodes.Status400BadRequest, "Webhook URL cannot be a placeholder value");
                 }
 
                 webhookUrl = existing.WebhookUrl;
@@ -1296,15 +1189,9 @@ public sealed class NotificationProvidersController : ControllerBase
             await _notificationService.SendTestNotificationAsync(providerDto);
             return Ok(new { Message = "Test notification sent successfully" });
         }
-        catch (DiscordException ex)
-        {
-            _logger.LogWarning(ex, "Failed to test Discord provider");
-            return BadRequest(new { Message = $"Test failed: {ex.Message}" });
-        }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to test Discord provider");
-            return BadRequest(new { Message = $"Test failed: {ex.Message}" });
+            throw new NotificationTestException($"Test failed: {ex.Message}", ex);
         }
     }
 
@@ -1316,23 +1203,23 @@ public sealed class NotificationProvidersController : ControllerBase
         {
             if (string.IsNullOrWhiteSpace(newProvider.Name))
             {
-                return BadRequest("Provider name is required");
+                return this.ProblemResult(StatusCodes.Status400BadRequest, "Provider name is required");
             }
 
             var duplicateConfig = await _dataContext.NotificationConfigs.CountAsync(x => x.Name == newProvider.Name);
             if (duplicateConfig > 0)
             {
-                return BadRequest("A provider with this name already exists");
+                return this.ProblemResult(StatusCodes.Status400BadRequest, "A provider with this name already exists");
             }
 
             if (newProvider.ApiToken.IsPlaceholder())
             {
-                return BadRequest("API token cannot be a placeholder value");
+                return this.ProblemResult(StatusCodes.Status400BadRequest, "API token cannot be a placeholder value");
             }
 
             if (newProvider.UserKey.IsPlaceholder())
             {
-                return BadRequest("User key cannot be a placeholder value");
+                return this.ProblemResult(StatusCodes.Status400BadRequest, "User key cannot be a placeholder value");
             }
 
             var pushoverConfig = new PushoverConfig
@@ -1372,15 +1259,6 @@ public sealed class NotificationProvidersController : ControllerBase
             var providerDto = MapProvider(provider);
             return CreatedAtAction(nameof(GetNotificationProviders), new { id = provider.Id }, providerDto);
         }
-        catch (ValidationException ex)
-        {
-            return BadRequest(ex.Message);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to create Pushover provider");
-            throw;
-        }
         finally
         {
             DataContext.Lock.Release();
@@ -1399,12 +1277,12 @@ public sealed class NotificationProvidersController : ControllerBase
 
             if (existingProvider == null)
             {
-                return NotFound($"Pushover provider with ID {id} not found");
+                return this.ProblemResult(StatusCodes.Status404NotFound, $"Pushover provider with ID {id} not found");
             }
 
             if (string.IsNullOrWhiteSpace(updatedProvider.Name))
             {
-                return BadRequest("Provider name is required");
+                return this.ProblemResult(StatusCodes.Status400BadRequest, "Provider name is required");
             }
 
             var duplicateConfig = await _dataContext.NotificationConfigs
@@ -1413,7 +1291,7 @@ public sealed class NotificationProvidersController : ControllerBase
                 .CountAsync();
             if (duplicateConfig > 0)
             {
-                return BadRequest("A provider with this name already exists");
+                return this.ProblemResult(StatusCodes.Status400BadRequest, "A provider with this name already exists");
             }
 
             var pushoverConfig = new PushoverConfig
@@ -1463,15 +1341,6 @@ public sealed class NotificationProvidersController : ControllerBase
             var providerDto = MapProvider(newProvider);
             return Ok(providerDto);
         }
-        catch (ValidationException ex)
-        {
-            return BadRequest(ex.Message);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to update Pushover provider with ID {Id}", id);
-            throw;
-        }
         finally
         {
             DataContext.Lock.Release();
@@ -1493,7 +1362,7 @@ public sealed class NotificationProvidersController : ControllerBase
 
                 if (existing is null)
                 {
-                    return BadRequest(new { Message = "Sensitive fields cannot be placeholder values" });
+                    return this.ProblemResult(StatusCodes.Status400BadRequest, "Sensitive fields cannot be placeholder values");
                 }
 
                 if (apiToken.IsPlaceholder())
@@ -1545,8 +1414,7 @@ public sealed class NotificationProvidersController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to test Pushover provider");
-            return BadRequest(new { Message = $"Test failed: {ex.Message}" });
+            throw new NotificationTestException($"Test failed: {ex.Message}", ex);
         }
     }
 
@@ -1558,18 +1426,18 @@ public sealed class NotificationProvidersController : ControllerBase
         {
             if (string.IsNullOrWhiteSpace(newProvider.Name))
             {
-                return BadRequest("Provider name is required");
+                return this.ProblemResult(StatusCodes.Status400BadRequest, "Provider name is required");
             }
 
             var duplicateConfig = await _dataContext.NotificationConfigs.CountAsync(x => x.Name == newProvider.Name);
             if (duplicateConfig > 0)
             {
-                return BadRequest("A provider with this name already exists");
+                return this.ProblemResult(StatusCodes.Status400BadRequest, "A provider with this name already exists");
             }
 
             if (newProvider.ApplicationToken.IsPlaceholder())
             {
-                return BadRequest("Application token cannot be a placeholder value");
+                return this.ProblemResult(StatusCodes.Status400BadRequest, "Application token cannot be a placeholder value");
             }
 
             var gotifyConfig = new GotifyConfig
@@ -1604,15 +1472,6 @@ public sealed class NotificationProvidersController : ControllerBase
             var providerDto = MapProvider(provider);
             return CreatedAtAction(nameof(GetNotificationProviders), new { id = provider.Id }, providerDto);
         }
-        catch (ValidationException ex)
-        {
-            return BadRequest(ex.Message);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to create Gotify provider");
-            throw;
-        }
         finally
         {
             DataContext.Lock.Release();
@@ -1631,12 +1490,12 @@ public sealed class NotificationProvidersController : ControllerBase
 
             if (existingProvider == null)
             {
-                return NotFound($"Gotify provider with ID {id} not found");
+                return this.ProblemResult(StatusCodes.Status404NotFound, $"Gotify provider with ID {id} not found");
             }
 
             if (string.IsNullOrWhiteSpace(updatedProvider.Name))
             {
-                return BadRequest("Provider name is required");
+                return this.ProblemResult(StatusCodes.Status400BadRequest, "Provider name is required");
             }
 
             var duplicateConfig = await _dataContext.NotificationConfigs
@@ -1645,7 +1504,7 @@ public sealed class NotificationProvidersController : ControllerBase
                 .CountAsync();
             if (duplicateConfig > 0)
             {
-                return BadRequest("A provider with this name already exists");
+                return this.ProblemResult(StatusCodes.Status400BadRequest, "A provider with this name already exists");
             }
 
             var gotifyConfig = new GotifyConfig
@@ -1688,15 +1547,6 @@ public sealed class NotificationProvidersController : ControllerBase
             var providerDto = MapProvider(newProvider);
             return Ok(providerDto);
         }
-        catch (ValidationException ex)
-        {
-            return BadRequest(ex.Message);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to update Gotify provider with ID {Id}", id);
-            throw;
-        }
         finally
         {
             DataContext.Lock.Release();
@@ -1716,7 +1566,9 @@ public sealed class NotificationProvidersController : ControllerBase
                     testRequest.ProviderId, NotificationProviderType.Gotify, p => p.GotifyConfiguration);
 
                 if (existing is null)
-                    return BadRequest(new { Message = "Application token cannot be a placeholder value" });
+                {
+                    return this.ProblemResult(StatusCodes.Status400BadRequest, "Application token cannot be a placeholder value");
+                }
 
                 applicationToken = existing.ApplicationToken;
             }
@@ -1752,15 +1604,9 @@ public sealed class NotificationProvidersController : ControllerBase
             await _notificationService.SendTestNotificationAsync(providerDto);
             return Ok(new { Message = "Test notification sent successfully" });
         }
-        catch (GotifyException ex)
-        {
-            _logger.LogWarning(ex, "Failed to test Gotify provider");
-            return BadRequest(new { Message = $"Test failed: {ex.Message}" });
-        }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to test Gotify provider");
-            return BadRequest(new { Message = $"Test failed: {ex.Message}" });
+            throw new NotificationTestException($"Test failed: {ex.Message}", ex);
         }
     }
 
