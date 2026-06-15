@@ -1,3 +1,4 @@
+using Cleanuparr.Api.Extensions;
 using Cleanuparr.Api.Features.DownloadCleaner.Contracts.Requests;
 using Cleanuparr.Api.Features.DownloadCleaner.Contracts.Responses;
 using Cleanuparr.Domain.Enums;
@@ -8,7 +9,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using ValidationException = Cleanuparr.Domain.Exceptions.ValidationException;
 
 namespace Cleanuparr.Api.Features.DownloadCleaner.Controllers;
 
@@ -40,17 +40,12 @@ public class SeedingRulesController : ControllerBase
 
             if (client is null)
             {
-                return NotFound(new { Message = $"Download client with ID {downloadClientId} not found" });
+                return this.ProblemResult(StatusCodes.Status404NotFound, $"Download client with ID {downloadClientId} not found");
             }
 
             var rules = await SeedingRuleHelper.GetForClientAsync(_dataContext, client);
 
             return Ok(rules.Select(SeedingRuleResponse.From));
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to retrieve seeding rules for client {ClientId}", downloadClientId);
-            return StatusCode(500, new { Message = "Failed to retrieve seeding rules", Error = ex.Message });
         }
         finally
         {
@@ -61,11 +56,6 @@ public class SeedingRulesController : ControllerBase
     [HttpPost("{downloadClientId}")]
     public async Task<IActionResult> CreateSeedingRule(Guid downloadClientId, [FromBody] SeedingRuleRequest ruleDto)
     {
-        if (!ModelState.IsValid)
-        {
-            return BadRequest(ModelState);
-        }
-
         await DataContext.Lock.WaitAsync();
         try
         {
@@ -75,14 +65,14 @@ public class SeedingRulesController : ControllerBase
 
             if (client is null)
             {
-                return NotFound(new { Message = $"Download client with ID {downloadClientId} not found" });
+                return this.ProblemResult(StatusCodes.Status404NotFound, $"Download client with ID {downloadClientId} not found");
             }
 
             var existingRules = await SeedingRuleHelper.GetForClientAsync(_dataContext, client);
 
             if (ruleDto.Priority.HasValue && existingRules.Any(r => r.Priority == ruleDto.Priority.Value))
             {
-                return BadRequest(new { Message = $"A seeding rule with priority {ruleDto.Priority.Value} already exists for this client" });
+                return this.ProblemResult(StatusCodes.Status400BadRequest, $"A seeding rule with priority {ruleDto.Priority.Value} already exists for this client");
             }
 
             int priority = ruleDto.Priority ?? (existingRules.Count == 0 ? 1 : existingRules.Max(r => r.Priority) + 1);
@@ -98,17 +88,6 @@ public class SeedingRulesController : ControllerBase
 
             return CreatedAtAction(nameof(GetSeedingRules), new { downloadClientId }, rule);
         }
-        catch (ValidationException ex)
-        {
-            _logger.LogWarning("Validation failed for seeding rule creation: {Message}", ex.Message);
-            return BadRequest(new { Message = ex.Message });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to create seeding rule: {RuleName} for client {ClientId}",
-                ruleDto.Name, downloadClientId);
-            return StatusCode(500, new { Message = "Failed to create seeding rule", Error = ex.Message });
-        }
         finally
         {
             DataContext.Lock.Release();
@@ -118,11 +97,6 @@ public class SeedingRulesController : ControllerBase
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdateSeedingRule(Guid id, [FromBody] SeedingRuleRequest ruleDto)
     {
-        if (!ModelState.IsValid)
-        {
-            return BadRequest(ModelState);
-        }
-
         await DataContext.Lock.WaitAsync();
         try
         {
@@ -130,7 +104,7 @@ public class SeedingRulesController : ControllerBase
 
             if (existingRule is null)
             {
-                return NotFound(new { Message = $"Seeding rule with ID {id} not found" });
+                return this.ProblemResult(StatusCodes.Status404NotFound, $"Seeding rule with ID {id} not found");
             }
 
             existingRule.Name = ruleDto.Name.Trim();
@@ -162,16 +136,6 @@ public class SeedingRulesController : ControllerBase
 
             return Ok(existingRule);
         }
-        catch (ValidationException ex)
-        {
-            _logger.LogWarning("Validation failed for seeding rule update: {Message}", ex.Message);
-            return BadRequest(new { Message = ex.Message });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to update seeding rule with ID: {RuleId}", id);
-            return StatusCode(500, new { Message = "Failed to update seeding rule", Error = ex.Message });
-        }
         finally
         {
             DataContext.Lock.Release();
@@ -181,11 +145,6 @@ public class SeedingRulesController : ControllerBase
     [HttpPut("{downloadClientId}/reorder")]
     public async Task<IActionResult> ReorderSeedingRules(Guid downloadClientId, [FromBody] ReorderSeedingRulesRequest request)
     {
-        if (!ModelState.IsValid)
-        {
-            return BadRequest(ModelState);
-        }
-
         await DataContext.Lock.WaitAsync();
         try
         {
@@ -195,24 +154,24 @@ public class SeedingRulesController : ControllerBase
 
             if (client is null)
             {
-                return NotFound(new { Message = $"Download client with ID {downloadClientId} not found" });
+                return this.ProblemResult(StatusCodes.Status404NotFound, $"Download client with ID {downloadClientId} not found");
             }
 
             List<ISeedingRule> rules = await SeedingRuleHelper.GetForClientTrackedAsync(_dataContext, client);
 
             if (request.OrderedIds.Distinct().Count() != request.OrderedIds.Count)
             {
-                return BadRequest(new { Message = "Duplicate rule IDs are not allowed" });
+                return this.ProblemResult(StatusCodes.Status400BadRequest, "Duplicate rule IDs are not allowed");
             }
 
             if (request.OrderedIds.Count != rules.Count)
             {
-                return BadRequest(new { Message = $"Expected {rules.Count} rule IDs but received {request.OrderedIds.Count}. All rules must be included." });
+                return this.ProblemResult(StatusCodes.Status400BadRequest, $"Expected {rules.Count} rule IDs but received {request.OrderedIds.Count}. All rules must be included.");
             }
 
             foreach (Guid id in request.OrderedIds.Where(id => rules.All(r => r.Id != id)))
             {
-                return BadRequest(new { Message = $"Rule with ID {id} not found for client {downloadClientId}" });
+                return this.ProblemResult(StatusCodes.Status400BadRequest, $"Rule with ID {id} not found for client {downloadClientId}");
             }
 
             int priority = 1;
@@ -228,11 +187,6 @@ public class SeedingRulesController : ControllerBase
             _logger.LogInformation("Reordered {Count} seeding rules for client {ClientId}", rules.Count, downloadClientId);
 
             return NoContent();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to reorder seeding rules for client {ClientId}", downloadClientId);
-            return StatusCode(500, new { Message = "Failed to reorder seeding rules", Error = ex.Message });
         }
         finally
         {
@@ -250,7 +204,7 @@ public class SeedingRulesController : ControllerBase
 
             if (existingRule is null)
             {
-                return NotFound(new { Message = $"Seeding rule with ID {id} not found" });
+                return this.ProblemResult(StatusCodes.Status404NotFound, $"Seeding rule with ID {id} not found");
             }
 
             RemoveRuleFromDbSet(existingRule);
@@ -259,11 +213,6 @@ public class SeedingRulesController : ControllerBase
             _logger.LogInformation("Deleted seeding rule: {RuleName} with ID: {RuleId}", existingRule.Name, id);
 
             return NoContent();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to delete seeding rule with ID: {RuleId}", id);
-            return StatusCode(500, new { Message = "Failed to delete seeding rule", Error = ex.Message });
         }
         finally
         {

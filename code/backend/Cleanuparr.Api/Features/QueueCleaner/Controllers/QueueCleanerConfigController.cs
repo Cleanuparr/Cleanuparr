@@ -1,5 +1,3 @@
-using System.ComponentModel.DataAnnotations;
-
 using Cleanuparr.Api.Features.QueueCleaner.Contracts.Requests;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Services.Interfaces;
@@ -79,15 +77,6 @@ public sealed class QueueCleanerConfigController : ControllerBase
             await UpdateJobSchedule(oldConfig, JobType.QueueCleaner);
 
             return Ok(new { Message = "QueueCleaner configuration updated successfully" });
-        }
-        catch (ValidationException ex)
-        {
-            return BadRequest(ex.Message);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to save QueueCleaner configuration");
-            throw;
         }
         finally
         {

@@ -1,3 +1,4 @@
+using Cleanuparr.Api.Extensions;
 using Cleanuparr.Api.Features.Seeker.Contracts.Requests;
 using Cleanuparr.Shared.Helpers;
 using Cleanuparr.Api.Features.Seeker.Contracts.Responses;
@@ -89,7 +90,7 @@ public sealed class SeekerConfigController : ControllerBase
     {
         if (!await DataContext.Lock.WaitAsync(TimeSpan.FromSeconds(30)))
         {
-            return StatusCode(503, "Database is busy, please try again");
+            return this.ProblemResult(StatusCodes.Status503ServiceUnavailable, "Database is busy, please try again");
         }
 
         try
@@ -193,11 +194,6 @@ public sealed class SeekerConfigController : ControllerBase
             }
 
             return Ok(new { Message = "Seeker configuration updated successfully" });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to save Seeker configuration");
-            throw;
         }
         finally
         {

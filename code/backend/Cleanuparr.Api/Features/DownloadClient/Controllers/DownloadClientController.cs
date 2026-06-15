@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 
+using Cleanuparr.Api.Extensions;
 using Cleanuparr.Api.Features.DownloadClient.Contracts.Requests;
 using Cleanuparr.Infrastructure.Features.DownloadClient;
 using Cleanuparr.Infrastructure.Http.DynamicHttpClientSystem;
@@ -73,11 +74,6 @@ public sealed class DownloadClientController : ControllerBase
 
             return CreatedAtAction(nameof(GetDownloadClientConfig), new { id = clientConfig.Id }, clientConfig);
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to create download client");
-            throw;
-        }
         finally
         {
             DataContext.Lock.Release();
@@ -97,7 +93,7 @@ public sealed class DownloadClientController : ControllerBase
 
             if (existingClient is null)
             {
-                return NotFound($"Download client with ID {id} not found");
+                return this.ProblemResult(StatusCodes.Status404NotFound, $"Download client with ID {id} not found");
             }
 
             var clientToPersist = updatedClient.ApplyTo(existingClient);
@@ -107,11 +103,6 @@ public sealed class DownloadClientController : ControllerBase
             await _dataContext.SaveChangesAsync();
 
             return Ok(clientToPersist);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to update download client with ID {Id}", id);
-            throw;
         }
         finally
         {
@@ -130,7 +121,7 @@ public sealed class DownloadClientController : ControllerBase
 
             if (existingClient is null)
             {
-                return NotFound($"Download client with ID {id} not found");
+                return this.ProblemResult(StatusCodes.Status404NotFound, $"Download client with ID {id} not found");
             }
 
             _dataContext.DownloadClients.Remove(existingClient);
@@ -142,11 +133,6 @@ public sealed class DownloadClientController : ControllerBase
             _logger.LogInformation("Removed HTTP client configuration for deleted download client {ClientName}", clientName);
 
             return NoContent();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to delete download client with ID {Id}", id);
-            throw;
         }
         finally
         {
@@ -171,7 +157,7 @@ public sealed class DownloadClientController : ControllerBase
 
                 if (existingClient is null)
                 {
-                    return NotFound($"Download client with ID {request.ClientId.Value} not found");
+                    return this.ProblemResult(StatusCodes.Status404NotFound, $"Download client with ID {request.ClientId.Value} not found");
                 }
 
                 resolvedPassword = existingClient.Password;
@@ -190,12 +176,12 @@ public sealed class DownloadClientController : ControllerBase
                 });
             }
 
-            return BadRequest(new { Message = healthResult.ErrorMessage ?? "Connection failed" });
+            return this.ProblemResult(StatusCodes.Status400BadRequest, healthResult.ErrorMessage ?? "Connection failed");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to test {TypeName} client connection", request.TypeName);
-            return BadRequest(new { Message = $"Connection failed: {ex.Message}" });
+            return this.ProblemResult(StatusCodes.Status400BadRequest, $"Connection failed: {ex.Message}");
         }
     }
 }

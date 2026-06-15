@@ -1,3 +1,4 @@
+using Cleanuparr.Api.Extensions;
 using Cleanuparr.Api.Features.DownloadCleaner.Contracts.Requests;
 using Cleanuparr.Api.Features.DownloadCleaner.Contracts.Responses;
 using Cleanuparr.Persistence;
@@ -37,7 +38,7 @@ public class UnlinkedConfigController : ControllerBase
 
             if (client is null)
             {
-                return NotFound(new { Message = $"Download client with ID {downloadClientId} not found" });
+                return this.ProblemResult(StatusCodes.Status404NotFound, $"Download client with ID {downloadClientId} not found");
             }
 
             var config = await _dataContext.UnlinkedConfigs
@@ -55,11 +56,6 @@ public class UnlinkedConfigController : ControllerBase
     [HttpPut("{downloadClientId}")]
     public async Task<IActionResult> UpdateUnlinkedConfig(Guid downloadClientId, [FromBody] UnlinkedConfigRequest dto)
     {
-        if (!ModelState.IsValid)
-        {
-            return BadRequest(ModelState);
-        }
-
         await DataContext.Lock.WaitAsync();
         try
         {
@@ -69,7 +65,7 @@ public class UnlinkedConfigController : ControllerBase
 
             if (client is null)
             {
-                return NotFound(new { Message = $"Download client with ID {downloadClientId} not found" });
+                return this.ProblemResult(StatusCodes.Status404NotFound, $"Download client with ID {downloadClientId} not found");
             }
 
             var existing = await _dataContext.UnlinkedConfigs

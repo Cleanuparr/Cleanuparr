@@ -17,8 +17,8 @@ public static class ControllerBaseExtensions
         string? title = null,
         IReadOnlyDictionary<string, object?>? extensions = null)
     {
-        ProblemDetails problemDetails = controller.ProblemDetailsFactory.CreateProblemDetails(
-            controller.HttpContext, statusCode: statusCode, title: title, detail: detail);
+        ProblemDetails problemDetails = controller.ProblemDetailsFactory
+            .CreateProblemDetails(controller.HttpContext, statusCode: statusCode, title: title, detail: detail);
 
         problemDetails.Extensions.TryAdd("traceId", Activity.Current?.Id ?? controller.HttpContext.TraceIdentifier);
 

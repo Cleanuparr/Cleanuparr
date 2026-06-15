@@ -1,3 +1,4 @@
+using Cleanuparr.Api.Extensions;
 using Cleanuparr.Api.Features.DownloadCleaner.Contracts.Requests;
 using Cleanuparr.Api.Features.DownloadCleaner.Contracts.Responses;
 using Cleanuparr.Persistence;
@@ -36,7 +37,7 @@ public sealed class OrphanedFilesConfigController : ControllerBase
 
             if (client is null)
             {
-                return NotFound(new { Message = $"Download client with ID {downloadClientId} not found" });
+                return this.ProblemResult(StatusCodes.Status404NotFound, $"Download client with ID {downloadClientId} not found");
             }
 
             var config = await _dataContext.OrphanedFilesConfigs
@@ -54,11 +55,6 @@ public sealed class OrphanedFilesConfigController : ControllerBase
     [HttpPut("{downloadClientId}")]
     public async Task<IActionResult> UpdateClientConfig(Guid downloadClientId, [FromBody] OrphanedFilesConfigRequest dto)
     {
-        if (!ModelState.IsValid)
-        {
-            return BadRequest(ModelState);
-        }
-
         await DataContext.Lock.WaitAsync();
         try
         {
@@ -68,7 +64,7 @@ public sealed class OrphanedFilesConfigController : ControllerBase
 
             if (client is null)
             {
-                return NotFound(new { Message = $"Download client with ID {downloadClientId} not found" });
+                return this.ProblemResult(StatusCodes.Status404NotFound, $"Download client with ID {downloadClientId} not found");
             }
 
             var existing = await _dataContext.OrphanedFilesConfigs
