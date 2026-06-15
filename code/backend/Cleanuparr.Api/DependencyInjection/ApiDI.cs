@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
 using Cleanuparr.Api.Filters;
@@ -55,6 +56,16 @@ public static class ApiDI
         // Add health status broadcaster
         services.AddHostedService<HealthStatusBroadcaster>();
 
+        // RFC 9457 problem-details responses for both the exception handler and [ApiController]
+        // model-state validation, with a uniform Activity-tied traceId.
+        services.AddProblemDetails(options =>
+        {
+            options.CustomizeProblemDetails = ctx =>
+                ctx.ProblemDetails.Extensions.TryAdd(
+                    "traceId", Activity.Current?.Id ?? ctx.HttpContext.TraceIdentifier);
+        });
+        services.AddExceptionHandler<GlobalExceptionHandler>();
+
         return services;
     }
 
@@ -71,8 +82,8 @@ public static class ApiDI
             OnPrepareResponse = ctx => NoCacheAttribute.Apply(ctx.Context.Response.Headers)
         });
         
-        // Add the global exception handling middleware first
-        app.UseMiddleware<ExceptionMiddleware>();
+        // Map unhandled exceptions to RFC 9457 problem-details responses (GlobalExceptionHandler)
+        app.UseExceptionHandler();
 
         // Resolve the real client IP / scheme / host from X-Forwarded-* headers
         app.UseMiddleware<TrustedForwardedHeadersMiddleware>();
