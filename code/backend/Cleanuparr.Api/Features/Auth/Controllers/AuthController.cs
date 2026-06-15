@@ -4,6 +4,7 @@ using Cleanuparr.Api.Extensions;
 using Cleanuparr.Api.Features.Auth.Contracts.Requests;
 using Cleanuparr.Api.Features.Auth.Contracts.Responses;
 using Cleanuparr.Api.Filters;
+using Cleanuparr.Domain.Exceptions;
 using Cleanuparr.Infrastructure.Features.Auth;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Auth;
@@ -92,7 +93,7 @@ public sealed class AuthController : ControllerBase
             var existingUser = await _usersContext.Users.FirstOrDefaultAsync();
             if (existingUser is not null)
             {
-                return Conflict(new { error = "Account already exists" });
+                return this.ProblemResult(StatusCodes.Status409Conflict, "Account already exists");
             }
 
             var user = new User
@@ -133,12 +134,12 @@ public sealed class AuthController : ControllerBase
 
             if (user is null)
             {
-                return BadRequest(new { error = "Create an account first" });
+                return this.ProblemResult(StatusCodes.Status400BadRequest, "Create an account first");
             }
 
             if (user.SetupCompleted)
             {
-                return Conflict(new { error = "Setup already completed. Use account settings to manage 2FA." });
+                return this.ProblemResult(StatusCodes.Status409Conflict, "Setup already completed. Use account settings to manage 2FA.");
             }
 
             // Generate new TOTP secret
@@ -190,22 +191,22 @@ public sealed class AuthController : ControllerBase
             var user = await _usersContext.Users.FirstOrDefaultAsync();
             if (user is null)
             {
-                return BadRequest(new { error = "Create an account first" });
+                return this.ProblemResult(StatusCodes.Status400BadRequest, "Create an account first");
             }
 
             if (user.SetupCompleted)
             {
-                return Conflict(new { error = "Setup already completed. Use account settings to manage 2FA." });
+                return this.ProblemResult(StatusCodes.Status409Conflict, "Setup already completed. Use account settings to manage 2FA.");
             }
 
             if (string.IsNullOrEmpty(user.TotpSecret))
             {
-                return BadRequest(new { error = "Generate 2FA setup first" });
+                return this.ProblemResult(StatusCodes.Status400BadRequest, "Generate 2FA setup first");
             }
 
             if (!_totpService.ValidateCode(user.TotpSecret, request.Code))
             {
-                return Unauthorized(new { error = "Invalid verification code" });
+                return this.ProblemResult(StatusCodes.Status401Unauthorized, "Invalid verification code");
             }
 
             user.TotpEnabled = true;
@@ -231,12 +232,12 @@ public sealed class AuthController : ControllerBase
             var user = await _usersContext.Users.FirstOrDefaultAsync();
             if (user is null)
             {
-                return BadRequest(new { error = "Create an account first" });
+                return this.ProblemResult(StatusCodes.Status400BadRequest, "Create an account first");
             }
 
             if (user.SetupCompleted)
             {
-                return Conflict(new { error = "Setup already completed" });
+                return this.ProblemResult(StatusCodes.Status409Conflict, "Setup already completed");
             }
 
             user.SetupCompleted = true;
@@ -258,7 +259,7 @@ public sealed class AuthController : ControllerBase
     {
         if (await IsOidcExclusiveModeActive())
         {
-            return StatusCode(403, new { error = "Login with credentials is disabled. Use OIDC to sign in." });
+            return this.ProblemResult(StatusCodes.Status403Forbidden, "Login with credentials is disabled. Use OIDC to sign in.");
         }
 
         var user = await _usersContext.Users.AsNoTracking().FirstOrDefaultAsync();
@@ -270,20 +271,21 @@ public sealed class AuthController : ControllerBase
 
         if (user is null || !user.SetupCompleted)
         {
-            return Unauthorized(new { error = "Invalid credentials" });
+            return this.ProblemResult(StatusCodes.Status401Unauthorized, "Invalid credentials");
         }
 
         // Check lockout
         if (user.LockoutEnd.HasValue && user.LockoutEnd.Value > DateTimeOffset.UtcNow)
         {
-            var remaining = (int)Math.Ceiling((user.LockoutEnd.Value - DateTimeOffset.UtcNow).TotalSeconds);
-            return StatusCode(429, new { error = "Account is locked", retryAfterSeconds = remaining });
+            int remaining = (int)Math.Ceiling((user.LockoutEnd.Value - DateTimeOffset.UtcNow).TotalSeconds);
+            throw new RateLimitException("Account is locked", remaining);
         }
 
         if (!passwordValid || !string.Equals(user.Username, request.Username, StringComparison.OrdinalIgnoreCase))
         {
-            var retryAfterSeconds = await IncrementFailedAttempts(user.Id);
-            return Unauthorized(new { error = "Invalid credentials", retryAfterSeconds });
+            int retryAfterSeconds = await IncrementFailedAttempts(user.Id);
+            return this.ProblemResult(StatusCodes.Status401Unauthorized, "Invalid credentials",
+                extensions: new Dictionary<string, object?> { ["retryAfterSeconds"] = retryAfterSeconds });
         }
 
         // Reset failed attempts on successful password verification
@@ -320,13 +322,13 @@ public sealed class AuthController : ControllerBase
     {
         if (await IsOidcExclusiveModeActive())
         {
-            return StatusCode(403, new { error = "Login with credentials is disabled. Use OIDC to sign in." });
+            return this.ProblemResult(StatusCodes.Status403Forbidden, "Login with credentials is disabled. Use OIDC to sign in.");
         }
 
         var userId = _jwtService.ValidateLoginToken(request.LoginToken);
         if (userId is null)
         {
-            return Unauthorized(new { error = "Invalid or expired login token" });
+            return this.ProblemResult(StatusCodes.Status401Unauthorized, "Invalid or expired login token");
         }
 
         var user = await _usersContext.Users
@@ -335,7 +337,7 @@ public sealed class AuthController : ControllerBase
 
         if (user is null)
         {
-            return Unauthorized(new { error = "Invalid login token" });
+            return this.ProblemResult(StatusCodes.Status401Unauthorized, "Invalid login token");
         }
 
         bool codeValid;
@@ -351,7 +353,7 @@ public sealed class AuthController : ControllerBase
 
         if (!codeValid)
         {
-            return Unauthorized(new { error = "Invalid verification code" });
+            return this.ProblemResult(StatusCodes.Status401Unauthorized, "Invalid verification code");
         }
 
         return Ok(await GenerateTokenResponse(user));
@@ -371,7 +373,7 @@ public sealed class AuthController : ControllerBase
 
             if (storedToken is null || storedToken.ExpiresAt < DateTimeOffset.UtcNow)
             {
-                return Unauthorized(new { error = "Invalid or expired refresh token" });
+                return this.ProblemResult(StatusCodes.Status401Unauthorized, "Invalid or expired refresh token");
             }
 
             // Revoke the old token (rotation)
@@ -420,12 +422,12 @@ public sealed class AuthController : ControllerBase
         var user = await _usersContext.Users.AsNoTracking().FirstOrDefaultAsync();
         if (user is null)
         {
-            return BadRequest(new { error = "Create an account first" });
+            return this.ProblemResult(StatusCodes.Status400BadRequest, "Create an account first");
         }
 
         if (user.SetupCompleted)
         {
-            return Conflict(new { error = "Setup already completed. Use account settings to manage Plex." });
+            return this.ProblemResult(StatusCodes.Status409Conflict, "Setup already completed. Use account settings to manage Plex.");
         }
 
         var pin = await _plexAuthService.RequestPin();
@@ -455,12 +457,12 @@ public sealed class AuthController : ControllerBase
             var user = await _usersContext.Users.FirstOrDefaultAsync();
             if (user is null)
             {
-                return BadRequest(new { error = "Create an account first" });
+                return this.ProblemResult(StatusCodes.Status400BadRequest, "Create an account first");
             }
 
             if (user.SetupCompleted)
             {
-                return Conflict(new { error = "Setup already completed. Use account settings to manage Plex." });
+                return this.ProblemResult(StatusCodes.Status409Conflict, "Setup already completed. Use account settings to manage Plex.");
             }
 
             user.PlexAccountId = plexAccount.AccountId;
@@ -486,13 +488,13 @@ public sealed class AuthController : ControllerBase
     {
         if (await IsOidcExclusiveModeActive())
         {
-            return StatusCode(403, new { error = "Plex login is disabled. Use OIDC to sign in." });
+            return this.ProblemResult(StatusCodes.Status403Forbidden, "Plex login is disabled. Use OIDC to sign in.");
         }
 
         var user = await _usersContext.Users.AsNoTracking().FirstOrDefaultAsync();
         if (user is null || !user.SetupCompleted || user.PlexAccountId is null)
         {
-            return BadRequest(new { error = "Plex login is not available" });
+            return this.ProblemResult(StatusCodes.Status400BadRequest, "Plex login is not available");
         }
 
         var pin = await _plexAuthService.RequestPin();
@@ -509,13 +511,13 @@ public sealed class AuthController : ControllerBase
     {
         if (await IsOidcExclusiveModeActive())
         {
-            return StatusCode(403, new { error = "Plex login is disabled. Use OIDC to sign in." });
+            return this.ProblemResult(StatusCodes.Status403Forbidden, "Plex login is disabled. Use OIDC to sign in.");
         }
 
         var user = await _usersContext.Users.FirstOrDefaultAsync();
         if (user is null || !user.SetupCompleted || user.PlexAccountId is null)
         {
-            return BadRequest(new { error = "Plex login is not available" });
+            return this.ProblemResult(StatusCodes.Status400BadRequest, "Plex login is not available");
         }
 
         var pinResult = await _plexAuthService.CheckPin(request.PinId);
@@ -530,7 +532,7 @@ public sealed class AuthController : ControllerBase
 
         if (plexAccount.AccountId != user.PlexAccountId)
         {
-            return Unauthorized(new { error = "Plex account does not match the linked account" });
+            return this.ProblemResult(StatusCodes.Status401Unauthorized, "Plex account does not match the linked account");
         }
 
         // Plex OAuth acts as a trusted identity provider — the user explicitly linked their
@@ -558,7 +560,7 @@ public sealed class AuthController : ControllerBase
             string.IsNullOrEmpty(oidcConfig.IssuerUrl) ||
             string.IsNullOrEmpty(oidcConfig.ClientId))
         {
-            return BadRequest(new { error = "OIDC is not enabled or not configured" });
+            return this.ProblemResult(StatusCodes.Status400BadRequest, "OIDC is not enabled or not configured");
         }
 
         var redirectUri = GetOidcCallbackUrl(oidcConfig.RedirectUrl);
@@ -572,7 +574,7 @@ public sealed class AuthController : ControllerBase
         catch (InvalidOperationException ex)
         {
             _logger.LogWarning(ex, "Failed to start OIDC authorization");
-            return StatusCode(429, new { error = ex.Message });
+            return this.ProblemResult(StatusCodes.Status429TooManyRequests, ex.Message);
         }
     }
 
@@ -642,7 +644,7 @@ public sealed class AuthController : ControllerBase
 
         if (result is null)
         {
-            return NotFound(new { error = "Invalid or expired code" });
+            return this.ProblemResult(StatusCodes.Status404NotFound, "Invalid or expired code");
         }
 
         return Ok(new TokenResponse

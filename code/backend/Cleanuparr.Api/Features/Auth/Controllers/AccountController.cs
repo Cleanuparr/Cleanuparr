@@ -10,7 +10,6 @@ using Cleanuparr.Persistence.Models.Auth;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using ValidationException = Cleanuparr.Domain.Exceptions.ValidationException;
 
 namespace Cleanuparr.Api.Features.Auth.Controllers;
 
@@ -67,7 +66,7 @@ public sealed class AccountController : ControllerBase
     {
         if (await IsOidcExclusiveModeActive())
         {
-            return StatusCode(403, new { error = "Password changes are disabled while OIDC exclusive mode is active." });
+            return this.ProblemResult(StatusCodes.Status403Forbidden, "Password changes are disabled while OIDC exclusive mode is active.");
         }
 
         var user = await GetCurrentUser();
@@ -78,7 +77,7 @@ public sealed class AccountController : ControllerBase
 
         if (!_passwordService.VerifyPassword(request.CurrentPassword, user.PasswordHash))
         {
-            return BadRequest(new { error = "Current password is incorrect" });
+            return this.ProblemResult(StatusCodes.Status400BadRequest, "Current password is incorrect");
         }
 
         DateTimeOffset now = DateTimeOffset.UtcNow;
@@ -115,12 +114,12 @@ public sealed class AccountController : ControllerBase
         // Verify current credentials
         if (!_passwordService.VerifyPassword(request.Password, user.PasswordHash))
         {
-            return BadRequest(new { error = "Incorrect password" });
+            return this.ProblemResult(StatusCodes.Status400BadRequest, "Incorrect password");
         }
 
         if (!_totpService.ValidateCode(user.TotpSecret, request.TotpCode))
         {
-            return BadRequest(new { error = "Invalid 2FA code" });
+            return this.ProblemResult(StatusCodes.Status400BadRequest, "Invalid 2FA code");
         }
 
         // Generate new TOTP
@@ -168,12 +167,12 @@ public sealed class AccountController : ControllerBase
 
         if (user.TotpEnabled)
         {
-            return Conflict(new { error = "2FA is already enabled" });
+            return this.ProblemResult(StatusCodes.Status409Conflict, "2FA is already enabled");
         }
 
         if (!_passwordService.VerifyPassword(request.Password, user.PasswordHash))
         {
-            return BadRequest(new { error = "Incorrect password" });
+            return this.ProblemResult(StatusCodes.Status400BadRequest, "Incorrect password");
         }
 
         // Generate new TOTP
@@ -221,17 +220,17 @@ public sealed class AccountController : ControllerBase
 
         if (user.TotpEnabled)
         {
-            return Conflict(new { error = "2FA is already enabled" });
+            return this.ProblemResult(StatusCodes.Status409Conflict, "2FA is already enabled");
         }
 
         if (string.IsNullOrEmpty(user.TotpSecret))
         {
-            return BadRequest(new { error = "Generate 2FA setup first" });
+            return this.ProblemResult(StatusCodes.Status400BadRequest, "Generate 2FA setup first");
         }
 
         if (!_totpService.ValidateCode(user.TotpSecret, request.Code))
         {
-            return BadRequest(new { error = "Invalid verification code" });
+            return this.ProblemResult(StatusCodes.Status400BadRequest, "Invalid verification code");
         }
 
         user.TotpEnabled = true;
@@ -254,17 +253,17 @@ public sealed class AccountController : ControllerBase
 
         if (!user.TotpEnabled)
         {
-            return BadRequest(new { error = "2FA is not enabled" });
+            return this.ProblemResult(StatusCodes.Status400BadRequest, "2FA is not enabled");
         }
 
         if (!_passwordService.VerifyPassword(request.Password, user.PasswordHash))
         {
-            return BadRequest(new { error = "Incorrect password" });
+            return this.ProblemResult(StatusCodes.Status400BadRequest, "Incorrect password");
         }
 
         if (!_totpService.ValidateCode(user.TotpSecret, request.TotpCode))
         {
-            return BadRequest(new { error = "Invalid 2FA code" });
+            return this.ProblemResult(StatusCodes.Status400BadRequest, "Invalid 2FA code");
         }
 
         user.TotpEnabled = false;
@@ -320,7 +319,7 @@ public sealed class AccountController : ControllerBase
     {
         if (await IsOidcExclusiveModeActive())
         {
-            return StatusCode(403, new { error = "Plex account management is disabled while OIDC exclusive mode is active." });
+            return this.ProblemResult(StatusCodes.Status403Forbidden, "Plex account management is disabled while OIDC exclusive mode is active.");
         }
 
         var pin = await _plexAuthService.RequestPin();
@@ -333,7 +332,7 @@ public sealed class AccountController : ControllerBase
     {
         if (await IsOidcExclusiveModeActive())
         {
-            return StatusCode(403, new { error = "Plex account management is disabled while OIDC exclusive mode is active." });
+            return this.ProblemResult(StatusCodes.Status403Forbidden, "Plex account management is disabled while OIDC exclusive mode is active.");
         }
 
         var pinResult = await _plexAuthService.CheckPin(request.PinId);
@@ -369,7 +368,7 @@ public sealed class AccountController : ControllerBase
     {
         if (await IsOidcExclusiveModeActive())
         {
-            return StatusCode(403, new { error = "Plex account management is disabled while OIDC exclusive mode is active." });
+            return this.ProblemResult(StatusCodes.Status403Forbidden, "Plex account management is disabled while OIDC exclusive mode is active.");
         }
 
         var user = await GetCurrentUser();
@@ -405,25 +404,18 @@ public sealed class AccountController : ControllerBase
     [HttpPut("oidc")]
     public async Task<IActionResult> UpdateOidcConfig([FromBody] UpdateOidcConfigRequest request)
     {
-        try
+        var user = await GetCurrentUser();
+        if (user is null)
         {
-            var user = await GetCurrentUser();
-            if (user is null)
-            {
-                return Unauthorized();
-            }
-
-            request.ApplyTo(user.Oidc);
-            user.Oidc.Validate();
-            user.UpdatedAt = DateTimeOffset.UtcNow;
-            await _usersContext.SaveChangesAsync();
-
-            return Ok(new { message = "OIDC configuration updated" });
+            return Unauthorized();
         }
-        catch (ValidationException ex)
-        {
-            return BadRequest(new { error = ex.Message });
-        }
+
+        request.ApplyTo(user.Oidc);
+        user.Oidc.Validate();
+        user.UpdatedAt = DateTimeOffset.UtcNow;
+        await _usersContext.SaveChangesAsync();
+
+        return Ok(new { message = "OIDC configuration updated" });
     }
 
     [HttpPost("oidc/link")]
@@ -437,7 +429,7 @@ public sealed class AccountController : ControllerBase
 
         if (user.Oidc is not { Enabled: true })
         {
-            return BadRequest(new { error = "OIDC is not enabled" });
+            return this.ProblemResult(StatusCodes.Status400BadRequest, "OIDC is not enabled");
         }
 
         var redirectUri = GetOidcLinkCallbackUrl(user.Oidc.RedirectUrl);
@@ -451,7 +443,7 @@ public sealed class AccountController : ControllerBase
         catch (InvalidOperationException ex)
         {
             _logger.LogWarning(ex, "Failed to start OIDC link authorization");
-            return StatusCode(429, new { error = ex.Message });
+            return this.ProblemResult(StatusCodes.Status429TooManyRequests, ex.Message);
         }
     }
 
@@ -556,7 +548,7 @@ public sealed class AccountController : ControllerBase
     {
         if (request.FeatureIds.Count > MaxFeatureIdsPerRequest)
         {
-            return BadRequest(new { error = $"featureIds exceeds the maximum allowed ({MaxFeatureIdsPerRequest})." });
+            return this.ProblemResult(StatusCodes.Status400BadRequest, $"featureIds exceeds the maximum allowed ({MaxFeatureIdsPerRequest}).");
         }
 
         await UsersContext.Lock.WaitAsync();
