@@ -13,16 +13,13 @@ namespace Cleanuparr.Api.Controllers;
 [Authorize]
 public class StatusController : ControllerBase
 {
-    private readonly ILogger<StatusController> _logger;
     private readonly DataContext _dataContext;
     private readonly IArrClientFactory _arrClientFactory;
 
     public StatusController(
-        ILogger<StatusController> logger,
         DataContext dataContext,
         IArrClientFactory arrClientFactory)
     {
-        _logger = logger;
         _dataContext = dataContext;
         _arrClientFactory = arrClientFactory;
     }
@@ -30,12 +27,9 @@ public class StatusController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetSystemStatus()
     {
-        var process = Process.GetCurrentProcess();
+        using var process = Process.GetCurrentProcess();
 
         // Get configuration
-        var downloadClients = await _dataContext.DownloadClients
-            .AsNoTracking()
-            .ToListAsync();
         var sonarrConfig = await _dataContext.ArrConfigs
             .Include(x => x.Instances)
             .AsNoTracking()

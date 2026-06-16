@@ -12,14 +12,10 @@ namespace Cleanuparr.Api.Controllers;
 [Authorize]
 public class StatsController : ControllerBase
 {
-    private readonly ILogger<StatsController> _logger;
     private readonly IStatsService _statsService;
 
-    public StatsController(
-        ILogger<StatsController> logger,
-        IStatsService statsService)
+    public StatsController(IStatsService statsService)
     {
-        _logger = logger;
         _statsService = statsService;
     }
 

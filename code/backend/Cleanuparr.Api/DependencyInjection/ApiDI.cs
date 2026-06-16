@@ -80,19 +80,18 @@ public static class ApiDI
 
     public static WebApplication ConfigureApi(this WebApplication app)
     {
-        ILogger<Program> logger = app.Services.GetRequiredService<ILogger<Program>>();
-        
+        // Map unhandled exceptions to RFC 9457 problem-details responses (GlobalExceptionHandler).
+        // Registered first so it also covers exceptions thrown by downstream middleware.
+        app.UseExceptionHandler();
+
         // Enable compression
         app.UseResponseCompression();
-        
+
         // Serve static files without caching
         app.UseStaticFiles(new StaticFileOptions
         {
             OnPrepareResponse = ctx => NoCacheAttribute.Apply(ctx.Context.Response.Headers)
         });
-        
-        // Map unhandled exceptions to RFC 9457 problem-details responses (GlobalExceptionHandler)
-        app.UseExceptionHandler();
 
         // Resolve the real client IP / scheme / host from X-Forwarded-* headers
         app.UseMiddleware<TrustedForwardedHeadersMiddleware>();

@@ -14,12 +14,10 @@ namespace Cleanuparr.Api.Controllers;
 public class JobsController : ControllerBase
 {
     private readonly IJobManagementService _jobManagementService;
-    private readonly ILogger<JobsController> _logger;
 
-    public JobsController(IJobManagementService jobManagementService, ILogger<JobsController> logger)
+    public JobsController(IJobManagementService jobManagementService)
     {
         _jobManagementService = jobManagementService;
-        _logger = logger;
     }
 
     [HttpGet]

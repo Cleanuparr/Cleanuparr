@@ -13,17 +13,13 @@ namespace Cleanuparr.Api.Controllers;
 [Authorize]
 public class HealthCheckController : ControllerBase
 {
-    private readonly ILogger<HealthCheckController> _logger;
     private readonly IHealthCheckService _healthCheckService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="HealthCheckController"/> class
     /// </summary>
-    public HealthCheckController(
-        ILogger<HealthCheckController> logger,
-        IHealthCheckService healthCheckService)
+    public HealthCheckController(IHealthCheckService healthCheckService)
     {
-        _logger = logger;
         _healthCheckService = healthCheckService;
     }
 
