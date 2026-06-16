@@ -5,10 +5,11 @@ namespace Cleanuparr.Infrastructure.Features.Jobs;
 /// <summary>
 /// Identifies a single download that should be scanned by the MalwareBlocker as the result of an *arr "On Grab" webhook.
 /// </summary>
-public sealed record WebhookScanTarget(Guid InstanceId, string DownloadId, long ContentId, InstanceType Type)
+public sealed record WebhookScanTarget(Guid InstanceId, string DownloadId, long ContentId, InstanceType Type, int RetryIndex = 0)
 {
     public const string InstanceIdKey = "webhook.instanceId";
     public const string DownloadIdKey = "webhook.downloadId";
     public const string ContentIdKey = "webhook.contentId";
     public const string InstanceTypeKey = "webhook.instanceType";
+    public const string RetryIndexKey = "webhook.retryIndex";
 }

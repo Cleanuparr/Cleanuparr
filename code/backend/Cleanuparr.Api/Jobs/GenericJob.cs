@@ -98,8 +98,11 @@ public sealed class GenericJob<T> : IJob
 
         string downloadId = dataMap.GetString(WebhookScanTarget.DownloadIdKey) ?? string.Empty;
         long contentId = dataMap.GetLong(WebhookScanTarget.ContentIdKey);
+        int retryIndex = dataMap.ContainsKey(WebhookScanTarget.RetryIndexKey)
+            ? dataMap.GetInt(WebhookScanTarget.RetryIndexKey)
+            : 0;
 
-        ContextProvider.Set(new WebhookScanTarget(instanceId, downloadId, contentId, instanceType));
+        ContextProvider.Set(new WebhookScanTarget(instanceId, downloadId, contentId, instanceType, retryIndex));
     }
 
     private async Task BroadcastJobStatus(IHubContext<AppHub> hubContext, IJobManagementService jobManagementService, JobType jobType, bool isFinished)
