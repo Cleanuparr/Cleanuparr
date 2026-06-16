@@ -1,6 +1,6 @@
 namespace Cleanuparr.Domain.Enums;
 
-public enum MalwareBlockerTriggerMode
+public enum JobTriggerMode
 {
     Schedule,
     Webhook,

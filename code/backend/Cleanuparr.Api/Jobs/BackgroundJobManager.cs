@@ -148,7 +148,7 @@ public class BackgroundJobManager : IHostedService
         await AddJobWithoutTrigger<MalwareBlocker>(cancellationToken);
 
         // Only add the cron trigger when scheduling is part of the trigger mode
-        if (config.Enabled && config.TriggerMode is not MalwareBlockerTriggerMode.Webhook)
+        if (config.Enabled && config.TriggerMode is not JobTriggerMode.Webhook)
         {
             await AddTriggersForJob<MalwareBlocker>(config.CronExpression, cancellationToken);
         }
