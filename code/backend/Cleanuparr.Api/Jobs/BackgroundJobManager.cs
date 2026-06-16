@@ -1,3 +1,4 @@
+using Cleanuparr.Domain.Enums;
 using Cleanuparr.Domain.Exceptions;
 using Cleanuparr.Infrastructure.Features.BlacklistSync;
 using Cleanuparr.Infrastructure.Features.Jobs;
@@ -112,6 +113,7 @@ public class BackgroundJobManager : IHostedService
         // Always register jobs, regardless of enabled status
         await RegisterQueueCleanerJob(queueCleanerConfig, cancellationToken);
         await RegisterMalwareBlockerJob(malwareBlockerConfig, cancellationToken);
+        await RegisterMalwareBlockerWebhookJob(cancellationToken);
         await RegisterDownloadCleanerJob(downloadCleanerConfig, cancellationToken);
         await RegisterBlacklistSyncJob(blacklistSyncConfig, cancellationToken);
         await RegisterSeekerJob(seekerConfig, cancellationToken);
@@ -144,12 +146,23 @@ public class BackgroundJobManager : IHostedService
     {
         // Always register the job definition
         await AddJobWithoutTrigger<MalwareBlocker>(cancellationToken);
-        
-        // Only add triggers if the job is enabled
-        if (config.Enabled)
+
+        // Only add the cron trigger when scheduling is part of the trigger mode
+        if (config.Enabled && config.TriggerMode is not MalwareBlockerTriggerMode.Webhook)
         {
             await AddTriggersForJob<MalwareBlocker>(config.CronExpression, cancellationToken);
         }
+    }
+
+    /// <summary>
+    /// Registers the webhook-triggered MalwareBlocker job under a dedicated JobKey (no cron trigger).
+    /// The dedicated key gives webhook runs their own DisallowConcurrentExecution lock, independent of
+    /// the scheduled MalwareBlocker job. Triggers are scheduled on demand when an "On Grab" webhook
+    /// is received.
+    /// </summary>
+    public async Task RegisterMalwareBlockerWebhookJob(CancellationToken cancellationToken = default)
+    {
+        await AddJobWithoutTrigger<MalwareBlocker>(cancellationToken, Constants.MalwareBlockerWebhookJobKey);
     }
     
     /// <summary>
@@ -273,17 +286,17 @@ public class BackgroundJobManager : IHostedService
     /// <summary>
     /// Helper method to add a job without a trigger (for chained jobs).
     /// </summary>
-    private async Task AddJobWithoutTrigger<T>(CancellationToken cancellationToken = default) 
+    private async Task AddJobWithoutTrigger<T>(CancellationToken cancellationToken = default, string? jobKeyName = null)
         where T : IHandler
     {
         if (_scheduler == null)
         {
             throw new InvalidOperationException("Scheduler not initialized");
         }
-        
-        string typeName = typeof(T).Name;
+
+        string typeName = jobKeyName ?? typeof(T).Name;
         var jobKey = new JobKey(typeName);
-        
+
         // Check if job already exists
         if (await _scheduler.CheckExists(jobKey, cancellationToken))
         {

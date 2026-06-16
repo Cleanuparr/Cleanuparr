@@ -22,4 +22,22 @@ public static class Constants
     public const string LogoUrl = "https://cdn.jsdelivr.net/gh/Cleanuparr/Cleanuparr@main/Logo/48.png";
 
     public const string CustomFormatScoreSyncerCron = "0 0/30 * * * ?";
+
+    /// <summary>
+    /// Quartz JobKey for webhook-triggered MalwareBlocker runs. Distinct from the cron JobKey
+    /// ("MalwareBlocker") so the two have independent DisallowConcurrentExecution locks.
+    /// </summary>
+    public const string MalwareBlockerWebhookJobKey = "MalwareBlockerWebhook";
+
+    /// <summary>
+    /// Delays (relative to receiving the "On Grab" webhook) at which the targeted MalwareBlocker scan
+    /// is run. The first run is immediate; later runs catch torrents whose file metadata was not yet
+    /// available. Once a download is acted on, retries become safe no-ops.
+    /// </summary>
+    public static readonly IReadOnlyList<TimeSpan> MalwareBlockerWebhookRetryDelays =
+    [
+        TimeSpan.Zero,
+        TimeSpan.FromSeconds(30),
+        TimeSpan.FromSeconds(120),
+    ];
 }
