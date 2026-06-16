@@ -25,5 +25,4 @@ public interface IJobManagementService
     Task<IReadOnlyList<JobInfo>> GetAllJobs(IScheduler? scheduler = null);
     Task<JobInfo> GetJob(JobType jobType);
     Task<bool> UpdateJobSchedule(JobType jobType, JobSchedule schedule);
-    Task<ITrigger?> GetMainTrigger(JobType jobType);
 }

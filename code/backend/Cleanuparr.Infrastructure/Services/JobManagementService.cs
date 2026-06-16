@@ -170,34 +170,6 @@ public class JobManagementService : IJobManagementService
             _logger.LogWarning(ex, "Failed to trigger job {jobName} immediately", jobKey.Name);
         }
     }
-
-    /// <summary>
-    /// Gets the main scheduled trigger for a job (excludes one-time triggers)
-    /// </summary>
-    public async Task<ITrigger?> GetMainTrigger(JobType jobType)
-    {
-        string jobName = jobType.ToString();
-        try
-        {
-            var scheduler = await _schedulerFactory.GetScheduler();
-            var jobKey = new JobKey(jobName);
-            
-            if (!await scheduler.CheckExists(jobKey))
-            {
-                return null;
-            }
-
-            // Look for the main trigger (follows our naming convention)
-            var mainTriggerKey = new TriggerKey($"{jobName}-trigger");
-            return await scheduler.GetTrigger(mainTriggerKey);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error getting main trigger for job {jobName}", jobName);
-            return null;
-        }
-    }
-
     
     public async Task<bool> StopJob(JobType jobType)
     {
