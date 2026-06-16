@@ -443,7 +443,7 @@ public sealed class AccountController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            throw new RateLimitException(ex.Message);
+            throw new RateLimitException(ex.Message, ex);
         }
     }
 

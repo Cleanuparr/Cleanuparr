@@ -12,4 +12,9 @@ public sealed class RateLimitException : Exception
     {
         RetryAfterSeconds = retryAfterSeconds;
     }
+
+    public RateLimitException(string message, Exception inner, int retryAfterSeconds = 0) : base(message, inner)
+    {
+        RetryAfterSeconds = retryAfterSeconds;
+    }
 }
