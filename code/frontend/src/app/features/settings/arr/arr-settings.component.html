@@ -36,24 +36,15 @@
               <span class="instance-row__url">{{ instance.url }}</span>
             </div>
             <div class="instance-row__actions">
-              @if (webhookSupported() && instance.id) {
-                <app-button variant="ghost" size="sm" (clicked)="toggleWebhookUrl(instance)">
-                  {{ revealedWebhookId() === instance.id ? 'Hide Webhook URL' : 'Webhook URL' }}
-                </app-button>
-              }
               <app-button variant="ghost" size="sm" (clicked)="openEditModal(instance)">Edit</app-button>
               <app-button variant="destructive" size="sm" (clicked)="deleteInstance(instance)">Delete</app-button>
             </div>
           </div>
-          @if (webhookSupported() && revealedWebhookId() === instance.id) {
-            <div class="instance-webhook">
-              <span class="instance-webhook__hint">
-                Paste this into a Sonarr/Radarr "On Grab" Webhook connection. Requires Trigger Mode "Webhook" or "Schedule + Webhook" in Malware Blocker settings.
-              </span>
-              <div class="instance-webhook__row">
-                <code class="instance-webhook__url">{{ webhookUrl(instance) }}</code>
-                <app-button variant="ghost" size="sm" (clicked)="copyWebhookUrl(instance)">Copy</app-button>
-              </div>
+          @if (webhookSupported() && instance.id) {
+            <div class="instance-id">
+              <span class="instance-id__label">Instance ID</span>
+              <code class="instance-id__value">{{ instance.id }}</code>
+              <app-button variant="ghost" size="sm" (clicked)="copyInstanceId(instance)">Copy</app-button>
             </div>
           }
         </div>

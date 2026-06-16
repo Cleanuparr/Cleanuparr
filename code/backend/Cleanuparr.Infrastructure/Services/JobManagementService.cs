@@ -344,8 +344,6 @@ public class JobManagementService : IJobManagementService
 
     public Task<bool> TriggerMalwareBlockerWebhook(Guid instanceId, string downloadId, long contentId, InstanceType type)
     {
-        // Schedule only the first attempt; later attempts are scheduled by the handler when the
-        // download has not yet been found/scanned (see ScheduleMalwareBlockerWebhookRetry).
         return ScheduleWebhookAttempt(instanceId, downloadId, contentId, type, attemptIndex: 0);
     }
 
