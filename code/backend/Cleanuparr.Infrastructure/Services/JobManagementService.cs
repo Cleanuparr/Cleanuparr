@@ -377,19 +377,19 @@ public class JobManagementService : IJobManagementService
         return ScheduleWebhookAttempt(instanceId, downloadId, contentId, type, attemptIndex: 0);
     }
 
-    public Task<bool> ScheduleMalwareBlockerWebhookRetry(Guid instanceId, string downloadId, long contentId, InstanceType type, int completedIndex)
+    public Task<bool> ScheduleMalwareBlockerWebhookRetry(WebhookScanTarget target)
     {
-        int nextIndex = completedIndex + 1;
+        int nextIndex = target.RetryIndex + 1;
 
         if (nextIndex >= Constants.MalwareBlockerWebhookRetryDelays.Count)
         {
             _logger.LogDebug(
                 "MalwareBlocker webhook scan gave up for download {downloadId} on {type} instance {instanceId} after {attempts} attempts",
-                downloadId, type, instanceId, Constants.MalwareBlockerWebhookRetryDelays.Count);
+                target.DownloadId, target.Type, target.InstanceId, Constants.MalwareBlockerWebhookRetryDelays.Count);
             return Task.FromResult(false);
         }
 
-        return ScheduleWebhookAttempt(instanceId, downloadId, contentId, type, nextIndex);
+        return ScheduleWebhookAttempt(target.InstanceId, target.DownloadId, target.ContentId, target.Type, nextIndex);
     }
 
     private async Task<bool> ScheduleWebhookAttempt(Guid instanceId, string downloadId, long contentId, InstanceType type, int attemptIndex)
