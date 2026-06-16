@@ -148,7 +148,7 @@ public class StatusController : ControllerBase
             .SelectMany(x => x.Instances)
             .Where(x => x.Enabled)
             .AsNoTracking()
-            .ToListAsync();;
+            .ToListAsync();
 
         // Check Sonarr instances
         var sonarrStatus = new List<object>();
