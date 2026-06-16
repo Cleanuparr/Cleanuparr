@@ -7,7 +7,7 @@ namespace Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 
 public interface IArrClient
 {
-    Task<QueueListResponse> GetQueueItemsAsync(ArrInstance arrInstance, int page);
+    Task<QueueListResponse> GetQueueItemsAsync(ArrInstance arrInstance, int page, long? contentId = null);
 
     Task<bool> ShouldRemoveFromQueue(InstanceType instanceType, QueueRecord record, bool isPrivateDownload, short arrMaxStrikes);
 

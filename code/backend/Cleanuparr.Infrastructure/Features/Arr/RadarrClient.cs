@@ -32,9 +32,16 @@ public class RadarrClient : ArrClient, IRadarrClient
         return "/api/v3/queue";
     }
 
-    protected override string GetQueueUrlQuery(int page)
+    protected override string GetQueueUrlQuery(int page, long? contentId = null)
     {
-        return $"page={page}&pageSize=200&includeUnknownMovieItems=true&includeMovie=true";
+        string query = $"page={page}&pageSize=200&includeUnknownMovieItems=true&includeMovie=true";
+
+        if (contentId is not null)
+        {
+            query += $"&movieIds={contentId}";
+        }
+
+        return query;
     }
 
     protected override string GetQueueDeleteUrlPath(long recordId)

@@ -5,5 +5,5 @@ namespace Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 
 public interface IArrQueueIterator
 {
-    Task Iterate(IArrClient arrClient, ArrInstance arrInstance, Func<IReadOnlyList<QueueRecord>, Task> action);
+    Task Iterate(IArrClient arrClient, ArrInstance arrInstance, Func<IReadOnlyList<QueueRecord>, Task> action, long? contentId = null);
 }
