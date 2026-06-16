@@ -116,3 +116,9 @@ export enum SearchCommandStatus {
 }
 
 export type ArrType = 'sonarr' | 'radarr' | 'lidarr' | 'readarr' | 'whisparr';
+
+export enum MalwareBlockerTriggerMode {
+  Schedule = 'Schedule',
+  Webhook = 'Webhook',
+  Both = 'Both',
+}

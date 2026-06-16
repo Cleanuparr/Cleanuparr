@@ -6,8 +6,10 @@ import {
   type SelectOption,
 } from '@ui';
 import { ArrApi } from '@core/api/arr.api';
+import { AccountApi } from '@core/api/account.api';
 import { ToastService } from '@core/services/toast.service';
 import { ConfirmService } from '@core/services/confirm.service';
+import { ApplicationPathService } from '@core/services/base-path.service';
 import { ArrConfig, ArrInstance, CreateArrInstanceDto, TestArrInstanceRequest } from '@shared/models/arr-config.model';
 import { ArrType } from '@shared/models/enums';
 import { HasPendingChanges } from '@core/guards/pending-changes.guard';
@@ -35,10 +37,20 @@ const ARR_VERSION_OPTIONS: Record<string, SelectOption[]> = {
 })
 export class ArrSettingsComponent implements HasPendingChanges {
   private readonly api = inject(ArrApi);
+  private readonly accountApi = inject(AccountApi);
   private readonly toast = inject(ToastService);
   private readonly confirmService = inject(ConfirmService);
+  private readonly pathService = inject(ApplicationPathService);
 
   readonly arrType = input.required<string>({ alias: 'type' });
+
+  // MalwareBlocker "On Grab" webhook triggering is only supported for Sonarr and Radarr.
+  readonly webhookSupported = computed(() => {
+    const t = this.arrType();
+    return t === 'sonarr' || t === 'radarr';
+  });
+  private readonly apiKey = signal<string | null>(null);
+  readonly revealedWebhookId = signal<string | null>(null);
   readonly displayName = computed(() => {
     const t = this.arrType();
     return t.charAt(0).toUpperCase() + t.slice(1);
@@ -209,6 +221,38 @@ export class ArrSettingsComponent implements HasPendingChanges {
       },
       error: () => this.toast.error('Failed to delete instance'),
     });
+  }
+
+  toggleWebhookUrl(instance: ArrInstance): void {
+    if (!instance.id) return;
+
+    if (this.revealedWebhookId() === instance.id) {
+      this.revealedWebhookId.set(null);
+      return;
+    }
+
+    if (this.apiKey() === null) {
+      this.accountApi.getApiKey().subscribe({
+        next: ({ apiKey }) => {
+          this.apiKey.set(apiKey);
+          this.revealedWebhookId.set(instance.id!);
+        },
+        error: () => this.toast.error('Failed to load API key'),
+      });
+      return;
+    }
+
+    this.revealedWebhookId.set(instance.id);
+  }
+
+  webhookUrl(instance: ArrInstance): string {
+    const path = this.pathService.buildUrl(`/api/webhooks/malware-blocker/${instance.id}`);
+    return `${path}?apikey=${this.apiKey() ?? ''}`;
+  }
+
+  copyWebhookUrl(instance: ArrInstance): void {
+    navigator.clipboard.writeText(this.webhookUrl(instance));
+    this.toast.success('Webhook URL copied to clipboard');
   }
 
   hasPendingChanges(): boolean {
