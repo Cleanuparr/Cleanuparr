@@ -2,9 +2,12 @@ using Cleanuparr.Api.Features.DownloadCleaner.Contracts.Requests;
 using Cleanuparr.Api.Features.DownloadCleaner.Contracts.Responses;
 using Cleanuparr.Api.Features.DownloadCleaner.Controllers;
 using Cleanuparr.Api.Tests.Features.DownloadCleaner.TestHelpers;
+using Cleanuparr.Api.Tests.TestHelpers;
 using Cleanuparr.Domain.Enums;
+using Cleanuparr.Domain.Exceptions;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
@@ -22,6 +25,7 @@ public class SeedingRulesControllerTests : IDisposable
         _dataContext = SeedingRulesTestDataFactory.CreateDataContext();
         var logger = Substitute.For<ILogger<SeedingRulesController>>();
         _controller = new SeedingRulesController(logger, _dataContext);
+        ControllerTestContext.Attach(_controller);
     }
 
     public void Dispose()
@@ -108,7 +112,7 @@ public class SeedingRulesControllerTests : IDisposable
     public async Task GetSeedingRules_NonExistentClient_ReturnsNotFound()
     {
         var result = await _controller.GetSeedingRules(Guid.NewGuid());
-        result.ShouldBeOfType<NotFoundObjectResult>();
+        result.ShouldBeOfType<ObjectResult>().StatusCode.ShouldBe(StatusCodes.Status404NotFound);
     }
 
     [Fact]
@@ -214,7 +218,7 @@ public class SeedingRulesControllerTests : IDisposable
         var request = CreateValidRequest(priority: 1);
 
         var result = await _controller.CreateSeedingRule(client.Id, request);
-        result.ShouldBeOfType<BadRequestObjectResult>();
+        result.ShouldBeOfType<ObjectResult>().StatusCode.ShouldBe(StatusCodes.Status400BadRequest);
     }
 
     [Fact]
@@ -223,7 +227,7 @@ public class SeedingRulesControllerTests : IDisposable
         var request = CreateValidRequest();
 
         var result = await _controller.CreateSeedingRule(Guid.NewGuid(), request);
-        result.ShouldBeOfType<NotFoundObjectResult>();
+        result.ShouldBeOfType<ObjectResult>().StatusCode.ShouldBe(StatusCodes.Status404NotFound);
     }
 
     [Fact]
@@ -232,10 +236,7 @@ public class SeedingRulesControllerTests : IDisposable
         var client = SeedingRulesTestDataFactory.AddDownloadClient(_dataContext);
         var request = CreateValidRequest(categories: []);
 
-        var result = await _controller.CreateSeedingRule(client.Id, request);
-
-        // Validate() throws ValidationException → caught → BadRequest
-        result.ShouldBeOfType<BadRequestObjectResult>();
+        await Should.ThrowAsync<ValidationException>(() => _controller.CreateSeedingRule(client.Id, request));
     }
 
     [Fact]
@@ -335,7 +336,7 @@ public class SeedingRulesControllerTests : IDisposable
         var request = CreateValidRequest();
 
         var result = await _controller.UpdateSeedingRule(Guid.NewGuid(), request);
-        result.ShouldBeOfType<NotFoundObjectResult>();
+        result.ShouldBeOfType<ObjectResult>().StatusCode.ShouldBe(StatusCodes.Status404NotFound);
     }
 
     [Fact]
@@ -347,8 +348,7 @@ public class SeedingRulesControllerTests : IDisposable
         // Both maxRatio and maxSeedTime negative → validation failure
         var request = CreateValidRequest(maxRatio: -1, maxSeedTime: -1);
 
-        var result = await _controller.UpdateSeedingRule(rule.Id, request);
-        result.ShouldBeOfType<BadRequestObjectResult>();
+        await Should.ThrowAsync<ValidationException>(() => _controller.UpdateSeedingRule(rule.Id, request));
     }
 
     // ──────────────────────────────────────────────────────────────────────
@@ -396,7 +396,7 @@ public class SeedingRulesControllerTests : IDisposable
         var request = new ReorderSeedingRulesRequest { OrderedIds = [Guid.NewGuid()] };
 
         var result = await _controller.ReorderSeedingRules(Guid.NewGuid(), request);
-        result.ShouldBeOfType<NotFoundObjectResult>();
+        result.ShouldBeOfType<ObjectResult>().StatusCode.ShouldBe(StatusCodes.Status404NotFound);
     }
 
     [Fact]
@@ -409,7 +409,7 @@ public class SeedingRulesControllerTests : IDisposable
         var request = new ReorderSeedingRulesRequest { OrderedIds = [rule1.Id, rule1.Id] };
 
         var result = await _controller.ReorderSeedingRules(client.Id, request);
-        result.ShouldBeOfType<BadRequestObjectResult>();
+        result.ShouldBeOfType<ObjectResult>().StatusCode.ShouldBe(StatusCodes.Status400BadRequest);
     }
 
     [Fact]
@@ -423,7 +423,7 @@ public class SeedingRulesControllerTests : IDisposable
         var request = new ReorderSeedingRulesRequest { OrderedIds = [rule1.Id] };
 
         var result = await _controller.ReorderSeedingRules(client.Id, request);
-        result.ShouldBeOfType<BadRequestObjectResult>();
+        result.ShouldBeOfType<ObjectResult>().StatusCode.ShouldBe(StatusCodes.Status400BadRequest);
     }
 
     [Fact]
@@ -436,7 +436,7 @@ public class SeedingRulesControllerTests : IDisposable
         var request = new ReorderSeedingRulesRequest { OrderedIds = [rule1.Id, Guid.NewGuid()] };
 
         var result = await _controller.ReorderSeedingRules(client.Id, request);
-        result.ShouldBeOfType<BadRequestObjectResult>();
+        result.ShouldBeOfType<ObjectResult>().StatusCode.ShouldBe(StatusCodes.Status400BadRequest);
     }
 
     // ──────────────────────────────────────────────────────────────────────
@@ -468,6 +468,6 @@ public class SeedingRulesControllerTests : IDisposable
     public async Task DeleteSeedingRule_NonExistentRule_ReturnsNotFound()
     {
         var result = await _controller.DeleteSeedingRule(Guid.NewGuid());
-        result.ShouldBeOfType<NotFoundObjectResult>();
+        result.ShouldBeOfType<ObjectResult>().StatusCode.ShouldBe(StatusCodes.Status404NotFound);
     }
 }

@@ -136,15 +136,6 @@ public sealed class DownloadCleanerConfigController : ControllerBase
 
             return Ok(new { Message = "DownloadCleaner configuration updated successfully" });
         }
-        catch (ValidationException ex)
-        {
-            return BadRequest(ex.Message);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to save DownloadCleaner configuration");
-            throw;
-        }
         finally
         {
             DataContext.Lock.Release();

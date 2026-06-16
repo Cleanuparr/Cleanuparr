@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
 using Cleanuparr.Api.Filters;
@@ -55,24 +56,42 @@ public static class ApiDI
         // Add health status broadcaster
         services.AddHostedService<HealthStatusBroadcaster>();
 
+        services.AddCleanuparrProblemDetails();
+        services.AddExceptionHandler<GlobalExceptionHandler>();
+
+        return services;
+    }
+
+    /// <summary>
+    /// Registers RFC 9457 problem-details responses for both the exception handler and
+    /// [ApiController] model-state validation, attaching a uniform Activity-tied traceId.
+    /// </summary>
+    public static IServiceCollection AddCleanuparrProblemDetails(this IServiceCollection services)
+    {
+        services.AddProblemDetails(options =>
+        {
+            options.CustomizeProblemDetails = ctx =>
+                ctx.ProblemDetails.Extensions.TryAdd(
+                    "traceId", Activity.Current?.Id ?? ctx.HttpContext.TraceIdentifier);
+        });
+
         return services;
     }
 
     public static WebApplication ConfigureApi(this WebApplication app)
     {
-        ILogger<Program> logger = app.Services.GetRequiredService<ILogger<Program>>();
-        
+        // Map unhandled exceptions to RFC 9457 problem-details responses (GlobalExceptionHandler).
+        // Registered first so it also covers exceptions thrown by downstream middleware.
+        app.UseExceptionHandler();
+
         // Enable compression
         app.UseResponseCompression();
-        
+
         // Serve static files without caching
         app.UseStaticFiles(new StaticFileOptions
         {
             OnPrepareResponse = ctx => NoCacheAttribute.Apply(ctx.Context.Response.Headers)
         });
-        
-        // Add the global exception handling middleware first
-        app.UseMiddleware<ExceptionMiddleware>();
 
         // Resolve the real client IP / scheme / host from X-Forwarded-* headers
         app.UseMiddleware<TrustedForwardedHeadersMiddleware>();

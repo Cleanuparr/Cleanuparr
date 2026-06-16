@@ -89,11 +89,6 @@ public sealed class BlacklistSyncConfigController : ControllerBase
 
             return Ok(new { Message = "BlacklistSynchronizer configuration updated successfully" });
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to save BlacklistSync configuration");
-            throw;
-        }
         finally
         {
             DataContext.Lock.Release();

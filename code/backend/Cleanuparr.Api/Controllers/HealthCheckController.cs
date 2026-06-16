@@ -1,3 +1,4 @@
+using Cleanuparr.Api.Extensions;
 using Cleanuparr.Infrastructure.Health;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -12,17 +13,13 @@ namespace Cleanuparr.Api.Controllers;
 [Authorize]
 public class HealthCheckController : ControllerBase
 {
-    private readonly ILogger<HealthCheckController> _logger;
     private readonly IHealthCheckService _healthCheckService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="HealthCheckController"/> class
     /// </summary>
-    public HealthCheckController(
-        ILogger<HealthCheckController> logger,
-        IHealthCheckService healthCheckService)
+    public HealthCheckController(IHealthCheckService healthCheckService)
     {
-        _logger = logger;
         _healthCheckService = healthCheckService;
     }
 
@@ -32,16 +29,8 @@ public class HealthCheckController : ControllerBase
     [HttpGet]
     public IActionResult GetAllHealth()
     {
-        try
-        {
-            var healthStatuses = _healthCheckService.GetAllClientHealth();
-            return Ok(healthStatuses);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error retrieving client health statuses");
-            return StatusCode(500, new { Error = "An error occurred while retrieving client health statuses" });
-        }
+        var healthStatuses = _healthCheckService.GetAllClientHealth();
+        return Ok(healthStatuses);
     }
 
     /// <summary>
@@ -50,21 +39,13 @@ public class HealthCheckController : ControllerBase
     [HttpGet("{id:guid}")]
     public IActionResult GetClientHealth(Guid id)
     {
-        try
+        var healthStatus = _healthCheckService.GetClientHealth(id);
+        if (healthStatus == null)
         {
-            var healthStatus = _healthCheckService.GetClientHealth(id);
-            if (healthStatus == null)
-            {
-                return NotFound(new { Message = $"Health status for client with ID '{id}' not found" });
-            }
+            return this.ProblemResult(StatusCodes.Status404NotFound, $"Health status for client with ID '{id}' not found");
+        }
 
-            return Ok(healthStatus);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error retrieving health status for client {id}", id);
-            return StatusCode(500, new { Error = "An error occurred while retrieving the client health status" });
-        }
+        return Ok(healthStatus);
     }
 
     /// <summary>
@@ -73,16 +54,8 @@ public class HealthCheckController : ControllerBase
     [HttpPost("check")]
     public async Task<IActionResult> CheckAllHealth()
     {
-        try
-        {
-            var results = await _healthCheckService.CheckAllClientsHealthAsync();
-            return Ok(results);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error checking health for all clients");
-            return StatusCode(500, new { Error = "An error occurred while checking client health" });
-        }
+        var results = await _healthCheckService.CheckAllClientsHealthAsync();
+        return Ok(results);
     }
 
     /// <summary>
@@ -91,15 +64,7 @@ public class HealthCheckController : ControllerBase
     [HttpPost("check/{id:guid}")]
     public async Task<IActionResult> CheckClientHealth(Guid id)
     {
-        try
-        {
-            var result = await _healthCheckService.CheckClientHealthAsync(id);
-            return Ok(result);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error checking health for client {id}", id);
-            return StatusCode(500, new { Error = "An error occurred while checking client health" });
-        }
+        var result = await _healthCheckService.CheckClientHealthAsync(id);
+        return Ok(result);
     }
 }

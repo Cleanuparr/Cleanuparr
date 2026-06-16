@@ -1,3 +1,4 @@
+using Cleanuparr.Api.Extensions;
 using Cleanuparr.Api.Features.Arr.Contracts.Requests;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Arr.Dtos;
@@ -182,11 +183,6 @@ public sealed class ArrConfigController : ControllerBase
 
             return Ok(new { Message = $"{type} configuration updated successfully" });
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to save {Type} configuration", type);
-            throw;
-        }
         finally
         {
             DataContext.Lock.Release();
@@ -207,11 +203,6 @@ public sealed class ArrConfigController : ControllerBase
 
             return CreatedAtAction(GetConfigActionName(type), new { id = instance.Id }, instance.Adapt<ArrInstanceDto>());
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to create {Type} instance", type);
-            throw;
-        }
         finally
         {
             DataContext.Lock.Release();
@@ -230,7 +221,7 @@ public sealed class ArrConfigController : ControllerBase
             var instance = config.Instances.FirstOrDefault(i => i.Id == id);
             if (instance is null)
             {
-                return NotFound($"{type} instance with ID {id} not found");
+                return this.ProblemResult(StatusCodes.Status404NotFound, $"{type} instance with ID {id} not found");
             }
 
             request.ApplyTo(instance);
@@ -238,11 +229,6 @@ public sealed class ArrConfigController : ControllerBase
             await _dataContext.SaveChangesAsync();
 
             return Ok(instance.Adapt<ArrInstanceDto>());
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to update {Type} instance with ID {Id}", type, id);
-            throw;
         }
         finally
         {
@@ -262,18 +248,13 @@ public sealed class ArrConfigController : ControllerBase
             var instance = config.Instances.FirstOrDefault(i => i.Id == id);
             if (instance is null)
             {
-                return NotFound($"{type} instance with ID {id} not found");
+                return this.ProblemResult(StatusCodes.Status404NotFound, $"{type} instance with ID {id} not found");
             }
 
             config.Instances.Remove(instance);
             await _dataContext.SaveChangesAsync();
 
             return NoContent();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to delete {Type} instance with ID {Id}", type, id);
-            throw;
         }
         finally
         {
@@ -295,7 +276,7 @@ public sealed class ArrConfigController : ControllerBase
 
                 if (existingInstance is null)
                 {
-                    return NotFound($"Instance with ID {request.InstanceId.Value} not found");
+                    return this.ProblemResult(StatusCodes.Status404NotFound, $"Instance with ID {request.InstanceId.Value} not found");
                 }
 
                 resolvedApiKey = existingInstance.ApiKey;
@@ -310,7 +291,7 @@ public sealed class ArrConfigController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to test {Type} instance connection", type);
-            return BadRequest(new { Message = $"Connection failed: {ex.Message}" });
+            return this.ProblemResult(StatusCodes.Status400BadRequest, $"Connection failed: {ex.Message}");
         }
     }
 

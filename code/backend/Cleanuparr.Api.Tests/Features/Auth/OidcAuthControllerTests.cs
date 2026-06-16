@@ -67,9 +67,11 @@ public class OidcAuthControllerTests : IClassFixture<OidcAuthControllerTests.Oid
         var response = await _client.PostAsync("/api/auth/oidc/start", null);
 
         response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        response.Content.Headers.ContentType!.MediaType.ShouldBe("application/problem+json");
 
         var body = await response.Content.ReadFromJsonAsync<JsonElement>();
-        body.GetProperty("error").GetString()!.ShouldContain("OIDC is not enabled");
+        body.GetProperty("detail").GetString()!.ShouldContain("OIDC is not enabled");
+        body.GetProperty("traceId").GetString().ShouldNotBeNullOrEmpty();
     }
 
     [Fact, TestPriority(3)]

@@ -2,9 +2,11 @@ using Cleanuparr.Api.Features.DownloadCleaner.Contracts.Requests;
 using Cleanuparr.Api.Features.DownloadCleaner.Contracts.Responses;
 using Cleanuparr.Api.Features.DownloadCleaner.Controllers;
 using Cleanuparr.Api.Tests.Features.DownloadCleaner.TestHelpers;
+using Cleanuparr.Api.Tests.TestHelpers;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -24,6 +26,7 @@ public class DeadTorrentConfigControllerTests : IDisposable
         _dataContext = SeedingRulesTestDataFactory.CreateDataContext();
         var logger = Substitute.For<ILogger<DeadTorrentConfigController>>();
         _controller = new DeadTorrentConfigController(logger, _dataContext);
+        ControllerTestContext.Attach(_controller);
     }
 
     public void Dispose()
@@ -90,7 +93,7 @@ public class DeadTorrentConfigControllerTests : IDisposable
 
         var result = await _controller.UpdateDeadTorrentConfig(client.Id, ValidRequest());
 
-        result.ShouldBeOfType<BadRequestObjectResult>();
+        result.ShouldBeOfType<ObjectResult>().StatusCode.ShouldBe(StatusCodes.Status400BadRequest);
     }
 
     [Fact]
@@ -98,6 +101,6 @@ public class DeadTorrentConfigControllerTests : IDisposable
     {
         var result = await _controller.UpdateDeadTorrentConfig(Guid.NewGuid(), ValidRequest());
 
-        result.ShouldBeOfType<NotFoundObjectResult>();
+        result.ShouldBeOfType<ObjectResult>().StatusCode.ShouldBe(StatusCodes.Status404NotFound);
     }
 }

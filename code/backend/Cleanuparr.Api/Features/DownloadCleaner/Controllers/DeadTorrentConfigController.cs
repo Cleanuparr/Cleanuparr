@@ -1,3 +1,4 @@
+using Cleanuparr.Api.Extensions;
 using Cleanuparr.Api.Features.DownloadCleaner.Contracts.Requests;
 using Cleanuparr.Api.Features.DownloadCleaner.Contracts.Responses;
 using Cleanuparr.Domain.Enums;
@@ -38,7 +39,7 @@ public class DeadTorrentConfigController : ControllerBase
 
             if (client is null)
             {
-                return NotFound(new { Message = $"Download client with ID {downloadClientId} not found" });
+                return this.ProblemResult(StatusCodes.Status404NotFound, $"Download client with ID {downloadClientId} not found");
             }
 
             var config = await _dataContext.DeadTorrentConfigs
@@ -56,11 +57,6 @@ public class DeadTorrentConfigController : ControllerBase
     [HttpPut("{downloadClientId}")]
     public async Task<IActionResult> UpdateDeadTorrentConfig(Guid downloadClientId, [FromBody] DeadTorrentConfigRequest dto)
     {
-        if (!ModelState.IsValid)
-        {
-            return BadRequest(ModelState);
-        }
-
         await DataContext.Lock.WaitAsync();
         try
         {
@@ -70,12 +66,12 @@ public class DeadTorrentConfigController : ControllerBase
 
             if (client is null)
             {
-                return NotFound(new { Message = $"Download client with ID {downloadClientId} not found" });
+                return this.ProblemResult(StatusCodes.Status404NotFound, $"Download client with ID {downloadClientId} not found");
             }
 
             if (dto.Enabled && client.TypeName is DownloadClientTypeName.rTorrent)
             {
-                return BadRequest(new { Message = "Dead torrent handling is not supported for rTorrent (no seeder count available)" });
+                return this.ProblemResult(StatusCodes.Status400BadRequest, "Dead torrent handling is not supported for rTorrent (no seeder count available)");
             }
 
             var existing = await _dataContext.DeadTorrentConfigs

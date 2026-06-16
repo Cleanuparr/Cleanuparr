@@ -12,14 +12,10 @@ namespace Cleanuparr.Api.Controllers;
 [Authorize]
 public class StatsController : ControllerBase
 {
-    private readonly ILogger<StatsController> _logger;
     private readonly IStatsService _statsService;
 
-    public StatsController(
-        ILogger<StatsController> logger,
-        IStatsService statsService)
+    public StatsController(IStatsService statsService)
     {
-        _logger = logger;
         _statsService = statsService;
     }
 
@@ -35,19 +31,11 @@ public class StatsController : ControllerBase
         [FromQuery] int includeEvents = 0,
         [FromQuery] int includeStrikes = 0)
     {
-        try
-        {
-            hours = Math.Clamp(hours, 1, 720);
-            includeEvents = Math.Clamp(includeEvents, 0, 100);
-            includeStrikes = Math.Clamp(includeStrikes, 0, 100);
+        hours = Math.Clamp(hours, 1, 720);
+        includeEvents = Math.Clamp(includeEvents, 0, 100);
+        includeStrikes = Math.Clamp(includeStrikes, 0, 100);
 
-            var stats = await _statsService.GetStatsAsync(hours, includeEvents, includeStrikes);
-            return Ok(stats);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error retrieving stats");
-            return StatusCode(500, new { Error = "An error occurred while retrieving stats" });
-        }
+        var stats = await _statsService.GetStatsAsync(hours, includeEvents, includeStrikes);
+        return Ok(stats);
     }
 }

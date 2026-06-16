@@ -1,5 +1,5 @@
+using Cleanuparr.Api.Extensions;
 using Cleanuparr.Api.Features.QueueCleaner.Contracts.Requests;
-using Cleanuparr.Domain.Exceptions;
 using Cleanuparr.Infrastructure.Services.Interfaces;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
@@ -43,11 +43,6 @@ public class QueueRulesController : ControllerBase
 
             return Ok(rules);
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to retrieve stall rules");
-            return StatusCode(500, new { Message = "Failed to retrieve stall rules", Error = ex.Message });
-        }
         finally
         {
             DataContext.Lock.Release();
@@ -57,11 +52,6 @@ public class QueueRulesController : ControllerBase
     [HttpPost("stall")]
     public async Task<IActionResult> CreateStallRule([FromBody] StallRuleDto ruleDto)
     {
-        if (!ModelState.IsValid)
-        {
-            return BadRequest(ModelState);
-        }
-
         await DataContext.Lock.WaitAsync();
         try
         {
@@ -73,7 +63,7 @@ public class QueueRulesController : ControllerBase
             
             if (existingRule != null)
             {
-                return BadRequest(new { Message = "A stall rule with this name already exists" });
+                return this.ProblemResult(StatusCodes.Status400BadRequest, "A stall rule with this name already exists");
             }
 
             var rule = new StallRule
@@ -97,7 +87,7 @@ public class QueueRulesController : ControllerBase
             var intervalValidationResult = _ruleIntervalValidator.ValidateStallRuleIntervals(rule, existingRules);
             if (!intervalValidationResult.IsValid)
             {
-                return BadRequest(new { Message = intervalValidationResult.ErrorMessage });
+                return this.ProblemResult(StatusCodes.Status400BadRequest, intervalValidationResult.ErrorMessage);
             }
 
             rule.Validate();
@@ -109,16 +99,6 @@ public class QueueRulesController : ControllerBase
 
             return CreatedAtAction(nameof(GetStallRules), new { id = rule.Id }, rule);
         }
-        catch (ValidationException ex)
-        {
-            _logger.LogWarning("Validation failed for stall rule creation: {Message}", ex.Message);
-            return BadRequest(new { Message = ex.Message });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to create stall rule: {RuleName}", ruleDto.Name);
-            return StatusCode(500, new { Message = "Failed to create stall rule", Error = ex.Message });
-        }
         finally
         {
             DataContext.Lock.Release();
@@ -128,11 +108,6 @@ public class QueueRulesController : ControllerBase
     [HttpPut("stall/{id}")]
     public async Task<IActionResult> UpdateStallRule(Guid id, [FromBody] StallRuleDto ruleDto)
     {
-        if (!ModelState.IsValid)
-        {
-            return BadRequest(ModelState);
-        }
-
         await DataContext.Lock.WaitAsync();
         try
         {
@@ -141,15 +116,15 @@ public class QueueRulesController : ControllerBase
 
             if (existingRule == null)
             {
-                return NotFound(new { Message = $"Stall rule with ID {id} not found" });
+                return this.ProblemResult(StatusCodes.Status404NotFound, $"Stall rule with ID {id} not found");
             }
 
             var duplicateRule = await _dataContext.StallRules
                 .FirstOrDefaultAsync(r => r.Id != id && r.Name.ToLower() == ruleDto.Name.ToLower());
-            
+
             if (duplicateRule != null)
             {
-                return BadRequest(new { Message = "A stall rule with this name already exists" });
+                return this.ProblemResult(StatusCodes.Status400BadRequest, "A stall rule with this name already exists");
             }
 
             var updatedRule = existingRule with
@@ -173,7 +148,7 @@ public class QueueRulesController : ControllerBase
             var intervalValidationResult = _ruleIntervalValidator.ValidateStallRuleIntervals(updatedRule, existingRules);
             if (!intervalValidationResult.IsValid)
             {
-                return BadRequest(new { Message = intervalValidationResult.ErrorMessage });
+                return this.ProblemResult(StatusCodes.Status400BadRequest, intervalValidationResult.ErrorMessage);
             }
 
             updatedRule.Validate();
@@ -184,16 +159,6 @@ public class QueueRulesController : ControllerBase
             _logger.LogInformation("Updated stall rule: {RuleName} with ID: {RuleId}", updatedRule.Name, id);
 
             return Ok(updatedRule);
-        }
-        catch (ValidationException ex)
-        {
-            _logger.LogWarning("Validation failed for stall rule update: {Message}", ex.Message);
-            return BadRequest(new { Message = ex.Message });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to update stall rule with ID: {RuleId}", id);
-            return StatusCode(500, new { Message = "Failed to update stall rule", Error = ex.Message });
         }
         finally
         {
@@ -212,7 +177,7 @@ public class QueueRulesController : ControllerBase
 
             if (existingRule == null)
             {
-                return NotFound(new { Message = $"Stall rule with ID {id} not found" });
+                return this.ProblemResult(StatusCodes.Status404NotFound, $"Stall rule with ID {id} not found");
             }
 
             _dataContext.StallRules.Remove(existingRule);
@@ -221,11 +186,6 @@ public class QueueRulesController : ControllerBase
             _logger.LogInformation("Deleted stall rule: {RuleName} with ID: {RuleId}", existingRule.Name, id);
 
             return NoContent();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to delete stall rule with ID: {RuleId}", id);
-            return StatusCode(500, new { Message = "Failed to delete stall rule", Error = ex.Message });
         }
         finally
         {
@@ -247,11 +207,6 @@ public class QueueRulesController : ControllerBase
 
             return Ok(rules);
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to retrieve slow rules");
-            return StatusCode(500, new { Message = "Failed to retrieve slow rules", Error = ex.Message });
-        }
         finally
         {
             DataContext.Lock.Release();
@@ -261,11 +216,6 @@ public class QueueRulesController : ControllerBase
     [HttpPost("slow")]
     public async Task<IActionResult> CreateSlowRule([FromBody] SlowRuleDto ruleDto)
     {
-        if (!ModelState.IsValid)
-        {
-            return BadRequest(ModelState);
-        }
-
         await DataContext.Lock.WaitAsync();
         try
         {
@@ -277,7 +227,7 @@ public class QueueRulesController : ControllerBase
             
             if (existingRule != null)
             {
-                return BadRequest(new { Message = "A slow rule with this name already exists" });
+                return this.ProblemResult(StatusCodes.Status400BadRequest, "A slow rule with this name already exists");
             }
 
             var rule = new SlowRule
@@ -303,7 +253,7 @@ public class QueueRulesController : ControllerBase
             var intervalValidationResult = _ruleIntervalValidator.ValidateSlowRuleIntervals(rule, existingRules);
             if (!intervalValidationResult.IsValid)
             {
-                return BadRequest(new { Message = intervalValidationResult.ErrorMessage });
+                return this.ProblemResult(StatusCodes.Status400BadRequest, intervalValidationResult.ErrorMessage);
             }
 
             rule.Validate();
@@ -315,16 +265,6 @@ public class QueueRulesController : ControllerBase
 
             return CreatedAtAction(nameof(GetSlowRules), new { id = rule.Id }, rule);
         }
-        catch (ValidationException ex)
-        {
-            _logger.LogWarning("Validation failed for slow rule creation: {Message}", ex.Message);
-            return BadRequest(new { Message = ex.Message });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to create slow rule: {RuleName}", ruleDto.Name);
-            return StatusCode(500, new { Message = "Failed to create slow rule", Error = ex.Message });
-        }
         finally
         {
             DataContext.Lock.Release();
@@ -334,11 +274,6 @@ public class QueueRulesController : ControllerBase
     [HttpPut("slow/{id}")]
     public async Task<IActionResult> UpdateSlowRule(Guid id, [FromBody] SlowRuleDto ruleDto)
     {
-        if (!ModelState.IsValid)
-        {
-            return BadRequest(ModelState);
-        }
-
         await DataContext.Lock.WaitAsync();
         try
         {
@@ -347,15 +282,15 @@ public class QueueRulesController : ControllerBase
 
             if (existingRule == null)
             {
-                return NotFound(new { Message = $"Slow rule with ID {id} not found" });
+                return this.ProblemResult(StatusCodes.Status404NotFound, $"Slow rule with ID {id} not found");
             }
 
             var duplicateRule = await _dataContext.SlowRules
                 .FirstOrDefaultAsync(r => r.Id != id && r.Name.ToLower() == ruleDto.Name.ToLower());
-            
+
             if (duplicateRule != null)
             {
-                return BadRequest(new { Message = "A slow rule with this name already exists" });
+                return this.ProblemResult(StatusCodes.Status400BadRequest, "A slow rule with this name already exists");
             }
 
             var updatedRule = existingRule with
@@ -381,7 +316,7 @@ public class QueueRulesController : ControllerBase
             var intervalValidationResult = _ruleIntervalValidator.ValidateSlowRuleIntervals(updatedRule, existingRules);
             if (!intervalValidationResult.IsValid)
             {
-                return BadRequest(new { Message = intervalValidationResult.ErrorMessage });
+                return this.ProblemResult(StatusCodes.Status400BadRequest, intervalValidationResult.ErrorMessage);
             }
 
             updatedRule.Validate();
@@ -392,16 +327,6 @@ public class QueueRulesController : ControllerBase
             _logger.LogInformation("Updated slow rule: {RuleName} with ID: {RuleId}", updatedRule.Name, id);
 
             return Ok(updatedRule);
-        }
-        catch (ValidationException ex)
-        {
-            _logger.LogWarning("Validation failed for slow rule update: {Message}", ex.Message);
-            return BadRequest(new { Message = ex.Message });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to update slow rule with ID: {RuleId}", id);
-            return StatusCode(500, new { Message = "Failed to update slow rule", Error = ex.Message });
         }
         finally
         {
@@ -420,7 +345,7 @@ public class QueueRulesController : ControllerBase
 
             if (existingRule == null)
             {
-                return NotFound(new { Message = $"Slow rule with ID {id} not found" });
+                return this.ProblemResult(StatusCodes.Status404NotFound, $"Slow rule with ID {id} not found");
             }
 
             _dataContext.SlowRules.Remove(existingRule);
@@ -429,11 +354,6 @@ public class QueueRulesController : ControllerBase
             _logger.LogInformation("Deleted slow rule: {RuleName} with ID: {RuleId}", existingRule.Name, id);
 
             return NoContent();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to delete slow rule with ID: {RuleId}", id);
-            return StatusCode(500, new { Message = "Failed to delete slow rule", Error = ex.Message });
         }
         finally
         {
