@@ -56,15 +56,24 @@ public static class ApiDI
         // Add health status broadcaster
         services.AddHostedService<HealthStatusBroadcaster>();
 
-        // RFC 9457 problem-details responses for both the exception handler and [ApiController]
-        // model-state validation, with a uniform Activity-tied traceId.
+        services.AddCleanuparrProblemDetails();
+        services.AddExceptionHandler<GlobalExceptionHandler>();
+
+        return services;
+    }
+
+    /// <summary>
+    /// Registers RFC 9457 problem-details responses for both the exception handler and
+    /// [ApiController] model-state validation, attaching a uniform Activity-tied traceId.
+    /// </summary>
+    public static IServiceCollection AddCleanuparrProblemDetails(this IServiceCollection services)
+    {
         services.AddProblemDetails(options =>
         {
             options.CustomizeProblemDetails = ctx =>
                 ctx.ProblemDetails.Extensions.TryAdd(
                     "traceId", Activity.Current?.Id ?? ctx.HttpContext.TraceIdentifier);
         });
-        services.AddExceptionHandler<GlobalExceptionHandler>();
 
         return services;
     }

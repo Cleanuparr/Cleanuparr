@@ -1,6 +1,7 @@
 using Cleanuparr.Domain.Exceptions;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Infrastructure;
 
 namespace Cleanuparr.Api.Middleware;
 
@@ -11,11 +12,16 @@ namespace Cleanuparr.Api.Middleware;
 public sealed class GlobalExceptionHandler : IExceptionHandler
 {
     private readonly IProblemDetailsService _problemDetailsService;
+    private readonly ProblemDetailsFactory _problemDetailsFactory;
     private readonly ILogger<GlobalExceptionHandler> _logger;
 
-    public GlobalExceptionHandler(IProblemDetailsService problemDetailsService, ILogger<GlobalExceptionHandler> logger)
+    public GlobalExceptionHandler(
+        IProblemDetailsService problemDetailsService,
+        ProblemDetailsFactory problemDetailsFactory,
+        ILogger<GlobalExceptionHandler> logger)
     {
         _problemDetailsService = problemDetailsService;
+        _problemDetailsFactory = problemDetailsFactory;
         _logger = logger;
     }
 
@@ -29,24 +35,22 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
             _ => (StatusCodes.Status500InternalServerError, "An error occurred", "An unexpected error occurred"),
         };
 
+        string path = Sanitize(context.Request.Path);
+
         if (status >= StatusCodes.Status500InternalServerError)
         {
-            _logger.LogError(exception, "Unhandled error during request to {Path}", context.Request.Path);
+            _logger.LogError(exception, "Unhandled error during request to {Path}", path);
         }
         else
         {
             _logger.LogWarning(exception, "Handled {Status} during request to {Path}: {Message}",
-                status, context.Request.Path, exception.Message);
+                status, path, Sanitize(exception.Message));
         }
 
         context.Response.StatusCode = status;
 
-        ProblemDetails problemDetails = new()
-        {
-            Status = status,
-            Title = title,
-            Detail = detail,
-        };
+        ProblemDetails problemDetails = _problemDetailsFactory.CreateProblemDetails(
+            context, statusCode: status, title: title, detail: detail);
 
         if (exception is RateLimitException { RetryAfterSeconds: > 0 } rateLimitException)
         {
@@ -60,5 +64,13 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
             ProblemDetails = problemDetails,
             Exception = exception,
         });
+    }
+
+    /// <summary>
+    /// Strips line breaks from user-controlled values before they reach the logs to prevent log forging.
+    /// </summary>
+    private static string Sanitize(string? value)
+    {
+        return value is null ? string.Empty : value.Replace("\r", string.Empty).Replace("\n", string.Empty);
     }
 }
