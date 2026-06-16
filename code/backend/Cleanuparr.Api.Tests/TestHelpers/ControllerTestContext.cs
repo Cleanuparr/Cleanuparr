@@ -1,3 +1,4 @@
+using Cleanuparr.Api.DependencyInjection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
@@ -19,7 +20,7 @@ public static class ControllerTestContext
         ServiceCollection services = new();
         services.AddLogging();
         services.AddControllers();
-        services.AddProblemDetails();
+        services.AddCleanuparrProblemDetails();
         return services.BuildServiceProvider();
     }
 
