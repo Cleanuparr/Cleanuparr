@@ -32,15 +32,17 @@ public partial class DelugeService
         if (ignoredDownloads.Count > 0 && download.ShouldIgnore(ignoredDownloads))
         {
             _logger.LogInformation("skip | download is ignored | {name}", download.Name);
+            result.MetadataFound = true;
             return result;
         }
-        
+
         var malwareBlockerConfig = ContextProvider.Get<ContentBlockerConfig>();
-        
+
         if (malwareBlockerConfig.IgnorePrivate && download.Private)
         {
             // ignore private trackers
             _logger.LogDebug("skip files check | download is private | {name}", download.Name);
+            result.MetadataFound = true;
             return result;
         }
         

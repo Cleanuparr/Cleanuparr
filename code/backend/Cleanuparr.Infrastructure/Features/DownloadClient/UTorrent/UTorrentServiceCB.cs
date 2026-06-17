@@ -35,15 +35,17 @@ public partial class UTorrentService
             (download.ShouldIgnore(ignoredDownloads) || properties.TrackerList.Any(x => x.ShouldIgnore(ignoredDownloads))))
         {
             _logger.LogInformation("skip | download is ignored | {name}", download.Name);
+            result.MetadataFound = true;
             return result;
         }
 
         var malwareBlockerConfig = ContextProvider.Get<ContentBlockerConfig>();
-        
+
         if (malwareBlockerConfig.IgnorePrivate && result.IsPrivate)
         {
             // ignore private trackers
             _logger.LogDebug("skip files check | download is private | {name}", download.Name);
+            result.MetadataFound = true;
             return result;
         }
         
