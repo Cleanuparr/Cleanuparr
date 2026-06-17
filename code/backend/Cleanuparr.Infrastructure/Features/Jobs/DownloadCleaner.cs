@@ -87,8 +87,9 @@ public sealed class DownloadCleaner : GenericHandler
     {
         DownloadCleanerConfig config = ContextProvider.Get<DownloadCleanerConfig>();
 
-        List<string> ignoredDownloads = ContextProvider.Get<GeneralConfig>(nameof(GeneralConfig)).IgnoredDownloads;
-        ignoredDownloads.AddRange(config.IgnoredDownloads);
+        List<string> ignoredDownloads = ContextProvider.Get<GeneralConfig>(nameof(GeneralConfig)).IgnoredDownloads
+            .Concat(config.IgnoredDownloads)
+            .ToList();
 
         Dictionary<IDownloadService, List<ITorrentItemWrapper>> downloadServiceToDownloadsMap = new();
         List<IDownloadService> loggedInServices = new();
