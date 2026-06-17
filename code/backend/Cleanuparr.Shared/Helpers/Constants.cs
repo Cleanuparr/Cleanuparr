@@ -37,6 +37,7 @@ public static class Constants
     public static readonly IReadOnlyList<TimeSpan> MalwareBlockerWebhookRetryDelays =
     [
         TimeSpan.Zero,
+        TimeSpan.FromSeconds(5),
         TimeSpan.FromSeconds(15),
         TimeSpan.FromSeconds(30),
         TimeSpan.FromSeconds(60)
