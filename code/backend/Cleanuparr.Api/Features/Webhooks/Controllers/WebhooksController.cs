@@ -1,3 +1,4 @@
+using Cleanuparr.Api.Extensions;
 using Cleanuparr.Api.Features.Webhooks.Contracts;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Services.Interfaces;
@@ -16,16 +17,16 @@ namespace Cleanuparr.Api.Features.Webhooks.Controllers;
 /// be pasted directly into the *arr Webhook connection.
 /// </summary>
 [ApiController]
-[Route("api/webhooks")]
+[Route("api/[controller]")]
 [Authorize]
-public sealed class MalwareBlockerWebhookController : ControllerBase
+public sealed class WebhooksController : ControllerBase
 {
-    private readonly ILogger<MalwareBlockerWebhookController> _logger;
+    private readonly ILogger<WebhooksController> _logger;
     private readonly DataContext _dataContext;
     private readonly IJobManagementService _jobManagementService;
 
-    public MalwareBlockerWebhookController(
-        ILogger<MalwareBlockerWebhookController> logger,
+    public WebhooksController(
+        ILogger<WebhooksController> logger,
         DataContext dataContext,
         IJobManagementService jobManagementService)
     {
@@ -74,12 +75,12 @@ public sealed class MalwareBlockerWebhookController : ControllerBase
 
         if (arrConfig is null || instance is null)
         {
-            return NotFound($"No arr instance found with id {instanceId}");
+            return this.ProblemResult(StatusCodes.Status404NotFound, $"No arr instance found with id {instanceId}");
         }
 
         if (arrConfig.Type is not (InstanceType.Sonarr or InstanceType.Radarr))
         {
-            return UnprocessableEntity("MalwareBlocker webhooks are only supported for Sonarr and Radarr");
+            return this.ProblemResult(StatusCodes.Status422UnprocessableEntity, "MalwareBlocker webhooks are only supported for Sonarr and Radarr");
         }
 
         if (!config.Enabled || config.TriggerMode is JobTriggerMode.Schedule)

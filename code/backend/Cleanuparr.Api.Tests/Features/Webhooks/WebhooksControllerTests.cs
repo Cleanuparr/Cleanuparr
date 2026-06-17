@@ -16,21 +16,21 @@ using Shouldly;
 
 namespace Cleanuparr.Api.Tests.Features.Webhooks;
 
-public class MalwareBlockerWebhookControllerTests : IDisposable
+public class WebhooksControllerTests : IDisposable
 {
     private readonly DataContext _dataContext;
     private readonly IJobManagementService _jobManagement;
-    private readonly MalwareBlockerWebhookController _controller;
+    private readonly WebhooksController _controller;
 
     private Guid _sonarrInstanceId;
     private Guid _lidarrInstanceId;
 
-    public MalwareBlockerWebhookControllerTests()
+    public WebhooksControllerTests()
     {
         _dataContext = CreateDataContext();
         _jobManagement = Substitute.For<IJobManagementService>();
-        var logger = Substitute.For<ILogger<MalwareBlockerWebhookController>>();
-        _controller = new MalwareBlockerWebhookController(logger, _dataContext, _jobManagement);
+        var logger = Substitute.For<ILogger<WebhooksController>>();
+        _controller = new WebhooksController(logger, _dataContext, _jobManagement);
         ControllerTestContext.Attach(_controller);
     }
 
@@ -109,7 +109,9 @@ public class MalwareBlockerWebhookControllerTests : IDisposable
     {
         var result = await _controller.TriggerMalwareBlocker(Guid.NewGuid(), GrabPayload());
 
-        result.ShouldBeOfType<NotFoundObjectResult>().StatusCode.ShouldBe(StatusCodes.Status404NotFound);
+        var notFound = result.ShouldBeOfType<ObjectResult>();
+        notFound.StatusCode.ShouldBe(StatusCodes.Status404NotFound);
+        notFound.Value.ShouldBeOfType<ProblemDetails>();
         await _jobManagement.DidNotReceive()
             .TriggerMalwareBlockerWebhook(Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<long>(), Arg.Any<InstanceType>());
     }
@@ -119,7 +121,9 @@ public class MalwareBlockerWebhookControllerTests : IDisposable
     {
         var result = await _controller.TriggerMalwareBlocker(_lidarrInstanceId, GrabPayload());
 
-        result.ShouldBeOfType<UnprocessableEntityObjectResult>().StatusCode.ShouldBe(StatusCodes.Status422UnprocessableEntity);
+        var unprocessable = result.ShouldBeOfType<ObjectResult>();
+        unprocessable.StatusCode.ShouldBe(StatusCodes.Status422UnprocessableEntity);
+        unprocessable.Value.ShouldBeOfType<ProblemDetails>();
         await _jobManagement.DidNotReceive()
             .TriggerMalwareBlockerWebhook(Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<long>(), Arg.Any<InstanceType>());
     }
