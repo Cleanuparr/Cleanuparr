@@ -55,6 +55,8 @@ public partial class UTorrentService
             return result;
         }
 
+        result.MetadataFound = true;
+
         List<int> fileIndexes = new(files.Count);
         long totalUnwantedFiles = 0;
         

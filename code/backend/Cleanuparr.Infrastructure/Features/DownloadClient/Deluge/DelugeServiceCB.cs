@@ -55,11 +55,14 @@ public partial class DelugeService
             _logger.LogDebug(exception, "failed to find files in the download client | {name}", download.Name);
         }
 
-        if (contents is null)
+        if (contents is null || contents.Contents?.Count is null or 0)
         {
+            _logger.LogDebug("torrent has no files | {name}", download.Name);
             return result;
         }
-        
+
+        result.MetadataFound = true;
+
         Dictionary<int, int> priorities = [];
         bool hasPriorityUpdates = false;
         long totalFiles = 0;

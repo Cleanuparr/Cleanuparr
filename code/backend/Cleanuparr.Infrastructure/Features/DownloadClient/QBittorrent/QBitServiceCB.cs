@@ -66,6 +66,8 @@ public partial class QBitService
             return result;
         }
 
+        result.MetadataFound = true;
+
         List<int> unwantedFiles = [];
         long totalFiles = 0;
         long totalUnwantedFiles = 0;

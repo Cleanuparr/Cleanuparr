@@ -15,6 +15,11 @@ public sealed record BlockFilesResult
     public bool IsPrivate { get; set; }
     
     public bool Found { get; set; }
-    
+
+    /// <summary>
+    /// True when the torrent's file list (metadata) was available so the scan could complete (or was not needed).
+    /// </summary>
+    public bool MetadataFound { get; set; }
+
     public DeleteReason DeleteReason { get; set; } = DeleteReason.None;
 }

@@ -64,6 +64,8 @@ public partial class RTorrentService
             return result;
         }
 
+        result.MetadataFound = true;
+
         bool hasPriorityUpdates = false;
         long totalFiles = 0;
         long totalUnwantedFiles = 0;

@@ -17,17 +17,23 @@ public partial class TransmissionService
         TorrentInfo? download = await GetTorrentAsync(hash);
         BlockFilesResult result = new();
 
-        if (download?.FileStats is null || download.FileStats.Length == 0)
+        if (download is null)
         {
             _logger.LogDebug("failed to find torrent {hash} in the {name} download client", hash, _downloadClientConfig.Name);
             return result;
         }
         
-        if (download.Files is null)
+        bool isPrivate = download.IsPrivate ?? false;
+        result.IsPrivate = isPrivate;
+        result.Found = true;
+
+        if (download.FileStats?.Length is null or 0 || download.Files?.Length is null or 0)
         {
-            _logger.LogDebug("torrent {hash} has no files", hash);
+            _logger.LogDebug("torrent has no files | {name}", download.Name);
             return result;
         }
+        
+        result.MetadataFound = true;
         
         if (ignoredDownloads.Count > 0 && download.ShouldIgnore(ignoredDownloads))
         {
@@ -35,9 +41,6 @@ public partial class TransmissionService
             return result;
         }
 
-        bool isPrivate = download.IsPrivate ?? false;
-        result.IsPrivate = isPrivate;
-        result.Found = true;
         SetDownloadClientContext();
 
         var malwareBlockerConfig = ContextProvider.Get<ContentBlockerConfig>();
@@ -48,7 +51,7 @@ public partial class TransmissionService
             _logger.LogDebug("skip files check | download is private | {name}", download.Name);
             return result;
         }
-
+        
         List<long> unwantedFiles = [];
         long totalFiles = 0;
         long totalUnwantedFiles = 0;
