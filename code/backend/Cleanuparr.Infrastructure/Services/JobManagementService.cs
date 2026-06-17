@@ -354,8 +354,8 @@ public class JobManagementService : IJobManagementService
         if (nextIndex >= Constants.MalwareBlockerWebhookRetryDelays.Count)
         {
             _logger.LogDebug(
-                $"{nameof(JobType.MalwareBlocker)} webhook scan gave up for download {target.DownloadId} on {target.Type} instance {target.InstanceId} after {target.RetryIndex} attempts",
-                target.DownloadId, target.Type, target.InstanceId, Constants.MalwareBlockerWebhookRetryDelays.Count);
+                "{name} webhook scan gave up for download {downloadId} on {type} instance {instanceId} after {attemptCount} attempts", 
+                nameof(JobType.MalwareBlocker), target.DownloadId, target.Type, target.InstanceId, Constants.MalwareBlockerWebhookRetryDelays.Count);
             return Task.FromResult(false);
         }
 
