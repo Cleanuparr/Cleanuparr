@@ -1,4 +1,5 @@
 import { Component, ChangeDetectionStrategy, inject, signal, input, computed, effect, untracked } from '@angular/core';
+import { rxResource } from '@angular/core/rxjs-interop';
 import { PageHeaderComponent } from '@layout/page-header/page-header.component';
 import {
   CardComponent, ButtonComponent, InputComponent, ToggleComponent,
@@ -45,10 +46,17 @@ export class ArrSettingsComponent implements HasPendingChanges {
   });
   readonly versionOptions = computed(() => ARR_VERSION_OPTIONS[this.type()] ?? []);
 
+  private readonly configResource = rxResource({
+    params: () => this.type(),
+    stream: ({ params }) => this.api.getConfig(params as ArrType),
+  });
+
   readonly loader = new DeferredLoader();
-  readonly loadError = signal(false);
+  readonly loadError = computed(() => !!this.configResource.error());
   readonly saving = signal(false);
-  readonly instances = signal<ArrInstance[]>([]);
+  readonly instances = computed(() =>
+    this.configResource.hasValue() ? (this.configResource.value().instances ?? []) : [],
+  );
 
   // Modal state
   readonly modalVisible = signal(false);
@@ -80,42 +88,29 @@ export class ArrSettingsComponent implements HasPendingChanges {
 
   constructor() {
     effect(() => {
-      const type = this.type();
-      if (type) {
-        untracked(() => {
-          this.instances.set([]);
-          this.loadError.set(false);
-          this.loadConfig();
-        });
-      }
-    });
-
-    effect(() => {
       const options = this.versionOptions();
       if (options.length > 0) {
         untracked(() => this.modalVersion.set(options[0].value));
       }
     });
-  }
 
-  private loadConfig(): void {
-    this.loader.start();
-    this.api.getConfig(this.type() as ArrType).subscribe({
-      next: (config) => {
-        this.instances.set(config.instances ?? []);
-        this.loader.stop();
-      },
-      error: () => {
+    effect(() => {
+      if (this.configResource.error()) {
         this.toast.error(`Failed to load ${this.displayName()} settings`);
+      }
+    });
+
+    effect(() => {
+      if (this.configResource.isLoading()) {
+        this.loader.start();
+      } else {
         this.loader.stop();
-        this.loadError.set(true);
-      },
+      }
     });
   }
 
   retry(): void {
-    this.loadError.set(false);
-    this.loadConfig();
+    this.configResource.reload();
   }
 
   openAddModal(): void {
@@ -183,7 +178,7 @@ export class ArrSettingsComponent implements HasPendingChanges {
         this.toast.success(editing ? 'Instance updated' : 'Instance added');
         this.modalVisible.set(false);
         this.saving.set(false);
-        this.loadConfig();
+        this.configResource.reload();
       },
       error: () => {
         this.toast.error('Failed to save instance');
@@ -205,7 +200,7 @@ export class ArrSettingsComponent implements HasPendingChanges {
     this.api.deleteInstance(this.type() as ArrType, instance.id).subscribe({
       next: () => {
         this.toast.success('Instance deleted');
-        this.loadConfig();
+        this.configResource.reload();
       },
       error: () => this.toast.error('Failed to delete instance'),
     });
