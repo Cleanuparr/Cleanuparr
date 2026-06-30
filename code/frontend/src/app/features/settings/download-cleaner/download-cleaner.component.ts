@@ -1,4 +1,5 @@
-import { Component, ChangeDetectionStrategy, inject, signal, computed, OnInit, viewChildren, effect, untracked } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, signal, computed, viewChildren, effect, untracked } from '@angular/core';
+import { rxResource } from '@angular/core/rxjs-interop';
 import { NgIconComponent } from '@ng-icons/core';
 import { CdkDragDrop, CdkDropList, CdkDrag, CdkDragHandle, moveItemInArray } from '@angular/cdk/drag-drop';
 import { PageHeaderComponent } from '@layout/page-header/page-header.component';
@@ -51,7 +52,7 @@ const PRIVACY_TYPE_OPTIONS: SelectOption[] = [
   styleUrl: './download-cleaner.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
+export class DownloadCleanerComponent implements HasPendingChanges {
   private readonly api = inject(DownloadCleanerApi);
   private readonly toast = inject(ToastService);
   private readonly confirm = inject(ConfirmService);
@@ -67,8 +68,13 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
 
   readonly scheduleUnitOptions = SCHEDULE_UNIT_OPTIONS;
   readonly privacyTypeOptions = PRIVACY_TYPE_OPTIONS;
+
+  private readonly configResource = rxResource({
+    stream: () => this.api.getConfig(),
+  });
+
   readonly loader = new DeferredLoader();
-  readonly loadError = signal(false);
+  readonly loadError = computed(() => !!this.configResource.error());
   readonly saving = signal(false);
   readonly saved = signal(false);
   readonly unlinkedSaving = signal(false);
@@ -170,6 +176,68 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
       const current = this.scheduleEvery();
       if (options.length > 0 && !options.includes(current as number)) {
         untracked(() => this.scheduleEvery.set(options[0]));
+      }
+    });
+
+    effect(() => {
+      const dc = this.configResource.hasValue() ? this.configResource.value() : undefined;
+      if (!dc) {
+        return;
+      }
+      untracked(() => {
+        this.config = dc;
+        this.enabled.set(dc.enabled);
+        this.useAdvancedScheduling.set(dc.useAdvancedScheduling);
+        this.cronExpression.set(dc.cronExpression);
+        const parsed = parseCronToJobSchedule(dc.cronExpression);
+        if (parsed) {
+          this.scheduleEvery.set(parsed.every);
+          this.scheduleUnit.set(parsed.type);
+        }
+        this.ignoredDownloads.set(dc.ignoredDownloads ?? []);
+
+        this.clientConfigs.set((dc.clients ?? []).map(c => ({
+          ...c,
+          seedingRules: c.seedingRules ?? [],
+          unlinkedConfig: c.unlinkedConfig ?? createDefaultUnlinkedConfig(),
+          deadTorrentConfig: c.deadTorrentConfig ?? createDefaultDeadTorrentConfig(),
+          orphanedFilesConfig: c.orphanedFilesConfig ?? createDefaultOrphanedFilesConfig(),
+        })));
+
+        if (dc.clients?.length > 0) {
+          this.selectedClientId.set(dc.clients[0].downloadClientId);
+        }
+
+        const unlinkedSnapshots: Record<string, string> = {};
+        const deadTorrentSnapshots: Record<string, string> = {};
+        const orphanedFilesSnapshots: Record<string, string> = {};
+        for (const c of dc.clients ?? []) {
+          unlinkedSnapshots[c.downloadClientId] = JSON.stringify(c.unlinkedConfig ?? createDefaultUnlinkedConfig());
+          deadTorrentSnapshots[c.downloadClientId] = JSON.stringify(c.deadTorrentConfig ?? createDefaultDeadTorrentConfig());
+          orphanedFilesSnapshots[c.downloadClientId] = JSON.stringify(c.orphanedFilesConfig ?? createDefaultOrphanedFilesConfig());
+        }
+        this.unlinkedSnapshots.set(unlinkedSnapshots);
+        this.deadTorrentSnapshots.set(deadTorrentSnapshots);
+        this.orphanedFilesSnapshots.set(orphanedFilesSnapshots);
+
+        // Defer snapshot so constructor effects (e.g. schedule unit clamping) settle first
+        queueMicrotask(() => {
+          this.savedSnapshot.set(this.buildSnapshot());
+        });
+      });
+    });
+
+    effect(() => {
+      if (this.configResource.error()) {
+        this.toast.error('Failed to load download cleaner settings');
+      }
+    });
+
+    effect(() => {
+      if (this.configResource.isLoading()) {
+        this.loader.start();
+      } else {
+        this.loader.stop();
       }
     });
   }
@@ -314,66 +382,8 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
 
   private config: DownloadCleanerConfig | null = null;
 
-  ngOnInit(): void {
-    this.loadConfig();
-  }
-
-  private loadConfig(): void {
-    this.loader.start();
-    this.api.getConfig().subscribe({
-      next: (dc) => {
-        this.config = dc;
-        this.enabled.set(dc.enabled);
-        this.useAdvancedScheduling.set(dc.useAdvancedScheduling);
-        this.cronExpression.set(dc.cronExpression);
-        const parsed = parseCronToJobSchedule(dc.cronExpression);
-        if (parsed) {
-          this.scheduleEvery.set(parsed.every);
-          this.scheduleUnit.set(parsed.type);
-        }
-        this.ignoredDownloads.set(dc.ignoredDownloads ?? []);
-
-        this.clientConfigs.set((dc.clients ?? []).map(c => ({
-          ...c,
-          seedingRules: c.seedingRules ?? [],
-          unlinkedConfig: c.unlinkedConfig ?? createDefaultUnlinkedConfig(),
-          deadTorrentConfig: c.deadTorrentConfig ?? createDefaultDeadTorrentConfig(),
-          orphanedFilesConfig: c.orphanedFilesConfig ?? createDefaultOrphanedFilesConfig(),
-        })));
-
-        if (dc.clients?.length > 0) {
-          this.selectedClientId.set(dc.clients[0].downloadClientId);
-        }
-
-        const unlinkedSnapshots: Record<string, string> = {};
-        const deadTorrentSnapshots: Record<string, string> = {};
-        const orphanedFilesSnapshots: Record<string, string> = {};
-        for (const c of dc.clients ?? []) {
-          unlinkedSnapshots[c.downloadClientId] = JSON.stringify(c.unlinkedConfig ?? createDefaultUnlinkedConfig());
-          deadTorrentSnapshots[c.downloadClientId] = JSON.stringify(c.deadTorrentConfig ?? createDefaultDeadTorrentConfig());
-          orphanedFilesSnapshots[c.downloadClientId] = JSON.stringify(c.orphanedFilesConfig ?? createDefaultOrphanedFilesConfig());
-        }
-        this.unlinkedSnapshots.set(unlinkedSnapshots);
-        this.deadTorrentSnapshots.set(deadTorrentSnapshots);
-        this.orphanedFilesSnapshots.set(orphanedFilesSnapshots);
-
-        this.loader.stop();
-        // Defer snapshot so constructor effects (e.g. schedule unit clamping) settle first
-        queueMicrotask(() => {
-          this.savedSnapshot.set(this.buildSnapshot());
-        });
-      },
-      error: () => {
-        this.toast.error('Failed to load download cleaner settings');
-        this.loader.stop();
-        this.loadError.set(true);
-      },
-    });
-  }
-
   retry(): void {
-    this.loadError.set(false);
-    this.loadConfig();
+    this.configResource.reload();
   }
 
   // --- Seeding rule modal CRUD ---
