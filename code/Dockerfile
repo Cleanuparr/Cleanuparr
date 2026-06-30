@@ -1,5 +1,5 @@
 # Build Angular frontend
-FROM --platform=$BUILDPLATFORM node:25-alpine AS frontend-build
+FROM --platform=$BUILDPLATFORM node:26-alpine AS frontend-build
 WORKDIR /app
 
 # Copy package files first for better layer caching

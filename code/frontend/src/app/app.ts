@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { ThemeService } from '@core/services/theme.service';
 import { AuthService } from '@core/auth/auth.service';
@@ -8,6 +8,7 @@ import { ToastContainerComponent, ConfirmDialogComponent } from '@ui';
   selector: 'app-root',
   standalone: true,
   imports: [RouterOutlet, ToastContainerComponent, ConfirmDialogComponent],
+  changeDetection: ChangeDetectionStrategy.Eager,
   template: `
     <router-outlet />
     <app-toast-container />
