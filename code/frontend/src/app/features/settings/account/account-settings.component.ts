@@ -1,4 +1,5 @@
-import { Component, ChangeDetectionStrategy, inject, signal, computed, effect, OnInit, OnDestroy } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, signal, computed, effect, untracked, OnInit, OnDestroy } from '@angular/core';
+import { rxResource } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
 import { PageHeaderComponent } from '@layout/page-header/page-header.component';
 import {
@@ -7,7 +8,7 @@ import {
   EmptyStateComponent, LoadingStateComponent,
 } from '@ui';
 import { forkJoin } from 'rxjs';
-import { AccountApi, AccountInfo } from '@core/api/account.api';
+import { AccountApi } from '@core/api/account.api';
 import { AuthService } from '@core/auth/auth.service';
 import { ToastService } from '@core/services/toast.service';
 import { ConfirmService } from '@core/services/confirm.service';
@@ -33,9 +34,13 @@ export class AccountSettingsComponent implements OnInit, OnDestroy {
   private readonly confirmService = inject(ConfirmService);
   private readonly route = inject(ActivatedRoute);
 
+  private readonly accountResource = rxResource({
+    stream: () => forkJoin([this.api.getInfo(), this.api.getOidcConfig()]),
+  });
+
   readonly loader = new DeferredLoader();
-  readonly loadError = signal(false);
-  readonly account = signal<AccountInfo | null>(null);
+  readonly loadError = computed(() => !!this.accountResource.error());
+  readonly account = computed(() => this.accountResource.hasValue() ? this.accountResource.value()[0] : null);
 
   // Change password
   readonly currentPassword = signal('');
@@ -108,6 +113,39 @@ export class AccountSettingsComponent implements OnInit, OnDestroy {
         this.oidcExclusiveMode.set(false);
       }
     });
+
+    effect(() => {
+      const data = this.accountResource.hasValue() ? this.accountResource.value() : undefined;
+      if (!data) {
+        return;
+      }
+      const oidc = data[1];
+      untracked(() => {
+        this.oidcEnabled.set(oidc.enabled);
+        this.oidcIssuerUrl.set(oidc.issuerUrl);
+        this.oidcClientId.set(oidc.clientId);
+        this.oidcClientSecret.set(oidc.clientSecret);
+        this.oidcScopes.set(oidc.scopes || 'openid profile email');
+        this.oidcProviderName.set(oidc.providerName || 'OIDC');
+        this.oidcRedirectUrl.set(oidc.redirectUrl || '');
+        this.oidcAuthorizedSubject.set(oidc.authorizedSubject);
+        this.oidcExclusiveMode.set(oidc.exclusiveMode);
+      });
+    });
+
+    effect(() => {
+      if (this.accountResource.error()) {
+        this.toast.error('Failed to load account information');
+      }
+    });
+
+    effect(() => {
+      if (this.accountResource.isLoading()) {
+        this.loader.start();
+      } else {
+        this.loader.stop();
+      }
+    });
   }
 
   ngOnInit(): void {
@@ -119,7 +157,6 @@ export class AccountSettingsComponent implements OnInit, OnDestroy {
       this.toast.error('Failed to link OIDC account');
       this.oidcExpanded.set(true);
     }
-    this.loadAccount();
   }
 
   ngOnDestroy(): void {
@@ -128,33 +165,8 @@ export class AccountSettingsComponent implements OnInit, OnDestroy {
     }
   }
 
-  private loadAccount(): void {
-    this.loader.start();
-    forkJoin([this.api.getInfo(), this.api.getOidcConfig()]).subscribe({
-      next: ([info, oidc]) => {
-        this.account.set(info);
-        this.oidcEnabled.set(oidc.enabled);
-        this.oidcIssuerUrl.set(oidc.issuerUrl);
-        this.oidcClientId.set(oidc.clientId);
-        this.oidcClientSecret.set(oidc.clientSecret);
-        this.oidcScopes.set(oidc.scopes || 'openid profile email');
-        this.oidcProviderName.set(oidc.providerName || 'OIDC');
-        this.oidcRedirectUrl.set(oidc.redirectUrl || '');
-        this.oidcAuthorizedSubject.set(oidc.authorizedSubject);
-        this.oidcExclusiveMode.set(oidc.exclusiveMode);
-        this.loader.stop();
-      },
-      error: () => {
-        this.toast.error('Failed to load account information');
-        this.loader.stop();
-        this.loadError.set(true);
-      },
-    });
-  }
-
   retry(): void {
-    this.loadError.set(false);
-    this.loadAccount();
+    this.accountResource.reload();
   }
 
   // Change password
@@ -255,7 +267,7 @@ export class AccountSettingsComponent implements OnInit, OnDestroy {
         this.toast.success('Two-factor authentication enabled');
         this.cancelEnable2fa();
         this.enabling2fa.set(false);
-        this.loadAccount();
+        this.accountResource.reload();
       },
       error: () => {
         this.toast.error('Invalid verification code');
@@ -290,7 +302,7 @@ export class AccountSettingsComponent implements OnInit, OnDestroy {
         this.twoFaPassword.set('');
         this.twoFaCode.set('');
         this.disabling2fa.set(false);
-        this.loadAccount();
+        this.accountResource.reload();
       },
       error: () => {
         this.toast.error('Failed to disable 2FA. Check your password and code.');
@@ -377,7 +389,7 @@ export class AccountSettingsComponent implements OnInit, OnDestroy {
             clearInterval(this.plexPollTimer!);
             this.plexLinking.set(false);
             this.toast.success('Plex account linked');
-            this.loadAccount();
+            this.accountResource.reload();
           }
         },
         error: () => {
@@ -403,7 +415,7 @@ export class AccountSettingsComponent implements OnInit, OnDestroy {
       next: () => {
         this.toast.success('Plex account unlinked');
         this.plexUnlinking.set(false);
-        this.loadAccount();
+        this.accountResource.reload();
       },
       error: () => {
         this.toast.error('Failed to unlink Plex account');
