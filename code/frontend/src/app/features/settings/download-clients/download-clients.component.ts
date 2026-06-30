@@ -1,4 +1,5 @@
-import { Component, ChangeDetectionStrategy, inject, signal, computed, OnInit } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, signal, computed, effect } from '@angular/core';
+import { rxResource } from '@angular/core/rxjs-interop';
 import { PageHeaderComponent } from '@layout/page-header/page-header.component';
 import {
   CardComponent, ButtonComponent, InputComponent, ToggleComponent,
@@ -35,16 +36,22 @@ const TYPE_OPTIONS: SelectOption[] = [
   styleUrl: './download-clients.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class DownloadClientsComponent implements OnInit, HasPendingChanges {
+export class DownloadClientsComponent implements HasPendingChanges {
   private readonly api = inject(DownloadClientApi);
   private readonly toast = inject(ToastService);
   private readonly confirmService = inject(ConfirmService);
 
+  private readonly clientsResource = rxResource({
+    stream: () => this.api.getConfig(),
+  });
+
   readonly typeOptions = TYPE_OPTIONS;
   readonly loader = new DeferredLoader();
-  readonly loadError = signal(false);
+  readonly loadError = computed(() => !!this.clientsResource.error());
   readonly saving = signal(false);
-  readonly clients = signal<ClientConfig[]>([]);
+  readonly clients = computed(() =>
+    this.clientsResource.hasValue() ? (this.clientsResource.value().clients ?? []) : [],
+  );
 
   // Modal
   readonly modalVisible = signal(false);
@@ -118,28 +125,24 @@ export class DownloadClientsComponent implements OnInit, HasPendingChanges {
     }
   }
 
-  ngOnInit(): void {
-    this.loadClients();
-  }
-
-  private loadClients(): void {
-    this.loader.start();
-    this.api.getConfig().subscribe({
-      next: (config) => {
-        this.clients.set(config.clients ?? []);
-        this.loader.stop();
-      },
-      error: () => {
+  constructor() {
+    effect(() => {
+      if (this.clientsResource.error()) {
         this.toast.error('Failed to load download clients');
+      }
+    });
+
+    effect(() => {
+      if (this.clientsResource.isLoading()) {
+        this.loader.start();
+      } else {
         this.loader.stop();
-        this.loadError.set(true);
-      },
+      }
     });
   }
 
   retry(): void {
-    this.loadError.set(false);
-    this.loadClients();
+    this.clientsResource.reload();
   }
 
   openAddModal(): void {
@@ -221,7 +224,7 @@ export class DownloadClientsComponent implements OnInit, HasPendingChanges {
           this.toast.success('Client updated');
           this.modalVisible.set(false);
           this.saving.set(false);
-          this.loadClients();
+          this.clientsResource.reload();
         },
         error: () => {
           this.toast.error('Failed to update client');
@@ -247,7 +250,7 @@ export class DownloadClientsComponent implements OnInit, HasPendingChanges {
           this.toast.success('Client added');
           this.modalVisible.set(false);
           this.saving.set(false);
-          this.loadClients();
+          this.clientsResource.reload();
         },
         error: () => {
           this.toast.error('Failed to add client');
@@ -271,7 +274,7 @@ export class DownloadClientsComponent implements OnInit, HasPendingChanges {
     this.api.delete(client.id).subscribe({
       next: () => {
         this.toast.success('Client deleted');
-        this.loadClients();
+        this.clientsResource.reload();
       },
       error: () => this.toast.error('Failed to delete client'),
     });
