@@ -26,10 +26,6 @@
     "node": ">=26"
   },
   "overrides": {
-    "@ngrx/signals": {
-      "@angular/common": "$@angular/common",
-      "@angular/core": "$@angular/core"
-    },
     "angularx-qrcode": {
       "@angular/common": "$@angular/common",
       "@angular/core": "$@angular/core"
@@ -47,7 +43,6 @@
     "@microsoft/signalr": "^10.0.0",
     "@ng-icons/core": "^33.0.0",
     "@ng-icons/tabler-icons": "^33.0.0",
-    "@ngrx/signals": "^21.0.1",
     "@tailwindcss/postcss": "^4.1.18",
     "angularx-qrcode": "^21.0.4",
     "postcss": "^8.5.6",
