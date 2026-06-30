@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, input, model, signal, computed, inject } from '@angular/core';
+import { Component, ChangeDetectionStrategy, input, model, signal, computed, effect, untracked, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NgIcon } from '@ng-icons/core';
 import { DocumentationService } from '@core/services/documentation.service';
@@ -26,9 +26,23 @@ export class ChipInputComponent {
   hint = input<string>();
   helpKey = input<string>();
   items = model<string[]>([]);
+  // `value` mirrors `items` so the control also satisfies Signal Forms' FormValueControl
+  // contract and can be bound via [formField]. Legacy [(items)] call sites keep working.
+  value = model<string[]>([]);
 
   readonly inputValue = signal('');
   readonly touched = signal(false);
+
+  constructor() {
+    effect(() => {
+      const v = this.value();
+      untracked(() => this.items.set(v));
+    });
+    effect(() => {
+      const items = this.items();
+      untracked(() => this.value.set(items));
+    });
+  }
 
   readonly hasUncommittedInput = computed(() => {
     return this.inputValue().trim().length > 0 && !this.disabled();
