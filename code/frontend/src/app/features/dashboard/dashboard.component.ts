@@ -11,7 +11,6 @@ import { JobsApi } from '@core/api/jobs.api';
 import { GeneralConfigApi } from '@core/api/general-config.api';
 import { CfScoreApi, CfScoreStats, CfScoreUpgrade } from '@core/api/cf-score.api';
 import { ToastService } from '@core/services/toast.service';
-import { LogEntry } from '@core/models/signalr.models';
 import { ManualEvent } from '@core/models/event.models';
 import { JobType } from '@shared/models/enums';
 

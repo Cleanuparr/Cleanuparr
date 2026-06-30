@@ -41,7 +41,7 @@ const EMPTY_FILTERS: AdvancedFilters = {
   grabbed: 'any',
 };
 
-const STATUS_OPTIONS: ReadonlyArray<{ value: SearchCommandStatus; label: string }> = [
+const STATUS_OPTIONS: readonly { value: SearchCommandStatus; label: string }[] = [
   { value: SearchCommandStatus.Started, label: 'Started' },
   { value: SearchCommandStatus.Completed, label: 'Completed' },
   { value: SearchCommandStatus.Failed, label: 'Failed' },

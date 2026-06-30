@@ -19,6 +19,9 @@ export interface SizeUnit {
 export class SizeInputComponent {
   private readonly docs = inject(DocumentationService);
 
+  private static nextId = 0;
+  protected readonly controlId = `app-size-${SizeInputComponent.nextId++}`;
+
   label = input<string>();
   featureId = input<string>();
   units = input.required<SizeUnit[]>();

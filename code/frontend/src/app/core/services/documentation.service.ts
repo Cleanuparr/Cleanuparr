@@ -1,9 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import { ApplicationPathService } from './base-path.service';
 
-interface FieldMappings {
-  [section: string]: { [field: string]: string };
-}
+type FieldMappings = Record<string, Record<string, string>>;
 
 @Injectable({ providedIn: 'root' })
 export class DocumentationService {

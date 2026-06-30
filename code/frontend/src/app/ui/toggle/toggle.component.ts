@@ -14,6 +14,9 @@ import { NewBadgeComponent } from '@ui/new-badge/new-badge.component';
 export class ToggleComponent {
   private readonly docs = inject(DocumentationService);
 
+  private static nextId = 0;
+  protected readonly controlId = `app-toggle-${ToggleComponent.nextId++}`;
+
   label = input<string>();
   featureId = input<string>();
   disabled = input(false);

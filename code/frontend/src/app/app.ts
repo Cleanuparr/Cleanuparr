@@ -8,7 +8,7 @@ import { ToastContainerComponent, ConfirmDialogComponent } from '@ui';
   selector: 'app-root',
   standalone: true,
   imports: [RouterOutlet, ToastContainerComponent, ConfirmDialogComponent],
-  changeDetection: ChangeDetectionStrategy.Eager,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <router-outlet />
     <app-toast-container />

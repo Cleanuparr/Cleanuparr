@@ -7,8 +7,6 @@ import { SearchesTabComponent } from './searches-tab/searches-tab.component';
 import { QualityTabComponent } from './quality-tab/quality-tab.component';
 import { UpgradesTabComponent } from './upgrades-tab/upgrades-tab.component';
 
-type SeekerTab = 'searches' | 'quality' | 'upgrades';
-
 @Component({
   selector: 'app-seeker-stats',
   standalone: true,

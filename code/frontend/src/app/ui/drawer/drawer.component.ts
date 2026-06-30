@@ -56,8 +56,8 @@ export class DrawerComponent implements OnInit, OnDestroy {
     this.closed.emit();
   }
 
-  onBackdropClick(): void {
-    if (this.closeOnBackdrop()) {
+  onBackdropClick(event: MouseEvent): void {
+    if (event.target === event.currentTarget && this.closeOnBackdrop()) {
       this.close();
     }
   }

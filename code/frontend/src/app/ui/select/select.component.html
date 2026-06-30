@@ -1,5 +1,5 @@
 @if (label()) {
-  <label class="select-label">
+  <label class="select-label" [attr.for]="controlId">
     {{ label() }}
     @if (helpKey()) {
       <button class="field-help-btn" (click)="onHelpClick($event)" aria-label="Open documentation" tabindex="-1">
@@ -13,14 +13,16 @@
 }
 <div class="select-wrapper">
   <button
+    [id]="controlId"
     class="select-trigger"
     [class.select-trigger--open]="isOpen()"
     [class.select-trigger--error]="error()"
-    [class.select-trigger--has-value]="value() != null"
+    [class.select-trigger--has-value]="value() !== null"
     [disabled]="disabled()"
     type="button"
     role="combobox"
     [attr.aria-expanded]="isOpen()"
+    [attr.aria-controls]="listboxId"
     (click)="toggleDropdown()"
     (keydown)="onKeydown($event)"
   >
@@ -32,6 +34,7 @@
 
   @if (isOpen()) {
     <div
+      [id]="listboxId"
       class="select-dropdown"
       [class.select-dropdown--top]="placement() === 'top'"
       role="listbox"

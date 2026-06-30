@@ -11,7 +11,7 @@ import { Directive, ElementRef, OnDestroy, OnInit, inject } from '@angular/core'
  * drops below 1, and the class flips on.
  */
 @Directive({
-  selector: '[stickyAware]',
+  selector: '[appStickyAware]',
   standalone: true,
 })
 export class StickyAwareDirective implements OnInit, OnDestroy {

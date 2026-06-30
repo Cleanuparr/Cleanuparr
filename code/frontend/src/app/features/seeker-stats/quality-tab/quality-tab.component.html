@@ -1,5 +1,5 @@
 <!-- Toolbar -->
-<div class="toolbar" stickyAware>
+<div class="toolbar" appStickyAware>
   <div class="toolbar__filters">
     <app-input
       placeholder="Search by title..."
@@ -74,7 +74,11 @@
       >
         <div
           class="score-row__main"
+          role="button"
+          tabindex="0"
           (click)="toggleExpand(item)"
+          (keydown.enter)="toggleExpand(item)"
+          (keydown.space)="toggleExpand(item)"
         >
           <ng-icon name="tablerChartBar" class="score-row__icon" />
           <span class="score-row__scores">
@@ -98,7 +102,14 @@
             class="score-row__chevron"
           />
         </div>
-        <div class="score-row__title" (click)="toggleExpand(item)">
+        <div
+          class="score-row__title"
+          role="button"
+          tabindex="0"
+          (click)="toggleExpand(item)"
+          (keydown.enter)="toggleExpand(item)"
+          (keydown.space)="toggleExpand(item)"
+        >
           {{ item.title }}
         </div>
 
@@ -176,7 +187,7 @@
 <!-- Filter drawer -->
 <app-drawer title="Filter quality scores" [(visible)]="drawerOpen">
   <div class="filter-group">
-    <label class="filter-group__label">Instance</label>
+    <span class="filter-group__label">Instance</span>
     <app-select
       [value]="draft().instanceId"
       [options]="instanceOptions()"
@@ -185,7 +196,7 @@
   </div>
 
   <div class="filter-group">
-    <label class="filter-group__label">Quality profile</label>
+    <span class="filter-group__label">Quality profile</span>
     <app-select
       [value]="draft().qualityProfile"
       [options]="qualityProfileOptions()"
@@ -194,7 +205,7 @@
   </div>
 
   <div class="filter-group">
-    <label class="filter-group__label">Cutoff status</label>
+    <span class="filter-group__label">Cutoff status</span>
     <app-select
       [value]="draft().cutoffFilter"
       [options]="cutoffOptions"
@@ -203,7 +214,7 @@
   </div>
 
   <div class="filter-group">
-    <label class="filter-group__label">Monitored</label>
+    <span class="filter-group__label">Monitored</span>
     <app-select
       [value]="draft().monitoredFilter"
       [options]="monitoredOptions"

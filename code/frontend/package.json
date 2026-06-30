@@ -5,7 +5,8 @@
     "ng": "ng",
     "start": "ng serve",
     "build": "ng build",
-    "watch": "ng build --watch --configuration development"
+    "watch": "ng build --watch --configuration development",
+    "lint": "eslint ."
   },
   "prettier": {
     "printWidth": 100,
@@ -55,18 +56,15 @@
     "tslib": "^2.3.0"
   },
   "devDependencies": {
-    "@angular-eslint/builder": "^22.0.0",
-    "@angular-eslint/eslint-plugin": "^22.0.0",
-    "@angular-eslint/eslint-plugin-template": "^22.0.0",
-    "@angular-eslint/template-parser": "^22.0.0",
     "@angular/build": "^22.0.4",
     "@angular/cli": "^22.0.4",
     "@angular/compiler-cli": "^22.0.4",
-    "@typescript-eslint/eslint-plugin": "^8.62.1",
-    "@typescript-eslint/parser": "^8.62.1",
+    "@eslint/js": "^9.39.4",
+    "angular-eslint": "^22.0.0",
     "eslint": "^9.39.2",
     "eslint-config-prettier": "^10.1.8",
     "prettier": "^3.8.1",
-    "typescript": "~6.0.3"
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.62.1"
   }
 }

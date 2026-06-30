@@ -61,6 +61,13 @@ export class ShellComponent implements OnInit, OnDestroy {
     this.checkMobile();
   }
 
+  @HostListener('document:keydown.escape')
+  onEscapeKey(): void {
+    if (this.mobileMenuOpen()) {
+      this.closeMobileMenu();
+    }
+  }
+
   toggleSidebar(): void {
     if (this.isMobile()) {
       this.mobileMenuOpen.set(!this.mobileMenuOpen());

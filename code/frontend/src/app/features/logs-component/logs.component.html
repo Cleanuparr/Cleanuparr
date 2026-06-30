@@ -5,7 +5,7 @@
 
 <div class="page-content">
   <!-- Toolbar -->
-  <div class="toolbar" stickyAware>
+  <div class="toolbar" appStickyAware>
     <div class="toolbar__filters">
       <app-select
         placeholder="All Levels"
@@ -83,7 +83,11 @@
           <div
             class="log-entry__row"
             [class.log-entry__row--expandable]="isExpandable(log)"
+            [attr.role]="isExpandable(log) ? 'button' : null"
+            [attr.tabindex]="isExpandable(log) ? 0 : null"
             (click)="isExpandable(log) ? toggleExpand($index) : null"
+            (keydown.enter)="isExpandable(log) ? toggleExpand($index) : null"
+            (keydown.space)="isExpandable(log) ? toggleExpand($index) : null"
           >
             <button class="log-entry__copy" (click)="copyLog(log); $event.stopPropagation()" title="Copy log">
               <ng-icon name="tablerCopy" />

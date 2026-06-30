@@ -4,6 +4,8 @@ import { NgIcon } from '@ng-icons/core';
 import { DocumentationService } from '@core/services/documentation.service';
 import { NewBadgeComponent } from '@ui/new-badge/new-badge.component';
 
+let nextInputId = 0;
+
 @Component({
   selector: 'app-input',
   standalone: true,
@@ -14,6 +16,8 @@ import { NewBadgeComponent } from '@ui/new-badge/new-badge.component';
 })
 export class InputComponent {
   private readonly docs = inject(DocumentationService);
+
+  protected readonly controlId = `app-input-${nextInputId++}`;
 
   label = input<string>();
   featureId = input<string>();

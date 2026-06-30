@@ -3,7 +3,7 @@ import { ActivatedRoute } from '@angular/router';
 import { PageHeaderComponent } from '@layout/page-header/page-header.component';
 import {
   CardComponent, ButtonComponent, InputComponent, SpinnerComponent,
-  AccordionComponent, ToggleComponent, LabelComponent,
+  ToggleComponent, LabelComponent,
   EmptyStateComponent, LoadingStateComponent,
 } from '@ui';
 import { forkJoin } from 'rxjs';

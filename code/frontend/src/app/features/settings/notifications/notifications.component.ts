@@ -30,6 +30,37 @@ import {
 import { HasPendingChanges } from '@core/guards/pending-changes.guard';
 import { DeferredLoader } from '@shared/utils/loading.util';
 
+interface ProviderConfiguration {
+  webhookUrl?: string;
+  username?: string;
+  avatarUrl?: string;
+  botToken?: string;
+  chatId?: string;
+  topicId?: string;
+  sendSilently?: boolean;
+  apiKey?: string;
+  channelId?: string;
+  mode?: AppriseMode;
+  url?: string;
+  key?: string;
+  tags?: string | string[];
+  serviceUrls?: string;
+  serverUrl?: string;
+  topics?: string[];
+  authenticationType?: NtfyAuthenticationType;
+  password?: string;
+  accessToken?: string;
+  priority?: number;
+  apiToken?: string;
+  userKey?: string;
+  devices?: string[];
+  sound?: string;
+  customSound?: string;
+  retry?: number;
+  expire?: number;
+  applicationToken?: string;
+}
+
 const APPRISE_MODE_OPTIONS: SelectOption[] = [
   { label: 'API', value: AppriseMode.Api },
   { label: 'CLI', value: AppriseMode.Cli },
@@ -356,7 +387,7 @@ export class NotificationsComponent implements OnInit, HasPendingChanges {
     this.modalEnabled.set(provider.isEnabled);
     this.resetModalFields();
 
-    const config = provider.configuration as any;
+    const config = provider.configuration as ProviderConfiguration;
     switch (provider.type) {
       case NotificationProviderType.Discord:
         this.modalWebhookUrl.set(config.webhookUrl ?? '');
@@ -377,7 +408,7 @@ export class NotificationsComponent implements OnInit, HasPendingChanges {
         this.modalAppriseMode.set(config.mode ?? AppriseMode.Api);
         this.modalAppriseUrl.set(config.url ?? '');
         this.modalAppriseKey.set(config.key ?? '');
-        this.modalAppriseTags.set(config.tags ?? '');
+        this.modalAppriseTags.set((config.tags as string) ?? '');
         this.modalAppriseServiceUrls.set(config.serviceUrls ? config.serviceUrls.split('\n').filter((s: string) => s.trim()) : []);
         break;
       case NotificationProviderType.Ntfy:
@@ -388,7 +419,7 @@ export class NotificationsComponent implements OnInit, HasPendingChanges {
         this.modalNtfyPassword.set(config.password ?? '');
         this.modalNtfyAccessToken.set(config.accessToken ?? '');
         this.modalNtfyPriority.set(config.priority ?? NtfyPriority.Default);
-        this.modalNtfyTags.set(config.tags ?? []);
+        this.modalNtfyTags.set((config.tags as string[]) ?? []);
         break;
       case NotificationProviderType.Pushover:
         this.modalPushoverApiToken.set(config.apiToken ?? '');
@@ -399,7 +430,7 @@ export class NotificationsComponent implements OnInit, HasPendingChanges {
         this.modalPushoverExpire.set(config.expire ?? 3600);
         this.modalPushoverSound.set(config.sound ?? '');
         this.modalPushoverCustomSound.set(config.customSound ?? '');
-        this.modalPushoverTags.set(config.tags ?? []);
+        this.modalPushoverTags.set((config.tags as string[]) ?? []);
         break;
       case NotificationProviderType.Gotify:
         this.modalGotifyServerUrl.set(config.serverUrl ?? '');

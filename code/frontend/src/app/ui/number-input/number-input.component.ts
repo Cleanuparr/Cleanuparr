@@ -15,6 +15,9 @@ import { NewBadgeComponent } from '@ui/new-badge/new-badge.component';
 export class NumberInputComponent {
   private readonly docs = inject(DocumentationService);
 
+  private static nextId = 0;
+  protected readonly controlId = `app-number-${NumberInputComponent.nextId++}`;
+
   label = input<string>();
   featureId = input<string>();
   placeholder = input('');

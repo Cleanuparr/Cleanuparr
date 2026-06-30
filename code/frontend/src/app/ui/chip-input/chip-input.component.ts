@@ -15,6 +15,9 @@ import { NewBadgeComponent } from '@ui/new-badge/new-badge.component';
 export class ChipInputComponent {
   private readonly docs = inject(DocumentationService);
 
+  private static nextId = 0;
+  protected readonly controlId = `app-chip-${ChipInputComponent.nextId++}`;
+
   label = input<string>();
   featureId = input<string>();
   placeholder = input('Type and press Enter...');

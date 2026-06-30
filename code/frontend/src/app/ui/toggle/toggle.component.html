@@ -1,5 +1,6 @@
-<label class="toggle" [class.toggle--disabled]="disabled()">
+<label class="toggle" [class.toggle--disabled]="disabled()" [attr.for]="controlId">
   <button
+    [id]="controlId"
     class="toggle__track"
     [class.toggle__track--checked]="checked()"
     role="switch"

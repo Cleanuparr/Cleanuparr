@@ -8,7 +8,7 @@ import {
 import { ArrApi } from '@core/api/arr.api';
 import { ToastService } from '@core/services/toast.service';
 import { ConfirmService } from '@core/services/confirm.service';
-import { ArrConfig, ArrInstance, CreateArrInstanceDto, TestArrInstanceRequest } from '@shared/models/arr-config.model';
+import { ArrInstance, CreateArrInstanceDto, TestArrInstanceRequest } from '@shared/models/arr-config.model';
 import { ArrType } from '@shared/models/enums';
 import { HasPendingChanges } from '@core/guards/pending-changes.guard';
 import { DeferredLoader } from '@shared/utils/loading.util';
@@ -38,12 +38,12 @@ export class ArrSettingsComponent implements HasPendingChanges {
   private readonly toast = inject(ToastService);
   private readonly confirmService = inject(ConfirmService);
 
-  readonly arrType = input.required<string>({ alias: 'type' });
+  readonly type = input.required<string>();
   readonly displayName = computed(() => {
-    const t = this.arrType();
+    const t = this.type();
     return t.charAt(0).toUpperCase() + t.slice(1);
   });
-  readonly versionOptions = computed(() => ARR_VERSION_OPTIONS[this.arrType()] ?? []);
+  readonly versionOptions = computed(() => ARR_VERSION_OPTIONS[this.type()] ?? []);
 
   readonly loader = new DeferredLoader();
   readonly loadError = signal(false);
@@ -80,7 +80,7 @@ export class ArrSettingsComponent implements HasPendingChanges {
 
   constructor() {
     effect(() => {
-      const type = this.arrType();
+      const type = this.type();
       if (type) {
         untracked(() => {
           this.instances.set([]);
@@ -100,7 +100,7 @@ export class ArrSettingsComponent implements HasPendingChanges {
 
   private loadConfig(): void {
     this.loader.start();
-    this.api.getConfig(this.arrType() as ArrType).subscribe({
+    this.api.getConfig(this.type() as ArrType).subscribe({
       next: (config) => {
         this.instances.set(config.instances ?? []);
         this.loader.stop();
@@ -149,7 +149,7 @@ export class ArrSettingsComponent implements HasPendingChanges {
       instanceId: this.editingInstance()?.id,
     };
     this.testing.set(true);
-    this.api.testInstance(this.arrType() as ArrType, request).subscribe({
+    this.api.testInstance(this.type() as ArrType, request).subscribe({
       next: (result) => {
         this.toast.success(result.message || 'Connection successful');
         this.testing.set(false);
@@ -175,8 +175,8 @@ export class ArrSettingsComponent implements HasPendingChanges {
     this.saving.set(true);
     const editing = this.editingInstance();
     const obs = editing?.id
-      ? this.api.updateInstance(this.arrType() as ArrType, editing.id, dto)
-      : this.api.createInstance(this.arrType() as ArrType, dto);
+      ? this.api.updateInstance(this.type() as ArrType, editing.id, dto)
+      : this.api.createInstance(this.type() as ArrType, dto);
 
     obs.subscribe({
       next: () => {
@@ -202,7 +202,7 @@ export class ArrSettingsComponent implements HasPendingChanges {
     });
     if (!confirmed) return;
 
-    this.api.deleteInstance(this.arrType() as ArrType, instance.id).subscribe({
+    this.api.deleteInstance(this.type() as ArrType, instance.id).subscribe({
       next: () => {
         this.toast.success('Instance deleted');
         this.loadConfig();

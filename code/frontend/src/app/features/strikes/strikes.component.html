@@ -5,7 +5,7 @@
 
 <div class="page-content">
   <!-- Toolbar -->
-  <div class="toolbar" stickyAware>
+  <div class="toolbar" appStickyAware>
     <div class="toolbar__filters">
       <app-select
         placeholder="All Types"
@@ -42,7 +42,11 @@
         >
           <div
             class="strike-row__main"
+            role="button"
+            tabindex="0"
             (click)="toggleExpand(item.downloadItemId)"
+            (keydown.enter)="toggleExpand(item.downloadItemId)"
+            (keydown.space)="toggleExpand(item.downloadItemId)"
           >
             <ng-icon name="tablerBolt" class="strike-row__icon" />
             <span class="strike-row__title">{{ item.title }}</span>

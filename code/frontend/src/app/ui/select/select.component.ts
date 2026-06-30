@@ -21,6 +21,10 @@ export interface SelectOption {
 export class SelectComponent {
   private readonly docs = inject(DocumentationService);
 
+  private static nextId = 0;
+  protected readonly controlId = `app-select-${SelectComponent.nextId++}`;
+  protected readonly listboxId = `${this.controlId}-listbox`;
+
   label = input<string>();
   featureId = input<string>();
   placeholder = input('Select...');

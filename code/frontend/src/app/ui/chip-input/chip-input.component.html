@@ -1,5 +1,5 @@
 @if (label()) {
-  <label class="chip-label">
+  <label class="chip-label" [attr.for]="controlId">
     {{ label() }}
     @if (helpKey()) {
       <button class="field-help-btn" (click)="onHelpClick($event)" aria-label="Open documentation" tabindex="-1">
@@ -21,6 +21,7 @@
     </span>
   }
   <input
+    [id]="controlId"
     class="chip-input"
     enterkeyhint="enter"
     [placeholder]="items().length === 0 ? placeholder() : ''"

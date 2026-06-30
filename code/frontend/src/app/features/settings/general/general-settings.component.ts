@@ -1,7 +1,7 @@
 import { Component, ChangeDetectionStrategy, inject, signal, computed, OnInit, viewChildren } from '@angular/core';
 import { PageHeaderComponent } from '@layout/page-header/page-header.component';
 import {
-  CardComponent, ButtonComponent, ToggleComponent, InputComponent,
+  CardComponent, ButtonComponent, ToggleComponent,
   NumberInputComponent, SelectComponent, ChipInputComponent, AccordionComponent,
   EmptyStateComponent, LoadingStateComponent,
   type SelectOption,
