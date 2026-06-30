@@ -1,5 +1,6 @@
 import { Component, ChangeDetectionStrategy, inject, signal, computed, effect, untracked } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
+import { form, required, FormField } from '@angular/forms/signals';
 import { PageHeaderComponent } from '@layout/page-header/page-header.component';
 import { CardComponent, ButtonComponent, InputComponent, ToggleComponent, EmptyStateComponent, LoadingStateComponent } from '@ui';
 import { BlacklistSyncApi } from '@core/api/blacklist-sync.api';
@@ -8,10 +9,15 @@ import { BlacklistSyncConfig } from '@shared/models/blacklist-sync-config.model'
 import { HasPendingChanges } from '@core/guards/pending-changes.guard';
 import { DeferredLoader } from '@shared/utils/loading.util';
 
+interface BlacklistSyncFormModel {
+  enabled: boolean;
+  blacklistPath: string;
+}
+
 @Component({
   selector: 'app-blacklist-sync',
   standalone: true,
-  imports: [PageHeaderComponent, CardComponent, ButtonComponent, InputComponent, ToggleComponent, EmptyStateComponent, LoadingStateComponent],
+  imports: [PageHeaderComponent, CardComponent, ButtonComponent, InputComponent, ToggleComponent, EmptyStateComponent, LoadingStateComponent, FormField],
   templateUrl: './blacklist-sync.component.html',
   styleUrl: './blacklist-sync.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -31,18 +37,17 @@ export class BlacklistSyncComponent implements HasPendingChanges {
   readonly saving = signal(false);
   readonly saved = signal(false);
 
-  readonly enabled = signal(false);
-  readonly blacklistPath = signal('');
+  private readonly model = signal<BlacklistSyncFormModel>({ enabled: false, blacklistPath: '' });
   private configId = '';
 
-  readonly blacklistPathError = computed(() => {
-    if (this.enabled() && !this.blacklistPath().trim()) {
-      return 'This field is required when blacklist sync is enabled';
-    }
-    return undefined;
+  readonly bsForm = form(this.model, (p) => {
+    required(p.blacklistPath, {
+      when: () => this.model().enabled,
+      message: 'This field is required when blacklist sync is enabled',
+    });
   });
 
-  readonly hasErrors = computed(() => !!this.blacklistPathError());
+  readonly hasErrors = computed(() => this.bsForm().invalid());
 
   constructor() {
     effect(() => {
@@ -52,8 +57,7 @@ export class BlacklistSyncComponent implements HasPendingChanges {
       }
       untracked(() => {
         this.configId = config.id;
-        this.enabled.set(config.enabled);
-        this.blacklistPath.set(config.blacklistPath ?? '');
+        this.model.set({ enabled: config.enabled, blacklistPath: config.blacklistPath ?? '' });
         this.savedSnapshot.set(this.buildSnapshot());
       });
     });
@@ -78,10 +82,11 @@ export class BlacklistSyncComponent implements HasPendingChanges {
   }
 
   save(): void {
+    const m = this.model();
     const config: BlacklistSyncConfig = {
       id: this.configId,
-      enabled: this.enabled(),
-      blacklistPath: this.blacklistPath() || undefined,
+      enabled: m.enabled,
+      blacklistPath: m.blacklistPath || undefined,
     };
 
     this.saving.set(true);
@@ -101,10 +106,7 @@ export class BlacklistSyncComponent implements HasPendingChanges {
   }
 
   private buildSnapshot(): string {
-    return JSON.stringify({
-      enabled: this.enabled(),
-      blacklistPath: this.blacklistPath(),
-    });
+    return JSON.stringify(this.model());
   }
 
   readonly dirty = computed(() => {

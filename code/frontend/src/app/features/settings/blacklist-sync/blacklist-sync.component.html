@@ -19,16 +19,16 @@
 <div class="settings-form">
   <app-card header="Configuration">
     <div class="form-stack">
-      <app-toggle label="Enabled" [(checked)]="enabled"
+      <app-toggle label="Enabled" [formField]="bsForm.enabled"
         hint="When enabled, blacklist patterns will be synchronized to enabled qBittorrent clients hourly"
         helpKey="blacklist-sync:enabled" />
-      @if (enabled()) {
+      @if (bsForm.enabled().value()) {
         <app-input
           label="Blacklist File Path"
           placeholder="Local file path or URL"
           hint="Path to blacklist file or HTTP(S) URL containing blacklist patterns"
-          [error]="blacklistPathError()"
-          [(value)]="blacklistPath"
+          [error]="bsForm.blacklistPath().errors()[0]?.message"
+          [formField]="bsForm.blacklistPath"
           helpKey="blacklist-sync:blacklistPath"
         />
       }
