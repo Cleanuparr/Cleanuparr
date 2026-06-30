@@ -1,4 +1,6 @@
-import { Component, ChangeDetectionStrategy, inject, computed, signal, OnInit } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, computed, signal } from '@angular/core';
+import { rxResource } from '@angular/core/rxjs-interop';
+import type { Observable } from 'rxjs';
 import { Router, RouterLink } from '@angular/router';
 import { DatePipe, JsonPipe } from '@angular/common';
 import { NgIcon } from '@ng-icons/core';
@@ -9,7 +11,7 @@ import { AppHubService } from '@core/realtime/app-hub.service';
 import { EventsApi } from '@core/api/events.api';
 import { JobsApi } from '@core/api/jobs.api';
 import { GeneralConfigApi } from '@core/api/general-config.api';
-import { CfScoreApi, CfScoreStats, CfScoreUpgrade } from '@core/api/cf-score.api';
+import { CfScoreApi, CfScoreStats, CfScoreUpgradesResponse } from '@core/api/cf-score.api';
 import { ToastService } from '@core/services/toast.service';
 import { ManualEvent } from '@core/models/event.models';
 import { JobType } from '@shared/models/enums';
@@ -39,7 +41,7 @@ type DashboardRowId = typeof DEFAULT_ROW_ORDER[number];
   styleUrl: './dashboard.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class DashboardComponent implements OnInit {
+export class DashboardComponent {
   readonly JobType = JobType;
 
   private readonly hub = inject(AppHubService);
@@ -52,9 +54,24 @@ export class DashboardComponent implements OnInit {
 
   readonly connected = this.hub.isConnected;
   readonly jobs = this.hub.jobs;
-  readonly showSupportSection = signal(false);
-  readonly cfScoreStats = signal<CfScoreStats | null>(null);
-  readonly cfScoreUpgrades = signal<CfScoreUpgrade[]>([]);
+
+  private readonly generalConfigResource = rxResource({
+    stream: () => this.generalConfigApi.get(),
+  });
+  private readonly cfScoreStatsResource = rxResource({
+    stream: (): Observable<CfScoreStats | null> => this.cfScoreApi.getStats(),
+    defaultValue: null,
+  });
+  private readonly cfScoreUpgradesResource = rxResource({
+    stream: () => this.cfScoreApi.getRecentUpgrades({ page: 1, pageSize: 5 }),
+    defaultValue: { items: [], page: 1, pageSize: 5, totalCount: 0, totalPages: 0 } as CfScoreUpgradesResponse,
+  });
+
+  readonly showSupportSection = computed(() =>
+    this.generalConfigResource.hasValue() ? this.generalConfigResource.value().displaySupportBanner : false,
+  );
+  readonly cfScoreStats = computed(() => this.cfScoreStatsResource.value());
+  readonly cfScoreUpgrades = computed(() => this.cfScoreUpgradesResource.value().items);
 
   readonly rowOrder = signal<DashboardRowId[]>(this.loadOrder());
   readonly visibleRowOrder = computed(() => {
@@ -82,22 +99,6 @@ export class DashboardComponent implements OnInit {
   readonly canNavigateNext = computed(() =>
     this.manualEventIndex() < this.unresolvedManualEvents().length - 1
   );
-
-  ngOnInit(): void {
-    this.generalConfigApi.get().subscribe({
-      next: (config) => this.showSupportSection.set(config.displaySupportBanner),
-    });
-    this.loadCfScoreData();
-  }
-
-  private loadCfScoreData(): void {
-    this.cfScoreApi.getStats().subscribe({
-      next: (stats) => this.cfScoreStats.set(stats),
-    });
-    this.cfScoreApi.getRecentUpgrades({ page: 1, pageSize: 5 }).subscribe({
-      next: (res) => this.cfScoreUpgrades.set(res.items),
-    });
-  }
 
   // Manual event navigation
   prevManualEvent(): void {
