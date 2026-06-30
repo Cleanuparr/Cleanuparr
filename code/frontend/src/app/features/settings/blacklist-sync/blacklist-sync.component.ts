@@ -1,4 +1,5 @@
-import { Component, ChangeDetectionStrategy, inject, signal, computed, OnInit } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, signal, computed, effect, untracked } from '@angular/core';
+import { rxResource } from '@angular/core/rxjs-interop';
 import { PageHeaderComponent } from '@layout/page-header/page-header.component';
 import { CardComponent, ButtonComponent, InputComponent, ToggleComponent, EmptyStateComponent, LoadingStateComponent } from '@ui';
 import { BlacklistSyncApi } from '@core/api/blacklist-sync.api';
@@ -15,14 +16,18 @@ import { DeferredLoader } from '@shared/utils/loading.util';
   styleUrl: './blacklist-sync.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class BlacklistSyncComponent implements OnInit, HasPendingChanges {
+export class BlacklistSyncComponent implements HasPendingChanges {
   private readonly api = inject(BlacklistSyncApi);
   private readonly toast = inject(ToastService);
 
   private readonly savedSnapshot = signal('');
 
+  private readonly configResource = rxResource({
+    stream: () => this.api.getConfig(),
+  });
+
   readonly loader = new DeferredLoader();
-  readonly loadError = signal(false);
+  readonly loadError = computed(() => !!this.configResource.error());
   readonly saving = signal(false);
   readonly saved = signal(false);
 
@@ -39,31 +44,37 @@ export class BlacklistSyncComponent implements OnInit, HasPendingChanges {
 
   readonly hasErrors = computed(() => !!this.blacklistPathError());
 
-  ngOnInit(): void {
-    this.loadConfig();
-  }
-
-  private loadConfig(): void {
-    this.loader.start();
-    this.api.getConfig().subscribe({
-      next: (config) => {
+  constructor() {
+    effect(() => {
+      const config = this.configResource.hasValue() ? this.configResource.value() : undefined;
+      if (!config) {
+        return;
+      }
+      untracked(() => {
         this.configId = config.id;
         this.enabled.set(config.enabled);
         this.blacklistPath.set(config.blacklistPath ?? '');
-        this.loader.stop();
         this.savedSnapshot.set(this.buildSnapshot());
-      },
-      error: () => {
+      });
+    });
+
+    effect(() => {
+      if (this.configResource.error()) {
         this.toast.error('Failed to load blacklist sync settings');
+      }
+    });
+
+    effect(() => {
+      if (this.configResource.isLoading()) {
+        this.loader.start();
+      } else {
         this.loader.stop();
-        this.loadError.set(true);
-      },
+      }
     });
   }
 
   retry(): void {
-    this.loadError.set(false);
-    this.loadConfig();
+    this.configResource.reload();
   }
 
   save(): void {
