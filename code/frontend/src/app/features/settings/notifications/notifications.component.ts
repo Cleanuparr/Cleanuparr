@@ -1,4 +1,5 @@
-import { Component, ChangeDetectionStrategy, inject, signal, computed, OnInit } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, signal, computed, effect } from '@angular/core';
+import { rxResource } from '@angular/core/rxjs-interop';
 import { PageHeaderComponent } from '@layout/page-header/page-header.component';
 import {
   CardComponent, ButtonComponent, InputComponent, ToggleComponent,
@@ -142,7 +143,7 @@ const PUSHOVER_SOUND_OPTIONS: SelectOption[] = [
   styleUrl: './notifications.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class NotificationsComponent implements OnInit, HasPendingChanges {
+export class NotificationsComponent implements HasPendingChanges {
   private readonly api = inject(NotificationApi);
   private readonly toast = inject(ToastService);
   private readonly confirmService = inject(ConfirmService);
@@ -150,10 +151,16 @@ export class NotificationsComponent implements OnInit, HasPendingChanges {
 
   readonly theme = this.themeService.theme;
 
+  private readonly providersResource = rxResource({
+    stream: () => this.api.getProviders(),
+  });
+
   readonly loader = new DeferredLoader();
-  readonly loadError = signal(false);
+  readonly loadError = computed(() => !!this.providersResource.error());
   readonly saving = signal(false);
-  readonly providers = signal<NotificationProviderDto[]>([]);
+  readonly providers = computed(() =>
+    this.providersResource.hasValue() ? (this.providersResource.value().providers ?? []) : [],
+  );
 
   // Selection modal
   readonly selectionModalVisible = signal(false);
@@ -341,28 +348,24 @@ export class NotificationsComponent implements OnInit, HasPendingChanges {
     { type: NotificationProviderType.Telegram, name: 'Telegram', iconUrl: 'icons/ext/telegram.svg', iconLightUrl: 'icons/ext/telegram-light.svg', description: 'core.telegram.org/bots' },
   ];
 
-  ngOnInit(): void {
-    this.loadProviders();
-  }
-
-  private loadProviders(): void {
-    this.loader.start();
-    this.api.getProviders().subscribe({
-      next: (config) => {
-        this.providers.set(config.providers ?? []);
-        this.loader.stop();
-      },
-      error: () => {
+  constructor() {
+    effect(() => {
+      if (this.providersResource.error()) {
         this.toast.error('Failed to load notification providers');
+      }
+    });
+
+    effect(() => {
+      if (this.providersResource.isLoading()) {
+        this.loader.start();
+      } else {
         this.loader.stop();
-        this.loadError.set(true);
-      },
+      }
     });
   }
 
   retry(): void {
-    this.loadError.set(false);
-    this.loadProviders();
+    this.providersResource.reload();
   }
 
   openAddModal(): void {
@@ -737,7 +740,7 @@ export class NotificationsComponent implements OnInit, HasPendingChanges {
     this.toast.success(editing ? 'Provider updated' : 'Provider added');
     this.modalVisible.set(false);
     this.saving.set(false);
-    this.loadProviders();
+    this.providersResource.reload();
   }
 
   private onSaveError(): void {
@@ -757,7 +760,7 @@ export class NotificationsComponent implements OnInit, HasPendingChanges {
     this.api.deleteProvider(provider.id).subscribe({
       next: () => {
         this.toast.success('Provider deleted');
-        this.loadProviders();
+        this.providersResource.reload();
       },
       error: () => this.toast.error('Failed to delete provider'),
     });
