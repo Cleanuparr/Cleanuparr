@@ -1,4 +1,5 @@
-import { Component, ChangeDetectionStrategy, inject, signal, computed, OnInit, viewChildren, effect, untracked } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, signal, computed, viewChildren, effect, untracked } from '@angular/core';
+import { rxResource } from '@angular/core/rxjs-interop';
 import { PageHeaderComponent } from '@layout/page-header/page-header.component';
 import {
   CardComponent, ButtonComponent, InputComponent, ToggleComponent,
@@ -49,7 +50,7 @@ const SCHEDULE_UNIT_OPTIONS: SelectOption[] = [
   styleUrl: './queue-cleaner.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class QueueCleanerComponent implements OnInit, HasPendingChanges {
+export class QueueCleanerComponent implements HasPendingChanges {
   private readonly api = inject(QueueCleanerApi);
   private readonly toast = inject(ToastService);
   private readonly confirm = inject(ConfirmService);
@@ -72,8 +73,20 @@ export class QueueCleanerComponent implements OnInit, HasPendingChanges {
     { label: 'MB', value: 'MB' },
     { label: 'GB', value: 'GB' },
   ];
+  private readonly configResource = rxResource({
+    stream: () => this.api.getConfig(),
+  });
+  private readonly stallRulesResource = rxResource({
+    stream: () => this.api.getStallRules(),
+    defaultValue: [] as StallRule[],
+  });
+  private readonly slowRulesResource = rxResource({
+    stream: () => this.api.getSlowRules(),
+    defaultValue: [] as SlowRule[],
+  });
+
   readonly loader = new DeferredLoader();
-  readonly loadError = signal(false);
+  readonly loadError = computed(() => !!this.configResource.error());
   readonly saving = signal(false);
   readonly saved = signal(false);
 
@@ -106,8 +119,8 @@ export class QueueCleanerComponent implements OnInit, HasPendingChanges {
   readonly metadataExpanded = signal(false);
 
   // Stall rules
-  readonly stallRules = signal<StallRule[]>([]);
-  readonly stallRulesLoading = signal(false);
+  readonly stallRules = computed(() => this.stallRulesResource.value());
+  readonly stallRulesLoading = computed(() => this.stallRulesResource.isLoading());
   readonly stallExpanded = signal(false);
   readonly stallModalVisible = signal(false);
   readonly editingStallRule = signal<StallRule | null>(null);
@@ -125,8 +138,8 @@ export class QueueCleanerComponent implements OnInit, HasPendingChanges {
   readonly stallChangeCategory = signal(false);
 
   // Slow rules
-  readonly slowRules = signal<SlowRule[]>([]);
-  readonly slowRulesLoading = signal(false);
+  readonly slowRules = computed(() => this.slowRulesResource.value());
+  readonly slowRulesLoading = computed(() => this.slowRulesResource.isLoading());
   readonly slowExpanded = signal(false);
   readonly slowModalVisible = signal(false);
   readonly editingSlowRule = signal<SlowRule | null>(null);
@@ -177,6 +190,61 @@ export class QueueCleanerComponent implements OnInit, HasPendingChanges {
     effect(() => {
       if (this.slowChangeCategory()) {
         untracked(() => this.slowDeletePrivate.set(false));
+      }
+    });
+
+    effect(() => {
+      const config = this.configResource.hasValue() ? this.configResource.value() : undefined;
+      if (!config) {
+        return;
+      }
+      untracked(() => {
+        this.config = config;
+        this.enabled.set(config.enabled);
+        this.useAdvancedScheduling.set(config.useAdvancedScheduling);
+        this.cronExpression.set(config.cronExpression);
+        const parsed = parseCronToJobSchedule(config.cronExpression);
+        if (parsed) {
+          this.scheduleEvery.set(parsed.every);
+          this.scheduleUnit.set(parsed.type);
+        }
+        this.ignoredDownloads.set(config.ignoredDownloads ?? []);
+        this.processNoContentId.set(config.processNoContentId);
+        this.failedMaxStrikes.set(config.failedImport.maxStrikes);
+        this.failedIgnorePrivate.set(config.failedImport.ignorePrivate);
+        this.failedDeletePrivate.set(config.failedImport.deletePrivate);
+        this.failedSkipNotFound.set(config.failedImport.skipIfNotFoundInClient);
+        this.failedPatterns.set(config.failedImport.patterns ?? []);
+        this.failedPatternMode.set(config.failedImport.patternMode ?? PatternMode.Exclude);
+        this.failedChangeCategory.set(config.failedImport.changeCategory ?? false);
+        this.metadataMaxStrikes.set(config.downloadingMetadataMaxStrikes);
+        this.savedSnapshot.set(this.buildSnapshot());
+      });
+    });
+
+    effect(() => {
+      if (this.configResource.error()) {
+        this.toast.error('Failed to load queue cleaner settings');
+      }
+    });
+
+    effect(() => {
+      if (this.configResource.isLoading()) {
+        this.loader.start();
+      } else {
+        this.loader.stop();
+      }
+    });
+
+    effect(() => {
+      if (this.stallRulesResource.error()) {
+        this.toast.error('Failed to load stall rules');
+      }
+    });
+
+    effect(() => {
+      if (this.slowRulesResource.error()) {
+        this.toast.error('Failed to load slow rules');
       }
     });
   }
@@ -294,79 +362,10 @@ export class QueueCleanerComponent implements OnInit, HasPendingChanges {
 
   private config: QueueCleanerConfig | null = null;
 
-  ngOnInit(): void {
-    this.loadConfig();
-    this.loadStallRules();
-    this.loadSlowRules();
-  }
-
-  private loadConfig(): void {
-    this.loader.start();
-    this.api.getConfig().subscribe({
-      next: (config) => {
-        this.config = config;
-        this.enabled.set(config.enabled);
-        this.useAdvancedScheduling.set(config.useAdvancedScheduling);
-        this.cronExpression.set(config.cronExpression);
-        const parsed = parseCronToJobSchedule(config.cronExpression);
-        if (parsed) {
-          this.scheduleEvery.set(parsed.every);
-          this.scheduleUnit.set(parsed.type);
-        }
-        this.ignoredDownloads.set(config.ignoredDownloads ?? []);
-        this.processNoContentId.set(config.processNoContentId);
-        this.failedMaxStrikes.set(config.failedImport.maxStrikes);
-        this.failedIgnorePrivate.set(config.failedImport.ignorePrivate);
-        this.failedDeletePrivate.set(config.failedImport.deletePrivate);
-        this.failedSkipNotFound.set(config.failedImport.skipIfNotFoundInClient);
-        this.failedPatterns.set(config.failedImport.patterns ?? []);
-        this.failedPatternMode.set(config.failedImport.patternMode ?? PatternMode.Exclude);
-        this.failedChangeCategory.set(config.failedImport.changeCategory ?? false);
-        this.metadataMaxStrikes.set(config.downloadingMetadataMaxStrikes);
-        this.loader.stop();
-        this.savedSnapshot.set(this.buildSnapshot());
-      },
-      error: () => {
-        this.toast.error('Failed to load queue cleaner settings');
-        this.loader.stop();
-        this.loadError.set(true);
-      },
-    });
-  }
-
-  private loadStallRules(): void {
-    this.stallRulesLoading.set(true);
-    this.api.getStallRules().subscribe({
-      next: (rules) => {
-        this.stallRules.set(rules);
-        this.stallRulesLoading.set(false);
-      },
-      error: () => {
-        this.toast.error('Failed to load stall rules');
-        this.stallRulesLoading.set(false);
-      },
-    });
-  }
-
-  private loadSlowRules(): void {
-    this.slowRulesLoading.set(true);
-    this.api.getSlowRules().subscribe({
-      next: (rules) => {
-        this.slowRules.set(rules);
-        this.slowRulesLoading.set(false);
-      },
-      error: () => {
-        this.toast.error('Failed to load slow rules');
-        this.slowRulesLoading.set(false);
-      },
-    });
-  }
-
   retry(): void {
-    this.loadError.set(false);
-    this.loadConfig();
-    this.loadStallRules();
-    this.loadSlowRules();
+    this.configResource.reload();
+    this.stallRulesResource.reload();
+    this.slowRulesResource.reload();
   }
 
   // Stall rule CRUD
@@ -424,7 +423,7 @@ export class QueueCleanerComponent implements OnInit, HasPendingChanges {
       next: () => {
         this.toast.success(editing ? 'Stall rule updated' : 'Stall rule created');
         this.stallModalVisible.set(false);
-        this.loadStallRules();
+        this.stallRulesResource.reload();
       },
       error: (e: Error) => this.toast.error(e.message),
     });
@@ -441,7 +440,7 @@ export class QueueCleanerComponent implements OnInit, HasPendingChanges {
     this.api.deleteStallRule(rule.id).subscribe({
       next: () => {
         this.toast.success('Stall rule deleted');
-        this.loadStallRules();
+        this.stallRulesResource.reload();
       },
       error: () => this.toast.error('Failed to delete stall rule'),
     });
@@ -508,7 +507,7 @@ export class QueueCleanerComponent implements OnInit, HasPendingChanges {
       next: () => {
         this.toast.success(editing ? 'Slow rule updated' : 'Slow rule created');
         this.slowModalVisible.set(false);
-        this.loadSlowRules();
+        this.slowRulesResource.reload();
       },
       error: (e: Error) => this.toast.error(e.message),
     });
@@ -525,7 +524,7 @@ export class QueueCleanerComponent implements OnInit, HasPendingChanges {
     this.api.deleteSlowRule(rule.id).subscribe({
       next: () => {
         this.toast.success('Slow rule deleted');
-        this.loadSlowRules();
+        this.slowRulesResource.reload();
       },
       error: () => this.toast.error('Failed to delete slow rule'),
     });
