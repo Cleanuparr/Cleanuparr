@@ -1,4 +1,5 @@
-import { Component, ChangeDetectionStrategy, inject, signal, computed, OnInit } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, signal, computed, effect, untracked } from '@angular/core';
+import { rxResource } from '@angular/core/rxjs-interop';
 import { DatePipe } from '@angular/common';
 import { PageHeaderComponent } from '@layout/page-header/page-header.component';
 import {
@@ -79,17 +80,21 @@ interface InstanceState {
   styleUrl: './seeker.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class SeekerComponent implements OnInit, HasPendingChanges {
+export class SeekerComponent implements HasPendingChanges {
   private readonly api = inject(SeekerApi);
   private readonly toast = inject(ToastService);
   private readonly confirm = inject(ConfirmService);
 
   private readonly savedSnapshot = signal('');
 
+  private readonly configResource = rxResource({
+    stream: () => this.api.getConfig(),
+  });
+
   readonly intervalOptions = INTERVAL_OPTIONS;
   readonly strategyOptions = STRATEGY_OPTIONS;
   readonly loader = new DeferredLoader();
-  readonly loadError = signal(false);
+  readonly loadError = computed(() => !!this.configResource.error());
   readonly saving = signal(false);
   readonly saved = signal(false);
 
@@ -113,14 +118,13 @@ export class SeekerComponent implements OnInit, HasPendingChanges {
 
   readonly hasErrors = computed(() => !!this.instanceError());
 
-  ngOnInit(): void {
-    this.loadConfig();
-  }
-
-  private loadConfig(): void {
-    this.loader.start();
-    this.api.getConfig().subscribe({
-      next: (config) => {
+  constructor() {
+    effect(() => {
+      const config = this.configResource.hasValue() ? this.configResource.value() : undefined;
+      if (!config) {
+        return;
+      }
+      untracked(() => {
         this.searchEnabled.set(config.searchEnabled);
         this.searchInterval.set(config.searchInterval);
         this.proactiveSearchEnabled.set(config.proactiveSearchEnabled);
@@ -141,20 +145,27 @@ export class SeekerComponent implements OnInit, HasPendingChanges {
           useCutoff: i.useCutoff,
           useCustomFormatScore: i.useCustomFormatScore,
         })));
-        this.loader.stop();
         this.savedSnapshot.set(this.buildSnapshot());
-      },
-      error: () => {
+      });
+    });
+
+    effect(() => {
+      if (this.configResource.error()) {
         this.toast.error('Failed to load seeker settings');
+      }
+    });
+
+    effect(() => {
+      if (this.configResource.isLoading()) {
+        this.loader.start();
+      } else {
         this.loader.stop();
-        this.loadError.set(true);
-      },
+      }
     });
   }
 
   retry(): void {
-    this.loadError.set(false);
-    this.loadConfig();
+    this.configResource.reload();
   }
 
   readonly confirmRoundRobin = async (newValue: boolean): Promise<boolean> => {
