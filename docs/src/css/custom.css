@@ -146,6 +146,14 @@ body {
   background: linear-gradient(90deg, transparent, rgba(126, 87, 194, 0.3), transparent);
 }
 
+/* Drop the blur at the mobile-sidebar breakpoint so the sidebar overlays the full viewport. */
+@media (max-width: 996px) {
+  .navbar {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+
 /* ===== Code Blocks ===== */
 [data-theme='light'] code {
   padding: 0.2em 0.4em;
