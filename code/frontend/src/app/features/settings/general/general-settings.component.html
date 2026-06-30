@@ -19,13 +19,13 @@
 <div class="settings-form">
   <app-card header="General">
     <div class="form-stack">
-      <app-toggle label="Dry Run Mode" [(checked)]="dryRun"
+      <app-toggle label="Dry Run Mode" [formField]="genForm.dryRun"
         hint="When enabled, actions will be logged without being executed (e.g. download removal)"
         helpKey="general:dryRun" />
-      <app-toggle label="Display Support Banner" [(checked)]="displaySupportBanner"
+      <app-toggle label="Display Support Banner" [formField]="genForm.displaySupportBanner"
         hint="Show the support section on the dashboard with links to GitHub and sponsors"
         helpKey="general:displaySupportBanner" />
-      <app-toggle label="Status Check" [(checked)]="statusCheckEnabled"
+      <app-toggle label="Status Check" [formField]="genForm.statusCheckEnabled"
         hint="When enabled, Cleanuparr will periodically check for new versions. Disable this if your environment has restricted outbound network access."
         helpKey="general:statusCheckEnabled" />
 
@@ -35,7 +35,7 @@
         label="Ignored Downloads"
         placeholder="Add download pattern..."
         hint="Downloads matching these patterns will be ignored (e.g. hash, tag, category, label, tracker)"
-        [(items)]="ignoredDownloads"
+        [formField]="genForm.ignoredDownloads"
         helpKey="general:ignoredDownloads"
       />
     </div>
@@ -43,18 +43,18 @@
 
   <app-card header="Authentication">
     <div class="form-stack">
-      <app-toggle label="Disable Authentication for Local Addresses" [(checked)]="authDisableLocalAuth"
+      <app-toggle label="Disable Authentication for Local Addresses" [formField]="genForm.authDisableLocalAuth"
         hint="When enabled, requests from local network addresses (localhost, 192.168.x.x, 10.x.x.x, 172.16-31.x.x) will bypass authentication"
         helpKey="general:auth.disableLocalAuth" />
-      @if (authDisableLocalAuth()) {
-        <app-toggle label="Trust Forwarded Headers" [(checked)]="authTrustForwardedHeaders"
+      @if (genForm.authDisableLocalAuth().value()) {
+        <app-toggle label="Trust Forwarded Headers" [formField]="genForm.authTrustForwardedHeaders"
           hint="When behind a reverse proxy, trust X-Forwarded-For and X-Real-IP headers to determine the client's real IP address. Only enable this if you are using a reverse proxy."
           helpKey="general:auth.trustForwardedHeaders" />
         <app-chip-input
           label="Additional Trusted Networks"
           placeholder="e.g. 192.168.1.0/24"
           hint="Add custom IP addresses or CIDR ranges that should bypass authentication"
-          [(items)]="authTrustedNetworks"
+          [formField]="genForm.authTrustedNetworks"
           helpKey="general:auth.trustedNetworks"
         />
       }
@@ -64,15 +64,15 @@
   <app-card header="HTTP Settings">
     <div class="form-stack">
       <div class="form-row">
-        <app-number-input label="Max Retries" [(value)]="httpMaxRetries" [min]="0" [max]="5"
+        <app-number-input label="Max Retries" [formField]="genForm.httpMaxRetries"
           hint="Number of retry attempts for failed HTTPS requests"
-          [error]="httpMaxRetriesError()"
+          [error]="genForm.httpMaxRetries().errors()[0]?.message"
           helpKey="general:httpMaxRetries" />
-        <app-number-input label="Timeout" [(value)]="httpTimeout" [min]="5" [max]="100" suffix="seconds"
+        <app-number-input label="Timeout" [formField]="genForm.httpTimeout" suffix="seconds"
           hint="Timeout duration for HTTP requests in seconds"
-          [error]="httpTimeoutError()"
+          [error]="genForm.httpTimeout().errors()[0]?.message"
           helpKey="general:httpTimeout" />
-        <app-select label="Certificate Validation" [options]="certOptions" [(value)]="httpCertificateValidation"
+        <app-select label="Certificate Validation" [options]="certOptions" [formField]="genForm.httpCertificateValidation"
           hint="Enable or disable certificate validation for HTTPS requests"
           helpKey="general:httpCertificateValidation" />
       </div>
@@ -81,9 +81,9 @@
 
   <app-card header="State Management">
     <div class="form-stack">
-      <app-number-input label="Strike Inactivity Window" [(value)]="strikeInactivityWindowHours" [min]="1" [max]="168" suffix="hours"
+      <app-number-input label="Strike Inactivity Window" [formField]="genForm.strikeInactivityWindowHours" suffix="hours"
         hint="Strikes for a download are cleared after it goes this many hours without receiving a new strike. As long as new strikes keep occurring, all strikes for that download are retained."
-        [error]="strikeInactivityWindowHoursError()"
+        [error]="genForm.strikeInactivityWindowHours().errors()[0]?.message"
         helpKey="general:strikeInactivityWindowHours" />
 
       <div class="form-divider"></div>
@@ -102,41 +102,41 @@
 
   <app-accordion header="Logging" subtitle="Log file settings" [(expanded)]="logExpanded">
     <div class="form-stack">
-      <app-select label="Log Level" [options]="logLevelOptions" [(value)]="logLevel"
+      <app-select label="Log Level" [options]="logLevelOptions" [formField]="genForm.logLevel"
         hint="Select the minimum log level to display"
         helpKey="general:log.level" />
 
       <div class="form-divider"></div>
 
       <div class="form-row">
-        <app-number-input label="Rolling Size" [(value)]="logRollingSizeMB" [min]="0" [max]="100" suffix="MB"
+        <app-number-input label="Rolling Size" [formField]="genForm.logRollingSizeMB" suffix="MB"
           hint="Maximum size of each log file in megabytes (0 = disabled)"
-          [error]="logRollingSizeError()"
+          [error]="genForm.logRollingSizeMB().errors()[0]?.message"
           helpKey="general:log.rollingSizeMB" />
-        <app-number-input label="Retained Files" [(value)]="logRetainedFileCount" [min]="0" [max]="50"
+        <app-number-input label="Retained Files" [formField]="genForm.logRetainedFileCount"
           hint="Number of old log files to retain (0 = unlimited)"
-          [error]="logRetainedFileCountError()"
+          [error]="genForm.logRetainedFileCount().errors()[0]?.message"
           helpKey="general:log.retainedFileCount" />
-        <app-number-input label="Time Limit" [(value)]="logTimeLimitHours" [min]="0" [max]="1440" suffix="hours"
+        <app-number-input label="Time Limit" [formField]="genForm.logTimeLimitHours" suffix="hours"
           hint="Maximum age of old log files in hours (0 = unlimited)"
-          [error]="logTimeLimitError()"
+          [error]="genForm.logTimeLimitHours().errors()[0]?.message"
           helpKey="general:log.timeLimitHours" />
       </div>
 
       <div class="form-divider"></div>
 
-      <app-toggle label="Archive Enabled" [(checked)]="logArchiveEnabled"
+      <app-toggle label="Archive Enabled" [formField]="genForm.logArchiveEnabled"
         hint="Enable archiving of old log files"
         helpKey="general:log.archiveEnabled" />
-      @if (logArchiveEnabled()) {
+      @if (genForm.logArchiveEnabled().value()) {
         <div class="form-row">
-          <app-number-input label="Archive Retained Count" [(value)]="logArchiveRetainedCount" [min]="0" [max]="100"
+          <app-number-input label="Archive Retained Count" [formField]="genForm.logArchiveRetainedCount"
             hint="Number of archive files to retain (0 = unlimited)"
-            [error]="logArchiveRetainedError()"
+            [error]="genForm.logArchiveRetainedCount().errors()[0]?.message"
             helpKey="general:log.archiveRetainedCount" />
-          <app-number-input label="Archive Time Limit" [(value)]="logArchiveTimeLimitHours" [min]="0" [max]="1440" suffix="hours"
+          <app-number-input label="Archive Time Limit" [formField]="genForm.logArchiveTimeLimitHours" suffix="hours"
             hint="Maximum age of archive files in hours (0 = unlimited)"
-            [error]="logArchiveTimeLimitError()"
+            [error]="genForm.logArchiveTimeLimitHours().errors()[0]?.message"
             helpKey="general:log.archiveTimeLimitHours" />
         </div>
       }

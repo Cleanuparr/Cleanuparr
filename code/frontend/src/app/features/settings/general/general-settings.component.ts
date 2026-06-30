@@ -1,5 +1,6 @@
 import { Component, ChangeDetectionStrategy, inject, signal, computed, effect, untracked, viewChildren } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
+import { form, required, min, max, validate, FormField } from '@angular/forms/signals';
 import { PageHeaderComponent } from '@layout/page-header/page-header.component';
 import {
   CardComponent, ButtonComponent, ToggleComponent,
@@ -30,13 +31,34 @@ const LOG_LEVEL_OPTIONS: SelectOption[] = [
   { label: 'Fatal', value: LogEventLevel.Fatal },
 ];
 
+interface GeneralSettingsFormModel {
+  displaySupportBanner: boolean;
+  dryRun: boolean;
+  httpMaxRetries: number | null;
+  httpTimeout: number | null;
+  httpCertificateValidation: CertificateValidationType;
+  statusCheckEnabled: boolean;
+  ignoredDownloads: string[];
+  strikeInactivityWindowHours: number | null;
+  authDisableLocalAuth: boolean;
+  authTrustForwardedHeaders: boolean;
+  authTrustedNetworks: string[];
+  logLevel: LogEventLevel;
+  logRollingSizeMB: number | null;
+  logRetainedFileCount: number | null;
+  logTimeLimitHours: number | null;
+  logArchiveEnabled: boolean;
+  logArchiveRetainedCount: number | null;
+  logArchiveTimeLimitHours: number | null;
+}
+
 @Component({
   selector: 'app-general-settings',
   standalone: true,
   imports: [
     PageHeaderComponent, CardComponent, ButtonComponent,
     ToggleComponent, NumberInputComponent, SelectComponent, ChipInputComponent,
-    AccordionComponent, EmptyStateComponent, LoadingStateComponent,
+    AccordionComponent, EmptyStateComponent, LoadingStateComponent, FormField,
   ],
   templateUrl: './general-settings.component.html',
   styleUrl: './general-settings.component.scss',
@@ -61,113 +83,77 @@ export class GeneralSettingsComponent implements HasPendingChanges {
   readonly saving = signal(false);
   readonly saved = signal(false);
 
-  // Form state
-  readonly displaySupportBanner = signal(true);
-  readonly dryRun = signal(false);
-  readonly httpMaxRetries = signal<number | null>(3);
-  readonly httpTimeout = signal<number | null>(30);
-  readonly httpCertificateValidation = signal<unknown>(CertificateValidationType.Enabled);
-  readonly statusCheckEnabled = signal(true);
-  readonly ignoredDownloads = signal<string[]>([]);
-  readonly strikeInactivityWindowHours = signal<number | null>(24);
+  // UI-only state (not part of the form model)
   readonly purgingStrikes = signal(false);
-
-  // Auth
-  readonly authDisableLocalAuth = signal(false);
-  readonly authTrustForwardedHeaders = signal(false);
-  readonly authTrustedNetworks = signal<string[]>([]);
-
-  // Logging
-  readonly logLevel = signal<unknown>(LogEventLevel.Information);
-  readonly logRollingSizeMB = signal<number | null>(10);
-  readonly logRetainedFileCount = signal<number | null>(5);
-  readonly logTimeLimitHours = signal<number | null>(168);
-  readonly logArchiveEnabled = signal(false);
-  readonly logArchiveRetainedCount = signal<number | null>(3);
-  readonly logArchiveTimeLimitHours = signal<number | null>(720);
   readonly logExpanded = signal(false);
 
-  readonly httpMaxRetriesError = computed(() => {
-    const v = this.httpMaxRetries();
-    if (v == null) return 'This field is required';
-    if (v < 0) return 'Minimum value is 0';
-    if (v > 5) return 'Maximum value is 5';
-    return undefined;
+  private readonly model = signal<GeneralSettingsFormModel>({
+    displaySupportBanner: true,
+    dryRun: false,
+    httpMaxRetries: 3,
+    httpTimeout: 30,
+    httpCertificateValidation: CertificateValidationType.Enabled,
+    statusCheckEnabled: true,
+    ignoredDownloads: [],
+    strikeInactivityWindowHours: 24,
+    authDisableLocalAuth: false,
+    authTrustForwardedHeaders: false,
+    authTrustedNetworks: [],
+    logLevel: LogEventLevel.Information,
+    logRollingSizeMB: 10,
+    logRetainedFileCount: 5,
+    logTimeLimitHours: 168,
+    logArchiveEnabled: false,
+    logArchiveRetainedCount: 3,
+    logArchiveTimeLimitHours: 720,
   });
 
-  readonly httpTimeoutError = computed(() => {
-    const v = this.httpTimeout();
-    if (v == null) return 'This field is required';
-    if (v < 1) return 'Minimum value is 1';
-    if (v > 100) return 'Maximum value is 100';
-    return undefined;
+  readonly genForm = form(this.model, (p) => {
+    required(p.httpMaxRetries, { message: 'This field is required' });
+    min(p.httpMaxRetries, 0, { message: 'Minimum value is 0' });
+    max(p.httpMaxRetries, 5, { message: 'Maximum value is 5' });
+
+    required(p.httpTimeout, { message: 'This field is required' });
+    min(p.httpTimeout, 5, { message: 'Minimum value is 5' });
+    max(p.httpTimeout, 100, { message: 'Maximum value is 100' });
+
+    required(p.strikeInactivityWindowHours, { message: 'This field is required' });
+    min(p.strikeInactivityWindowHours, 1, { message: 'Minimum value is 1' });
+    max(p.strikeInactivityWindowHours, 168, { message: 'Maximum value is 168 hours (7 days)' });
+
+    required(p.logRollingSizeMB, { message: 'This field is required' });
+    min(p.logRollingSizeMB, 0, { message: 'Minimum value is 0' });
+    max(p.logRollingSizeMB, 100, { message: 'Maximum value is 100 MB' });
+
+    required(p.logRetainedFileCount, { message: 'This field is required' });
+    min(p.logRetainedFileCount, 0, { message: 'Minimum value is 0' });
+    max(p.logRetainedFileCount, 50, { message: 'Maximum value is 50' });
+
+    required(p.logTimeLimitHours, { message: 'This field is required' });
+    min(p.logTimeLimitHours, 0, { message: 'Minimum value is 0' });
+    max(p.logTimeLimitHours, 1440, { message: 'Maximum value is 1440 hours (60 days)' });
+
+    required(p.logArchiveRetainedCount, { message: 'This field is required' });
+    min(p.logArchiveRetainedCount, 0, { message: 'Minimum value is 0' });
+    max(p.logArchiveRetainedCount, 100, { message: 'Maximum value is 100' });
+    validate(p.logArchiveRetainedCount, () => this.bothZeroError());
+
+    required(p.logArchiveTimeLimitHours, { message: 'This field is required' });
+    min(p.logArchiveTimeLimitHours, 0, { message: 'Minimum value is 0' });
+    max(p.logArchiveTimeLimitHours, 1440, { message: 'Maximum value is 1440 hours (60 days)' });
+    validate(p.logArchiveTimeLimitHours, () => this.bothZeroError());
   });
 
-  readonly logRollingSizeError = computed(() => {
-    const v = this.logRollingSizeMB();
-    if (v == null) return 'This field is required';
-    if (v < 0) return 'Minimum value is 0';
-    if (v > 100) return 'Maximum value is 100 MB';
-    return undefined;
-  });
+  private bothZeroError() {
+    const m = this.model();
+    return m.logArchiveEnabled && m.logArchiveRetainedCount === 0 && m.logArchiveTimeLimitHours === 0
+      ? { kind: 'bothZero', message: 'Retained count and time limit cannot both be 0 when archiving is enabled' }
+      : undefined;
+  }
 
-  readonly logRetainedFileCountError = computed(() => {
-    const v = this.logRetainedFileCount();
-    if (v == null) return 'This field is required';
-    if (v < 0) return 'Minimum value is 0';
-    if (v > 50) return 'Maximum value is 50';
-    return undefined;
-  });
-
-  readonly logTimeLimitError = computed(() => {
-    const v = this.logTimeLimitHours();
-    if (v == null) return 'This field is required';
-    if (v < 0) return 'Minimum value is 0';
-    if (v > 1440) return 'Maximum value is 1440 hours (60 days)';
-    return undefined;
-  });
-
-  readonly logArchiveRetentionBothZeroError = computed(() =>
-    this.logArchiveEnabled() && this.logArchiveRetainedCount() === 0 && this.logArchiveTimeLimitHours() === 0
-      ? 'Retained count and time limit cannot both be 0 when archiving is enabled'
-      : undefined
+  readonly hasErrors = computed(() =>
+    this.genForm().invalid() || this.chipInputs().some(c => c.hasUncommittedInput())
   );
-
-  readonly logArchiveRetainedError = computed(() => {
-    const v = this.logArchiveRetainedCount();
-    if (v == null) return 'This field is required';
-    if (v < 0) return 'Minimum value is 0';
-    if (v > 100) return 'Maximum value is 100';
-    return this.logArchiveRetentionBothZeroError();
-  });
-
-  readonly logArchiveTimeLimitError = computed(() => {
-    const v = this.logArchiveTimeLimitHours();
-    if (v == null) return 'This field is required';
-    if (v < 0) return 'Minimum value is 0';
-    if (v > 1440) return 'Maximum value is 1440 hours (60 days)';
-    return this.logArchiveRetentionBothZeroError();
-  });
-
-  readonly strikeInactivityWindowHoursError = computed(() => {
-    const v = this.strikeInactivityWindowHours();
-    if (v == null) return 'This field is required';
-    if (v < 1) return 'Minimum value is 1';
-    if (v > 168) return 'Maximum value is 168 hours (7 days)';
-    return undefined;
-  });
-
-  readonly hasErrors = computed(() => !!(
-    this.strikeInactivityWindowHoursError() ||
-    this.httpMaxRetriesError() ||
-    this.httpTimeoutError() ||
-    this.logRollingSizeError() ||
-    this.logRetainedFileCountError() ||
-    this.logTimeLimitError() ||
-    this.logArchiveRetainedError() ||
-    this.logArchiveTimeLimitError() ||
-    this.chipInputs().some(c => c.hasUncommittedInput())
-  ));
 
   constructor() {
     effect(() => {
@@ -176,28 +162,26 @@ export class GeneralSettingsComponent implements HasPendingChanges {
         return;
       }
       untracked(() => {
-        this.displaySupportBanner.set(config.displaySupportBanner);
-        this.dryRun.set(config.dryRun);
-        this.httpMaxRetries.set(config.httpMaxRetries);
-        this.httpTimeout.set(config.httpTimeout);
-        this.httpCertificateValidation.set(config.httpCertificateValidation);
-        this.statusCheckEnabled.set(config.statusCheckEnabled);
-        this.ignoredDownloads.set(config.ignoredDownloads ?? []);
-        this.strikeInactivityWindowHours.set(config.strikeInactivityWindowHours);
-        if (config.auth) {
-          this.authDisableLocalAuth.set(config.auth.disableAuthForLocalAddresses);
-          this.authTrustForwardedHeaders.set(config.auth.trustForwardedHeaders);
-          this.authTrustedNetworks.set(config.auth.trustedNetworks ?? []);
-        }
-        if (config.log) {
-          this.logLevel.set(config.log.level);
-          this.logRollingSizeMB.set(config.log.rollingSizeMB);
-          this.logRetainedFileCount.set(config.log.retainedFileCount);
-          this.logTimeLimitHours.set(config.log.timeLimitHours);
-          this.logArchiveEnabled.set(config.log.archiveEnabled);
-          this.logArchiveRetainedCount.set(config.log.archiveRetainedCount);
-          this.logArchiveTimeLimitHours.set(config.log.archiveTimeLimitHours);
-        }
+        this.model.set({
+          displaySupportBanner: config.displaySupportBanner,
+          dryRun: config.dryRun,
+          httpMaxRetries: config.httpMaxRetries,
+          httpTimeout: config.httpTimeout,
+          httpCertificateValidation: config.httpCertificateValidation,
+          statusCheckEnabled: config.statusCheckEnabled,
+          ignoredDownloads: config.ignoredDownloads ?? [],
+          strikeInactivityWindowHours: config.strikeInactivityWindowHours,
+          authDisableLocalAuth: config.auth?.disableAuthForLocalAddresses ?? false,
+          authTrustForwardedHeaders: config.auth?.trustForwardedHeaders ?? false,
+          authTrustedNetworks: config.auth?.trustedNetworks ?? [],
+          logLevel: config.log?.level ?? LogEventLevel.Information,
+          logRollingSizeMB: config.log?.rollingSizeMB ?? 10,
+          logRetainedFileCount: config.log?.retainedFileCount ?? 5,
+          logTimeLimitHours: config.log?.timeLimitHours ?? 168,
+          logArchiveEnabled: config.log?.archiveEnabled ?? false,
+          logArchiveRetainedCount: config.log?.archiveRetainedCount ?? 3,
+          logArchiveTimeLimitHours: config.log?.archiveTimeLimitHours ?? 720,
+        });
         this.savedSnapshot.set(this.buildSnapshot());
       });
     });
@@ -222,28 +206,29 @@ export class GeneralSettingsComponent implements HasPendingChanges {
   }
 
   save(): void {
+    const m = this.model();
     const config: GeneralConfig = {
-      displaySupportBanner: this.displaySupportBanner(),
-      dryRun: this.dryRun(),
-      httpMaxRetries: this.httpMaxRetries() ?? 3,
-      httpTimeout: this.httpTimeout() ?? 30,
-      httpCertificateValidation: this.httpCertificateValidation() as CertificateValidationType,
-      statusCheckEnabled: this.statusCheckEnabled(),
-      strikeInactivityWindowHours: this.strikeInactivityWindowHours() ?? 24,
-      ignoredDownloads: this.ignoredDownloads(),
+      displaySupportBanner: m.displaySupportBanner,
+      dryRun: m.dryRun,
+      httpMaxRetries: m.httpMaxRetries ?? 3,
+      httpTimeout: m.httpTimeout ?? 30,
+      httpCertificateValidation: m.httpCertificateValidation as CertificateValidationType,
+      statusCheckEnabled: m.statusCheckEnabled,
+      strikeInactivityWindowHours: m.strikeInactivityWindowHours ?? 24,
+      ignoredDownloads: m.ignoredDownloads,
       auth: {
-        disableAuthForLocalAddresses: this.authDisableLocalAuth(),
-        trustForwardedHeaders: this.authTrustForwardedHeaders(),
-        trustedNetworks: this.authTrustedNetworks(),
+        disableAuthForLocalAddresses: m.authDisableLocalAuth,
+        trustForwardedHeaders: m.authTrustForwardedHeaders,
+        trustedNetworks: m.authTrustedNetworks,
       },
       log: {
-        level: this.logLevel() as LogEventLevel,
-        rollingSizeMB: this.logRollingSizeMB() ?? 10,
-        retainedFileCount: this.logRetainedFileCount() ?? 5,
-        timeLimitHours: this.logTimeLimitHours() ?? 168,
-        archiveEnabled: this.logArchiveEnabled(),
-        archiveRetainedCount: this.logArchiveRetainedCount() ?? 3,
-        archiveTimeLimitHours: this.logArchiveTimeLimitHours() ?? 720,
+        level: m.logLevel as LogEventLevel,
+        rollingSizeMB: m.logRollingSizeMB ?? 10,
+        retainedFileCount: m.logRetainedFileCount ?? 5,
+        timeLimitHours: m.logTimeLimitHours ?? 168,
+        archiveEnabled: m.logArchiveEnabled,
+        archiveRetainedCount: m.logArchiveRetainedCount ?? 3,
+        archiveTimeLimitHours: m.logArchiveTimeLimitHours ?? 720,
       },
     };
 
@@ -264,26 +249,7 @@ export class GeneralSettingsComponent implements HasPendingChanges {
   }
 
   private buildSnapshot(): string {
-    return JSON.stringify({
-      displaySupportBanner: this.displaySupportBanner(),
-      dryRun: this.dryRun(),
-      httpMaxRetries: this.httpMaxRetries(),
-      httpTimeout: this.httpTimeout(),
-      httpCertificateValidation: this.httpCertificateValidation(),
-      statusCheckEnabled: this.statusCheckEnabled(),
-      strikeInactivityWindowHours: this.strikeInactivityWindowHours(),
-      ignoredDownloads: this.ignoredDownloads(),
-      authDisableLocalAuth: this.authDisableLocalAuth(),
-      authTrustForwardedHeaders: this.authTrustForwardedHeaders(),
-      authTrustedNetworks: this.authTrustedNetworks(),
-      logLevel: this.logLevel(),
-      logRollingSizeMB: this.logRollingSizeMB(),
-      logRetainedFileCount: this.logRetainedFileCount(),
-      logTimeLimitHours: this.logTimeLimitHours(),
-      logArchiveEnabled: this.logArchiveEnabled(),
-      logArchiveRetainedCount: this.logArchiveRetainedCount(),
-      logArchiveTimeLimitHours: this.logArchiveTimeLimitHours(),
-    });
+    return JSON.stringify(this.model());
   }
 
   readonly dirty = computed(() => {
