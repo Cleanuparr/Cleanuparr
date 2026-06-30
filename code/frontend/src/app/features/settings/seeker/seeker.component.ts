@@ -1,5 +1,6 @@
 import { Component, ChangeDetectionStrategy, inject, signal, computed, effect, untracked } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
+import { form, min, max, FormField } from '@angular/forms/signals';
 import { DatePipe } from '@angular/common';
 import { PageHeaderComponent } from '@layout/page-header/page-header.component';
 import {
@@ -53,6 +54,15 @@ const STRATEGY_DESCRIPTIONS: Record<SelectionStrategy, string> = {
   [SelectionStrategy.Random]: 'Every item has an equal chance of being picked. No prioritization.',
 };
 
+interface SeekerFormModel {
+  searchEnabled: boolean;
+  searchInterval: number;
+  proactiveSearchEnabled: boolean;
+  selectionStrategy: SelectionStrategy;
+  useRoundRobin: boolean;
+  postReleaseGraceHours: number | null;
+}
+
 interface InstanceState {
   arrInstanceId: string;
   instanceName: string;
@@ -74,7 +84,7 @@ interface InstanceState {
   imports: [
     PageHeaderComponent, CardComponent, ButtonComponent,
     ToggleComponent, SelectComponent, ChipInputComponent, NumberInputComponent,
-    EmptyStateComponent, LoadingStateComponent, BadgeComponent, DatePipe,
+    EmptyStateComponent, LoadingStateComponent, BadgeComponent, DatePipe, FormField,
   ],
   templateUrl: './seeker.component.html',
   styleUrl: './seeker.component.scss',
@@ -98,25 +108,34 @@ export class SeekerComponent implements HasPendingChanges {
   readonly saving = signal(false);
   readonly saved = signal(false);
 
-  readonly searchEnabled = signal(true);
-  readonly searchInterval = signal<unknown>(2);
-  readonly proactiveSearchEnabled = signal(false);
-  readonly selectionStrategy = signal<unknown>(SelectionStrategy.BalancedWeighted);
-  readonly useRoundRobin = signal(true);
-  readonly postReleaseGraceHours = signal<number>(6);
+  // Scalar settings live in a Signal Forms model; the per-instance array stays a
+  // signal (one-way bound rows with imperative updates) and is not a form field.
+  private readonly model = signal<SeekerFormModel>({
+    searchEnabled: true,
+    searchInterval: 2,
+    proactiveSearchEnabled: false,
+    selectionStrategy: SelectionStrategy.BalancedWeighted,
+    useRoundRobin: true,
+    postReleaseGraceHours: 6,
+  });
+
+  readonly seekerForm = form(this.model, (p) => {
+    min(p.postReleaseGraceHours, 0);
+    max(p.postReleaseGraceHours, 72);
+  });
 
   readonly instances = signal<InstanceState[]>([]);
 
-  readonly strategyDescription = computed(() => STRATEGY_DESCRIPTIONS[this.selectionStrategy() as SelectionStrategy] ?? '');
+  readonly strategyDescription = computed(() => STRATEGY_DESCRIPTIONS[this.model().selectionStrategy] ?? '');
 
   readonly instanceError = computed(() => {
-    if (this.proactiveSearchEnabled() && this.instances().length > 0 && !this.instances().some(i => i.enabled)) {
+    if (this.model().proactiveSearchEnabled && this.instances().length > 0 && !this.instances().some(i => i.enabled)) {
       return 'At least one instance must be enabled when proactive search is enabled';
     }
     return undefined;
   });
 
-  readonly hasErrors = computed(() => !!this.instanceError());
+  readonly hasErrors = computed(() => this.seekerForm().invalid() || !!this.instanceError());
 
   constructor() {
     effect(() => {
@@ -125,12 +144,14 @@ export class SeekerComponent implements HasPendingChanges {
         return;
       }
       untracked(() => {
-        this.searchEnabled.set(config.searchEnabled);
-        this.searchInterval.set(config.searchInterval);
-        this.proactiveSearchEnabled.set(config.proactiveSearchEnabled);
-        this.selectionStrategy.set(config.selectionStrategy);
-        this.useRoundRobin.set(config.useRoundRobin);
-        this.postReleaseGraceHours.set(config.postReleaseGraceHours);
+        this.model.set({
+          searchEnabled: config.searchEnabled,
+          searchInterval: config.searchInterval,
+          proactiveSearchEnabled: config.proactiveSearchEnabled,
+          selectionStrategy: config.selectionStrategy,
+          useRoundRobin: config.useRoundRobin,
+          postReleaseGraceHours: config.postReleaseGraceHours,
+        });
         this.instances.set(config.instances.map(i => ({
           arrInstanceId: i.arrInstanceId,
           instanceName: i.instanceName,
@@ -247,13 +268,14 @@ export class SeekerComponent implements HasPendingChanges {
   }
 
   save(): void {
+    const m = this.model();
     const config: UpdateSeekerConfig = {
-      searchEnabled: this.searchEnabled(),
-      searchInterval: (this.searchInterval() as number) ?? 2,
-      proactiveSearchEnabled: this.proactiveSearchEnabled(),
-      selectionStrategy: this.selectionStrategy() as SelectionStrategy,
-      useRoundRobin: this.useRoundRobin(),
-      postReleaseGraceHours: this.postReleaseGraceHours(),
+      searchEnabled: m.searchEnabled,
+      searchInterval: m.searchInterval ?? 2,
+      proactiveSearchEnabled: m.proactiveSearchEnabled,
+      selectionStrategy: m.selectionStrategy,
+      useRoundRobin: m.useRoundRobin,
+      postReleaseGraceHours: m.postReleaseGraceHours ?? 6,
       instances: this.instances().map(i => ({
         arrInstanceId: i.arrInstanceId,
         enabled: i.enabled,
@@ -286,12 +308,7 @@ export class SeekerComponent implements HasPendingChanges {
 
   private buildSnapshot(): string {
     return JSON.stringify({
-      searchEnabled: this.searchEnabled(),
-      searchInterval: this.searchInterval(),
-      proactiveSearchEnabled: this.proactiveSearchEnabled(),
-      selectionStrategy: this.selectionStrategy(),
-      useRoundRobin: this.useRoundRobin(),
-      postReleaseGraceHours: this.postReleaseGraceHours(),
+      ...this.model(),
       instances: [...this.instances()].sort((a, b) => a.arrInstanceId.localeCompare(b.arrInstanceId)),
     });
   }

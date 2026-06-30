@@ -19,11 +19,11 @@
 <div class="settings-form">
   <app-card header="Search Settings">
     <div class="form-stack">
-      <app-toggle label="Search Enabled" [(checked)]="searchEnabled"
+      <app-toggle label="Search Enabled" [formField]="seekerForm.searchEnabled"
         hint="Master toggle for all searching. When disabled, no replacement or proactive searches will be performed."
         helpKey="seeker:searchEnabled" />
-      @if (searchEnabled()) {
-        <app-select label="Search Interval" [options]="intervalOptions" [(value)]="searchInterval"
+      @if (seekerForm.searchEnabled().value()) {
+        <app-select label="Search Interval" [options]="intervalOptions" [formField]="seekerForm.searchInterval"
           hint="How often the seeker runs to process searches"
           helpKey="seeker:searchInterval" />
         <p class="interval-warning">Using a very low interval will trigger searches more frequently, increasing indexer load significantly. This can result in rate limit warnings or a ban from your indexer, so be careful!</p>
@@ -34,14 +34,14 @@
     </div>
   </app-card>
 
-  @if (searchEnabled()) {
+  @if (seekerForm.searchEnabled().value()) {
   <app-card header="Proactive Search">
     <div class="form-stack">
-      <app-toggle label="Proactive Search" [(checked)]="proactiveSearchEnabled"
+      <app-toggle label="Proactive Search" [formField]="seekerForm.proactiveSearchEnabled"
         hint="When enabled, the seeker will periodically search for missing items and quality upgrades across your library"
         helpKey="seeker:proactiveSearchEnabled" />
-      @if (proactiveSearchEnabled()) {
-        <app-select label="Selection Strategy" [options]="strategyOptions" [(value)]="selectionStrategy"
+      @if (seekerForm.proactiveSearchEnabled().value()) {
+        <app-select label="Selection Strategy" [options]="strategyOptions" [formField]="seekerForm.selectionStrategy"
           hint="How items are selected for searching"
           helpKey="seeker:selectionStrategy" />
         @if (strategyDescription()) {
@@ -52,7 +52,7 @@
         <app-toggle label="Enable Missing Search" [checked]="true" [disabled]="true"
           hint="Always searches for items with no file. This cannot be disabled."
           helpKey="seeker:missingSearchEnabled" />
-        <app-toggle label="Round Robin" [(checked)]="useRoundRobin"
+        <app-toggle label="Round Robin" [formField]="seekerForm.useRoundRobin"
           [beforeChange]="confirmRoundRobin"
           hint="Process one instance per run to spread indexer load"
           helpKey="seeker:useRoundRobin" />
@@ -60,17 +60,14 @@
           label="Post-Release Grace Period (hours)"
           placeholder="6"
           hint="Wait this many hours after content is released before searching. Gives indexers time to process new releases. (0 = disabled)"
-          [value]="postReleaseGraceHours()"
-          [min]="0"
-          [max]="72"
-          (valueChange)="postReleaseGraceHours.set($event ?? 6)"
+          [formField]="seekerForm.postReleaseGraceHours"
           helpKey="seeker:postReleaseGraceHours"
         />
       }
     </div>
   </app-card>
 
-  @if (proactiveSearchEnabled() && instances().length > 0) {
+  @if (seekerForm.proactiveSearchEnabled().value() && instances().length > 0) {
     <app-card header="Instances">
       @if (instanceError()) {
         <div class="instance-error">{{ instanceError() }}</div>
