@@ -4,6 +4,7 @@ import { NgIcon } from '@ng-icons/core';
 import { DocumentationService } from '@core/services/documentation.service';
 import { NewBadgeComponent } from '@ui/new-badge/new-badge.component';
 import { generateControlId } from '@ui/control-id';
+import { effectiveDisabled as computeEffectiveDisabled } from '@ui/effective-disabled';
 
 function sameItems(a: string[], b: string[]): boolean {
   return a.length === b.length && a.every((v, i) => v === b[i]);
@@ -38,7 +39,7 @@ export class ChipInputComponent {
   readonly inputValue = signal('');
   readonly touched = signal(false);
 
-  readonly effectiveDisabled = computed(() => this.disabled() || this.forceDisabled());
+  readonly effectiveDisabled = computeEffectiveDisabled(this.disabled, this.forceDisabled);
 
   constructor() {
     // `value` ([formField]) and `items` ([(items)] call sites) are both two-way models mirroring the same list. Guard each write on shallow-equality so the

@@ -4,6 +4,7 @@ import { NgIcon } from '@ng-icons/core';
 import { DocumentationService } from '@core/services/documentation.service';
 import { NewBadgeComponent } from '@ui/new-badge/new-badge.component';
 import { generateControlId } from '@ui/control-id';
+import { effectiveDisabled as computeEffectiveDisabled } from '@ui/effective-disabled';
 
 export interface SelectOption {
   label: string;
@@ -37,7 +38,7 @@ export class SelectComponent {
   placement = input<'bottom' | 'top'>('bottom');
   value = model<unknown>(null);
 
-  readonly effectiveDisabled = computed(() => this.disabled() || this.forceDisabled());
+  readonly effectiveDisabled = computeEffectiveDisabled(this.disabled, this.forceDisabled);
 
   readonly hasValue = computed(() => this.value() != null);
 

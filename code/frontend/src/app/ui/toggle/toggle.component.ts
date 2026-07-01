@@ -1,8 +1,9 @@
-import { Component, ChangeDetectionStrategy, input, model, computed, inject } from '@angular/core';
+import { Component, ChangeDetectionStrategy, input, model, inject } from '@angular/core';
 import { NgIcon } from '@ng-icons/core';
 import { DocumentationService } from '@core/services/documentation.service';
 import { NewBadgeComponent } from '@ui/new-badge/new-badge.component';
 import { generateControlId } from '@ui/control-id';
+import { effectiveDisabled as computeEffectiveDisabled } from '@ui/effective-disabled';
 
 @Component({
   selector: 'app-toggle',
@@ -26,7 +27,7 @@ export class ToggleComponent {
   beforeChange = input<(newValue: boolean) => Promise<boolean> | boolean>();
   checked = model(false);
 
-  readonly effectiveDisabled = computed(() => this.disabled() || this.forceDisabled());
+  readonly effectiveDisabled = computeEffectiveDisabled(this.disabled, this.forceDisabled);
 
   private pending = false;
 
