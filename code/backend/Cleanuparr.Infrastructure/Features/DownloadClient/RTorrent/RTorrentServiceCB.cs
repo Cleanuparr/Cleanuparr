@@ -36,6 +36,7 @@ public partial class RTorrentService
         if (ignoredDownloads.Count > 0 && torrentWrapper.IsIgnored(ignoredDownloads))
         {
             _logger.LogInformation("skip | download is ignored | {name}", download.Name);
+            result.MetadataFound = true;
             return result;
         }
 
@@ -44,6 +45,7 @@ public partial class RTorrentService
         if (malwareBlockerConfig.IgnorePrivate && download.IsPrivate == 1)
         {
             _logger.LogDebug("skip files check | download is private | {name}", download.Name);
+            result.MetadataFound = true;
             return result;
         }
 
@@ -63,6 +65,8 @@ public partial class RTorrentService
         {
             return result;
         }
+
+        result.MetadataFound = true;
 
         bool hasPriorityUpdates = false;
         long totalFiles = 0;

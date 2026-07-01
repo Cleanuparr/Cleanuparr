@@ -1,0 +1,109 @@
+using Cleanuparr.Api.Extensions;
+using Cleanuparr.Api.Features.Webhooks.Contracts;
+using Cleanuparr.Domain.Enums;
+using Cleanuparr.Infrastructure.Services.Interfaces;
+using Cleanuparr.Persistence;
+using Cleanuparr.Persistence.Models.Configuration.Arr;
+using Cleanuparr.Persistence.Models.Configuration.MalwareBlocker;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+
+namespace Cleanuparr.Api.Features.Webhooks.Controllers;
+
+/// <summary>
+/// Receives Sonarr/Radarr "On Grab" webhooks and triggers a targeted MalwareBlocker scan of the
+/// grabbed download. Authentication reuses the account API key (e.g. <c>?apikey=</c>), so the URL can
+/// be pasted directly into the *arr Webhook connection.
+/// </summary>
+[ApiController]
+[Route("api/[controller]")]
+[Authorize]
+public sealed class WebhooksController : ControllerBase
+{
+    private readonly ILogger<WebhooksController> _logger;
+    private readonly DataContext _dataContext;
+    private readonly IJobManagementService _jobManagementService;
+
+    public WebhooksController(
+        ILogger<WebhooksController> logger,
+        DataContext dataContext,
+        IJobManagementService jobManagementService)
+    {
+        _logger = logger;
+        _dataContext = dataContext;
+        _jobManagementService = jobManagementService;
+    }
+
+    [HttpPost("malware-blocker/{instanceId:guid}")]
+    public async Task<IActionResult> TriggerMalwareBlocker(Guid instanceId, [FromBody] ArrWebhookPayload payload)
+    {
+        Enum.TryParse(payload.EventType, ignoreCase: true, out ArrWebhookEventType eventType);
+
+        // The Test button sends an event we acknowledge without doing any work.
+        if (eventType is ArrWebhookEventType.Test)
+        {
+            _logger.LogInformation("Received MalwareBlocker test webhook for instance {instanceId}", instanceId);
+            return Ok();
+        }
+
+        if (eventType is not ArrWebhookEventType.Grab)
+        {
+            _logger.LogDebug("Ignoring MalwareBlocker webhook event '{eventType}' for instance {instanceId}",
+                payload.EventType, instanceId);
+            return Ok();
+        }
+
+        ArrConfig? arrConfig;
+        ArrInstance? instance;
+        ContentBlockerConfig config;
+
+        await DataContext.Lock.WaitAsync();
+        try
+        {
+            arrConfig = await _dataContext.ArrConfigs
+                .Include(x => x.Instances)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(c => c.Instances.Any(i => i.Id == instanceId));
+            instance = arrConfig?.Instances.FirstOrDefault(i => i.Id == instanceId);
+            config = await _dataContext.ContentBlockerConfigs.AsNoTracking().FirstAsync();
+        }
+        finally
+        {
+            DataContext.Lock.Release();
+        }
+
+        if (arrConfig is null || instance is null)
+        {
+            return this.ProblemResult(StatusCodes.Status404NotFound, $"No arr instance found with id {instanceId}");
+        }
+
+        if (arrConfig.Type is not (InstanceType.Sonarr or InstanceType.Radarr))
+        {
+            return this.ProblemResult(StatusCodes.Status422UnprocessableEntity, "MalwareBlocker webhooks are only supported for Sonarr and Radarr");
+        }
+
+        if (!config.Enabled || config.TriggerMode is JobTriggerMode.Schedule)
+        {
+            _logger.LogDebug("Ignoring MalwareBlocker webhook | webhook triggering is not enabled");
+            return Ok();
+        }
+
+        if (string.IsNullOrWhiteSpace(payload.DownloadId))
+        {
+            _logger.LogDebug("Ignoring MalwareBlocker webhook | no download id in payload (usenet or pre-grab)");
+            return Ok();
+        }
+
+        long contentId = arrConfig.Type switch
+        {
+            InstanceType.Sonarr => payload.Series?.Id ?? 0,
+            InstanceType.Radarr => payload.Movie?.Id ?? 0,
+            _ => 0,
+        };
+
+        await _jobManagementService.TriggerMalwareBlockerWebhook(instanceId, payload.DownloadId, contentId, arrConfig.Type);
+
+        return Ok();
+    }
+}

@@ -14,7 +14,7 @@ public sealed class ArrQueueIterator : IArrQueueIterator
         _logger = logger;
     }
     
-    public async Task Iterate(IArrClient arrClient, ArrInstance arrInstance, Func<IReadOnlyList<QueueRecord>, Task> action)
+    public async Task Iterate(IArrClient arrClient, ArrInstance arrInstance, Func<IReadOnlyList<QueueRecord>, Task> action, long? contentId = null)
     {
         const ushort maxPage = 100;
         ushort page = 1;
@@ -23,7 +23,7 @@ public sealed class ArrQueueIterator : IArrQueueIterator
 
         do
         {
-            QueueListResponse queueResponse = await arrClient.GetQueueItemsAsync(arrInstance, page);
+            QueueListResponse queueResponse = await arrClient.GetQueueItemsAsync(arrInstance, page, contentId);
             
             if (totalRecords is 0)
             {

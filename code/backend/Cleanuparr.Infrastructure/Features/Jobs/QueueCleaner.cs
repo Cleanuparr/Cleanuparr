@@ -81,9 +81,10 @@ public sealed class QueueCleaner : GenericHandler
 
     protected override async Task ProcessInstanceAsync(ArrInstance instance)
     {
-        List<string> ignoredDownloads = ContextProvider.Get<GeneralConfig>(nameof(GeneralConfig)).IgnoredDownloads;
         QueueCleanerConfig queueCleanerConfig = ContextProvider.Get<QueueCleanerConfig>();
-        ignoredDownloads.AddRange(queueCleanerConfig.IgnoredDownloads);
+        List<string> ignoredDownloads = ContextProvider.Get<GeneralConfig>(nameof(GeneralConfig)).IgnoredDownloads
+            .Concat(queueCleanerConfig.IgnoredDownloads)
+            .ToList();
         
         using var _ = LogContext.PushProperty(LogProperties.Category, instance.ArrConfig.Type.ToString());
         using var _2 = LogContext.PushProperty(LogProperties.InstanceName, instance.Name);

@@ -7,6 +7,7 @@ using Cleanuparr.Infrastructure.Features.Files;
 using Cleanuparr.Infrastructure.Features.Jobs;
 using Cleanuparr.Infrastructure.Features.MalwareBlocker;
 using Cleanuparr.Infrastructure.Interceptors;
+using Cleanuparr.Infrastructure.Services.Interfaces;
 using Cleanuparr.Persistence;
 using MassTransit;
 using Microsoft.Extensions.Caching.Memory;
@@ -30,6 +31,7 @@ public class JobHandlerFixture : IDisposable
     public IDownloadServiceFactory DownloadServiceFactory { get; private set; }
     public IEventPublisher EventPublisher { get; private set; }
     public IBlocklistProvider BlocklistProvider { get; private set; }
+    public IJobManagementService JobManagementService { get; private set; }
     public IHardLinkFileService HardLinkFileService { get; private set; }
     public IDryRunInterceptor DryRunInterceptor { get; private set; }
     public FakeTimeProvider TimeProvider { get; private set; }
@@ -52,6 +54,7 @@ public class JobHandlerFixture : IDisposable
         DownloadServiceFactory = Substitute.For<IDownloadServiceFactory>();
         EventPublisher = Substitute.For<IEventPublisher>();
         BlocklistProvider = Substitute.For<IBlocklistProvider>();
+        JobManagementService = Substitute.For<IJobManagementService>();
         HardLinkFileService = Substitute.For<IHardLinkFileService>();
         DryRunInterceptor = Substitute.For<IDryRunInterceptor>();
         TimeProvider = new FakeTimeProvider();
@@ -151,6 +154,7 @@ public class JobHandlerFixture : IDisposable
         DownloadServiceFactory = Substitute.For<IDownloadServiceFactory>();
         EventPublisher = Substitute.For<IEventPublisher>();
         BlocklistProvider = Substitute.For<IBlocklistProvider>();
+        JobManagementService = Substitute.For<IJobManagementService>();
         HardLinkFileService = Substitute.For<IHardLinkFileService>();
         DryRunInterceptor = Substitute.For<IDryRunInterceptor>();
         Cache.Clear();

@@ -33,11 +33,11 @@ public abstract class ArrClient : IArrClient
         _dryRunInterceptor = dryRunInterceptor;
     }
 
-    public virtual async Task<QueueListResponse> GetQueueItemsAsync(ArrInstance arrInstance, int page)
+    public virtual async Task<QueueListResponse> GetQueueItemsAsync(ArrInstance arrInstance, int page, long? contentId = null)
     {
         UriBuilder uriBuilder = new(arrInstance.Url);
         uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/{GetQueueUrlPath().TrimStart('/')}";
-        uriBuilder.Query = GetQueueUrlQuery(page);
+        uriBuilder.Query = GetQueueUrlQuery(page, contentId);
 
         using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
         SetApiKey(request, arrInstance.ApiKey);
@@ -271,7 +271,7 @@ public abstract class ArrClient : IArrClient
     
     protected abstract string GetQueueUrlPath();
 
-    protected abstract string GetQueueUrlQuery(int page);
+    protected abstract string GetQueueUrlQuery(int page, long? contentId = null);
 
     protected abstract string GetQueueDeleteUrlPath(long recordId);
     

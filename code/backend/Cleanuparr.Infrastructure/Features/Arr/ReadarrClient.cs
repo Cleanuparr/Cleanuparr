@@ -32,7 +32,7 @@ public class ReadarrClient : ArrClient, IReadarrClient
         return "/api/v1/queue";
     }
 
-    protected override string GetQueueUrlQuery(int page)
+    protected override string GetQueueUrlQuery(int page, long? contentId = null)
     {
         return $"page={page}&pageSize=200&includeUnknownAuthorItems=true&includeAuthor=true&includeBook=true";
     }

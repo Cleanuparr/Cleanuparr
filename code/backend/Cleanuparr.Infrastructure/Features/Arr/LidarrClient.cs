@@ -32,7 +32,7 @@ public class LidarrClient : ArrClient, ILidarrClient
         return "/api/v1/queue";
     }
 
-    protected override string GetQueueUrlQuery(int page)
+    protected override string GetQueueUrlQuery(int page, long? contentId = null)
     {
         return $"page={page}&pageSize=200&includeUnknownArtistItems=true&includeArtist=true&includeAlbum=true";
     }

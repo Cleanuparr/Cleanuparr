@@ -39,6 +39,13 @@ export class ArrSettingsComponent implements HasPendingChanges {
   private readonly confirmService = inject(ConfirmService);
 
   readonly arrType = input.required<string>({ alias: 'type' });
+
+  // MalwareBlocker "On Grab" webhook triggering is only supported for Sonarr and Radarr; the instance
+  // id shown on the card is used to build the per-instance webhook URL.
+  readonly webhookSupported = computed(() => {
+    const t = this.arrType();
+    return t === 'sonarr' || t === 'radarr';
+  });
   readonly displayName = computed(() => {
     const t = this.arrType();
     return t.charAt(0).toUpperCase() + t.slice(1);
@@ -209,6 +216,12 @@ export class ArrSettingsComponent implements HasPendingChanges {
       },
       error: () => this.toast.error('Failed to delete instance'),
     });
+  }
+
+  copyInstanceId(instance: ArrInstance): void {
+    if (!instance.id) return;
+    navigator.clipboard.writeText(instance.id);
+    this.toast.success('Instance ID copied to clipboard');
   }
 
   hasPendingChanges(): boolean {

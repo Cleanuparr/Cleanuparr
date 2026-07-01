@@ -48,6 +48,8 @@ public sealed class GenericJob<T> : IJob
             ContextProvider.SetJobRunId(jobRunId);
             using var __ = LogContext.PushProperty(LogProperties.JobRunId, jobRunId.ToString());
 
+            SetWebhookScanTarget(context);
+
             await BroadcastJobStatus(hubContext, jobManagementService, jobType, false);
 
             var handler = scope.ServiceProvider.GetRequiredService<T>();
@@ -73,6 +75,34 @@ public sealed class GenericJob<T> : IJob
                 await eventsContext.SaveChangesAsync();
             }
         }
+    }
+
+    /// <summary>
+    /// When the firing trigger carries a webhook scan target in its JobDataMap, surfaces it to the
+    /// handler via the ContextProvider so the run scans only that download. No-op for normal triggers.
+    /// </summary>
+    private static void SetWebhookScanTarget(IJobExecutionContext context)
+    {
+        JobDataMap dataMap = context.MergedJobDataMap;
+
+        if (!dataMap.ContainsKey(WebhookScanTarget.InstanceIdKey))
+        {
+            return;
+        }
+
+        if (!Guid.TryParse(dataMap.GetString(WebhookScanTarget.InstanceIdKey), out Guid instanceId) ||
+            !Enum.TryParse(dataMap.GetString(WebhookScanTarget.InstanceTypeKey), out InstanceType instanceType))
+        {
+            return;
+        }
+
+        string downloadId = dataMap.GetString(WebhookScanTarget.DownloadIdKey) ?? string.Empty;
+        long contentId = dataMap.GetLong(WebhookScanTarget.ContentIdKey);
+        int retryIndex = dataMap.ContainsKey(WebhookScanTarget.RetryIndexKey)
+            ? dataMap.GetInt(WebhookScanTarget.RetryIndexKey)
+            : 0;
+
+        ContextProvider.Set(new WebhookScanTarget(instanceId, downloadId, contentId, instanceType, retryIndex));
     }
 
     private async Task BroadcastJobStatus(IHubContext<AppHub> hubContext, IJobManagementService jobManagementService, JobType jobType, bool isFinished)

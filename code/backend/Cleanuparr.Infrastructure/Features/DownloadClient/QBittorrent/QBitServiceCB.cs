@@ -30,6 +30,8 @@ public partial class QBitService
             (download.ShouldIgnore(ignoredDownloads) || trackers.Any(x => x.ShouldIgnore(ignoredDownloads)) is true))
         {
             _logger.LogInformation("skip | download is ignored | {name}", download.Name);
+            result.Found = true;
+            result.MetadataFound = true;
             return result;
         }
         
@@ -55,6 +57,7 @@ public partial class QBitService
         {
             // ignore private trackers
             _logger.LogDebug("skip files check | download is private | {name}", download.Name);
+            result.MetadataFound = true;
             return result;
         }
         
@@ -65,6 +68,8 @@ public partial class QBitService
             _logger.LogDebug("skip files check | no files found | {name}", download.Name);
             return result;
         }
+
+        result.MetadataFound = true;
 
         List<int> unwantedFiles = [];
         long totalFiles = 0;

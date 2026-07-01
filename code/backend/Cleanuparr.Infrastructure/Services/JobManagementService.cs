@@ -1,8 +1,10 @@
 using System.Collections.Concurrent;
 using Cleanuparr.Domain.Enums;
+using Cleanuparr.Infrastructure.Features.Jobs;
 using Cleanuparr.Infrastructure.Models;
 using Cleanuparr.Infrastructure.Services.Interfaces;
 using Cleanuparr.Infrastructure.Utilities;
+using Cleanuparr.Shared.Helpers;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using Quartz;
@@ -168,34 +170,6 @@ public class JobManagementService : IJobManagementService
             _logger.LogWarning(ex, "Failed to trigger job {jobName} immediately", jobKey.Name);
         }
     }
-
-    /// <summary>
-    /// Gets the main scheduled trigger for a job (excludes one-time triggers)
-    /// </summary>
-    public async Task<ITrigger?> GetMainTrigger(JobType jobType)
-    {
-        string jobName = jobType.ToString();
-        try
-        {
-            var scheduler = await _schedulerFactory.GetScheduler();
-            var jobKey = new JobKey(jobName);
-            
-            if (!await scheduler.CheckExists(jobKey))
-            {
-                return null;
-            }
-
-            // Look for the main trigger (follows our naming convention)
-            var mainTriggerKey = new TriggerKey($"{jobName}-trigger");
-            return await scheduler.GetTrigger(mainTriggerKey);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error getting main trigger for job {jobName}", jobName);
-            return null;
-        }
-    }
-
     
     public async Task<bool> StopJob(JobType jobType)
     {
@@ -364,6 +338,71 @@ public class JobManagementService : IJobManagementService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error triggering job {jobName}", jobName);
+            return false;
+        }
+    }
+
+    public Task<bool> TriggerMalwareBlockerWebhook(Guid instanceId, string downloadId, long contentId, InstanceType type)
+    {
+        return ScheduleWebhookAttempt(instanceId, downloadId, contentId, type, attemptIndex: 0);
+    }
+
+    public Task<bool> ScheduleMalwareBlockerWebhookRetry(WebhookScanTarget target)
+    {
+        int nextIndex = target.RetryIndex + 1;
+
+        if (nextIndex >= Constants.MalwareBlockerWebhookRetryDelays.Count)
+        {
+            _logger.LogDebug(
+                "{name} webhook scan gave up for download {downloadId} on {type} instance {instanceId} after {attemptCount} attempts", 
+                nameof(JobType.MalwareBlocker), target.DownloadId, target.Type, target.InstanceId, Constants.MalwareBlockerWebhookRetryDelays.Count);
+            return Task.FromResult(false);
+        }
+
+        return ScheduleWebhookAttempt(target.InstanceId, target.DownloadId, target.ContentId, target.Type, nextIndex);
+    }
+
+    private async Task<bool> ScheduleWebhookAttempt(Guid instanceId, string downloadId, long contentId, InstanceType type, int attemptIndex)
+    {
+        try
+        {
+            var scheduler = await _schedulerFactory.GetScheduler();
+            var jobKey = new JobKey(Constants.MalwareBlockerWebhookJobKey);
+
+            if (!await scheduler.CheckExists(jobKey))
+            {
+                _logger.LogError("Job {name} does not exist", Constants.MalwareBlockerWebhookJobKey);
+                return false;
+            }
+
+            TimeSpan delay = Constants.MalwareBlockerWebhookRetryDelays[attemptIndex];
+
+            var jobData = new JobDataMap
+            {
+                { WebhookScanTarget.InstanceIdKey, instanceId.ToString() },
+                { WebhookScanTarget.DownloadIdKey, downloadId },
+                { WebhookScanTarget.ContentIdKey, contentId },
+                { WebhookScanTarget.InstanceTypeKey, type.ToString() },
+                { WebhookScanTarget.RetryIndexKey, attemptIndex },
+            };
+
+            var trigger = TriggerBuilder.Create()
+                .WithIdentity($"{Constants.MalwareBlockerWebhookJobKey}-{instanceId}-{downloadId}-{attemptIndex}-{DateTimeOffset.UtcNow.Ticks}")
+                .ForJob(jobKey)
+                .UsingJobData(jobData)
+                .StartAt(DateTimeOffset.UtcNow.Add(delay))
+                .Build();
+
+            await scheduler.ScheduleJob(trigger);
+
+            _logger.LogInformation(
+                "MalwareBlocker webhook scan attempt {attempt} scheduled (in {delay}s) for download {downloadId} on {type} instance {instanceId}",
+                attemptIndex, (int)delay.TotalSeconds, downloadId, type, instanceId);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error scheduling MalwareBlocker webhook scan for instance {instanceId}", instanceId);
             return false;
         }
     }

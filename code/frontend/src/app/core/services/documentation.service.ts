@@ -104,6 +104,7 @@ export class DocumentationService {
     },
     'malware-blocker': {
       'enabled': 'enable-malware-blocker',
+      'triggerMode': 'trigger-mode',
       'ignoredDownloads': 'ignored-downloads',
       'useAdvancedScheduling': 'scheduling-mode',
       'cronExpression': 'cron-expression',

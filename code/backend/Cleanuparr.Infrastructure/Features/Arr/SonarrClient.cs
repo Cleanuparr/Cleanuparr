@@ -34,9 +34,16 @@ public class SonarrClient : ArrClient, ISonarrClient
         return "/api/v3/queue";
     }
 
-    protected override string GetQueueUrlQuery(int page)
+    protected override string GetQueueUrlQuery(int page, long? contentId = null)
     {
-        return $"page={page}&pageSize=200&includeUnknownSeriesItems=true&includeSeries=true&includeEpisode=true";
+        string query = $"page={page}&pageSize=200&includeUnknownSeriesItems=true&includeSeries=true&includeEpisode=true";
+
+        if (contentId is not null)
+        {
+            query += $"&seriesIds={contentId}";
+        }
+
+        return query;
     }
 
     protected override string GetQueueDeleteUrlPath(long recordId)

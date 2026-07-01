@@ -26,18 +26,27 @@
       </div>
 
       @for (instance of instances(); track instance.id) {
-        <div class="instance-row">
-          <div class="instance-row__info">
-            <span class="instance-row__name">{{ instance.name }}</span>
-            <app-badge [severity]="instance.enabled ? 'success' : 'default'" size="sm">
-              {{ instance.enabled ? 'Enabled' : 'Disabled' }}
-            </app-badge>
-            <span class="instance-row__url">{{ instance.url }}</span>
+        <div class="instance-item">
+          <div class="instance-row">
+            <div class="instance-row__info">
+              <span class="instance-row__name">{{ instance.name }}</span>
+              <app-badge [severity]="instance.enabled ? 'success' : 'default'" size="sm">
+                {{ instance.enabled ? 'Enabled' : 'Disabled' }}
+              </app-badge>
+              <span class="instance-row__url">{{ instance.url }}</span>
+            </div>
+            <div class="instance-row__actions">
+              <app-button variant="ghost" size="sm" (clicked)="openEditModal(instance)">Edit</app-button>
+              <app-button variant="destructive" size="sm" (clicked)="deleteInstance(instance)">Delete</app-button>
+            </div>
           </div>
-          <div class="instance-row__actions">
-            <app-button variant="ghost" size="sm" (clicked)="openEditModal(instance)">Edit</app-button>
-            <app-button variant="destructive" size="sm" (clicked)="deleteInstance(instance)">Delete</app-button>
-          </div>
+          @if (webhookSupported() && instance.id) {
+            <div class="instance-id">
+              <span class="instance-id__label">Instance ID</span>
+              <code class="instance-id__value">{{ instance.id }}</code>
+              <app-button variant="ghost" size="sm" (clicked)="copyInstanceId(instance)">Copy</app-button>
+            </div>
+          }
         </div>
       } @empty {
         <app-empty-state

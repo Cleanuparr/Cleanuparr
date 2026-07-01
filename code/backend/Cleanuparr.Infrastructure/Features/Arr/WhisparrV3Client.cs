@@ -33,7 +33,7 @@ public class WhisparrV3Client : ArrClient, IWhisparrV3Client
         return "/api/v3/queue";
     }
 
-    protected override string GetQueueUrlQuery(int page)
+    protected override string GetQueueUrlQuery(int page, long? contentId = null)
     {
         return $"page={page}&pageSize=200&includeUnknownMovieItems=true&includeMovie=true";
     }
