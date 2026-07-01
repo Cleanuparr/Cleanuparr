@@ -330,56 +330,56 @@
 <!-- Seeding Rule Modal -->
 <app-modal [title]="editingRule() ? 'Edit Seeding Rule' : 'Add Seeding Rule'" [(visible)]="ruleModalVisible" size="lg">
   <div class="form-grid">
-    <app-input label="Rule Name" placeholder="My TV rule" [(value)]="ruleName"
-      [error]="ruleNameError()"
+    <app-input label="Rule Name" placeholder="My TV rule" [formField]="ruleForm.name"
+      [error]="ruleForm.name().errors()[0]?.message"
       hint="A descriptive label for this rule"
       helpKey="download-cleaner:name" />
-    <app-select label="Privacy Type" [options]="privacyTypeOptions" [(value)]="rulePrivacyType"
+    <app-select label="Privacy Type" [options]="privacyTypeOptions" [formField]="ruleForm.privacyType"
       hint="Which torrent types this rule applies to"
       helpKey="download-cleaner:privacyType" />
     <app-chip-input class="full-width" label="Categories" placeholder="Add category..."
-      [(items)]="ruleCategories"
-      [error]="ruleCategoriesError()"
+      [formField]="ruleForm.categories"
+      [error]="ruleForm.categories().errors()[0]?.message"
       hint="One or more download client categories this rule applies to (e.g. tv-sonarr, radarr)"
       helpKey="download-cleaner:categories" #ruleChipInput />
     <app-chip-input class="full-width" label="Tracker Patterns" placeholder="Add tracker domain..."
-      [(items)]="ruleTrackerPatterns"
+      [formField]="ruleForm.trackerPatterns"
       hint="Tracker domain suffixes to match (e.g. tracker.org). Empty means any tracker."
       helpKey="download-cleaner:trackerPatterns" #ruleChipInput />
     @if (isTagFilterableClient()) {
       <app-chip-input class="full-width" [label]="isSelectedClientTransmission() ? 'Labels (Any)' : 'Tags (Any)'" [placeholder]="isSelectedClientTransmission() ? 'Add label...' : 'Add tag...'"
-        [(items)]="ruleTagsAny"
+        [formField]="ruleForm.tagsAny"
         [hint]="isSelectedClientTransmission() ? 'Torrent must have at least one of these labels. Empty means any labels.' : 'Torrent must have at least one of these tags. Empty means any tags.'"
         helpKey="download-cleaner:tagsAny" #ruleChipInput />
       <app-chip-input class="full-width" [label]="isSelectedClientTransmission() ? 'Labels (All)' : 'Tags (All)'" [placeholder]="isSelectedClientTransmission() ? 'Add label...' : 'Add tag...'"
-        [(items)]="ruleTagsAll"
+        [formField]="ruleForm.tagsAll"
         [hint]="isSelectedClientTransmission() ? 'Torrent must have all of these labels. Empty means any labels.' : 'Torrent must have all of these tags. Empty means any tags.'"
         helpKey="download-cleaner:tagsAll" #ruleChipInput />
     }
-    <app-number-input label="Max Ratio" [(value)]="ruleMaxRatio" [step]="0.1" [min]="-1"
+    <app-number-input label="Max Ratio" [formField]="ruleForm.maxRatio" [step]="0.1"
       hint="Maximum ratio to seed before removing (-1 means disabled)"
       helpKey="download-cleaner:maxRatio" />
-    <app-number-input label="Min Seed Time" [(value)]="ruleMinSeedTime" suffix="hours" [min]="0"
+    <app-number-input label="Min Seed Time" [formField]="ruleForm.minSeedTime" suffix="hours"
       hint="Minimum time to seed before removing a download that has reached the max ratio (0 means disabled)"
       helpKey="download-cleaner:minSeedTime" />
-    <app-number-input label="Max Seed Time" [(value)]="ruleMaxSeedTime" suffix="hours" [min]="-1"
+    <app-number-input label="Max Seed Time" [formField]="ruleForm.maxSeedTime" suffix="hours"
       hint="Maximum time to seed before removing (-1 means disabled)"
       helpKey="download-cleaner:maxSeedTime" />
     @if (isSeedersFilterableClient()) {
-      <app-number-input label="Min Seeders" [(value)]="ruleMinSeeders" [min]="0" [step]="1" featureId="min-seeders"
+      <app-number-input label="Min Seeders" [formField]="ruleForm.minSeeders" [step]="1" featureId="min-seeders"
         hint="Minimum number of seeders required before removing (0 means disabled; unavailable counts keep the download)"
         helpKey="download-cleaner:minSeeders" />
     }
     @if (ruleDisabledError()) {
       <div class="category-error">{{ ruleDisabledError() }}</div>
     }
-    <app-toggle class="full-width" label="Delete Source Files" [(checked)]="ruleDeleteSourceFiles"
+    <app-toggle class="full-width" label="Delete Source Files" [formField]="ruleForm.deleteSourceFiles"
       hint="When enabled, the source files will be deleted when the download is removed"
       helpKey="download-cleaner:deleteSourceFiles" />
   </div>
   <div modal-footer>
     <app-button variant="secondary" (clicked)="ruleModalVisible.set(false)">Cancel</app-button>
-    <app-button variant="primary" [disabled]="!!ruleNameError() || !!ruleCategoriesError() || !!ruleDisabledError() || ruleHasUncommittedInputs()" (clicked)="saveRule()">
+    <app-button variant="primary" [disabled]="ruleForm().invalid() || ruleHasUncommittedInputs()" (clicked)="saveRule()">
       {{ editingRule() ? 'Update' : 'Create' }}
     </app-button>
   </div>

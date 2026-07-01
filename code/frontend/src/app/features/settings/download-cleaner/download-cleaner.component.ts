@@ -1,6 +1,6 @@
 import { Component, ChangeDetectionStrategy, inject, signal, computed, viewChildren, effect, untracked } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
-import { form, validate, FormField } from '@angular/forms/signals';
+import { form, required, min, minLength, validate, FormField } from '@angular/forms/signals';
 import { NgIconComponent } from '@ng-icons/core';
 import { CdkDragDrop, CdkDropList, CdkDrag, CdkDragHandle, moveItemInArray } from '@angular/cdk/drag-drop';
 import { PageHeaderComponent } from '@layout/page-header/page-header.component';
@@ -45,6 +45,20 @@ interface DownloadCleanerGlobalFormModel {
   scheduleEvery: number;
   scheduleUnit: ScheduleUnit;
   ignoredDownloads: string[];
+}
+
+interface SeedingRuleFormModel {
+  name: string;
+  categories: string[];
+  trackerPatterns: string[];
+  tagsAny: string[];
+  tagsAll: string[];
+  privacyType: TorrentPrivacyType;
+  maxRatio: number | null;
+  minSeedTime: number | null;
+  maxSeedTime: number | null;
+  minSeeders: number | null;
+  deleteSourceFiles: boolean;
 }
 
 @Component({
@@ -180,17 +194,30 @@ export class DownloadCleanerComponent implements HasPendingChanges {
   // Seeding rule modal
   readonly ruleModalVisible = signal(false);
   readonly editingRule = signal<SeedingRule | null>(null);
-  readonly ruleName = signal('');
-  readonly ruleCategories = signal<string[]>([]);
-  readonly ruleTrackerPatterns = signal<string[]>([]);
-  readonly ruleTagsAny = signal<string[]>([]);
-  readonly ruleTagsAll = signal<string[]>([]);
-  readonly rulePrivacyType = signal<unknown>(TorrentPrivacyType.Public);
-  readonly ruleMaxRatio = signal<number | null>(-1);
-  readonly ruleMinSeedTime = signal<number | null>(0);
-  readonly ruleMaxSeedTime = signal<number | null>(-1);
-  readonly ruleMinSeeders = signal<number | null>(0);
-  readonly ruleDeleteSourceFiles = signal(true);
+  private readonly ruleDefaults: SeedingRuleFormModel = {
+    name: '', categories: [], trackerPatterns: [], tagsAny: [], tagsAll: [],
+    privacyType: TorrentPrivacyType.Public, maxRatio: -1, minSeedTime: 0,
+    maxSeedTime: -1, minSeeders: 0, deleteSourceFiles: true,
+  };
+  readonly ruleModel = signal<SeedingRuleFormModel>({ ...this.ruleDefaults });
+  readonly ruleForm = form(this.ruleModel, (p) => {
+    required(p.name, { message: 'Name is required' });
+    minLength(p.categories, 1, { message: 'At least one category is required' });
+    min(p.maxRatio, -1);
+    min(p.minSeedTime, 0);
+    min(p.maxSeedTime, -1);
+    min(p.minSeeders, 0);
+    validate(p.maxSeedTime, () => {
+      const m = this.ruleModel();
+      return (m.maxRatio ?? -1) < 0 && (m.maxSeedTime ?? -1) < 0
+        ? { kind: 'disabled', message: 'Both max ratio and max seed time cannot be disabled at the same time' }
+        : undefined;
+    });
+  });
+
+  readonly ruleDisabledError = computed(() =>
+    this.ruleForm.maxSeedTime().errors().find(e => e.kind === 'disabled')?.message
+  );
 
   readonly scheduleIntervalOptions = computed(() => {
     const values = ScheduleOptions[this.model().scheduleUnit] ?? [];
@@ -269,27 +296,6 @@ export class DownloadCleanerComponent implements HasPendingChanges {
       }
     });
   }
-
-  readonly ruleNameError = computed(() => {
-    if (!this.ruleName().trim()) {
-      return 'Name is required';
-    }
-    return undefined;
-  });
-
-  readonly ruleCategoriesError = computed(() => {
-    if (this.ruleCategories().length === 0) {
-      return 'At least one category is required';
-    }
-    return undefined;
-  });
-
-  readonly ruleDisabledError = computed(() => {
-    if ((this.ruleMaxRatio() ?? -1) < 0 && (this.ruleMaxSeedTime() ?? -1) < 0) {
-      return 'Both max ratio and max seed time cannot be disabled at the same time';
-    }
-    return undefined;
-  });
 
   readonly unlinkedCategoriesError = computed(() => {
     const client = this.selectedClient();
@@ -391,35 +397,27 @@ export class DownloadCleanerComponent implements HasPendingChanges {
   openRuleModal(rule?: SeedingRule): void {
     this.editingRule.set(rule ?? null);
     if (rule) {
-      this.ruleName.set(rule.name);
-      this.ruleCategories.set([...(rule.categories ?? [])]);
-      this.ruleTrackerPatterns.set([...(rule.trackerPatterns ?? [])]);
-      this.ruleTagsAny.set([...(rule.tagsAny ?? [])]);
-      this.ruleTagsAll.set([...(rule.tagsAll ?? [])]);
-      this.rulePrivacyType.set(rule.privacyType);
-      this.ruleMaxRatio.set(rule.maxRatio);
-      this.ruleMinSeedTime.set(rule.minSeedTime);
-      this.ruleMaxSeedTime.set(rule.maxSeedTime);
-      this.ruleMinSeeders.set(rule.minSeeders ?? 0);
-      this.ruleDeleteSourceFiles.set(rule.deleteSourceFiles);
+      this.ruleModel.set({
+        name: rule.name,
+        categories: [...(rule.categories ?? [])],
+        trackerPatterns: [...(rule.trackerPatterns ?? [])],
+        tagsAny: [...(rule.tagsAny ?? [])],
+        tagsAll: [...(rule.tagsAll ?? [])],
+        privacyType: rule.privacyType,
+        maxRatio: rule.maxRatio,
+        minSeedTime: rule.minSeedTime,
+        maxSeedTime: rule.maxSeedTime,
+        minSeeders: rule.minSeeders ?? 0,
+        deleteSourceFiles: rule.deleteSourceFiles,
+      });
     } else {
-      this.ruleName.set('');
-      this.ruleCategories.set([]);
-      this.ruleTrackerPatterns.set([]);
-      this.ruleTagsAny.set([]);
-      this.ruleTagsAll.set([]);
-      this.rulePrivacyType.set(TorrentPrivacyType.Public);
-      this.ruleMaxRatio.set(-1);
-      this.ruleMinSeedTime.set(0);
-      this.ruleMaxSeedTime.set(-1);
-      this.ruleMinSeeders.set(0);
-      this.ruleDeleteSourceFiles.set(true);
+      this.ruleModel.set({ ...this.ruleDefaults });
     }
     this.ruleModalVisible.set(true);
   }
 
   saveRule(): void {
-    if (this.ruleNameError() || this.ruleCategoriesError() || this.ruleDisabledError() || this.ruleHasUncommittedInputs()) {
+    if (this.ruleForm().invalid() || this.ruleHasUncommittedInputs()) {
       return;
     }
     const clientId = this.selectedClientId();
@@ -427,20 +425,21 @@ export class DownloadCleanerComponent implements HasPendingChanges {
       return;
     }
 
+    const m = this.ruleModel();
     const sanitize = (list: string[]) => list.map(s => s.trim()).filter(s => s.length > 0);
 
     const dto: Partial<SeedingRule> = {
-      name: this.ruleName().trim(),
-      categories: sanitize(this.ruleCategories()),
-      trackerPatterns: sanitize(this.ruleTrackerPatterns()),
-      tagsAny: sanitize(this.ruleTagsAny()),
-      tagsAll: sanitize(this.ruleTagsAll()),
-      privacyType: this.rulePrivacyType() as TorrentPrivacyType,
-      maxRatio: this.ruleMaxRatio() ?? -1,
-      minSeedTime: this.ruleMinSeedTime() ?? 0,
-      maxSeedTime: this.ruleMaxSeedTime() ?? -1,
-      minSeeders: this.ruleMinSeeders() ?? 0,
-      deleteSourceFiles: this.ruleDeleteSourceFiles(),
+      name: m.name.trim(),
+      categories: sanitize(m.categories),
+      trackerPatterns: sanitize(m.trackerPatterns),
+      tagsAny: sanitize(m.tagsAny),
+      tagsAll: sanitize(m.tagsAll),
+      privacyType: m.privacyType,
+      maxRatio: m.maxRatio ?? -1,
+      minSeedTime: m.minSeedTime ?? 0,
+      maxSeedTime: m.maxSeedTime ?? -1,
+      minSeeders: m.minSeeders ?? 0,
+      deleteSourceFiles: m.deleteSourceFiles,
     };
 
     const editing = this.editingRule();
