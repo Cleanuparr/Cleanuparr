@@ -147,17 +147,15 @@ export class DownloadCleanerComponent implements HasPendingChanges {
   });
 
   readonly dcForm = form(this.model, (p) => {
-    validate(p.scheduleEvery, () => {
-      const m = this.model();
-      if (m.useAdvancedScheduling) {
+    validate(p.scheduleEvery, ({ value, valueOf }) => {
+      if (!valueOf(p.enabled) || valueOf(p.useAdvancedScheduling)) {
         return undefined;
       }
-      const options = ScheduleOptions[m.scheduleUnit] ?? [];
-      return options.includes(m.scheduleEvery) ? undefined : { kind: 'schedule', message: 'Please select a value' };
+      const options = ScheduleOptions[valueOf(p.scheduleUnit)] ?? [];
+      return options.includes(value()) ? undefined : { kind: 'schedule', message: 'Please select a value' };
     });
-    validate(p.cronExpression, () => {
-      const m = this.model();
-      return m.useAdvancedScheduling && !m.cronExpression.trim()
+    validate(p.cronExpression, ({ value, valueOf }) => {
+      return valueOf(p.enabled) && valueOf(p.useAdvancedScheduling) && !value().trim()
         ? { kind: 'required', message: 'Cron expression is required' }
         : undefined;
     });

@@ -165,7 +165,7 @@ export class QueueCleanerComponent implements HasPendingChanges {
     max(p.metadataMaxStrikes, 5000, { message: 'Value cannot exceed 5000' });
 
     validate(p.scheduleEvery, ({ value, valueOf }) => {
-      if (valueOf(p.useAdvancedScheduling)) {
+      if (!valueOf(p.enabled) || valueOf(p.useAdvancedScheduling)) {
         return undefined;
       }
       const options = ScheduleOptions[valueOf(p.scheduleUnit)] ?? [];
@@ -173,7 +173,7 @@ export class QueueCleanerComponent implements HasPendingChanges {
     });
 
     validate(p.cronExpression, ({ value, valueOf }) => {
-      return valueOf(p.useAdvancedScheduling) && !value().trim()
+      return valueOf(p.enabled) && valueOf(p.useAdvancedScheduling) && !value().trim()
         ? { kind: 'required', message: 'Cron expression is required' }
         : undefined;
     });
