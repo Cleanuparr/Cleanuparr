@@ -286,7 +286,7 @@
   </div>
   <div modal-footer>
     <app-button variant="secondary" (clicked)="stallModalVisible.set(false)">Cancel</app-button>
-    <app-button variant="primary" (clicked)="saveStallRule()">
+    <app-button variant="primary" [disabled]="stallForm().invalid()" (clicked)="saveStallRule()">
       {{ editingStallRule() ? 'Update' : 'Create' }}
     </app-button>
   </div>
@@ -340,7 +340,7 @@
   </div>
   <div modal-footer>
     <app-button variant="secondary" (clicked)="slowModalVisible.set(false)">Cancel</app-button>
-    <app-button variant="primary" (clicked)="saveSlowRule()">
+    <app-button variant="primary" [disabled]="slowForm().invalid()" (clicked)="saveSlowRule()">
       {{ editingSlowRule() ? 'Update' : 'Create' }}
     </app-button>
   </div>
