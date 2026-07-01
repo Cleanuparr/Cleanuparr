@@ -288,28 +288,32 @@ export class QueueCleanerComponent implements HasPendingChanges {
       }
     });
 
+    // These reset effects guard on the current value: model.update always creates a new object,
+    // so writing unconditionally would re-trigger the effect forever (infinite loop / page freeze).
     effect(() => {
-      if (this.model().failedIgnorePrivate) {
-        untracked(() => this.model.update(m => ({ ...m, failedDeletePrivate: false })));
+      const m = this.model();
+      if (m.failedIgnorePrivate && m.failedDeletePrivate) {
+        untracked(() => this.model.update(mm => ({ ...mm, failedDeletePrivate: false })));
       }
     });
 
     effect(() => {
-      if (this.model().failedChangeCategory) {
-        untracked(() => this.model.update(m => ({ ...m, failedDeletePrivate: false })));
+      const m = this.model();
+      if (m.failedChangeCategory && m.failedDeletePrivate) {
+        untracked(() => this.model.update(mm => ({ ...mm, failedDeletePrivate: false })));
       }
     });
 
     effect(() => {
       const m = this.stallModel();
-      if (m.changeCategory || m.privacyType === TorrentPrivacyType.Public) {
+      if ((m.changeCategory || m.privacyType === TorrentPrivacyType.Public) && m.deletePrivate) {
         untracked(() => this.stallModel.update(s => ({ ...s, deletePrivate: false })));
       }
     });
 
     effect(() => {
       const m = this.slowModel();
-      if (m.changeCategory || m.privacyType === TorrentPrivacyType.Public) {
+      if ((m.changeCategory || m.privacyType === TorrentPrivacyType.Public) && m.deletePrivate) {
         untracked(() => this.slowModel.update(s => ({ ...s, deletePrivate: false })));
       }
     });
