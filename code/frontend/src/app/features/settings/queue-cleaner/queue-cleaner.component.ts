@@ -1,5 +1,6 @@
 import { Component, ChangeDetectionStrategy, inject, signal, computed, viewChildren, effect, untracked } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
+import { form, required, min, max, validate, disabled, FormField } from '@angular/forms/signals';
 import { PageHeaderComponent } from '@layout/page-header/page-header.component';
 import {
   CardComponent, ButtonComponent, InputComponent, ToggleComponent,
@@ -37,6 +38,24 @@ const SCHEDULE_UNIT_OPTIONS: SelectOption[] = [
   { label: 'Hours', value: ScheduleUnit.Hours },
 ];
 
+interface QueueCleanerFormModel {
+  enabled: boolean;
+  useAdvancedScheduling: boolean;
+  cronExpression: string;
+  scheduleEvery: number;
+  scheduleUnit: ScheduleUnit;
+  ignoredDownloads: string[];
+  processNoContentId: boolean;
+  failedMaxStrikes: number | null;
+  failedIgnorePrivate: boolean;
+  failedDeletePrivate: boolean;
+  failedSkipNotFound: boolean;
+  failedPatterns: string[];
+  failedPatternMode: PatternMode;
+  failedChangeCategory: boolean;
+  metadataMaxStrikes: number | null;
+}
+
 @Component({
   selector: 'app-queue-cleaner',
   standalone: true,
@@ -44,7 +63,7 @@ const SCHEDULE_UNIT_OPTIONS: SelectOption[] = [
     PageHeaderComponent, CardComponent, ButtonComponent, InputComponent,
     ToggleComponent, NumberInputComponent, SelectComponent, ChipInputComponent,
     AccordionComponent, BadgeComponent, ModalComponent, EmptyStateComponent, LoadingStateComponent,
-    SizeInputComponent, NgIcon,
+    SizeInputComponent, NgIcon, FormField,
   ],
   templateUrl: './queue-cleaner.component.html',
   styleUrl: './queue-cleaner.component.scss',
@@ -90,32 +109,74 @@ export class QueueCleanerComponent implements HasPendingChanges {
   readonly saving = signal(false);
   readonly saved = signal(false);
 
-  readonly enabled = signal(false);
-  readonly useAdvancedScheduling = signal(false);
-  readonly cronExpression = signal('');
-  readonly scheduleEvery = signal<unknown>(5);
-  readonly scheduleUnit = signal<unknown>(ScheduleUnit.Minutes);
-  readonly ignoredDownloads = signal<string[]>([]);
-  readonly processNoContentId = signal(false);
+  private readonly model = signal<QueueCleanerFormModel>({
+    enabled: false,
+    useAdvancedScheduling: false,
+    cronExpression: '',
+    scheduleEvery: 5,
+    scheduleUnit: ScheduleUnit.Minutes,
+    ignoredDownloads: [],
+    processNoContentId: false,
+    failedMaxStrikes: 3,
+    failedIgnorePrivate: false,
+    failedDeletePrivate: false,
+    failedSkipNotFound: false,
+    failedPatterns: [],
+    failedPatternMode: PatternMode.Exclude,
+    failedChangeCategory: false,
+    metadataMaxStrikes: 3,
+  });
+
+  readonly qcForm = form(this.model, (p) => {
+    required(p.failedMaxStrikes, { message: 'This field is required' });
+    min(p.failedMaxStrikes, 0, { message: 'Value cannot be negative' });
+    max(p.failedMaxStrikes, 5000, { message: 'Value cannot exceed 5000' });
+
+    required(p.metadataMaxStrikes, { message: 'This field is required' });
+    min(p.metadataMaxStrikes, 0, { message: 'Value cannot be negative' });
+    max(p.metadataMaxStrikes, 5000, { message: 'Value cannot exceed 5000' });
+
+    validate(p.scheduleEvery, () => {
+      const m = this.model();
+      if (m.useAdvancedScheduling) {
+        return undefined;
+      }
+      const options = ScheduleOptions[m.scheduleUnit] ?? [];
+      return options.includes(m.scheduleEvery) ? undefined : { kind: 'schedule', message: 'Please select a value' };
+    });
+
+    validate(p.cronExpression, () => {
+      const m = this.model();
+      return m.useAdvancedScheduling && !m.cronExpression.trim()
+        ? { kind: 'required', message: 'Cron expression is required' }
+        : undefined;
+    });
+
+    validate(p.failedPatterns, () => {
+      const m = this.model();
+      if (m.failedMaxStrikes === 0) {
+        return undefined;
+      }
+      return m.failedPatternMode === PatternMode.Include && m.failedPatterns.length === 0
+        ? { kind: 'required', message: 'At least one pattern is required when using Include mode' }
+        : undefined;
+    });
+
+    disabled(p.failedIgnorePrivate, () => this.model().failedMaxStrikes === 0);
+    disabled(p.failedChangeCategory, () => this.model().failedMaxStrikes === 0);
+    disabled(p.failedDeletePrivate, () => this.failedDeletePrivateDisabled());
+    disabled(p.failedSkipNotFound, () => this.model().failedMaxStrikes === 0);
+    disabled(p.failedPatternMode, () => this.model().failedMaxStrikes === 0);
+    disabled(p.failedPatterns, () => this.model().failedMaxStrikes === 0);
+  });
 
   readonly scheduleIntervalOptions = computed(() => {
-    const unit = this.scheduleUnit() as ScheduleUnit;
-    const values = ScheduleOptions[unit] ?? [];
+    const values = ScheduleOptions[this.model().scheduleUnit] ?? [];
     return values.map(v => ({ label: `${v}`, value: v }));
   });
 
-  // Failed import
-  readonly failedMaxStrikes = signal<number | null>(3);
-  readonly failedIgnorePrivate = signal(false);
-  readonly failedDeletePrivate = signal(false);
-  readonly failedSkipNotFound = signal(false);
-  readonly failedPatterns = signal<string[]>([]);
-  readonly failedPatternMode = signal<unknown>(PatternMode.Exclude);
-  readonly failedChangeCategory = signal(false);
+  // UI-only expansion state
   readonly failedExpanded = signal(true);
-
-  // Metadata
-  readonly metadataMaxStrikes = signal<number | null>(3);
   readonly metadataExpanded = signal(false);
 
   // Stall rules
@@ -160,24 +221,23 @@ export class QueueCleanerComponent implements HasPendingChanges {
 
   constructor() {
     effect(() => {
-      const unit = this.scheduleUnit();
-      const options = ScheduleOptions[unit as ScheduleUnit] ?? [];
-      const current = this.scheduleEvery();
-      if (options.length > 0 && !options.includes(current as number)) {
-        untracked(() => this.scheduleEvery.set(options[0]));
+      const unit = this.model().scheduleUnit;
+      const options = ScheduleOptions[unit] ?? [];
+      const current = this.model().scheduleEvery;
+      if (options.length > 0 && !options.includes(current)) {
+        untracked(() => this.model.update(m => ({ ...m, scheduleEvery: options[0] })));
       }
     });
 
     effect(() => {
-      const ignorePrivate = this.failedIgnorePrivate();
-      if (ignorePrivate) {
-        untracked(() => this.failedDeletePrivate.set(false));
+      if (this.model().failedIgnorePrivate) {
+        untracked(() => this.model.update(m => ({ ...m, failedDeletePrivate: false })));
       }
     });
 
     effect(() => {
-      if (this.failedChangeCategory()) {
-        untracked(() => this.failedDeletePrivate.set(false));
+      if (this.model().failedChangeCategory) {
+        untracked(() => this.model.update(m => ({ ...m, failedDeletePrivate: false })));
       }
     });
 
@@ -200,24 +260,24 @@ export class QueueCleanerComponent implements HasPendingChanges {
       }
       untracked(() => {
         this.config = config;
-        this.enabled.set(config.enabled);
-        this.useAdvancedScheduling.set(config.useAdvancedScheduling);
-        this.cronExpression.set(config.cronExpression);
         const parsed = parseCronToJobSchedule(config.cronExpression);
-        if (parsed) {
-          this.scheduleEvery.set(parsed.every);
-          this.scheduleUnit.set(parsed.type);
-        }
-        this.ignoredDownloads.set(config.ignoredDownloads ?? []);
-        this.processNoContentId.set(config.processNoContentId);
-        this.failedMaxStrikes.set(config.failedImport.maxStrikes);
-        this.failedIgnorePrivate.set(config.failedImport.ignorePrivate);
-        this.failedDeletePrivate.set(config.failedImport.deletePrivate);
-        this.failedSkipNotFound.set(config.failedImport.skipIfNotFoundInClient);
-        this.failedPatterns.set(config.failedImport.patterns ?? []);
-        this.failedPatternMode.set(config.failedImport.patternMode ?? PatternMode.Exclude);
-        this.failedChangeCategory.set(config.failedImport.changeCategory ?? false);
-        this.metadataMaxStrikes.set(config.downloadingMetadataMaxStrikes);
+        this.model.set({
+          enabled: config.enabled,
+          useAdvancedScheduling: config.useAdvancedScheduling,
+          cronExpression: config.cronExpression,
+          scheduleEvery: parsed?.every ?? 5,
+          scheduleUnit: parsed?.type ?? ScheduleUnit.Minutes,
+          ignoredDownloads: config.ignoredDownloads ?? [],
+          processNoContentId: config.processNoContentId,
+          failedMaxStrikes: config.failedImport.maxStrikes,
+          failedIgnorePrivate: config.failedImport.ignorePrivate,
+          failedDeletePrivate: config.failedImport.deletePrivate,
+          failedSkipNotFound: config.failedImport.skipIfNotFoundInClient,
+          failedPatterns: config.failedImport.patterns ?? [],
+          failedPatternMode: config.failedImport.patternMode ?? PatternMode.Exclude,
+          failedChangeCategory: config.failedImport.changeCategory ?? false,
+          metadataMaxStrikes: config.downloadingMetadataMaxStrikes,
+        });
         this.savedSnapshot.set(this.buildSnapshot());
       });
     });
@@ -249,61 +309,21 @@ export class QueueCleanerComponent implements HasPendingChanges {
     });
   }
 
-  // Validation
-  readonly scheduleEveryError = computed(() => {
-    if (this.useAdvancedScheduling()) return undefined;
-    const unit = this.scheduleUnit() as ScheduleUnit;
-    const options = ScheduleOptions[unit] ?? [];
-    if (!options.includes(this.scheduleEvery() as number)) return 'Please select a value';
-    return undefined;
-  });
+  readonly failedSubFieldsDisabled = computed(() => this.model().failedMaxStrikes === 0);
 
-  readonly cronError = computed(() => {
-    if (this.useAdvancedScheduling() && !this.cronExpression().trim()) return 'Cron expression is required';
-    return undefined;
-  });
+  readonly failedDeletePrivateDisabled = computed(() =>
+    this.failedSubFieldsDisabled() || this.model().failedIgnorePrivate
+  );
 
-  readonly failedMaxStrikesError = computed(() => {
-    const v = this.failedMaxStrikes();
-    if (v == null) return 'This field is required';
-    if (v < 0) return 'Value cannot be negative';
-    if (v > 5000) return 'Value cannot exceed 5000';
-    return undefined;
-  });
+  readonly patternLabel = computed(() =>
+    this.model().failedPatternMode === PatternMode.Include ? 'Included Patterns' : 'Excluded Patterns'
+  );
 
-  readonly failedPatternsError = computed(() => {
-    if (this.failedSubFieldsDisabled()) return undefined;
-    if (this.failedPatternMode() === PatternMode.Include && this.failedPatterns().length === 0) {
-      return 'At least one pattern is required when using Include mode';
-    }
-    return undefined;
-  });
-
-  readonly metadataMaxStrikesError = computed(() => {
-    const v = this.metadataMaxStrikes();
-    if (v == null) return 'This field is required';
-    if (v < 0) return 'Value cannot be negative';
-    if (v > 5000) return 'Value cannot exceed 5000';
-    return undefined;
-  });
-
-  readonly failedSubFieldsDisabled = computed(() => {
-    return this.failedMaxStrikes() === 0;
-  });
-
-  readonly failedDeletePrivateDisabled = computed(() => {
-    return this.failedSubFieldsDisabled() || this.failedIgnorePrivate();
-  });
-
-  readonly patternLabel = computed(() => {
-    return this.failedPatternMode() === PatternMode.Include ? 'Included Patterns' : 'Excluded Patterns';
-  });
-
-  readonly patternHint = computed(() => {
-    return this.failedPatternMode() === PatternMode.Include
+  readonly patternHint = computed(() =>
+    this.model().failedPatternMode === PatternMode.Include
       ? 'Only failed imports containing these patterns will be removed and everything else will be skipped'
-      : 'Failed imports containing these patterns will be skipped and everything else will be removed';
-  });
+      : 'Failed imports containing these patterns will be skipped and everything else will be removed'
+  );
 
   // Coverage analysis
   readonly stallCoverage = computed(() => analyzeCoverage(this.stallRules()));
@@ -351,14 +371,9 @@ export class QueueCleanerComponent implements HasPendingChanges {
     return undefined;
   });
 
-  readonly hasErrors = computed(() => !!(
-    this.scheduleEveryError() ||
-    this.cronError() ||
-    this.failedMaxStrikesError() ||
-    this.failedPatternsError() ||
-    this.metadataMaxStrikesError() ||
-    this.chipInputs().some(c => c.hasUncommittedInput())
-  ));
+  readonly hasErrors = computed(() =>
+    this.qcForm().invalid() || this.chipInputs().some(c => c.hasUncommittedInput())
+  );
 
   private config: QueueCleanerConfig | null = null;
 
@@ -533,28 +548,29 @@ export class QueueCleanerComponent implements HasPendingChanges {
   save(): void {
     if (!this.config) return;
 
-    const jobSchedule = { every: (this.scheduleEvery() as number) ?? 5, type: this.scheduleUnit() as ScheduleUnit };
-    const cronExpression = this.useAdvancedScheduling()
-      ? this.cronExpression()
+    const m = this.model();
+    const jobSchedule = { every: m.scheduleEvery ?? 5, type: m.scheduleUnit };
+    const cronExpression = m.useAdvancedScheduling
+      ? m.cronExpression
       : generateCronExpression(jobSchedule);
 
     const config: QueueCleanerConfig = {
       ...this.config,
-      enabled: this.enabled(),
-      useAdvancedScheduling: this.useAdvancedScheduling(),
+      enabled: m.enabled,
+      useAdvancedScheduling: m.useAdvancedScheduling,
       cronExpression,
-      ignoredDownloads: this.ignoredDownloads(),
-      processNoContentId: this.processNoContentId(),
+      ignoredDownloads: m.ignoredDownloads,
+      processNoContentId: m.processNoContentId,
       failedImport: {
-        maxStrikes: this.failedMaxStrikes() ?? 3,
-        ignorePrivate: this.failedIgnorePrivate(),
-        deletePrivate: this.failedChangeCategory() ? false : this.failedDeletePrivate(),
-        skipIfNotFoundInClient: this.failedSkipNotFound(),
-        patterns: this.failedPatterns(),
-        patternMode: this.failedPatternMode() as PatternMode,
-        changeCategory: this.failedChangeCategory(),
+        maxStrikes: m.failedMaxStrikes ?? 3,
+        ignorePrivate: m.failedIgnorePrivate,
+        deletePrivate: m.failedChangeCategory ? false : m.failedDeletePrivate,
+        skipIfNotFoundInClient: m.failedSkipNotFound,
+        patterns: m.failedPatterns,
+        patternMode: m.failedPatternMode,
+        changeCategory: m.failedChangeCategory,
       },
-      downloadingMetadataMaxStrikes: this.metadataMaxStrikes() ?? 3,
+      downloadingMetadataMaxStrikes: m.metadataMaxStrikes ?? 3,
     };
 
     this.saving.set(true);
@@ -574,23 +590,7 @@ export class QueueCleanerComponent implements HasPendingChanges {
   }
 
   private buildSnapshot(): string {
-    return JSON.stringify({
-      enabled: this.enabled(),
-      useAdvancedScheduling: this.useAdvancedScheduling(),
-      cronExpression: this.cronExpression(),
-      scheduleEvery: this.scheduleEvery(),
-      scheduleUnit: this.scheduleUnit(),
-      ignoredDownloads: this.ignoredDownloads(),
-      processNoContentId: this.processNoContentId(),
-      failedMaxStrikes: this.failedMaxStrikes(),
-      failedIgnorePrivate: this.failedIgnorePrivate(),
-      failedDeletePrivate: this.failedDeletePrivate(),
-      failedSkipNotFound: this.failedSkipNotFound(),
-      failedPatterns: this.failedPatterns(),
-      failedPatternMode: this.failedPatternMode(),
-      failedChangeCategory: this.failedChangeCategory(),
-      metadataMaxStrikes: this.metadataMaxStrikes(),
-    });
+    return JSON.stringify(this.model());
   }
 
   readonly dirty = computed(() => {
