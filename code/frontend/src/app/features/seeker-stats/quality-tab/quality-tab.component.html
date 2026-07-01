@@ -187,8 +187,8 @@
 <!-- Filter drawer -->
 <app-drawer title="Filter quality scores" [(visible)]="drawerOpen">
   <div class="filter-group">
-    <span class="filter-group__label">Instance</span>
     <app-select
+      label="Instance"
       [value]="draft().instanceId"
       [options]="instanceOptions()"
       (valueChange)="updateDraft('instanceId', $any($event))"
@@ -196,8 +196,8 @@
   </div>
 
   <div class="filter-group">
-    <span class="filter-group__label">Quality profile</span>
     <app-select
+      label="Quality profile"
       [value]="draft().qualityProfile"
       [options]="qualityProfileOptions()"
       (valueChange)="updateDraft('qualityProfile', $any($event))"
@@ -205,8 +205,8 @@
   </div>
 
   <div class="filter-group">
-    <span class="filter-group__label">Cutoff status</span>
     <app-select
+      label="Cutoff status"
       [value]="draft().cutoffFilter"
       [options]="cutoffOptions"
       (valueChange)="updateDraft('cutoffFilter', $any($event))"
@@ -214,8 +214,8 @@
   </div>
 
   <div class="filter-group">
-    <span class="filter-group__label">Monitored</span>
     <app-select
+      label="Monitored"
       [value]="draft().monitoredFilter"
       [options]="monitoredOptions"
       (valueChange)="updateDraft('monitoredFilter', $any($event))"
