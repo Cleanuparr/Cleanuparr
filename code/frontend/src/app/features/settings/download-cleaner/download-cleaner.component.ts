@@ -1,5 +1,6 @@
 import { Component, ChangeDetectionStrategy, inject, signal, computed, viewChildren, effect, untracked } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
+import { form, validate, FormField } from '@angular/forms/signals';
 import { NgIconComponent } from '@ng-icons/core';
 import { CdkDragDrop, CdkDropList, CdkDrag, CdkDragHandle, moveItemInArray } from '@angular/cdk/drag-drop';
 import { PageHeaderComponent } from '@layout/page-header/page-header.component';
@@ -37,6 +38,15 @@ const PRIVACY_TYPE_OPTIONS: SelectOption[] = [
   { label: 'Both', value: TorrentPrivacyType.Both },
 ];
 
+interface DownloadCleanerGlobalFormModel {
+  enabled: boolean;
+  useAdvancedScheduling: boolean;
+  cronExpression: string;
+  scheduleEvery: number;
+  scheduleUnit: ScheduleUnit;
+  ignoredDownloads: string[];
+}
+
 @Component({
   selector: 'app-download-cleaner',
   standalone: true,
@@ -46,7 +56,7 @@ const PRIVACY_TYPE_OPTIONS: SelectOption[] = [
     PageHeaderComponent, CardComponent, ButtonComponent, InputComponent,
     ToggleComponent, NumberInputComponent, SelectComponent, ChipInputComponent, AccordionComponent,
     EmptyStateComponent, LoadingStateComponent, ModalComponent, BadgeComponent, SpinnerComponent,
-    TooltipComponent,
+    TooltipComponent, FormField,
   ],
   templateUrl: './download-cleaner.component.html',
   styleUrl: './download-cleaner.component.scss',
@@ -88,12 +98,31 @@ export class DownloadCleanerComponent implements HasPendingChanges {
   private readonly deadTorrentSnapshots = signal<Record<string, string>>({});
 
   // Global settings
-  readonly enabled = signal(false);
-  readonly useAdvancedScheduling = signal(false);
-  readonly cronExpression = signal('');
-  readonly scheduleEvery = signal<unknown>(5);
-  readonly scheduleUnit = signal<unknown>(ScheduleUnit.Minutes);
-  readonly ignoredDownloads = signal<string[]>([]);
+  private readonly model = signal<DownloadCleanerGlobalFormModel>({
+    enabled: false,
+    useAdvancedScheduling: false,
+    cronExpression: '',
+    scheduleEvery: 5,
+    scheduleUnit: ScheduleUnit.Minutes,
+    ignoredDownloads: [],
+  });
+
+  readonly dcForm = form(this.model, (p) => {
+    validate(p.scheduleEvery, () => {
+      const m = this.model();
+      if (m.useAdvancedScheduling) {
+        return undefined;
+      }
+      const options = ScheduleOptions[m.scheduleUnit] ?? [];
+      return options.includes(m.scheduleEvery) ? undefined : { kind: 'schedule', message: 'Please select a value' };
+    });
+    validate(p.cronExpression, () => {
+      const m = this.model();
+      return m.useAdvancedScheduling && !m.cronExpression.trim()
+        ? { kind: 'required', message: 'Cron expression is required' }
+        : undefined;
+    });
+  });
 
   // Per-client settings
   readonly clientConfigs = signal<ClientCleanerConfig[]>([]);
@@ -164,18 +193,17 @@ export class DownloadCleanerComponent implements HasPendingChanges {
   readonly ruleDeleteSourceFiles = signal(true);
 
   readonly scheduleIntervalOptions = computed(() => {
-    const unit = this.scheduleUnit() as ScheduleUnit;
-    const values = ScheduleOptions[unit] ?? [];
+    const values = ScheduleOptions[this.model().scheduleUnit] ?? [];
     return values.map(v => ({ label: `${v}`, value: v }));
   });
 
   constructor() {
     effect(() => {
-      const unit = this.scheduleUnit();
-      const options = ScheduleOptions[unit as ScheduleUnit] ?? [];
-      const current = this.scheduleEvery();
-      if (options.length > 0 && !options.includes(current as number)) {
-        untracked(() => this.scheduleEvery.set(options[0]));
+      const unit = this.model().scheduleUnit;
+      const options = ScheduleOptions[unit] ?? [];
+      const current = this.model().scheduleEvery;
+      if (options.length > 0 && !options.includes(current)) {
+        untracked(() => this.model.update(m => ({ ...m, scheduleEvery: options[0] })));
       }
     });
 
@@ -186,15 +214,15 @@ export class DownloadCleanerComponent implements HasPendingChanges {
       }
       untracked(() => {
         this.config = dc;
-        this.enabled.set(dc.enabled);
-        this.useAdvancedScheduling.set(dc.useAdvancedScheduling);
-        this.cronExpression.set(dc.cronExpression);
         const parsed = parseCronToJobSchedule(dc.cronExpression);
-        if (parsed) {
-          this.scheduleEvery.set(parsed.every);
-          this.scheduleUnit.set(parsed.type);
-        }
-        this.ignoredDownloads.set(dc.ignoredDownloads ?? []);
+        this.model.set({
+          enabled: dc.enabled,
+          useAdvancedScheduling: dc.useAdvancedScheduling,
+          cronExpression: dc.cronExpression,
+          scheduleEvery: parsed?.every ?? 5,
+          scheduleUnit: parsed?.type ?? ScheduleUnit.Minutes,
+          ignoredDownloads: dc.ignoredDownloads ?? [],
+        });
 
         this.clientConfigs.set((dc.clients ?? []).map(c => ({
           ...c,
@@ -241,25 +269,6 @@ export class DownloadCleanerComponent implements HasPendingChanges {
       }
     });
   }
-
-  readonly scheduleEveryError = computed(() => {
-    if (this.useAdvancedScheduling()) {
-      return undefined;
-    }
-    const unit = this.scheduleUnit() as ScheduleUnit;
-    const options = ScheduleOptions[unit] ?? [];
-    if (!options.includes(this.scheduleEvery() as number)) {
-      return 'Please select a value';
-    }
-    return undefined;
-  });
-
-  readonly cronError = computed(() => {
-    if (this.useAdvancedScheduling() && !this.cronExpression().trim()) {
-      return 'Cron expression is required';
-    }
-    return undefined;
-  });
 
   readonly ruleNameError = computed(() => {
     if (!this.ruleName().trim()) {
@@ -367,18 +376,9 @@ export class DownloadCleanerComponent implements HasPendingChanges {
     return saved !== JSON.stringify(client.orphanedFilesConfig);
   });
 
-  readonly hasGlobalErrors = computed(() => {
-    if (this.scheduleEveryError()) {
-      return true;
-    }
-    if (this.cronError()) {
-      return true;
-    }
-    if (this.chipInputs().some(c => c.hasUncommittedInput())) {
-      return true;
-    }
-    return false;
-  });
+  readonly hasGlobalErrors = computed(() =>
+    this.dcForm().invalid() || this.chipInputs().some(c => c.hasUncommittedInput())
+  );
 
   private config: DownloadCleanerConfig | null = null;
 
@@ -687,16 +687,17 @@ export class DownloadCleanerComponent implements HasPendingChanges {
       return;
     }
 
-    const jobSchedule = { every: (this.scheduleEvery() as number) ?? 5, type: this.scheduleUnit() as ScheduleUnit };
-    const cronExpression = this.useAdvancedScheduling()
-      ? this.cronExpression()
+    const m = this.model();
+    const jobSchedule = { every: m.scheduleEvery ?? 5, type: m.scheduleUnit };
+    const cronExpression = m.useAdvancedScheduling
+      ? m.cronExpression
       : generateCronExpression(jobSchedule);
 
     const config = {
-      enabled: this.enabled(),
+      enabled: m.enabled,
       cronExpression,
-      useAdvancedScheduling: this.useAdvancedScheduling(),
-      ignoredDownloads: this.ignoredDownloads(),
+      useAdvancedScheduling: m.useAdvancedScheduling,
+      ignoredDownloads: m.ignoredDownloads,
     };
 
     this.saving.set(true);
@@ -718,14 +719,7 @@ export class DownloadCleanerComponent implements HasPendingChanges {
   }
 
   private buildSnapshot(): string {
-    return JSON.stringify({
-      enabled: this.enabled(),
-      useAdvancedScheduling: this.useAdvancedScheduling(),
-      cronExpression: this.cronExpression(),
-      scheduleEvery: this.scheduleEvery(),
-      scheduleUnit: this.scheduleUnit(),
-      ignoredDownloads: this.ignoredDownloads(),
-    });
+    return JSON.stringify(this.model());
   }
 
   readonly dirty = computed(() => {

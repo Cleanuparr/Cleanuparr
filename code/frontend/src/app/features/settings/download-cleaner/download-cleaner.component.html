@@ -19,26 +19,26 @@
 <div class="settings-form">
   <app-card header="General">
     <div class="form-stack">
-      <app-toggle label="Enabled" [(checked)]="enabled"
+      <app-toggle label="Enabled" [formField]="dcForm.enabled"
         hint="When enabled, the download cleaner will run according to the schedule"
         helpKey="download-cleaner:enabled" />
-      @if (enabled()) {
-        <app-toggle label="Advanced Scheduling" [(checked)]="useAdvancedScheduling"
+      @if (dcForm.enabled().value()) {
+        <app-toggle label="Advanced Scheduling" [formField]="dcForm.useAdvancedScheduling"
           hint="Choose between basic scheduling or advanced cron expression"
           helpKey="download-cleaner:useAdvancedScheduling" />
-        @if (useAdvancedScheduling()) {
-          <app-input label="Cron Expression" placeholder="0 0/5 * ? * * *" [(value)]="cronExpression"
+        @if (dcForm.useAdvancedScheduling().value()) {
+          <app-input label="Cron Expression" placeholder="0 0/5 * ? * * *" [formField]="dcForm.cronExpression"
             hint="Enter a valid Quartz cron expression (e.g., &quot;0 0/5 * ? * * *&quot; runs every 5 minutes)"
-            [error]="cronError()"
+            [error]="dcForm.cronExpression().errors()[0]?.message"
             helpKey="download-cleaner:cronExpression" />
         } @else {
           <div class="form-row">
-            <app-select label="Schedule Unit" [options]="scheduleUnitOptions" [(value)]="scheduleUnit"
+            <app-select label="Schedule Unit" [options]="scheduleUnitOptions" [formField]="dcForm.scheduleUnit"
               hint="Choose the time unit for the schedule"
               helpKey="download-cleaner:scheduleUnit" />
-            <app-select label="Every" [options]="scheduleIntervalOptions()" [(value)]="scheduleEvery"
+            <app-select label="Every" [options]="scheduleIntervalOptions()" [formField]="dcForm.scheduleEvery"
               hint="How often the job should run"
-              [error]="scheduleEveryError()"
+              [error]="dcForm.scheduleEvery().errors()[0]?.message"
               helpKey="download-cleaner:scheduleEvery" />
           </div>
         }
@@ -49,7 +49,7 @@
           label="Ignored Downloads"
           placeholder="Add download pattern..."
           hint="Downloads matching these patterns will be ignored (e.g. hash, tag, category, label, tracker)"
-          [(items)]="ignoredDownloads"
+          [formField]="dcForm.ignoredDownloads"
           helpKey="download-cleaner:ignoredDownloads"
         />
       }
@@ -61,7 +61,7 @@
     </div>
   </app-card>
 
-  @if (enabled()) {
+  @if (dcForm.enabled().value()) {
     @if (clientOptions().length > 0) {
       <app-card [header]="selectedClient()?.downloadClientName ?? 'Download Client'">
         <div class="form-stack">
