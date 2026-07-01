@@ -1,6 +1,7 @@
 import { Component, ChangeDetectionStrategy, input, output, model, HostListener, effect, ElementRef, inject, OnInit, OnDestroy } from '@angular/core';
 import { A11yModule } from '@angular/cdk/a11y';
 import { generateControlId } from '@ui/control-id';
+import { OverlayStackService } from '@core/services/overlay-stack.service';
 
 @Component({
   selector: 'app-drawer',
@@ -12,7 +13,9 @@ import { generateControlId } from '@ui/control-id';
 })
 export class DrawerComponent implements OnInit, OnDestroy {
   private readonly host: ElementRef<HTMLElement> = inject(ElementRef);
+  private readonly overlays = inject(OverlayStackService);
   private previousFocus: HTMLElement | null = null;
+  private overlayId: number | null = null;
 
   readonly titleId = generateControlId('drawer-title');
 
@@ -31,6 +34,15 @@ export class DrawerComponent implements OnInit, OnDestroy {
         queueMicrotask(() => this.focusFirstControl());
       }
     });
+
+    effect(() => {
+      if (this.visible()) {
+        this.overlayId ??= this.overlays.register();
+      } else if (this.overlayId !== null) {
+        this.overlays.unregister(this.overlayId);
+        this.overlayId = null;
+      }
+    });
   }
 
   ngOnInit(): void {
@@ -38,13 +50,16 @@ export class DrawerComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    if (this.overlayId !== null) {
+      this.overlays.unregister(this.overlayId);
+    }
     this.restoreFocus();
     this.host.nativeElement.remove();
   }
 
   @HostListener('document:keydown.escape')
   onEscapeKey(): void {
-    if (this.visible()) {
+    if (this.visible() && this.overlayId !== null && this.overlays.isTopmost(this.overlayId)) {
       this.close();
     }
   }

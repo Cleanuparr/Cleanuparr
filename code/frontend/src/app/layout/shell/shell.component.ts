@@ -3,6 +3,7 @@ import {
   ChangeDetectionStrategy,
   signal,
   inject,
+  effect,
   DestroyRef,
   HostListener,
   OnInit,
@@ -15,6 +16,7 @@ import { NavSidebarComponent } from '../nav-sidebar/nav-sidebar.component';
 import { ToolbarComponent } from '../toolbar/toolbar.component';
 import { AppHubService } from '@core/realtime/app-hub.service';
 import { FeatureBadgeService } from '@core/feature-badges/feature-badge.service';
+import { OverlayStackService } from '@core/services/overlay-stack.service';
 
 @Component({
   selector: 'app-shell',
@@ -29,6 +31,7 @@ export class ShellComponent implements OnInit, OnDestroy {
   private hub = inject(AppHubService);
   private featureBadge = inject(FeatureBadgeService);
   private destroyRef = inject(DestroyRef);
+  private overlays = inject(OverlayStackService);
 
   sidebarCollapsed = signal(false);
   mobileMenuOpen = signal(false);
@@ -37,6 +40,18 @@ export class ShellComponent implements OnInit, OnDestroy {
   private readonly MOBILE_BREAKPOINT = 768;
   private readonly TABLET_BREAKPOINT = 1024;
   private autoCollapsed = signal(false);
+  private overlayId: number | null = null;
+
+  constructor() {
+    effect(() => {
+      if (this.mobileMenuOpen()) {
+        this.overlayId ??= this.overlays.register();
+      } else if (this.overlayId !== null) {
+        this.overlays.unregister(this.overlayId);
+        this.overlayId = null;
+      }
+    });
+  }
 
   ngOnInit(): void {
     this.checkMobile();
@@ -63,7 +78,7 @@ export class ShellComponent implements OnInit, OnDestroy {
 
   @HostListener('document:keydown.escape')
   onEscapeKey(): void {
-    if (this.mobileMenuOpen()) {
+    if (this.mobileMenuOpen() && this.overlayId !== null && this.overlays.isTopmost(this.overlayId)) {
       this.closeMobileMenu();
     }
   }
