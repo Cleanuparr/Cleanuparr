@@ -2,6 +2,7 @@ import { Component, ChangeDetectionStrategy, input, model, computed, inject } fr
 import { NgIcon } from '@ng-icons/core';
 import { DocumentationService } from '@core/services/documentation.service';
 import { NewBadgeComponent } from '@ui/new-badge/new-badge.component';
+import { generateControlId } from '@ui/control-id';
 
 @Component({
   selector: 'app-toggle',
@@ -14,8 +15,7 @@ import { NewBadgeComponent } from '@ui/new-badge/new-badge.component';
 export class ToggleComponent {
   private readonly docs = inject(DocumentationService);
 
-  private static nextId = 0;
-  protected readonly controlId = `app-toggle-${ToggleComponent.nextId++}`;
+  protected readonly controlId = generateControlId('app-toggle');
 
   label = input<string>();
   featureId = input<string>();

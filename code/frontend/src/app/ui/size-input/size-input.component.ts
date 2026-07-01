@@ -2,6 +2,7 @@ import { Component, ChangeDetectionStrategy, input, model, signal, effect, untra
 import { NgIcon } from '@ng-icons/core';
 import { DocumentationService } from '@core/services/documentation.service';
 import { NewBadgeComponent } from '@ui/new-badge/new-badge.component';
+import { generateControlId } from '@ui/control-id';
 
 export interface SizeUnit {
   label: string;
@@ -19,8 +20,7 @@ export interface SizeUnit {
 export class SizeInputComponent {
   private readonly docs = inject(DocumentationService);
 
-  private static nextId = 0;
-  protected readonly controlId = `app-size-${SizeInputComponent.nextId++}`;
+  protected readonly controlId = generateControlId('app-size');
 
   label = input<string>();
   featureId = input<string>();

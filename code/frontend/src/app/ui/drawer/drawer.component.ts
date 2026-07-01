@@ -1,5 +1,6 @@
 import { Component, ChangeDetectionStrategy, input, output, model, HostListener, effect, ElementRef, inject, OnInit, OnDestroy } from '@angular/core';
 import { A11yModule } from '@angular/cdk/a11y';
+import { generateControlId } from '@ui/control-id';
 
 @Component({
   selector: 'app-drawer',
@@ -10,12 +11,10 @@ import { A11yModule } from '@angular/cdk/a11y';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DrawerComponent implements OnInit, OnDestroy {
-  private static nextId = 0;
-
   private readonly host: ElementRef<HTMLElement> = inject(ElementRef);
   private previousFocus: HTMLElement | null = null;
 
-  readonly titleId = `drawer-title-${++DrawerComponent.nextId}`;
+  readonly titleId = generateControlId('drawer-title');
 
   title = input<string>();
   visible = model(false);

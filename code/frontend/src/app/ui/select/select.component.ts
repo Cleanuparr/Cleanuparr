@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { NgIcon } from '@ng-icons/core';
 import { DocumentationService } from '@core/services/documentation.service';
 import { NewBadgeComponent } from '@ui/new-badge/new-badge.component';
+import { generateControlId } from '@ui/control-id';
 
 export interface SelectOption {
   label: string;
@@ -21,8 +22,7 @@ export interface SelectOption {
 export class SelectComponent {
   private readonly docs = inject(DocumentationService);
 
-  private static nextId = 0;
-  protected readonly controlId = `app-select-${SelectComponent.nextId++}`;
+  protected readonly controlId = generateControlId('app-select');
   protected readonly listboxId = `${this.controlId}-listbox`;
 
   label = input<string>();

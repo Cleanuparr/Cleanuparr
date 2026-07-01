@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { NgIcon } from '@ng-icons/core';
 import { DocumentationService } from '@core/services/documentation.service';
 import { NewBadgeComponent } from '@ui/new-badge/new-badge.component';
+import { generateControlId } from '@ui/control-id';
 
 function sameItems(a: string[], b: string[]): boolean {
   return a.length === b.length && a.every((v, i) => v === b[i]);
@@ -19,8 +20,7 @@ function sameItems(a: string[], b: string[]): boolean {
 export class ChipInputComponent {
   private readonly docs = inject(DocumentationService);
 
-  private static nextId = 0;
-  protected readonly controlId = `app-chip-${ChipInputComponent.nextId++}`;
+  protected readonly controlId = generateControlId('app-chip');
 
   label = input<string>();
   featureId = input<string>();

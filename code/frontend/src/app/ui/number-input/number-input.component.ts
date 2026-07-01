@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { NgIcon } from '@ng-icons/core';
 import { DocumentationService } from '@core/services/documentation.service';
 import { NewBadgeComponent } from '@ui/new-badge/new-badge.component';
+import { generateControlId } from '@ui/control-id';
 
 @Component({
   selector: 'app-number-input',
@@ -15,8 +16,7 @@ import { NewBadgeComponent } from '@ui/new-badge/new-badge.component';
 export class NumberInputComponent {
   private readonly docs = inject(DocumentationService);
 
-  private static nextId = 0;
-  protected readonly controlId = `app-number-${NumberInputComponent.nextId++}`;
+  protected readonly controlId = generateControlId('app-number');
 
   label = input<string>();
   featureId = input<string>();
