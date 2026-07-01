@@ -1,18 +1,32 @@
-import { Component, ChangeDetectionStrategy, inject, signal, computed, effect, OnInit, OnDestroy } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, signal, computed, effect, untracked, OnInit, OnDestroy } from '@angular/core';
+import { rxResource } from '@angular/core/rxjs-interop';
+import { form, required, FormField } from '@angular/forms/signals';
 import { ActivatedRoute } from '@angular/router';
 import { PageHeaderComponent } from '@layout/page-header/page-header.component';
 import {
   CardComponent, ButtonComponent, InputComponent, SpinnerComponent,
-  AccordionComponent, ToggleComponent, LabelComponent,
+  ToggleComponent, LabelComponent,
   EmptyStateComponent, LoadingStateComponent,
 } from '@ui';
 import { forkJoin } from 'rxjs';
-import { AccountApi, AccountInfo } from '@core/api/account.api';
+import { AccountApi } from '@core/api/account.api';
 import { AuthService } from '@core/auth/auth.service';
 import { ToastService } from '@core/services/toast.service';
 import { ConfirmService } from '@core/services/confirm.service';
 import { DeferredLoader } from '@shared/utils/loading.util';
 import { QRCodeComponent } from 'angularx-qrcode';
+
+interface OidcFormModel {
+  enabled: boolean;
+  issuerUrl: string;
+  clientId: string;
+  clientSecret: string;
+  scopes: string;
+  providerName: string;
+  redirectUrl: string;
+  authorizedSubject: string;
+  exclusiveMode: boolean;
+}
 
 @Component({
   selector: 'app-account-settings',
@@ -20,7 +34,7 @@ import { QRCodeComponent } from 'angularx-qrcode';
   imports: [
     PageHeaderComponent, CardComponent, ButtonComponent, InputComponent,
     SpinnerComponent, ToggleComponent,
-    EmptyStateComponent, LoadingStateComponent, QRCodeComponent, LabelComponent,
+    EmptyStateComponent, LoadingStateComponent, QRCodeComponent, LabelComponent, FormField,
   ],
   templateUrl: './account-settings.component.html',
   styleUrl: './account-settings.component.scss',
@@ -33,9 +47,13 @@ export class AccountSettingsComponent implements OnInit, OnDestroy {
   private readonly confirmService = inject(ConfirmService);
   private readonly route = inject(ActivatedRoute);
 
+  private readonly accountResource = rxResource({
+    stream: () => forkJoin([this.api.getInfo(), this.api.getOidcConfig()]),
+  });
+
   readonly loader = new DeferredLoader();
-  readonly loadError = signal(false);
-  readonly account = signal<AccountInfo | null>(null);
+  readonly loadError = computed(() => !!this.accountResource.error());
+  readonly account = computed(() => this.accountResource.hasValue() ? this.accountResource.value()[0] : null);
 
   // Change password
   readonly currentPassword = signal('');
@@ -86,26 +104,72 @@ export class AccountSettingsComponent implements OnInit, OnDestroy {
   private plexPollTimer: ReturnType<typeof setInterval> | null = null;
 
   // OIDC
-  readonly oidcEnabled = signal(false);
-  readonly oidcIssuerUrl = signal('');
-  readonly oidcClientId = signal('');
-  readonly oidcClientSecret = signal('');
-  readonly oidcScopes = signal('openid profile email');
-  readonly oidcProviderName = signal('OIDC');
-  readonly oidcRedirectUrl = signal('');
-  readonly oidcAuthorizedSubject = signal('');
+  private readonly oidcModel = signal<OidcFormModel>({
+    enabled: false,
+    issuerUrl: '',
+    clientId: '',
+    clientSecret: '',
+    scopes: 'openid profile email',
+    providerName: 'OIDC',
+    redirectUrl: '',
+    authorizedSubject: '',
+    exclusiveMode: false,
+  });
+  readonly oidcForm = form(this.oidcModel, (p) => {
+    required(p.issuerUrl, { when: ({ valueOf }) => valueOf(p.enabled), message: 'Issuer URL is required' });
+    required(p.clientId, { when: ({ valueOf }) => valueOf(p.enabled), message: 'Client ID is required' });
+  });
+  readonly oidcExclusiveMode = computed(() => this.oidcModel().exclusiveMode);
+  readonly oidcAuthorizedSubject = computed(() => this.oidcModel().authorizedSubject);
   readonly oidcExpanded = signal(false);
-  readonly oidcExclusiveMode = signal(false);
   readonly oidcLinking = signal(false);
   readonly oidcUnlinking = signal(false);
   readonly oidcSaving = signal(false);
   readonly oidcSaved = signal(false);
 
   constructor() {
-    // Reset exclusive mode when OIDC is toggled off
+    // Reset exclusive mode when OIDC is toggled off. Guard on exclusiveMode too:
+    // the write flips it false, so the effect settles instead of writing a fresh
+    // object every run (which would loop forever while enabled stays false).
     effect(() => {
-      if (!this.oidcEnabled()) {
-        this.oidcExclusiveMode.set(false);
+      const m = this.oidcModel();
+      if (!m.enabled && m.exclusiveMode) {
+        untracked(() => this.oidcModel.update(mm => ({ ...mm, exclusiveMode: false })));
+      }
+    });
+
+    effect(() => {
+      const data = this.accountResource.hasValue() ? this.accountResource.value() : undefined;
+      if (!data) {
+        return;
+      }
+      const oidc = data[1];
+      untracked(() => {
+        this.oidcModel.set({
+          enabled: oidc.enabled,
+          issuerUrl: oidc.issuerUrl,
+          clientId: oidc.clientId,
+          clientSecret: oidc.clientSecret,
+          scopes: oidc.scopes || 'openid profile email',
+          providerName: oidc.providerName || 'OIDC',
+          redirectUrl: oidc.redirectUrl || '',
+          authorizedSubject: oidc.authorizedSubject,
+          exclusiveMode: oidc.exclusiveMode,
+        });
+      });
+    });
+
+    effect(() => {
+      if (this.accountResource.error()) {
+        this.toast.error('Failed to load account information');
+      }
+    });
+
+    effect(() => {
+      if (this.accountResource.isLoading()) {
+        this.loader.start();
+      } else {
+        this.loader.stop();
       }
     });
   }
@@ -119,7 +183,6 @@ export class AccountSettingsComponent implements OnInit, OnDestroy {
       this.toast.error('Failed to link OIDC account');
       this.oidcExpanded.set(true);
     }
-    this.loadAccount();
   }
 
   ngOnDestroy(): void {
@@ -128,33 +191,8 @@ export class AccountSettingsComponent implements OnInit, OnDestroy {
     }
   }
 
-  private loadAccount(): void {
-    this.loader.start();
-    forkJoin([this.api.getInfo(), this.api.getOidcConfig()]).subscribe({
-      next: ([info, oidc]) => {
-        this.account.set(info);
-        this.oidcEnabled.set(oidc.enabled);
-        this.oidcIssuerUrl.set(oidc.issuerUrl);
-        this.oidcClientId.set(oidc.clientId);
-        this.oidcClientSecret.set(oidc.clientSecret);
-        this.oidcScopes.set(oidc.scopes || 'openid profile email');
-        this.oidcProviderName.set(oidc.providerName || 'OIDC');
-        this.oidcRedirectUrl.set(oidc.redirectUrl || '');
-        this.oidcAuthorizedSubject.set(oidc.authorizedSubject);
-        this.oidcExclusiveMode.set(oidc.exclusiveMode);
-        this.loader.stop();
-      },
-      error: () => {
-        this.toast.error('Failed to load account information');
-        this.loader.stop();
-        this.loadError.set(true);
-      },
-    });
-  }
-
   retry(): void {
-    this.loadError.set(false);
-    this.loadAccount();
+    this.accountResource.reload();
   }
 
   // Change password
@@ -255,7 +293,7 @@ export class AccountSettingsComponent implements OnInit, OnDestroy {
         this.toast.success('Two-factor authentication enabled');
         this.cancelEnable2fa();
         this.enabling2fa.set(false);
-        this.loadAccount();
+        this.accountResource.reload();
       },
       error: () => {
         this.toast.error('Invalid verification code');
@@ -290,7 +328,7 @@ export class AccountSettingsComponent implements OnInit, OnDestroy {
         this.twoFaPassword.set('');
         this.twoFaCode.set('');
         this.disabling2fa.set(false);
-        this.loadAccount();
+        this.accountResource.reload();
       },
       error: () => {
         this.toast.error('Failed to disable 2FA. Check your password and code.');
@@ -377,7 +415,7 @@ export class AccountSettingsComponent implements OnInit, OnDestroy {
             clearInterval(this.plexPollTimer!);
             this.plexLinking.set(false);
             this.toast.success('Plex account linked');
-            this.loadAccount();
+            this.accountResource.reload();
           }
         },
         error: () => {
@@ -403,7 +441,7 @@ export class AccountSettingsComponent implements OnInit, OnDestroy {
       next: () => {
         this.toast.success('Plex account unlinked');
         this.plexUnlinking.set(false);
-        this.loadAccount();
+        this.accountResource.reload();
       },
       error: () => {
         this.toast.error('Failed to unlink Plex account');
@@ -414,7 +452,8 @@ export class AccountSettingsComponent implements OnInit, OnDestroy {
 
   // OIDC
   async saveOidcConfig(): Promise<void> {
-    if (this.oidcEnabled() && !this.oidcAuthorizedSubject()) {
+    const m = this.oidcModel();
+    if (m.enabled && !m.authorizedSubject) {
       const confirmed = await this.confirmService.confirm({
         title: 'Enable OIDC without a linked account',
         message:
@@ -434,15 +473,15 @@ export class AccountSettingsComponent implements OnInit, OnDestroy {
 
     this.oidcSaving.set(true);
     this.api.updateOidcConfig({
-      enabled: this.oidcEnabled(),
-      issuerUrl: this.oidcIssuerUrl(),
-      clientId: this.oidcClientId(),
-      clientSecret: this.oidcClientSecret(),
-      scopes: this.oidcScopes(),
-      authorizedSubject: this.oidcAuthorizedSubject(),
-      providerName: this.oidcProviderName(),
-      redirectUrl: this.oidcRedirectUrl(),
-      exclusiveMode: this.oidcExclusiveMode(),
+      enabled: m.enabled,
+      issuerUrl: m.issuerUrl,
+      clientId: m.clientId,
+      clientSecret: m.clientSecret,
+      scopes: m.scopes,
+      authorizedSubject: m.authorizedSubject,
+      providerName: m.providerName,
+      redirectUrl: m.redirectUrl,
+      exclusiveMode: m.exclusiveMode,
     }).subscribe({
       next: () => {
         this.toast.success('OIDC settings saved');
@@ -482,8 +521,7 @@ export class AccountSettingsComponent implements OnInit, OnDestroy {
     this.oidcUnlinking.set(true);
     this.api.unlinkOidc().subscribe({
       next: () => {
-        this.oidcAuthorizedSubject.set('');
-        this.oidcExclusiveMode.set(false);
+        this.oidcModel.update(m => ({ ...m, authorizedSubject: '', exclusiveMode: false }));
         this.toast.success('OIDC account unlinked');
         this.oidcUnlinking.set(false);
       },

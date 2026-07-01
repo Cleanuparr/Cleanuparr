@@ -27,7 +27,7 @@ This helps us avoid redundant work, git conflicts, and contributions that may no
 ### Prerequisites
 
 - [.NET 10.0 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
-- [Node.js 18+](https://nodejs.org/)
+- [Node.js 26+](https://nodejs.org/)
 - [Git](https://git-scm.com/)
 - (Optional) [Make](https://www.gnu.org/software/make/) for database migrations
 - (Optional) IDE: [JetBrains Rider](https://www.jetbrains.com/rider/) or [Visual Studio](https://visualstudio.microsoft.com/)

@@ -2,6 +2,7 @@ import { Component, ChangeDetectionStrategy, input, model, signal, effect, untra
 import { NgIcon } from '@ng-icons/core';
 import { DocumentationService } from '@core/services/documentation.service';
 import { NewBadgeComponent } from '@ui/new-badge/new-badge.component';
+import { generateControlId } from '@ui/control-id';
 
 export interface SizeUnit {
   label: string;
@@ -19,12 +20,14 @@ export interface SizeUnit {
 export class SizeInputComponent {
   private readonly docs = inject(DocumentationService);
 
+  protected readonly controlId = generateControlId('app-size');
+
   label = input<string>();
   featureId = input<string>();
   units = input.required<SizeUnit[]>();
   placeholder = input('');
   disabled = input(false);
-  min = input<number>(0);
+  minValue = input<number>(0);
   error = input<string>();
   hint = input<string>();
   helpKey = input<string>();

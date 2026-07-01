@@ -1,5 +1,7 @@
 import { Component, ChangeDetectionStrategy, input, output, model, HostListener, effect, ElementRef, inject, OnInit, OnDestroy } from '@angular/core';
 import { A11yModule } from '@angular/cdk/a11y';
+import { generateControlId } from '@ui/control-id';
+import { registerOverlayEffect } from '@core/services/overlay-stack.service';
 
 @Component({
   selector: 'app-drawer',
@@ -10,18 +12,18 @@ import { A11yModule } from '@angular/cdk/a11y';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DrawerComponent implements OnInit, OnDestroy {
-  private static nextId = 0;
-
   private readonly host: ElementRef<HTMLElement> = inject(ElementRef);
   private previousFocus: HTMLElement | null = null;
 
-  readonly titleId = `drawer-title-${++DrawerComponent.nextId}`;
+  readonly titleId = generateControlId('drawer-title');
 
   title = input<string>();
   visible = model(false);
   closeOnBackdrop = input(true);
 
   closed = output<void>();
+
+  private readonly isTopmostOverlay = registerOverlayEffect(this.visible);
 
   constructor() {
     effect(() => {
@@ -45,7 +47,7 @@ export class DrawerComponent implements OnInit, OnDestroy {
 
   @HostListener('document:keydown.escape')
   onEscapeKey(): void {
-    if (this.visible()) {
+    if (this.visible() && this.isTopmostOverlay()) {
       this.close();
     }
   }
@@ -56,8 +58,8 @@ export class DrawerComponent implements OnInit, OnDestroy {
     this.closed.emit();
   }
 
-  onBackdropClick(): void {
-    if (this.closeOnBackdrop()) {
+  onBackdropClick(event: MouseEvent): void {
+    if (event.target === event.currentTarget && this.closeOnBackdrop()) {
       this.close();
     }
   }

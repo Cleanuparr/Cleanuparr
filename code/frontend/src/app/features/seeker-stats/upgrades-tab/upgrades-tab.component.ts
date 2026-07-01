@@ -1,4 +1,5 @@
-import { Component, ChangeDetectionStrategy, inject, signal, computed, effect, untracked, OnInit } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, signal, computed, effect } from '@angular/core';
+import { rxResource } from '@angular/core/rxjs-interop';
 import { DatePipe } from '@angular/common';
 import { NgIcon } from '@ng-icons/core';
 import {
@@ -8,7 +9,10 @@ import {
 } from '@ui';
 import type { SelectOption } from '@ui';
 import { AnimatedCounterComponent } from '@ui/animated-counter/animated-counter.component';
-import { CfScoreApi, CfScoreUpgrade, CfUpgradesSortBy, SortDirection } from '@core/api/cf-score.api';
+import {
+  CfScoreApi, CfScoreUpgradesResponse, CfScoreUpgradesQuery,
+  CfScoreInstance, CfUpgradesSortBy, SortDirection,
+} from '@core/api/cf-score.api';
 import { AppHubService } from '@core/realtime/app-hub.service';
 import { ToastService } from '@core/services/toast.service';
 import { PaginationService } from '@core/services/pagination.service';
@@ -48,7 +52,7 @@ const EMPTY_FILTERS: AdvancedFilters = {
   styleUrl: './upgrades-tab.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class UpgradesTabComponent implements OnInit {
+export class UpgradesTabComponent {
   private static readonly PAGE_SIZE_KEY = 'cleanuparr-page-size-seeker-upgrades';
 
   private readonly api = inject(CfScoreApi);
@@ -56,17 +60,12 @@ export class UpgradesTabComponent implements OnInit {
   private readonly toast = inject(ToastService);
   private readonly pagination = inject(PaginationService);
   private initialLoad = true;
-  private latestLoadToken = 0;
 
-  readonly upgrades = signal<CfScoreUpgrade[]>([]);
-  readonly totalRecords = signal(0);
   readonly currentPage = signal(1);
   readonly pageSize = signal(this.pagination.getPageSize(UpgradesTabComponent.PAGE_SIZE_KEY, 50));
-  readonly loading = signal(false);
 
   readonly searchQuery = signal('');
   readonly selectedInstanceId = signal<string>('');
-  readonly instanceOptions = signal<SelectOption[]>([]);
 
   readonly sortBy = signal<CfUpgradesSortBy>(DEFAULT_SORT_BY);
   readonly sortDirection = signal<SortDirection>(DEFAULT_SORT_DIRECTION);
@@ -74,6 +73,38 @@ export class UpgradesTabComponent implements OnInit {
   readonly applied = signal<AdvancedFilters>({ ...EMPTY_FILTERS });
   readonly draft = signal<AdvancedFilters>({ ...EMPTY_FILTERS });
   readonly drawerOpen = signal(false);
+
+  private readonly upgradesParams = computed<CfScoreUpgradesQuery>(() => {
+    const a = this.applied();
+    const days = parseInt(a.timeRange, 10);
+    return {
+      page: this.currentPage(),
+      pageSize: this.pageSize(),
+      instanceId: this.selectedInstanceId() || undefined,
+      days: Number.isFinite(days) ? days : undefined,
+      search: this.searchQuery() || undefined,
+      sortBy: this.sortBy(),
+      sortDirection: this.sortDirection(),
+    };
+  });
+
+  private readonly upgradesResource = rxResource({
+    params: () => this.upgradesParams(),
+    stream: ({ params }) => this.api.getRecentUpgrades(params),
+    defaultValue: { items: [], page: 1, pageSize: 50, totalCount: 0, totalPages: 0 } as CfScoreUpgradesResponse,
+  });
+
+  private readonly instancesResource = rxResource({
+    stream: () => this.api.getInstances(),
+    defaultValue: { instances: [] as CfScoreInstance[] },
+  });
+
+  readonly upgrades = computed(() => this.upgradesResource.value().items);
+  readonly totalRecords = computed(() => this.upgradesResource.value().totalCount);
+  readonly instanceOptions = computed<SelectOption[]>(() => [
+    { label: 'All Instances', value: '' },
+    ...this.instancesResource.value().instances.map((i) => ({ label: `${i.name} (${i.itemType})`, value: i.id })),
+  ]);
 
   readonly sortOptions: SelectOption[] = [
     { label: 'Upgraded At', value: CfUpgradesSortBy.UpgradedAt },
@@ -111,44 +142,42 @@ export class UpgradesTabComponent implements OnInit {
         this.initialLoad = false;
         return;
       }
-      untracked(() => {
-        this.loadUpgrades();
-      });
+      this.upgradesResource.reload();
     });
-  }
-
-  ngOnInit(): void {
-    this.loadInstances();
-    this.loadUpgrades();
+    effect(() => {
+      if (this.upgradesResource.error()) {
+        this.toast.error('Failed to load upgrades');
+      }
+    });
+    effect(() => {
+      if (this.instancesResource.error()) {
+        this.toast.error('Failed to load instances');
+      }
+    });
   }
 
   onSearchFilterChange(): void {
     this.currentPage.set(1);
-    this.loadUpgrades();
   }
 
   onSortByChange(value: CfUpgradesSortBy): void {
     this.sortBy.set(value);
     this.currentPage.set(1);
-    this.loadUpgrades();
   }
 
   onSortOrderChange(value: SortDirection): void {
     this.sortDirection.set(value);
     this.currentPage.set(1);
-    this.loadUpgrades();
   }
 
   onPageChange(page: number): void {
     this.currentPage.set(page);
-    this.loadUpgrades();
   }
 
   readonly onPageSizeChange = this.pagination.createPageSizeHandler(
     UpgradesTabComponent.PAGE_SIZE_KEY,
     this.pageSize,
     this.currentPage,
-    () => this.loadUpgrades(),
   );
 
   openFilters(): void {
@@ -166,7 +195,6 @@ export class UpgradesTabComponent implements OnInit {
     this.selectedInstanceId.set(draft.instanceId);
     this.drawerOpen.set(false);
     this.currentPage.set(1);
-    this.loadUpgrades();
   }
 
   updateDraft<K extends keyof AdvancedFilters>(key: K, value: AdvancedFilters[K]): void {
@@ -174,55 +202,10 @@ export class UpgradesTabComponent implements OnInit {
   }
 
   refresh(): void {
-    this.loadUpgrades();
+    this.upgradesResource.reload();
   }
 
   itemTypeSeverity(itemType: string): 'info' | 'default' {
     return itemType === 'Radarr' || itemType === 'Sonarr' ? 'info' : 'default';
-  }
-
-  private loadInstances(): void {
-    this.api.getInstances().subscribe({
-      next: (result) => {
-        this.instanceOptions.set([
-          { label: 'All Instances', value: '' },
-          ...result.instances.map(i => ({
-            label: `${i.name} (${i.itemType})`,
-            value: i.id,
-          })),
-        ]);
-      },
-      error: () => this.toast.error('Failed to load instances'),
-    });
-  }
-
-  private loadUpgrades(): void {
-    this.loading.set(true);
-    const loadToken = ++this.latestLoadToken;
-    const a = this.applied();
-    const days = parseInt(a.timeRange, 10);
-    const instanceId = this.selectedInstanceId() || undefined;
-
-    this.api.getRecentUpgrades({
-      page: this.currentPage(),
-      pageSize: this.pageSize(),
-      instanceId,
-      days: Number.isFinite(days) ? days : undefined,
-      search: this.searchQuery() || undefined,
-      sortBy: this.sortBy(),
-      sortDirection: this.sortDirection(),
-    }).subscribe({
-      next: (result) => {
-        if (loadToken !== this.latestLoadToken) return;
-        this.upgrades.set(result.items);
-        this.totalRecords.set(result.totalCount);
-        this.loading.set(false);
-      },
-      error: () => {
-        if (loadToken !== this.latestLoadToken) return;
-        this.loading.set(false);
-        this.toast.error('Failed to load upgrades');
-      },
-    });
   }
 }

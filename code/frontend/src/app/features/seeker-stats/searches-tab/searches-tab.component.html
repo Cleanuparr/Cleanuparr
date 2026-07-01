@@ -101,7 +101,7 @@
 }
 
 <!-- Toolbar -->
-<div class="toolbar" stickyAware>
+<div class="toolbar" appStickyAware>
   <div class="toolbar__filters">
     <app-input
       placeholder="Search by title..."
@@ -200,7 +200,7 @@
 <!-- Filter drawer -->
 <app-drawer title="Filter searches" [(visible)]="drawerOpen">
   <div class="filter-group">
-    <label class="filter-group__label">Instance</label>
+    <span class="filter-group__label">Instance</span>
     <app-select
       [value]="draft().instanceId"
       [options]="instanceOptions()"
@@ -209,7 +209,7 @@
   </div>
 
   <div class="filter-group">
-    <label class="filter-group__label">Cycle</label>
+    <span class="filter-group__label">Cycle</span>
     <app-select
       [value]="draft().cycleFilter"
       [options]="cycleFilterOptions"
@@ -222,7 +222,7 @@
   </div>
 
   <div class="filter-group">
-    <label class="filter-group__label">Status</label>
+    <span class="filter-group__label">Status</span>
     <div class="chip-group">
       @for (opt of statusOptions; track opt.value) {
         <button
@@ -237,7 +237,7 @@
   </div>
 
   <div class="filter-group">
-    <label class="filter-group__label">Search type</label>
+    <span class="filter-group__label">Search type</span>
     <app-select
       [value]="draft().searchType"
       [options]="searchTypeOptions"
@@ -246,7 +246,7 @@
   </div>
 
   <div class="filter-group">
-    <label class="filter-group__label">Search reason</label>
+    <span class="filter-group__label">Search reason</span>
     <app-select
       [value]="draft().searchReason"
       [options]="searchReasonOptions"
@@ -255,7 +255,7 @@
   </div>
 
   <div class="filter-group">
-    <label class="filter-group__label">Grabbed</label>
+    <span class="filter-group__label">Grabbed</span>
     <app-select
       [value]="draft().grabbed"
       [options]="triStateOptions"

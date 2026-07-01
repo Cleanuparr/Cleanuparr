@@ -1,4 +1,5 @@
 import { Component, ChangeDetectionStrategy, input, output, model, HostListener } from '@angular/core';
+import { registerOverlayEffect } from '@core/services/overlay-stack.service';
 
 @Component({
   selector: 'app-modal',
@@ -15,9 +16,13 @@ export class ModalComponent {
 
   closed = output<void>();
 
+  private readonly isTopmostOverlay = registerOverlayEffect(this.visible);
+
   @HostListener('document:keydown.escape')
   onEscapeKey(): void {
-    this.close();
+    if (this.visible() && this.isTopmostOverlay()) {
+      this.close();
+    }
   }
 
   close(): void {
@@ -25,8 +30,8 @@ export class ModalComponent {
     this.closed.emit();
   }
 
-  onBackdropClick(): void {
-    if (this.closeOnBackdrop()) {
+  onBackdropClick(event: MouseEvent): void {
+    if (event.target === event.currentTarget && this.closeOnBackdrop()) {
       this.close();
     }
   }

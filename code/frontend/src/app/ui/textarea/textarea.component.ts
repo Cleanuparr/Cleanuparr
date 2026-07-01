@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { NgIcon } from '@ng-icons/core';
 import { DocumentationService } from '@core/services/documentation.service';
 import { NewBadgeComponent } from '@ui/new-badge/new-badge.component';
+import { generateControlId } from '@ui/control-id';
 
 @Component({
   selector: 'app-textarea',
@@ -14,6 +15,8 @@ import { NewBadgeComponent } from '@ui/new-badge/new-badge.component';
 })
 export class TextareaComponent {
   private readonly docs = inject(DocumentationService);
+
+  protected readonly controlId = generateControlId('app-textarea');
 
   label = input<string>();
   featureId = input<string>();

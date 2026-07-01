@@ -1,11 +1,12 @@
-<label class="toggle" [class.toggle--disabled]="disabled()">
+<label class="toggle" [class.toggle--disabled]="effectiveDisabled()" [attr.for]="controlId">
   <button
+    [id]="controlId"
     class="toggle__track"
     [class.toggle__track--checked]="checked()"
     role="switch"
     [attr.aria-checked]="checked()"
     [attr.aria-label]="label()"
-    [disabled]="disabled()"
+    [disabled]="effectiveDisabled()"
     (click)="toggle()"
     (keydown)="onKeydown($event)"
   >

@@ -7,7 +7,7 @@ export class ApplicationPathService {
     if (isDevMode()) {
       return 'http://localhost:5000';
     }
-    return (window as any)['_server_base_path'] || '/';
+    return (window as unknown as { _server_base_path?: string })._server_base_path || '/';
   }
 
   getDocumentationBaseUrl(): string {

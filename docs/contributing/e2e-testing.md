@@ -13,7 +13,7 @@ E2E tests use a real Keycloak instance and Playwright browser automation to vali
 ## Prerequisites
 
 - Docker + Docker Compose
-- Node.js 18+
+- Node.js 26+
 - GitHub Packages credentials (for building the app image)
 
 ## Running Locally

@@ -1,4 +1,6 @@
-import { Component, ChangeDetectionStrategy, inject, signal, computed, effect, untracked, OnInit } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, signal, computed, effect } from '@angular/core';
+import { rxResource } from '@angular/core/rxjs-interop';
+import type { Observable } from 'rxjs';
 import { DatePipe } from '@angular/common';
 import { NgIcon } from '@ng-icons/core';
 import {
@@ -10,7 +12,9 @@ import type { SelectOption } from '@ui';
 import type { BadgeSeverity } from '@ui/badge/badge.component';
 import { AnimatedCounterComponent } from '@ui/animated-counter/animated-counter.component';
 import { SearchStatsApi, SearchEventsSortBy, SortDirection } from '@core/api/search-stats.api';
+import type { SearchEventsQuery } from '@core/api/search-stats.api';
 import type { SearchStatsSummary, SearchEvent, InstanceSearchStat } from '@core/models/search-stats.models';
+import type { PaginatedResult } from '@core/models/pagination.model';
 import { SeekerSearchType, SeekerSearchReason, SearchCommandStatus } from '@core/models/search-stats.models';
 import { AppHubService } from '@core/realtime/app-hub.service';
 import { ToastService } from '@core/services/toast.service';
@@ -41,7 +45,7 @@ const EMPTY_FILTERS: AdvancedFilters = {
   grabbed: 'any',
 };
 
-const STATUS_OPTIONS: ReadonlyArray<{ value: SearchCommandStatus; label: string }> = [
+const STATUS_OPTIONS: readonly { value: SearchCommandStatus; label: string }[] = [
   { value: SearchCommandStatus.Started, label: 'Started' },
   { value: SearchCommandStatus.Completed, label: 'Completed' },
   { value: SearchCommandStatus.Failed, label: 'Failed' },
@@ -70,7 +74,7 @@ const STATUS_OPTIONS: ReadonlyArray<{ value: SearchCommandStatus; label: string 
   styleUrl: './searches-tab.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class SearchesTabComponent implements OnInit {
+export class SearchesTabComponent {
   private static readonly PAGE_SIZE_KEY = 'cleanuparr-page-size-seeker-searches';
 
   private readonly api = inject(SearchStatsApi);
@@ -78,10 +82,13 @@ export class SearchesTabComponent implements OnInit {
   private readonly toast = inject(ToastService);
   private readonly pagination = inject(PaginationService);
   private initialLoad = true;
-  private latestLoadToken = 0;
 
-  readonly summary = signal<SearchStatsSummary | null>(null);
-  readonly loading = signal(false);
+  private readonly summaryResource = rxResource({
+    stream: (): Observable<SearchStatsSummary | null> => this.api.getSummary(),
+    defaultValue: null,
+  });
+
+  readonly summary = computed(() => this.summaryResource.value());
 
   readonly sortedInstanceStats = computed(() =>
     [...(this.summary()?.perInstanceStats ?? [])].sort((a, b) => {
@@ -91,7 +98,12 @@ export class SearchesTabComponent implements OnInit {
   );
 
   readonly selectedInstanceId = signal<string>('');
-  readonly instanceOptions = signal<SelectOption[]>([]);
+  readonly instanceOptions = computed<SelectOption[]>(() => {
+    return [
+      { label: 'All Instances', value: '' },
+      ...(this.summaryResource.value()?.perInstanceStats ?? []).map((st) => ({ label: st.instanceName, value: st.instanceId })),
+    ];
+  });
 
   readonly searchQuery = signal('');
 
@@ -103,10 +115,45 @@ export class SearchesTabComponent implements OnInit {
   readonly draft = signal<AdvancedFilters>({ ...EMPTY_FILTERS });
   readonly drawerOpen = signal(false);
 
-  readonly events = signal<SearchEvent[]>([]);
-  readonly eventsTotalRecords = signal(0);
   readonly eventsPage = signal(1);
   readonly pageSize = signal(this.pagination.getPageSize(SearchesTabComponent.PAGE_SIZE_KEY, 50));
+
+  private readonly eventsParams = computed<SearchEventsQuery>(() => {
+    const instanceId = this.selectedInstanceId() || undefined;
+    const search = this.searchQuery() || undefined;
+    const a = this.applied();
+
+    let cycleId: string | undefined;
+    if (a.cycleFilter === 'current' && instanceId) {
+      const instance = this.summaryResource.value()?.perInstanceStats.find((s) => s.instanceId === instanceId);
+      cycleId = instance?.currentCycleId ?? undefined;
+    }
+
+    const triToBool = (v: TriState): boolean | undefined => (v === 'any' ? undefined : v === 'true');
+
+    return {
+      page: this.eventsPage(),
+      pageSize: this.pageSize(),
+      instanceId,
+      cycleId,
+      search,
+      sortBy: this.sortBy(),
+      sortDirection: this.sortDirection(),
+      searchStatus: a.statuses.length ? a.statuses : undefined,
+      searchType: a.searchType || undefined,
+      searchReason: a.searchReason || undefined,
+      grabbed: triToBool(a.grabbed),
+    };
+  });
+
+  private readonly eventsResource = rxResource({
+    params: () => this.eventsParams(),
+    stream: ({ params }) => this.api.getEvents(params),
+    defaultValue: { items: [], page: 1, pageSize: 50, totalCount: 0, totalPages: 0 } as PaginatedResult<SearchEvent>,
+  });
+
+  readonly events = computed(() => this.eventsResource.value().items);
+  readonly eventsTotalRecords = computed(() => this.eventsResource.value().totalCount);
 
   readonly sortOptions: SelectOption[] = [
     { label: 'Timestamp', value: SearchEventsSortBy.Timestamp },
@@ -166,45 +213,43 @@ export class SearchesTabComponent implements OnInit {
         this.initialLoad = false;
         return;
       }
-      untracked(() => {
-        this.loadSummary();
-        this.loadEvents();
-      });
+      this.summaryResource.reload();
+      this.eventsResource.reload();
     });
-  }
-
-  ngOnInit(): void {
-    this.loadSummary();
-    this.loadEvents();
+    effect(() => {
+      if (this.summaryResource.error()) {
+        this.toast.error('Failed to load search stats');
+      }
+    });
+    effect(() => {
+      if (this.eventsResource.error()) {
+        this.toast.error('Failed to load search events');
+      }
+    });
   }
 
   onSearchFilterChange(): void {
     this.eventsPage.set(1);
-    this.loadEvents();
   }
 
   onEventsPageChange(page: number): void {
     this.eventsPage.set(page);
-    this.loadEvents();
   }
 
   onSortByChange(value: SearchEventsSortBy): void {
     this.sortBy.set(value);
     this.eventsPage.set(1);
-    this.loadEvents();
   }
 
   onSortOrderChange(value: SortDirection): void {
     this.sortDirection.set(value);
     this.eventsPage.set(1);
-    this.loadEvents();
   }
 
   readonly onPageSizeChange = this.pagination.createPageSizeHandler(
     SearchesTabComponent.PAGE_SIZE_KEY,
     this.pageSize,
     this.eventsPage,
-    () => this.loadEvents(),
   );
 
   openFilters(): void {
@@ -222,7 +267,6 @@ export class SearchesTabComponent implements OnInit {
     this.selectedInstanceId.set(draft.instanceId);
     this.drawerOpen.set(false);
     this.eventsPage.set(1);
-    this.loadEvents();
   }
 
   toggleStatus(value: SearchCommandStatus): void {
@@ -249,8 +293,8 @@ export class SearchesTabComponent implements OnInit {
   }
 
   refresh(): void {
-    this.loadSummary();
-    this.loadEvents();
+    this.summaryResource.reload();
+    this.eventsResource.reload();
   }
 
   searchTypeSeverity(type: SeekerSearchType): 'info' | 'warning' {
@@ -324,63 +368,5 @@ export class SearchesTabComponent implements OnInit {
     }
     const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
     return `${diffMinutes}m`;
-  }
-
-  private loadSummary(): void {
-    this.api.getSummary().subscribe({
-      next: (summary) => {
-        this.summary.set(summary);
-        this.instanceOptions.set([
-          { label: 'All Instances', value: '' },
-          ...summary.perInstanceStats.map(s => ({
-            label: s.instanceName,
-            value: s.instanceId,
-          })),
-        ]);
-      },
-      error: () => this.toast.error('Failed to load search stats'),
-    });
-  }
-
-  private loadEvents(): void {
-    this.loading.set(true);
-    const loadToken = ++this.latestLoadToken;
-    const instanceId = this.selectedInstanceId() || undefined;
-    const search = this.searchQuery() || undefined;
-    const a = this.applied();
-
-    let cycleId: string | undefined;
-    if (a.cycleFilter === 'current' && instanceId) {
-      const instance = this.summary()?.perInstanceStats.find(s => s.instanceId === instanceId);
-      cycleId = instance?.currentCycleId ?? undefined;
-    }
-
-    const triToBool = (v: TriState): boolean | undefined => v === 'any' ? undefined : v === 'true';
-
-    this.api.getEvents({
-      page: this.eventsPage(),
-      pageSize: this.pageSize(),
-      instanceId,
-      cycleId,
-      search,
-      sortBy: this.sortBy(),
-      sortDirection: this.sortDirection(),
-      searchStatus: a.statuses.length ? a.statuses : undefined,
-      searchType: a.searchType || undefined,
-      searchReason: a.searchReason || undefined,
-      grabbed: triToBool(a.grabbed),
-    }).subscribe({
-      next: (result) => {
-        if (loadToken !== this.latestLoadToken) return;
-        this.events.set(result.items);
-        this.eventsTotalRecords.set(result.totalCount);
-        this.loading.set(false);
-      },
-      error: () => {
-        if (loadToken !== this.latestLoadToken) return;
-        this.loading.set(false);
-        this.toast.error('Failed to load search events');
-      },
-    });
   }
 }

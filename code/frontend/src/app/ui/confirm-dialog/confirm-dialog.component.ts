@@ -1,5 +1,6 @@
 import { Component, ChangeDetectionStrategy, inject, HostListener } from '@angular/core';
 import { ConfirmService } from '@core/services/confirm.service';
+import { registerOverlayEffect } from '@core/services/overlay-stack.service';
 import { ButtonComponent } from '../button/button.component';
 
 @Component({
@@ -13,9 +14,17 @@ import { ButtonComponent } from '../button/button.component';
 export class ConfirmDialogComponent {
   readonly confirm = inject(ConfirmService);
 
+  private readonly isTopmostOverlay = registerOverlayEffect(this.confirm.state);
+
   @HostListener('document:keydown.escape')
   onEscapeKey(): void {
-    if (this.confirm.state()) {
+    if (this.confirm.state() && this.isTopmostOverlay()) {
+      this.confirm.cancel();
+    }
+  }
+
+  onBackdropClick(event: MouseEvent): void {
+    if (event.target === event.currentTarget) {
       this.confirm.cancel();
     }
   }

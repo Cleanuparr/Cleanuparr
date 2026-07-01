@@ -13,12 +13,6 @@ interface NavItem {
   route: string;
 }
 
-interface ExternalLink {
-  label: string;
-  icon: string;
-  href: string;
-}
-
 @Component({
   selector: 'app-nav-sidebar',
   standalone: true,

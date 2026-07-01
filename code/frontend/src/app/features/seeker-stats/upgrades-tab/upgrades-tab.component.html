@@ -1,5 +1,5 @@
 <!-- Toolbar -->
-<div class="toolbar" stickyAware>
+<div class="toolbar" appStickyAware>
   <div class="toolbar__filters">
     <app-input
       placeholder="Search by title..."
@@ -86,7 +86,7 @@
 <!-- Filter drawer -->
 <app-drawer title="Filter upgrades" [(visible)]="drawerOpen">
   <div class="filter-group">
-    <label class="filter-group__label">Instance</label>
+    <span class="filter-group__label">Instance</span>
     <app-select
       [value]="draft().instanceId"
       [options]="instanceOptions()"
@@ -95,7 +95,7 @@
   </div>
 
   <div class="filter-group">
-    <label class="filter-group__label">Time range</label>
+    <span class="filter-group__label">Time range</span>
     <app-select
       [value]="draft().timeRange"
       [options]="timeRangeOptions"

@@ -1,4 +1,5 @@
-import { Component, ChangeDetectionStrategy, inject, signal, OnInit, OnDestroy } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, signal, computed, effect, OnInit, OnDestroy } from '@angular/core';
+import { rxResource } from '@angular/core/rxjs-interop';
 import { DatePipe } from '@angular/common';
 import { NgIcon } from '@ng-icons/core';
 import { PageHeaderComponent } from '@layout/page-header/page-header.component';
@@ -13,6 +14,7 @@ import { ConfirmService } from '@core/services/confirm.service';
 import { PaginationService } from '@core/services/pagination.service';
 import { StickyAwareDirective } from '@core/directives/sticky-aware.directive';
 import { DownloadItemStrikes, StrikeFilter } from '@core/models/strike.models';
+import { PaginatedResult } from '@core/models/pagination.model';
 
 @Component({
   selector: 'app-strikes',
@@ -44,9 +46,6 @@ export class StrikesComponent implements OnInit, OnDestroy {
   private readonly pagination = inject(PaginationService);
   private pollTimer: ReturnType<typeof setInterval> | null = null;
 
-  readonly items = signal<DownloadItemStrikes[]>([]);
-  readonly totalRecords = signal(0);
-  readonly loading = signal(false);
   readonly expandedId = signal<string | null>(null);
 
   readonly currentPage = signal(1);
@@ -54,12 +53,50 @@ export class StrikesComponent implements OnInit, OnDestroy {
   readonly selectedType = signal<unknown>('');
   readonly searchQuery = signal('');
 
-  readonly typeOptions = signal<SelectOption[]>([{ label: 'All Types', value: '' }]);
+  private readonly strikeFilter = computed<StrikeFilter>(() => {
+    const filter: StrikeFilter = {
+      page: this.currentPage(),
+      pageSize: this.pageSize(),
+    };
+    const type = this.selectedType() as string;
+    const search = this.searchQuery();
+    if (type) {
+      filter.type = type;
+    }
+    if (search) {
+      filter.search = search;
+    }
+    return filter;
+  });
+
+  private readonly strikesResource = rxResource({
+    params: () => this.strikeFilter(),
+    stream: ({ params }) => this.strikesApi.getStrikes(params),
+    defaultValue: { items: [], page: 1, pageSize: 50, totalCount: 0, totalPages: 0 } as PaginatedResult<DownloadItemStrikes>,
+  });
+
+  private readonly strikeTypesResource = rxResource({
+    stream: () => this.strikesApi.getStrikeTypes(),
+    defaultValue: [] as string[],
+  });
+
+  readonly items = computed(() => this.strikesResource.value().items);
+  readonly totalRecords = computed(() => this.strikesResource.value().totalCount);
+  readonly typeOptions = computed<SelectOption[]>(() => [
+    { label: 'All Types', value: '' },
+    ...this.strikeTypesResource.value().map((t) => ({ label: this.formatStrikeType(t), value: t })),
+  ]);
+
+  constructor() {
+    effect(() => {
+      if (this.strikesResource.error()) {
+        this.toast.error('Failed to load strikes');
+      }
+    });
+  }
 
   ngOnInit(): void {
-    this.loadStrikeTypes();
-    this.loadStrikes();
-    this.pollTimer = setInterval(() => this.loadStrikes(), 10_000);
+    this.pollTimer = setInterval(() => this.strikesResource.reload(), 10_000);
   }
 
   ngOnDestroy(): void {
@@ -68,57 +105,18 @@ export class StrikesComponent implements OnInit, OnDestroy {
     }
   }
 
-  loadStrikes(): void {
-    const filter: StrikeFilter = {
-      page: this.currentPage(),
-      pageSize: this.pageSize(),
-    };
-    const type = this.selectedType() as string;
-    const search = this.searchQuery();
-
-    if (type) filter.type = type;
-    if (search) filter.search = search;
-
-    this.loading.set(true);
-    this.strikesApi.getStrikes(filter).subscribe({
-      next: (result) => {
-        this.items.set(result.items);
-        this.totalRecords.set(result.totalCount);
-        this.loading.set(false);
-      },
-      error: () => {
-        this.loading.set(false);
-        this.toast.error('Failed to load strikes');
-      },
-    });
-  }
-
-  private loadStrikeTypes(): void {
-    this.strikesApi.getStrikeTypes().subscribe({
-      next: (types) => {
-        this.typeOptions.set([
-          { label: 'All Types', value: '' },
-          ...types.map((t) => ({ label: this.formatStrikeType(t), value: t })),
-        ]);
-      },
-    });
-  }
-
   onFilterChange(): void {
     this.currentPage.set(1);
-    this.loadStrikes();
   }
 
   onPageChange(page: number): void {
     this.currentPage.set(page);
-    this.loadStrikes();
   }
 
   readonly onPageSizeChange = this.pagination.createPageSizeHandler(
     StrikesComponent.PAGE_SIZE_KEY,
     this.pageSize,
     this.currentPage,
-    () => this.loadStrikes(),
   );
 
   toggleExpand(itemId: string): void {
@@ -138,14 +136,14 @@ export class StrikesComponent implements OnInit, OnDestroy {
     this.strikesApi.deleteStrikesForItem(item.downloadItemId).subscribe({
       next: () => {
         this.toast.success(`Strikes deleted for "${item.title}"`);
-        this.loadStrikes();
+        this.strikesResource.reload();
       },
       error: () => this.toast.error('Failed to delete strikes'),
     });
   }
 
   refresh(): void {
-    this.loadStrikes();
+    this.strikesResource.reload();
   }
 
   // Helpers

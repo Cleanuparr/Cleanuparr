@@ -1,8 +1,9 @@
 @if (confirm.state(); as state) {
-  <div class="confirm-backdrop" (click)="confirm.cancel()">
+  <!-- Backdrop dismissal is pointer-only sugar; keyboard users dismiss via the Escape HostListener. -->
+  <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
+  <div class="confirm-backdrop" (click)="onBackdropClick($event)">
     <div
       class="confirm"
-      (click)="$event.stopPropagation()"
       role="alertdialog"
       aria-modal="true"
       aria-labelledby="confirm-title"

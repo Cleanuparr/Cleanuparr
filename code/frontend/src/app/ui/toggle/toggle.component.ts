@@ -2,6 +2,8 @@ import { Component, ChangeDetectionStrategy, input, model, inject } from '@angul
 import { NgIcon } from '@ng-icons/core';
 import { DocumentationService } from '@core/services/documentation.service';
 import { NewBadgeComponent } from '@ui/new-badge/new-badge.component';
+import { generateControlId } from '@ui/control-id';
+import { effectiveDisabled as computeEffectiveDisabled } from '@ui/effective-disabled';
 
 @Component({
   selector: 'app-toggle',
@@ -14,18 +16,23 @@ import { NewBadgeComponent } from '@ui/new-badge/new-badge.component';
 export class ToggleComponent {
   private readonly docs = inject(DocumentationService);
 
+  protected readonly controlId = generateControlId('app-toggle');
+
   label = input<string>();
   featureId = input<string>();
   disabled = input(false);
+  forceDisabled = input(false);
   hint = input<string>();
   helpKey = input<string>();
   beforeChange = input<(newValue: boolean) => Promise<boolean> | boolean>();
   checked = model(false);
 
+  readonly effectiveDisabled = computeEffectiveDisabled(this.disabled, this.forceDisabled);
+
   private pending = false;
 
   async toggle(): Promise<void> {
-    if (this.disabled() || this.pending) return;
+    if (this.effectiveDisabled() || this.pending) return;
 
     const newValue = !this.checked();
     const guard = this.beforeChange();

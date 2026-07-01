@@ -5,7 +5,7 @@
 
 <div class="page-content">
   <!-- Toolbar -->
-  <div class="toolbar" stickyAware>
+  <div class="toolbar" appStickyAware>
     <div class="toolbar__filters">
       <app-select
         placeholder="All Severities"
@@ -84,9 +84,13 @@
           <div
             class="event-row__main"
             [class.event-row__main--expandable]="isExpandable(event)"
+            [attr.role]="isExpandable(event) ? 'button' : null"
+            [attr.tabindex]="isExpandable(event) ? 0 : null"
             (click)="isExpandable(event) ? toggleExpand(event.id) : null"
+            (keydown.enter)="isExpandable(event) ? toggleExpand(event.id) : null"
+            (keydown.space)="isExpandable(event) ? toggleExpand(event.id) : null"
           >
-            <button class="event-row__copy" (click)="copyEvent(event); $event.stopPropagation()" title="Copy event">
+            <button class="event-row__copy" (click)="copyEvent(event); $event.stopPropagation()" (keydown.enter)="$event.stopPropagation()" (keydown.space)="$event.stopPropagation()" title="Copy event">
               <ng-icon name="tablerCopy" />
             </button>
             <span class="event-row__time">{{ event.timestamp | date:'yyyy-MM-dd HH:mm:ss' }}</span>

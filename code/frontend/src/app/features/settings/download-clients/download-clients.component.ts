@@ -1,4 +1,6 @@
-import { Component, ChangeDetectionStrategy, inject, signal, computed, OnInit } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, signal, computed, effect } from '@angular/core';
+import { rxResource } from '@angular/core/rxjs-interop';
+import { form, required, FormField } from '@angular/forms/signals';
 import { PageHeaderComponent } from '@layout/page-header/page-header.component';
 import {
   CardComponent, ButtonComponent, InputComponent, ToggleComponent,
@@ -23,163 +25,167 @@ const TYPE_OPTIONS: SelectOption[] = [
   { label: 'rTorrent', value: DownloadClientTypeName.rTorrent },
 ];
 
+interface DownloadClientFormModel {
+  enabled: boolean;
+  name: string;
+  typeName: DownloadClientTypeName;
+  host: string;
+  username: string;
+  password: string;
+  urlBase: string;
+  externalUrl: string;
+  downloadDirectorySource: string;
+  downloadDirectoryTarget: string;
+}
+
 @Component({
   selector: 'app-download-clients',
   standalone: true,
   imports: [
     PageHeaderComponent, CardComponent, ButtonComponent, InputComponent,
     ToggleComponent, SelectComponent, ModalComponent, EmptyStateComponent,
-    BadgeComponent, LoadingStateComponent,
+    BadgeComponent, LoadingStateComponent, FormField,
   ],
   templateUrl: './download-clients.component.html',
   styleUrl: './download-clients.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class DownloadClientsComponent implements OnInit, HasPendingChanges {
+export class DownloadClientsComponent implements HasPendingChanges {
   private readonly api = inject(DownloadClientApi);
   private readonly toast = inject(ToastService);
   private readonly confirmService = inject(ConfirmService);
 
+  private readonly clientsResource = rxResource({
+    stream: () => this.api.getConfig(),
+  });
+
   readonly typeOptions = TYPE_OPTIONS;
   readonly loader = new DeferredLoader();
-  readonly loadError = signal(false);
+  readonly loadError = computed(() => !!this.clientsResource.error());
   readonly saving = signal(false);
-  readonly clients = signal<ClientConfig[]>([]);
+  readonly clients = computed(() =>
+    this.clientsResource.hasValue() ? (this.clientsResource.value().clients ?? []) : [],
+  );
 
   // Modal
   readonly modalVisible = signal(false);
   readonly editingClient = signal<ClientConfig | null>(null);
-  readonly modalEnabled = signal(true);
-  readonly modalName = signal('');
-  readonly modalTypeName = signal<unknown>(DownloadClientTypeName.qBittorrent);
-  readonly modalHost = signal('');
-  readonly modalUsername = signal('');
-  readonly modalPassword = signal('');
-  readonly modalUrlBase = signal('');
-  readonly modalExternalUrl = signal('');
-  readonly modalDownloadDirectorySource = signal('');
-  readonly modalDownloadDirectoryTarget = signal('');
   readonly testing = signal(false);
 
-  // Modal validation
-  readonly modalNameError = computed(() => {
-    if (!this.modalName().trim()) {
-      return 'Name is required';
-    }
-    return undefined;
+  readonly clientModel = signal<DownloadClientFormModel>({
+    enabled: true, name: '', typeName: DownloadClientTypeName.qBittorrent,
+    host: '', username: '', password: '', urlBase: '', externalUrl: '',
+    downloadDirectorySource: '', downloadDirectoryTarget: '',
   });
-  readonly modalHostError = computed(() => {
-    if (!this.modalHost().trim()) {
-      return 'Host is required';
-    }
-    return undefined;
+  readonly clientForm = form(this.clientModel, (p) => {
+    required(p.name, { message: 'Name is required' });
+    required(p.host, { message: 'Host is required' });
   });
-  readonly hasModalErrors = computed(() => !!(
-    this.modalNameError() || this.modalHostError()
-  ));
+
+  readonly hasModalErrors = computed(() => this.clientForm().invalid());
 
   readonly showUsernameField = computed(() => {
-    return this.modalTypeName() !== DownloadClientTypeName.Deluge;
+    return this.clientModel().typeName !== DownloadClientTypeName.Deluge;
   });
 
   readonly showPasswordField = computed(() => true);
 
   readonly usernameHint = computed(() => {
-    if (this.modalTypeName() === DownloadClientTypeName.rTorrent) {
+    if (this.clientModel().typeName === DownloadClientTypeName.rTorrent) {
       return 'Username for HTTP Basic Auth';
     }
     return 'Username for authentication';
   });
 
   readonly passwordHint = computed(() => {
-    if (this.modalTypeName() === DownloadClientTypeName.rTorrent) {
+    if (this.clientModel().typeName === DownloadClientTypeName.rTorrent) {
       return 'Password for HTTP Basic Auth';
     }
     return 'Password for authentication';
   });
 
   readonly urlBaseHint = computed(() => {
-    if (this.modalTypeName() === DownloadClientTypeName.rTorrent) {
+    if (this.clientModel().typeName === DownloadClientTypeName.rTorrent) {
       return 'Path to the XMLRPC endpoint. Usually RPC2 for rTorrent or plugins/httprpc/action.php for ruTorrent.';
     }
     return 'Optional URL base path, leave blank for default';
   });
 
-  onClientTypeChange(value: unknown): void {
-    this.modalTypeName.set(value);
-    if (value === DownloadClientTypeName.Deluge) {
-      this.modalUsername.set('');
+  // typeName is owned by [formField]; here we only apply type-specific defaults,
+  // guarded so they never clobber values already loaded when editing a client.
+  onClientTypeChange(): void {
+    const m = this.clientModel();
+    const patch: Partial<DownloadClientFormModel> = {};
+    if (m.typeName === DownloadClientTypeName.Deluge && m.username !== '') {
+      patch.username = '';
     }
-    if (value === DownloadClientTypeName.Transmission) {
-      this.modalUrlBase.set('transmission');
+    if (m.typeName === DownloadClientTypeName.Transmission && !m.urlBase) {
+      patch.urlBase = 'transmission';
     }
-    if (value === DownloadClientTypeName.rTorrent) {
-      this.modalUrlBase.set('plugins/httprpc/action.php');
+    if (m.typeName === DownloadClientTypeName.rTorrent && !m.urlBase) {
+      patch.urlBase = 'plugins/httprpc/action.php';
+    }
+    if (Object.keys(patch).length > 0) {
+      this.clientModel.update((mm) => ({ ...mm, ...patch }));
     }
   }
 
-  ngOnInit(): void {
-    this.loadClients();
-  }
-
-  private loadClients(): void {
-    this.loader.start();
-    this.api.getConfig().subscribe({
-      next: (config) => {
-        this.clients.set(config.clients ?? []);
-        this.loader.stop();
-      },
-      error: () => {
+  constructor() {
+    effect(() => {
+      if (this.clientsResource.error()) {
         this.toast.error('Failed to load download clients');
+      }
+    });
+
+    effect(() => {
+      if (this.clientsResource.isLoading()) {
+        this.loader.start();
+      } else {
         this.loader.stop();
-        this.loadError.set(true);
-      },
+      }
     });
   }
 
   retry(): void {
-    this.loadError.set(false);
-    this.loadClients();
+    this.clientsResource.reload();
   }
 
   openAddModal(): void {
     this.editingClient.set(null);
-    this.modalEnabled.set(true);
-    this.modalName.set('');
-    this.modalTypeName.set(DownloadClientTypeName.qBittorrent);
-    this.modalHost.set('');
-    this.modalUsername.set('');
-    this.modalPassword.set('');
-    this.modalUrlBase.set('');
-    this.modalExternalUrl.set('');
-    this.modalDownloadDirectorySource.set('');
-    this.modalDownloadDirectoryTarget.set('');
+    this.clientModel.set({
+      enabled: true, name: '', typeName: DownloadClientTypeName.qBittorrent,
+      host: '', username: '', password: '', urlBase: '', externalUrl: '',
+      downloadDirectorySource: '', downloadDirectoryTarget: '',
+    });
     this.modalVisible.set(true);
   }
 
   openEditModal(client: ClientConfig): void {
     this.editingClient.set(client);
-    this.modalEnabled.set(client.enabled);
-    this.modalName.set(client.name);
-    this.modalTypeName.set(client.typeName);
-    this.modalHost.set(client.host);
-    this.modalUsername.set(client.username);
-    this.modalPassword.set(client.password ?? '');
-    this.modalUrlBase.set(client.urlBase);
-    this.modalExternalUrl.set(client.externalUrl ?? '');
-    this.modalDownloadDirectorySource.set(client.downloadDirectorySource ?? '');
-    this.modalDownloadDirectoryTarget.set(client.downloadDirectoryTarget ?? '');
+    this.clientModel.set({
+      enabled: client.enabled,
+      name: client.name,
+      typeName: client.typeName,
+      host: client.host,
+      username: client.username,
+      password: client.password ?? '',
+      urlBase: client.urlBase,
+      externalUrl: client.externalUrl ?? '',
+      downloadDirectorySource: client.downloadDirectorySource ?? '',
+      downloadDirectoryTarget: client.downloadDirectoryTarget ?? '',
+    });
     this.modalVisible.set(true);
   }
 
   testConnection(): void {
+    const m = this.clientModel();
     const request: TestDownloadClientRequest = {
-      typeName: this.modalTypeName() as DownloadClientTypeName,
+      typeName: m.typeName,
       type: DownloadClientType.Torrent,
-      host: this.modalHost(),
-      username: this.modalUsername(),
-      password: this.modalPassword(),
-      urlBase: this.modalUrlBase(),
+      host: m.host,
+      username: m.username,
+      password: m.password,
+      urlBase: m.urlBase,
       clientId: this.editingClient()?.id,
     };
     this.testing.set(true);
@@ -196,32 +202,33 @@ export class DownloadClientsComponent implements OnInit, HasPendingChanges {
   }
 
   saveClient(): void {
-    if (this.hasModalErrors()) {
+    if (this.clientForm().invalid()) {
       return;
     }
     const editing = this.editingClient();
+    const m = this.clientModel();
     this.saving.set(true);
 
     if (editing) {
       const client: ClientConfig = {
         ...editing,
-        enabled: this.modalEnabled(),
-        name: this.modalName(),
-        typeName: this.modalTypeName() as DownloadClientTypeName,
-        host: this.modalHost(),
-        username: this.modalUsername(),
-        password: this.modalPassword() || undefined,
-        urlBase: this.modalUrlBase(),
-        externalUrl: this.modalExternalUrl() || undefined,
-        downloadDirectorySource: this.modalDownloadDirectorySource() || null,
-        downloadDirectoryTarget: this.modalDownloadDirectoryTarget() || null,
+        enabled: m.enabled,
+        name: m.name,
+        typeName: m.typeName,
+        host: m.host,
+        username: m.username,
+        password: m.password || undefined,
+        urlBase: m.urlBase,
+        externalUrl: m.externalUrl || undefined,
+        downloadDirectorySource: m.downloadDirectorySource || null,
+        downloadDirectoryTarget: m.downloadDirectoryTarget || null,
       };
       this.api.update(editing.id, client).subscribe({
         next: () => {
           this.toast.success('Client updated');
           this.modalVisible.set(false);
           this.saving.set(false);
-          this.loadClients();
+          this.clientsResource.reload();
         },
         error: () => {
           this.toast.error('Failed to update client');
@@ -230,24 +237,24 @@ export class DownloadClientsComponent implements OnInit, HasPendingChanges {
       });
     } else {
       const dto: CreateDownloadClientDto = {
-        enabled: this.modalEnabled(),
-        name: this.modalName(),
+        enabled: m.enabled,
+        name: m.name,
         type: DownloadClientType.Torrent,
-        typeName: this.modalTypeName() as DownloadClientTypeName,
-        host: this.modalHost(),
-        username: this.modalUsername(),
-        password: this.modalPassword(),
-        urlBase: this.modalUrlBase(),
-        externalUrl: this.modalExternalUrl() || undefined,
-        downloadDirectorySource: this.modalDownloadDirectorySource() || null,
-        downloadDirectoryTarget: this.modalDownloadDirectoryTarget() || null,
+        typeName: m.typeName,
+        host: m.host,
+        username: m.username,
+        password: m.password,
+        urlBase: m.urlBase,
+        externalUrl: m.externalUrl || undefined,
+        downloadDirectorySource: m.downloadDirectorySource || null,
+        downloadDirectoryTarget: m.downloadDirectoryTarget || null,
       };
       this.api.create(dto).subscribe({
         next: () => {
           this.toast.success('Client added');
           this.modalVisible.set(false);
           this.saving.set(false);
-          this.loadClients();
+          this.clientsResource.reload();
         },
         error: () => {
           this.toast.error('Failed to add client');
@@ -271,7 +278,7 @@ export class DownloadClientsComponent implements OnInit, HasPendingChanges {
     this.api.delete(client.id).subscribe({
       next: () => {
         this.toast.success('Client deleted');
-        this.loadClients();
+        this.clientsResource.reload();
       },
       error: () => this.toast.error('Failed to delete client'),
     });

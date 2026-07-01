@@ -1,4 +1,6 @@
-import { Component, ChangeDetectionStrategy, inject, signal, computed, effect, untracked, OnInit } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, signal, computed, effect } from '@angular/core';
+import { rxResource } from '@angular/core/rxjs-interop';
+import type { Observable } from 'rxjs';
 import { DatePipe } from '@angular/common';
 import { NgIcon } from '@ng-icons/core';
 import {
@@ -10,6 +12,7 @@ import type { SelectOption } from '@ui';
 import { AnimatedCounterComponent } from '@ui/animated-counter/animated-counter.component';
 import {
   CfScoreApi, CfScoreEntry, CfScoreStats, CfScoreHistoryEntry, CfScoreInstance,
+  CfScoreEntriesResponse, CfScoresQuery,
   CutoffFilter, MonitoredFilter, CfScoresSortBy, SortDirection,
 } from '@core/api/cf-score.api';
 import { AppHubService } from '@core/realtime/app-hub.service';
@@ -56,7 +59,7 @@ const EMPTY_FILTERS: AdvancedFilters = {
   styleUrl: './quality-tab.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class QualityTabComponent implements OnInit {
+export class QualityTabComponent {
   private static readonly PAGE_SIZE_KEY = 'cleanuparr-page-size-seeker-quality';
 
   private readonly api = inject(CfScoreApi);
@@ -64,19 +67,11 @@ export class QualityTabComponent implements OnInit {
   private readonly toast = inject(ToastService);
   private readonly pagination = inject(PaginationService);
   private initialLoad = true;
-  private latestLoadToken = 0;
-
-  readonly items = signal<CfScoreEntry[]>([]);
-  readonly stats = signal<CfScoreStats | null>(null);
-  readonly totalRecords = signal(0);
-  readonly loading = signal(false);
 
   readonly currentPage = signal(1);
   readonly pageSize = signal(this.pagination.getPageSize(QualityTabComponent.PAGE_SIZE_KEY, 50));
   readonly searchQuery = signal('');
   readonly selectedInstanceId = signal<string>('');
-  readonly instances = signal<CfScoreInstance[]>([]);
-  readonly instanceOptions = signal<SelectOption[]>([]);
 
   readonly sortBy = signal<CfScoresSortBy>(DEFAULT_SORT_BY);
   readonly sortDirection = signal<SortDirection>(DEFAULT_SORT_DIRECTION);
@@ -98,6 +93,46 @@ export class QualityTabComponent implements OnInit {
   readonly applied = signal<AdvancedFilters>({ ...EMPTY_FILTERS });
   readonly draft = signal<AdvancedFilters>({ ...EMPTY_FILTERS });
   readonly drawerOpen = signal(false);
+
+  private readonly scoresParams = computed<CfScoresQuery>(() => {
+    const a = this.applied();
+    return {
+      page: this.currentPage(),
+      pageSize: this.pageSize(),
+      search: this.searchQuery() || undefined,
+      instanceId: this.selectedInstanceId() || undefined,
+      sortBy: this.sortBy(),
+      sortDirection: this.sortDirection(),
+      qualityProfile: a.qualityProfile || undefined,
+      cutoffFilter: a.cutoffFilter,
+      monitoredFilter: a.monitoredFilter,
+    };
+  });
+
+  private readonly scoresResource = rxResource({
+    params: () => this.scoresParams(),
+    stream: ({ params }) => this.api.getScores(params),
+    defaultValue: { items: [], page: 1, pageSize: 50, totalCount: 0, totalPages: 0 } as CfScoreEntriesResponse,
+  });
+
+  private readonly statsResource = rxResource({
+    stream: (): Observable<CfScoreStats | null> => this.api.getStats(),
+    defaultValue: null,
+  });
+
+  private readonly instancesResource = rxResource({
+    stream: () => this.api.getInstances(),
+    defaultValue: { instances: [] as CfScoreInstance[] },
+  });
+
+  readonly items = computed(() => this.scoresResource.value().items);
+  readonly totalRecords = computed(() => this.scoresResource.value().totalCount);
+  readonly stats = computed(() => this.statsResource.value());
+  readonly instances = computed(() => this.instancesResource.value().instances);
+  readonly instanceOptions = computed<SelectOption[]>(() => [
+    { label: 'All Instances', value: '' },
+    ...this.instancesResource.value().instances.map((i) => ({ label: `${i.name} (${i.itemType})`, value: i.id })),
+  ]);
 
   readonly displayStats = computed(() => {
     const s = this.stats();
@@ -160,98 +195,48 @@ export class QualityTabComponent implements OnInit {
         this.initialLoad = false;
         return;
       }
-      untracked(() => {
-        this.loadScores();
-        this.loadStats();
-      });
+      this.scoresResource.reload();
+      this.statsResource.reload();
     });
-  }
-
-  ngOnInit(): void {
-    this.loadInstances();
-    this.loadScores();
-    this.loadStats();
-  }
-
-  loadScores(): void {
-    this.loading.set(true);
-    const loadToken = ++this.latestLoadToken;
-    const a = this.applied();
-    this.api.getScores({
-      page: this.currentPage(),
-      pageSize: this.pageSize(),
-      search: this.searchQuery() || undefined,
-      instanceId: this.selectedInstanceId() || undefined,
-      sortBy: this.sortBy(),
-      sortDirection: this.sortDirection(),
-      qualityProfile: a.qualityProfile || undefined,
-      cutoffFilter: a.cutoffFilter,
-      monitoredFilter: a.monitoredFilter,
-    }).subscribe({
-      next: (result) => {
-        if (loadToken !== this.latestLoadToken) return;
-        this.items.set(result.items);
-        this.totalRecords.set(result.totalCount);
-        this.loading.set(false);
-      },
-      error: () => {
-        if (loadToken !== this.latestLoadToken) return;
-        this.loading.set(false);
+    effect(() => {
+      if (this.scoresResource.error()) {
         this.toast.error('Failed to load CF scores');
-      },
+      }
     });
-  }
-
-  private loadInstances(): void {
-    this.api.getInstances().subscribe({
-      next: (result) => {
-        this.instances.set(result.instances);
-        this.instanceOptions.set([
-          { label: 'All Instances', value: '' },
-          ...result.instances.map(i => ({
-            label: `${i.name} (${i.itemType})`,
-            value: i.id,
-          })),
-        ]);
-      },
-      error: () => this.toast.error('Failed to load instances'),
+    effect(() => {
+      if (this.statsResource.error()) {
+        this.toast.error('Failed to load CF score stats');
+      }
     });
-  }
-
-  private loadStats(): void {
-    this.api.getStats().subscribe({
-      next: (stats) => this.stats.set(stats),
-      error: () => this.toast.error('Failed to load CF score stats'),
+    effect(() => {
+      if (this.instancesResource.error()) {
+        this.toast.error('Failed to load instances');
+      }
     });
   }
 
   onFilterChange(): void {
     this.currentPage.set(1);
-    this.loadScores();
   }
 
   onSortByChange(value: CfScoresSortBy): void {
     this.sortBy.set(value);
     this.currentPage.set(1);
-    this.loadScores();
   }
 
   onSortOrderChange(value: SortDirection): void {
     this.sortDirection.set(value);
     this.currentPage.set(1);
-    this.loadScores();
   }
 
   onPageChange(page: number): void {
     this.currentPage.set(page);
-    this.loadScores();
   }
 
   readonly onPageSizeChange = this.pagination.createPageSizeHandler(
     QualityTabComponent.PAGE_SIZE_KEY,
     this.pageSize,
     this.currentPage,
-    () => this.loadScores(),
   );
 
   openFilters(): void {
@@ -277,7 +262,6 @@ export class QualityTabComponent implements OnInit {
     this.selectedInstanceId.set(draft.instanceId);
     this.drawerOpen.set(false);
     this.currentPage.set(1);
-    this.loadScores();
   }
 
   private collectProfilesFor(instanceId: string): Set<string> {
@@ -296,8 +280,8 @@ export class QualityTabComponent implements OnInit {
   }
 
   refresh(): void {
-    this.loadScores();
-    this.loadStats();
+    this.scoresResource.reload();
+    this.statsResource.reload();
   }
 
   toggleExpand(item: CfScoreEntry): void {

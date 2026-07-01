@@ -1,9 +1,10 @@
 @if (visible()) {
-  <div class="modal-backdrop" (click)="onBackdropClick()">
+  <!-- Backdrop dismissal is pointer-only sugar; keyboard users dismiss via the Escape HostListener. -->
+  <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
+  <div class="modal-backdrop" (click)="onBackdropClick($event)">
     <div
       class="modal"
       [class]="'modal modal--' + size()"
-      (click)="$event.stopPropagation()"
       role="dialog"
       aria-modal="true"
       aria-labelledby="modal-title"

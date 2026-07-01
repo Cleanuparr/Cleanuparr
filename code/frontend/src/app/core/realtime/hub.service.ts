@@ -101,8 +101,12 @@ export abstract class HubService implements OnDestroy {
     return this.connection.invoke(method, ...args);
   }
 
-  protected onConnected(): void {}
-  protected onReconnected(): void {}
+  protected onConnected(): void {
+    // Optional hook for subclasses.
+  }
+  protected onReconnected(): void {
+    // Optional hook for subclasses.
+  }
 
   ngOnDestroy(): void {
     this.stop();

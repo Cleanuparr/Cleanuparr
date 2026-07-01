@@ -5,6 +5,8 @@
 >
   <!-- Mobile backdrop -->
   @if (isMobile() && mobileMenuOpen()) {
+    <!-- Backdrop dismissal is pointer-only sugar; keyboard users dismiss via the Escape HostListener. -->
+    <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
     <div class="shell__backdrop" (click)="closeMobileMenu()"></div>
   }
 

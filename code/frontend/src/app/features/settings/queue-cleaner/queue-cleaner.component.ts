@@ -1,4 +1,6 @@
-import { Component, ChangeDetectionStrategy, inject, signal, computed, OnInit, viewChildren, effect, untracked } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, signal, computed, viewChildren, effect, untracked } from '@angular/core';
+import { rxResource } from '@angular/core/rxjs-interop';
+import { form, required, min, max, maxLength, validate, disabled, FormField } from '@angular/forms/signals';
 import { PageHeaderComponent } from '@layout/page-header/page-header.component';
 import {
   CardComponent, ButtonComponent, InputComponent, ToggleComponent,
@@ -36,6 +38,52 @@ const SCHEDULE_UNIT_OPTIONS: SelectOption[] = [
   { label: 'Hours', value: ScheduleUnit.Hours },
 ];
 
+interface QueueCleanerFormModel {
+  enabled: boolean;
+  useAdvancedScheduling: boolean;
+  cronExpression: string;
+  scheduleEvery: number;
+  scheduleUnit: ScheduleUnit;
+  ignoredDownloads: string[];
+  processNoContentId: boolean;
+  failedMaxStrikes: number | null;
+  failedIgnorePrivate: boolean;
+  failedDeletePrivate: boolean;
+  failedSkipNotFound: boolean;
+  failedPatterns: string[];
+  failedPatternMode: PatternMode;
+  failedChangeCategory: boolean;
+  metadataMaxStrikes: number | null;
+}
+
+interface StallRuleFormModel {
+  name: string;
+  enabled: boolean;
+  maxStrikes: number | null;
+  privacyType: TorrentPrivacyType;
+  minCompletion: number | null;
+  maxCompletion: number | null;
+  resetOnProgress: boolean;
+  minProgress: string;
+  deletePrivate: boolean;
+  changeCategory: boolean;
+}
+
+interface SlowRuleFormModel {
+  name: string;
+  enabled: boolean;
+  maxStrikes: number | null;
+  minSpeed: string;
+  maxTimeHours: number | null;
+  privacyType: TorrentPrivacyType;
+  minCompletion: number | null;
+  maxCompletion: number | null;
+  ignoreAboveSize: string;
+  resetOnProgress: boolean;
+  deletePrivate: boolean;
+  changeCategory: boolean;
+}
+
 @Component({
   selector: 'app-queue-cleaner',
   standalone: true,
@@ -43,13 +91,13 @@ const SCHEDULE_UNIT_OPTIONS: SelectOption[] = [
     PageHeaderComponent, CardComponent, ButtonComponent, InputComponent,
     ToggleComponent, NumberInputComponent, SelectComponent, ChipInputComponent,
     AccordionComponent, BadgeComponent, ModalComponent, EmptyStateComponent, LoadingStateComponent,
-    SizeInputComponent, NgIcon,
+    SizeInputComponent, NgIcon, FormField,
   ],
   templateUrl: './queue-cleaner.component.html',
   styleUrl: './queue-cleaner.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class QueueCleanerComponent implements OnInit, HasPendingChanges {
+export class QueueCleanerComponent implements HasPendingChanges {
   private readonly api = inject(QueueCleanerApi);
   private readonly toast = inject(ToastService);
   private readonly confirm = inject(ConfirmService);
@@ -72,346 +120,324 @@ export class QueueCleanerComponent implements OnInit, HasPendingChanges {
     { label: 'MB', value: 'MB' },
     { label: 'GB', value: 'GB' },
   ];
+  private readonly configResource = rxResource({
+    stream: () => this.api.getConfig(),
+  });
+  private readonly stallRulesResource = rxResource({
+    stream: () => this.api.getStallRules(),
+    defaultValue: [] as StallRule[],
+  });
+  private readonly slowRulesResource = rxResource({
+    stream: () => this.api.getSlowRules(),
+    defaultValue: [] as SlowRule[],
+  });
+
   readonly loader = new DeferredLoader();
-  readonly loadError = signal(false);
+  readonly loadError = computed(() => !!this.configResource.error());
   readonly saving = signal(false);
   readonly saved = signal(false);
 
-  readonly enabled = signal(false);
-  readonly useAdvancedScheduling = signal(false);
-  readonly cronExpression = signal('');
-  readonly scheduleEvery = signal<unknown>(5);
-  readonly scheduleUnit = signal<unknown>(ScheduleUnit.Minutes);
-  readonly ignoredDownloads = signal<string[]>([]);
-  readonly processNoContentId = signal(false);
+  private readonly model = signal<QueueCleanerFormModel>({
+    enabled: false,
+    useAdvancedScheduling: false,
+    cronExpression: '',
+    scheduleEvery: 5,
+    scheduleUnit: ScheduleUnit.Minutes,
+    ignoredDownloads: [],
+    processNoContentId: false,
+    failedMaxStrikes: 3,
+    failedIgnorePrivate: false,
+    failedDeletePrivate: false,
+    failedSkipNotFound: false,
+    failedPatterns: [],
+    failedPatternMode: PatternMode.Exclude,
+    failedChangeCategory: false,
+    metadataMaxStrikes: 3,
+  });
+
+  readonly failedSubFieldsDisabled = computed(() => this.model().failedMaxStrikes === 0);
+
+  readonly failedDeletePrivateDisabled = computed(() =>
+    this.failedSubFieldsDisabled() || this.model().failedIgnorePrivate
+  );
+
+  readonly qcForm = form(this.model, (p) => {
+    required(p.failedMaxStrikes, { message: 'This field is required' });
+    min(p.failedMaxStrikes, 0, { message: 'Value cannot be negative' });
+    max(p.failedMaxStrikes, 5000, { message: 'Value cannot exceed 5000' });
+
+    required(p.metadataMaxStrikes, { message: 'This field is required' });
+    min(p.metadataMaxStrikes, 0, { message: 'Value cannot be negative' });
+    max(p.metadataMaxStrikes, 5000, { message: 'Value cannot exceed 5000' });
+
+    validate(p.scheduleEvery, ({ value, valueOf }) => {
+      if (!valueOf(p.enabled) || valueOf(p.useAdvancedScheduling)) {
+        return undefined;
+      }
+      const options = ScheduleOptions[valueOf(p.scheduleUnit)] ?? [];
+      return options.includes(value()) ? undefined : { kind: 'schedule', message: 'Please select a value' };
+    });
+
+    validate(p.cronExpression, ({ value, valueOf }) => {
+      return valueOf(p.enabled) && valueOf(p.useAdvancedScheduling) && !value().trim()
+        ? { kind: 'required', message: 'Cron expression is required' }
+        : undefined;
+    });
+
+    validate(p.failedPatterns, ({ value, valueOf }) => {
+      if (valueOf(p.failedMaxStrikes) === 0) {
+        return undefined;
+      }
+      return valueOf(p.failedPatternMode) === PatternMode.Include && value().length === 0
+        ? { kind: 'required', message: 'At least one pattern is required when using Include mode' }
+        : undefined;
+    });
+
+    disabled(p.failedIgnorePrivate, () => this.model().failedMaxStrikes === 0);
+    disabled(p.failedChangeCategory, () => this.model().failedMaxStrikes === 0);
+    disabled(p.failedDeletePrivate, () => this.failedDeletePrivateDisabled());
+    disabled(p.failedSkipNotFound, () => this.model().failedMaxStrikes === 0);
+    disabled(p.failedPatternMode, () => this.model().failedMaxStrikes === 0);
+    disabled(p.failedPatterns, () => this.model().failedMaxStrikes === 0);
+  });
 
   readonly scheduleIntervalOptions = computed(() => {
-    const unit = this.scheduleUnit() as ScheduleUnit;
-    const values = ScheduleOptions[unit] ?? [];
+    const values = ScheduleOptions[this.model().scheduleUnit] ?? [];
     return values.map(v => ({ label: `${v}`, value: v }));
   });
 
-  // Failed import
-  readonly failedMaxStrikes = signal<number | null>(3);
-  readonly failedIgnorePrivate = signal(false);
-  readonly failedDeletePrivate = signal(false);
-  readonly failedSkipNotFound = signal(false);
-  readonly failedPatterns = signal<string[]>([]);
-  readonly failedPatternMode = signal<unknown>(PatternMode.Exclude);
-  readonly failedChangeCategory = signal(false);
+  // UI-only expansion state
   readonly failedExpanded = signal(true);
-
-  // Metadata
-  readonly metadataMaxStrikes = signal<number | null>(3);
   readonly metadataExpanded = signal(false);
 
   // Stall rules
-  readonly stallRules = signal<StallRule[]>([]);
-  readonly stallRulesLoading = signal(false);
+  readonly stallRules = computed(() => this.stallRulesResource.value());
+  readonly stallRulesLoading = computed(() => this.stallRulesResource.isLoading());
   readonly stallExpanded = signal(false);
   readonly stallModalVisible = signal(false);
   readonly editingStallRule = signal<StallRule | null>(null);
 
   // Stall rule form
-  readonly stallName = signal('');
-  readonly stallEnabled = signal(true);
-  readonly stallMaxStrikes = signal<number | null>(3);
-  readonly stallPrivacyType = signal<unknown>(TorrentPrivacyType.Both);
-  readonly stallMinCompletion = signal<number | null>(0);
-  readonly stallMaxCompletion = signal<number | null>(100);
-  readonly stallResetOnProgress = signal(false);
-  readonly stallMinProgress = signal('');
-  readonly stallDeletePrivate = signal(false);
-  readonly stallChangeCategory = signal(false);
+  private readonly stallDefaults: StallRuleFormModel = {
+    name: '', enabled: true, maxStrikes: 3, privacyType: TorrentPrivacyType.Both,
+    minCompletion: 0, maxCompletion: 100, resetOnProgress: false, minProgress: '',
+    deletePrivate: false, changeCategory: false,
+  };
+  readonly stallModel = signal<StallRuleFormModel>({ ...this.stallDefaults });
+  readonly stallForm = form(this.stallModel, (p) => {
+    required(p.name, { message: 'Name is required' });
+    maxLength(p.name, 100, { message: 'Name cannot exceed 100 characters' });
+    required(p.maxStrikes, { message: 'This field is required' });
+    min(p.maxStrikes, 3, { message: 'Min value is 3' });
+    max(p.maxStrikes, 5000, { message: 'Max value is 5000' });
+    min(p.minCompletion, 0);
+    max(p.minCompletion, 100);
+    min(p.maxCompletion, 1);
+    max(p.maxCompletion, 100);
+    validate(p.maxCompletion, ({ value, valueOf }) => {
+      const minC = valueOf(p.minCompletion) ?? 0;
+      const maxC = value() ?? 100;
+      if (maxC <= 0) return { kind: 'completion', message: 'Max percentage must be greater than 0' };
+      if (maxC < minC) return { kind: 'completion', message: 'Max percentage must be greater than or equal to Min percentage' };
+      return undefined;
+    });
+    disabled(p.deletePrivate, () => this.stallModel().privacyType === TorrentPrivacyType.Public);
+  });
 
   // Slow rules
-  readonly slowRules = signal<SlowRule[]>([]);
-  readonly slowRulesLoading = signal(false);
+  readonly slowRules = computed(() => this.slowRulesResource.value());
+  readonly slowRulesLoading = computed(() => this.slowRulesResource.isLoading());
   readonly slowExpanded = signal(false);
   readonly slowModalVisible = signal(false);
   readonly editingSlowRule = signal<SlowRule | null>(null);
 
   // Slow rule form
-  readonly slowName = signal('');
-  readonly slowEnabled = signal(true);
-  readonly slowMaxStrikes = signal<number | null>(3);
-  readonly slowMinSpeed = signal('');
-  readonly slowMaxTimeHours = signal<number | null>(0);
-  readonly slowPrivacyType = signal<unknown>(TorrentPrivacyType.Both);
-  readonly slowMinCompletion = signal<number | null>(0);
-  readonly slowMaxCompletion = signal<number | null>(100);
-  readonly slowIgnoreAboveSize = signal('');
-  readonly slowResetOnProgress = signal(false);
-  readonly slowDeletePrivate = signal(false);
-  readonly slowChangeCategory = signal(false);
+  private readonly slowDefaults: SlowRuleFormModel = {
+    name: '', enabled: true, maxStrikes: 3, minSpeed: '', maxTimeHours: 0,
+    privacyType: TorrentPrivacyType.Both, minCompletion: 0, maxCompletion: 100,
+    ignoreAboveSize: '', resetOnProgress: false, deletePrivate: false, changeCategory: false,
+  };
+  readonly slowModel = signal<SlowRuleFormModel>({ ...this.slowDefaults });
+  readonly slowForm = form(this.slowModel, (p) => {
+    required(p.name, { message: 'Name is required' });
+    maxLength(p.name, 100, { message: 'Name cannot exceed 100 characters' });
+    required(p.maxStrikes, { message: 'This field is required' });
+    min(p.maxStrikes, 3, { message: 'Min value is 3' });
+    max(p.maxStrikes, 5000, { message: 'Max value is 5000' });
+    min(p.maxTimeHours, 0);
+    min(p.minCompletion, 0);
+    max(p.minCompletion, 100);
+    min(p.maxCompletion, 1);
+    max(p.maxCompletion, 100);
+    validate(p.maxCompletion, ({ value, valueOf }) => {
+      const minC = valueOf(p.minCompletion) ?? 0;
+      const maxC = value() ?? 100;
+      if (maxC <= 0) return { kind: 'completion', message: 'Max percentage must be greater than 0' };
+      if (maxC < minC) return { kind: 'completion', message: 'Max percentage must be greater than or equal to Min percentage' };
+      return undefined;
+    });
+    disabled(p.deletePrivate, () => this.slowModel().privacyType === TorrentPrivacyType.Public);
+  });
 
   constructor() {
     effect(() => {
-      const unit = this.scheduleUnit();
-      const options = ScheduleOptions[unit as ScheduleUnit] ?? [];
-      const current = this.scheduleEvery();
-      if (options.length > 0 && !options.includes(current as number)) {
-        untracked(() => this.scheduleEvery.set(options[0]));
+      const unit = this.model().scheduleUnit;
+      const options = ScheduleOptions[unit] ?? [];
+      const current = this.model().scheduleEvery;
+      if (options.length > 0 && !options.includes(current)) {
+        untracked(() => this.model.update(m => ({ ...m, scheduleEvery: options[0] })));
+      }
+    });
+
+    // These reset effects guard on the current value: model.update always creates a new object,
+    // so writing unconditionally would re-trigger the effect forever (infinite loop / page freeze).
+    effect(() => {
+      const m = this.model();
+      if (m.failedIgnorePrivate && m.failedDeletePrivate) {
+        untracked(() => this.model.update(mm => ({ ...mm, failedDeletePrivate: false })));
       }
     });
 
     effect(() => {
-      const ignorePrivate = this.failedIgnorePrivate();
-      if (ignorePrivate) {
-        untracked(() => this.failedDeletePrivate.set(false));
+      const m = this.model();
+      if (m.failedChangeCategory && m.failedDeletePrivate) {
+        untracked(() => this.model.update(mm => ({ ...mm, failedDeletePrivate: false })));
       }
     });
 
     effect(() => {
-      if (this.failedChangeCategory()) {
-        untracked(() => this.failedDeletePrivate.set(false));
+      const m = this.stallModel();
+      if ((m.changeCategory || m.privacyType === TorrentPrivacyType.Public) && m.deletePrivate) {
+        untracked(() => this.stallModel.update(s => ({ ...s, deletePrivate: false })));
       }
     });
 
     effect(() => {
-      if (this.stallChangeCategory()) {
-        untracked(() => this.stallDeletePrivate.set(false));
+      const m = this.slowModel();
+      if ((m.changeCategory || m.privacyType === TorrentPrivacyType.Public) && m.deletePrivate) {
+        untracked(() => this.slowModel.update(s => ({ ...s, deletePrivate: false })));
       }
     });
 
     effect(() => {
-      if (this.slowChangeCategory()) {
-        untracked(() => this.slowDeletePrivate.set(false));
+      const config = this.configResource.hasValue() ? this.configResource.value() : undefined;
+      if (!config) {
+        return;
+      }
+      untracked(() => {
+        this.config = config;
+        const parsed = parseCronToJobSchedule(config.cronExpression);
+        this.model.set({
+          enabled: config.enabled,
+          useAdvancedScheduling: config.useAdvancedScheduling,
+          cronExpression: config.cronExpression,
+          scheduleEvery: parsed?.every ?? 5,
+          scheduleUnit: parsed?.type ?? ScheduleUnit.Minutes,
+          ignoredDownloads: config.ignoredDownloads ?? [],
+          processNoContentId: config.processNoContentId,
+          failedMaxStrikes: config.failedImport.maxStrikes,
+          failedIgnorePrivate: config.failedImport.ignorePrivate,
+          failedDeletePrivate: config.failedImport.deletePrivate,
+          failedSkipNotFound: config.failedImport.skipIfNotFoundInClient,
+          failedPatterns: config.failedImport.patterns ?? [],
+          failedPatternMode: config.failedImport.patternMode ?? PatternMode.Exclude,
+          failedChangeCategory: config.failedImport.changeCategory ?? false,
+          metadataMaxStrikes: config.downloadingMetadataMaxStrikes,
+        });
+        this.savedSnapshot.set(this.buildSnapshot());
+      });
+    });
+
+    effect(() => {
+      if (this.configResource.error()) {
+        this.toast.error('Failed to load queue cleaner settings');
+      }
+    });
+
+    effect(() => {
+      if (this.configResource.isLoading()) {
+        this.loader.start();
+      } else {
+        this.loader.stop();
+      }
+    });
+
+    effect(() => {
+      if (this.stallRulesResource.error()) {
+        this.toast.error('Failed to load stall rules');
+      }
+    });
+
+    effect(() => {
+      if (this.slowRulesResource.error()) {
+        this.toast.error('Failed to load slow rules');
       }
     });
   }
 
-  // Validation
-  readonly scheduleEveryError = computed(() => {
-    if (this.useAdvancedScheduling()) return undefined;
-    const unit = this.scheduleUnit() as ScheduleUnit;
-    const options = ScheduleOptions[unit] ?? [];
-    if (!options.includes(this.scheduleEvery() as number)) return 'Please select a value';
-    return undefined;
-  });
+  readonly patternLabel = computed(() =>
+    this.model().failedPatternMode === PatternMode.Include ? 'Included Patterns' : 'Excluded Patterns'
+  );
 
-  readonly cronError = computed(() => {
-    if (this.useAdvancedScheduling() && !this.cronExpression().trim()) return 'Cron expression is required';
-    return undefined;
-  });
-
-  readonly failedMaxStrikesError = computed(() => {
-    const v = this.failedMaxStrikes();
-    if (v == null) return 'This field is required';
-    if (v < 0) return 'Value cannot be negative';
-    if (v > 5000) return 'Value cannot exceed 5000';
-    return undefined;
-  });
-
-  readonly failedPatternsError = computed(() => {
-    if (this.failedSubFieldsDisabled()) return undefined;
-    if (this.failedPatternMode() === PatternMode.Include && this.failedPatterns().length === 0) {
-      return 'At least one pattern is required when using Include mode';
-    }
-    return undefined;
-  });
-
-  readonly metadataMaxStrikesError = computed(() => {
-    const v = this.metadataMaxStrikes();
-    if (v == null) return 'This field is required';
-    if (v < 0) return 'Value cannot be negative';
-    if (v > 5000) return 'Value cannot exceed 5000';
-    return undefined;
-  });
-
-  readonly failedSubFieldsDisabled = computed(() => {
-    return this.failedMaxStrikes() === 0;
-  });
-
-  readonly failedDeletePrivateDisabled = computed(() => {
-    return this.failedSubFieldsDisabled() || this.failedIgnorePrivate();
-  });
-
-  readonly patternLabel = computed(() => {
-    return this.failedPatternMode() === PatternMode.Include ? 'Included Patterns' : 'Excluded Patterns';
-  });
-
-  readonly patternHint = computed(() => {
-    return this.failedPatternMode() === PatternMode.Include
+  readonly patternHint = computed(() =>
+    this.model().failedPatternMode === PatternMode.Include
       ? 'Only failed imports containing these patterns will be removed and everything else will be skipped'
-      : 'Failed imports containing these patterns will be skipped and everything else will be removed';
-  });
+      : 'Failed imports containing these patterns will be skipped and everything else will be removed'
+  );
 
   // Coverage analysis
   readonly stallCoverage = computed(() => analyzeCoverage(this.stallRules()));
   readonly slowCoverage = computed(() => analyzeCoverage(this.slowRules()));
 
-  // Stall modal validation
-  readonly stallNameError = computed(() => {
-    if (!this.stallName().trim()) return 'Name is required';
-    if (this.stallName().length > 100) return 'Name cannot exceed 100 characters';
-    return undefined;
-  });
-  readonly stallMaxStrikesError = computed(() => {
-    const v = this.stallMaxStrikes();
-    if (v == null) return 'This field is required';
-    if (v < 3) return 'Min value is 3';
-    if (v > 5000) return 'Max value is 5000';
-    return undefined;
-  });
-  readonly stallCompletionError = computed(() => {
-    const min = this.stallMinCompletion() ?? 0;
-    const max = this.stallMaxCompletion() ?? 100;
-    if (max <= 0) return 'Max percentage must be greater than 0';
-    if (max < min) return 'Max percentage must be greater than or equal to Min percentage';
-    return undefined;
-  });
-
-  // Slow modal validation
-  readonly slowNameError = computed(() => {
-    if (!this.slowName().trim()) return 'Name is required';
-    if (this.slowName().length > 100) return 'Name cannot exceed 100 characters';
-    return undefined;
-  });
-  readonly slowMaxStrikesError = computed(() => {
-    const v = this.slowMaxStrikes();
-    if (v == null) return 'This field is required';
-    if (v < 3) return 'Min value is 3';
-    if (v > 5000) return 'Max value is 5000';
-    return undefined;
-  });
-  readonly slowCompletionError = computed(() => {
-    const min = this.slowMinCompletion() ?? 0;
-    const max = this.slowMaxCompletion() ?? 100;
-    if (max <= 0) return 'Max percentage must be greater than 0';
-    if (max < min) return 'Max percentage must be greater than or equal to Min percentage';
-    return undefined;
-  });
-
-  readonly hasErrors = computed(() => !!(
-    this.scheduleEveryError() ||
-    this.cronError() ||
-    this.failedMaxStrikesError() ||
-    this.failedPatternsError() ||
-    this.metadataMaxStrikesError() ||
-    this.chipInputs().some(c => c.hasUncommittedInput())
-  ));
+  readonly hasErrors = computed(() =>
+    this.qcForm().invalid() || this.chipInputs().some(c => c.hasUncommittedInput())
+  );
 
   private config: QueueCleanerConfig | null = null;
 
-  ngOnInit(): void {
-    this.loadConfig();
-    this.loadStallRules();
-    this.loadSlowRules();
-  }
-
-  private loadConfig(): void {
-    this.loader.start();
-    this.api.getConfig().subscribe({
-      next: (config) => {
-        this.config = config;
-        this.enabled.set(config.enabled);
-        this.useAdvancedScheduling.set(config.useAdvancedScheduling);
-        this.cronExpression.set(config.cronExpression);
-        const parsed = parseCronToJobSchedule(config.cronExpression);
-        if (parsed) {
-          this.scheduleEvery.set(parsed.every);
-          this.scheduleUnit.set(parsed.type);
-        }
-        this.ignoredDownloads.set(config.ignoredDownloads ?? []);
-        this.processNoContentId.set(config.processNoContentId);
-        this.failedMaxStrikes.set(config.failedImport.maxStrikes);
-        this.failedIgnorePrivate.set(config.failedImport.ignorePrivate);
-        this.failedDeletePrivate.set(config.failedImport.deletePrivate);
-        this.failedSkipNotFound.set(config.failedImport.skipIfNotFoundInClient);
-        this.failedPatterns.set(config.failedImport.patterns ?? []);
-        this.failedPatternMode.set(config.failedImport.patternMode ?? PatternMode.Exclude);
-        this.failedChangeCategory.set(config.failedImport.changeCategory ?? false);
-        this.metadataMaxStrikes.set(config.downloadingMetadataMaxStrikes);
-        this.loader.stop();
-        this.savedSnapshot.set(this.buildSnapshot());
-      },
-      error: () => {
-        this.toast.error('Failed to load queue cleaner settings');
-        this.loader.stop();
-        this.loadError.set(true);
-      },
-    });
-  }
-
-  private loadStallRules(): void {
-    this.stallRulesLoading.set(true);
-    this.api.getStallRules().subscribe({
-      next: (rules) => {
-        this.stallRules.set(rules);
-        this.stallRulesLoading.set(false);
-      },
-      error: () => {
-        this.toast.error('Failed to load stall rules');
-        this.stallRulesLoading.set(false);
-      },
-    });
-  }
-
-  private loadSlowRules(): void {
-    this.slowRulesLoading.set(true);
-    this.api.getSlowRules().subscribe({
-      next: (rules) => {
-        this.slowRules.set(rules);
-        this.slowRulesLoading.set(false);
-      },
-      error: () => {
-        this.toast.error('Failed to load slow rules');
-        this.slowRulesLoading.set(false);
-      },
-    });
-  }
-
   retry(): void {
-    this.loadError.set(false);
-    this.loadConfig();
-    this.loadStallRules();
-    this.loadSlowRules();
+    this.configResource.reload();
+    this.stallRulesResource.reload();
+    this.slowRulesResource.reload();
   }
 
   // Stall rule CRUD
   openStallModal(rule?: StallRule): void {
     this.editingStallRule.set(rule ?? null);
     if (rule) {
-      this.stallName.set(rule.name);
-      this.stallEnabled.set(rule.enabled);
-      this.stallMaxStrikes.set(rule.maxStrikes);
-      this.stallPrivacyType.set(rule.privacyType);
-      this.stallMinCompletion.set(rule.minCompletionPercentage);
-      this.stallMaxCompletion.set(rule.maxCompletionPercentage);
-      this.stallResetOnProgress.set(rule.resetStrikesOnProgress);
-      this.stallMinProgress.set(rule.minimumProgress ?? '');
-      this.stallDeletePrivate.set(rule.deletePrivateTorrentsFromClient);
-      this.stallChangeCategory.set(rule.changeCategory ?? false);
+      this.stallModel.set({
+        name: rule.name,
+        enabled: rule.enabled,
+        maxStrikes: rule.maxStrikes,
+        privacyType: rule.privacyType,
+        minCompletion: rule.minCompletionPercentage,
+        maxCompletion: rule.maxCompletionPercentage,
+        resetOnProgress: rule.resetStrikesOnProgress,
+        minProgress: rule.minimumProgress ?? '',
+        deletePrivate: rule.deletePrivateTorrentsFromClient,
+        changeCategory: rule.changeCategory ?? false,
+      });
     } else {
-      this.stallName.set('');
-      this.stallEnabled.set(true);
-      this.stallMaxStrikes.set(3);
-      this.stallPrivacyType.set(TorrentPrivacyType.Both);
-      this.stallMinCompletion.set(0);
-      this.stallMaxCompletion.set(100);
-      this.stallResetOnProgress.set(false);
-      this.stallMinProgress.set('');
-      this.stallDeletePrivate.set(false);
-      this.stallChangeCategory.set(false);
+      this.stallModel.set({ ...this.stallDefaults });
     }
     this.stallModalVisible.set(true);
   }
 
   saveStallRule(): void {
-    if (this.stallNameError() || this.stallMaxStrikesError() || this.stallCompletionError()) return;
+    if (this.stallForm().invalid()) return;
 
-    const changeCategory = this.stallChangeCategory();
+    const m = this.stallModel();
+    const changeCategory = m.changeCategory;
     const dto: CreateStallRuleDto = {
-      name: this.stallName().trim(),
-      enabled: this.stallEnabled(),
-      maxStrikes: this.stallMaxStrikes() ?? 3,
-      privacyType: this.stallPrivacyType() as TorrentPrivacyType,
-      minCompletionPercentage: this.stallMinCompletion() ?? 0,
-      maxCompletionPercentage: this.stallMaxCompletion() ?? 100,
-      resetStrikesOnProgress: this.stallResetOnProgress(),
-      minimumProgress: this.stallMinProgress().trim() || null,
-      deletePrivateTorrentsFromClient: changeCategory ? false : this.stallDeletePrivate(),
+      name: m.name.trim(),
+      enabled: m.enabled,
+      maxStrikes: m.maxStrikes ?? 3,
+      privacyType: m.privacyType,
+      minCompletionPercentage: m.minCompletion ?? 0,
+      maxCompletionPercentage: m.maxCompletion ?? 100,
+      resetStrikesOnProgress: m.resetOnProgress,
+      minimumProgress: m.minProgress.trim() || null,
+      deletePrivateTorrentsFromClient: changeCategory ? false : m.deletePrivate,
       changeCategory,
     };
 
@@ -424,7 +450,7 @@ export class QueueCleanerComponent implements OnInit, HasPendingChanges {
       next: () => {
         this.toast.success(editing ? 'Stall rule updated' : 'Stall rule created');
         this.stallModalVisible.set(false);
-        this.loadStallRules();
+        this.stallRulesResource.reload();
       },
       error: (e: Error) => this.toast.error(e.message),
     });
@@ -441,7 +467,7 @@ export class QueueCleanerComponent implements OnInit, HasPendingChanges {
     this.api.deleteStallRule(rule.id).subscribe({
       next: () => {
         this.toast.success('Stall rule deleted');
-        this.loadStallRules();
+        this.stallRulesResource.reload();
       },
       error: () => this.toast.error('Failed to delete stall rule'),
     });
@@ -451,51 +477,43 @@ export class QueueCleanerComponent implements OnInit, HasPendingChanges {
   openSlowModal(rule?: SlowRule): void {
     this.editingSlowRule.set(rule ?? null);
     if (rule) {
-      this.slowName.set(rule.name);
-      this.slowEnabled.set(rule.enabled);
-      this.slowMaxStrikes.set(rule.maxStrikes);
-      this.slowMinSpeed.set(rule.minSpeed);
-      this.slowMaxTimeHours.set(rule.maxTimeHours);
-      this.slowPrivacyType.set(rule.privacyType);
-      this.slowMinCompletion.set(rule.minCompletionPercentage);
-      this.slowMaxCompletion.set(rule.maxCompletionPercentage);
-      this.slowIgnoreAboveSize.set(rule.ignoreAboveSize ?? '');
-      this.slowResetOnProgress.set(rule.resetStrikesOnProgress);
-      this.slowDeletePrivate.set(rule.deletePrivateTorrentsFromClient);
-      this.slowChangeCategory.set(rule.changeCategory ?? false);
+      this.slowModel.set({
+        name: rule.name,
+        enabled: rule.enabled,
+        maxStrikes: rule.maxStrikes,
+        minSpeed: rule.minSpeed,
+        maxTimeHours: rule.maxTimeHours,
+        privacyType: rule.privacyType,
+        minCompletion: rule.minCompletionPercentage,
+        maxCompletion: rule.maxCompletionPercentage,
+        ignoreAboveSize: rule.ignoreAboveSize ?? '',
+        resetOnProgress: rule.resetStrikesOnProgress,
+        deletePrivate: rule.deletePrivateTorrentsFromClient,
+        changeCategory: rule.changeCategory ?? false,
+      });
     } else {
-      this.slowName.set('');
-      this.slowEnabled.set(true);
-      this.slowMaxStrikes.set(3);
-      this.slowMinSpeed.set('');
-      this.slowMaxTimeHours.set(0);
-      this.slowPrivacyType.set(TorrentPrivacyType.Both);
-      this.slowMinCompletion.set(0);
-      this.slowMaxCompletion.set(100);
-      this.slowIgnoreAboveSize.set('');
-      this.slowResetOnProgress.set(false);
-      this.slowDeletePrivate.set(false);
-      this.slowChangeCategory.set(false);
+      this.slowModel.set({ ...this.slowDefaults });
     }
     this.slowModalVisible.set(true);
   }
 
   saveSlowRule(): void {
-    if (this.slowNameError() || this.slowMaxStrikesError() || this.slowCompletionError()) return;
+    if (this.slowForm().invalid()) return;
 
-    const changeCategory = this.slowChangeCategory();
+    const m = this.slowModel();
+    const changeCategory = m.changeCategory;
     const dto: CreateSlowRuleDto = {
-      name: this.slowName().trim(),
-      enabled: this.slowEnabled(),
-      maxStrikes: this.slowMaxStrikes() ?? 3,
-      privacyType: this.slowPrivacyType() as TorrentPrivacyType,
-      minCompletionPercentage: this.slowMinCompletion() ?? 0,
-      maxCompletionPercentage: this.slowMaxCompletion() ?? 100,
-      resetStrikesOnProgress: this.slowResetOnProgress(),
-      minSpeed: this.slowMinSpeed().trim(),
-      maxTimeHours: this.slowMaxTimeHours() ?? 0,
-      ignoreAboveSize: this.slowIgnoreAboveSize().trim() || undefined,
-      deletePrivateTorrentsFromClient: changeCategory ? false : this.slowDeletePrivate(),
+      name: m.name.trim(),
+      enabled: m.enabled,
+      maxStrikes: m.maxStrikes ?? 3,
+      privacyType: m.privacyType,
+      minCompletionPercentage: m.minCompletion ?? 0,
+      maxCompletionPercentage: m.maxCompletion ?? 100,
+      resetStrikesOnProgress: m.resetOnProgress,
+      minSpeed: m.minSpeed.trim(),
+      maxTimeHours: m.maxTimeHours ?? 0,
+      ignoreAboveSize: m.ignoreAboveSize.trim() || undefined,
+      deletePrivateTorrentsFromClient: changeCategory ? false : m.deletePrivate,
       changeCategory,
     };
 
@@ -508,7 +526,7 @@ export class QueueCleanerComponent implements OnInit, HasPendingChanges {
       next: () => {
         this.toast.success(editing ? 'Slow rule updated' : 'Slow rule created');
         this.slowModalVisible.set(false);
-        this.loadSlowRules();
+        this.slowRulesResource.reload();
       },
       error: (e: Error) => this.toast.error(e.message),
     });
@@ -525,7 +543,7 @@ export class QueueCleanerComponent implements OnInit, HasPendingChanges {
     this.api.deleteSlowRule(rule.id).subscribe({
       next: () => {
         this.toast.success('Slow rule deleted');
-        this.loadSlowRules();
+        this.slowRulesResource.reload();
       },
       error: () => this.toast.error('Failed to delete slow rule'),
     });
@@ -534,28 +552,29 @@ export class QueueCleanerComponent implements OnInit, HasPendingChanges {
   save(): void {
     if (!this.config) return;
 
-    const jobSchedule = { every: (this.scheduleEvery() as number) ?? 5, type: this.scheduleUnit() as ScheduleUnit };
-    const cronExpression = this.useAdvancedScheduling()
-      ? this.cronExpression()
+    const m = this.model();
+    const jobSchedule = { every: m.scheduleEvery ?? 5, type: m.scheduleUnit };
+    const cronExpression = m.useAdvancedScheduling
+      ? m.cronExpression
       : generateCronExpression(jobSchedule);
 
     const config: QueueCleanerConfig = {
       ...this.config,
-      enabled: this.enabled(),
-      useAdvancedScheduling: this.useAdvancedScheduling(),
+      enabled: m.enabled,
+      useAdvancedScheduling: m.useAdvancedScheduling,
       cronExpression,
-      ignoredDownloads: this.ignoredDownloads(),
-      processNoContentId: this.processNoContentId(),
+      ignoredDownloads: m.ignoredDownloads,
+      processNoContentId: m.processNoContentId,
       failedImport: {
-        maxStrikes: this.failedMaxStrikes() ?? 3,
-        ignorePrivate: this.failedIgnorePrivate(),
-        deletePrivate: this.failedChangeCategory() ? false : this.failedDeletePrivate(),
-        skipIfNotFoundInClient: this.failedSkipNotFound(),
-        patterns: this.failedPatterns(),
-        patternMode: this.failedPatternMode() as PatternMode,
-        changeCategory: this.failedChangeCategory(),
+        maxStrikes: m.failedMaxStrikes ?? 3,
+        ignorePrivate: m.failedIgnorePrivate,
+        deletePrivate: m.failedChangeCategory ? false : m.failedDeletePrivate,
+        skipIfNotFoundInClient: m.failedSkipNotFound,
+        patterns: m.failedPatterns,
+        patternMode: m.failedPatternMode,
+        changeCategory: m.failedChangeCategory,
       },
-      downloadingMetadataMaxStrikes: this.metadataMaxStrikes() ?? 3,
+      downloadingMetadataMaxStrikes: m.metadataMaxStrikes ?? 3,
     };
 
     this.saving.set(true);
@@ -575,23 +594,7 @@ export class QueueCleanerComponent implements OnInit, HasPendingChanges {
   }
 
   private buildSnapshot(): string {
-    return JSON.stringify({
-      enabled: this.enabled(),
-      useAdvancedScheduling: this.useAdvancedScheduling(),
-      cronExpression: this.cronExpression(),
-      scheduleEvery: this.scheduleEvery(),
-      scheduleUnit: this.scheduleUnit(),
-      ignoredDownloads: this.ignoredDownloads(),
-      processNoContentId: this.processNoContentId(),
-      failedMaxStrikes: this.failedMaxStrikes(),
-      failedIgnorePrivate: this.failedIgnorePrivate(),
-      failedDeletePrivate: this.failedDeletePrivate(),
-      failedSkipNotFound: this.failedSkipNotFound(),
-      failedPatterns: this.failedPatterns(),
-      failedPatternMode: this.failedPatternMode(),
-      failedChangeCategory: this.failedChangeCategory(),
-      metadataMaxStrikes: this.metadataMaxStrikes(),
-    });
+    return JSON.stringify(this.model());
   }
 
   readonly dirty = computed(() => {
@@ -601,15 +604,5 @@ export class QueueCleanerComponent implements OnInit, HasPendingChanges {
 
   hasPendingChanges(): boolean {
     return this.dirty();
-  }
-
-  onStallPrivacyTypeChange(value: unknown): void {
-    this.stallPrivacyType.set(value);
-    this.stallDeletePrivate.set(false);
-  }
-
-  onSlowPrivacyTypeChange(value: unknown): void {
-    this.slowPrivacyType.set(value);
-    this.slowDeletePrivate.set(false);
   }
 }

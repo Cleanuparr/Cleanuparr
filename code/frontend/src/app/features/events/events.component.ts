@@ -1,4 +1,5 @@
-import { Component, ChangeDetectionStrategy, inject, signal, OnInit, OnDestroy } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, signal, computed, effect, OnInit, OnDestroy } from '@angular/core';
+import { rxResource } from '@angular/core/rxjs-interop';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -14,6 +15,7 @@ import { PaginationService } from '@core/services/pagination.service';
 import { StickyAwareDirective } from '@core/directives/sticky-aware.directive';
 import { AnimatedCounterComponent } from '@ui/animated-counter/animated-counter.component';
 import { AppEvent, EventFilter } from '@core/models/event.models';
+import { PaginatedResult } from '@core/models/pagination.model';
 
 @Component({
   selector: 'app-events',
@@ -47,9 +49,6 @@ export class EventsComponent implements OnInit, OnDestroy {
   private readonly pagination = inject(PaginationService);
   private pollTimer: ReturnType<typeof setInterval> | null = null;
 
-  readonly events = signal<AppEvent[]>([]);
-  readonly totalRecords = signal(0);
-  readonly loading = signal(false);
   readonly expandedId = signal<string | null>(null);
   readonly showExportMenu = signal(false);
   readonly selectedJobRunId = signal<string | null>(null);
@@ -62,22 +61,7 @@ export class EventsComponent implements OnInit, OnDestroy {
   readonly fromDate = signal('');
   readonly toDate = signal('');
 
-  readonly severityOptions = signal<SelectOption[]>([{ label: 'All Severities', value: '' }]);
-  readonly typeOptions = signal<SelectOption[]>([{ label: 'All Types', value: '' }]);
-
-  ngOnInit(): void {
-    this.loadFilterOptions();
-    this.loadEvents();
-    this.pollTimer = setInterval(() => this.loadEvents(), 10_000);
-  }
-
-  ngOnDestroy(): void {
-    if (this.pollTimer) {
-      clearInterval(this.pollTimer);
-    }
-  }
-
-  loadEvents(): void {
+  private readonly eventFilter = computed<EventFilter>(() => {
     const filter: EventFilter = {
       page: this.currentPage(),
       pageSize: this.pageSize(),
@@ -87,64 +71,86 @@ export class EventsComponent implements OnInit, OnDestroy {
     const search = this.searchQuery();
     const from = this.fromDate();
     const to = this.toDate();
-
     const jobRunId = this.selectedJobRunId();
 
-    if (severity) filter.severity = severity;
-    if (type) filter.eventType = type;
-    if (search) filter.search = search;
-    if (from) filter.fromDate = from;
-    if (to) filter.toDate = to;
-    if (jobRunId) filter.jobRunId = jobRunId;
+    if (severity) {
+      filter.severity = severity;
+    }
+    if (type) {
+      filter.eventType = type;
+    }
+    if (search) {
+      filter.search = search;
+    }
+    if (from) {
+      filter.fromDate = from;
+    }
+    if (to) {
+      filter.toDate = to;
+    }
+    if (jobRunId) {
+      filter.jobRunId = jobRunId;
+    }
+    return filter;
+  });
 
-    this.loading.set(true);
-    this.eventsApi.getEvents(filter).subscribe({
-      next: (result) => {
-        this.events.set(result.items);
-        this.totalRecords.set(result.totalCount);
-        this.loading.set(false);
-      },
-      error: () => {
-        this.loading.set(false);
+  private readonly eventsResource = rxResource({
+    params: () => this.eventFilter(),
+    stream: ({ params }) => this.eventsApi.getEvents(params),
+    defaultValue: { items: [], page: 1, pageSize: 50, totalCount: 0, totalPages: 0 } as PaginatedResult<AppEvent>,
+  });
+
+  private readonly severitiesResource = rxResource({
+    stream: () => this.eventsApi.getSeverities(),
+    defaultValue: [] as string[],
+  });
+
+  private readonly eventTypesResource = rxResource({
+    stream: () => this.eventsApi.getEventTypes(),
+    defaultValue: [] as string[],
+  });
+
+  readonly events = computed(() => this.eventsResource.value().items);
+  readonly totalRecords = computed(() => this.eventsResource.value().totalCount);
+  readonly severityOptions = computed<SelectOption[]>(() => [
+    { label: 'All Severities', value: '' },
+    ...this.severitiesResource.value().map((s) => ({ label: s, value: s })),
+  ]);
+  readonly typeOptions = computed<SelectOption[]>(() => [
+    { label: 'All Types', value: '' },
+    ...this.eventTypesResource.value().map((t) => ({ label: this.formatEventType(t), value: t })),
+  ]);
+
+  constructor() {
+    effect(() => {
+      if (this.eventsResource.error()) {
         this.toast.error('Failed to load events');
-      },
+      }
     });
   }
 
-  private loadFilterOptions(): void {
-    this.eventsApi.getSeverities().subscribe({
-      next: (severities) => {
-        this.severityOptions.set([
-          { label: 'All Severities', value: '' },
-          ...severities.map((s) => ({ label: s, value: s })),
-        ]);
-      },
-    });
-    this.eventsApi.getEventTypes().subscribe({
-      next: (types) => {
-        this.typeOptions.set([
-          { label: 'All Types', value: '' },
-          ...types.map((t) => ({ label: this.formatEventType(t), value: t })),
-        ]);
-      },
-    });
+  ngOnInit(): void {
+    this.pollTimer = setInterval(() => this.eventsResource.reload(), 10_000);
+  }
+
+  ngOnDestroy(): void {
+    if (this.pollTimer) {
+      clearInterval(this.pollTimer);
+    }
   }
 
   onFilterChange(): void {
     this.currentPage.set(1);
-    this.loadEvents();
   }
 
   onPageChange(page: number): void {
     this.currentPage.set(page);
-    this.loadEvents();
   }
 
   readonly onPageSizeChange = this.pagination.createPageSizeHandler(
     EventsComponent.PAGE_SIZE_KEY,
     this.pageSize,
     this.currentPage,
-    () => this.loadEvents(),
   );
 
   isExpandable(event: AppEvent): boolean {
@@ -162,19 +168,17 @@ export class EventsComponent implements OnInit, OnDestroy {
   }
 
   refresh(): void {
-    this.loadEvents();
+    this.eventsResource.reload();
   }
 
   filterByJobRunId(runId: string): void {
     this.selectedJobRunId.set(runId);
     this.currentPage.set(1);
-    this.loadEvents();
   }
 
   clearJobRunFilter(): void {
     this.selectedJobRunId.set(null);
     this.currentPage.set(1);
-    this.loadEvents();
   }
 
   viewLogsForJobRun(runId: string): void {

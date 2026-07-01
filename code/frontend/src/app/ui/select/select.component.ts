@@ -1,8 +1,10 @@
-import { Component, ChangeDetectionStrategy, input, model, signal, ElementRef, inject, HostListener } from '@angular/core';
+import { Component, ChangeDetectionStrategy, input, model, signal, computed, ElementRef, inject, HostListener } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NgIcon } from '@ng-icons/core';
 import { DocumentationService } from '@core/services/documentation.service';
 import { NewBadgeComponent } from '@ui/new-badge/new-badge.component';
+import { generateControlId } from '@ui/control-id';
+import { effectiveDisabled as computeEffectiveDisabled } from '@ui/effective-disabled';
 
 export interface SelectOption {
   label: string;
@@ -21,16 +23,24 @@ export interface SelectOption {
 export class SelectComponent {
   private readonly docs = inject(DocumentationService);
 
+  protected readonly controlId = generateControlId('app-select');
+  protected readonly listboxId = `${this.controlId}-listbox`;
+
   label = input<string>();
   featureId = input<string>();
   placeholder = input('Select...');
   options = input<SelectOption[]>([]);
   disabled = input(false);
+  forceDisabled = input(false);
   error = input<string>();
   hint = input<string>();
   helpKey = input<string>();
   placement = input<'bottom' | 'top'>('bottom');
   value = model<unknown>(null);
+
+  readonly effectiveDisabled = computeEffectiveDisabled(this.disabled, this.forceDisabled);
+
+  readonly hasValue = computed(() => this.value() != null);
 
   readonly isOpen = signal(false);
 
@@ -50,7 +60,7 @@ export class SelectComponent {
   }
 
   toggleDropdown(): void {
-    if (!this.disabled()) {
+    if (!this.effectiveDisabled()) {
       if (this.isOpen()) {
         this.close();
       } else {

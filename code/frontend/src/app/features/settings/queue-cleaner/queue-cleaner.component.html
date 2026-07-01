@@ -19,30 +19,30 @@
 <div class="settings-form">
   <app-card header="General">
     <div class="form-stack">
-      <app-toggle label="Enabled" [(checked)]="enabled"
+      <app-toggle label="Enabled" [formField]="qcForm.enabled"
         hint="When enabled, the queue cleaner will run according to the schedule"
         helpKey="queue-cleaner:enabled" />
-      @if (enabled()) {
-        <app-toggle label="Process downloads with no content ID" [(checked)]="processNoContentId"
+      @if (qcForm.enabled().value()) {
+        <app-toggle label="Process downloads with no content ID" [formField]="qcForm.processNoContentId"
           hint="Process downloads from the queue that are not linked to any content in the arr app. Cleanuparr will not be able to trigger a search for a replacement when this happens."
           helpKey="queue-cleaner:processNoContentId" />
         <div class="form-divider"></div>
-        <app-toggle label="Advanced Scheduling" [(checked)]="useAdvancedScheduling"
+        <app-toggle label="Advanced Scheduling" [formField]="qcForm.useAdvancedScheduling"
           hint="Choose between basic scheduling or advanced cron expression"
           helpKey="queue-cleaner:useAdvancedScheduling" />
-        @if (useAdvancedScheduling()) {
-          <app-input label="Cron Expression" placeholder="0 0/5 * ? * * *" [(value)]="cronExpression"
+        @if (qcForm.useAdvancedScheduling().value()) {
+          <app-input label="Cron Expression" placeholder="0 0/5 * ? * * *" [formField]="qcForm.cronExpression"
             hint="Enter a valid Quartz cron expression (e.g., &quot;0 0/5 * ? * * *&quot; runs every 5 minutes)"
-            [error]="cronError()"
+            [error]="qcForm.cronExpression().errors()[0]?.message"
             helpKey="queue-cleaner:cronExpression" />
         } @else {
           <div class="form-row">
-            <app-select label="Schedule Unit" [options]="scheduleUnitOptions" [(value)]="scheduleUnit"
+            <app-select label="Schedule Unit" [options]="scheduleUnitOptions" [formField]="qcForm.scheduleUnit"
               hint="Choose the time unit for the schedule"
               helpKey="queue-cleaner:scheduleUnit" />
-            <app-select label="Every" [options]="scheduleIntervalOptions()" [(value)]="scheduleEvery"
+            <app-select label="Every" [options]="scheduleIntervalOptions()" [formField]="qcForm.scheduleEvery"
               hint="How often the job should run"
-              [error]="scheduleEveryError()"
+              [error]="qcForm.scheduleEvery().errors()[0]?.message"
               helpKey="queue-cleaner:scheduleEvery" />
           </div>
         }
@@ -51,55 +51,50 @@
           label="Ignored Downloads"
           placeholder="Add download pattern..."
           hint="Downloads matching these patterns will be ignored (e.g. hash, tag, category, label, tracker)"
-          [(items)]="ignoredDownloads"
+          [formField]="qcForm.ignoredDownloads"
           helpKey="queue-cleaner:ignoredDownloads"
         />
       }
     </div>
   </app-card>
 
-  @if (enabled()) {
+  @if (qcForm.enabled().value()) {
     <app-accordion header="Failed Import" subtitle="Settings for handling failed imports" [(expanded)]="failedExpanded">
       <div class="form-stack">
-        <app-number-input label="Max Strikes" [(value)]="failedMaxStrikes" [min]="0" [max]="5000"
+        <app-number-input label="Max Strikes" [formField]="qcForm.failedMaxStrikes"
           hint="Number of strikes before action is taken (0 to disable, min 3 to enable)"
-          [error]="failedMaxStrikesError()"
+          [error]="qcForm.failedMaxStrikes().errors()[0]?.message"
           helpKey="queue-cleaner:failedImport.maxStrikes" />
 
         <div class="form-divider"></div>
 
-        <app-toggle label="Ignore Private Torrents" [(checked)]="failedIgnorePrivate"
-          [disabled]="failedSubFieldsDisabled()"
+        <app-toggle label="Ignore Private Torrents" [formField]="qcForm.failedIgnorePrivate" [forceDisabled]="qcForm.failedIgnorePrivate().disabled()"
           hint="When enabled, private torrents will not be checked for being failed imports"
           helpKey="queue-cleaner:failedImport.ignorePrivate" />
-        <app-toggle label="Change category instead of delete" [(checked)]="failedChangeCategory"
-          [disabled]="failedSubFieldsDisabled()"
+        <app-toggle label="Change category instead of delete" [formField]="qcForm.failedChangeCategory" [forceDisabled]="qcForm.failedChangeCategory().disabled()"
           hint="Changes the category to the post-import category set in your arr"
           helpKey="queue-cleaner:failedImport.changeCategory" />
-        @if (!failedChangeCategory()) {
-          <app-toggle label="Delete Private from Client" [(checked)]="failedDeletePrivate"
-            [disabled]="failedDeletePrivateDisabled()"
+        @if (!qcForm.failedChangeCategory().value()) {
+          <app-toggle label="Delete Private from Client" [formField]="qcForm.failedDeletePrivate" [forceDisabled]="qcForm.failedDeletePrivate().disabled()"
             hint="Disable this if you want to keep private torrents in the download client even if they are removed from the arrs"
             helpKey="queue-cleaner:failedImport.deletePrivate" />
         }
-        <app-toggle label="Skip if Not Found in Client" [(checked)]="failedSkipNotFound"
-          [disabled]="failedSubFieldsDisabled()"
+        <app-toggle label="Skip if Not Found in Client" [formField]="qcForm.failedSkipNotFound" [forceDisabled]="qcForm.failedSkipNotFound().disabled()"
           hint="Skip failed import check for torrents not found in any enabled torrent client"
           helpKey="queue-cleaner:failedImport.skipIfNotFoundInClient" />
 
         <div class="form-divider"></div>
 
-        <app-select label="Pattern Mode" [options]="patternModeOptions" [(value)]="failedPatternMode"
-          [disabled]="failedSubFieldsDisabled()"
+        <app-select label="Pattern Mode" [options]="patternModeOptions" [formField]="qcForm.failedPatternMode" [forceDisabled]="qcForm.failedPatternMode().disabled()"
           hint="Choose how the patterns are applied to failed imports"
           helpKey="queue-cleaner:failedImport.pattern-mode" />
         <app-chip-input
           [label]="patternLabel()"
           placeholder="Add a pattern..."
           [hint]="patternHint()"
-          [error]="failedPatternsError()"
-          [disabled]="failedSubFieldsDisabled()"
-          [(items)]="failedPatterns"
+          [error]="qcForm.failedPatterns().errors()[0]?.message"
+          [formField]="qcForm.failedPatterns"
+          [forceDisabled]="qcForm.failedPatterns().disabled()"
           helpKey="queue-cleaner:failedImport.patterns"
         />
       </div>
@@ -107,9 +102,9 @@
 
     <app-accordion header="Downloading Metadata" subtitle="Settings for stalled metadata downloads (qBittorrent only)" [(expanded)]="metadataExpanded">
       <div class="form-stack">
-        <app-number-input label="Max Strikes" [(value)]="metadataMaxStrikes" [min]="0" [max]="5000"
+        <app-number-input label="Max Strikes" [formField]="qcForm.metadataMaxStrikes"
           hint="Number of strikes before action is taken (0 to disable, min 3 to enable)"
-          [error]="metadataMaxStrikesError()"
+          [error]="qcForm.metadataMaxStrikes().errors()[0]?.message"
           helpKey="queue-cleaner:downloadingMetadataMaxStrikes" />
       </div>
     </app-accordion>
@@ -251,49 +246,47 @@
 <!-- Stall Rule Modal -->
 <app-modal [title]="editingStallRule() ? 'Edit Stall Rule' : 'Add Stall Rule'" [(visible)]="stallModalVisible" size="lg">
   <div class="form-grid">
-    <app-input label="Name" placeholder="My Stall Rule" [(value)]="stallName"
-      [error]="stallNameError()"
+    <app-input label="Name" placeholder="My Stall Rule" [formField]="stallForm.name"
+      [error]="stallForm.name().errors()[0]?.message"
       helpKey="queue-cleaner:stallRule.name" />
-    <app-toggle label="Enabled" [(checked)]="stallEnabled"
+    <app-toggle label="Enabled" [formField]="stallForm.enabled"
       hint="Enable this rule"
       helpKey="queue-cleaner:stallRule.enabled" />
-    <app-number-input label="Max Strikes" [(value)]="stallMaxStrikes" [min]="3" [max]="5000"
+    <app-number-input label="Max Strikes" [formField]="stallForm.maxStrikes"
       hint="Number of strikes before action is taken"
-      [error]="stallMaxStrikesError()"
+      [error]="stallForm.maxStrikes().errors()[0]?.message"
       helpKey="queue-cleaner:stallRule.maxStrikes" />
-    <app-select label="Privacy Type" [options]="privacyTypeOptions" [value]="stallPrivacyType()"
-      (valueChange)="onStallPrivacyTypeChange($event)"
+    <app-select label="Privacy Type" [options]="privacyTypeOptions" [formField]="stallForm.privacyType"
       hint="Which torrent types this rule applies to"
       helpKey="queue-cleaner:stallRule.privacyType" />
-    <app-number-input label="Min Completion %" [(value)]="stallMinCompletion" [min]="0" [max]="100" suffix="%"
+    <app-number-input label="Min Completion %" [formField]="stallForm.minCompletion" suffix="%"
       hint="Apply the rule once completion percentage exceeds this value (0 includes items at 0% and above)"
       helpKey="queue-cleaner:stallRule.completionRange" />
-    <app-number-input label="Max Completion %" [(value)]="stallMaxCompletion" [min]="1" [max]="100" suffix="%"
+    <app-number-input label="Max Completion %" [formField]="stallForm.maxCompletion" suffix="%"
       hint="Apply the rule to items with a completion percentage less than or equal to this value"
-      [error]="stallCompletionError()"
+      [error]="stallForm.maxCompletion().errors()[0]?.message"
       helpKey="queue-cleaner:stallRule.completionRange" />
-    <app-toggle label="Reset Strikes on Progress" [(checked)]="stallResetOnProgress"
+    <app-toggle label="Reset Strikes on Progress" [formField]="stallForm.resetOnProgress"
       hint="Reset strike count when torrent shows progress"
       helpKey="queue-cleaner:stallRule.resetStrikesOnProgress" />
-    @if (stallResetOnProgress()) {
-      <app-size-input label="Minimum Progress to Reset" [units]="sizeUnits" [(value)]="stallMinProgress"
+    @if (stallForm.resetOnProgress().value()) {
+      <app-size-input label="Minimum Progress to Reset" [units]="sizeUnits" [formField]="stallForm.minProgress"
         placeholder="e.g. 1"
         hint="Only reset strikes after the torrent downloads at least this amount. Leave blank to reset on any progress."
         helpKey="queue-cleaner:stallRule.minimumProgress" />
     }
-    <app-toggle label="Change category instead of delete" [(checked)]="stallChangeCategory"
+    <app-toggle label="Change category instead of delete" [formField]="stallForm.changeCategory"
       hint="Changes the category to the post-import category set in your arr"
       helpKey="queue-cleaner:stallRule.changeCategory" />
-    @if (!stallChangeCategory()) {
-      <app-toggle label="Delete Private from Client" [(checked)]="stallDeletePrivate"
-        [disabled]="stallPrivacyType() === 'Public'"
+    @if (!stallForm.changeCategory().value()) {
+      <app-toggle label="Delete Private from Client" [formField]="stallForm.deletePrivate" [forceDisabled]="stallForm.deletePrivate().disabled()"
         hint="Disable this if you want to keep private torrents in the download client even if they are removed from the arrs"
         helpKey="queue-cleaner:stallRule.deletePrivateTorrentsFromClient" />
     }
   </div>
   <div modal-footer>
     <app-button variant="secondary" (clicked)="stallModalVisible.set(false)">Cancel</app-button>
-    <app-button variant="primary" (clicked)="saveStallRule()">
+    <app-button variant="primary" [disabled]="stallForm().invalid()" (clicked)="saveStallRule()">
       {{ editingStallRule() ? 'Update' : 'Create' }}
     </app-button>
   </div>
@@ -302,54 +295,52 @@
 <!-- Slow Rule Modal -->
 <app-modal [title]="editingSlowRule() ? 'Edit Slow Rule' : 'Add Slow Rule'" [(visible)]="slowModalVisible" size="lg">
   <div class="form-grid">
-    <app-input label="Name" placeholder="My Slow Rule" [(value)]="slowName"
-      [error]="slowNameError()"
+    <app-input label="Name" placeholder="My Slow Rule" [formField]="slowForm.name"
+      [error]="slowForm.name().errors()[0]?.message"
       helpKey="queue-cleaner:slowRule.name" />
-    <app-toggle label="Enabled" [(checked)]="slowEnabled"
+    <app-toggle label="Enabled" [formField]="slowForm.enabled"
       hint="Enable this rule"
       helpKey="queue-cleaner:slowRule.enabled" />
-    <app-number-input label="Max Strikes" [(value)]="slowMaxStrikes" [min]="3" [max]="5000"
+    <app-number-input label="Max Strikes" [formField]="slowForm.maxStrikes"
       hint="Number of strikes before action is taken"
-      [error]="slowMaxStrikesError()"
+      [error]="slowForm.maxStrikes().errors()[0]?.message"
       helpKey="queue-cleaner:slowRule.maxStrikes" />
-    <app-size-input label="Min Speed" [units]="speedUnits" [(value)]="slowMinSpeed"
+    <app-size-input label="Min Speed" [units]="speedUnits" [formField]="slowForm.minSpeed"
       placeholder="e.g. 100"
       hint="Minimum speed threshold for slow downloads"
       helpKey="queue-cleaner:slowRule.minSpeed" />
-    <app-number-input label="Maximum Time (Hours)" [(value)]="slowMaxTimeHours" [min]="0"
+    <app-number-input label="Maximum Time (Hours)" [formField]="slowForm.maxTimeHours"
       hint="Maximum time allowed for slow downloads (0 means disabled)"
       helpKey="queue-cleaner:slowRule.maxTimeHours" />
-    <app-select label="Privacy Type" [options]="privacyTypeOptions" [value]="slowPrivacyType()"
-      (valueChange)="onSlowPrivacyTypeChange($event)"
+    <app-select label="Privacy Type" [options]="privacyTypeOptions" [formField]="slowForm.privacyType"
       hint="Which torrent types this rule applies to"
       helpKey="queue-cleaner:slowRule.privacyType" />
-    <app-number-input label="Min Completion %" [(value)]="slowMinCompletion" [min]="0" [max]="100" suffix="%"
+    <app-number-input label="Min Completion %" [formField]="slowForm.minCompletion" suffix="%"
       hint="Apply the rule once completion percentage exceeds this value (0 still includes exactly 0%)"
       helpKey="queue-cleaner:slowRule.completionRange" />
-    <app-number-input label="Max Completion %" [(value)]="slowMaxCompletion" [min]="1" [max]="100" suffix="%"
+    <app-number-input label="Max Completion %" [formField]="slowForm.maxCompletion" suffix="%"
       hint="Apply the rule up to and including this completion percentage"
-      [error]="slowCompletionError()"
+      [error]="slowForm.maxCompletion().errors()[0]?.message"
       helpKey="queue-cleaner:slowRule.completionRange" />
-    <app-size-input label="Ignore Above Size" [units]="sizeUnitsLarge" [(value)]="slowIgnoreAboveSize"
+    <app-size-input label="Ignore Above Size" [units]="sizeUnitsLarge" [formField]="slowForm.ignoreAboveSize"
       placeholder="e.g. 25"
       hint="Downloads will be ignored if size exceeds this threshold"
       helpKey="queue-cleaner:slowRule.ignoreAboveSize" />
-    <app-toggle label="Reset Strikes on Progress" [(checked)]="slowResetOnProgress"
+    <app-toggle label="Reset Strikes on Progress" [formField]="slowForm.resetOnProgress"
       hint="Reset strike count when torrent shows progress"
       helpKey="queue-cleaner:slowRule.resetStrikesOnProgress" />
-    <app-toggle label="Change category instead of delete" [(checked)]="slowChangeCategory"
+    <app-toggle label="Change category instead of delete" [formField]="slowForm.changeCategory"
       hint="Changes the category to the post-import category set in your arr"
       helpKey="queue-cleaner:slowRule.changeCategory" />
-    @if (!slowChangeCategory()) {
-      <app-toggle label="Delete Private from Client" [(checked)]="slowDeletePrivate"
-        [disabled]="slowPrivacyType() === 'Public'"
+    @if (!slowForm.changeCategory().value()) {
+      <app-toggle label="Delete Private from Client" [formField]="slowForm.deletePrivate" [forceDisabled]="slowForm.deletePrivate().disabled()"
         hint="Disable this if you want to keep private torrents in the download client even if they are removed from the arrs"
         helpKey="queue-cleaner:slowRule.deletePrivateTorrentsFromClient" />
     }
   </div>
   <div modal-footer>
     <app-button variant="secondary" (clicked)="slowModalVisible.set(false)">Cancel</app-button>
-    <app-button variant="primary" (clicked)="saveSlowRule()">
+    <app-button variant="primary" [disabled]="slowForm().invalid()" (clicked)="saveSlowRule()">
       {{ editingSlowRule() ? 'Update' : 'Create' }}
     </app-button>
   </div>

@@ -1,4 +1,6 @@
-import { Component, ChangeDetectionStrategy, inject, signal, computed, OnInit, viewChildren, effect, untracked } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, signal, computed, viewChildren, effect, untracked, linkedSignal } from '@angular/core';
+import { rxResource } from '@angular/core/rxjs-interop';
+import { form, required, min, minLength, validate, FormField } from '@angular/forms/signals';
 import { NgIconComponent } from '@ng-icons/core';
 import { CdkDragDrop, CdkDropList, CdkDrag, CdkDragHandle, moveItemInArray } from '@angular/cdk/drag-drop';
 import { PageHeaderComponent } from '@layout/page-header/page-header.component';
@@ -36,6 +38,54 @@ const PRIVACY_TYPE_OPTIONS: SelectOption[] = [
   { label: 'Both', value: TorrentPrivacyType.Both },
 ];
 
+interface DownloadCleanerGlobalFormModel {
+  enabled: boolean;
+  useAdvancedScheduling: boolean;
+  cronExpression: string;
+  scheduleEvery: number;
+  scheduleUnit: ScheduleUnit;
+  ignoredDownloads: string[];
+}
+
+interface SeedingRuleFormModel {
+  name: string;
+  categories: string[];
+  trackerPatterns: string[];
+  tagsAny: string[];
+  tagsAll: string[];
+  privacyType: TorrentPrivacyType;
+  maxRatio: number | null;
+  minSeedTime: number | null;
+  maxSeedTime: number | null;
+  minSeeders: number | null;
+  deleteSourceFiles: boolean;
+}
+
+interface UnlinkedFormModel {
+  enabled: boolean;
+  targetCategory: string;
+  useTag: boolean;
+  ignoredRootDirs: string[];
+  categories: string[];
+}
+
+interface DeadTorrentFormModel {
+  enabled: boolean;
+  targetCategory: string;
+  useTag: boolean;
+  maxStrikes: number | null;
+  categories: string[];
+}
+
+interface OrphanedFilesFormModel {
+  enabled: boolean;
+  scanDirectories: string[];
+  orphanedDirectory: string;
+  excludePatterns: string[];
+  minFileAgeHours: number | null;
+  purgeAfterHours: number | null;
+}
+
 @Component({
   selector: 'app-download-cleaner',
   standalone: true,
@@ -45,13 +95,13 @@ const PRIVACY_TYPE_OPTIONS: SelectOption[] = [
     PageHeaderComponent, CardComponent, ButtonComponent, InputComponent,
     ToggleComponent, NumberInputComponent, SelectComponent, ChipInputComponent, AccordionComponent,
     EmptyStateComponent, LoadingStateComponent, ModalComponent, BadgeComponent, SpinnerComponent,
-    TooltipComponent,
+    TooltipComponent, FormField,
   ],
   templateUrl: './download-cleaner.component.html',
   styleUrl: './download-cleaner.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
+export class DownloadCleanerComponent implements HasPendingChanges {
   private readonly api = inject(DownloadCleanerApi);
   private readonly toast = inject(ToastService);
   private readonly confirm = inject(ConfirmService);
@@ -67,8 +117,13 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
 
   readonly scheduleUnitOptions = SCHEDULE_UNIT_OPTIONS;
   readonly privacyTypeOptions = PRIVACY_TYPE_OPTIONS;
+
+  private readonly configResource = rxResource({
+    stream: () => this.api.getConfig(),
+  });
+
   readonly loader = new DeferredLoader();
-  readonly loadError = signal(false);
+  readonly loadError = computed(() => !!this.configResource.error());
   readonly saving = signal(false);
   readonly saved = signal(false);
   readonly unlinkedSaving = signal(false);
@@ -82,12 +137,29 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
   private readonly deadTorrentSnapshots = signal<Record<string, string>>({});
 
   // Global settings
-  readonly enabled = signal(false);
-  readonly useAdvancedScheduling = signal(false);
-  readonly cronExpression = signal('');
-  readonly scheduleEvery = signal<unknown>(5);
-  readonly scheduleUnit = signal<unknown>(ScheduleUnit.Minutes);
-  readonly ignoredDownloads = signal<string[]>([]);
+  private readonly model = signal<DownloadCleanerGlobalFormModel>({
+    enabled: false,
+    useAdvancedScheduling: false,
+    cronExpression: '',
+    scheduleEvery: 5,
+    scheduleUnit: ScheduleUnit.Minutes,
+    ignoredDownloads: [],
+  });
+
+  readonly dcForm = form(this.model, (p) => {
+    validate(p.scheduleEvery, ({ value, valueOf }) => {
+      if (!valueOf(p.enabled) || valueOf(p.useAdvancedScheduling)) {
+        return undefined;
+      }
+      const options = ScheduleOptions[valueOf(p.scheduleUnit)] ?? [];
+      return options.includes(value()) ? undefined : { kind: 'schedule', message: 'Please select a value' };
+    });
+    validate(p.cronExpression, ({ value, valueOf }) => {
+      return valueOf(p.enabled) && valueOf(p.useAdvancedScheduling) && !value().trim()
+        ? { kind: 'required', message: 'Cron expression is required' }
+        : undefined;
+    });
+  });
 
   // Per-client settings
   readonly clientConfigs = signal<ClientCleanerConfig[]>([]);
@@ -145,193 +217,158 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
   // Seeding rule modal
   readonly ruleModalVisible = signal(false);
   readonly editingRule = signal<SeedingRule | null>(null);
-  readonly ruleName = signal('');
-  readonly ruleCategories = signal<string[]>([]);
-  readonly ruleTrackerPatterns = signal<string[]>([]);
-  readonly ruleTagsAny = signal<string[]>([]);
-  readonly ruleTagsAll = signal<string[]>([]);
-  readonly rulePrivacyType = signal<unknown>(TorrentPrivacyType.Public);
-  readonly ruleMaxRatio = signal<number | null>(-1);
-  readonly ruleMinSeedTime = signal<number | null>(0);
-  readonly ruleMaxSeedTime = signal<number | null>(-1);
-  readonly ruleMinSeeders = signal<number | null>(0);
-  readonly ruleDeleteSourceFiles = signal(true);
+  private readonly ruleDefaults: SeedingRuleFormModel = {
+    name: '', categories: [], trackerPatterns: [], tagsAny: [], tagsAll: [],
+    privacyType: TorrentPrivacyType.Public, maxRatio: -1, minSeedTime: 0,
+    maxSeedTime: -1, minSeeders: 0, deleteSourceFiles: true,
+  };
+  readonly ruleModel = signal<SeedingRuleFormModel>({ ...this.ruleDefaults });
+  readonly ruleForm = form(this.ruleModel, (p) => {
+    required(p.name, { message: 'Name is required' });
+    minLength(p.categories, 1, { message: 'At least one category is required' });
+    min(p.maxRatio, -1);
+    min(p.minSeedTime, 0);
+    min(p.maxSeedTime, -1);
+    min(p.minSeeders, 0);
+    validate(p.maxSeedTime, () => {
+      const m = this.ruleModel();
+      return (m.maxRatio ?? -1) < 0 && (m.maxSeedTime ?? -1) < 0
+        ? { kind: 'disabled', message: 'Both max ratio and max seed time cannot be disabled at the same time' }
+        : undefined;
+    });
+  });
+
+  readonly ruleDisabledError = computed(() =>
+    this.ruleForm.maxSeedTime().errors().find(e => e.kind === 'disabled')?.message
+  );
+
+  readonly unlinkedModel = linkedSignal<string | null, UnlinkedFormModel>({
+    source: this.selectedClientId,
+    computation: (id) => {
+      const snap = id ? untracked(() => this.unlinkedSnapshots())[id] : undefined;
+      return snap ? JSON.parse(snap) as UnlinkedFormModel : this.toUnlinkedModel(null);
+    },
+  });
+  readonly unlinkedForm = form(this.unlinkedModel, (p) => {
+    validate(p.categories, () => {
+      const m = this.unlinkedModel();
+      return m.enabled && m.categories.length === 0
+        ? { kind: 'required', message: 'At least one category is required' }
+        : undefined;
+    });
+  });
+
+  readonly deadTorrentModel = linkedSignal<string | null, DeadTorrentFormModel>({
+    source: this.selectedClientId,
+    computation: (id) => {
+      const snap = id ? untracked(() => this.deadTorrentSnapshots())[id] : undefined;
+      return snap ? JSON.parse(snap) as DeadTorrentFormModel : this.toDeadTorrentModel(null);
+    },
+  });
+  readonly deadTorrentForm = form(this.deadTorrentModel, (p) => {
+    validate(p.categories, () => {
+      const m = this.deadTorrentModel();
+      return m.enabled && m.categories.length === 0
+        ? { kind: 'required', message: 'At least one category is required' }
+        : undefined;
+    });
+    validate(p.maxStrikes, () => {
+      const m = this.deadTorrentModel();
+      return m.enabled && (m.maxStrikes ?? 0) < 3
+        ? { kind: 'min', message: 'Strikes must be at least 3' }
+        : undefined;
+    });
+  });
+
+  readonly orphanedFilesModel = linkedSignal<string | null, OrphanedFilesFormModel>({
+    source: this.selectedClientId,
+    computation: (id) => {
+      const snap = id ? untracked(() => this.orphanedFilesSnapshots())[id] : undefined;
+      return snap ? JSON.parse(snap) as OrphanedFilesFormModel : this.toOrphanedFilesModel(null);
+    },
+  });
+  readonly orphanedFilesForm = form(this.orphanedFilesModel, (p) => {
+    validate(p.scanDirectories, () => {
+      const m = this.orphanedFilesModel();
+      return m.enabled && m.scanDirectories.length === 0
+        ? { kind: 'required', message: 'At least one scan directory is required' }
+        : undefined;
+    });
+    validate(p.orphanedDirectory, () => {
+      const m = this.orphanedFilesModel();
+      return m.enabled && !m.orphanedDirectory.trim()
+        ? { kind: 'required', message: 'Orphaned directory is required' }
+        : undefined;
+    });
+    min(p.minFileAgeHours, 0);
+    min(p.purgeAfterHours, 1);
+  });
+
+  private toUnlinkedModel(c: UnlinkedConfigModel | null): UnlinkedFormModel {
+    const d = c ?? createDefaultUnlinkedConfig();
+    return {
+      enabled: d.enabled,
+      targetCategory: d.targetCategory,
+      useTag: d.useTag,
+      ignoredRootDirs: [...(d.ignoredRootDirs ?? [])],
+      categories: [...(d.categories ?? [])],
+    };
+  }
+
+  private toDeadTorrentModel(c: DeadTorrentConfigModel | null): DeadTorrentFormModel {
+    const d = c ?? createDefaultDeadTorrentConfig();
+    return {
+      enabled: d.enabled,
+      targetCategory: d.targetCategory,
+      useTag: d.useTag,
+      maxStrikes: d.maxStrikes,
+      categories: [...(d.categories ?? [])],
+    };
+  }
+
+  private toOrphanedFilesModel(c: OrphanedFilesConfig | null): OrphanedFilesFormModel {
+    const d = c ?? createDefaultOrphanedFilesConfig();
+    return {
+      enabled: d.enabled,
+      scanDirectories: [...(d.scanDirectories ?? [])],
+      orphanedDirectory: d.orphanedDirectory,
+      excludePatterns: [...(d.excludePatterns ?? [])],
+      minFileAgeHours: d.minFileAgeHours,
+      purgeAfterHours: d.purgeAfterHours ?? null,
+    };
+  }
 
   readonly scheduleIntervalOptions = computed(() => {
-    const unit = this.scheduleUnit() as ScheduleUnit;
-    const values = ScheduleOptions[unit] ?? [];
+    const values = ScheduleOptions[this.model().scheduleUnit] ?? [];
     return values.map(v => ({ label: `${v}`, value: v }));
   });
 
   constructor() {
     effect(() => {
-      const unit = this.scheduleUnit();
-      const options = ScheduleOptions[unit as ScheduleUnit] ?? [];
-      const current = this.scheduleEvery();
-      if (options.length > 0 && !options.includes(current as number)) {
-        untracked(() => this.scheduleEvery.set(options[0]));
+      const unit = this.model().scheduleUnit;
+      const options = ScheduleOptions[unit] ?? [];
+      const current = this.model().scheduleEvery;
+      if (options.length > 0 && !options.includes(current)) {
+        untracked(() => this.model.update(m => ({ ...m, scheduleEvery: options[0] })));
       }
     });
-  }
 
-  readonly scheduleEveryError = computed(() => {
-    if (this.useAdvancedScheduling()) {
-      return undefined;
-    }
-    const unit = this.scheduleUnit() as ScheduleUnit;
-    const options = ScheduleOptions[unit] ?? [];
-    if (!options.includes(this.scheduleEvery() as number)) {
-      return 'Please select a value';
-    }
-    return undefined;
-  });
-
-  readonly cronError = computed(() => {
-    if (this.useAdvancedScheduling() && !this.cronExpression().trim()) {
-      return 'Cron expression is required';
-    }
-    return undefined;
-  });
-
-  readonly ruleNameError = computed(() => {
-    if (!this.ruleName().trim()) {
-      return 'Name is required';
-    }
-    return undefined;
-  });
-
-  readonly ruleCategoriesError = computed(() => {
-    if (this.ruleCategories().length === 0) {
-      return 'At least one category is required';
-    }
-    return undefined;
-  });
-
-  readonly ruleDisabledError = computed(() => {
-    if ((this.ruleMaxRatio() ?? -1) < 0 && (this.ruleMaxSeedTime() ?? -1) < 0) {
-      return 'Both max ratio and max seed time cannot be disabled at the same time';
-    }
-    return undefined;
-  });
-
-  readonly unlinkedCategoriesError = computed(() => {
-    const client = this.selectedClient();
-    if (!client?.unlinkedConfig?.enabled) {
-      return undefined;
-    }
-    if ((client.unlinkedConfig.categories ?? []).length === 0) {
-      return 'At least one category is required';
-    }
-    return undefined;
-  });
-
-  readonly deadTorrentCategoriesError = computed(() => {
-    const client = this.selectedClient();
-    if (!client?.deadTorrentConfig?.enabled) {
-      return undefined;
-    }
-    if ((client.deadTorrentConfig.categories ?? []).length === 0) {
-      return 'At least one category is required';
-    }
-    return undefined;
-  });
-
-  readonly deadTorrentStrikesError = computed(() => {
-    const client = this.selectedClient();
-    if (!client?.deadTorrentConfig?.enabled) {
-      return undefined;
-    }
-    if ((client.deadTorrentConfig.maxStrikes ?? 0) < 3) {
-      return 'Strikes must be at least 3';
-    }
-    return undefined;
-  });
-
-  readonly orphanedFilesScanDirsError = computed(() => {
-    const client = this.selectedClient();
-    if (!client?.orphanedFilesConfig?.enabled) {
-      return undefined;
-    }
-    if ((client.orphanedFilesConfig.scanDirectories ?? []).length === 0) {
-      return 'At least one scan directory is required';
-    }
-    return undefined;
-  });
-
-  readonly orphanedFilesOrphanedDirError = computed(() => {
-    const client = this.selectedClient();
-    if (!client?.orphanedFilesConfig?.enabled) {
-      return undefined;
-    }
-    if (!client.orphanedFilesConfig.orphanedDirectory?.trim()) {
-      return 'Orphaned directory is required';
-    }
-    return undefined;
-  });
-
-  readonly unlinkedDirty = computed(() => {
-    const client = this.selectedClient();
-    if (!client) {
-      return false;
-    }
-    const saved = this.unlinkedSnapshots()[client.downloadClientId]
-      ?? JSON.stringify(createDefaultUnlinkedConfig());
-    return saved !== JSON.stringify(client.unlinkedConfig);
-  });
-
-  readonly deadTorrentDirty = computed(() => {
-    const client = this.selectedClient();
-    if (!client) {
-      return false;
-    }
-    const saved = this.deadTorrentSnapshots()[client.downloadClientId]
-      ?? JSON.stringify(createDefaultDeadTorrentConfig());
-    return saved !== JSON.stringify(client.deadTorrentConfig);
-  });
-
-  readonly orphanedFilesDirty = computed(() => {
-    const client = this.selectedClient();
-    if (!client) {
-      return false;
-    }
-    const saved = this.orphanedFilesSnapshots()[client.downloadClientId]
-      ?? JSON.stringify(createDefaultOrphanedFilesConfig());
-    return saved !== JSON.stringify(client.orphanedFilesConfig);
-  });
-
-  readonly hasGlobalErrors = computed(() => {
-    if (this.scheduleEveryError()) {
-      return true;
-    }
-    if (this.cronError()) {
-      return true;
-    }
-    if (this.chipInputs().some(c => c.hasUncommittedInput())) {
-      return true;
-    }
-    return false;
-  });
-
-  private config: DownloadCleanerConfig | null = null;
-
-  ngOnInit(): void {
-    this.loadConfig();
-  }
-
-  private loadConfig(): void {
-    this.loader.start();
-    this.api.getConfig().subscribe({
-      next: (dc) => {
+    effect(() => {
+      const dc = this.configResource.hasValue() ? this.configResource.value() : undefined;
+      if (!dc) {
+        return;
+      }
+      untracked(() => {
         this.config = dc;
-        this.enabled.set(dc.enabled);
-        this.useAdvancedScheduling.set(dc.useAdvancedScheduling);
-        this.cronExpression.set(dc.cronExpression);
         const parsed = parseCronToJobSchedule(dc.cronExpression);
-        if (parsed) {
-          this.scheduleEvery.set(parsed.every);
-          this.scheduleUnit.set(parsed.type);
-        }
-        this.ignoredDownloads.set(dc.ignoredDownloads ?? []);
+        this.model.set({
+          enabled: dc.enabled,
+          useAdvancedScheduling: dc.useAdvancedScheduling,
+          cronExpression: dc.cronExpression,
+          scheduleEvery: parsed?.every ?? 5,
+          scheduleUnit: parsed?.type ?? ScheduleUnit.Minutes,
+          ignoredDownloads: dc.ignoredDownloads ?? [],
+        });
 
         this.clientConfigs.set((dc.clients ?? []).map(c => ({
           ...c,
@@ -341,39 +378,80 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
           orphanedFilesConfig: c.orphanedFilesConfig ?? createDefaultOrphanedFilesConfig(),
         })));
 
-        if (dc.clients?.length > 0) {
-          this.selectedClientId.set(dc.clients[0].downloadClientId);
-        }
-
         const unlinkedSnapshots: Record<string, string> = {};
         const deadTorrentSnapshots: Record<string, string> = {};
         const orphanedFilesSnapshots: Record<string, string> = {};
         for (const c of dc.clients ?? []) {
-          unlinkedSnapshots[c.downloadClientId] = JSON.stringify(c.unlinkedConfig ?? createDefaultUnlinkedConfig());
-          deadTorrentSnapshots[c.downloadClientId] = JSON.stringify(c.deadTorrentConfig ?? createDefaultDeadTorrentConfig());
-          orphanedFilesSnapshots[c.downloadClientId] = JSON.stringify(c.orphanedFilesConfig ?? createDefaultOrphanedFilesConfig());
+          unlinkedSnapshots[c.downloadClientId] = JSON.stringify(this.toUnlinkedModel(c.unlinkedConfig ?? null));
+          deadTorrentSnapshots[c.downloadClientId] = JSON.stringify(this.toDeadTorrentModel(c.deadTorrentConfig ?? null));
+          orphanedFilesSnapshots[c.downloadClientId] = JSON.stringify(this.toOrphanedFilesModel(c.orphanedFilesConfig ?? null));
         }
         this.unlinkedSnapshots.set(unlinkedSnapshots);
         this.deadTorrentSnapshots.set(deadTorrentSnapshots);
         this.orphanedFilesSnapshots.set(orphanedFilesSnapshots);
 
-        this.loader.stop();
+        // Set selection after snapshots so the sub-config linkedSignals hydrate from saved state.
+        if (dc.clients?.length > 0) {
+          this.selectedClientId.set(dc.clients[0].downloadClientId);
+        }
+
         // Defer snapshot so constructor effects (e.g. schedule unit clamping) settle first
         queueMicrotask(() => {
           this.savedSnapshot.set(this.buildSnapshot());
         });
-      },
-      error: () => {
+      });
+    });
+
+    effect(() => {
+      if (this.configResource.error()) {
         this.toast.error('Failed to load download cleaner settings');
+      }
+    });
+
+    effect(() => {
+      if (this.configResource.isLoading()) {
+        this.loader.start();
+      } else {
         this.loader.stop();
-        this.loadError.set(true);
-      },
+      }
     });
   }
 
+  readonly unlinkedDirty = computed(() => {
+    const id = this.selectedClientId();
+    if (!id) {
+      return false;
+    }
+    const saved = this.unlinkedSnapshots()[id] ?? JSON.stringify(this.toUnlinkedModel(null));
+    return saved !== JSON.stringify(this.unlinkedModel());
+  });
+
+  readonly deadTorrentDirty = computed(() => {
+    const id = this.selectedClientId();
+    if (!id) {
+      return false;
+    }
+    const saved = this.deadTorrentSnapshots()[id] ?? JSON.stringify(this.toDeadTorrentModel(null));
+    return saved !== JSON.stringify(this.deadTorrentModel());
+  });
+
+  readonly orphanedFilesDirty = computed(() => {
+    const id = this.selectedClientId();
+    if (!id) {
+      return false;
+    }
+    const saved = this.orphanedFilesSnapshots()[id] ?? JSON.stringify(this.toOrphanedFilesModel(null));
+    return saved !== JSON.stringify(this.orphanedFilesModel());
+  });
+
+  readonly hasGlobalErrors = computed(() =>
+    this.dcForm().invalid() || this.chipInputs().some(c => c.hasUncommittedInput())
+  );
+
+  private config: DownloadCleanerConfig | null = null;
+
   retry(): void {
-    this.loadError.set(false);
-    this.loadConfig();
+    this.configResource.reload();
   }
 
   // --- Seeding rule modal CRUD ---
@@ -381,35 +459,27 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
   openRuleModal(rule?: SeedingRule): void {
     this.editingRule.set(rule ?? null);
     if (rule) {
-      this.ruleName.set(rule.name);
-      this.ruleCategories.set([...(rule.categories ?? [])]);
-      this.ruleTrackerPatterns.set([...(rule.trackerPatterns ?? [])]);
-      this.ruleTagsAny.set([...(rule.tagsAny ?? [])]);
-      this.ruleTagsAll.set([...(rule.tagsAll ?? [])]);
-      this.rulePrivacyType.set(rule.privacyType);
-      this.ruleMaxRatio.set(rule.maxRatio);
-      this.ruleMinSeedTime.set(rule.minSeedTime);
-      this.ruleMaxSeedTime.set(rule.maxSeedTime);
-      this.ruleMinSeeders.set(rule.minSeeders ?? 0);
-      this.ruleDeleteSourceFiles.set(rule.deleteSourceFiles);
+      this.ruleModel.set({
+        name: rule.name,
+        categories: [...(rule.categories ?? [])],
+        trackerPatterns: [...(rule.trackerPatterns ?? [])],
+        tagsAny: [...(rule.tagsAny ?? [])],
+        tagsAll: [...(rule.tagsAll ?? [])],
+        privacyType: rule.privacyType,
+        maxRatio: rule.maxRatio,
+        minSeedTime: rule.minSeedTime,
+        maxSeedTime: rule.maxSeedTime,
+        minSeeders: rule.minSeeders ?? 0,
+        deleteSourceFiles: rule.deleteSourceFiles,
+      });
     } else {
-      this.ruleName.set('');
-      this.ruleCategories.set([]);
-      this.ruleTrackerPatterns.set([]);
-      this.ruleTagsAny.set([]);
-      this.ruleTagsAll.set([]);
-      this.rulePrivacyType.set(TorrentPrivacyType.Public);
-      this.ruleMaxRatio.set(-1);
-      this.ruleMinSeedTime.set(0);
-      this.ruleMaxSeedTime.set(-1);
-      this.ruleMinSeeders.set(0);
-      this.ruleDeleteSourceFiles.set(true);
+      this.ruleModel.set({ ...this.ruleDefaults });
     }
     this.ruleModalVisible.set(true);
   }
 
   saveRule(): void {
-    if (this.ruleNameError() || this.ruleCategoriesError() || this.ruleDisabledError() || this.ruleHasUncommittedInputs()) {
+    if (this.ruleForm().invalid() || this.ruleHasUncommittedInputs()) {
       return;
     }
     const clientId = this.selectedClientId();
@@ -417,20 +487,21 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
       return;
     }
 
+    const m = this.ruleModel();
     const sanitize = (list: string[]) => list.map(s => s.trim()).filter(s => s.length > 0);
 
     const dto: Partial<SeedingRule> = {
-      name: this.ruleName().trim(),
-      categories: sanitize(this.ruleCategories()),
-      trackerPatterns: sanitize(this.ruleTrackerPatterns()),
-      tagsAny: sanitize(this.ruleTagsAny()),
-      tagsAll: sanitize(this.ruleTagsAll()),
-      privacyType: this.rulePrivacyType() as TorrentPrivacyType,
-      maxRatio: this.ruleMaxRatio() ?? -1,
-      minSeedTime: this.ruleMinSeedTime() ?? 0,
-      maxSeedTime: this.ruleMaxSeedTime() ?? -1,
-      minSeeders: this.ruleMinSeeders() ?? 0,
-      deleteSourceFiles: this.ruleDeleteSourceFiles(),
+      name: m.name.trim(),
+      categories: sanitize(m.categories),
+      trackerPatterns: sanitize(m.trackerPatterns),
+      tagsAny: sanitize(m.tagsAny),
+      tagsAll: sanitize(m.tagsAll),
+      privacyType: m.privacyType,
+      maxRatio: m.maxRatio ?? -1,
+      minSeedTime: m.minSeedTime ?? 0,
+      maxSeedTime: m.maxSeedTime ?? -1,
+      minSeeders: m.minSeeders ?? 0,
+      deleteSourceFiles: m.deleteSourceFiles,
     };
 
     const editing = this.editingRule();
@@ -521,62 +592,36 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
       if (!confirmed) {
         return;
       }
-      const currentId = this.selectedClientId();
-      if (currentId) {
-        this.restoreClientEditsFromSnapshot(currentId);
-      }
     }
+    // Changing the selection resets the per-client linkedSignal models to the newly
+    // selected client's saved snapshot, discarding any edits on the previous client.
     this.selectedClientId.set(newClientId as string | null);
-  }
-
-  /** Reverts the client's unlinked/dead-torrent/orphaned edits back to their saved snapshots. */
-  private restoreClientEditsFromSnapshot(clientId: string): void {
-    this.clientConfigs.update(configs => configs.map(c => {
-      if (c.downloadClientId !== clientId) {
-        return c;
-      }
-      const unlinked = this.unlinkedSnapshots()[clientId];
-      const deadTorrent = this.deadTorrentSnapshots()[clientId];
-      const orphaned = this.orphanedFilesSnapshots()[clientId];
-      return {
-        ...c,
-        unlinkedConfig: unlinked ? JSON.parse(unlinked) : c.unlinkedConfig,
-        deadTorrentConfig: deadTorrent ? JSON.parse(deadTorrent) : c.deadTorrentConfig,
-        orphanedFilesConfig: orphaned ? JSON.parse(orphaned) : c.orphanedFilesConfig,
-      };
-    }));
   }
 
   // --- Unlinked config ---
 
-  updateUnlinkedField<K extends keyof UnlinkedConfigModel>(field: K, value: UnlinkedConfigModel[K]): void {
-    this.updateSelectedClient(client => ({
-      ...client,
-      unlinkedConfig: {
-        ...(client.unlinkedConfig ?? createDefaultUnlinkedConfig()),
-        [field]: value,
-      },
-    }));
-  }
-
   saveUnlinkedConfig(): void {
     const clientId = this.selectedClientId();
-    const client = this.selectedClient();
-    if (!clientId || !client?.unlinkedConfig) {
+    if (!clientId) {
       return;
     }
+    const m = this.unlinkedModel();
+    const dto: UnlinkedConfigModel = {
+      enabled: m.enabled,
+      targetCategory: m.targetCategory,
+      useTag: m.useTag,
+      ignoredRootDirs: m.ignoredRootDirs,
+      categories: m.categories,
+    };
 
     this.unlinkedSaving.set(true);
-    this.api.updateUnlinkedConfig(clientId, client.unlinkedConfig).subscribe({
+    this.api.updateUnlinkedConfig(clientId, dto).subscribe({
       next: () => {
         this.toast.success('Unlinked config saved');
         this.unlinkedSaving.set(false);
         this.unlinkedSaved.set(true);
         setTimeout(() => this.unlinkedSaved.set(false), 1500);
-        this.unlinkedSnapshots.update(s => ({
-          ...s,
-          [clientId]: JSON.stringify(client.unlinkedConfig),
-        }));
+        this.unlinkedSnapshots.update(s => ({ ...s, [clientId]: JSON.stringify(m) }));
       },
       error: (err: ApiError) => {
         this.toast.error(err.statusCode === 400 ? err.message : 'Failed to save unlinked config');
@@ -587,34 +632,28 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
 
   // --- Dead torrent per-client config ---
 
-  updateDeadTorrentField<K extends keyof DeadTorrentConfigModel>(field: K, value: DeadTorrentConfigModel[K]): void {
-    this.updateSelectedClient(client => ({
-      ...client,
-      deadTorrentConfig: {
-        ...(client.deadTorrentConfig ?? createDefaultDeadTorrentConfig()),
-        [field]: value,
-      },
-    }));
-  }
-
   saveDeadTorrentConfig(): void {
     const clientId = this.selectedClientId();
-    const client = this.selectedClient();
-    if (!clientId || !client?.deadTorrentConfig) {
+    if (!clientId) {
       return;
     }
+    const m = this.deadTorrentModel();
+    const dto: DeadTorrentConfigModel = {
+      enabled: m.enabled,
+      targetCategory: m.targetCategory,
+      useTag: m.useTag,
+      maxStrikes: m.maxStrikes ?? 0,
+      categories: m.categories,
+    };
 
     this.deadTorrentSaving.set(true);
-    this.api.updateDeadTorrentConfig(clientId, client.deadTorrentConfig).subscribe({
+    this.api.updateDeadTorrentConfig(clientId, dto).subscribe({
       next: () => {
         this.toast.success('Dead torrent config saved');
         this.deadTorrentSaving.set(false);
         this.deadTorrentSaved.set(true);
         setTimeout(() => this.deadTorrentSaved.set(false), 1500);
-        this.deadTorrentSnapshots.update(s => ({
-          ...s,
-          [clientId]: JSON.stringify(client.deadTorrentConfig),
-        }));
+        this.deadTorrentSnapshots.update(s => ({ ...s, [clientId]: JSON.stringify(m) }));
       },
       error: (err: ApiError) => {
         this.toast.error(err.statusCode === 400 ? err.message : 'Failed to save dead torrent config');
@@ -625,49 +664,35 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
 
   // --- Orphaned files per-client config ---
 
-  updateOrphanedFilesField<K extends keyof OrphanedFilesConfig>(field: K, value: OrphanedFilesConfig[K]): void {
-    this.updateSelectedClient(client => ({
-      ...client,
-      orphanedFilesConfig: {
-        ...(client.orphanedFilesConfig ?? createDefaultOrphanedFilesConfig()),
-        [field]: value,
-      },
-    }));
-  }
-
   saveOrphanedFilesConfig(): void {
     const clientId = this.selectedClientId();
-    const client = this.selectedClient();
-    if (!clientId || !client?.orphanedFilesConfig) {
+    if (!clientId) {
       return;
     }
+    const m = this.orphanedFilesModel();
+    const dto: OrphanedFilesConfig = {
+      enabled: m.enabled,
+      scanDirectories: m.scanDirectories,
+      orphanedDirectory: m.orphanedDirectory,
+      excludePatterns: m.excludePatterns,
+      minFileAgeHours: m.minFileAgeHours ?? 24,
+      purgeAfterHours: m.purgeAfterHours ?? undefined,
+    };
+
     this.orphanedFilesSaving.set(true);
-    this.api.updateOrphanedFilesConfig(clientId, client.orphanedFilesConfig).subscribe({
+    this.api.updateOrphanedFilesConfig(clientId, dto).subscribe({
       next: () => {
         this.toast.success('Orphaned files settings saved');
         this.orphanedFilesSaving.set(false);
         this.orphanedFilesSaved.set(true);
         setTimeout(() => this.orphanedFilesSaved.set(false), 1500);
-        this.orphanedFilesSnapshots.update(s => ({
-          ...s,
-          [clientId]: JSON.stringify(client.orphanedFilesConfig),
-        }));
+        this.orphanedFilesSnapshots.update(s => ({ ...s, [clientId]: JSON.stringify(m) }));
       },
       error: (err: ApiError) => {
         this.toast.error(err.statusCode === 400 ? err.message : 'Failed to save orphaned files settings');
         this.orphanedFilesSaving.set(false);
       },
     });
-  }
-
-  private updateSelectedClient(updater: (client: ClientCleanerConfig) => ClientCleanerConfig): void {
-    const id = this.selectedClientId();
-    if (!id) {
-      return;
-    }
-    this.clientConfigs.update(configs =>
-      configs.map(c => c.downloadClientId === id ? updater(c) : c)
-    );
   }
 
   // --- Global config save ---
@@ -677,16 +702,17 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
       return;
     }
 
-    const jobSchedule = { every: (this.scheduleEvery() as number) ?? 5, type: this.scheduleUnit() as ScheduleUnit };
-    const cronExpression = this.useAdvancedScheduling()
-      ? this.cronExpression()
+    const m = this.model();
+    const jobSchedule = { every: m.scheduleEvery ?? 5, type: m.scheduleUnit };
+    const cronExpression = m.useAdvancedScheduling
+      ? m.cronExpression
       : generateCronExpression(jobSchedule);
 
     const config = {
-      enabled: this.enabled(),
+      enabled: m.enabled,
       cronExpression,
-      useAdvancedScheduling: this.useAdvancedScheduling(),
-      ignoredDownloads: this.ignoredDownloads(),
+      useAdvancedScheduling: m.useAdvancedScheduling,
+      ignoredDownloads: m.ignoredDownloads,
     };
 
     this.saving.set(true);
@@ -708,14 +734,7 @@ export class DownloadCleanerComponent implements OnInit, HasPendingChanges {
   }
 
   private buildSnapshot(): string {
-    return JSON.stringify({
-      enabled: this.enabled(),
-      useAdvancedScheduling: this.useAdvancedScheduling(),
-      cronExpression: this.cronExpression(),
-      scheduleEvery: this.scheduleEvery(),
-      scheduleUnit: this.scheduleUnit(),
-      ignoredDownloads: this.ignoredDownloads(),
-    });
+    return JSON.stringify(this.model());
   }
 
   readonly dirty = computed(() => {

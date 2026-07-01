@@ -56,41 +56,41 @@
   [(visible)]="modalVisible"
 >
   <div class="modal-form">
-    <app-toggle label="Enabled" [(checked)]="modalEnabled"
+    <app-toggle label="Enabled" [formField]="clientForm.enabled"
       hint="Enable or disable this client"
       helpKey="download-client:enabled" />
-    <app-input label="Name" placeholder="My qBittorrent" [(value)]="modalName"
+    <app-input label="Name" placeholder="My qBittorrent" [formField]="clientForm.name"
       hint="A unique name to identify this client"
-      [error]="modalNameError()"
+      [error]="clientForm.name().errors()[0]?.message"
       helpKey="download-client:name" />
-    <app-select label="Client Type" [options]="typeOptions" [value]="modalTypeName()"
-      (valueChange)="onClientTypeChange($event)"
+    <app-select label="Client Type" [options]="typeOptions" [formField]="clientForm.typeName"
+      (valueChange)="onClientTypeChange()"
       hint="The type of download client"
       helpKey="download-client:typeName" />
-    <app-input label="Host" placeholder="http://localhost:8080" [(value)]="modalHost"
+    <app-input label="Host" placeholder="http://localhost:8080" [formField]="clientForm.host"
       hint="Full URL including protocol and port (e.g., http://localhost:8080)"
-      [error]="modalHostError()"
+      [error]="clientForm.host().errors()[0]?.message"
       helpKey="download-client:host" />
     @if (showUsernameField()) {
-      <app-input label="Username" placeholder="admin" [(value)]="modalUsername"
+      <app-input label="Username" placeholder="admin" [formField]="clientForm.username"
         [hint]="usernameHint()"
         helpKey="download-client:username" />
     }
     @if (showPasswordField()) {
-      <app-input label="Password" placeholder="Enter password" type="password" [revealable]="false" [(value)]="modalPassword"
+      <app-input label="Password" placeholder="Enter password" type="password" [revealable]="false" [formField]="clientForm.password"
         [hint]="passwordHint()"
         helpKey="download-client:password" />
     }
-    <app-input label="URL Base" placeholder="/api/v2" [(value)]="modalUrlBase"
+    <app-input label="URL Base" placeholder="/api/v2" [formField]="clientForm.urlBase"
       [hint]="urlBaseHint()"
       helpKey="download-client:urlBase" />
-    <app-input label="External URL" placeholder="https://qbit.example.com" type="url" [(value)]="modalExternalUrl"
+    <app-input label="External URL" placeholder="https://qbit.example.com" type="url" [formField]="clientForm.externalUrl"
       hint="Optional URL used in notifications for clickable links (e.g., when internal Docker URLs are not reachable externally)"
       helpKey="download-client:externalUrl" />
-    <app-input label="Download Directory Source" placeholder="/downloads" [(value)]="modalDownloadDirectorySource"
+    <app-input label="Download Directory Source" placeholder="/downloads" [formField]="clientForm.downloadDirectorySource"
       hint="The path your download client reports (e.g. /downloads). Leave blank if Cleanuparr sees the files at the same path."
       helpKey="download-client:downloadDirectorySource" />
-    <app-input label="Download Directory Target" placeholder="/mnt/data/downloads" [(value)]="modalDownloadDirectoryTarget"
+    <app-input label="Download Directory Target" placeholder="/mnt/data/downloads" [formField]="clientForm.downloadDirectoryTarget"
       hint="Where Cleanuparr actually finds those files (e.g. /mnt/data/downloads). Cleanuparr replaces the source path with this one."
       helpKey="download-client:downloadDirectoryTarget" />
   </div>
