@@ -398,7 +398,7 @@
       <div class="form-divider"></div>
 
       <div class="form-actions">
-        <app-button variant="primary" [loading]="oidcSaving()" [disabled]="oidcSaving() || oidcSaved()" (clicked)="saveOidcConfig()">
+        <app-button variant="primary" [loading]="oidcSaving()" [disabled]="oidcSaving() || oidcSaved() || oidcForm().invalid()" (clicked)="saveOidcConfig()">
           {{ oidcSaved() ? 'Saved!' : 'Save OIDC Settings' }}
         </app-button>
       </div>

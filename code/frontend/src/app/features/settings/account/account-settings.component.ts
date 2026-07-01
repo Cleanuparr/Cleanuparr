@@ -1,6 +1,6 @@
 import { Component, ChangeDetectionStrategy, inject, signal, computed, effect, untracked, OnInit, OnDestroy } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
-import { form, FormField } from '@angular/forms/signals';
+import { form, required, FormField } from '@angular/forms/signals';
 import { ActivatedRoute } from '@angular/router';
 import { PageHeaderComponent } from '@layout/page-header/page-header.component';
 import {
@@ -115,7 +115,10 @@ export class AccountSettingsComponent implements OnInit, OnDestroy {
     authorizedSubject: '',
     exclusiveMode: false,
   });
-  readonly oidcForm = form(this.oidcModel);
+  readonly oidcForm = form(this.oidcModel, (p) => {
+    required(p.issuerUrl, { when: ({ valueOf }) => valueOf(p.enabled), message: 'Issuer URL is required' });
+    required(p.clientId, { when: ({ valueOf }) => valueOf(p.enabled), message: 'Client ID is required' });
+  });
   readonly oidcExclusiveMode = computed(() => this.oidcModel().exclusiveMode);
   readonly oidcAuthorizedSubject = computed(() => this.oidcModel().authorizedSubject);
   readonly oidcExpanded = signal(false);
