@@ -1,5 +1,6 @@
 import { Component, ChangeDetectionStrategy, inject, signal, input, computed, effect, untracked } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
+import { form, required, FormField } from '@angular/forms/signals';
 import { PageHeaderComponent } from '@layout/page-header/page-header.component';
 import {
   CardComponent, ButtonComponent, InputComponent, ToggleComponent,
@@ -22,13 +23,22 @@ const ARR_VERSION_OPTIONS: Record<string, SelectOption[]> = {
   whisparr: [{ label: 'v2', value: 2 }, { label: 'v3', value: 3 }],
 };
 
+interface ArrInstanceFormModel {
+  name: string;
+  url: string;
+  externalUrl: string;
+  apiKey: string;
+  version: number;
+  enabled: boolean;
+}
+
 @Component({
   selector: 'app-arr-settings',
   standalone: true,
   imports: [
     PageHeaderComponent, CardComponent, ButtonComponent, InputComponent,
     ToggleComponent, SelectComponent, ModalComponent, EmptyStateComponent,
-    BadgeComponent, LoadingStateComponent,
+    BadgeComponent, LoadingStateComponent, FormField,
   ],
   templateUrl: './arr-settings.component.html',
   styleUrl: './arr-settings.component.scss',
@@ -61,36 +71,24 @@ export class ArrSettingsComponent implements HasPendingChanges {
   // Modal state
   readonly modalVisible = signal(false);
   readonly editingInstance = signal<ArrInstance | null>(null);
-  readonly modalName = signal('');
-  readonly modalUrl = signal('');
-  readonly modalExternalUrl = signal('');
-  readonly modalApiKey = signal('');
-  readonly modalVersion = signal<unknown>(3);
-  readonly modalEnabled = signal(true);
   readonly testing = signal(false);
 
-  // Modal validation
-  readonly modalNameError = computed(() => {
-    if (!this.modalName().trim()) return 'Name is required';
-    return undefined;
+  readonly instanceModel = signal<ArrInstanceFormModel>({
+    name: '', url: '', externalUrl: '', apiKey: '', version: 3, enabled: true,
   });
-  readonly modalUrlError = computed(() => {
-    if (!this.modalUrl().trim()) return 'URL is required';
-    return undefined;
+  readonly instanceForm = form(this.instanceModel, (p) => {
+    required(p.name, { message: 'Name is required' });
+    required(p.url, { message: 'URL is required' });
+    required(p.apiKey, { message: 'API key is required' });
   });
-  readonly modalApiKeyError = computed(() => {
-    if (!this.modalApiKey().trim()) return 'API key is required';
-    return undefined;
-  });
-  readonly hasModalErrors = computed(() => !!(
-    this.modalNameError() || this.modalUrlError() || this.modalApiKeyError()
-  ));
+
+  readonly hasModalErrors = computed(() => this.instanceForm().invalid());
 
   constructor() {
     effect(() => {
       const options = this.versionOptions();
       if (options.length > 0) {
-        untracked(() => this.modalVersion.set(options[0].value));
+        untracked(() => this.instanceModel.update(m => ({ ...m, version: options[0].value as number })));
       }
     });
 
@@ -115,32 +113,34 @@ export class ArrSettingsComponent implements HasPendingChanges {
 
   openAddModal(): void {
     this.editingInstance.set(null);
-    this.modalName.set('');
-    this.modalUrl.set('');
-    this.modalExternalUrl.set('');
-    this.modalApiKey.set('');
     const options = this.versionOptions();
-    this.modalVersion.set(options.length > 0 ? options[0].value : 3);
-    this.modalEnabled.set(true);
+    this.instanceModel.set({
+      name: '', url: '', externalUrl: '', apiKey: '',
+      version: options.length > 0 ? (options[0].value as number) : 3,
+      enabled: true,
+    });
     this.modalVisible.set(true);
   }
 
   openEditModal(instance: ArrInstance): void {
     this.editingInstance.set(instance);
-    this.modalName.set(instance.name);
-    this.modalUrl.set(instance.url);
-    this.modalExternalUrl.set(instance.externalUrl ?? '');
-    this.modalApiKey.set(instance.apiKey);
-    this.modalVersion.set(instance.version);
-    this.modalEnabled.set(instance.enabled);
+    this.instanceModel.set({
+      name: instance.name,
+      url: instance.url,
+      externalUrl: instance.externalUrl ?? '',
+      apiKey: instance.apiKey,
+      version: instance.version,
+      enabled: instance.enabled,
+    });
     this.modalVisible.set(true);
   }
 
   testConnection(): void {
+    const m = this.instanceModel();
     const request: TestArrInstanceRequest = {
-      url: this.modalUrl(),
-      apiKey: this.modalApiKey(),
-      version: (this.modalVersion() as number) ?? 3,
+      url: m.url,
+      apiKey: m.apiKey,
+      version: m.version ?? 3,
       instanceId: this.editingInstance()?.id,
     };
     this.testing.set(true);
@@ -157,14 +157,17 @@ export class ArrSettingsComponent implements HasPendingChanges {
   }
 
   saveInstance(): void {
-    if (this.hasModalErrors()) return;
+    if (this.instanceForm().invalid()) {
+      return;
+    }
+    const m = this.instanceModel();
     const dto: CreateArrInstanceDto = {
-      name: this.modalName(),
-      url: this.modalUrl(),
-      externalUrl: this.modalExternalUrl() || undefined,
-      apiKey: this.modalApiKey(),
-      version: (this.modalVersion() as number) ?? 3,
-      enabled: this.modalEnabled(),
+      name: m.name,
+      url: m.url,
+      externalUrl: m.externalUrl || undefined,
+      apiKey: m.apiKey,
+      version: m.version ?? 3,
+      enabled: m.enabled,
     };
 
     this.saving.set(true);

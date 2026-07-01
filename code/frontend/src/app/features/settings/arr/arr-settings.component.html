@@ -55,25 +55,25 @@
   [(visible)]="modalVisible"
 >
   <div class="modal-form">
-    <app-toggle label="Enabled" [(checked)]="modalEnabled"
+    <app-toggle label="Enabled" [formField]="instanceForm.enabled"
       hint="Enable or disable this instance"
       helpKey="arr:enabled" />
-    <app-input label="Name" placeholder="My Instance" [(value)]="modalName"
+    <app-input label="Name" placeholder="My Instance" [formField]="instanceForm.name"
       hint="A unique name to identify this instance"
-      [error]="modalNameError()"
+      [error]="instanceForm.name().errors()[0]?.message"
       helpKey="arr:name" />
-    <app-input label="URL" placeholder="http://localhost:8989" type="url" [(value)]="modalUrl"
+    <app-input label="URL" placeholder="http://localhost:8989" type="url" [formField]="instanceForm.url"
       hint="Full URL including protocol and port"
-      [error]="modalUrlError()"
+      [error]="instanceForm.url().errors()[0]?.message"
       helpKey="arr:url" />
-    <app-input label="External URL" placeholder="https://sonarr.example.com" type="url" [(value)]="modalExternalUrl"
+    <app-input label="External URL" placeholder="https://sonarr.example.com" type="url" [formField]="instanceForm.externalUrl"
       hint="Optional URL used in notifications for clickable links (e.g., when internal Docker URLs are not reachable externally)"
       helpKey="arr:externalUrl" />
-    <app-input label="API Key" placeholder="Enter API key" type="password" [revealable]="false" [(value)]="modalApiKey"
+    <app-input label="API Key" placeholder="Enter API key" type="password" [revealable]="false" [formField]="instanceForm.apiKey"
       hint="API key from your arr application's Settings > General"
-      [error]="modalApiKeyError()"
+      [error]="instanceForm.apiKey().errors()[0]?.message"
       helpKey="arr:apiKey" />
-    <app-select label="API Version" [options]="versionOptions()" [(value)]="modalVersion"
+    <app-select label="API Version" [options]="versionOptions()" [formField]="instanceForm.version"
       hint="API version for this application"
       helpKey="arr:version" />
   </div>
