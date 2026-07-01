@@ -89,7 +89,7 @@
             (keydown.enter)="isExpandable(log) ? toggleExpand($index) : null"
             (keydown.space)="isExpandable(log) ? toggleExpand($index) : null"
           >
-            <button class="log-entry__copy" (click)="copyLog(log); $event.stopPropagation()" title="Copy log">
+            <button class="log-entry__copy" (click)="copyLog(log); $event.stopPropagation()" (keydown.enter)="$event.stopPropagation()" (keydown.space)="$event.stopPropagation()" title="Copy log">
               <ng-icon name="tablerCopy" />
             </button>
             <span class="log-entry__time">{{ log.timestamp | date:'yyyy-MM-dd HH:mm:ss' }}</span>

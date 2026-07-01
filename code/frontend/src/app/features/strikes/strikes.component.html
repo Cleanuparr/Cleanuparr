@@ -75,6 +75,8 @@
             <button
               class="strike-row__delete"
               (click)="deleteItemStrikes(item); $event.stopPropagation()"
+              (keydown.enter)="$event.stopPropagation()"
+              (keydown.space)="$event.stopPropagation()"
               title="Delete all strikes for this item"
             >
               <ng-icon name="tablerTrash" />
