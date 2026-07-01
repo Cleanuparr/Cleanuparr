@@ -49,9 +49,12 @@ test.describe('Notifications UI', () => {
     const modal = await openProvider(page, 'Pushover');
 
     const retry = modal.locator('app-number-input').filter({ hasText: 'Retry' });
+    const expire = modal.locator('app-number-input').filter({ hasText: 'Expire' });
     await expect(retry).toHaveCount(0);
+    await expect(expire).toHaveCount(0);
 
     await selectOption(modal, 'Priority', 'Emergency');
     await expect(retry).toBeVisible();
+    await expect(expire).toBeVisible();
   });
 });
