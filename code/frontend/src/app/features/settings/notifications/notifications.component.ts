@@ -1,6 +1,6 @@
 import { Component, ChangeDetectionStrategy, inject, signal, computed, effect } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
-import { form, validate, min, max, FormField } from '@angular/forms/signals';
+import { form, validate, FormField } from '@angular/forms/signals';
 import { PageHeaderComponent } from '@layout/page-header/page-header.component';
 import {
   CardComponent, ButtonComponent, InputComponent, ToggleComponent,
@@ -295,9 +295,26 @@ export class NotificationsComponent implements HasPendingChanges {
     validate(p.pushoverUserKey, () =>
       this.modalType() === NotificationProviderType.Pushover && !this.modalModel().pushoverUserKey.trim()
         ? { kind: 'required', message: 'User key is required' } : undefined);
-    min(p.pushoverRetry, 30, { message: 'Minimum 30 seconds' });
-    min(p.pushoverExpire, 1, { message: 'Minimum 1 second' });
-    max(p.pushoverExpire, 10800, { message: 'Maximum 10800 seconds' });
+    // Retry/expire only apply to Emergency priority; skip otherwise so stale
+    // values from a hidden field can't keep the modal Save disabled.
+    validate(p.pushoverRetry, () => {
+      if (this.modalType() !== NotificationProviderType.Pushover
+        || this.modalModel().pushoverPriority !== PushoverPriority.Emergency) {
+        return undefined;
+      }
+      const retry = this.modalModel().pushoverRetry;
+      return retry == null || retry < 30 ? { kind: 'min', message: 'Minimum 30 seconds' } : undefined;
+    });
+    validate(p.pushoverExpire, () => {
+      if (this.modalType() !== NotificationProviderType.Pushover
+        || this.modalModel().pushoverPriority !== PushoverPriority.Emergency) {
+        return undefined;
+      }
+      const expire = this.modalModel().pushoverExpire;
+      if (expire == null || expire < 1) return { kind: 'min', message: 'Minimum 1 second' };
+      if (expire > 10800) return { kind: 'max', message: 'Maximum 10800 seconds' };
+      return undefined;
+    });
 
     // Gotify
     validate(p.gotifyServerUrl, () =>
