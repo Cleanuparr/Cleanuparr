@@ -125,10 +125,13 @@ export class AccountSettingsComponent implements OnInit, OnDestroy {
   readonly oidcSaved = signal(false);
 
   constructor() {
-    // Reset exclusive mode when OIDC is toggled off
+    // Reset exclusive mode when OIDC is toggled off. Guard on exclusiveMode too:
+    // the write flips it false, so the effect settles instead of writing a fresh
+    // object every run (which would loop forever while enabled stays false).
     effect(() => {
-      if (!this.oidcModel().enabled) {
-        untracked(() => this.oidcModel.update(m => ({ ...m, exclusiveMode: false })));
+      const m = this.oidcModel();
+      if (!m.enabled && m.exclusiveMode) {
+        untracked(() => this.oidcModel.update(mm => ({ ...mm, exclusiveMode: false })));
       }
     });
 
