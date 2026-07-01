@@ -1,6 +1,6 @@
-import { Component, ChangeDetectionStrategy, inject, effect, HostListener } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, HostListener } from '@angular/core';
 import { ConfirmService } from '@core/services/confirm.service';
-import { OverlayStackService } from '@core/services/overlay-stack.service';
+import { registerOverlayEffect } from '@core/services/overlay-stack.service';
 import { ButtonComponent } from '../button/button.component';
 
 @Component({
@@ -14,23 +14,11 @@ import { ButtonComponent } from '../button/button.component';
 export class ConfirmDialogComponent {
   readonly confirm = inject(ConfirmService);
 
-  private readonly overlays = inject(OverlayStackService);
-  private overlayId: number | null = null;
-
-  constructor() {
-    effect(() => {
-      if (this.confirm.state()) {
-        this.overlayId ??= this.overlays.register();
-      } else if (this.overlayId !== null) {
-        this.overlays.unregister(this.overlayId);
-        this.overlayId = null;
-      }
-    });
-  }
+  private readonly isTopmostOverlay = registerOverlayEffect(this.confirm.state);
 
   @HostListener('document:keydown.escape')
   onEscapeKey(): void {
-    if (this.confirm.state() && this.overlayId !== null && this.overlays.isTopmost(this.overlayId)) {
+    if (this.confirm.state() && this.isTopmostOverlay()) {
       this.confirm.cancel();
     }
   }
