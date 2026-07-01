@@ -52,7 +52,7 @@ interface ProviderConfiguration {
   authenticationType?: NtfyAuthenticationType;
   password?: string;
   accessToken?: string;
-  priority?: number;
+  priority?: number | NtfyPriority | PushoverPriority;
   apiToken?: string;
   userKey?: string;
   devices?: string[];
@@ -398,14 +398,18 @@ export class NotificationsComponent implements HasPendingChanges {
         model.ntfyUsername = config.username ?? '';
         model.ntfyPassword = config.password ?? '';
         model.ntfyAccessToken = config.accessToken ?? '';
-        model.ntfyPriority = (config.priority as unknown as NtfyPriority) ?? NtfyPriority.Default;
+        model.ntfyPriority = Object.values(NtfyPriority).includes(config.priority as NtfyPriority)
+          ? (config.priority as NtfyPriority)
+          : NtfyPriority.Default;
         model.ntfyTags = (config.tags as string[]) ?? [];
         break;
       case NotificationProviderType.Pushover:
         model.pushoverApiToken = config.apiToken ?? '';
         model.pushoverUserKey = config.userKey ?? '';
         model.pushoverDevices = config.devices ?? [];
-        model.pushoverPriority = (config.priority as unknown as PushoverPriority) ?? PushoverPriority.Normal;
+        model.pushoverPriority = Object.values(PushoverPriority).includes(config.priority as PushoverPriority)
+          ? (config.priority as PushoverPriority)
+          : PushoverPriority.Normal;
         model.pushoverRetry = config.retry ?? 30;
         model.pushoverExpire = config.expire ?? 3600;
         model.pushoverSound = config.sound ?? '';
