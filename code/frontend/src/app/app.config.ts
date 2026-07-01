@@ -1,7 +1,6 @@
 import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/core';
 import { provideRouter, withComponentInputBinding } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
-import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { provideIcons } from '@ng-icons/core';
 import {
   tablerLayoutDashboard,
@@ -68,7 +67,6 @@ export const appConfig: ApplicationConfig = {
     provideHttpClient(
       withInterceptors([baseUrlInterceptor, authInterceptor, errorInterceptor]),
     ),
-    provideAnimationsAsync(),
     provideIcons({
       tablerLayoutDashboard,
       tablerFileText,
