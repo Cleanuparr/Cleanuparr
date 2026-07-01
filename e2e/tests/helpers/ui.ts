@@ -26,10 +26,11 @@ export async function loginAndGotoSettings(page: Page, path: string): Promise<vo
 }
 
 // --- Form-control locators ---------------------------------------------------
-// The shared UI inputs/selects do NOT associate their <label> with the control
-// (no for/id), so getByLabel does not work. Toggles expose the label via
-// aria-label. Everything else is scoped by the stable custom-element tag plus
-// the label text, then the inner native control.
+// The shared UI inputs/selects now associate their <label> with the control via
+// for/id, but the label also contains a help button and a "new" badge, so the
+// accessible name is polluted and getByLabel is brittle. We instead scope by the
+// stable custom-element tag plus the label text, then the inner native control.
+// Toggles are located by their aria-label (role=switch).
 
 /** A toggle (role=switch) located by its label (aria-label). */
 export function toggle(scope: Scope, label: string): Locator {
