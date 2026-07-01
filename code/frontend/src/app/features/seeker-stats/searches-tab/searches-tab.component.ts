@@ -250,7 +250,6 @@ export class SearchesTabComponent {
     SearchesTabComponent.PAGE_SIZE_KEY,
     this.pageSize,
     this.eventsPage,
-    () => this.eventsResource.reload(),
   );
 
   openFilters(): void {

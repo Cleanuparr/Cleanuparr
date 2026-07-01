@@ -151,7 +151,6 @@ export class EventsComponent implements OnInit, OnDestroy {
     EventsComponent.PAGE_SIZE_KEY,
     this.pageSize,
     this.currentPage,
-    () => this.eventsResource.reload(),
   );
 
   isExpandable(event: AppEvent): boolean {

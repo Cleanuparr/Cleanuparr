@@ -237,7 +237,6 @@ export class QualityTabComponent {
     QualityTabComponent.PAGE_SIZE_KEY,
     this.pageSize,
     this.currentPage,
-    () => this.scoresResource.reload(),
   );
 
   openFilters(): void {

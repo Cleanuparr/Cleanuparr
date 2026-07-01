@@ -27,7 +27,6 @@ export class PaginationService {
     key: string,
     pageSize: WritableSignal<number>,
     currentPage: WritableSignal<number>,
-    reload: () => void,
   ): (size: number) => void {
     return (size: number) => {
       if (!this.isValidPageSize(size)) {
@@ -36,7 +35,6 @@ export class PaginationService {
       this.setPageSize(key, size);
       pageSize.set(size);
       currentPage.set(1);
-      reload();
     };
   }
 

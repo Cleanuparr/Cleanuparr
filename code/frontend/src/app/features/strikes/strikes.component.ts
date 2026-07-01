@@ -117,7 +117,6 @@ export class StrikesComponent implements OnInit, OnDestroy {
     StrikesComponent.PAGE_SIZE_KEY,
     this.pageSize,
     this.currentPage,
-    () => this.strikesResource.reload(),
   );
 
   toggleExpand(itemId: string): void {

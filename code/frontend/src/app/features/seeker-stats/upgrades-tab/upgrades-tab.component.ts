@@ -178,7 +178,6 @@ export class UpgradesTabComponent {
     UpgradesTabComponent.PAGE_SIZE_KEY,
     this.pageSize,
     this.currentPage,
-    () => this.upgradesResource.reload(),
   );
 
   openFilters(): void {
