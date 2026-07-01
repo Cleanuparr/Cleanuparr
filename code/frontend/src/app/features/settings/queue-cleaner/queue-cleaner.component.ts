@@ -164,28 +164,25 @@ export class QueueCleanerComponent implements HasPendingChanges {
     min(p.metadataMaxStrikes, 0, { message: 'Value cannot be negative' });
     max(p.metadataMaxStrikes, 5000, { message: 'Value cannot exceed 5000' });
 
-    validate(p.scheduleEvery, () => {
-      const m = this.model();
-      if (m.useAdvancedScheduling) {
+    validate(p.scheduleEvery, ({ value, valueOf }) => {
+      if (valueOf(p.useAdvancedScheduling)) {
         return undefined;
       }
-      const options = ScheduleOptions[m.scheduleUnit] ?? [];
-      return options.includes(m.scheduleEvery) ? undefined : { kind: 'schedule', message: 'Please select a value' };
+      const options = ScheduleOptions[valueOf(p.scheduleUnit)] ?? [];
+      return options.includes(value()) ? undefined : { kind: 'schedule', message: 'Please select a value' };
     });
 
-    validate(p.cronExpression, () => {
-      const m = this.model();
-      return m.useAdvancedScheduling && !m.cronExpression.trim()
+    validate(p.cronExpression, ({ value, valueOf }) => {
+      return valueOf(p.useAdvancedScheduling) && !value().trim()
         ? { kind: 'required', message: 'Cron expression is required' }
         : undefined;
     });
 
-    validate(p.failedPatterns, () => {
-      const m = this.model();
-      if (m.failedMaxStrikes === 0) {
+    validate(p.failedPatterns, ({ value, valueOf }) => {
+      if (valueOf(p.failedMaxStrikes) === 0) {
         return undefined;
       }
-      return m.failedPatternMode === PatternMode.Include && m.failedPatterns.length === 0
+      return valueOf(p.failedPatternMode) === PatternMode.Include && value().length === 0
         ? { kind: 'required', message: 'At least one pattern is required when using Include mode' }
         : undefined;
     });
@@ -231,10 +228,9 @@ export class QueueCleanerComponent implements HasPendingChanges {
     max(p.minCompletion, 100);
     min(p.maxCompletion, 1);
     max(p.maxCompletion, 100);
-    validate(p.maxCompletion, () => {
-      const m = this.stallModel();
-      const minC = m.minCompletion ?? 0;
-      const maxC = m.maxCompletion ?? 100;
+    validate(p.maxCompletion, ({ value, valueOf }) => {
+      const minC = valueOf(p.minCompletion) ?? 0;
+      const maxC = value() ?? 100;
       if (maxC <= 0) return { kind: 'completion', message: 'Max percentage must be greater than 0' };
       if (maxC < minC) return { kind: 'completion', message: 'Max percentage must be greater than or equal to Min percentage' };
       return undefined;
@@ -267,10 +263,9 @@ export class QueueCleanerComponent implements HasPendingChanges {
     max(p.minCompletion, 100);
     min(p.maxCompletion, 1);
     max(p.maxCompletion, 100);
-    validate(p.maxCompletion, () => {
-      const m = this.slowModel();
-      const minC = m.minCompletion ?? 0;
-      const maxC = m.maxCompletion ?? 100;
+    validate(p.maxCompletion, ({ value, valueOf }) => {
+      const minC = valueOf(p.minCompletion) ?? 0;
+      const maxC = value() ?? 100;
       if (maxC <= 0) return { kind: 'completion', message: 'Max percentage must be greater than 0' };
       if (maxC < minC) return { kind: 'completion', message: 'Max percentage must be greater than or equal to Min percentage' };
       return undefined;
