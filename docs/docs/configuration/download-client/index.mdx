@@ -144,4 +144,61 @@ Password for download client authentication.
 
 </div>
 
+<div className={styles.section}>
+
+<SectionTitle>
+  Path Mapping
+</SectionTitle>
+
+<ConfigSection
+  title="Download Directory Source and Target"
+>
+
+Some Cleanuparr features need to read the actual files on disk — unlinked download handling, orphaned files, and deleting source files. The download client and Cleanuparr do not always see those files at the same path. This is common in Docker, where each container mounts the same folder under a different path. Path mapping tells Cleanuparr how to translate the path the client reports into the path Cleanuparr can actually reach.
+
+- **Download Directory Source** — the path exactly as the download client reports it (e.g. `/downloads`).
+- **Download Directory Target** — the path where Cleanuparr actually finds those same files (e.g. `/mnt/data/downloads`). Cleanuparr replaces the source prefix with the target prefix.
+
+Leave **both fields blank** if the download client and Cleanuparr already see the files at the same path (no path translation needed).
+
+**Docker example:**
+
+In a typical Docker Compose setup, each container has its own view of the filesystem. Two download clients may each report paths starting with `/downloads`, even though their files live in different host folders. Cleanuparr mounts those host folders under different paths, so it needs a mapping per client to locate the actual files.
+
+```yaml
+services:
+  qbittorrent:
+    image: ...
+    ...
+    volumes:
+      - /host/data/downloads-qbit:/downloads        # qBittorrent sees /downloads
+
+  deluge:
+    image: ...
+    ...
+    volumes:
+      - /host/data/downloads-deluge:/downloads      # Deluge sees /downloads
+
+  cleanuparr:
+    image: ghcr.io/cleanuparr/cleanuparr
+    ...
+    volumes:
+      - /host/data/downloads-qbit:/downloads-qbit   # Cleanuparr sees /downloads-qbit
+      - /host/data/downloads-deluge:/downloads-deluge # Cleanuparr sees /downloads-deluge
+```
+
+Both clients report paths under the same `/downloads` prefix, but Cleanuparr mounts each host folder under a different path, so it needs the translation per client:
+
+- **qBittorrent** reports `/downloads/movie.mkv` while Cleanuparr finds it at `/downloads-qbit/movie.mkv`
+  - Download Directory Source: `/downloads`
+  - Download Directory Target: `/downloads-qbit`
+
+- **Deluge** reports `/downloads/movie.mkv` while Cleanuparr finds it at `/downloads-deluge/movie.mkv`
+  - Download Directory Source: `/downloads`
+  - Download Directory Target: `/downloads-deluge`
+
+</ConfigSection>
+
+</div>
+
 </div>
