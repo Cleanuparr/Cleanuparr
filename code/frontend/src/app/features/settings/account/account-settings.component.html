@@ -335,29 +335,29 @@
   <!-- OIDC / SSO -->
   <app-card header="OIDC / SSO">
     <div class="form-stack">
-      <app-toggle label="Enable OIDC" [(checked)]="oidcEnabled"
+      <app-toggle label="Enable OIDC" [formField]="oidcForm.enabled"
         helpKey="account:oidcEnabled"
         hint="Allow signing in with an external identity provider (Authentik, Authelia, Keycloak, etc.)" />
-      @if (oidcEnabled()) {
-        <app-input label="Provider Name" [(value)]="oidcProviderName"
+      @if (oidcForm.enabled().value()) {
+        <app-input label="Provider Name" [formField]="oidcForm.providerName"
           helpKey="account:oidcProviderName"
           hint="Display name shown on the login button (e.g. Authentik, Keycloak)" />
-        <app-input label="Issuer URL" [(value)]="oidcIssuerUrl"
+        <app-input label="Issuer URL" [formField]="oidcForm.issuerUrl"
           helpKey="account:oidcIssuerUrl"
           placeholder="https://auth.example.com/application/o/cleanuparr/"
           hint="The OpenID Connect issuer URL from your identity provider. Must use HTTPS." />
         <div class="form-row">
-          <app-input label="Client ID" [(value)]="oidcClientId"
+          <app-input label="Client ID" [formField]="oidcForm.clientId"
             helpKey="account:oidcClientId"
             hint="The client ID assigned by your identity provider" />
-          <app-input label="Client Secret" [(value)]="oidcClientSecret" type="password" [revealable]="false"
+          <app-input label="Client Secret" [formField]="oidcForm.clientSecret" type="password" [revealable]="false"
             helpKey="account:oidcClientSecret"
             hint="Optional. Required for confidential clients." />
         </div>
-        <app-input label="Scopes" [(value)]="oidcScopes"
+        <app-input label="Scopes" [formField]="oidcForm.scopes"
           helpKey="account:oidcScopes"
           hint="Space-separated list of OIDC scopes to request (default: openid profile email)" />
-        <app-input label="Redirect URL" [(value)]="oidcRedirectUrl"
+        <app-input label="Redirect URL" [formField]="oidcForm.redirectUrl"
           helpKey="account:oidcRedirectUrl"
           placeholder="https://cleanuparr.example.com"
           hint="The base URL where Cleanuparr is accessible. Callback paths are appended automatically. Leave empty to auto-detect." />
@@ -390,7 +390,7 @@
         </div>
 
         <div class="form-divider"></div>
-        <app-toggle label="Exclusive Mode" [(checked)]="oidcExclusiveMode"
+        <app-toggle label="Exclusive Mode" [formField]="oidcForm.exclusiveMode"
           helpKey="account:oidcExclusiveMode"
           hint="When enabled, only OIDC login is allowed. Username/password and Plex login will be disabled." />
       }

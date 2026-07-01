@@ -1,5 +1,6 @@
 import { Component, ChangeDetectionStrategy, inject, signal, computed, effect, untracked, OnInit, OnDestroy } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
+import { form, FormField } from '@angular/forms/signals';
 import { ActivatedRoute } from '@angular/router';
 import { PageHeaderComponent } from '@layout/page-header/page-header.component';
 import {
@@ -15,13 +16,25 @@ import { ConfirmService } from '@core/services/confirm.service';
 import { DeferredLoader } from '@shared/utils/loading.util';
 import { QRCodeComponent } from 'angularx-qrcode';
 
+interface OidcFormModel {
+  enabled: boolean;
+  issuerUrl: string;
+  clientId: string;
+  clientSecret: string;
+  scopes: string;
+  providerName: string;
+  redirectUrl: string;
+  authorizedSubject: string;
+  exclusiveMode: boolean;
+}
+
 @Component({
   selector: 'app-account-settings',
   standalone: true,
   imports: [
     PageHeaderComponent, CardComponent, ButtonComponent, InputComponent,
     SpinnerComponent, ToggleComponent,
-    EmptyStateComponent, LoadingStateComponent, QRCodeComponent, LabelComponent,
+    EmptyStateComponent, LoadingStateComponent, QRCodeComponent, LabelComponent, FormField,
   ],
   templateUrl: './account-settings.component.html',
   styleUrl: './account-settings.component.scss',
@@ -91,16 +104,21 @@ export class AccountSettingsComponent implements OnInit, OnDestroy {
   private plexPollTimer: ReturnType<typeof setInterval> | null = null;
 
   // OIDC
-  readonly oidcEnabled = signal(false);
-  readonly oidcIssuerUrl = signal('');
-  readonly oidcClientId = signal('');
-  readonly oidcClientSecret = signal('');
-  readonly oidcScopes = signal('openid profile email');
-  readonly oidcProviderName = signal('OIDC');
-  readonly oidcRedirectUrl = signal('');
-  readonly oidcAuthorizedSubject = signal('');
+  private readonly oidcModel = signal<OidcFormModel>({
+    enabled: false,
+    issuerUrl: '',
+    clientId: '',
+    clientSecret: '',
+    scopes: 'openid profile email',
+    providerName: 'OIDC',
+    redirectUrl: '',
+    authorizedSubject: '',
+    exclusiveMode: false,
+  });
+  readonly oidcForm = form(this.oidcModel);
+  readonly oidcExclusiveMode = computed(() => this.oidcModel().exclusiveMode);
+  readonly oidcAuthorizedSubject = computed(() => this.oidcModel().authorizedSubject);
   readonly oidcExpanded = signal(false);
-  readonly oidcExclusiveMode = signal(false);
   readonly oidcLinking = signal(false);
   readonly oidcUnlinking = signal(false);
   readonly oidcSaving = signal(false);
@@ -109,8 +127,8 @@ export class AccountSettingsComponent implements OnInit, OnDestroy {
   constructor() {
     // Reset exclusive mode when OIDC is toggled off
     effect(() => {
-      if (!this.oidcEnabled()) {
-        this.oidcExclusiveMode.set(false);
+      if (!this.oidcModel().enabled) {
+        untracked(() => this.oidcModel.update(m => ({ ...m, exclusiveMode: false })));
       }
     });
 
@@ -121,15 +139,17 @@ export class AccountSettingsComponent implements OnInit, OnDestroy {
       }
       const oidc = data[1];
       untracked(() => {
-        this.oidcEnabled.set(oidc.enabled);
-        this.oidcIssuerUrl.set(oidc.issuerUrl);
-        this.oidcClientId.set(oidc.clientId);
-        this.oidcClientSecret.set(oidc.clientSecret);
-        this.oidcScopes.set(oidc.scopes || 'openid profile email');
-        this.oidcProviderName.set(oidc.providerName || 'OIDC');
-        this.oidcRedirectUrl.set(oidc.redirectUrl || '');
-        this.oidcAuthorizedSubject.set(oidc.authorizedSubject);
-        this.oidcExclusiveMode.set(oidc.exclusiveMode);
+        this.oidcModel.set({
+          enabled: oidc.enabled,
+          issuerUrl: oidc.issuerUrl,
+          clientId: oidc.clientId,
+          clientSecret: oidc.clientSecret,
+          scopes: oidc.scopes || 'openid profile email',
+          providerName: oidc.providerName || 'OIDC',
+          redirectUrl: oidc.redirectUrl || '',
+          authorizedSubject: oidc.authorizedSubject,
+          exclusiveMode: oidc.exclusiveMode,
+        });
       });
     });
 
@@ -426,7 +446,8 @@ export class AccountSettingsComponent implements OnInit, OnDestroy {
 
   // OIDC
   async saveOidcConfig(): Promise<void> {
-    if (this.oidcEnabled() && !this.oidcAuthorizedSubject()) {
+    const m = this.oidcModel();
+    if (m.enabled && !m.authorizedSubject) {
       const confirmed = await this.confirmService.confirm({
         title: 'Enable OIDC without a linked account',
         message:
@@ -446,15 +467,15 @@ export class AccountSettingsComponent implements OnInit, OnDestroy {
 
     this.oidcSaving.set(true);
     this.api.updateOidcConfig({
-      enabled: this.oidcEnabled(),
-      issuerUrl: this.oidcIssuerUrl(),
-      clientId: this.oidcClientId(),
-      clientSecret: this.oidcClientSecret(),
-      scopes: this.oidcScopes(),
-      authorizedSubject: this.oidcAuthorizedSubject(),
-      providerName: this.oidcProviderName(),
-      redirectUrl: this.oidcRedirectUrl(),
-      exclusiveMode: this.oidcExclusiveMode(),
+      enabled: m.enabled,
+      issuerUrl: m.issuerUrl,
+      clientId: m.clientId,
+      clientSecret: m.clientSecret,
+      scopes: m.scopes,
+      authorizedSubject: m.authorizedSubject,
+      providerName: m.providerName,
+      redirectUrl: m.redirectUrl,
+      exclusiveMode: m.exclusiveMode,
     }).subscribe({
       next: () => {
         this.toast.success('OIDC settings saved');
@@ -494,8 +515,7 @@ export class AccountSettingsComponent implements OnInit, OnDestroy {
     this.oidcUnlinking.set(true);
     this.api.unlinkOidc().subscribe({
       next: () => {
-        this.oidcAuthorizedSubject.set('');
-        this.oidcExclusiveMode.set(false);
+        this.oidcModel.update(m => ({ ...m, authorizedSubject: '', exclusiveMode: false }));
         this.toast.success('OIDC account unlinked');
         this.oidcUnlinking.set(false);
       },
