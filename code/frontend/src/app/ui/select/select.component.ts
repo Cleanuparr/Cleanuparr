@@ -39,6 +39,8 @@ export class SelectComponent {
 
   readonly effectiveDisabled = computed(() => this.disabled() || this.forceDisabled());
 
+  readonly hasValue = computed(() => this.value() != null);
+
   readonly isOpen = signal(false);
 
   private readonly el = inject(ElementRef);

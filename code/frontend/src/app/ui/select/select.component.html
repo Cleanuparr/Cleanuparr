@@ -17,7 +17,7 @@
     class="select-trigger"
     [class.select-trigger--open]="isOpen()"
     [class.select-trigger--error]="error()"
-    [class.select-trigger--has-value]="value() !== null"
+    [class.select-trigger--has-value]="hasValue()"
     [disabled]="effectiveDisabled()"
     type="button"
     role="combobox"
