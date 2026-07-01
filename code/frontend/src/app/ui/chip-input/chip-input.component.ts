@@ -4,6 +4,10 @@ import { NgIcon } from '@ng-icons/core';
 import { DocumentationService } from '@core/services/documentation.service';
 import { NewBadgeComponent } from '@ui/new-badge/new-badge.component';
 
+function sameItems(a: string[], b: string[]): boolean {
+  return a.length === b.length && a.every((v, i) => v === b[i]);
+}
+
 @Component({
   selector: 'app-chip-input',
   standalone: true,
@@ -37,13 +41,23 @@ export class ChipInputComponent {
   readonly effectiveDisabled = computed(() => this.disabled() || this.forceDisabled());
 
   constructor() {
+    // `value` ([formField]) and `items` ([(items)] call sites) are both two-way models mirroring the same list. Guard each write on shallow-equality so the
+    // pair can never ping-pong into an infinite loop, even if a future edit copies or maps the array instead of passing the same reference through.
     effect(() => {
       const v = this.value();
-      untracked(() => this.items.set(v));
+      untracked(() => {
+        if (!sameItems(this.items(), v)) {
+          this.items.set(v);
+        }
+      });
     });
     effect(() => {
       const items = this.items();
-      untracked(() => this.value.set(items));
+      untracked(() => {
+        if (!sameItems(this.value(), items)) {
+          this.value.set(items);
+        }
+      });
     });
   }
 
