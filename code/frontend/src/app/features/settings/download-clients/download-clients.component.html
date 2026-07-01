@@ -63,8 +63,8 @@
       hint="A unique name to identify this client"
       [error]="clientForm.name().errors()[0]?.message"
       helpKey="download-client:name" />
-    <app-select label="Client Type" [options]="typeOptions" [value]="clientModel().typeName"
-      (valueChange)="onClientTypeChange($event)"
+    <app-select label="Client Type" [options]="typeOptions" [formField]="clientForm.typeName"
+      (valueChange)="onClientTypeChange()"
       hint="The type of download client"
       helpKey="download-client:typeName" />
     <app-input label="Host" placeholder="http://localhost:8080" [formField]="clientForm.host"

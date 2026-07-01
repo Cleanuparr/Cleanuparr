@@ -111,21 +111,23 @@ export class DownloadClientsComponent implements HasPendingChanges {
     return 'Optional URL base path, leave blank for default';
   });
 
-  onClientTypeChange(value: unknown): void {
-    const typeName = value as DownloadClientTypeName;
-    this.clientModel.update((m) => {
-      const next = { ...m, typeName };
-      if (typeName === DownloadClientTypeName.Deluge) {
-        next.username = '';
-      }
-      if (typeName === DownloadClientTypeName.Transmission) {
-        next.urlBase = 'transmission';
-      }
-      if (typeName === DownloadClientTypeName.rTorrent) {
-        next.urlBase = 'plugins/httprpc/action.php';
-      }
-      return next;
-    });
+  // typeName is owned by [formField]; here we only apply type-specific defaults,
+  // guarded so they never clobber values already loaded when editing a client.
+  onClientTypeChange(): void {
+    const m = this.clientModel();
+    const patch: Partial<DownloadClientFormModel> = {};
+    if (m.typeName === DownloadClientTypeName.Deluge && m.username !== '') {
+      patch.username = '';
+    }
+    if (m.typeName === DownloadClientTypeName.Transmission && !m.urlBase) {
+      patch.urlBase = 'transmission';
+    }
+    if (m.typeName === DownloadClientTypeName.rTorrent && !m.urlBase) {
+      patch.urlBase = 'plugins/httprpc/action.php';
+    }
+    if (Object.keys(patch).length > 0) {
+      this.clientModel.update((mm) => ({ ...mm, ...patch }));
+    }
   }
 
   constructor() {
