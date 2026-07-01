@@ -22,6 +22,7 @@ export class ChipInputComponent {
   featureId = input<string>();
   placeholder = input('Type and press Enter...');
   disabled = input(false);
+  forceDisabled = input(false);
   error = input<string>();
   hint = input<string>();
   helpKey = input<string>();
@@ -32,6 +33,8 @@ export class ChipInputComponent {
 
   readonly inputValue = signal('');
   readonly touched = signal(false);
+
+  readonly effectiveDisabled = computed(() => this.disabled() || this.forceDisabled());
 
   constructor() {
     effect(() => {
@@ -45,7 +48,7 @@ export class ChipInputComponent {
   }
 
   readonly hasUncommittedInput = computed(() => {
-    return this.inputValue().trim().length > 0 && !this.disabled();
+    return this.inputValue().trim().length > 0 && !this.effectiveDisabled();
   });
 
   readonly uncommittedError = computed(() => {

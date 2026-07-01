@@ -11,11 +11,11 @@
     }
   </label>
 }
-<div class="chip-wrapper" [class.chip-wrapper--disabled]="disabled()" [class.chip-wrapper--error]="error() || uncommittedError()">
+<div class="chip-wrapper" [class.chip-wrapper--disabled]="effectiveDisabled()" [class.chip-wrapper--error]="error() || uncommittedError()">
   @for (item of items(); track item; let i = $index) {
     <span class="chip">
       {{ item }}
-      @if (!disabled()) {
+      @if (!effectiveDisabled()) {
         <button class="chip__remove" type="button" (click)="removeItem(i)" aria-label="Remove">&times;</button>
       }
     </span>
@@ -25,7 +25,7 @@
     class="chip-input"
     enterkeyhint="enter"
     [placeholder]="items().length === 0 ? placeholder() : ''"
-    [disabled]="disabled()"
+    [disabled]="effectiveDisabled()"
     [(ngModel)]="inputValue"
     (keydown)="onKeydown($event)"
     (blur)="onBlur()"

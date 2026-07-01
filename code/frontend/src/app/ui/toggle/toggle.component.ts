@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, input, model, inject } from '@angular/core';
+import { Component, ChangeDetectionStrategy, input, model, computed, inject } from '@angular/core';
 import { NgIcon } from '@ng-icons/core';
 import { DocumentationService } from '@core/services/documentation.service';
 import { NewBadgeComponent } from '@ui/new-badge/new-badge.component';
@@ -20,15 +20,18 @@ export class ToggleComponent {
   label = input<string>();
   featureId = input<string>();
   disabled = input(false);
+  forceDisabled = input(false);
   hint = input<string>();
   helpKey = input<string>();
   beforeChange = input<(newValue: boolean) => Promise<boolean> | boolean>();
   checked = model(false);
 
+  readonly effectiveDisabled = computed(() => this.disabled() || this.forceDisabled());
+
   private pending = false;
 
   async toggle(): Promise<void> {
-    if (this.disabled() || this.pending) return;
+    if (this.effectiveDisabled() || this.pending) return;
 
     const newValue = !this.checked();
     const guard = this.beforeChange();

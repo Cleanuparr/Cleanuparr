@@ -68,24 +68,24 @@
 
         <div class="form-divider"></div>
 
-        <app-toggle label="Ignore Private Torrents" [formField]="qcForm.failedIgnorePrivate"
+        <app-toggle label="Ignore Private Torrents" [formField]="qcForm.failedIgnorePrivate" [forceDisabled]="failedSubFieldsDisabled()"
           hint="When enabled, private torrents will not be checked for being failed imports"
           helpKey="queue-cleaner:failedImport.ignorePrivate" />
-        <app-toggle label="Change category instead of delete" [formField]="qcForm.failedChangeCategory"
+        <app-toggle label="Change category instead of delete" [formField]="qcForm.failedChangeCategory" [forceDisabled]="failedSubFieldsDisabled()"
           hint="Changes the category to the post-import category set in your arr"
           helpKey="queue-cleaner:failedImport.changeCategory" />
         @if (!qcForm.failedChangeCategory().value()) {
-          <app-toggle label="Delete Private from Client" [formField]="qcForm.failedDeletePrivate"
+          <app-toggle label="Delete Private from Client" [formField]="qcForm.failedDeletePrivate" [forceDisabled]="failedDeletePrivateDisabled()"
             hint="Disable this if you want to keep private torrents in the download client even if they are removed from the arrs"
             helpKey="queue-cleaner:failedImport.deletePrivate" />
         }
-        <app-toggle label="Skip if Not Found in Client" [formField]="qcForm.failedSkipNotFound"
+        <app-toggle label="Skip if Not Found in Client" [formField]="qcForm.failedSkipNotFound" [forceDisabled]="failedSubFieldsDisabled()"
           hint="Skip failed import check for torrents not found in any enabled torrent client"
           helpKey="queue-cleaner:failedImport.skipIfNotFoundInClient" />
 
         <div class="form-divider"></div>
 
-        <app-select label="Pattern Mode" [options]="patternModeOptions" [formField]="qcForm.failedPatternMode"
+        <app-select label="Pattern Mode" [options]="patternModeOptions" [formField]="qcForm.failedPatternMode" [forceDisabled]="failedSubFieldsDisabled()"
           hint="Choose how the patterns are applied to failed imports"
           helpKey="queue-cleaner:failedImport.pattern-mode" />
         <app-chip-input
@@ -94,6 +94,7 @@
           [hint]="patternHint()"
           [error]="qcForm.failedPatterns().errors()[0]?.message"
           [formField]="qcForm.failedPatterns"
+          [forceDisabled]="failedSubFieldsDisabled()"
           helpKey="queue-cleaner:failedImport.patterns"
         />
       </div>
@@ -278,7 +279,7 @@
       hint="Changes the category to the post-import category set in your arr"
       helpKey="queue-cleaner:stallRule.changeCategory" />
     @if (!stallForm.changeCategory().value()) {
-      <app-toggle label="Delete Private from Client" [formField]="stallForm.deletePrivate"
+      <app-toggle label="Delete Private from Client" [formField]="stallForm.deletePrivate" [forceDisabled]="stallForm.privacyType().value() === 'Public'"
         hint="Disable this if you want to keep private torrents in the download client even if they are removed from the arrs"
         helpKey="queue-cleaner:stallRule.deletePrivateTorrentsFromClient" />
     }
@@ -332,7 +333,7 @@
       hint="Changes the category to the post-import category set in your arr"
       helpKey="queue-cleaner:slowRule.changeCategory" />
     @if (!slowForm.changeCategory().value()) {
-      <app-toggle label="Delete Private from Client" [formField]="slowForm.deletePrivate"
+      <app-toggle label="Delete Private from Client" [formField]="slowForm.deletePrivate" [forceDisabled]="slowForm.privacyType().value() === 'Public'"
         hint="Disable this if you want to keep private torrents in the download client even if they are removed from the arrs"
         helpKey="queue-cleaner:slowRule.deletePrivateTorrentsFromClient" />
     }

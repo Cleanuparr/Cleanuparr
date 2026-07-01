@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, input, model, signal, ElementRef, inject, HostListener } from '@angular/core';
+import { Component, ChangeDetectionStrategy, input, model, signal, computed, ElementRef, inject, HostListener } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NgIcon } from '@ng-icons/core';
 import { DocumentationService } from '@core/services/documentation.service';
@@ -30,11 +30,14 @@ export class SelectComponent {
   placeholder = input('Select...');
   options = input<SelectOption[]>([]);
   disabled = input(false);
+  forceDisabled = input(false);
   error = input<string>();
   hint = input<string>();
   helpKey = input<string>();
   placement = input<'bottom' | 'top'>('bottom');
   value = model<unknown>(null);
+
+  readonly effectiveDisabled = computed(() => this.disabled() || this.forceDisabled());
 
   readonly isOpen = signal(false);
 
@@ -54,7 +57,7 @@ export class SelectComponent {
   }
 
   toggleDropdown(): void {
-    if (!this.disabled()) {
+    if (!this.effectiveDisabled()) {
       if (this.isOpen()) {
         this.close();
       } else {
