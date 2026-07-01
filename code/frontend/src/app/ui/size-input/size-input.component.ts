@@ -27,7 +27,9 @@ export class SizeInputComponent {
   units = input.required<SizeUnit[]>();
   placeholder = input('');
   disabled = input(false);
-  min = input<number>(0);
+  // Named `minValue` (not `min`) so Signal Forms' [formField] doesn't treat it as the
+  // field min binding — this control's value is a string, which would clash.
+  minValue = input<number>(0);
   error = input<string>();
   hint = input<string>();
   helpKey = input<string>();
