@@ -163,18 +163,15 @@
 
             <app-accordion header="Unlinked Downloads" subtitle="Clean up orphaned downloads" [(expanded)]="unlinkedExpanded">
               <div class="form-stack">
-                <app-toggle label="Enabled" [checked]="client.unlinkedConfig?.enabled ?? false"
-                  (checkedChange)="updateUnlinkedField('enabled', $event)"
+                <app-toggle label="Enabled" [formField]="unlinkedForm.enabled"
                   hint="Enable management of downloads that have no hardlinks"
                   helpKey="download-cleaner:unlinkedEnabled" />
-                @if (client.unlinkedConfig?.enabled) {
-                  <app-input label="Target Category" placeholder="unlinked" [value]="client.unlinkedConfig?.targetCategory ?? ''"
-                    (valueChange)="updateUnlinkedField('targetCategory', $event)"
+                @if (unlinkedForm.enabled().value()) {
+                  <app-input label="Target Category" placeholder="unlinked" [formField]="unlinkedForm.targetCategory"
                     hint="Category to move unlinked downloads to. You have to create a seeding rule for this category if you want to remove the downloads."
                     helpKey="download-cleaner:unlinkedTargetCategory" />
                   @if (isTagFilterableClient()) {
-                    <app-toggle [label]="isSelectedClientTransmission() ? 'Use Label Instead' : 'Use Tag Instead'" [checked]="client.unlinkedConfig?.useTag ?? false"
-                      (checkedChange)="updateUnlinkedField('useTag', $event)"
+                    <app-toggle [label]="isSelectedClientTransmission() ? 'Use Label Instead' : 'Use Tag Instead'" [formField]="unlinkedForm.useTag"
                       [featureId]="isSelectedClientTransmission() ? 'unlinked-transmission-label': ''"
                       [hint]="isSelectedClientTransmission() ? 'When enabled, adds a label instead of changing the category' : 'When enabled, adds a tag instead of changing the category'"
                       helpKey="download-cleaner:unlinkedUseTag" />
@@ -183,19 +180,17 @@
                   <div class="form-divider"></div>
 
                   <app-chip-input label="Ignored Root Directories" placeholder="Add directory path..."
-                    [items]="client.unlinkedConfig?.ignoredRootDirs ?? []"
-                    (itemsChange)="updateUnlinkedField('ignoredRootDirs', $event)"
+                    [formField]="unlinkedForm.ignoredRootDirs"
                     hint="Root directories to ignore when checking for unlinked downloads (used for cross-seed)"
                     helpKey="download-cleaner:unlinkedIgnoredRootDir" />
                   <app-chip-input label="Unlinked Categories" placeholder="Add category..."
-                    [items]="client.unlinkedConfig?.categories ?? []"
-                    (itemsChange)="updateUnlinkedField('categories', $event)"
+                    [formField]="unlinkedForm.categories"
                     hint="Categories to check for unlinked downloads"
-                    [error]="unlinkedCategoriesError()"
+                    [error]="unlinkedForm.categories().errors()[0]?.message"
                     helpKey="download-cleaner:unlinkedCategories" />
                 }
                 <div class="form-actions">
-                  <app-button variant="primary" [glowing]="unlinkedDirty()" [loading]="unlinkedSaving()" [disabled]="unlinkedSaving() || unlinkedSaved() || !unlinkedDirty() || !!unlinkedCategoriesError()" (clicked)="saveUnlinkedConfig()">
+                  <app-button variant="primary" [glowing]="unlinkedDirty()" [loading]="unlinkedSaving()" [disabled]="unlinkedSaving() || unlinkedSaved() || !unlinkedDirty() || unlinkedForm.categories().invalid()" (clicked)="saveUnlinkedConfig()">
                     {{ unlinkedSaved() ? 'Saved!' : 'Save' }}
                   </app-button>
                 </div>
@@ -205,38 +200,33 @@
             @if (isDeadTorrentCapableClient()) {
             <app-accordion header="Dead Torrents" subtitle="Triage torrents with no seeders" featureId="dead-torrent" [(expanded)]="deadTorrentExpanded">
               <div class="form-stack">
-                <app-toggle label="Enabled" [checked]="client.deadTorrentConfig?.enabled ?? false"
-                  (checkedChange)="updateDeadTorrentField('enabled', $event)"
+                <app-toggle label="Enabled" [formField]="deadTorrentForm.enabled"
                   hint="When enabled, torrents reporting no seeders (or whose tracker is unreachable) for a number of consecutive runs are moved to a target category/tag"
                   helpKey="download-cleaner:deadTorrentEnabled" />
-                @if (client.deadTorrentConfig?.enabled) {
-                  <app-input label="Target Category" placeholder="cleanuparr-dead" [value]="client.deadTorrentConfig?.targetCategory ?? ''"
-                    (valueChange)="updateDeadTorrentField('targetCategory', $event)"
+                @if (deadTorrentForm.enabled().value()) {
+                  <app-input label="Target Category" placeholder="cleanuparr-dead" [formField]="deadTorrentForm.targetCategory"
                     hint="Category/tag dead torrents are moved to. Create a seeding rule for this category to control what happens next."
                     helpKey="download-cleaner:deadTorrentTargetCategory" />
                   @if (isTagFilterableClient()) {
-                    <app-toggle [label]="isSelectedClientTransmission() ? 'Use Label Instead' : 'Use Tag Instead'" [checked]="client.deadTorrentConfig?.useTag ?? false"
-                      (checkedChange)="updateDeadTorrentField('useTag', $event)"
+                    <app-toggle [label]="isSelectedClientTransmission() ? 'Use Label Instead' : 'Use Tag Instead'" [formField]="deadTorrentForm.useTag"
                       [hint]="isSelectedClientTransmission() ? 'When enabled, adds a label instead of changing the category' : 'When enabled, uses a tag instead of category'"
                       helpKey="download-cleaner:deadTorrentUseTag" />
                   }
-                  <app-number-input label="Strikes" [value]="client.deadTorrentConfig?.maxStrikes ?? null" [min]="3" [step]="1"
-                    (valueChange)="updateDeadTorrentField('maxStrikes', $event ?? 0)"
-                    [error]="deadTorrentStrikesError()"
+                  <app-number-input label="Strikes" [formField]="deadTorrentForm.maxStrikes" [step]="1"
+                    [error]="deadTorrentForm.maxStrikes().errors()[0]?.message"
                     hint="Consecutive runs with no seeders before moving the torrent (minimum 3). Set this high enough to ride out tracker downtime — e.g. with an hourly cleaner, 168 ≈ 1 week. Strikes reset once seeders are found again."
                     helpKey="download-cleaner:deadTorrentStrikes" />
 
                   <div class="form-divider"></div>
 
                   <app-chip-input label="Categories" placeholder="Add category..."
-                    [items]="client.deadTorrentConfig?.categories ?? []"
-                    (itemsChange)="updateDeadTorrentField('categories', $event)"
+                    [formField]="deadTorrentForm.categories"
                     hint="Categories to scan for dead torrents"
-                    [error]="deadTorrentCategoriesError()"
+                    [error]="deadTorrentForm.categories().errors()[0]?.message"
                     helpKey="download-cleaner:deadTorrentCategories" />
                 }
                 <div class="form-actions">
-                  <app-button variant="primary" [glowing]="deadTorrentDirty()" [loading]="deadTorrentSaving()" [disabled]="deadTorrentSaving() || deadTorrentSaved() || !deadTorrentDirty() || !!deadTorrentCategoriesError() || !!deadTorrentStrikesError()" (clicked)="saveDeadTorrentConfig()">
+                  <app-button variant="primary" [glowing]="deadTorrentDirty()" [loading]="deadTorrentSaving()" [disabled]="deadTorrentSaving() || deadTorrentSaved() || !deadTorrentDirty() || deadTorrentForm.categories().invalid() || deadTorrentForm.maxStrikes().invalid()" (clicked)="saveDeadTorrentConfig()">
                     {{ deadTorrentSaved() ? 'Saved!' : 'Save' }}
                   </app-button>
                 </div>
@@ -248,55 +238,47 @@
               <div class="form-stack">
                 <app-toggle
                   label="Enabled"
-                  [checked]="client.orphanedFilesConfig?.enabled ?? false"
-                  (checkedChange)="updateOrphanedFilesField('enabled', $event)"
+                  [formField]="orphanedFilesForm.enabled"
                   hint="Enable orphaned files scanning for this download client"
                   helpKey="download-cleaner:orphanedFilesEnabled"
                 />
-                @if (client.orphanedFilesConfig?.enabled) {
+                @if (orphanedFilesForm.enabled().value()) {
                   <div class="form-divider"></div>
                   <app-chip-input
                     label="Scan Directories"
                     placeholder="Add directory path..."
                     hint="Absolute paths to scan for orphaned files. Each top-level entry is checked against your active torrents."
-                    [items]="client.orphanedFilesConfig?.scanDirectories ?? []"
-                    (itemsChange)="updateOrphanedFilesField('scanDirectories', $event)"
-                    [error]="orphanedFilesScanDirsError()"
+                    [formField]="orphanedFilesForm.scanDirectories"
+                    [error]="orphanedFilesForm.scanDirectories().errors()[0]?.message"
                     helpKey="download-cleaner:orphanedFilesScanDirectories"
                   />
                   <app-input
                     label="Orphaned Directory"
                     placeholder="/mnt/data/orphaned"
                     hint="Where orphaned files are moved."
-                    [value]="client.orphanedFilesConfig?.orphanedDirectory ?? ''"
-                    (valueChange)="updateOrphanedFilesField('orphanedDirectory', $event)"
-                    [error]="orphanedFilesOrphanedDirError()"
+                    [formField]="orphanedFilesForm.orphanedDirectory"
+                    [error]="orphanedFilesForm.orphanedDirectory().errors()[0]?.message"
                     helpKey="download-cleaner:orphanedFilesOrphanedDirectory"
                   />
                   <app-chip-input
                     label="Exclude Patterns"
                     placeholder="Add glob pattern (e.g. *.nfo)..."
                     hint="File or directory names matching these patterns are never considered orphaned (e.g. *.nfo, .DS_Store)"
-                    [items]="client.orphanedFilesConfig?.excludePatterns ?? []"
-                    (itemsChange)="updateOrphanedFilesField('excludePatterns', $event)"
+                    [formField]="orphanedFilesForm.excludePatterns"
                     helpKey="download-cleaner:orphanedFilesExcludePatterns"
                   />
                   <app-number-input
                     label="Min File Age"
                     suffix="hours"
-                    [min]="0"
                     hint="Skip files or folders modified less than this many hours ago. Protects active downloads. Set to 0 to disable the age check."
-                    [value]="client.orphanedFilesConfig?.minFileAgeHours ?? 24"
-                    (valueChange)="updateOrphanedFilesField('minFileAgeHours', $event ?? 24)"
+                    [formField]="orphanedFilesForm.minFileAgeHours"
                     helpKey="download-cleaner:orphanedFilesMinFileAgeHours"
                   />
                   <app-number-input
                     label="Purge Orphaned After"
                     suffix="hours"
-                    [min]="1"
                     hint="Permanently delete entries from the Orphaned Directory after this many hours. Leave empty to keep them indefinitely."
-                    [value]="client.orphanedFilesConfig?.purgeAfterHours ?? null"
-                    (valueChange)="updateOrphanedFilesField('purgeAfterHours', $event ?? undefined)"
+                    [formField]="orphanedFilesForm.purgeAfterHours"
                     helpKey="download-cleaner:orphanedFilesPurgeAfterHours"
                   />
                 }
@@ -305,7 +287,7 @@
                     variant="primary"
                     [glowing]="orphanedFilesDirty()"
                     [loading]="orphanedFilesSaving()"
-                    [disabled]="orphanedFilesSaving() || orphanedFilesSaved() || !orphanedFilesDirty() || !!orphanedFilesScanDirsError() || !!orphanedFilesOrphanedDirError()"
+                    [disabled]="orphanedFilesSaving() || orphanedFilesSaved() || !orphanedFilesDirty() || orphanedFilesForm.scanDirectories().invalid() || orphanedFilesForm.orphanedDirectory().invalid()"
                     (clicked)="saveOrphanedFilesConfig()"
                   >
                     {{ orphanedFilesSaved() ? 'Saved!' : 'Save' }}
