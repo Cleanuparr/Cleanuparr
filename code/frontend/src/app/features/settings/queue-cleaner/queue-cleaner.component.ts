@@ -155,6 +155,12 @@ export class QueueCleanerComponent implements HasPendingChanges {
     metadataMaxStrikes: 3,
   });
 
+  readonly failedSubFieldsDisabled = computed(() => this.model().failedMaxStrikes === 0);
+
+  readonly failedDeletePrivateDisabled = computed(() =>
+    this.failedSubFieldsDisabled() || this.model().failedIgnorePrivate
+  );
+
   readonly qcForm = form(this.model, (p) => {
     required(p.failedMaxStrikes, { message: 'This field is required' });
     min(p.failedMaxStrikes, 0, { message: 'Value cannot be negative' });
@@ -368,12 +374,6 @@ export class QueueCleanerComponent implements HasPendingChanges {
       }
     });
   }
-
-  readonly failedSubFieldsDisabled = computed(() => this.model().failedMaxStrikes === 0);
-
-  readonly failedDeletePrivateDisabled = computed(() =>
-    this.failedSubFieldsDisabled() || this.model().failedIgnorePrivate
-  );
 
   readonly patternLabel = computed(() =>
     this.model().failedPatternMode === PatternMode.Include ? 'Included Patterns' : 'Excluded Patterns'
