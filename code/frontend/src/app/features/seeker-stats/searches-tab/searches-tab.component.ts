@@ -99,13 +99,9 @@ export class SearchesTabComponent {
 
   readonly selectedInstanceId = signal<string>('');
   readonly instanceOptions = computed<SelectOption[]>(() => {
-    const s = this.summaryResource.value();
-    if (!s) {
-      return [];
-    }
     return [
       { label: 'All Instances', value: '' },
-      ...s.perInstanceStats.map((st) => ({ label: st.instanceName, value: st.instanceId })),
+      ...(this.summaryResource.value()?.perInstanceStats ?? []).map((st) => ({ label: st.instanceName, value: st.instanceId })),
     ];
   });
 
