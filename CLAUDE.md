@@ -46,11 +46,13 @@ Cleanuparr is a tool for automating the cleanup of unwanted or blocked files in 
   - Always use **NSubstitute** for mocking in new tests (Moq is being phased out)
 
 ### Frontend
-- **Angular 21** with TypeScript 5.9 (standalone components, zoneless, OnPush)
+- **Angular 22** with TypeScript 6.0, Node 26 (standalone components, zoneless, OnPush)
 - **UI**: Custom glassmorphism design system with 33 custom components — no external UI frameworks
 - **Icons**: @ng-icons/core + @ng-icons/tabler-icons
 - **Design System**: 3-layer SCSS (`_variables` -> `_tokens` -> `_themes`), dark/light themes
-- **State Management**: @ngrx/signals (Angular signals-based)
+- **State Management**: Angular signals (`signal`/`computed`/`effect`) — `@ngrx/signals` was removed (it was unused)
+- **Data fetching**: Angular 22 Resource API — `rxResource` from `@angular/core/rxjs-interop` (not manual `HttpClient.subscribe()`)
+- **Forms**: Angular 22 Signal Forms — `form()` + `[formField]` from `@angular/forms/signals` (settings forms; a few not-yet-migrated forms still use per-field signals)
 - **Real-time Updates**: @microsoft/signalr 10.0.0
 - **PWA**: Service Worker support enabled
 
@@ -69,7 +71,7 @@ Cleanuparr/
 │   │   ├── Cleanuparr.Persistence/      # SQLite data access
 │   │   ├── Cleanuparr.Persistence.Tests/
 │   │   └── Cleanuparr.Shared/           # Shared utilities
-│   ├── frontend/                        # Angular 21 application
+│   ├── frontend/                        # Angular 22 application
 │   ├── e2e/                             # Playwright E2E tests
 │   ├── Dockerfile                       # Multi-stage Docker build
 │   ├── entrypoint.sh                    # Docker entrypoint
@@ -98,6 +100,8 @@ Cleanuparr/
 - All components must be **standalone** with **ChangeDetectionStrategy.OnPush**
 - Use `input()` / `output()` function APIs (not `@Input()` / `@Output()` decorators)
 - Use Angular **signals** for reactive state (`signal()`, `computed()`, `effect()`)
+- **Data fetching**: use the **Resource API** (`rxResource`) with a reactive `params` + `stream`, not manual `HttpClient.subscribe()`; drive spinners/errors off `isLoading()`/`error()`
+- **Forms**: use **Signal Forms** (`form()` + `[formField]`) with a single model signal + schema validators; keep the JSON-snapshot dirty tracking (`buildSnapshot()`/`hasPendingChanges()`), do NOT use Signal Forms `dirty()` for the unsaved-changes guard
 - Follow the 3-layer SCSS design system (`_variables` -> `_tokens` -> `_themes`)
 - **Do not introduce external UI frameworks** (no PrimeNG, Material, Tailwind, etc.)
 - Component naming: `{feature}.component.ts`
@@ -183,7 +187,9 @@ make migrate-users name=YourMigrationName
 - **Malware blocker** is a critical security feature - changes require careful testing
 - **Cross-seed integration** allows keeping torrents that are actively seeding
 - **Real-time updates** use SignalR - maintain websocket patterns when adding features
-- Use `@ng-icons/core` + `@ng-icons/tabler-icons` for icons (NOT `angular-tabler-icons` which doesn't support Angular 21)
+- Use `@ng-icons/core` + `@ng-icons/tabler-icons` for icons (NOT `angular-tabler-icons` which doesn't support Angular 22)
 - **Sidebar** stays dark purple in both themes - uses sidebar-specific CSS variables
 - The project uses **Clean Architecture** - respect layer boundaries
-- **Settings dirty tracking** uses JSON snapshot comparison (`buildSnapshot()` + `hasPendingChanges()`)
+- **Settings dirty tracking** uses JSON snapshot comparison (`buildSnapshot()` + `hasPendingChanges()`) — keep this even with Signal Forms; Signal Forms `dirty()` means "touched", not "differs from saved"
+- **Resource API** (`rxResource`): `value()` throws in the error state — always set a `defaultValue` (lists) or guard with `hasValue()` before reading
+- **Signal Forms** (`[formField]`) owns `min`/`max`/`disabled`/`required` — set these via schema validators, not template bindings. Custom controls satisfy the contract via `model()` signals (`chip-input` exposes a `value` model; `size-input`'s numeric-min input is named `minValue` to avoid clashing with the field min)
