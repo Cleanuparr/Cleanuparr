@@ -57,4 +57,22 @@ test.describe('Notifications UI', () => {
     await expect(retry).toBeVisible();
     await expect(expire).toBeVisible();
   });
+
+  test('Gotify modal shows server/token fields and gates Save on required fields', async ({ page }) => {
+    await loginAndGotoSettings(page, 'notifications');
+    const modal = await openProvider(page, 'Gotify');
+
+    const serverUrl = modal.locator('app-input').filter({ hasText: 'Server URL' });
+    const appToken = modal.locator('app-input').filter({ hasText: 'Application Token' });
+    await expect(serverUrl).toBeVisible();
+    await expect(appToken).toBeVisible();
+
+    const save = modal.getByRole('button', { name: 'Save' });
+    await expect(save).toBeDisabled();
+
+    await modal.locator('app-input').first().locator('input').fill('My Gotify'); // Name
+    await serverUrl.locator('input').fill('https://gotify.example.com');
+    await appToken.locator('input').fill('AzToken123');
+    await expect(save).toBeEnabled();
+  });
 });
