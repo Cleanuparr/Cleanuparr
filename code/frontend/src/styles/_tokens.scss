@@ -101,6 +101,16 @@
   --sidebar-collapsed-width: #{$sidebar-collapsed-width};
   --toolbar-height:          #{$toolbar-height};
   --content-max-width:       #{$content-max-width};
+  --input-height:            #{$input-height};
+  --drawer-width:            #{$drawer-width};
+  --toast-max-width:         #{$toast-max-width};
+
+  // Elevation
+  --shadow-tooltip: #{$shadow-tooltip};
+
+  // Third-party brand
+  --plex-brand:     #{$plex-brand};
+  --plex-brand-ink: #{$plex-brand-ink};
 
   // Z-index
   --z-dropdown: #{$z-dropdown};
