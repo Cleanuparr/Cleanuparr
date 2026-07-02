@@ -1,3 +1,4 @@
+@use 'responsive' as *;
 @use 'glass' as *;
 
 .modal-backdrop {
@@ -90,7 +91,7 @@
     }
   }
 
-  @media (max-width: 768px) {
+  @include mobile {
     max-height: 90vh;
 
     &__header {

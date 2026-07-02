@@ -1,3 +1,4 @@
+@use 'responsive' as *;
 @use 'data-toolbar' as *;
 @use 'page-animations' as *;
 
@@ -279,7 +280,7 @@
 }
 
 // Tablet responsiveness
-@media (max-width: 1024px) {
+@include tablet {
   .toolbar__filters {
     app-input {
       min-width: 0;
@@ -296,7 +297,7 @@
 }
 
 // Mobile responsiveness
-@media (max-width: 768px) {
+@include mobile {
   .toolbar__filters {
     app-input {
       min-width: 0;

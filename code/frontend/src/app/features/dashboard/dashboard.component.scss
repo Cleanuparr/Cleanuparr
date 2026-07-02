@@ -1,3 +1,4 @@
+@use 'responsive' as *;
 @use 'page-animations' as *;
 
 // Support section
@@ -7,7 +8,7 @@
   gap: var(--space-6);
   margin-bottom: var(--space-6);
 
-  @media (max-width: 1024px) {
+  @include tablet {
     grid-template-columns: 1fr;
   }
 
@@ -129,7 +130,7 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-6);
 
-  @media (max-width: 1024px) {
+  @include tablet {
     grid-template-columns: 1fr;
   }
 }
@@ -182,7 +183,7 @@
     grid-template-columns: repeat(4, 1fr);
     gap: var(--space-4);
     margin-bottom: var(--space-4);
-    @media (max-width: 768px) { grid-template-columns: repeat(2, 1fr); }
+    @include mobile { grid-template-columns: repeat(2, 1fr); }
   }
 
   &__stat {
@@ -635,12 +636,12 @@
     gap: var(--space-2);
     min-width: 200px;
 
-    @media (max-width: 1024px) {
+    @include tablet {
       min-width: auto;
     }
   }
 
-  @media (max-width: 1024px) {
+  @include tablet {
     &__row {
       flex-wrap: wrap;
       gap: var(--space-2);
@@ -683,7 +684,7 @@
 }
 
 // Mobile compact dashboard
-@media (max-width: 768px) {
+@include mobile {
   .card-inner {
     min-height: 240px;
   }

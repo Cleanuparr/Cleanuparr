@@ -1,3 +1,4 @@
+@use 'responsive' as *;
 // =============================================================================
 // Shared Data Page Toolbar
 // Used by data-browsing pages (events, logs) for filter/action bars.
@@ -57,7 +58,7 @@
     flex-wrap: wrap;
   }
 
-  @media (max-width: 1024px) {
+  @include tablet {
     &__filters {
       app-select {
         width: 150px;
@@ -66,7 +67,7 @@
     }
   }
 
-  @media (max-width: 768px) {
+  @include mobile {
     flex-direction: column;
     align-items: stretch;
 
