@@ -4,6 +4,7 @@ import { form, required, FormField } from '@angular/forms/signals';
 import { PageHeaderComponent } from '@layout/page-header/page-header.component';
 import { CardComponent, ButtonComponent, InputComponent, ToggleComponent, EmptyStateComponent, LoadingStateComponent } from '@ui';
 import { BlacklistSyncApi } from '@core/api/blacklist-sync.api';
+import { ApiError } from '@core/interceptors/error.interceptor';
 import { ToastService } from '@core/services/toast.service';
 import { BlacklistSyncConfig } from '@shared/models/blacklist-sync-config.model';
 import { HasPendingChanges } from '@core/guards/pending-changes.guard';
@@ -98,8 +99,8 @@ export class BlacklistSyncComponent implements HasPendingChanges {
         setTimeout(() => this.saved.set(false), 1500);
         this.savedSnapshot.set(this.buildSnapshot());
       },
-      error: () => {
-        this.toast.error('Failed to save blacklist sync settings');
+      error: (err: ApiError) => {
+        this.toast.error(err.statusCode === 400 ? err.message : 'Failed to save blacklist sync settings');
         this.saving.set(false);
       },
     });
