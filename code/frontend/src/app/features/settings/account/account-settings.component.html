@@ -18,60 +18,7 @@
 } @else if (!loader.loading() && account()) {
 <div class="settings-form">
   <!-- Change Password -->
-  <app-card header="Change Password">
-    <div class="form-stack">
-      @if (oidcExclusiveMode()) {
-        <div class="section-notice">
-          Password login is disabled while OIDC exclusive mode is active.
-        </div>
-      }
-      <app-input
-        label="Current Password"
-        type="password"
-        placeholder="Enter current password"
-        [value]="currentPassword()"
-        (valueChange)="currentPassword.set($event)"
-      />
-      <app-input
-        label="New Password"
-        type="password"
-        placeholder="Enter new password (min 8 characters)"
-        [value]="newPassword()"
-        (valueChange)="newPassword.set($event)"
-      />
-
-      @if (newPassword()) {
-        <div class="password-strength">
-          <div class="password-strength__bar">
-            <div class="password-strength__fill password-strength__fill--{{ newPasswordStrength() }}"></div>
-          </div>
-          <span class="password-strength__label password-strength__label--{{ newPasswordStrength() }}">{{ newPasswordStrength() }}</span>
-        </div>
-      }
-
-      <app-input
-        label="Confirm New Password"
-        type="password"
-        placeholder="Confirm new password"
-        [value]="confirmPassword()"
-        (valueChange)="confirmPassword.set($event)"
-      />
-      <div class="form-actions">
-        <app-button
-          variant="primary"
-          [glowing]="!!currentPassword() && !!newPassword() && !!confirmPassword() && !oidcExclusiveMode()"
-          [disabled]="!currentPassword() || !newPassword() || !confirmPassword() || changingPassword() || oidcExclusiveMode()"
-          (clicked)="changePassword()"
-        >
-          @if (changingPassword()) {
-            <app-spinner size="sm" /> Changing...
-          } @else {
-            Change Password
-          }
-        </app-button>
-      </div>
-    </div>
-  </app-card>
+  <app-change-password-card [oidcExclusiveMode]="oidcExclusiveMode()" />
 
   <!-- Two-Factor Authentication -->
   <app-card header="Two-Factor Authentication">
@@ -247,51 +194,12 @@
   <app-api-key-card [apiKeyPreview]="account()!.apiKeyPreview" />
 
   <!-- Plex Integration -->
-  <app-card header="Plex Integration">
-    <div class="form-stack">
-      @if (oidcExclusiveMode()) {
-        <div class="section-notice">
-          Plex login is disabled while OIDC exclusive mode is active.
-        </div>
-      }
-      @if (account()!.plexLinked) {
-        <div class="status-row">
-          <span class="status-label">Linked Account</span>
-          <span class="status-value">{{ account()!.plexUsername }}</span>
-        </div>
-        <div class="form-actions">
-          <app-button
-            variant="destructive"
-            [disabled]="plexUnlinking() || oidcExclusiveMode()"
-            (clicked)="confirmUnlinkPlex()"
-          >
-            @if (plexUnlinking()) {
-              <app-spinner size="sm" /> Unlinking...
-            } @else {
-              Unlink Plex Account
-            }
-          </app-button>
-        </div>
-      } @else {
-        <p class="section-hint">
-          Link your Plex account to enable signing in with Plex as an alternative to username and password.
-        </p>
-        <div class="form-actions">
-          <app-button
-            variant="primary"
-            [disabled]="plexLinking() || oidcExclusiveMode()"
-            (clicked)="startPlexLink()"
-          >
-            @if (plexLinking()) {
-              <app-spinner size="sm" /> Waiting for Plex...
-            } @else {
-              Link Plex Account
-            }
-          </app-button>
-        </div>
-      }
-    </div>
-  </app-card>
+  <app-plex-integration-card
+    [linked]="account()!.plexLinked"
+    [username]="account()!.plexUsername ?? ''"
+    [oidcExclusiveMode]="oidcExclusiveMode()"
+    (changed)="onPlexChanged()"
+  />
 
   <!-- OIDC / SSO -->
   <app-card header="OIDC / SSO">

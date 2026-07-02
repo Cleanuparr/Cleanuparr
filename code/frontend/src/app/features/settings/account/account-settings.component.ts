@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, inject, signal, computed, effect, untracked, OnInit, DestroyRef } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, signal, computed, effect, untracked, OnInit } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { form, required, FormField } from '@angular/forms/signals';
 import { ActivatedRoute } from '@angular/router';
@@ -13,10 +13,11 @@ import { AccountApi } from '@core/api/account.api';
 import { AuthService } from '@core/auth/auth.service';
 import { ToastService } from '@core/services/toast.service';
 import { ConfirmService } from '@core/services/confirm.service';
-import { pollPlexPin } from '@shared/utils/plex-pin-poller';
 import { DeferredLoader } from '@shared/utils/loading.util';
 import { QRCodeComponent } from 'angularx-qrcode';
 import { ApiKeyCardComponent } from './api-key-card.component';
+import { ChangePasswordCardComponent } from './change-password-card.component';
+import { PlexIntegrationCardComponent } from './plex-integration-card.component';
 
 interface OidcFormModel {
   enabled: boolean;
@@ -37,7 +38,7 @@ interface OidcFormModel {
     PageHeaderComponent, CardComponent, ButtonComponent, InputComponent,
     SpinnerComponent, ToggleComponent,
     EmptyStateComponent, LoadingStateComponent, QRCodeComponent, LabelComponent, FormField,
-    ApiKeyCardComponent,
+    ApiKeyCardComponent, ChangePasswordCardComponent, PlexIntegrationCardComponent,
   ],
   templateUrl: './account-settings.component.html',
   styleUrl: './account-settings.component.scss',
@@ -49,7 +50,6 @@ export class AccountSettingsComponent implements OnInit {
   private readonly toast = inject(ToastService);
   private readonly confirmService = inject(ConfirmService);
   private readonly route = inject(ActivatedRoute);
-  private readonly destroyRef = inject(DestroyRef);
 
   private readonly accountResource = rxResource({
     stream: () => forkJoin([this.api.getInfo(), this.api.getOidcConfig()]),
@@ -58,27 +58,6 @@ export class AccountSettingsComponent implements OnInit {
   readonly loader = new DeferredLoader();
   readonly loadError = computed(() => !!this.accountResource.error());
   readonly account = computed(() => this.accountResource.hasValue() ? this.accountResource.value()[0] : null);
-
-  // Change password
-  readonly currentPassword = signal('');
-  readonly newPassword = signal('');
-  readonly confirmPassword = signal('');
-  readonly changingPassword = signal(false);
-
-  // Password strength
-  readonly newPasswordStrength = computed(() => {
-    const pw = this.newPassword();
-    if (!pw) return null;
-    if (pw.length < 8) return 'weak';
-    const hasUpper = /[A-Z]/.test(pw);
-    const hasLower = /[a-z]/.test(pw);
-    const hasNumber = /[0-9]/.test(pw);
-    const hasSpecial = /[^A-Za-z0-9]/.test(pw);
-    const score = [hasUpper, hasLower, hasNumber, hasSpecial].filter(Boolean).length;
-    if (pw.length >= 12 && score >= 3) return 'strong';
-    if (pw.length >= 8 && score >= 2) return 'medium';
-    return 'weak';
-  });
 
   // 2FA regeneration
   readonly twoFaPassword = signal('');
@@ -96,10 +75,6 @@ export class AccountSettingsComponent implements OnInit {
 
   // 2FA disable
   readonly disabling2fa = signal(false);
-
-  // Plex
-  readonly plexLinking = signal(false);
-  readonly plexUnlinking = signal(false);
 
   // OIDC
   private readonly oidcModel = signal<OidcFormModel>({
@@ -185,36 +160,6 @@ export class AccountSettingsComponent implements OnInit {
 
   retry(): void {
     this.accountResource.reload();
-  }
-
-  // Change password
-  changePassword(): void {
-    if (this.newPassword() !== this.confirmPassword()) {
-      this.toast.error('Passwords do not match');
-      return;
-    }
-    if (this.newPassword().length < 8) {
-      this.toast.error('Password must be at least 8 characters');
-      return;
-    }
-
-    this.changingPassword.set(true);
-    this.api.changePassword({
-      currentPassword: this.currentPassword(),
-      newPassword: this.newPassword(),
-    }).subscribe({
-      next: () => {
-        this.toast.success('Password changed successfully');
-        this.currentPassword.set('');
-        this.newPassword.set('');
-        this.confirmPassword.set('');
-        this.changingPassword.set(false);
-      },
-      error: () => {
-        this.toast.error('Failed to change password');
-        this.changingPassword.set(false);
-      },
-    });
   }
 
   // 2FA regeneration
@@ -332,61 +277,8 @@ export class AccountSettingsComponent implements OnInit {
   // API key
 
   // Plex
-  startPlexLink(): void {
-    this.plexLinking.set(true);
-    this.api.linkPlex().subscribe({
-      next: (result) => {
-        window.open(result.authUrl, '_blank');
-        this.pollPlexLink(result.pinId);
-      },
-      error: () => {
-        this.toast.error('Failed to start Plex linking');
-        this.plexLinking.set(false);
-      },
-    });
-  }
-
-  private pollPlexLink(pinId: number): void {
-    pollPlexPin({
-      verify: () => this.api.verifyPlexLink(pinId),
-      onCompleted: () => {
-        this.plexLinking.set(false);
-        this.toast.success('Plex account linked');
-        this.accountResource.reload();
-      },
-      onError: () => {
-        this.plexLinking.set(false);
-        this.toast.error('Plex linking failed');
-      },
-      onTimeout: () => {
-        this.plexLinking.set(false);
-        this.toast.error('Plex linking timed out');
-      },
-      destroyRef: this.destroyRef,
-    });
-  }
-
-  async confirmUnlinkPlex(): Promise<void> {
-    const confirmed = await this.confirmService.confirm({
-      title: 'Unlink Plex',
-      message: 'This will remove your linked Plex account. You will no longer be able to log in with Plex.',
-      confirmLabel: 'Unlink',
-      destructive: true,
-    });
-    if (!confirmed) return;
-
-    this.plexUnlinking.set(true);
-    this.api.unlinkPlex().subscribe({
-      next: () => {
-        this.toast.success('Plex account unlinked');
-        this.plexUnlinking.set(false);
-        this.accountResource.reload();
-      },
-      error: () => {
-        this.toast.error('Failed to unlink Plex account');
-        this.plexUnlinking.set(false);
-      },
-    });
+  onPlexChanged(): void {
+    this.accountResource.reload();
   }
 
   // OIDC

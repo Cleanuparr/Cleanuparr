@@ -1,0 +1,45 @@
+<app-card header="Plex Integration">
+  <div class="form-stack">
+    @if (oidcExclusiveMode()) {
+      <div class="section-notice">
+        Plex login is disabled while OIDC exclusive mode is active.
+      </div>
+    }
+    @if (linked()) {
+      <div class="status-row">
+        <span class="status-label">Linked Account</span>
+        <span class="status-value">{{ username() }}</span>
+      </div>
+      <div class="form-actions">
+        <app-button
+          variant="destructive"
+          [disabled]="plexUnlinking() || oidcExclusiveMode()"
+          (clicked)="confirmUnlinkPlex()"
+        >
+          @if (plexUnlinking()) {
+            <app-spinner size="sm" /> Unlinking...
+          } @else {
+            Unlink Plex Account
+          }
+        </app-button>
+      </div>
+    } @else {
+      <p class="section-hint">
+        Link your Plex account to enable signing in with Plex as an alternative to username and password.
+      </p>
+      <div class="form-actions">
+        <app-button
+          variant="primary"
+          [disabled]="plexLinking() || oidcExclusiveMode()"
+          (clicked)="startPlexLink()"
+        >
+          @if (plexLinking()) {
+            <app-spinner size="sm" /> Waiting for Plex...
+          } @else {
+            Link Plex Account
+          }
+        </app-button>
+      </div>
+    }
+  </div>
+</app-card>
