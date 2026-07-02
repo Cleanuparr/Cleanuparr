@@ -244,46 +244,7 @@
   </app-card>
 
   <!-- API Key -->
-  <app-card header="API Key">
-    <div class="form-stack">
-      <p class="section-hint">
-        Use this API key to access the Cleanuparr API without authentication.
-        Include it as the <code>X-Api-Key</code> header or <code>?apikey=</code> query parameter.
-      </p>
-
-      <div class="api-key-row">
-        <div class="api-key-display">
-          @if (apiKeyRevealed()) {
-            <code class="api-key-value">{{ apiKey() }}</code>
-          } @else {
-            <code class="api-key-value api-key-value--masked">{{ account()!.apiKeyPreview }}</code>
-          }
-        </div>
-        <div class="api-key-actions">
-          <app-button variant="ghost" size="sm" (clicked)="revealApiKey()">
-            {{ apiKeyRevealed() ? 'Hide' : 'Reveal' }}
-          </app-button>
-          @if (apiKeyRevealed()) {
-            <app-button variant="ghost" size="sm" (clicked)="copyApiKey()">Copy</app-button>
-          }
-        </div>
-      </div>
-
-      <div class="form-actions">
-        <app-button
-          variant="destructive"
-          [disabled]="regeneratingApiKey()"
-          (clicked)="confirmRegenerateApiKey()"
-        >
-          @if (regeneratingApiKey()) {
-            <app-spinner size="sm" /> Regenerating...
-          } @else {
-            Regenerate API Key
-          }
-        </app-button>
-      </div>
-    </div>
-  </app-card>
+  <app-api-key-card [apiKeyPreview]="account()!.apiKeyPreview" />
 
   <!-- Plex Integration -->
   <app-card header="Plex Integration">

@@ -16,6 +16,7 @@ import { ConfirmService } from '@core/services/confirm.service';
 import { pollPlexPin } from '@shared/utils/plex-pin-poller';
 import { DeferredLoader } from '@shared/utils/loading.util';
 import { QRCodeComponent } from 'angularx-qrcode';
+import { ApiKeyCardComponent } from './api-key-card.component';
 
 interface OidcFormModel {
   enabled: boolean;
@@ -36,6 +37,7 @@ interface OidcFormModel {
     PageHeaderComponent, CardComponent, ButtonComponent, InputComponent,
     SpinnerComponent, ToggleComponent,
     EmptyStateComponent, LoadingStateComponent, QRCodeComponent, LabelComponent, FormField,
+    ApiKeyCardComponent,
   ],
   templateUrl: './account-settings.component.html',
   styleUrl: './account-settings.component.scss',
@@ -94,11 +96,6 @@ export class AccountSettingsComponent implements OnInit {
 
   // 2FA disable
   readonly disabling2fa = signal(false);
-
-  // API key
-  readonly apiKey = signal('');
-  readonly apiKeyRevealed = signal(false);
-  readonly regeneratingApiKey = signal(false);
 
   // Plex
   readonly plexLinking = signal(false);
@@ -333,50 +330,6 @@ export class AccountSettingsComponent implements OnInit {
   }
 
   // API key
-  revealApiKey(): void {
-    if (this.apiKeyRevealed()) {
-      this.apiKeyRevealed.set(false);
-      this.apiKey.set('');
-      return;
-    }
-
-    this.api.getApiKey().subscribe({
-      next: (result) => {
-        this.apiKey.set(result.apiKey);
-        this.apiKeyRevealed.set(true);
-      },
-      error: () => this.toast.error('Failed to load API key'),
-    });
-  }
-
-  copyApiKey(): void {
-    navigator.clipboard.writeText(this.apiKey());
-    this.toast.success('API key copied to clipboard');
-  }
-
-  async confirmRegenerateApiKey(): Promise<void> {
-    const confirmed = await this.confirmService.confirm({
-      title: 'Regenerate API Key',
-      message: 'This will invalidate the current API key. Any integrations using this key will stop working.',
-      confirmLabel: 'Regenerate',
-      destructive: true,
-    });
-    if (!confirmed) return;
-
-    this.regeneratingApiKey.set(true);
-    this.api.regenerateApiKey().subscribe({
-      next: (result) => {
-        this.apiKey.set(result.apiKey);
-        this.apiKeyRevealed.set(true);
-        this.toast.success('API key regenerated');
-        this.regeneratingApiKey.set(false);
-      },
-      error: () => {
-        this.toast.error('Failed to regenerate API key');
-        this.regeneratingApiKey.set(false);
-      },
-    });
-  }
 
   // Plex
   startPlexLink(): void {
