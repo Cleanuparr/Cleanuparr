@@ -244,53 +244,7 @@
 }
 
 <!-- Stall Rule Modal -->
-<app-modal [title]="editingStallRule() ? 'Edit Stall Rule' : 'Add Stall Rule'" [(visible)]="stallModalVisible" size="lg">
-  <div class="form-grid">
-    <app-input label="Name" placeholder="My Stall Rule" [formField]="stallForm.name"
-      [error]="stallForm.name().errors()[0]?.message"
-      helpKey="queue-cleaner:stallRule.name" />
-    <app-toggle label="Enabled" [formField]="stallForm.enabled"
-      hint="Enable this rule"
-      helpKey="queue-cleaner:stallRule.enabled" />
-    <app-number-input label="Max Strikes" [formField]="stallForm.maxStrikes"
-      hint="Number of strikes before action is taken"
-      [error]="stallForm.maxStrikes().errors()[0]?.message"
-      helpKey="queue-cleaner:stallRule.maxStrikes" />
-    <app-select label="Privacy Type" [options]="privacyTypeOptions" [formField]="stallForm.privacyType"
-      hint="Which torrent types this rule applies to"
-      helpKey="queue-cleaner:stallRule.privacyType" />
-    <app-number-input label="Min Completion %" [formField]="stallForm.minCompletion" suffix="%"
-      hint="Apply the rule once completion percentage exceeds this value (0 includes items at 0% and above)"
-      helpKey="queue-cleaner:stallRule.completionRange" />
-    <app-number-input label="Max Completion %" [formField]="stallForm.maxCompletion" suffix="%"
-      hint="Apply the rule to items with a completion percentage less than or equal to this value"
-      [error]="stallForm.maxCompletion().errors()[0]?.message"
-      helpKey="queue-cleaner:stallRule.completionRange" />
-    <app-toggle label="Reset Strikes on Progress" [formField]="stallForm.resetOnProgress"
-      hint="Reset strike count when torrent shows progress"
-      helpKey="queue-cleaner:stallRule.resetStrikesOnProgress" />
-    @if (stallForm.resetOnProgress().value()) {
-      <app-size-input label="Minimum Progress to Reset" [units]="sizeUnits" [formField]="stallForm.minProgress"
-        placeholder="e.g. 1"
-        hint="Only reset strikes after the torrent downloads at least this amount. Leave blank to reset on any progress."
-        helpKey="queue-cleaner:stallRule.minimumProgress" />
-    }
-    <app-toggle label="Change category instead of delete" [formField]="stallForm.changeCategory"
-      hint="Changes the category to the post-import category set in your arr"
-      helpKey="queue-cleaner:stallRule.changeCategory" />
-    @if (!stallForm.changeCategory().value()) {
-      <app-toggle label="Delete Private from Client" [formField]="stallForm.deletePrivate" [forceDisabled]="stallForm.deletePrivate().disabled()"
-        hint="Disable this if you want to keep private torrents in the download client even if they are removed from the arrs"
-        helpKey="queue-cleaner:stallRule.deletePrivateTorrentsFromClient" />
-    }
-  </div>
-  <div modal-footer>
-    <app-button variant="secondary" (clicked)="stallModalVisible.set(false)">Cancel</app-button>
-    <app-button variant="primary" [disabled]="stallForm().invalid()" (clicked)="saveStallRule()">
-      {{ editingStallRule() ? 'Update' : 'Create' }}
-    </app-button>
-  </div>
-</app-modal>
+<app-stall-rule-modal [rule]="editingStallRule()" [(visible)]="stallModalVisible" (saved)="reloadStallRules()" />
 
 <!-- Slow Rule Modal -->
 <app-slow-rule-modal [rule]="editingSlowRule()" [(visible)]="slowModalVisible" (saved)="reloadSlowRules()" />
