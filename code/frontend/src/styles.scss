@@ -93,3 +93,12 @@
   background: rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(2px);
 }
+
+// Modal footer content is projected via [modal-footer] into the modal's footer slot,
+// so the wrapper element lives under the consumer's view encapsulation and the modal component stylesheet can't reach it. Lay its buttons out here.
+[modal-footer] {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-3);
+}
