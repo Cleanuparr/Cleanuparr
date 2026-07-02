@@ -432,7 +432,7 @@
     left: 0;
     right: 0;
     height: 1px;
-    background: linear-gradient(90deg, var(--color-primary-subtle), rgba(59, 130, 246, 0.15), transparent);
+    background: linear-gradient(90deg, var(--color-primary-subtle), rgba(var(--accent-rgb), 0.15), transparent);
     pointer-events: none;
   }
 
