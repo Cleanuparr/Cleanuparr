@@ -74,6 +74,40 @@ test.describe('Queue Cleaner UI', () => {
     await modal.getByRole('button', { name: 'Cancel' }).click();
   });
 
+  async function openSlowModal(page: Page) {
+    await ensureToggle(toggle(page, 'Enabled'), true);
+    await ensureAccordionExpanded(
+      page,
+      'Slow Download Rules',
+      page.getByRole('button', { name: 'Add Slow Rule' }),
+    );
+    await page.getByRole('button', { name: 'Add Slow Rule' }).click();
+    const modal = page.getByRole('dialog', { name: 'Add Slow Rule' });
+    await expect(modal).toBeVisible();
+    return modal;
+  }
+
+  test('slow modal validates name + completion range and disables delete-private for public', async ({ page }) => {
+    await loginAndGotoSettings(page, 'queue-cleaner');
+    const modal = await openSlowModal(page);
+
+    const nameCard = modal.locator('app-input').filter({ hasText: 'Name' });
+    await expect(nameCard.locator('.input-error')).toBeVisible();
+    await nameCard.locator('input').fill('My Slow Rule');
+    await expect(nameCard.locator('.input-error')).toHaveCount(0);
+
+    const maxCard = modal.locator('app-number-input').filter({ hasText: 'Max Completion' });
+    await modal.locator('app-number-input').filter({ hasText: 'Min Completion' }).locator('input').fill('80');
+    await maxCard.locator('input').fill('10');
+    await expect(maxCard.locator('.number-error')).toBeVisible();
+
+    await selectOption(modal, 'Privacy Type', 'Public');
+    await expect(modal.getByRole('switch', { name: 'Delete Private from Client' })).toBeDisabled();
+
+    await modal.getByRole('button', { name: 'Cancel' }).click();
+    await expect(modal).toBeHidden();
+  });
+
   test('unsaved-changes guard fires when dirty and clears after revert', async ({ page }) => {
     await loginAndGotoSettings(page, 'queue-cleaner');
     const enabled = toggle(page, 'Enabled');
