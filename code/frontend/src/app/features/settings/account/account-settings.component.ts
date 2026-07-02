@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, inject, signal, computed, effect, untracked, OnInit, OnDestroy } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, signal, computed, effect, untracked, OnInit, DestroyRef } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { form, required, FormField } from '@angular/forms/signals';
 import { ActivatedRoute } from '@angular/router';
@@ -13,6 +13,7 @@ import { AccountApi } from '@core/api/account.api';
 import { AuthService } from '@core/auth/auth.service';
 import { ToastService } from '@core/services/toast.service';
 import { ConfirmService } from '@core/services/confirm.service';
+import { pollPlexPin } from '@shared/utils/plex-pin-poller';
 import { DeferredLoader } from '@shared/utils/loading.util';
 import { QRCodeComponent } from 'angularx-qrcode';
 
@@ -40,12 +41,13 @@ interface OidcFormModel {
   styleUrl: './account-settings.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class AccountSettingsComponent implements OnInit, OnDestroy {
+export class AccountSettingsComponent implements OnInit {
   private readonly api = inject(AccountApi);
   private readonly auth = inject(AuthService);
   private readonly toast = inject(ToastService);
   private readonly confirmService = inject(ConfirmService);
   private readonly route = inject(ActivatedRoute);
+  private readonly destroyRef = inject(DestroyRef);
 
   private readonly accountResource = rxResource({
     stream: () => forkJoin([this.api.getInfo(), this.api.getOidcConfig()]),
@@ -101,7 +103,6 @@ export class AccountSettingsComponent implements OnInit, OnDestroy {
   // Plex
   readonly plexLinking = signal(false);
   readonly plexUnlinking = signal(false);
-  private plexPollTimer: ReturnType<typeof setInterval> | null = null;
 
   // OIDC
   private readonly oidcModel = signal<OidcFormModel>({
@@ -182,12 +183,6 @@ export class AccountSettingsComponent implements OnInit, OnDestroy {
     } else if (params['oidc_link_error']) {
       this.toast.error('Failed to link OIDC account');
       this.oidcExpanded.set(true);
-    }
-  }
-
-  ngOnDestroy(): void {
-    if (this.plexPollTimer) {
-      clearInterval(this.plexPollTimer);
     }
   }
 
@@ -399,32 +394,23 @@ export class AccountSettingsComponent implements OnInit, OnDestroy {
   }
 
   private pollPlexLink(pinId: number): void {
-    let attempts = 0;
-    this.plexPollTimer = setInterval(() => {
-      attempts++;
-      if (attempts > 60) {
-        clearInterval(this.plexPollTimer!);
+    pollPlexPin({
+      verify: () => this.api.verifyPlexLink(pinId),
+      onCompleted: () => {
+        this.plexLinking.set(false);
+        this.toast.success('Plex account linked');
+        this.accountResource.reload();
+      },
+      onError: () => {
+        this.plexLinking.set(false);
+        this.toast.error('Plex linking failed');
+      },
+      onTimeout: () => {
         this.plexLinking.set(false);
         this.toast.error('Plex linking timed out');
-        return;
-      }
-
-      this.api.verifyPlexLink(pinId).subscribe({
-        next: (result) => {
-          if (result.completed) {
-            clearInterval(this.plexPollTimer!);
-            this.plexLinking.set(false);
-            this.toast.success('Plex account linked');
-            this.accountResource.reload();
-          }
-        },
-        error: () => {
-          clearInterval(this.plexPollTimer!);
-          this.plexLinking.set(false);
-          this.toast.error('Plex linking failed');
-        },
-      });
-    }, 2000);
+      },
+      destroyRef: this.destroyRef,
+    });
   }
 
   async confirmUnlinkPlex(): Promise<void> {
