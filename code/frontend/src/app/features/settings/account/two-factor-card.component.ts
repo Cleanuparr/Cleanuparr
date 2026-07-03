@@ -72,8 +72,10 @@ export class TwoFactorCardComponent {
 
   copyRecoveryCodes(): void {
     const codes = this.newRecoveryCodes().join('\n');
-    navigator.clipboard.writeText(codes);
-    this.toast.success('Recovery codes copied to clipboard');
+    navigator.clipboard.writeText(codes).then(
+      () => this.toast.success('Recovery codes copied to clipboard'),
+      () => this.toast.error('Failed to copy recovery codes'),
+    );
   }
 
   dismissRecoveryCodes(): void {

@@ -40,8 +40,10 @@ export class ApiKeyCardComponent {
   }
 
   copyApiKey(): void {
-    navigator.clipboard.writeText(this.apiKey());
-    this.toast.success('API key copied to clipboard');
+    navigator.clipboard.writeText(this.apiKey()).then(
+      () => this.toast.success('API key copied to clipboard'),
+      () => this.toast.error('Failed to copy API key'),
+    );
   }
 
   async confirmRegenerateApiKey(): Promise<void> {
