@@ -49,6 +49,213 @@ public class StatsService : IStatsService
         };
     }
 
+    private static readonly EventType[] StrikeEventTypes =
+    [
+        EventType.StalledStrike,
+        EventType.DownloadingMetadataStrike,
+        EventType.FailedImportStrike,
+        EventType.SlowSpeedStrike,
+        EventType.SlowTimeStrike,
+        EventType.DeadTorrentStrike,
+    ];
+
+    private static readonly DeleteReason[] MalwareReasons =
+    [
+        DeleteReason.AllFilesBlocked,
+        DeleteReason.AtLeastOneFileBlocked,
+    ];
+
+    /// <inheritdoc />
+    public async Task<StatsV2Response> GetStatsV2Async(int hours, string window)
+    {
+        DateTimeOffset cutoff = DateTimeOffset.UtcNow.AddHours(-hours);
+
+        Dictionary<string, int> byType = await MergedCountsAsync(cutoff, e => e.EventType, h => h.EventType);
+        Dictionary<string, int> bySeverity = await MergedCountsAsync(cutoff, e => e.Severity, h => h.Severity);
+
+        Dictionary<string, int> activeStrikes = (await _eventsContext.Strikes
+                .GroupBy(s => s.Type)
+                .Select(g => new { Type = g.Key, Count = g.Count() })
+                .ToListAsync())
+            .ToDictionary(x => x.Type.ToString(), x => x.Count);
+
+        return new StatsV2Response
+        {
+            Events = new EventV2Stats
+            {
+                TotalCount = byType.Values.Sum(),
+                ByType = byType,
+                BySeverity = bySeverity,
+            },
+            Strikes = new StrikeV2Stats
+            {
+                Active = activeStrikes,
+                Issued = await CountEventsAsync(cutoff, StrikeEventTypes),
+                Recovered = await CountEventsAsync(cutoff, [EventType.StrikeReset]),
+                Removed = await CountEventsAsync(cutoff, [EventType.QueueItemDeleted]),
+            },
+            Malware = new MalwareV2Stats
+            {
+                Blocked = await CountMalwareAsync(cutoff),
+            },
+            Jobs = await GetJobV2StatsAsync(cutoff),
+            Health = GetHealthStats(),
+            Window = window,
+            GeneratedAt = DateTimeOffset.UtcNow,
+        };
+    }
+
+    /// <inheritdoc />
+    public async Task<List<TimelineBucketDto>> GetTimelineAsync(string metric, int hours)
+    {
+        DateTimeOffset cutoff = DateTimeOffset.UtcNow.AddHours(-hours);
+
+        List<DateTimeOffset> timestamps = await MetricTimestampsAsync(cutoff, metric);
+
+        Dictionary<DateOnly, int> counts = timestamps
+            .GroupBy(t => DateOnly.FromDateTime(t.UtcDateTime))
+            .ToDictionary(g => g.Key, g => g.Count());
+
+        // Fill every day in the window so the series is continuous for charting.
+        List<TimelineBucketDto> series = [];
+        DateOnly start = DateOnly.FromDateTime(cutoff.UtcDateTime);
+        DateOnly end = DateOnly.FromDateTime(DateTimeOffset.UtcNow.UtcDateTime);
+        for (DateOnly day = start; day <= end; day = day.AddDays(1))
+        {
+            series.Add(new TimelineBucketDto { Date = day, Count = counts.GetValueOrDefault(day) });
+        }
+
+        return series;
+    }
+
+    private async Task<Dictionary<string, int>> MergedCountsAsync<TKey>(
+        DateTimeOffset cutoff,
+        System.Linq.Expressions.Expression<Func<Persistence.Models.Events.AppEvent, TKey>> activeSelector,
+        System.Linq.Expressions.Expression<Func<Persistence.Models.Events.EventHistory, TKey>> historySelector)
+        where TKey : notnull
+    {
+        var active = await _eventsContext.Events
+            .Where(e => e.Timestamp >= cutoff)
+            .GroupBy(activeSelector)
+            .Select(g => new { g.Key, Count = g.Count() })
+            .ToListAsync();
+
+        var history = await _eventsContext.EventHistory
+            .Where(e => e.Timestamp >= cutoff)
+            .GroupBy(historySelector)
+            .Select(g => new { g.Key, Count = g.Count() })
+            .ToListAsync();
+
+        Dictionary<string, int> merged = [];
+        foreach (var entry in active.Concat(history))
+        {
+            string key = entry.Key.ToString() ?? string.Empty;
+            merged[key] = merged.GetValueOrDefault(key) + entry.Count;
+        }
+
+        return merged;
+    }
+
+    private async Task<int> CountEventsAsync(DateTimeOffset cutoff, EventType[] types)
+    {
+        int active = await _eventsContext.Events
+            .CountAsync(e => e.Timestamp >= cutoff && types.Contains(e.EventType));
+        int history = await _eventsContext.EventHistory
+            .CountAsync(e => e.Timestamp >= cutoff && types.Contains(e.EventType));
+        return active + history;
+    }
+
+    private async Task<int> CountMalwareAsync(DateTimeOffset cutoff)
+    {
+        int active = await _eventsContext.Events
+            .CountAsync(e => e.Timestamp >= cutoff && e.EventType == EventType.QueueItemDeleted
+                && e.DeleteReason != null && MalwareReasons.Contains(e.DeleteReason.Value));
+        int history = await _eventsContext.EventHistory
+            .CountAsync(e => e.Timestamp >= cutoff && e.EventType == EventType.QueueItemDeleted
+                && e.DeleteReason != null && MalwareReasons.Contains(e.DeleteReason.Value));
+        return active + history;
+    }
+
+    private async Task<List<DateTimeOffset>> MetricTimestampsAsync(DateTimeOffset cutoff, string metric)
+    {
+        EventType[]? types = metric switch
+        {
+            "strikesIssued" => StrikeEventTypes,
+            "recovered" => [EventType.StrikeReset],
+            "removed" => [EventType.QueueItemDeleted],
+            "malwareBlocked" => [EventType.QueueItemDeleted],
+            _ => null, // "events" or unknown → all types
+        };
+        bool malwareOnly = metric == "malwareBlocked";
+
+        IQueryable<Persistence.Models.Events.AppEvent> active = _eventsContext.Events.Where(e => e.Timestamp >= cutoff);
+        IQueryable<Persistence.Models.Events.EventHistory> history = _eventsContext.EventHistory.Where(e => e.Timestamp >= cutoff);
+
+        if (types is not null)
+        {
+            active = active.Where(e => types.Contains(e.EventType));
+            history = history.Where(e => types.Contains(e.EventType));
+        }
+
+        if (malwareOnly)
+        {
+            active = active.Where(e => e.DeleteReason != null && MalwareReasons.Contains(e.DeleteReason.Value));
+            history = history.Where(e => e.DeleteReason != null && MalwareReasons.Contains(e.DeleteReason.Value));
+        }
+
+        // ponytail: windows are bounded (max ~1y of low-volume events), so bucket in memory rather than push a date expression to SQLite.
+        List<DateTimeOffset> timestamps = await active.Select(e => e.Timestamp).ToListAsync();
+        timestamps.AddRange(await history.Select(e => e.Timestamp).ToListAsync());
+        return timestamps;
+    }
+
+    private async Task<JobV2Stats> GetJobV2StatsAsync(DateTimeOffset cutoff)
+    {
+        var jobRuns = await _eventsContext.JobRuns
+            .Where(j => j.StartedAt >= cutoff)
+            .GroupBy(j => j.Type)
+            .Select(g => new
+            {
+                Type = g.Key,
+                TotalRuns = g.Count(),
+                Completed = g.Count(j => j.Status == JobRunStatus.Completed),
+                Failed = g.Count(j => j.Status == JobRunStatus.Failed),
+                LastRunAt = g.Max(j => j.StartedAt),
+            })
+            .ToListAsync();
+
+        Dictionary<string, JobTypeStats> byType = jobRuns.ToDictionary(
+            j => j.Type.ToString(),
+            j => new JobTypeStats
+            {
+                TotalRuns = j.TotalRuns,
+                Completed = j.Completed,
+                Failed = j.Failed,
+                LastRunAt = j.LastRunAt,
+            });
+
+        var allJobs = await _jobManagementService.GetAllJobs();
+        foreach (var job in allJobs)
+        {
+            if (byType.TryGetValue(job.JobType, out JobTypeStats? stats))
+            {
+                stats.NextRunAt = job.NextRunTime;
+            }
+            else
+            {
+                byType[job.JobType] = new JobTypeStats { NextRunAt = job.NextRunTime };
+            }
+        }
+
+        return new JobV2Stats
+        {
+            TotalRuns = jobRuns.Sum(j => j.TotalRuns),
+            Completed = jobRuns.Sum(j => j.Completed),
+            Failed = jobRuns.Sum(j => j.Failed),
+            ByType = byType,
+        };
+    }
+
     private async Task<EventStats> GetEventStatsAsync(DateTimeOffset cutoff, int hours, int includeEvents)
     {
         var eventsByType = await _eventsContext.Events

@@ -13,4 +13,15 @@ public interface IStatsService
     /// <param name="includeStrikes">Number of recent strikes to include (0 = none)</param>
     /// <returns>Aggregated stats response</returns>
     Task<StatsResponse> GetStatsAsync(int hours = 24, int includeEvents = 0, int includeStrikes = 0);
+
+    /// <summary>
+    /// Gets comprehensive v2 statistics for the given window, derived from active events + archived history.
+    /// </summary>
+    Task<StatsV2Response> GetStatsV2Async(int hours, string window);
+
+    /// <summary>
+    /// Gets a day-bucketed timeline for a single metric over the given window.
+    /// </summary>
+    /// <param name="metric">strikesIssued | recovered | removed | malwareBlocked | events</param>
+    Task<List<TimelineBucketDto>> GetTimelineAsync(string metric, int hours);
 }
