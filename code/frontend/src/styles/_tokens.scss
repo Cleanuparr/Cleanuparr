@@ -30,6 +30,7 @@
   --color-success-dim: #{$color-success-dim};
   --color-warning:     #{$color-warning};
   --color-warning-dim: #{$color-warning-dim};
+  --color-warning-bg:  color-mix(in srgb, #{$color-warning} 10%, transparent);
   --color-error:       #{$color-error};
   --color-error-dim:   #{$color-error-dim};
   --color-info:        #{$color-info};

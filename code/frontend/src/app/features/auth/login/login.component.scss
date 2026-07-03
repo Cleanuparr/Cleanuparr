@@ -38,7 +38,7 @@
 }
 
 .retry-countdown {
-  background: rgba(234, 179, 8, 0.1);
+  background: var(--color-warning-bg);
   color: var(--color-warning);
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-md);
