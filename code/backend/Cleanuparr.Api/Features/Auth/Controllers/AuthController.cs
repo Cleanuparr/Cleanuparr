@@ -497,7 +497,8 @@ public sealed class AuthController : ControllerBase
             return this.ProblemResult(StatusCodes.Status400BadRequest, "Plex login is not available");
         }
 
-        var pin = await _plexAuthService.RequestPin();
+        string forwardUrl = $"{HttpContext.GetExternalBaseUrl()}/auth/plex/callback";
+        PlexPinResult pin = await _plexAuthService.RequestPin(forwardUrl);
 
         return Ok(new PlexPinStatusResponse
         {

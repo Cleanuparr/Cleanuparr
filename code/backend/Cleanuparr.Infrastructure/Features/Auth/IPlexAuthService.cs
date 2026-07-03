@@ -22,7 +22,7 @@ public sealed record PlexAccountInfo
 
 public interface IPlexAuthService
 {
-    Task<PlexPinResult> RequestPin();
+    Task<PlexPinResult> RequestPin(string? forwardUrl = null);
     Task<PlexPinCheckResult> CheckPin(int pinId);
     Task<PlexAccountInfo> GetAccount(string authToken);
 }

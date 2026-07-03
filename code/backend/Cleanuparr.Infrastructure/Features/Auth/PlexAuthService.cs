@@ -21,7 +21,7 @@ public sealed class PlexAuthService : IPlexAuthService
         _clientIdentifier = GetOrCreateClientIdentifier();
     }
 
-    public async Task<PlexPinResult> RequestPin()
+    public async Task<PlexPinResult> RequestPin(string? forwardUrl = null)
     {
         var request = new HttpRequestMessage(HttpMethod.Post, $"{PlexApiBaseUrl}/pins");
         AddPlexHeaders(request);
@@ -42,6 +42,11 @@ public sealed class PlexAuthService : IPlexAuthService
         }
 
         var authUrl = $"https://app.plex.tv/auth#?clientID={Uri.EscapeDataString(_clientIdentifier)}&code={Uri.EscapeDataString(pin.Code)}&context%5Bdevice%5D%5Bproduct%5D={Uri.EscapeDataString(PlexProduct)}";
+
+        if (!string.IsNullOrEmpty(forwardUrl))
+        {
+            authUrl += $"&forwardUrl={Uri.EscapeDataString(forwardUrl)}";
+        }
 
         return new PlexPinResult
         {
