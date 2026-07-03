@@ -2,6 +2,7 @@ import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, tap, of, catchError, finalize, shareReplay } from 'rxjs';
 import { Router } from '@angular/router';
+import { ApiError } from '@core/interceptors/error.interceptor';
 
 export interface AuthStatus {
   setupCompleted: boolean;
@@ -213,8 +214,10 @@ export class AuthService {
       .post<TokenResponse>('/api/auth/refresh', { refreshToken: storedRefreshToken })
       .pipe(
         tap((tokens) => this.handleTokens(tokens)),
-        catchError(() => {
-          this.clearAuth();
+        catchError((err) => {
+          if ((err as ApiError).statusCode === 401) {
+            this.clearAuth();
+          }
           return of(null);
         }),
         finalize(() => {
@@ -237,6 +240,11 @@ export class AuthService {
 
   getAccessToken(): string | null {
     return localStorage.getItem('access_token');
+  }
+
+  /** True while a refresh token is stored. Cleared only on a definitive refresh rejection. */
+  hasRefreshToken(): boolean {
+    return localStorage.getItem('refresh_token') !== null;
   }
 
   /** Returns true if the access token is expired or will expire within the buffer period. */
