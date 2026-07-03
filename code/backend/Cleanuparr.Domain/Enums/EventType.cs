@@ -13,4 +13,5 @@ public enum EventType
     CategoryChanged,
     DownloadMarkedForDeletion,
     SearchTriggered,
+    StrikeReset,
 }
