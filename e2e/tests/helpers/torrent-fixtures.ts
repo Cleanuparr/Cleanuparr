@@ -50,6 +50,32 @@ export interface GeneratedTorrent {
 }
 
 /**
+ * Deterministic bytes seeded from `seed` (HMAC-like SHA-256 expansion)
+ */
+function generateDeterministicData(seed: Buffer, sizeBytes: number): Buffer {
+  const data = Buffer.alloc(sizeBytes);
+  let offset = 0;
+  let counter = 0;
+  while (offset < sizeBytes) {
+    const block = createHash('sha256').update(seed).update(Buffer.from([counter & 0xff, (counter >> 8) & 0xff])).digest();
+    block.copy(data, offset, 0, Math.min(block.length, sizeBytes - offset));
+    offset += block.length;
+    counter++;
+  }
+  return data;
+}
+
+/** Concatenated SHA-1 hashes of each `pieceLength`-sized chunk of `data` (BEP-3 `pieces`). */
+function computePieces(data: Buffer, pieceLength: number): Buffer {
+  const pieces: Buffer[] = [];
+  for (let i = 0; i < data.length; i += pieceLength) {
+    const piece = data.subarray(i, Math.min(i + pieceLength, data.length));
+    pieces.push(createHash('sha1').update(piece).digest());
+  }
+  return Buffer.concat(pieces);
+}
+
+/**
  * Build a single-file multi-piece torrent on disk and return its metainfo.
  *
  * The data file is written to `<savePath>/<name>/data.bin` and contains
@@ -65,27 +91,12 @@ export function buildFolderTorrent(savePath: string, name: string, sizeBytes = 3
   mkdirSync(contentPath, { recursive: true });
   chmodIgnoringEPERM(contentPath, 0o777);
 
-  // Deterministic content: HMAC-like expansion from the name so two runs
-  // produce identical bytes (and thus identical pieces / infohash).
   const seed = createHash('sha256').update(`cleanuparr-e2e:${name}`).digest();
-  const data = Buffer.alloc(sizeBytes);
-  let offset = 0;
-  let counter = 0;
-  while (offset < sizeBytes) {
-    const block = createHash('sha256').update(seed).update(Buffer.from([counter & 0xff, (counter >> 8) & 0xff])).digest();
-    block.copy(data, offset, 0, Math.min(block.length, sizeBytes - offset));
-    offset += block.length;
-    counter++;
-  }
+  const data = generateDeterministicData(seed, sizeBytes);
   writeFileSync(join(contentPath, 'data.bin'), data);
 
   const pieceLength = 16384;
-  const pieces: Buffer[] = [];
-  for (let i = 0; i < data.length; i += pieceLength) {
-    const piece = data.subarray(i, Math.min(i + pieceLength, data.length));
-    pieces.push(createHash('sha1').update(piece).digest());
-  }
-  const piecesConcat = Buffer.concat(pieces);
+  const piecesConcat = computePieces(data, pieceLength);
 
   const info = {
     name,
@@ -133,15 +144,7 @@ export function buildMultiFileTorrent(
 
   for (const { filename, sizeBytes = 16384 } of files) {
     const seed = createHash('sha256').update(`cleanuparr-e2e:${name}:${filename}`).digest();
-    const buf = Buffer.alloc(sizeBytes);
-    let offset = 0;
-    let counter = 0;
-    while (offset < sizeBytes) {
-      const block = createHash('sha256').update(seed).update(Buffer.from([counter & 0xff, (counter >> 8) & 0xff])).digest();
-      block.copy(buf, offset, 0, Math.min(block.length, sizeBytes - offset));
-      offset += block.length;
-      counter++;
-    }
+    const buf = generateDeterministicData(seed, sizeBytes);
     writeFileSync(join(contentPath, filename), buf);
     fileBuffers.push(buf);
     fileEntries.push({ length: buf.length, path: [filename] });
@@ -149,12 +152,7 @@ export function buildMultiFileTorrent(
 
   const concatenated = Buffer.concat(fileBuffers);
   const pieceLength = 16384;
-  const pieces: Buffer[] = [];
-  for (let i = 0; i < concatenated.length; i += pieceLength) {
-    const piece = concatenated.subarray(i, Math.min(i + pieceLength, concatenated.length));
-    pieces.push(createHash('sha1').update(piece).digest());
-  }
-  const piecesConcat = Buffer.concat(pieces);
+  const piecesConcat = computePieces(concatenated, pieceLength);
 
   const info = {
     name,
@@ -184,24 +182,11 @@ export function buildSingleFileTorrent(savePath: string, fileName: string, sizeB
   chmodIgnoringEPERM(savePath, 0o777);
 
   const seed = createHash('sha256').update(`cleanuparr-e2e:${fileName}`).digest();
-  const data = Buffer.alloc(sizeBytes);
-  let offset = 0;
-  let counter = 0;
-  while (offset < sizeBytes) {
-    const block = createHash('sha256').update(seed).update(Buffer.from([counter & 0xff, (counter >> 8) & 0xff])).digest();
-    block.copy(data, offset, 0, Math.min(block.length, sizeBytes - offset));
-    offset += block.length;
-    counter++;
-  }
+  const data = generateDeterministicData(seed, sizeBytes);
   writeFileSync(join(savePath, fileName), data);
 
   const pieceLength = 16384;
-  const pieces: Buffer[] = [];
-  for (let i = 0; i < data.length; i += pieceLength) {
-    const piece = data.subarray(i, Math.min(i + pieceLength, data.length));
-    pieces.push(createHash('sha1').update(piece).digest());
-  }
-  const piecesConcat = Buffer.concat(pieces);
+  const piecesConcat = computePieces(data, pieceLength);
 
   const info = {
     name: fileName,
