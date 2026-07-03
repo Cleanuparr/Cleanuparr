@@ -268,6 +268,21 @@ export class NotificationProviderModalComponent {
     validate(p.ntfyTopics, () =>
       this.modalType() === NotificationProviderType.Ntfy && this.modalModel().ntfyTopics.length === 0
         ? { kind: 'required', message: 'At least one topic is required' } : undefined);
+    validate(p.ntfyUsername, () =>
+      this.modalType() === NotificationProviderType.Ntfy
+        && this.modalModel().ntfyAuthType === NtfyAuthenticationType.BasicAuth
+        && !this.modalModel().ntfyUsername.trim()
+        ? { kind: 'required', message: 'Username is required' } : undefined);
+    validate(p.ntfyPassword, () =>
+      this.modalType() === NotificationProviderType.Ntfy
+        && this.modalModel().ntfyAuthType === NtfyAuthenticationType.BasicAuth
+        && !this.modalModel().ntfyPassword.trim()
+        ? { kind: 'required', message: 'Password is required' } : undefined);
+    validate(p.ntfyAccessToken, () =>
+      this.modalType() === NotificationProviderType.Ntfy
+        && this.modalModel().ntfyAuthType === NtfyAuthenticationType.AccessToken
+        && !this.modalModel().ntfyAccessToken.trim()
+        ? { kind: 'required', message: 'Access token is required' } : undefined);
 
     // Pushover
     validate(p.pushoverApiToken, () =>

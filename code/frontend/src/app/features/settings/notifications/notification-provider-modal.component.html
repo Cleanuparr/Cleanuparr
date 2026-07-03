@@ -95,14 +95,17 @@
       @if (modalForm.ntfyAuthType().value() === 'BasicAuth') {
         <app-input label="Username" placeholder="Enter username" [formField]="modalForm.ntfyUsername"
           hint="Your username for basic authentication."
+          [error]="modalForm.ntfyUsername().errors()[0]?.message"
           helpKey="notifications/ntfy:username" />
         <app-input label="Password" placeholder="Enter password" type="password" [revealable]="false" [formField]="modalForm.ntfyPassword"
           hint="Your password for basic authentication."
+          [error]="modalForm.ntfyPassword().errors()[0]?.message"
           helpKey="notifications/ntfy:password" />
       }
       @if (modalForm.ntfyAuthType().value() === 'AccessToken') {
         <app-input label="Access Token" placeholder="Enter access token" type="password" [revealable]="false" [formField]="modalForm.ntfyAccessToken"
           hint="Your access token for bearer token authentication."
+          [error]="modalForm.ntfyAccessToken().errors()[0]?.message"
           helpKey="notifications/ntfy:accessToken" />
       }
       <app-select label="Priority" [options]="ntfyPriorityOptions" [formField]="modalForm.ntfyPriority"
