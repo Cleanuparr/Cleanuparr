@@ -201,7 +201,7 @@
     </div>
   </div>
   <div modal-footer>
-    <app-button variant="secondary" size="sm" [loading]="testing()" (clicked)="testNotification()">
+    <app-button variant="secondary" size="sm" [loading]="testing()" [disabled]="modalForm().invalid()" (clicked)="testNotification()">
       Test
     </app-button>
     <app-button variant="primary" size="sm" [loading]="saving()" [disabled]="modalForm().invalid()" (clicked)="saveProvider()">
