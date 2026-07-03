@@ -16,6 +16,7 @@ import { ToastService } from '@core/services/toast.service';
 import { ConfirmService } from '@core/services/confirm.service';
 import { ManualEvent } from '@core/models/event.models';
 import { JobType } from '@shared/models/enums';
+import { StatsCardComponent } from './stats-card/stats-card.component';
 
 const DASHBOARD_ROW_ORDER_KEY = 'dashboard-row-order';
 const DEFAULT_ROW_ORDER = ['strikes', 'logs-events', 'cf-scores', 'jobs'] as const;
@@ -36,6 +37,7 @@ type DashboardRowId = typeof DEFAULT_ROW_ORDER[number];
     CdkDropList,
     CdkDrag,
     CdkDragHandle,
+    StatsCardComponent,
   ],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.scss',
@@ -246,6 +248,9 @@ export class DashboardComponent {
   // Event helpers
   eventMarkerClass(eventType: string, severity: string): string {
     const t = eventType.toLowerCase();
+    if (t === 'strikereset') {
+      return 'success';
+    }
     if (t.includes('strike')) {
       const s = severity.toLowerCase();
       if (s === 'error') return 'error';
@@ -257,6 +262,7 @@ export class DashboardComponent {
 
   eventTypeSeverity(eventType: string): 'error' | 'warning' | 'info' | 'success' | 'default' {
     const t = eventType.toLowerCase();
+    if (t === 'strikereset') return 'success';
     if (t === 'failedimportstrike' || t === 'queueitemdeleted') return 'error';
     if (t === 'stalledstrike' || t === 'downloadmarkedfordeletion') return 'warning';
     if (t === 'downloadcleaned') return 'success';
@@ -296,6 +302,7 @@ export class DashboardComponent {
 
   eventIcon(eventType: string): string {
     const t = eventType.toLowerCase();
+    if (t === 'strikereset') return 'tablerHistory';
     if (t.includes('strike')) return 'tablerBolt';
     if (t === 'downloadcleaned') return 'tablerDownload';
     if (t === 'queueitemdeleted') return 'tablerTrash';

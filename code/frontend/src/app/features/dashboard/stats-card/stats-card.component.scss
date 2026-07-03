@@ -1,0 +1,159 @@
+.stats {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.stats__windows {
+  display: flex;
+  gap: var(--space-1);
+  align-self: flex-end;
+}
+
+.stats__window {
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--text-tertiary);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+
+  &:hover {
+    color: var(--text-secondary);
+    background: var(--glass-bg-hover);
+  }
+
+  &--active {
+    color: var(--color-primary);
+    background: var(--glass-bg);
+    border-color: var(--glass-border);
+  }
+}
+
+.stats__tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: var(--space-3);
+  transition: opacity 0.2s ease;
+
+  &--loading {
+    opacity: 0.6;
+  }
+}
+
+.stats__tile {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-4);
+  text-align: left;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+
+  &:hover:not(:disabled) {
+    background: var(--glass-bg-hover);
+    transform: translateY(-1px);
+  }
+
+  &:disabled {
+    cursor: default;
+  }
+
+  &--active {
+    border-color: var(--tone-color);
+    box-shadow: 0 0 0 1px var(--tone-color);
+  }
+
+  // Tone drives the value color and the active outline
+  &[data-tone='removed'] { --tone-color: var(--color-error); }
+  &[data-tone='recovered'] { --tone-color: var(--color-success); }
+  &[data-tone='issued'] { --tone-color: var(--color-warning); }
+  &[data-tone='malware'] { --tone-color: var(--color-primary); }
+  &[data-tone='jobs'] { --tone-color: var(--text-tertiary); }
+}
+
+.stats__value {
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--tone-color, var(--text-primary));
+  font-variant-numeric: tabular-nums;
+}
+
+.stats__label {
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+}
+
+.stats__spark {
+  min-height: 40px;
+}
+
+.stats__spark-svg {
+  display: block;
+  width: 100%;
+  height: 40px;
+  overflow: visible;
+}
+
+.stats__spark-line {
+  fill: none;
+  stroke: var(--color-primary);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.stats__spark-area {
+  fill: var(--color-primary);
+  opacity: 0.1;
+  stroke: none;
+}
+
+.stats__spark-empty {
+  margin: 0;
+  padding: var(--space-3) 0;
+  font-size: var(--font-size-sm);
+  color: var(--text-tertiary);
+  text-align: center;
+}
+
+.stats__error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+.stats__retry {
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--color-primary);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--glass-bg-hover);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stats__tile,
+  .stats__window,
+  .stats__tiles {
+    transition: none;
+  }
+}

@@ -231,6 +231,7 @@ export class EventsComponent implements OnInit, OnDestroy {
   // Helpers
   eventTypeSeverity(eventType: string): 'error' | 'warning' | 'info' | 'success' | 'default' {
     const t = eventType.toLowerCase();
+    if (t === 'strikereset') return 'success';
     if (t === 'failedimportstrike' || t === 'queueitemdeleted') return 'error';
     if (t === 'stalledstrike' || t === 'downloadmarkedfordeletion') return 'warning';
     if (t === 'downloadcleaned') return 'success';

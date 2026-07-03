@@ -1,0 +1,53 @@
+<app-card header="Statistics" subtitle="Activity over the selected window">
+  <div class="stats">
+    <div class="stats__windows" role="group" aria-label="Time window">
+      @for (w of windows; track w) {
+        <button
+          type="button"
+          class="stats__window"
+          [class.stats__window--active]="window() === w"
+          [attr.aria-pressed]="window() === w"
+          (click)="setWindow(w)"
+        >
+          {{ w }}
+        </button>
+      }
+    </div>
+
+    @if (hasError()) {
+      <div class="stats__error">
+        <span>Couldn't load statistics.</span>
+        <button type="button" class="stats__retry" (click)="retry()">Retry</button>
+      </div>
+    } @else {
+      <div class="stats__tiles" [class.stats__tiles--loading]="isLoading()">
+        @for (tile of tiles(); track tile.key) {
+          <button
+            type="button"
+            class="stats__tile"
+            [class.stats__tile--active]="tile.metric && selectedMetric() === tile.metric"
+            [attr.data-tone]="tile.tone"
+            [disabled]="!tile.metric"
+            (click)="selectMetric(tile.metric)"
+          >
+            <span class="stats__value"><app-animated-counter [value]="tile.value" /></span>
+            <span class="stats__label">{{ tile.label }}</span>
+          </button>
+        }
+      </div>
+
+      @if (spark(); as s) {
+        <div class="stats__spark">
+          @if (s.empty) {
+            <p class="stats__spark-empty">No activity in this window.</p>
+          } @else {
+            <svg class="stats__spark-svg" viewBox="0 0 100 28" preserveAspectRatio="none" aria-hidden="true">
+              <path class="stats__spark-area" [attr.d]="s.area" />
+              <path class="stats__spark-line" [attr.d]="s.line" />
+            </svg>
+          }
+        </div>
+      }
+    }
+  </div>
+</app-card>
