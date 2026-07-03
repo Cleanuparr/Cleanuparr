@@ -175,6 +175,53 @@ export function buildMultiFileTorrent(
 }
 
 /**
+ * Build a single-file torrent (BEP-3 single-file mode — `info.length`, no `files`
+ * list and no containing folder). The data file is written directly as
+ * `<savePath>/<fileName>`, so the torrent's on-disk entry is the file itself.
+ */
+export function buildSingleFileTorrent(savePath: string, fileName: string, sizeBytes = 32_768, announce = 'http://tracker.invalid/announce'): GeneratedTorrent {
+  mkdirSync(savePath, { recursive: true });
+  chmodIgnoringEPERM(savePath, 0o777);
+
+  const seed = createHash('sha256').update(`cleanuparr-e2e:${fileName}`).digest();
+  const data = Buffer.alloc(sizeBytes);
+  let offset = 0;
+  let counter = 0;
+  while (offset < sizeBytes) {
+    const block = createHash('sha256').update(seed).update(Buffer.from([counter & 0xff, (counter >> 8) & 0xff])).digest();
+    block.copy(data, offset, 0, Math.min(block.length, sizeBytes - offset));
+    offset += block.length;
+    counter++;
+  }
+  writeFileSync(join(savePath, fileName), data);
+
+  const pieceLength = 16384;
+  const pieces: Buffer[] = [];
+  for (let i = 0; i < data.length; i += pieceLength) {
+    const piece = data.subarray(i, Math.min(i + pieceLength, data.length));
+    pieces.push(createHash('sha1').update(piece).digest());
+  }
+  const piecesConcat = Buffer.concat(pieces);
+
+  const info = {
+    name: fileName,
+    'piece length': pieceLength,
+    pieces: piecesConcat,
+    length: data.length,
+    private: 1,
+  };
+  const metainfo = bencode({
+    announce,
+    'created by': 'cleanuparr-e2e',
+    'creation date': 0,
+    info,
+  });
+  const infoHash = createHash('sha1').update(bencode(info)).digest('hex');
+
+  return { metainfo, infoHash, name: fileName, contentPath: join(savePath, fileName) };
+}
+
+/**
  * `chmodSync` that tolerates EPERM. The torrent-client bind mounts
  * (`test-data/downloads/<client>`) are chowned to PUID=1000 by
  * linuxserver.io entrypoints, while CI's Playwright runner is uid 1001
