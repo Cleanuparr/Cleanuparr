@@ -242,6 +242,11 @@ export class AuthService {
     return localStorage.getItem('access_token');
   }
 
+  /** True while a refresh token is stored. Cleared only on a definitive refresh rejection. */
+  hasRefreshToken(): boolean {
+    return localStorage.getItem('refresh_token') !== null;
+  }
+
   /** Returns true if the access token is expired or will expire within the buffer period. */
   isTokenExpired(bufferSeconds = 30): boolean {
     const token = localStorage.getItem('access_token');

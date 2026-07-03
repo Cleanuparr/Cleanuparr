@@ -25,7 +25,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
           });
           return next(freshReq);
         }
-        if (!auth.isAuthenticated()) {
+        if (!auth.hasRefreshToken()) {
           auth.logout();
         }
         return throwError(() => new HttpErrorResponse({ status: 401 }));

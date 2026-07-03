@@ -27,6 +27,13 @@ test.describe('Token refresh transient failure', () => {
     );
     expect(originalRefreshToken).toBeTruthy();
 
+    // A transient miss must never tear down the session.
+    let logoutCalled = false;
+    await page.route('**/api/auth/logout', (route) => {
+      logoutCalled = true;
+      return route.fulfill({ status: 200, body: '{}' });
+    });
+
     // Simulate the server briefly unavailable during a token refresh.
     await page.route('**/api/auth/refresh', (route) =>
       route.fulfill({ status: 503, body: '' }),
@@ -40,6 +47,7 @@ test.describe('Token refresh transient failure', () => {
       localStorage.getItem('refresh_token'),
     );
     expect(refreshTokenAfterFailure).toBe(originalRefreshToken);
+    expect(logoutCalled).toBe(false);
 
     // Server recovers: returning to the app refreshes silently, no re-login.
     await page.unroute('**/api/auth/refresh');
