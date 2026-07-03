@@ -90,6 +90,31 @@ public class StrikerIntegrationTests : IDisposable
     }
 
     [Fact]
+    public async Task ResetStrikeAsync_ClearsActiveStrikes_PublishesStrikeResetEvent()
+    {
+        // Arrange: two stalled strikes on the same item
+        await _fixture.Striker.StrikeAndCheckLimit("RESET_HASH", "Recovered.Movie.2024", maxStrikes: 5, StrikeType.Stalled);
+        await _fixture.Striker.StrikeAndCheckLimit("RESET_HASH", "Recovered.Movie.2024", maxStrikes: 5, StrikeType.Stalled);
+        (await _fixture.EventsContext.Strikes.CountAsync()).ShouldBe(2);
+
+        // Act
+        await _fixture.Striker.ResetStrikeAsync("RESET_HASH", "Recovered.Movie.2024", StrikeType.Stalled);
+
+        // Assert: active strikes of that type are cleared (history lives in the event stream)
+        (await _fixture.EventsContext.Strikes.ToListAsync()).ShouldBeEmpty();
+
+        // Assert: exactly one StrikeReset event, with typed payload
+        var resetEvents = await _fixture.EventsContext.Events
+            .Where(e => e.EventType == EventType.StrikeReset)
+            .ToListAsync();
+        resetEvents.Count.ShouldBe(1);
+        resetEvents[0].Severity.ShouldBe(EventSeverity.Information);
+        resetEvents[0].ItemHash.ShouldBe("RESET_HASH");
+        resetEvents[0].ItemTitle.ShouldBe("Recovered.Movie.2024");
+        resetEvents[0].StrikeCount.ShouldBe(2);
+    }
+
+    [Fact]
     public async Task DownloadingMetadataStrike_PublishesEvent_CreatesStrike_SendsNotification()
     {
         // Act

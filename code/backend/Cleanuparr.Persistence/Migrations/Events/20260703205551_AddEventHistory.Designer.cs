@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Cleanuparr.Persistence.Migrations.Events
 {
     [DbContext(typeof(EventsContext))]
-    [Migration("20260703172838_AddStrikeAndEventHistory")]
-    partial class AddStrikeAndEventHistory
+    [Migration("20260703205551_AddEventHistory")]
+    partial class AddEventHistory
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -575,80 +575,6 @@ namespace Cleanuparr.Persistence.Migrations.Events
                         .HasDatabaseName("ix_strikes_download_item_id_type");
 
                     b.ToTable("strikes", (string)null);
-                });
-
-            modelBuilder.Entity("Cleanuparr.Persistence.Models.State.StrikeHistory", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT")
-                        .HasColumnName("id");
-
-                    b.Property<string>("ArchivedAt")
-                        .IsRequired()
-                        .HasColumnType("TEXT")
-                        .HasColumnName("archived_at");
-
-                    b.Property<Guid>("DownloadItemId")
-                        .HasColumnType("TEXT")
-                        .HasColumnName("download_item_id");
-
-                    b.Property<bool>("IsDryRun")
-                        .HasColumnType("INTEGER")
-                        .HasColumnName("is_dry_run");
-
-                    b.Property<string>("ItemHash")
-                        .HasMaxLength(100)
-                        .HasColumnType("TEXT")
-                        .HasColumnName("item_hash");
-
-                    b.Property<string>("ItemTitle")
-                        .HasMaxLength(500)
-                        .HasColumnType("TEXT")
-                        .HasColumnName("item_title");
-
-                    b.Property<Guid>("JobRunId")
-                        .HasColumnType("TEXT")
-                        .HasColumnName("job_run_id");
-
-                    b.Property<long?>("LastDownloadedBytes")
-                        .HasColumnType("INTEGER")
-                        .HasColumnName("last_downloaded_bytes");
-
-                    b.Property<string>("Outcome")
-                        .IsRequired()
-                        .HasColumnType("TEXT")
-                        .HasColumnName("outcome");
-
-                    b.Property<string>("Reason")
-                        .HasMaxLength(100)
-                        .HasColumnType("TEXT")
-                        .HasColumnName("reason");
-
-                    b.Property<string>("StruckAt")
-                        .IsRequired()
-                        .HasColumnType("TEXT")
-                        .HasColumnName("struck_at");
-
-                    b.Property<string>("Type")
-                        .IsRequired()
-                        .HasColumnType("TEXT")
-                        .HasColumnName("type");
-
-                    b.HasKey("Id")
-                        .HasName("pk_strike_history");
-
-                    b.HasIndex("ArchivedAt")
-                        .IsDescending()
-                        .HasDatabaseName("ix_strike_history_archived_at");
-
-                    b.HasIndex("Outcome")
-                        .HasDatabaseName("ix_strike_history_outcome");
-
-                    b.HasIndex("Type")
-                        .HasDatabaseName("ix_strike_history_type");
-
-                    b.ToTable("strike_history", (string)null);
                 });
 
             modelBuilder.Entity("Cleanuparr.Persistence.Models.Events.AppEvent", b =>

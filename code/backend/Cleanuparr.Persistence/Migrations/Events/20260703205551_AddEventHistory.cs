@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Cleanuparr.Persistence.Migrations.Events
 {
     /// <inheritdoc />
-    public partial class AddStrikeAndEventHistory : Migration
+    public partial class AddEventHistory : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -52,28 +52,6 @@ namespace Cleanuparr.Persistence.Migrations.Events
                     table.PrimaryKey("pk_event_history", x => x.id);
                 });
 
-            migrationBuilder.CreateTable(
-                name: "strike_history",
-                columns: table => new
-                {
-                    id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    download_item_id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    item_title = table.Column<string>(type: "TEXT", maxLength: 500, nullable: true),
-                    item_hash = table.Column<string>(type: "TEXT", maxLength: 100, nullable: true),
-                    type = table.Column<string>(type: "TEXT", nullable: false),
-                    outcome = table.Column<string>(type: "TEXT", nullable: false),
-                    reason = table.Column<string>(type: "TEXT", maxLength: 100, nullable: true),
-                    struck_at = table.Column<string>(type: "TEXT", nullable: false),
-                    archived_at = table.Column<string>(type: "TEXT", nullable: false),
-                    job_run_id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    last_downloaded_bytes = table.Column<long>(type: "INTEGER", nullable: true),
-                    is_dry_run = table.Column<bool>(type: "INTEGER", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("pk_strike_history", x => x.id);
-                });
-
             migrationBuilder.CreateIndex(
                 name: "ix_event_history_archived_at",
                 table: "event_history",
@@ -100,22 +78,6 @@ namespace Cleanuparr.Persistence.Migrations.Events
                 table: "event_history",
                 column: "timestamp",
                 descending: new bool[0]);
-
-            migrationBuilder.CreateIndex(
-                name: "ix_strike_history_archived_at",
-                table: "strike_history",
-                column: "archived_at",
-                descending: new bool[0]);
-
-            migrationBuilder.CreateIndex(
-                name: "ix_strike_history_outcome",
-                table: "strike_history",
-                column: "outcome");
-
-            migrationBuilder.CreateIndex(
-                name: "ix_strike_history_type",
-                table: "strike_history",
-                column: "type");
         }
 
         /// <inheritdoc />
@@ -123,9 +85,6 @@ namespace Cleanuparr.Persistence.Migrations.Events
         {
             migrationBuilder.DropTable(
                 name: "event_history");
-
-            migrationBuilder.DropTable(
-                name: "strike_history");
         }
     }
 }

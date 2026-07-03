@@ -153,6 +153,23 @@ public class EventPublisher : IEventPublisher
     }
 
     /// <summary>
+    /// Publishes a strike reset event: emitted when a download recovers and its strikes of a given type are cleared.
+    /// </summary>
+    public async Task PublishStrikeReset(StrikeType strikeType, int strikeCount, string hash, string itemName)
+    {
+        await PublishAsync(
+            EventType.StrikeReset,
+            $"'{itemName}' recovered — {strikeCount} '{strikeType}' strike(s) reset",
+            EventSeverity.Information,
+            configure: e =>
+            {
+                e.ItemTitle = itemName;
+                e.ItemHash = hash;
+                e.StrikeCount = strikeCount;
+            });
+    }
+
+    /// <summary>
     /// Publishes a queue item deleted event with context data and notifications
     /// </summary>
     public async Task PublishQueueItemDeleted(bool removeFromClient, DeleteReason deleteReason)

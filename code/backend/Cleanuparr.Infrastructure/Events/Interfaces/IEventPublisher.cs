@@ -11,6 +11,8 @@ public interface IEventPublisher
 
     Task PublishStrike(StrikeType strikeType, int strikeCount, string hash, string itemName, Guid? strikeId = null);
 
+    Task PublishStrikeReset(StrikeType strikeType, int strikeCount, string hash, string itemName);
+
     Task PublishQueueItemDeleted(bool removeFromClient, DeleteReason deleteReason);
 
     Task PublishDownloadCleaned(double ratio, TimeSpan seedingTime, string categoryName, CleanReason reason);

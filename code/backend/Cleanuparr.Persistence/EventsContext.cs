@@ -23,8 +23,6 @@ public class EventsContext : DbContext
 
     public DbSet<JobRun> JobRuns { get; set; }
 
-    public DbSet<StrikeHistory> StrikeHistory { get; set; }
-
     public DbSet<EventHistory> EventHistory { get; set; }
 
     public EventsContext()

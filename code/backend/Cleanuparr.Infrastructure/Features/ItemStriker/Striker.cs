@@ -106,12 +106,18 @@ public sealed class Striker : IStriker
             .Where(s => s.DownloadItemId == downloadItem.Id && s.Type == strikeType)
             .ToListAsync();
 
-        if (strikesToDelete.Count > 0)
+        if (strikesToDelete.Count is 0)
         {
-            _context.Strikes.RemoveRange(strikesToDelete);
-            await _context.SaveChangesAsync();
-            _logger.LogTrace("Progress detected | resetting {reason} strikes from {strikeCount} to 0 | {name}", strikeType, strikesToDelete.Count, itemName);
+            return;
         }
+
+        int resetCount = strikesToDelete.Count;
+        _context.Strikes.RemoveRange(strikesToDelete);
+        await _context.SaveChangesAsync();
+
+        _logger.LogTrace("Progress detected | resetting {reason} strikes from {strikeCount} to 0 | {name}", strikeType, resetCount, itemName);
+
+        await _eventPublisher.PublishStrikeReset(strikeType, resetCount, hash, itemName);
     }
 
     private async Task<DownloadItem> GetOrCreateDownloadItemAsync(string hash, string itemName)
