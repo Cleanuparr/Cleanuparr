@@ -18,6 +18,7 @@
 
 .input-field {
   @include glass-input;
+
   height: var(--input-height);
   padding: 0 var(--space-3);
   width: 100%;
