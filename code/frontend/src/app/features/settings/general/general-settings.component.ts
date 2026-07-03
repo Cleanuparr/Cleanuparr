@@ -40,6 +40,7 @@ interface GeneralSettingsFormModel {
   statusCheckEnabled: boolean;
   ignoredDownloads: string[];
   strikeInactivityWindowHours: number | null;
+  historyRetentionDays: number | null;
   authDisableLocalAuth: boolean;
   authTrustForwardedHeaders: boolean;
   authTrustedNetworks: string[];
@@ -96,6 +97,7 @@ export class GeneralSettingsComponent implements HasPendingChanges {
     statusCheckEnabled: true,
     ignoredDownloads: [],
     strikeInactivityWindowHours: 24,
+    historyRetentionDays: 365,
     authDisableLocalAuth: false,
     authTrustForwardedHeaders: false,
     authTrustedNetworks: [],
@@ -120,6 +122,10 @@ export class GeneralSettingsComponent implements HasPendingChanges {
     required(p.strikeInactivityWindowHours, { message: 'This field is required' });
     min(p.strikeInactivityWindowHours, 1, { message: 'Minimum value is 1' });
     max(p.strikeInactivityWindowHours, 168, { message: 'Maximum value is 168 hours (7 days)' });
+
+    required(p.historyRetentionDays, { message: 'This field is required' });
+    min(p.historyRetentionDays, 1, { message: 'Minimum value is 1' });
+    max(p.historyRetentionDays, 3650, { message: 'Maximum value is 3650 days (10 years)' });
 
     required(p.logRollingSizeMB, { message: 'This field is required' });
     min(p.logRollingSizeMB, 0, { message: 'Minimum value is 0' });
@@ -171,6 +177,7 @@ export class GeneralSettingsComponent implements HasPendingChanges {
           statusCheckEnabled: config.statusCheckEnabled,
           ignoredDownloads: config.ignoredDownloads ?? [],
           strikeInactivityWindowHours: config.strikeInactivityWindowHours,
+          historyRetentionDays: config.historyRetentionDays,
           authDisableLocalAuth: config.auth?.disableAuthForLocalAddresses ?? false,
           authTrustForwardedHeaders: config.auth?.trustForwardedHeaders ?? false,
           authTrustedNetworks: config.auth?.trustedNetworks ?? [],
@@ -215,6 +222,7 @@ export class GeneralSettingsComponent implements HasPendingChanges {
       httpCertificateValidation: m.httpCertificateValidation as CertificateValidationType,
       statusCheckEnabled: m.statusCheckEnabled,
       strikeInactivityWindowHours: m.strikeInactivityWindowHours ?? 24,
+      historyRetentionDays: m.historyRetentionDays ?? 365,
       ignoredDownloads: m.ignoredDownloads,
       auth: {
         disableAuthForLocalAddresses: m.authDisableLocalAuth,

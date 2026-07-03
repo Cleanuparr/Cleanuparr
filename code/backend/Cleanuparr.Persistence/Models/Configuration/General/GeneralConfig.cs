@@ -31,6 +31,11 @@ public sealed record GeneralConfig : IConfig
 
     public ushort StrikeInactivityWindowHours { get; set; } = 24;
 
+    /// <summary>
+    /// How long archived strike/event history is retained before being pruned, in days.
+    /// </summary>
+    public ushort HistoryRetentionDays { get; set; } = 365;
+
     public LoggingConfig Log { get; set; } = new();
 
     public AuthConfig Auth { get; set; } = new();
