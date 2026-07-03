@@ -1,10 +1,9 @@
-import { Component, ChangeDetectionStrategy, inject, signal, viewChild, effect, afterNextRender, OnInit, OnDestroy, DestroyRef } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, signal, viewChild, effect, afterNextRender, OnInit, OnDestroy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ButtonComponent, InputComponent, SpinnerComponent } from '@ui';
 import { AuthService } from '@core/auth/auth.service';
 import { ApiError } from '@core/interceptors/error.interceptor';
-import { pollPlexPin } from '@shared/utils/plex-pin-poller';
 
 type LoginView = 'credentials' | '2fa' | 'recovery';
 
@@ -20,7 +19,6 @@ export class LoginComponent implements OnInit, OnDestroy {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
-  private readonly destroyRef = inject(DestroyRef);
 
   view = signal<LoginView>('credentials');
   loading = signal(false);
@@ -193,25 +191,6 @@ export class LoginComponent implements OnInit, OnDestroy {
         this.error.set(err.message || 'Failed to start OIDC login');
         this.oidcLoading.set(false);
       },
-    });
-  }
-
-  private pollPlexPin(): void {
-    pollPlexPin({
-      verify: () => this.auth.verifyPlexPin(this.plexPinId()),
-      onCompleted: () => {
-        this.plexLoading.set(false);
-        this.router.navigate(['/dashboard']);
-      },
-      onError: (error) => {
-        this.plexLoading.set(false);
-        this.error.set((error as ApiError)?.message || 'Plex authorization failed');
-      },
-      onTimeout: () => {
-        this.plexLoading.set(false);
-        this.error.set('Plex authorization timed out');
-      },
-      destroyRef: this.destroyRef,
     });
   }
 
