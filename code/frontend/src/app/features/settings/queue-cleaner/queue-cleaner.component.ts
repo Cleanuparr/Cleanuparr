@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, inject, signal, computed, viewChildren, effect, untracked } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, signal, computed, viewChild, viewChildren, effect, untracked } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { form, required, min, max, validate, disabled, FormField } from '@angular/forms/signals';
 import { PageHeaderComponent } from '@layout/page-header/page-header.component';
@@ -69,6 +69,8 @@ export class QueueCleanerComponent implements HasPendingChanges {
   private readonly toast = inject(ToastService);
   private readonly confirm = inject(ConfirmService);
   private readonly chipInputs = viewChildren(ChipInputComponent);
+  private readonly stallModal = viewChild(StallRuleModalComponent);
+  private readonly slowModal = viewChild(SlowRuleModalComponent);
 
   private readonly savedSnapshot = signal('');
 
@@ -394,6 +396,8 @@ export class QueueCleanerComponent implements HasPendingChanges {
   });
 
   hasPendingChanges(): boolean {
-    return this.dirty();
+    return this.dirty()
+      || !!this.stallModal()?.hasPendingChanges()
+      || !!this.slowModal()?.hasPendingChanges();
   }
 }

@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, inject, signal, computed, effect } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, signal, computed, effect, viewChild } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { PageHeaderComponent } from '@layout/page-header/page-header.component';
 import {
@@ -32,6 +32,7 @@ export class NotificationsComponent implements HasPendingChanges {
   private readonly toast = inject(ToastService);
   private readonly confirmService = inject(ConfirmService);
   protected readonly themeService = inject(ThemeService);
+  private readonly providerModal = viewChild(NotificationProviderModalComponent);
 
   private readonly providersResource = rxResource({
     stream: () => this.api.getProviders(),
@@ -121,6 +122,6 @@ export class NotificationsComponent implements HasPendingChanges {
   }
 
   hasPendingChanges(): boolean {
-    return false;
+    return !!this.providerModal()?.hasPendingChanges();
   }
 }

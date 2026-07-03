@@ -63,6 +63,11 @@ export class SeedingRuleModalComponent {
 
   readonly saving = signal(false);
 
+  /** JSON snapshot of the model as loaded when the modal opened, for dirty tracking. */
+  private readonly openSnapshot = signal('');
+  readonly hasPendingChanges = computed(() =>
+    this.visible() && JSON.stringify(this.model()) !== this.openSnapshot());
+
   private readonly defaults: SeedingRuleFormModel = {
     name: '', categories: [], trackerPatterns: [], tagsAny: [], tagsAll: [],
     privacyType: TorrentPrivacyType.Public, maxRatio: -1, minSeedTime: 0,
@@ -95,19 +100,23 @@ export class SeedingRuleModalComponent {
         return;
       }
       const r = untracked(() => this.rule());
-      untracked(() => this.model.set(r ? {
-        name: r.name,
-        categories: [...(r.categories ?? [])],
-        trackerPatterns: [...(r.trackerPatterns ?? [])],
-        tagsAny: [...(r.tagsAny ?? [])],
-        tagsAll: [...(r.tagsAll ?? [])],
-        privacyType: r.privacyType,
-        maxRatio: r.maxRatio,
-        minSeedTime: r.minSeedTime,
-        maxSeedTime: r.maxSeedTime,
-        minSeeders: r.minSeeders ?? 0,
-        deleteSourceFiles: r.deleteSourceFiles,
-      } : { ...this.defaults }));
+      untracked(() => {
+        const next: SeedingRuleFormModel = r ? {
+          name: r.name,
+          categories: [...(r.categories ?? [])],
+          trackerPatterns: [...(r.trackerPatterns ?? [])],
+          tagsAny: [...(r.tagsAny ?? [])],
+          tagsAll: [...(r.tagsAll ?? [])],
+          privacyType: r.privacyType,
+          maxRatio: r.maxRatio,
+          minSeedTime: r.minSeedTime,
+          maxSeedTime: r.maxSeedTime,
+          minSeeders: r.minSeeders ?? 0,
+          deleteSourceFiles: r.deleteSourceFiles,
+        } : { ...this.defaults };
+        this.model.set(next);
+        this.openSnapshot.set(JSON.stringify(next));
+      });
     });
   }
 

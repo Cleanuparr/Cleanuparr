@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, inject, signal, computed, viewChildren, effect, untracked, linkedSignal } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, signal, computed, viewChild, viewChildren, effect, untracked, linkedSignal } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { form, min, validate, FormField } from '@angular/forms/signals';
 import { NgIconComponent } from '@ng-icons/core';
@@ -87,6 +87,7 @@ export class DownloadCleanerComponent implements HasPendingChanges {
   private readonly toast = inject(ToastService);
   private readonly confirm = inject(ConfirmService);
   private readonly chipInputs = viewChildren(ChipInputComponent);
+  private readonly seedingRuleModal = viewChild(SeedingRuleModalComponent);
 
   private readonly savedSnapshot = signal('');
   private readonly orphanedFilesSnapshots = signal<Record<string, string>>({});
@@ -643,6 +644,7 @@ export class DownloadCleanerComponent implements HasPendingChanges {
   });
 
   hasPendingChanges(): boolean {
-    return this.dirty() || this.unlinkedDirty() || this.deadTorrentDirty() || this.orphanedFilesDirty();
+    return this.dirty() || this.unlinkedDirty() || this.deadTorrentDirty() || this.orphanedFilesDirty()
+      || !!this.seedingRuleModal()?.hasPendingChanges();
   }
 }

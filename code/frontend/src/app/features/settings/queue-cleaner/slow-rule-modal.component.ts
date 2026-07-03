@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, inject, signal, effect, untracked, input, model, output } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, signal, computed, effect, untracked, input, model, output } from '@angular/core';
 import { form, required, min, max, maxLength, validate, disabled, FormField } from '@angular/forms/signals';
 import {
   ModalComponent, InputComponent, ToggleComponent, NumberInputComponent,
@@ -62,6 +62,11 @@ export class SlowRuleModalComponent {
 
   readonly saving = signal(false);
 
+  /** JSON snapshot of the model as loaded when the modal opened, for dirty tracking. */
+  private readonly openSnapshot = signal('');
+  readonly hasPendingChanges = computed(() =>
+    this.visible() && JSON.stringify(this.model()) !== this.openSnapshot());
+
   private readonly defaults: SlowRuleFormModel = {
     name: '', enabled: true, maxStrikes: 3, minSpeed: '', maxTimeHours: 0,
     privacyType: TorrentPrivacyType.Both, minCompletion: 0, maxCompletion: 100,
@@ -96,20 +101,24 @@ export class SlowRuleModalComponent {
         return;
       }
       const r = untracked(() => this.rule());
-      untracked(() => this.model.set(r ? {
-        name: r.name,
-        enabled: r.enabled,
-        maxStrikes: r.maxStrikes,
-        minSpeed: r.minSpeed,
-        maxTimeHours: r.maxTimeHours,
-        privacyType: r.privacyType,
-        minCompletion: r.minCompletionPercentage,
-        maxCompletion: r.maxCompletionPercentage,
-        ignoreAboveSize: r.ignoreAboveSize ?? '',
-        resetOnProgress: r.resetStrikesOnProgress,
-        deletePrivate: r.deletePrivateTorrentsFromClient,
-        changeCategory: r.changeCategory ?? false,
-      } : { ...this.defaults }));
+      untracked(() => {
+        const next: SlowRuleFormModel = r ? {
+          name: r.name,
+          enabled: r.enabled,
+          maxStrikes: r.maxStrikes,
+          minSpeed: r.minSpeed,
+          maxTimeHours: r.maxTimeHours,
+          privacyType: r.privacyType,
+          minCompletion: r.minCompletionPercentage,
+          maxCompletion: r.maxCompletionPercentage,
+          ignoreAboveSize: r.ignoreAboveSize ?? '',
+          resetOnProgress: r.resetStrikesOnProgress,
+          deletePrivate: r.deletePrivateTorrentsFromClient,
+          changeCategory: r.changeCategory ?? false,
+        } : { ...this.defaults };
+        this.model.set(next);
+        this.openSnapshot.set(JSON.stringify(next));
+      });
     });
 
     // Guard on the current value: model.update always creates a new object, so an

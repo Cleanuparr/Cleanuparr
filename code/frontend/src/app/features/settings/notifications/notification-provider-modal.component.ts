@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, inject, signal, input, model, output, effect, untracked } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, signal, computed, input, model, output, effect, untracked } from '@angular/core';
 import { form, validate, FormField } from '@angular/forms/signals';
 import {
   ButtonComponent, InputComponent, ToggleComponent, SelectComponent,
@@ -228,6 +228,12 @@ export class NotificationProviderModalComponent {
   readonly saving = signal(false);
 
   readonly modalModel = signal<NotificationModalModel>(createDefaultModalModel());
+
+  /** JSON snapshot of the model as loaded when the modal opened, for dirty tracking. */
+  private readonly openSnapshot = signal('');
+  readonly hasPendingChanges = computed(() =>
+    this.visible() && JSON.stringify(this.modalModel()) !== this.openSnapshot());
+
   readonly modalForm = form(this.modalModel, (p) => {
     validate(p.name, () =>
       !this.modalModel().name.trim() ? { kind: 'required', message: 'Name is required' } : undefined);
@@ -338,13 +344,10 @@ export class NotificationProviderModalComponent {
       const provider = untracked(() => this.editingProvider());
       const initialType = untracked(() => this.initialType());
       untracked(() => {
-        if (provider) {
-          this.modalType.set(provider.type);
-          this.modalModel.set(this.buildModelFromProvider(provider));
-        } else {
-          this.modalType.set(initialType);
-          this.modalModel.set(createDefaultModalModel());
-        }
+        const next = provider ? this.buildModelFromProvider(provider) : createDefaultModalModel();
+        this.modalType.set(provider ? provider.type : initialType);
+        this.modalModel.set(next);
+        this.openSnapshot.set(JSON.stringify(next));
       });
     });
   }
