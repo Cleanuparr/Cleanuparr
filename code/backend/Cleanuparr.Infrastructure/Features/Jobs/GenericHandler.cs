@@ -186,7 +186,11 @@ public abstract class GenericHandler : IHandler
 
         _logger.LogInformation("item marked for removal | {title} | {url}", record.Title, instance.Url);
         await _eventPublisher.PublishAsync(EventType.DownloadMarkedForDeletion, "Download marked for deletion", EventSeverity.Important,
-            data: new { itemName = record.Title, hash = record.DownloadId });
+            configure: e =>
+            {
+                e.ItemTitle = record.Title;
+                e.ItemHash = record.DownloadId;
+            });
     }
     
     protected SearchItem GetRecordSearchItem(InstanceType type, float version, QueueRecord record, bool isPack = false)

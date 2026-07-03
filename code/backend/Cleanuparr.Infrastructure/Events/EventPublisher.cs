@@ -1,5 +1,3 @@
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Events.Interfaces;
@@ -12,7 +10,6 @@ using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Cleanuparr.Persistence.Models.Events;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging;
 
 namespace Cleanuparr.Infrastructure.Events;
@@ -29,7 +26,7 @@ public class EventPublisher : IEventPublisher
     private readonly IDryRunInterceptor _dryRunInterceptor;
 
     public EventPublisher(
-        EventsContext context, 
+        EventsContext context,
         IHubContext<AppHub> appHubContext,
         ILogger<EventPublisher> logger,
         INotificationPublisher notificationPublisher,
@@ -43,19 +40,16 @@ public class EventPublisher : IEventPublisher
     }
 
     /// <summary>
-    /// Generic method for publishing events to database and SignalR clients
+    /// Generic method for publishing events to database and SignalR clients.
+    /// Common context fields are populated here; <paramref name="configure"/> sets event-type-specific typed fields.
     /// </summary>
-    public async Task PublishAsync(EventType eventType, string message, EventSeverity severity, object? data = null, Guid? trackingId = null, Guid? strikeId = null, bool? isDryRun = null)
+    public async Task PublishAsync(EventType eventType, string message, EventSeverity severity, Action<AppEvent>? configure = null, Guid? trackingId = null, Guid? strikeId = null, bool? isDryRun = null)
     {
         AppEvent eventEntity = new()
         {
             EventType = eventType,
             Message = message,
             Severity = severity,
-            Data = data != null ? JsonSerializer.Serialize(data, new JsonSerializerOptions
-            {
-                Converters = { new JsonStringEnumConverter() }
-            }) : null,
             TrackingId = trackingId,
             StrikeId = strikeId,
             JobRunId = ContextProvider.TryGetJobRunId(),
@@ -67,6 +61,8 @@ public class EventPublisher : IEventPublisher
             DownloadClientName = ContextProvider.Get(ContextProvider.Keys.DownloadClientName) as string,
         };
 
+        configure?.Invoke(eventEntity);
+
         eventEntity.IsDryRun = isDryRun ?? await _dryRunInterceptor.IsDryRunEnabled();
 
         _context.Events.Add(eventEntity);
@@ -77,22 +73,20 @@ public class EventPublisher : IEventPublisher
         _logger.LogTrace("Published event: {eventType}", eventType);
     }
 
-    public async Task PublishManualAsync(string message, EventSeverity severity, object? data = null, bool? isDryRun = null)
+    public async Task PublishManualAsync(string message, EventSeverity severity, Action<ManualEvent>? configure = null, bool? isDryRun = null)
     {
         ManualEvent eventEntity = new()
         {
             Message = message,
             Severity = severity,
-            Data = data != null ? JsonSerializer.Serialize(data, new JsonSerializerOptions
-            {
-                Converters = { new JsonStringEnumConverter() }
-            }) : null,
             JobRunId = ContextProvider.TryGetJobRunId(),
             InstanceType = ContextProvider.Get(nameof(InstanceType)) is InstanceType it ? it : null,
             InstanceUrl = (ContextProvider.Get(ContextProvider.Keys.ArrInstanceUrl) as Uri)?.ToString(),
             DownloadClientType = ContextProvider.Get(ContextProvider.Keys.DownloadClientType) is DownloadClientTypeName dct ? dct : null,
             DownloadClientName = ContextProvider.Get(ContextProvider.Keys.DownloadClientName) as string,
         };
+
+        configure?.Invoke(eventEntity);
 
         eventEntity.IsDryRun = isDryRun ?? await _dryRunInterceptor.IsDryRunEnabled();
 
@@ -121,29 +115,17 @@ public class EventPublisher : IEventPublisher
             _ => throw new ArgumentOutOfRangeException(nameof(strikeType), strikeType, null)
         };
 
-        dynamic data;
+        List<string> failedImportReasons = [];
 
         if (strikeType is StrikeType.FailedImport)
         {
             QueueRecord record = ContextProvider.Get<QueueRecord>(nameof(QueueRecord));
-            data = new
-            {
-                hash,
-                itemName,
-                strikeCount,
-                strikeType,
-                failedImportReasons = record.StatusMessages ?? [],
-            };
-        }
-        else
-        {
-            data = new
-            {
-                hash,
-                itemName,
-                strikeCount,
-                strikeType,
-            };
+            failedImportReasons = record.StatusMessages?
+                .Select(m => m.Messages is { Count: > 0 }
+                    ? $"{m.Title}: {string.Join("; ", m.Messages)}"
+                    : m.Title)
+                .Where(s => !string.IsNullOrWhiteSpace(s))
+                .ToList() ?? [];
         }
 
         bool isDryRun = await _dryRunInterceptor.IsDryRunEnabled();
@@ -153,7 +135,13 @@ public class EventPublisher : IEventPublisher
             eventType,
             $"Item '{itemName}' has been struck {strikeCount} times for reason '{strikeType}'",
             EventSeverity.Important,
-            data: data,
+            configure: e =>
+            {
+                e.ItemTitle = itemName;
+                e.ItemHash = hash;
+                e.StrikeCount = strikeCount;
+                e.FailedImportReasons = failedImportReasons;
+            },
             strikeId: strikeId,
             isDryRun: isDryRun);
 
@@ -178,7 +166,13 @@ public class EventPublisher : IEventPublisher
             EventType.QueueItemDeleted,
             $"Deleting item from queue with reason: {deleteReason}",
             EventSeverity.Important,
-            data: new { itemName, hash, removeFromClient, deleteReason });
+            configure: e =>
+            {
+                e.ItemTitle = itemName;
+                e.ItemHash = hash;
+                e.DeleteReason = deleteReason;
+                e.RemoveFromClient = removeFromClient;
+            });
 
         // Send notification (uses ContextProvider internally)
         await _notificationPublisher.NotifyQueueItemDeleted(removeFromClient, deleteReason);
@@ -198,7 +192,15 @@ public class EventPublisher : IEventPublisher
             EventType.DownloadCleaned,
             $"Cleaned item from download client with reason: {reason}",
             EventSeverity.Important,
-            data: new { itemName, hash, categoryName, ratio, seedingTime = seedingTime.TotalHours, reason });
+            configure: e =>
+            {
+                e.ItemTitle = itemName;
+                e.ItemHash = hash;
+                e.CleanedCategory = categoryName;
+                e.SeedRatio = ratio;
+                e.SeedingTimeHours = seedingTime.TotalHours;
+                e.CleanReason = reason;
+            });
 
         // Send notification (uses ContextProvider internally)
         await _notificationPublisher.NotifyDownloadCleaned(ratio, seedingTime, categoryName, reason);
@@ -218,7 +220,14 @@ public class EventPublisher : IEventPublisher
             EventType.CategoryChanged,
             isTag ? $"Tag '{newCategory}' added to download" : $"Category changed from '{oldCategory}' to '{newCategory}'",
             EventSeverity.Information,
-            data: new { itemName, hash, oldCategory, newCategory, isTag });
+            configure: e =>
+            {
+                e.ItemTitle = itemName;
+                e.ItemHash = hash;
+                e.OldCategory = oldCategory;
+                e.NewCategory = newCategory;
+                e.IsCategoryTag = isTag;
+            });
 
         // Send notification (uses ContextProvider internally)
         await _notificationPublisher.NotifyCategoryChanged(oldCategory, newCategory, isTag);
@@ -232,7 +241,12 @@ public class EventPublisher : IEventPublisher
         await PublishManualAsync(
             "Download keeps coming back after deletion\nTo prevent further issues, please consult the prerequisites: https://cleanuparr.github.io/Cleanuparr/docs/installation/",
             EventSeverity.Important,
-            data: new { itemName, hash, strikeCount }
+            configure: e =>
+            {
+                e.ItemTitle = itemName;
+                e.ItemHash = hash;
+                e.StrikeCount = strikeCount;
+            }
         );
     }
 
@@ -256,31 +270,15 @@ public class EventPublisher : IEventPublisher
             DownloadClientType = ContextProvider.Get(ContextProvider.Keys.DownloadClientType) is DownloadClientTypeName dct ? dct : null,
             DownloadClientName = ContextProvider.Get(ContextProvider.Keys.DownloadClientName) as string,
             CycleId = cycleId,
+            ItemTitle = itemTitle,
+            SearchType = searchType,
+            SearchReason = searchReason,
         };
 
         eventEntity.IsDryRun = await _dryRunInterceptor.IsDryRunEnabled();
 
-        await using IDbContextTransaction transaction = await _context.Database.BeginTransactionAsync();
-
-        try
-        {
-            _context.Events.Add(eventEntity);
-            _context.SearchEventData.Add(new SearchEventData
-            {
-                AppEventId = eventEntity.Id,
-                ItemTitle = itemTitle,
-                SearchType = searchType,
-                SearchReason = searchReason,
-            });
-
-            await _context.SaveChangesAsync();
-            await transaction.CommitAsync();
-        }
-        catch
-        {
-            await transaction.RollbackAsync();
-            throw;
-        }
+        _context.Events.Add(eventEntity);
+        await _context.SaveChangesAsync();
 
         await NotifyClientsAsync(eventEntity);
         await _notificationPublisher.NotifySearchTriggered(itemTitle, searchType, searchReason);
@@ -294,7 +292,6 @@ public class EventPublisher : IEventPublisher
     public async Task PublishSearchCompleted(Guid eventId, SearchCommandStatus status, InstanceType instanceType, string instanceUrl, List<string>? grabbedItems = null)
     {
         var existingEvent = await _context.Events
-            .Include(e => e.SearchEventData)
             .FirstOrDefaultAsync(e => e.Id == eventId);
 
         if (existingEvent is null)
@@ -306,17 +303,17 @@ public class EventPublisher : IEventPublisher
         existingEvent.SearchStatus = status;
         existingEvent.CompletedAt = DateTimeOffset.UtcNow;
 
-        if (grabbedItems is { Count: > 0 } && existingEvent.SearchEventData is not null)
+        if (grabbedItems is { Count: > 0 })
         {
-            existingEvent.SearchEventData.GrabbedItems = grabbedItems;
+            existingEvent.GrabbedItems = grabbedItems;
         }
 
         await _context.SaveChangesAsync();
         await NotifyClientsAsync(existingEvent);
 
-        if (status is SearchCommandStatus.Completed && grabbedItems is { Count: > 0 } && existingEvent.SearchEventData is not null)
+        if (status is SearchCommandStatus.Completed && grabbedItems is { Count: > 0 })
         {
-            await _notificationPublisher.NotifySearchItemGrabbed(existingEvent.SearchEventData.ItemTitle, grabbedItems, instanceType, instanceUrl);
+            await _notificationPublisher.NotifySearchItemGrabbed(existingEvent.ItemTitle ?? string.Empty, grabbedItems, instanceType, instanceUrl);
         }
     }
 
@@ -328,7 +325,11 @@ public class EventPublisher : IEventPublisher
         await PublishManualAsync(
             "Replacement search was not triggered after removal\nPlease trigger a manual search if needed",
             EventSeverity.Warning,
-            data: new { itemName, hash }
+            configure: e =>
+            {
+                e.ItemTitle = itemName;
+                e.ItemHash = hash;
+            }
         );
     }
 
@@ -344,7 +345,7 @@ public class EventPublisher : IEventPublisher
             _logger.LogError(ex, "Failed to send event {eventId} to SignalR clients", appEventEntity.Id);
         }
     }
-    
+
     private async Task NotifyClientsAsync(ManualEvent appEventEntity)
     {
         try
@@ -378,4 +379,4 @@ public class EventPublisher : IEventPublisher
             _logger.LogError(ex, "Failed to send strike to SignalR clients");
         }
     }
-} 
+}

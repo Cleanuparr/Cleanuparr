@@ -1,12 +1,13 @@
 ﻿using Cleanuparr.Domain.Enums;
+using Cleanuparr.Persistence.Models.Events;
 
 namespace Cleanuparr.Infrastructure.Events.Interfaces;
 
 public interface IEventPublisher
 {
-    Task PublishAsync(EventType eventType, string message, EventSeverity severity, object? data = null, Guid? trackingId = null, Guid? strikeId = null, bool? isDryRun = null);
+    Task PublishAsync(EventType eventType, string message, EventSeverity severity, Action<AppEvent>? configure = null, Guid? trackingId = null, Guid? strikeId = null, bool? isDryRun = null);
 
-    Task PublishManualAsync(string message, EventSeverity severity, object? data = null, bool? isDryRun = null);
+    Task PublishManualAsync(string message, EventSeverity severity, Action<ManualEvent>? configure = null, bool? isDryRun = null);
 
     Task PublishStrike(StrikeType strikeType, int strikeCount, string hash, string itemName, Guid? strikeId = null);
 

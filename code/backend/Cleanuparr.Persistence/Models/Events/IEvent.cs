@@ -3,11 +3,6 @@
 public interface IEvent
 {
     Guid Id { get; set; }
-    
+
     DateTimeOffset Timestamp { get; set; }
-    
-    /// <summary>
-    /// JSON data associated with the event
-    /// </summary>
-    string? Data { get; set; }
 }

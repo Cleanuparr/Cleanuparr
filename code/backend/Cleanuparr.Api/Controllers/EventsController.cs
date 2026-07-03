@@ -88,7 +88,7 @@ public class EventsController : ControllerBase
             string pattern = EventsContext.GetLikePattern(search);
             query = query.Where(e =>
                 EF.Functions.Like(e.Message, pattern) ||
-                EF.Functions.Like(e.Data, pattern) ||
+                (e.ItemTitle != null && EF.Functions.Like(e.ItemTitle, pattern)) ||
                 EF.Functions.Like(e.TrackingId.ToString(), pattern) ||
                 EF.Functions.Like(e.JobRunId.ToString(), pattern)
             );

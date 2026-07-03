@@ -88,23 +88,25 @@ public class EventPublisherTests : IDisposable
     }
 
     [Fact]
-    public async Task PublishAsync_WithData_SerializesDataToJson()
+    public async Task PublishAsync_WithConfigure_PersistsTypedFields()
     {
         // Arrange
         var eventType = EventType.DownloadCleaned;
         var message = "Download cleaned";
         var severity = EventSeverity.Information;
-        var data = new { Name = "TestDownload", Hash = "abc123" };
 
         // Act
-        await _publisher.PublishAsync(eventType, message, severity, data);
+        await _publisher.PublishAsync(eventType, message, severity, configure: e =>
+        {
+            e.ItemTitle = "TestDownload";
+            e.ItemHash = "abc123";
+        });
 
         // Assert
         var savedEvent = await _context.Events.FirstOrDefaultAsync();
         savedEvent.ShouldNotBeNull();
-        savedEvent.Data.ShouldNotBeNull();
-        savedEvent.Data.ShouldContain("TestDownload");
-        savedEvent.Data.ShouldContain("abc123");
+        savedEvent.ItemTitle.ShouldBe("TestDownload");
+        savedEvent.ItemHash.ShouldBe("abc123");
     }
 
     [Fact]
@@ -166,7 +168,7 @@ public class EventPublisherTests : IDisposable
     }
 
     [Fact]
-    public async Task PublishAsync_NullData_DoesNotSerialize()
+    public async Task PublishAsync_NullConfigure_LeavesTypedFieldsUnset()
     {
         // Arrange
         var eventType = EventType.DownloadCleaned;
@@ -174,12 +176,13 @@ public class EventPublisherTests : IDisposable
         var severity = EventSeverity.Information;
 
         // Act
-        await _publisher.PublishAsync(eventType, message, severity, data: null);
+        await _publisher.PublishAsync(eventType, message, severity, configure: null);
 
         // Assert
         var savedEvent = await _context.Events.FirstOrDefaultAsync();
         savedEvent.ShouldNotBeNull();
-        savedEvent.Data.ShouldBeNull();
+        savedEvent.ItemTitle.ShouldBeNull();
+        savedEvent.ItemHash.ShouldBeNull();
     }
 
     #endregion
@@ -204,22 +207,24 @@ public class EventPublisherTests : IDisposable
     }
 
     [Fact]
-    public async Task PublishManualAsync_WithData_SerializesDataToJson()
+    public async Task PublishManualAsync_WithConfigure_PersistsTypedFields()
     {
         // Arrange
         var message = "Manual event";
         var severity = EventSeverity.Important;
-        var data = new { ItemName = "TestItem", Count = 5 };
 
         // Act
-        await _publisher.PublishManualAsync(message, severity, data);
+        await _publisher.PublishManualAsync(message, severity, configure: e =>
+        {
+            e.ItemTitle = "TestItem";
+            e.StrikeCount = 5;
+        });
 
         // Assert
         var savedEvent = await _context.ManualEvents.FirstOrDefaultAsync();
         savedEvent.ShouldNotBeNull();
-        savedEvent.Data.ShouldNotBeNull();
-        savedEvent.Data.ShouldContain("TestItem");
-        savedEvent.Data.ShouldContain("5");
+        savedEvent.ItemTitle.ShouldBe("TestItem");
+        savedEvent.StrikeCount.ShouldBe(5);
     }
 
     [Fact]
@@ -344,54 +349,6 @@ public class EventPublisherTests : IDisposable
 
     #endregion
 
-    #region Data Serialization Tests
-
-    [Fact]
-    public async Task PublishAsync_SerializesEnumsAsStrings()
-    {
-        // Arrange
-        var eventType = EventType.QueueItemDeleted;
-        var message = "Test";
-        var severity = EventSeverity.Important;
-        var data = new { Reason = DeleteReason.Stalled };
-
-        // Act
-        await _publisher.PublishAsync(eventType, message, severity, data);
-
-        // Assert
-        var savedEvent = await _context.Events.FirstOrDefaultAsync();
-        savedEvent.ShouldNotBeNull();
-        savedEvent.Data.ShouldNotBeNull();
-        savedEvent.Data.ShouldContain("Stalled");
-    }
-
-    [Fact]
-    public async Task PublishAsync_HandlesComplexData()
-    {
-        // Arrange
-        var eventType = EventType.DownloadCleaned;
-        var message = "Test";
-        var severity = EventSeverity.Information;
-        var data = new
-        {
-            Items = new[] { "item1", "item2" },
-            Nested = new { Value = 123 },
-            NullableValue = (string?)null
-        };
-
-        // Act
-        await _publisher.PublishAsync(eventType, message, severity, data);
-
-        // Assert
-        var savedEvent = await _context.Events.FirstOrDefaultAsync();
-        savedEvent.ShouldNotBeNull();
-        savedEvent.Data.ShouldNotBeNull();
-        savedEvent.Data.ShouldContain("item1");
-        savedEvent.Data.ShouldContain("123");
-    }
-
-    #endregion
-
     #region PublishQueueItemDeleted Tests
 
     [Fact]
@@ -409,10 +366,25 @@ public class EventPublisherTests : IDisposable
         savedEvent.ShouldNotBeNull();
         savedEvent.EventType.ShouldBe(EventType.QueueItemDeleted);
         savedEvent.Severity.ShouldBe(EventSeverity.Important);
-        savedEvent.Data.ShouldNotBeNull();
-        savedEvent.Data.ShouldContain("Test Download");
-        savedEvent.Data.ShouldContain("abc123");
-        savedEvent.Data.ShouldContain("Stalled");
+        savedEvent.ItemTitle.ShouldBe("Test Download");
+        savedEvent.ItemHash.ShouldBe("abc123");
+        savedEvent.DeleteReason.ShouldBe(DeleteReason.Stalled);
+    }
+
+    [Fact]
+    public async Task PublishQueueItemDeleted_WithAllFilesBlocked_SetsDeleteReason()
+    {
+        // Arrange
+        ContextProvider.Set(ContextProvider.Keys.ItemName, "Malware Download");
+        ContextProvider.Set(ContextProvider.Keys.Hash, "mal123");
+
+        // Act
+        await _publisher.PublishQueueItemDeleted(removeFromClient: true, DeleteReason.AllFilesBlocked);
+
+        // Assert
+        var savedEvent = await _context.Events.FirstOrDefaultAsync();
+        savedEvent.ShouldNotBeNull();
+        savedEvent.DeleteReason.ShouldBe(DeleteReason.AllFilesBlocked);
     }
 
     [Fact]
@@ -452,11 +424,12 @@ public class EventPublisherTests : IDisposable
         savedEvent.ShouldNotBeNull();
         savedEvent.EventType.ShouldBe(EventType.DownloadCleaned);
         savedEvent.Severity.ShouldBe(EventSeverity.Important);
-        savedEvent.Data.ShouldNotBeNull();
-        savedEvent.Data.ShouldContain("Cleaned Download");
-        savedEvent.Data.ShouldContain("def456");
-        savedEvent.Data.ShouldContain("movies");
-        savedEvent.Data.ShouldContain("MaxSeedTimeReached");
+        savedEvent.ItemTitle.ShouldBe("Cleaned Download");
+        savedEvent.ItemHash.ShouldBe("def456");
+        savedEvent.CleanedCategory.ShouldBe("movies");
+        savedEvent.SeedRatio.ShouldBe(2.5);
+        savedEvent.SeedingTimeHours.ShouldBe(48.0);
+        savedEvent.CleanReason.ShouldBe(CleanReason.MaxSeedTimeReached);
     }
 
     [Fact]
@@ -497,9 +470,8 @@ public class EventPublisherTests : IDisposable
         savedEvent.ShouldNotBeNull();
         savedEvent.Severity.ShouldBe(EventSeverity.Warning);
         savedEvent.Message.ShouldContain("Replacement search was not triggered");
-        savedEvent.Data.ShouldNotBeNull();
-        savedEvent.Data.ShouldContain("Test Item");
-        savedEvent.Data.ShouldContain("abc123");
+        savedEvent.ItemTitle.ShouldBe("Test Item");
+        savedEvent.ItemHash.ShouldBe("abc123");
     }
 
     #endregion
@@ -521,9 +493,9 @@ public class EventPublisherTests : IDisposable
         savedEvent.ShouldNotBeNull();
         savedEvent.Severity.ShouldBe(EventSeverity.Important);
         savedEvent.Message.ShouldContain("keeps coming back");
-        savedEvent.Data.ShouldNotBeNull();
-        savedEvent.Data.ShouldContain("Recurring Item");
-        savedEvent.Data.ShouldContain("hash123");
+        savedEvent.ItemTitle.ShouldBe("Recurring Item");
+        savedEvent.ItemHash.ShouldBe("hash123");
+        savedEvent.StrikeCount.ShouldBe(5);
     }
 
     #endregion
@@ -635,7 +607,7 @@ public class EventPublisherTests : IDisposable
     }
 
     [Fact]
-    public async Task PublishSearchTriggered_CreatesSearchEventData()
+    public async Task PublishSearchTriggered_SetsSearchFields()
     {
         // Act
         await _publisher.PublishSearchTriggered("Series A", SeekerSearchType.Replacement, SeekerSearchReason.Replacement);
@@ -643,12 +615,9 @@ public class EventPublisherTests : IDisposable
         // Assert
         var savedEvent = await _context.Events.FirstOrDefaultAsync();
         savedEvent.ShouldNotBeNull();
-
-        var searchData = await _context.SearchEventData.FirstOrDefaultAsync(s => s.AppEventId == savedEvent.Id);
-        searchData.ShouldNotBeNull();
-        searchData.ItemTitle.ShouldBe("Series A");
-        searchData.SearchType.ShouldBe(SeekerSearchType.Replacement);
-        searchData.SearchReason.ShouldBe(SeekerSearchReason.Replacement);
+        savedEvent.ItemTitle.ShouldBe("Series A");
+        savedEvent.SearchType.ShouldBe(SeekerSearchType.Replacement);
+        savedEvent.SearchReason.ShouldBe(SeekerSearchReason.Replacement);
     }
 
     [Fact]
@@ -722,7 +691,7 @@ public class EventPublisherTests : IDisposable
     }
 
     [Fact]
-    public async Task PublishSearchCompleted_UpdatesGrabbedItemsOnSearchEventData()
+    public async Task PublishSearchCompleted_UpdatesGrabbedItems()
     {
         // Arrange
         Guid eventId = await _publisher.PublishSearchTriggered("Movie A", SeekerSearchType.Proactive, SeekerSearchReason.Missing);
@@ -733,13 +702,13 @@ public class EventPublisherTests : IDisposable
         await _publisher.PublishSearchCompleted(eventId, SearchCommandStatus.Completed, InstanceType.Radarr, "http://localhost:7878", grabbedItems);
 
         // Assert
-        var searchData = await _context.SearchEventData.FirstOrDefaultAsync(s => s.AppEventId == eventId);
-        searchData.ShouldNotBeNull();
-        searchData.GrabbedItems.ShouldContain("Movie A (2024)");
+        var updatedEvent = await _context.Events.FindAsync(eventId);
+        updatedEvent.ShouldNotBeNull();
+        updatedEvent.GrabbedItems.ShouldContain("Movie A (2024)");
     }
 
     [Fact]
-    public async Task PublishSearchCompleted_WithNullGrabbedItems_DoesNotModifySearchEventData()
+    public async Task PublishSearchCompleted_WithNullGrabbedItems_LeavesGrabbedItemsEmpty()
     {
         // Arrange
         Guid eventId = await _publisher.PublishSearchTriggered("Movie A", SeekerSearchType.Proactive, SeekerSearchReason.Missing);
@@ -748,9 +717,9 @@ public class EventPublisherTests : IDisposable
         await _publisher.PublishSearchCompleted(eventId, SearchCommandStatus.Completed, InstanceType.Radarr, "http://localhost:7878");
 
         // Assert
-        var searchData = await _context.SearchEventData.FirstOrDefaultAsync(s => s.AppEventId == eventId);
-        searchData.ShouldNotBeNull();
-        searchData.GrabbedItems.ShouldBeEmpty();
+        var updatedEvent = await _context.Events.FindAsync(eventId);
+        updatedEvent.ShouldNotBeNull();
+        updatedEvent.GrabbedItems.ShouldBeEmpty();
     }
 
     [Fact]

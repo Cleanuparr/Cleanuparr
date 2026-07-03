@@ -197,7 +197,6 @@ public class RecentEventDto
     public string EventType { get; set; } = string.Empty;
     public string Message { get; set; } = string.Empty;
     public string Severity { get; set; } = string.Empty;
-    public string? Data { get; set; }
 }
 
 /// <summary>

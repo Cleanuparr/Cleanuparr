@@ -23,8 +23,6 @@ public class EventsContext : DbContext
 
     public DbSet<JobRun> JobRuns { get; set; }
 
-    public DbSet<SearchEventData> SearchEventData { get; set; }
-    
     public EventsContext()
     {
     }
@@ -68,14 +66,6 @@ public class EventsContext : DbContext
                 .WithMany()
                 .HasForeignKey(e => e.StrikeId)
                 .OnDelete(DeleteBehavior.SetNull);
-        });
-
-        modelBuilder.Entity<SearchEventData>(entity =>
-        {
-            entity.HasOne(s => s.AppEvent)
-                .WithOne(e => e.SearchEventData)
-                .HasForeignKey<SearchEventData>(s => s.AppEventId)
-                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<Strike>(entity =>

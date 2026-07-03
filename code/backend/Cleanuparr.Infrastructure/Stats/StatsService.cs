@@ -84,7 +84,6 @@ public class StatsService : IStatsService
                     EventType = e.EventType.ToString(),
                     Message = e.Message,
                     Severity = e.Severity.ToString(),
-                    Data = e.Data
                 })
                 .ToListAsync();
         }

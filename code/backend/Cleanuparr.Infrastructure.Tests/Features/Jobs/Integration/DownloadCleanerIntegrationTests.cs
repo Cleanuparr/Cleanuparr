@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Cleanuparr.Domain.Entities;
 using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Enums;
@@ -240,16 +239,12 @@ public class DownloadCleanerIntegrationTests : IDisposable
         cleanedEvent.SearchStatus.ShouldBeNull();
         cleanedEvent.CompletedAt.ShouldBeNull();
         cleanedEvent.CycleId.ShouldBeNull();
-        cleanedEvent.Data.ShouldNotBeNull();
-        using (var data = JsonDocument.Parse(cleanedEvent.Data!))
-        {
-            data.RootElement.GetProperty("itemName").GetString().ShouldBe("Completed.Movie.2024");
-            data.RootElement.GetProperty("hash").GetString().ShouldBe("cleaned_hash_abc");
-            data.RootElement.GetProperty("categoryName").GetString().ShouldBe("completed");
-            data.RootElement.GetProperty("ratio").GetDouble().ShouldBe(1.5);
-            data.RootElement.GetProperty("seedingTime").GetDouble().ShouldBe(24.0);
-            data.RootElement.GetProperty("reason").GetString().ShouldBe("MaxRatioReached");
-        }
+        cleanedEvent.ItemTitle.ShouldBe("Completed.Movie.2024");
+        cleanedEvent.ItemHash.ShouldBe("cleaned_hash_abc");
+        cleanedEvent.CleanedCategory.ShouldBe("completed");
+        cleanedEvent.SeedRatio.ShouldBe(1.5);
+        cleanedEvent.SeedingTimeHours.ShouldBe(24.0);
+        cleanedEvent.CleanReason.ShouldBe(CleanReason.MaxRatioReached);
 
         // Assert: Notification sent
         await _fixture.NotificationPublisher.Received(1)
@@ -323,15 +318,11 @@ public class DownloadCleanerIntegrationTests : IDisposable
         categoryEvent.SearchStatus.ShouldBeNull();
         categoryEvent.CompletedAt.ShouldBeNull();
         categoryEvent.CycleId.ShouldBeNull();
-        categoryEvent.Data.ShouldNotBeNull();
-        using (var data = JsonDocument.Parse(categoryEvent.Data!))
-        {
-            data.RootElement.GetProperty("itemName").GetString().ShouldBe("NoLinks.Movie.2024");
-            data.RootElement.GetProperty("hash").GetString().ShouldBe("unlinked_hash_xyz");
-            data.RootElement.GetProperty("oldCategory").GetString().ShouldBe("completed");
-            data.RootElement.GetProperty("newCategory").GetString().ShouldBe("unlinked");
-            data.RootElement.GetProperty("isTag").GetBoolean().ShouldBe(false);
-        }
+        categoryEvent.ItemTitle.ShouldBe("NoLinks.Movie.2024");
+        categoryEvent.ItemHash.ShouldBe("unlinked_hash_xyz");
+        categoryEvent.OldCategory.ShouldBe("completed");
+        categoryEvent.NewCategory.ShouldBe("unlinked");
+        categoryEvent.IsCategoryTag.ShouldBe(false);
 
         // Assert: Notification sent
         await _fixture.NotificationPublisher.Received(1)
