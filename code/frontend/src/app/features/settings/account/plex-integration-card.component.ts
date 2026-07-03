@@ -30,13 +30,21 @@ export class PlexIntegrationCardComponent {
   readonly plexUnlinking = signal(false);
 
   startPlexLink(): void {
+    // Open the popup synchronously on the click so popup blockers allow it, then
+    // point it at the auth URL once the PIN request resolves.
+    const authWindow = window.open('', '_blank');
     this.plexLinking.set(true);
     this.api.linkPlex().subscribe({
       next: (result) => {
-        window.open(result.authUrl, '_blank');
+        if (authWindow) {
+          authWindow.location.href = result.authUrl;
+        } else {
+          window.open(result.authUrl, '_blank');
+        }
         this.pollPlexLink(result.pinId);
       },
       error: () => {
+        authWindow?.close();
         this.toast.error('Failed to start Plex linking');
         this.plexLinking.set(false);
       },

@@ -184,16 +184,24 @@ export class SetupComponent {
 
   // Step 3: Plex linking
   startPlexLink(): void {
+    // Open the popup synchronously on the click so popup blockers allow it, then
+    // point it at the auth URL once the PIN request resolves.
+    const authWindow = window.open('', '_blank');
     this.plexLinking.set(true);
     this.error.set('');
 
     this.auth.requestSetupPlexPin().subscribe({
       next: (result) => {
         this.plexPinId.set(result.pinId);
-        window.open(result.authUrl, '_blank');
+        if (authWindow) {
+          authWindow.location.href = result.authUrl;
+        } else {
+          window.open(result.authUrl, '_blank');
+        }
         this.pollPlexPin();
       },
       error: (err) => {
+        authWindow?.close();
         this.error.set(err.message || 'Failed to start Plex link');
         this.plexLinking.set(false);
       },
