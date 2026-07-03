@@ -40,7 +40,7 @@
   </div>
   <div modal-footer>
     <app-button variant="secondary" (clicked)="visible.set(false)">Cancel</app-button>
-    <app-button variant="primary" [disabled]="form().invalid()" (clicked)="save()">
+    <app-button variant="primary" [loading]="saving()" [disabled]="form().invalid()" (clicked)="save()">
       {{ rule() ? 'Update' : 'Create' }}
     </app-button>
   </div>
