@@ -154,7 +154,8 @@ export class EventsComponent implements OnInit, OnDestroy {
   );
 
   isExpandable(event: AppEvent): boolean {
-    return !!(event.data || event.trackingId || event.instanceType || event.downloadClientType || event.jobRunId);
+    return this.eventDetails(event).length > 0
+      || !!(event.trackingId || event.instanceType || event.downloadClientType || event.jobRunId);
   }
 
   toggleExpand(eventId: string): void {
@@ -199,9 +200,9 @@ export class EventsComponent implements OnInit, OnDestroy {
         ext = 'json';
         break;
       case 'csv': {
-        const header = 'Timestamp,Severity,EventType,Message,Data,TrackingId,JobRunId,InstanceType,InstanceUrl,DownloadClientType,DownloadClientName';
+        const header = 'Timestamp,Severity,EventType,Message,Item,Hash,TrackingId,JobRunId,InstanceType,InstanceUrl,DownloadClientType,DownloadClientName';
         const rows = events.map((e) =>
-          [e.timestamp, e.severity, e.eventType, `"${(e.message ?? '').replace(/"/g, '""')}"`, `"${(e.data ?? '').replace(/"/g, '""')}"`, e.trackingId ?? '', e.jobRunId ?? '', e.instanceType ?? '', e.instanceUrl ?? '', e.downloadClientType ?? '', e.downloadClientName ?? ''].join(',')
+          [e.timestamp, e.severity, e.eventType, `"${(e.message ?? '').replace(/"/g, '""')}"`, `"${(e.itemTitle ?? '').replace(/"/g, '""')}"`, e.itemHash ?? '', e.trackingId ?? '', e.jobRunId ?? '', e.instanceType ?? '', e.instanceUrl ?? '', e.downloadClientType ?? '', e.downloadClientName ?? ''].join(',')
         );
         content = [header, ...rows].join('\n');
         mimeType = 'text/csv';
@@ -249,22 +250,39 @@ export class EventsComponent implements OnInit, OnDestroy {
     return eventType.replace(/([A-Z])/g, ' $1').trim();
   }
 
-  parseEventData(data?: string): Record<string, unknown> | null {
-    if (!data) return null;
-    try {
-      return JSON.parse(data);
-    } catch {
-      return null;
-    }
-  }
+  eventDetails(event: AppEvent): { label: string; value: string }[] {
+    const details: { label: string; value: string }[] = [];
+    const add = (label: string, value: unknown): void => {
+      if (value === null || value === undefined || value === '') {
+        return;
+      }
+      if (Array.isArray(value)) {
+        if (value.length === 0) {
+          return;
+        }
+        details.push({ label, value: value.join(', ') });
+        return;
+      }
+      details.push({ label, value: String(value) });
+    };
 
-  formatValue(value: unknown): string {
-    if (value !== null && typeof value === 'object') return JSON.stringify(value);
-    return String(value ?? '');
-  }
-
-  objectKeys(obj: Record<string, unknown>): string[] {
-    return Object.keys(obj);
+    add('Item', event.itemTitle);
+    add('Hash', event.itemHash);
+    add('Strike count', event.strikeCount);
+    add('Failed import reasons', event.failedImportReasons);
+    add('Delete reason', event.deleteReason);
+    add('Removed from client', event.removeFromClient);
+    add('Clean reason', event.cleanReason);
+    add('Category', event.cleanedCategory);
+    add('Seed ratio', event.seedRatio);
+    add('Seeding time (h)', event.seedingTimeHours);
+    add('Old category', event.oldCategory);
+    add('New category', event.newCategory);
+    add('Tag', event.isCategoryTag);
+    add('Search type', event.searchType);
+    add('Search reason', event.searchReason);
+    add('Grabbed items', event.grabbedItems);
+    return details;
   }
 
 }

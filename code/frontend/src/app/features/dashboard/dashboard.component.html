@@ -14,11 +14,20 @@
       </app-badge>
     </div>
     <p class="manual-event__message" [innerHTML]="processManualEventMessage(event.message)"></p>
-    @if (event.data) {
-      <details class="manual-event__details">
-        <summary class="manual-event__details-toggle">Event Details</summary>
-        <pre class="manual-event__details-content">{{ parseEventData(event.data) | json }}</pre>
-      </details>
+    @if (manualEventDetails(event); as details) {
+      @if (details.length > 0) {
+        <details class="manual-event__details">
+          <summary class="manual-event__details-toggle">Event Details</summary>
+          <div class="manual-event__details-content">
+            @for (detail of details; track detail.label) {
+              <div class="manual-event__details-row">
+                <span class="manual-event__details-key">{{ detail.label }}</span>
+                <span class="manual-event__details-value">{{ detail.value }}</span>
+              </div>
+            }
+          </div>
+        </details>
+      }
     }
     <div class="manual-event__meta">
       <span class="manual-event__time">{{ event.timestamp | date:'short' }}</span>

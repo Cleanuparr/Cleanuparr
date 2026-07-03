@@ -2,7 +2,7 @@ import { Component, ChangeDetectionStrategy, inject, computed, signal } from '@a
 import { rxResource } from '@angular/core/rxjs-interop';
 import type { Observable } from 'rxjs';
 import { Router, RouterLink } from '@angular/router';
-import { DatePipe, JsonPipe } from '@angular/common';
+import { DatePipe } from '@angular/common';
 import { NgIcon } from '@ng-icons/core';
 import { CdkDragDrop, CdkDropList, CdkDrag, CdkDragHandle, moveItemInArray } from '@angular/cdk/drag-drop';
 import { PageHeaderComponent } from '@layout/page-header/page-header.component';
@@ -27,7 +27,6 @@ type DashboardRowId = typeof DEFAULT_ROW_ORDER[number];
   imports: [
     RouterLink,
     DatePipe,
-    JsonPipe,
     NgIcon,
     PageHeaderComponent,
     CardComponent,
@@ -277,13 +276,8 @@ export class DashboardComponent {
     return eventType.replace(/([A-Z])/g, ' $1').trim();
   }
 
-  getDownloadName(event: { data?: string }): string | null {
-    if (!event.data) return null;
-    try {
-      return JSON.parse(event.data)?.itemName || null;
-    } catch {
-      return null;
-    }
+  getDownloadName(event: { itemTitle?: string }): string | null {
+    return event.itemTitle || null;
   }
 
   truncate(text: string, max = 80): string {
@@ -354,13 +348,18 @@ export class DashboardComponent {
     return processed;
   }
 
-  parseEventData(data: string | undefined): unknown {
-    if (!data) return null;
-    try {
-      return JSON.parse(data);
-    } catch {
-      return null;
+  manualEventDetails(event: ManualEvent): { label: string; value: string }[] {
+    const details: { label: string; value: string }[] = [];
+    if (event.itemTitle) {
+      details.push({ label: 'Item', value: event.itemTitle });
     }
+    if (event.itemHash) {
+      details.push({ label: 'Hash', value: event.itemHash });
+    }
+    if (event.strikeCount !== null && event.strikeCount !== undefined) {
+      details.push({ label: 'Strike count', value: String(event.strikeCount) });
+    }
+    return details;
   }
 
   navigateTo(path: string): void {
