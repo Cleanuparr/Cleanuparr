@@ -708,4 +708,33 @@ public class UTorrentServiceDCTests : IClassFixture<UTorrentServiceFixture>
             await _fixture.ClientWrapper.Received(1).SetTorrentLabelAsync("hash1", "unlinked");
         }
     }
+
+    public class GetClaimedPaths_Tests : UTorrentServiceDCTests
+    {
+        public GetClaimedPaths_Tests(UTorrentServiceFixture fixture) : base(fixture)
+        {
+        }
+
+        [Fact]
+        public async Task DerivesRootFromFetchedFiles_SharedFolderDedupes()
+        {
+            var sut = _fixture.CreateSut();
+            var wrapper = new UTorrentItemWrapper(
+                new UTorrentItem { Hash = "hash1", Name = "Renamed Display", SavePath = "/downloads" },
+                new UTorrentProperties { Hash = "hash1", Pex = 1, Trackers = "" });
+            _fixture.ClientWrapper
+                .GetTorrentFilesAsync("hash1")
+                .Returns(new List<UTorrentFile>
+                {
+                    new UTorrentFile { Name = "show/file1.mkv", Priority = 1, Index = 0, Size = 1000, Downloaded = 1000 },
+                    new UTorrentFile { Name = "show/file2.mkv", Priority = 1, Index = 1, Size = 1000, Downloaded = 1000 }
+                });
+
+            IReadOnlyList<string> claimed = await sut.GetClaimedPathsAsync(new Domain.Entities.ITorrentItemWrapper[] { wrapper });
+
+            claimed.ShouldContain("/downloads/show");
+            claimed.Count(p => p == "/downloads/show").ShouldBe(1);
+            claimed.ShouldNotContain("/downloads/Renamed Display");
+        }
+    }
 }

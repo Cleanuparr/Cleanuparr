@@ -1001,4 +1001,36 @@ public class TransmissionServiceDCTests : IClassFixture<TransmissionServiceFixtu
                 .TorrentSetLocationAsync(Arg.Is<long[]>(ids => ids.Contains(123)), expectedNewLocation, true);
         }
     }
+
+    public class GetClaimedPaths_Tests : TransmissionServiceDCTests
+    {
+        public GetClaimedPaths_Tests(TransmissionServiceFixture fixture) : base(fixture)
+        {
+        }
+
+        [Fact]
+        public async Task DerivesRootFromFileList_SharedFolderDedupes()
+        {
+            // Transmission carries the files in the list response; the root is derived from them,
+            // not the display name.
+            var sut = _fixture.CreateSut();
+            var wrapper = new TransmissionItemWrapper(new TorrentInfo
+            {
+                HashString = "hash1",
+                Name = "Renamed Display",
+                DownloadDir = "/downloads",
+                Files = new[]
+                {
+                    new TransmissionTorrentFiles { Name = "show/file1.mkv" },
+                    new TransmissionTorrentFiles { Name = "show/file2.mkv" }
+                }
+            });
+
+            IReadOnlyList<string> claimed = await sut.GetClaimedPathsAsync(new Domain.Entities.ITorrentItemWrapper[] { wrapper });
+
+            claimed.ShouldContain("/downloads/show");
+            claimed.Count(p => p == "/downloads/show").ShouldBe(1);
+            claimed.ShouldNotContain("/downloads/Renamed Display");
+        }
+    }
 }

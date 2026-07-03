@@ -1385,5 +1385,29 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
 
             claimed.ShouldContain("/downloads/some-show");
         }
+
+        [Fact]
+        public async Task MultiFileSharingFolder_ClaimsSingleRoot()
+        {
+            // both files live under one folder → one claimed entry, not the deep file paths.
+            var sut = _fixture.CreateSut();
+            var wrapper = new QBitItemWrapper(
+                new TorrentInfo { Hash = "hash1", Name = "show", SavePath = "/downloads" },
+                Array.Empty<TorrentTracker>(),
+                false);
+            _fixture.ClientWrapper
+                .GetTorrentContentsAsync("hash1")
+                .Returns(new[]
+                {
+                    new TorrentContent { Index = 0, Name = "show/file1.mkv", Priority = TorrentContentPriority.Normal },
+                    new TorrentContent { Index = 1, Name = "show/file2.mkv", Priority = TorrentContentPriority.Normal }
+                });
+
+            IReadOnlyList<string> claimed = await sut.GetClaimedPathsAsync(new Domain.Entities.ITorrentItemWrapper[] { wrapper });
+
+            claimed.ShouldContain("/downloads/show");
+            claimed.Count(p => p == "/downloads/show").ShouldBe(1);
+            claimed.ShouldNotContain("/downloads/show/file1.mkv");
+        }
     }
 }

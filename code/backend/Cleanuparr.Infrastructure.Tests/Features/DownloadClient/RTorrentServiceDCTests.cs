@@ -772,4 +772,32 @@ public class RTorrentServiceDCTests : IClassFixture<RTorrentServiceFixture>
             wrapper.Category.ShouldBe("unlinked");
         }
     }
+
+    public class GetClaimedPaths_Tests : RTorrentServiceDCTests
+    {
+        public GetClaimedPaths_Tests(RTorrentServiceFixture fixture) : base(fixture)
+        {
+        }
+
+        [Fact]
+        public async Task ClaimsBasePathAndDirectory()
+        {
+            // rTorrent resolves base_path (content root) and directory (its parent) itself;
+            // no file lookup, and the display name is never involved.
+            var sut = _fixture.CreateSut();
+            var wrapper = new RTorrentItemWrapper(new RTorrentTorrent
+            {
+                Hash = "HASH1",
+                Name = "Renamed Display",
+                BasePath = "/downloads/show",
+                Directory = "/downloads"
+            });
+
+            IReadOnlyList<string> claimed = await sut.GetClaimedPathsAsync(new Domain.Entities.ITorrentItemWrapper[] { wrapper });
+
+            claimed.ShouldContain("/downloads/show");
+            claimed.ShouldContain("/downloads");
+            claimed.ShouldNotContain("/downloads/Renamed Display");
+        }
+    }
 }
