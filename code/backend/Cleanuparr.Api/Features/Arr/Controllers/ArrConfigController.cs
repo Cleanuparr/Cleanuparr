@@ -4,8 +4,8 @@ using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Arr.Dtos;
 using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 using Cleanuparr.Persistence;
+using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Cleanuparr.Shared.Helpers;
-using Mapster;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -160,7 +160,7 @@ public sealed class ArrConfigController : ControllerBase
                 .OrderBy(i => i.Name)
                 .ToList();
 
-            return Ok(config.Adapt<ArrConfigDto>());
+            return Ok(ToDto(config));
         }
         finally
         {
@@ -201,7 +201,7 @@ public sealed class ArrConfigController : ControllerBase
             await _dataContext.ArrInstances.AddAsync(instance);
             await _dataContext.SaveChangesAsync();
 
-            return CreatedAtAction(GetConfigActionName(type), new { id = instance.Id }, instance.Adapt<ArrInstanceDto>());
+            return CreatedAtAction(GetConfigActionName(type), new { id = instance.Id }, ToDto(instance));
         }
         finally
         {
@@ -228,7 +228,7 @@ public sealed class ArrConfigController : ControllerBase
 
             await _dataContext.SaveChangesAsync();
 
-            return Ok(instance.Adapt<ArrInstanceDto>());
+            return Ok(ToDto(instance));
         }
         finally
         {
@@ -294,6 +294,25 @@ public sealed class ArrConfigController : ControllerBase
             return this.ProblemResult(StatusCodes.Status400BadRequest, $"Connection failed: {ex.Message}");
         }
     }
+
+    private static ArrConfigDto ToDto(ArrConfig config) => new()
+    {
+        Id = config.Id,
+        Type = config.Type,
+        FailedImportMaxStrikes = config.FailedImportMaxStrikes,
+        Instances = config.Instances.Select(ToDto).ToList(),
+    };
+
+    private static ArrInstanceDto ToDto(ArrInstance instance) => new()
+    {
+        Id = instance.Id,
+        Enabled = instance.Enabled,
+        Version = instance.Version,
+        Name = instance.Name,
+        Url = instance.Url.ToString(),
+        ApiKey = instance.ApiKey,
+        ExternalUrl = instance.ExternalUrl?.ToString(),
+    };
 
     private static string GetConfigActionName(InstanceType type) => type switch
     {
