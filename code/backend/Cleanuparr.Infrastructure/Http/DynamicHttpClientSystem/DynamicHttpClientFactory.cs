@@ -151,15 +151,4 @@ public class DynamicHttpClientFactory : IDynamicHttpClientFactory
                               generalConfig.HttpMaxRetries,
                               generalConfig.HttpCertificateValidation);
     }
-
-    public IEnumerable<string> GetRegisteredClientNames()
-    {
-        return _configStore.GetAllConfigurations().Select(kvp => kvp.Key);
-    }
-
-    public void InvalidateAllCachedConfigurations()
-    {
-        _optionsInvalidator.InvalidateAllClients();
-        _logger.LogInformation("Force invalidated all HTTP client option caches");
-    }
-} 
+}
