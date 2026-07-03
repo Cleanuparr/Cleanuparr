@@ -1,4 +1,6 @@
 using Cleanuparr.Persistence;
+using Cleanuparr.Persistence.Models.Configuration.General;
+using Cleanuparr.Persistence.Models.Events;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -62,16 +64,28 @@ public class EventCleanupService : BackgroundService
             var eventsContext = scope.ServiceProvider.GetRequiredService<EventsContext>();
             var dataContext = scope.ServiceProvider.GetRequiredService<DataContext>();
 
-            var cutoffDate = DateTimeOffset.UtcNow.AddDays(-_eventRetentionDays);
-            await eventsContext.Events
-                .Where(e => e.Timestamp < cutoffDate)
-                .ExecuteDeleteAsync();
+            GeneralConfig config = await dataContext.GeneralConfigs
+                .AsNoTracking()
+                .FirstAsync();
+
+            DateTimeOffset eventCutoff = DateTimeOffset.UtcNow.AddDays(-_eventRetentionDays);
+
+            // Move events past the hot window into history instead of deleting them
+            await ArchiveExpiredEventsAsync(eventsContext, eventCutoff);
+
+            // Resolved manual events are transient and are not archived
             await eventsContext.ManualEvents
-                .Where(e => e.Timestamp < cutoffDate)
+                .Where(e => e.Timestamp < eventCutoff)
                 .Where(e => e.IsResolved)
                 .ExecuteDeleteAsync();
 
-            await CleanupStrikesAsync(eventsContext, dataContext);
+            // Prune cold history older than the configured retention window
+            await PruneEventHistoryAsync(eventsContext, config.HistoryRetentionDays);
+
+            await CleanupStrikesAsync(eventsContext, config.StrikeInactivityWindowHours);
+
+            // Prune old job runs no longer referenced by any active strike or event
+            await PruneJobRunsAsync(eventsContext, eventCutoff);
         }
         catch (Exception ex)
         {
@@ -79,13 +93,122 @@ public class EventCleanupService : BackgroundService
         }
     }
 
-    private async Task CleanupStrikesAsync(EventsContext eventsContext, DataContext dataContext)
+    /// <summary>
+    /// Moves events older than the hot window into <see cref="EventHistory"/> (preserving their Id), in batches.
+    /// </summary>
+    internal async Task ArchiveExpiredEventsAsync(EventsContext eventsContext, DateTimeOffset cutoff)
     {
-        var config = await dataContext.GeneralConfigs
-            .AsNoTracking()
-            .FirstAsync();
+        const int batchSize = 5000;
+        int totalArchived = 0;
 
-        var inactivityWindowHours = config.StrikeInactivityWindowHours;
+        while (true)
+        {
+            List<AppEvent> batch = await eventsContext.Events
+                .AsNoTracking()
+                .Where(e => e.Timestamp < cutoff)
+                .OrderBy(e => e.Timestamp)
+                .Take(batchSize)
+                .ToListAsync();
+
+            if (batch.Count is 0)
+            {
+                break;
+            }
+
+            DateTimeOffset archivedAt = DateTimeOffset.UtcNow;
+            List<EventHistory> history = batch
+                .Select(e => new EventHistory
+                {
+                    Id = e.Id,
+                    Timestamp = e.Timestamp,
+                    EventType = e.EventType,
+                    Message = e.Message,
+                    Severity = e.Severity,
+                    ArchivedAt = archivedAt,
+                    TrackingId = e.TrackingId,
+                    StrikeId = e.StrikeId,
+                    JobRunId = e.JobRunId,
+                    ArrInstanceId = e.ArrInstanceId,
+                    DownloadClientId = e.DownloadClientId,
+                    SearchStatus = e.SearchStatus,
+                    CompletedAt = e.CompletedAt,
+                    CycleId = e.CycleId,
+                    IsDryRun = e.IsDryRun,
+                    ItemTitle = e.ItemTitle,
+                    ItemHash = e.ItemHash,
+                    StrikeCount = e.StrikeCount,
+                    FailedImportReasons = e.FailedImportReasons,
+                    DeleteReason = e.DeleteReason,
+                    RemoveFromClient = e.RemoveFromClient,
+                    CleanReason = e.CleanReason,
+                    CleanedCategory = e.CleanedCategory,
+                    SeedRatio = e.SeedRatio,
+                    SeedingTimeHours = e.SeedingTimeHours,
+                    OldCategory = e.OldCategory,
+                    NewCategory = e.NewCategory,
+                    IsCategoryTag = e.IsCategoryTag,
+                    SearchType = e.SearchType,
+                    SearchReason = e.SearchReason,
+                    GrabbedItems = e.GrabbedItems,
+                })
+                .ToList();
+
+            eventsContext.EventHistory.AddRange(history);
+            await eventsContext.SaveChangesAsync();
+
+            List<Guid> ids = batch.Select(e => e.Id).ToList();
+            await eventsContext.Events
+                .Where(e => ids.Contains(e.Id))
+                .ExecuteDeleteAsync();
+
+            totalArchived += batch.Count;
+
+            if (batch.Count < batchSize)
+            {
+                break;
+            }
+        }
+
+        if (totalArchived > 0)
+        {
+            _logger.LogInformation("Archived {count} events older than {days} days to history", totalArchived, _eventRetentionDays);
+        }
+    }
+
+    internal async Task PruneEventHistoryAsync(EventsContext eventsContext, ushort historyRetentionDays)
+    {
+        DateTimeOffset cutoff = DateTimeOffset.UtcNow.AddDays(-historyRetentionDays);
+        int deleted = await eventsContext.EventHistory
+            .Where(h => h.ArchivedAt < cutoff)
+            .ExecuteDeleteAsync();
+
+        if (deleted > 0)
+        {
+            _logger.LogInformation("Pruned {count} event history entries older than {days} days", deleted, historyRetentionDays);
+        }
+    }
+
+    /// <summary>
+    /// Deletes completed job runs older than the hot window that no active strike or event still references.
+    /// The guard is required because <c>Strike.JobRunId</c> is a required cascade FK.
+    /// </summary>
+    internal async Task PruneJobRunsAsync(EventsContext eventsContext, DateTimeOffset cutoff)
+    {
+        int deleted = await eventsContext.JobRuns
+            .Where(j => j.CompletedAt != null && j.StartedAt < cutoff)
+            .Where(j => !eventsContext.Strikes.Any(s => s.JobRunId == j.Id))
+            .Where(j => !eventsContext.Events.Any(e => e.JobRunId == j.Id))
+            .Where(j => !eventsContext.ManualEvents.Any(m => m.JobRunId == j.Id))
+            .ExecuteDeleteAsync();
+
+        if (deleted > 0)
+        {
+            _logger.LogInformation("Pruned {count} unreferenced job runs", deleted);
+        }
+    }
+
+    private async Task CleanupStrikesAsync(EventsContext eventsContext, ushort inactivityWindowHours)
+    {
         var cutoffDate = DateTimeOffset.UtcNow.AddHours(-inactivityWindowHours);
 
         // Sliding window: find items whose most recent strike is older than the inactivity window.
