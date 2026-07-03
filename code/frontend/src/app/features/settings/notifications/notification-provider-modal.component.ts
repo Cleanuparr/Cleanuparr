@@ -129,6 +129,11 @@ function createDefaultModalModel(): NotificationModalModel {
   };
 }
 
+function parseGotifyPriority(value: string): number {
+  const priority = Number.parseInt(value, 10);
+  return Number.isNaN(priority) ? 5 : priority;
+}
+
 const APPRISE_MODE_OPTIONS: SelectOption[] = [
   { label: 'API', value: AppriseMode.Api },
   { label: 'CLI', value: AppriseMode.Cli },
@@ -507,7 +512,7 @@ export class NotificationProviderModalComponent {
         this.api.testGotify({
           serverUrl: m.gotifyServerUrl,
           applicationToken: m.gotifyApplicationToken,
-          priority: parseInt(m.gotifyPriority, 10) || 5,
+          priority: parseGotifyPriority(m.gotifyPriority),
           providerId,
         }).subscribe({
           next: (r) => { this.toast.success(r.message || 'Test sent'); this.testing.set(false); },
@@ -622,7 +627,7 @@ export class NotificationProviderModalComponent {
           name: m.name,
           serverUrl: m.gotifyServerUrl,
           applicationToken: m.gotifyApplicationToken,
-          priority: parseInt(m.gotifyPriority, 10) || 5,
+          priority: parseGotifyPriority(m.gotifyPriority),
           isEnabled: m.enabled,
           ...eventFlags,
         };
