@@ -32,6 +32,19 @@ public partial class TransmissionService
     }
 
     /// <inheritdoc/>
+    public override Task<IReadOnlyList<string>> GetClaimedPathsAsync(IReadOnlyList<ITorrentItemWrapper> torrents) =>
+        BuildClaimedPathsAsync(torrents, torrent =>
+        {
+            IReadOnlyCollection<string> files = torrent is TransmissionItemWrapper { Info.Files.Length: > 0 } wrapper
+                ? wrapper.Info.Files
+                    .Select(f => f.Name)
+                    .Where(name => !string.IsNullOrEmpty(name))
+                    .ToList()
+                : [];
+            return Task.FromResult(files);
+        });
+
+    /// <inheritdoc/>
     public override List<ITorrentItemWrapper>? FilterDownloadsToBeCleanedAsync(List<ITorrentItemWrapper>? downloads, List<ISeedingRule> seedingRules)
     {
         return downloads

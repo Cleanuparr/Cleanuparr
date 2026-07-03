@@ -41,6 +41,27 @@ public partial class DelugeService
             .ToList();
     }
 
+    /// <inheritdoc/>
+    public override Task<IReadOnlyList<string>> GetClaimedPathsAsync(IReadOnlyList<ITorrentItemWrapper> torrents) =>
+        BuildClaimedPathsAsync(torrents, async torrent =>
+        {
+            if (string.IsNullOrEmpty(torrent.Hash))
+            {
+                return [];
+            }
+
+            DelugeContents? contents = await _client.GetTorrentFiles(torrent.Hash);
+            List<string> relativePaths = [];
+            ProcessFiles(contents?.Contents, (_, file) =>
+            {
+                if (!string.IsNullOrEmpty(file.Path))
+                {
+                    relativePaths.Add(file.Path);
+                }
+            });
+            return relativePaths;
+        });
+
     public override List<ITorrentItemWrapper>? FilterDownloadsToBeCleanedAsync(List<ITorrentItemWrapper>? downloads, List<ISeedingRule> seedingRules) =>
         downloads
             ?.Where(x => seedingRules.Any(rule => rule.Categories.Any(cat => cat.Equals(x.Category, StringComparison.OrdinalIgnoreCase))))

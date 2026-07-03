@@ -38,6 +38,12 @@ public interface IDownloadService : IDisposable
     Task<List<ITorrentItemWrapper>> GetAllTorrentsLite();
 
     /// <summary>
+    /// Resolves the on-disk paths claimed by the given torrents.
+    /// </summary>
+    /// <returns>The distinct, remapped paths claimed by the torrents.</returns>
+    Task<IReadOnlyList<string>> GetClaimedPathsAsync(IReadOnlyList<ITorrentItemWrapper> torrents);
+
+    /// <summary>
     /// Filters downloads that should be cleaned.
     /// </summary>
     /// <param name="downloads">The downloads to filter.</param>

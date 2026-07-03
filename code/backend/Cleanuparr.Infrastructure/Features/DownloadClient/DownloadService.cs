@@ -11,6 +11,7 @@ using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Infrastructure.Services.Interfaces;
 using Cleanuparr.Persistence.Models.Configuration;
 using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
+using Cleanuparr.Shared.Helpers;
 using Microsoft.Extensions.Logging;
 
 namespace Cleanuparr.Infrastructure.Features.DownloadClient;
@@ -76,6 +77,79 @@ public abstract class DownloadService : IDownloadService
 
     /// <inheritdoc/>
     public abstract Task<List<ITorrentItemWrapper>> GetAllTorrentsLite();
+
+    /// <inheritdoc/>
+    public abstract Task<IReadOnlyList<string>> GetClaimedPathsAsync(IReadOnlyList<ITorrentItemWrapper> torrents);
+
+    protected async Task<IReadOnlyList<string>> BuildClaimedPathsAsync(
+        IReadOnlyList<ITorrentItemWrapper> torrents,
+        Func<ITorrentItemWrapper, Task<IReadOnlyCollection<string>>> resolveRelativeFilePaths)
+    {
+        HashSet<string> claimed = new(StringComparer.OrdinalIgnoreCase);
+
+        foreach (ITorrentItemWrapper torrent in torrents)
+        {
+            IReadOnlyCollection<string> relativeFilePaths;
+            try
+            {
+                relativeFilePaths = await resolveRelativeFilePaths(torrent);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "failed to resolve files, falling back to name | {name}", torrent.Name);
+                relativeFilePaths = [];
+            }
+
+            foreach (string path in BuildClaimedPaths(torrent, relativeFilePaths))
+            {
+                claimed.Add(path);
+            }
+        }
+
+        return claimed.ToList();
+    }
+
+    /// <summary>
+    /// The top-level entries a torrent occupies.
+    /// </summary>
+    private IReadOnlyList<string> BuildClaimedPaths(ITorrentItemWrapper torrent, IReadOnlyCollection<string> relativeFilePaths)
+    {
+        List<string> claimed = [];
+        if (string.IsNullOrEmpty(torrent.SavePath))
+        {
+            return claimed;
+        }
+
+        claimed.Add(RemapAndTrim(torrent.SavePath));
+
+        IReadOnlyCollection<string> sources = relativeFilePaths;
+        if (sources.Count == 0 && !string.IsNullOrEmpty(torrent.Name))
+        {
+            sources = [torrent.Name];
+        }
+
+        foreach (string relativePath in sources)
+        {
+            string firstSegment = FirstSegment(relativePath);
+            if (!string.IsNullOrEmpty(firstSegment))
+            {
+                claimed.Add(RemapAndTrim(Path.Combine(torrent.SavePath, firstSegment)));
+            }
+        }
+
+        return claimed;
+    }
+
+    private static string FirstSegment(string relativePath)
+    {
+        string[] parts = relativePath.Replace('\\', '/').Split('/', StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length > 0 ? parts[0] : string.Empty;
+    }
+
+    protected string RemapAndTrim(string path) =>
+        PathHelper
+            .NormalizeAndRemap(path, _downloadClientConfig.DownloadDirectorySource, _downloadClientConfig.DownloadDirectoryTarget)
+            .TrimEnd(Path.DirectorySeparatorChar);
 
     /// <inheritdoc/>
     public abstract List<ITorrentItemWrapper>? FilterDownloadsToBeCleanedAsync(List<ITorrentItemWrapper>? downloads, List<ISeedingRule> seedingRules);

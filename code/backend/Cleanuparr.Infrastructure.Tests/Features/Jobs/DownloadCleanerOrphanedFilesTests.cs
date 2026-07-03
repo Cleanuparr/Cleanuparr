@@ -82,8 +82,31 @@ public sealed class DownloadCleanerOrphanedFilesTests : IDisposable
         svc.LoginAsync().Returns(Task.CompletedTask);
         svc.GetSeedingDownloads().Returns([]);
         svc.GetAllTorrentsLite().Returns(torrents);
+        svc.GetClaimedPathsAsync(Arg.Any<IReadOnlyList<ITorrentItemWrapper>>())
+            .Returns(ci => Task.FromResult(BuildDefaultClaimedPaths(ci.Arg<IReadOnlyList<ITorrentItemWrapper>>())));
         _fixture.DownloadServiceFactory.GetDownloadService(clientConfig).Returns(svc);
         return svc;
+    }
+
+    private static IReadOnlyList<string> BuildDefaultClaimedPaths(IReadOnlyList<ITorrentItemWrapper> torrents)
+    {
+        HashSet<string> paths = new(StringComparer.OrdinalIgnoreCase);
+        foreach (ITorrentItemWrapper torrent in torrents)
+        {
+            if (string.IsNullOrEmpty(torrent.SavePath))
+            {
+                continue;
+            }
+
+            paths.Add(torrent.SavePath.TrimEnd(Path.DirectorySeparatorChar));
+
+            if (!string.IsNullOrEmpty(torrent.Name))
+            {
+                paths.Add(Path.Combine(torrent.SavePath, torrent.Name).TrimEnd(Path.DirectorySeparatorChar));
+            }
+        }
+
+        return paths.ToList();
     }
 
     [Fact]

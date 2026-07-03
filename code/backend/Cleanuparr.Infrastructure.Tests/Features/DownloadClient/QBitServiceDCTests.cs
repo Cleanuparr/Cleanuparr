@@ -1343,4 +1343,47 @@ public class QBitServiceDCTests : IClassFixture<QBitServiceFixture>
                 .AddTorrentTagAsync(Arg.Is<IEnumerable<string>>(h => h.Contains("hash1")), "unlinked");
         }
     }
+
+    public class GetClaimedPaths_Tests : QBitServiceDCTests
+    {
+        public GetClaimedPaths_Tests(QBitServiceFixture fixture) : base(fixture)
+        {
+        }
+
+        [Fact]
+        public async Task UsesFileList_WhenDisplayNameDivergesFromDisk()
+        {
+            var sut = _fixture.CreateSut();
+            var wrapper = new QBitItemWrapper(
+                new TorrentInfo { Hash = "hash1", Name = "Renamed Display Name", SavePath = "/downloads" },
+                Array.Empty<TorrentTracker>(),
+                false);
+            _fixture.ClientWrapper
+                .GetTorrentContentsAsync("hash1")
+                .Returns(new[] { new TorrentContent { Index = 0, Name = "actual-folder/data.bin", Priority = TorrentContentPriority.Normal } });
+
+            IReadOnlyList<string> claimed = await sut.GetClaimedPathsAsync(new Domain.Entities.ITorrentItemWrapper[] { wrapper });
+
+            claimed.ShouldContain("/downloads/actual-folder");
+            claimed.ShouldNotContain("/downloads/Renamed Display Name");
+        }
+
+        [Fact]
+        public async Task FallsBackToSavePathAndName_WhenFileListUnavailable()
+        {
+            // no files returned (e.g. metadata not yet fetched) — claim save path + name.
+            var sut = _fixture.CreateSut();
+            var wrapper = new QBitItemWrapper(
+                new TorrentInfo { Hash = "hash1", Name = "some-show", SavePath = "/downloads" },
+                Array.Empty<TorrentTracker>(),
+                false);
+            _fixture.ClientWrapper
+                .GetTorrentContentsAsync("hash1")
+                .Returns(Array.Empty<TorrentContent>());
+
+            IReadOnlyList<string> claimed = await sut.GetClaimedPathsAsync(new Domain.Entities.ITorrentItemWrapper[] { wrapper });
+
+            claimed.ShouldContain("/downloads/some-show");
+        }
+    }
 }
