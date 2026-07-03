@@ -847,4 +847,40 @@ public class DelugeServiceDCTests : IClassFixture<DelugeServiceFixture>
                 .SetTorrentLabel("hash1", "unlinked");
         }
     }
+
+    public class GetClaimedPaths_Tests : DelugeServiceDCTests
+    {
+        public GetClaimedPaths_Tests(DelugeServiceFixture fixture) : base(fixture)
+        {
+        }
+
+        [Fact]
+        public async Task DerivesRootFromFetchedFiles_SharedFolderDedupes()
+        {
+            var sut = _fixture.CreateSut();
+            var wrapper = new DelugeItemWrapper(new DownloadStatus
+            {
+                Hash = "hash1",
+                Name = "Renamed Display",
+                Trackers = new List<Tracker>(),
+                DownloadLocation = "/downloads"
+            });
+            _fixture.ClientWrapper
+                .GetTorrentFiles("hash1")
+                .Returns(new DelugeContents
+                {
+                    Contents = new Dictionary<string, DelugeFileOrDirectory>
+                    {
+                        { "file1.mkv", new DelugeFileOrDirectory { Type = "file", Priority = 1, Index = 0, Path = "show/file1.mkv" } },
+                        { "file2.mkv", new DelugeFileOrDirectory { Type = "file", Priority = 1, Index = 1, Path = "show/file2.mkv" } }
+                    }
+                });
+
+            IReadOnlyList<string> claimed = await sut.GetClaimedPathsAsync(new Domain.Entities.ITorrentItemWrapper[] { wrapper });
+
+            claimed.ShouldContain("/downloads/show");
+            claimed.Count(p => p == "/downloads/show").ShouldBe(1);
+            claimed.ShouldNotContain("/downloads/Renamed Display");
+        }
+    }
 }

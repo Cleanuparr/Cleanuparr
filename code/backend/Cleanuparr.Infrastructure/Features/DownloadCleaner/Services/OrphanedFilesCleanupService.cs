@@ -5,7 +5,6 @@ using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration;
 using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
-using Cleanuparr.Shared.Helpers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -155,33 +154,9 @@ public sealed class OrphanedFilesCleanupService : IOrphanedFilesCleanupService
             return false;
         }
 
-        foreach (ITorrentItemWrapper torrent in torrents)
+        foreach (string claimedPath in await downloadService.GetClaimedPathsAsync(torrents))
         {
-            if (string.IsNullOrEmpty(torrent.SavePath))
-            {
-                continue;
-            }
-
-            string remappedSavePath = PathHelper.NormalizeAndRemap(
-                torrent.SavePath,
-                downloadClient.DownloadDirectorySource,
-                downloadClient.DownloadDirectoryTarget
-            ).TrimEnd(Path.DirectorySeparatorChar);
-
-            claimedPaths.Add(remappedSavePath);
-
-            if (string.IsNullOrEmpty(torrent.Name))
-            {
-                continue;
-            }
-
-            string contentPath = PathHelper.NormalizeAndRemap(
-                Path.Combine(torrent.SavePath, torrent.Name),
-                downloadClient.DownloadDirectorySource,
-                downloadClient.DownloadDirectoryTarget
-            );
-
-            claimedPaths.Add(contentPath.TrimEnd(Path.DirectorySeparatorChar));
+            claimedPaths.Add(claimedPath);
         }
 
         _logger.LogDebug("Loaded {count} torrents | {name}", torrents.Count, downloadClient.Name);

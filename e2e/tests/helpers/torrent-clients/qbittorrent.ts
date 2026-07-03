@@ -98,6 +98,24 @@ export class QBittorrentDriver implements TorrentClientDriver {
     }
   }
 
+  /**
+   * Change a torrent's display name without touching files on disk.
+   */
+  async renameTorrent(infoHash: string, name: string): Promise<void> {
+    const body = new URLSearchParams({ hash: infoHash.toLowerCase(), name });
+    const res = await fetch(`${this.directHost}/api/v2/torrents/rename`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        ...(this.cookie ? { Cookie: this.cookie } : {}),
+      },
+      body: body.toString(),
+    });
+    if (!res.ok) {
+      throw new Error(`qBittorrent rename failed: ${res.status} ${await res.text()}`);
+    }
+  }
+
   /** Returns the torrent's category, or undefined if not found. */
   async getTorrentCategory(infoHash: string): Promise<string | undefined> {
     const t = await this.getTorrent(infoHash);

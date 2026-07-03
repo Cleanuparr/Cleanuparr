@@ -49,6 +49,19 @@ public partial class QBitService
     }
 
     /// <inheritdoc/>
+    public override Task<IReadOnlyList<string>> GetClaimedPathsAsync(IReadOnlyList<ITorrentItemWrapper> torrents) =>
+        BuildClaimedPathsAsync(torrents, async torrent =>
+        {
+            if (string.IsNullOrEmpty(torrent.Hash))
+            {
+                return [];
+            }
+
+            IReadOnlyList<TorrentContent>? files = await _client.GetTorrentContentsAsync(torrent.Hash);
+            return files?.Select(f => f.Name).Where(name => !string.IsNullOrEmpty(name)).ToList() ?? [];
+        });
+
+    /// <inheritdoc/>
     public override List<ITorrentItemWrapper>? FilterDownloadsToBeCleanedAsync(List<ITorrentItemWrapper>? downloads, List<ISeedingRule> seedingRules) =>
         downloads
             ?.Where(x => !string.IsNullOrEmpty(x.Hash))

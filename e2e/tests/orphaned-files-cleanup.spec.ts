@@ -12,7 +12,14 @@ import {
   triggerJob,
 } from './helpers/app-api';
 import { ALL_CLIENTS, TorrentClientFixture } from './helpers/torrent-clients';
-import { buildFolderTorrent, chmodIgnoringEPERM, resetDirectory } from './helpers/torrent-fixtures';
+import {
+  buildFolderTorrent,
+  buildMultiFileTorrent,
+  buildSingleFileTorrent,
+  chmodIgnoringEPERM,
+  resetDirectory,
+  GeneratedTorrent,
+} from './helpers/torrent-fixtures';
 
 async function waitForTorrents(
   driver: { listTorrents(): Promise<Array<{ hash: string }>> },
@@ -47,27 +54,66 @@ async function waitForOrphanMove(dir: string, expectedName: string, timeoutMs = 
 
 /**
  * Orphaned files cleanup e2e — exercises the full pipeline for every
- * supported download client:
+ * supported download client across the three torrent content layouts:
  *
- *   1. configure the download cleaner globally (enabled, generous schedule)
- *   2. configure the orphaned files cleanup globally (no min age, no purge)
- *   3. spin up the client and pre-create two torrents whose data lives in
- *      /e2e-downloads/<client>/
- *   4. delete one of those torrents through the client's API while keeping
- *      data on disk → produces a real orphan
- *   5. trigger the DownloadCleaner job
- *   6. assert the surviving torrent's files are untouched and the orphan's
- *      files were moved into /e2e-downloads/<client>/orphaned/
+ *   1. dir-single-file  — a folder containing one file
+ *   2. dir-two-files    — a folder containing two files
+ *   3. single-file      — one file with no containing folder
  *
- * The downloads volume is bind-mounted at the same path inside every
- * container (`/e2e-downloads`) and on the host (`e2e/test-data/downloads`)
- * so the spec can assert directly against host paths without any
- * DownloadDirectorySource/Target remapping.
+ * For each client and layout the spec pre-creates two torrents whose data
+ * lives in /e2e-downloads/<client>/, deletes one through the client's API
+ * (leaving its data on disk to become a real orphan), triggers the
+ * DownloadCleaner, then asserts the surviving torrent's content is untouched
+ * and the orphan's content was moved into the orphaned directory. This
+ * verifies each client resolves claimed paths correctly for every layout —
+ * the regression behind issue #652.
+ *
+ * The downloads volume is bind-mounted at /e2e-downloads (app) / /downloads
+ * (client), remapped via DownloadDirectorySource/Target so content paths
+ * resolve into the scan directory.
  */
 
 const HOST_DOWNLOADS = resolve(__dirname, '..', 'test-data', 'downloads');
 const CLIENT_DOWNLOADS = '/downloads';
 const APP_DOWNLOADS = '/e2e-downloads';
+
+interface BuiltLayout {
+  fx: GeneratedTorrent;
+  /** The top-level on-disk entry (folder for dir layouts, file for single-file). */
+  entryName: string;
+  /** A file that must survive under the scan dir when the torrent is kept. */
+  contentFileRel: string;
+}
+
+interface Layout {
+  key: string;
+  build: (scanDir: string, base: string) => BuiltLayout;
+}
+
+const LAYOUTS: Layout[] = [
+  {
+    key: 'dir-single-file',
+    build: (scanDir, base) => {
+      const fx = buildFolderTorrent(scanDir, base);
+      return { fx, entryName: base, contentFileRel: join(base, 'data.bin') };
+    },
+  },
+  {
+    key: 'dir-two-files',
+    build: (scanDir, base) => {
+      const fx = buildMultiFileTorrent(scanDir, base, [{ filename: 'file1.bin' }, { filename: 'file2.bin' }]);
+      return { fx, entryName: base, contentFileRel: join(base, 'file1.bin') };
+    },
+  },
+  {
+    key: 'single-file',
+    build: (scanDir, base) => {
+      const fileName = `${base}.bin`;
+      const fx = buildSingleFileTorrent(scanDir, fileName);
+      return { fx, entryName: fileName, contentFileRel: fileName };
+    },
+  },
+];
 
 function clientDirs(slug: string) {
   return {
@@ -99,8 +145,8 @@ test.describe.serial('Orphaned files cleanup', () => {
       await deleteDownloadClient(token, client.id);
     }
 
-    // Enable the global download cleaner + the global orphaned-files config.
-    // Schedule is irrelevant since we trigger the job manually.
+    // Enable the global download cleaner. Schedule is irrelevant since we
+    // trigger the job manually.
     const dcCurrent = await (await getDownloadCleanerConfig(token)).json();
     await updateDownloadCleanerConfig(token, {
       enabled: true,
@@ -120,37 +166,16 @@ test.describe.serial('Orphaned files cleanup', () => {
 function runClientScenario(fixture: TorrentClientFixture, getToken: () => string) {
   const { driver } = fixture;
   const slug = SLUG_BY_TYPE[driver.typeName];
-  const describeFn = fixture.enabled ? test.describe : test.describe.skip;
+  const describeFn = fixture.enabled ? test.describe.serial : test.describe.skip;
+  const dirs = clientDirs(slug);
 
   describeFn(`${driver.typeName}`, () => {
-    let keep: { name: string; infoHash: string };
-    let orphan: { name: string; infoHash: string };
     let clientId: string;
-    const dirs = clientDirs(slug);
 
-    test('configures client and produces an orphan', async () => {
-      test.setTimeout(180_000);
-
-      // Fresh per-client scan dir so a previous failed run doesn't bleed in.
-      resetDirectory(dirs.hostScanDir);
-      mkdirSync(dirs.hostOrphanedDir, { recursive: true });
-      chmodIgnoringEPERM(dirs.hostOrphanedDir, 0o777);
-
-      const keepName = `keep-${slug}`;
-      const orphanName = `orphan-${slug}`;
-      const keepFx = buildFolderTorrent(dirs.hostScanDir, keepName);
-      const orphanFx = buildFolderTorrent(dirs.hostScanDir, orphanName);
-      keep = { name: keepName, infoHash: keepFx.infoHash };
-      orphan = { name: orphanName, infoHash: orphanFx.infoHash };
-
-      // Wait for the client's HTTP surface to come up. This is the slowest
-      // step on a cold compose start.
+    test.beforeAll(async () => {
+      // Wait for the client's HTTP surface (slowest step on a cold start) and
+      // register it with Cleanuparr once for all layout scenarios.
       await driver.ready();
-
-      // Wipe any torrents left over from a prior `make test` run — the
-      // client's session is in a persistent config volume that survives
-      // `make test` and would otherwise reject re-adding the same infohash.
-      await driver.clearAllTorrents();
 
       const createRes = await createDownloadClient(getToken(), {
         enabled: true,
@@ -165,8 +190,7 @@ function runClientScenario(fixture: TorrentClientFixture, getToken: () => string
       });
       expect(createRes.status).toBeGreaterThanOrEqual(200);
       expect(createRes.status).toBeLessThan(300);
-      const createdClient = await createRes.json();
-      clientId = createdClient.id;
+      clientId = (await createRes.json()).id;
 
       const ofcRes = await updateOrphanedFilesConfig(getToken(), clientId, {
         enabled: true,
@@ -175,47 +199,59 @@ function runClientScenario(fixture: TorrentClientFixture, getToken: () => string
         minFileAgeHours: 0,
       });
       expect(ofcRes.status).toBe(200);
-
-      await driver.addTorrent({
-        metainfo: keepFx.metainfo,
-        savePath: dirs.clientSavePath,
-        name: keepName,
-        infoHash: keepFx.infoHash,
-      });
-      await driver.addTorrent({
-        metainfo: orphanFx.metainfo,
-        savePath: dirs.clientSavePath,
-        name: orphanName,
-        infoHash: orphanFx.infoHash,
-      });
-
-      // Some clients process `add` asynchronously — poll for both torrents
-      // to become visible before continuing.
-      await waitForTorrents(driver, [keep.infoHash, orphan.infoHash]);
-
-      // Delete the orphan torrent from the client while preserving data.
-      await driver.deleteTorrent(orphan.infoHash);
-
-      // Verify orphan is gone from the client but still present on disk.
-      const afterList = await driver.listTorrents();
-      const afterHashes = new Set(afterList.map((t) => t.hash.toLowerCase()));
-      expect(afterHashes.has(keep.infoHash.toLowerCase())).toBe(true);
-      expect(afterHashes.has(orphan.infoHash.toLowerCase())).toBe(false);
-      expect(existsSync(join(dirs.hostScanDir, orphanName))).toBe(true);
-
-      // Trigger the cleaner. The job runs async on a worker thread; we poll
-      // the filesystem for the expected outcome rather than sleeping.
-      const trig = await triggerJob(getToken(), 'DownloadCleaner');
-      expect(trig.ok, `triggerJob: ${trig.status}`).toBe(true);
-
-      const moved = await waitForOrphanMove(dirs.hostOrphanedDir, orphanName);
-
-      // Assert: kept torrent's folder survives in place.
-      expect(existsSync(join(dirs.hostScanDir, keepName, 'data.bin'))).toBe(true);
-      // Assert: orphan folder no longer at top of scan dir.
-      expect(existsSync(join(dirs.hostScanDir, orphanName))).toBe(false);
-      // Assert: orphan folder is under the orphanedDirectory, with its data intact.
-      expect(existsSync(join(dirs.hostOrphanedDir, moved, 'data.bin'))).toBe(true);
     });
+
+    for (const layout of LAYOUTS) {
+      test(`${layout.key}: keeps active torrent, moves orphan`, async () => {
+        test.setTimeout(180_000);
+
+        // Fresh scan dir so a previous layout/run doesn't bleed in.
+        resetDirectory(dirs.hostScanDir);
+        mkdirSync(dirs.hostOrphanedDir, { recursive: true });
+        chmodIgnoringEPERM(dirs.hostOrphanedDir, 0o777);
+
+        // Wipe client state — the session survives across layouts and would
+        // otherwise reject re-adding a torrent or leave stale claims.
+        await driver.clearAllTorrents();
+
+        const keep = layout.build(dirs.hostScanDir, `keep-${slug}-${layout.key}`);
+        const orphan = layout.build(dirs.hostScanDir, `orphan-${slug}-${layout.key}`);
+
+        await driver.addTorrent({
+          metainfo: keep.fx.metainfo,
+          savePath: dirs.clientSavePath,
+          name: keep.fx.name,
+          infoHash: keep.fx.infoHash,
+        });
+        await driver.addTorrent({
+          metainfo: orphan.fx.metainfo,
+          savePath: dirs.clientSavePath,
+          name: orphan.fx.name,
+          infoHash: orphan.fx.infoHash,
+        });
+
+        await waitForTorrents(driver, [keep.fx.infoHash, orphan.fx.infoHash]);
+
+        // Delete the orphan torrent from the client while preserving its data.
+        await driver.deleteTorrent(orphan.fx.infoHash);
+
+        const afterList = await driver.listTorrents();
+        const afterHashes = new Set(afterList.map((t) => t.hash.toLowerCase()));
+        expect(afterHashes.has(keep.fx.infoHash.toLowerCase())).toBe(true);
+        expect(afterHashes.has(orphan.fx.infoHash.toLowerCase())).toBe(false);
+        expect(existsSync(join(dirs.hostScanDir, orphan.entryName))).toBe(true);
+
+        const trig = await triggerJob(getToken(), 'DownloadCleaner');
+        expect(trig.ok, `triggerJob: ${trig.status}`).toBe(true);
+
+        const moved = await waitForOrphanMove(dirs.hostOrphanedDir, orphan.entryName);
+
+        // Kept torrent's content survives in place.
+        expect(existsSync(join(dirs.hostScanDir, keep.contentFileRel))).toBe(true);
+        // Orphan is gone from the scan dir and now lives under the orphaned dir.
+        expect(existsSync(join(dirs.hostScanDir, orphan.entryName))).toBe(false);
+        expect(existsSync(join(dirs.hostOrphanedDir, moved))).toBe(true);
+      });
+    }
   });
 }

@@ -32,6 +32,32 @@ public partial class RTorrentService
             .ToList();
     }
 
+    /// <inheritdoc/>
+    public override Task<IReadOnlyList<string>> GetClaimedPathsAsync(IReadOnlyList<ITorrentItemWrapper> torrents)
+    {
+        HashSet<string> claimed = new(StringComparer.OrdinalIgnoreCase);
+
+        foreach (ITorrentItemWrapper torrent in torrents)
+        {
+            if (torrent is not RTorrentItemWrapper wrapper)
+            {
+                continue;
+            }
+
+            if (!string.IsNullOrEmpty(wrapper.Info.BasePath))
+            {
+                claimed.Add(RemapAndTrim(wrapper.Info.BasePath));
+            }
+
+            if (!string.IsNullOrEmpty(wrapper.Info.Directory))
+            {
+                claimed.Add(RemapAndTrim(wrapper.Info.Directory));
+            }
+        }
+
+        return Task.FromResult<IReadOnlyList<string>>(claimed.ToList());
+    }
+
     public override List<ITorrentItemWrapper>? FilterDownloadsToBeCleanedAsync(List<ITorrentItemWrapper>? downloads, List<ISeedingRule> seedingRules) =>
         downloads
             ?.Where(x => seedingRules.Any(rule => rule.Categories.Any(cat => cat.Equals(x.Category, StringComparison.OrdinalIgnoreCase))))
