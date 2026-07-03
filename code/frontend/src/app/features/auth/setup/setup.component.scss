@@ -339,8 +339,8 @@
   margin-bottom: var(--space-4);
 
   &:hover:not(:disabled) {
-    background: #d4920c;
-    box-shadow: 0 0 20px rgba(229, 160, 13, 0.3);
+    background: var(--plex-brand-hover);
+    box-shadow: 0 0 20px color-mix(in srgb, var(--plex-brand) 30%, transparent);
   }
 
   &:active:not(:disabled) {

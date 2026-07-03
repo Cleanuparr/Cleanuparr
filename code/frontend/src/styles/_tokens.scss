@@ -110,8 +110,12 @@
   --shadow-tooltip: #{$shadow-tooltip};
 
   // Third-party brand
-  --plex-brand:     #{$plex-brand};
-  --plex-brand-ink: #{$plex-brand-ink};
+  --plex-brand:       #{$plex-brand};
+  --plex-brand-ink:   #{$plex-brand-ink};
+  --plex-brand-hover: #{$plex-brand-hover};
+
+  // Static surfaces
+  --surface-always-light: #{$surface-always-light};
 
   // Z-index
   --z-dropdown: #{$z-dropdown};
