@@ -2,6 +2,7 @@ import { HttpInterceptorFn, HttpErrorResponse, HttpContextToken, HttpContext } f
 import { inject } from '@angular/core';
 import { catchError, switchMap, throwError } from 'rxjs';
 import { AuthService } from './auth.service';
+import { ApiError } from '@core/interceptors/error.interceptor';
 
 const IS_RETRY = new HttpContextToken<boolean>(() => false);
 
@@ -24,7 +25,9 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
           });
           return next(freshReq);
         }
-        auth.logout();
+        if (!auth.isAuthenticated()) {
+          auth.logout();
+        }
         return throwError(() => new HttpErrorResponse({ status: 401 }));
       }),
     );
@@ -39,9 +42,9 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   }
 
   return next(req).pipe(
-    catchError((error: HttpErrorResponse) => {
+    catchError((error) => {
       // Fallback: 401 catch for edge cases (e.g., token expired between check and send)
-      if (error.status === 401 && token && !req.context.get(IS_RETRY)) {
+      if ((error as ApiError).statusCode === 401 && token && !req.context.get(IS_RETRY)) {
         return auth.refreshToken().pipe(
           switchMap((result) => {
             if (result) {
@@ -51,7 +54,9 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
               });
               return next(retryReq);
             }
-            auth.logout();
+            if (!auth.isAuthenticated()) {
+              auth.logout();
+            }
             return throwError(() => error);
           }),
         );
