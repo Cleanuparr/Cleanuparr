@@ -53,6 +53,7 @@ export class PlexCallbackComponent implements OnInit, OnDestroy {
   readonly error = signal('');
 
   private pollTimer: ReturnType<typeof setInterval> | null = null;
+  private destroyed = false;
 
   ngOnInit(): void {
     const stored = sessionStorage.getItem('plex_login_pin_id');
@@ -68,6 +69,7 @@ export class PlexCallbackComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.destroyed = true;
     this.stopPolling();
   }
 
@@ -77,6 +79,9 @@ export class PlexCallbackComponent implements OnInit, OnDestroy {
       attempts++;
       this.auth.verifyPlexPin(pinId).subscribe({
         next: (result) => {
+          if (this.destroyed) {
+            return;
+          }
           if (result.completed) {
             this.stopPolling();
             this.router.navigate(['/dashboard']);
@@ -86,6 +91,9 @@ export class PlexCallbackComponent implements OnInit, OnDestroy {
           }
         },
         error: (err) => {
+          if (this.destroyed) {
+            return;
+          }
           this.stopPolling();
           this.handleError(err.message || 'Plex authorization failed');
         },
