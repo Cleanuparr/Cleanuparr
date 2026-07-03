@@ -519,6 +519,10 @@ export class NotificationProviderModalComponent {
           error: () => { this.toast.error('Test failed'); this.testing.set(false); },
         });
         break;
+      default:
+        this.toast.error('Test failed');
+        this.testing.set(false);
+        break;
     }
   }
 
@@ -635,6 +639,9 @@ export class NotificationProviderModalComponent {
         obs.subscribe({ next: () => this.onSaveSuccess(editing), error: () => this.onSaveError() });
         break;
       }
+      default:
+        this.onSaveError();
+        break;
     }
   }
 
