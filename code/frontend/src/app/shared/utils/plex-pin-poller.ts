@@ -45,6 +45,7 @@ export function pollPlexPin<T extends { completed: boolean }>(options: PlexPinPo
       return;
     }
 
+    inFlight?.unsubscribe();
     inFlight = verify().subscribe({
       next: (result) => {
         if (result.completed) {
