@@ -28,6 +28,7 @@ public sealed class AuthController : ControllerBase
     private readonly IPlexAuthService _plexAuthService;
     private readonly IOidcAuthService _oidcAuthService;
     private readonly ILogger<AuthController> _logger;
+    private readonly IWebHostEnvironment _environment;
 
     public AuthController(
         UsersContext usersContext,
@@ -37,7 +38,8 @@ public sealed class AuthController : ControllerBase
         ITotpService totpService,
         IPlexAuthService plexAuthService,
         IOidcAuthService oidcAuthService,
-        ILogger<AuthController> logger)
+        ILogger<AuthController> logger,
+        IWebHostEnvironment environment)
     {
         _usersContext = usersContext;
         _dataContext = dataContext;
@@ -47,6 +49,7 @@ public sealed class AuthController : ControllerBase
         _plexAuthService = plexAuthService;
         _oidcAuthService = oidcAuthService;
         _logger = logger;
+        _environment = environment;
     }
 
     [HttpGet("status")]
@@ -497,7 +500,17 @@ public sealed class AuthController : ControllerBase
             return this.ProblemResult(StatusCodes.Status400BadRequest, "Plex login is not available");
         }
 
-        var pin = await _plexAuthService.RequestPin();
+        string baseUrl = HttpContext.GetExternalBaseUrl();
+        if (_environment.IsDevelopment())
+        {
+            string origin = Request.Headers.Origin.ToString();
+            if (!string.IsNullOrEmpty(origin))
+            {
+                baseUrl = $"{origin}{Request.GetSafeBasePath()}";
+            }
+        }
+        string forwardUrl = $"{baseUrl}/auth/plex/callback";
+        PlexPinResult pin = await _plexAuthService.RequestPin(forwardUrl);
 
         return Ok(new PlexPinStatusResponse
         {

@@ -166,6 +166,13 @@ export const routes: Routes = [
             '@features/auth/oidc-callback/oidc-callback.component'
           ).then((m) => m.OidcCallbackComponent),
       },
+      {
+        path: 'plex/callback',
+        loadComponent: () =>
+          import(
+            '@features/auth/plex-callback/plex-callback.component'
+          ).then((m) => m.PlexCallbackComponent),
+      },
     ],
   },
   { path: '**', redirectTo: 'dashboard' },

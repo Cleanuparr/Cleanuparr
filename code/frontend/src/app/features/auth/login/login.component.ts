@@ -40,7 +40,6 @@ export class LoginComponent implements OnInit, OnDestroy {
   // Plex
   plexLinked = this.auth.plexLinked;
   plexLoading = signal(false);
-  plexPinId = signal(0);
 
   // OIDC
   oidcEnabled = this.auth.oidcEnabled;
@@ -88,9 +87,6 @@ export class LoginComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.clearCountdown();
-    if (this.plexPollTimer) {
-      clearInterval(this.plexPollTimer);
-    }
   }
 
   submitLogin(): void {
@@ -166,17 +162,14 @@ export class LoginComponent implements OnInit, OnDestroy {
     this.loginToken.set('');
   }
 
-  private plexPollTimer: ReturnType<typeof setInterval> | null = null;
-
   startPlexLogin(): void {
     this.plexLoading.set(true);
     this.error.set('');
 
     this.auth.requestPlexPin().subscribe({
       next: (result) => {
-        this.plexPinId.set(result.pinId);
-        window.open(result.authUrl, '_blank');
-        this.pollPlexPin();
+        sessionStorage.setItem('plex_login_pin_id', String(result.pinId));
+        window.location.href = result.authUrl;
       },
       error: (err) => {
         this.error.set(err.message || 'Failed to start Plex login');
@@ -199,34 +192,6 @@ export class LoginComponent implements OnInit, OnDestroy {
         this.oidcLoading.set(false);
       },
     });
-  }
-
-  private pollPlexPin(): void {
-    let attempts = 0;
-    this.plexPollTimer = setInterval(() => {
-      attempts++;
-      if (attempts > 60) {
-        clearInterval(this.plexPollTimer!);
-        this.plexLoading.set(false);
-        this.error.set('Plex authorization timed out');
-        return;
-      }
-
-      this.auth.verifyPlexPin(this.plexPinId()).subscribe({
-        next: (result) => {
-          if (result.completed) {
-            clearInterval(this.plexPollTimer!);
-            this.plexLoading.set(false);
-            this.router.navigate(['/dashboard']);
-          }
-        },
-        error: (err) => {
-          clearInterval(this.plexPollTimer!);
-          this.plexLoading.set(false);
-          this.error.set(err.message || 'Plex authorization failed');
-        },
-      });
-    }, 2000);
   }
 
   private startCountdown(seconds: number): void {
