@@ -4,27 +4,12 @@
 .form-divider { @include form-divider; }
 .form-actions { @include form-actions; }
 
-.section-hint {
-  font-size: var(--font-size-sm);
-  color: var(--text-secondary);
-  line-height: 1.5;
-}
-
-.status-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.status-label {
-  font-size: var(--font-size-sm);
-  color: var(--text-secondary);
-}
+.section-hint { @include section-hint; }
+.status-row { @include status-row; }
+.status-label { @include status-label; }
 
 .status-value {
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-semibold);
-  color: var(--text-primary);
+  @include status-value;
 
   &--active {
     color: var(--color-success);
