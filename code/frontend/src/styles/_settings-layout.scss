@@ -110,3 +110,35 @@
   flex-direction: column;
   gap: var(--space-4);
 }
+
+@mixin section-notice {
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+}
+
+@mixin section-hint {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+@mixin status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+@mixin status-label {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+@mixin status-value {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+}

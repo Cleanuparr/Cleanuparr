@@ -232,7 +232,12 @@ export class AuthService {
   logout(): void {
     const refreshToken = localStorage.getItem('refresh_token');
     if (refreshToken) {
-      this.http.post('/api/auth/logout', { refreshToken }).subscribe();
+      // Best-effort server-side token revocation; the local session is cleared
+      // regardless, so a failed call must not surface as an unhandled error.
+      this.http
+        .post('/api/auth/logout', { refreshToken })
+        .pipe(catchError(() => of(null)))
+        .subscribe();
     }
     this.clearAuth();
     this.router.navigate(['/auth/login']);

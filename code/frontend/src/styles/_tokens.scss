@@ -30,6 +30,7 @@
   --color-success-dim: #{$color-success-dim};
   --color-warning:     #{$color-warning};
   --color-warning-dim: #{$color-warning-dim};
+  --color-warning-bg:  color-mix(in srgb, #{$color-warning} 10%, transparent);
   --color-error:       #{$color-error};
   --color-error-dim:   #{$color-error-dim};
   --color-info:        #{$color-info};
@@ -101,6 +102,20 @@
   --sidebar-collapsed-width: #{$sidebar-collapsed-width};
   --toolbar-height:          #{$toolbar-height};
   --content-max-width:       #{$content-max-width};
+  --input-height:            #{$input-height};
+  --drawer-width:            #{$drawer-width};
+  --toast-max-width:         #{$toast-max-width};
+
+  // Elevation
+  --shadow-tooltip: #{$shadow-tooltip};
+
+  // Third-party brand
+  --plex-brand:       #{$plex-brand};
+  --plex-brand-ink:   #{$plex-brand-ink};
+  --plex-brand-hover: #{$plex-brand-hover};
+
+  // Static surfaces
+  --surface-always-light: #{$surface-always-light};
 
   // Z-index
   --z-dropdown: #{$z-dropdown};

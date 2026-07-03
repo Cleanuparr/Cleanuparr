@@ -1,0 +1,56 @@
+<app-modal [title]="rule() ? 'Edit Seeding Rule' : 'Add Seeding Rule'" [(visible)]="visible" size="lg">
+  <div class="form-grid">
+    <app-input label="Rule Name" placeholder="My TV rule" [formField]="form.name"
+      [error]="form.name().errors()[0]?.message"
+      hint="A descriptive label for this rule"
+      helpKey="download-cleaner:name" />
+    <app-select label="Privacy Type" [options]="privacyTypeOptions" [formField]="form.privacyType"
+      hint="Which torrent types this rule applies to"
+      helpKey="download-cleaner:privacyType" />
+    <app-chip-input class="full-width" label="Categories" placeholder="Add category..."
+      [formField]="form.categories"
+      [error]="form.categories().errors()[0]?.message"
+      hint="One or more download client categories this rule applies to (e.g. tv-sonarr, radarr)"
+      helpKey="download-cleaner:categories" #ruleChipInput />
+    <app-chip-input class="full-width" label="Tracker Patterns" placeholder="Add tracker domain..."
+      [formField]="form.trackerPatterns"
+      hint="Tracker domain suffixes to match (e.g. tracker.org). Empty means any tracker."
+      helpKey="download-cleaner:trackerPatterns" #ruleChipInput />
+    @if (isTagFilterableClient()) {
+      <app-chip-input class="full-width" [label]="isSelectedClientTransmission() ? 'Labels (Any)' : 'Tags (Any)'" [placeholder]="isSelectedClientTransmission() ? 'Add label...' : 'Add tag...'"
+        [formField]="form.tagsAny"
+        [hint]="isSelectedClientTransmission() ? 'Torrent must have at least one of these labels. Empty means any labels.' : 'Torrent must have at least one of these tags. Empty means any tags.'"
+        helpKey="download-cleaner:tagsAny" #ruleChipInput />
+      <app-chip-input class="full-width" [label]="isSelectedClientTransmission() ? 'Labels (All)' : 'Tags (All)'" [placeholder]="isSelectedClientTransmission() ? 'Add label...' : 'Add tag...'"
+        [formField]="form.tagsAll"
+        [hint]="isSelectedClientTransmission() ? 'Torrent must have all of these labels. Empty means any labels.' : 'Torrent must have all of these tags. Empty means any tags.'"
+        helpKey="download-cleaner:tagsAll" #ruleChipInput />
+    }
+    <app-number-input label="Max Ratio" [formField]="form.maxRatio" [step]="0.1"
+      hint="Maximum ratio to seed before removing (-1 means disabled)"
+      helpKey="download-cleaner:maxRatio" />
+    <app-number-input label="Min Seed Time" [formField]="form.minSeedTime" suffix="hours"
+      hint="Minimum time to seed before removing a download that has reached the max ratio (0 means disabled)"
+      helpKey="download-cleaner:minSeedTime" />
+    <app-number-input label="Max Seed Time" [formField]="form.maxSeedTime" suffix="hours"
+      hint="Maximum time to seed before removing (-1 means disabled)"
+      helpKey="download-cleaner:maxSeedTime" />
+    @if (isSeedersFilterableClient()) {
+      <app-number-input label="Min Seeders" [formField]="form.minSeeders" [step]="1" featureId="min-seeders"
+        hint="Minimum number of seeders required before removing (0 means disabled; unavailable counts keep the download)"
+        helpKey="download-cleaner:minSeeders" />
+    }
+    @if (disabledError()) {
+      <div class="category-error">{{ disabledError() }}</div>
+    }
+    <app-toggle class="full-width" label="Delete Source Files" [formField]="form.deleteSourceFiles"
+      hint="When enabled, the source files will be deleted when the download is removed"
+      helpKey="download-cleaner:deleteSourceFiles" />
+  </div>
+  <div modal-footer>
+    <app-button variant="secondary" (clicked)="visible.set(false)">Cancel</app-button>
+    <app-button variant="primary" [loading]="saving()" [disabled]="form().invalid() || hasUncommittedInputs()" (clicked)="save()">
+      {{ rule() ? 'Update' : 'Create' }}
+    </app-button>
+  </div>
+</app-modal>

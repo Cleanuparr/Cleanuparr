@@ -1,0 +1,20 @@
+@use 'settings-layout' as *;
+
+.modal-form { @include modal-form; }
+
+.event-flags {
+  margin-top: var(--space-2);
+
+  &__title {
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: var(--space-3);
+  }
+
+  &__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(200px, 100%), 1fr));
+    gap: var(--space-3);
+  }
+}

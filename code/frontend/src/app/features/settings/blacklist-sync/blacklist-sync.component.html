@@ -36,7 +36,7 @@
   </app-card>
 
   <div class="form-actions">
-    <app-button variant="primary" [glowing]="dirty()" [loading]="saving()" [disabled]="saving() || saved() || hasErrors()" (clicked)="save()">
+    <app-button variant="primary" [glowing]="dirty()" [loading]="saving()" [disabled]="saving() || saved() || hasErrors() || !dirty()" (clicked)="save()">
       {{ saved() ? 'Saved!' : 'Save Settings' }}
     </app-button>
   </div>

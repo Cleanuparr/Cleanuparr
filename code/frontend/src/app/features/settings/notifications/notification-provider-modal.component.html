@@ -1,0 +1,211 @@
+<app-modal
+  [title]="editingProvider() ? ('Edit ' + modalType() + ' Provider') : ('Add ' + modalType() + ' Provider')"
+  [(visible)]="visible"
+  size="lg"
+>
+  <div class="modal-form">
+    <app-toggle label="Enabled" [formField]="modalForm.enabled"
+      hint="Enable or disable this provider" />
+    <app-input label="Name" placeholder="My Provider" [formField]="modalForm.name"
+      hint="A unique name to identify this provider"
+      [error]="modalForm.name().errors()[0]?.message" />
+
+    <!-- Discord Fields -->
+    @if (modalType() === 'Discord') {
+      <app-input label="Webhook URL" placeholder="https://discord.com/api/webhooks/..." type="password" [revealable]="false" [formField]="modalForm.webhookUrl"
+        hint="Your Discord webhook URL. Create one in your Discord server's channel settings under Integrations."
+        [error]="modalForm.webhookUrl().errors()[0]?.message"
+        helpKey="notifications/discord:webhookUrl" />
+      <app-input label="Username" placeholder="Cleanuparr" [formField]="modalForm.username"
+        hint="Override the default webhook username. Leave empty to use the webhook's default name."
+        helpKey="notifications/discord:username" />
+      <app-input label="Avatar URL" placeholder="https://example.com/avatar.png" type="url" [formField]="modalForm.avatarUrl"
+        hint="Override the default webhook avatar. Leave empty to use the webhook's default avatar."
+        helpKey="notifications/discord:avatarUrl" />
+    }
+
+    <!-- Telegram Fields -->
+    @if (modalType() === 'Telegram') {
+      <app-input label="Bot Token" placeholder="123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11" type="password" [revealable]="false" [formField]="modalForm.botToken"
+        hint="Create a bot with BotFather and paste the API token"
+        [error]="modalForm.botToken().errors()[0]?.message"
+        helpKey="notifications/telegram:botToken" />
+      <app-input label="Chat ID" placeholder="-1001234567890" [formField]="modalForm.chatId"
+        hint="Start a conversation with the bot or add it to your group to get the chat ID"
+        [error]="modalForm.chatId().errors()[0]?.message"
+        helpKey="notifications/telegram:chatId" />
+      <app-input label="Topic ID" placeholder="Optional" [formField]="modalForm.topicId"
+        hint="Specify a Topic ID to send to a specific thread (supergroups only)"
+        helpKey="notifications/telegram:topicId" />
+      <app-toggle label="Send Silently" [formField]="modalForm.sendSilently"
+        hint="Deliver without sound for recipients"
+        helpKey="notifications/telegram:sendSilently" />
+    }
+
+    <!-- Notifiarr Fields -->
+    @if (modalType() === 'Notifiarr') {
+      <app-input label="API Key" placeholder="Enter API key" type="password" [revealable]="false" [formField]="modalForm.apiKey"
+        hint="Your Notifiarr API key from your dashboard. Requires Passthrough integration."
+        [error]="modalForm.apiKey().errors()[0]?.message"
+        helpKey="notifications/notifiarr:apiKey" />
+      <app-input label="Channel ID" placeholder="Enter Discord channel ID" [formField]="modalForm.channelId"
+        hint="The Discord channel ID where notifications will be sent."
+        helpKey="notifications/notifiarr:channelId" />
+    }
+
+    <!-- Apprise Fields -->
+    @if (modalType() === 'Apprise') {
+      <app-select label="Mode" [options]="appriseOptions" [formField]="modalForm.appriseMode"
+        hint="API mode requires an external Apprise container. CLI mode uses the Apprise CLI directly."
+        helpKey="notifications/apprise:mode" />
+      @if (modalForm.appriseMode().value() === 'Api') {
+        <app-input label="Server URL" placeholder="http://localhost:8000" [formField]="modalForm.appriseUrl"
+          hint="The URL of your Apprise server where notifications will be sent."
+          [error]="modalForm.appriseUrl().errors()[0]?.message"
+          helpKey="notifications/apprise:url" />
+        <app-input label="Configuration Key" placeholder="Enter key" [formField]="modalForm.appriseKey"
+          hint="The key that identifies your Apprise configuration on the server."
+          [error]="modalForm.appriseKey().errors()[0]?.message"
+          helpKey="notifications/apprise:key" />
+      }
+      @if (modalForm.appriseMode().value() === 'Cli') {
+        <app-chip-input label="Service URLs" placeholder="discord://webhook_id/token" [formField]="modalForm.appriseServiceUrls"
+          hint="Add Apprise service URLs. Example: discord://webhook_id/token."
+          [error]="modalForm.appriseServiceUrls().errors()[0]?.message"
+          helpKey="notifications/apprise:serviceUrls" />
+      }
+      <app-input label="Tags" placeholder="all" [formField]="modalForm.appriseTags"
+        hint="Optional tags to filter notifications. Use comma (,) to OR tags and space ( ) to AND them."
+        helpKey="notifications/apprise:tags" />
+    }
+
+    <!-- Ntfy Fields -->
+    @if (modalType() === 'Ntfy') {
+      <app-input label="Server URL" placeholder="https://ntfy.sh" [formField]="modalForm.ntfyServerUrl"
+        hint="The URL of your ntfy server. Use https://ntfy.sh for the public service or your self-hosted instance."
+        [error]="modalForm.ntfyServerUrl().errors()[0]?.message"
+        helpKey="notifications/ntfy:serverUrl" />
+      <app-chip-input label="Topics" placeholder="cleanuparr" [formField]="modalForm.ntfyTopics"
+        hint="Enter the ntfy topics you want to publish to."
+        [error]="modalForm.ntfyTopics().errors()[0]?.message"
+        helpKey="notifications/ntfy:topics" />
+      <app-select label="Authentication" [options]="ntfyAuthOptions" [formField]="modalForm.ntfyAuthType"
+        hint="Choose how to authenticate with the ntfy server."
+        helpKey="notifications/ntfy:authenticationType" />
+      @if (modalForm.ntfyAuthType().value() === 'BasicAuth') {
+        <app-input label="Username" placeholder="Enter username" [formField]="modalForm.ntfyUsername"
+          hint="Your username for basic authentication."
+          [error]="modalForm.ntfyUsername().errors()[0]?.message"
+          helpKey="notifications/ntfy:username" />
+        <app-input label="Password" placeholder="Enter password" type="password" [revealable]="false" [formField]="modalForm.ntfyPassword"
+          hint="Your password for basic authentication."
+          [error]="modalForm.ntfyPassword().errors()[0]?.message"
+          helpKey="notifications/ntfy:password" />
+      }
+      @if (modalForm.ntfyAuthType().value() === 'AccessToken') {
+        <app-input label="Access Token" placeholder="Enter access token" type="password" [revealable]="false" [formField]="modalForm.ntfyAccessToken"
+          hint="Your access token for bearer token authentication."
+          [error]="modalForm.ntfyAccessToken().errors()[0]?.message"
+          helpKey="notifications/ntfy:accessToken" />
+      }
+      <app-select label="Priority" [options]="ntfyPriorityOptions" [formField]="modalForm.ntfyPriority"
+        hint="The priority level for notifications."
+        helpKey="notifications/ntfy:priority" />
+      <app-chip-input label="Tags" placeholder="warning" [formField]="modalForm.ntfyTags"
+        hint="Optional tags to add to notifications (e.g., warning, alert)."
+        helpKey="notifications/ntfy:tags" />
+    }
+
+    <!-- Pushover Fields -->
+    @if (modalType() === 'Pushover') {
+      <app-input label="API Token" placeholder="Enter API token" type="password" [revealable]="false" [formField]="modalForm.pushoverApiToken"
+        hint="Your application API token from Pushover. Create one at pushover.net/apps/build."
+        [error]="modalForm.pushoverApiToken().errors()[0]?.message"
+        helpKey="notifications/pushover:apiToken" />
+      <app-input label="User Key" placeholder="Enter user key" type="password" [revealable]="false" [formField]="modalForm.pushoverUserKey"
+        hint="Your user/group key from your Pushover dashboard."
+        [error]="modalForm.pushoverUserKey().errors()[0]?.message"
+        helpKey="notifications/pushover:userKey" />
+      <app-chip-input label="Devices" placeholder="myphone" [formField]="modalForm.pushoverDevices"
+        hint="Leave empty to send to all devices, or enter specific device names."
+        helpKey="notifications/pushover:devices" />
+      <app-select label="Priority" [options]="pushoverPriorityOptions" [formField]="modalForm.pushoverPriority"
+        hint="The priority level for notifications. Emergency priority will repeat until acknowledged."
+        helpKey="notifications/pushover:priority" />
+      @if (modalForm.pushoverPriority().value() === 'Emergency') {
+        <app-number-input label="Retry (seconds)" [formField]="modalForm.pushoverRetry" [step]="30"
+          [error]="modalForm.pushoverRetry().errors()[0]?.message"
+          hint="How often (in seconds) the notification will be resent until acknowledged. Minimum 30 seconds."
+          helpKey="notifications/pushover:retry" />
+        <app-number-input label="Expire (seconds)" [formField]="modalForm.pushoverExpire"
+          [error]="modalForm.pushoverExpire().errors()[0]?.message"
+          hint="How long (in seconds) the notification will continue to be retried. Maximum 10800 seconds (3 hours)."
+          helpKey="notifications/pushover:expire" />
+      }
+      <app-select label="Sound" [options]="pushoverSoundOptions" [formField]="modalForm.pushoverSound"
+        hint="Choose a notification sound, or select Custom to enter your own."
+        helpKey="notifications/pushover:sound" />
+      @if (modalForm.pushoverSound().value() === '__custom__') {
+        <app-input label="Custom Sound" placeholder="Enter custom sound name" [formField]="modalForm.pushoverCustomSound"
+          hint="Enter the name of a custom sound you've uploaded to Pushover."
+          helpKey="notifications/pushover:customSound" />
+      }
+      <app-chip-input label="Tags" placeholder="tag1" [formField]="modalForm.pushoverTags"
+        hint="Tags for receipt tracking and batch cancellation of emergency notifications."
+        helpKey="notifications/pushover:tags" />
+    }
+
+    <!-- Gotify Fields -->
+    @if (modalType() === 'Gotify') {
+      <app-input label="Server URL" placeholder="https://gotify.example.com" [formField]="modalForm.gotifyServerUrl"
+        hint="The base URL of your Gotify server instance."
+        [error]="modalForm.gotifyServerUrl().errors()[0]?.message"
+        helpKey="notifications/gotify:serverUrl" />
+      <app-input label="Application Token" placeholder="Enter application token" type="password" [revealable]="false" [formField]="modalForm.gotifyApplicationToken"
+        hint="The application token from your Gotify server. Create one under Apps in the Gotify web UI."
+        [error]="modalForm.gotifyApplicationToken().errors()[0]?.message"
+        helpKey="notifications/gotify:applicationToken" />
+      <app-select label="Priority" [options]="gotifyPriorityOptions" [formField]="modalForm.gotifyPriority"
+        hint="Message priority. Higher priority may trigger more intrusive notifications on clients."
+        helpKey="notifications/gotify:priority" />
+    }
+
+    <div class="event-flags">
+      <h4 class="event-flags__title">Events</h4>
+      <div class="event-flags__grid">
+        <app-toggle label="Failed Import Strike" [formField]="modalForm.onFailedImportStrike"
+          hint="Notify when a failed import strike occurs"
+          helpKey="notifications:onFailedImportStrike" />
+        <app-toggle label="Stalled Strike" [formField]="modalForm.onStalledStrike"
+          hint="Notify when a stalled download strike occurs"
+          helpKey="notifications:onStalledStrike" />
+        <app-toggle label="Slow Strike" [formField]="modalForm.onSlowStrike"
+          hint="Notify when a slow download strike occurs"
+          helpKey="notifications:onSlowStrike" />
+        <app-toggle label="Queue Item Deleted" [formField]="modalForm.onQueueItemDeleted"
+          hint="Notify when a queue item is deleted"
+          helpKey="notifications:onQueueItemDeleted" />
+        <app-toggle label="Download Cleaned" [formField]="modalForm.onDownloadCleaned"
+          hint="Notify when a download is cleaned"
+          helpKey="notifications:onDownloadCleaned" />
+        <app-toggle label="Category Changed" [formField]="modalForm.onCategoryChanged"
+          hint="Notify when a download's category is changed"
+          helpKey="notifications:onCategoryChanged" />
+        <app-toggle label="Search Triggered" [formField]="modalForm.onSearchTriggered"
+          hint="Notify when a search is triggered by the Seeker"
+          helpKey="notifications:onSearchTriggered" />
+        <app-toggle label="Search Item Grabbed" [formField]="modalForm.onSearchItemGrabbed"
+          hint="Notify when a search results in downloads being grabbed"
+          helpKey="notifications:onSearchItemGrabbed" />
+      </div>
+    </div>
+  </div>
+  <div modal-footer>
+    <app-button variant="secondary" size="sm" [loading]="testing()" [disabled]="modalForm().invalid()" (clicked)="testNotification()">
+      Test
+    </app-button>
+    <app-button variant="primary" size="sm" [loading]="saving()" [disabled]="modalForm().invalid()" (clicked)="saveProvider()">
+      Save
+    </app-button>
+  </div>
+</app-modal>

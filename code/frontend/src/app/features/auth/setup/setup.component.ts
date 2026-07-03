@@ -1,9 +1,10 @@
-import { Component, ChangeDetectionStrategy, inject, signal, computed, viewChild, effect, afterNextRender, OnDestroy } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, signal, computed, viewChild, effect, afterNextRender, DestroyRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ButtonComponent, InputComponent, SpinnerComponent, EmptyStateComponent } from '@ui';
 import { AuthService } from '@core/auth/auth.service';
 import { ToastService } from '@core/services/toast.service';
+import { pollPlexPin } from '@shared/utils/plex-pin-poller';
 import { NgIconComponent, provideIcons } from '@ng-icons/core';
 import { tablerCheck, tablerCopy, tablerShieldLock } from '@ng-icons/tabler-icons';
 import { QRCodeComponent } from 'angularx-qrcode';
@@ -18,10 +19,11 @@ import { forkJoin, timer } from 'rxjs';
   changeDetection: ChangeDetectionStrategy.OnPush,
   viewProviders: [provideIcons({ tablerCheck, tablerCopy, tablerShieldLock })],
 })
-export class SetupComponent implements OnDestroy {
+export class SetupComponent {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   private readonly toast = inject(ToastService);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly connectionError = this.auth.connectionError;
   readonly retrying = signal(false);
@@ -182,57 +184,47 @@ export class SetupComponent implements OnDestroy {
 
   // Step 3: Plex linking
   startPlexLink(): void {
+    // Open the popup synchronously on the click so popup blockers allow it, then
+    // point it at the auth URL once the PIN request resolves.
+    const authWindow = window.open('', '_blank');
     this.plexLinking.set(true);
     this.error.set('');
 
     this.auth.requestSetupPlexPin().subscribe({
       next: (result) => {
         this.plexPinId.set(result.pinId);
-        window.open(result.authUrl, '_blank');
+        if (authWindow) {
+          authWindow.location.href = result.authUrl;
+        } else {
+          window.open(result.authUrl, '_blank');
+        }
         this.pollPlexPin();
       },
       error: (err) => {
+        authWindow?.close();
         this.error.set(err.message || 'Failed to start Plex link');
         this.plexLinking.set(false);
       },
     });
   }
 
-  private plexPollTimer: ReturnType<typeof setInterval> | null = null;
-
-  ngOnDestroy(): void {
-    if (this.plexPollTimer) {
-      clearInterval(this.plexPollTimer);
-    }
-  }
-
   private pollPlexPin(): void {
-    let attempts = 0;
-    this.plexPollTimer = setInterval(() => {
-      attempts++;
-      if (attempts > 60) {
-        // Timeout after ~2 minutes
-        clearInterval(this.plexPollTimer!);
+    pollPlexPin({
+      verify: () => this.auth.verifySetupPlexPin(this.plexPinId()),
+      onCompleted: () => {
+        this.plexLinked.set(true);
+        this.plexLinking.set(false);
+      },
+      onError: (error) => {
+        this.plexLinking.set(false);
+        this.error.set((error as { message?: string })?.message || 'Plex linking failed');
+      },
+      onTimeout: () => {
         this.plexLinking.set(false);
         this.error.set('Plex authorization timed out');
-        return;
-      }
-
-      this.auth.verifySetupPlexPin(this.plexPinId()).subscribe({
-        next: (result) => {
-          if (result.completed) {
-            clearInterval(this.plexPollTimer!);
-            this.plexLinked.set(true);
-            this.plexLinking.set(false);
-          }
-        },
-        error: (err) => {
-          clearInterval(this.plexPollTimer!);
-          this.plexLinking.set(false);
-          this.error.set(err.message || 'Plex linking failed');
-        },
-      });
-    }, 2000);
+      },
+      destroyRef: this.destroyRef,
+    });
   }
 
   completeSetup(): void {

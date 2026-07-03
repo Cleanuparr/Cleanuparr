@@ -1,13 +1,13 @@
-import { Component, ChangeDetectionStrategy, inject, signal, computed, viewChildren, effect, untracked, linkedSignal } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, signal, computed, viewChild, viewChildren, effect, untracked, linkedSignal } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
-import { form, required, min, minLength, validate, FormField } from '@angular/forms/signals';
+import { form, min, validate, FormField } from '@angular/forms/signals';
 import { NgIconComponent } from '@ng-icons/core';
 import { CdkDragDrop, CdkDropList, CdkDrag, CdkDragHandle, moveItemInArray } from '@angular/cdk/drag-drop';
 import { PageHeaderComponent } from '@layout/page-header/page-header.component';
 import {
   CardComponent, ButtonComponent, InputComponent, ToggleComponent,
   NumberInputComponent, SelectComponent, ChipInputComponent, AccordionComponent,
-  EmptyStateComponent, LoadingStateComponent, ModalComponent, BadgeComponent, SpinnerComponent,
+  EmptyStateComponent, LoadingStateComponent, BadgeComponent, SpinnerComponent,
   TooltipComponent,
   type SelectOption,
 } from '@ui';
@@ -21,21 +21,16 @@ import {
   createDefaultUnlinkedConfig, createDefaultDeadTorrentConfig, createDefaultOrphanedFilesConfig,
 } from '@shared/models/download-cleaner-config.model';
 import { ScheduleOptions } from '@shared/models/queue-cleaner-config.model';
-import { ScheduleUnit, TorrentPrivacyType, DownloadClientTypeName } from '@shared/models/enums';
+import { ScheduleUnit, DownloadClientTypeName } from '@shared/models/enums';
 import { HasPendingChanges } from '@core/guards/pending-changes.guard';
 import { DeferredLoader } from '@shared/utils/loading.util';
 import { generateCronExpression, parseCronToJobSchedule } from '@shared/utils/schedule.util';
+import { SeedingRuleModalComponent } from './seeding-rule-modal.component';
 
 const SCHEDULE_UNIT_OPTIONS: SelectOption[] = [
   { label: 'Seconds', value: ScheduleUnit.Seconds },
   { label: 'Minutes', value: ScheduleUnit.Minutes },
   { label: 'Hours', value: ScheduleUnit.Hours },
-];
-
-const PRIVACY_TYPE_OPTIONS: SelectOption[] = [
-  { label: 'Public', value: TorrentPrivacyType.Public },
-  { label: 'Private', value: TorrentPrivacyType.Private },
-  { label: 'Both', value: TorrentPrivacyType.Both },
 ];
 
 interface DownloadCleanerGlobalFormModel {
@@ -45,20 +40,6 @@ interface DownloadCleanerGlobalFormModel {
   scheduleEvery: number;
   scheduleUnit: ScheduleUnit;
   ignoredDownloads: string[];
-}
-
-interface SeedingRuleFormModel {
-  name: string;
-  categories: string[];
-  trackerPatterns: string[];
-  tagsAny: string[];
-  tagsAll: string[];
-  privacyType: TorrentPrivacyType;
-  maxRatio: number | null;
-  minSeedTime: number | null;
-  maxSeedTime: number | null;
-  minSeeders: number | null;
-  deleteSourceFiles: boolean;
 }
 
 interface UnlinkedFormModel {
@@ -94,8 +75,8 @@ interface OrphanedFilesFormModel {
     CdkDropList, CdkDrag, CdkDragHandle,
     PageHeaderComponent, CardComponent, ButtonComponent, InputComponent,
     ToggleComponent, NumberInputComponent, SelectComponent, ChipInputComponent, AccordionComponent,
-    EmptyStateComponent, LoadingStateComponent, ModalComponent, BadgeComponent, SpinnerComponent,
-    TooltipComponent, FormField,
+    EmptyStateComponent, LoadingStateComponent, BadgeComponent, SpinnerComponent,
+    TooltipComponent, FormField, SeedingRuleModalComponent,
   ],
   templateUrl: './download-cleaner.component.html',
   styleUrl: './download-cleaner.component.scss',
@@ -106,17 +87,12 @@ export class DownloadCleanerComponent implements HasPendingChanges {
   private readonly toast = inject(ToastService);
   private readonly confirm = inject(ConfirmService);
   private readonly chipInputs = viewChildren(ChipInputComponent);
-  private readonly ruleChipInputs = viewChildren<ChipInputComponent>('ruleChipInput');
-
-  readonly ruleHasUncommittedInputs = computed(() =>
-    this.ruleChipInputs().some(c => c.hasUncommittedInput())
-  );
+  private readonly seedingRuleModal = viewChild(SeedingRuleModalComponent);
 
   private readonly savedSnapshot = signal('');
   private readonly orphanedFilesSnapshots = signal<Record<string, string>>({});
 
   readonly scheduleUnitOptions = SCHEDULE_UNIT_OPTIONS;
-  readonly privacyTypeOptions = PRIVACY_TYPE_OPTIONS;
 
   private readonly configResource = rxResource({
     stream: () => this.api.getConfig(),
@@ -217,30 +193,6 @@ export class DownloadCleanerComponent implements HasPendingChanges {
   // Seeding rule modal
   readonly ruleModalVisible = signal(false);
   readonly editingRule = signal<SeedingRule | null>(null);
-  private readonly ruleDefaults: SeedingRuleFormModel = {
-    name: '', categories: [], trackerPatterns: [], tagsAny: [], tagsAll: [],
-    privacyType: TorrentPrivacyType.Public, maxRatio: -1, minSeedTime: 0,
-    maxSeedTime: -1, minSeeders: 0, deleteSourceFiles: true,
-  };
-  readonly ruleModel = signal<SeedingRuleFormModel>({ ...this.ruleDefaults });
-  readonly ruleForm = form(this.ruleModel, (p) => {
-    required(p.name, { message: 'Name is required' });
-    minLength(p.categories, 1, { message: 'At least one category is required' });
-    min(p.maxRatio, -1);
-    min(p.minSeedTime, 0);
-    min(p.maxSeedTime, -1);
-    min(p.minSeeders, 0);
-    validate(p.maxSeedTime, () => {
-      const m = this.ruleModel();
-      return (m.maxRatio ?? -1) < 0 && (m.maxSeedTime ?? -1) < 0
-        ? { kind: 'disabled', message: 'Both max ratio and max seed time cannot be disabled at the same time' }
-        : undefined;
-    });
-  });
-
-  readonly ruleDisabledError = computed(() =>
-    this.ruleForm.maxSeedTime().errors().find(e => e.kind === 'disabled')?.message
-  );
 
   readonly unlinkedModel = linkedSignal<string | null, UnlinkedFormModel>({
     source: this.selectedClientId,
@@ -458,65 +410,14 @@ export class DownloadCleanerComponent implements HasPendingChanges {
 
   openRuleModal(rule?: SeedingRule): void {
     this.editingRule.set(rule ?? null);
-    if (rule) {
-      this.ruleModel.set({
-        name: rule.name,
-        categories: [...(rule.categories ?? [])],
-        trackerPatterns: [...(rule.trackerPatterns ?? [])],
-        tagsAny: [...(rule.tagsAny ?? [])],
-        tagsAll: [...(rule.tagsAll ?? [])],
-        privacyType: rule.privacyType,
-        maxRatio: rule.maxRatio,
-        minSeedTime: rule.minSeedTime,
-        maxSeedTime: rule.maxSeedTime,
-        minSeeders: rule.minSeeders ?? 0,
-        deleteSourceFiles: rule.deleteSourceFiles,
-      });
-    } else {
-      this.ruleModel.set({ ...this.ruleDefaults });
-    }
     this.ruleModalVisible.set(true);
   }
 
-  saveRule(): void {
-    if (this.ruleForm().invalid() || this.ruleHasUncommittedInputs()) {
-      return;
-    }
+  onSeedingRuleSaved(): void {
     const clientId = this.selectedClientId();
-    if (!clientId) {
-      return;
+    if (clientId) {
+      this.reloadSeedingRules(clientId);
     }
-
-    const m = this.ruleModel();
-    const sanitize = (list: string[]) => list.map(s => s.trim()).filter(s => s.length > 0);
-
-    const dto: Partial<SeedingRule> = {
-      name: m.name.trim(),
-      categories: sanitize(m.categories),
-      trackerPatterns: sanitize(m.trackerPatterns),
-      tagsAny: sanitize(m.tagsAny),
-      tagsAll: sanitize(m.tagsAll),
-      privacyType: m.privacyType,
-      maxRatio: m.maxRatio ?? -1,
-      minSeedTime: m.minSeedTime ?? 0,
-      maxSeedTime: m.maxSeedTime ?? -1,
-      minSeeders: m.minSeeders ?? 0,
-      deleteSourceFiles: m.deleteSourceFiles,
-    };
-
-    const editing = this.editingRule();
-    const request = editing?.id
-      ? this.api.updateSeedingRule(editing.id, dto)
-      : this.api.createSeedingRule(clientId, dto);
-
-    request.subscribe({
-      next: () => {
-        this.toast.success(editing ? 'Seeding rule updated' : 'Seeding rule created');
-        this.ruleModalVisible.set(false);
-        this.reloadSeedingRules(clientId);
-      },
-      error: (e: ApiError) => this.toast.error(e.statusCode === 400 ? e.message : 'Failed to save seeding rule'),
-    });
   }
 
   async deleteRule(rule: SeedingRule): Promise<void> {
@@ -743,6 +644,7 @@ export class DownloadCleanerComponent implements HasPendingChanges {
   });
 
   hasPendingChanges(): boolean {
-    return this.dirty() || this.unlinkedDirty() || this.deadTorrentDirty() || this.orphanedFilesDirty();
+    return this.dirty() || this.unlinkedDirty() || this.deadTorrentDirty() || this.orphanedFilesDirty()
+      || !!this.seedingRuleModal()?.hasPendingChanges();
   }
 }

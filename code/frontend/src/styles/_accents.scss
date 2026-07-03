@@ -18,6 +18,10 @@
   --logo-accent: #420077;
 }
 
+[data-theme='dark'][data-accent='default'] {
+  --logo-accent: #8b5cf6;
+}
+
 [data-accent='blue'] {
   --brand-50:  #eff6ff;
   --brand-100: #dbeafe;

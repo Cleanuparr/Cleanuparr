@@ -80,3 +80,25 @@
     background: var(--color-primary-subtle);
   }
 }
+
+// CDK overlay: pin the overlay container to the app's modal layer so toasts and
+// tooltips keep their prior stacking above open drawers (prebuilt CSS defaults to 1000).
+.cdk-overlay-container {
+  z-index: var(--z-modal);
+}
+
+// Drawer backdrop — CDK renders the backdrop element outside the drawer component,
+// so it can't be styled from the component stylesheet.
+.drawer-backdrop {
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(2px);
+}
+
+// Modal footer content is projected via [modal-footer] into the modal's footer slot,
+// so the wrapper element lives under the consumer's view encapsulation and the modal component stylesheet can't reach it. Lay its buttons out here.
+[modal-footer] {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-3);
+}

@@ -1,0 +1,13 @@
+@use 'settings-layout' as *;
+
+.form-grid { @include form-grid; }
+
+.full-width {
+  grid-column: 1 / -1;
+}
+
+.category-error {
+  font-size: var(--font-size-xs);
+  color: var(--color-error);
+  margin-bottom: var(--space-3);
+}

@@ -1,0 +1,50 @@
+@use 'settings-layout' as *;
+
+.form-stack { @include form-stack; }
+.form-actions { @include form-actions; }
+
+.section-hint {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  line-height: 1.5;
+
+  code {
+    background: var(--surface-secondary);
+    padding: 0.125rem 0.375rem;
+    border-radius: var(--radius-sm);
+    font-size: var(--font-size-xs);
+  }
+}
+
+.api-key-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  background: var(--surface-secondary);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+}
+
+.api-key-display {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.api-key-value {
+  font-family: monospace;
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  word-break: break-all;
+
+  &--masked {
+    color: var(--text-secondary);
+  }
+}
+
+.api-key-actions {
+  display: flex;
+  gap: var(--space-1);
+  flex-shrink: 0;
+}

@@ -1,3 +1,4 @@
+@use 'responsive' as *;
 @use 'data-toolbar' as *;
 @use 'page-animations' as *;
 
@@ -388,7 +389,7 @@
 }
 
 // Tablet
-@media (max-width: 1024px) {
+@include tablet {
   .list-row__main {
     flex-wrap: wrap;
   }
@@ -399,7 +400,7 @@
 }
 
 // Mobile
-@media (max-width: 768px) {
+@include mobile {
   .stats-bar {
     flex-wrap: wrap;
     gap: var(--space-3);

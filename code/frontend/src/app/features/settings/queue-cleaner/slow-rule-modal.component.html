@@ -1,0 +1,52 @@
+<app-modal [title]="rule() ? 'Edit Slow Rule' : 'Add Slow Rule'" [(visible)]="visible" size="lg">
+  <div class="form-grid">
+    <app-input label="Name" placeholder="My Slow Rule" [formField]="form.name"
+      [error]="form.name().errors()[0]?.message"
+      helpKey="queue-cleaner:slowRule.name" />
+    <app-toggle label="Enabled" [formField]="form.enabled"
+      hint="Enable this rule"
+      helpKey="queue-cleaner:slowRule.enabled" />
+    <app-number-input label="Max Strikes" [formField]="form.maxStrikes"
+      hint="Number of strikes before action is taken"
+      [error]="form.maxStrikes().errors()[0]?.message"
+      helpKey="queue-cleaner:slowRule.maxStrikes" />
+    <app-size-input label="Min Speed" [units]="speedUnits" [formField]="form.minSpeed"
+      placeholder="e.g. 100"
+      hint="Minimum speed threshold for slow downloads"
+      helpKey="queue-cleaner:slowRule.minSpeed" />
+    <app-number-input label="Maximum Time (Hours)" [formField]="form.maxTimeHours"
+      hint="Maximum time allowed for slow downloads (0 means disabled)"
+      helpKey="queue-cleaner:slowRule.maxTimeHours" />
+    <app-select label="Privacy Type" [options]="privacyTypeOptions" [formField]="form.privacyType"
+      hint="Which torrent types this rule applies to"
+      helpKey="queue-cleaner:slowRule.privacyType" />
+    <app-number-input label="Min Completion %" [formField]="form.minCompletion" suffix="%"
+      hint="Apply the rule once completion percentage exceeds this value (0 still includes exactly 0%)"
+      helpKey="queue-cleaner:slowRule.completionRange" />
+    <app-number-input label="Max Completion %" [formField]="form.maxCompletion" suffix="%"
+      hint="Apply the rule up to and including this completion percentage"
+      [error]="form.maxCompletion().errors()[0]?.message"
+      helpKey="queue-cleaner:slowRule.completionRange" />
+    <app-size-input label="Ignore Above Size" [units]="sizeUnitsLarge" [formField]="form.ignoreAboveSize"
+      placeholder="e.g. 25"
+      hint="Downloads will be ignored if size exceeds this threshold"
+      helpKey="queue-cleaner:slowRule.ignoreAboveSize" />
+    <app-toggle label="Reset Strikes on Progress" [formField]="form.resetOnProgress"
+      hint="Reset strike count when torrent shows progress"
+      helpKey="queue-cleaner:slowRule.resetStrikesOnProgress" />
+    <app-toggle label="Change category instead of delete" [formField]="form.changeCategory"
+      hint="Changes the category to the post-import category set in your arr"
+      helpKey="queue-cleaner:slowRule.changeCategory" />
+    @if (!form.changeCategory().value()) {
+      <app-toggle label="Delete Private from Client" [formField]="form.deletePrivate" [forceDisabled]="form.deletePrivate().disabled()"
+        hint="Disable this if you want to keep private torrents in the download client even if they are removed from the arrs"
+        helpKey="queue-cleaner:slowRule.deletePrivateTorrentsFromClient" />
+    }
+  </div>
+  <div modal-footer>
+    <app-button variant="secondary" (clicked)="visible.set(false)">Cancel</app-button>
+    <app-button variant="primary" [loading]="saving()" [disabled]="form().invalid()" (clicked)="save()">
+      {{ rule() ? 'Update' : 'Create' }}
+    </app-button>
+  </div>
+</app-modal>
