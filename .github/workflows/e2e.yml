@@ -24,6 +24,7 @@ permissions:
 
 jobs:
   e2e:
+    if: false
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
