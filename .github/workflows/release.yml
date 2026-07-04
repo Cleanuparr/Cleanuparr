@@ -243,6 +243,26 @@ jobs:
             ./artifacts/*.pkg
             ./artifacts/*.exe
 
+  # Deploy docs after a successful release
+  deploy-docs:
+    needs: [create-release]
+    if: needs.create-release.result == 'success'
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    uses: ./.github/workflows/docs.yml
+    secrets: inherit
+
+  # Deploy Cloudflare status page after a successful release
+  deploy-status:
+    needs: [validate, create-release]
+    if: needs.create-release.result == 'success'
+    uses: ./.github/workflows/cloudflare-pages-status.yml
+    with:
+      version: ${{ needs.validate.outputs.release_version }}
+    secrets: inherit
+
   # Summary job
   summary:
     needs: [validate, test, e2e, build-frontend, build-executables, build-windows-installer, build-macos, build-docker]
