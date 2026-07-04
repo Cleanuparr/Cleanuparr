@@ -142,6 +142,19 @@ public class ManualEventsController : ControllerBase
     }
 
     /// <summary>
+    /// Marks all unresolved manual events as resolved
+    /// </summary>
+    [HttpPost("resolve_all")]
+    public async Task<ActionResult<object>> ResolveAllManualEvents()
+    {
+        int resolvedCount = await _context.ManualEvents
+            .Where(e => !e.IsResolved)
+            .ExecuteUpdateAsync(setter => setter.SetProperty(e => e.IsResolved, true));
+
+        return Ok(new { ResolvedCount = resolvedCount });
+    }
+
+    /// <summary>
     /// Gets manual event statistics
     /// </summary>
     [HttpGet("stats")]

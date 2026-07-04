@@ -70,6 +70,10 @@ export class EventsApi {
     return this.http.post<void>(`/api/manualevents/${id}/resolve`, {});
   }
 
+  resolveAllManualEvents(): Observable<{ resolvedCount: number }> {
+    return this.http.post<{ resolvedCount: number }>('/api/manualevents/resolve_all', {});
+  }
+
   getManualEventStats(): Observable<ManualEventStats> {
     return this.http.get<ManualEventStats>('/api/manualevents/stats');
   }
