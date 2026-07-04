@@ -54,6 +54,12 @@ namespace Cleanuparr.Persistence.Migrations.Events
                 defaultValue: "");
 
             migrationBuilder.AddColumn<string>(
+                name: "resolved_at",
+                table: "manual_events",
+                type: "TEXT",
+                nullable: true);
+
+            migrationBuilder.AddColumn<string>(
                 name: "clean_reason",
                 table: "events",
                 type: "TEXT",
@@ -209,6 +215,16 @@ namespace Cleanuparr.Persistence.Migrations.Events
                 column: "delete_reason");
 
             migrationBuilder.CreateIndex(
+                name: "ix_events_search_type",
+                table: "events",
+                column: "search_type");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_events_search_reason",
+                table: "events",
+                column: "search_reason");
+
+            migrationBuilder.CreateIndex(
                 name: "ix_event_history_archived_at",
                 table: "event_history",
                 column: "archived_at",
@@ -254,6 +270,14 @@ namespace Cleanuparr.Persistence.Migrations.Events
                 name: "ix_events_delete_reason",
                 table: "events");
 
+            migrationBuilder.DropIndex(
+                name: "ix_events_search_type",
+                table: "events");
+
+            migrationBuilder.DropIndex(
+                name: "ix_events_search_reason",
+                table: "events");
+
             migrationBuilder.DropColumn(
                 name: "item_hash",
                 table: "manual_events");
@@ -268,6 +292,10 @@ namespace Cleanuparr.Persistence.Migrations.Events
 
             migrationBuilder.DropColumn(
                 name: "type",
+                table: "manual_events");
+
+            migrationBuilder.DropColumn(
+                name: "resolved_at",
                 table: "manual_events");
 
             migrationBuilder.DropColumn(

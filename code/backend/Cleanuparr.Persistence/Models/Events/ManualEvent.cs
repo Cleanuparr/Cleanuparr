@@ -54,6 +54,12 @@ public class ManualEvent
 
     public bool IsResolved { get; set; }
 
+    /// <summary>
+    /// When the event was resolved. Used to enforce the post-resolve cooldown before an
+    /// identical event can be re-created. Null while unresolved.
+    /// </summary>
+    public DateTimeOffset? ResolvedAt { get; set; }
+
     public Guid? JobRunId { get; set; }
 
     [JsonIgnore]

@@ -21,6 +21,8 @@ namespace Cleanuparr.Persistence.Models.Events;
 [Index(nameof(CycleId))]
 [Index(nameof(DeleteReason))]
 [Index(nameof(CleanReason))]
+[Index(nameof(SearchType))]
+[Index(nameof(SearchReason))]
 public class AppEvent : IEvent
 {
     [Key]

@@ -182,6 +182,12 @@ namespace Cleanuparr.Persistence.Migrations.Events
                     b.HasIndex("Message")
                         .HasDatabaseName("ix_events_message");
 
+                    b.HasIndex("SearchReason")
+                        .HasDatabaseName("ix_events_search_reason");
+
+                    b.HasIndex("SearchType")
+                        .HasDatabaseName("ix_events_search_type");
+
                     b.HasIndex("Severity")
                         .HasDatabaseName("ix_events_severity");
 
@@ -410,6 +416,10 @@ namespace Cleanuparr.Persistence.Migrations.Events
                         .HasMaxLength(1000)
                         .HasColumnType("TEXT")
                         .HasColumnName("message");
+
+                    b.Property<string>("ResolvedAt")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("resolved_at");
 
                     b.Property<string>("Severity")
                         .IsRequired()
