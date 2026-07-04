@@ -75,10 +75,7 @@ public class EventCleanupService : BackgroundService
             await ArchiveExpiredEventsAsync(eventsContext, eventCutoff);
 
             // Resolved manual events are transient and are not archived
-            await eventsContext.ManualEvents
-                .Where(e => e.Timestamp < eventCutoff)
-                .Where(e => e.IsResolved)
-                .ExecuteDeleteAsync();
+            await DeleteResolvedManualEventsAsync(eventsContext, eventCutoff);
 
             // Prune cold history older than the configured retention window
             await PruneEventHistoryAsync(eventsContext, config.HistoryRetentionDays);
@@ -180,6 +177,24 @@ public class EventCleanupService : BackgroundService
         if (totalArchived > 0)
         {
             _logger.LogInformation("Archived {count} events older than {days} days to history", totalArchived, _eventRetentionDays);
+        }
+    }
+
+    /// <summary>
+    /// Deletes resolved manual events past the hot window. Retention is measured from when the event was
+    /// resolved (falling back to its timestamp for legacy rows), so a freshly-resolved old event survives
+    /// long enough to keep backing the publish cooldown until it naturally expires.
+    /// </summary>
+    internal async Task DeleteResolvedManualEventsAsync(EventsContext eventsContext, DateTimeOffset cutoff)
+    {
+        int deleted = await eventsContext.ManualEvents
+            .Where(e => e.IsResolved)
+            .Where(e => (e.ResolvedAt ?? e.Timestamp) < cutoff)
+            .ExecuteDeleteAsync();
+
+        if (deleted > 0)
+        {
+            _logger.LogInformation("Deleted {count} resolved manual events older than {days} days", deleted, _eventRetentionDays);
         }
     }
 

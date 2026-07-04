@@ -106,6 +106,51 @@ public class EventCleanupLogicTests : IDisposable
     }
 
     [Fact]
+    public async Task DeleteResolvedManualEventsAsync_KeepsRecentlyResolvedOldEvents()
+    {
+        DateTimeOffset cutoff = DateTimeOffset.UtcNow.AddDays(-30);
+
+        // Created long ago but resolved just now — must survive so the publish cooldown still sees it.
+        ManualEvent freshlyResolved = new()
+        {
+            Type = ManualEventType.RecurringDownload,
+            Message = "fresh",
+            Severity = EventSeverity.Warning,
+            Timestamp = DateTimeOffset.UtcNow.AddDays(-40),
+            IsResolved = true,
+            ResolvedAt = DateTimeOffset.UtcNow,
+        };
+        // Created and resolved long ago — safe to delete.
+        ManualEvent longResolved = new()
+        {
+            Type = ManualEventType.SearchNotTriggered,
+            Message = "stale",
+            Severity = EventSeverity.Warning,
+            Timestamp = DateTimeOffset.UtcNow.AddDays(-40),
+            IsResolved = true,
+            ResolvedAt = DateTimeOffset.UtcNow.AddDays(-35),
+        };
+        // Old but still unresolved — never deleted here.
+        ManualEvent unresolved = new()
+        {
+            Type = ManualEventType.RecurringDownload,
+            Message = "open",
+            Severity = EventSeverity.Warning,
+            Timestamp = DateTimeOffset.UtcNow.AddDays(-40),
+            IsResolved = false,
+        };
+        _context.ManualEvents.AddRange(freshlyResolved, longResolved, unresolved);
+        await _context.SaveChangesAsync();
+
+        await _service.DeleteResolvedManualEventsAsync(_context, cutoff);
+
+        List<string> remaining = await _context.ManualEvents.Select(e => e.Message).ToListAsync();
+        remaining.ShouldContain("fresh");
+        remaining.ShouldContain("open");
+        remaining.ShouldNotContain("stale");
+    }
+
+    [Fact]
     public async Task PruneJobRunsAsync_DeletesOnlyOldCompletedUnreferencedRuns()
     {
         DateTimeOffset oldTime = DateTimeOffset.UtcNow.AddDays(-40);
