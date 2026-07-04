@@ -258,6 +258,8 @@ public class EventPublisherTests : IDisposable
             ItemHash = itemHash,
             IsResolved = isResolved,
             Timestamp = timestamp,
+            // For resolved seeds the timestamp represents when it was resolved (drives the cooldown).
+            ResolvedAt = isResolved ? timestamp : null,
         };
         _context.ManualEvents.Add(seed);
         await _context.SaveChangesAsync();

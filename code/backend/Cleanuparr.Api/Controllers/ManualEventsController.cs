@@ -136,6 +136,7 @@ public class ManualEventsController : ControllerBase
             return NotFound();
 
         eventEntity.IsResolved = true;
+        eventEntity.ResolvedAt = DateTimeOffset.UtcNow;
         await _context.SaveChangesAsync();
 
         return Ok();
@@ -147,9 +148,12 @@ public class ManualEventsController : ControllerBase
     [HttpPost("resolve_all")]
     public async Task<ActionResult<object>> ResolveAllManualEvents()
     {
+        DateTimeOffset resolvedAt = DateTimeOffset.UtcNow;
         int resolvedCount = await _context.ManualEvents
             .Where(e => !e.IsResolved)
-            .ExecuteUpdateAsync(setter => setter.SetProperty(e => e.IsResolved, true));
+            .ExecuteUpdateAsync(setter => setter
+                .SetProperty(e => e.IsResolved, true)
+                .SetProperty(e => e.ResolvedAt, resolvedAt));
 
         return Ok(new { ResolvedCount = resolvedCount });
     }

@@ -9,6 +9,7 @@ using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Cleanuparr.Persistence.Models.Events;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -73,6 +74,12 @@ public class EventPublisher : IEventPublisher
         _logger.LogTrace("Published event: {eventType}", eventType);
     }
 
+    /// <summary>
+    /// Publishes a manual event, gated to avoid duplicates. Common context fields are populated here;
+    /// <paramref name="configure"/> sets event-type-specific typed fields. When an item hash is set,
+    /// the event is suppressed if an unresolved event of the same type/hash already exists, or if one
+    /// was resolved within the post-resolve cooldown window.
+    /// </summary>
     public async Task PublishManualAsync(ManualEventType type, string message, EventSeverity severity, Action<ManualEvent>? configure = null, bool? isDryRun = null)
     {
         ManualEvent eventEntity = new()
@@ -97,11 +104,11 @@ public class EventPublisher : IEventPublisher
             // ponytail: 1h cooldown is hardcoded by request; make it a config value only if it needs tuning.
             DateTimeOffset cutoff = DateTimeOffset.UtcNow.AddHours(-1);
 
-            // Suppress if an unresolved event already exists (dedup) OR the last one was < 1h ago (post-resolve cooldown).
+            // Suppress if an unresolved event already exists (dedup) OR one was resolved < 1h ago (post-resolve cooldown).
             bool suppress = await _context.ManualEvents.AnyAsync(e =>
                 e.Type == type &&
                 e.ItemHash == normalizedHash &&
-                (!e.IsResolved || e.Timestamp >= cutoff));
+                (!e.IsResolved || (e.ResolvedAt != null && e.ResolvedAt >= cutoff)));
 
             if (suppress)
             {
@@ -117,9 +124,11 @@ public class EventPublisher : IEventPublisher
             _context.ManualEvents.Add(eventEntity);
             await _context.SaveChangesAsync();
         }
-        catch (DbUpdateException) when (normalizedHash is not null)
+        catch (DbUpdateException ex) when (normalizedHash is not null
+            && ex.InnerException is SqliteException { SqliteErrorCode: 19 })
         {
-            // Lost a race against the partial unique index — another run created it first. Treat as deduped.
+            // SQLITE_CONSTRAINT (19): lost a race against the partial unique index — another run
+            // created it first. Treat as deduped. Any other failure is real and bubbles up.
             _logger.LogDebug("Manual event {type} for {hash} rejected by unique index", type, normalizedHash);
             _context.Entry(eventEntity).State = EntityState.Detached;
             return;
