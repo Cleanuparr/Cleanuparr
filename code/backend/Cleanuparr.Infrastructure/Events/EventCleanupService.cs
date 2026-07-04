@@ -180,11 +180,6 @@ public class EventCleanupService : BackgroundService
         }
     }
 
-    /// <summary>
-    /// Deletes resolved manual events past the hot window. Retention is measured from when the event was
-    /// resolved (falling back to its timestamp for legacy rows), so a freshly-resolved old event survives
-    /// long enough to keep backing the publish cooldown until it naturally expires.
-    /// </summary>
     internal async Task DeleteResolvedManualEventsAsync(EventsContext eventsContext, DateTimeOffset cutoff)
     {
         int deleted = await eventsContext.ManualEvents
@@ -211,10 +206,6 @@ public class EventCleanupService : BackgroundService
         }
     }
 
-    /// <summary>
-    /// Deletes completed job runs older than the hot window that no active strike or event still references.
-    /// The guard is required because <c>Strike.JobRunId</c> is a required cascade FK.
-    /// </summary>
     internal async Task PruneJobRunsAsync(EventsContext eventsContext, DateTimeOffset cutoff)
     {
         int deleted = await eventsContext.JobRuns
@@ -222,6 +213,7 @@ public class EventCleanupService : BackgroundService
             .Where(j => !eventsContext.Strikes.Any(s => s.JobRunId == j.Id))
             .Where(j => !eventsContext.Events.Any(e => e.JobRunId == j.Id))
             .Where(j => !eventsContext.ManualEvents.Any(m => m.JobRunId == j.Id))
+            .Where(j => !eventsContext.EventHistory.Any(h => h.JobRunId == j.Id))
             .ExecuteDeleteAsync();
 
         if (deleted > 0)
