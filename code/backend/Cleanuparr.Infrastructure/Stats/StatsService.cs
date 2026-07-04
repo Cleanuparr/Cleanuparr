@@ -90,9 +90,10 @@ public class StatsService : IStatsService
             Strikes = new StrikeV2Stats
             {
                 Active = activeStrikes,
-                Issued = await CountEventsAsync(cutoff, StrikeEventTypes),
-                Recovered = await CountEventsAsync(cutoff, [EventType.StrikeReset]),
-                Removed = await CountEventsAsync(cutoff, [EventType.QueueItemDeleted]),
+                // byType already holds the merged (active + history) per-type counts for this cutoff.
+                Issued = StrikeEventTypes.Sum(t => byType.GetValueOrDefault(t.ToString(), 0)),
+                Recovered = byType.GetValueOrDefault(EventType.StrikeReset.ToString(), 0),
+                Removed = byType.GetValueOrDefault(EventType.QueueItemDeleted.ToString(), 0),
             },
             Malware = new MalwareV2Stats
             {
@@ -156,15 +157,6 @@ public class StatsService : IStatsService
         return merged;
     }
 
-    private async Task<int> CountEventsAsync(DateTimeOffset cutoff, EventType[] types)
-    {
-        int active = await _eventsContext.Events
-            .CountAsync(e => e.Timestamp >= cutoff && types.Contains(e.EventType));
-        int history = await _eventsContext.EventHistory
-            .CountAsync(e => e.Timestamp >= cutoff && types.Contains(e.EventType));
-        return active + history;
-    }
-
     private async Task<int> CountMalwareAsync(DateTimeOffset cutoff)
     {
         int active = await _eventsContext.Events
@@ -209,7 +201,11 @@ public class StatsService : IStatsService
         return timestamps;
     }
 
-    private async Task<JobV2Stats> GetJobV2StatsAsync(DateTimeOffset cutoff)
+    /// <summary>
+    /// Builds the per-job-type run stats for the window, enriched with each job's next scheduled run.
+    /// Shared by the v1 and v2 job-stats projections.
+    /// </summary>
+    private async Task<Dictionary<string, JobTypeStats>> BuildJobTypeStatsAsync(DateTimeOffset cutoff)
     {
         var jobRuns = await _eventsContext.JobRuns
             .Where(j => j.StartedAt >= cutoff)
@@ -247,11 +243,18 @@ public class StatsService : IStatsService
             }
         }
 
+        return byType;
+    }
+
+    private async Task<JobV2Stats> GetJobV2StatsAsync(DateTimeOffset cutoff)
+    {
+        Dictionary<string, JobTypeStats> byType = await BuildJobTypeStatsAsync(cutoff);
+
         return new JobV2Stats
         {
-            TotalRuns = jobRuns.Sum(j => j.TotalRuns),
-            Completed = jobRuns.Sum(j => j.Completed),
-            Failed = jobRuns.Sum(j => j.Failed),
+            TotalRuns = byType.Values.Sum(s => s.TotalRuns),
+            Completed = byType.Values.Sum(s => s.Completed),
+            Failed = byType.Values.Sum(s => s.Failed),
             ByType = byType,
         };
     }
@@ -341,41 +344,7 @@ public class StatsService : IStatsService
 
     private async Task<JobStats> GetJobStatsAsync(DateTimeOffset cutoff, int hours)
     {
-        var jobRuns = await _eventsContext.JobRuns
-            .Where(j => j.StartedAt >= cutoff)
-            .GroupBy(j => j.Type)
-            .Select(g => new
-            {
-                Type = g.Key,
-                TotalRuns = g.Count(),
-                Completed = g.Count(j => j.Status == JobRunStatus.Completed),
-                Failed = g.Count(j => j.Status == JobRunStatus.Failed),
-                LastRunAt = g.Max(j => j.StartedAt)
-            })
-            .ToListAsync();
-
-        var byType = jobRuns.ToDictionary(
-            j => j.Type.ToString(),
-            j => new JobTypeStats
-            {
-                TotalRuns = j.TotalRuns,
-                Completed = j.Completed,
-                Failed = j.Failed,
-                LastRunAt = j.LastRunAt
-            });
-
-        var allJobs = await _jobManagementService.GetAllJobs();
-        foreach (var job in allJobs)
-        {
-            if (byType.TryGetValue(job.JobType, out var stats))
-            {
-                stats.NextRunAt = job.NextRunTime;
-            }
-            else
-            {
-                byType[job.JobType] = new JobTypeStats { NextRunAt = job.NextRunTime };
-            }
-        }
+        Dictionary<string, JobTypeStats> byType = await BuildJobTypeStatsAsync(cutoff);
 
         return new JobStats
         {
