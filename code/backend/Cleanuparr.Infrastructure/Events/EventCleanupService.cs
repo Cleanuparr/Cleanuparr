@@ -2,6 +2,7 @@ using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.General;
 using Cleanuparr.Persistence.Models.Events;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -153,6 +154,11 @@ public class EventCleanupService : BackgroundService
                 })
                 .ToList();
 
+            // Insert history and delete the source rows atomically. Without this, a failure
+            // between the two writes leaves the history rows committed, so the next run re-archives
+            // the same events and their preserved Ids collide on the EventHistory primary key.
+            await using IDbContextTransaction transaction = await eventsContext.Database.BeginTransactionAsync();
+
             eventsContext.EventHistory.AddRange(history);
             await eventsContext.SaveChangesAsync();
 
@@ -160,6 +166,8 @@ public class EventCleanupService : BackgroundService
             await eventsContext.Events
                 .Where(e => ids.Contains(e.Id))
                 .ExecuteDeleteAsync();
+
+            await transaction.CommitAsync();
 
             totalArchived += batch.Count;
 
