@@ -251,7 +251,13 @@ export class EventsComponent implements OnInit, OnDestroy {
     return eventType.replace(/([A-Z])/g, ' $1').trim();
   }
 
+  private readonly detailsCache = new WeakMap<AppEvent, { label: string; value: string }[]>();
+
   eventDetails(event: AppEvent): { label: string; value: string }[] {
+    const cached = this.detailsCache.get(event);
+    if (cached) {
+      return cached;
+    }
     const details: { label: string; value: string }[] = [];
     const add = (label: string, value: unknown): void => {
       if (value === null || value === undefined || value === '') {
@@ -283,6 +289,7 @@ export class EventsComponent implements OnInit, OnDestroy {
     add('Search type', event.searchType);
     add('Search reason', event.searchReason);
     add('Grabbed items', event.grabbedItems);
+    this.detailsCache.set(event, details);
     return details;
   }
 
