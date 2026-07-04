@@ -108,9 +108,9 @@ public class EventsController : ControllerBase
         int totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
         int skip = (page - 1) * pageSize;
 
-        // Get paginated data
         List<EventListItem> events = await query
             .OrderByDescending(e => e.Timestamp)
+            .ThenByDescending(e => e.Id)
             .Skip(skip)
             .Take(pageSize)
             .ToListAsync();
