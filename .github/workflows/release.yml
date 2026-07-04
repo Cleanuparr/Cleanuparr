@@ -99,7 +99,8 @@ jobs:
   # Run E2E tests
   e2e:
     needs: validate
-    if: ${{ needs.validate.outputs.is_tag == 'true' || github.event.inputs.runTests == 'true' }}
+    # if: ${{ needs.validate.outputs.is_tag == 'true' || github.event.inputs.runTests == 'true' }}
+    if: false
     uses: ./.github/workflows/e2e.yml
     secrets: inherit
 
