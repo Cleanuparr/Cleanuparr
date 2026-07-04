@@ -43,6 +43,11 @@ public class StatsV2Controller : ControllerBase
         [FromQuery] string window = "30d",
         [FromQuery] string bucket = "day")
     {
+        if (!string.Equals(bucket, "day", StringComparison.OrdinalIgnoreCase))
+        {
+            return BadRequest($"Unsupported bucket '{bucket}'. Only 'day' is currently supported.");
+        }
+
         int hours = WindowToHours(window);
         List<TimelineBucketDto> series = await _statsService.GetTimelineAsync(metric, hours);
         return Ok(series);
