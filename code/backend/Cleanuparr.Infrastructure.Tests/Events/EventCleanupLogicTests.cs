@@ -114,9 +114,10 @@ public class EventCleanupLogicTests : IDisposable
         JobRun unreferenced = new() { Id = Guid.NewGuid(), Type = JobType.QueueCleaner, StartedAt = oldTime, CompletedAt = oldTime };
         JobRun referencedByStrike = new() { Id = Guid.NewGuid(), Type = JobType.QueueCleaner, StartedAt = oldTime, CompletedAt = oldTime };
         JobRun referencedByEvent = new() { Id = Guid.NewGuid(), Type = JobType.QueueCleaner, StartedAt = oldTime, CompletedAt = oldTime };
+        JobRun referencedByManualEvent = new() { Id = Guid.NewGuid(), Type = JobType.QueueCleaner, StartedAt = oldTime, CompletedAt = oldTime };
         JobRun recent = new() { Id = Guid.NewGuid(), Type = JobType.QueueCleaner, StartedAt = recentTime, CompletedAt = recentTime };
         JobRun incomplete = new() { Id = Guid.NewGuid(), Type = JobType.QueueCleaner, StartedAt = oldTime, CompletedAt = null };
-        _context.JobRuns.AddRange(unreferenced, referencedByStrike, referencedByEvent, recent, incomplete);
+        _context.JobRuns.AddRange(unreferenced, referencedByStrike, referencedByEvent, referencedByManualEvent, recent, incomplete);
 
         DownloadItem item = new() { DownloadId = "h1", Title = "t1" };
         _context.DownloadItems.Add(item);
@@ -128,6 +129,13 @@ public class EventCleanupLogicTests : IDisposable
             Severity = EventSeverity.Important,
             JobRunId = referencedByEvent.Id,
         });
+        _context.ManualEvents.Add(new ManualEvent
+        {
+            Type = ManualEventType.RecurringDownload,
+            Message = "m",
+            Severity = EventSeverity.Important,
+            JobRunId = referencedByManualEvent.Id,
+        });
         await _context.SaveChangesAsync();
 
         await _service.PruneJobRunsAsync(_context, DateTimeOffset.UtcNow.AddDays(-30));
@@ -136,6 +144,7 @@ public class EventCleanupLogicTests : IDisposable
         remaining.ShouldNotContain(unreferenced.Id);
         remaining.ShouldContain(referencedByStrike.Id);
         remaining.ShouldContain(referencedByEvent.Id);
+        remaining.ShouldContain(referencedByManualEvent.Id);
         remaining.ShouldContain(recent.Id);
         remaining.ShouldContain(incomplete.Id);
     }
