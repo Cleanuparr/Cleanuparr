@@ -73,10 +73,11 @@ public class EventPublisher : IEventPublisher
         _logger.LogTrace("Published event: {eventType}", eventType);
     }
 
-    public async Task PublishManualAsync(string message, EventSeverity severity, Action<ManualEvent>? configure = null, bool? isDryRun = null)
+    public async Task PublishManualAsync(ManualEventType type, string message, EventSeverity severity, Action<ManualEvent>? configure = null, bool? isDryRun = null)
     {
         ManualEvent eventEntity = new()
         {
+            Type = type,
             Message = message,
             Severity = severity,
             JobRunId = ContextProvider.TryGetJobRunId(),
@@ -88,10 +89,41 @@ public class EventPublisher : IEventPublisher
 
         configure?.Invoke(eventEntity);
 
+        string? normalizedHash = eventEntity.ItemHash?.ToLowerInvariant();
+        eventEntity.ItemHash = normalizedHash;
+
+        if (normalizedHash is not null)
+        {
+            // ponytail: 1h cooldown is hardcoded by request; make it a config value only if it needs tuning.
+            DateTimeOffset cutoff = DateTimeOffset.UtcNow.AddHours(-1);
+
+            // Suppress if an unresolved event already exists (dedup) OR the last one was < 1h ago (post-resolve cooldown).
+            bool suppress = await _context.ManualEvents.AnyAsync(e =>
+                e.Type == type &&
+                e.ItemHash == normalizedHash &&
+                (!e.IsResolved || e.Timestamp >= cutoff));
+
+            if (suppress)
+            {
+                _logger.LogDebug("Skipping manual event {type} for {hash} (unresolved or within cooldown)", type, normalizedHash);
+                return;
+            }
+        }
+
         eventEntity.IsDryRun = isDryRun ?? await _dryRunInterceptor.IsDryRunEnabled();
 
-        _context.ManualEvents.Add(eventEntity);
-        await _context.SaveChangesAsync();
+        try
+        {
+            _context.ManualEvents.Add(eventEntity);
+            await _context.SaveChangesAsync();
+        }
+        catch (DbUpdateException) when (normalizedHash is not null)
+        {
+            // Lost a race against the partial unique index — another run created it first. Treat as deduped.
+            _logger.LogDebug("Manual event {type} for {hash} rejected by unique index", type, normalizedHash);
+            _context.Entry(eventEntity).State = EntityState.Detached;
+            return;
+        }
 
         await NotifyClientsAsync(eventEntity);
 
@@ -256,6 +288,7 @@ public class EventPublisher : IEventPublisher
     public async Task PublishRecurringItem(string hash, string itemName, int strikeCount)
     {
         await PublishManualAsync(
+            ManualEventType.RecurringDownload,
             "Download keeps coming back after deletion\nTo prevent further issues, please consult the prerequisites: https://cleanuparr.github.io/Cleanuparr/docs/installation/",
             EventSeverity.Important,
             configure: e =>
@@ -340,6 +373,7 @@ public class EventPublisher : IEventPublisher
     public async Task PublishSearchNotTriggered(string hash, string itemName)
     {
         await PublishManualAsync(
+            ManualEventType.SearchNotTriggered,
             "Replacement search was not triggered after removal\nPlease trigger a manual search if needed",
             EventSeverity.Warning,
             configure: e =>

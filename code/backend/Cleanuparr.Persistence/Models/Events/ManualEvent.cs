@@ -30,6 +30,12 @@ public class ManualEvent
     public required EventSeverity Severity { get; set; }
 
     /// <summary>
+    /// Discriminator used to gate duplicate unresolved events per item.
+    /// </summary>
+    [Required]
+    public required ManualEventType Type { get; set; }
+
+    /// <summary>
     /// Title of the download item this event refers to
     /// </summary>
     [MaxLength(500)]

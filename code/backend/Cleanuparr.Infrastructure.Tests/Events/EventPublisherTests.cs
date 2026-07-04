@@ -197,7 +197,7 @@ public class EventPublisherTests : IDisposable
         var severity = EventSeverity.Warning;
 
         // Act
-        await _publisher.PublishManualAsync(message, severity);
+        await _publisher.PublishManualAsync(ManualEventType.RecurringDownload, message, severity);
 
         // Assert
         var savedEvent = await _context.ManualEvents.FirstOrDefaultAsync();
@@ -214,7 +214,7 @@ public class EventPublisherTests : IDisposable
         var severity = EventSeverity.Important;
 
         // Act
-        await _publisher.PublishManualAsync(message, severity, configure: e =>
+        await _publisher.PublishManualAsync(ManualEventType.RecurringDownload, message, severity, configure: e =>
         {
             e.ItemTitle = "TestItem";
             e.StrikeCount = 5;
@@ -235,13 +235,124 @@ public class EventPublisherTests : IDisposable
         var severity = EventSeverity.Information;
 
         // Act
-        await _publisher.PublishManualAsync(message, severity);
+        await _publisher.PublishManualAsync(ManualEventType.RecurringDownload, message, severity);
 
         // Assert
         await _clientProxy.Received(1).SendCoreAsync(
             "ManualEventReceived",
             Arg.Is<object[]>(args => args.Length == 1 && args[0] is ManualEvent),
             Arg.Any<CancellationToken>());
+    }
+
+    #endregion
+
+    #region Manual Event Gating Tests
+
+    private async Task SeedManualEventAsync(ManualEventType type, string itemHash, bool isResolved, DateTimeOffset timestamp)
+    {
+        ManualEvent seed = new()
+        {
+            Type = type,
+            Message = "seed",
+            Severity = EventSeverity.Warning,
+            ItemHash = itemHash,
+            IsResolved = isResolved,
+            Timestamp = timestamp,
+        };
+        _context.ManualEvents.Add(seed);
+        await _context.SaveChangesAsync();
+    }
+
+    [Fact]
+    public async Task PublishManualAsync_NoExistingEvent_CreatesEvent()
+    {
+        // Act
+        await _publisher.PublishManualAsync(ManualEventType.RecurringDownload, "msg", EventSeverity.Warning,
+            configure: e => e.ItemHash = "abc123");
+
+        // Assert
+        (await _context.ManualEvents.CountAsync()).ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task PublishManualAsync_UnresolvedSameTypeAndHash_IsSkipped()
+    {
+        // Arrange
+        await SeedManualEventAsync(ManualEventType.RecurringDownload, "abc123", isResolved: false, DateTimeOffset.UtcNow.AddHours(-5));
+
+        // Act
+        await _publisher.PublishManualAsync(ManualEventType.RecurringDownload, "msg", EventSeverity.Warning,
+            configure: e => e.ItemHash = "abc123");
+
+        // Assert
+        (await _context.ManualEvents.CountAsync()).ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task PublishManualAsync_ResolvedSameTypeAndHash_WithinCooldown_IsSkipped()
+    {
+        // Arrange - resolved 30 minutes ago (inside the 1h cooldown)
+        await SeedManualEventAsync(ManualEventType.RecurringDownload, "abc123", isResolved: true, DateTimeOffset.UtcNow.AddMinutes(-30));
+
+        // Act
+        await _publisher.PublishManualAsync(ManualEventType.RecurringDownload, "msg", EventSeverity.Warning,
+            configure: e => e.ItemHash = "abc123");
+
+        // Assert
+        (await _context.ManualEvents.CountAsync()).ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task PublishManualAsync_ResolvedSameTypeAndHash_AfterCooldown_CreatesEvent()
+    {
+        // Arrange - resolved 2 hours ago (outside the 1h cooldown)
+        await SeedManualEventAsync(ManualEventType.RecurringDownload, "abc123", isResolved: true, DateTimeOffset.UtcNow.AddHours(-2));
+
+        // Act
+        await _publisher.PublishManualAsync(ManualEventType.RecurringDownload, "msg", EventSeverity.Warning,
+            configure: e => e.ItemHash = "abc123");
+
+        // Assert
+        (await _context.ManualEvents.CountAsync()).ShouldBe(2);
+    }
+
+    [Fact]
+    public async Task PublishManualAsync_SameHashDifferentType_CreatesEvent()
+    {
+        // Arrange
+        await SeedManualEventAsync(ManualEventType.RecurringDownload, "abc123", isResolved: false, DateTimeOffset.UtcNow.AddMinutes(-5));
+
+        // Act
+        await _publisher.PublishManualAsync(ManualEventType.SearchNotTriggered, "msg", EventSeverity.Warning,
+            configure: e => e.ItemHash = "abc123");
+
+        // Assert
+        (await _context.ManualEvents.CountAsync()).ShouldBe(2);
+    }
+
+    [Fact]
+    public async Task PublishManualAsync_NullHash_AlwaysCreates()
+    {
+        // Act
+        await _publisher.PublishManualAsync(ManualEventType.RecurringDownload, "msg", EventSeverity.Warning);
+        await _publisher.PublishManualAsync(ManualEventType.RecurringDownload, "msg", EventSeverity.Warning);
+
+        // Assert - no gate applies without an item hash
+        (await _context.ManualEvents.CountAsync()).ShouldBe(2);
+    }
+
+    [Fact]
+    public async Task PublishManualAsync_HashDifferingOnlyInCase_IsTreatedAsSameItem()
+    {
+        // Arrange - stored normalized (lowercase)
+        await SeedManualEventAsync(ManualEventType.RecurringDownload, "abc123", isResolved: false, DateTimeOffset.UtcNow.AddMinutes(-5));
+
+        // Act - publish with the same hash in a different case
+        await _publisher.PublishManualAsync(ManualEventType.RecurringDownload, "msg", EventSeverity.Warning,
+            configure: e => e.ItemHash = "ABC123");
+
+        // Assert
+        (await _context.ManualEvents.CountAsync()).ShouldBe(1);
     }
 
     #endregion
@@ -271,7 +382,7 @@ public class EventPublisherTests : IDisposable
         var severity = EventSeverity.Important;
 
         // Act
-        await _publisher.PublishManualAsync(message, severity);
+        await _publisher.PublishManualAsync(ManualEventType.RecurringDownload, message, severity);
 
         // Assert
         await _dryRunInterceptor.Received(1).IsDryRunEnabled();
@@ -321,7 +432,7 @@ public class EventPublisherTests : IDisposable
         var severity = EventSeverity.Important;
 
         // Act
-        await _publisher.PublishManualAsync(message, severity);
+        await _publisher.PublishManualAsync(ManualEventType.RecurringDownload, message, severity);
 
         // Assert
         var savedEvent = await _context.ManualEvents.FirstOrDefaultAsync();

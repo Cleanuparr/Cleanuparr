@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Cleanuparr.Persistence.Migrations.Events
 {
     [DbContext(typeof(EventsContext))]
-    [Migration("20260703172402_TypedEventColumns")]
-    partial class TypedEventColumns
+    [Migration("20260704101031_EventStreamRework")]
+    partial class EventStreamRework
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -195,6 +195,169 @@ namespace Cleanuparr.Persistence.Migrations.Events
                     b.ToTable("events", (string)null);
                 });
 
+            modelBuilder.Entity("Cleanuparr.Persistence.Models.Events.EventHistory", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("id");
+
+                    b.Property<string>("ArchivedAt")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("archived_at");
+
+                    b.Property<Guid?>("ArrInstanceId")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("arr_instance_id");
+
+                    b.Property<string>("CleanReason")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("clean_reason");
+
+                    b.Property<string>("CleanedCategory")
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("cleaned_category");
+
+                    b.Property<string>("CompletedAt")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("completed_at");
+
+                    b.Property<Guid?>("CycleId")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("cycle_id");
+
+                    b.Property<string>("DeleteReason")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("delete_reason");
+
+                    b.Property<Guid?>("DownloadClientId")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("download_client_id");
+
+                    b.Property<string>("EventType")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("event_type");
+
+                    b.PrimitiveCollection<string>("FailedImportReasons")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("failed_import_reasons");
+
+                    b.PrimitiveCollection<string>("GrabbedItems")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("grabbed_items");
+
+                    b.Property<bool?>("IsCategoryTag")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("is_category_tag");
+
+                    b.Property<bool>("IsDryRun")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("is_dry_run");
+
+                    b.Property<string>("ItemHash")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("item_hash");
+
+                    b.Property<string>("ItemTitle")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("item_title");
+
+                    b.Property<Guid?>("JobRunId")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("job_run_id");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("message");
+
+                    b.Property<string>("NewCategory")
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("new_category");
+
+                    b.Property<string>("OldCategory")
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT")
+                        .HasColumnName("old_category");
+
+                    b.Property<bool?>("RemoveFromClient")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("remove_from_client");
+
+                    b.Property<string>("SearchReason")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("search_reason");
+
+                    b.Property<string>("SearchStatus")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("search_status");
+
+                    b.Property<string>("SearchType")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("search_type");
+
+                    b.Property<double?>("SeedRatio")
+                        .HasColumnType("REAL")
+                        .HasColumnName("seed_ratio");
+
+                    b.Property<double?>("SeedingTimeHours")
+                        .HasColumnType("REAL")
+                        .HasColumnName("seeding_time_hours");
+
+                    b.Property<string>("Severity")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("severity");
+
+                    b.Property<int?>("StrikeCount")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("strike_count");
+
+                    b.Property<Guid?>("StrikeId")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("strike_id");
+
+                    b.Property<string>("Timestamp")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("timestamp");
+
+                    b.Property<Guid?>("TrackingId")
+                        .HasColumnType("TEXT")
+                        .HasColumnName("tracking_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_event_history");
+
+                    b.HasIndex("ArchivedAt")
+                        .IsDescending()
+                        .HasDatabaseName("ix_event_history_archived_at");
+
+                    b.HasIndex("DeleteReason")
+                        .HasDatabaseName("ix_event_history_delete_reason");
+
+                    b.HasIndex("EventType")
+                        .HasDatabaseName("ix_event_history_event_type");
+
+                    b.HasIndex("Severity")
+                        .HasDatabaseName("ix_event_history_severity");
+
+                    b.HasIndex("Timestamp")
+                        .IsDescending()
+                        .HasDatabaseName("ix_event_history_timestamp");
+
+                    b.ToTable("event_history", (string)null);
+                });
+
             modelBuilder.Entity("Cleanuparr.Persistence.Models.Events.ManualEvent", b =>
                 {
                     b.Property<Guid>("Id")
@@ -262,6 +425,11 @@ namespace Cleanuparr.Persistence.Migrations.Events
                         .HasColumnType("TEXT")
                         .HasColumnName("timestamp");
 
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("type");
+
                     b.HasKey("Id")
                         .HasName("pk_manual_events");
 
@@ -283,6 +451,11 @@ namespace Cleanuparr.Persistence.Migrations.Events
                     b.HasIndex("Timestamp")
                         .IsDescending()
                         .HasDatabaseName("ix_manual_events_timestamp");
+
+                    b.HasIndex("Type", "ItemHash")
+                        .IsUnique()
+                        .HasDatabaseName("ix_manual_events_type_item_hash")
+                        .HasFilter("\"is_resolved\" = 0");
 
                     b.ToTable("manual_events", (string)null);
                 });

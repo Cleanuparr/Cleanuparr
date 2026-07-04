@@ -76,6 +76,15 @@ public class EventsContext : DbContext
                 .HasConversion(new LowercaseEnumConverter<StrikeType>());
         });
 
+        modelBuilder.Entity<ManualEvent>(entity =>
+        {
+            // Race-proof gate: at most one UNRESOLVED event per (Type, ItemHash).
+            // Partial unique index — resolved rows are exempt, so history/cooldown is unaffected.
+            entity.HasIndex(e => new { e.Type, e.ItemHash })
+                .IsUnique()
+                .HasFilter("\"is_resolved\" = 0");
+        });
+
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())
         {
             var enumProperties = entityType.ClrType.GetProperties()

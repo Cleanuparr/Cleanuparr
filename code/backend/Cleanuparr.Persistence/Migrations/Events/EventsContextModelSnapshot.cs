@@ -422,6 +422,11 @@ namespace Cleanuparr.Persistence.Migrations.Events
                         .HasColumnType("TEXT")
                         .HasColumnName("timestamp");
 
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasColumnType("TEXT")
+                        .HasColumnName("type");
+
                     b.HasKey("Id")
                         .HasName("pk_manual_events");
 
@@ -443,6 +448,11 @@ namespace Cleanuparr.Persistence.Migrations.Events
                     b.HasIndex("Timestamp")
                         .IsDescending()
                         .HasDatabaseName("ix_manual_events_timestamp");
+
+                    b.HasIndex("Type", "ItemHash")
+                        .IsUnique()
+                        .HasDatabaseName("ix_manual_events_type_item_hash")
+                        .HasFilter("\"is_resolved\" = 0");
 
                     b.ToTable("manual_events", (string)null);
                 });
