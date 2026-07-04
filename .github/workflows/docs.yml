@@ -1,9 +1,7 @@
 name: Deploy Docusaurus to GitHub Pages
 
 on:
-  push:
-    tags:
-      - "v*.*.*"
+  workflow_call: {}
   workflow_dispatch: {}
 
 permissions:

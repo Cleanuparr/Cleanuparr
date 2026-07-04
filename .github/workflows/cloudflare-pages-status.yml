@@ -1,9 +1,12 @@
 name: Deploy to Cloudflare Pages
 
 on:
-  push:
-    tags:
-      - "v*.*.*"
+  workflow_call:
+    inputs:
+      version:
+        description: 'Release version (e.g. v1.2.3)'
+        type: string
+        required: true
 
 jobs:
   deploy:
@@ -14,7 +17,7 @@ jobs:
       - name: Create status files
         run: |
           mkdir -p status
-          echo "{ \"version\": \"${GITHUB_REF_NAME}\" }" > status/status.json
+          echo "{ \"version\": \"${{ inputs.version }}\" }" > status/status.json
 
           # Cache static files for 10 minutes
           cat > status/_headers << 'EOF'
