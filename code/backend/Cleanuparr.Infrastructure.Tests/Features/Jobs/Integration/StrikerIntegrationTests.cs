@@ -445,7 +445,7 @@ public class StrikerIntegrationTests : IDisposable
         manualEvents[0].Severity.ShouldBe(EventSeverity.Important);
         manualEvents[0].JobRunId.ShouldBe(_fixture.JobRunId);
         manualEvents[0].ItemTitle.ShouldBe("Recurring.Movie.2024");
-        manualEvents[0].ItemHash.ShouldBe("RECURRING_HASH_555");
+        manualEvents[0].ItemHash.ShouldBe("recurring_hash_555"); // stored normalized (lowercased) for case-insensitive dedup
         manualEvents[0].StrikeCount.ShouldBe(3);
     }
 
