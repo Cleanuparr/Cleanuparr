@@ -17,10 +17,16 @@ public class StatsV2Response
     public DateTimeOffset GeneratedAt { get; set; }
 }
 
+/// <summary>Event counts within the window, merged across active events and archived history.</summary>
 public class EventV2Stats
 {
+    /// <summary>Total events in the window.</summary>
     public int TotalCount { get; set; }
+
+    /// <summary>Event counts keyed by <see cref="Domain.Enums.EventType"/>.</summary>
     public Dictionary<string, int> ByType { get; set; } = new();
+
+    /// <summary>Event counts keyed by <see cref="Domain.Enums.EventSeverity"/>.</summary>
     public Dictionary<string, int> BySeverity { get; set; } = new();
 }
 
@@ -45,11 +51,19 @@ public class MalwareV2Stats
     public int Blocked { get; set; }
 }
 
+/// <summary>Job-run stats within the window, in total and broken down by job type.</summary>
 public class JobV2Stats
 {
+    /// <summary>Total job runs in the window.</summary>
     public int TotalRuns { get; set; }
+
+    /// <summary>Job runs that completed successfully.</summary>
     public int Completed { get; set; }
+
+    /// <summary>Job runs that failed.</summary>
     public int Failed { get; set; }
+
+    /// <summary>Per-job-type stats keyed by job type name.</summary>
     public Dictionary<string, JobTypeStats> ByType { get; set; } = new();
 }
 
@@ -58,6 +72,9 @@ public class JobV2Stats
 /// </summary>
 public class TimelineBucketDto
 {
+    /// <summary>The day this bucket covers (UTC).</summary>
     public DateOnly Date { get; set; }
+
+    /// <summary>Number of matching events on that day.</summary>
     public int Count { get; set; }
 }
