@@ -22,19 +22,22 @@
     }
     <div class="manual-event__meta">
       <span class="manual-event__time">{{ event.timestamp | date:'short' }}</span>
-      @if (unresolvedManualEvents().length > 1) {
+      @if (manualEventCount() > 1) {
         <span class="manual-event__counter">
-          {{ manualEventIndex() + 1 }} of {{ unresolvedManualEvents().length }}
+          {{ manualEventIndex() + 1 }} of {{ manualEventCount() }}
         </span>
       }
     </div>
     <div class="manual-event__actions">
-      @if (unresolvedManualEvents().length > 1) {
+      @if (manualEventCount() > 1) {
         <app-button variant="ghost" size="sm" [disabled]="!canNavigatePrev()" (clicked)="prevManualEvent()">
           Previous
         </app-button>
-        <app-button variant="ghost" size="sm" [disabled]="!canNavigateNext()" (clicked)="nextManualEvent()">
+        <app-button variant="ghost" size="sm" [disabled]="!canNavigateNext() || loadingMoreManualEvents()" (clicked)="nextManualEvent()">
           Next
+        </app-button>
+        <app-button variant="ghost" size="sm" (clicked)="dismissAllManualEvents()">
+          Dismiss all
         </app-button>
       }
       <app-button variant="primary" size="sm" (clicked)="dismissManualEvent(event)">

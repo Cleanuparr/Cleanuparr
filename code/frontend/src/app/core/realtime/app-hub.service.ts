@@ -130,7 +130,6 @@ export class AppHubService extends HubService {
   protected override onConnected(): void {
     this.requestRecentLogs();
     this.requestRecentEvents();
-    this.requestRecentManualEvents();
     this.requestRecentStrikes();
     this.requestJobStatus();
   }
