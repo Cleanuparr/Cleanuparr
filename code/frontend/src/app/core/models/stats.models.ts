@@ -2,6 +2,14 @@ export type StatsWindow = '24h' | '7d' | '30d' | '1y';
 
 export type TimelineMetric = 'strikesIssued' | 'recovered' | 'removed' | 'malwareBlocked' | 'events';
 
+export interface JobTypeStats {
+  totalRuns: number;
+  completed: number;
+  failed: number;
+  lastRunAt?: string;
+  nextRunAt?: string;
+}
+
 export interface StatsV2Response {
   events: {
     totalCount: number;
@@ -21,7 +29,7 @@ export interface StatsV2Response {
     totalRuns: number;
     completed: number;
     failed: number;
-    byType: Record<string, unknown>;
+    byType: Record<string, JobTypeStats>;
   };
   window: string;
   generatedAt: string;
