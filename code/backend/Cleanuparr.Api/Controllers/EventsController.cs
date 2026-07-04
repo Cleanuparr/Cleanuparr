@@ -157,21 +157,6 @@ public class EventsController : ControllerBase
     }
 
     /// <summary>
-    /// Manually triggers cleanup of old events
-    /// </summary>
-    [HttpPost("cleanup")]
-    public async Task<ActionResult<object>> CleanupOldEvents([FromQuery] int retentionDays = 30)
-    {
-        var cutoffDate = DateTimeOffset.UtcNow.AddDays(-retentionDays);
-        
-        await _context.Events
-            .Where(e => e.Timestamp < cutoffDate)
-            .ExecuteDeleteAsync();
-        
-        return Ok();
-    }
-
-    /// <summary>
     /// Gets unique event types
     /// </summary>
     [HttpGet("types")]

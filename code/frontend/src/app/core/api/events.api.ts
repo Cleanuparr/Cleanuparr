@@ -43,10 +43,6 @@ export class EventsApi {
     return this.http.get<string[]>('/api/events/severities');
   }
 
-  cleanupOldEvents(retentionDays = 30): Observable<void> {
-    return this.http.post<void>(`/api/events/cleanup?retentionDays=${retentionDays}`, {});
-  }
-
   // Manual events
   getManualEvents(filter?: ManualEventFilter): Observable<PaginatedResult<ManualEvent>> {
     let params = new HttpParams();
@@ -80,9 +76,5 @@ export class EventsApi {
 
   getManualEventSeverities(): Observable<string[]> {
     return this.http.get<string[]>('/api/manualevents/severities');
-  }
-
-  cleanupOldManualEvents(retentionDays = 30): Observable<{ deletedCount: number }> {
-    return this.http.post<{ deletedCount: number }>(`/api/manualevents/cleanup?retentionDays=${retentionDays}`, {});
   }
 }

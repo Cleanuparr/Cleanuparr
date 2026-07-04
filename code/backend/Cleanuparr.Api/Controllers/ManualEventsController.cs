@@ -192,19 +192,4 @@ public class ManualEventsController : ControllerBase
         var severities = Enum.GetNames(typeof(EventSeverity)).ToList();
         return Ok(severities);
     }
-
-    /// <summary>
-    /// Manually triggers cleanup of old resolved events
-    /// </summary>
-    [HttpPost("cleanup")]
-    public async Task<ActionResult<object>> CleanupOldResolvedEvents([FromQuery] int retentionDays = 30)
-    {
-        var cutoffDate = DateTimeOffset.UtcNow.AddDays(-retentionDays);
-
-        var deletedCount = await _context.ManualEvents
-            .Where(e => e.IsResolved && e.Timestamp < cutoffDate)
-            .ExecuteDeleteAsync();
-
-        return Ok(new { DeletedCount = deletedCount });
-    }
 }
