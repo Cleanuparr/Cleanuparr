@@ -10,6 +10,11 @@
   }
 }
 
+app-events-stats-card {
+  display: block;
+  margin-bottom: var(--space-6);
+}
+
 .toolbar {
   @include data-toolbar;
 

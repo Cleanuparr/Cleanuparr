@@ -66,6 +66,16 @@ export interface ManualEventStats {
   unresolvedBySeverity: { severity: string; count: number }[];
 }
 
+export interface EventTypeTimelineBucket {
+  date: string;
+  counts: Record<string, number>;
+}
+
+export interface EventTypeTimelineResponse {
+  types: string[];
+  buckets: EventTypeTimelineBucket[];
+}
+
 export interface EventFilter {
   page?: number;
   pageSize?: number;

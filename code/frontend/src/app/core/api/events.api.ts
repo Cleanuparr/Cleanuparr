@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { AppEvent, ManualEvent, EventStats, ManualEventStats, EventFilter, ManualEventFilter } from '@core/models/event.models';
+import { AppEvent, ManualEvent, EventStats, ManualEventStats, EventFilter, ManualEventFilter, EventTypeTimelineResponse } from '@core/models/event.models';
 import { PaginatedResult } from '@core/models/pagination.model';
 
 @Injectable({ providedIn: 'root' })
@@ -41,6 +41,12 @@ export class EventsApi {
 
   getSeverities(): Observable<string[]> {
     return this.http.get<string[]>('/api/events/severities');
+  }
+
+  getEventTypeTimeline(hours: number): Observable<EventTypeTimelineResponse> {
+    return this.http.get<EventTypeTimelineResponse>('/api/events/timeline', {
+      params: new HttpParams().set('hours', hours),
+    });
   }
 
   // Manual events

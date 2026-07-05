@@ -16,6 +16,7 @@ import { StickyAwareDirective } from '@core/directives/sticky-aware.directive';
 import { AnimatedCounterComponent } from '@ui/animated-counter/animated-counter.component';
 import { AppEvent, EventFilter } from '@core/models/event.models';
 import { PaginatedResult } from '@core/models/pagination.model';
+import { EventsStatsCardComponent } from './events-stats-card/events-stats-card.component';
 
 @Component({
   selector: 'app-events',
@@ -35,6 +36,7 @@ import { PaginatedResult } from '@core/models/pagination.model';
     EmptyStateComponent,
     AnimatedCounterComponent,
     StickyAwareDirective,
+    EventsStatsCardComponent,
   ],
   templateUrl: './events.component.html',
   styleUrl: './events.component.scss',
