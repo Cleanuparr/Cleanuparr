@@ -1,5 +1,3 @@
-export type StatsWindow = '24h' | '7d' | '30d' | '1y';
-
 export type TimelineMetric = 'strikesIssued' | 'recovered' | 'removed' | 'malwareBlocked' | 'events';
 
 export interface JobTypeStats {
@@ -31,7 +29,6 @@ export interface StatsV2Response {
     failed: number;
     byType: Record<string, JobTypeStats>;
   };
-  window: string;
   generatedAt: string;
 }
 

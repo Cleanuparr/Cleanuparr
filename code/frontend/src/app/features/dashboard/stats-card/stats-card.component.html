@@ -1,15 +1,15 @@
 <app-card header="Statistics" subtitle="Activity over the selected window">
   <div class="stats">
     <div class="stats__windows" role="group" aria-label="Time window">
-      @for (w of windows; track w) {
+      @for (w of windows; track w.hours) {
         <button
           type="button"
           class="stats__window"
-          [class.stats__window--active]="window() === w"
-          [attr.aria-pressed]="window() === w"
-          (click)="setWindow(w)"
+          [class.stats__window--active]="window() === w.hours"
+          [attr.aria-pressed]="window() === w.hours"
+          (click)="setWindow(w.hours)"
         >
-          {{ w }}
+          {{ w.label }}
         </button>
       }
     </div>
@@ -36,18 +36,26 @@
         }
       </div>
 
-      @if (spark(); as s) {
-        <div class="stats__spark">
-          @if (s.empty) {
-            <p class="stats__spark-empty">No activity in this window.</p>
-          } @else {
-            <svg class="stats__spark-svg" viewBox="0 0 100 28" preserveAspectRatio="none" aria-hidden="true">
-              <path class="stats__spark-area" [attr.d]="s.area" />
-              <path class="stats__spark-line" [attr.d]="s.line" />
-            </svg>
-          }
-        </div>
-      }
+      <div class="stats__spark">
+        @if (hasActivity()) {
+          <vis-xy-container [data]="timeline()" [height]="64" [duration]="duration" [margin]="chartMargin">
+            <vis-area [x]="x" [y]="y" [color]="chartColor()" [opacity]="0.14" [duration]="duration" />
+            <vis-line [x]="x" [y]="y" [color]="chartColor()" [lineWidth]="2" [duration]="duration" />
+            <vis-axis
+              type="x"
+              [numTicks]="4"
+              [tickFormat]="xTickFormat"
+              [gridLine]="false"
+              [tickLine]="false"
+              [domainLine]="false"
+            />
+            <vis-crosshair [x]="x" [y]="y" [color]="chartColor()" [template]="tooltip" />
+            <vis-tooltip />
+          </vis-xy-container>
+        } @else {
+          <p class="stats__spark-empty">No activity in this window.</p>
+        }
+      </div>
     }
   </div>
 </app-card>

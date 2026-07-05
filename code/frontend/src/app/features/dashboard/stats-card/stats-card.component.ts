@@ -1,33 +1,68 @@
 import { Component, ChangeDetectionStrategy, inject, signal, computed } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
+import {
+  VisXYContainerModule,
+  VisLineModule,
+  VisAreaModule,
+  VisAxisModule,
+  VisCrosshairModule,
+  VisTooltipModule,
+} from '@unovis/angular';
+import { Spacing } from '@unovis/ts';
 import { CardComponent } from '@ui';
 import { AnimatedCounterComponent } from '@ui/animated-counter/animated-counter.component';
 import { StatsApi } from '@core/api/stats.api';
-import { StatsV2Response, StatsWindow, TimelineBucket, TimelineMetric } from '@core/models/stats.models';
+import { StatsV2Response, TimelineBucket, TimelineMetric } from '@core/models/stats.models';
 
 interface StatTile {
   key: string;
   label: string;
   value: number;
-  metric?: TimelineMetric; // present tiles drive the sparkline
+  metric?: TimelineMetric; // present tiles drive the chart
   tone: 'removed' | 'recovered' | 'issued' | 'malware' | 'jobs';
 }
 
-const WINDOWS: StatsWindow[] = ['24h', '7d', '30d', '1y'];
+interface WindowOption {
+  label: string;
+  hours: number;
+}
+
+const WINDOWS: WindowOption[] = [
+  { label: '24h', hours: 24 },
+  { label: '7d', hours: 168 },
+  { label: '30d', hours: 720 },
+  { label: '1y', hours: 8760 },
+];
+
+const METRIC_COLORS: Record<TimelineMetric, string> = {
+  removed: 'var(--color-error)',
+  recovered: 'var(--color-success)',
+  strikesIssued: 'var(--color-warning)',
+  malwareBlocked: 'var(--color-primary)',
+  events: 'var(--color-primary)',
+};
 
 const EMPTY_STATS: StatsV2Response = {
   events: { totalCount: 0, byType: {}, bySeverity: {} },
   strikes: { active: {}, issued: 0, recovered: 0, removed: 0 },
   malware: { blocked: 0 },
   jobs: { totalRuns: 0, completed: 0, failed: 0, byType: {} },
-  window: '',
   generatedAt: '',
 };
 
 @Component({
   selector: 'app-stats-card',
   standalone: true,
-  imports: [CardComponent, AnimatedCounterComponent],
+  imports: [
+    CardComponent,
+    AnimatedCounterComponent,
+    VisXYContainerModule,
+    VisLineModule,
+    VisAreaModule,
+    VisAxisModule,
+    VisCrosshairModule,
+    VisTooltipModule,
+  ],
   templateUrl: './stats-card.component.html',
   styleUrl: './stats-card.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -36,7 +71,7 @@ export class StatsCardComponent {
   private readonly statsApi = inject(StatsApi);
 
   readonly windows = WINDOWS;
-  readonly window = signal<StatsWindow>('7d');
+  readonly window = signal<number>(168);
   readonly selectedMetric = signal<TimelineMetric>('removed');
 
   private readonly statsResource = rxResource({
@@ -46,8 +81,8 @@ export class StatsCardComponent {
   });
 
   private readonly timelineResource = rxResource({
-    params: () => ({ window: this.window(), metric: this.selectedMetric() }),
-    stream: ({ params }) => this.statsApi.getTimeline(params.metric, params.window),
+    params: () => ({ hours: this.window(), metric: this.selectedMetric() }),
+    stream: ({ params }) => this.statsApi.getTimeline(params.metric, params.hours),
     defaultValue: [] as TimelineBucket[],
   });
 
@@ -65,28 +100,34 @@ export class StatsCardComponent {
     ];
   });
 
-  /** Inline SVG sparkline geometry for the selected metric timeline. */
-  readonly spark = computed(() => {
-    const data = this.timelineResource.value().map((b) => b.count);
-    const width = 100;
-    const height = 28;
-    if (data.length === 0) {
-      return { line: '', area: '', max: 0, empty: true };
-    }
-    const max = Math.max(1, ...data);
-    const stepX = data.length > 1 ? width / (data.length - 1) : 0;
-    const points = data.map((v, i) => {
-      const x = data.length > 1 ? i * stepX : width / 2;
-      const y = height - (v / max) * (height - 2) - 1;
-      return `${x.toFixed(2)},${y.toFixed(2)}`;
-    });
-    const line = `M ${points.join(' L ')}`;
-    const area = `${line} L ${width},${height} L 0,${height} Z`;
-    return { line, area, max, empty: data.every((v) => v === 0) };
-  });
+  readonly timeline = computed(() => this.timelineResource.value());
+  readonly hasActivity = computed(() => this.timeline().some((b) => b.count > 0));
+  readonly chartColor = computed(() => METRIC_COLORS[this.selectedMetric()]);
 
-  setWindow(window: StatsWindow): void {
-    this.window.set(window);
+  readonly duration =
+    typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 600;
+  readonly chartMargin: Spacing = { top: 6, right: 4, bottom: 4, left: 4 };
+
+  readonly x = (_d: TimelineBucket, i: number): number => i;
+  readonly y = (d: TimelineBucket): number => d.count;
+
+  readonly xTickFormat = (tick: number | Date): string => {
+    const index = typeof tick === 'number' ? Math.round(tick) : 0;
+    const bucket = this.timeline()[index];
+    return bucket ? this.formatDate(bucket.date) : '';
+  };
+
+  readonly tooltip = (d: TimelineBucket): string =>
+    `<div style="display:flex;gap:6px;align-items:center;font-size:12px">` +
+    `<span style="color:var(--text-tertiary)">${this.formatDate(d.date)}</span>` +
+    `<b style="font-variant-numeric:tabular-nums">${d.count}</b></div>`;
+
+  private formatDate(date: string): string {
+    return new Date(`${date}T00:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  }
+
+  setWindow(hours: number): void {
+    this.window.set(hours);
   }
 
   selectMetric(metric: TimelineMetric | undefined): void {
