@@ -112,6 +112,11 @@
   100% { transform: scale(1.15); }
 }
 
+app-stats-card {
+  display: block;
+  margin-bottom: var(--space-6);
+}
+
 // Dashboard rows (drag-and-drop)
 .dashboard-rows {
   @include page-section-stagger($increment: 80ms);
