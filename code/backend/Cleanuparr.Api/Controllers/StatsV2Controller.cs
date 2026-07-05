@@ -21,13 +21,14 @@ public class StatsV2Controller : ControllerBase
     }
 
     /// <summary>
-    /// Aggregated statistics for the given window (24h | 7d | 30d | 1y).
+    /// Aggregated statistics for the given timeframe.
     /// </summary>
+    /// <param name="hours">Timeframe in hours (default 168, range 1-8760)</param>
     [HttpGet]
-    public async Task<IActionResult> GetStats([FromQuery] string window = "7d")
+    public async Task<IActionResult> GetStats([FromQuery] int hours = 168)
     {
-        int hours = WindowToHours(window);
-        StatsV2Response stats = await _statsService.GetStatsV2Async(hours, window);
+        hours = Math.Clamp(hours, 1, 8760);
+        StatsV2Response stats = await _statsService.GetStatsV2Async(hours);
         return Ok(stats);
     }
 
@@ -35,12 +36,12 @@ public class StatsV2Controller : ControllerBase
     /// Day-bucketed timeline for a single metric.
     /// </summary>
     /// <param name="metric">strikesIssued | recovered | removed | malwareBlocked | events</param>
-    /// <param name="window">24h | 7d | 30d | 1y</param>
+    /// <param name="hours">Timeframe in hours (default 720, range 1-8760)</param>
     /// <param name="bucket">Only "day" is currently supported.</param>
     [HttpGet("timeline")]
     public async Task<IActionResult> GetTimeline(
         [FromQuery] string metric = "events",
-        [FromQuery] string window = "30d",
+        [FromQuery] int hours = 720,
         [FromQuery] string bucket = "day")
     {
         if (!string.Equals(bucket, "day", StringComparison.OrdinalIgnoreCase))
@@ -48,17 +49,8 @@ public class StatsV2Controller : ControllerBase
             return BadRequest($"Unsupported bucket '{bucket}'. Only 'day' is currently supported.");
         }
 
-        int hours = WindowToHours(window);
+        hours = Math.Clamp(hours, 1, 8760);
         List<TimelineBucketDto> series = await _statsService.GetTimelineAsync(metric, hours);
         return Ok(series);
     }
-
-    private static int WindowToHours(string window) => window switch
-    {
-        "24h" => 24,
-        "7d" => 24 * 7,
-        "30d" => 24 * 30,
-        "1y" => 24 * 365,
-        _ => 24 * 7,
-    };
 }

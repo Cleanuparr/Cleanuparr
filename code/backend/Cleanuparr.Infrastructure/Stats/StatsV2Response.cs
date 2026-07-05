@@ -11,9 +11,6 @@ public class StatsV2Response
     public JobV2Stats Jobs { get; set; } = new();
     public HealthStats Health { get; set; } = new();
 
-    /// <summary>The requested window (e.g. "24h", "7d", "30d", "1y").</summary>
-    public string Window { get; set; } = string.Empty;
-
     public DateTimeOffset GeneratedAt { get; set; }
 }
 

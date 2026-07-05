@@ -80,7 +80,7 @@ public class StatsServiceV2Tests : IDisposable
 
         await _context.SaveChangesAsync();
 
-        StatsV2Response stats = await _service.GetStatsV2Async(24, "24h");
+        StatsV2Response stats = await _service.GetStatsV2Async(24);
 
         stats.Strikes.Issued.ShouldBe(2);      // 1 active + 1 history StalledStrike
         stats.Strikes.Recovered.ShouldBe(1);   // StrikeReset
@@ -89,7 +89,6 @@ public class StatsServiceV2Tests : IDisposable
         stats.Strikes.Active["Stalled"].ShouldBe(1);
         stats.Events.ByType["StalledStrike"].ShouldBe(2); // merged active + history
         stats.Events.TotalCount.ShouldBe(5);
-        stats.Window.ShouldBe("24h");
     }
 
     [Fact]

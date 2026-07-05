@@ -15,9 +15,10 @@ public interface IStatsService
     Task<StatsResponse> GetStatsAsync(int hours = 24, int includeEvents = 0, int includeStrikes = 0);
 
     /// <summary>
-    /// Gets comprehensive v2 statistics for the given window, derived from active events + archived history.
+    /// Gets comprehensive v2 statistics for the given timeframe, derived from active events + archived history.
     /// </summary>
-    Task<StatsV2Response> GetStatsV2Async(int hours, string window);
+    /// <param name="hours">Timeframe in hours</param>
+    Task<StatsV2Response> GetStatsV2Async(int hours);
 
     /// <summary>
     /// Gets a day-bucketed timeline for a single metric over the given window.

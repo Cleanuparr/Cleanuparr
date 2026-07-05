@@ -66,7 +66,7 @@ public class StatsService : IStatsService
     ];
 
     /// <inheritdoc />
-    public async Task<StatsV2Response> GetStatsV2Async(int hours, string window)
+    public async Task<StatsV2Response> GetStatsV2Async(int hours)
     {
         DateTimeOffset cutoff = DateTimeOffset.UtcNow.AddHours(-hours);
 
@@ -101,7 +101,6 @@ public class StatsService : IStatsService
             },
             Jobs = await GetJobV2StatsAsync(cutoff),
             Health = GetHealthStats(),
-            Window = window,
             GeneratedAt = DateTimeOffset.UtcNow,
         };
     }
