@@ -87,8 +87,23 @@
 }
 
 .stats__label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
   font-size: var(--font-size-xs);
   color: var(--text-tertiary);
+}
+
+.stats__hint {
+  font-size: 13px;
+  color: var(--text-tertiary);
+  opacity: 0.6;
+  transition: opacity var(--duration-fast) var(--ease-default), color var(--duration-fast) var(--ease-default);
+
+  &:hover {
+    opacity: 1;
+    color: var(--text-secondary);
+  }
 }
 
 .stats__spark {

@@ -9,7 +9,8 @@ import {
   VisTooltipModule,
 } from '@unovis/angular';
 import { Spacing } from '@unovis/ts';
-import { CardComponent } from '@ui';
+import { NgIcon } from '@ng-icons/core';
+import { CardComponent, TooltipComponent } from '@ui';
 import { AnimatedCounterComponent } from '@ui/animated-counter/animated-counter.component';
 import { StatsApi } from '@core/api/stats.api';
 import { StatsV2Response, TimelineBucket, TimelineMetric } from '@core/models/stats.models';
@@ -17,6 +18,7 @@ import { StatsV2Response, TimelineBucket, TimelineMetric } from '@core/models/st
 interface StatTile {
   key: string;
   label: string;
+  hint: string;
   value: number;
   metric?: TimelineMetric; // present tiles drive the chart
   tone: 'removed' | 'recovered' | 'issued' | 'malware' | 'jobs';
@@ -54,6 +56,8 @@ const EMPTY_STATS: StatsV2Response = {
   selector: 'app-stats-card',
   standalone: true,
   imports: [
+    NgIcon,
+    TooltipComponent,
     CardComponent,
     AnimatedCounterComponent,
     VisXYContainerModule,
@@ -92,11 +96,45 @@ export class StatsCardComponent {
   readonly tiles = computed<StatTile[]>(() => {
     const s = this.statsResource.value();
     return [
-      { key: 'removed', label: 'Downloads removed', value: s.strikes.removed, metric: 'removed', tone: 'removed' },
-      { key: 'recovered', label: 'Recovered', value: s.strikes.recovered, metric: 'recovered', tone: 'recovered' },
-      { key: 'issued', label: 'Strikes issued', value: s.strikes.issued, metric: 'strikesIssued', tone: 'issued' },
-      { key: 'malware', label: 'Malware blocked', value: s.malware.blocked, metric: 'malwareBlocked', tone: 'malware' },
-      { key: 'jobs', label: 'Job failures', value: s.jobs.failed, tone: 'jobs' },
+      {
+        key: 'removed',
+        label: 'Downloads removed',
+        hint: 'Downloads deleted from your download client after reaching their strike limit.',
+        value: s.strikes.removed,
+        metric: 'removed',
+        tone: 'removed',
+      },
+      {
+        key: 'recovered',
+        label: 'Recovered',
+        hint: 'Downloads that resumed healthy progress and had their strikes reset before removal.',
+        value: s.strikes.recovered,
+        metric: 'recovered',
+        tone: 'recovered',
+      },
+      {
+        key: 'issued',
+        label: 'Strikes issued',
+        hint: 'Strikes handed out to stalled, slow, or failing downloads in this window.',
+        value: s.strikes.issued,
+        metric: 'strikesIssued',
+        tone: 'issued',
+      },
+      {
+        key: 'malware',
+        label: 'Malware blocked',
+        hint: 'Downloads removed because they contained blocked or malicious files.',
+        value: s.malware.blocked,
+        metric: 'malwareBlocked',
+        tone: 'malware',
+      },
+      {
+        key: 'jobs',
+        label: 'Job failures',
+        hint: 'Scheduled job runs that failed in this window.',
+        value: s.jobs.failed,
+        tone: 'jobs',
+      },
     ];
   });
 

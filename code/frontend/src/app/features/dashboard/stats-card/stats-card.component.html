@@ -31,7 +31,12 @@
             (click)="selectMetric(tile.metric)"
           >
             <span class="stats__value"><app-animated-counter [value]="tile.value" /></span>
-            <span class="stats__label">{{ tile.label }}</span>
+            <span class="stats__label">
+              {{ tile.label }}
+              <app-tooltip [text]="tile.hint">
+                <ng-icon name="tablerInfoCircle" class="stats__hint" aria-hidden="true" />
+              </app-tooltip>
+            </span>
           </button>
         }
       </div>
