@@ -3,6 +3,7 @@ import { rxResource } from '@angular/core/rxjs-interop';
 import {
   VisXYContainerModule,
   VisLineModule,
+  VisAreaModule,
   VisAxisModule,
   VisCrosshairModule,
   VisTooltipModule,
@@ -51,6 +52,7 @@ const EMPTY_TIMELINE: EventTypeTimelineResponse = { types: [], buckets: [] };
     CardComponent,
     VisXYContainerModule,
     VisLineModule,
+    VisAreaModule,
     VisAxisModule,
     VisCrosshairModule,
     VisTooltipModule,
@@ -65,7 +67,7 @@ export class EventsStatsCardComponent {
 
   readonly windows = WINDOWS;
   readonly window = signal<number>(720);
-  readonly hidden = signal<Set<string>>(new Set());
+  readonly selected = signal<string | null>(null);
 
   private readonly timelineResource = rxResource({
     params: () => this.window(),
@@ -78,21 +80,52 @@ export class EventsStatsCardComponent {
 
   readonly data = computed(() => this.timelineResource.value().buckets);
   readonly allTypes = computed(() => this.timelineResource.value().types);
-  readonly visibleTypes = computed(() => this.allTypes().filter((t) => !this.hidden().has(t)));
   readonly hasActivity = computed(() => this.allTypes().length > 0);
 
-  readonly yAccessors = computed(() =>
-    this.visibleTypes().map((type) => (d: EventTypeTimelineBucket): number => d.counts[type] ?? 0),
-  );
-  readonly lineColors = computed(() => this.visibleTypes().map((type) => TYPE_COLORS[type] ?? FALLBACK_COLOR));
+  private readonly busiestType = computed(() => {
+    const totals: Record<string, number> = {};
+    for (const bucket of this.data()) {
+      for (const [type, count] of Object.entries(bucket.counts)) {
+        totals[type] = (totals[type] ?? 0) + count;
+      }
+    }
+    let best: string | null = null;
+    let max = -1;
+    for (const type of this.allTypes()) {
+      const value = totals[type] ?? 0;
+      if (value > max) {
+        max = value;
+        best = type;
+      }
+    }
+    return best;
+  });
+
+  readonly current = computed(() => {
+    const selected = this.selected();
+    if (selected && this.allTypes().includes(selected)) {
+      return selected;
+    }
+    return this.busiestType();
+  });
+
+  readonly currentColor = computed(() => {
+    const type = this.current();
+    return type ? TYPE_COLORS[type] ?? FALLBACK_COLOR : FALLBACK_COLOR;
+  });
 
   readonly legendItems = computed<BulletLegendItemInterface[]>(() =>
     this.allTypes().map((type) => ({
       name: this.formatEventType(type),
       color: TYPE_COLORS[type] ?? FALLBACK_COLOR,
-      inactive: this.hidden().has(type),
+      inactive: type !== this.current(),
     })),
   );
+
+  readonly y = computed(() => {
+    const type = this.current();
+    return (d: EventTypeTimelineBucket): number => (type ? d.counts[type] ?? 0 : 0);
+  });
 
   readonly duration =
     typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 600;
@@ -107,35 +140,24 @@ export class EventsStatsCardComponent {
   };
 
   readonly tooltip = (d: EventTypeTimelineBucket): string => {
-    const rows = this.visibleTypes()
-      .filter((type) => (d.counts[type] ?? 0) > 0)
-      .map(
-        (type) =>
-          `<div style="display:flex;gap:6px;align-items:center">` +
-          `<span style="width:8px;height:8px;border-radius:50%;background:${TYPE_COLORS[type] ?? FALLBACK_COLOR}"></span>` +
-          `<span style="flex:1">${this.formatEventType(type)}</span>` +
-          `<b style="font-variant-numeric:tabular-nums">${d.counts[type]}</b></div>`,
-      )
-      .join('');
-    const body = rows || `<div style="color:var(--text-tertiary)">No events</div>`;
+    const type = this.current();
+    const count = type ? d.counts[type] ?? 0 : 0;
+    const label = type ? this.formatEventType(type) : '';
     return (
-      `<div style="display:flex;flex-direction:column;gap:4px;font-size:12px;min-width:160px">` +
-      `<span style="color:var(--text-tertiary)">${this.formatDate(d.date)}</span>${body}</div>`
+      `<div style="display:flex;flex-direction:column;gap:2px;font-size:12px">` +
+      `<span style="color:var(--text-tertiary)">${this.formatDate(d.date)}</span>` +
+      `<div style="display:flex;gap:6px;align-items:center">` +
+      `<span style="width:8px;height:8px;border-radius:50%;background:${this.currentColor()}"></span>` +
+      `<span style="flex:1">${label}</span>` +
+      `<b style="font-variant-numeric:tabular-nums">${count}</b></div></div>`
     );
   };
 
   readonly onLegendClick = (_item: BulletLegendItemInterface, index: number): void => {
     const type = this.allTypes()[index];
-    if (!type) {
-      return;
+    if (type) {
+      this.selected.set(type);
     }
-    const next = new Set(this.hidden());
-    if (next.has(type)) {
-      next.delete(type);
-    } else {
-      next.add(type);
-    }
-    this.hidden.set(next);
   };
 
   private formatEventType(eventType: string): string {

@@ -21,23 +21,20 @@
       </div>
     } @else if (hasActivity()) {
       <div class="stats__chart" [class.stats__chart--loading]="isLoading()">
-        @if (visibleTypes().length > 0) {
-          <vis-xy-container [data]="data()" [height]="200" [duration]="duration" [margin]="chartMargin">
-            <vis-line [x]="x" [y]="yAccessors()" [color]="lineColors()" [lineWidth]="2" [duration]="duration" />
-            <vis-axis
-              type="x"
-              [numTicks]="5"
-              [tickFormat]="xTickFormat"
-              [gridLine]="false"
-              [tickLine]="false"
-              [domainLine]="false"
-            />
-            <vis-crosshair [x]="x" [y]="yAccessors()" [template]="tooltip" />
-            <vis-tooltip />
-          </vis-xy-container>
-        } @else {
-          <p class="stats__empty">All types hidden — click a legend item to show it again.</p>
-        }
+        <vis-xy-container [data]="data()" [height]="200" [duration]="duration" [margin]="chartMargin">
+          <vis-area [x]="x" [y]="y()" [color]="currentColor()" [opacity]="0.14" [duration]="duration" />
+          <vis-line [x]="x" [y]="y()" [color]="currentColor()" [lineWidth]="2" [duration]="duration" />
+          <vis-axis
+            type="x"
+            [numTicks]="5"
+            [tickFormat]="xTickFormat"
+            [gridLine]="false"
+            [tickLine]="false"
+            [domainLine]="false"
+          />
+          <vis-crosshair [x]="x" [y]="y()" [color]="currentColor()" [template]="tooltip" />
+          <vis-tooltip />
+        </vis-xy-container>
         <vis-bullet-legend class="stats__legend" [items]="legendItems()" [onLegendItemClick]="onLegendClick" />
       </div>
     } @else {
