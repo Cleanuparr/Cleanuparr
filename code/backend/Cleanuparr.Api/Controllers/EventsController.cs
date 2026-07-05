@@ -1,5 +1,6 @@
 using System.Linq.Expressions;
 using System.Text.Json.Serialization;
+using Cleanuparr.Api.Features.Events.Contracts.Responses;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Events;
@@ -174,6 +175,54 @@ public class EventsController : ControllerBase
     {
         var severities = Enum.GetNames(typeof(EventSeverity)).ToList();
         return Ok(severities);
+    }
+
+    [HttpGet("timeline")]
+    public async Task<ActionResult<EventTypeTimelineResponse>> GetTimeline([FromQuery] int hours = 720)
+    {
+        hours = Math.Clamp(hours, 1, 8760);
+        DateTimeOffset cutoff = DateTimeOffset.UtcNow.AddHours(-hours);
+
+        var rows = await _context.Events
+            .Where(e => e.Timestamp >= cutoff)
+            .Select(e => new { e.Timestamp, e.EventType })
+            .Concat(_context.EventHistory
+                .Where(e => e.Timestamp >= cutoff)
+                .Select(e => new { e.Timestamp, e.EventType }))
+            .ToListAsync();
+
+        Dictionary<(DateOnly Day, EventType Type), int> byDayType = rows
+            .GroupBy(r => (Day: DateOnly.FromDateTime(r.Timestamp.UtcDateTime), r.EventType))
+            .ToDictionary(g => g.Key, g => g.Count());
+
+        List<EventType> presentTypes = rows
+            .Select(r => r.EventType)
+            .Distinct()
+            .OrderBy(t => (int)t)
+            .ToList();
+
+        List<EventTypeTimelineBucket> buckets = [];
+        DateOnly start = DateOnly.FromDateTime(cutoff.UtcDateTime);
+        DateOnly end = DateOnly.FromDateTime(DateTimeOffset.UtcNow.UtcDateTime);
+        for (DateOnly day = start; day <= end; day = day.AddDays(1))
+        {
+            Dictionary<string, int> counts = new();
+            foreach (EventType type in presentTypes)
+            {
+                if (byDayType.TryGetValue((day, type), out int count) && count > 0)
+                {
+                    counts[type.ToString()] = count;
+                }
+            }
+
+            buckets.Add(new EventTypeTimelineBucket { Date = day, Counts = counts });
+        }
+
+        return Ok(new EventTypeTimelineResponse
+        {
+            Types = presentTypes.Select(t => t.ToString()).ToList(),
+            Buckets = buckets,
+        });
     }
 } 
 
