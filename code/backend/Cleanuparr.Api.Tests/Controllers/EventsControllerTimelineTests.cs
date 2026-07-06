@@ -35,26 +35,29 @@ public class EventsControllerTimelineTests : IDisposable
     [Fact]
     public async Task GetTimeline_BucketsEventsByTypeAndDay()
     {
+        DateOnly today = DateOnly.FromDateTime(DateTimeOffset.UtcNow.UtcDateTime);
+        DateTimeOffset sameDay = new(today.ToDateTime(new TimeOnly(12, 0)), TimeSpan.Zero);
+
         _context.Events.Add(new AppEvent
         {
             EventType = EventType.FailedImportStrike,
             Message = "active a",
             Severity = EventSeverity.Important,
-            Timestamp = DateTimeOffset.UtcNow.AddHours(-2),
+            Timestamp = sameDay,
         });
         _context.Events.Add(new AppEvent
         {
             EventType = EventType.FailedImportStrike,
             Message = "active b",
             Severity = EventSeverity.Important,
-            Timestamp = DateTimeOffset.UtcNow.AddHours(-3),
+            Timestamp = sameDay.AddHours(-1),
         });
         _context.Events.Add(new AppEvent
         {
             EventType = EventType.StalledStrike,
             Message = "active c",
             Severity = EventSeverity.Important,
-            Timestamp = DateTimeOffset.UtcNow.AddHours(-4),
+            Timestamp = sameDay.AddHours(-2),
         });
         _context.Events.Add(new AppEvent
         {
@@ -77,7 +80,6 @@ public class EventsControllerTimelineTests : IDisposable
         stalled.ShouldBe(1);
         removed.ShouldBe(1);
 
-        DateOnly today = DateOnly.FromDateTime(DateTimeOffset.UtcNow.UtcDateTime);
         EventTypeTimelineBucket todayBucket = timeline.Buckets.Single(b => b.Date == today);
         todayBucket.Counts["FailedImportStrike"].ShouldBe(2);
         todayBucket.Counts["StalledStrike"].ShouldBe(1);
