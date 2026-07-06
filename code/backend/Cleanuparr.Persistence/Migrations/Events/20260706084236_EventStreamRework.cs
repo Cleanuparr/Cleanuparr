@@ -11,6 +11,9 @@ namespace Cleanuparr.Persistence.Migrations.Events
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.Sql("DELETE FROM events;");
+            migrationBuilder.Sql("DELETE FROM manual_events;");
+
             migrationBuilder.DropForeignKey(
                 name: "fk_events_job_runs_job_run_id",
                 table: "events");
