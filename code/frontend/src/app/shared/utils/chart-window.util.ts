@@ -14,8 +14,11 @@ export function getChartDuration(): number {
   return typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 600;
 }
 
-export function formatBucketDate(date: string): string {
-  return new Date(`${date}T00:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+export function formatBucketDate(date: string, hours: number): string {
+  if (hours <= 24) {
+    return new Date(date).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+  }
+  return new Date(`${date.slice(0, 10)}T00:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
 export function chartYDomain(values: number[]): [number, number] {

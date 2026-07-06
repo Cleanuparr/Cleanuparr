@@ -109,17 +109,16 @@ public class StatsService : IStatsService
     /// <inheritdoc />
     public async Task<List<TimelineBucketDto>> GetTimelineAsync(string metric, int hours)
     {
-        DateTimeOffset cutoff = DateTimeOffset.UtcNow.AddHours(-hours);
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+        DateTimeOffset cutoff = now.AddHours(-hours);
+        bool hourly = TimelineBucketing.IsHourly(hours);
 
-        Dictionary<DateOnly, int> counts = await MetricDayCountsAsync(cutoff, metric);
+        Dictionary<DateTimeOffset, int> counts = await MetricCountsAsync(cutoff, metric, hourly);
 
-        // Fill every day in the window so the series is continuous for charting.
         List<TimelineBucketDto> series = [];
-        DateOnly start = DateOnly.FromDateTime(cutoff.UtcDateTime);
-        DateOnly end = DateOnly.FromDateTime(DateTimeOffset.UtcNow.UtcDateTime);
-        for (DateOnly day = start; day <= end; day = day.AddDays(1))
+        foreach (DateTimeOffset bucket in TimelineBucketing.Buckets(cutoff, now, hourly))
         {
-            series.Add(new TimelineBucketDto { Date = day, Count = counts.GetValueOrDefault(day) });
+            series.Add(new TimelineBucketDto { Date = bucket, Count = counts.GetValueOrDefault(bucket) });
         }
 
         return series;
@@ -153,7 +152,7 @@ public class StatsService : IStatsService
                 && e.DeleteReason != null && MalwareReasons.Contains(e.DeleteReason.Value));
     }
 
-    private async Task<Dictionary<DateOnly, int>> MetricDayCountsAsync(DateTimeOffset cutoff, string metric)
+    private async Task<Dictionary<DateTimeOffset, int>> MetricCountsAsync(DateTimeOffset cutoff, string metric, bool hourly)
     {
         EventType[]? types = metric switch
         {
@@ -182,25 +181,26 @@ public class StatsService : IStatsService
             parameters.AddRange(MalwareReasons.Select(r => (object)r.ToString().ToLowerInvariant()));
         }
 
+        string bucketExpr = $"substr(timestamp, 1, {TimelineBucketing.KeyLength(hourly)})";
         string sql = $"""
-            SELECT substr(timestamp, 1, 10) AS "day", COUNT(*) AS "count"
+            SELECT {bucketExpr} AS "bucket", COUNT(*) AS "count"
             FROM events
             {where}
-            GROUP BY substr(timestamp, 1, 10)
+            GROUP BY {bucketExpr}
             """;
 
-        List<DayCount> rows = await _eventsContext.Database
-            .SqlQueryRaw<DayCount>(sql, parameters.ToArray())
+        List<BucketCount> rows = await _eventsContext.Database
+            .SqlQueryRaw<BucketCount>(sql, parameters.ToArray())
             .ToListAsync();
 
         return rows.ToDictionary(
-            r => DateOnly.ParseExact(r.Day, "yyyy-MM-dd", CultureInfo.InvariantCulture),
+            r => TimelineBucketing.ParseKey(r.Bucket, hourly),
             r => r.Count);
     }
 
-    private sealed class DayCount
+    private sealed class BucketCount
     {
-        public string Day { get; set; } = string.Empty;
+        public string Bucket { get; set; } = string.Empty;
         public int Count { get; set; }
     }
 

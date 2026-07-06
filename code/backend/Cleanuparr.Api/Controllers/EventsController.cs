@@ -3,6 +3,7 @@ using Cleanuparr.Api.Common;
 using Cleanuparr.Api.Contracts.Responses;
 using Cleanuparr.Api.Features.Events.Contracts.Responses;
 using Cleanuparr.Domain.Enums;
+using Cleanuparr.Infrastructure.Stats;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Events;
 using Microsoft.AspNetCore.Authorization;
@@ -181,27 +182,30 @@ public class EventsController : ControllerBase
     public async Task<ActionResult<EventTypeTimelineResponse>> GetTimeline([FromQuery] int hours = 720)
     {
         hours = TimelineWindow.ClampHours(hours);
-        DateTimeOffset cutoff = DateTimeOffset.UtcNow.AddHours(-hours);
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+        DateTimeOffset cutoff = now.AddHours(-hours);
+        bool hourly = TimelineBucketing.IsHourly(hours);
         string cutoffText = cutoff.UtcDateTime.ToString("yyyy-MM-dd HH:mm:ss.fffffff", CultureInfo.InvariantCulture);
 
-        List<DayTypeCount> rows = await _context.Database
-            .SqlQueryRaw<DayTypeCount>(
-                """
-                SELECT substr(timestamp, 1, 10) AS "day", event_type AS "event_type", COUNT(*) AS "count"
+        string bucketExpr = $"substr(timestamp, 1, {TimelineBucketing.KeyLength(hourly)})";
+        List<BucketTypeCount> rows = await _context.Database
+            .SqlQueryRaw<BucketTypeCount>(
+                $$"""
+                SELECT {{bucketExpr}} AS "bucket", event_type AS "event_type", COUNT(*) AS "count"
                 FROM events
                 WHERE timestamp >= {0}
-                GROUP BY substr(timestamp, 1, 10), event_type
+                GROUP BY {{bucketExpr}}, event_type
                 """,
                 cutoffText)
             .ToListAsync();
 
-        Dictionary<(DateOnly Day, EventType Type), int> byDayType = new();
+        Dictionary<(DateTimeOffset Bucket, EventType Type), int> byBucketType = new();
         HashSet<EventType> presentSet = [];
-        foreach (DayTypeCount row in rows)
+        foreach (BucketTypeCount row in rows)
         {
-            DateOnly day = DateOnly.ParseExact(row.Day, "yyyy-MM-dd", CultureInfo.InvariantCulture);
+            DateTimeOffset bucket = TimelineBucketing.ParseKey(row.Bucket, hourly);
             EventType type = Enum.Parse<EventType>(row.EventType, ignoreCase: true);
-            byDayType[(day, type)] = row.Count;
+            byBucketType[(bucket, type)] = row.Count;
             presentSet.Add(type);
         }
 
@@ -210,20 +214,18 @@ public class EventsController : ControllerBase
             .ToList();
 
         List<EventTypeTimelineBucket> buckets = [];
-        DateOnly start = DateOnly.FromDateTime(cutoff.UtcDateTime);
-        DateOnly end = DateOnly.FromDateTime(DateTimeOffset.UtcNow.UtcDateTime);
-        for (DateOnly day = start; day <= end; day = day.AddDays(1))
+        foreach (DateTimeOffset bucket in TimelineBucketing.Buckets(cutoff, now, hourly))
         {
             Dictionary<string, int> counts = new();
             foreach (EventType type in presentTypes)
             {
-                if (byDayType.TryGetValue((day, type), out int count) && count > 0)
+                if (byBucketType.TryGetValue((bucket, type), out int count) && count > 0)
                 {
                     counts[type.ToString()] = count;
                 }
             }
 
-            buckets.Add(new EventTypeTimelineBucket { Date = day, Counts = counts });
+            buckets.Add(new EventTypeTimelineBucket { Date = bucket, Counts = counts });
         }
 
         return Ok(new EventTypeTimelineResponse
@@ -233,9 +235,9 @@ public class EventsController : ControllerBase
         });
     }
 
-    private sealed class DayTypeCount
+    private sealed class BucketTypeCount
     {
-        public string Day { get; set; } = string.Empty;
+        public string Bucket { get; set; } = string.Empty;
         public string EventType { get; set; } = string.Empty;
         public int Count { get; set; }
     }

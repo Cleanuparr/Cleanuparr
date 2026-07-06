@@ -131,7 +131,7 @@ export class EventsStatsCardComponent {
   readonly xTickFormat = (tick: number | Date): string => {
     const index = typeof tick === 'number' ? Math.round(tick) : 0;
     const bucket = this.data()[index];
-    return bucket ? formatBucketDate(bucket.date) : '';
+    return bucket ? formatBucketDate(bucket.date, this.window()) : '';
   };
 
   readonly yTickFormat = (tick: number | Date): string =>
@@ -143,7 +143,7 @@ export class EventsStatsCardComponent {
     const label = type ? this.formatEventType(type) : '';
     return (
       `<div style="display:flex;flex-direction:column;gap:2px;font-size:12px">` +
-      `<span style="color:var(--text-tertiary)">${formatBucketDate(d.date)}</span>` +
+      `<span style="color:var(--text-tertiary)">${formatBucketDate(d.date, this.window())}</span>` +
       `<div style="display:flex;gap:6px;align-items:center">` +
       `<span style="width:8px;height:8px;border-radius:50%;background:${this.currentColor()}"></span>` +
       `<span style="flex:1">${label}</span>` +

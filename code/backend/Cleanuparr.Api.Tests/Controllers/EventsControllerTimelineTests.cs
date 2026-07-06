@@ -80,10 +80,38 @@ public class EventsControllerTimelineTests : IDisposable
         stalled.ShouldBe(1);
         removed.ShouldBe(1);
 
-        EventTypeTimelineBucket todayBucket = timeline.Buckets.Single(b => b.Date == today);
+        DateTimeOffset todayStart = new(today.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero);
+        EventTypeTimelineBucket todayBucket = timeline.Buckets.Single(b => b.Date == todayStart);
         todayBucket.Counts["FailedImportStrike"].ShouldBe(2);
         todayBucket.Counts["StalledStrike"].ShouldBe(1);
         todayBucket.Counts.ShouldNotContainKey("QueueItemDeleted");
+    }
+
+    [Fact]
+    public async Task GetTimeline_UsesHourlyBucketsForDayWindow()
+    {
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+        _context.Events.Add(new AppEvent
+        {
+            EventType = EventType.StalledStrike,
+            Message = "recent",
+            Severity = EventSeverity.Important,
+            Timestamp = now.AddHours(-1),
+        });
+        _context.Events.Add(new AppEvent
+        {
+            EventType = EventType.StalledStrike,
+            Message = "earlier",
+            Severity = EventSeverity.Important,
+            Timestamp = now.AddHours(-3),
+        });
+        await _context.SaveChangesAsync();
+
+        EventTypeTimelineResponse timeline = GetTimeline(await _controller.GetTimeline(hours: 24));
+
+        int nonEmpty = timeline.Buckets.Count(b => b.Counts.GetValueOrDefault("StalledStrike") > 0);
+        nonEmpty.ShouldBe(2);
+        timeline.Buckets.Count.ShouldBeGreaterThan(2);
     }
 
     [Fact]

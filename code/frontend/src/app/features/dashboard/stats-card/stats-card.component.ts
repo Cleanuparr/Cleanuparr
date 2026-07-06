@@ -147,12 +147,12 @@ export class StatsCardComponent {
   readonly xTickFormat = (tick: number | Date): string => {
     const index = typeof tick === 'number' ? Math.round(tick) : 0;
     const bucket = this.timeline()[index];
-    return bucket ? formatBucketDate(bucket.date) : '';
+    return bucket ? formatBucketDate(bucket.date, this.window()) : '';
   };
 
   readonly tooltip = (d: TimelineBucket): string =>
     `<div style="display:flex;gap:6px;align-items:center;font-size:12px">` +
-    `<span style="color:var(--text-tertiary)">${formatBucketDate(d.date)}</span>` +
+    `<span style="color:var(--text-tertiary)">${formatBucketDate(d.date, this.window())}</span>` +
     `<b style="font-variant-numeric:tabular-nums">${d.count}</b></div>`;
 
   setWindow(hours: number): void {
