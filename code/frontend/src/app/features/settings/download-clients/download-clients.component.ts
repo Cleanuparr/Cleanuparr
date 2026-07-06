@@ -25,6 +25,11 @@ const TYPE_OPTIONS: SelectOption[] = [
   { label: 'rTorrent', value: DownloadClientTypeName.rTorrent },
 ];
 
+const AUTOFILL_URL_BASES: Partial<Record<DownloadClientTypeName, string>> = {
+  [DownloadClientTypeName.Transmission]: 'transmission',
+  [DownloadClientTypeName.rTorrent]: 'plugins/httprpc/action.php',
+};
+
 interface DownloadClientFormModel {
   enabled: boolean;
   name: string;
@@ -119,11 +124,10 @@ export class DownloadClientsComponent implements HasPendingChanges {
     if (m.typeName === DownloadClientTypeName.Deluge && m.username !== '') {
       patch.username = '';
     }
-    if (m.typeName === DownloadClientTypeName.Transmission && !m.urlBase) {
-      patch.urlBase = 'transmission';
-    }
-    if (m.typeName === DownloadClientTypeName.rTorrent && !m.urlBase) {
-      patch.urlBase = 'plugins/httprpc/action.php';
+    const autofill = AUTOFILL_URL_BASES[m.typeName];
+    const replaceable = m.urlBase === '' || Object.values(AUTOFILL_URL_BASES).includes(m.urlBase);
+    if (autofill && replaceable) {
+      patch.urlBase = autofill;
     }
     if (Object.keys(patch).length > 0) {
       this.clientModel.update((mm) => ({ ...mm, ...patch }));
