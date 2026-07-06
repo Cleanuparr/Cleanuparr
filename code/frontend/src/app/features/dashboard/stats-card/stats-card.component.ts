@@ -14,6 +14,7 @@ import { CardComponent, TooltipComponent } from '@ui';
 import { AnimatedCounterComponent } from '@ui/animated-counter/animated-counter.component';
 import { StatsApi } from '@core/api/stats.api';
 import { StatsV2Response, TimelineBucket, TimelineMetric } from '@core/models/stats.models';
+import { WINDOWS, getChartDuration, formatBucketDate } from '@shared/utils/chart-window.util';
 
 interface StatTile {
   key: string;
@@ -23,18 +24,6 @@ interface StatTile {
   metric?: TimelineMetric; // present tiles drive the chart
   tone: 'removed' | 'recovered' | 'issued' | 'malware' | 'jobs';
 }
-
-interface WindowOption {
-  label: string;
-  hours: number;
-}
-
-const WINDOWS: WindowOption[] = [
-  { label: '24h', hours: 24 },
-  { label: '7d', hours: 168 },
-  { label: '30d', hours: 720 },
-  { label: '1y', hours: 8760 },
-];
 
 const METRIC_COLORS: Record<TimelineMetric, string> = {
   removed: 'var(--color-error)',
@@ -142,8 +131,7 @@ export class StatsCardComponent {
   readonly hasActivity = computed(() => this.timeline().some((b) => b.count > 0));
   readonly chartColor = computed(() => METRIC_COLORS[this.selectedMetric()]);
 
-  readonly duration =
-    typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 600;
+  readonly duration = getChartDuration();
   readonly chartMargin: Spacing = { top: 6, right: 4, bottom: 4, left: 4 };
 
   readonly x = (_d: TimelineBucket, i: number): number => i;
@@ -152,17 +140,13 @@ export class StatsCardComponent {
   readonly xTickFormat = (tick: number | Date): string => {
     const index = typeof tick === 'number' ? Math.round(tick) : 0;
     const bucket = this.timeline()[index];
-    return bucket ? this.formatDate(bucket.date) : '';
+    return bucket ? formatBucketDate(bucket.date) : '';
   };
 
   readonly tooltip = (d: TimelineBucket): string =>
     `<div style="display:flex;gap:6px;align-items:center;font-size:12px">` +
-    `<span style="color:var(--text-tertiary)">${this.formatDate(d.date)}</span>` +
+    `<span style="color:var(--text-tertiary)">${formatBucketDate(d.date)}</span>` +
     `<b style="font-variant-numeric:tabular-nums">${d.count}</b></div>`;
-
-  private formatDate(date: string): string {
-    return new Date(`${date}T00:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-  }
 
   setWindow(hours: number): void {
     this.window.set(hours);

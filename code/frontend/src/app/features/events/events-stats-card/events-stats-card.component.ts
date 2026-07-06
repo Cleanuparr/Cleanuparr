@@ -13,18 +13,7 @@ import { Spacing, BulletLegendItemInterface } from '@unovis/ts';
 import { CardComponent } from '@ui';
 import { EventsApi } from '@core/api/events.api';
 import { EventTypeTimelineBucket, EventTypeTimelineResponse } from '@core/models/event.models';
-
-interface WindowOption {
-  label: string;
-  hours: number;
-}
-
-const WINDOWS: WindowOption[] = [
-  { label: '24h', hours: 24 },
-  { label: '7d', hours: 168 },
-  { label: '30d', hours: 720 },
-  { label: '1y', hours: 8760 },
-];
+import { WINDOWS, getChartDuration, formatBucketDate } from '@shared/utils/chart-window.util';
 
 const TYPE_COLORS: Record<string, string> = {
   QueueItemDeleted: '#ef4444',
@@ -127,8 +116,7 @@ export class EventsStatsCardComponent {
     return (d: EventTypeTimelineBucket): number => (type ? d.counts[type] ?? 0 : 0);
   });
 
-  readonly duration =
-    typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 600;
+  readonly duration = getChartDuration();
   readonly chartMargin: Spacing = { top: 8, right: 8, bottom: 4, left: 8 };
 
   readonly x = (_d: EventTypeTimelineBucket, i: number): number => i;
@@ -136,7 +124,7 @@ export class EventsStatsCardComponent {
   readonly xTickFormat = (tick: number | Date): string => {
     const index = typeof tick === 'number' ? Math.round(tick) : 0;
     const bucket = this.data()[index];
-    return bucket ? this.formatDate(bucket.date) : '';
+    return bucket ? formatBucketDate(bucket.date) : '';
   };
 
   readonly tooltip = (d: EventTypeTimelineBucket): string => {
@@ -145,7 +133,7 @@ export class EventsStatsCardComponent {
     const label = type ? this.formatEventType(type) : '';
     return (
       `<div style="display:flex;flex-direction:column;gap:2px;font-size:12px">` +
-      `<span style="color:var(--text-tertiary)">${this.formatDate(d.date)}</span>` +
+      `<span style="color:var(--text-tertiary)">${formatBucketDate(d.date)}</span>` +
       `<div style="display:flex;gap:6px;align-items:center">` +
       `<span style="width:8px;height:8px;border-radius:50%;background:${this.currentColor()}"></span>` +
       `<span style="flex:1">${label}</span>` +
@@ -162,10 +150,6 @@ export class EventsStatsCardComponent {
 
   private formatEventType(eventType: string): string {
     return eventType.replace(/([A-Z])/g, ' $1').trim();
-  }
-
-  private formatDate(date: string): string {
-    return new Date(`${date}T00:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
   }
 
   setWindow(hours: number): void {
