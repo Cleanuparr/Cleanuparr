@@ -43,9 +43,17 @@
 
       <div class="stats__spark">
         @if (hasActivity()) {
-          <vis-xy-container [data]="timeline()" [height]="64" [duration]="duration" [margin]="chartMargin">
-            <vis-area [x]="x" [y]="y" [color]="chartColor()" [opacity]="0.14" [duration]="duration" />
-            <vis-line [x]="x" [y]="y" [color]="chartColor()" [lineWidth]="2" [duration]="duration" />
+          <vis-xy-container [data]="timeline()" [height]="140" [yDomain]="yDomain()" [duration]="duration" [margin]="chartMargin">
+            <vis-area [x]="x" [y]="y" [baseline]="yBaseline()" [curveType]="CurveType.Linear" [color]="chartColor()" [opacity]="0.14" [duration]="duration" />
+            <vis-line [x]="x" [y]="y" [curveType]="CurveType.Linear" [color]="chartColor()" [lineWidth]="2" [duration]="duration" />
+            <vis-axis
+              type="y"
+              [numTicks]="3"
+              [tickFormat]="yTickFormat"
+              [gridLine]="true"
+              [tickLine]="false"
+              [domainLine]="false"
+            />
             <vis-axis
               type="x"
               [numTicks]="4"

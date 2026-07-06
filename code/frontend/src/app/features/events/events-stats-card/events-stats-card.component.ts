@@ -9,11 +9,11 @@ import {
   VisTooltipModule,
   VisBulletLegendModule,
 } from '@unovis/angular';
-import { Spacing, BulletLegendItemInterface } from '@unovis/ts';
+import { Spacing, BulletLegendItemInterface, CurveType } from '@unovis/ts';
 import { CardComponent } from '@ui';
 import { EventsApi } from '@core/api/events.api';
 import { EventTypeTimelineBucket, EventTypeTimelineResponse } from '@core/models/event.models';
-import { WINDOWS, getChartDuration, formatBucketDate } from '@shared/utils/chart-window.util';
+import { WINDOWS, getChartDuration, formatBucketDate, chartYDomain } from '@shared/utils/chart-window.util';
 
 const TYPE_COLORS: Record<string, string> = {
   QueueItemDeleted: '#ef4444',
@@ -116,8 +116,15 @@ export class EventsStatsCardComponent {
     return (d: EventTypeTimelineBucket): number => (type ? d.counts[type] ?? 0 : 0);
   });
 
+  readonly yDomain = computed<[number, number]>(() => {
+    const type = this.current();
+    return chartYDomain(this.data().map((b) => (type ? b.counts[type] ?? 0 : 0)));
+  });
+  readonly yBaseline = computed<number>(() => this.yDomain()[0]);
+
+  readonly CurveType = CurveType;
   readonly duration = getChartDuration();
-  readonly chartMargin: Spacing = { top: 8, right: 8, bottom: 4, left: 8 };
+  readonly chartMargin: Spacing = { top: 8, right: 8, bottom: 4, left: 32 };
 
   readonly x = (_d: EventTypeTimelineBucket, i: number): number => i;
 
@@ -126,6 +133,9 @@ export class EventsStatsCardComponent {
     const bucket = this.data()[index];
     return bucket ? formatBucketDate(bucket.date) : '';
   };
+
+  readonly yTickFormat = (tick: number | Date): string =>
+    typeof tick === 'number' ? Math.round(tick).toString() : '';
 
   readonly tooltip = (d: EventTypeTimelineBucket): string => {
     const type = this.current();

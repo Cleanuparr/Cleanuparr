@@ -71,10 +71,10 @@
   }
 
   // Tone drives the value color and the active outline
-  &[data-tone='removed'] { --tone-color: var(--color-error); }
+  &[data-tone='removed'] { --tone-color: var(--color-primary); }
   &[data-tone='recovered'] { --tone-color: var(--color-success); }
   &[data-tone='issued'] { --tone-color: var(--color-warning); }
-  &[data-tone='malware'] { --tone-color: var(--color-primary); }
+  &[data-tone='malware'] { --tone-color: var(--color-error); }
   &[data-tone='jobs'] { --tone-color: var(--text-tertiary); }
 }
 
@@ -107,11 +107,12 @@
 }
 
 .stats__spark {
-  min-height: 64px;
+  min-height: 140px;
 
   --vis-axis-tick-label-color: var(--text-tertiary);
   --vis-axis-tick-label-font-size: var(--font-size-xs);
   --vis-axis-font-family: inherit;
+  --vis-axis-grid-color: var(--glass-border);
   --vis-crosshair-line-stroke-color: var(--text-tertiary);
   --vis-crosshair-line-stroke-opacity: 0.4;
   --vis-crosshair-circle-stroke-color: var(--surface-ground);

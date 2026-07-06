@@ -8,13 +8,13 @@ import {
   VisCrosshairModule,
   VisTooltipModule,
 } from '@unovis/angular';
-import { Spacing } from '@unovis/ts';
+import { Spacing, CurveType } from '@unovis/ts';
 import { NgIcon } from '@ng-icons/core';
 import { CardComponent, TooltipComponent } from '@ui';
 import { AnimatedCounterComponent } from '@ui/animated-counter/animated-counter.component';
 import { StatsApi } from '@core/api/stats.api';
 import { StatsV2Response, TimelineBucket, TimelineMetric } from '@core/models/stats.models';
-import { WINDOWS, getChartDuration, formatBucketDate } from '@shared/utils/chart-window.util';
+import { WINDOWS, getChartDuration, formatBucketDate, chartYDomain } from '@shared/utils/chart-window.util';
 
 interface StatTile {
   key: string;
@@ -26,10 +26,10 @@ interface StatTile {
 }
 
 const METRIC_COLORS: Record<TimelineMetric, string> = {
-  removed: 'var(--color-error)',
+  removed: 'var(--color-primary)',
   recovered: 'var(--color-success)',
   strikesIssued: 'var(--color-warning)',
-  malwareBlocked: 'var(--color-primary)',
+  malwareBlocked: 'var(--color-error)',
   events: 'var(--color-primary)',
 };
 
@@ -131,11 +131,18 @@ export class StatsCardComponent {
   readonly hasActivity = computed(() => this.timeline().some((b) => b.count > 0));
   readonly chartColor = computed(() => METRIC_COLORS[this.selectedMetric()]);
 
+  readonly yDomain = computed<[number, number]>(() => chartYDomain(this.timeline().map((b) => b.count)));
+
+  readonly CurveType = CurveType;
   readonly duration = getChartDuration();
-  readonly chartMargin: Spacing = { top: 6, right: 4, bottom: 4, left: 4 };
+  readonly chartMargin: Spacing = { top: 6, right: 4, bottom: 4, left: 28 };
 
   readonly x = (_d: TimelineBucket, i: number): number => i;
   readonly y = (d: TimelineBucket): number => d.count;
+  readonly yBaseline = computed<number>(() => this.yDomain()[0]);
+
+  readonly yTickFormat = (tick: number | Date): string =>
+    typeof tick === 'number' ? Math.round(tick).toString() : '';
 
   readonly xTickFormat = (tick: number | Date): string => {
     const index = typeof tick === 'number' ? Math.round(tick) : 0;

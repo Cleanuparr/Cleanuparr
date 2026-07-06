@@ -21,9 +21,17 @@
       </div>
     } @else if (hasActivity()) {
       <div class="stats__chart" [class.stats__chart--loading]="isLoading()">
-        <vis-xy-container [data]="data()" [height]="200" [duration]="duration" [margin]="chartMargin">
-          <vis-area [x]="x" [y]="y()" [color]="currentColor()" [opacity]="0.14" [duration]="duration" />
-          <vis-line [x]="x" [y]="y()" [color]="currentColor()" [lineWidth]="2" [duration]="duration" />
+        <vis-xy-container [data]="data()" [height]="200" [yDomain]="yDomain()" [duration]="duration" [margin]="chartMargin">
+          <vis-area [x]="x" [y]="y()" [baseline]="yBaseline()" [curveType]="CurveType.Linear" [color]="currentColor()" [opacity]="0.14" [duration]="duration" />
+          <vis-line [x]="x" [y]="y()" [curveType]="CurveType.Linear" [color]="currentColor()" [lineWidth]="2" [duration]="duration" />
+          <vis-axis
+            type="y"
+            [numTicks]="4"
+            [tickFormat]="yTickFormat"
+            [gridLine]="true"
+            [tickLine]="false"
+            [domainLine]="false"
+          />
           <vis-axis
             type="x"
             [numTicks]="5"

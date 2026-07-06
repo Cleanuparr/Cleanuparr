@@ -17,3 +17,8 @@ export function getChartDuration(): number {
 export function formatBucketDate(date: string): string {
   return new Date(`${date}T00:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
+
+export function chartYDomain(values: number[]): [number, number] {
+  const max = Math.max(0, ...values);
+  return [0, max === 0 ? 1 : Math.ceil(max)];
+}
