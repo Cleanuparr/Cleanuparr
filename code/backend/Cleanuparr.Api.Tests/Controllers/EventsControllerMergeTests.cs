@@ -9,9 +9,8 @@ using Shouldly;
 namespace Cleanuparr.Api.Tests.Controllers;
 
 /// <summary>
-/// Verifies the events list endpoint unifies active <see cref="AppEvent"/> rows with archived
-/// <see cref="EventHistory"/> rows. Runs against real SQLite so the Concat/UNION projection —
-/// including the primitive-collection columns — is actually translated.
+/// Verifies the events list endpoint's ordering, filtering, search, and primitive-collection round-tripping.
+/// Runs against real SQLite so the projection is actually translated.
 /// </summary>
 public class EventsControllerMergeTests : IDisposable
 {
@@ -42,14 +41,12 @@ public class EventsControllerMergeTests : IDisposable
             FailedImportReasons = ["reason one", "reason two"],
             GrabbedItems = ["grab one"],
         });
-        _context.EventHistory.Add(new EventHistory
+        _context.Events.Add(new AppEvent
         {
-            Id = Guid.NewGuid(),
             EventType = EventType.QueueItemDeleted,
             Message = "archived",
             Severity = EventSeverity.Important,
             Timestamp = DateTimeOffset.UtcNow.AddDays(-100),
-            ArchivedAt = DateTimeOffset.UtcNow.AddDays(-70),
             ItemTitle = "Archived Item",
         });
         await _context.SaveChangesAsync();
@@ -62,7 +59,7 @@ public class EventsControllerMergeTests : IDisposable
     }
 
     [Fact]
-    public async Task GetEvents_MergesActiveAndArchived_NewestFirst_AndRoundTripsCollections()
+    public async Task GetEvents_OrdersNewestFirst_AndRoundTripsCollections()
     {
         await SeedAsync();
 
@@ -79,7 +76,7 @@ public class EventsControllerMergeTests : IDisposable
     }
 
     [Fact]
-    public async Task GetEvents_EventTypeFilter_AppliesAcrossBothSources()
+    public async Task GetEvents_EventTypeFilter_Applies()
     {
         await SeedAsync();
 

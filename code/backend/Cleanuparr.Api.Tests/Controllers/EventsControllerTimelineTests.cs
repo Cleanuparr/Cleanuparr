@@ -33,7 +33,7 @@ public class EventsControllerTimelineTests : IDisposable
     }
 
     [Fact]
-    public async Task GetTimeline_BucketsEventsByTypeAndDay_AcrossActiveAndHistory()
+    public async Task GetTimeline_BucketsEventsByTypeAndDay()
     {
         _context.Events.Add(new AppEvent
         {
@@ -56,14 +56,12 @@ public class EventsControllerTimelineTests : IDisposable
             Severity = EventSeverity.Important,
             Timestamp = DateTimeOffset.UtcNow.AddHours(-4),
         });
-        _context.EventHistory.Add(new EventHistory
+        _context.Events.Add(new AppEvent
         {
-            Id = Guid.NewGuid(),
             EventType = EventType.QueueItemDeleted,
-            Message = "archived",
+            Message = "older removal",
             Severity = EventSeverity.Important,
             Timestamp = DateTimeOffset.UtcNow.AddDays(-10),
-            ArchivedAt = DateTimeOffset.UtcNow,
         });
         await _context.SaveChangesAsync();
 
@@ -89,14 +87,12 @@ public class EventsControllerTimelineTests : IDisposable
     [Fact]
     public async Task GetTimeline_ExcludesEventsOutsideWindow()
     {
-        _context.EventHistory.Add(new EventHistory
+        _context.Events.Add(new AppEvent
         {
-            Id = Guid.NewGuid(),
             EventType = EventType.QueueItemDeleted,
             Message = "too old",
             Severity = EventSeverity.Important,
             Timestamp = DateTimeOffset.UtcNow.AddDays(-40),
-            ArchivedAt = DateTimeOffset.UtcNow,
         });
         await _context.SaveChangesAsync();
 

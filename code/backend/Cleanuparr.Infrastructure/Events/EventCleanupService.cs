@@ -2,7 +2,6 @@ using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.General;
 using Cleanuparr.Persistence.Models.Events;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -71,14 +70,11 @@ public class EventCleanupService : BackgroundService
 
             DateTimeOffset eventCutoff = DateTimeOffset.UtcNow.AddDays(-_eventRetentionDays);
 
-            // Move events past the hot window into history instead of deleting them
-            await ArchiveExpiredEventsAsync(eventsContext, eventCutoff);
-
-            // Resolved manual events are transient and are not archived
+            // Resolved manual events are transient
             await DeleteResolvedManualEventsAsync(eventsContext, eventCutoff);
 
-            // Prune cold history older than the configured retention window
-            await PruneEventHistoryAsync(eventsContext, config.HistoryRetentionDays);
+            // Prune events older than the configured retention window
+            await PruneEventsAsync(eventsContext, config.HistoryRetentionDays);
 
             await CleanupStrikesAsync(eventsContext, config.StrikeInactivityWindowHours);
 
@@ -88,95 +84,6 @@ public class EventCleanupService : BackgroundService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to perform event cleanup");
-        }
-    }
-
-    /// <summary>
-    /// Moves events older than the hot window into <see cref="EventHistory"/> (preserving their Id), in batches.
-    /// </summary>
-    internal async Task ArchiveExpiredEventsAsync(EventsContext eventsContext, DateTimeOffset cutoff)
-    {
-        const int batchSize = 5000;
-        int totalArchived = 0;
-
-        while (true)
-        {
-            List<AppEvent> batch = await eventsContext.Events
-                .AsNoTracking()
-                .Where(e => e.Timestamp < cutoff)
-                .OrderBy(e => e.Timestamp)
-                .Take(batchSize)
-                .ToListAsync();
-
-            if (batch.Count is 0)
-            {
-                break;
-            }
-
-            DateTimeOffset archivedAt = DateTimeOffset.UtcNow;
-            List<EventHistory> history = batch
-                .Select(e => new EventHistory
-                {
-                    Id = e.Id,
-                    Timestamp = e.Timestamp,
-                    EventType = e.EventType,
-                    Message = e.Message,
-                    Severity = e.Severity,
-                    ArchivedAt = archivedAt,
-                    TrackingId = e.TrackingId,
-                    StrikeId = e.StrikeId,
-                    JobRunId = e.JobRunId,
-                    ArrInstanceId = e.ArrInstanceId,
-                    DownloadClientId = e.DownloadClientId,
-                    SearchStatus = e.SearchStatus,
-                    CompletedAt = e.CompletedAt,
-                    CycleId = e.CycleId,
-                    IsDryRun = e.IsDryRun,
-                    ItemTitle = e.ItemTitle,
-                    ItemHash = e.ItemHash,
-                    StrikeCount = e.StrikeCount,
-                    FailedImportReasons = e.FailedImportReasons,
-                    DeleteReason = e.DeleteReason,
-                    RemoveFromClient = e.RemoveFromClient,
-                    CleanReason = e.CleanReason,
-                    CleanedCategory = e.CleanedCategory,
-                    SeedRatio = e.SeedRatio,
-                    SeedingTimeHours = e.SeedingTimeHours,
-                    OldCategory = e.OldCategory,
-                    NewCategory = e.NewCategory,
-                    IsCategoryTag = e.IsCategoryTag,
-                    SearchType = e.SearchType,
-                    SearchReason = e.SearchReason,
-                    GrabbedItems = e.GrabbedItems,
-                })
-                .ToList();
-
-            // Insert history and delete the source rows atomically. Without this, a failure
-            // between the two writes leaves the history rows committed, so the next run re-archives
-            // the same events and their preserved Ids collide on the EventHistory primary key.
-            await using IDbContextTransaction transaction = await eventsContext.Database.BeginTransactionAsync();
-
-            eventsContext.EventHistory.AddRange(history);
-            await eventsContext.SaveChangesAsync();
-
-            List<Guid> ids = batch.Select(e => e.Id).ToList();
-            await eventsContext.Events
-                .Where(e => ids.Contains(e.Id))
-                .ExecuteDeleteAsync();
-
-            await transaction.CommitAsync();
-
-            totalArchived += batch.Count;
-
-            if (batch.Count < batchSize)
-            {
-                break;
-            }
-        }
-
-        if (totalArchived > 0)
-        {
-            _logger.LogInformation("Archived {count} events older than {days} days to history", totalArchived, _eventRetentionDays);
         }
     }
 
@@ -193,16 +100,16 @@ public class EventCleanupService : BackgroundService
         }
     }
 
-    internal async Task PruneEventHistoryAsync(EventsContext eventsContext, ushort historyRetentionDays)
+    internal async Task PruneEventsAsync(EventsContext eventsContext, ushort retentionDays)
     {
-        DateTimeOffset cutoff = DateTimeOffset.UtcNow.AddDays(-historyRetentionDays);
-        int deleted = await eventsContext.EventHistory
-            .Where(h => h.ArchivedAt < cutoff)
+        DateTimeOffset cutoff = DateTimeOffset.UtcNow.AddDays(-retentionDays);
+        int deleted = await eventsContext.Events
+            .Where(e => e.Timestamp < cutoff)
             .ExecuteDeleteAsync();
 
         if (deleted > 0)
         {
-            _logger.LogInformation("Pruned {count} event history entries older than {days} days", deleted, historyRetentionDays);
+            _logger.LogInformation("Pruned {count} events older than {days} days", deleted, retentionDays);
         }
     }
 
@@ -213,7 +120,6 @@ public class EventCleanupService : BackgroundService
             .Where(j => !eventsContext.Strikes.Any(s => s.JobRunId == j.Id))
             .Where(j => !eventsContext.Events.Any(e => e.JobRunId == j.Id))
             .Where(j => !eventsContext.ManualEvents.Any(m => m.JobRunId == j.Id))
-            .Where(j => !eventsContext.EventHistory.Any(h => h.JobRunId == j.Id))
             .ExecuteDeleteAsync();
 
         if (deleted > 0)

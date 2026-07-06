@@ -23,8 +23,6 @@ public class EventsContext : DbContext
 
     public DbSet<JobRun> JobRuns { get; set; }
 
-    public DbSet<EventHistory> EventHistory { get; set; }
-
     public EventsContext()
     {
     }
@@ -67,6 +65,11 @@ public class EventsContext : DbContext
             entity.HasOne(e => e.Strike)
                 .WithMany()
                 .HasForeignKey(e => e.StrikeId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(e => e.JobRun)
+                .WithMany(j => j.Events)
+                .HasForeignKey(e => e.JobRunId)
                 .OnDelete(DeleteBehavior.SetNull);
         });
 

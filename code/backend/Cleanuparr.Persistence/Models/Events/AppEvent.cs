@@ -13,16 +13,10 @@ namespace Cleanuparr.Persistence.Models.Events;
 [Index(nameof(Timestamp), IsDescending = [true])]
 [Index(nameof(EventType))]
 [Index(nameof(Severity))]
-[Index(nameof(Message))]
-[Index(nameof(StrikeId))]
 [Index(nameof(JobRunId))]
 [Index(nameof(ArrInstanceId))]
-[Index(nameof(DownloadClientId))]
 [Index(nameof(CycleId))]
 [Index(nameof(DeleteReason))]
-[Index(nameof(CleanReason))]
-[Index(nameof(SearchType))]
-[Index(nameof(SearchReason))]
 public class AppEvent : IEvent
 {
     [Key]

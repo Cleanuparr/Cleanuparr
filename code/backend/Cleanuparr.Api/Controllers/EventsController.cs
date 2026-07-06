@@ -53,8 +53,7 @@ public class EventsController : ControllerBase
         }
         
         IQueryable<EventListItem> query = _context.Events
-            .Select(EventListItem.FromEvent)
-            .Concat(_context.EventHistory.Select(EventListItem.FromHistory));
+            .Select(EventListItem.FromEvent);
 
         // Apply filters
         if (!string.IsNullOrWhiteSpace(severity))
@@ -186,9 +185,6 @@ public class EventsController : ControllerBase
         var rows = await _context.Events
             .Where(e => e.Timestamp >= cutoff)
             .Select(e => new { e.Timestamp, e.EventType })
-            .Concat(_context.EventHistory
-                .Where(e => e.Timestamp >= cutoff)
-                .Select(e => new { e.Timestamp, e.EventType }))
             .ToListAsync();
 
         Dictionary<(DateOnly Day, EventType Type), int> byDayType = rows
@@ -271,9 +267,8 @@ public class PaginatedResult<T>
 }
 
 /// <summary>
-/// Flattened event row for the events list. Unifies active <see cref="AppEvent"/> rows and
-/// archived <see cref="EventHistory"/> rows so both are browsable through one paginated endpoint.
-/// Serializes identically to the fields the client reads from <see cref="AppEvent"/>.
+/// Flattened event row for the events list. Serializes identically to the fields the client
+/// reads from <see cref="AppEvent"/>, without the navigation properties.
 /// </summary>
 public class EventListItem
 {
@@ -341,40 +336,5 @@ public class EventListItem
         SearchType = e.SearchType,
         SearchReason = e.SearchReason,
         GrabbedItems = e.GrabbedItems,
-    };
-
-    /// <summary>Projects an archived <see cref="EventHistory"/> row into the unified list shape.</summary>
-    public static readonly Expression<Func<EventHistory, EventListItem>> FromHistory = h => new EventListItem
-    {
-        Id = h.Id,
-        Timestamp = h.Timestamp,
-        EventType = h.EventType,
-        Message = h.Message,
-        Severity = h.Severity,
-        TrackingId = h.TrackingId,
-        StrikeId = h.StrikeId,
-        JobRunId = h.JobRunId,
-        ArrInstanceId = h.ArrInstanceId,
-        DownloadClientId = h.DownloadClientId,
-        SearchStatus = h.SearchStatus,
-        CompletedAt = h.CompletedAt,
-        CycleId = h.CycleId,
-        IsDryRun = h.IsDryRun,
-        ItemTitle = h.ItemTitle,
-        ItemHash = h.ItemHash,
-        StrikeCount = h.StrikeCount,
-        FailedImportReasons = h.FailedImportReasons,
-        DeleteReason = h.DeleteReason,
-        RemoveFromClient = h.RemoveFromClient,
-        CleanReason = h.CleanReason,
-        CleanedCategory = h.CleanedCategory,
-        SeedRatio = h.SeedRatio,
-        SeedingTimeHours = h.SeedingTimeHours,
-        OldCategory = h.OldCategory,
-        NewCategory = h.NewCategory,
-        IsCategoryTag = h.IsCategoryTag,
-        SearchType = h.SearchType,
-        SearchReason = h.SearchReason,
-        GrabbedItems = h.GrabbedItems,
     };
 }

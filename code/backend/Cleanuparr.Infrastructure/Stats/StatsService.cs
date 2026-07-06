@@ -70,8 +70,8 @@ public class StatsService : IStatsService
     {
         DateTimeOffset cutoff = DateTimeOffset.UtcNow.AddHours(-hours);
 
-        Dictionary<string, int> byType = await MergedCountsAsync(cutoff, e => e.EventType, h => h.EventType);
-        Dictionary<string, int> bySeverity = await MergedCountsAsync(cutoff, e => e.Severity, h => h.Severity);
+        Dictionary<string, int> byType = await MergedCountsAsync(cutoff, e => e.EventType);
+        Dictionary<string, int> bySeverity = await MergedCountsAsync(cutoff, e => e.Severity);
 
         Dictionary<string, int> activeStrikes = (await _eventsContext.Strikes
                 .GroupBy(s => s.Type)
@@ -130,41 +130,30 @@ public class StatsService : IStatsService
 
     private async Task<Dictionary<string, int>> MergedCountsAsync<TKey>(
         DateTimeOffset cutoff,
-        System.Linq.Expressions.Expression<Func<Persistence.Models.Events.AppEvent, TKey>> activeSelector,
-        System.Linq.Expressions.Expression<Func<Persistence.Models.Events.EventHistory, TKey>> historySelector)
+        System.Linq.Expressions.Expression<Func<Persistence.Models.Events.AppEvent, TKey>> selector)
         where TKey : notnull
     {
-        var active = await _eventsContext.Events
+        var grouped = await _eventsContext.Events
             .Where(e => e.Timestamp >= cutoff)
-            .GroupBy(activeSelector)
+            .GroupBy(selector)
             .Select(g => new { g.Key, Count = g.Count() })
             .ToListAsync();
 
-        var history = await _eventsContext.EventHistory
-            .Where(e => e.Timestamp >= cutoff)
-            .GroupBy(historySelector)
-            .Select(g => new { g.Key, Count = g.Count() })
-            .ToListAsync();
-
-        Dictionary<string, int> merged = [];
-        foreach (var entry in active.Concat(history))
+        Dictionary<string, int> counts = [];
+        foreach (var entry in grouped)
         {
             string key = entry.Key.ToString() ?? string.Empty;
-            merged[key] = merged.GetValueOrDefault(key) + entry.Count;
+            counts[key] = counts.GetValueOrDefault(key) + entry.Count;
         }
 
-        return merged;
+        return counts;
     }
 
     private async Task<int> CountMalwareAsync(DateTimeOffset cutoff)
     {
-        int active = await _eventsContext.Events
+        return await _eventsContext.Events
             .CountAsync(e => e.Timestamp >= cutoff && e.EventType == EventType.QueueItemDeleted
                 && e.DeleteReason != null && MalwareReasons.Contains(e.DeleteReason.Value));
-        int history = await _eventsContext.EventHistory
-            .CountAsync(e => e.Timestamp >= cutoff && e.EventType == EventType.QueueItemDeleted
-                && e.DeleteReason != null && MalwareReasons.Contains(e.DeleteReason.Value));
-        return active + history;
     }
 
     private async Task<List<DateTimeOffset>> MetricTimestampsAsync(DateTimeOffset cutoff, string metric)
@@ -179,25 +168,20 @@ public class StatsService : IStatsService
         };
         bool malwareOnly = metric == "malwareBlocked";
 
-        IQueryable<Persistence.Models.Events.AppEvent> active = _eventsContext.Events.Where(e => e.Timestamp >= cutoff);
-        IQueryable<Persistence.Models.Events.EventHistory> history = _eventsContext.EventHistory.Where(e => e.Timestamp >= cutoff);
+        IQueryable<Persistence.Models.Events.AppEvent> events = _eventsContext.Events.Where(e => e.Timestamp >= cutoff);
 
         if (types is not null)
         {
-            active = active.Where(e => types.Contains(e.EventType));
-            history = history.Where(e => types.Contains(e.EventType));
+            events = events.Where(e => types.Contains(e.EventType));
         }
 
         if (malwareOnly)
         {
-            active = active.Where(e => e.DeleteReason != null && MalwareReasons.Contains(e.DeleteReason.Value));
-            history = history.Where(e => e.DeleteReason != null && MalwareReasons.Contains(e.DeleteReason.Value));
+            events = events.Where(e => e.DeleteReason != null && MalwareReasons.Contains(e.DeleteReason.Value));
         }
 
         // ponytail: windows are bounded (max ~1y of low-volume events), so bucket in memory rather than push a date expression to SQLite.
-        List<DateTimeOffset> timestamps = await active.Select(e => e.Timestamp).ToListAsync();
-        timestamps.AddRange(await history.Select(e => e.Timestamp).ToListAsync());
-        return timestamps;
+        return await events.Select(e => e.Timestamp).ToListAsync();
     }
 
     /// <summary>

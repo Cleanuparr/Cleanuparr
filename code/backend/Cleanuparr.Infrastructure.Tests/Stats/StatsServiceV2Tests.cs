@@ -15,7 +15,7 @@ using Xunit;
 namespace Cleanuparr.Infrastructure.Tests.Stats;
 
 /// <summary>
-/// Verifies the v2 stats service derives strike/event/malware metrics from active events + archived history.
+/// Verifies the v2 stats service derives strike/event/malware metrics from the events table.
 /// </summary>
 public class StatsServiceV2Tests : IDisposable
 {
@@ -52,24 +52,13 @@ public class StatsServiceV2Tests : IDisposable
     };
 
     [Fact]
-    public async Task GetStatsV2Async_DerivesMetricsFromActiveAndHistory()
+    public async Task GetStatsV2Async_DerivesMetricsFromEvents()
     {
-        // Active events
+        _context.Events.Add(Event(EventType.StalledStrike));
         _context.Events.Add(Event(EventType.StalledStrike));
         _context.Events.Add(Event(EventType.StrikeReset));
         _context.Events.Add(Event(EventType.QueueItemDeleted, DeleteReason.AllFilesBlocked));
         _context.Events.Add(Event(EventType.QueueItemDeleted, DeleteReason.Stalled));
-
-        // Archived history (counts too)
-        _context.EventHistory.Add(new EventHistory
-        {
-            Id = Guid.NewGuid(),
-            EventType = EventType.StalledStrike,
-            Message = "archived strike",
-            Severity = EventSeverity.Important,
-            Timestamp = DateTimeOffset.UtcNow.AddHours(-2),
-            ArchivedAt = DateTimeOffset.UtcNow,
-        });
 
         // A live active strike
         DownloadItem item = new() { DownloadId = "h1", Title = "t1" };
@@ -87,7 +76,7 @@ public class StatsServiceV2Tests : IDisposable
         stats.Strikes.Removed.ShouldBe(2);     // two QueueItemDeleted
         stats.Malware.Blocked.ShouldBe(1);     // only AllFilesBlocked
         stats.Strikes.Active["Stalled"].ShouldBe(1);
-        stats.Events.ByType["StalledStrike"].ShouldBe(2); // merged active + history
+        stats.Events.ByType["StalledStrike"].ShouldBe(2);
         stats.Events.TotalCount.ShouldBe(5);
     }
 
@@ -97,20 +86,11 @@ public class StatsServiceV2Tests : IDisposable
         _context.Events.Add(Event(EventType.QueueItemDeleted, DeleteReason.AllFilesBlocked));
         _context.Events.Add(Event(EventType.QueueItemDeleted, DeleteReason.Stalled));
         _context.Events.Add(Event(EventType.StrikeReset)); // not a removal
-        _context.EventHistory.Add(new EventHistory
-        {
-            Id = Guid.NewGuid(),
-            EventType = EventType.QueueItemDeleted,
-            Message = "archived removal",
-            Severity = EventSeverity.Important,
-            Timestamp = DateTimeOffset.UtcNow.AddHours(-3),
-            ArchivedAt = DateTimeOffset.UtcNow,
-            DeleteReason = DeleteReason.SlowSpeed,
-        });
+        _context.Events.Add(Event(EventType.QueueItemDeleted, DeleteReason.SlowSpeed));
         await _context.SaveChangesAsync();
 
         List<TimelineBucketDto> removed = await _service.GetTimelineAsync("removed", 24);
-        removed.Sum(b => b.Count).ShouldBe(3); // 2 active + 1 history QueueItemDeleted
+        removed.Sum(b => b.Count).ShouldBe(3); // three QueueItemDeleted
 
         List<TimelineBucketDto> malware = await _service.GetTimelineAsync("malwareBlocked", 24);
         malware.Sum(b => b.Count).ShouldBe(1); // only AllFilesBlocked
