@@ -87,7 +87,7 @@
         helpKey="general:strikeInactivityWindowHours" />
 
       <app-number-input label="History Retention" [formField]="genForm.historyRetentionDays" suffix="days"
-        hint="How long event history is kept before being pruned."
+        hint="How long the event history is kept before being pruned."
         [error]="genForm.historyRetentionDays().errors()[0]?.message"
         helpKey="general:historyRetentionDays" featureId="history-retention" />
 
