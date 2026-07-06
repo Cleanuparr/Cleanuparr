@@ -75,7 +75,7 @@ export class StatsCardComponent {
   private readonly statsApi = inject(StatsApi);
 
   readonly windows = WINDOWS;
-  readonly window = signal<number>(168);
+  readonly window = signal<number>(24);
   readonly selectedMetric = signal<TimelineMetric>('removed');
 
   private readonly statsResource = rxResource({

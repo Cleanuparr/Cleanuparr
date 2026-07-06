@@ -66,7 +66,7 @@ export class EventsStatsCardComponent {
   private readonly eventsApi = inject(EventsApi);
 
   readonly windows = WINDOWS;
-  readonly window = signal<number>(720);
+  readonly window = signal<number>(24);
   readonly selected = signal<string | null>(null);
 
   private readonly timelineResource = rxResource({
