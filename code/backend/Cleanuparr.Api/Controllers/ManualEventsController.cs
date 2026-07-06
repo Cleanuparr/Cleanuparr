@@ -1,3 +1,4 @@
+using Cleanuparr.Api.Contracts.Responses;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Events;

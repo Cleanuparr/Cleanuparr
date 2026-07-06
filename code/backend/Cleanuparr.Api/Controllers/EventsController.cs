@@ -1,5 +1,6 @@
-using System.Linq.Expressions;
-using System.Text.Json.Serialization;
+using System.Globalization;
+using Cleanuparr.Api.Common;
+using Cleanuparr.Api.Contracts.Responses;
 using Cleanuparr.Api.Features.Events.Contracts.Responses;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Persistence;
@@ -51,7 +52,7 @@ public class EventsController : ControllerBase
         {
             pageSize = 500;
         }
-        
+
         IQueryable<EventListItem> query = _context.Events
             .Select(EventListItem.FromEvent);
 
@@ -135,7 +136,7 @@ public class EventsController : ControllerBase
     public async Task<ActionResult<AppEvent>> GetEvent(Guid id)
     {
         var eventEntity = await _context.Events.FindAsync(id);
-        
+
         if (eventEntity == null)
             return NotFound();
 
@@ -179,21 +180,32 @@ public class EventsController : ControllerBase
     [HttpGet("timeline")]
     public async Task<ActionResult<EventTypeTimelineResponse>> GetTimeline([FromQuery] int hours = 720)
     {
-        hours = Math.Clamp(hours, 1, 8760);
+        hours = TimelineWindow.ClampHours(hours);
         DateTimeOffset cutoff = DateTimeOffset.UtcNow.AddHours(-hours);
+        string cutoffText = cutoff.UtcDateTime.ToString("yyyy-MM-dd HH:mm:ss.fffffff", CultureInfo.InvariantCulture);
 
-        var rows = await _context.Events
-            .Where(e => e.Timestamp >= cutoff)
-            .Select(e => new { e.Timestamp, e.EventType })
+        List<DayTypeCount> rows = await _context.Database
+            .SqlQueryRaw<DayTypeCount>(
+                """
+                SELECT substr(timestamp, 1, 10) AS "day", event_type AS "event_type", COUNT(*) AS "count"
+                FROM events
+                WHERE timestamp >= {0}
+                GROUP BY substr(timestamp, 1, 10), event_type
+                """,
+                cutoffText)
             .ToListAsync();
 
-        Dictionary<(DateOnly Day, EventType Type), int> byDayType = rows
-            .GroupBy(r => (Day: DateOnly.FromDateTime(r.Timestamp.UtcDateTime), r.EventType))
-            .ToDictionary(g => g.Key, g => g.Count());
+        Dictionary<(DateOnly Day, EventType Type), int> byDayType = new();
+        HashSet<EventType> presentSet = [];
+        foreach (DayTypeCount row in rows)
+        {
+            DateOnly day = DateOnly.ParseExact(row.Day, "yyyy-MM-dd", CultureInfo.InvariantCulture);
+            EventType type = Enum.Parse<EventType>(row.EventType, ignoreCase: true);
+            byDayType[(day, type)] = row.Count;
+            presentSet.Add(type);
+        }
 
-        List<EventType> presentTypes = rows
-            .Select(r => r.EventType)
-            .Distinct()
+        List<EventType> presentTypes = presentSet
             .OrderBy(t => (int)t)
             .ToList();
 
@@ -220,121 +232,11 @@ public class EventsController : ControllerBase
             Buckets = buckets,
         });
     }
-} 
 
-/// <summary>
-/// Represents a paginated result set
-/// </summary>
-/// <typeparam name="T">Type of items in the result</typeparam>
-public class PaginatedResult<T>
-{
-    /// <summary>
-    /// The items in the current page
-    /// </summary>
-    public List<T> Items { get; set; } = new();
-    
-    /// <summary>
-    /// Current page number (1-based)
-    /// </summary>
-    public int Page { get; set; }
-    
-    /// <summary>
-    /// Number of items per page
-    /// </summary>
-    public int PageSize { get; set; }
-    
-    /// <summary>
-    /// Total number of items across all pages
-    /// </summary>
-    public int TotalCount { get; set; }
-    
-    /// <summary>
-    /// Total number of pages
-    /// </summary>
-    public int TotalPages { get; set; }
-    
-    /// <summary>
-    /// Whether there is a previous page
-    /// </summary>
-    [JsonIgnore]
-    public bool HasPrevious => Page > 1;
-    
-    /// <summary>
-    /// Whether there is a next page
-    /// </summary>
-    [JsonIgnore]
-    public bool HasNext => Page < TotalPages;
-}
-
-/// <summary>
-/// Flattened event row for the events list. Serializes identically to the fields the client
-/// reads from <see cref="AppEvent"/>, without the navigation properties.
-/// </summary>
-public class EventListItem
-{
-    public Guid Id { get; set; }
-    public DateTimeOffset Timestamp { get; set; }
-    public EventType EventType { get; set; }
-    public string Message { get; set; } = string.Empty;
-    public EventSeverity Severity { get; set; }
-    public Guid? TrackingId { get; set; }
-    public Guid? StrikeId { get; set; }
-    public Guid? JobRunId { get; set; }
-    public Guid? ArrInstanceId { get; set; }
-    public Guid? DownloadClientId { get; set; }
-    public SearchCommandStatus? SearchStatus { get; set; }
-    public DateTimeOffset? CompletedAt { get; set; }
-    public Guid? CycleId { get; set; }
-    public bool IsDryRun { get; set; }
-    public string? ItemTitle { get; set; }
-    public string? ItemHash { get; set; }
-    public int? StrikeCount { get; set; }
-    public List<string> FailedImportReasons { get; set; } = [];
-    public DeleteReason? DeleteReason { get; set; }
-    public bool? RemoveFromClient { get; set; }
-    public CleanReason? CleanReason { get; set; }
-    public string? CleanedCategory { get; set; }
-    public double? SeedRatio { get; set; }
-    public double? SeedingTimeHours { get; set; }
-    public string? OldCategory { get; set; }
-    public string? NewCategory { get; set; }
-    public bool? IsCategoryTag { get; set; }
-    public SeekerSearchType? SearchType { get; set; }
-    public SeekerSearchReason? SearchReason { get; set; }
-    public List<string> GrabbedItems { get; set; } = [];
-
-    /// <summary>Projects an active <see cref="AppEvent"/> into the unified list shape.</summary>
-    public static readonly Expression<Func<AppEvent, EventListItem>> FromEvent = e => new EventListItem
+    private sealed class DayTypeCount
     {
-        Id = e.Id,
-        Timestamp = e.Timestamp,
-        EventType = e.EventType,
-        Message = e.Message,
-        Severity = e.Severity,
-        TrackingId = e.TrackingId,
-        StrikeId = e.StrikeId,
-        JobRunId = e.JobRunId,
-        ArrInstanceId = e.ArrInstanceId,
-        DownloadClientId = e.DownloadClientId,
-        SearchStatus = e.SearchStatus,
-        CompletedAt = e.CompletedAt,
-        CycleId = e.CycleId,
-        IsDryRun = e.IsDryRun,
-        ItemTitle = e.ItemTitle,
-        ItemHash = e.ItemHash,
-        StrikeCount = e.StrikeCount,
-        FailedImportReasons = e.FailedImportReasons,
-        DeleteReason = e.DeleteReason,
-        RemoveFromClient = e.RemoveFromClient,
-        CleanReason = e.CleanReason,
-        CleanedCategory = e.CleanedCategory,
-        SeedRatio = e.SeedRatio,
-        SeedingTimeHours = e.SeedingTimeHours,
-        OldCategory = e.OldCategory,
-        NewCategory = e.NewCategory,
-        IsCategoryTag = e.IsCategoryTag,
-        SearchType = e.SearchType,
-        SearchReason = e.SearchReason,
-        GrabbedItems = e.GrabbedItems,
-    };
+        public string Day { get; set; } = string.Empty;
+        public string EventType { get; set; } = string.Empty;
+        public int Count { get; set; }
+    }
 }

@@ -1,4 +1,6 @@
+using Cleanuparr.Api.Contracts.Responses;
 using Cleanuparr.Api.Controllers;
+using Cleanuparr.Api.Features.Events.Contracts.Responses;
 using Cleanuparr.Api.Tests.Features.Seeker.TestHelpers;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Persistence;

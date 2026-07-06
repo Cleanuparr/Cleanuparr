@@ -1,3 +1,4 @@
+using Cleanuparr.Api.Common;
 using Cleanuparr.Infrastructure.Stats;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -23,7 +24,7 @@ public class StatsV2Controller : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetStats([FromQuery] int hours = 168)
     {
-        hours = Math.Clamp(hours, 1, 8760);
+        hours = TimelineWindow.ClampHours(hours);
         StatsV2Response stats = await _statsService.GetStatsV2Async(hours);
         return Ok(stats);
     }
@@ -45,7 +46,7 @@ public class StatsV2Controller : ControllerBase
             return BadRequest($"Unsupported bucket '{bucket}'. Only 'day' is currently supported.");
         }
 
-        hours = Math.Clamp(hours, 1, 8760);
+        hours = TimelineWindow.ClampHours(hours);
         List<TimelineBucketDto> series = await _statsService.GetTimelineAsync(metric, hours);
         return Ok(series);
     }

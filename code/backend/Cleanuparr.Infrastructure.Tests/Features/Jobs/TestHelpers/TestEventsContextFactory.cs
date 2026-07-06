@@ -21,6 +21,8 @@ public static class TestEventsContextFactory
 
         var options = new DbContextOptionsBuilder<EventsContext>()
             .UseSqlite(connection)
+            .UseLowerCaseNamingConvention()
+            .UseSnakeCaseNamingConvention()
             .Options;
 
         var context = new EventsContext(options);

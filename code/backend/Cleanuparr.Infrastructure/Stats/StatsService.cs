@@ -1,3 +1,5 @@
+using System.Globalization;
+using System.Text;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Health;
 using Cleanuparr.Infrastructure.Services.Interfaces;
@@ -109,11 +111,7 @@ public class StatsService : IStatsService
     {
         DateTimeOffset cutoff = DateTimeOffset.UtcNow.AddHours(-hours);
 
-        List<DateTimeOffset> timestamps = await MetricTimestampsAsync(cutoff, metric);
-
-        Dictionary<DateOnly, int> counts = timestamps
-            .GroupBy(t => DateOnly.FromDateTime(t.UtcDateTime))
-            .ToDictionary(g => g.Key, g => g.Count());
+        Dictionary<DateOnly, int> counts = await MetricDayCountsAsync(cutoff, metric);
 
         // Fill every day in the window so the series is continuous for charting.
         List<TimelineBucketDto> series = [];
@@ -155,7 +153,7 @@ public class StatsService : IStatsService
                 && e.DeleteReason != null && MalwareReasons.Contains(e.DeleteReason.Value));
     }
 
-    private async Task<List<DateTimeOffset>> MetricTimestampsAsync(DateTimeOffset cutoff, string metric)
+    private async Task<Dictionary<DateOnly, int>> MetricDayCountsAsync(DateTimeOffset cutoff, string metric)
     {
         EventType[]? types = metric switch
         {
@@ -167,20 +165,43 @@ public class StatsService : IStatsService
         };
         bool malwareOnly = metric == "malwareBlocked";
 
-        IQueryable<Persistence.Models.Events.AppEvent> events = _eventsContext.Events.Where(e => e.Timestamp >= cutoff);
+        List<object> parameters = [cutoff.UtcDateTime.ToString("yyyy-MM-dd HH:mm:ss.fffffff", CultureInfo.InvariantCulture)];
+        StringBuilder where = new("WHERE timestamp >= {0}");
 
         if (types is not null)
         {
-            events = events.Where(e => types.Contains(e.EventType));
+            string placeholders = string.Join(", ", types.Select((_, i) => $"{{{parameters.Count + i}}}"));
+            where.Append($" AND event_type IN ({placeholders})");
+            parameters.AddRange(types.Select(t => (object)t.ToString().ToLowerInvariant()));
         }
 
         if (malwareOnly)
         {
-            events = events.Where(e => e.DeleteReason != null && MalwareReasons.Contains(e.DeleteReason.Value));
+            string placeholders = string.Join(", ", MalwareReasons.Select((_, i) => $"{{{parameters.Count + i}}}"));
+            where.Append($" AND delete_reason IN ({placeholders})");
+            parameters.AddRange(MalwareReasons.Select(r => (object)r.ToString().ToLowerInvariant()));
         }
 
-        // ponytail: windows are bounded (max ~1y of low-volume events), so bucket in memory rather than push a date expression to SQLite.
-        return await events.Select(e => e.Timestamp).ToListAsync();
+        string sql = $"""
+            SELECT substr(timestamp, 1, 10) AS "day", COUNT(*) AS "count"
+            FROM events
+            {where}
+            GROUP BY substr(timestamp, 1, 10)
+            """;
+
+        List<DayCount> rows = await _eventsContext.Database
+            .SqlQueryRaw<DayCount>(sql, parameters.ToArray())
+            .ToListAsync();
+
+        return rows.ToDictionary(
+            r => DateOnly.ParseExact(r.Day, "yyyy-MM-dd", CultureInfo.InvariantCulture),
+            r => r.Count);
+    }
+
+    private sealed class DayCount
+    {
+        public string Day { get; set; } = string.Empty;
+        public int Count { get; set; }
     }
 
     /// <summary>
