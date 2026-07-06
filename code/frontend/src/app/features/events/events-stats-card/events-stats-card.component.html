@@ -1,19 +1,19 @@
 <app-card header="Event activity" subtitle="Events by type over the selected window" featureId="events-stats-card">
-  <div class="stats">
-    <div class="stats__windows" role="group" aria-label="Time window">
-      @for (w of windows; track w.hours) {
-        <button
-          type="button"
-          class="stats__window"
-          [class.stats__window--active]="window() === w.hours"
-          [attr.aria-pressed]="window() === w.hours"
-          (click)="setWindow(w.hours)"
-        >
-          {{ w.label }}
-        </button>
-      }
-    </div>
+  <div class="stats__windows" card-actions role="group" aria-label="Time window">
+    @for (w of windows; track w.hours) {
+      <button
+        type="button"
+        class="stats__window"
+        [class.stats__window--active]="window() === w.hours"
+        [attr.aria-pressed]="window() === w.hours"
+        (click)="setWindow(w.hours)"
+      >
+        {{ w.label }}
+      </button>
+    }
+  </div>
 
+  <div class="stats">
     @if (hasError()) {
       <div class="stats__error">
         <span>Couldn't load event activity.</span>

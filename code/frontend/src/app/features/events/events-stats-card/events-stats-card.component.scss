@@ -7,7 +7,7 @@
 .stats__windows {
   display: flex;
   gap: var(--space-1);
-  align-self: flex-end;
+  flex-shrink: 0;
 }
 
 .stats__window {
