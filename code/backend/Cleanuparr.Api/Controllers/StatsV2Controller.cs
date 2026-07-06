@@ -4,10 +4,6 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Cleanuparr.Api.Controllers;
 
-/// <summary>
-/// Comprehensive v2 statistics for the dashboard, derived from the event stream (active + archived history).
-/// v1 (<see cref="StatsController"/>) is left untouched.
-/// </summary>
 [ApiController]
 [Route("api/v2/stats")]
 [Authorize]

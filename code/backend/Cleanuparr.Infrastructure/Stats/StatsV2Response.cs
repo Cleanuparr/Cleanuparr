@@ -1,8 +1,5 @@
 namespace Cleanuparr.Infrastructure.Stats;
 
-/// <summary>
-/// Comprehensive v2 statistics, derived from the event stream (active events + archived history).
-/// </summary>
 public class StatsV2Response
 {
     public EventV2Stats Events { get; set; } = new();
@@ -14,7 +11,6 @@ public class StatsV2Response
     public DateTimeOffset GeneratedAt { get; set; }
 }
 
-/// <summary>Event counts within the window, merged across active events and archived history.</summary>
 public class EventV2Stats
 {
     /// <summary>Total events in the window.</summary>

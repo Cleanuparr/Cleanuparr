@@ -90,7 +90,6 @@ public class StatsService : IStatsService
             Strikes = new StrikeV2Stats
             {
                 Active = activeStrikes,
-                // byType already holds the merged (active + history) per-type counts for this cutoff.
                 Issued = StrikeEventTypes.Sum(t => byType.GetValueOrDefault(t.ToString(), 0)),
                 Recovered = byType.GetValueOrDefault(EventType.StrikeReset.ToString(), 0),
                 Removed = byType.GetValueOrDefault(EventType.QueueItemDeleted.ToString(), 0),

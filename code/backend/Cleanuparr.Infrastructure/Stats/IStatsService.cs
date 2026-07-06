@@ -14,9 +14,6 @@ public interface IStatsService
     /// <returns>Aggregated stats response</returns>
     Task<StatsResponse> GetStatsAsync(int hours = 24, int includeEvents = 0, int includeStrikes = 0);
 
-    /// <summary>
-    /// Gets comprehensive v2 statistics for the given timeframe, derived from active events + archived history.
-    /// </summary>
     /// <param name="hours">Timeframe in hours</param>
     Task<StatsV2Response> GetStatsV2Async(int hours);
 
