@@ -106,34 +106,50 @@ If `BASE_PATH` is set, include it in the URL: `http://localhost:11011/cleanuparr
 ```json
 {
   "events": {
-    "totalCount": 42,
+    "totalCount": 60,
     "byType": {
-      "StalledStrike": 12,
       "FailedImportStrike": 5,
-      "QueueItemDeleted": 8,
+      "StalledStrike": 12,
+      "DownloadingMetadataStrike": 2,
+      "SlowSpeedStrike": 3,
+      "SlowTimeStrike": 1,
+      "DeadTorrentStrike": 1,
+      "QueueItemDeleted": 13,
       "DownloadCleaned": 6,
+      "CategoryChanged": 4,
+      "DownloadMarkedForDeletion": 2,
       "SearchTriggered": 8,
       "StrikeReset": 3
     },
     "bySeverity": {
-      "Information": 20,
-      "Warning": 15,
-      "Error": 7
+      "Information": 30,
+      "Warning": 20,
+      "Important": 7,
+      "Error": 3
     }
   },
   "strikes": {
-    "issued": 17,
+    "issued": 24,
     "byType": {
       "Stalled": 12,
-      "FailedImport": 5
+      "DownloadingMetadata": 2,
+      "FailedImport": 5,
+      "SlowSpeed": 3,
+      "SlowTime": 1,
+      "DeadTorrent": 1
     },
     "recovered": 3
   },
   "removals": {
-    "total": 8,
+    "total": 13,
     "byReason": {
-      "Stalled": 3,
-      "FailedImport": 1,
+      "Stalled": 2,
+      "FailedImport": 2,
+      "DownloadingMetadata": 1,
+      "SlowSpeed": 1,
+      "SlowTime": 1,
+      "AllFilesSkipped": 1,
+      "AllFilesSkippedByQBit": 1,
       "AllFilesBlocked": 3,
       "AtLeastOneFileBlocked": 1
     }
@@ -151,14 +167,16 @@ If `BASE_PATH` is set, include it in the URL: `http://localhost:11011/cleanuparr
     "failed": 1,
     "grabbed": 5,
     "byReason": {
-      "Missing": 5,
-      "QualityCutoffNotMet": 3
+      "Missing": 4,
+      "QualityCutoffNotMet": 2,
+      "CustomFormatScoreBelowCutoff": 1,
+      "Replacement": 1
     }
   },
   "jobs": {
-    "totalRuns": 96,
-    "completed": 94,
-    "failed": 2,
+    "totalRuns": 168,
+    "completed": 165,
+    "failed": 3,
     "byType": {
       "QueueCleaner": {
         "totalRuns": 48,
@@ -173,6 +191,34 @@ If `BASE_PATH` is set, include it in the URL: `http://localhost:11011/cleanuparr
         "failed": 0,
         "lastRunAt": "2025-01-15T12:00:00Z",
         "nextRunAt": "2025-01-15T12:30:00Z"
+      },
+      "DownloadCleaner": {
+        "totalRuns": 24,
+        "completed": 24,
+        "failed": 0,
+        "lastRunAt": "2025-01-15T12:00:00Z",
+        "nextRunAt": "2025-01-15T13:00:00Z"
+      },
+      "BlacklistSynchronizer": {
+        "totalRuns": 12,
+        "completed": 12,
+        "failed": 0,
+        "lastRunAt": "2025-01-15T12:00:00Z",
+        "nextRunAt": "2025-01-15T14:00:00Z"
+      },
+      "Seeker": {
+        "totalRuns": 30,
+        "completed": 29,
+        "failed": 1,
+        "lastRunAt": "2025-01-15T12:00:00Z",
+        "nextRunAt": "2025-01-15T12:15:00Z"
+      },
+      "CustomFormatScoreSyncer": {
+        "totalRuns": 6,
+        "completed": 6,
+        "failed": 0,
+        "lastRunAt": "2025-01-15T12:00:00Z",
+        "nextRunAt": "2025-01-15T18:00:00Z"
       }
     }
   },
@@ -205,7 +251,7 @@ If `BASE_PATH` is set, include it in the URL: `http://localhost:11011/cleanuparr
 ```
 
 <Note>
-All breakdown keys (`byType`, `bySeverity`, `byReason`) are PascalCase enum names, and only entries with activity are present — a reason or type with zero events is omitted rather than sent as `0`.
+The example lists every possible key for each breakdown for reference. In a real response, breakdown keys (`byType`, `bySeverity`, `byReason`) are PascalCase enum names and **only entries with activity are present** — a reason or type with zero events is omitted rather than sent as `0`.
 </Note>
 
 </ConfigSection>
@@ -217,7 +263,7 @@ All breakdown keys (`byType`, `bySeverity`, `byReason`) are PascalCase enum name
 The raw event audit for the window. The higher-level sections (`strikes`, `removals`, `cleaned`, `searches`) are ergonomic roll-ups derived from these same events.
 
 - **totalCount** — Total events in the window (equal to the sum of `byType`)
-- **byType** — Events grouped by event type
+- **byType** — Events grouped by event type (`FailedImportStrike`, `StalledStrike`, `DownloadingMetadataStrike`, `SlowSpeedStrike`, `SlowTimeStrike`, `DeadTorrentStrike`, `QueueItemDeleted`, `DownloadCleaned`, `CategoryChanged`, `DownloadMarkedForDeletion`, `SearchTriggered`, `StrikeReset`)
 - **bySeverity** — Events grouped by severity (`Information`, `Warning`, `Important`, `Error`)
 
 </ConfigSection>
@@ -242,10 +288,6 @@ Downloads removed from the queue in the window, broken down by reason. This is t
 
 - **total** — Total removals in the window (all reasons)
 - **byReason** — Removals grouped by delete reason (`Stalled`, `FailedImport`, `SlowSpeed`, `SlowTime`, `DownloadingMetadata`, `AllFilesSkipped`, `AllFilesSkippedByQBit`, `AllFilesBlocked`, `AtLeastOneFileBlocked`)
-
-<Note>
-**Malware blocked** is not a separate field — it is derived from this breakdown: `byReason.AllFilesBlocked + byReason.AtLeastOneFileBlocked`.
-</Note>
 
 </ConfigSection>
 
@@ -431,30 +473,8 @@ Key fields for dashboards:
 >
 
 <Warning>
-`/api/stats` is deprecated in favour of `/api/v2/stats` and will be removed in a future release. Responses include `Deprecation: true` and a `Link` header pointing to the successor version.
+`/api/stats` is deprecated in favour of `/api/v2/stats` and will be removed in a future release.
 </Warning>
-
-The v1 endpoint returns a similar `events` / `strikes` / `jobs` / `health` structure plus optional `recentItems`, controlled by these query parameters:
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `hours` | integer | `24` | Timeframe in hours (range: 1–720) |
-| `includeEvents` | integer | `0` | Number of recent events to include (range: 0–100) |
-| `includeStrikes` | integer | `0` | Number of recent strikes to include (range: 0–100) |
-
-**Migrating to v2:**
-
-| v1 field | v2 replacement |
-|----------|----------------|
-| `strikes.totalCount` | `strikes.issued` |
-| `strikes.byType` | `strikes.byType` (now derived from strike events) |
-| `strikes.itemsRemoved` | `removals.total` |
-| *(malware — not in v1)* | `removals.byReason.AllFilesBlocked + removals.byReason.AtLeastOneFileBlocked` |
-| `events.*` | `events.*` (unchanged) |
-| `jobs.byType` | `jobs.byType` (unchanged) |
-| `health` | `health` (unchanged) |
-
-v2 also adds `removals.byReason`, `cleaned`, `searches`, `windowHours`, an `includeDryRun` option, and a bucketed `timeline` endpoint. v2 does not return `recentItems` — use the Events API for recent event/strike records.
 
 </ConfigSection>
 
