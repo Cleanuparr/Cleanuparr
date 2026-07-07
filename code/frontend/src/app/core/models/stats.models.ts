@@ -1,4 +1,13 @@
+import { DeleteReason } from '@shared/models/enums';
+
 export type TimelineMetric = 'strikesIssued' | 'recovered' | 'removed' | 'malwareBlocked' | 'events';
+
+export type TimelineBucketSize = 'hour' | 'day' | 'week' | 'month';
+
+export const MALWARE_DELETE_REASONS: readonly DeleteReason[] = [
+  DeleteReason.AllFilesBlocked,
+  DeleteReason.AtLeastOneFileBlocked,
+];
 
 export interface JobTypeStats {
   totalRuns: number;
@@ -15,13 +24,24 @@ export interface StatsV2Response {
     bySeverity: Record<string, number>;
   };
   strikes: {
-    active: Record<string, number>;
     issued: number;
+    byType: Record<string, number>;
     recovered: number;
-    removed: number;
   };
-  malware: {
-    blocked: number;
+  removals: {
+    total: number;
+    byReason: Record<string, number>;
+  };
+  cleaned: {
+    total: number;
+    byReason: Record<string, number>;
+  };
+  searches: {
+    triggered: number;
+    completed: number;
+    failed: number;
+    grabbed: number;
+    byReason: Record<string, number>;
   };
   jobs: {
     totalRuns: number;
@@ -29,6 +49,7 @@ export interface StatsV2Response {
     failed: number;
     byType: Record<string, JobTypeStats>;
   };
+  windowHours: number;
   generatedAt: string;
 }
 

@@ -1,3 +1,5 @@
+import { TimelineBucketSize } from '@core/models/stats.models';
+
 export interface WindowOption {
   label: string;
   hours: number;
@@ -10,6 +12,16 @@ export const WINDOWS: WindowOption[] = [
   { label: '1y', hours: 8760 },
 ];
 
+export function bucketForWindow(hours: number): TimelineBucketSize {
+  if (hours <= 24) {
+    return 'hour';
+  }
+  if (hours <= 720) {
+    return 'day';
+  }
+  return 'month';
+}
+
 export function getChartDuration(): number {
   return typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 600;
 }
@@ -17,6 +29,9 @@ export function getChartDuration(): number {
 export function formatBucketDate(date: string, hours: number): string {
   if (hours <= 24) {
     return new Date(date).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+  }
+  if (hours >= 8760) {
+    return new Date(`${date.slice(0, 10)}T00:00:00`).toLocaleDateString(undefined, { month: 'short', year: '2-digit' });
   }
   return new Date(`${date.slice(0, 10)}T00:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }

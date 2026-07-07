@@ -13,7 +13,7 @@ import { NgIcon } from '@ng-icons/core';
 import { CardComponent, TooltipComponent } from '@ui';
 import { AnimatedCounterComponent } from '@ui/animated-counter/animated-counter.component';
 import { StatsApi } from '@core/api/stats.api';
-import { StatsV2Response, TimelineBucket, TimelineMetric } from '@core/models/stats.models';
+import { MALWARE_DELETE_REASONS, StatsV2Response, TimelineBucket, TimelineMetric } from '@core/models/stats.models';
 import { WINDOWS, getChartDuration, formatBucketDate, chartYDomain } from '@shared/utils/chart-window.util';
 
 interface StatTile {
@@ -35,9 +35,12 @@ const METRIC_COLORS: Record<TimelineMetric, string> = {
 
 const EMPTY_STATS: StatsV2Response = {
   events: { totalCount: 0, byType: {}, bySeverity: {} },
-  strikes: { active: {}, issued: 0, recovered: 0, removed: 0 },
-  malware: { blocked: 0 },
+  strikes: { issued: 0, byType: {}, recovered: 0 },
+  removals: { total: 0, byReason: {} },
+  cleaned: { total: 0, byReason: {} },
+  searches: { triggered: 0, completed: 0, failed: 0, grabbed: 0, byReason: {} },
   jobs: { totalRuns: 0, completed: 0, failed: 0, byType: {} },
+  windowHours: 0,
   generatedAt: '',
 };
 
@@ -88,8 +91,8 @@ export class StatsCardComponent {
       {
         key: 'removed',
         label: 'Downloads removed',
-        hint: 'Downloads deleted from your download client after reaching their strike limit.',
-        value: s.strikes.removed,
+        hint: 'Downloads deleted from the queue in this window, across all removal reasons.',
+        value: s.removals.total,
         metric: 'removed',
         tone: 'removed',
       },
@@ -113,7 +116,7 @@ export class StatsCardComponent {
         key: 'malware',
         label: 'Malware blocked',
         hint: 'Downloads removed because they contained blocked or malicious files.',
-        value: s.malware.blocked,
+        value: MALWARE_DELETE_REASONS.reduce((sum, reason) => sum + (s.removals.byReason[reason] ?? 0), 0),
         metric: 'malwareBlocked',
         tone: 'malware',
       },
