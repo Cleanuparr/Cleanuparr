@@ -62,13 +62,13 @@ JWT Bearer tokens are also supported for browser-based access.
   title="GET /api/v2/stats"
 >
 
-Returns aggregated statistics for a time window. Every section except `health` is scoped to the window; `health` is a cached, point-in-time gauge. By default the windowed sections count only **live** activity — dry-run activity is excluded unless you opt in.
+Returns aggregated statistics for a time window. Every section except `health` is scoped to the window; `health` is a cached, point-in-time gauge. By default the windowed sections count only **live** activity: dry-run activity is excluded unless you opt in.
 
 **Query Parameters:**
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `hours` | integer | `168` | Timeframe in hours (range: 1–8760) |
+| `hours` | integer | `168` | Timeframe in hours (range: 1-8760) |
 | `includeDryRun` | boolean | `false` | When `true`, dry-run activity is included in the windowed sections |
 
 **Examples:**
@@ -251,7 +251,7 @@ If `BASE_PATH` is set, include it in the URL: `http://localhost:11011/cleanuparr
 ```
 
 <Note>
-The example lists every possible key for each breakdown for reference. In a real response, breakdown keys (`byType`, `bySeverity`, `byReason`) are PascalCase enum names and **only entries with activity are present** — a reason or type with zero events is omitted rather than sent as `0`.
+The example lists every possible key for each breakdown for reference. In a real response, breakdown keys (`byType`, `bySeverity`, `byReason`) are PascalCase enum names and **only entries with activity are present**. A reason or type with zero events is omitted rather than sent as `0`.
 </Note>
 
 </ConfigSection>
@@ -262,9 +262,25 @@ The example lists every possible key for each breakdown for reference. In a real
 
 The raw event audit for the window. The higher-level sections (`strikes`, `removals`, `cleaned`, `searches`) are ergonomic roll-ups derived from these same events.
 
-- **totalCount** — Total events in the window (equal to the sum of `byType`)
-- **byType** — Events grouped by event type (`FailedImportStrike`, `StalledStrike`, `DownloadingMetadataStrike`, `SlowSpeedStrike`, `SlowTimeStrike`, `DeadTorrentStrike`, `QueueItemDeleted`, `DownloadCleaned`, `CategoryChanged`, `DownloadMarkedForDeletion`, `SearchTriggered`, `StrikeReset`)
-- **bySeverity** — Events grouped by severity (`Information`, `Warning`, `Important`, `Error`)
+- **totalCount**: Total events in the window (equal to the sum of `byType`).
+- **byType**: Events grouped by event type. Possible types:
+  - `FailedImportStrike`: A strike given because the download kept failing to import into the arr app.
+  - `StalledStrike`: A strike given because the download stopped making progress.
+  - `DownloadingMetadataStrike`: A strike given because the torrent was stuck fetching its metadata.
+  - `SlowSpeedStrike`: A strike given because the download stayed below the minimum speed.
+  - `SlowTimeStrike`: A strike given because the download's estimated time was over the allowed maximum.
+  - `DeadTorrentStrike`: A strike given because the torrent had no seeders (dead).
+  - `QueueItemDeleted`: A download was actually removed from the queue (and optionally from the client).
+  - `DownloadCleaned`: A finished download was removed after meeting its seeding goals.
+  - `CategoryChanged`: A download's category or tag was changed.
+  - `DownloadMarkedForDeletion`: A download was flagged for removal, just before it is deleted.
+  - `SearchTriggered`: The Seeker started a search for a missing or upgradeable item.
+  - `StrikeReset`: A download recovered, so its accumulated strikes were cleared.
+- **bySeverity**: Events grouped by severity. Possible severities:
+  - `Information`: Routine, low-priority events, such as a strike reset or category change.
+  - `Warning`: Something worth noticing that is not an error.
+  - `Important`: A major action, such as a removal or a strike being applied.
+  - `Error`: Something failed, such as a health check or an operation error.
 
 </ConfigSection>
 
@@ -274,9 +290,15 @@ The raw event audit for the window. The higher-level sections (`strikes`, `remov
 
 Strike activity in the window.
 
-- **issued** — Total strikes issued (equal to the sum of `byType`)
-- **byType** — Strikes issued grouped by strike type (`Stalled`, `FailedImport`, `SlowSpeed`, `SlowTime`, `DownloadingMetadata`, `DeadTorrent`)
-- **recovered** — Downloads that recovered and had their strikes reset
+- **issued**: Total strikes issued (equal to the sum of `byType`).
+- **byType**: Strikes grouped by type. Possible types:
+  - `Stalled`: Strikes for downloads that stopped making progress.
+  - `DownloadingMetadata`: Strikes for downloads stuck fetching torrent metadata.
+  - `FailedImport`: Strikes for downloads that repeatedly failed to import.
+  - `SlowSpeed`: Strikes for downloads staying below the minimum speed.
+  - `SlowTime`: Strikes for downloads whose estimated time exceeded the maximum.
+  - `DeadTorrent`: Strikes for torrents with no seeders.
+- **recovered**: Downloads that recovered and had their strikes reset.
 
 </ConfigSection>
 
@@ -286,8 +308,21 @@ Strike activity in the window.
 
 Downloads removed from the queue in the window, broken down by reason. This is the single source of truth for removals.
 
-- **total** — Total removals in the window (all reasons)
-- **byReason** — Removals grouped by delete reason (`Stalled`, `FailedImport`, `SlowSpeed`, `SlowTime`, `DownloadingMetadata`, `AllFilesSkipped`, `AllFilesSkippedByQBit`, `AllFilesBlocked`, `AtLeastOneFileBlocked`)
+- **total**: Total removals in the window, across all reasons.
+- **byReason**: Removals grouped by reason. Possible reasons:
+  - `Stalled`: Removed for not progressing within the allowed time.
+  - `FailedImport`: Removed after too many failed import attempts.
+  - `DownloadingMetadata`: Removed for being stuck fetching metadata too long.
+  - `SlowSpeed`: Removed for staying below the minimum speed too long.
+  - `SlowTime`: Removed because its estimated time exceeded the maximum allowed.
+  - `AllFilesSkipped`: Removed because every file in it was marked as unwanted.
+  - `AllFilesSkippedByQBit`: Removed because qBittorrent marked every file as "do not download", so nothing was ever downloaded.
+  - `AllFilesBlocked`: Removed because every file matched the malware blocklist. Counts as malware.
+  - `AtLeastOneFileBlocked`: Removed because at least one file matched the malware blocklist, with "delete if any file is blocked" enabled. Counts as malware.
+
+<Note>
+**Malware blocked** is not a separate field. It is the sum of the `AllFilesBlocked` and `AtLeastOneFileBlocked` reasons in this breakdown.
+</Note>
 
 </ConfigSection>
 
@@ -295,10 +330,12 @@ Downloads removed from the queue in the window, broken down by reason. This is t
   title="cleaned"
 >
 
-Downloads cleaned by the download cleaner in the window. Cleaning is distinct from a removal — it happens when a download meets its seeding goals, not because it was struck out.
+Downloads cleaned by the download cleaner in the window. Cleaning is different from a removal: it happens when a download meets its seeding goals, not because it was struck out.
 
-- **total** — Total cleaned downloads in the window
-- **byReason** — Cleaned downloads grouped by clean reason (`MaxRatioReached`, `MaxSeedTimeReached`)
+- **total**: Total cleaned downloads in the window.
+- **byReason**: Cleaned downloads grouped by reason. Possible reasons:
+  - `MaxRatioReached`: Cleaned after reaching its maximum seed ratio and minimum seed time.
+  - `MaxSeedTimeReached`: Cleaned after reaching its maximum seeding time.
 
 </ConfigSection>
 
@@ -308,11 +345,15 @@ Downloads cleaned by the download cleaner in the window. Cleaning is distinct fr
 
 Seeker search activity in the window. A single record is tracked per search and updated as it completes, so the counts never double-count.
 
-- **triggered** — Total searches triggered in the window (regardless of current status)
-- **completed** — Searches that completed successfully
-- **failed** — Searches that did not succeed (failed **and** timed-out searches)
-- **grabbed** — Total items grabbed as a result of the triggered searches
-- **byReason** — Searches grouped by the reason they were triggered (`Missing`, `QualityCutoffNotMet`, `CustomFormatScoreBelowCutoff`, `Replacement`)
+- **triggered**: Total searches started in the window, regardless of their current status.
+- **completed**: Searches that finished successfully.
+- **failed**: Searches that did not succeed, counting both failed and timed-out searches.
+- **grabbed**: Total items grabbed as a result of the triggered searches.
+- **byReason**: Searches grouped by why they were started. Possible reasons:
+  - `Missing`: The item had no file at all, so a search was started.
+  - `QualityCutoffNotMet`: The item's quality was below the configured cutoff.
+  - `CustomFormatScoreBelowCutoff`: The item's custom format score was below the configured cutoff.
+  - `Replacement`: A search started to replace a download that Cleanuparr removed.
 
 </ConfigSection>
 
@@ -322,11 +363,14 @@ Seeker search activity in the window. A single record is tracked per search and 
 
 Scheduled job run outcomes in the window. Job runs are recorded regardless of dry-run mode.
 
-- **totalRuns** / **completed** / **failed** — Overall run counts across all job types
-- **byType** — Per-job-type stats (`QueueCleaner`, `MalwareBlocker`, `DownloadCleaner`, `BlacklistSynchronizer`, `Seeker`, `CustomFormatScoreSyncer`)
-  - **totalRuns** / **completed** / **failed** — Run counts for this job type
-  - **lastRunAt** — Timestamp of the most recent run
-  - **nextRunAt** — When this job is next scheduled to run
+- **totalRuns**, **completed**, **failed**: Overall run counts across all job types.
+- **byType**: Per-job-type stats. Each entry contains its own **totalRuns**, **completed**, **failed**, **lastRunAt** (most recent run), and **nextRunAt** (next scheduled run). Possible job types:
+  - `QueueCleaner`: Watches the arr queues and removes downloads caught by the strike rules.
+  - `MalwareBlocker`: Scans queued downloads and removes ones containing blocked or malicious files.
+  - `DownloadCleaner`: Removes finished downloads once they meet their seeding goals.
+  - `BlacklistSynchronizer`: Refreshes the malware blocklist patterns from their source.
+  - `Seeker`: Searches for missing items and quality upgrades.
+  - `CustomFormatScoreSyncer`: Syncs custom format scores from the arr apps.
 
 </ConfigSection>
 
@@ -336,11 +380,11 @@ Scheduled job run outcomes in the window. Job runs are recorded regardless of dr
 
 Current health of all configured download clients and arr instances.
 
-- **downloadClients** — Health of each enabled download client
-- **arrInstances** — Health of each enabled arr instance (Sonarr, Radarr, Lidarr, Readarr, Whisparr)
+- **downloadClients**: Health of each enabled download client.
+- **arrInstances**: Health of each enabled arr instance: Sonarr, Radarr, Lidarr, Readarr, Whisparr.
 
 <Important>
-`health` is a **gauge**, not a windowed metric. It reflects the last background check (~5 minute interval) and ignores the `hours` parameter, keeping the endpoint fast for frequent polling.
+`health` is a **gauge**, not a windowed metric. It reflects the last background check (roughly every 5 minutes) and ignores the `hours` parameter, keeping the endpoint fast for frequent polling.
 </Important>
 
 </ConfigSection>
@@ -349,8 +393,8 @@ Current health of all configured download clients and arr instances.
   title="windowHours & generatedAt"
 >
 
-- **windowHours** — The window the response covers, echoing the requested `hours` after clamping
-- **generatedAt** — When the response was generated (UTC)
+- **windowHours**: The window the response covers, echoing the requested `hours` after clamping.
+- **generatedAt**: When the response was generated (UTC).
 
 </ConfigSection>
 
@@ -364,14 +408,14 @@ Current health of all configured download clients and arr instances.
   title="GET /api/v2/stats/timeline"
 >
 
-Returns a bucketed time series for a single metric — useful for charts.
+Returns a bucketed time series for a single metric, useful for charts.
 
 **Query Parameters:**
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `metric` | string | `events` | One of `strikesIssued`, `recovered`, `removed`, `malwareBlocked`, `events` |
-| `hours` | integer | `720` | Timeframe in hours (range: 1–8760) |
+| `hours` | integer | `720` | Timeframe in hours (range: 1-8760) |
 | `bucket` | string | *(auto)* | Bucket size: `hour`, `day`, `week`, `month`. When omitted, defaults to `hour` for windows up to 24h and `day` otherwise |
 | `includeDryRun` | boolean | `false` | When `true`, dry-run activity is included |
 
@@ -392,8 +436,8 @@ curl -H "X-Api-Key: YOUR_API_KEY" \
 ]
 ```
 
-- **date** — Start of the bucket (UTC); granularity matches the requested `bucket`
-- **count** — Count of the metric within that bucket
+- **date**: Start of the bucket (UTC). Granularity matches the requested `bucket`.
+- **count**: Count of the metric within that bucket.
 
 An unsupported `bucket` value returns `400 Bad Request`.
 
@@ -449,16 +493,16 @@ To change the timeframe, add a query parameter to the URL: `http://localhost:110
 Any tool that can fetch and parse JSON can use this endpoint. The response is a flat, predictable JSON structure designed for easy field mapping.
 
 Key fields for dashboards:
-- `events.totalCount` — Total events in the window
-- `strikes.issued` — Strikes issued in the window
-- `removals.total` — Downloads removed
-- `removals.byReason.AllFilesBlocked` — Malware removals (combine with `AtLeastOneFileBlocked`)
-- `cleaned.total` — Downloads cleaned after meeting seeding goals
-- `searches.triggered` — Seeker searches triggered
-- `jobs.byType.<JobType>.failed` — Failed job runs
-- `jobs.byType.<JobType>.nextRunAt` — Next scheduled run
-- `health.downloadClients[0].isHealthy` — First download client health
-- `health.arrInstances[0].isHealthy` — First arr instance health
+- `events.totalCount`: Total events in the window.
+- `strikes.issued`: Strikes issued in the window.
+- `removals.total`: Downloads removed.
+- `removals.byReason.AllFilesBlocked`: Malware removals (combine with `AtLeastOneFileBlocked`).
+- `cleaned.total`: Downloads cleaned after meeting seeding goals.
+- `searches.triggered`: Seeker searches triggered.
+- `jobs.byType.<JobType>.failed`: Failed job runs.
+- `jobs.byType.<JobType>.nextRunAt`: Next scheduled run.
+- `health.downloadClients[0].isHealthy`: First download client health.
+- `health.arrInstances[0].isHealthy`: First arr instance health.
 
 </ConfigSection>
 
