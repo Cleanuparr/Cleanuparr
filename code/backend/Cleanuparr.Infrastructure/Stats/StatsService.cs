@@ -187,26 +187,21 @@ public class StatsService : IStatsService
 
     private async Task<SearchesV2Stats> GetSearchStatsAsync(DateTimeOffset cutoff, Dictionary<string, int> byType, bool includeDryRun)
     {
-        var byStatus = await _eventsContext.Events
-            .Where(e => e.Timestamp >= cutoff && (includeDryRun || !e.IsDryRun)
-                && e.EventType == EventType.SearchTriggered && e.SearchStatus != null)
-            .GroupBy(e => e.SearchStatus!.Value)
-            .Select(g => new { Status = g.Key, Count = g.Count() })
-            .ToListAsync();
-        Dictionary<SearchCommandStatus, int> statusCounts = byStatus.ToDictionary(x => x.Status, x => x.Count);
-
-        var byReason = await _eventsContext.Events
-            .Where(e => e.Timestamp >= cutoff && (includeDryRun || !e.IsDryRun)
-                && e.EventType == EventType.SearchTriggered && e.SearchReason != null)
-            .GroupBy(e => e.SearchReason!.Value)
-            .Select(g => new { Reason = g.Key, Count = g.Count() })
-            .ToListAsync();
-
-        List<List<string>> grabbedLists = await _eventsContext.Events
+        var rows = await _eventsContext.Events
             .Where(e => e.Timestamp >= cutoff && (includeDryRun || !e.IsDryRun)
                 && e.EventType == EventType.SearchTriggered)
-            .Select(e => e.GrabbedItems)
+            .Select(e => new { e.SearchStatus, e.SearchReason, GrabbedCount = e.GrabbedItems.Count })
             .ToListAsync();
+
+        Dictionary<SearchCommandStatus, int> statusCounts = rows
+            .Where(r => r.SearchStatus != null)
+            .GroupBy(r => r.SearchStatus!.Value)
+            .ToDictionary(g => g.Key, g => g.Count());
+
+        Dictionary<string, int> byReason = rows
+            .Where(r => r.SearchReason != null)
+            .GroupBy(r => r.SearchReason!.Value)
+            .ToDictionary(g => g.Key.ToString(), g => g.Count());
 
         return new SearchesV2Stats
         {
@@ -214,8 +209,8 @@ public class StatsService : IStatsService
             Completed = statusCounts.GetValueOrDefault(SearchCommandStatus.Completed, 0),
             Failed = statusCounts.GetValueOrDefault(SearchCommandStatus.Failed, 0)
                 + statusCounts.GetValueOrDefault(SearchCommandStatus.TimedOut, 0),
-            Grabbed = grabbedLists.Sum(list => list.Count),
-            ByReason = byReason.ToDictionary(x => x.Reason.ToString(), x => x.Count),
+            Grabbed = rows.Sum(r => r.GrabbedCount),
+            ByReason = byReason,
         };
     }
 
