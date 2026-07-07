@@ -1,7 +1,13 @@
-name: Deploy to Cloudflare Pages
+name: Deploy Status Page to Cloudflare Pages
 
 on:
   workflow_call:
+    inputs:
+      version:
+        description: 'Release version (e.g. v1.2.3)'
+        type: string
+        required: true
+  workflow_dispatch:
     inputs:
       version:
         description: 'Release version (e.g. v1.2.3)'
@@ -11,7 +17,7 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    name: Deploy to Cloudflare Pages
+    name: Deploy Status Page to Cloudflare Pages
     
     steps:
       - name: Create status files
