@@ -1,14 +1,14 @@
 namespace Cleanuparr.Infrastructure.Stats;
 
 /// <summary>
-/// Seeker search activity in the window (SearchTriggered events). A single event is tracked per search and
+/// Seeker search activity in the timeframe (SearchTriggered events). A single event is tracked per search and
 /// updated in place as the search completes, so the counts never double-count. Excludes dry-run activity
 /// unless the caller opts in.
 /// </summary>
 public class SearchesV2Stats
 {
     /// <summary>
-    /// Total searches triggered in the window (regardless of their current status).
+    /// Total searches triggered in the timeframe (regardless of their current status).
     /// </summary>
     public int Total { get; set; }
 
@@ -18,7 +18,7 @@ public class SearchesV2Stats
     public int Completed { get; set; }
 
     /// <summary>
-    /// Searches that did not succeed — both failed and timed-out searches.
+    /// Searches that did not succeed: both failed and timed-out searches.
     /// </summary>
     public int Failed { get; set; }
 

@@ -61,7 +61,7 @@ public class StatsServiceV2Tests : IDisposable
     };
 
     [Fact]
-    public async Task GetStatsV2Async_DerivesWindowedMetricsFromEvents()
+    public async Task GetStatsV2Async_DerivesTimeframeMetricsFromEvents()
     {
         _context.Events.Add(Event(EventType.StalledStrike));
         _context.Events.Add(Event(EventType.StalledStrike));
@@ -73,7 +73,7 @@ public class StatsServiceV2Tests : IDisposable
 
         StatsV2Response stats = await _service.GetStatsV2Async(24);
 
-        stats.WindowHours.ShouldBe(24);
+        stats.TimeframeHours.ShouldBe(24);
         stats.Events.Total.ShouldBe(6);
         stats.Events.ByType["StalledStrike"].ShouldBe(2);
 
@@ -105,7 +105,7 @@ public class StatsServiceV2Tests : IDisposable
     }
 
     [Fact]
-    public async Task GetStatsV2Async_StrikesRespectWindow()
+    public async Task GetStatsV2Async_StrikesRespectTimeframe()
     {
         _context.Events.Add(Event(EventType.StalledStrike));
         _context.Events.Add(Event(EventType.StalledStrike, timestamp: DateTimeOffset.UtcNow.AddHours(-100)));

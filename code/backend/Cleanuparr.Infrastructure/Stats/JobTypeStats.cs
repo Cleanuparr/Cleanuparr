@@ -1,12 +1,12 @@
 namespace Cleanuparr.Infrastructure.Stats;
 
 /// <summary>
-/// Run stats for a single job type within the window, enriched with the next scheduled run.
+/// Run stats for a single job type within the timeframe, enriched with the next scheduled run.
 /// </summary>
 public class JobTypeStats
 {
     /// <summary>
-    /// Total runs of this job type in the window.
+    /// Total runs of this job type in the timeframe.
     /// </summary>
     public int TotalRuns { get; set; }
 
@@ -21,7 +21,7 @@ public class JobTypeStats
     public int Failed { get; set; }
 
     /// <summary>
-    /// When this job type last ran, or null if it never ran in the window.
+    /// When this job type last ran, or null if it never ran in the timeframe.
     /// </summary>
     public DateTimeOffset? LastRunAt { get; set; }
 

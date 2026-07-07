@@ -114,7 +114,7 @@ public class StatsService : IStatsService
             Searches = await GetSearchStatsAsync(cutoff, byType, includeDryRun),
             Jobs = await GetJobV2StatsAsync(cutoff),
             Health = GetHealthStats(),
-            WindowHours = hours,
+            TimeframeHours = hours,
             GeneratedAt = DateTimeOffset.UtcNow,
         };
     }
@@ -277,7 +277,7 @@ public class StatsService : IStatsService
     }
 
     /// <summary>
-    /// Builds the per-job-type run stats for the window, enriched with each job's next scheduled run.
+    /// Builds the per-job-type run stats for the timeframe, enriched with each job's next scheduled run.
     /// Shared by the v1 and v2 job-stats projections.
     /// </summary>
     private async Task<Dictionary<string, JobTypeStats>> BuildJobTypeStatsAsync(DateTimeOffset cutoff)

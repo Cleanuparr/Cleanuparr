@@ -1,12 +1,12 @@
 namespace Cleanuparr.Infrastructure.Stats;
 
 /// <summary>
-/// Raw event audit for the window. Excludes dry-run events unless the caller opts in.
+/// Raw event audit for the timeframe. Excludes dry-run events unless the caller opts in.
 /// </summary>
 public class EventV2Stats
 {
     /// <summary>
-    /// Total number of events in the window. Equal to the sum of <see cref="ByType"/>.
+    /// Total number of events in the timeframe. Equal to the sum of <see cref="ByType"/>.
     /// </summary>
     public int Total { get; set; }
 

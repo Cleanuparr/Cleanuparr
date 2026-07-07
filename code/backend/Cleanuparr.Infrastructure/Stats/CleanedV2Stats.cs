@@ -1,14 +1,14 @@
 namespace Cleanuparr.Infrastructure.Stats;
 
 /// <summary>
-/// Downloads cleaned by the download cleaner in the window (DownloadCleaned events), broken down by reason.
+/// Downloads cleaned by the download cleaner in the timeframe (DownloadCleaned events), broken down by reason.
 /// Cleaning is distinct from a removal: it happens when a download meets its seeding goals, not because it
 /// was struck out. Excludes dry-run activity unless the caller opts in.
 /// </summary>
 public class CleanedV2Stats
 {
     /// <summary>
-    /// Total downloads cleaned in the window (all reasons). Equal to the sum of <see cref="ByReason"/>.
+    /// Total downloads cleaned in the timeframe (all reasons). Equal to the sum of <see cref="ByReason"/>.
     /// </summary>
     public int Total { get; set; }
 

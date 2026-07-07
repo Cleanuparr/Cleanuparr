@@ -19,11 +19,11 @@ public class StatsV2Controller : ControllerBase
     }
 
     /// <summary>
-    /// Aggregated statistics for the given timeframe. Every section except health is windowed and, by
+    /// Aggregated statistics for the given timeframe. Every section except health is scoped to the timeframe and, by
     /// default, excludes dry-run activity.
     /// </summary>
     /// <param name="hours">Timeframe in hours (default 168, range 1-8760)</param>
-    /// <param name="includeDryRun">Include dry-run activity in the windowed sections (default false)</param>
+    /// <param name="includeDryRun">Include dry-run activity in the timeframe-scoped sections (default false)</param>
     [HttpGet]
     public async Task<IActionResult> GetStats([FromQuery] int hours = 168, [FromQuery] bool includeDryRun = false)
     {
@@ -37,7 +37,7 @@ public class StatsV2Controller : ControllerBase
     /// </summary>
     /// <param name="metric">strikesIssued | recovered | removed | malwareBlocked | events</param>
     /// <param name="hours">Timeframe in hours (default 720, range 1-8760)</param>
-    /// <param name="bucket">Bucket size: hour | day | week | month. When omitted, hourly for windows up to 24h, daily otherwise.</param>
+    /// <param name="bucket">Bucket size: hour | day | week | month. When omitted, hourly for timeframes up to 24h, daily otherwise.</param>
     /// <param name="includeDryRun">Include dry-run activity (default false)</param>
     [HttpGet("timeline")]
     public async Task<IActionResult> GetTimeline(

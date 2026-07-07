@@ -40,7 +40,7 @@ const EMPTY_STATS: StatsV2Response = {
   cleaned: { total: 0, byReason: {} },
   searches: { total: 0, completed: 0, failed: 0, grabbed: 0, byReason: {} },
   jobs: { total: 0, completed: 0, failed: 0, byType: {} },
-  windowHours: 0,
+  timeframeHours: 0,
   generatedAt: '',
 };
 
@@ -91,7 +91,7 @@ export class StatsCardComponent {
       {
         key: 'removed',
         label: 'Downloads removed',
-        hint: 'Downloads deleted from the queue in this window, across all removal reasons.',
+        hint: 'Downloads deleted from the queue in this timeframe, across all removal reasons.',
         value: s.removals.total,
         metric: 'removed',
         tone: 'removed',
@@ -107,7 +107,7 @@ export class StatsCardComponent {
       {
         key: 'issued',
         label: 'Strikes issued',
-        hint: 'Strikes handed out to stalled, slow, or failing downloads in this window.',
+        hint: 'Strikes handed out to stalled, slow, or failing downloads in this timeframe.',
         value: s.strikes.total,
         metric: 'strikesIssued',
         tone: 'issued',
@@ -123,7 +123,7 @@ export class StatsCardComponent {
       {
         key: 'jobs',
         label: 'Job failures',
-        hint: 'Scheduled job runs that failed in this window.',
+        hint: 'Scheduled job runs that failed in this timeframe.',
         value: s.jobs.failed,
         tone: 'jobs',
       },

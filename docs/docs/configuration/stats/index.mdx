@@ -62,14 +62,14 @@ JWT Bearer tokens are also supported for browser-based access.
   title="GET /api/v2/stats"
 >
 
-Returns aggregated statistics for a time window. Every section except `health` is scoped to the window; `health` is a cached, point-in-time gauge. By default the windowed sections count only **live** activity: dry-run activity is excluded unless you opt in.
+Returns aggregated statistics for a timeframe. Every section except `health` is scoped to the timeframe; `health` is a cached, point-in-time gauge. By default the timeframe-scoped sections count only **live** activity: dry-run activity is excluded unless you opt in.
 
 **Query Parameters:**
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `hours` | integer | `168` | Timeframe in hours (range: 1-8760) |
-| `includeDryRun` | boolean | `false` | When `true`, dry-run activity is included in the windowed sections |
+| `includeDryRun` | boolean | `false` | When `true`, dry-run activity is included in the timeframe-scoped sections |
 
 **Examples:**
 
@@ -245,7 +245,7 @@ If `BASE_PATH` is set, include it in the URL: `http://localhost:11011/cleanuparr
       }
     ]
   },
-  "windowHours": 168,
+  "timeframeHours": 168,
   "generatedAt": "2025-01-15T12:00:00Z"
 }
 ```
@@ -260,9 +260,9 @@ The example lists every possible key for each breakdown for reference. In a real
   title="events"
 >
 
-The raw event audit for the window. The higher-level sections (`strikes`, `removals`, `cleaned`, `searches`) are ergonomic roll-ups derived from these same events.
+The raw event audit for the timeframe. The higher-level sections (`strikes`, `removals`, `cleaned`, `searches`) are ergonomic roll-ups derived from these same events.
 
-- **total**: Total number of events in the window, equal to the sum of `byType`.
+- **total**: Total number of events in the timeframe, equal to the sum of `byType`.
 - **byType**: Events grouped by event type. Possible types:
   - `FailedImportStrike`: A strike given because the download kept failing to import into the arr app.
   - `StalledStrike`: A strike given because the download stopped making progress.
@@ -288,9 +288,9 @@ The raw event audit for the window. The higher-level sections (`strikes`, `remov
   title="strikes"
 >
 
-Strike activity in the window.
+Strike activity in the timeframe.
 
-- **total**: Total strikes issued in the window, equal to the sum of `byType`.
+- **total**: Total strikes issued in the timeframe, equal to the sum of `byType`.
 - **byType**: Strikes grouped by type. Possible types:
   - `Stalled`: Strikes for downloads that stopped making progress.
   - `DownloadingMetadata`: Strikes for downloads stuck fetching torrent metadata.
@@ -306,9 +306,9 @@ Strike activity in the window.
   title="removals"
 >
 
-Downloads removed from the queue in the window, broken down by reason. This is the single source of truth for removals.
+Downloads removed from the queue in the timeframe, broken down by reason. This is the single source of truth for removals.
 
-- **total**: Total removals in the window, across all reasons.
+- **total**: Total removals in the timeframe, across all reasons.
 - **byReason**: Removals grouped by reason. Possible reasons:
   - `Stalled`: Removed for being stalled (not downloading).
   - `FailedImport`: Removed for being stuck at `failed to import` in the *arrs.
@@ -330,9 +330,9 @@ The number of **Malware blocked** can be derived from the sum of the `AllFilesBl
   title="cleaned"
 >
 
-Downloads cleaned by the `Download Cleaner` in the window.
+Downloads cleaned by the `Download Cleaner` in the timeframe.
 
-- **total**: Total cleaned downloads in the window.
+- **total**: Total cleaned downloads in the timeframe.
 - **byReason**: Cleaned downloads grouped by reason. Possible reasons:
   - `MaxRatioReached`: Cleaned after reaching its maximum seed ratio and minimum seed time.
   - `MaxSeedTimeReached`: Cleaned after reaching its maximum seeding time.
@@ -343,9 +343,9 @@ Downloads cleaned by the `Download Cleaner` in the window.
   title="searches"
 >
 
-Seeker search activity in the window. A single record is tracked per search and updated as it completes.
+Seeker search activity in the timeframe. A single record is tracked per search and updated as it completes.
 
-- **total**: Total searches started in the window, regardless of their current status.
+- **total**: Total searches started in the timeframe, regardless of their current status.
 - **completed**: Searches that finished successfully.
 - **failed**: Searches that did not succeed, counting both failed and timed-out searches.
 - **grabbed**: Total items grabbed as a result of the triggered searches.
@@ -361,9 +361,9 @@ Seeker search activity in the window. A single record is tracked per search and 
   title="jobs"
 >
 
-Scheduled job run outcomes in the window. Job runs are recorded regardless of dry-run mode.
+Scheduled job run outcomes in the timeframe. Job runs are recorded regardless of dry-run mode.
 
-- **total**: Total job runs in the window across all job types. **completed** and **failed** break that total down by outcome.
+- **total**: Total job runs in the timeframe across all job types. **completed** and **failed** break that total down by outcome.
 - **byType**: Per-job-type stats. Each entry contains its own **total** (runs of that job type), **completed**, **failed**, **lastRunAt** (most recent run), and **nextRunAt** (next scheduled run). Possible job types:
   - `QueueCleaner`: Watches the *arr queues and removes downloads caught by the strike rules.
   - `MalwareBlocker`: Scans queued downloads and removes ones containing blocked or malicious files.
@@ -384,16 +384,16 @@ Current health of all configured download clients and arr instances.
 - **arrInstances**: Health of each enabled arr instance: Sonarr, Radarr, Lidarr, Readarr, Whisparr.
 
 <Important>
-`health` is a **gauge**, not a windowed metric. It reflects the last background check (roughly every 5 minutes) and ignores the `hours` parameter, keeping the endpoint fast for frequent polling.
+`health` is a **gauge**, not a timeframe-scoped metric. It reflects the last background check (roughly every 5 minutes) and ignores the `hours` parameter, keeping the endpoint fast for frequent polling.
 </Important>
 
 </ConfigSection>
 
 <ConfigSection
-  title="windowHours & generatedAt"
+  title="timeframeHours & generatedAt"
 >
 
-- **windowHours**: The window the response covers, echoing the requested `hours` after clamping.
+- **timeframeHours**: The timeframe the response covers, echoing the requested `hours` after clamping.
 - **generatedAt**: When the response was generated (UTC).
 
 </ConfigSection>
@@ -416,7 +416,7 @@ Returns a bucketed time series for a single metric, useful for charts.
 |-----------|------|---------|-------------|
 | `metric` | string | `events` | One of `strikesIssued`, `recovered`, `removed`, `malwareBlocked`, `events` |
 | `hours` | integer | `720` | Timeframe in hours (range: 1-8760) |
-| `bucket` | string | *(auto)* | Bucket size: `hour`, `day`, `week`, `month`. When omitted, defaults to `hour` for windows up to 24h and `day` otherwise |
+| `bucket` | string | *(auto)* | Bucket size: `hour`, `day`, `week`, `month`. When omitted, defaults to `hour` for timeframes up to 24h and `day` otherwise |
 | `includeDryRun` | boolean | `false` | When `true`, dry-run activity is included |
 
 **Example:**
@@ -493,8 +493,8 @@ To change the timeframe, add a query parameter to the URL: `http://localhost:110
 Any tool that can fetch and parse JSON can use this endpoint. The response is a flat, predictable JSON structure designed for easy field mapping.
 
 Key fields for dashboards:
-- `events.total`: Total events in the window.
-- `strikes.total`: Strikes issued in the window.
+- `events.total`: Total events in the timeframe.
+- `strikes.total`: Strikes issued in the timeframe.
 - `removals.total`: Downloads removed.
 - `removals.byReason.AllFilesBlocked`: Malware removals (combine with `AtLeastOneFileBlocked`).
 - `cleaned.total`: Downloads cleaned after meeting seeding goals.

@@ -6,7 +6,7 @@ namespace Cleanuparr.Api.Controllers;
 
 /// <summary>
 /// Aggregated statistics endpoint for dashboard integrations.
-/// Deprecated — use <c>GET /api/v2/stats</c> instead.
+/// Deprecated. Use <c>GET /api/v2/stats</c> instead.
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
@@ -22,7 +22,7 @@ public class StatsController : ControllerBase
 
     /// <summary>
     /// Gets aggregated application statistics for the specified timeframe.
-    /// Deprecated — use <c>GET /api/v2/stats</c> instead. Responses carry Deprecation/Link headers.
+    /// Deprecated. Use <c>GET /api/v2/stats</c> instead. Responses carry Deprecation/Link headers.
     /// </summary>
     /// <param name="hours">Timeframe in hours (default 24, range 1-720)</param>
     /// <param name="includeEvents">Number of recent events to include (0 = none, max 100)</param>

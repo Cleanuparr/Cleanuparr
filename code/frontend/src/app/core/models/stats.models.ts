@@ -49,7 +49,7 @@ export interface StatsV2Response {
     failed: number;
     byType: Record<string, JobTypeStats>;
   };
-  windowHours: number;
+  timeframeHours: number;
   generatedAt: string;
 }
 

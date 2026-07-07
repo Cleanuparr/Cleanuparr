@@ -1,12 +1,12 @@
 namespace Cleanuparr.Infrastructure.Stats;
 
 /// <summary>
-/// Scheduled job run outcomes for the window. Job runs are recorded regardless of dry-run mode.
+/// Scheduled job run outcomes for the timeframe. Job runs are recorded regardless of dry-run mode.
 /// </summary>
 public class JobV2Stats
 {
     /// <summary>
-    /// Total job runs in the window across all job types.
+    /// Total job runs in the timeframe across all job types.
     /// </summary>
     public int Total { get; set; }
 
