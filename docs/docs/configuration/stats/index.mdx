@@ -14,7 +14,11 @@ import {
 
 # Stats API
 
-Cleanuparr provides a stats endpoint that exposes aggregated application statistics. This is designed for integration with dashboard tools like [Homepage](https://gethomepage.dev), [Homarr](https://homarr.dev), or any tool that can consume JSON APIs.
+Cleanuparr exposes a stats endpoint with aggregated application statistics, designed for integration with dashboard tools like [Homepage](https://gethomepage.dev), [Homarr](https://homarr.dev), or any tool that can consume JSON APIs.
+
+<Warning>
+**`/api/stats` (v1) is deprecated.** Use **`/api/v2/stats`** instead. The v1 endpoint still works but returns `Deprecation`, `Sunset`, and `Link` response headers and is scheduled for removal after **2026-08-01**. See the **Deprecated: v1** section at the bottom of this page for the migration.
+</Warning>
 
 <ElementNavigator />
 
@@ -32,12 +36,12 @@ This endpoint requires authentication. You can authenticate using your API key i
 
 **Header (recommended):**
 ```bash
-curl -H "X-Api-Key: YOUR_API_KEY" http://localhost:11011/api/stats
+curl -H "X-Api-Key: YOUR_API_KEY" http://localhost:11011/api/v2/stats
 ```
 
 **Query parameter:**
 ```bash
-curl http://localhost:11011/api/stats?apikey=YOUR_API_KEY
+curl http://localhost:11011/api/v2/stats?apikey=YOUR_API_KEY
 ```
 
 You can find your API key in the Cleanuparr UI under **Account Settings**.
@@ -55,37 +59,36 @@ JWT Bearer tokens are also supported for browser-based access.
 <SectionTitle>Endpoint</SectionTitle>
 
 <ConfigSection
-  title="GET /api/stats"
+  title="GET /api/v2/stats"
 >
 
-Returns aggregated statistics including events, strikes, job runs, and health status.
+Returns aggregated statistics for a time window. Every section except `health` is scoped to the window; `health` is a cached, point-in-time gauge. By default the windowed sections count only **live** activity — dry-run activity is excluded unless you opt in.
 
 **Query Parameters:**
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `hours` | integer | `24` | Timeframe in hours (range: 1–720) |
-| `includeEvents` | integer | `0` | Number of recent events to include (range: 0–100). Omitted from response when 0. |
-| `includeStrikes` | integer | `0` | Number of recent strikes to include (range: 0–100). Omitted from response when 0. |
+| `hours` | integer | `168` | Timeframe in hours (range: 1–8760) |
+| `includeDryRun` | boolean | `false` | When `true`, dry-run activity is included in the windowed sections |
 
 **Examples:**
 
 ```bash
-# Last 24 hours (default)
-curl -H "X-Api-Key: YOUR_API_KEY" http://localhost:11011/api/stats
+# Last 7 days (default)
+curl -H "X-Api-Key: YOUR_API_KEY" http://localhost:11011/api/v2/stats
 
-# Last hour
-curl -H "X-Api-Key: YOUR_API_KEY" http://localhost:11011/api/stats?hours=1
+# Last 24 hours
+curl -H "X-Api-Key: YOUR_API_KEY" http://localhost:11011/api/v2/stats?hours=24
 
-# Last 7 days
-curl -H "X-Api-Key: YOUR_API_KEY" http://localhost:11011/api/stats?hours=168
+# Last 30 days
+curl -H "X-Api-Key: YOUR_API_KEY" http://localhost:11011/api/v2/stats?hours=720
 
-# Include 5 recent events and 5 recent strikes
-curl -H "X-Api-Key: YOUR_API_KEY" "http://localhost:11011/api/stats?includeEvents=5&includeStrikes=5"
+# Include dry-run activity
+curl -H "X-Api-Key: YOUR_API_KEY" "http://localhost:11011/api/v2/stats?includeDryRun=true"
 ```
 
 <Note>
-If `BASE_PATH` is set, include it in the URL: `http://localhost:11011/cleanuparr/api/stats`
+If `BASE_PATH` is set, include it in the URL: `http://localhost:11011/cleanuparr/api/v2/stats`
 </Note>
 
 </ConfigSection>
@@ -97,44 +100,125 @@ If `BASE_PATH` is set, include it in the URL: `http://localhost:11011/cleanuparr
 <SectionTitle>Response Reference</SectionTitle>
 
 <ConfigSection
-  title="events"
+  title="Full example"
 >
-
-Event statistics within the specified timeframe.
 
 ```json
 {
-  "totalCount": 42,
-  "byType": {
-    "FailedImportStrike": 5,
-    "StalledStrike": 12,
-    "QueueItemDeleted": 8,
-    "DownloadCleaned": 6
-  },
-  "bySeverity": {
-    "Information": 20,
-    "Warning": 15,
-    "Error": 7
-  },
-  "timeframeHours": 24,
-  "recentItems": [
-    {
-      "id": "...",
-      "timestamp": "2025-01-15T12:00:00Z",
-      "eventType": "StalledStrike",
-      "message": "Strike issued for stalled download",
-      "severity": "Warning",
-      "data": null
+  "events": {
+    "totalCount": 42,
+    "byType": {
+      "StalledStrike": 12,
+      "FailedImportStrike": 5,
+      "QueueItemDeleted": 8,
+      "DownloadCleaned": 6,
+      "SearchTriggered": 8,
+      "StrikeReset": 3
+    },
+    "bySeverity": {
+      "Information": 20,
+      "Warning": 15,
+      "Error": 7
     }
-  ]
+  },
+  "strikes": {
+    "issued": 17,
+    "byType": {
+      "Stalled": 12,
+      "FailedImport": 5
+    },
+    "recovered": 3
+  },
+  "removals": {
+    "total": 8,
+    "byReason": {
+      "Stalled": 3,
+      "FailedImport": 1,
+      "AllFilesBlocked": 3,
+      "AtLeastOneFileBlocked": 1
+    }
+  },
+  "cleaned": {
+    "total": 6,
+    "byReason": {
+      "MaxRatioReached": 4,
+      "MaxSeedTimeReached": 2
+    }
+  },
+  "searches": {
+    "triggered": 8,
+    "completed": 6,
+    "failed": 1,
+    "grabbed": 5,
+    "byReason": {
+      "Missing": 5,
+      "QualityCutoffNotMet": 3
+    }
+  },
+  "jobs": {
+    "totalRuns": 96,
+    "completed": 94,
+    "failed": 2,
+    "byType": {
+      "QueueCleaner": {
+        "totalRuns": 48,
+        "completed": 46,
+        "failed": 2,
+        "lastRunAt": "2025-01-15T12:00:00Z",
+        "nextRunAt": "2025-01-15T12:30:00Z"
+      },
+      "MalwareBlocker": {
+        "totalRuns": 48,
+        "completed": 48,
+        "failed": 0,
+        "lastRunAt": "2025-01-15T12:00:00Z",
+        "nextRunAt": "2025-01-15T12:30:00Z"
+      }
+    }
+  },
+  "health": {
+    "downloadClients": [
+      {
+        "id": "...",
+        "name": "qBittorrent",
+        "type": "qBittorrent",
+        "isHealthy": true,
+        "lastChecked": "2025-01-15T12:00:00Z",
+        "responseTimeMs": 45.2,
+        "errorMessage": null
+      }
+    ],
+    "arrInstances": [
+      {
+        "id": "...",
+        "name": "Sonarr",
+        "type": "Sonarr",
+        "isHealthy": true,
+        "lastChecked": "2025-01-15T12:00:00Z",
+        "errorMessage": null
+      }
+    ]
+  },
+  "windowHours": 168,
+  "generatedAt": "2025-01-15T12:00:00Z"
 }
 ```
 
-- **totalCount** — Total number of events in the timeframe
-- **byType** — Events grouped by type (only types with events are included)
-- **bySeverity** — Events grouped by severity level
-- **timeframeHours** — The requested timeframe
-- **recentItems** — Recent event records (only present when `includeEvents` > 0)
+<Note>
+All breakdown keys (`byType`, `bySeverity`, `byReason`) are PascalCase enum names, and only entries with activity are present — a reason or type with zero events is omitted rather than sent as `0`.
+</Note>
+
+</ConfigSection>
+
+<ConfigSection
+  title="events"
+>
+
+The raw event audit for the window. The higher-level sections (`strikes`, `removals`, `cleaned`, `searches`) are ergonomic roll-ups derived from these same events.
+
+- **totalCount** — Total events in the window (equal to the sum of `byType`)
+- **byType** — Events grouped by event type
+- **bySeverity** — Events grouped by severity (`Information`, `Warning`, `Important`, `Error`)
 
 </ConfigSection>
 
@@ -142,36 +226,51 @@ Event statistics within the specified timeframe.
   title="strikes"
 >
 
-Strike statistics within the specified timeframe.
+Strike activity in the window.
 
-```json
-{
-  "totalCount": 23,
-  "byType": {
-    "Stalled": 8,
-    "FailedImport": 5,
-    "SlowSpeed": 4,
-    "SlowTime": 3,
-    "DownloadingMetadata": 3
-  },
-  "itemsRemoved": 10,
-  "timeframeHours": 24,
-  "recentItems": [
-    {
-      "id": "...",
-      "type": "Stalled",
-      "createdAt": "2025-01-15T12:00:00Z",
-      "downloadId": "abc123",
-      "title": "Some.Download.Title"
-    }
-  ]
-}
-```
+- **issued** — Total strikes issued (equal to the sum of `byType`)
+- **byType** — Strikes issued grouped by strike type (`Stalled`, `FailedImport`, `SlowSpeed`, `SlowTime`, `DownloadingMetadata`, `DeadTorrent`)
+- **recovered** — Downloads that recovered and had their strikes reset
 
-- **totalCount** — Total number of strikes issued in the timeframe
-- **byType** — Strikes grouped by type (only types with strikes are included)
-- **itemsRemoved** — Number of download items removed that had strikes in the timeframe
-- **recentItems** — Recent strike records with download info (only present when `includeStrikes` > 0)
+</ConfigSection>
+
+<ConfigSection
+  title="removals"
+>
+
+Downloads removed from the queue in the window, broken down by reason. This is the single source of truth for removals.
+
+- **total** — Total removals in the window (all reasons)
+- **byReason** — Removals grouped by delete reason (`Stalled`, `FailedImport`, `SlowSpeed`, `SlowTime`, `DownloadingMetadata`, `AllFilesSkipped`, `AllFilesSkippedByQBit`, `AllFilesBlocked`, `AtLeastOneFileBlocked`)
+
+<Note>
+**Malware blocked** is not a separate field — it is derived from this breakdown: `byReason.AllFilesBlocked + byReason.AtLeastOneFileBlocked`.
+</Note>
+
+</ConfigSection>
+
+<ConfigSection
+  title="cleaned"
+>
+
+Downloads cleaned by the download cleaner in the window. Cleaning is distinct from a removal — it happens when a download meets its seeding goals, not because it was struck out.
+
+- **total** — Total cleaned downloads in the window
+- **byReason** — Cleaned downloads grouped by clean reason (`MaxRatioReached`, `MaxSeedTimeReached`)
+
+</ConfigSection>
+
+<ConfigSection
+  title="searches"
+>
+
+Seeker search activity in the window. A single record is tracked per search and updated as it completes, so the counts never double-count.
+
+- **triggered** — Total searches triggered in the window (regardless of current status)
+- **completed** — Searches that completed successfully
+- **failed** — Searches that did not succeed (failed **and** timed-out searches)
+- **grabbed** — Total items grabbed as a result of the triggered searches
+- **byReason** — Searches grouped by the reason they were triggered (`Missing`, `QualityCutoffNotMet`, `CustomFormatScoreBelowCutoff`, `Replacement`)
 
 </ConfigSection>
 
@@ -179,35 +278,13 @@ Strike statistics within the specified timeframe.
   title="jobs"
 >
 
-Job run statistics within the specified timeframe.
+Scheduled job run outcomes in the window. Job runs are recorded regardless of dry-run mode.
 
-```json
-{
-  "byType": {
-    "QueueCleaner": {
-      "totalRuns": 48,
-      "completed": 46,
-      "failed": 2,
-      "lastRunAt": "2025-01-15T12:00:00Z",
-      "nextRunAt": "2025-01-15T12:30:00Z"
-    },
-    "MalwareBlocker": {
-      "totalRuns": 48,
-      "completed": 48,
-      "failed": 0,
-      "lastRunAt": "2025-01-15T12:00:00Z",
-      "nextRunAt": "2025-01-15T12:30:00Z"
-    }
-  },
-  "timeframeHours": 24
-}
-```
-
-- **byType** — Stats per job type (QueueCleaner, MalwareBlocker, DownloadCleaner, BlacklistSynchronizer)
-- **totalRuns** — Total executions in the timeframe
-- **completed** / **failed** — Breakdown by outcome
-- **lastRunAt** — Timestamp of the most recent run
-- **nextRunAt** — When this job is next scheduled to run
+- **totalRuns** / **completed** / **failed** — Overall run counts across all job types
+- **byType** — Per-job-type stats (`QueueCleaner`, `MalwareBlocker`, `DownloadCleaner`, `BlacklistSynchronizer`, `Seeker`, `CustomFormatScoreSyncer`)
+  - **totalRuns** / **completed** / **failed** — Run counts for this job type
+  - **lastRunAt** — Timestamp of the most recent run
+  - **nextRunAt** — When this job is next scheduled to run
 
 </ConfigSection>
 
@@ -215,40 +292,68 @@ Job run statistics within the specified timeframe.
   title="health"
 >
 
-Current health status of all configured download clients and arr instances. Health data is cached and updated every ~5 minutes by a background service.
-
-```json
-{
-  "downloadClients": [
-    {
-      "id": "...",
-      "name": "qBittorrent",
-      "type": "qBittorrent",
-      "isHealthy": true,
-      "lastChecked": "2025-01-15T12:00:00Z",
-      "responseTimeMs": 45.2,
-      "errorMessage": null
-    }
-  ],
-  "arrInstances": [
-    {
-      "id": "...",
-      "name": "Sonarr",
-      "type": "Sonarr",
-      "isHealthy": true,
-      "lastChecked": "2025-01-15T12:00:00Z",
-      "errorMessage": null
-    }
-  ]
-}
-```
+Current health of all configured download clients and arr instances.
 
 - **downloadClients** — Health of each enabled download client
 - **arrInstances** — Health of each enabled arr instance (Sonarr, Radarr, Lidarr, Readarr, Whisparr)
 
 <Important>
-Health data reflects the last background check (~5 minute interval). It does not perform live checks on each request, keeping the endpoint fast for frequent polling.
+`health` is a **gauge**, not a windowed metric. It reflects the last background check (~5 minute interval) and ignores the `hours` parameter, keeping the endpoint fast for frequent polling.
 </Important>
+
+</ConfigSection>
+
+<ConfigSection
+  title="windowHours & generatedAt"
+>
+
+- **windowHours** — The window the response covers, echoing the requested `hours` after clamping
+- **generatedAt** — When the response was generated (UTC)
+
+</ConfigSection>
+
+</div>
+
+<div className={styles.section}>
+
+<SectionTitle>Timeline</SectionTitle>
+
+<ConfigSection
+  title="GET /api/v2/stats/timeline"
+>
+
+Returns a bucketed time series for a single metric — useful for charts.
+
+**Query Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `metric` | string | `events` | One of `strikesIssued`, `recovered`, `removed`, `malwareBlocked`, `events` |
+| `hours` | integer | `720` | Timeframe in hours (range: 1–8760) |
+| `bucket` | string | *(auto)* | Bucket size: `hour`, `day`, `week`, `month`. When omitted, defaults to `hour` for windows up to 24h and `day` otherwise |
+| `includeDryRun` | boolean | `false` | When `true`, dry-run activity is included |
+
+**Example:**
+
+```bash
+curl -H "X-Api-Key: YOUR_API_KEY" \
+  "http://localhost:11011/api/v2/stats/timeline?metric=removed&hours=8760&bucket=month"
+```
+
+**Response:**
+
+```json
+[
+  { "date": "2025-01-01T00:00:00Z", "count": 12 },
+  { "date": "2025-02-01T00:00:00Z", "count": 8 },
+  { "date": "2025-03-01T00:00:00Z", "count": 15 }
+]
+```
+
+- **date** — Start of the bucket (UTC); granularity matches the requested `bucket`
+- **count** — Count of the metric within that bucket
+
+An unsupported `bucket` value returns `400 Bad Request`.
 
 </ConfigSection>
 
@@ -271,24 +376,27 @@ Health data reflects the last background check (~5 minute interval). It does not
     description: Arr Cleanup Service
     widget:
       type: customapi
-      url: http://localhost:11011/api/stats
+      url: http://localhost:11011/api/v2/stats
       headers:
         X-Api-Key: YOUR_API_KEY
       mappings:
         - field: events.totalCount
-          label: Events (24h)
+          label: Events (7d)
           format: number
-        - field: strikes.totalCount
-          label: Strikes (24h)
+        - field: strikes.issued
+          label: Strikes issued
           format: number
-        - field: strikes.itemsRemoved
+        - field: removals.total
           label: Removed
+          format: number
+        - field: cleaned.total
+          label: Cleaned
           format: number
 ```
 
-You can reference any field in the response using dot notation (e.g., `jobs.byType.QueueCleaner.failed`).
+You can reference any field in the response using dot notation (e.g., `jobs.byType.QueueCleaner.failed`, `removals.byReason.AllFilesBlocked`).
 
-To change the timeframe, add a query parameter to the URL: `http://localhost:11011/api/stats?hours=168` for a weekly view.
+To change the timeframe, add a query parameter to the URL: `http://localhost:11011/api/v2/stats?hours=720` for a 30-day view.
 
 </ConfigSection>
 
@@ -299,13 +407,54 @@ To change the timeframe, add a query parameter to the URL: `http://localhost:110
 Any tool that can fetch and parse JSON can use this endpoint. The response is a flat, predictable JSON structure designed for easy field mapping.
 
 Key fields for dashboards:
-- `events.totalCount` — Total events in timeframe
-- `strikes.totalCount` — Total strikes in timeframe
-- `strikes.itemsRemoved` — Downloads removed
+- `events.totalCount` — Total events in the window
+- `strikes.issued` — Strikes issued in the window
+- `removals.total` — Downloads removed
+- `removals.byReason.AllFilesBlocked` — Malware removals (combine with `AtLeastOneFileBlocked`)
+- `cleaned.total` — Downloads cleaned after meeting seeding goals
+- `searches.triggered` — Seeker searches triggered
 - `jobs.byType.<JobType>.failed` — Failed job runs
 - `jobs.byType.<JobType>.nextRunAt` — Next scheduled run
 - `health.downloadClients[0].isHealthy` — First download client health
 - `health.arrInstances[0].isHealthy` — First arr instance health
+
+</ConfigSection>
+
+</div>
+
+<div className={styles.section}>
+
+<SectionTitle>Deprecated: v1</SectionTitle>
+
+<ConfigSection
+  title="GET /api/stats (deprecated)"
+>
+
+<Warning>
+`/api/stats` is deprecated in favour of `/api/v2/stats` and is scheduled for removal after **2026-08-01**. Responses include `Deprecation: true`, a `Sunset` date, and a `Link` header pointing to the successor version.
+</Warning>
+
+The v1 endpoint returns a similar `events` / `strikes` / `jobs` / `health` structure plus optional `recentItems`, controlled by these query parameters:
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `hours` | integer | `24` | Timeframe in hours (range: 1–720) |
+| `includeEvents` | integer | `0` | Number of recent events to include (range: 0–100) |
+| `includeStrikes` | integer | `0` | Number of recent strikes to include (range: 0–100) |
+
+**Migrating to v2:**
+
+| v1 field | v2 replacement |
+|----------|----------------|
+| `strikes.totalCount` | `strikes.issued` |
+| `strikes.byType` | `strikes.byType` (now derived from strike events) |
+| `strikes.itemsRemoved` | `removals.total` |
+| *(malware — not in v1)* | `removals.byReason.AllFilesBlocked + removals.byReason.AtLeastOneFileBlocked` |
+| `events.*` | `events.*` (unchanged) |
+| `jobs.byType` | `jobs.byType` (unchanged) |
+| `health` | `health` (unchanged) |
+
+v2 also adds `removals.byReason`, `cleaned`, `searches`, `windowHours`, an `includeDryRun` option, and a bucketed `timeline` endpoint. v2 does not return `recentItems` — use the Events API for recent event/strike records.
 
 </ConfigSection>
 
