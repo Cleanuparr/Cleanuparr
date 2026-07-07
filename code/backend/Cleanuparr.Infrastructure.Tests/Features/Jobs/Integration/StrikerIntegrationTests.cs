@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Context;
@@ -82,17 +81,37 @@ public class StrikerIntegrationTests : IDisposable
         strikeEvent.SearchStatus.ShouldBeNull();
         strikeEvent.CompletedAt.ShouldBeNull();
         strikeEvent.CycleId.ShouldBeNull();
-        strikeEvent.Data.ShouldNotBeNull();
-        using (var data = JsonDocument.Parse(strikeEvent.Data!))
-        {
-            data.RootElement.GetProperty("hash").GetString().ShouldBe("STALLED_HASH_123");
-            data.RootElement.GetProperty("itemName").GetString().ShouldBe("Stalled.Movie.2024.1080p");
-            data.RootElement.GetProperty("strikeCount").GetInt32().ShouldBe(1);
-            data.RootElement.GetProperty("strikeType").GetString().ShouldBe("Stalled");
-        }
+        strikeEvent.ItemHash.ShouldBe("STALLED_HASH_123");
+        strikeEvent.ItemTitle.ShouldBe("Stalled.Movie.2024.1080p");
+        strikeEvent.StrikeCount.ShouldBe(1);
 
         // Assert: Notification sent
         await _fixture.NotificationPublisher.Received(1).NotifyStrike(StrikeType.Stalled, 1);
+    }
+
+    [Fact]
+    public async Task ResetStrikeAsync_ClearsActiveStrikes_PublishesStrikeResetEvent()
+    {
+        // Arrange: two stalled strikes on the same item
+        await _fixture.Striker.StrikeAndCheckLimit("RESET_HASH", "Recovered.Movie.2024", maxStrikes: 5, StrikeType.Stalled);
+        await _fixture.Striker.StrikeAndCheckLimit("RESET_HASH", "Recovered.Movie.2024", maxStrikes: 5, StrikeType.Stalled);
+        (await _fixture.EventsContext.Strikes.CountAsync()).ShouldBe(2);
+
+        // Act
+        await _fixture.Striker.ResetStrikeAsync("RESET_HASH", "Recovered.Movie.2024", StrikeType.Stalled);
+
+        // Assert: active strikes of that type are cleared (history lives in the event stream)
+        (await _fixture.EventsContext.Strikes.ToListAsync()).ShouldBeEmpty();
+
+        // Assert: exactly one StrikeReset event, with typed payload
+        var resetEvents = await _fixture.EventsContext.Events
+            .Where(e => e.EventType == EventType.StrikeReset)
+            .ToListAsync();
+        resetEvents.Count.ShouldBe(1);
+        resetEvents[0].Severity.ShouldBe(EventSeverity.Information);
+        resetEvents[0].ItemHash.ShouldBe("RESET_HASH");
+        resetEvents[0].ItemTitle.ShouldBe("Recovered.Movie.2024");
+        resetEvents[0].StrikeCount.ShouldBe(2);
     }
 
     [Fact]
@@ -140,14 +159,9 @@ public class StrikerIntegrationTests : IDisposable
         strikeEvent.SearchStatus.ShouldBeNull();
         strikeEvent.CompletedAt.ShouldBeNull();
         strikeEvent.CycleId.ShouldBeNull();
-        strikeEvent.Data.ShouldNotBeNull();
-        using (var data = JsonDocument.Parse(strikeEvent.Data!))
-        {
-            data.RootElement.GetProperty("hash").GetString().ShouldBe("METADATA_HASH_456");
-            data.RootElement.GetProperty("itemName").GetString().ShouldBe("Metadata.Movie.2024.1080p");
-            data.RootElement.GetProperty("strikeCount").GetInt32().ShouldBe(1);
-            data.RootElement.GetProperty("strikeType").GetString().ShouldBe("DownloadingMetadata");
-        }
+        strikeEvent.ItemHash.ShouldBe("METADATA_HASH_456");
+        strikeEvent.ItemTitle.ShouldBe("Metadata.Movie.2024.1080p");
+        strikeEvent.StrikeCount.ShouldBe(1);
 
         // Assert: Notification sent
         await _fixture.NotificationPublisher.Received(1).NotifyStrike(StrikeType.DownloadingMetadata, 1);
@@ -216,23 +230,15 @@ public class StrikerIntegrationTests : IDisposable
         strikeEvent.SearchStatus.ShouldBeNull();
         strikeEvent.CompletedAt.ShouldBeNull();
         strikeEvent.CycleId.ShouldBeNull();
-        strikeEvent.Data.ShouldNotBeNull();
-        using (var data = JsonDocument.Parse(strikeEvent.Data!))
-        {
-            data.RootElement.GetProperty("hash").GetString().ShouldBe("FAILED_HASH_789");
-            data.RootElement.GetProperty("itemName").GetString().ShouldBe("FailedImport.Movie.2024.1080p");
-            data.RootElement.GetProperty("strikeCount").GetInt32().ShouldBe(1);
-            data.RootElement.GetProperty("strikeType").GetString().ShouldBe("FailedImport");
+        strikeEvent.ItemHash.ShouldBe("FAILED_HASH_789");
+        strikeEvent.ItemTitle.ShouldBe("FailedImport.Movie.2024.1080p");
+        strikeEvent.StrikeCount.ShouldBe(1);
 
-            // FailedImport-specific: includes failedImportReasons from QueueRecord.StatusMessages
-            var reasons = data.RootElement.GetProperty("failedImportReasons");
-            reasons.GetArrayLength().ShouldBe(1);
-            reasons[0].GetProperty("Title").GetString().ShouldBe("Import failed");
-            var messages = reasons[0].GetProperty("Messages");
-            messages.GetArrayLength().ShouldBe(2);
-            messages[0].GetString().ShouldBe("File not found");
-            messages[1].GetString().ShouldBe("Path does not exist");
-        }
+        // FailedImport-specific: includes failedImportReasons from QueueRecord.StatusMessages
+        strikeEvent.FailedImportReasons.Count.ShouldBe(1);
+        strikeEvent.FailedImportReasons[0].ShouldContain("Import failed");
+        strikeEvent.FailedImportReasons[0].ShouldContain("File not found");
+        strikeEvent.FailedImportReasons[0].ShouldContain("Path does not exist");
 
         // Assert: Notification sent
         await _fixture.NotificationPublisher.Received(1).NotifyStrike(StrikeType.FailedImport, 1);
@@ -283,14 +289,9 @@ public class StrikerIntegrationTests : IDisposable
         strikeEvent.SearchStatus.ShouldBeNull();
         strikeEvent.CompletedAt.ShouldBeNull();
         strikeEvent.CycleId.ShouldBeNull();
-        strikeEvent.Data.ShouldNotBeNull();
-        using (var data = JsonDocument.Parse(strikeEvent.Data!))
-        {
-            data.RootElement.GetProperty("hash").GetString().ShouldBe("SLOW_SPEED_HASH_111");
-            data.RootElement.GetProperty("itemName").GetString().ShouldBe("SlowSpeed.Movie.2024.1080p");
-            data.RootElement.GetProperty("strikeCount").GetInt32().ShouldBe(1);
-            data.RootElement.GetProperty("strikeType").GetString().ShouldBe("SlowSpeed");
-        }
+        strikeEvent.ItemHash.ShouldBe("SLOW_SPEED_HASH_111");
+        strikeEvent.ItemTitle.ShouldBe("SlowSpeed.Movie.2024.1080p");
+        strikeEvent.StrikeCount.ShouldBe(1);
 
         // Assert: Notification sent
         await _fixture.NotificationPublisher.Received(1).NotifyStrike(StrikeType.SlowSpeed, 1);
@@ -341,14 +342,9 @@ public class StrikerIntegrationTests : IDisposable
         strikeEvent.SearchStatus.ShouldBeNull();
         strikeEvent.CompletedAt.ShouldBeNull();
         strikeEvent.CycleId.ShouldBeNull();
-        strikeEvent.Data.ShouldNotBeNull();
-        using (var data = JsonDocument.Parse(strikeEvent.Data!))
-        {
-            data.RootElement.GetProperty("hash").GetString().ShouldBe("SLOW_TIME_HASH_222");
-            data.RootElement.GetProperty("itemName").GetString().ShouldBe("SlowTime.Movie.2024.1080p");
-            data.RootElement.GetProperty("strikeCount").GetInt32().ShouldBe(1);
-            data.RootElement.GetProperty("strikeType").GetString().ShouldBe("SlowTime");
-        }
+        strikeEvent.ItemHash.ShouldBe("SLOW_TIME_HASH_222");
+        strikeEvent.ItemTitle.ShouldBe("SlowTime.Movie.2024.1080p");
+        strikeEvent.StrikeCount.ShouldBe(1);
 
         // Assert: Notification sent
         await _fixture.NotificationPublisher.Received(1).NotifyStrike(StrikeType.SlowTime, 1);
@@ -386,8 +382,7 @@ public class StrikerIntegrationTests : IDisposable
         for (int i = 0; i < 3; i++)
         {
             events[i].EventType.ShouldBe(EventType.StalledStrike);
-            using var data = JsonDocument.Parse(events[i].Data!);
-            data.RootElement.GetProperty("strikeCount").GetInt32().ShouldBe(i + 1);
+            events[i].StrikeCount.ShouldBe(i + 1);
         }
 
         // Assert: 3 notifications with incrementing counts
@@ -449,13 +444,9 @@ public class StrikerIntegrationTests : IDisposable
         manualEvents[0].Message.ShouldContain("Download keeps coming back after deletion");
         manualEvents[0].Severity.ShouldBe(EventSeverity.Important);
         manualEvents[0].JobRunId.ShouldBe(_fixture.JobRunId);
-        manualEvents[0].Data.ShouldNotBeNull();
-        using (var data = JsonDocument.Parse(manualEvents[0].Data!))
-        {
-            data.RootElement.GetProperty("itemName").GetString().ShouldBe("Recurring.Movie.2024");
-            data.RootElement.GetProperty("hash").GetString().ShouldBe("RECURRING_HASH_555");
-            data.RootElement.GetProperty("strikeCount").GetInt32().ShouldBe(3);
-        }
+        manualEvents[0].ItemTitle.ShouldBe("Recurring.Movie.2024");
+        manualEvents[0].ItemHash.ShouldBe("recurring_hash_555"); // stored normalized (lowercased) for case-insensitive dedup
+        manualEvents[0].StrikeCount.ShouldBe(3);
     }
 
     [Fact]
@@ -493,11 +484,6 @@ public class StrikerIntegrationTests : IDisposable
         var events = await _fixture.EventsContext.Events.ToListAsync();
         events.Count.ShouldBe(1);
         events[0].EventType.ShouldBe(EventType.FailedImportStrike);
-        events[0].Data.ShouldNotBeNull();
-        using (var data = JsonDocument.Parse(events[0].Data!))
-        {
-            var reasons = data.RootElement.GetProperty("failedImportReasons");
-            reasons.GetArrayLength().ShouldBe(0);
-        }
+        events[0].FailedImportReasons.ShouldBeEmpty();
     }
 }

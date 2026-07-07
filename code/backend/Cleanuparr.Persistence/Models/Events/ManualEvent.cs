@@ -26,12 +26,39 @@ public class ManualEvent
     [MaxLength(1000)]
     public string Message { get; set; } = string.Empty;
 
-    public string? Data { get; set; }
-
     [Required]
     public required EventSeverity Severity { get; set; }
 
+    /// <summary>
+    /// Discriminator used to gate duplicate unresolved events per item.
+    /// </summary>
+    [Required]
+    public required ManualEventType Type { get; set; }
+
+    /// <summary>
+    /// Title of the download item this event refers to
+    /// </summary>
+    [MaxLength(500)]
+    public string? ItemTitle { get; set; }
+
+    /// <summary>
+    /// Hash / download ID of the item this event refers to
+    /// </summary>
+    [MaxLength(100)]
+    public string? ItemHash { get; set; }
+
+    /// <summary>
+    /// Strike number at the time of the event, when applicable
+    /// </summary>
+    public int? StrikeCount { get; set; }
+
     public bool IsResolved { get; set; }
+
+    /// <summary>
+    /// When the event was resolved. Used to enforce the post-resolve cooldown before an
+    /// identical event can be re-created. Null while unresolved.
+    /// </summary>
+    public DateTimeOffset? ResolvedAt { get; set; }
 
     public Guid? JobRunId { get; set; }
 

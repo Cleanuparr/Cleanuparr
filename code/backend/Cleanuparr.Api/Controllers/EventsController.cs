@@ -1,5 +1,9 @@
-using System.Text.Json.Serialization;
+using System.Globalization;
+using Cleanuparr.Api.Common;
+using Cleanuparr.Api.Contracts.Responses;
+using Cleanuparr.Api.Features.Events.Contracts.Responses;
 using Cleanuparr.Domain.Enums;
+using Cleanuparr.Infrastructure.Stats;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Events;
 using Microsoft.AspNetCore.Authorization;
@@ -24,7 +28,7 @@ public class EventsController : ControllerBase
     /// Gets events with pagination and filtering
     /// </summary>
     [HttpGet]
-    public async Task<ActionResult<PaginatedResult<AppEvent>>> GetEvents(
+    public async Task<ActionResult<PaginatedResult<EventListItem>>> GetEvents(
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 50,
         [FromQuery] string? severity = null,
@@ -49,35 +53,40 @@ public class EventsController : ControllerBase
         {
             pageSize = 500;
         }
-        
-        var query = _context.Events.AsQueryable();
+
+        IQueryable<EventListItem> query = _context.Events
+            .Select(EventListItem.FromEvent);
 
         // Apply filters
         if (!string.IsNullOrWhiteSpace(severity))
         {
-            if (Enum.TryParse<EventSeverity>(severity, true, out var severityEnum))
+            if (Enum.TryParse<EventSeverity>(severity, true, out EventSeverity severityEnum))
+            {
                 query = query.Where(e => e.Severity == severityEnum);
+            }
         }
 
         if (!string.IsNullOrWhiteSpace(eventType))
         {
-            if (Enum.TryParse<EventType>(eventType, true, out var eventTypeEnum))
+            if (Enum.TryParse<EventType>(eventType, true, out EventType eventTypeEnum))
+            {
                 query = query.Where(e => e.EventType == eventTypeEnum);
+            }
         }
-        
+
         // Apply date range filters
         if (fromDate.HasValue)
         {
             query = query.Where(e => e.Timestamp >= fromDate.Value);
         }
-        
+
         if (toDate.HasValue)
         {
             query = query.Where(e => e.Timestamp <= toDate.Value);
         }
 
         // Apply job run ID exact-match filter
-        if (!string.IsNullOrWhiteSpace(jobRunId) && Guid.TryParse(jobRunId, out var jobRunGuid))
+        if (!string.IsNullOrWhiteSpace(jobRunId) && Guid.TryParse(jobRunId, out Guid jobRunGuid))
         {
             query = query.Where(e => e.JobRunId == jobRunGuid);
         }
@@ -88,28 +97,28 @@ public class EventsController : ControllerBase
             string pattern = EventsContext.GetLikePattern(search);
             query = query.Where(e =>
                 EF.Functions.Like(e.Message, pattern) ||
-                EF.Functions.Like(e.Data, pattern) ||
+                (e.ItemTitle != null && EF.Functions.Like(e.ItemTitle, pattern)) ||
                 EF.Functions.Like(e.TrackingId.ToString(), pattern) ||
                 EF.Functions.Like(e.JobRunId.ToString(), pattern)
             );
         }
 
         // Count total matching records for pagination
-        var totalCount = await query.CountAsync();
-        
+        int totalCount = await query.CountAsync();
+
         // Calculate pagination
-        var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
-        var skip = (page - 1) * pageSize;
-        
-        // Get paginated data
-        var events = await query
+        int totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
+        int skip = (page - 1) * pageSize;
+
+        List<EventListItem> events = await query
             .OrderByDescending(e => e.Timestamp)
+            .ThenByDescending(e => e.Id)
             .Skip(skip)
             .Take(pageSize)
             .ToListAsync();
 
         // Return paginated result
-        var result = new PaginatedResult<AppEvent>
+        PaginatedResult<EventListItem> result = new()
         {
             Items = events,
             Page = page,
@@ -117,7 +126,7 @@ public class EventsController : ControllerBase
             TotalCount = totalCount,
             TotalPages = totalPages
         };
-        
+
         return Ok(result);
     }
 
@@ -128,7 +137,7 @@ public class EventsController : ControllerBase
     public async Task<ActionResult<AppEvent>> GetEvent(Guid id)
     {
         var eventEntity = await _context.Events.FindAsync(id);
-        
+
         if (eventEntity == null)
             return NotFound();
 
@@ -150,21 +159,6 @@ public class EventsController : ControllerBase
     }
 
     /// <summary>
-    /// Manually triggers cleanup of old events
-    /// </summary>
-    [HttpPost("cleanup")]
-    public async Task<ActionResult<object>> CleanupOldEvents([FromQuery] int retentionDays = 30)
-    {
-        var cutoffDate = DateTimeOffset.UtcNow.AddDays(-retentionDays);
-        
-        await _context.Events
-            .Where(e => e.Timestamp < cutoffDate)
-            .ExecuteDeleteAsync();
-        
-        return Ok();
-    }
-
-    /// <summary>
     /// Gets unique event types
     /// </summary>
     [HttpGet("types")]
@@ -183,48 +177,68 @@ public class EventsController : ControllerBase
         var severities = Enum.GetNames(typeof(EventSeverity)).ToList();
         return Ok(severities);
     }
-} 
 
-/// <summary>
-/// Represents a paginated result set
-/// </summary>
-/// <typeparam name="T">Type of items in the result</typeparam>
-public class PaginatedResult<T>
-{
-    /// <summary>
-    /// The items in the current page
-    /// </summary>
-    public List<T> Items { get; set; } = new();
-    
-    /// <summary>
-    /// Current page number (1-based)
-    /// </summary>
-    public int Page { get; set; }
-    
-    /// <summary>
-    /// Number of items per page
-    /// </summary>
-    public int PageSize { get; set; }
-    
-    /// <summary>
-    /// Total number of items across all pages
-    /// </summary>
-    public int TotalCount { get; set; }
-    
-    /// <summary>
-    /// Total number of pages
-    /// </summary>
-    public int TotalPages { get; set; }
-    
-    /// <summary>
-    /// Whether there is a previous page
-    /// </summary>
-    [JsonIgnore]
-    public bool HasPrevious => Page > 1;
-    
-    /// <summary>
-    /// Whether there is a next page
-    /// </summary>
-    [JsonIgnore]
-    public bool HasNext => Page < TotalPages;
+    [HttpGet("timeline")]
+    public async Task<ActionResult<EventTypeTimelineResponse>> GetTimeline([FromQuery] int hours = 720)
+    {
+        hours = TimelineWindow.ClampHours(hours);
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+        DateTimeOffset cutoff = now.AddHours(-hours);
+        TimelineBucketSize size = TimelineBucketing.DefaultFor(hours);
+        string cutoffText = cutoff.UtcDateTime.ToString("yyyy-MM-dd HH:mm:ss.fffffff", CultureInfo.InvariantCulture);
+
+        string bucketExpr = TimelineBucketing.BucketExpr(size);
+        List<BucketTypeCount> rows = await _context.Database
+            .SqlQueryRaw<BucketTypeCount>(
+                $$"""
+                SELECT {{bucketExpr}} AS "bucket", event_type AS "event_type", COUNT(*) AS "count"
+                FROM events
+                WHERE timestamp >= {0}
+                GROUP BY {{bucketExpr}}, event_type
+                """,
+                cutoffText)
+            .ToListAsync();
+
+        Dictionary<(DateTimeOffset Bucket, EventType Type), int> byBucketType = new();
+        HashSet<EventType> presentSet = [];
+        foreach (BucketTypeCount row in rows)
+        {
+            DateTimeOffset bucket = TimelineBucketing.ParseKey(row.Bucket, size);
+            EventType type = Enum.Parse<EventType>(row.EventType, ignoreCase: true);
+            byBucketType[(bucket, type)] = row.Count;
+            presentSet.Add(type);
+        }
+
+        List<EventType> presentTypes = presentSet
+            .OrderBy(t => (int)t)
+            .ToList();
+
+        List<EventTypeTimelineBucket> buckets = [];
+        foreach (DateTimeOffset bucket in TimelineBucketing.Buckets(cutoff, now, size))
+        {
+            Dictionary<string, int> counts = new();
+            foreach (EventType type in presentTypes)
+            {
+                if (byBucketType.TryGetValue((bucket, type), out int count) && count > 0)
+                {
+                    counts[type.ToString()] = count;
+                }
+            }
+
+            buckets.Add(new EventTypeTimelineBucket { Date = bucket, Counts = counts });
+        }
+
+        return Ok(new EventTypeTimelineResponse
+        {
+            Types = presentTypes.Select(t => t.ToString()).ToList(),
+            Buckets = buckets,
+        });
+    }
+
+    private sealed class BucketTypeCount
+    {
+        public string Bucket { get; set; } = string.Empty;
+        public string EventType { get; set; } = string.Empty;
+        public int Count { get; set; }
+    }
 }

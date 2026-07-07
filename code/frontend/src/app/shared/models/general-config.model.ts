@@ -24,6 +24,7 @@ export interface GeneralConfig {
   httpCertificateValidation: CertificateValidationType;
   statusCheckEnabled: boolean;
   strikeInactivityWindowHours: number;
+  historyRetentionDays: number;
   log?: LoggingConfig;
   auth?: AuthConfig;
   ignoredDownloads: string[];

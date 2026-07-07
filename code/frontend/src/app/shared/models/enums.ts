@@ -115,4 +115,23 @@ export enum SearchCommandStatus {
   TimedOut = 'TimedOut',
 }
 
+export enum DeleteReason {
+  None = 'None',
+  Stalled = 'Stalled',
+  FailedImport = 'FailedImport',
+  DownloadingMetadata = 'DownloadingMetadata',
+  SlowSpeed = 'SlowSpeed',
+  SlowTime = 'SlowTime',
+  AllFilesSkipped = 'AllFilesSkipped',
+  AllFilesSkippedByQBit = 'AllFilesSkippedByQBit',
+  AllFilesBlocked = 'AllFilesBlocked',
+  AtLeastOneFileBlocked = 'AtLeastOneFileBlocked',
+}
+
+export enum CleanReason {
+  None = 'None',
+  MaxRatioReached = 'MaxRatioReached',
+  MaxSeedTimeReached = 'MaxSeedTimeReached',
+}
+
 export type ArrType = 'sonarr' | 'radarr' | 'lidarr' | 'readarr' | 'whisparr';

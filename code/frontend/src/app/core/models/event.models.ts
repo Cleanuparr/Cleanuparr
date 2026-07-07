@@ -3,7 +3,6 @@ export interface AppEvent {
   timestamp: Date;
   eventType: string;
   message: string;
-  data?: string;
   severity: string;
   trackingId?: string;
   strikeId?: string;
@@ -13,13 +12,30 @@ export interface AppEvent {
   downloadClientType?: string;
   downloadClientName?: string;
   isDryRun: boolean;
+
+  // Typed event payload (replaces the old JSON `data` blob)
+  itemTitle?: string;
+  itemHash?: string;
+  strikeCount?: number;
+  failedImportReasons?: string[];
+  deleteReason?: string;
+  removeFromClient?: boolean;
+  cleanReason?: string;
+  cleanedCategory?: string;
+  seedRatio?: number;
+  seedingTimeHours?: number;
+  oldCategory?: string;
+  newCategory?: string;
+  isCategoryTag?: boolean;
+  searchType?: string;
+  searchReason?: string;
+  grabbedItems?: string[];
 }
 
 export interface ManualEvent {
   id: string;
   timestamp: Date;
   message: string;
-  data?: string;
   severity: string;
   isResolved: boolean;
   jobRunId?: string;
@@ -28,6 +44,11 @@ export interface ManualEvent {
   downloadClientType?: string;
   downloadClientName?: string;
   isDryRun: boolean;
+
+  // Typed event payload (replaces the old JSON `data` blob)
+  itemTitle?: string;
+  itemHash?: string;
+  strikeCount?: number;
 }
 
 export interface EventStats {
@@ -43,6 +64,16 @@ export interface ManualEventStats {
   resolvedEvents: number;
   eventsBySeverity: { severity: string; count: number }[];
   unresolvedBySeverity: { severity: string; count: number }[];
+}
+
+export interface EventTypeTimelineBucket {
+  date: string;
+  counts: Record<string, number>;
+}
+
+export interface EventTypeTimelineResponse {
+  types: string[];
+  buckets: EventTypeTimelineBucket[];
 }
 
 export interface EventFilter {

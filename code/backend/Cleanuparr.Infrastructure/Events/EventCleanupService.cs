@@ -1,4 +1,6 @@
 using Cleanuparr.Persistence;
+using Cleanuparr.Persistence.Models.Configuration.General;
+using Cleanuparr.Persistence.Models.Events;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -62,16 +64,22 @@ public class EventCleanupService : BackgroundService
             var eventsContext = scope.ServiceProvider.GetRequiredService<EventsContext>();
             var dataContext = scope.ServiceProvider.GetRequiredService<DataContext>();
 
-            var cutoffDate = DateTimeOffset.UtcNow.AddDays(-_eventRetentionDays);
-            await eventsContext.Events
-                .Where(e => e.Timestamp < cutoffDate)
-                .ExecuteDeleteAsync();
-            await eventsContext.ManualEvents
-                .Where(e => e.Timestamp < cutoffDate)
-                .Where(e => e.IsResolved)
-                .ExecuteDeleteAsync();
+            GeneralConfig config = await dataContext.GeneralConfigs
+                .AsNoTracking()
+                .FirstAsync();
 
-            await CleanupStrikesAsync(eventsContext, dataContext);
+            DateTimeOffset eventCutoff = DateTimeOffset.UtcNow.AddDays(-_eventRetentionDays);
+
+            // Resolved manual events are transient
+            await DeleteResolvedManualEventsAsync(eventsContext, eventCutoff);
+
+            // Prune events older than the configured retention window
+            await PruneEventsAsync(eventsContext, config.HistoryRetentionDays);
+
+            await CleanupStrikesAsync(eventsContext, config.StrikeInactivityWindowHours);
+
+            // Prune old job runs no longer referenced by any active strike or event
+            await PruneJobRunsAsync(eventsContext, eventCutoff);
         }
         catch (Exception ex)
         {
@@ -79,13 +87,49 @@ public class EventCleanupService : BackgroundService
         }
     }
 
-    private async Task CleanupStrikesAsync(EventsContext eventsContext, DataContext dataContext)
+    internal async Task DeleteResolvedManualEventsAsync(EventsContext eventsContext, DateTimeOffset cutoff)
     {
-        var config = await dataContext.GeneralConfigs
-            .AsNoTracking()
-            .FirstAsync();
+        int deleted = await eventsContext.ManualEvents
+            .Where(e => e.IsResolved)
+            .Where(e => (e.ResolvedAt ?? e.Timestamp) < cutoff)
+            .ExecuteDeleteAsync();
 
-        var inactivityWindowHours = config.StrikeInactivityWindowHours;
+        if (deleted > 0)
+        {
+            _logger.LogInformation("Deleted {count} resolved manual events older than {days} days", deleted, _eventRetentionDays);
+        }
+    }
+
+    internal async Task PruneEventsAsync(EventsContext eventsContext, ushort retentionDays)
+    {
+        DateTimeOffset cutoff = DateTimeOffset.UtcNow.AddDays(-retentionDays);
+        int deleted = await eventsContext.Events
+            .Where(e => e.Timestamp < cutoff)
+            .ExecuteDeleteAsync();
+
+        if (deleted > 0)
+        {
+            _logger.LogInformation("Pruned {count} events older than {days} days", deleted, retentionDays);
+        }
+    }
+
+    internal async Task PruneJobRunsAsync(EventsContext eventsContext, DateTimeOffset cutoff)
+    {
+        int deleted = await eventsContext.JobRuns
+            .Where(j => j.CompletedAt != null && j.StartedAt < cutoff)
+            .Where(j => !eventsContext.Strikes.Any(s => s.JobRunId == j.Id))
+            .Where(j => !eventsContext.Events.Any(e => e.JobRunId == j.Id))
+            .Where(j => !eventsContext.ManualEvents.Any(m => m.JobRunId == j.Id))
+            .ExecuteDeleteAsync();
+
+        if (deleted > 0)
+        {
+            _logger.LogInformation("Pruned {count} unreferenced job runs", deleted);
+        }
+    }
+
+    private async Task CleanupStrikesAsync(EventsContext eventsContext, ushort inactivityWindowHours)
+    {
         var cutoffDate = DateTimeOffset.UtcNow.AddHours(-inactivityWindowHours);
 
         // Sliding window: find items whose most recent strike is older than the inactivity window.

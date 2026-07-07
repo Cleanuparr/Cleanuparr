@@ -4,6 +4,8 @@
 />
 
 <div class="page-content">
+  <app-events-stats-card />
+
   <!-- Toolbar -->
   <div class="toolbar" appStickyAware>
     <div class="toolbar__filters">
@@ -155,18 +157,20 @@
                   </div>
                 </div>
               }
-              @if (parseEventData(event.data); as data) {
-                <div class="event-row__detail">
-                  <span class="event-row__detail-label">Event Data</span>
-                  <div class="event-row__data">
-                    @for (key of objectKeys(data); track key) {
-                      <div class="event-row__data-item">
-                        <span class="event-row__data-key">{{ key }}</span>
-                        <span class="event-row__data-value">{{ formatValue(data[key]) }}</span>
-                      </div>
-                    }
+              @if (eventDetails(event); as details) {
+                @if (details.length > 0) {
+                  <div class="event-row__detail">
+                    <span class="event-row__detail-label">Event Data</span>
+                    <div class="event-row__data">
+                      @for (detail of details; track detail.label) {
+                        <div class="event-row__data-item">
+                          <span class="event-row__data-key">{{ detail.label }}</span>
+                          <span class="event-row__data-value">{{ detail.value }}</span>
+                        </div>
+                      }
+                    </div>
                   </div>
-                </div>
+                }
               }
             </div>
           }

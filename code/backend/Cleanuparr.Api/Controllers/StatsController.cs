@@ -5,13 +5,16 @@ using Microsoft.AspNetCore.Mvc;
 namespace Cleanuparr.Api.Controllers;
 
 /// <summary>
-/// Aggregated statistics endpoint for dashboard integrations
+/// Aggregated statistics endpoint for dashboard integrations.
+/// Deprecated. Use <c>GET /api/v2/stats</c> instead.
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
 public class StatsController : ControllerBase
 {
+    private static readonly DateTimeOffset SunsetDate = new(2026, 9, 1, 0, 0, 0, TimeSpan.Zero);
+
     private readonly IStatsService _statsService;
 
     public StatsController(IStatsService statsService)
@@ -20,7 +23,8 @@ public class StatsController : ControllerBase
     }
 
     /// <summary>
-    /// Gets aggregated application statistics for the specified timeframe
+    /// Gets aggregated application statistics for the specified timeframe.
+    /// Deprecated. Use <c>GET /api/v2/stats</c> instead. Responses carry Deprecation/Link headers.
     /// </summary>
     /// <param name="hours">Timeframe in hours (default 24, range 1-720)</param>
     /// <param name="includeEvents">Number of recent events to include (0 = none, max 100)</param>
@@ -31,6 +35,17 @@ public class StatsController : ControllerBase
         [FromQuery] int includeEvents = 0,
         [FromQuery] int includeStrikes = 0)
     {
+        Response.Headers["Deprecation"] = "true";
+        Response.Headers["Sunset"] = SunsetDate.ToString("R");
+        Response.Headers["Link"] =
+            "</api/v2/stats>; rel=\"successor-version\", " +
+            "<https://cleanuparr.github.io/Cleanuparr/docs/configuration/stats>; rel=\"deprecation\"";
+
+        if (DateTimeOffset.UtcNow >= SunsetDate)
+        {
+            return NotFound();
+        }
+
         hours = Math.Clamp(hours, 1, 720);
         includeEvents = Math.Clamp(includeEvents, 0, 100);
         includeStrikes = Math.Clamp(includeStrikes, 0, 100);

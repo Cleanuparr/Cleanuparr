@@ -27,6 +27,8 @@ public sealed record UpdateGeneralConfigRequest
 
     public ushort StrikeInactivityWindowHours { get; init; } = 24;
 
+    public ushort HistoryRetentionDays { get; init; } = 365;
+
     public UpdateLoggingConfigRequest Log { get; init; } = new();
 
     public UpdateAuthConfigRequest Auth { get; init; } = new();
@@ -42,6 +44,7 @@ public sealed record UpdateGeneralConfigRequest
         existingConfig.EncryptionKey = EncryptionKey;
         existingConfig.IgnoredDownloads = IgnoredDownloads;
         existingConfig.StrikeInactivityWindowHours = StrikeInactivityWindowHours;
+        existingConfig.HistoryRetentionDays = HistoryRetentionDays;
 
         bool loggingChanged = Log.ApplyTo(existingConfig.Log);
         Auth.ApplyTo(existingConfig.Auth);
@@ -68,6 +71,16 @@ public sealed record UpdateGeneralConfigRequest
         if (config.StrikeInactivityWindowHours > 168)
         {
             throw new ValidationException("STRIKE_INACTIVITY_WINDOW_HOURS must be less than or equal to 168");
+        }
+
+        if (config.HistoryRetentionDays is 0)
+        {
+            throw new ValidationException("HISTORY_RETENTION_DAYS must be greater than 0");
+        }
+
+        if (config.HistoryRetentionDays > 3650)
+        {
+            throw new ValidationException("HISTORY_RETENTION_DAYS must be less than or equal to 3650");
         }
 
         config.Log.Validate();

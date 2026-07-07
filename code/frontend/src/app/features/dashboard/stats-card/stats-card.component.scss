@@ -1,0 +1,165 @@
+.stats {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.stats__windows {
+  display: flex;
+  gap: var(--space-1);
+  flex-shrink: 0;
+}
+
+.stats__window {
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--text-tertiary);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+
+  &:hover {
+    color: var(--text-secondary);
+    background: var(--glass-bg-hover);
+  }
+
+  &--active {
+    color: var(--color-primary);
+    background: var(--glass-bg);
+    border-color: var(--glass-border);
+  }
+}
+
+.stats__tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: var(--space-3);
+  transition: opacity 0.2s ease;
+
+  &--loading {
+    opacity: 0.6;
+  }
+}
+
+.stats__tile {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-4);
+  text-align: left;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+
+  &:hover:not(:disabled) {
+    background: var(--glass-bg-hover);
+    transform: translateY(-1px);
+  }
+
+  &:disabled {
+    cursor: default;
+  }
+
+  &--active {
+    border-color: var(--tone-color);
+    box-shadow: 0 0 0 1px var(--tone-color);
+  }
+
+  // Tone drives the value color and the active outline
+  &[data-tone='removed'] { --tone-color: var(--color-primary); }
+  &[data-tone='recovered'] { --tone-color: var(--color-success); }
+  &[data-tone='issued'] { --tone-color: var(--color-warning); }
+  &[data-tone='malware'] { --tone-color: var(--color-error); }
+  &[data-tone='jobs'] { --tone-color: var(--text-tertiary); }
+}
+
+.stats__value {
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--tone-color, var(--text-primary));
+  font-variant-numeric: tabular-nums;
+}
+
+.stats__label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+}
+
+.stats__hint {
+  font-size: 13px;
+  color: var(--text-tertiary);
+  opacity: 0.6;
+  transition: opacity var(--duration-fast) var(--ease-default), color var(--duration-fast) var(--ease-default);
+
+  &:hover {
+    opacity: 1;
+    color: var(--text-secondary);
+  }
+}
+
+.stats__spark {
+  min-height: 140px;
+
+  --vis-axis-tick-label-color: var(--text-tertiary);
+  --vis-axis-tick-label-font-size: var(--font-size-xs);
+  --vis-axis-font-family: inherit;
+  --vis-axis-grid-color: var(--glass-border);
+  --vis-crosshair-line-stroke-color: var(--text-tertiary);
+  --vis-crosshair-line-stroke-opacity: 0.4;
+  --vis-crosshair-circle-stroke-color: var(--surface-ground);
+  --vis-tooltip-background-color: var(--glass-bg);
+  --vis-tooltip-border-color: var(--glass-border);
+  --vis-tooltip-text-color: var(--text-primary);
+  --vis-tooltip-border-radius: var(--radius-md);
+  --vis-tooltip-padding: var(--space-1) var(--space-2);
+}
+
+.stats__spark-empty {
+  margin: 0;
+  padding: var(--space-3) 0;
+  font-size: var(--font-size-sm);
+  color: var(--text-tertiary);
+  text-align: center;
+}
+
+.stats__error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+.stats__retry {
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--color-primary);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--glass-bg-hover);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stats__tile,
+  .stats__window,
+  .stats__tiles {
+    transition: none;
+  }
+}

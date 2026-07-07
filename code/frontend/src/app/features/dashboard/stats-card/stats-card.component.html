@@ -1,0 +1,74 @@
+<app-card header="Statistics" subtitle="Activity over the selected window" featureId="dashboard-stats-card">
+  <div class="stats__windows" card-actions role="group" aria-label="Time window">
+    @for (w of windows; track w.hours) {
+      <button
+        type="button"
+        class="stats__window"
+        [class.stats__window--active]="window() === w.hours"
+        [attr.aria-pressed]="window() === w.hours"
+        (click)="setWindow(w.hours)"
+      >
+        {{ w.label }}
+      </button>
+    }
+  </div>
+
+  <div class="stats">
+    @if (hasError()) {
+      <div class="stats__error">
+        <span>Couldn't load statistics.</span>
+        <button type="button" class="stats__retry" (click)="retry()">Retry</button>
+      </div>
+    } @else {
+      <div class="stats__tiles" [class.stats__tiles--loading]="isLoading()">
+        @for (tile of tiles(); track tile.key) {
+          <button
+            type="button"
+            class="stats__tile"
+            [class.stats__tile--active]="tile.metric && selectedMetric() === tile.metric"
+            [attr.data-tone]="tile.tone"
+            [disabled]="!tile.metric"
+            (click)="selectMetric(tile.metric)"
+          >
+            <span class="stats__value"><app-animated-counter [value]="tile.value" /></span>
+            <span class="stats__label">
+              {{ tile.label }}
+              <app-tooltip [text]="tile.hint">
+                <ng-icon name="tablerInfoCircle" class="stats__hint" aria-hidden="true" />
+              </app-tooltip>
+            </span>
+          </button>
+        }
+      </div>
+
+      <div class="stats__spark">
+        @if (hasActivity()) {
+          <vis-xy-container [data]="timeline()" [height]="140" [yDomain]="yDomain()" [duration]="duration" [margin]="chartMargin">
+            <vis-area [x]="x" [y]="y" [baseline]="yBaseline()" [curveType]="CurveType.Linear" [color]="chartColor()" [opacity]="0.14" [duration]="duration" />
+            <vis-line [x]="x" [y]="y" [curveType]="CurveType.Linear" [color]="chartColor()" [lineWidth]="2" [duration]="duration" />
+            <vis-axis
+              type="y"
+              [numTicks]="3"
+              [tickFormat]="yTickFormat"
+              [gridLine]="true"
+              [tickLine]="false"
+              [domainLine]="false"
+            />
+            <vis-axis
+              type="x"
+              [numTicks]="4"
+              [tickFormat]="xTickFormat"
+              [gridLine]="false"
+              [tickLine]="false"
+              [domainLine]="false"
+            />
+            <vis-crosshair [x]="x" [y]="y" [color]="chartColor()" [template]="tooltip" />
+            <vis-tooltip />
+          </vis-xy-container>
+        } @else {
+          <p class="stats__spark-empty">No activity in this window.</p>
+        }
+      </div>
+    }
+  </div>
+</app-card>

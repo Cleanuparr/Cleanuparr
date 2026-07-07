@@ -279,21 +279,16 @@ public class SearchStatsControllerTests : IDisposable
             Timestamp = timestamp ?? DateTime.UtcNow
         };
 
-        _eventsContext.Events.Add(appEvent);
-        _eventsContext.SaveChanges();
-
         if (itemTitle is not null)
         {
-            _eventsContext.SearchEventData.Add(new SearchEventData
-            {
-                AppEventId = appEvent.Id,
-                ItemTitle = itemTitle,
-                SearchType = searchType,
-                SearchReason = searchReason,
-                GrabbedItems = grabbedItems ?? [],
-            });
-            _eventsContext.SaveChanges();
+            appEvent.ItemTitle = itemTitle;
+            appEvent.SearchType = searchType;
+            appEvent.SearchReason = searchReason;
+            appEvent.GrabbedItems = grabbedItems ?? [];
         }
+
+        _eventsContext.Events.Add(appEvent);
+        _eventsContext.SaveChanges();
     }
 
     #endregion

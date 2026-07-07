@@ -23,8 +23,6 @@ public class EventsContext : DbContext
 
     public DbSet<JobRun> JobRuns { get; set; }
 
-    public DbSet<SearchEventData> SearchEventData { get; set; }
-    
     public EventsContext()
     {
     }
@@ -68,20 +66,26 @@ public class EventsContext : DbContext
                 .WithMany()
                 .HasForeignKey(e => e.StrikeId)
                 .OnDelete(DeleteBehavior.SetNull);
-        });
 
-        modelBuilder.Entity<SearchEventData>(entity =>
-        {
-            entity.HasOne(s => s.AppEvent)
-                .WithOne(e => e.SearchEventData)
-                .HasForeignKey<SearchEventData>(s => s.AppEventId)
-                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.JobRun)
+                .WithMany(j => j.Events)
+                .HasForeignKey(e => e.JobRunId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
 
         modelBuilder.Entity<Strike>(entity =>
         {
             entity.Property(e => e.Type)
                 .HasConversion(new LowercaseEnumConverter<StrikeType>());
+        });
+
+        modelBuilder.Entity<ManualEvent>(entity =>
+        {
+            // Race-proof gate: at most one UNRESOLVED event per (Type, ItemHash).
+            // Partial unique index — resolved rows are exempt, so history/cooldown is unaffected.
+            entity.HasIndex(e => new { e.Type, e.ItemHash })
+                .IsUnique()
+                .HasFilter("\"is_resolved\" = 0");
         });
 
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())

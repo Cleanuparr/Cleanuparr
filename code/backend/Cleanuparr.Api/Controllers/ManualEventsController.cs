@@ -1,3 +1,4 @@
+using Cleanuparr.Api.Contracts.Responses;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Events;
@@ -79,7 +80,7 @@ public class ManualEventsController : ControllerBase
             string pattern = EventsContext.GetLikePattern(search);
             query = query.Where(e =>
                 EF.Functions.Like(e.Message, pattern) ||
-                EF.Functions.Like(e.Data, pattern)
+                (e.ItemTitle != null && EF.Functions.Like(e.ItemTitle, pattern))
             );
         }
 
@@ -136,6 +137,7 @@ public class ManualEventsController : ControllerBase
             return NotFound();
 
         eventEntity.IsResolved = true;
+        eventEntity.ResolvedAt = DateTimeOffset.UtcNow;
         await _context.SaveChangesAsync();
 
         return Ok();
@@ -147,9 +149,12 @@ public class ManualEventsController : ControllerBase
     [HttpPost("resolve_all")]
     public async Task<ActionResult<object>> ResolveAllManualEvents()
     {
+        DateTimeOffset resolvedAt = DateTimeOffset.UtcNow;
         int resolvedCount = await _context.ManualEvents
             .Where(e => !e.IsResolved)
-            .ExecuteUpdateAsync(setter => setter.SetProperty(e => e.IsResolved, true));
+            .ExecuteUpdateAsync(setter => setter
+                .SetProperty(e => e.IsResolved, true)
+                .SetProperty(e => e.ResolvedAt, resolvedAt));
 
         return Ok(new { ResolvedCount = resolvedCount });
     }
@@ -187,20 +192,5 @@ public class ManualEventsController : ControllerBase
     {
         var severities = Enum.GetNames(typeof(EventSeverity)).ToList();
         return Ok(severities);
-    }
-
-    /// <summary>
-    /// Manually triggers cleanup of old resolved events
-    /// </summary>
-    [HttpPost("cleanup")]
-    public async Task<ActionResult<object>> CleanupOldResolvedEvents([FromQuery] int retentionDays = 30)
-    {
-        var cutoffDate = DateTimeOffset.UtcNow.AddDays(-retentionDays);
-
-        var deletedCount = await _context.ManualEvents
-            .Where(e => e.IsResolved && e.Timestamp < cutoffDate)
-            .ExecuteDeleteAsync();
-
-        return Ok(new { DeletedCount = deletedCount });
     }
 }

@@ -164,7 +164,6 @@ public sealed class SearchStatsController : ControllerBase
 
         var query = _eventsContext.Events
             .AsNoTracking()
-            .Include(e => e.SearchEventData)
             .Where(e => e.EventType == EventType.SearchTriggered);
 
         // Filter by instance ID
@@ -179,12 +178,12 @@ public sealed class SearchStatsController : ControllerBase
             query = query.Where(e => e.CycleId == cycleId.Value);
         }
 
-        // Search by item title in SearchEventData
+        // Search by item title
         if (!string.IsNullOrWhiteSpace(search))
         {
             string pattern = EventsContext.GetLikePattern(search);
-            query = query.Where(e => e.SearchEventData != null
-                && EF.Functions.Like(e.SearchEventData.ItemTitle, pattern));
+            query = query.Where(e => e.ItemTitle != null
+                && EF.Functions.Like(e.ItemTitle, pattern));
         }
 
         // Filter by search status (multi-valued)
@@ -197,13 +196,13 @@ public sealed class SearchStatsController : ControllerBase
         if (searchType.HasValue)
         {
             SeekerSearchType typeValue = searchType.Value;
-            query = query.Where(e => e.SearchEventData != null && e.SearchEventData.SearchType == typeValue);
+            query = query.Where(e => e.SearchType == typeValue);
         }
 
         if (searchReason.HasValue)
         {
             SeekerSearchReason reasonValue = searchReason.Value;
-            query = query.Where(e => e.SearchEventData != null && e.SearchEventData.SearchReason == reasonValue);
+            query = query.Where(e => e.SearchReason == reasonValue);
         }
 
         // Filter by grabbed-result presence
@@ -211,11 +210,11 @@ public sealed class SearchStatsController : ControllerBase
         {
             if (grabbed.Value)
             {
-                query = query.Where(e => e.SearchEventData != null && e.SearchEventData.GrabbedItems.Count > 0);
+                query = query.Where(e => e.GrabbedItems.Count > 0);
             }
             else
             {
-                query = query.Where(e => e.SearchEventData == null || e.SearchEventData.GrabbedItems.Count == 0);
+                query = query.Where(e => e.GrabbedItems.Count == 0);
             }
         }
 
@@ -226,14 +225,14 @@ public sealed class SearchStatsController : ControllerBase
         IOrderedQueryable<AppEvent> ordered = sortBy switch
         {
             SearchEventsSortBy.Title => ascending
-                ? query.OrderBy(e => e.SearchEventData != null ? e.SearchEventData.ItemTitle : string.Empty)
-                : query.OrderByDescending(e => e.SearchEventData != null ? e.SearchEventData.ItemTitle : string.Empty),
+                ? query.OrderBy(e => e.ItemTitle ?? string.Empty)
+                : query.OrderByDescending(e => e.ItemTitle ?? string.Empty),
             SearchEventsSortBy.Status => ascending
                 ? query.OrderBy(e => e.SearchStatus)
                 : query.OrderByDescending(e => e.SearchStatus),
             SearchEventsSortBy.Type => ascending
-                ? query.OrderBy(e => e.SearchEventData != null ? (int)e.SearchEventData.SearchType : 0)
-                : query.OrderByDescending(e => e.SearchEventData != null ? (int)e.SearchEventData.SearchType : 0),
+                ? query.OrderBy(e => e.SearchType)
+                : query.OrderByDescending(e => e.SearchType),
             _ => ascending
                 ? query.OrderBy(e => e.Timestamp)
                 : query.OrderByDescending(e => e.Timestamp),
@@ -273,12 +272,12 @@ public sealed class SearchStatsController : ControllerBase
             InstanceType = e.ArrInstanceId.HasValue && instanceTypeMap.TryGetValue(e.ArrInstanceId.Value, out var it)
                 ? it.ToString()
                 : null,
-            ItemTitle = e.SearchEventData?.ItemTitle ?? "Unknown",
-            SearchType = e.SearchEventData?.SearchType ?? SeekerSearchType.Proactive,
-            SearchReason = e.SearchEventData?.SearchReason,
+            ItemTitle = e.ItemTitle ?? "Unknown",
+            SearchType = e.SearchType ?? SeekerSearchType.Proactive,
+            SearchReason = e.SearchReason,
             SearchStatus = e.SearchStatus,
             CompletedAt = e.CompletedAt,
-            GrabbedItems = e.SearchEventData?.GrabbedItems ?? [],
+            GrabbedItems = e.GrabbedItems,
             CycleId = e.CycleId,
             IsDryRun = e.IsDryRun,
         }).ToList();

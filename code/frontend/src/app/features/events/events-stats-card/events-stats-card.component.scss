@@ -1,0 +1,98 @@
+.stats {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.stats__windows {
+  display: flex;
+  gap: var(--space-1);
+  flex-shrink: 0;
+}
+
+.stats__window {
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--text-tertiary);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+
+  &:hover {
+    color: var(--text-secondary);
+    background: var(--glass-bg-hover);
+  }
+
+  &--active {
+    color: var(--color-primary);
+    background: var(--glass-bg);
+    border-color: var(--glass-border);
+  }
+}
+
+.stats__chart {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  transition: opacity 0.2s ease;
+
+  --vis-axis-tick-label-color: var(--text-tertiary);
+  --vis-axis-tick-label-font-size: var(--font-size-xs);
+  --vis-axis-font-family: inherit;
+  --vis-axis-grid-color: var(--glass-border);
+  --vis-crosshair-line-stroke-color: var(--text-tertiary);
+  --vis-crosshair-line-stroke-opacity: 0.4;
+  --vis-crosshair-circle-stroke-color: var(--surface-ground);
+  --vis-tooltip-background-color: var(--glass-bg);
+  --vis-tooltip-border-color: var(--glass-border);
+  --vis-tooltip-text-color: var(--text-primary);
+  --vis-tooltip-border-radius: var(--radius-md);
+  --vis-tooltip-padding: var(--space-2) var(--space-3);
+
+  --vis-legend-label-color: var(--text-secondary);
+  --vis-legend-label-font-size: var(--font-size-xs);
+
+  &--loading {
+    opacity: 0.6;
+  }
+}
+
+.stats__legend {
+  display: block;
+}
+
+.stats__empty {
+  margin: 0;
+  padding: var(--space-6) 0;
+  font-size: var(--font-size-sm);
+  color: var(--text-tertiary);
+  text-align: center;
+}
+
+.stats__error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+.stats__retry {
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--color-primary);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--glass-bg-hover);
+  }
+}

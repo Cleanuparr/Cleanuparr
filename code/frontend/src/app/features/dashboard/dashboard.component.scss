@@ -112,6 +112,11 @@
   100% { transform: scale(1.15); }
 }
 
+app-stats-card {
+  display: block;
+  margin-bottom: var(--space-6);
+}
+
 // Dashboard rows (drag-and-drop)
 .dashboard-rows {
   @include page-section-stagger($increment: 80ms);
@@ -384,6 +389,26 @@
     word-wrap: break-word;
     line-height: 1.5;
     border-radius: 0 0 var(--radius-md) var(--radius-md);
+  }
+
+  &__details-row {
+    display: flex;
+    gap: var(--space-3);
+
+    &:not(:last-child) {
+      margin-bottom: var(--space-1);
+    }
+  }
+
+  &__details-key {
+    min-width: 140px;
+    flex-shrink: 0;
+    color: var(--text-tertiary);
+  }
+
+  &__details-value {
+    color: var(--text-secondary);
+    word-break: break-all;
   }
 
   &__meta {

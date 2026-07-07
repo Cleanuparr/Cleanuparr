@@ -2,7 +2,7 @@ import { Component, ChangeDetectionStrategy, inject, computed, signal } from '@a
 import { rxResource } from '@angular/core/rxjs-interop';
 import type { Observable } from 'rxjs';
 import { Router, RouterLink } from '@angular/router';
-import { DatePipe, JsonPipe } from '@angular/common';
+import { DatePipe } from '@angular/common';
 import { NgIcon } from '@ng-icons/core';
 import { CdkDragDrop, CdkDropList, CdkDrag, CdkDragHandle, moveItemInArray } from '@angular/cdk/drag-drop';
 import { PageHeaderComponent } from '@layout/page-header/page-header.component';
@@ -16,6 +16,7 @@ import { ToastService } from '@core/services/toast.service';
 import { ConfirmService } from '@core/services/confirm.service';
 import { ManualEvent } from '@core/models/event.models';
 import { JobType } from '@shared/models/enums';
+import { StatsCardComponent } from './stats-card/stats-card.component';
 
 const DASHBOARD_ROW_ORDER_KEY = 'dashboard-row-order';
 const DEFAULT_ROW_ORDER = ['strikes', 'logs-events', 'cf-scores', 'jobs'] as const;
@@ -27,7 +28,6 @@ type DashboardRowId = typeof DEFAULT_ROW_ORDER[number];
   imports: [
     RouterLink,
     DatePipe,
-    JsonPipe,
     NgIcon,
     PageHeaderComponent,
     CardComponent,
@@ -37,6 +37,7 @@ type DashboardRowId = typeof DEFAULT_ROW_ORDER[number];
     CdkDropList,
     CdkDrag,
     CdkDragHandle,
+    StatsCardComponent,
   ],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.scss',
@@ -55,9 +56,10 @@ export class DashboardComponent {
   private readonly router = inject(Router);
 
   private static readonly MANUAL_PAGE_SIZE = 20;
+  private static readonly MANUAL_REFILL_THRESHOLD = 3;
 
   constructor() {
-    this.loadMoreManualEvents();
+    this.loadManualEvents(true);
   }
 
   readonly connected = this.hub.isConnected;
@@ -91,13 +93,13 @@ export class DashboardComponent {
   readonly recentLogs = computed(() => this.hub.logs().slice(0, 5));
   readonly recentEvents = computed(() => this.hub.events().slice(0, 5));
 
-  // REST-paged backlog of unresolved manual events (lazily loaded page by page)
-  private readonly manualPages = signal<ManualEvent[]>([]);
-  private readonly manualNextPage = signal(1);
+  // Keyset-paged backlog of unresolved manual events (cursored by timestamp, loaded 20 at a time)
+  private readonly loadedManualEvents = signal<ManualEvent[]>([]);
   private readonly totalUnresolvedManualEvents = signal(0);
+  readonly hasMoreBacklog = signal(true);
   readonly loadingMoreManualEvents = signal(false);
 
-  // Merge live-pushed hub events with the lazily-paged backlog, newest first
+  // Merge live-pushed hub events with the keyset-paged backlog, newest first
   readonly unresolvedManualEvents = computed(() => {
     const byId = new Map<string, ManualEvent>();
     for (const e of this.hub.manualEvents()) {
@@ -105,7 +107,7 @@ export class DashboardComponent {
         byId.set(e.id, e);
       }
     }
-    for (const e of this.manualPages()) {
+    for (const e of this.loadedManualEvents()) {
       if (!e.isResolved) {
         byId.set(e.id, e);
       }
@@ -130,7 +132,7 @@ export class DashboardComponent {
 
   readonly canNavigatePrev = computed(() => this.manualEventIndex() > 0);
   readonly canNavigateNext = computed(() =>
-    this.manualEventIndex() < this.manualEventCount() - 1
+    this.manualEventIndex() < this.unresolvedManualEvents().length - 1 || this.hasMoreBacklog()
   );
 
   // Manual event navigation
@@ -146,8 +148,8 @@ export class DashboardComponent {
     }
     const nextIdx = this.manualEventIndex() + 1;
     if (nextIdx >= this.unresolvedManualEvents().length) {
-      // Reached the end of what's loaded — lazily fetch the next page first
-      this.loadMoreManualEvents(() => {
+      // Reached the end of what's loaded — fetch the next keyset slice first
+      this.loadManualEvents(false, () => {
         const maxIdx = this.unresolvedManualEvents().length - 1;
         this.manualEventIndex.set(Math.min(nextIdx, maxIdx));
       });
@@ -156,19 +158,33 @@ export class DashboardComponent {
     this.manualEventIndex.set(nextIdx);
   }
 
-  private loadMoreManualEvents(after?: () => void): void {
+  // Keyset pagination: cursor on the oldest loaded event's timestamp (via the endpoint's
+  // `toDate` filter) so resolving events never shifts offsets and drops the tail.
+  private loadManualEvents(initial: boolean, after?: () => void): void {
     if (this.loadingMoreManualEvents()) {
       return;
     }
     this.loadingMoreManualEvents.set(true);
-    const page = this.manualNextPage();
+    const cursor = initial ? undefined : this.loadedManualEvents().at(-1)?.timestamp;
     this.eventsApi
-      .getManualEvents({ page, pageSize: DashboardComponent.MANUAL_PAGE_SIZE, isResolved: false })
+      .getManualEvents({
+        pageSize: DashboardComponent.MANUAL_PAGE_SIZE,
+        isResolved: false,
+        toDate: cursor ? String(cursor) : undefined,
+      })
       .subscribe({
         next: (res) => {
-          this.manualPages.update((cur) => [...cur, ...res.items]);
-          this.manualNextPage.set(page + 1);
-          this.totalUnresolvedManualEvents.set(res.totalCount);
+          const seen = new Set(this.loadedManualEvents().map((e) => e.id));
+          const newItems = res.items.filter((e) => !seen.has(e.id));
+          this.loadedManualEvents.update((cur) => [...cur, ...newItems]);
+          if (initial) {
+            this.totalUnresolvedManualEvents.set(res.totalCount);
+          }
+          this.hasMoreBacklog.set(res.items.length === DashboardComponent.MANUAL_PAGE_SIZE && newItems.length > 0);
+          const maxIdx = this.unresolvedManualEvents().length - 1;
+          if (this.manualEventIndex() > maxIdx) {
+            this.manualEventIndex.set(Math.max(0, maxIdx));
+          }
           this.loadingMoreManualEvents.set(false);
           after?.();
         },
@@ -183,11 +199,15 @@ export class DashboardComponent {
     this.eventsApi.resolveManualEvent(event.id).subscribe({
       next: () => {
         this.hub.removeManualEvent(event.id);
-        this.manualPages.update((cur) => cur.filter((e) => e.id !== event.id));
+        this.loadedManualEvents.update((cur) => cur.filter((e) => e.id !== event.id));
         this.totalUnresolvedManualEvents.update((t) => Math.max(0, t - 1));
         const maxIdx = this.unresolvedManualEvents().length - 1;
         if (this.manualEventIndex() > maxIdx) {
           this.manualEventIndex.set(Math.max(0, maxIdx));
+        }
+        // Top up from the next keyset slice before the buffer runs dry
+        if (this.unresolvedManualEvents().length <= DashboardComponent.MANUAL_REFILL_THRESHOLD && this.hasMoreBacklog()) {
+          this.loadManualEvents(false);
         }
         this.toast.success('Event dismissed');
       },
@@ -207,10 +227,10 @@ export class DashboardComponent {
     this.eventsApi.resolveAllManualEvents().subscribe({
       next: (res) => {
         this.hub.clearManualEvents();
-        this.manualPages.set([]);
-        this.manualNextPage.set(1);
+        this.loadedManualEvents.set([]);
         this.totalUnresolvedManualEvents.set(0);
         this.manualEventIndex.set(0);
+        this.hasMoreBacklog.set(true);
         this.toast.success(`Dismissed ${res.resolvedCount} events`);
       },
       error: () => this.toast.error('Failed to dismiss events'),
@@ -247,6 +267,9 @@ export class DashboardComponent {
   // Event helpers
   eventMarkerClass(eventType: string, severity: string): string {
     const t = eventType.toLowerCase();
+    if (t === 'strikereset') {
+      return 'success';
+    }
     if (t.includes('strike')) {
       const s = severity.toLowerCase();
       if (s === 'error') return 'error';
@@ -258,6 +281,7 @@ export class DashboardComponent {
 
   eventTypeSeverity(eventType: string): 'error' | 'warning' | 'info' | 'success' | 'default' {
     const t = eventType.toLowerCase();
+    if (t === 'strikereset') return 'success';
     if (t === 'failedimportstrike' || t === 'queueitemdeleted') return 'error';
     if (t === 'stalledstrike' || t === 'downloadmarkedfordeletion') return 'warning';
     if (t === 'downloadcleaned') return 'success';
@@ -277,13 +301,8 @@ export class DashboardComponent {
     return eventType.replace(/([A-Z])/g, ' $1').trim();
   }
 
-  getDownloadName(event: { data?: string }): string | null {
-    if (!event.data) return null;
-    try {
-      return JSON.parse(event.data)?.itemName || null;
-    } catch {
-      return null;
-    }
+  getDownloadName(event: { itemTitle?: string }): string | null {
+    return event.itemTitle || null;
   }
 
   truncate(text: string, max = 80): string {
@@ -302,6 +321,7 @@ export class DashboardComponent {
 
   eventIcon(eventType: string): string {
     const t = eventType.toLowerCase();
+    if (t === 'strikereset') return 'tablerHistory';
     if (t.includes('strike')) return 'tablerBolt';
     if (t === 'downloadcleaned') return 'tablerDownload';
     if (t === 'queueitemdeleted') return 'tablerTrash';
@@ -354,13 +374,18 @@ export class DashboardComponent {
     return processed;
   }
 
-  parseEventData(data: string | undefined): unknown {
-    if (!data) return null;
-    try {
-      return JSON.parse(data);
-    } catch {
-      return null;
+  manualEventDetails(event: ManualEvent): { label: string; value: string }[] {
+    const details: { label: string; value: string }[] = [];
+    if (event.itemTitle) {
+      details.push({ label: 'Item', value: event.itemTitle });
     }
+    if (event.itemHash) {
+      details.push({ label: 'Hash', value: event.itemHash });
+    }
+    if (event.strikeCount !== null && event.strikeCount !== undefined) {
+      details.push({ label: 'Strike count', value: String(event.strikeCount) });
+    }
+    return details;
   }
 
   navigateTo(path: string): void {

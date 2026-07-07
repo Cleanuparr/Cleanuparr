@@ -89,16 +89,12 @@ public class SeekerIntegrationTests : IDisposable
         searchEvent.CycleId.ShouldBeNull();
         searchEvent.StrikeId.ShouldBeNull();
         searchEvent.TrackingId.ShouldBeNull();
-        searchEvent.Data.ShouldBeNull();
 
-        // Assert: SearchEventData was created with correct properties
-        var searchData = await _fixture.EventsContext.SearchEventData.ToListAsync();
-        searchData.Count.ShouldBe(1);
-        searchData[0].AppEventId.ShouldBe(searchEvent.Id);
-        searchData[0].SearchType.ShouldBe(SeekerSearchType.Replacement);
-        searchData[0].SearchReason.ShouldBe(SeekerSearchReason.Replacement);
-        searchData[0].ItemTitle.ShouldBe("Test.Movie.2024.1080p");
-        searchData[0].GrabbedItems.ShouldBeEmpty();
+        // Assert: search fields were populated on the event
+        searchEvent.SearchType.ShouldBe(SeekerSearchType.Replacement);
+        searchEvent.SearchReason.ShouldBe(SeekerSearchReason.Replacement);
+        searchEvent.ItemTitle.ShouldBe("Test.Movie.2024.1080p");
+        searchEvent.GrabbedItems.ShouldBeEmpty();
 
         // Assert: Notification was sent
         await _fixture.NotificationPublisher.Received(1).NotifySearchTriggered(
@@ -149,9 +145,6 @@ public class SeekerIntegrationTests : IDisposable
         var events = await _fixture.EventsContext.Events.ToListAsync();
         events.ShouldBeEmpty();
 
-        var searchData = await _fixture.EventsContext.SearchEventData.ToListAsync();
-        searchData.ShouldBeEmpty();
-
         await _fixture.NotificationPublisher.DidNotReceive().NotifySearchTriggered(
             Arg.Any<string>(), Arg.Any<SeekerSearchType>(), Arg.Any<SeekerSearchReason>());
 
@@ -200,15 +193,12 @@ public class SeekerIntegrationTests : IDisposable
         searchEvent.CompletedAt.ShouldBeNull();
         searchEvent.CycleId.ShouldBeNull();
         searchEvent.StrikeId.ShouldBeNull();
-        searchEvent.Data.ShouldBeNull();
 
-        // Assert: SearchEventData created
-        var searchData = await _fixture.EventsContext.SearchEventData.ToListAsync();
-        searchData.Count.ShouldBe(1);
-        searchData[0].ItemTitle.ShouldBe("DryRun.Movie.2024");
-        searchData[0].SearchType.ShouldBe(SeekerSearchType.Replacement);
-        searchData[0].SearchReason.ShouldBe(SeekerSearchReason.Replacement);
-        searchData[0].GrabbedItems.ShouldBeEmpty();
+        // Assert: search fields were populated on the event
+        searchEvent.ItemTitle.ShouldBe("DryRun.Movie.2024");
+        searchEvent.SearchType.ShouldBe(SeekerSearchType.Replacement);
+        searchEvent.SearchReason.ShouldBe(SeekerSearchReason.Replacement);
+        searchEvent.GrabbedItems.ShouldBeEmpty();
 
         // Assert: Item remains in queue (dry run doesn't dequeue)
         var remainingItems = await _fixture.DataContext.SearchQueue.CountAsync();

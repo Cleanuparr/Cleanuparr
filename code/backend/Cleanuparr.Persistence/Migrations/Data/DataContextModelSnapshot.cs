@@ -695,6 +695,10 @@ namespace Cleanuparr.Persistence.Migrations.Data
                         .HasColumnType("TEXT")
                         .HasColumnName("encryption_key");
 
+                    b.Property<ushort>("HistoryRetentionDays")
+                        .HasColumnType("INTEGER")
+                        .HasColumnName("history_retention_days");
+
                     b.Property<string>("HttpCertificateValidation")
                         .IsRequired()
                         .HasColumnType("TEXT")
@@ -1079,7 +1083,8 @@ namespace Cleanuparr.Persistence.Migrations.Data
                         .HasColumnType("TEXT")
                         .HasColumnName("id");
 
-                    b.Property<DateTimeOffset>("CreatedAt")
+                    b.Property<string>("CreatedAt")
+                        .IsRequired()
                         .HasColumnType("TEXT")
                         .HasColumnName("created_at");
 
@@ -1130,7 +1135,8 @@ namespace Cleanuparr.Persistence.Migrations.Data
                         .HasColumnType("TEXT")
                         .HasColumnName("type");
 
-                    b.Property<DateTimeOffset>("UpdatedAt")
+                    b.Property<string>("UpdatedAt")
+                        .IsRequired()
                         .HasColumnType("TEXT")
                         .HasColumnName("updated_at");
 
@@ -1577,7 +1583,7 @@ namespace Cleanuparr.Persistence.Migrations.Data
                         .HasColumnType("INTEGER")
                         .HasColumnName("enabled");
 
-                    b.Property<DateTimeOffset?>("LastProcessedAt")
+                    b.Property<string>("LastProcessedAt")
                         .HasColumnType("TEXT")
                         .HasColumnName("last_processed_at");
 
@@ -1688,11 +1694,12 @@ namespace Cleanuparr.Persistence.Migrations.Data
                         .HasColumnType("TEXT")
                         .HasColumnName("item_type");
 
-                    b.Property<DateTimeOffset>("LastSyncedAt")
+                    b.Property<string>("LastSyncedAt")
+                        .IsRequired()
                         .HasColumnType("TEXT")
                         .HasColumnName("last_synced_at");
 
-                    b.Property<DateTimeOffset?>("LastUpgradedAt")
+                    b.Property<string>("LastUpgradedAt")
                         .HasColumnType("TEXT")
                         .HasColumnName("last_upgraded_at");
 
@@ -1747,7 +1754,8 @@ namespace Cleanuparr.Persistence.Migrations.Data
                         .HasColumnType("TEXT")
                         .HasColumnName("item_type");
 
-                    b.Property<DateTimeOffset>("RecordedAt")
+                    b.Property<string>("RecordedAt")
+                        .IsRequired()
                         .HasColumnType("TEXT")
                         .HasColumnName("recorded_at");
 
@@ -1783,7 +1791,8 @@ namespace Cleanuparr.Persistence.Migrations.Data
                         .HasColumnType("TEXT")
                         .HasColumnName("arr_instance_id");
 
-                    b.Property<DateTimeOffset>("CreatedAt")
+                    b.Property<string>("CreatedAt")
+                        .IsRequired()
                         .HasColumnType("TEXT")
                         .HasColumnName("created_at");
 
@@ -1828,7 +1837,8 @@ namespace Cleanuparr.Persistence.Migrations.Data
                         .HasColumnType("INTEGER")
                         .HasColumnName("command_id");
 
-                    b.Property<DateTimeOffset>("CreatedAt")
+                    b.Property<string>("CreatedAt")
+                        .IsRequired()
                         .HasColumnType("TEXT")
                         .HasColumnName("created_at");
 
@@ -1896,7 +1906,8 @@ namespace Cleanuparr.Persistence.Migrations.Data
                         .HasColumnType("TEXT")
                         .HasColumnName("item_type");
 
-                    b.Property<DateTimeOffset>("LastSearchedAt")
+                    b.Property<string>("LastSearchedAt")
+                        .IsRequired()
                         .HasColumnType("TEXT")
                         .HasColumnName("last_searched_at");
 

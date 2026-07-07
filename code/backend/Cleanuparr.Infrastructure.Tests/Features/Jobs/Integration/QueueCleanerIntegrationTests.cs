@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Cleanuparr.Domain.Entities.Arr.Queue;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
@@ -111,12 +110,8 @@ public class QueueCleanerIntegrationTests : IDisposable
         markedEvent.SearchStatus.ShouldBeNull();
         markedEvent.CompletedAt.ShouldBeNull();
         markedEvent.CycleId.ShouldBeNull();
-        markedEvent.Data.ShouldNotBeNull();
-        using (var markedData = JsonDocument.Parse(markedEvent.Data!))
-        {
-            markedData.RootElement.GetProperty("itemName").GetString().ShouldBe("Test.Movie.2024.1080p");
-            markedData.RootElement.GetProperty("hash").GetString().ShouldBe("ABC123DEF456");
-        }
+        markedEvent.ItemTitle.ShouldBe("Test.Movie.2024.1080p");
+        markedEvent.ItemHash.ShouldBe("ABC123DEF456");
 
         // QueueItemDeleted event
         var deletedEvent = events.First(e => e.EventType == EventType.QueueItemDeleted);
@@ -131,14 +126,10 @@ public class QueueCleanerIntegrationTests : IDisposable
         deletedEvent.SearchStatus.ShouldBeNull();
         deletedEvent.CompletedAt.ShouldBeNull();
         deletedEvent.CycleId.ShouldBeNull();
-        deletedEvent.Data.ShouldNotBeNull();
-        using (var deletedData = JsonDocument.Parse(deletedEvent.Data!))
-        {
-            deletedData.RootElement.GetProperty("itemName").GetString().ShouldBe("Test.Movie.2024.1080p");
-            deletedData.RootElement.GetProperty("hash").GetString().ShouldBe("ABC123DEF456");
-            deletedData.RootElement.GetProperty("removeFromClient").GetBoolean().ShouldBe(true);
-            deletedData.RootElement.GetProperty("deleteReason").GetString().ShouldBe("Stalled");
-        }
+        deletedEvent.ItemTitle.ShouldBe("Test.Movie.2024.1080p");
+        deletedEvent.ItemHash.ShouldBe("ABC123DEF456");
+        deletedEvent.RemoveFromClient.ShouldBe(true);
+        deletedEvent.DeleteReason.ShouldBe(DeleteReason.Stalled);
 
         // Assert Phase 4: Notification was triggered
         await _fixture.NotificationPublisher.Received(1).NotifyQueueItemDeleted(true, DeleteReason.Stalled);
@@ -202,14 +193,10 @@ public class QueueCleanerIntegrationTests : IDisposable
         deletedEvent.IsDryRun.ShouldBe(false);
         deletedEvent.StrikeId.ShouldBeNull();
         deletedEvent.SearchStatus.ShouldBeNull();
-        deletedEvent.Data.ShouldNotBeNull();
-        using (var data = JsonDocument.Parse(deletedEvent.Data!))
-        {
-            data.RootElement.GetProperty("itemName").GetString().ShouldBe("Test.Movie.2024.1080p");
-            data.RootElement.GetProperty("hash").GetString().ShouldBe("ABC123DEF456");
-            data.RootElement.GetProperty("removeFromClient").GetBoolean().ShouldBe(true);
-            data.RootElement.GetProperty("deleteReason").GetString().ShouldBe("FailedImport");
-        }
+        deletedEvent.ItemTitle.ShouldBe("Test.Movie.2024.1080p");
+        deletedEvent.ItemHash.ShouldBe("ABC123DEF456");
+        deletedEvent.RemoveFromClient.ShouldBe(true);
+        deletedEvent.DeleteReason.ShouldBe(DeleteReason.FailedImport);
 
         // Notification with FailedImport reason
         await _fixture.NotificationPublisher.Received(1).NotifyQueueItemDeleted(true, DeleteReason.FailedImport);
@@ -303,14 +290,10 @@ public class QueueCleanerIntegrationTests : IDisposable
         deletedEvent.JobRunId.ShouldBe(_fixture.JobRunId);
         deletedEvent.ArrInstanceId.ShouldBe(instance.Id);
         deletedEvent.IsDryRun.ShouldBe(false);
-        deletedEvent.Data.ShouldNotBeNull();
-        using (var data = JsonDocument.Parse(deletedEvent.Data!))
-        {
-            data.RootElement.GetProperty("itemName").GetString().ShouldBe("Test.Movie.2024.1080p");
-            data.RootElement.GetProperty("hash").GetString().ShouldBe("ABC123DEF456");
-            data.RootElement.GetProperty("removeFromClient").GetBoolean().ShouldBe(false);
-            data.RootElement.GetProperty("deleteReason").GetString().ShouldBe("Stalled");
-        }
+        deletedEvent.ItemTitle.ShouldBe("Test.Movie.2024.1080p");
+        deletedEvent.ItemHash.ShouldBe("ABC123DEF456");
+        deletedEvent.RemoveFromClient.ShouldBe(false);
+        deletedEvent.DeleteReason.ShouldBe(DeleteReason.Stalled);
 
         await _fixture.NotificationPublisher.Received(1).NotifyQueueItemDeleted(false, DeleteReason.Stalled);
     }

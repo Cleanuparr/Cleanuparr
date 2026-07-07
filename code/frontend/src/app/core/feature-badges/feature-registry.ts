@@ -36,4 +36,7 @@ export const NEW_FEATURES: NewFeature[] = [
   { id: 'dead-torrent' },
   { id: 'min-seeders' },
   { id: 'unlinked-transmission-label' },
+  { id: 'history-retention' },
+  { id: 'dashboard-stats-card' },
+  { id: 'events-stats-card' },
 ];
