@@ -34,12 +34,12 @@ const METRIC_COLORS: Record<TimelineMetric, string> = {
 };
 
 const EMPTY_STATS: StatsV2Response = {
-  events: { totalCount: 0, byType: {}, bySeverity: {} },
-  strikes: { issued: 0, byType: {}, recovered: 0 },
+  events: { total: 0, byType: {}, bySeverity: {} },
+  strikes: { total: 0, byType: {}, recovered: 0 },
   removals: { total: 0, byReason: {} },
   cleaned: { total: 0, byReason: {} },
-  searches: { triggered: 0, completed: 0, failed: 0, grabbed: 0, byReason: {} },
-  jobs: { totalRuns: 0, completed: 0, failed: 0, byType: {} },
+  searches: { total: 0, completed: 0, failed: 0, grabbed: 0, byReason: {} },
+  jobs: { total: 0, completed: 0, failed: 0, byType: {} },
   windowHours: 0,
   generatedAt: '',
 };
@@ -108,7 +108,7 @@ export class StatsCardComponent {
         key: 'issued',
         label: 'Strikes issued',
         hint: 'Strikes handed out to stalled, slow, or failing downloads in this window.',
-        value: s.strikes.issued,
+        value: s.strikes.total,
         metric: 'strikesIssued',
         tone: 'issued',
       },

@@ -91,13 +91,13 @@ public class StatsService : IStatsService
         {
             Events = new EventV2Stats
             {
-                TotalCount = byType.Values.Sum(),
+                Total = byType.Values.Sum(),
                 ByType = byType,
                 BySeverity = bySeverity,
             },
             Strikes = new StrikeV2Stats
             {
-                Issued = strikesByType.Values.Sum(),
+                Total = strikesByType.Values.Sum(),
                 ByType = strikesByType,
                 Recovered = byType.GetValueOrDefault(EventType.StrikeReset.ToString(), 0),
             },
@@ -210,7 +210,7 @@ public class StatsService : IStatsService
 
         return new SearchesV2Stats
         {
-            Triggered = byType.GetValueOrDefault(EventType.SearchTriggered.ToString(), 0),
+            Total = byType.GetValueOrDefault(EventType.SearchTriggered.ToString(), 0),
             Completed = statusCounts.GetValueOrDefault(SearchCommandStatus.Completed, 0),
             Failed = statusCounts.GetValueOrDefault(SearchCommandStatus.Failed, 0)
                 + statusCounts.GetValueOrDefault(SearchCommandStatus.TimedOut, 0),
@@ -325,12 +325,23 @@ public class StatsService : IStatsService
     {
         Dictionary<string, JobTypeStats> byType = await BuildJobTypeStatsAsync(cutoff);
 
+        Dictionary<string, JobTypeV2Stats> byTypeV2 = byType.ToDictionary(
+            kvp => kvp.Key,
+            kvp => new JobTypeV2Stats
+            {
+                Total = kvp.Value.TotalRuns,
+                Completed = kvp.Value.Completed,
+                Failed = kvp.Value.Failed,
+                LastRunAt = kvp.Value.LastRunAt,
+                NextRunAt = kvp.Value.NextRunAt,
+            });
+
         return new JobV2Stats
         {
-            TotalRuns = byType.Values.Sum(s => s.TotalRuns),
-            Completed = byType.Values.Sum(s => s.Completed),
-            Failed = byType.Values.Sum(s => s.Failed),
-            ByType = byType,
+            Total = byTypeV2.Values.Sum(s => s.Total),
+            Completed = byTypeV2.Values.Sum(s => s.Completed),
+            Failed = byTypeV2.Values.Sum(s => s.Failed),
+            ByType = byTypeV2,
         };
     }
 

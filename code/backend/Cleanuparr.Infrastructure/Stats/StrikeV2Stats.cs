@@ -9,7 +9,7 @@ public class StrikeV2Stats
     /// <summary>
     /// Total strikes issued in the window. Equal to the sum of <see cref="ByType"/>.
     /// </summary>
-    public int Issued { get; set; }
+    public int Total { get; set; }
 
     /// <summary>
     /// Strikes issued in the window, grouped by strike type (Stalled, FailedImport, SlowSpeed, ...).

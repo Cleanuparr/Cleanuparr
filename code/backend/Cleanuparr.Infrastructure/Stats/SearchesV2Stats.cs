@@ -10,7 +10,7 @@ public class SearchesV2Stats
     /// <summary>
     /// Total searches triggered in the window (regardless of their current status).
     /// </summary>
-    public int Triggered { get; set; }
+    public int Total { get; set; }
 
     /// <summary>
     /// Searches that completed successfully.

@@ -8,7 +8,7 @@ public class EventV2Stats
     /// <summary>
     /// Total number of events in the window. Equal to the sum of <see cref="ByType"/>.
     /// </summary>
-    public int TotalCount { get; set; }
+    public int Total { get; set; }
 
     /// <summary>
     /// Events grouped by event type. Keys are PascalCase event-type names; only types with activity are present.

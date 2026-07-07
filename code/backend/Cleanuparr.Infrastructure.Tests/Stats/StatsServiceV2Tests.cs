@@ -74,13 +74,13 @@ public class StatsServiceV2Tests : IDisposable
         StatsV2Response stats = await _service.GetStatsV2Async(24);
 
         stats.WindowHours.ShouldBe(24);
-        stats.Events.TotalCount.ShouldBe(6);
+        stats.Events.Total.ShouldBe(6);
         stats.Events.ByType["StalledStrike"].ShouldBe(2);
 
-        stats.Strikes.Issued.ShouldBe(3);
+        stats.Strikes.Total.ShouldBe(3);
         stats.Strikes.ByType["Stalled"].ShouldBe(2);
         stats.Strikes.ByType["FailedImport"].ShouldBe(1);
-        stats.Strikes.Issued.ShouldBe(stats.Strikes.ByType.Values.Sum());
+        stats.Strikes.Total.ShouldBe(stats.Strikes.ByType.Values.Sum());
         stats.Strikes.Recovered.ShouldBe(1);
 
         stats.Removals.Total.ShouldBe(2);
@@ -113,7 +113,7 @@ public class StatsServiceV2Tests : IDisposable
 
         StatsV2Response stats = await _service.GetStatsV2Async(24);
 
-        stats.Strikes.Issued.ShouldBe(1);
+        stats.Strikes.Total.ShouldBe(1);
         stats.Strikes.ByType["Stalled"].ShouldBe(1);
     }
 
@@ -125,11 +125,11 @@ public class StatsServiceV2Tests : IDisposable
         await _context.SaveChangesAsync();
 
         StatsV2Response live = await _service.GetStatsV2Async(24);
-        live.Strikes.Issued.ShouldBe(1);
+        live.Strikes.Total.ShouldBe(1);
         live.Events.ByType["StalledStrike"].ShouldBe(1);
 
         StatsV2Response withDryRun = await _service.GetStatsV2Async(24, includeDryRun: true);
-        withDryRun.Strikes.Issued.ShouldBe(2);
+        withDryRun.Strikes.Total.ShouldBe(2);
         withDryRun.Events.ByType["StalledStrike"].ShouldBe(2);
     }
 
@@ -167,7 +167,7 @@ public class StatsServiceV2Tests : IDisposable
 
         StatsV2Response stats = await _service.GetStatsV2Async(24);
 
-        stats.Searches.Triggered.ShouldBe(5);
+        stats.Searches.Total.ShouldBe(5);
         stats.Searches.Completed.ShouldBe(2);
         stats.Searches.Failed.ShouldBe(2);
         stats.Searches.Grabbed.ShouldBe(3);

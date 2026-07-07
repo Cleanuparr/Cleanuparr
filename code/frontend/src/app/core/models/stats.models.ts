@@ -10,7 +10,7 @@ export const MALWARE_DELETE_REASONS: readonly DeleteReason[] = [
 ];
 
 export interface JobTypeStats {
-  totalRuns: number;
+  total: number;
   completed: number;
   failed: number;
   lastRunAt?: string;
@@ -19,12 +19,12 @@ export interface JobTypeStats {
 
 export interface StatsV2Response {
   events: {
-    totalCount: number;
+    total: number;
     byType: Record<string, number>;
     bySeverity: Record<string, number>;
   };
   strikes: {
-    issued: number;
+    total: number;
     byType: Record<string, number>;
     recovered: number;
   };
@@ -37,14 +37,14 @@ export interface StatsV2Response {
     byReason: Record<string, number>;
   };
   searches: {
-    triggered: number;
+    total: number;
     completed: number;
     failed: number;
     grabbed: number;
     byReason: Record<string, number>;
   };
   jobs: {
-    totalRuns: number;
+    total: number;
     completed: number;
     failed: number;
     byType: Record<string, JobTypeStats>;

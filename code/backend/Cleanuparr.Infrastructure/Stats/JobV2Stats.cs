@@ -8,7 +8,7 @@ public class JobV2Stats
     /// <summary>
     /// Total job runs in the window across all job types.
     /// </summary>
-    public int TotalRuns { get; set; }
+    public int Total { get; set; }
 
     /// <summary>
     /// Job runs that completed successfully.
@@ -23,5 +23,5 @@ public class JobV2Stats
     /// <summary>
     /// Per-job-type run stats. Keys are PascalCase job-type names (QueueCleaner, MalwareBlocker, ...).
     /// </summary>
-    public Dictionary<string, JobTypeStats> ByType { get; set; } = new();
+    public Dictionary<string, JobTypeV2Stats> ByType { get; set; } = new();
 }

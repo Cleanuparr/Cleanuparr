@@ -106,7 +106,7 @@ If `BASE_PATH` is set, include it in the URL: `http://localhost:11011/cleanuparr
 ```json
 {
   "events": {
-    "totalCount": 60,
+    "total": 60,
     "byType": {
       "FailedImportStrike": 5,
       "StalledStrike": 12,
@@ -129,7 +129,7 @@ If `BASE_PATH` is set, include it in the URL: `http://localhost:11011/cleanuparr
     }
   },
   "strikes": {
-    "issued": 24,
+    "total": 24,
     "byType": {
       "Stalled": 12,
       "DownloadingMetadata": 2,
@@ -162,7 +162,7 @@ If `BASE_PATH` is set, include it in the URL: `http://localhost:11011/cleanuparr
     }
   },
   "searches": {
-    "triggered": 8,
+    "total": 8,
     "completed": 6,
     "failed": 1,
     "grabbed": 5,
@@ -174,47 +174,47 @@ If `BASE_PATH` is set, include it in the URL: `http://localhost:11011/cleanuparr
     }
   },
   "jobs": {
-    "totalRuns": 168,
+    "total": 168,
     "completed": 165,
     "failed": 3,
     "byType": {
       "QueueCleaner": {
-        "totalRuns": 48,
+        "total": 48,
         "completed": 46,
         "failed": 2,
         "lastRunAt": "2025-01-15T12:00:00Z",
         "nextRunAt": "2025-01-15T12:30:00Z"
       },
       "MalwareBlocker": {
-        "totalRuns": 48,
+        "total": 48,
         "completed": 48,
         "failed": 0,
         "lastRunAt": "2025-01-15T12:00:00Z",
         "nextRunAt": "2025-01-15T12:30:00Z"
       },
       "DownloadCleaner": {
-        "totalRuns": 24,
+        "total": 24,
         "completed": 24,
         "failed": 0,
         "lastRunAt": "2025-01-15T12:00:00Z",
         "nextRunAt": "2025-01-15T13:00:00Z"
       },
       "BlacklistSynchronizer": {
-        "totalRuns": 12,
+        "total": 12,
         "completed": 12,
         "failed": 0,
         "lastRunAt": "2025-01-15T12:00:00Z",
         "nextRunAt": "2025-01-15T14:00:00Z"
       },
       "Seeker": {
-        "totalRuns": 30,
+        "total": 30,
         "completed": 29,
         "failed": 1,
         "lastRunAt": "2025-01-15T12:00:00Z",
         "nextRunAt": "2025-01-15T12:15:00Z"
       },
       "CustomFormatScoreSyncer": {
-        "totalRuns": 6,
+        "total": 6,
         "completed": 6,
         "failed": 0,
         "lastRunAt": "2025-01-15T12:00:00Z",
@@ -262,7 +262,7 @@ The example lists every possible key for each breakdown for reference. In a real
 
 The raw event audit for the window. The higher-level sections (`strikes`, `removals`, `cleaned`, `searches`) are ergonomic roll-ups derived from these same events.
 
-- **totalCount**: Total events in the window (equal to the sum of `byType`).
+- **total**: Total number of events in the window, equal to the sum of `byType`.
 - **byType**: Events grouped by event type. Possible types:
   - `FailedImportStrike`: A strike given because the download kept failing to import into the arr app.
   - `StalledStrike`: A strike given because the download stopped making progress.
@@ -290,7 +290,7 @@ The raw event audit for the window. The higher-level sections (`strikes`, `remov
 
 Strike activity in the window.
 
-- **issued**: Total strikes issued (equal to the sum of `byType`).
+- **total**: Total strikes issued in the window, equal to the sum of `byType`.
 - **byType**: Strikes grouped by type. Possible types:
   - `Stalled`: Strikes for downloads that stopped making progress.
   - `DownloadingMetadata`: Strikes for downloads stuck fetching torrent metadata.
@@ -345,7 +345,7 @@ Downloads cleaned by the download cleaner in the window. Cleaning is different f
 
 Seeker search activity in the window. A single record is tracked per search and updated as it completes, so the counts never double-count.
 
-- **triggered**: Total searches started in the window, regardless of their current status.
+- **total**: Total searches started in the window, regardless of their current status.
 - **completed**: Searches that finished successfully.
 - **failed**: Searches that did not succeed, counting both failed and timed-out searches.
 - **grabbed**: Total items grabbed as a result of the triggered searches.
@@ -363,8 +363,8 @@ Seeker search activity in the window. A single record is tracked per search and 
 
 Scheduled job run outcomes in the window. Job runs are recorded regardless of dry-run mode.
 
-- **totalRuns**, **completed**, **failed**: Overall run counts across all job types.
-- **byType**: Per-job-type stats. Each entry contains its own **totalRuns**, **completed**, **failed**, **lastRunAt** (most recent run), and **nextRunAt** (next scheduled run). Possible job types:
+- **total**: Total job runs in the window across all job types. **completed** and **failed** break that total down by outcome.
+- **byType**: Per-job-type stats. Each entry contains its own **total** (runs of that job type), **completed**, **failed**, **lastRunAt** (most recent run), and **nextRunAt** (next scheduled run). Possible job types:
   - `QueueCleaner`: Watches the arr queues and removes downloads caught by the strike rules.
   - `MalwareBlocker`: Scans queued downloads and removes ones containing blocked or malicious files.
   - `DownloadCleaner`: Removes finished downloads once they meet their seeding goals.
@@ -466,10 +466,10 @@ An unsupported `bucket` value returns `400 Bad Request`.
       headers:
         X-Api-Key: YOUR_API_KEY
       mappings:
-        - field: events.totalCount
+        - field: events.total
           label: Events (7d)
           format: number
-        - field: strikes.issued
+        - field: strikes.total
           label: Strikes issued
           format: number
         - field: removals.total
@@ -493,12 +493,12 @@ To change the timeframe, add a query parameter to the URL: `http://localhost:110
 Any tool that can fetch and parse JSON can use this endpoint. The response is a flat, predictable JSON structure designed for easy field mapping.
 
 Key fields for dashboards:
-- `events.totalCount`: Total events in the window.
-- `strikes.issued`: Strikes issued in the window.
+- `events.total`: Total events in the window.
+- `strikes.total`: Strikes issued in the window.
 - `removals.total`: Downloads removed.
 - `removals.byReason.AllFilesBlocked`: Malware removals (combine with `AtLeastOneFileBlocked`).
 - `cleaned.total`: Downloads cleaned after meeting seeding goals.
-- `searches.triggered`: Seeker searches triggered.
+- `searches.total`: Seeker searches triggered.
 - `jobs.byType.<JobType>.failed`: Failed job runs.
 - `jobs.byType.<JobType>.nextRunAt`: Next scheduled run.
 - `health.downloadClients[0].isHealthy`: First download client health.
