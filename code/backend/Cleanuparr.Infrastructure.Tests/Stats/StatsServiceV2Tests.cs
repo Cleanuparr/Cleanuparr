@@ -6,7 +6,6 @@ using Cleanuparr.Infrastructure.Stats;
 using Cleanuparr.Infrastructure.Tests.Features.Jobs.TestHelpers;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Events;
-using Cleanuparr.Persistence.Models.State;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Shouldly;
@@ -14,9 +13,6 @@ using Xunit;
 
 namespace Cleanuparr.Infrastructure.Tests.Stats;
 
-/// <summary>
-/// Verifies the v2 stats service derives strike/event/malware metrics from the events table.
-/// </summary>
 public class StatsServiceV2Tests : IDisposable
 {
     private readonly EventsContext _context;
@@ -42,57 +38,192 @@ public class StatsServiceV2Tests : IDisposable
         GC.SuppressFinalize(this);
     }
 
-    private AppEvent Event(EventType type, DeleteReason? deleteReason = null) => new()
+    private static AppEvent Event(
+        EventType type,
+        DeleteReason? deleteReason = null,
+        CleanReason? cleanReason = null,
+        SearchCommandStatus? searchStatus = null,
+        SeekerSearchReason? searchReason = null,
+        List<string>? grabbedItems = null,
+        bool isDryRun = false,
+        DateTimeOffset? timestamp = null) => new()
     {
         EventType = type,
         Message = type.ToString(),
         Severity = EventSeverity.Information,
-        Timestamp = DateTimeOffset.UtcNow.AddHours(-1),
+        Timestamp = timestamp ?? DateTimeOffset.UtcNow.AddHours(-1),
         DeleteReason = deleteReason,
+        CleanReason = cleanReason,
+        SearchStatus = searchStatus,
+        SearchReason = searchReason,
+        GrabbedItems = grabbedItems ?? [],
+        IsDryRun = isDryRun,
     };
 
     [Fact]
-    public async Task GetStatsV2Async_DerivesMetricsFromEvents()
+    public async Task GetStatsV2Async_DerivesWindowedMetricsFromEvents()
     {
         _context.Events.Add(Event(EventType.StalledStrike));
         _context.Events.Add(Event(EventType.StalledStrike));
+        _context.Events.Add(Event(EventType.FailedImportStrike));
         _context.Events.Add(Event(EventType.StrikeReset));
-        _context.Events.Add(Event(EventType.QueueItemDeleted, DeleteReason.AllFilesBlocked));
-        _context.Events.Add(Event(EventType.QueueItemDeleted, DeleteReason.Stalled));
-
-        // A live active strike
-        DownloadItem item = new() { DownloadId = "h1", Title = "t1" };
-        JobRun run = new() { Id = Guid.NewGuid(), Type = JobType.QueueCleaner };
-        _context.DownloadItems.Add(item);
-        _context.JobRuns.Add(run);
-        _context.Strikes.Add(new Strike { DownloadItemId = item.Id, JobRunId = run.Id, Type = StrikeType.Stalled });
-
+        _context.Events.Add(Event(EventType.QueueItemDeleted, deleteReason: DeleteReason.AllFilesBlocked));
+        _context.Events.Add(Event(EventType.QueueItemDeleted, deleteReason: DeleteReason.Stalled));
         await _context.SaveChangesAsync();
 
         StatsV2Response stats = await _service.GetStatsV2Async(24);
 
-        stats.Strikes.Issued.ShouldBe(2);      // 1 active + 1 history StalledStrike
-        stats.Strikes.Recovered.ShouldBe(1);   // StrikeReset
-        stats.Strikes.Removed.ShouldBe(2);     // two QueueItemDeleted
-        stats.Malware.Blocked.ShouldBe(1);     // only AllFilesBlocked
-        stats.Strikes.Active["Stalled"].ShouldBe(1);
+        stats.WindowHours.ShouldBe(24);
+        stats.Events.TotalCount.ShouldBe(6);
         stats.Events.ByType["StalledStrike"].ShouldBe(2);
-        stats.Events.TotalCount.ShouldBe(5);
+
+        stats.Strikes.Issued.ShouldBe(3);
+        stats.Strikes.ByType["Stalled"].ShouldBe(2);
+        stats.Strikes.ByType["FailedImport"].ShouldBe(1);
+        stats.Strikes.Issued.ShouldBe(stats.Strikes.ByType.Values.Sum());
+        stats.Strikes.Recovered.ShouldBe(1);
+
+        stats.Removals.Total.ShouldBe(2);
+        stats.Removals.ByReason["AllFilesBlocked"].ShouldBe(1);
+        stats.Removals.ByReason["Stalled"].ShouldBe(1);
     }
 
     [Fact]
-    public async Task GetTimelineAsync_BucketsMatchingEventsByDay()
+    public async Task GetStatsV2Async_MalwareIsDerivedFromRemovalReasons()
     {
-        _context.Events.Add(Event(EventType.QueueItemDeleted, DeleteReason.AllFilesBlocked));
-        _context.Events.Add(Event(EventType.QueueItemDeleted, DeleteReason.Stalled));
-        _context.Events.Add(Event(EventType.StrikeReset)); // not a removal
-        _context.Events.Add(Event(EventType.QueueItemDeleted, DeleteReason.SlowSpeed));
+        _context.Events.Add(Event(EventType.QueueItemDeleted, deleteReason: DeleteReason.AllFilesBlocked));
+        _context.Events.Add(Event(EventType.QueueItemDeleted, deleteReason: DeleteReason.AtLeastOneFileBlocked));
+        _context.Events.Add(Event(EventType.QueueItemDeleted, deleteReason: DeleteReason.SlowSpeed));
+        await _context.SaveChangesAsync();
+
+        StatsV2Response stats = await _service.GetStatsV2Async(24);
+
+        int malware = stats.Removals.ByReason.GetValueOrDefault("AllFilesBlocked")
+            + stats.Removals.ByReason.GetValueOrDefault("AtLeastOneFileBlocked");
+        malware.ShouldBe(2);
+        stats.Removals.Total.ShouldBe(3);
+    }
+
+    [Fact]
+    public async Task GetStatsV2Async_StrikesRespectWindow()
+    {
+        _context.Events.Add(Event(EventType.StalledStrike));
+        _context.Events.Add(Event(EventType.StalledStrike, timestamp: DateTimeOffset.UtcNow.AddHours(-100)));
+        await _context.SaveChangesAsync();
+
+        StatsV2Response stats = await _service.GetStatsV2Async(24);
+
+        stats.Strikes.Issued.ShouldBe(1);
+        stats.Strikes.ByType["Stalled"].ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task GetStatsV2Async_ExcludesDryRunByDefault()
+    {
+        _context.Events.Add(Event(EventType.StalledStrike));
+        _context.Events.Add(Event(EventType.StalledStrike, isDryRun: true));
+        await _context.SaveChangesAsync();
+
+        StatsV2Response live = await _service.GetStatsV2Async(24);
+        live.Strikes.Issued.ShouldBe(1);
+        live.Events.ByType["StalledStrike"].ShouldBe(1);
+
+        StatsV2Response withDryRun = await _service.GetStatsV2Async(24, includeDryRun: true);
+        withDryRun.Strikes.Issued.ShouldBe(2);
+        withDryRun.Events.ByType["StalledStrike"].ShouldBe(2);
+    }
+
+    [Fact]
+    public async Task GetStatsV2Async_CleanedGroupsByReasonSkippingNone()
+    {
+        _context.Events.Add(Event(EventType.DownloadCleaned, cleanReason: CleanReason.MaxRatioReached));
+        _context.Events.Add(Event(EventType.DownloadCleaned, cleanReason: CleanReason.MaxRatioReached));
+        _context.Events.Add(Event(EventType.DownloadCleaned, cleanReason: CleanReason.MaxSeedTimeReached));
+        _context.Events.Add(Event(EventType.DownloadCleaned, cleanReason: CleanReason.None));
+        await _context.SaveChangesAsync();
+
+        StatsV2Response stats = await _service.GetStatsV2Async(24);
+
+        stats.Cleaned.Total.ShouldBe(4);
+        stats.Cleaned.ByReason["MaxRatioReached"].ShouldBe(2);
+        stats.Cleaned.ByReason["MaxSeedTimeReached"].ShouldBe(1);
+        stats.Cleaned.ByReason.ShouldNotContainKey("None");
+    }
+
+    [Fact]
+    public async Task GetStatsV2Async_SearchesAggregateStatusReasonAndGrabbed()
+    {
+        _context.Events.Add(Event(EventType.SearchTriggered, searchStatus: SearchCommandStatus.Completed,
+            searchReason: SeekerSearchReason.Missing, grabbedItems: ["a", "b"]));
+        _context.Events.Add(Event(EventType.SearchTriggered, searchStatus: SearchCommandStatus.Completed,
+            searchReason: SeekerSearchReason.QualityCutoffNotMet, grabbedItems: ["c"]));
+        _context.Events.Add(Event(EventType.SearchTriggered, searchStatus: SearchCommandStatus.Failed,
+            searchReason: SeekerSearchReason.Missing));
+        _context.Events.Add(Event(EventType.SearchTriggered, searchStatus: SearchCommandStatus.TimedOut,
+            searchReason: SeekerSearchReason.Replacement));
+        _context.Events.Add(Event(EventType.SearchTriggered, searchStatus: SearchCommandStatus.Pending,
+            searchReason: SeekerSearchReason.Missing));
+        await _context.SaveChangesAsync();
+
+        StatsV2Response stats = await _service.GetStatsV2Async(24);
+
+        stats.Searches.Triggered.ShouldBe(5);
+        stats.Searches.Completed.ShouldBe(2);
+        stats.Searches.Failed.ShouldBe(2);
+        stats.Searches.Grabbed.ShouldBe(3);
+        stats.Searches.ByReason["Missing"].ShouldBe(3);
+        stats.Searches.ByReason["QualityCutoffNotMet"].ShouldBe(1);
+        stats.Searches.ByReason["Replacement"].ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task GetTimelineAsync_FiltersByMetricAndDryRun()
+    {
+        _context.Events.Add(Event(EventType.QueueItemDeleted, deleteReason: DeleteReason.AllFilesBlocked));
+        _context.Events.Add(Event(EventType.QueueItemDeleted, deleteReason: DeleteReason.Stalled));
+        _context.Events.Add(Event(EventType.StrikeReset));
+        _context.Events.Add(Event(EventType.QueueItemDeleted, deleteReason: DeleteReason.SlowSpeed, isDryRun: true));
         await _context.SaveChangesAsync();
 
         List<TimelineBucketDto> removed = await _service.GetTimelineAsync("removed", 24);
-        removed.Sum(b => b.Count).ShouldBe(3); // three QueueItemDeleted
+        removed.Sum(b => b.Count).ShouldBe(2);
+
+        List<TimelineBucketDto> removedWithDryRun = await _service.GetTimelineAsync("removed", 24, includeDryRun: true);
+        removedWithDryRun.Sum(b => b.Count).ShouldBe(3);
 
         List<TimelineBucketDto> malware = await _service.GetTimelineAsync("malwareBlocked", 24);
-        malware.Sum(b => b.Count).ShouldBe(1); // only AllFilesBlocked
+        malware.Sum(b => b.Count).ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task GetTimelineAsync_MonthBucketsAreFirstOfMonth()
+    {
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+        _context.Events.Add(Event(EventType.QueueItemDeleted, deleteReason: DeleteReason.Stalled, timestamp: now));
+        _context.Events.Add(Event(EventType.QueueItemDeleted, deleteReason: DeleteReason.Stalled, timestamp: now.AddDays(-40)));
+        _context.Events.Add(Event(EventType.QueueItemDeleted, deleteReason: DeleteReason.Stalled, timestamp: now.AddDays(-75)));
+        await _context.SaveChangesAsync();
+
+        List<TimelineBucketDto> series = await _service.GetTimelineAsync("removed", 8760, TimelineBucketSize.Month);
+
+        series.Sum(b => b.Count).ShouldBe(3);
+        series.Count(b => b.Count > 0).ShouldBe(3);
+        series.ShouldAllBe(b => b.Date.Day == 1);
+    }
+
+    [Fact]
+    public async Task GetTimelineAsync_WeekBucketsStartOnMonday()
+    {
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+        _context.Events.Add(Event(EventType.QueueItemDeleted, deleteReason: DeleteReason.Stalled, timestamp: now));
+        _context.Events.Add(Event(EventType.QueueItemDeleted, deleteReason: DeleteReason.Stalled, timestamp: now.AddDays(-10)));
+        _context.Events.Add(Event(EventType.QueueItemDeleted, deleteReason: DeleteReason.Stalled, timestamp: now.AddDays(-20)));
+        await _context.SaveChangesAsync();
+
+        List<TimelineBucketDto> series = await _service.GetTimelineAsync("removed", 720, TimelineBucketSize.Week);
+
+        series.Sum(b => b.Count).ShouldBe(3);
+        series.Count(b => b.Count > 0).ShouldBe(3);
+        series.ShouldAllBe(b => b.Date.DayOfWeek == DayOfWeek.Monday);
     }
 }
