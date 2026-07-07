@@ -310,18 +310,18 @@ Downloads removed from the queue in the window, broken down by reason. This is t
 
 - **total**: Total removals in the window, across all reasons.
 - **byReason**: Removals grouped by reason. Possible reasons:
-  - `Stalled`: Removed for not progressing within the allowed time.
-  - `FailedImport`: Removed after too many failed import attempts.
-  - `DownloadingMetadata`: Removed for being stuck fetching metadata too long.
-  - `SlowSpeed`: Removed for staying below the minimum speed too long.
+  - `Stalled`: Removed for being stalled (not downloading).
+  - `FailedImport`: Removed for being stuck at `failed to import` in the *arrs.
+  - `DownloadingMetadata`: Removed for being stuck fetching metadata (qBittorrent only).
+  - `SlowSpeed`: Removed for staying below the minimum speed.
   - `SlowTime`: Removed because its estimated time exceeded the maximum allowed.
-  - `AllFilesSkipped`: Removed because every file in it was marked as unwanted.
-  - `AllFilesSkippedByQBit`: Removed because qBittorrent marked every file as "do not download", so nothing was ever downloaded.
-  - `AllFilesBlocked`: Removed because every file matched the malware blocklist. Counts as malware.
-  - `AtLeastOneFileBlocked`: Removed because at least one file matched the malware blocklist, with "delete if any file is blocked" enabled. Counts as malware.
+  - `AllFilesSkipped`: Removed because every file in it was marked as `unwanted`/`skipped`/`do not download`.
+  - `AllFilesSkippedByQBit`: Removed because qBittorrent marked every file as `do not download`, so nothing was ever downloaded.
+  - `AllFilesBlocked`: Removed because every file matched the malware blocklist.
+  - `AtLeastOneFileBlocked`: Removed because at least one file matched the malware blocklist.
 
 <Note>
-**Malware blocked** is not a separate field. It is the sum of the `AllFilesBlocked` and `AtLeastOneFileBlocked` reasons in this breakdown.
+The number of **Malware blocked** can be derived from the sum of the `AllFilesBlocked` and `AtLeastOneFileBlocked`.
 </Note>
 
 </ConfigSection>
@@ -330,7 +330,7 @@ Downloads removed from the queue in the window, broken down by reason. This is t
   title="cleaned"
 >
 
-Downloads cleaned by the download cleaner in the window. Cleaning is different from a removal: it happens when a download meets its seeding goals, not because it was struck out.
+Downloads cleaned by the `Download Cleaner` in the window.
 
 - **total**: Total cleaned downloads in the window.
 - **byReason**: Cleaned downloads grouped by reason. Possible reasons:
@@ -343,7 +343,7 @@ Downloads cleaned by the download cleaner in the window. Cleaning is different f
   title="searches"
 >
 
-Seeker search activity in the window. A single record is tracked per search and updated as it completes, so the counts never double-count.
+Seeker search activity in the window. A single record is tracked per search and updated as it completes.
 
 - **total**: Total searches started in the window, regardless of their current status.
 - **completed**: Searches that finished successfully.
@@ -365,12 +365,12 @@ Scheduled job run outcomes in the window. Job runs are recorded regardless of dr
 
 - **total**: Total job runs in the window across all job types. **completed** and **failed** break that total down by outcome.
 - **byType**: Per-job-type stats. Each entry contains its own **total** (runs of that job type), **completed**, **failed**, **lastRunAt** (most recent run), and **nextRunAt** (next scheduled run). Possible job types:
-  - `QueueCleaner`: Watches the arr queues and removes downloads caught by the strike rules.
+  - `QueueCleaner`: Watches the *arr queues and removes downloads caught by the strike rules.
   - `MalwareBlocker`: Scans queued downloads and removes ones containing blocked or malicious files.
   - `DownloadCleaner`: Removes finished downloads once they meet their seeding goals.
-  - `BlacklistSynchronizer`: Refreshes the malware blocklist patterns from their source.
+  - `BlacklistSynchronizer`: Refreshes the qBittorrent malware blocklist patterns from their source.
   - `Seeker`: Searches for missing items and quality upgrades.
-  - `CustomFormatScoreSyncer`: Syncs custom format scores from the arr apps.
+  - `CustomFormatScoreSyncer`: Syncs custom format scores from the *arr apps.
 
 </ConfigSection>
 
