@@ -1,4 +1,5 @@
 using Cleanuparr.Api.Common;
+using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Stats;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -18,36 +19,46 @@ public class StatsV2Controller : ControllerBase
     }
 
     /// <summary>
-    /// Aggregated statistics for the given timeframe.
+    /// Aggregated statistics for the given timeframe. Every section except health is windowed and, by
+    /// default, excludes dry-run activity.
     /// </summary>
     /// <param name="hours">Timeframe in hours (default 168, range 1-8760)</param>
+    /// <param name="includeDryRun">Include dry-run activity in the windowed sections (default false)</param>
     [HttpGet]
-    public async Task<IActionResult> GetStats([FromQuery] int hours = 168)
+    public async Task<IActionResult> GetStats([FromQuery] int hours = 168, [FromQuery] bool includeDryRun = false)
     {
         hours = TimelineWindow.ClampHours(hours);
-        StatsV2Response stats = await _statsService.GetStatsV2Async(hours);
+        StatsV2Response stats = await _statsService.GetStatsV2Async(hours, includeDryRun);
         return Ok(stats);
     }
 
     /// <summary>
-    /// Day-bucketed timeline for a single metric.
+    /// Bucketed timeline for a single metric.
     /// </summary>
     /// <param name="metric">strikesIssued | recovered | removed | malwareBlocked | events</param>
     /// <param name="hours">Timeframe in hours (default 720, range 1-8760)</param>
-    /// <param name="bucket">Only "day" is currently supported.</param>
+    /// <param name="bucket">Bucket size: hour | day | week | month. When omitted, hourly for windows up to 24h, daily otherwise.</param>
+    /// <param name="includeDryRun">Include dry-run activity (default false)</param>
     [HttpGet("timeline")]
     public async Task<IActionResult> GetTimeline(
         [FromQuery] string metric = "events",
         [FromQuery] int hours = 720,
-        [FromQuery] string bucket = "day")
+        [FromQuery] string? bucket = null,
+        [FromQuery] bool includeDryRun = false)
     {
-        if (!string.Equals(bucket, "day", StringComparison.OrdinalIgnoreCase))
+        TimelineBucketSize? size = null;
+        if (!string.IsNullOrWhiteSpace(bucket))
         {
-            return BadRequest($"Unsupported bucket '{bucket}'. Only 'day' is currently supported.");
+            if (!Enum.TryParse(bucket, ignoreCase: true, out TimelineBucketSize parsed) || !Enum.IsDefined(parsed))
+            {
+                return BadRequest($"Unsupported bucket '{bucket}'. Supported values: hour, day, week, month.");
+            }
+
+            size = parsed;
         }
 
         hours = TimelineWindow.ClampHours(hours);
-        List<TimelineBucketDto> series = await _statsService.GetTimelineAsync(metric, hours);
+        List<TimelineBucketDto> series = await _statsService.GetTimelineAsync(metric, hours, size, includeDryRun);
         return Ok(series);
     }
 }

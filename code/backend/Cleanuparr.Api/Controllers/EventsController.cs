@@ -184,10 +184,10 @@ public class EventsController : ControllerBase
         hours = TimelineWindow.ClampHours(hours);
         DateTimeOffset now = DateTimeOffset.UtcNow;
         DateTimeOffset cutoff = now.AddHours(-hours);
-        bool hourly = TimelineBucketing.IsHourly(hours);
+        TimelineBucketSize size = TimelineBucketing.DefaultFor(hours);
         string cutoffText = cutoff.UtcDateTime.ToString("yyyy-MM-dd HH:mm:ss.fffffff", CultureInfo.InvariantCulture);
 
-        string bucketExpr = $"substr(timestamp, 1, {TimelineBucketing.KeyLength(hourly)})";
+        string bucketExpr = TimelineBucketing.BucketExpr(size);
         List<BucketTypeCount> rows = await _context.Database
             .SqlQueryRaw<BucketTypeCount>(
                 $$"""
@@ -203,7 +203,7 @@ public class EventsController : ControllerBase
         HashSet<EventType> presentSet = [];
         foreach (BucketTypeCount row in rows)
         {
-            DateTimeOffset bucket = TimelineBucketing.ParseKey(row.Bucket, hourly);
+            DateTimeOffset bucket = TimelineBucketing.ParseKey(row.Bucket, size);
             EventType type = Enum.Parse<EventType>(row.EventType, ignoreCase: true);
             byBucketType[(bucket, type)] = row.Count;
             presentSet.Add(type);
@@ -214,7 +214,7 @@ public class EventsController : ControllerBase
             .ToList();
 
         List<EventTypeTimelineBucket> buckets = [];
-        foreach (DateTimeOffset bucket in TimelineBucketing.Buckets(cutoff, now, hourly))
+        foreach (DateTimeOffset bucket in TimelineBucketing.Buckets(cutoff, now, size))
         {
             Dictionary<string, int> counts = new();
             foreach (EventType type in presentTypes)

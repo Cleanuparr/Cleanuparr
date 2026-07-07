@@ -51,15 +51,17 @@ public class StatsService : IStatsService
         };
     }
 
-    private static readonly EventType[] StrikeEventTypes =
-    [
-        EventType.StalledStrike,
-        EventType.DownloadingMetadataStrike,
-        EventType.FailedImportStrike,
-        EventType.SlowSpeedStrike,
-        EventType.SlowTimeStrike,
-        EventType.DeadTorrentStrike,
-    ];
+    private static readonly Dictionary<EventType, StrikeType> StrikeEventToType = new()
+    {
+        [EventType.StalledStrike] = StrikeType.Stalled,
+        [EventType.DownloadingMetadataStrike] = StrikeType.DownloadingMetadata,
+        [EventType.FailedImportStrike] = StrikeType.FailedImport,
+        [EventType.SlowSpeedStrike] = StrikeType.SlowSpeed,
+        [EventType.SlowTimeStrike] = StrikeType.SlowTime,
+        [EventType.DeadTorrentStrike] = StrikeType.DeadTorrent,
+    };
+
+    private static readonly EventType[] StrikeEventTypes = [.. StrikeEventToType.Keys];
 
     private static readonly DeleteReason[] MalwareReasons =
     [
@@ -68,18 +70,22 @@ public class StatsService : IStatsService
     ];
 
     /// <inheritdoc />
-    public async Task<StatsV2Response> GetStatsV2Async(int hours)
+    public async Task<StatsV2Response> GetStatsV2Async(int hours, bool includeDryRun = false)
     {
         DateTimeOffset cutoff = DateTimeOffset.UtcNow.AddHours(-hours);
 
-        Dictionary<string, int> byType = await MergedCountsAsync(cutoff, e => e.EventType);
-        Dictionary<string, int> bySeverity = await MergedCountsAsync(cutoff, e => e.Severity);
+        Dictionary<string, int> byType = await MergedCountsAsync(cutoff, e => e.EventType, includeDryRun);
+        Dictionary<string, int> bySeverity = await MergedCountsAsync(cutoff, e => e.Severity, includeDryRun);
 
-        Dictionary<string, int> activeStrikes = (await _eventsContext.Strikes
-                .GroupBy(s => s.Type)
-                .Select(g => new { Type = g.Key, Count = g.Count() })
-                .ToListAsync())
-            .ToDictionary(x => x.Type.ToString(), x => x.Count);
+        Dictionary<string, int> strikesByType = [];
+        foreach ((EventType eventType, StrikeType strikeType) in StrikeEventToType)
+        {
+            int count = byType.GetValueOrDefault(eventType.ToString(), 0);
+            if (count > 0)
+            {
+                strikesByType[strikeType.ToString()] = count;
+            }
+        }
 
         return new StatsV2Response
         {
@@ -91,34 +97,41 @@ public class StatsService : IStatsService
             },
             Strikes = new StrikeV2Stats
             {
-                Active = activeStrikes,
-                Issued = StrikeEventTypes.Sum(t => byType.GetValueOrDefault(t.ToString(), 0)),
+                Issued = strikesByType.Values.Sum(),
+                ByType = strikesByType,
                 Recovered = byType.GetValueOrDefault(EventType.StrikeReset.ToString(), 0),
-                Removed = byType.GetValueOrDefault(EventType.QueueItemDeleted.ToString(), 0),
             },
-            Malware = new MalwareV2Stats
+            Removals = new RemovalsV2Stats
             {
-                Blocked = await CountMalwareAsync(cutoff),
+                Total = byType.GetValueOrDefault(EventType.QueueItemDeleted.ToString(), 0),
+                ByReason = await RemovalsByReasonAsync(cutoff, includeDryRun),
             },
+            Cleaned = new CleanedV2Stats
+            {
+                Total = byType.GetValueOrDefault(EventType.DownloadCleaned.ToString(), 0),
+                ByReason = await CleanedByReasonAsync(cutoff, includeDryRun),
+            },
+            Searches = await GetSearchStatsAsync(cutoff, byType, includeDryRun),
             Jobs = await GetJobV2StatsAsync(cutoff),
             Health = GetHealthStats(),
+            WindowHours = hours,
             GeneratedAt = DateTimeOffset.UtcNow,
         };
     }
 
     /// <inheritdoc />
-    public async Task<List<TimelineBucketDto>> GetTimelineAsync(string metric, int hours)
+    public async Task<List<TimelineBucketDto>> GetTimelineAsync(string metric, int hours, TimelineBucketSize? bucket = null, bool includeDryRun = false)
     {
         DateTimeOffset now = DateTimeOffset.UtcNow;
         DateTimeOffset cutoff = now.AddHours(-hours);
-        bool hourly = TimelineBucketing.IsHourly(hours);
+        TimelineBucketSize size = bucket ?? TimelineBucketing.DefaultFor(hours);
 
-        Dictionary<DateTimeOffset, int> counts = await MetricCountsAsync(cutoff, metric, hourly);
+        Dictionary<DateTimeOffset, int> counts = await MetricCountsAsync(cutoff, metric, size, includeDryRun);
 
         List<TimelineBucketDto> series = [];
-        foreach (DateTimeOffset bucket in TimelineBucketing.Buckets(cutoff, now, hourly))
+        foreach (DateTimeOffset point in TimelineBucketing.Buckets(cutoff, now, size))
         {
-            series.Add(new TimelineBucketDto { Date = bucket, Count = counts.GetValueOrDefault(bucket) });
+            series.Add(new TimelineBucketDto { Date = point, Count = counts.GetValueOrDefault(point) });
         }
 
         return series;
@@ -126,11 +139,12 @@ public class StatsService : IStatsService
 
     private async Task<Dictionary<string, int>> MergedCountsAsync<TKey>(
         DateTimeOffset cutoff,
-        System.Linq.Expressions.Expression<Func<Persistence.Models.Events.AppEvent, TKey>> selector)
+        System.Linq.Expressions.Expression<Func<Persistence.Models.Events.AppEvent, TKey>> selector,
+        bool includeDryRun)
         where TKey : notnull
     {
         var grouped = await _eventsContext.Events
-            .Where(e => e.Timestamp >= cutoff)
+            .Where(e => e.Timestamp >= cutoff && (includeDryRun || !e.IsDryRun))
             .GroupBy(selector)
             .Select(g => new { g.Key, Count = g.Count() })
             .ToListAsync();
@@ -145,14 +159,67 @@ public class StatsService : IStatsService
         return counts;
     }
 
-    private async Task<int> CountMalwareAsync(DateTimeOffset cutoff)
+    private async Task<Dictionary<string, int>> RemovalsByReasonAsync(DateTimeOffset cutoff, bool includeDryRun)
     {
-        return await _eventsContext.Events
-            .CountAsync(e => e.Timestamp >= cutoff && e.EventType == EventType.QueueItemDeleted
-                && e.DeleteReason != null && MalwareReasons.Contains(e.DeleteReason.Value));
+        var grouped = await _eventsContext.Events
+            .Where(e => e.Timestamp >= cutoff && (includeDryRun || !e.IsDryRun)
+                && e.EventType == EventType.QueueItemDeleted
+                && e.DeleteReason != null && e.DeleteReason != DeleteReason.None)
+            .GroupBy(e => e.DeleteReason!.Value)
+            .Select(g => new { Reason = g.Key, Count = g.Count() })
+            .ToListAsync();
+
+        return grouped.ToDictionary(x => x.Reason.ToString(), x => x.Count);
     }
 
-    private async Task<Dictionary<DateTimeOffset, int>> MetricCountsAsync(DateTimeOffset cutoff, string metric, bool hourly)
+    private async Task<Dictionary<string, int>> CleanedByReasonAsync(DateTimeOffset cutoff, bool includeDryRun)
+    {
+        var grouped = await _eventsContext.Events
+            .Where(e => e.Timestamp >= cutoff && (includeDryRun || !e.IsDryRun)
+                && e.EventType == EventType.DownloadCleaned
+                && e.CleanReason != null && e.CleanReason != CleanReason.None)
+            .GroupBy(e => e.CleanReason!.Value)
+            .Select(g => new { Reason = g.Key, Count = g.Count() })
+            .ToListAsync();
+
+        return grouped.ToDictionary(x => x.Reason.ToString(), x => x.Count);
+    }
+
+    private async Task<SearchesV2Stats> GetSearchStatsAsync(DateTimeOffset cutoff, Dictionary<string, int> byType, bool includeDryRun)
+    {
+        var byStatus = await _eventsContext.Events
+            .Where(e => e.Timestamp >= cutoff && (includeDryRun || !e.IsDryRun)
+                && e.EventType == EventType.SearchTriggered && e.SearchStatus != null)
+            .GroupBy(e => e.SearchStatus!.Value)
+            .Select(g => new { Status = g.Key, Count = g.Count() })
+            .ToListAsync();
+        Dictionary<SearchCommandStatus, int> statusCounts = byStatus.ToDictionary(x => x.Status, x => x.Count);
+
+        var byReason = await _eventsContext.Events
+            .Where(e => e.Timestamp >= cutoff && (includeDryRun || !e.IsDryRun)
+                && e.EventType == EventType.SearchTriggered && e.SearchReason != null)
+            .GroupBy(e => e.SearchReason!.Value)
+            .Select(g => new { Reason = g.Key, Count = g.Count() })
+            .ToListAsync();
+
+        List<List<string>> grabbedLists = await _eventsContext.Events
+            .Where(e => e.Timestamp >= cutoff && (includeDryRun || !e.IsDryRun)
+                && e.EventType == EventType.SearchTriggered)
+            .Select(e => e.GrabbedItems)
+            .ToListAsync();
+
+        return new SearchesV2Stats
+        {
+            Triggered = byType.GetValueOrDefault(EventType.SearchTriggered.ToString(), 0),
+            Completed = statusCounts.GetValueOrDefault(SearchCommandStatus.Completed, 0),
+            Failed = statusCounts.GetValueOrDefault(SearchCommandStatus.Failed, 0)
+                + statusCounts.GetValueOrDefault(SearchCommandStatus.TimedOut, 0),
+            Grabbed = grabbedLists.Sum(list => list.Count),
+            ByReason = byReason.ToDictionary(x => x.Reason.ToString(), x => x.Count),
+        };
+    }
+
+    private async Task<Dictionary<DateTimeOffset, int>> MetricCountsAsync(DateTimeOffset cutoff, string metric, TimelineBucketSize size, bool includeDryRun)
     {
         EventType[]? types = metric switch
         {
@@ -181,7 +248,12 @@ public class StatsService : IStatsService
             parameters.AddRange(MalwareReasons.Select(r => (object)r.ToString().ToLowerInvariant()));
         }
 
-        string bucketExpr = $"substr(timestamp, 1, {TimelineBucketing.KeyLength(hourly)})";
+        if (!includeDryRun)
+        {
+            where.Append(" AND is_dry_run = 0");
+        }
+
+        string bucketExpr = TimelineBucketing.BucketExpr(size);
         string sql = $"""
             SELECT {bucketExpr} AS "bucket", COUNT(*) AS "count"
             FROM events
@@ -194,7 +266,7 @@ public class StatsService : IStatsService
             .ToListAsync();
 
         return rows.ToDictionary(
-            r => TimelineBucketing.ParseKey(r.Bucket, hourly),
+            r => TimelineBucketing.ParseKey(r.Bucket, size),
             r => r.Count);
     }
 
