@@ -13,6 +13,8 @@ namespace Cleanuparr.Api.Controllers;
 [Authorize]
 public class StatsController : ControllerBase
 {
+    private static readonly DateTimeOffset SunsetDate = new(2026, 9, 1, 0, 0, 0, TimeSpan.Zero);
+
     private readonly IStatsService _statsService;
 
     public StatsController(IStatsService statsService)
@@ -34,9 +36,15 @@ public class StatsController : ControllerBase
         [FromQuery] int includeStrikes = 0)
     {
         Response.Headers["Deprecation"] = "true";
+        Response.Headers["Sunset"] = SunsetDate.ToString("R");
         Response.Headers["Link"] =
             "</api/v2/stats>; rel=\"successor-version\", " +
             "<https://cleanuparr.github.io/Cleanuparr/docs/configuration/stats>; rel=\"deprecation\"";
+
+        if (DateTimeOffset.UtcNow >= SunsetDate)
+        {
+            return NotFound();
+        }
 
         hours = Math.Clamp(hours, 1, 720);
         includeEvents = Math.Clamp(includeEvents, 0, 100);

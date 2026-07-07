@@ -17,7 +17,7 @@ import {
 Cleanuparr exposes a stats endpoint with aggregated application statistics, designed for integration with dashboard tools like [Homepage](https://gethomepage.dev), [Homarr](https://homarr.dev), or any tool that can consume JSON APIs.
 
 <Warning>
-**`/api/stats` (v1) is deprecated.** Use **`/api/v2/stats`** instead. The v1 endpoint still works but returns `Deprecation` and `Link` response headers and will be removed in a future release. See the **Deprecated: v1** section at the bottom of this page for the migration.
+**`/api/stats` (v1) is deprecated.** Use **`/api/v2/stats`** instead. The v1 endpoint still works but returns `Deprecation`, `Sunset`, and `Link` response headers. It stops responding on **1 September 2026 00:00 UTC**: requests on or after that time return `404 Not Found`. See the **Deprecated: v1** section at the bottom of this page for the migration.
 </Warning>
 
 <ElementNavigator />
@@ -517,7 +517,7 @@ Key fields for dashboards:
 >
 
 <Warning>
-`/api/stats` is deprecated in favour of `/api/v2/stats` and will be removed in a future release.
+`/api/stats` is deprecated in favour of `/api/v2/stats`. It stops responding on **1 September 2026 00:00 UTC**; requests on or after that time return `404 Not Found`.
 </Warning>
 
 </ConfigSection>
