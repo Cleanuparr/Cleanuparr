@@ -246,7 +246,7 @@ jobs:
   # Deploy docs after a successful release
   deploy-docs:
     needs: [create-release]
-    if: needs.create-release.result == 'success'
+    if: always() && needs.create-release.result == 'success'
     permissions:
       contents: read
       pages: write
@@ -257,7 +257,7 @@ jobs:
   # Deploy Cloudflare status page after a successful release
   deploy-status:
     needs: [validate, create-release]
-    if: needs.create-release.result == 'success'
+    if: always() && needs.create-release.result == 'success'
     uses: ./.github/workflows/cloudflare-pages-status.yml
     with:
       version: ${{ needs.validate.outputs.release_version }}
