@@ -266,21 +266,21 @@ The raw event audit for the window. The higher-level sections (`strikes`, `remov
 - **byType**: Events grouped by event type. Possible types:
   - `FailedImportStrike`: A strike given because the download kept failing to import into the arr app.
   - `StalledStrike`: A strike given because the download stopped making progress.
-  - `DownloadingMetadataStrike`: A strike given because the torrent was stuck fetching its metadata.
+  - `DownloadingMetadataStrike`: A strike given because the torrent was stuck fetching its metadata (qBittorrent only).
   - `SlowSpeedStrike`: A strike given because the download stayed below the minimum speed.
   - `SlowTimeStrike`: A strike given because the download's estimated time was over the allowed maximum.
   - `DeadTorrentStrike`: A strike given because the torrent had no seeders (dead).
-  - `QueueItemDeleted`: A download was actually removed from the queue (and optionally from the client).
+  - `QueueItemDeleted`: A download was removed from the *arr queue.
   - `DownloadCleaned`: A finished download was removed after meeting its seeding goals.
   - `CategoryChanged`: A download's category or tag was changed.
   - `DownloadMarkedForDeletion`: A download was flagged for removal, just before it is deleted.
   - `SearchTriggered`: The Seeker started a search for a missing or upgradeable item.
   - `StrikeReset`: A download recovered, so its accumulated strikes were cleared.
 - **bySeverity**: Events grouped by severity. Possible severities:
-  - `Information`: Routine, low-priority events, such as a strike reset or category change.
-  - `Warning`: Something worth noticing that is not an error.
-  - `Important`: A major action, such as a removal or a strike being applied.
-  - `Error`: Something failed, such as a health check or an operation error.
+  - `Information`
+  - `Warning`
+  - `Important`
+  - `Error`
 
 </ConfigSection>
 
