@@ -45,13 +45,11 @@ public class ReadarrClientTests
 
         _dryRunInterceptor.IsDryRunEnabled().Returns(false);
         _dryRunInterceptor
-            .InterceptAsync<HttpResponseMessage>(Arg.Any<Delegate>(), Arg.Any<object[]>())
+            .InterceptAsync<HttpResponseMessage>(Arg.Any<Func<Task<HttpResponseMessage>>>(), Arg.Any<string?>())
             .Returns(async ci =>
             {
-                var del = ci.Arg<Delegate>();
-                var args = (object[])ci[1];
-                var task = (Task<HttpResponseMessage>)del.DynamicInvoke(args)!;
-                return await task;
+                Func<Task<HttpResponseMessage>> action = ci.Arg<Func<Task<HttpResponseMessage>>>();
+                return await action();
             });
     }
 
@@ -200,7 +198,7 @@ public class ReadarrClientTests
     {
         // Arrange — interceptor short-circuits
         _dryRunInterceptor
-            .InterceptAsync<HttpResponseMessage>(Arg.Any<Delegate>(), Arg.Any<object[]>())
+            .InterceptAsync<HttpResponseMessage>(Arg.Any<Func<Task<HttpResponseMessage>>>(), Arg.Any<string?>())
             .Returns((HttpResponseMessage?)null);
         _httpMessageHandler.SetupResponse((_, _) => Task.FromResult(JsonNullResponse()));
 

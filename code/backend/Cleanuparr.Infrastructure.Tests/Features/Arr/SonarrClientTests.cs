@@ -46,13 +46,11 @@ public class SonarrClientTests
 
         _dryRunInterceptor.IsDryRunEnabled().Returns(false);
         _dryRunInterceptor
-            .InterceptAsync<HttpResponseMessage>(Arg.Any<Delegate>(), Arg.Any<object[]>())
+            .InterceptAsync<HttpResponseMessage>(Arg.Any<Func<Task<HttpResponseMessage>>>(), Arg.Any<string?>())
             .Returns(async ci =>
             {
-                var del = ci.Arg<Delegate>();
-                var args = (object[])ci[1];
-                var task = (Task<HttpResponseMessage>)del.DynamicInvoke(args)!;
-                return await task;
+                Func<Task<HttpResponseMessage>> action = ci.Arg<Func<Task<HttpResponseMessage>>>();
+                return await action();
             });
     }
 
@@ -230,7 +228,7 @@ public class SonarrClientTests
     {
         // Arrange — interceptor returns null on dry run
         _dryRunInterceptor
-            .InterceptAsync<HttpResponseMessage>(Arg.Any<Delegate>(), Arg.Any<object[]>())
+            .InterceptAsync<HttpResponseMessage>(Arg.Any<Func<Task<HttpResponseMessage>>>(), Arg.Any<string?>())
             .Returns((HttpResponseMessage?)null);
         // Set up GETs that ComputeCommandLogContext might fire (series lookup)
         _httpMessageHandler.SetupResponse((req, _) => Task.FromResult(JsonNullResponse()));

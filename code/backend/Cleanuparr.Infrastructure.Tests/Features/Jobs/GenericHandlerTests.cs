@@ -10,6 +10,7 @@ using Cleanuparr.Infrastructure.Features.Jobs;
 using Cleanuparr.Infrastructure.Tests.Features.Jobs.TestHelpers;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration;
+using Cleanuparr.Persistence.Models.Events;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
 using Cleanuparr.Persistence.Models.Configuration.General;
@@ -313,7 +314,7 @@ public class GenericHandlerTests : IClassFixture<JobHandlerFixture>
             .Publish(Arg.Any<QueueItemRemoveRequest<SeriesSearchItem>>(), Arg.Any<CancellationToken>());
         await _fixture.EventPublisher.Received(1).PublishAsync(
             EventType.DownloadMarkedForDeletion, Arg.Any<string>(), Arg.Any<EventSeverity>(),
-            Arg.Any<object?>(), Arg.Any<Guid?>(), Arg.Any<Guid?>(), Arg.Any<bool?>());
+            Arg.Any<Action<AppEvent>?>(), Arg.Any<Guid?>(), Arg.Any<Guid?>(), Arg.Any<bool?>());
     }
 
     [Fact]
