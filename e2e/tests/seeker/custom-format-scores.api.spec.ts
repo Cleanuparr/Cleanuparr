@@ -29,12 +29,14 @@ test.describe('Seeker — custom format scores', () => {
     expect(typeof body).toBe('object');
   });
 
-  test('history returns 404 for unknown instance + item', async ({ api }) => {
+  test('history returns empty entries for unknown instance + item', async ({ api }) => {
     const res = await api.seeker.getCustomFormatScoreHistory(
       '00000000-0000-0000-0000-000000000000',
       '99999',
     );
-    expect([200, 404]).toContain(res.status);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.entries).toEqual([]);
   });
 
   test('GET requires auth', async ({ anonymousApi }) => {

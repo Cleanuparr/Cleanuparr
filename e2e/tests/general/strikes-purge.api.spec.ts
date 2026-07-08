@@ -14,10 +14,8 @@ test.describe('General — strikes purge', () => {
   test('after purge, /api/strikes returns no items', async ({ api }) => {
     await api.general.purgeStrikes();
     const list = await (await api.strikes.list()).json();
-    const items = list.items ?? list;
-    expect(Array.isArray(items) ? items.length : items.totalItems ?? 0).toBe(
-      Array.isArray(items) ? 0 : 0,
-    );
+    expect(list.items).toEqual([]);
+    expect(list.totalCount).toBe(0);
   });
 
   test('POST requires auth', async ({ anonymousApi }) => {
