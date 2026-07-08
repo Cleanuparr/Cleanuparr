@@ -73,7 +73,7 @@ async function waitForOrphanMove(dir: string, expectedName: string, timeoutMs = 
  * resolve into the scan directory.
  */
 
-const HOST_DOWNLOADS = resolve(__dirname, '..', 'test-data', 'downloads');
+const HOST_DOWNLOADS = resolve(__dirname, '..', '..', 'test-data', 'downloads');
 const CLIENT_DOWNLOADS = '/downloads';
 const APP_DOWNLOADS = '/e2e-downloads';
 

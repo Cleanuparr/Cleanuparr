@@ -36,7 +36,7 @@ import { buildFolderTorrent, chmodIgnoringEPERM, resetDirectory } from '../helpe
  * cannot be portably backdated. That scenario is covered by unit tests.
  */
 
-const HOST_DOWNLOADS = resolve(__dirname, '..', 'test-data', 'downloads');
+const HOST_DOWNLOADS = resolve(__dirname, '..', '..', 'test-data', 'downloads');
 const APP_DOWNLOADS = '/e2e-downloads';
 const SLUG = 'qbittorrent-behaviors';
 const HOST_SCAN_DIR = join(HOST_DOWNLOADS, SLUG);

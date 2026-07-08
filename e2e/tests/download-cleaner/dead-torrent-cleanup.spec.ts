@@ -17,7 +17,7 @@ import { DelugeDriver } from '../helpers/torrent-clients/deluge';
 import { UTorrentDriver } from '../helpers/torrent-clients/utorrent';
 import { buildFolderTorrent, chmodIgnoringEPERM, resetDirectory } from '../helpers/torrent-fixtures';
 
-const HOST_DOWNLOADS = resolve(__dirname, '..', 'test-data', 'downloads');
+const HOST_DOWNLOADS = resolve(__dirname, '..', '..', 'test-data', 'downloads');
 const CLIENT_DOWNLOADS = '/downloads';
 const TARGET = 'cleanuparr-dead';
 const MAX_STRIKES = 3;

@@ -29,7 +29,7 @@ import { buildFolderTorrent, chmodIgnoringEPERM, resetDirectory } from '../helpe
  * so the torrent's content_path resolves into the scanned directory.
  */
 
-const HOST_DOWNLOADS = resolve(__dirname, '..', 'test-data', 'downloads');
+const HOST_DOWNLOADS = resolve(__dirname, '..', '..', 'test-data', 'downloads');
 // A subdirectory of the qbittorrent bind mount, isolated from the top-level
 // dir the client-matrix spec uses.
 const SCAN_SUBDIR = 'contentpath-scan';

@@ -32,7 +32,7 @@ import { chmodIgnoringEPERM, resetDirectory } from '../helpers/torrent-fixtures'
  *      Exercises the explicit zero-torrents bail in `TryAddClaimedPathsAsync`.
  */
 
-const HOST_DOWNLOADS = resolve(__dirname, '..', 'test-data', 'downloads');
+const HOST_DOWNLOADS = resolve(__dirname, '..', '..', 'test-data', 'downloads');
 const APP_DOWNLOADS = '/e2e-downloads';
 const SLUG = 'qbittorrent-unreachable';
 const HOST_SCAN_DIR = join(HOST_DOWNLOADS, SLUG);
