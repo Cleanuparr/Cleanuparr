@@ -49,7 +49,6 @@ export class AppHubService implements OnDestroy {
     this.connection = new signalR.HubConnectionBuilder()
       .withUrl(hubUrl, {
         accessTokenFactory: async () => {
-          // No tokens stored — trusted network bypass, no token needed
           if (!this.authService.getAccessToken() && !localStorage.getItem('refresh_token')) {
             return '';
           }
@@ -64,7 +63,6 @@ export class AppHubService implements OnDestroy {
         },
       })
       .withAutomaticReconnect({
-        // infinite retries with capped exponential backoff
         nextRetryDelayInMilliseconds: (retryContext) =>
           Math.min(RECONNECT_DELAY_MS * Math.pow(2, retryContext.previousRetryCount), 30_000),
       })
@@ -85,7 +83,6 @@ export class AppHubService implements OnDestroy {
       this.connected.set(true);
       this.requestInitialData();
     } catch (err) {
-      // withAutomaticReconnect does not retry a failed initial connection, so retry it here
       console.warn('[SignalR] Connection failed:', err);
       this.connection = null;
       this.reconnectTimeout = setTimeout(() => this.start(), RECONNECT_DELAY_MS);
