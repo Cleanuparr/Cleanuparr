@@ -33,6 +33,7 @@ public class GenericHandlerTests : IClassFixture<JobHandlerFixture>
     public GenericHandlerTests(JobHandlerFixture fixture)
     {
         _fixture = fixture;
+        _fixture.RecreateDataContext();
         _fixture.ResetMocks();
         _handler = new TestHandler(
             Substitute.For<ILogger<GenericHandler>>(),
