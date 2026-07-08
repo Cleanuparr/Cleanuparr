@@ -1,15 +1,5 @@
 using Cleanuparr.Domain.Enums;
-using Cleanuparr.Infrastructure.Events;
-using Cleanuparr.Infrastructure.Events.Interfaces;
-using Cleanuparr.Infrastructure.Features.Files;
-using Cleanuparr.Infrastructure.Features.ItemStriker;
-using Cleanuparr.Infrastructure.Features.MalwareBlocker;
-using Cleanuparr.Infrastructure.Helpers;
-using Cleanuparr.Infrastructure.Http;
-using Cleanuparr.Infrastructure.Interceptors;
-using Cleanuparr.Infrastructure.Services.Interfaces;
 using Cleanuparr.Persistence.Models.Configuration;
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using DelugeService = Cleanuparr.Infrastructure.Features.DownloadClient.Deluge.DelugeService;
@@ -27,7 +17,7 @@ public sealed class DownloadServiceFactory : IDownloadServiceFactory
 {
     private readonly ILogger<DownloadServiceFactory> _logger;
     private readonly IServiceProvider _serviceProvider;
-    
+
     public DownloadServiceFactory(
         ILogger<DownloadServiceFactory> logger,
         IServiceProvider serviceProvider
@@ -41,139 +31,22 @@ public sealed class DownloadServiceFactory : IDownloadServiceFactory
     /// Creates a download service using the specified client configuration
     /// </summary>
     /// <param name="downloadClientConfig">The client configuration to use</param>
-    /// <returns>An implementation of IDownloadService or null if the client is not available</returns>
+    /// <returns>An implementation of IDownloadService</returns>
     public IDownloadService GetDownloadService(DownloadClientConfig downloadClientConfig)
     {
         if (!downloadClientConfig.Enabled)
         {
             _logger.LogWarning("Download client {clientId} is disabled, but a service was requested", downloadClientConfig.Id);
         }
-        
+
         return downloadClientConfig.TypeName switch
         {
-            DownloadClientTypeName.qBittorrent => CreateQBitService(downloadClientConfig),
-            DownloadClientTypeName.Deluge => CreateDelugeService(downloadClientConfig),
-            DownloadClientTypeName.Transmission => CreateTransmissionService(downloadClientConfig),
-            DownloadClientTypeName.uTorrent => CreateUTorrentService(downloadClientConfig),
-            DownloadClientTypeName.rTorrent => CreateRTorrentService(downloadClientConfig),
+            DownloadClientTypeName.qBittorrent => ActivatorUtilities.CreateInstance<QBitService>(_serviceProvider, downloadClientConfig),
+            DownloadClientTypeName.Deluge => ActivatorUtilities.CreateInstance<DelugeService>(_serviceProvider, downloadClientConfig),
+            DownloadClientTypeName.Transmission => ActivatorUtilities.CreateInstance<TransmissionService>(_serviceProvider, downloadClientConfig),
+            DownloadClientTypeName.uTorrent => ActivatorUtilities.CreateInstance<UTorrentService>(_serviceProvider, downloadClientConfig),
+            DownloadClientTypeName.rTorrent => ActivatorUtilities.CreateInstance<RTorrentService>(_serviceProvider, downloadClientConfig),
             _ => throw new NotSupportedException($"Download client type {downloadClientConfig.TypeName} is not supported")
         };
-    }
-    
-    private QBitService CreateQBitService(DownloadClientConfig downloadClientConfig)
-    {
-        var logger = _serviceProvider.GetRequiredService<ILogger<QBitService>>();
-        var filenameEvaluator = _serviceProvider.GetRequiredService<IFilenameEvaluator>();
-        var striker = _serviceProvider.GetRequiredService<IStriker>();
-        var dryRunInterceptor = _serviceProvider.GetRequiredService<IDryRunInterceptor>();
-        var hardLinkFileService = _serviceProvider.GetRequiredService<IHardLinkFileService>();
-        var httpClientProvider = _serviceProvider.GetRequiredService<IDynamicHttpClientProvider>();
-        var eventPublisher = _serviceProvider.GetRequiredService<IEventPublisher>();
-        var blocklistProvider = _serviceProvider.GetRequiredService<IBlocklistProvider>();
-
-        var ruleEvaluator = _serviceProvider.GetRequiredService<IQueueRuleEvaluator>();
-        var seedingRuleEvaluator = _serviceProvider.GetRequiredService<ISeedingRuleEvaluator>();
-
-        // Create the QBitService instance
-        QBitService service = new(
-            logger, filenameEvaluator, striker, dryRunInterceptor,
-            hardLinkFileService, httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, ruleEvaluator, seedingRuleEvaluator
-        );
-
-        return service;
-    }
-    
-    private DelugeService CreateDelugeService(DownloadClientConfig downloadClientConfig)
-    {
-        var logger = _serviceProvider.GetRequiredService<ILogger<DelugeService>>();
-        var filenameEvaluator = _serviceProvider.GetRequiredService<IFilenameEvaluator>();
-        var striker = _serviceProvider.GetRequiredService<IStriker>();
-        var dryRunInterceptor = _serviceProvider.GetRequiredService<IDryRunInterceptor>();
-        var hardLinkFileService = _serviceProvider.GetRequiredService<IHardLinkFileService>();
-        var httpClientProvider = _serviceProvider.GetRequiredService<IDynamicHttpClientProvider>();
-        var eventPublisher = _serviceProvider.GetRequiredService<IEventPublisher>();
-        var blocklistProvider = _serviceProvider.GetRequiredService<IBlocklistProvider>();
-
-        var ruleEvaluator = _serviceProvider.GetRequiredService<IQueueRuleEvaluator>();
-        var seedingRuleEvaluator = _serviceProvider.GetRequiredService<ISeedingRuleEvaluator>();
-
-        // Create the DelugeService instance
-        DelugeService service = new(
-            logger, filenameEvaluator, striker, dryRunInterceptor,
-            hardLinkFileService, httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, ruleEvaluator, seedingRuleEvaluator
-        );
-
-        return service;
-    }
-
-    private TransmissionService CreateTransmissionService(DownloadClientConfig downloadClientConfig)
-    {
-        var logger = _serviceProvider.GetRequiredService<ILogger<TransmissionService>>();
-        var filenameEvaluator = _serviceProvider.GetRequiredService<IFilenameEvaluator>();
-        var striker = _serviceProvider.GetRequiredService<IStriker>();
-        var dryRunInterceptor = _serviceProvider.GetRequiredService<IDryRunInterceptor>();
-        var hardLinkFileService = _serviceProvider.GetRequiredService<IHardLinkFileService>();
-        var httpClientProvider = _serviceProvider.GetRequiredService<IDynamicHttpClientProvider>();
-        var eventPublisher = _serviceProvider.GetRequiredService<IEventPublisher>();
-        var blocklistProvider = _serviceProvider.GetRequiredService<IBlocklistProvider>();
-
-        var ruleEvaluator = _serviceProvider.GetRequiredService<IQueueRuleEvaluator>();
-        var seedingRuleEvaluator = _serviceProvider.GetRequiredService<ISeedingRuleEvaluator>();
-
-        // Create the TransmissionService instance
-        TransmissionService service = new(
-            logger, filenameEvaluator, striker, dryRunInterceptor,
-            hardLinkFileService, httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, ruleEvaluator, seedingRuleEvaluator
-        );
-
-        return service;
-    }
-
-    private UTorrentService CreateUTorrentService(DownloadClientConfig downloadClientConfig)
-    {
-        var logger = _serviceProvider.GetRequiredService<ILogger<UTorrentService>>();
-        var cache = _serviceProvider.GetRequiredService<IMemoryCache>();
-        var filenameEvaluator = _serviceProvider.GetRequiredService<IFilenameEvaluator>();
-        var striker = _serviceProvider.GetRequiredService<IStriker>();
-        var dryRunInterceptor = _serviceProvider.GetRequiredService<IDryRunInterceptor>();
-        var hardLinkFileService = _serviceProvider.GetRequiredService<IHardLinkFileService>();
-        var httpClientProvider = _serviceProvider.GetRequiredService<IDynamicHttpClientProvider>();
-        var eventPublisher = _serviceProvider.GetRequiredService<IEventPublisher>();
-        var blocklistProvider = _serviceProvider.GetRequiredService<IBlocklistProvider>();
-        var loggerFactory = _serviceProvider.GetRequiredService<ILoggerFactory>();
-
-        var ruleEvaluator = _serviceProvider.GetRequiredService<IQueueRuleEvaluator>();
-        var seedingRuleEvaluator = _serviceProvider.GetRequiredService<ISeedingRuleEvaluator>();
-
-        // Create the UTorrentService instance
-        UTorrentService service = new(
-            logger, cache, filenameEvaluator, striker, dryRunInterceptor,
-            hardLinkFileService, httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, loggerFactory, ruleEvaluator, seedingRuleEvaluator
-        );
-
-        return service;
-    }
-
-    private RTorrentService CreateRTorrentService(DownloadClientConfig downloadClientConfig)
-    {
-        var logger = _serviceProvider.GetRequiredService<ILogger<RTorrentService>>();
-        var filenameEvaluator = _serviceProvider.GetRequiredService<IFilenameEvaluator>();
-        var striker = _serviceProvider.GetRequiredService<IStriker>();
-        var dryRunInterceptor = _serviceProvider.GetRequiredService<IDryRunInterceptor>();
-        var hardLinkFileService = _serviceProvider.GetRequiredService<IHardLinkFileService>();
-        var httpClientProvider = _serviceProvider.GetRequiredService<IDynamicHttpClientProvider>();
-        var eventPublisher = _serviceProvider.GetRequiredService<IEventPublisher>();
-        var blocklistProvider = _serviceProvider.GetRequiredService<IBlocklistProvider>();
-
-        var ruleEvaluator = _serviceProvider.GetRequiredService<IQueueRuleEvaluator>();
-        var seedingRuleEvaluator = _serviceProvider.GetRequiredService<ISeedingRuleEvaluator>();
-
-        // Create the RTorrentService instance
-        RTorrentService service = new(
-            logger, filenameEvaluator, striker, dryRunInterceptor,
-            hardLinkFileService, httpClientProvider, eventPublisher, blocklistProvider, downloadClientConfig, ruleEvaluator, seedingRuleEvaluator
-        );
-
-        return service;
     }
 }

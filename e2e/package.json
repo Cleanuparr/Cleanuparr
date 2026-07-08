@@ -4,9 +4,14 @@
   "scripts": {
     "test": "playwright test",
     "test:headed": "playwright test --headed",
-    "test:debug": "playwright test --debug"
+    "test:debug": "playwright test --debug",
+    "test:regression": "playwright test --project=setup:regression --project=regression"
+  },
+  "dependencies": {
+    "@microsoft/signalr": "^8.0.0"
   },
   "devDependencies": {
-    "@playwright/test": "^1.50.0"
+    "@playwright/test": "^1.50.0",
+    "@types/node": "^22.10.0"
   }
 }

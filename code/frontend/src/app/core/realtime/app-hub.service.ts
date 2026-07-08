@@ -1,25 +1,28 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, OnDestroy, inject, signal } from '@angular/core';
 import * as signalR from '@microsoft/signalr';
-import { HubService } from './hub.service';
-import { SignalRHubConfig, LogEntry } from '@core/models/signalr.models';
+import { firstValueFrom } from 'rxjs';
+import { LogEntry } from '@core/models/signalr.models';
 import { AppEvent, ManualEvent } from '@core/models/event.models';
 import { JobInfo } from '@core/models/job.models';
 import { AppStatus } from '@core/models/app-status.model';
 import { RecentStrike } from '@core/models/strike.models';
+import { ApplicationPathService } from '@core/services/base-path.service';
+import { AuthService } from '@core/auth/auth.service';
 
 const MAX_BUFFER = 1000;
+const HUB_URL = '/api/hubs/app';
+const RECONNECT_DELAY_MS = 2000;
 
 @Injectable({ providedIn: 'root' })
-export class AppHubService extends HubService {
-  protected readonly config: SignalRHubConfig = {
-    hubUrl: '/api/hubs/app',
-    maxReconnectAttempts: 0, // infinite
-    reconnectDelayMs: 2000,
-    bufferSize: MAX_BUFFER,
-    healthCheckIntervalMs: 0,
-  };
+export class AppHubService implements OnDestroy {
+  private readonly pathService = inject(ApplicationPathService);
+  private readonly authService = inject(AuthService);
+  private connection: signalR.HubConnection | null = null;
+  private reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
 
-  // Signal-based state
+  private readonly connected = signal(false);
+  readonly isConnected = this.connected.asReadonly();
+
   private readonly _logs = signal<LogEntry[]>([]);
   private readonly _events = signal<AppEvent[]>([]);
   private readonly _manualEvents = signal<ManualEvent[]>([]);
@@ -38,7 +41,78 @@ export class AppHubService extends HubService {
   readonly cfScoresVersion = this._cfScoresVersion.asReadonly();
   readonly searchStatsVersion = this._searchStatsVersion.asReadonly();
 
-  protected registerHandlers(connection: signalR.HubConnection): void {
+  async start(): Promise<void> {
+    if (this.connection) return;
+
+    const hubUrl = this.pathService.buildHubUrl(HUB_URL);
+
+    this.connection = new signalR.HubConnectionBuilder()
+      .withUrl(hubUrl, {
+        accessTokenFactory: async () => {
+          if (!this.authService.getAccessToken() && !localStorage.getItem('refresh_token')) {
+            return '';
+          }
+          if (this.authService.isTokenExpired(30)) {
+            const result = await firstValueFrom(this.authService.refreshToken());
+            if (result) {
+              return result.accessToken;
+            }
+            return '';
+          }
+          return this.authService.getAccessToken() ?? '';
+        },
+      })
+      .withAutomaticReconnect({
+        nextRetryDelayInMilliseconds: (retryContext) =>
+          Math.min(RECONNECT_DELAY_MS * Math.pow(2, retryContext.previousRetryCount), 30_000),
+      })
+      .configureLogging(signalR.LogLevel.Warning)
+      .build();
+
+    this.connection.onreconnecting(() => this.connected.set(false));
+    this.connection.onreconnected(() => {
+      this.connected.set(true);
+      this.requestInitialData();
+    });
+    this.connection.onclose(() => this.connected.set(false));
+
+    this.registerHandlers(this.connection);
+
+    try {
+      await this.connection.start();
+      this.connected.set(true);
+      this.requestInitialData();
+    } catch (err) {
+      console.warn('[SignalR] Connection failed:', err);
+      this.connection = null;
+      this.reconnectTimeout = setTimeout(() => this.start(), RECONNECT_DELAY_MS);
+    }
+  }
+
+  async stop(): Promise<void> {
+    if (this.reconnectTimeout) {
+      clearTimeout(this.reconnectTimeout);
+      this.reconnectTimeout = null;
+    }
+    if (this.connection) {
+      await this.connection.stop();
+      this.connection = null;
+    }
+    this.connected.set(false);
+  }
+
+  ngOnDestroy(): void {
+    this.stop();
+  }
+
+  private invoke(method: string, ...args: unknown[]): Promise<void> {
+    if (!this.connection || this.connection.state !== signalR.HubConnectionState.Connected) {
+      return Promise.resolve();
+    }
+    return this.connection.invoke(method, ...args);
+  }
+
+  private registerHandlers(connection: signalR.HubConnection): void {
     // Single log entry
     connection.on('LogReceived', (log: LogEntry) => {
       this._logs.update((logs) => {
@@ -127,15 +201,11 @@ export class AppHubService extends HubService {
     });
   }
 
-  protected override onConnected(): void {
+  private requestInitialData(): void {
     this.requestRecentLogs();
     this.requestRecentEvents();
     this.requestRecentStrikes();
     this.requestJobStatus();
-  }
-
-  protected override onReconnected(): void {
-    this.onConnected();
   }
 
   requestRecentLogs(): void {

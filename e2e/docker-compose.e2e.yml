@@ -20,6 +20,26 @@ services:
       retries: 30
       start_period: 30s
 
+  wiremock-arr:
+    image: wiremock/wiremock:3.10.0
+    network_mode: host
+    command: ["--port", "9100", "--disable-banner"]
+
+  wiremock-dlc:
+    image: wiremock/wiremock:3.10.0
+    network_mode: host
+    command: ["--port", "9200", "--disable-banner"]
+
+  wiremock-notify:
+    image: wiremock/wiremock:3.10.0
+    network_mode: host
+    command: ["--port", "9300", "--disable-banner"]
+
+  wiremock-blocklist:
+    image: wiremock/wiremock:3.10.0
+    network_mode: host
+    command: ["--port", "9400", "--disable-banner"]
+
   app:
     build:
       context: ../code
@@ -30,11 +50,21 @@ services:
     depends_on:
       keycloak:
         condition: service_healthy
+      wiremock-arr:
+        condition: service_started
+      wiremock-dlc:
+        condition: service_started
+      wiremock-notify:
+        condition: service_started
+      wiremock-blocklist:
+        condition: service_started
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment:
       PORT: "5000"
       HTTP_PORTS: "5000"
+    # Ephemeral /config — wiped on every container restart. The e2e harness
+    # restarts the app container between spec folders for a clean baseline.
     tmpfs:
       - /config
     volumes:

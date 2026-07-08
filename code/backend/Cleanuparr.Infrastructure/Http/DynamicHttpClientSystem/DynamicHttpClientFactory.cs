@@ -1,7 +1,9 @@
 using System.Net;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Persistence.Models.Configuration.General;
+using Microsoft.Extensions.Http;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Cleanuparr.Infrastructure.Http.DynamicHttpClientSystem;
 
@@ -12,18 +14,18 @@ public class DynamicHttpClientFactory : IDynamicHttpClientFactory
 {
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IHttpClientConfigStore _configStore;
-    private readonly IHttpClientOptionsInvalidator _optionsInvalidator;
+    private readonly IOptionsMonitorCache<HttpClientFactoryOptions> _optionsCache;
     private readonly ILogger<DynamicHttpClientFactory> _logger;
 
     public DynamicHttpClientFactory(
-        IHttpClientFactory httpClientFactory, 
+        IHttpClientFactory httpClientFactory,
         IHttpClientConfigStore configStore,
-        IHttpClientOptionsInvalidator optionsInvalidator,
+        IOptionsMonitorCache<HttpClientFactoryOptions> optionsCache,
         ILogger<DynamicHttpClientFactory> logger)
     {
         _httpClientFactory = httpClientFactory;
         _configStore = configStore;
-        _optionsInvalidator = optionsInvalidator;
+        _optionsCache = optionsCache;
         _logger = logger;
     }
 
@@ -102,10 +104,10 @@ public class DynamicHttpClientFactory : IDynamicHttpClientFactory
     public void UnregisterConfiguration(string clientName)
     {
         _configStore.RemoveConfiguration(clientName);
-        
+
         // Also invalidate the cached options for this client
-        _optionsInvalidator.InvalidateClient(clientName);
-        
+        _optionsCache.TryRemove(clientName);
+
         _logger.LogDebug("Unregistered and invalidated HTTP client configuration: {ClientName}", clientName);
     }
 
@@ -142,8 +144,11 @@ public class DynamicHttpClientFactory : IDynamicHttpClientFactory
         // CRITICAL: Invalidate IHttpClientFactory's cached configurations
         // This forces the factory to call our Configure() method again with updated settings
         var clientNames = updatedConfigurations.Select(kvp => kvp.Key).ToList();
-        _optionsInvalidator.InvalidateClients(clientNames);
-        
+        foreach (string clientName in clientNames)
+        {
+            _optionsCache.TryRemove(clientName);
+        }
+
         _logger.LogInformation("Updated and invalidated {Count} HTTP client configurations with new general settings: " +
                               "Timeout={Timeout}s, MaxRetries={MaxRetries}, CertificateValidation={CertValidation}",
                               updatedConfigurations.Count, 
@@ -151,15 +156,4 @@ public class DynamicHttpClientFactory : IDynamicHttpClientFactory
                               generalConfig.HttpMaxRetries,
                               generalConfig.HttpCertificateValidation);
     }
-
-    public IEnumerable<string> GetRegisteredClientNames()
-    {
-        return _configStore.GetAllConfigurations().Select(kvp => kvp.Key);
-    }
-
-    public void InvalidateAllCachedConfigurations()
-    {
-        _optionsInvalidator.InvalidateAllClients();
-        _logger.LogInformation("Force invalidated all HTTP client option caches");
-    }
-} 
+}

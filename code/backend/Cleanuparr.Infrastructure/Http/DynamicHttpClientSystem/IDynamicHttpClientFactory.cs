@@ -47,14 +47,4 @@ public interface IDynamicHttpClientFactory
     /// Updates all registered HTTP client configurations with new general config settings
     /// </summary>
     void UpdateAllClientsFromGeneralConfig(GeneralConfig generalConfig);
-    
-    /// <summary>
-    /// Gets all currently registered client names
-    /// </summary>
-    IEnumerable<string> GetRegisteredClientNames();
-    
-    /// <summary>
-    /// Forces cache invalidation for all registered clients (for debugging/testing)
-    /// </summary>
-    void InvalidateAllCachedConfigurations();
-} 
+}

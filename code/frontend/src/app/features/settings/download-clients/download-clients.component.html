@@ -64,7 +64,7 @@
       [error]="clientForm.name().errors()[0]?.message"
       helpKey="download-client:name" />
     <app-select label="Client Type" [options]="typeOptions" [formField]="clientForm.typeName"
-      (valueChange)="onClientTypeChange()"
+      (valueChange)="onClientTypeChange($event)"
       hint="The type of download client"
       helpKey="download-client:typeName" />
     <app-input label="Host" placeholder="http://localhost:8080" [formField]="clientForm.host"
