@@ -118,13 +118,14 @@ export class DownloadClientsComponent implements HasPendingChanges {
 
   // typeName is owned by [formField]; here we only apply type-specific defaults,
   // guarded so they never clobber values already loaded when editing a client.
-  onClientTypeChange(): void {
+  onClientTypeChange(value: unknown): void {
+    const newType = value as DownloadClientTypeName;
     const m = this.clientModel();
     const patch: Partial<DownloadClientFormModel> = {};
-    if (m.typeName === DownloadClientTypeName.Deluge && m.username !== '') {
+    if (newType === DownloadClientTypeName.Deluge && m.username !== '') {
       patch.username = '';
     }
-    const autofill = AUTOFILL_URL_BASES[m.typeName];
+    const autofill = AUTOFILL_URL_BASES[newType];
     const replaceable = m.urlBase === '' || Object.values(AUTOFILL_URL_BASES).includes(m.urlBase);
     if (autofill && replaceable) {
       patch.urlBase = autofill;
