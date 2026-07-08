@@ -7,8 +7,12 @@ using Cleanuparr.Persistence.Models.Configuration.DownloadCleaner;
 using Cleanuparr.Persistence.Models.Configuration.General;
 using Cleanuparr.Persistence.Models.Configuration.MalwareBlocker;
 using Cleanuparr.Persistence.Models.Configuration.QueueCleaner;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using NSubstitute;
 
 namespace Cleanuparr.Api.Tests.TestHelpers;
 
@@ -50,6 +54,31 @@ public static class ConfigControllerTestDataFactory
         var context = new EventsContext(options);
         context.Database.EnsureCreated();
         return context;
+    }
+
+    public static void ConfigureProblemDetails(ControllerBase controller)
+    {
+        ProblemDetailsFactory factory = Substitute.For<ProblemDetailsFactory>();
+        factory
+            .CreateProblemDetails(
+                Arg.Any<HttpContext>(),
+                Arg.Any<int?>(),
+                Arg.Any<string?>(),
+                Arg.Any<string?>(),
+                Arg.Any<string?>(),
+                Arg.Any<string?>())
+            .Returns(call => new ProblemDetails
+            {
+                Status = call.ArgAt<int?>(1),
+                Title = call.ArgAt<string?>(2),
+                Detail = call.ArgAt<string?>(4),
+            });
+
+        controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext(),
+        };
+        controller.ProblemDetailsFactory = factory;
     }
 
     private static void SeedDefaults(DataContext context)

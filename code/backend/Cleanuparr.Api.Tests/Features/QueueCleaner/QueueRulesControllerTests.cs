@@ -29,6 +29,7 @@ public class QueueRulesControllerTests : IDisposable
         _validator.ValidateStallRuleIntervals(Arg.Any<StallRule>(), Arg.Any<List<StallRule>>()).Returns(ValidationResult.Success());
         _validator.ValidateSlowRuleIntervals(Arg.Any<SlowRule>(), Arg.Any<List<SlowRule>>()).Returns(ValidationResult.Success());
         _controller = new QueueRulesController(logger, _dataContext, _validator);
+        ConfigControllerTestDataFactory.ConfigureProblemDetails(_controller);
     }
 
     public void Dispose()
@@ -78,7 +79,7 @@ public class QueueRulesControllerTests : IDisposable
         var result = await _controller.CreateStallRule(NewStallDto(name: "RULE-A"));
 
         // Assert
-        result.ShouldBeOfType<BadRequestObjectResult>();
+        result.ShouldBeOfType<ObjectResult>().StatusCode.ShouldBe(400);
         (await _dataContext.StallRules.CountAsync()).ShouldBe(1);
     }
 
@@ -93,7 +94,7 @@ public class QueueRulesControllerTests : IDisposable
         var result = await _controller.CreateStallRule(NewStallDto(name: "x"));
 
         // Assert
-        result.ShouldBeOfType<BadRequestObjectResult>();
+        result.ShouldBeOfType<ObjectResult>().StatusCode.ShouldBe(400);
         (await _dataContext.StallRules.CountAsync()).ShouldBe(0);
     }
 
@@ -104,7 +105,7 @@ public class QueueRulesControllerTests : IDisposable
         var result = await _controller.UpdateStallRule(Guid.NewGuid(), NewStallDto("x"));
 
         // Assert
-        result.ShouldBeOfType<NotFoundObjectResult>();
+        result.ShouldBeOfType<ObjectResult>().StatusCode.ShouldBe(404);
     }
 
     [Fact]
@@ -137,7 +138,7 @@ public class QueueRulesControllerTests : IDisposable
         var result = await _controller.UpdateStallRule(betaId, NewStallDto(name: "alpha"));
 
         // Assert
-        result.ShouldBeOfType<BadRequestObjectResult>();
+        result.ShouldBeOfType<ObjectResult>().StatusCode.ShouldBe(400);
     }
 
     [Fact]
@@ -162,7 +163,7 @@ public class QueueRulesControllerTests : IDisposable
         var result = await _controller.DeleteStallRule(Guid.NewGuid());
 
         // Assert
-        result.ShouldBeOfType<NotFoundObjectResult>();
+        result.ShouldBeOfType<ObjectResult>().StatusCode.ShouldBe(404);
     }
 
     #endregion
@@ -207,7 +208,7 @@ public class QueueRulesControllerTests : IDisposable
         var result = await _controller.CreateSlowRule(NewSlowDto(name: "X"));
 
         // Assert
-        result.ShouldBeOfType<BadRequestObjectResult>();
+        result.ShouldBeOfType<ObjectResult>().StatusCode.ShouldBe(400);
     }
 
     [Fact]
@@ -217,7 +218,7 @@ public class QueueRulesControllerTests : IDisposable
         var result = await _controller.UpdateSlowRule(Guid.NewGuid(), NewSlowDto("x"));
 
         // Assert
-        result.ShouldBeOfType<NotFoundObjectResult>();
+        result.ShouldBeOfType<ObjectResult>().StatusCode.ShouldBe(404);
     }
 
     [Fact]
@@ -227,7 +228,7 @@ public class QueueRulesControllerTests : IDisposable
         var result = await _controller.DeleteSlowRule(Guid.NewGuid());
 
         // Assert
-        result.ShouldBeOfType<NotFoundObjectResult>();
+        result.ShouldBeOfType<ObjectResult>().StatusCode.ShouldBe(404);
     }
 
     #endregion

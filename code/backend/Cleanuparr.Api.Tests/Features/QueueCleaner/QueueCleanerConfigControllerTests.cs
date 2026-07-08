@@ -26,6 +26,7 @@ public class QueueCleanerConfigControllerTests : IDisposable
         var logger = Substitute.For<ILogger<QueueCleanerConfigController>>();
         _jobManagementService = Substitute.For<IJobManagementService>();
         _controller = new QueueCleanerConfigController(logger, _dataContext, _jobManagementService);
+        ConfigControllerTestDataFactory.ConfigureProblemDetails(_controller);
     }
 
     public void Dispose()
@@ -122,11 +123,9 @@ public class QueueCleanerConfigControllerTests : IDisposable
             IgnoredDownloads = new List<string>(),
         };
 
-        // Act
-        var result = await _controller.UpdateQueueCleanerConfig(request);
-
-        // Assert
-        result.ShouldBeOfType<BadRequestObjectResult>();
+        // Act + Assert
+        await Should.ThrowAsync<System.ComponentModel.DataAnnotations.ValidationException>(
+            () => _controller.UpdateQueueCleanerConfig(request));
     }
 
     [Fact]

@@ -30,6 +30,7 @@ public class DownloadClientControllerTests : IDisposable
         _dynamicHttpClientFactory = Substitute.For<IDynamicHttpClientFactory>();
         _downloadServiceFactory = Substitute.For<IDownloadServiceFactory>();
         _controller = new DownloadClientController(logger, _dataContext, _dynamicHttpClientFactory, _downloadServiceFactory);
+        ConfigControllerTestDataFactory.ConfigureProblemDetails(_controller);
     }
 
     public void Dispose()
@@ -132,7 +133,7 @@ public class DownloadClientControllerTests : IDisposable
         var result = await _controller.UpdateDownloadClientConfig(Guid.NewGuid(), request);
 
         // Assert
-        result.ShouldBeOfType<NotFoundObjectResult>();
+        result.ShouldBeOfType<ObjectResult>().StatusCode.ShouldBe(404);
     }
 
     [Fact]
@@ -186,7 +187,7 @@ public class DownloadClientControllerTests : IDisposable
         var result = await _controller.DeleteDownloadClientConfig(Guid.NewGuid());
 
         // Assert
-        result.ShouldBeOfType<NotFoundObjectResult>();
+        result.ShouldBeOfType<ObjectResult>().StatusCode.ShouldBe(404);
         _dynamicHttpClientFactory.DidNotReceive().UnregisterConfiguration(Arg.Any<string>());
     }
 
@@ -241,7 +242,7 @@ public class DownloadClientControllerTests : IDisposable
         var result = await _controller.TestDownloadClient(request);
 
         // Assert
-        result.ShouldBeOfType<BadRequestObjectResult>();
+        result.ShouldBeOfType<ObjectResult>().StatusCode.ShouldBe(400);
     }
 
     [Fact]
@@ -260,7 +261,7 @@ public class DownloadClientControllerTests : IDisposable
         var result = await _controller.TestDownloadClient(request);
 
         // Assert
-        result.ShouldBeOfType<BadRequestObjectResult>();
+        result.ShouldBeOfType<ObjectResult>().StatusCode.ShouldBe(400);
     }
 
     private static DownloadClientConfig NewClient(string name, DownloadClientTypeName typeName) => new()

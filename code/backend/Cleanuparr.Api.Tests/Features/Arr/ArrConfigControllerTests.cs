@@ -30,6 +30,7 @@ public class ArrConfigControllerTests : IDisposable
         _arrClient = Substitute.For<IArrClient>();
         _arrClientFactory.GetClient(Arg.Any<InstanceType>(), Arg.Any<float>()).Returns(_arrClient);
         _controller = new ArrConfigController(logger, _dataContext, _arrClientFactory);
+        ConfigControllerTestDataFactory.ConfigureProblemDetails(_controller);
     }
 
     public void Dispose()
@@ -175,7 +176,7 @@ public class ArrConfigControllerTests : IDisposable
         var result = await _controller.UpdateSonarrInstance(Guid.NewGuid(), request);
 
         // Assert
-        result.ShouldBeOfType<NotFoundObjectResult>();
+        result.ShouldBeOfType<ObjectResult>().StatusCode.ShouldBe(404);
     }
 
     [Fact]
@@ -225,7 +226,7 @@ public class ArrConfigControllerTests : IDisposable
         var result = await _controller.DeleteSonarrInstance(Guid.NewGuid());
 
         // Assert
-        result.ShouldBeOfType<NotFoundObjectResult>();
+        result.ShouldBeOfType<ObjectResult>().StatusCode.ShouldBe(404);
     }
 
     [Fact]
@@ -293,7 +294,7 @@ public class ArrConfigControllerTests : IDisposable
         var result = await _controller.TestSonarrInstance(request);
 
         // Assert
-        result.ShouldBeOfType<BadRequestObjectResult>();
+        result.ShouldBeOfType<ObjectResult>().StatusCode.ShouldBe(400);
     }
 
     [Fact]
@@ -311,7 +312,7 @@ public class ArrConfigControllerTests : IDisposable
         var result = await _controller.TestSonarrInstance(request);
 
         // Assert
-        result.ShouldBeOfType<BadRequestObjectResult>();
+        result.ShouldBeOfType<ObjectResult>().StatusCode.ShouldBe(400);
     }
 
     [Fact]

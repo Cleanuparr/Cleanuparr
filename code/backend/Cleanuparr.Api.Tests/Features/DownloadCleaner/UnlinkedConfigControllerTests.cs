@@ -1,5 +1,7 @@
 using Cleanuparr.Api.Features.DownloadCleaner.Contracts.Requests;
+using Cleanuparr.Api.Features.DownloadCleaner.Contracts.Responses;
 using Cleanuparr.Api.Features.DownloadCleaner.Controllers;
+using Cleanuparr.Domain.Exceptions;
 using Cleanuparr.Api.Tests.TestHelpers;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Persistence;
@@ -24,6 +26,7 @@ public class UnlinkedConfigControllerTests : IDisposable
         _dataContext = ConfigControllerTestDataFactory.CreateDataContext();
         var logger = Substitute.For<ILogger<UnlinkedConfigController>>();
         _controller = new UnlinkedConfigController(logger, _dataContext);
+        ConfigControllerTestDataFactory.ConfigureProblemDetails(_controller);
     }
 
     public void Dispose()
@@ -39,7 +42,7 @@ public class UnlinkedConfigControllerTests : IDisposable
         var result = await _controller.GetUnlinkedConfig(Guid.NewGuid());
 
         // Assert
-        result.ShouldBeOfType<NotFoundObjectResult>();
+        result.ShouldBeOfType<ObjectResult>().StatusCode.ShouldBe(404);
     }
 
     [Fact]
@@ -75,7 +78,7 @@ public class UnlinkedConfigControllerTests : IDisposable
 
         // Assert
         var ok = result.ShouldBeOfType<OkObjectResult>();
-        var config = ok.Value.ShouldBeOfType<UnlinkedConfig>();
+        var config = ok.Value.ShouldBeOfType<UnlinkedConfigResponse>();
         config.Enabled.ShouldBeTrue();
         config.TargetCategory.ShouldBe("unlinked-cat");
     }
@@ -90,7 +93,7 @@ public class UnlinkedConfigControllerTests : IDisposable
         var result = await _controller.UpdateUnlinkedConfig(Guid.NewGuid(), dto);
 
         // Assert
-        result.ShouldBeOfType<NotFoundObjectResult>();
+        result.ShouldBeOfType<ObjectResult>().StatusCode.ShouldBe(404);
     }
 
     [Fact]
@@ -159,11 +162,9 @@ public class UnlinkedConfigControllerTests : IDisposable
             Categories = new List<string>(),
         };
 
-        // Act
-        var result = await _controller.UpdateUnlinkedConfig(client.Id, dto);
-
-        // Assert
-        result.ShouldBeOfType<BadRequestObjectResult>();
+        // Act + Assert
+        await Should.ThrowAsync<ValidationException>(
+            () => _controller.UpdateUnlinkedConfig(client.Id, dto));
     }
 
     [Fact]
@@ -178,11 +179,9 @@ public class UnlinkedConfigControllerTests : IDisposable
             Categories = new List<string> { "movies", "unlinked-cat" },
         };
 
-        // Act
-        var result = await _controller.UpdateUnlinkedConfig(client.Id, dto);
-
-        // Assert
-        result.ShouldBeOfType<BadRequestObjectResult>();
+        // Act + Assert
+        await Should.ThrowAsync<ValidationException>(
+            () => _controller.UpdateUnlinkedConfig(client.Id, dto));
     }
 
     private DownloadClientConfig AddDownloadClient()
