@@ -5,7 +5,7 @@ import {
   numberInput,
   expectGuardOnLeave,
   expectNoGuardOnLeave,
-} from './helpers/ui';
+} from '../helpers/ui';
 
 // Behavior-parity spec for the General settings form (Signal Forms migration).
 test.describe('General Settings UI', () => {

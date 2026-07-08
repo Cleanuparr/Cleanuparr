@@ -10,9 +10,9 @@ import {
   getDownloadCleanerConfig,
   updateOrphanedFilesConfig,
   triggerJob,
-} from './helpers/app-api';
-import { QBittorrentDriver } from './helpers/torrent-clients/qbittorrent';
-import { chmodIgnoringEPERM, resetDirectory } from './helpers/torrent-fixtures';
+} from '../helpers/app-api';
+import { QBittorrentDriver } from '../helpers/torrent-clients/qbittorrent';
+import { chmodIgnoringEPERM, resetDirectory } from '../helpers/torrent-fixtures';
 
 /**
  * Regression guard for the orphaned-files cleanup safety bail.

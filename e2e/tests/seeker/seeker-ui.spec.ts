@@ -5,7 +5,7 @@ import {
   ensureToggle,
   expectGuardOnLeave,
   expectNoGuardOnLeave,
-} from './helpers/ui';
+} from '../helpers/ui';
 
 // Behavior-parity spec for the Seeker settings form.
 test.describe('Seeker UI', () => {

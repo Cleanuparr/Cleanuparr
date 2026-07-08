@@ -10,8 +10,8 @@ import {
   getDownloadCleanerConfig,
   updateOrphanedFilesConfig,
   triggerJob,
-} from './helpers/app-api';
-import { ALL_CLIENTS, TorrentClientFixture } from './helpers/torrent-clients';
+} from '../helpers/app-api';
+import { ALL_CLIENTS, TorrentClientFixture } from '../helpers/torrent-clients';
 import {
   buildFolderTorrent,
   buildMultiFileTorrent,
@@ -19,7 +19,7 @@ import {
   chmodIgnoringEPERM,
   resetDirectory,
   GeneratedTorrent,
-} from './helpers/torrent-fixtures';
+} from '../helpers/torrent-fixtures';
 
 async function waitForTorrents(
   driver: { listTorrents(): Promise<Array<{ hash: string }>> },

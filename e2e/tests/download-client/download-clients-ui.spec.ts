@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { loginAndGotoSettings, selectOption } from './helpers/ui';
+import { loginAndGotoSettings, selectOption } from '../helpers/ui';
 
 // Behavior-parity spec for the Download Clients create/edit modal (client-type driven fields).
 test.describe('Download Clients UI', () => {

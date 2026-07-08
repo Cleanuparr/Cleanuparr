@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { loginAndGotoSettings } from './helpers/ui';
+import { loginAndGotoSettings } from '../helpers/ui';
 
 // Behavior-parity spec for the Arr (Sonarr) instance create/edit modal.
 test.describe('Arr Settings UI', () => {

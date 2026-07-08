@@ -5,7 +5,7 @@ import {
   textInput,
   expectGuardOnLeave,
   expectNoGuardOnLeave,
-} from './helpers/ui';
+} from '../helpers/ui';
 
 // Behavior-parity spec for the Blacklist Sync settings form (Signal Forms migration).
 // Authored against pre-migration (main) behavior; must stay green after the migration.

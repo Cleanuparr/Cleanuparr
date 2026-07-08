@@ -4,7 +4,7 @@ import {
   createDownloadClient,
   deleteDownloadClient,
   listDownloadClients,
-} from './helpers/app-api';
+} from '../helpers/app-api';
 import {
   loginAndGotoSettings,
   toggle,
@@ -12,7 +12,7 @@ import {
   selectOption,
   ensureToggle,
   ensureAccordionExpanded,
-} from './helpers/ui';
+} from '../helpers/ui';
 
 const CLIENT_A = 'E2E DC One';
 const CLIENT_B = 'E2E DC Two';

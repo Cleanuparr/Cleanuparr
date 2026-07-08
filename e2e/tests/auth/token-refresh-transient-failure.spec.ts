@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
-import { TEST_CONFIG } from './helpers/test-config';
-import { loginViaBrowser } from './helpers/ui';
+import { TEST_CONFIG } from '../helpers/test-config';
+import { loginViaBrowser } from '../helpers/ui';
 
 /**
  * A transient failure of the refresh endpoint (server restarting, network blip,

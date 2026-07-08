@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { loginAndGotoSettings, textInput } from './helpers/ui';
+import { loginAndGotoSettings, textInput } from '../helpers/ui';
 
 // Behavior-parity spec for the non-OIDC Account settings sections.
 // (OIDC is covered separately in oidc-settings-ui.spec.ts.)

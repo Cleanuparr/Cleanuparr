@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { loginAndGotoSettings, selectOption } from './helpers/ui';
+import { loginAndGotoSettings, selectOption } from '../helpers/ui';
 
 // Behavior-parity spec for the Notifications provider modal (discriminated union over provider type).
 test.describe('Notifications UI', () => {

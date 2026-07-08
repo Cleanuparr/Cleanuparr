@@ -13,9 +13,9 @@ import {
   updateGeneralConfig,
   triggerJob,
   OrphanedFilesConfigRequest,
-} from './helpers/app-api';
-import { QBittorrentDriver } from './helpers/torrent-clients/qbittorrent';
-import { buildFolderTorrent, chmodIgnoringEPERM, resetDirectory } from './helpers/torrent-fixtures';
+} from '../helpers/app-api';
+import { QBittorrentDriver } from '../helpers/torrent-clients/qbittorrent';
+import { buildFolderTorrent, chmodIgnoringEPERM, resetDirectory } from '../helpers/torrent-fixtures';
 
 /**
  * Behavior-level coverage for the orphaned files cleaner that isn't

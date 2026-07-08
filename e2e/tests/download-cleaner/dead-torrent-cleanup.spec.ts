@@ -10,12 +10,12 @@ import {
   getDownloadCleanerConfig,
   updateDeadTorrentConfig,
   triggerJob,
-} from './helpers/app-api';
-import { QBittorrentDriver } from './helpers/torrent-clients/qbittorrent';
-import { TransmissionDriver } from './helpers/torrent-clients/transmission';
-import { DelugeDriver } from './helpers/torrent-clients/deluge';
-import { UTorrentDriver } from './helpers/torrent-clients/utorrent';
-import { buildFolderTorrent, chmodIgnoringEPERM, resetDirectory } from './helpers/torrent-fixtures';
+} from '../helpers/app-api';
+import { QBittorrentDriver } from '../helpers/torrent-clients/qbittorrent';
+import { TransmissionDriver } from '../helpers/torrent-clients/transmission';
+import { DelugeDriver } from '../helpers/torrent-clients/deluge';
+import { UTorrentDriver } from '../helpers/torrent-clients/utorrent';
+import { buildFolderTorrent, chmodIgnoringEPERM, resetDirectory } from '../helpers/torrent-fixtures';
 
 const HOST_DOWNLOADS = resolve(__dirname, '..', 'test-data', 'downloads');
 const CLIENT_DOWNLOADS = '/downloads';

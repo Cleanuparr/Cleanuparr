@@ -6,7 +6,7 @@ import {
   getDeadTorrentConfig,
   updateDeadTorrentConfig,
   getDownloadCleanerConfig,
-} from './helpers/app-api';
+} from '../helpers/app-api';
 
 test.describe.serial('Dead Torrent Config API', () => {
   let token: string;

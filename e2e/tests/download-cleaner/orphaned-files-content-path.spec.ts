@@ -10,9 +10,9 @@ import {
   getDownloadCleanerConfig,
   updateOrphanedFilesConfig,
   triggerJob,
-} from './helpers/app-api';
-import { QBittorrentDriver } from './helpers/torrent-clients/qbittorrent';
-import { buildFolderTorrent, chmodIgnoringEPERM, resetDirectory } from './helpers/torrent-fixtures';
+} from '../helpers/app-api';
+import { QBittorrentDriver } from '../helpers/torrent-clients/qbittorrent';
+import { buildFolderTorrent, chmodIgnoringEPERM, resetDirectory } from '../helpers/torrent-fixtures';
 
 /**
  * An actively-seeding torrent whose display name

@@ -7,7 +7,7 @@ import {
   ensureAccordionExpanded,
   expectGuardOnLeave,
   expectNoGuardOnLeave,
-} from './helpers/ui';
+} from '../helpers/ui';
 
 // Behavior-parity spec for the Queue Cleaner settings form + stall-rule modal.
 test.describe('Queue Cleaner UI', () => {
