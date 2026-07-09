@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using System.Text;
 using Cleanuparr.Domain.Entities.Arr;
 using Cleanuparr.Domain.Entities.Arr.Queue;
@@ -131,7 +132,9 @@ public class RadarrClient : ArrClient, IRadarrClient
         return null;
     }
 
-    public async Task<List<SearchableMovie>> GetAllMoviesAsync(ArrInstance arrInstance)
+    public async IAsyncEnumerable<SearchableMovie> StreamAllMoviesAsync(
+        ArrInstance arrInstance,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         UriBuilder uriBuilder = new(arrInstance.Url);
         uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/v3/movie";
@@ -139,14 +142,17 @@ public class RadarrClient : ArrClient, IRadarrClient
         using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
         SetApiKey(request, arrInstance.ApiKey);
 
-        using HttpResponseMessage response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+        using HttpResponseMessage response = await _httpClient.SendAsync(
+            request,
+            HttpCompletionOption.ResponseHeadersRead,
+            cancellationToken);
         response.EnsureSuccessStatusCode();
 
-        using Stream stream = await response.Content.ReadAsStreamAsync();
-        using StreamReader sr = new(stream);
-        using JsonTextReader reader = new(sr);
-        JsonSerializer serializer = JsonSerializer.CreateDefault();
-        return serializer.Deserialize<List<SearchableMovie>>(reader) ?? [];
+        await using Stream stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+        await foreach (SearchableMovie movie in JsonStreamReader.StreamArrayAsync<SearchableMovie>(stream, cancellationToken))
+        {
+            yield return movie;
+        }
     }
     
     public override async Task<List<Tag>> GetAllTagsAsync(ArrInstance arrInstance)

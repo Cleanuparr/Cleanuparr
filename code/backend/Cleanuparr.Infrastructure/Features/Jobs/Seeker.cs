@@ -423,10 +423,7 @@ public sealed class Seeker : IHandler
         bool isDryRun,
         HashSet<long> queuedMovieIds)
     {
-        List<SearchableMovie> movies = await _radarrClient.GetAllMoviesAsync(arrInstance);
         List<Tag> tags = await _radarrClient.GetAllTagsAsync(arrInstance);
-        List<long> allLibraryIds = movies.Select(m => m.Id).ToList();
-
         Dictionary<long, string> tagsById = tags.ToDictionary(t => t.Id, t => t.Label);
         HashSet<string> skipTagSet = new(instanceConfig.SkipTags, StringComparer.InvariantCultureIgnoreCase);
 
@@ -440,22 +437,47 @@ public sealed class Seeker : IHandler
                 .ToDictionaryAsync(e => e.ExternalItemId);
         }
 
-        // Apply filters — UseCutoff and UseCustomFormatScore are OR-ed: an item qualifies if it fails the quality cutoff OR the CF score cutoff.
-        // Items without cutoff data or a cached CF score are excluded from the respective filter.
         DateTimeOffset graceCutoff = _timeProvider.GetUtcNow().AddHours(-config.PostReleaseGraceHours);
-        var candidates = movies
-            .Where(m => m.Status is "released")
-            .Where(m => IsMoviePastGracePeriod(m, graceCutoff))
-            .Where(m => !instanceConfig.MonitoredOnly || m.Monitored)
-            .Where(m => instanceConfig.SkipTags.Count == 0 ||
-                !m.Tags
+        
+        List<long> allLibraryIds = new();
+        List<SearchableMovie> candidates = new();
+        await foreach (SearchableMovie movie in _radarrClient.StreamAllMoviesAsync(arrInstance))
+        {
+            allLibraryIds.Add(movie.Id);
+
+            if (movie.Status is not "released")
+            {
+                continue;
+            }
+
+            if (!IsMoviePastGracePeriod(movie, graceCutoff))
+            {
+                continue;
+            }
+
+            if (instanceConfig.MonitoredOnly && !movie.Monitored)
+            {
+                continue;
+            }
+
+            if (instanceConfig.SkipTags.Count > 0
+                && movie.Tags
                     .Select(id => tagsById.TryGetValue(id, out var label) ? label : null)
-                    .Any(label => label is not null && skipTagSet.Contains(label))
-            )
-            .Where(m => !m.HasFile
-                || (instanceConfig.UseCutoff && (m.MovieFile?.QualityCutoffNotMet ?? false))
-                || (instanceConfig.UseCustomFormatScore && cfScores != null && cfScores.TryGetValue(m.Id, out var entry) && entry.CurrentScore < entry.CutoffScore))
-            .ToList();
+                    .Any(label => label is not null && skipTagSet.Contains(label)))
+            {
+                continue;
+            }
+
+            bool passesQualityCheck = !movie.HasFile
+                || (instanceConfig.UseCutoff && (movie.MovieFile?.QualityCutoffNotMet ?? false))
+                || (instanceConfig.UseCustomFormatScore && cfScores != null && cfScores.TryGetValue(movie.Id, out var entry) && entry.CurrentScore < entry.CutoffScore);
+            if (!passesQualityCheck)
+            {
+                continue;
+            }
+
+            candidates.Add(movie);
+        }
 
         instanceConfig.TotalEligibleItems = candidates.Count;
 
@@ -521,10 +543,15 @@ public sealed class Seeker : IHandler
         IItemSelector selector = ItemSelectorFactory.Create(config.SelectionStrategy);
         List<long> selectedIds = selector.Select(selectionCandidates, 1);
 
+        Dictionary<long, SearchableMovie> candidatesById = candidates.ToDictionary(m => m.Id);
+
         List<SeekerSearchCandidate> searchCandidates = [];
         foreach (long movieId in selectedIds)
         {
-            SearchableMovie movie = candidates.First(m => m.Id == movieId);
+            if (!candidatesById.TryGetValue(movieId, out SearchableMovie? movie))
+            {
+                continue;
+            }
             SeekerSearchReason reason = !movie.HasFile
                 ? SeekerSearchReason.Missing
                 : instanceConfig.UseCutoff && (movie.MovieFile?.QualityCutoffNotMet ?? false)
@@ -556,28 +583,47 @@ public sealed class Seeker : IHandler
         bool isRetry = false,
         HashSet<(long SeriesId, long SeasonNumber)>? queuedSeasons = null)
     {
-        List<SearchableSeries> series = await _sonarrClient.GetAllSeriesAsync(arrInstance);
         List<Tag> tags = await _sonarrClient.GetAllTagsAsync(arrInstance);
-        List<long> allLibraryIds = series.Select(s => s.Id).ToList();
-        DateTimeOffset graceCutoff = _timeProvider.GetUtcNow().AddHours(-config.PostReleaseGraceHours);
-
         Dictionary<long, string> tagsById = tags.ToDictionary(t => t.Id, t => t.Label);
         HashSet<string> skipTagSet = new(instanceConfig.SkipTags, StringComparer.InvariantCultureIgnoreCase);
 
-        // Apply filters
-        var candidates = series
-            .Where(s => s.Status is "continuing" or "ended" or "released")
-            .Where(s => !instanceConfig.MonitoredOnly || s.Monitored)
-            .Where(s => instanceConfig.SkipTags.Count == 0 ||
-                !s.Tags
+        DateTimeOffset graceCutoff = _timeProvider.GetUtcNow().AddHours(-config.PostReleaseGraceHours);
+        
+        List<long> allLibraryIds = new();
+        List<SearchableSeries> candidates = new();
+        await foreach (SearchableSeries series in _sonarrClient.StreamAllSeriesAsync(arrInstance))
+        {
+            allLibraryIds.Add(series.Id);
+
+            if (series.Status is not ("continuing" or "ended" or "released"))
+            {
+                continue;
+            }
+
+            if (instanceConfig.MonitoredOnly && !series.Monitored)
+            {
+                continue;
+            }
+
+            if (instanceConfig.SkipTags.Count > 0
+                && series.Tags
                     .Select(id => tagsById.TryGetValue(id, out var label) ? label : null)
-                    .Any(label => label is not null && skipTagSet.Contains(label))
-            )
-            // Skip fully-downloaded series (unless quality upgrade filters active)
-            .Where(s => instanceConfig.UseCutoff || instanceConfig.UseCustomFormatScore
-                || s.Statistics == null || s.Statistics.EpisodeCount == 0
-                || s.Statistics.EpisodeFileCount < s.Statistics.EpisodeCount)
-            .ToList();
+                    .Any(label => label is not null && skipTagSet.Contains(label)))
+            {
+                continue;
+            }
+
+            // Skip fully-downloaded series unless a quality upgrade filter is active.
+            bool fullyDownloaded = series.Statistics is not null
+                && series.Statistics.EpisodeCount > 0
+                && series.Statistics.EpisodeFileCount >= series.Statistics.EpisodeCount;
+            if (fullyDownloaded && !instanceConfig.UseCutoff && !instanceConfig.UseCustomFormatScore)
+            {
+                continue;
+            }
+
+            candidates.Add(series);
+        }
 
         instanceConfig.TotalEligibleItems = candidates.Count;
 
@@ -596,6 +642,8 @@ public sealed class Seeker : IHandler
         IItemSelector selector = ItemSelectorFactory.Create(config.SelectionStrategy);
         List<long> candidateIds = selector.Select(selectionCandidates, selectionCandidates.Count);
 
+        Dictionary<long, SearchableSeries> candidatesById = candidates.ToDictionary(s => s.Id);
+
         // Drill down to find the first series with qualifying unsearched seasons
         foreach (long seriesId in candidateIds)
         {
@@ -603,11 +651,16 @@ public sealed class Seeker : IHandler
 
             try
             {
+                if (!candidatesById.TryGetValue(seriesId, out SearchableSeries? series))
+                {
+                    continue;
+                }
+
                 List<SeekerHistory> seriesHistory = currentCycleHistory
                     .Where(h => h.ExternalItemId == seriesId)
                     .ToList();
 
-                seriesTitle = candidates.First(s => s.Id == seriesId).Title;
+                seriesTitle = series.Title;
 
                 (SeriesSearchItem? searchItem, SearchableEpisode? selectedEpisode, SeekerSearchReason searchReason) =
                     await BuildSonarrSearchItemAsync(instanceConfig, arrInstance, seriesId, seriesHistory, seriesTitle, graceCutoff, queuedSeasons);
@@ -959,5 +1012,4 @@ public sealed class Seeker : IHandler
         DateTimeOffset? releaseDate = movie.DigitalRelease ?? movie.PhysicalRelease ?? movie.InCinemas;
         return releaseDate is null || releaseDate.Value <= graceCutoff;
     }
-
 }

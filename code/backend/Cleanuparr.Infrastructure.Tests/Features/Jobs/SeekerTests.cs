@@ -97,6 +97,16 @@ public class SeekerTests : IDisposable
         );
     }
 
+    private static async IAsyncEnumerable<T> ToAsyncEnumerable<T>(IEnumerable<T> items)
+    {
+        foreach (T item in items)
+        {
+            yield return item;
+        }
+
+        await Task.CompletedTask;
+    }
+
     #region ExecuteAsync Tests
 
     [Fact]
@@ -366,13 +376,13 @@ public class SeekerTests : IDisposable
             .Returns(ci => ci.ArgAt<Func<IReadOnlyList<QueueRecord>, Task>>(2)(queuedRecords));
 
         _radarrClient
-            .GetAllMoviesAsync(radarrInstance)
+            .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
             .Returns(
-            [
+            ToAsyncEnumerable<SearchableMovie>([
                 new SearchableMovie { Id = 1, Title = "Movie 1", Status = "released", Monitored = true, Tags = [] },
                 new SearchableMovie { Id = 2, Title = "Movie 2", Status = "released", Monitored = true, Tags = [] },
                 new SearchableMovie { Id = 3, Title = "Movie 3", Status = "released", Monitored = true, Tags = [] }
-            ]);
+            ]));
 
         HashSet<SearchItem>? capturedSearchItems = null;
         mockArrClient
@@ -431,11 +441,11 @@ public class SeekerTests : IDisposable
             .Returns(ci => ci.ArgAt<Func<IReadOnlyList<QueueRecord>, Task>>(2)(queuedRecords));
 
         _radarrClient
-            .GetAllMoviesAsync(radarrInstance)
+            .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
             .Returns(
-            [
+            ToAsyncEnumerable<SearchableMovie>([
                 new SearchableMovie { Id = 1, Title = "Movie 1", Status = "released", Monitored = true, Tags = [] }
-            ]);
+            ]));
 
         mockArrClient
             .SearchItemAsync(radarrInstance, Arg.Any<SearchItem>())
@@ -486,11 +496,11 @@ public class SeekerTests : IDisposable
             .Returns(ci => ci.ArgAt<Func<IReadOnlyList<QueueRecord>, Task>>(2)(queuedRecords));
 
         _sonarrClient
-            .GetAllSeriesAsync(Arg.Any<ArrInstance>())
+            .StreamAllSeriesAsync(Arg.Any<ArrInstance>(), Arg.Any<CancellationToken>())
             .Returns(
-            [
+            ToAsyncEnumerable<SearchableSeries>([
                 new SearchableSeries { Id = 10, Title = "Test Series", Status = "continuing", Monitored = true, Tags = [], Statistics = new SeriesStatistics { EpisodeCount = 20, EpisodeFileCount = 10 } }
-            ]);
+            ]));
 
         // Use dates relative to FakeTimeProvider (defaults to Jan 1, 2000)
         var pastDate = _fixture.TimeProvider.GetUtcNow().UtcDateTime.AddDays(-30);
@@ -530,6 +540,86 @@ public class SeekerTests : IDisposable
     }
 
     [Fact]
+    public async Task ExecuteAsync_Sonarr_MultipleCandidates_SelectsCorrectSeriesById()
+    {
+        var config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
+        config.SearchEnabled = true;
+        config.ProactiveSearchEnabled = true;
+        await _fixture.DataContext.SaveChangesAsync();
+
+        var sonarrInstance = TestDataContextFactory.AddSonarrInstance(_fixture.DataContext);
+
+        _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = sonarrInstance.Id,
+            ArrInstance = sonarrInstance,
+            Enabled = true
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+
+        var mockArrClient = Substitute.For<IArrClient>();
+
+        _fixture.ArrQueueIterator
+            .Iterate(mockArrClient, Arg.Any<ArrInstance>(), Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>())
+            .Returns(Task.CompletedTask);
+
+        _sonarrClient
+            .StreamAllSeriesAsync(Arg.Any<ArrInstance>(), Arg.Any<CancellationToken>())
+            .Returns(
+            ToAsyncEnumerable<SearchableSeries>([
+                new SearchableSeries { Id = 10, Title = "Series Ten", Status = "continuing", Monitored = true, Tags = [], Statistics = new SeriesStatistics { EpisodeCount = 10, EpisodeFileCount = 10 } },
+                new SearchableSeries { Id = 20, Title = "Series Twenty", Status = "continuing", Monitored = true, Tags = [], Statistics = new SeriesStatistics { EpisodeCount = 10, EpisodeFileCount = 5 } },
+                new SearchableSeries { Id = 30, Title = "Series Thirty", Status = "continuing", Monitored = true, Tags = [], Statistics = new SeriesStatistics { EpisodeCount = 10, EpisodeFileCount = 10 } }
+            ]));
+
+        var pastDate = _fixture.TimeProvider.GetUtcNow().UtcDateTime.AddDays(-30);
+
+        _sonarrClient
+            .GetEpisodesAsync(Arg.Any<ArrInstance>(), 10)
+            .Returns(
+            [
+                new SearchableEpisode { Id = 900, SeasonNumber = 1, EpisodeNumber = 1, Monitored = true, AirDateUtc = pastDate, HasFile = true }
+            ]);
+        _sonarrClient
+            .GetEpisodesAsync(Arg.Any<ArrInstance>(), 30)
+            .Returns(
+            [
+                new SearchableEpisode { Id = 901, SeasonNumber = 1, EpisodeNumber = 1, Monitored = true, AirDateUtc = pastDate, HasFile = true }
+            ]);
+
+        _sonarrClient
+            .GetEpisodesAsync(Arg.Any<ArrInstance>(), 20)
+            .Returns(
+            [
+                new SearchableEpisode { Id = 902, SeasonNumber = 1, EpisodeNumber = 1, Monitored = true, AirDateUtc = pastDate, HasFile = false }
+            ]);
+
+        SeriesSearchItem? capturedSearchItem = null;
+        mockArrClient
+            .SearchItemAsync(Arg.Any<ArrInstance>(), Arg.Any<SearchItem>())
+            .Returns(ci =>
+            {
+                capturedSearchItem = ci.ArgAt<SearchItem>(1) as SeriesSearchItem;
+                return 100L;
+            });
+
+        _fixture.ArrClientFactory
+            .GetClient(InstanceType.Sonarr, Arg.Any<float>())
+            .Returns(mockArrClient);
+
+        var sut = CreateSut();
+
+        await sut.ExecuteAsync();
+
+        await mockArrClient.Received(1)
+            .SearchItemAsync(Arg.Any<ArrInstance>(), Arg.Any<SearchItem>());
+
+        capturedSearchItem.ShouldNotBeNull();
+        capturedSearchItem.SeriesId.ShouldBe(20);
+        capturedSearchItem.Id.ShouldBe(1);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_QueueFetchFails_ProceedsWithoutFiltering()
     {
         // Arrange — queue fetch throws, but search should still proceed
@@ -556,11 +646,11 @@ public class SeekerTests : IDisposable
             .ThrowsAsync(new HttpRequestException("Connection refused"));
 
         _radarrClient
-            .GetAllMoviesAsync(radarrInstance)
+            .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
             .Returns(
-            [
+            ToAsyncEnumerable<SearchableMovie>([
                 new SearchableMovie { Id = 1, Title = "Movie 1", Status = "released", Monitored = true, Tags = [] }
-            ]);
+            ]));
 
         mockArrClient
             .SearchItemAsync(radarrInstance, Arg.Any<SearchItem>())
@@ -611,12 +701,12 @@ public class SeekerTests : IDisposable
             .Returns(Task.CompletedTask);
 
         _radarrClient
-            .GetAllMoviesAsync(radarrInstance)
+            .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
             .Returns(
-            [
+            ToAsyncEnumerable<SearchableMovie>([
                 new SearchableMovie { Id = 1, Title = "Monitored Movie", Status = "released", Monitored = true, Tags = [] },
                 new SearchableMovie { Id = 2, Title = "Unmonitored Movie", Status = "released", Monitored = false, Tags = [] }
-            ]);
+            ]));
 
         HashSet<SearchItem>? capturedSearchItems = null;
         mockArrClient
@@ -669,12 +759,12 @@ public class SeekerTests : IDisposable
             .Returns(Task.CompletedTask);
 
         _radarrClient
-            .GetAllMoviesAsync(radarrInstance)
+            .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
             .Returns(
-            [
+            ToAsyncEnumerable<SearchableMovie>([
                 new SearchableMovie { Id = 1, Title = "Normal Movie", Status = "released", Monitored = true, Tags = [1] },
                 new SearchableMovie { Id = 2, Title = "Skipped Movie", Status = "released", Monitored = true, Tags = [2, 1] }
-            ]);
+            ]));
 
         _radarrClient
             .GetAllTagsAsync(radarrInstance)
@@ -709,6 +799,147 @@ public class SeekerTests : IDisposable
     }
 
     [Fact]
+    public async Task ExecuteAsync_Radarr_SkipTags_TagIdBoundaryIsRespected()
+    {
+        // Arrange — skip tag id 1 must NOT accidentally match tag id 11 or 110 via substring.
+        // The stage table stores tags as ",1,2,3," so the LIKE filter looks for ",1," not "1".
+        var config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
+        config.SearchEnabled = true;
+        config.ProactiveSearchEnabled = true;
+        await _fixture.DataContext.SaveChangesAsync();
+
+        var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
+
+        _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = radarrInstance.Id,
+            ArrInstance = radarrInstance,
+            Enabled = true,
+            MonitoredOnly = false,
+            SkipTags = ["skip-me"]
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+
+        var mockArrClient = Substitute.For<IArrClient>();
+
+        _fixture.ArrQueueIterator
+            .Iterate(mockArrClient, Arg.Any<ArrInstance>(), Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>())
+            .Returns(Task.CompletedTask);
+
+        _radarrClient
+            .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
+            .Returns(ToAsyncEnumerable<SearchableMovie>([
+                new SearchableMovie { Id = 100, Title = "Has tag 1 (skip)", Status = "released", Monitored = true, Tags = [1] },
+                new SearchableMovie { Id = 101, Title = "Has tag 11 (keep)", Status = "released", Monitored = true, Tags = [11] },
+                new SearchableMovie { Id = 102, Title = "Has tag 110 (keep)", Status = "released", Monitored = true, Tags = [110] },
+                new SearchableMovie { Id = 103, Title = "No tags (keep)", Status = "released", Monitored = true, Tags = [] }
+            ]));
+
+        _radarrClient
+            .GetAllTagsAsync(radarrInstance)
+            .Returns([
+                new Tag { Id = 1, Label = "skip-me" },
+                new Tag { Id = 11, Label = "other" },
+                new Tag { Id = 110, Label = "another" }
+            ]);
+
+        HashSet<SearchItem>? captured = null;
+        mockArrClient
+            .SearchItemAsync(radarrInstance, Arg.Any<SearchItem>())
+            .Returns(ci =>
+            {
+                captured = [ci.ArgAt<SearchItem>(1)];
+                return 100L;
+            });
+
+        _fixture.ArrClientFactory
+            .GetClient(InstanceType.Radarr, Arg.Any<float>())
+            .Returns(mockArrClient);
+
+        var sut = CreateSut();
+
+        // Act — run until all eligible are searched. Seeker processes one per run.
+        for (int i = 0; i < 5; i++)
+        {
+            await sut.ExecuteAsync();
+        }
+
+        // Assert — tag 1 excluded, tag 11 / 110 / no-tags all eligible
+        var searchedIds = await _fixture.DataContext.SeekerHistory
+            .Where(h => h.ArrInstanceId == radarrInstance.Id)
+            .Select(h => h.ExternalItemId)
+            .ToListAsync();
+
+        searchedIds.ShouldNotContain(100L); // skip-tag 1 correctly excluded
+        searchedIds.ShouldContain(101L);    // tag 11 not a false positive
+        searchedIds.ShouldContain(102L);    // tag 110 not a false positive
+        searchedIds.ShouldContain(103L);    // no tags
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_Radarr_GracePeriod_NoReleaseDatesTreatsAsReleased()
+    {
+        // Arrange — movie with all three release date fields null should pass the grace-period
+        // filter (the original IsMoviePastGracePeriod returned true for null dates).
+        var config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
+        config.SearchEnabled = true;
+        config.ProactiveSearchEnabled = true;
+        config.PostReleaseGraceHours = 24;
+        await _fixture.DataContext.SaveChangesAsync();
+
+        var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
+
+        _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = radarrInstance.Id,
+            ArrInstance = radarrInstance,
+            Enabled = true,
+            MonitoredOnly = false,
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+
+        var mockArrClient = Substitute.For<IArrClient>();
+
+        _fixture.ArrQueueIterator
+            .Iterate(mockArrClient, Arg.Any<ArrInstance>(), Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>())
+            .Returns(Task.CompletedTask);
+
+        _radarrClient
+            .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
+            .Returns(ToAsyncEnumerable<SearchableMovie>([
+                new SearchableMovie
+                {
+                    Id = 200, Title = "No dates", Status = "released", Monitored = true,
+                    DigitalRelease = null, PhysicalRelease = null, InCinemas = null,
+                }
+            ]));
+
+        _radarrClient.GetAllTagsAsync(radarrInstance).Returns([]);
+
+        HashSet<SearchItem>? captured = null;
+        mockArrClient
+            .SearchItemAsync(radarrInstance, Arg.Any<SearchItem>())
+            .Returns(ci =>
+            {
+                captured = [ci.ArgAt<SearchItem>(1)];
+                return 100L;
+            });
+
+        _fixture.ArrClientFactory
+            .GetClient(InstanceType.Radarr, Arg.Any<float>())
+            .Returns(mockArrClient);
+
+        var sut = CreateSut();
+
+        // Act
+        await sut.ExecuteAsync();
+
+        // Assert — the movie with no dates passes grace period and is eligible
+        captured.ShouldNotBeNull();
+        captured.ShouldContain(item => item.Id == 200);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_Radarr_MissingOnly_ExcludesMoviesWithFiles()
     {
         // Arrange — both UseCutoff and UseCustomFormatScore disabled: only missing movies should be searched
@@ -737,13 +968,13 @@ public class SeekerTests : IDisposable
             .Returns(Task.CompletedTask);
 
         _radarrClient
-            .GetAllMoviesAsync(radarrInstance)
+            .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
             .Returns(
-            [
+            ToAsyncEnumerable<SearchableMovie>([
                 new SearchableMovie { Id = 1, Title = "Missing Movie", Status = "released", Monitored = true, HasFile = false, Tags = [] },
                 new SearchableMovie { Id = 2, Title = "Has File", Status = "released", Monitored = true, HasFile = true, MovieFile = new MovieFileInfo { Id = 200, QualityCutoffNotMet = false }, Tags = [] },
                 new SearchableMovie { Id = 3, Title = "Also Has File", Status = "released", Monitored = true, HasFile = true, MovieFile = new MovieFileInfo { Id = 300, QualityCutoffNotMet = true }, Tags = [] }
-            ]);
+            ]));
 
         SearchItem? capturedSearchItem = null;
         mockArrClient
@@ -796,13 +1027,13 @@ public class SeekerTests : IDisposable
             .Returns(Task.CompletedTask);
 
         _radarrClient
-            .GetAllMoviesAsync(radarrInstance)
+            .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
             .Returns(
-            [
+            ToAsyncEnumerable<SearchableMovie>([
                 new SearchableMovie { Id = 1, Title = "Missing Movie", Status = "released", Monitored = true, HasFile = false, Tags = [] },
                 new SearchableMovie { Id = 2, Title = "Cutoff Met", Status = "released", Monitored = true, HasFile = true, MovieFile = new MovieFileInfo { Id = 200, QualityCutoffNotMet = false }, Tags = [] },
                 new SearchableMovie { Id = 3, Title = "Cutoff Not Met", Status = "released", Monitored = true, HasFile = true, MovieFile = new MovieFileInfo { Id = 300, QualityCutoffNotMet = true }, Tags = [] }
-            ]);
+            ]));
 
         HashSet<SearchItem>? capturedSearchItems = null;
         mockArrClient
@@ -878,12 +1109,12 @@ public class SeekerTests : IDisposable
             .Returns(Task.CompletedTask);
 
         _radarrClient
-            .GetAllMoviesAsync(radarrInstance)
+            .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
             .Returns(
-            [
+            ToAsyncEnumerable<SearchableMovie>([
                 new SearchableMovie { Id = 1, Title = "Movie 1", Status = "released", Monitored = true, Tags = [] },
                 new SearchableMovie { Id = 2, Title = "Movie 2", Status = "released", Monitored = true, Tags = [] }
-            ]);
+            ]));
 
         mockArrClient
             .SearchItemAsync(radarrInstance, Arg.Any<SearchItem>())
@@ -951,8 +1182,8 @@ public class SeekerTests : IDisposable
 
         // Return movies for both instances — only instance 2 should be called
         _radarrClient
-            .GetAllMoviesAsync(Arg.Is<ArrInstance>(a => a.Id == radarrInstance2.Id))
-            .Returns([new SearchableMovie { Id = 1, Title = "Movie 1", Status = "released", Monitored = true, Tags = [] }]);
+            .StreamAllMoviesAsync(Arg.Is<ArrInstance>(a => a.Id == radarrInstance2.Id), Arg.Any<CancellationToken>())
+            .Returns(ToAsyncEnumerable<SearchableMovie>([new SearchableMovie { Id = 1, Title = "Movie 1", Status = "released", Monitored = true, Tags = [] }]));
 
         mockArrClient
             .SearchItemAsync(Arg.Any<ArrInstance>(), Arg.Any<SearchItem>())
@@ -967,11 +1198,10 @@ public class SeekerTests : IDisposable
         // Act
         await sut.ExecuteAsync();
 
-        // Assert — instance 2 (oldest) was processed, verified by GetAllMoviesAsync being called for it
-        await _radarrClient.Received(1)
-            .GetAllMoviesAsync(Arg.Is<ArrInstance>(a => a.Id == radarrInstance2.Id));
-        await _radarrClient.DidNotReceive()
-            .GetAllMoviesAsync(Arg.Is<ArrInstance>(a => a.Id == radarrInstance1.Id));
+        _radarrClient.Received(1)
+            .StreamAllMoviesAsync(Arg.Is<ArrInstance>(a => a.Id == radarrInstance2.Id), Arg.Any<CancellationToken>());
+        _radarrClient.DidNotReceive()
+            .StreamAllMoviesAsync(Arg.Is<ArrInstance>(a => a.Id == radarrInstance1.Id), Arg.Any<CancellationToken>());
     }
 
     #endregion
@@ -1078,12 +1308,12 @@ public class SeekerTests : IDisposable
             .Returns(Task.CompletedTask);
 
         _radarrClient
-            .GetAllMoviesAsync(radarrInstance)
+            .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
             .Returns(
-            [
+            ToAsyncEnumerable<SearchableMovie>([
                 new SearchableMovie { Id = 1, Title = "Movie 1", Status = "released", Monitored = true, Tags = [] },
                 new SearchableMovie { Id = 2, Title = "Movie 2", Status = "released", Monitored = true, Tags = [] }
-            ]);
+            ]));
 
         _fixture.ArrClientFactory
             .GetClient(InstanceType.Radarr, Arg.Any<float>())
@@ -1155,12 +1385,12 @@ public class SeekerTests : IDisposable
             .Returns(Task.CompletedTask);
 
         _radarrClient
-            .GetAllMoviesAsync(radarrInstance)
+            .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
             .Returns(
-            [
+            ToAsyncEnumerable<SearchableMovie>([
                 new SearchableMovie { Id = 1, Title = "Movie 1", Status = "released", Monitored = true, Tags = [] },
                 new SearchableMovie { Id = 2, Title = "Movie 2", Status = "released", Monitored = true, Tags = [] }
-            ]);
+            ]));
 
         mockArrClient
             .SearchItemAsync(radarrInstance, Arg.Any<SearchItem>())
@@ -1226,11 +1456,11 @@ public class SeekerTests : IDisposable
             .Returns(Task.CompletedTask);
 
         _radarrClient
-            .GetAllMoviesAsync(radarrInstance)
+            .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
             .Returns(
-            [
+            ToAsyncEnumerable<SearchableMovie>([
                 new SearchableMovie { Id = 1, Title = "Movie 1", Status = "released", Monitored = true, Tags = [] }
-            ]);
+            ]));
 
         mockArrClient
             .SearchItemAsync(radarrInstance, Arg.Any<SearchItem>())
@@ -1294,11 +1524,11 @@ public class SeekerTests : IDisposable
             .Returns(Task.CompletedTask);
 
         _sonarrClient
-            .GetAllSeriesAsync(sonarrInstance)
+            .StreamAllSeriesAsync(sonarrInstance, Arg.Any<CancellationToken>())
             .Returns(
-            [
+            ToAsyncEnumerable<SearchableSeries>([
                 new SearchableSeries { Id = 10, Title = "Test Series", Status = "continuing", Monitored = true, Tags = [], Statistics = new SeriesStatistics { EpisodeCount = 10, EpisodeFileCount = 5 } }
-            ]);
+            ]));
 
         var pastDate = now.AddDays(-30);
         _sonarrClient
@@ -1370,11 +1600,11 @@ public class SeekerTests : IDisposable
             .Returns(Task.CompletedTask);
 
         _sonarrClient
-            .GetAllSeriesAsync(sonarrInstance)
+            .StreamAllSeriesAsync(sonarrInstance, Arg.Any<CancellationToken>())
             .Returns(
-            [
+            ToAsyncEnumerable<SearchableSeries>([
                 new SearchableSeries { Id = 10, Title = "Test Series", Status = "continuing", Monitored = true, Tags = [], Statistics = new SeriesStatistics { EpisodeCount = 10, EpisodeFileCount = 5 } }
-            ]);
+            ]));
 
         var pastDate = now.AddDays(-30);
         _sonarrClient
@@ -1470,18 +1700,18 @@ public class SeekerTests : IDisposable
 
         // Instance A: return the movie that was already searched in its cycle
         _radarrClient
-            .GetAllMoviesAsync(instanceA)
+            .StreamAllMoviesAsync(instanceA, Arg.Any<CancellationToken>())
             .Returns(
-            [
+            ToAsyncEnumerable<SearchableMovie>([
                 new SearchableMovie { Id = 1, Title = "Movie A", Status = "released", Monitored = true, Tags = [] }
-            ]);
+            ]));
 
         _radarrClient
-            .GetAllMoviesAsync(instanceB)
+            .StreamAllMoviesAsync(instanceB, Arg.Any<CancellationToken>())
             .Returns(
-            [
+            ToAsyncEnumerable<SearchableMovie>([
                 new SearchableMovie { Id = 10, Title = "Movie B", Status = "released", Monitored = true, Tags = [] }
-            ]);
+            ]));
 
         mockArrClient
             .SearchItemAsync(Arg.Any<ArrInstance>(), Arg.Any<SearchItem>())
@@ -1497,11 +1727,11 @@ public class SeekerTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert — Instance A was checked (library fetched) but no search triggered
-        await _radarrClient.Received(1)
-            .GetAllMoviesAsync(instanceA);
+        _radarrClient.Received(1)
+            .StreamAllMoviesAsync(instanceA, Arg.Any<CancellationToken>());
         // Instance B was processed and searched
-        await _radarrClient.Received(1)
-            .GetAllMoviesAsync(instanceB);
+        _radarrClient.Received(1)
+            .StreamAllMoviesAsync(instanceB, Arg.Any<CancellationToken>());
         // Search was only triggered for instance B, not instance A
         await mockArrClient.DidNotReceive()
             .SearchItemAsync(instanceA, Arg.Any<SearchItem>());
@@ -1563,13 +1793,13 @@ public class SeekerTests : IDisposable
 
         // Library now has 3 items — the 3rd was newly added
         _radarrClient
-            .GetAllMoviesAsync(radarrInstance)
+            .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
             .Returns(
-            [
+            ToAsyncEnumerable<SearchableMovie>([
                 new SearchableMovie { Id = 1, Title = "Movie 1", Status = "released", Monitored = true, Tags = [] },
                 new SearchableMovie { Id = 2, Title = "Movie 2", Status = "released", Monitored = true, Tags = [] },
                 new SearchableMovie { Id = 3, Title = "Movie 3 (New)", Status = "released", Monitored = true, Tags = [] }
-            ]);
+            ]));
 
         mockArrClient
             .SearchItemAsync(radarrInstance, Arg.Any<SearchItem>())
@@ -1648,12 +1878,12 @@ public class SeekerTests : IDisposable
 
         // Library: item 2 was removed, item 3 was added (same total count of 2)
         _radarrClient
-            .GetAllMoviesAsync(radarrInstance)
+            .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
             .Returns(
-            [
+            ToAsyncEnumerable<SearchableMovie>([
                 new SearchableMovie { Id = 1, Title = "Movie 1", Status = "released", Monitored = true, Tags = [] },
                 new SearchableMovie { Id = 3, Title = "Movie 3 (New)", Status = "released", Monitored = true, Tags = [] }
-            ]);
+            ]));
 
         mockArrClient
             .SearchItemAsync(radarrInstance, Arg.Any<SearchItem>())
@@ -1710,12 +1940,12 @@ public class SeekerTests : IDisposable
 
         var now = _fixture.TimeProvider.GetUtcNow().UtcDateTime;
         _radarrClient
-            .GetAllMoviesAsync(radarrInstance)
+            .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
             .Returns(
-            [
+            ToAsyncEnumerable<SearchableMovie>([
                 new SearchableMovie { Id = 1, Title = "Recent Movie", Status = "released", Monitored = true, Tags = [], DigitalRelease = now.AddHours(-2) },
                 new SearchableMovie { Id = 2, Title = "Old Movie", Status = "released", Monitored = true, Tags = [], DigitalRelease = now.AddHours(-10) }
-            ]);
+            ]));
 
         HashSet<SearchItem>? capturedSearchItems = null;
         mockArrClient
@@ -1773,11 +2003,11 @@ public class SeekerTests : IDisposable
 
         var now = _fixture.TimeProvider.GetUtcNow().UtcDateTime;
         _radarrClient
-            .GetAllMoviesAsync(radarrInstance)
+            .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
             .Returns(
-            [
+            ToAsyncEnumerable<SearchableMovie>([
                 new SearchableMovie { Id = 1, Title = "Just Released", Status = "released", Monitored = true, Tags = [], DigitalRelease = now.AddMinutes(-5) }
-            ]);
+            ]));
 
         mockArrClient
             .SearchItemAsync(radarrInstance, Arg.Any<SearchItem>())
@@ -1824,11 +2054,11 @@ public class SeekerTests : IDisposable
             .Returns(ci => ci.ArgAt<Func<IReadOnlyList<QueueRecord>, Task>>(2)([]));
 
         _radarrClient
-            .GetAllMoviesAsync(radarrInstance)
+            .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
             .Returns(
-            [
+            ToAsyncEnumerable<SearchableMovie>([
                 new SearchableMovie { Id = 1, Title = "No Dates Movie", Status = "released", Monitored = true, Tags = [] }
-            ]);
+            ]));
 
         mockArrClient
             .SearchItemAsync(radarrInstance, Arg.Any<SearchItem>())
@@ -1875,11 +2105,11 @@ public class SeekerTests : IDisposable
             .Returns(ci => ci.ArgAt<Func<IReadOnlyList<QueueRecord>, Task>>(2)([]));
 
         _sonarrClient
-            .GetAllSeriesAsync(Arg.Any<ArrInstance>())
+            .StreamAllSeriesAsync(Arg.Any<ArrInstance>(), Arg.Any<CancellationToken>())
             .Returns(
-            [
+            ToAsyncEnumerable<SearchableSeries>([
                 new SearchableSeries { Id = 10, Title = "Test Series", Status = "continuing", Monitored = true, Tags = [], Statistics = new SeriesStatistics { EpisodeCount = 10, EpisodeFileCount = 8 } }
-            ]);
+            ]));
 
         var now = _fixture.TimeProvider.GetUtcNow().UtcDateTime;
         _sonarrClient
@@ -1944,14 +2174,14 @@ public class SeekerTests : IDisposable
 
         var now = _fixture.TimeProvider.GetUtcNow().UtcDateTime;
         _radarrClient
-            .GetAllMoviesAsync(radarrInstance)
+            .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
             .Returns(
-            [
+            ToAsyncEnumerable<SearchableMovie>([
                 // DigitalRelease is null, PhysicalRelease is 2h ago (within grace)
                 new SearchableMovie { Id = 1, Title = "Physical Only", Status = "released", Monitored = true, Tags = [], PhysicalRelease = now.AddHours(-2) },
                 // DigitalRelease is 10h ago (past grace), PhysicalRelease is 2h ago — DigitalRelease takes precedence
                 new SearchableMovie { Id = 2, Title = "Digital First", Status = "released", Monitored = true, Tags = [], DigitalRelease = now.AddHours(-10), PhysicalRelease = now.AddHours(-2) }
-            ]);
+            ]));
 
         HashSet<SearchItem>? capturedSearchItems = null;
         mockArrClient
@@ -2035,12 +2265,12 @@ public class SeekerTests : IDisposable
 
         // No missing movies — only movies with files, to isolate CF score filtering
         _radarrClient
-            .GetAllMoviesAsync(radarrInstance)
+            .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
             .Returns(
-            [
+            ToAsyncEnumerable<SearchableMovie>([
                 new SearchableMovie { Id = 2, Title = "Below Cutoff", Status = "released", Monitored = true, HasFile = true, MovieFile = new MovieFileInfo { Id = 200, QualityCutoffNotMet = false }, Tags = [] },
                 new SearchableMovie { Id = 3, Title = "Above Cutoff", Status = "released", Monitored = true, HasFile = true, MovieFile = new MovieFileInfo { Id = 300, QualityCutoffNotMet = false }, Tags = [] }
-            ]);
+            ]));
 
         SearchItem? capturedSearchItem = null;
         mockArrClient
@@ -2125,13 +2355,13 @@ public class SeekerTests : IDisposable
             .Returns(Task.CompletedTask);
 
         _radarrClient
-            .GetAllMoviesAsync(radarrInstance)
+            .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
             .Returns(
-            [
+            ToAsyncEnumerable<SearchableMovie>([
                 new SearchableMovie { Id = 2, Title = "CF Below", Status = "released", Monitored = true, HasFile = true, MovieFile = new MovieFileInfo { Id = 200, QualityCutoffNotMet = false }, Tags = [] },
                 new SearchableMovie { Id = 3, Title = "Cutoff Not Met", Status = "released", Monitored = true, HasFile = true, MovieFile = new MovieFileInfo { Id = 300, QualityCutoffNotMet = true }, Tags = [] },
                 new SearchableMovie { Id = 4, Title = "Both Met", Status = "released", Monitored = true, HasFile = true, MovieFile = new MovieFileInfo { Id = 400, QualityCutoffNotMet = false }, Tags = [] }
-            ]);
+            ]));
 
         List<SearchItem> capturedSearchItems = [];
         mockArrClient
@@ -2185,11 +2415,11 @@ public class SeekerTests : IDisposable
             .Returns(Task.CompletedTask);
 
         _radarrClient
-            .GetAllMoviesAsync(radarrInstance)
+            .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
             .Returns(
-            [
+            ToAsyncEnumerable<SearchableMovie>([
                 new SearchableMovie { Id = 1, Title = "Missing Movie", Status = "released", Monitored = true, HasFile = false, Tags = [] }
-            ]);
+            ]));
 
         mockArrClient
             .SearchItemAsync(radarrInstance, Arg.Any<SearchItem>())
@@ -2240,13 +2470,13 @@ public class SeekerTests : IDisposable
             .Returns(Task.CompletedTask);
 
         _radarrClient
-            .GetAllMoviesAsync(radarrInstance)
+            .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
             .Returns(
-            [
+            ToAsyncEnumerable<SearchableMovie>([
                 new SearchableMovie { Id = 1, Title = "Announced Movie", Status = "announced", Monitored = true, HasFile = false, Tags = [] },
                 new SearchableMovie { Id = 2, Title = "In Cinemas Movie", Status = "inCinemas", Monitored = true, HasFile = false, Tags = [] },
                 new SearchableMovie { Id = 3, Title = "Released Movie", Status = "released", Monitored = true, HasFile = false, Tags = [] }
-            ]);
+            ]));
 
         SearchItem? capturedSearchItem = null;
         mockArrClient
@@ -2304,11 +2534,11 @@ public class SeekerTests : IDisposable
             .Returns(Task.CompletedTask);
 
         _sonarrClient
-            .GetAllSeriesAsync(sonarrInstance)
+            .StreamAllSeriesAsync(sonarrInstance, Arg.Any<CancellationToken>())
             .Returns(
-            [
+            ToAsyncEnumerable<SearchableSeries>([
                 new SearchableSeries { Id = 10, Title = "Test Series", Status = "continuing", Monitored = true, Tags = [], Statistics = new SeriesStatistics { EpisodeCount = 10, EpisodeFileCount = 8 } }
-            ]);
+            ]));
 
         var pastDate = _fixture.TimeProvider.GetUtcNow().UtcDateTime.AddDays(-30);
         _sonarrClient
@@ -2371,11 +2601,11 @@ public class SeekerTests : IDisposable
             .Returns(Task.CompletedTask);
 
         _sonarrClient
-            .GetAllSeriesAsync(sonarrInstance)
+            .StreamAllSeriesAsync(sonarrInstance, Arg.Any<CancellationToken>())
             .Returns(
-            [
+            ToAsyncEnumerable<SearchableSeries>([
                 new SearchableSeries { Id = 10, Title = "Test Series", Status = "continuing", Monitored = true, Tags = [], Statistics = new SeriesStatistics { EpisodeCount = 10, EpisodeFileCount = 8 } }
-            ]);
+            ]));
 
         var pastDate = _fixture.TimeProvider.GetUtcNow().UtcDateTime.AddDays(-30);
         _sonarrClient
@@ -2471,11 +2701,11 @@ public class SeekerTests : IDisposable
             .Returns(Task.CompletedTask);
 
         _sonarrClient
-            .GetAllSeriesAsync(sonarrInstance)
+            .StreamAllSeriesAsync(sonarrInstance, Arg.Any<CancellationToken>())
             .Returns(
-            [
+            ToAsyncEnumerable<SearchableSeries>([
                 new SearchableSeries { Id = 10, Title = "Test Series", Status = "continuing", Monitored = true, Tags = [], Statistics = new SeriesStatistics { EpisodeCount = 10, EpisodeFileCount = 10 } }
-            ]);
+            ]));
 
         var pastDate = _fixture.TimeProvider.GetUtcNow().UtcDateTime.AddDays(-30);
         _sonarrClient
@@ -2536,12 +2766,12 @@ public class SeekerTests : IDisposable
             .Returns(Task.CompletedTask);
 
         _sonarrClient
-            .GetAllSeriesAsync(sonarrInstance)
+            .StreamAllSeriesAsync(sonarrInstance, Arg.Any<CancellationToken>())
             .Returns(
-            [
+            ToAsyncEnumerable<SearchableSeries>([
                 new SearchableSeries { Id = 10, Title = "Monitored Series", Status = "continuing", Monitored = true, Tags = [], Statistics = new SeriesStatistics { EpisodeCount = 10, EpisodeFileCount = 5 } },
                 new SearchableSeries { Id = 20, Title = "Unmonitored Series", Status = "continuing", Monitored = false, Tags = [], Statistics = new SeriesStatistics { EpisodeCount = 10, EpisodeFileCount = 5 } }
-            ]);
+            ]));
 
         var pastDate = _fixture.TimeProvider.GetUtcNow().UtcDateTime.AddDays(-30);
         _sonarrClient
@@ -2599,12 +2829,12 @@ public class SeekerTests : IDisposable
             .Returns(Task.CompletedTask);
 
         _sonarrClient
-            .GetAllSeriesAsync(sonarrInstance)
+            .StreamAllSeriesAsync(sonarrInstance, Arg.Any<CancellationToken>())
             .Returns(
-            [
+            ToAsyncEnumerable<SearchableSeries>([
                 new SearchableSeries { Id = 10, Title = "Normal Series", Status = "continuing", Monitored = true, Tags = [1], Statistics = new SeriesStatistics { EpisodeCount = 10, EpisodeFileCount = 5 } },
                 new SearchableSeries { Id = 20, Title = "Skipped Series", Status = "continuing", Monitored = true, Tags = [2], Statistics = new SeriesStatistics { EpisodeCount = 10, EpisodeFileCount = 5 } }
-            ]);
+            ]));
 
         _sonarrClient
             .GetAllTagsAsync(sonarrInstance)
@@ -2671,14 +2901,14 @@ public class SeekerTests : IDisposable
             .Returns(Task.CompletedTask);
 
         _sonarrClient
-            .GetAllSeriesAsync(sonarrInstance)
+            .StreamAllSeriesAsync(sonarrInstance, Arg.Any<CancellationToken>())
             .Returns(
-            [
+            ToAsyncEnumerable<SearchableSeries>([
                 // Fully downloaded — EpisodeFileCount == EpisodeCount
                 new SearchableSeries { Id = 10, Title = "Complete Series", Status = "ended", Monitored = true, Tags = [], Statistics = new SeriesStatistics { EpisodeCount = 10, EpisodeFileCount = 10 } },
                 // Has missing episodes
                 new SearchableSeries { Id = 20, Title = "Incomplete Series", Status = "continuing", Monitored = true, Tags = [], Statistics = new SeriesStatistics { EpisodeCount = 10, EpisodeFileCount = 5 } }
-            ]);
+            ]));
 
         var pastDate = _fixture.TimeProvider.GetUtcNow().UtcDateTime.AddDays(-30);
         _sonarrClient
@@ -2741,11 +2971,11 @@ public class SeekerTests : IDisposable
             .Returns(Task.CompletedTask);
 
         _radarrClient
-            .GetAllMoviesAsync(radarrInstance)
+            .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
             .Returns(
-            [
+            ToAsyncEnumerable<SearchableMovie>([
                 new SearchableMovie { Id = 1, Title = "Movie 1", Status = "released", Monitored = true, HasFile = false, Tags = [] }
-            ]);
+            ]));
 
         mockArrClient
             .SearchItemAsync(radarrInstance, Arg.Any<SearchItem>())
@@ -2798,11 +3028,11 @@ public class SeekerTests : IDisposable
             .Returns(Task.CompletedTask);
 
         _radarrClient
-            .GetAllMoviesAsync(radarrInstance)
+            .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
             .Returns(
-            [
+            ToAsyncEnumerable<SearchableMovie>([
                 new SearchableMovie { Id = 1, Title = "Movie 1", Status = "released", Monitored = true, HasFile = false, Tags = [] }
-            ]);
+            ]));
 
         mockArrClient
             .SearchItemAsync(radarrInstance, Arg.Any<SearchItem>())
@@ -2867,11 +3097,11 @@ public class SeekerTests : IDisposable
 
         // Library only has movie 1, not movie 99
         _radarrClient
-            .GetAllMoviesAsync(radarrInstance)
+            .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
             .Returns(
-            [
+            ToAsyncEnumerable<SearchableMovie>([
                 new SearchableMovie { Id = 1, Title = "Movie 1", Status = "released", Monitored = true, HasFile = false, Tags = [] }
-            ]);
+            ]));
 
         mockArrClient
             .SearchItemAsync(radarrInstance, Arg.Any<SearchItem>())
@@ -2934,11 +3164,11 @@ public class SeekerTests : IDisposable
             .Returns(Task.CompletedTask);
 
         _radarrClient
-            .GetAllMoviesAsync(radarrInstance)
+            .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
             .Returns(
-            [
+            ToAsyncEnumerable<SearchableMovie>([
                 new SearchableMovie { Id = 1, Title = "Movie 1", Status = "released", Monitored = true, HasFile = false, Tags = [] }
-            ]);
+            ]));
 
         mockArrClient
             .SearchItemAsync(radarrInstance, Arg.Any<SearchItem>())
@@ -2987,13 +3217,13 @@ public class SeekerTests : IDisposable
             .Returns(Task.CompletedTask);
 
         _radarrClient
-            .GetAllMoviesAsync(radarrInstance)
+            .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
             .Returns(
-            [
+            ToAsyncEnumerable<SearchableMovie>([
                 new SearchableMovie { Id = 1, Title = "Movie 1", Status = "released", Monitored = true, HasFile = false, Tags = [] },
                 new SearchableMovie { Id = 2, Title = "Movie 2", Status = "released", Monitored = true, HasFile = false, Tags = [] },
                 new SearchableMovie { Id = 3, Title = "Movie 3", Status = "released", Monitored = true, HasFile = false, Tags = [] }
-            ]);
+            ]));
 
         mockArrClient
             .SearchItemAsync(radarrInstance, Arg.Any<SearchItem>())
@@ -3047,11 +3277,11 @@ public class SeekerTests : IDisposable
             .Returns(Task.CompletedTask);
 
         _radarrClient
-            .GetAllMoviesAsync(radarrInstance)
+            .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
             .Returns(
-            [
+            ToAsyncEnumerable<SearchableMovie>([
                 new SearchableMovie { Id = 1, Title = "Movie 1", Status = "released", Monitored = true, HasFile = false, Tags = [] }
-            ]);
+            ]));
 
         mockArrClient
             .SearchItemAsync(radarrInstance, Arg.Any<SearchItem>())
@@ -3106,8 +3336,8 @@ public class SeekerTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert — no library fetched, no search triggered
-        await _radarrClient.DidNotReceive()
-            .GetAllMoviesAsync(Arg.Any<ArrInstance>());
+        _radarrClient.DidNotReceive()
+            .StreamAllMoviesAsync(Arg.Any<ArrInstance>(), Arg.Any<CancellationToken>());
         _fixture.ArrClientFactory.DidNotReceive()
             .GetClient(Arg.Any<InstanceType>(), Arg.Any<float>());
     }
@@ -3147,11 +3377,11 @@ public class SeekerTests : IDisposable
             .Returns(ci => ci.ArgAt<Func<IReadOnlyList<QueueRecord>, Task>>(2)(activeDownloads));
 
         _radarrClient
-            .GetAllMoviesAsync(radarrInstance)
+            .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
             .Returns(
-            [
+            ToAsyncEnumerable<SearchableMovie>([
                 new SearchableMovie { Id = 1, Title = "Movie 1", Status = "released", Monitored = true, HasFile = false, Tags = [] }
-            ]);
+            ]));
 
         mockArrClient
             .SearchItemAsync(radarrInstance, Arg.Any<SearchItem>())
@@ -3211,17 +3441,17 @@ public class SeekerTests : IDisposable
             .Returns(Task.CompletedTask);
 
         _radarrClient
-            .GetAllMoviesAsync(radarrInstance1)
+            .StreamAllMoviesAsync(radarrInstance1, Arg.Any<CancellationToken>())
             .Returns(
-            [
+            ToAsyncEnumerable<SearchableMovie>([
                 new SearchableMovie { Id = 1, Title = "Movie 1", Status = "released", Monitored = true, HasFile = false, Tags = [] }
-            ]);
+            ]));
         _radarrClient
-            .GetAllMoviesAsync(radarrInstance2)
+            .StreamAllMoviesAsync(radarrInstance2, Arg.Any<CancellationToken>())
             .Returns(
-            [
+            ToAsyncEnumerable<SearchableMovie>([
                 new SearchableMovie { Id = 2, Title = "Movie 2", Status = "released", Monitored = true, HasFile = false, Tags = [] }
-            ]);
+            ]));
 
         mockArrClient
             .SearchItemAsync(Arg.Any<ArrInstance>(), Arg.Any<SearchItem>())
@@ -3237,10 +3467,10 @@ public class SeekerTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert — both instances had their libraries fetched
-        await _radarrClient.Received(1)
-            .GetAllMoviesAsync(radarrInstance1);
-        await _radarrClient.Received(1)
-            .GetAllMoviesAsync(radarrInstance2);
+        _radarrClient.Received(1)
+            .StreamAllMoviesAsync(radarrInstance1, Arg.Any<CancellationToken>());
+        _radarrClient.Received(1)
+            .StreamAllMoviesAsync(radarrInstance2, Arg.Any<CancellationToken>());
     }
 
     #endregion
@@ -3357,11 +3587,11 @@ public class SeekerTests : IDisposable
             .Returns(Task.CompletedTask);
 
         _radarrClient
-            .GetAllMoviesAsync(radarrInstance)
+            .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
             .Returns(
-            [
+            ToAsyncEnumerable<SearchableMovie>([
                 new SearchableMovie { Id = 1, Title = "Movie 1", Status = "released", Monitored = true, HasFile = false, Tags = [] }
-            ]);
+            ]));
 
         mockArrClient
             .SearchItemAsync(radarrInstance, Arg.Any<SearchItem>())

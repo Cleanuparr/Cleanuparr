@@ -6,9 +6,9 @@ namespace Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 public interface ISonarrClient : IArrClient
 {
     /// <summary>
-    /// Fetches all series from a Sonarr instance
+    /// Streams series from a Sonarr instance one item at a time
     /// </summary>
-    Task<List<SearchableSeries>> GetAllSeriesAsync(ArrInstance arrInstance);
+    IAsyncEnumerable<SearchableSeries> StreamAllSeriesAsync(ArrInstance arrInstance, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Fetches all episodes for a specific series from a Sonarr instance

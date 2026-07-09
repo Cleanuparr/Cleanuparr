@@ -68,6 +68,11 @@ ENV PUID=1000 \
 # Fix FileSystemWatcher in Docker: https://github.com/dotnet/dotnet-docker/issues/3546
 ENV DOTNET_USE_POLLING_FILE_WATCHER=true
 
+# GC tuning: prefer lower memory footprint over throughput
+ENV DOTNET_GCDynamicAdaptationMode=1 \
+    DOTNET_GCConserveMemory=5 \
+    DOTNET_GCRetainVM=0
+
 WORKDIR /app
 
 # Copy backend

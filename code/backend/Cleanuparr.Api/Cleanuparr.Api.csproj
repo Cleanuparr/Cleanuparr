@@ -7,6 +7,8 @@
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
         <PublishReadyToRun>true</PublishReadyToRun>
+        <ServerGarbageCollection>false</ServerGarbageCollection>
+        <ConcurrentGarbageCollection>true</ConcurrentGarbageCollection>
         <EnableMacOSCodeSign>false</EnableMacOSCodeSign>
         <CodeSignOnCopy>false</CodeSignOnCopy>
         <_CodeSignDuringBuild>false</_CodeSignDuringBuild>

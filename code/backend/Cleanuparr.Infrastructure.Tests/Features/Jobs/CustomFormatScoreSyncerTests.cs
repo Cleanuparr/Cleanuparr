@@ -3,12 +3,16 @@ using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 using Cleanuparr.Infrastructure.Hubs;
 using Cleanuparr.Infrastructure.Tests.Features.Jobs.TestHelpers;
+using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
+using Cleanuparr.Persistence.Models.Configuration.General;
 using Cleanuparr.Persistence.Models.Configuration.Seeker;
 using Cleanuparr.Persistence.Models.State;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
 using Shouldly;
 using Xunit;
@@ -58,6 +62,16 @@ public class CustomFormatScoreSyncerTests : IDisposable
         );
     }
 
+    private static async IAsyncEnumerable<T> ToAsyncEnumerable<T>(IEnumerable<T> items)
+    {
+        foreach (T item in items)
+        {
+            yield return item;
+        }
+
+        await Task.CompletedTask;
+    }
+
     #region ExecuteAsync Tests
 
     [Fact]
@@ -70,8 +84,8 @@ public class CustomFormatScoreSyncerTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert — no API calls made
-        await _radarrClient.DidNotReceive().GetAllMoviesAsync(Arg.Any<ArrInstance>());
-        await _sonarrClient.DidNotReceive().GetAllSeriesAsync(Arg.Any<ArrInstance>());
+        _radarrClient.DidNotReceive().StreamAllMoviesAsync(Arg.Any<ArrInstance>(), Arg.Any<CancellationToken>());
+        _sonarrClient.DidNotReceive().StreamAllSeriesAsync(Arg.Any<ArrInstance>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -84,8 +98,8 @@ public class CustomFormatScoreSyncerTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert — no API calls
-        await _radarrClient.DidNotReceive().GetAllMoviesAsync(Arg.Any<ArrInstance>());
-        await _sonarrClient.DidNotReceive().GetAllSeriesAsync(Arg.Any<ArrInstance>());
+        _radarrClient.DidNotReceive().StreamAllMoviesAsync(Arg.Any<ArrInstance>(), Arg.Any<CancellationToken>());
+        _sonarrClient.DidNotReceive().StreamAllSeriesAsync(Arg.Any<ArrInstance>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -110,8 +124,8 @@ public class CustomFormatScoreSyncerTests : IDisposable
 
         // Mock movies with files
         _radarrClient
-            .GetAllMoviesAsync(radarrInstance)
-            .Returns([
+            .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
+            .Returns(ToAsyncEnumerable<SearchableMovie>([
                 new SearchableMovie
                 {
                     Id = 10,
@@ -122,7 +136,7 @@ public class CustomFormatScoreSyncerTests : IDisposable
                     Status = "released",
                     Monitored = true
                 }
-            ]);
+            ]));
 
         // Mock file scores
         _radarrClient
@@ -190,8 +204,8 @@ public class CustomFormatScoreSyncerTests : IDisposable
 
         // Mock movies — same movie but score changed from 200 to 350
         _radarrClient
-            .GetAllMoviesAsync(radarrInstance)
-            .Returns([
+            .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
+            .Returns(ToAsyncEnumerable<SearchableMovie>([
                 new SearchableMovie
                 {
                     Id = 10,
@@ -202,7 +216,7 @@ public class CustomFormatScoreSyncerTests : IDisposable
                     Status = "released",
                     Monitored = true
                 }
-            ]);
+            ]));
 
         _radarrClient
             .GetMovieFileScoresAsync(radarrInstance, Arg.Is<List<long>>(ids => ids.Contains(100)))
@@ -245,8 +259,8 @@ public class CustomFormatScoreSyncerTests : IDisposable
             .Returns([new ArrQualityProfile { Id = 1, Name = "HD", CutoffFormatScore = 500 }]);
 
         _radarrClient
-            .GetAllMoviesAsync(radarrInstance)
-            .Returns([
+            .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
+            .Returns(ToAsyncEnumerable<SearchableMovie>([
                 new SearchableMovie
                 {
                     Id = 10,
@@ -257,7 +271,7 @@ public class CustomFormatScoreSyncerTests : IDisposable
                     Status = "released",
                     Monitored = false
                 }
-            ]);
+            ]));
 
         _radarrClient
             .GetMovieFileScoresAsync(radarrInstance, Arg.Is<List<long>>(ids => ids.Contains(100)))
@@ -311,15 +325,15 @@ public class CustomFormatScoreSyncerTests : IDisposable
 
         // Movie is now unmonitored
         _radarrClient
-            .GetAllMoviesAsync(radarrInstance)
-            .Returns([
+            .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
+            .Returns(ToAsyncEnumerable<SearchableMovie>([
                 new SearchableMovie
                 {
                     Id = 10, Title = "Test Movie", HasFile = true,
                     MovieFile = new MovieFileInfo { Id = 100, QualityCutoffNotMet = false },
                     QualityProfileId = 1, Status = "released", Monitored = false
                 }
-            ]);
+            ]));
 
         _radarrClient
             .GetMovieFileScoresAsync(radarrInstance, Arg.Any<List<long>>())
@@ -362,10 +376,10 @@ public class CustomFormatScoreSyncerTests : IDisposable
 
         // Mock series
         _sonarrClient
-            .GetAllSeriesAsync(sonarrInstance)
-            .Returns([
+            .StreamAllSeriesAsync(sonarrInstance, Arg.Any<CancellationToken>())
+            .Returns(ToAsyncEnumerable<SearchableSeries>([
                 new SearchableSeries { Id = 10, Title = "Test Series", QualityProfileId = 1, Monitored = true }
-            ]);
+            ]));
 
         // Mock episodes — one with a file, one without
         _sonarrClient
@@ -427,10 +441,10 @@ public class CustomFormatScoreSyncerTests : IDisposable
             .Returns([new ArrQualityProfile { Id = 1, Name = "HD", CutoffFormatScore = 500 }]);
 
         _sonarrClient
-            .GetAllSeriesAsync(sonarrInstance)
-            .Returns([
+            .StreamAllSeriesAsync(sonarrInstance, Arg.Any<CancellationToken>())
+            .Returns(ToAsyncEnumerable<SearchableSeries>([
                 new SearchableSeries { Id = 10, Title = "Test Series", QualityProfileId = 1, Monitored = true }
-            ]);
+            ]));
 
         // All episodes have EpisodeFileId = 0 (no file)
         _sonarrClient
@@ -451,6 +465,132 @@ public class CustomFormatScoreSyncerTests : IDisposable
         // Assert — no entries created
         var entries = await _fixture.DataContext.CustomFormatScoreEntries.ToListAsync();
         entries.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_SyncSonarr_FetchesSeriesConcurrentlyButWritesSerially()
+    {
+        const int FetchConcurrency = 5;
+        const int SeriesCount = 20;
+
+        string dbPath = Path.Combine(Path.GetTempPath(), $"cfsync-concurrency-{Guid.NewGuid():N}.db");
+        DataContext dataContext = CreateFileBackedWalDataContext(dbPath);
+
+        try
+        {
+            ArrConfig sonarrConfig = dataContext.ArrConfigs.First(c => c.Type == InstanceType.Sonarr);
+            ArrInstance sonarrInstance = new()
+            {
+                Id = Guid.NewGuid(),
+                Name = "Test Sonarr",
+                Url = new Uri("http://sonarr:8989"),
+                ApiKey = "test-api-key",
+                Enabled = true,
+                ArrConfigId = sonarrConfig.Id,
+                ArrConfig = sonarrConfig
+            };
+            dataContext.ArrInstances.Add(sonarrInstance);
+            dataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+            {
+                ArrInstanceId = sonarrInstance.Id,
+                ArrInstance = sonarrInstance,
+                Enabled = true,
+                UseCustomFormatScore = true
+            });
+            await dataContext.SaveChangesAsync();
+
+            _sonarrClient
+                .GetQualityProfilesAsync(sonarrInstance)
+                .Returns([new ArrQualityProfile { Id = 1, Name = "HD", CutoffFormatScore = 500 }]);
+
+            List<SearchableSeries> seriesList = new(SeriesCount);
+            for (int i = 1; i <= SeriesCount; i++)
+            {
+                seriesList.Add(new SearchableSeries { Id = i, Title = $"Series {i}", QualityProfileId = 1, Monitored = true });
+            }
+
+            _sonarrClient
+                .StreamAllSeriesAsync(sonarrInstance, Arg.Any<CancellationToken>())
+                .Returns(ToAsyncEnumerable(seriesList));
+
+            int inFlight = 0;
+            int maxInFlight = 0;
+            object gate = new();
+
+            async Task TrackInFlightAsync()
+            {
+                lock (gate)
+                {
+                    inFlight++;
+                    maxInFlight = Math.Max(maxInFlight, inFlight);
+                }
+
+                await Task.Delay(50);
+
+                lock (gate)
+                {
+                    inFlight--;
+                }
+            }
+
+            _sonarrClient
+                .GetEpisodesAsync(sonarrInstance, Arg.Any<long>())
+                .Returns(async callInfo =>
+                {
+                    await TrackInFlightAsync();
+                    long seriesId = callInfo.Arg<long>();
+                    return new List<SearchableEpisode>
+                    {
+                        new() { Id = seriesId * 100, SeasonNumber = 1, EpisodeNumber = 1, EpisodeFileId = seriesId * 1000, HasFile = true, Monitored = true }
+                    };
+                });
+
+            _sonarrClient
+                .GetEpisodeFilesAsync(sonarrInstance, Arg.Any<long>())
+                .Returns(async callInfo =>
+                {
+                    await TrackInFlightAsync();
+                    long seriesId = callInfo.Arg<long>();
+                    return new List<ArrEpisodeFile>
+                    {
+                        new() { Id = seriesId * 1000, CustomFormatScore = 300, QualityCutoffNotMet = false }
+                    };
+                });
+
+            CustomFormatScoreSyncer sut = new(
+                _logger,
+                dataContext,
+                _radarrClient,
+                _sonarrClient,
+                new FakeTimeProvider(),
+                _hubContext);
+
+            await sut.ExecuteAsync();
+
+            maxInFlight.ShouldBeGreaterThanOrEqualTo(2);
+            maxInFlight.ShouldBeLessThanOrEqualTo(FetchConcurrency * 2);
+
+            List<CustomFormatScoreEntry> entries = await dataContext.CustomFormatScoreEntries.ToListAsync();
+            entries.Count.ShouldBe(SeriesCount);
+
+            foreach (SearchableSeries series in seriesList)
+            {
+                CustomFormatScoreEntry? entry = entries.FirstOrDefault(e => e.ExternalItemId == series.Id);
+                entry.ShouldNotBeNull();
+                entry.CurrentScore.ShouldBe(300);
+                entry.CutoffScore.ShouldBe(500);
+            }
+
+            List<CustomFormatScoreHistory> history = await dataContext.CustomFormatScoreHistory.ToListAsync();
+            history.Count.ShouldBe(SeriesCount);
+        }
+        finally
+        {
+            dataContext.Dispose();
+            File.Delete(dbPath);
+            File.Delete($"{dbPath}-wal");
+            File.Delete($"{dbPath}-shm");
+        }
     }
 
     #endregion
@@ -492,15 +632,15 @@ public class CustomFormatScoreSyncerTests : IDisposable
             .Returns([new ArrQualityProfile { Id = 1, Name = "HD", CutoffFormatScore = 500 }]);
 
         _radarrClient
-            .GetAllMoviesAsync(radarrInstance)
-            .Returns([
+            .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
+            .Returns(ToAsyncEnumerable<SearchableMovie>([
                 new SearchableMovie
                 {
                     Id = 10, Title = "Test Movie", HasFile = true,
                     MovieFile = new MovieFileInfo { Id = 100, QualityCutoffNotMet = false },
                     QualityProfileId = 1, Status = "released", Monitored = true
                 }
-            ]);
+            ]));
 
         // Score unchanged: still 250
         _radarrClient
@@ -562,15 +702,15 @@ public class CustomFormatScoreSyncerTests : IDisposable
 
         // Library now only has movie 10 (not 999)
         _radarrClient
-            .GetAllMoviesAsync(radarrInstance)
-            .Returns([
+            .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
+            .Returns(ToAsyncEnumerable<SearchableMovie>([
                 new SearchableMovie
                 {
                     Id = 10, Title = "Current Movie", HasFile = true,
                     MovieFile = new MovieFileInfo { Id = 100, QualityCutoffNotMet = false },
                     QualityProfileId = 1, Status = "released", Monitored = true
                 }
-            ]);
+            ]));
 
         _radarrClient
             .GetMovieFileScoresAsync(radarrInstance, Arg.Any<List<long>>())
@@ -634,15 +774,15 @@ public class CustomFormatScoreSyncerTests : IDisposable
 
         // Movie still exists in Radarr but HasFile is false (RSS upgrade in progress)
         _radarrClient
-            .GetAllMoviesAsync(radarrInstance)
-            .Returns([
+            .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
+            .Returns(ToAsyncEnumerable<SearchableMovie>([
                 new SearchableMovie
                 {
                     Id = 10, Title = "Mario Bros", HasFile = false,
                     MovieFile = null,
                     QualityProfileId = 1, Status = "released", Monitored = true
                 }
-            ]);
+            ]));
 
         var sut = CreateSut();
 
@@ -707,15 +847,15 @@ public class CustomFormatScoreSyncerTests : IDisposable
 
         // Movie has a new file (different FileId) after RSS upgrade
         _radarrClient
-            .GetAllMoviesAsync(radarrInstance)
-            .Returns([
+            .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
+            .Returns(ToAsyncEnumerable<SearchableMovie>([
                 new SearchableMovie
                 {
                     Id = 10, Title = "Mario Bros", HasFile = true,
                     MovieFile = new MovieFileInfo { Id = 200, QualityCutoffNotMet = false },
                     QualityProfileId = 1, Status = "released", Monitored = true
                 }
-            ]);
+            ]));
 
         // New file returns no score (not yet calculated by Radarr)
         _radarrClient
@@ -783,10 +923,10 @@ public class CustomFormatScoreSyncerTests : IDisposable
             .Returns([new ArrQualityProfile { Id = 1, Name = "HD", CutoffFormatScore = 500 }]);
 
         _sonarrClient
-            .GetAllSeriesAsync(sonarrInstance)
-            .Returns([
+            .StreamAllSeriesAsync(sonarrInstance, Arg.Any<CancellationToken>())
+            .Returns(ToAsyncEnumerable<SearchableSeries>([
                 new SearchableSeries { Id = 10, Title = "Test Series", QualityProfileId = 1, Monitored = true }
-            ]);
+            ]));
 
         // Episode exists but has no file currently (RSS upgrade in progress)
         _sonarrClient
@@ -813,6 +953,138 @@ public class CustomFormatScoreSyncerTests : IDisposable
 
         var history = await _fixture.DataContext.CustomFormatScoreHistory.ToListAsync();
         history.ShouldHaveSingleItem();
+    }
+
+    #endregion
+
+    #region WAL Checkpoint Tests
+
+    private const int CheckpointIntervalChunks = 10;
+    private const int ChunkSize = 200;
+
+    private static DataContext CreateFileBackedWalDataContext(string dbPath)
+    {
+        SqliteConnectionStringBuilder connectionStringBuilder = new()
+        {
+            DataSource = dbPath
+        };
+
+        DbContextOptions<DataContext> options = new DbContextOptionsBuilder<DataContext>()
+            .UseSqlite(connectionStringBuilder.ConnectionString)
+            .Options;
+
+        DataContext context = new(options);
+        context.Database.EnsureCreated();
+        context.Database.ExecuteSqlRaw("PRAGMA journal_mode=WAL;");
+
+        context.GeneralConfigs.Add(new GeneralConfig
+        {
+            Id = Guid.NewGuid(),
+            DryRun = false,
+            IgnoredDownloads = [],
+            Log = new LoggingConfig()
+        });
+
+        context.ArrConfigs.AddRange(
+            new ArrConfig { Id = Guid.NewGuid(), Type = InstanceType.Sonarr, Instances = [], FailedImportMaxStrikes = 3 },
+            new ArrConfig { Id = Guid.NewGuid(), Type = InstanceType.Radarr, Instances = [], FailedImportMaxStrikes = 3 }
+        );
+
+        context.SaveChanges();
+
+        return context;
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_Radarr_CheckspointsWalPeriodicallyOnLargeLibrary()
+    {
+        string dbPath = Path.Combine(Path.GetTempPath(), $"cfsync-wal-{Guid.NewGuid():N}.db");
+        string walPath = $"{dbPath}-wal";
+        DataContext dataContext = CreateFileBackedWalDataContext(dbPath);
+
+        try
+        {
+            ArrConfig radarrConfig = dataContext.ArrConfigs.First(c => c.Type == InstanceType.Radarr);
+            ArrInstance radarrInstance = new()
+            {
+                Id = Guid.NewGuid(),
+                Name = "Test Radarr",
+                Url = new Uri("http://radarr:7878"),
+                ApiKey = "test-api-key",
+                Enabled = true,
+                ArrConfigId = radarrConfig.Id,
+                ArrConfig = radarrConfig
+            };
+            dataContext.ArrInstances.Add(radarrInstance);
+            dataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+            {
+                ArrInstanceId = radarrInstance.Id,
+                ArrInstance = radarrInstance,
+                Enabled = true,
+                UseCustomFormatScore = true
+            });
+            await dataContext.SaveChangesAsync();
+
+            _radarrClient
+                .GetQualityProfilesAsync(radarrInstance)
+                .Returns([new ArrQualityProfile { Id = 1, Name = "HD", CutoffFormatScore = 500 }]);
+
+            int movieCount = (CheckpointIntervalChunks * ChunkSize) + ChunkSize;
+
+            List<SearchableMovie> movies = new(movieCount);
+            Dictionary<long, int> scores = new(movieCount);
+            for (int i = 1; i <= movieCount; i++)
+            {
+                movies.Add(new SearchableMovie
+                {
+                    Id = i,
+                    Title = $"Movie {i}",
+                    HasFile = true,
+                    MovieFile = new MovieFileInfo { Id = i, QualityCutoffNotMet = false },
+                    QualityProfileId = 1,
+                    Status = "released",
+                    Monitored = true
+                });
+                scores[i] = 100 + (i % 400);
+            }
+
+            _radarrClient
+                .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
+                .Returns(ToAsyncEnumerable(movies));
+
+            _radarrClient
+                .GetMovieFileScoresAsync(radarrInstance, Arg.Any<List<long>>())
+                .Returns(callInfo =>
+                {
+                    List<long> fileIds = callInfo.Arg<List<long>>();
+                    return fileIds
+                        .Where(scores.ContainsKey)
+                        .ToDictionary(id => id, id => scores[id]);
+                });
+
+            CustomFormatScoreSyncer sut = new(
+                _logger,
+                dataContext,
+                _radarrClient,
+                _sonarrClient,
+                new FakeTimeProvider(),
+                _hubContext);
+
+            await sut.ExecuteAsync();
+
+            int entryCount = await dataContext.CustomFormatScoreEntries.CountAsync();
+            entryCount.ShouldBe(movieCount);
+
+            long walSizeBytes = File.Exists(walPath) ? new FileInfo(walPath).Length : 0;
+            walSizeBytes.ShouldBeLessThan(2 * 1024 * 1024);
+        }
+        finally
+        {
+            dataContext.Dispose();
+            File.Delete(dbPath);
+            File.Delete(walPath);
+            File.Delete($"{dbPath}-shm");
+        }
     }
 
     #endregion
