@@ -1,6 +1,7 @@
 ﻿using System.Reflection;
 using Cleanuparr.Infrastructure.Services;
 using Cleanuparr.Persistence;
+using Cleanuparr.Persistence.Providers;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cleanuparr.Api;
@@ -66,30 +67,30 @@ public static class HostExtensions
 
     public static async Task<WebApplicationBuilder> InitAsync(this WebApplicationBuilder builder)
     {
+        IDatabaseProvider provider = DatabaseProviderFactory.Current;
+
         // Apply data db migrations first — events migrations may ATTACH cleanuparr.db
         // and reference its schema, so it must be up to date before events migrate.
-        await using var configContext = DataContext.CreateStaticInstance();
+        await using DataContext configContext = DataContext.CreateStaticInstance();
         if ((await configContext.Database.GetPendingMigrationsAsync()).Any())
         {
             await configContext.Database.MigrateAsync();
         }
+        await provider.OnPostMigrateAsync(configContext.Database, DbContextKind.Data, CancellationToken.None);
 
-        // Apply events db migrations
-        await using var eventsContext = EventsContext.CreateStaticInstance();
+        await using EventsContext eventsContext = EventsContext.CreateStaticInstance();
         if ((await eventsContext.Database.GetPendingMigrationsAsync()).Any())
         {
             await eventsContext.Database.MigrateAsync();
         }
-        
-        // WAL gives better write concurrency and write throughput
-        await eventsContext.Database.ExecuteSqlRawAsync("PRAGMA journal_mode=WAL;");
+        await provider.OnPostMigrateAsync(eventsContext.Database, DbContextKind.Events, CancellationToken.None);
 
-        // Apply users db migrations
-        await using var usersContext = UsersContext.CreateStaticInstance();
+        await using UsersContext usersContext = UsersContext.CreateStaticInstance();
         if ((await usersContext.Database.GetPendingMigrationsAsync()).Any())
         {
             await usersContext.Database.MigrateAsync();
         }
+        await provider.OnPostMigrateAsync(usersContext.Database, DbContextKind.Users, CancellationToken.None);
 
         return builder;
     }

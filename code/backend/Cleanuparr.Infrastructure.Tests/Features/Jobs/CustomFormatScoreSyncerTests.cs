@@ -8,6 +8,7 @@ using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Cleanuparr.Persistence.Models.Configuration.General;
 using Cleanuparr.Persistence.Models.Configuration.Seeker;
 using Cleanuparr.Persistence.Models.State;
+using Cleanuparr.Persistence.Providers;
 using System.Data.Common;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Data.Sqlite;
@@ -61,7 +62,8 @@ public class CustomFormatScoreSyncerTests : IDisposable
             _radarrClient,
             _sonarrClient,
             _fixture.TimeProvider,
-            _hubContext
+            _hubContext,
+            new SqliteDatabaseProvider()
         );
     }
 
@@ -575,7 +577,8 @@ public class CustomFormatScoreSyncerTests : IDisposable
                 _radarrClient,
                 _sonarrClient,
                 new FakeTimeProvider(),
-                _hubContext);
+                _hubContext,
+                new SqliteDatabaseProvider());
 
             await sut.ExecuteAsync();
 
@@ -1192,7 +1195,8 @@ public class CustomFormatScoreSyncerTests : IDisposable
                 _radarrClient,
                 _sonarrClient,
                 new FakeTimeProvider(),
-                _hubContext);
+                _hubContext,
+                new SqliteDatabaseProvider());
 
             await sut.ExecuteAsync();
 
