@@ -13,17 +13,20 @@ namespace Cleanuparr.Api.Tests.Features.Seeker;
 public class CustomFormatScoreControllerTests : IDisposable
 {
     private readonly DataContext _dataContext;
+    private readonly EventsContext _eventsContext;
     private readonly CustomFormatScoreController _controller;
 
     public CustomFormatScoreControllerTests()
     {
         _dataContext = SeekerTestDataFactory.CreateDataContext();
-        _controller = new CustomFormatScoreController(_dataContext);
+        _eventsContext = SeekerTestDataFactory.CreateEventsContext();
+        _controller = new CustomFormatScoreController(_dataContext, _eventsContext);
     }
 
     public void Dispose()
     {
         _dataContext.Dispose();
+        _eventsContext.Dispose();
         GC.SuppressFinalize(this);
     }
 
@@ -495,7 +498,7 @@ public class CustomFormatScoreControllerTests : IDisposable
         bool isMonitored = true,
         string qualityProfileName = "HD")
     {
-        _dataContext.CustomFormatScoreEntries.Add(new CustomFormatScoreEntry
+        _eventsContext.CustomFormatScoreEntries.Add(new CustomFormatScoreEntry
         {
             ArrInstanceId = arrInstanceId,
             ExternalItemId = externalItemId,
@@ -509,7 +512,7 @@ public class CustomFormatScoreControllerTests : IDisposable
             IsMonitored = isMonitored,
             LastSyncedAt = lastSynced ?? DateTime.UtcNow
         });
-        _dataContext.SaveChanges();
+        _eventsContext.SaveChanges();
     }
 
     private void AddHistoryEntry(
@@ -521,7 +524,7 @@ public class CustomFormatScoreControllerTests : IDisposable
         int cutoffScore = 500,
         InstanceType itemType = InstanceType.Radarr)
     {
-        _dataContext.CustomFormatScoreHistory.Add(new CustomFormatScoreHistory
+        _eventsContext.CustomFormatScoreHistory.Add(new CustomFormatScoreHistory
         {
             ArrInstanceId = arrInstanceId,
             ExternalItemId = externalItemId,
@@ -532,7 +535,7 @@ public class CustomFormatScoreControllerTests : IDisposable
             CutoffScore = cutoffScore,
             RecordedAt = recordedAt
         });
-        _dataContext.SaveChanges();
+        _eventsContext.SaveChanges();
     }
 
     #endregion

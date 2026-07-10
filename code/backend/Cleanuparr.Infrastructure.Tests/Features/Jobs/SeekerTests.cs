@@ -85,6 +85,7 @@ public class SeekerTests : IDisposable
         return new SeekerJob(
             _logger,
             _fixture.DataContext,
+            _fixture.EventsContext,
             _radarrClient,
             _sonarrClient,
             _fixture.ArrClientFactory,
@@ -123,6 +124,7 @@ public class SeekerTests : IDisposable
         var config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
         config.SearchEnabled = false;
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var sut = CreateSut();
 
@@ -148,6 +150,7 @@ public class SeekerTests : IDisposable
         config.SearchEnabled = true;
         config.ProactiveSearchEnabled = false;
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var sut = CreateSut();
 
@@ -171,15 +174,15 @@ public class SeekerTests : IDisposable
         // Arrange
         var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
 
-        _fixture.DataContext.SearchQueue.Add(new SearchQueueItem
+        _fixture.EventsContext.SearchQueue.Add(new SearchQueueItem
         {
             ArrInstanceId = radarrInstance.Id,
-            ArrInstance = radarrInstance,
             ItemId = 42,
             Title = "Test Movie",
             CreatedAt = DateTime.UtcNow
         });
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var mockArrClient = Substitute.For<IArrClient>();
         mockArrClient
@@ -207,7 +210,7 @@ public class SeekerTests : IDisposable
                 Arg.Any<Guid?>());
 
         // Replacement item should be removed from the queue
-        var remaining = await _fixture.DataContext.SearchQueue.CountAsync();
+        var remaining = await _fixture.EventsContext.SearchQueue.CountAsync();
         remaining.ShouldBe(0);
     }
 
@@ -219,15 +222,15 @@ public class SeekerTests : IDisposable
 
         var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
 
-        _fixture.DataContext.SearchQueue.Add(new SearchQueueItem
+        _fixture.EventsContext.SearchQueue.Add(new SearchQueueItem
         {
             ArrInstanceId = radarrInstance.Id,
-            ArrInstance = radarrInstance,
             ItemId = 42,
             Title = "Test Movie",
             CreatedAt = DateTime.UtcNow
         });
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var mockArrClient = Substitute.For<IArrClient>();
         mockArrClient
@@ -247,7 +250,7 @@ public class SeekerTests : IDisposable
         await mockArrClient.Received(1)
             .SearchItemAsync(radarrInstance, Arg.Any<SearchItem>());
 
-        var remaining = await _fixture.DataContext.SearchQueue.CountAsync();
+        var remaining = await _fixture.EventsContext.SearchQueue.CountAsync();
         remaining.ShouldBe(1);
     }
 
@@ -259,6 +262,7 @@ public class SeekerTests : IDisposable
         config.SearchEnabled = true;
         config.ProactiveSearchEnabled = true;
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
 
@@ -271,6 +275,7 @@ public class SeekerTests : IDisposable
             ActiveDownloadLimit = 2
         });
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var mockArrClient = Substitute.For<IArrClient>();
 
@@ -313,6 +318,7 @@ public class SeekerTests : IDisposable
         config.SearchEnabled = true;
         config.ProactiveSearchEnabled = true;
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
 
@@ -324,6 +330,7 @@ public class SeekerTests : IDisposable
             ActiveDownloadLimit = 2
         });
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var mockArrClient = Substitute.For<IArrClient>();
 
@@ -360,6 +367,7 @@ public class SeekerTests : IDisposable
         config.SearchEnabled = true;
         config.ProactiveSearchEnabled = true;
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
 
@@ -370,6 +378,7 @@ public class SeekerTests : IDisposable
             Enabled = true
         });
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var mockArrClient = Substitute.For<IArrClient>();
 
@@ -424,6 +433,7 @@ public class SeekerTests : IDisposable
         config.SearchEnabled = true;
         config.ProactiveSearchEnabled = true;
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
 
@@ -434,6 +444,7 @@ public class SeekerTests : IDisposable
             Enabled = true
         });
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var mockArrClient = Substitute.For<IArrClient>();
 
@@ -461,6 +472,7 @@ public class SeekerTests : IDisposable
         config.SearchEnabled = true;
         config.ProactiveSearchEnabled = true;
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var sonarrInstance = TestDataContextFactory.AddSonarrInstance(_fixture.DataContext);
 
@@ -471,6 +483,7 @@ public class SeekerTests : IDisposable
             Enabled = true
         });
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var mockArrClient = Substitute.For<IArrClient>();
 
@@ -505,6 +518,7 @@ public class SeekerTests : IDisposable
         config.SearchEnabled = true;
         config.ProactiveSearchEnabled = true;
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
 
@@ -515,6 +529,7 @@ public class SeekerTests : IDisposable
             Enabled = true
         });
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var mockArrClient = Substitute.For<IArrClient>();
 
@@ -560,6 +575,7 @@ public class SeekerTests : IDisposable
         config.SearchEnabled = true;
         config.ProactiveSearchEnabled = true;
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var sonarrInstance = TestDataContextFactory.AddSonarrInstance(_fixture.DataContext);
 
@@ -570,6 +586,7 @@ public class SeekerTests : IDisposable
             Enabled = true
         });
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var mockArrClient = Substitute.For<IArrClient>();
 
@@ -633,6 +650,7 @@ public class SeekerTests : IDisposable
         config.SearchEnabled = true;
         config.ProactiveSearchEnabled = true;
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var sonarrInstance = TestDataContextFactory.AddSonarrInstance(_fixture.DataContext);
 
@@ -643,6 +661,7 @@ public class SeekerTests : IDisposable
             Enabled = true
         });
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var mockArrClient = Substitute.For<IArrClient>();
 
@@ -714,6 +733,7 @@ public class SeekerTests : IDisposable
         config.SearchEnabled = true;
         config.ProactiveSearchEnabled = true;
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
 
@@ -724,6 +744,7 @@ public class SeekerTests : IDisposable
             Enabled = true
         });
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var mockArrClient = Substitute.For<IArrClient>();
 
@@ -769,6 +790,7 @@ public class SeekerTests : IDisposable
         config.SearchEnabled = true;
         config.ProactiveSearchEnabled = true;
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
 
@@ -780,6 +802,7 @@ public class SeekerTests : IDisposable
             MonitoredOnly = true
         });
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var mockArrClient = Substitute.For<IArrClient>();
 
@@ -826,6 +849,7 @@ public class SeekerTests : IDisposable
         config.SearchEnabled = true;
         config.ProactiveSearchEnabled = true;
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
 
@@ -838,6 +862,7 @@ public class SeekerTests : IDisposable
             SkipTags = ["no-search"]
         });
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var mockArrClient = Substitute.For<IArrClient>();
 
@@ -894,6 +919,7 @@ public class SeekerTests : IDisposable
         config.SearchEnabled = true;
         config.ProactiveSearchEnabled = true;
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
 
@@ -906,6 +932,7 @@ public class SeekerTests : IDisposable
             SkipTags = ["skip-me"]
         });
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var mockArrClient = Substitute.For<IArrClient>();
 
@@ -952,7 +979,7 @@ public class SeekerTests : IDisposable
         }
 
         // Assert — tag 1 excluded, tag 11 / 110 / no-tags all eligible
-        var searchedIds = await _fixture.DataContext.SeekerHistory
+        var searchedIds = await _fixture.EventsContext.SeekerHistory
             .Where(h => h.ArrInstanceId == radarrInstance.Id)
             .Select(h => h.ExternalItemId)
             .ToListAsync();
@@ -973,6 +1000,7 @@ public class SeekerTests : IDisposable
         config.ProactiveSearchEnabled = true;
         config.PostReleaseGraceHours = 24;
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
 
@@ -984,6 +1012,7 @@ public class SeekerTests : IDisposable
             MonitoredOnly = false,
         });
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var mockArrClient = Substitute.For<IArrClient>();
 
@@ -1034,6 +1063,7 @@ public class SeekerTests : IDisposable
         config.SearchEnabled = true;
         config.ProactiveSearchEnabled = true;
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
 
@@ -1047,6 +1077,7 @@ public class SeekerTests : IDisposable
             UseCustomFormatScore = false
         });
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var mockArrClient = Substitute.For<IArrClient>();
 
@@ -1094,6 +1125,7 @@ public class SeekerTests : IDisposable
         config.SearchEnabled = true;
         config.ProactiveSearchEnabled = true;
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
 
@@ -1106,6 +1138,7 @@ public class SeekerTests : IDisposable
             UseCutoff = true
         });
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var mockArrClient = Substitute.For<IArrClient>();
 
@@ -1153,6 +1186,7 @@ public class SeekerTests : IDisposable
         config.SearchEnabled = true;
         config.ProactiveSearchEnabled = true;
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
         var currentCycleId = Guid.NewGuid();
@@ -1169,7 +1203,7 @@ public class SeekerTests : IDisposable
 
         // Add history entries for both movies in the current cycle
         // Use dates relative to FakeTimeProvider and far enough back to exceed default MinCycleTimeDays
-        _fixture.DataContext.SeekerHistory.Add(new SeekerHistory
+        _fixture.EventsContext.SeekerHistory.Add(new SeekerHistory
         {
             ArrInstanceId = radarrInstance.Id,
             ExternalItemId = 1,
@@ -1178,7 +1212,7 @@ public class SeekerTests : IDisposable
             LastSearchedAt = now.AddDays(-10),
             ItemTitle = "Movie 1"
         });
-        _fixture.DataContext.SeekerHistory.Add(new SeekerHistory
+        _fixture.EventsContext.SeekerHistory.Add(new SeekerHistory
         {
             ArrInstanceId = radarrInstance.Id,
             ExternalItemId = 2,
@@ -1188,6 +1222,7 @@ public class SeekerTests : IDisposable
             ItemTitle = "Movie 2"
         });
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var mockArrClient = Substitute.For<IArrClient>();
 
@@ -1238,6 +1273,7 @@ public class SeekerTests : IDisposable
         config.ProactiveSearchEnabled = true;
         config.UseRoundRobin = true;
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var radarrInstance1 = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext, "http://radarr1:7878");
         var radarrInstance2 = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext, "http://radarr2:7878");
@@ -1260,6 +1296,7 @@ public class SeekerTests : IDisposable
             LastProcessedAt = DateTime.UtcNow.AddHours(-24)
         });
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var mockArrClient = Substitute.For<IArrClient>();
 
@@ -1302,24 +1339,26 @@ public class SeekerTests : IDisposable
         var config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
         config.SearchEnabled = true;
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         // Add a valid instance just so we can create the queue item with its ID, then detach it
         var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
         var instanceId = radarrInstance.Id;
 
-        _fixture.DataContext.SearchQueue.Add(new SearchQueueItem
+        _fixture.EventsContext.SearchQueue.Add(new SearchQueueItem
         {
             ArrInstanceId = instanceId,
-            ArrInstance = radarrInstance,
             ItemId = 42,
             Title = "Orphaned Movie",
             CreatedAt = DateTime.UtcNow
         });
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         // Now remove the arr instance to simulate deletion
         _fixture.DataContext.ArrInstances.Remove(radarrInstance);
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var sut = CreateSut();
 
@@ -1327,7 +1366,7 @@ public class SeekerTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert — queue item should be cleaned up
-        var remaining = await _fixture.DataContext.SearchQueue.CountAsync();
+        var remaining = await _fixture.EventsContext.SearchQueue.CountAsync();
         remaining.ShouldBe(0);
 
         // No search should have been triggered
@@ -1351,6 +1390,7 @@ public class SeekerTests : IDisposable
         config.SearchEnabled = true;
         config.ProactiveSearchEnabled = true;
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
         var currentCycleId = Guid.NewGuid();
@@ -1368,7 +1408,7 @@ public class SeekerTests : IDisposable
         });
 
         // Cycle started 2 days ago — within the 7-day minimum
-        _fixture.DataContext.SeekerHistory.Add(new SeekerHistory
+        _fixture.EventsContext.SeekerHistory.Add(new SeekerHistory
         {
             ArrInstanceId = radarrInstance.Id,
             ExternalItemId = 1,
@@ -1377,7 +1417,7 @@ public class SeekerTests : IDisposable
             LastSearchedAt = now.AddDays(-2),
             ItemTitle = "Movie 1"
         });
-        _fixture.DataContext.SeekerHistory.Add(new SeekerHistory
+        _fixture.EventsContext.SeekerHistory.Add(new SeekerHistory
         {
             ArrInstanceId = radarrInstance.Id,
             ExternalItemId = 2,
@@ -1387,6 +1427,7 @@ public class SeekerTests : IDisposable
             ItemTitle = "Movie 2"
         });
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var mockArrClient = Substitute.For<IArrClient>();
 
@@ -1428,6 +1469,7 @@ public class SeekerTests : IDisposable
         config.SearchEnabled = true;
         config.ProactiveSearchEnabled = true;
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
         var currentCycleId = Guid.NewGuid();
@@ -1445,7 +1487,7 @@ public class SeekerTests : IDisposable
         });
 
         // Cycle started 10 days ago — beyond the 7-day minimum
-        _fixture.DataContext.SeekerHistory.Add(new SeekerHistory
+        _fixture.EventsContext.SeekerHistory.Add(new SeekerHistory
         {
             ArrInstanceId = radarrInstance.Id,
             ExternalItemId = 1,
@@ -1454,7 +1496,7 @@ public class SeekerTests : IDisposable
             LastSearchedAt = now.AddDays(-10),
             ItemTitle = "Movie 1"
         });
-        _fixture.DataContext.SeekerHistory.Add(new SeekerHistory
+        _fixture.EventsContext.SeekerHistory.Add(new SeekerHistory
         {
             ArrInstanceId = radarrInstance.Id,
             ExternalItemId = 2,
@@ -1464,6 +1506,7 @@ public class SeekerTests : IDisposable
             ItemTitle = "Movie 2"
         });
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var mockArrClient = Substitute.For<IArrClient>();
 
@@ -1509,6 +1552,7 @@ public class SeekerTests : IDisposable
         config.SearchEnabled = true;
         config.ProactiveSearchEnabled = true;
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
         var currentCycleId = Guid.NewGuid();
@@ -1525,7 +1569,7 @@ public class SeekerTests : IDisposable
 
         // History uses a DIFFERENT CycleId — current cycle has no history entries
         var oldCycleId = Guid.NewGuid();
-        _fixture.DataContext.SeekerHistory.Add(new SeekerHistory
+        _fixture.EventsContext.SeekerHistory.Add(new SeekerHistory
         {
             ArrInstanceId = radarrInstance.Id,
             ExternalItemId = 1,
@@ -1535,6 +1579,7 @@ public class SeekerTests : IDisposable
             ItemTitle = "Movie 1"
         });
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var mockArrClient = Substitute.For<IArrClient>();
 
@@ -1575,6 +1620,7 @@ public class SeekerTests : IDisposable
         config.SearchEnabled = true;
         config.ProactiveSearchEnabled = true;
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var sonarrInstance = TestDataContextFactory.AddSonarrInstance(_fixture.DataContext);
         var currentCycleId = Guid.NewGuid();
@@ -1592,7 +1638,7 @@ public class SeekerTests : IDisposable
         });
 
         // Series history — season already searched in current cycle (started 2 days ago)
-        _fixture.DataContext.SeekerHistory.Add(new SeekerHistory
+        _fixture.EventsContext.SeekerHistory.Add(new SeekerHistory
         {
             ArrInstanceId = sonarrInstance.Id,
             ExternalItemId = 10,
@@ -1603,6 +1649,7 @@ public class SeekerTests : IDisposable
             ItemTitle = "Test Series"
         });
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var mockArrClient = Substitute.For<IArrClient>();
 
@@ -1651,6 +1698,7 @@ public class SeekerTests : IDisposable
         config.SearchEnabled = true;
         config.ProactiveSearchEnabled = true;
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var sonarrInstance = TestDataContextFactory.AddSonarrInstance(_fixture.DataContext);
         var currentCycleId = Guid.NewGuid();
@@ -1668,7 +1716,7 @@ public class SeekerTests : IDisposable
         });
 
         // Series history — season already searched in current cycle (started 10 days ago)
-        _fixture.DataContext.SeekerHistory.Add(new SeekerHistory
+        _fixture.EventsContext.SeekerHistory.Add(new SeekerHistory
         {
             ArrInstanceId = sonarrInstance.Id,
             ExternalItemId = 10,
@@ -1679,6 +1727,7 @@ public class SeekerTests : IDisposable
             ItemTitle = "Test Series"
         });
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var mockArrClient = Substitute.For<IArrClient>();
 
@@ -1734,6 +1783,7 @@ public class SeekerTests : IDisposable
         config.ProactiveSearchEnabled = true;
         config.UseRoundRobin = true;
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var now = _fixture.TimeProvider.GetUtcNow().UtcDateTime;
 
@@ -1751,7 +1801,7 @@ public class SeekerTests : IDisposable
             TotalEligibleItems = 1,
             LastProcessedAt = now.AddDays(-5) // Oldest — round-robin tries this first
         });
-        _fixture.DataContext.SeekerHistory.Add(new SeekerHistory
+        _fixture.EventsContext.SeekerHistory.Add(new SeekerHistory
         {
             ArrInstanceId = instanceA.Id,
             ExternalItemId = 1,
@@ -1778,6 +1828,7 @@ public class SeekerTests : IDisposable
         // No history for instance B — it hasn't searched anything yet
 
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var mockArrClient = Substitute.For<IArrClient>();
 
@@ -1835,6 +1886,7 @@ public class SeekerTests : IDisposable
         config.SearchEnabled = true;
         config.ProactiveSearchEnabled = true;
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
         var currentCycleId = Guid.NewGuid();
@@ -1852,7 +1904,7 @@ public class SeekerTests : IDisposable
         });
 
         // History: 2 items searched in current cycle
-        _fixture.DataContext.SeekerHistory.Add(new SeekerHistory
+        _fixture.EventsContext.SeekerHistory.Add(new SeekerHistory
         {
             ArrInstanceId = radarrInstance.Id,
             ExternalItemId = 1,
@@ -1861,7 +1913,7 @@ public class SeekerTests : IDisposable
             LastSearchedAt = now.AddDays(-2),
             ItemTitle = "Movie 1"
         });
-        _fixture.DataContext.SeekerHistory.Add(new SeekerHistory
+        _fixture.EventsContext.SeekerHistory.Add(new SeekerHistory
         {
             ArrInstanceId = radarrInstance.Id,
             ExternalItemId = 2,
@@ -1871,6 +1923,7 @@ public class SeekerTests : IDisposable
             ItemTitle = "Movie 2"
         });
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var mockArrClient = Substitute.For<IArrClient>();
 
@@ -1920,6 +1973,7 @@ public class SeekerTests : IDisposable
         config.SearchEnabled = true;
         config.ProactiveSearchEnabled = true;
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
         var currentCycleId = Guid.NewGuid();
@@ -1937,7 +1991,7 @@ public class SeekerTests : IDisposable
         });
 
         // History: items 1 and 2 were searched
-        _fixture.DataContext.SeekerHistory.Add(new SeekerHistory
+        _fixture.EventsContext.SeekerHistory.Add(new SeekerHistory
         {
             ArrInstanceId = radarrInstance.Id,
             ExternalItemId = 1,
@@ -1946,7 +2000,7 @@ public class SeekerTests : IDisposable
             LastSearchedAt = now.AddDays(-2),
             ItemTitle = "Movie 1"
         });
-        _fixture.DataContext.SeekerHistory.Add(new SeekerHistory
+        _fixture.EventsContext.SeekerHistory.Add(new SeekerHistory
         {
             ArrInstanceId = radarrInstance.Id,
             ExternalItemId = 2,
@@ -1956,6 +2010,7 @@ public class SeekerTests : IDisposable
             ItemTitle = "Movie 2 (Removed)"
         });
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var mockArrClient = Substitute.For<IArrClient>();
 
@@ -2008,6 +2063,7 @@ public class SeekerTests : IDisposable
         config.ProactiveSearchEnabled = true;
         config.PostReleaseGraceHours = 6;
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
 
@@ -2018,6 +2074,7 @@ public class SeekerTests : IDisposable
             Enabled = true
         });
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var mockArrClient = Substitute.For<IArrClient>();
 
@@ -2071,6 +2128,7 @@ public class SeekerTests : IDisposable
         config.ProactiveSearchEnabled = true;
         config.PostReleaseGraceHours = 0;
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
 
@@ -2081,6 +2139,7 @@ public class SeekerTests : IDisposable
             Enabled = true
         });
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var mockArrClient = Substitute.For<IArrClient>();
 
@@ -2123,6 +2182,7 @@ public class SeekerTests : IDisposable
         config.ProactiveSearchEnabled = true;
         config.PostReleaseGraceHours = 6;
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
 
@@ -2133,6 +2193,7 @@ public class SeekerTests : IDisposable
             Enabled = true
         });
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var mockArrClient = Substitute.For<IArrClient>();
 
@@ -2174,6 +2235,7 @@ public class SeekerTests : IDisposable
         config.ProactiveSearchEnabled = true;
         config.PostReleaseGraceHours = 6;
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var sonarrInstance = TestDataContextFactory.AddSonarrInstance(_fixture.DataContext);
 
@@ -2184,6 +2246,7 @@ public class SeekerTests : IDisposable
             Enabled = true
         });
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var mockArrClient = Substitute.For<IArrClient>();
 
@@ -2242,6 +2305,7 @@ public class SeekerTests : IDisposable
         config.ProactiveSearchEnabled = true;
         config.PostReleaseGraceHours = 6;
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
 
@@ -2252,6 +2316,7 @@ public class SeekerTests : IDisposable
             Enabled = true
         });
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var mockArrClient = Substitute.For<IArrClient>();
 
@@ -2310,6 +2375,7 @@ public class SeekerTests : IDisposable
         config.SearchEnabled = true;
         config.ProactiveSearchEnabled = true;
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
 
@@ -2324,7 +2390,7 @@ public class SeekerTests : IDisposable
         });
 
         // CF score entries: movie 2 is below cutoff, movie 3 meets cutoff
-        _fixture.DataContext.CustomFormatScoreEntries.Add(new CustomFormatScoreEntry
+        _fixture.EventsContext.CustomFormatScoreEntries.Add(new CustomFormatScoreEntry
         {
             ArrInstanceId = radarrInstance.Id,
             ExternalItemId = 2,
@@ -2333,7 +2399,7 @@ public class SeekerTests : IDisposable
             CutoffScore = 50,
             Title = "Below Cutoff"
         });
-        _fixture.DataContext.CustomFormatScoreEntries.Add(new CustomFormatScoreEntry
+        _fixture.EventsContext.CustomFormatScoreEntries.Add(new CustomFormatScoreEntry
         {
             ArrInstanceId = radarrInstance.Id,
             ExternalItemId = 3,
@@ -2343,6 +2409,7 @@ public class SeekerTests : IDisposable
             Title = "Above Cutoff"
         });
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var mockArrClient = Substitute.For<IArrClient>();
 
@@ -2390,6 +2457,7 @@ public class SeekerTests : IDisposable
         config.SearchEnabled = true;
         config.ProactiveSearchEnabled = true;
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
 
@@ -2404,7 +2472,7 @@ public class SeekerTests : IDisposable
         });
 
         // Movie 2: cutoff met, CF score below cutoff → qualifies via CF
-        _fixture.DataContext.CustomFormatScoreEntries.Add(new CustomFormatScoreEntry
+        _fixture.EventsContext.CustomFormatScoreEntries.Add(new CustomFormatScoreEntry
         {
             ArrInstanceId = radarrInstance.Id,
             ExternalItemId = 2,
@@ -2414,7 +2482,7 @@ public class SeekerTests : IDisposable
             Title = "CF Below"
         });
         // Movie 3: cutoff not met, CF score above cutoff → qualifies via cutoff
-        _fixture.DataContext.CustomFormatScoreEntries.Add(new CustomFormatScoreEntry
+        _fixture.EventsContext.CustomFormatScoreEntries.Add(new CustomFormatScoreEntry
         {
             ArrInstanceId = radarrInstance.Id,
             ExternalItemId = 3,
@@ -2424,7 +2492,7 @@ public class SeekerTests : IDisposable
             Title = "Cutoff Not Met"
         });
         // Movie 4: cutoff met, CF score above cutoff → excluded (both met)
-        _fixture.DataContext.CustomFormatScoreEntries.Add(new CustomFormatScoreEntry
+        _fixture.EventsContext.CustomFormatScoreEntries.Add(new CustomFormatScoreEntry
         {
             ArrInstanceId = radarrInstance.Id,
             ExternalItemId = 4,
@@ -2434,6 +2502,7 @@ public class SeekerTests : IDisposable
             Title = "Both Met"
         });
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var mockArrClient = Substitute.For<IArrClient>();
 
@@ -2483,6 +2552,7 @@ public class SeekerTests : IDisposable
         config.SearchEnabled = true;
         config.ProactiveSearchEnabled = true;
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
 
@@ -2494,6 +2564,7 @@ public class SeekerTests : IDisposable
             MonitoredOnly = false
         });
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var mockArrClient = Substitute.For<IArrClient>();
 
@@ -2538,6 +2609,7 @@ public class SeekerTests : IDisposable
         config.SearchEnabled = true;
         config.ProactiveSearchEnabled = true;
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
 
@@ -2549,6 +2621,7 @@ public class SeekerTests : IDisposable
             MonitoredOnly = false
         });
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var mockArrClient = Substitute.For<IArrClient>();
 
@@ -2600,6 +2673,7 @@ public class SeekerTests : IDisposable
         config.SearchEnabled = true;
         config.ProactiveSearchEnabled = true;
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var sonarrInstance = TestDataContextFactory.AddSonarrInstance(_fixture.DataContext);
 
@@ -2613,6 +2687,7 @@ public class SeekerTests : IDisposable
             UseCustomFormatScore = false
         });
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var mockArrClient = Substitute.For<IArrClient>();
 
@@ -2667,6 +2742,7 @@ public class SeekerTests : IDisposable
         config.SearchEnabled = true;
         config.ProactiveSearchEnabled = true;
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var sonarrInstance = TestDataContextFactory.AddSonarrInstance(_fixture.DataContext);
 
@@ -2680,6 +2756,7 @@ public class SeekerTests : IDisposable
             UseCustomFormatScore = false
         });
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var mockArrClient = Substitute.For<IArrClient>();
 
@@ -2745,6 +2822,7 @@ public class SeekerTests : IDisposable
         config.SearchEnabled = true;
         config.ProactiveSearchEnabled = true;
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var sonarrInstance = TestDataContextFactory.AddSonarrInstance(_fixture.DataContext);
 
@@ -2759,7 +2837,7 @@ public class SeekerTests : IDisposable
         });
 
         // CF score entries keyed by EpisodeId for Sonarr
-        _fixture.DataContext.CustomFormatScoreEntries.Add(new CustomFormatScoreEntry
+        _fixture.EventsContext.CustomFormatScoreEntries.Add(new CustomFormatScoreEntry
         {
             ArrInstanceId = sonarrInstance.Id,
             ExternalItemId = 10, // SeriesId
@@ -2769,7 +2847,7 @@ public class SeekerTests : IDisposable
             CutoffScore = 50,
             Title = "Below CF Cutoff"
         });
-        _fixture.DataContext.CustomFormatScoreEntries.Add(new CustomFormatScoreEntry
+        _fixture.EventsContext.CustomFormatScoreEntries.Add(new CustomFormatScoreEntry
         {
             ArrInstanceId = sonarrInstance.Id,
             ExternalItemId = 10,
@@ -2780,6 +2858,7 @@ public class SeekerTests : IDisposable
             Title = "Above CF Cutoff"
         });
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var mockArrClient = Substitute.For<IArrClient>();
 
@@ -2834,6 +2913,7 @@ public class SeekerTests : IDisposable
         config.SearchEnabled = true;
         config.ProactiveSearchEnabled = true;
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var sonarrInstance = TestDataContextFactory.AddSonarrInstance(_fixture.DataContext);
 
@@ -2845,6 +2925,7 @@ public class SeekerTests : IDisposable
             MonitoredOnly = true
         });
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var mockArrClient = Substitute.For<IArrClient>();
 
@@ -2896,6 +2977,7 @@ public class SeekerTests : IDisposable
         config.SearchEnabled = true;
         config.ProactiveSearchEnabled = true;
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var sonarrInstance = TestDataContextFactory.AddSonarrInstance(_fixture.DataContext);
 
@@ -2908,6 +2990,7 @@ public class SeekerTests : IDisposable
             SkipTags = ["no-search"]
         });
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var mockArrClient = Substitute.For<IArrClient>();
 
@@ -2967,6 +3050,7 @@ public class SeekerTests : IDisposable
         config.SearchEnabled = true;
         config.ProactiveSearchEnabled = true;
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var sonarrInstance = TestDataContextFactory.AddSonarrInstance(_fixture.DataContext);
 
@@ -2980,6 +3064,7 @@ public class SeekerTests : IDisposable
             UseCustomFormatScore = false
         });
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var mockArrClient = Substitute.For<IArrClient>();
 
@@ -3037,6 +3122,7 @@ public class SeekerTests : IDisposable
         config.SearchEnabled = true;
         config.ProactiveSearchEnabled = true;
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
         var cycleId = Guid.NewGuid();
@@ -3050,6 +3136,7 @@ public class SeekerTests : IDisposable
             CurrentCycleId = cycleId
         });
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var mockArrClient = Substitute.For<IArrClient>();
 
@@ -3078,7 +3165,7 @@ public class SeekerTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert — SeekerHistory entry created with correct data
-        var history = await _fixture.DataContext.SeekerHistory
+        var history = await _fixture.EventsContext.SeekerHistory
             .FirstOrDefaultAsync(h => h.ArrInstanceId == radarrInstance.Id && h.ExternalItemId == 1);
         history.ShouldNotBeNull();
         history.ItemType.ShouldBe(InstanceType.Radarr);
@@ -3096,6 +3183,7 @@ public class SeekerTests : IDisposable
         config.SearchEnabled = true;
         config.ProactiveSearchEnabled = true;
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
 
@@ -3107,6 +3195,7 @@ public class SeekerTests : IDisposable
             MonitoredOnly = false
         });
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var mockArrClient = Substitute.For<IArrClient>();
 
@@ -3135,7 +3224,7 @@ public class SeekerTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert — SeekerCommandTracker entry created
-        var tracker = await _fixture.DataContext.SeekerCommandTrackers
+        var tracker = await _fixture.EventsContext.SeekerCommandTrackers
             .FirstOrDefaultAsync(t => t.ArrInstanceId == radarrInstance.Id);
         tracker.ShouldNotBeNull();
         tracker.CommandId.ShouldBe(42L);
@@ -3151,6 +3240,7 @@ public class SeekerTests : IDisposable
         config.SearchEnabled = true;
         config.ProactiveSearchEnabled = true;
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
         var cycleId = Guid.NewGuid();
@@ -3165,7 +3255,7 @@ public class SeekerTests : IDisposable
         });
 
         // Stale history for movie 99 (no longer in library)
-        _fixture.DataContext.SeekerHistory.Add(new SeekerHistory
+        _fixture.EventsContext.SeekerHistory.Add(new SeekerHistory
         {
             ArrInstanceId = radarrInstance.Id,
             ExternalItemId = 99,
@@ -3175,6 +3265,7 @@ public class SeekerTests : IDisposable
             ItemTitle = "Deleted Movie"
         });
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var mockArrClient = Substitute.For<IArrClient>();
 
@@ -3204,7 +3295,7 @@ public class SeekerTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert — stale history for movie 99 should be cleaned up
-        var staleHistory = await _fixture.DataContext.SeekerHistory
+        var staleHistory = await _fixture.EventsContext.SeekerHistory
             .FirstOrDefaultAsync(h => h.ExternalItemId == 99);
         staleHistory.ShouldBeNull();
     }
@@ -3217,6 +3308,7 @@ public class SeekerTests : IDisposable
         config.SearchEnabled = true;
         config.ProactiveSearchEnabled = true;
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
         var currentCycleId = Guid.NewGuid();
@@ -3233,7 +3325,7 @@ public class SeekerTests : IDisposable
         });
 
         // Old cycle history — 60 days ago, different cycle
-        _fixture.DataContext.SeekerHistory.Add(new SeekerHistory
+        _fixture.EventsContext.SeekerHistory.Add(new SeekerHistory
         {
             ArrInstanceId = radarrInstance.Id,
             ExternalItemId = 1,
@@ -3243,6 +3335,7 @@ public class SeekerTests : IDisposable
             ItemTitle = "Old History"
         });
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var mockArrClient = Substitute.For<IArrClient>();
 
@@ -3271,7 +3364,7 @@ public class SeekerTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert — old cycle history should be cleaned up
-        var oldHistory = await _fixture.DataContext.SeekerHistory
+        var oldHistory = await _fixture.EventsContext.SeekerHistory
             .FirstOrDefaultAsync(h => h.CycleId == oldCycleId);
         oldHistory.ShouldBeNull();
     }
@@ -3284,6 +3377,7 @@ public class SeekerTests : IDisposable
         config.SearchEnabled = true;
         config.ProactiveSearchEnabled = true;
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
 
@@ -3296,6 +3390,7 @@ public class SeekerTests : IDisposable
             TotalEligibleItems = 0 // Start at 0
         });
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var mockArrClient = Substitute.For<IArrClient>();
 
@@ -3345,6 +3440,7 @@ public class SeekerTests : IDisposable
         config.SearchEnabled = true;
         config.ProactiveSearchEnabled = true;
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
 
@@ -3356,6 +3452,7 @@ public class SeekerTests : IDisposable
             MonitoredOnly = false
         });
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var mockArrClient = Substitute.For<IArrClient>();
 
@@ -3388,13 +3485,13 @@ public class SeekerTests : IDisposable
             .SearchItemAsync(radarrInstance, Arg.Any<SearchItem>());
 
         // History saved with IsDryRun = true
-        var history = await _fixture.DataContext.SeekerHistory
+        var history = await _fixture.EventsContext.SeekerHistory
             .FirstOrDefaultAsync(h => h.ArrInstanceId == radarrInstance.Id);
         history.ShouldNotBeNull();
         history.IsDryRun.ShouldBe(true);
 
         // No command tracker saved
-        var trackers = await _fixture.DataContext.SeekerCommandTrackers.CountAsync();
+        var trackers = await _fixture.EventsContext.SeekerCommandTrackers.CountAsync();
         trackers.ShouldBe(0);
     }
 
@@ -3406,6 +3503,7 @@ public class SeekerTests : IDisposable
         config.SearchEnabled = true;
         config.ProactiveSearchEnabled = true;
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
 
@@ -3416,6 +3514,7 @@ public class SeekerTests : IDisposable
             Enabled = false
         });
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var sut = CreateSut();
 
@@ -3437,6 +3536,7 @@ public class SeekerTests : IDisposable
         config.SearchEnabled = true;
         config.ProactiveSearchEnabled = true;
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
 
@@ -3449,6 +3549,7 @@ public class SeekerTests : IDisposable
             ActiveDownloadLimit = 0
         });
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var mockArrClient = Substitute.For<IArrClient>();
 
@@ -3501,6 +3602,7 @@ public class SeekerTests : IDisposable
         config.ProactiveSearchEnabled = true;
         config.UseRoundRobin = false;
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var radarrInstance1 = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext, "http://radarr1:7878");
         var radarrInstance2 = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext, "http://radarr2:7878");
@@ -3520,6 +3622,7 @@ public class SeekerTests : IDisposable
             MonitoredOnly = false
         });
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var mockArrClient = Substitute.For<IArrClient>();
 
@@ -3570,10 +3673,9 @@ public class SeekerTests : IDisposable
         // Arrange — replacement queue item with SeriesId and SearchType should create a SeriesSearchItem
         var sonarrInstance = TestDataContextFactory.AddSonarrInstance(_fixture.DataContext);
 
-        _fixture.DataContext.SearchQueue.Add(new SearchQueueItem
+        _fixture.EventsContext.SearchQueue.Add(new SearchQueueItem
         {
             ArrInstanceId = sonarrInstance.Id,
-            ArrInstance = sonarrInstance,
             ItemId = 5,
             SeriesId = 42,
             SearchType = "Season",
@@ -3581,6 +3683,7 @@ public class SeekerTests : IDisposable
             CreatedAt = DateTime.UtcNow
         });
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var mockArrClient = Substitute.For<IArrClient>();
         SeriesSearchItem? capturedSearchItem = null;
@@ -3614,15 +3717,15 @@ public class SeekerTests : IDisposable
         // Arrange — SearchItemAsync throws, but the item should still be removed from the queue
         var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
 
-        _fixture.DataContext.SearchQueue.Add(new SearchQueueItem
+        _fixture.EventsContext.SearchQueue.Add(new SearchQueueItem
         {
             ArrInstanceId = radarrInstance.Id,
-            ArrInstance = radarrInstance,
             ItemId = 42,
             Title = "Failing Movie",
             CreatedAt = DateTime.UtcNow
         });
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var mockArrClient = Substitute.For<IArrClient>();
         mockArrClient
@@ -3639,7 +3742,7 @@ public class SeekerTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert — item was still dequeued (finally block)
-        var remaining = await _fixture.DataContext.SearchQueue.CountAsync();
+        var remaining = await _fixture.EventsContext.SearchQueue.CountAsync();
         remaining.ShouldBe(0);
     }
 
@@ -3655,6 +3758,7 @@ public class SeekerTests : IDisposable
         config.SearchEnabled = true;
         config.ProactiveSearchEnabled = true;
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
 
@@ -3666,6 +3770,7 @@ public class SeekerTests : IDisposable
             MonitoredOnly = false
         });
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var mockArrClient = Substitute.For<IArrClient>();
 

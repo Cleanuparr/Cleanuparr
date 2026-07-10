@@ -132,7 +132,7 @@ public class QueueItemRemoverTests : IDisposable
         await _queueItemRemover.RemoveQueueItemAsync(request);
 
         // Assert
-        var queueItems = await _dataContext.SearchQueue.ToListAsync();
+        var queueItems = await _eventsContext.SearchQueue.ToListAsync();
         queueItems.Count.ShouldBe(1);
         queueItems[0].ArrInstanceId.ShouldBe(request.Instance.Id);
         queueItems[0].ItemId.ShouldBe(request.SearchItem.Id);
@@ -188,7 +188,7 @@ public class QueueItemRemoverTests : IDisposable
         await _queueItemRemover.RemoveQueueItemAsync(request);
 
         // Assert
-        var queueItems = await _dataContext.SearchQueue.ToListAsync();
+        var queueItems = await _eventsContext.SearchQueue.ToListAsync();
         queueItems.ShouldBeEmpty();
     }
 
@@ -217,7 +217,7 @@ public class QueueItemRemoverTests : IDisposable
         await _queueItemRemover.RemoveQueueItemAsync(request);
 
         // Assert
-        var queueItems = await _dataContext.SearchQueue.ToListAsync();
+        var queueItems = await _eventsContext.SearchQueue.ToListAsync();
         queueItems.Count.ShouldBe(1);
     }
 
@@ -235,7 +235,7 @@ public class QueueItemRemoverTests : IDisposable
         await _queueItemRemover.RemoveQueueItemAsync(request);
 
         // Assert
-        var queueItems = await _dataContext.SearchQueue.ToListAsync();
+        var queueItems = await _eventsContext.SearchQueue.ToListAsync();
         queueItems.ShouldBeEmpty();
     }
 
@@ -271,7 +271,7 @@ public class QueueItemRemoverTests : IDisposable
         await _queueItemRemover.RemoveQueueItemAsync(request);
 
         // Assert
-        var queueItems = await _dataContext.SearchQueue.ToListAsync();
+        var queueItems = await _eventsContext.SearchQueue.ToListAsync();
         queueItems.ShouldBeEmpty();
     }
 

@@ -41,6 +41,25 @@ public static class TestDataContextFactory
     }
 
     /// <summary>
+    /// Creates a new SQLite in-memory EventsContext for testing the Seeker/CF-score
+    /// state tables (and other event data) that live in events.db.
+    /// </summary>
+    public static EventsContext CreateEvents()
+    {
+        var connection = new SqliteConnection("DataSource=:memory:");
+        connection.Open();
+
+        var options = new DbContextOptionsBuilder<EventsContext>()
+            .UseSqlite(connection)
+            .Options;
+
+        var context = new EventsContext(options);
+        context.Database.EnsureCreated();
+
+        return context;
+    }
+
+    /// <summary>
     /// Seeds the minimum required data for GenericHandler.ExecuteAsync() to work
     /// </summary>
     private static void SeedDefaultData(DataContext context)

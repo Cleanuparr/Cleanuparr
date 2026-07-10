@@ -23,6 +23,7 @@ namespace Cleanuparr.Infrastructure.Tests.Features.Jobs.TestHelpers;
 public class JobHandlerFixture : IDisposable
 {
     public DataContext DataContext { get; private set; }
+    public EventsContext EventsContext { get; private set; }
     public MemoryCache Cache { get; private set; }
     public IBus MessageBus { get; private set; }
     public IArrClientFactory ArrClientFactory { get; private set; }
@@ -45,6 +46,7 @@ public class JobHandlerFixture : IDisposable
     {
         SubstituteHelper.ClearPendingArgSpecs();
         DataContext = TestDataContextFactory.Create();
+        EventsContext = TestDataContextFactory.CreateEvents();
         Cache = new MemoryCache(new MemoryCacheOptions());
         MessageBus = Substitute.For<IBus>();
         ArrClientFactory = Substitute.For<IArrClientFactory>();
@@ -137,6 +139,8 @@ public class JobHandlerFixture : IDisposable
     {
         DataContext?.Dispose();
         DataContext = TestDataContextFactory.Create(seedData);
+        EventsContext?.Dispose();
+        EventsContext = TestDataContextFactory.CreateEvents();
         RecreateCleanupServices();
         return DataContext;
     }
@@ -166,6 +170,7 @@ public class JobHandlerFixture : IDisposable
     public void Dispose()
     {
         DataContext?.Dispose();
+        EventsContext?.Dispose();
         Cache?.Dispose();
         GC.SuppressFinalize(this);
     }

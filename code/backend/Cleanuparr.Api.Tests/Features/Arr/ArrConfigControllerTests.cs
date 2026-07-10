@@ -4,6 +4,7 @@ using Cleanuparr.Api.Tests.TestHelpers;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Arr.Dtos;
 using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
+using Cleanuparr.Infrastructure.Features.Seeker;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Microsoft.AspNetCore.Mvc;
@@ -29,7 +30,8 @@ public class ArrConfigControllerTests : IDisposable
         _arrClientFactory = Substitute.For<IArrClientFactory>();
         _arrClient = Substitute.For<IArrClient>();
         _arrClientFactory.GetClient(Arg.Any<InstanceType>(), Arg.Any<float>()).Returns(_arrClient);
-        _controller = new ArrConfigController(logger, _dataContext, _arrClientFactory);
+        var seekerStateCleanup = Substitute.For<ISeekerStateCleanup>();
+        _controller = new ArrConfigController(logger, _dataContext, _arrClientFactory, seekerStateCleanup);
         ConfigControllerTestDataFactory.ConfigureProblemDetails(_controller);
     }
 

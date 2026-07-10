@@ -57,6 +57,7 @@ public class CustomFormatScoreSyncerTests : IDisposable
         return new CustomFormatScoreSyncer(
             _logger,
             _fixture.DataContext,
+            _fixture.EventsContext,
             _radarrClient,
             _sonarrClient,
             _fixture.TimeProvider,
@@ -118,6 +119,7 @@ public class CustomFormatScoreSyncerTests : IDisposable
             UseCustomFormatScore = true
         });
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         // Mock quality profiles
         _radarrClient
@@ -151,7 +153,7 @@ public class CustomFormatScoreSyncerTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert — CF score entry was saved
-        var entries = await _fixture.DataContext.CustomFormatScoreEntries.ToListAsync();
+        var entries = await _fixture.EventsContext.CustomFormatScoreEntries.ToListAsync();
         entries.ShouldHaveSingleItem();
 
         var entry = entries[0];
@@ -164,7 +166,7 @@ public class CustomFormatScoreSyncerTests : IDisposable
         entry.IsMonitored.ShouldBeTrue();
 
         // Initial history entry should also be created
-        var history = await _fixture.DataContext.CustomFormatScoreHistory.ToListAsync();
+        var history = await _fixture.EventsContext.CustomFormatScoreHistory.ToListAsync();
         history.ShouldHaveSingleItem();
         history[0].Score.ShouldBe(250);
     }
@@ -184,7 +186,7 @@ public class CustomFormatScoreSyncerTests : IDisposable
         });
 
         // Pre-existing CF score entry with a different score
-        _fixture.DataContext.CustomFormatScoreEntries.Add(new CustomFormatScoreEntry
+        _fixture.EventsContext.CustomFormatScoreEntries.Add(new CustomFormatScoreEntry
         {
             ArrInstanceId = radarrInstance.Id,
             ExternalItemId = 10,
@@ -198,6 +200,7 @@ public class CustomFormatScoreSyncerTests : IDisposable
             LastSyncedAt = DateTime.UtcNow.AddHours(-1)
         });
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         // Mock quality profiles
         _radarrClient
@@ -230,12 +233,12 @@ public class CustomFormatScoreSyncerTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert — existing entry should be updated
-        var entries = await _fixture.DataContext.CustomFormatScoreEntries.ToListAsync();
+        var entries = await _fixture.EventsContext.CustomFormatScoreEntries.ToListAsync();
         entries.ShouldHaveSingleItem();
         entries[0].CurrentScore.ShouldBe(350);
 
         // History entry should be created because score changed (200 -> 350)
-        var history = await _fixture.DataContext.CustomFormatScoreHistory.ToListAsync();
+        var history = await _fixture.EventsContext.CustomFormatScoreHistory.ToListAsync();
         history.ShouldHaveSingleItem();
         history[0].Score.ShouldBe(350);
         history[0].ItemType.ShouldBe(InstanceType.Radarr);
@@ -255,6 +258,7 @@ public class CustomFormatScoreSyncerTests : IDisposable
             UseCustomFormatScore = true
         });
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         _radarrClient
             .GetQualityProfilesAsync(radarrInstance)
@@ -285,7 +289,7 @@ public class CustomFormatScoreSyncerTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert — entry should be saved with IsMonitored = false
-        var entries = await _fixture.DataContext.CustomFormatScoreEntries.ToListAsync();
+        var entries = await _fixture.EventsContext.CustomFormatScoreEntries.ToListAsync();
         entries.ShouldHaveSingleItem();
         entries[0].IsMonitored.ShouldBeFalse();
     }
@@ -305,7 +309,7 @@ public class CustomFormatScoreSyncerTests : IDisposable
         });
 
         // Pre-existing entry that was monitored
-        _fixture.DataContext.CustomFormatScoreEntries.Add(new CustomFormatScoreEntry
+        _fixture.EventsContext.CustomFormatScoreEntries.Add(new CustomFormatScoreEntry
         {
             ArrInstanceId = radarrInstance.Id,
             ExternalItemId = 10,
@@ -320,6 +324,7 @@ public class CustomFormatScoreSyncerTests : IDisposable
             LastSyncedAt = DateTime.UtcNow.AddHours(-1)
         });
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         _radarrClient
             .GetQualityProfilesAsync(radarrInstance)
@@ -347,7 +352,7 @@ public class CustomFormatScoreSyncerTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert — IsMonitored should be updated to false
-        var entries = await _fixture.DataContext.CustomFormatScoreEntries.ToListAsync();
+        var entries = await _fixture.EventsContext.CustomFormatScoreEntries.ToListAsync();
         entries.ShouldHaveSingleItem();
         entries[0].IsMonitored.ShouldBeFalse();
     }
@@ -370,6 +375,7 @@ public class CustomFormatScoreSyncerTests : IDisposable
             UseCustomFormatScore = true
         });
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         // Mock quality profiles
         _sonarrClient
@@ -404,7 +410,7 @@ public class CustomFormatScoreSyncerTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert — only the episode with a file should have an entry
-        var entries = await _fixture.DataContext.CustomFormatScoreEntries.ToListAsync();
+        var entries = await _fixture.EventsContext.CustomFormatScoreEntries.ToListAsync();
         entries.ShouldHaveSingleItem();
 
         var entry = entries[0];
@@ -418,7 +424,7 @@ public class CustomFormatScoreSyncerTests : IDisposable
         entry.Title.ShouldContain("S01E01");
 
         // Initial history should be created
-        var history = await _fixture.DataContext.CustomFormatScoreHistory.ToListAsync();
+        var history = await _fixture.EventsContext.CustomFormatScoreHistory.ToListAsync();
         history.ShouldHaveSingleItem();
         history[0].Score.ShouldBe(300);
     }
@@ -437,6 +443,7 @@ public class CustomFormatScoreSyncerTests : IDisposable
             UseCustomFormatScore = true
         });
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         _sonarrClient
             .GetQualityProfilesAsync(sonarrInstance)
@@ -465,7 +472,7 @@ public class CustomFormatScoreSyncerTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert — no entries created
-        var entries = await _fixture.DataContext.CustomFormatScoreEntries.ToListAsync();
+        var entries = await _fixture.EventsContext.CustomFormatScoreEntries.ToListAsync();
         entries.ShouldBeEmpty();
     }
 
@@ -476,7 +483,9 @@ public class CustomFormatScoreSyncerTests : IDisposable
         const int SeriesCount = 20;
 
         string dbPath = Path.Combine(Path.GetTempPath(), $"cfsync-concurrency-{Guid.NewGuid():N}.db");
+        string eventsDbPath = Path.Combine(Path.GetTempPath(), $"cfsync-concurrency-events-{Guid.NewGuid():N}.db");
         DataContext dataContext = CreateFileBackedWalDataContext(dbPath);
+        EventsContext eventsContext = CreateFileBackedWalEventsContext(eventsDbPath);
 
         try
         {
@@ -562,6 +571,7 @@ public class CustomFormatScoreSyncerTests : IDisposable
             CustomFormatScoreSyncer sut = new(
                 _logger,
                 dataContext,
+                eventsContext,
                 _radarrClient,
                 _sonarrClient,
                 new FakeTimeProvider(),
@@ -572,7 +582,7 @@ public class CustomFormatScoreSyncerTests : IDisposable
             maxInFlight.ShouldBeGreaterThanOrEqualTo(3);
             maxInFlight.ShouldBeLessThanOrEqualTo(FetchConcurrency * 2);
 
-            List<CustomFormatScoreEntry> entries = await dataContext.CustomFormatScoreEntries.ToListAsync();
+            List<CustomFormatScoreEntry> entries = await eventsContext.CustomFormatScoreEntries.ToListAsync();
             entries.Count.ShouldBe(SeriesCount);
 
             foreach (SearchableSeries series in seriesList)
@@ -583,15 +593,19 @@ public class CustomFormatScoreSyncerTests : IDisposable
                 entry.CutoffScore.ShouldBe(500);
             }
 
-            List<CustomFormatScoreHistory> history = await dataContext.CustomFormatScoreHistory.ToListAsync();
+            List<CustomFormatScoreHistory> history = await eventsContext.CustomFormatScoreHistory.ToListAsync();
             history.Count.ShouldBe(SeriesCount);
         }
         finally
         {
             dataContext.Dispose();
+            eventsContext.Dispose();
             File.Delete(dbPath);
             File.Delete($"{dbPath}-wal");
             File.Delete($"{dbPath}-shm");
+            File.Delete(eventsDbPath);
+            File.Delete($"{eventsDbPath}-wal");
+            File.Delete($"{eventsDbPath}-shm");
         }
     }
 
@@ -614,7 +628,7 @@ public class CustomFormatScoreSyncerTests : IDisposable
         });
 
         // Pre-existing entry with score = 250 (same as what will be returned)
-        _fixture.DataContext.CustomFormatScoreEntries.Add(new CustomFormatScoreEntry
+        _fixture.EventsContext.CustomFormatScoreEntries.Add(new CustomFormatScoreEntry
         {
             ArrInstanceId = radarrInstance.Id,
             ExternalItemId = 10,
@@ -628,6 +642,7 @@ public class CustomFormatScoreSyncerTests : IDisposable
             LastSyncedAt = DateTime.UtcNow.AddHours(-1)
         });
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         _radarrClient
             .GetQualityProfilesAsync(radarrInstance)
@@ -655,11 +670,11 @@ public class CustomFormatScoreSyncerTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert — no history entries (score didn't change)
-        var history = await _fixture.DataContext.CustomFormatScoreHistory.ToListAsync();
+        var history = await _fixture.EventsContext.CustomFormatScoreHistory.ToListAsync();
         history.ShouldBeEmpty();
 
         // Entry should still be updated (LastSyncedAt changes)
-        var entries = await _fixture.DataContext.CustomFormatScoreEntries.ToListAsync();
+        var entries = await _fixture.EventsContext.CustomFormatScoreEntries.ToListAsync();
         entries.ShouldHaveSingleItem();
         entries[0].CurrentScore.ShouldBe(250);
     }
@@ -683,7 +698,7 @@ public class CustomFormatScoreSyncerTests : IDisposable
         });
 
         // Pre-existing entry for a movie that no longer exists in library
-        _fixture.DataContext.CustomFormatScoreEntries.Add(new CustomFormatScoreEntry
+        _fixture.EventsContext.CustomFormatScoreEntries.Add(new CustomFormatScoreEntry
         {
             ArrInstanceId = radarrInstance.Id,
             ExternalItemId = 999,
@@ -697,6 +712,7 @@ public class CustomFormatScoreSyncerTests : IDisposable
             LastSyncedAt = new DateTime(1999, 1, 1, 0, 0, 0, DateTimeKind.Utc)
         });
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         _radarrClient
             .GetQualityProfilesAsync(radarrInstance)
@@ -724,7 +740,7 @@ public class CustomFormatScoreSyncerTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert — entry for removed movie 999 should be deleted
-        var entries = await _fixture.DataContext.CustomFormatScoreEntries.ToListAsync();
+        var entries = await _fixture.EventsContext.CustomFormatScoreEntries.ToListAsync();
         entries.ShouldHaveSingleItem();
         entries[0].ExternalItemId.ShouldBe(10);
     }
@@ -744,7 +760,7 @@ public class CustomFormatScoreSyncerTests : IDisposable
         });
 
         // Pre-existing entry with score history
-        _fixture.DataContext.CustomFormatScoreEntries.Add(new CustomFormatScoreEntry
+        _fixture.EventsContext.CustomFormatScoreEntries.Add(new CustomFormatScoreEntry
         {
             ArrInstanceId = radarrInstance.Id,
             ExternalItemId = 10,
@@ -757,7 +773,7 @@ public class CustomFormatScoreSyncerTests : IDisposable
             QualityProfileName = "HD",
             LastSyncedAt = DateTime.UtcNow.AddHours(-1)
         });
-        _fixture.DataContext.CustomFormatScoreHistory.Add(new CustomFormatScoreHistory
+        _fixture.EventsContext.CustomFormatScoreHistory.Add(new CustomFormatScoreHistory
         {
             ArrInstanceId = radarrInstance.Id,
             ExternalItemId = 10,
@@ -769,6 +785,7 @@ public class CustomFormatScoreSyncerTests : IDisposable
             RecordedAt = DateTime.UtcNow.AddHours(-1)
         });
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         _radarrClient
             .GetQualityProfilesAsync(radarrInstance)
@@ -792,12 +809,12 @@ public class CustomFormatScoreSyncerTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert — entry and history should be preserved since the movie still exists
-        var entries = await _fixture.DataContext.CustomFormatScoreEntries.ToListAsync();
+        var entries = await _fixture.EventsContext.CustomFormatScoreEntries.ToListAsync();
         entries.ShouldHaveSingleItem();
         entries[0].ExternalItemId.ShouldBe(10);
         entries[0].CurrentScore.ShouldBe(250);
 
-        var history = await _fixture.DataContext.CustomFormatScoreHistory.ToListAsync();
+        var history = await _fixture.EventsContext.CustomFormatScoreHistory.ToListAsync();
         history.ShouldHaveSingleItem();
         history[0].Score.ShouldBe(250);
     }
@@ -817,7 +834,7 @@ public class CustomFormatScoreSyncerTests : IDisposable
         });
 
         // Pre-existing entry with history
-        _fixture.DataContext.CustomFormatScoreEntries.Add(new CustomFormatScoreEntry
+        _fixture.EventsContext.CustomFormatScoreEntries.Add(new CustomFormatScoreEntry
         {
             ArrInstanceId = radarrInstance.Id,
             ExternalItemId = 10,
@@ -830,7 +847,7 @@ public class CustomFormatScoreSyncerTests : IDisposable
             QualityProfileName = "HD",
             LastSyncedAt = DateTime.UtcNow.AddHours(-1)
         });
-        _fixture.DataContext.CustomFormatScoreHistory.Add(new CustomFormatScoreHistory
+        _fixture.EventsContext.CustomFormatScoreHistory.Add(new CustomFormatScoreHistory
         {
             ArrInstanceId = radarrInstance.Id,
             ExternalItemId = 10,
@@ -842,6 +859,7 @@ public class CustomFormatScoreSyncerTests : IDisposable
             RecordedAt = DateTime.UtcNow.AddHours(-1)
         });
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         _radarrClient
             .GetQualityProfilesAsync(radarrInstance)
@@ -870,12 +888,12 @@ public class CustomFormatScoreSyncerTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert — entry and history should be preserved since the movie still exists
-        var entries = await _fixture.DataContext.CustomFormatScoreEntries.ToListAsync();
+        var entries = await _fixture.EventsContext.CustomFormatScoreEntries.ToListAsync();
         entries.ShouldHaveSingleItem();
         entries[0].ExternalItemId.ShouldBe(10);
         entries[0].CurrentScore.ShouldBe(250);
 
-        var history = await _fixture.DataContext.CustomFormatScoreHistory.ToListAsync();
+        var history = await _fixture.EventsContext.CustomFormatScoreHistory.ToListAsync();
         history.ShouldHaveSingleItem();
     }
 
@@ -894,7 +912,7 @@ public class CustomFormatScoreSyncerTests : IDisposable
         });
 
         // Pre-existing CF score entry for an episode
-        _fixture.DataContext.CustomFormatScoreEntries.Add(new CustomFormatScoreEntry
+        _fixture.EventsContext.CustomFormatScoreEntries.Add(new CustomFormatScoreEntry
         {
             ArrInstanceId = sonarrInstance.Id,
             ExternalItemId = 10,
@@ -907,7 +925,7 @@ public class CustomFormatScoreSyncerTests : IDisposable
             QualityProfileName = "HD",
             LastSyncedAt = DateTime.UtcNow.AddHours(-1)
         });
-        _fixture.DataContext.CustomFormatScoreHistory.Add(new CustomFormatScoreHistory
+        _fixture.EventsContext.CustomFormatScoreHistory.Add(new CustomFormatScoreHistory
         {
             ArrInstanceId = sonarrInstance.Id,
             ExternalItemId = 10,
@@ -919,6 +937,7 @@ public class CustomFormatScoreSyncerTests : IDisposable
             RecordedAt = DateTime.UtcNow.AddHours(-1)
         });
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         _sonarrClient
             .GetQualityProfilesAsync(sonarrInstance)
@@ -947,13 +966,13 @@ public class CustomFormatScoreSyncerTests : IDisposable
         await sut.ExecuteAsync();
 
         // Assert — entry and history should be preserved
-        var entries = await _fixture.DataContext.CustomFormatScoreEntries.ToListAsync();
+        var entries = await _fixture.EventsContext.CustomFormatScoreEntries.ToListAsync();
         entries.ShouldHaveSingleItem();
         entries[0].ExternalItemId.ShouldBe(10);
         entries[0].EpisodeId.ShouldBe(100);
         entries[0].CurrentScore.ShouldBe(300);
 
-        var history = await _fixture.DataContext.CustomFormatScoreHistory.ToListAsync();
+        var history = await _fixture.EventsContext.CustomFormatScoreHistory.ToListAsync();
         history.ShouldHaveSingleItem();
     }
 
@@ -970,7 +989,7 @@ public class CustomFormatScoreSyncerTests : IDisposable
             UseCustomFormatScore = true
         });
 
-        _fixture.DataContext.CustomFormatScoreEntries.Add(new CustomFormatScoreEntry
+        _fixture.EventsContext.CustomFormatScoreEntries.Add(new CustomFormatScoreEntry
         {
             ArrInstanceId = sonarrInstance.Id,
             ExternalItemId = 10,
@@ -983,7 +1002,7 @@ public class CustomFormatScoreSyncerTests : IDisposable
             QualityProfileName = "HD",
             LastSyncedAt = new DateTime(1999, 12, 15, 0, 0, 0, DateTimeKind.Utc)
         });
-        _fixture.DataContext.CustomFormatScoreHistory.Add(new CustomFormatScoreHistory
+        _fixture.EventsContext.CustomFormatScoreHistory.Add(new CustomFormatScoreHistory
         {
             ArrInstanceId = sonarrInstance.Id,
             ExternalItemId = 10,
@@ -995,6 +1014,7 @@ public class CustomFormatScoreSyncerTests : IDisposable
             RecordedAt = new DateTime(1999, 12, 15, 0, 0, 0, DateTimeKind.Utc)
         });
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         _sonarrClient
             .GetQualityProfilesAsync(sonarrInstance)
@@ -1018,12 +1038,12 @@ public class CustomFormatScoreSyncerTests : IDisposable
 
         await sut.ExecuteAsync();
 
-        var entries = await _fixture.DataContext.CustomFormatScoreEntries.ToListAsync();
+        var entries = await _fixture.EventsContext.CustomFormatScoreEntries.ToListAsync();
         entries.ShouldHaveSingleItem();
         entries[0].ExternalItemId.ShouldBe(10);
         entries[0].CurrentScore.ShouldBe(300);
 
-        var history = await _fixture.DataContext.CustomFormatScoreHistory.ToListAsync();
+        var history = await _fixture.EventsContext.CustomFormatScoreHistory.ToListAsync();
         history.ShouldHaveSingleItem();
     }
 
@@ -1073,13 +1093,37 @@ public class CustomFormatScoreSyncerTests : IDisposable
         return context;
     }
 
+    private static EventsContext CreateFileBackedWalEventsContext(string dbPath, params IInterceptor[] interceptors)
+    {
+        SqliteConnectionStringBuilder connectionStringBuilder = new()
+        {
+            DataSource = dbPath
+        };
+
+        DbContextOptionsBuilder<EventsContext> optionsBuilder = new DbContextOptionsBuilder<EventsContext>()
+            .UseSqlite(connectionStringBuilder.ConnectionString);
+
+        if (interceptors.Length > 0)
+        {
+            optionsBuilder.AddInterceptors(interceptors);
+        }
+
+        EventsContext context = new(optionsBuilder.Options);
+        context.Database.EnsureCreated();
+        context.Database.ExecuteSqlRaw("PRAGMA journal_mode=WAL;");
+
+        return context;
+    }
+
     [Fact]
     public async Task ExecuteAsync_Radarr_CheckspointsWalPeriodicallyOnLargeLibrary()
     {
         string dbPath = Path.Combine(Path.GetTempPath(), $"cfsync-wal-{Guid.NewGuid():N}.db");
-        string walPath = $"{dbPath}-wal";
+        string eventsDbPath = Path.Combine(Path.GetTempPath(), $"cfsync-wal-events-{Guid.NewGuid():N}.db");
+        string walPath = $"{eventsDbPath}-wal";
         CheckpointCountingInterceptor checkpointCounter = new();
-        DataContext dataContext = CreateFileBackedWalDataContext(dbPath, checkpointCounter);
+        DataContext dataContext = CreateFileBackedWalDataContext(dbPath);
+        EventsContext eventsContext = CreateFileBackedWalEventsContext(eventsDbPath, checkpointCounter);
 
         try
         {
@@ -1144,6 +1188,7 @@ public class CustomFormatScoreSyncerTests : IDisposable
             CustomFormatScoreSyncer sut = new(
                 _logger,
                 dataContext,
+                eventsContext,
                 _radarrClient,
                 _sonarrClient,
                 new FakeTimeProvider(),
@@ -1151,7 +1196,7 @@ public class CustomFormatScoreSyncerTests : IDisposable
 
             await sut.ExecuteAsync();
 
-            int entryCount = await dataContext.CustomFormatScoreEntries.CountAsync();
+            int entryCount = await eventsContext.CustomFormatScoreEntries.CountAsync();
             entryCount.ShouldBe(movieCount);
 
             checkpointCounter.CheckpointCount.ShouldBeGreaterThanOrEqualTo(2);
@@ -1162,9 +1207,13 @@ public class CustomFormatScoreSyncerTests : IDisposable
         finally
         {
             dataContext.Dispose();
+            eventsContext.Dispose();
             File.Delete(dbPath);
-            File.Delete(walPath);
+            File.Delete($"{dbPath}-wal");
             File.Delete($"{dbPath}-shm");
+            File.Delete(eventsDbPath);
+            File.Delete(walPath);
+            File.Delete($"{eventsDbPath}-shm");
         }
     }
 

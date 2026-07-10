@@ -20,6 +20,7 @@ namespace Cleanuparr.Infrastructure.Tests.Features.Jobs;
 public class SeekerCommandMonitorTests : IAsyncDisposable
 {
     private readonly DataContext _dataContext;
+    private readonly EventsContext _eventsContext;
     private readonly FakeTimeProvider _timeProvider;
     private readonly IArrClient _arrClient;
     private readonly IEventPublisher _eventPublisher;
@@ -29,6 +30,7 @@ public class SeekerCommandMonitorTests : IAsyncDisposable
     public SeekerCommandMonitorTests()
     {
         _dataContext = TestDataContextFactory.Create();
+        _eventsContext = TestDataContextFactory.CreateEvents();
         _timeProvider = new FakeTimeProvider();
         _arrClient = Substitute.For<IArrClient>();
         _eventPublisher = Substitute.For<IEventPublisher>();
@@ -39,6 +41,7 @@ public class SeekerCommandMonitorTests : IAsyncDisposable
 
         var serviceProvider = Substitute.For<IServiceProvider>();
         serviceProvider.GetService(typeof(DataContext)).Returns(_dataContext);
+        serviceProvider.GetService(typeof(EventsContext)).Returns(_eventsContext);
         serviceProvider.GetService(typeof(IArrClientFactory)).Returns(arrClientFactory);
         serviceProvider.GetService(typeof(IEventPublisher)).Returns(_eventPublisher);
 
@@ -60,6 +63,7 @@ public class SeekerCommandMonitorTests : IAsyncDisposable
         catch { /* expected during teardown */ }
         _sut.Dispose();
         _dataContext.Dispose();
+        _eventsContext.Dispose();
         _cts.Dispose();
         GC.SuppressFinalize(this);
     }
@@ -71,7 +75,7 @@ public class SeekerCommandMonitorTests : IAsyncDisposable
         var sonarrInstance = TestDataContextFactory.AddSonarrInstance(_dataContext);
         var eventId = Guid.NewGuid();
 
-        _dataContext.SeekerCommandTrackers.Add(new SeekerCommandTracker
+        _eventsContext.SeekerCommandTrackers.Add(new SeekerCommandTracker
         {
             ArrInstanceId = sonarrInstance.Id,
             CommandId = 1,
@@ -83,6 +87,7 @@ public class SeekerCommandMonitorTests : IAsyncDisposable
             CreatedAt = _timeProvider.GetUtcNow().UtcDateTime
         });
         await _dataContext.SaveChangesAsync();
+        await _eventsContext.SaveChangesAsync();
 
         _arrClient.GetCommandStatusAsync(Arg.Any<ArrInstance>(), Arg.Any<long>())
             .Returns(new ArrCommandStatus(1, "completed", null));
@@ -126,7 +131,7 @@ public class SeekerCommandMonitorTests : IAsyncDisposable
         var sonarrInstance = TestDataContextFactory.AddSonarrInstance(_dataContext);
         var eventId = Guid.NewGuid();
 
-        _dataContext.SeekerCommandTrackers.Add(new SeekerCommandTracker
+        _eventsContext.SeekerCommandTrackers.Add(new SeekerCommandTracker
         {
             ArrInstanceId = sonarrInstance.Id,
             CommandId = 1,
@@ -138,6 +143,7 @@ public class SeekerCommandMonitorTests : IAsyncDisposable
             CreatedAt = _timeProvider.GetUtcNow().UtcDateTime
         });
         await _dataContext.SaveChangesAsync();
+        await _eventsContext.SaveChangesAsync();
 
         _arrClient.GetCommandStatusAsync(Arg.Any<ArrInstance>(), Arg.Any<long>())
             .Returns(new ArrCommandStatus(1, "completed", null));
@@ -179,7 +185,7 @@ public class SeekerCommandMonitorTests : IAsyncDisposable
         var radarrInstance = TestDataContextFactory.AddRadarrInstance(_dataContext);
         var eventId = Guid.NewGuid();
 
-        _dataContext.SeekerCommandTrackers.Add(new SeekerCommandTracker
+        _eventsContext.SeekerCommandTrackers.Add(new SeekerCommandTracker
         {
             ArrInstanceId = radarrInstance.Id,
             CommandId = 1,
@@ -191,6 +197,7 @@ public class SeekerCommandMonitorTests : IAsyncDisposable
             CreatedAt = _timeProvider.GetUtcNow().UtcDateTime
         });
         await _dataContext.SaveChangesAsync();
+        await _eventsContext.SaveChangesAsync();
 
         _arrClient.GetCommandStatusAsync(Arg.Any<ArrInstance>(), Arg.Any<long>())
             .Returns(new ArrCommandStatus(1, "completed", null));
