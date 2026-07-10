@@ -12,6 +12,7 @@ using Cleanuparr.Infrastructure.Features.Files;
 using Cleanuparr.Infrastructure.Features.ItemStriker;
 using Cleanuparr.Infrastructure.Features.Jobs;
 using Cleanuparr.Infrastructure.Features.MalwareBlocker;
+using Cleanuparr.Infrastructure.Features.Seeker;
 using Cleanuparr.Infrastructure.Helpers;
 using Cleanuparr.Infrastructure.Interceptors;
 using Cleanuparr.Infrastructure.Services;
@@ -54,6 +55,7 @@ public static class ServicesDI
             .AddScoped<IOrphanedFilesCleanupService, OrphanedFilesCleanupService>()
             .AddScoped<Seeker>()
             .AddScoped<CustomFormatScoreSyncer>()
+            .AddScoped<ISeekerStateCleanup, SeekerStateCleanup>()
             .AddScoped<IQueueItemRemover, QueueItemRemover>()
             .AddScoped<IFilenameEvaluator, FilenameEvaluator>()
             .AddScoped<IHardLinkFileService, HardLinkFileService>()

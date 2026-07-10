@@ -3,6 +3,7 @@ using Cleanuparr.Api.Features.Arr.Contracts.Requests;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Arr.Dtos;
 using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
+using Cleanuparr.Infrastructure.Features.Seeker;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Cleanuparr.Shared.Helpers;
@@ -20,15 +21,18 @@ public sealed class ArrConfigController : ControllerBase
     private readonly ILogger<ArrConfigController> _logger;
     private readonly DataContext _dataContext;
     private readonly IArrClientFactory _arrClientFactory;
+    private readonly ISeekerStateCleanup _seekerStateCleanup;
 
     public ArrConfigController(
         ILogger<ArrConfigController> logger,
         DataContext dataContext,
-        IArrClientFactory arrClientFactory)
+        IArrClientFactory arrClientFactory,
+        ISeekerStateCleanup seekerStateCleanup)
     {
         _logger = logger;
         _dataContext = dataContext;
         _arrClientFactory = arrClientFactory;
+        _seekerStateCleanup = seekerStateCleanup;
     }
 
     [HttpGet("sonarr")]
@@ -253,6 +257,8 @@ public sealed class ArrConfigController : ControllerBase
 
             config.Instances.Remove(instance);
             await _dataContext.SaveChangesAsync();
+
+            await _seekerStateCleanup.DeleteForInstanceAsync(id);
 
             return NoContent();
         }
