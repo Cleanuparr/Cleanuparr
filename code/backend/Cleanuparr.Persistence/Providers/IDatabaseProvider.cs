@@ -23,11 +23,7 @@ public interface IDatabaseProvider
 
     Task CheckpointAsync(DatabaseFacade database, CancellationToken cancellationToken);
 
-    string EscapeLikePattern(string input);
-
     string GetTimelineBucketExpr(TimelineBucketSize size);
-
-    string FormatBooleanLiteral(bool value);
 
     bool IsUniqueConstraintViolation(DbUpdateException exception);
 }

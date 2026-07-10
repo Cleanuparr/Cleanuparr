@@ -32,19 +32,6 @@ public class SqliteDatabaseProviderTests
     }
 
     [Fact]
-    public void EscapeLikePattern_escapes_wildcards_with_backslash_and_wraps()
-    {
-        _provider.EscapeLikePattern("a_b%c[d").ShouldBe("%a\\_b\\%c[d%");
-    }
-
-    [Fact]
-    public void FormatBooleanLiteral_uses_integer_literals()
-    {
-        _provider.FormatBooleanLiteral(true).ShouldBe("1");
-        _provider.FormatBooleanLiteral(false).ShouldBe("0");
-    }
-
-    [Fact]
     public void GetTimelineBucketExpr_hour_uses_substr()
     {
         _provider.GetTimelineBucketExpr(TimelineBucketSize.Hour).ShouldBe("substr(timestamp, 1, 13)");

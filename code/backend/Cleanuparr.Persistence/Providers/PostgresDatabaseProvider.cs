@@ -49,16 +49,6 @@ public sealed class PostgresDatabaseProvider : IDatabaseProvider
 
     public Task CheckpointAsync(DatabaseFacade database, CancellationToken cancellationToken) => Task.CompletedTask;
 
-    public string EscapeLikePattern(string input)
-    {
-        string escaped = input
-            .Replace("\\", "\\\\")
-            .Replace("%", "\\%")
-            .Replace("_", "\\_");
-
-        return $"%{escaped}%";
-    }
-
     public string GetTimelineBucketExpr(TimelineBucketSize size) => size switch
     {
         TimelineBucketSize.Hour => "to_char(\"timestamp\" AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24')",
@@ -67,8 +57,6 @@ public sealed class PostgresDatabaseProvider : IDatabaseProvider
         TimelineBucketSize.Month => "to_char(date_trunc('month', \"timestamp\" AT TIME ZONE 'UTC'), 'YYYY-MM-DD')",
         _ => throw new ArgumentOutOfRangeException(nameof(size), size, null),
     };
-
-    public string FormatBooleanLiteral(bool value) => value ? "true" : "false";
 
     public bool IsUniqueConstraintViolation(DbUpdateException exception) =>
         exception.InnerException is PostgresException { SqlState: "23505" };

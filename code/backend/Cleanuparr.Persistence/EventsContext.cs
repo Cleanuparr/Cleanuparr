@@ -61,7 +61,12 @@ public class EventsContext : DbContext
 
     public static string GetLikePattern(string input)
     {
-        return DatabaseProviderFactory.Current.EscapeLikePattern(input.ToLowerInvariant());
+        string escaped = input.ToLowerInvariant()
+            .Replace("\\", "\\\\")
+            .Replace("%", "\\%")
+            .Replace("_", "\\_");
+
+        return $"%{escaped}%";
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

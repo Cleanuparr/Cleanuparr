@@ -68,13 +68,6 @@ public class PostgresDatabaseProviderTests
     }
 
     [Fact]
-    public void FormatBooleanLiteral_uses_boolean_literals()
-    {
-        _provider.FormatBooleanLiteral(true).ShouldBe("true");
-        _provider.FormatBooleanLiteral(false).ShouldBe("false");
-    }
-
-    [Fact]
     public void GetTimelineBucketExpr_month_uses_date_trunc_in_utc()
     {
         _provider.GetTimelineBucketExpr(TimelineBucketSize.Month)

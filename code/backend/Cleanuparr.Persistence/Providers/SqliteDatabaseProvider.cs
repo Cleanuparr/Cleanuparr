@@ -58,16 +58,6 @@ public sealed class SqliteDatabaseProvider : IDatabaseProvider
         await database.ExecuteSqlRawAsync("PRAGMA wal_checkpoint(TRUNCATE);", cancellationToken);
     }
 
-    public string EscapeLikePattern(string input)
-    {
-        string escaped = input
-            .Replace("\\", "\\\\")
-            .Replace("%", "\\%")
-            .Replace("_", "\\_");
-
-        return $"%{escaped}%";
-    }
-
     public string GetTimelineBucketExpr(TimelineBucketSize size) => size switch
     {
         TimelineBucketSize.Hour => "substr(timestamp, 1, 13)",
@@ -76,8 +66,6 @@ public sealed class SqliteDatabaseProvider : IDatabaseProvider
         TimelineBucketSize.Month => "strftime('%Y-%m-01', substr(timestamp, 1, 19))",
         _ => throw new ArgumentOutOfRangeException(nameof(size), size, null),
     };
-
-    public string FormatBooleanLiteral(bool value) => value ? "1" : "0";
 
     public bool IsUniqueConstraintViolation(DbUpdateException exception) =>
         exception.InnerException is SqliteException { SqliteErrorCode: 19 };

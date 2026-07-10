@@ -248,7 +248,8 @@ public class StatsService : IStatsService
 
         if (!includeDryRun)
         {
-            where.Append($" AND is_dry_run = {_databaseProvider.FormatBooleanLiteral(false)}");
+            where.Append($" AND is_dry_run = {{{parameters.Count}}}");
+            parameters.Add(false);
         }
 
         string bucketExpr = _databaseProvider.GetTimelineBucketExpr(size);
