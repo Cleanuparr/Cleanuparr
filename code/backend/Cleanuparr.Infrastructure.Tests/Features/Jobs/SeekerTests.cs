@@ -611,9 +611,9 @@ public class SeekerTests : IDisposable
             .StreamAllSeriesAsync(Arg.Any<ArrInstance>(), Arg.Any<CancellationToken>())
             .Returns(
             ToAsyncEnumerable<SearchableSeries>([
-                new SearchableSeries { Id = 10, Title = "Series Ten", Status = "continuing", Monitored = true, Tags = [], Statistics = new SeriesStatistics { EpisodeCount = 10, EpisodeFileCount = 10 } },
+                new SearchableSeries { Id = 10, Title = "Series Ten", Status = "continuing", Monitored = true, Tags = [], Statistics = new SeriesStatistics { EpisodeCount = 10, EpisodeFileCount = 9 } },
                 new SearchableSeries { Id = 20, Title = "Series Twenty", Status = "continuing", Monitored = true, Tags = [], Statistics = new SeriesStatistics { EpisodeCount = 10, EpisodeFileCount = 5 } },
-                new SearchableSeries { Id = 30, Title = "Series Thirty", Status = "continuing", Monitored = true, Tags = [], Statistics = new SeriesStatistics { EpisodeCount = 10, EpisodeFileCount = 10 } }
+                new SearchableSeries { Id = 30, Title = "Series Thirty", Status = "continuing", Monitored = true, Tags = [], Statistics = new SeriesStatistics { EpisodeCount = 10, EpisodeFileCount = 9 } }
             ]));
 
         var pastDate = _fixture.TimeProvider.GetUtcNow().UtcDateTime.AddDays(-30);
