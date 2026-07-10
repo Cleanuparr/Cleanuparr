@@ -21,6 +21,7 @@ For most users, we recommend the Docker installation method as it provides the m
 - [Docker Installation (Recommended)](#docker-installation-recommended)
   - [Docker Run Method](#docker-run)
   - [Docker Compose Method](#docker-compose)
+  - [Database](#database)
 - [Unraid](#unraid)
 - [Windows Installation](#windows-installation)
   - [Windows Installer](#windows-installer)
@@ -112,6 +113,51 @@ services:
 
 <Note>
 Replace `/path/to/config` with your desired configuration directory path on the host system.
+</Note>
+
+### Database
+
+Cleanuparr uses SQLite by default, with the database files stored under `/config`. No configuration is needed for this.
+
+PostgreSQL can be used instead by setting `DATABASE_PROVIDER=postgres` plus the connection variables below:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DATABASE_PROVIDER` | sqlite | Database backend to use: `sqlite` or `postgres` |
+| `POSTGRES_HOST` | *(required)* | PostgreSQL server hostname |
+| `POSTGRES_PORT` | 5432 | PostgreSQL server port |
+| `POSTGRES_USER` | *(required)* | PostgreSQL username |
+| `POSTGRES_PASS` | *(required)* | PostgreSQL password |
+| `POSTGRES_DB` | *(required)* | PostgreSQL database name |
+| `POSTGRES_EXTRA_PARAMS` | *(empty)* | Additional connection string parameters, semicolon-separated |
+
+Cleanuparr creates three schemas in the target database: `data`, `events` and `users`, one per internal database context, each with its own migration history.
+
+Example with SSL enabled via `POSTGRES_EXTRA_PARAMS`:
+
+```bash
+docker run -d --name cleanuparr \
+  --restart unless-stopped \
+  -p 11011:11011 \
+  -v /path/to/config:/config \
+  -e DATABASE_PROVIDER=postgres \
+  -e POSTGRES_HOST=postgres.example.com \
+  -e POSTGRES_PORT=5432 \
+  -e POSTGRES_USER=cleanuparr \
+  -e POSTGRES_PASS=change-me \
+  -e POSTGRES_DB=cleanuparr \
+  -e "POSTGRES_EXTRA_PARAMS=SSL Mode=Require;Trust Server Certificate=true" \
+  ghcr.io/cleanuparr/cleanuparr:latest
+```
+
+A ready-to-use example is also available as [`docker-compose.postgres.yml`](https://github.com/Cleanuparr/Cleanuparr/blob/main/code/docker-compose.postgres.yml) in the repository.
+
+<Important>
+PostgreSQL support is for fresh installs only: there is no migration path from an existing SQLite database to PostgreSQL. Existing SQLite installs are unaffected and can keep using SQLite indefinitely.
+</Important>
+
+<Note>
+`/config` is still required when using PostgreSQL. It holds DataProtection keys, `cleanuparr.json` and log files. Only the `.db` files are no longer used.
 </Note>
 
 </div>

@@ -909,6 +909,122 @@ namespace Cleanuparr.Persistence.Postgres.Migrations.Data
                 table: "unlinked_configs",
                 column: "download_client_config_id",
                 unique: true);
+
+            migrationBuilder.InsertData(
+                schema: "data",
+                table: "general_configs",
+                columns: new[]
+                {
+                    "id", "display_support_banner", "dry_run", "http_max_retries", "http_timeout", "http_certificate_validation",
+                    "status_check_enabled", "encryption_key", "ignored_downloads", "strike_inactivity_window_hours", "history_retention_days",
+                    "auth_disable_auth_for_local_addresses", "auth_trust_forwarded_headers", "auth_trusted_networks",
+                    "log_archive_enabled", "log_archive_retained_count", "log_archive_time_limit_hours", "log_level",
+                    "log_retained_file_count", "log_rolling_size_mb", "log_time_limit_hours",
+                },
+                values: new object[]
+                {
+                    Guid.NewGuid(), true, false, 0, 100, "enabled",
+                    true, Guid.NewGuid().ToString(), Array.Empty<string>(), 24, 365,
+                    false, false, "",
+                    true, 60, 720, "information",
+                    5, 10, 24,
+                });
+
+            migrationBuilder.InsertData(
+                schema: "data",
+                table: "queue_cleaner_configs",
+                columns: new[]
+                {
+                    "id", "enabled", "cron_expression", "use_advanced_scheduling", "ignored_downloads", "process_no_content_id",
+                    "downloading_metadata_max_strikes", "failed_import_change_category", "failed_import_delete_private",
+                    "failed_import_ignore_private", "failed_import_max_strikes", "failed_import_pattern_mode",
+                    "failed_import_patterns", "failed_import_skip_if_not_found_in_client",
+                },
+                values: new object[]
+                {
+                    Guid.NewGuid(), false, "0 0/5 * * * ?", false, Array.Empty<string>(), false,
+                    0, false, false,
+                    false, 0, "include",
+                    Array.Empty<string>(), true,
+                });
+
+            migrationBuilder.InsertData(
+                schema: "data",
+                table: "content_blocker_configs",
+                columns: new[]
+                {
+                    "id", "enabled", "cron_expression", "use_advanced_scheduling", "ignore_private", "delete_private",
+                    "process_no_content_id", "delete_if_any_file_blocked",
+                    "sonarr_enabled", "sonarr_blocklist_path", "sonarr_blocklist_type",
+                    "radarr_enabled", "radarr_blocklist_path", "radarr_blocklist_type",
+                    "lidarr_enabled", "lidarr_blocklist_path", "lidarr_blocklist_type",
+                    "readarr_enabled", "readarr_blocklist_path", "readarr_blocklist_type",
+                    "whisparr_enabled", "whisparr_blocklist_path", "whisparr_blocklist_type",
+                    "ignored_downloads",
+                },
+                values: new object[]
+                {
+                    Guid.NewGuid(), false, "0/5 * * * * ?", false, false, false,
+                    false, false,
+                    false, null, "blacklist",
+                    false, null, "blacklist",
+                    false, null, "blacklist",
+                    false, null, "blacklist",
+                    false, null, 0,
+                    Array.Empty<string>(),
+                });
+
+            migrationBuilder.InsertData(
+                schema: "data",
+                table: "download_cleaner_configs",
+                columns: new[] { "id", "enabled", "cron_expression", "use_advanced_scheduling", "ignored_downloads" },
+                values: new object[] { Guid.NewGuid(), false, "0 0 * * * ?", false, Array.Empty<string>() });
+
+            migrationBuilder.InsertData(
+                schema: "data",
+                table: "seeker_configs",
+                columns: new[]
+                {
+                    "id", "search_enabled", "search_interval", "proactive_search_enabled",
+                    "selection_strategy", "use_round_robin", "post_release_grace_hours",
+                },
+                values: new object[] { Guid.NewGuid(), true, 10, false, "balancedweighted", true, 6 });
+
+            migrationBuilder.InsertData(
+                schema: "data",
+                table: "blacklist_sync_configs",
+                columns: new[] { "id", "enabled", "cron_expression", "blacklist_path" },
+                values: new object[] { Guid.NewGuid(), false, "0 0 * * * ?", null });
+
+            migrationBuilder.InsertData(
+                schema: "data",
+                table: "arr_configs",
+                columns: new[] { "id", "failed_import_max_strikes", "type" },
+                values: new object[] { Guid.NewGuid(), (short)-1, "radarr" });
+
+            migrationBuilder.InsertData(
+                schema: "data",
+                table: "arr_configs",
+                columns: new[] { "id", "failed_import_max_strikes", "type" },
+                values: new object[] { Guid.NewGuid(), (short)-1, "lidarr" });
+
+            migrationBuilder.InsertData(
+                schema: "data",
+                table: "arr_configs",
+                columns: new[] { "id", "failed_import_max_strikes", "type" },
+                values: new object[] { Guid.NewGuid(), (short)-1, "sonarr" });
+
+            migrationBuilder.InsertData(
+                schema: "data",
+                table: "arr_configs",
+                columns: new[] { "id", "failed_import_max_strikes", "type" },
+                values: new object[] { Guid.NewGuid(), (short)-1, "readarr" });
+
+            migrationBuilder.InsertData(
+                schema: "data",
+                table: "arr_configs",
+                columns: new[] { "id", "failed_import_max_strikes", "type" },
+                values: new object[] { Guid.NewGuid(), (short)-1, "whisparr" });
         }
 
         /// <inheritdoc />

@@ -23,8 +23,12 @@ public sealed class PostgresDatabaseProvider : IDatabaseProvider
 
     public void ConfigureContext(DbContextOptionsBuilder builder, DbContextKind kind)
     {
+        string schema = Schemas[kind];
+
         builder
-            .UseNpgsql(GetConnectionString(), options => options.MigrationsAssembly(MigrationsAssembly))
+            .UseNpgsql(GetConnectionString(), options => options
+                .MigrationsAssembly(MigrationsAssembly)
+                .MigrationsHistoryTable("__ef_migrations_history", schema))
             .UseLowerCaseNamingConvention()
             .UseSnakeCaseNamingConvention();
     }
