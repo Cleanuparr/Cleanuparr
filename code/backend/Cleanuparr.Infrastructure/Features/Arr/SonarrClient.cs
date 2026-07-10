@@ -241,7 +241,7 @@ public class SonarrClient : ArrClient, ISonarrClient
         return serializer.Deserialize<List<Tag>>(reader) ?? [];
     }
 
-    public async Task<List<SearchableEpisode>> GetEpisodesAsync(ArrInstance arrInstance, long seriesId)
+    public async Task<List<SearchableEpisode>> GetEpisodesAsync(ArrInstance arrInstance, long seriesId, CancellationToken cancellationToken = default)
     {
         UriBuilder uriBuilder = new(arrInstance.Url);
         uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/v3/episode";
@@ -250,13 +250,13 @@ public class SonarrClient : ArrClient, ISonarrClient
         using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
         SetApiKey(request, arrInstance.ApiKey);
 
-        using HttpResponseMessage response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+        using HttpResponseMessage response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
         response.EnsureSuccessStatusCode();
 
-        return await DeserializeStreamAsync<List<SearchableEpisode>>(response) ?? [];
+        return await DeserializeStreamAsync<List<SearchableEpisode>>(response, cancellationToken) ?? [];
     }
 
-    public async Task<List<ArrEpisodeFile>> GetEpisodeFilesAsync(ArrInstance arrInstance, long seriesId)
+    public async Task<List<ArrEpisodeFile>> GetEpisodeFilesAsync(ArrInstance arrInstance, long seriesId, CancellationToken cancellationToken = default)
     {
         UriBuilder uriBuilder = new(arrInstance.Url);
         uriBuilder.Path = $"{uriBuilder.Path.TrimEnd('/')}/api/v3/episodefile";
@@ -265,10 +265,10 @@ public class SonarrClient : ArrClient, ISonarrClient
         using HttpRequestMessage request = new(HttpMethod.Get, uriBuilder.Uri);
         SetApiKey(request, arrInstance.ApiKey);
 
-        using HttpResponseMessage response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+        using HttpResponseMessage response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
         response.EnsureSuccessStatusCode();
 
-        return await DeserializeStreamAsync<List<ArrEpisodeFile>>(response) ?? [];
+        return await DeserializeStreamAsync<List<ArrEpisodeFile>>(response, cancellationToken) ?? [];
     }
 
     public async Task<List<ArrQualityProfile>> GetQualityProfilesAsync(ArrInstance arrInstance)

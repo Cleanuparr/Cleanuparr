@@ -670,7 +670,7 @@ public sealed class Seeker : IHandler
                 seriesTitle = series.Title;
 
                 (SeriesSearchItem? searchItem, SearchableEpisode? selectedEpisode, SeekerSearchReason searchReason) =
-                    await BuildSonarrSearchItemAsync(instanceConfig, arrInstance, seriesId, seriesHistory, seriesTitle, graceCutoff, queuedSeasons);
+                    await BuildSonarrSearchItemAsync(instanceConfig, arrInstance, seriesId, seriesHistory, seriesTitle, graceCutoff, cancellationToken, queuedSeasons);
 
                 if (searchItem is not null)
                 {
@@ -693,6 +693,10 @@ public sealed class Seeker : IHandler
                 }
 
                 _logger.LogDebug("Skipping '{SeriesTitle}' — no qualifying seasons found", seriesTitle);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
             }
             catch (Exception ex)
             {
@@ -741,15 +745,16 @@ public sealed class Seeker : IHandler
         List<SeekerHistory> seriesHistory,
         string seriesTitle,
         DateTimeOffset graceCutoff,
+        CancellationToken cancellationToken,
         HashSet<(long SeriesId, long SeasonNumber)>? queuedSeasons = null)
     {
-        List<SearchableEpisode> episodes = await _sonarrClient.GetEpisodesAsync(arrInstance, seriesId);
+        List<SearchableEpisode> episodes = await _sonarrClient.GetEpisodesAsync(arrInstance, seriesId, cancellationToken);
 
         // Fetch episode file metadata to determine cutoff status from the dedicated episodefile endpoint
         HashSet<long> cutoffNotMetFileIds = [];
         if (instanceConfig.UseCutoff)
         {
-            List<ArrEpisodeFile> episodeFiles = await _sonarrClient.GetEpisodeFilesAsync(arrInstance, seriesId);
+            List<ArrEpisodeFile> episodeFiles = await _sonarrClient.GetEpisodeFilesAsync(arrInstance, seriesId, cancellationToken);
             cutoffNotMetFileIds = episodeFiles
                 .Where(f => f.QualityCutoffNotMet)
                 .Select(f => f.Id)

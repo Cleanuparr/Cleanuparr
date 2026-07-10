@@ -480,8 +480,8 @@ public sealed class CustomFormatScoreSyncer : IHandler
         await gate.WaitAsync(cancellationToken);
         try
         {
-            Task<List<SearchableEpisode>> episodesTask = _sonarrClient.GetEpisodesAsync(arrInstance, series.Id);
-            Task<List<ArrEpisodeFile>> episodeFilesTask = _sonarrClient.GetEpisodeFilesAsync(arrInstance, series.Id);
+            Task<List<SearchableEpisode>> episodesTask = _sonarrClient.GetEpisodesAsync(arrInstance, series.Id, cancellationToken);
+            Task<List<ArrEpisodeFile>> episodeFilesTask = _sonarrClient.GetEpisodeFilesAsync(arrInstance, series.Id, cancellationToken);
             await Task.WhenAll(episodesTask, episodeFilesTask);
 
             return new SeriesFetch(series, episodesTask.Result, episodeFilesTask.Result, Failed: false);

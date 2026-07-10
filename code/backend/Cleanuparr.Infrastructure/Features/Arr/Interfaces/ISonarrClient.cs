@@ -13,7 +13,7 @@ public interface ISonarrClient : IArrClient
     /// <summary>
     /// Fetches all episodes for a specific series from a Sonarr instance
     /// </summary>
-    Task<List<SearchableEpisode>> GetEpisodesAsync(ArrInstance arrInstance, long seriesId);
+    Task<List<SearchableEpisode>> GetEpisodesAsync(ArrInstance arrInstance, long seriesId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Fetches quality profiles from a Sonarr instance
@@ -23,7 +23,7 @@ public interface ISonarrClient : IArrClient
     /// <summary>
     /// Fetches episode file metadata for a specific series, including quality cutoff status
     /// </summary>
-    Task<List<ArrEpisodeFile>> GetEpisodeFilesAsync(ArrInstance arrInstance, long seriesId);
+    Task<List<ArrEpisodeFile>> GetEpisodeFilesAsync(ArrInstance arrInstance, long seriesId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Fetches custom format scores for episode files in batches
