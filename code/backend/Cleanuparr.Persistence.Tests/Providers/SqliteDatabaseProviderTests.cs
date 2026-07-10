@@ -31,8 +31,8 @@ public class SqliteDatabaseProviderTests
     }
 
     [Fact]
-    public void EscapeLikePattern_escapes_brackets_and_wildcards_and_wraps()
+    public void EscapeLikePattern_escapes_wildcards_with_backslash_and_wraps()
     {
-        _provider.EscapeLikePattern("a_b%c[d").ShouldBe("%a[_]b[%]c[[]d%");
+        _provider.EscapeLikePattern("a_b%c[d").ShouldBe("%a\\_b\\%c[d%");
     }
 }

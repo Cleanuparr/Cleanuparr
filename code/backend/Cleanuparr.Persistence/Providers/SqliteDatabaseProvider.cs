@@ -59,9 +59,9 @@ public sealed class SqliteDatabaseProvider : IDatabaseProvider
     public string EscapeLikePattern(string input)
     {
         string escaped = input
-            .Replace("[", "[[]")
-            .Replace("%", "[%]")
-            .Replace("_", "[_]");
+            .Replace("\\", "\\\\")
+            .Replace("%", "\\%")
+            .Replace("_", "\\_");
 
         return $"%{escaped}%";
     }

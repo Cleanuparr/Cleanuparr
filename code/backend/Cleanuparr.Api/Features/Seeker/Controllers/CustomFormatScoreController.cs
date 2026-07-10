@@ -66,7 +66,7 @@ public sealed class CustomFormatScoreController : ControllerBase
         if (!string.IsNullOrWhiteSpace(search))
         {
             string pattern = EventsContext.GetLikePattern(search);
-            query = query.Where(e => EF.Functions.Like(e.Title.ToLower(), pattern));
+            query = query.Where(e => EF.Functions.Like(e.Title.ToLower(), pattern, "\\"));
         }
 
         if (!string.IsNullOrWhiteSpace(qualityProfile))
