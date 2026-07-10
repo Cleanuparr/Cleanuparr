@@ -107,6 +107,13 @@ public class SeekerTests : IDisposable
         await Task.CompletedTask;
     }
 
+    private static async IAsyncEnumerable<SearchableMovie> ThrowsCancellationAfterFirstMovie()
+    {
+        yield return new SearchableMovie { Id = 1, Title = "Movie 1", Status = "released", Monitored = true, Tags = [] };
+        await Task.CompletedTask;
+        throw new OperationCanceledException();
+    }
+
     #region ExecuteAsync Tests
 
     [Fact]
@@ -408,6 +415,43 @@ public class SeekerTests : IDisposable
 
         capturedSearchItems.ShouldNotBeNull();
         capturedSearchItems.ShouldNotContain(item => item.Id == 2);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_Radarr_PropagatesCancellationFromStream()
+    {
+        var config = await _fixture.DataContext.SeekerConfigs.FirstAsync();
+        config.SearchEnabled = true;
+        config.ProactiveSearchEnabled = true;
+        await _fixture.DataContext.SaveChangesAsync();
+
+        var radarrInstance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
+
+        _fixture.DataContext.SeekerInstanceConfigs.Add(new SeekerInstanceConfig
+        {
+            ArrInstanceId = radarrInstance.Id,
+            ArrInstance = radarrInstance,
+            Enabled = true
+        });
+        await _fixture.DataContext.SaveChangesAsync();
+
+        var mockArrClient = Substitute.For<IArrClient>();
+
+        _fixture.ArrQueueIterator
+            .Iterate(mockArrClient, Arg.Any<ArrInstance>(), Arg.Any<Func<IReadOnlyList<QueueRecord>, Task>>())
+            .Returns(Task.CompletedTask);
+
+        _radarrClient
+            .StreamAllMoviesAsync(radarrInstance, Arg.Any<CancellationToken>())
+            .Returns(ThrowsCancellationAfterFirstMovie());
+
+        _fixture.ArrClientFactory
+            .GetClient(InstanceType.Radarr, Arg.Any<float>())
+            .Returns(mockArrClient);
+
+        var sut = CreateSut();
+
+        await Should.ThrowAsync<OperationCanceledException>(() => sut.ExecuteAsync());
     }
 
     [Fact]

@@ -109,7 +109,7 @@ public sealed class Seeker : IHandler
             return;
         }
 
-        await ProcessProactiveSearchAsync(config, isDryRun);
+        await ProcessProactiveSearchAsync(config, isDryRun, cancellationToken);
 
         await _hubContext.Clients.All.SendAsync("SearchStatsUpdated");
     }
@@ -199,7 +199,7 @@ public sealed class Seeker : IHandler
         return new SearchItem { Id = item.ItemId };
     }
 
-    private async Task ProcessProactiveSearchAsync(SeekerConfig config, bool isDryRun)
+    private async Task ProcessProactiveSearchAsync(SeekerConfig config, bool isDryRun, CancellationToken cancellationToken)
     {
         List<SeekerInstanceConfig> instanceConfigs = await _dataContext.SeekerInstanceConfigs
             .Include(s => s.ArrInstance)
@@ -228,8 +228,8 @@ public sealed class Seeker : IHandler
 
             foreach (SeekerInstanceConfig instance in ordered)
             {
-                bool searched = await ProcessSingleInstanceAsync(config, instance, isDryRun);
-                
+                bool searched = await ProcessSingleInstanceAsync(config, instance, isDryRun, cancellationToken);
+
                 if (searched)
                 {
                     break;
@@ -241,12 +241,12 @@ public sealed class Seeker : IHandler
             // Process all enabled instances sequentially
             foreach (SeekerInstanceConfig instanceConfig in instanceConfigs)
             {
-                await ProcessSingleInstanceAsync(config, instanceConfig, isDryRun);
+                await ProcessSingleInstanceAsync(config, instanceConfig, isDryRun, cancellationToken);
             }
         }
     }
 
-    private async Task<bool> ProcessSingleInstanceAsync(SeekerConfig config, SeekerInstanceConfig instanceConfig, bool isDryRun)
+    private async Task<bool> ProcessSingleInstanceAsync(SeekerConfig config, SeekerInstanceConfig instanceConfig, bool isDryRun, CancellationToken cancellationToken)
     {
         ArrInstance arrInstance = instanceConfig.ArrInstance;
         InstanceType instanceType = arrInstance.ArrConfig.Type;
@@ -297,7 +297,11 @@ public sealed class Seeker : IHandler
         bool searched = false;
         try
         {
-            searched = await ProcessInstanceAsync(config, instanceConfig, arrInstance, instanceType, isDryRun, queueRecords);
+            searched = await ProcessInstanceAsync(config, instanceConfig, arrInstance, instanceType, isDryRun, queueRecords, cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -319,7 +323,8 @@ public sealed class Seeker : IHandler
         ArrInstance arrInstance,
         InstanceType instanceType,
         bool isDryRun,
-        List<QueueRecord> queueRecords)
+        List<QueueRecord> queueRecords,
+        CancellationToken cancellationToken)
     {
         // Load search history for the current cycle
         List<SeekerHistory> currentCycleHistory = await _dataContext.SeekerHistory
@@ -353,7 +358,7 @@ public sealed class Seeker : IHandler
                 .Select(r => r.MovieId)
                 .ToHashSet();
 
-            result = await ProcessRadarrAsync(config, arrInstance, instanceConfig, itemSearchHistory, isDryRun, queuedMovieIds);
+            result = await ProcessRadarrAsync(config, arrInstance, instanceConfig, itemSearchHistory, isDryRun, queuedMovieIds, cancellationToken);
         }
         else
         {
@@ -362,7 +367,7 @@ public sealed class Seeker : IHandler
                 .Select(r => (r.SeriesId, r.SeasonNumber))
                 .ToHashSet();
 
-            result = await ProcessSonarrAsync(config, arrInstance, instanceConfig, itemSearchHistory, currentCycleHistory, isDryRun, queuedSeasons: queuedSeasons);
+            result = await ProcessSonarrAsync(config, arrInstance, instanceConfig, itemSearchHistory, currentCycleHistory, isDryRun, cancellationToken, queuedSeasons: queuedSeasons);
         }
 
         if (result.Candidates.Count == 0)
@@ -421,7 +426,8 @@ public sealed class Seeker : IHandler
         SeekerInstanceConfig instanceConfig,
         Dictionary<long, DateTimeOffset> searchHistory,
         bool isDryRun,
-        HashSet<long> queuedMovieIds)
+        HashSet<long> queuedMovieIds,
+        CancellationToken cancellationToken)
     {
         List<Tag> tags = await _radarrClient.GetAllTagsAsync(arrInstance);
         Dictionary<long, string> tagsById = tags.ToDictionary(t => t.Id, t => t.Label);
@@ -441,7 +447,7 @@ public sealed class Seeker : IHandler
         
         List<long> allLibraryIds = new();
         List<SearchableMovie> candidates = new();
-        await foreach (SearchableMovie movie in _radarrClient.StreamAllMoviesAsync(arrInstance))
+        await foreach (SearchableMovie movie in _radarrClient.StreamAllMoviesAsync(arrInstance, cancellationToken))
         {
             allLibraryIds.Add(movie.Id);
 
@@ -580,6 +586,7 @@ public sealed class Seeker : IHandler
         Dictionary<long, DateTimeOffset> seriesSearchHistory,
         List<SeekerHistory> currentCycleHistory,
         bool isDryRun,
+        CancellationToken cancellationToken,
         bool isRetry = false,
         HashSet<(long SeriesId, long SeasonNumber)>? queuedSeasons = null)
     {
@@ -591,7 +598,7 @@ public sealed class Seeker : IHandler
         
         List<long> allLibraryIds = new();
         List<SearchableSeries> candidates = new();
-        await foreach (SearchableSeries series in _sonarrClient.StreamAllSeriesAsync(arrInstance))
+        await foreach (SearchableSeries series in _sonarrClient.StreamAllSeriesAsync(arrInstance, cancellationToken))
         {
             allLibraryIds.Add(series.Id);
 
@@ -717,7 +724,7 @@ public sealed class Seeker : IHandler
 
             // Retry with fresh cycle (only once to prevent infinite recursion)
             return await ProcessSonarrAsync(config, arrInstance, instanceConfig,
-                new Dictionary<long, DateTimeOffset>(), [], isDryRun, isRetry: true, queuedSeasons: queuedSeasons);
+                new Dictionary<long, DateTimeOffset>(), [], isDryRun, cancellationToken, isRetry: true, queuedSeasons: queuedSeasons);
         }
 
         return new SeekerProcessResult { Candidates = [], AllLibraryIds = allLibraryIds };
