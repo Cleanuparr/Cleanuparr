@@ -201,6 +201,23 @@ namespace Cleanuparr.Persistence.Migrations.Events
             return Convert.ToInt64(command.ExecuteScalar()) > 0;
         }
 
+        private static List<string> GetColumns(string dbPath, string tableName)
+        {
+            List<string> columns = new();
+            using SqliteConnection connection = new($"Data Source={dbPath}");
+            connection.Open();
+            using SqliteCommand command = connection.CreateCommand();
+            command.CommandText = "SELECT name FROM pragma_table_info($name)";
+            command.Parameters.AddWithValue("$name", tableName);
+            using SqliteDataReader reader = command.ExecuteReader();
+            while (reader.Read())
+            {
+                columns.Add(reader.GetString(0));
+            }
+
+            return columns;
+        }
+
         private static void CopyFromDataDatabase(MigrationBuilder migrationBuilder, string dataDbPath)
         {
             string[] tables =
@@ -222,7 +239,9 @@ namespace Cleanuparr.Persistence.Migrations.Events
             sql.AppendLine($"ATTACH DATABASE '{dataDbPath.Replace("'", "''")}' AS src;");
             foreach (string table in present)
             {
-                sql.AppendLine($"INSERT INTO {table} SELECT * FROM src.{table} WHERE NOT EXISTS (SELECT 1 FROM {table});");
+                List<string> columns = GetColumns(dataDbPath, table);
+                string columnList = string.Join(", ", columns.Select(c => $"\"{c}\""));
+                sql.AppendLine($"INSERT INTO {table} ({columnList}) SELECT {columnList} FROM src.{table} WHERE NOT EXISTS (SELECT 1 FROM {table});");
             }
 
             foreach (string table in present)
