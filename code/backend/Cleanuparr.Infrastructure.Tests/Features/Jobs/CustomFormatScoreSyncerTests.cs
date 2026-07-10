@@ -567,7 +567,7 @@ public class CustomFormatScoreSyncerTests : IDisposable
 
             await sut.ExecuteAsync();
 
-            maxInFlight.ShouldBeGreaterThanOrEqualTo(2);
+            maxInFlight.ShouldBeGreaterThanOrEqualTo(3);
             maxInFlight.ShouldBeLessThanOrEqualTo(FetchConcurrency * 2);
 
             List<CustomFormatScoreEntry> entries = await dataContext.CustomFormatScoreEntries.ToListAsync();
