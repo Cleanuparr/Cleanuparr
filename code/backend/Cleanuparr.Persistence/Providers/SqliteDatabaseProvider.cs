@@ -8,6 +8,8 @@ namespace Cleanuparr.Persistence.Providers;
 
 public sealed class SqliteDatabaseProvider : IDatabaseProvider
 {
+    private const string MigrationsAssembly = "Cleanuparr.Persistence.Sqlite";
+
     private static readonly IReadOnlyDictionary<DbContextKind, string> FileNames = new Dictionary<DbContextKind, string>
     {
         [DbContextKind.Data] = "cleanuparr.db",
@@ -21,7 +23,7 @@ public sealed class SqliteDatabaseProvider : IDatabaseProvider
     {
         string dbPath = Path.Combine(ConfigurationPathProvider.GetConfigPath(), FileNames[kind]);
         builder
-            .UseSqlite($"Data Source={dbPath}")
+            .UseSqlite($"Data Source={dbPath}", options => options.MigrationsAssembly(MigrationsAssembly))
             .UseLowerCaseNamingConvention()
             .UseSnakeCaseNamingConvention();
     }

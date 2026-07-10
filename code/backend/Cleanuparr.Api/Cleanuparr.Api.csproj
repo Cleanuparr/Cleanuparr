@@ -22,6 +22,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\Cleanuparr.Infrastructure\Cleanuparr.Infrastructure.csproj" />
+      <ProjectReference Include="..\Cleanuparr.Persistence.Sqlite\Cleanuparr.Persistence.Sqlite.csproj" />
     </ItemGroup>
 
     <ItemGroup>
