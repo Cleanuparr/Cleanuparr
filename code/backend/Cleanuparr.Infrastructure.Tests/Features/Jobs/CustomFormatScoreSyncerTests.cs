@@ -8,9 +8,11 @@ using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Cleanuparr.Persistence.Models.Configuration.General;
 using Cleanuparr.Persistence.Models.Configuration.Seeker;
 using Cleanuparr.Persistence.Models.State;
+using System.Data.Common;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
@@ -1032,16 +1034,22 @@ public class CustomFormatScoreSyncerTests : IDisposable
     private const int CheckpointIntervalChunks = 10;
     private const int ChunkSize = 200;
 
-    private static DataContext CreateFileBackedWalDataContext(string dbPath)
+    private static DataContext CreateFileBackedWalDataContext(string dbPath, params IInterceptor[] interceptors)
     {
         SqliteConnectionStringBuilder connectionStringBuilder = new()
         {
             DataSource = dbPath
         };
 
-        DbContextOptions<DataContext> options = new DbContextOptionsBuilder<DataContext>()
-            .UseSqlite(connectionStringBuilder.ConnectionString)
-            .Options;
+        DbContextOptionsBuilder<DataContext> optionsBuilder = new DbContextOptionsBuilder<DataContext>()
+            .UseSqlite(connectionStringBuilder.ConnectionString);
+
+        if (interceptors.Length > 0)
+        {
+            optionsBuilder.AddInterceptors(interceptors);
+        }
+
+        DbContextOptions<DataContext> options = optionsBuilder.Options;
 
         DataContext context = new(options);
         context.Database.EnsureCreated();
@@ -1070,7 +1078,8 @@ public class CustomFormatScoreSyncerTests : IDisposable
     {
         string dbPath = Path.Combine(Path.GetTempPath(), $"cfsync-wal-{Guid.NewGuid():N}.db");
         string walPath = $"{dbPath}-wal";
-        DataContext dataContext = CreateFileBackedWalDataContext(dbPath);
+        CheckpointCountingInterceptor checkpointCounter = new();
+        DataContext dataContext = CreateFileBackedWalDataContext(dbPath, checkpointCounter);
 
         try
         {
@@ -1145,6 +1154,8 @@ public class CustomFormatScoreSyncerTests : IDisposable
             int entryCount = await dataContext.CustomFormatScoreEntries.CountAsync();
             entryCount.ShouldBe(movieCount);
 
+            checkpointCounter.CheckpointCount.ShouldBeGreaterThanOrEqualTo(2);
+
             long walSizeBytes = File.Exists(walPath) ? new FileInfo(walPath).Length : 0;
             walSizeBytes.ShouldBeLessThan(2 * 1024 * 1024);
         }
@@ -1158,4 +1169,34 @@ public class CustomFormatScoreSyncerTests : IDisposable
     }
 
     #endregion
+
+    private sealed class CheckpointCountingInterceptor : DbCommandInterceptor
+    {
+        private int _checkpointCount;
+
+        public int CheckpointCount => _checkpointCount;
+
+        private void CountIfCheckpoint(DbCommand command)
+        {
+            if (command.CommandText.Contains("wal_checkpoint", StringComparison.OrdinalIgnoreCase))
+            {
+                Interlocked.Increment(ref _checkpointCount);
+            }
+        }
+
+        public override InterceptionResult<int> NonQueryExecuting(
+            DbCommand command, CommandEventData eventData, InterceptionResult<int> result)
+        {
+            CountIfCheckpoint(command);
+            return base.NonQueryExecuting(command, eventData, result);
+        }
+
+        public override ValueTask<InterceptionResult<int>> NonQueryExecutingAsync(
+            DbCommand command, CommandEventData eventData, InterceptionResult<int> result,
+            CancellationToken cancellationToken = default)
+        {
+            CountIfCheckpoint(command);
+            return base.NonQueryExecutingAsync(command, eventData, result, cancellationToken);
+        }
+    }
 }
