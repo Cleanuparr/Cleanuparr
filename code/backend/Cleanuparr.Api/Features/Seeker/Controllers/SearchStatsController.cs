@@ -43,13 +43,13 @@ public sealed class SearchStatsController : ControllerBase
         int searchesLast30Days = await searchEvents.CountAsync(e => e.Timestamp >= thirtyDaysAgo);
 
         // History stats from DataContext
-        int uniqueItemsSearched = await _dataContext.SeekerHistory
+        int uniqueItemsSearched = await _eventsContext.SeekerHistory
             .AsNoTracking()
             .Select(h => h.ExternalItemId)
             .Distinct()
             .CountAsync();
 
-        int pendingReplacementSearches = await _dataContext.SearchQueue.CountAsync();
+        int pendingReplacementSearches = await _eventsContext.SearchQueue.CountAsync();
 
         // Per-instance stats
         List<SeekerInstanceConfig> instanceConfigs = await _dataContext.SeekerInstanceConfigs
@@ -59,7 +59,7 @@ public sealed class SearchStatsController : ControllerBase
             .Where(s => s.Enabled && s.ArrInstance.Enabled)
             .ToListAsync();
 
-        var historyByInstance = await _dataContext.SeekerHistory
+        var historyByInstance = await _eventsContext.SeekerHistory
             .AsNoTracking()
             .GroupBy(h => h.ArrInstanceId)
             .Select(g => new
@@ -73,7 +73,7 @@ public sealed class SearchStatsController : ControllerBase
 
         // Count items searched in current cycle per instance
         List<Guid> currentCycleIds = instanceConfigs.Select(ic => ic.CurrentCycleId).ToList();
-        var cycleItemsByInstance = await _dataContext.SeekerHistory
+        var cycleItemsByInstance = await _eventsContext.SeekerHistory
             .AsNoTracking()
             .Where(h => currentCycleIds.Contains(h.CycleId))
             .GroupBy(h => h.ArrInstanceId)

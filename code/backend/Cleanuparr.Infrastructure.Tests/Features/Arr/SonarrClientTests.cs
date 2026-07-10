@@ -270,10 +270,10 @@ public class SonarrClientTests
 
     #endregion
 
-    #region GetAllSeriesAsync / GetAllTagsAsync / GetEpisodes / EpisodeFiles / QualityProfiles / Scores
+    #region StreamAllSeriesAsync / GetAllTagsAsync / GetEpisodes / EpisodeFiles / QualityProfiles / Scores
 
     [Fact]
-    public async Task GetAllSeriesAsync_BuildsCorrectUriAndDeserializesList()
+    public async Task StreamAllSeriesAsync_BuildsCorrectUriAndDeserializesList()
     {
         // Arrange
         _httpMessageHandler.SetupResponse((_, _) => Task.FromResult(JsonResponse(new[]
@@ -282,7 +282,11 @@ public class SonarrClientTests
         })));
 
         // Act
-        var result = await _client.GetAllSeriesAsync(_arrInstance);
+        List<SearchableSeries> result = [];
+        await foreach (SearchableSeries series in _client.StreamAllSeriesAsync(_arrInstance))
+        {
+            result.Add(series);
+        }
 
         // Assert
         result.Count.ShouldBe(1);
@@ -293,13 +297,17 @@ public class SonarrClientTests
     }
 
     [Fact]
-    public async Task GetAllSeriesAsync_NullBody_ReturnsEmpty()
+    public async Task StreamAllSeriesAsync_NullBody_ReturnsEmpty()
     {
         // Arrange
         _httpMessageHandler.SetupResponse((_, _) => Task.FromResult(JsonNullResponse()));
 
         // Act
-        var result = await _client.GetAllSeriesAsync(_arrInstance);
+        List<SearchableSeries> result = [];
+        await foreach (SearchableSeries series in _client.StreamAllSeriesAsync(_arrInstance))
+        {
+            result.Add(series);
+        }
 
         // Assert
         result.ShouldBeEmpty();

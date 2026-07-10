@@ -135,7 +135,7 @@ public class QueueCleanerIntegrationTests : IDisposable
         await _fixture.NotificationPublisher.Received(1).NotifyQueueItemDeleted(true, DeleteReason.Stalled);
 
         // Assert Phase 5: Replacement search item was added to SearchQueue
-        var searchItems = await _fixture.DataContext.SearchQueue.ToListAsync();
+        var searchItems = await _fixture.EventsContext.SearchQueue.ToListAsync();
         searchItems.Count.ShouldBe(1);
         searchItems[0].ArrInstanceId.ShouldBe(instance.Id);
         searchItems[0].ItemId.ShouldBe(42);

@@ -65,12 +65,11 @@ public class SeekerCommandMonitor : BackgroundService
     {
         await using AsyncServiceScope scope = _scopeFactory.CreateAsyncScope();
         var dataContext = scope.ServiceProvider.GetRequiredService<DataContext>();
+        var eventsContext = scope.ServiceProvider.GetRequiredService<EventsContext>();
         var arrClientFactory = scope.ServiceProvider.GetRequiredService<IArrClientFactory>();
         var eventPublisher = scope.ServiceProvider.GetRequiredService<IEventPublisher>();
 
-        List<SeekerCommandTracker> pendingTrackers = await dataContext.SeekerCommandTrackers
-            .Include(t => t.ArrInstance)
-                .ThenInclude(a => a.ArrConfig)
+        List<SeekerCommandTracker> pendingTrackers = await eventsContext.SeekerCommandTrackers
             .Where(t => t.Status != SearchCommandStatus.Completed
                 && t.Status != SearchCommandStatus.Failed
                 && t.Status != SearchCommandStatus.TimedOut)
@@ -81,6 +80,8 @@ public class SeekerCommandMonitor : BackgroundService
             return false;
         }
 
+        Dictionary<Guid, ArrInstance> instancesById = await LoadInstancesAsync(dataContext, pendingTrackers, stoppingToken);
+
         // Handle timed-out commands
         var timedOut = pendingTrackers
             .Where(t => _timeProvider.GetUtcNow() - t.CreatedAt > CommandTimeout)
@@ -88,8 +89,11 @@ public class SeekerCommandMonitor : BackgroundService
 
         foreach (SeekerCommandTracker tracker in timedOut)
         {
+            string instanceName = instancesById.TryGetValue(tracker.ArrInstanceId, out ArrInstance? inst)
+                ? inst.Name
+                : tracker.ArrInstanceId.ToString();
             _logger.LogWarning("Search command {CommandId} timed out for '{Title}' on {Instance}",
-                tracker.CommandId, tracker.ItemTitle, tracker.ArrInstance.Name);
+                tracker.CommandId, tracker.ItemTitle, instanceName);
             tracker.Status = SearchCommandStatus.TimedOut;
         }
 
@@ -98,7 +102,11 @@ public class SeekerCommandMonitor : BackgroundService
 
         foreach (SeekerCommandTracker tracker in activeTrackers)
         {
-            var arrInstance = tracker.ArrInstance;
+            if (!instancesById.TryGetValue(tracker.ArrInstanceId, out ArrInstance? arrInstance))
+            {
+                continue;
+            }
+
             IArrClient arrClient = arrClientFactory.GetClient(arrInstance.ArrConfig.Type, arrInstance.Version);
 
             try
@@ -113,21 +121,28 @@ public class SeekerCommandMonitor : BackgroundService
             }
         }
 
-        await dataContext.SaveChangesAsync(stoppingToken);
+        await eventsContext.SaveChangesAsync(stoppingToken);
 
         // Process terminal trackers
-        var terminalTrackers = await dataContext.SeekerCommandTrackers
-            .Include(t => t.ArrInstance)
-                .ThenInclude(a => a.ArrConfig)
+        var terminalTrackers = await eventsContext.SeekerCommandTrackers
             .Where(t => t.Status == SearchCommandStatus.Completed
                 || t.Status == SearchCommandStatus.Failed
                 || t.Status == SearchCommandStatus.TimedOut)
             .ToListAsync(stoppingToken);
 
+        Dictionary<Guid, ArrInstance> terminalInstances = await LoadInstancesAsync(dataContext, terminalTrackers, stoppingToken);
+
         foreach (SeekerCommandTracker tracker in terminalTrackers)
         {
-            InstanceType instanceType = tracker.ArrInstance.ArrConfig.Type;
-            string instanceUrl = tracker.ArrInstance.ExternalOrInternalUrl.ToString();
+            if (!terminalInstances.TryGetValue(tracker.ArrInstanceId, out ArrInstance? arrInstance))
+            {
+                // Instance was deleted; drop the orphaned tracker
+                eventsContext.SeekerCommandTrackers.Remove(tracker);
+                continue;
+            }
+
+            InstanceType instanceType = arrInstance.ArrConfig.Type;
+            string instanceUrl = arrInstance.ExternalOrInternalUrl.ToString();
 
             if (tracker.Status is SearchCommandStatus.Failed or SearchCommandStatus.TimedOut)
             {
@@ -136,16 +151,28 @@ public class SeekerCommandMonitor : BackgroundService
             }
             else
             {
-                List<string>? grabbedItems = await InspectDownloadQueueAsync(tracker, arrClientFactory);
+                List<string>? grabbedItems = await InspectDownloadQueueAsync(tracker, arrInstance, arrClientFactory);
                 await eventPublisher.PublishSearchCompleted(tracker.EventId, SearchCommandStatus.Completed, instanceType, instanceUrl, grabbedItems);
                 _logger.LogDebug("Search command completed for event {EventId}", tracker.EventId);
             }
 
-            dataContext.SeekerCommandTrackers.Remove(tracker);
+            eventsContext.SeekerCommandTrackers.Remove(tracker);
         }
 
-        await dataContext.SaveChangesAsync(stoppingToken);
+        await eventsContext.SaveChangesAsync(stoppingToken);
         return true;
+    }
+
+    private static async Task<Dictionary<Guid, ArrInstance>> LoadInstancesAsync(
+        DataContext dataContext,
+        List<SeekerCommandTracker> trackers,
+        CancellationToken stoppingToken)
+    {
+        List<Guid> ids = trackers.Select(t => t.ArrInstanceId).Distinct().ToList();
+        return await dataContext.ArrInstances
+            .Include(a => a.ArrConfig)
+            .Where(a => ids.Contains(a.Id))
+            .ToDictionaryAsync(a => a.Id, stoppingToken);
     }
 
     private static void UpdateTrackerStatus(SeekerCommandTracker tracker, ArrCommandStatus commandStatus)
@@ -161,17 +188,17 @@ public class SeekerCommandMonitor : BackgroundService
 
     private async Task<List<string>?> InspectDownloadQueueAsync(
         SeekerCommandTracker tracker,
+        ArrInstance arrInstance,
         IArrClientFactory arrClientFactory)
     {
         try
         {
-            var arrInstance = tracker.ArrInstance;
             IArrClient arrClient = arrClientFactory.GetClient(arrInstance.ArrConfig.Type, arrInstance.Version);
 
             QueueListResponse queue = await arrClient.GetQueueItemsAsync(arrInstance, 1);
 
             var grabbedTitles = queue.Records
-                .Where(r => tracker.ArrInstance.ArrConfig.Type == InstanceType.Radarr
+                .Where(r => arrInstance.ArrConfig.Type == InstanceType.Radarr
                     ? r.MovieId == tracker.ExternalItemId
                     : r.SeriesId == tracker.ExternalItemId
                         && (tracker.SeasonNumber == 0 || r.SeasonNumber == tracker.SeasonNumber))

@@ -38,6 +38,7 @@ public class SeekerIntegrationTests : IDisposable
         return new SeekerJob(
             Substitute.For<ILogger<SeekerJob>>(),
             _fixture.DataContext,
+            _fixture.EventsContext,
             Substitute.For<IRadarrClient>(),
             Substitute.For<ISonarrClient>(),
             _fixture.ArrClientFactory,
@@ -56,13 +57,14 @@ public class SeekerIntegrationTests : IDisposable
         var instance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
 
         // Add a replacement search item to the queue
-        _fixture.DataContext.SearchQueue.Add(new SearchQueueItem
+        _fixture.EventsContext.SearchQueue.Add(new SearchQueueItem
         {
             ArrInstanceId = instance.Id,
             ItemId = 42,
             Title = "Test.Movie.2024.1080p",
         });
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         // Mock arr client to return command IDs on search
         _fixture.ArrClient.SearchItemAsync(Arg.Any<Cleanuparr.Persistence.Models.Configuration.Arr.ArrInstance>(), Arg.Any<SearchItem>())
@@ -103,11 +105,11 @@ public class SeekerIntegrationTests : IDisposable
             SeekerSearchReason.Replacement);
 
         // Assert: Item was dequeued from SearchQueue
-        var remainingItems = await _fixture.DataContext.SearchQueue.CountAsync();
+        var remainingItems = await _fixture.EventsContext.SearchQueue.CountAsync();
         remainingItems.ShouldBe(0);
 
         // Assert: Command tracker was saved for monitoring
-        var trackers = await _fixture.DataContext.SeekerCommandTrackers.ToListAsync();
+        var trackers = await _fixture.EventsContext.SeekerCommandTrackers.ToListAsync();
         trackers.Count.ShouldBe(1);
         trackers[0].CommandId.ShouldBe(100L);
     }
@@ -119,18 +121,20 @@ public class SeekerIntegrationTests : IDisposable
         var seekerConfig = await _fixture.DataContext.SeekerConfigs.FirstAsync();
         seekerConfig.SearchEnabled = false;
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
 
         // Add a search queue item that should NOT be processed
         var instance = await _fixture.DataContext.ArrInstances.FirstAsync();
-        _fixture.DataContext.SearchQueue.Add(new SearchQueueItem
+        _fixture.EventsContext.SearchQueue.Add(new SearchQueueItem
         {
             ArrInstanceId = instance.Id,
             ItemId = 99,
             Title = "Should.Not.Search",
         });
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         var sut = CreateSut();
 
@@ -149,7 +153,7 @@ public class SeekerIntegrationTests : IDisposable
             Arg.Any<string>(), Arg.Any<SeekerSearchType>(), Arg.Any<SeekerSearchReason>());
 
         // Item should still be in the queue (not processed)
-        var remainingItems = await _fixture.DataContext.SearchQueue.CountAsync();
+        var remainingItems = await _fixture.EventsContext.SearchQueue.CountAsync();
         remainingItems.ShouldBe(1);
     }
 
@@ -161,13 +165,14 @@ public class SeekerIntegrationTests : IDisposable
 
         var instance = TestDataContextFactory.AddRadarrInstance(_fixture.DataContext);
 
-        _fixture.DataContext.SearchQueue.Add(new SearchQueueItem
+        _fixture.EventsContext.SearchQueue.Add(new SearchQueueItem
         {
             ArrInstanceId = instance.Id,
             ItemId = 55,
             Title = "DryRun.Movie.2024",
         });
         await _fixture.DataContext.SaveChangesAsync();
+        await _fixture.EventsContext.SaveChangesAsync();
 
         _fixture.ArrClient.SearchItemAsync(
             Arg.Any<Cleanuparr.Persistence.Models.Configuration.Arr.ArrInstance>(),
@@ -201,11 +206,11 @@ public class SeekerIntegrationTests : IDisposable
         searchEvent.GrabbedItems.ShouldBeEmpty();
 
         // Assert: Item remains in queue (dry run doesn't dequeue)
-        var remainingItems = await _fixture.DataContext.SearchQueue.CountAsync();
+        var remainingItems = await _fixture.EventsContext.SearchQueue.CountAsync();
         remainingItems.ShouldBe(1);
 
         // Assert: No command tracker saved (dry run)
-        var trackers = await _fixture.DataContext.SeekerCommandTrackers.ToListAsync();
+        var trackers = await _fixture.EventsContext.SeekerCommandTrackers.ToListAsync();
         trackers.ShouldBeEmpty();
     }
 }

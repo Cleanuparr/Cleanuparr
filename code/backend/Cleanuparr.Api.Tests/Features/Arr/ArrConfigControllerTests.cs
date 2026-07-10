@@ -18,6 +18,7 @@ namespace Cleanuparr.Api.Tests.Features.Arr;
 public class ArrConfigControllerTests : IDisposable
 {
     private readonly DataContext _dataContext;
+    private readonly EventsContext _eventsContext;
     private readonly IArrClientFactory _arrClientFactory;
     private readonly IArrClient _arrClient;
     private readonly ArrConfigController _controller;
@@ -25,17 +26,19 @@ public class ArrConfigControllerTests : IDisposable
     public ArrConfigControllerTests()
     {
         _dataContext = ConfigControllerTestDataFactory.CreateDataContext();
+        _eventsContext = ConfigControllerTestDataFactory.CreateEventsContext();
         var logger = Substitute.For<ILogger<ArrConfigController>>();
         _arrClientFactory = Substitute.For<IArrClientFactory>();
         _arrClient = Substitute.For<IArrClient>();
         _arrClientFactory.GetClient(Arg.Any<InstanceType>(), Arg.Any<float>()).Returns(_arrClient);
-        _controller = new ArrConfigController(logger, _dataContext, _arrClientFactory);
+        _controller = new ArrConfigController(logger, _dataContext, _eventsContext, _arrClientFactory);
         ConfigControllerTestDataFactory.ConfigureProblemDetails(_controller);
     }
 
     public void Dispose()
     {
         _dataContext.Dispose();
+        _eventsContext.Dispose();
         GC.SuppressFinalize(this);
     }
 
@@ -251,6 +254,32 @@ public class ArrConfigControllerTests : IDisposable
         // Assert
         result.ShouldBeOfType<NoContentResult>();
         (await _dataContext.ArrInstances.CountAsync(i => i.Id == instance.Id)).ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task DeleteSonarrInstance_WhenStateCleanupFails_KeepsInstance()
+    {
+        // Arrange
+        var sonarr = await _dataContext.ArrConfigs.FirstAsync(c => c.Type == InstanceType.Sonarr);
+        var instance = new ArrInstance
+        {
+            Name = "doomed",
+            Url = new Uri("http://doomed:8989"),
+            ApiKey = "k",
+            ArrConfigId = sonarr.Id,
+            Enabled = true,
+        };
+        _dataContext.ArrInstances.Add(instance);
+        await _dataContext.SaveChangesAsync();
+
+        // Force the events cleanup to fail so the instance delete must roll back
+        await _eventsContext.DisposeAsync();
+
+        // Act
+        await Should.ThrowAsync<Exception>(() => _controller.DeleteSonarrInstance(instance.Id));
+
+        // Assert — instance is preserved (never deleted without its events state being removed)
+        (await _dataContext.ArrInstances.AsNoTracking().CountAsync(i => i.Id == instance.Id)).ShouldBe(1);
     }
 
     #endregion

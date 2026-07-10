@@ -25,10 +25,28 @@ public static class HostExtensions
                 ? "Cleanuparr version not detected"
                 : $"Cleanuparr {formattedVersion}"
         );
-        
+
         logger.LogInformation("timezone: {tz}", TimeZoneInfo.Local.DisplayName);
-        
+
+        LogGcConfiguration(logger);
+
         return app;
+    }
+
+    private static void LogGcConfiguration(ILogger logger)
+    {
+        // Surface the active GC settings
+        GCMemoryInfo info = GC.GetGCMemoryInfo();
+        long totalAvailableMb = info.TotalAvailableMemoryBytes / (1024 * 1024);
+        long heapHardLimitMb = info.HighMemoryLoadThresholdBytes / (1024 * 1024);
+
+        logger.LogInformation(
+            "Garbage Collector config | server={ServerGC} concurrent={ConcurrentGC} latencyMode={Latency} totalAvailable={TotalMb} MB highMemoryLoadThreshold={HighMb} MB",
+            System.Runtime.GCSettings.IsServerGC,
+            info.Concurrent,
+            System.Runtime.GCSettings.LatencyMode,
+            totalAvailableMb,
+            heapHardLimitMb);
     }
 
     private static string? FormatVersion(Version? version)
@@ -62,6 +80,9 @@ public static class HostExtensions
         {
             await eventsContext.Database.MigrateAsync();
         }
+        
+        // WAL gives better write concurrency and write throughput
+        await eventsContext.Database.ExecuteSqlRawAsync("PRAGMA journal_mode=WAL;");
 
         // Apply users db migrations
         await using var usersContext = UsersContext.CreateStaticInstance();

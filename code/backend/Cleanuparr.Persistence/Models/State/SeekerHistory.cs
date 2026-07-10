@@ -21,11 +21,6 @@ public sealed record SeekerHistory
     public Guid ArrInstanceId { get; set; }
 
     /// <summary>
-    /// Navigation property to the associated arr instance
-    /// </summary>
-    public ArrInstance ArrInstance { get; set; } = null!;
-
-    /// <summary>
     /// The external item ID in the arr application (e.g., Radarr movieId or Sonarr seriesId)
     /// </summary>
     public long ExternalItemId { get; set; }

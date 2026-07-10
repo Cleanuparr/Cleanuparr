@@ -231,10 +231,10 @@ public class RadarrClientTests
 
     #endregion
 
-    #region GetAllMoviesAsync / GetAllTagsAsync / GetQualityProfilesAsync / GetMovieFileScoresAsync
+    #region StreamAllMoviesAsync / GetAllTagsAsync / GetQualityProfilesAsync / GetMovieFileScoresAsync
 
     [Fact]
-    public async Task GetAllMoviesAsync_DeserializesList()
+    public async Task StreamAllMoviesAsync_DeserializesList()
     {
         // Arrange
         _httpMessageHandler.SetupResponse((_, _) => Task.FromResult(JsonResponse(new[]
@@ -243,7 +243,11 @@ public class RadarrClientTests
         })));
 
         // Act
-        var movies = await _client.GetAllMoviesAsync(_arrInstance);
+        List<SearchableMovie> movies = [];
+        await foreach (SearchableMovie movie in _client.StreamAllMoviesAsync(_arrInstance))
+        {
+            movies.Add(movie);
+        }
 
         // Assert
         movies.Count.ShouldBe(1);
@@ -253,13 +257,17 @@ public class RadarrClientTests
     }
 
     [Fact]
-    public async Task GetAllMoviesAsync_NullBody_ReturnsEmpty()
+    public async Task StreamAllMoviesAsync_NullBody_ReturnsEmpty()
     {
         // Arrange
         _httpMessageHandler.SetupResponse((_, _) => Task.FromResult(JsonNullResponse()));
 
         // Act
-        var movies = await _client.GetAllMoviesAsync(_arrInstance);
+        List<SearchableMovie> movies = [];
+        await foreach (SearchableMovie movie in _client.StreamAllMoviesAsync(_arrInstance))
+        {
+            movies.Add(movie);
+        }
 
         // Assert
         movies.ShouldBeEmpty();

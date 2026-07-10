@@ -6,9 +6,9 @@ namespace Cleanuparr.Infrastructure.Features.Arr.Interfaces;
 public interface IRadarrClient : IArrClient
 {
     /// <summary>
-    /// Fetches all movies from a Radarr instance
+    /// Streams movies from a Radarr instance one item at a time
     /// </summary>
-    Task<List<SearchableMovie>> GetAllMoviesAsync(ArrInstance arrInstance);
+    IAsyncEnumerable<SearchableMovie> StreamAllMoviesAsync(ArrInstance arrInstance, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Fetches quality profiles from a Radarr instance

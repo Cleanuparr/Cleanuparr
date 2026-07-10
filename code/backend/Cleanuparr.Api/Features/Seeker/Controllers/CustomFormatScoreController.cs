@@ -15,10 +15,12 @@ namespace Cleanuparr.Api.Features.Seeker.Controllers;
 public sealed class CustomFormatScoreController : ControllerBase
 {
     private readonly DataContext _dataContext;
+    private readonly EventsContext _eventsContext;
 
-    public CustomFormatScoreController(DataContext dataContext)
+    public CustomFormatScoreController(DataContext dataContext, EventsContext eventsContext)
     {
         _dataContext = dataContext;
+        _eventsContext = eventsContext;
     }
 
     /// <summary>
@@ -52,7 +54,7 @@ public sealed class CustomFormatScoreController : ControllerBase
             pageSize = 500;
         }
 
-        var query = _dataContext.CustomFormatScoreEntries
+        var query = _eventsContext.CustomFormatScoreEntries
             .AsNoTracking()
             .AsQueryable();
 
@@ -271,12 +273,12 @@ public sealed class CustomFormatScoreController : ControllerBase
             new("@skip", (page - 1) * pageSize),
         ];
 
-        var rows = await _dataContext.Database
+        var rows = await _eventsContext.Database
             .SqlQueryRaw<UpgradeSqlRow>(listSql, listParams)
             .ToListAsync();
 
         string countSql = $"{upgradesCte} SELECT COUNT(*) AS value FROM upgrades {filterClause}";
-        int totalCount = await _dataContext.Database
+        int totalCount = await _eventsContext.Database
             .SqlQueryRaw<int>(countSql, BuildCommonParameters())
             .FirstAsync();
 
@@ -347,28 +349,29 @@ public sealed class CustomFormatScoreController : ControllerBase
     [HttpGet("instances")]
     public async Task<IActionResult> GetInstances()
     {
-        var raw = await _dataContext.CustomFormatScoreEntries
+        var raw = await _eventsContext.CustomFormatScoreEntries
             .AsNoTracking()
-            .Join(
-                _dataContext.ArrInstances.AsNoTracking(),
-                e => e.ArrInstanceId,
-                a => a.Id,
-                (e, a) => new
-                {
-                    Id = e.ArrInstanceId,
-                    a.Name,
-                    e.ItemType,
-                    e.QualityProfileName,
-                })
+            .Select(e => new
+            {
+                e.ArrInstanceId,
+                e.ItemType,
+                e.QualityProfileName,
+            })
             .Distinct()
             .ToListAsync();
 
+        List<Guid> instanceIds = raw.Select(x => x.ArrInstanceId).Distinct().ToList();
+        Dictionary<Guid, string> namesById = await _dataContext.ArrInstances
+            .AsNoTracking()
+            .Where(a => instanceIds.Contains(a.Id))
+            .ToDictionaryAsync(a => a.Id, a => a.Name);
+
         var instances = raw
-            .GroupBy(x => new { x.Id, x.Name, x.ItemType })
+            .GroupBy(x => new { x.ArrInstanceId, x.ItemType })
             .Select(g => new
             {
-                g.Key.Id,
-                g.Key.Name,
+                Id = g.Key.ArrInstanceId,
+                Name = namesById.TryGetValue(g.Key.ArrInstanceId, out string? name) ? name : "Unknown",
                 ItemType = g.Key.ItemType,
                 QualityProfiles = g
                     .Select(x => x.QualityProfileName)
@@ -389,7 +392,7 @@ public sealed class CustomFormatScoreController : ControllerBase
     [HttpGet("stats")]
     public async Task<IActionResult> GetStats()
     {
-        var entries = await _dataContext.CustomFormatScoreEntries
+        var entries = await _eventsContext.CustomFormatScoreEntries
             .AsNoTracking()
             .ToListAsync();
 
@@ -401,7 +404,7 @@ public sealed class CustomFormatScoreController : ControllerBase
 
         // Count upgrades in the last 7 days
         var sevenDaysAgo = DateTimeOffset.UtcNow.AddDays(-7);
-        var recentHistory = await _dataContext.CustomFormatScoreHistory
+        var recentHistory = await _eventsContext.CustomFormatScoreHistory
             .AsNoTracking()
             .Where(h => h.RecordedAt >= sevenDaysAgo)
             .OrderBy(h => h.RecordedAt)
@@ -485,7 +488,7 @@ public sealed class CustomFormatScoreController : ControllerBase
         long itemId,
         [FromQuery] long episodeId = 0)
     {
-        var history = await _dataContext.CustomFormatScoreHistory
+        var history = await _eventsContext.CustomFormatScoreHistory
             .AsNoTracking()
             .Where(h => h.ArrInstanceId == instanceId
                         && h.ExternalItemId == itemId

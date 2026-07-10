@@ -305,9 +305,9 @@ public abstract class ArrClient : IArrClient
         return response;
     }
     
-    protected static async Task<T?> DeserializeStreamAsync<T>(HttpResponseMessage response)
+    protected static async Task<T?> DeserializeStreamAsync<T>(HttpResponseMessage response, CancellationToken cancellationToken = default)
     {
-        using Stream stream = await response.Content.ReadAsStreamAsync();
+        using Stream stream = await response.Content.ReadAsStreamAsync(cancellationToken);
         using StreamReader sr = new(stream);
         using JsonTextReader reader = new(sr);
         return JsonSerializer.CreateDefault().Deserialize<T>(reader);

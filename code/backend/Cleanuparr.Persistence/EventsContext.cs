@@ -23,6 +23,16 @@ public class EventsContext : DbContext
 
     public DbSet<JobRun> JobRuns { get; set; }
 
+    public DbSet<SeekerHistory> SeekerHistory { get; set; }
+
+    public DbSet<SearchQueueItem> SearchQueue { get; set; }
+
+    public DbSet<CustomFormatScoreEntry> CustomFormatScoreEntries { get; set; }
+
+    public DbSet<CustomFormatScoreHistory> CustomFormatScoreHistory { get; set; }
+
+    public DbSet<SeekerCommandTracker> SeekerCommandTrackers { get; set; }
+
     public EventsContext()
     {
     }
@@ -86,6 +96,33 @@ public class EventsContext : DbContext
             entity.HasIndex(e => new { e.Type, e.ItemHash })
                 .IsUnique()
                 .HasFilter("\"is_resolved\" = 0");
+        });
+
+        modelBuilder.Entity<SeekerHistory>(entity =>
+        {
+            entity.HasIndex(s => new { s.ArrInstanceId, s.ExternalItemId, s.ItemType, s.SeasonNumber, s.CycleId }).IsUnique();
+        });
+
+        modelBuilder.Entity<SearchQueueItem>(entity =>
+        {
+            entity.HasIndex(s => s.ArrInstanceId);
+        });
+
+        modelBuilder.Entity<CustomFormatScoreEntry>(entity =>
+        {
+            entity.HasIndex(s => new { s.ArrInstanceId, s.ExternalItemId, s.EpisodeId }).IsUnique();
+            entity.HasIndex(s => s.LastUpgradedAt);
+        });
+
+        modelBuilder.Entity<CustomFormatScoreHistory>(entity =>
+        {
+            entity.HasIndex(s => new { s.ArrInstanceId, s.ExternalItemId, s.EpisodeId });
+            entity.HasIndex(s => s.RecordedAt);
+        });
+
+        modelBuilder.Entity<SeekerCommandTracker>(entity =>
+        {
+            entity.HasIndex(s => s.ArrInstanceId);
         });
 
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())

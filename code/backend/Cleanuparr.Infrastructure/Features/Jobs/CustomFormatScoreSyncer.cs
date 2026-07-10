@@ -19,10 +19,15 @@ namespace Cleanuparr.Infrastructure.Features.Jobs;
 public sealed class CustomFormatScoreSyncer : IHandler
 {
     private const int ChunkSize = 200;
+    private const int CheckpointIntervalChunks = 10;
+    private const int FetchConcurrency = 5;
     private static readonly TimeSpan HistoryRetention = TimeSpan.FromDays(120);
+
+    private sealed record SeriesFetch(SearchableSeries Series, List<SearchableEpisode> Episodes, List<ArrEpisodeFile> EpisodeFiles, bool Failed);
 
     private readonly ILogger<CustomFormatScoreSyncer> _logger;
     private readonly DataContext _dataContext;
+    private readonly EventsContext _eventsContext;
     private readonly IRadarrClient _radarrClient;
     private readonly ISonarrClient _sonarrClient;
     private readonly TimeProvider _timeProvider;
@@ -31,6 +36,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
     public CustomFormatScoreSyncer(
         ILogger<CustomFormatScoreSyncer> logger,
         DataContext dataContext,
+        EventsContext eventsContext,
         IRadarrClient radarrClient,
         ISonarrClient sonarrClient,
         TimeProvider timeProvider,
@@ -38,10 +44,35 @@ public sealed class CustomFormatScoreSyncer : IHandler
     {
         _logger = logger;
         _dataContext = dataContext;
+        _eventsContext = eventsContext;
         _radarrClient = radarrClient;
         _sonarrClient = sonarrClient;
         _timeProvider = timeProvider;
         _hubContext = hubContext;
+    }
+
+    private async Task ConfigureSqliteCacheSizeAsync(CancellationToken cancellationToken)
+    {
+        if (_eventsContext.Database.IsSqlite())
+        {
+            await _eventsContext.Database.ExecuteSqlRawAsync("PRAGMA cache_size=-20000;", cancellationToken);
+        }
+    }
+
+    private async Task CheckpointWalIfDueAsync(int flushedChunks, CancellationToken cancellationToken)
+    {
+        if (_eventsContext.Database.IsSqlite() && flushedChunks % CheckpointIntervalChunks == 0)
+        {
+            await _eventsContext.Database.ExecuteSqlRawAsync("PRAGMA wal_checkpoint(TRUNCATE);", cancellationToken);
+        }
+    }
+
+    private async Task CheckpointWalAsync(CancellationToken cancellationToken)
+    {
+        if (_eventsContext.Database.IsSqlite())
+        {
+            await _eventsContext.Database.ExecuteSqlRawAsync("PRAGMA wal_checkpoint(TRUNCATE);", cancellationToken);
+        }
     }
 
     public async Task ExecuteAsync(CancellationToken cancellationToken = default)
@@ -93,7 +124,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
 
         if (instanceType == InstanceType.Radarr)
         {
-            await SyncRadarrAsync(arrInstance);
+            await SyncRadarrAsync(arrInstance, cancellationToken);
         }
         else
         {
@@ -101,67 +132,128 @@ public sealed class CustomFormatScoreSyncer : IHandler
         }
     }
 
-    private async Task SyncRadarrAsync(ArrInstance arrInstance)
+    private async Task SyncRadarrAsync(ArrInstance arrInstance, CancellationToken cancellationToken)
     {
+        await ConfigureSqliteCacheSizeAsync(cancellationToken);
+
         List<ArrQualityProfile> profiles = await _radarrClient.GetQualityProfilesAsync(arrInstance);
         Dictionary<int, ArrQualityProfile> profileMap = profiles.ToDictionary(p => p.Id);
 
         _logger.LogTrace("[Radarr] {InstanceName}: fetched {ProfileCount} quality profile(s)",
             arrInstance.Name, profiles.Count);
 
-        List<SearchableMovie> allMovies = await _radarrClient.GetAllMoviesAsync(arrInstance);
-
-        List<(SearchableMovie Movie, long FileId)> moviesWithFiles = allMovies
-            .Where(m => m.HasFile && m.MovieFile is not null)
-            .Select(m => (Movie: m, FileId: m.MovieFile!.Id))
-            .Where(x => x.FileId > 0)
-            .ToList();
-
-        _logger.LogTrace("[Radarr] {InstanceName}: found {TotalMovies} total movies, {WithFiles} with files",
-            arrInstance.Name, allMovies.Count, moviesWithFiles.Count);
-
         DateTimeOffset now = _timeProvider.GetUtcNow();
 
-        // Touch entries for movies that still exist but have no file (e.g., RSS upgrade in progress)
-        HashSet<long> movieIdsWithFiles = moviesWithFiles.Select(x => x.Movie.Id).ToHashSet();
-        List<long> movieIdsWithoutFiles = allMovies
-            .Where(m => !movieIdsWithFiles.Contains(m.Id))
-            .Select(m => m.Id)
-            .ToList();
+        List<(SearchableMovie Movie, long FileId)> withFilesBuffer = new(ChunkSize);
+        List<long> withoutFilesBuffer = new(ChunkSize);
 
-        foreach (long[] touchChunk in movieIdsWithoutFiles.Chunk(ChunkSize))
-        {
-            List<long> chunkList = touchChunk.ToList();
-            await _dataContext.CustomFormatScoreEntries
-                .Where(e => e.ArrInstanceId == arrInstance.Id
-                    && e.ItemType == InstanceType.Radarr
-                    && chunkList.Contains(e.ExternalItemId))
-                .ExecuteUpdateAsync(s => s.SetProperty(e => e.LastSyncedAt, now));
-        }
-
+        int totalMovies = 0;
+        int totalWithFiles = 0;
         int totalSynced = 0;
         int totalSkipped = 0;
+        int flushedChunks = 0;
 
-        foreach ((SearchableMovie Movie, long FileId)[] chunk in moviesWithFiles.Chunk(ChunkSize))
+        await foreach (SearchableMovie movie in _radarrClient.StreamAllMoviesAsync(arrInstance, cancellationToken))
         {
-            List<long> fileIds = chunk.Select(x => x.FileId).ToList();
-            Dictionary<long, int> scores = await _radarrClient.GetMovieFileScoresAsync(arrInstance, fileIds);
+            totalMovies++;
 
-            _logger.LogTrace("[Radarr] {InstanceName}: chunk of {FileCount} file IDs returned {ScoreCount} score(s)",
-                arrInstance.Name, fileIds.Count, scores.Count);
+            if (movie.HasFile && movie.MovieFile is not null && movie.MovieFile.Id > 0)
+            {
+                withFilesBuffer.Add((movie, movie.MovieFile.Id));
+                totalWithFiles++;
 
-            List<long> movieIds = chunk.Select(x => x.Movie.Id).ToList();
-            Dictionary<long, CustomFormatScoreEntry> existingEntries = await _dataContext.CustomFormatScoreEntries
-                .Where(e => e.ArrInstanceId == arrInstance.Id
-                    && e.ItemType == InstanceType.Radarr
-                    && movieIds.Contains(e.ExternalItemId))
-                .ToDictionaryAsync(e => e.ExternalItemId);
+                if (withFilesBuffer.Count >= ChunkSize)
+                {
+                    (int synced, int skipped) = await FlushRadarrWithFilesChunkAsync(arrInstance, profileMap, withFilesBuffer, now);
+                    totalSynced += synced;
+                    totalSkipped += skipped;
+                    withFilesBuffer.Clear();
+                    flushedChunks++;
+                    await CheckpointWalIfDueAsync(flushedChunks, cancellationToken);
+                }
+            }
+            else
+            {
+                withoutFilesBuffer.Add(movie.Id);
 
+                if (withoutFilesBuffer.Count >= ChunkSize)
+                {
+                    await FlushRadarrTouchChunkAsync(arrInstance, withoutFilesBuffer, now);
+                    withoutFilesBuffer.Clear();
+                    flushedChunks++;
+                    await CheckpointWalIfDueAsync(flushedChunks, cancellationToken);
+                }
+            }
+        }
+
+        if (withFilesBuffer.Count > 0)
+        {
+            (int synced, int skipped) = await FlushRadarrWithFilesChunkAsync(arrInstance, profileMap, withFilesBuffer, now);
+            totalSynced += synced;
+            totalSkipped += skipped;
+            withFilesBuffer.Clear();
+            flushedChunks++;
+        }
+
+        if (withoutFilesBuffer.Count > 0)
+        {
+            await FlushRadarrTouchChunkAsync(arrInstance, withoutFilesBuffer, now);
+            withoutFilesBuffer.Clear();
+            flushedChunks++;
+        }
+
+        _logger.LogTrace("[Radarr] {InstanceName}: found {TotalMovies} total movies, {WithFiles} with files",
+            arrInstance.Name, totalMovies, totalWithFiles);
+
+        await CleanupStaleEntriesAsync(arrInstance.Id, InstanceType.Radarr, now);
+
+        await CheckpointWalAsync(cancellationToken);
+
+        _logger.LogInformation("[Radarr] Synced CF scores for {Count} movies on {InstanceName} ({Skipped} skipped)",
+            totalSynced, arrInstance.Name, totalSkipped);
+    }
+
+    private async Task FlushRadarrTouchChunkAsync(ArrInstance arrInstance, List<long> movieIds, DateTimeOffset now)
+    {
+        List<long> chunkList = movieIds.ToList();
+        await _eventsContext.CustomFormatScoreEntries
+            .Where(e => e.ArrInstanceId == arrInstance.Id
+                && e.ItemType == InstanceType.Radarr
+                && chunkList.Contains(e.ExternalItemId))
+            .ExecuteUpdateAsync(s => s.SetProperty(e => e.LastSyncedAt, now));
+    }
+
+    private async Task<(int Synced, int Skipped)> FlushRadarrWithFilesChunkAsync(
+        ArrInstance arrInstance,
+        Dictionary<int, ArrQualityProfile> profileMap,
+        List<(SearchableMovie Movie, long FileId)> chunk,
+        DateTimeOffset now)
+    {
+        int synced = 0;
+        int skipped = 0;
+
+        List<long> fileIds = chunk.Select(x => x.FileId).ToList();
+        Dictionary<long, int> scores = await _radarrClient.GetMovieFileScoresAsync(arrInstance, fileIds);
+
+        _logger.LogTrace("[Radarr] {InstanceName}: chunk of {FileCount} file IDs returned {ScoreCount} score(s)",
+            arrInstance.Name, fileIds.Count, scores.Count);
+
+        List<long> movieIds = chunk.Select(x => x.Movie.Id).ToList();
+        Dictionary<long, CustomFormatScoreEntry> existingEntries = await _eventsContext.CustomFormatScoreEntries
+            .Where(e => e.ArrInstanceId == arrInstance.Id
+                && e.ItemType == InstanceType.Radarr
+                && movieIds.Contains(e.ExternalItemId))
+            .ToDictionaryAsync(e => e.ExternalItemId);
+
+        bool autoDetect = _eventsContext.ChangeTracker.AutoDetectChangesEnabled;
+        _eventsContext.ChangeTracker.AutoDetectChangesEnabled = false;
+        try
+        {
             foreach ((SearchableMovie movie, long fileId) in chunk)
             {
                 if (!scores.TryGetValue(fileId, out int cfScore))
                 {
-                    totalSkipped++;
+                    skipped++;
                     // Touch existing entry to prevent stale cleanup — movie still exists
                     if (existingEntries.TryGetValue(movie.Id, out CustomFormatScoreEntry? skippedEntry))
                     {
@@ -179,94 +271,148 @@ public sealed class CustomFormatScoreSyncer : IHandler
                 existingEntries.TryGetValue(movie.Id, out CustomFormatScoreEntry? existing);
                 UpsertCustomFormatScore(existing, arrInstance.Id, movie.Id, 0, InstanceType.Radarr, movie.Title, fileId, cfScore, cutoffScore, profileName, movie.Monitored, now);
 
-                totalSynced++;
+                synced++;
             }
 
-            await _dataContext.SaveChangesAsync();
+            _eventsContext.ChangeTracker.DetectChanges();
+            await _eventsContext.SaveChangesAsync();
+            _eventsContext.ChangeTracker.Clear();
+        }
+        finally
+        {
+            _eventsContext.ChangeTracker.AutoDetectChangesEnabled = autoDetect;
         }
 
-        await CleanupStaleEntriesAsync(arrInstance.Id, InstanceType.Radarr, now);
-
-        _logger.LogInformation("[Radarr] Synced CF scores for {Count} movies on {InstanceName} ({Skipped} skipped)",
-            totalSynced, arrInstance.Name, totalSkipped);
+        return (synced, skipped);
     }
 
     private async Task SyncSonarrAsync(ArrInstance arrInstance, CancellationToken cancellationToken)
     {
+        await ConfigureSqliteCacheSizeAsync(cancellationToken);
+
         List<ArrQualityProfile> profiles = await _sonarrClient.GetQualityProfilesAsync(arrInstance);
         Dictionary<int, ArrQualityProfile> profileMap = profiles.ToDictionary(p => p.Id);
 
         _logger.LogTrace("[Sonarr] {InstanceName}: fetched {ProfileCount} quality profile(s)",
             arrInstance.Name, profiles.Count);
 
-        List<SearchableSeries> allSeries = await _sonarrClient.GetAllSeriesAsync(arrInstance);
-
-        _logger.LogTrace("[Sonarr] {InstanceName}: found {SeriesCount} total series",
-            arrInstance.Name, allSeries.Count);
-
         DateTimeOffset now = _timeProvider.GetUtcNow();
 
+        List<SearchableSeries> buffer = new(ChunkSize);
+
+        int totalSeries = 0;
         int totalSynced = 0;
         int totalSkipped = 0;
+        int flushedChunks = 0;
 
-        foreach (SearchableSeries[] chunk in allSeries.Chunk(ChunkSize))
+        await foreach (SearchableSeries series in _sonarrClient.StreamAllSeriesAsync(arrInstance, cancellationToken))
         {
-            // Collect all episodes with files for this chunk of series
-            List<(SearchableSeries Series, SearchableEpisode Episode, long FileId, int CfScore, bool IsMonitored)> itemsInChunk = [];
-            List<(long SeriesId, long EpisodeId)> episodesToTouch = [];
+            totalSeries++;
+            buffer.Add(series);
 
-            foreach (SearchableSeries series in chunk)
+            if (buffer.Count >= ChunkSize)
             {
-                try
+                (int synced, int skipped) = await FlushSonarrSeriesChunkAsync(arrInstance, profileMap, buffer, now, cancellationToken);
+                totalSynced += synced;
+                totalSkipped += skipped;
+                buffer.Clear();
+                flushedChunks++;
+                await CheckpointWalIfDueAsync(flushedChunks, cancellationToken);
+            }
+        }
+
+        if (buffer.Count > 0)
+        {
+            (int synced, int skipped) = await FlushSonarrSeriesChunkAsync(arrInstance, profileMap, buffer, now, cancellationToken);
+            totalSynced += synced;
+            totalSkipped += skipped;
+            buffer.Clear();
+            flushedChunks++;
+        }
+
+        _logger.LogTrace("[Sonarr] {InstanceName}: found {SeriesCount} total series",
+            arrInstance.Name, totalSeries);
+
+        await CleanupStaleEntriesAsync(arrInstance.Id, InstanceType.Sonarr, now);
+
+        await CheckpointWalAsync(cancellationToken);
+
+        _logger.LogInformation("[Sonarr] Synced CF scores for {Count} episodes on {InstanceName} ({Skipped} skipped)",
+            totalSynced, arrInstance.Name, totalSkipped);
+    }
+
+    private async Task<(int Synced, int Skipped)> FlushSonarrSeriesChunkAsync(
+        ArrInstance arrInstance,
+        Dictionary<int, ArrQualityProfile> profileMap,
+        List<SearchableSeries> chunk,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
+    {
+        int synced = 0;
+        int skipped = 0;
+
+        SemaphoreSlim gate = new(FetchConcurrency);
+        List<Task<SeriesFetch>> fetchTasks = new(chunk.Count);
+        foreach (SearchableSeries series in chunk)
+        {
+            fetchTasks.Add(FetchSeriesAsync(arrInstance, series, gate, cancellationToken));
+        }
+
+        SeriesFetch[] fetched = await Task.WhenAll(fetchTasks);
+        gate.Dispose();
+
+        List<long> failedSeriesIds = fetched
+            .Where(f => f.Failed)
+            .Select(f => f.Series.Id)
+            .ToList();
+
+        // Collect all episodes with files for this chunk of series
+        List<(SearchableSeries Series, SearchableEpisode Episode, long FileId, int CfScore, bool IsMonitored)> itemsInChunk = [];
+        List<(long SeriesId, long EpisodeId)> episodesToTouch = [];
+
+        foreach (SeriesFetch seriesFetch in fetched)
+        {
+            SearchableSeries series = seriesFetch.Series;
+            List<SearchableEpisode> episodes = seriesFetch.Episodes;
+            List<ArrEpisodeFile> episodeFiles = seriesFetch.EpisodeFiles;
+
+            Dictionary<long, ArrEpisodeFile> fileMap = episodeFiles.ToDictionary(f => f.Id);
+
+            int matched = 0;
+            foreach (SearchableEpisode episode in episodes)
+            {
+                if (episode.EpisodeFileId > 0 && fileMap.TryGetValue(episode.EpisodeFileId, out ArrEpisodeFile? file))
                 {
-                    List<SearchableEpisode> episodes = await _sonarrClient.GetEpisodesAsync(arrInstance, series.Id);
-                    List<ArrEpisodeFile> episodeFiles = await _sonarrClient.GetEpisodeFilesAsync(arrInstance, series.Id);
-
-                    // Build a map of fileId -> episode file
-                    Dictionary<long, ArrEpisodeFile> fileMap = episodeFiles.ToDictionary(f => f.Id);
-
-                    // Match episodes to their files via EpisodeFileId
-                    int matched = 0;
-                    foreach (SearchableEpisode episode in episodes)
+                    itemsInChunk.Add((series, episode, file.Id, file.CustomFormatScore, series.Monitored && episode.Monitored));
+                    matched++;
+                }
+                else
+                {
+                    episodesToTouch.Add((series.Id, episode.Id));
+                    if (episode.EpisodeFileId > 0)
                     {
-                        if (episode.EpisodeFileId > 0 && fileMap.TryGetValue(episode.EpisodeFileId, out ArrEpisodeFile? file))
-                        {
-                            itemsInChunk.Add((series, episode, file.Id, file.CustomFormatScore, series.Monitored && episode.Monitored));
-                            matched++;
-                        }
-                        else
-                        {
-                            // Episode exists but has no file — touch its entry to prevent stale cleanup
-                            episodesToTouch.Add((series.Id, episode.Id));
-                            if (episode.EpisodeFileId > 0)
-                            {
-                                totalSkipped++;
-                            }
-                        }
+                        skipped++;
                     }
-
-                    _logger.LogTrace("[Sonarr] {InstanceName}: series '{SeriesTitle}' (id={SeriesId}) has {TotalEpisodes} episodes, {FileCount} files, {Matched} matched",
-                        arrInstance.Name, series.Title, series.Id, episodes.Count, episodeFiles.Count, matched);
                 }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "[Sonarr] Failed to fetch episodes for series '{SeriesTitle}' (id={SeriesId}) on {InstanceName}",
-                        series.Title, series.Id, arrInstance.Name);
-                }
-
-                // Rate limit to avoid overloading the Sonarr API
-                await Task.Delay(Random.Shared.Next(100, 500), cancellationToken);
             }
 
-            if (itemsInChunk.Count > 0)
-            {
-                List<long> seriesIds = itemsInChunk.Select(x => x.Series.Id).Distinct().ToList();
-                Dictionary<(long, long), CustomFormatScoreEntry> existingEntries = await _dataContext.CustomFormatScoreEntries
-                    .Where(e => e.ArrInstanceId == arrInstance.Id
-                        && e.ItemType == InstanceType.Sonarr
-                        && seriesIds.Contains(e.ExternalItemId))
-                    .ToDictionaryAsync(e => (e.ExternalItemId, e.EpisodeId));
+            _logger.LogTrace("[Sonarr] {InstanceName}: series '{SeriesTitle}' (id={SeriesId}) has {TotalEpisodes} episodes, {FileCount} files, {Matched} matched",
+                arrInstance.Name, series.Title, series.Id, episodes.Count, episodeFiles.Count, matched);
+        }
 
+        if (itemsInChunk.Count > 0)
+        {
+            List<long> seriesIds = itemsInChunk.Select(x => x.Series.Id).Distinct().ToList();
+            Dictionary<(long, long), CustomFormatScoreEntry> existingEntries = await _eventsContext.CustomFormatScoreEntries
+                .Where(e => e.ArrInstanceId == arrInstance.Id
+                    && e.ItemType == InstanceType.Sonarr
+                    && seriesIds.Contains(e.ExternalItemId))
+                .ToDictionaryAsync(e => (e.ExternalItemId, e.EpisodeId));
+
+            bool autoDetect = _eventsContext.ChangeTracker.AutoDetectChangesEnabled;
+            _eventsContext.ChangeTracker.AutoDetectChangesEnabled = false;
+            try
+            {
                 foreach ((SearchableSeries series, SearchableEpisode episode, long fileId, int cfScore, bool isMonitored) in itemsInChunk)
                 {
                     profileMap.TryGetValue(series.QualityProfileId, out ArrQualityProfile? profile);
@@ -278,38 +424,82 @@ public sealed class CustomFormatScoreSyncer : IHandler
                     existingEntries.TryGetValue((series.Id, episode.Id), out CustomFormatScoreEntry? existing);
                     UpsertCustomFormatScore(existing, arrInstance.Id, series.Id, episode.Id, InstanceType.Sonarr, title, fileId, cfScore, cutoffScore, profileName, isMonitored, now);
 
-                    totalSynced++;
+                    synced++;
                 }
 
-                await _dataContext.SaveChangesAsync();
+                _eventsContext.ChangeTracker.DetectChanges();
+                await _eventsContext.SaveChangesAsync(cancellationToken);
+                _eventsContext.ChangeTracker.Clear();
             }
-            else
+            finally
             {
-                _logger.LogTrace("[Sonarr] {InstanceName}: chunk of {ChunkSize} series yielded 0 episodes with files",
-                    arrInstance.Name, chunk.Length);
+                _eventsContext.ChangeTracker.AutoDetectChangesEnabled = autoDetect;
             }
+        }
+        else
+        {
+            _logger.LogTrace("[Sonarr] {InstanceName}: chunk of {ChunkSize} series yielded 0 episodes with files",
+                arrInstance.Name, chunk.Count);
+        }
 
-            // Touch entries for episodes that exist but have no file (e.g., RSS upgrade in progress)
-            foreach (var group in episodesToTouch.GroupBy(x => x.SeriesId))
+        // Touch entries for episodes that exist but have no file (e.g., RSS upgrade in progress)
+        foreach (var group in episodesToTouch.GroupBy(x => x.SeriesId))
+        {
+            List<long> episodeIds = group.Select(x => x.EpisodeId).ToList();
+            foreach (long[] epChunk in episodeIds.Chunk(ChunkSize))
             {
-                List<long> episodeIds = group.Select(x => x.EpisodeId).ToList();
-                foreach (long[] epChunk in episodeIds.Chunk(ChunkSize))
-                {
-                    List<long> epChunkList = epChunk.ToList();
-                    await _dataContext.CustomFormatScoreEntries
-                        .Where(e => e.ArrInstanceId == arrInstance.Id
-                            && e.ItemType == InstanceType.Sonarr
-                            && e.ExternalItemId == group.Key
-                            && epChunkList.Contains(e.EpisodeId))
-                        .ExecuteUpdateAsync(s => s.SetProperty(e => e.LastSyncedAt, now));
-                }
+                List<long> epChunkList = epChunk.ToList();
+                await _eventsContext.CustomFormatScoreEntries
+                    .Where(e => e.ArrInstanceId == arrInstance.Id
+                        && e.ItemType == InstanceType.Sonarr
+                        && e.ExternalItemId == group.Key
+                        && epChunkList.Contains(e.EpisodeId))
+                    .ExecuteUpdateAsync(s => s.SetProperty(e => e.LastSyncedAt, now), cancellationToken);
             }
         }
 
-        await CleanupStaleEntriesAsync(arrInstance.Id, InstanceType.Sonarr, now);
+        if (failedSeriesIds.Count > 0)
+        {
+            foreach (long[] failedChunk in failedSeriesIds.Chunk(ChunkSize))
+            {
+                List<long> failedChunkList = failedChunk.ToList();
+                await _eventsContext.CustomFormatScoreEntries
+                    .Where(e => e.ArrInstanceId == arrInstance.Id
+                        && e.ItemType == InstanceType.Sonarr
+                        && failedChunkList.Contains(e.ExternalItemId))
+                    .ExecuteUpdateAsync(s => s.SetProperty(e => e.LastSyncedAt, now), cancellationToken);
+            }
+        }
 
-        _logger.LogInformation("[Sonarr] Synced CF scores for {Count} episodes on {InstanceName} ({Skipped} skipped)",
-            totalSynced, arrInstance.Name, totalSkipped);
+        return (synced, skipped);
+    }
+
+    private async Task<SeriesFetch> FetchSeriesAsync(
+        ArrInstance arrInstance,
+        SearchableSeries series,
+        SemaphoreSlim gate,
+        CancellationToken cancellationToken)
+    {
+        await gate.WaitAsync(cancellationToken);
+        try
+        {
+            Task<List<SearchableEpisode>> episodesTask = _sonarrClient.GetEpisodesAsync(arrInstance, series.Id, cancellationToken);
+            Task<List<ArrEpisodeFile>> episodeFilesTask = _sonarrClient.GetEpisodeFilesAsync(arrInstance, series.Id, cancellationToken);
+            await Task.WhenAll(episodesTask, episodeFilesTask);
+
+            return new SeriesFetch(series, episodesTask.Result, episodeFilesTask.Result, Failed: false);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "[Sonarr] Failed to fetch episodes for series '{SeriesTitle}' (id={SeriesId}) on {InstanceName}",
+                series.Title, series.Id, arrInstance.Name);
+
+            return new SeriesFetch(series, [], [], Failed: true);
+        }
+        finally
+        {
+            gate.Release();
+        }
     }
 
     /// <summary>
@@ -333,7 +523,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
         {
             if (existing.CurrentScore != cfScore)
             {
-                _dataContext.CustomFormatScoreHistory.Add(new CustomFormatScoreHistory
+                _eventsContext.CustomFormatScoreHistory.Add(new CustomFormatScoreHistory
                 {
                     ArrInstanceId = arrInstanceId,
                     ExternalItemId = externalItemId,
@@ -361,7 +551,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
         }
         else
         {
-            _dataContext.CustomFormatScoreEntries.Add(new CustomFormatScoreEntry
+            _eventsContext.CustomFormatScoreEntries.Add(new CustomFormatScoreEntry
             {
                 ArrInstanceId = arrInstanceId,
                 ExternalItemId = externalItemId,
@@ -377,7 +567,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
             });
 
             // Record initial score in history
-            _dataContext.CustomFormatScoreHistory.Add(new CustomFormatScoreHistory
+            _eventsContext.CustomFormatScoreHistory.Add(new CustomFormatScoreHistory
             {
                 ArrInstanceId = arrInstanceId,
                 ExternalItemId = externalItemId,
@@ -399,7 +589,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
     private async Task CleanupStaleEntriesAsync(
         Guid arrInstanceId, InstanceType instanceType, DateTimeOffset syncStartTime)
     {
-        List<long> staleItemIds = await _dataContext.CustomFormatScoreEntries
+        List<long> staleItemIds = await _eventsContext.CustomFormatScoreEntries
             .Where(e => e.ArrInstanceId == arrInstanceId
                 && e.ItemType == instanceType
                 && e.LastSyncedAt < syncStartTime)
@@ -412,7 +602,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
             return;
         }
 
-        await _dataContext.CustomFormatScoreEntries
+        await _eventsContext.CustomFormatScoreEntries
             .Where(e => e.ArrInstanceId == arrInstanceId
                 && e.ItemType == instanceType
                 && e.LastSyncedAt < syncStartTime)
@@ -421,7 +611,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
         foreach (long[] chunk in staleItemIds.Chunk(ChunkSize))
         {
             List<long> chunkList = chunk.ToList();
-            await _dataContext.CustomFormatScoreHistory
+            await _eventsContext.CustomFormatScoreHistory
                 .Where(h => h.ArrInstanceId == arrInstanceId
                     && h.ItemType == instanceType
                     && chunkList.Contains(h.ExternalItemId))
@@ -438,7 +628,7 @@ public sealed class CustomFormatScoreSyncer : IHandler
     private async Task CleanupOldHistoryAsync()
     {
         DateTimeOffset threshold = _timeProvider.GetUtcNow() - HistoryRetention;
-        int deleted = await _dataContext.CustomFormatScoreHistory
+        int deleted = await _eventsContext.CustomFormatScoreHistory
             .Where(h => h.RecordedAt < threshold)
             .ExecuteDeleteAsync();
 

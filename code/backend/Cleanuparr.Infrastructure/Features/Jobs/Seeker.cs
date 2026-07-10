@@ -39,6 +39,7 @@ public sealed class Seeker : IHandler
 
     private readonly ILogger<Seeker> _logger;
     private readonly DataContext _dataContext;
+    private readonly EventsContext _eventsContext;
     private readonly IRadarrClient _radarrClient;
     private readonly ISonarrClient _sonarrClient;
     private readonly IArrClientFactory _arrClientFactory;
@@ -52,6 +53,7 @@ public sealed class Seeker : IHandler
     public Seeker(
         ILogger<Seeker> logger,
         DataContext dataContext,
+        EventsContext eventsContext,
         IRadarrClient radarrClient,
         ISonarrClient sonarrClient,
         IArrClientFactory arrClientFactory,
@@ -64,6 +66,7 @@ public sealed class Seeker : IHandler
     {
         _logger = logger;
         _dataContext = dataContext;
+        _eventsContext = eventsContext;
         _radarrClient = radarrClient;
         _sonarrClient = sonarrClient;
         _arrClientFactory = arrClientFactory;
@@ -92,7 +95,7 @@ public sealed class Seeker : IHandler
         bool isDryRun = await _dryRunInterceptor.IsDryRunEnabled();
 
         // Replacement searches queued after download removal
-        SearchQueueItem? replacementItem = await _dataContext.SearchQueue
+        SearchQueueItem? replacementItem = await _eventsContext.SearchQueue
             .OrderBy(q => q.CreatedAt)
             .FirstOrDefaultAsync();
 
@@ -109,7 +112,7 @@ public sealed class Seeker : IHandler
             return;
         }
 
-        await ProcessProactiveSearchAsync(config, isDryRun);
+        await ProcessProactiveSearchAsync(config, isDryRun, cancellationToken);
 
         await _hubContext.Clients.All.SendAsync("SearchStatsUpdated");
     }
@@ -143,18 +146,18 @@ public sealed class Seeker : IHandler
             _logger.LogWarning(
                 "Skipping replacement search for '{Title}' — arr instance {InstanceId} no longer exists",
                 item.Title, item.ArrInstanceId);
-            _dataContext.SearchQueue.Remove(item);
-            await _dataContext.SaveChangesAsync();
+            _eventsContext.SearchQueue.Remove(item);
+            await _eventsContext.SaveChangesAsync();
             return;
         }
 
-        ContextProvider.Set(nameof(InstanceType), item.ArrInstance.ArrConfig.Type);
+        ContextProvider.Set(nameof(InstanceType), arrInstance.ArrConfig.Type);
         ContextProvider.Set(ContextProvider.Keys.ArrInstanceId, arrInstance.Id);
         ContextProvider.Set(ContextProvider.Keys.ArrInstanceUrl, arrInstance.ExternalOrInternalUrl);
 
         try
         {
-            IArrClient arrClient = _arrClientFactory.GetClient(item.ArrInstance.ArrConfig.Type, arrInstance.Version);
+            IArrClient arrClient = _arrClientFactory.GetClient(arrInstance.ArrConfig.Type, arrInstance.Version);
             SearchItem searchItem = BuildSearchItem(item);
 
             long commandId = await arrClient.SearchItemAsync(arrInstance, searchItem);
@@ -163,7 +166,7 @@ public sealed class Seeker : IHandler
 
             if (!isDryRun)
             {
-                await SaveCommandTrackerAsync(commandId, eventId, arrInstance.Id, item.ArrInstance.ArrConfig.Type, item.ItemId, item.Title);
+                await SaveCommandTrackerAsync(commandId, eventId, arrInstance.Id, arrInstance.ArrConfig.Type, item.ItemId, item.Title);
             }
 
             _logger.LogInformation("Replacement search triggered for '{Title}' on {InstanceName}",
@@ -178,8 +181,8 @@ public sealed class Seeker : IHandler
         {
             if (!isDryRun)
             {
-                _dataContext.SearchQueue.Remove(item);
-                await _dataContext.SaveChangesAsync();
+                _eventsContext.SearchQueue.Remove(item);
+                await _eventsContext.SaveChangesAsync();
             }
         }
     }
@@ -199,7 +202,7 @@ public sealed class Seeker : IHandler
         return new SearchItem { Id = item.ItemId };
     }
 
-    private async Task ProcessProactiveSearchAsync(SeekerConfig config, bool isDryRun)
+    private async Task ProcessProactiveSearchAsync(SeekerConfig config, bool isDryRun, CancellationToken cancellationToken)
     {
         List<SeekerInstanceConfig> instanceConfigs = await _dataContext.SeekerInstanceConfigs
             .Include(s => s.ArrInstance)
@@ -228,8 +231,8 @@ public sealed class Seeker : IHandler
 
             foreach (SeekerInstanceConfig instance in ordered)
             {
-                bool searched = await ProcessSingleInstanceAsync(config, instance, isDryRun);
-                
+                bool searched = await ProcessSingleInstanceAsync(config, instance, isDryRun, cancellationToken);
+
                 if (searched)
                 {
                     break;
@@ -241,12 +244,12 @@ public sealed class Seeker : IHandler
             // Process all enabled instances sequentially
             foreach (SeekerInstanceConfig instanceConfig in instanceConfigs)
             {
-                await ProcessSingleInstanceAsync(config, instanceConfig, isDryRun);
+                await ProcessSingleInstanceAsync(config, instanceConfig, isDryRun, cancellationToken);
             }
         }
     }
 
-    private async Task<bool> ProcessSingleInstanceAsync(SeekerConfig config, SeekerInstanceConfig instanceConfig, bool isDryRun)
+    private async Task<bool> ProcessSingleInstanceAsync(SeekerConfig config, SeekerInstanceConfig instanceConfig, bool isDryRun, CancellationToken cancellationToken)
     {
         ArrInstance arrInstance = instanceConfig.ArrInstance;
         InstanceType instanceType = arrInstance.ArrConfig.Type;
@@ -297,7 +300,11 @@ public sealed class Seeker : IHandler
         bool searched = false;
         try
         {
-            searched = await ProcessInstanceAsync(config, instanceConfig, arrInstance, instanceType, isDryRun, queueRecords);
+            searched = await ProcessInstanceAsync(config, instanceConfig, arrInstance, instanceType, isDryRun, queueRecords, cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -319,16 +326,17 @@ public sealed class Seeker : IHandler
         ArrInstance arrInstance,
         InstanceType instanceType,
         bool isDryRun,
-        List<QueueRecord> queueRecords)
+        List<QueueRecord> queueRecords,
+        CancellationToken cancellationToken)
     {
         // Load search history for the current cycle
-        List<SeekerHistory> currentCycleHistory = await _dataContext.SeekerHistory
+        List<SeekerHistory> currentCycleHistory = await _eventsContext.SeekerHistory
             .AsNoTracking()
             .Where(h => h.ArrInstanceId == arrInstance.Id && h.CycleId == instanceConfig.CurrentCycleId)
             .ToListAsync();
 
         // Load all history for stale cleanup
-        List<long> allHistoryExternalIds = await _dataContext.SeekerHistory
+        List<long> allHistoryExternalIds = await _eventsContext.SeekerHistory
             .AsNoTracking()
             .Where(h => h.ArrInstanceId == arrInstance.Id)
             .Select(x => x.ExternalItemId)
@@ -353,7 +361,7 @@ public sealed class Seeker : IHandler
                 .Select(r => r.MovieId)
                 .ToHashSet();
 
-            result = await ProcessRadarrAsync(config, arrInstance, instanceConfig, itemSearchHistory, isDryRun, queuedMovieIds);
+            result = await ProcessRadarrAsync(config, arrInstance, instanceConfig, itemSearchHistory, isDryRun, queuedMovieIds, cancellationToken);
         }
         else
         {
@@ -362,7 +370,7 @@ public sealed class Seeker : IHandler
                 .Select(r => (r.SeriesId, r.SeasonNumber))
                 .ToHashSet();
 
-            result = await ProcessSonarrAsync(config, arrInstance, instanceConfig, itemSearchHistory, currentCycleHistory, isDryRun, queuedSeasons: queuedSeasons);
+            result = await ProcessSonarrAsync(config, arrInstance, instanceConfig, itemSearchHistory, currentCycleHistory, isDryRun, cancellationToken, queuedSeasons: queuedSeasons);
         }
 
         if (result.Candidates.Count == 0)
@@ -421,12 +429,10 @@ public sealed class Seeker : IHandler
         SeekerInstanceConfig instanceConfig,
         Dictionary<long, DateTimeOffset> searchHistory,
         bool isDryRun,
-        HashSet<long> queuedMovieIds)
+        HashSet<long> queuedMovieIds,
+        CancellationToken cancellationToken)
     {
-        List<SearchableMovie> movies = await _radarrClient.GetAllMoviesAsync(arrInstance);
         List<Tag> tags = await _radarrClient.GetAllTagsAsync(arrInstance);
-        List<long> allLibraryIds = movies.Select(m => m.Id).ToList();
-
         Dictionary<long, string> tagsById = tags.ToDictionary(t => t.Id, t => t.Label);
         HashSet<string> skipTagSet = new(instanceConfig.SkipTags, StringComparer.InvariantCultureIgnoreCase);
 
@@ -434,28 +440,53 @@ public sealed class Seeker : IHandler
         Dictionary<long, CustomFormatScoreEntry>? cfScores = null;
         if (instanceConfig.UseCustomFormatScore)
         {
-            cfScores = await _dataContext.CustomFormatScoreEntries
+            cfScores = await _eventsContext.CustomFormatScoreEntries
                 .AsNoTracking()
                 .Where(e => e.ArrInstanceId == arrInstance.Id && e.ItemType == InstanceType.Radarr)
                 .ToDictionaryAsync(e => e.ExternalItemId);
         }
 
-        // Apply filters — UseCutoff and UseCustomFormatScore are OR-ed: an item qualifies if it fails the quality cutoff OR the CF score cutoff.
-        // Items without cutoff data or a cached CF score are excluded from the respective filter.
         DateTimeOffset graceCutoff = _timeProvider.GetUtcNow().AddHours(-config.PostReleaseGraceHours);
-        var candidates = movies
-            .Where(m => m.Status is "released")
-            .Where(m => IsMoviePastGracePeriod(m, graceCutoff))
-            .Where(m => !instanceConfig.MonitoredOnly || m.Monitored)
-            .Where(m => instanceConfig.SkipTags.Count == 0 ||
-                !m.Tags
+        
+        List<long> allLibraryIds = new();
+        List<SearchableMovie> candidates = new();
+        await foreach (SearchableMovie movie in _radarrClient.StreamAllMoviesAsync(arrInstance, cancellationToken))
+        {
+            allLibraryIds.Add(movie.Id);
+
+            if (movie.Status is not "released")
+            {
+                continue;
+            }
+
+            if (!IsMoviePastGracePeriod(movie, graceCutoff))
+            {
+                continue;
+            }
+
+            if (instanceConfig.MonitoredOnly && !movie.Monitored)
+            {
+                continue;
+            }
+
+            if (instanceConfig.SkipTags.Count > 0
+                && movie.Tags
                     .Select(id => tagsById.TryGetValue(id, out var label) ? label : null)
-                    .Any(label => label is not null && skipTagSet.Contains(label))
-            )
-            .Where(m => !m.HasFile
-                || (instanceConfig.UseCutoff && (m.MovieFile?.QualityCutoffNotMet ?? false))
-                || (instanceConfig.UseCustomFormatScore && cfScores != null && cfScores.TryGetValue(m.Id, out var entry) && entry.CurrentScore < entry.CutoffScore))
-            .ToList();
+                    .Any(label => label is not null && skipTagSet.Contains(label)))
+            {
+                continue;
+            }
+
+            bool passesQualityCheck = !movie.HasFile
+                || (instanceConfig.UseCutoff && (movie.MovieFile?.QualityCutoffNotMet ?? false))
+                || (instanceConfig.UseCustomFormatScore && cfScores != null && cfScores.TryGetValue(movie.Id, out var entry) && entry.CurrentScore < entry.CutoffScore);
+            if (!passesQualityCheck)
+            {
+                continue;
+            }
+
+            candidates.Add(movie);
+        }
 
         instanceConfig.TotalEligibleItems = candidates.Count;
 
@@ -521,10 +552,15 @@ public sealed class Seeker : IHandler
         IItemSelector selector = ItemSelectorFactory.Create(config.SelectionStrategy);
         List<long> selectedIds = selector.Select(selectionCandidates, 1);
 
+        Dictionary<long, SearchableMovie> candidatesById = candidates.ToDictionary(m => m.Id);
+
         List<SeekerSearchCandidate> searchCandidates = [];
         foreach (long movieId in selectedIds)
         {
-            SearchableMovie movie = candidates.First(m => m.Id == movieId);
+            if (!candidatesById.TryGetValue(movieId, out SearchableMovie? movie))
+            {
+                continue;
+            }
             SeekerSearchReason reason = !movie.HasFile
                 ? SeekerSearchReason.Missing
                 : instanceConfig.UseCutoff && (movie.MovieFile?.QualityCutoffNotMet ?? false)
@@ -553,31 +589,51 @@ public sealed class Seeker : IHandler
         Dictionary<long, DateTimeOffset> seriesSearchHistory,
         List<SeekerHistory> currentCycleHistory,
         bool isDryRun,
+        CancellationToken cancellationToken,
         bool isRetry = false,
         HashSet<(long SeriesId, long SeasonNumber)>? queuedSeasons = null)
     {
-        List<SearchableSeries> series = await _sonarrClient.GetAllSeriesAsync(arrInstance);
         List<Tag> tags = await _sonarrClient.GetAllTagsAsync(arrInstance);
-        List<long> allLibraryIds = series.Select(s => s.Id).ToList();
-        DateTimeOffset graceCutoff = _timeProvider.GetUtcNow().AddHours(-config.PostReleaseGraceHours);
-
         Dictionary<long, string> tagsById = tags.ToDictionary(t => t.Id, t => t.Label);
         HashSet<string> skipTagSet = new(instanceConfig.SkipTags, StringComparer.InvariantCultureIgnoreCase);
 
-        // Apply filters
-        var candidates = series
-            .Where(s => s.Status is "continuing" or "ended" or "released")
-            .Where(s => !instanceConfig.MonitoredOnly || s.Monitored)
-            .Where(s => instanceConfig.SkipTags.Count == 0 ||
-                !s.Tags
+        DateTimeOffset graceCutoff = _timeProvider.GetUtcNow().AddHours(-config.PostReleaseGraceHours);
+        
+        List<long> allLibraryIds = new();
+        List<SearchableSeries> candidates = new();
+        await foreach (SearchableSeries series in _sonarrClient.StreamAllSeriesAsync(arrInstance, cancellationToken))
+        {
+            allLibraryIds.Add(series.Id);
+
+            if (series.Status is not ("continuing" or "ended" or "released"))
+            {
+                continue;
+            }
+
+            if (instanceConfig.MonitoredOnly && !series.Monitored)
+            {
+                continue;
+            }
+
+            if (instanceConfig.SkipTags.Count > 0
+                && series.Tags
                     .Select(id => tagsById.TryGetValue(id, out var label) ? label : null)
-                    .Any(label => label is not null && skipTagSet.Contains(label))
-            )
-            // Skip fully-downloaded series (unless quality upgrade filters active)
-            .Where(s => instanceConfig.UseCutoff || instanceConfig.UseCustomFormatScore
-                || s.Statistics == null || s.Statistics.EpisodeCount == 0
-                || s.Statistics.EpisodeFileCount < s.Statistics.EpisodeCount)
-            .ToList();
+                    .Any(label => label is not null && skipTagSet.Contains(label)))
+            {
+                continue;
+            }
+
+            // Skip fully-downloaded series unless a quality upgrade filter is active.
+            bool fullyDownloaded = series.Statistics is not null
+                && series.Statistics.EpisodeCount > 0
+                && series.Statistics.EpisodeFileCount >= series.Statistics.EpisodeCount;
+            if (fullyDownloaded && !instanceConfig.UseCutoff && !instanceConfig.UseCustomFormatScore)
+            {
+                continue;
+            }
+
+            candidates.Add(series);
+        }
 
         instanceConfig.TotalEligibleItems = candidates.Count;
 
@@ -596,6 +652,8 @@ public sealed class Seeker : IHandler
         IItemSelector selector = ItemSelectorFactory.Create(config.SelectionStrategy);
         List<long> candidateIds = selector.Select(selectionCandidates, selectionCandidates.Count);
 
+        Dictionary<long, SearchableSeries> candidatesById = candidates.ToDictionary(s => s.Id);
+
         // Drill down to find the first series with qualifying unsearched seasons
         foreach (long seriesId in candidateIds)
         {
@@ -603,14 +661,19 @@ public sealed class Seeker : IHandler
 
             try
             {
+                if (!candidatesById.TryGetValue(seriesId, out SearchableSeries? series))
+                {
+                    continue;
+                }
+
                 List<SeekerHistory> seriesHistory = currentCycleHistory
                     .Where(h => h.ExternalItemId == seriesId)
                     .ToList();
 
-                seriesTitle = candidates.First(s => s.Id == seriesId).Title;
+                seriesTitle = series.Title;
 
                 (SeriesSearchItem? searchItem, SearchableEpisode? selectedEpisode, SeekerSearchReason searchReason) =
-                    await BuildSonarrSearchItemAsync(instanceConfig, arrInstance, seriesId, seriesHistory, seriesTitle, graceCutoff, queuedSeasons);
+                    await BuildSonarrSearchItemAsync(instanceConfig, arrInstance, seriesId, seriesHistory, seriesTitle, graceCutoff, cancellationToken, queuedSeasons);
 
                 if (searchItem is not null)
                 {
@@ -633,6 +696,10 @@ public sealed class Seeker : IHandler
                 }
 
                 _logger.LogDebug("Skipping '{SeriesTitle}' — no qualifying seasons found", seriesTitle);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
             }
             catch (Exception ex)
             {
@@ -664,7 +731,7 @@ public sealed class Seeker : IHandler
 
             // Retry with fresh cycle (only once to prevent infinite recursion)
             return await ProcessSonarrAsync(config, arrInstance, instanceConfig,
-                new Dictionary<long, DateTimeOffset>(), [], isDryRun, isRetry: true, queuedSeasons: queuedSeasons);
+                new Dictionary<long, DateTimeOffset>(), [], isDryRun, cancellationToken, isRetry: true, queuedSeasons: queuedSeasons);
         }
 
         return new SeekerProcessResult { Candidates = [], AllLibraryIds = allLibraryIds };
@@ -681,15 +748,16 @@ public sealed class Seeker : IHandler
         List<SeekerHistory> seriesHistory,
         string seriesTitle,
         DateTimeOffset graceCutoff,
+        CancellationToken cancellationToken,
         HashSet<(long SeriesId, long SeasonNumber)>? queuedSeasons = null)
     {
-        List<SearchableEpisode> episodes = await _sonarrClient.GetEpisodesAsync(arrInstance, seriesId);
+        List<SearchableEpisode> episodes = await _sonarrClient.GetEpisodesAsync(arrInstance, seriesId, cancellationToken);
 
         // Fetch episode file metadata to determine cutoff status from the dedicated episodefile endpoint
         HashSet<long> cutoffNotMetFileIds = [];
         if (instanceConfig.UseCutoff)
         {
-            List<ArrEpisodeFile> episodeFiles = await _sonarrClient.GetEpisodeFilesAsync(arrInstance, seriesId);
+            List<ArrEpisodeFile> episodeFiles = await _sonarrClient.GetEpisodeFilesAsync(arrInstance, seriesId, cancellationToken);
             cutoffNotMetFileIds = episodeFiles
                 .Where(f => f.QualityCutoffNotMet)
                 .Select(f => f.Id)
@@ -700,7 +768,7 @@ public sealed class Seeker : IHandler
         Dictionary<long, CustomFormatScoreEntry>? cfScores = null;
         if (instanceConfig.UseCustomFormatScore)
         {
-            cfScores = await _dataContext.CustomFormatScoreEntries
+            cfScores = await _eventsContext.CustomFormatScoreEntries
                 .AsNoTracking()
                 .Where(e => e.ArrInstanceId == arrInstance.Id
                     && e.ItemType == InstanceType.Sonarr
@@ -826,7 +894,7 @@ public sealed class Seeker : IHandler
             long id = searchedIds[i];
             string title = itemTitles != null && i < itemTitles.Count ? itemTitles[i] : string.Empty;
 
-            SeekerHistory? existing = await _dataContext.SeekerHistory
+            SeekerHistory? existing = await _eventsContext.SeekerHistory
                 .FirstOrDefaultAsync(h =>
                     h.ArrInstanceId == arrInstanceId
                     && h.ExternalItemId == id
@@ -845,7 +913,7 @@ public sealed class Seeker : IHandler
             }
             else
             {
-                _dataContext.SeekerHistory.Add(new SeekerHistory
+                _eventsContext.SeekerHistory.Add(new SeekerHistory
                 {
                     ArrInstanceId = arrInstanceId,
                     ExternalItemId = id,
@@ -859,7 +927,7 @@ public sealed class Seeker : IHandler
             }
         }
 
-        await _dataContext.SaveChangesAsync();
+        await _eventsContext.SaveChangesAsync();
     }
 
     private async Task SaveCommandTrackerAsync(
@@ -871,7 +939,7 @@ public sealed class Seeker : IHandler
         string itemTitle,
         int seasonNumber = 0)
     {
-        _dataContext.SeekerCommandTrackers.Add(new SeekerCommandTracker
+        _eventsContext.SeekerCommandTrackers.Add(new SeekerCommandTracker
         {
             ArrInstanceId = arrInstanceId,
             CommandId = commandId,
@@ -881,7 +949,7 @@ public sealed class Seeker : IHandler
             SeasonNumber = seasonNumber,
         });
 
-        await _dataContext.SaveChangesAsync();
+        await _eventsContext.SaveChangesAsync();
     }
 
     private async Task CleanupStaleHistoryAsync(
@@ -901,7 +969,7 @@ public sealed class Seeker : IHandler
             return;
         }
 
-        await _dataContext.SeekerHistory
+        await _eventsContext.SeekerHistory
             .Where(h => h.ArrInstanceId == arrInstanceId
                 && h.ItemType == instanceType
                 && staleIds.Contains(h.ExternalItemId))
@@ -922,7 +990,7 @@ public sealed class Seeker : IHandler
     {
         DateTimeOffset cutoff = _timeProvider.GetUtcNow().AddDays(-30);
 
-        int deleted = await _dataContext.SeekerHistory
+        int deleted = await _eventsContext.SeekerHistory
             .Where(h => h.ArrInstanceId == arrInstance.Id
                 && h.CycleId != currentCycleId
                 && h.LastSearchedAt < cutoff)
@@ -959,5 +1027,4 @@ public sealed class Seeker : IHandler
         DateTimeOffset? releaseDate = movie.DigitalRelease ?? movie.PhysicalRelease ?? movie.InCinemas;
         return releaseDate is null || releaseDate.Value <= graceCutoff;
     }
-
 }
