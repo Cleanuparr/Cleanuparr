@@ -3,13 +3,13 @@ using Cleanuparr.Api.Features.Arr.Contracts.Requests;
 using Cleanuparr.Domain.Enums;
 using Cleanuparr.Infrastructure.Features.Arr.Dtos;
 using Cleanuparr.Infrastructure.Features.Arr.Interfaces;
-using Cleanuparr.Infrastructure.Features.Seeker;
 using Cleanuparr.Persistence;
 using Cleanuparr.Persistence.Models.Configuration.Arr;
 using Cleanuparr.Shared.Helpers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Cleanuparr.Api.Features.Arr.Controllers;
 
@@ -20,19 +20,19 @@ public sealed class ArrConfigController : ControllerBase
 {
     private readonly ILogger<ArrConfigController> _logger;
     private readonly DataContext _dataContext;
+    private readonly EventsContext _eventsContext;
     private readonly IArrClientFactory _arrClientFactory;
-    private readonly ISeekerStateCleanup _seekerStateCleanup;
 
     public ArrConfigController(
         ILogger<ArrConfigController> logger,
         DataContext dataContext,
-        IArrClientFactory arrClientFactory,
-        ISeekerStateCleanup seekerStateCleanup)
+        EventsContext eventsContext,
+        IArrClientFactory arrClientFactory)
     {
         _logger = logger;
         _dataContext = dataContext;
+        _eventsContext = eventsContext;
         _arrClientFactory = arrClientFactory;
-        _seekerStateCleanup = seekerStateCleanup;
     }
 
     [HttpGet("sonarr")]
@@ -255,16 +255,64 @@ public sealed class ArrConfigController : ControllerBase
                 return this.ProblemResult(StatusCodes.Status404NotFound, $"{type} instance with ID {id} not found");
             }
 
-            config.Instances.Remove(instance);
-            await _dataContext.SaveChangesAsync();
+            await using IDbContextTransaction transaction = await _dataContext.Database.BeginTransactionAsync();
 
-            await _seekerStateCleanup.DeleteForInstanceAsync(id);
+            try
+            {
+                config.Instances.Remove(instance);
+                await _dataContext.SaveChangesAsync();
 
+                await DeleteSeekerEventsForInstanceAsync(id);
+
+                await transaction.CommitAsync();
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
+            
             return NoContent();
         }
         finally
         {
             DataContext.Lock.Release();
+        }
+    }
+    
+    private async Task DeleteSeekerEventsForInstanceAsync(Guid arrInstanceId, CancellationToken cancellationToken = default)
+    {
+        await using IDbContextTransaction transaction = await _eventsContext.Database.BeginTransactionAsync(cancellationToken);
+
+        try
+        {
+
+            await _eventsContext.CustomFormatScoreEntries
+                .Where(e => e.ArrInstanceId == arrInstanceId)
+                .ExecuteDeleteAsync(cancellationToken);
+
+            await _eventsContext.CustomFormatScoreHistory
+                .Where(e => e.ArrInstanceId == arrInstanceId)
+                .ExecuteDeleteAsync(cancellationToken);
+
+            await _eventsContext.SeekerHistory
+                .Where(e => e.ArrInstanceId == arrInstanceId)
+                .ExecuteDeleteAsync(cancellationToken);
+
+            await _eventsContext.SearchQueue
+                .Where(e => e.ArrInstanceId == arrInstanceId)
+                .ExecuteDeleteAsync(cancellationToken);
+
+            await _eventsContext.SeekerCommandTrackers
+                .Where(e => e.ArrInstanceId == arrInstanceId)
+                .ExecuteDeleteAsync(cancellationToken);
+            
+            await transaction.CommitAsync(cancellationToken);
+        }
+        catch
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            throw;
         }
     }
 
