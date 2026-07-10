@@ -74,15 +74,15 @@ public static class HostExtensions
             await configContext.Database.MigrateAsync();
         }
 
-        // WAL gives better write concurrency and write throughput
-        await configContext.Database.ExecuteSqlRawAsync("PRAGMA journal_mode=WAL;");
-
         // Apply events db migrations
         await using var eventsContext = EventsContext.CreateStaticInstance();
         if ((await eventsContext.Database.GetPendingMigrationsAsync()).Any())
         {
             await eventsContext.Database.MigrateAsync();
         }
+        
+        // WAL gives better write concurrency and write throughput
+        await eventsContext.Database.ExecuteSqlRawAsync("PRAGMA journal_mode=WAL;");
 
         // Apply users db migrations
         await using var usersContext = UsersContext.CreateStaticInstance();
