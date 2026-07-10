@@ -199,12 +199,12 @@ public sealed class CustomFormatScoreSyncer : IHandler
             flushedChunks++;
         }
 
-        await CheckpointWalAsync(cancellationToken);
-
         _logger.LogTrace("[Radarr] {InstanceName}: found {TotalMovies} total movies, {WithFiles} with files",
             arrInstance.Name, totalMovies, totalWithFiles);
 
         await CleanupStaleEntriesAsync(arrInstance.Id, InstanceType.Radarr, now);
+
+        await CheckpointWalAsync(cancellationToken);
 
         _logger.LogInformation("[Radarr] Synced CF scores for {Count} movies on {InstanceName} ({Skipped} skipped)",
             totalSynced, arrInstance.Name, totalSkipped);
@@ -327,12 +327,12 @@ public sealed class CustomFormatScoreSyncer : IHandler
             flushedChunks++;
         }
 
-        await CheckpointWalAsync(cancellationToken);
-
         _logger.LogTrace("[Sonarr] {InstanceName}: found {SeriesCount} total series",
             arrInstance.Name, totalSeries);
 
         await CleanupStaleEntriesAsync(arrInstance.Id, InstanceType.Sonarr, now);
+
+        await CheckpointWalAsync(cancellationToken);
 
         _logger.LogInformation("[Sonarr] Synced CF scores for {Count} episodes on {InstanceName} ({Skipped} skipped)",
             totalSynced, arrInstance.Name, totalSkipped);
